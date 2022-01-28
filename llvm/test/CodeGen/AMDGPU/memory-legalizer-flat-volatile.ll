@@ -51,7 +51,7 @@ define amdgpu_kernel void @flat_nontemporal_load_0(
 ;
 ; SKIP-CACHE-INV-LABEL: flat_nontemporal_load_0:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s1
@@ -68,7 +68,7 @@ define amdgpu_kernel void @flat_nontemporal_load_0(
 ; GFX11-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-WGP-NEXT:    flat_load_b32 v2, v[0:1] glc
+; GFX11-WGP-NEXT:    flat_load_b32 v2, v[0:1] glc dlc
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -80,7 +80,7 @@ define amdgpu_kernel void @flat_nontemporal_load_0(
 ; GFX11-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-CU-NEXT:    flat_load_b32 v2, v[0:1] glc
+; GFX11-CU-NEXT:    flat_load_b32 v2, v[0:1] glc dlc
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -142,7 +142,7 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ;
 ; SKIP-CACHE-INV-LABEL: flat_nontemporal_load_1:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s1
@@ -163,7 +163,7 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    v_add_co_u32 v0, s0, s0, v0
 ; GFX11-WGP-NEXT:    v_add_co_ci_u32_e64 v1, s0, s1, 0, s0
-; GFX11-WGP-NEXT:    flat_load_b32 v2, v[0:1] glc
+; GFX11-WGP-NEXT:    flat_load_b32 v2, v[0:1] glc dlc
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    v_dual_mov_b32 v1, s3 :: v_dual_mov_b32 v0, s2
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -177,7 +177,7 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    v_add_co_u32 v0, s0, s0, v0
 ; GFX11-CU-NEXT:    v_add_co_ci_u32_e64 v1, s0, s1, 0, s0
-; GFX11-CU-NEXT:    flat_load_b32 v2, v[0:1] glc
+; GFX11-CU-NEXT:    flat_load_b32 v2, v[0:1] glc dlc
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v1, s3 :: v_dual_mov_b32 v0, s2
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -237,7 +237,7 @@ define amdgpu_kernel void @flat_nontemporal_store_0(
 ;
 ; SKIP-CACHE-INV-LABEL: flat_nontemporal_store_0:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s1
@@ -257,7 +257,7 @@ define amdgpu_kernel void @flat_nontemporal_store_0(
 ; GFX11-WGP-NEXT:    flat_load_b32 v2, v[0:1]
 ; GFX11-WGP-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-WGP-NEXT:    flat_store_b32 v[0:1], v2
+; GFX11-WGP-NEXT:    flat_store_b32 v[0:1], v2 dlc
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
@@ -269,7 +269,7 @@ define amdgpu_kernel void @flat_nontemporal_store_0(
 ; GFX11-CU-NEXT:    flat_load_b32 v2, v[0:1]
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
+; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2 dlc
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    s_endpgm
     i32* %in, i32* %out) {
@@ -328,7 +328,7 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ;
 ; SKIP-CACHE-INV-LABEL: flat_nontemporal_store_1:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
@@ -352,7 +352,7 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX11-WGP-NEXT:    flat_load_b32 v2, v[1:2]
 ; GFX11-WGP-NEXT:    v_add_co_ci_u32_e64 v1, s0, s3, 0, s0
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-WGP-NEXT:    flat_store_b32 v[0:1], v2
+; GFX11-WGP-NEXT:    flat_store_b32 v[0:1], v2 dlc
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
@@ -366,7 +366,7 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX11-CU-NEXT:    flat_load_b32 v2, v[1:2]
 ; GFX11-CU-NEXT:    v_add_co_ci_u32_e64 v1, s0, s3, 0, s0
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
+; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2 dlc
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    s_endpgm
     i32* %in, i32* %out) {
@@ -423,7 +423,7 @@ define amdgpu_kernel void @flat_volatile_workgroup_acquire_load(
 ;
 ; SKIP-CACHE-INV-LABEL: flat_volatile_workgroup_acquire_load:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s1
@@ -507,8 +507,8 @@ define amdgpu_kernel void @flat_volatile_workgroup_release_store(
 ;
 ; SKIP-CACHE-INV-LABEL: flat_volatile_workgroup_release_store:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s3

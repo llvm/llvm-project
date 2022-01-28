@@ -12,6 +12,7 @@
 
 #include <functional>
 #include <memory>
+#include <tuple>
 #include <type_traits>
 
 #include "test_macros.h"
@@ -261,6 +262,16 @@ void test_bullet_four() {
   }
 }
 
+#if TEST_STD_VER > 20
+struct A {};
+struct B {};
+struct C : B {};
+template<>
+struct std::common_type<A, std::tuple<B>> {
+  using type = tuple<B>;
+};
+#endif
+
 int main(int, char**)
 {
     static_assert((std::is_same<std::common_type<int>::type, int>::value), "");
@@ -321,7 +332,7 @@ int main(int, char**)
   test_bullet_three_four();
   test_bullet_four();
 
-//  P0548
+    // P0548
     static_assert((std::is_same<std::common_type<S<int> >::type,         S<int> >::value), "");
     static_assert((std::is_same<std::common_type<S<int>, S<int> >::type, S<int> >::value), "");
 
@@ -338,6 +349,17 @@ int main(int, char**)
 #if TEST_STD_VER >= 11
     // Test that we're really variadic in C++11
     static_assert(std::is_same<std::common_type<int, int, int, int, int, int, int, int>::type, int>::value, "");
+#endif
+
+#if TEST_STD_VER > 20
+    // P2321
+    static_assert(std::is_same_v<std::common_type_t<std::tuple<int>>, std::tuple<int>>);
+    static_assert(std::is_same_v<std::common_type_t<std::tuple<int>, std::tuple<long>>, std::tuple<long>>);
+    static_assert(std::is_same_v<std::common_type_t<std::tuple<const int>, std::tuple<const int>>, std::tuple<int>>);
+    static_assert(std::is_same_v<std::common_type_t<std::tuple<const int&>>, std::tuple<int>>);
+    static_assert(std::is_same_v<std::common_type_t<std::tuple<const volatile int&>, std::tuple<const volatile long&>>, std::tuple<long>>);
+
+    static_assert(std::is_same_v<std::common_reference_t<A, std::tuple<B>,std::tuple<C>>, std::tuple<B>>);
 #endif
 
   return 0;

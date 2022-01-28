@@ -48,7 +48,7 @@ int main(int, char**)
     test<unsigned long>(0);
     test<long long>(0);
     test<unsigned long long>(0);
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     test<__int128_t>(0);
     test<__uint128_t>(0);
 #endif

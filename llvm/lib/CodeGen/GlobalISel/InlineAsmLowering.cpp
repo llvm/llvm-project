@@ -298,7 +298,7 @@ bool InlineAsmLowering::lowerInlineAsm(
 
     // Compute the value type for each operand.
     if (OpInfo.hasArg()) {
-      OpInfo.CallOperandVal = const_cast<Value *>(Call.getArgOperand(ArgNo++));
+      OpInfo.CallOperandVal = const_cast<Value *>(Call.getArgOperand(ArgNo));
 
       if (isa<BasicBlock>(OpInfo.CallOperandVal)) {
         LLVM_DEBUG(dbgs() << "Basic block input operands not supported yet\n");
@@ -310,10 +310,8 @@ bool InlineAsmLowering::lowerInlineAsm(
       // If this is an indirect operand, the operand is a pointer to the
       // accessed type.
       if (OpInfo.isIndirect) {
-        PointerType *PtrTy = dyn_cast<PointerType>(OpTy);
-        if (!PtrTy)
-          report_fatal_error("Indirect operand for inline asm not a pointer!");
-        OpTy = PtrTy->getElementType();
+        OpTy = Call.getAttributes().getParamElementType(ArgNo);
+        assert(OpTy && "Indirect operand must have elementtype attribute");
       }
 
       // FIXME: Support aggregate input operands
@@ -325,7 +323,7 @@ bool InlineAsmLowering::lowerInlineAsm(
 
       OpInfo.ConstraintVT =
           TLI->getAsmOperandValueType(DL, OpTy, true).getSimpleVT();
-
+      ++ArgNo;
     } else if (OpInfo.Type == InlineAsm::isOutput && !OpInfo.isIndirect) {
       assert(!Call.getType()->isVoidTy() && "Bad inline asm!");
       if (StructType *STy = dyn_cast<StructType>(Call.getType())) {
@@ -625,7 +623,8 @@ bool InlineAsmLowering::lowerInlineAsm(
 
       Register SrcReg = OpInfo.Regs[0];
       unsigned SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
-      if (MRI->getType(ResRegs[i]).getSizeInBits() < SrcSize) {
+      LLT ResTy = MRI->getType(ResRegs[i]);
+      if (ResTy.isScalar() && ResTy.getSizeInBits() < SrcSize) {
         // First copy the non-typed virtual register into a generic virtual
         // register
         Register Tmp1Reg =
@@ -633,9 +632,14 @@ bool InlineAsmLowering::lowerInlineAsm(
         MIRBuilder.buildCopy(Tmp1Reg, SrcReg);
         // Need to truncate the result of the register
         MIRBuilder.buildTrunc(ResRegs[i], Tmp1Reg);
-      } else {
+      } else if (ResTy.getSizeInBits() == SrcSize) {
         MIRBuilder.buildCopy(ResRegs[i], SrcReg);
+      } else {
+        LLVM_DEBUG(dbgs() << "Unhandled output operand with "
+                             "mismatched register size\n");
+        return false;
       }
+
       break;
     }
     case TargetLowering::C_Immediate:

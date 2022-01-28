@@ -32,7 +32,7 @@ using namespace mlir::linalg;
 
 namespace {
 struct TestLinalgTransforms
-    : public PassWrapper<TestLinalgTransforms, FunctionPass> {
+    : public PassWrapper<TestLinalgTransforms, OperationPass<FuncOp>> {
   TestLinalgTransforms() = default;
   TestLinalgTransforms(const TestLinalgTransforms &pass) : PassWrapper(pass) {}
 
@@ -42,6 +42,7 @@ struct TestLinalgTransforms
                     memref::MemRefDialect,
                     scf::SCFDialect,
                     StandardOpsDialect,
+                    linalg::LinalgDialect,
                     vector::VectorDialect,
                     gpu::GPUDialect>();
     // clang-format on
@@ -53,7 +54,7 @@ struct TestLinalgTransforms
     return "Test Linalg transformation patterns by applying them greedily.";
   }
 
-  void runOnFunction() override;
+  void runOnOperation() override;
 
   Option<bool> testPatterns{*this, "test-patterns",
                             llvm::cl::desc("Test a mixed set of patterns"),
@@ -370,12 +371,11 @@ static SmallVector<ProcInfo, 2>
 getGpuProcIds(OpBuilder &b, Location loc, ArrayRef<Range> parallelLoopRanges) {
   size_t count = std::min<size_t>(3, parallelLoopRanges.size());
   SmallVector<ProcInfo, 2> procInfo(count);
-  const char *xyz[] = {"x", "y", "z"};
   Type indexType = b.getIndexType();
   for (unsigned i = 0; i < count; ++i) {
-    procInfo[count - 1 - i] = {
-        b.create<IdOp>(loc, indexType, b.getStringAttr(xyz[i])),
-        b.create<NProcsOp>(loc, indexType, b.getStringAttr(xyz[i]))};
+    gpu::Dimension dim = *gpu::symbolizeDimension(i);
+    procInfo[count - 1 - i] = {b.create<IdOp>(loc, indexType, dim),
+                               b.create<NProcsOp>(loc, indexType, dim)};
   }
   return procInfo;
 }
@@ -550,20 +550,20 @@ static void applyLinalgToVectorPatterns(FuncOp funcOp) {
       funcOp.getContext(),
       LinalgTransformationFilter()
           .addOpFilter<ContractionOpInterface, FillOp, CopyOp, GenericOp>());
-  populatePadTensorOpVectorizationPatterns(patterns);
+  populatePadOpVectorizationPatterns(patterns);
   populateConvolutionVectorizationPatterns(patterns);
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
 static void applyPadTensorToGenericPatterns(FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
-  patterns.add<PadTensorOpTransformationPattern>(funcOp.getContext());
+  patterns.add<PadOpTransformationPattern>(funcOp.getContext());
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
 static void applyGeneralizePadTensorPatterns(FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
-  patterns.add<GeneralizePadTensorOpPattern>(funcOp.getContext());
+  patterns.add<GeneralizePadOpPattern>(funcOp.getContext());
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
@@ -675,9 +675,9 @@ static void applyTiledLoopPeelingPattern(FuncOp funcOp,
 }
 
 /// Apply transformations specified as patterns.
-void TestLinalgTransforms::runOnFunction() {
+void TestLinalgTransforms::runOnOperation() {
   auto lambda = [&](void *) {
-    getFunction().walk([](LinalgOp op) {
+    getOperation().walk([](LinalgOp op) {
       op->removeAttr(LinalgTransforms::kLinalgTransformMarker);
     });
   };
@@ -686,39 +686,39 @@ void TestLinalgTransforms::runOnFunction() {
   if (testPromotionOptions) {
     RewritePatternSet patterns(&getContext());
     fillPromotionCallBackPatterns(&getContext(), patterns);
-    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     return;
   }
   if (testTileAndDistributionOptions) {
     RewritePatternSet patterns(&getContext());
     fillTileAndDistributePatterns(&getContext(), patterns);
-    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     return;
   }
   if (testPatterns)
-    return applyPatterns(getFunction());
+    return applyPatterns(getOperation());
   if (testMatmulToVectorPatterns1dTiling || testMatmulToVectorPatterns2dTiling)
-    return applyMatmulToVectorPatterns(getFunction(),
+    return applyMatmulToVectorPatterns(getOperation(),
                                        testMatmulToVectorPatterns1dTiling,
                                        testMatmulToVectorPatterns2dTiling);
   if (testVectorTransferForwardingPatterns)
-    return applyVectorTransferForwardingPatterns(getFunction());
+    return applyVectorTransferForwardingPatterns(getOperation());
   if (testGenericToVectorPattern)
-    return applyLinalgToVectorPatterns(getFunction());
+    return applyLinalgToVectorPatterns(getOperation());
   if (testTransformPadTensor)
-    return applyPadTensorToGenericPatterns(getFunction());
+    return applyPadTensorToGenericPatterns(getOperation());
   if (testGeneralizePadTensor)
-    return applyGeneralizePadTensorPatterns(getFunction());
+    return applyGeneralizePadTensorPatterns(getOperation());
   if (testSwapSubTensorPadTensor)
-    return applyExtractSliceOfPadTensorSwapPattern(getFunction());
+    return applyExtractSliceOfPadTensorSwapPattern(getOperation());
   if (testTiledLoopPeeling.hasValue())
-    return applyTiledLoopPeelingPattern(getFunction(), testTiledLoopPeeling,
+    return applyTiledLoopPeelingPattern(getOperation(), testTiledLoopPeeling,
                                         skipPartial);
   if (testTilePattern)
-    return applyTilePattern(getFunction(), loopType, tileSizes, peeledLoops,
+    return applyTilePattern(getOperation(), loopType, tileSizes, peeledLoops,
                             /*scalarizeDynamicDims=*/false);
   if (testTileScalarizeDynamicDims)
-    return applyTilePattern(getFunction(), loopType, tileSizes,
+    return applyTilePattern(getOperation(), loopType, tileSizes,
                             /*peeledLoops=*/{}, /*scalarizeDynamicDims=*/true);
 }
 

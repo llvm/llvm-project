@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Support/AArch64TargetParser.h"
 #include "llvm/Support/TargetParser.h"
 
 using namespace llvm;
@@ -370,11 +371,6 @@ void AArch64Subtarget::mirFileLoaded(MachineFunction &MF) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
   if (!MFI.isMaxCallFrameSizeComputed())
     MFI.computeMaxCallFrameSize(MF);
-}
-
-bool AArch64Subtarget::useSVEForFixedLengthVectors() const {
-  // Prefer NEON unless larger SVE registers are available.
-  return hasSVE() && getMinSVEVectorSizeInBits() >= 256;
 }
 
 bool AArch64Subtarget::useAA() const { return UseAA; }

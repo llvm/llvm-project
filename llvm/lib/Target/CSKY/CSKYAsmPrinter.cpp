@@ -58,6 +58,33 @@ void CSKYAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
 // instructions) auto-generated.
 #include "CSKYGenMCPseudoLowering.inc"
 
+void CSKYAsmPrinter::expandTLSLA(const MachineInstr *MI) {
+  const CSKYInstrInfo *TII = Subtarget->getInstrInfo();
+
+  DebugLoc DL = MI->getDebugLoc();
+
+  MCSymbol *PCLabel = OutContext.getOrCreateSymbol(
+      Twine(MAI->getPrivateGlobalPrefix()) + "PC" + Twine(getFunctionNumber()) +
+      "_" + Twine(MI->getOperand(3).getImm()));
+
+  OutStreamer->emitLabel(PCLabel);
+
+  auto Instr = BuildMI(*MF, DL, TII->get(CSKY::LRW32))
+                   .add(MI->getOperand(0))
+                   .add(MI->getOperand(2));
+  MCInst LRWInst;
+  MCInstLowering.Lower(Instr, LRWInst);
+  EmitToStreamer(*OutStreamer, LRWInst);
+
+  Instr = BuildMI(*MF, DL, TII->get(CSKY::GRS32))
+              .add(MI->getOperand(1))
+              .addSym(PCLabel);
+  MCInst GRSInst;
+  MCInstLowering.Lower(Instr, GRSInst);
+  EmitToStreamer(*OutStreamer, GRSInst);
+  return;
+}
+
 void CSKYAsmPrinter::emitCustomConstantPool(const MachineInstr *MI) {
 
   // This instruction represents a floating constant pool in the function.
@@ -101,6 +128,9 @@ void CSKYAsmPrinter::emitInstruction(const MachineInstr *MI) {
   if (InConstantPool && MI->getOpcode() != CSKY::CONSTPOOL_ENTRY) {
     InConstantPool = false;
   }
+
+  if (MI->getOpcode() == CSKY::PseudoTLSLA32)
+    return expandTLSLA(MI);
 
   if (MI->getOpcode() == CSKY::CONSTPOOL_ENTRY)
     return emitCustomConstantPool(MI);

@@ -181,7 +181,7 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
     MLIRContext context;
     context.printOpOnDiagnostic(!verifyDiagnostics);
     llvm::SourceMgr sourceMgr;
-    sourceMgr.AddNewSourceBuffer(std::move(ownedBuffer), llvm::SMLoc());
+    sourceMgr.AddNewSourceBuffer(std::move(ownedBuffer), SMLoc());
 
     if (!verifyDiagnostics) {
       SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, &context);

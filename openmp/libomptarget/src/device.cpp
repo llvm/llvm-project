@@ -19,6 +19,33 @@
 #include <cstdio>
 #include <string>
 
+int HostDataToTargetTy::addEventIfNecessary(
+    DeviceTy &Device, AsyncInfoTy &AsyncInfo) const {
+  // First, check if the user disabled atomic map transfer/malloc/dealloc.
+  if (!PM->UseEventsForAtomicTransfers)
+    return OFFLOAD_SUCCESS;
+
+  void *Event = getEvent();
+  bool NeedNewEvent = Event == nullptr;
+  if (NeedNewEvent && Device.createEvent(&Event) != OFFLOAD_SUCCESS) {
+    REPORT("Failed to create event\n");
+    return OFFLOAD_FAIL;
+  }
+
+  // We cannot assume the event should not be nullptr because we don't
+  // know if the target support event. But if a target doesn't,
+  // recordEvent should always return success.
+  if (Device.recordEvent(Event, AsyncInfo) != OFFLOAD_SUCCESS) {
+    REPORT("Failed to set dependence on event " DPxMOD "\n", DPxPTR(Event));
+    return OFFLOAD_FAIL;
+  }
+
+  if (NeedNewEvent)
+    setEvent(Event);
+
+  return OFFLOAD_SUCCESS;
+}
+
 DeviceTy::DeviceTy(RTLInfoTy *RTL)
     : DeviceID(-1), RTL(RTL), RTLDeviceID(-1), IsInit(false), InitFlag(),
       HasPendingGlobals(false), HostDataToTargetMap(), PendingCtorsDtors(),
@@ -259,7 +286,7 @@ DeviceTy::getTargetPointer(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
   if (TargetPointer && !IsHostPtr && HasFlagTo && (IsNew || HasFlagAlways)) {
     // Lock the entry before releasing the mapping table lock such that another
     // thread that could issue data movement will get the right result.
-    Entry->lock();
+    HostDataToTargetTy::LockGuard LG(*Entry);
     // Release the mapping table lock right after the entry is locked.
     DataMapMtx.unlock();
 
@@ -268,38 +295,16 @@ DeviceTy::getTargetPointer(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
 
     int Ret = submitData(TargetPointer, HstPtrBegin, Size, AsyncInfo);
     if (Ret != OFFLOAD_SUCCESS) {
-      Entry->unlock();
       REPORT("Copying data to device failed.\n");
       // We will also return nullptr if the data movement fails because that
       // pointer points to a corrupted memory region so it doesn't make any
       // sense to continue to use it.
       TargetPointer = nullptr;
-    }
-
-    void *Event = Entry->getEvent();
-    bool NeedNewEvent = Event == nullptr;
-    if (NeedNewEvent && createEvent(&Event) != OFFLOAD_SUCCESS) {
-      Entry->unlock();
-      REPORT("Failed to create event\n");
+    } else if (Entry->addEventIfNecessary(*this, AsyncInfo) !=
+        OFFLOAD_SUCCESS)
       return {{false /* IsNewEntry */, false /* IsHostPointer */},
               {} /* MapTableEntry */,
               nullptr /* TargetPointer */};
-    }
-    // We cannot assume the event should not be nullptr because we don't
-    // know if the target support event. But if a target doesn't,
-    // recordEvent should always return success.
-    Ret = recordEvent(Event, AsyncInfo);
-    if (Ret != OFFLOAD_SUCCESS) {
-      Entry->unlock();
-      REPORT("Failed to set dependence on event " DPxMOD "\n", DPxPTR(Event));
-      return {{false /* IsNewEntry */, false /* IsHostPointer */},
-              {} /* MapTableEntry */,
-              nullptr /* TargetPointer */};
-    }
-    if (NeedNewEvent)
-      Entry->setEvent(Event);
-    // We're done with the entry. Release the entry.
-    Entry->unlock();
   } else {
     // Release the mapping table lock directly.
     DataMapMtx.unlock();
@@ -308,11 +313,10 @@ DeviceTy::getTargetPointer(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
     // Note: Entry might be nullptr because of zero length array section.
     if (Entry != HostDataToTargetListTy::iterator() && !IsHostPtr &&
         !HasPresentModifier) {
-      Entry->lock();
+      HostDataToTargetTy::LockGuard LG(*Entry);
       void *Event = Entry->getEvent();
       if (Event) {
         int Ret = waitEvent(Event, AsyncInfo);
-        Entry->unlock();
         if (Ret != OFFLOAD_SUCCESS) {
           // If it fails to wait for the event, we need to return nullptr in
           // case of any data race.
@@ -321,8 +325,6 @@ DeviceTy::getTargetPointer(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
                   {} /* MapTableEntry */,
                   nullptr /* TargetPointer */};
         }
-      } else {
-        Entry->unlock();
       }
     }
   }
@@ -333,11 +335,12 @@ DeviceTy::getTargetPointer(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
 // Used by targetDataBegin, targetDataEnd, targetDataUpdate and target.
 // Return the target pointer begin (where the data will be moved).
 // Decrement the reference counter if called from targetDataEnd.
-void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
-                               bool UpdateRefCount, bool UseHoldRefCount,
-                               bool &IsHostPtr, bool MustContain,
-                               bool ForceDelete) {
-  void *rc = NULL;
+TargetPointerResultTy
+DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
+                         bool UpdateRefCount, bool UseHoldRefCount,
+                         bool &IsHostPtr, bool MustContain, bool ForceDelete) {
+  void *TargetPointer = NULL;
+  bool IsNew = false;
   IsHostPtr = false;
   IsLast = false;
   DataMapMtx.lock();
@@ -379,7 +382,7 @@ void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
          "Size=%" PRId64 ", DynRefCount=%s%s, HoldRefCount=%s%s\n",
          DPxPTR(HstPtrBegin), DPxPTR(tp), Size, HT.dynRefCountToStr().c_str(),
          DynRefCountAction, HT.holdRefCountToStr().c_str(), HoldRefCountAction);
-    rc = (void *)tp;
+    TargetPointer = (void *)tp;
   } else if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
     // If the value isn't found in the mapping and unified shared memory
     // is on then it means we have stumbled upon a value which we need to
@@ -388,11 +391,11 @@ void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
        "memory\n",
        DPxPTR((uintptr_t)HstPtrBegin), Size);
     IsHostPtr = true;
-    rc = HstPtrBegin;
+    TargetPointer = HstPtrBegin;
   }
 
   DataMapMtx.unlock();
-  return rc;
+  return {{IsNew, IsHostPtr}, lr.Entry, TargetPointer};
 }
 
 // Return the target pointer begin (where the data will be moved).

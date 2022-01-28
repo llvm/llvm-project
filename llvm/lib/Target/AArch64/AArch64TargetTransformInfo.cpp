@@ -416,11 +416,75 @@ static Optional<Instruction *> processPhiNode(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, NPN);
 }
 
+// (from_svbool (binop (to_svbool pred) (svbool_t _) (svbool_t _))))
+// => (binop (pred) (from_svbool _) (from_svbool _))
+//
+// The above transformation eliminates a `to_svbool` in the predicate
+// operand of bitwise operation `binop` by narrowing the vector width of
+// the operation. For example, it would convert a `<vscale x 16 x i1>
+// and` into a `<vscale x 4 x i1> and`. This is profitable because
+// to_svbool must zero the new lanes during widening, whereas
+// from_svbool is free.
+static Optional<Instruction *> tryCombineFromSVBoolBinOp(InstCombiner &IC,
+                                                         IntrinsicInst &II) {
+  auto BinOp = dyn_cast<IntrinsicInst>(II.getOperand(0));
+  if (!BinOp)
+    return None;
+
+  auto IntrinsicID = BinOp->getIntrinsicID();
+  switch (IntrinsicID) {
+  case Intrinsic::aarch64_sve_and_z:
+  case Intrinsic::aarch64_sve_bic_z:
+  case Intrinsic::aarch64_sve_eor_z:
+  case Intrinsic::aarch64_sve_nand_z:
+  case Intrinsic::aarch64_sve_nor_z:
+  case Intrinsic::aarch64_sve_orn_z:
+  case Intrinsic::aarch64_sve_orr_z:
+    break;
+  default:
+    return None;
+  }
+
+  auto BinOpPred = BinOp->getOperand(0);
+  auto BinOpOp1 = BinOp->getOperand(1);
+  auto BinOpOp2 = BinOp->getOperand(2);
+
+  auto PredIntr = dyn_cast<IntrinsicInst>(BinOpPred);
+  if (!PredIntr ||
+      PredIntr->getIntrinsicID() != Intrinsic::aarch64_sve_convert_to_svbool)
+    return None;
+
+  auto PredOp = PredIntr->getOperand(0);
+  auto PredOpTy = cast<VectorType>(PredOp->getType());
+  if (PredOpTy != II.getType())
+    return None;
+
+  IRBuilder<> Builder(II.getContext());
+  Builder.SetInsertPoint(&II);
+
+  SmallVector<Value *> NarrowedBinOpArgs = {PredOp};
+  auto NarrowBinOpOp1 = Builder.CreateIntrinsic(
+      Intrinsic::aarch64_sve_convert_from_svbool, {PredOpTy}, {BinOpOp1});
+  NarrowedBinOpArgs.push_back(NarrowBinOpOp1);
+  if (BinOpOp1 == BinOpOp2)
+    NarrowedBinOpArgs.push_back(NarrowBinOpOp1);
+  else
+    NarrowedBinOpArgs.push_back(Builder.CreateIntrinsic(
+        Intrinsic::aarch64_sve_convert_from_svbool, {PredOpTy}, {BinOpOp2}));
+
+  auto NarrowedBinOp =
+      Builder.CreateIntrinsic(IntrinsicID, {PredOpTy}, NarrowedBinOpArgs);
+  return IC.replaceInstUsesWith(II, NarrowedBinOp);
+}
+
 static Optional<Instruction *> instCombineConvertFromSVBool(InstCombiner &IC,
                                                             IntrinsicInst &II) {
   // If the reinterpret instruction operand is a PHI Node
   if (isa<PHINode>(II.getArgOperand(0)))
     return processPhiNode(IC, II);
+
+  if (auto BinOpCombine = tryCombineFromSVBoolBinOp(IC, II))
+    return BinOpCombine;
 
   SmallVector<Instruction *, 32> CandidatesForRemoval;
   Value *Cursor = II.getOperand(0), *EarliestReplacement = nullptr;
@@ -1168,6 +1232,32 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   return None;
 }
 
+Optional<Value *> AArch64TTIImpl::simplifyDemandedVectorEltsIntrinsic(
+    InstCombiner &IC, IntrinsicInst &II, APInt OrigDemandedElts,
+    APInt &UndefElts, APInt &UndefElts2, APInt &UndefElts3,
+    std::function<void(Instruction *, unsigned, APInt, APInt &)>
+        SimplifyAndSetOp) const {
+  switch (II.getIntrinsicID()) {
+  default:
+    break;
+  case Intrinsic::aarch64_neon_fcvtxn:
+  case Intrinsic::aarch64_neon_rshrn:
+  case Intrinsic::aarch64_neon_sqrshrn:
+  case Intrinsic::aarch64_neon_sqrshrun:
+  case Intrinsic::aarch64_neon_sqshrn:
+  case Intrinsic::aarch64_neon_sqshrun:
+  case Intrinsic::aarch64_neon_sqxtn:
+  case Intrinsic::aarch64_neon_sqxtun:
+  case Intrinsic::aarch64_neon_uqrshrn:
+  case Intrinsic::aarch64_neon_uqshrn:
+  case Intrinsic::aarch64_neon_uqxtn:
+    SimplifyAndSetOp(&II, 0, OrigDemandedElts, UndefElts);
+    break;
+  }
+
+  return None;
+}
+
 bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
                                            ArrayRef<const Value *> Args) {
 
@@ -1500,6 +1590,15 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::FP_EXTEND, MVT::nxv4f64, MVT::nxv4f32, 2},
     { ISD::FP_EXTEND, MVT::nxv8f64, MVT::nxv8f32, 6},
 
+    // Bitcasts from float to integer
+    { ISD::BITCAST, MVT::nxv2f16, MVT::nxv2i16, 0 },
+    { ISD::BITCAST, MVT::nxv4f16, MVT::nxv4i16, 0 },
+    { ISD::BITCAST, MVT::nxv2f32, MVT::nxv2i32, 0 },
+
+    // Bitcasts from integer to float
+    { ISD::BITCAST, MVT::nxv2i16, MVT::nxv2f16, 0 },
+    { ISD::BITCAST, MVT::nxv4i16, MVT::nxv4f16, 0 },
+    { ISD::BITCAST, MVT::nxv2i32, MVT::nxv2f32, 0 },
   };
 
   if (const auto *Entry = ConvertCostTableLookup(ConversionTbl, ISD,
@@ -1594,9 +1693,12 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     if (!LT.second.isVector())
       return 0;
 
-    // The type may be split. Normalize the index to the new type.
-    unsigned Width = LT.second.getVectorNumElements();
-    Index = Index % Width;
+    // The type may be split. For fixed-width vectors we can normalize the
+    // index to the new type.
+    if (LT.second.isFixedLengthVector()) {
+      unsigned Width = LT.second.getVectorNumElements();
+      Index = Index % Width;
+    }
 
     // The element at index zero is already inside the vector.
     if (Index == 0)

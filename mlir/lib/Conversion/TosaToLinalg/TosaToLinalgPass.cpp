@@ -39,7 +39,7 @@ public:
                     tensor::TensorDialect, scf::SCFDialect>();
   }
 
-  void runOnFunction() override {
+  void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
     target.addLegalDialect<linalg::LinalgDialect, StandardOpsDialect,
@@ -55,7 +55,7 @@ public:
 
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
-    FuncOp func = getFunction();
+    FuncOp func = getOperation();
     mlir::tosa::populateTosaToLinalgConversionPatterns(&patterns);
     if (failed(applyFullConversion(func, target, std::move(patterns))))
       signalPassFailure();
@@ -68,10 +68,13 @@ std::unique_ptr<Pass> mlir::tosa::createTosaToLinalg() {
 }
 
 void mlir::tosa::addTosaToLinalgPasses(OpPassManager &pm) {
+  // Optional decompositions are designed to benefit linalg.
   pm.addNestedPass<FuncOp>(mlir::tosa::createTosaOptionalDecompositions());
-  pm.addNestedPass<FuncOp>(createTosaMakeBroadcastablePass());
-  pm.addNestedPass<FuncOp>(createTosaToLinalgNamed());
   pm.addNestedPass<FuncOp>(mlir::createCanonicalizerPass());
-  pm.addNestedPass<FuncOp>(createTosaMakeBroadcastablePass());
-  pm.addNestedPass<FuncOp>(createTosaToLinalg());
+
+  pm.addNestedPass<FuncOp>(tosa::createTosaMakeBroadcastablePass());
+  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgNamed());
+  pm.addNestedPass<FuncOp>(mlir::createCanonicalizerPass());
+  pm.addNestedPass<FuncOp>(tosa::createTosaMakeBroadcastablePass());
+  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalg());
 }

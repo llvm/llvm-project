@@ -109,6 +109,23 @@ struct DenseMapInfo<std::pair<const MCSymbol *, MCSymbolRefExpr::VariantKind>> {
 
 namespace {
 
+enum {
+  // GNU attribute tags for PowerPC ABI
+  Tag_GNU_Power_ABI_FP = 4,
+  Tag_GNU_Power_ABI_Vector = 8,
+  Tag_GNU_Power_ABI_Struct_Return = 12,
+
+  // GNU attribute values for PowerPC float ABI, as combination of two parts
+  Val_GNU_Power_ABI_NoFloat = 0b00,
+  Val_GNU_Power_ABI_HardFloat_DP = 0b01,
+  Val_GNU_Power_ABI_SoftFloat_DP = 0b10,
+  Val_GNU_Power_ABI_HardFloat_SP = 0b11,
+
+  Val_GNU_Power_ABI_LDBL_IBM128 = 0b0100,
+  Val_GNU_Power_ABI_LDBL_64 = 0b1000,
+  Val_GNU_Power_ABI_LDBL_IEEE128 = 0b1100,
+};
+
 class PPCAsmPrinter : public AsmPrinter {
 protected:
   // For TLS on AIX, we need to be able to identify TOC entries of specific
@@ -177,6 +194,8 @@ public:
   StringRef getPassName() const override {
     return "Linux PPC Assembly Printer";
   }
+
+  void emitGNUAttributes(Module &M);
 
   void emitStartOfAsmFile(Module &M) override;
   void emitEndOfAsmFile(Module &) override;
@@ -1388,6 +1407,28 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 
+void PPCLinuxAsmPrinter::emitGNUAttributes(Module &M) {
+  // Emit float ABI into GNU attribute
+  Metadata *MD = M.getModuleFlag("float-abi");
+  MDString *FloatABI = dyn_cast_or_null<MDString>(MD);
+  if (!FloatABI)
+    return;
+  StringRef flt = FloatABI->getString();
+  // TODO: Support emitting soft-fp and hard double/single attributes.
+  if (flt == "doubledouble")
+    OutStreamer->emitGNUAttribute(Tag_GNU_Power_ABI_FP,
+                                  Val_GNU_Power_ABI_HardFloat_DP |
+                                      Val_GNU_Power_ABI_LDBL_IBM128);
+  else if (flt == "ieeequad")
+    OutStreamer->emitGNUAttribute(Tag_GNU_Power_ABI_FP,
+                                  Val_GNU_Power_ABI_HardFloat_DP |
+                                      Val_GNU_Power_ABI_LDBL_IEEE128);
+  else if (flt == "ieeedouble")
+    OutStreamer->emitGNUAttribute(Tag_GNU_Power_ABI_FP,
+                                  Val_GNU_Power_ABI_HardFloat_DP |
+                                      Val_GNU_Power_ABI_LDBL_64);
+}
+
 void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
   if (!Subtarget->isPPC64())
     return PPCAsmPrinter::emitInstruction(MI);
@@ -1641,6 +1682,8 @@ void PPCLinuxAsmPrinter::emitEndOfAsmFile(Module &M) {
 
   PPCTargetStreamer *TS =
       static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
+
+  emitGNUAttributes(M);
 
   if (!TOC.empty()) {
     const char *Name = isPPC64 ? ".toc" : ".got2";

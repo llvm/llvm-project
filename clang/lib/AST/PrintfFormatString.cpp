@@ -428,7 +428,7 @@ bool clang::analyze_format_string::ParsePrintfString(FormatStringHandler &H,
       continue;
     // We have a format specifier.  Pass it to the callback.
     if (!H.HandlePrintfSpecifier(FSR.getValue(), FSR.getStart(),
-                                 I - FSR.getStart()))
+                                 I - FSR.getStart(), Target))
       return true;
   }
   assert(I == E && "Format string not exhausted");

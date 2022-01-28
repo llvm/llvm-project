@@ -2339,9 +2339,8 @@ bool PPCInstrInfo::ClobbersPredicate(MachineInstr &MI,
           Found = true;
         }
       } else if (MO.isRegMask()) {
-        for (TargetRegisterClass::iterator I = RC->begin(),
-             IE = RC->end(); I != IE; ++I)
-          if (MO.clobbersPhysReg(*I)) {
+        for (MCPhysReg R : *RC)
+          if (MO.clobbersPhysReg(R)) {
             Pred.push_back(MO);
             Found = true;
           }
@@ -3253,7 +3252,7 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
       Register Reg = MI.getOperand(i).getReg();
       if (!Register::isVirtualRegister(Reg))
         continue;
-      unsigned TrueReg = TRI->lookThruCopyLike(Reg, MRI);
+      Register TrueReg = TRI->lookThruCopyLike(Reg, MRI);
       if (Register::isVirtualRegister(TrueReg)) {
         DefMI = MRI->getVRegDef(TrueReg);
         if (DefMI->getOpcode() == PPC::LI || DefMI->getOpcode() == PPC::LI8 ||
@@ -3502,8 +3501,8 @@ bool PPCInstrInfo::foldFrameOffset(MachineInstr &MI) const {
     return false;
 
   assert(ADDIMI && "There should be ADDIMI for valid ToBeChangedReg.");
-  unsigned ToBeChangedReg = ADDIMI->getOperand(0).getReg();
-  unsigned ScaleReg = ADDMI->getOperand(ScaleRegIdx).getReg();
+  Register ToBeChangedReg = ADDIMI->getOperand(0).getReg();
+  Register ScaleReg = ADDMI->getOperand(ScaleRegIdx).getReg();
   auto NewDefFor = [&](unsigned Reg, MachineBasicBlock::iterator Start,
                        MachineBasicBlock::iterator End) {
     for (auto It = ++Start; It != End; It++)
@@ -3720,7 +3719,7 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
 bool PPCInstrInfo::combineRLWINM(MachineInstr &MI,
                                  MachineInstr **ToErase) const {
   MachineRegisterInfo *MRI = &MI.getParent()->getParent()->getRegInfo();
-  unsigned FoldingReg = MI.getOperand(1).getReg();
+  Register FoldingReg = MI.getOperand(1).getReg();
   if (!Register::isVirtualRegister(FoldingReg))
     return false;
   MachineInstr *SrcMI = MRI->getVRegDef(FoldingReg);

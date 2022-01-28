@@ -21,8 +21,10 @@
 #include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/Caching.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/xxhash.h"
 
 namespace llvm {
@@ -52,6 +54,7 @@ Expected<std::string> getDefaultDebuginfodCacheDirectory() {
   if (!sys::path::cache_directory(CacheDirectory))
     return createStringError(
         errc::io_error, "Unable to determine appropriate cache directory.");
+  sys::path::append(CacheDirectory, "llvm-debuginfod", "client");
   return std::string(CacheDirectory);
 }
 

@@ -106,6 +106,12 @@ public:
   Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
                                                IntrinsicInst &II) const;
 
+  Optional<Value *> simplifyDemandedVectorEltsIntrinsic(
+      InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
+      APInt &UndefElts2, APInt &UndefElts3,
+      std::function<void(Instruction *, unsigned, APInt, APInt &)>
+          SimplifyAndSetOp) const;
+
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
     switch (K) {
     case TargetTransformInfo::RGK_Scalar:
@@ -305,6 +311,10 @@ public:
 
   unsigned getGISelRematGlobalCost() const {
     return 2;
+  }
+
+  bool emitGetActiveLaneMask() const {
+    return ST->hasSVE();
   }
 
   bool supportsScalableVectors() const { return ST->hasSVE(); }

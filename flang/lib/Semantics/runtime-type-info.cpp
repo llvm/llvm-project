@@ -354,7 +354,8 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
   auto locationRestorer{common::ScopedSet(location_, dtSymbol->name())};
   // Check for an existing description that can be imported from a USE'd module
   std::string typeName{dtSymbol->name().ToString()};
-  if (typeName.empty() || typeName[0] == '.') {
+  if (typeName.empty() ||
+      (typeName.front() == '.' && !context_.IsTempName(typeName))) {
     return nullptr;
   }
   std::string distinctName{typeName};
@@ -627,7 +628,7 @@ SourceName RuntimeTableBuilder::SaveObjectName(const std::string &name) {
 SomeExpr RuntimeTableBuilder::SaveNameAsPointerTarget(
     Scope &scope, const std::string &name) {
   CHECK(!name.empty());
-  CHECK(name.front() != '.');
+  CHECK(name.front() != '.' || context_.IsTempName(name));
   ObjectEntityDetails object;
   auto len{static_cast<common::ConstantSubscript>(name.size())};
   if (const auto *spec{scope.FindType(DeclTypeSpec{CharacterTypeSpec{
@@ -1064,7 +1065,7 @@ void RuntimeTableBuilder::IncorporateDefinedIoGenericInterfaces(
     GenericKind::DefinedIo definedIo, const Scope *scope) {
   for (; !scope->IsGlobal(); scope = &scope->parent()) {
     if (auto asst{scope->find(name)}; asst != scope->end()) {
-      const Symbol &generic{*asst->second};
+      const Symbol &generic{asst->second->GetUltimate()};
       const auto &genericDetails{generic.get<GenericDetails>()};
       CHECK(std::holds_alternative<GenericKind::DefinedIo>(
           genericDetails.kind().u));

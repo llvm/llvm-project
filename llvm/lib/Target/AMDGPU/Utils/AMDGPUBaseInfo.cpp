@@ -143,6 +143,8 @@ bool isHsaAbiVersion3Or4(const MCSubtargetInfo *STI) {
 #define GET_MIMGInfoTable_IMPL
 #define GET_MIMGLZMappingTable_IMPL
 #define GET_MIMGMIPMappingTable_IMPL
+#define GET_MIMGBiasMappingTable_IMPL
+#define GET_MIMGOffsetMappingTable_IMPL
 #define GET_MIMGG16MappingTable_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
@@ -1075,9 +1077,25 @@ static unsigned getLastSymbolicHwreg(const MCSubtargetInfo &STI) {
 }
 
 bool isValidHwreg(int64_t Id, const MCSubtargetInfo &STI) {
-  return
-    ID_SYMBOLIC_FIRST_ <= Id && Id < getLastSymbolicHwreg(STI) &&
-    IdSymbolic[Id] && (Id != ID_XNACK_MASK || !AMDGPU::isGFX10_BEncoding(STI));
+  switch (Id) {
+  case ID_HW_ID:
+    return isSI(STI) || isCI(STI) || isVI(STI) || isGFX9(STI);
+  case ID_HW_ID1:
+  case ID_HW_ID2:
+    return isGFX10Plus(STI);
+  case ID_XNACK_MASK:
+    return isGFX10(STI) && !AMDGPU::isGFX10_BEncoding(STI);
+  case ID_TBA_LO:
+  case ID_TBA_HI:
+  case ID_TMA_LO:
+  case ID_TMA_HI:
+    return isGFX9(STI) || isGFX10(STI);
+  case ID_POPS_PACKER:
+    return isGFX10(STI);
+  default:
+    return ID_SYMBOLIC_FIRST_ <= Id && Id < getLastSymbolicHwreg(STI) &&
+           IdSymbolic[Id];
+  }
 }
 
 bool isValidHwreg(int64_t Id) {

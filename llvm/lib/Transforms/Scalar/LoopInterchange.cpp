@@ -292,33 +292,6 @@ static LoopVector populateWorklist(Loop &L) {
   return LoopList;
 }
 
-static PHINode *getInductionVariable(Loop *L, ScalarEvolution *SE) {
-  PHINode *InnerIndexVar = L->getCanonicalInductionVariable();
-  if (InnerIndexVar)
-    return InnerIndexVar;
-  if (L->getLoopLatch() == nullptr || L->getLoopPredecessor() == nullptr)
-    return nullptr;
-  for (BasicBlock::iterator I = L->getHeader()->begin(); isa<PHINode>(I); ++I) {
-    PHINode *PhiVar = cast<PHINode>(I);
-    Type *PhiTy = PhiVar->getType();
-    if (!PhiTy->isIntegerTy() && !PhiTy->isFloatingPointTy() &&
-        !PhiTy->isPointerTy())
-      return nullptr;
-    const SCEVAddRecExpr *AddRec =
-        dyn_cast<SCEVAddRecExpr>(SE->getSCEV(PhiVar));
-    if (!AddRec || !AddRec->isAffine())
-      continue;
-    const SCEV *Step = AddRec->getStepRecurrence(*SE);
-    if (!isa<SCEVConstant>(Step))
-      continue;
-    // Found the induction variable.
-    // FIXME: Handle loops with more than one induction variable. Note that,
-    // currently, legality makes sure we have only one induction variable.
-    return PhiVar;
-  }
-  return nullptr;
-}
-
 namespace {
 
 /// LoopInterchangeLegality checks if it is legal to interchange the loop.
@@ -332,14 +305,22 @@ public:
   bool canInterchangeLoops(unsigned InnerLoopId, unsigned OuterLoopId,
                            CharMatrix &DepMatrix);
 
+  /// Discover induction PHIs in the header of \p L. Induction
+  /// PHIs are added to \p Inductions.
+  bool findInductions(Loop *L, SmallVectorImpl<PHINode *> &Inductions);
+
   /// Check if the loop structure is understood. We do not handle triangular
   /// loops for now.
-  bool isLoopStructureUnderstood(PHINode *InnerInductionVar);
+  bool isLoopStructureUnderstood();
 
   bool currentLimitations();
 
   const SmallPtrSetImpl<PHINode *> &getOuterInnerReductions() const {
     return OuterInnerReductions;
+  }
+
+  const SmallVectorImpl<PHINode *> &getInnerLoopInductions() const {
+    return InnerLoopInductions;
   }
 
 private:
@@ -365,6 +346,9 @@ private:
   /// Set of reduction PHIs taking part of a reduction across the inner and
   /// outer loop.
   SmallPtrSet<PHINode *, 4> OuterInnerReductions;
+
+  /// Set of inner loop induction PHIs
+  SmallVector<PHINode *, 8> InnerLoopInductions;
 };
 
 /// LoopInterchangeProfitability checks if it is profitable to interchange the
@@ -635,25 +619,26 @@ bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
   return true;
 }
 
-bool LoopInterchangeLegality::isLoopStructureUnderstood(
-    PHINode *InnerInduction) {
-  unsigned Num = InnerInduction->getNumOperands();
+bool LoopInterchangeLegality::isLoopStructureUnderstood() {
   BasicBlock *InnerLoopPreheader = InnerLoop->getLoopPreheader();
-  for (unsigned i = 0; i < Num; ++i) {
-    Value *Val = InnerInduction->getOperand(i);
-    if (isa<Constant>(Val))
-      continue;
-    Instruction *I = dyn_cast<Instruction>(Val);
-    if (!I)
-      return false;
-    // TODO: Handle triangular loops.
-    // e.g. for(int i=0;i<N;i++)
-    //        for(int j=i;j<N;j++)
-    unsigned IncomBlockIndx = PHINode::getIncomingValueNumForOperand(i);
-    if (InnerInduction->getIncomingBlock(IncomBlockIndx) ==
-            InnerLoopPreheader &&
-        !OuterLoop->isLoopInvariant(I)) {
-      return false;
+  for (PHINode *InnerInduction : InnerLoopInductions) {
+    unsigned Num = InnerInduction->getNumOperands();
+    for (unsigned i = 0; i < Num; ++i) {
+      Value *Val = InnerInduction->getOperand(i);
+      if (isa<Constant>(Val))
+        continue;
+      Instruction *I = dyn_cast<Instruction>(Val);
+      if (!I)
+        return false;
+      // TODO: Handle triangular loops.
+      // e.g. for(int i=0;i<N;i++)
+      //        for(int j=i;j<N;j++)
+      unsigned IncomBlockIndx = PHINode::getIncomingValueNumForOperand(i);
+      if (InnerInduction->getIncomingBlock(IncomBlockIndx) ==
+              InnerLoopPreheader &&
+          !OuterLoop->isLoopInvariant(I)) {
+        return false;
+      }
     }
   }
 
@@ -682,27 +667,34 @@ bool LoopInterchangeLegality::isLoopStructureUnderstood(
     // Return true if V is InnerInduction, or a cast from
     // InnerInduction, or a binary operator that involves
     // InnerInduction and a constant.
-    std::function<bool(Value *)> IsPathToIndVar;
-    IsPathToIndVar = [&InnerInduction, &IsPathToIndVar](Value *V) -> bool {
-      if (V == InnerInduction)
+    std::function<bool(Value *)> IsPathToInnerIndVar;
+    IsPathToInnerIndVar = [this, &IsPathToInnerIndVar](const Value *V) -> bool {
+      if (llvm::is_contained(InnerLoopInductions, V))
         return true;
       if (isa<Constant>(V))
         return true;
-      Instruction *I = dyn_cast<Instruction>(V);
+      const Instruction *I = dyn_cast<Instruction>(V);
       if (!I)
         return false;
       if (isa<CastInst>(I))
-        return IsPathToIndVar(I->getOperand(0));
+        return IsPathToInnerIndVar(I->getOperand(0));
       if (isa<BinaryOperator>(I))
-        return IsPathToIndVar(I->getOperand(0)) &&
-               IsPathToIndVar(I->getOperand(1));
+        return IsPathToInnerIndVar(I->getOperand(0)) &&
+               IsPathToInnerIndVar(I->getOperand(1));
       return false;
     };
 
-    if (IsPathToIndVar(Op0) && !isa<Constant>(Op0)) {
+    // In case of multiple inner loop indvars, it is okay if LHS and RHS
+    // are both inner indvar related variables.
+    if (IsPathToInnerIndVar(Op0) && IsPathToInnerIndVar(Op1))
+      return true;
+
+    // Otherwise we check if the cmp instruction compares an inner indvar
+    // related variable (Left) with a outer loop invariant (Right).
+    if (IsPathToInnerIndVar(Op0) && !isa<Constant>(Op0)) {
       Left = Op0;
       Right = Op1;
-    } else if (IsPathToIndVar(Op1) && !isa<Constant>(Op1)) {
+    } else if (IsPathToInnerIndVar(Op1) && !isa<Constant>(Op1)) {
       Left = Op1;
       Right = Op0;
     }
@@ -814,7 +806,6 @@ bool LoopInterchangeLegality::currentLimitations() {
     return true;
   }
 
-  PHINode *InnerInductionVar;
   SmallVector<PHINode *, 8> Inductions;
   if (!findInductionAndReductions(OuterLoop, Inductions, InnerLoop)) {
     LLVM_DEBUG(
@@ -826,20 +817,6 @@ bool LoopInterchangeLegality::currentLimitations() {
                                       OuterLoop->getHeader())
              << "Only outer loops with induction or reduction PHI nodes can be"
                 " interchanged currently.";
-    });
-    return true;
-  }
-
-  // TODO: Currently we handle only loops with 1 induction variable.
-  if (Inductions.size() != 1) {
-    LLVM_DEBUG(dbgs() << "Loops with more than 1 induction variables are not "
-                      << "supported currently.\n");
-    ORE->emit([&]() {
-      return OptimizationRemarkMissed(DEBUG_TYPE, "MultiIndutionOuter",
-                                      OuterLoop->getStartLoc(),
-                                      OuterLoop->getHeader())
-             << "Only outer loops with 1 induction variable can be "
-                "interchanged currently.";
     });
     return true;
   }
@@ -859,24 +836,8 @@ bool LoopInterchangeLegality::currentLimitations() {
     return true;
   }
 
-  // TODO: Currently we handle only loops with 1 induction variable.
-  if (Inductions.size() != 1) {
-    LLVM_DEBUG(
-        dbgs() << "We currently only support loops with 1 induction variable."
-               << "Failed to interchange due to current limitation\n");
-    ORE->emit([&]() {
-      return OptimizationRemarkMissed(DEBUG_TYPE, "MultiInductionInner",
-                                      InnerLoop->getStartLoc(),
-                                      InnerLoop->getHeader())
-             << "Only inner loops with 1 induction variable can be "
-                "interchanged currently.";
-    });
-    return true;
-  }
-  InnerInductionVar = Inductions.pop_back_val();
-
   // TODO: Triangular loops are not handled for now.
-  if (!isLoopStructureUnderstood(InnerInductionVar)) {
+  if (!isLoopStructureUnderstood()) {
     LLVM_DEBUG(dbgs() << "Loop structure not understood by pass\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedStructureInner",
@@ -888,6 +849,16 @@ bool LoopInterchangeLegality::currentLimitations() {
   }
 
   return false;
+}
+
+bool LoopInterchangeLegality::findInductions(
+    Loop *L, SmallVectorImpl<PHINode *> &Inductions) {
+  for (PHINode &PHI : L->getHeader()->phis()) {
+    InductionDescriptor ID;
+    if (InductionDescriptor::isInductionPHI(&PHI, L, SE, ID))
+      Inductions.push_back(&PHI);
+  }
+  return !Inductions.empty();
 }
 
 // We currently only support LCSSA PHI nodes in the inner loop exit, if their
@@ -1017,6 +988,11 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
 
         return false;
       }
+
+  if (!findInductions(InnerLoop, InnerLoopInductions)) {
+    LLVM_DEBUG(dbgs() << "Cound not find inner loop induction variables.\n");
+    return false;
+  }
 
   if (!areInnerLoopLatchPHIsSupported(OuterLoop, InnerLoop)) {
     LLVM_DEBUG(dbgs() << "Found unsupported PHI nodes in inner loop latch.\n");
@@ -1274,25 +1250,25 @@ void LoopInterchangeTransform::restructureLoops(
 
 bool LoopInterchangeTransform::transform() {
   bool Transformed = false;
-  Instruction *InnerIndexVar;
 
   if (InnerLoop->getSubLoops().empty()) {
     BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
     LLVM_DEBUG(dbgs() << "Splitting the inner loop latch\n");
-    PHINode *InductionPHI = getInductionVariable(InnerLoop, SE);
-    if (!InductionPHI) {
+    auto &InductionPHIs = LIL.getInnerLoopInductions();
+    if (InductionPHIs.empty()) {
       LLVM_DEBUG(dbgs() << "Failed to find the point to split loop latch \n");
       return false;
     }
 
-    if (InductionPHI->getIncomingBlock(0) == InnerLoopPreHeader)
-      InnerIndexVar = dyn_cast<Instruction>(InductionPHI->getIncomingValue(1));
-    else
-      InnerIndexVar = dyn_cast<Instruction>(InductionPHI->getIncomingValue(0));
-
-    // Ensure that InductionPHI is the first Phi node.
-    if (&InductionPHI->getParent()->front() != InductionPHI)
-      InductionPHI->moveBefore(&InductionPHI->getParent()->front());
+    SmallVector<Instruction *, 8> InnerIndexVarList;
+    for (PHINode *CurInductionPHI : InductionPHIs) {
+      if (CurInductionPHI->getIncomingBlock(0) == InnerLoopPreHeader)
+        InnerIndexVarList.push_back(
+            dyn_cast<Instruction>(CurInductionPHI->getIncomingValue(1)));
+      else
+        InnerIndexVarList.push_back(
+            dyn_cast<Instruction>(CurInductionPHI->getIncomingValue(0)));
+    }
 
     // Create a new latch block for the inner loop. We split at the
     // current latch's terminator and then move the condition and all
@@ -1304,7 +1280,7 @@ bool LoopInterchangeTransform::transform() {
 
     SmallSetVector<Instruction *, 4> WorkList;
     unsigned i = 0;
-    auto MoveInstructions = [&i, &WorkList, this, InductionPHI, NewLatch]() {
+    auto MoveInstructions = [&i, &WorkList, this, &InductionPHIs, NewLatch]() {
       for (; i < WorkList.size(); i++) {
         // Duplicate instruction and move it the new latch. Update uses that
         // have been moved.
@@ -1316,7 +1292,8 @@ bool LoopInterchangeTransform::transform() {
         for (Use &U : llvm::make_early_inc_range(WorkList[i]->uses())) {
           Instruction *UserI = cast<Instruction>(U.getUser());
           if (!InnerLoop->contains(UserI->getParent()) ||
-              UserI->getParent() == NewLatch || UserI == InductionPHI)
+              UserI->getParent() == NewLatch ||
+              llvm::is_contained(InductionPHIs, UserI))
             U.set(NewI);
         }
         // Add operands of moved instruction to the worklist, except if they are
@@ -1325,7 +1302,7 @@ bool LoopInterchangeTransform::transform() {
           Instruction *OpI = dyn_cast<Instruction>(Op);
           if (!OpI ||
               this->LI->getLoopFor(OpI->getParent()) != this->InnerLoop ||
-              OpI == InductionPHI)
+              llvm::is_contained(InductionPHIs, OpI))
             continue;
           WorkList.insert(OpI);
         }
@@ -1339,7 +1316,8 @@ bool LoopInterchangeTransform::transform() {
     if (CondI)
       WorkList.insert(CondI);
     MoveInstructions();
-    WorkList.insert(cast<Instruction>(InnerIndexVar));
+    for (Instruction *InnerIndexVar : InnerIndexVarList)
+      WorkList.insert(cast<Instruction>(InnerIndexVar));
     MoveInstructions();
 
     // Splits the inner loops phi nodes out into a separate basic block.
@@ -1612,7 +1590,6 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   updateSuccessor(InnerLoopLatchPredecessorBI, InnerLoopLatch,
                   InnerLoopLatchSuccessor, DTUpdates);
 
-
   if (OuterLoopLatchBI->getSuccessor(0) == OuterLoopHeader)
     OuterLoopLatchSuccessor = OuterLoopLatchBI->getSuccessor(1);
   else
@@ -1639,19 +1616,22 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   SmallVector<PHINode *, 4> InnerLoopPHIs, OuterLoopPHIs;
   for (PHINode &PHI : InnerLoopHeader->phis())
     if (OuterInnerReductions.contains(&PHI))
-      InnerLoopPHIs.push_back(cast<PHINode>(&PHI));
+      InnerLoopPHIs.push_back(&PHI);
+
   for (PHINode &PHI : OuterLoopHeader->phis())
     if (OuterInnerReductions.contains(&PHI))
-      OuterLoopPHIs.push_back(cast<PHINode>(&PHI));
+      OuterLoopPHIs.push_back(&PHI);
 
   // Now move the remaining reduction PHIs from outer to inner loop header and
   // vice versa. The PHI nodes must be part of a reduction across the inner and
   // outer loop and all the remains to do is and updating the incoming blocks.
   for (PHINode *PHI : OuterLoopPHIs) {
+    LLVM_DEBUG(dbgs() << "Outer loop reduction PHIs:\n"; PHI->dump(););
     PHI->moveBefore(InnerLoopHeader->getFirstNonPHI());
     assert(OuterInnerReductions.count(PHI) && "Expected a reduction PHI node");
   }
   for (PHINode *PHI : InnerLoopPHIs) {
+    LLVM_DEBUG(dbgs() << "Inner loop reduction PHIs:\n"; PHI->dump(););
     PHI->moveBefore(OuterLoopHeader->getFirstNonPHI());
     assert(OuterInnerReductions.count(PHI) && "Expected a reduction PHI node");
   }

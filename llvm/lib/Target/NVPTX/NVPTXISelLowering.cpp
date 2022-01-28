@@ -553,17 +553,29 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // These map to corresponding instructions for f32/f64. f16 must be
   // promoted to f32. v2f16 is expanded to f16, which is then promoted
   // to f32.
-  for (const auto &Op : {ISD::FDIV, ISD::FREM, ISD::FSQRT, ISD::FSIN, ISD::FCOS,
-                         ISD::FABS, ISD::FMINNUM, ISD::FMAXNUM}) {
+  for (const auto &Op :
+       {ISD::FDIV, ISD::FREM, ISD::FSQRT, ISD::FSIN, ISD::FCOS, ISD::FABS}) {
     setOperationAction(Op, MVT::f16, Promote);
     setOperationAction(Op, MVT::f32, Legal);
     setOperationAction(Op, MVT::f64, Legal);
     setOperationAction(Op, MVT::v2f16, Expand);
   }
-  setOperationAction(ISD::FMINNUM, MVT::f16, Promote);
-  setOperationAction(ISD::FMAXNUM, MVT::f16, Promote);
-  setOperationAction(ISD::FMINIMUM, MVT::f16, Promote);
-  setOperationAction(ISD::FMAXIMUM, MVT::f16, Promote);
+  // max.f16, max.f16x2 and max.NaN are supported on sm_80+.
+  auto GetMinMaxAction = [&](LegalizeAction NotSm80Action) {
+    bool IsAtLeastSm80 = STI.getSmVersion() >= 80 && STI.getPTXVersion() >= 70;
+    return IsAtLeastSm80 ? Legal : NotSm80Action;
+  };
+  for (const auto &Op : {ISD::FMINNUM, ISD::FMAXNUM}) {
+    setFP16OperationAction(Op, MVT::f16, GetMinMaxAction(Promote), Promote);
+    setOperationAction(Op, MVT::f32, Legal);
+    setOperationAction(Op, MVT::f64, Legal);
+    setFP16OperationAction(Op, MVT::v2f16, GetMinMaxAction(Expand), Expand);
+  }
+  for (const auto &Op : {ISD::FMINIMUM, ISD::FMAXIMUM}) {
+    setFP16OperationAction(Op, MVT::f16, GetMinMaxAction(Expand), Expand);
+    setOperationAction(Op, MVT::f32, GetMinMaxAction(Expand));
+    setFP16OperationAction(Op, MVT::v2f16, GetMinMaxAction(Expand), Expand);
+  }
 
   // No FEXP2, FLOG2.  The PTX ex2 and log2 functions are always approximate.
   // No FPOW or FREM in PTX.
@@ -1341,7 +1353,7 @@ std::string NVPTXTargetLowering::getPrototype(
     }
     auto *PTy = dyn_cast<PointerType>(Ty);
     assert(PTy && "Param with byval attribute should be a pointer type");
-    Type *ETy = PTy->getElementType();
+    Type *ETy = PTy->getPointerElementType();
 
     Align align = Outs[OIdx].Flags.getNonZeroByValAlign();
     unsigned sz = DL.getTypeAllocSize(ETy);
@@ -1564,7 +1576,8 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     SmallVector<uint64_t, 16> Offsets;
     auto *PTy = dyn_cast<PointerType>(Args[i].Ty);
     assert(PTy && "Type of a byval parameter should be pointer");
-    ComputePTXValueVTs(*this, DL, PTy->getElementType(), VTs, &Offsets, 0);
+    ComputePTXValueVTs(*this, DL, PTy->getPointerElementType(), VTs, &Offsets,
+                       0);
 
     // declare .param .align <align> .b8 .param<n>[<size>];
     unsigned sz = Outs[OIdx].Flags.getByValSize();
@@ -2434,7 +2447,7 @@ static bool isImageOrSamplerVal(const Value *arg, const Module *context) {
   if (!context)
     return false;
 
-  auto *STy = dyn_cast<StructType>(PTy->getElementType());
+  auto *STy = dyn_cast<StructType>(PTy->getPointerElementType());
   if (!STy || STy->isLiteral())
     return false;
 

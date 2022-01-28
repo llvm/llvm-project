@@ -341,7 +341,7 @@ public:
   static bool WatchpointCallbackFunction(void *baton,
                                          StoppointCallbackContext *context,
                                          lldb::user_id_t watch_id);
-  static void InitializePrivate();
+  static void Initialize();
 
   class SynchronicityHandler {
   private:

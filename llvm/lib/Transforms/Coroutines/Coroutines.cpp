@@ -123,6 +123,7 @@ Value *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
 static bool isCoroutineIntrinsicName(StringRef Name) {
   // NOTE: Must be sorted!
   static const char *const CoroIntrinsics[] = {
+      "llvm.coro.align",
       "llvm.coro.alloc",
       "llvm.coro.async.context.alloc",
       "llvm.coro.async.context.dealloc",
@@ -267,6 +268,9 @@ void coro::Shape::buildFrom(Function &F) {
         continue;
       case Intrinsic::coro_size:
         CoroSizes.push_back(cast<CoroSizeInst>(II));
+        break;
+      case Intrinsic::coro_align:
+        CoroAligns.push_back(cast<CoroAlignInst>(II));
         break;
       case Intrinsic::coro_frame:
         CoroFrames.push_back(cast<CoroFrameInst>(II));
@@ -672,8 +676,11 @@ static void checkAsyncFuncPointer(const Instruction *I, Value *V) {
   if (!AsyncFuncPtrAddr)
     fail(I, "llvm.coro.id.async async function pointer not a global", V);
 
-  auto *StructTy =
-      cast<StructType>(AsyncFuncPtrAddr->getType()->getPointerElementType());
+  if (AsyncFuncPtrAddr->getType()->isOpaquePointerTy())
+    return;
+
+  auto *StructTy = cast<StructType>(
+      AsyncFuncPtrAddr->getType()->getNonOpaquePointerElementType());
   if (StructTy->isOpaque() || !StructTy->isPacked() ||
       StructTy->getNumElements() != 2 ||
       !StructTy->getElementType(0)->isIntegerTy(32) ||
@@ -697,14 +704,16 @@ void CoroIdAsyncInst::checkWellFormed() const {
 static void checkAsyncContextProjectFunction(const Instruction *I,
                                              Function *F) {
   auto *FunTy = cast<FunctionType>(F->getValueType());
-  if (!FunTy->getReturnType()->isPointerTy() ||
-      !FunTy->getReturnType()->getPointerElementType()->isIntegerTy(8))
+  Type *Int8Ty = Type::getInt8Ty(F->getContext());
+  auto *RetPtrTy = dyn_cast<PointerType>(FunTy->getReturnType());
+  if (!RetPtrTy || !RetPtrTy->isOpaqueOrPointeeTypeMatches(Int8Ty))
     fail(I,
          "llvm.coro.suspend.async resume function projection function must "
          "return an i8* type",
          F);
   if (FunTy->getNumParams() != 1 || !FunTy->getParamType(0)->isPointerTy() ||
-      !FunTy->getParamType(0)->getPointerElementType()->isIntegerTy(8))
+      !cast<PointerType>(FunTy->getParamType(0))
+           ->isOpaqueOrPointeeTypeMatches(Int8Ty))
     fail(I,
          "llvm.coro.suspend.async resume function projection function must "
          "take one i8* type as parameter",
@@ -719,8 +728,7 @@ void CoroAsyncEndInst::checkWellFormed() const {
   auto *MustTailCallFunc = getMustTailCallFunction();
   if (!MustTailCallFunc)
     return;
-  auto *FnTy =
-      cast<FunctionType>(MustTailCallFunc->getType()->getPointerElementType());
+  auto *FnTy = MustTailCallFunc->getFunctionType();
   if (FnTy->getNumParams() != (arg_size() - 3))
     fail(this,
          "llvm.coro.end.async must tail call function argument type must "

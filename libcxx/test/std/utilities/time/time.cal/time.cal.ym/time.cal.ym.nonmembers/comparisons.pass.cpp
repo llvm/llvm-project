@@ -50,7 +50,7 @@ int main(int, char**)
         year_month{year{1235}, std::chrono::January},
         false, true), "");
 
-//  same year, different months
+    //  same year, different months
     for (unsigned i = 1; i < 12; ++i)
         for (unsigned j = 1; j < 12; ++j)
             assert((testComparisons6(
@@ -58,13 +58,13 @@ int main(int, char**)
                 year_month{year{1234}, month{j}},
                 i == j, i < j )));
 
-//  same month, different years
-    for (int i = 1000; i < 20; ++i)
-        for (int j = 1000; j < 20; ++j)
+    //  same month, different years
+    for (int i = 1000; i < 2000; ++i)
+        for (int j = 1000; j < 2000; ++j)
         assert((testComparisons6(
             year_month{year{i}, std::chrono::January},
             year_month{year{j}, std::chrono::January},
             i == j, i < j )));
 
-  return 0;
+    return 0;
 }

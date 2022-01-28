@@ -428,6 +428,9 @@ void Platform::GetStatus(Stream &strm) {
     strm.Printf(" Connected: %s\n", is_connected ? "yes" : "no");
   }
 
+  if (GetSDKRootDirectory()) {
+    strm.Format("   Sysroot: {0}\n", GetSDKRootDirectory());
+  }
   if (GetWorkingDirectory()) {
     strm.Printf("WorkingDir: %s\n", GetWorkingDirectory().GetCString());
   }
@@ -1999,4 +2002,8 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
     return trap_opcode_size;
 
   return 0;
+}
+
+CompilerType Platform::GetSiginfoType(const llvm::Triple& triple) {
+  return CompilerType();
 }

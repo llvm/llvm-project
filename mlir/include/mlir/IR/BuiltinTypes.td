@@ -154,6 +154,10 @@ def Builtin_Function : Builtin_Type<"Function", [
     unsigned getNumResults() const;
     Type getResult(unsigned i) const { return getResults()[i]; }
 
+    /// Returns a clone of this function type with the given argument
+    /// and result types.
+    FunctionType clone(TypeRange inputs, TypeRange results) const;
+
     /// Returns a new function type with the specified arguments and results
     /// inserted.
     FunctionType getWithArgsAndResults(ArrayRef<unsigned> argIndices,
@@ -162,8 +166,8 @@ def Builtin_Function : Builtin_Type<"Function", [
                                        TypeRange resultTypes);
 
     /// Returns a new function type without the specified arguments and results.
-    FunctionType getWithoutArgsAndResults(ArrayRef<unsigned> argIndices,
-                                          ArrayRef<unsigned> resultIndices);
+    FunctionType getWithoutArgsAndResults(const BitVector &argIndices,
+                                          const BitVector &resultIndices);
   }];
 }
 
@@ -266,7 +270,7 @@ def Builtin_Integer : Builtin_Type<"Integer"> {
 //===----------------------------------------------------------------------===//
 
 def Builtin_MemRef : Builtin_Type<"MemRef", [
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>
+    DeclareTypeInterfaceMethods<SubElementTypeInterface>, ShapedTypeInterface
   ], "BaseMemRefType"> {
   let summary = "Shaped reference to a region of memory";
   let description = [{
@@ -541,6 +545,16 @@ def Builtin_MemRef : Builtin_Type<"MemRef", [
       "unsigned":$memorySpaceInd)>
   ];
   let extraClassDeclaration = [{
+    using ShapedType::Trait<MemRefType>::clone;
+    using ShapedType::Trait<MemRefType>::getElementTypeBitWidth;
+    using ShapedType::Trait<MemRefType>::getRank;
+    using ShapedType::Trait<MemRefType>::getNumElements;
+    using ShapedType::Trait<MemRefType>::isDynamicDim;
+    using ShapedType::Trait<MemRefType>::hasStaticShape;
+    using ShapedType::Trait<MemRefType>::getNumDynamicDims;
+    using ShapedType::Trait<MemRefType>::getDimSize;
+    using ShapedType::Trait<MemRefType>::getDynamicDimIndex;
+
     /// This is a builder type that keeps local references to arguments.
     /// Arguments that are passed into the builder must outlive the builder.
     class Builder;
@@ -620,7 +634,7 @@ def Builtin_Opaque : Builtin_Type<"Opaque"> {
 //===----------------------------------------------------------------------===//
 
 def Builtin_RankedTensor : Builtin_Type<"RankedTensor", [
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>
+    DeclareTypeInterfaceMethods<SubElementTypeInterface>, ShapedTypeInterface
   ], "TensorType"> {
   let summary = "Multi-dimensional array with a fixed number of dimensions";
   let description = [{
@@ -702,6 +716,16 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", [
     }]>
   ];
   let extraClassDeclaration = [{
+    using ShapedType::Trait<RankedTensorType>::clone;
+    using ShapedType::Trait<RankedTensorType>::getElementTypeBitWidth;
+    using ShapedType::Trait<RankedTensorType>::getRank;
+    using ShapedType::Trait<RankedTensorType>::getNumElements;
+    using ShapedType::Trait<RankedTensorType>::isDynamicDim;
+    using ShapedType::Trait<RankedTensorType>::hasStaticShape;
+    using ShapedType::Trait<RankedTensorType>::getNumDynamicDims;
+    using ShapedType::Trait<RankedTensorType>::getDimSize;
+    using ShapedType::Trait<RankedTensorType>::getDynamicDimIndex;
+
     /// This is a builder type that keeps local references to arguments.
     /// Arguments that are passed into the builder must outlive the builder.
     class Builder;
@@ -784,7 +808,7 @@ def Builtin_Tuple : Builtin_Type<"Tuple", [
 //===----------------------------------------------------------------------===//
 
 def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", [
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>
+    DeclareTypeInterfaceMethods<SubElementTypeInterface>, ShapedTypeInterface
   ], "BaseMemRefType"> {
   let summary = "Shaped reference, with unknown rank, to a region of memory";
   let description = [{
@@ -831,6 +855,16 @@ def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", [
     }]>
   ];
   let extraClassDeclaration = [{
+    using ShapedType::Trait<UnrankedMemRefType>::clone;
+    using ShapedType::Trait<UnrankedMemRefType>::getElementTypeBitWidth;
+    using ShapedType::Trait<UnrankedMemRefType>::getRank;
+    using ShapedType::Trait<UnrankedMemRefType>::getNumElements;
+    using ShapedType::Trait<UnrankedMemRefType>::isDynamicDim;
+    using ShapedType::Trait<UnrankedMemRefType>::hasStaticShape;
+    using ShapedType::Trait<UnrankedMemRefType>::getNumDynamicDims;
+    using ShapedType::Trait<UnrankedMemRefType>::getDimSize;
+    using ShapedType::Trait<UnrankedMemRefType>::getDynamicDimIndex;
+
     ArrayRef<int64_t> getShape() const { return llvm::None; }
 
     /// [deprecated] Returns the memory space in old raw integer representation.
@@ -846,7 +880,7 @@ def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", [
 //===----------------------------------------------------------------------===//
 
 def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", [
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>
+    DeclareTypeInterfaceMethods<SubElementTypeInterface>, ShapedTypeInterface
   ], "TensorType"> {
   let summary = "Multi-dimensional array with unknown dimensions";
   let description = [{
@@ -874,6 +908,16 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", [
     }]>
   ];
   let extraClassDeclaration = [{
+    using ShapedType::Trait<UnrankedTensorType>::clone;
+    using ShapedType::Trait<UnrankedTensorType>::getElementTypeBitWidth;
+    using ShapedType::Trait<UnrankedTensorType>::getRank;
+    using ShapedType::Trait<UnrankedTensorType>::getNumElements;
+    using ShapedType::Trait<UnrankedTensorType>::isDynamicDim;
+    using ShapedType::Trait<UnrankedTensorType>::hasStaticShape;
+    using ShapedType::Trait<UnrankedTensorType>::getNumDynamicDims;
+    using ShapedType::Trait<UnrankedTensorType>::getDimSize;
+    using ShapedType::Trait<UnrankedTensorType>::getDynamicDimIndex;
+
     ArrayRef<int64_t> getShape() const { return llvm::None; }
   }];
   let skipDefaultBuilders = 1;
@@ -885,8 +929,8 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", [
 //===----------------------------------------------------------------------===//
 
 def Builtin_Vector : Builtin_Type<"Vector", [
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>
-  ], "ShapedType"> {
+    DeclareTypeInterfaceMethods<SubElementTypeInterface>, ShapedTypeInterface
+  ], "Type"> {
   let summary = "Multi-dimensional SIMD vector type";
   let description = [{
     Syntax:
@@ -966,6 +1010,14 @@ def Builtin_Vector : Builtin_Type<"Vector", [
     /// element type of bitwidth scaled by `scale`.
     /// Return null if the scaled element type cannot be represented.
     VectorType scaleElementBitwidth(unsigned scale);
+
+    /// Returns if this type is ranked (always true).
+    bool hasRank() const { return true; }
+
+    /// Clone this vector type with the given shape and element type. If the
+    /// provided shape is `None`, the current shape of the type is used.
+    VectorType cloneWith(Optional<ArrayRef<int64_t>> shape,
+                         Type elementType) const;
   }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;

@@ -3546,8 +3546,7 @@ define dso_local i32 @round_trip_calloc(i32 %x) {
 ; IS__TUNIT_NPM-SAME: (i32 [[X:%.*]]) {
 ; IS__TUNIT_NPM-NEXT:  entry:
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
-; IS__TUNIT_NPM-NEXT:    [[CALLOC_BC:%.*]] = bitcast i8* [[TMP0]] to i8*
-; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALLOC_BC]], i8 0, i64 4, i1 false)
+; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[TMP0]], i8 0, i64 4, i1 false)
 ; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i32*
 ; IS__TUNIT_NPM-NEXT:    store i32 [[X]], i32* [[TMP1]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
@@ -3568,8 +3567,7 @@ define dso_local i32 @round_trip_calloc(i32 %x) {
 ; IS__CGSCC_NPM-SAME: (i32 [[X:%.*]]) #[[ATTR9]] {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
-; IS__CGSCC_NPM-NEXT:    [[CALLOC_BC:%.*]] = bitcast i8* [[TMP0]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALLOC_BC]], i8 0, i64 4, i1 false)
+; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[TMP0]], i8 0, i64 4, i1 false)
 ; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i32*
 ; IS__CGSCC_NPM-NEXT:    store i32 [[X]], i32* [[TMP1]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
@@ -3595,8 +3593,7 @@ define dso_local i32 @round_trip_calloc_constant() {
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@round_trip_calloc_constant() {
 ; IS__TUNIT_NPM-NEXT:  entry:
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
-; IS__TUNIT_NPM-NEXT:    [[CALLOC_BC:%.*]] = bitcast i8* [[TMP0]] to i8*
-; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALLOC_BC]], i8 0, i64 4, i1 false)
+; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[TMP0]], i8 0, i64 4, i1 false)
 ; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i32*
 ; IS__TUNIT_NPM-NEXT:    store i32 11, i32* [[TMP1]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
@@ -3617,8 +3614,7 @@ define dso_local i32 @round_trip_calloc_constant() {
 ; IS__CGSCC_NPM-SAME: () #[[ATTR9]] {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
-; IS__CGSCC_NPM-NEXT:    [[CALLOC_BC:%.*]] = bitcast i8* [[TMP0]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALLOC_BC]], i8 0, i64 4, i1 false)
+; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[TMP0]], i8 0, i64 4, i1 false)
 ; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i32*
 ; IS__CGSCC_NPM-NEXT:    store i32 11, i32* [[TMP1]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
@@ -3655,8 +3651,7 @@ define dso_local i32 @conditional_calloc(i32 %x) {
 ; IS__TUNIT_NPM-SAME: (i32 [[X:%.*]]) {
 ; IS__TUNIT_NPM-NEXT:  entry:
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
-; IS__TUNIT_NPM-NEXT:    [[CALLOC_BC:%.*]] = bitcast i8* [[TMP0]] to i8*
-; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALLOC_BC]], i8 0, i64 4, i1 false)
+; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[TMP0]], i8 0, i64 4, i1 false)
 ; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i32*
 ; IS__TUNIT_NPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[X]], 0
 ; IS__TUNIT_NPM-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
@@ -3689,8 +3684,7 @@ define dso_local i32 @conditional_calloc(i32 %x) {
 ; IS__CGSCC_NPM-SAME: (i32 [[X:%.*]]) #[[ATTR9]] {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
-; IS__CGSCC_NPM-NEXT:    [[CALLOC_BC:%.*]] = bitcast i8* [[TMP0]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALLOC_BC]], i8 0, i64 4, i1 false)
+; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[TMP0]], i8 0, i64 4, i1 false)
 ; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i32*
 ; IS__CGSCC_NPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[X]], 0
 ; IS__CGSCC_NPM-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
@@ -3738,8 +3732,7 @@ define dso_local i32 @conditional_calloc_zero(i1 %c) {
 ; IS__TUNIT_NPM-SAME: (i1 [[C:%.*]]) {
 ; IS__TUNIT_NPM-NEXT:  entry:
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
-; IS__TUNIT_NPM-NEXT:    [[CALLOC_BC:%.*]] = bitcast i8* [[TMP0]] to i8*
-; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALLOC_BC]], i8 0, i64 4, i1 false)
+; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[TMP0]], i8 0, i64 4, i1 false)
 ; IS__TUNIT_NPM-NEXT:    br i1 [[C]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; IS__TUNIT_NPM:       if.then:
 ; IS__TUNIT_NPM-NEXT:    br label [[IF_END]]
@@ -3767,8 +3760,7 @@ define dso_local i32 @conditional_calloc_zero(i1 %c) {
 ; IS__CGSCC_NPM-SAME: (i1 [[C:%.*]]) #[[ATTR9]] {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
-; IS__CGSCC_NPM-NEXT:    [[CALLOC_BC:%.*]] = bitcast i8* [[TMP0]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALLOC_BC]], i8 0, i64 4, i1 false)
+; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[TMP0]], i8 0, i64 4, i1 false)
 ; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; IS__CGSCC_NPM:       if.then:
 ; IS__CGSCC_NPM-NEXT:    br label [[IF_END]]

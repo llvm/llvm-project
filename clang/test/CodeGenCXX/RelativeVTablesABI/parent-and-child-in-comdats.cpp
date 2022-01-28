@@ -23,7 +23,7 @@
 // CHECK: @_ZTV1A = linkonce_odr unnamed_addr alias { [3 x i32] }, { [3 x i32] }* @_ZTV1A.local
 // CHECK: @_ZTV1B = linkonce_odr unnamed_addr alias { [3 x i32] }, { [3 x i32] }* @_ZTV1B.local
 
-// CHECK: declare void @_Z5A_fooP1A(%class.A*)
+// CHECK: declare void @_Z5A_fooP1A(%class.A* noundef)
 
 // The stubs and implementations for foo() are in their own comdat sections.
 // CHECK:      define linkonce_odr void @_ZN1A3fooEv(%class.A* {{.*}}%this) unnamed_addr #{{[0-9]+}} comdat

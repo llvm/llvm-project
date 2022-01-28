@@ -371,6 +371,122 @@ func @cos() {
   return
 }
 
+// -------------------------------------------------------------------------- //
+// Atan.
+// -------------------------------------------------------------------------- //
+
+func @atan() {
+  // CHECK: -0.785184
+  %0 = arith.constant -1.0 : f32
+  %atan_0 = math.atan %0 : f32
+  vector.print %atan_0 : f32
+
+  // CHECK: 0.785184
+  %1 = arith.constant 1.0 : f32
+  %atan_1 = math.atan %1 : f32
+  vector.print %atan_1 : f32
+
+  // CHECK: -0.463643
+  %2 = arith.constant -0.5 : f32
+  %atan_2 = math.atan %2 : f32
+  vector.print %atan_2 : f32
+
+  // CHECK: 0.463643
+  %3 = arith.constant 0.5 : f32
+  %atan_3 = math.atan %3 : f32
+  vector.print %atan_3 : f32
+
+  // CHECK: 0
+  %4 = arith.constant 0.0 : f32
+  %atan_4 = math.atan %4 : f32
+  vector.print %atan_4 : f32
+
+  // CHECK: -1.10715
+  %5 = arith.constant -2.0 : f32
+  %atan_5 = math.atan %5 : f32
+  vector.print %atan_5 : f32
+
+  // CHECK: 1.10715
+  %6 = arith.constant 2.0 : f32
+  %atan_6 = math.atan %6 : f32
+  vector.print %atan_6 : f32
+
+  return
+}
+
+
+// -------------------------------------------------------------------------- //
+// Atan2.
+// -------------------------------------------------------------------------- //
+
+func @atan2() {
+  %zero = arith.constant 0.0 : f32
+  %one = arith.constant 1.0 : f32
+  %two = arith.constant 2.0 : f32
+  %neg_one = arith.constant -1.0 : f32
+  %neg_two = arith.constant -2.0 : f32
+
+  // CHECK: 0
+  %atan2_0 = math.atan2 %zero, %one : f32
+  vector.print %atan2_0 : f32
+
+  // CHECK: 1.5708
+  %atan2_1 = math.atan2 %one, %zero : f32
+  vector.print %atan2_1 : f32
+
+  // CHECK: 3.14159
+  %atan2_2 = math.atan2 %zero, %neg_one : f32
+  vector.print %atan2_2 : f32
+
+  // CHECK: -1.5708
+  %atan2_3 = math.atan2 %neg_one, %zero : f32
+  vector.print %atan2_3 : f32
+
+  // CHECK: nan
+  %atan2_4 = math.atan2 %zero, %zero : f32
+  vector.print %atan2_4 : f32
+
+  // CHECK: 1.10715
+  %atan2_5 = math.atan2 %two, %one : f32
+  vector.print %atan2_5 : f32
+
+  // CHECK: 2.03444
+  %x6 = arith.constant -1.0 : f32
+  %y6 = arith.constant 2.0 : f32
+  %atan2_6 = math.atan2 %two, %neg_one : f32
+  vector.print %atan2_6 : f32
+
+  // CHECK: -2.03444
+  %atan2_7 = math.atan2 %neg_two, %neg_one : f32
+  vector.print %atan2_7 : f32
+
+  // CHECK: -1.10715
+  %atan2_8 = math.atan2 %neg_two, %one : f32
+  vector.print %atan2_8 : f32
+
+  // CHECK: 0.463643
+  %atan2_9 = math.atan2 %one, %two : f32
+  vector.print %atan2_9 : f32
+
+  // CHECK: 2.67795
+  %x10 = arith.constant -2.0 : f32
+  %y10 = arith.constant 1.0 : f32
+  %atan2_10 = math.atan2 %one, %neg_two : f32
+  vector.print %atan2_10 : f32
+
+  // CHECK: -2.67795
+  %x11 = arith.constant -2.0 : f32
+  %y11 = arith.constant -1.0 : f32
+  %atan2_11 = math.atan2 %neg_one, %neg_two : f32
+  vector.print %atan2_11 : f32
+
+  // CHECK: -0.463643
+  %atan2_12 = math.atan2 %neg_one, %two : f32
+  vector.print %atan2_12 : f32
+
+  return
+}
+
 
 func @main() {
   call @tanh(): () -> ()
@@ -382,5 +498,7 @@ func @main() {
   call @expm1(): () -> ()
   call @sin(): () -> ()
   call @cos(): () -> ()
+  call @atan() : () -> ()
+  call @atan2() : () -> ()
   return
 }

@@ -115,7 +115,7 @@ define amdgpu_kernel void @fsub_f16() #0 {
 ; FASTF16-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = fsub <4 x half> undef, undef
 ; FASTF16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5f16 = fsub <5 x half> undef, undef
 ; FASTF16-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16f16 = fsub <16 x half> undef, undef
-; FASTF16-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v17f16 = fsub <17 x half> undef, undef
+; FASTF16-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v17f16 = fsub <17 x half> undef, undef
 ; FASTF16-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SLOWF64-LABEL: 'fsub_f16'
@@ -135,7 +135,7 @@ define amdgpu_kernel void @fsub_f16() #0 {
 ; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = fsub <4 x half> undef, undef
 ; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5f16 = fsub <5 x half> undef, undef
 ; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16f16 = fsub <16 x half> undef, undef
-; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v17f16 = fsub <17 x half> undef, undef
+; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v17f16 = fsub <17 x half> undef, undef
 ; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLOWF64-SIZE-LABEL: 'fsub_f16'

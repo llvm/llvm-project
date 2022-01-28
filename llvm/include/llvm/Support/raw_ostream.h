@@ -15,9 +15,9 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
-#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -30,6 +30,7 @@
 
 namespace llvm {
 
+class Duration;
 class formatv_object_base;
 class format_object_base;
 class FormattedString;
@@ -574,7 +575,7 @@ public:
   ///
   /// It is used as @ref lock.
   LLVM_NODISCARD
-  Expected<sys::fs::FileLocker> tryLockFor(std::chrono::milliseconds Timeout);
+  Expected<sys::fs::FileLocker> tryLockFor(Duration const& Timeout);
 };
 
 /// This returns a reference to a raw_fd_ostream for standard output. Use it

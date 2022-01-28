@@ -948,6 +948,32 @@ Semantics:
 The `coro.size` intrinsic is lowered to a constant representing the size of
 the coroutine frame.
 
+.. _coro.align:
+
+'llvm.coro.align' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+    declare i32 @llvm.coro.align.i32()
+    declare i64 @llvm.coro.align.i64()
+
+Overview:
+"""""""""
+
+The '``llvm.coro.align``' intrinsic returns the alignment of a `coroutine frame`_.
+This is only supported for switched-resume coroutines.
+
+Arguments:
+""""""""""
+
+None
+
+Semantics:
+""""""""""
+
+The `coro.align` intrinsic is lowered to a constant representing the alignment of
+the coroutine frame.
+
 .. _coro.begin:
 
 'llvm.coro.begin' Intrinsic

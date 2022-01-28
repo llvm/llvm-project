@@ -943,7 +943,7 @@ static Instruction *foldSelectCtlzToCttz(ICmpInst *ICI, Value *TrueVal,
 }
 
 /// Attempt to fold a cttz/ctlz followed by a icmp plus select into a single
-/// call to cttz/ctlz with flag 'is_zero_undef' cleared.
+/// call to cttz/ctlz with flag 'is_zero_poison' cleared.
 ///
 /// For example, we can fold the following code sequence:
 /// \code
@@ -987,7 +987,7 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
   // sizeof in bits of 'Count'.
   unsigned SizeOfInBits = Count->getType()->getScalarSizeInBits();
   if (match(ValueOnZero, m_SpecificInt(SizeOfInBits))) {
-    // Explicitly clear the 'undef_on_zero' flag. It's always valid to go from
+    // Explicitly clear the 'is_zero_poison' flag. It's always valid to go from
     // true to false on this flag, so we can replace it for all users.
     II->setArgOperand(1, ConstantInt::getFalse(II->getContext()));
     return SelectArg;
@@ -995,7 +995,7 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
 
   // The ValueOnZero is not the bitwidth. But if the cttz/ctlz (and optional
   // zext/trunc) have one use (ending at the select), the cttz/ctlz result will
-  // not be used if the input is zero. Relax to 'undef_on_zero' for that case.
+  // not be used if the input is zero. Relax to 'zero is poison' for that case.
   if (II->hasOneUse() && SelectArg->hasOneUse() &&
       !match(II->getArgOperand(1), m_One()))
     II->setArgOperand(1, ConstantInt::getTrue(II->getContext()));

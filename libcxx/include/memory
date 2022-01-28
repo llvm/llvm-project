@@ -244,14 +244,39 @@ ForwardIterator uninitialized_fill_n(ForwardIterator first, iter_difference_t<Fo
 template <class T, class ...Args>
 constexpr T* construct_at(T* location, Args&& ...args); // since C++20
 
+namespace ranges {
+  template<class T, class... Args>
+    constexpr T* construct_at(T* location, Args&&... args); // since C++20
+}
+
 template <class T>
 void destroy_at(T* location); // constexpr in C++20
+
+namespace ranges {
+  template<destructible T>
+    constexpr void destroy_at(T* location) noexcept; // since C++20
+}
 
 template <class ForwardIterator>
 void destroy(ForwardIterator first, ForwardIterator last); // constexpr in C++20
 
+namespace ranges {
+  template<nothrow-input-iterator InputIterator, nothrow-sentinel-for<InputIterator> Sentinel>
+    requires destructible<iter_value_t<InputIterator>>
+    constexpr InputIterator destroy(InputIterator first, Sentinel last) noexcept; // since C++20
+  template<nothrow-input-range InputRange>
+    requires destructible<range_value_t<InputRange>>
+    constexpr borrowed_iterator_t<InputRange> destroy(InputRange&& range) noexcept; // since C++20
+}
+
 template <class ForwardIterator, class Size>
 ForwardIterator destroy_n(ForwardIterator first, Size n); // constexpr in C++20
+
+namespace ranges {
+  template<nothrow-input-iterator InputIterator>
+    requires destructible<iter_value_t<InputIterator>>
+    constexpr InputIterator destroy_n(InputIterator first, iter_difference_t<InputIterator> n) noexcept; // since C++20
+}
 
 template <class InputIterator, class ForwardIterator>
  ForwardIterator uninitialized_move(InputIterator first, InputIterator last, ForwardIterator result);
@@ -790,6 +815,7 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 #include <__memory/concepts.h>
 #include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
+#include <__memory/ranges_construct_at.h>
 #include <__memory/ranges_uninitialized_algorithms.h>
 #include <__memory/raw_storage_iterator.h>
 #include <__memory/shared_ptr.h>

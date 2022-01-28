@@ -21,12 +21,13 @@
 #include "DemangleConfig.h"
 #include "StringView.h"
 #include "Utility.h"
+#include <algorithm>
 #include <cassert>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <numeric>
+#include <limits>
 #include <utility>
 
 #define FOR_EACH_NODE_KIND(X) \
@@ -310,7 +311,7 @@ public:
       printRight(OB);
   }
 
-  // Print the "left" side of this Node into OutputString.
+  // Print the "left" side of this Node into OutputBuffer.
   virtual void printLeft(OutputBuffer &) const = 0;
 
   // Print the "right". This distinction is necessary to represent C++ types
@@ -1210,7 +1211,8 @@ public:
 class ParameterPack final : public Node {
   NodeArray Data;
 
-  // Setup OutputString for a pack expansion unless we're already expanding one.
+  // Setup OutputBuffer for a pack expansion, unless we're already expanding
+  // one.
   void initializePackExpansion(OutputBuffer &OB) const {
     if (OB.CurrentPackMax == std::numeric_limits<unsigned>::max()) {
       OB.CurrentPackMax = static_cast<unsigned>(Data.size());
@@ -2473,7 +2475,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
 
   char consume() { return First != Last ? *First++ : '\0'; }
 
-  char look(unsigned Lookahead = 0) {
+  char look(unsigned Lookahead = 0) const {
     if (static_cast<size_t>(Last - First) <= Lookahead)
       return '\0';
     return First[Lookahead];
@@ -2591,34 +2593,38 @@ Node *AbstractManglingParser<Derived, Alloc>::parseName(NameState *State) {
   if (look() == 'Z')
     return getDerived().parseLocalName(State);
 
-  //        ::= <unscoped-template-name> <template-args>
-  if (look() == 'S' && look(1) != 't') {
-    Node *S = getDerived().parseSubstitution();
-    if (S == nullptr)
-      return nullptr;
-    if (look() != 'I')
-      return nullptr;
+  Node *Result = nullptr;
+  bool IsSubst = look() == 'S' && look(1) != 't';
+  if (IsSubst) {
+    // A substitution must lead to:
+    //        ::= <unscoped-template-name> <template-args>
+    Result = getDerived().parseSubstitution();
+  } else {
+    // An unscoped name can be one of:
+    //        ::= <unscoped-name>
+    //        ::= <unscoped-template-name> <template-args>
+    Result = getDerived().parseUnscopedName(State);
+  }
+  if (Result == nullptr)
+    return nullptr;
+
+  if (look() == 'I') {
+    //        ::= <unscoped-template-name> <template-args>
+    if (!IsSubst)
+      // An unscoped-template-name is substitutable.
+      Subs.push_back(Result);
     Node *TA = getDerived().parseTemplateArgs(State != nullptr);
     if (TA == nullptr)
       return nullptr;
-    if (State) State->EndsWithTemplateArgs = true;
-    return make<NameWithTemplateArgs>(S, TA);
+    if (State)
+      State->EndsWithTemplateArgs = true;
+    Result = make<NameWithTemplateArgs>(Result, TA);
+  } else if (IsSubst) {
+    // The substitution case must be followed by <template-args>.
+    return nullptr;
   }
 
-  Node *N = getDerived().parseUnscopedName(State);
-  if (N == nullptr)
-    return nullptr;
-  //        ::= <unscoped-template-name> <template-args>
-  if (look() == 'I') {
-    Subs.push_back(N);
-    Node *TA = getDerived().parseTemplateArgs(State != nullptr);
-    if (TA == nullptr)
-      return nullptr;
-    if (State) State->EndsWithTemplateArgs = true;
-    return make<NameWithTemplateArgs>(N, TA);
-  }
-  //        ::= <unscoped-name>
-  return N;
+  return Result;
 }
 
 // <local-name> := Z <function encoding> E <entity name> [<discriminator>]
@@ -2663,13 +2669,17 @@ Node *AbstractManglingParser<Derived, Alloc>::parseLocalName(NameState *State) {
 template <typename Derived, typename Alloc>
 Node *
 AbstractManglingParser<Derived, Alloc>::parseUnscopedName(NameState *State) {
-  if (consumeIf("StL") || consumeIf("St")) {
-    Node *R = getDerived().parseUnqualifiedName(State);
-    if (R == nullptr)
-      return nullptr;
-    return make<StdQualifiedName>(R);
-  }
-  return getDerived().parseUnqualifiedName(State);
+  bool IsStd = consumeIf("St");
+  if (IsStd)
+    consumeIf('L');
+
+  Node *Result = getDerived().parseUnqualifiedName(State);
+  if (Result == nullptr)
+    return nullptr;
+  if (IsStd)
+    Result = make<StdQualifiedName>(Result);
+
+  return Result;
 }
 
 // <unqualified-name> ::= <operator-name> [abi-tags]
@@ -4064,9 +4074,9 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
   }
   //             ::= <substitution>  # See Compression below
   case 'S': {
-    if (look(1) && look(1) != 't') {
-      Node *Sub = getDerived().parseSubstitution();
-      if (Sub == nullptr)
+    if (look(1) != 't') {
+      Result = getDerived().parseSubstitution();
+      if (Result == nullptr)
         return nullptr;
 
       // Sub could be either of:
@@ -4083,13 +4093,13 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
         Node *TA = getDerived().parseTemplateArgs();
         if (TA == nullptr)
           return nullptr;
-        Result = make<NameWithTemplateArgs>(Sub, TA);
-        break;
+        Result = make<NameWithTemplateArgs>(Result, TA);
+      } else {
+        // If all we parsed was a substitution, don't re-insert into the
+        // substitution table.
+        return Result;
       }
-
-      // If all we parsed was a substitution, don't re-insert into the
-      // substitution table.
-      return Sub;
+      break;
     }
     DEMANGLE_FALLTHROUGH;
   }
@@ -5437,38 +5447,35 @@ Node *AbstractManglingParser<Derived, Alloc>::parseSubstitution() {
   if (!consumeIf('S'))
     return nullptr;
 
-  if (std::islower(look())) {
-    Node *SpecialSub;
+  if (look() >= 'a' && look() <= 'z') {
+    SpecialSubKind Kind;
     switch (look()) {
     case 'a':
-      ++First;
-      SpecialSub = make<SpecialSubstitution>(SpecialSubKind::allocator);
+      Kind = SpecialSubKind::allocator;
       break;
     case 'b':
-      ++First;
-      SpecialSub = make<SpecialSubstitution>(SpecialSubKind::basic_string);
-      break;
-    case 's':
-      ++First;
-      SpecialSub = make<SpecialSubstitution>(SpecialSubKind::string);
-      break;
-    case 'i':
-      ++First;
-      SpecialSub = make<SpecialSubstitution>(SpecialSubKind::istream);
-      break;
-    case 'o':
-      ++First;
-      SpecialSub = make<SpecialSubstitution>(SpecialSubKind::ostream);
+      Kind = SpecialSubKind::basic_string;
       break;
     case 'd':
-      ++First;
-      SpecialSub = make<SpecialSubstitution>(SpecialSubKind::iostream);
+      Kind = SpecialSubKind::iostream;
+      break;
+    case 'i':
+      Kind = SpecialSubKind::istream;
+      break;
+    case 'o':
+      Kind = SpecialSubKind::ostream;
+      break;
+    case 's':
+      Kind = SpecialSubKind::string;
       break;
     default:
       return nullptr;
     }
+    ++First;
+    auto *SpecialSub = make<SpecialSubstitution>(Kind);
     if (!SpecialSub)
       return nullptr;
+
     // Itanium C++ ABI 5.1.2: If a name that would use a built-in <substitution>
     // has ABI tags, the tags are appended to the substitution; the result is a
     // substitutable component.

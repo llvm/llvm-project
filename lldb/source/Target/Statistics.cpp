@@ -34,7 +34,8 @@ json::Value StatsSuccessFail::ToJSON() const {
 }
 
 static double elapsed(const StatsTimepoint &start, const StatsTimepoint &end) {
-  StatsDuration elapsed = end.time_since_epoch() - start.time_since_epoch();
+  StatsDuration::Duration elapsed =
+      end.time_since_epoch() - start.time_since_epoch();
   return elapsed.count();
 }
 
@@ -64,6 +65,14 @@ json::Value ModuleStats::ToJSON() const {
   return module;
 }
 
+llvm::json::Value ConstStringStats::ToJSON() const {
+  json::Object obj;
+  obj.try_emplace<int64_t>("bytesTotal", stats.GetBytesTotal());
+  obj.try_emplace<int64_t>("bytesUsed", stats.GetBytesUsed());
+  obj.try_emplace<int64_t>("bytesUnused", stats.GetBytesUnused());
+  return obj;
+}
+
 json::Value TargetStats::ToJSON(Target &target) {
   CollectStats(target);
 
@@ -86,7 +95,8 @@ json::Value TargetStats::ToJSON(Target &target) {
         elapsed(*m_launch_or_attach_time, *m_first_public_stop_time);
     target_metrics_json.try_emplace("firstStopTime", elapsed_time);
   }
-  target_metrics_json.try_emplace("targetCreateTime", m_create_time.count());
+  target_metrics_json.try_emplace("targetCreateTime",
+                                  m_create_time.get().count());
 
   json::Array breakpoints_array;
   double totalBreakpointResolveTime = 0.0;
@@ -177,8 +187,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
     }
     module_stat.uuid = module->GetUUID().GetAsString();
     module_stat.triple = module->GetArchitecture().GetTriple().str();
-    module_stat.symtab_parse_time = module->GetSymtabParseTime().count();
-    module_stat.symtab_index_time = module->GetSymtabIndexTime().count();
+    module_stat.symtab_parse_time = module->GetSymtabParseTime().get().count();
+    module_stat.symtab_index_time = module->GetSymtabIndexTime().get().count();
     Symtab *symtab = module->GetSymtab();
     if (symtab) {
       module_stat.symtab_loaded_from_cache = symtab->GetWasLoadedFromCache();
@@ -210,9 +220,15 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
     json_modules.emplace_back(module_stat.ToJSON());
   }
 
+  ConstStringStats const_string_stats;
+  json::Object json_memory{
+      {"strings", const_string_stats.ToJSON()},
+  };
+
   json::Object global_stats{
       {"targets", std::move(json_targets)},
       {"modules", std::move(json_modules)},
+      {"memory", std::move(json_memory)},
       {"totalSymbolTableParseTime", symtab_parse_time},
       {"totalSymbolTableIndexTime", symtab_index_time},
       {"totalSymbolTablesLoadedFromCache", symtabs_loaded},

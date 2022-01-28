@@ -20,6 +20,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.__errno_location
 
+    # fcntl.h entrypoints
+    libc.src.fcntl.open
+
     # string.h entrypoints
     libc.src.string.bcmp
     libc.src.string.bzero
@@ -79,6 +82,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/mman.h entrypoints
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
+
+    # unistd.h entrypoints
+    libc.src.unistd.close
+    libc.src.unistd.fsync
+    libc.src.unistd.read
+    libc.src.unistd.write
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
@@ -144,6 +153,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.llround
     libc.src.math.llroundf
     libc.src.math.llroundl
+    libc.src.math.log10f
+    libc.src.math.log2f
     libc.src.math.logf
     libc.src.math.logb
     libc.src.math.logbf
@@ -227,9 +238,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.gmtime
     libc.src.time.gmtime_r
     libc.src.time.mktime
-
-    # unistd.h entrypoints
-    libc.src.unistd.write
   )
 endif()
 
@@ -241,7 +249,11 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
     libc.src.stdlib.calloc
     libc.src.stdlib.realloc
     libc.src.stdlib.free
+  )
+endif()
 
+if(LLVM_LIBC_INCLUDE_SCUDO OR NOT LLVM_LIBC_FULL_BUILD)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
     # string.h entrypoints that depend on malloc
     libc.src.string.strdup
     libc.src.string.strndup

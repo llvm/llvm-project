@@ -1198,9 +1198,10 @@ NewGVN::ExprResult NewGVN::createExpression(Instruction *I) const {
     if (auto Simplified = checkExprResults(E, I, V))
       return Simplified;
   } else if (auto *GEPI = dyn_cast<GetElementPtrInst>(I)) {
-    Value *V = SimplifyGEPInst(GEPI->getSourceElementType(),
-                               ArrayRef<Value *>(E->op_begin(), E->op_end()),
-                               GEPI->isInBounds(), SQ);
+    Value *V =
+        SimplifyGEPInst(GEPI->getSourceElementType(), *E->op_begin(),
+                        makeArrayRef(std::next(E->op_begin()), E->op_end()),
+                        GEPI->isInBounds(), SQ);
     if (auto Simplified = checkExprResults(E, I, V))
       return Simplified;
   } else if (AllConstant) {
@@ -2586,6 +2587,15 @@ bool NewGVN::OpIsSafeForPHIOfOpsHelper(
   }
 
   auto *OrigI = cast<Instruction>(V);
+  // When we hit an instruction that reads memory (load, call, etc), we must
+  // consider any store that may happen in the loop. For now, we assume the
+  // worst: there is a store in the loop that alias with this read.
+  // The case where the load is outside the loop is already covered by the
+  // dominator check above.
+  // TODO: relax this condition
+  if (OrigI->mayReadFromMemory())
+    return false;
+
   for (auto *Op : OrigI->operand_values()) {
     if (!isa<Instruction>(Op))
       continue;

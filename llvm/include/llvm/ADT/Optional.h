@@ -21,7 +21,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/type_traits.h"
 #include <cassert>
-#include <memory>
 #include <new>
 #include <utility>
 
@@ -34,12 +33,12 @@ namespace optional_detail {
 /// Storage for any type.
 //
 // The specialization condition intentionally uses
-// llvm::is_trivially_copy_constructible instead of
-// std::is_trivially_copy_constructible.  GCC versions prior to 7.4 may
-// instantiate the copy constructor of `T` when
-// std::is_trivially_copy_constructible is instantiated.  This causes
-// compilation to fail if we query the trivially copy constructible property of
-// a class which is not copy constructible.
+// llvm::is_trivially_{copy/move}_constructible instead of
+// std::is_trivially_{copy/move}_constructible. GCC versions prior to 7.4 may
+// instantiate the copy/move constructor of `T` when
+// std::is_trivially_{copy/move}_constructible is instantiated.  This causes
+// compilation to fail if we query the trivially copy/move constructible
+// property of a class which is not copy/move constructible.
 //
 // The current implementation of OptionalStorage insists that in order to use
 // the trivial specialization, the value_type must be trivially copy
@@ -50,12 +49,13 @@ namespace optional_detail {
 //
 // The move constructible / assignable conditions emulate the remaining behavior
 // of std::is_trivially_copyable.
-template <typename T, bool = (llvm::is_trivially_copy_constructible<T>::value &&
-                              std::is_trivially_copy_assignable<T>::value &&
-                              (std::is_trivially_move_constructible<T>::value ||
-                               !std::is_move_constructible<T>::value) &&
-                              (std::is_trivially_move_assignable<T>::value ||
-                               !std::is_move_assignable<T>::value))>
+template <typename T,
+          bool = (llvm::is_trivially_copy_constructible<T>::value &&
+                  std::is_trivially_copy_assignable<T>::value &&
+                  (llvm::is_trivially_move_constructible<T>::value ||
+                   !std::is_move_constructible<T>::value) &&
+                  (std::is_trivially_move_assignable<T>::value ||
+                   !std::is_move_assignable<T>::value))>
 class OptionalStorage {
   union {
     char empty;

@@ -105,6 +105,12 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &,
 std::vector<LocatedSymbol> findImplementations(ParsedAST &AST, Position Pos,
                                                const SymbolIndex *Index);
 
+/// Returns symbols for types referenced at \p Pos.
+///
+/// For example, given `b^ar()` wher bar return Foo, this function returns the
+/// definition of class Foo.
+std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos);
+
 /// Returns references of the symbol at a specified \p Pos.
 /// \p Limit limits the number of results returned (0 means no limit).
 ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,

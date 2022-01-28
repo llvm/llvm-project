@@ -15,19 +15,20 @@
 
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpsInterfaces.td"
+include "mlir/IR/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-def FMFnnan     : BitEnumAttrCase<"nnan", 0x1>;
-def FMFninf     : BitEnumAttrCase<"ninf", 0x2>;
-def FMFnsz      : BitEnumAttrCase<"nsz", 0x4>;
-def FMFarcp     : BitEnumAttrCase<"arcp", 0x8>;
-def FMFcontract : BitEnumAttrCase<"contract", 0x10>;
-def FMFafn      : BitEnumAttrCase<"afn", 0x20>;
-def FMFreassoc  : BitEnumAttrCase<"reassoc", 0x40>;
-def FMFfast     : BitEnumAttrCase<"fast", 0x80>;
+def FMFnnan     : BitEnumAttrCaseBit<"nnan", 0>;
+def FMFninf     : BitEnumAttrCaseBit<"ninf", 1>;
+def FMFnsz      : BitEnumAttrCaseBit<"nsz", 2>;
+def FMFarcp     : BitEnumAttrCaseBit<"arcp", 3>;
+def FMFcontract : BitEnumAttrCaseBit<"contract", 4>;
+def FMFafn      : BitEnumAttrCaseBit<"afn", 5>;
+def FMFreassoc  : BitEnumAttrCaseBit<"reassoc", 6>;
+def FMFfast     : BitEnumAttrCaseBit<"fast", 7>;
 
 def FastmathFlags_DoNotUse : BitEnumAttr<
     "FastmathFlags",
@@ -295,7 +296,7 @@ class MemoryOpWithAlignmentAndAttributes : MemoryOpWithAlignmentBase {
 def LLVM_AllocaOp : LLVM_Op<"alloca">, MemoryOpWithAlignmentBase {
   let arguments = (ins AnyInteger:$arraySize,
                    OptionalAttr<I64Attr>:$alignment);
-  let results = (outs LLVM_AnyPointer:$res);
+  let results = (outs Res<LLVM_AnyPointer, "", [MemAlloc<AutomaticAllocationScopeResource>]>:$res);
   string llvmBuilder = [{
     auto *inst = builder.CreateAlloca(
       $_resultType->getPointerElementType(), $arraySize);
@@ -356,7 +357,7 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [NoSideEffect]> {
 }
 
 def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpWithAlignmentAndAttributes {
-  let arguments = (ins LLVM_PointerTo<LLVM_LoadableType>:$addr,
+  let arguments = (ins Arg<LLVM_PointerTo<LLVM_LoadableType>, "", [MemRead]>:$addr,
                    OptionalAttr<SymbolRefArrayAttr>:$access_groups,
                    OptionalAttr<SymbolRefArrayAttr>:$alias_scopes,
                    OptionalAttr<SymbolRefArrayAttr>:$noalias_scopes,
@@ -390,7 +391,7 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpWithAlignmentAndAttributes {
 
 def LLVM_StoreOp : LLVM_Op<"store">, MemoryOpWithAlignmentAndAttributes {
   let arguments = (ins LLVM_LoadableType:$value,
-                   LLVM_PointerTo<LLVM_LoadableType>:$addr,
+                   Arg<LLVM_PointerTo<LLVM_LoadableType>,"",[MemWrite]>:$addr,
                    OptionalAttr<SymbolRefArrayAttr>:$access_groups,
                    OptionalAttr<SymbolRefArrayAttr>:$alias_scopes,
                    OptionalAttr<SymbolRefArrayAttr>:$noalias_scopes,
@@ -861,7 +862,7 @@ def UnnamedAddr : LLVM_EnumAttr<
   let cppNamespace = "::mlir::LLVM";
 }
 
-def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof"> {
+def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof", [NoSideEffect]> {
   let arguments = (ins FlatSymbolRefAttr:$global_name);
   let results = (outs LLVM_Type:$res);
 
@@ -1237,8 +1238,9 @@ def LLVM_GlobalDtorsOp : LLVM_Op<"mlir.global_dtors", [
   let assemblyFormat = "attr-dict";
 }
 
-def LLVM_LLVMFuncOp : LLVM_Op<"func",
-    [AutomaticAllocationScope, IsolatedFromAbove, FunctionLike, Symbol]> {
+def LLVM_LLVMFuncOp : LLVM_Op<"func", [
+    AutomaticAllocationScope, IsolatedFromAbove, FunctionOpInterface, Symbol
+  ]> {
   let summary = "LLVM dialect function.";
 
   let description = [{
@@ -1292,24 +1294,19 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func",
     Block *addEntryBlock();
 
     LLVMFunctionType getType() {
-      return (*this)->getAttrOfType<TypeAttr>(getTypeAttrName())
-          .getValue().cast<LLVMFunctionType>();
+      return getTypeAttr().getValue().cast<LLVMFunctionType>();
     }
-    bool isVarArg() {
-      return getType().isVarArg();
-    }
+    bool isVarArg() { return getType().isVarArg(); }
 
-    // Hook for OpTrait::FunctionLike, returns the number of function arguments`.
-    // Depends on the type attribute being correct as checked by verifyType.
-    unsigned getNumFuncArguments();
+    /// Returns the argument types of this function.
+    ArrayRef<Type> getArgumentTypes() { return getType().getParams(); }
 
-    // Hook for OpTrait::FunctionLike, returns the number of function results.
-    // Depends on the type attribute being correct as checked by verifyType.
-    unsigned getNumFuncResults();
+    /// Returns the result types of this function.
+    ArrayRef<Type> getResultTypes() { return getType().getReturnTypes(); }
 
-    // Hook for OpTrait::FunctionLike, called after verifying that the 'type'
-    // attribute is present.  This can check for preconditions of the
-    // getNumArguments hook not failing.
+    /// Hook for FunctionOpInterface, called after verifying that the 'type'
+    /// attribute is present.  This can check for preconditions of the
+    /// getNumArguments hook not failing.
     LogicalResult verifyType();
   }];
 
@@ -1542,6 +1539,10 @@ def LLVM_CoroBeginOp : LLVM_IntrOp<"coro.begin", [], [], [], 1> {
 }
 
 def LLVM_CoroSizeOp : LLVM_IntrOp<"coro.size", [0], [], [], 1> {
+  let assemblyFormat = "attr-dict `:` type($res)";
+}
+
+def LLVM_CoroAlignOp : LLVM_IntrOp<"coro.align", [0], [], [], 1> {
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 

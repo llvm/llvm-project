@@ -13,6 +13,39 @@ func @create_vector_mask_to_constant_mask() -> (vector<4x3xi1>) {
 
 // -----
 
+// CHECK-LABEL: create_vector_mask_to_constant_mask_truncation
+func @create_vector_mask_to_constant_mask_truncation() -> (vector<4x3xi1>) {
+  %c2 = arith.constant 2 : index
+  %c5 = arith.constant 5 : index
+  // CHECK: vector.constant_mask [4, 2] : vector<4x3xi1>
+  %0 = vector.create_mask %c5, %c2 : vector<4x3xi1>
+  return %0 : vector<4x3xi1>
+}
+
+// -----
+
+// CHECK-LABEL: create_vector_mask_to_constant_mask_truncation_neg
+func @create_vector_mask_to_constant_mask_truncation_neg() -> (vector<4x3xi1>) {
+  %cneg2 = arith.constant -2 : index
+  %c5 = arith.constant 5 : index
+  // CHECK: vector.constant_mask [0, 0] : vector<4x3xi1>
+  %0 = vector.create_mask %c5, %cneg2 : vector<4x3xi1>
+  return %0 : vector<4x3xi1>
+}
+
+// -----
+
+// CHECK-LABEL: create_vector_mask_to_constant_mask_truncation_zero
+func @create_vector_mask_to_constant_mask_truncation_zero() -> (vector<4x3xi1>) {
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  // CHECK: vector.constant_mask [0, 0] : vector<4x3xi1>
+  %0 = vector.create_mask %c0, %c2 : vector<4x3xi1>
+  return %0 : vector<4x3xi1>
+}
+
+// -----
+
 func @extract_strided_slice_of_constant_mask() -> (vector<2x2xi1>) {
   %0 = vector.constant_mask [2, 2] : vector<4x3xi1>
   %1 = vector.extract_strided_slice %0
@@ -316,87 +349,103 @@ func @insert_extract_transpose_2d(
 
 // -----
 
-// CHECK-LABEL: func @insert_extract_transpose_3d(
-//  CHECK-SAME: %[[V:[a-zA-Z0-9]*]]: vector<2x3x4xf32>,
-//  CHECK-SAME: %[[F0:[a-zA-Z0-9]*]]: f32,
-//  CHECK-SAME: %[[F1:[a-zA-Z0-9]*]]: f32,
-//  CHECK-SAME: %[[F2:[a-zA-Z0-9]*]]: f32,
-//  CHECK-SAME: %[[F3:[a-zA-Z0-9]*]]: f32
-func @insert_extract_transpose_3d(
-    %v: vector<2x3x4xf32>, %f0: f32, %f1: f32, %f2: f32, %f3: f32)
--> (f32, f32, f32, f32)
-{
-  %0 = vector.insert %f0, %v[0, 0, 0] : f32 into vector<2x3x4xf32>
-  %1 = vector.insert %f1, %0[0, 1, 0] : f32 into vector<2x3x4xf32>
-  %2 = vector.insert %f2, %1[1, 0, 0] : f32 into vector<2x3x4xf32>
-  %3 = vector.insert %f3, %2[0, 0, 1] : f32 into vector<2x3x4xf32>
-  %4 = vector.transpose %3, [1, 2, 0] : vector<2x3x4xf32> to vector<3x4x2xf32>
-  %5 = vector.insert %f3, %4[1, 0, 0] : f32 into vector<3x4x2xf32>
-  %6 = vector.transpose %5, [1, 2, 0] : vector<3x4x2xf32> to vector<4x2x3xf32>
-  %7 = vector.insert %f3, %6[1, 0, 0] : f32 into vector<4x2x3xf32>
-  %8 = vector.transpose %7, [1, 2, 0] : vector<4x2x3xf32> to vector<2x3x4xf32>
+// CHECK-LABEL: insert_extract_chain
+//  CHECK-SAME: %[[V234:[a-zA-Z0-9]*]]: vector<2x3x4xf32>
+//  CHECK-SAME: %[[V34:[a-zA-Z0-9]*]]: vector<3x4xf32>
+//  CHECK-SAME: %[[V4:[a-zA-Z0-9]*]]: vector<4xf32>
+func @insert_extract_chain(%v234: vector<2x3x4xf32>, %v34: vector<3x4xf32>, %v4: vector<4xf32>)
+    -> (vector<4xf32>, vector<4xf32>, vector<3x4xf32>, vector<3x4xf32>) {
+  // CHECK-NEXT: %[[A34:.*]] = vector.insert
+  %A34 = vector.insert %v34, %v234[0]: vector<3x4xf32> into vector<2x3x4xf32>
+  // CHECK-NEXT: %[[B34:.*]] = vector.insert
+  %B34 = vector.insert %v34, %A34[1]: vector<3x4xf32> into vector<2x3x4xf32>
+  // CHECK-NEXT: %[[A4:.*]] = vector.insert
+  %A4 = vector.insert %v4, %B34[1, 0]: vector<4xf32> into vector<2x3x4xf32>
+  // CHECK-NEXT: %[[B4:.*]] = vector.insert
+  %B4 = vector.insert %v4, %A4[1, 1]: vector<4xf32> into vector<2x3x4xf32>
 
-  // Expected %f2 from %2 = vector.insert %f2, %1[1, 0, 0].
-  %r1 = vector.extract %3[1, 0, 0] : vector<2x3x4xf32>
+  // Case 2.a. [1, 1] == insertpos ([1, 1])
+  // Match %A4 insertionpos and fold to its source(i.e. %V4).
+   %r0 = vector.extract %B4[1, 1]: vector<2x3x4xf32>
 
-  // Expected %f1 from %1 = vector.insert %f1, %0[0, 1, 0] followed by
-  // transpose[1, 2, 0].
-  %r2 = vector.extract %4[1, 0, 0] : vector<3x4x2xf32>
+  // Case 3.a. insertpos ([1]) is a prefix of [1, 0].
+  // Traverse %B34 to its source(i.e. %V34@[*0*]).
+  // CHECK-NEXT: %[[R1:.*]] = vector.extract %[[V34]][0]
+   %r1 = vector.extract %B34[1, 0]: vector<2x3x4xf32>
 
-  // Expected %f3 from %3 = vector.insert %f3, %0[0, 0, 1] followed by double
-  // transpose[1, 2, 0].
-  %r3 = vector.extract %6[1, 0, 0] : vector<4x2x3xf32>
+  // Case 4. [1] is a prefix of insertpos ([1, 1]).
+  // Cannot traverse %B4.
+  // CHECK-NEXT: %[[R2:.*]] = vector.extract %[[B4]][1]
+   %r2 = vector.extract %B4[1]: vector<2x3x4xf32>
 
-  // Expected %f2 from %2 = vector.insert %f2, %1[1, 0, 0] followed by triple
-  // transpose[1, 2, 0].
-  %r4 = vector.extract %8[1, 0, 0] : vector<2x3x4xf32>
+  // Case 5. [0] is disjoint from insertpos ([1, 1]).
+  // Traverse %B4 to its dest(i.e. %A4@[0]).
+  // Traverse %A4 to its dest(i.e. %B34@[0]).
+  // Traverse %B34 to its dest(i.e. %A34@[0]).
+  // Match %A34 insertionpos and fold to its source(i.e. %V34).
+   %r3 = vector.extract %B4[0]: vector<2x3x4xf32>
 
-  // CHECK-NEXT: return %[[F2]], %[[F1]], %[[F3]], %[[F2]] : f32, f32, f32
-  return %r1, %r2, %r3, %r4 : f32, f32, f32, f32
+  // CHECK: return %[[V4]], %[[R1]], %[[R2]], %[[V34]]
+  return %r0, %r1, %r2, %r3:
+    vector<4xf32>, vector<4xf32>, vector<3x4xf32>, vector<3x4xf32>
 }
 
 // -----
 
-// CHECK-LABEL: func @insert_extract_transpose_3d_2d(
-//  CHECK-SAME: %[[V:[a-zA-Z0-9]*]]: vector<2x3x4xf32>,
-//  CHECK-SAME: %[[F0:[a-zA-Z0-9]*]]: vector<4xf32>,
-//  CHECK-SAME: %[[F1:[a-zA-Z0-9]*]]: vector<4xf32>,
-//  CHECK-SAME: %[[F2:[a-zA-Z0-9]*]]: vector<4xf32>,
-//  CHECK-SAME: %[[F3:[a-zA-Z0-9]*]]: vector<4xf32>
-func @insert_extract_transpose_3d_2d(
-    %v: vector<2x3x4xf32>,
-    %f0: vector<4xf32>, %f1: vector<4xf32>, %f2: vector<4xf32>, %f3: vector<4xf32>)
--> (vector<4xf32>, vector<4xf32>, vector<4xf32>, vector<4xf32>)
-{
-  %0 = vector.insert %f0, %v[0, 0] : vector<4xf32> into vector<2x3x4xf32>
-  %1 = vector.insert %f1, %0[0, 1] : vector<4xf32> into vector<2x3x4xf32>
-  %2 = vector.insert %f2, %1[1, 0] : vector<4xf32> into vector<2x3x4xf32>
-  %3 = vector.insert %f3, %2[1, 1] : vector<4xf32> into vector<2x3x4xf32>
-  %4 = vector.transpose %3, [1, 0, 2] : vector<2x3x4xf32> to vector<3x2x4xf32>
-  %5 = vector.transpose %4, [1, 0, 2] : vector<3x2x4xf32> to vector<2x3x4xf32>
+// CHECK-LABEL: func @insert_extract_transpose_3d(
+//  CHECK-SAME: %[[V234:[a-zA-Z0-9]*]]: vector<2x3x4xf32>
+func @insert_extract_transpose_3d(
+  %v234: vector<2x3x4xf32>, %v43: vector<4x3xf32>, %f0: f32)
+    -> (vector<4xf32>, vector<4xf32>, vector<4xf32>, vector<3x4xf32>) {
 
-  // Expected %f2 from %2 = vector.insert %f2, %1[1, 0].
-  %r1 = vector.extract %3[1, 0] : vector<2x3x4xf32>
+  %a432 = vector.transpose %v234, [2, 1, 0] : vector<2x3x4xf32> to vector<4x3x2xf32>
+  %b432 = vector.insert %f0, %a432[0, 0, 1] : f32 into vector<4x3x2xf32>
+  %c234 = vector.transpose %b432, [2, 1, 0] : vector<4x3x2xf32> to vector<2x3x4xf32>
+  // Case 1. %c234 = transpose [2,1,0] posWithSentinels [1,2,-1] -> [-1,2,1]
+  // Case 5. %b432 = insert [0,0,1] (inter([.,2,1], [.,0,1]) == 0) prop to %v432
+  // Case 1. %a432 = transpose [2,1,0] posWithSentinels [-1,2,1] -> [1,2,-1]
+  // can extract directly from %v234, the rest folds.
+  // CHECK: %[[R0:.*]] = vector.extract %[[V234]][1, 2]
+  %r0 = vector.extract %c234[1, 2] : vector<2x3x4xf32>
 
-  // Expected %f1 from %1 = vector.insert %f1, %0[0, 1] followed by
-  // transpose[1, 0, 2].
-  %r2 = vector.extract %4[1, 0] : vector<3x2x4xf32>
+  // CHECK-NEXT: vector.transpose
+  // CHECK-NEXT: vector.insert
+  // CHECK-NEXT: %[[F234:.*]] = vector.transpose
+  %d432 = vector.transpose %v234, [2, 1, 0] : vector<2x3x4xf32> to vector<4x3x2xf32>
+  %e432 = vector.insert %f0, %d432[0, 2, 1] : f32 into vector<4x3x2xf32>
+  %f234 = vector.transpose %e432, [2, 1, 0] : vector<4x3x2xf32> to vector<2x3x4xf32>
+  // Case 1. %c234 = transpose [2,1,0] posWithSentinels [1,2,-1] -> [-1,2,1]
+  // Case 4. %b432 = insert [0,0,1] (inter([.,2,1], [.,2,1]) != 0)
+  // Bail, cannot do better than the current.
+  // CHECK: %[[R1:.*]] = vector.extract %[[F234]]
+  %r1 = vector.extract %f234[1, 2] : vector<2x3x4xf32>
 
-  // Expected %f2 from %2 = vector.insert %f2, %1[1, 0, 0] followed by double
-  // transpose[1, 0, 2].
-  %r3 = vector.extract %5[1, 0] : vector<2x3x4xf32>
+  // CHECK-NEXT: vector.transpose
+  // CHECK-NEXT: vector.insert
+  // CHECK-NEXT: %[[H234:.*]] = vector.transpose
+  %g243 = vector.transpose %v234, [0, 2, 1] : vector<2x3x4xf32> to vector<2x4x3xf32>
+  %h243 = vector.insert %v43, %g243[0] : vector<4x3xf32> into vector<2x4x3xf32>
+  %i234 = vector.transpose %h243, [0, 2, 1] : vector<2x4x3xf32> to vector<2x3x4xf32>
+  // Case 1. %i234 = transpose [0,2,1] posWithSentinels [0,-1,-2] -> [0,-2,-1]
+  // Case 3.b. %b432 = insert [0] is prefix of [0,.,.] but internal transpose.
+  // Bail, cannot do better than the current.
+  // CHECK: %[[R2:.*]] = vector.extract %[[H234]][0, 1]
+  %r2 = vector.extract %i234[0, 1] : vector<2x3x4xf32>
 
-  %6 = vector.transpose %3, [1, 2, 0] : vector<2x3x4xf32> to vector<3x4x2xf32>
-  %7 = vector.transpose %6, [1, 2, 0] : vector<3x4x2xf32> to vector<4x2x3xf32>
-  %8 = vector.transpose %7, [1, 2, 0] : vector<4x2x3xf32> to vector<2x3x4xf32>
+  // CHECK-NEXT: vector.transpose
+  // CHECK-NEXT: vector.insert
+  // CHECK-NEXT: %[[K234:.*]] = vector.transpose
+  %j243 = vector.transpose %v234, [0, 2, 1] : vector<2x3x4xf32> to vector<2x4x3xf32>
+  %k243 = vector.insert %v43, %j243[0] : vector<4x3xf32> into vector<2x4x3xf32>
+  %l234 = vector.transpose %k243, [0, 2, 1] : vector<2x4x3xf32> to vector<2x3x4xf32>
+  // Case 1. %i234 = transpose [0,2,1] posWithSentinels [0,-1,-2] -> [0,-2,-1]
+  // Case 2.b. %b432 = insert [0] == [0,.,.] but internal transpose.
+  // Bail, cannot do better than the current.
+  // CHECK: %[[R3:.*]] = vector.extract %[[K234]][0]
+  %r3 = vector.extract %l234[0] : vector<2x3x4xf32>
 
-  // Expected %f2 from %2 = vector.insert %f2, %1[1, 0, 0] followed by triple
-  // transpose[1, 2, 0].
-  %r4 = vector.extract %8[1, 0] : vector<2x3x4xf32>
-
-  //      CHECK: return %[[F2]], %[[F1]], %[[F2]], %[[F2]]
-  // CHECK-SAME: vector<4xf32>, vector<4xf32>, vector<4xf32>, vector<4xf32>
-  return %r1, %r2, %r3, %r4 : vector<4xf32>, vector<4xf32>, vector<4xf32>, vector<4xf32>
+  // CHECK-NEXT: return %[[R0]], %[[R1]], %[[R2]], %[[R3]]
+  return %r0, %r1, %r2, %r3: vector<4xf32>, vector<4xf32>, vector<4xf32>, vector<3x4xf32>
 }
 
 // -----
@@ -1108,4 +1157,88 @@ func @extract_constant() -> (vector<7xf32>, i32) {
   %0 = vector.extract %cst[2] : vector<29x7xf32>
   %1 = vector.extract %cst_1[1, 4, 5] : vector<4x37x9xi32>
   return %0, %1 : vector<7xf32>, i32
+}
+
+// -----
+
+// CHECK-LABEL: extract_extract_strided
+//  CHECK-SAME: %[[A:.*]]: vector<32x16x4xf16>
+//       CHECK: %[[V:.*]] = vector.extract %[[A]][9, 7] : vector<32x16x4xf16>
+//       CHECK: return %[[V]] : vector<4xf16>
+func @extract_extract_strided(%arg0: vector<32x16x4xf16>) -> vector<4xf16> {
+ %1 = vector.extract_strided_slice %arg0
+  {offsets = [7, 3], sizes = [10, 8], strides = [1, 1]} :
+  vector<32x16x4xf16> to vector<10x8x4xf16>
+  %2 = vector.extract %1[2, 4] : vector<10x8x4xf16>
+  return %2 : vector<4xf16>
+}
+
+// -----
+
+// CHECK-LABEL: extract_insert_strided
+//  CHECK-SAME: %[[A:.*]]: vector<6x4xf32>
+//       CHECK: %[[V:.*]] = vector.extract %[[A]][0, 2] : vector<6x4xf32>
+//       CHECK: return %[[V]] : f32
+func @extract_insert_strided(%a: vector<6x4xf32>, %b: vector<8x16xf32>)
+  -> f32 {
+  %0 = vector.insert_strided_slice %a, %b {offsets = [2, 2], strides = [1, 1]}
+    : vector<6x4xf32> into vector<8x16xf32>
+  %2 = vector.extract %0[2, 4] : vector<8x16xf32>
+  return %2 : f32
+}
+
+// -----
+
+// CHECK-LABEL: extract_insert_rank_reduce
+//  CHECK-SAME: %[[A:.*]]: vector<4xf32>
+//       CHECK: %[[V:.*]] = vector.extract %[[A]][2] : vector<4xf32>
+//       CHECK: return %[[V]] : f32
+func @extract_insert_rank_reduce(%a: vector<4xf32>, %b: vector<8x16xf32>)
+  -> f32 {
+  %0 = vector.insert_strided_slice %a, %b {offsets = [2, 2], strides = [1]}
+    : vector<4xf32> into vector<8x16xf32>
+  %2 = vector.extract %0[2, 4] : vector<8x16xf32>
+  return %2 : f32
+}
+
+// -----
+
+// CHECK-LABEL: extract_insert_negative
+//       CHECK: vector.insert_strided_slice
+//       CHECK: vector.extract
+func @extract_insert_negative(%a: vector<2x15xf32>, %b: vector<12x8x16xf32>)
+  -> vector<16xf32> {
+  %0 = vector.insert_strided_slice %a, %b {offsets = [4, 2, 0], strides = [1, 1]}
+    : vector<2x15xf32> into vector<12x8x16xf32>
+  %2 = vector.extract %0[4, 2] : vector<12x8x16xf32>
+  return %2 : vector<16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: extract_insert_chain
+//  CHECK-SAME: (%[[A:.*]]: vector<2x16xf32>, %[[B:.*]]: vector<12x8x16xf32>, %[[C:.*]]: vector<2x16xf32>)
+//       CHECK: %[[V:.*]] = vector.extract %[[C]][0] : vector<2x16xf32>
+//       CHECK: return %[[V]] : vector<16xf32>
+func @extract_insert_chain(%a: vector<2x16xf32>, %b: vector<12x8x16xf32>, %c: vector<2x16xf32>)
+  -> vector<16xf32> {
+  %0 = vector.insert_strided_slice %c, %b {offsets = [4, 2, 0], strides = [1, 1]}
+    : vector<2x16xf32> into vector<12x8x16xf32>
+  %1 = vector.insert_strided_slice %a, %0 {offsets = [0, 2, 0], strides = [1, 1]}
+    : vector<2x16xf32> into vector<12x8x16xf32>
+  %2 = vector.extract %1[4, 2] : vector<12x8x16xf32>
+  return %2 : vector<16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: extract_extract_strided2
+//  CHECK-SAME: %[[A:.*]]: vector<2x4xf32>
+//       CHECK: %[[V:.*]] = vector.extract %[[A]][1] : vector<2x4xf32>
+//       CHECK: return %[[V]] : vector<4xf32>
+func @extract_extract_strided2(%A: vector<2x4xf32>)
+  -> (vector<4xf32>) {
+ %0 = vector.extract_strided_slice %A {offsets = [1, 0], sizes = [1, 4], strides = [1, 1]} : vector<2x4xf32> to vector<1x4xf32>
+ %1 = vector.extract %0[0] : vector<1x4xf32>
+ return %1 : vector<4xf32>
 }

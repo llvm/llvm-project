@@ -41,8 +41,9 @@ Attribute constFoldBinaryOp(ArrayRef<Attribute> operands,
 
     return AttrElementT::get(lhs.getType(),
                              calculate(lhs.getValue(), rhs.getValue()));
-  } else if (operands[0].isa<SplatElementsAttr>() &&
-             operands[1].isa<SplatElementsAttr>()) {
+  }
+  if (operands[0].isa<SplatElementsAttr>() &&
+      operands[1].isa<SplatElementsAttr>()) {
     // Both operands are splats so we can avoid expanding the values out and
     // just fold based on the splat value.
     auto lhs = operands[0].cast<SplatElementsAttr>();

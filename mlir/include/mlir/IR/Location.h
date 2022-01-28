@@ -115,7 +115,7 @@ namespace mlir {
 /// Returns an instance of opaque location which contains a given pointer to
 /// an object. The corresponding MLIR location is set to UnknownLoc.
 template <typename T>
-inline Location OpaqueLoc::get(T underlyingLocation, MLIRContext *context) {
+inline OpaqueLoc OpaqueLoc::get(T underlyingLocation, MLIRContext *context) {
   return get(reinterpret_cast<uintptr_t>(underlyingLocation), TypeID::get<T>(),
              UnknownLoc::get(context));
 }
@@ -130,11 +130,11 @@ namespace llvm {
 // Type hash just like pointers.
 template <> struct DenseMapInfo<mlir::Location> {
   static mlir::Location getEmptyKey() {
-    auto pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
+    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::Location::getFromOpaquePointer(pointer);
   }
   static mlir::Location getTombstoneKey() {
-    auto pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
+    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
     return mlir::Location::getFromOpaquePointer(pointer);
   }
   static unsigned getHashValue(mlir::Location val) {

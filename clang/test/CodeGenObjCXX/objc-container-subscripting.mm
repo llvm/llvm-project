@@ -50,7 +50,7 @@ template void test3<int>(NSMutableArray*);
 // CHECK-LABEL: define{{.*}} void @_Z11static_dataP14NSMutableArray
 void static_data(NSMutableArray *array) {
   // CHECK: call i32 @__cxa_guard_acquire
-  // CHECK: {{call i8*.*@objc_msgSend }}
+  // CHECK: {{call noundef i8*.*@objc_msgSend }}
   // CHECK: call void @__cxa_guard_release
   static id x = array[4];
   // CHECK: ret void

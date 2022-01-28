@@ -512,8 +512,7 @@ def HasV6T2Ops  : SubtargetFeature<"v6t2", "HasV6T2Ops", "true",
 
 def HasV7Ops    : SubtargetFeature<"v7", "HasV7Ops", "true",
                                    "Support ARM v7 instructions",
-                                   [HasV6T2Ops, FeaturePerfMon,
-                                    FeatureV7Clrex]>;
+                                   [HasV6T2Ops, FeatureV7Clrex]>;
 
 def HasV8MMainlineOps :
                   SubtargetFeature<"v8m.main", "HasV8MMainlineOps", "true",
@@ -522,7 +521,7 @@ def HasV8MMainlineOps :
 
 def HasV8Ops    : SubtargetFeature<"v8", "HasV8Ops", "true",
                                    "Support ARM v8 instructions",
-                                   [HasV7Ops, FeatureAcquireRelease]>;
+                                   [HasV7Ops, FeaturePerfMon, FeatureAcquireRelease]>;
 
 def HasV8_1aOps : SubtargetFeature<"v8.1a", "HasV8_1aOps", "true",
                                    "Support ARM v8.1a instructions",
@@ -765,7 +764,8 @@ def ARMv7a    : Architecture<"armv7-a",   "ARMv7a",   [HasV7Ops,
                                                        FeatureNEON,
                                                        FeatureDB,
                                                        FeatureDSP,
-                                                       FeatureAClass]>;
+                                                       FeatureAClass,
+                                                       FeaturePerfMon]>;
 
 def ARMv7ve   : Architecture<"armv7ve",   "ARMv7ve",  [HasV7Ops,
                                                        FeatureNEON,
@@ -774,13 +774,15 @@ def ARMv7ve   : Architecture<"armv7ve",   "ARMv7ve",  [HasV7Ops,
                                                        FeatureTrustZone,
                                                        FeatureMP,
                                                        FeatureVirtualization,
-                                                       FeatureAClass]>;
+                                                       FeatureAClass,
+                                                       FeaturePerfMon]>;
 
 def ARMv7r    : Architecture<"armv7-r",   "ARMv7r",   [HasV7Ops,
                                                        FeatureDB,
                                                        FeatureDSP,
                                                        FeatureHWDivThumb,
-                                                       FeatureRClass]>;
+                                                       FeatureRClass,
+                                                       FeaturePerfMon]>;
 
 def ARMv7m    : Architecture<"armv7-m",   "ARMv7m",   [HasV7Ops,
                                                        FeatureThumb2,
@@ -1459,8 +1461,7 @@ def : ProcNoItin<"neoverse-n1",                         [ARMv82a,
 
 def : ProcNoItin<"neoverse-n2",                         [ARMv85a,
                                                          FeatureBF16,
-                                                         FeatureMatMulInt8,
-                                                         FeaturePerfMon]>;
+                                                         FeatureMatMulInt8]>;
 
 def : ProcessorModel<"cyclone",     SwiftModel,         [ARMv8a, ProcSwift,
                                                          FeatureHasRetAddrStack,

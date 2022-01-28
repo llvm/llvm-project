@@ -8,6 +8,8 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-format
+// TODO FMT Evaluate gcc-11 status
+// UNSUPPORTED: gcc-11
 
 // <format>
 
@@ -96,7 +98,7 @@ void test_all_unsigned_integral_types() {
   test_unsigned_integral_type<unsigned, CharT>();
   test_unsigned_integral_type<unsigned long, CharT>();
   test_unsigned_integral_type<unsigned long long, CharT>();
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
   test_unsigned_integral_type<__uint128_t, CharT>();
 #endif
 }

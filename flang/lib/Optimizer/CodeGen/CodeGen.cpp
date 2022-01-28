@@ -23,6 +23,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "llvm/ADT/ArrayRef.h"
 
 #define DEBUG_TYPE "flang-codegen"
@@ -369,14 +370,19 @@ struct AllocaOpConversion : public FIROpConversion<fir::AllocaOp> {
     if (alloc.hasShapeOperands()) {
       mlir::Type allocEleTy = fir::unwrapRefType(alloc.getType());
       // Scale the size by constant factors encoded in the array type.
+      // We only do this for arrays that don't have a constant interior, since
+      // those are the only ones that get decayed to a pointer to the element
+      // type.
       if (auto seqTy = allocEleTy.dyn_cast<fir::SequenceType>()) {
-        fir::SequenceType::Extent constSize = 1;
-        for (auto extent : seqTy.getShape())
-          if (extent != fir::SequenceType::getUnknownExtent())
-            constSize *= extent;
-        mlir::Value constVal{
-            genConstantIndex(loc, ity, rewriter, constSize).getResult()};
-        size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, constVal);
+        if (!seqTy.hasConstantInterior()) {
+          fir::SequenceType::Extent constSize = 1;
+          for (auto extent : seqTy.getShape())
+            if (extent != fir::SequenceType::getUnknownExtent())
+              constSize *= extent;
+          mlir::Value constVal{
+              genConstantIndex(loc, ity, rewriter, constSize).getResult()};
+          size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, constVal);
+        }
       }
       unsigned end = operands.size();
       for (; i < end; ++i)
@@ -1634,7 +1640,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
   mlir::Value
   getTypeDescriptor(BOX box, mlir::ConversionPatternRewriter &rewriter,
                     mlir::Location loc, fir::RecordType recType) const {
-    std::string name = recType.getLoweredName();
+    std::string name = recType.translateNameToFrontendMangledName();
     auto module = box->template getParentOfType<mlir::ModuleOp>();
     if (auto global = module.template lookupSymbol<fir::GlobalOp>(name)) {
       auto ty = mlir::LLVM::LLVMPointerType::get(
@@ -3260,7 +3266,7 @@ public:
 
     auto *context = getModule().getContext();
     fir::LLVMTypeConverter typeConverter{getModule()};
-    mlir::OwningRewritePatternList pattern(context);
+    mlir::RewritePatternSet pattern(context);
     pattern.insert<
         AbsentOpConversion, AddcOpConversion, AddrOfOpConversion,
         AllocaOpConversion, AllocMemOpConversion, BoxAddrOpConversion,
@@ -3300,8 +3306,44 @@ public:
     }
   }
 };
+
+/// Lower from LLVM IR dialect to proper LLVM-IR and dump the module
+struct LLVMIRLoweringPass
+    : public mlir::PassWrapper<LLVMIRLoweringPass,
+                               mlir::OperationPass<mlir::ModuleOp>> {
+  using Printer = fir::LLVMIRLoweringPrinter;
+  LLVMIRLoweringPass(raw_ostream &output, Printer p)
+      : output{output}, printer{p} {}
+
+  mlir::ModuleOp getModule() { return getOperation(); }
+
+  void runOnOperation() override final {
+    auto *ctx = getModule().getContext();
+    auto optName = getModule().getName();
+    llvm::LLVMContext llvmCtx;
+    if (auto llvmModule = mlir::translateModuleToLLVMIR(
+            getModule(), llvmCtx, optName ? *optName : "FIRModule")) {
+      printer(*llvmModule, output);
+      return;
+    }
+
+    mlir::emitError(mlir::UnknownLoc::get(ctx), "could not emit LLVM-IR\n");
+    signalPassFailure();
+  }
+
+private:
+  raw_ostream &output;
+  Printer printer;
+};
+
 } // namespace
 
 std::unique_ptr<mlir::Pass> fir::createFIRToLLVMPass() {
   return std::make_unique<FIRToLLVMLowering>();
+}
+
+std::unique_ptr<mlir::Pass>
+fir::createLLVMDialectToLLVMPass(raw_ostream &output,
+                                 fir::LLVMIRLoweringPrinter printer) {
+  return std::make_unique<LLVMIRLoweringPass>(output, printer);
 }

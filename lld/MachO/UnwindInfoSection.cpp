@@ -226,7 +226,7 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
         // (See discussions/alternatives already considered on D107533)
         if (!defined->isExternal())
           if (Symbol *sym = symtab->find(defined->getName()))
-            if (sym->kind() != Symbol::LazyKind)
+            if (!sym->isLazy())
               r.referent = s = sym;
       }
       if (auto *undefined = dyn_cast<Undefined>(s)) {

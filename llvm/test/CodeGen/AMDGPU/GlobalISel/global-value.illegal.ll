@@ -1,4 +1,4 @@
-; RUN: not --crash llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -o /dev/null %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not --crash llc -global-isel -global-isel-abort=1 -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -o /dev/null %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 ; FIXME: Should produce context error for each one
 ; ERR: LLVM ERROR: unable to legalize instruction: %{{[0-9]+}}:_(p5) = G_GLOBAL_VALUE @external_private (in function: fn_external_private)

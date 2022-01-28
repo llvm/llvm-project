@@ -649,3 +649,62 @@ TEST(ExternalIOTests, TestWriteAfterNonAvancingInput) {
   ASSERT_EQ(resultRecord, expectedRecord)
       << "Record after non advancing read followed by wrote";
 }
+
+TEST(ExternalIOTests, TestWriteAfterEndfile) {
+  // OPEN(NEWUNIT=unit,ACCESS='SEQUENTIAL',ACTION='READWRITE',&
+  //   FORM='FORMATTED',STATUS='SCRATCH')
+  auto *io{IONAME(BeginOpenNewUnit)(__FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetAccess)(io, "SEQUENTIAL", 10))
+      << "SetAccess(SEQUENTIAL)";
+  ASSERT_TRUE(IONAME(SetAction)(io, "READWRITE", 9)) << "SetAction(READWRITE)";
+  ASSERT_TRUE(IONAME(SetForm)(io, "FORMATTED", 9)) << "SetForm(FORMATTED)";
+  ASSERT_TRUE(IONAME(SetStatus)(io, "SCRATCH", 7)) << "SetStatus(SCRATCH)";
+  int unit{-1};
+  ASSERT_TRUE(IONAME(GetNewUnit)(io, unit)) << "GetNewUnit()";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for OpenNewUnit";
+  // WRITE(unit,"(I8)") 1234
+  static constexpr std::string_view format{"(I8)"};
+  io = IONAME(BeginExternalFormattedOutput)(
+      format.data(), format.length(), unit, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(OutputInteger64)(io, 1234)) << "OutputInteger64()";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement for WRITE before ENDFILE";
+  // ENDFILE(unit)
+  io = IONAME(BeginEndfile)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement for ENDFILE";
+  // WRITE(unit,"(I8)",iostat=iostat) 5678
+  io = IONAME(BeginExternalFormattedOutput)(
+      format.data(), format.length(), unit, __FILE__, __LINE__);
+  IONAME(EnableHandlers)(io, true /*IOSTAT=*/);
+  ASSERT_FALSE(IONAME(OutputInteger64)(io, 5678)) << "OutputInteger64()";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatWriteAfterEndfile)
+      << "EndIoStatement for WRITE after ENDFILE";
+  // BACKSPACE(unit)
+  io = IONAME(BeginBackspace)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement for BACKSPACE";
+  // WRITE(unit,"(I8)") 3456
+  io = IONAME(BeginExternalFormattedOutput)(
+      format.data(), format.length(), unit, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(OutputInteger64)(io, 3456)) << "OutputInteger64()";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement for WRITE after BACKSPACE";
+  // REWIND(unit)
+  io = IONAME(BeginRewind)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement for REWIND";
+  // READ(unit,"(I8)",END=) j, k
+  std::int64_t j{-1}, k{-1}, eof{-1};
+  io = IONAME(BeginExternalFormattedInput)(
+      format.data(), format.length(), unit, __FILE__, __LINE__);
+  IONAME(EnableHandlers)(io, false, false, true /*END=*/);
+  ASSERT_TRUE(IONAME(InputInteger)(io, j)) << "InputInteger(j)";
+  ASSERT_EQ(j, 1234) << "READ(j)";
+  ASSERT_TRUE(IONAME(InputInteger)(io, k)) << "InputInteger(k)";
+  ASSERT_EQ(k, 3456) << "READ(k)";
+  ASSERT_FALSE(IONAME(InputInteger)(io, eof)) << "InputInteger(eof)";
+  ASSERT_EQ(eof, -1) << "READ(eof)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatEnd) << "EndIoStatement for READ";
+}

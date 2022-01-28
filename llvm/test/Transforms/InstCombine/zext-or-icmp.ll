@@ -46,11 +46,7 @@ define i32 @dont_widen_undef() {
 ; CHECK:       block1:
 ; CHECK-NEXT:    br label [[BLOCK2]]
 ; CHECK:       block2:
-; CHECK-NEXT:    [[CMP_I:%.*]] = phi i1 [ false, [[BLOCK1:%.*]] ], [ true, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[CMP115:%.*]] = phi i1 [ true, [[BLOCK1]] ], [ false, [[ENTRY]] ]
-; CHECK-NEXT:    [[CMP1:%.*]] = or i1 [[CMP_I]], [[CMP115]]
-; CHECK-NEXT:    [[CONV2:%.*]] = zext i1 [[CMP1]] to i32
-; CHECK-NEXT:    ret i32 [[CONV2]]
+; CHECK-NEXT:    ret i32 1
 ;
 entry:
   br label %block2
@@ -76,11 +72,7 @@ define i32 @dont_widen_undef_logical() {
 ; CHECK:       block1:
 ; CHECK-NEXT:    br label [[BLOCK2]]
 ; CHECK:       block2:
-; CHECK-NEXT:    [[CMP_I:%.*]] = phi i1 [ false, [[BLOCK1:%.*]] ], [ true, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[CMP115:%.*]] = phi i1 [ true, [[BLOCK1]] ], [ false, [[ENTRY]] ]
-; CHECK-NEXT:    [[CMP1:%.*]] = or i1 [[CMP_I]], [[CMP115]]
-; CHECK-NEXT:    [[CONV2:%.*]] = zext i1 [[CMP1]] to i32
-; CHECK-NEXT:    ret i32 [[CONV2]]
+; CHECK-NEXT:    ret i32 1
 ;
 entry:
   br label %block2
@@ -97,6 +89,33 @@ block2:
   %cmp1 = select i1 %cmp.i, i1 true, i1 %cmp115
   %conv2 = zext i1 %cmp1 to i32
   ret i32 %conv2
+}
+
+; A limitation of knownbits with overshift prevents reducing to 'false'.
+
+define i1 @knownbits_out_of_range_shift(i32 %x) {
+; CHECK-LABEL: @knownbits_out_of_range_shift(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[BLOCK2:%.*]]
+; CHECK:       block1:
+; CHECK-NEXT:    br label [[BLOCK2]]
+; CHECK:       block2:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 63, [[ENTRY:%.*]] ], [ 31, [[BLOCK1:%.*]] ]
+; CHECK-NEXT:    [[L:%.*]] = lshr i32 [[X:%.*]], [[P]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[L]], 2
+; CHECK-NEXT:    ret i1 [[R]]
+;
+entry:
+  br label %block2
+
+block1:
+  br label %block2
+
+block2:
+  %p = phi i32 [ 63, %entry ], [ 31, %block1 ]
+  %l = lshr i32 %x, %p
+  %r = icmp eq i32 %l, 2
+  ret i1 %r
 }
 
 ; This should not end with more instructions than it started from.

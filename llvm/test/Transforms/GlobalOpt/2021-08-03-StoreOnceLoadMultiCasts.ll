@@ -8,9 +8,9 @@ define signext i32 @f() local_unnamed_addr {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @f1()
-; CHECK-NEXT:    store i32 1, i32* @g.body, align 4
+; CHECK-NEXT:    store i32 1, i32* bitcast ([4 x i8]* @g.body to i32*), align 4
 ; CHECK-NEXT:    call void @f1()
-; CHECK-NEXT:    store i8 2, i8* bitcast (i32* @g.body to i8*), align 4
+; CHECK-NEXT:    store i8 2, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @g.body, i32 0, i32 0), align 4
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
@@ -30,7 +30,7 @@ define signext i32 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call signext i32 @f()
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @g.body, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* bitcast ([4 x i8]* @g.body to i32*), align 4
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:

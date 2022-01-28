@@ -251,9 +251,10 @@ public:
   /// creates DBG_VALUEs and puts them in #Transfers, then prepares the other
   /// object fields to track variable locations as we step through the block.
   /// FIXME: could just examine mloctracker instead of passing in \p mlocs?
-  void loadInlocs(MachineBasicBlock &MBB, ValueIDNum *MLocs,
-                  SmallVectorImpl<std::pair<DebugVariable, DbgValue>> &VLocs,
-                  unsigned NumLocs) {
+  void
+  loadInlocs(MachineBasicBlock &MBB, ValueIDNum *MLocs,
+             const SmallVectorImpl<std::pair<DebugVariable, DbgValue>> &VLocs,
+             unsigned NumLocs) {
     ActiveMLocs.clear();
     ActiveVLocs.clear();
     VarLocs.clear();
@@ -272,7 +273,7 @@ public:
     };
 
     // Map of the preferred location for each value.
-    std::map<ValueIDNum, LocIdx> ValueToLoc;
+    DenseMap<ValueIDNum, LocIdx> ValueToLoc;
     ActiveMLocs.reserve(VLocs.size());
     ActiveVLocs.reserve(VLocs.size());
 
@@ -283,6 +284,11 @@ public:
       LocIdx Idx = Location.Idx;
       ValueIDNum &VNum = MLocs[Idx.asU64()];
       VarLocs.push_back(VNum);
+
+      // Short-circuit unnecessary preferred location update.
+      if (VLocs.empty())
+        continue;
+
       auto it = ValueToLoc.find(VNum);
       // In order of preference, pick:
       //  * Callee saved registers,
@@ -298,7 +304,7 @@ public:
     }
 
     // Now map variables to their picked LocIdxes.
-    for (auto Var : VLocs) {
+    for (const auto &Var : VLocs) {
       if (Var.second.Kind == DbgValue::Const) {
         PendingDbgValues.push_back(
             emitMOLoc(*Var.second.MO, Var.first, Var.second.Properties));
@@ -413,7 +419,8 @@ public:
     return Reg != SP && Reg != FP;
   }
 
-  bool recoverAsEntryValue(const DebugVariable &Var, DbgValueProperties &Prop,
+  bool recoverAsEntryValue(const DebugVariable &Var,
+                           const DbgValueProperties &Prop,
                            const ValueIDNum &Num) {
     // Is this variable location a candidate to be an entry value. First,
     // should we be trying this at all?
@@ -2799,31 +2806,28 @@ void InstrRefBasedLDV::emitLocations(
     }
   }
 
-  // We have to insert DBG_VALUEs in a consistent order, otherwise they appeaer
-  // in DWARF in different orders. Use the order that they appear when walking
-  // through each block / each instruction, stored in AllVarsNumbering.
-  auto OrderDbgValues = [&](const MachineInstr *A,
-                            const MachineInstr *B) -> bool {
-    DebugVariable VarA(A->getDebugVariable(), A->getDebugExpression(),
-                       A->getDebugLoc()->getInlinedAt());
-    DebugVariable VarB(B->getDebugVariable(), B->getDebugExpression(),
-                       B->getDebugLoc()->getInlinedAt());
-    return AllVarsNumbering.find(VarA)->second <
-           AllVarsNumbering.find(VarB)->second;
-  };
-
   // Go through all the transfers recorded in the TransferTracker -- this is
   // both the live-ins to a block, and any movements of values that happen
   // in the middle.
-  for (auto &P : TTracker->Transfers) {
-    // Sort them according to appearance order.
-    llvm::sort(P.Insts, OrderDbgValues);
+  for (const auto &P : TTracker->Transfers) {
+    // We have to insert DBG_VALUEs in a consistent order, otherwise they
+    // appear in DWARF in different orders. Use the order that they appear
+    // when walking through each block / each instruction, stored in
+    // AllVarsNumbering.
+    SmallVector<std::pair<unsigned, MachineInstr *>> Insts;
+    for (MachineInstr *MI : P.Insts) {
+      DebugVariable Var(MI->getDebugVariable(), MI->getDebugExpression(),
+                        MI->getDebugLoc()->getInlinedAt());
+      Insts.emplace_back(AllVarsNumbering.find(Var)->second, MI);
+    }
+    llvm::sort(Insts,
+               [](const auto &A, const auto &B) { return A.first < B.first; });
+
     // Insert either before or after the designated point...
     if (P.MBB) {
       MachineBasicBlock &MBB = *P.MBB;
-      for (auto *MI : P.Insts) {
-        MBB.insert(P.Pos, MI);
-      }
+      for (const auto &Pair : Insts)
+        MBB.insert(P.Pos, Pair.second);
     } else {
       // Terminators, like tail calls, can clobber things. Don't try and place
       // transfers after them.
@@ -2831,9 +2835,8 @@ void InstrRefBasedLDV::emitLocations(
         continue;
 
       MachineBasicBlock &MBB = *P.Pos->getParent();
-      for (auto *MI : P.Insts) {
-        MBB.insertAfterBundle(P.Pos, MI);
-      }
+      for (const auto &Pair : Insts)
+        MBB.insertAfterBundle(P.Pos, Pair.second);
     }
   }
 }

@@ -516,7 +516,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Determine spill area sizes.
   for (const CalleeSavedInfo &I : CSI) {
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     int FI = I.getFrameIdx();
     switch (Reg) {
     case ARM::R8:
@@ -751,7 +751,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
     MachineBasicBlock::iterator Pos = std::next(GPRCS1Push);
     int CFIIndex;
     for (const auto &Entry : CSI) {
-      unsigned Reg = Entry.getReg();
+      Register Reg = Entry.getReg();
       int FI = Entry.getFrameIdx();
       switch (Reg) {
       case ARM::R8:
@@ -784,7 +784,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   if (GPRCS2Size > 0) {
     MachineBasicBlock::iterator Pos = std::next(GPRCS2Push);
     for (const auto &Entry : CSI) {
-      unsigned Reg = Entry.getReg();
+      Register Reg = Entry.getReg();
       int FI = Entry.getFrameIdx();
       switch (Reg) {
       case ARM::R8:
@@ -794,7 +794,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
       case ARM::R12:
         if (STI.splitFramePushPop(MF)) {
           unsigned DwarfReg = MRI->getDwarfRegNum(
-              Reg == ARM::R12 ? (unsigned)ARM::RA_AUTH_CODE : Reg, true);
+              Reg == ARM::R12 ? ARM::RA_AUTH_CODE : Reg, true);
           unsigned Offset = MFI.getObjectOffset(FI);
           unsigned CFIIndex = MF.addFrameInst(
               MCCFIInstruction::createOffset(nullptr, DwarfReg, Offset));
@@ -812,7 +812,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
     // instructions in the prologue.
     MachineBasicBlock::iterator Pos = std::next(LastPush);
     for (const auto &Entry : CSI) {
-      unsigned Reg = Entry.getReg();
+      Register Reg = Entry.getReg();
       int FI = Entry.getFrameIdx();
       if ((Reg >= ARM::D0 && Reg <= ARM::D31) &&
           (Reg < ARM::D8 || Reg >= ARM::D8 + AFI->getNumAlignedDPRCS2Regs())) {
@@ -1144,7 +1144,7 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
   while (i != 0) {
     unsigned LastReg = 0;
     for (; i != 0; --i) {
-      unsigned Reg = CSI[i-1].getReg();
+      Register Reg = CSI[i-1].getReg();
       if (!(Func)(Reg, STI.splitFramePushPop(MF))) continue;
 
       // D-registers in the aligned area DPRCS2 are NOT spilled here.
@@ -1237,7 +1237,7 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
     bool DeleteRet = false;
     for (; i != 0; --i) {
       CalleeSavedInfo &Info = CSI[i-1];
-      unsigned Reg = Info.getReg();
+      Register Reg = Info.getReg();
       if (!(Func)(Reg, STI.splitFramePushPop(MF))) continue;
 
       // The aligned reloads from area DPRCS2 are not inserted here.
@@ -1812,7 +1812,7 @@ bool ARMFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   // shrinkwrapping can cause clobbering of r12 when the PAC code is
   // generated. A follow-up patch will fix this in a more performant manner.
   if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress(
-          false /*SpillsLR */))
+          true /* SpillsLR */))
     return false;
 
   return true;
@@ -2353,7 +2353,7 @@ bool ARMFrameLowering::assignCalleeSavedSpillSlots(
     // LR, R7, R6, R5, R4, <R12>, R11, R10,  R9,  R8, D15-D8
     CSI.insert(find_if(CSI,
                        [=](const auto &CS) {
-                         unsigned Reg = CS.getReg();
+                         Register Reg = CS.getReg();
                          return Reg == ARM::R10 || Reg == ARM::R11 ||
                                 Reg == ARM::R8 || Reg == ARM::R9 ||
                                 ARM::DPRRegClass.contains(Reg);

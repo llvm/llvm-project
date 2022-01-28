@@ -275,7 +275,7 @@ define i64 @v_shl_i64_sext_i32_overflow(i32 %x) {
 define amdgpu_kernel void @mulu24_shl64(i32 addrspace(1)* nocapture %arg) {
 ; GFX7-LABEL: mulu24_shl64:
 ; GFX7:       ; %bb.0: ; %bb
-; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; GFX7-NEXT:    v_and_b32_e32 v0, 6, v0
 ; GFX7-NEXT:    v_mul_u32_u24_e32 v0, 7, v0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, 0
@@ -288,7 +288,7 @@ define amdgpu_kernel void @mulu24_shl64(i32 addrspace(1)* nocapture %arg) {
 ;
 ; GFX8-LABEL: mulu24_shl64:
 ; GFX8:       ; %bb.0: ; %bb
-; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; GFX8-NEXT:    v_and_b32_e32 v0, 6, v0
 ; GFX8-NEXT:    v_mul_u32_u24_e32 v0, 7, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 0
@@ -303,7 +303,7 @@ define amdgpu_kernel void @mulu24_shl64(i32 addrspace(1)* nocapture %arg) {
 ;
 ; GFX9-LABEL: mulu24_shl64:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; GFX9-NEXT:    v_and_b32_e32 v0, 6, v0
 ; GFX9-NEXT:    v_mul_u32_u24_e32 v0, 7, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
@@ -318,7 +318,7 @@ define amdgpu_kernel void @mulu24_shl64(i32 addrspace(1)* nocapture %arg) {
 ;
 ; GFX10-LABEL: mulu24_shl64:
 ; GFX10:       ; %bb.0: ; %bb
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; GFX10-NEXT:    v_and_b32_e32 v0, 6, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_mul_u32_u24_e32 v0, 7, v0
@@ -333,7 +333,7 @@ define amdgpu_kernel void @mulu24_shl64(i32 addrspace(1)* nocapture %arg) {
 ;
 ; GFX11-LABEL: mulu24_shl64:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 6, v0
 ; GFX11-NEXT:    v_mul_u32_u24_e32 v0, 7, v0
 ; GFX11-NEXT:    v_lshlrev_b64 v[2:3], 2, v[0:1]
@@ -356,7 +356,7 @@ bb:
 define amdgpu_kernel void @muli24_shl64(i64 addrspace(1)* nocapture %arg, i32 addrspace(1)* nocapture readonly %arg1) {
 ; GFX7-LABEL: muli24_shl64:
 ; GFX7:       ; %bb.0: ; %bb
-; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; GFX7-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX7-NEXT:    s_mov_b32 s6, 0
@@ -378,7 +378,7 @@ define amdgpu_kernel void @muli24_shl64(i64 addrspace(1)* nocapture %arg, i32 ad
 ;
 ; GFX8-LABEL: muli24_shl64:
 ; GFX8:       ; %bb.0: ; %bb
-; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v5, 3, v0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
@@ -401,7 +401,7 @@ define amdgpu_kernel void @muli24_shl64(i64 addrspace(1)* nocapture %arg, i32 ad
 ;
 ; GFX9-LABEL: muli24_shl64:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
@@ -416,7 +416,7 @@ define amdgpu_kernel void @muli24_shl64(i64 addrspace(1)* nocapture %arg, i32 ad
 ;
 ; GFX10-LABEL: muli24_shl64:
 ; GFX10:       ; %bb.0: ; %bb
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
@@ -431,7 +431,7 @@ define amdgpu_kernel void @muli24_shl64(i64 addrspace(1)* nocapture %arg, i32 ad
 ;
 ; GFX11-LABEL: muli24_shl64:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v1, 2, v0
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)

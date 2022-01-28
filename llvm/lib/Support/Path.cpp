@@ -12,6 +12,7 @@
 
 #include "llvm/Support/Path.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/config.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Endian.h"
@@ -1167,6 +1168,25 @@ const char *mapped_file_region::const_data() const {
   return reinterpret_cast<const char *>(Mapping);
 }
 
+Error readNativeFileToEOF(file_t FileHandle, SmallVectorImpl<char> &Buffer,
+                          ssize_t ChunkSize) {
+  // Install a handler to truncate the buffer to the correct size on exit.
+  size_t Size = Buffer.size();
+  auto TruncateOnExit = make_scope_exit([&]() { Buffer.truncate(Size); });
+
+  // Read into Buffer until we hit EOF.
+  for (;;) {
+    Buffer.resize_for_overwrite(Size + ChunkSize);
+    Expected<size_t> ReadBytes = readNativeFile(
+        FileHandle, makeMutableArrayRef(Buffer.begin() + Size, ChunkSize));
+    if (!ReadBytes)
+      return ReadBytes.takeError();
+    if (*ReadBytes == 0)
+      return Error::success();
+    Size += *ReadBytes;
+  }
+}
+
 } // end namespace fs
 } // end namespace sys
 } // end namespace llvm
@@ -1234,7 +1254,8 @@ Error TempFile::keep(const Twine &Name) {
 #ifdef _WIN32
   // If we can't cancel the delete don't rename.
   auto H = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
-  std::error_code RenameEC = setDeleteDisposition(H, false);
+  std::error_code RenameEC =
+      RemoveOnClose ? std::error_code() : setDeleteDisposition(H, false);
   bool ShouldDelete = false;
   if (!RenameEC) {
     RenameEC = rename_handle(H, Name);

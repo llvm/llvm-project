@@ -6,7 +6,7 @@
 /// Checking dwarf-version
 
 // RUN: %clang -### -g -target ve %s 2>&1 | FileCheck -check-prefix=DWARF_VER %s
-// DWARF_VER: "-dwarf-version=4"
+// DWARF_VER: "-dwarf-version=5"
 
 ///-----------------------------------------------------------------------------
 /// Checking include-path

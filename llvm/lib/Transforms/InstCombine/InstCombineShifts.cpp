@@ -369,6 +369,9 @@ static Instruction *foldShiftOfShiftedLogic(BinaryOperator &I,
 }
 
 Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
+  if (Instruction *Phi = foldBinopWithPhiOperands(I))
+    return Phi;
+
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   assert(Op0->getType() == Op1->getType());
 
@@ -1032,12 +1035,13 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
           NewLShr->setIsExact(I.isExact());
           return NewLShr;
         }
-        // (X << C1) >>u C  --> (X >>u (C - C1)) & (-1 >> C)
-        Value *NewLShr = Builder.CreateLShr(X, ShiftDiff, "", I.isExact());
-        APInt Mask(APInt::getLowBitsSet(BitWidth, BitWidth - ShAmtC));
-        return BinaryOperator::CreateAnd(NewLShr, ConstantInt::get(Ty, Mask));
-      }
-      if (C1->ugt(ShAmtC)) {
+        if (Op0->hasOneUse()) {
+          // (X << C1) >>u C  --> (X >>u (C - C1)) & (-1 >> C)
+          Value *NewLShr = Builder.CreateLShr(X, ShiftDiff, "", I.isExact());
+          APInt Mask(APInt::getLowBitsSet(BitWidth, BitWidth - ShAmtC));
+          return BinaryOperator::CreateAnd(NewLShr, ConstantInt::get(Ty, Mask));
+        }
+      } else if (C1->ugt(ShAmtC)) {
         unsigned ShlAmtC = C1->getZExtValue();
         Constant *ShiftDiff = ConstantInt::get(Ty, ShlAmtC - ShAmtC);
         if (cast<BinaryOperator>(Op0)->hasNoUnsignedWrap()) {
@@ -1046,15 +1050,18 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
           NewShl->setHasNoUnsignedWrap(true);
           return NewShl;
         }
-        // (X << C1) >>u C  --> X << (C1 - C) & (-1 >> C)
-        Value *NewShl = Builder.CreateShl(X, ShiftDiff);
+        if (Op0->hasOneUse()) {
+          // (X << C1) >>u C  --> X << (C1 - C) & (-1 >> C)
+          Value *NewShl = Builder.CreateShl(X, ShiftDiff);
+          APInt Mask(APInt::getLowBitsSet(BitWidth, BitWidth - ShAmtC));
+          return BinaryOperator::CreateAnd(NewShl, ConstantInt::get(Ty, Mask));
+        }
+      } else {
+        assert(*C1 == ShAmtC);
+        // (X << C) >>u C --> X & (-1 >>u C)
         APInt Mask(APInt::getLowBitsSet(BitWidth, BitWidth - ShAmtC));
-        return BinaryOperator::CreateAnd(NewShl, ConstantInt::get(Ty, Mask));
+        return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, Mask));
       }
-      assert(*C1 == ShAmtC);
-      // (X << C) >>u C --> X & (-1 >>u C)
-      APInt Mask(APInt::getLowBitsSet(BitWidth, BitWidth - ShAmtC));
-      return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, Mask));
     }
 
     // ((X << C) + Y) >>u C --> (X + (Y >>u C)) & (-1 >>u C)

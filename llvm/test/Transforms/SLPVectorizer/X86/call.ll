@@ -125,8 +125,8 @@ define void @sqrt_libm_errno(double* %a, double* %b) {
 ; CHECK-NEXT:    [[A0:%.*]] = load double, double* [[A:%.*]], align 8
 ; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds double, double* [[A]], i64 1
 ; CHECK-NEXT:    [[A1:%.*]] = load double, double* [[IDX1]], align 8
-; CHECK-NEXT:    [[SQRT1:%.*]] = tail call nnan double @sqrt(double [[A0]]) #2
-; CHECK-NEXT:    [[SQRT2:%.*]] = tail call nnan double @sqrt(double [[A1]]) #2
+; CHECK-NEXT:    [[SQRT1:%.*]] = tail call nnan double @sqrt(double [[A0]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[SQRT2:%.*]] = tail call nnan double @sqrt(double [[A1]]) #[[ATTR2]]
 ; CHECK-NEXT:    store double [[SQRT1]], double* [[B:%.*]], align 8
 ; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds double, double* [[B]], i64 1
 ; CHECK-NEXT:    store double [[SQRT2]], double* [[IDX2]], align 8
@@ -149,8 +149,8 @@ define void @round_custom(i64* %a, i64* %b) {
 ; CHECK-NEXT:    [[A0:%.*]] = load i64, i64* [[A:%.*]], align 8
 ; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 1
 ; CHECK-NEXT:    [[A1:%.*]] = load i64, i64* [[IDX1]], align 8
-; CHECK-NEXT:    [[ROUND1:%.*]] = tail call i64 @round(i64 [[A0]]) #3
-; CHECK-NEXT:    [[ROUND2:%.*]] = tail call i64 @round(i64 [[A1]]) #3
+; CHECK-NEXT:    [[ROUND1:%.*]] = tail call i64 @round(i64 [[A0]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[ROUND2:%.*]] = tail call i64 @round(i64 [[A1]]) #[[ATTR3]]
 ; CHECK-NEXT:    store i64 [[ROUND1]], i64* [[B:%.*]], align 8
 ; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds i64, i64* [[B]], i64 1
 ; CHECK-NEXT:    store i64 [[ROUND2]], i64* [[IDX2]], align 8
@@ -168,10 +168,5 @@ define void @round_custom(i64* %a, i64* %b) {
 }
 
 
-; CHECK: declare <2 x double> @llvm.sin.v2f64(<2 x double>) [[ATTR0:#[0-9]+]]
-; CHECK: declare <2 x double> @llvm.cos.v2f64(<2 x double>) [[ATTR0]]
-; CHECK: declare <2 x double> @llvm.pow.v2f64(<2 x double>, <2 x double>) [[ATTR0]]
-; CHECK: declare <2 x double> @llvm.exp2.v2f64(<2 x double>) [[ATTR0]]
 
-; CHECK: attributes [[ATTR0]] = { nofree nosync nounwind readnone speculatable willreturn }
 

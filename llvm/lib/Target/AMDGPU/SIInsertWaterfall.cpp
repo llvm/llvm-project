@@ -96,61 +96,6 @@ static unsigned getWFLastUseSize(const unsigned Opcode) {
   return 0; // Not SI_WATERFALL_LAST_USE_*
 }
 
-static void initReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
-                    const SIRegisterInfo *RI, const SIInstrInfo *TII,
-                    MachineBasicBlock::iterator &I, const DebugLoc &DL,
-                    Register Reg, unsigned ImmVal) {
-
-  auto EndDstRC = MRI->getRegClass(Reg);
-  uint32_t RegSize = RI->getRegSizeInBits(*EndDstRC) / 32;
-
-  if (RegSize == 1)
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MOV_B32_e32), Reg).addImm(0);
-  else {
-    SmallVector<Register, 8> TRegs;
-    for (unsigned i = 0; i < RegSize; i++) {
-      Register TReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-      BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MOV_B32_e32), TReg).addImm(ImmVal);
-      TRegs.push_back(TReg);
-    }
-    MachineInstrBuilder MIB =
-        BuildMI(MBB, I, DL, TII->get(AMDGPU::REG_SEQUENCE), Reg);
-    for (unsigned i = 0; i < RegSize; ++i) {
-      MIB.addReg(TRegs[i]);
-      MIB.addImm(RI->getSubRegFromChannel(i));
-    }
-  }
-}
-
-static void orReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
-                  const SIRegisterInfo *RI, const SIInstrInfo *TII,
-                  MachineBasicBlock::iterator &I, const DebugLoc &DL,
-                  Register EndDst, Register PhiReg, Register EndSrc) {
-  auto EndDstRC = MRI->getRegClass(EndDst);
-  uint32_t RegSize = RI->getRegSizeInBits(*EndDstRC) / 32;
-
-  if (RegSize == 1)
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::V_OR_B32_e64), EndDst)
-        .addReg(PhiReg)
-        .addReg(EndSrc);
-  else {
-    SmallVector<Register, 8> TRegs;
-    for (unsigned i = 0; i < RegSize; ++i) {
-      Register TReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-      BuildMI(MBB, I, DL, TII->get(AMDGPU::V_OR_B32_e64), TReg)
-          .addReg(PhiReg, 0, RI->getSubRegFromChannel(i))
-          .addReg(EndSrc, 0, RI->getSubRegFromChannel(i));
-      TRegs.push_back(TReg);
-    }
-    MachineInstrBuilder MIB =
-        BuildMI(MBB, I, DL, TII->get(AMDGPU::REG_SEQUENCE), EndDst);
-    for (unsigned i = 0; i < RegSize; i++) {
-      MIB.addReg(TRegs[i]);
-      MIB.addImm(RI->getSubRegFromChannel(i));
-    }
-  }
-}
-
 static void readFirstLaneReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
                              const SIRegisterInfo *RI, const SIInstrInfo *TII,
                              MachineBasicBlock::iterator &I, const DebugLoc &DL,
@@ -282,7 +227,7 @@ private:
 
     // List of corresponding init, newdst and phi registers used in loop for
     // end pseudos
-    std::vector<std::tuple<Register, Register, Register, Register>> EndRegs;
+    std::vector<std::pair<Register, Register>> EndRegs;
     std::vector<Register> RFLRegs;
 
     WaterfallWorkitem() = default;
@@ -616,14 +561,11 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
     // Initialize the register we accumulate the result into, which is the
     // target of any SI_WATERFALL_END instruction
     for (auto EndMI : Item.EndList) {
-      auto EndDst = TII->getNamedOperand(*EndMI, AMDGPU::OpName::dst)->getReg();
-      auto EndDstRC = MRI->getRegClass(EndDst);
-      Register EndInit = MRI->createVirtualRegister(EndDstRC);
-      Register PhiReg = MRI->createVirtualRegister(EndDstRC);
+      Register EndDst =
+          TII->getNamedOperand(*EndMI, AMDGPU::OpName::dst)->getReg();
       Register EndSrc =
           TII->getNamedOperand(*EndMI, AMDGPU::OpName::src)->getReg();
-      initReg(*CurrMBB, MRI, RI, TII, I, DL, EndInit, 0x0);
-      Item.EndRegs.push_back(std::make_tuple(EndInit, EndDst, PhiReg, EndSrc));
+      Item.EndRegs.emplace_back(EndDst, EndSrc);
     }
     for (auto LUMI : Item.LastUseList) {
       Register LUSrc =
@@ -673,14 +615,8 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
     // Iterate over the instructions inserted into the loop
     // Need to unset any kill flag on any uses as now this is a loop that is no
     // longer valid
-    // Also replace any use of a waterfall.end dst register with the one that
-    // will replace it in the new phi node at the start of the BB
-    for (MachineInstr &MI : LoopBB) {
+    for (MachineInstr &MI : LoopBB)
       MI.clearKillInfo();
-      for (auto EndReg : Item.EndRegs) {
-        MI.substituteRegister(std::get<1>(EndReg), std::get<2>(EndReg), 0, *RI);
-      }
-    }
 
     RemainderBB.transferSuccessorsAndUpdatePHIs(CurrMBB);
     RemainderBB.splice(RemainderBB.begin(), CurrMBB, SpliceE, CurrMBB->end());
@@ -697,13 +633,6 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
     for (auto &CurrIdx : IndexList)
       CurrIdx.CurrentIdxReg = MRI->createVirtualRegister(CurrIdx.IndexSRC);
 
-    for (auto EndReg : Item.EndRegs) {
-      BuildMI(LoopBB, J, DL, TII->get(TargetOpcode::PHI), std::get<2>(EndReg))
-          .addReg(std::get<0>(EndReg))
-          .addMBB(CurrMBB)
-          .addReg(std::get<1>(EndReg))
-          .addMBB(&LoopBB);
-    }
     BuildMI(LoopBB, J, DL, TII->get(TargetOpcode::PHI), PhiExec)
         .addReg(TmpExec)
         .addMBB(CurrMBB)
@@ -754,13 +683,11 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
 
     // TODO: Conditional branch here to loop header as potential optimization?
 
-    // Move the just read value into the destination using OR
-    // TODO: In theory a mov would do here - but this is tricky to get to work
-    // correctly as it seems to confuse the register allocator and other passes
+    // Copy the just read value into the destination
     for (auto EndReg : Item.EndRegs) {
       MachineBasicBlock::iterator EndInsert(Item.Final);
-      orReg(LoopBB, MRI, RI, TII, EndInsert, DL, std::get<1>(EndReg),
-            std::get<2>(EndReg), std::get<3>(EndReg));
+      BuildMI(LoopBB, EndInsert, DL, TII->get(AMDGPU::COPY), EndReg.first)
+          .addReg(EndReg.second);
     }
 
     MRI->setSimpleHint(NewExec, CondReg);
@@ -774,7 +701,7 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
     // s_cbranch_scc0?
 
     // Loop back if there are still variants to cover
-    BuildMI(LoopBB, E, DL, TII->get(AMDGPU::S_CBRANCH_EXECNZ)).addMBB(&LoopBB);
+    BuildMI(LoopBB, E, DL, TII->get(AMDGPU::SI_WATERFALL_LOOP)).addMBB(&LoopBB);
 
     MachineBasicBlock::iterator First = RemainderBB.begin();
     BuildMI(RemainderBB, First, DL, TII->get(MovOpc), Exec)

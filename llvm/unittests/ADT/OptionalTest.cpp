@@ -805,4 +805,15 @@ TEST(OptionalTest, HashValue) {
   EXPECT_EQ(hash_value(B), hash_value(I));
 }
 
+struct NotTriviallyCopyable {
+  NotTriviallyCopyable(); // Constructor out-of-line.
+  virtual ~NotTriviallyCopyable() = default;
+  Optional<MoveOnly> MO;
+};
+
+TEST(OptionalTest, GCCIsTriviallyMoveConstructibleCompat) {
+  Optional<NotTriviallyCopyable> V;
+  EXPECT_FALSE(V);
+}
+
 } // end anonymous namespace

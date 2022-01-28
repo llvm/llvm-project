@@ -128,7 +128,7 @@ namespace test4 {
   // CHECK-NEXT: store i8* [[BLOCKDESC:%.*]], i8** {{.*}}, align 8
   // CHECK-NEXT: bitcast i8* [[BLOCKDESC]] to <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]* }>*
   // CHECK:      call void @_ZN5test41AC1Ev([[A]]* {{[^,]*}} [[TMP]])
-  // CHECK-NEXT: call void @_ZN5test43fooENS_1AE([[A]]* [[TMP]])
+  // CHECK-NEXT: call void @_ZN5test43fooENS_1AE([[A]]* noundef [[TMP]])
   // CHECK-NEXT: call void @_ZN5test41AD1Ev([[A]]* {{[^,]*}} [[TMP]])
   // CHECK-NEXT: ret void
 }
@@ -167,7 +167,7 @@ namespace test5 {
 
   // CHECK-NOT:  br
   // CHECK:      [[CAPTURE:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
-  // CHECK-NEXT: call void @_ZN5test51AC1ERKS0_([[A]]* {{[^,]*}} [[CAPTURE]], [[A]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
+  // CHECK-NEXT: call void @_ZN5test51AC1ERKS0_([[A]]* {{[^,]*}} [[CAPTURE]], [[A]]* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
   // CHECK-NEXT: store i1 true, i1* [[CLEANUP_ACTIVE]]
   // CHECK-NEXT: store [[A]]* [[CAPTURE]], [[A]]** [[COND_CLEANUP_SAVE]], align 8
   // CHECK-NEXT: bitcast [[BLOCK_T]]* [[BLOCK]] to void ()*

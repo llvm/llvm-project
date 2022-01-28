@@ -19,6 +19,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
@@ -419,6 +420,21 @@ namespace detail {
 
 class InMemoryDirectory;
 class InMemoryFile;
+class InMemoryNode;
+
+struct NewInMemoryNodeInfo {
+  llvm::sys::fs::UniqueID DirUID;
+  StringRef Path;
+  StringRef Name;
+  time_t ModificationTime;
+  std::unique_ptr<llvm::MemoryBuffer> Buffer;
+  uint32_t User;
+  uint32_t Group;
+  llvm::sys::fs::file_type Type;
+  llvm::sys::fs::perms Perms;
+
+  Status makeStatus() const;
+};
 
 } // namespace detail
 
@@ -428,14 +444,15 @@ class InMemoryFileSystem : public FileSystem {
   std::string WorkingDirectory;
   bool UseNormalizedPaths = true;
 
-  /// If HardLinkTarget is non-null, a hardlink is created to the To path which
-  /// must be a file. If it is null then it adds the file as the public addFile.
+  using MakeNodeFn = llvm::function_ref<std::unique_ptr<detail::InMemoryNode>(
+      detail::NewInMemoryNodeInfo)>;
+
+  /// Create node with \p MakeNode and add it into this filesystem at \p Path.
   bool addFile(const Twine &Path, time_t ModificationTime,
                std::unique_ptr<llvm::MemoryBuffer> Buffer,
                Optional<uint32_t> User, Optional<uint32_t> Group,
                Optional<llvm::sys::fs::file_type> Type,
-               Optional<llvm::sys::fs::perms> Perms,
-               const detail::InMemoryFile *HardLinkTarget);
+               Optional<llvm::sys::fs::perms> Perms, MakeNodeFn MakeNode);
 
 public:
   explicit InMemoryFileSystem(bool UseNormalizedPaths = true);
@@ -546,6 +563,9 @@ class RedirectingFileSystemParser;
 ///            ]
 /// }
 /// \endverbatim
+///
+/// The roots may be absolute or relative. If relative they will be made
+/// absolute against the current working directory.
 ///
 /// All configuration options are optional.
 ///   'case-sensitive': <boolean, default=(true for Posix, false for Windows)>

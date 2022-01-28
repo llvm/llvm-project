@@ -37,7 +37,6 @@
 
 using namespace mlir;
 using namespace llvm;
-using llvm::SMLoc;
 
 /// Perform the actions on the input file indicated by the command line flags
 /// within the specified context.
@@ -158,10 +157,12 @@ LogicalResult mlir::MlirOptMain(raw_ostream &outputStream,
     return splitAndProcessBuffer(
         std::move(buffer),
         [&](std::unique_ptr<MemoryBuffer> chunkBuffer, raw_ostream &os) {
-          return processBuffer(os, std::move(chunkBuffer), verifyDiagnostics,
-                               verifyPasses, allowUnregisteredDialects,
-                               preloadDialectsInContext, passManagerSetupFn,
-                               registry, threadPool);
+          LogicalResult result = processBuffer(
+              os, std::move(chunkBuffer), verifyDiagnostics, verifyPasses,
+              allowUnregisteredDialects, preloadDialectsInContext,
+              passManagerSetupFn, registry, threadPool);
+          os << "// -----\n";
+          return result;
         },
         outputStream);
 

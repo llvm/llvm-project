@@ -10,6 +10,7 @@
 #define MLIR_LIB_PARSER_TOKEN_H
 
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SMLoc.h"
 
@@ -34,7 +35,7 @@ public:
 
   // Token classification.
   Kind getKind() const { return kind; }
-  bool is(Kind K) const { return kind == K; }
+  bool is(Kind k) const { return kind == k; }
 
   bool isAny(Kind k1, Kind k2) const { return is(k1) || is(k2); }
 
@@ -101,9 +102,9 @@ public:
   std::string getSymbolReference() const;
 
   // Location processing.
-  llvm::SMLoc getLoc() const;
-  llvm::SMLoc getEndLoc() const;
-  llvm::SMRange getLocRange() const;
+  SMLoc getLoc() const;
+  SMLoc getEndLoc() const;
+  SMRange getLocRange() const;
 
   /// Given a punctuation or keyword token kind, return the spelling of the
   /// token as a string.  Warning: This will abort on markers, identifiers and

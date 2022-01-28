@@ -218,8 +218,8 @@ define amdgpu_ps float @sample_c_d_o_2darray_V1(<8 x i32> inreg %rsrc, <4 x i32>
 ; GFX11-LABEL: sample_c_d_o_2darray_V1:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v10, v3
-; GFX11-NEXT:    v_mov_b32_e32 v2, v0
-; GFX11-NEXT:    v_dual_mov_b32 v0, 0xffff :: v_dual_mov_b32 v3, v1
+; GFX11-NEXT:    v_dual_mov_b32 v3, v1 :: v_dual_mov_b32 v2, v0
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_and_b32_e32 v1, v0, v4
 ; GFX11-NEXT:    v_and_b32_e32 v0, v0, v9
@@ -253,8 +253,8 @@ define amdgpu_ps <2 x float> @sample_c_d_o_2darray_V2(<8 x i32> inreg %rsrc, <4 
 ; GFX11-LABEL: sample_c_d_o_2darray_V2:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v10, v3
-; GFX11-NEXT:    v_mov_b32_e32 v2, v0
-; GFX11-NEXT:    v_dual_mov_b32 v0, 0xffff :: v_dual_mov_b32 v3, v1
+; GFX11-NEXT:    v_dual_mov_b32 v3, v1 :: v_dual_mov_b32 v2, v0
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_and_b32_e32 v1, v0, v4
 ; GFX11-NEXT:    v_and_b32_e32 v0, v0, v9

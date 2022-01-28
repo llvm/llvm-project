@@ -78,11 +78,8 @@ private:
   moveScalarAddSub(SetVectorType &Worklist, MachineInstr &Inst,
                    MachineDominatorTree *MDT = nullptr) const;
 
-  void lowerSelect32(SetVectorType &Worklist, MachineInstr &Inst,
-                     MachineDominatorTree *MDT = nullptr) const;
-
-  void splitSelect64(SetVectorType &Worklist, MachineInstr &Inst,
-                     MachineDominatorTree *MDT = nullptr) const;
+  void lowerSelect(SetVectorType &Worklist, MachineInstr &Inst,
+                   MachineDominatorTree *MDT = nullptr) const;
 
   void lowerScalarAbs(SetVectorType &Worklist,
                       MachineInstr &Inst) const;
@@ -1280,6 +1277,10 @@ namespace AMDGPU {
   /// of an SVS (VADDR+SADDR) form.
   LLVM_READONLY
   int getFlatScratchInstSVfromSVS(uint16_t Opcode);
+
+  /// \returns earlyclobber version of a MAC MFMA is exists.
+  LLVM_READONLY
+  int getMFMAEarlyClobberOp(uint16_t Opcode);
 
   const uint64_t RSRC_DATA_FORMAT = 0xf00000000000LL;
   const uint64_t RSRC_ELEMENT_SIZE_SHIFT = (32 + 19);

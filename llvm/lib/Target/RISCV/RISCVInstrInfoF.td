@@ -309,6 +309,10 @@ def : MnemonicAlias<"fmv.x.s", "fmv.x.w">;
 
 def PseudoFLW  : PseudoFloatLoad<"flw", FPR32>;
 def PseudoFSW  : PseudoStore<"fsw", FPR32>;
+let usesCustomInserter = 1 in {
+def PseudoQuietFLE_S : PseudoQuietFCMP<FPR32>;
+def PseudoQuietFLT_S : PseudoQuietFCMP<FPR32>;
+}
 } // Predicates = [HasStdExtF]
 
 //===----------------------------------------------------------------------===//
@@ -316,9 +320,13 @@ def PseudoFSW  : PseudoStore<"fsw", FPR32>;
 //===----------------------------------------------------------------------===//
 
 /// Floating point constants
-def fpimm0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
+def fpimm0    : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
+def fpimmneg0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(-0.0); }]>;
 
 /// Generic pattern classes
+class PatSetCC<RegisterClass Ty, SDPatternOperator OpNode, CondCode Cond, RVInst Inst>
+    : Pat<(OpNode Ty:$rs1, Ty:$rs2, Cond), (Inst $rs1, $rs2)>;
+
 class PatFpr32Fpr32<SDPatternOperator OpNode, RVInstR Inst>
     : Pat<(OpNode FPR32:$rs1, FPR32:$rs2), (Inst $rs1, $rs2)>;
 
@@ -329,6 +337,7 @@ let Predicates = [HasStdExtF] in {
 
 /// Float constants
 def : Pat<(f32 (fpimm0)), (FMV_W_X X0)>;
+def : Pat<(f32 (fpimmneg0)), (FSGNJN_S (FMV_W_X X0), (FMV_W_X X0))>;
 
 /// Float conversion operations
 
@@ -373,13 +382,34 @@ def : PatFpr32Fpr32<fminnum, FMIN_S>;
 def : PatFpr32Fpr32<fmaxnum, FMAX_S>;
 
 /// Setcc
+// FIXME: SETEQ/SETLT/SETLE imply nonans, can we pick better instructions for
+// strict versions of those.
 
-def : PatFpr32Fpr32<seteq, FEQ_S>;
-def : PatFpr32Fpr32<setoeq, FEQ_S>;
-def : PatFpr32Fpr32<setlt, FLT_S>;
-def : PatFpr32Fpr32<setolt, FLT_S>;
-def : PatFpr32Fpr32<setle, FLE_S>;
-def : PatFpr32Fpr32<setole, FLE_S>;
+// Match non-signaling FEQ_S
+def : PatSetCC<FPR32, any_fsetcc, SETEQ, FEQ_S>;
+def : PatSetCC<FPR32, any_fsetcc, SETOEQ, FEQ_S>;
+def : PatSetCC<FPR32, strict_fsetcc, SETLT, PseudoQuietFLT_S>;
+def : PatSetCC<FPR32, strict_fsetcc, SETOLT, PseudoQuietFLT_S>;
+def : PatSetCC<FPR32, strict_fsetcc, SETLE, PseudoQuietFLE_S>;
+def : PatSetCC<FPR32, strict_fsetcc, SETOLE, PseudoQuietFLE_S>;
+
+// Match signaling FEQ_S
+def : Pat<(strict_fsetccs FPR32:$rs1, FPR32:$rs2, SETEQ),
+          (AND (FLE_S $rs1, $rs2),
+               (FLE_S $rs2, $rs1))>;
+def : Pat<(strict_fsetccs FPR32:$rs1, FPR32:$rs2, SETOEQ),
+          (AND (FLE_S $rs1, $rs2),
+               (FLE_S $rs2, $rs1))>;
+// If both operands are the same, use a single FLE.
+def : Pat<(strict_fsetccs FPR32:$rs1, FPR32:$rs1, SETEQ),
+          (FLE_S $rs1, $rs1)>;
+def : Pat<(strict_fsetccs FPR32:$rs1, FPR32:$rs1, SETOEQ),
+          (FLE_S $rs1, $rs1)>;
+
+def : PatSetCC<FPR32, any_fsetccs, SETLT, FLT_S>;
+def : PatSetCC<FPR32, any_fsetccs, SETOLT, FLT_S>;
+def : PatSetCC<FPR32, any_fsetccs, SETLE, FLE_S>;
+def : PatSetCC<FPR32, any_fsetccs, SETOLE, FLE_S>;
 
 def Select_FPR32_Using_CC_GPR : SelectCC_rrirr<FPR32, GPR>;
 

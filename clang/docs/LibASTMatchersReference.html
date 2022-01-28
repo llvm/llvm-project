@@ -4201,6 +4201,22 @@ auto Y() -&gt; int {}
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isConsteval1')"><a name="isConsteval1Anchor">isConsteval</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isConsteval1"><pre>Matches consteval function declarations and if consteval/if ! consteval
+statements.
+
+Given:
+  consteval int a();
+  void b() { if consteval {} }
+  void c() { if ! consteval {} }
+  void d() { if ! consteval {} else {} }
+functionDecl(isConsteval())
+  matches the declaration of "int a()".
+ifStmt(isConsteval())
+  matches the if statement in "void b()", "void c()", "void d()".
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isConstexpr1')"><a name="isConstexpr1Anchor">isConstexpr</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isConstexpr1"><pre>Matches constexpr variable and function declarations,
        and if constexpr.
@@ -4470,6 +4486,22 @@ functionProtoType(parameterCountIs(2))
   matches g and h
 functionProtoType(parameterCountIs(3))
   matches k
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1IfStmt.html">IfStmt</a>&gt;</td><td class="name" onclick="toggle('isConsteval2')"><a name="isConsteval2Anchor">isConsteval</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isConsteval2"><pre>Matches consteval function declarations and if consteval/if ! consteval
+statements.
+
+Given:
+  consteval int a();
+  void b() { if consteval {} }
+  void c() { if ! consteval {} }
+  void d() { if ! consteval {} else {} }
+functionDecl(isConsteval())
+  matches the declaration of "int a()".
+ifStmt(isConsteval())
+  matches the if statement in "void b()", "void c()", "void d()".
 </pre></td></tr>
 
 
@@ -5593,6 +5625,19 @@ functionDecl(isConstexpr())
   matches the declaration of bar.
 ifStmt(isConstexpr())
   matches the if statement in baz.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('isConstinit0')"><a name="isConstinit0Anchor">isConstinit</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isConstinit0"><pre>Matches constinit variable declarations.
+
+Given:
+  constinit int foo = 42;
+  constinit const char* bar = "baz";
+  int baz = 42;
+  [[clang::require_constant_initialization]] int xyz = 42;
+varDecl(isConstinit())
+  matches the declaration of `foo` and `bar`, but not `baz` and `xyz`.
 </pre></td></tr>
 
 

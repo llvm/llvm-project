@@ -163,17 +163,6 @@ Substring &Substring::set_upper(Expr<SubscriptInteger> &&expr) {
 }
 
 std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
-  if (!lower_) {
-    lower_ = AsExpr(Constant<SubscriptInteger>{1});
-  }
-  lower_.value() = evaluate::Fold(context, std::move(lower_.value().value()));
-  std::optional<ConstantSubscript> lbi{ToInt64(lower_.value().value())};
-  if (lbi && *lbi < 1) {
-    context.messages().Say(
-        "Lower bound (%jd) on substring is less than one"_en_US, *lbi);
-    *lbi = 1;
-    lower_ = AsExpr(Constant<SubscriptInteger>{1});
-  }
   if (!upper_) {
     upper_ = upper();
     if (!upper_) {
@@ -181,63 +170,74 @@ std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
     }
   }
   upper_.value() = evaluate::Fold(context, std::move(upper_.value().value()));
-  if (std::optional<ConstantSubscript> ubi{ToInt64(upper_.value().value())}) {
-    auto *literal{std::get_if<StaticDataObject::Pointer>(&parent_)};
-    std::optional<ConstantSubscript> length;
-    if (literal) {
-      length = (*literal)->data().size();
-    } else if (const Symbol * symbol{GetLastSymbol()}) {
-      if (const semantics::DeclTypeSpec * type{symbol->GetType()}) {
-        if (type->category() == semantics::DeclTypeSpec::Character) {
-          length = ToInt64(type->characterTypeSpec().length().GetExplicit());
+  std::optional<ConstantSubscript> ubi{ToInt64(upper_.value().value())};
+  if (!ubi) {
+    return std::nullopt;
+  }
+  if (!lower_) {
+    lower_ = AsExpr(Constant<SubscriptInteger>{1});
+  }
+  lower_.value() = evaluate::Fold(context, std::move(lower_.value().value()));
+  std::optional<ConstantSubscript> lbi{ToInt64(lower_.value().value())};
+  if (!lbi) {
+    return std::nullopt;
+  }
+  if (*lbi > *ubi) { // empty result; canonicalize
+    *lbi = 1;
+    *ubi = 0;
+    lower_ = AsExpr(Constant<SubscriptInteger>{*lbi});
+    upper_ = AsExpr(Constant<SubscriptInteger>{*ubi});
+  }
+  std::optional<ConstantSubscript> length;
+  std::optional<Expr<SomeCharacter>> strings; // a Constant<Character>
+  if (const auto *literal{std::get_if<StaticDataObject::Pointer>(&parent_)}) {
+    length = (*literal)->data().size();
+    if (auto str{(*literal)->AsString()}) {
+      strings =
+          Expr<SomeCharacter>(Expr<Ascii>(Constant<Ascii>{std::move(*str)}));
+    }
+  } else if (const auto *dataRef{std::get_if<DataRef>(&parent_)}) {
+    if (auto expr{AsGenericExpr(DataRef{*dataRef})}) {
+      auto folded{evaluate::Fold(context, std::move(*expr))};
+      if (IsActuallyConstant(folded)) {
+        if (const auto *value{UnwrapExpr<Expr<SomeCharacter>>(folded)}) {
+          strings = *value;
         }
       }
     }
-    if (*ubi < 1 || (lbi && *ubi < *lbi)) {
-      // Zero-length string: canonicalize
-      *lbi = 1, *ubi = 0;
-      lower_ = AsExpr(Constant<SubscriptInteger>{*lbi});
-      upper_ = AsExpr(Constant<SubscriptInteger>{*ubi});
-    } else if (length && *ubi > *length) {
-      context.messages().Say("Upper bound (%jd) on substring is greater "
-                             "than character length (%jd)"_en_US,
-          *ubi, *length);
-      *ubi = *length;
-    }
-    if (lbi && literal) {
-      auto newStaticData{StaticDataObject::Create()};
-      auto items{0}; // If the lower bound is greater, the length is 0
-      if (*ubi >= *lbi) {
-        items = *ubi - *lbi + 1;
-      }
-      auto width{(*literal)->itemBytes()};
-      auto bytes{items * width};
-      auto startByte{(*lbi - 1) * width};
-      const auto *from{&(*literal)->data()[0] + startByte};
-      for (auto j{0}; j < bytes; ++j) {
-        newStaticData->data().push_back(from[j]);
-      }
-      parent_ = newStaticData;
+  }
+  std::optional<Expr<SomeCharacter>> result;
+  if (strings) {
+    result = std::visit(
+        [&](const auto &expr) -> std::optional<Expr<SomeCharacter>> {
+          using Type = typename std::decay_t<decltype(expr)>::Result;
+          if (const auto *cc{std::get_if<Constant<Type>>(&expr.u)}) {
+            if (auto substr{cc->Substring(*lbi, *ubi)}) {
+              return Expr<SomeCharacter>{Expr<Type>{*substr}};
+            }
+          }
+          return std::nullopt;
+        },
+        strings->u);
+  }
+  if (!result) { // error cases
+    if (*lbi < 1) {
+      context.messages().Say(
+          "Lower bound (%jd) on substring is less than one"_en_US,
+          static_cast<std::intmax_t>(*lbi));
+      *lbi = 1;
       lower_ = AsExpr(Constant<SubscriptInteger>{1});
-      ConstantSubscript length = newStaticData->data().size();
-      upper_ = AsExpr(Constant<SubscriptInteger>{length});
-      switch (width) {
-      case 1:
-        return {
-            AsCategoryExpr(AsExpr(Constant<Type<TypeCategory::Character, 1>>{
-                *newStaticData->AsString()}))};
-      case 2:
-        return {AsCategoryExpr(Constant<Type<TypeCategory::Character, 2>>{
-            *newStaticData->AsU16String()})};
-      case 4:
-        return {AsCategoryExpr(Constant<Type<TypeCategory::Character, 4>>{
-            *newStaticData->AsU32String()})};
-      default:
-        CRASH_NO_CASE;
-      }
+    }
+    if (length && *ubi > *length) {
+      context.messages().Say(
+          "Upper bound (%jd) on substring is greater than character length (%jd)"_en_US,
+          static_cast<std::intmax_t>(*ubi),
+          static_cast<std::intmax_t>(*length));
+      *ubi = *length;
+      upper_ = AsExpr(Constant<SubscriptInteger>{*ubi});
     }
   }
-  return std::nullopt;
+  return result;
 }
 
 DescriptorInquiry::DescriptorInquiry(
@@ -685,6 +685,9 @@ bool DescriptorInquiry::operator==(const DescriptorInquiry &that) const {
       dimension_ == that.dimension_;
 }
 
+#ifdef _MSC_VER // disable bogus warning about missing definitions
+#pragma warning(disable : 4661)
+#endif
 INSTANTIATE_VARIABLE_TEMPLATES
 } // namespace Fortran::evaluate
 

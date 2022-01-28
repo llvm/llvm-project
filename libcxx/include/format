@@ -14,42 +14,14 @@
 
 namespace std {
   // [format.context], class template basic_format_context
-  template<class Out, class charT>
-  class basic_format_context {
-    basic_format_args<basic_format_context> args_;      // exposition only
-    Out out_;                                           // exposition only
-
-  public:
-    using iterator = Out;
-    using char_type = charT;
-    template<class T> using formatter_type = formatter<T, charT>;
-
-    basic_format_arg<basic_format_context> arg(size_t id) const;
-    std::locale locale();
-
-    iterator out();
-    void advance_to(iterator it);
-  };
+  template<class Out, class charT> class basic_format_context;
   using format_context = basic_format_context<unspecified, char>;
   using wformat_context = basic_format_context<unspecified, wchar_t>;
 
   // [format.args], class template basic_format_args
-  template<class Context>
-  class basic_format_args {
-    size_t size_;                               // exposition only
-    const basic_format_arg<Context>* data_;     // exposition only
-
-  public:
-    basic_format_args() noexcept;
-
-    template<class... Args>
-      basic_format_args(const format-arg-store<Context, Args...>& store) noexcept;
-
-    basic_format_arg<Context> get(size_t i) const noexcept;
-  };
+  template<class Context> class basic_format_args;
   using format_args = basic_format_args<format_context>;
   using wformat_args = basic_format_args<wformat_context>;
-
 
   // [format.functions], formatting functions
   template<class... Args>
@@ -90,8 +62,7 @@ namespace std {
     Out out;
     iter_difference_t<Out> size;
   };
-
- template<class Out, class... Args>
+  template<class Out, class... Args>
     format_to_n_result<Out> format_to_n(Out out, iter_difference_t<Out> n,
                                         string_view fmt, const Args&... args);
   template<class Out, class... Args>
@@ -116,99 +87,22 @@ namespace std {
     size_t formatted_size(const locale& loc, wstring_view fmt, const Args&... args);
 
   // [format.formatter], formatter
-  template<> struct formatter<char, char>;
-  template<> struct formatter<char, wchar_t>;
-  template<> struct formatter<wchar_t, wchar_t>;
-
-  template<> struct formatter<charT*, charT>;
-  template<> struct formatter<const charT*, charT>;
-  template<size_t N> struct formatter<const charT[N], charT>;
-  template<class traits, class Allocator>
-    struct formatter<basic_string<charT, traits, Allocator>, charT>;
-  template<class traits>
-    struct formatter<basic_string_view<charT, traits>, charT>;
+  template<class T, class charT = char> struct formatter;
 
   // [format.parse.ctx], class template basic_format_parse_context
-  template<class charT>
-  class basic_format_parse_context {
-  public:
-    using char_type = charT;
-    using const_iterator = typename basic_string_view<charT>::const_iterator;
-    using iterator = const_iterator;
-
-  private:
-    iterator begin_;                                    // exposition only
-    iterator end_;                                      // exposition only
-    enum indexing { unknown, manual, automatic };       // exposition only
-    indexing indexing_;                                 // exposition only
-    size_t next_arg_id_;                                // exposition only
-    size_t num_args_;                                   // exposition only
-
-  public:
-    constexpr explicit basic_format_parse_context(basic_string_view<charT> fmt,
-                                                  size_t num_args = 0) noexcept;
-    basic_format_parse_context(const basic_format_parse_context&) = delete;
-    basic_format_parse_context& operator=(const basic_format_parse_context&) = delete;
-
-    constexpr const_iterator begin() const noexcept;
-    constexpr const_iterator end() const noexcept;
-    constexpr void advance_to(const_iterator it);
-
-    constexpr size_t next_arg_id();
-    constexpr void check_arg_id(size_t id);
-  };
+  template<class charT> class basic_format_parse_context;
   using format_parse_context = basic_format_parse_context<char>;
   using wformat_parse_context = basic_format_parse_context<wchar_t>;
 
   // [format.arguments], arguments
   // [format.arg], class template basic_format_arg
-  template<class Context>
-  class basic_format_arg {
-  public:
-    class handle;
-
-  private:
-    using char_type = typename Context::char_type;                              // exposition only
-
-    variant<monostate, bool, char_type,
-            int, unsigned int, long long int, unsigned long long int,
-            float, double, long double,
-            const char_type*, basic_string_view<char_type>,
-            const void*, handle> value;                                         // exposition only
-
-    template<class T> explicit basic_format_arg(const T& v) noexcept;           // exposition only
-    explicit basic_format_arg(float n) noexcept;                                // exposition only
-    explicit basic_format_arg(double n) noexcept;                               // exposition only
-    explicit basic_format_arg(long double n) noexcept;                          // exposition only
-    explicit basic_format_arg(const char_type* s);                              // exposition only
-
-    template<class traits>
-      explicit basic_format_arg(
-        basic_string_view<char_type, traits> s) noexcept;                       // exposition only
-
-    template<class traits, class Allocator>
-      explicit basic_format_arg(
-        const basic_string<char_type, traits, Allocator>& s) noexcept;          // exposition only
-
-    explicit basic_format_arg(nullptr_t) noexcept;                              // exposition only
-
-    template<class T>
-      explicit basic_format_arg(const T* p) noexcept;                           // exposition only
-
-  public:
-    basic_format_arg() noexcept;
-
-    explicit operator bool() const noexcept;
-  };
+  template<class Context> class basic_format_arg;
 
   template<class Visitor, class Context>
     see below visit_format_arg(Visitor&& vis, basic_format_arg<Context> arg);
 
   // [format.arg.store], class template format-arg-store
-  template<class Context, class... Args>
-  struct format-arg-store {      // exposition only
-    array<basic_format_arg<Context>, sizeof...(Args)> args;
-  };
+  template<class Context, class... Args> struct format-arg-store;      // exposition only
 
   template<class Context = format_context, class... Args>
     format-arg-store<Context, Args...>
@@ -218,43 +112,7 @@ namespace std {
       make_wformat_args(const Args&... args);
 
   // [format.error], class format_error
-  class format_error : public runtime_error {
-  public:
-    explicit format_error(const string& what_arg);
-    explicit format_error(const char* what_arg);
-  };
-
-  // [format.parse.ctx], class template basic_format_parse_context
-  template<class charT>
-  class basic_format_parse_context {
-  public:
-    using char_type = charT;
-    using const_iterator = typename basic_string_view<charT>::const_iterator;
-    using iterator = const_iterator;
-
-  private:
-    iterator begin_;                                    // exposition only
-    iterator end_;                                      // exposition only
-    enum indexing { unknown, manual, automatic };       // exposition only
-    indexing indexing_;                                 // exposition only
-    size_t next_arg_id_;                                // exposition only
-    size_t num_args_;                                   // exposition only
-
-  public:
-    constexpr explicit basic_format_parse_context(basic_string_view<charT> fmt,
-                                                  size_t num_args = 0) noexcept;
-    basic_format_parse_context(const basic_format_parse_context&) = delete;
-    basic_format_parse_context& operator=(const basic_format_parse_context&) = delete;
-
-    constexpr const_iterator begin() const noexcept;
-    constexpr const_iterator end() const noexcept;
-    constexpr void advance_to(const_iterator it);
-
-    constexpr size_t next_arg_id();
-    constexpr void check_arg_id(size_t id);
-  };
-  using format_parse_context = basic_format_parse_context<char>;
-  using wformat_parse_context = basic_format_parse_context<wchar_t>;
+  class format_error;
 }
 
 */
@@ -277,7 +135,9 @@ namespace std {
 #include <__format/formatter.h>
 #include <__format/formatter_bool.h>
 #include <__format/formatter_char.h>
+#include <__format/formatter_floating_point.h>
 #include <__format/formatter_integer.h>
+#include <__format/formatter_pointer.h>
 #include <__format/formatter_string.h>
 #include <__format/parser_std_format_spec.h>
 #include <__variant/monostate.h>
@@ -367,6 +227,8 @@ __handle_replacement_field(const _CharT* __begin, const _CharT* __end,
       [&](auto __arg) {
         if constexpr (same_as<decltype(__arg), monostate>)
           __throw_format_error("Argument index out of bounds");
+        else if constexpr (same_as<decltype(__arg), typename basic_format_arg<_Ctx>::handle>)
+          __arg.format(__parse_ctx, __ctx);
         else {
           formatter<decltype(__arg), _CharT> __formatter;
           __parse_ctx.advance_to(__formatter.parse(__parse_ctx));

@@ -15,34 +15,34 @@ namespace __llvm_libc {
 
 // The constants and polynomials for sine and cosine.  The 2nd entry
 // computes -cos (x) rather than cos (x) to get negation for free.
-const sincos_t __SINCOSF_TABLE[2] = {
+constexpr sincos_t SINCOSF_TABLE[2] = {
     {{1.0, -1.0, -1.0, 1.0},
-     as_double(0x41645f306dc9c883),
-     as_double(0x3ff921fb54442d18),
-     as_double(0x3ff0000000000000),
-     as_double(0xbfdffffffd0c621c),
-     as_double(0x3fa55553e1068f19),
-     as_double(0xbf56c087e89a359d),
-     as_double(0x3ef99343027bf8c3),
-     as_double(0xbfc555545995a603),
-     as_double(0x3f81107605230bc4),
-     as_double(0xbf2994eb3774cf24)},
+     0x1.45f306dc9c883p+23,
+     0x1.921fb54442d18p+0,
+     0x1p+0,
+     -0x1.ffffffd0c621cp-2,
+     0x1.55553e1068f19p-5,
+     -0x1.6c087e89a359dp-10,
+     0x1.99343027bf8c3p-16,
+     -0x1.555545995a603p-3,
+     0x1.1107605230bc4p-7,
+     -0x1.994eb3774cf24p-13},
     {{1.0, -1.0, -1.0, 1.0},
-     as_double(0x41645f306dc9c883),
-     as_double(0x3ff921fb54442d18),
-     as_double(0xbff0000000000000),
-     as_double(0x3fdffffffd0c621c),
-     as_double(0xbfa55553e1068f19),
-     as_double(0x3f56c087e89a359d),
-     as_double(0xbef99343027bf8c3),
-     as_double(0xbfc555545995a603),
-     as_double(0x3f81107605230bc4),
-     as_double(0xbf2994eb3774cf24)},
+     0x1.45f306dc9c883p+23,
+     0x1.921fb54442d18p+0,
+     -0x1p+0,
+     0x1.ffffffd0c621cp-2,
+     -0x1.55553e1068f19p-5,
+     0x1.6c087e89a359dp-10,
+     -0x1.99343027bf8c3p-16,
+     -0x1.555545995a603p-3,
+     0x1.1107605230bc4p-7,
+     -0x1.994eb3774cf24p-13},
 };
 
 // Table with 4/PI to 192 bit precision.  To avoid unaligned accesses
 // only 8 new bits are added per entry, making the table 4 times larger.
-const uint32_t __INV_PIO4[24] = {
+constexpr uint32_t INV_PIO4[24] = {
     0xa2,       0xa2f9,     0xa2f983,   0xa2f9836e, 0xf9836e4e, 0x836e4e44,
     0x6e4e4415, 0x4e441529, 0x441529fc, 0x1529fc27, 0x29fc2757, 0xfc2757d1,
     0x2757d1f5, 0x57d1f534, 0xd1f534dd, 0xf534ddc0, 0x34ddc0db, 0xddc0db62,

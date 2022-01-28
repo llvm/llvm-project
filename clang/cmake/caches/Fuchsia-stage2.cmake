@@ -70,10 +70,9 @@ if(APPLE)
   set(LIBCXX_ENABLE_SHARED OFF CACHE BOOL "")
   set(LIBCXX_ENABLE_STATIC_ABI_LIBRARY ON CACHE BOOL "")
   set(LIBCXX_ABI_VERSION 2 CACHE STRING "")
-  set(DARWIN_ios_ARCHS armv7;armv7s;arm64 CACHE STRING "")
-  set(DARWIN_iossim_ARCHS i386;x86_64 CACHE STRING "")
+  set(DARWIN_ios_ARCHS arm64 CACHE STRING "")
+  set(DARWIN_iossim_ARCHS arm64 CACHE STRING "")
   set(DARWIN_osx_ARCHS arm64;x86_64 CACHE STRING "")
-  set(SANITIZER_MIN_OSX_VERSION 10.7 CACHE STRING "")
 endif()
 
 if(WIN32)
@@ -135,6 +134,8 @@ foreach(target aarch64-unknown-linux-gnu;armv7-unknown-linux-gnueabihf;i386-unkn
     set(RUNTIMES_${target}_LLVM_ENABLE_ASSERTIONS OFF CACHE BOOL "")
     set(RUNTIMES_${target}_SANITIZER_CXX_ABI "libc++" CACHE STRING "")
     set(RUNTIMES_${target}_SANITIZER_CXX_ABI_INTREE ON CACHE BOOL "")
+    set(RUNTIMES_${target}_SANITIZER_TEST_CXX "libc++" CACHE STRING "")
+    set(RUNTIMES_${target}_SANITIZER_TEST_CXX_INTREE ON CACHE BOOL "")
     set(RUNTIMES_${target}_COMPILER_RT_TEST_COMPILER_CFLAGS "--unwindlib=libunwind -static-libgcc" CACHE STRING "")
     set(RUNTIMES_${target}_SANITIZER_COMMON_TEST_TARGET_CFLAGS "--unwindlib=libunwind -static-libgcc" CACHE STRING "")
     set(RUNTIMES_${target}_TSAN_TEST_TARGET_CFLAGS "--unwindlib=libunwind -static-libgcc" CACHE STRING "")
@@ -277,6 +278,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-objcopy
   llvm-objdump
   llvm-otool
+  llvm-pdbutil
   llvm-profdata
   llvm-rc
   llvm-ranlib

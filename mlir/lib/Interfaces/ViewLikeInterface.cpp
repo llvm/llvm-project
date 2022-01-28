@@ -195,3 +195,48 @@ void OffsetSizeAndStrideOpInterface::expandToRank(
     strides.push_back(one);
   }
 }
+
+SmallVector<OpFoldResult, 4>
+mlir::getMixedOffsets(OffsetSizeAndStrideOpInterface op,
+                      ArrayAttr staticOffsets, ValueRange offsets) {
+  SmallVector<OpFoldResult, 4> res;
+  unsigned numDynamic = 0;
+  unsigned count = static_cast<unsigned>(staticOffsets.size());
+  for (unsigned idx = 0; idx < count; ++idx) {
+    if (op.isDynamicOffset(idx))
+      res.push_back(offsets[numDynamic++]);
+    else
+      res.push_back(staticOffsets[idx]);
+  }
+  return res;
+}
+
+SmallVector<OpFoldResult, 4>
+mlir::getMixedSizes(OffsetSizeAndStrideOpInterface op, ArrayAttr staticSizes,
+                    ValueRange sizes) {
+  SmallVector<OpFoldResult, 4> res;
+  unsigned numDynamic = 0;
+  unsigned count = static_cast<unsigned>(staticSizes.size());
+  for (unsigned idx = 0; idx < count; ++idx) {
+    if (op.isDynamicSize(idx))
+      res.push_back(sizes[numDynamic++]);
+    else
+      res.push_back(staticSizes[idx]);
+  }
+  return res;
+}
+
+SmallVector<OpFoldResult, 4>
+mlir::getMixedStrides(OffsetSizeAndStrideOpInterface op,
+                      ArrayAttr staticStrides, ValueRange strides) {
+  SmallVector<OpFoldResult, 4> res;
+  unsigned numDynamic = 0;
+  unsigned count = static_cast<unsigned>(staticStrides.size());
+  for (unsigned idx = 0; idx < count; ++idx) {
+    if (op.isDynamicStride(idx))
+      res.push_back(strides[numDynamic++]);
+    else
+      res.push_back(staticStrides[idx]);
+  }
+  return res;
+}

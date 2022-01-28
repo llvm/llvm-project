@@ -52,15 +52,15 @@ static void collectAllDefs(StringRef selectedDialect,
   if (selectedDialect.empty()) {
     // If a dialect was not specified, ensure that all found defs belong to the
     // same dialect.
-    if (!llvm::is_splat(
-            llvm::map_range(defs, [](auto def) { return def.getDialect(); }))) {
+    if (!llvm::is_splat(llvm::map_range(
+            defs, [](const auto &def) { return def.getDialect(); }))) {
       llvm::PrintFatalError("defs belonging to more than one dialect. Must "
                             "select one via '--(attr|type)defs-dialect'");
     }
     resultDefs.assign(defs.begin(), defs.end());
   } else {
     // Otherwise, generate the defs that belong to the selected dialect.
-    auto dialectDefs = llvm::make_filter_range(defs, [&](auto def) {
+    auto dialectDefs = llvm::make_filter_range(defs, [&](const auto &def) {
       return def.getDialect().getName().equals(selectedDialect);
     });
     resultDefs.assign(dialectDefs.begin(), dialectDefs.end());
@@ -616,9 +616,11 @@ public:
 
 protected:
   DefGenerator(std::vector<llvm::Record *> &&defs, raw_ostream &os,
-               StringRef defType, StringRef valueType, bool isAttrGenerator)
+               StringRef defType, StringRef valueType, bool isAttrGenerator,
+               bool needsDialectParserPrinter)
       : defRecords(std::move(defs)), os(os), defType(defType),
-        valueType(valueType), isAttrGenerator(isAttrGenerator) {}
+        valueType(valueType), isAttrGenerator(isAttrGenerator),
+        needsDialectParserPrinter(needsDialectParserPrinter) {}
 
   /// Emit the list of def type names.
   void emitTypeDefList(ArrayRef<AttrOrTypeDef> defs);
@@ -637,19 +639,29 @@ protected:
   /// Flag indicating if this generator is for Attributes. False if the
   /// generator is for types.
   bool isAttrGenerator;
+  /// Track if we need to emit the printAttribute/parseAttribute
+  /// implementations.
+  bool needsDialectParserPrinter;
 };
 
 /// A specialized generator for AttrDefs.
 struct AttrDefGenerator : public DefGenerator {
   AttrDefGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
       : DefGenerator(records.getAllDerivedDefinitions("AttrDef"), os, "Attr",
-                     "Attribute", /*isAttrGenerator=*/true) {}
+                     "Attribute",
+                     /*isAttrGenerator=*/true,
+                     /*needsDialectParserPrinter=*/
+                     !records.getAllDerivedDefinitions("DialectAttr").empty()) {
+  }
 };
 /// A specialized generator for TypeDefs.
 struct TypeDefGenerator : public DefGenerator {
   TypeDefGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
       : DefGenerator(records.getAllDerivedDefinitions("TypeDef"), os, "Type",
-                     "Type", /*isAttrGenerator=*/false) {}
+                     "Type", /*isAttrGenerator=*/false,
+                     /*needsDialectParserPrinter=*/
+                     !records.getAllDerivedDefinitions("DialectType").empty()) {
+  }
 };
 } // namespace
 
@@ -731,7 +743,7 @@ static const char *const dialectDefaultAttrPrinterParserDispatch = R"(
     if (parseResult.hasValue())
       return attr;
   }
-  parser.emitError(typeLoc) << "unknown  attribute `"
+  parser.emitError(typeLoc) << "unknown attribute `"
       << attrTag << "` in dialect `" << getNamespace() << "`";
   return {{};
 }
@@ -860,7 +872,7 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
   Dialect firstDialect = defs.front().getDialect();
   // Emit the default parser/printer for Attributes if the dialect asked for
   // it.
-  if (valueType == "Attribute" &&
+  if (valueType == "Attribute" && needsDialectParserPrinter &&
       firstDialect.useDefaultAttributePrinterParser()) {
     NamespaceEmitter nsEmitter(os, firstDialect);
     os << llvm::formatv(dialectDefaultAttrPrinterParserDispatch,
@@ -868,7 +880,8 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
   }
 
   // Emit the default parser/printer for Types if the dialect asked for it.
-  if (valueType == "Type" && firstDialect.useDefaultTypePrinterParser()) {
+  if (valueType == "Type" && needsDialectParserPrinter &&
+      firstDialect.useDefaultTypePrinterParser()) {
     NamespaceEmitter nsEmitter(os, firstDialect);
     os << llvm::formatv(dialectDefaultTypePrinterParserDispatch,
                         firstDialect.getCppClassName());

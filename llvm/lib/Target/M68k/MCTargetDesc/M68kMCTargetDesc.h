@@ -58,4 +58,4 @@ std::unique_ptr<MCObjectTargetWriter> createM68kELFObjectWriter(uint8_t OSABI);
 #define GET_SUBTARGETINFO_ENUM
 #include "M68kGenSubtargetInfo.inc"
 
-#endif
+#endif // LLVM_LIB_TARGET_M68K_MCTARGETDESC_M68KMCTARGETDESC_H

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
-#include "../AffineStructuresParser.h"
+#include "../../Dialect/Affine/Analysis/AffineStructuresParser.h"
 #include "mlir/IR/MLIRContext.h"
 
 #include <gmock/gmock.h>
@@ -635,9 +635,11 @@ static void checkDivisionRepresentation(
   // Check that the `dividends` and `expectedDividends` match. If the
   // denominator for a division is zero, we ignore its dividend.
   EXPECT_TRUE(dividends.size() == expectedDividends.size());
-  for (unsigned i = 0, e = dividends.size(); i < e; ++i)
-    if (denominators[i] != 0)
+  for (unsigned i = 0, e = dividends.size(); i < e; ++i) {
+    if (denominators[i] != 0) {
       EXPECT_TRUE(expectedDividends[i] == dividends[i]);
+    }
+  }
 }
 
 TEST(IntegerPolyhedronTest, computeLocalReprSimple) {
@@ -967,6 +969,30 @@ TEST(IntegerPolyhedronTest, mergeDivisionsConstants) {
     EXPECT_EQ(poly1.getNumLocalIds(), 2u);
     EXPECT_EQ(poly2.getNumLocalIds(), 2u);
   }
+}
+
+TEST(IntegerPolyhedronTest, negativeDividends) {
+  // (x) : (exists y = [-x + 1 / 2], z = [-x - 2 / 3]: y + z >= x).
+  IntegerPolyhedron poly1(1);
+  poly1.addLocalFloorDiv({-1, 1}, 2); // y = [x + 1 / 2].
+  // Normalization test with negative dividends
+  poly1.addLocalFloorDiv({-3, 0, -6}, 9); // z = [3x + 6 / 9] -> [x + 2 / 3].
+  poly1.addInequality({-1, 1, 1, 0});     // y + z >= x.
+
+  // (x) : (exists y = [x + 1 / 3], z = [x + 2 / 3]: y + z <= x).
+  IntegerPolyhedron poly2(1);
+  // Normalization test.
+  poly2.addLocalFloorDiv({-2, 2}, 4);     // y = [-2x + 2 / 4] -> [-x + 1 / 2].
+  poly2.addLocalFloorDiv({-1, 0, -2}, 3); // z = [-x - 2 / 3].
+  poly2.addInequality({1, -1, -1, 0});    // y + z <= x.
+
+  poly1.mergeLocalIds(poly2);
+
+  // Merging triggers normalization.
+  std::vector<SmallVector<int64_t, 8>> divisions = {{-1, 0, 0, 1},
+                                                    {-1, 0, 0, -2}};
+  SmallVector<unsigned, 8> denoms = {2, 3};
+  checkDivisionRepresentation(poly1, divisions, denoms);
 }
 
 } // namespace mlir

@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_INTERFACES_SIDEEFFECTS_H
-#define MLIR_INTERFACES_SIDEEFFECTS_H
+#ifndef MLIR_INTERFACES_SIDEEFFECTINTERFACES_H
+#define MLIR_INTERFACES_SIDEEFFECTINTERFACES_H
 
 #include "mlir/IR/OpDefinition.h"
 
@@ -77,7 +77,7 @@ private:
 /// class represents an abstract interface for a given resource.
 class Resource {
 public:
-  virtual ~Resource() {}
+  virtual ~Resource() = default;
 
   /// This base class is used for derived effects that are non-parametric.
   template <typename DerivedResource, typename BaseResource = Resource>
@@ -266,4 +266,4 @@ bool wouldOpBeTriviallyDead(Operation *op);
 /// Include the definitions of the side effect interfaces.
 #include "mlir/Interfaces/SideEffectInterfaces.h.inc"
 
-#endif // MLIR_INTERFACES_SIDEEFFECTS_H
+#endif // MLIR_INTERFACES_SIDEEFFECTINTERFACES_H

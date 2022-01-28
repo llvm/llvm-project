@@ -3,10 +3,11 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/foo.s -o %t/foo.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 
-# RUN: %lld -map %t/map %t/test.o %t/foo.o -o %t/test-map
+# RUN: %lld -map %t/map %t/test.o %t/foo.o --time-trace -o %t/test-map
 # RUN: llvm-objdump --syms --section-headers %t/test-map > %t/objdump
 # RUN: cat %t/objdump %t/map > %t/out
 # RUN: FileCheck %s < %t/out
+# RUN: FileCheck %s --check-prefix=MAPFILE < %t/test-map.time-trace
 
 #--- foo.s
 .section __TEXT,obj
@@ -46,6 +47,8 @@ _main:
 
 # CHECK-NEXT: # Symbols:
 # CHECK-NEXT: # Address        File  Name
-# CHECK-NEXT: 0x[[#NUMBER]]    [  1]  _number
 # CHECK-NEXT: 0x[[#MAIN]]      [  1]  _main
 # CHECK-NEXT: 0x[[#FOO]]       [  2]  _foo
+# CHECK-NEXT: 0x[[#NUMBER]]    [  1]  _number
+
+# MAPFILE: "name":"Total Write map file"

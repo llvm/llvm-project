@@ -1471,6 +1471,33 @@ Using outputs on an indirect branch may result in undefined behavior. For
 example, in the function above, use of the value assigned to `y` in the `err`
 block is undefined behavior.
 
+When using tied-outputs (i.e. outputs that are inputs and outputs, not just
+outputs) with the `+r` constraint, there is a hidden input that's created
+before the label, so numeric references to operands must account for that.
+
+.. code-block:: c++
+
+  int foo(int x) {
+      // %0 and %1 both refer to x
+      // %l2 refers to err
+      asm goto("# %0 %1 %l2" : "+r"(x) : : : err);
+      return x;
+    err:
+      return -1;
+  }
+
+This was changed to match GCC in clang-13; for better portability, symbolic
+references can be used instead of numeric references.
+
+.. code-block:: c++
+
+  int foo(int x) {
+      asm goto("# %[x] %l[err]" : [x]"+r"(x) : : : err);
+      return x;
+    err:
+      return -1;
+  }
+
 Query for this feature with ``__has_extension(gnu_asm_goto_with_outputs)``.
 
 Objective-C Features
@@ -2098,43 +2125,104 @@ implemented directly in terms of :ref:`extended vector support
 <langext-vectors>` instead of builtins, in order to reduce the number of
 builtins that we need to implement.
 
-.. _langext-__builtin_assume:
+``__builtin_alloca``
+--------------------
 
-``__builtin_assume``
-------------------------------
-
-``__builtin_assume`` is used to provide the optimizer with a boolean
-invariant that is defined to be true.
+``__builtin_alloca`` is used to dynamically allocate memory on the stack. Memory
+is automatically freed upon function termination.
 
 **Syntax**:
 
 .. code-block:: c++
 
-  __builtin_assume(bool)
+  __builtin_alloca(size_t n)
 
 **Example of Use**:
 
 .. code-block:: c++
 
-  int foo(int x) {
-    __builtin_assume(x != 0);
-
-    // The optimizer may short-circuit this check using the invariant.
-    if (x == 0)
-      return do_something();
-
-    return do_something_else();
+  void init(float* data, size_t nbelems);
+  void process(float* data, size_t nbelems);
+  int foo(size_t n) {
+    auto mem = (float*)__builtin_alloca(n * sizeof(float));
+    init(mem, n);
+    process(mem, n);
+    /* mem is automatically freed at this point */
   }
 
 **Description**:
 
-The boolean argument to this function is defined to be true. The optimizer may
-analyze the form of the expression provided as the argument and deduce from
-that information used to optimize the program. If the condition is violated
-during execution, the behavior is undefined. The argument itself is never
-evaluated, so any side effects of the expression will be discarded.
+``__builtin_alloca`` is meant to be used to allocate a dynamic amount of memory
+on the stack. This amount is subject to stack allocation limits.
 
-Query for this feature with ``__has_builtin(__builtin_assume)``.
+Query for this feature with ``__has_builtin(__builtin_alloca)``.
+
+``__builtin_alloca_with_align``
+-------------------------------
+
+``__builtin_alloca_with_align`` is used to dynamically allocate memory on the
+stack while controlling its alignment. Memory is automatically freed upon
+function termination.
+
+
+**Syntax**:
+
+.. code-block:: c++
+
+  __builtin_alloca_with_align(size_t n, size_t align)
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  void init(float* data, size_t nbelems);
+  void process(float* data, size_t nbelems);
+  int foo(size_t n) {
+    auto mem = (float*)__builtin_alloca_with_align(
+                        n * sizeof(float),
+                        CHAR_BIT * alignof(float));
+    init(mem, n);
+    process(mem, n);
+    /* mem is automatically freed at this point */
+  }
+
+**Description**:
+
+``__builtin_alloca_with_align`` is meant to be used to allocate a dynamic amount of memory
+on the stack. It is similar to ``__builtin_alloca`` but accepts a second
+argument whose value is the alignment constraint, as a power of 2 in *bits*.
+
+Query for this feature with ``__has_builtin(__builtin_alloca_with_align)``.
+
+.. _langext-__builtin_assume:
+
+``__builtin_call_with_static_chain``
+------------------------------------
+
+``__builtin_call_with_static_chain`` is used to perform a static call while
+setting updating the static chain register.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  T __builtin_call_with_static_chain(T expr, void* ptr)
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  auto v = __builtin_call_with_static_chain(foo(3), foo);
+
+**Description**:
+
+This builtin returns ``expr`` after checking that ``expr`` is a non-member
+static call expression. The call to that expression is made while using ``ptr``
+as a function pointer stored in a dedicated register to implement *static chain*
+calling convention, as used by some language to implement closures or nested
+functions.
+
+Query for this feature with ``__has_builtin(__builtin_call_with_static_chain)``.
 
 ``__builtin_readcyclecounter``
 ------------------------------
@@ -2473,6 +2561,98 @@ The ``__builtin_unpredictable()`` builtin is expected to be used with control
 flow conditions such as in ``if`` and ``switch`` statements.
 
 Query for this feature with ``__has_builtin(__builtin_unpredictable)``.
+
+
+``__builtin_expect``
+--------------------
+
+``__builtin_expect`` is used to indicate that the value of an expression is
+anticipated to be the same as a statically known result.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    long __builtin_expect(long expr, long val)
+
+**Example of use**:
+
+.. code-block:: c++
+
+  if (__builtin_expect(x, 0)) {
+     bar();
+  }
+
+**Description**:
+
+The ``__builtin_expect()`` builtin is typically used with control flow
+conditions such as in ``if`` and ``switch`` statements to help branch
+prediction. It means that its first argument ``expr`` is expected to take the
+value of its second argument ``val``. It always returns ``expr``.
+
+Query for this feature with ``__has_builtin(__builtin_expect)``.
+
+``__builtin_expect_with_probability``
+-------------------------------------
+
+``__builtin_expect_with_probability`` is similar to ``__builtin_expect`` but it
+takes a probability as third argument.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    long __builtin_expect_with_probability(long expr, long val, double p)
+
+**Example of use**:
+
+.. code-block:: c++
+
+  if (__builtin_expect_with_probability(x, 0, .3)) {
+     bar();
+  }
+
+**Description**:
+
+The ``__builtin_expect_with_probability()`` builtin is typically used with
+control flow conditions such as in ``if`` and ``switch`` statements to help
+branch prediction. It means that its first argument ``expr`` is expected to take
+the value of its second argument ``val`` with probability ``p``. ``p`` must be
+within ``[0.0 ; 1.0]`` bounds. This builtin always returns the value of ``expr``.
+
+Query for this feature with ``__has_builtin(__builtin_expect_with_probability)``.
+
+``__builtin_prefetch``
+----------------------
+
+``__builtin_prefetch`` is used to communicate with the cache handler to bring
+data into the cache before it gets used.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    void __builtin_prefetch(const void *addr, int rw=0, int locality=3)
+
+**Example of use**:
+
+.. code-block:: c++
+
+    __builtin_prefetch(a + i);
+
+**Description**:
+
+The ``__builtin_prefetch(addr, rw, locality)`` builtin is expected to be used to
+avoid cache misses when the developper has a good understanding of which data
+are going to be used next. ``addr`` is the address that needs to be brought into
+the cache. ``rw`` indicates the expected access mode: ``0`` for *read* and ``1``
+for *write*. In case of *read write* access, ``1`` is to be used. ``locality``
+indicates the expected persistance of data in cache, from ``0`` which means that
+data can be discarded from cache after its next use to ``3`` which means that
+data is going to be reused a lot once in cache. ``1`` and ``2`` provide
+intermediate behavior between these two extremes.
+
+Query for this feature with ``__has_builtin(__builtin_prefetch)``.
 
 ``__sync_swap``
 ---------------

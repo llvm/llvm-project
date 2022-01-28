@@ -43,6 +43,15 @@ VERS1.0 {
     llvm_omp_get_dynamic_shared;
     __tgt_set_info_flag;
     __tgt_print_device_info;
+    omp_get_interop_ptr;
+    omp_get_interop_str;
+    omp_get_interop_int;
+    omp_get_interop_name;
+    omp_get_interop_type_desc;
+    omp_get_interop_rc_desc;
+    __tgt_interop_init;
+    __tgt_interop_use;
+    __tgt_interop_destroy;
   local:
     *;
 };

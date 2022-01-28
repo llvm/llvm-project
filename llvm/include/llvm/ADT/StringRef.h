@@ -9,7 +9,8 @@
 #ifndef LLVM_ADT_STRINGREF_H
 #define LLVM_ADT_STRINGREF_H
 
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
 #include <algorithm>
@@ -877,6 +878,25 @@ namespace llvm {
       return ltrim(Chars).rtrim(Chars);
     }
 
+    /// Detect the line ending style of the string.
+    ///
+    /// If the string contains a line ending, return the line ending character
+    /// sequence that is detected. Otherwise return '\n' for unix line endings.
+    ///
+    /// \return - The line ending character sequence.
+    LLVM_NODISCARD
+    StringRef detectEOL() const {
+      size_t Pos = find('\r');
+      if (Pos == npos) {
+        // If there is no carriage return, assume unix
+        return "\n";
+      }
+      if (Pos + 1 < Length && Data[Pos + 1] == '\n')
+        return "\r\n"; // Windows
+      if (Pos > 0 && Data[Pos - 1] == '\n')
+        return "\n\r"; // You monster!
+      return "\r";     // Classic Mac
+    }
     /// @}
   };
 
@@ -959,13 +979,7 @@ namespace llvm {
           reinterpret_cast<const char *>(~static_cast<uintptr_t>(1)), 0);
     }
 
-    static unsigned getHashValue(StringRef Val) {
-      assert(Val.data() != getEmptyKey().data() &&
-             "Cannot hash the empty key!");
-      assert(Val.data() != getTombstoneKey().data() &&
-             "Cannot hash the tombstone key!");
-      return (unsigned)(hash_value(Val));
-    }
+    static unsigned getHashValue(StringRef Val);
 
     static bool isEqual(StringRef LHS, StringRef RHS) {
       if (RHS.data() == getEmptyKey().data())

@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_IR_OPERATION_SUPPORT_H
-#define MLIR_IR_OPERATION_SUPPORT_H
+#ifndef MLIR_IR_OPERATIONSUPPORT_H
+#define MLIR_IR_OPERATIONSUPPORT_H
 
 #include "mlir/IR/BlockSupport.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -49,14 +49,12 @@ class Pattern;
 class Region;
 class ResultRange;
 class RewritePattern;
+class RewritePatternSet;
 class Type;
 class Value;
 class ValueRange;
 template <typename ValueRangeT>
 class ValueTypeRange;
-
-class RewritePatternSet;
-using OwningRewritePatternList = RewritePatternSet;
 
 //===----------------------------------------------------------------------===//
 // OperationName
@@ -231,9 +229,7 @@ public:
   /// Lookup the registered operation information for the given operation.
   /// Returns None if the operation isn't registered.
   static Optional<RegisteredOperationName> lookup(StringRef name,
-                                                  MLIRContext *ctx) {
-    return OperationName(name, ctx).getRegisteredInfo();
-  }
+                                                  MLIRContext *ctx);
 
   /// Register a new operation in a Dialect object.
   /// This constructor is used by Dialect objects when they register the list of
@@ -582,9 +578,12 @@ struct OperationState {
 
 public:
   OperationState(Location location, StringRef name);
-
   OperationState(Location location, OperationName name);
 
+  OperationState(Location location, OperationName name, ValueRange operands,
+                 TypeRange types, ArrayRef<NamedAttribute> attributes,
+                 BlockRange successors = {},
+                 MutableArrayRef<std::unique_ptr<Region>> regions = {});
   OperationState(Location location, StringRef name, ValueRange operands,
                  TypeRange types, ArrayRef<NamedAttribute> attributes,
                  BlockRange successors = {},
@@ -665,7 +664,7 @@ public:
 
   /// Erase the operands held by the storage that have their corresponding bit
   /// set in `eraseIndices`.
-  void eraseOperands(const llvm::BitVector &eraseIndices);
+  void eraseOperands(const BitVector &eraseIndices);
 
   /// Get the operation operands held by the storage.
   MutableArrayRef<OpOperand> getOperands() { return {operandStorage, size()}; }

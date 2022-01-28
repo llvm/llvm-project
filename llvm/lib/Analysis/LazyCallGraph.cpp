@@ -1503,7 +1503,7 @@ void LazyCallGraph::removeEdge(Node &SourceN, Node &TargetN) {
 void LazyCallGraph::removeDeadFunction(Function &F) {
   // FIXME: This is unnecessarily restrictive. We should be able to remove
   // functions which recursively call themselves.
-  assert(F.use_empty() &&
+  assert(F.hasZeroLiveUses() &&
          "This routine should only be called on trivially dead functions!");
 
   // We shouldn't remove library functions as they are never really dead while

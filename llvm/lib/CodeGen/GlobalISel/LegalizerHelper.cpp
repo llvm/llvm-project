@@ -564,7 +564,7 @@ static bool isLibCallInTailPosition(MachineInstr &MI,
   // the return. Ignore NoAlias and NonNull because they don't affect the
   // call sequence.
   AttributeList CallerAttrs = F.getAttributes();
-  if (AttrBuilder(F.getContext(), CallerAttrs, AttributeList::ReturnIndex)
+  if (AttrBuilder(F.getContext(), CallerAttrs.getRetAttrs())
           .removeAttribute(Attribute::NoAlias)
           .removeAttribute(Attribute::NonNull)
           .hasAttributes())
@@ -1677,7 +1677,7 @@ LegalizerHelper::widenScalarUnmergeValues(MachineInstr &MI, unsigned TypeIdx,
 
     // Widen SrcTy to WideTy. This does not affect the result, but since the
     // user requested this size, it is probably better handled than SrcTy and
-    // should reduce the total number of legalization artifacts
+    // should reduce the total number of legalization artifacts.
     if (WideTy.getSizeInBits() > SrcTy.getSizeInBits()) {
       SrcTy = WideTy;
       SrcReg = MIRBuilder.buildAnyExt(WideTy, SrcReg).getReg(0);

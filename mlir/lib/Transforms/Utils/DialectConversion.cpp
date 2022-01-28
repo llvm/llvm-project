@@ -11,9 +11,8 @@
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/FunctionSupport.h"
+#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/Rewrite/PatternApplicator.h"
-#include "mlir/Transforms/Utils.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -763,7 +762,11 @@ Block *ArgConverter::applySignatureConversion(
   Block *newBlock = block->splitBlock(block->begin());
   block->replaceAllUsesWith(newBlock);
 
-  SmallVector<Value, 4> newArgRange(newBlock->addArguments(convertedTypes));
+  // FIXME: We should map the new arguments to proper locations.
+  SmallVector<Location> newLocs(convertedTypes.size(),
+                                rewriter.getUnknownLoc());
+  SmallVector<Value, 4> newArgRange(
+      newBlock->addArguments(convertedTypes, newLocs));
   ArrayRef<Value> newArgs(newArgRange);
 
   // Remap each of the original arguments as determined by the signature
@@ -3049,55 +3052,50 @@ auto TypeConverter::convertBlockSignature(Block *block)
 }
 
 //===----------------------------------------------------------------------===//
-// FunctionLikeSignatureConversion
+// FunctionOpInterfaceSignatureConversion
 //===----------------------------------------------------------------------===//
 
 /// Create a default conversion pattern that rewrites the type signature of a
-/// FunctionLike op. This only supports FunctionLike ops which use FunctionType
-/// to represent their type.
+/// FunctionOpInterface op. This only supports ops which use FunctionType to
+/// represent their type.
 namespace {
-struct FunctionLikeSignatureConversion : public ConversionPattern {
-  FunctionLikeSignatureConversion(StringRef functionLikeOpName,
-                                  MLIRContext *ctx, TypeConverter &converter)
+struct FunctionOpInterfaceSignatureConversion : public ConversionPattern {
+  FunctionOpInterfaceSignatureConversion(StringRef functionLikeOpName,
+                                         MLIRContext *ctx,
+                                         TypeConverter &converter)
       : ConversionPattern(converter, functionLikeOpName, /*benefit=*/1, ctx) {}
 
-  /// Hook to implement combined matching and rewriting for FunctionLike ops.
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    FunctionType type = function_like_impl::getFunctionType(op);
+    FunctionOpInterface funcOp = cast<FunctionOpInterface>(op);
+    FunctionType type = funcOp.getType().cast<FunctionType>();
 
     // Convert the original function types.
     TypeConverter::SignatureConversion result(type.getNumInputs());
     SmallVector<Type, 1> newResults;
     if (failed(typeConverter->convertSignatureArgs(type.getInputs(), result)) ||
         failed(typeConverter->convertTypes(type.getResults(), newResults)) ||
-        failed(rewriter.convertRegionTypes(
-            &function_like_impl::getFunctionBody(op), *typeConverter, &result)))
+        failed(rewriter.convertRegionTypes(&funcOp.getBody(), *typeConverter,
+                                           &result)))
       return failure();
 
     // Update the function signature in-place.
     auto newType = FunctionType::get(rewriter.getContext(),
                                      result.getConvertedTypes(), newResults);
 
-    rewriter.updateRootInPlace(
-        op, [&] { function_like_impl::setFunctionType(op, newType); });
+    rewriter.updateRootInPlace(op, [&] { funcOp.setType(newType); });
 
     return success();
   }
 };
 } // namespace
 
-void mlir::populateFunctionLikeTypeConversionPattern(
+void mlir::populateFunctionOpInterfaceTypeConversionPattern(
     StringRef functionLikeOpName, RewritePatternSet &patterns,
     TypeConverter &converter) {
-  patterns.add<FunctionLikeSignatureConversion>(
+  patterns.add<FunctionOpInterfaceSignatureConversion>(
       functionLikeOpName, patterns.getContext(), converter);
-}
-
-void mlir::populateFuncOpTypeConversionPattern(RewritePatternSet &patterns,
-                                               TypeConverter &converter) {
-  populateFunctionLikeTypeConversionPattern<FuncOp>(patterns, converter);
 }
 
 //===----------------------------------------------------------------------===//

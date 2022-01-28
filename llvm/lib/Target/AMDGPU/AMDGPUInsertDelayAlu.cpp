@@ -339,6 +339,11 @@ public:
         // TODO: Scan implicit uses too?
         for (const auto &Op : MI.explicit_uses()) {
           if (Op.isReg()) {
+            // One of the operands of the writelane is also the output operand.
+            // This creates the insertion of redundant delays. Hence, we have to
+            // ignore this operand.
+            if (MI.getOpcode() == AMDGPU::V_WRITELANE_B32 && Op.isTied())
+              continue;
             for (MCRegUnitIterator UI(Op.getReg(), TRI); UI.isValid(); ++UI) {
               auto It = State.find(*UI);
               if (It != State.end()) {

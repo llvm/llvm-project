@@ -156,19 +156,17 @@ public:
     Value rhs = op.getRhs();
 
     Location loc = op.getLoc();
+    // If any operand is NaN, 'cmp' will be true (and 'select' returns 'lhs').
+    static_assert(pred == arith::CmpFPredicate::UGT ||
+                  pred == arith::CmpFPredicate::ULT,
+                  "pred must be either UGT or ULT");
     Value cmp = rewriter.create<arith::CmpFOp>(loc, pred, lhs, rhs);
     Value select = rewriter.create<SelectOp>(loc, cmp, lhs, rhs);
 
-    auto floatType = getElementTypeOrSelf(lhs.getType()).cast<FloatType>();
+    // Handle the case where rhs is NaN: 'isNaN(rhs) ? rhs : select'.
     Value isNaN = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::UNO,
-                                                 lhs, rhs);
-
-    Value nan = rewriter.create<arith::ConstantFloatOp>(
-        loc, APFloat::getQNaN(floatType.getFloatSemantics()), floatType);
-    if (VectorType vectorType = lhs.getType().dyn_cast<VectorType>())
-      nan = rewriter.create<SplatOp>(loc, vectorType, nan);
-
-    rewriter.replaceOpWithNewOp<SelectOp>(op, isNaN, nan, select);
+                                                 rhs, rhs);
+    rewriter.replaceOpWithNewOp<SelectOp>(op, isNaN, rhs, select);
     return success();
   }
 };
@@ -191,7 +189,7 @@ public:
 
 struct ArithmeticExpandOpsPass
     : public ArithmeticExpandOpsBase<ArithmeticExpandOpsPass> {
-  void runOnFunction() override {
+  void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
 
@@ -211,8 +209,8 @@ struct ArithmeticExpandOpsPass
       arith::MinUIOp
     >();
     // clang-format on
-    if (failed(
-            applyPartialConversion(getFunction(), target, std::move(patterns))))
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
       signalPassFailure();
   }
 };
@@ -226,8 +224,8 @@ void mlir::arith::populateArithmeticExpandOpsPatterns(
     CeilDivSIOpConverter,
     CeilDivUIOpConverter,
     FloorDivSIOpConverter,
-    MaxMinFOpConverter<MaxFOp, arith::CmpFPredicate::OGT>,
-    MaxMinFOpConverter<MinFOp, arith::CmpFPredicate::OLT>,
+    MaxMinFOpConverter<MaxFOp, arith::CmpFPredicate::UGT>,
+    MaxMinFOpConverter<MinFOp, arith::CmpFPredicate::ULT>,
     MaxMinIOpConverter<MaxSIOp, arith::CmpIPredicate::sgt>,
     MaxMinIOpConverter<MaxUIOp, arith::CmpIPredicate::ugt>,
     MaxMinIOpConverter<MinSIOp, arith::CmpIPredicate::slt>,

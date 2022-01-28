@@ -784,8 +784,8 @@ static mlir::LogicalResult verify(fir::ConstcOp &op) {
 // ConvertOp
 //===----------------------------------------------------------------------===//
 
-void fir::ConvertOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
+void fir::ConvertOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                 MLIRContext *context) {
   results.insert<ConvertConvertOptPattern, RedundantConvertOptPattern,
                  CombineConvertOptPattern, ForwardConstantConvertPattern>(
       context);
@@ -994,9 +994,11 @@ static void print(mlir::OpAsmPrinter &p, fir::DispatchTableOp &op) {
   p << " @" << tableName;
 
   Region &body = op.getOperation()->getRegion(0);
-  if (!body.empty())
+  if (!body.empty()) {
+    p << ' ';
     p.printRegion(body, /*printEntryBlockArgs=*/false,
                   /*printBlockTerminators=*/false);
+  }
 }
 
 static mlir::LogicalResult verify(fir::DispatchTableOp &op) {
@@ -1220,10 +1222,12 @@ static void print(mlir::OpAsmPrinter &p, fir::GlobalOp &op) {
     p << " constant";
   p << " : ";
   p.printType(op.getType());
-  if (op.hasInitializationBody())
+  if (op.hasInitializationBody()) {
+    p << ' ';
     p.printRegion(op.getOperation()->getRegion(0),
                   /*printEntryBlockArgs=*/false,
                   /*printBlockTerminators=*/true);
+  }
 }
 
 void fir::GlobalOp::appendInitialValue(mlir::Operation *op) {
@@ -1504,7 +1508,7 @@ struct UndoComplexPattern : public mlir::RewritePattern {
 };
 
 void fir::InsertValueOp::getCanonicalizationPatterns(
-    mlir::OwningRewritePatternList &results, mlir::MLIRContext *context) {
+    mlir::RewritePatternSet &results, mlir::MLIRContext *context) {
   results.insert<UndoComplexPattern<mlir::arith::AddFOp, fir::AddcOp>,
                  UndoComplexPattern<mlir::arith::SubFOp, fir::SubcOp>>(context);
 }
@@ -1530,9 +1534,11 @@ void fir::IterWhileOp::build(mlir::OpBuilder &builder,
     result.addTypes(v.getType());
   mlir::Region *bodyRegion = result.addRegion();
   bodyRegion->push_back(new Block{});
-  bodyRegion->front().addArgument(builder.getIndexType());
-  bodyRegion->front().addArgument(iterate.getType());
-  bodyRegion->front().addArguments(iterArgs.getTypes());
+  bodyRegion->front().addArgument(builder.getIndexType(), result.location);
+  bodyRegion->front().addArgument(iterate.getType(), result.location);
+  bodyRegion->front().addArguments(
+      iterArgs.getTypes(),
+      SmallVector<Location>(iterArgs.size(), result.location));
   result.addAttributes(attributes);
 }
 
@@ -1709,6 +1715,7 @@ static void print(mlir::OpAsmPrinter &p, fir::IterWhileOp op) {
   }
   p.printOptionalAttrDictWithKeyword(op->getAttrs(),
                                      {op.getFinalValueAttrNameStr()});
+  p << ' ';
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/true);
 }
@@ -1849,8 +1856,10 @@ void fir::DoLoopOp::build(mlir::OpBuilder &builder,
   bodyRegion->push_back(new Block{});
   if (iterArgs.empty() && !finalCountValue)
     DoLoopOp::ensureTerminator(*bodyRegion, builder, result.location);
-  bodyRegion->front().addArgument(builder.getIndexType());
-  bodyRegion->front().addArguments(iterArgs.getTypes());
+  bodyRegion->front().addArgument(builder.getIndexType(), result.location);
+  bodyRegion->front().addArguments(
+      iterArgs.getTypes(),
+      SmallVector<Location>(iterArgs.size(), result.location));
   if (unordered)
     result.addAttribute(unorderedAttrName(result.name), builder.getUnitAttr());
   result.addAttributes(attributes);
@@ -2003,6 +2012,7 @@ static void print(mlir::OpAsmPrinter &p, fir::DoLoopOp op) {
   }
   p.printOptionalAttrDictWithKeyword(op->getAttrs(),
                                      {"unordered", "finalValue"});
+  p << ' ';
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false,
                 printBlockTerminators);
 }
@@ -3122,13 +3132,14 @@ static void print(mlir::OpAsmPrinter &p, fir::IfOp op) {
     p << " -> (" << op.getResultTypes() << ')';
     printBlockTerminators = true;
   }
+  p << ' ';
   p.printRegion(op.thenRegion(), /*printEntryBlockArgs=*/false,
                 printBlockTerminators);
 
   // Print the 'else' regions if it exists and has a block.
   auto &otherReg = op.elseRegion();
   if (!otherReg.empty()) {
-    p << " else";
+    p << " else ";
     p.printRegion(otherReg, /*printEntryBlockArgs=*/false,
                   printBlockTerminators);
   }

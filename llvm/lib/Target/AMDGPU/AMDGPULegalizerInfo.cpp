@@ -272,8 +272,8 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
   const bool IsLoad = Query.Opcode != AMDGPU::G_STORE;
 
   unsigned RegSize = Ty.getSizeInBits();
-  unsigned MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
-  unsigned AlignBits = Query.MMODescrs[0].AlignInBits;
+  uint64_t MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
+  uint64_t AlignBits = Query.MMODescrs[0].AlignInBits;
   unsigned AS = Query.Types[1].getAddressSpace();
 
   // All of these need to be custom lowered to cast the pointer operand.
@@ -380,7 +380,7 @@ static bool shouldBitcastLoadStoreType(const GCNSubtarget &ST, const LLT Ty,
 /// access up to the alignment. Note this case when the memory access itself
 /// changes, not the size of the result register.
 static bool shouldWidenLoad(const GCNSubtarget &ST, LLT MemoryTy,
-                            unsigned AlignInBits, unsigned AddrSpace,
+                            uint64_t AlignInBits, unsigned AddrSpace,
                             unsigned Opcode) {
   unsigned SizeInBits = MemoryTy.getSizeInBits();
   // We don't want to widen cases that are naturally legal.
@@ -929,10 +929,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder(G_CTPOP)
     .legalFor({{S32, S32}, {S32, S64}})
     .clampScalar(0, S32, S32)
+    .widenScalarToNextPow2(1, 32)
     .clampScalar(1, S32, S64)
     .scalarize(0)
-    .widenScalarToNextPow2(0, 32)
-    .widenScalarToNextPow2(1, 32);
+    .widenScalarToNextPow2(0, 32);
+
 
   // The hardware instructions return a different result on 0 than the generic
   // instructions expect. The hardware produces -1, but these produce the
@@ -1172,7 +1173,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               if (MemSize > MaxSize)
                 return std::make_pair(0, LLT::scalar(MaxSize));
 
-              unsigned Align = Query.MMODescrs[0].AlignInBits;
+              uint64_t Align = Query.MMODescrs[0].AlignInBits;
               return std::make_pair(0, LLT::scalar(Align));
             })
         .fewerElementsIf(
@@ -1295,6 +1296,18 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.hasAtomicFaddInsts())
     Atomic.legalFor({{S32, GlobalPtr}});
 
+  if (ST.hasGFX90AInsts()) {
+    // These are legal with some caveats, and should have undergone expansion in
+    // the IR in most situations
+    // TODO: Move atomic expansion into legalizer
+    // TODO: Also supports <2 x f16>
+    Atomic.legalFor({
+        {S32, GlobalPtr},
+        {S64, GlobalPtr},
+        {S64, FlatPtr}
+      });
+  }
+
   // BUFFER/FLAT_ATOMIC_CMP_SWAP on GCN GPUs needs input marshalling, and output
   // demarshalling
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG)
@@ -1345,8 +1358,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       }, changeTo(1, S16));
     Shifts.maxScalarIf(typeIs(0, S16), 1, S16);
     Shifts.clampScalar(1, S32, S32);
-    Shifts.clampScalar(0, S16, S64);
     Shifts.widenScalarToNextPow2(0, 16);
+    Shifts.clampScalar(0, S16, S64);
 
     getActionDefinitionsBuilder({G_SSHLSAT, G_USHLSAT})
       .minScalar(0, S16)
@@ -1357,8 +1370,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     // expansion for the shifted type will produce much worse code if it hasn't
     // been truncated already.
     Shifts.clampScalar(1, S32, S32);
-    Shifts.clampScalar(0, S32, S64);
     Shifts.widenScalarToNextPow2(0, 32);
+    Shifts.clampScalar(0, S32, S64);
 
     getActionDefinitionsBuilder({G_SSHLSAT, G_USHLSAT})
       .minScalar(0, S32)
@@ -1993,6 +2006,7 @@ bool AMDGPULegalizerInfo::legalizeFceil(
 
   // TODO: Should this propagate fast-math-flags?
   B.buildFAdd(MI.getOperand(0).getReg(), Trunc, Add);
+  MI.eraseFromParent();
   return true;
 }
 
@@ -2547,7 +2561,7 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
   const LLT MemTy = MMO->getMemoryType();
   const Align MemAlign = MMO->getAlign();
   const unsigned MemSize = MemTy.getSizeInBits();
-  const unsigned AlignInBits = 8 * MemAlign.value();
+  const uint64_t AlignInBits = 8 * MemAlign.value();
 
   // Widen non-power-of-2 loads to the alignment if needed
   if (shouldWidenLoad(ST, MemTy, AlignInBits, AddrSpace, MI.getOpcode())) {
@@ -2887,6 +2901,8 @@ bool AMDGPULegalizerInfo::loadInputValue(Register DstReg, MachineIRBuilder &B,
 
     Register AndMaskSrc = LiveIn;
 
+    // TODO: Avoid clearing the high bits if we know workitem id y/z are always
+    // 0.
     if (Shift != 0) {
       auto ShiftAmt = B.buildConstant(S32, Shift);
       AndMaskSrc = B.buildLShr(S32, LiveIn, ShiftAmt).getReg(0);
@@ -4151,7 +4167,6 @@ static unsigned getBufferAtomicPseudo(Intrinsic::ID IntrID) {
   case Intrinsic::amdgcn_raw_buffer_atomic_cmpswap:
   case Intrinsic::amdgcn_struct_buffer_atomic_cmpswap:
     return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_CMPSWAP;
-  case Intrinsic::amdgcn_buffer_atomic_fadd:
   case Intrinsic::amdgcn_raw_buffer_atomic_fadd:
   case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
     return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD;
@@ -4258,15 +4273,18 @@ static void packImage16bitOpsToDwords(MachineIRBuilder &B, MachineInstr &MI,
     if ((I < Intr->GradientStart) ||
         (I >= Intr->GradientStart && I < Intr->CoordStart && !IsG16) ||
         (I >= Intr->CoordStart && !IsA16)) {
-      // Handle any gradient or coordinate operands that should not be packed
       if ((I < Intr->GradientStart) && IsA16 &&
           (B.getMRI()->getType(AddrReg) == S16)) {
+        assert(I == Intr->BiasIndex && "Got unexpected 16-bit extra argument");
         // Special handling of bias when A16 is on. Bias is of type half but
         // occupies full 32-bit.
         PackedAddrs.push_back(
             B.buildBuildVector(V2S16, {AddrReg, B.buildUndef(S16).getReg(0)})
                 .getReg(0));
       } else {
+        assert((!IsA16 || Intr->NumBiasArgs == 0 || I != Intr->BiasIndex) &&
+               "Bias needs to be converted to 16 bit in A16 mode");
+        // Handle any gradient or coordinate operands that should not be packed
         AddrReg = B.buildBitcast(V2S16, AddrReg).getReg(0);
         PackedAddrs.push_back(AddrReg);
       }
@@ -4431,44 +4449,6 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   }
 
   unsigned CorrectedNumVAddrs = Intr->NumVAddrs;
-
-  // Optimize _L to _LZ when _L is zero
-  if (const AMDGPU::MIMGLZMappingInfo *LZMappingInfo =
-          AMDGPU::getMIMGLZMappingInfo(Intr->BaseOpcode)) {
-    const ConstantFP *ConstantLod;
-
-    if (mi_match(MI.getOperand(ArgOffset + Intr->LodIndex).getReg(), *MRI,
-                 m_GFCst(ConstantLod))) {
-      if (ConstantLod->isZero() || ConstantLod->isNegative()) {
-        // Set new opcode to _lz variant of _l, and change the intrinsic ID.
-        const AMDGPU::ImageDimIntrinsicInfo *NewImageDimIntr =
-            AMDGPU::getImageDimIntrinsicByBaseOpcode(LZMappingInfo->LZ,
-                                                     Intr->Dim);
-
-        // The starting indexes should remain in the same place.
-        --CorrectedNumVAddrs;
-
-        MI.getOperand(NumDefs).setIntrinsicID(
-            static_cast<Intrinsic::ID>(NewImageDimIntr->Intr));
-        MI.RemoveOperand(ArgOffset + Intr->LodIndex);
-        Intr = NewImageDimIntr;
-      }
-    }
-  }
-
-  // Optimize _mip away, when 'lod' is zero
-  if (AMDGPU::getMIMGMIPMappingInfo(Intr->BaseOpcode)) {
-    int64_t ConstantLod;
-    if (mi_match(MI.getOperand(ArgOffset + Intr->MipIndex).getReg(), *MRI,
-                 m_ICst(ConstantLod))) {
-      if (ConstantLod == 0) {
-        // TODO: Change intrinsic opcode and remove operand instead or replacing
-        // it with 0, as the _L to _LZ handling is done above.
-        MI.getOperand(ArgOffset + Intr->MipIndex).ChangeToImmediate(0);
-        --CorrectedNumVAddrs;
-      }
-    }
-  }
 
   // Rewrite the addressing register layout before doing anything else.
   if (BaseOpcode->Gradients && !ST.hasG16() && (IsA16 != IsG16)) {
@@ -5006,6 +4986,12 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
   return true;
 }
 
+static bool replaceWithConstant(MachineIRBuilder &B, MachineInstr &MI, int64_t C) {
+  B.buildConstant(MI.getOperand(0).getReg(), C);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                             MachineInstr &MI) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
@@ -5109,12 +5095,20 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_implicitarg_ptr:
     return legalizeImplicitArgPtr(MI, MRI, B);
   case Intrinsic::amdgcn_workitem_id_x:
+    if (ST.getMaxWorkitemID(B.getMF().getFunction(), 0) == 0)
+      return replaceWithConstant(B, MI, 0);
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKITEM_ID_X);
   case Intrinsic::amdgcn_workitem_id_y:
+    if (ST.getMaxWorkitemID(B.getMF().getFunction(), 1) == 0)
+      return replaceWithConstant(B, MI, 0);
+
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKITEM_ID_Y);
   case Intrinsic::amdgcn_workitem_id_z:
+    if (ST.getMaxWorkitemID(B.getMF().getFunction(), 2) == 0)
+      return replaceWithConstant(B, MI, 0);
+
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKITEM_ID_Z);
   case Intrinsic::amdgcn_workgroup_id_x:
@@ -5194,16 +5188,29 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_struct_buffer_atomic_inc:
   case Intrinsic::amdgcn_raw_buffer_atomic_dec:
   case Intrinsic::amdgcn_struct_buffer_atomic_dec:
-  case Intrinsic::amdgcn_raw_buffer_atomic_fadd:
-  case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
   case Intrinsic::amdgcn_raw_buffer_atomic_cmpswap:
   case Intrinsic::amdgcn_struct_buffer_atomic_cmpswap:
-  case Intrinsic::amdgcn_buffer_atomic_fadd:
   case Intrinsic::amdgcn_raw_buffer_atomic_fmin:
   case Intrinsic::amdgcn_struct_buffer_atomic_fmin:
   case Intrinsic::amdgcn_raw_buffer_atomic_fmax:
   case Intrinsic::amdgcn_struct_buffer_atomic_fmax:
     return legalizeBufferAtomic(MI, B, IntrID);
+  case Intrinsic::amdgcn_raw_buffer_atomic_fadd:
+  case Intrinsic::amdgcn_struct_buffer_atomic_fadd: {
+    Register DstReg = MI.getOperand(0).getReg();
+    if (!MRI.use_empty(DstReg) && !ST.hasGFX90AInsts()) {
+      Function &F = B.getMF().getFunction();
+      DiagnosticInfoUnsupported NoFpRet(
+          F, "return versions of fp atomics not supported", B.getDebugLoc(),
+          DS_Error);
+      F.getContext().diagnose(NoFpRet);
+      B.buildUndef(DstReg);
+      MI.eraseFromParent();
+      return true;
+    }
+
+    return legalizeBufferAtomic(MI, B, IntrID);
+  }
   case Intrinsic::amdgcn_atomic_inc:
     return legalizeAtomicIncDec(MI, B, true);
   case Intrinsic::amdgcn_atomic_dec:

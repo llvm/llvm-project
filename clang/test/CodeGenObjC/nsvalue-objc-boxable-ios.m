@@ -21,10 +21,10 @@ void doRange() {
   // CHECK:      [[LOCAL_CAST:%.*]] = bitcast %struct._NSRange* [[LOCAL_VAR]]{{.*}}
   // CHECK:      call void @llvm.memcpy{{.*}} [[TEMP_CAST]]{{.*}} [[LOCAL_CAST]]{{.*}}
   // CHECK:      [[PARAM_CAST:%.*]] = bitcast %struct._NSRange* [[TEMP_VAR]]{{.*}}
-  // CHECK:      [[SEL:%.*]]        = load i8*, i8** [[VALUE_SEL]]
   // CHECK:      [[RECV:%.*]]       = bitcast %struct._class_t* [[RECV_PTR]] to i8*
+  // CHECK:      [[SEL:%.*]]        = load i8*, i8** [[VALUE_SEL]]
   NSRange ns_range = { .location = 0, .length = 42 };
-  // CHECK:      call {{.*objc_msgSend.*}}(i8* [[RECV]], i8* [[SEL]], i8* [[PARAM_CAST]], i8* {{.*}}[[RANGE_STR]]{{.*}})
+  // CHECK:      call {{.*objc_msgSend.*}}(i8* noundef [[RECV]], i8* noundef [[SEL]], i8* noundef [[PARAM_CAST]], i8* noundef {{.*}}[[RANGE_STR]]{{.*}})
   NSValue *range = @(ns_range);
   // CHECK:      ret void
 }
@@ -38,10 +38,10 @@ void doPoint() {
   // CHECK:      [[LOCAL_CAST:%.*]] = bitcast %struct.CGPoint* [[LOCAL_VAR]]{{.*}}
   // CHECK:      call void @llvm.memcpy{{.*}} [[TEMP_CAST]]{{.*}} [[LOCAL_CAST]]{{.*}}
   // CHECK:      [[PARAM_CAST:%.*]] = bitcast %struct.CGPoint* [[TEMP_VAR]]{{.*}}
-  // CHECK:      [[SEL:%.*]]        = load i8*, i8** [[VALUE_SEL]]
   // CHECK:      [[RECV:%.*]]       = bitcast %struct._class_t* [[RECV_PTR]] to i8*
+  // CHECK:      [[SEL:%.*]]        = load i8*, i8** [[VALUE_SEL]]
   CGPoint cg_point = { .x = 42, .y = 24 };
-  // CHECK:      call {{.*objc_msgSend.*}}(i8* [[RECV]], i8* [[SEL]], i8* [[PARAM_CAST]], i8* {{.*}}[[POINT_STR]]{{.*}})
+  // CHECK:      call {{.*objc_msgSend.*}}(i8* noundef [[RECV]], i8* noundef [[SEL]], i8* noundef [[PARAM_CAST]], i8* noundef {{.*}}[[POINT_STR]]{{.*}})
   NSValue *point = @(cg_point);
   // CHECK:      ret void
 }
@@ -55,10 +55,10 @@ void doSize() {
   // CHECK:      [[LOCAL_CAST:%.*]] = bitcast %struct.CGSize* [[LOCAL_VAR]]{{.*}}
   // CHECK:      call void @llvm.memcpy{{.*}} [[TEMP_CAST]]{{.*}} [[LOCAL_CAST]]{{.*}}
   // CHECK:      [[PARAM_CAST:%.*]] = bitcast %struct.CGSize* [[TEMP_VAR]]{{.*}}
-  // CHECK:      [[SEL:%.*]]        = load i8*, i8** [[VALUE_SEL]]
   // CHECK:      [[RECV:%.*]]       = bitcast %struct._class_t* [[RECV_PTR]] to i8*
+  // CHECK:      [[SEL:%.*]]        = load i8*, i8** [[VALUE_SEL]]
   CGSize cg_size = { .width = 42, .height = 24 };
-  // CHECK:      call {{.*objc_msgSend.*}}(i8* [[RECV]], i8* [[SEL]], i8* [[PARAM_CAST]], i8* {{.*}}[[SIZE_STR]]{{.*}})
+  // CHECK:      call {{.*objc_msgSend.*}}(i8* noundef [[RECV]], i8* noundef [[SEL]], i8* noundef [[PARAM_CAST]], i8* noundef {{.*}}[[SIZE_STR]]{{.*}})
   NSValue *size = @(cg_size);
   // CHECK:      ret void
 }
@@ -72,12 +72,12 @@ void doRect() {
   // CHECK:      [[LOCAL_CAST:%.*]] = bitcast %struct.CGRect* [[LOCAL_VAR]]{{.*}}
   // CHECK:      call void @llvm.memcpy{{.*}} [[TEMP_CAST]]{{.*}} [[LOCAL_CAST]]{{.*}}
   // CHECK:      [[PARAM_CAST:%.*]] = bitcast %struct.CGRect* [[TEMP_VAR]]{{.*}}
-  // CHECK:      [[SEL:%.*]]        = load i8*, i8** [[VALUE_SEL]]
   // CHECK:      [[RECV:%.*]]       = bitcast %struct._class_t* [[RECV_PTR]] to i8*
+  // CHECK:      [[SEL:%.*]]        = load i8*, i8** [[VALUE_SEL]]
   CGPoint cg_point = { .x = 42, .y = 24 };
   CGSize cg_size = { .width = 42, .height = 24 };
   CGRect cg_rect = { .origin = cg_point, .size = cg_size };
-  // CHECK:      call {{.*objc_msgSend.*}}(i8* [[RECV]], i8* [[SEL]], i8* [[PARAM_CAST]], i8*{{.*}}[[RECT_STR]]{{.*}})
+  // CHECK:      call {{.*objc_msgSend.*}}(i8* noundef [[RECV]], i8* noundef [[SEL]], i8* noundef [[PARAM_CAST]], i8*{{.*}}[[RECT_STR]]{{.*}})
   NSValue *rect = @(cg_rect);
   // CHECK:      ret void
 }
@@ -91,10 +91,10 @@ void doNSEdgeInsets() {
   // CHECK:      [[LOCAL_CAST:%.*]] = bitcast %struct.NSEdgeInsets* [[LOCAL_VAR]]{{.*}}
   // CHECK:      call void @llvm.memcpy{{.*}} [[TEMP_CAST]]{{.*}} [[LOCAL_CAST]]{{.*}}
   // CHECK:      [[PARAM_CAST:%.*]] = bitcast %struct.NSEdgeInsets* [[TEMP_VAR]]{{.*}}
-  // CHECK:      [[SEL:%.*]]        = load i8*, i8** [[VALUE_SEL]]
   // CHECK:      [[RECV:%.*]]       = bitcast %struct._class_t* [[RECV_PTR]] to i8*
+  // CHECK:      [[SEL:%.*]]        = load i8*, i8** [[VALUE_SEL]]
   NSEdgeInsets ns_edge_insets;
-  // CHECK:      call {{.*objc_msgSend.*}}(i8* [[RECV]], i8* [[SEL]], i8* [[PARAM_CAST]], i8*{{.*}}[[EDGE_STR]]{{.*}})
+  // CHECK:      call {{.*objc_msgSend.*}}(i8* noundef [[RECV]], i8* noundef [[SEL]], i8* noundef [[PARAM_CAST]], i8*{{.*}}[[EDGE_STR]]{{.*}})
   NSValue *edge_insets = @(ns_edge_insets);
   // CHECK:      ret void
 }
@@ -105,9 +105,9 @@ void doRangeRValue() {
   // CHECK:     [[RECV_PTR:%.*]]        = load {{.*}} [[NSVALUE]]
   // CHECK:     call {{.*}} @getRange {{.*}} [[COERCE]]{{.*}}
   // CHECK:     [[COERCE_CAST:%.*]]     = bitcast %struct._NSRange* [[COERCE]]{{.*}}
-  // CHECK:     [[SEL:%.*]]             = load i8*, i8** [[VALUE_SEL]]
   // CHECK:     [[RECV:%.*]]            = bitcast %struct._class_t* [[RECV_PTR]] to i8*
-  // CHECK:     call {{.*objc_msgSend.*}}(i8* [[RECV]], i8* [[SEL]], i8* [[COERCE_CAST]], i8* {{.*}}[[RANGE_STR]]{{.*}})
+  // CHECK:     [[SEL:%.*]]             = load i8*, i8** [[VALUE_SEL]]
+  // CHECK:     call {{.*objc_msgSend.*}}(i8* noundef [[RECV]], i8* noundef [[SEL]], i8* noundef [[COERCE_CAST]], i8* noundef {{.*}}[[RANGE_STR]]{{.*}})
   NSValue *range_rvalue = @(getRange());
   // CHECK: ret void
 }

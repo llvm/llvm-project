@@ -13,13 +13,12 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
+#include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace llvm {
 
-class Timer;
 class TimerGroup;
 class raw_ostream;
 

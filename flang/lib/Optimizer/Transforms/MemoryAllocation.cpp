@@ -21,7 +21,7 @@
 #define DEBUG_TYPE "flang-memory-allocation-opt"
 
 // Number of elements in an array does not determine where it is allocated.
-static constexpr std::size_t UnlimitedArraySize = ~static_cast<std::size_t>(0);
+static constexpr std::size_t unlimitedArraySize = ~static_cast<std::size_t>(0);
 
 namespace {
 struct MemoryAllocationOptions {
@@ -32,7 +32,7 @@ struct MemoryAllocationOptions {
   // Number of elements in array threshold for moving to heap. In environments
   // with limited stack size, moving large arrays to the heap can avoid running
   // out of stack space.
-  std::size_t maxStackArraySize = UnlimitedArraySize;
+  std::size_t maxStackArraySize = unlimitedArraySize;
 };
 
 class ReturnAnalysis {
@@ -150,13 +150,36 @@ private:
 class MemoryAllocationOpt
     : public fir::MemoryAllocationOptBase<MemoryAllocationOpt> {
 public:
+  MemoryAllocationOpt() {
+    // Set options with default values. (See Passes.td.) Note that the
+    // command-line options, e.g. dynamicArrayOnHeap,  are not set yet.
+    options = {dynamicArrayOnHeap, maxStackArraySize};
+  }
+
+  MemoryAllocationOpt(bool dynOnHeap, std::size_t maxStackSize) {
+    // Set options with default values. (See Passes.td.)
+    options = {dynOnHeap, maxStackSize};
+  }
+
+  /// Override `options` if command-line options have been set.
+  inline void useCommandLineOptions() {
+    if (dynamicArrayOnHeap)
+      options.dynamicArrayOnHeap = dynamicArrayOnHeap;
+    if (maxStackArraySize != unlimitedArraySize)
+      options.maxStackArraySize = maxStackArraySize;
+  }
+
   void runOnOperation() override {
     auto *context = &getContext();
     auto func = getOperation();
-    mlir::OwningRewritePatternList patterns(context);
+    mlir::RewritePatternSet patterns(context);
     mlir::ConversionTarget target(*context);
-    MemoryAllocationOptions options = {dynamicArrayOnHeap.getValue(),
-                                       maxStackArraySize.getValue()};
+
+    useCommandLineOptions();
+    LLVM_DEBUG(llvm::dbgs()
+               << "dynamic arrays on heap: " << options.dynamicArrayOnHeap
+               << "\nmaximum number of elements of array on stack: "
+               << options.maxStackArraySize << '\n');
 
     // If func is a declaration, skip it.
     if (func.empty())
@@ -178,9 +201,17 @@ public:
       signalPassFailure();
     }
   }
+
+private:
+  MemoryAllocationOptions options;
 };
 } // namespace
 
 std::unique_ptr<mlir::Pass> fir::createMemoryAllocationPass() {
   return std::make_unique<MemoryAllocationOpt>();
+}
+
+std::unique_ptr<mlir::Pass>
+fir::createMemoryAllocationPass(bool dynOnHeap, std::size_t maxStackSize) {
+  return std::make_unique<MemoryAllocationOpt>(dynOnHeap, maxStackSize);
 }

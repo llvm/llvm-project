@@ -11,8 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/CodeGen/CodeGen.h"
+#include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Support/InitFIR.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/KindMapping.h"
+#include "flang/Optimizer/Transforms/Passes.h"
+#include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Parser.h"
@@ -25,6 +31,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -42,8 +49,14 @@ static cl::opt<bool> emitFir("emit-fir",
                              cl::desc("Parse and pretty-print the input"),
                              cl::init(false));
 
+static cl::opt<std::string> targetTriple("target",
+                                         cl::desc("specify a target triple"),
+                                         cl::init("native"));
+
+#include "flang/Tools/CLOptions.inc"
+
 static void printModuleBody(mlir::ModuleOp mod, raw_ostream &output) {
-  for (auto &op : mod.getBody()->without_terminator())
+  for (auto &op : *mod.getBody())
     output << op << '\n';
 }
 
@@ -65,6 +78,8 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   mlir::DialectRegistry registry;
   fir::support::registerDialects(registry);
   mlir::MLIRContext context(registry);
+  fir::support::loadDialects(context);
+  fir::support::registerLLVMTranslation(context);
   auto owningRef = mlir::parseSourceFile(sourceMgr, &context);
 
   if (!owningRef) {
@@ -80,21 +95,31 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   ToolOutputFile out(outputFilename, ec, sys::fs::OF_None);
 
   // run passes
-  mlir::PassManager pm{&context};
+  fir::KindMapping kindMap{&context};
+  fir::setTargetTriple(*owningRef, targetTriple);
+  fir::setKindMapping(*owningRef, kindMap);
+  mlir::PassManager pm(&context, mlir::OpPassManager::Nesting::Implicit);
+  pm.enableVerifier(/*verifyPasses=*/true);
   mlir::applyPassManagerCLOptions(pm);
   if (emitFir) {
     // parse the input and pretty-print it back out
     // -emit-fir intentionally disables all the passes
+  } else if (passPipeline.hasAnyOccurrences()) {
+    auto errorHandler = [&](const Twine &msg) {
+      mlir::emitError(mlir::UnknownLoc::get(pm.getContext())) << msg;
+      return mlir::failure();
+    };
+    if (mlir::failed(passPipeline.addToPipeline(pm, errorHandler)))
+      return mlir::failure();
   } else {
-    // TODO: Actually add passes when added to FIR code base
-    // add all the passes
-    // the user can disable them individually
+    fir::createMLIRToLLVMPassPipeline(pm);
+    fir::addLLVMDialectToLLVMPass(pm, out.os());
   }
 
   // run the pass manager
   if (mlir::succeeded(pm.run(*owningRef))) {
     // passes ran successfully, so keep the output
-    if (emitFir)
+    if (emitFir || passPipeline.hasAnyOccurrences())
       printModuleBody(*owningRef, out.os());
     out.keep();
     return mlir::success();
@@ -107,8 +132,11 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
 }
 
 int main(int argc, char **argv) {
-  fir::support::registerMLIRPassesForFortranTools();
   [[maybe_unused]] InitLLVM y(argc, argv);
+  fir::support::registerMLIRPassesForFortranTools();
+  fir::registerOptCodeGenPasses();
+  fir::registerOptTransformPasses();
+  mlir::registerMLIRContextCLOptions();
   mlir::registerPassManagerCLOptions();
   mlir::PassPipelineCLParser passPipe("", "Compiler passes to run");
   cl::ParseCommandLineOptions(argc, argv, "Tilikum Crossing Optimizer\n");

@@ -337,105 +337,66 @@ static bool CleanupConstantGlobalUsers(GlobalVariable *GV,
   return Changed;
 }
 
-static bool isSafeSROAElementUse(Value *V);
-
-/// Return true if the specified GEP is a safe user of a derived
-/// expression from a global that we want to SROA.
-static bool isSafeSROAGEP(User *U) {
-  // Check to see if this ConstantExpr GEP is SRA'able.  In particular, we
-  // don't like < 3 operand CE's, and we don't like non-constant integer
-  // indices.  This enforces that all uses are 'gep GV, 0, C, ...' for some
-  // value of C.
-  if (U->getNumOperands() < 3 || !isa<Constant>(U->getOperand(1)) ||
-      !cast<Constant>(U->getOperand(1))->isNullValue())
-    return false;
-
-  gep_type_iterator GEPI = gep_type_begin(U), E = gep_type_end(U);
-  ++GEPI; // Skip over the pointer index.
-
-  // For all other level we require that the indices are constant and inrange.
-  // In particular, consider: A[0][i].  We cannot know that the user isn't doing
-  // invalid things like allowing i to index an out-of-range subscript that
-  // accesses A[1]. This can also happen between different members of a struct
-  // in llvm IR.
-  for (; GEPI != E; ++GEPI) {
-    if (GEPI.isStruct())
+/// Look at all uses of the global and determine which (offset, type) pairs it
+/// can be split into.
+static bool collectSRATypes(DenseMap<uint64_t, Type *> &Types, GlobalValue *GV,
+                            const DataLayout &DL) {
+  SmallVector<Use *, 16> Worklist;
+  SmallPtrSet<Use *, 16> Visited;
+  auto AppendUses = [&](Value *V) {
+    for (Use &U : V->uses())
+      if (Visited.insert(&U).second)
+        Worklist.push_back(&U);
+  };
+  AppendUses(GV);
+  while (!Worklist.empty()) {
+    Use *U = Worklist.pop_back_val();
+    User *V = U->getUser();
+    if (isa<BitCastOperator>(V) || isa<AddrSpaceCastOperator>(V)) {
+      AppendUses(V);
       continue;
+    }
 
-    ConstantInt *IdxVal = dyn_cast<ConstantInt>(GEPI.getOperand());
-    if (!IdxVal || (GEPI.isBoundedSequential() &&
-                    IdxVal->getZExtValue() >= GEPI.getSequentialNumElements()))
-      return false;
-  }
+    if (auto *GEP = dyn_cast<GEPOperator>(V)) {
+      if (!GEP->hasAllConstantIndices())
+        return false;
+      AppendUses(V);
+      continue;
+    }
 
-  return llvm::all_of(U->users(), isSafeSROAElementUse);
-}
+    if (Value *Ptr = getLoadStorePointerOperand(V)) {
+      // This is storing the global address into somewhere, not storing into
+      // the global.
+      if (isa<StoreInst>(V) && U->getOperandNo() == 0)
+        return false;
 
-/// Return true if the specified instruction is a safe user of a derived
-/// expression from a global that we want to SROA.
-static bool isSafeSROAElementUse(Value *V) {
-  // We might have a dead and dangling constant hanging off of here.
-  if (Constant *C = dyn_cast<Constant>(V))
-    return isSafeToDestroyConstant(C);
+      APInt Offset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+      Ptr = Ptr->stripAndAccumulateConstantOffsets(DL, Offset,
+                                                   /* AllowNonInbounds */ true);
+      if (Ptr != GV || Offset.getActiveBits() >= 64)
+        return false;
 
-  Instruction *I = dyn_cast<Instruction>(V);
-  if (!I) return false;
+      // TODO: We currently require that all accesses at a given offset must
+      // use the same type. This could be relaxed.
+      Type *Ty = getLoadStoreType(V);
+      auto It = Types.try_emplace(Offset.getZExtValue(), Ty).first;
+      if (Ty != It->second)
+        return false;
+      continue;
+    }
 
-  // Loads are ok.
-  if (isa<LoadInst>(I)) return true;
+    // Ignore dead constant users.
+    if (auto *C = dyn_cast<Constant>(V)) {
+      if (!isSafeToDestroyConstant(C))
+        return false;
+      continue;
+    }
 
-  // Stores *to* the pointer are ok.
-  if (StoreInst *SI = dyn_cast<StoreInst>(I))
-    return SI->getOperand(0) != V;
-
-  // Otherwise, it must be a GEP. Check it and its users are safe to SRA.
-  return isa<GetElementPtrInst>(I) && isSafeSROAGEP(I);
-}
-
-/// Look at all uses of the global and decide whether it is safe for us to
-/// perform this transformation.
-static bool GlobalUsersSafeToSRA(GlobalValue *GV) {
-  for (User *U : GV->users()) {
-    // The user of the global must be a GEP Inst or a ConstantExpr GEP.
-    if (!isa<GetElementPtrInst>(U) &&
-        (!isa<ConstantExpr>(U) ||
-        cast<ConstantExpr>(U)->getOpcode() != Instruction::GetElementPtr))
-      return false;
-
-    // Check the gep and it's users are safe to SRA
-    if (!isSafeSROAGEP(U))
-      return false;
+    // Unknown user.
+    return false;
   }
 
   return true;
-}
-
-static bool IsSRASequential(Type *T) {
-  return isa<ArrayType>(T) || isa<VectorType>(T);
-}
-static uint64_t GetSRASequentialNumElements(Type *T) {
-  if (ArrayType *AT = dyn_cast<ArrayType>(T))
-    return AT->getNumElements();
-  return cast<FixedVectorType>(T)->getNumElements();
-}
-static Type *GetSRASequentialElementType(Type *T) {
-  if (ArrayType *AT = dyn_cast<ArrayType>(T))
-    return AT->getElementType();
-  return cast<VectorType>(T)->getElementType();
-}
-static bool CanDoGlobalSRA(GlobalVariable *GV) {
-  Constant *Init = GV->getInitializer();
-
-  if (isa<StructType>(Init->getType())) {
-    // nothing to check
-  } else if (IsSRASequential(Init->getType())) {
-    if (GetSRASequentialNumElements(Init->getType()) > 16 &&
-        GV->hasNUsesOrMore(16))
-      return false; // It's not worth it.
-  } else
-    return false;
-
-  return GlobalUsersSafeToSRA(GV);
 }
 
 /// Copy over the debug info for a variable to its SRA replacements.
@@ -468,161 +429,140 @@ static void transferSRADebugInfo(GlobalVariable *GV, GlobalVariable *NGV,
 /// transformation is safe already.  We return the first global variable we
 /// insert so that the caller can reprocess it.
 static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
-  // Make sure this global only has simple uses that we can SRA.
-  if (!CanDoGlobalSRA(GV))
+  assert(GV->hasLocalLinkage());
+
+  // Collect types to split into.
+  DenseMap<uint64_t, Type *> Types;
+  if (!collectSRATypes(Types, GV, DL) || Types.empty())
     return nullptr;
 
-  assert(GV->hasLocalLinkage());
-  Constant *Init = GV->getInitializer();
-  Type *Ty = Init->getType();
-  uint64_t VarSize = DL.getTypeSizeInBits(Ty);
+  // Make sure we don't SRA back to the same type.
+  if (Types.size() == 1 && Types.begin()->second == GV->getValueType())
+    return nullptr;
 
-  std::map<unsigned, GlobalVariable *> NewGlobals;
+  // Don't perform SRA if we would have to split into many globals.
+  if (Types.size() > 16)
+    return nullptr;
 
-  // Get the alignment of the global, either explicit or target-specific.
-  Align StartAlignment =
-      DL.getValueOrABITypeAlignment(GV->getAlign(), GV->getType());
+  // Sort by offset.
+  SmallVector<std::pair<uint64_t, Type *>, 16> TypesVector;
+  append_range(TypesVector, Types);
+  sort(TypesVector,
+       [](const auto &A, const auto &B) { return A.first < B.first; });
 
-  // Loop over all users and create replacement variables for used aggregate
-  // elements.
-  for (User *GEP : GV->users()) {
-    assert(((isa<ConstantExpr>(GEP) && cast<ConstantExpr>(GEP)->getOpcode() ==
-                                           Instruction::GetElementPtr) ||
-            isa<GetElementPtrInst>(GEP)) &&
-           "NonGEP CE's are not SRAable!");
+  // Check that the types are non-overlapping.
+  uint64_t Offset = 0;
+  for (const auto &Pair : TypesVector) {
+    // Overlaps with previous type.
+    if (Pair.first < Offset)
+      return nullptr;
 
-    // Ignore the 1th operand, which has to be zero or else the program is quite
-    // broken (undefined).  Get the 2nd operand, which is the structure or array
-    // index.
-    unsigned ElementIdx = cast<ConstantInt>(GEP->getOperand(2))->getZExtValue();
-    if (NewGlobals.count(ElementIdx) == 1)
-      continue; // we`ve already created replacement variable
-    assert(NewGlobals.count(ElementIdx) == 0);
-
-    Type *ElTy = nullptr;
-    if (StructType *STy = dyn_cast<StructType>(Ty))
-      ElTy = STy->getElementType(ElementIdx);
-    else
-      ElTy = GetSRASequentialElementType(Ty);
-    assert(ElTy);
-
-    Constant *In = Init->getAggregateElement(ElementIdx);
-    assert(In && "Couldn't get element of initializer?");
-
-    GlobalVariable *NGV = new GlobalVariable(
-        ElTy, false, GlobalVariable::InternalLinkage, In,
-        GV->getName() + "." + Twine(ElementIdx), GV->getThreadLocalMode(),
-        GV->getType()->getAddressSpace());
-    NGV->setExternallyInitialized(GV->isExternallyInitialized());
-    NGV->copyAttributesFrom(GV);
-    NewGlobals.insert(std::make_pair(ElementIdx, NGV));
-
-    if (StructType *STy = dyn_cast<StructType>(Ty)) {
-      const StructLayout &Layout = *DL.getStructLayout(STy);
-
-      // Calculate the known alignment of the field.  If the original aggregate
-      // had 256 byte alignment for example, something might depend on that:
-      // propagate info to each field.
-      uint64_t FieldOffset = Layout.getElementOffset(ElementIdx);
-      Align NewAlign = commonAlignment(StartAlignment, FieldOffset);
-      if (NewAlign > DL.getABITypeAlign(STy->getElementType(ElementIdx)))
-        NGV->setAlignment(NewAlign);
-
-      // Copy over the debug info for the variable.
-      uint64_t Size = DL.getTypeAllocSizeInBits(NGV->getValueType());
-      uint64_t FragmentOffsetInBits = Layout.getElementOffsetInBits(ElementIdx);
-      transferSRADebugInfo(GV, NGV, FragmentOffsetInBits, Size, VarSize);
-    } else {
-      uint64_t EltSize = DL.getTypeAllocSize(ElTy);
-      Align EltAlign = DL.getABITypeAlign(ElTy);
-      uint64_t FragmentSizeInBits = DL.getTypeAllocSizeInBits(ElTy);
-
-      // Calculate the known alignment of the field.  If the original aggregate
-      // had 256 byte alignment for example, something might depend on that:
-      // propagate info to each field.
-      Align NewAlign = commonAlignment(StartAlignment, EltSize * ElementIdx);
-      if (NewAlign > EltAlign)
-        NGV->setAlignment(NewAlign);
-      transferSRADebugInfo(GV, NGV, FragmentSizeInBits * ElementIdx,
-                           FragmentSizeInBits, VarSize);
-    }
+    Offset = Pair.first + DL.getTypeAllocSize(Pair.second);
   }
 
-  if (NewGlobals.empty())
+  // Some accesses go beyond the end of the global, don't bother.
+  if (Offset > DL.getTypeAllocSize(GV->getValueType()))
     return nullptr;
 
-  Module::GlobalListType &Globals = GV->getParent()->getGlobalList();
-  for (auto NewGlobalVar : NewGlobals)
-    Globals.push_back(NewGlobalVar.second);
+  // Collect initializers for new globals.
+  Constant *OrigInit = GV->getInitializer();
+  DenseMap<uint64_t, Constant *> Initializers;
+  for (const auto &Pair : Types) {
+    Constant *NewInit = ConstantFoldLoadFromConst(OrigInit, Pair.second,
+                                                  APInt(64, Pair.first), DL);
+    if (!NewInit) {
+      LLVM_DEBUG(dbgs() << "Global SRA: Failed to evaluate initializer of "
+                        << *GV << " with type " << *Pair.second << " at offset "
+                        << Pair.first << "\n");
+      return nullptr;
+    }
+    Initializers.insert({Pair.first, NewInit});
+  }
 
   LLVM_DEBUG(dbgs() << "PERFORMING GLOBAL SRA ON: " << *GV << "\n");
 
-  Constant *NullInt =Constant::getNullValue(Type::getInt32Ty(GV->getContext()));
+  // Get the alignment of the global, either explicit or target-specific.
+  Align StartAlignment =
+      DL.getValueOrABITypeAlignment(GV->getAlign(), GV->getValueType());
+  uint64_t VarSize = DL.getTypeSizeInBits(GV->getValueType());
 
-  // Loop over all of the uses of the global, replacing the constantexpr geps,
-  // with smaller constantexpr geps or direct references.
-  while (!GV->use_empty()) {
-    User *GEP = GV->user_back();
-    assert(((isa<ConstantExpr>(GEP) &&
-             cast<ConstantExpr>(GEP)->getOpcode()==Instruction::GetElementPtr)||
-            isa<GetElementPtrInst>(GEP)) && "NonGEP CE's are not SRAable!");
+  // Create replacement globals.
+  DenseMap<uint64_t, GlobalVariable *> NewGlobals;
+  unsigned NameSuffix = 0;
+  for (auto &Pair : TypesVector) {
+    uint64_t Offset = Pair.first;
+    Type *Ty = Pair.second;
+    GlobalVariable *NGV = new GlobalVariable(
+        *GV->getParent(), Ty, false, GlobalVariable::InternalLinkage,
+        Initializers[Offset], GV->getName() + "." + Twine(NameSuffix++), GV,
+        GV->getThreadLocalMode(), GV->getAddressSpace());
+    NGV->copyAttributesFrom(GV);
+    NewGlobals.insert({Offset, NGV});
 
-    // Ignore the 1th operand, which has to be zero or else the program is quite
-    // broken (undefined).  Get the 2nd operand, which is the structure or array
-    // index.
-    unsigned ElementIdx = cast<ConstantInt>(GEP->getOperand(2))->getZExtValue();
-    assert(NewGlobals.count(ElementIdx) == 1);
+    // Calculate the known alignment of the field.  If the original aggregate
+    // had 256 byte alignment for example, something might depend on that:
+    // propagate info to each field.
+    Align NewAlign = commonAlignment(StartAlignment, Offset);
+    if (NewAlign > DL.getABITypeAlign(Ty))
+      NGV->setAlignment(NewAlign);
 
-    Value *NewPtr = NewGlobals[ElementIdx];
-    Type *NewTy = NewGlobals[ElementIdx]->getValueType();
-
-    // Form a shorter GEP if needed.
-    if (GEP->getNumOperands() > 3) {
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(GEP)) {
-        SmallVector<Constant*, 8> Idxs;
-        Idxs.push_back(NullInt);
-        for (unsigned i = 3, e = CE->getNumOperands(); i != e; ++i)
-          Idxs.push_back(CE->getOperand(i));
-        NewPtr =
-            ConstantExpr::getGetElementPtr(NewTy, cast<Constant>(NewPtr), Idxs);
-      } else {
-        GetElementPtrInst *GEPI = cast<GetElementPtrInst>(GEP);
-        SmallVector<Value*, 8> Idxs;
-        Idxs.push_back(NullInt);
-        for (unsigned i = 3, e = GEPI->getNumOperands(); i != e; ++i)
-          Idxs.push_back(GEPI->getOperand(i));
-        NewPtr = GetElementPtrInst::Create(
-            NewTy, NewPtr, Idxs, GEPI->getName() + "." + Twine(ElementIdx),
-            GEPI);
-      }
-    }
-    GEP->replaceAllUsesWith(NewPtr);
-
-    // We changed the pointer of any memory access user. Recalculate alignments.
-    for (User *U : NewPtr->users()) {
-      if (auto *Load = dyn_cast<LoadInst>(U)) {
-        Align PrefAlign = DL.getPrefTypeAlign(Load->getType());
-        Align NewAlign = getOrEnforceKnownAlignment(Load->getPointerOperand(),
-                                                    PrefAlign, DL, Load);
-        Load->setAlignment(NewAlign);
-      }
-      if (auto *Store = dyn_cast<StoreInst>(U)) {
-        Align PrefAlign =
-            DL.getPrefTypeAlign(Store->getValueOperand()->getType());
-        Align NewAlign = getOrEnforceKnownAlignment(Store->getPointerOperand(),
-                                                    PrefAlign, DL, Store);
-        Store->setAlignment(NewAlign);
-      }
-    }
-
-    if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(GEP))
-      GEPI->eraseFromParent();
-    else
-      cast<ConstantExpr>(GEP)->destroyConstant();
+    // Copy over the debug info for the variable.
+    transferSRADebugInfo(GV, NGV, Offset * 8, DL.getTypeAllocSizeInBits(Ty),
+                         VarSize);
   }
 
-  // Delete the old global, now that it is dead.
-  Globals.erase(GV);
+  // Replace uses of the original global with uses of the new global.
+  SmallVector<Value *, 16> Worklist;
+  SmallPtrSet<Value *, 16> Visited;
+  SmallVector<WeakTrackingVH, 16> DeadInsts;
+  auto AppendUsers = [&](Value *V) {
+    for (User *U : V->users())
+      if (Visited.insert(U).second)
+        Worklist.push_back(U);
+  };
+  AppendUsers(GV);
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (isa<BitCastOperator>(V) || isa<AddrSpaceCastOperator>(V) ||
+        isa<GEPOperator>(V)) {
+      AppendUsers(V);
+      if (isa<Instruction>(V))
+        DeadInsts.push_back(V);
+      continue;
+    }
+
+    if (Value *Ptr = getLoadStorePointerOperand(V)) {
+      APInt Offset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+      Ptr = Ptr->stripAndAccumulateConstantOffsets(DL, Offset,
+                                                   /* AllowNonInbounds */ true);
+      assert(Ptr == GV && "Load/store must be from/to global");
+      GlobalVariable *NGV = NewGlobals[Offset.getZExtValue()];
+      assert(NGV && "Must have replacement global for this offset");
+
+      // Update the pointer operand and recalculate alignment.
+      Align PrefAlign = DL.getPrefTypeAlign(getLoadStoreType(V));
+      Align NewAlign =
+          getOrEnforceKnownAlignment(NGV, PrefAlign, DL, cast<Instruction>(V));
+
+      if (auto *LI = dyn_cast<LoadInst>(V)) {
+        LI->setOperand(0, NGV);
+        LI->setAlignment(NewAlign);
+      } else {
+        auto *SI = cast<StoreInst>(V);
+        SI->setOperand(1, NGV);
+        SI->setAlignment(NewAlign);
+      }
+      continue;
+    }
+
+    assert(isa<Constant>(V) && isSafeToDestroyConstant(cast<Constant>(V)) &&
+           "Other users can only be dead constants");
+  }
+
+  // Delete old instructions and global.
+  RecursivelyDeleteTriviallyDeadInstructions(DeadInsts);
+  GV->removeDeadConstantUsers();
+  GV->eraseFromParent();
   ++NumSRA;
 
   assert(NewGlobals.size() > 0);
@@ -677,7 +617,7 @@ static bool AllUsesOfValueWillTrapIfNull(const Value *V,
              "Should be GlobalVariable");
       // This and only this kind of non-signed ICmpInst is to be replaced with
       // the comparing of the value of the created global init bool later in
-      // optimizeGlobalAddressOfMalloc for the global variable.
+      // optimizeGlobalAddressOfAllocation for the global variable.
     } else {
       //cerr << "NONTRAPPING USE: " << *U;
       return false;
@@ -895,29 +835,36 @@ static void ConstantPropUsersOf(Value *V, const DataLayout &DL,
 /// to actually DO the malloc.  Instead, turn the malloc into a global, and any
 /// loads of GV as uses of the new global.
 static GlobalVariable *
-OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI, Type *AllocTy,
-                              ConstantInt *NElements, const DataLayout &DL,
-                              TargetLibraryInfo *TLI) {
+OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
+                                  uint64_t AllocSize, Constant *InitVal,
+                                  const DataLayout &DL,
+                                  TargetLibraryInfo *TLI) {
   LLVM_DEBUG(errs() << "PROMOTING GLOBAL: " << *GV << "  CALL = " << *CI
                     << '\n');
 
-  Type *GlobalType;
-  if (NElements->getZExtValue() == 1)
-    GlobalType = AllocTy;
-  else
-    // If we have an array allocation, the global variable is of an array.
-    GlobalType = ArrayType::get(AllocTy, NElements->getZExtValue());
+  // Create global of type [AllocSize x i8].
+  Type *GlobalType = ArrayType::get(Type::getInt8Ty(GV->getContext()),
+                                    AllocSize);
 
-  // Create the new global variable.  The contents of the malloc'd memory is
-  // undefined, so initialize with an undef value.
+  // Create the new global variable.  The contents of the allocated memory is
+  // undefined initially, so initialize with an undef value.
   GlobalVariable *NewGV = new GlobalVariable(
       *GV->getParent(), GlobalType, false, GlobalValue::InternalLinkage,
       UndefValue::get(GlobalType), GV->getName() + ".body", nullptr,
       GV->getThreadLocalMode());
 
-  // If there are bitcast users of the malloc (which is typical, usually we have
-  // a malloc + bitcast) then replace them with uses of the new global.  Update
-  // other users to use the global as well.
+  // Initialize the global at the point of the original call.  Note that this
+  // is a different point from the initialization referred to below for the
+  // nullability handling.  Sublety: We have not proven the original global was
+  // only initialized once.  As such, we can not fold this into the initializer
+  // of the new global as may need to re-init the storage multiple times.
+  if (!isa<UndefValue>(InitVal)) {
+    IRBuilder<> Builder(CI->getNextNode());
+    // TODO: Use alignment above if align!=1
+    Builder.CreateMemSet(NewGV, InitVal, AllocSize, None);
+  }
+
+  // Update users of the allocation to use the new global instead.
   BitCastInst *TheBC = nullptr;
   while (!CI->use_empty()) {
     Instruction *User = cast<Instruction>(CI->user_back());
@@ -1009,7 +956,7 @@ OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI, Type *AllocTy,
   } else
     GV->getParent()->getGlobalList().insert(GV->getIterator(), InitBool);
 
-  // Now the GV is dead, nuke it and the malloc..
+  // Now the GV is dead, nuke it and the allocation..
   GV->eraseFromParent();
   CI->eraseFromParent();
 
@@ -1066,95 +1013,33 @@ valueIsOnlyUsedLocallyOrStoredToOneGlobal(const CallInst *CI,
   return true;
 }
 
-/// getMallocType - Returns the PointerType resulting from the malloc call.
-/// The PointerType depends on the number of bitcast uses of the malloc call:
-///   0: PointerType is the calls' return type.
-///   1: PointerType is the bitcast's result type.
-///  >1: Unique PointerType cannot be determined, return NULL.
-static PointerType *getMallocType(const CallInst *CI,
-                                  const TargetLibraryInfo *TLI) {
-  assert(isMallocLikeFn(CI, TLI) && "getMallocType and not malloc call");
+/// If we have a global that is only initialized with a fixed size allocation
+/// try to transform the program to use global memory instead of heap
+/// allocated memory. This eliminates dynamic allocation, avoids an indirection
+/// accessing the data, and exposes the resultant global to further GlobalOpt.
+static bool tryToOptimizeStoreOfAllocationToGlobal(GlobalVariable *GV,
+                                                   CallInst *CI,
+                                                   AtomicOrdering Ordering,
+                                                   const DataLayout &DL,
+                                                   TargetLibraryInfo *TLI) {
+  if (!isAllocRemovable(CI, TLI))
+    // Must be able to remove the call when we get done..
+    return false;
 
-  PointerType *MallocType = nullptr;
-  unsigned NumOfBitCastUses = 0;
+  Type *Int8Ty = Type::getInt8Ty(CI->getFunction()->getContext());
+  Constant *InitVal = getInitialValueOfAllocation(CI, TLI, Int8Ty);
+  if (!InitVal)
+    // Must be able to emit a memset for initialization
+    return false;
 
-  // Determine if CallInst has a bitcast use.
-  for (const User *U : CI->users())
-    if (const BitCastInst *BCI = dyn_cast<BitCastInst>(U)) {
-      MallocType = cast<PointerType>(BCI->getDestTy());
-      NumOfBitCastUses++;
-    }
+  uint64_t AllocSize;
+  if (!getObjectSize(CI, AllocSize, DL, TLI, ObjectSizeOpts()))
+    return false;
 
-  // Malloc call has 1 bitcast use, so type is the bitcast's destination type.
-  if (NumOfBitCastUses == 1)
-    return MallocType;
-
-  // Malloc call was not bitcast, so type is the malloc function's return type.
-  if (NumOfBitCastUses == 0)
-    return cast<PointerType>(CI->getType());
-
-  // Type could not be determined.
-  return nullptr;
-}
-
-/// getMallocAllocatedType - Returns the Type allocated by malloc call.
-/// The Type depends on the number of bitcast uses of the malloc call:
-///   0: PointerType is the malloc calls' return type.
-///   1: PointerType is the bitcast's result type.
-///  >1: Unique PointerType cannot be determined, return NULL.
-static Type *getMallocAllocatedType(const CallInst *CI,
-                                    const TargetLibraryInfo *TLI) {
-  PointerType *PT = getMallocType(CI, TLI);
-  return PT ? PT->getElementType() : nullptr;
-}
-
-static Value *computeArraySize(const CallInst *CI, const DataLayout &DL,
-                               const TargetLibraryInfo *TLI,
-                               bool LookThroughSExt = false) {
-  if (!CI)
-    return nullptr;
-
-  // The size of the malloc's result type must be known to determine array size.
-  Type *T = getMallocAllocatedType(CI, TLI);
-  if (!T || !T->isSized())
-    return nullptr;
-
-  unsigned ElementSize = DL.getTypeAllocSize(T);
-  if (StructType *ST = dyn_cast<StructType>(T))
-    ElementSize = DL.getStructLayout(ST)->getSizeInBytes();
-
-  // If malloc call's arg can be determined to be a multiple of ElementSize,
-  // return the multiple.  Otherwise, return NULL.
-  Value *MallocArg = CI->getArgOperand(0);
-  Value *Multiple = nullptr;
-  if (ComputeMultiple(MallocArg, ElementSize, Multiple, LookThroughSExt))
-    return Multiple;
-
-  return nullptr;
-}
-
-/// getMallocArraySize - Returns the array size of a malloc call.  If the
-/// argument passed to malloc is a multiple of the size of the malloced type,
-/// then return that multiple.  For non-array mallocs, the multiple is
-/// constant 1.  Otherwise, return NULL for mallocs whose array size cannot be
-/// determined.
-static Value *getMallocArraySize(CallInst *CI, const DataLayout &DL,
-                                 const TargetLibraryInfo *TLI,
-                                 bool LookThroughSExt) {
-  assert(isMallocLikeFn(CI, TLI) && "getMallocArraySize and not malloc call");
-  return computeArraySize(CI, DL, TLI, LookThroughSExt);
-}
-
-
-/// This function is called when we see a pointer global variable with a single
-/// value stored it that is a malloc or cast of malloc.
-static bool tryToOptimizeStoreOfMallocToGlobal(GlobalVariable *GV, CallInst *CI,
-                                               Type *AllocTy,
-                                               AtomicOrdering Ordering,
-                                               const DataLayout &DL,
-                                               TargetLibraryInfo *TLI) {
-  // If this is a malloc of an abstract type, don't touch it.
-  if (!AllocTy->isSized())
+  // Restrict this transformation to only working on small allocations
+  // (2048 bytes currently), as we don't want to introduce a 16M global or
+  // something.
+  if (AllocSize >= 2048)
     return false;
 
   // We can't optimize this global unless all uses of it are *known* to be
@@ -1173,25 +1058,8 @@ static bool tryToOptimizeStoreOfMallocToGlobal(GlobalVariable *GV, CallInst *CI,
   if (!valueIsOnlyUsedLocallyOrStoredToOneGlobal(CI, GV))
     return false;
 
-  // If we have a global that is only initialized with a fixed size malloc,
-  // transform the program to use global memory instead of malloc'd memory.
-  // This eliminates dynamic allocation, avoids an indirection accessing the
-  // data, and exposes the resultant global to further GlobalOpt.
-  // We cannot optimize the malloc if we cannot determine malloc array size.
-  Value *NElems = getMallocArraySize(CI, DL, TLI, true);
-  if (!NElems)
-    return false;
-
-  if (ConstantInt *NElements = dyn_cast<ConstantInt>(NElems))
-    // Restrict this transformation to only working on small allocations
-    // (2048 bytes currently), as we don't want to introduce a 16M global or
-    // something.
-    if (NElements->getZExtValue() * DL.getTypeAllocSize(AllocTy) < 2048) {
-      OptimizeGlobalAddressOfMalloc(GV, CI, AllocTy, NElements, DL, TLI);
-      return true;
-    }
-
-  return false;
+  OptimizeGlobalAddressOfAllocation(GV, CI, AllocSize, InitVal, DL, TLI);
+  return true;
 }
 
 // Try to optimize globals based on the knowledge that only one value (besides
@@ -1220,12 +1088,10 @@ optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
       // Optimize away any trapping uses of the loaded value.
       if (OptimizeAwayTrappingUsesOfLoads(GV, SOVC, DL, GetTLI))
         return true;
-    } else if (isMallocLikeFn(StoredOnceVal, GetTLI)) {
+    } else if (isAllocationFn(StoredOnceVal, GetTLI)) {
       if (auto *CI = dyn_cast<CallInst>(StoredOnceVal)) {
         auto *TLI = &GetTLI(*CI->getFunction());
-        Type *MallocType = getMallocAllocatedType(CI, TLI);
-        if (MallocType && tryToOptimizeStoreOfMallocToGlobal(GV, CI, MallocType,
-                                                             Ordering, DL, TLI))
+        if (tryToOptimizeStoreOfAllocationToGlobal(GV, CI, Ordering, DL, TLI))
           return true;
       }
     }
@@ -1253,9 +1119,12 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
 
   // Walk the use list of the global seeing if all the uses are load or store.
   // If there is anything else, bail out.
-  for (User *U : GV->users())
+  for (User *U : GV->users()) {
     if (!isa<LoadInst>(U) && !isa<StoreInst>(U))
       return false;
+    if (getLoadStoreType(U) != GVElType)
+      return false;
+  }
 
   LLVM_DEBUG(dbgs() << "   *** SHRINKING TO BOOL: " << *GV << "\n");
 
@@ -1672,11 +1541,25 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     // This is restricted to address spaces that allow globals to have
     // initializers. NVPTX, for example, does not support initializers for
     // shared memory (AS 3).
-    if (SOVConstant && SOVConstant->getType() == GV->getValueType() &&
-        isa<UndefValue>(GV->getInitializer()) &&
+    if (SOVConstant && isa<UndefValue>(GV->getInitializer()) &&
+        DL.getTypeAllocSize(SOVConstant->getType()) ==
+            DL.getTypeAllocSize(GV->getValueType()) &&
         CanHaveNonUndefGlobalInitializer) {
-      // Change the initial value here.
-      GV->setInitializer(SOVConstant);
+      if (SOVConstant->getType() == GV->getValueType()) {
+        // Change the initializer in place.
+        GV->setInitializer(SOVConstant);
+      } else {
+        // Create a new global with adjusted type.
+        auto *NGV = new GlobalVariable(
+            *GV->getParent(), SOVConstant->getType(), GV->isConstant(),
+            GV->getLinkage(), SOVConstant, "", GV, GV->getThreadLocalMode(),
+            GV->getAddressSpace());
+        NGV->takeName(GV);
+        NGV->copyAttributesFrom(GV);
+        GV->replaceAllUsesWith(ConstantExpr::getBitCast(NGV, GV->getType()));
+        GV->eraseFromParent();
+        GV = NGV;
+      }
 
       // Clean up any obviously simplifiable users now.
       CleanupConstantGlobalUsers(GV, DL);

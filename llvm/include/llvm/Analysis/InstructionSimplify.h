@@ -63,7 +63,7 @@ class Value;
 /// results if the users specified it is safe to use.
 struct InstrInfoQuery {
   InstrInfoQuery(bool UMD) : UseInstrInfo(UMD) {}
-  InstrInfoQuery() : UseInstrInfo(true) {}
+  InstrInfoQuery() = default;
   bool UseInstrInfo = true;
 
   MDNode *getMetadata(const Instruction *I, unsigned KindID) const {
@@ -248,8 +248,8 @@ Value *SimplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
                           const SimplifyQuery &Q);
 
 /// Given operands for a GetElementPtrInst, fold the result or return null.
-Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops, bool InBounds,
-                       const SimplifyQuery &Q);
+Value *SimplifyGEPInst(Type *SrcTy, Value *Ptr, ArrayRef<Value *> Indices,
+                       bool InBounds, const SimplifyQuery &Q);
 
 /// Given operands for an InsertValueInst, fold the result or return null.
 Value *SimplifyInsertValueInst(Value *Agg, Value *Val, ArrayRef<unsigned> Idxs,

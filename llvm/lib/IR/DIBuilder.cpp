@@ -33,7 +33,7 @@ static cl::opt<bool>
 
 DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
     : M(m), VMContext(M.getContext()), CUNode(CU), DeclareFn(nullptr),
-      ValueFn(nullptr), LabelFn(nullptr),
+      ValueFn(nullptr), LabelFn(nullptr), AddrFn(nullptr),
       AllowUnresolvedNodes(AllowUnresolvedNodes) {
   if (CUNode) {
     if (const auto &ETs = CUNode->getEnumTypes())
@@ -974,6 +974,24 @@ Instruction *DIBuilder::insertDbgValueIntrinsic(Value *V,
   return insertDbgValueIntrinsic(V, VarInfo, Expr, DL, InsertAtEnd, nullptr);
 }
 
+Instruction *DIBuilder::insertDbgAddrIntrinsic(Value *V,
+                                               DILocalVariable *VarInfo,
+                                               DIExpression *Expr,
+                                               const DILocation *DL,
+                                               Instruction *InsertBefore) {
+  return insertDbgAddrIntrinsic(
+      V, VarInfo, Expr, DL, InsertBefore ? InsertBefore->getParent() : nullptr,
+      InsertBefore);
+}
+
+Instruction *DIBuilder::insertDbgAddrIntrinsic(Value *V,
+                                               DILocalVariable *VarInfo,
+                                               DIExpression *Expr,
+                                               const DILocation *DL,
+                                               BasicBlock *InsertAtEnd) {
+  return insertDbgAddrIntrinsic(V, VarInfo, Expr, DL, InsertAtEnd, nullptr);
+}
+
 /// Initialize IRBuilder for inserting dbg.declare and dbg.value intrinsics.
 /// This abstracts over the various ways to specify an insert position.
 static void initIRBuilder(IRBuilder<> &Builder, const DILocation *DL,
@@ -993,6 +1011,24 @@ static Value *getDbgIntrinsicValueImpl(LLVMContext &VMContext, Value *V) {
 static Function *getDeclareIntrin(Module &M) {
   return Intrinsic::getDeclaration(&M, UseDbgAddr ? Intrinsic::dbg_addr
                                                   : Intrinsic::dbg_declare);
+}
+
+Instruction *DIBuilder::insertDbgValueIntrinsic(
+    llvm::Value *Val, DILocalVariable *VarInfo, DIExpression *Expr,
+    const DILocation *DL, BasicBlock *InsertBB, Instruction *InsertBefore) {
+  if (!ValueFn)
+    ValueFn = Intrinsic::getDeclaration(&M, Intrinsic::dbg_value);
+  return insertDbgIntrinsic(ValueFn, Val, VarInfo, Expr, DL, InsertBB,
+                            InsertBefore);
+}
+
+Instruction *DIBuilder::insertDbgAddrIntrinsic(
+    llvm::Value *Val, DILocalVariable *VarInfo, DIExpression *Expr,
+    const DILocation *DL, BasicBlock *InsertBB, Instruction *InsertBefore) {
+  if (!AddrFn)
+    AddrFn = Intrinsic::getDeclaration(&M, Intrinsic::dbg_addr);
+  return insertDbgIntrinsic(AddrFn, Val, VarInfo, Expr, DL, InsertBB,
+                            InsertBefore);
 }
 
 Instruction *DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
@@ -1018,17 +1054,20 @@ Instruction *DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
   return B.CreateCall(DeclareFn, Args);
 }
 
-Instruction *DIBuilder::insertDbgValueIntrinsic(
-    Value *V, DILocalVariable *VarInfo, DIExpression *Expr,
-    const DILocation *DL, BasicBlock *InsertBB, Instruction *InsertBefore) {
-  assert(V && "no value passed to dbg.value");
-  assert(VarInfo && "empty or invalid DILocalVariable* passed to dbg.value");
+Instruction *DIBuilder::insertDbgIntrinsic(llvm::Function *IntrinsicFn,
+                                           Value *V, DILocalVariable *VarInfo,
+                                           DIExpression *Expr,
+                                           const DILocation *DL,
+                                           BasicBlock *InsertBB,
+                                           Instruction *InsertBefore) {
+  assert(IntrinsicFn && "must pass a non-null intrinsic function");
+  assert(V && "must pass a value to a dbg intrinsic");
+  assert(VarInfo &&
+         "empty or invalid DILocalVariable* passed to debug intrinsic");
   assert(DL && "Expected debug loc");
   assert(DL->getScope()->getSubprogram() ==
              VarInfo->getScope()->getSubprogram() &&
          "Expected matching subprograms");
-  if (!ValueFn)
-    ValueFn = Intrinsic::getDeclaration(&M, Intrinsic::dbg_value);
 
   trackIfUnresolved(VarInfo);
   trackIfUnresolved(Expr);
@@ -1038,7 +1077,7 @@ Instruction *DIBuilder::insertDbgValueIntrinsic(
 
   IRBuilder<> B(DL->getContext());
   initIRBuilder(B, DL, InsertBB, InsertBefore);
-  return B.CreateCall(ValueFn, Args);
+  return B.CreateCall(IntrinsicFn, Args);
 }
 
 Instruction *DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,

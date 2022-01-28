@@ -915,7 +915,7 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
                           .addMBB(&DestBB, RISCVII::MO_CALL);
 
   RS->enterBasicBlockEnd(MBB);
-  unsigned Scav = RS->scavengeRegisterBackwards(RISCV::GPRRegClass,
+  Register Scav = RS->scavengeRegisterBackwards(RISCV::GPRRegClass,
                                                 MI.getIterator(), false, 0);
   // TODO: The case when there is no scavenged register needs special handling.
   assert(Scav != RISCV::NoRegister && "No register is scavenged!");
@@ -1145,6 +1145,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
             Ok = isUInt<6>(Imm);
           else
             Ok = isUInt<5>(Imm);
+          break;
+        case RISCVOp::OPERAND_RVKRNUM:
+          Ok = Imm >= 0 && Imm <= 10;
           break;
         }
         if (!Ok) {
@@ -1726,7 +1729,7 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
     CASE_WIDEOP_CHANGE_OPCODE_LMULS(WSUB_WV)
     CASE_WIDEOP_CHANGE_OPCODE_LMULS(WSUBU_WV)
     }
-    //clang-format on
+    // clang-format on
 
     MachineBasicBlock &MBB = *MI.getParent();
     MachineInstrBuilder MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))

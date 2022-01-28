@@ -2084,6 +2084,8 @@ struct AutoTypeLocInfo : TypeSpecLocInfo {
 
   // For decltype(auto).
   SourceLocation RParenLoc;
+
+  // Followed by a TemplateArgumentLocInfo[]
 };
 
 class AutoTypeLoc

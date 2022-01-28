@@ -228,7 +228,7 @@ void __kmp_invoke_microtask(kmp_int32 global_tid, kmp_int32 bound_tid, void *fn,
 
 namespace _OMP {
 /// Helper to keep code alive without introducing a performance penalty.
-__attribute__((used, weak, optnone)) void keepAlive() {
+__attribute__((used, retain, weak, optnone, cold)) void keepAlive() {
   __kmpc_get_hardware_thread_id_in_block();
   __kmpc_get_hardware_num_threads_in_block();
   __kmpc_get_warp_size();

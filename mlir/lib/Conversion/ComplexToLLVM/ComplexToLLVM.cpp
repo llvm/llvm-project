@@ -78,6 +78,18 @@ struct AbsOpConversion : public ConvertOpToLLVMPattern<complex::AbsOp> {
   }
 };
 
+struct ConstantOpLowering : public ConvertOpToLLVMPattern<complex::ConstantOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::ConstantOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    return LLVM::detail::oneToOneRewrite(
+        op, LLVM::ConstantOp::getOperationName(), adaptor.getOperands(),
+        *getTypeConverter(), rewriter);
+  }
+};
+
 struct CreateOpConversion : public ConvertOpToLLVMPattern<complex::CreateOp> {
   using ConvertOpToLLVMPattern<complex::CreateOp>::ConvertOpToLLVMPattern;
 
@@ -294,6 +306,7 @@ void mlir::populateComplexToLLVMConversionPatterns(
   patterns.add<
       AbsOpConversion,
       AddOpConversion,
+      ConstantOpLowering,
       CreateOpConversion,
       DivOpConversion,
       ImOpConversion,

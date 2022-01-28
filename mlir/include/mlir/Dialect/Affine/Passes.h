@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_AFFINE_TRANSFORMS_PASSES_H
-#define MLIR_DIALECT_AFFINE_TRANSFORMS_PASSES_H
+#ifndef MLIR_DIALECT_AFFINE_PASSES_H
+#define MLIR_DIALECT_AFFINE_PASSES_H
 
 #include "mlir/Pass/Pass.h"
 #include <limits>
@@ -20,6 +20,10 @@
 namespace mlir {
 
 class AffineForOp;
+
+/// Fusion mode to attempt. The default mode `Greedy` does both
+/// producer-consumer and sibling fusion.
+enum FusionMode { Greedy, ProducerConsumer, Sibling };
 
 /// Creates a simplification pass for affine structures (maps and sets). In
 /// addition, this pass also normalizes memrefs to have the trivial (identity)
@@ -51,7 +55,20 @@ std::unique_ptr<OperationPass<FuncOp>> createAffineDataCopyGenerationPass();
 /// Creates a pass to replace affine memref accesses by scalars using store to
 /// load forwarding and redundant load elimination; consequently also eliminate
 /// dead allocs.
-std::unique_ptr<FunctionPass> createAffineScalarReplacementPass();
+std::unique_ptr<OperationPass<FuncOp>> createAffineScalarReplacementPass();
+
+/// Creates a pass that transforms perfectly nested loops with independent
+/// bounds into a single loop.
+std::unique_ptr<OperationPass<FuncOp>> createLoopCoalescingPass();
+
+/// Creates a loop fusion pass which fuses loops according to type of fusion
+/// specified in `fusionMode`. Buffers of size less than or equal to
+/// `localBufSizeThreshold` are promoted to memory space `fastMemorySpace`.
+std::unique_ptr<OperationPass<FuncOp>>
+createLoopFusionPass(unsigned fastMemorySpace = 0,
+                     uint64_t localBufSizeThreshold = 0,
+                     bool maximalFusion = false,
+                     enum FusionMode fusionMode = FusionMode::Greedy);
 
 /// Creates a pass to perform tiling on loop nests.
 std::unique_ptr<OperationPass<FuncOp>>
@@ -76,6 +93,10 @@ std::unique_ptr<OperationPass<FuncOp>> createLoopUnrollPass(
 std::unique_ptr<OperationPass<FuncOp>>
 createLoopUnrollAndJamPass(int unrollJamFactor = -1);
 
+/// Creates a pass to pipeline explicit movement of data across levels of the
+/// memory hierarchy.
+std::unique_ptr<OperationPass<FuncOp>> createPipelineDataTransferPass();
+
 /// Creates a pass to vectorize loops, operations and data types using a
 /// target-independent, n-D super-vector abstraction.
 std::unique_ptr<OperationPass<FuncOp>>
@@ -93,4 +114,4 @@ std::unique_ptr<OperationPass<FuncOp>> createSuperVectorizePass();
 
 } // namespace mlir
 
-#endif // MLIR_DIALECT_AFFINE_RANSFORMS_PASSES_H
+#endif // MLIR_DIALECT_AFFINE_PASSES_H

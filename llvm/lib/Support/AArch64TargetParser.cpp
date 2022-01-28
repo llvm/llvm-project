@@ -114,6 +114,12 @@ bool AArch64::getExtensionFeatures(uint64_t Extensions,
     Features.push_back("+sme-f64");
   if (Extensions & AArch64::AEK_SMEI64)
     Features.push_back("+sme-i64");
+  if (Extensions & AArch64::AEK_HBC)
+    Features.push_back("+hbc");
+  if (Extensions & AArch64::AEK_MOPS)
+    Features.push_back("+mops");
+  if (Extensions & AArch64::AEK_PERFMON)
+    Features.push_back("+perfmon");
 
   return true;
 }

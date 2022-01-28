@@ -156,6 +156,7 @@ struct InterestingMemoryAccess {
   Value *Addr = nullptr;
   bool IsWrite;
   unsigned Alignment;
+  Type *AccessTy;
   uint64_t TypeSize;
   Value *MaybeMask = nullptr;
 };
@@ -181,7 +182,7 @@ public:
                          Value *Addr, uint32_t TypeSize, bool IsWrite);
   void instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
                                    Instruction *I, Value *Addr,
-                                   unsigned Alignment, uint32_t TypeSize,
+                                   unsigned Alignment, Type *AccessTy,
                                    bool IsWrite);
   void instrumentMemIntrinsic(MemIntrinsic *MI);
   Value *memToShadow(Value *Shadow, IRBuilder<> &IRB);
@@ -334,36 +335,32 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
 
   InterestingMemoryAccess Access;
 
-  const DataLayout &DL = I->getModule()->getDataLayout();
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
     if (!ClInstrumentReads)
       return None;
     Access.IsWrite = false;
-    Access.TypeSize = DL.getTypeStoreSizeInBits(LI->getType());
+    Access.AccessTy = LI->getType();
     Access.Alignment = LI->getAlignment();
     Access.Addr = LI->getPointerOperand();
   } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
     if (!ClInstrumentWrites)
       return None;
     Access.IsWrite = true;
-    Access.TypeSize =
-        DL.getTypeStoreSizeInBits(SI->getValueOperand()->getType());
+    Access.AccessTy = SI->getValueOperand()->getType();
     Access.Alignment = SI->getAlignment();
     Access.Addr = SI->getPointerOperand();
   } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(I)) {
     if (!ClInstrumentAtomics)
       return None;
     Access.IsWrite = true;
-    Access.TypeSize =
-        DL.getTypeStoreSizeInBits(RMW->getValOperand()->getType());
+    Access.AccessTy = RMW->getValOperand()->getType();
     Access.Alignment = 0;
     Access.Addr = RMW->getPointerOperand();
   } else if (AtomicCmpXchgInst *XCHG = dyn_cast<AtomicCmpXchgInst>(I)) {
     if (!ClInstrumentAtomics)
       return None;
     Access.IsWrite = true;
-    Access.TypeSize =
-        DL.getTypeStoreSizeInBits(XCHG->getCompareOperand()->getType());
+    Access.AccessTy = XCHG->getCompareOperand()->getType();
     Access.Alignment = 0;
     Access.Addr = XCHG->getPointerOperand();
   } else if (auto *CI = dyn_cast<CallInst>(I)) {
@@ -376,16 +373,16 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
           return None;
         // Masked store has an initial operand for the value.
         OpOffset = 1;
+        Access.AccessTy = CI->getArgOperand(0)->getType();
         Access.IsWrite = true;
       } else {
         if (!ClInstrumentReads)
           return None;
+        Access.AccessTy = CI->getType();
         Access.IsWrite = false;
       }
 
       auto *BasePtr = CI->getOperand(0 + OpOffset);
-      auto *Ty = cast<PointerType>(BasePtr->getType())->getElementType();
-      Access.TypeSize = DL.getTypeStoreSizeInBits(Ty);
       if (auto *AlignmentConstant =
               dyn_cast<ConstantInt>(CI->getOperand(1 + OpOffset)))
         Access.Alignment = (unsigned)AlignmentConstant->getZExtValue();
@@ -412,15 +409,16 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
   if (Access.Addr->isSwiftError())
     return None;
 
+  const DataLayout &DL = I->getModule()->getDataLayout();
+  Access.TypeSize = DL.getTypeStoreSizeInBits(Access.AccessTy);
   return Access;
 }
 
 void MemProfiler::instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
                                               Instruction *I, Value *Addr,
                                               unsigned Alignment,
-                                              uint32_t TypeSize, bool IsWrite) {
-  auto *VTy = cast<FixedVectorType>(
-      cast<PointerType>(Addr->getType())->getElementType());
+                                              Type *AccessTy, bool IsWrite) {
+  auto *VTy = cast<FixedVectorType>(AccessTy);
   uint64_t ElemTypeSize = DL.getTypeStoreSizeInBits(VTy->getScalarType());
   unsigned Num = VTy->getNumElements();
   auto *Zero = ConstantInt::get(IntptrTy, 0);
@@ -469,7 +467,7 @@ void MemProfiler::instrumentMop(Instruction *I, const DataLayout &DL,
 
   if (Access.MaybeMask) {
     instrumentMaskedLoadOrStore(DL, Access.MaybeMask, I, Access.Addr,
-                                Access.Alignment, Access.TypeSize,
+                                Access.Alignment, Access.AccessTy,
                                 Access.IsWrite);
   } else {
     // Since the access counts will be accumulated across the entire allocation,

@@ -42,6 +42,7 @@ static_library("MachO") {
     "OutputSection.cpp",
     "OutputSegment.cpp",
     "Relocations.cpp",
+    "SectionPriorities.cpp",
     "SymbolTable.cpp",
     "Symbols.cpp",
     "SyntheticSections.cpp",

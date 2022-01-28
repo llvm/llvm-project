@@ -118,10 +118,12 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     if (IsKernel || !F.hasFnAttribute("amdgpu-no-workitem-id-x"))
       WorkItemIDX = true;
 
-    if (!F.hasFnAttribute("amdgpu-no-workitem-id-y"))
+    if (!F.hasFnAttribute("amdgpu-no-workitem-id-y") &&
+        ST.getMaxWorkitemID(F, 1) != 0)
       WorkItemIDY = true;
 
-    if (!F.hasFnAttribute("amdgpu-no-workitem-id-z"))
+    if (!F.hasFnAttribute("amdgpu-no-workitem-id-z") &&
+        ST.getMaxWorkitemID(F, 2) != 0)
       WorkItemIDZ = true;
 
     if (!F.hasFnAttribute("amdgpu-no-dispatch-ptr"))
@@ -274,7 +276,6 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
   MachineFrameInfo &FrameInfo = MF.getFrameInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   unsigned WaveSize = ST.getWavefrontSize();
-  SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
 
   unsigned Size = FrameInfo.getObjectSize(FI);
   unsigned NumLanes = Size / 4;
@@ -291,16 +292,7 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
     Register LaneVGPR;
     unsigned VGPRIndex = (NumVGPRSpillLanes % WaveSize);
 
-    // Reserve a VGPR (when NumVGPRSpillLanes = 0, WaveSize, 2*WaveSize, ..) and
-    // when one of the two conditions is true:
-    // 1. One reserved VGPR being tracked by VGPRReservedForSGPRSpill is not yet
-    // reserved.
-    // 2. All spill lanes of reserved VGPR(s) are full and another spill lane is
-    // required.
-    if (FuncInfo->VGPRReservedForSGPRSpill && NumVGPRSpillLanes < WaveSize) {
-      assert(FuncInfo->VGPRReservedForSGPRSpill == SpillVGPRs.back().VGPR);
-      LaneVGPR = FuncInfo->VGPRReservedForSGPRSpill;
-    } else if (VGPRIndex == 0) {
+    if (VGPRIndex == 0) {
       LaneVGPR = TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass, MF);
       if (LaneVGPR == AMDGPU::NoRegister) {
         // We have no VGPRs left for spilling SGPRs. Reset because we will not
@@ -308,6 +300,8 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
         SGPRToVGPRSpills.erase(FI);
         NumVGPRSpillLanes -= I;
 
+        // FIXME: We can run out of free registers with split allocation if
+        // IPRA is enabled and a called function already uses every VGPR.
 #if 0
         DiagnosticInfoResourceLimit DiagOutOfRegs(MF.getFunction(),
                                                   "VGPRs for SGPR spilling",
@@ -337,21 +331,6 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
     SpillLanes.push_back(SpilledReg(LaneVGPR, VGPRIndex));
   }
 
-  return true;
-}
-
-/// Reserve a VGPR for spilling of SGPRs
-bool SIMachineFunctionInfo::reserveVGPRforSGPRSpills(MachineFunction &MF) {
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const SIRegisterInfo *TRI = ST.getRegisterInfo();
-  SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
-
-  Register LaneVGPR = TRI->findUnusedRegister(
-      MF.getRegInfo(), &AMDGPU::VGPR_32RegClass, MF, true);
-  if (LaneVGPR == Register())
-    return false;
-  SpillVGPRs.push_back(SGPRSpillVGPR(LaneVGPR, None));
-  FuncInfo->VGPRReservedForSGPRSpill = LaneVGPR;
   return true;
 }
 
@@ -612,24 +591,6 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
     ScavengeFI = *FIOrErr;
   } else {
     ScavengeFI = None;
-  }
-  return false;
-}
-
-// Remove VGPR which was reserved for SGPR spills if there are no spilled SGPRs
-bool SIMachineFunctionInfo::removeVGPRForSGPRSpill(Register ReservedVGPR,
-                                                   MachineFunction &MF) {
-  for (auto *i = SpillVGPRs.begin(); i < SpillVGPRs.end(); i++) {
-    if (i->VGPR == ReservedVGPR) {
-      SpillVGPRs.erase(i);
-
-      for (MachineBasicBlock &MBB : MF) {
-        MBB.removeLiveIn(ReservedVGPR);
-        MBB.sortUniqueLiveIns();
-      }
-      this->VGPRReservedForSGPRSpill = AMDGPU::NoRegister;
-      return true;
-    }
   }
   return false;
 }

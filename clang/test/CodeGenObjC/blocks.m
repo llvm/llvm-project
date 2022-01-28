@@ -1,5 +1,14 @@
 // RUN: %clang_cc1 -triple i386-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -fblocks -o - %s | FileCheck %s
 
+// CHECK: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i32, i32 }
+
+// Check that there is only one capture (20o) in the copy/dispose function
+// names.
+
+// CHECK: @[[BLOCK_DESCRIPTOR0:.*]] = linkonce_odr hidden unnamed_addr constant { i32, i32, i8*, i8*, i8*, i32 } { i32 0, i32 28, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_4_20o to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_4_20o to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i32 512 },
+
+void (^gb0)(void);
+
 // test1.  All of this is somehow testing rdar://6676764
 struct S {
   void (^F)(struct S*);
@@ -115,7 +124,7 @@ void test3(void (^block)(int, ...)) {
 // CHECK-NEXT: [[T3:%.*]] = bitcast [[BLOCK_T]]* [[T1]] to i8*
 // CHECK-NEXT: [[T4:%.*]] = load i8*, i8** [[T2]]
 // CHECK-NEXT: [[T5:%.*]] = bitcast i8* [[T4]] to void (i8*, i32, ...)*
-// CHECK-NEXT: call void (i8*, i32, ...) [[T5]](i8* [[T3]], i32 0, i32 1, i32 2, i32 3)
+// CHECK-NEXT: call void (i8*, i32, ...) [[T5]](i8* noundef [[T3]], i32 noundef 0, i32 noundef 1, i32 noundef 2, i32 noundef 3)
 // CHECK-NEXT: ret void
 
 void test4(void (^block)()) {
@@ -130,5 +139,23 @@ void test4(void (^block)()) {
 // CHECK-NEXT: [[T3:%.*]] = bitcast [[BLOCK_T]]* [[T1]] to i8*
 // CHECK-NEXT: [[T4:%.*]] = load i8*, i8** [[T2]]
 // CHECK-NEXT: [[T5:%.*]] = bitcast i8* [[T4]] to void (i8*, i32, i32, i32, i32)*
-// CHECK-NEXT: call void [[T5]](i8* [[T3]], i32 0, i32 1, i32 2, i32 3)
+// CHECK-NEXT: call void [[T5]](i8* noundef [[T3]], i32 noundef 0, i32 noundef 1, i32 noundef 2, i32 noundef 3)
 // CHECK-NEXT: ret void
+
+void test5(A *a) {
+  __unsafe_unretained A *t = a;
+  gb0 = ^{ (void)a; (void)t; };
+}
+
+// CHECK-LABEL: define void @test5(
+// CHECK: %[[V0:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, {{.*}}*, {{.*}}* }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, {{.*}}*, {{.*}}* }>* %{{.*}}, i32 0, i32 4
+// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i32, i32, i8*, i8*, i8*, i32 }* @[[BLOCK_DESCRIPTOR0]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[V0]],
+
+void test6(id a, long long b) {
+  void (^block)() = ^{ (void)b; (void)a; };
+}
+
+// Check that the block literal doesn't have two fields for capture 'a'.
+
+// CHECK-LABEL: define void @test6(
+// CHECK: alloca <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i64 }>,

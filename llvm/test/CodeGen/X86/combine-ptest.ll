@@ -392,6 +392,30 @@ define i32 @ptestz_v32i8_signbits(<32 x i8> %c, i32 %a, i32 %b) {
   ret i32 %t5
 }
 
+;
+; testz(or(extract_lo(X),extract_hi(X),or(extract_lo(Y),extract_hi(Y)) -> testz(X,Y)
+;
+
+define i32 @ptestz_v2i64_concat(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: ptestz_v2i64_concat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vptest %ymm1, %ymm0
+; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %t1 = shufflevector <4 x i64> %c, <4 x i64> undef, <2 x i32> <i32 0, i32 1>
+  %t2 = shufflevector <4 x i64> %c, <4 x i64> undef, <2 x i32> <i32 2, i32 3>
+  %t3 = shufflevector <4 x i64> %d, <4 x i64> undef, <2 x i32> <i32 0, i32 1>
+  %t4 = shufflevector <4 x i64> %d, <4 x i64> undef, <2 x i32> <i32 2, i32 3>
+  %t5 = or <2 x i64> %t1, %t2
+  %t6 = or <2 x i64> %t4, %t3
+  %t7 = call i32 @llvm.x86.sse41.ptestz(<2 x i64> %t5, <2 x i64> %t6)
+  %t8 = icmp ne i32 %t7, 0
+  %t9 = select i1 %t8, i32 %a, i32 %b
+  ret i32 %t9
+}
+
 declare i32 @llvm.x86.sse41.ptestz(<2 x i64>, <2 x i64>) nounwind readnone
 declare i32 @llvm.x86.sse41.ptestc(<2 x i64>, <2 x i64>) nounwind readnone
 declare i32 @llvm.x86.sse41.ptestnzc(<2 x i64>, <2 x i64>) nounwind readnone

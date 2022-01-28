@@ -1,4 +1,4 @@
-//===- LinalgInterfaceImpl.h - Linalg Impl. of BufferizableOpInterface ----===//
+//===- AffineInterfaceImpl.h - Affine Impl. of BufferizableOpInterface ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_AFFINE_INTERFACE_IMPL_H
-#define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_AFFINE_INTERFACE_IMPL_H
+#ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_AFFINEINTERFACEIMPL_H
+#define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_AFFINEINTERFACEIMPL_H
 
 namespace mlir {
 
@@ -24,4 +24,4 @@ void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry);
 } // namespace linalg
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_AFFINE_INTERFACE_IMPL_H
+#endif // MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_AFFINEINTERFACEIMPL_H

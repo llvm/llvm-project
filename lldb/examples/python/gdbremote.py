@@ -1619,13 +1619,11 @@ if __name__ == '__main__':
     else:
         parse_gdb_log(sys.stdin, options)
 
-else:
-    import lldb
-    if lldb.debugger:
-        # This initializer is being run from LLDB in the embedded command interpreter
-        # Add any commands contained in this module to LLDB
-        lldb.debugger.HandleCommand(
-            'command script add -f gdbremote.start_gdb_log start_gdb_log')
-        lldb.debugger.HandleCommand(
-            'command script add -f gdbremote.stop_gdb_log stop_gdb_log')
-        print('The "start_gdb_log" and "stop_gdb_log" commands are now installed and ready for use, type "start_gdb_log --help" or "stop_gdb_log --help" for more information')
+def __lldb_init_module(debugger, internal_dict):
+    # This initializer is being run from LLDB in the embedded command interpreter
+    # Add any commands contained in this module to LLDB
+    debugger.HandleCommand(
+        'command script add -f gdbremote.start_gdb_log start_gdb_log')
+    debugger.HandleCommand(
+        'command script add -f gdbremote.stop_gdb_log stop_gdb_log')
+    print('The "start_gdb_log" and "stop_gdb_log" commands are now installed and ready for use, type "start_gdb_log --help" or "stop_gdb_log --help" for more information')

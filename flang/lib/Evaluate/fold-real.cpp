@@ -64,7 +64,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
             name, KIND);
       }
     }
-  } else if (name == "abs") {
+  } else if (name == "abs") { // incl. zabs & cdabs
     // Argument can be complex or real
     if (auto *x{UnwrapExpr<Expr<SomeReal>>(args[0])}) {
       return FoldElementalIntrinsic<T, T>(
@@ -130,6 +130,31 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     if (auto *expr{args[0].value().UnwrapExpr()}) {
       return ToReal<KIND>(context, std::move(*expr));
     }
+  } else if (name == "scale") {
+    if (const auto *byExpr{UnwrapExpr<Expr<SomeInteger>>(args[1])}) {
+      return std::visit(
+          [&](const auto &byVal) {
+            using TBY = ResultType<decltype(byVal)>;
+            return FoldElementalIntrinsic<T, T, TBY>(context,
+                std::move(funcRef),
+                ScalarFunc<T, T, TBY>(
+                    [&](const Scalar<T> &x, const Scalar<TBY> &y) -> Scalar<T> {
+                      ValueWithRealFlags<Scalar<T>> result{x.
+// MSVC chokes on the keyword "template" here in a call to a
+// member function template.
+#ifndef _MSC_VER
+                                                           template
+#endif
+                                                           SCALE(y)};
+                      if (result.flags.test(RealFlag::Overflow)) {
+                        context.messages().Say(
+                            "SCALE intrinsic folding overflow"_en_US);
+                      }
+                      return result.value;
+                    }));
+          },
+          byExpr->u);
+    }
   } else if (name == "sign") {
     return FoldElementalIntrinsic<T, T, T>(
         context, std::move(funcRef), &Scalar<T>::SIGN);
@@ -143,7 +168,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     return Expr<T>{Scalar<T>::TINY()};
   }
   // TODO: dim, dot_product, fraction, matmul,
-  // modulo, nearest, norm2, rrspacing, scale,
+  // modulo, nearest, norm2, rrspacing,
   // __builtin_next_after/down/up,
   // set_exponent, spacing, transfer,
   // bessel_jn (transformational) and bessel_yn (transformational)
@@ -175,6 +200,9 @@ Expr<Type<TypeCategory::Real, KIND>> FoldOperation(
   return Expr<Part>{std::move(x)};
 }
 
+#ifdef _MSC_VER // disable bogus warning about missing definitions
+#pragma warning(disable : 4661)
+#endif
 FOR_EACH_REAL_KIND(template class ExpressionBase, )
 template class ExpressionBase<SomeReal>;
 } // namespace Fortran::evaluate

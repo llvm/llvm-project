@@ -6,6 +6,7 @@ load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
     licenses = ["notice"],
 )
 
@@ -23,6 +24,7 @@ cc_library(
         ":TestDialect",
         "//llvm:Support",
         "//mlir:Affine",
+        "//mlir:AffineAnalysis",
         "//mlir:Analysis",
         "//mlir:IR",
         "//mlir:MemRefDialect",
@@ -288,6 +290,7 @@ cc_library(
         ":TestDialect",
         "//llvm:Support",
         "//mlir:Affine",
+        "//mlir:AffineAnalysis",
         "//mlir:Analysis",
         "//mlir:ArithmeticDialect",
         "//mlir:IR",
@@ -323,12 +326,15 @@ cc_library(
     deps = [
         "//llvm:Support",
         "//mlir:Affine",
+        "//mlir:AffineAnalysis",
         "//mlir:AffineTransforms",
         "//mlir:AffineUtils",
         "//mlir:Analysis",
         "//mlir:IR",
         "//mlir:MemRefDialect",
         "//mlir:Pass",
+        "//mlir:SCFDialect",
+        "//mlir:StandardOps",
         "//mlir:Support",
         "//mlir:Transforms",
         "//mlir:VectorOps",
@@ -383,11 +389,10 @@ cc_library(
         "//llvm:Support",
         "//mlir:Affine",
         "//mlir:AffineBufferizableOpInterfaceImpl",
-        "//mlir:ArithBufferizableOpInterfaceImpl",
         "//mlir:ArithmeticDialect",
-        "//mlir:BufferizableOpInterface",
+        "//mlir:ArithmeticTransforms",
         "//mlir:BufferizationDialect",
-        "//mlir:ComprehensiveBufferize",
+        "//mlir:BufferizationTransforms",
         "//mlir:GPUDialect",
         "//mlir:IR",
         "//mlir:LinalgBufferizableOpInterfaceImpl",
@@ -399,8 +404,9 @@ cc_library(
         "//mlir:SCFDialect",
         "//mlir:SCFTransforms",
         "//mlir:StandardOps",
-        "//mlir:TensorBufferizableOpInterfaceImpl",
+        "//mlir:StdBufferizableOpInterfaceImpl",
         "//mlir:TensorDialect",
+        "//mlir:TensorTransforms",
         "//mlir:TransformUtils",
         "//mlir:VectorBufferizableOpInterfaceImpl",
         "//mlir:VectorOps",
@@ -421,6 +427,20 @@ cc_library(
         "//mlir:TransformUtils",
         "//mlir:VectorOps",
         "//mlir:X86Vector",
+    ],
+)
+
+cc_library(
+    name = "TestMemRef",
+    srcs = glob(["lib/Dialect/MemRef/*.cpp"]),
+    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        ":TestDialect",
+        "//mlir:Affine",
+        "//mlir:MemRefTransforms",
+        "//mlir:Pass",
+        "//mlir:Transforms",
     ],
 )
 

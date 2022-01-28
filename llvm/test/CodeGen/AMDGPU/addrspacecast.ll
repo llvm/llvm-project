@@ -17,15 +17,17 @@
 ; CI-DAG: v_cndmask_b32_e32 v[[LO:[0-9]+]], 0, [[VPTR]]
 
 ; HSA-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
-; GFX9-DAG: s_load_dword s[[PTR:[0-9]+]], s[4:5], 0x0{{$}}
+; GFX9-DAG: s_load_dword [[PTR:s[0-9]+]], s[4:5], 0x0{{$}}
 ; GFX9-DAG: s_getreg_b32 [[SSRC_SHARED:s[0-9]+]], hwreg(HW_REG_SH_MEM_BASES, 16, 16)
-; GFX9-DAG: s_lshl_b32 s[[SSRC_SHARED_BASE:[0-9]+]], [[SSRC_SHARED]], 16
+; GFX9-DAG: s_lshl_b32 [[SSRC_SHARED_BASE:s[0-9]+]], [[SSRC_SHARED]], 16
+; GFX9-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[SSRC_SHARED_BASE]]
 
 ; GFX9-XXX: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], src_shared_base
-; GFX9: s_cmp_lg_u32 s[[PTR]], -1
-; GFX9: s_cselect_b64 s{{\[}}[[SEL_LO:[0-9]+]]:[[SEL_HI:[0-9]+]]{{\]}}, s{{\[}}[[PTR]]:[[SSRC_SHARED_BASE]]{{\]}}, 0
-; GFX9-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[SEL_LO]]
-; GFX9-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], s[[SEL_HI]]
+; GFX9: s_cmp_lg_u32 [[PTR]], -1
+; GFX9: s_cselect_b64 vcc, -1, 0
+; GFX9: v_cndmask_b32_e32 v[[HI:[0-9]+]], 0, [[VAPERTURE]], vcc
+; GFX9-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
+; GFX9-DAG: v_cndmask_b32_e32 v[[LO:[0-9]+]], 0, [[VPTR]]
 
 ; HSA: flat_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, [[K]]
 
@@ -82,17 +84,19 @@ define void @use_group_to_flat_addrspacecast_func(i32 addrspace(3)* %ptr) #0 {
 ; CI-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
 ; CI-DAG: v_cndmask_b32_e32 v[[LO:[0-9]+]], 0, [[VPTR]]
 
-; GFX9-DAG: s_load_dword s[[PTR:[0-9]+]], s[4:5], 0x0{{$}}
+; GFX9-DAG: s_load_dword [[PTR:s[0-9]+]], s[4:5], 0x0{{$}}
 ; GFX9-DAG: s_getreg_b32 [[SSRC_PRIVATE:s[0-9]+]], hwreg(HW_REG_SH_MEM_BASES, 0, 16)
-; GFX9-DAG: s_lshl_b32 s[[SSRC_PRIVATE_BASE:[0-9]+]], [[SSRC_PRIVATE]], 16
+; GFX9-DAG: s_lshl_b32 [[SSRC_PRIVATE_BASE:s[0-9]+]], [[SSRC_PRIVATE]], 16
+; GFX9-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[SSRC_PRIVATE_BASE]]
 
 ; GFX9-XXX: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], src_private_base
 
 ; GFX9-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
-; GFX9: s_cmp_lg_u32 s[[PTR]], -1
-; GFX9: s_cselect_b64 s{{\[}}[[SEL_LO:[0-9]+]]:[[SEL_HI:[0-9]+]]{{\]}}, s{{\[}}[[PTR]]:[[SSRC_PRIVATE_BASE]]{{\]}}, 0
-; GFX9-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[SEL_LO]]
-; GFX9-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], s[[SEL_HI]]
+; GFX9: s_cmp_lg_u32 [[PTR]], -1
+; GFX9: s_cselect_b64 vcc, -1, 0
+; GFX9: v_cndmask_b32_e32 v[[HI:[0-9]+]], 0, [[VAPERTURE]], vcc
+; GFX9: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
+; GFX9-DAG: v_cndmask_b32_e32 v[[LO:[0-9]+]], 0, [[VPTR]]
 
 ; HSA: flat_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, [[K]]
 
@@ -401,9 +405,32 @@ define amdgpu_kernel void @use_global_to_constant32_addrspacecast(i8 addrspace(1
   ret void
 }
 
+; GCN-LABEL: {{^}}use_constant32bit_to_flat_addrspacecast_0:
+; GCN: s_load_dword [[PTR:s[0-9]+]],
+; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], 0
+; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], [[PTR]]
+; GCN: flat_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+define amdgpu_kernel void @use_constant32bit_to_flat_addrspacecast_0(i32 addrspace(6)* %ptr) #0 {
+  %stof = addrspacecast i32 addrspace(6)* %ptr to i32*
+  %load = load volatile i32, i32* %stof
+  ret void
+}
+
+; GCN-LABEL: {{^}}use_constant32bit_to_flat_addrspacecast_1:
+; GCN: s_load_dword [[PTR:s[0-9]+]],
+; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], 0xffff8000
+; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], [[PTR]]
+; GCN: flat_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+define amdgpu_kernel void @use_constant32bit_to_flat_addrspacecast_1(i32 addrspace(6)* %ptr) #3 {
+  %stof = addrspacecast i32 addrspace(6)* %ptr to i32*
+  %load = load volatile i32, i32* %stof
+  ret void
+}
+
 declare void @llvm.amdgcn.s.barrier() #1
 declare i32 @llvm.amdgcn.workitem.id.x() #2
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind convergent }
 attributes #2 = { nounwind readnone }
+attributes #3 = { nounwind "amdgpu-32bit-address-high-bits"="0xffff8000" }

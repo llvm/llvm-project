@@ -39,17 +39,17 @@ class Vector_Op<string mnemonic, list<OpTrait> traits = []> :
 }
 
 // The "kind" of combining function for contractions and reductions.
-def COMBINING_KIND_ADD : BitEnumAttrCase<"ADD", 0x1, "add">;
-def COMBINING_KIND_MUL : BitEnumAttrCase<"MUL", 0x2, "mul">;
-def COMBINING_KIND_MINUI : BitEnumAttrCase<"MINUI", 0x4, "minui">;
-def COMBINING_KIND_MINSI : BitEnumAttrCase<"MINSI", 0x8, "minsi">;
-def COMBINING_KIND_MINF : BitEnumAttrCase<"MINF", 0x10, "minf">;
-def COMBINING_KIND_MAXUI : BitEnumAttrCase<"MAXUI", 0x20, "maxui">;
-def COMBINING_KIND_MAXSI : BitEnumAttrCase<"MAXSI", 0x40, "maxsi">;
-def COMBINING_KIND_MAXF : BitEnumAttrCase<"MAXF", 0x80, "maxf">;
-def COMBINING_KIND_AND : BitEnumAttrCase<"AND", 0x100, "and">;
-def COMBINING_KIND_OR  : BitEnumAttrCase<"OR", 0x200, "or">;
-def COMBINING_KIND_XOR : BitEnumAttrCase<"XOR", 0x400, "xor">;
+def COMBINING_KIND_ADD : BitEnumAttrCaseBit<"ADD", 0, "add">;
+def COMBINING_KIND_MUL : BitEnumAttrCaseBit<"MUL", 1, "mul">;
+def COMBINING_KIND_MINUI : BitEnumAttrCaseBit<"MINUI", 2, "minui">;
+def COMBINING_KIND_MINSI : BitEnumAttrCaseBit<"MINSI", 3, "minsi">;
+def COMBINING_KIND_MINF : BitEnumAttrCaseBit<"MINF", 4, "minf">;
+def COMBINING_KIND_MAXUI : BitEnumAttrCaseBit<"MAXUI", 5, "maxui">;
+def COMBINING_KIND_MAXSI : BitEnumAttrCaseBit<"MAXSI", 6, "maxsi">;
+def COMBINING_KIND_MAXF : BitEnumAttrCaseBit<"MAXF", 7, "maxf">;
+def COMBINING_KIND_AND : BitEnumAttrCaseBit<"AND", 8, "and">;
+def COMBINING_KIND_OR  : BitEnumAttrCaseBit<"OR", 9, "or">;
+def COMBINING_KIND_XOR : BitEnumAttrCaseBit<"XOR", 10, "xor">;
 
 def CombiningKind : BitEnumAttr<
     "CombiningKind",
@@ -865,6 +865,11 @@ def Vector_InsertStridedSliceOp :
     VectorType getDestVectorType() {
       return dest().getType().cast<VectorType>();
     }
+    bool hasNonUnitStrides() { 
+      return llvm::any_of(strides(), [](Attribute attr) {
+        return attr.cast<IntegerAttr>().getInt() != 1;
+      });
+    }
   }];
 
   let hasFolder = 1;
@@ -1120,6 +1125,11 @@ def Vector_ExtractStridedSliceOp :
     static StringRef getStridesAttrName() { return "strides"; }
     VectorType getVectorType(){ return vector().getType().cast<VectorType>(); }
     void getOffsets(SmallVectorImpl<int64_t> &results);
+    bool hasNonUnitStrides() { 
+      return llvm::any_of(strides(), [](Attribute attr) {
+        return attr.cast<IntegerAttr>().getInt() != 1;
+      });
+    }
   }];
   let hasCanonicalizer = 1;
   let hasFolder = 1;
@@ -2121,7 +2131,9 @@ def Vector_ConstantMaskOp :
     specifies an exclusive upper bound [0, mask-dim-size-element-value)
     for a unique dimension in the vector result. The conjunction of the ranges
     define a hyper-rectangular region within which elements values are set to 1
-    (otherwise element values are set to 0).
+    (otherwise element values are set to 0). Each value of 'mask_dim_sizes' must
+    be non-negative and not greater than the size of the corresponding vector
+    dimension (as opposed to vector.create_mask which allows this).
 
     Example:
 
@@ -2159,7 +2171,9 @@ def Vector_CreateMaskOp :
     each operand specifies a range [0, operand-value) for a unique dimension in
     the vector result. The conjunction of the operand ranges define a
     hyper-rectangular region within which elements values are set to 1
-    (otherwise element values are set to 0).
+    (otherwise element values are set to 0). If operand-value is negative, it is
+    treated as if it were zero, and if it is greater than the corresponding
+    dimension size, it is treated as if it were equal to the dimension size.
 
     Example:
 

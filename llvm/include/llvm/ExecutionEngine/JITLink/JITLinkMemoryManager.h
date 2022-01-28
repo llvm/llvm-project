@@ -60,7 +60,8 @@ public:
   public:
     FinalizedAlloc() = default;
     explicit FinalizedAlloc(orc::ExecutorAddr A) : A(A) {
-      assert(A && "Explicitly creating an invalid allocation?");
+      assert(A.getValue() != InvalidAddr &&
+             "Explicitly creating an invalid allocation?");
     }
     FinalizedAlloc(const FinalizedAlloc &) = delete;
     FinalizedAlloc(FinalizedAlloc &&Other) : A(Other.A) {

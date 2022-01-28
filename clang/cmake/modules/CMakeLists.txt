@@ -1,3 +1,4 @@
+include(ExtendPath)
 include(LLVMDistributionSupport)
 include(FindPrefixFromConfig)
 
@@ -29,13 +30,22 @@ configure_file(
 set(CLANG_CONFIG_CMAKE_DIR)
 set(CLANG_CONFIG_LLVM_CMAKE_DIR)
 
+# For compatibility with projects that include(ClangConfig)
+# via CMAKE_MODULE_PATH, place API modules next to it.
+file(COPY .
+  DESTINATION ${clang_cmake_builddir}
+  FILES_MATCHING PATTERN *.cmake
+  PATTERN CMakeFiles EXCLUDE
+  )
+
 # Generate ClangConfig.cmake for the install tree.
 find_prefix_from_config(CLANG_CONFIG_CODE CLANG_INSTALL_PREFIX "${CLANG_INSTALL_PACKAGE_DIR}")
 set(CLANG_CONFIG_CMAKE_DIR "\${CLANG_INSTALL_PREFIX}/${CLANG_INSTALL_PACKAGE_DIR}")
 set(CLANG_CONFIG_LLVM_CMAKE_DIR "\${CLANG_INSTALL_PREFIX}/${LLVM_INSTALL_PACKAGE_DIR}")
 get_config_exports_includes(Clang CLANG_CONFIG_INCLUDE_EXPORTS)
+extend_path(base_includedir "\${CLANG_INSTALL_PREFIX}" "${CMAKE_INSTALL_INCLUDEDIR}")
 set(CLANG_CONFIG_INCLUDE_DIRS
-  "\${CLANG_INSTALL_PREFIX}/include"
+  "${base_includedir}"
   )
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ClangConfig.cmake.in

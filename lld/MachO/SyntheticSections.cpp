@@ -16,8 +16,7 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 
-#include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Memory.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/EndianStream.h"
@@ -85,7 +84,7 @@ static uint32_t cpuSubtype() {
 
   if (config->outputType == MH_EXECUTE && !config->staticLink &&
       target->cpuSubtype == CPU_SUBTYPE_X86_64_ALL &&
-      config->platform() == PlatformKind::macOS &&
+      config->platform() == PLATFORM_MACOS &&
       config->platformInfo.minimum >= VersionTuple(10, 5))
     subtype |= CPU_SUBTYPE_LIB64;
 
@@ -834,7 +833,7 @@ void SymtabSection::emitBeginSourceStab(DWARFUnit *compileUnit) {
   if (!dir.endswith(sep))
     dir += sep;
   stab.strx = stringTableSection.addString(
-      saver.save(dir + compileUnit->getUnitDIE().getShortName()));
+      saver().save(dir + compileUnit->getUnitDIE().getShortName()));
   stabs.emplace_back(std::move(stab));
 }
 
@@ -856,7 +855,7 @@ void SymtabSection::emitObjectFileStab(ObjFile *file) {
   if (!file->archiveName.empty())
     path.append({"(", file->getName(), ")"});
 
-  StringRef adjustedPath = saver.save(path.str());
+  StringRef adjustedPath = saver().save(path.str());
   adjustedPath.consume_front(config->osoPrefix);
 
   stab.strx = stringTableSection.addString(adjustedPath);
@@ -1283,7 +1282,10 @@ void BitcodeBundleSection::finalize() {
   using namespace llvm::sys::fs;
   CHECK_EC(createTemporaryFile("bitcode-bundle", "xar", xarPath));
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   xar_t xar(xar_open(xarPath.data(), O_RDWR));
+#pragma clang diagnostic pop
   if (!xar)
     fatal("failed to open XAR temporary file at " + xarPath);
   CHECK_EC(xar_opt_set(xar, XAR_OPT_COMPRESSION, XAR_OPT_VAL_NONE));
@@ -1379,26 +1381,15 @@ DeduplicatedCStringSection::DeduplicatedCStringSection()
 void DeduplicatedCStringSection::finalizeContents() {
   // Add all string pieces to the string table builder to create section
   // contents.
-  for (const CStringInputSection *isec : inputs)
+  for (CStringInputSection *isec : inputs) {
     for (size_t i = 0, e = isec->pieces.size(); i != e; ++i)
       if (isec->pieces[i].live)
-        builder.add(isec->getCachedHashStringRef(i));
-
-  // Fix the string table content. After this, the contents will never change.
-  builder.finalizeInOrder();
-
-  // finalize() fixed tail-optimized strings, so we can now get
-  // offsets of strings. Get an offset for each string and save it
-  // to a corresponding SectionPiece for easy access.
-  for (CStringInputSection *isec : inputs) {
-    for (size_t i = 0, e = isec->pieces.size(); i != e; ++i) {
-      if (!isec->pieces[i].live)
-        continue;
-      isec->pieces[i].outSecOff =
-          builder.getOffset(isec->getCachedHashStringRef(i));
-      isec->isFinal = true;
-    }
+        isec->pieces[i].outSecOff =
+            builder.add(isec->getCachedHashStringRef(i));
+    isec->isFinal = true;
   }
+
+  builder.finalizeInOrder();
 }
 
 // This section is actually emitted as __TEXT,__const by ld64, but clang may

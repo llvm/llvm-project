@@ -727,6 +727,13 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         Name == "arm.cde.vcx3qa.predicated.v2i64.v4i1")
       return true;
 
+    if (Name == "amdgcn.alignbit") {
+      // Target specific intrinsic became redundant
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::fshr,
+                                        {F->getReturnType()});
+      return true;
+    }
+
     break;
   }
 
@@ -4488,7 +4495,7 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
 
   if (F.getCallingConv() == CallingConv::X86_INTR &&
       !F.arg_empty() && !F.hasParamAttribute(0, Attribute::ByVal)) {
-    Type *ByValTy = cast<PointerType>(F.getArg(0)->getType())->getElementType();
+    Type *ByValTy = F.getArg(0)->getType()->getPointerElementType();
     Attribute NewAttr = Attribute::getWithByValType(F.getContext(), ByValTy);
     F.addParamAttr(0, NewAttr);
   }
@@ -4569,27 +4576,39 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     return DL.empty() ? std::string("G1") : (DL + "-G1").str();
   }
 
+  std::string Res = DL.str();
+  if (!T.isX86())
+    return Res;
+
+  // If the datalayout matches the expected format, add pointer size address
+  // spaces to the datalayout.
   std::string AddrSpaces = "-p270:32:32-p271:32:32-p272:64:64";
-  // If X86, and the datalayout matches the expected format, add pointer size
-  // address spaces to the datalayout.
-  if (!T.isX86() || DL.contains(AddrSpaces))
-    return std::string(DL);
+  if (!DL.contains(AddrSpaces)) {
+    SmallVector<StringRef, 4> Groups;
+    Regex R("(e-m:[a-z](-p:32:32)?)(-[if]64:.*$)");
+    if (R.match(DL, &Groups))
+      Res = (Groups[1] + AddrSpaces + Groups[3]).str();
+  }
 
-  SmallVector<StringRef, 4> Groups;
-  Regex R("(e-m:[a-z](-p:32:32)?)(-[if]64:.*$)");
-  if (!R.match(DL, &Groups))
-    return std::string(DL);
+  // For 32-bit MSVC targets, raise the alignment of f80 values to 16 bytes.
+  // Raising the alignment is safe because Clang did not produce f80 values in
+  // the MSVC environment before this upgrade was added.
+  if (T.isWindowsMSVCEnvironment() && !T.isArch64Bit()) {
+    StringRef Ref = Res;
+    auto I = Ref.find("-f80:32-");
+    if (I != StringRef::npos)
+      Res = (Ref.take_front(I) + "-f80:128-" + Ref.drop_front(I + 8)).str();
+  }
 
-  return (Groups[1] + AddrSpaces + Groups[3]).str();
+  return Res;
 }
 
 void llvm::UpgradeAttributes(AttrBuilder &B) {
   StringRef FramePointer;
-  if (B.contains("no-frame-pointer-elim")) {
+  Attribute A = B.getAttribute("no-frame-pointer-elim");
+  if (A.isValid()) {
     // The value can be "true" or "false".
-    for (const auto &A : B.td_attrs())
-      if (A.getKindAsString() == "no-frame-pointer-elim")
-        FramePointer = A.getValueAsString() == "true" ? "all" : "none";
+    FramePointer = A.getValueAsString() == "true" ? "all" : "none";
     B.removeAttribute("no-frame-pointer-elim");
   }
   if (B.contains("no-frame-pointer-elim-non-leaf")) {
@@ -4601,12 +4620,10 @@ void llvm::UpgradeAttributes(AttrBuilder &B) {
   if (!FramePointer.empty())
     B.addAttribute("frame-pointer", FramePointer);
 
-  if (B.contains("null-pointer-is-valid")) {
+  A = B.getAttribute("null-pointer-is-valid");
+  if (A.isValid()) {
     // The value can be "true" or "false".
-    bool NullPointerIsValid = false;
-    for (const auto &A : B.td_attrs())
-      if (A.getKindAsString() == "null-pointer-is-valid")
-        NullPointerIsValid = A.getValueAsString() == "true";
+    bool NullPointerIsValid = A.getValueAsString() == "true";
     B.removeAttribute("null-pointer-is-valid");
     if (NullPointerIsValid)
       B.addAttribute(Attribute::NullPointerIsValid);

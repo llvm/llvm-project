@@ -43,7 +43,7 @@ namespace {
 /// If \p ND is a template specialization, returns the described template.
 /// Otherwise, returns \p ND.
 const NamedDecl &getTemplateOrThis(const NamedDecl &ND) {
-  if (auto T = ND.getDescribedTemplate())
+  if (auto *T = ND.getDescribedTemplate())
     return *T;
   return ND;
 }

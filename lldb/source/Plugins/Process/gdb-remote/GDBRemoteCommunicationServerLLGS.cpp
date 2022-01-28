@@ -1086,7 +1086,7 @@ void GDBRemoteCommunicationServerLLGS::NewSubprocess(
 }
 
 void GDBRemoteCommunicationServerLLGS::DataAvailableCallback() {
-  Log *log(GetLogIfAnyCategoriesSet(GDBR_LOG_COMM));
+  Log *log = GetLog(GDBRLog::Comm);
 
   bool interrupt = false;
   bool done = false;
@@ -2920,6 +2920,18 @@ GDBRemoteCommunicationServerLLGS::ReadXferObject(llvm::StringRef object,
     return std::move(*buffer_or_error);
   }
 
+  if (object == "siginfo") {
+    NativeThreadProtocol *thread = m_current_process->GetCurrentThread();
+    if (!thread)
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "no current thread");
+
+    auto buffer_or_error = thread->GetSiginfo();
+    if (!buffer_or_error)
+      return buffer_or_error.takeError();
+    return std::move(*buffer_or_error);
+  }
+
   if (object == "libraries-svr4") {
     auto library_list = m_current_process->GetLoadedSVR4Libraries();
     if (!library_list)
@@ -3838,6 +3850,8 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
     ret.push_back("qXfer:auxv:read+");
   if (bool(plugin_features & Extension::libraries_svr4))
     ret.push_back("qXfer:libraries-svr4:read+");
+  if (bool(plugin_features & Extension::siginfo_read))
+    ret.push_back("qXfer:siginfo:read+");
   if (bool(plugin_features & Extension::memory_tagging))
     ret.push_back("memory-tagging+");
   if (bool(plugin_features & Extension::savecore))

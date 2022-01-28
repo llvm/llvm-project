@@ -16,7 +16,6 @@
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/GPU/Utils.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
@@ -31,7 +30,7 @@ class GpuAsyncRegionPass : public GpuAsyncRegionPassBase<GpuAsyncRegionPass> {
   struct ThreadTokenCallback;
   struct DeferWaitCallback;
   struct SingleTokenUseCallback;
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 } // namespace
 
@@ -252,7 +251,9 @@ private:
           executeOp.operandsMutable().append(asyncTokens);
           SmallVector<Type, 1> tokenTypes(
               asyncTokens.size(), builder.getType<gpu::AsyncTokenType>());
-          copy(executeOp.getBody()->addArguments(tokenTypes),
+          SmallVector<Location, 1> tokenLocs(asyncTokens.size(),
+                                             executeOp.getLoc());
+          copy(executeOp.getBody()->addArguments(tokenTypes, tokenLocs),
                std::back_inserter(tokens));
         });
 
@@ -327,14 +328,14 @@ struct GpuAsyncRegionPass::SingleTokenUseCallback {
 // Replaces synchronous GPU ops in the op's region with asynchronous ones and
 // inserts the necessary synchronization (as gpu.wait ops). Assumes sequential
 // execution semantics and that no GPU ops are asynchronous yet.
-void GpuAsyncRegionPass::runOnFunction() {
-  if (getFunction()->walk(ThreadTokenCallback(getContext())).wasInterrupted())
+void GpuAsyncRegionPass::runOnOperation() {
+  if (getOperation()->walk(ThreadTokenCallback(getContext())).wasInterrupted())
     return signalPassFailure();
 
   // Collect gpu.wait ops that we can move out of async.execute regions.
-  getFunction().getRegion().walk(DeferWaitCallback());
+  getOperation().getRegion().walk(DeferWaitCallback());
   // Makes each !gpu.async.token returned from async.execute op have single use.
-  getFunction().getRegion().walk(SingleTokenUseCallback());
+  getOperation().getRegion().walk(SingleTokenUseCallback());
 }
 
 std::unique_ptr<OperationPass<FuncOp>> mlir::createGpuAsyncRegionPass() {

@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=riscv64 < %s | FileCheck %s --check-prefixes=RV64
 ; RUN: llc -mtriple=riscv32 -mattr=+m < %s | FileCheck %s --check-prefixes=RV32M
 ; RUN: llc -mtriple=riscv64 -mattr=+m < %s | FileCheck %s --check-prefixes=RV64M
-; RUN: llc -mtriple=riscv32 -mattr=+m,+experimental-v -riscv-v-vector-bits-min=128 < %s | FileCheck %s --check-prefixes=RV32MV
-; RUN: llc -mtriple=riscv64 -mattr=+m,+experimental-v -riscv-v-vector-bits-min=128 < %s | FileCheck %s --check-prefixes=RV64MV
+; RUN: llc -mtriple=riscv32 -mattr=+m,+v -riscv-v-vector-bits-min=128 < %s | FileCheck %s --check-prefixes=RV32MV
+; RUN: llc -mtriple=riscv64 -mattr=+m,+v -riscv-v-vector-bits-min=128 < %s | FileCheck %s --check-prefixes=RV64MV
 
 define i1 @test_urem_odd(i13 %X) nounwind {
 ; RV32-LABEL: test_urem_odd:
@@ -394,8 +394,8 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64-NEXT:    lwu a1, 0(s0)
 ; RV64-NEXT:    slli a0, a0, 32
 ; RV64-NEXT:    or a0, a1, a0
-; RV64-NEXT:    srli s2, a0, 11
-; RV64-NEXT:    srli s1, a0, 22
+; RV64-NEXT:    srli s1, a0, 11
+; RV64-NEXT:    srli s2, a0, 22
 ; RV64-NEXT:    andi a0, a0, 2047
 ; RV64-NEXT:    li a1, 683
 ; RV64-NEXT:    call __muldi3@plt
@@ -407,14 +407,14 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64-NEXT:    li a1, 341
 ; RV64-NEXT:    sltu s3, a1, a0
 ; RV64-NEXT:    li a1, 819
-; RV64-NEXT:    mv a0, s1
+; RV64-NEXT:    mv a0, s2
 ; RV64-NEXT:    call __muldi3@plt
 ; RV64-NEXT:    addiw a0, a0, -1638
 ; RV64-NEXT:    andi a0, a0, 2047
 ; RV64-NEXT:    li a1, 1
-; RV64-NEXT:    sltu s1, a1, a0
+; RV64-NEXT:    sltu s2, a1, a0
 ; RV64-NEXT:    li a1, 1463
-; RV64-NEXT:    mv a0, s2
+; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call __muldi3@plt
 ; RV64-NEXT:    addiw a0, a0, -1463
 ; RV64-NEXT:    andi a0, a0, 2047
@@ -426,7 +426,7 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64-NEXT:    andi a0, a0, 2047
 ; RV64-NEXT:    slli a0, a0, 11
 ; RV64-NEXT:    or a0, a1, a0
-; RV64-NEXT:    slli a1, s1, 22
+; RV64-NEXT:    slli a1, s2, 22
 ; RV64-NEXT:    sub a0, a0, a1
 ; RV64-NEXT:    sw a0, 0(s0)
 ; RV64-NEXT:    slli a0, a0, 31

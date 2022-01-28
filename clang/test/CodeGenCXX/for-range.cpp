@@ -40,7 +40,7 @@ extern B array[5];
 // CHECK-NEXT:    [[__BEGIN1:%.*]] = alloca %struct.B*, align 8
 // CHECK-NEXT:    [[__END1:%.*]] = alloca %struct.B*, align 8
 // CHECK-NEXT:    [[B:%.*]] = alloca [[STRUCT_B:%.*]], align 1
-// CHECK-NEXT:    call void @_ZN1AC1Ev(%struct.A* nonnull align 1 dereferenceable(1) [[A]])
+// CHECK-NEXT:    call void @_ZN1AC1Ev(%struct.A* noundef nonnull align 1 dereferenceable(1) [[A]])
 // CHECK-NEXT:    store [5 x %struct.B]* @array, [5 x %struct.B]** [[__RANGE1]], align 8
 // CHECK-NEXT:    store %struct.B* getelementptr inbounds ([5 x %struct.B], [5 x %struct.B]* @array, i64 0, i64 0), %struct.B** [[__BEGIN1]], align 8
 // CHECK-NEXT:    store %struct.B* getelementptr inbounds ([5 x %struct.B], [5 x %struct.B]* @array, i64 1, i64 0), %struct.B** [[__END1]], align 8
@@ -52,8 +52,8 @@ extern B array[5];
 // CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK:       for.body:
 // CHECK-NEXT:    [[TMP2:%.*]] = load %struct.B*, %struct.B** [[__BEGIN1]], align 8
-// CHECK-NEXT:    call void @_ZN1BC1ERKS_(%struct.B* nonnull align 1 dereferenceable(1) [[B]], %struct.B* nonnull align 1 dereferenceable(1) [[TMP2]])
-// CHECK-NEXT:    call void @_ZN1BD1Ev(%struct.B* nonnull align 1 dereferenceable(1) [[B]]) #[[ATTR3:[0-9]+]]
+// CHECK-NEXT:    call void @_ZN1BC1ERKS_(%struct.B* noundef nonnull align 1 dereferenceable(1) [[B]], %struct.B* noundef nonnull align 1 dereferenceable(1) [[TMP2]])
+// CHECK-NEXT:    call void @_ZN1BD1Ev(%struct.B* noundef nonnull align 1 dereferenceable(1) [[B]]) #[[ATTR3:[0-9]+]]
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:
 // CHECK-NEXT:    [[TMP3:%.*]] = load %struct.B*, %struct.B** [[__BEGIN1]], align 8
@@ -61,7 +61,7 @@ extern B array[5];
 // CHECK-NEXT:    store %struct.B* [[INCDEC_PTR]], %struct.B** [[__BEGIN1]], align 8
 // CHECK-NEXT:    br label [[FOR_COND]]
 // CHECK:       for.end:
-// CHECK-NEXT:    call void @_ZN1AD1Ev(%struct.A* nonnull align 1 dereferenceable(1) [[A]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @_ZN1AD1Ev(%struct.A* noundef nonnull align 1 dereferenceable(1) [[A]]) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 void for_array() {
@@ -78,14 +78,14 @@ void for_array() {
 // CHECK-NEXT:    [[__BEGIN1:%.*]] = alloca %struct.B*, align 8
 // CHECK-NEXT:    [[__END1:%.*]] = alloca %struct.B*, align 8
 // CHECK-NEXT:    [[B:%.*]] = alloca [[STRUCT_B:%.*]], align 1
-// CHECK-NEXT:    call void @_ZN1AC1Ev(%struct.A* nonnull align 1 dereferenceable(1) [[A]])
-// CHECK-NEXT:    call void @_ZN1CC1Ev(%struct.C* nonnull align 1 dereferenceable(1) [[REF_TMP]])
+// CHECK-NEXT:    call void @_ZN1AC1Ev(%struct.A* noundef nonnull align 1 dereferenceable(1) [[A]])
+// CHECK-NEXT:    call void @_ZN1CC1Ev(%struct.C* noundef nonnull align 1 dereferenceable(1) [[REF_TMP]])
 // CHECK-NEXT:    store %struct.C* [[REF_TMP]], %struct.C** [[__RANGE1]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load %struct.C*, %struct.C** [[__RANGE1]], align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call %struct.B* @_Z5beginR1C(%struct.C* nonnull align 1 dereferenceable(1) [[TMP0]])
+// CHECK-NEXT:    [[CALL:%.*]] = call noundef %struct.B* @_Z5beginR1C(%struct.C* noundef nonnull align 1 dereferenceable(1) [[TMP0]])
 // CHECK-NEXT:    store %struct.B* [[CALL]], %struct.B** [[__BEGIN1]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load %struct.C*, %struct.C** [[__RANGE1]], align 8
-// CHECK-NEXT:    [[CALL1:%.*]] = call %struct.B* @_Z3endR1C(%struct.C* nonnull align 1 dereferenceable(1) [[TMP1]])
+// CHECK-NEXT:    [[CALL1:%.*]] = call noundef %struct.B* @_Z3endR1C(%struct.C* noundef nonnull align 1 dereferenceable(1) [[TMP1]])
 // CHECK-NEXT:    store %struct.B* [[CALL1]], %struct.B** [[__END1]], align 8
 // CHECK-NEXT:    br label [[FOR_COND:%.*]]
 // CHECK:       for.cond:
@@ -94,12 +94,12 @@ void for_array() {
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ne %struct.B* [[TMP2]], [[TMP3]]
 // CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 // CHECK:       for.cond.cleanup:
-// CHECK-NEXT:    call void @_ZN1CD1Ev(%struct.C* nonnull align 1 dereferenceable(1) [[REF_TMP]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @_ZN1CD1Ev(%struct.C* noundef nonnull align 1 dereferenceable(1) [[REF_TMP]]) #[[ATTR3]]
 // CHECK-NEXT:    br label [[FOR_END:%.*]]
 // CHECK:       for.body:
 // CHECK-NEXT:    [[TMP4:%.*]] = load %struct.B*, %struct.B** [[__BEGIN1]], align 8
-// CHECK-NEXT:    call void @_ZN1BC1ERKS_(%struct.B* nonnull align 1 dereferenceable(1) [[B]], %struct.B* nonnull align 1 dereferenceable(1) [[TMP4]])
-// CHECK-NEXT:    call void @_ZN1BD1Ev(%struct.B* nonnull align 1 dereferenceable(1) [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @_ZN1BC1ERKS_(%struct.B* noundef nonnull align 1 dereferenceable(1) [[B]], %struct.B* noundef nonnull align 1 dereferenceable(1) [[TMP4]])
+// CHECK-NEXT:    call void @_ZN1BD1Ev(%struct.B* noundef nonnull align 1 dereferenceable(1) [[B]]) #[[ATTR3]]
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:
 // CHECK-NEXT:    [[TMP5:%.*]] = load %struct.B*, %struct.B** [[__BEGIN1]], align 8
@@ -107,7 +107,7 @@ void for_array() {
 // CHECK-NEXT:    store %struct.B* [[INCDEC_PTR]], %struct.B** [[__BEGIN1]], align 8
 // CHECK-NEXT:    br label [[FOR_COND]]
 // CHECK:       for.end:
-// CHECK-NEXT:    call void @_ZN1AD1Ev(%struct.A* nonnull align 1 dereferenceable(1) [[A]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @_ZN1AD1Ev(%struct.A* noundef nonnull align 1 dereferenceable(1) [[A]]) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 void for_range() {
@@ -124,14 +124,14 @@ void for_range() {
 // CHECK-NEXT:    [[__BEGIN1:%.*]] = alloca %struct.B*, align 8
 // CHECK-NEXT:    [[__END1:%.*]] = alloca %struct.B*, align 8
 // CHECK-NEXT:    [[B:%.*]] = alloca [[STRUCT_B:%.*]], align 1
-// CHECK-NEXT:    call void @_ZN1AC1Ev(%struct.A* nonnull align 1 dereferenceable(1) [[A]])
-// CHECK-NEXT:    call void @_ZN1DC1Ev(%struct.D* nonnull align 1 dereferenceable(1) [[REF_TMP]])
+// CHECK-NEXT:    call void @_ZN1AC1Ev(%struct.A* noundef nonnull align 1 dereferenceable(1) [[A]])
+// CHECK-NEXT:    call void @_ZN1DC1Ev(%struct.D* noundef nonnull align 1 dereferenceable(1) [[REF_TMP]])
 // CHECK-NEXT:    store %struct.D* [[REF_TMP]], %struct.D** [[__RANGE1]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load %struct.D*, %struct.D** [[__RANGE1]], align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call %struct.B* @_ZN1D5beginEv(%struct.D* nonnull align 1 dereferenceable(1) [[TMP0]])
+// CHECK-NEXT:    [[CALL:%.*]] = call noundef %struct.B* @_ZN1D5beginEv(%struct.D* noundef nonnull align 1 dereferenceable(1) [[TMP0]])
 // CHECK-NEXT:    store %struct.B* [[CALL]], %struct.B** [[__BEGIN1]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load %struct.D*, %struct.D** [[__RANGE1]], align 8
-// CHECK-NEXT:    [[CALL1:%.*]] = call %struct.B* @_ZN1D3endEv(%struct.D* nonnull align 1 dereferenceable(1) [[TMP1]])
+// CHECK-NEXT:    [[CALL1:%.*]] = call noundef %struct.B* @_ZN1D3endEv(%struct.D* noundef nonnull align 1 dereferenceable(1) [[TMP1]])
 // CHECK-NEXT:    store %struct.B* [[CALL1]], %struct.B** [[__END1]], align 8
 // CHECK-NEXT:    br label [[FOR_COND:%.*]]
 // CHECK:       for.cond:
@@ -140,12 +140,12 @@ void for_range() {
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ne %struct.B* [[TMP2]], [[TMP3]]
 // CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 // CHECK:       for.cond.cleanup:
-// CHECK-NEXT:    call void @_ZN1DD1Ev(%struct.D* nonnull align 1 dereferenceable(1) [[REF_TMP]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @_ZN1DD1Ev(%struct.D* noundef nonnull align 1 dereferenceable(1) [[REF_TMP]]) #[[ATTR3]]
 // CHECK-NEXT:    br label [[FOR_END:%.*]]
 // CHECK:       for.body:
 // CHECK-NEXT:    [[TMP4:%.*]] = load %struct.B*, %struct.B** [[__BEGIN1]], align 8
-// CHECK-NEXT:    call void @_ZN1BC1ERKS_(%struct.B* nonnull align 1 dereferenceable(1) [[B]], %struct.B* nonnull align 1 dereferenceable(1) [[TMP4]])
-// CHECK-NEXT:    call void @_ZN1BD1Ev(%struct.B* nonnull align 1 dereferenceable(1) [[B]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @_ZN1BC1ERKS_(%struct.B* noundef nonnull align 1 dereferenceable(1) [[B]], %struct.B* noundef nonnull align 1 dereferenceable(1) [[TMP4]])
+// CHECK-NEXT:    call void @_ZN1BD1Ev(%struct.B* noundef nonnull align 1 dereferenceable(1) [[B]]) #[[ATTR3]]
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:
 // CHECK-NEXT:    [[TMP5:%.*]] = load %struct.B*, %struct.B** [[__BEGIN1]], align 8
@@ -153,7 +153,7 @@ void for_range() {
 // CHECK-NEXT:    store %struct.B* [[INCDEC_PTR]], %struct.B** [[__BEGIN1]], align 8
 // CHECK-NEXT:    br label [[FOR_COND]]
 // CHECK:       for.end:
-// CHECK-NEXT:    call void @_ZN1AD1Ev(%struct.A* nonnull align 1 dereferenceable(1) [[A]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @_ZN1AD1Ev(%struct.A* noundef nonnull align 1 dereferenceable(1) [[A]]) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 void for_member_range() {

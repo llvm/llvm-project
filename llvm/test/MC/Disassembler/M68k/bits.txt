@@ -1,0 +1,4 @@
+# RUN: llvm-mc -disassemble -triple m68k %s | FileCheck %s
+
+# CHECK: btst #0, %d3
+0x08 0x03 0x00 0x00

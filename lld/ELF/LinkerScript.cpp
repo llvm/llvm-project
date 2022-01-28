@@ -19,7 +19,7 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
-#include "lld/Common/Memory.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -64,8 +64,8 @@ static StringRef getOutputSectionName(const InputSectionBase *s) {
     if (InputSectionBase *rel = isec->getRelocatedSection()) {
       OutputSection *out = rel->getOutputSection();
       if (s->type == SHT_RELA)
-        return saver.save(".rela" + out->name);
-      return saver.save(".rel" + out->name);
+        return saver().save(".rela" + out->name);
+      return saver().save(".rel" + out->name);
     }
   }
 
@@ -135,7 +135,7 @@ uint64_t ExprValue::getSectionOffset() const {
 
 OutputSection *LinkerScript::createOutputSection(StringRef name,
                                                  StringRef location) {
-  OutputSection *&secRef = nameToOutputSection[name];
+  OutputSection *&secRef = nameToOutputSection[CachedHashStringRef(name)];
   OutputSection *sec;
   if (secRef && secRef->location.empty()) {
     // There was a forward reference.
@@ -150,7 +150,7 @@ OutputSection *LinkerScript::createOutputSection(StringRef name,
 }
 
 OutputSection *LinkerScript::getOrCreateOutputSection(StringRef name) {
-  OutputSection *&cmdRef = nameToOutputSection[name];
+  OutputSection *&cmdRef = nameToOutputSection[CachedHashStringRef(name)];
   if (!cmdRef)
     cmdRef = make<OutputSection>(name, SHT_PROGBITS, 0);
   return cmdRef;
@@ -561,16 +561,8 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
 }
 
 void LinkerScript::discard(InputSectionBase &s) {
-  if (&s == in.shStrTab.get() || &s == mainPart->relrDyn.get())
+  if (&s == in.shStrTab.get())
     error("discarding " + s.name + " section is not allowed");
-
-  // You can discard .hash and .gnu.hash sections by linker scripts. Since
-  // they are synthesized sections, we need to handle them differently than
-  // other regular sections.
-  if (&s == mainPart->gnuHashTab)
-    mainPart->gnuHashTab = nullptr;
-  if (&s == mainPart->hashTab)
-    mainPart->hashTab = nullptr;
 
   s.markDead();
   s.parent = nullptr;
@@ -582,8 +574,9 @@ void LinkerScript::discardSynthetic(OutputSection &outCmd) {
   for (Partition &part : partitions) {
     if (!part.armExidx || !part.armExidx->isLive())
       continue;
-    std::vector<InputSectionBase *> secs(part.armExidx->exidxSections.begin(),
-                                         part.armExidx->exidxSections.end());
+    SmallVector<InputSectionBase *, 0> secs(
+        part.armExidx->exidxSections.begin(),
+        part.armExidx->exidxSections.end());
     for (SectionCommand *cmd : outCmd.commands)
       if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
         for (InputSectionBase *s : computeInputSections(isd, secs))
@@ -653,14 +646,16 @@ void LinkerScript::processSectionCommands() {
 
   // Process OVERWRITE_SECTIONS first so that it can overwrite the main script
   // or orphans.
-  DenseMap<StringRef, OutputSection *> map;
+  DenseMap<CachedHashStringRef, OutputSection *> map;
   size_t i = 0;
   for (OutputSection *osec : overwriteSections)
-    if (process(osec) && !map.try_emplace(osec->name, osec).second)
+    if (process(osec) &&
+        !map.try_emplace(CachedHashStringRef(osec->name), osec).second)
       warn("OVERWRITE_SECTIONS specifies duplicate " + osec->name);
   for (SectionCommand *&base : sectionCommands)
     if (auto *osec = dyn_cast<OutputSection>(base)) {
-      if (OutputSection *overwrite = map.lookup(osec->name)) {
+      if (OutputSection *overwrite =
+              map.lookup(CachedHashStringRef(osec->name))) {
         log(overwrite->location + " overwrites " + osec->name);
         overwrite->sectionIndex = i++;
         base = overwrite;

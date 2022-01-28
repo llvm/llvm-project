@@ -23,7 +23,6 @@
 #include "index/ProjectAware.h"
 #include "index/Serialization.h"
 #include "index/remote/Client.h"
-#include "refactor/Rename.h"
 #include "support/Path.h"
 #include "support/Shutdown.h"
 #include "support/ThreadCrashReporter.h"
@@ -294,6 +293,7 @@ RetiredFlag<bool> AsyncPreamble("async-preamble");
 RetiredFlag<bool> CollectMainFileRefs("collect-main-file-refs");
 RetiredFlag<bool> CrossFileRename("cross-file-rename");
 RetiredFlag<std::string> ClangTidyChecks("clang-tidy-checks");
+RetiredFlag<std::string> InlayHints("inlay-hints");
 
 opt<int> LimitResults{
     "limit-results",
@@ -324,15 +324,6 @@ opt<bool> FoldingRanges{
     cat(Features),
     desc("Enable preview of FoldingRanges feature"),
     init(false),
-    Hidden,
-};
-
-opt<bool> InlayHints{
-    "inlay-hints",
-    cat(Features),
-    desc("Enable InlayHints feature"),
-    init(ClangdLSPServer::Options().InlayHints),
-    // FIXME: allow inlayHints to be disabled in Config and remove this option.
     Hidden,
 };
 
@@ -501,6 +492,12 @@ opt<bool> EnableConfig{
     init(true),
 };
 
+opt<bool> UseDirtyHeaders{"use-dirty-headers", cat(Misc),
+                          desc("Use files open in the editor when parsing "
+                               "headers instead of reading from the disk"),
+                          Hidden,
+                          init(ClangdServer::Options().UseDirtyHeaders)};
+
 #if defined(__GLIBC__) && CLANGD_MALLOC_TRIM
 opt<bool> EnableMallocTrim{
     "malloc-trim",
@@ -602,7 +599,7 @@ loadExternalIndex(const Config::ExternalIndexSpec &External,
     auto NewIndex = std::make_unique<SwapIndex>(std::make_unique<MemIndex>());
     auto IndexLoadTask = [File = External.Location,
                           PlaceHolder = NewIndex.get()] {
-      if (auto Idx = loadIndex(File, /*UseDex=*/true))
+      if (auto Idx = loadIndex(File, SymbolOrigin::Static, /*UseDex=*/true))
         PlaceHolder->reset(std::move(Idx));
     };
     if (Tasks) {
@@ -884,7 +881,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
   Opts.AsyncThreadsCount = WorkerThreadsCount;
   Opts.FoldingRanges = FoldingRanges;
-  Opts.InlayHints = InlayHints;
   Opts.MemoryCleanup = getMemoryCleanupFunction();
 
   Opts.CodeComplete.IncludeIneligibleResults = IncludeIneligibleResults;
@@ -938,6 +934,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     ClangTidyOptProvider = combine(std::move(Providers));
     Opts.ClangTidyProvider = ClangTidyOptProvider;
   }
+  Opts.UseDirtyHeaders = UseDirtyHeaders;
   Opts.QueryDriverGlobs = std::move(QueryDriverGlobs);
   Opts.TweakFilter = [&](const Tweak &T) {
     if (T.hidden() && !HiddenFeatures)

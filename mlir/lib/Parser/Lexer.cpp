@@ -17,9 +17,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/SourceMgr.h"
-using namespace mlir;
 
-using llvm::SMLoc;
+using namespace mlir;
 
 // Returns true if 'c' is an allowable punctuation character: [$._-]
 // Returns false otherwise.
@@ -36,7 +35,7 @@ Lexer::Lexer(const llvm::SourceMgr &sourceMgr, MLIRContext *context)
 
 /// Encode the specified source location information into an attribute for
 /// attachment to the IR.
-Location Lexer::getEncodedSourceLocation(llvm::SMLoc loc) {
+Location Lexer::getEncodedSourceLocation(SMLoc loc) {
   auto &sourceMgr = getSourceMgr();
   unsigned mainFileID = sourceMgr.getMainFileID();
 

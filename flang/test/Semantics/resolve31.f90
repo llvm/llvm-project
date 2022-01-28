@@ -83,6 +83,8 @@ module m4
     class(*), allocatable :: typeStarField
     !ERROR: A sequence type data component must either be of an intrinsic type or a derived sequence type
     type(plainType) :: testField1
+    !Pointers are ok as an extension
+    type(plainType), pointer :: testField1p
     type(sequenceType) :: testField2
     procedure(real), pointer, nopass :: procField
   end type testType

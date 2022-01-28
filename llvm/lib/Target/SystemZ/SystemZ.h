@@ -20,6 +20,7 @@
 namespace llvm {
 class SystemZTargetMachine;
 class FunctionPass;
+class PassRegistry;
 
 namespace SystemZ {
 // Condition-code mask values.
@@ -196,6 +197,15 @@ FunctionPass *createSystemZLDCleanupPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZCopyPhysRegsPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZPostRewritePass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZTDCPass();
+
+void initializeSystemZElimComparePass(PassRegistry &);
+void initializeSystemZShortenInstPass(PassRegistry &);
+void initializeSystemZLongBranchPass(PassRegistry &);
+void initializeSystemZLDCleanupPass(PassRegistry &);
+void initializeSystemZCopyPhysRegsPass(PassRegistry &);
+void initializeSystemZPostRewritePass(PassRegistry &);
+void initializeSystemZTDCPassPass(PassRegistry &);
+
 } // end namespace llvm
 
 #endif

@@ -1054,12 +1054,12 @@ design choices:
 
 1.  MLIR makes use of extensive uniqued immutable data structures (affine
     expressions, types, etc are all immutable, uniqued, and immortal).
-2.  Constants are defined in per-function pools, instead of being globally
+2.  Constants are defined in per-operation pools, instead of being globally
     uniqued.
-3.  Functions themselves are not SSA values either, so they don't have the same
-    problem as constants.
-4.  FunctionPasses are copied (through their copy ctor) into one instance per
+3.  Functions, and other global-like operations, themselves are not SSA values
+    either, so they don't have the same problem as constants.
+4.  Passes are copied (through their copy ctor) into one instance per
     thread, avoiding sharing of local state across threads.
 
-This allows MLIR function passes to support efficient multithreaded compilation
+This allows MLIR passes to support efficient multithreaded compilation
 and code generation.

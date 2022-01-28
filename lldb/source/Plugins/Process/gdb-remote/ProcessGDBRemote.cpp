@@ -72,6 +72,7 @@
 #include <thread>
 
 #include "GDBRemoteRegisterContext.h"
+#include "GDBRemoteRegisterFallback.h"
 #include "Plugins/Platform/MacOSX/PlatformRemoteiOS.h"
 #include "Plugins/Process/Utility/GDBRemoteSignals.h"
 #include "Plugins/Process/Utility/InferiorCallPOSIX.h"
@@ -394,6 +395,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
   //     2 - If the target definition doesn't have any of the info from the
   //     target.xml (registers) then proceed to read the target.xml.
   //     3 - Fall back on the qRegisterInfo packets.
+  //     4 - Use hardcoded defaults if available.
 
   FileSpec target_definition_fspec =
       GetGlobalPluginProperties().GetTargetDefinitionFile();
@@ -507,6 +509,9 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
     }
   }
 
+  if (registers.empty())
+    registers = GetFallbackRegisters(arch_to_use);
+
   AddRemoteRegisters(registers, arch_to_use);
 }
 
@@ -524,7 +529,7 @@ Status ProcessGDBRemote::WillAttachToProcessWithName(const char *process_name,
 }
 
 Status ProcessGDBRemote::DoConnectRemote(llvm::StringRef remote_url) {
-  Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
+  Log *log = GetLog(GDBRLog::Process);
 
   Status error(WillLaunchOrAttach());
   if (error.Fail())
@@ -601,8 +606,7 @@ Status ProcessGDBRemote::DoConnectRemote(llvm::StringRef remote_url) {
                 ReadModuleFromMemory(FileSpec(namebuf), standalone_value);
           }
 
-          Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(
-              LIBLLDB_LOG_DYNAMIC_LOADER));
+          Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
           if (module_sp.get()) {
             target.GetImages().AppendIfNeeded(module_sp, false);
 

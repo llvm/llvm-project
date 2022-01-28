@@ -4,10 +4,10 @@ declare void @foo(i16*, i16*, i8*)
 
 define void @test1(i16 %x) {
 ; CHECK-LABEL: test1:
+; Frame setup, with frame pointer
+; CHECK: in r28, 61
+; CHECK: in r29, 62
 ; CHECK: out 61, r28
-; SP copy
-; CHECK-NEXT: in [[SPCOPY1:r[0-9]+]], 61
-; CHECK-NEXT: in [[SPCOPY2:r[0-9]+]], 62
 ; allocate first dynalloca
 ; CHECK: in {{.*}}, 61
 ; CHECK: in {{.*}}, 62
@@ -26,9 +26,9 @@ define void @test1(i16 %x) {
 ; Test SP restore
 ; CHECK: in r0, 63
 ; CHECK-NEXT: cli
-; CHECK-NEXT: out 62, [[SPCOPY2]]
+; CHECK-NEXT: out 62, r29
 ; CHECK-NEXT: out 63, r0
-; CHECK-NEXT: out 61, [[SPCOPY1]]
+; CHECK-NEXT: out 61, r28
   %a = alloca [8 x i16]
   %vla = alloca i16, i16 %x
   %add = shl nsw i16 %x, 1
@@ -51,8 +51,8 @@ declare void @foo2(i16*, i64, i64, i64)
 ; after the call frame is restored and not before.
 define void @dynalloca2(i16 %x) {
 ; CHECK-LABEL: dynalloca2:
-; CHECK: in [[SPCOPY1:r[0-9]+]], 61
-; CHECK: in [[SPCOPY2:r[0-9]+]], 62
+; CHECK: in r28, 61
+; CHECK: in r29, 62
 ; Allocate stack space for call
 ; CHECK: in {{.*}}, 61
 ; CHECK: in {{.*}}, 62
@@ -87,10 +87,40 @@ define void @dynalloca2(i16 %x) {
 ; SP restore
 ; CHECK: in r0, 63
 ; CHECK-NEXT: cli
-; CHECK-NEXT: out 62, r7
+; CHECK-NEXT: out 62, r29
 ; CHECK-NEXT: out 63, r0
-; CHECK-NEXT: out 61, r6
+; CHECK-NEXT: out 61, r28
   %vla = alloca i16, i16 %x
   call void @foo2(i16* %vla, i64 0, i64 0, i64 0)
+  ret void
+}
+
+; Test a function with a variable sized object but without any other need for a
+; frame pointer.
+; Allocas that are not placed in the entry block are considered variable sized
+; (they could be in a loop).
+define void @dynalloca3() {
+; CHECK-LABEL: dynalloca3:
+; Read frame pointer
+; CHECK:      in r28, 61
+; CHECK-NEXT: in r29, 62
+; Allocate memory for the alloca
+; CHECK-NEXT: in r24, 61
+; CHECK-NEXT: in r25, 62
+; CHECK-NEXT: sbiw r24, 8
+; CHECK-NEXT: in r0, 63
+; CHECK-NEXT: cli
+; CHECK-NEXT: out 62, r25
+; CHECK-NEXT: out 63, r0
+; CHECK-NEXT: out 61, r24
+; Restore frame pointer
+; CHECK-NEXT: in r0, 63
+; CHECK-NEXT: cli
+; CHECK-NEXT: out 62, r29
+; CHECK-NEXT: out 63, r0
+; CHECK-NEXT: out 61, r28
+  br label %1
+1:
+  %a = alloca i64
   ret void
 }

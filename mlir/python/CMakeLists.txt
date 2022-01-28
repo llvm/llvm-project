@@ -126,6 +126,16 @@ declare_mlir_python_sources(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/PDLOps.td
+  SOURCES
+    dialects/pdl.py
+    dialects/_pdl_ops_ext.py
+    _mlir_libs/_mlir/dialects/pdl.pyi
+  DIALECT_NAME pdl)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/SCFOps.td
   SOURCES
     dialects/scf.py
@@ -243,6 +253,19 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Pybind
     MLIRCAPIQuant
 )
 
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.PDL.Pybind
+  MODULE_NAME _mlirDialectsPDL
+  ADD_TO_PARENT MLIRPythonSources.Dialects.pdl
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    DialectPDL.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPIPDL
+)
+
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.SparseTensor.Pybind
   MODULE_NAME _mlirDialectsSparseTensor
   ADD_TO_PARENT MLIRPythonSources.Dialects.sparse_tensor
@@ -292,17 +315,20 @@ declare_mlir_python_extension(MLIRPythonExtension.Conversions
   MLIRCAPIConversion
 )
 
-declare_mlir_python_extension(MLIRPythonExtension.ExecutionEngine
-  MODULE_NAME _mlirExecutionEngine
-  ADD_TO_PARENT MLIRPythonSources.ExecutionEngine
-  ROOT_DIR "${PYTHON_SOURCE_DIR}"
-  SOURCES
-    ExecutionEngineModule.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
-  EMBED_CAPI_LINK_LIBS
-    MLIRCAPIExecutionEngine
-)
+# Only enable the ExecutionEngine if the native target is configured in.
+if(TARGET ${LLVM_NATIVE_ARCH})
+  declare_mlir_python_extension(MLIRPythonExtension.ExecutionEngine
+    MODULE_NAME _mlirExecutionEngine
+    ADD_TO_PARENT MLIRPythonSources.ExecutionEngine
+    ROOT_DIR "${PYTHON_SOURCE_DIR}"
+    SOURCES
+      ExecutionEngineModule.cpp
+    PRIVATE_LINK_LIBS
+      LLVMSupport
+    EMBED_CAPI_LINK_LIBS
+      MLIRCAPIExecutionEngine
+  )
+endif()
 
 declare_mlir_python_extension(MLIRPythonExtension.GPUDialectPasses
   MODULE_NAME _mlirGPUPasses

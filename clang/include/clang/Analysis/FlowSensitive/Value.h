@@ -17,6 +17,8 @@
 #include "clang/AST/Decl.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include <cassert>
 #include <utility>
 
@@ -26,7 +28,7 @@ namespace dataflow {
 /// Base class for all values computed by abstract interpretation.
 class Value {
 public:
-  enum class Kind { Integer, Reference, Pointer, Struct };
+  enum class Kind { Bool, Integer, Reference, Pointer, Struct };
 
   explicit Value(Kind ValKind) : ValKind(ValKind) {}
 
@@ -36,6 +38,14 @@ public:
 
 private:
   Kind ValKind;
+};
+
+/// Models a boolean.
+class BoolValue : public Value {
+public:
+  explicit BoolValue() : Value(Kind::Bool) {}
+
+  static bool classof(const Value *Val) { return Val->getKind() == Kind::Bool; }
 };
 
 /// Models an integer.
@@ -100,15 +110,32 @@ public:
     return Val->getKind() == Kind::Struct;
   }
 
-  /// Returns the child value for `D`.
+  /// Returns the child value that is assigned for `D`.
   Value &getChild(const ValueDecl &D) const {
     auto It = Children.find(&D);
     assert(It != Children.end());
     return *It->second;
   }
 
+  /// Assigns `Val` as the child value for `D`.
+  void setChild(const ValueDecl &D, Value &Val) { Children[&D] = &Val; }
+
+  /// Returns the value of the synthetic property with the given `Name` or null
+  /// if the property isn't assigned a value.
+  Value *getProperty(llvm::StringRef Name) const {
+    auto It = Properties.find(Name);
+    return It == Properties.end() ? nullptr : It->second;
+  }
+
+  /// Assigns `Val` as the value of the synthetic property with the given
+  /// `Name`.
+  void setProperty(llvm::StringRef Name, Value &Val) {
+    Properties.insert_or_assign(Name, &Val);
+  }
+
 private:
-  const llvm::DenseMap<const ValueDecl *, Value *> Children;
+  llvm::DenseMap<const ValueDecl *, Value *> Children;
+  llvm::StringMap<Value *> Properties;
 };
 
 } // namespace dataflow

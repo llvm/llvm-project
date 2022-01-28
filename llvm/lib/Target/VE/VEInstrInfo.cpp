@@ -248,7 +248,7 @@ unsigned VEInstrInfo::insertBranch(MachineBasicBlock &MBB,
   const TargetRegisterInfo *TRI = &getRegisterInfo();
   MachineFunction *MF = MBB.getParent();
   const MachineRegisterInfo &MRI = MF->getRegInfo();
-  unsigned Reg = Cond[2].getReg();
+  Register Reg = Cond[2].getReg();
   if (IsIntegerCC(Cond[0].getImm())) {
     if (TRI->getRegSizeInBits(Reg, MRI) == 32) {
       opc[0] = VE::BRCFWir;

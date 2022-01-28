@@ -2006,6 +2006,36 @@ TEST(CompletionTest, ScopeOfClassFieldInConstructorInitializer) {
               UnorderedElementsAre(AllOf(Scope("ns::X::"), Named("x_"))));
 }
 
+// Like other class members, constructor init lists have to parse what's below,
+// after the completion point.
+// But recovering from an incomplete constructor init list is particularly
+// tricky because the bulk of the list is not surrounded by brackets.
+TEST(CompletionTest, ConstructorInitListIncomplete) {
+  auto Results = completions(
+      R"cpp(
+        namespace ns {
+          struct X {
+            X() : x^
+            int xyz_;
+          };
+        }
+      )cpp");
+  EXPECT_THAT(Results.Completions, ElementsAre(Named("xyz_")));
+
+  Results = completions(
+      R"cpp(
+        int foo();
+
+        namespace ns {
+          struct X {
+            X() : xyz_(fo^
+            int xyz_;
+          };
+        }
+      )cpp");
+  EXPECT_THAT(Results.Completions, ElementsAre(Named("foo")));
+}
+
 TEST(CompletionTest, CodeCompletionContext) {
   auto Results = completions(
       R"cpp(
@@ -2444,6 +2474,26 @@ TEST(CompletionTest, OverridesNonIdentName) {
   )cpp");
 }
 
+TEST(CompletionTest, NoCrashOnMissingNewLineAtEOF) {
+  auto FooCpp = testPath("foo.cpp");
+
+  MockCompilationDatabase CDB;
+  MockFS FS;
+  Annotations F("#pragma ^ // no new line");
+  FS.Files[FooCpp] = F.code().str();
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
+  runAddDocument(Server, FooCpp, F.code());
+  // Run completion outside the file range.
+  EXPECT_THAT(cantFail(runCodeComplete(Server, FooCpp, F.point(),
+                                       clangd::CodeCompleteOptions()))
+                  .Completions,
+              IsEmpty());
+  EXPECT_THAT(cantFail(runSignatureHelp(Server, FooCpp, F.point(),
+                                        MarkupKind::PlainText))
+                  .signatures,
+              IsEmpty());
+}
+
 TEST(GuessCompletionPrefix, Filters) {
   for (llvm::StringRef Case : {
            "[[scope::]][[ident]]^",
@@ -2650,11 +2700,34 @@ TEST(SignatureHelpTest, InsideArgument) {
 TEST(SignatureHelpTest, ConstructorInitializeFields) {
   {
     const auto Results = signatures(R"cpp(
-      struct A {
-        A(int);
-      };
+      struct A { A(int); };
       struct B {
         B() : a_elem(^) {}
+        A a_elem;
+      };
+    )cpp");
+    EXPECT_THAT(Results.signatures,
+                UnorderedElementsAre(Sig("A([[int]])"), Sig("A([[A &&]])"),
+                                     Sig("A([[const A &]])")));
+  }
+  {
+    const auto Results = signatures(R"cpp(
+      struct A { A(int); };
+      struct B {
+        B() : a_elem(^
+        A a_elem;
+      };
+    )cpp");
+    // FIXME: currently the parser skips over the decl of a_elem as part of the
+    // (broken) init list, so we don't get signatures for the first member.
+    EXPECT_THAT(Results.signatures, IsEmpty());
+  }
+  {
+    const auto Results = signatures(R"cpp(
+      struct A { A(int); };
+      struct B {
+        B() : a_elem(^
+        int dummy_elem;
         A a_elem;
       };
     )cpp");

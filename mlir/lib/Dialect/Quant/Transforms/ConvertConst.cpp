@@ -12,7 +12,6 @@
 #include "mlir/Dialect/Quant/QuantOps.h"
 #include "mlir/Dialect/Quant/QuantizeUtils.h"
 #include "mlir/Dialect/Quant/UniformSupport.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -22,7 +21,7 @@ using namespace mlir::quant;
 
 namespace {
 struct ConvertConstPass : public QuantConvertConstBase<ConvertConstPass> {
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 struct QuantizedConstRewrite : public OpRewritePattern<QuantizeCastOp> {
@@ -91,9 +90,9 @@ QuantizedConstRewrite::matchAndRewrite(QuantizeCastOp qbarrier,
   return success();
 }
 
-void ConvertConstPass::runOnFunction() {
+void ConvertConstPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
-  auto func = getFunction();
+  auto func = getOperation();
   auto *context = &getContext();
   patterns.add<QuantizedConstRewrite>(context);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));

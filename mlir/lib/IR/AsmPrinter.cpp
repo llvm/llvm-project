@@ -143,8 +143,8 @@ struct AsmPrinterOptions {
 
   llvm::cl::opt<bool> printLocalScopeOpt{
       "mlir-print-local-scope", llvm::cl::init(false),
-      llvm::cl::desc("Print assuming in local scope by default"),
-      llvm::cl::Hidden};
+      llvm::cl::desc("Print with local scope and inline information (eliding "
+                     "aliases for attributes, types, and locations")};
 };
 } // namespace
 
@@ -797,8 +797,7 @@ public:
   /// A sentinel value used for values with names set.
   enum : unsigned { NameSentinel = ~0U };
 
-  SSANameState(Operation *op, const OpPrintingFlags &printerFlags,
-               DialectInterfaceCollection<OpAsmDialectInterface> &interfaces);
+  SSANameState(Operation *op, const OpPrintingFlags &printerFlags);
 
   /// Print the SSA identifier for the given value to 'stream'. If
   /// 'printResultNo' is true, it also presents the result number ('#' number)
@@ -866,15 +865,12 @@ private:
   /// These are the printing flags.  They control, eg., whether to print in
   /// generic form.
   OpPrintingFlags printerFlags;
-
-  DialectInterfaceCollection<OpAsmDialectInterface> &interfaces;
 };
 } // namespace
 
 SSANameState::SSANameState(
-    Operation *op, const OpPrintingFlags &printerFlags,
-    DialectInterfaceCollection<OpAsmDialectInterface> &interfaces)
-    : printerFlags(printerFlags), interfaces(interfaces) {
+    Operation *op, const OpPrintingFlags &printerFlags)
+    : printerFlags(printerFlags) {
   llvm::SaveAndRestore<unsigned> valueIDSaver(nextValueID);
   llvm::SaveAndRestore<unsigned> argumentIDSaver(nextArgumentID);
   llvm::SaveAndRestore<unsigned> conflictIDSaver(nextConflictID);
@@ -1071,8 +1067,6 @@ void SSANameState::numberValuesInOp(Operation &op) {
   if (!printerFlags.shouldPrintGenericOpForm()) {
     if (OpAsmOpInterface asmInterface = dyn_cast<OpAsmOpInterface>(&op))
       asmInterface.getAsmResultNames(setResultNameFn);
-    else if (auto *asmInterface = interfaces.getInterfaceFor(op.getDialect()))
-      asmInterface->getAsmResultNames(&op, setResultNameFn);
   }
 
   // If the first result wasn't numbered, give it a default number.
@@ -1172,7 +1166,7 @@ class AsmStateImpl {
 public:
   explicit AsmStateImpl(Operation *op, const OpPrintingFlags &printerFlags,
                         AsmState::LocationMap *locationMap)
-      : interfaces(op->getContext()), nameState(op, printerFlags, interfaces),
+      : interfaces(op->getContext()), nameState(op, printerFlags),
         printerFlags(printerFlags), locationMap(locationMap) {}
 
   /// Initialize the alias state to enable the printing of aliases.
@@ -1607,7 +1601,7 @@ static void printSymbolReference(StringRef symbolRef, raw_ostream &os) {
 // accept the string "elided". The first string must be a registered dialect
 // name and the latter must be a hex constant.
 static void printElidedElementsAttr(raw_ostream &os) {
-  os << R"(opaque<"_", "0xDEADBEEF">)";
+  os << R"(opaque<"elided_large_const", "0xDEADBEEF">)";
 }
 
 LogicalResult AsmPrinter::Impl::printAlias(Attribute attr) {
@@ -2653,7 +2647,8 @@ void OperationPrinter::print(Block *block, bool printBlockArgs,
     if (!block->getParent()) {
       os << "  // block is not in a region!";
     } else if (block->hasNoPredecessors()) {
-      os << "  // no predecessors";
+      if (!block->isEntryBlock())
+        os << "  // no predecessors";
     } else if (auto *pred = block->getSinglePredecessor()) {
       os << "  // pred: ";
       printBlockName(pred);
@@ -2716,7 +2711,7 @@ void OperationPrinter::printSuccessorAndUseList(Block *successor,
 void OperationPrinter::printRegion(Region &region, bool printEntryBlockArgs,
                                    bool printBlockTerminators,
                                    bool printEmptyBlock) {
-  os << " {" << newLine;
+  os << "{" << newLine;
   if (!region.empty()) {
     auto restoreDefaultDialect =
         llvm::make_scope_exit([&]() { defaultDialectStack.pop_back(); });

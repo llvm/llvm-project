@@ -25,7 +25,7 @@ void target_maps_parallel_integer(int a){
   }
 }
 
-// CK1-DEVICE: {{.*}}void @__omp_offloading_{{.*}}(i32* nonnull align 4 dereferenceable(4){{.*}}
+// CK1-DEVICE: {{.*}}void @__omp_offloading_{{.*}}(i32* noundef nonnull align 4 dereferenceable(4){{.*}}
 
 // CK1: {{.*}}void {{.*}}target_maps_parallel_integer{{.*}} {
 

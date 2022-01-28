@@ -81,31 +81,31 @@ s_waitcnt vmcnt(9)
 // GCN: s_waitcnt vmcnt(9) ; encoding: [0x79,0x0f,0x8c,0xbf]
 
 s_waitcnt vmcnt(15)
-// GCN: s_waitcnt ; encoding: [0x7f,0x0f,0x8c,0xbf]
+// GCN: s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15) ; encoding: [0x7f,0x0f,0x8c,0xbf]
 
 s_waitcnt vmcnt_sat(9)
 // GCN: s_waitcnt vmcnt(9) ; encoding: [0x79,0x0f,0x8c,0xbf]
 
 s_waitcnt vmcnt_sat(15)
-// GCN: s_waitcnt ; encoding: [0x7f,0x0f,0x8c,0xbf]
+// GCN: s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15) ; encoding: [0x7f,0x0f,0x8c,0xbf]
 
 s_waitcnt vmcnt_sat(16)
-// GCN: s_waitcnt ; encoding: [0x7f,0x0f,0x8c,0xbf]
+// GCN: s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15) ; encoding: [0x7f,0x0f,0x8c,0xbf]
 
 s_waitcnt expcnt(2)
 // GCN: s_waitcnt expcnt(2) ; encoding: [0x2f,0x0f,0x8c,0xbf]
 
 s_waitcnt expcnt(7)
-// GCN: s_waitcnt ; encoding: [0x7f,0x0f,0x8c,0xbf]
+// GCN: s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15) ; encoding: [0x7f,0x0f,0x8c,0xbf]
 
 s_waitcnt expcnt_sat(2)
 // GCN: s_waitcnt expcnt(2) ; encoding: [0x2f,0x0f,0x8c,0xbf]
 
 s_waitcnt expcnt_sat(7)
-// GCN: s_waitcnt ; encoding: [0x7f,0x0f,0x8c,0xbf]
+// GCN: s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15) ; encoding: [0x7f,0x0f,0x8c,0xbf]
 
 s_waitcnt expcnt_sat(0xFFFF0000)
-// GCN: s_waitcnt ; encoding: [0x7f,0x0f,0x8c,0xbf]
+// GCN: s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15) ; encoding: [0x7f,0x0f,0x8c,0xbf]
 
 s_waitcnt lgkmcnt(3)
 // GCN: s_waitcnt lgkmcnt(3) ; encoding: [0x7f,0x03,0x8c,0xbf]
@@ -114,7 +114,7 @@ s_waitcnt lgkmcnt(9)
 // GCN: s_waitcnt lgkmcnt(9) ; encoding: [0x7f,0x09,0x8c,0xbf]
 
 s_waitcnt lgkmcnt(15)
-// GCN: s_waitcnt ; encoding: [0x7f,0x0f,0x8c,0xbf]
+// GCN: s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15) ; encoding: [0x7f,0x0f,0x8c,0xbf]
 
 s_waitcnt vmcnt(0), expcnt(0)
 // GCN: s_waitcnt vmcnt(0) expcnt(0) ; encoding: [0x00,0x0f,0x8c,0xbf]
@@ -126,10 +126,10 @@ s_waitcnt lgkmcnt_sat(9)
 // GCN: s_waitcnt lgkmcnt(9) ; encoding: [0x7f,0x09,0x8c,0xbf]
 
 s_waitcnt lgkmcnt_sat(15)
-// GCN: s_waitcnt ; encoding: [0x7f,0x0f,0x8c,0xbf]
+// GCN: s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15) ; encoding: [0x7f,0x0f,0x8c,0xbf]
 
 s_waitcnt lgkmcnt_sat(16)
-// GCN: s_waitcnt ; encoding: [0x7f,0x0f,0x8c,0xbf]
+// GCN: s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15) ; encoding: [0x7f,0x0f,0x8c,0xbf]
 
 x=1
 s_waitcnt lgkmcnt_sat(x+1)

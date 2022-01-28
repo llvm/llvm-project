@@ -593,7 +593,7 @@ namespace {
     SDValue MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL);
     SDValue MatchLoadCombine(SDNode *N);
     SDValue mergeTruncStores(StoreSDNode *N);
-    SDValue ReduceLoadWidth(SDNode *N);
+    SDValue reduceLoadWidth(SDNode *N);
     SDValue ReduceLoadOpStoreWidth(SDNode *N);
     SDValue splitMergedValStore(StoreSDNode *ST);
     SDValue TransformFPLoadStorePair(SDNode *N);
@@ -1070,7 +1070,7 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
         return DAG.getNode(Opc, DL, VT, N00, OpNode);
       return SDValue();
     }
-    if (N0.hasOneUse()) {
+    if (TLI.isReassocProfitable(DAG, N0, N1)) {
       // Reassociate: (op (op x, c1), y) -> (op (op x, y), c1)
       //              iff (op x, c1) has one use
       if (SDValue OpNode = DAG.getNode(Opc, SDLoc(N0), VT, N00, N1))
@@ -3058,9 +3058,8 @@ static SDValue combineADDCARRYDiamond(DAGCombiner &Combiner, SelectionDAG &DAG,
 //
 // Our goal is to identify A, B, and CarryIn and produce ADDCARRY/SUBCARRY with
 // a single path for carry/borrow out propagation:
-static SDValue combineCarryDiamond(DAGCombiner &Combiner, SelectionDAG &DAG,
-                                   const TargetLowering &TLI, SDValue Carry0,
-                                   SDValue Carry1, SDNode *N) {
+static SDValue combineCarryDiamond(SelectionDAG &DAG, const TargetLowering &TLI,
+                                   SDValue Carry0, SDValue Carry1, SDNode *N) {
   if (Carry0.getResNo() != 1 || Carry1.getResNo() != 1)
     return SDValue();
   unsigned Opcode = Carry0.getOpcode();
@@ -4471,15 +4470,15 @@ SDValue DAGCombiner::visitMULHS(SDNode *N) {
       return FoldedVOp;
 
     // fold (mulhs x, 0) -> 0
-    // do not return N0/N1, because undef node may exist.
-    if (ISD::isConstantSplatVectorAllZeros(N0.getNode()) ||
-        ISD::isConstantSplatVectorAllZeros(N1.getNode()))
+    // do not return N1, because undef node may exist.
+    if (ISD::isConstantSplatVectorAllZeros(N1.getNode()))
       return DAG.getConstant(0, DL, VT);
   }
 
   // fold (mulhs x, 0) -> 0
   if (isNullConstant(N1))
     return N1;
+
   // fold (mulhs x, 1) -> (sra x, size(x)-1)
   if (isOneConstant(N1))
     return DAG.getNode(ISD::SRA, DL, N0.getValueType(), N0,
@@ -4531,18 +4530,19 @@ SDValue DAGCombiner::visitMULHU(SDNode *N) {
       return FoldedVOp;
 
     // fold (mulhu x, 0) -> 0
-    // do not return N0/N1, because undef node may exist.
-    if (ISD::isConstantSplatVectorAllZeros(N0.getNode()) ||
-        ISD::isConstantSplatVectorAllZeros(N1.getNode()))
+    // do not return N1, because undef node may exist.
+    if (ISD::isConstantSplatVectorAllZeros(N1.getNode()))
       return DAG.getConstant(0, DL, VT);
   }
 
   // fold (mulhu x, 0) -> 0
   if (isNullConstant(N1))
     return N1;
+
   // fold (mulhu x, 1) -> 0
   if (isOneConstant(N1))
     return DAG.getConstant(0, DL, N0.getValueType());
+
   // fold (mulhu x, undef) -> 0
   if (N0.isUndef() || N1.isUndef())
     return DAG.getConstant(0, DL, VT);
@@ -4892,6 +4892,42 @@ static SDValue PerformMinMaxFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
                   : DAG.getSExtOrTrunc(Sat, DL, N2->getValueType(0));
 }
 
+static SDValue PerformUMinFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
+                                         SDValue N3, ISD::CondCode CC,
+                                         SelectionDAG &DAG) {
+  // We are looking for UMIN(FPTOUI(X), (2^n)-1), which may have come via a
+  // select/vselect/select_cc. The two operands pairs for the select (N2/N3) may
+  // be truncated versions of the the setcc (N0/N1).
+  if ((N0 != N2 &&
+       (N2.getOpcode() != ISD::TRUNCATE || N0 != N2.getOperand(0))) ||
+      N0.getOpcode() != ISD::FP_TO_UINT || CC != ISD::SETULT)
+    return SDValue();
+  ConstantSDNode *N1C = isConstOrConstSplat(N1);
+  ConstantSDNode *N3C = isConstOrConstSplat(N3);
+  if (!N1C || !N3C)
+    return SDValue();
+  const APInt &C1 = N1C->getAPIntValue();
+  const APInt &C3 = N3C->getAPIntValue();
+  if (!(C1 + 1).isPowerOf2() || C1.getBitWidth() < C3.getBitWidth() ||
+      C1 != C3.zextOrSelf(C1.getBitWidth()))
+    return SDValue();
+
+  unsigned BW = (C1 + 1).exactLogBase2();
+  EVT FPVT = N0.getOperand(0).getValueType();
+  EVT NewVT = EVT::getIntegerVT(*DAG.getContext(), BW);
+  if (FPVT.isVector())
+    NewVT = EVT::getVectorVT(*DAG.getContext(), NewVT,
+                             FPVT.getVectorElementCount());
+  if (!DAG.getTargetLoweringInfo().shouldConvertFpToSat(ISD::FP_TO_UINT_SAT,
+                                                        FPVT, NewVT))
+    return SDValue();
+
+  SDValue Sat =
+      DAG.getNode(ISD::FP_TO_UINT_SAT, SDLoc(N0), NewVT, N0.getOperand(0),
+                  DAG.getValueType(NewVT.getScalarType()));
+  return DAG.getZExtOrTrunc(Sat, SDLoc(N0), N3.getValueType());
+}
+
 SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -4933,6 +4969,9 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   if (Opcode == ISD::SMIN || Opcode == ISD::SMAX)
     if (SDValue S = PerformMinMaxFpToSatCombine(
             N0, N1, N0, N1, Opcode == ISD::SMIN ? ISD::SETLT : ISD::SETGT, DAG))
+      return S;
+  if (Opcode == ISD::UMIN)
+    if (SDValue S = PerformUMinFpToSatCombine(N0, N1, N0, N1, ISD::SETULT, DAG))
       return S;
 
   // Simplify the operands using demanded-bits information.
@@ -5491,6 +5530,8 @@ bool DAGCombiner::SearchForAndLoads(SDNode *N,
 
     // Some constants may need fixing up later if they are too large.
     if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
+      if (Mask->getValueType(0) != C->getValueType(0))
+        return false;
       if ((N->getOpcode() == ISD::OR || N->getOpcode() == ISD::XOR) &&
           (Mask->getAPIntValue() & C->getAPIntValue()) != C->getAPIntValue())
         NodesWithConsts.insert(N);
@@ -5524,15 +5565,24 @@ bool DAGCombiner::SearchForAndLoads(SDNode *N,
     case ISD::AssertZext: {
       unsigned ActiveBits = Mask->getAPIntValue().countTrailingOnes();
       EVT ExtVT = EVT::getIntegerVT(*DAG.getContext(), ActiveBits);
-      EVT VT = Op.getOpcode() == ISD::AssertZext ?
-        cast<VTSDNode>(Op.getOperand(1))->getVT() :
-        Op.getOperand(0).getValueType();
+      EVT VT = Op.getOpcode() == ISD::AssertZext
+                   ? cast<VTSDNode>(Op.getOperand(1))->getVT()
+                   : Op.getOperand(0).getValueType();
 
       // We can accept extending nodes if the mask is wider or an equal
       // width to the original type.
       if (ExtVT.bitsGE(VT))
         continue;
       break;
+    }
+    case ISD::ANY_EXTEND: {
+      unsigned ActiveBits = Mask->getAPIntValue().countTrailingOnes();
+      EVT ExtVT = EVT::getIntegerVT(*DAG.getContext(), ActiveBits);
+      EVT VT = Op.getOperand(0).getValueType();
+      if (ExtVT.bitsGE(VT))
+        break;
+      // Fallthrough to searching for nodes from the operands of the extend.
+      LLVM_FALLTHROUGH;
     }
     case ISD::OR:
     case ISD::XOR:
@@ -5593,12 +5643,14 @@ bool DAGCombiner::BackwardsPropagateMask(SDNode *N) {
     // masking.
     if (FixupNode) {
       LLVM_DEBUG(dbgs() << "First, need to fix up: "; FixupNode->dump());
-      SDValue And = DAG.getNode(ISD::AND, SDLoc(FixupNode),
-                                FixupNode->getValueType(0),
-                                SDValue(FixupNode, 0), MaskOp);
+      SDValue MaskOpT = DAG.getZExtOrTrunc(MaskOp, SDLoc(FixupNode),
+                                           FixupNode->getValueType(0));
+      SDValue And =
+          DAG.getNode(ISD::AND, SDLoc(FixupNode), FixupNode->getValueType(0),
+                      SDValue(FixupNode, 0), MaskOpT);
       DAG.ReplaceAllUsesOfValueWith(SDValue(FixupNode, 0), And);
       if (And.getOpcode() == ISD ::AND)
-        DAG.UpdateNodeOperands(And.getNode(), SDValue(FixupNode, 0), MaskOp);
+        DAG.UpdateNodeOperands(And.getNode(), SDValue(FixupNode, 0), MaskOpT);
     }
 
     // Narrow any constants that need it.
@@ -5607,10 +5659,12 @@ bool DAGCombiner::BackwardsPropagateMask(SDNode *N) {
       SDValue Op1 = LogicN->getOperand(1);
 
       if (isa<ConstantSDNode>(Op0))
-          std::swap(Op0, Op1);
+        std::swap(Op0, Op1);
 
-      SDValue And = DAG.getNode(ISD::AND, SDLoc(Op1), Op1.getValueType(),
-                                Op1, MaskOp);
+      SDValue MaskOpT =
+          DAG.getZExtOrTrunc(MaskOp, SDLoc(Op1), Op1.getValueType());
+      SDValue And =
+          DAG.getNode(ISD::AND, SDLoc(Op1), Op1.getValueType(), Op1, MaskOpT);
 
       DAG.UpdateNodeOperands(LogicN, Op0, And);
     }
@@ -5618,13 +5672,15 @@ bool DAGCombiner::BackwardsPropagateMask(SDNode *N) {
     // Create narrow loads.
     for (auto *Load : Loads) {
       LLVM_DEBUG(dbgs() << "Propagate AND back to: "; Load->dump());
+      SDValue MaskOpT =
+          DAG.getZExtOrTrunc(MaskOp, SDLoc(Load), Load->getValueType(0));
       SDValue And = DAG.getNode(ISD::AND, SDLoc(Load), Load->getValueType(0),
-                                SDValue(Load, 0), MaskOp);
+                                SDValue(Load, 0), MaskOpT);
       DAG.ReplaceAllUsesOfValueWith(SDValue(Load, 0), And);
       if (And.getOpcode() == ISD ::AND)
         And = SDValue(
-            DAG.UpdateNodeOperands(And.getNode(), SDValue(Load, 0), MaskOp), 0);
-      SDValue NewLoad = ReduceLoadWidth(And.getNode());
+            DAG.UpdateNodeOperands(And.getNode(), SDValue(Load, 0), MaskOpT), 0);
+      SDValue NewLoad = reduceLoadWidth(And.getNode());
       assert(NewLoad &&
              "Shouldn't be masking the load if it can't be narrowed");
       CombineTo(Load, NewLoad, NewLoad.getValue(1));
@@ -5799,18 +5855,12 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
       return FoldedVOp;
 
     // fold (and x, 0) -> 0, vector edition
-    if (ISD::isConstantSplatVectorAllZeros(N0.getNode()))
-      // do not return N0, because undef node may exist in N0
-      return DAG.getConstant(APInt::getZero(N0.getScalarValueSizeInBits()),
-                             SDLoc(N), N0.getValueType());
     if (ISD::isConstantSplatVectorAllZeros(N1.getNode()))
       // do not return N1, because undef node may exist in N1
       return DAG.getConstant(APInt::getZero(N1.getScalarValueSizeInBits()),
                              SDLoc(N), N1.getValueType());
 
     // fold (and x, -1) -> x, vector edition
-    if (ISD::isConstantSplatVectorAllOnes(N0.getNode()))
-      return N1;
     if (ISD::isConstantSplatVectorAllOnes(N1.getNode()))
       return N0;
 
@@ -5862,7 +5912,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     if (SDValue Shuffle = XformToShuffleWithZero(N))
       return Shuffle;
 
-  if (SDValue Combined = combineCarryDiamond(*this, DAG, TLI, N0, N1, N))
+  if (SDValue Combined = combineCarryDiamond(DAG, TLI, N0, N1, N))
     return Combined;
 
   // fold (and (or x, C), D) -> D if (C & D) == D
@@ -6024,7 +6074,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   if (!VT.isVector() && N1C && (N0.getOpcode() == ISD::LOAD ||
                                 (N0.getOpcode() == ISD::ANY_EXTEND &&
                                  N0.getOperand(0).getOpcode() == ISD::LOAD))) {
-    if (SDValue Res = ReduceLoadWidth(N)) {
+    if (SDValue Res = reduceLoadWidth(N)) {
       LoadSDNode *LN0 = N0->getOpcode() == ISD::ANY_EXTEND
         ? cast<LoadSDNode>(N0.getOperand(0)) : cast<LoadSDNode>(N0);
       AddToWorklist(N);
@@ -6659,7 +6709,7 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
   if (SDValue Combined = visitORLike(N0, N1, N))
     return Combined;
 
-  if (SDValue Combined = combineCarryDiamond(*this, DAG, TLI, N0, N1, N))
+  if (SDValue Combined = combineCarryDiamond(DAG, TLI, N0, N1, N))
     return Combined;
 
   // Recognize halfword bswaps as (bswap + rotl 16) or (bswap + shl 16)
@@ -8156,7 +8206,7 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
 
-  if (SDValue Combined = combineCarryDiamond(*this, DAG, TLI, N0, N1, N))
+  if (SDValue Combined = combineCarryDiamond(DAG, TLI, N0, N1, N))
     return Combined;
 
   return SDValue();
@@ -8948,6 +8998,10 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
   if (SDValue MULH = combineShiftToMULH(N, DAG, TLI))
     return MULH;
 
+  // Attempt to convert a sra of a load into a narrower sign-extending load.
+  if (SDValue NarrowLoad = reduceLoadWidth(N))
+    return NarrowLoad;
+
   return SDValue();
 }
 
@@ -9140,7 +9194,7 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
       return NewSRL;
 
   // Attempt to convert a srl of a load into a narrower zero-extending load.
-  if (SDValue NarrowLoad = ReduceLoadWidth(N))
+  if (SDValue NarrowLoad = reduceLoadWidth(N))
     return NarrowLoad;
 
   // Here is a common situation. We want to optimize:
@@ -9358,6 +9412,17 @@ SDValue DAGCombiner::visitBSWAP(SDNode *N) {
   // fold (bswap (bswap x)) -> x
   if (N0.getOpcode() == ISD::BSWAP)
     return N0->getOperand(0);
+
+  // Canonicalize bswap(bitreverse(x)) -> bitreverse(bswap(x)). If bitreverse
+  // isn't supported, it will be expanded to bswap followed by a manual reversal
+  // of bits in each byte. By placing bswaps before bitreverse, we can remove
+  // the two bswaps if the bitreverse gets expanded.
+  if (N0.getOpcode() == ISD::BITREVERSE && N0.hasOneUse()) {
+    SDLoc DL(N);
+    SDValue BSwap = DAG.getNode(ISD::BSWAP, DL, VT, N0.getOperand(0));
+    return DAG.getNode(ISD::BITREVERSE, DL, VT, BSwap);
+  }
+
   return SDValue();
 }
 
@@ -10287,6 +10352,8 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
     }
 
     if (SDValue S = PerformMinMaxFpToSatCombine(LHS, RHS, N1, N2, CC, DAG))
+      return S;
+    if (SDValue S = PerformUMinFpToSatCombine(LHS, RHS, N1, N2, CC, DAG))
       return S;
 
     // If this select has a condition (setcc) with narrower operands than the
@@ -11357,7 +11424,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   if (N0.getOpcode() == ISD::TRUNCATE) {
     // fold (sext (truncate (load x))) -> (sext (smaller load x))
     // fold (sext (truncate (srl (load x), c))) -> (sext (smaller load (x+c/n)))
-    if (SDValue NarrowLoad = ReduceLoadWidth(N0.getNode())) {
+    if (SDValue NarrowLoad = reduceLoadWidth(N0.getNode())) {
       SDNode *oye = N0.getOperand(0).getNode();
       if (NarrowLoad.getNode() != N0.getNode()) {
         CombineTo(N0.getNode(), NarrowLoad);
@@ -11621,7 +11688,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   if (N0.getOpcode() == ISD::TRUNCATE) {
     // fold (zext (truncate (load x))) -> (zext (smaller load x))
     // fold (zext (truncate (srl (load x), c))) -> (zext (smaller load (x+c/n)))
-    if (SDValue NarrowLoad = ReduceLoadWidth(N0.getNode())) {
+    if (SDValue NarrowLoad = reduceLoadWidth(N0.getNode())) {
       SDNode *oye = N0.getOperand(0).getNode();
       if (NarrowLoad.getNode() != N0.getNode()) {
         CombineTo(N0.getNode(), NarrowLoad);
@@ -11864,7 +11931,7 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
   // fold (aext (truncate (load x))) -> (aext (smaller load x))
   // fold (aext (truncate (srl (load x), c))) -> (aext (small load (x+c/n)))
   if (N0.getOpcode() == ISD::TRUNCATE) {
-    if (SDValue NarrowLoad = ReduceLoadWidth(N0.getNode())) {
+    if (SDValue NarrowLoad = reduceLoadWidth(N0.getNode())) {
       SDNode *oye = N0.getOperand(0).getNode();
       if (NarrowLoad.getNode() != N0.getNode()) {
         CombineTo(N0.getNode(), NarrowLoad);
@@ -12095,13 +12162,10 @@ SDValue DAGCombiner::visitAssertAlign(SDNode *N) {
   return SDValue();
 }
 
-/// If the result of a wider load is shifted to right of N  bits and then
-/// truncated to a narrower type and where N is a multiple of number of bits of
-/// the narrower type, transform it to a narrower load from address + N / num of
-/// bits of new type. Also narrow the load if the result is masked with an AND
-/// to effectively produce a smaller type. If the result is to be extended, also
-/// fold the extension to form a extending load.
-SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
+/// If the result of a load is shifted/masked/truncated to an effectively
+/// narrower type, try to transform the load to a narrower type and/or
+/// use an extending load.
+SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
   unsigned Opc = N->getOpcode();
 
   ISD::LoadExtType ExtType = ISD::NON_EXTLOAD;
@@ -12113,32 +12177,48 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
   if (VT.isVector())
     return SDValue();
 
+  // The ShAmt variable is used to indicate that we've consumed a right
+  // shift. I.e. we want to narrow the width of the load by skipping to load the
+  // ShAmt least significant bits.
   unsigned ShAmt = 0;
+  // A special case is when the least significant bits from the load are masked
+  // away, but using an AND rather than a right shift. HasShiftedOffset is used
+  // to indicate that the narrowed load should be left-shifted ShAmt bits to get
+  // the result.
   bool HasShiftedOffset = false;
   // Special case: SIGN_EXTEND_INREG is basically truncating to ExtVT then
   // extended to VT.
   if (Opc == ISD::SIGN_EXTEND_INREG) {
     ExtType = ISD::SEXTLOAD;
     ExtVT = cast<VTSDNode>(N->getOperand(1))->getVT();
-  } else if (Opc == ISD::SRL) {
-    // Another special-case: SRL is basically zero-extending a narrower value,
-    // or it maybe shifting a higher subword, half or byte into the lowest
-    // bits.
-    ExtType = ISD::ZEXTLOAD;
-    N0 = SDValue(N, 0);
+  } else if (Opc == ISD::SRL || Opc == ISD::SRA) {
+    // Another special-case: SRL/SRA is basically zero/sign-extending a narrower
+    // value, or it may be shifting a higher subword, half or byte into the
+    // lowest bits.
 
-    auto *LN0 = dyn_cast<LoadSDNode>(N0.getOperand(0));
-    auto *N01 = dyn_cast<ConstantSDNode>(N0.getOperand(1));
-    if (!N01 || !LN0)
+    // Only handle shift with constant shift amount, and the shiftee must be a
+    // load.
+    auto *LN = dyn_cast<LoadSDNode>(N0);
+    auto *N1C = dyn_cast<ConstantSDNode>(N->getOperand(1));
+    if (!N1C || !LN)
       return SDValue();
-
-    uint64_t ShiftAmt = N01->getZExtValue();
-    uint64_t MemoryWidth = LN0->getMemoryVT().getScalarSizeInBits();
-    if (LN0->getExtensionType() != ISD::SEXTLOAD && MemoryWidth > ShiftAmt)
-      ExtVT = EVT::getIntegerVT(*DAG.getContext(), MemoryWidth - ShiftAmt);
-    else
-      ExtVT = EVT::getIntegerVT(*DAG.getContext(),
-                                VT.getScalarSizeInBits() - ShiftAmt);
+    // If the shift amount is larger than the memory type then we're not
+    // accessing any of the loaded bytes.
+    ShAmt = N1C->getZExtValue();
+    uint64_t MemoryWidth = LN->getMemoryVT().getScalarSizeInBits();
+    if (MemoryWidth <= ShAmt)
+      return SDValue();
+    // Attempt to fold away the SRL by using ZEXTLOAD and SRA by using SEXTLOAD.
+    ExtType = Opc == ISD::SRL ? ISD::ZEXTLOAD : ISD::SEXTLOAD;
+    ExtVT = EVT::getIntegerVT(*DAG.getContext(), MemoryWidth - ShAmt);
+    // If original load is a SEXTLOAD then we can't simply replace it by a
+    // ZEXTLOAD (we could potentially replace it by a more narrow SEXTLOAD
+    // followed by a ZEXT, but that is not handled at the moment). Similarly if
+    // the original load is a ZEXTLOAD and we want to use a SEXTLOAD.
+    if ((LN->getExtensionType() == ISD::SEXTLOAD ||
+         LN->getExtensionType() == ISD::ZEXTLOAD) &&
+        LN->getExtensionType() != ExtType)
+      return SDValue();
   } else if (Opc == ISD::AND) {
     // An AND with a constant mask is the same as a truncate + zero-extend.
     auto AndC = dyn_cast<ConstantSDNode>(N->getOperand(1));
@@ -12161,55 +12241,80 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
     ExtVT = EVT::getIntegerVT(*DAG.getContext(), ActiveBits);
   }
 
-  if (N0.getOpcode() == ISD::SRL && N0.hasOneUse()) {
-    SDValue SRL = N0;
-    if (auto *ConstShift = dyn_cast<ConstantSDNode>(SRL.getOperand(1))) {
-      ShAmt = ConstShift->getZExtValue();
-      unsigned EVTBits = ExtVT.getScalarSizeInBits();
-      // Is the shift amount a multiple of size of VT?
-      if ((ShAmt & (EVTBits-1)) == 0) {
-        N0 = N0.getOperand(0);
-        // Is the load width a multiple of size of VT?
-        if ((N0.getScalarValueSizeInBits() & (EVTBits - 1)) != 0)
-          return SDValue();
-      }
+  // In case Opc==SRL we've already prepared ExtVT/ExtType/ShAmt based on doing
+  // a right shift. Here we redo some of those checks, to possibly adjust the
+  // ExtVT even further based on "a masking AND". We could also end up here for
+  // other reasons (e.g. based on Opc==TRUNCATE) and that is why some checks
+  // need to be done here as well.
+  if (Opc == ISD::SRL || N0.getOpcode() == ISD::SRL) {
+    SDValue SRL = Opc == ISD::SRL ? SDValue(N, 0) : N0;
+    // Bail out when the SRL has more than one use. This is done for historical
+    // (undocumented) reasons. Maybe intent was to guard the AND-masking below
+    // check below? And maybe it could be non-profitable to do the transform in
+    // case the SRL has multiple uses and we get here with Opc!=ISD::SRL?
+    // FIXME: Can't we just skip this check for the Opc==ISD::SRL case.
+    if (!SRL.hasOneUse())
+      return SDValue();
 
-      // At this point, we must have a load or else we can't do the transform.
-      auto *LN0 = dyn_cast<LoadSDNode>(N0);
-      if (!LN0) return SDValue();
+    // Only handle shift with constant shift amount, and the shiftee must be a
+    // load.
+    auto *LN = dyn_cast<LoadSDNode>(SRL.getOperand(0));
+    auto *SRL1C = dyn_cast<ConstantSDNode>(SRL.getOperand(1));
+    if (!SRL1C || !LN)
+      return SDValue();
 
-      // Because a SRL must be assumed to *need* to zero-extend the high bits
-      // (as opposed to anyext the high bits), we can't combine the zextload
-      // lowering of SRL and an sextload.
-      if (LN0->getExtensionType() == ISD::SEXTLOAD)
+    // If the shift amount is larger than the input type then we're not
+    // accessing any of the loaded bytes.  If the load was a zextload/extload
+    // then the result of the shift+trunc is zero/undef (handled elsewhere).
+    ShAmt = SRL1C->getZExtValue();
+    uint64_t MemoryWidth = LN->getMemoryVT().getSizeInBits();
+    if (ShAmt >= MemoryWidth)
+      return SDValue();
+
+    // Because a SRL must be assumed to *need* to zero-extend the high bits
+    // (as opposed to anyext the high bits), we can't combine the zextload
+    // lowering of SRL and an sextload.
+    if (LN->getExtensionType() == ISD::SEXTLOAD)
+      return SDValue();
+
+    // Avoid reading outside the memory accessed by the original load (could
+    // happened if we only adjust the load base pointer by ShAmt). Instead we
+    // try to narrow the load even further. The typical scenario here is:
+    //   (i64 (truncate (i96 (srl (load x), 64)))) ->
+    //     (i64 (truncate (i96 (zextload (load i32 + offset) from i32))))
+    if (ExtVT.getScalarSizeInBits() > MemoryWidth - ShAmt) {
+      // Don't replace sextload by zextload.
+      if (ExtType == ISD::SEXTLOAD)
         return SDValue();
+      // Narrow the load.
+      ExtType = ISD::ZEXTLOAD;
+      ExtVT = EVT::getIntegerVT(*DAG.getContext(), MemoryWidth - ShAmt);
+    }
 
-      // If the shift amount is larger than the input type then we're not
-      // accessing any of the loaded bytes.  If the load was a zextload/extload
-      // then the result of the shift+trunc is zero/undef (handled elsewhere).
-      if (ShAmt >= LN0->getMemoryVT().getSizeInBits())
-        return SDValue();
-
-      // If the SRL is only used by a masking AND, we may be able to adjust
-      // the ExtVT to make the AND redundant.
-      SDNode *Mask = *(SRL->use_begin());
-      if (Mask->getOpcode() == ISD::AND &&
-          isa<ConstantSDNode>(Mask->getOperand(1))) {
-        const APInt& ShiftMask = Mask->getConstantOperandAPInt(1);
-        if (ShiftMask.isMask()) {
-          EVT MaskedVT = EVT::getIntegerVT(*DAG.getContext(),
-                                           ShiftMask.countTrailingOnes());
-          // If the mask is smaller, recompute the type.
-          if ((ExtVT.getScalarSizeInBits() > MaskedVT.getScalarSizeInBits()) &&
-              TLI.isLoadExtLegal(ExtType, N0.getValueType(), MaskedVT))
-            ExtVT = MaskedVT;
-        }
+    // If the SRL is only used by a masking AND, we may be able to adjust
+    // the ExtVT to make the AND redundant.
+    SDNode *Mask = *(SRL->use_begin());
+    if (SRL.hasOneUse() && Mask->getOpcode() == ISD::AND &&
+        isa<ConstantSDNode>(Mask->getOperand(1))) {
+      const APInt& ShiftMask = Mask->getConstantOperandAPInt(1);
+      if (ShiftMask.isMask()) {
+        EVT MaskedVT = EVT::getIntegerVT(*DAG.getContext(),
+                                         ShiftMask.countTrailingOnes());
+        // If the mask is smaller, recompute the type.
+        if ((ExtVT.getScalarSizeInBits() > MaskedVT.getScalarSizeInBits()) &&
+            TLI.isLoadExtLegal(ExtType, SRL.getValueType(), MaskedVT))
+          ExtVT = MaskedVT;
       }
     }
+
+    N0 = SRL.getOperand(0);
   }
 
-  // If the load is shifted left (and the result isn't shifted back right),
-  // we can fold the truncate through the shift.
+  // If the load is shifted left (and the result isn't shifted back right), we
+  // can fold a truncate through the shift. The typical scenario is that N
+  // points at a TRUNCATE here so the attempted fold is:
+  //   (truncate (shl (load x), c))) -> (shl (narrow load x), c)
+  // ShLeftAmt will indicate how much a narrowed load should be shifted left.
   unsigned ShLeftAmt = 0;
   if (ShAmt == 0 && N0.getOpcode() == ISD::SHL && N0.hasOneUse() &&
       ExtVT == VT && TLI.isNarrowingProfitable(N0.getValueType(), VT)) {
@@ -12237,12 +12342,12 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
     return LVTStoreBits - EVTStoreBits - ShAmt;
   };
 
-  // For big endian targets, we need to adjust the offset to the pointer to
-  // load the correct bytes.
-  if (DAG.getDataLayout().isBigEndian())
-    ShAmt = AdjustBigEndianShift(ShAmt);
+  // We need to adjust the pointer to the load by ShAmt bits in order to load
+  // the correct bytes.
+  unsigned PtrAdjustmentInBits =
+      DAG.getDataLayout().isBigEndian() ? AdjustBigEndianShift(ShAmt) : ShAmt;
 
-  uint64_t PtrOff = ShAmt / 8;
+  uint64_t PtrOff = PtrAdjustmentInBits / 8;
   Align NewAlign = commonAlignment(LN0->getAlign(), PtrOff);
   SDLoc DL(LN0);
   // The original load itself didn't wrap, so an offset within it doesn't.
@@ -12285,11 +12390,6 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
   }
 
   if (HasShiftedOffset) {
-    // Recalculate the shift amount after it has been altered to calculate
-    // the offset.
-    if (DAG.getDataLayout().isBigEndian())
-      ShAmt = AdjustBigEndianShift(ShAmt);
-
     // We're using a shifted mask, so the load now has an offset. This means
     // that data has been loaded into the lower bytes than it would have been
     // before, so we need to shl the loaded data into the correct position in the
@@ -12382,7 +12482,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
 
   // fold (sext_in_reg (load x)) -> (smaller sextload x)
   // fold (sext_in_reg (srl (load x), c)) -> (smaller sextload (x+c/evtbits))
-  if (SDValue NarrowLoad = ReduceLoadWidth(N))
+  if (SDValue NarrowLoad = reduceLoadWidth(N))
     return NarrowLoad;
 
   // fold (sext_in_reg (srl X, 24), i8) -> (sra X, 24)
@@ -12669,7 +12769,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   // fold (truncate (load x)) -> (smaller load x)
   // fold (truncate (srl (load x), c)) -> (smaller load (x+c/evtbits))
   if (!LegalTypes || TLI.isTypeDesirableForOp(N0.getOpcode(), VT)) {
-    if (SDValue Reduced = ReduceLoadWidth(N))
+    if (SDValue Reduced = reduceLoadWidth(N))
       return Reduced;
 
     // Handle the case where the load remains an extending load even
@@ -18356,6 +18456,15 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
       Value.getValueType().isInteger() &&
       (!isa<ConstantSDNode>(Value) ||
        !cast<ConstantSDNode>(Value)->isOpaque())) {
+    // Convert a truncating store of a extension into a standard store.
+    if ((Value.getOpcode() == ISD::ZERO_EXTEND ||
+         Value.getOpcode() == ISD::SIGN_EXTEND ||
+         Value.getOpcode() == ISD::ANY_EXTEND) &&
+        Value.getOperand(0).getValueType() == ST->getMemoryVT() &&
+        TLI.isOperationLegalOrCustom(ISD::STORE, ST->getMemoryVT()))
+      return DAG.getStore(Chain, SDLoc(N), Value.getOperand(0), Ptr,
+                          ST->getMemOperand());
+
     APInt TruncDemandedBits =
         APInt::getLowBitsSet(Value.getScalarValueSizeInBits(),
                              ST->getMemoryVT().getScalarSizeInBits());
@@ -23303,6 +23412,8 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
   }
 
   if (SDValue S = PerformMinMaxFpToSatCombine(N0, N1, N2, N3, CC, DAG))
+    return S;
+  if (SDValue S = PerformUMinFpToSatCombine(N0, N1, N2, N3, CC, DAG))
     return S;
 
   return SDValue();

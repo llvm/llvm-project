@@ -266,6 +266,7 @@ cc_test(
     ]),
     deps = [
         "//llvm:gtest_main",
+        "//mlir:AffineAnalysis",
         "//mlir:IR",
         "//mlir:Parser",
         "//mlir:Pass",
@@ -282,10 +283,12 @@ cc_test(
         "Analysis/*.h",
         "Analysis/*/*.cpp",
         "Analysis/*/*.h",
+        "Dialect/Affine/Analysis/AffineStructuresParser.*",
     ]),
     deps = [
         "//llvm:TestingSupport",
         "//llvm:gtest_main",
+        "//mlir:AffineAnalysis",
         "//mlir:Analysis",
         "//mlir:IR",
     ],

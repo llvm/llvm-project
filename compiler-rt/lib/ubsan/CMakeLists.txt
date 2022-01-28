@@ -56,7 +56,9 @@ append_rtti_flag(ON UBSAN_CXXFLAGS)
 append_list_if(SANITIZER_CAN_USE_CXXABI -DUBSAN_CAN_USE_CXXABI UBSAN_CXXFLAGS)
 
 # Silence warnings in system headers with MSVC.
-append_list_if(COMPILER_RT_HAS_EXTERNAL_FLAG "/experimental:external /external:W0 /external:anglebrackets" UBSAN_CXXFLAGS)
+if(NOT CLANG_CL)
+  append_list_if(COMPILER_RT_HAS_EXTERNAL_FLAG "/experimental:external /external:W0 /external:anglebrackets" UBSAN_CXXFLAGS)
+endif()
 
 set(UBSAN_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
 
@@ -151,14 +153,16 @@ else()
     add_compiler_rt_object_libraries(UbsanWeakInterception
       ${SANITIZER_COMMON_SUPPORTED_OS}
       ARCHS ${UBSAN_SUPPORTED_ARCH}
-      SOURCES ubsan_win_weak_interception.cpp
+      SOURCES
+        ubsan_win_weak_interception.cpp
       CFLAGS ${UBSAN_CFLAGS} -DSANITIZER_DYNAMIC
       DEFS ${UBSAN_COMMON_DEFINITIONS})
 
     add_compiler_rt_object_libraries(UbsanDllThunk
       ${SANITIZER_COMMON_SUPPORTED_OS}
       ARCHS ${UBSAN_SUPPORTED_ARCH}
-      SOURCES ubsan_win_dll_thunk.cpp
+      SOURCES
+        ubsan_win_dll_thunk.cpp
       CFLAGS ${UBSAN_CFLAGS} -DSANITIZER_DLL_THUNK
       DEFS ${UBSAN_COMMON_DEFINITIONS})
 
@@ -171,7 +175,8 @@ else()
     add_compiler_rt_object_libraries(UbsanDynamicRuntimeThunk
       ${SANITIZER_COMMON_SUPPORTED_OS}
       ARCHS ${UBSAN_SUPPORTED_ARCH}
-      SOURCES ubsan_win_dynamic_runtime_thunk.cpp
+      SOURCES
+        ubsan_win_dynamic_runtime_thunk.cpp
       CFLAGS ${UBSAN_CFLAGS} ${DYNAMIC_RUNTIME_THUNK_CFLAGS}
       DEFS ${UBSAN_COMMON_DEFINITIONS})
   endif()

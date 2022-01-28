@@ -154,35 +154,87 @@ void detail::PassOptions::copyOptionValuesFrom(const PassOptions &other) {
     std::get<0>(optionsIt)->copyValueFrom(*std::get<1>(optionsIt));
 }
 
+/// Parse in the next argument from the given options string. Returns a tuple
+/// containing [the key of the option, the value of the option, updated
+/// `options` string pointing after the parsed option].
+static std::tuple<StringRef, StringRef, StringRef>
+parseNextArg(StringRef options) {
+  // Functor used to extract an argument from 'options' and update it to point
+  // after the arg.
+  auto extractArgAndUpdateOptions = [&](size_t argSize) {
+    StringRef str = options.take_front(argSize).trim();
+    options = options.drop_front(argSize).ltrim();
+    return str;
+  };
+  // Try to process the given punctuation, properly escaping any contained
+  // characters.
+  auto tryProcessPunct = [&](size_t &currentPos, char punct) {
+    if (options[currentPos] != punct)
+      return false;
+    size_t nextIt = options.find_first_of(punct, currentPos + 1);
+    if (nextIt != StringRef::npos)
+      currentPos = nextIt;
+    return true;
+  };
+
+  // Parse the argument name of the option.
+  StringRef argName;
+  for (size_t argEndIt = 0, optionsE = options.size();; ++argEndIt) {
+    // Check for the end of the full option.
+    if (argEndIt == optionsE || options[argEndIt] == ' ') {
+      argName = extractArgAndUpdateOptions(argEndIt);
+      return std::make_tuple(argName, StringRef(), options);
+    }
+
+    // Check for the end of the name and the start of the value.
+    if (options[argEndIt] == '=') {
+      argName = extractArgAndUpdateOptions(argEndIt);
+      options = options.drop_front();
+      break;
+    }
+  }
+
+  // Parse the value of the option.
+  for (size_t argEndIt = 0, optionsE = options.size();; ++argEndIt) {
+    // Handle the end of the options string.
+    if (argEndIt == optionsE || options[argEndIt] == ' ') {
+      StringRef value = extractArgAndUpdateOptions(argEndIt);
+      return std::make_tuple(argName, value, options);
+    }
+
+    // Skip over escaped sequences.
+    char c = options[argEndIt];
+    if (tryProcessPunct(argEndIt, '\'') || tryProcessPunct(argEndIt, '"'))
+      continue;
+    // '{...}' is used to specify options to passes, properly escape it so
+    // that we don't accidentally split any nested options.
+    if (c == '{') {
+      size_t braceCount = 1;
+      for (++argEndIt; argEndIt != optionsE; ++argEndIt) {
+        // Allow nested punctuation.
+        if (tryProcessPunct(argEndIt, '\'') || tryProcessPunct(argEndIt, '"'))
+          continue;
+        if (options[argEndIt] == '{')
+          ++braceCount;
+        else if (options[argEndIt] == '}' && --braceCount == 0)
+          break;
+      }
+      // Account for the increment at the top of the loop.
+      --argEndIt;
+    }
+  }
+  llvm_unreachable("unexpected control flow in pass option parsing");
+}
+
 LogicalResult detail::PassOptions::parseFromString(StringRef options) {
-  // TODO: Handle escaping strings.
   // NOTE: `options` is modified in place to always refer to the unprocessed
   // part of the string.
   while (!options.empty()) {
-    size_t spacePos = options.find(' ');
-    StringRef arg = options;
-    if (spacePos != StringRef::npos) {
-      arg = options.substr(0, spacePos);
-      options = options.substr(spacePos + 1);
-    } else {
-      options = StringRef();
-    }
-    if (arg.empty())
+    StringRef key, value;
+    std::tie(key, value, options) = parseNextArg(options);
+    if (key.empty())
       continue;
 
-    // At this point, arg refers to everything that is non-space in options
-    // upto the next space, and options refers to the rest of the string after
-    // that point.
-
-    // Split the individual option on '=' to form key and value. If there is no
-    // '=', then value is `StringRef()`.
-    size_t equalPos = arg.find('=');
-    StringRef key = arg;
-    StringRef value;
-    if (equalPos != StringRef::npos) {
-      key = arg.substr(0, equalPos);
-      value = arg.substr(equalPos + 1);
-    }
     auto it = OptionsMap.find(key);
     if (it == OptionsMap.end()) {
       llvm::errs() << "<Pass-Options-Parser>: no such option " << key << "\n";
@@ -319,9 +371,9 @@ LogicalResult TextualPipeline::initialize(StringRef text,
   pipelineMgr.AddNewSourceBuffer(
       llvm::MemoryBuffer::getMemBuffer(text, "MLIR Textual PassPipeline Parser",
                                        /*RequiresNullTerminator=*/false),
-      llvm::SMLoc());
+      SMLoc());
   auto errorHandler = [&](const char *rawLoc, Twine msg) {
-    pipelineMgr.PrintMessage(errorStream, llvm::SMLoc::getFromPointer(rawLoc),
+    pipelineMgr.PrintMessage(errorStream, SMLoc::getFromPointer(rawLoc),
                              llvm::SourceMgr::DK_Error, msg);
     return failure();
   };
@@ -482,10 +534,6 @@ LogicalResult TextualPipeline::addToPipeline(
   return success();
 }
 
-/// This function parses the textual representation of a pass pipeline, and adds
-/// the result to 'pm' on success. This function returns failure if the given
-/// pipeline was invalid. 'errorStream' is an optional parameter that, if
-/// non-null, will be used to emit errors found during parsing.
 LogicalResult mlir::parsePassPipeline(StringRef pipeline, OpPassManager &pm,
                                       raw_ostream &errorStream) {
   TextualPipeline pipelineParser;
@@ -498,6 +546,24 @@ LogicalResult mlir::parsePassPipeline(StringRef pipeline, OpPassManager &pm,
   if (failed(pipelineParser.addToPipeline(pm, errorHandler)))
     return failure();
   return success();
+}
+
+FailureOr<OpPassManager> mlir::parsePassPipeline(StringRef pipeline,
+                                                 raw_ostream &errorStream) {
+  // Pipelines are expected to be of the form `<op-name>(<pipeline>)`.
+  size_t pipelineStart = pipeline.find_first_of('(');
+  if (pipelineStart == 0 || pipelineStart == StringRef::npos ||
+      !pipeline.consume_back(")")) {
+    errorStream << "expected pass pipeline to be wrapped with the anchor "
+                   "operation type, e.g. `builtin.module(...)";
+    return failure();
+  }
+
+  StringRef opName = pipeline.take_front(pipelineStart);
+  OpPassManager pm(opName);
+  if (failed(parsePassPipeline(pipeline.drop_front(1 + pipelineStart), pm)))
+    return failure();
+  return pm;
 }
 
 //===----------------------------------------------------------------------===//

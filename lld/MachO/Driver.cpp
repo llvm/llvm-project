@@ -15,6 +15,7 @@
 #include "ObjC.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
+#include "SectionPriorities.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -128,7 +129,7 @@ static Optional<StringRef> findFramework(StringRef name) {
         // only append suffix if realpath() succeeds
         Twine suffixed = location + suffix;
         if (fs::exists(suffixed))
-          return resolvedFrameworks[key] = saver.save(suffixed.str());
+          return resolvedFrameworks[key] = saver().save(suffixed.str());
       }
       // Suffix lookup failed, fall through to the no-suffix case.
     }
@@ -165,7 +166,7 @@ getSearchPaths(unsigned optionCode, InputArgList &args,
         path::append(buffer, path);
         // Do not warn about paths that are computed via the syslib roots
         if (fs::is_directory(buffer)) {
-          paths.push_back(saver.save(buffer.str()));
+          paths.push_back(saver().save(buffer.str()));
           found = true;
         }
       }
@@ -183,7 +184,7 @@ getSearchPaths(unsigned optionCode, InputArgList &args,
       SmallString<261> buffer(root);
       path::append(buffer, path);
       if (fs::is_directory(buffer))
-        paths.push_back(saver.save(buffer.str()));
+        paths.push_back(saver().save(buffer.str()));
     }
   }
   return paths;
@@ -249,7 +250,8 @@ static llvm::CachePruningPolicy getLTOCachePolicy(InputArgList &args) {
 static DenseMap<StringRef, ArchiveFile *> loadedArchives;
 
 static InputFile *addFile(StringRef path, ForceLoad forceLoadArchive,
-                          bool isExplicit = true, bool isBundleLoader = false) {
+                          bool isLazy = false, bool isExplicit = true,
+                          bool isBundleLoader = false) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return nullptr;
@@ -319,7 +321,7 @@ static InputFile *addFile(StringRef path, ForceLoad forceLoadArchive,
     break;
   }
   case file_magic::macho_object:
-    newFile = make<ObjFile>(mbref, getModTime(path), "");
+    newFile = make<ObjFile>(mbref, getModTime(path), "", isLazy);
     break;
   case file_magic::macho_dynamically_linked_shared_lib:
   case file_magic::macho_dynamically_linked_shared_lib_stub:
@@ -331,7 +333,7 @@ static InputFile *addFile(StringRef path, ForceLoad forceLoadArchive,
     }
     break;
   case file_magic::bitcode:
-    newFile = make<BitcodeFile>(mbref, "", 0);
+    newFile = make<BitcodeFile>(mbref, "", 0, isLazy);
     break;
   case file_magic::macho_executable:
   case file_magic::macho_bundle:
@@ -346,9 +348,20 @@ static InputFile *addFile(StringRef path, ForceLoad forceLoadArchive,
     error(path + ": unhandled file type");
   }
   if (newFile && !isa<DylibFile>(newFile)) {
+    if ((isa<ObjFile>(newFile) || isa<BitcodeFile>(newFile)) && newFile->lazy &&
+        config->forceLoadObjC) {
+      for (Symbol *sym : newFile->symbols)
+        if (sym && sym->getName().startswith(objc::klass)) {
+          extract(*newFile, "-ObjC");
+          break;
+        }
+      if (newFile->lazy && hasObjCSection(mbref))
+        extract(*newFile, "-ObjC");
+    }
+
     // printArchiveMemberLoad() prints both .a and .o names, so no need to
-    // print the .a name here.
-    if (config->printEachFile && magic != file_magic::archive)
+    // print the .a name here. Similarly skip lazy files.
+    if (config->printEachFile && magic != file_magic::archive && !isLazy)
       message(toString(newFile));
     inputFiles.insert(newFile);
   }
@@ -360,7 +373,7 @@ static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
                        ForceLoad forceLoadArchive) {
   if (Optional<StringRef> path = findLibrary(name)) {
     if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-            addFile(*path, forceLoadArchive, isExplicit))) {
+            addFile(*path, forceLoadArchive, /*isLazy=*/false, isExplicit))) {
       if (isNeeded)
         dylibFile->forceNeeded = true;
       if (isWeak)
@@ -380,7 +393,7 @@ static void addFramework(StringRef name, bool isNeeded, bool isWeak,
                          ForceLoad forceLoadArchive) {
   if (Optional<StringRef> path = findFramework(name)) {
     if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-            addFile(*path, forceLoadArchive, isExplicit))) {
+            addFile(*path, forceLoadArchive, /*isLazy=*/false, isExplicit))) {
       if (isNeeded)
         dylibFile->forceNeeded = true;
       if (isWeak)
@@ -425,13 +438,13 @@ void macho::parseLCLinkerOption(InputFile *f, unsigned argc, StringRef data) {
   }
 }
 
-static void addFileList(StringRef path) {
+static void addFileList(StringRef path, bool isLazy) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return;
   MemoryBufferRef mbref = *buffer;
   for (StringRef path : args::getLines(mbref))
-    addFile(rerootPath(path), ForceLoad::Default);
+    addFile(rerootPath(path), ForceLoad::Default, isLazy);
 }
 
 // An order file has one entry per line, in the following format:
@@ -448,60 +461,6 @@ static void addFileList(StringRef path) {
 // entry (the one nearest to the front of the list.)
 //
 // The file can also have line comments that start with '#'.
-static void parseOrderFile(StringRef path) {
-  Optional<MemoryBufferRef> buffer = readFile(path);
-  if (!buffer) {
-    error("Could not read order file at " + path);
-    return;
-  }
-
-  MemoryBufferRef mbref = *buffer;
-  size_t priority = std::numeric_limits<size_t>::max();
-  for (StringRef line : args::getLines(mbref)) {
-    StringRef objectFile, symbol;
-    line = line.take_until([](char c) { return c == '#'; }); // ignore comments
-    line = line.ltrim();
-
-    CPUType cpuType = StringSwitch<CPUType>(line)
-                          .StartsWith("i386:", CPU_TYPE_I386)
-                          .StartsWith("x86_64:", CPU_TYPE_X86_64)
-                          .StartsWith("arm:", CPU_TYPE_ARM)
-                          .StartsWith("arm64:", CPU_TYPE_ARM64)
-                          .StartsWith("ppc:", CPU_TYPE_POWERPC)
-                          .StartsWith("ppc64:", CPU_TYPE_POWERPC64)
-                          .Default(CPU_TYPE_ANY);
-
-    if (cpuType != CPU_TYPE_ANY && cpuType != target->cpuType)
-      continue;
-
-    // Drop the CPU type as well as the colon
-    if (cpuType != CPU_TYPE_ANY)
-      line = line.drop_until([](char c) { return c == ':'; }).drop_front();
-
-    constexpr std::array<StringRef, 2> fileEnds = {".o:", ".o):"};
-    for (StringRef fileEnd : fileEnds) {
-      size_t pos = line.find(fileEnd);
-      if (pos != StringRef::npos) {
-        // Split the string around the colon
-        objectFile = line.take_front(pos + fileEnd.size() - 1);
-        line = line.drop_front(pos + fileEnd.size());
-        break;
-      }
-    }
-    symbol = line.trim();
-
-    if (!symbol.empty()) {
-      SymbolPriorityEntry &entry = config->priorities[symbol];
-      if (!objectFile.empty())
-        entry.objectFiles.insert(std::make_pair(objectFile, priority));
-      else
-        entry.anyObjectFile = std::max(entry.anyObjectFile, priority);
-    }
-
-    --priority;
-  }
-}
-
 // We expect sub-library names of the form "libfoo", which will match a dylib
 // with a path of .*/libfoo.{dylib, tbd}.
 // XXX ld64 seems to ignore the extension entirely when matching sub-libraries;
@@ -545,7 +504,8 @@ static void compileBitcodeFiles() {
   auto *lto = make<BitcodeCompiler>();
   for (InputFile *file : inputFiles)
     if (auto *bitcodeFile = dyn_cast<BitcodeFile>(file))
-      lto->add(*bitcodeFile);
+      if (!file->lazy)
+        lto->add(*bitcodeFile);
 
   for (ObjFile *file : lto->compile())
     inputFiles.insert(file);
@@ -629,11 +589,11 @@ static std::string lowerDash(StringRef s) {
 }
 
 // Has the side-effect of setting Config::platformInfo.
-static PlatformKind parsePlatformVersion(const ArgList &args) {
+static PlatformType parsePlatformVersion(const ArgList &args) {
   const Arg *arg = args.getLastArg(OPT_platform_version);
   if (!arg) {
     error("must specify -platform_version");
-    return PlatformKind::unknown;
+    return PLATFORM_UNKNOWN;
   }
 
   StringRef platformStr = arg->getValue(0);
@@ -641,20 +601,20 @@ static PlatformKind parsePlatformVersion(const ArgList &args) {
   StringRef sdkVersionStr = arg->getValue(2);
 
   // TODO(compnerd) see if we can generate this case list via XMACROS
-  PlatformKind platform =
-      StringSwitch<PlatformKind>(lowerDash(platformStr))
-          .Cases("macos", "1", PlatformKind::macOS)
-          .Cases("ios", "2", PlatformKind::iOS)
-          .Cases("tvos", "3", PlatformKind::tvOS)
-          .Cases("watchos", "4", PlatformKind::watchOS)
-          .Cases("bridgeos", "5", PlatformKind::bridgeOS)
-          .Cases("mac-catalyst", "6", PlatformKind::macCatalyst)
-          .Cases("ios-simulator", "7", PlatformKind::iOSSimulator)
-          .Cases("tvos-simulator", "8", PlatformKind::tvOSSimulator)
-          .Cases("watchos-simulator", "9", PlatformKind::watchOSSimulator)
-          .Cases("driverkit", "10", PlatformKind::driverKit)
-          .Default(PlatformKind::unknown);
-  if (platform == PlatformKind::unknown)
+  PlatformType platform =
+      StringSwitch<PlatformType>(lowerDash(platformStr))
+          .Cases("macos", "1", PLATFORM_MACOS)
+          .Cases("ios", "2", PLATFORM_IOS)
+          .Cases("tvos", "3", PLATFORM_TVOS)
+          .Cases("watchos", "4", PLATFORM_WATCHOS)
+          .Cases("bridgeos", "5", PLATFORM_BRIDGEOS)
+          .Cases("mac-catalyst", "6", PLATFORM_MACCATALYST)
+          .Cases("ios-simulator", "7", PLATFORM_IOSSIMULATOR)
+          .Cases("tvos-simulator", "8", PLATFORM_TVOSSIMULATOR)
+          .Cases("watchos-simulator", "9", PLATFORM_WATCHOSSIMULATOR)
+          .Cases("driverkit", "10", PLATFORM_DRIVERKIT)
+          .Default(PLATFORM_UNKNOWN);
+  if (platform == PLATFORM_UNKNOWN)
     error(Twine("malformed platform: ") + platformStr);
   // TODO: check validity of version strings, which varies by platform
   // NOTE: ld64 accepts version strings with 5 components
@@ -675,7 +635,7 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
     return nullptr;
   }
 
-  PlatformKind platform = parsePlatformVersion(args);
+  PlatformType platform = parsePlatformVersion(args);
   config->platformInfo.target =
       MachO::Target(getArchitectureFromName(archName), platform);
 
@@ -861,27 +821,27 @@ static std::vector<SectionAlign> parseSectAlign(const opt::InputArgList &args) {
   return sectAligns;
 }
 
-PlatformKind macho::removeSimulator(PlatformKind platform) {
+PlatformType macho::removeSimulator(PlatformType platform) {
   switch (platform) {
-  case PlatformKind::iOSSimulator:
-    return PlatformKind::iOS;
-  case PlatformKind::tvOSSimulator:
-    return PlatformKind::tvOS;
-  case PlatformKind::watchOSSimulator:
-    return PlatformKind::watchOS;
+  case PLATFORM_IOSSIMULATOR:
+    return PLATFORM_IOS;
+  case PLATFORM_TVOSSIMULATOR:
+    return PLATFORM_TVOS;
+  case PLATFORM_WATCHOSSIMULATOR:
+    return PLATFORM_WATCHOS;
   default:
     return platform;
   }
 }
 
 static bool dataConstDefault(const InputArgList &args) {
-  static const std::vector<std::pair<PlatformKind, VersionTuple>> minVersion = {
-      {PlatformKind::macOS, VersionTuple(10, 15)},
-      {PlatformKind::iOS, VersionTuple(13, 0)},
-      {PlatformKind::tvOS, VersionTuple(13, 0)},
-      {PlatformKind::watchOS, VersionTuple(6, 0)},
-      {PlatformKind::bridgeOS, VersionTuple(4, 0)}};
-  PlatformKind platform = removeSimulator(config->platformInfo.target.Platform);
+  static const std::vector<std::pair<PlatformType, VersionTuple>> minVersion = {
+      {PLATFORM_MACOS, VersionTuple(10, 15)},
+      {PLATFORM_IOS, VersionTuple(13, 0)},
+      {PLATFORM_TVOS, VersionTuple(13, 0)},
+      {PLATFORM_WATCHOS, VersionTuple(6, 0)},
+      {PLATFORM_BRIDGEOS, VersionTuple(4, 0)}};
+  PlatformType platform = removeSimulator(config->platformInfo.target.Platform);
   auto it = llvm::find_if(minVersion,
                           [&](const auto &p) { return p.first == platform; });
   if (it != minVersion.end())
@@ -962,6 +922,7 @@ static void createFiles(const InputArgList &args) {
   TimeTraceScope timeScope("Load input files");
   // This loop should be reserved for options whose exact ordering matters.
   // Other options should be handled via filtered() and/or getLastArg().
+  bool isLazy = false;
   for (const Arg *arg : args) {
     const Option &opt = arg->getOption();
     warnIfDeprecatedOption(opt);
@@ -969,7 +930,7 @@ static void createFiles(const InputArgList &args) {
 
     switch (opt.getID()) {
     case OPT_INPUT:
-      addFile(rerootPath(arg->getValue()), ForceLoad::Default);
+      addFile(rerootPath(arg->getValue()), ForceLoad::Default, isLazy);
       break;
     case OPT_needed_library:
       if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
@@ -989,7 +950,7 @@ static void createFiles(const InputArgList &args) {
         dylibFile->forceWeakImport = true;
       break;
     case OPT_filelist:
-      addFileList(arg->getValue());
+      addFileList(arg->getValue(), isLazy);
       break;
     case OPT_force_load:
       addFile(rerootPath(arg->getValue()), ForceLoad::Yes);
@@ -1010,6 +971,16 @@ static void createFiles(const InputArgList &args) {
                    opt.getID() == OPT_weak_framework,
                    opt.getID() == OPT_reexport_framework, /*isExplicit=*/true,
                    ForceLoad::Default);
+      break;
+    case OPT_start_lib:
+      if (isLazy)
+        error("nested --start-lib");
+      isLazy = true;
+      break;
+    case OPT_end_lib:
+      if (!isLazy)
+        error("stray --end-lib");
+      isLazy = false;
       break;
     default:
       break;
@@ -1083,14 +1054,14 @@ static void referenceStubBinder() {
   symtab->addUndefined("dyld_stub_binder", /*file=*/nullptr, /*isWeak=*/false);
 }
 
-bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
-                 raw_ostream &stdoutOS, raw_ostream &stderrOS) {
-  lld::stdoutOS = &stdoutOS;
-  lld::stderrOS = &stderrOS;
+bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
+                 llvm::raw_ostream &stderrOS, bool exitEarly,
+                 bool disableOutput) {
+  // This driver-specific context will be freed later by lldMain().
+  auto *ctx = new CommonLinkerContext;
 
-  errorHandler().cleanupCallback = []() {
-    freeArena();
-
+  ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
+  ctx->e.cleanupCallback = []() {
     resolvedFrameworks.clear();
     resolvedLibraries.clear();
     cachedReads.clear();
@@ -1111,17 +1082,15 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     InputFile::resetIdCount();
   };
 
-  errorHandler().logName = args::getFilenameWithoutExe(argsArr[0]);
-  stderrOS.enable_colors(stderrOS.has_colors());
+  ctx->e.logName = args::getFilenameWithoutExe(argsArr[0]);
 
   MachOOptTable parser;
   InputArgList args = parser.parse(argsArr.slice(1));
 
-  errorHandler().errorLimitExceededMsg =
-      "too many errors emitted, stopping now "
-      "(use --error-limit=0 to see all errors)";
-  errorHandler().errorLimit = args::getInteger(args, OPT_error_limit_eq, 20);
-  errorHandler().verbose = args.hasArg(OPT_verbose);
+  ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now "
+                                 "(use --error-limit=0 to see all errors)";
+  ctx->e.errorLimit = args::getInteger(args, OPT_error_limit_eq, 20);
+  ctx->e.verbose = args.hasArg(OPT_verbose);
 
   if (args.hasArg(OPT_help_hidden)) {
     parser.printHelp(argsArr[0], /*showHidden=*/true);
@@ -1165,7 +1134,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       // these are meaningful for our text based stripping
       if (config->osoPrefix.equals(".") || config->osoPrefix.endswith(sep))
         expanded += sep;
-      config->osoPrefix = saver.save(expanded.str());
+      config->osoPrefix = saver().save(expanded.str());
     }
   }
 
@@ -1228,7 +1197,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   if (const Arg *arg = args.getLastArg(OPT_bundle_loader)) {
     if (config->outputType != MH_BUNDLE)
       error("-bundle_loader can only be used with MachO bundle output");
-    addFile(arg->getValue(), ForceLoad::Default, /*isExplicit=*/false,
+    addFile(arg->getValue(), ForceLoad::Default, /*isLazy=*/false,
+            /*isExplicit=*/false,
             /*isBundleLoader=*/true);
   }
   if (const Arg *arg = args.getLastArg(OPT_umbrella)) {
@@ -1246,7 +1216,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->thinLTOCacheDir = args.getLastArgValue(OPT_cache_path_lto);
   config->thinLTOCachePolicy = getLTOCachePolicy(args);
   config->runtimePaths = args::getStrings(args, OPT_rpath);
-  config->allLoad = args.hasArg(OPT_all_load);
+  config->allLoad = args.hasFlag(OPT_all_load, OPT_noall_load, false);
   config->archMultiple = args.hasArg(OPT_arch_multiple);
   config->applicationExtension = args.hasFlag(
       OPT_application_extension, OPT_no_application_extension, false);
@@ -1262,16 +1232,20 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->emitDataInCodeInfo =
       args.hasFlag(OPT_data_in_code_info, OPT_no_data_in_code_info, true);
   config->icfLevel = getICFLevel(args);
-  config->dedupLiterals = args.hasArg(OPT_deduplicate_literals) ||
-                          config->icfLevel != ICFLevel::none;
+  config->dedupLiterals =
+      args.hasFlag(OPT_deduplicate_literals, OPT_icf_eq, false) ||
+      config->icfLevel != ICFLevel::none;
   config->warnDylibInstallName = args.hasFlag(
       OPT_warn_dylib_install_name, OPT_no_warn_dylib_install_name, false);
+  config->callGraphProfileSort = args.hasFlag(
+      OPT_call_graph_profile_sort, OPT_no_call_graph_profile_sort, true);
+  config->printSymbolOrder = args.getLastArgValue(OPT_print_symbol_order);
 
   // FIXME: Add a commandline flag for this too.
   config->zeroModTime = getenv("ZERO_AR_DATE");
 
-  std::array<PlatformKind, 3> encryptablePlatforms{
-      PlatformKind::iOS, PlatformKind::watchOS, PlatformKind::tvOS};
+  std::array<PlatformType, 3> encryptablePlatforms{
+      PLATFORM_IOS, PLATFORM_WATCHOS, PLATFORM_TVOS};
   config->emitEncryptionInfo =
       args.hasFlag(OPT_encryptable, OPT_no_encryption,
                    is_contained(encryptablePlatforms, config->platform()));
@@ -1386,7 +1360,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->adhocCodesign = args.hasFlag(
       OPT_adhoc_codesign, OPT_no_adhoc_codesign,
       (config->arch() == AK_arm64 || config->arch() == AK_arm64e) &&
-          config->platform() == PlatformKind::macOS);
+          config->platform() == PLATFORM_MACOS);
 
   if (args.hasArg(OPT_v)) {
     message(getLLDVersion(), lld::errs());
@@ -1448,7 +1422,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
     // Parse LTO options.
     if (const Arg *arg = args.getLastArg(OPT_mcpu))
-      parseClangOption(saver.save("-mcpu=" + StringRef(arg->getValue())),
+      parseClangOption(saver().save("-mcpu=" + StringRef(arg->getValue())),
                        arg->getSpelling());
 
     for (const Arg *arg : args.filtered(OPT_mllvm))
@@ -1458,8 +1432,10 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     replaceCommonSymbols();
 
     StringRef orderFile = args.getLastArgValue(OPT_order_file);
-    if (!orderFile.empty())
+    if (!orderFile.empty()) {
       parseOrderFile(orderFile);
+      config->callGraphProfileSort = false;
+    }
 
     referenceStubBinder();
 
@@ -1509,6 +1485,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     }
 
     gatherInputSections();
+    if (config->callGraphProfileSort)
+      extractCallGraphProfile();
 
     if (config->deadStrip)
       markLive();
@@ -1535,11 +1513,5 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
     timeTraceProfilerCleanup();
   }
-
-  if (canExitEarly)
-    exitLld(errorCount() ? 1 : 0);
-
-  bool ret = errorCount() == 0;
-  errorHandler().reset();
-  return ret;
+  return errorCount() == 0;
 }

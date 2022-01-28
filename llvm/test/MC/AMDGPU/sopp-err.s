@@ -109,6 +109,7 @@ s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 
 s_sendmsg sendmsg(MSG_SAVEWAVE)
 // SICI: error: invalid message id
+// GFX11: error: expected a message name or an absolute expression
 
 s_sendmsg sendmsg(MSG_STALL_WAVE_GEN)
 // SICI: error: invalid message id
@@ -141,22 +142,39 @@ s_sendmsg sendmsg(MSG_GS_ALLOC_REQ, 0)
 s_sendmsg sendmsg(MSG_GET_DOORBELL)
 // SICI: error: invalid message id
 // VI: error: invalid message id
+// GFX11: error: expected a message name or an absolute expression
 
 s_sendmsg sendmsg(MSG_GET_DDID)
 // SICI: error: invalid message id
 // VI: error: invalid message id
+// GFX11: error: expected a message name or an absolute expression
 
-s_sendmsg sendmsg(MSG_GET_TMA)
+s_sendmsg sendmsg(MSG_RTN_GET_DOORBELL)
 // SICI: error: invalid message id
 // VI: error: invalid message id
 // GFX10: error: invalid message id
 
-s_sendmsg sendmsg(MSG_GET_REALTIME)
+s_sendmsg sendmsg(MSG_RTN_GET_DDID)
 // SICI: error: invalid message id
 // VI: error: invalid message id
 // GFX10: error: invalid message id
 
-s_sendmsg sendmsg(MSG_GET_TBA)
+s_sendmsg sendmsg(MSG_RTN_GET_TMA)
+// SICI: error: invalid message id
+// VI: error: invalid message id
+// GFX10: error: invalid message id
+
+s_sendmsg sendmsg(MSG_RTN_GET_REALTIME)
+// SICI: error: invalid message id
+// VI: error: invalid message id
+// GFX10: error: invalid message id
+
+s_sendmsg sendmsg(MSG_RTN_SAVE_WAVE)
+// SICI: error: invalid message id
+// VI: error: invalid message id
+// GFX10: error: invalid message id
+
+s_sendmsg sendmsg(MSG_RTN_GET_TBA)
 // SICI: error: invalid message id
 // VI: error: invalid message id
 // GFX10: error: invalid message id

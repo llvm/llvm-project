@@ -94,8 +94,8 @@ private:
 
 class MemDataFlowOpt : public fir::MemRefDataFlowOptBase<MemDataFlowOpt> {
 public:
-  void runOnFunction() override {
-    mlir::FuncOp f = getFunction();
+  void runOnOperation() override {
+    mlir::FuncOp f = getOperation();
 
     auto *domInfo = &getAnalysis<mlir::DominanceInfo>();
     LoadStoreForwarding<fir::LoadOp, fir::StoreOp> lsf(domInfo);

@@ -46,7 +46,7 @@ The members of the group represent a wide cross-section of the community, and me
 * Oliver Hunt (Apple) [ojhunt]
 * Paul Robinson (Sony) [probinson]
 * Peter Smith (ARM) [peter.smith]
-* Pietro Albini (individual; Rust) [pietroalbini]
+* Pietro Albini (Ferrous Systems; Rust) [pietroalbini]
 * Serge Guelton (RedHat) [serge-sans-paille]
 * Sergey Maslov (Intel) [smaslov-intel]
 * Shayne Hiet-Block (Microsoft) [Shayne]
@@ -115,6 +115,8 @@ Transparency Report
 -------------------
 
 Every year, the LLVM Security Group must publish a transparency report. The intent of this report is to keep the community informed by summarizing the disclosures that have been made public in the last year. It shall contain a list of all public disclosures, as well as statistics on time to fix issues, length of embargo periods, and so on.
+
+The transparency reports are published at :doc:`SecurityTransparencyReports`.
 
 
 Privileges and Responsibilities of LLVM Security Group Members

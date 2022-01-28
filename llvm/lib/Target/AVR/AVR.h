@@ -28,7 +28,6 @@ FunctionPass *createAVRISelDag(AVRTargetMachine &TM,
 FunctionPass *createAVRExpandPseudoPass();
 FunctionPass *createAVRFrameAnalyzerPass();
 FunctionPass *createAVRRelaxMemPass();
-FunctionPass *createAVRDynAllocaSRPass();
 FunctionPass *createAVRBranchSelectionPass();
 
 void initializeAVRShiftExpandPass(PassRegistry &);
@@ -39,17 +38,56 @@ void initializeAVRRelaxMemPass(PassRegistry &);
 namespace AVR {
 
 /// An integer that identifies all of the supported AVR address spaces.
-enum AddressSpace { DataMemory, ProgramMemory };
+enum AddressSpace {
+  DataMemory,
+  ProgramMemory,
+  ProgramMemory1,
+  ProgramMemory2,
+  ProgramMemory3,
+  ProgramMemory4,
+  ProgramMemory5,
+  NumAddrSpaces,
+};
 
 /// Checks if a given type is a pointer to program memory.
 template <typename T> bool isProgramMemoryAddress(T *V) {
-  return cast<PointerType>(V->getType())->getAddressSpace() == ProgramMemory;
+  auto *PT = cast<PointerType>(V->getType());
+  assert(PT != nullptr && "unexpected MemSDNode");
+  return PT->getAddressSpace() == ProgramMemory ||
+         PT->getAddressSpace() == ProgramMemory1 ||
+         PT->getAddressSpace() == ProgramMemory2 ||
+         PT->getAddressSpace() == ProgramMemory3 ||
+         PT->getAddressSpace() == ProgramMemory4 ||
+         PT->getAddressSpace() == ProgramMemory5;
+}
+
+template <typename T> AddressSpace getAddressSpace(T *V) {
+  auto *PT = cast<PointerType>(V->getType());
+  assert(PT != nullptr && "unexpected MemSDNode");
+  unsigned AS = PT->getAddressSpace();
+  if (AS < NumAddrSpaces)
+    return static_cast<AddressSpace>(AS);
+  return NumAddrSpaces;
 }
 
 inline bool isProgramMemoryAccess(MemSDNode const *N) {
-  auto V = N->getMemOperand()->getValue();
+  auto *V = N->getMemOperand()->getValue();
+  if (V != nullptr && isProgramMemoryAddress(V))
+    return true;
+  return false;
+}
 
-  return (V != nullptr) ? isProgramMemoryAddress(V) : false;
+// Get the index of the program memory bank.
+//  -1: not program memory
+//   0: ordinary program memory
+// 1~5: extended program memory
+inline int getProgramMemoryBank(MemSDNode const *N) {
+  auto *V = N->getMemOperand()->getValue();
+  if (V == nullptr || !isProgramMemoryAddress(V))
+    return -1;
+  AddressSpace AS = getAddressSpace(V);
+  assert(ProgramMemory <= AS && AS <= ProgramMemory5);
+  return static_cast<int>(AS - ProgramMemory);
 }
 
 } // end of namespace AVR

@@ -1094,7 +1094,7 @@ Breakpoint::BreakpointEventData::GetBreakpointLocationAtIndexFromEvent(
 json::Value Breakpoint::GetStatistics() {
   json::Object bp;
   bp.try_emplace("id", GetID());
-  bp.try_emplace("resolveTime", m_resolve_time.count());
+  bp.try_emplace("resolveTime", m_resolve_time.get().count());
   bp.try_emplace("numLocations", (int64_t)GetNumLocations());
   bp.try_emplace("numResolvedLocations", (int64_t)GetNumResolvedLocations());
   bp.try_emplace("internal", IsInternal());

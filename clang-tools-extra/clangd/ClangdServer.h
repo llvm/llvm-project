@@ -165,6 +165,8 @@ public:
     bool FoldingRanges = false;
 
     FeatureModuleSet *FeatureModules = nullptr;
+    /// If true, use the dirty buffer contents when building Preambles.
+    bool UseDirtyHeaders = false;
 
     explicit operator TUScheduler::Options() const;
   };
@@ -282,6 +284,10 @@ public:
   void findImplementations(PathRef File, Position Pos,
                            Callback<std::vector<LocatedSymbol>> CB);
 
+  /// Retrieve symbols for types referenced at \p Pos.
+  void findType(PathRef File, Position Pos,
+                Callback<std::vector<LocatedSymbol>> CB);
+
   /// Retrieve locations for symbol references.
   void findReferences(PathRef File, Position Pos, uint32_t Limit,
                       Callback<ReferencesResult> CB);
@@ -390,6 +396,9 @@ public:
 private:
   FeatureModuleSet *FeatureModules;
   const GlobalCompilationDatabase &CDB;
+  const ThreadsafeFS &getHeaderFS() const {
+    return UseDirtyHeaders ? *DirtyFS : TFS;
+  }
   const ThreadsafeFS &TFS;
 
   Path ResourceDir;
@@ -408,6 +417,8 @@ private:
 
   // When set, provides clang-tidy options for a specific file.
   TidyProviderRef ClangTidyProvider;
+
+  bool UseDirtyHeaders = false;
 
   // GUARDED_BY(CachedCompletionFuzzyFindRequestMutex)
   llvm::StringMap<llvm::Optional<FuzzyFindRequest>>

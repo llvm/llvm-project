@@ -239,6 +239,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
   if (auto splatAttr = attr.dyn_cast<SplatElementsAttr>()) {
     llvm::Type *elementType;
     uint64_t numElements;
+    bool isScalable = false;
     if (auto *arrayTy = dyn_cast<llvm::ArrayType>(llvmType)) {
       elementType = arrayTy->getElementType();
       numElements = arrayTy->getNumElements();
@@ -248,6 +249,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     } else if (auto *sVectorTy = dyn_cast<llvm::ScalableVectorType>(llvmType)) {
       elementType = sVectorTy->getElementType();
       numElements = sVectorTy->getMinNumElements();
+      isScalable = true;
     } else {
       llvm_unreachable("unrecognized constant vector type");
     }
@@ -265,7 +267,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
       return nullptr;
     if (llvmType->isVectorTy())
       return llvm::ConstantVector::getSplat(
-          llvm::ElementCount::get(numElements, /*Scalable=*/false), child);
+          llvm::ElementCount::get(numElements, /*Scalable=*/isScalable), child);
     if (llvmType->isArrayTy()) {
       auto *arrayType = llvm::ArrayType::get(elementType, numElements);
       SmallVector<llvm::Constant *, 8> constants(numElements, child);
@@ -360,11 +362,19 @@ static Value getPHISourceValue(Block *current, Block *pred,
   if (isa<LLVM::BrOp>(terminator))
     return terminator.getOperand(index);
 
-  SuccessorRange successors = terminator.getSuccessors();
-  assert(std::adjacent_find(successors.begin(), successors.end()) ==
-             successors.end() &&
-         "successors with arguments in LLVM branches must be different blocks");
-  (void)successors;
+#ifndef NDEBUG
+  llvm::SmallPtrSet<Block *, 4> seenSuccessors;
+  for (unsigned i = 0, e = terminator.getNumSuccessors(); i < e; ++i) {
+    Block *successor = terminator.getSuccessor(i);
+    auto branch = cast<BranchOpInterface>(terminator);
+    Optional<OperandRange> successorOperands = branch.getSuccessorOperands(i);
+    assert(
+        (!seenSuccessors.contains(successor) ||
+         (successorOperands && successorOperands->empty())) &&
+        "successors with arguments in LLVM branches must be different blocks");
+    seenSuccessors.insert(successor);
+  }
+#endif
 
   // For instructions that branch based on a condition value, we need to take
   // the operands for the branch that was taken.
@@ -757,21 +767,22 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     }
 
     if (auto attr = func.getArgAttrOfType<UnitAttr>(argIdx, "llvm.sret")) {
-      auto argTy = mlirArg.getType();
-      if (!argTy.isa<LLVM::LLVMPointerType>())
+      auto argTy = mlirArg.getType().dyn_cast<LLVM::LLVMPointerType>();
+      if (!argTy)
         return func.emitError(
             "llvm.sret attribute attached to LLVM non-pointer argument");
-      llvmArg.addAttrs(llvm::AttrBuilder(llvmArg.getContext()).addStructRetAttr(
-          llvmArg.getType()->getPointerElementType()));
+      llvmArg.addAttrs(
+          llvm::AttrBuilder(llvmArg.getContext())
+              .addStructRetAttr(convertType(argTy.getElementType())));
     }
 
     if (auto attr = func.getArgAttrOfType<UnitAttr>(argIdx, "llvm.byval")) {
-      auto argTy = mlirArg.getType();
-      if (!argTy.isa<LLVM::LLVMPointerType>())
+      auto argTy = mlirArg.getType().dyn_cast<LLVM::LLVMPointerType>();
+      if (!argTy)
         return func.emitError(
             "llvm.byval attribute attached to LLVM non-pointer argument");
-      llvmArg.addAttrs(llvm::AttrBuilder(llvmArg.getContext()).addByValAttr(
-          llvmArg.getType()->getPointerElementType()));
+      llvmArg.addAttrs(llvm::AttrBuilder(llvmArg.getContext())
+                           .addByValAttr(convertType(argTy.getElementType())));
     }
 
     mapValue(mlirArg, &llvmArg);

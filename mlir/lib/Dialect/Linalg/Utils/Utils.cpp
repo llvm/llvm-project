@@ -12,10 +12,11 @@
 
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 
-#include "mlir/Analysis/AffineStructures.h"
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -23,6 +24,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineExprVisitor.h"
@@ -30,7 +32,6 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/LoopUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 
@@ -328,7 +329,7 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
   // Exit if `source` is not defined by an ExtractSliceOp.
   auto sliceOp = source.getDefiningOp<tensor::ExtractSliceOp>();
   if (!sliceOp)
-    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Search the `source` use-def chain for padded LinalgOps.
   Value current = sliceOp.source();
@@ -339,51 +340,87 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
     OpResult opResult = current.cast<OpResult>();
     current = linalgOp.getOutputOperand(opResult.getResultNumber())->get();
   }
-  auto padTensorOp = current ? current.getDefiningOp<PadTensorOp>() : nullptr;
+  auto padOp = current ? current.getDefiningOp<tensor::PadOp>() : nullptr;
 
-  // Exit if the search fails to match a PadTensorOp at the end of the matched
+  // Exit if the search fails to match a tensor::PadOp at the end of the matched
   // LinalgOp sequence.
-  if (!padTensorOp)
-    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+  if (!padOp)
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Exit if the padded result type does not match.
   if (sliceOp.source().getType() != type)
-    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Exit if the LinalgOps are not high padded.
-  if (llvm::any_of(padTensorOp.getMixedLowPad(), [](OpFoldResult ofr) {
+  if (llvm::any_of(padOp.getMixedLowPad(), [](OpFoldResult ofr) {
         return getConstantIntValue(ofr) != static_cast<int64_t>(0);
       }))
-    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
-  // Exit if `padTensorOpSliceOp`, which defines the slice used by
-  // `padTensorOp`, is rank-reducing.
-  auto padTensorOpSliceOp =
-      padTensorOp.source().getDefiningOp<tensor::ExtractSliceOp>();
-  if (!padTensorOpSliceOp || sliceOp.getMixedSizes().size() !=
-                                 padTensorOpSliceOp.getMixedSizes().size())
-    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+  // Exit if `padOpSliceOp`, which defines the slice used by
+  // `padOp`, is rank-reducing.
+  auto padOpSliceOp = padOp.source().getDefiningOp<tensor::ExtractSliceOp>();
+  if (!padOpSliceOp ||
+      sliceOp.getMixedSizes().size() != padOpSliceOp.getMixedSizes().size())
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Exit if the sizes of the dynamic sizes of `sliceOp` do not match the size
-  // of the slice padded by `padTensorOp`.
-  if (llvm::any_of(llvm::zip(sliceOp.getMixedSizes(),
-                             padTensorOpSliceOp.getMixedSizes()),
-                   [](std::tuple<OpFoldResult, OpFoldResult> it) {
-                     return !isEqualConstantIntOrValue(std::get<0>(it),
-                                                       std::get<1>(it));
-                   }))
-    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+  // of the slice padded by `padOp`.
+  if (llvm::any_of(
+          llvm::zip(sliceOp.getMixedSizes(), padOpSliceOp.getMixedSizes()),
+          [](std::tuple<OpFoldResult, OpFoldResult> it) {
+            return !isEqualConstantIntOrValue(std::get<0>(it), std::get<1>(it));
+          }))
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Exit if the padding values do not match.
-  Attribute padTensorOpPadAttr, padAttr;
-  Value padTensorOpPad = padTensorOp.getConstantPaddingValue();
-  if (!padTensorOpPad ||
-      !matchPattern(padTensorOpPad, m_Constant(&padTensorOpPadAttr)) ||
-      !matchPattern(pad, m_Constant(&padAttr)) || padTensorOpPadAttr != padAttr)
-    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+  Attribute padOpPadAttr, padAttr;
+  Value padOpPad = padOp.getConstantPaddingValue();
+  if (!padOpPad || !matchPattern(padOpPad, m_Constant(&padOpPadAttr)) ||
+      !matchPattern(pad, m_Constant(&padAttr)) || padOpPadAttr != padAttr)
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Return the padded result if the padding values and sizes match.
   return sliceOp.source();
+}
+
+GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,
+                          Value outputTensor,
+                          ArrayRef<int64_t> transposeVector) {
+  auto resultTensorType = outputTensor.getType().cast<RankedTensorType>();
+  Type elementType = resultTensorType.getElementType();
+
+  assert(isPermutation(transposeVector) &&
+         "expect transpose vector to be a permutation");
+  assert(transposeVector.size() ==
+             static_cast<size_t>(resultTensorType.getRank()) &&
+         "expect transpose vector size to match result tensor rank");
+
+  // Compute the transpose and the indentity indexing maps.
+  SmallVector<AffineMap> indexingMaps = {
+      inversePermutation(AffineMap::getPermutationMap(
+          SmallVector<unsigned>(transposeVector.begin(), transposeVector.end()),
+          b.getContext())),
+      AffineMap::getMultiDimIdentityMap(transposeVector.size(),
+                                        b.getContext())};
+  SmallVector<llvm::StringRef> iteratorTypes(transposeVector.size(),
+                                             getParallelIteratorTypeName());
+
+  // Create a GenericOp to transpose `inputTensor` into `outputTensor`.
+  auto transposeOp = b.create<GenericOp>(
+      loc, resultTensorType, inputTensor, outputTensor,
+      b.getAffineMapArrayAttr(indexingMaps), b.getStrArrayAttr(iteratorTypes),
+      /*doc=*/nullptr,
+      /*library_call=*/nullptr);
+  Region &body = transposeOp.getRegion();
+  body.push_back(new Block());
+  body.front().addArguments({elementType, elementType}, {loc, loc});
+
+  // Create the body of the transpose operation.
+  OpBuilder::InsertionGuard g(b);
+  b.setInsertionPointToEnd(&body.front());
+  b.create<YieldOp>(loc, transposeOp.getRegion().front().getArgument(0));
+  return transposeOp;
 }
 
 /// Specialization to build an scf "for" nest.

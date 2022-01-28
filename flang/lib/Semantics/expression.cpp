@@ -1739,7 +1739,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(
         } else if (IsAllocatable(*symbol) && IsBareNullPointer(&*value)) {
           // NULL() with no arguments allowed by 7.5.10 para 6 for ALLOCATABLE
         } else if (auto symType{DynamicType::From(symbol)}) {
-          if (valueType) {
+          if (IsAllocatable(*symbol) && symType->IsUnlimitedPolymorphic() &&
+              valueType) {
+            // ok
+          } else if (valueType) {
             AttachDeclaration(
                 Say(expr.source,
                     "Value in structure constructor of type %s is "
@@ -2778,33 +2781,43 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::DefinedBinary &x) {
       "No operator %s defined for %s and %s"_err_en_US, nullptr, true);
 }
 
-static void CheckFuncRefToArrayElementRefHasSubscripts(
-    semantics::SemanticsContext &context,
+// Returns true if a parsed function reference should be converted
+// into an array element reference.
+static bool CheckFuncRefToArrayElement(semantics::SemanticsContext &context,
     const parser::FunctionReference &funcRef) {
   // Emit message if the function reference fix will end up an array element
-  // reference with no subscripts because it will not be possible to later tell
-  // the difference in expressions between empty subscript list due to bad
-  // subscripts error recovery or because the user did not put any.
-  if (std::get<std::list<parser::ActualArgSpec>>(funcRef.v.t).empty()) {
-    auto &proc{std::get<parser::ProcedureDesignator>(funcRef.v.t)};
-    const auto *name{std::get_if<parser::Name>(&proc.u)};
-    if (!name) {
-      name = &std::get<parser::ProcComponentRef>(proc.u).v.thing.component;
+  // reference with no subscripts, or subscripts on a scalar, because it will
+  // not be possible to later distinguish in expressions between an empty
+  // subscript list due to bad subscripts error recovery or because the
+  // user did not put any.
+  auto &proc{std::get<parser::ProcedureDesignator>(funcRef.v.t)};
+  const auto *name{std::get_if<parser::Name>(&proc.u)};
+  if (!name) {
+    name = &std::get<parser::ProcComponentRef>(proc.u).v.thing.component;
+  }
+  if (!name->symbol) {
+    return false;
+  } else if (name->symbol->Rank() == 0) {
+    if (const Symbol *
+        function{
+            semantics::IsFunctionResultWithSameNameAsFunction(*name->symbol)}) {
+      auto &msg{context.Say(funcRef.v.source,
+          "Recursive call to '%s' requires a distinct RESULT in its declaration"_err_en_US,
+          name->source)};
+      AttachDeclaration(&msg, *function);
+      name->symbol = const_cast<Symbol *>(function);
     }
-    auto &msg{context.Say(funcRef.v.source,
-        name->symbol && name->symbol->Rank() == 0
-            ? "'%s' is not a function"_err_en_US
-            : "Reference to array '%s' with empty subscript list"_err_en_US,
-        name->source)};
-    if (name->symbol) {
-      if (semantics::IsFunctionResultWithSameNameAsFunction(*name->symbol)) {
-        msg.Attach(name->source,
-            "A result variable must be declared with RESULT to allow recursive "
-            "function calls"_en_US);
-      } else {
+    return false;
+  } else {
+    if (std::get<std::list<parser::ActualArgSpec>>(funcRef.v.t).empty()) {
+      auto &msg{context.Say(funcRef.v.source,
+          "Reference to array '%s' with empty subscript list"_err_en_US,
+          name->source)};
+      if (name->symbol) {
         AttachDeclaration(&msg, *name->symbol);
       }
     }
+    return true;
   }
 }
 
@@ -2838,8 +2851,9 @@ static void FixMisparsedFunctionReference(
         // pointer as per C1105 so this cannot be a function reference.
         if constexpr (common::HasMember<common::Indirection<parser::Designator>,
                           uType>) {
-          CheckFuncRefToArrayElementRefHasSubscripts(context, funcRef);
-          u = common::Indirection{funcRef.ConvertToArrayElementRef()};
+          if (CheckFuncRefToArrayElement(context, funcRef)) {
+            u = common::Indirection{funcRef.ConvertToArrayElementRef()};
+          }
         } else {
           DIE("can't fix misparsed function as array reference");
         }

@@ -293,7 +293,6 @@ public:
       return nullptr;
     }
   }
-  bool MightBeAssignmentCompatibleWith(const DerivedTypeSpec &) const;
   bool operator==(const DerivedTypeSpec &that) const {
     return RawEquals(that) && parameters_ == that.parameters_;
   }

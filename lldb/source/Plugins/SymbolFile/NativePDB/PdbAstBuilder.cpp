@@ -1081,7 +1081,7 @@ PdbAstBuilder::GetOrCreateFunctionDecl(PdbCompilandSymId func_id) {
 
   clang::FunctionDecl *function_decl = nullptr;
   if (parent->isRecord()) {
-    clang::QualType parent_qt = llvm::dyn_cast<clang::TypeDecl>(parent)
+    clang::QualType parent_qt = llvm::cast<clang::TypeDecl>(parent)
                                     ->getTypeForDecl()
                                     ->getCanonicalTypeInternal();
     lldb::opaque_compiler_type_t parent_opaque_ty =
@@ -1318,7 +1318,7 @@ void PdbAstBuilder::ParseAllNamespacesPlusChildrenOf(
     if (!context->isNamespace())
       continue;
 
-    clang::NamespaceDecl *ns = llvm::dyn_cast<clang::NamespaceDecl>(context);
+    clang::NamespaceDecl *ns = llvm::cast<clang::NamespaceDecl>(context);
     std::string actual_ns = ns->getQualifiedNameAsString();
     if (llvm::StringRef(actual_ns).startswith(*parent)) {
       clang::QualType qt = GetOrCreateType(tid);

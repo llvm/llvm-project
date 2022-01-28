@@ -13,135 +13,108 @@
 
 #include <iterator>
 
-#include <array>
 #include <cassert>
 #include <cstddef>
 
+#include "../types.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 
-using range_t = std::array<int, 10>;
-
-class distance_apriori_sentinel {
-public:
-  distance_apriori_sentinel() = default;
-  constexpr explicit distance_apriori_sentinel(std::ptrdiff_t const count) : count_(count) {}
-
-  constexpr bool operator==(std::input_or_output_iterator auto const&) const {
-    assert(false && "difference op should take precedence");
-    return false;
+template <bool Count, class It>
+constexpr void check_assignable(int* first, int* last, int* expected) {
+  {
+    It it(first);
+    auto sent = assignable_sentinel(It(last));
+    std::ranges::advance(it, sent);
+    ASSERT_SAME_TYPE(decltype(std::ranges::advance(it, sent)), void);
+    assert(base(it) == expected);
   }
 
-  friend constexpr std::ptrdiff_t operator-(std::input_or_output_iterator auto const&,
-                                            distance_apriori_sentinel const y) {
-    return -y.count_;
+  // Count operations
+  if constexpr (Count) {
+    auto it = stride_counting_iterator(It(first));
+    auto sent = assignable_sentinel(stride_counting_iterator(It(last)));
+    std::ranges::advance(it, sent);
+    assert(base(base(it)) == expected);
+    assert(it.stride_count() == 0); // because we got here by assigning from last, not by incrementing
+  }
+}
+
+template <bool Count, class It>
+constexpr void check_sized_sentinel(int* first, int* last, int* expected) {
+  auto size = (last - first);
+
+  {
+    It it(first);
+    auto sent = distance_apriori_sentinel(size);
+    std::ranges::advance(it, sent);
+    ASSERT_SAME_TYPE(decltype(std::ranges::advance(it, sent)), void);
+    assert(base(it) == expected);
   }
 
-  friend constexpr std::ptrdiff_t operator-(distance_apriori_sentinel const x,
-                                            std::input_or_output_iterator auto const&) {
-    return x.count_;
-  }
-
-private:
-  std::ptrdiff_t count_ = 0;
-};
-
-template <class It, class Sent = It>
-constexpr void check_assignable_case() {
-  auto range = range_t{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-
-  for (std::ptrdiff_t n = 0; n != 9; ++n) {
-    {
-      It first(range.begin());
-      Sent last(It(range.begin() + n));
-      std::ranges::advance(first, last);
-      assert(base(first) == range.begin() + n);
-    }
-
-    // Count operations
-    if constexpr (std::is_same_v<It, Sent>) {
-      stride_counting_iterator<It> first(It(range.begin()));
-      stride_counting_iterator<It> last(It(range.begin() + n));
-      std::ranges::advance(first, last);
-      assert(first.base().base() == range.begin() + n);
-      assert(first.stride_count() == 0); // because we got here by assigning from last, not by incrementing
+  // Count operations
+  if constexpr (Count) {
+    auto it = stride_counting_iterator(It(first));
+    auto sent = distance_apriori_sentinel(size);
+    std::ranges::advance(it, sent);
+    if constexpr (std::random_access_iterator<It>) {
+      assert(it.stride_count() == 1);
+    } else {
+      assert(it.stride_count() == size);
     }
   }
 }
 
-template <class It>
-constexpr void check_sized_sentinel_case() {
-  auto range = range_t{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+template <bool Count, class It>
+constexpr void check_sentinel(int* first, int* last, int* expected) {
+  auto size = (last - first);
 
-  for (std::ptrdiff_t n = 0; n != 9; ++n) {
-    {
-      It first(range.begin());
-      distance_apriori_sentinel last(n);
-      std::ranges::advance(first, last);
-      assert(base(first) == range.begin() + n);
-    }
-
-    // Count operations
-    {
-      stride_counting_iterator<It> first(It(range.begin()));
-      distance_apriori_sentinel last(n);
-      std::ranges::advance(first, last);
-
-      assert(first.base().base() == range.begin() + n);
-      if constexpr (std::random_access_iterator<It>) {
-        assert(first.stride_count() == 1);
-        assert(first.stride_displacement() == 1);
-      } else {
-        assert(first.stride_count() == n);
-        assert(first.stride_displacement() == n);
-      }
-    }
+  {
+    It it(first);
+    auto sent = sentinel_wrapper(It(last));
+    std::ranges::advance(it, sent);
+    ASSERT_SAME_TYPE(decltype(std::ranges::advance(it, sent)), void);
+    assert(base(it) == expected);
   }
-}
 
-template <class It>
-constexpr void check_sentinel_case() {
-  auto range = range_t{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-
-  for (std::ptrdiff_t n = 0; n != 9; ++n) {
-    {
-      It first(range.begin());
-      sentinel_wrapper<It> last(It(range.begin() + n));
-      std::ranges::advance(first, last);
-      assert(base(first) == range.begin() + n);
-    }
-
-    // Count operations
-    {
-      stride_counting_iterator<It> first(It(range.begin()));
-      sentinel_wrapper<It> last(It(range.begin() + n));
-      std::ranges::advance(first, last);
-      assert(first.base() == last);
-      assert(first.stride_count() == n);
-    }
+  // Count operations
+  if constexpr (Count) {
+    auto it = stride_counting_iterator(It(first));
+    auto sent = sentinel_wrapper(stride_counting_iterator(It(last)));
+    std::ranges::advance(it, sent);
+    assert(it.stride_count() == size);
   }
 }
 
 constexpr bool test() {
-  using It = range_t::const_iterator;
-  check_assignable_case<cpp17_input_iterator<It>, sentinel_wrapper<cpp17_input_iterator<It>>>();
-  check_assignable_case<forward_iterator<It>>();
-  check_assignable_case<bidirectional_iterator<It>>();
-  check_assignable_case<random_access_iterator<It>>();
-  check_assignable_case<contiguous_iterator<It>>();
+  int range[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-  check_sized_sentinel_case<cpp17_input_iterator<It>>();
-  check_sized_sentinel_case<cpp20_input_iterator<It>>();
-  check_sized_sentinel_case<forward_iterator<It>>();
-  check_sized_sentinel_case<bidirectional_iterator<It>>();
-  check_sized_sentinel_case<random_access_iterator<It>>();
-  check_sized_sentinel_case<contiguous_iterator<It>>();
+  for (int n = 0; n != 10; ++n) {
+    check_assignable<false, cpp17_input_iterator<int*>>(  range, range+n, range+n);
+    check_assignable<false, cpp20_input_iterator<int*>>(  range, range+n, range+n);
+    check_assignable<true,  forward_iterator<int*>>(      range, range+n, range+n);
+    check_assignable<true,  bidirectional_iterator<int*>>(range, range+n, range+n);
+    check_assignable<true,  random_access_iterator<int*>>(range, range+n, range+n);
+    check_assignable<true,  contiguous_iterator<int*>>(   range, range+n, range+n);
+    check_assignable<true,  int*>(                        range, range+n, range+n);
 
-  check_sentinel_case<cpp17_input_iterator<It>>();
-  // cpp20_input_iterator not copyable, so is omitted
-  check_sentinel_case<forward_iterator<It>>();
-  check_sentinel_case<bidirectional_iterator<It>>();
-  check_sentinel_case<random_access_iterator<It>>();
-  check_sentinel_case<contiguous_iterator<It>>();
+    check_sized_sentinel<false, cpp17_input_iterator<int*>>(  range, range+n, range+n);
+    check_sized_sentinel<false, cpp20_input_iterator<int*>>(  range, range+n, range+n);
+    check_sized_sentinel<true,  forward_iterator<int*>>(      range, range+n, range+n);
+    check_sized_sentinel<true,  bidirectional_iterator<int*>>(range, range+n, range+n);
+    check_sized_sentinel<true,  random_access_iterator<int*>>(range, range+n, range+n);
+    check_sized_sentinel<true,  contiguous_iterator<int*>>(   range, range+n, range+n);
+    check_sized_sentinel<true,  int*>(                        range, range+n, range+n);
+
+    check_sentinel<false, cpp17_input_iterator<int*>>(  range, range+n, range+n);
+    check_sentinel<false, cpp20_input_iterator<int*>>(  range, range+n, range+n);
+    check_sentinel<true,  forward_iterator<int*>>(      range, range+n, range+n);
+    check_sentinel<true,  bidirectional_iterator<int*>>(range, range+n, range+n);
+    check_sentinel<true,  random_access_iterator<int*>>(range, range+n, range+n);
+    check_sentinel<true,  contiguous_iterator<int*>>(   range, range+n, range+n);
+    check_sentinel<true,  int*>(                        range, range+n, range+n);
+  }
+
   return true;
 }
 

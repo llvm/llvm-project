@@ -21,6 +21,7 @@
 #define DEBUG_TYPE "presburger"
 
 using namespace mlir;
+using namespace presburger_utils;
 using llvm::SmallDenseMap;
 using llvm::SmallDenseSet;
 
@@ -759,15 +760,17 @@ Optional<SmallVector<int64_t, 8>> IntegerPolyhedron::findIntegerSample() const {
   // full-dimensional cone and is hence non-empty.
   Simplex shrunkenConeSimplex(cone);
   assert(!shrunkenConeSimplex.isEmpty() && "Shrunken cone cannot be empty!");
+
+  // The sample will always exist since the shrunken cone is non-empty.
   SmallVector<Fraction, 8> shrunkenConeSample =
-      shrunkenConeSimplex.getRationalSample();
+      *shrunkenConeSimplex.getRationalSample();
 
   SmallVector<int64_t, 8> coneSample(llvm::map_range(shrunkenConeSample, ceil));
 
   // 6) Return transform * concat(boundedSample, coneSample).
   SmallVector<int64_t, 8> &sample = boundedSample.getValue();
   sample.append(coneSample.begin(), coneSample.end());
-  return transform.preMultiplyColumn(sample);
+  return transform.postMultiplyWithColumn(sample);
 }
 
 /// Helper to evaluate an affine expression at a point.
@@ -797,8 +800,7 @@ bool IntegerPolyhedron::containsPoint(ArrayRef<int64_t> point) const {
   return true;
 }
 
-void IntegerPolyhedron::getLocalReprs(
-    std::vector<llvm::Optional<std::pair<unsigned, unsigned>>> &repr) const {
+void IntegerPolyhedron::getLocalReprs(std::vector<MaybeLocalRepr> &repr) const {
   std::vector<SmallVector<int64_t, 8>> dividends(getNumLocalIds());
   SmallVector<unsigned, 4> denominators(getNumLocalIds());
   getLocalReprs(dividends, denominators, repr);
@@ -807,15 +809,14 @@ void IntegerPolyhedron::getLocalReprs(
 void IntegerPolyhedron::getLocalReprs(
     std::vector<SmallVector<int64_t, 8>> &dividends,
     SmallVector<unsigned, 4> &denominators) const {
-  std::vector<llvm::Optional<std::pair<unsigned, unsigned>>> repr(
-      getNumLocalIds());
+  std::vector<MaybeLocalRepr> repr(getNumLocalIds());
   getLocalReprs(dividends, denominators, repr);
 }
 
 void IntegerPolyhedron::getLocalReprs(
     std::vector<SmallVector<int64_t, 8>> &dividends,
     SmallVector<unsigned, 4> &denominators,
-    std::vector<llvm::Optional<std::pair<unsigned, unsigned>>> &repr) const {
+    std::vector<MaybeLocalRepr> &repr) const {
 
   repr.resize(getNumLocalIds());
   dividends.resize(getNumLocalIds());
@@ -833,11 +834,13 @@ void IntegerPolyhedron::getLocalReprs(
     changed = false;
     for (unsigned i = 0, e = getNumLocalIds(); i < e; ++i) {
       if (!foundRepr[i + divOffset]) {
-        if (auto res = presburger_utils::computeSingleVarRepr(
-                *this, foundRepr, divOffset + i, dividends[i],
-                denominators[i])) {
+        auto res = computeSingleVarRepr(*this, foundRepr, divOffset + i,
+                                        dividends[i], denominators[i]);
+        if (res.kind == ReprKind::Inequality) {
           foundRepr[i + divOffset] = true;
-          repr[i] = res;
+          repr[i].kind = ReprKind::Inequality;
+          repr[i].repr.inEqualityPair = {res.repr.inEqualityPair.lowerBoundIdx,
+                                         res.repr.inEqualityPair.upperBoundIdx};
           changed = true;
         }
       }
@@ -847,7 +850,7 @@ void IntegerPolyhedron::getLocalReprs(
   // Set 0 denominator for identifiers for which no division representation
   // could be found.
   for (unsigned i = 0, e = repr.size(); i < e; ++i)
-    if (!repr[i].hasValue())
+    if (repr[i].kind == ReprKind::None)
       denominators[i] = 0;
 }
 
@@ -1087,47 +1090,17 @@ void IntegerPolyhedron::mergeLocalIds(IntegerPolyhedron &other) {
   std::copy(denomsB.begin() + initLocals, denomsB.end(),
             denomsA.begin() + initLocals);
 
-  // Find and merge duplicate divisions.
-  // TODO: Add division normalization to support divisions that differ by
-  // a constant.
-  // TODO: Add division ordering such that a division representation for local
-  // identifier at position `i` only depends on local identifiers at position <
-  // `i`. This would make sure that all divisions depending on other local
-  // variables that can be merged, are merged.
+  // Merge function that merges the local variables in both sets by treating
+  // them as the same identifier.
+  auto merge = [&polyA, &polyB](unsigned i, unsigned j) -> bool {
+    eliminateRedundantLocalId(polyA, i, j);
+    eliminateRedundantLocalId(polyB, i, j);
+    return true;
+  };
+
+  // Merge all divisions by removing duplicate divisions.
   unsigned localOffset = getIdKindOffset(IdKind::Local);
-  for (unsigned i = 0; i < divsA.size(); ++i) {
-    // Check if a division representation exists for the `i^th` local id.
-    if (denomsA[i] == 0)
-      continue;
-    // Check if a division exists which is a duplicate of the division at `i`.
-    for (unsigned j = i + 1; j < divsA.size(); ++j) {
-      // Check if a division representation exists for the `j^th` local id.
-      if (denomsA[j] == 0)
-        continue;
-      // Check if the denominators match.
-      if (denomsA[i] != denomsA[j])
-        continue;
-      // Check if the representations are equal.
-      if (divsA[i] != divsA[j])
-        continue;
-
-      // Merge divisions at position `j` into division at position `i`.
-      eliminateRedundantLocalId(polyA, i, j);
-      eliminateRedundantLocalId(polyB, i, j);
-      for (unsigned k = 0, g = divsA.size(); k < g; ++k) {
-        SmallVector<int64_t, 8> &div = divsA[k];
-        if (denomsA[k] != 0) {
-          div[localOffset + i] += div[localOffset + j];
-          div.erase(div.begin() + localOffset + j);
-        }
-      }
-
-      divsA.erase(divsA.begin() + j);
-      denomsA.erase(denomsA.begin() + j);
-      // Since `j` can never be zero, we do not need to worry about overflows.
-      --j;
-    }
-  }
+  removeDuplicateDivs(divsA, denomsA, localOffset, merge);
 }
 
 /// Removes local variables using equalities. Each equality is checked if it

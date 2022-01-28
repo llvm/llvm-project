@@ -8,6 +8,8 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-format
+// TODO FMT Evaluate gcc-11 status
+// UNSUPPORTED: gcc-11
 
 // <format>
 
@@ -24,7 +26,7 @@
 #include "test_macros.h"
 
 void test(const auto& store) {
-#if _LIBCPP_VERSION
+#ifdef _LIBCPP_VERSION
   for (const auto& arg : store.__args) {
     assert(arg);
     assert(static_cast<bool>(arg));

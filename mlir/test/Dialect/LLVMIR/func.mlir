@@ -216,6 +216,13 @@ module {
 // -----
 
 module {
+  // expected-error@+1 {{cannot attach result attributes to functions with a void return}}
+  llvm.func @variadic_def() -> (!llvm.void {llvm.noalias})
+}
+
+// -----
+
+module {
   // expected-error@+1 {{variadic arguments must be in the end of the argument list}}
   llvm.func @variadic_inside(%arg0: i32, ..., %arg1: i32)
 }

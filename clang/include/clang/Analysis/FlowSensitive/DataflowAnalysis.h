@@ -42,6 +42,11 @@ namespace dataflow {
 ///   * `void transfer(const Stmt *, LatticeT &, Environment &)` - applies the
 ///     analysis transfer function for a given statement and lattice element.
 ///
+///  `Derived` can optionally override the following members:
+///   * `bool merge(QualType, const Value &, const Value &, Value &,
+///     Environment &)` -  joins distinct values. This could be a strict
+///     lattice join or a more general widening operation.
+///
 ///  `LatticeT` is a bounded join-semilattice that is used by `Derived` and must
 ///  provide the following public members:
 ///   * `LatticeJoinEffect join(const LatticeT &)` - joins the object and the
@@ -57,6 +62,8 @@ public:
   using Lattice = LatticeT;
 
   explicit DataflowAnalysis(ASTContext &Context) : Context(Context) {}
+  explicit DataflowAnalysis(ASTContext &Context, bool ApplyBuiltinTransfer)
+      : TypeErasedDataflowAnalysis(ApplyBuiltinTransfer), Context(Context) {}
 
   ASTContext &getASTContext() final { return Context; }
 

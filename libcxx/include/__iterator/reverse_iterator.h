@@ -24,13 +24,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Tp, class = void>
-struct __is_stashing_iterator : false_type {};
-
-template <class _Tp>
-struct __is_stashing_iterator<_Tp, typename __void_t<typename _Tp::__stashing_iterator_tag>::type>
-  : true_type {};
-
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Iter>
 class _LIBCPP_TEMPLATE_VIS reverse_iterator
@@ -47,10 +40,6 @@ private:
 #ifndef _LIBCPP_ABI_NO_ITERATOR_BASES
     _Iter __t; // no longer used as of LWG #2360, not removed due to ABI break
 #endif
-
-    static_assert(!__is_stashing_iterator<_Iter>::value,
-      "The specified iterator type cannot be used with reverse_iterator; "
-      "Using stashing iterators with reverse_iterator causes undefined behavior");
 
 protected:
     _Iter current;
@@ -88,7 +77,7 @@ public:
     template <class _Up, class = __enable_if_t<
         !is_same<_Up, _Iter>::value &&
         is_convertible<_Up const&, _Iter>::value &&
-        is_assignable<_Iter, _Up const&>::value
+        is_assignable<_Iter&, _Up const&>::value
     > >
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     reverse_iterator& operator=(const reverse_iterator<_Up>& __u) {
@@ -113,7 +102,7 @@ public:
     template <class _Up, class = __enable_if_t<
         !is_same<_Up, _Iter>::value &&
         is_convertible<_Up const&, _Iter>::value &&
-        is_assignable<_Iter, _Up const&>::value
+        is_assignable<_Iter&, _Up const&>::value
     > >
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     reverse_iterator& operator=(const reverse_iterator<_Up>& __u) {

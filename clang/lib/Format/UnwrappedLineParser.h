@@ -18,6 +18,7 @@
 #include "FormatToken.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Format/Format.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/Support/Regex.h"
 #include <stack>
 #include <vector>
@@ -81,12 +82,21 @@ public:
   void parse();
 
 private:
+  enum class IfStmtKind {
+    NotIf,   // Not an if statement.
+    IfOnly,  // An if statement without the else clause.
+    IfElse,  // An if statement followed by else but not else if.
+    IfElseIf // An if statement followed by else if.
+  };
+
   void reset();
   void parseFile();
-  void parseLevel(bool HasOpeningBrace);
-  void parseBlock(bool MustBeDeclaration = false, unsigned AddLevels = 1u,
-                  bool MunchSemi = true,
-                  bool UnindentWhitesmithsBraces = false);
+  bool precededByCommentOrPPDirective() const;
+  bool mightFitOnOneLine() const;
+  bool parseLevel(bool HasOpeningBrace, IfStmtKind *IfKind = nullptr);
+  IfStmtKind parseBlock(bool MustBeDeclaration = false, unsigned AddLevels = 1u,
+                        bool MunchSemi = true,
+                        bool UnindentWhitesmithsBraces = false);
   void parseChildBlock();
   void parsePPDirective();
   void parsePPDefine();
@@ -96,13 +106,15 @@ private:
   void parsePPEndIf();
   void parsePPUnknown();
   void readTokenWithJavaScriptASI();
-  void parseStructuralElement(bool IsTopLevel = false);
+  void parseStructuralElement(IfStmtKind *IfKind = nullptr,
+                              bool IsTopLevel = false);
   bool tryToParseBracedList();
   bool parseBracedList(bool ContinueOnSemicolons = false, bool IsEnum = false,
                        tok::TokenKind ClosingBraceKind = tok::r_brace);
   void parseParens();
   void parseSquare(bool LambdaIntroducer = false);
-  void parseIfThenElse();
+  void keepAncestorBraces();
+  FormatToken *parseIfThenElse(IfStmtKind *IfKind, bool KeepBraces = false);
   void parseTryCatch();
   void parseForOrWhileLoop();
   void parseDoWhile();
@@ -220,7 +232,7 @@ private:
 
   // We store for each line whether it must be a declaration depending on
   // whether we are in a compound statement or not.
-  std::vector<bool> DeclarationScopeStack;
+  llvm::BitVector DeclarationScopeStack;
 
   const FormatStyle &Style;
   const AdditionalKeywords &Keywords;
@@ -234,6 +246,10 @@ private:
   // of the format tokens. The goal is to have the actual tokens created and
   // owned outside of and handed into the UnwrappedLineParser.
   ArrayRef<FormatToken *> AllTokens;
+
+  // Keeps a stack of the states of nested control statements (true if the
+  // statement contains more than some predefined number of nested statements).
+  SmallVector<bool, 8> NestedTooDeep;
 
   // Represents preprocessor branch type, so we can find matching
   // #if/#else/#endif directives.

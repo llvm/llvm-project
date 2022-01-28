@@ -1,4 +1,5 @@
 ; RUN: llvm-go test llvm.org/llvm/bindings/go/llvm
 
 ; REQUIRES: shell, default_triple
-; UNSUPPORTED: asan, ubsan, msan
+;; Building Go bindings with Clang is currently unsupported on AIX.
+; UNSUPPORTED: asan, ubsan, msan, -aix

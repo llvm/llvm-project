@@ -69,6 +69,30 @@ Expected<std::string> python::As<std::string>(Expected<PythonObject> &&obj) {
   return std::string(utf8.get());
 }
 
+static bool python_is_finalizing() {
+#if PY_MAJOR_VERSION == 2
+  return false;
+#elif PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 7
+  return _Py_Finalizing != nullptr;
+#else
+  return _Py_IsFinalizing();
+#endif
+}
+
+void PythonObject::Reset() {
+  if (m_py_obj && Py_IsInitialized()) {
+    if (python_is_finalizing()) {
+      // Leak m_py_obj rather than crashing the process.
+      // https://docs.python.org/3/c-api/init.html#c.PyGILState_Ensure
+    } else {
+      PyGILState_STATE state = PyGILState_Ensure();
+      Py_DECREF(m_py_obj);
+      PyGILState_Release(state);
+    }
+  }
+  m_py_obj = nullptr;
+}
+
 Expected<long long> PythonObject::AsLongLong() const {
   if (!m_py_obj)
     return nullDeref();
@@ -257,6 +281,9 @@ PythonObject PythonObject::GetAttributeValue(llvm::StringRef attr) const {
 }
 
 StructuredData::ObjectSP PythonObject::CreateStructuredObject() const {
+#if PY_MAJOR_VERSION >= 3
+  assert(PyGILState_Check());
+#endif
   switch (GetObjectType()) {
   case PyObjectType::Dictionary:
     return PythonDictionary(PyRefType::Borrowed, m_py_obj)
@@ -279,7 +306,8 @@ StructuredData::ObjectSP PythonObject::CreateStructuredObject() const {
   case PyObjectType::None:
     return StructuredData::ObjectSP();
   default:
-    return StructuredData::ObjectSP(new StructuredPythonObject(m_py_obj));
+    return StructuredData::ObjectSP(new StructuredPythonObject(
+        PythonObject(PyRefType::Borrowed, m_py_obj)));
   }
 }
 

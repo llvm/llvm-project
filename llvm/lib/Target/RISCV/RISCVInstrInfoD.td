@@ -158,6 +158,10 @@ def : InstAlias<"fge.d $rd, $rs, $rt",
 
 def PseudoFLD  : PseudoFloatLoad<"fld", FPR64>;
 def PseudoFSD  : PseudoStore<"fsd", FPR64>;
+let usesCustomInserter = 1 in {
+def PseudoQuietFLE_D : PseudoQuietFCMP<FPR64>;
+def PseudoQuietFLT_D : PseudoQuietFCMP<FPR64>;
+}
 } // Predicates = [HasStdExtD]
 
 //===----------------------------------------------------------------------===//
@@ -222,13 +226,34 @@ def : PatFpr64Fpr64<fminnum, FMIN_D>;
 def : PatFpr64Fpr64<fmaxnum, FMAX_D>;
 
 /// Setcc
+// FIXME: SETEQ/SETLT/SETLE imply nonans, can we pick better instructions for
+// strict versions of those.
 
-def : PatFpr64Fpr64<seteq, FEQ_D>;
-def : PatFpr64Fpr64<setoeq, FEQ_D>;
-def : PatFpr64Fpr64<setlt, FLT_D>;
-def : PatFpr64Fpr64<setolt, FLT_D>;
-def : PatFpr64Fpr64<setle, FLE_D>;
-def : PatFpr64Fpr64<setole, FLE_D>;
+// Match non-signaling FEQ_D
+def : PatSetCC<FPR64, any_fsetcc, SETEQ, FEQ_D>;
+def : PatSetCC<FPR64, any_fsetcc, SETOEQ, FEQ_D>;
+def : PatSetCC<FPR64, strict_fsetcc, SETLT, PseudoQuietFLT_D>;
+def : PatSetCC<FPR64, strict_fsetcc, SETOLT, PseudoQuietFLT_D>;
+def : PatSetCC<FPR64, strict_fsetcc, SETLE, PseudoQuietFLE_D>;
+def : PatSetCC<FPR64, strict_fsetcc, SETOLE, PseudoQuietFLE_D>;
+
+// Match signaling FEQ_D
+def : Pat<(strict_fsetccs FPR64:$rs1, FPR64:$rs2, SETEQ),
+          (AND (FLE_D $rs1, $rs2),
+               (FLE_D $rs2, $rs1))>;
+def : Pat<(strict_fsetccs FPR64:$rs1, FPR64:$rs2, SETOEQ),
+          (AND (FLE_D $rs1, $rs2),
+               (FLE_D $rs2, $rs1))>;
+// If both operands are the same, use a single FLE.
+def : Pat<(strict_fsetccs FPR64:$rs1, FPR64:$rs1, SETEQ),
+          (FLE_D $rs1, $rs1)>;
+def : Pat<(strict_fsetccs FPR64:$rs1, FPR64:$rs1, SETOEQ),
+          (FLE_D $rs1, $rs1)>;
+
+def : PatSetCC<FPR64, any_fsetccs, SETLT, FLT_D>;
+def : PatSetCC<FPR64, any_fsetccs, SETOLT, FLT_D>;
+def : PatSetCC<FPR64, any_fsetccs, SETLE, FLE_D>;
+def : PatSetCC<FPR64, any_fsetccs, SETOLE, FLE_D>;
 
 def Select_FPR64_Using_CC_GPR : SelectCC_rrirr<FPR64, GPR>;
 
@@ -260,6 +285,8 @@ let Predicates = [HasStdExtD, IsRV32] in {
 
 /// Float constants
 def : Pat<(f64 (fpimm0)), (FCVT_D_W (i32 X0))>;
+def : Pat<(f64 (fpimmneg0)), (FSGNJN_D (FCVT_D_W (i32 X0)),
+                                       (FCVT_D_W (i32 X0)))>;
 
 // double->[u]int. Round-to-zero must be used.
 def : Pat<(i32 (any_fp_to_sint FPR64:$rs1)), (FCVT_W_D FPR64:$rs1, 0b001)>;
@@ -284,6 +311,8 @@ let Predicates = [HasStdExtD, IsRV64] in {
 
 /// Float constants
 def : Pat<(f64 (fpimm0)), (FMV_D_X (i64 X0))>;
+def : Pat<(f64 (fpimmneg0)), (FSGNJN_D (FMV_D_X (i64 X0)),
+                                       (FMV_D_X (i64 X0)))>;
 
 // Moves (no conversion)
 def : Pat<(bitconvert (i64 GPR:$rs1)), (FMV_D_X GPR:$rs1)>;

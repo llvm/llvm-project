@@ -17,7 +17,7 @@ using namespace mlir;
 
 namespace {
 struct ShapeBufferizePass : public ShapeBufferizeBase<ShapeBufferizePass> {
-  void runOnFunction() override {
+  void runOnOperation() override {
     MLIRContext &ctx = getContext();
 
     RewritePatternSet patterns(&ctx);
@@ -28,13 +28,13 @@ struct ShapeBufferizePass : public ShapeBufferizeBase<ShapeBufferizePass> {
     populateShapeStructuralTypeConversionsAndLegality(typeConverter, patterns,
                                                       target);
 
-    if (failed(
-            applyPartialConversion(getFunction(), target, std::move(patterns))))
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
       signalPassFailure();
   }
 };
 } // namespace
 
-std::unique_ptr<FunctionPass> mlir::createShapeBufferizePass() {
+std::unique_ptr<OperationPass<FuncOp>> mlir::createShapeBufferizePass() {
   return std::make_unique<ShapeBufferizePass>();
 }

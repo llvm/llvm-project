@@ -12,7 +12,6 @@
 
 #include <__config>
 #include <__debug>
-#include <__function_like.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
@@ -72,14 +71,8 @@ void advance(_InputIter& __i, _Distance __orig_n) {
 namespace ranges {
 namespace __advance {
 
-struct __fn final : private __function_like {
+struct __fn {
 private:
-  template <class _Tp>
-  _LIBCPP_HIDE_FROM_ABI
-  static constexpr _Tp __magnitude_geq(_Tp __a, _Tp __b) noexcept {
-    return __a < 0 ? (__a <= __b) : (__a >= __b);
-  }
-
   template <class _Ip>
   _LIBCPP_HIDE_FROM_ABI
   static constexpr void __advance_forward(_Ip& __i, iter_difference_t<_Ip> __n) {
@@ -99,8 +92,6 @@ private:
   }
 
 public:
-  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
-
   // Preconditions: If `I` does not model `bidirectional_iterator`, `n` is not negative.
   template <input_or_output_iterator _Ip>
   _LIBCPP_HIDE_FROM_ABI
@@ -158,6 +149,12 @@ public:
     // If `S` and `I` model `sized_sentinel_for<S, I>`:
     if constexpr (sized_sentinel_for<_Sp, _Ip>) {
       // If |n| >= |bound - i|, equivalent to `ranges::advance(i, bound)`.
+      // __magnitude_geq(a, b) returns |a| >= |b|, assuming they have the same sign.
+      auto __magnitude_geq = [](auto __a, auto __b) {
+        return __a == 0 ? __b == 0 :
+               __a > 0  ? __a >= __b :
+                          __a <= __b;
+      };
       if (const auto __M = __bound - __i; __magnitude_geq(__n, __M)) {
         (*this)(__i, __bound);
         return __n - __M;
@@ -191,7 +188,7 @@ public:
 } // namespace __advance
 
 inline namespace __cpo {
-  inline constexpr auto advance = __advance::__fn(__function_like::__tag());
+  inline constexpr auto advance = __advance::__fn{};
 } // namespace __cpo
 } // namespace ranges
 

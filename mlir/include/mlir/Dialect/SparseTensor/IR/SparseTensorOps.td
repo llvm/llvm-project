@@ -239,7 +239,7 @@ def SparseTensor_ExpandOp : SparseTensor_Op<"expand", []>,
     dimension (e.g. a full row for matrices). The added array and count are used
     to store new indices when a false value is encountered in the filled array.
     All arrays should be allocated before the loop (possibly even shared between
-    loops in a future optimization) so that their *dense* intitialization can be
+    loops in a future optimization) so that their *dense* initialization can be
     amortized over many iterations. Setting and resetting the dense arrays in
     the loop nest itself is kept *sparse* by only iterating over set elements
     through an indirection using the added array, so that the operations are
@@ -349,6 +349,26 @@ def SparseTensor_ReleaseOp : SparseTensor_Op<"release", []>,
     ```
   }];
   let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
+}
+
+def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
+    Arguments<(ins AnyType:$tensor, AnyType:$dest)> {
+  string summary = "Outputs a sparse tensor to the given destination";
+  string description = [{
+    Outputs the contents of a sparse tensor to the destination defined by an
+    opaque pointer provided by `dest`. For targets that have access to a file
+    system, for example, this pointer may specify a filename (or file) for output.
+    The form of the operation is kept deliberately very general to allow for
+    alternative implementations in the future, such as sending the contents to
+    a buffer defined by a pointer.
+
+    Example:
+
+    ```mlir
+    sparse_tensor.out %t, %dest : tensor<1024x1024xf64, #CSR>, !Dest
+    ```
+  }];
+  let assemblyFormat = "$tensor `,` $dest attr-dict `:` type($tensor) `,` type($dest)";
 }
 
 #endif // SPARSETENSOR_OPS

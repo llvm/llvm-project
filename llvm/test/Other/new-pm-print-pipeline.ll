@@ -40,8 +40,8 @@
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(early-cse<>,early-cse<memssa>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-12
 ; CHECK-12: function(early-cse<>,early-cse<memssa>)
 
-; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='msan-module,function(msan,msan<>,msan<recover;kernel;track-origins=5>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-13
-; CHECK-13: msan-module,function(msan<track-origins=0>,msan<track-origins=0>,msan<recover;kernel;track-origins=5>)
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='msan-module,function(msan,msan<>,msan<recover;kernel;eager-checks;track-origins=5>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-13
+; CHECK-13: msan-module,function(msan<track-origins=0>,msan<track-origins=0>,msan<recover;kernel;eager-checks;track-origins=5>)
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='module(hwasan<>,hwasan<kernel;recover>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-14
 ; CHECK-14: hwasan<>,hwasan<kernel;recover>
@@ -73,3 +73,8 @@
 ;; Test that the loop-nest-pass lnicm is printed with the other loop-passes in the pipeline.
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(loop-mssa(licm,loop-rotate,loop-deletion,lnicm,loop-rotate))' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-23
 ; CHECK-23: function(loop-mssa(licm,loop-rotate,loop-deletion,lnicm,loop-rotate))
+
+;; Test that -debugify and -check-debugify is printed correctly.
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='debugify,no-op-function,check-debugify' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-24
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -enable-debugify -passes='no-op-function' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-24
+; CHECK-24: debugify,function(no-op-function),check-debugify

@@ -77,7 +77,8 @@ attributes #0 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 ; CHECK:     Compile3Sym {
 ; CHECK:       Kind: S_COMPILE3 (0x113C)
 ; CHECK:       Language: C (0x0)
-; CHECK:       Flags [ (0x0)
+; CHECK:       Flags [ (0x4000
+; CHECK:        HotPatch (0x4000)
 ; CHECK:       ]
 ; CHECK:     }
 ; CHECK:   ]

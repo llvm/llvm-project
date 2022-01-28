@@ -40,6 +40,10 @@ static cl::opt<bool>
                               "normal DBG_VALUE inputs"),
                      cl::init(false));
 
+static cl::opt<cl::boolOrDefault> ValueTrackingVariableLocations(
+    "experimental-debug-variable-locations",
+    cl::desc("Use experimental new value-tracking variable locations"));
+
 // Options to prevent pathological compile-time behavior. If InputBBLimit and
 // InputDbgValueLimit are both exceeded, range extension is disabled.
 static cl::opt<unsigned> InputBBLimit(
@@ -116,4 +120,9 @@ bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
 
   return TheImpl->ExtendRanges(MF, DomTree, TPC, InputBBLimit,
                                InputDbgValueLimit);
+}
+
+bool llvm::debuginfoShouldUseDebugInstrRef(const Triple &T) {
+  // Enable if explicitly requested on command line.
+  return ValueTrackingVariableLocations == cl::boolOrDefault::BOU_TRUE;
 }

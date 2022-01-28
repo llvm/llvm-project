@@ -42,7 +42,7 @@ def HasStdExtD : Predicate<"Subtarget->hasStdExtD()">,
                            "'D' (Double-Precision Floating-Point)">;
 
 def FeatureStdExtZfhmin
-    : SubtargetFeature<"experimental-zfhmin", "HasStdExtZfhmin", "true",
+    : SubtargetFeature<"zfhmin", "HasStdExtZfhmin", "true",
                        "'Zfhmin' (Half-Precision Floating-Point Minimal)",
                        [FeatureStdExtF]>;
 def HasStdExtZfhmin : Predicate<"Subtarget->hasStdExtZfhmin()">,
@@ -50,7 +50,7 @@ def HasStdExtZfhmin : Predicate<"Subtarget->hasStdExtZfhmin()">,
                              "'Zfhmin' (Half-Precision Floating-Point Minimal)">;
 
 def FeatureStdExtZfh
-    : SubtargetFeature<"experimental-zfh", "HasStdExtZfh", "true",
+    : SubtargetFeature<"zfh", "HasStdExtZfh", "true",
                        "'Zfh' (Half-Precision Floating-Point)",
                        [FeatureStdExtZfhmin, FeatureStdExtF]>;
 def HasStdExtZfh : Predicate<"Subtarget->hasStdExtZfh()">,
@@ -65,83 +65,217 @@ def HasStdExtC : Predicate<"Subtarget->hasStdExtC()">,
                            "'C' (Compressed Instructions)">;
 
 def FeatureStdExtZba
-    : SubtargetFeature<"experimental-zba", "HasStdExtZba", "true",
-                       "'Zba' (Address calculation 'B' Instructions)">;
+    : SubtargetFeature<"zba", "HasStdExtZba", "true",
+                       "'Zba' (Address Generation Instructions)">;
 def HasStdExtZba : Predicate<"Subtarget->hasStdExtZba()">,
                              AssemblerPredicate<(all_of FeatureStdExtZba),
-                             "'Zba' (Address calculation 'B' Instructions)">;
+                             "'Zba' (Address Generation Instructions)">;
 def NotHasStdExtZba : Predicate<"!Subtarget->hasStdExtZba()">;
 
 def FeatureStdExtZbb
-    : SubtargetFeature<"experimental-zbb", "HasStdExtZbb", "true",
-                       "'Zbb' (Base 'B' Instructions)">;
+    : SubtargetFeature<"zbb", "HasStdExtZbb", "true",
+                       "'Zbb' (Basic Bit-Manipulation)">;
 def HasStdExtZbb : Predicate<"Subtarget->hasStdExtZbb()">,
                              AssemblerPredicate<(all_of FeatureStdExtZbb),
-                             "'Zbb' (Base 'B' Instructions)">;
+                             "'Zbb' (Basic Bit-Manipulation)">;
 
 def FeatureStdExtZbc
-    : SubtargetFeature<"experimental-zbc", "HasStdExtZbc", "true",
-                       "'Zbc' (Carry-Less 'B' Instructions)">;
+    : SubtargetFeature<"zbc", "HasStdExtZbc", "true",
+                       "'Zbc' (Carry-Less Multiplication)">;
 def HasStdExtZbc : Predicate<"Subtarget->hasStdExtZbc()">,
                              AssemblerPredicate<(all_of FeatureStdExtZbc),
-                             "'Zbc' (Carry-Less 'B' Instructions)">;
+                             "'Zbc' (Carry-Less Multiplication)">;
 
 def FeatureStdExtZbe
     : SubtargetFeature<"experimental-zbe", "HasStdExtZbe", "true",
-                       "'Zbe' (Extract-Deposit 'B' Instructions)">;
+                       "'Zbe' (Extract-Deposit 'Zb' Instructions)">;
 def HasStdExtZbe : Predicate<"Subtarget->hasStdExtZbe()">,
                              AssemblerPredicate<(all_of FeatureStdExtZbe),
-                             "'Zbe' (Extract-Deposit 'B' Instructions)">;
+                             "'Zbe' (Extract-Deposit 'Zb' Instructions)">;
 
 def FeatureStdExtZbf
     : SubtargetFeature<"experimental-zbf", "HasStdExtZbf", "true",
-                       "'Zbf' (Bit-Field 'B' Instructions)">;
+                       "'Zbf' (Bit-Field 'Zb' Instructions)">;
 def HasStdExtZbf : Predicate<"Subtarget->hasStdExtZbf()">,
                              AssemblerPredicate<(all_of FeatureStdExtZbf),
-                             "'Zbf' (Bit-Field 'B' Instructions)">;
+                             "'Zbf' (Bit-Field 'Zb' Instructions)">;
 
 def FeatureStdExtZbm
     : SubtargetFeature<"experimental-zbm", "HasStdExtZbm", "true",
-                       "'Zbm' (Matrix 'B' Instructions)">;
+                       "'Zbm' (Matrix 'Zb' Instructions)">;
 def HasStdExtZbm : Predicate<"Subtarget->hasStdExtZbm()">,
                              AssemblerPredicate<(all_of FeatureStdExtZbm),
-                             "'Zbm' (Matrix 'B' Instructions)">;
+                             "'Zbm' (Matrix 'Zb' Instructions)">;
 
 def FeatureStdExtZbp
     : SubtargetFeature<"experimental-zbp", "HasStdExtZbp", "true",
-                       "'Zbp' (Permutation 'B' Instructions)">;
+                       "'Zbp' (Permutation 'Zb' Instructions)">;
 def HasStdExtZbp : Predicate<"Subtarget->hasStdExtZbp()">,
                              AssemblerPredicate<(all_of FeatureStdExtZbp),
-                             "'Zbp' (Permutation 'B' Instructions)">;
+                             "'Zbp' (Permutation 'Zb' Instructions)">;
 
 def FeatureStdExtZbr
     : SubtargetFeature<"experimental-zbr", "HasStdExtZbr", "true",
-                       "'Zbr' (Polynomial Reduction 'B' Instructions)">;
+                       "'Zbr' (Polynomial Reduction 'Zb' Instructions)">;
 def HasStdExtZbr : Predicate<"Subtarget->hasStdExtZbr()">,
                              AssemblerPredicate<(all_of FeatureStdExtZbr),
-                             "'Zbr' (Polynomial Reduction 'B' Instructions)">;
+                             "'Zbr' (Polynomial Reduction 'Zb' Instructions)">;
 
 def FeatureStdExtZbs
-    : SubtargetFeature<"experimental-zbs", "HasStdExtZbs", "true",
-                       "'Zbs' (Single-Bit 'B' Instructions)">;
+    : SubtargetFeature<"zbs", "HasStdExtZbs", "true",
+                       "'Zbs' (Single-Bit Instructions)">;
 def HasStdExtZbs : Predicate<"Subtarget->hasStdExtZbs()">,
                              AssemblerPredicate<(all_of FeatureStdExtZbs),
-                             "'Zbs' (Single-Bit 'B' Instructions)">;
+                             "'Zbs' (Single-Bit Instructions)">;
 
 def FeatureStdExtZbt
     : SubtargetFeature<"experimental-zbt", "HasStdExtZbt", "true",
-                       "'Zbt' (Ternary 'B' Instructions)">;
+                       "'Zbt' (Ternary 'Zb' Instructions)">;
 def HasStdExtZbt : Predicate<"Subtarget->hasStdExtZbt()">,
                              AssemblerPredicate<(all_of FeatureStdExtZbt),
-                             "'Zbt' (Ternary 'B' Instructions)">;
+                             "'Zbt' (Ternary 'Zb' Instructions)">;
 
 // Some instructions belong to both the basic and the permutation
 // subextensions. They should be enabled if either has been specified.
 def HasStdExtZbbOrZbp
     : Predicate<"Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbp()">,
                 AssemblerPredicate<(any_of FeatureStdExtZbb, FeatureStdExtZbp),
-                                   "'Zbb' (Base 'B' Instructions) or "
-                                   "'Zbp' (Permutation 'B' Instructions)">;
+                                   "'Zbb' (Basic Bit-Manipulation) or "
+                                   "'Zbp' (Permutation 'Zb' Instructions)">;
+
+def FeatureStdExtZbkb
+    : SubtargetFeature<"zbkb", "HasStdExtZbkb", "true",
+                       "'Zbkb' (Bitmanip instructions for Cryptography)">;
+def HasStdExtZbkb : Predicate<"Subtarget->hasStdExtZbkb()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZbkb),
+                             "'Zbkb' (Bitmanip instructions for Cryptography)">;
+
+def FeatureStdExtZbkx
+    : SubtargetFeature<"zbkx", "HasStdExtZbkx", "true",
+                       "'Zbkx' (Crossbar permutation instructions)">;
+def HasStdExtZbkx : Predicate<"Subtarget->hasStdExtZbkx()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZbkx),
+                             "'Zbkx' (Crossbar permutation instructions)">;
+
+def HasStdExtZbpOrZbkx
+    : Predicate<"Subtarget->hasStdExtZbp() || Subtarget->hasStdExtZbkx()">,
+                AssemblerPredicate<(any_of FeatureStdExtZbp, FeatureStdExtZbkx),
+                                   "'Zbp' (Permutation 'Zb' Instructions) or "
+                                   "'Zbkx' (Crossbar permutation instructions)">;
+
+def HasStdExtZbpOrZbkb
+    : Predicate<"Subtarget->hasStdExtZbp() || Subtarget->hasStdExtZbkb()">,
+                AssemblerPredicate<(any_of FeatureStdExtZbp, FeatureStdExtZbkb),
+                                   "'Zbp' (Permutation 'Zb' Instructions) or "
+                                   "'Zbkb' (Bitmanip instructions for Cryptography)">;
+
+def HasStdExtZbbOrZbkb
+    : Predicate<"Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbkb()">,
+                AssemblerPredicate<(any_of FeatureStdExtZbb, FeatureStdExtZbkb),
+                                   "'Zbb' (Basic Bit-Manipulation) or "
+                                   "'Zbkb' (Bitmanip instructions for Cryptography)">;
+
+def HasStdExtZbbOrZbpOrZbkb
+    : Predicate<"Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbp() || Subtarget->hasStdExtZbkb()">,
+                AssemblerPredicate<(any_of FeatureStdExtZbb, FeatureStdExtZbp, FeatureStdExtZbkb),
+                                   "'Zbb' (Basic Bit-Manipulation) or "
+                                   "'Zbp' (Permutation 'Zb' Instructions) or "
+                                   "'Zbkb' (Bitmanip instructions for Cryptography)">;
+
+// The Carry-less multiply subextension for cryptography is a subset of basic carry-less multiply subextension. The former should be enabled if the latter is enabled.
+def FeatureStdExtZbkc
+    : SubtargetFeature<"zbkc", "HasStdExtZbkc", "true",
+                       "'Zbkc' (Carry-less multiply instructions for Cryptography)">;
+def HasStdExtZbkc
+    : Predicate<"Subtarget->hasStdExtZbkc()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZbkc),
+                             "'Zbkc' (Carry-less multiply instructions for Cryptography)">;
+
+def HasStdExtZbcOrZbkc
+    : Predicate<"Subtarget->hasStdExtZbc() || Subtarget->hasStdExtZbkc()">,
+                AssemblerPredicate<(any_of FeatureStdExtZbc, FeatureStdExtZbkc),
+                                   "'Zbc' (Carry-Less Multiplication) or "
+                                   "'Zbkc' (Carry-less multiply instructions for Cryptography)">;
+
+def FeatureStdExtZknd
+    : SubtargetFeature<"zknd", "HasStdExtZknd", "true",
+                       "'Zknd' (NIST Suite: AES Decryption)">;
+def HasStdExtZknd : Predicate<"Subtarget->hasStdExtZknd()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZknd),
+                             "'Zknd' (NIST Suite: AES Decryption)">;
+
+def FeatureStdExtZkne
+    : SubtargetFeature<"zkne", "HasStdExtZkne", "true",
+                       "'Zkne' (NIST Suite: AES Encryption)">;
+def HasStdExtZkne : Predicate<"Subtarget->hasStdExtZkne()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZkne),
+                             "'Zkne' (NIST Suite: AES Encryption)">;
+
+// Some instructions belong to both Zknd and Zkne subextensions.
+// They should be enabled if either has been specified.
+def HasStdExtZkndOrZkne
+    : Predicate<"Subtarget->hasStdExtZknd() || Subtarget->hasStdExtZkne()">,
+                AssemblerPredicate<(any_of FeatureStdExtZknd, FeatureStdExtZkne),
+                                   "'Zknd' (NIST Suite: AES Decryption) or "
+                                   "'Zkne' (NIST Suite: AES Encryption)">;
+
+def FeatureStdExtZknh
+    : SubtargetFeature<"zknh", "HasStdExtZknh", "true",
+                       "'Zknh' (NIST Suite: Hash Function Instructions)">;
+def HasStdExtZknh : Predicate<"Subtarget->hasStdExtZknh()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZknh),
+                             "'Zknh' (NIST Suite: Hash Function Instructions)">;
+
+def FeatureStdExtZksed
+    : SubtargetFeature<"zksed", "HasStdExtZksed", "true",
+                       "'Zksed' (ShangMi Suite: SM4 Block Cipher Instructions)">;
+def HasStdExtZksed : Predicate<"Subtarget->hasStdExtZksed()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZksed),
+                             "'Zksed' (ShangMi Suite: SM4 Block Cipher Instructions)">;
+
+def FeatureStdExtZksh
+    : SubtargetFeature<"zksh", "HasStdExtZksh", "true",
+                       "'Zksh' (ShangMi Suite: SM3 Hash Function Instructions)">;
+def HasStdExtZksh : Predicate<"Subtarget->hasStdExtZksh()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZksh),
+                             "'Zksh' (ShangMi Suite: SM3 Hash Function Instructions)">;
+
+def FeatureStdExtZkr
+    : SubtargetFeature<"zkr", "HasStdExtZkr", "true",
+                       "'Zkr' (Entropy Source Extension)">;
+def HasStdExtZkr : Predicate<"Subtarget->hasStdExtZkr()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZkr),
+                             "'Zkr' (Entropy Source Extension)">;
+
+def FeatureStdExtZkn
+    : SubtargetFeature<"zkn", "HasStdExtZkn", "true",
+                       "'Zkn' (NIST Algorithm Suite)",
+                       [FeatureStdExtZbkb,
+                        FeatureStdExtZbkc,
+                        FeatureStdExtZbkx,
+                        FeatureStdExtZkne,
+                        FeatureStdExtZknd,
+                        FeatureStdExtZknh]>;
+
+def FeatureStdExtZks
+    : SubtargetFeature<"zks", "HasStdExtZks", "true",
+                       "'Zks' (ShangMi Algorithm Suite)",
+                       [FeatureStdExtZbkb,
+                        FeatureStdExtZbkc,
+                        FeatureStdExtZbkx,
+                        FeatureStdExtZksed,
+                        FeatureStdExtZksh]>;
+
+def FeatureStdExtZkt
+    : SubtargetFeature<"zkt", "HasStdExtZkt", "true",
+                       "'Zkt' (Data Independent Execution Latency)">;
+
+def FeatureStdExtZk
+    : SubtargetFeature<"zk", "HasStdExtZk", "true",
+                       "'Zk' (Standard scalar cryptography extension)",
+                       [FeatureStdExtZkn,
+                        FeatureStdExtZkr,
+                        FeatureStdExtZkt]>;
 
 def FeatureNoRVCHints
     : SubtargetFeature<"no-rvc-hints", "EnableRVCHintInstrs", "false",
@@ -150,23 +284,66 @@ def HasRVCHints : Predicate<"Subtarget->enableRVCHintInstrs()">,
                   AssemblerPredicate<(all_of(not FeatureNoRVCHints)),
                                       "RVC Hint Instructions">;
 
+def FeatureStdExtZvl32b : SubtargetFeature<"zvl32b", "ZvlLen", "ExtZvl::Zvl32b",
+                       "'Zvl' (Minimum Vector Length) 32">;
+
+foreach i = { 6-15 } in {
+    defvar I = !shl(1, i);
+    def FeatureStdExtZvl#I#b :
+        SubtargetFeature<"zvl"#I#"b", "ZvlLen", "ExtZvl::Zvl"#I#"b",
+                        "'Zvl' (Minimum Vector Length) "#I,
+                        [!cast<SubtargetFeature>("FeatureStdExtZvl"#!srl(I, 1)#"b")]>;
+}
+
+def FeatureStdExtZve32x
+    : SubtargetFeature<"zve32x", "HasStdExtZve32x", "true",
+                       "'Zve32x' (Vector Extensions for Embedded Processors "
+                       "with maximal 32 EEW)",
+                       [FeatureStdExtZvl32b]>;
+
+def FeatureStdExtZve32f
+    : SubtargetFeature<"zve32f", "HasStdExtZve32f", "true",
+                       "'Zve32f' (Vector Extensions for Embedded Processors "
+                       "with maximal 32 EEW and F extension)",
+                       [FeatureStdExtZve32x]>;
+
+def FeatureStdExtZve64x
+    : SubtargetFeature<"zve64x", "HasStdExtZve64x", "true",
+                       "'Zve64x' (Vector Extensions for Embedded Processors "
+                       "with maximal 64 EEW)", [FeatureStdExtZve32x, FeatureStdExtZvl64b]>;
+
+def FeatureStdExtZve64f
+    : SubtargetFeature<"zve64f", "HasStdExtZve64f", "true",
+                       "'Zve64f' (Vector Extensions for Embedded Processors "
+                       "with maximal 64 EEW and F extension)",
+                       [FeatureStdExtZve32f, FeatureStdExtZve64x]>;
+
+def FeatureStdExtZve64d
+    : SubtargetFeature<"zve64d", "HasStdExtZve64d", "true",
+                       "'Zve64d' (Vector Extensions for Embedded Processors "
+                       "with maximal 64 EEW, F and D extension)",
+                       [FeatureStdExtZve64f]>;
+
 def FeatureStdExtV
-    : SubtargetFeature<"experimental-v", "HasStdExtV", "true",
-                       "'V' (Vector Instructions)">;
-def HasStdExtV : Predicate<"Subtarget->hasStdExtV()">,
-                           AssemblerPredicate<(all_of FeatureStdExtV),
-                           "'V' (Vector Instructions)">;
+    : SubtargetFeature<"v", "HasStdExtV", "true",
+                       "'V' (Vector Extension for Application Processors)",
+                       [FeatureStdExtZvl128b, FeatureStdExtF, FeatureStdExtD]>;
 
-def HasVInstructions    : Predicate<"Subtarget->hasVInstructions()">;
-def HasVInstructionsAnyF : Predicate<"Subtarget->hasVInstructionsAnyF()">;
-
-def FeatureStdExtZvlsseg
-    : SubtargetFeature<"experimental-zvlsseg", "HasStdExtZvlsseg", "true",
-                       "'Zvlsseg' (Vector segment load/store instructions)",
-                       [FeatureStdExtV]>;
-def HasStdExtZvlsseg : Predicate<"Subtarget->hasStdExtZvlsseg()">,
-                                 AssemblerPredicate<(all_of FeatureStdExtZvlsseg),
-                                 "'Zvlsseg' (Vector segment load/store instructions)">;
+def HasVInstructions    : Predicate<"Subtarget->hasVInstructions()">,
+      AssemblerPredicate<
+          (any_of FeatureStdExtZve32x, FeatureStdExtV),
+          "'V' (Vector Extension for Application Processors), 'Zve32x' or "
+          "'Zve64x' (Vector Extensions for Embedded Processors)">;
+def HasVInstructionsI64 : Predicate<"Subtarget->hasVInstructionsI64()">,
+      AssemblerPredicate<
+          (any_of FeatureStdExtZve64x, FeatureStdExtV),
+          "'V' (Vector Extension for Application Processors) or 'Zve64x' "
+          "(Vector Extensions for Embedded Processors)">;
+def HasVInstructionsAnyF : Predicate<"Subtarget->hasVInstructionsAnyF()">,
+      AssemblerPredicate<
+          (any_of FeatureStdExtZve32f, FeatureStdExtV),
+          "'V' (Vector Extension for Application Processors), 'Zve32f', "
+          "'Zve64f' or 'Zve64d' (Vector Extensions for Embedded Processors)">;
 
 def Feature64Bit
     : SubtargetFeature<"64bit", "HasRV64", "true", "Implements RV64">;
@@ -198,6 +375,9 @@ foreach i = {1-31} in
 def FeatureSaveRestore : SubtargetFeature<"save-restore", "EnableSaveRestore",
                                           "true", "Enable save/restore.">;
 
+def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
+                                   "SiFive 7-Series processors">;
+
 //===----------------------------------------------------------------------===//
 // Named operands for CSR instructions.
 //===----------------------------------------------------------------------===//
@@ -226,8 +406,10 @@ def : ProcessorModel<"generic-rv64", NoSchedModel, [Feature64Bit]>;
 def : ProcessorModel<"rocket-rv32", RocketModel, []>;
 def : ProcessorModel<"rocket-rv64", RocketModel, [Feature64Bit]>;
 
-def : ProcessorModel<"sifive-7-rv32", SiFive7Model, []>;
-def : ProcessorModel<"sifive-7-rv64", SiFive7Model, [Feature64Bit]>;
+def : ProcessorModel<"sifive-7-rv32", SiFive7Model, [],
+                     [TuneSiFive7]>;
+def : ProcessorModel<"sifive-7-rv64", SiFive7Model, [Feature64Bit],
+                     [TuneSiFive7]>;
 
 def : ProcessorModel<"sifive-e20", RocketModel, [FeatureStdExtM,
                                                  FeatureStdExtC]>;
@@ -253,7 +435,8 @@ def : ProcessorModel<"sifive-e34", RocketModel, [FeatureStdExtM,
 def : ProcessorModel<"sifive-e76", SiFive7Model, [FeatureStdExtM,
                                                   FeatureStdExtA,
                                                   FeatureStdExtF,
-                                                  FeatureStdExtC]>;
+                                                  FeatureStdExtC],
+                     [TuneSiFive7]>;
 
 def : ProcessorModel<"sifive-s21", RocketModel, [Feature64Bit,
                                                  FeatureStdExtM,
@@ -277,7 +460,8 @@ def : ProcessorModel<"sifive-s76", SiFive7Model, [Feature64Bit,
                                                   FeatureStdExtA,
                                                   FeatureStdExtF,
                                                   FeatureStdExtD,
-                                                  FeatureStdExtC]>;
+                                                  FeatureStdExtC],
+                     [TuneSiFive7]>;
 
 def : ProcessorModel<"sifive-u54", RocketModel, [Feature64Bit,
                                                  FeatureStdExtM,
@@ -291,7 +475,8 @@ def : ProcessorModel<"sifive-u74", SiFive7Model, [Feature64Bit,
                                                   FeatureStdExtA,
                                                   FeatureStdExtF,
                                                   FeatureStdExtD,
-                                                  FeatureStdExtC]>;
+                                                  FeatureStdExtC],
+                     [TuneSiFive7]>;
 
 //===----------------------------------------------------------------------===//
 // Define the RISC-V target.

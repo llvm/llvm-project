@@ -287,8 +287,8 @@ TEST(ProgramTest, TestExecuteNegative) {
     bool ExecutionFailed;
     int RetCode = ExecuteAndWait(Executable, argv, llvm::None, {}, 0, 0, &Error,
                                  &ExecutionFailed);
-    ASSERT_TRUE(RetCode < 0) << "On error ExecuteAndWait should return 0 or "
-                                "positive value indicating the result code";
+    ASSERT_LT(RetCode, 0) << "On error ExecuteAndWait should return 0 or "
+                             "positive value indicating the result code";
     ASSERT_TRUE(ExecutionFailed);
     ASSERT_FALSE(Error.empty());
   }

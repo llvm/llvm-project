@@ -1,5 +1,11 @@
 // RUN: mlir-opt -split-input-file -linalg-fold-reshape-ops-by-linearization %s | FileCheck %s
 
+// Note: These tests fuse the reshape ops by linearization. This can create
+// indexing maps which are hard to analyse later on. These patterns are useful
+// only if the folded dimensions in the reshape op are unit extent. Tests here
+// are more general for testing purposes, but use of these pattern for non-unit
+// dimensions should be deprecated.
+
 #map0 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
 func @generic_op_reshape_producer_fusion(%arg0 : tensor<?x?x?xi32>)
   -> tensor<?x?x4x?xi32> {
@@ -10,7 +16,7 @@ func @generic_op_reshape_producer_fusion(%arg0 : tensor<?x?x?xi32>)
     iterator_types = ["parallel", "parallel", "parallel", "parallel"] }
     ins(%0 : tensor<?x?x4x?xi32>)
     outs(%0 : tensor<?x?x4x?xi32>) {
-  ^bb0(%arg6: i32, %arg7 : i32):       // no predecessors
+  ^bb0(%arg6: i32, %arg7 : i32):       
     %idx = linalg.index 0 : index
     %2 = arith.index_cast %idx : index to i32
     %3 = arith.addi %arg6, %2 : i32
@@ -40,7 +46,7 @@ func @generic_op_reshape_consumer_fusion(%arg0 : tensor<?x?x4x5xi32>)
     indexing_maps = [#map0, #map0],
     iterator_types = ["parallel", "parallel", "parallel", "parallel"] }
     ins(%arg0 : tensor<?x?x4x5xi32>) outs(%arg0 : tensor<?x?x4x5xi32>) {
-  ^bb0(%arg6: i32, %arg7: i32):       // no predecessors
+  ^bb0(%arg6: i32, %arg7: i32):       
     %idx = linalg.index 0 : index
     %2 = arith.index_cast %idx : index to i32
     %3 = arith.addi %arg6, %2 : i32
@@ -75,7 +81,7 @@ func @generic_op_021_permultation_reshape_producer_fusion(%arg0 : tensor<3x35xf3
     {indexing_maps = [#map2, #map3],
      iterator_types = ["parallel", "parallel", "parallel"]}
     ins(%0 : tensor<3x5x7xf32>) outs(%1 : tensor<3x7x5xf32>) {
-    ^bb0(%arg2: f32, %arg3 : f32):  // no predecessors
+    ^bb0(%arg2: f32, %arg3 : f32):  
       linalg.yield %arg2 : f32
     } -> tensor<3x7x5xf32>
     return %2 : tensor<3x7x5xf32>
@@ -100,7 +106,7 @@ func @generic_op_120_permutation_reshape_producer_fusion(%arg0 : tensor<3x35xf32
     {indexing_maps = [#map2, #map3],
      iterator_types = ["parallel", "parallel", "parallel"]}
     ins(%0 : tensor<3x5x7xf32>) outs(%1 : tensor<5x7x3xf32>) {
-    ^bb0(%arg2: f32, %arg3: f32):  // no predecessors
+    ^bb0(%arg2: f32, %arg3: f32):  
       linalg.yield %arg2 : f32
     } -> tensor<5x7x3xf32>
     return %2 : tensor<5x7x3xf32>
@@ -127,7 +133,7 @@ func @generic_op_102_permultation_reshape_producer_fusion(%arg0 : tensor<3x35xf3
     {indexing_maps = [#map2, #map3],
      iterator_types = ["parallel", "parallel", "parallel"]}
     ins(%0 : tensor<3x5x7xf32>) outs(%1 : tensor<5x3x7xf32>) {
-    ^bb0(%arg2: f32, %arg3: f32):  // no predecessors
+    ^bb0(%arg2: f32, %arg3: f32):  
       linalg.yield %arg2 : f32
     } -> tensor<5x3x7xf32>
     return %2 : tensor<5x3x7xf32>
@@ -153,7 +159,7 @@ func @generic_op_102_permultation_reshape_consumer_fusion(%arg0 : tensor<3x5x7xf
     {indexing_maps = [#map0, #map1],
      iterator_types = ["parallel", "parallel", "parallel"]}
     ins(%arg0 : tensor<3x5x7xf32>) outs(%0 : tensor<5x3x7xf32>) {
-    ^bb0(%arg2: f32, %arg3 : f32):  // no predecessors
+    ^bb0(%arg2: f32, %arg3 : f32):  
       linalg.yield %arg2 : f32
   } -> tensor<5x3x7xf32>
   %2 = tensor.collapse_shape %1 [[0], [1, 2]]
@@ -184,7 +190,7 @@ func @generic_op_reshape_consumer_nofusion(%arg0 : tensor<?x?x?x5xf32>,
      iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
       ins(%arg0, %arg1 : tensor<?x?x?x5xf32>, tensor<?x?x?x5xf32>)
       outs(%arg0 : tensor<?x?x?x5xf32>) {
-    ^bb0(%arg3: f32, %arg4: f32, %arg5: f32):       // no predecessors
+    ^bb0(%arg3: f32, %arg4: f32, %arg5: f32):       
       %1 = arith.mulf %arg3, %arg4 : f32
       linalg.yield %1 : f32
   } -> tensor<?x?x?x5xf32>
@@ -209,7 +215,7 @@ func @generic_op_permultation_reshape_consumer_fusion_unused_dim(%arg0 : tensor<
                                         affine_map<(d0, d1) -> (d0, d1)>],
    iterator_types = ["parallel", "parallel"]}
    ins(%arg0 : tensor<6x1xf32>) outs(%0 : tensor<6x1xi32>) {
-    ^bb0(%arg3: f32, %arg4: i32):  // no predecessors
+    ^bb0(%arg3: f32, %arg4: i32):  
       %5 = arith.fptosi %arg3 : f32 to i32
       linalg.yield %5 : i32
     } -> tensor<6x1xi32>
@@ -227,3 +233,55 @@ func @generic_op_permultation_reshape_consumer_fusion_unused_dim(%arg0 : tensor<
 //  CHECK-SAME:     indexing_maps = [#[[MAP0]], #[[MAP1]]]
 //  CHECK-SAME:     ins(%[[ARG0]] : tensor<6x1xf32>)
 //  CHECK-SAME:     outs(%[[T1]] : tensor<6xi32>)
+
+// -----
+
+#map0 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d2, d4, d0, d6, d3, d5, d1)>
+#map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3, d4, d5, d6)>
+func @permuted_dims_fusion_expand_shape(%arg0 : tensor<3x8x7x240xf32>) -> tensor<4x6x3x8x2x5x7xf32> {
+  %0 = tensor.expand_shape %arg0 [[0], [1, 2], [3], [4, 5, 6]]
+      : tensor<3x8x7x240xf32> into tensor<3x2x4x7x8x5x6xf32>
+  %1 = linalg.init_tensor [4, 6, 3, 8, 2, 5, 7] : tensor<4x6x3x8x2x5x7xf32>
+  %2 = linalg.generic {
+      indexing_maps = [#map0, #map1],
+      iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "parallel", "parallel"]}
+      ins(%0 : tensor<3x2x4x7x8x5x6xf32>) outs(%1 : tensor<4x6x3x8x2x5x7xf32>) {
+      ^bb0(%arg1 : f32, %arg2 : f32):
+        linalg.yield %arg1 : f32
+      } -> tensor<4x6x3x8x2x5x7xf32>
+  return %2 : tensor<4x6x3x8x2x5x7xf32>
+}
+//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d2, d0 + d4 * 4, d6, d1 + d3 * 30 + d5 * 6)>
+//  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3, d4, d5, d6)>
+//      CHECK: func @permuted_dims_fusion_expand_shape(
+// CHECK-SAME:     %[[ARG0:.+]]: tensor<3x8x7x240xf32>)
+//      CHECK:   %[[RESULT:.+]] = linalg.generic
+// CHECK-SAME:       indexing_maps = [#[[MAP0]], #[[MAP1]]]
+// CHECK-SAME:       ins(%[[ARG0]] :
+//      CHECK:   return %[[RESULT]]
+
+// -----
+
+#map0 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d2, d4, d0, d6, d3, d5, d1)>
+#map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3, d4, d5, d6)>
+func @permuted_dims_fusion_collapse_shape(%arg0 : tensor<4x6x3x8x2x5x7xf32>) -> tensor<3x8x7x240xf32> {
+  %0 = linalg.init_tensor [3, 2, 4, 7, 8, 5, 6] : tensor<3x2x4x7x8x5x6xf32>
+  %1 = linalg.generic {
+      indexing_maps = [#map1, #map0],
+      iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "parallel", "parallel"]}
+      ins(%arg0 : tensor<4x6x3x8x2x5x7xf32>) outs(%0 : tensor<3x2x4x7x8x5x6xf32>) {
+      ^bb0(%arg1 : f32, %arg2 : f32):
+        linalg.yield %arg1 : f32
+      } -> tensor<3x2x4x7x8x5x6xf32>
+  %2 = tensor.collapse_shape %1 [[0], [1, 2], [3], [4, 5, 6]]
+      : tensor<3x2x4x7x8x5x6xf32> into tensor<3x8x7x240xf32>
+  return %2 : tensor<3x8x7x240xf32>
+}
+//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3, d4, d5, d6)>
+//  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d2, d0 + d4 * 4, d6, d1 + d3 * 30 + d5 * 6)>
+//      CHECK: func @permuted_dims_fusion_collapse_shape(
+// CHECK-SAME:     %[[ARG0:.+]]: tensor<4x6x3x8x2x5x7xf32>)
+//      CHECK:   %[[RESULT:.+]] = linalg.generic
+// CHECK-SAME:       indexing_maps = [#[[MAP0]], #[[MAP1]]]
+// CHECK-SAME:       ins(%[[ARG0]] :
+//      CHECK:   return %[[RESULT]]

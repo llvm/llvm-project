@@ -28,12 +28,15 @@ void mlirLinalgFillBuiltinNamedOpRegion(MlirOperation mlirOp) {
          "Expected Linalg op with 0 blocks");
 
   SmallVector<Type, 8> argTypes;
-  for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands())
+  SmallVector<Location, 8> argLocs;
+  for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands()) {
     argTypes.push_back(getElementTypeOrSelf(opOperand->get().getType()));
+    argLocs.push_back(opOperand->get().getLoc());
+  }
 
   ImplicitLocOpBuilder b(op->getLoc(), op->getContext());
   Region &region = op->getRegion(0);
-  Block *body = b.createBlock(&region, /*insertPt=*/{}, argTypes);
+  Block *body = b.createBlock(&region, /*insertPt=*/{}, argTypes, argLocs);
   b.setInsertionPointToStart(body);
   fun(b, *body);
 }

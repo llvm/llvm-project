@@ -36,7 +36,7 @@ static inline void _inlineFunction() {
 
 // CHECK-LABEL: define internal void @_inlineFunction()
 // CHECK:  [[ZERO:%.*]] = load %struct._class_t*, %struct._class_t** @"OBJC_CLASSLIST_REFERENCES_
-// CHECK-NEXT:   [[ONE:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
-// CHECK-NEXT:   [[TWO:%.*]] = bitcast %struct._class_t* [[ZERO]] to i8*
-// CHECK-NEXT:   call void (i8*, i8*, [[T:%.*]]*, ...) bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, [[T:%.*]]*, ...)*)(i8* [[TWO]], i8* [[ONE]], [[T:%.*]]* bitcast (%struct.__NSConstantString_tag* @_unnamed_cfstring_{{.*}} to [[T:%.*]]*))
+// CHECK-NEXT:   [[OBJ:%.*]] = bitcast %struct._class_t* [[ZERO]] to i8*
+// CHECK-NEXT:   [[SEL:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
+// CHECK-NEXT:   call void (i8*, i8*, [[T:%.*]]*, ...) bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, [[T:%.*]]*, ...)*)(i8* noundef [[OBJ]], i8* noundef [[SEL]], [[T:%.*]]* noundef bitcast (%struct.__NSConstantString_tag* @_unnamed_cfstring_{{.*}} to [[T:%.*]]*))
 // CHECK-NEXT:   ret void

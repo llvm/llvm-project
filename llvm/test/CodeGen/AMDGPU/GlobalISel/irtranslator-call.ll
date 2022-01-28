@@ -2470,9 +2470,9 @@ define amdgpu_kernel void @test_call_external_void_func_v63i16() #0 {
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<64 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[UV3]](s16), [[UV4]](s16), [[UV5]](s16), [[UV6]](s16), [[UV7]](s16), [[UV8]](s16), [[UV9]](s16), [[UV10]](s16), [[UV11]](s16), [[UV12]](s16), [[UV13]](s16), [[UV14]](s16), [[UV15]](s16), [[UV16]](s16), [[UV17]](s16), [[UV18]](s16), [[UV19]](s16), [[UV20]](s16), [[UV21]](s16), [[UV22]](s16), [[UV23]](s16), [[UV24]](s16), [[UV25]](s16), [[UV26]](s16), [[UV27]](s16), [[UV28]](s16), [[UV29]](s16), [[UV30]](s16), [[UV31]](s16), [[UV32]](s16), [[UV33]](s16), [[UV34]](s16), [[UV35]](s16), [[UV36]](s16), [[UV37]](s16), [[UV38]](s16), [[UV39]](s16), [[UV40]](s16), [[UV41]](s16), [[UV42]](s16), [[UV43]](s16), [[UV44]](s16), [[UV45]](s16), [[UV46]](s16), [[UV47]](s16), [[UV48]](s16), [[UV49]](s16), [[UV50]](s16), [[UV51]](s16), [[UV52]](s16), [[UV53]](s16), [[UV54]](s16), [[UV55]](s16), [[UV56]](s16), [[UV57]](s16), [[UV58]](s16), [[UV59]](s16), [[UV60]](s16), [[UV61]](s16), [[UV62]](s16), [[DEF1]](s16)
   ; CHECK-NEXT:   [[UV63:%[0-9]+]]:_(<2 x s16>), [[UV64:%[0-9]+]]:_(<2 x s16>), [[UV65:%[0-9]+]]:_(<2 x s16>), [[UV66:%[0-9]+]]:_(<2 x s16>), [[UV67:%[0-9]+]]:_(<2 x s16>), [[UV68:%[0-9]+]]:_(<2 x s16>), [[UV69:%[0-9]+]]:_(<2 x s16>), [[UV70:%[0-9]+]]:_(<2 x s16>), [[UV71:%[0-9]+]]:_(<2 x s16>), [[UV72:%[0-9]+]]:_(<2 x s16>), [[UV73:%[0-9]+]]:_(<2 x s16>), [[UV74:%[0-9]+]]:_(<2 x s16>), [[UV75:%[0-9]+]]:_(<2 x s16>), [[UV76:%[0-9]+]]:_(<2 x s16>), [[UV77:%[0-9]+]]:_(<2 x s16>), [[UV78:%[0-9]+]]:_(<2 x s16>), [[UV79:%[0-9]+]]:_(<2 x s16>), [[UV80:%[0-9]+]]:_(<2 x s16>), [[UV81:%[0-9]+]]:_(<2 x s16>), [[UV82:%[0-9]+]]:_(<2 x s16>), [[UV83:%[0-9]+]]:_(<2 x s16>), [[UV84:%[0-9]+]]:_(<2 x s16>), [[UV85:%[0-9]+]]:_(<2 x s16>), [[UV86:%[0-9]+]]:_(<2 x s16>), [[UV87:%[0-9]+]]:_(<2 x s16>), [[UV88:%[0-9]+]]:_(<2 x s16>), [[UV89:%[0-9]+]]:_(<2 x s16>), [[UV90:%[0-9]+]]:_(<2 x s16>), [[UV91:%[0-9]+]]:_(<2 x s16>), [[UV92:%[0-9]+]]:_(<2 x s16>), [[UV93:%[0-9]+]]:_(<2 x s16>), [[UV94:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<64 x s16>)
-  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(p5) = COPY $sp_reg
+  ; CHECK-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sp_reg
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C3]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C3]](s32)
   ; CHECK-NEXT:   G_STORE [[UV94]](<2 x s16>), [[PTR_ADD1]](p5) :: (store (<2 x s16>) into stack, align 16, addrspace 5)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV63]](<2 x s16>)
   ; CHECK-NEXT:   $vgpr1 = COPY [[UV64]](<2 x s16>)
@@ -2505,8 +2505,8 @@ define amdgpu_kernel void @test_call_external_void_func_v63i16() #0 {
   ; CHECK-NEXT:   $vgpr28 = COPY [[UV91]](<2 x s16>)
   ; CHECK-NEXT:   $vgpr29 = COPY [[UV92]](<2 x s16>)
   ; CHECK-NEXT:   $vgpr30 = COPY [[UV93]](<2 x s16>)
-  ; CHECK-NEXT:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY20]](<4 x s32>)
   ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
   ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY11]](p4)
   ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[PTR_ADD]](p4)
@@ -2564,12 +2564,12 @@ define amdgpu_kernel void @test_call_external_void_func_v65i16() #0 {
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<66 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[UV3]](s16), [[UV4]](s16), [[UV5]](s16), [[UV6]](s16), [[UV7]](s16), [[UV8]](s16), [[UV9]](s16), [[UV10]](s16), [[UV11]](s16), [[UV12]](s16), [[UV13]](s16), [[UV14]](s16), [[UV15]](s16), [[UV16]](s16), [[UV17]](s16), [[UV18]](s16), [[UV19]](s16), [[UV20]](s16), [[UV21]](s16), [[UV22]](s16), [[UV23]](s16), [[UV24]](s16), [[UV25]](s16), [[UV26]](s16), [[UV27]](s16), [[UV28]](s16), [[UV29]](s16), [[UV30]](s16), [[UV31]](s16), [[UV32]](s16), [[UV33]](s16), [[UV34]](s16), [[UV35]](s16), [[UV36]](s16), [[UV37]](s16), [[UV38]](s16), [[UV39]](s16), [[UV40]](s16), [[UV41]](s16), [[UV42]](s16), [[UV43]](s16), [[UV44]](s16), [[UV45]](s16), [[UV46]](s16), [[UV47]](s16), [[UV48]](s16), [[UV49]](s16), [[UV50]](s16), [[UV51]](s16), [[UV52]](s16), [[UV53]](s16), [[UV54]](s16), [[UV55]](s16), [[UV56]](s16), [[UV57]](s16), [[UV58]](s16), [[UV59]](s16), [[UV60]](s16), [[UV61]](s16), [[UV62]](s16), [[UV63]](s16), [[UV64]](s16), [[DEF1]](s16)
   ; CHECK-NEXT:   [[UV65:%[0-9]+]]:_(<2 x s16>), [[UV66:%[0-9]+]]:_(<2 x s16>), [[UV67:%[0-9]+]]:_(<2 x s16>), [[UV68:%[0-9]+]]:_(<2 x s16>), [[UV69:%[0-9]+]]:_(<2 x s16>), [[UV70:%[0-9]+]]:_(<2 x s16>), [[UV71:%[0-9]+]]:_(<2 x s16>), [[UV72:%[0-9]+]]:_(<2 x s16>), [[UV73:%[0-9]+]]:_(<2 x s16>), [[UV74:%[0-9]+]]:_(<2 x s16>), [[UV75:%[0-9]+]]:_(<2 x s16>), [[UV76:%[0-9]+]]:_(<2 x s16>), [[UV77:%[0-9]+]]:_(<2 x s16>), [[UV78:%[0-9]+]]:_(<2 x s16>), [[UV79:%[0-9]+]]:_(<2 x s16>), [[UV80:%[0-9]+]]:_(<2 x s16>), [[UV81:%[0-9]+]]:_(<2 x s16>), [[UV82:%[0-9]+]]:_(<2 x s16>), [[UV83:%[0-9]+]]:_(<2 x s16>), [[UV84:%[0-9]+]]:_(<2 x s16>), [[UV85:%[0-9]+]]:_(<2 x s16>), [[UV86:%[0-9]+]]:_(<2 x s16>), [[UV87:%[0-9]+]]:_(<2 x s16>), [[UV88:%[0-9]+]]:_(<2 x s16>), [[UV89:%[0-9]+]]:_(<2 x s16>), [[UV90:%[0-9]+]]:_(<2 x s16>), [[UV91:%[0-9]+]]:_(<2 x s16>), [[UV92:%[0-9]+]]:_(<2 x s16>), [[UV93:%[0-9]+]]:_(<2 x s16>), [[UV94:%[0-9]+]]:_(<2 x s16>), [[UV95:%[0-9]+]]:_(<2 x s16>), [[UV96:%[0-9]+]]:_(<2 x s16>), [[UV97:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<66 x s16>)
-  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(p5) = COPY $sp_reg
+  ; CHECK-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sp_reg
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C3]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C3]](s32)
   ; CHECK-NEXT:   G_STORE [[UV96]](<2 x s16>), [[PTR_ADD1]](p5) :: (store (<2 x s16>) into stack, align 16, addrspace 5)
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C4]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C4]](s32)
   ; CHECK-NEXT:   G_STORE [[UV97]](<2 x s16>), [[PTR_ADD2]](p5) :: (store (<2 x s16>) into stack + 4, addrspace 5)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV65]](<2 x s16>)
   ; CHECK-NEXT:   $vgpr1 = COPY [[UV66]](<2 x s16>)
@@ -2602,8 +2602,8 @@ define amdgpu_kernel void @test_call_external_void_func_v65i16() #0 {
   ; CHECK-NEXT:   $vgpr28 = COPY [[UV93]](<2 x s16>)
   ; CHECK-NEXT:   $vgpr29 = COPY [[UV94]](<2 x s16>)
   ; CHECK-NEXT:   $vgpr30 = COPY [[UV95]](<2 x s16>)
-  ; CHECK-NEXT:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY20]](<4 x s32>)
   ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
   ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY11]](p4)
   ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[PTR_ADD]](p4)
@@ -2658,12 +2658,12 @@ define amdgpu_kernel void @test_call_external_void_func_v66i16() #0 {
   ; CHECK-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>), [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>), [[UV8:%[0-9]+]]:_(<2 x s16>), [[UV9:%[0-9]+]]:_(<2 x s16>), [[UV10:%[0-9]+]]:_(<2 x s16>), [[UV11:%[0-9]+]]:_(<2 x s16>), [[UV12:%[0-9]+]]:_(<2 x s16>), [[UV13:%[0-9]+]]:_(<2 x s16>), [[UV14:%[0-9]+]]:_(<2 x s16>), [[UV15:%[0-9]+]]:_(<2 x s16>), [[UV16:%[0-9]+]]:_(<2 x s16>), [[UV17:%[0-9]+]]:_(<2 x s16>), [[UV18:%[0-9]+]]:_(<2 x s16>), [[UV19:%[0-9]+]]:_(<2 x s16>), [[UV20:%[0-9]+]]:_(<2 x s16>), [[UV21:%[0-9]+]]:_(<2 x s16>), [[UV22:%[0-9]+]]:_(<2 x s16>), [[UV23:%[0-9]+]]:_(<2 x s16>), [[UV24:%[0-9]+]]:_(<2 x s16>), [[UV25:%[0-9]+]]:_(<2 x s16>), [[UV26:%[0-9]+]]:_(<2 x s16>), [[UV27:%[0-9]+]]:_(<2 x s16>), [[UV28:%[0-9]+]]:_(<2 x s16>), [[UV29:%[0-9]+]]:_(<2 x s16>), [[UV30:%[0-9]+]]:_(<2 x s16>), [[UV31:%[0-9]+]]:_(<2 x s16>), [[UV32:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[LOAD]](<66 x s16>)
-  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(p5) = COPY $sp_reg
+  ; CHECK-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sp_reg
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C3]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C3]](s32)
   ; CHECK-NEXT:   G_STORE [[UV31]](<2 x s16>), [[PTR_ADD1]](p5) :: (store (<2 x s16>) into stack, align 16, addrspace 5)
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C4]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C4]](s32)
   ; CHECK-NEXT:   G_STORE [[UV32]](<2 x s16>), [[PTR_ADD2]](p5) :: (store (<2 x s16>) into stack + 4, addrspace 5)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](<2 x s16>)
   ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](<2 x s16>)
@@ -2696,8 +2696,8 @@ define amdgpu_kernel void @test_call_external_void_func_v66i16() #0 {
   ; CHECK-NEXT:   $vgpr28 = COPY [[UV28]](<2 x s16>)
   ; CHECK-NEXT:   $vgpr29 = COPY [[UV29]](<2 x s16>)
   ; CHECK-NEXT:   $vgpr30 = COPY [[UV30]](<2 x s16>)
-  ; CHECK-NEXT:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY20]](<4 x s32>)
   ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
   ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY11]](p4)
   ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[PTR_ADD]](p4)
@@ -3445,9 +3445,9 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
   ; CHECK-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<32 x s32>)
-  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(p5) = COPY $sp_reg
+  ; CHECK-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sp_reg
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C3]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C3]](s32)
   ; CHECK-NEXT:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
@@ -3480,8 +3480,8 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
   ; CHECK-NEXT:   $vgpr28 = COPY [[UV28]](s32)
   ; CHECK-NEXT:   $vgpr29 = COPY [[UV29]](s32)
   ; CHECK-NEXT:   $vgpr30 = COPY [[UV30]](s32)
-  ; CHECK-NEXT:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY20]](<4 x s32>)
   ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
   ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY11]](p4)
   ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[PTR_ADD]](p4)
@@ -3541,12 +3541,12 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
   ; CHECK-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<32 x s32>)
-  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(p5) = COPY $sp_reg
+  ; CHECK-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sp_reg
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C3]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C3]](s32)
   ; CHECK-NEXT:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C4]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C4]](s32)
   ; CHECK-NEXT:   G_STORE [[LOAD2]](s32), [[PTR_ADD2]](p5) :: (store (s32) into stack + 4, addrspace 5)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
@@ -3579,8 +3579,8 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
   ; CHECK-NEXT:   $vgpr28 = COPY [[UV28]](s32)
   ; CHECK-NEXT:   $vgpr29 = COPY [[UV29]](s32)
   ; CHECK-NEXT:   $vgpr30 = COPY [[UV30]](s32)
-  ; CHECK-NEXT:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY20]](<4 x s32>)
   ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
   ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY11]](p4)
   ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[PTR_ADD]](p4)
@@ -3642,20 +3642,20 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i8_i8_i16() #0 {
   ; CHECK-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY20]], [[C2]](s32)
   ; CHECK-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<32 x s32>)
-  ; CHECK-NEXT:   [[COPY21:%[0-9]+]]:_(p5) = COPY $sp_reg
+  ; CHECK-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sp_reg
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C3]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C3]](s32)
   ; CHECK-NEXT:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[LOAD2]](s8)
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C4]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C4]](s32)
   ; CHECK-NEXT:   G_STORE [[ANYEXT]](s16), [[PTR_ADD2]](p5) :: (store (s16) into stack + 4, align 4, addrspace 5)
-  ; CHECK-NEXT:   [[COPY22:%[0-9]+]]:_(s16) = COPY [[ANYEXT]](s16)
+  ; CHECK-NEXT:   [[COPY21:%[0-9]+]]:_(s16) = COPY [[ANYEXT]](s16)
   ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C5]](s32)
-  ; CHECK-NEXT:   G_STORE [[COPY22]](s16), [[PTR_ADD3]](p5) :: (store (s16) into stack + 8, align 8, addrspace 5)
+  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C5]](s32)
+  ; CHECK-NEXT:   G_STORE [[COPY21]](s16), [[PTR_ADD3]](p5) :: (store (s16) into stack + 8, align 8, addrspace 5)
   ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; CHECK-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C6]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C6]](s32)
   ; CHECK-NEXT:   G_STORE [[LOAD3]](s16), [[PTR_ADD4]](p5) :: (store (s16) into stack + 12, align 4, addrspace 5)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
@@ -3688,8 +3688,8 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i8_i8_i16() #0 {
   ; CHECK-NEXT:   $vgpr28 = COPY [[UV28]](s32)
   ; CHECK-NEXT:   $vgpr29 = COPY [[UV29]](s32)
   ; CHECK-NEXT:   $vgpr30 = COPY [[UV30]](s32)
-  ; CHECK-NEXT:   [[COPY23:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY23]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY22:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY22]](<4 x s32>)
   ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY11]](p4)
   ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY12]](p4)
   ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[PTR_ADD]](p4)
@@ -3753,15 +3753,15 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_p3_p5() #0 {
   ; CHECK-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY20]], [[C2]](s32)
   ; CHECK-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<32 x s32>)
-  ; CHECK-NEXT:   [[COPY21:%[0-9]+]]:_(p5) = COPY $sp_reg
+  ; CHECK-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sp_reg
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C3]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C3]](s32)
   ; CHECK-NEXT:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C4]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C4]](s32)
   ; CHECK-NEXT:   G_STORE [[LOAD2]](p3), [[PTR_ADD2]](p5) :: (store (p3) into stack + 4, addrspace 5)
   ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C5]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C5]](s32)
   ; CHECK-NEXT:   G_STORE [[LOAD3]](p5), [[PTR_ADD3]](p5) :: (store (p5) into stack + 8, align 8, addrspace 5)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
@@ -3794,8 +3794,8 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_p3_p5() #0 {
   ; CHECK-NEXT:   $vgpr28 = COPY [[UV28]](s32)
   ; CHECK-NEXT:   $vgpr29 = COPY [[UV29]](s32)
   ; CHECK-NEXT:   $vgpr30 = COPY [[UV30]](s32)
-  ; CHECK-NEXT:   [[COPY22:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY22]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
   ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY11]](p4)
   ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY12]](p4)
   ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[PTR_ADD]](p4)
@@ -3981,13 +3981,13 @@ define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0
   ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C5]](s32)
   ; CHECK-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
-  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(p5) = COPY $sp_reg
+  ; CHECK-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sp_reg
   ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C6]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C6]](s32)
   ; CHECK-NEXT:   [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; CHECK-NEXT:   G_MEMCPY [[PTR_ADD2]](p5), [[FRAME_INDEX]](p5), [[C7]](s32), 0 :: (dereferenceable store (s64) into stack, align 4, addrspace 5), (dereferenceable load (s64) from %ir.val, align 4, addrspace 5)
-  ; CHECK-NEXT:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY20]](<4 x s32>)
   ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
   ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY11]](p4)
   ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[PTR_ADD1]](p4)
@@ -4037,18 +4037,18 @@ define void @call_byval_3ai32_byval_i8_align32([3 x i32] addrspace(5)* %incoming
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY2]]
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY1]]
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-  ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:_(p5) = COPY $sgpr32
+  ; CHECK-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY19]], [[C1]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C1]](s32)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
   ; CHECK-NEXT:   G_MEMCPY [[PTR_ADD]](p5), [[COPY8]](p5), [[C2]](s32), 0 :: (dereferenceable store (s96) into stack, align 4, addrspace 5), (dereferenceable load (s96) from %ir.incoming0, align 4, addrspace 5)
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY19]], [[C3]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C3]](s32)
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   G_MEMCPY [[PTR_ADD1]](p5), [[COPY9]](p5), [[C4]](s32), 0 :: (dereferenceable store (s8) into stack + 32, align 32, addrspace 5), (dereferenceable load (s8) from %ir.incoming1, align 32, addrspace 5)
   ; CHECK-NEXT:   $vgpr0 = COPY [[C]](s32)
-  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY20]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY19]](<4 x s32>)
   ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY11]](p4)
   ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY12]](p4)
   ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[COPY13]](p4)
@@ -4059,8 +4059,8 @@ define void @call_byval_3ai32_byval_i8_align32([3 x i32] addrspace(5)* %incoming
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY18]](s32)
   ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @void_func_byval_a3i32_byval_i8_align32, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 36, implicit-def $scc
-  ; CHECK-NEXT:   [[COPY21:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY10]]
-  ; CHECK-NEXT:   S_SETPC_B64_return [[COPY21]]
+  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY10]]
+  ; CHECK-NEXT:   S_SETPC_B64_return [[COPY20]]
   call void @void_func_byval_a3i32_byval_i8_align32([3 x i32] addrspace(5)* byval([3 x i32]) %incoming0, i8 addrspace(5)* align 32 %incoming1, i32 999)
   ret void
 }
@@ -4094,13 +4094,13 @@ define void @call_byval_a4i64_align4_higher_source_align([4 x i64] addrspace(5)*
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY2]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY1]]
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(p5) = COPY $sgpr32
+  ; CHECK-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY18]], [[C]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
   ; CHECK-NEXT:   G_MEMCPY [[PTR_ADD]](p5), [[COPY8]](p5), [[C1]](s32), 0 :: (dereferenceable store (s256) into stack, align 4, addrspace 5), (dereferenceable load (s256) from %ir.incoming_high_align, align 256, addrspace 5)
-  ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY19]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY18]](<4 x s32>)
   ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
   ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY11]](p4)
   ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[COPY12]](p4)
@@ -4111,8 +4111,8 @@ define void @call_byval_a4i64_align4_higher_source_align([4 x i64] addrspace(5)*
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY17]](s32)
   ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @void_func_byval_a4i64_align4, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 32, implicit-def $scc
-  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY9]]
-  ; CHECK-NEXT:   S_SETPC_B64_return [[COPY20]]
+  ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY9]]
+  ; CHECK-NEXT:   S_SETPC_B64_return [[COPY19]]
   call void @void_func_byval_a4i64_align4([4 x i64] addrspace(5)* byval([4 x i64]) align 4 %incoming_high_align)
   ret void
 }
@@ -4547,16 +4547,16 @@ define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val
   ; CHECK-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C3]](s32)
   ; CHECK-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<32 x s32>)
-  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(p5) = COPY $sp_reg
+  ; CHECK-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sp_reg
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C4]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C4]](s32)
   ; CHECK-NEXT:   G_STORE [[UV31]](s32), [[PTR_ADD2]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; CHECK-NEXT:   [[UV32:%[0-9]+]]:_(s32), [[UV33:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](s64)
   ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C5]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C5]](s32)
   ; CHECK-NEXT:   G_STORE [[UV32]](s32), [[PTR_ADD3]](p5) :: (store (s32) into stack + 4, addrspace 5)
   ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; CHECK-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C6]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C6]](s32)
   ; CHECK-NEXT:   G_STORE [[UV33]](s32), [[PTR_ADD4]](p5) :: (store (s32) into stack + 8, align 8, addrspace 5)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
@@ -4589,8 +4589,8 @@ define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val
   ; CHECK-NEXT:   $vgpr28 = COPY [[UV28]](s32)
   ; CHECK-NEXT:   $vgpr29 = COPY [[UV29]](s32)
   ; CHECK-NEXT:   $vgpr30 = COPY [[UV30]](s32)
-  ; CHECK-NEXT:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY20]](<4 x s32>)
   ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
   ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY11]](p4)
   ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[PTR_ADD1]](p4)
@@ -4670,22 +4670,22 @@ define void @stack_12xv3i32() #0 {
   ; CHECK-NEXT:   [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR8]](<3 x s32>)
   ; CHECK-NEXT:   [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR9]](<3 x s32>)
   ; CHECK-NEXT:   [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32), [[UV32:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR10]](<3 x s32>)
-  ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(p5) = COPY $sgpr32
+  ; CHECK-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
   ; CHECK-NEXT:   [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C16]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C16]](s32)
   ; CHECK-NEXT:   G_STORE [[UV31]](s32), [[PTR_ADD]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; CHECK-NEXT:   [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C17]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C17]](s32)
   ; CHECK-NEXT:   G_STORE [[UV32]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack + 4, addrspace 5)
   ; CHECK-NEXT:   [[UV33:%[0-9]+]]:_(s32), [[UV34:%[0-9]+]]:_(s32), [[UV35:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR11]](<3 x s32>)
   ; CHECK-NEXT:   [[C18:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C18]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C18]](s32)
   ; CHECK-NEXT:   G_STORE [[UV33]](s32), [[PTR_ADD2]](p5) :: (store (s32) into stack + 8, align 8, addrspace 5)
   ; CHECK-NEXT:   [[C19:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C19]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C19]](s32)
   ; CHECK-NEXT:   G_STORE [[UV34]](s32), [[PTR_ADD3]](p5) :: (store (s32) into stack + 12, addrspace 5)
   ; CHECK-NEXT:   [[C20:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; CHECK-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C20]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C20]](s32)
   ; CHECK-NEXT:   G_STORE [[UV35]](s32), [[PTR_ADD4]](p5) :: (store (s32) into stack + 16, align 16, addrspace 5)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
@@ -4718,8 +4718,8 @@ define void @stack_12xv3i32() #0 {
   ; CHECK-NEXT:   $vgpr28 = COPY [[UV28]](s32)
   ; CHECK-NEXT:   $vgpr29 = COPY [[UV29]](s32)
   ; CHECK-NEXT:   $vgpr30 = COPY [[UV30]](s32)
-  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY18]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY17]](<4 x s32>)
   ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY9]](p4)
   ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY10]](p4)
   ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[COPY11]](p4)
@@ -4730,8 +4730,8 @@ define void @stack_12xv3i32() #0 {
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY16]](s32)
   ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_12xv3i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 20, implicit-def $scc
-  ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY8]]
-  ; CHECK-NEXT:   S_SETPC_B64_return [[COPY19]]
+  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY8]]
+  ; CHECK-NEXT:   S_SETPC_B64_return [[COPY18]]
 entry:
   call void @external_void_func_12xv3i32(
       <3 x i32> <i32 0, i32 0, i32 0>,
@@ -4812,22 +4812,22 @@ define void @stack_12xv3f32() #0 {
   ; CHECK-NEXT:   [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR8]](<3 x s32>)
   ; CHECK-NEXT:   [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR9]](<3 x s32>)
   ; CHECK-NEXT:   [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32), [[UV32:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR10]](<3 x s32>)
-  ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(p5) = COPY $sgpr32
+  ; CHECK-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
   ; CHECK-NEXT:   [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C16]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C16]](s32)
   ; CHECK-NEXT:   G_STORE [[UV31]](s32), [[PTR_ADD]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; CHECK-NEXT:   [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C17]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C17]](s32)
   ; CHECK-NEXT:   G_STORE [[UV32]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack + 4, addrspace 5)
   ; CHECK-NEXT:   [[UV33:%[0-9]+]]:_(s32), [[UV34:%[0-9]+]]:_(s32), [[UV35:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR11]](<3 x s32>)
   ; CHECK-NEXT:   [[C18:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C18]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C18]](s32)
   ; CHECK-NEXT:   G_STORE [[UV33]](s32), [[PTR_ADD2]](p5) :: (store (s32) into stack + 8, align 8, addrspace 5)
   ; CHECK-NEXT:   [[C19:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C19]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C19]](s32)
   ; CHECK-NEXT:   G_STORE [[UV34]](s32), [[PTR_ADD3]](p5) :: (store (s32) into stack + 12, addrspace 5)
   ; CHECK-NEXT:   [[C20:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; CHECK-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C20]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C20]](s32)
   ; CHECK-NEXT:   G_STORE [[UV35]](s32), [[PTR_ADD4]](p5) :: (store (s32) into stack + 16, align 16, addrspace 5)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
@@ -4860,8 +4860,8 @@ define void @stack_12xv3f32() #0 {
   ; CHECK-NEXT:   $vgpr28 = COPY [[UV28]](s32)
   ; CHECK-NEXT:   $vgpr29 = COPY [[UV29]](s32)
   ; CHECK-NEXT:   $vgpr30 = COPY [[UV30]](s32)
-  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY18]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY17]](<4 x s32>)
   ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY9]](p4)
   ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY10]](p4)
   ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[COPY11]](p4)
@@ -4872,8 +4872,8 @@ define void @stack_12xv3f32() #0 {
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY16]](s32)
   ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_12xv3f32, csr_amdgpu_highregs, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 20, implicit-def $scc
-  ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY8]]
-  ; CHECK-NEXT:   S_SETPC_B64_return [[COPY19]]
+  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY8]]
+  ; CHECK-NEXT:   S_SETPC_B64_return [[COPY18]]
 entry:
   call void @external_void_func_12xv3f32(
       <3 x float> <float 0.0, float 0.0, float 0.0>,
@@ -4946,34 +4946,34 @@ define void @stack_8xv5i32() #0 {
   ; CHECK-NEXT:   [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR4]](<5 x s32>)
   ; CHECK-NEXT:   [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR5]](<5 x s32>)
   ; CHECK-NEXT:   [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32), [[UV32:%[0-9]+]]:_(s32), [[UV33:%[0-9]+]]:_(s32), [[UV34:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR6]](<5 x s32>)
-  ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(p5) = COPY $sgpr32
+  ; CHECK-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
   ; CHECK-NEXT:   [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C16]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C16]](s32)
   ; CHECK-NEXT:   G_STORE [[UV31]](s32), [[PTR_ADD]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; CHECK-NEXT:   [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C17]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C17]](s32)
   ; CHECK-NEXT:   G_STORE [[UV32]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack + 4, addrspace 5)
   ; CHECK-NEXT:   [[C18:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C18]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C18]](s32)
   ; CHECK-NEXT:   G_STORE [[UV33]](s32), [[PTR_ADD2]](p5) :: (store (s32) into stack + 8, align 8, addrspace 5)
   ; CHECK-NEXT:   [[C19:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C19]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C19]](s32)
   ; CHECK-NEXT:   G_STORE [[UV34]](s32), [[PTR_ADD3]](p5) :: (store (s32) into stack + 12, addrspace 5)
   ; CHECK-NEXT:   [[UV35:%[0-9]+]]:_(s32), [[UV36:%[0-9]+]]:_(s32), [[UV37:%[0-9]+]]:_(s32), [[UV38:%[0-9]+]]:_(s32), [[UV39:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR7]](<5 x s32>)
   ; CHECK-NEXT:   [[C20:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; CHECK-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C20]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C20]](s32)
   ; CHECK-NEXT:   G_STORE [[UV35]](s32), [[PTR_ADD4]](p5) :: (store (s32) into stack + 16, align 16, addrspace 5)
   ; CHECK-NEXT:   [[C21:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
-  ; CHECK-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C21]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C21]](s32)
   ; CHECK-NEXT:   G_STORE [[UV36]](s32), [[PTR_ADD5]](p5) :: (store (s32) into stack + 20, addrspace 5)
   ; CHECK-NEXT:   [[C22:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-  ; CHECK-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C22]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C22]](s32)
   ; CHECK-NEXT:   G_STORE [[UV37]](s32), [[PTR_ADD6]](p5) :: (store (s32) into stack + 24, align 8, addrspace 5)
   ; CHECK-NEXT:   [[C23:%[0-9]+]]:_(s32) = G_CONSTANT i32 28
-  ; CHECK-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C23]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C23]](s32)
   ; CHECK-NEXT:   G_STORE [[UV38]](s32), [[PTR_ADD7]](p5) :: (store (s32) into stack + 28, addrspace 5)
   ; CHECK-NEXT:   [[C24:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-  ; CHECK-NEXT:   [[PTR_ADD8:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C24]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD8:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C24]](s32)
   ; CHECK-NEXT:   G_STORE [[UV39]](s32), [[PTR_ADD8]](p5) :: (store (s32) into stack + 32, align 16, addrspace 5)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
@@ -5006,8 +5006,8 @@ define void @stack_8xv5i32() #0 {
   ; CHECK-NEXT:   $vgpr28 = COPY [[UV28]](s32)
   ; CHECK-NEXT:   $vgpr29 = COPY [[UV29]](s32)
   ; CHECK-NEXT:   $vgpr30 = COPY [[UV30]](s32)
-  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY18]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY17]](<4 x s32>)
   ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY9]](p4)
   ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY10]](p4)
   ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[COPY11]](p4)
@@ -5018,8 +5018,8 @@ define void @stack_8xv5i32() #0 {
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY16]](s32)
   ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_8xv5i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 36, implicit-def $scc
-  ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY8]]
-  ; CHECK-NEXT:   S_SETPC_B64_return [[COPY19]]
+  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY8]]
+  ; CHECK-NEXT:   S_SETPC_B64_return [[COPY18]]
 entry:
   call void @external_void_func_8xv5i32(
       <5 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0>,
@@ -5088,34 +5088,34 @@ define void @stack_8xv5f32() #0 {
   ; CHECK-NEXT:   [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR4]](<5 x s32>)
   ; CHECK-NEXT:   [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR5]](<5 x s32>)
   ; CHECK-NEXT:   [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32), [[UV32:%[0-9]+]]:_(s32), [[UV33:%[0-9]+]]:_(s32), [[UV34:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR6]](<5 x s32>)
-  ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(p5) = COPY $sgpr32
+  ; CHECK-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
   ; CHECK-NEXT:   [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C16]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C16]](s32)
   ; CHECK-NEXT:   G_STORE [[UV31]](s32), [[PTR_ADD]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; CHECK-NEXT:   [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C17]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C17]](s32)
   ; CHECK-NEXT:   G_STORE [[UV32]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack + 4, addrspace 5)
   ; CHECK-NEXT:   [[C18:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C18]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C18]](s32)
   ; CHECK-NEXT:   G_STORE [[UV33]](s32), [[PTR_ADD2]](p5) :: (store (s32) into stack + 8, align 8, addrspace 5)
   ; CHECK-NEXT:   [[C19:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C19]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C19]](s32)
   ; CHECK-NEXT:   G_STORE [[UV34]](s32), [[PTR_ADD3]](p5) :: (store (s32) into stack + 12, addrspace 5)
   ; CHECK-NEXT:   [[UV35:%[0-9]+]]:_(s32), [[UV36:%[0-9]+]]:_(s32), [[UV37:%[0-9]+]]:_(s32), [[UV38:%[0-9]+]]:_(s32), [[UV39:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR7]](<5 x s32>)
   ; CHECK-NEXT:   [[C20:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; CHECK-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C20]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C20]](s32)
   ; CHECK-NEXT:   G_STORE [[UV35]](s32), [[PTR_ADD4]](p5) :: (store (s32) into stack + 16, align 16, addrspace 5)
   ; CHECK-NEXT:   [[C21:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
-  ; CHECK-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C21]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C21]](s32)
   ; CHECK-NEXT:   G_STORE [[UV36]](s32), [[PTR_ADD5]](p5) :: (store (s32) into stack + 20, addrspace 5)
   ; CHECK-NEXT:   [[C22:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-  ; CHECK-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C22]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C22]](s32)
   ; CHECK-NEXT:   G_STORE [[UV37]](s32), [[PTR_ADD6]](p5) :: (store (s32) into stack + 24, align 8, addrspace 5)
   ; CHECK-NEXT:   [[C23:%[0-9]+]]:_(s32) = G_CONSTANT i32 28
-  ; CHECK-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C23]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C23]](s32)
   ; CHECK-NEXT:   G_STORE [[UV38]](s32), [[PTR_ADD7]](p5) :: (store (s32) into stack + 28, addrspace 5)
   ; CHECK-NEXT:   [[C24:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-  ; CHECK-NEXT:   [[PTR_ADD8:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C24]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD8:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C24]](s32)
   ; CHECK-NEXT:   G_STORE [[UV39]](s32), [[PTR_ADD8]](p5) :: (store (s32) into stack + 32, align 16, addrspace 5)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
@@ -5148,8 +5148,8 @@ define void @stack_8xv5f32() #0 {
   ; CHECK-NEXT:   $vgpr28 = COPY [[UV28]](s32)
   ; CHECK-NEXT:   $vgpr29 = COPY [[UV29]](s32)
   ; CHECK-NEXT:   $vgpr30 = COPY [[UV30]](s32)
-  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY18]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY17]](<4 x s32>)
   ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY9]](p4)
   ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY10]](p4)
   ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[COPY11]](p4)
@@ -5160,8 +5160,8 @@ define void @stack_8xv5f32() #0 {
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY16]](s32)
   ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_8xv5f32, csr_amdgpu_highregs, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 36, implicit-def $scc
-  ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY8]]
-  ; CHECK-NEXT:   S_SETPC_B64_return [[COPY19]]
+  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY8]]
+  ; CHECK-NEXT:   S_SETPC_B64_return [[COPY18]]
 entry:
   call void @external_void_func_8xv5f32(
       <5 x float> <float 0.0, float 0.0, float 0.0, float 0.0, float 0.0>,
@@ -5172,6 +5172,39 @@ entry:
       <5 x float> <float 5.0, float 5.0, float 5.0, float 5.0, float 5.0>,
       <5 x float> <float 6.0, float 7.0, float 8.0, float 9.0, float 10.0>,
       <5 x float> <float 11.0, float 12.0, float 13.0, float 14.0, float 15.0>)
+  ret void
+}
+
+define amdgpu_ps void @amdgpu_ps_call_default_cc() {
+  ; CHECK-LABEL: name: amdgpu_ps_call_default_cc
+  ; CHECK: bb.1.main_body:
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY [[DEF]](p4)
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(p4) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[C1]], [[C2]](s64)
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY [[DEF2]](s32)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[DEF2]](s32)
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[DEF2]](s32)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY4]](<4 x s32>)
+  ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[DEF]](p4)
+  ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY]](p4)
+  ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[PTR_ADD]](p4)
+  ; CHECK-NEXT:   $sgpr10_sgpr11 = COPY [[DEF1]](s64)
+  ; CHECK-NEXT:   $sgpr12 = COPY [[DEF2]](s32)
+  ; CHECK-NEXT:   $sgpr13 = COPY [[COPY1]](s32)
+  ; CHECK-NEXT:   $sgpr14 = COPY [[COPY2]](s32)
+  ; CHECK-NEXT:   $vgpr31 = COPY [[COPY3]](s32)
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[C]](p0), 0, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   S_ENDPGM 0
+main_body:
+  call void null()
   ret void
 }
 

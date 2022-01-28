@@ -160,7 +160,7 @@ SerializeToHsacoPass::loadLibraries(SmallVectorImpl<char> &path,
     llvm::StringRef pathRef(path.data(), path.size());
     std::unique_ptr<llvm::Module> library =
         llvm::getLazyIRFileModule(pathRef, error, context);
-    path.set_size(dirLength);
+    path.truncate(dirLength);
     if (!library) {
       getOperation().emitError() << "Failed to load library " << file
                                  << " from " << path << error.getMessage();
@@ -357,7 +357,7 @@ SerializeToHsacoPass::assembleIsa(const std::string &isa) {
 
   llvm::SourceMgr srcMgr;
   srcMgr.AddNewSourceBuffer(llvm::MemoryBuffer::getMemBuffer(isa),
-                            llvm::SMLoc());
+                            SMLoc());
 
   const llvm::MCTargetOptions mcOptions;
   std::unique_ptr<llvm::MCRegisterInfo> mri(
@@ -479,6 +479,17 @@ void mlir::registerGpuSerializeToHsacoPass() {
                                                       "", 2);
       });
 }
+
+/// Create an instance of the GPU kernel function to HSAco binary serialization
+/// pass.
+std::unique_ptr<Pass> mlir::createGpuSerializeToHsacoPass(StringRef triple,
+                                                          StringRef arch,
+                                                          StringRef features,
+                                                          int optLevel) {
+  return std::make_unique<SerializeToHsacoPass>(triple, arch, features,
+                                                optLevel);
+}
+
 #else  // MLIR_GPU_TO_HSACO_PASS_ENABLE
 void mlir::registerGpuSerializeToHsacoPass() {}
 #endif // MLIR_GPU_TO_HSACO_PASS_ENABLE

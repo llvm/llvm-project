@@ -11,19 +11,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/Analysis/AffineAnalysis.h"
-#include "mlir/Analysis/AffineStructures.h"
-#include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Analysis/Utils.h"
+#include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
+#include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
+#include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
+#include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/Transforms/LoopUtils.h"
-#include "mlir/Transforms/Utils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -44,7 +44,7 @@ namespace {
 ///       uses.
 struct LoopInvariantCodeMotion
     : public AffineLoopInvariantCodeMotionBase<LoopInvariantCodeMotion> {
-  void runOnFunction() override;
+  void runOnOperation() override;
   void runOnAffineForOp(AffineForOp forOp);
 };
 } // namespace
@@ -227,11 +227,11 @@ void LoopInvariantCodeMotion::runOnAffineForOp(AffineForOp forOp) {
   LLVM_DEBUG(forOp->print(llvm::dbgs() << "Modified loop\n"));
 }
 
-void LoopInvariantCodeMotion::runOnFunction() {
+void LoopInvariantCodeMotion::runOnOperation() {
   // Walk through all loops in a function in innermost-loop-first order.  This
   // way, we first LICM from the inner loop, and place the ops in
   // the outer loop, which in turn can be further LICM'ed.
-  getFunction().walk([&](AffineForOp op) {
+  getOperation().walk([&](AffineForOp op) {
     LLVM_DEBUG(op->print(llvm::dbgs() << "\nOriginal loop\n"));
     runOnAffineForOp(op);
   });

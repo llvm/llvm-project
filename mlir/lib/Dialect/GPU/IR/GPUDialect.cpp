@@ -13,9 +13,7 @@
 #include "mlir/Dialect/GPU/GPUDialect.h"
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -26,6 +24,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
@@ -102,6 +101,20 @@ bool GPUDialect::isKernel(Operation *op) {
   return static_cast<bool>(isKernelAttr);
 }
 
+namespace {
+/// This class defines the interface for handling inlining with gpu
+/// operations.
+struct GPUInlinerInterface : public DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+
+  /// All gpu dialect ops can be inlined.
+  bool isLegalToInline(Operation *, Region *, bool,
+                       BlockAndValueMapping &) const final {
+    return true;
+  }
+};
+} // namespace
+
 void GPUDialect::initialize() {
   addTypes<AsyncTokenType>();
   addTypes<MMAMatrixType>();
@@ -109,6 +122,11 @@ void GPUDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/GPU/GPUOps.cpp.inc"
       >();
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "mlir/Dialect/GPU/GPUOpsAttributes.cpp.inc"
+      >();
+  addInterfaces<GPUInlinerInterface>();
 }
 
 Type GPUDialect::parseType(DialectAsmParser &parser) const {
@@ -123,7 +141,7 @@ Type GPUDialect::parseType(DialectAsmParser &parser) const {
     return AsyncTokenType::get(context);
 
   if (keyword == "mma_matrix") {
-    llvm::SMLoc beginLoc = parser.getNameLoc();
+    SMLoc beginLoc = parser.getNameLoc();
 
     // Parse '<'.
     if (parser.parseLess())
@@ -207,21 +225,28 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
 
     // Check that `launch_func` refers to a well-formed kernel function.
     Operation *kernelFunc = module.lookupSymbol(launchOp.kernelAttr());
-    auto kernelGPUFunction = dyn_cast_or_null<gpu::GPUFuncOp>(kernelFunc);
-    auto kernelLLVMFunction = dyn_cast_or_null<LLVM::LLVMFuncOp>(kernelFunc);
-    if (!kernelGPUFunction && !kernelLLVMFunction)
+    if (!kernelFunc)
       return launchOp.emitOpError("kernel function '")
              << launchOp.kernel() << "' is undefined";
+    auto kernelConvertedFunction = dyn_cast<FunctionOpInterface>(kernelFunc);
+    if (!kernelConvertedFunction) {
+      InFlightDiagnostic diag = launchOp.emitOpError()
+                                << "referenced kernel '" << launchOp.kernel()
+                                << "' is not a function";
+      diag.attachNote(kernelFunc->getLoc()) << "see the kernel definition here";
+      return diag;
+    }
+
     if (!kernelFunc->getAttrOfType<mlir::UnitAttr>(
             GPUDialect::getKernelFuncAttrName()))
       return launchOp.emitOpError("kernel function is missing the '")
              << GPUDialect::getKernelFuncAttrName() << "' attribute";
 
-    // TODO: if the kernel function has been converted to
-    // the LLVM dialect but the caller hasn't (which happens during the
-    // separate compilation), do not check type correspondence as it would
-    // require the verifier to be aware of the LLVM type conversion.
-    if (kernelLLVMFunction)
+    // TODO: If the kernel isn't a GPU function (which happens during separate
+    // compilation), do not check type correspondence as it would require the
+    // verifier to be aware of the type conversion.
+    auto kernelGPUFunction = dyn_cast<gpu::GPUFuncOp>(kernelFunc);
+    if (!kernelGPUFunction)
       return success();
 
     unsigned actualNumArguments = launchOp.getNumKernelOperands();
@@ -277,54 +302,36 @@ static LogicalResult verifyAllReduce(gpu::AllReduceOp allReduce) {
     if (yieldCount == 0)
       return allReduce.emitError("expected gpu.yield op in region");
   } else {
-    StringRef opName = *allReduce.op();
-    if ((opName == "and" || opName == "or" || opName == "xor") &&
+    gpu::AllReduceOperation opName = *allReduce.op();
+    if ((opName == gpu::AllReduceOperation::AND ||
+         opName == gpu::AllReduceOperation::OR ||
+         opName == gpu::AllReduceOperation::XOR) &&
         !allReduce.getType().isa<IntegerType>()) {
       return allReduce.emitError()
-             << '`' << opName << '`'
+             << '`' << gpu::stringifyAllReduceOperation(opName) << '`'
              << " accumulator is only compatible with Integer type";
     }
   }
   return success();
 }
 
-static LogicalResult verifyShuffleOp(gpu::ShuffleOp shuffleOp) {
-  auto type = shuffleOp.value().getType();
-  if (shuffleOp.result().getType() != type) {
-    return shuffleOp.emitOpError()
-           << "requires the same type for value operand and result";
-  }
-  if (!type.isSignlessIntOrFloat() || type.getIntOrFloatBitWidth() != 32) {
-    return shuffleOp.emitOpError()
-           << "requires value operand type to be f32 or i32";
+// TODO: Support optional custom attributes (without dialect prefix).
+static ParseResult parseAllReduceOperation(AsmParser &parser,
+                                           AllReduceOperationAttr &attr) {
+  StringRef enumStr;
+  if (!parser.parseOptionalKeyword(&enumStr)) {
+    Optional<AllReduceOperation> op = gpu::symbolizeAllReduceOperation(enumStr);
+    if (!op)
+      return parser.emitError(parser.getCurrentLocation(), "invalid op kind");
+    attr = AllReduceOperationAttr::get(parser.getContext(), *op);
   }
   return success();
 }
 
-static void printShuffleOp(OpAsmPrinter &p, ShuffleOp op) {
-  p << ' ' << op.getOperands() << ' ' << stringifyEnum(op.mode()) << " : "
-    << op.value().getType();
-}
-
-static ParseResult parseShuffleOp(OpAsmParser &parser, OperationState &state) {
-  SmallVector<OpAsmParser::OperandType, 3> operandInfo;
-  if (parser.parseOperandList(operandInfo, 3))
-    return failure();
-
-  StringRef mode;
-  if (parser.parseKeyword(&mode))
-    return failure();
-  state.addAttribute("mode", parser.getBuilder().getStringAttr(mode));
-
-  Type valueType;
-  Type int32Type = parser.getBuilder().getIntegerType(32);
-  Type int1Type = parser.getBuilder().getI1Type();
-  if (parser.parseColonType(valueType) ||
-      parser.resolveOperands(operandInfo, {valueType, int32Type, int32Type},
-                             parser.getCurrentLocation(), state.operands) ||
-      parser.addTypesToList({valueType, int1Type}, state.types))
-    return failure();
-  return success();
+static void printAllReduceOperation(AsmPrinter &printer, Operation *op,
+                                    AllReduceOperationAttr attr) {
+  if (attr)
+    attr.print(printer);
 }
 
 //===----------------------------------------------------------------------===//
@@ -367,8 +374,8 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
   // the rest have the same types as the data operands.
   Region *kernelRegion = result.addRegion();
   Block *body = new Block();
-  body->addArguments(
-      std::vector<Type>(kNumConfigRegionAttributes, builder.getIndexType()));
+  for (unsigned i = 0; i < kNumConfigRegionAttributes; ++i)
+    body->addArgument(builder.getIndexType(), result.location);
   kernelRegion->push_back(body);
 }
 
@@ -459,6 +466,7 @@ static void printLaunchOp(OpAsmPrinter &p, LaunchOp op) {
     p << ' ' << op.getDynamicSharedMemorySizeKeyword() << ' '
       << op.dynamicSharedMemorySize();
 
+  p << ' ';
   p.printRegion(op.body(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict(op->getAttrs());
 }
@@ -667,11 +675,13 @@ parseLaunchFuncOperands(OpAsmParser &parser,
                         SmallVectorImpl<Type> &argTypes) {
   if (parser.parseOptionalKeyword("args"))
     return success();
-  SmallVector<NamedAttrList, 4> argAttrs;
+  SmallVector<NamedAttrList> argAttrs;
+  SmallVector<Location> argLocations;
   bool isVariadic = false;
-  return function_like_impl::parseFunctionArgumentList(
+  return function_interface_impl::parseFunctionArgumentList(
       parser, /*allowAttributes=*/false,
-      /*allowVariadic=*/false, argNames, argTypes, argAttrs, isVariadic);
+      /*allowVariadic=*/false, argNames, argTypes, argAttrs, argLocations,
+      isVariadic);
 }
 
 static void printLaunchFuncOperands(OpAsmPrinter &printer, Operation *,
@@ -694,21 +704,21 @@ static void printLaunchFuncOperands(OpAsmPrinter &printer, Operation *,
 
 /// Adds a new block argument that corresponds to buffers located in
 /// workgroup memory.
-BlockArgument GPUFuncOp::addWorkgroupAttribution(Type type) {
+BlockArgument GPUFuncOp::addWorkgroupAttribution(Type type, Location loc) {
   auto attrName = getNumWorkgroupAttributionsAttrName();
   auto attr = (*this)->getAttrOfType<IntegerAttr>(attrName);
   (*this)->setAttr(attrName,
                    IntegerAttr::get(attr.getType(), attr.getValue() + 1));
   return getBody().insertArgument(getType().getNumInputs() + attr.getInt(),
-                                  type);
+                                  type, loc);
 }
 
 /// Adds a new block argument that corresponds to buffers located in
 /// private memory.
-BlockArgument GPUFuncOp::addPrivateAttribution(Type type) {
+BlockArgument GPUFuncOp::addPrivateAttribution(Type type, Location loc) {
   // Buffers on the private memory always come after buffers on the workgroup
   // memory.
-  return getBody().addArgument(type);
+  return getBody().addArgument(type, loc);
 }
 
 void GPUFuncOp::build(OpBuilder &builder, OperationState &result,
@@ -724,9 +734,14 @@ void GPUFuncOp::build(OpBuilder &builder, OperationState &result,
   result.addAttributes(attrs);
   Region *body = result.addRegion();
   Block *entryBlock = new Block;
-  entryBlock->addArguments(type.getInputs());
-  entryBlock->addArguments(workgroupAttributions);
-  entryBlock->addArguments(privateAttributions);
+
+  // TODO: Allow passing in proper locations here.
+  for (Type argTy : type.getInputs())
+    entryBlock->addArgument(argTy, result.location);
+  for (Type argTy : workgroupAttributions)
+    entryBlock->addArgument(argTy, result.location);
+  for (Type argTy : privateAttributions)
+    entryBlock->addArgument(argTy, result.location);
 
   body->getBlocks().push_back(entryBlock);
 }
@@ -773,11 +788,12 @@ parseAttributions(OpAsmParser &parser, StringRef keyword,
 ///                 (`->` function-result-list)? memory-attribution `kernel`?
 ///                 function-attributes? region
 static ParseResult parseGPUFuncOp(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 8> entryArgs;
-  SmallVector<NamedAttrList, 1> argAttrs;
-  SmallVector<NamedAttrList, 1> resultAttrs;
-  SmallVector<Type, 8> argTypes;
-  SmallVector<Type, 4> resultTypes;
+  SmallVector<OpAsmParser::OperandType> entryArgs;
+  SmallVector<NamedAttrList> argAttrs;
+  SmallVector<NamedAttrList> resultAttrs;
+  SmallVector<Type> argTypes;
+  SmallVector<Type> resultTypes;
+  SmallVector<Location> argLocations;
   bool isVariadic;
 
   // Parse the function name.
@@ -787,9 +803,9 @@ static ParseResult parseGPUFuncOp(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   auto signatureLocation = parser.getCurrentLocation();
-  if (failed(function_like_impl::parseFunctionSignature(
+  if (failed(function_interface_impl::parseFunctionSignature(
           parser, /*allowVariadic=*/false, entryArgs, argTypes, argAttrs,
-          isVariadic, resultTypes, resultAttrs)))
+          argLocations, isVariadic, resultTypes, resultAttrs)))
     return failure();
 
   if (entryArgs.empty() && !argTypes.empty())
@@ -826,8 +842,8 @@ static ParseResult parseGPUFuncOp(OpAsmParser &parser, OperationState &result) {
   // Parse attributes.
   if (failed(parser.parseOptionalAttrDictWithKeyword(result.attributes)))
     return failure();
-  function_like_impl::addArgAndResultAttrs(builder, result, argAttrs,
-                                           resultAttrs);
+  function_interface_impl::addArgAndResultAttrs(builder, result, argAttrs,
+                                                resultAttrs);
 
   // Parse the region. If no argument names were provided, take all names
   // (including those of attributions) from the entry block.
@@ -852,7 +868,7 @@ static void printGPUFuncOp(OpAsmPrinter &p, GPUFuncOp op) {
   p.printSymbolName(op.getName());
 
   FunctionType type = op.getType();
-  function_like_impl::printFunctionSignature(
+  function_interface_impl::printFunctionSignature(
       p, op.getOperation(), type.getInputs(),
       /*isVariadic=*/false, type.getResults());
 
@@ -861,14 +877,14 @@ static void printGPUFuncOp(OpAsmPrinter &p, GPUFuncOp op) {
   if (op.isKernel())
     p << ' ' << op.getKernelKeyword();
 
-  function_like_impl::printFunctionAttributes(
+  function_interface_impl::printFunctionAttributes(
       p, op.getOperation(), type.getNumInputs(), type.getNumResults(),
       {op.getNumWorkgroupAttributionsAttrName(),
        GPUDialect::getKernelFuncAttrName()});
+  p << ' ';
   p.printRegion(op.getBody(), /*printEntryBlockArgs=*/false);
 }
 
-/// Hook for FunctionLike verifier.
 LogicalResult GPUFuncOp::verifyType() {
   Type type = getTypeAttr().getValue();
   if (!type.isa<FunctionType>())
@@ -989,6 +1005,7 @@ static void print(OpAsmPrinter &p, GPUModuleOp op) {
   p.printSymbolName(op.getName());
   p.printOptionalAttrDictWithKeyword(op->getAttrs(),
                                      {SymbolTable::getSymbolAttrName()});
+  p << ' ';
   p.printRegion(op->getRegion(0), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
 }
@@ -1186,6 +1203,9 @@ void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 #include "mlir/Dialect/GPU/GPUOpInterfaces.cpp.inc"
 #include "mlir/Dialect/GPU/GPUOpsEnums.cpp.inc"
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/GPU/GPUOpsAttributes.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/GPU/GPUOps.cpp.inc"

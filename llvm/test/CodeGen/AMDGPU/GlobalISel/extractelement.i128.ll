@@ -408,9 +408,10 @@ define i128 @extractelement_vgpr_v4i128_vgpr_idx(<4 x i128> addrspace(1)* %ptr, 
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v3, v3, v5, s0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v4, v4, v6, s0
-; GFX11-NEXT:    v_cmp_eq_u32_e64 s0, 2, v1
 ; GFX11-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-NEXT:    v_dual_cndmask_b32 v2, v2, v7 :: v_dual_cndmask_b32 v5, v19, v8
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, v2, v7, vcc_lo
+; GFX11-NEXT:    v_cmp_eq_u32_e64 s0, 2, v1
+; GFX11-NEXT:    v_cndmask_b32_e32 v5, v19, v8, vcc_lo
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v3, v3, v7, s0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v4, v4, v8, s0

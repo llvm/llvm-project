@@ -6,11 +6,12 @@
 
 // Given a FatArchive, clang-offload-bundler should be called to create a
 // device specific archive, which should be passed to clang-nvlink-wrapper.
-// RUN: %clang -O2 -### -fopenmp -fopenmp-targets=nvptx64 %s -L%S/Inputs/openmp_static_device_link -lFatArchive 2>&1 | FileCheck %s
-// CHECK: clang{{.*}}"-cc1"{{.*}}"-triple" "nvptx64"{{.*}}"-target-cpu" "[[GPU:sm_[0-9]+]]"{{.*}}"-o" "[[HOSTBC:.*.s]]" "-x" "c++"{{.*}}.cpp
-// CHECK: clang-offload-bundler" "-unbundle" "-type=a" "-inputs={{.*}}/Inputs/openmp_static_device_link/libFatArchive.a" "-targets=openmp-nvptx64-[[GPU]]" "-outputs=[[DEVICESPECIFICARCHIVE:.*.a]]" "-allow-missing-bundles"
+// RUN: %clang -O2 -### -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda %s -L%S/Inputs/openmp_static_device_link -lFatArchive 2>&1 | FileCheck %s
+// CHECK: clang{{.*}}"-cc1"{{.*}}"-triple" "nvptx64-nvidia-cuda"{{.*}}"-target-cpu" "[[GPU:sm_[0-9]+]]"{{.*}}"-o" "[[HOSTBC:.*.s]]" "-x" "c++"{{.*}}.cpp
+// CHECK: clang-offload-bundler" "-unbundle" "-type=a" "-inputs={{.*}}/Inputs/openmp_static_device_link/libFatArchive.a" "-targets=openmp-nvptx64-nvidia-cuda-[[GPU]]" "-outputs=[[DEVICESPECIFICARCHIVE:.*.a]]" "-allow-missing-bundles"
 // CHECK: clang-nvlink-wrapper{{.*}}"-o" "{{.*}}.out" "-arch" "[[GPU]]" "{{.*}}[[DEVICESPECIFICARCHIVE]]"
-// expected-no-diagnostics
+// RUN: not %clang -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda %s %S/Inputs/openmp_static_device_link/empty.o --libomptarget-nvptx-bc-path=%S/Inputs/openmp_static_device_link/lib.bc 2>&1 | FileCheck %s --check-prefix=EMPTY
+// EMPTY-NOT: Could not open input file
 
 #ifndef HEADER
 #define HEADER
@@ -72,8 +73,8 @@ void func_present(float* in, float* out, unsigned n){
     clang -O2 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908 -c func_1.c -o func_1_gfx908.o
     clang -O2 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 -c func_2.c -o func_2_gfx906.o
     clang -O2 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908 -c func_2.c -o func_2_gfx908.o
-    clang -O2 -fopenmp -fopenmp-targets=nvptx64 -c func_1.c -o func_1_nvptx.o
-    clang -O2 -fopenmp -fopenmp-targets=nvptx64 -c func_2.c -o func_2_nvptx.o
+    clang -O2 -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -c func_1.c -o func_1_nvptx.o
+    clang -O2 -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -c func_2.c -o func_2_nvptx.o
 
 2. Create a fat archive by combining all the object file(s)
     llvm-ar cr libFatArchive.a func_1_gfx906.o func_1_gfx908.o func_2_gfx906.o func_2_gfx908.o func_1_nvptx.o func_2_nvptx.o

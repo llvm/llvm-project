@@ -80,6 +80,88 @@ MachineBasicBlock::iterator SystemZFrameLowering::eliminateCallFramePseudoInstr(
   }
 }
 
+namespace {
+struct SZFrameSortingObj {
+  bool IsValid = false;     // True if we care about this Object.
+  uint32_t ObjectIndex = 0; // Index of Object into MFI list.
+  uint64_t ObjectSize = 0;  // Size of Object in bytes.
+  uint32_t D12Count = 0;    // 12-bit displacement only.
+  uint32_t DPairCount = 0;  // 12 or 20 bit displacement.
+};
+typedef std::vector<SZFrameSortingObj> SZFrameObjVec;
+} // namespace
+
+// TODO: Move to base class.
+void SystemZELFFrameLowering::orderFrameObjects(
+    const MachineFunction &MF, SmallVectorImpl<int> &ObjectsToAllocate) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const SystemZInstrInfo *TII =
+      static_cast<const SystemZInstrInfo *>(MF.getSubtarget().getInstrInfo());
+
+  // Make a vector of sorting objects to track all MFI objects and mark those
+  // to be sorted as valid.
+  if (ObjectsToAllocate.size() <= 1)
+    return;
+  SZFrameObjVec SortingObjects(MFI.getObjectIndexEnd());
+  for (auto &Obj : ObjectsToAllocate) {
+    SortingObjects[Obj].IsValid = true;
+    SortingObjects[Obj].ObjectIndex = Obj;
+    SortingObjects[Obj].ObjectSize = MFI.getObjectSize(Obj);
+  }
+
+  // Examine uses for each object and record short (12-bit) and "pair"
+  // displacement types.
+  for (auto &MBB : MF)
+    for (auto &MI : MBB) {
+      if (MI.isDebugInstr())
+        continue;
+      for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
+        const MachineOperand &MO = MI.getOperand(I);
+        if (!MO.isFI())
+          continue;
+        int Index = MO.getIndex();
+        if (Index >= 0 && Index < MFI.getObjectIndexEnd() &&
+            SortingObjects[Index].IsValid) {
+          if (TII->hasDisplacementPairInsn(MI.getOpcode()))
+            SortingObjects[Index].DPairCount++;
+          else if (!(MI.getDesc().TSFlags & SystemZII::Has20BitOffset))
+            SortingObjects[Index].D12Count++;
+        }
+      }
+    }
+
+  // Sort all objects for short/paired displacements, which should be
+  // sufficient as it seems like all frame objects typically are within the
+  // long displacement range.  Sorting works by computing the "density" as
+  // Count / ObjectSize. The comparisons of two such fractions are refactored
+  // by multiplying both sides with A.ObjectSize * B.ObjectSize, in order to
+  // eliminate the (fp) divisions.  A higher density object needs to go after
+  // in the list in order for it to end up lower on the stack.
+  auto CmpD12 = [](const SZFrameSortingObj &A, const SZFrameSortingObj &B) {
+    // Put all invalid and variable sized objects at the end.
+    if (!A.IsValid || !B.IsValid)
+      return A.IsValid;
+    if (!A.ObjectSize || !B.ObjectSize)
+      return A.ObjectSize > 0;
+    uint64_t ADensityCmp = A.D12Count * B.ObjectSize;
+    uint64_t BDensityCmp = B.D12Count * A.ObjectSize;
+    if (ADensityCmp != BDensityCmp)
+      return ADensityCmp < BDensityCmp;
+    return A.DPairCount * B.ObjectSize < B.DPairCount * A.ObjectSize;
+  };
+  std::stable_sort(SortingObjects.begin(), SortingObjects.end(), CmpD12);
+
+  // Now modify the original list to represent the final order that
+  // we want.
+  unsigned Idx = 0;
+  for (auto &Obj : SortingObjects) {
+    // All invalid items are sorted at the end, so it's safe to stop.
+    if (!Obj.IsValid)
+      break;
+    ObjectsToAllocate[Idx++] = Obj.ObjectIndex;
+  }
+}
+
 bool SystemZFrameLowering::hasReservedCallFrame(
     const MachineFunction &MF) const {
   // The ELF ABI requires us to allocate 160 bytes of stack space for the
@@ -103,7 +185,7 @@ bool SystemZELFFrameLowering::assignCalleeSavedSpillSlots(
   unsigned HighGPR = SystemZ::R15D;
   int StartSPOffset = SystemZMC::ELFCallFrameSize;
   for (auto &CS : CSI) {
-    unsigned Reg = CS.getReg();
+    Register Reg = CS.getReg();
     int Offset = getRegSpillOffset(MF, Reg);
     if (Offset) {
       if (SystemZ::GR64BitRegClass.contains(Reg) && StartSPOffset > Offset) {
@@ -124,7 +206,7 @@ bool SystemZELFFrameLowering::assignCalleeSavedSpillSlots(
     // Also save the GPR varargs, if any.  R6D is call-saved, so would
     // already be included, but we also need to handle the call-clobbered
     // argument registers.
-    unsigned FirstGPR = ZFI->getVarArgsFirstGPR();
+    Register FirstGPR = ZFI->getVarArgsFirstGPR();
     if (FirstGPR < SystemZ::ELFNumArgGPRs) {
       unsigned Reg = SystemZ::ELFArgGPRs[FirstGPR];
       int Offset = getRegSpillOffset(MF, Reg);
@@ -143,7 +225,7 @@ bool SystemZELFFrameLowering::assignCalleeSavedSpillSlots(
   for (auto &CS : CSI) {
     if (CS.getFrameIdx() != INT32_MAX)
       continue;
-    unsigned Reg = CS.getReg();
+    Register Reg = CS.getReg();
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
     unsigned Size = TRI->getSpillSize(*RC);
     CurrOffset -= Size;
@@ -271,7 +353,7 @@ bool SystemZELFFrameLowering::spillCalleeSavedRegisters(
     // Make sure all call-saved GPRs are included as operands and are
     // marked as live on entry.
     for (const CalleeSavedInfo &I : CSI) {
-      unsigned Reg = I.getReg();
+      Register Reg = I.getReg();
       if (SystemZ::GR64BitRegClass.contains(Reg))
         addSavedGPR(MBB, MIB, Reg, true);
     }
@@ -284,7 +366,7 @@ bool SystemZELFFrameLowering::spillCalleeSavedRegisters(
 
   // Save FPRs/VRs in the normal TargetInstrInfo way.
   for (const CalleeSavedInfo &I : CSI) {
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
       TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
@@ -314,7 +396,7 @@ bool SystemZELFFrameLowering::restoreCalleeSavedRegisters(
 
   // Restore FPRs/VRs in the normal TargetInstrInfo way.
   for (const CalleeSavedInfo &I : CSI) {
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg))
       TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
                                 &SystemZ::FP64BitRegClass, TRI);
@@ -346,7 +428,7 @@ bool SystemZELFFrameLowering::restoreCalleeSavedRegisters(
 
     // Do a second scan adding regs as being defined by instruction
     for (const CalleeSavedInfo &I : CSI) {
-      unsigned Reg = I.getReg();
+      Register Reg = I.getReg();
       if (Reg != RestoreGPRs.LowGPR && Reg != RestoreGPRs.HighGPR &&
           SystemZ::GR64BitRegClass.contains(Reg))
         MIB.addReg(Reg, RegState::ImplicitDefine);
@@ -500,7 +582,7 @@ void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
 
     // Add CFI for the GPR saves.
     for (auto &Save : CSI) {
-      unsigned Reg = Save.getReg();
+      Register Reg = Save.getReg();
       if (SystemZ::GR64BitRegClass.contains(Reg)) {
         int FI = Save.getFrameIdx();
         int64_t Offset = MFFrame.getObjectOffset(FI);
@@ -580,7 +662,7 @@ void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
   // Skip over the FPR/VR saves.
   SmallVector<unsigned, 8> CFIIndexes;
   for (auto &Save : CSI) {
-    unsigned Reg = Save.getReg();
+    Register Reg = Save.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg)) {
       if (MBBI != MBB.end() &&
           (MBBI->getOpcode() == SystemZ::STD ||
@@ -764,8 +846,7 @@ void SystemZELFFrameLowering::inlineStackProbe(
 
 bool SystemZELFFrameLowering::hasFP(const MachineFunction &MF) const {
   return (MF.getTarget().Options.DisableFramePointerElim(MF) ||
-          MF.getFrameInfo().hasVarSizedObjects() ||
-          MF.getInfo<SystemZMachineFunctionInfo>()->getManipulatesSP());
+          MF.getFrameInfo().hasVarSizedObjects());
 }
 
 StackOffset SystemZELFFrameLowering::getFrameIndexReference(
@@ -850,7 +931,7 @@ bool SystemZXPLINKFrameLowering::assignCalleeSavedSpillSlots(
 
   auto ProcessCSI = [&](std::vector<CalleeSavedInfo> &CSIList) {
     for (auto &CS : CSIList) {
-      unsigned Reg = CS.getReg();
+      Register Reg = CS.getReg();
       int Offset = RegSpillOffsets[Reg];
       if (Offset >= 0) {
         if (GRRegClass.contains(Reg)) {
@@ -895,7 +976,7 @@ bool SystemZXPLINKFrameLowering::assignCalleeSavedSpillSlots(
   for (auto &CS : CSI) {
     if (CS.getFrameIdx() != INT32_MAX)
       continue;
-    unsigned Reg = CS.getReg();
+    Register Reg = CS.getReg();
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
     Align Alignment = TRI->getSpillAlign(*RC);
     unsigned Size = TRI->getSpillSize(*RC);
@@ -966,7 +1047,7 @@ bool SystemZXPLINKFrameLowering::spillCalleeSavedRegisters(
     // marked as live on entry.
     auto &GRRegClass = SystemZ::GR64BitRegClass;
     for (const CalleeSavedInfo &I : CSI) {
-      unsigned Reg = I.getReg();
+      Register Reg = I.getReg();
       if (GRRegClass.contains(Reg))
         addSavedGPR(MBB, MIB, Reg, true);
     }
@@ -974,7 +1055,7 @@ bool SystemZXPLINKFrameLowering::spillCalleeSavedRegisters(
 
   // Spill FPRs to the stack in the normal TargetInstrInfo way
   for (const CalleeSavedInfo &I : CSI) {
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
       TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
@@ -1007,7 +1088,7 @@ bool SystemZXPLINKFrameLowering::restoreCalleeSavedRegisters(
 
   // Restore FPRs in the normal TargetInstrInfo way.
   for (unsigned I = 0, E = CSI.size(); I != E; ++I) {
-    unsigned Reg = CSI[I].getReg();
+    Register Reg = CSI[I].getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg))
       TII->loadRegFromStackSlot(MBB, MBBI, Reg, CSI[I].getFrameIdx(),
                                 &SystemZ::FP64BitRegClass, TRI);
@@ -1041,7 +1122,7 @@ bool SystemZXPLINKFrameLowering::restoreCalleeSavedRegisters(
 
       // Do a second scan adding regs as being defined by instruction
       for (unsigned I = 0, E = CSI.size(); I != E; ++I) {
-        unsigned Reg = CSI[I].getReg();
+        Register Reg = CSI[I].getReg();
         if (Reg > RestoreGPRs.LowGPR && Reg < RestoreGPRs.HighGPR)
           MIB.addReg(Reg, RegState::ImplicitDefine);
       }

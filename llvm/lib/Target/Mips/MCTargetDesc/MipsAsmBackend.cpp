@@ -197,7 +197,7 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     Value = (int64_t)Value / 2;
     // We now check if Value can be encoded as a 26-bit signed immediate.
     if (!isInt<26>(Value)) {
-      Ctx.reportFatalError(Fixup.getLoc(), "out of range PC26 fixup");
+      Ctx.reportError(Fixup.getLoc(), "out of range PC26 fixup");
       return 0;
     }
     break;

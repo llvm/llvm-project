@@ -84,12 +84,12 @@ protected:
   InterfaceGenerator(std::vector<llvm::Record *> &&defs, raw_ostream &os)
       : defs(std::move(defs)), os(os) {}
 
-  void emitConceptDecl(Interface &interface);
-  void emitModelDecl(Interface &interface);
-  void emitModelMethodsDef(Interface &interface);
-  void emitTraitDecl(Interface &interface, StringRef interfaceName,
+  void emitConceptDecl(const Interface &interface);
+  void emitModelDecl(const Interface &interface);
+  void emitModelMethodsDef(const Interface &interface);
+  void emitTraitDecl(const Interface &interface, StringRef interfaceName,
                      StringRef interfaceTraitsName);
-  void emitInterfaceDecl(Interface interface);
+  void emitInterfaceDecl(const Interface &interface);
 
   /// The set of interface records to emit.
   std::vector<llvm::Record *> defs;
@@ -104,6 +104,7 @@ protected:
   /// The format context to use for methods.
   tblgen::FmtContext nonStaticMethodFmt;
   tblgen::FmtContext traitMethodFmt;
+  tblgen::FmtContext extraDeclsFmt;
 };
 
 /// A specialized generator for attribute interfaces.
@@ -118,6 +119,7 @@ struct AttrInterfaceGenerator : public InterfaceGenerator {
     nonStaticMethodFmt.addSubst("_attr", castCode).withSelf(castCode);
     traitMethodFmt.addSubst("_attr",
                             "(*static_cast<const ConcreteAttr *>(this))");
+    extraDeclsFmt.addSubst("_attr", "(*this)");
   }
 };
 /// A specialized generator for operation interfaces.
@@ -132,6 +134,7 @@ struct OpInterfaceGenerator : public InterfaceGenerator {
         .withOp(castCode)
         .withSelf(castCode);
     traitMethodFmt.withOp("(*static_cast<ConcreteOp *>(this))");
+    extraDeclsFmt.withOp("(*this)");
   }
 };
 /// A specialized generator for type interfaces.
@@ -146,6 +149,7 @@ struct TypeInterfaceGenerator : public InterfaceGenerator {
     nonStaticMethodFmt.addSubst("_type", castCode).withSelf(castCode);
     traitMethodFmt.addSubst("_type",
                             "(*static_cast<const ConcreteType *>(this))");
+    extraDeclsFmt.addSubst("_type", "(*this)");
   }
 };
 } // namespace
@@ -196,7 +200,7 @@ bool InterfaceGenerator::emitInterfaceDefs() {
 // GEN: Interface declarations
 //===----------------------------------------------------------------------===//
 
-void InterfaceGenerator::emitConceptDecl(Interface &interface) {
+void InterfaceGenerator::emitConceptDecl(const Interface &interface) {
   os << "  struct Concept {\n";
 
   // Insert each of the pure virtual concept methods.
@@ -216,7 +220,7 @@ void InterfaceGenerator::emitConceptDecl(Interface &interface) {
   os << "  };\n";
 }
 
-void InterfaceGenerator::emitModelDecl(Interface &interface) {
+void InterfaceGenerator::emitModelDecl(const Interface &interface) {
   // Emit the basic model and the fallback model.
   for (const char *modelClass : {"Model", "FallbackModel"}) {
     os << "  template<typename " << valueTemplate << ">\n";
@@ -276,7 +280,7 @@ void InterfaceGenerator::emitModelDecl(Interface &interface) {
   os << "  };\n";
 }
 
-void InterfaceGenerator::emitModelMethodsDef(Interface &interface) {
+void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
   for (auto &method : interface.getMethods()) {
     os << "template<typename " << valueTemplate << ">\n";
     emitCPPType(method.getReturnType(), os);
@@ -374,7 +378,7 @@ void InterfaceGenerator::emitModelMethodsDef(Interface &interface) {
   }
 }
 
-void InterfaceGenerator::emitTraitDecl(Interface &interface,
+void InterfaceGenerator::emitTraitDecl(const Interface &interface,
                                        StringRef interfaceName,
                                        StringRef interfaceTraitsName) {
   os << llvm::formatv("  template <typename {3}>\n"
@@ -415,11 +419,13 @@ void InterfaceGenerator::emitTraitDecl(Interface &interface,
   }
   if (auto extraTraitDecls = interface.getExtraTraitClassDeclaration())
     os << tblgen::tgfmt(*extraTraitDecls, &traitMethodFmt) << "\n";
+  if (auto extraTraitDecls = interface.getExtraSharedClassDeclaration())
+    os << tblgen::tgfmt(*extraTraitDecls, &traitMethodFmt) << "\n";
 
   os << "  };\n";
 }
 
-void InterfaceGenerator::emitInterfaceDecl(Interface interface) {
+void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
   llvm::SmallVector<StringRef, 2> namespaces;
   llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
   for (StringRef ns : namespaces)
@@ -469,6 +475,9 @@ void InterfaceGenerator::emitInterfaceDecl(Interface interface) {
   // Emit any extra declarations.
   if (Optional<StringRef> extraDecls = interface.getExtraClassDeclaration())
     os << *extraDecls << "\n";
+  if (Optional<StringRef> extraDecls =
+          interface.getExtraSharedClassDeclaration())
+    os << tblgen::tgfmt(*extraDecls, &extraDeclsFmt);
 
   os << "};\n";
 

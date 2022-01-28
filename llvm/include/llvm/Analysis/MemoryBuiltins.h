@@ -57,22 +57,6 @@ bool isAllocationFn(const Value *V,
                     function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
 
 /// Tests if a value is a call or invoke to a library function that
-/// allocates uninitialized memory (such as malloc).
-bool isMallocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
-bool isMallocLikeFn(const Value *V,
-                    function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
-
-/// Tests if a value is a call or invoke to a library function that
-/// allocates uninitialized memory with alignment (such as aligned_alloc).
-bool isAlignedAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
-bool isAlignedAllocLikeFn(
-    const Value *V, function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
-
-/// Tests if a value is a call or invoke to a library function that
-/// allocates zero-filled memory (such as calloc).
-bool isCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
-
-/// Tests if a value is a call or invoke to a library function that
 /// allocates memory similar to malloc or calloc.
 bool isMallocOrCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
 
@@ -118,6 +102,14 @@ bool isAllocRemovable(const CallBase *V, const TargetLibraryInfo *TLI);
 
 /// Gets the alignment argument for an aligned_alloc-like function
 Value *getAllocAlignment(const CallBase *V, const TargetLibraryInfo *TLI);
+
+/// Return the size of the requested allocation.  With a trivial mapper, this is
+/// identical to calling getObjectSize(..., Exact).  A mapper function can be
+/// used to replace one Value* (operand to the allocation) with another.  This
+/// is useful when doing abstract interpretation.
+Optional<APInt> getAllocSize(const CallBase *CB,
+                             const TargetLibraryInfo *TLI,
+                             std::function<const Value*(const Value*)> Mapper);
 
 /// If this allocation function initializes memory to a fixed value, return
 /// said value in the requested type.  Otherwise, return nullptr.

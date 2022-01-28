@@ -68,6 +68,7 @@
 // For the SPIR and SPIR-V target all features are supported.
 #if defined(__SPIR__) || defined(__SPIRV__)
 #define __opencl_c_atomic_scope_all_devices 1
+#define __opencl_c_read_write_images 1
 #endif // defined(__SPIR__)
 #endif // (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
 
@@ -498,12 +499,14 @@ typedef int clk_profiling_info;
 
 #define MAX_WORK_DIM 3
 
+#ifdef __opencl_c_device_enqueue
 typedef struct {
   unsigned int workDimension;
   size_t globalWorkOffset[MAX_WORK_DIM];
   size_t globalWorkSize[MAX_WORK_DIM];
   size_t localWorkSize[MAX_WORK_DIM];
 } ndrange_t;
+#endif // __opencl_c_device_enqueue
 
 #endif // defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
 

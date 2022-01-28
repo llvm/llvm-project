@@ -224,7 +224,7 @@ void foo(int arg) {
 }
 
 
-// CK1:     define internal {{.*}}i32 [[OMP_TASK_ENTRY]](i32 {{.*}}%0, [[KMP_TASK_T_WITH_PRIVATES]]* noalias %1)
+// CK1:     define internal {{.*}}i32 [[OMP_TASK_ENTRY]](i32 {{.*}}%0, [[KMP_TASK_T_WITH_PRIVATES]]* noalias noundef %1)
 // CK1-DAG: call void @__tgt_target_data_begin_nowait_mapper(%struct.ident_t* @{{.+}}, i64 %{{[^,]+}}, i32 1, i8** [[BPADDR:%[^,]+]], i8** [[PADDR:%[^,]+]], i64* [[SZADDR:%[^,]+]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[MTYPE00]], i32 0, i32 0), i8** null, i8** null)
 // CK1-DAG: [[BPADDR]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[FPBPADDR:%[^,]+]], i{{32|64}} 0, i{{32|64}} 0
 // CK1-DAG: [[PADDR]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[FPPADDR:%[^,]+]], i{{32|64}} 0, i{{32|64}} 0

@@ -64,7 +64,7 @@ CODEGENOPT(DisableLifetimeMarkers, 1, 0) ///< Don't emit any lifetime markers
 CODEGENOPT(DisableO0ImplyOptNone , 1, 0) ///< Don't annonate function with optnone at O0
 CODEGENOPT(ExperimentalStrictFloatingPoint, 1, 0) ///< Enables the new, experimental
                                                   ///< strict floating point.
-CODEGENOPT(EnableNoundefAttrs, 1, 0) ///< Enable emitting `noundef` attributes on IR call arguments and return values
+CODEGENOPT(DisableNoundefAttrs, 1, 0) ///< Disable emitting `noundef` attributes on IR call arguments and return values
 CODEGENOPT(LegacyPassManager, 1, 0) ///< Use the legacy pass manager.
 CODEGENOPT(DebugPassManager, 1, 0) ///< Prints debug information for the new
                                    ///< pass manager.
@@ -107,6 +107,8 @@ CODEGENOPT(CFProtectionReturn , 1, 0) ///< if -fcf-protection is
                                       ///< set to full or return.
 CODEGENOPT(CFProtectionBranch , 1, 0) ///< if -fcf-protection is
                                       ///< set to full or branch.
+CODEGENOPT(IBTSeal, 1, 0)             ///< set to optimize CFProtectionBranch.
+
 CODEGENOPT(XRayInstrumentFunctions , 1, 0) ///< Set when -fxray-instrument is
                                            ///< enabled.
 CODEGENOPT(StackSizeSection  , 1, 0) ///< Set when -fstack-size-section is enabled.
@@ -138,6 +140,9 @@ VALUE_CODEGENOPT(XRaySelectedFunctionGroup, 32, 0)
 
 VALUE_CODEGENOPT(PatchableFunctionEntryCount , 32, 0) ///< Number of NOPs at function entry
 VALUE_CODEGENOPT(PatchableFunctionEntryOffset , 32, 0)
+
+CODEGENOPT(HotPatch, 1, 0) ///< Supports the Microsoft /HOTPATCH flag and
+                           ///< generates a 'patchable-function' attribute.
 
 CODEGENOPT(InstrumentForProfiling , 1, 0) ///< Set when -pg is enabled.
 CODEGENOPT(CallFEntry , 1, 0) ///< Set when -mfentry is enabled.
@@ -231,6 +236,9 @@ CODEGENOPT(SanitizeMemoryTrackOrigins, 2, 0) ///< Enable tracking origins in
 ENUM_CODEGENOPT(SanitizeAddressDtor, llvm::AsanDtorKind, 2,
                 llvm::AsanDtorKind::Global)  ///< Set how ASan global
                                              ///< destructors are emitted.
+CODEGENOPT(SanitizeMemoryParamRetval, 1, 0) ///< Enable detection of uninitialized
+                                            ///< parameters and return values
+                                            ///< in MemorySanitizer
 CODEGENOPT(SanitizeMemoryUseAfterDtor, 1, 0) ///< Enable use-after-delete detection
                                              ///< in MemorySanitizer
 CODEGENOPT(SanitizeCfiCrossDso, 1, 0) ///< Enable cross-dso support in CFI.

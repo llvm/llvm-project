@@ -445,24 +445,22 @@ llvm::createInstrProfilingLegacyPass(const InstrProfOptions &Options,
   return new InstrProfilingLegacyPass(Options, IsCS);
 }
 
-static InstrProfIncrementInst *castToIncrementInst(Instruction *Instr) {
-  InstrProfIncrementInst *Inc = dyn_cast<InstrProfIncrementInstStep>(Instr);
-  if (Inc)
-    return Inc;
-  return dyn_cast<InstrProfIncrementInst>(Instr);
-}
-
 bool InstrProfiling::lowerIntrinsics(Function *F) {
   bool MadeChange = false;
   PromotionCandidates.clear();
   for (BasicBlock &BB : *F) {
     for (Instruction &Instr : llvm::make_early_inc_range(BB)) {
-      InstrProfIncrementInst *Inc = castToIncrementInst(&Instr);
-      if (Inc) {
-        lowerIncrement(Inc);
+      if (auto *IPIS = dyn_cast<InstrProfIncrementInstStep>(&Instr)) {
+        lowerIncrement(IPIS);
         MadeChange = true;
-      } else if (auto *Ind = dyn_cast<InstrProfValueProfileInst>(&Instr)) {
-        lowerValueProfileInst(Ind);
+      } else if (auto *IPI = dyn_cast<InstrProfIncrementInst>(&Instr)) {
+        lowerIncrement(IPI);
+        MadeChange = true;
+      } else if (auto *IPC = dyn_cast<InstrProfCoverInst>(&Instr)) {
+        lowerCover(IPC);
+        MadeChange = true;
+      } else if (auto *IPVP = dyn_cast<InstrProfValueProfileInst>(&Instr)) {
+        lowerValueProfileInst(IPVP);
         MadeChange = true;
       }
     }
@@ -539,19 +537,15 @@ static bool needsRuntimeHookUnconditionally(const Triple &TT) {
 
 /// Check if the module contains uses of any profiling intrinsics.
 static bool containsProfilingIntrinsics(Module &M) {
-  if (auto *F = M.getFunction(
-          Intrinsic::getName(llvm::Intrinsic::instrprof_increment)))
-    if (!F->use_empty())
-      return true;
-  if (auto *F = M.getFunction(
-          Intrinsic::getName(llvm::Intrinsic::instrprof_increment_step)))
-    if (!F->use_empty())
-      return true;
-  if (auto *F = M.getFunction(
-          Intrinsic::getName(llvm::Intrinsic::instrprof_value_profile)))
-    if (!F->use_empty())
-      return true;
-  return false;
+  auto containsIntrinsic = [&](int ID) {
+    if (auto *F = M.getFunction(Intrinsic::getName(ID)))
+      return !F->use_empty();
+    return false;
+  };
+  return containsIntrinsic(llvm::Intrinsic::instrprof_cover) ||
+         containsIntrinsic(llvm::Intrinsic::instrprof_increment) ||
+         containsIntrinsic(llvm::Intrinsic::instrprof_increment_step) ||
+         containsIntrinsic(llvm::Intrinsic::instrprof_value_profile);
 }
 
 bool InstrProfiling::run(
@@ -699,47 +693,58 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   Ind->eraseFromParent();
 }
 
+Value *InstrProfiling::getCounterAddress(InstrProfInstBase *I) {
+  auto *Counters = getOrCreateRegionCounters(I);
+  IRBuilder<> Builder(I);
+
+  auto *Addr = Builder.CreateConstInBoundsGEP2_32(
+      Counters->getValueType(), Counters, 0, I->getIndex()->getZExtValue());
+
+  if (!isRuntimeCounterRelocationEnabled())
+    return Addr;
+
+  Type *Int64Ty = Type::getInt64Ty(M->getContext());
+  Function *Fn = I->getParent()->getParent();
+  Instruction &EntryI = Fn->getEntryBlock().front();
+  LoadInst *LI = dyn_cast<LoadInst>(&EntryI);
+  if (!LI) {
+    IRBuilder<> EntryBuilder(&EntryI);
+    auto *Bias = M->getGlobalVariable(getInstrProfCounterBiasVarName());
+    if (!Bias) {
+      // Compiler must define this variable when runtime counter relocation
+      // is being used. Runtime has a weak external reference that is used
+      // to check whether that's the case or not.
+      Bias = new GlobalVariable(
+          *M, Int64Ty, false, GlobalValue::LinkOnceODRLinkage,
+          Constant::getNullValue(Int64Ty), getInstrProfCounterBiasVarName());
+      Bias->setVisibility(GlobalVariable::HiddenVisibility);
+      // A definition that's weak (linkonce_odr) without being in a COMDAT
+      // section wouldn't lead to link errors, but it would lead to a dead
+      // data word from every TU but one. Putting it in COMDAT ensures there
+      // will be exactly one data slot in the link.
+      if (TT.supportsCOMDAT())
+        Bias->setComdat(M->getOrInsertComdat(Bias->getName()));
+    }
+    LI = EntryBuilder.CreateLoad(Int64Ty, Bias);
+  }
+  auto *Add = Builder.CreateAdd(Builder.CreatePtrToInt(Addr, Int64Ty), LI);
+  return Builder.CreateIntToPtr(Add, Addr->getType());
+}
+
+void InstrProfiling::lowerCover(InstrProfCoverInst *CoverInstruction) {
+  auto *Addr = getCounterAddress(CoverInstruction);
+  IRBuilder<> Builder(CoverInstruction);
+  // We store zero to represent that this block is covered.
+  Builder.CreateStore(Builder.getInt8(0), Addr);
+  CoverInstruction->eraseFromParent();
+}
+
 void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
-  GlobalVariable *Counters = getOrCreateRegionCounters(Inc);
+  auto *Addr = getCounterAddress(Inc);
 
   IRBuilder<> Builder(Inc);
-  uint64_t Index = Inc->getIndex()->getZExtValue();
-  Value *Addr = Builder.CreateConstInBoundsGEP2_32(Counters->getValueType(),
-                                                   Counters, 0, Index);
-
-  if (isRuntimeCounterRelocationEnabled()) {
-    Type *Int64Ty = Type::getInt64Ty(M->getContext());
-    Type *Int64PtrTy = Type::getInt64PtrTy(M->getContext());
-    Function *Fn = Inc->getParent()->getParent();
-    Instruction &I = Fn->getEntryBlock().front();
-    LoadInst *LI = dyn_cast<LoadInst>(&I);
-    if (!LI) {
-      IRBuilder<> Builder(&I);
-      GlobalVariable *Bias =
-          M->getGlobalVariable(getInstrProfCounterBiasVarName());
-      if (!Bias) {
-        // Compiler must define this variable when runtime counter relocation
-        // is being used. Runtime has a weak external reference that is used
-        // to check whether that's the case or not.
-        Bias = new GlobalVariable(
-            *M, Int64Ty, false, GlobalValue::LinkOnceODRLinkage,
-            Constant::getNullValue(Int64Ty), getInstrProfCounterBiasVarName());
-        Bias->setVisibility(GlobalVariable::HiddenVisibility);
-        // A definition that's weak (linkonce_odr) without being in a COMDAT
-        // section wouldn't lead to link errors, but it would lead to a dead
-        // data word from every TU but one. Putting it in COMDAT ensures there
-        // will be exactly one data slot in the link.
-        if (TT.supportsCOMDAT())
-          Bias->setComdat(M->getOrInsertComdat(Bias->getName()));
-      }
-      LI = Builder.CreateLoad(Int64Ty, Bias);
-    }
-    auto *Add = Builder.CreateAdd(Builder.CreatePtrToInt(Addr, Int64Ty), LI);
-    Addr = Builder.CreateIntToPtr(Add, Int64PtrTy);
-  }
-
   if (Options.Atomic || AtomicCounterUpdateAll ||
-      (Index == 0 && AtomicFirstCounter)) {
+      (Inc->getIndex()->isZeroValue() && AtomicFirstCounter)) {
     Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
                             MaybeAlign(), AtomicOrdering::Monotonic);
   } else {
@@ -770,7 +775,7 @@ void InstrProfiling::lowerCoverageData(GlobalVariable *CoverageNamesVar) {
 }
 
 /// Get the name of a profiling variable for a particular function.
-static std::string getVarName(InstrProfIncrementInst *Inc, StringRef Prefix,
+static std::string getVarName(InstrProfInstBase *Inc, StringRef Prefix,
                               bool &Renamed) {
   StringRef NamePrefix = getInstrProfNameVarPrefix();
   StringRef Name = Inc->getName()->getName().substr(NamePrefix.size());
@@ -859,7 +864,32 @@ static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
 }
 
 GlobalVariable *
-InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
+InstrProfiling::createRegionCounters(InstrProfInstBase *Inc, StringRef Name,
+                                     GlobalValue::LinkageTypes Linkage) {
+  uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
+  auto &Ctx = M->getContext();
+  GlobalVariable *GV;
+  if (isa<InstrProfCoverInst>(Inc)) {
+    auto *CounterTy = Type::getInt8Ty(Ctx);
+    auto *CounterArrTy = ArrayType::get(CounterTy, NumCounters);
+    // TODO: `Constant::getAllOnesValue()` does not yet accept an array type.
+    std::vector<Constant *> InitialValues(NumCounters,
+                                          Constant::getAllOnesValue(CounterTy));
+    GV = new GlobalVariable(*M, CounterArrTy, false, Linkage,
+                            ConstantArray::get(CounterArrTy, InitialValues),
+                            Name);
+    GV->setAlignment(Align(1));
+  } else {
+    auto *CounterTy = ArrayType::get(Type::getInt64Ty(Ctx), NumCounters);
+    GV = new GlobalVariable(*M, CounterTy, false, Linkage,
+                            Constant::getNullValue(CounterTy), Name);
+    GV->setAlignment(Align(8));
+  }
+  return GV;
+}
+
+GlobalVariable *
+InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
   GlobalVariable *NamePtr = Inc->getName();
   auto &PD = ProfileDataMap[NamePtr];
   if (PD.RegionCounters)
@@ -924,16 +954,11 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
   LLVMContext &Ctx = M->getContext();
-  ArrayType *CounterTy = ArrayType::get(Type::getInt64Ty(Ctx), NumCounters);
 
-  // Create the counters variable.
-  auto *CounterPtr =
-      new GlobalVariable(*M, CounterTy, false, Linkage,
-                         Constant::getNullValue(CounterTy), CntsVarName);
+  auto *CounterPtr = createRegionCounters(Inc, CntsVarName, Linkage);
   CounterPtr->setVisibility(Visibility);
   CounterPtr->setSection(
       getInstrProfSectionName(IPSK_cnts, TT.getObjectFormat()));
-  CounterPtr->setAlignment(Align(8));
   MaybeSetComdat(CounterPtr);
   CounterPtr->setLinkage(Linkage);
   PD.RegionCounters = CounterPtr;

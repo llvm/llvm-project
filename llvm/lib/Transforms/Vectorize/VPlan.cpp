@@ -680,7 +680,7 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     Value *ScalarTC = State.get(getOperand(1), Part);
 
     auto *Int1Ty = Type::getInt1Ty(Builder.getContext());
-    auto *PredTy = FixedVectorType::get(Int1Ty, State.VF.getKnownMinValue());
+    auto *PredTy = VectorType::get(Int1Ty, State.VF);
     Instruction *Call = Builder.CreateIntrinsic(
         Intrinsic::get_active_lane_mask, {PredTy, ScalarTC->getType()},
         {VIVElem0, ScalarTC}, nullptr, "active.lane.mask");
@@ -728,6 +728,32 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     }
 
     State.set(this, Next, Part);
+    break;
+  }
+  case VPInstruction::BranchOnCount: {
+    if (Part != 0)
+      break;
+    // First create the compare.
+    Value *IV = State.get(getOperand(0), Part);
+    Value *TC = State.get(getOperand(1), Part);
+    Value *Cond = Builder.CreateICmpEQ(IV, TC);
+
+    // Now create the branch.
+    auto *Plan = getParent()->getPlan();
+    VPRegionBlock *TopRegion = Plan->getVectorLoopRegion();
+    VPBasicBlock *Header = TopRegion->getEntry()->getEntryBasicBlock();
+    if (Header->empty()) {
+      assert(EnableVPlanNativePath &&
+             "empty entry block only expected in VPlanNativePath");
+      Header = cast<VPBasicBlock>(Header->getSingleSuccessor());
+    }
+    // TODO: Once the exit block is modeled in VPlan, use it instead of going
+    // through State.CFG.LastBB.
+    BasicBlock *Exit =
+        cast<BranchInst>(State.CFG.LastBB->getTerminator())->getSuccessor(0);
+
+    Builder.CreateCondBr(Cond, Exit, State.CFG.VPBB2IRBB[Header]);
+    Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
     break;
   }
   default:
@@ -782,6 +808,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::CanonicalIVIncrementNUW:
     O << "VF * UF +(nuw) ";
+    break;
+  case VPInstruction::BranchOnCount:
+    O << "branch-on-count ";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
@@ -842,6 +871,16 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
     VPValue *VPV = new VPValue(CanonicalIVStartValue);
     addExternalDef(VPV);
     auto *IV = getCanonicalIV();
+    assert(all_of(IV->users(),
+                  [](const VPUser *U) {
+                    auto *VPI = cast<VPInstruction>(U);
+                    return VPI->getOpcode() ==
+                               VPInstruction::CanonicalIVIncrement ||
+                           VPI->getOpcode() ==
+                               VPInstruction::CanonicalIVIncrementNUW;
+                  }) &&
+           "the canonical IV should only be used by its increments when "
+           "resetting the start value");
     IV->setOperand(0, VPV);
   }
 }
@@ -901,13 +940,19 @@ void VPlan::execute(VPTransformState *State) {
 
   // 3. Merge the temporary latch created with the last basic-block filled.
   BasicBlock *LastBB = State->CFG.PrevBB;
+  assert(isa<BranchInst>(LastBB->getTerminator()) &&
+         "Expected VPlan CFG to terminate with branch");
+
+  // Move both the branch and check from LastBB to VectorLatchBB.
+  auto *LastBranch = cast<BranchInst>(LastBB->getTerminator());
+  LastBranch->moveBefore(VectorLatchBB->getTerminator());
+  VectorLatchBB->getTerminator()->eraseFromParent();
+  // Move condition so it is guaranteed to be next to branch. This is only done
+  // to avoid excessive test updates.
+  // TODO: Remove special handling once the increments for all inductions are
+  // modeled explicitly in VPlan.
+  cast<Instruction>(LastBranch->getCondition())->moveBefore(LastBranch);
   // Connect LastBB to VectorLatchBB to facilitate their merge.
-  assert((EnableVPlanNativePath ||
-          isa<UnreachableInst>(LastBB->getTerminator())) &&
-         "Expected InnerLoop VPlan CFG to terminate with unreachable");
-  assert((!EnableVPlanNativePath || isa<BranchInst>(LastBB->getTerminator())) &&
-         "Expected VPlan CFG to terminate with branch in NativePath");
-  LastBB->getTerminator()->eraseFromParent();
   BranchInst::Create(VectorLatchBB, LastBB);
 
   // Merge LastBB with Latch.
@@ -947,16 +992,6 @@ void VPlan::execute(VPTransformState *State) {
     }
   }
 
-  // Add the loop exit condition and branch based on the canonical induction.
-  auto *CanonicalIV = getCanonicalIV();
-  // TODO: Model compare and branch explicitly in VPlan as recipes.
-  auto *Next = State->get(CanonicalIV->getBackedgeValue(), 0);
-  auto *TermBr = cast<BranchInst>(VectorLatchBB->getTerminator());
-  State->Builder.SetInsertPoint(TermBr);
-  auto *ICmp =
-      State->Builder.CreateICmpEQ(Next, State->get(&getVectorTripCount(), 0));
-  TermBr->setCondition(ICmp);
-
   // We do not attempt to preserve DT for outer loop vectorization currently.
   if (!EnableVPlanNativePath)
     updateDominatorTree(State->DT, VectorPreHeaderBB, VectorLatchBB,
@@ -970,8 +1005,12 @@ void VPlan::print(raw_ostream &O) const {
 
   O << "VPlan '" << Name << "' {";
 
-  assert(VectorTripCount.getNumUsers() == 0 &&
-         "should not be used yet in VPlan");
+  if (VectorTripCount.getNumUsers() > 0) {
+    O << "\nLive-in ";
+    VectorTripCount.printAsOperand(O, SlotTracker);
+    O << " = vector-trip-count\n";
+  }
+
   if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
     O << "\nLive-in ";
     BackedgeTakenCount->printAsOperand(O, SlotTracker);
@@ -1223,7 +1262,15 @@ void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
   } else
     O << " " << VPlanIngredient(IV);
 }
+#endif
 
+bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
+  auto *StartC = dyn_cast<ConstantInt>(getStartValue()->getLiveInIRValue());
+  auto *StepC = dyn_cast<SCEVConstant>(getInductionDescriptor().getStep());
+  return StartC && StartC->isZero() && StepC && StepC->isOne();
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-GEP ";
@@ -1323,7 +1370,7 @@ void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "WIDEN ";
 
   if (!isStore()) {
-    getVPSingleValue()->printAsOperand(O, SlotTracker);
+    printAsOperand(O, SlotTracker);
     O << " = ";
   }
   O << Instruction::getOpcodeName(Ingredient.getOpcode()) << " ";
@@ -1346,13 +1393,13 @@ void VPCanonicalIVPHIRecipe::execute(VPTransformState &State) {
 void VPCanonicalIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                                    VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT ";
-  getVPSingleValue()->printAsOperand(O, SlotTracker);
+  printAsOperand(O, SlotTracker);
   O << " = CANONICAL-INDUCTION";
 }
 #endif
 
 void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
-  Value *CanonicalIV = State.get(getParent()->getPlan()->getCanonicalIV(), 0);
+  Value *CanonicalIV = State.get(getOperand(0), 0);
   Type *STy = CanonicalIV->getType();
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   ElementCount VF = State.VF;
@@ -1375,7 +1422,8 @@ void VPWidenCanonicalIVRecipe::print(raw_ostream &O, const Twine &Indent,
                                      VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT ";
   printAsOperand(O, SlotTracker);
-  O << " = WIDEN-CANONICAL-INDUCTION";
+  O << " = WIDEN-CANONICAL-INDUCTION ";
+  printOperands(O, SlotTracker);
 }
 #endif
 

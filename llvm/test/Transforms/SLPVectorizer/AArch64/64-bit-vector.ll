@@ -21,14 +21,14 @@ define void @f(float* %r, float* %w) {
 ; NO_SLP-LABEL: @f(
 ; NO_SLP-NEXT:    [[R0:%.*]] = getelementptr inbounds float, float* [[R:%.*]], i64 0
 ; NO_SLP-NEXT:    [[R1:%.*]] = getelementptr inbounds float, float* [[R]], i64 1
-; NO_SLP-NEXT:    [[F0:%.*]] = load float, float* [[R0]]
-; NO_SLP-NEXT:    [[F1:%.*]] = load float, float* [[R1]]
+; NO_SLP-NEXT:    [[F0:%.*]] = load float, float* [[R0]], align 4
+; NO_SLP-NEXT:    [[F1:%.*]] = load float, float* [[R1]], align 4
 ; NO_SLP-NEXT:    [[ADD0:%.*]] = fadd float [[F0]], [[F0]]
 ; NO_SLP-NEXT:    [[ADD1:%.*]] = fadd float [[F1]], [[F1]]
 ; NO_SLP-NEXT:    [[W0:%.*]] = getelementptr inbounds float, float* [[W:%.*]], i64 0
 ; NO_SLP-NEXT:    [[W1:%.*]] = getelementptr inbounds float, float* [[W]], i64 1
-; NO_SLP-NEXT:    store float [[ADD0]], float* [[W0]]
-; NO_SLP-NEXT:    store float [[ADD1]], float* [[W1]]
+; NO_SLP-NEXT:    store float [[ADD0]], float* [[W0]], align 4
+; NO_SLP-NEXT:    store float [[ADD1]], float* [[W1]], align 4
 ; NO_SLP-NEXT:    ret void
 ;
   %r0 = getelementptr inbounds float, float* %r, i64 0

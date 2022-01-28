@@ -184,7 +184,7 @@ public:
   Defined *getEnclosingFunction(uint64_t offset);
 
   // Returns a source location string. Used to construct an error message.
-  template <class ELFT> std::string getLocation(uint64_t offset);
+  std::string getLocation(uint64_t offset);
   std::string getSrcMsg(const Symbol &sym, uint64_t offset);
   std::string getObjMsg(uint64_t offset);
 

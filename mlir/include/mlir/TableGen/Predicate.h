@@ -34,7 +34,7 @@ namespace tblgen {
 class Pred {
 public:
   // Constructs the null Predicate (e.g., always true).
-  explicit Pred() : def(nullptr) {}
+  explicit Pred() {}
   // Construct a Predicate from a record.
   explicit Pred(const llvm::Record *record);
   // Construct a Predicate from an initializer.
@@ -54,7 +54,7 @@ public:
   bool isCombined() const;
 
   // Get the location of the predicate.
-  ArrayRef<llvm::SMLoc> getLoc() const;
+  ArrayRef<SMLoc> getLoc() const;
 
   // Records are pointer-comparable.
   bool operator==(const Pred &other) const { return def == other.def; }
@@ -69,7 +69,7 @@ public:
 
 protected:
   // The TableGen definition of this predicate.
-  const llvm::Record *def;
+  const llvm::Record *def{nullptr};
 };
 
 // A logical predicate wrapping a C expression.  This class must closely follow

@@ -417,30 +417,16 @@ const Value *stripAndAccumulateMinimalOffsets(
                                                 AttributorAnalysis);
 }
 
-static const Value *getMinimalBaseOfAccessPointerOperand(
-    Attributor &A, const AbstractAttribute &QueryingAA, const Instruction *I,
-    int64_t &BytesOffset, const DataLayout &DL, bool AllowNonInbounds = false) {
-  const Value *Ptr = getPointerOperand(I, /* AllowVolatile */ false);
-  if (!Ptr)
-    return nullptr;
+static const Value *
+getMinimalBaseOfPointer(Attributor &A, const AbstractAttribute &QueryingAA,
+                        const Value *Ptr, int64_t &BytesOffset,
+                        const DataLayout &DL, bool AllowNonInbounds = false) {
   APInt OffsetAPInt(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
   const Value *Base = stripAndAccumulateMinimalOffsets(
       A, QueryingAA, Ptr, DL, OffsetAPInt, AllowNonInbounds);
 
   BytesOffset = OffsetAPInt.getSExtValue();
   return Base;
-}
-
-static const Value *
-getBasePointerOfAccessPointerOperand(const Instruction *I, int64_t &BytesOffset,
-                                     const DataLayout &DL,
-                                     bool AllowNonInbounds = false) {
-  const Value *Ptr = getPointerOperand(I, /* AllowVolatile */ false);
-  if (!Ptr)
-    return nullptr;
-
-  return GetPointerBaseWithConstantOffset(Ptr, BytesOffset, DL,
-                                          AllowNonInbounds);
 }
 
 /// Clamp the information known for all returned values of a function
@@ -1182,7 +1168,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
           return HandlePassthroughUser(Usr, OffsetInfoMap[CurPtr], Follow);
         if (CE->isCompare())
           return true;
-        if (!CE->isGEPWithNoNotionalOverIndexing()) {
+        if (!isa<GEPOperator>(CE)) {
           LLVM_DEBUG(dbgs() << "[AAPointerInfo] Unhandled constant user " << *CE
                             << "\n");
           return false;
@@ -1216,7 +1202,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
         }
         UsrOI.Offset = PtrOI.Offset +
                        DL.getIndexedOffsetInType(
-                           CurPtr->getType()->getPointerElementType(), Indices);
+                           GEP->getSourceElementType(), Indices);
         Follow = true;
         return true;
       }
@@ -2151,31 +2137,26 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
     return DerefAA.getKnownDereferenceableBytes();
   }
 
+  Optional<MemoryLocation> Loc = MemoryLocation::getOrNone(I);
+  if (!Loc || Loc->Ptr != UseV || !Loc->Size.isPrecise() || I->isVolatile())
+    return 0;
+
   int64_t Offset;
   const Value *Base =
-      getMinimalBaseOfAccessPointerOperand(A, QueryingAA, I, Offset, DL);
-  if (Base) {
-    if (Base == &AssociatedValue &&
-        getPointerOperand(I, /* AllowVolatile */ false) == UseV) {
-      int64_t DerefBytes =
-          (int64_t)DL.getTypeStoreSize(PtrTy->getPointerElementType()) + Offset;
-
-      IsNonNull |= !NullPointerIsDefined;
-      return std::max(int64_t(0), DerefBytes);
-    }
+      getMinimalBaseOfPointer(A, QueryingAA, Loc->Ptr, Offset, DL);
+  if (Base && Base == &AssociatedValue) {
+    int64_t DerefBytes = Loc->Size.getValue() + Offset;
+    IsNonNull |= !NullPointerIsDefined;
+    return std::max(int64_t(0), DerefBytes);
   }
 
   /// Corner case when an offset is 0.
-  Base = getBasePointerOfAccessPointerOperand(I, Offset, DL,
-                                              /*AllowNonInbounds*/ true);
-  if (Base) {
-    if (Offset == 0 && Base == &AssociatedValue &&
-        getPointerOperand(I, /* AllowVolatile */ false) == UseV) {
-      int64_t DerefBytes =
-          (int64_t)DL.getTypeStoreSize(PtrTy->getPointerElementType());
-      IsNonNull |= !NullPointerIsDefined;
-      return std::max(int64_t(0), DerefBytes);
-    }
+  Base = GetPointerBaseWithConstantOffset(Loc->Ptr, Offset, DL,
+                                          /*AllowNonInbounds*/ true);
+  if (Base && Base == &AssociatedValue && Offset == 0) {
+    int64_t DerefBytes = Loc->Size.getValue();
+    IsNonNull |= !NullPointerIsDefined;
+    return std::max(int64_t(0), DerefBytes);
   }
 
   return 0;
@@ -4083,17 +4064,15 @@ struct AADereferenceableImpl : AADereferenceable {
     if (!UseV->getType()->isPointerTy())
       return;
 
-    Type *PtrTy = UseV->getType();
-    const DataLayout &DL = A.getDataLayout();
+    Optional<MemoryLocation> Loc = MemoryLocation::getOrNone(I);
+    if (!Loc || Loc->Ptr != UseV || !Loc->Size.isPrecise() || I->isVolatile())
+      return;
+
     int64_t Offset;
-    if (const Value *Base = getBasePointerOfAccessPointerOperand(
-            I, Offset, DL, /*AllowNonInbounds*/ true)) {
-      if (Base == &getAssociatedValue() &&
-          getPointerOperand(I, /* AllowVolatile */ false) == UseV) {
-        uint64_t Size = DL.getTypeStoreSize(PtrTy->getPointerElementType());
-        State.addAccessedBytes(Offset, Size);
-      }
-    }
+    const Value *Base = GetPointerBaseWithConstantOffset(
+        Loc->Ptr, Offset, A.getDataLayout(), /*AllowNonInbounds*/ true);
+    if (Base && Base == &getAssociatedValue())
+      State.addAccessedBytes(Offset, Loc->Size.getValue());
   }
 
   /// See followUsesInMBEC
@@ -5771,13 +5750,6 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
     /// The call that allocates the memory.
     CallBase *const CB;
 
-    /// The kind of allocation.
-    const enum class AllocationKind {
-      MALLOC,
-      CALLOC,
-      ALIGNED_ALLOC,
-    } Kind;
-
     /// The library function id for the allocation.
     LibFunc LibraryFunctionId = NotLibFunc;
 
@@ -5834,20 +5806,17 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
         DeallocationInfos[CB] = new (A.Allocator) DeallocationInfo{CB};
         return true;
       }
-      bool IsMalloc = isMallocLikeFn(CB, TLI);
-      bool IsAlignedAllocLike = !IsMalloc && isAlignedAllocLikeFn(CB, TLI);
-      bool IsCalloc =
-          !IsMalloc && !IsAlignedAllocLike && isCallocLikeFn(CB, TLI);
-      if (!IsMalloc && !IsAlignedAllocLike && !IsCalloc)
-        return true;
-      auto Kind =
-          IsMalloc ? AllocationInfo::AllocationKind::MALLOC
-                   : (IsCalloc ? AllocationInfo::AllocationKind::CALLOC
-                               : AllocationInfo::AllocationKind::ALIGNED_ALLOC);
-
-      AllocationInfo *AI = new (A.Allocator) AllocationInfo{CB, Kind};
-      AllocationInfos[CB] = AI;
-      TLI->getLibFunc(*CB, AI->LibraryFunctionId);
+      // To do heap to stack, we need to know that the allocation itself is
+      // removable once uses are rewritten, and that we can initialize the
+      // alloca to the same pattern as the original allocation result.
+      if (isAllocationFn(CB, TLI) && isAllocRemovable(CB, TLI)) {
+        auto *I8Ty = Type::getInt8Ty(CB->getParent()->getContext());
+        if (nullptr != getInitialValueOfAllocation(CB, TLI, I8Ty)) {
+          AllocationInfo *AI = new (A.Allocator) AllocationInfo{CB};
+          AllocationInfos[CB] = AI;
+          TLI->getLibFunc(*CB, AI->LibraryFunctionId);
+        }
+      }
       return true;
     };
 
@@ -5943,23 +5912,22 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       Optional<APInt> SizeAPI = getSize(A, *this, AI);
       if (SizeAPI.hasValue()) {
         Size = ConstantInt::get(AI.CB->getContext(), *SizeAPI);
-      } else if (AI.Kind == AllocationInfo::AllocationKind::CALLOC) {
-        auto *Num = AI.CB->getOperand(0);
-        auto *SizeT = AI.CB->getOperand(1);
-        IRBuilder<> B(AI.CB);
-        Size = B.CreateMul(Num, SizeT, "h2s.calloc.size");
-      } else if (AI.Kind == AllocationInfo::AllocationKind::ALIGNED_ALLOC) {
-        Size = AI.CB->getOperand(1);
       } else {
-        Size = AI.CB->getOperand(0);
+        LLVMContext &Ctx = AI.CB->getContext();
+        auto &DL = A.getInfoCache().getDL();
+        ObjectSizeOpts Opts;
+        ObjectSizeOffsetEvaluator Eval(DL, TLI, Ctx, Opts);
+        SizeOffsetEvalType SizeOffsetPair = Eval.compute(AI.CB);
+        assert(SizeOffsetPair != ObjectSizeOffsetEvaluator::unknown() &&
+               cast<ConstantInt>(SizeOffsetPair.second)->isZero());
+        Size = SizeOffsetPair.first;
       }
 
       Align Alignment(1);
       if (MaybeAlign RetAlign = AI.CB->getRetAlign())
         Alignment = max(Alignment, RetAlign);
-      if (AI.Kind == AllocationInfo::AllocationKind::ALIGNED_ALLOC) {
-        Optional<APInt> AlignmentAPI =
-            getAPInt(A, *this, *AI.CB->getArgOperand(0));
+      if (Value *Align = getAllocAlignment(AI.CB, TLI)) {
+        Optional<APInt> AlignmentAPI = getAPInt(A, *this, *Align);
         assert(AlignmentAPI.hasValue() &&
                "Expected an alignment during manifest!");
         Alignment =
@@ -5975,6 +5943,11 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
         Alloca = new BitCastInst(Alloca, AI.CB->getType(), "malloc_bc",
                                  Alloca->getNextNode());
 
+      auto *I8Ty = Type::getInt8Ty(F->getContext());
+      auto *InitVal = getInitialValueOfAllocation(AI.CB, TLI, I8Ty);
+      assert(InitVal &&
+             "Must be able to materialize initial memory state of allocation");
+
       A.changeValueAfterManifest(*AI.CB, *Alloca);
 
       if (auto *II = dyn_cast<InvokeInst>(AI.CB)) {
@@ -5985,18 +5958,13 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
         A.deleteAfterManifest(*AI.CB);
       }
 
-      // Zero out the allocated memory if it was a calloc.
-      if (AI.Kind == AllocationInfo::AllocationKind::CALLOC) {
-        auto *BI = new BitCastInst(Alloca, AI.CB->getType(), "calloc_bc",
-                                   Alloca->getNextNode());
-        Value *Ops[] = {
-            BI, ConstantInt::get(F->getContext(), APInt(8, 0, false)), Size,
-            ConstantInt::get(Type::getInt1Ty(F->getContext()), false)};
-
-        Type *Tys[] = {BI->getType(), AI.CB->getOperand(0)->getType()};
-        Module *M = F->getParent();
-        Function *Fn = Intrinsic::getDeclaration(M, Intrinsic::memset, Tys);
-        CallInst::Create(Fn, Ops, "", BI->getNextNode());
+      // Initialize the alloca with the same value as used by the allocation
+      // function.  We can skip undef as the initial value of an alloc is
+      // undef, and the memset would simply end up being DSEd.
+      if (!isa<UndefValue>(InitVal)) {
+        IRBuilder<> Builder(Alloca->getNextNode());
+        // TODO: Use alignment above if align!=1
+        Builder.CreateMemSet(Alloca, InitVal, Size, None);
       }
       HasChanged = ChangeStatus::CHANGED;
     }
@@ -6018,25 +5986,18 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
 
   Optional<APInt> getSize(Attributor &A, const AbstractAttribute &AA,
                           AllocationInfo &AI) {
+    auto Mapper = [&](const Value *V) -> const Value * {
+      bool UsedAssumedInformation = false;
+      if (Optional<Constant *> SimpleV =
+              A.getAssumedConstant(*V, AA, UsedAssumedInformation))
+        if (*SimpleV)
+          return *SimpleV;
+      return V;
+    };
 
-    if (AI.Kind == AllocationInfo::AllocationKind::MALLOC)
-      return getAPInt(A, AA, *AI.CB->getArgOperand(0));
-
-    if (AI.Kind == AllocationInfo::AllocationKind::ALIGNED_ALLOC)
-      // Only if the alignment is also constant we return a size.
-      return getAPInt(A, AA, *AI.CB->getArgOperand(0)).hasValue()
-                 ? getAPInt(A, AA, *AI.CB->getArgOperand(1))
-                 : llvm::None;
-
-    assert(AI.Kind == AllocationInfo::AllocationKind::CALLOC &&
-           "Expected only callocs are left");
-    Optional<APInt> Num = getAPInt(A, AA, *AI.CB->getArgOperand(0));
-    Optional<APInt> Size = getAPInt(A, AA, *AI.CB->getArgOperand(1));
-    if (!Num.hasValue() || !Size.hasValue())
-      return llvm::None;
-    bool Overflow = false;
-    Size = Size.getValue().umul_ov(Num.getValue(), Overflow);
-    return Overflow ? llvm::None : Size;
+    const Function *F = getAnchorScope();
+    const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
+    return getAllocSize(AI.CB, TLI, Mapper);
   }
 
   /// Collection of all malloc-like calls in a function with associated
@@ -6053,6 +6014,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
 ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
   ChangeStatus Changed = ChangeStatus::UNCHANGED;
   const Function *F = getAnchorScope();
+  const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
 
   const auto &LivenessAA =
       A.getAAFor<AAIsDead>(*this, IRPosition::function(*F), DepClassTy::NONE);
@@ -6267,22 +6229,24 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
     if (AI.Status == AllocationInfo::INVALID)
       continue;
 
-    if (MaxHeapToStackSize == -1) {
-      if (AI.Kind == AllocationInfo::AllocationKind::ALIGNED_ALLOC)
-        if (!getAPInt(A, *this, *AI.CB->getArgOperand(0)).hasValue()) {
-          LLVM_DEBUG(dbgs() << "[H2S] Unknown allocation alignment: " << *AI.CB
-                            << "\n");
-          AI.Status = AllocationInfo::INVALID;
-          Changed = ChangeStatus::CHANGED;
-          continue;
-        }
-    } else {
+    if (Value *Align = getAllocAlignment(AI.CB, TLI)) {
+      if (!getAPInt(A, *this, *Align)) {
+        // Can't generate an alloca which respects the required alignment
+        // on the allocation.
+        LLVM_DEBUG(dbgs() << "[H2S] Unknown allocation alignment: " << *AI.CB
+                          << "\n");
+        AI.Status = AllocationInfo::INVALID;
+        Changed = ChangeStatus::CHANGED;
+        continue;
+      }
+    }
+
+    if (MaxHeapToStackSize != -1) {
       Optional<APInt> Size = getSize(A, *this, AI);
       if (!Size.hasValue() || Size.getValue().ugt(MaxHeapToStackSize)) {
         LLVM_DEBUG({
           if (!Size.hasValue())
-            dbgs() << "[H2S] Unknown allocation size (or alignment): " << *AI.CB
-                   << "\n";
+            dbgs() << "[H2S] Unknown allocation size: " << *AI.CB << "\n";
           else
             dbgs() << "[H2S] Allocation size too large: " << *AI.CB << " vs. "
                    << MaxHeapToStackSize << "\n";
@@ -6665,9 +6629,10 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     IRBuilder<NoFolder> IRB(IP);
     const DataLayout &DL = IP->getModule()->getDataLayout();
 
-    if (Base->getType()->getPointerElementType() != PrivType)
-      Base = BitCastInst::CreateBitOrPointerCast(Base, PrivType->getPointerTo(),
-                                                 "", ACS.getInstruction());
+    Type *PrivPtrType = PrivType->getPointerTo();
+    if (Base->getType() != PrivPtrType)
+      Base = BitCastInst::CreateBitOrPointerCast(Base, PrivPtrType, "",
+                                                 ACS.getInstruction());
 
     // Traverse the type, build GEPs and loads.
     if (auto *PrivStructType = dyn_cast<StructType>(PrivType)) {
@@ -6809,7 +6774,7 @@ struct AAPrivatizablePtrFloating : public AAPrivatizablePtrImpl {
     if (auto *AI = dyn_cast<AllocaInst>(Obj))
       if (auto *CI = dyn_cast<ConstantInt>(AI->getArraySize()))
         if (CI->isOne())
-          return Obj->getType()->getPointerElementType();
+          return AI->getAllocatedType();
     if (auto *Arg = dyn_cast<Argument>(Obj)) {
       auto &PrivArgAA = A.getAAFor<AAPrivatizablePtr>(
           *this, IRPosition::argument(*Arg), DepClassTy::REQUIRED);
@@ -8512,13 +8477,30 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
                                                   /* UseValueSimplify */ false))
       return indicatePessimisticFixpoint();
 
-    return clampStateAndIndicateChange(getState(), T);
+    // Ensure that long def-use chains can't cause circular reasoning either by
+    // introducing a cutoff below.
+    if (clampStateAndIndicateChange(getState(), T) == ChangeStatus::UNCHANGED)
+      return ChangeStatus::UNCHANGED;
+    if (++NumChanges > MaxNumChanges) {
+      LLVM_DEBUG(dbgs() << "[AAValueConstantRange] performed " << NumChanges
+                        << " but only " << MaxNumChanges
+                        << " are allowed to avoid cyclic reasoning.");
+      return indicatePessimisticFixpoint();
+    }
+    return ChangeStatus::CHANGED;
   }
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FLOATING_ATTR(value_range)
   }
+
+  /// Tracker to bail after too many widening steps of the constant range.
+  int NumChanges = 0;
+
+  /// Upper bound for the number of allowed changes (=widening steps) for the
+  /// constant range before we give up.
+  static constexpr int MaxNumChanges = 5;
 };
 
 struct AAValueConstantRangeFunction : AAValueConstantRangeImpl {

@@ -395,7 +395,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     // [module.interface]p1:
     // An export-declaration shall inhabit a namespace scope and appear in the
     // purview of a module interface unit.
-    Diag(ExportLoc, diag::err_export_not_in_module_interface);
+    Diag(ExportLoc, diag::err_export_not_in_module_interface) << 0;
   }
 
   return Import;
@@ -527,21 +527,30 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
   // Set this temporarily so we know the export-declaration was braced.
   D->setRBraceLoc(LBraceLoc);
 
+  CurContext->addDecl(D);
+  PushDeclContext(S, D);
+
   // C++2a [module.interface]p1:
   //   An export-declaration shall appear only [...] in the purview of a module
   //   interface unit. An export-declaration shall not appear directly or
   //   indirectly within [...] a private-module-fragment.
   if (ModuleScopes.empty() || !ModuleScopes.back().Module->isModulePurview()) {
     Diag(ExportLoc, diag::err_export_not_in_module_interface) << 0;
+    D->setInvalidDecl();
+    return D;
   } else if (!ModuleScopes.back().ModuleInterface) {
     Diag(ExportLoc, diag::err_export_not_in_module_interface) << 1;
     Diag(ModuleScopes.back().BeginLoc,
          diag::note_not_module_interface_add_export)
         << FixItHint::CreateInsertion(ModuleScopes.back().BeginLoc, "export ");
+    D->setInvalidDecl();
+    return D;
   } else if (ModuleScopes.back().Module->Kind ==
              Module::PrivateModuleFragment) {
     Diag(ExportLoc, diag::err_export_in_private_module_fragment);
     Diag(ModuleScopes.back().BeginLoc, diag::note_private_module_fragment);
+    D->setInvalidDecl();
+    return D;
   }
 
   for (const DeclContext *DC = CurContext; DC; DC = DC->getLexicalParent()) {
@@ -553,7 +562,7 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
         Diag(ND->getLocation(), diag::note_anonymous_namespace);
         // Don't diagnose internal-linkage declarations in this region.
         D->setInvalidDecl();
-        break;
+        return D;
       }
 
       //   A declaration is exported if it is [...] a namespace-definition
@@ -572,10 +581,10 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
     Diag(ExportLoc, diag::err_export_within_export);
     if (ED->hasBraces())
       Diag(ED->getLocation(), diag::note_export);
+    D->setInvalidDecl();
+    return D;
   }
 
-  CurContext->addDecl(D);
-  PushDeclContext(S, D);
   D->setModuleOwnershipKind(Decl::ModuleOwnershipKind::VisibleWhenImported);
   return D;
 }

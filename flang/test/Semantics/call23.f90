@@ -5,6 +5,8 @@ real :: x = 0.0 ! prevent folding
 print *, max(a1=x,a1=1)
 !ERROR: Keyword argument 'a1=' has already been specified positionally (#1) in this procedure reference
 print *, max(x,a1=1)
-!ERROR: Argument keyword 'a6=' is not recognized for this procedure reference
-print *, max(a1=x,a2=0,a3=0,a4=0,a6=0)
+print *, max(a1=x,a2=0,a4=0) ! ok
+print *, max(x,0,a99=0) ! ok
+!ERROR: Argument keyword 'a06=' is not known in call to 'max'
+print *, max(a1=x,a2=0,a06=0)
 end

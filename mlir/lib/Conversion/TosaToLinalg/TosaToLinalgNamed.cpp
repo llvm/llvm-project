@@ -17,7 +17,9 @@
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
+#include "mlir/Dialect/Tosa/Utils/CoversionUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
@@ -27,29 +29,7 @@
 #include <numeric>
 
 using namespace mlir;
-
-static SmallVector<StringRef> getNParallelLoopsAttrs(unsigned nParallelLoops) {
-  return SmallVector<StringRef>(nParallelLoops, getParallelIteratorTypeName());
-}
-
-template <typename T>
-static void getValuesFromIntArrayAttribute(ArrayAttr attr,
-                                           SmallVector<T> &arrayValues) {
-  for (Attribute val : attr.getValue()) {
-    arrayValues.push_back(val.cast<IntegerAttr>().getValue().getSExtValue());
-  }
-}
-
-template <typename T, typename P>
-static mlir::SelectOp clampHelper(Location loc, Value arg,
-                                  arith::ConstantOp min, arith::ConstantOp max,
-                                  P pred, OpBuilder &rewriter) {
-  auto smallerThanMin = rewriter.create<T>(loc, pred, arg, min);
-  auto minOrArg =
-      rewriter.create<mlir::SelectOp>(loc, smallerThanMin, min, arg);
-  auto largerThanMax = rewriter.create<T>(loc, pred, max, arg);
-  return rewriter.create<mlir::SelectOp>(loc, largerThanMax, max, minOrArg);
-}
+using namespace mlir::tosa;
 
 static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
                             Attribute padAttr, OpBuilder &rewriter) {
@@ -76,18 +56,10 @@ static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
 
   Value padValue = rewriter.create<arith::ConstantOp>(loc, padAttr);
 
-  return linalg::PadTensorOp::createPadScalarOp(
-             RankedTensorType::get(paddedShape, inputETy), input, padValue,
-             lowIndices, highIndices, /*nofold=*/false, loc, rewriter)
+  return tensor::createPadScalarOp(RankedTensorType::get(paddedShape, inputETy),
+                                   input, padValue, lowIndices, highIndices,
+                                   /*nofold=*/false, loc, rewriter)
       .result();
-}
-
-static SmallVector<Value> filterDynamicDims(const SmallVector<Value> &dynDims) {
-  SmallVector<Value> filteredDims;
-  for (auto dim : dynDims)
-    if (dim)
-      filteredDims.push_back(dim);
-  return filteredDims;
 }
 
 namespace {
@@ -116,10 +88,15 @@ public:
     auto dilationTosaAttr = op->getAttr("dilation").cast<ArrayAttr>();
     bool isQuantized = op->hasAttr("quantization_info");
 
-    if (!inputTy.hasStaticShape() || !weightTy.hasStaticShape() ||
-        !biasTy.hasStaticShape() || !resultTy.hasStaticShape())
-      return rewriter.notifyMatchFailure(op,
-                                         "tosa.conv ops require static shapes");
+    if (!weightTy.hasStaticShape() || !biasTy.hasStaticShape())
+      return rewriter.notifyMatchFailure(
+          op, "tosa.conv ops require static shapes for weight and bias");
+
+    auto dynamicDimsOr =
+        checkHasDynamicBatchDims(rewriter, op, {input, op.output()});
+    if (!dynamicDimsOr.hasValue())
+      return failure();
+    SmallVector<Value> dynamicDims = dynamicDimsOr.getValue();
 
     if (inputETy.isUnsignedInteger())
       return rewriter.notifyMatchFailure(
@@ -172,7 +149,7 @@ public:
 
     Attribute resultZeroAttr = rewriter.getZeroAttr(resultETy);
     Value initTensor = rewriter.create<linalg::InitTensorOp>(
-        loc, resultTy.getShape(), resultETy);
+        loc, dynamicDims, resultTy.getShape(), resultETy);
     Value zero = rewriter.create<arith::ConstantOp>(loc, resultZeroAttr);
     Value zeroTensor =
         rewriter.create<linalg::FillOp>(loc, zero, initTensor).getResult(0);
@@ -197,7 +174,7 @@ public:
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultTy.getRank()));
 
     Value biasInitTensor = rewriter.create<linalg::InitTensorOp>(
-        loc, resultTy.getShape(), resultETy);
+        loc, dynamicDims, resultTy.getShape(), resultETy);
 
     if (isQuantized) {
       auto quantizationInfo =
@@ -292,10 +269,15 @@ public:
           quantizationInfo.weight_zp().getValue().getSExtValue());
     }
 
-    if (!inputTy.hasStaticShape() || !weightTy.hasStaticShape() ||
-        !biasTy.hasStaticShape() || !resultTy.hasStaticShape())
-      return rewriter.notifyMatchFailure(op,
-                                         "tosa.conv ops require static shapes");
+    if (!weightTy.hasStaticShape() || !biasTy.hasStaticShape())
+      return rewriter.notifyMatchFailure(
+          op, "tosa.depthwise_conv ops require static shapes");
+
+    auto dynamicDimsOr =
+        checkHasDynamicBatchDims(rewriter, op, {input, op.output()});
+    if (!dynamicDimsOr.hasValue())
+      return failure();
+    SmallVector<Value> dynamicDims = dynamicDimsOr.getValue();
 
     auto weightShape = weightTy.getShape();
     auto resultShape = resultTy.getShape();
@@ -354,13 +336,13 @@ public:
 
     Attribute resultZeroAttr = rewriter.getZeroAttr(resultETy);
     Value initTensor = rewriter.create<linalg::InitTensorOp>(
-        loc, linalgConvTy.getShape(), resultETy);
+        loc, dynamicDims, linalgConvTy.getShape(), resultETy);
     Value zero = rewriter.create<arith::ConstantOp>(loc, resultZeroAttr);
     Value zeroTensor =
         rewriter.create<linalg::FillOp>(loc, zero, initTensor).getResult(0);
 
     Value biasInitTensor = rewriter.create<linalg::InitTensorOp>(
-        loc, resultTy.getShape(), resultETy);
+        loc, dynamicDims, resultTy.getShape(), resultETy);
     if (!isQuantized) {
       Value conv = rewriter
                        .create<linalg::DepthwiseConv2DNhwcHwcmOp>(
@@ -442,7 +424,7 @@ public:
       dynDims[2] = rewriter.create<tensor::DimOp>(loc, op->getOperand(1), 2);
     }
 
-    SmallVector<Value> filteredDims = filterDynamicDims(dynDims);
+    SmallVector<Value> filteredDims = condenseValues(dynDims);
 
     auto zeroAttr = rewriter.getZeroAttr(outputElementTy);
     Value zero = rewriter.create<arith::ConstantOp>(loc, zeroAttr);
@@ -503,7 +485,7 @@ public:
       dynDims[1] = rewriter.create<tensor::DimOp>(loc, weight, 0);
     }
 
-    SmallVector<Value> filteredDims = filterDynamicDims(dynDims);
+    SmallVector<Value> filteredDims = condenseValues(dynDims);
 
     // Creating maps for the output of MatMul and the bias
     SmallVector<AffineMap, 4> indexingMaps;
@@ -611,8 +593,11 @@ public:
     ShapedType resultTy = op.getType().template cast<ShapedType>();
     Type resultETy = inputTy.getElementType();
 
-    if (!inputTy.hasStaticShape())
+    auto dynamicDimsOr =
+        checkHasDynamicBatchDims(rewriter, op, {input, op.output()});
+    if (!dynamicDimsOr.hasValue())
       return failure();
+    SmallVector<Value> dynamicDims = dynamicDimsOr.getValue();
 
     // Determine what the initial value needs to be for the max pool op.
     Attribute initialAttr;
@@ -649,7 +634,7 @@ public:
 
     // Create the linalg op that performs pooling.
     Value initTensor = rewriter.create<linalg::InitTensorOp>(
-        loc, resultTy.getShape(), resultTy.getElementType());
+        loc, dynamicDims, resultTy.getShape(), resultTy.getElementType());
 
     Value filledInitTensor =
         rewriter.create<linalg::FillOp>(loc, initialValue, initTensor).result();
@@ -682,8 +667,11 @@ public:
         inElementTy.isa<IntegerType>() ? rewriter.getI32Type() : inElementTy;
     ShapedType accTy = resultTy.clone(accETy);
 
-    if (!inputTy.hasStaticShape())
+    auto dynamicDimsOr =
+        checkHasDynamicBatchDims(rewriter, op, {input, op.output()});
+    if (!dynamicDimsOr.hasValue())
       return failure();
+    SmallVector<Value> dynamicDims = dynamicDimsOr.getValue();
 
     // Apply padding as necessary.
     llvm::SmallVector<int64_t> pad;
@@ -704,8 +692,8 @@ public:
     Attribute dilationAttr = rewriter.getI64VectorAttr({1, 1});
 
     // Create the linalg op that performs pooling.
-    Value poolInitTensor =
-        rewriter.create<linalg::InitTensorOp>(loc, accTy.getShape(), accETy);
+    Value poolInitTensor = rewriter.create<linalg::InitTensorOp>(
+        loc, dynamicDims, accTy.getShape(), accETy);
 
     Value filledInitTensor =
         rewriter.create<linalg::FillOp>(loc, initialValue, poolInitTensor)
@@ -728,7 +716,7 @@ public:
     auto affineMap = rewriter.getMultiDimIdentityMap(resultTy.getRank());
 
     Value genericInitTensor = rewriter.create<linalg::InitTensorOp>(
-        loc, resultTy.getShape(), resultETy);
+        loc, dynamicDims, resultTy.getShape(), resultETy);
 
     auto genericOp = rewriter.create<linalg::GenericOp>(
         loc, ArrayRef<Type>({resultTy}), ValueRange{poolingOp},
@@ -770,7 +758,7 @@ public:
           auto kH2 = padFn(kH1, y1, pad[3]);
           auto kHCmp = rewriter.create<arith::CmpIOp>(
               loc, arith::CmpIPredicate::slt, kH2, one);
-          auto kH3 = rewriter.create<SelectOp>(loc, kHCmp, one, kH2);
+          auto kH3 = rewriter.create<mlir::SelectOp>(loc, kHCmp, one, kH2);
 
           // compute the horizontal component of coverage.
           auto kW0 = rewriter.create<arith::ConstantIndexOp>(loc, kernel[1]);
@@ -778,7 +766,7 @@ public:
           auto kW2 = padFn(kW1, x1, pad[5]);
           auto kWCmp = rewriter.create<arith::CmpIOp>(
               loc, arith::CmpIPredicate::slt, kW2, one);
-          auto kW3 = rewriter.create<SelectOp>(loc, kWCmp, one, kW2);
+          auto kW3 = rewriter.create<mlir::SelectOp>(loc, kWCmp, one, kW2);
 
           // Compute the total number of elements and normalize.
           Value count = rewriter.create<arith::MulIOp>(loc, kH3, kW3);

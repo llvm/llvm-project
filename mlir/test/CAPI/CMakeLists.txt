@@ -19,13 +19,16 @@ function(_add_capi_test_executable name)
   endif()
 endfunction(_add_capi_test_executable)
 
-_add_capi_test_executable(mlir-capi-execution-engine-test
-  execution_engine.c
-LINK_LIBS PRIVATE
-  MLIRCAPIConversion
-  MLIRCAPIExecutionEngine
-  MLIRCAPIRegistration
-)
+# Only enable the ExecutionEngine if the native target is configured in.
+if(TARGET ${LLVM_NATIVE_ARCH})
+  _add_capi_test_executable(mlir-capi-execution-engine-test
+    execution_engine.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIConversion
+    MLIRCAPIExecutionEngine
+    MLIRCAPIRegistration
+  )
+endif()
 
 _add_capi_test_executable(mlir-capi-ir-test
   ir.c
@@ -65,4 +68,12 @@ _add_capi_test_executable(mlir-capi-quant-test
     MLIRCAPIIR
     MLIRCAPIRegistration
     MLIRCAPIQuant
+)
+
+_add_capi_test_executable(mlir-capi-pdl-test
+  pdl.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPIRegistration
+    MLIRCAPIPDL
 )

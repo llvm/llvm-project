@@ -9,19 +9,40 @@
 #ifndef LLDB_TARGET_STATISTICS_H
 #define LLDB_TARGET_STATISTICS_H
 
-#include <chrono>
-#include <string>
-#include <vector>
-
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/Support/JSON.h"
+#include <atomic>
+#include <chrono>
+#include <ratio>
+#include <string>
+#include <vector>
 
 namespace lldb_private {
 
 using StatsClock = std::chrono::high_resolution_clock;
-using StatsDuration = std::chrono::duration<double>;
 using StatsTimepoint = std::chrono::time_point<StatsClock>;
+
+class StatsDuration {
+public:
+  using Duration = std::chrono::duration<double>;
+
+  Duration get() const {
+    return Duration(InternalDuration(value.load(std::memory_order_relaxed)));
+  }
+  operator Duration() const { return get(); }
+
+  StatsDuration &operator+=(Duration dur) {
+    value.fetch_add(std::chrono::duration_cast<InternalDuration>(dur).count(),
+                    std::memory_order_relaxed);
+    return *this;
+  }
+
+private:
+  using InternalDuration = std::chrono::duration<uint64_t, std::micro>;
+  std::atomic<uint64_t> value{0};
+};
 
 /// A class that measures elapsed time in an exception safe way.
 ///
@@ -54,7 +75,7 @@ public:
     m_start_time = StatsClock::now();
   }
   ~ElapsedTime() {
-    StatsDuration elapsed = StatsClock::now() - m_start_time;
+    StatsClock::duration elapsed = StatsClock::now() - m_start_time;
     m_elapsed_time += elapsed;
   }
 };
@@ -90,6 +111,11 @@ struct ModuleStats {
   bool debug_info_index_saved_to_cache = false;
 };
 
+struct ConstStringStats {
+  llvm::json::Value ToJSON() const;
+  ConstString::MemoryStats stats = ConstString::GetMemoryStats();
+};
+
 /// A class that represents statistics for a since lldb_private::Target.
 class TargetStats {
 public:
@@ -104,7 +130,7 @@ public:
   StatsSuccessFail &GetFrameVariableStats() { return m_frame_var; }
 
 protected:
-  StatsDuration m_create_time{0.0};
+  StatsDuration m_create_time;
   llvm::Optional<StatsTimepoint> m_launch_or_attach_time;
   llvm::Optional<StatsTimepoint> m_first_private_stop_time;
   llvm::Optional<StatsTimepoint> m_first_public_stop_time;

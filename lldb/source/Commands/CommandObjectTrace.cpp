@@ -40,7 +40,7 @@ class CommandObjectTraceLoad : public CommandObjectParsed {
 public:
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() { OptionParsingStarting(nullptr); }
+    CommandOptions() { OptionParsingStarting(nullptr); }
 
     ~CommandOptions() override = default;
 
@@ -74,8 +74,7 @@ public:
   CommandObjectTraceLoad(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "trace load",
                             "Load a processor trace session from a JSON file.",
-                            "trace load"),
-        m_options() {}
+                            "trace load") {}
 
   ~CommandObjectTraceLoad() override = default;
 
@@ -139,7 +138,7 @@ class CommandObjectTraceDump : public CommandObjectParsed {
 public:
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() { OptionParsingStarting(nullptr); }
+    CommandOptions() { OptionParsingStarting(nullptr); }
 
     ~CommandOptions() override = default;
 
@@ -173,8 +172,7 @@ public:
   CommandObjectTraceDump(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "trace dump",
                             "Dump the loaded processor trace data.",
-                            "trace dump"),
-        m_options() {}
+                            "trace dump") {}
 
   ~CommandObjectTraceDump() override = default;
 
@@ -205,7 +203,7 @@ class CommandObjectTraceSchema : public CommandObjectParsed {
 public:
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() { OptionParsingStarting(nullptr); }
+    CommandOptions() { OptionParsingStarting(nullptr); }
 
     ~CommandOptions() override = default;
 
@@ -240,8 +238,7 @@ public:
       : CommandObjectParsed(interpreter, "trace schema",
                             "Show the schema of the given trace plugin.",
                             "trace schema <plug-in>. Use the plug-in name "
-                            "\"all\" to see all schemas.\n"),
-        m_options() {}
+                            "\"all\" to see all schemas.\n") {}
 
   ~CommandObjectTraceSchema() override = default;
 

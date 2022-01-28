@@ -781,9 +781,9 @@ class divergent_i64_BinOp <SDPatternOperator Op, Instruction Inst> :
       )
   >;
 
-def :  divergent_i64_BinOp <and, V_AND_B32_e32>;
-def :  divergent_i64_BinOp <or,  V_OR_B32_e32>;
-def :  divergent_i64_BinOp <xor, V_XOR_B32_e32>;
+def :  divergent_i64_BinOp <and, V_AND_B32_e64>;
+def :  divergent_i64_BinOp <or,  V_OR_B32_e64>;
+def :  divergent_i64_BinOp <xor, V_XOR_B32_e64>;
 
 let SubtargetPredicate = Has16BitInsts in {
 
@@ -850,6 +850,36 @@ let SubtargetPredicate = HasDLInsts in {
 
 let isReMaterializable = 1 in
 defm V_XNOR_B32 : VOP2Inst <"v_xnor_b32", VOP_I32_I32_I32, xnor>;
+
+def : GCNPat<
+  (i32 (DivergentUnaryFrag<not> (xor_oneuse i32:$src0, i32:$src1))),
+  (i32 (V_XNOR_B32_e64 $src0, $src1))
+>;
+
+def : GCNPat<
+  (i32 (DivergentBinFrag<xor_oneuse> (not i32:$src0), i32:$src1)),
+  (i32 (V_XNOR_B32_e64 $src0, $src1))
+>;
+
+def : GCNPat<
+  (i64 (DivergentUnaryFrag<not> (xor_oneuse i64:$src0, i64:$src1))),
+  (REG_SEQUENCE VReg_64, (i32 (V_XNOR_B32_e64
+                            (i32 (EXTRACT_SUBREG $src0, sub0)),
+                            (i32 (EXTRACT_SUBREG $src1, sub0)))), sub0,
+                     (i32 (V_XNOR_B32_e64
+                            (i32 (EXTRACT_SUBREG $src0, sub1)),
+                            (i32 (EXTRACT_SUBREG $src1, sub1)))), sub1)
+>;
+
+def : GCNPat<
+  (i64 (DivergentBinFrag<xor_oneuse> (not i64:$src0), i64:$src1)),
+  (REG_SEQUENCE VReg_64, (i32 (V_XNOR_B32_e64
+                            (i32 (EXTRACT_SUBREG $src0, sub0)),
+                            (i32 (EXTRACT_SUBREG $src1, sub0)))), sub0,
+                     (i32 (V_XNOR_B32_e64
+                            (i32 (EXTRACT_SUBREG $src0, sub1)),
+                            (i32 (EXTRACT_SUBREG $src1, sub1)))), sub1)
+>;
 
 let Constraints = "$vdst = $src2",
     DisableEncoding = "$src2",
@@ -1153,13 +1183,14 @@ let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
 
   //===------------------------- VOP2 (with name) -------------------------===//
   multiclass VOP2_Real_e32_with_name_gfx11<bits<6> op, string opName,
-                                           string asmName> {
+                                           string asmName, bit single = 0> {
     defvar ps = !cast<VOP2_Pseudo>(opName#"_e32");
     def _e32_gfx11 :
       VOP2_Real<ps, SIEncodingFamily.GFX11, asmName>,
       VOP2e<op{5-0}, ps.Pfl>,
       MnemonicAlias<ps.Mnemonic, asmName>, Requires<[isGFX11Plus]> {
         let AsmString = asmName # ps.AsmOperands;
+        let IsSingle = single;
       }
   }
   multiclass VOP2_Real_e64_with_name_gfx11<bits<6> op, string opName,
@@ -1289,8 +1320,8 @@ multiclass VOP2_Real_FULL_gfx11<bits<6> op> :
   VOP2_Realtriple_e64_gfx11<op>, VOP2_Real_NO_VOP3_gfx11<op>;
 
 multiclass VOP2_Real_NO_VOP3_with_name_gfx11<bits<6> op, string opName,
-                                           string asmName> :
-  VOP2_Real_e32_with_name_gfx11<op, opName, asmName>,
+                                           string asmName, bit isSingle = 0> :
+  VOP2_Real_e32_with_name_gfx11<op, opName, asmName, isSingle>,
   VOP2_Real_dpp_with_name_gfx11<op, opName, asmName>,
   VOP2_Real_dpp8_with_name_gfx11<op, opName, asmName>;
 
@@ -1310,7 +1341,7 @@ multiclass VOP2_Real_NO_DPP_with_name_gfx11<bits<6> op, string opName,
 defm V_CNDMASK_B32 : VOP2e_Real_gfx11<0x001, "V_CNDMASK_B32",
   "v_cndmask_b32">;
 defm V_DOT2ACC_F32_F16 : VOP2_Real_NO_VOP3_with_name_gfx11<0x002,
-  "V_DOT2C_F32_F16", "v_dot2acc_f32_f16">;
+  "V_DOT2C_F32_F16", "v_dot2acc_f32_f16", 1>;
 defm V_FMAC_DX9_ZERO_F32 : VOP2_Real_NO_DPP_with_name_gfx11<0x006,
   "V_FMAC_LEGACY_F32", "v_fmac_dx9_zero_f32">;
 defm V_MUL_DX9_ZERO_F32 : VOP2_Real_FULL_with_name_gfx11<0x007,

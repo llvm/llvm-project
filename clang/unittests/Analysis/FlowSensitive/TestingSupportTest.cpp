@@ -4,6 +4,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -77,10 +78,14 @@ void checkDataflow(
                            std::string, DataflowAnalysisState<NoopLattice>>>,
                        ASTContext &)>
         Expectations) {
-  test::checkDataflow<NoopAnalysis>(
-      Code, Target,
-      [](ASTContext &Context, Environment &) { return NoopAnalysis(Context); },
-      std::move(Expectations), {"-fsyntax-only", "-std=c++17"});
+  ASSERT_THAT_ERROR(
+      test::checkDataflow<NoopAnalysis>(
+          Code, Target,
+          [](ASTContext &Context, Environment &) {
+            return NoopAnalysis(Context, /*ApplyBuiltinTransfer=*/false);
+          },
+          std::move(Expectations), {"-fsyntax-only", "-std=c++17"}),
+      llvm::Succeeded());
 }
 
 TEST(ProgramPointAnnotations, NoAnnotations) {

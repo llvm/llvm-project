@@ -49,7 +49,7 @@ class CommandObjectFrameDiagnose : public CommandObjectParsed {
 public:
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() { OptionParsingStarting(nullptr); }
+    CommandOptions() { OptionParsingStarting(nullptr); }
 
     ~CommandOptions() override = default;
 
@@ -110,8 +110,7 @@ public:
                             nullptr,
                             eCommandRequiresThread | eCommandTryTargetAPILock |
                                 eCommandProcessMustBeLaunched |
-                                eCommandProcessMustBePaused),
-        m_options() {
+                                eCommandProcessMustBePaused) {
     CommandArgumentEntry arg;
     CommandArgumentData index_arg;
 
@@ -222,7 +221,7 @@ class CommandObjectFrameSelect : public CommandObjectParsed {
 public:
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() { OptionParsingStarting(nullptr); }
+    CommandOptions() { OptionParsingStarting(nullptr); }
 
     ~CommandOptions() override = default;
 
@@ -267,8 +266,7 @@ public:
                             nullptr,
                             eCommandRequiresThread | eCommandTryTargetAPILock |
                                 eCommandProcessMustBeLaunched |
-                                eCommandProcessMustBePaused),
-        m_options() {
+                                eCommandProcessMustBePaused) {
     CommandArgumentEntry arg;
     CommandArgumentData index_arg;
 
@@ -399,10 +397,9 @@ public:
             eCommandRequiresFrame | eCommandTryTargetAPILock |
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused |
                 eCommandRequiresProcess),
-        m_option_group(),
         m_option_variable(
             true), // Include the frame specific options by passing "true"
-        m_option_format(eFormatDefault), m_varobj_options() {
+        m_option_format(eFormatDefault) {
     SetHelpLong(R"(
 Children of aggregate variables can be specified such as 'var->child.x'.  In
 'frame variable', the operators -> and [] do not invoke operator overloads if
@@ -558,18 +555,16 @@ protected:
                   }
                 }
               } else if (num_matches == 0) {
-                result.GetErrorStream().Printf("error: no variables matched "
-                                               "the regular expression '%s'.\n",
-                                               entry.c_str());
+                result.AppendErrorWithFormat(
+                    "no variables matched the regular expression '%s'.",
+                    entry.c_str());
               }
             } else {
               if (llvm::Error err = regex.GetError())
-                result.GetErrorStream().Printf(
-                    "error: %s\n", llvm::toString(std::move(err)).c_str());
+                result.AppendError(llvm::toString(std::move(err)));
               else
-                result.GetErrorStream().Printf(
-                    "error: unknown regex error when compiling '%s'\n",
-                    entry.c_str());
+                result.AppendErrorWithFormat(
+                    "unknown regex error when compiling '%s'", entry.c_str());
             }
           } else // No regex, either exact variable names or variable
                  // expressions.
@@ -605,14 +600,13 @@ protected:
                   valobj_sp->GetParent() ? entry.c_str() : nullptr);
               valobj_sp->Dump(output_stream, options);
             } else {
-              const char *error_cstr = error.AsCString(nullptr);
-              if (error_cstr)
-                result.GetErrorStream().Printf("error: %s\n", error_cstr);
+              if (auto error_cstr = error.AsCString(nullptr))
+                result.AppendError(error_cstr);
               else
-                result.GetErrorStream().Printf("error: unable to find any "
-                                               "variable expression path that "
-                                               "matches '%s'.\n",
-                                               entry.c_str());
+                result.AppendErrorWithFormat(
+                    "unable to find any variable expression path that matches "
+                    "'%s'.",
+                    entry.c_str());
             }
           }
         }
@@ -680,7 +674,8 @@ protected:
           }
         }
       }
-      result.SetStatus(eReturnStatusSuccessFinishResult);
+      if (result.GetStatus() != eReturnStatusFailed)
+        result.SetStatus(eReturnStatusSuccessFinishResult);
     }
 
     if (m_option_variable.show_recognized_args) {
@@ -731,7 +726,7 @@ class CommandObjectFrameRecognizerAdd : public CommandObjectParsed {
 private:
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() {}
     ~CommandOptions() override = default;
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
@@ -800,8 +795,7 @@ protected:
 public:
   CommandObjectFrameRecognizerAdd(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "frame recognizer add",
-                            "Add a new frame recognizer.", nullptr),
-        m_options() {
+                            "Add a new frame recognizer.", nullptr) {
     SetHelpLong(R"(
 Frame recognizers allow for retrieving information about special frames based on
 ABI, arguments or other special properties of that frame, even without source

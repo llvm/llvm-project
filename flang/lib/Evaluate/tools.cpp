@@ -607,6 +607,9 @@ std::optional<Expr<SomeType>> ConvertToNumeric(int kind, Expr<SomeType> &&x) {
 
 std::optional<Expr<SomeType>> ConvertToType(
     const DynamicType &type, Expr<SomeType> &&x) {
+  if (type.IsTypelessIntrinsicArgument()) {
+    return std::nullopt;
+  }
   switch (type.category()) {
   case TypeCategory::Integer:
     if (auto *boz{std::get_if<BOZLiteralConstant>(&x.u)}) {
@@ -1008,6 +1011,71 @@ static const Symbol *GetLastPointerSymbol(const CoarrayRef &x) {
 }
 const Symbol *GetLastPointerSymbol(const DataRef &x) {
   return std::visit([](const auto &y) { return GetLastPointerSymbol(y); }, x.u);
+}
+
+template <TypeCategory TO, TypeCategory FROM>
+static std::optional<Expr<SomeType>> DataConstantConversionHelper(
+    FoldingContext &context, const DynamicType &toType,
+    const Expr<SomeType> &expr) {
+  DynamicType sizedType{FROM, toType.kind()};
+  if (auto sized{
+          Fold(context, ConvertToType(sizedType, Expr<SomeType>{expr}))}) {
+    if (const auto *someExpr{UnwrapExpr<Expr<SomeKind<FROM>>>(*sized)}) {
+      return std::visit(
+          [](const auto &w) -> std::optional<Expr<SomeType>> {
+            using FromType = typename std::decay_t<decltype(w)>::Result;
+            static constexpr int kind{FromType::kind};
+            if constexpr (IsValidKindOfIntrinsicType(TO, kind)) {
+              if (const auto *fromConst{UnwrapExpr<Constant<FromType>>(w)}) {
+                using FromWordType = typename FromType::Scalar;
+                using LogicalType = value::Logical<FromWordType::bits>;
+                using ElementType =
+                    std::conditional_t<TO == TypeCategory::Logical, LogicalType,
+                        typename LogicalType::Word>;
+                std::vector<ElementType> values;
+                auto at{fromConst->lbounds()};
+                auto shape{fromConst->shape()};
+                for (auto n{GetSize(shape)}; n-- > 0;
+                     fromConst->IncrementSubscripts(at)) {
+                  auto elt{fromConst->At(at)};
+                  if constexpr (TO == TypeCategory::Logical) {
+                    values.emplace_back(std::move(elt));
+                  } else {
+                    values.emplace_back(elt.word());
+                  }
+                }
+                return {AsGenericExpr(AsExpr(Constant<Type<TO, kind>>{
+                    std::move(values), std::move(shape)}))};
+              }
+            }
+            return std::nullopt;
+          },
+          someExpr->u);
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<Expr<SomeType>> DataConstantConversionExtension(
+    FoldingContext &context, const DynamicType &toType,
+    const Expr<SomeType> &expr0) {
+  Expr<SomeType> expr{Fold(context, Expr<SomeType>{expr0})};
+  if (!IsActuallyConstant(expr)) {
+    return std::nullopt;
+  }
+  if (auto fromType{expr.GetType()}) {
+    if (toType.category() == TypeCategory::Logical &&
+        fromType->category() == TypeCategory::Integer) {
+      return DataConstantConversionHelper<TypeCategory::Logical,
+          TypeCategory::Integer>(context, toType, expr);
+    }
+    if (toType.category() == TypeCategory::Integer &&
+        fromType->category() == TypeCategory::Logical) {
+      return DataConstantConversionHelper<TypeCategory::Integer,
+          TypeCategory::Logical>(context, toType, expr);
+    }
+  }
+  return std::nullopt;
 }
 
 } // namespace Fortran::evaluate

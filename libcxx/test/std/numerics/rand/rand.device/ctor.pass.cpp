@@ -9,6 +9,11 @@
 // See https://llvm.org/PR20183
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
 
+// The behavior of std::random_device changed on Apple platforms with
+// https://llvm.org/D116045.
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{11|12}}
+
 // UNSUPPORTED: libcpp-has-no-random-device
 
 // <random>
@@ -59,13 +64,24 @@ int main(int, char**) {
   }
   // Check the validity of various tokens
   {
-    check_random_device_invalid("wrong file");
-    check_random_device_invalid("/dev/whatever");
+#if defined(_LIBCPP_USING_ARC4_RANDOM)
     check_random_device_valid("/dev/urandom");
-#if defined(_LIBCPP_USING_DEV_RANDOM)
     check_random_device_valid("/dev/random");
+    check_random_device_valid("/dev/null");
+    check_random_device_valid("/dev/nonexistent");
+    check_random_device_valid("wrong file");
+#elif defined(_LIBCPP_USING_DEV_RANDOM)
+    check_random_device_valid("/dev/urandom");
+    check_random_device_valid("/dev/random");
+    check_random_device_valid("/dev/null");
+    check_random_device_invalid("/dev/nonexistent");
+    check_random_device_invalid("wrong file");
 #else
+    check_random_device_valid("/dev/urandom");
     check_random_device_invalid("/dev/random");
+    check_random_device_invalid("/dev/null");
+    check_random_device_invalid("/dev/nonexistent");
+    check_random_device_invalid("wrong file");
 #endif
   }
 

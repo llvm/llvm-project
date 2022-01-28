@@ -17,9 +17,11 @@
 #include "PassDetail.h"
 #include "Target.h"
 #include "flang/Lower/Todo.h"
+#include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -42,7 +44,8 @@ struct FixupTy {
     ReturnAsStore,
     ReturnType,
     Split,
-    Trailing
+    Trailing,
+    TrailingCharProc
   };
 
   FixupTy(Codes code, std::size_t index, std::size_t second = 0)
@@ -76,9 +79,8 @@ public:
     mlir::OpBuilder rewriter(&context);
 
     auto mod = getModule();
-    if (!forcedTargetTriple.empty()) {
+    if (!forcedTargetTriple.empty())
       setTargetTriple(mod, forcedTargetTriple);
-    }
 
     auto specifics = CodeGenSpecifics::get(getOperation().getContext(),
                                            getTargetTriple(getOperation()),
@@ -267,6 +269,41 @@ public:
           .template Case<mlir::ComplexType>([&](mlir::ComplexType cmplx) {
             rewriteCallComplexInputType(cmplx, oper, newInTys, newOpers);
           })
+          .template Case<mlir::TupleType>([&](mlir::TupleType tuple) {
+            if (factory::isCharacterProcedureTuple(tuple)) {
+              mlir::ModuleOp module = getModule();
+              if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
+                if (callOp.callee()) {
+                  llvm::StringRef charProcAttr =
+                      fir::getCharacterProcedureDummyAttrName();
+                  // The charProcAttr attribute is only used as a safety to
+                  // confirm that this is a dummy procedure and should be split.
+                  // It cannot be used to match because attributes are not
+                  // available in case of indirect calls.
+                  auto funcOp =
+                      module.lookupSymbol<mlir::FuncOp>(*callOp.callee());
+                  if (funcOp &&
+                      !funcOp.template getArgAttrOfType<mlir::UnitAttr>(
+                          index, charProcAttr))
+                    mlir::emitError(loc, "tuple argument will be split even "
+                                         "though it does not have the `" +
+                                             charProcAttr + "` attribute");
+                }
+              }
+              mlir::Type funcPointerType = tuple.getType(0);
+              mlir::Type lenType = tuple.getType(1);
+              FirOpBuilder builder(*rewriter, getKindMapping(module));
+              auto [funcPointer, len] =
+                  factory::extractCharacterProcedureTuple(builder, loc, oper);
+              newInTys.push_back(funcPointerType);
+              newOpers.push_back(funcPointer);
+              trailingInTys.push_back(lenType);
+              trailingOpers.push_back(len);
+            } else {
+              newInTys.push_back(tuple);
+              newOpers.push_back(oper);
+            }
+          })
           .Default([&](mlir::Type ty) {
             newInTys.push_back(ty);
             newOpers.push_back(oper);
@@ -361,6 +398,14 @@ public:
           .Case<mlir::ComplexType>([&](mlir::ComplexType ty) {
             lowerComplexSignatureArg(ty, newInTys);
           })
+          .Case<mlir::TupleType>([&](mlir::TupleType tuple) {
+            if (factory::isCharacterProcedureTuple(tuple)) {
+              newInTys.push_back(tuple.getType(0));
+              trailingInTys.push_back(tuple.getType(1));
+            } else {
+              newInTys.push_back(ty);
+            }
+          })
           .Default([&](mlir::Type ty) { newInTys.push_back(ty); });
     }
     // append trailing input types
@@ -395,7 +440,8 @@ public:
         return false;
       }
     for (auto ty : func.getInputs())
-      if ((ty.isa<BoxCharType>() && !noCharacterConversion) ||
+      if (((ty.isa<BoxCharType>() || factory::isCharacterProcedureTuple(ty)) &&
+           !noCharacterConversion) ||
           (isa_complex(ty) && !noComplexConversion)) {
         LLVM_DEBUG(llvm::dbgs() << "rewrite " << signature << " for target\n");
         return false;
@@ -477,6 +523,16 @@ public:
             else
               doComplexArg(func, cmplx, newInTys, fixups);
           })
+          .Case<mlir::TupleType>([&](mlir::TupleType tuple) {
+            if (factory::isCharacterProcedureTuple(tuple)) {
+              fixups.emplace_back(FixupTy::Codes::TrailingCharProc,
+                                  newInTys.size(), trailingTys.size());
+              newInTys.push_back(tuple.getType(0));
+              trailingTys.push_back(tuple.getType(1));
+            } else {
+              newInTys.push_back(ty);
+            }
+          })
           .Default([&](mlir::Type ty) { newInTys.push_back(ty); });
     }
 
@@ -493,8 +549,8 @@ public:
         case FixupTy::Codes::ArgumentAsLoad: {
           // Argument was pass-by-value, but is now pass-by-reference and
           // possibly with a different element type.
-          auto newArg =
-              func.front().insertArgument(fixup.index, newInTys[fixup.index]);
+          auto newArg = func.front().insertArgument(fixup.index,
+                                                    newInTys[fixup.index], loc);
           rewriter->setInsertionPointToStart(&func.front());
           auto oldArgTy = ReferenceType::get(oldArgTys[fixup.index - offset]);
           auto cast = rewriter->create<ConvertOp>(loc, oldArgTy, newArg);
@@ -505,8 +561,8 @@ public:
         case FixupTy::Codes::ArgumentType: {
           // Argument is pass-by-value, but its type has likely been modified to
           // suit the target ABI convention.
-          auto newArg =
-              func.front().insertArgument(fixup.index, newInTys[fixup.index]);
+          auto newArg = func.front().insertArgument(fixup.index,
+                                                    newInTys[fixup.index], loc);
           rewriter->setInsertionPointToStart(&func.front());
           auto mem =
               rewriter->create<fir::AllocaOp>(loc, newInTys[fixup.index]);
@@ -524,8 +580,8 @@ public:
         case FixupTy::Codes::CharPair: {
           // The FIR boxchar argument has been split into a pair of distinct
           // arguments that are in juxtaposition to each other.
-          auto newArg =
-              func.front().insertArgument(fixup.index, newInTys[fixup.index]);
+          auto newArg = func.front().insertArgument(fixup.index,
+                                                    newInTys[fixup.index], loc);
           if (fixup.second == 1) {
             rewriter->setInsertionPointToStart(&func.front());
             auto boxTy = oldArgTys[fixup.index - offset - fixup.second];
@@ -539,8 +595,8 @@ public:
         case FixupTy::Codes::ReturnAsStore: {
           // The value being returned is now being returned in memory (callee
           // stack space) through a hidden reference argument.
-          auto newArg =
-              func.front().insertArgument(fixup.index, newInTys[fixup.index]);
+          auto newArg = func.front().insertArgument(fixup.index,
+                                                    newInTys[fixup.index], loc);
           offset++;
           func.walk([&](mlir::ReturnOp ret) {
             rewriter->setInsertionPoint(ret);
@@ -571,8 +627,8 @@ public:
         case FixupTy::Codes::Split: {
           // The FIR argument has been split into a pair of distinct arguments
           // that are in juxtaposition to each other. (For COMPLEX value.)
-          auto newArg =
-              func.front().insertArgument(fixup.index, newInTys[fixup.index]);
+          auto newArg = func.front().insertArgument(fixup.index,
+                                                    newInTys[fixup.index], loc);
           if (fixup.second == 1) {
             rewriter->setInsertionPointToStart(&func.front());
             auto cplxTy = oldArgTys[fixup.index - offset - fixup.second];
@@ -594,14 +650,32 @@ public:
           // The first part of the pair appears in the original argument
           // position. The second part of the pair is appended after all the
           // original arguments. (Boxchar arguments.)
-          auto newBufArg =
-              func.front().insertArgument(fixup.index, newInTys[fixup.index]);
-          auto newLenArg = func.front().addArgument(trailingTys[fixup.second]);
+          auto newBufArg = func.front().insertArgument(
+              fixup.index, newInTys[fixup.index], loc);
+          auto newLenArg =
+              func.front().addArgument(trailingTys[fixup.second], loc);
           auto boxTy = oldArgTys[fixup.index - offset];
           rewriter->setInsertionPointToStart(&func.front());
           auto box =
               rewriter->create<EmboxCharOp>(loc, boxTy, newBufArg, newLenArg);
           func.getArgument(fixup.index + 1).replaceAllUsesWith(box);
+          func.front().eraseArgument(fixup.index + 1);
+        } break;
+        case FixupTy::Codes::TrailingCharProc: {
+          // The FIR character procedure argument tuple has been split into a
+          // pair of distinct arguments. The first part of the pair appears in
+          // the original argument position. The second part of the pair is
+          // appended after all the original arguments.
+          auto newProcPointerArg = func.front().insertArgument(
+              fixup.index, newInTys[fixup.index], loc);
+          auto newLenArg =
+              func.front().addArgument(trailingTys[fixup.second], loc);
+          auto tupleType = oldArgTys[fixup.index - offset];
+          rewriter->setInsertionPointToStart(&func.front());
+          FirOpBuilder builder(*rewriter, getKindMapping(getModule()));
+          auto tuple = factory::createCharacterProcedureTuple(
+              builder, loc, tupleType, newProcPointerArg, newLenArg);
+          func.getArgument(fixup.index + 1).replaceAllUsesWith(tuple);
           func.front().eraseArgument(fixup.index + 1);
         } break;
         }

@@ -40,8 +40,18 @@ struct TypeErasedLattice {
 };
 
 /// Type-erased base class for dataflow analyses built on a single lattice type.
-class TypeErasedDataflowAnalysis {
+class TypeErasedDataflowAnalysis : public Environment::Merger {
+  /// Determines whether to apply the built-in transfer functions.
+  // FIXME: Remove this option once the framework supports composing analyses
+  // (at which point the built-in transfer functions can be simply a standalone
+  // analysis).
+  bool ApplyBuiltinTransfer;
+
 public:
+  TypeErasedDataflowAnalysis() : ApplyBuiltinTransfer(true) {}
+  TypeErasedDataflowAnalysis(bool ApplyBuiltinTransfer)
+      : ApplyBuiltinTransfer(ApplyBuiltinTransfer) {}
+
   virtual ~TypeErasedDataflowAnalysis() {}
 
   /// Returns the `ASTContext` that is used by the analysis.
@@ -66,6 +76,10 @@ public:
   /// type-erased lattice element.
   virtual void transferTypeErased(const Stmt *, TypeErasedLattice &,
                                   Environment &) = 0;
+
+  /// Determines whether to apply the built-in transfer functions, which model
+  /// the heap and stack in the `Environment`.
+  bool applyBuiltinTransfer() const { return ApplyBuiltinTransfer; }
 };
 
 /// Type-erased model of the program at a given program point.

@@ -535,10 +535,11 @@ void mlirRegionDestroy(MlirRegion region) {
 // Block API.
 //===----------------------------------------------------------------------===//
 
-MlirBlock mlirBlockCreate(intptr_t nArgs, MlirType const *args) {
+MlirBlock mlirBlockCreate(intptr_t nArgs, MlirType const *args,
+                          MlirLocation const *locs) {
   Block *b = new Block;
   for (intptr_t i = 0; i < nArgs; ++i)
-    b->addArgument(unwrap(args[i]));
+    b->addArgument(unwrap(args[i]), unwrap(locs[i]));
   return wrap(b);
 }
 
@@ -618,8 +619,9 @@ intptr_t mlirBlockGetNumArguments(MlirBlock block) {
   return static_cast<intptr_t>(unwrap(block)->getNumArguments());
 }
 
-MlirValue mlirBlockAddArgument(MlirBlock block, MlirType type) {
-  return wrap(unwrap(block)->addArgument(unwrap(type)));
+MlirValue mlirBlockAddArgument(MlirBlock block, MlirType type,
+                               MlirLocation loc) {
+  return wrap(unwrap(block)->addArgument(unwrap(type), unwrap(loc)));
 }
 
 MlirValue mlirBlockGetArgument(MlirBlock block, intptr_t pos) {
@@ -820,8 +822,8 @@ MlirLogicalResult mlirSymbolTableReplaceAllSymbolUses(MlirStringRef oldSymbol,
                                                       MlirOperation from) {
   auto *cppFrom = unwrap(from);
   auto *context = cppFrom->getContext();
-  auto oldSymbolAttr = StringAttr::get(unwrap(oldSymbol), context);
-  auto newSymbolAttr = StringAttr::get(unwrap(newSymbol), context);
+  auto oldSymbolAttr = StringAttr::get(context, unwrap(oldSymbol));
+  auto newSymbolAttr = StringAttr::get(context, unwrap(newSymbol));
   return wrap(SymbolTable::replaceAllSymbolUses(oldSymbolAttr, newSymbolAttr,
                                                 unwrap(from)));
 }

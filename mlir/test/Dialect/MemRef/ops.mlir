@@ -246,3 +246,17 @@ func @atomic_rmw(%I: memref<10xf32>, %val: f32, %i : index) {
   // CHECK: memref.atomic_rmw addf [[VAL]], [[BUF]]{{\[}}[[I]]]
   return
 }
+
+// CHECK-LABEL: func @generic_atomic_rmw
+// CHECK-SAME: ([[BUF:%.*]]: memref<1x2xf32>, [[I:%.*]]: index, [[J:%.*]]: index)
+func @generic_atomic_rmw(%I: memref<1x2xf32>, %i : index, %j : index) {
+  %x = memref.generic_atomic_rmw %I[%i, %j] : memref<1x2xf32> {
+  // CHECK-NEXT: memref.generic_atomic_rmw [[BUF]]{{\[}}[[I]], [[J]]] : memref
+    ^bb0(%old_value : f32):
+      %c1 = arith.constant 1.0 : f32
+      %out = arith.addf %c1, %old_value : f32
+      memref.atomic_yield %out : f32
+  // CHECK: index_attr = 8 : index
+  } { index_attr = 8 : index }
+  return
+}

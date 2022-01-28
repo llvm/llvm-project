@@ -3,6 +3,7 @@
 #include "gtest/gtest.h"
 #include <memory>
 
+using namespace mlir;
 using namespace mlir::sparse_tensor;
 
 namespace {
@@ -88,7 +89,7 @@ protected:
   /// but there is no required ordering within groups.
   bool latPointWithinRange(unsigned s, unsigned p, unsigned n,
                            const std::shared_ptr<Pattern> &pattern,
-                           const llvm::BitVector &bits) {
+                           const BitVector &bits) {
     for (unsigned i = p; i < p + n; ++i) {
       if (compareExpression(merger.lat(merger.set(s)[i]).exp, pattern) &&
           compareBits(s, i, bits))
@@ -100,22 +101,22 @@ protected:
   /// Wrapper over latPointWithinRange for readability of tests.
   void expectLatPointWithinRange(unsigned s, unsigned p, unsigned n,
                                  const std::shared_ptr<Pattern> &pattern,
-                                 const llvm::BitVector &bits) {
+                                 const BitVector &bits) {
     EXPECT_TRUE(latPointWithinRange(s, p, n, pattern, bits));
   }
 
   /// Wrapper over expectLatPointWithinRange for a single lat point.
   void expectLatPoint(unsigned s, unsigned p,
                       const std::shared_ptr<Pattern> &pattern,
-                      const llvm::BitVector &bits) {
+                      const BitVector &bits) {
     EXPECT_TRUE(latPointWithinRange(s, p, 1, pattern, bits));
   }
 
   /// Converts a vector of (loop, tensor) pairs to a bitvector with the
   /// corresponding bits set.
-  llvm::BitVector
+  BitVector
   loopsToBits(const std::vector<std::pair<unsigned, unsigned>> &loops) {
-    llvm::BitVector testBits = llvm::BitVector(numTensors + 1, false);
+    BitVector testBits = BitVector(numTensors + 1, false);
     for (auto l : loops) {
       auto loop = std::get<0>(l);
       auto tensor = std::get<1>(l);
@@ -125,7 +126,7 @@ protected:
   }
 
   /// Returns true if the bits of lattice point p in set s match the given bits.
-  bool compareBits(unsigned s, unsigned p, const llvm::BitVector &bits) {
+  bool compareBits(unsigned s, unsigned p, const BitVector &bits) {
     return merger.lat(merger.set(s)[p]).bits == bits;
   }
 

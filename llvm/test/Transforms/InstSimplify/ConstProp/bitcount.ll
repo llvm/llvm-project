@@ -48,9 +48,9 @@ define i32 @cttz_zero_defined() {
   ret i32 %x
 }
 
-define i32 @cttz_zero_undefined() {
-; CHECK-LABEL: @cttz_zero_undefined(
-; CHECK-NEXT:    ret i32 undef
+define i32 @cttz_zero_is_poison() {
+; CHECK-LABEL: @cttz_zero_is_poison(
+; CHECK-NEXT:    ret i32 poison
 ;
   %x = call i32 @llvm.cttz.i32(i32 0, i1 true)
   ret i32 %x
@@ -64,9 +64,9 @@ define i33 @ctlz_zero_defined() {
   ret i33 %x
 }
 
-define i33 @ctlz_zero_undefined() {
-; CHECK-LABEL: @ctlz_zero_undefined(
-; CHECK-NEXT:    ret i33 undef
+define i33 @ctlz_zero_is_poison() {
+; CHECK-LABEL: @ctlz_zero_is_poison(
+; CHECK-NEXT:    ret i33 poison
 ;
   %x = call i33 @llvm.ctlz.i33(i33 0, i1 true)
   ret i33 %x
@@ -88,9 +88,9 @@ define i32 @cttz_undef_defined() {
   ret i32 %x
 }
 
-define i32 @cttz_undef_undefined() {
-; CHECK-LABEL: @cttz_undef_undefined(
-; CHECK-NEXT:    ret i32 undef
+define i32 @cttz_undef_zero_is_poison() {
+; CHECK-LABEL: @cttz_undef_zero_is_poison(
+; CHECK-NEXT:    ret i32 poison
 ;
   %x = call i32 @llvm.cttz.i32(i32 undef, i1 true)
   ret i32 %x
@@ -104,9 +104,9 @@ define i33 @ctlz_undef_defined() {
   ret i33 %x
 }
 
-define i33 @ctlz_undef_undefined() {
-; CHECK-LABEL: @ctlz_undef_undefined(
-; CHECK-NEXT:    ret i33 undef
+define i33 @ctlz_undef_zero_is_poison() {
+; CHECK-LABEL: @ctlz_undef_zero_is_poison(
+; CHECK-NEXT:    ret i33 poison
 ;
   %x = call i33 @llvm.ctlz.i33(i33 undef, i1 true)
   ret i33 %x
@@ -144,9 +144,9 @@ define <2 x i32> @cttz_vector_undef_defined() {
   ret <2 x i32> %x
 }
 
-define <2 x i32> @cttz_vector_undef_undefined() {
-; CHECK-LABEL: @cttz_vector_undef_undefined(
-; CHECK-NEXT:    ret <2 x i32> undef
+define <2 x i32> @cttz_vector_undef_zero_is_poison() {
+; CHECK-LABEL: @cttz_vector_undef_zero_is_poison(
+; CHECK-NEXT:    ret <2 x i32> poison
 ;
   %x = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> <i32 0, i32 undef>, i1 true)
   ret <2 x i32> %x
@@ -168,9 +168,9 @@ define <2 x i33> @ctlz_vector_undef_defined() {
   ret <2 x i33> %x
 }
 
-define <2 x i33> @ctlz_vector_undef_undefined() {
-; CHECK-LABEL: @ctlz_vector_undef_undefined(
-; CHECK-NEXT:    ret <2 x i33> undef
+define <2 x i33> @ctlz_vector_undef_zero_is_poison() {
+; CHECK-LABEL: @ctlz_vector_undef_zero_is_poison(
+; CHECK-NEXT:    ret <2 x i33> poison
 ;
   %x = call <2 x i33> @llvm.ctlz.v2i33(<2 x i33> <i33 0, i33 undef>, i1 true)
   ret <2 x i33> %x

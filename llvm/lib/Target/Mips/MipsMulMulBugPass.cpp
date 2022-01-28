@@ -110,17 +110,19 @@ bool MipsMulMulBugFix::fixMulMulBB(MachineBasicBlock &MBB,
                                    const MipsInstrInfo &MipsII) {
   bool Modified = false;
 
+  MachineBasicBlock::instr_iterator NextMII;
+
   // Iterate through the instructions in the basic block
   for (MachineBasicBlock::instr_iterator MII = MBB.instr_begin(),
                                          E = MBB.instr_end();
-       MII != E; ++MII) {
+       MII != E; MII = NextMII) {
 
-    MachineBasicBlock::instr_iterator NextMII = std::next(MII);
+    NextMII = next_nodbg(MII, E);
 
     // Trigger when the current instruction is a mul and the next instruction
     // is either a mul or a branch in case the branch target start with a mul
     if (NextMII != E && isFirstMul(*MII) && isSecondMulOrBranch(*NextMII)) {
-      LLVM_DEBUG(dbgs() << "Found mulmul!");
+      LLVM_DEBUG(dbgs() << "Found mulmul!\n");
 
       const MCInstrDesc &NewMCID = MipsII.get(Mips::NOP);
       BuildMI(MBB, NextMII, DebugLoc(), NewMCID);

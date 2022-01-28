@@ -2,7 +2,6 @@
 ##    Check that \DexDeclareFile's file declaration can be made relative to the
 ##    --source-root-dir path.
 
-# REQUIRES: lldb
 # UNSUPPORTED: system-darwin
 
 # RUN: %clang %S/../source/test.cpp -O0 -g -o %t

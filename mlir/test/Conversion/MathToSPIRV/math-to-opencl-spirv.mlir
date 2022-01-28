@@ -8,28 +8,32 @@ func @float32_unary_scalar(%arg0: f32) {
   %0 = math.cos %arg0 : f32
   // CHECK: spv.OCL.exp %{{.*}}: f32
   %1 = math.exp %arg0 : f32
+  // CHECK: %[[EXP:.+]] = spv.OCL.exp %arg0
+  // CHECK: %[[ONE:.+]] = spv.Constant 1.000000e+00 : f32
+  // CHECK: spv.FSub %[[EXP]], %[[ONE]]
+  %2 = math.expm1 %arg0 : f32
   // CHECK: spv.OCL.log %{{.*}}: f32
-  %2 = math.log %arg0 : f32
+  %3 = math.log %arg0 : f32
   // CHECK: %[[ONE:.+]] = spv.Constant 1.000000e+00 : f32
   // CHECK: %[[ADDONE:.+]] = spv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spv.OCL.log %[[ADDONE]]
-  %3 = math.log1p %arg0 : f32
+  %4 = math.log1p %arg0 : f32
   // CHECK: spv.OCL.rsqrt %{{.*}}: f32
-  %4 = math.rsqrt %arg0 : f32
+  %5 = math.rsqrt %arg0 : f32
   // CHECK: spv.OCL.sqrt %{{.*}}: f32
-  %5 = math.sqrt %arg0 : f32
+  %6 = math.sqrt %arg0 : f32
   // CHECK: spv.OCL.tanh %{{.*}}: f32
-  %6 = math.tanh %arg0 : f32
+  %7 = math.tanh %arg0 : f32
   // CHECK: spv.OCL.sin %{{.*}}: f32
-  %7 = math.sin %arg0 : f32
+  %8 = math.sin %arg0 : f32
   // CHECK: spv.OCL.fabs %{{.*}}: f32
-  %8 = math.abs %arg0 : f32
+  %9 = math.abs %arg0 : f32
   // CHECK: spv.OCL.ceil %{{.*}}: f32
-  %9 = math.ceil %arg0 : f32
+  %10 = math.ceil %arg0 : f32
   // CHECK: spv.OCL.floor %{{.*}}: f32
-  %10 = math.floor %arg0 : f32
+  %11 = math.floor %arg0 : f32
   // CHECK: spv.OCL.erf %{{.*}}: f32
-  %11 = math.erf %arg0 : f32
+  %12 = math.erf %arg0 : f32
   return
 }
 
@@ -39,20 +43,24 @@ func @float32_unary_vector(%arg0: vector<3xf32>) {
   %0 = math.cos %arg0 : vector<3xf32>
   // CHECK: spv.OCL.exp %{{.*}}: vector<3xf32>
   %1 = math.exp %arg0 : vector<3xf32>
+  // CHECK: %[[EXP:.+]] = spv.OCL.exp %arg0
+  // CHECK: %[[ONE:.+]] = spv.Constant dense<1.000000e+00> : vector<3xf32>
+  // CHECK: spv.FSub %[[EXP]], %[[ONE]]
+  %2 = math.expm1 %arg0 : vector<3xf32>
   // CHECK: spv.OCL.log %{{.*}}: vector<3xf32>
-  %2 = math.log %arg0 : vector<3xf32>
+  %3 = math.log %arg0 : vector<3xf32>
   // CHECK: %[[ONE:.+]] = spv.Constant dense<1.000000e+00> : vector<3xf32>
   // CHECK: %[[ADDONE:.+]] = spv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spv.OCL.log %[[ADDONE]]
-  %3 = math.log1p %arg0 : vector<3xf32>
+  %4 = math.log1p %arg0 : vector<3xf32>
   // CHECK: spv.OCL.rsqrt %{{.*}}: vector<3xf32>
-  %4 = math.rsqrt %arg0 : vector<3xf32>
+  %5 = math.rsqrt %arg0 : vector<3xf32>
   // CHECK: spv.OCL.sqrt %{{.*}}: vector<3xf32>
-  %5 = math.sqrt %arg0 : vector<3xf32>
+  %6 = math.sqrt %arg0 : vector<3xf32>
   // CHECK: spv.OCL.tanh %{{.*}}: vector<3xf32>
-  %6 = math.tanh %arg0 : vector<3xf32>
+  %7 = math.tanh %arg0 : vector<3xf32>
   // CHECK: spv.OCL.sin %{{.*}}: vector<3xf32>
-  %7 = math.sin %arg0 : vector<3xf32>
+  %8 = math.sin %arg0 : vector<3xf32>
   return
 }
 

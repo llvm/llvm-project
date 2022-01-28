@@ -50,8 +50,8 @@ enum SCEVTypes : unsigned short {
   scSMaxExpr,
   scUMinExpr,
   scSMinExpr,
-  scPtrToInt,
   scSequentialUMinExpr,
+  scPtrToInt,
   scUnknown,
   scCouldNotCompute
 };
@@ -530,6 +530,20 @@ protected:
 
 public:
   Type *getType() const { return getOperand(0)->getType(); }
+
+  static SCEVTypes getEquivalentNonSequentialSCEVType(SCEVTypes Ty) {
+    assert(isSequentialMinMaxType(Ty));
+    switch (Ty) {
+    case scSequentialUMinExpr:
+      return scUMinExpr;
+    default:
+      llvm_unreachable("Not a sequential min/max type.");
+    }
+  }
+
+  SCEVTypes getEquivalentNonSequentialSCEVType() const {
+    return getEquivalentNonSequentialSCEVType(getSCEVType());
+  }
 
   static bool classof(const SCEV *S) {
     return isSequentialMinMaxType(S->getSCEVType());

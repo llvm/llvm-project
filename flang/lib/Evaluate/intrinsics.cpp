@@ -87,11 +87,13 @@ ENUM_CLASS(KindCode, none, defaultIntegerKind,
     size, // default KIND= for SIZE(), UBOUND, &c.
     addressable, // for PRESENT(), &c.; anything (incl. procedure) but BOZ
     nullPointerType, // for ASSOCIATED(NULL())
+    exactKind, // a single explicit exactKindValue
 )
 
 struct TypePattern {
   CategorySet categorySet;
   KindCode kindCode{KindCode::none};
+  int exactKindValue{0}; // for KindCode::exactBind
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 };
 
@@ -484,7 +486,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"image_status", {{"image", SameInt}, OptionalTEAM}, DefaultInt},
     {"index",
         {{"string", SameChar}, {"substring", SameChar},
-            {"back", AnyLogical, Rank::scalar, Optionality::optional},
+            {"back", AnyLogical, Rank::elemental, Optionality::optional},
             DefaultingKIND},
         KINDInt},
     {"int", {{"a", AnyNumeric, Rank::elementalOrBOZ}, DefaultingKIND}, KINDInt},
@@ -791,6 +793,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             DefaultingKIND},
         KINDInt},
     {"__builtin_ieee_is_nan", {{"a", AnyFloating}}, DefaultLogical},
+    {"__builtin_ieee_is_normal", {{"a", AnyFloating}}, DefaultLogical},
+    {"__builtin_ieee_is_negative", {{"a", AnyFloating}}, DefaultLogical},
     {"__builtin_ieee_next_after", {{"x", SameReal}, {"y", AnyReal}}, SameReal},
     {"__builtin_ieee_next_down", {{"x", SameReal}}, SameReal},
     {"__builtin_ieee_next_up", {{"x", SameReal}}, SameReal},
@@ -914,6 +918,9 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
     {{"asin", {{"x", DefaultReal}}, DefaultReal}},
     {{"atan", {{"x", DefaultReal}}, DefaultReal}},
     {{"atan2", {{"y", DefaultReal}, {"x", DefaultReal}}, DefaultReal}},
+    {{"babs", {{"a", TypePattern{IntType, KindCode::exactKind, 1}}},
+         TypePattern{IntType, KindCode::exactKind, 1}},
+        "abs"},
     {{"cabs", {{"a", DefaultComplex}}, DefaultReal}, "abs"},
     {{"ccos", {{"a", DefaultComplex}}, DefaultComplex}, "cos"},
     {{"cdabs", {{"a", DoublePrecisionComplex}}, DoublePrecision}, "abs"},
@@ -988,9 +995,18 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
     {{"idint", {{"a", AnyReal}}, DefaultInt}, "int", true},
     {{"idnint", {{"a", DoublePrecision}}, DefaultInt}, "nint"},
     {{"ifix", {{"a", AnyReal}}, DefaultInt}, "int", true},
+    {{"iiabs", {{"a", TypePattern{IntType, KindCode::exactKind, 2}}},
+         TypePattern{IntType, KindCode::exactKind, 2}},
+        "abs"},
     {{"index", {{"string", DefaultChar}, {"substring", DefaultChar}},
         DefaultInt}},
     {{"isign", {{"a", DefaultInt}, {"b", DefaultInt}}, DefaultInt}, "sign"},
+    {{"jiabs", {{"a", TypePattern{IntType, KindCode::exactKind, 4}}},
+         TypePattern{IntType, KindCode::exactKind, 4}},
+        "abs"},
+    {{"kiabs", {{"a", TypePattern{IntType, KindCode::exactKind, 8}}},
+         TypePattern{IntType, KindCode::exactKind, 8}},
+        "abs"},
     {{"len", {{"string", DefaultChar, Rank::anyOrAssumedRank}}, DefaultInt,
         Rank::scalar}},
     {{"lge", {{"string_a", DefaultChar}, {"string_b", DefaultChar}},
@@ -1036,6 +1052,9 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
     {{"sqrt", {{"x", DefaultReal}}, DefaultReal}},
     {{"tan", {{"x", DefaultReal}}, DefaultReal}},
     {{"tanh", {{"x", DefaultReal}}, DefaultReal}},
+    {{"zabs", {{"a", TypePattern{ComplexType, KindCode::exactKind, 8}}},
+         TypePattern{RealType, KindCode::exactKind, 8}},
+        "abs"},
 };
 
 static const IntrinsicInterface intrinsicSubroutine[]{
@@ -1166,7 +1185,7 @@ static DynamicType GetBuiltinDerivedType(
 }
 
 // Ensure that the keywords of arguments to MAX/MIN and their variants
-// are of the form A123 with no duplicates.
+// are of the form A123 with no duplicates or leading zeroes.
 static bool CheckMaxMinArgument(std::optional<parser::CharBlock> keyword,
     std::set<parser::CharBlock> &set, const char *intrinsicName,
     parser::ContextualMessages &messages) {
@@ -1174,7 +1193,7 @@ static bool CheckMaxMinArgument(std::optional<parser::CharBlock> keyword,
     std::size_t j{1};
     for (; j < keyword->size(); ++j) {
       char ch{(*keyword)[j]};
-      if (ch < '0' || ch > '9') {
+      if (ch < (j == 1 ? '1' : '0') || ch > '9') {
         break;
       }
     }
@@ -1330,10 +1349,17 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             d.rank == Rank::elementalOrBOZ) {
           continue;
         } else {
-          const IntrinsicDummyArgument &nextParam{dummy[j + 1]};
-          messages.Say(
-              "Typeless (BOZ) not allowed for both '%s=' & '%s=' arguments"_err_en_US, // C7109
-              d.keyword, nextParam.keyword);
+          const IntrinsicDummyArgument *nextParam{
+              j + 1 < dummies ? &dummy[j + 1] : nullptr};
+          if (nextParam && nextParam->rank == Rank::elementalOrBOZ) {
+            messages.Say(
+                "Typeless (BOZ) not allowed for both '%s=' & '%s=' arguments"_err_en_US, // C7109
+                d.keyword, nextParam->keyword);
+          } else {
+            messages.Say(
+                "Typeless (BOZ) not allowed for '%s=' argument"_err_en_US,
+                d.keyword);
+          }
         }
       } else {
         // NULL(), procedure, or procedure pointer
@@ -1424,6 +1450,9 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::nullPointerType:
       argOk = true;
       break;
+    case KindCode::exactKind:
+      argOk = type->kind() == d.typePattern.exactKindValue;
+      break;
     default:
       CRASH_NO_CASE;
     }
@@ -1496,8 +1525,6 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         if (!arrayArg) {
           arrayArg = arg;
           arrayArgName = d.keyword;
-        } else {
-          argOk &= rank == arrayArg->Rank();
         }
         break;
       case Rank::coarray:
@@ -1696,6 +1723,9 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       resultType = DynamicType{
           GetBuiltinDerivedType(builtinsScope, "__builtin_team_type")};
       break;
+    case KindCode::exactKind:
+      resultType = DynamicType{*category, result.exactKindValue};
+      break;
     case KindCode::defaultCharKind:
     case KindCode::typeless:
     case KindCode::any:
@@ -1780,8 +1810,19 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     if (const auto &arg{rearranged[j]}) {
       if (const Expr<SomeType> *expr{arg->UnwrapExpr()}) {
         std::string kw{d.keyword};
-        if (isMaxMin) {
-          kw = "a"s + std::to_string(j + 1);
+        if (arg->keyword()) {
+          kw = arg->keyword()->ToString();
+        } else if (isMaxMin) {
+          for (std::size_t k{j + 1};; ++k) {
+            kw = "a"s + std::to_string(k);
+            auto iter{std::find_if(dummyArgs.begin(), dummyArgs.end(),
+                [&kw](const characteristics::DummyArgument &prev) {
+                  return prev.name == kw;
+                })};
+            if (iter == dummyArgs.end()) {
+              break;
+            }
+          }
         }
         auto dc{characteristics::DummyArgument::FromActual(
             std::move(kw), *expr, context)};

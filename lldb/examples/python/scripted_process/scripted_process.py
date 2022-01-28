@@ -19,6 +19,7 @@ class ScriptedProcess:
     memory_regions = None
     stack_memory_dump = None
     loaded_images = None
+    threads = {}
 
     @abstractmethod
     def __init__(self, target, args):
@@ -51,6 +52,16 @@ class ScriptedProcess:
         """
         pass
 
+    def get_threads_info(self):
+        """ Get the dictionary describing the process' Scripted Threads.
+
+        Returns:
+            Dict: The dictionary of threads, with the thread ID as the key and
+            a Scripted Thread instance as the value.
+            The dictionary can be empty.
+        """
+        return self.threads
+
     @abstractmethod
     def get_thread_with_id(self, tid):
         """ Get the scripted process thread with a specific ID.
@@ -59,7 +70,7 @@ class ScriptedProcess:
             tid (int): Thread ID to look for in the scripted process.
 
         Returns:
-            Dict: The thread represented as a dictionary, withr the
+            Dict: The thread represented as a dictionary, with the
                 tid thread ID. None if tid doesn't match any of the scripted
                 process threads.
         """
@@ -201,11 +212,12 @@ class ScriptedThread:
         self.target = None
         self.process = None
         self.args = None
-        if isinstance(process, lldb.SBProcess) and process.IsValid():
-            self.process = process
-            self.target = process.GetTarget()
+        if isinstance(process, ScriptedProcess):
+            self.target = process.target
+            self.process = self.target.GetProcess()
 
         self.id = None
+        self.idx = None
         self.name = None
         self.queue = None
         self.state = None

@@ -155,6 +155,9 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (Instruction *X = foldVectorBinop(I))
     return X;
 
+  if (Instruction *Phi = foldBinopWithPhiOperands(I))
+    return Phi;
+
   if (Value *V = SimplifyUsingDistributiveLaws(I))
     return replaceInstUsesWith(I, V);
 
@@ -348,12 +351,20 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     return CastInst::Create(Instruction::SExt, And, I.getType());
   }
 
-  // (bool X) * Y --> X ? Y : 0
-  // Y * (bool X) --> X ? Y : 0
+  // (zext bool X) * Y --> X ? Y : 0
+  // Y * (zext bool X) --> X ? Y : 0
   if (match(Op0, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
     return SelectInst::Create(X, Op1, ConstantInt::get(I.getType(), 0));
   if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
     return SelectInst::Create(X, Op0, ConstantInt::get(I.getType(), 0));
+
+  // (sext bool X) * C --> X ? -C : 0
+  Constant *ImmC;
+  if (match(Op0, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1) &&
+      match(Op1, m_ImmConstant(ImmC))) {
+    Constant *NegC = ConstantExpr::getNeg(ImmC);
+    return SelectInst::Create(X, NegC, ConstantInt::getNullValue(I.getType()));
+  }
 
   // (lshr X, 31) * Y --> (ashr X, 31) & Y
   // Y * (lshr X, 31) --> (ashr X, 31) & Y
@@ -441,6 +452,9 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
 
   if (Instruction *X = foldVectorBinop(I))
     return X;
+
+  if (Instruction *Phi = foldBinopWithPhiOperands(I))
+    return Phi;
 
   if (Instruction *FoldedMul = foldBinOpIntoSelectOrPhi(I))
     return FoldedMul;
@@ -742,6 +756,9 @@ static bool isMultiple(const APInt &C1, const APInt &C2, APInt &Quotient,
 /// division instructions.
 /// Common integer divide transforms
 Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
+  if (Instruction *Phi = foldBinopWithPhiOperands(I))
+    return Phi;
+
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   bool IsSigned = I.getOpcode() == Instruction::SDiv;
   Type *Ty = I.getType();
@@ -1359,6 +1376,9 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
   if (Instruction *X = foldVectorBinop(I))
     return X;
 
+  if (Instruction *Phi = foldBinopWithPhiOperands(I))
+    return Phi;
+
   if (Instruction *R = foldFDivConstantDivisor(I))
     return R;
 
@@ -1460,6 +1480,9 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
 /// remainder instructions.
 /// Common integer remainder transforms
 Instruction *InstCombinerImpl::commonIRemTransforms(BinaryOperator &I) {
+  if (Instruction *Phi = foldBinopWithPhiOperands(I))
+    return Phi;
+
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   // The RHS is known non-zero.
@@ -1637,6 +1660,9 @@ Instruction *InstCombinerImpl::visitFRem(BinaryOperator &I) {
 
   if (Instruction *X = foldVectorBinop(I))
     return X;
+
+  if (Instruction *Phi = foldBinopWithPhiOperands(I))
+    return Phi;
 
   return nullptr;
 }

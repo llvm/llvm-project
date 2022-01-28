@@ -8,7 +8,7 @@ define void @wombat(i64 %arg, i64* %arg1, i64 %arg2, i32* %arg3) {
 ; CHECK-LABEL: @wombat(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i64 [[ARG2:%.*]], [[ARG:%.*]]
-; CHECK-NEXT:    callbr void asm sideeffect "", "X,X"(i8* blockaddress(@wombat, [[BB7:%.*]]), i8* blockaddress(@wombat, [[BB9:%.*]]))
+; CHECK-NEXT:    callbr void asm sideeffect "", "i,i"(i8* blockaddress(@wombat, [[BB7:%.*]]), i8* blockaddress(@wombat, [[BB9:%.*]]))
 ; CHECK-NEXT:    to label [[BB6:%.*]] [label [[BB7]], label %bb9]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    br label [[BB7]]
@@ -23,7 +23,7 @@ define void @wombat(i64 %arg, i64* %arg1, i64 %arg2, i32* %arg3) {
 ;
 bb:
   %tmp5 = or i64 %arg2, %arg
-  callbr void asm sideeffect "", "X,X"(i8* blockaddress(@wombat, %bb7), i8* blockaddress(@wombat, %bb9))
+  callbr void asm sideeffect "", "i,i"(i8* blockaddress(@wombat, %bb7), i8* blockaddress(@wombat, %bb9))
           to label %bb6 [label %bb7, label %bb9]
 
 bb6:                                              ; preds = %bb

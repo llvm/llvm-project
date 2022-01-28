@@ -263,3 +263,22 @@ TEST(StmtPrinter, TerseOutputWithLambdas) {
 
       [](PrintingPolicy &PP) { PP.TerseOutput = true; }));
 }
+
+TEST(StmtPrinter, ParamsUglified) {
+  llvm::StringLiteral Code = R"cpp(
+    template <typename _T, int _I, template <typename> class _C>
+    auto foo(int __j) {
+      return typename _C<_T>::_F(_I, __j);
+    }
+  )cpp";
+  auto Clean = [](PrintingPolicy &Policy) {
+    Policy.CleanUglifiedParameters = true;
+  };
+
+  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX14, Code,
+                                    returnStmt().bind("id"),
+                                    "return typename _C<_T>::_F(_I, __j);\n"));
+  ASSERT_TRUE(
+      PrintedStmtCXXMatches(StdVer::CXX14, Code, returnStmt().bind("id"),
+                            "return typename C<T>::_F(I, j);\n", Clean));
+}

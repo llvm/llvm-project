@@ -903,8 +903,8 @@ define hidden amdgpu_kernel void @clmem_read(i8 addrspace(1)*  %buffer) {
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_and_b32 v1, 0xff, v0
 ; GFX11-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_lshlrev_b32 v3, 17, v0
-; GFX11-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX11-NEXT:    s_movk_i32 s1, 0x7f
+; GFX11-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_lshlrev_b64 v[0:1], 3, v[1:2]
 ; GFX11-NEXT:    v_and_b32_e32 v2, 0xfe000000, v3

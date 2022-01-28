@@ -198,26 +198,26 @@ static Expected<std::unique_ptr<IFSStub>> readInputFile(StringRef FilePath) {
 static int writeTbdStub(const Triple &T, const std::vector<IFSSymbol> &Symbols,
                         const StringRef Format, raw_ostream &Out) {
 
-  auto PlatformKindOrError =
-      [](const llvm::Triple &T) -> llvm::Expected<llvm::MachO::PlatformKind> {
+  auto PlatformTypeOrError =
+      [](const llvm::Triple &T) -> llvm::Expected<llvm::MachO::PlatformType> {
     if (T.isMacOSX())
-      return llvm::MachO::PlatformKind::macOS;
+      return llvm::MachO::PLATFORM_MACOS;
     if (T.isTvOS())
-      return llvm::MachO::PlatformKind::tvOS;
+      return llvm::MachO::PLATFORM_TVOS;
     if (T.isWatchOS())
-      return llvm::MachO::PlatformKind::watchOS;
+      return llvm::MachO::PLATFORM_WATCHOS;
     // Note: put isiOS last because tvOS and watchOS are also iOS according
     // to the Triple.
     if (T.isiOS())
-      return llvm::MachO::PlatformKind::iOS;
+      return llvm::MachO::PLATFORM_IOS;
 
     return createStringError(errc::not_supported, "Invalid Platform.\n");
   }(T);
 
-  if (!PlatformKindOrError)
+  if (!PlatformTypeOrError)
     return -1;
 
-  PlatformKind Plat = PlatformKindOrError.get();
+  PlatformType Plat = PlatformTypeOrError.get();
   TargetList Targets({Target(llvm::MachO::mapToArchitecture(T), Plat)});
 
   InterfaceFile File;

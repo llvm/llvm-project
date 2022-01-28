@@ -190,3 +190,38 @@ func @no_inline_invalid_call() -> i32 {
   %res = "test.conversion_call_op"() { callee=@convert_callee_fn_multiblock, noinline } : () -> (i32)
   return %res : i32
 }
+
+func @gpu_alloc() -> memref<1024xf32> {
+  %m = gpu.alloc [] () : memref<1024xf32>
+  return %m : memref<1024xf32>
+}
+
+// CHECK-LABEL: func @inline_gpu_ops
+func @inline_gpu_ops() -> memref<1024xf32> {
+  // CHECK-NEXT: gpu.alloc
+  %m = call @gpu_alloc() : () -> memref<1024xf32>
+  return %m : memref<1024xf32>
+}
+
+// Test block arguments location propagation.
+// Use two call-sites to force cloning.
+func @func_with_block_args_location(%arg0 : i32) {
+  br ^bb1(%arg0 : i32)
+^bb1(%x : i32 loc("foo")):
+  "test.foo" (%x) : (i32) -> () loc("bar")
+  return
+}
+
+// INLINE-LOC-LABEL: func @func_with_block_args_location_callee1
+// INLINE-LOC: br
+// INLINE-LOC: ^bb{{[0-9]+}}(%{{.*}}: i32 loc("foo")
+func @func_with_block_args_location_callee1(%arg0 : i32) {
+  call @func_with_block_args_location(%arg0) : (i32) -> ()
+  return
+}
+
+// CHECK-LABEL: func @func_with_block_args_location_callee2
+func @func_with_block_args_location_callee2(%arg0 : i32) {
+  call @func_with_block_args_location(%arg0) : (i32) -> ()
+  return
+}

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBModule.h"
-#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBModuleSpec.h"
@@ -24,17 +23,18 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-SBModule::SBModule() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBModule); }
+SBModule::SBModule() { LLDB_INSTRUMENT_VA(this); }
 
 SBModule::SBModule(const lldb::ModuleSP &module_sp) : m_opaque_sp(module_sp) {}
 
 SBModule::SBModule(const SBModuleSpec &module_spec) {
-  LLDB_RECORD_CONSTRUCTOR(SBModule, (const lldb::SBModuleSpec &), module_spec);
+  LLDB_INSTRUMENT_VA(this, module_spec);
 
   ModuleSP module_sp;
   Status error = ModuleList::GetSharedModule(
@@ -44,12 +44,11 @@ SBModule::SBModule(const SBModuleSpec &module_spec) {
 }
 
 SBModule::SBModule(const SBModule &rhs) : m_opaque_sp(rhs.m_opaque_sp) {
-  LLDB_RECORD_CONSTRUCTOR(SBModule, (const lldb::SBModule &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 }
 
 SBModule::SBModule(lldb::SBProcess &process, lldb::addr_t header_addr) {
-  LLDB_RECORD_CONSTRUCTOR(SBModule, (lldb::SBProcess &, lldb::addr_t), process,
-                          header_addr);
+  LLDB_INSTRUMENT_VA(this, process, header_addr);
 
   ProcessSP process_sp(process.GetSP());
   if (process_sp) {
@@ -64,8 +63,7 @@ SBModule::SBModule(lldb::SBProcess &process, lldb::addr_t header_addr) {
 }
 
 const SBModule &SBModule::operator=(const SBModule &rhs) {
-  LLDB_RECORD_METHOD(const lldb::SBModule &, SBModule, operator=,
-                     (const lldb::SBModule &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
@@ -75,23 +73,37 @@ const SBModule &SBModule::operator=(const SBModule &rhs) {
 SBModule::~SBModule() = default;
 
 bool SBModule::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBModule, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 SBModule::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBModule, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp.get() != nullptr;
 }
 
 void SBModule::Clear() {
-  LLDB_RECORD_METHOD_NO_ARGS(void, SBModule, Clear);
+  LLDB_INSTRUMENT_VA(this);
 
   m_opaque_sp.reset();
 }
 
+bool SBModule::IsFileBacked() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  ModuleSP module_sp(GetSP());
+  if (!module_sp)
+    return false;
+
+  ObjectFile *obj_file = module_sp->GetObjectFile();
+  if (!obj_file)
+    return false;
+
+  return !obj_file->IsInMemory();
+}
+
 SBFileSpec SBModule::GetFileSpec() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBFileSpec, SBModule, GetFileSpec);
+  LLDB_INSTRUMENT_VA(this);
 
   SBFileSpec file_spec;
   ModuleSP module_sp(GetSP());
@@ -102,8 +114,7 @@ SBFileSpec SBModule::GetFileSpec() const {
 }
 
 lldb::SBFileSpec SBModule::GetPlatformFileSpec() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBFileSpec, SBModule,
-                                   GetPlatformFileSpec);
+  LLDB_INSTRUMENT_VA(this);
 
   SBFileSpec file_spec;
   ModuleSP module_sp(GetSP());
@@ -114,8 +125,7 @@ lldb::SBFileSpec SBModule::GetPlatformFileSpec() const {
 }
 
 bool SBModule::SetPlatformFileSpec(const lldb::SBFileSpec &platform_file) {
-  LLDB_RECORD_METHOD(bool, SBModule, SetPlatformFileSpec,
-                     (const lldb::SBFileSpec &), platform_file);
+  LLDB_INSTRUMENT_VA(this, platform_file);
 
   bool result = false;
 
@@ -129,8 +139,7 @@ bool SBModule::SetPlatformFileSpec(const lldb::SBFileSpec &platform_file) {
 }
 
 lldb::SBFileSpec SBModule::GetRemoteInstallFileSpec() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBFileSpec, SBModule,
-                             GetRemoteInstallFileSpec);
+  LLDB_INSTRUMENT_VA(this);
 
   SBFileSpec sb_file_spec;
   ModuleSP module_sp(GetSP());
@@ -140,8 +149,7 @@ lldb::SBFileSpec SBModule::GetRemoteInstallFileSpec() {
 }
 
 bool SBModule::SetRemoteInstallFileSpec(lldb::SBFileSpec &file) {
-  LLDB_RECORD_METHOD(bool, SBModule, SetRemoteInstallFileSpec,
-                     (lldb::SBFileSpec &), file);
+  LLDB_INSTRUMENT_VA(this, file);
 
   ModuleSP module_sp(GetSP());
   if (module_sp) {
@@ -152,7 +160,7 @@ bool SBModule::SetRemoteInstallFileSpec(lldb::SBFileSpec &file) {
 }
 
 const uint8_t *SBModule::GetUUIDBytes() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(const uint8_t *, SBModule, GetUUIDBytes);
+  LLDB_INSTRUMENT_VA(this);
 
   const uint8_t *uuid_bytes = nullptr;
   ModuleSP module_sp(GetSP());
@@ -163,7 +171,7 @@ const uint8_t *SBModule::GetUUIDBytes() const {
 }
 
 const char *SBModule::GetUUIDString() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBModule, GetUUIDString);
+  LLDB_INSTRUMENT_VA(this);
 
   const char *uuid_cstr = nullptr;
   ModuleSP module_sp(GetSP());
@@ -183,8 +191,7 @@ const char *SBModule::GetUUIDString() const {
 }
 
 bool SBModule::operator==(const SBModule &rhs) const {
-  LLDB_RECORD_METHOD_CONST(bool, SBModule, operator==, (const lldb::SBModule &),
-                           rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (m_opaque_sp)
     return m_opaque_sp.get() == rhs.m_opaque_sp.get();
@@ -192,8 +199,7 @@ bool SBModule::operator==(const SBModule &rhs) const {
 }
 
 bool SBModule::operator!=(const SBModule &rhs) const {
-  LLDB_RECORD_METHOD_CONST(bool, SBModule, operator!=, (const lldb::SBModule &),
-                           rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (m_opaque_sp)
     return m_opaque_sp.get() != rhs.m_opaque_sp.get();
@@ -205,8 +211,7 @@ ModuleSP SBModule::GetSP() const { return m_opaque_sp; }
 void SBModule::SetSP(const ModuleSP &module_sp) { m_opaque_sp = module_sp; }
 
 SBAddress SBModule::ResolveFileAddress(lldb::addr_t vm_addr) {
-  LLDB_RECORD_METHOD(lldb::SBAddress, SBModule, ResolveFileAddress,
-                     (lldb::addr_t), vm_addr);
+  LLDB_INSTRUMENT_VA(this, vm_addr);
 
   lldb::SBAddress sb_addr;
   ModuleSP module_sp(GetSP());
@@ -221,9 +226,7 @@ SBAddress SBModule::ResolveFileAddress(lldb::addr_t vm_addr) {
 SBSymbolContext
 SBModule::ResolveSymbolContextForAddress(const SBAddress &addr,
                                          uint32_t resolve_scope) {
-  LLDB_RECORD_METHOD(lldb::SBSymbolContext, SBModule,
-                     ResolveSymbolContextForAddress,
-                     (const lldb::SBAddress &, uint32_t), addr, resolve_scope);
+  LLDB_INSTRUMENT_VA(this, addr, resolve_scope);
 
   SBSymbolContext sb_sc;
   ModuleSP module_sp(GetSP());
@@ -234,8 +237,7 @@ SBModule::ResolveSymbolContextForAddress(const SBAddress &addr,
 }
 
 bool SBModule::GetDescription(SBStream &description) {
-  LLDB_RECORD_METHOD(bool, SBModule, GetDescription, (lldb::SBStream &),
-                     description);
+  LLDB_INSTRUMENT_VA(this, description);
 
   Stream &strm = description.ref();
 
@@ -249,7 +251,7 @@ bool SBModule::GetDescription(SBStream &description) {
 }
 
 uint32_t SBModule::GetNumCompileUnits() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBModule, GetNumCompileUnits);
+  LLDB_INSTRUMENT_VA(this);
 
   ModuleSP module_sp(GetSP());
   if (module_sp) {
@@ -259,8 +261,7 @@ uint32_t SBModule::GetNumCompileUnits() {
 }
 
 SBCompileUnit SBModule::GetCompileUnitAtIndex(uint32_t index) {
-  LLDB_RECORD_METHOD(lldb::SBCompileUnit, SBModule, GetCompileUnitAtIndex,
-                     (uint32_t), index);
+  LLDB_INSTRUMENT_VA(this, index);
 
   SBCompileUnit sb_cu;
   ModuleSP module_sp(GetSP());
@@ -272,8 +273,7 @@ SBCompileUnit SBModule::GetCompileUnitAtIndex(uint32_t index) {
 }
 
 SBSymbolContextList SBModule::FindCompileUnits(const SBFileSpec &sb_file_spec) {
-  LLDB_RECORD_METHOD(lldb::SBSymbolContextList, SBModule, FindCompileUnits,
-                     (const lldb::SBFileSpec &), sb_file_spec);
+  LLDB_INSTRUMENT_VA(this, sb_file_spec);
 
   SBSymbolContextList sb_sc_list;
   const ModuleSP module_sp(GetSP());
@@ -290,7 +290,7 @@ static Symtab *GetUnifiedSymbolTable(const lldb::ModuleSP &module_sp) {
 }
 
 size_t SBModule::GetNumSymbols() {
-  LLDB_RECORD_METHOD_NO_ARGS(size_t, SBModule, GetNumSymbols);
+  LLDB_INSTRUMENT_VA(this);
 
   ModuleSP module_sp(GetSP());
   if (Symtab *symtab = GetUnifiedSymbolTable(module_sp))
@@ -299,7 +299,7 @@ size_t SBModule::GetNumSymbols() {
 }
 
 SBSymbol SBModule::GetSymbolAtIndex(size_t idx) {
-  LLDB_RECORD_METHOD(lldb::SBSymbol, SBModule, GetSymbolAtIndex, (size_t), idx);
+  LLDB_INSTRUMENT_VA(this, idx);
 
   SBSymbol sb_symbol;
   ModuleSP module_sp(GetSP());
@@ -311,8 +311,7 @@ SBSymbol SBModule::GetSymbolAtIndex(size_t idx) {
 
 lldb::SBSymbol SBModule::FindSymbol(const char *name,
                                     lldb::SymbolType symbol_type) {
-  LLDB_RECORD_METHOD(lldb::SBSymbol, SBModule, FindSymbol,
-                     (const char *, lldb::SymbolType), name, symbol_type);
+  LLDB_INSTRUMENT_VA(this, name, symbol_type);
 
   SBSymbol sb_symbol;
   if (name && name[0]) {
@@ -328,8 +327,7 @@ lldb::SBSymbol SBModule::FindSymbol(const char *name,
 
 lldb::SBSymbolContextList SBModule::FindSymbols(const char *name,
                                                 lldb::SymbolType symbol_type) {
-  LLDB_RECORD_METHOD(lldb::SBSymbolContextList, SBModule, FindSymbols,
-                     (const char *, lldb::SymbolType), name, symbol_type);
+  LLDB_INSTRUMENT_VA(this, name, symbol_type);
 
   SBSymbolContextList sb_sc_list;
   if (name && name[0]) {
@@ -356,7 +354,7 @@ lldb::SBSymbolContextList SBModule::FindSymbols(const char *name,
 }
 
 size_t SBModule::GetNumSections() {
-  LLDB_RECORD_METHOD_NO_ARGS(size_t, SBModule, GetNumSections);
+  LLDB_INSTRUMENT_VA(this);
 
   ModuleSP module_sp(GetSP());
   if (module_sp) {
@@ -370,8 +368,7 @@ size_t SBModule::GetNumSections() {
 }
 
 SBSection SBModule::GetSectionAtIndex(size_t idx) {
-  LLDB_RECORD_METHOD(lldb::SBSection, SBModule, GetSectionAtIndex, (size_t),
-                     idx);
+  LLDB_INSTRUMENT_VA(this, idx);
 
   SBSection sb_section;
   ModuleSP module_sp(GetSP());
@@ -388,8 +385,7 @@ SBSection SBModule::GetSectionAtIndex(size_t idx) {
 
 lldb::SBSymbolContextList SBModule::FindFunctions(const char *name,
                                                   uint32_t name_type_mask) {
-  LLDB_RECORD_METHOD(lldb::SBSymbolContextList, SBModule, FindFunctions,
-                     (const char *, uint32_t), name, name_type_mask);
+  LLDB_INSTRUMENT_VA(this, name, name_type_mask);
 
   lldb::SBSymbolContextList sb_sc_list;
   ModuleSP module_sp(GetSP());
@@ -407,9 +403,7 @@ lldb::SBSymbolContextList SBModule::FindFunctions(const char *name,
 
 SBValueList SBModule::FindGlobalVariables(SBTarget &target, const char *name,
                                           uint32_t max_matches) {
-  LLDB_RECORD_METHOD(lldb::SBValueList, SBModule, FindGlobalVariables,
-                     (lldb::SBTarget &, const char *, uint32_t), target, name,
-                     max_matches);
+  LLDB_INSTRUMENT_VA(this, target, name, max_matches);
 
   SBValueList sb_value_list;
   ModuleSP module_sp(GetSP());
@@ -431,8 +425,7 @@ SBValueList SBModule::FindGlobalVariables(SBTarget &target, const char *name,
 
 lldb::SBValue SBModule::FindFirstGlobalVariable(lldb::SBTarget &target,
                                                 const char *name) {
-  LLDB_RECORD_METHOD(lldb::SBValue, SBModule, FindFirstGlobalVariable,
-                     (lldb::SBTarget &, const char *), target, name);
+  LLDB_INSTRUMENT_VA(this, target, name);
 
   SBValueList sb_value_list(FindGlobalVariables(target, name, 1));
   if (sb_value_list.IsValid() && sb_value_list.GetSize() > 0)
@@ -441,8 +434,7 @@ lldb::SBValue SBModule::FindFirstGlobalVariable(lldb::SBTarget &target,
 }
 
 lldb::SBType SBModule::FindFirstType(const char *name_cstr) {
-  LLDB_RECORD_METHOD(lldb::SBType, SBModule, FindFirstType, (const char *),
-                     name_cstr);
+  LLDB_INSTRUMENT_VA(this, name_cstr);
 
   SBType sb_type;
   ModuleSP module_sp(GetSP());
@@ -467,8 +459,7 @@ lldb::SBType SBModule::FindFirstType(const char *name_cstr) {
 }
 
 lldb::SBType SBModule::GetBasicType(lldb::BasicType type) {
-  LLDB_RECORD_METHOD(lldb::SBType, SBModule, GetBasicType, (lldb::BasicType),
-                     type);
+  LLDB_INSTRUMENT_VA(this, type);
 
   ModuleSP module_sp(GetSP());
   if (module_sp) {
@@ -484,8 +475,7 @@ lldb::SBType SBModule::GetBasicType(lldb::BasicType type) {
 }
 
 lldb::SBTypeList SBModule::FindTypes(const char *type) {
-  LLDB_RECORD_METHOD(lldb::SBTypeList, SBModule, FindTypes, (const char *),
-                     type);
+  LLDB_INSTRUMENT_VA(this, type);
 
   SBTypeList retval;
 
@@ -521,8 +511,7 @@ lldb::SBTypeList SBModule::FindTypes(const char *type) {
 }
 
 lldb::SBType SBModule::GetTypeByID(lldb::user_id_t uid) {
-  LLDB_RECORD_METHOD(lldb::SBType, SBModule, GetTypeByID, (lldb::user_id_t),
-                     uid);
+  LLDB_INSTRUMENT_VA(this, uid);
 
   ModuleSP module_sp(GetSP());
   if (module_sp) {
@@ -536,8 +525,7 @@ lldb::SBType SBModule::GetTypeByID(lldb::user_id_t uid) {
 }
 
 lldb::SBTypeList SBModule::GetTypes(uint32_t type_mask) {
-  LLDB_RECORD_METHOD(lldb::SBTypeList, SBModule, GetTypes, (uint32_t),
-                     type_mask);
+  LLDB_INSTRUMENT_VA(this, type_mask);
 
   SBTypeList sb_type_list;
 
@@ -556,8 +544,7 @@ lldb::SBTypeList SBModule::GetTypes(uint32_t type_mask) {
 }
 
 SBSection SBModule::FindSection(const char *sect_name) {
-  LLDB_RECORD_METHOD(lldb::SBSection, SBModule, FindSection, (const char *),
-                     sect_name);
+  LLDB_INSTRUMENT_VA(this, sect_name);
 
   SBSection sb_section;
 
@@ -578,7 +565,7 @@ SBSection SBModule::FindSection(const char *sect_name) {
 }
 
 lldb::ByteOrder SBModule::GetByteOrder() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::ByteOrder, SBModule, GetByteOrder);
+  LLDB_INSTRUMENT_VA(this);
 
   ModuleSP module_sp(GetSP());
   if (module_sp)
@@ -587,7 +574,7 @@ lldb::ByteOrder SBModule::GetByteOrder() {
 }
 
 const char *SBModule::GetTriple() {
-  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBModule, GetTriple);
+  LLDB_INSTRUMENT_VA(this);
 
   ModuleSP module_sp(GetSP());
   if (module_sp) {
@@ -602,7 +589,7 @@ const char *SBModule::GetTriple() {
 }
 
 uint32_t SBModule::GetAddressByteSize() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBModule, GetAddressByteSize);
+  LLDB_INSTRUMENT_VA(this);
 
   ModuleSP module_sp(GetSP());
   if (module_sp)
@@ -611,8 +598,7 @@ uint32_t SBModule::GetAddressByteSize() {
 }
 
 uint32_t SBModule::GetVersion(uint32_t *versions, uint32_t num_versions) {
-  LLDB_RECORD_METHOD(uint32_t, SBModule, GetVersion, (uint32_t *, uint32_t),
-                     versions, num_versions);
+  LLDB_INSTRUMENT_VA(this, versions, num_versions);
 
   llvm::VersionTuple version;
   if (ModuleSP module_sp = GetSP())
@@ -640,8 +626,7 @@ uint32_t SBModule::GetVersion(uint32_t *versions, uint32_t num_versions) {
 }
 
 lldb::SBFileSpec SBModule::GetSymbolFileSpec() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBFileSpec, SBModule,
-                                   GetSymbolFileSpec);
+  LLDB_INSTRUMENT_VA(this);
 
   lldb::SBFileSpec sb_file_spec;
   ModuleSP module_sp(GetSP());
@@ -653,8 +638,7 @@ lldb::SBFileSpec SBModule::GetSymbolFileSpec() const {
 }
 
 lldb::SBAddress SBModule::GetObjectFileHeaderAddress() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBAddress, SBModule,
-                                   GetObjectFileHeaderAddress);
+  LLDB_INSTRUMENT_VA(this);
 
   lldb::SBAddress sb_addr;
   ModuleSP module_sp(GetSP());
@@ -667,8 +651,7 @@ lldb::SBAddress SBModule::GetObjectFileHeaderAddress() const {
 }
 
 lldb::SBAddress SBModule::GetObjectFileEntryPointAddress() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBAddress, SBModule,
-                                   GetObjectFileEntryPointAddress);
+  LLDB_INSTRUMENT_VA(this);
 
   lldb::SBAddress sb_addr;
   ModuleSP module_sp(GetSP());
@@ -681,15 +664,13 @@ lldb::SBAddress SBModule::GetObjectFileEntryPointAddress() const {
 }
 
 uint32_t SBModule::GetNumberAllocatedModules() {
-  LLDB_RECORD_STATIC_METHOD_NO_ARGS(uint32_t, SBModule,
-                                    GetNumberAllocatedModules);
+  LLDB_INSTRUMENT();
 
   return Module::GetNumberAllocatedModules();
 }
 
 void SBModule::GarbageCollectAllocatedModules() {
-  LLDB_RECORD_STATIC_METHOD_NO_ARGS(void, SBModule,
-                                    GarbageCollectAllocatedModules);
+  LLDB_INSTRUMENT();
 
   const bool mandatory = false;
   ModuleList::RemoveOrphanSharedModules(mandatory);

@@ -124,7 +124,7 @@ void test3() {
 
 // CHECK: [[EHCLEANUP_BB]]:
 // CHECK-NEXT:   %[[CLEANUPPAD:.*]] = cleanuppad within none []
-// CHECK-NEXT:   call %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* {{[^,]*}} %{{.*}}) {{.*}} [ "funclet"(token %[[CLEANUPPAD]]) ]
+// CHECK-NEXT:   call noundef %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* {{[^,]*}} %{{.*}}) {{.*}} [ "funclet"(token %[[CLEANUPPAD]]) ]
 // CHECK-NEXT:   cleanupret from %[[CLEANUPPAD]] unwind to caller
 
 // Possibly throwing function call within a catch
@@ -209,7 +209,7 @@ void test6() {
 
 // CHECK: [[EHCLEANUP_BB0]]:
 // CHECK-NEXT:   %[[CLEANUPPAD0:.*]] = cleanuppad within none []
-// CHECK-NEXT:   call %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* {{.*}}) {{.*}} [ "funclet"(token %[[CLEANUPPAD0]]) ]
+// CHECK-NEXT:   call noundef %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* {{.*}}) {{.*}} [ "funclet"(token %[[CLEANUPPAD0]]) ]
 // CHECK-NEXT:   cleanupret from %[[CLEANUPPAD0]] unwind label %[[CATCH_DISPATCH_BB:.*]]
 
 // CHECK: [[CATCH_DISPATCH_BB]]:
@@ -232,7 +232,7 @@ void test6() {
 
 // CHECK: [[EHCLEANUP_BB2]]:
 // CHECK-NEXT:   %[[CLEANUPPAD2:.*]] = cleanuppad within %[[CATCHPAD]] []
-// CHECK-NEXT:   call %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* {{[^,]*}} %{{.*}}) {{.*}} [ "funclet"(token %[[CLEANUPPAD2]]) ]
+// CHECK-NEXT:   call noundef %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* {{[^,]*}} %{{.*}}) {{.*}} [ "funclet"(token %[[CLEANUPPAD2]]) ]
 // CHECK-NEXT:   cleanupret from %[[CLEANUPPAD2]] unwind label %[[EHCLEANUP_BB3:.*]]
 
 // CHECK: [[EHCLEANUP_BB3]]:
@@ -241,7 +241,7 @@ void test6() {
 
 // CHECK: [[EHCLEANUP_BB1]]:
 // CHECK-NEXT:   %[[CLEANUPPAD1:.*]] = cleanuppad within none []
-// CHECK-NEXT:   call %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* {{[^,]*}} %{{.*}}) {{.*}} [ "funclet"(token %[[CLEANUPPAD1]]) ]
+// CHECK-NEXT:   call noundef %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* {{[^,]*}} %{{.*}}) {{.*}} [ "funclet"(token %[[CLEANUPPAD1]]) ]
 // CHECK-NEXT:   cleanupret from %[[CLEANUPPAD1]] unwind to caller
 
 // CHECK: [[UNREACHABLE_BB]]:

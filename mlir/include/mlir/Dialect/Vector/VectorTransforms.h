@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DIALECT_VECTOR_VECTORTRANSFORMS_H_
-#define DIALECT_VECTOR_VECTORTRANSFORMS_H_
+#ifndef MLIR_DIALECT_VECTOR_VECTORTRANSFORMS_H
+#define MLIR_DIALECT_VECTOR_VECTORTRANSFORMS_H
 
 #include "mlir/Dialect/Vector/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/VectorUtils.h"
@@ -17,8 +17,6 @@ class MLIRContext;
 class VectorTransferOpInterface;
 class RewritePatternSet;
 class RewriterBase;
-
-using OwningRewritePatternList = RewritePatternSet;
 
 namespace scf {
 class IfOp;
@@ -96,4 +94,4 @@ void transferOpflowOpt(FuncOp func);
 } // namespace vector
 } // namespace mlir
 
-#endif // DIALECT_VECTOR_VECTORTRANSFORMS_H_
+#endif // MLIR_DIALECT_VECTOR_VECTORTRANSFORMS_H

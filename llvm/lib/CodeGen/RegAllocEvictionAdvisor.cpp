@@ -43,6 +43,9 @@ static cl::opt<bool> EnableLocalReassignment(
     cl::init(false));
 
 #define DEBUG_TYPE "regalloc"
+#ifdef LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL
+#define LLVM_HAVE_TF_AOT
+#endif
 
 char RegAllocEvictionAdvisorAnalysis::ID = 0;
 INITIALIZE_PASS(RegAllocEvictionAdvisorAnalysis, "regalloc-evict",
@@ -83,10 +86,14 @@ template <> Pass *llvm::callDefaultCtor<RegAllocEvictionAdvisorAnalysis>() {
     Ret = new DefaultEvictionAdvisorAnalysis(/*NotAsRequested*/ false);
     break;
   case RegAllocEvictionAdvisorAnalysis::AdvisorMode::Development:
-    // TODO(mtrofin): add implementation
+#if defined(LLVM_HAVE_TF_API)
+    Ret = createDevelopmentModeAdvisor();
+#endif
     break;
   case RegAllocEvictionAdvisorAnalysis::AdvisorMode::Release:
-    // TODO(mtrofin): add implementation
+#if defined(LLVM_HAVE_TF_AOT)
+    Ret = createReleaseModeAdvisor();
+#endif
     break;
   }
   if (Ret)

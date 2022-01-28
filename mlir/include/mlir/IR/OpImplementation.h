@@ -126,7 +126,7 @@ public:
 protected:
   /// Initialize the printer with no internal implementation. In this case, all
   /// virtual methods of this class must be overriden.
-  AsmPrinter() : impl(nullptr) {}
+  AsmPrinter() {}
 
 private:
   AsmPrinter(const AsmPrinter &) = delete;
@@ -141,7 +141,7 @@ private:
   virtual LogicalResult printAlias(Type type);
 
   /// The internal implementation of the printer.
-  Impl *impl;
+  Impl *impl{nullptr};
 };
 
 template <typename AsmPrinterT>
@@ -367,14 +367,14 @@ public:
   MLIRContext *getContext() const;
 
   /// Return the location of the original name token.
-  virtual llvm::SMLoc getNameLoc() const = 0;
+  virtual SMLoc getNameLoc() const = 0;
 
   //===--------------------------------------------------------------------===//
   // Utilities
   //===--------------------------------------------------------------------===//
 
   /// Emit a diagnostic at the specified location and return failure.
-  virtual InFlightDiagnostic emitError(llvm::SMLoc loc,
+  virtual InFlightDiagnostic emitError(SMLoc loc,
                                        const Twine &message = {}) = 0;
 
   /// Return a builder which provides useful access to MLIRContext, global
@@ -383,8 +383,8 @@ public:
 
   /// Get the location of the next token and store it into the argument.  This
   /// always succeeds.
-  virtual llvm::SMLoc getCurrentLocation() = 0;
-  ParseResult getCurrentLocation(llvm::SMLoc *loc) {
+  virtual SMLoc getCurrentLocation() = 0;
+  ParseResult getCurrentLocation(SMLoc *loc) {
     *loc = getCurrentLocation();
     return success();
   }
@@ -392,7 +392,7 @@ public:
   /// Re-encode the given source location as an MLIR location and return it.
   /// Note: This method should only be used when a `Location` is necessary, as
   /// the encoding process is not efficient.
-  virtual Location getEncodedSourceLoc(llvm::SMLoc loc) = 0;
+  virtual Location getEncodedSourceLoc(SMLoc loc) = 0;
 
   //===--------------------------------------------------------------------===//
   // Token Parsing
@@ -627,7 +627,7 @@ public:
   /// unlike `OpBuilder::getType`, this method does not implicitly insert a
   /// context parameter.
   template <typename T, typename... ParamsT>
-  T getChecked(llvm::SMLoc loc, ParamsT &&... params) {
+  T getChecked(SMLoc loc, ParamsT &&... params) {
     return T::getChecked([&] { return emitError(loc); },
                          std::forward<ParamsT>(params)...);
   }
@@ -656,7 +656,7 @@ public:
   /// Parse an attribute of a specific kind and type.
   template <typename AttrType>
   ParseResult parseAttribute(AttrType &result, Type type = {}) {
-    llvm::SMLoc loc = getCurrentLocation();
+    SMLoc loc = getCurrentLocation();
 
     // Parse any kind of attribute.
     Attribute attr;
@@ -690,7 +690,7 @@ public:
   template <typename AttrType>
   ParseResult parseAttribute(AttrType &result, Type type, StringRef attrName,
                              NamedAttrList &attrs) {
-    llvm::SMLoc loc = getCurrentLocation();
+    SMLoc loc = getCurrentLocation();
 
     // Parse any kind of attribute.
     Attribute attr;
@@ -721,7 +721,7 @@ public:
   std::enable_if_t<detect_has_parse_method<AttrType>::value, ParseResult>
   parseCustomAttributeWithFallback(AttrType &result, Type type,
                                    StringRef attrName, NamedAttrList &attrs) {
-    llvm::SMLoc loc = getCurrentLocation();
+    SMLoc loc = getCurrentLocation();
 
     // Parse any kind of attribute.
     Attribute attr;
@@ -757,7 +757,7 @@ public:
   template <typename AttrType>
   std::enable_if_t<detect_has_parse_method<AttrType>::value, ParseResult>
   parseCustomAttributeWithFallback(AttrType &result) {
-    llvm::SMLoc loc = getCurrentLocation();
+    SMLoc loc = getCurrentLocation();
 
     // Parse any kind of attribute.
     Attribute attr;
@@ -850,10 +850,6 @@ public:
                                               StringRef attrName,
                                               NamedAttrList &attrs) = 0;
 
-  /// Parse a loc(...) specifier if present, filling in result if so.
-  virtual ParseResult
-  parseOptionalLocationSpecifier(Optional<Location> &result) = 0;
-
   //===--------------------------------------------------------------------===//
   // Type Parsing
   //===--------------------------------------------------------------------===//
@@ -872,7 +868,7 @@ public:
   /// Parse a type of a specific type.
   template <typename TypeT>
   ParseResult parseType(TypeT &result) {
-    llvm::SMLoc loc = getCurrentLocation();
+    SMLoc loc = getCurrentLocation();
 
     // Parse any kind of type.
     Type type;
@@ -901,7 +897,7 @@ public:
   template <typename TypeT>
   std::enable_if_t<detect_type_has_parse_method<TypeT>::value, ParseResult>
   parseCustomTypeWithFallback(TypeT &result) {
-    llvm::SMLoc loc = getCurrentLocation();
+    SMLoc loc = getCurrentLocation();
 
     // Parse any kind of Type.
     Type type;
@@ -949,7 +945,7 @@ public:
   /// Parse a colon followed by a type of a specific kind, e.g. a FunctionType.
   template <typename TypeType>
   ParseResult parseColonType(TypeType &result) {
-    llvm::SMLoc loc = getCurrentLocation();
+    SMLoc loc = getCurrentLocation();
 
     // Parse any kind of type.
     Type type;
@@ -1041,6 +1037,13 @@ public:
   using AsmParser::AsmParser;
   ~OpAsmParser() override;
 
+  /// Parse a loc(...) specifier if present, filling in result if so.
+  /// Location for BlockArgument and Operation may be deferred with an alias, in
+  /// which case an OpaqueLoc is set and will be resolved when parsing
+  /// completes.
+  virtual ParseResult
+  parseOptionalLocationSpecifier(Optional<Location> &result) = 0;
+
   /// Return the name of the specified result in the specified syntax, as well
   /// as the sub-element in the name.  It returns an empty string and ~0U for
   /// invalid result numbers.  For example, in this operation:
@@ -1081,7 +1084,7 @@ public:
 
   /// This is the representation of an operand reference.
   struct OperandType {
-    llvm::SMLoc location; // Location of the token.
+    SMLoc location; // Location of the token.
     StringRef name;       // Value name, e.g. %42 or %abc
     unsigned number;      // Number, e.g. 12 for an operand like %xyz#12
   };
@@ -1149,7 +1152,7 @@ public:
   /// emitting an error and returning failure, or appending the results
   /// to the list on success.
   ParseResult resolveOperands(ArrayRef<OperandType> operands,
-                              ArrayRef<Type> types, llvm::SMLoc loc,
+                              ArrayRef<Type> types, SMLoc loc,
                               SmallVectorImpl<Value> &result) {
     if (operands.size() != types.size())
       return emitError(loc)
@@ -1162,14 +1165,14 @@ public:
     return success();
   }
   template <typename Operands>
-  ParseResult resolveOperands(Operands &&operands, Type type, llvm::SMLoc loc,
+  ParseResult resolveOperands(Operands &&operands, Type type, SMLoc loc,
                               SmallVectorImpl<Value> &result) {
     return resolveOperands(std::forward<Operands>(operands),
                            ArrayRef<Type>(type), loc, result);
   }
   template <typename Operands, typename Types>
   std::enable_if_t<!std::is_convertible<Types, Type>::value, ParseResult>
-  resolveOperands(Operands &&operands, Types &&types, llvm::SMLoc loc,
+  resolveOperands(Operands &&operands, Types &&types, SMLoc loc,
                   SmallVectorImpl<Value> &result) {
     size_t operandSize = std::distance(operands.begin(), operands.end());
     size_t typeSize = std::distance(types.begin(), types.end());
@@ -1205,20 +1208,23 @@ public:
 
   /// Parses a region. Any parsed blocks are appended to 'region' and must be
   /// moved to the op regions after the op is created. The first block of the
-  /// region takes 'arguments' of types 'argTypes'. If 'enableNameShadowing' is
-  /// set to true, the argument names are allowed to shadow the names of other
-  /// existing SSA values defined above the region scope. 'enableNameShadowing'
-  /// can only be set to true for regions attached to operations that are
-  /// 'IsolatedFromAbove.
+  /// region takes 'arguments' of types 'argTypes'. If `argLocations` is
+  /// non-empty it contains a location to be attached to each argument. If
+  /// 'enableNameShadowing' is set to true, the argument names are allowed to
+  /// shadow the names of other existing SSA values defined above the region
+  /// scope. 'enableNameShadowing' can only be set to true for regions attached
+  /// to operations that are 'IsolatedFromAbove'.
   virtual ParseResult parseRegion(Region &region,
                                   ArrayRef<OperandType> arguments = {},
                                   ArrayRef<Type> argTypes = {},
+                                  ArrayRef<Location> argLocations = {},
                                   bool enableNameShadowing = false) = 0;
 
   /// Parses a region if present.
   virtual OptionalParseResult
   parseOptionalRegion(Region &region, ArrayRef<OperandType> arguments = {},
                       ArrayRef<Type> argTypes = {},
+                      ArrayRef<Location> argLocations = {},
                       bool enableNameShadowing = false) = 0;
 
   /// Parses a region if present. If the region is present, a new region is
@@ -1344,10 +1350,6 @@ public:
     return AliasResult::NoAlias;
   }
 
-  /// Get a special name to use when printing the given operation. See
-  /// OpAsmInterface.td#getAsmResultNames for usage details and documentation.
-  virtual void getAsmResultNames(Operation *op,
-                                 OpAsmSetValueNameFn setNameFn) const {}
 };
 } // namespace mlir
 

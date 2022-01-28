@@ -258,12 +258,12 @@ void PPCMIPeephole::UpdateTOCSaves(
   }
 
   bool Keep = true;
-  for (auto It = TOCSaves.begin(); It != TOCSaves.end(); It++ ) {
-    MachineInstr *CurrInst = It->first;
+  for (auto &I : TOCSaves) {
+    MachineInstr *CurrInst = I.first;
     // If new instruction dominates an existing one, mark existing one as
     // redundant.
-    if (It->second && MDT->dominates(MI, CurrInst))
-      It->second = false;
+    if (I.second && MDT->dominates(MI, CurrInst))
+      I.second = false;
     // Check if the new instruction is redundant.
     if (MDT->dominates(CurrInst, MI)) {
       Keep = false;
@@ -481,7 +481,7 @@ bool PPCMIPeephole::simplifyCode() {
         // PPC::ZERO.
         if (!MI.getOperand(1).isImm() || MI.getOperand(1).getImm() != 0)
           break;
-        unsigned MIDestReg = MI.getOperand(0).getReg();
+        Register MIDestReg = MI.getOperand(0).getReg();
         for (MachineInstr& UseMI : MRI->use_instructions(MIDestReg))
           Simplified |= TII->onlyFoldImmediate(UseMI, MI, MIDestReg);
         if (MRI->use_nodbg_empty(MIDestReg)) {
@@ -519,9 +519,9 @@ bool PPCMIPeephole::simplifyCode() {
         //   XXPERMDI t, SUBREG_TO_REG(s), SUBREG_TO_REG(s), immed.
         // We have to look through chains of COPY and SUBREG_TO_REG
         // to find the real source values for comparison.
-        unsigned TrueReg1 =
+        Register TrueReg1 =
           TRI->lookThruCopyLike(MI.getOperand(1).getReg(), MRI);
-        unsigned TrueReg2 =
+        Register TrueReg2 =
           TRI->lookThruCopyLike(MI.getOperand(2).getReg(), MRI);
 
         if (!(TrueReg1 == TrueReg2 && Register::isVirtualRegister(TrueReg1)))
@@ -541,7 +541,7 @@ bool PPCMIPeephole::simplifyCode() {
         auto isConversionOfLoadAndSplat = [=]() -> bool {
           if (DefOpc != PPC::XVCVDPSXDS && DefOpc != PPC::XVCVDPUXDS)
             return false;
-          unsigned FeedReg1 =
+          Register FeedReg1 =
             TRI->lookThruCopyLike(DefMI->getOperand(1).getReg(), MRI);
           if (Register::isVirtualRegister(FeedReg1)) {
             MachineInstr *LoadMI = MRI->getVRegDef(FeedReg1);
@@ -565,16 +565,16 @@ bool PPCMIPeephole::simplifyCode() {
         // If this is a splat or a swap fed by another splat, we
         // can replace it with a copy.
         if (DefOpc == PPC::XXPERMDI) {
-          unsigned DefReg1 = DefMI->getOperand(1).getReg();
-          unsigned DefReg2 = DefMI->getOperand(2).getReg();
+          Register DefReg1 = DefMI->getOperand(1).getReg();
+          Register DefReg2 = DefMI->getOperand(2).getReg();
           unsigned DefImmed = DefMI->getOperand(3).getImm();
 
           // If the two inputs are not the same register, check to see if
           // they originate from the same virtual register after only
           // copy-like instructions.
           if (DefReg1 != DefReg2) {
-            unsigned FeedReg1 = TRI->lookThruCopyLike(DefReg1, MRI);
-            unsigned FeedReg2 = TRI->lookThruCopyLike(DefReg2, MRI);
+            Register FeedReg1 = TRI->lookThruCopyLike(DefReg1, MRI);
+            Register FeedReg2 = TRI->lookThruCopyLike(DefReg2, MRI);
 
             if (!(FeedReg1 == FeedReg2 &&
                   Register::isVirtualRegister(FeedReg1)))
@@ -643,7 +643,7 @@ bool PPCMIPeephole::simplifyCode() {
       case PPC::XXSPLTW: {
         unsigned MyOpcode = MI.getOpcode();
         unsigned OpNo = MyOpcode == PPC::XXSPLTW ? 1 : 2;
-        unsigned TrueReg =
+        Register TrueReg =
           TRI->lookThruCopyLike(MI.getOperand(OpNo).getReg(), MRI);
         if (!Register::isVirtualRegister(TrueReg))
           break;
@@ -707,7 +707,7 @@ bool PPCMIPeephole::simplifyCode() {
       }
       case PPC::XVCVDPSP: {
         // If this is a DP->SP conversion fed by an FRSP, the FRSP is redundant.
-        unsigned TrueReg =
+        Register TrueReg =
           TRI->lookThruCopyLike(MI.getOperand(1).getReg(), MRI);
         if (!Register::isVirtualRegister(TrueReg))
           break;
@@ -716,9 +716,9 @@ bool PPCMIPeephole::simplifyCode() {
         // This can occur when building a vector of single precision or integer
         // values.
         if (DefMI && DefMI->getOpcode() == PPC::XXPERMDI) {
-          unsigned DefsReg1 =
+          Register DefsReg1 =
             TRI->lookThruCopyLike(DefMI->getOperand(1).getReg(), MRI);
-          unsigned DefsReg2 =
+          Register DefsReg2 =
             TRI->lookThruCopyLike(DefMI->getOperand(2).getReg(), MRI);
           if (!Register::isVirtualRegister(DefsReg1) ||
               !Register::isVirtualRegister(DefsReg2))

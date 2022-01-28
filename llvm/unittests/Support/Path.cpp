@@ -15,6 +15,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Duration.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -1949,6 +1950,53 @@ TEST_F(FileSystemTest, readNativeFile) {
   EXPECT_THAT_EXPECTED(Read(6), HasValue("01234"));
 }
 
+TEST_F(FileSystemTest, readNativeFileToEOF) {
+  constexpr StringLiteral Content = "0123456789";
+  createFileWithData(NonExistantFile, false, fs::CD_CreateNew, Content);
+  FileRemover Cleanup(NonExistantFile);
+  const auto &Read = [&](SmallVectorImpl<char> &V,
+                         Optional<ssize_t> ChunkSize) {
+    Expected<fs::file_t> FD = fs::openNativeFileForRead(NonExistantFile);
+    if (!FD)
+      return FD.takeError();
+    auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
+    if (ChunkSize)
+      return fs::readNativeFileToEOF(*FD, V, *ChunkSize);
+    return fs::readNativeFileToEOF(*FD, V);
+  };
+
+  // Check basic operation.
+  {
+    SmallString<0> NoSmall;
+    SmallString<fs::DefaultReadChunkSize + Content.size()> StaysSmall;
+    SmallVectorImpl<char> *Vectors[] = {
+        static_cast<SmallVectorImpl<char> *>(&NoSmall),
+        static_cast<SmallVectorImpl<char> *>(&StaysSmall),
+    };
+    for (SmallVectorImpl<char> *V : Vectors) {
+      ASSERT_THAT_ERROR(Read(*V, None), Succeeded());
+      ASSERT_EQ(Content, StringRef(V->begin(), V->size()));
+    }
+    ASSERT_EQ(fs::DefaultReadChunkSize + Content.size(), StaysSmall.capacity());
+
+    // Check appending.
+    {
+      constexpr StringLiteral Prefix = "prefix-";
+      for (SmallVectorImpl<char> *V : Vectors) {
+        V->assign(Prefix.begin(), Prefix.end());
+        ASSERT_THAT_ERROR(Read(*V, None), Succeeded());
+        ASSERT_EQ((Prefix + Content).str(), StringRef(V->begin(), V->size()));
+      }
+    }
+  }
+
+  // Check that the chunk size (if specified) is respected.
+  SmallString<Content.size() + 5> SmallChunks;
+  ASSERT_THAT_ERROR(Read(SmallChunks, 5), Succeeded());
+  ASSERT_EQ(SmallChunks, Content);
+  ASSERT_EQ(Content.size() + 5, SmallChunks.capacity());
+}
+
 TEST_F(FileSystemTest, readNativeFileSlice) {
   createFileWithData(NonExistantFile, false, fs::CD_CreateNew, "01234");
   FileRemover Cleanup(NonExistantFile);
@@ -2268,7 +2316,7 @@ TEST_F(FileSystemTest, widenPath) {
   for (size_t i = 0; i < NumChars; ++i)
     Input += Pi;
   // Check that UTF-8 length already exceeds MAX_PATH.
-  EXPECT_TRUE(Input.size() > MAX_PATH);
+  EXPECT_GT(Input.size(), MAX_PATH);
   SmallVector<wchar_t, MAX_PATH + 16> Result;
   ASSERT_NO_ERROR(windows::widenPath(Input, Result));
   // Result should not start with the long path prefix.

@@ -178,6 +178,18 @@ int llvm::Intrinsic::lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
   return -1;
 }
 
+ConstantInt *InstrProfInstBase::getNumCounters() const {
+  if (InstrProfValueProfileInst::classof(this))
+    llvm_unreachable("InstrProfValueProfileInst does not have counters!");
+  return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
+}
+
+ConstantInt *InstrProfInstBase::getIndex() const {
+  if (InstrProfValueProfileInst::classof(this))
+    llvm_unreachable("Please use InstrProfValueProfileInst::getIndex()");
+  return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));
+}
+
 Value *InstrProfIncrementInst::getStep() const {
   if (InstrProfIncrementInstStep::classof(this)) {
     return const_cast<Value *>(getArgOperand(4));
@@ -482,6 +494,7 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
     VPFunc = Intrinsic::getDeclaration(M, VPID, OverloadTy);
     break;
   }
+  case Intrinsic::vp_merge:
   case Intrinsic::vp_select:
     VPFunc = Intrinsic::getDeclaration(M, VPID, {Params[1]->getType()});
     break;

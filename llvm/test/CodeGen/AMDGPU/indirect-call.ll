@@ -1199,8 +1199,8 @@ define void @test_indirect_call_vgpr_ptr_inreg_arg(void(i32)* %fptr) {
 ; GISEL-NEXT:    v_writelane_b32 v40, s62, 28
 ; GISEL-NEXT:    v_writelane_b32 v40, s63, 29
 ; GISEL-NEXT:    s_mov_b64 s[6:7], s[30:31]
-; GISEL-NEXT:    s_movk_i32 s4, 0x7b
 ; GISEL-NEXT:    s_mov_b64 s[8:9], exec
+; GISEL-NEXT:    s_movk_i32 s4, 0x7b
 ; GISEL-NEXT:  .LBB6_1: ; =>This Inner Loop Header: Depth=1
 ; GISEL-NEXT:    v_readfirstlane_b32 s10, v0
 ; GISEL-NEXT:    v_readfirstlane_b32 s11, v1

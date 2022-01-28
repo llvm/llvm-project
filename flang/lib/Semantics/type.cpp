@@ -199,17 +199,6 @@ ParamValue *DerivedTypeSpec::FindParameter(SourceName target) {
       const_cast<const DerivedTypeSpec *>(this)->FindParameter(target));
 }
 
-// Objects of derived types might be assignment compatible if they are equal
-// with respect to everything other than their instantiated type parameters
-// and their constant instantiated type parameters have the same values.
-bool DerivedTypeSpec::MightBeAssignmentCompatibleWith(
-    const DerivedTypeSpec &that) const {
-  if (!RawEquals(that)) {
-    return false;
-  }
-  return AreTypeParamCompatible(*this, that);
-}
-
 class InstantiateHelper {
 public:
   InstantiateHelper(Scope &scope) : scope_{scope} {}
@@ -697,7 +686,14 @@ std::string DeclTypeSpec::AsFortran() const {
   case Character:
     return characterTypeSpec().AsFortran();
   case TypeDerived:
-    return "TYPE(" + derivedTypeSpec().AsFortran() + ')';
+    if (derivedTypeSpec()
+            .typeSymbol()
+            .get<DerivedTypeDetails>()
+            .isDECStructure()) {
+      return "RECORD" + derivedTypeSpec().typeSymbol().name().ToString();
+    } else {
+      return "TYPE(" + derivedTypeSpec().AsFortran() + ')';
+    }
   case ClassDerived:
     return "CLASS(" + derivedTypeSpec().AsFortran() + ')';
   case TypeStar:

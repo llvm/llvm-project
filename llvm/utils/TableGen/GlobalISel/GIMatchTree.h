@@ -588,7 +588,7 @@ class GIMatchTreeVRegDefPartitioner : public GIMatchTreePartitioner {
   unsigned OpIdx;
   std::vector<BitVector> TraversedEdges;
   DenseMap<unsigned, unsigned> ResultToPartition;
-  std::vector<bool> PartitionToResult;
+  BitVector PartitionToResult;
 
   void addToPartition(bool Result, unsigned LeafIdx);
 

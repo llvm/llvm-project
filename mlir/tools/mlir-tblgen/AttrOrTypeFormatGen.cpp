@@ -14,6 +14,7 @@
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -576,7 +577,7 @@ private:
   const AttrOrTypeDef &def;
 
   /// Seen attribute or type parameters.
-  llvm::BitVector seenParams;
+  BitVector seenParams;
 };
 } // namespace
 
@@ -756,7 +757,7 @@ void mlir::tblgen::generateAttrOrTypeFormat(const AttrOrTypeDef &def,
   llvm::SourceMgr mgr;
   mgr.AddNewSourceBuffer(
       llvm::MemoryBuffer::getMemBuffer(*def.getAssemblyFormat()),
-      llvm::SMLoc());
+      SMLoc());
 
   /// Parse the custom assembly format>
   FormatParser fmtParser(mgr, def);

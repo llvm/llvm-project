@@ -42,10 +42,12 @@ COMPILER_RT_VISIBILITY uint64_t __llvm_profile_get_version(void) {
 }
 
 COMPILER_RT_VISIBILITY void __llvm_profile_reset_counters(void) {
-  uint64_t *I = __llvm_profile_begin_counters();
-  uint64_t *E = __llvm_profile_end_counters();
+  char *I = __llvm_profile_begin_counters();
+  char *E = __llvm_profile_end_counters();
 
-  memset(I, 0, sizeof(uint64_t) * (E - I));
+  char ResetValue =
+      (__llvm_profile_get_version() & VARIANT_MASK_BYTE_COVERAGE) ? 0xFF : 0;
+  memset(I, ResetValue, E - I);
 
   const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
   const __llvm_profile_data *DataEnd = __llvm_profile_end_data();

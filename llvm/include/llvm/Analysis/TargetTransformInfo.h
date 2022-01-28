@@ -663,6 +663,12 @@ public:
   bool isLegalMaskedScatter(Type *DataType, Align Alignment) const;
   /// Return true if the target supports masked gather.
   bool isLegalMaskedGather(Type *DataType, Align Alignment) const;
+  /// Return true if the target forces scalarizing of llvm.masked.gather
+  /// intrinsics.
+  bool forceScalarizeMaskedGather(VectorType *Type, Align Alignment) const;
+  /// Return true if the target forces scalarizing of llvm.masked.scatter
+  /// intrinsics.
+  bool forceScalarizeMaskedScatter(VectorType *Type, Align Alignment) const;
 
   /// Return true if the target supports masked compress store.
   bool isLegalMaskedCompressStore(Type *DataType) const;
@@ -1358,10 +1364,12 @@ public:
 
   /// Flags describing the kind of vector reduction.
   struct ReductionFlags {
-    ReductionFlags() : IsMaxOp(false), IsSigned(false), NoNaN(false) {}
-    bool IsMaxOp;  ///< If the op a min/max kind, true if it's a max operation.
-    bool IsSigned; ///< Whether the operation is a signed int reduction.
-    bool NoNaN;    ///< If op is an fp min/max, whether NaNs may be present.
+    ReductionFlags() = default;
+    bool IsMaxOp =
+        false; ///< If the op a min/max kind, true if it's a max operation.
+    bool IsSigned = false; ///< Whether the operation is a signed int reduction.
+    bool NoNaN =
+        false; ///< If op is an fp min/max, whether NaNs may be present.
   };
 
   /// \returns True if the target prefers reductions in loop.
@@ -1544,6 +1552,10 @@ public:
   virtual bool isLegalNTLoad(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalMaskedScatter(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalMaskedGather(Type *DataType, Align Alignment) = 0;
+  virtual bool forceScalarizeMaskedGather(VectorType *DataType,
+                                          Align Alignment) = 0;
+  virtual bool forceScalarizeMaskedScatter(VectorType *DataType,
+                                           Align Alignment) = 0;
   virtual bool isLegalMaskedCompressStore(Type *DataType) = 0;
   virtual bool isLegalMaskedExpandLoad(Type *DataType) = 0;
   virtual bool enableOrderedReductions() = 0;
@@ -1946,6 +1958,14 @@ public:
   }
   bool isLegalMaskedGather(Type *DataType, Align Alignment) override {
     return Impl.isLegalMaskedGather(DataType, Alignment);
+  }
+  bool forceScalarizeMaskedGather(VectorType *DataType,
+                                  Align Alignment) override {
+    return Impl.forceScalarizeMaskedGather(DataType, Alignment);
+  }
+  bool forceScalarizeMaskedScatter(VectorType *DataType,
+                                   Align Alignment) override {
+    return Impl.forceScalarizeMaskedScatter(DataType, Alignment);
   }
   bool isLegalMaskedCompressStore(Type *DataType) override {
     return Impl.isLegalMaskedCompressStore(DataType);

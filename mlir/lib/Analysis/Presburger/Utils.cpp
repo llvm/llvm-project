@@ -16,6 +16,7 @@
 #include "mlir/Support/MathExtras.h"
 
 using namespace mlir;
+using namespace presburger_utils;
 
 /// Normalize a division's `dividend` and the `divisor` by their GCD. For
 /// example: if the dividend and divisor are [2,0,4] and 4 respectively,
@@ -24,7 +25,10 @@ static void normalizeDivisionByGCD(SmallVectorImpl<int64_t> &dividend,
                                    unsigned &divisor) {
   if (divisor == 0 || dividend.empty())
     return;
-  int64_t gcd = llvm::greatestCommonDivisor(dividend.front(), int64_t(divisor));
+  // We take the absolute value of dividend's coefficients to make sure that
+  // `gcd` is positive.
+  int64_t gcd =
+      llvm::greatestCommonDivisor(std::abs(dividend.front()), int64_t(divisor));
 
   // The reason for ignoring the constant term is as follows.
   // For a division:
@@ -34,7 +38,7 @@ static void normalizeDivisionByGCD(SmallVectorImpl<int64_t> &dividend,
   // Since `{a/m}/d` in the dividend satisfies 0 <= {a/m}/d < 1/d, it will not
   // influence the result of the floor division and thus, can be ignored.
   for (size_t i = 1, m = dividend.size() - 1; i < m; i++) {
-    gcd = llvm::greatestCommonDivisor(dividend[i], gcd);
+    gcd = llvm::greatestCommonDivisor(std::abs(dividend[i]), gcd);
     if (gcd == 1)
       return;
   }
@@ -144,7 +148,7 @@ static LogicalResult getDivRepr(const IntegerPolyhedron &cst, unsigned pos,
 /// be computed. If the representation could be computed, `dividend` and
 /// `denominator` are set. If the representation could not be computed,
 /// `llvm::None` is returned.
-Optional<std::pair<unsigned, unsigned>> presburger_utils::computeSingleVarRepr(
+MaybeLocalRepr presburger_utils::computeSingleVarRepr(
     const IntegerPolyhedron &cst, ArrayRef<bool> foundRepr, unsigned pos,
     SmallVector<int64_t, 8> &dividend, unsigned &divisor) {
   assert(pos < cst.getNumIds() && "invalid position");
@@ -153,6 +157,7 @@ Optional<std::pair<unsigned, unsigned>> presburger_utils::computeSingleVarRepr(
 
   SmallVector<unsigned, 4> lbIndices, ubIndices;
   cst.getLowerAndUpperBoundIndices(pos, &lbIndices, &ubIndices);
+  MaybeLocalRepr repr;
 
   for (unsigned ubPos : ubIndices) {
     for (unsigned lbPos : lbIndices) {
@@ -178,9 +183,61 @@ Optional<std::pair<unsigned, unsigned>> presburger_utils::computeSingleVarRepr(
       if (c < f)
         continue;
 
-      return std::make_pair(ubPos, lbPos);
+      repr.kind = ReprKind::Inequality;
+      repr.repr.inEqualityPair = {ubPos, lbPos};
+      return repr;
     }
   }
+  return repr;
+}
 
-  return llvm::None;
+void presburger_utils::removeDuplicateDivs(
+    std::vector<SmallVector<int64_t, 8>> &divs,
+    SmallVectorImpl<unsigned> &denoms, unsigned localOffset,
+    llvm::function_ref<bool(unsigned i, unsigned j)> merge) {
+
+  // Find and merge duplicate divisions.
+  // TODO: Add division normalization to support divisions that differ by
+  // a constant.
+  // TODO: Add division ordering such that a division representation for local
+  // identifier at position `i` only depends on local identifiers at position <
+  // `i`. This would make sure that all divisions depending on other local
+  // variables that can be merged, are merged.
+  for (unsigned i = 0; i < divs.size(); ++i) {
+    // Check if a division representation exists for the `i^th` local id.
+    if (denoms[i] == 0)
+      continue;
+    // Check if a division exists which is a duplicate of the division at `i`.
+    for (unsigned j = i + 1; j < divs.size(); ++j) {
+      // Check if a division representation exists for the `j^th` local id.
+      if (denoms[j] == 0)
+        continue;
+      // Check if the denominators match.
+      if (denoms[i] != denoms[j])
+        continue;
+      // Check if the representations are equal.
+      if (divs[i] != divs[j])
+        continue;
+
+      // Merge divisions at position `j` into division at position `i`. If
+      // merge fails, do not merge these divs.
+      bool mergeResult = merge(i, j);
+      if (!mergeResult)
+        continue;
+
+      // Update division information to reflect merging.
+      for (unsigned k = 0, g = divs.size(); k < g; ++k) {
+        SmallVector<int64_t, 8> &div = divs[k];
+        if (denoms[k] != 0) {
+          div[localOffset + i] += div[localOffset + j];
+          div.erase(div.begin() + localOffset + j);
+        }
+      }
+
+      divs.erase(divs.begin() + j);
+      denoms.erase(denoms.begin() + j);
+      // Since `j` can never be zero, we do not need to worry about overflows.
+      --j;
+    }
+  }
 }

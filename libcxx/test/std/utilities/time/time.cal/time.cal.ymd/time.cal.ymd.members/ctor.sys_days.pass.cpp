@@ -59,8 +59,8 @@ int main(int, char**)
     }
 
 
-//  There's one more leap day between 1/1/40 and 1/1/70
-//  when compared to 1/1/70 -> 1/1/2000
+    //  There's one more leap day between 1/1/40 and 1/1/70
+    //  when compared to 1/1/70 -> 1/1/2000
     {
     constexpr sys_days sd{days{-10957}};
     constexpr year_month_day ymd{sd};
@@ -81,5 +81,5 @@ int main(int, char**)
     assert( ymd.day()   == day{29});
     }
 
-  return 0;
+    return 0;
 }

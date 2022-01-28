@@ -4,7 +4,11 @@ typedef const struct __CFString * CFStringRef;
 #define CFSTR __builtin___CFStringMakeConstantString
 
 void f() {
+#if !defined(__MVS__) && !defined(_AIX)
+  // Builtin function __builtin___CFStringMakeConstantString is currently
+  // unsupported on z/OS and AIX.
   (void)CFStringRef(CFSTR("Hello"));
+#endif
 }
 
 void a() { __builtin_va_list x, y; ::__builtin_va_copy(x, y); }

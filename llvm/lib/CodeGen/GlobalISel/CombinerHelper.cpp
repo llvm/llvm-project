@@ -1748,6 +1748,20 @@ void CombinerHelper::applyCombineUnmergeConstant(MachineInstr &MI,
   MI.eraseFromParent();
 }
 
+bool CombinerHelper::matchCombineUnmergeUndef(
+    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  unsigned SrcIdx = MI.getNumOperands() - 1;
+  Register SrcReg = MI.getOperand(SrcIdx).getReg();
+  MatchInfo = [&MI](MachineIRBuilder &B) {
+    unsigned NumElems = MI.getNumOperands() - 1;
+    for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+      Register DstReg = MI.getOperand(Idx).getReg();
+      B.buildUndef(DstReg);
+    }
+  };
+  return isa<GImplicitDef>(MRI.getVRegDef(SrcReg));
+}
+
 bool CombinerHelper::matchCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
          "Expected an unmerge");
@@ -2025,16 +2039,19 @@ void CombinerHelper::applyCombineAddP2IToPtrAdd(
 }
 
 bool CombinerHelper::matchCombineConstPtrAddToI2P(MachineInstr &MI,
-                                                  int64_t &NewCst) {
+                                                  APInt &NewCst) {
   auto &PtrAdd = cast<GPtrAdd>(MI);
   Register LHS = PtrAdd.getBaseReg();
   Register RHS = PtrAdd.getOffsetReg();
   MachineRegisterInfo &MRI = Builder.getMF().getRegInfo();
 
-  if (auto RHSCst = getIConstantVRegSExtVal(RHS, MRI)) {
-    int64_t Cst;
+  if (auto RHSCst = getIConstantVRegVal(RHS, MRI)) {
+    APInt Cst;
     if (mi_match(LHS, MRI, m_GIntToPtr(m_ICst(Cst)))) {
-      NewCst = Cst + *RHSCst;
+      auto DstTy = MRI.getType(PtrAdd.getReg(0));
+      // G_INTTOPTR uses zero-extension
+      NewCst = Cst.zextOrTrunc(DstTy.getSizeInBits());
+      NewCst += RHSCst->sextOrTrunc(DstTy.getSizeInBits());
       return true;
     }
   }
@@ -2043,7 +2060,7 @@ bool CombinerHelper::matchCombineConstPtrAddToI2P(MachineInstr &MI,
 }
 
 void CombinerHelper::applyCombineConstPtrAddToI2P(MachineInstr &MI,
-                                                  int64_t &NewCst) {
+                                                  APInt &NewCst) {
   auto &PtrAdd = cast<GPtrAdd>(MI);
   Register Dst = PtrAdd.getReg(0);
 
@@ -3875,39 +3892,48 @@ bool CombinerHelper::matchOrShiftToFunnelShift(MachineInstr &MI,
   LLT Ty = MRI.getType(Dst);
   unsigned BitWidth = Ty.getScalarSizeInBits();
 
-  Register ShlSrc, ShlAmt, LShrSrc, LShrAmt;
+  Register ShlSrc, ShlAmt, LShrSrc, LShrAmt, Amt;
   unsigned FshOpc = 0;
 
-  // Match (or (shl x, amt), (lshr y, sub(bw, amt))).
-  if (mi_match(
-          Dst, MRI,
-          // m_GOr() handles the commuted version as well.
-          m_GOr(m_GShl(m_Reg(ShlSrc), m_Reg(ShlAmt)),
-                m_GLShr(m_Reg(LShrSrc), m_GSub(m_SpecificICstOrSplat(BitWidth),
-                                               m_Reg(LShrAmt)))))) {
+  // Match (or (shl ...), (lshr ...)).
+  if (!mi_match(Dst, MRI,
+                // m_GOr() handles the commuted version as well.
+                m_GOr(m_GShl(m_Reg(ShlSrc), m_Reg(ShlAmt)),
+                      m_GLShr(m_Reg(LShrSrc), m_Reg(LShrAmt)))))
+    return false;
+
+  // Given constants C0 and C1 such that C0 + C1 is bit-width:
+  // (or (shl x, C0), (lshr y, C1)) -> (fshl x, y, C0) or (fshr x, y, C1)
+  // TODO: Match constant splat.
+  int64_t CstShlAmt, CstLShrAmt;
+  if (mi_match(ShlAmt, MRI, m_ICst(CstShlAmt)) &&
+      mi_match(LShrAmt, MRI, m_ICst(CstLShrAmt)) &&
+      CstShlAmt + CstLShrAmt == BitWidth) {
+    FshOpc = TargetOpcode::G_FSHR;
+    Amt = LShrAmt;
+
+  } else if (mi_match(LShrAmt, MRI,
+                      m_GSub(m_SpecificICstOrSplat(BitWidth), m_Reg(Amt))) &&
+             ShlAmt == Amt) {
+    // (or (shl x, amt), (lshr y, (sub bw, amt))) -> (fshl x, y, amt)
     FshOpc = TargetOpcode::G_FSHL;
 
-    // Match (or (shl x, sub(bw, amt)), (lshr y, amt)).
-  } else if (mi_match(Dst, MRI,
-                      m_GOr(m_GLShr(m_Reg(LShrSrc), m_Reg(LShrAmt)),
-                            m_GShl(m_Reg(ShlSrc),
-                                   m_GSub(m_SpecificICstOrSplat(BitWidth),
-                                          m_Reg(ShlAmt)))))) {
+  } else if (mi_match(ShlAmt, MRI,
+                      m_GSub(m_SpecificICstOrSplat(BitWidth), m_Reg(Amt))) &&
+             LShrAmt == Amt) {
+    // (or (shl x, (sub bw, amt)), (lshr y, amt)) -> (fshr x, y, amt)
     FshOpc = TargetOpcode::G_FSHR;
 
   } else {
     return false;
   }
 
-  if (ShlAmt != LShrAmt)
-    return false;
-
-  LLT AmtTy = MRI.getType(ShlAmt);
+  LLT AmtTy = MRI.getType(Amt);
   if (!isLegalOrBeforeLegalizer({FshOpc, {Ty, AmtTy}}))
     return false;
 
   MatchInfo = [=](MachineIRBuilder &B) {
-    B.buildInstr(FshOpc, {Dst}, {ShlSrc, LShrSrc, ShlAmt});
+    B.buildInstr(FshOpc, {Dst}, {ShlSrc, LShrSrc, Amt});
   };
   return true;
 }
@@ -4851,37 +4877,39 @@ bool CombinerHelper::matchCombineFAddFMulToFMadOrFMA(
   if (!canCombineFMadOrFMA(MI, AllowFusionGlobally, HasFMAD, Aggressive))
     return false;
 
-  MachineInstr *LHS = MRI.getVRegDef(MI.getOperand(1).getReg());
-  MachineInstr *RHS = MRI.getVRegDef(MI.getOperand(2).getReg());
+  Register Op1 = MI.getOperand(1).getReg();
+  Register Op2 = MI.getOperand(2).getReg();
+  DefinitionAndSourceRegister LHS = {MRI.getVRegDef(Op1), Op1};
+  DefinitionAndSourceRegister RHS = {MRI.getVRegDef(Op2), Op2};
   unsigned PreferredFusedOpcode =
       HasFMAD ? TargetOpcode::G_FMAD : TargetOpcode::G_FMA;
 
   // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
   // prefer to fold the multiply with fewer uses.
-  if (Aggressive && isContractableFMul(*LHS, AllowFusionGlobally) &&
-      isContractableFMul(*RHS, AllowFusionGlobally)) {
-    if (hasMoreUses(*LHS, *RHS, MRI))
+  if (Aggressive && isContractableFMul(*LHS.MI, AllowFusionGlobally) &&
+      isContractableFMul(*RHS.MI, AllowFusionGlobally)) {
+    if (hasMoreUses(*LHS.MI, *RHS.MI, MRI))
       std::swap(LHS, RHS);
   }
 
   // fold (fadd (fmul x, y), z) -> (fma x, y, z)
-  if (isContractableFMul(*LHS, AllowFusionGlobally) &&
-      (Aggressive || MRI.hasOneNonDBGUse(LHS->getOperand(0).getReg()))) {
+  if (isContractableFMul(*LHS.MI, AllowFusionGlobally) &&
+      (Aggressive || MRI.hasOneNonDBGUse(LHS.Reg))) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
       B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
-                   {LHS->getOperand(1).getReg(), LHS->getOperand(2).getReg(),
-                    RHS->getOperand(0).getReg()});
+                   {LHS.MI->getOperand(1).getReg(),
+                    LHS.MI->getOperand(2).getReg(), RHS.Reg});
     };
     return true;
   }
 
   // fold (fadd x, (fmul y, z)) -> (fma y, z, x)
-  if (isContractableFMul(*RHS, AllowFusionGlobally) &&
-      (Aggressive || MRI.hasOneNonDBGUse(RHS->getOperand(0).getReg()))) {
+  if (isContractableFMul(*RHS.MI, AllowFusionGlobally) &&
+      (Aggressive || MRI.hasOneNonDBGUse(RHS.Reg))) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
       B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
-                   {RHS->getOperand(1).getReg(), RHS->getOperand(2).getReg(),
-                    LHS->getOperand(0).getReg()});
+                   {RHS.MI->getOperand(1).getReg(),
+                    RHS.MI->getOperand(2).getReg(), LHS.Reg});
     };
     return true;
   }
@@ -4898,8 +4926,10 @@ bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMA(
     return false;
 
   const auto &TLI = *MI.getMF()->getSubtarget().getTargetLowering();
-  MachineInstr *LHS = MRI.getVRegDef(MI.getOperand(1).getReg());
-  MachineInstr *RHS = MRI.getVRegDef(MI.getOperand(2).getReg());
+  Register Op1 = MI.getOperand(1).getReg();
+  Register Op2 = MI.getOperand(2).getReg();
+  DefinitionAndSourceRegister LHS = {MRI.getVRegDef(Op1), Op1};
+  DefinitionAndSourceRegister RHS = {MRI.getVRegDef(Op2), Op2};
   LLT DstType = MRI.getType(MI.getOperand(0).getReg());
 
   unsigned PreferredFusedOpcode =
@@ -4907,42 +4937,38 @@ bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMA(
 
   // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
   // prefer to fold the multiply with fewer uses.
-  if (Aggressive && isContractableFMul(*LHS, AllowFusionGlobally) &&
-      isContractableFMul(*RHS, AllowFusionGlobally)) {
-    if (hasMoreUses(*LHS, *RHS, MRI))
+  if (Aggressive && isContractableFMul(*LHS.MI, AllowFusionGlobally) &&
+      isContractableFMul(*RHS.MI, AllowFusionGlobally)) {
+    if (hasMoreUses(*LHS.MI, *RHS.MI, MRI))
       std::swap(LHS, RHS);
   }
 
   // fold (fadd (fpext (fmul x, y)), z) -> (fma (fpext x), (fpext y), z)
   MachineInstr *FpExtSrc;
-  if (mi_match(LHS->getOperand(0).getReg(), MRI,
-               m_GFPExt(m_MInstr(FpExtSrc))) &&
+  if (mi_match(LHS.Reg, MRI, m_GFPExt(m_MInstr(FpExtSrc))) &&
       isContractableFMul(*FpExtSrc, AllowFusionGlobally) &&
       TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstType,
                           MRI.getType(FpExtSrc->getOperand(1).getReg()))) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
       auto FpExtX = B.buildFPExt(DstType, FpExtSrc->getOperand(1).getReg());
       auto FpExtY = B.buildFPExt(DstType, FpExtSrc->getOperand(2).getReg());
-      B.buildInstr(
-          PreferredFusedOpcode, {MI.getOperand(0).getReg()},
-          {FpExtX.getReg(0), FpExtY.getReg(0), RHS->getOperand(0).getReg()});
+      B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
+                   {FpExtX.getReg(0), FpExtY.getReg(0), RHS.Reg});
     };
     return true;
   }
 
   // fold (fadd z, (fpext (fmul x, y))) -> (fma (fpext x), (fpext y), z)
   // Note: Commutes FADD operands.
-  if (mi_match(RHS->getOperand(0).getReg(), MRI,
-               m_GFPExt(m_MInstr(FpExtSrc))) &&
+  if (mi_match(RHS.Reg, MRI, m_GFPExt(m_MInstr(FpExtSrc))) &&
       isContractableFMul(*FpExtSrc, AllowFusionGlobally) &&
       TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstType,
                           MRI.getType(FpExtSrc->getOperand(1).getReg()))) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
       auto FpExtX = B.buildFPExt(DstType, FpExtSrc->getOperand(1).getReg());
       auto FpExtY = B.buildFPExt(DstType, FpExtSrc->getOperand(2).getReg());
-      B.buildInstr(
-          PreferredFusedOpcode, {MI.getOperand(0).getReg()},
-          {FpExtX.getReg(0), FpExtY.getReg(0), LHS->getOperand(0).getReg()});
+      B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
+                   {FpExtX.getReg(0), FpExtY.getReg(0), LHS.Reg});
     };
     return true;
   }
@@ -4958,8 +4984,10 @@ bool CombinerHelper::matchCombineFAddFMAFMulToFMadOrFMA(
   if (!canCombineFMadOrFMA(MI, AllowFusionGlobally, HasFMAD, Aggressive, true))
     return false;
 
-  MachineInstr *LHS = MRI.getVRegDef(MI.getOperand(1).getReg());
-  MachineInstr *RHS = MRI.getVRegDef(MI.getOperand(2).getReg());
+  Register Op1 = MI.getOperand(1).getReg();
+  Register Op2 = MI.getOperand(2).getReg();
+  DefinitionAndSourceRegister LHS = {MRI.getVRegDef(Op1), Op1};
+  DefinitionAndSourceRegister RHS = {MRI.getVRegDef(Op2), Op2};
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
 
   unsigned PreferredFusedOpcode =
@@ -4967,31 +4995,31 @@ bool CombinerHelper::matchCombineFAddFMAFMulToFMadOrFMA(
 
   // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
   // prefer to fold the multiply with fewer uses.
-  if (Aggressive && isContractableFMul(*LHS, AllowFusionGlobally) &&
-      isContractableFMul(*RHS, AllowFusionGlobally)) {
-    if (hasMoreUses(*LHS, *RHS, MRI))
+  if (Aggressive && isContractableFMul(*LHS.MI, AllowFusionGlobally) &&
+      isContractableFMul(*RHS.MI, AllowFusionGlobally)) {
+    if (hasMoreUses(*LHS.MI, *RHS.MI, MRI))
       std::swap(LHS, RHS);
   }
 
   MachineInstr *FMA = nullptr;
   Register Z;
   // fold (fadd (fma x, y, (fmul u, v)), z) -> (fma x, y, (fma u, v, z))
-  if (LHS->getOpcode() == PreferredFusedOpcode &&
-      (MRI.getVRegDef(LHS->getOperand(3).getReg())->getOpcode() ==
+  if (LHS.MI->getOpcode() == PreferredFusedOpcode &&
+      (MRI.getVRegDef(LHS.MI->getOperand(3).getReg())->getOpcode() ==
        TargetOpcode::G_FMUL) &&
-      MRI.hasOneNonDBGUse(LHS->getOperand(0).getReg()) &&
-      MRI.hasOneNonDBGUse(LHS->getOperand(3).getReg())) {
-    FMA = LHS;
-    Z = RHS->getOperand(0).getReg();
+      MRI.hasOneNonDBGUse(LHS.MI->getOperand(0).getReg()) &&
+      MRI.hasOneNonDBGUse(LHS.MI->getOperand(3).getReg())) {
+    FMA = LHS.MI;
+    Z = RHS.Reg;
   }
   // fold (fadd z, (fma x, y, (fmul u, v))) -> (fma x, y, (fma u, v, z))
-  else if (RHS->getOpcode() == PreferredFusedOpcode &&
-           (MRI.getVRegDef(RHS->getOperand(3).getReg())->getOpcode() ==
+  else if (RHS.MI->getOpcode() == PreferredFusedOpcode &&
+           (MRI.getVRegDef(RHS.MI->getOperand(3).getReg())->getOpcode() ==
             TargetOpcode::G_FMUL) &&
-           MRI.hasOneNonDBGUse(RHS->getOperand(0).getReg()) &&
-           MRI.hasOneNonDBGUse(RHS->getOperand(3).getReg())) {
-    Z = LHS->getOperand(0).getReg();
-    FMA = RHS;
+           MRI.hasOneNonDBGUse(RHS.MI->getOperand(0).getReg()) &&
+           MRI.hasOneNonDBGUse(RHS.MI->getOperand(3).getReg())) {
+    Z = LHS.Reg;
+    FMA = RHS.MI;
   }
 
   if (FMA) {
@@ -5026,17 +5054,19 @@ bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMAAggressive(
 
   const auto &TLI = *MI.getMF()->getSubtarget().getTargetLowering();
   LLT DstType = MRI.getType(MI.getOperand(0).getReg());
-  MachineInstr *LHS = MRI.getVRegDef(MI.getOperand(1).getReg());
-  MachineInstr *RHS = MRI.getVRegDef(MI.getOperand(2).getReg());
+  Register Op1 = MI.getOperand(1).getReg();
+  Register Op2 = MI.getOperand(2).getReg();
+  DefinitionAndSourceRegister LHS = {MRI.getVRegDef(Op1), Op1};
+  DefinitionAndSourceRegister RHS = {MRI.getVRegDef(Op2), Op2};
 
   unsigned PreferredFusedOpcode =
       HasFMAD ? TargetOpcode::G_FMAD : TargetOpcode::G_FMA;
 
   // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
   // prefer to fold the multiply with fewer uses.
-  if (Aggressive && isContractableFMul(*LHS, AllowFusionGlobally) &&
-      isContractableFMul(*RHS, AllowFusionGlobally)) {
-    if (hasMoreUses(*LHS, *RHS, MRI))
+  if (Aggressive && isContractableFMul(*LHS.MI, AllowFusionGlobally) &&
+      isContractableFMul(*RHS.MI, AllowFusionGlobally)) {
+    if (hasMoreUses(*LHS.MI, *RHS.MI, MRI))
       std::swap(LHS, RHS);
   }
 
@@ -5055,16 +5085,17 @@ bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMAAggressive(
   MachineInstr *FMulMI, *FMAMI;
   // fold (fadd (fma x, y, (fpext (fmul u, v))), z)
   //   -> (fma x, y, (fma (fpext u), (fpext v), z))
-  if (LHS->getOpcode() == PreferredFusedOpcode &&
-      mi_match(LHS->getOperand(3).getReg(), MRI, m_GFPExt(m_MInstr(FMulMI))) &&
+  if (LHS.MI->getOpcode() == PreferredFusedOpcode &&
+      mi_match(LHS.MI->getOperand(3).getReg(), MRI,
+               m_GFPExt(m_MInstr(FMulMI))) &&
       isContractableFMul(*FMulMI, AllowFusionGlobally) &&
       TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstType,
                           MRI.getType(FMulMI->getOperand(0).getReg()))) {
     MatchInfo = [=](MachineIRBuilder &B) {
       buildMatchInfo(FMulMI->getOperand(1).getReg(),
-                     FMulMI->getOperand(2).getReg(),
-                     RHS->getOperand(0).getReg(), LHS->getOperand(1).getReg(),
-                     LHS->getOperand(2).getReg(), B);
+                     FMulMI->getOperand(2).getReg(), RHS.Reg,
+                     LHS.MI->getOperand(1).getReg(),
+                     LHS.MI->getOperand(2).getReg(), B);
     };
     return true;
   }
@@ -5074,7 +5105,7 @@ bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMAAggressive(
   // FIXME: This turns two single-precision and one double-precision
   // operation into two double-precision operations, which might not be
   // interesting for all targets, especially GPUs.
-  if (mi_match(LHS->getOperand(0).getReg(), MRI, m_GFPExt(m_MInstr(FMAMI))) &&
+  if (mi_match(LHS.Reg, MRI, m_GFPExt(m_MInstr(FMAMI))) &&
       FMAMI->getOpcode() == PreferredFusedOpcode) {
     MachineInstr *FMulMI = MRI.getVRegDef(FMAMI->getOperand(3).getReg());
     if (isContractableFMul(*FMulMI, AllowFusionGlobally) &&
@@ -5086,8 +5117,7 @@ bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMAAggressive(
         X = B.buildFPExt(DstType, X).getReg(0);
         Y = B.buildFPExt(DstType, Y).getReg(0);
         buildMatchInfo(FMulMI->getOperand(1).getReg(),
-                       FMulMI->getOperand(2).getReg(),
-                       RHS->getOperand(0).getReg(), X, Y, B);
+                       FMulMI->getOperand(2).getReg(), RHS.Reg, X, Y, B);
       };
 
       return true;
@@ -5096,16 +5126,17 @@ bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMAAggressive(
 
   // fold (fadd z, (fma x, y, (fpext (fmul u, v)))
   //   -> (fma x, y, (fma (fpext u), (fpext v), z))
-  if (RHS->getOpcode() == PreferredFusedOpcode &&
-      mi_match(RHS->getOperand(3).getReg(), MRI, m_GFPExt(m_MInstr(FMulMI))) &&
+  if (RHS.MI->getOpcode() == PreferredFusedOpcode &&
+      mi_match(RHS.MI->getOperand(3).getReg(), MRI,
+               m_GFPExt(m_MInstr(FMulMI))) &&
       isContractableFMul(*FMulMI, AllowFusionGlobally) &&
       TLI.isFPExtFoldable(MI, PreferredFusedOpcode, DstType,
                           MRI.getType(FMulMI->getOperand(0).getReg()))) {
     MatchInfo = [=](MachineIRBuilder &B) {
       buildMatchInfo(FMulMI->getOperand(1).getReg(),
-                     FMulMI->getOperand(2).getReg(),
-                     LHS->getOperand(0).getReg(), RHS->getOperand(1).getReg(),
-                     RHS->getOperand(2).getReg(), B);
+                     FMulMI->getOperand(2).getReg(), LHS.Reg,
+                     RHS.MI->getOperand(1).getReg(),
+                     RHS.MI->getOperand(2).getReg(), B);
     };
     return true;
   }
@@ -5115,7 +5146,7 @@ bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMAAggressive(
   // FIXME: This turns two single-precision and one double-precision
   // operation into two double-precision operations, which might not be
   // interesting for all targets, especially GPUs.
-  if (mi_match(RHS->getOperand(0).getReg(), MRI, m_GFPExt(m_MInstr(FMAMI))) &&
+  if (mi_match(RHS.Reg, MRI, m_GFPExt(m_MInstr(FMAMI))) &&
       FMAMI->getOpcode() == PreferredFusedOpcode) {
     MachineInstr *FMulMI = MRI.getVRegDef(FMAMI->getOperand(3).getReg());
     if (isContractableFMul(*FMulMI, AllowFusionGlobally) &&
@@ -5127,8 +5158,7 @@ bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMAAggressive(
         X = B.buildFPExt(DstType, X).getReg(0);
         Y = B.buildFPExt(DstType, Y).getReg(0);
         buildMatchInfo(FMulMI->getOperand(1).getReg(),
-                       FMulMI->getOperand(2).getReg(),
-                       LHS->getOperand(0).getReg(), X, Y, B);
+                       FMulMI->getOperand(2).getReg(), LHS.Reg, X, Y, B);
       };
       return true;
     }
@@ -5145,16 +5175,18 @@ bool CombinerHelper::matchCombineFSubFMulToFMadOrFMA(
   if (!canCombineFMadOrFMA(MI, AllowFusionGlobally, HasFMAD, Aggressive))
     return false;
 
-  MachineInstr *LHS = MRI.getVRegDef(MI.getOperand(1).getReg());
-  MachineInstr *RHS = MRI.getVRegDef(MI.getOperand(2).getReg());
+  Register Op1 = MI.getOperand(1).getReg();
+  Register Op2 = MI.getOperand(2).getReg();
+  DefinitionAndSourceRegister LHS = {MRI.getVRegDef(Op1), Op1};
+  DefinitionAndSourceRegister RHS = {MRI.getVRegDef(Op2), Op2};
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
 
   // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
   // prefer to fold the multiply with fewer uses.
   int FirstMulHasFewerUses = true;
-  if (isContractableFMul(*LHS, AllowFusionGlobally) &&
-      isContractableFMul(*RHS, AllowFusionGlobally) &&
-      hasMoreUses(*LHS, *RHS, MRI))
+  if (isContractableFMul(*LHS.MI, AllowFusionGlobally) &&
+      isContractableFMul(*RHS.MI, AllowFusionGlobally) &&
+      hasMoreUses(*LHS.MI, *RHS.MI, MRI))
     FirstMulHasFewerUses = false;
 
   unsigned PreferredFusedOpcode =
@@ -5162,24 +5194,24 @@ bool CombinerHelper::matchCombineFSubFMulToFMadOrFMA(
 
   // fold (fsub (fmul x, y), z) -> (fma x, y, -z)
   if (FirstMulHasFewerUses &&
-      (isContractableFMul(*LHS, AllowFusionGlobally) &&
-       (Aggressive || MRI.hasOneNonDBGUse(LHS->getOperand(0).getReg())))) {
+      (isContractableFMul(*LHS.MI, AllowFusionGlobally) &&
+       (Aggressive || MRI.hasOneNonDBGUse(LHS.Reg)))) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
-      Register NegZ = B.buildFNeg(DstTy, RHS->getOperand(0).getReg()).getReg(0);
-      B.buildInstr(
-          PreferredFusedOpcode, {MI.getOperand(0).getReg()},
-          {LHS->getOperand(1).getReg(), LHS->getOperand(2).getReg(), NegZ});
+      Register NegZ = B.buildFNeg(DstTy, RHS.Reg).getReg(0);
+      B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
+                   {LHS.MI->getOperand(1).getReg(),
+                    LHS.MI->getOperand(2).getReg(), NegZ});
     };
     return true;
   }
   // fold (fsub x, (fmul y, z)) -> (fma -y, z, x)
-  else if ((isContractableFMul(*RHS, AllowFusionGlobally) &&
-            (Aggressive || MRI.hasOneNonDBGUse(RHS->getOperand(0).getReg())))) {
+  else if ((isContractableFMul(*RHS.MI, AllowFusionGlobally) &&
+            (Aggressive || MRI.hasOneNonDBGUse(RHS.Reg)))) {
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
-      Register NegY = B.buildFNeg(DstTy, RHS->getOperand(1).getReg()).getReg(0);
-      B.buildInstr(
-          PreferredFusedOpcode, {MI.getOperand(0).getReg()},
-          {NegY, RHS->getOperand(2).getReg(), LHS->getOperand(0).getReg()});
+      Register NegY =
+          B.buildFNeg(DstTy, RHS.MI->getOperand(1).getReg()).getReg(0);
+      B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
+                   {NegY, RHS.MI->getOperand(2).getReg(), LHS.Reg});
     };
     return true;
   }

@@ -1394,7 +1394,7 @@ let canFoldAsLoad = 1, isReMaterializable = 1 in {
   // ldd Rd,   P+q
   // ldd Rd+1, P+q+1
   let Constraints = "@earlyclobber $dst" in def LDDWRdPtrQ
-      : Pseudo<(outs DREGS_WITHOUT_YZ_WORKAROUND
+      : Pseudo<(outs DREGS
                 : $dst),
                (ins memri
                 : $memri),
@@ -1702,21 +1702,34 @@ let mayLoad = 1, hasSideEffects = 0 in {
       : F16<0b1001010111011000, (outs), (ins), "elpm", []>,
       Requires<[HasELPM]>;
 
-  def ELPMRdZ : FLPMX<1, 0,
-                      (outs GPR8
-                       : $dst),
-                      (ins ZREG
-                       : $z),
+  def ELPMRdZ : FLPMX<1, 0, (outs GPR8:$dst), (ins ZREG:$z),
                       "elpm\t$dst, $z", []>,
                 Requires<[HasELPMX]>;
 
-  let Defs = [R31R30] in def ELPMRdZPi : FLPMX<1, 1,
-                                               (outs GPR8
-                                                : $dst),
-                                               (ins ZREG
-                                                : $z),
-                                               "elpm\t$dst, $z+", []>,
-      Requires<[HasELPMX]>;
+  let Defs = [R31R30] in {
+    def ELPMRdZPi : FLPMX<1, 1, (outs GPR8:$dst), (ins ZREG:$z),
+                          "elpm\t$dst, $z+", []>,
+                    Requires<[HasELPMX]>;
+  }
+
+  // These pseudos are combination of the OUT and ELPM instructions.
+  let Defs = [R31R30], hasSideEffects = 1 in {
+    def ELPMBRdZ : Pseudo<(outs GPR8:$dst), (ins ZREG:$z, LD8:$p),
+                          "elpmb\t$dst, $z, $p", []>,
+                   Requires<[HasELPMX]>;
+
+    def ELPMWRdZ : Pseudo<(outs DREGS:$dst), (ins ZREG:$z, LD8:$p),
+                          "elpmw\t$dst, $z, $p", []>,
+                   Requires<[HasELPMX]>;
+
+    def ELPMBRdZPi : Pseudo<(outs GPR8:$dst), (ins ZREG:$z, LD8:$p),
+                            "elpmb\t$dst, $z+, $p", []>,
+                     Requires<[HasELPMX]>;
+
+    def ELPMWRdZPi : Pseudo<(outs DREGS:$dst), (ins ZREG:$z, LD8:$p),
+                            "elpmw\t$dst, $z+, $p", []>,
+                     Requires<[HasELPMX]>;
+  }
 }
 
 // Store program memory operations.
@@ -2376,6 +2389,10 @@ def Asr16 : ShiftPseudo<(outs DREGS
                                             : $dst, (AVRasrLoop i16
                                                      : $src, i8
                                                      : $cnt))]>;
+
+// lowered to a copy from R1, which contains the value zero.
+let usesCustomInserter=1 in
+def CopyR1 : Pseudo<(outs GPR8:$rd), (ins), "clrz\t$rd", [(set i8:$rd, 0)]>;
 
 //===----------------------------------------------------------------------===//
 // Non-Instruction Patterns

@@ -34,11 +34,10 @@ namespace Fortran::semantics {
 
 // Steps through a list of values in a DATA statement set; implements
 // repetition.
-class ValueListIterator {
+template <typename DSV = parser::DataStmtValue> class ValueListIterator {
 public:
-  explicit ValueListIterator(const parser::DataStmtSet &set)
-      : end_{std::get<std::list<parser::DataStmtValue>>(set.t).end()},
-        at_{std::get<std::list<parser::DataStmtValue>>(set.t).begin()} {
+  explicit ValueListIterator(const std::list<DSV> &list)
+      : end_{list.end()}, at_{list.begin()} {
     SetRepetitionCount();
   }
   bool hasFatalError() const { return hasFatalError_; }
@@ -56,25 +55,27 @@ public:
   }
 
 private:
-  using listIterator = std::list<parser::DataStmtValue>::const_iterator;
+  using listIterator = typename std::list<DSV>::const_iterator;
   void SetRepetitionCount();
+  const parser::DataStmtValue &GetValue() const {
+    return DEREF(common::Unwrap<const parser::DataStmtValue>(*at_));
+  }
   const parser::DataStmtConstant &GetConstant() const {
-    return std::get<parser::DataStmtConstant>(at_->t);
+    return std::get<parser::DataStmtConstant>(GetValue().t);
   }
 
-  listIterator end_;
-  listIterator at_;
+  listIterator end_, at_;
   ConstantSubscript repetitionsRemaining_{0};
   bool hasFatalError_{false};
 };
 
-void ValueListIterator::SetRepetitionCount() {
+template <typename DSV> void ValueListIterator<DSV>::SetRepetitionCount() {
   for (repetitionsRemaining_ = 1; at_ != end_; ++at_) {
-    if (at_->repetitions < 0) {
+    auto repetitions{GetValue().repetitions};
+    if (repetitions < 0) {
       hasFatalError_ = true;
-    }
-    if (at_->repetitions > 0) {
-      repetitionsRemaining_ = at_->repetitions - 1;
+    } else if (repetitions > 0) {
+      repetitionsRemaining_ = repetitions - 1;
       return;
     }
   }
@@ -86,15 +87,18 @@ void ValueListIterator::SetRepetitionCount() {
 // Expands the implied DO loops and array references.
 // Applies checks that validate each distinct elemental initialization
 // of the variables in a data-stmt-set, as well as those that apply
-// to the corresponding values being use to initialize each element.
+// to the corresponding values being used to initialize each element.
+template <typename DSV = parser::DataStmtValue>
 class DataInitializationCompiler {
 public:
   DataInitializationCompiler(DataInitializations &inits,
-      evaluate::ExpressionAnalyzer &a, const parser::DataStmtSet &set)
-      : inits_{inits}, exprAnalyzer_{a}, values_{set} {}
+      evaluate::ExpressionAnalyzer &a, const std::list<DSV> &list)
+      : inits_{inits}, exprAnalyzer_{a}, values_{list} {}
   const DataInitializations &inits() const { return inits_; }
   bool HasSurplusValues() const { return !values_.IsAtEnd(); }
   bool Scan(const parser::DataStmtObject &);
+  // Initializes all elements of whole variable or component
+  bool Scan(const Symbol &);
 
 private:
   bool Scan(const parser::Variable &);
@@ -104,7 +108,7 @@ private:
 
   // Initializes all elements of a designator, which can be an array or section.
   bool InitDesignator(const SomeExpr &);
-  // Initializes a single object.
+  // Initializes a single scalar object.
   bool InitElement(const evaluate::OffsetSymbol &, const SomeExpr &designator);
   // If the returned flag is true, emit a warning about CHARACTER misusage.
   std::optional<std::pair<SomeExpr, bool>> ConvertElement(
@@ -112,10 +116,12 @@ private:
 
   DataInitializations &inits_;
   evaluate::ExpressionAnalyzer &exprAnalyzer_;
-  ValueListIterator values_;
+  ValueListIterator<DSV> values_;
 };
 
-bool DataInitializationCompiler::Scan(const parser::DataStmtObject &object) {
+template <typename DSV>
+bool DataInitializationCompiler<DSV>::Scan(
+    const parser::DataStmtObject &object) {
   return std::visit(
       common::visitors{
           [&](const common::Indirection<parser::Variable> &var) {
@@ -126,7 +132,8 @@ bool DataInitializationCompiler::Scan(const parser::DataStmtObject &object) {
       object.u);
 }
 
-bool DataInitializationCompiler::Scan(const parser::Variable &var) {
+template <typename DSV>
+bool DataInitializationCompiler<DSV>::Scan(const parser::Variable &var) {
   if (const auto *expr{GetExpr(var)}) {
     exprAnalyzer_.GetFoldingContext().messages().SetLocation(var.GetSource());
     if (InitDesignator(*expr)) {
@@ -136,7 +143,9 @@ bool DataInitializationCompiler::Scan(const parser::Variable &var) {
   return false;
 }
 
-bool DataInitializationCompiler::Scan(const parser::Designator &designator) {
+template <typename DSV>
+bool DataInitializationCompiler<DSV>::Scan(
+    const parser::Designator &designator) {
   if (auto expr{exprAnalyzer_.Analyze(designator)}) {
     exprAnalyzer_.GetFoldingContext().messages().SetLocation(
         parser::FindSourceLocation(designator));
@@ -147,7 +156,8 @@ bool DataInitializationCompiler::Scan(const parser::Designator &designator) {
   return false;
 }
 
-bool DataInitializationCompiler::Scan(const parser::DataImpliedDo &ido) {
+template <typename DSV>
+bool DataInitializationCompiler<DSV>::Scan(const parser::DataImpliedDo &ido) {
   const auto &bounds{std::get<parser::DataImpliedDo::Bounds>(ido.t)};
   auto name{bounds.name.thing.thing};
   const auto *lowerExpr{GetExpr(bounds.lower.thing.thing)};
@@ -201,7 +211,9 @@ bool DataInitializationCompiler::Scan(const parser::DataImpliedDo &ido) {
   return false;
 }
 
-bool DataInitializationCompiler::Scan(const parser::DataIDoObject &object) {
+template <typename DSV>
+bool DataInitializationCompiler<DSV>::Scan(
+    const parser::DataIDoObject &object) {
   return std::visit(
       common::visitors{
           [&](const parser::Scalar<common::Indirection<parser::Designator>>
@@ -213,7 +225,16 @@ bool DataInitializationCompiler::Scan(const parser::DataIDoObject &object) {
       object.u);
 }
 
-bool DataInitializationCompiler::InitDesignator(const SomeExpr &designator) {
+template <typename DSV>
+bool DataInitializationCompiler<DSV>::Scan(const Symbol &symbol) {
+  auto designator{exprAnalyzer_.Designate(evaluate::DataRef{symbol})};
+  CHECK(designator.has_value());
+  return InitDesignator(*designator);
+}
+
+template <typename DSV>
+bool DataInitializationCompiler<DSV>::InitDesignator(
+    const SomeExpr &designator) {
   evaluate::FoldingContext &context{exprAnalyzer_.GetFoldingContext()};
   evaluate::DesignatorFolder folder{context};
   while (auto offsetSymbol{folder.FoldDesignator(designator)}) {
@@ -237,8 +258,9 @@ bool DataInitializationCompiler::InitDesignator(const SomeExpr &designator) {
   return folder.isEmpty();
 }
 
+template <typename DSV>
 std::optional<std::pair<SomeExpr, bool>>
-DataInitializationCompiler::ConvertElement(
+DataInitializationCompiler<DSV>::ConvertElement(
     const SomeExpr &expr, const evaluate::DynamicType &type) {
   if (auto converted{evaluate::ConvertToType(type, SomeExpr{expr})}) {
     return {std::make_pair(std::move(*converted), false)};
@@ -262,10 +284,23 @@ DataInitializationCompiler::ConvertElement(
       return {std::make_pair(std::move(*converted), true)};
     }
   }
+  SemanticsContext &context{exprAnalyzer_.context()};
+  if (context.IsEnabled(common::LanguageFeature::LogicalIntegerAssignment)) {
+    if (MaybeExpr converted{evaluate::DataConstantConversionExtension(
+            exprAnalyzer_.GetFoldingContext(), type, expr)}) {
+      if (context.ShouldWarn(
+              common::LanguageFeature::LogicalIntegerAssignment)) {
+        context.Say("nonstandard usage: initialization of %s with %s"_en_US,
+            type.AsFortran(), expr.GetType().value().AsFortran());
+      }
+      return {std::make_pair(std::move(*converted), false)};
+    }
+  }
   return std::nullopt;
 }
 
-bool DataInitializationCompiler::InitElement(
+template <typename DSV>
+bool DataInitializationCompiler<DSV>::InitElement(
     const evaluate::OffsetSymbol &offsetSymbol, const SomeExpr &designator) {
   const Symbol &symbol{offsetSymbol.symbol()};
   const Symbol *lastSymbol{GetLastSymbol(designator)};
@@ -401,7 +436,8 @@ bool DataInitializationCompiler::InitElement(
 void AccumulateDataInitializations(DataInitializations &inits,
     evaluate::ExpressionAnalyzer &exprAnalyzer,
     const parser::DataStmtSet &set) {
-  DataInitializationCompiler scanner{inits, exprAnalyzer, set};
+  DataInitializationCompiler scanner{
+      inits, exprAnalyzer, std::get<std::list<parser::DataStmtValue>>(set.t)};
   for (const auto &object :
       std::get<std::list<parser::DataStmtObject>>(set.t)) {
     if (!scanner.Scan(object)) {
@@ -409,6 +445,17 @@ void AccumulateDataInitializations(DataInitializations &inits,
     }
   }
   if (scanner.HasSurplusValues()) {
+    exprAnalyzer.context().Say(
+        "DATA statement set has more values than objects"_err_en_US);
+  }
+}
+
+void AccumulateDataInitializations(DataInitializations &inits,
+    evaluate::ExpressionAnalyzer &exprAnalyzer, const Symbol &symbol,
+    const std::list<common::Indirection<parser::DataStmtValue>> &list) {
+  DataInitializationCompiler<common::Indirection<parser::DataStmtValue>>
+      scanner{inits, exprAnalyzer, list};
+  if (scanner.Scan(symbol) && scanner.HasSurplusValues()) {
     exprAnalyzer.context().Say(
         "DATA statement set has more values than objects"_err_en_US);
   }

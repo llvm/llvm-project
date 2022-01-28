@@ -106,7 +106,7 @@ builtin.func @fuse_reduction(%arg0: tensor<24x12xf32>,
   %c24 = arith.constant 24 : index
   %c4 = arith.constant 4 : index
   %0 = linalg.generic {indexing_maps = [#map0, #map1], iterator_types = ["parallel", "reduction", "parallel"]} ins(%arg3 : tensor<12x7x25xf32>) outs(%arg1 : tensor<12x25xf32>) {
-  ^bb0(%arg4: f32, %arg5: f32):  // no predecessors
+  ^bb0(%arg4: f32, %arg5: f32):  
     %2 = arith.addf %arg4, %arg5 : f32
     linalg.yield %2 : f32
   } -> tensor<12x25xf32>
@@ -150,7 +150,7 @@ builtin.func @fuse_transposed(%arg0: tensor<24x12xf32>,
   %c24 = arith.constant 24 : index
   %c4 = arith.constant 4 : index
   %0 = linalg.generic {indexing_maps = [#map0, #map1], iterator_types = ["parallel", "parallel"]} ins(%arg3 : tensor<12x24xf32>) outs(%arg0 : tensor<24x12xf32>) {
-  ^bb0(%arg4: f32, %arg5: f32):  // no predecessors
+  ^bb0(%arg4: f32, %arg5: f32):  
     %2 = arith.addf %arg4, %arg5 : f32
     linalg.yield %2 : f32
   } -> tensor<24x12xf32>
@@ -219,7 +219,7 @@ builtin.func @fuse_indexed(%arg0: tensor<24x12xi32>,
   %c24 = arith.constant 24 : index
   %c4 = arith.constant 4 : index
   %0 = linalg.generic {indexing_maps = [#map0], iterator_types = ["parallel", "parallel"]} outs(%arg1 : tensor<12x25xi32>) {
-  ^bb0(%arg3: i32):  // no predecessors
+  ^bb0(%arg3: i32):  
     %6 = linalg.index 0 : index
     %7 = linalg.index 1 : index
     %8 = arith.addi %6, %7 : index
@@ -272,7 +272,7 @@ func @fuse_outermost_reduction(%arg0: tensor<10x17xf32>,
   // GENERIC-SAME:                                        %[[IV1]]
   //      GENERIC:  linalg.generic {{.*}} ins(%[[T2]] {{.*}} outs(%[[T3]]
   %2 = linalg.generic {indexing_maps = [#map0, #map1], iterator_types = ["parallel", "reduction"]} ins(%0 : tensor<10x17xf32>) outs(%1 : tensor<10xf32>) {
-  ^bb0(%arg2: f32, %arg3: f32):  // no predecessors
+  ^bb0(%arg2: f32, %arg3: f32):  
     %3 = arith.addf %arg2, %arg3 : f32
     linalg.yield %3 : f32
   } -> tensor<10xf32>
@@ -315,7 +315,7 @@ func @fuse_non_rectangular(%arg0: tensor<10x17xf32>,
   // GENERIC-SAME:                                                , %[[UB1]]
   //      GENERIC:      %[[T1:.*]] = linalg.fill(%{{.*}}, %[[T0]])
   %1 = linalg.generic {indexing_maps = [#map0, #map1], iterator_types = ["parallel", "parallel"]} ins(%0 : tensor<10x17xf32>) outs(%arg1 : tensor<10x8xf32>) {
-  ^bb0(%arg2: f32, %arg3: f32):  // no predecessors
+  ^bb0(%arg2: f32, %arg3: f32):  
     %2 = arith.addf %arg2, %arg3 : f32
     linalg.yield %2 : f32
   } -> tensor<10x8xf32>

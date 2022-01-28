@@ -16,6 +16,7 @@
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_DATAFLOWENVIRONMENT_H
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
@@ -25,6 +26,9 @@
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include <memory>
+#include <type_traits>
+#include <utility>
 
 namespace clang {
 namespace dataflow {
@@ -39,16 +43,53 @@ enum class SkipPast {
   None,
   /// An optional reference should be skipped past.
   Reference,
+  /// An optional reference should be skipped past, then an optional pointer
+  /// should be skipped past.
+  ReferenceThenPointer,
 };
 
 /// Holds the state of the program (store and heap) at a given program point.
 class Environment {
 public:
-  Environment(DataflowAnalysisContext &DACtx) : DACtx(&DACtx) {}
+  /// Supplements `Environment` with non-standard join operations.
+  class Merger {
+  public:
+    virtual ~Merger() = default;
+
+    /// Given distinct `Val1` and `Val2`, modifies `MergedVal` to approximate
+    /// both `Val1` and `Val2`. This could be a strict lattice join or a more
+    /// general widening operation. If this function returns true, `MergedVal`
+    /// will be assigned to a storage location of type `Type` in `Env`.
+    ///
+    /// Requirements:
+    ///
+    ///  `Val1` and `Val2` must be distinct.
+    virtual bool merge(QualType Type, const Value &Val1, const Value &Val2,
+                       Value &MergedVal, Environment &Env) {
+      return false;
+    }
+  };
+
+  /// Creates an environment that uses `DACtx` to store objects that encompass
+  /// the state of a program.
+  explicit Environment(DataflowAnalysisContext &DACtx) : DACtx(&DACtx) {}
+
+  /// Creates an environment that uses `DACtx` to store objects that encompass
+  /// the state of a program.
+  ///
+  /// If `DeclCtx` is a function, initializes the environment with symbolic
+  /// representations of the function parameters.
+  ///
+  /// If `DeclCtx` is a non-static member function, initializes the environment
+  /// with a symbolic representation of the `this` pointee.
+  Environment(DataflowAnalysisContext &DACtx, const DeclContext &DeclCtx);
 
   bool operator==(const Environment &) const;
 
-  LatticeJoinEffect join(const Environment &);
+  LatticeJoinEffect join(const Environment &, Environment::Merger &);
+
+  // FIXME: Rename `createOrGetStorageLocation` to `getOrCreateStorageLocation`,
+  // `getStableStorageLocation`, or something more appropriate.
 
   /// Creates a storage location appropriate for `Type`. Does not assign a value
   /// to the returned storage location in the environment.
@@ -92,15 +133,20 @@ public:
   /// assigned a storage location in the environment.
   StorageLocation *getStorageLocation(const Expr &E, SkipPast SP) const;
 
-  /// Creates a value appropriate for `Type`, assigns it to `Loc`, and returns
-  /// it, if `Type` is supported, otherwise return null. If `Type` is a pointer
-  /// or reference type, creates all the necessary storage locations and values
-  /// for indirections until it finds a non-pointer/non-reference type.
+  /// Returns the storage location assigned to the `this` pointee in the
+  /// environment or null if the `this` pointee has no assigned storage location
+  /// in the environment.
+  StorageLocation *getThisPointeeStorageLocation() const;
+
+  /// Creates a value appropriate for `Type`, if `Type` is supported, otherwise
+  /// return null. If `Type` is a pointer or reference type, creates all the
+  /// necessary storage locations and values for indirections until it finds a
+  /// non-pointer/non-reference type.
   ///
   /// Requirements:
   ///
   ///  `Type` must not be null.
-  Value *initValueInStorageLocation(const StorageLocation &Loc, QualType Type);
+  Value *createValue(QualType Type);
 
   /// Assigns `Val` as the value of `Loc` in the environment.
   void setValue(const StorageLocation &Loc, Value &Val);
@@ -118,16 +164,38 @@ public:
   Value *getValue(const Expr &E, SkipPast SP) const;
 
   /// Transfers ownership of `Loc` to the analysis context and returns a
-  /// reference to `Loc`.
-  StorageLocation &takeOwnership(std::unique_ptr<StorageLocation> Loc);
+  /// reference to it.
+  ///
+  /// Requirements:
+  ///
+  ///  `Loc` must not be null.
+  template <typename T>
+  typename std::enable_if<std::is_base_of<StorageLocation, T>::value, T &>::type
+  takeOwnership(std::unique_ptr<T> Loc) {
+    return DACtx->takeOwnership(std::move(Loc));
+  }
 
   /// Transfers ownership of `Val` to the analysis context and returns a
-  /// reference to `Val`.
-  Value &takeOwnership(std::unique_ptr<Value> Val);
+  /// reference to it.
+  ///
+  /// Requirements:
+  ///
+  ///  `Val` must not be null.
+  template <typename T>
+  typename std::enable_if<std::is_base_of<Value, T>::value, T &>::type
+  takeOwnership(std::unique_ptr<T> Val) {
+    return DACtx->takeOwnership(std::move(Val));
+  }
+
+  /// Returns a symbolic boolean value that models a boolean literal equal to
+  /// `Value`
+  BoolValue &getBoolLiteralValue(bool Value) const {
+    return DACtx->getBoolLiteralValue(Value);
+  }
 
 private:
-  /// Returns the value assigned to `Loc` in the environment or null if `Type`
-  /// isn't supported.
+  /// Creates a value appropriate for `Type`, if `Type` is supported, otherwise
+  /// return null.
   ///
   /// Recursively initializes storage locations and values until it sees a
   /// self-referential pointer or reference type. `Visited` is used to track
@@ -137,9 +205,8 @@ private:
   /// Requirements:
   ///
   ///  `Type` must not be null.
-  Value *initValueInStorageLocationUnlessSelfReferential(
-      const StorageLocation &Loc, QualType Type,
-      llvm::DenseSet<QualType> &Visited);
+  Value *createValueUnlessSelfReferential(QualType Type,
+                                          llvm::DenseSet<QualType> &Visited);
 
   StorageLocation &skip(StorageLocation &Loc, SkipPast SP) const;
   const StorageLocation &skip(const StorageLocation &Loc, SkipPast SP) const;

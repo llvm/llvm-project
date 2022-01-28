@@ -29,6 +29,8 @@ VERS1.0 {
     __tgt_rtl_wait_event;
     __tgt_rtl_sync_event;
     __tgt_rtl_destroy_event;
+    __tgt_rtl_init_device_info;
+    __tgt_rtl_init_async_info;
   local:
     *;
 };

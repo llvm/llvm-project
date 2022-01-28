@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Vector/VectorTransforms.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
@@ -70,8 +69,7 @@ static Operation *cloneOpWithOperandsAndTypes(OpBuilder &builder, Location loc,
                                               Operation *op,
                                               ArrayRef<Value> operands,
                                               ArrayRef<Type> resultTypes) {
-  OperationState res(loc, op->getName().getStringRef(), operands, resultTypes,
-                     op->getAttrs());
+  OperationState res(loc, op->getName(), operands, resultTypes, op->getAttrs());
   return builder.createOperation(res);
 }
 

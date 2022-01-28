@@ -121,12 +121,22 @@ struct IRInstructionData
   /// and is used when checking when two instructions are considered similar.
   /// If either instruction is not legal, the instructions are automatically not
   /// considered similar.
-  bool Legal;
+  bool Legal = false;
 
   /// This is only relevant if we are wrapping a CmpInst where we needed to
   /// change the predicate of a compare instruction from a greater than form
   /// to a less than form.  It is None otherwise.
   Optional<CmpInst::Predicate> RevisedPredicate;
+
+  /// This is only relevant if we are wrapping a CallInst. If we are requiring
+  /// that the function calls have matching names as well as types, and the
+  /// call is not an indirect call, this will hold the name of the function.  If
+  /// it is an indirect string, it will be the empty string.  However, if this
+  /// requirement is not in place it will be the empty string regardless of the
+  /// function call type.  The value held here is used to create the hash of the
+  /// instruction, and check to make sure two instructions are close to one
+  /// another.
+  Optional<std::string> CalleeName;
 
   /// This structure holds the distances of how far "ahead of" or "behind" the
   /// target blocks of a branch, or the incoming blocks of a phi nodes are.
@@ -168,6 +178,10 @@ struct IRInstructionData
   /// instruction. the IRInstructionData must be wrapping a CmpInst.
   CmpInst::Predicate getPredicate() const;
 
+  /// Get the callee name that the call instruction is using for hashing the
+  /// instruction. The IRInstructionData must be wrapping a CallInst.
+  StringRef getCalleeName() const;
+
   /// A function that swaps the predicates to their less than form if they are
   /// in a greater than form. Otherwise, the predicate is unchanged.
   ///
@@ -184,6 +198,31 @@ struct IRInstructionData
   /// in the module.
   void
   setBranchSuccessors(DenseMap<BasicBlock *, unsigned> &BasicBlockToInteger);
+
+  /// For an IRInstructionData containing a CallInst, set the function name
+  /// appropriately.  This will be an empty string if it is an indirect call,
+  /// or we are not matching by name of the called function.  It will be the
+  /// name of the function if \p MatchByName is true and it is not an indirect
+  /// call.  We may decide not to match by name in order to expand the
+  /// size of the regions we can match.  If a function name has the same type
+  /// signature, but the different name, the region of code is still almost the
+  /// same.  Since function names can be treated as constants, the name itself
+  /// could be extrapolated away.  However, matching by name provides a
+  /// specificity and more "identical" code than not matching by name.
+  ///
+  /// \param MatchByName - A flag to mark whether we are using the called
+  /// function name as a differentiating parameter.
+  void setCalleeName(bool MatchByName = true);
+
+  /// For an IRInstructionData containing a PHINode, finds the
+  /// relative distances from the incoming basic block to the current block by
+  /// taking the difference of the number assigned to the current basic block
+  /// and the incoming basic block of the branch.
+  ///
+  /// \param BasicBlockToInteger - The mapping of basic blocks to their location
+  /// in the module.
+  void
+  setPHIPredecessors(DenseMap<BasicBlock *, unsigned> &BasicBlockToInteger);
 
   /// Hashes \p Value based on its opcode, types, and operand types.
   /// Two IRInstructionData instances produce the same hash when they perform
@@ -223,12 +262,14 @@ struct IRInstructionData
           llvm::hash_value(ID.Inst->getType()),
           llvm::hash_value(ID.getPredicate()),
           llvm::hash_combine_range(OperTypes.begin(), OperTypes.end()));
-    else if (CallInst *CI = dyn_cast<CallInst>(ID.Inst))
+    else if (isa<CallInst>(ID.Inst)) {
+      std::string FunctionName = *ID.CalleeName;
       return llvm::hash_combine(
           llvm::hash_value(ID.Inst->getOpcode()),
           llvm::hash_value(ID.Inst->getType()),
-          llvm::hash_value(CI->getCalledFunction()->getName().str()),
+          llvm::hash_value(ID.Inst->getType()), llvm::hash_value(FunctionName),
           llvm::hash_combine_range(OperTypes.begin(), OperTypes.end()));
+    }
     return llvm::hash_combine(
         llvm::hash_value(ID.Inst->getOpcode()),
         llvm::hash_value(ID.Inst->getType()),
@@ -346,6 +387,10 @@ struct IRInstructionMapper {
   /// to be considered for similarity.
   bool HaveLegalRange = false;
 
+  /// Marks whether we should use exact function names, as well as types to
+  /// find similarity between calls.
+  bool EnableMatchCallsByName = false;
+
   /// This allocator pointer is in charge of holding on to the IRInstructionData
   /// so it is not deallocated until whatever external tool is using it is done
   /// with the information.
@@ -462,8 +507,11 @@ struct IRInstructionMapper {
         return Legal;
       return Illegal;
     }
-    // TODO: Determine a scheme to resolve when the labels are similar enough.
-    InstrType visitPHINode(PHINode &PN) { return Illegal; }
+    InstrType visitPHINode(PHINode &PN) { 
+      if (EnableBranches)
+        return Legal;
+      return Illegal;
+    }
     // TODO: Handle allocas.
     InstrType visitAllocaInst(AllocaInst &AI) { return Illegal; }
     // We exclude variable argument instructions since variable arguments
@@ -483,7 +531,10 @@ struct IRInstructionMapper {
     // is not an indirect call.
     InstrType visitCallInst(CallInst &CI) {
       Function *F = CI.getCalledFunction();
-      if (!F || CI.isIndirectCall() || !F->hasName())
+      bool IsIndirectCall = CI.isIndirectCall();
+      if (IsIndirectCall && !EnableIndirectCalls)
+        return Illegal;
+      if (!F && !IsIndirectCall)
         return Illegal;
       return Legal;
     }
@@ -498,6 +549,10 @@ struct IRInstructionMapper {
     // The flag variable that lets the classifier know whether we should
     // allow branches to be checked for similarity.
     bool EnableBranches = false;
+
+    // The flag variable that lets the classifier know whether we should
+    // allow indirect calls to be considered legal instructions.
+    bool EnableIndirectCalls = false;
   };
 
   /// Maps an Instruction to a member of InstrType.
@@ -882,9 +937,12 @@ typedef std::vector<SimilarityGroup> SimilarityGroupList;
 /// analyzing the module.
 class IRSimilarityIdentifier {
 public:
-  IRSimilarityIdentifier(bool MatchBranches = true)
+  IRSimilarityIdentifier(bool MatchBranches = true,
+                         bool MatchIndirectCalls = true,
+                         bool MatchCallsWithName = false)
       : Mapper(&InstDataAllocator, &InstDataListAllocator),
-        EnableBranches(MatchBranches) {}
+        EnableBranches(MatchBranches), EnableIndirectCalls(MatchIndirectCalls),
+        EnableMatchingCallsByName(MatchCallsWithName) {}
 
 private:
   /// Map the instructions in the module to unsigned integers, using mapping
@@ -963,6 +1021,15 @@ private:
   /// The flag variable that marks whether we should check branches for
   /// similarity, or only look within basic blocks.
   bool EnableBranches = true;
+
+  /// The flag variable that marks whether we allow indirect calls to be checked
+  /// for similarity, or exclude them as a legal instruction.
+  bool EnableIndirectCalls = true;
+
+  /// The flag variable that marks whether we allow calls to be marked as
+  /// similar if they do not have the same name, only the same calling
+  /// convention, attributes and type signature.
+  bool EnableMatchingCallsByName = true;
 
   /// The SimilarityGroups found with the most recent run of \ref
   /// findSimilarity. None if there is no recent run.

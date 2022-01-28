@@ -67,6 +67,30 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmpInMacroDefinition) {
   EXPECT_TOKEN(Tokens[11], tok::star, TT_PointerOrReference);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsClasses) {
+  auto Tokens = annotate("class C {};");
+  EXPECT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_RecordLBrace);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
+  auto Tokens = annotate("struct S {};");
+  EXPECT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_RecordLBrace);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsUnions) {
+  auto Tokens = annotate("union U {};");
+  EXPECT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_RecordLBrace);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsEnums) {
+  auto Tokens = annotate("enum E {};");
+  EXPECT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_RecordLBrace);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang

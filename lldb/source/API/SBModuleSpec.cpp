@@ -7,31 +7,30 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBModuleSpec.h"
-#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "Utils.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
 SBModuleSpec::SBModuleSpec() : m_opaque_up(new lldb_private::ModuleSpec()) {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBModuleSpec);
+  LLDB_INSTRUMENT_VA(this);
 }
 
 SBModuleSpec::SBModuleSpec(const SBModuleSpec &rhs) {
-  LLDB_RECORD_CONSTRUCTOR(SBModuleSpec, (const lldb::SBModuleSpec &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
 const SBModuleSpec &SBModuleSpec::operator=(const SBModuleSpec &rhs) {
-  LLDB_RECORD_METHOD(const lldb::SBModuleSpec &,
-                     SBModuleSpec, operator=,(const lldb::SBModuleSpec &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
@@ -41,76 +40,72 @@ const SBModuleSpec &SBModuleSpec::operator=(const SBModuleSpec &rhs) {
 SBModuleSpec::~SBModuleSpec() = default;
 
 bool SBModuleSpec::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBModuleSpec, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 SBModuleSpec::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBModuleSpec, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up->operator bool();
 }
 
 void SBModuleSpec::Clear() {
-  LLDB_RECORD_METHOD_NO_ARGS(void, SBModuleSpec, Clear);
+  LLDB_INSTRUMENT_VA(this);
 
   m_opaque_up->Clear();
 }
 
 SBFileSpec SBModuleSpec::GetFileSpec() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBFileSpec, SBModuleSpec, GetFileSpec);
+  LLDB_INSTRUMENT_VA(this);
 
   SBFileSpec sb_spec(m_opaque_up->GetFileSpec());
   return sb_spec;
 }
 
 void SBModuleSpec::SetFileSpec(const lldb::SBFileSpec &sb_spec) {
-  LLDB_RECORD_METHOD(void, SBModuleSpec, SetFileSpec,
-                     (const lldb::SBFileSpec &), sb_spec);
+  LLDB_INSTRUMENT_VA(this, sb_spec);
 
   m_opaque_up->GetFileSpec() = *sb_spec;
 }
 
 lldb::SBFileSpec SBModuleSpec::GetPlatformFileSpec() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBFileSpec, SBModuleSpec,
-                             GetPlatformFileSpec);
+  LLDB_INSTRUMENT_VA(this);
 
   return SBFileSpec(m_opaque_up->GetPlatformFileSpec());
 }
 
 void SBModuleSpec::SetPlatformFileSpec(const lldb::SBFileSpec &sb_spec) {
-  LLDB_RECORD_METHOD(void, SBModuleSpec, SetPlatformFileSpec,
-                     (const lldb::SBFileSpec &), sb_spec);
+  LLDB_INSTRUMENT_VA(this, sb_spec);
 
   m_opaque_up->GetPlatformFileSpec() = *sb_spec;
 }
 
 lldb::SBFileSpec SBModuleSpec::GetSymbolFileSpec() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBFileSpec, SBModuleSpec, GetSymbolFileSpec);
+  LLDB_INSTRUMENT_VA(this);
 
   return SBFileSpec(m_opaque_up->GetSymbolFileSpec());
 }
 
 void SBModuleSpec::SetSymbolFileSpec(const lldb::SBFileSpec &sb_spec) {
-  LLDB_RECORD_METHOD(void, SBModuleSpec, SetSymbolFileSpec,
-                     (const lldb::SBFileSpec &), sb_spec);
+  LLDB_INSTRUMENT_VA(this, sb_spec);
 
   m_opaque_up->GetSymbolFileSpec() = *sb_spec;
 }
 
 const char *SBModuleSpec::GetObjectName() {
-  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBModuleSpec, GetObjectName);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up->GetObjectName().GetCString();
 }
 
 void SBModuleSpec::SetObjectName(const char *name) {
-  LLDB_RECORD_METHOD(void, SBModuleSpec, SetObjectName, (const char *), name);
+  LLDB_INSTRUMENT_VA(this, name);
 
   m_opaque_up->GetObjectName().SetCString(name);
 }
 
 const char *SBModuleSpec::GetTriple() {
-  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBModuleSpec, GetTriple);
+  LLDB_INSTRUMENT_VA(this);
 
   std::string triple(m_opaque_up->GetArchitecture().GetTriple().str());
   // Unique the string so we don't run into ownership issues since the const
@@ -121,48 +116,46 @@ const char *SBModuleSpec::GetTriple() {
 }
 
 void SBModuleSpec::SetTriple(const char *triple) {
-  LLDB_RECORD_METHOD(void, SBModuleSpec, SetTriple, (const char *), triple);
+  LLDB_INSTRUMENT_VA(this, triple);
 
   m_opaque_up->GetArchitecture().SetTriple(triple);
 }
 
 const uint8_t *SBModuleSpec::GetUUIDBytes() {
+  LLDB_INSTRUMENT_VA(this)
   return m_opaque_up->GetUUID().GetBytes().data();
 }
 
 size_t SBModuleSpec::GetUUIDLength() {
-  LLDB_RECORD_METHOD_NO_ARGS(size_t, SBModuleSpec, GetUUIDLength);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up->GetUUID().GetBytes().size();
 }
 
 bool SBModuleSpec::SetUUIDBytes(const uint8_t *uuid, size_t uuid_len) {
+  LLDB_INSTRUMENT_VA(this, uuid, uuid_len)
   m_opaque_up->GetUUID() = UUID::fromOptionalData(uuid, uuid_len);
   return m_opaque_up->GetUUID().IsValid();
 }
 
 bool SBModuleSpec::GetDescription(lldb::SBStream &description) {
-  LLDB_RECORD_METHOD(bool, SBModuleSpec, GetDescription, (lldb::SBStream &),
-                     description);
+  LLDB_INSTRUMENT_VA(this, description);
 
   m_opaque_up->Dump(description.ref());
   return true;
 }
 
 SBModuleSpecList::SBModuleSpecList() : m_opaque_up(new ModuleSpecList()) {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBModuleSpecList);
+  LLDB_INSTRUMENT_VA(this);
 }
 
 SBModuleSpecList::SBModuleSpecList(const SBModuleSpecList &rhs)
     : m_opaque_up(new ModuleSpecList(*rhs.m_opaque_up)) {
-  LLDB_RECORD_CONSTRUCTOR(SBModuleSpecList, (const lldb::SBModuleSpecList &),
-                          rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 }
 
 SBModuleSpecList &SBModuleSpecList::operator=(const SBModuleSpecList &rhs) {
-  LLDB_RECORD_METHOD(
-      lldb::SBModuleSpecList &,
-      SBModuleSpecList, operator=,(const lldb::SBModuleSpecList &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)
     *m_opaque_up = *rhs.m_opaque_up;
@@ -172,8 +165,7 @@ SBModuleSpecList &SBModuleSpecList::operator=(const SBModuleSpecList &rhs) {
 SBModuleSpecList::~SBModuleSpecList() = default;
 
 SBModuleSpecList SBModuleSpecList::GetModuleSpecifications(const char *path) {
-  LLDB_RECORD_STATIC_METHOD(lldb::SBModuleSpecList, SBModuleSpecList,
-                            GetModuleSpecifications, (const char *), path);
+  LLDB_INSTRUMENT_VA(path);
 
   SBModuleSpecList specs;
   FileSpec file_spec(path);
@@ -184,28 +176,25 @@ SBModuleSpecList SBModuleSpecList::GetModuleSpecifications(const char *path) {
 }
 
 void SBModuleSpecList::Append(const SBModuleSpec &spec) {
-  LLDB_RECORD_METHOD(void, SBModuleSpecList, Append,
-                     (const lldb::SBModuleSpec &), spec);
+  LLDB_INSTRUMENT_VA(this, spec);
 
   m_opaque_up->Append(*spec.m_opaque_up);
 }
 
 void SBModuleSpecList::Append(const SBModuleSpecList &spec_list) {
-  LLDB_RECORD_METHOD(void, SBModuleSpecList, Append,
-                     (const lldb::SBModuleSpecList &), spec_list);
+  LLDB_INSTRUMENT_VA(this, spec_list);
 
   m_opaque_up->Append(*spec_list.m_opaque_up);
 }
 
 size_t SBModuleSpecList::GetSize() {
-  LLDB_RECORD_METHOD_NO_ARGS(size_t, SBModuleSpecList, GetSize);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up->GetSize();
 }
 
 SBModuleSpec SBModuleSpecList::GetSpecAtIndex(size_t i) {
-  LLDB_RECORD_METHOD(lldb::SBModuleSpec, SBModuleSpecList, GetSpecAtIndex,
-                     (size_t), i);
+  LLDB_INSTRUMENT_VA(this, i);
 
   SBModuleSpec sb_module_spec;
   m_opaque_up->GetModuleSpecAtIndex(i, *sb_module_spec.m_opaque_up);
@@ -214,9 +203,7 @@ SBModuleSpec SBModuleSpecList::GetSpecAtIndex(size_t i) {
 
 SBModuleSpec
 SBModuleSpecList::FindFirstMatchingSpec(const SBModuleSpec &match_spec) {
-  LLDB_RECORD_METHOD(lldb::SBModuleSpec, SBModuleSpecList,
-                     FindFirstMatchingSpec, (const lldb::SBModuleSpec &),
-                     match_spec);
+  LLDB_INSTRUMENT_VA(this, match_spec);
 
   SBModuleSpec sb_module_spec;
   m_opaque_up->FindMatchingModuleSpec(*match_spec.m_opaque_up,
@@ -226,9 +213,7 @@ SBModuleSpecList::FindFirstMatchingSpec(const SBModuleSpec &match_spec) {
 
 SBModuleSpecList
 SBModuleSpecList::FindMatchingSpecs(const SBModuleSpec &match_spec) {
-  LLDB_RECORD_METHOD(lldb::SBModuleSpecList, SBModuleSpecList,
-                     FindMatchingSpecs, (const lldb::SBModuleSpec &),
-                     match_spec);
+  LLDB_INSTRUMENT_VA(this, match_spec);
 
   SBModuleSpecList specs;
   m_opaque_up->FindMatchingModuleSpecs(*match_spec.m_opaque_up,
@@ -237,8 +222,7 @@ SBModuleSpecList::FindMatchingSpecs(const SBModuleSpec &match_spec) {
 }
 
 bool SBModuleSpecList::GetDescription(lldb::SBStream &description) {
-  LLDB_RECORD_METHOD(bool, SBModuleSpecList, GetDescription, (lldb::SBStream &),
-                     description);
+  LLDB_INSTRUMENT_VA(this, description);
 
   m_opaque_up->Dump(description.ref());
   return true;

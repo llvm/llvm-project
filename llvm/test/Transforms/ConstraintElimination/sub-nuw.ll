@@ -237,4 +237,38 @@ if.end:                                           ; preds = %entry
   ret void
 }
 
+define i16 @test_pr53123_sub_constraint_sign(i16 %v) {
+; CHECK-LABEL: @test_pr53123_sub_constraint_sign(
+; CHECK-NEXT:  bb.0:
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i16 32767, [[V:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i16 [[V]], [[SUB]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[BB_2:%.*]], label [[BB_1:%.*]]
+; CHECK:       bb.1:
+; CHECK-NEXT:    [[ADD:%.*]] = shl nuw nsw i16 [[V]], 1
+; CHECK-NEXT:    [[SUB9:%.*]] = sub nuw nsw i16 32767, [[ADD]]
+; CHECK-NEXT:    [[CMP11:%.*]] = icmp ugt i16 [[ADD]], [[SUB9]]
+; CHECK-NEXT:    br i1 [[CMP11]], label [[BB_3:%.*]], label [[BB_2]]
+; CHECK:       bb.2:
+; CHECK-NEXT:    ret i16 1
+; CHECK:       bb.3:
+; CHECK-NEXT:    ret i16 0
+;
+bb.0:
+  %sub = sub nuw nsw i16 32767, %v
+  %cmp1 = icmp ugt i16 %v, %sub
+  br i1 %cmp1, label %bb.2, label %bb.1
+
+bb.1:
+  %add = shl nuw nsw i16 %v, 1
+  %sub9 = sub nuw nsw i16 32767, %add
+  %cmp11 = icmp ugt i16 %add, %sub9
+  br i1 %cmp11, label %bb.3, label %bb.2
+
+bb.2:
+  ret i16 1
+
+bb.3:
+  ret i16 0
+}
+
 declare void @use(i1)

@@ -60,7 +60,7 @@ define amdgpu_kernel void @global_agent_unordered_load(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_unordered_load:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s7, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -170,7 +170,7 @@ define amdgpu_kernel void @global_agent_monotonic_load(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_monotonic_load:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s7, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -286,7 +286,7 @@ define amdgpu_kernel void @global_agent_acquire_load(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_acquire_load:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s7, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -412,7 +412,7 @@ define amdgpu_kernel void @global_agent_seq_cst_load(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_seq_cst_load:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s7, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -527,8 +527,8 @@ define amdgpu_kernel void @global_agent_unordered_store(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_unordered_store:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x0
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -628,8 +628,8 @@ define amdgpu_kernel void @global_agent_monotonic_store(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_monotonic_store:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x0
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -735,8 +735,8 @@ define amdgpu_kernel void @global_agent_release_store(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_release_store:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x0
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -849,8 +849,8 @@ define amdgpu_kernel void @global_agent_seq_cst_store(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_seq_cst_store:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x0
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -957,8 +957,8 @@ define amdgpu_kernel void @global_agent_monotonic_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_monotonic_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1068,8 +1068,8 @@ define amdgpu_kernel void @global_agent_acquire_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_acquire_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1186,8 +1186,8 @@ define amdgpu_kernel void @global_agent_release_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_release_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1310,8 +1310,8 @@ define amdgpu_kernel void @global_agent_acq_rel_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_acq_rel_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1445,8 +1445,8 @@ define amdgpu_kernel void @global_agent_seq_cst_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_seq_cst_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1578,8 +1578,8 @@ define amdgpu_kernel void @global_agent_acquire_ret_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_acquire_ret_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1716,8 +1716,8 @@ define amdgpu_kernel void @global_agent_acq_rel_ret_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_acq_rel_ret_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1861,8 +1861,8 @@ define amdgpu_kernel void @global_agent_seq_cst_ret_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_seq_cst_ret_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1992,8 +1992,8 @@ define amdgpu_kernel void @global_agent_monotonic_monotonic_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_monotonic_monotonic_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2113,8 +2113,8 @@ define amdgpu_kernel void @global_agent_acquire_monotonic_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_acquire_monotonic_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2241,8 +2241,8 @@ define amdgpu_kernel void @global_agent_release_monotonic_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_release_monotonic_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2375,8 +2375,8 @@ define amdgpu_kernel void @global_agent_acq_rel_monotonic_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_acq_rel_monotonic_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2520,8 +2520,8 @@ define amdgpu_kernel void @global_agent_seq_cst_monotonic_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_seq_cst_monotonic_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2659,8 +2659,8 @@ define amdgpu_kernel void @global_agent_monotonic_acquire_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_monotonic_acquire_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2791,8 +2791,8 @@ define amdgpu_kernel void @global_agent_acquire_acquire_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_acquire_acquire_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2929,8 +2929,8 @@ define amdgpu_kernel void @global_agent_release_acquire_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_release_acquire_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3074,8 +3074,8 @@ define amdgpu_kernel void @global_agent_acq_rel_acquire_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_acq_rel_acquire_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3219,8 +3219,8 @@ define amdgpu_kernel void @global_agent_seq_cst_acquire_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_seq_cst_acquire_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3364,8 +3364,8 @@ define amdgpu_kernel void @global_agent_monotonic_seq_cst_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_monotonic_seq_cst_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3509,8 +3509,8 @@ define amdgpu_kernel void @global_agent_acquire_seq_cst_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_acquire_seq_cst_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3654,8 +3654,8 @@ define amdgpu_kernel void @global_agent_release_seq_cst_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_release_seq_cst_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3799,8 +3799,8 @@ define amdgpu_kernel void @global_agent_acq_rel_seq_cst_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_acq_rel_seq_cst_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3944,8 +3944,8 @@ define amdgpu_kernel void @global_agent_seq_cst_seq_cst_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_seq_cst_seq_cst_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4083,8 +4083,8 @@ define amdgpu_kernel void @global_agent_monotonic_monotonic_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_monotonic_monotonic_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4222,8 +4222,8 @@ define amdgpu_kernel void @global_agent_acquire_monotonic_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_acquire_monotonic_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4367,8 +4367,8 @@ define amdgpu_kernel void @global_agent_release_monotonic_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_release_monotonic_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4519,8 +4519,8 @@ define amdgpu_kernel void @global_agent_acq_rel_monotonic_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_acq_rel_monotonic_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4677,8 +4677,8 @@ define amdgpu_kernel void @global_agent_seq_cst_monotonic_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_seq_cst_monotonic_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4829,8 +4829,8 @@ define amdgpu_kernel void @global_agent_monotonic_acquire_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_monotonic_acquire_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4974,8 +4974,8 @@ define amdgpu_kernel void @global_agent_acquire_acquire_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_acquire_acquire_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5125,8 +5125,8 @@ define amdgpu_kernel void @global_agent_release_acquire_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_release_acquire_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5283,8 +5283,8 @@ define amdgpu_kernel void @global_agent_acq_rel_acquire_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_acq_rel_acquire_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5441,8 +5441,8 @@ define amdgpu_kernel void @global_agent_seq_cst_acquire_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_seq_cst_acquire_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5599,8 +5599,8 @@ define amdgpu_kernel void @global_agent_monotonic_seq_cst_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_monotonic_seq_cst_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5757,8 +5757,8 @@ define amdgpu_kernel void @global_agent_acquire_seq_cst_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_acquire_seq_cst_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5915,8 +5915,8 @@ define amdgpu_kernel void @global_agent_release_seq_cst_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_release_seq_cst_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -6073,8 +6073,8 @@ define amdgpu_kernel void @global_agent_acq_rel_seq_cst_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_acq_rel_seq_cst_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -6231,8 +6231,8 @@ define amdgpu_kernel void @global_agent_seq_cst_seq_cst_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_seq_cst_seq_cst_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -6365,7 +6365,7 @@ define amdgpu_kernel void @global_agent_one_as_unordered_load(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_unordered_load:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s7, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -6475,7 +6475,7 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_load(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_monotonic_load:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s7, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -6591,7 +6591,7 @@ define amdgpu_kernel void @global_agent_one_as_acquire_load(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_acquire_load:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s7, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -6717,7 +6717,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_load(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_seq_cst_load:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s7, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -6832,8 +6832,8 @@ define amdgpu_kernel void @global_agent_one_as_unordered_store(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_unordered_store:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x0
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -6933,8 +6933,8 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_store(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_monotonic_store:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x0
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7040,8 +7040,8 @@ define amdgpu_kernel void @global_agent_one_as_release_store(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_release_store:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x0
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7154,8 +7154,8 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_store(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_seq_cst_store:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x0
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7262,8 +7262,8 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_monotonic_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7373,8 +7373,8 @@ define amdgpu_kernel void @global_agent_one_as_acquire_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_acquire_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7491,8 +7491,8 @@ define amdgpu_kernel void @global_agent_one_as_release_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_release_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7615,8 +7615,8 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_acq_rel_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7750,8 +7750,8 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_seq_cst_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7883,8 +7883,8 @@ define amdgpu_kernel void @global_agent_one_as_acquire_ret_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_acquire_ret_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -8021,8 +8021,8 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_ret_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_acq_rel_ret_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -8166,8 +8166,8 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_ret_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_seq_cst_ret_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dword s4, s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -8297,8 +8297,8 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_monotonic_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_monotonic_monotonic_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -8418,8 +8418,8 @@ define amdgpu_kernel void @global_agent_one_as_acquire_monotonic_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_acquire_monotonic_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -8546,8 +8546,8 @@ define amdgpu_kernel void @global_agent_one_as_release_monotonic_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_release_monotonic_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -8680,8 +8680,8 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_monotonic_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_acq_rel_monotonic_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -8825,8 +8825,8 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_monotonic_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_seq_cst_monotonic_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -8964,8 +8964,8 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_acquire_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_monotonic_acquire_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -9096,8 +9096,8 @@ define amdgpu_kernel void @global_agent_one_as_acquire_acquire_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_acquire_acquire_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -9234,8 +9234,8 @@ define amdgpu_kernel void @global_agent_one_as_release_acquire_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_release_acquire_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -9379,8 +9379,8 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_acquire_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_acq_rel_acquire_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -9524,8 +9524,8 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_acquire_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_seq_cst_acquire_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -9669,8 +9669,8 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_seq_cst_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_monotonic_seq_cst_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -9814,8 +9814,8 @@ define amdgpu_kernel void @global_agent_one_as_acquire_seq_cst_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_acquire_seq_cst_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -9959,8 +9959,8 @@ define amdgpu_kernel void @global_agent_one_as_release_seq_cst_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_release_seq_cst_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -10104,8 +10104,8 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_seq_cst_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_acq_rel_seq_cst_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -10249,8 +10249,8 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_seq_cst_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_seq_cst_seq_cst_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -10388,8 +10388,8 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_monotonic_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_monotonic_monotonic_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -10527,8 +10527,8 @@ define amdgpu_kernel void @global_agent_one_as_acquire_monotonic_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_acquire_monotonic_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -10678,8 +10678,8 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_monotonic_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_acq_rel_monotonic_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -10836,8 +10836,8 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_monotonic_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_seq_cst_monotonic_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -10988,8 +10988,8 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_acquire_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_monotonic_acquire_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -11133,8 +11133,8 @@ define amdgpu_kernel void @global_agent_one_as_acquire_acquire_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_acquire_acquire_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -11284,8 +11284,8 @@ define amdgpu_kernel void @global_agent_one_as_release_acquire_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_release_acquire_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -11442,8 +11442,8 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_acquire_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_acq_rel_acquire_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -11600,8 +11600,8 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_acquire_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_seq_cst_acquire_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -11758,8 +11758,8 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_seq_cst_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_monotonic_seq_cst_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -11916,8 +11916,8 @@ define amdgpu_kernel void @global_agent_one_as_acquire_seq_cst_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_acquire_seq_cst_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -12074,8 +12074,8 @@ define amdgpu_kernel void @global_agent_one_as_release_seq_cst_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_release_seq_cst_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -12232,8 +12232,8 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_acq_rel_seq_cst_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -12390,8 +12390,8 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: global_agent_one_as_seq_cst_seq_cst_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s3, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)

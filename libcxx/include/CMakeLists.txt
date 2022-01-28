@@ -26,6 +26,7 @@ set(files
   __algorithm/generate.h
   __algorithm/generate_n.h
   __algorithm/half_positive.h
+  __algorithm/in_in_result.h
   __algorithm/in_out_result.h
   __algorithm/includes.h
   __algorithm/inplace_merge.h
@@ -103,9 +104,20 @@ set(files
   __charconv/chars_format.h
   __charconv/from_chars_result.h
   __charconv/to_chars_result.h
+  __chrono/calendar.h
+  __chrono/convert_to_timespec.h
+  __chrono/duration.h
+  __chrono/file_clock.h
+  __chrono/high_resolution_clock.h
+  __chrono/steady_clock.h
+  __chrono/system_clock.h
+  __chrono/time_point.h
   __compare/common_comparison_category.h
+  __compare/compare_partial_order_fallback.h
+  __compare/compare_strong_order_fallback.h
   __compare/compare_three_way.h
   __compare/compare_three_way_result.h
+  __compare/compare_weak_order_fallback.h
   __compare/is_eq.h
   __compare/ordering.h
   __compare/partial_order.h
@@ -169,11 +181,12 @@ set(files
   __format/formatter.h
   __format/formatter_bool.h
   __format/formatter_char.h
+  __format/formatter_floating_point.h
   __format/formatter_integer.h
   __format/formatter_integral.h
+  __format/formatter_pointer.h
   __format/formatter_string.h
   __format/parser_std_format_spec.h
-  __function_like.h
   __functional/binary_function.h
   __functional/binary_negate.h
   __functional/bind.h
@@ -249,6 +262,7 @@ set(files
   __memory/concepts.h
   __memory/construct_at.h
   __memory/pointer_traits.h
+  __memory/ranges_construct_at.h
   __memory/ranges_uninitialized_algorithms.h
   __memory/raw_storage_iterator.h
   __memory/shared_ptr.h
@@ -325,6 +339,7 @@ set(files
   __ranges/iota_view.h
   __ranges/join_view.h
   __ranges/non_propagating_cache.h
+  __ranges/owning_view.h
   __ranges/range_adaptor.h
   __ranges/ref_view.h
   __ranges/reverse_view.h
@@ -357,6 +372,7 @@ set(files
   __support/xlocale/__posix_l_fallback.h
   __support/xlocale/__strtonum_fallback.h
   __thread/poll_with_backoff.h
+  __thread/timed_backoff_policy.h
   __threading_support
   __tree
   __tuple

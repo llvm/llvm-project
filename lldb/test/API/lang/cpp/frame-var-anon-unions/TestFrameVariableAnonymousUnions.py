@@ -29,7 +29,3 @@ class FrameVariableAnonymousUnionsTestCase(TestBase):
             self.expect('frame variable -f x i', substrs=['41ffff00'])
 
         self.expect('frame variable c', substrs=["'A"])
-
-        self.expect('frame variable x', matching=False, substrs=['3'])
-        self.expect('frame variable y', matching=False, substrs=["'B'"])
-        self.expect('frame variable z', matching=False, substrs=['14'])

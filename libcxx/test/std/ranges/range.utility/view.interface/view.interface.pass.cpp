@@ -32,8 +32,6 @@ static_assert(!ValidViewInterfaceType<Empty const>);
 static_assert(!ValidViewInterfaceType<Empty &>);
 static_assert( ValidViewInterfaceType<Empty>);
 
-static_assert(std::derived_from<std::ranges::view_interface<Empty>, std::ranges::view_base>);
-
 using InputIter = cpp20_input_iterator<const int*>;
 
 struct InputRange : std::ranges::view_interface<InputRange> {
@@ -80,6 +78,11 @@ struct MoveOnlyForwardRange : std::ranges::view_interface<MoveOnlyForwardRange> 
   constexpr ForwardIter end() const { return ForwardIter(const_cast<int*>(buff) + 8); }
 };
 static_assert(std::ranges::view<MoveOnlyForwardRange>);
+
+struct MI : std::ranges::view_interface<InputRange>,
+            std::ranges::view_interface<MoveOnlyForwardRange> {
+};
+static_assert(!std::ranges::view<MI>);
 
 struct EmptyIsTrue : std::ranges::view_interface<EmptyIsTrue> {
   int buff[8] = {0, 1, 2, 3, 4, 5, 6, 7};
@@ -301,6 +304,10 @@ constexpr bool testFrontBack() {
 
   return true;
 }
+
+struct V1 : std::ranges::view_interface<V1> { };
+struct V2 : std::ranges::view_interface<V2> { V1 base_; };
+static_assert(sizeof(V2) == sizeof(V1));
 
 int main(int, char**) {
   testEmpty();

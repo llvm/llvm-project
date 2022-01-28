@@ -14,6 +14,7 @@
 #include "MapFile.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
+#include "SectionPriorities.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -21,8 +22,7 @@
 #include "UnwindInfoSection.h"
 
 #include "lld/Common/Arrays.h"
-#include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Memory.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/LEB128.h"
@@ -415,19 +415,19 @@ public:
   void writeTo(uint8_t *buf) const override {
     auto *c = reinterpret_cast<version_min_command *>(buf);
     switch (platformInfo.target.Platform) {
-    case PlatformKind::macOS:
+    case PLATFORM_MACOS:
       c->cmd = LC_VERSION_MIN_MACOSX;
       break;
-    case PlatformKind::iOS:
-    case PlatformKind::iOSSimulator:
+    case PLATFORM_IOS:
+    case PLATFORM_IOSSIMULATOR:
       c->cmd = LC_VERSION_MIN_IPHONEOS;
       break;
-    case PlatformKind::tvOS:
-    case PlatformKind::tvOSSimulator:
+    case PLATFORM_TVOS:
+    case PLATFORM_TVOSSIMULATOR:
       c->cmd = LC_VERSION_MIN_TVOS;
       break;
-    case PlatformKind::watchOS:
-    case PlatformKind::watchOSSimulator:
+    case PLATFORM_WATCHOS:
+    case PLATFORM_WATCHOSSIMULATOR:
       c->cmd = LC_VERSION_MIN_WATCHOS;
       break;
     default:
@@ -610,7 +610,7 @@ static bool needsBinding(const Symbol *sym) {
 }
 
 static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
-                                    const Reloc &r) {
+                                    const lld::macho::Reloc &r) {
   assert(sym->isLive());
   const RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);
 
@@ -643,7 +643,7 @@ void Writer::scanRelocations() {
       continue;
 
     for (auto it = isec->relocs.begin(); it != isec->relocs.end(); ++it) {
-      Reloc &r = *it;
+      lld::macho::Reloc &r = *it;
       if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)) {
         // Skip over the following UNSIGNED relocation -- it's just there as the
         // minuend, and doesn't have the usual UNSIGNED semantics. We don't want
@@ -709,14 +709,14 @@ void Writer::scanSymbols() {
 
 // TODO: ld64 enforces the old load commands in a few other cases.
 static bool useLCBuildVersion(const PlatformInfo &platformInfo) {
-  static const std::vector<std::pair<PlatformKind, VersionTuple>> minVersion = {
-      {PlatformKind::macOS, VersionTuple(10, 14)},
-      {PlatformKind::iOS, VersionTuple(12, 0)},
-      {PlatformKind::iOSSimulator, VersionTuple(13, 0)},
-      {PlatformKind::tvOS, VersionTuple(12, 0)},
-      {PlatformKind::tvOSSimulator, VersionTuple(13, 0)},
-      {PlatformKind::watchOS, VersionTuple(5, 0)},
-      {PlatformKind::watchOSSimulator, VersionTuple(6, 0)}};
+  static const std::vector<std::pair<PlatformType, VersionTuple>> minVersion = {
+      {PLATFORM_MACOS, VersionTuple(10, 14)},
+      {PLATFORM_IOS, VersionTuple(12, 0)},
+      {PLATFORM_IOSSIMULATOR, VersionTuple(13, 0)},
+      {PLATFORM_TVOS, VersionTuple(12, 0)},
+      {PLATFORM_TVOSSIMULATOR, VersionTuple(13, 0)},
+      {PLATFORM_WATCHOS, VersionTuple(5, 0)},
+      {PLATFORM_WATCHOSSIMULATOR, VersionTuple(6, 0)}};
   auto it = llvm::find_if(minVersion, [&](const auto &p) {
     return p.first == platformInfo.target.Platform;
   });
@@ -847,52 +847,6 @@ template <class LP> void Writer::createLoadCommands() {
       config->headerPad, (config->headerPadMaxInstallNames
                               ? LCDylib::getInstanceCount() * MACOS_MAXPATHLEN
                               : 0));
-}
-
-static size_t getSymbolPriority(const SymbolPriorityEntry &entry,
-                                const InputFile *f) {
-  // We don't use toString(InputFile *) here because it returns the full path
-  // for object files, and we only want the basename.
-  StringRef filename;
-  if (f->archiveName.empty())
-    filename = path::filename(f->getName());
-  else
-    filename = saver.save(path::filename(f->archiveName) + "(" +
-                          path::filename(f->getName()) + ")");
-  return std::max(entry.objectFiles.lookup(filename), entry.anyObjectFile);
-}
-
-// Each section gets assigned the priority of the highest-priority symbol it
-// contains.
-static DenseMap<const InputSection *, size_t> buildInputSectionPriorities() {
-  DenseMap<const InputSection *, size_t> sectionPriorities;
-
-  if (config->priorities.empty())
-    return sectionPriorities;
-
-  auto addSym = [&](Defined &sym) {
-    if (sym.isAbsolute())
-      return;
-
-    auto it = config->priorities.find(sym.getName());
-    if (it == config->priorities.end())
-      return;
-
-    SymbolPriorityEntry &entry = it->second;
-    size_t &priority = sectionPriorities[sym.isec];
-    priority =
-        std::max(priority, getSymbolPriority(entry, sym.isec->getFile()));
-  };
-
-  // TODO: Make sure this handles weak symbols correctly.
-  for (const InputFile *file : inputFiles) {
-    if (isa<ObjFile>(file))
-      for (Symbol *sym : file->symbols)
-        if (auto *d = dyn_cast_or_null<Defined>(sym))
-          addSym(*d);
-  }
-
-  return sectionPriorities;
 }
 
 // Sorting only can happen once all outputs have been collected. Here we sort
@@ -1175,7 +1129,13 @@ template <class LP> void Writer::run() {
   sortSegmentsAndSections();
   createLoadCommands<LP>();
   finalizeAddresses();
-  threadPool.async(writeMapFile);
+  threadPool.async([&] {
+    if (LLVM_ENABLE_THREADS && config->timeTraceEnabled)
+      timeTraceProfilerInitialize(config->timeTraceGranularity, "writeMapFile");
+    writeMapFile();
+    if (LLVM_ENABLE_THREADS && config->timeTraceEnabled)
+      timeTraceProfilerFinishThread();
+  });
   finalizeLinkEditSegment();
   writeOutputFile();
 }
@@ -1207,7 +1167,7 @@ void macho::createSyntheticSections() {
 
   // This section contains space for just a single word, and will be used by
   // dyld to cache an address to the image loader it uses.
-  uint8_t *arr = bAlloc.Allocate<uint8_t>(target->wordSize);
+  uint8_t *arr = bAlloc().Allocate<uint8_t>(target->wordSize);
   memset(arr, 0, target->wordSize);
   in.imageLoaderCache = make<ConcatInputSection>(
       segment_names::data, section_names::data, /*file=*/nullptr,

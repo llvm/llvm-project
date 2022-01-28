@@ -128,8 +128,10 @@ INSTR_PROF_VALUE_NODE(PtrToNodeT, llvm::Type::getInt8PtrTy(Ctx), Next, \
 INSTR_PROF_RAW_HEADER(uint64_t, Magic, __llvm_profile_get_magic())
 INSTR_PROF_RAW_HEADER(uint64_t, Version, __llvm_profile_get_version())
 INSTR_PROF_RAW_HEADER(uint64_t, BinaryIdsSize, __llvm_write_binary_ids(NULL))
+/* FIXME: A more accurate name is NumData */
 INSTR_PROF_RAW_HEADER(uint64_t, DataSize, DataSize)
 INSTR_PROF_RAW_HEADER(uint64_t, PaddingBytesBeforeCounters, PaddingBytesBeforeCounters)
+/* FIXME: A more accurate name is NumCounters */
 INSTR_PROF_RAW_HEADER(uint64_t, CountersSize, CountersSize)
 INSTR_PROF_RAW_HEADER(uint64_t, PaddingBytesAfterCounters, PaddingBytesAfterCounters)
 INSTR_PROF_RAW_HEADER(uint64_t, NamesSize,  NamesSize)
@@ -644,6 +646,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
        (uint64_t)'p' << 40 | (uint64_t)'r' << 32 | (uint64_t)'o' << 24 |  \
         (uint64_t)'f' << 16 | (uint64_t)'R' << 8 | (uint64_t)129
 
+/* FIXME: Please remedy the fixme in the header before bumping the version. */
 /* Raw profile format version (start from 1). */
 #define INSTR_PROF_RAW_VERSION 8
 /* Indexed profile format version (start from 1). */
@@ -657,6 +660,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
  * generated profile, and 0 if this is a Clang FE generated profile.
  * 1 in bit 57 indicates there are context-sensitive records in the profile.
  * The 59th bit indicates whether to use debug info to correlate profiles.
+ * The 60th bit indicates single byte coverage instrumentation.
+ * The 61st bit indicates function entry instrumentation only.
  */
 #define VARIANT_MASKS_ALL 0xff00000000000000ULL
 #define GET_VERSION(V) ((V) & ~VARIANT_MASKS_ALL)
@@ -664,6 +669,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define VARIANT_MASK_CSIR_PROF (0x1ULL << 57)
 #define VARIANT_MASK_INSTR_ENTRY (0x1ULL << 58)
 #define VARIANT_MASK_DBG_CORRELATE (0x1ULL << 59)
+#define VARIANT_MASK_BYTE_COVERAGE (0x1ULL << 60)
+#define VARIANT_MASK_FUNCTION_ENTRY_ONLY (0x1ULL << 61)
 #define INSTR_PROF_RAW_VERSION_VAR __llvm_profile_raw_version
 #define INSTR_PROF_PROFILE_RUNTIME_VAR __llvm_profile_runtime
 #define INSTR_PROF_PROFILE_COUNTER_BIAS_VAR __llvm_profile_counter_bias

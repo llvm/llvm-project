@@ -46,6 +46,7 @@ Getting Started with libc++
    Status/Format
    Status/Ranges
    Status/Spaceship
+   Status/Zip
 
 
 .. toctree::

@@ -12,20 +12,19 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arithmetic/Transforms/BufferizableOpInterfaceImpl.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/AffineInterfaceImpl.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/ArithInterfaceImpl.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizationInterfaceImpl.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/ComprehensiveBufferize.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/LinalgInterfaceImpl.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/ModuleBufferization.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/SCFInterfaceImpl.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/TensorInterfaceImpl.h"
+#include "mlir/Dialect/Linalg/ComprehensiveBufferize/StdInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/VectorInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
@@ -33,12 +32,14 @@
 using namespace mlir;
 using namespace mlir::linalg;
 using namespace mlir::linalg::comprehensive_bufferize;
+using namespace mlir::bufferization;
 
 namespace {
 /// A helper struct for FunctionBufferize and ModuleBufferize. Both passes are
 /// mostly identical.
 struct TestComprehensiveFunctionBufferize
-    : public PassWrapper<TestComprehensiveFunctionBufferize, FunctionPass> {
+    : public PassWrapper<TestComprehensiveFunctionBufferize,
+                         OperationPass<FuncOp>> {
   StringRef getArgument() const final {
     return "test-comprehensive-function-bufferize";
   }
@@ -55,18 +56,18 @@ struct TestComprehensiveFunctionBufferize
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<bufferization::BufferizationDialect, linalg::LinalgDialect,
                     memref::MemRefDialect, tensor::TensorDialect,
-                    vector::VectorDialect, scf::SCFDialect,
+                    vector::VectorDialect, scf::SCFDialect, StandardOpsDialect,
                     arith::ArithmeticDialect, AffineDialect>();
     affine_ext::registerBufferizableOpInterfaceExternalModels(registry);
-    arith_ext::registerBufferizableOpInterfaceExternalModels(registry);
-    bufferization_ext::registerBufferizableOpInterfaceExternalModels(registry);
+    arith::registerBufferizableOpInterfaceExternalModels(registry);
     linalg_ext::registerBufferizableOpInterfaceExternalModels(registry);
     scf_ext::registerBufferizableOpInterfaceExternalModels(registry);
-    tensor_ext::registerBufferizableOpInterfaceExternalModels(registry);
+    std_ext::registerBufferizableOpInterfaceExternalModels(registry);
+    tensor::registerBufferizableOpInterfaceExternalModels(registry);
     vector_ext::registerBufferizableOpInterfaceExternalModels(registry);
   }
 
-  void runOnFunction() override;
+  void runOnOperation() override;
 
   Option<bool> allowReturnMemref{
       *this, "allow-return-memref",
@@ -90,19 +91,29 @@ struct TestComprehensiveFunctionBufferize
       *this, "dialect-filter",
       llvm::cl::desc("Bufferize only ops from the specified dialects"),
       llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
+  Option<bool> fullyDynamicLayoutMaps{
+      *this, "fully-dynamic-layout-maps",
+      llvm::cl::desc("Use fully dynamic layout maps on memref types"),
+      llvm::cl::init(true)};
+  Option<bool> createDeallocs{
+      *this, "create-deallocs",
+      llvm::cl::desc("Specify if buffers should be deallocated"),
+      llvm::cl::init(true)};
 };
 } // namespace
 
-void TestComprehensiveFunctionBufferize::runOnFunction() {
-  auto options = std::make_unique<BufferizationOptions>();
+void TestComprehensiveFunctionBufferize::runOnOperation() {
+  auto options = std::make_unique<AnalysisBufferizationOptions>();
 
   if (!allowReturnMemref)
-    options->addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
+    options->addPostAnalysisStep<scf_ext::AssertScfForAliasingProperties>();
 
   options->allowReturnMemref = allowReturnMemref;
   options->allowUnknownOps = allowUnknownOps;
   options->testAnalysisOnly = testAnalysisOnly;
   options->analysisFuzzerSeed = analysisFuzzerSeed;
+  options->fullyDynamicLayoutMaps = fullyDynamicLayoutMaps;
+  options->createDeallocs = createDeallocs;
 
   if (dialectFilter.hasValue()) {
     options->dialectFilter.emplace();
@@ -110,8 +121,8 @@ void TestComprehensiveFunctionBufferize::runOnFunction() {
       options->dialectFilter->insert(dialectNamespace);
   }
 
-  Operation *op = getFunction().getOperation();
-  if (failed(runComprehensiveBufferize(op, std::move(options))))
+  Operation *op = getOperation();
+  if (failed(runOneShotBufferize(op, std::move(options))))
     return;
 
   if (testAnalysisOnly)

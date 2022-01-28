@@ -58,24 +58,37 @@ static APFloat fmed3AMDGCN(const APFloat &Src0, const APFloat &Src1,
 
 // Check if a value can be converted to a 16-bit value without losing
 // precision.
-static bool canSafelyConvertTo16Bit(Value &V) {
+// The value is expected to be either a float (IsFloat = true) or an unsigned
+// integer (IsFloat = false).
+static bool canSafelyConvertTo16Bit(Value &V, bool IsFloat) {
   Type *VTy = V.getType();
   if (VTy->isHalfTy() || VTy->isIntegerTy(16)) {
     // The value is already 16-bit, so we don't want to convert to 16-bit again!
     return false;
   }
-  if (ConstantFP *ConstFloat = dyn_cast<ConstantFP>(&V)) {
-    // We need to check that if we cast the index down to a half, we do not lose
-    // precision.
-    APFloat FloatValue(ConstFloat->getValueAPF());
-    bool LosesInfo = true;
-    FloatValue.convert(APFloat::IEEEhalf(), APFloat::rmTowardZero, &LosesInfo);
-    return !LosesInfo;
+  if (IsFloat) {
+    if (ConstantFP *ConstFloat = dyn_cast<ConstantFP>(&V)) {
+      // We need to check that if we cast the index down to a half, we do not
+      // lose precision.
+      APFloat FloatValue(ConstFloat->getValueAPF());
+      bool LosesInfo = true;
+      FloatValue.convert(APFloat::IEEEhalf(), APFloat::rmTowardZero,
+                         &LosesInfo);
+      return !LosesInfo;
+    }
+  } else {
+    if (ConstantInt *ConstInt = dyn_cast<ConstantInt>(&V)) {
+      // We need to check that if we cast the index down to an i16, we do not
+      // lose precision.
+      APInt IntValue(ConstInt->getValue());
+      return IntValue.getActiveBits() <= 16;
+    }
   }
+
   Value *CastSrc;
-  if (match(&V, m_FPExt(PatternMatch::m_Value(CastSrc))) ||
-      match(&V, m_SExt(PatternMatch::m_Value(CastSrc))) ||
-      match(&V, m_ZExt(PatternMatch::m_Value(CastSrc)))) {
+  bool IsExt = IsFloat ? match(&V, m_FPExt(PatternMatch::m_Value(CastSrc)))
+                       : match(&V, m_ZExt(PatternMatch::m_Value(CastSrc)));
+  if (IsExt) {
     Type *CastSrcTy = CastSrc->getType();
     if (CastSrcTy->isHalfTy() || CastSrcTy->isIntegerTy(16))
       return true;
@@ -97,13 +110,116 @@ static Value *convertTo16Bit(Value &V, InstCombiner::BuilderTy &Builder) {
   llvm_unreachable("Should never be called!");
 }
 
+/// Applies Function(II.Args, II.ArgTys) and replaces the intrinsic call with
+/// the modified arguments.
+static Optional<Instruction *> modifyIntrinsicCall(
+    IntrinsicInst &II, unsigned NewIntr, InstCombiner &IC,
+    std::function<void(SmallVectorImpl<Value *> &, SmallVectorImpl<Type *> &)>
+        Func) {
+  SmallVector<Type *, 4> ArgTys;
+  if (!Intrinsic::getIntrinsicSignature(II.getCalledFunction(), ArgTys))
+    return None;
+
+  SmallVector<Value *, 8> Args(II.args());
+
+  // Modify arguments and types
+  Func(Args, ArgTys);
+
+  Function *I = Intrinsic::getDeclaration(II.getModule(), NewIntr, ArgTys);
+
+  CallInst *NewCall = IC.Builder.CreateCall(I, Args);
+  NewCall->takeName(&II);
+  NewCall->copyMetadata(II);
+  if (isa<FPMathOperator>(NewCall))
+    NewCall->copyFastMathFlags(&II);
+
+  // Erase and replace uses
+  if (!II.getType()->isVoidTy())
+    IC.replaceInstUsesWith(II, NewCall);
+  return IC.eraseInstFromFunction(II);
+}
+
 static Optional<Instruction *>
 simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
                              const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr,
                              IntrinsicInst &II, InstCombiner &IC) {
+  // Optimize _L to _LZ when _L is zero
+  if (const auto *LZMappingInfo =
+          AMDGPU::getMIMGLZMappingInfo(ImageDimIntr->BaseOpcode)) {
+    if (auto *ConstantLod =
+            dyn_cast<ConstantFP>(II.getOperand(ImageDimIntr->LodIndex))) {
+      if (ConstantLod->isZero() || ConstantLod->isNegative()) {
+        const AMDGPU::ImageDimIntrinsicInfo *NewImageDimIntr =
+            AMDGPU::getImageDimIntrinsicByBaseOpcode(LZMappingInfo->LZ,
+                                                     ImageDimIntr->Dim);
+        return modifyIntrinsicCall(
+            II, NewImageDimIntr->Intr, IC, [&](auto &Args, auto &ArgTys) {
+              Args.erase(Args.begin() + ImageDimIntr->LodIndex);
+            });
+      }
+    }
+  }
+
+  // Optimize _mip away, when 'lod' is zero
+  if (const auto *MIPMappingInfo =
+          AMDGPU::getMIMGMIPMappingInfo(ImageDimIntr->BaseOpcode)) {
+    if (auto *ConstantMip =
+            dyn_cast<ConstantInt>(II.getOperand(ImageDimIntr->MipIndex))) {
+      if (ConstantMip->isZero()) {
+        const AMDGPU::ImageDimIntrinsicInfo *NewImageDimIntr =
+            AMDGPU::getImageDimIntrinsicByBaseOpcode(MIPMappingInfo->NONMIP,
+                                                     ImageDimIntr->Dim);
+        return modifyIntrinsicCall(
+            II, NewImageDimIntr->Intr, IC, [&](auto &Args, auto &ArgTys) {
+              Args.erase(Args.begin() + ImageDimIntr->MipIndex);
+            });
+      }
+    }
+  }
+
+  // Optimize _bias away when 'bias' is zero
+  if (const auto *BiasMappingInfo =
+          AMDGPU::getMIMGBiasMappingInfo(ImageDimIntr->BaseOpcode)) {
+    if (auto *ConstantBias =
+            dyn_cast<ConstantFP>(II.getOperand(ImageDimIntr->BiasIndex))) {
+      if (ConstantBias->isZero()) {
+        const AMDGPU::ImageDimIntrinsicInfo *NewImageDimIntr =
+            AMDGPU::getImageDimIntrinsicByBaseOpcode(BiasMappingInfo->NoBias,
+                                                     ImageDimIntr->Dim);
+        return modifyIntrinsicCall(
+            II, NewImageDimIntr->Intr, IC, [&](auto &Args, auto &ArgTys) {
+              Args.erase(Args.begin() + ImageDimIntr->BiasIndex);
+              ArgTys.erase(ArgTys.begin() + ImageDimIntr->BiasTyArg);
+            });
+      }
+    }
+  }
+
+  // Optimize _offset away when 'offset' is zero
+  if (const auto *OffsetMappingInfo =
+          AMDGPU::getMIMGOffsetMappingInfo(ImageDimIntr->BaseOpcode)) {
+    if (auto *ConstantOffset =
+            dyn_cast<ConstantInt>(II.getOperand(ImageDimIntr->OffsetIndex))) {
+      if (ConstantOffset->isZero()) {
+        const AMDGPU::ImageDimIntrinsicInfo *NewImageDimIntr =
+            AMDGPU::getImageDimIntrinsicByBaseOpcode(
+                OffsetMappingInfo->NoOffset, ImageDimIntr->Dim);
+        return modifyIntrinsicCall(
+            II, NewImageDimIntr->Intr, IC, [&](auto &Args, auto &ArgTys) {
+              Args.erase(Args.begin() + ImageDimIntr->OffsetIndex);
+            });
+      }
+    }
+  }
+
+  // Try to use A16 or G16
   if (!ST->hasA16() && !ST->hasG16())
     return None;
 
+  // Address is interpreted as float if the instruction has a sampler or as
+  // unsigned int if there is no sampler.
+  bool HasSampler =
+      AMDGPU::getMIMGBaseOpcodeInfo(ImageDimIntr->BaseOpcode)->Sampler;
   bool FloatCoord = false;
   // true means derivatives can be converted to 16 bit, coordinates not
   bool OnlyDerivatives = false;
@@ -112,7 +228,7 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
        OperandIndex < ImageDimIntr->VAddrEnd; OperandIndex++) {
     Value *Coord = II.getOperand(OperandIndex);
     // If the values are not derived from 16-bit values, we cannot optimize.
-    if (!canSafelyConvertTo16Bit(*Coord)) {
+    if (!canSafelyConvertTo16Bit(*Coord, HasSampler)) {
       if (OperandIndex < ImageDimIntr->CoordStart ||
           ImageDimIntr->GradientStart == ImageDimIntr->CoordStart) {
         return None;
@@ -127,43 +243,50 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
     FloatCoord = Coord->getType()->isFloatingPointTy();
   }
 
-  if (OnlyDerivatives) {
-    if (!ST->hasG16())
-      return None;
-  } else {
-    if (!ST->hasA16())
-      OnlyDerivatives = true; // Only supports G16
+  if (!OnlyDerivatives && !ST->hasA16())
+    OnlyDerivatives = true; // Only supports G16
+
+  // Check if there is a bias parameter and if it can be converted to f16
+  if (!OnlyDerivatives && ImageDimIntr->NumBiasArgs != 0) {
+    Value *Bias = II.getOperand(ImageDimIntr->BiasIndex);
+    assert(HasSampler &&
+           "Only image instructions with a sampler can have a bias");
+    if (!canSafelyConvertTo16Bit(*Bias, HasSampler))
+      OnlyDerivatives = true;
   }
+
+  if (OnlyDerivatives && (!ST->hasG16() || ImageDimIntr->GradientStart ==
+                                               ImageDimIntr->CoordStart))
+    return None;
 
   Type *CoordType = FloatCoord ? Type::getHalfTy(II.getContext())
                                : Type::getInt16Ty(II.getContext());
 
-  SmallVector<Type *, 4> ArgTys;
-  if (!Intrinsic::getIntrinsicSignature(II.getCalledFunction(), ArgTys))
-    return None;
+  return modifyIntrinsicCall(
+      II, II.getIntrinsicID(), IC, [&](auto &Args, auto &ArgTys) {
+        ArgTys[ImageDimIntr->GradientTyArg] = CoordType;
+        if (!OnlyDerivatives) {
+          ArgTys[ImageDimIntr->CoordTyArg] = CoordType;
 
-  ArgTys[ImageDimIntr->GradientTyArg] = CoordType;
-  if (!OnlyDerivatives)
-    ArgTys[ImageDimIntr->CoordTyArg] = CoordType;
-  Function *I =
-      Intrinsic::getDeclaration(II.getModule(), II.getIntrinsicID(), ArgTys);
+          // Change the bias type
+          if (ImageDimIntr->NumBiasArgs != 0)
+            ArgTys[ImageDimIntr->BiasTyArg] = Type::getHalfTy(II.getContext());
+        }
 
-  SmallVector<Value *, 8> Args(II.args());
+        unsigned EndIndex =
+            OnlyDerivatives ? ImageDimIntr->CoordStart : ImageDimIntr->VAddrEnd;
+        for (unsigned OperandIndex = ImageDimIntr->GradientStart;
+             OperandIndex < EndIndex; OperandIndex++) {
+          Args[OperandIndex] =
+              convertTo16Bit(*II.getOperand(OperandIndex), IC.Builder);
+        }
 
-  unsigned EndIndex =
-      OnlyDerivatives ? ImageDimIntr->CoordStart : ImageDimIntr->VAddrEnd;
-  for (unsigned OperandIndex = ImageDimIntr->GradientStart;
-       OperandIndex < EndIndex; OperandIndex++) {
-    Args[OperandIndex] =
-        convertTo16Bit(*II.getOperand(OperandIndex), IC.Builder);
-  }
-
-  CallInst *NewCall = IC.Builder.CreateCall(I, Args);
-  NewCall->takeName(&II);
-  NewCall->copyMetadata(II);
-  if (isa<FPMathOperator>(NewCall))
-    NewCall->copyFastMathFlags(&II);
-  return IC.replaceInstUsesWith(II, NewCall);
+        // Convert the bias
+        if (!OnlyDerivatives && ImageDimIntr->NumBiasArgs != 0) {
+          Value *Bias = II.getOperand(ImageDimIntr->BiasIndex);
+          Args[ImageDimIntr->BiasIndex] = convertTo16Bit(*Bias, IC.Builder);
+        }
+      });
 }
 
 bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Value *Op0, const Value *Op1,

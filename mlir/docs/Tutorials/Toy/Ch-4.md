@@ -356,20 +356,20 @@ void MulOp::inferShapes() { getResult().setType(getOperand(0).getType()); }
 ```
 
 At this point, each of the necessary Toy operations provide a mechanism by which
-to infer their output shapes. The ShapeInferencePass is a FunctionPass: it will
-run on each Function in isolation. MLIR also supports general
-[OperationPasses](../../PassManagement.md/#operation-pass) that run on any isolated
-operation (i.e. other function-like operations), but here our module only
-contains functions, so there is no need to generalize to all operations.
+to infer their output shapes. The ShapeInferencePass will operate on functions:
+it will run on each Function in isolation. MLIR also supports general
+[OperationPasses](../../PassManagement.md#operation-pass) that run on any
+isolated operation (i.e. other function-like operations), but here our module
+only contains functions, so there is no need to generalize to all operations.
 
 Implementing such a pass is done by creating a class inheriting from
-`mlir::FunctionPass` and overriding the `runOnFunction()` method.
+`mlir::OperationPass<FuncOp>` and overriding the `runOnOperation()` method.
 
 ```c++
 class ShapeInferencePass
-    : public mlir::PassWrapper<ShapeInferencePass, FunctionPass> {
-  void runOnFunction() override {
-    FuncOp function = getFunction();
+    : public mlir::PassWrapper<ShapeInferencePass, OperationPass<FuncOp>> {
+  void runOnOperation() override {
+    FuncOp function = getOperation();
     ...
   }
 };

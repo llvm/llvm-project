@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// See https://llvm.org/PR20183
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
-
 // UNSUPPORTED: libcpp-has-no-random-device
 
 // <random>

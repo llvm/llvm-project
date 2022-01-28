@@ -1,27 +1,38 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -linalg-comprehensive-module-bufferize="allow-return-memref allow-unknown-ops" -split-input-file | FileCheck %s
 
+// Test bufferization using memref types that have no layout map.
+// RUN: mlir-opt %s -allow-unregistered-dialect -linalg-comprehensive-module-bufferize="allow-return-memref allow-unknown-ops fully-dynamic-layout-maps=0" -split-input-file | FileCheck %s --check-prefix=CHECK-NO-LAYOUT-MAP
+
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -allow-unregistered-dialect -linalg-comprehensive-module-bufferize="test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -allow-unregistered-dialect -linalg-comprehensive-module-bufferize="test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -allow-unregistered-dialect -linalg-comprehensive-module-bufferize="test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -allow-unregistered-dialect -linalg-comprehensive-module-bufferize="allow-return-memref test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -allow-unregistered-dialect -linalg-comprehensive-module-bufferize="allow-return-memref test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -allow-unregistered-dialect -linalg-comprehensive-module-bufferize="allow-return-memref test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
 
 // RUN: mlir-opt %s -allow-unregistered-dialect -test-comprehensive-function-bufferize="dialect-filter=tensor allow-unknown-ops allow-return-memref" -canonicalize -split-input-file | FileCheck %s --check-prefix=CHECK-TENSOR
 // RUN: mlir-opt %s -allow-unregistered-dialect -test-comprehensive-function-bufferize="dialect-filter=scf allow-unknown-ops allow-return-memref" -canonicalize -split-input-file | FileCheck %s --check-prefix=CHECK-SCF
 
+// CHECK: #[[$MAP:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
+
 // CHECK-LABEL: func @use_of_unknown_op_1(
-//  CHECK-SAME:     %[[m1:.*]]: memref<?xf32
+//  CHECK-SAME:     %[[m1:.*]]: memref<?xf32, #[[$MAP]]>
+// CHECK-NO-LAYOUT-MAP-LABEL: func @use_of_unknown_op_1(
+//  CHECK-NO-LAYOUT-MAP-SAME:     %[[m1:.*]]: memref<?xf32>)
 func @use_of_unknown_op_1(%t1: tensor<?xf32> {linalg.inplaceable = true})
     -> vector<5xf32> {
   // ToTensorOp is generated because the function is bufferized and has a
   // memref block argument.
-  // CHECK: %[[m1_tensor:.*]] = bufferization.to_tensor %[[m1]]
+  // CHECK: %[[m1_tensor:.*]] = bufferization.to_tensor %[[m1]] : memref<?xf32, #[[$MAP]]>
   // CHECK: %[[dummy:.*]] = "test.dummy_op"(%[[m1_tensor]])
+  // CHECK-NO-LAYOUT-MAP: %[[m1_tensor:.*]] = bufferization.to_tensor %[[m1]] : memref<?xf32>
+  // CHECK-NO-LAYOUT-MAP: %[[dummy:.*]] = "test.dummy_op"(%[[m1_tensor]])
   %0 = "test.dummy_op"(%t1) : (tensor<?xf32>) -> tensor<?xf32>
 
   %idx = arith.constant 0 : index
   %cst = arith.constant 0.0 : f32
-  // CHECK: %[[dummy_memref:.*]] = bufferization.to_memref %[[dummy]]
-  // CHECK: vector.transfer_read %[[dummy_memref]]
+  // CHECK: %[[dummy_memref:.*]] = bufferization.to_memref %[[dummy]] : memref<?xf32, #[[$MAP]]>
+  // CHECK: vector.transfer_read %[[dummy_memref]][%{{.*}}], %{{.*}} : memref<?xf32, #[[$MAP]]>
+  // CHECK-NO-LAYOUT-MAP: %[[dummy_memref:.*]] = bufferization.to_memref %[[dummy]] : memref<?xf32>
+  // CHECK-NO-LAYOUT-MAP: vector.transfer_read %[[dummy_memref]][%{{.*}}], %{{.*}} : memref<?xf32>
   %1 = vector.transfer_read %0[%idx], %cst : tensor<?xf32>, vector<5xf32>
   return %1 : vector<5xf32>
 }
@@ -141,7 +152,7 @@ func @unknown_op_not_writable(
   // introducing a RaW conflict.
   // CHECK: %[[dim:.*]] = tensor.dim %[[dummy]]
   // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
-  // CHECK: linalg.copy(%[[dummy_memref]], %[[alloc]])
+  // CHECK: memref.copy %[[dummy_memref]], %[[alloc]]
   // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
   %1 = vector.transfer_write %v, %0[%idx] : vector<5xf32>, tensor<?xf32>
 
@@ -159,7 +170,7 @@ func @simple_tensor_test(%t1 : tensor<?xf32>, %f : f32) -> tensor<?xf32> {
   // CHECK-TENSOR: %[[alloc:.*]] = memref.alloc
   // CHECK-TENSOR: %[[casted:.*]] = memref.cast %[[alloc]]
   // CHECK-TENSOR: %[[casted_tensor:.*]] = bufferization.to_tensor %[[casted]]
-  // CHECK-TENSOR: memref.copy %[[t1_memref]], %[[casted]]
+  // CHECK-TENSOR: memref.copy %[[t1_memref]], %[[alloc]]
   // CHECK-TENSOR: memref.store %{{.*}}, %[[alloc]]
   %0 = tensor.insert %f into %t1[%c0] : tensor<?xf32>
   // CHECK-TENSOR: return %[[casted_tensor]]
@@ -177,7 +188,7 @@ func @simple_scf_for(
   // CHECK-SCF: %[[t1_memref:.*]] = bufferization.to_memref %[[t1]]
   // CHECK-SCF: %[[alloc:.*]] = memref.alloc
   // CHECK-SCF: %[[casted:.*]] = memref.cast %[[alloc]]
-  // CHECK-SCF: memref.copy %[[t1_memref]], %[[casted]]
+  // CHECK-SCF: memref.copy %[[t1_memref]], %[[alloc]]
   // CHECK-SCF: %[[scf_for:.*]] = scf.for %[[iv:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[arg0:.*]] = %[[casted]]) -> ({{.*}}) {
   %0 = scf.for %iv = %c0 to %sz step %step iter_args(%arg0 = %t1) -> tensor<?xf32> {
     // CHECK-SCF: %[[arg0_tensor:.*]] = bufferization.to_tensor %[[arg0]]

@@ -11,14 +11,12 @@
 
 include "mlir/Pass/PassBase.td"
 
-def ArithmeticBufferize : FunctionPass<"arith-bufferize"> {
+def ArithmeticBufferize : Pass<"arith-bufferize", "FuncOp"> {
   let summary = "Bufferize Arithmetic dialect ops.";
   let constructor = "mlir::arith::createArithmeticBufferizePass()";
-  let dependentDialects = ["bufferization::BufferizationDialect",
-                           "memref::MemRefDialect"];
 }
 
-def ArithmeticExpandOps : FunctionPass<"arith-expand"> {
+def ArithmeticExpandOps : Pass<"arith-expand", "FuncOp"> {
   let summary = "Legalize Arithmetic ops to be convertible to LLVM.";
   let constructor = "mlir::arith::createArithmeticExpandOpsPass()";
   let dependentDialects = ["StandardOpsDialect"];

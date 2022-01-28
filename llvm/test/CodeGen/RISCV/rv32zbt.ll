@@ -332,8 +332,8 @@ define i32 @fshl_i32(i32 %a, i32 %b, i32 %c) nounwind {
 ; As we are not matching directly i64 code patterns on RV32 some i64 patterns
 ; don't have yet an efficient pattern-matching with bit manipulation
 ; instructions on RV32.
-; This test is presented here in case future expansions of the experimental-b
-; extension introduce instructions that can match more efficiently this pattern.
+; This test is presented here in case future expansions of the Bitmanip
+; extensions introduce instructions that can match more efficiently this pattern.
 
 declare i64 @llvm.fshl.i64(i64, i64, i64)
 
@@ -341,14 +341,14 @@ define i64 @fshl_i64(i64 %a, i64 %b, i64 %c) nounwind {
 ; RV32I-LABEL: fshl_i64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    srli a5, a4, 5
-; RV32I-NEXT:    andi a5, a5, 1
-; RV32I-NEXT:    mv a6, a3
-; RV32I-NEXT:    bnez a5, .LBB13_2
+; RV32I-NEXT:    andi a6, a5, 1
+; RV32I-NEXT:    mv a5, a3
+; RV32I-NEXT:    bnez a6, .LBB13_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a6, a0
+; RV32I-NEXT:    mv a5, a0
 ; RV32I-NEXT:  .LBB13_2:
-; RV32I-NEXT:    sll a7, a6, a4
-; RV32I-NEXT:    bnez a5, .LBB13_4
+; RV32I-NEXT:    sll a7, a5, a4
+; RV32I-NEXT:    bnez a6, .LBB13_4
 ; RV32I-NEXT:  # %bb.3:
 ; RV32I-NEXT:    mv a2, a3
 ; RV32I-NEXT:  .LBB13_4:
@@ -356,12 +356,12 @@ define i64 @fshl_i64(i64 %a, i64 %b, i64 %c) nounwind {
 ; RV32I-NEXT:    not a3, a4
 ; RV32I-NEXT:    srl a2, a2, a3
 ; RV32I-NEXT:    or a2, a7, a2
-; RV32I-NEXT:    bnez a5, .LBB13_6
+; RV32I-NEXT:    bnez a6, .LBB13_6
 ; RV32I-NEXT:  # %bb.5:
 ; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:  .LBB13_6:
 ; RV32I-NEXT:    sll a0, a0, a4
-; RV32I-NEXT:    srli a1, a6, 1
+; RV32I-NEXT:    srli a1, a5, 1
 ; RV32I-NEXT:    srl a1, a1, a3
 ; RV32I-NEXT:    or a1, a0, a1
 ; RV32I-NEXT:    mv a0, a2
@@ -407,8 +407,8 @@ define i32 @fshr_i32(i32 %a, i32 %b, i32 %c) nounwind {
 ; As we are not matching directly i64 code patterns on RV32 some i64 patterns
 ; don't have yet an efficient pattern-matching with bit manipulation
 ; instructions on RV32.
-; This test is presented here in case future expansions of the experimental-b
-; extension introduce instructions that can match more efficiently this pattern.
+; This test is presented here in case future expansions of the Bitmanip
+; extensions introduce instructions that can match more efficiently this pattern.
 
 declare i64 @llvm.fshr.i64(i64, i64, i64)
 
@@ -420,24 +420,24 @@ define i64 @fshr_i64(i64 %a, i64 %b, i64 %c) nounwind {
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    mv a2, a3
 ; RV32I-NEXT:  .LBB15_2:
-; RV32I-NEXT:    srl a6, a2, a4
+; RV32I-NEXT:    srl a2, a2, a4
 ; RV32I-NEXT:    beqz a5, .LBB15_4
 ; RV32I-NEXT:  # %bb.3:
 ; RV32I-NEXT:    mv a3, a0
 ; RV32I-NEXT:  .LBB15_4:
 ; RV32I-NEXT:    slli a7, a3, 1
-; RV32I-NEXT:    not t0, a4
-; RV32I-NEXT:    sll a2, a7, t0
-; RV32I-NEXT:    or a6, a2, a6
+; RV32I-NEXT:    not a6, a4
+; RV32I-NEXT:    sll a7, a7, a6
+; RV32I-NEXT:    or a2, a7, a2
 ; RV32I-NEXT:    srl a3, a3, a4
 ; RV32I-NEXT:    beqz a5, .LBB15_6
 ; RV32I-NEXT:  # %bb.5:
 ; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:  .LBB15_6:
 ; RV32I-NEXT:    slli a0, a0, 1
-; RV32I-NEXT:    sll a0, a0, t0
+; RV32I-NEXT:    sll a0, a0, a6
 ; RV32I-NEXT:    or a1, a0, a3
-; RV32I-NEXT:    mv a0, a6
+; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBT-LABEL: fshr_i64:

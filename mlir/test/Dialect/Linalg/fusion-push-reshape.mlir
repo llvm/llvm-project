@@ -20,7 +20,7 @@ func @reshape(%A: tensor<?x16xf32>, %B: tensor<16xf32>, %init: tensor<?x112x16xf
     iterator_types = ["parallel", "parallel", "parallel"]}
   ins(%0, %B : tensor<?x112x16xf32>, tensor<16xf32>)
   outs(%init : tensor<?x112x16xf32>) {
-  ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):  // no predecessors
+  ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):  
     %s = arith.subf %arg1, %arg2 : f32
     linalg.yield %s : f32
   } -> tensor<?x112x16xf32>
@@ -56,7 +56,7 @@ func @reshape_multiple(%A: tensor<12544x16xf32>, %B: tensor<12544x16xf32>,
     iterator_types = ["parallel", "parallel", "parallel"]}
   ins(%0, %1, %C : tensor<112x112x16xf32>, tensor<112x112x16xf32>, tensor<16xf32>)
   outs(%2 : tensor<112x112x16xf32>) {
-  ^bb0(%arg1: f32, %arg2: f32, %arg3: f32, %arg4: f32):  // no predecessors
+  ^bb0(%arg1: f32, %arg2: f32, %arg3: f32, %arg4: f32):  
     %s = arith.subf %arg1, %arg2 : f32
     %m = arith.mulf %s, %arg3 : f32
     linalg.yield %m : f32
@@ -82,7 +82,7 @@ func @reshape_negative(%A: tensor<12544x16xf32>, %B: tensor<112xf32>) -> tensor<
     iterator_types = ["parallel", "parallel", "parallel"]}
   ins(%20, %B : tensor<112x112x16xf32>, tensor<112xf32>)
   outs(%21 : tensor<112x112x16xf32>) {
-  ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):  // no predecessors
+  ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):  
     %s = arith.subf %arg1, %arg2 : f32
     linalg.yield %s : f32
   } -> tensor<112x112x16xf32>
@@ -107,7 +107,7 @@ func @type_correctness(%arg0 : tensor<6x5xi32>, %arg1 : tensor<5xf32>,
       iterator_types = ["parallel", "parallel", "parallel"]}
       ins(%25, %arg1, %arg2 : tensor<2x3x5xi32>, tensor<5xf32>, tensor<5xf32>)
       outs(%26 : tensor<2x3x5xf32>) {
-      ^bb0(%arg6: i32, %arg7: f32, %arg8: f32, %arg9: f32):  // no predecessors
+      ^bb0(%arg6: i32, %arg7: f32, %arg8: f32, %arg9: f32):  
         %29 = arith.sitofp %arg6 : i32 to f32
         %30 = arith.addf %arg7, %cst_8 : f32
         %31 = arith.divf %cst_7, %30 : f32
@@ -124,3 +124,30 @@ func @type_correctness(%arg0 : tensor<6x5xi32>, %arg1 : tensor<5xf32>,
 //  CHECK-SAME:   outs(%{{.+}} : tensor<6x5xf32>)
 //       CHECK:   tensor.expand_shape %[[OP]]
 //  CHECK-SAME:   tensor<6x5xf32> into tensor<2x3x5xf32>
+
+// -----
+
+func @generic_op_index_semantics(%A: tensor<?x16xi64>, %B: tensor<16xi64>, %init: tensor<?x112x16xi64>) -> tensor<?x112x16xi64> {
+  %0 = tensor.expand_shape %A [[0, 1], [2]]
+      : tensor<?x16xi64> into tensor<?x112x16xi64>
+  %2 = linalg.generic {indexing_maps = [
+    affine_map<(d0, d1, d2) -> (d0, d1, d2)>, affine_map<(d0, d1, d2) -> (d2)>,
+    affine_map<(d0, d1, d2) -> (d0, d1, d2)>],
+    iterator_types = ["parallel", "parallel", "parallel"]}
+  ins(%0, %B : tensor<?x112x16xi64>, tensor<16xi64>)
+  outs(%init : tensor<?x112x16xi64>) {
+  ^bb0(%arg1: i64, %arg2: i64, %arg3: i64):  // no predecessors
+    %index = linalg.index 0 : index
+    %1 = arith.index_cast %index : index to i64
+    %add = arith.addi %arg1, %1 : i64
+    %s = arith.subi %add, %arg2 : i64
+    linalg.yield %s : i64
+  } -> tensor<?x112x16xi64>
+  return %2 : tensor<?x112x16xi64>
+}
+//      CHECK: func @generic_op_index_semantics
+// CHECK-SAME:     %[[ARG0:.+]]: tensor<?x16xi64>
+//      CHECK:   %[[RESHAPE:.+]] = tensor.expand_shape %[[ARG0]]
+//      CHECK:   %[[RESULT:.+]] = linalg.generic
+// CHECK-SAME:       ins(%[[RESHAPE]]
+//      CHECK:   return %[[RESULT]]

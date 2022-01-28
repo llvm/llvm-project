@@ -40,15 +40,15 @@ using namespace mlir;
 namespace {
 
 /// Convert gpu dialect shfl mode enum to the equivalent nvvm one.
-static NVVM::ShflKind convertShflKind(gpu::ShuffleModeAttr mode) {
+static NVVM::ShflKind convertShflKind(gpu::ShuffleMode mode) {
   switch (mode) {
-  case gpu::ShuffleModeAttr::XOR:
+  case gpu::ShuffleMode::XOR:
     return NVVM::ShflKind::bfly;
-  case gpu::ShuffleModeAttr::UP:
+  case gpu::ShuffleMode::UP:
     return NVVM::ShflKind::up;
-  case gpu::ShuffleModeAttr::DOWN:
+  case gpu::ShuffleMode::DOWN:
     return NVVM::ShflKind::down;
-  case gpu::ShuffleModeAttr::IDX:
+  case gpu::ShuffleMode::IDX:
     return NVVM::ShflKind::idx;
   }
   llvm_unreachable("unknown shuffle mode");
@@ -64,8 +64,10 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   /// the highest lane which participates in the shuffle).
   ///
   ///     %one = llvm.constant(1 : i32) : i32
-  ///     %shl = llvm.shl %one, %width : i32
-  ///     %active_mask = llvm.sub %shl, %one : i32
+  ///     %minus_one = llvm.constant(-1 : i32) : i32
+  ///     %thirty_two = llvm.constant(32 : i32) : i32
+  ///     %num_lanes = llvm.sub %thirty_two, %width : i32
+  ///     %active_mask = llvm.lshr %minus_one, %num_lanes : i32
   ///     %mask_and_clamp = llvm.sub %width, %one : i32
   ///     %shfl = nvvm.shfl.sync.bfly %active_mask, %value, %offset,
   ///         %mask_and_clamp : !llvm<"{ float, i1 }">
@@ -86,14 +88,24 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
 
     Value one = rewriter.create<LLVM::ConstantOp>(
         loc, int32Type, rewriter.getI32IntegerAttr(1));
-    // Bit mask of active lanes: `(1 << activeWidth) - 1`.
-    Value activeMask = rewriter.create<LLVM::SubOp>(
-        loc, int32Type,
-        rewriter.create<LLVM::ShlOp>(loc, int32Type, one, adaptor.width()),
-        one);
-    // Clamp lane: `activeWidth - 1`
-    Value maskAndClamp =
-        rewriter.create<LLVM::SubOp>(loc, int32Type, adaptor.width(), one);
+    Value minusOne = rewriter.create<LLVM::ConstantOp>(
+        loc, int32Type, rewriter.getI32IntegerAttr(-1));
+    Value thirtyTwo = rewriter.create<LLVM::ConstantOp>(
+        loc, int32Type, rewriter.getI32IntegerAttr(32));
+    Value numLeadInactiveLane = rewriter.create<LLVM::SubOp>(
+        loc, int32Type, thirtyTwo, adaptor.width());
+    // Bit mask of active lanes: `(-1) >> (32 - activeWidth)`.
+    Value activeMask = rewriter.create<LLVM::LShrOp>(loc, int32Type, minusOne,
+                                                     numLeadInactiveLane);
+    Value maskAndClamp;
+    if (op.mode() == gpu::ShuffleMode::UP) {
+      // Clamp lane: `32 - activeWidth`
+      maskAndClamp = numLeadInactiveLane;
+    } else {
+      // Clamp lane: `activeWidth - 1`
+      maskAndClamp =
+          rewriter.create<LLVM::SubOp>(loc, int32Type, adaptor.width(), one);
+    }
 
     auto returnValueAndIsValidAttr = rewriter.getUnitAttr();
     Value shfl = rewriter.create<NVVM::ShflOp>(

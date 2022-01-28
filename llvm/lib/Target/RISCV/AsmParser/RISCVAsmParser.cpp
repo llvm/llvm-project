@@ -566,6 +566,16 @@ public:
     return IsConstantImm && isUInt<7>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
   }
 
+  bool isRnumArg() const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    if (!isImm())
+      return false;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && Imm >= INT64_C(0) && Imm <= INT64_C(10) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
   bool isSImm5() const {
     if (!isImm())
       return false;
@@ -1240,6 +1250,9 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                       (1 << 4),
                                       "immediate must be in the range");
   }
+  case Match_InvalidRnumArg: {
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, 10);
+  }
   }
 
   llvm_unreachable("Unknown match type detected!");
@@ -1912,8 +1925,10 @@ bool RISCVAsmParser::ParseInstruction(ParseInstructionInfo &Info,
   Operands.push_back(RISCVOperand::createToken(Name, NameLoc, isRV64()));
 
   // If there are no more operands, then finish
-  if (getLexer().is(AsmToken::EndOfStatement))
+  if (getLexer().is(AsmToken::EndOfStatement)) {
+    getParser().Lex(); // Consume the EndOfStatement.
     return false;
+  }
 
   // Parse first operand
   if (parseOperand(Operands, Name))

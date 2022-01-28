@@ -499,7 +499,8 @@ public:
              1 /* null byte always written by sprintf */) {}
 
   bool HandlePrintfSpecifier(const analyze_printf::PrintfSpecifier &FS,
-                             const char *, unsigned SpecifierLen) override {
+                             const char *, unsigned SpecifierLen,
+                             const TargetInfo &) override {
 
     const size_t FieldWidth = computeFieldWidth(FS);
     const size_t Precision = computePrecision(FS);
@@ -1578,11 +1579,26 @@ static ExprResult SemaBuiltinLaunder(Sema &S, CallExpr *TheCall) {
   return TheCall;
 }
 
+// Emit an error and return true if the current object format type is in the
+// list of unsupported types.
+static bool CheckBuiltinTargetNotInUnsupported(
+    Sema &S, unsigned BuiltinID, CallExpr *TheCall,
+    ArrayRef<llvm::Triple::ObjectFormatType> UnsupportedObjectFormatTypes) {
+  llvm::Triple::ObjectFormatType CurObjFormat =
+      S.getASTContext().getTargetInfo().getTriple().getObjectFormat();
+  if (llvm::is_contained(UnsupportedObjectFormatTypes, CurObjFormat)) {
+    S.Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
+        << TheCall->getSourceRange();
+    return true;
+  }
+  return false;
+}
+
 // Emit an error and return true if the current architecture is not in the list
 // of supported architectures.
 static bool
-CheckBuiltinTargetSupport(Sema &S, unsigned BuiltinID, CallExpr *TheCall,
-                          ArrayRef<llvm::Triple::ArchType> SupportedArchs) {
+CheckBuiltinTargetInSupported(Sema &S, unsigned BuiltinID, CallExpr *TheCall,
+                              ArrayRef<llvm::Triple::ArchType> SupportedArchs) {
   llvm::Triple::ArchType CurArch =
       S.getASTContext().getTargetInfo().getTriple().getArch();
   if (llvm::is_contained(SupportedArchs, CurArch))
@@ -1664,6 +1680,12 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   switch (BuiltinID) {
   case Builtin::BI__builtin___CFStringMakeConstantString:
+    // CFStringMakeConstantString is currently not implemented for GOFF (i.e.,
+    // on z/OS) and for XCOFF (i.e., on AIX). Emit unsupported
+    if (CheckBuiltinTargetNotInUnsupported(
+            *this, BuiltinID, TheCall,
+            {llvm::Triple::GOFF, llvm::Triple::XCOFF}))
+      return ExprError();
     assert(TheCall->getNumArgs() == 1 &&
            "Wrong # arguments to builtin CFStringMakeConstantString");
     if (CheckObjCString(TheCall->getArg(0)))
@@ -1698,7 +1720,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI_interlockedbittestandreset_acq:
   case Builtin::BI_interlockedbittestandreset_rel:
   case Builtin::BI_interlockedbittestandreset_nf:
-    if (CheckBuiltinTargetSupport(
+    if (CheckBuiltinTargetInSupported(
             *this, BuiltinID, TheCall,
             {llvm::Triple::arm, llvm::Triple::thumb, llvm::Triple::aarch64}))
       return ExprError();
@@ -1711,9 +1733,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI_bittestandset64:
   case Builtin::BI_interlockedbittestandreset64:
   case Builtin::BI_interlockedbittestandset64:
-    if (CheckBuiltinTargetSupport(*this, BuiltinID, TheCall,
-                                  {llvm::Triple::x86_64, llvm::Triple::arm,
-                                   llvm::Triple::thumb, llvm::Triple::aarch64}))
+    if (CheckBuiltinTargetInSupported(*this, BuiltinID, TheCall,
+                                      {llvm::Triple::x86_64, llvm::Triple::arm,
+                                       llvm::Triple::thumb,
+                                       llvm::Triple::aarch64}))
       return ExprError();
     break;
 
@@ -1750,10 +1773,12 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
   case Builtin::BI__builtin_alloca_with_align:
+  case Builtin::BI__builtin_alloca_with_align_uninitialized:
     if (SemaBuiltinAllocaWithAlign(TheCall))
       return ExprError();
     LLVM_FALLTHROUGH;
   case Builtin::BI__builtin_alloca:
+  case Builtin::BI__builtin_alloca_uninitialized:
     Diag(TheCall->getBeginLoc(), diag::warn_alloca)
         << TheCall->getDirectCallee();
     break;
@@ -2235,8 +2260,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   }
 
-  // __builtin_reduce_xor supports vector of integers only.
-  case Builtin::BI__builtin_reduce_xor: {
+  // These builtins support vectors of integers only.
+  case Builtin::BI__builtin_reduce_xor:
+  case Builtin::BI__builtin_reduce_or:
+  case Builtin::BI__builtin_reduce_and: {
     if (PrepareBuiltinReduceMathOneArgCall(TheCall))
       return ExprError();
 
@@ -3949,23 +3976,39 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
 
   // Check if each required feature is included
   for (StringRef F : ReqFeatures) {
-    if (TI.hasFeature(F))
-      continue;
+    SmallVector<StringRef> ReqOpFeatures;
+    F.split(ReqOpFeatures, '|');
+    bool HasFeature = false;
+    for (StringRef OF : ReqOpFeatures) {
+      if (TI.hasFeature(OF)) {
+        HasFeature = true;
+        continue;
+      }
+    }
 
-    // If the feature is 64bit, alter the string so it will print better in
-    // the diagnostic.
-    if (F == "64bit")
-      F = "RV64";
+    if (!HasFeature) {
+      std::string FeatureStrs = "";
+      for (StringRef OF : ReqOpFeatures) {
+        // If the feature is 64bit, alter the string so it will print better in
+        // the diagnostic.
+        if (OF == "64bit")
+          OF = "RV64";
 
-    // Convert features like "zbr" and "experimental-zbr" to "Zbr".
-    F.consume_front("experimental-");
-    std::string FeatureStr = F.str();
-    FeatureStr[0] = std::toupper(FeatureStr[0]);
-
-    // Error message
-    FeatureMissing = true;
-    Diag(TheCall->getBeginLoc(), diag::err_riscv_builtin_requires_extension)
-        << TheCall->getSourceRange() << StringRef(FeatureStr);
+        // Convert features like "zbr" and "experimental-zbr" to "Zbr".
+        OF.consume_front("experimental-");
+        std::string FeatureStr = OF.str();
+        FeatureStr[0] = std::toupper(FeatureStr[0]);
+        // Combine strings.
+        FeatureStrs += FeatureStrs == "" ? "" : ", ";
+        FeatureStrs += "'";
+        FeatureStrs += FeatureStr;
+        FeatureStrs += "'";
+      }
+      // Error message
+      FeatureMissing = true;
+      Diag(TheCall->getBeginLoc(), diag::err_riscv_builtin_requires_extension)
+          << TheCall->getSourceRange() << StringRef(FeatureStrs);
+    }
   }
 
   if (FeatureMissing)
@@ -8883,8 +8926,8 @@ public:
   void handleInvalidMaskType(StringRef MaskType) override;
 
   bool HandlePrintfSpecifier(const analyze_printf::PrintfSpecifier &FS,
-                             const char *startSpecifier,
-                             unsigned specifierLen) override;
+                             const char *startSpecifier, unsigned specifierLen,
+                             const TargetInfo &Target) override;
   bool checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
                        const char *StartSpecifier,
                        unsigned SpecifierLen,
@@ -9143,11 +9186,9 @@ bool CheckPrintfHandler::checkForCStrMembers(
   return false;
 }
 
-bool
-CheckPrintfHandler::HandlePrintfSpecifier(const analyze_printf::PrintfSpecifier
-                                            &FS,
-                                          const char *startSpecifier,
-                                          unsigned specifierLen) {
+bool CheckPrintfHandler::HandlePrintfSpecifier(
+    const analyze_printf::PrintfSpecifier &FS, const char *startSpecifier,
+    unsigned specifierLen, const TargetInfo &Target) {
   using namespace analyze_format_string;
   using namespace analyze_printf;
 
@@ -9277,6 +9318,15 @@ CheckPrintfHandler::HandlePrintfSpecifier(const analyze_printf::PrintfSpecifier
                            /*IsStringLocation*/ false,
                            getSpecifierRange(startSpecifier, specifierLen));
     }
+  }
+
+  const llvm::Triple &Triple = Target.getTriple();
+  if (CS.getKind() == ConversionSpecifier::nArg &&
+      (Triple.isAndroid() || Triple.isOSFuchsia())) {
+    EmitFormatDiagnostic(S.PDiag(diag::warn_printf_narg_not_supported),
+                         getLocationOfByte(CS.getStart()),
+                         /*IsStringLocation*/ false,
+                         getSpecifierRange(startSpecifier, specifierLen));
   }
 
   // Check for invalid use of field width

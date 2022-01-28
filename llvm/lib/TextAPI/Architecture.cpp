@@ -15,7 +15,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TextAPI/ArchitectureSet.h"
+#include "llvm/Support/ErrorHandling.h"
 
 namespace llvm {
 namespace MachO {

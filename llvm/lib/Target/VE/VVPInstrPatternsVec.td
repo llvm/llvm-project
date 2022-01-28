@@ -20,8 +20,22 @@ include "VVPInstrInfo.td"
 multiclass Binary_rv<SDPatternOperator OpNode,
     ValueType ScalarVT, ValueType DataVT,
     ValueType MaskVT, string OpBaseName> {
-  // Masked with select, broadcast.
-  // TODO
+  // Masked with passthru, broadcast.
+  def : Pat<(vvp_select
+                (OpNode
+                    (any_broadcast ScalarVT:$sx),
+                    DataVT:$vy,
+                    (MaskVT srcvalue),
+                    (i32 srcvalue)),
+                DataVT:$vfalse,
+                MaskVT:$mask,
+                i32:$pivot),
+            (!cast<Instruction>(OpBaseName#"rvml_v")
+                ScalarVT:$sx,
+                $vy,
+                $mask,
+                $pivot,
+                $vfalse)>;
 
   // Unmasked, broadcast.
   def : Pat<(OpNode
@@ -42,8 +56,22 @@ multiclass Binary_rv<SDPatternOperator OpNode,
 multiclass Binary_vr<SDPatternOperator OpNode,
     ValueType ScalarVT, ValueType DataVT,
     ValueType MaskVT, string OpBaseName> {
-  // Masked with select, broadcast.
-  // TODO
+  // Masked with passthru, broadcast.
+  def : Pat<(vvp_select
+                (OpNode
+                    DataVT:$vx,
+                    (any_broadcast ScalarVT:$sy),
+                    (MaskVT srcvalue),
+                    (i32 srcvalue)),
+                DataVT:$vfalse,
+                MaskVT:$mask,
+                i32:$pivot),
+            (!cast<Instruction>(OpBaseName#"vrml_v")
+                $vx,
+                ScalarVT:$sy,
+                $mask,
+                $pivot,
+                $vfalse)>;
 
   // Unmasked, broadcast.
   def : Pat<(OpNode
@@ -64,6 +92,23 @@ multiclass Binary_vr<SDPatternOperator OpNode,
 multiclass Binary_vv<SDPatternOperator OpNode,
     ValueType DataVT,
     ValueType MaskVT, string OpBaseName> {
+  // Masked with passthru, broadcast.
+  def : Pat<(vvp_select
+                (OpNode
+                    DataVT:$vx,
+                    DataVT:$vy,
+                    (MaskVT srcvalue),
+                    (i32 srcvalue)),
+                DataVT:$vfalse,
+                MaskVT:$mask,
+                i32:$pivot),
+            (!cast<Instruction>(OpBaseName#"vvml_v")
+                $vx,
+                $vy,
+                $mask,
+                $pivot,
+                $vfalse)>;
+
   // Masked with select.
   // TODO
 
@@ -191,3 +236,35 @@ defm : Binary_rv_vv_ShortLong<vvp_fsub,
 defm : Binary_rv_vr_vv_ShortLong<vvp_fdiv,
                               f64, v256f64, "VFDIVD",
                               f32, v256f32, "VFDIVS">;
+
+multiclass Merge_mvv<
+    SDPatternOperator OpNode,
+    ValueType DataVT, ValueType MaskVT,
+    string OpBaseName> {
+  // Masked.
+  def : Pat<(OpNode
+                DataVT:$vtrue, DataVT:$vfalse,
+                MaskVT:$vm,
+                i32:$avl),
+            (!cast<Instruction>(OpBaseName#"vvml_v")
+                $vfalse, $vtrue, $vm, $avl, $vfalse)>;
+}
+
+multiclass Merge_mvv_ShortLong<
+    SDPatternOperator OpNode,
+    ValueType LongDataVT, ValueType ShortDataVT,
+    string OpBaseName> {
+  defm : Merge_mvv<OpNode,
+                   LongDataVT, v256i1,
+                   OpBaseName>;
+  defm : Merge_mvv<OpNode,
+                   ShortDataVT, v256i1,
+                   OpBaseName>;
+}
+
+defm : Merge_mvv_ShortLong<vvp_select,
+                           v256f64,
+                           v256f32, "VMRG">;
+defm : Merge_mvv_ShortLong<vvp_select,
+                           v256i64,
+                           v256i32, "VMRG">;

@@ -336,6 +336,94 @@ define <4 x i32> @rotate_demanded_bits_3(<4 x i32>, <4 x i32>) {
   ret <4 x i32> %9
 }
 
+define <4 x i32> @rotl_binop_shuffle(<4 x i32>, <4 x i32>) {
+; SSE2-LABEL: rotl_binop_shuffle:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    pslld $23, %xmm1
+; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pmuludq %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,3,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; SSE2-NEXT:    pmuludq %xmm2, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,3,2,3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    por %xmm3, %xmm0
+; SSE2-NEXT:    retq
+;
+; XOP-LABEL: rotl_binop_shuffle:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vprotd %xmm1, %xmm0, %xmm0
+; XOP-NEXT:    retq
+;
+; AVX2-LABEL: rotl_binop_shuffle:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [31,31,31,31]
+; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpsllvd %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [32,32,32,32]
+; AVX2-NEXT:    vpsubd %xmm1, %xmm3, %xmm1
+; AVX2-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: rotl_binop_shuffle:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vprolvd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %3 = shufflevector <4 x i32> %0, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %4 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %5 = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %3, <4 x i32> %3, <4 x i32> %4)
+  %6 = shufflevector <4 x i32> %5, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x i32> %6
+}
+
+define <4 x i32> @rotr_binop_shuffle(<4 x i32>, <4 x i32>) {
+; SSE2-LABEL: rotr_binop_shuffle:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,2,3,3]
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    andl $31, %eax
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    psllq %xmm1, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; SSE2-NEXT:    psllq %xmm1, %xmm0
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm2[1,3]
+; SSE2-NEXT:    retq
+;
+; XOP-LABEL: rotr_binop_shuffle:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; XOP-NEXT:    vprotd %xmm1, %xmm0, %xmm0
+; XOP-NEXT:    retq
+;
+; AVX2-LABEL: rotr_binop_shuffle:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[2,2,3,3]
+; AVX2-NEXT:    vpsllq %xmm1, %xmm2, %xmm2
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; AVX2-NEXT:    vpsllq %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm2[1,3]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: rotr_binop_shuffle:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpbroadcastd %xmm1, %xmm1
+; AVX512-NEXT:    vprolvd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %3 = shufflevector <4 x i32> %0, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %4 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> zeroinitializer
+  %5 = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %3, <4 x i32> %3, <4 x i32> %4)
+  %6 = shufflevector <4 x i32> %5, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x i32> %6
+}
+
 ; OSS Fuzz: https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=9935
 define i32 @fuzz9935() {
 ; CHECK-LABEL: fuzz9935:
@@ -348,3 +436,6 @@ define i32 @fuzz9935() {
   %4 = or i32 %3, %2
   ret i32 %4
 }
+
+declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.fshr.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)

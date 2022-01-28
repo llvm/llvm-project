@@ -587,7 +587,7 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
         OS << " addrspace(" << AddressSpace << ')';
       return;
     }
-    print(PTy->getElementType(), OS);
+    print(PTy->getNonOpaquePointerElementType(), OS);
     if (unsigned AddressSpace = PTy->getAddressSpace())
       OS << " addrspace(" << AddressSpace << ')';
     OS << '*';
@@ -1986,6 +1986,8 @@ static void writeDIStringType(raw_ostream &Out, const DIStringType *N,
   Printer.printString("name", N->getName());
   Printer.printMetadata("stringLength", N->getRawStringLength());
   Printer.printMetadata("stringLengthExpression", N->getRawStringLengthExp());
+  Printer.printMetadata("stringLocationExpression",
+                        N->getRawStringLocationExp());
   Printer.printInt("size", N->getSizeInBits());
   Printer.printInt("align", N->getAlignInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),

@@ -163,7 +163,7 @@ struct AAICVTracker;
 struct OMPInformationCache : public InformationCache {
   OMPInformationCache(Module &M, AnalysisGetter &AG,
                       BumpPtrAllocator &Allocator, SetVector<Function *> &CGSCC,
-                      SmallPtrSetImpl<Kernel> &Kernels)
+                      KernelSet &Kernels)
       : InformationCache(M, AG, Allocator, &CGSCC), OMPBuilder(M),
         Kernels(Kernels) {
 
@@ -417,6 +417,12 @@ struct OMPInformationCache : public InformationCache {
       recollectUsesForFunction(static_cast<RuntimeFunction>(Idx));
   }
 
+  // Helper function to inherit the calling convention of the function callee.
+  void setCallingConvention(FunctionCallee Callee, CallInst *CI) {
+    if (Function *Fn = dyn_cast<Function>(Callee.getCallee()))
+      CI->setCallingConv(Fn->getCallingConv());
+  }
+
   /// Helper to initialize all runtime function information for those defined
   /// in OpenMPKinds.def.
   void initializeRuntimeFunctions() {
@@ -478,7 +484,7 @@ struct OMPInformationCache : public InformationCache {
   }
 
   /// Collection of known kernels (\see Kernel) in the module.
-  SmallPtrSetImpl<Kernel> &Kernels;
+  KernelSet &Kernels;
 
   /// Collection of known OpenMP runtime functions..
   DenseSet<const Function *> RTLFunctions;
@@ -1006,7 +1012,8 @@ private:
     // into a single parallel region is contained in a single basic block
     // without any other instructions. We use the OpenMPIRBuilder to outline
     // that block and call the resulting function via __kmpc_fork_call.
-    auto Merge = [&](SmallVectorImpl<CallInst *> &MergableCIs, BasicBlock *BB) {
+    auto Merge = [&](const SmallVectorImpl<CallInst *> &MergableCIs,
+                     BasicBlock *BB) {
       // TODO: Change the interface to allow single CIs expanded, e.g, to
       // include an outer loop.
       assert(MergableCIs.size() > 1 && "Assumed multiple mergable CIs");
@@ -1068,8 +1075,7 @@ private:
       BranchInst::Create(AfterBB, AfterIP.getBlock());
 
       // Perform the actual outlining.
-      OMPInfoCache.OMPBuilder.finalize(OriginalFn,
-                                       /* AllowExtractorSinking */ true);
+      OMPInfoCache.OMPBuilder.finalize(OriginalFn);
 
       Function *OutlinedFn = MergableCIs.front()->getCaller();
 
@@ -1531,6 +1537,7 @@ private:
 
     CallInst *IssueCallsite =
         CallInst::Create(IssueDecl, Args, /*NameStr=*/"", &RuntimeCall);
+    OMPInfoCache.setCallingConvention(IssueDecl, IssueCallsite);
     RuntimeCall.eraseFromParent();
 
     // Add "wait" runtime call declaration:
@@ -1543,7 +1550,9 @@ private:
             OffloadArray::DeviceIDArgNum), // device_id.
         Handle                             // handle to wait on.
     };
-    CallInst::Create(WaitDecl, WaitParams, /*NameStr=*/"", &WaitMovementPoint);
+    CallInst *WaitCallsite = CallInst::Create(
+        WaitDecl, WaitParams, /*NameStr=*/"", &WaitMovementPoint);
+    OMPInfoCache.setCallingConvention(WaitDecl, WaitCallsite);
 
     return true;
   }
@@ -2166,7 +2175,7 @@ struct AAICVTrackerFunction : public AAICVTracker {
       };
 
       auto CallCheck = [&](Instruction &I) {
-        Optional<Value *> ReplVal = getValueForCall(A, &I, ICV);
+        Optional<Value *> ReplVal = getValueForCall(A, I, ICV);
         if (ReplVal.hasValue() &&
             ValuesMap.insert(std::make_pair(&I, *ReplVal)).second)
           HasChanged = ChangeStatus::CHANGED;
@@ -2192,12 +2201,12 @@ struct AAICVTrackerFunction : public AAICVTracker {
     return HasChanged;
   }
 
-  /// Hepler to check if \p I is a call and get the value for it if it is
+  /// Helper to check if \p I is a call and get the value for it if it is
   /// unique.
-  Optional<Value *> getValueForCall(Attributor &A, const Instruction *I,
+  Optional<Value *> getValueForCall(Attributor &A, const Instruction &I,
                                     InternalControlVar &ICV) const {
 
-    const auto *CB = dyn_cast<CallBase>(I);
+    const auto *CB = dyn_cast<CallBase>(&I);
     if (!CB || CB->hasFnAttr("no_openmp") ||
         CB->hasFnAttr("no_openmp_routines"))
       return None;
@@ -2213,8 +2222,8 @@ struct AAICVTrackerFunction : public AAICVTracker {
     if (CalledFunction == GetterRFI.Declaration)
       return None;
     if (CalledFunction == SetterRFI.Declaration) {
-      if (ICVReplacementValuesMap[ICV].count(I))
-        return ICVReplacementValuesMap[ICV].lookup(I);
+      if (ICVReplacementValuesMap[ICV].count(&I))
+        return ICVReplacementValuesMap[ICV].lookup(&I);
 
       return nullptr;
     }
@@ -2226,8 +2235,11 @@ struct AAICVTrackerFunction : public AAICVTracker {
     const auto &ICVTrackingAA = A.getAAFor<AAICVTracker>(
         *this, IRPosition::callsite_returned(*CB), DepClassTy::REQUIRED);
 
-    if (ICVTrackingAA.isAssumedTracked())
-      return ICVTrackingAA.getUniqueReplacementValue(ICV);
+    if (ICVTrackingAA.isAssumedTracked()) {
+      Optional<Value *> URV = ICVTrackingAA.getUniqueReplacementValue(ICV);
+      if (!URV || (*URV && AA::isValidAtPosition(**URV, I, OMPInfoCache)))
+        return URV;
+    }
 
     // If we don't know, assume it changes.
     return nullptr;
@@ -2279,7 +2291,7 @@ struct AAICVTrackerFunction : public AAICVTracker {
           break;
         }
 
-        Optional<Value *> NewReplVal = getValueForCall(A, CurrInst, ICV);
+        Optional<Value *> NewReplVal = getValueForCall(A, *CurrInst, ICV);
         if (!NewReplVal.hasValue())
           continue;
 
@@ -2767,7 +2779,7 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
       Type *Int8ArrTy = ArrayType::get(Int8Ty, AllocSize->getZExtValue());
       auto *SharedMem = new GlobalVariable(
           *M, Int8ArrTy, /* IsConstant */ false, GlobalValue::InternalLinkage,
-          UndefValue::get(Int8ArrTy), CB->getName(), nullptr,
+          UndefValue::get(Int8ArrTy), CB->getName() + "_shared", nullptr,
           GlobalValue::NotThreadLocal,
           static_cast<unsigned>(AddressSpace::Shared));
       auto *NewBuffer =
@@ -3238,8 +3250,10 @@ struct AAKernelInfoFunction : AAKernelInfo {
       FunctionCallee HardwareTidFn =
           OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
               M, OMPRTL___kmpc_get_hardware_thread_id_in_block);
-      Value *Tid =
+      CallInst *Tid =
           OMPInfoCache.OMPBuilder.Builder.CreateCall(HardwareTidFn, {});
+      Tid->setDebugLoc(DL);
+      OMPInfoCache.setCallingConvention(HardwareTidFn, Tid);
       Value *TidCheck = OMPInfoCache.OMPBuilder.Builder.CreateIsNull(Tid);
       OMPInfoCache.OMPBuilder.Builder
           .CreateCondBr(TidCheck, RegionStartBB, RegionBarrierBB)
@@ -3252,14 +3266,18 @@ struct AAKernelInfoFunction : AAKernelInfo {
               M, OMPRTL___kmpc_barrier_simple_spmd);
       OMPInfoCache.OMPBuilder.updateToLocation(InsertPointTy(
           RegionBarrierBB, RegionBarrierBB->getFirstInsertionPt()));
-      OMPInfoCache.OMPBuilder.Builder.CreateCall(BarrierFn, {Ident, Tid})
-          ->setDebugLoc(DL);
+      CallInst *Barrier =
+          OMPInfoCache.OMPBuilder.Builder.CreateCall(BarrierFn, {Ident, Tid});
+      Barrier->setDebugLoc(DL);
+      OMPInfoCache.setCallingConvention(BarrierFn, Barrier);
 
       // Second barrier ensures workers have read broadcast values.
-      if (HasBroadcastValues)
-        CallInst::Create(BarrierFn, {Ident, Tid}, "",
-                         RegionBarrierBB->getTerminator())
-            ->setDebugLoc(DL);
+      if (HasBroadcastValues) {
+        CallInst *Barrier = CallInst::Create(BarrierFn, {Ident, Tid}, "",
+                                             RegionBarrierBB->getTerminator());
+        Barrier->setDebugLoc(DL);
+        OMPInfoCache.setCallingConvention(BarrierFn, Barrier);
+      }
     };
 
     auto &AllocSharedRFI = OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared];
@@ -3529,10 +3547,12 @@ struct AAKernelInfoFunction : AAKernelInfo {
     FunctionCallee WarpSizeFn =
         OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
             M, OMPRTL___kmpc_get_warp_size);
-    Instruction *BlockHwSize =
+    CallInst *BlockHwSize =
         CallInst::Create(BlockHwSizeFn, "block.hw_size", InitBB);
+    OMPInfoCache.setCallingConvention(BlockHwSizeFn, BlockHwSize);
     BlockHwSize->setDebugLoc(DLoc);
-    Instruction *WarpSize = CallInst::Create(WarpSizeFn, "warp.size", InitBB);
+    CallInst *WarpSize = CallInst::Create(WarpSizeFn, "warp.size", InitBB);
+    OMPInfoCache.setCallingConvention(WarpSizeFn, WarpSize);
     WarpSize->setDebugLoc(DLoc);
     Instruction *BlockSize =
         BinaryOperator::CreateSub(BlockHwSize, WarpSize, "block.size", InitBB);
@@ -3572,8 +3592,10 @@ struct AAKernelInfoFunction : AAKernelInfo {
     FunctionCallee BarrierFn =
         OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
             M, OMPRTL___kmpc_barrier_simple_generic);
-    CallInst::Create(BarrierFn, {Ident, GTid}, "", StateMachineBeginBB)
-        ->setDebugLoc(DLoc);
+    CallInst *Barrier =
+        CallInst::Create(BarrierFn, {Ident, GTid}, "", StateMachineBeginBB);
+    OMPInfoCache.setCallingConvention(BarrierFn, Barrier);
+    Barrier->setDebugLoc(DLoc);
 
     if (WorkFnAI->getType()->getPointerAddressSpace() !=
         (unsigned int)AddressSpace::Generic) {
@@ -3589,8 +3611,9 @@ struct AAKernelInfoFunction : AAKernelInfo {
     FunctionCallee KernelParallelFn =
         OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
             M, OMPRTL___kmpc_kernel_parallel);
-    Instruction *IsActiveWorker = CallInst::Create(
+    CallInst *IsActiveWorker = CallInst::Create(
         KernelParallelFn, {WorkFnAI}, "worker.is_active", StateMachineBeginBB);
+    OMPInfoCache.setCallingConvention(KernelParallelFn, IsActiveWorker);
     IsActiveWorker->setDebugLoc(DLoc);
     Instruction *WorkFn = new LoadInst(VoidPtrTy, WorkFnAI, "worker.work_fn",
                                        StateMachineBeginBB);
@@ -3670,10 +3693,13 @@ struct AAKernelInfoFunction : AAKernelInfo {
                        StateMachineIfCascadeCurrentBB)
         ->setDebugLoc(DLoc);
 
-    CallInst::Create(OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
-                         M, OMPRTL___kmpc_kernel_end_parallel),
-                     {}, "", StateMachineEndParallelBB)
-        ->setDebugLoc(DLoc);
+    FunctionCallee EndParallelFn =
+        OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
+            M, OMPRTL___kmpc_kernel_end_parallel);
+    CallInst *EndParallel =
+        CallInst::Create(EndParallelFn, {}, "", StateMachineEndParallelBB);
+    OMPInfoCache.setCallingConvention(EndParallelFn, EndParallel);
+    EndParallel->setDebugLoc(DLoc);
     BranchInst::Create(StateMachineDoneBarrierBB, StateMachineEndParallelBB)
         ->setDebugLoc(DLoc);
 

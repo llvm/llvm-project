@@ -15,77 +15,6 @@
 // CHECK-DAG: #[[$strided3D:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>
 // CHECK-DAG: #[[$strided3DT:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d2 * s1 + s0 + d1 * s2 + d0)>
 
-func @pad_dynamic(%arg0: tensor<1x2x2x?xf32>, %low: index, %high: index,
-                  %pad_value: f32) -> tensor<6x?x?x?xf32> {
-  %0 = linalg.pad_tensor %arg0 low[2, %low, 3, 3] high[3, 3, %high, 2] {
-    ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):
-      linalg.yield %pad_value : f32
-    } : tensor<1x2x2x?xf32> to tensor<6x?x?x?xf32>
-  return %0 : tensor<6x?x?x?xf32>
-}
-// CHECK-LABEL: func @pad_dynamic
-//  CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]*]]
-//  CHECK-SAME: %[[LOW:[a-zA-Z0-9_]*]]
-//  CHECK-SAME: %[[HIGH:[a-zA-Z0-9_]*]]
-//       CHECK:   linalg.pad_tensor %[[ARG0]]
-//  CHECK-SAME:     low[2, %[[LOW]], 3, 3]
-//  CHECK-SAME:     high[3, 3, %[[HIGH]], 2]
-//       CHECK:    : tensor<1x2x2x?xf32> to tensor<6x?x?x?xf32>
-
-// -----
-
-func @pad_static(%arg0: tensor<3x4xf32>, %pad_value: f32) -> tensor<6x9xf32> {
-  %0 = linalg.pad_tensor %arg0 low[1, 2] high[2, 3] {
-    ^bb0(%arg1 : index, %arg2 : index):
-      linalg.yield %pad_value : f32
-    } : tensor<3x4xf32> to tensor<6x9xf32>
-  return %0 : tensor<6x9xf32>
-}
-// CHECK-LABEL: func @pad_static
-//  CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]*]]
-//       CHECK:   linalg.pad_tensor %[[ARG0]] low[1, 2] high[2, 3]
-//       CHECK:    : tensor<3x4xf32> to tensor<6x9xf32>
-
-// -----
-
-func @pad_asymmetrical(%arg0: tensor<2x3xf32>, %ub0: index, %ub1: index,
-                       %pad_value: f32) -> tensor<?x?xf32> {
-  %0 = linalg.pad_tensor %arg0 low[0, 0] high[%ub0, %ub1] {
-    ^bb0(%arg1: index, %arg2: index):
-      linalg.yield %pad_value : f32
-    } : tensor<2x3xf32> to tensor<?x?xf32>
-  return %0 : tensor<?x?xf32>
-}
-// CHECK-LABEL: func @pad_asymmetrical
-//  CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]*]]
-//  CHECK-SAME: %[[UB0:[a-zA-Z0-9_]*]]
-//  CHECK-SAME: %[[UB1:[a-zA-Z0-9_]*]]
-//       CHECK:   linalg.pad_tensor %[[ARG0]]
-//  CHECK-SAME:     low[0, 0]
-//  CHECK-SAME:     high[%[[UB0]], %[[UB1]]]
-//       CHECK:    : tensor<2x3xf32> to tensor<?x?xf32>
-
-// -----
-
-func @pad_to_static_size(%arg0: tensor<?x?xf32>, %ub0: index, %ub1: index,
-                         %pad_value: f32) -> tensor<2x3xf32> {
-  %0 = linalg.pad_tensor %arg0 low[0, 0] high[%ub0, %ub1] {
-    ^bb0(%arg1: index, %arg2: index):
-      linalg.yield %pad_value : f32
-    } : tensor<?x?xf32> to tensor<2x3xf32>
-  return %0 : tensor<2x3xf32>
-}
-// CHECK-LABEL: func @pad_to_static_size
-//  CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]*]]
-//  CHECK-SAME: %[[UB0:[a-zA-Z0-9_]*]]
-//  CHECK-SAME: %[[UB1:[a-zA-Z0-9_]*]]
-//       CHECK:   linalg.pad_tensor %[[ARG0]]
-//  CHECK-SAME:     low[0, 0]
-//  CHECK-SAME:     high[%[[UB0]], %[[UB1]]]
-//       CHECK:    : tensor<?x?xf32> to tensor<2x3xf32>
-
-// -----
-
 func @views(%arg0: index) {
   %c0 = arith.constant 0 : index
   %0 = arith.muli %arg0, %arg0 : index
@@ -259,7 +188,7 @@ func @generic_without_inputs(%arg0 : memref<?x?x?xf32>) {
   linalg.generic  {indexing_maps = [#map0],
                    iterator_types = ["parallel", "parallel", "parallel"]}
                   outs(%arg0 : memref<?x?x?xf32>) {
-   ^bb0(%arg3: f32):  // no predecessors
+   ^bb0(%arg3: f32):  
       %cst = arith.constant 0.000000e+00 : f32
       linalg.yield %cst : f32
     }
@@ -322,7 +251,7 @@ func @generic_with_multiple_tensor_outputs(
     iterator_types = ["reduction"]}
     ins(%arg0, %arg1 : tensor<?xi32>, tensor<?xi32>)
     outs(%1, %3 : tensor<i32>, tensor<i32>) {
-  ^bb0(%arg3: i32, %arg4: i32, %arg5: i32, %arg6: i32):  // no predecessors
+  ^bb0(%arg3: i32, %arg4: i32, %arg5: i32, %arg6: i32):  
     %5 = arith.cmpi sge, %arg3, %arg5 : i32
     %6 = select %5, %arg3, %arg5 : i32
     %7 = arith.cmpi eq, %arg3, %arg5 : i32
@@ -435,15 +364,18 @@ func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?x?xf32>, %c3: memref<?x?x
 
 // -----
 
+#attr = {"foo"}
 func @init_tensor(%arg0 : index, %arg1 : index)
 {
   %0 = linalg.init_tensor [3, 42] : tensor<3x42xf32>
   %1 = linalg.init_tensor [4, %arg0, %arg1, 5] : tensor<4x?x?x5xf32>
+  %2 = linalg.init_tensor [2, 2] : tensor<2x2xf32, #attr>
   return
 }
 // CHECK-LABEL: func @init_tensor
 //       CHECK:   linalg.init_tensor [3, 42] : tensor<3x42xf32>
 //       CHECK:   linalg.init_tensor [4, %{{.*}}, %{{.*}}, 5] : tensor<4x?x?x5xf32>
+//       CHECK:   linalg.init_tensor [2, 2] : tensor<2x2xf32, {foo}>
 
 // -----
 

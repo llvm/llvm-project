@@ -9,17 +9,6 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
-// RUN: mlir-opt %s -test-conv-vectorization="tile-sizes=1,1,1,3,3,3" -convert-linalg-to-llvm -lower-affine -convert-scf-to-std -convert-vector-to-llvm --convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | \
-// RUN: mlir-cpu-runner -e main -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
-// RUN: | FileCheck %s
-
-// RUN: mlir-opt %s -linalg-tile="tile-sizes=2,2,2" \
-// RUN:   -test-conv-vectorization="tile-sizes=1,1,1,3,3,3" -convert-linalg-to-llvm -lower-affine -convert-scf-to-std -convert-vector-to-llvm --convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | \
-// RUN: mlir-cpu-runner -e main -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
-// RUN: | FileCheck %s
-
 func private @print_memref_f32(memref<*xf32>)
 
 // Creates and returns 3-D buffer of size (%s1, %s2, %s3) filled with the value %f

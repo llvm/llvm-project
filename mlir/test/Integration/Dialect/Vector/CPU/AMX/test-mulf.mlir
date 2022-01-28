@@ -8,7 +8,7 @@
 // Multiply into zeroed destination.
 func @kernel1(%arg0: memref<2x4xbf16>,
               %arg1: memref<2x4xbf16>,
-	      %arg2: memref<2x2xf32>) {
+              %arg2: memref<2x2xf32>) {
   %0 = arith.constant 0 : index
   %1 = amx.tile_load %arg0[%0, %0] : memref<2x4xbf16>  into vector<2x4xbf16>
   %2 = amx.tile_load %arg1[%0, %0] : memref<2x4xbf16>  into vector<2x4xbf16>
@@ -21,7 +21,7 @@ func @kernel1(%arg0: memref<2x4xbf16>,
 // Multiply and update into destination.
 func @kernel2(%arg0: memref<2x4xbf16>,
               %arg1: memref<2x4xbf16>,
-	      %arg2: memref<2x2xf32>) {
+              %arg2: memref<2x2xf32>) {
   %0 = arith.constant 0 : index
   %1 = amx.tile_load %arg0[%0, %0] : memref<2x4xbf16>  into vector<2x4xbf16>
   %2 = amx.tile_load %arg1[%0, %0] : memref<2x4xbf16>  into vector<2x4xbf16>

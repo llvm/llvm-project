@@ -83,3 +83,17 @@ _start:
 # HEX-NEXT: 12345678
 
 # NONE-NOT: Contents of section .note.gnu.build-id:
+
+# RUN: ld.lld --build-id=sha1 -z separate-loadable-segments %t -o %t2
+# RUN: llvm-readelf -x .note.gnu.build-id %t2 | FileCheck --check-prefix=SEPARATE %s
+
+# SEPARATE:      Hex dump of section '.note.gnu.build-id':
+# SEPARATE-NEXT: 0x00200198 04000000 14000000 03000000 474e5500
+# SEPARATE-NEXT: 0x002001a8 96820adf d90d5470 0a0c32ff a88c4017
+
+# RUN: ld.lld --build-id=sha1 --no-rosegment %t -o %t2
+# RUN: llvm-readelf -x .note.gnu.build-id %t2 | FileCheck --check-prefix=NORO %s
+
+# NORO:      Hex dump of section '.note.gnu.build-id':
+# NORO-NEXT: 0x00200160 04000000 14000000 03000000 474e5500
+# NORO-NEXT: 0x00200170 cf6d7b3a 0b3297c3 5b47c079 ce048349

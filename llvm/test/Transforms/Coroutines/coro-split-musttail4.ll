@@ -42,9 +42,9 @@ coro.end:
   ret void
 }
 
-; FIXME: The fakerresume1 here should be musttail call.
 ; CHECK-LABEL: @f.resume(
-; CHECK-NOT: musttail call fastcc void @fakeresume1(
+; CHECK:          musttail call fastcc void @fakeresume1(
+; CHECK-NEXT:     ret void
 
 declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*) #1
 declare i1 @llvm.coro.alloc(token) #2

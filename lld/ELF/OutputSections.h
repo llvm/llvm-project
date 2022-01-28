@@ -25,6 +25,13 @@ struct PhdrEntry;
 class InputSection;
 class InputSectionBase;
 
+struct CompressedData {
+  std::unique_ptr<SmallVector<uint8_t, 0>[]> shards;
+  uint32_t numShards = 0;
+  uint32_t checksum = 0;
+  uint64_t uncompressedSize;
+};
+
 // This represents a section in an output file.
 // It is composed of multiple InputSections.
 // The writer creates multiple OutputSections and assign them unique,
@@ -112,8 +119,7 @@ public:
 
 private:
   // Used for implementation of --compress-debug-sections option.
-  SmallVector<uint8_t, 0> zDebugHeader;
-  SmallVector<char, 0> compressedData;
+  CompressedData compressed;
 
   std::array<uint8_t, 4> getFiller();
 };

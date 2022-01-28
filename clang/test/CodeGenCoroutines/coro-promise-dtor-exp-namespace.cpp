@@ -34,7 +34,7 @@ coro_t f() {
 // CHECK:  %gro.active = alloca i1
 // CHECK:  store i1 false, i1* %gro.active
 
-// CHECK:  invoke %"struct.coro_t::promise_type"* @"??0promise_type@coro_t@@QEAA@XZ"(
+// CHECK:  invoke noundef %"struct.coro_t::promise_type"* @"??0promise_type@coro_t@@QEAA@XZ"(
 // CHECK:  invoke void @"?get_return_object@promise_type@coro_t@@QEAA?AU2@XZ"(
 // CHECK:  store i1 true, i1* %gro.active
 

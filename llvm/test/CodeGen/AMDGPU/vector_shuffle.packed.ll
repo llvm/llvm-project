@@ -1781,14 +1781,15 @@ define <6 x half> @shuffle_v6f16_452367(<6 x half> addrspace(1)* %arg0, <6 x hal
 ; GFX11-NEXT:    global_load_b96 v[4:6], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    scratch_store_b96 off, v[4:6], s32
-; GFX11-NEXT:    global_load_b96 v[0:2], v[2:3], off
+; GFX11-NEXT:    global_load_b96 v[4:6], v[2:3], off
+; GFX11-NEXT:    scratch_load_b128 v[0:3], off, s32
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    scratch_store_b96 off, v[4:6], s32 offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_clause 0x3
-; GFX11-NEXT:    scratch_store_b96 off, v[0:2], s32 offset:16
-; GFX11-NEXT:    scratch_load_b32 v0, off, s32 offset:8
-; GFX11-NEXT:    scratch_load_b32 v1, off, s32 offset:4
-; GFX11-NEXT:    scratch_load_b32 v2, off, s32 offset:16
+; GFX11-NEXT:    scratch_load_b32 v3, off, s32 offset:16
+; GFX11-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, v3
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <6 x half>, <6 x half> addrspace(1)* %arg0

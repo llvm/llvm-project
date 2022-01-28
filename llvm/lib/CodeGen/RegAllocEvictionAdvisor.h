@@ -176,13 +176,14 @@ public:
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA) = 0;
   AdvisorMode getAdvisorMode() const { return Mode; }
 
-private:
+protected:
   // This analysis preserves everything, and subclasses may have additional
   // requirements.
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }
 
+private:
   StringRef getPassName() const override;
   const AdvisorMode Mode;
 };
@@ -191,14 +192,9 @@ private:
 /// an instance of the eviction advisor.
 template <> Pass *callDefaultCtor<RegAllocEvictionAdvisorAnalysis>();
 
-// TODO(mtrofin): implement these.
-#ifdef LLVM_HAVE_TF_AOT
 RegAllocEvictionAdvisorAnalysis *createReleaseModeAdvisor();
-#endif
 
-#ifdef LLVM_HAVE_TF_API
 RegAllocEvictionAdvisorAnalysis *createDevelopmentModeAdvisor();
-#endif
 
 // TODO: move to RegAllocEvictionAdvisor.cpp when we move implementation
 // out of RegAllocGreedy.cpp

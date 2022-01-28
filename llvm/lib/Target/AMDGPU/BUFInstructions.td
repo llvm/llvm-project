@@ -2031,8 +2031,11 @@ multiclass MUBUF_Real_Atomics_gfx11_Renamed<bits<8> op, string real_name> :
   MUBUF_Real_AllAddr_gfx11_Renamed<op, real_name>,
   MUBUF_Real_Atomics_RTN_gfx11_Renamed<op, real_name>;
 
+let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
 def BUFFER_GL0_INV_gfx11          : MUBUF_Real_gfx11<0x02B, BUFFER_GL0_INV>;
 def BUFFER_GL1_INV_gfx11          : MUBUF_Real_gfx11<0x02C, BUFFER_GL1_INV>;
+}
+
 defm BUFFER_LOAD_DWORD            : MUBUF_Real_AllAddr_gfx11_Renamed<0x014, "buffer_load_b32">;
 defm BUFFER_LOAD_DWORDX2          : MUBUF_Real_AllAddr_gfx11_Renamed<0x015, "buffer_load_b64">;
 defm BUFFER_LOAD_DWORDX3          : MUBUF_Real_AllAddr_gfx11_Renamed<0x016, "buffer_load_b96">;

@@ -12,17 +12,6 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-namespace bufferization {
-class BufferizeTypeConverter;
-} // namespace bufferization
-
-class RewritePatternSet;
-using OwningRewritePatternList = RewritePatternSet;
-
-void populateTensorBufferizePatterns(
-    bufferization::BufferizeTypeConverter &typeConverter,
-    RewritePatternSet &patterns);
-
 /// Creates an instance of `tensor` dialect bufferization pass.
 std::unique_ptr<Pass> createTensorBufferizePass();
 

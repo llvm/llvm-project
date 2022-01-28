@@ -29,6 +29,7 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
@@ -617,7 +618,8 @@ static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
   Value *CachedSlot = nullptr;
   auto getSwiftErrorSlot = [&](Type *ValueTy) -> Value * {
     if (CachedSlot) {
-      assert(CachedSlot->getType()->getPointerElementType() == ValueTy &&
+      assert(cast<PointerType>(CachedSlot->getType())
+                 ->isOpaqueOrPointeeTypeMatches(ValueTy) &&
              "multiple swifterror slots in function with different types");
       return CachedSlot;
     }
@@ -626,7 +628,8 @@ static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
     for (auto &Arg : F.args()) {
       if (Arg.isSwiftError()) {
         CachedSlot = &Arg;
-        assert(Arg.getType()->getPointerElementType() == ValueTy &&
+        assert(cast<PointerType>(Arg.getType())
+                   ->isOpaqueOrPointeeTypeMatches(ValueTy) &&
                "swifterror argument does not have expected type");
         return &Arg;
       }
@@ -1082,9 +1085,15 @@ static void updateAsyncFuncPointerContextSize(coro::Shape &Shape) {
   Shape.AsyncLowering.AsyncFuncPointer->setInitializer(NewFuncPtrStruct);
 }
 
-static void replaceFrameSize(coro::Shape &Shape) {
+static void replaceFrameSizeAndAlignment(coro::Shape &Shape) {
   if (Shape.ABI == coro::ABI::Async)
     updateAsyncFuncPointerContextSize(Shape);
+
+  for (CoroAlignInst *CA : Shape.CoroAligns) {
+    CA->replaceAllUsesWith(
+        ConstantInt::get(CA->getType(), Shape.FrameAlign.value()));
+    CA->eraseFromParent();
+  }
 
   if (Shape.CoroSizes.empty())
     return;
@@ -1197,10 +1206,34 @@ scanPHIsAndUpdateValueMap(Instruction *Prev, BasicBlock *NewBlock,
 static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
   DenseMap<Value *, Value *> ResolvedValues;
   BasicBlock *UnconditionalSucc = nullptr;
+  assert(InitialInst->getModule());
+  const DataLayout &DL = InitialInst->getModule()->getDataLayout();
+
+  auto GetFirstValidInstruction = [](Instruction *I) {
+    while (I) {
+      // BitCastInst wouldn't generate actual code so that we could skip it.
+      if (isa<BitCastInst>(I) || I->isDebugOrPseudoInst() ||
+          I->isLifetimeStartOrEnd())
+        I = I->getNextNode();
+      else if (isInstructionTriviallyDead(I))
+        // Duing we are in the middle of the transformation, we need to erase
+        // the dead instruction manually.
+        I = &*I->eraseFromParent();
+      else
+        break;
+    }
+    return I;
+  };
+
+  auto TryResolveConstant = [&ResolvedValues](Value *V) {
+    auto It = ResolvedValues.find(V);
+    if (It != ResolvedValues.end())
+      V = It->second;
+    return dyn_cast<ConstantInt>(V);
+  };
 
   Instruction *I = InitialInst;
-  while (I->isTerminator() ||
-         (isa<CmpInst>(I) && I->getNextNode()->isTerminator())) {
+  while (I->isTerminator() || isa<CmpInst>(I)) {
     if (isa<ReturnInst>(I)) {
       if (I != InitialInst) {
         // If InitialInst is an unconditional branch,
@@ -1213,48 +1246,68 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
     }
     if (auto *BR = dyn_cast<BranchInst>(I)) {
       if (BR->isUnconditional()) {
-        BasicBlock *BB = BR->getSuccessor(0);
+        BasicBlock *Succ = BR->getSuccessor(0);
         if (I == InitialInst)
-          UnconditionalSucc = BB;
-        scanPHIsAndUpdateValueMap(I, BB, ResolvedValues);
-        I = BB->getFirstNonPHIOrDbgOrLifetime();
+          UnconditionalSucc = Succ;
+        scanPHIsAndUpdateValueMap(I, Succ, ResolvedValues);
+        I = GetFirstValidInstruction(Succ->getFirstNonPHIOrDbgOrLifetime());
+        continue;
+      }
+
+      BasicBlock *BB = BR->getParent();
+      // Handle the case the condition of the conditional branch is constant.
+      // e.g.,
+      //
+      //     br i1 false, label %cleanup, label %CoroEnd
+      //
+      // It is possible during the transformation. We could continue the
+      // simplifying in this case.
+      if (ConstantFoldTerminator(BB, /*DeleteDeadConditions=*/true)) {
+        // Handle this branch in next iteration.
+        I = BB->getTerminator();
         continue;
       }
     } else if (auto *CondCmp = dyn_cast<CmpInst>(I)) {
-      auto *BR = dyn_cast<BranchInst>(I->getNextNode());
-      if (BR && BR->isConditional() && CondCmp == BR->getCondition()) {
-        // If the case number of suspended switch instruction is reduced to
-        // 1, then it is simplified to CmpInst in llvm::ConstantFoldTerminator.
-        // And the comparsion looks like : %cond = icmp eq i8 %V, constant.
-        ConstantInt *CondConst = dyn_cast<ConstantInt>(CondCmp->getOperand(1));
-        if (CondConst && CondCmp->getPredicate() == CmpInst::ICMP_EQ) {
-          Value *V = CondCmp->getOperand(0);
-          auto it = ResolvedValues.find(V);
-          if (it != ResolvedValues.end())
-            V = it->second;
+      // If the case number of suspended switch instruction is reduced to
+      // 1, then it is simplified to CmpInst in llvm::ConstantFoldTerminator.
+      auto *BR = dyn_cast<BranchInst>(
+          GetFirstValidInstruction(CondCmp->getNextNode()));
+      if (!BR || !BR->isConditional() || CondCmp != BR->getCondition())
+        return false;
 
-          if (ConstantInt *Cond0 = dyn_cast<ConstantInt>(V)) {
-            BasicBlock *BB = Cond0->equalsInt(CondConst->getZExtValue())
-                                 ? BR->getSuccessor(0)
-                                 : BR->getSuccessor(1);
-            scanPHIsAndUpdateValueMap(I, BB, ResolvedValues);
-            I = BB->getFirstNonPHIOrDbgOrLifetime();
-            continue;
-          }
-        }
-      }
+      // And the comparsion looks like : %cond = icmp eq i8 %V, constant.
+      // So we try to resolve constant for the first operand only since the
+      // second operand should be literal constant by design.
+      ConstantInt *Cond0 = TryResolveConstant(CondCmp->getOperand(0));
+      auto *Cond1 = dyn_cast<ConstantInt>(CondCmp->getOperand(1));
+      if (!Cond0 || !Cond1)
+        return false;
+
+      // Both operands of the CmpInst are Constant. So that we could evaluate
+      // it immediately to get the destination.
+      auto *ConstResult =
+          dyn_cast_or_null<ConstantInt>(ConstantFoldCompareInstOperands(
+              CondCmp->getPredicate(), Cond0, Cond1, DL));
+      if (!ConstResult)
+        return false;
+
+      CondCmp->replaceAllUsesWith(ConstResult);
+      CondCmp->eraseFromParent();
+
+      // Handle this branch in next iteration.
+      I = BR;
+      continue;
     } else if (auto *SI = dyn_cast<SwitchInst>(I)) {
-      Value *V = SI->getCondition();
-      auto it = ResolvedValues.find(V);
-      if (it != ResolvedValues.end())
-        V = it->second;
-      if (ConstantInt *Cond = dyn_cast<ConstantInt>(V)) {
-        BasicBlock *BB = SI->findCaseValue(Cond)->getCaseSuccessor();
-        scanPHIsAndUpdateValueMap(I, BB, ResolvedValues);
-        I = BB->getFirstNonPHIOrDbgOrLifetime();
-        continue;
-      }
+      ConstantInt *Cond = TryResolveConstant(SI->getCondition());
+      if (!Cond)
+        return false;
+
+      BasicBlock *BB = SI->findCaseValue(Cond)->getCaseSuccessor();
+      scanPHIsAndUpdateValueMap(I, BB, ResolvedValues);
+      I = GetFirstValidInstruction(BB->getFirstNonPHIOrDbgOrLifetime());
+      continue;
     }
+
     return false;
   }
   return false;
@@ -1839,7 +1892,7 @@ static coro::Shape splitCoroutine(Function &F,
 
   simplifySuspendPoints(Shape);
   buildCoroutineFrame(F, Shape);
-  replaceFrameSize(Shape);
+  replaceFrameSizeAndAlignment(Shape);
 
   // If there are no suspend points, no split required, just remove
   // the allocation and deallocation blocks, they are not needed.

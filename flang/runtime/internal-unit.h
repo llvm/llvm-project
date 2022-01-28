@@ -45,6 +45,8 @@ private:
     return descriptor().template ZeroBasedIndexedElement<char>(
         currentRecordNumber - 1);
   }
+  void BlankFillOutputRecord();
+
   StaticDescriptor<maxRank, true /*addendum*/> staticDescriptor_;
 };
 

@@ -7,5 +7,5 @@ decor = [decorators.skipUnlessHasCallSiteInfo,
 lldbinline.MakeInlineTest(__file__, globals(), name="UnambiguousTailCalls_V5",
         build_dict=dict(CFLAGS_EXTRAS="-O2 -glldb"), decorators=decor)
 lldbinline.MakeInlineTest(__file__, globals(), name="UnambiguousTailCalls_GNU",
-        build_dict=dict(CFLAGS_EXTRAS="-O2 -ggdb"),
+        build_dict=dict(CFLAGS_EXTRAS="-O2 -ggdb -gdwarf-4"),
         decorators=decor+[decorators.skipIf(debug_info="dsym")])

@@ -13,10 +13,7 @@
 #ifndef LLVM_ADT_SMALLVECTOR_H
 #define LLVM_ADT_SMALLVECTOR_H
 
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MemAlloc.h"
 #include "llvm/Support/type_traits.h"
 #include <algorithm>
 #include <cassert>
@@ -33,6 +30,8 @@
 #include <utility>
 
 namespace llvm {
+
+template <typename IteratorT> class iterator_range;
 
 /// This is all the stuff common to all SmallVectors.
 ///
@@ -72,15 +71,11 @@ public:
 
   LLVM_NODISCARD bool empty() const { return !Size; }
 
+protected:
   /// Set the array size to \p N, which the current array must have enough
   /// capacity for.
   ///
   /// This does not construct or destroy any elements in the vector.
-  ///
-  /// Clients can use this in conjunction with capacity() to write past the end
-  /// of the buffer when they know that more elements are available, and only
-  /// update the size later. This avoids the cost of value initializing elements
-  /// which will only be overwritten.
   void set_size(size_t N) {
     assert(N <= capacity());
     Size = N;
@@ -588,6 +583,9 @@ public:
   }
 
 private:
+  // Make set_size() private to avoid misuse in subclasses.
+  using SuperClass::set_size;
+
   template <bool ForOverwrite> void resizeImpl(size_type N) {
     if (N == this->size())
       return;

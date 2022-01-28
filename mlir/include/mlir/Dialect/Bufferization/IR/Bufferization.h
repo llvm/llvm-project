@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZATION_H_
 
 #include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 

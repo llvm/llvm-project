@@ -649,8 +649,7 @@ define i1 @umin_lhs_overdefined_rhs_range(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A:%.*]], [[B]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[SEL]], 42
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ;
   %assume = icmp ult i32 %b, 42
   call void @llvm.assume(i1 %assume)
@@ -666,8 +665,7 @@ define i1 @umin_rhs_overdefined_lhs_range(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[A:%.*]], [[B]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[A]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[SEL]], 42
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ;
   %assume = icmp ult i32 %b, 42
   call void @llvm.assume(i1 %assume)
@@ -1125,6 +1123,108 @@ entry:
   %a32 = sext i8 %a8 to i32
   %cmp = icmp sle i32 %a32, 128
   ret i1 %cmp
+}
+
+define void @trunc_icmp_ule(i32 %x, i1* %p) {
+; CHECK-LABEL: @trunc_icmp_ule(
+; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[C:%.*]] = icmp uge i8 [[T]], 5
+; CHECK-NEXT:    br i1 [[C]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    store i1 true, i1* [[P:%.*]], align 1
+; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
+; CHECK-NEXT:    [[C3:%.*]] = icmp ule i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C3]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 false, i1* [[P]], align 1
+; CHECK-NEXT:    ret void
+; CHECK:       false:
+; CHECK-NEXT:    [[C1_2:%.*]] = icmp uge i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C1_2]], i1* [[P]], align 1
+; CHECK-NEXT:    [[C2_2:%.*]] = icmp ugt i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C2_2]], i1* [[P]], align 1
+; CHECK-NEXT:    [[C3_2:%.*]] = icmp ule i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C3_2]], i1* [[P]], align 1
+; CHECK-NEXT:    [[C4_2:%.*]] = icmp ult i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C4_2]], i1* [[P]], align 1
+; CHECK-NEXT:    ret void
+;
+  %t = trunc i32 %x to i8
+  %c = icmp uge i8 %t, 5
+  br i1 %c, label %true, label %false
+
+true:
+  %c1 = icmp uge i32 %x, 5
+  store i1 %c1, i1* %p
+  %c2 = icmp ugt i32 %x, 5
+  store i1 %c2, i1* %p
+  %c3 = icmp ule i32 %x, 5
+  store i1 %c3, i1* %p
+  %c4 = icmp ult i32 %x, 5
+  store i1 %c4, i1* %p
+  ret void
+
+false:
+  %c1.2 = icmp uge i32 %x, 5
+  store i1 %c1.2, i1* %p
+  %c2.2 = icmp ugt i32 %x, 5
+  store i1 %c2.2, i1* %p
+  %c3.2 = icmp ule i32 %x, 5
+  store i1 %c3.2, i1* %p
+  %c4.2 = icmp ult i32 %x, 5
+  store i1 %c4.2, i1* %p
+  ret void
+}
+
+define void @trunc_icmp_eq(i32 %x, i1* %p) {
+; CHECK-LABEL: @trunc_icmp_eq(
+; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[T]], 5
+; CHECK-NEXT:    br i1 [[C]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    store i1 true, i1* [[P:%.*]], align 1
+; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
+; CHECK-NEXT:    [[C3:%.*]] = icmp ule i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C3]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 false, i1* [[P]], align 1
+; CHECK-NEXT:    ret void
+; CHECK:       false:
+; CHECK-NEXT:    [[C1_2:%.*]] = icmp uge i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C1_2]], i1* [[P]], align 1
+; CHECK-NEXT:    [[C2_2:%.*]] = icmp ugt i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C2_2]], i1* [[P]], align 1
+; CHECK-NEXT:    [[C3_2:%.*]] = icmp ule i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C3_2]], i1* [[P]], align 1
+; CHECK-NEXT:    [[C4_2:%.*]] = icmp ult i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C4_2]], i1* [[P]], align 1
+; CHECK-NEXT:    ret void
+;
+  %t = trunc i32 %x to i8
+  %c = icmp eq i8 %t, 5
+  br i1 %c, label %true, label %false
+
+true:
+  %c1 = icmp uge i32 %x, 5
+  store i1 %c1, i1* %p
+  %c2 = icmp ugt i32 %x, 5
+  store i1 %c2, i1* %p
+  %c3 = icmp ule i32 %x, 5
+  store i1 %c3, i1* %p
+  %c4 = icmp ult i32 %x, 5
+  store i1 %c4, i1* %p
+  ret void
+
+false:
+  %c1.2 = icmp uge i32 %x, 5
+  store i1 %c1.2, i1* %p
+  %c2.2 = icmp ugt i32 %x, 5
+  store i1 %c2.2, i1* %p
+  %c3.2 = icmp ule i32 %x, 5
+  store i1 %c3.2, i1* %p
+  %c4.2 = icmp ult i32 %x, 5
+  store i1 %c4.2, i1* %p
+  ret void
 }
 
 ; TODO: missed optimization
@@ -1642,6 +1742,30 @@ guard:
 
 exit:
   ret i1 false
+}
+
+define void @select_assume(i32 %a, i32 %b, i1 %c, i1* %p) {
+; CHECK-LABEL: @select_assume(
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[A:%.*]], 10
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C1]])
+; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[B:%.*]], 20
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    [[C3:%.*]] = icmp ult i32 [[S]], 19
+; CHECK-NEXT:    store i1 [[C3]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 true, i1* [[P]], align 1
+; CHECK-NEXT:    ret void
+;
+  %c1 = icmp ult i32 %a, 10
+  call void @llvm.assume(i1 %c1)
+  %c2 = icmp ult i32 %b, 20
+  call void @llvm.assume(i1 %c2)
+  %s = select i1 %c, i32 %a, i32 %b
+  %c3 = icmp ult i32 %s, 19
+  store i1 %c3, i1* %p
+  %c4 = icmp ult i32 %s, 20
+  store i1 %c4, i1* %p
+  ret void
 }
 
 

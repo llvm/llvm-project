@@ -77,7 +77,7 @@
 #  define TEST_COMPILER_APPLE_CLANG
 # endif
 #elif defined(_MSC_VER)
-# define TEST_COMPILER_C1XX
+# define TEST_COMPILER_MSVC
 #elif defined(__GNUC__)
 # define TEST_COMPILER_GCC
 #endif
@@ -147,7 +147,7 @@
 
 #if defined(__cpp_lib_is_constant_evaluated) && __cpp_lib_is_constant_evaluated >= 201811L
 # define TEST_IS_CONSTANT_EVALUATED std::is_constant_evaluated()
-#elif __has_builtin(__builtin_is_constant_evaluated)
+#elif TEST_HAS_BUILTIN(__builtin_is_constant_evaluated)
 # define TEST_IS_CONSTANT_EVALUATED __builtin_is_constant_evaluated()
 #else
 # define TEST_IS_CONSTANT_EVALUATED false
@@ -314,7 +314,7 @@ inline void DoNotOptimize(Tp const& value) {
 #endif
 
 #if (defined(_WIN32) && !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)) ||   \
-    defined(__MVS__)
+    defined(__MVS__) || defined(_AIX)
 // Macros for waiving cases when we can't count allocations done within
 // the library implementation.
 //
@@ -324,6 +324,7 @@ inline void DoNotOptimize(Tp const& value) {
 // calls within the library.
 //
 // The same goes on IBM zOS.
+// The same goes on AIX.
 #define ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(...) ((void)(__VA_ARGS__))
 #define TEST_SUPPORTS_LIBRARY_INTERNAL_ALLOCATIONS 0
 #else
@@ -365,6 +366,10 @@ inline void DoNotOptimize(Tp const& value) {
 #   define TEST_HAS_NO_UNICODE
 #elif defined(_MSVC_EXECUTION_CHARACTER_SET) && _MSVC_EXECUTION_CHARACTER_SET != 65001
 #   define TEST_HAS_NO_UNICODE
+#endif
+
+#if defined(_LIBCPP_HAS_NO_INT128) || defined(TEST_COMPILER_MSVC)
+#   define TEST_HAS_NO_INT128
 #endif
 
 #if defined(__GNUC__)

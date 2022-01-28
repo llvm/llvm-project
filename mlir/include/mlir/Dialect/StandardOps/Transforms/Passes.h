@@ -11,19 +11,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_STANDARD_TRANSFORMS_PASSES_H_
-#define MLIR_DIALECT_STANDARD_TRANSFORMS_PASSES_H_
+#ifndef MLIR_DIALECT_STANDARDOPS_TRANSFORMS_PASSES_H
+#define MLIR_DIALECT_STANDARDOPS_TRANSFORMS_PASSES_H
 
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
 namespace bufferization {
 class BufferizeTypeConverter;
+class GlobalCreator;
 } // namespace bufferization
 
-class GlobalCreator;
 class RewritePatternSet;
-using OwningRewritePatternList = RewritePatternSet;
 
 void populateStdBufferizePatterns(
     bufferization::BufferizeTypeConverter &typeConverter,
@@ -38,22 +37,12 @@ std::unique_ptr<Pass> createFuncBufferizePass();
 /// Add patterns to bufferize tensor constants into global memrefs to the given
 /// pattern list.
 void populateTensorConstantBufferizePatterns(
-    GlobalCreator &globalCreator,
+    bufferization::GlobalCreator &globalCreator,
     bufferization::BufferizeTypeConverter &typeConverter,
     RewritePatternSet &patterns);
 
 /// Creates an instance of tensor constant bufferization pass.
 std::unique_ptr<Pass> createTensorConstantBufferizePass(unsigned alignment = 0);
-
-/// Creates an instance of the StdExpand pass that legalizes Std
-/// dialect ops to be convertible to LLVM. For example,
-/// `std.arith.ceildivsi` gets transformed to a number of std operations,
-/// which can be lowered to LLVM; `memref.reshape` gets converted to
-/// `memref_reinterpret_cast`.
-std::unique_ptr<Pass> createStdExpandOpsPass();
-
-/// Collects a set of patterns to rewrite ops within the Std dialect.
-void populateStdExpandOpsPatterns(RewritePatternSet &patterns);
 
 //===----------------------------------------------------------------------===//
 // Registration
@@ -65,4 +54,4 @@ void populateStdExpandOpsPatterns(RewritePatternSet &patterns);
 
 } // namespace mlir
 
-#endif // MLIR_DIALECT_STANDARD_TRANSFORMS_PASSES_H_
+#endif // MLIR_DIALECT_STANDARDOPS_TRANSFORMS_PASSES_H

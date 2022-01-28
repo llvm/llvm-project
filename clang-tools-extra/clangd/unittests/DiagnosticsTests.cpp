@@ -623,6 +623,15 @@ n]] = 10; // error-ok
                   Fix(Source.range(), "ident", "change 'ide\\…' to 'ident'"))));
 }
 
+TEST(DiagnosticTest, NewLineFixMessage) {
+  Annotations Source("int a;[[]]");
+  TestTU TU = TestTU::withCode(Source.code());
+  TU.ExtraArgs = {"-Wnewline-eof"};
+  EXPECT_THAT(
+      *TU.build().getDiagnostics(),
+      ElementsAre(WithFix((Fix(Source.range(), "\n", "insert '\\n'")))));
+}
+
 TEST(DiagnosticTest, ClangTidySuppressionCommentTrumpsWarningAsError) {
   Annotations Main(R"cpp(
     int main() {
@@ -769,6 +778,17 @@ TEST(DiagnosticsTest, NoFixItInMacro) {
   EXPECT_THAT(*TU.build().getDiagnostics(),
               ElementsAre(AllOf(Diag(Test.range(), "'main' must return 'int'"),
                                 Not(WithFix(_)))));
+}
+
+TEST(DiagnosticsTest, PragmaSystemHeader) {
+  Annotations Test("#pragma clang [[system_header]]\n");
+  auto TU = TestTU::withCode(Test.code());
+  EXPECT_THAT(
+      *TU.build().getDiagnostics(),
+      ElementsAre(AllOf(
+          Diag(Test.range(), "#pragma system_header ignored in main file"))));
+  TU.Filename = "TestTU.h";
+  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
 }
 
 TEST(ClangdTest, MSAsm) {

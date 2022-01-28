@@ -817,7 +817,8 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
     // Opaque pointer doesn't have pointee type information, so we just mangle
     // address space for opaque pointer.
     if (!PTyp->isOpaque())
-      Result += getMangledTypeStr(PTyp->getElementType(), HasUnnamedType);
+      Result += getMangledTypeStr(PTyp->getNonOpaquePointerElementType(),
+                                  HasUnnamedType);
   } else if (ArrayType *ATyp = dyn_cast<ArrayType>(Ty)) {
     Result += "a" + utostr(ATyp->getNumElements()) +
               getMangledTypeStr(ATyp->getElementType(), HasUnnamedType);
@@ -1465,8 +1466,8 @@ static bool matchIntrinsicType(
       if (!PT || PT->getAddressSpace() != D.Pointer_AddressSpace)
         return true;
       if (!PT->isOpaque())
-        return matchIntrinsicType(PT->getElementType(), Infos, ArgTys,
-                                  DeferredChecks, IsDeferredCheck);
+        return matchIntrinsicType(PT->getNonOpaquePointerElementType(), Infos,
+                                  ArgTys, DeferredChecks, IsDeferredCheck);
       // Consume IIT descriptors relating to the pointer element type.
       while (Infos.front().Kind == IITDescriptor::Pointer)
         Infos = Infos.slice(1);
@@ -1573,7 +1574,8 @@ static bool matchIntrinsicType(
         return IsDeferredCheck || DeferCheck(Ty);
       Type * ReferenceType = ArgTys[D.getArgumentNumber()];
       PointerType *ThisArgType = dyn_cast<PointerType>(Ty);
-      return (!ThisArgType || ThisArgType->getElementType() != ReferenceType);
+      return (!ThisArgType ||
+              !ThisArgType->isOpaqueOrPointeeTypeMatches(ReferenceType));
     }
     case IITDescriptor::PtrToElt: {
       if (D.getArgumentNumber() >= ArgTys.size())

@@ -1,6 +1,5 @@
-; RUN: llc -filetype=asm -o - -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
-; RUN: llc -filetype=asm -o - -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:    -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -relocation-model=pic < %s | FileCheck %s
 
 define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" {
 ; CHECK-LABEL: foo:

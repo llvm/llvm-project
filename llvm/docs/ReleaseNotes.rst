@@ -163,9 +163,17 @@ Changes to LLDB
 * A change in Clang's type printing has changed the way LLDB names array types
   (from ``int [N]`` to ``int[N]``) - LLDB pretty printer type name matching
   code may need to be updated to handle this.
-* The ``memory read`` command now ignores non-address bits in start and end
-  addresses. In addition, non-address bits will not be shown in the addresses
-  in the output.
+* The following commands now ignore non-address bits (e.g. AArch64 pointer
+  signatures) in address arguments. In addition, non-address bits will not
+  be shown in the output of the commands.
+
+  * ``memory find``
+  * ``memory read``
+  * ``memory tag read``
+  * ``memory tag write``
+
+* The ``memory read`` command has a new option ``--show-tags``. Use this option
+  to show memory tags beside the contents of tagged memory ranges.
 
 Changes to Sanitizers
 ---------------------

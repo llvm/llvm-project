@@ -109,7 +109,7 @@ int main(int, char**) {
     test_arrays();
     static_assert(tests());
     // TODO: Until std::construct_at has support for arrays, it's impossible to test this
-    //       in a constexpr context.
+    //       in a constexpr context (see https://reviews.llvm.org/D114903).
     // static_assert(test_arrays());
 #endif
     return 0;

@@ -271,12 +271,11 @@ define <4 x i32> @phsubd4(<4 x i32> %x) {
 define <8 x i16> @phsubw1_reverse(<8 x i16> %x, <8 x i16> %y) {
 ; SSSE3-LABEL: phsubw1_reverse:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [2,3,6,7,10,11,14,15,14,15,10,11,12,13,14,15]
-; SSSE3-NEXT:    movdqa %xmm1, %xmm4
-; SSSE3-NEXT:    pshufb %xmm3, %xmm4
+; SSSE3-NEXT:    movdqa %xmm1, %xmm3
+; SSSE3-NEXT:    psrad $16, %xmm3
 ; SSSE3-NEXT:    movdqa %xmm0, %xmm2
-; SSSE3-NEXT:    pshufb %xmm3, %xmm2
-; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm4[0]
+; SSSE3-NEXT:    psrad $16, %xmm2
+; SSSE3-NEXT:    packssdw %xmm3, %xmm2
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; SSSE3-NEXT:    pshufb %xmm3, %xmm1
 ; SSSE3-NEXT:    pshufb %xmm3, %xmm0
@@ -287,10 +286,9 @@ define <8 x i16> @phsubw1_reverse(<8 x i16> %x, <8 x i16> %y) {
 ;
 ; AVX-LABEL: phsubw1_reverse:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [2,3,6,7,10,11,14,15,14,15,10,11,12,13,14,15]
-; AVX-NEXT:    vpshufb %xmm2, %xmm1, %xmm3
-; AVX-NEXT:    vpshufb %xmm2, %xmm0, %xmm2
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; AVX-NEXT:    vpsrld $16, %xmm1, %xmm2
+; AVX-NEXT:    vpsrld $16, %xmm0, %xmm3
+; AVX-NEXT:    vpackusdw %xmm2, %xmm3, %xmm2
 ; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm3[1],xmm1[2],xmm3[3],xmm1[4],xmm3[5],xmm1[6],xmm3[7]
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm3[1],xmm0[2],xmm3[3],xmm0[4],xmm3[5],xmm0[6],xmm3[7]

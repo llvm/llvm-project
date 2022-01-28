@@ -15,7 +15,7 @@
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/Support/Compression.h"
+#include "llvm/Config/config.h" // LLVM_ENABLE_ZLIB
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Parallel.h"
@@ -23,6 +23,9 @@
 #include "llvm/Support/TimeProfiler.h"
 #include <regex>
 #include <unordered_set>
+#if LLVM_ENABLE_ZLIB
+#include <zlib.h>
+#endif
 
 using namespace llvm;
 using namespace llvm::dwarf;
@@ -284,38 +287,94 @@ static void fill(uint8_t *buf, size_t size,
   memcpy(buf + i, filler.data(), size - i);
 }
 
+#if LLVM_ENABLE_ZLIB
+static SmallVector<uint8_t, 0> deflateShard(ArrayRef<uint8_t> in, int level,
+                                            int flush) {
+  // 15 and 8 are default. windowBits=-15 is negative to generate raw deflate
+  // data with no zlib header or trailer.
+  z_stream s = {};
+  deflateInit2(&s, level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
+  s.next_in = const_cast<uint8_t *>(in.data());
+  s.avail_in = in.size();
+
+  // Allocate a buffer of half of the input size, and grow it by 1.5x if
+  // insufficient.
+  SmallVector<uint8_t, 0> out;
+  size_t pos = 0;
+  out.resize_for_overwrite(std::max<size_t>(in.size() / 2, 64));
+  do {
+    if (pos == out.size())
+      out.resize_for_overwrite(out.size() * 3 / 2);
+    s.next_out = out.data() + pos;
+    s.avail_out = out.size() - pos;
+    (void)deflate(&s, flush);
+    pos = s.next_out - out.data();
+  } while (s.avail_out == 0);
+  assert(s.avail_in == 0);
+
+  out.truncate(pos);
+  deflateEnd(&s);
+  return out;
+}
+#endif
+
 // Compress section contents if this section contains debug info.
 template <class ELFT> void OutputSection::maybeCompress() {
+#if LLVM_ENABLE_ZLIB
   using Elf_Chdr = typename ELFT::Chdr;
 
   // Compress only DWARF debug sections.
   if (!config->compressDebugSections || (flags & SHF_ALLOC) ||
-      !name.startswith(".debug_"))
+      !name.startswith(".debug_") || size == 0)
     return;
 
   llvm::TimeTraceScope timeScope("Compress debug sections");
 
-  // Create a section header.
-  zDebugHeader.resize(sizeof(Elf_Chdr));
-  auto *hdr = reinterpret_cast<Elf_Chdr *>(zDebugHeader.data());
-  hdr->ch_type = ELFCOMPRESS_ZLIB;
-  hdr->ch_size = size;
-  hdr->ch_addralign = alignment;
+  // Write uncompressed data to a temporary zero-initialized buffer.
+  auto buf = std::make_unique<uint8_t[]>(size);
+  writeTo<ELFT>(buf.get());
+  // We chose 1 (Z_BEST_SPEED) as the default compression level because it is
+  // the fastest. If -O2 is given, we use level 6 to compress debug info more by
+  // ~15%. We found that level 7 to 9 doesn't make much difference (~1% more
+  // compression) while they take significant amount of time (~2x), so level 6
+  // seems enough.
+  const int level = config->optimize >= 2 ? 6 : Z_BEST_SPEED;
 
-  // Write section contents to a temporary buffer and compress it.
-  std::vector<uint8_t> buf(size);
-  writeTo<ELFT>(buf.data());
-  // We chose 1 as the default compression level because it is the fastest. If
-  // -O2 is given, we use level 6 to compress debug info more by ~15%. We found
-  // that level 7 to 9 doesn't make much difference (~1% more compression) while
-  // they take significant amount of time (~2x), so level 6 seems enough.
-  if (Error e = zlib::compress(toStringRef(buf), compressedData,
-                               config->optimize >= 2 ? 6 : 1))
-    fatal("compress failed: " + llvm::toString(std::move(e)));
+  // Split input into 1-MiB shards.
+  constexpr size_t shardSize = 1 << 20;
+  const size_t numShards = (size + shardSize - 1) / shardSize;
+  auto shardsIn = std::make_unique<ArrayRef<uint8_t>[]>(numShards);
+  for (size_t i = 0, start = 0, end; start != size; ++i, start = end) {
+    end = std::min(start + shardSize, (size_t)size);
+    shardsIn[i] = makeArrayRef<uint8_t>(buf.get() + start, end - start);
+  }
 
-  // Update section headers.
-  size = sizeof(Elf_Chdr) + compressedData.size();
+  // Compress shards and compute Alder-32 checksums. Use Z_SYNC_FLUSH for all
+  // shards but the last to flush the output to a byte boundary to be
+  // concatenated with the next shard.
+  auto shardsOut = std::make_unique<SmallVector<uint8_t, 0>[]>(numShards);
+  auto shardsAdler = std::make_unique<uint32_t[]>(numShards);
+  parallelForEachN(0, numShards, [&](size_t i) {
+    shardsOut[i] = deflateShard(shardsIn[i], level,
+                                i != numShards - 1 ? Z_SYNC_FLUSH : Z_FINISH);
+    shardsAdler[i] = adler32(1, shardsIn[i].data(), shardsIn[i].size());
+  });
+
+  // Update section size and combine Alder-32 checksums.
+  uint32_t checksum = 1;       // Initial Adler-32 value
+  compressed.uncompressedSize = size;
+  size = sizeof(Elf_Chdr) + 2; // Elf_Chdir and zlib header
+  for (size_t i = 0; i != numShards; ++i) {
+    size += shardsOut[i].size();
+    checksum = adler32_combine(checksum, shardsAdler[i], shardsIn[i].size());
+  }
+  size += 4; // checksum
+
+  compressed.shards = std::move(shardsOut);
+  compressed.numShards = numShards;
+  compressed.checksum = checksum;
   flags |= SHF_COMPRESSED;
+#endif
 }
 
 static void writeInt(uint8_t *buf, uint64_t data, uint64_t size) {
@@ -339,10 +398,27 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *buf) {
   // If --compress-debug-section is specified and if this is a debug section,
   // we've already compressed section contents. If that's the case,
   // just write it down.
-  if (!compressedData.empty()) {
-    memcpy(buf, zDebugHeader.data(), zDebugHeader.size());
-    memcpy(buf + zDebugHeader.size(), compressedData.data(),
-           compressedData.size());
+  if (compressed.shards) {
+    auto *chdr = reinterpret_cast<typename ELFT::Chdr *>(buf);
+    chdr->ch_type = ELFCOMPRESS_ZLIB;
+    chdr->ch_size = compressed.uncompressedSize;
+    chdr->ch_addralign = alignment;
+    buf += sizeof(*chdr);
+
+    // Compute shard offsets.
+    auto offsets = std::make_unique<size_t[]>(compressed.numShards);
+    offsets[0] = 2; // zlib header
+    for (size_t i = 1; i != compressed.numShards; ++i)
+      offsets[i] = offsets[i - 1] + compressed.shards[i - 1].size();
+
+    buf[0] = 0x78; // CMF
+    buf[1] = 0x01; // FLG: best speed
+    parallelForEachN(0, compressed.numShards, [&](size_t i) {
+      memcpy(buf + offsets[i], compressed.shards[i].data(),
+             compressed.shards[i].size());
+    });
+
+    write32be(buf + (size - sizeof(*chdr) - 4), compressed.checksum);
     return;
   }
 

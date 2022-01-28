@@ -56,12 +56,12 @@ const char *const IdSymbolic_GFX11Plus[ID_GAPS_LAST_] = {
 
 // This must be in sync with llvm::AMDGPU::SendMsg::IdRtn enum members, see SIDefines.h.
 const char *const IdRtnSymbolic[ID_RTN_LAST_ - ID_RTN_FIRST_] = {
-  "MSG_GET_DOORBELL",
-  "MSG_GET_DDID",
-  "MSG_GET_TMA",
-  "MSG_GET_REALTIME",
-  "MSG_SAVEWAVE",
-  "MSG_GET_TBA",
+  "MSG_RTN_GET_DOORBELL",
+  "MSG_RTN_GET_DDID",
+  "MSG_RTN_GET_TMA",
+  "MSG_RTN_GET_REALTIME",
+  "MSG_RTN_SAVE_WAVE",
+  "MSG_RTN_GET_TBA",
 };
 
 // These two must be in sync with llvm::AMDGPU::SendMsg::Op enum members, see SIDefines.h.
@@ -109,8 +109,8 @@ const char* const IdSymbolic[] = {
   "HW_REG_FLAT_SCR_LO",
   "HW_REG_FLAT_SCR_HI",
   "HW_REG_XNACK_MASK",
-  nullptr, // HW_ID1, no predictable values
-  nullptr, // HW_ID2, no predictable values
+  "HW_REG_HW_ID1",
+  "HW_REG_HW_ID2",
   "HW_REG_POPS_PACKER",
   nullptr,
   nullptr,

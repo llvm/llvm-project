@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TOOLS_PDLL_AST_DIAGNOSTICS_H_
-#define MLIR_TOOLS_PDLL_AST_DIAGNOSTICS_H_
+#ifndef MLIR_TOOLS_PDLL_AST_DIAGNOSTIC_H
+#define MLIR_TOOLS_PDLL_AST_DIAGNOSTIC_H
 
 #include <string>
 
@@ -37,14 +37,14 @@ public:
   StringRef getMessage() const { return message; }
 
   /// Return the location of this diagnostic.
-  llvm::SMRange getLocation() const { return location; }
+  SMRange getLocation() const { return location; }
 
   /// Return the notes of this diagnostic.
   auto getNotes() const { return llvm::make_pointee_range(notes); }
 
   /// Attach a note to this diagnostic.
   Diagnostic &attachNote(const Twine &msg,
-                         Optional<llvm::SMRange> noteLoc = llvm::None) {
+                         Optional<SMRange> noteLoc = llvm::None) {
     assert(getSeverity() != Severity::DK_Note &&
            "cannot attach a Note to a Note");
     notes.emplace_back(
@@ -57,7 +57,7 @@ public:
   operator LogicalResult() const { return failure(); }
 
 private:
-  Diagnostic(Severity severity, llvm::SMRange loc, const Twine &msg)
+  Diagnostic(Severity severity, SMRange loc, const Twine &msg)
       : severity(severity), message(msg.str()), location(loc) {}
 
   // Allow access to the constructor.
@@ -68,7 +68,7 @@ private:
   /// The message held by this diagnostic.
   std::string message;
   /// The raw location of this diagnostic.
-  llvm::SMRange location;
+  SMRange location;
   /// Any additional note diagnostics attached to this diagnostic.
   std::vector<std::unique_ptr<Diagnostic>> notes;
 };
@@ -142,11 +142,11 @@ public:
   using HandlerFn = llvm::unique_function<void(Diagnostic &)>;
 
   /// Emit an error to the diagnostic engine.
-  InFlightDiagnostic emitError(llvm::SMRange loc, const Twine &msg) {
+  InFlightDiagnostic emitError(SMRange loc, const Twine &msg) {
     return InFlightDiagnostic(
         this, Diagnostic(Diagnostic::Severity::DK_Error, loc, msg));
   }
-  InFlightDiagnostic emitWarning(llvm::SMRange loc, const Twine &msg) {
+  InFlightDiagnostic emitWarning(SMRange loc, const Twine &msg) {
     return InFlightDiagnostic(
         this, Diagnostic(Diagnostic::Severity::DK_Warning, loc, msg));
   }
@@ -179,4 +179,4 @@ private:
 } // namespace pdll
 } // namespace mlir
 
-#endif // MLIR_TOOLS_PDLL_AST_DIAGNOSTICS_H_
+#endif // MLIR_TOOLS_PDLL_AST_DIAGNOSTIC_H

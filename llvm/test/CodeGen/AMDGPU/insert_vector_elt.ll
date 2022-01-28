@@ -1627,23 +1627,26 @@ define amdgpu_kernel void @dynamic_insertelement_v2f64(<2 x double> addrspace(1)
 ;
 ; VI-LABEL: dynamic_insertelement_v2f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s10, s[4:5], 0x60
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; VI-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x30
-; VI-NEXT:    s_mov_b32 s8, 0
-; VI-NEXT:    s_mov_b32 s9, 0x40200000
-; VI-NEXT:    s_mov_b32 s3, 0x1100f000
+; VI-NEXT:    s_load_dword s8, s[4:5], 0x60
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x30
+; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; VI-NEXT:    v_mov_b32_e32 v1, 0x40200000
+; VI-NEXT:    s_mov_b32 s7, 0x1100f000
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_cmp_lg_u32 s10, 1
-; VI-NEXT:    s_cselect_b64 s[6:7], s[6:7], s[8:9]
-; VI-NEXT:    s_cmp_lg_u32 s10, 0
-; VI-NEXT:    s_cselect_b64 s[4:5], s[4:5], s[8:9]
-; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    v_mov_b32_e32 v0, s4
-; VI-NEXT:    v_mov_b32_e32 v1, s5
-; VI-NEXT:    v_mov_b32_e32 v2, s6
-; VI-NEXT:    v_mov_b32_e32 v3, s7
-; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
+; VI-NEXT:    s_cmp_eq_u32 s8, 1
+; VI-NEXT:    v_mov_b32_e32 v0, s3
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
+; VI-NEXT:    v_cndmask_b32_e32 v3, v0, v1, vcc
+; VI-NEXT:    v_mov_b32_e32 v0, s2
+; VI-NEXT:    s_cmp_eq_u32 s8, 0
+; VI-NEXT:    v_cndmask_b32_e64 v2, v0, 0, vcc
+; VI-NEXT:    v_mov_b32_e32 v0, s1
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
+; VI-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    s_mov_b32 s6, -1
+; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <2 x double> %a, double 8.0, i32 %b
   store <2 x double> %vecins, <2 x double> addrspace(1)* %out, align 16
@@ -1676,20 +1679,24 @@ define amdgpu_kernel void @dynamic_insertelement_v2i64(<2 x i64> addrspace(1)* %
 ;
 ; VI-LABEL: dynamic_insertelement_v2i64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s8, s[4:5], 0x20
+; VI-NEXT:    s_load_dword s10, s[4:5], 0x20
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
 ; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; VI-NEXT:    s_mov_b32 s7, 0x1100f000
 ; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_cmp_lg_u32 s8, 1
-; VI-NEXT:    s_cselect_b64 s[2:3], s[2:3], 5
-; VI-NEXT:    s_cmp_lg_u32 s8, 0
-; VI-NEXT:    s_cselect_b64 s[0:1], s[0:1], 5
+; VI-NEXT:    s_cmp_eq_u32 s10, 1
+; VI-NEXT:    v_mov_b32_e32 v0, s3
+; VI-NEXT:    s_cselect_b64 s[8:9], -1, 0
+; VI-NEXT:    v_cndmask_b32_e64 v3, v0, 0, s[8:9]
+; VI-NEXT:    v_mov_b32_e32 v0, s2
+; VI-NEXT:    s_cmp_eq_u32 s10, 0
+; VI-NEXT:    v_cndmask_b32_e64 v2, v0, 5, s[8:9]
+; VI-NEXT:    v_mov_b32_e32 v0, s1
+; VI-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; VI-NEXT:    v_cndmask_b32_e64 v1, v0, 0, s[2:3]
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    v_mov_b32_e32 v2, s2
-; VI-NEXT:    v_mov_b32_e32 v3, s3
+; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 5, s[2:3]
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <2 x i64> %a, i64 5, i32 %b
@@ -1737,20 +1744,26 @@ define amdgpu_kernel void @dynamic_insertelement_v3i64(<3 x i64> addrspace(1)* %
 ; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x30
 ; VI-NEXT:    s_mov_b32 s3, 0x1100f000
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_cmp_lg_u32 s12, 1
-; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    s_cselect_b64 s[6:7], s[10:11], 5
-; VI-NEXT:    s_cmp_lg_u32 s12, 0
-; VI-NEXT:    s_cselect_b64 s[8:9], s[8:9], 5
-; VI-NEXT:    s_cmp_lg_u32 s12, 2
-; VI-NEXT:    s_cselect_b64 s[4:5], s[4:5], 5
-; VI-NEXT:    v_mov_b32_e32 v0, s4
-; VI-NEXT:    v_mov_b32_e32 v1, s5
-; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0 offset:16
+; VI-NEXT:    s_cmp_eq_u32 s12, 1
+; VI-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; VI-NEXT:    v_mov_b32_e32 v0, s11
+; VI-NEXT:    v_cndmask_b32_e64 v3, v0, 0, s[6:7]
+; VI-NEXT:    v_mov_b32_e32 v0, s10
+; VI-NEXT:    s_cmp_eq_u32 s12, 0
+; VI-NEXT:    v_cndmask_b32_e64 v2, v0, 5, s[6:7]
+; VI-NEXT:    v_mov_b32_e32 v0, s9
+; VI-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; VI-NEXT:    v_cndmask_b32_e64 v1, v0, 0, s[6:7]
 ; VI-NEXT:    v_mov_b32_e32 v0, s8
-; VI-NEXT:    v_mov_b32_e32 v1, s9
-; VI-NEXT:    v_mov_b32_e32 v2, s6
-; VI-NEXT:    v_mov_b32_e32 v3, s7
+; VI-NEXT:    s_cmp_eq_u32 s12, 2
+; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 5, s[6:7]
+; VI-NEXT:    v_mov_b32_e32 v4, s5
+; VI-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; VI-NEXT:    v_cndmask_b32_e64 v5, v4, 0, s[6:7]
+; VI-NEXT:    v_mov_b32_e32 v4, s4
+; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    v_cndmask_b32_e64 v4, v4, 5, s[6:7]
+; VI-NEXT:    buffer_store_dwordx2 v[4:5], off, s[0:3], 0 offset:16
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <3 x i64> %a, i64 5, i32 %b
@@ -1798,32 +1811,38 @@ define amdgpu_kernel void @dynamic_insertelement_v4f64(<4 x double> addrspace(1)
 ;
 ; VI-LABEL: dynamic_insertelement_v4f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s16, s[4:5], 0x40
+; VI-NEXT:    s_load_dword s6, s[4:5], 0x40
 ; VI-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x20
+; VI-NEXT:    v_mov_b32_e32 v4, 0x40200000
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; VI-NEXT:    s_mov_b32 s4, 0
-; VI-NEXT:    s_mov_b32 s5, 0x40200000
 ; VI-NEXT:    s_mov_b32 s3, 0x1100f000
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_cmp_lg_u32 s16, 1
-; VI-NEXT:    s_cselect_b64 s[6:7], s[10:11], s[4:5]
-; VI-NEXT:    s_cmp_lg_u32 s16, 0
-; VI-NEXT:    s_cselect_b64 s[8:9], s[8:9], s[4:5]
-; VI-NEXT:    s_cmp_lg_u32 s16, 3
-; VI-NEXT:    s_cselect_b64 s[10:11], s[14:15], s[4:5]
-; VI-NEXT:    s_cmp_lg_u32 s16, 2
-; VI-NEXT:    s_cselect_b64 s[4:5], s[12:13], s[4:5]
-; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    v_mov_b32_e32 v0, s4
-; VI-NEXT:    v_mov_b32_e32 v1, s5
-; VI-NEXT:    v_mov_b32_e32 v2, s10
-; VI-NEXT:    v_mov_b32_e32 v3, s11
-; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
-; VI-NEXT:    s_nop 0
+; VI-NEXT:    s_cmp_eq_u32 s6, 1
+; VI-NEXT:    v_mov_b32_e32 v0, s11
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
+; VI-NEXT:    v_cndmask_b32_e32 v3, v0, v4, vcc
+; VI-NEXT:    v_mov_b32_e32 v0, s10
+; VI-NEXT:    s_cmp_eq_u32 s6, 0
+; VI-NEXT:    v_cndmask_b32_e64 v2, v0, 0, vcc
+; VI-NEXT:    v_mov_b32_e32 v0, s9
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
+; VI-NEXT:    v_cndmask_b32_e32 v1, v0, v4, vcc
 ; VI-NEXT:    v_mov_b32_e32 v0, s8
-; VI-NEXT:    v_mov_b32_e32 v1, s9
-; VI-NEXT:    v_mov_b32_e32 v2, s6
-; VI-NEXT:    v_mov_b32_e32 v3, s7
+; VI-NEXT:    s_cmp_eq_u32 s6, 3
+; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; VI-NEXT:    v_mov_b32_e32 v5, s15
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
+; VI-NEXT:    v_cndmask_b32_e32 v7, v5, v4, vcc
+; VI-NEXT:    v_mov_b32_e32 v5, s14
+; VI-NEXT:    s_cmp_eq_u32 s6, 2
+; VI-NEXT:    v_cndmask_b32_e64 v6, v5, 0, vcc
+; VI-NEXT:    v_mov_b32_e32 v5, s13
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
+; VI-NEXT:    v_cndmask_b32_e32 v5, v5, v4, vcc
+; VI-NEXT:    v_mov_b32_e32 v4, s12
+; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    v_cndmask_b32_e64 v4, v4, 0, vcc
+; VI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <4 x double> %a, double 8.0, i32 %b

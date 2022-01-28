@@ -216,7 +216,7 @@ public:
     auto *context = &getContext();
     auto func = getOperation();
     auto loc = func.getLoc();
-    mlir::OwningRewritePatternList patterns(context);
+    mlir::RewritePatternSet patterns(context);
     mlir::ConversionTarget target = *context;
     AbstractResultOptions options{passResultAsBox.getValue(),
                                   /*newArg=*/{}};
@@ -231,7 +231,7 @@ public:
         mlir::OpBuilder rewriter(context);
         auto resultType = funcTy.getResult(0);
         auto argTy = getResultArgumentType(resultType, options);
-        options.newArg = func.front().insertArgument(zero, argTy);
+        options.newArg = func.front().insertArgument(zero, argTy, loc);
         if (mustEmboxResult(resultType, options)) {
           auto bufferType = fir::ReferenceType::get(resultType);
           rewriter.setInsertionPointToStart(&func.front());

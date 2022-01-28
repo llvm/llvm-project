@@ -56,7 +56,7 @@ int main(void) {
 void __stdcall f7(foo) int foo; {}
 void f8(void) {
   f7(0);
-  // CHECK: call x86_stdcallcc void @f7(i32 0)
+  // CHECK: call x86_stdcallcc void @f7(i32 noundef 0)
 }
 
 // PR12535

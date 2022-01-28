@@ -104,6 +104,7 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   CoroBeginInst *CoroBegin;
   SmallVector<AnyCoroEndInst *, 4> CoroEnds;
   SmallVector<CoroSizeInst *, 2> CoroSizes;
+  SmallVector<CoroAlignInst *, 2> CoroAligns;
   SmallVector<AnyCoroSuspendInst *, 4> CoroSuspends;
   SmallVector<CallInst*, 2> SwiftErrorOps;
 

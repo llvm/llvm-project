@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SpecialCaseList.h"
+#include "llvm/Support/AArch64TargetParser.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
@@ -641,10 +642,14 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         Args.hasFlag(options::OPT_fsanitize_memory_use_after_dtor,
                      options::OPT_fno_sanitize_memory_use_after_dtor,
                      MsanUseAfterDtor);
+    MsanParamRetval = Args.hasFlag(
+        options::OPT_fsanitize_memory_param_retval,
+        options::OPT_fno_sanitize_memory_param_retval, MsanParamRetval);
     NeedPIE |= !(TC.getTriple().isOSLinux() &&
                  TC.getTriple().getArch() == llvm::Triple::x86_64);
   } else {
     MsanUseAfterDtor = false;
+    MsanParamRetval = false;
   }
 
   if (AllAddedKinds & SanitizerKind::Thread) {
@@ -1095,6 +1100,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (MsanUseAfterDtor)
     CmdArgs.push_back("-fsanitize-memory-use-after-dtor");
+
+  if (MsanParamRetval)
+    CmdArgs.push_back("-fsanitize-memory-param-retval");
 
   // FIXME: Pass these parameters as function attributes, not as -llvm flags.
   if (!TsanMemoryAccess) {

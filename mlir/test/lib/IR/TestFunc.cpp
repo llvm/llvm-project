@@ -1,4 +1,4 @@
-//===- TestFunctionLike.cpp - Pass to test helpers on FunctionLike --------===//
+//===- TestFunc.cpp - Pass to test helpers on function utilities ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,6 +20,7 @@ struct TestFuncInsertArg
   void runOnOperation() override {
     auto module = getOperation();
 
+    UnknownLoc unknownLoc = UnknownLoc::get(module.getContext());
     for (FuncOp func : module.getOps<FuncOp>()) {
       auto inserts = func->getAttrOfType<ArrayAttr>("test.insert_args");
       if (!inserts || inserts.empty())
@@ -27,7 +28,7 @@ struct TestFuncInsertArg
       SmallVector<unsigned, 4> indicesToInsert;
       SmallVector<Type, 4> typesToInsert;
       SmallVector<DictionaryAttr, 4> attrsToInsert;
-      SmallVector<Optional<Location>, 4> locsToInsert;
+      SmallVector<Location, 4> locsToInsert;
       for (auto insert : inserts.getAsRange<ArrayAttr>()) {
         indicesToInsert.push_back(
             insert[0].cast<IntegerAttr>().getValue().getZExtValue());
@@ -35,10 +36,9 @@ struct TestFuncInsertArg
         attrsToInsert.push_back(insert.size() > 2
                                     ? insert[2].cast<DictionaryAttr>()
                                     : DictionaryAttr::get(&getContext()));
-        locsToInsert.push_back(
-            insert.size() > 3
-                ? Optional<Location>(insert[3].cast<LocationAttr>())
-                : Optional<Location>{});
+        locsToInsert.push_back(insert.size() > 3
+                                   ? Location(insert[3].cast<LocationAttr>())
+                                   : unknownLoc);
       }
       func->removeAttr("test.insert_args");
       func.insertArguments(indicesToInsert, typesToInsert, attrsToInsert,
@@ -87,18 +87,10 @@ struct TestFuncEraseArg
     auto module = getOperation();
 
     for (FuncOp func : module.getOps<FuncOp>()) {
-      SmallVector<unsigned, 4> indicesToErase;
-      for (auto argIndex : llvm::seq<int>(0, func.getNumArguments())) {
-        if (func.getArgAttr(argIndex, "test.erase_this_arg")) {
-          // Push back twice to test that duplicate arg indices are handled
-          // correctly.
-          indicesToErase.push_back(argIndex);
-          indicesToErase.push_back(argIndex);
-        }
-      }
-      // Reverse the order to test that unsorted index lists are handled
-      // correctly.
-      std::reverse(indicesToErase.begin(), indicesToErase.end());
+      BitVector indicesToErase(func.getNumArguments());
+      for (auto argIndex : llvm::seq<int>(0, func.getNumArguments()))
+        if (func.getArgAttr(argIndex, "test.erase_this_arg"))
+          indicesToErase.set(argIndex);
       func.eraseArguments(indicesToErase);
     }
   }
@@ -115,18 +107,10 @@ struct TestFuncEraseResult
     auto module = getOperation();
 
     for (FuncOp func : module.getOps<FuncOp>()) {
-      SmallVector<unsigned, 4> indicesToErase;
-      for (auto resultIndex : llvm::seq<int>(0, func.getNumResults())) {
-        if (func.getResultAttr(resultIndex, "test.erase_this_result")) {
-          // Push back twice to test that duplicate indices are handled
-          // correctly.
-          indicesToErase.push_back(resultIndex);
-          indicesToErase.push_back(resultIndex);
-        }
-      }
-      // Reverse the order to test that unsorted index lists are handled
-      // correctly.
-      std::reverse(indicesToErase.begin(), indicesToErase.end());
+      BitVector indicesToErase(func.getNumResults());
+      for (auto resultIndex : llvm::seq<int>(0, func.getNumResults()))
+        if (func.getResultAttr(resultIndex, "test.erase_this_result"))
+          indicesToErase.set(resultIndex);
       func.eraseResults(indicesToErase);
     }
   }

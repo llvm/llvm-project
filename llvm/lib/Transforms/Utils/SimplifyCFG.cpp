@@ -2052,109 +2052,119 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
   if (ScanIdx == 0)
     return false;
 
-  // Okay, we *could* sink last ScanIdx instructions. But how many can we
-  // actually sink before encountering instruction that is unprofitable to sink?
-  auto ProfitableToSinkInstruction = [&](LockstepReverseIterator &LRI) {
-    unsigned NumPHIdValues = 0;
-    for (auto *I : *LRI)
-      for (auto *V : PHIOperands[I]) {
-        if (!InstructionsToSink.contains(V))
-          ++NumPHIdValues;
-        // FIXME: this check is overly optimistic. We may end up not sinking
-        // said instruction, due to the very same profitability check.
-        // See @creating_too_many_phis in sink-common-code.ll.
-      }
-    LLVM_DEBUG(dbgs() << "SINK: #phid values: " << NumPHIdValues << "\n");
-    unsigned NumPHIInsts = NumPHIdValues / UnconditionalPreds.size();
-    if ((NumPHIdValues % UnconditionalPreds.size()) != 0)
+  bool followedByDeoptOrUnreachable = IsBlockFollowedByDeoptOrUnreachable(BB);
+
+  if (!followedByDeoptOrUnreachable) {
+    // Okay, we *could* sink last ScanIdx instructions. But how many can we
+    // actually sink before encountering instruction that is unprofitable to
+    // sink?
+    auto ProfitableToSinkInstruction = [&](LockstepReverseIterator &LRI) {
+      unsigned NumPHIdValues = 0;
+      for (auto *I : *LRI)
+        for (auto *V : PHIOperands[I]) {
+          if (!InstructionsToSink.contains(V))
+            ++NumPHIdValues;
+          // FIXME: this check is overly optimistic. We may end up not sinking
+          // said instruction, due to the very same profitability check.
+          // See @creating_too_many_phis in sink-common-code.ll.
+        }
+      LLVM_DEBUG(dbgs() << "SINK: #phid values: " << NumPHIdValues << "\n");
+      unsigned NumPHIInsts = NumPHIdValues / UnconditionalPreds.size();
+      if ((NumPHIdValues % UnconditionalPreds.size()) != 0)
         NumPHIInsts++;
 
-    return NumPHIInsts <= 1;
-  };
+      return NumPHIInsts <= 1;
+    };
 
-  // We've determined that we are going to sink last ScanIdx instructions,
-  // and recorded them in InstructionsToSink. Now, some instructions may be
-  // unprofitable to sink. But that determination depends on the instructions
-  // that we are going to sink.
+    // We've determined that we are going to sink last ScanIdx instructions,
+    // and recorded them in InstructionsToSink. Now, some instructions may be
+    // unprofitable to sink. But that determination depends on the instructions
+    // that we are going to sink.
 
-  // First, forward scan: find the first instruction unprofitable to sink,
-  // recording all the ones that are profitable to sink.
-  // FIXME: would it be better, after we detect that not all are profitable.
-  // to either record the profitable ones, or erase the unprofitable ones?
-  // Maybe we need to choose (at runtime) the one that will touch least instrs?
-  LRI.reset();
-  int Idx = 0;
-  SmallPtrSet<Value *, 4> InstructionsProfitableToSink;
-  while (Idx < ScanIdx) {
-    if (!ProfitableToSinkInstruction(LRI)) {
-      // Too many PHIs would be created.
-      LLVM_DEBUG(
-          dbgs() << "SINK: stopping here, too many PHIs would be created!\n");
-      break;
-    }
-    InstructionsProfitableToSink.insert((*LRI).begin(), (*LRI).end());
-    --LRI;
-    ++Idx;
-  }
-
-  // If no instructions can be sunk, early-return.
-  if (Idx == 0)
-    return false;
-
-  // Did we determine that (only) some instructions are unprofitable to sink?
-  if (Idx < ScanIdx) {
-    // Okay, some instructions are unprofitable.
-    ScanIdx = Idx;
-    InstructionsToSink = InstructionsProfitableToSink;
-
-    // But, that may make other instructions unprofitable, too.
-    // So, do a backward scan, do any earlier instructions become unprofitable?
-    assert(!ProfitableToSinkInstruction(LRI) &&
-           "We already know that the last instruction is unprofitable to sink");
-    ++LRI;
-    --Idx;
-    while (Idx >= 0) {
-      // If we detect that an instruction becomes unprofitable to sink,
-      // all earlier instructions won't be sunk either,
-      // so preemptively keep InstructionsProfitableToSink in sync.
-      // FIXME: is this the most performant approach?
-      for (auto *I : *LRI)
-        InstructionsProfitableToSink.erase(I);
+    // First, forward scan: find the first instruction unprofitable to sink,
+    // recording all the ones that are profitable to sink.
+    // FIXME: would it be better, after we detect that not all are profitable.
+    // to either record the profitable ones, or erase the unprofitable ones?
+    // Maybe we need to choose (at runtime) the one that will touch least
+    // instrs?
+    LRI.reset();
+    int Idx = 0;
+    SmallPtrSet<Value *, 4> InstructionsProfitableToSink;
+    while (Idx < ScanIdx) {
       if (!ProfitableToSinkInstruction(LRI)) {
-        // Everything starting with this instruction won't be sunk.
-        ScanIdx = Idx;
-        InstructionsToSink = InstructionsProfitableToSink;
+        // Too many PHIs would be created.
+        LLVM_DEBUG(
+            dbgs() << "SINK: stopping here, too many PHIs would be created!\n");
+        break;
       }
+      InstructionsProfitableToSink.insert((*LRI).begin(), (*LRI).end());
+      --LRI;
+      ++Idx;
+    }
+
+    // If no instructions can be sunk, early-return.
+    if (Idx == 0)
+      return false;
+
+    // Did we determine that (only) some instructions are unprofitable to sink?
+    if (Idx < ScanIdx) {
+      // Okay, some instructions are unprofitable.
+      ScanIdx = Idx;
+      InstructionsToSink = InstructionsProfitableToSink;
+
+      // But, that may make other instructions unprofitable, too.
+      // So, do a backward scan, do any earlier instructions become
+      // unprofitable?
+      assert(
+          !ProfitableToSinkInstruction(LRI) &&
+          "We already know that the last instruction is unprofitable to sink");
       ++LRI;
       --Idx;
+      while (Idx >= 0) {
+        // If we detect that an instruction becomes unprofitable to sink,
+        // all earlier instructions won't be sunk either,
+        // so preemptively keep InstructionsProfitableToSink in sync.
+        // FIXME: is this the most performant approach?
+        for (auto *I : *LRI)
+          InstructionsProfitableToSink.erase(I);
+        if (!ProfitableToSinkInstruction(LRI)) {
+          // Everything starting with this instruction won't be sunk.
+          ScanIdx = Idx;
+          InstructionsToSink = InstructionsProfitableToSink;
+        }
+        ++LRI;
+        --Idx;
+      }
     }
-  }
 
-  // If no instructions can be sunk, early-return.
-  if (ScanIdx == 0)
-    return false;
+    // If no instructions can be sunk, early-return.
+    if (ScanIdx == 0)
+      return false;
+  }
 
   bool Changed = false;
 
   if (HaveNonUnconditionalPredecessors) {
-    // It is always legal to sink common instructions from unconditional
-    // predecessors. However, if not all predecessors are unconditional,
-    // this transformation might be pessimizing. So as a rule of thumb,
-    // don't do it unless we'd sink at least one non-speculatable instruction.
-    // See https://bugs.llvm.org/show_bug.cgi?id=30244
-    LRI.reset();
-    int Idx = 0;
-    bool Profitable = false;
-    while (Idx < ScanIdx) {
-      if (!isSafeToSpeculativelyExecute((*LRI)[0])) {
-        Profitable = true;
-        break;
+    if (!followedByDeoptOrUnreachable) {
+      // It is always legal to sink common instructions from unconditional
+      // predecessors. However, if not all predecessors are unconditional,
+      // this transformation might be pessimizing. So as a rule of thumb,
+      // don't do it unless we'd sink at least one non-speculatable instruction.
+      // See https://bugs.llvm.org/show_bug.cgi?id=30244
+      LRI.reset();
+      int Idx = 0;
+      bool Profitable = false;
+      while (Idx < ScanIdx) {
+        if (!isSafeToSpeculativelyExecute((*LRI)[0])) {
+          Profitable = true;
+          break;
+        }
+        --LRI;
+        ++Idx;
       }
-      --LRI;
-      ++Idx;
+      if (!Profitable)
+        return false;
     }
-    if (!Profitable)
-      return false;
 
     LLVM_DEBUG(dbgs() << "SINK: Splitting edge\n");
     // We have a conditional edge and we're going to sink some instructions.
@@ -5795,10 +5805,9 @@ static void reuseTableCompare(
   for (auto ValuePair : Values) {
     Constant *CaseConst = ConstantExpr::getICmp(CmpInst->getPredicate(),
                                                 ValuePair.second, CmpOp1, true);
-    if (!CaseConst || CaseConst == DefaultConst || isa<UndefValue>(CaseConst))
+    if (!CaseConst || CaseConst == DefaultConst ||
+        (CaseConst != TrueConst && CaseConst != FalseConst))
       return;
-    assert((CaseConst == TrueConst || CaseConst == FalseConst) &&
-           "Expect true or false as compare result.");
   }
 
   // Check if the branch instruction dominates the phi node. It's a simple

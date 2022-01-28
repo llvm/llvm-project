@@ -7,34 +7,33 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBListener.h"
-#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Utility/Broadcaster.h"
+#include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Listener.h"
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-SBListener::SBListener() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBListener); }
+SBListener::SBListener() { LLDB_INSTRUMENT_VA(this); }
 
 SBListener::SBListener(const char *name)
     : m_opaque_sp(Listener::MakeListener(name)), m_unused_ptr(nullptr) {
-  LLDB_RECORD_CONSTRUCTOR(SBListener, (const char *), name);
+  LLDB_INSTRUMENT_VA(this, name);
 }
 
 SBListener::SBListener(const SBListener &rhs)
     : m_opaque_sp(rhs.m_opaque_sp), m_unused_ptr(nullptr) {
-  LLDB_RECORD_CONSTRUCTOR(SBListener, (const lldb::SBListener &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 }
 
 const lldb::SBListener &SBListener::operator=(const lldb::SBListener &rhs) {
-  LLDB_RECORD_METHOD(const lldb::SBListener &,
-                     SBListener, operator=,(const lldb::SBListener &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
@@ -49,18 +48,17 @@ SBListener::SBListener(const lldb::ListenerSP &listener_sp)
 SBListener::~SBListener() = default;
 
 bool SBListener::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBListener, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 SBListener::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBListener, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp != nullptr;
 }
 
 void SBListener::AddEvent(const SBEvent &event) {
-  LLDB_RECORD_METHOD(void, SBListener, AddEvent, (const lldb::SBEvent &),
-                     event);
+  LLDB_INSTRUMENT_VA(this, event);
 
   EventSP &event_sp = event.GetSP();
   if (event_sp)
@@ -68,7 +66,7 @@ void SBListener::AddEvent(const SBEvent &event) {
 }
 
 void SBListener::Clear() {
-  LLDB_RECORD_METHOD_NO_ARGS(void, SBListener, Clear);
+  LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_sp)
     m_opaque_sp->Clear();
@@ -77,9 +75,7 @@ void SBListener::Clear() {
 uint32_t SBListener::StartListeningForEventClass(SBDebugger &debugger,
                                                  const char *broadcaster_class,
                                                  uint32_t event_mask) {
-  LLDB_RECORD_METHOD(uint32_t, SBListener, StartListeningForEventClass,
-                     (lldb::SBDebugger &, const char *, uint32_t), debugger,
-                     broadcaster_class, event_mask);
+  LLDB_INSTRUMENT_VA(this, debugger, broadcaster_class, event_mask);
 
   if (m_opaque_sp) {
     Debugger *lldb_debugger = debugger.get();
@@ -95,9 +91,7 @@ uint32_t SBListener::StartListeningForEventClass(SBDebugger &debugger,
 bool SBListener::StopListeningForEventClass(SBDebugger &debugger,
                                             const char *broadcaster_class,
                                             uint32_t event_mask) {
-  LLDB_RECORD_METHOD(bool, SBListener, StopListeningForEventClass,
-                     (lldb::SBDebugger &, const char *, uint32_t), debugger,
-                     broadcaster_class, event_mask);
+  LLDB_INSTRUMENT_VA(this, debugger, broadcaster_class, event_mask);
 
   if (m_opaque_sp) {
     Debugger *lldb_debugger = debugger.get();
@@ -112,9 +106,7 @@ bool SBListener::StopListeningForEventClass(SBDebugger &debugger,
 
 uint32_t SBListener::StartListeningForEvents(const SBBroadcaster &broadcaster,
                                              uint32_t event_mask) {
-  LLDB_RECORD_METHOD(uint32_t, SBListener, StartListeningForEvents,
-                     (const lldb::SBBroadcaster &, uint32_t), broadcaster,
-                     event_mask);
+  LLDB_INSTRUMENT_VA(this, broadcaster, event_mask);
 
   uint32_t acquired_event_mask = 0;
   if (m_opaque_sp && broadcaster.IsValid()) {
@@ -127,9 +119,7 @@ uint32_t SBListener::StartListeningForEvents(const SBBroadcaster &broadcaster,
 
 bool SBListener::StopListeningForEvents(const SBBroadcaster &broadcaster,
                                         uint32_t event_mask) {
-  LLDB_RECORD_METHOD(bool, SBListener, StopListeningForEvents,
-                     (const lldb::SBBroadcaster &, uint32_t), broadcaster,
-                     event_mask);
+  LLDB_INSTRUMENT_VA(this, broadcaster, event_mask);
 
   if (m_opaque_sp && broadcaster.IsValid()) {
     return m_opaque_sp->StopListeningForEvents(broadcaster.get(), event_mask);
@@ -138,8 +128,7 @@ bool SBListener::StopListeningForEvents(const SBBroadcaster &broadcaster,
 }
 
 bool SBListener::WaitForEvent(uint32_t timeout_secs, SBEvent &event) {
-  LLDB_RECORD_METHOD(bool, SBListener, WaitForEvent,
-                     (uint32_t, lldb::SBEvent &), timeout_secs, event);
+  LLDB_INSTRUMENT_VA(this, timeout_secs, event);
 
   bool success = false;
 
@@ -165,9 +154,7 @@ bool SBListener::WaitForEvent(uint32_t timeout_secs, SBEvent &event) {
 bool SBListener::WaitForEventForBroadcaster(uint32_t num_seconds,
                                             const SBBroadcaster &broadcaster,
                                             SBEvent &event) {
-  LLDB_RECORD_METHOD(bool, SBListener, WaitForEventForBroadcaster,
-                     (uint32_t, const lldb::SBBroadcaster &, lldb::SBEvent &),
-                     num_seconds, broadcaster, event);
+  LLDB_INSTRUMENT_VA(this, num_seconds, broadcaster, event);
 
   if (m_opaque_sp && broadcaster.IsValid()) {
     Timeout<std::micro> timeout(llvm::None);
@@ -187,10 +174,7 @@ bool SBListener::WaitForEventForBroadcaster(uint32_t num_seconds,
 bool SBListener::WaitForEventForBroadcasterWithType(
     uint32_t num_seconds, const SBBroadcaster &broadcaster,
     uint32_t event_type_mask, SBEvent &event) {
-  LLDB_RECORD_METHOD(
-      bool, SBListener, WaitForEventForBroadcasterWithType,
-      (uint32_t, const lldb::SBBroadcaster &, uint32_t, lldb::SBEvent &),
-      num_seconds, broadcaster, event_type_mask, event);
+  LLDB_INSTRUMENT_VA(this, num_seconds, broadcaster, event_type_mask, event);
 
   if (m_opaque_sp && broadcaster.IsValid()) {
     Timeout<std::micro> timeout(llvm::None);
@@ -208,8 +192,7 @@ bool SBListener::WaitForEventForBroadcasterWithType(
 }
 
 bool SBListener::PeekAtNextEvent(SBEvent &event) {
-  LLDB_RECORD_METHOD(bool, SBListener, PeekAtNextEvent, (lldb::SBEvent &),
-                     event);
+  LLDB_INSTRUMENT_VA(this, event);
 
   if (m_opaque_sp) {
     event.reset(m_opaque_sp->PeekAtNextEvent());
@@ -221,9 +204,7 @@ bool SBListener::PeekAtNextEvent(SBEvent &event) {
 
 bool SBListener::PeekAtNextEventForBroadcaster(const SBBroadcaster &broadcaster,
                                                SBEvent &event) {
-  LLDB_RECORD_METHOD(bool, SBListener, PeekAtNextEventForBroadcaster,
-                     (const lldb::SBBroadcaster &, lldb::SBEvent &),
-                     broadcaster, event);
+  LLDB_INSTRUMENT_VA(this, broadcaster, event);
 
   if (m_opaque_sp && broadcaster.IsValid()) {
     event.reset(m_opaque_sp->PeekAtNextEventForBroadcaster(broadcaster.get()));
@@ -236,9 +217,7 @@ bool SBListener::PeekAtNextEventForBroadcaster(const SBBroadcaster &broadcaster,
 bool SBListener::PeekAtNextEventForBroadcasterWithType(
     const SBBroadcaster &broadcaster, uint32_t event_type_mask,
     SBEvent &event) {
-  LLDB_RECORD_METHOD(bool, SBListener, PeekAtNextEventForBroadcasterWithType,
-                     (const lldb::SBBroadcaster &, uint32_t, lldb::SBEvent &),
-                     broadcaster, event_type_mask, event);
+  LLDB_INSTRUMENT_VA(this, broadcaster, event_type_mask, event);
 
   if (m_opaque_sp && broadcaster.IsValid()) {
     event.reset(m_opaque_sp->PeekAtNextEventForBroadcasterWithType(
@@ -250,7 +229,7 @@ bool SBListener::PeekAtNextEventForBroadcasterWithType(
 }
 
 bool SBListener::GetNextEvent(SBEvent &event) {
-  LLDB_RECORD_METHOD(bool, SBListener, GetNextEvent, (lldb::SBEvent &), event);
+  LLDB_INSTRUMENT_VA(this, event);
 
   if (m_opaque_sp) {
     EventSP event_sp;
@@ -265,9 +244,7 @@ bool SBListener::GetNextEvent(SBEvent &event) {
 
 bool SBListener::GetNextEventForBroadcaster(const SBBroadcaster &broadcaster,
                                             SBEvent &event) {
-  LLDB_RECORD_METHOD(bool, SBListener, GetNextEventForBroadcaster,
-                     (const lldb::SBBroadcaster &, lldb::SBEvent &),
-                     broadcaster, event);
+  LLDB_INSTRUMENT_VA(this, broadcaster, event);
 
   if (m_opaque_sp && broadcaster.IsValid()) {
     EventSP event_sp;
@@ -284,9 +261,7 @@ bool SBListener::GetNextEventForBroadcaster(const SBBroadcaster &broadcaster,
 bool SBListener::GetNextEventForBroadcasterWithType(
     const SBBroadcaster &broadcaster, uint32_t event_type_mask,
     SBEvent &event) {
-  LLDB_RECORD_METHOD(bool, SBListener, GetNextEventForBroadcasterWithType,
-                     (const lldb::SBBroadcaster &, uint32_t, lldb::SBEvent &),
-                     broadcaster, event_type_mask, event);
+  LLDB_INSTRUMENT_VA(this, broadcaster, event_type_mask, event);
 
   if (m_opaque_sp && broadcaster.IsValid()) {
     EventSP event_sp;
@@ -302,8 +277,7 @@ bool SBListener::GetNextEventForBroadcasterWithType(
 }
 
 bool SBListener::HandleBroadcastEvent(const SBEvent &event) {
-  LLDB_RECORD_METHOD(bool, SBListener, HandleBroadcastEvent,
-                     (const lldb::SBEvent &), event);
+  LLDB_INSTRUMENT_VA(this, event);
 
   if (m_opaque_sp)
     return m_opaque_sp->HandleBroadcastEvent(event.GetSP());

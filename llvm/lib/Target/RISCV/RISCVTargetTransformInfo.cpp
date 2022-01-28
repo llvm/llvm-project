@@ -197,10 +197,7 @@ void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // Support explicit targets enabled for SiFive with the unrolling preferences
   // below
   bool UseDefaultPreferences = true;
-  if (ST->getTuneCPU().contains("sifive-e76") ||
-      ST->getTuneCPU().contains("sifive-s76") ||
-      ST->getTuneCPU().contains("sifive-u74") ||
-      ST->getTuneCPU().contains("sifive-7"))
+  if (ST->getProcFamily() == RISCVSubtarget::SiFive7)
     UseDefaultPreferences = false;
 
   if (UseDefaultPreferences)
@@ -277,4 +274,17 @@ void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 void RISCVTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::PeelingPreferences &PP) {
   BaseT::getPeelingPreferences(L, SE, PP);
+}
+
+InstructionCost RISCVTTIImpl::getRegUsageForType(Type *Ty) {
+  TypeSize Size = Ty->getPrimitiveSizeInBits();
+  if (Ty->isVectorTy()) {
+    if (Size.isScalable() && ST->hasVInstructions())
+      return divideCeil(Size.getKnownMinValue(), RISCV::RVVBitsPerBlock);
+
+    if (ST->useRVVForFixedLengthVectors())
+      return divideCeil(Size, ST->getMinRVVVectorSizeInBits());
+  }
+
+  return BaseT::getRegUsageForType(Ty);
 }

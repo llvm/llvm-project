@@ -20,7 +20,7 @@ class TestCase(TestBase):
         try:
             self.build(dictionary={
                 "C_SOURCES" : test_file,
-                "CFLAGS_EXTRAS" : "-Werror"
+                "CFLAGS_EXTRAS" : "-Werror=ignored-attributes"
             })
         except BuildError as e:
              # Test source failed to build. Check if it failed because the

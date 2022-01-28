@@ -11,25 +11,27 @@
 
 #include "lldb/Utility/Log.h"
 
-#define WINDOWS_LOG_PROCESS (1u << 1)     // Log process operations
-#define WINDOWS_LOG_EXCEPTION (1u << 1)   // Log exceptions
-#define WINDOWS_LOG_THREAD (1u << 2)      // Log thread operations
-#define WINDOWS_LOG_MEMORY (1u << 3)      // Log memory reads/writes calls
-#define WINDOWS_LOG_BREAKPOINTS (1u << 4) // Log breakpoint operations
-#define WINDOWS_LOG_STEP (1u << 5)        // Log step operations
-#define WINDOWS_LOG_REGISTERS (1u << 6)   // Log register operations
-#define WINDOWS_LOG_EVENT (1u << 7)       // Low level debug events
-
 namespace lldb_private {
-class ProcessWindowsLog {
-  static Log::Channel g_channel;
 
+enum class WindowsLog : Log::MaskType {
+  Breakpoints = Log::ChannelFlag<0>, // Log breakpoint operations
+  Event = Log::ChannelFlag<1>,       // Low level debug events
+  Exception = Log::ChannelFlag<2>,   // Log exceptions
+  Memory = Log::ChannelFlag<3>,      // Log memory reads/writes calls
+  Process = Log::ChannelFlag<4>,     // Log process operations
+  Registers = Log::ChannelFlag<5>,   // Log register operations
+  Step = Log::ChannelFlag<6>,        // Log step operations
+  Thread = Log::ChannelFlag<7>,      // Log thread operations
+  LLVM_MARK_AS_BITMASK_ENUM(Thread)
+};
+
+class ProcessWindowsLog {
 public:
   static void Initialize();
   static void Terminate();
-
-  static Log *GetLogIfAny(uint32_t mask) { return g_channel.GetLogIfAny(mask); }
 };
+
+template <> Log::Channel &LogChannelFor<WindowsLog>();
 }
 
 #endif // liblldb_ProcessWindowsLog_h_

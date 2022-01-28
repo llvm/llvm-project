@@ -433,7 +433,7 @@ bool ObjCARCContract::tryToPeepholeInstruction(
     // If we succeed in our optimization, fall through.
     LLVM_FALLTHROUGH;
   case ARCInstKind::RetainRV:
-  case ARCInstKind::ClaimRV: {
+  case ARCInstKind::UnsafeClaimRV: {
     bool IsInstContainedInBundle = BundledInsts->contains(Inst);
 
     // Return now if the target doesn't need a special inline-asm marker. Return

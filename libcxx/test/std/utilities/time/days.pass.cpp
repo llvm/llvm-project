@@ -12,8 +12,9 @@
 // using days = duration<signed integer type of at least 25 bits, ratio_multiply<ratio<24>, hours::period>>;
 
 #include <chrono>
-#include <type_traits>
 #include <limits>
+#include <ratio>
+#include <type_traits>
 
 #include "test_macros.h"
 

@@ -533,10 +533,9 @@ let Uses = [SCC] in {
     def S_CSELECT_B32 : SOP2_32 <"s_cselect_b32",
       [(set i32:$sdst, (SelectPat<select> i32:$src0, i32:$src1))]
     >;
-    def S_CSELECT_B64 : SOP2_64 <"s_cselect_b64",
-      [(set i64:$sdst, (SelectPat<select> i64:$src0, i64:$src1))]
-    >;
   }
+
+  def S_CSELECT_B64 : SOP2_64 <"s_cselect_b64">;
 } // End Uses = [SCC]
 
 let Defs = [SCC] in {
@@ -566,11 +565,11 @@ def S_XOR_B64 : SOP2_64 <"s_xor_b64",
 >;
 
 def S_XNOR_B32 : SOP2_32 <"s_xnor_b32",
-  [(set i32:$sdst, (not (xor_oneuse i32:$src0, i32:$src1)))]
+  [(set i32:$sdst, (UniformUnaryFrag<not> (xor_oneuse i32:$src0, i32:$src1)))]
 >;
 
 def S_XNOR_B64 : SOP2_64 <"s_xnor_b64",
-  [(set i64:$sdst, (not (xor_oneuse i64:$src0, i64:$src1)))]
+  [(set i64:$sdst, (UniformUnaryFrag<not> (xor_oneuse i64:$src0, i64:$src1)))]
 >;
 
 def S_NAND_B32 : SOP2_32 <"s_nand_b32",

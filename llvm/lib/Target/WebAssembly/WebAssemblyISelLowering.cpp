@@ -1491,8 +1491,7 @@ bool WebAssemblyTargetLowering::MatchTableForLowering(SelectionDAG &DAG,
     if (GA) {
       // We are in Case 2 above.
       Idx = Base->getOperand(1);
-      if (!Idx || GA->getNumValues() != 1 || Idx->getNumValues() != 1)
-        return false;
+      assert(GA->getNumValues() == 1);
     } else {
       // This might be Case 1 above (or an error)
       SDValue V = Base->getOperand(0);
@@ -1629,7 +1628,7 @@ SDValue WebAssemblyTargetLowering::LowerCopyToReg(SDValue Op,
     // local.copy between Op and its FI operand.
     SDValue Chain = Op.getOperand(0);
     SDLoc DL(Op);
-    unsigned Reg = cast<RegisterSDNode>(Op.getOperand(1))->getReg();
+    Register Reg = cast<RegisterSDNode>(Op.getOperand(1))->getReg();
     EVT VT = Src.getValueType();
     SDValue Copy(DAG.getMachineNode(VT == MVT::i32 ? WebAssembly::COPY_I32
                                                    : WebAssembly::COPY_I64,

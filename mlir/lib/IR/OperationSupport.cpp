@@ -170,12 +170,12 @@ OperationState::OperationState(Location location, StringRef name)
 OperationState::OperationState(Location location, OperationName name)
     : location(location), name(name) {}
 
-OperationState::OperationState(Location location, StringRef name,
+OperationState::OperationState(Location location, OperationName name,
                                ValueRange operands, TypeRange types,
                                ArrayRef<NamedAttribute> attributes,
                                BlockRange successors,
                                MutableArrayRef<std::unique_ptr<Region>> regions)
-    : location(location), name(name, location->getContext()),
+    : location(location), name(name),
       operands(operands.begin(), operands.end()),
       types(types.begin(), types.end()),
       attributes(attributes.begin(), attributes.end()),
@@ -183,6 +183,13 @@ OperationState::OperationState(Location location, StringRef name,
   for (std::unique_ptr<Region> &r : regions)
     this->regions.push_back(std::move(r));
 }
+OperationState::OperationState(Location location, StringRef name,
+                               ValueRange operands, TypeRange types,
+                               ArrayRef<NamedAttribute> attributes,
+                               BlockRange successors,
+                               MutableArrayRef<std::unique_ptr<Region>> regions)
+    : OperationState(location, OperationName(name, location.getContext()),
+                     operands, types, attributes, successors, regions) {}
 
 void OperationState::addOperands(ValueRange newOperands) {
   operands.append(newOperands.begin(), newOperands.end());
@@ -286,7 +293,7 @@ void detail::OperandStorage::eraseOperands(unsigned start, unsigned length) {
 }
 
 void detail::OperandStorage::eraseOperands(
-    const llvm::BitVector &eraseIndices) {
+    const BitVector &eraseIndices) {
   MutableArrayRef<OpOperand> operands = getOperands();
   assert(eraseIndices.size() == operands.size());
 

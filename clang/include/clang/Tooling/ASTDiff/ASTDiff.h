@@ -48,20 +48,6 @@ struct Node {
   llvm::Optional<std::string> getQualifiedIdentifier() const;
 };
 
-class ASTDiff {
-public:
-  ASTDiff(SyntaxTree &Src, SyntaxTree &Dst, const ComparisonOptions &Options);
-  ~ASTDiff();
-
-  // Returns the ID of the node that is mapped to the given node in SourceTree.
-  NodeId getMapped(const SyntaxTree &SourceTree, NodeId Id) const;
-
-  class Impl;
-
-private:
-  std::unique_ptr<Impl> DiffImpl;
-};
-
 /// SyntaxTree objects represent subtrees of the AST.
 /// They can be constructed from any Decl or Stmt.
 class SyntaxTree {
@@ -118,6 +104,20 @@ struct ComparisonOptions {
   bool isMatchingAllowed(const Node &N1, const Node &N2) const {
     return N1.getType().isSame(N2.getType());
   }
+};
+
+class ASTDiff {
+public:
+  ASTDiff(SyntaxTree &Src, SyntaxTree &Dst, const ComparisonOptions &Options);
+  ~ASTDiff();
+
+  // Returns the ID of the node that is mapped to the given node in SourceTree.
+  NodeId getMapped(const SyntaxTree &SourceTree, NodeId Id) const;
+
+  class Impl;
+
+private:
+  std::unique_ptr<Impl> DiffImpl;
 };
 
 } // end namespace diff

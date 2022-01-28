@@ -9,8 +9,6 @@
 #ifndef LLVM_SUPPORT_RISCVISAINFO_H
 #define LLVM_SUPPORT_RISCVISAINFO_H
 
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
@@ -61,9 +59,13 @@ public:
 
   unsigned getXLen() const { return XLen; };
   unsigned getFLen() const { return FLen; };
+  unsigned getMinVLen() const { return MinVLen; }
+  unsigned getMaxELen() const { return MaxELen; }
+  unsigned getMaxELenFp() const { return MaxELenFp; }
 
   bool hasExtension(StringRef Ext) const;
   std::string toString() const;
+  std::vector<std::string> toFeatureVector() const;
 
   static bool isSupportedExtensionFeature(StringRef Ext);
   static bool isSupportedExtension(StringRef Ext);
@@ -71,10 +73,13 @@ public:
                                    unsigned MinorVersion);
 
 private:
-  RISCVISAInfo(unsigned XLen) : XLen(XLen), FLen(0) {}
+  RISCVISAInfo(unsigned XLen)
+      : XLen(XLen), FLen(0), MinVLen(0), MaxELen(0), MaxELenFp(0) {}
 
   unsigned XLen;
   unsigned FLen;
+  unsigned MinVLen;
+  unsigned MaxELen, MaxELenFp;
 
   OrderedExtensionMap Exts;
 
@@ -85,6 +90,8 @@ private:
 
   void updateImplication();
   void updateFLen();
+  void updateMinVLen();
+  void updateMaxELen();
 };
 
 } // namespace llvm

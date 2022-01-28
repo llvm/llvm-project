@@ -12,7 +12,6 @@
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/CommonFolders.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Traits.h"
 #include "mlir/IR/Builders.h"
@@ -287,9 +286,9 @@ static void print(OpAsmPrinter &p, AssumingOp op) {
   bool yieldsResults = !op.getResults().empty();
 
   p << " " << op.getWitness();
-  if (yieldsResults) {
+  if (yieldsResults)
     p << " -> (" << op.getResultTypes() << ")";
-  }
+  p << ' ';
   p.printRegion(op.getDoRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/yieldsResults);
@@ -1114,6 +1113,7 @@ void print(OpAsmPrinter &p, FunctionLibraryOp op) {
   p.printSymbolName(op.getName());
   p.printOptionalAttrDictWithKeyword(
       op->getAttrs(), {SymbolTable::getSymbolAttrName(), "mapping"});
+  p << ' ';
   p.printRegion(op.getOperation()->getRegion(0), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
   p << " mapping ";
@@ -1624,18 +1624,18 @@ void ReduceOp::build(OpBuilder &builder, OperationState &result, Value shape,
   Region *bodyRegion = result.addRegion();
   bodyRegion->push_back(new Block);
   Block &bodyBlock = bodyRegion->front();
-  bodyBlock.addArgument(builder.getIndexType());
+  bodyBlock.addArgument(builder.getIndexType(), result.location);
 
   Type elementType;
   if (auto tensorType = shape.getType().dyn_cast<TensorType>())
     elementType = tensorType.getElementType();
   else
     elementType = SizeType::get(builder.getContext());
-  bodyBlock.addArgument(elementType);
+  bodyBlock.addArgument(elementType, shape.getLoc());
 
-  for (Type initValType : initVals.getTypes()) {
-    bodyBlock.addArgument(initValType);
-    result.addTypes(initValType);
+  for (Value initVal : initVals) {
+    bodyBlock.addArgument(initVal.getType(), initVal.getLoc());
+    result.addTypes(initVal.getType());
   }
 }
 
@@ -1711,6 +1711,7 @@ static void print(OpAsmPrinter &p, ReduceOp op) {
   p << '(' << op.getShape() << ", " << op.getInitVals()
     << ") : " << op.getShape().getType();
   p.printOptionalArrowTypeList(op.getResultTypes());
+  p << ' ';
   p.printRegion(op.getRegion());
   p.printOptionalAttrDict(op->getAttrs());
 }

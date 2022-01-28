@@ -118,6 +118,9 @@
 // RUN: %clang_cl /Gw /Gw- -### -- %s 2>&1 | FileCheck -check-prefix=Gw_ %s
 // Gw_-NOT: -fdata-sections
 
+// RUN: %clang_cl /hotpatch -### -- %s 2>&1 | FileCheck -check-prefix=hotpatch %s
+// hotpatch: -fms-hotpatch
+
 // RUN: %clang_cl /Imyincludedir -### -- %s 2>&1 | FileCheck -check-prefix=SLASH_I %s
 // RUN: %clang_cl /I myincludedir -### -- %s 2>&1 | FileCheck -check-prefix=SLASH_I %s
 // SLASH_I: "-I" "myincludedir"
@@ -483,7 +486,6 @@
 // RUN:     /GZ \
 // RUN:     /H \
 // RUN:     /homeparams \
-// RUN:     /hotpatch \
 // RUN:     /JMC \
 // RUN:     /kernel \
 // RUN:     /LN \
@@ -594,7 +596,7 @@
 // RUN: %clang_cl /Z7 -gdwarf /c -### -- %s 2>&1 | FileCheck -check-prefix=Z7_gdwarf %s
 // Z7_gdwarf: "-gcodeview"
 // Z7_gdwarf: "-debug-info-kind=constructor"
-// Z7_gdwarf: "-dwarf-version=4"
+// Z7_gdwarf: "-dwarf-version=
 
 // RUN: %clang_cl -fmsc-version=1800 -TP -### -- %s 2>&1 | FileCheck -check-prefix=CXX11 %s
 // CXX11: -std=c++11

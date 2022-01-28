@@ -121,6 +121,21 @@ module attributes {gpu.container_module} {
 // -----
 
 module attributes {gpu.container_module} {
+  gpu.module @kernels {
+    // expected-note@+1 {{see the kernel definition here}}
+    memref.global "private" @kernel_1 : memref<4xi32>
+  }
+
+  func @launch_func_undefined_function(%sz : index) {
+    // expected-error@+1 {{referenced kernel '@kernels::@kernel_1' is not a function}}
+    gpu.launch_func @kernels::@kernel_1 blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz)
+    return
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
   module @kernels {
     gpu.func @kernel_1(%arg1 : !llvm.ptr<f32>) kernel {
       gpu.return
@@ -194,42 +209,6 @@ module attributes {gpu.container_module} {
 
 // -----
 
-func @illegal_dimension() {
-  // expected-error@+1 {{dimension "o" is invalid}}
-  %tIdX = "gpu.thread_id"() {dimension = "o"} : () -> (index)
-
-  return
-}
-
-// -----
-
-func @illegal_dimension() {
-  // expected-error@+1 {{dimension "o" is invalid}}
-  %bDimX = "gpu.block_dim"() {dimension = "o"} : () -> (index)
-
-  return
-}
-
-// -----
-
-func @illegal_dimension() {
-  // expected-error@+1 {{dimension "o" is invalid}}
-  %bIdX = "gpu.block_id"() {dimension = "o"} : () -> (index)
-
-  return
-}
-
-// -----
-
-func @illegal_dimension() {
-  // expected-error@+1 {{dimension "o" is invalid}}
-  %gDimX = "gpu.grid_dim"() {dimension = "o"} : () -> (index)
-
-  return
-}
-
-// -----
-
 func @reduce_no_op_no_body(%arg0 : f32) {
   // expected-error@+1 {{expected either an op attribute or a non-empty body}}
   %res = "gpu.all_reduce"(%arg0) ({}) : (f32) -> (f32)
@@ -243,15 +222,15 @@ func @reduce_op_and_body(%arg0 : f32) {
   %res = "gpu.all_reduce"(%arg0) ({
   ^bb(%lhs : f32, %rhs : f32):
     "gpu.yield"(%lhs) : (f32) -> ()
-  }) {op = "add"} : (f32) -> (f32)
+  }) {op = #gpu<"all_reduce_op add">} : (f32) -> (f32)
   return
 }
 
 // -----
 
 func @reduce_invalid_op(%arg0 : f32) {
-  // expected-error@+1 {{attribute 'op' failed to satisfy constraint}}
-  %res = "gpu.all_reduce"(%arg0) ({}) {op = "foo"} : (f32) -> (f32)
+  // expected-error@+1 {{invalid op kind}}
+  %res = gpu.all_reduce foo %arg0 {} : (f32) -> (f32)
   return
 }
 
@@ -259,7 +238,7 @@ func @reduce_invalid_op(%arg0 : f32) {
 
 func @reduce_invalid_op_type(%arg0 : f32) {
   // expected-error@+1 {{`and` accumulator is only compatible with Integer type}}
-  %res = "gpu.all_reduce"(%arg0) ({}) {op = "and"} : (f32) -> (f32)
+  %res = gpu.all_reduce and %arg0 {} : (f32) -> (f32)
   return
 }
 
@@ -267,10 +246,10 @@ func @reduce_invalid_op_type(%arg0 : f32) {
 
 func @reduce_incorrect_region_arguments(%arg0 : f32) {
   // expected-error@+1 {{expected two region arguments}}
-  %res = "gpu.all_reduce"(%arg0) ({
+  %res = gpu.all_reduce %arg0 {
   ^bb(%lhs : f32):
     "gpu.yield"(%lhs) : (f32) -> ()
-  }) : (f32) -> (f32)
+  } : (f32) -> (f32)
   return
 }
 
@@ -278,10 +257,10 @@ func @reduce_incorrect_region_arguments(%arg0 : f32) {
 
 func @reduce_incorrect_region_arguments(%arg0 : f32) {
   // expected-error@+1 {{incorrect region argument type}}
-  %res = "gpu.all_reduce"(%arg0) ({
+  %res = gpu.all_reduce %arg0 {
   ^bb(%lhs : f32, %rhs : i32):
     "gpu.yield"(%lhs) : (f32) -> ()
-  }) : (f32) -> (f32)
+  } : (f32) -> (f32)
   return
 }
 
@@ -289,10 +268,10 @@ func @reduce_incorrect_region_arguments(%arg0 : f32) {
 
 func @reduce_incorrect_yield(%arg0 : f32) {
   // expected-error@+1 {{expected one gpu.yield operand}}
-  %res = "gpu.all_reduce"(%arg0) ({
+  %res = gpu.all_reduce %arg0 {
   ^bb(%lhs : f32, %rhs : f32):
     "gpu.yield"(%lhs, %rhs) : (f32, f32) -> ()
-  }) : (f32) -> (f32)
+  } : (f32) -> (f32)
   return
 }
 
@@ -300,11 +279,11 @@ func @reduce_incorrect_yield(%arg0 : f32) {
 
 func @reduce_incorrect_yield(%arg0 : f32) {
   // expected-error@+1 {{incorrect gpu.yield type}}
-  %res = "gpu.all_reduce"(%arg0) ({
+  %res = gpu.all_reduce %arg0 {
   ^bb(%lhs : f32, %rhs : f32):
     %one = arith.constant 1 : i32
     "gpu.yield"(%one) : (i32) -> ()
-  }) : (f32) -> (f32)
+  } : (f32) -> (f32)
   return
 }
 
@@ -312,25 +291,27 @@ func @reduce_incorrect_yield(%arg0 : f32) {
 
 func @reduce_incorrect_yield(%arg0 : f32) {
   // expected-error@+1 {{expected gpu.yield op in region}}
-  %res = "gpu.all_reduce"(%arg0) ({
+  %res = gpu.all_reduce %arg0 {
   ^bb(%lhs : f32, %rhs : f32):
     return
-  }) : (f32) -> (f32)
+  } : (f32) -> (f32)
   return
 }
 
 // -----
 
 func @shuffle_mismatching_type(%arg0 : f32, %arg1 : i32, %arg2 : i32) {
-  // expected-error@+1 {{requires the same type for value operand and result}}
-  %shfl, %pred = "gpu.shuffle"(%arg0, %arg1, %arg2) { mode = "xor" } : (f32, i32, i32) -> (i32, i1)
+  // expected-error@+1 {{inferred type(s) 'f32', 'i1' are incompatible with return type(s) of operation 'i32', 'i1'}}
+  %shfl, %pred = "gpu.shuffle"(%arg0, %arg1, %arg2) { mode = #gpu<"shuffle_mode xor"> } : (f32, i32, i32) -> (i32, i1)
+  return
 }
 
 // -----
 
 func @shuffle_unsupported_type(%arg0 : index, %arg1 : i32, %arg2 : i32) {
-  // expected-error@+1 {{requires value operand type to be f32 or i32}}
-  %shfl, %pred = gpu.shuffle %arg0, %arg1, %arg2 xor : index
+  // expected-error@+1 {{operand #0 must be i32 or f32}}
+  %shfl, %pred = gpu.shuffle xor %arg0, %arg1, %arg2 : index
+  return
 }
 
 // -----
@@ -430,7 +411,7 @@ module {
 module {
   gpu.module @gpu_funcs {
     // expected-error @+1 {{'gpu.func' op expected at least 5 arguments to body region}}
-    "gpu.func"() ( {
+    "gpu.func"() ({
     ^bb0(%arg0: f32, %arg1: memref<?xf32>, %arg2: memref<5xf32, 3>, %arg3: memref<5xf32, 5>):
       "gpu.return"() : () -> ()
     } ) {gpu.kernel, sym_name = "kernel_1", type = (f32, memref<?xf32>) -> (), workgroup_attributions = 3: i64} : () -> ()

@@ -1003,12 +1003,17 @@ static int performOperation(ArchiveOperation Operation,
     fail("unable to open '" + ArchiveName + "': " + EC.message());
 
   if (!EC) {
-    Error Err = Error::success();
-    object::Archive Archive(Buf.get()->getMemBufferRef(), Err);
-    failIfError(std::move(Err), "unable to load '" + ArchiveName + "'");
-    if (Archive.isThin())
+    Expected<std::unique_ptr<object::Archive>> ArchiveOrError =
+        object::Archive::create(Buf.get()->getMemBufferRef());
+    if (!ArchiveOrError)
+      failIfError(ArchiveOrError.takeError(),
+                  "unable to load '" + ArchiveName + "'");
+
+    std::unique_ptr<object::Archive> Archive = std::move(ArchiveOrError.get());
+    if (Archive->isThin())
       CompareFullPath = true;
-    performOperation(Operation, &Archive, std::move(Buf.get()), NewMembers);
+    performOperation(Operation, Archive.get(), std::move(Buf.get()),
+                     NewMembers);
     return 0;
   }
 
@@ -1111,11 +1116,11 @@ static void runMRIScript() {
 }
 
 static bool handleGenericOption(StringRef arg) {
-  if (arg == "-help" || arg == "--help" || arg == "-h") {
+  if (arg == "--help" || arg == "-h") {
     printHelpMessage();
     return true;
   }
-  if (arg == "-version" || arg == "--version") {
+  if (arg == "--version") {
     cl::PrintVersionMessage();
     return true;
   }
@@ -1129,8 +1134,6 @@ static const char *matchFlagWithArg(StringRef Expected,
 
   if (Arg.startswith("--"))
     Arg = Arg.substr(2);
-  else if (Arg.startswith("-"))
-    Arg = Arg.substr(1);
 
   size_t len = Expected.size();
   if (Arg == Expected) {

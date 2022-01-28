@@ -23,6 +23,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
+#include <iosfwd>
 #include <system_error>
 
 _LIBCPP_PUSH_MACROS
@@ -237,6 +238,12 @@ public:
   _LIBCPP_INLINE_VISIBILITY
   bool operator>=(directory_entry const& __rhs) const noexcept {
     return __p_ >= __rhs.__p_;
+  }
+
+  template <class _CharT, class _Traits>
+  _LIBCPP_INLINE_VISIBILITY
+  friend basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const directory_entry& __d) {
+    return __os << __d.path();
   }
 
 private:

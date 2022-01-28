@@ -15,18 +15,19 @@
 
 #include <span>
 #include <cassert>
+#include <cstddef>
 
 struct Sink {
     constexpr Sink() = default;
     constexpr Sink(Sink*) {}
 };
 
-constexpr int count(std::span<const Sink> sp) {
+constexpr std::size_t count(std::span<const Sink> sp) {
     return sp.size();
 }
 
 template<int N>
-constexpr int countn(std::span<const Sink, N> sp) {
+constexpr std::size_t countn(std::span<const Sink, N> sp) {
     return sp.size();
 }
 
@@ -38,8 +39,7 @@ constexpr bool test() {
     return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
     test();
     static_assert(test());
 

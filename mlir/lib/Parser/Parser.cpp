@@ -29,7 +29,6 @@
 using namespace mlir;
 using namespace mlir::detail;
 using llvm::MemoryBuffer;
-using llvm::SMLoc;
 using llvm::SourceMgr;
 
 //===----------------------------------------------------------------------===//
@@ -198,7 +197,7 @@ OptionalParseResult Parser::parseOptionalInteger(APInt &result) {
 ParseResult Parser::parseFloatFromIntegerLiteral(
     Optional<APFloat> &result, const Token &tok, bool isNegative,
     const llvm::fltSemantics &semantics, size_t typeSizeInBits) {
-  llvm::SMLoc loc = tok.getLoc();
+  SMLoc loc = tok.getLoc();
   StringRef spelling = tok.getSpelling();
   bool isHex = spelling.size() > 1 && spelling[1] == 'x';
   if (!isHex) {
@@ -341,6 +340,11 @@ public:
   ///
   ParseResult parseTrailingLocationSpecifier(OpOrArgument opOrArgument);
 
+  /// Parse a location alias, that is a sequence looking like: #loc42
+  /// The alias may have already be defined or may be defined later, in which
+  /// case an OpaqueLoc is used a placeholder.
+  ParseResult parseLocationAlias(LocationAttr &loc);
+
   /// This is the structure of a result specifier in the assembly syntax,
   /// including the name, number of results, and location.
   using ResultRecord = std::tuple<StringRef, unsigned, SMLoc>;
@@ -358,17 +362,19 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Parse a region into 'region' with the provided entry block arguments.
-  /// 'isIsolatedNameScope' indicates if the naming scope of this region is
-  /// isolated from those above.
+  /// If non-empty, 'argLocations' contains an optional locations for each
+  /// argument. 'isIsolatedNameScope' indicates if the naming scope of this
+  /// region is isolated from those above.
   ParseResult parseRegion(Region &region,
                           ArrayRef<std::pair<SSAUseInfo, Type>> entryArguments,
+                          ArrayRef<Location> argLocations,
                           bool isIsolatedNameScope = false);
 
   /// Parse a region body into 'region'.
   ParseResult
-  parseRegionBody(Region &region, llvm::SMLoc startLoc,
+  parseRegionBody(Region &region, SMLoc startLoc,
                   ArrayRef<std::pair<SSAUseInfo, Type>> entryArguments,
-                  bool isIsolatedNameScope);
+                  ArrayRef<Location> argLocations, bool isIsolatedNameScope);
 
   //===--------------------------------------------------------------------===//
   // Block Parsing
@@ -476,10 +482,14 @@ private:
   /// their first reference, to allow checking for use of undefined values.
   DenseMap<Value, SMLoc> forwardRefPlaceholders;
 
-  /// A set of operations whose locations reference aliases that have yet to
-  /// be resolved.
-  SmallVector<std::pair<OpOrArgument, Token>, 8>
-      opsAndArgumentsWithDeferredLocs;
+  /// Deffered locations: when parsing `loc(#loc42)` we add an entry to this
+  /// map. After parsing the definition `#loc42 = ...` we'll patch back users
+  /// of this location.
+  struct DeferredLocInfo {
+    SMLoc loc;
+    StringRef identifier;
+  };
+  std::vector<DeferredLocInfo> deferredLocsReferences;
 
   /// The builder used when creating parsed operation instances.
   OpBuilder opBuilder;
@@ -537,23 +547,36 @@ ParseResult OperationParser::finalize() {
 
   // Resolve the locations of any deferred operations.
   auto &attributeAliases = state.symbols.attributeAliasDefinitions;
-  for (std::pair<OpOrArgument, Token> &it : opsAndArgumentsWithDeferredLocs) {
-    llvm::SMLoc tokLoc = it.second.getLoc();
-    StringRef identifier = it.second.getSpelling().drop_front();
-    Attribute attr = attributeAliases.lookup(identifier);
+  auto locID = TypeID::get<DeferredLocInfo *>();
+  auto resolveLocation = [&, this](auto &opOrArgument) -> LogicalResult {
+    auto fwdLoc = opOrArgument.getLoc().template dyn_cast<OpaqueLoc>();
+    if (!fwdLoc || fwdLoc.getUnderlyingTypeID() != locID)
+      return success();
+    auto locInfo = deferredLocsReferences[fwdLoc.getUnderlyingLocation()];
+    Attribute attr = attributeAliases.lookup(locInfo.identifier);
     if (!attr)
-      return emitError(tokLoc) << "operation location alias was never defined";
-
-    LocationAttr locAttr = attr.dyn_cast<LocationAttr>();
+      return this->emitError(locInfo.loc)
+             << "operation location alias was never defined";
+    auto locAttr = attr.dyn_cast<LocationAttr>();
     if (!locAttr)
-      return emitError(tokLoc)
+      return this->emitError(locInfo.loc)
              << "expected location, but found '" << attr << "'";
-    auto opOrArgument = it.first;
-    if (auto *op = opOrArgument.dyn_cast<Operation *>())
-      op->setLoc(locAttr);
-    else
-      opOrArgument.get<BlockArgument>().setLoc(locAttr);
-  }
+    opOrArgument.setLoc(locAttr);
+    return success();
+  };
+
+  auto walkRes = topLevelOp->walk([&](Operation *op) {
+    if (failed(resolveLocation(*op)))
+      return WalkResult::interrupt();
+    for (Region &region : op->getRegions())
+      for (Block &block : region.getBlocks())
+        for (BlockArgument arg : block.getArguments())
+          if (failed(resolveLocation(arg)))
+            return WalkResult::interrupt();
+    return WalkResult::advance();
+  });
+  if (walkRes.wasInterrupted())
+    return failure();
 
   // Pop the top level name scope.
   if (failed(popSSANameScope()))
@@ -910,7 +933,7 @@ ParseResult OperationParser::parseOperation() {
     // Add this operation to the assembly state if it was provided to populate.
     if (state.asmState) {
       unsigned resultIt = 0;
-      SmallVector<std::pair<unsigned, llvm::SMLoc>> asmResultGroups;
+      SmallVector<std::pair<unsigned, SMLoc>> asmResultGroups;
       asmResultGroups.reserve(resultIDs.size());
       for (ResultRecord &record : resultIDs) {
         asmResultGroups.emplace_back(resultIt, std::get<2>(record));
@@ -1030,7 +1053,8 @@ ParseResult OperationParser::parseGenericOperationAfterOpName(
       do {
         // Create temporary regions with the top level region as parent.
         result.regions.emplace_back(new Region(topLevelOp));
-        if (parseRegion(*result.regions.back(), /*entryArguments=*/{}))
+        if (parseRegion(*result.regions.back(), /*entryArguments=*/{},
+                        /*argLocations=*/{}))
           return failure();
       } while (consumeIf(Token::comma));
       if (parseToken(Token::r_paren, "expected ')' to end region list"))
@@ -1256,7 +1280,7 @@ public:
   }
 
   /// Emit a diagnostic at the specified location and return failure.
-  InFlightDiagnostic emitError(llvm::SMLoc loc, const Twine &message) override {
+  InFlightDiagnostic emitError(SMLoc loc, const Twine &message) override {
     return AsmParserImpl<OpAsmParser>::emitError(loc, "custom op '" + opName +
                                                           "' " + message);
   }
@@ -1426,6 +1450,7 @@ public:
   /// effectively defines the SSA values of `arguments` and assigns their type.
   ParseResult parseRegion(Region &region, ArrayRef<OperandType> arguments,
                           ArrayRef<Type> argTypes,
+                          ArrayRef<Location> argLocations,
                           bool enableNameShadowing) override {
     assert(arguments.size() == argTypes.size() &&
            "mismatching number of arguments and types");
@@ -1444,7 +1469,8 @@ public:
     (void)isIsolatedFromAbove;
     assert((!enableNameShadowing || isIsolatedFromAbove) &&
            "name shadowing is only allowed on isolated regions");
-    if (parser.parseRegion(region, regionArguments, enableNameShadowing))
+    if (parser.parseRegion(region, regionArguments, argLocations,
+                           enableNameShadowing))
       return failure();
     return success();
   }
@@ -1453,10 +1479,12 @@ public:
   OptionalParseResult parseOptionalRegion(Region &region,
                                           ArrayRef<OperandType> arguments,
                                           ArrayRef<Type> argTypes,
+                                          ArrayRef<Location> argLocations,
                                           bool enableNameShadowing) override {
     if (parser.getToken().isNot(Token::l_brace))
       return llvm::None;
-    return parseRegion(region, arguments, argTypes, enableNameShadowing);
+    return parseRegion(region, arguments, argTypes, argLocations,
+                       enableNameShadowing);
   }
 
   /// Parses a region if present. If the region is present, a new region is
@@ -1469,7 +1497,8 @@ public:
     if (parser.getToken().isNot(Token::l_brace))
       return llvm::None;
     std::unique_ptr<Region> newRegion = std::make_unique<Region>();
-    if (parseRegion(*newRegion, arguments, argTypes, enableNameShadowing))
+    if (parseRegion(*newRegion, arguments, argTypes, /*argLocations=*/{},
+                    enableNameShadowing))
       return failure();
 
     region = std::move(newRegion);
@@ -1575,6 +1604,34 @@ public:
     return parser.parseCommaSeparatedListUntil(Token::r_paren, parseElt);
   }
 
+  /// Parse a loc(...) specifier if present, filling in result if so.
+  ParseResult
+  parseOptionalLocationSpecifier(Optional<Location> &result) override {
+    // If there is a 'loc' we parse a trailing location.
+    if (!parser.consumeIf(Token::kw_loc))
+      return success();
+    LocationAttr directLoc;
+    if (parser.parseToken(Token::l_paren, "expected '(' in location"))
+      return failure();
+
+    Token tok = parser.getToken();
+
+    // Check to see if we are parsing a location alias.
+    // Otherwise, we parse the location directly.
+    if (tok.is(Token::hash_identifier)) {
+      if (parser.parseLocationAlias(directLoc))
+        return failure();
+    } else if (parser.parseLocationInstance(directLoc)) {
+      return failure();
+    }
+
+    if (parser.parseToken(Token::r_paren, "expected ')' in location"))
+      return failure();
+
+    result = directLoc;
+    return success();
+  }
+
 private:
   /// Information about the result name specifiers.
   ArrayRef<OperationParser::ResultRecord> resultIDs;
@@ -1634,7 +1691,7 @@ FailureOr<OperationName> OperationParser::parseCustomOperationName() {
 
 Operation *
 OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
-  llvm::SMLoc opLoc = getToken().getLoc();
+  SMLoc opLoc = getToken().getLoc();
 
   FailureOr<OperationName> opNameInfo = parseCustomOperationName();
   if (failed(opNameInfo))
@@ -1702,6 +1759,33 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
   return op;
 }
 
+ParseResult OperationParser::parseLocationAlias(LocationAttr &loc) {
+  Token tok = getToken();
+  consumeToken(Token::hash_identifier);
+  StringRef identifier = tok.getSpelling().drop_front();
+  if (identifier.contains('.')) {
+    return emitError(tok.getLoc())
+           << "expected location, but found dialect attribute: '#" << identifier
+           << "'";
+  }
+
+  // If this alias can be resolved, do it now.
+  Attribute attr = state.symbols.attributeAliasDefinitions.lookup(identifier);
+  if (attr) {
+    if (!(loc = attr.dyn_cast<LocationAttr>()))
+      return emitError(tok.getLoc())
+             << "expected location, but found '" << attr << "'";
+  } else {
+    // Otherwise, remember this operation and resolve its location later.
+    // In the meantime, use a special OpaqueLoc as a marker.
+    loc = OpaqueLoc::get(deferredLocsReferences.size(),
+                         TypeID::get<DeferredLocInfo *>(),
+                         UnknownLoc::get(getContext()));
+    deferredLocsReferences.push_back(DeferredLocInfo{tok.getLoc(), identifier});
+  }
+  return success();
+}
+
 ParseResult
 OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
   // If there is a 'loc' we parse a trailing location.
@@ -1712,29 +1796,11 @@ OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
   Token tok = getToken();
 
   // Check to see if we are parsing a location alias.
+  // Otherwise, we parse the location directly.
   LocationAttr directLoc;
   if (tok.is(Token::hash_identifier)) {
-    consumeToken();
-
-    StringRef identifier = tok.getSpelling().drop_front();
-    if (identifier.contains('.')) {
-      return emitError(tok.getLoc())
-             << "expected location, but found dialect attribute: '#"
-             << identifier << "'";
-    }
-
-    // If this alias can be resolved, do it now.
-    Attribute attr = state.symbols.attributeAliasDefinitions.lookup(identifier);
-    if (attr) {
-      if (!(directLoc = attr.dyn_cast<LocationAttr>()))
-        return emitError(tok.getLoc())
-               << "expected location, but found '" << attr << "'";
-    } else {
-      // Otherwise, remember this operation and resolve its location later.
-      opsAndArgumentsWithDeferredLocs.emplace_back(opOrArgument, tok);
-    }
-
-    // Otherwise, we parse the location directly.
+    if (parseLocationAlias(directLoc))
+      return failure();
   } else if (parseLocationInstance(directLoc)) {
     return failure();
   }
@@ -1742,12 +1808,10 @@ OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
   if (parseToken(Token::r_paren, "expected ')' in location"))
     return failure();
 
-  if (directLoc) {
-    if (auto *op = opOrArgument.dyn_cast<Operation *>())
-      op->setLoc(directLoc);
-    else
-      opOrArgument.get<BlockArgument>().setLoc(directLoc);
-  }
+  if (auto *op = opOrArgument.dyn_cast<Operation *>())
+    op->setLoc(directLoc);
+  else
+    opOrArgument.get<BlockArgument>().setLoc(directLoc);
   return success();
 }
 
@@ -1758,7 +1822,7 @@ OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
 ParseResult OperationParser::parseRegion(
     Region &region,
     ArrayRef<std::pair<OperationParser::SSAUseInfo, Type>> entryArguments,
-    bool isIsolatedNameScope) {
+    ArrayRef<Location> argLocations, bool isIsolatedNameScope) {
   // Parse the '{'.
   Token lBraceTok = getToken();
   if (parseToken(Token::l_brace, "expected '{' to begin a region"))
@@ -1770,7 +1834,7 @@ ParseResult OperationParser::parseRegion(
 
   // Parse the region body.
   if ((!entryArguments.empty() || getToken().isNot(Token::r_brace)) &&
-      parseRegionBody(region, lBraceTok.getLoc(), entryArguments,
+      parseRegionBody(region, lBraceTok.getLoc(), entryArguments, argLocations,
                       isIsolatedNameScope)) {
     return failure();
   }
@@ -1784,9 +1848,10 @@ ParseResult OperationParser::parseRegion(
 }
 
 ParseResult OperationParser::parseRegionBody(
-    Region &region, llvm::SMLoc startLoc,
+    Region &region, SMLoc startLoc,
     ArrayRef<std::pair<OperationParser::SSAUseInfo, Type>> entryArguments,
-    bool isIsolatedNameScope) {
+    ArrayRef<Location> argLocations, bool isIsolatedNameScope) {
+  assert(argLocations.empty() || argLocations.size() == entryArguments.size());
   auto currentPt = opBuilder.saveInsertionPoint();
 
   // Push a new named value scope.
@@ -1808,7 +1873,9 @@ ParseResult OperationParser::parseRegionBody(
     if (getToken().is(Token::caret_identifier))
       return emitError("invalid block name in region with named arguments");
 
-    for (auto &placeholderArgPair : entryArguments) {
+    for (const auto &it : llvm::enumerate(entryArguments)) {
+      size_t argIndex = it.index();
+      auto &placeholderArgPair = it.value();
       auto &argInfo = placeholderArgPair.first;
 
       // Ensure that the argument was not already defined.
@@ -1818,8 +1885,11 @@ ParseResult OperationParser::parseRegionBody(
                    .attachNote(getEncodedSourceLocation(*defLoc))
                << "previously referenced here";
       }
-      auto loc = getEncodedSourceLocation(placeholderArgPair.first.loc);
-      BlockArgument arg = block->addArgument(placeholderArgPair.second, loc);
+      BlockArgument arg = block->addArgument(
+          placeholderArgPair.second,
+          argLocations.empty()
+              ? getEncodedSourceLocation(placeholderArgPair.first.loc)
+              : argLocations[argIndex]);
 
       // Add a definition of this arg to the assembly state if provided.
       if (state.asmState)
@@ -2181,7 +2251,7 @@ LogicalResult mlir::parseSourceFile(llvm::StringRef filename,
                      "could not open input file " + filename);
 
   // Load the MLIR source file.
-  sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), llvm::SMLoc());
+  sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), SMLoc());
   return parseSourceFile(sourceMgr, block, context, sourceFileLoc, asmState);
 }
 

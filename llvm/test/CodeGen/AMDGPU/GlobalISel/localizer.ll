@@ -224,3 +224,39 @@ bb1:
 bb2:
   ret void
 }
+
+; This would crash from using the wrong insert point
+define void @sink_null_insert_pt(i32 addrspace(4)* %arg0) {
+; GFX9-LABEL: sink_null_insert_pt:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_or_saveexec_b64 s[16:17], -1
+; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_mov_b64 exec, s[16:17]
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    global_load_dword v0, v[0:1], off glc
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_writelane_b32 v40, s33, 2
+; GFX9-NEXT:    v_writelane_b32 v40, s30, 0
+; GFX9-NEXT:    s_mov_b32 s33, s32
+; GFX9-NEXT:    s_addk_i32 s32, 0x400
+; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
+; GFX9-NEXT:    s_swappc_b64 s[30:31], 0
+; GFX9-NEXT:    v_readlane_b32 s4, v40, 0
+; GFX9-NEXT:    v_readlane_b32 s5, v40, 1
+; GFX9-NEXT:    s_addk_i32 s32, 0xfc00
+; GFX9-NEXT:    v_readlane_b32 s33, v40, 2
+; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_mov_b64 exec, s[6:7]
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[4:5]
+entry:
+  %load0 = load volatile i32, i32 addrspace(1)* null, align 4
+  br label %bb1
+
+bb1:
+  call void null()
+  ret void
+}

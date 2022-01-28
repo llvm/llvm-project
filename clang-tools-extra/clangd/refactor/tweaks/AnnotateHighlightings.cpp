@@ -38,7 +38,7 @@ REGISTER_TWEAK(AnnotateHighlightings)
 
 Expected<Tweak::Effect> AnnotateHighlightings::apply(const Selection &Inputs) {
   const Decl *CommonDecl = nullptr;
-  for (auto N = Inputs.ASTSelection.commonAncestor(); N && !CommonDecl;
+  for (auto *N = Inputs.ASTSelection.commonAncestor(); N && !CommonDecl;
        N = N->Parent)
     CommonDecl = N->ASTNode.get<Decl>();
 

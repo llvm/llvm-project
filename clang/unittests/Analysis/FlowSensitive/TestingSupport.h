@@ -31,11 +31,13 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Testing/Support/Annotations.h"
-#include "gtest/gtest.h"
 #include <functional>
 #include <memory>
+#include <ostream>
 #include <string>
 #include <utility>
 
@@ -62,7 +64,7 @@ buildStatementToAnnotationMapping(const FunctionDecl *Func,
 // Runs dataflow on the body of the function that matches `func_matcher` in code
 // snippet `code`. Requires: `Analysis` contains a type `Lattice`.
 template <typename AnalysisT>
-void checkDataflow(
+llvm::Error checkDataflow(
     llvm::StringRef Code,
     ast_matchers::internal::Matcher<FunctionDecl> FuncMatcher,
     std::function<AnalysisT(ASTContext &, Environment &)> MakeAnalysis,
@@ -83,8 +85,9 @@ void checkDataflow(
   auto &Context = Unit->getASTContext();
 
   if (Context.getDiagnostics().getClient()->getNumErrors() != 0) {
-    FAIL() << "Source file has syntax or type errors, they were printed to "
-              "the test log";
+    return llvm::make_error<llvm::StringError>(
+        llvm::errc::invalid_argument, "Source file has syntax or type errors, "
+                                      "they were printed to the test log");
   }
 
   const FunctionDecl *F = ast_matchers::selectFirst<FunctionDecl>(
@@ -93,22 +96,23 @@ void checkDataflow(
           ast_matchers::functionDecl(ast_matchers::isDefinition(), FuncMatcher)
               .bind("target"),
           Context));
-  ASSERT_TRUE(F != nullptr) << "Could not find target function.";
+  if (F == nullptr)
+    return llvm::make_error<llvm::StringError>(
+        llvm::errc::invalid_argument, "Could not find target function.");
 
   auto CFCtx = ControlFlowContext::build(F, F->getBody(), &F->getASTContext());
-  ASSERT_TRUE((bool)CFCtx) << "Could not build ControlFlowContext.";
+  if (!CFCtx)
+    return CFCtx.takeError();
 
   DataflowAnalysisContext DACtx;
-  Environment Env(DACtx);
+  Environment Env(DACtx, *F);
   auto Analysis = MakeAnalysis(Context, Env);
 
   llvm::Expected<llvm::DenseMap<const clang::Stmt *, std::string>>
       StmtToAnnotations = buildStatementToAnnotationMapping(F, AnnotatedCode);
-  if (auto E = StmtToAnnotations.takeError()) {
-    FAIL() << "Failed to build annotation map: "
-           << llvm::toString(std::move(E));
-    return;
-  }
+  if (!StmtToAnnotations)
+    return StmtToAnnotations.takeError();
+
   auto &Annotations = *StmtToAnnotations;
 
   std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates =
@@ -116,7 +120,7 @@ void checkDataflow(
 
   if (BlockStates.empty()) {
     Expectations({}, Context);
-    return;
+    return llvm::Error::success();
   }
 
   // Compute a map from statement annotations to the state computed for
@@ -134,21 +138,19 @@ void checkDataflow(
           auto It = Annotations.find(Stmt.getStmt());
           if (It == Annotations.end())
             return;
-          if (auto *Lattice = llvm::any_cast<typename AnalysisT::Lattice>(
-                  &State.Lattice.Value)) {
-            Results.emplace_back(It->second, StateT{*Lattice, State.Env});
-          } else {
-            FAIL() << "Could not cast lattice element to expected type.";
-          }
+          auto *Lattice =
+              llvm::any_cast<typename AnalysisT::Lattice>(&State.Lattice.Value);
+          Results.emplace_back(It->second, StateT{*Lattice, State.Env});
         });
   }
   Expectations(Results, Context);
+  return llvm::Error::success();
 }
 
 // Runs dataflow on the body of the function named `target_fun` in code snippet
 // `code`.
 template <typename AnalysisT>
-void checkDataflow(
+llvm::Error checkDataflow(
     llvm::StringRef Code, llvm::StringRef TargetFun,
     std::function<AnalysisT(ASTContext &, Environment &)> MakeAnalysis,
     std::function<void(
@@ -158,9 +160,17 @@ void checkDataflow(
         Expectations,
     ArrayRef<std::string> Args,
     const tooling::FileContentMappings &VirtualMappedFiles = {}) {
-  checkDataflow(Code, ast_matchers::hasName(TargetFun), std::move(MakeAnalysis),
-                std::move(Expectations), Args, VirtualMappedFiles);
+  return checkDataflow(Code, ast_matchers::hasName(TargetFun),
+                       std::move(MakeAnalysis), std::move(Expectations), Args,
+                       VirtualMappedFiles);
 }
+
+/// Returns the `ValueDecl` for the given identifier.
+///
+/// Requirements:
+///
+///  `Name` must be unique in `ASTCtx`.
+const ValueDecl *findValueDecl(ASTContext &ASTCtx, llvm::StringRef Name);
 
 } // namespace test
 } // namespace dataflow

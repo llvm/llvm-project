@@ -1324,13 +1324,163 @@ void OmpStructureChecker::Leave(const parser::OmpEndBlockDirective &x) {
   }
 }
 
+template <typename T, typename D>
+bool OmpStructureChecker::IsOperatorValid(const T &node, const D &variable) {
+  using AllowedBinaryOperators =
+      std::variant<parser::Expr::Add, parser::Expr::Multiply,
+          parser::Expr::Subtract, parser::Expr::Divide, parser::Expr::AND,
+          parser::Expr::OR, parser::Expr::EQV, parser::Expr::NEQV>;
+  using BinaryOperators = std::variant<parser::Expr::Add,
+      parser::Expr::Multiply, parser::Expr::Subtract, parser::Expr::Divide,
+      parser::Expr::AND, parser::Expr::OR, parser::Expr::EQV,
+      parser::Expr::NEQV, parser::Expr::Power, parser::Expr::Concat,
+      parser::Expr::LT, parser::Expr::LE, parser::Expr::EQ, parser::Expr::NE,
+      parser::Expr::GE, parser::Expr::GT>;
+
+  if constexpr (common::HasMember<T, BinaryOperators>) {
+    const auto &variableName{variable.GetSource().ToString()};
+    const auto &exprLeft{std::get<0>(node.t)};
+    const auto &exprRight{std::get<1>(node.t)};
+    if ((exprLeft.value().source.ToString() != variableName) &&
+        (exprRight.value().source.ToString() != variableName)) {
+      context_.Say(variable.GetSource(),
+          "Atomic update variable '%s' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct"_err_en_US,
+          variableName);
+    }
+    return common::HasMember<T, AllowedBinaryOperators>;
+  }
+  return true;
+}
+
+void OmpStructureChecker::CheckAtomicUpdateAssignmentStmt(
+    const parser::AssignmentStmt &assignment) {
+  const auto &expr{std::get<parser::Expr>(assignment.t)};
+  const auto &var{std::get<parser::Variable>(assignment.t)};
+  std::visit(
+      common::visitors{
+          [&](const common::Indirection<parser::FunctionReference> &x) {
+            const auto &procedureDesignator{
+                std::get<parser::ProcedureDesignator>(x.value().v.t)};
+            const parser::Name *name{
+                std::get_if<parser::Name>(&procedureDesignator.u)};
+            if (name &&
+                !(name->source == "max" || name->source == "min" ||
+                    name->source == "iand" || name->source == "ior" ||
+                    name->source == "ieor")) {
+              context_.Say(expr.source,
+                  "Invalid intrinsic procedure name in OpenMP ATOMIC (UPDATE) statement"_err_en_US);
+            } else if (name) {
+              bool foundMatch{false};
+              if (auto varDesignatorIndirection =
+                      std::get_if<Fortran::common::Indirection<
+                          Fortran::parser::Designator>>(&var.u)) {
+                const auto &varDesignator = varDesignatorIndirection->value();
+                if (const auto *dataRef = std::get_if<Fortran::parser::DataRef>(
+                        &varDesignator.u)) {
+                  if (const auto *name =
+                          std::get_if<Fortran::parser::Name>(&dataRef->u)) {
+                    const auto &varSymbol = *name->symbol;
+                    if (const auto *e{GetExpr(expr)}) {
+                      for (const Symbol &symbol :
+                          evaluate::CollectSymbols(*e)) {
+                        if (symbol == varSymbol) {
+                          foundMatch = true;
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              if (!foundMatch) {
+                context_.Say(expr.source,
+                    "Atomic update variable '%s' not found in the argument list of intrinsic procedure"_err_en_US,
+                    var.GetSource().ToString());
+              }
+            }
+          },
+          [&](const auto &x) {
+            if (!IsOperatorValid(x, var)) {
+              context_.Say(expr.source,
+                  "Invalid operator in OpenMP ATOMIC (UPDATE) statement"_err_en_US);
+            }
+          },
+      },
+      expr.u);
+}
+
+void OmpStructureChecker::CheckAtomicMemoryOrderClause(
+    const parser::OmpAtomicClauseList &clauseList) {
+  int numMemoryOrderClause = 0;
+  for (const auto &clause : clauseList.v) {
+    if (std::get_if<Fortran::parser::OmpMemoryOrderClause>(&clause.u)) {
+      numMemoryOrderClause++;
+      if (numMemoryOrderClause > 1) {
+        context_.Say(clause.source,
+            "More than one memory order clause not allowed on OpenMP Atomic construct"_err_en_US);
+        return;
+      }
+    }
+  }
+}
+
+void OmpStructureChecker::CheckAtomicMemoryOrderClause(
+    const parser::OmpAtomicClauseList &leftHandClauseList,
+    const parser::OmpAtomicClauseList &rightHandClauseList) {
+  int numMemoryOrderClause = 0;
+  for (const auto &clause : leftHandClauseList.v) {
+    if (std::get_if<Fortran::parser::OmpMemoryOrderClause>(&clause.u)) {
+      numMemoryOrderClause++;
+      if (numMemoryOrderClause > 1) {
+        context_.Say(clause.source,
+            "More than one memory order clause not allowed on OpenMP Atomic construct"_err_en_US);
+        return;
+      }
+    }
+  }
+  for (const auto &clause : rightHandClauseList.v) {
+    if (std::get_if<Fortran::parser::OmpMemoryOrderClause>(&clause.u)) {
+      numMemoryOrderClause++;
+      if (numMemoryOrderClause > 1) {
+        context_.Say(clause.source,
+            "More than one memory order clause not allowed on OpenMP Atomic construct"_err_en_US);
+        return;
+      }
+    }
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
   std::visit(
       common::visitors{
-          [&](const auto &someAtomicConstruct) {
-            const auto &dir{std::get<parser::Verbatim>(someAtomicConstruct.t)};
+          [&](const parser::OmpAtomic &atomicConstruct) {
+            const auto &dir{std::get<parser::Verbatim>(atomicConstruct.t)};
             PushContextAndClauseSets(
                 dir.source, llvm::omp::Directive::OMPD_atomic);
+            CheckAtomicUpdateAssignmentStmt(
+                std::get<parser::Statement<parser::AssignmentStmt>>(
+                    atomicConstruct.t)
+                    .statement);
+            CheckAtomicMemoryOrderClause(
+                std::get<parser::OmpAtomicClauseList>(atomicConstruct.t));
+          },
+          [&](const parser::OmpAtomicUpdate &atomicConstruct) {
+            const auto &dir{std::get<parser::Verbatim>(atomicConstruct.t)};
+            PushContextAndClauseSets(
+                dir.source, llvm::omp::Directive::OMPD_atomic);
+            CheckAtomicUpdateAssignmentStmt(
+                std::get<parser::Statement<parser::AssignmentStmt>>(
+                    atomicConstruct.t)
+                    .statement);
+            CheckAtomicMemoryOrderClause(
+                std::get<0>(atomicConstruct.t), std::get<2>(atomicConstruct.t));
+          },
+          [&](const auto &atomicConstruct) {
+            const auto &dir{std::get<parser::Verbatim>(atomicConstruct.t)};
+            PushContextAndClauseSets(
+                dir.source, llvm::omp::Directive::OMPD_atomic);
+            CheckAtomicMemoryOrderClause(
+                std::get<0>(atomicConstruct.t), std::get<2>(atomicConstruct.t));
           },
       },
       x.u);

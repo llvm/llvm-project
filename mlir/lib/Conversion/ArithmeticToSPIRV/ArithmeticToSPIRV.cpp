@@ -790,25 +790,25 @@ void mlir::arith::populateArithmeticToSPIRVPatterns(
   patterns.add<
     ConstantCompositeOpPattern,
     ConstantScalarOpPattern,
-    spirv::UnaryAndBinaryOpPattern<arith::AddIOp, spirv::IAddOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::SubIOp, spirv::ISubOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::MulIOp, spirv::IMulOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::DivUIOp, spirv::UDivOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::DivSIOp, spirv::SDivOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::RemUIOp, spirv::UModOp>,
+    spirv::ElementwiseOpPattern<arith::AddIOp, spirv::IAddOp>,
+    spirv::ElementwiseOpPattern<arith::SubIOp, spirv::ISubOp>,
+    spirv::ElementwiseOpPattern<arith::MulIOp, spirv::IMulOp>,
+    spirv::ElementwiseOpPattern<arith::DivUIOp, spirv::UDivOp>,
+    spirv::ElementwiseOpPattern<arith::DivSIOp, spirv::SDivOp>,
+    spirv::ElementwiseOpPattern<arith::RemUIOp, spirv::UModOp>,
     RemSIOpGLSLPattern, RemSIOpOCLPattern,
     BitwiseOpPattern<arith::AndIOp, spirv::LogicalAndOp, spirv::BitwiseAndOp>,
     BitwiseOpPattern<arith::OrIOp, spirv::LogicalOrOp, spirv::BitwiseOrOp>,
     XOrIOpLogicalPattern, XOrIOpBooleanPattern,
-    spirv::UnaryAndBinaryOpPattern<arith::ShLIOp, spirv::ShiftLeftLogicalOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::ShRUIOp, spirv::ShiftRightLogicalOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::ShRSIOp, spirv::ShiftRightArithmeticOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::NegFOp, spirv::FNegateOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::AddFOp, spirv::FAddOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::SubFOp, spirv::FSubOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::MulFOp, spirv::FMulOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::DivFOp, spirv::FDivOp>,
-    spirv::UnaryAndBinaryOpPattern<arith::RemFOp, spirv::FRemOp>,
+    spirv::ElementwiseOpPattern<arith::ShLIOp, spirv::ShiftLeftLogicalOp>,
+    spirv::ElementwiseOpPattern<arith::ShRUIOp, spirv::ShiftRightLogicalOp>,
+    spirv::ElementwiseOpPattern<arith::ShRSIOp, spirv::ShiftRightArithmeticOp>,
+    spirv::ElementwiseOpPattern<arith::NegFOp, spirv::FNegateOp>,
+    spirv::ElementwiseOpPattern<arith::AddFOp, spirv::FAddOp>,
+    spirv::ElementwiseOpPattern<arith::SubFOp, spirv::FSubOp>,
+    spirv::ElementwiseOpPattern<arith::MulFOp, spirv::FMulOp>,
+    spirv::ElementwiseOpPattern<arith::DivFOp, spirv::FDivOp>,
+    spirv::ElementwiseOpPattern<arith::RemFOp, spirv::FRemOp>,
     TypeCastingOpPattern<arith::ExtUIOp, spirv::UConvertOp>, ExtUII1Pattern,
     TypeCastingOpPattern<arith::ExtSIOp, spirv::SConvertOp>,
     TypeCastingOpPattern<arith::ExtFOp, spirv::FConvertOp>,
@@ -837,7 +837,7 @@ void mlir::arith::populateArithmeticToSPIRVPatterns(
 namespace {
 struct ConvertArithmeticToSPIRVPass
     : public ConvertArithmeticToSPIRVBase<ConvertArithmeticToSPIRVPass> {
-  void runOnFunction() override {
+  void runOnOperation() override {
     auto module = getOperation()->getParentOfType<ModuleOp>();
     auto targetAttr = spirv::lookupTargetEnvOrDefault(module);
     auto target = SPIRVConversionTarget::get(targetAttr);

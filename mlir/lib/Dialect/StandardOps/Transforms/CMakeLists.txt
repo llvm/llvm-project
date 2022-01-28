@@ -1,8 +1,6 @@
 add_mlir_dialect_library(MLIRStandardOpsTransforms
   Bufferize.cpp
-  ComposeSubView.cpp
   DecomposeCallGraphTypes.cpp
-  ExpandOps.cpp
   FuncBufferize.cpp
   FuncConversions.cpp
   TensorConstantBufferize.cpp
@@ -14,6 +12,7 @@ add_mlir_dialect_library(MLIRStandardOpsTransforms
   MLIRStandardTransformsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAffine
   MLIRArithmeticTransforms
   MLIRBufferizationTransforms
   MLIRIR
