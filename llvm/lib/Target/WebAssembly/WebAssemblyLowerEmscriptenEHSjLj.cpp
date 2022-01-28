@@ -630,9 +630,9 @@ static bool canLongjmp(const Value *Callee) {
 
   // Exception-catching related functions
   //
-  // We intentionally excluded __cxa_end_catch here even though it surely cannot
-  // longjmp, in order to maintain the unwind relationship from all existing
-  // catchpads (and calls within them) to catch.dispatch.longjmp.
+  // We intentionally treat __cxa_end_catch longjmpable in Wasm SjLj even though
+  // it surely cannot longjmp, in order to maintain the unwind relationship from
+  // all existing catchpads (and calls within them) to catch.dispatch.longjmp.
   //
   // In Wasm EH + Wasm SjLj, we
   // 1. Make all catchswitch and cleanuppad that unwind to caller unwind to
@@ -663,6 +663,8 @@ static bool canLongjmp(const Value *Callee) {
   //
   // The comment block in findWasmUnwindDestinations() in
   // SelectionDAGBuilder.cpp is addressing a similar problem.
+  if (CalleeName == "__cxa_end_catch")
+    return WebAssembly::WasmEnableSjLj;
   if (CalleeName == "__cxa_begin_catch" ||
       CalleeName == "__cxa_allocate_exception" || CalleeName == "__cxa_throw" ||
       CalleeName == "__clang_call_terminate")
