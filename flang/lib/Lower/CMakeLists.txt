@@ -6,7 +6,6 @@ add_flang_library(FortranLower
   Coarray.cpp
   ComplexExpr.cpp
   ConvertType.cpp
-  DoLoopHelper.cpp
   IntrinsicCall.cpp
   IO.cpp
   Mangler.cpp
