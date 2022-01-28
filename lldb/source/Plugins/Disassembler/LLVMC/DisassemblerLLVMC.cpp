@@ -1097,19 +1097,19 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
       thumb_arch_name.erase(0, 3);
       thumb_arch_name.insert(0, "thumb");
     } else {
-      thumb_arch_name = "thumbv8.7a";
+      thumb_arch_name = "thumbv9.3a";
     }
     thumb_arch.GetTriple().setArchName(llvm::StringRef(thumb_arch_name));
   }
 
   // If no sub architecture specified then use the most recent arm architecture
-  // so the disassembler will return all instruction. Without it we will see a
-  // lot of unknow opcode in case the code uses instructions which are not
-  // available in the oldest arm version (used when no sub architecture is
-  // specified)
+  // so the disassembler will return all instructions. Without it we will see a
+  // lot of unknown opcodes if the code uses instructions which are not
+  // available in the oldest arm version (which is used when no sub architecture
+  // is specified).
   if (triple.getArch() == llvm::Triple::arm &&
       triple.getSubArch() == llvm::Triple::NoSubArch)
-    triple.setArchName("armv8.7a");
+    triple.setArchName("armv9.3a");
 
   std::string features_str;
   const char *triple_str = triple.getTriple().c_str();
@@ -1179,9 +1179,9 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
   }
 
   // If any AArch64 variant, enable latest ISA with any optional
-  // extensions like SVE.
+  // extensions like MTE.
   if (triple.isAArch64()) {
-    features_str += "+v8.7a,+sve2,+mte";
+    features_str += "+v9.3a,+mte";
 
     if (triple.getVendor() == llvm::Triple::Apple)
       cpu = "apple-latest";
