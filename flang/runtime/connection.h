@@ -22,8 +22,6 @@ class IoStatementState;
 enum class Direction { Output, Input };
 enum class Access { Sequential, Direct, Stream };
 
-inline bool IsRecordFile(Access a) { return a != Access::Stream; }
-
 // These characteristics of a connection are immutable after being
 // established in an OPEN statement.
 struct ConnectionAttributes {
@@ -31,6 +29,11 @@ struct ConnectionAttributes {
   std::optional<bool> isUnformatted; // FORM='UNFORMATTED' if true
   bool isUTF8{false}; // ENCODING='UTF-8'
   std::optional<std::int64_t> openRecl; // RECL= on OPEN
+
+  bool IsRecordFile() const {
+    // Formatted stream files are viewed as having records, at least on input
+    return access != Access::Stream || !isUnformatted.value_or(true);
+  }
 };
 
 struct ConnectionState : public ConnectionAttributes {

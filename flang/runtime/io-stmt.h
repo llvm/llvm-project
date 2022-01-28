@@ -142,7 +142,7 @@ public:
       }
       SkipSpaces(remaining);
     }
-    return NextInField(remaining);
+    return NextInField(remaining, edit);
   }
 
   std::optional<char32_t> SkipSpaces(std::optional<int> &remaining) {
@@ -163,59 +163,10 @@ public:
     return std::nullopt;
   }
 
+  // Acquires the next input character, respecting any applicable field width
+  // or separator character.
   std::optional<char32_t> NextInField(
-      std::optional<int> &remaining, char32_t decimal = '.') {
-    if (!remaining) { // list-directed or NAMELIST: check for separators
-      if (auto next{GetCurrentChar()}) {
-        if (*next == decimal) { // can be ','
-          HandleRelativePosition(1);
-          return next;
-        }
-        switch (*next) {
-        case ' ':
-        case '\t':
-        case ',':
-        case ';':
-        case '/':
-        case '(':
-        case ')':
-        case '\'':
-        case '"':
-        case '*':
-        case '\n': // for stream access
-          break;
-        default:
-          HandleRelativePosition(1);
-          return next;
-        }
-      }
-    } else if (*remaining > 0) {
-      if (auto next{GetCurrentChar()}) {
-        --*remaining;
-        HandleRelativePosition(1);
-        GotChar();
-        return next;
-      }
-      const ConnectionState &connection{GetConnectionState()};
-      if (!connection.IsAtEOF()) {
-        if (auto length{connection.EffectiveRecordLength()}) {
-          if (connection.positionInRecord >= *length) {
-            IoErrorHandler &handler{GetIoErrorHandler()};
-            if (mutableModes().nonAdvancing) {
-              handler.SignalEor();
-            } else if (connection.openRecl && !connection.modes.pad) {
-              handler.SignalError(IostatRecordReadOverrun);
-            }
-            if (connection.modes.pad) { // PAD='YES'
-              --*remaining;
-              return std::optional<char32_t>{' '};
-            }
-          }
-        }
-      }
-    }
-    return std::nullopt;
-  }
+      std::optional<int> &remaining, const DataEdit &);
 
   // Skips spaces, advances records, and ignores NAMELIST comments
   std::optional<char32_t> GetNextNonBlank() {
