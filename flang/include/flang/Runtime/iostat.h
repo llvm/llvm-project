@@ -45,7 +45,7 @@ enum Iostat {
   IostatInternalWriteOverrun,
   IostatErrorInFormat,
   IostatErrorInKeyword,
-  IostatEndfileNonSequential,
+  IostatEndfileDirect,
   IostatEndfileUnwritable,
   IostatOpenBadRecl,
   IostatOpenUnknownSize,

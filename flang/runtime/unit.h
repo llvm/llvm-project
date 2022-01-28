@@ -90,10 +90,10 @@ public:
   void Endfile(IoErrorHandler &);
   void Rewind(IoErrorHandler &);
   void EndIoStatement();
-  void SetPosition(std::int64_t pos) {
-    frameOffsetInFile_ = pos;
-    recordOffsetInFrame_ = 0;
-    BeginRecord();
+  void SetPosition(std::int64_t, IoErrorHandler &); // zero-based
+  std::int64_t InquirePos() const {
+    // 12.6.2.11 defines POS=1 as the beginning of file
+    return frameOffsetInFile_ + 1;
   }
 
   ChildIo *GetChildIo() { return child_.get(); }
@@ -104,18 +104,18 @@ private:
   static UnitMap &GetUnitMap();
   const char *FrameNextInput(IoErrorHandler &, std::size_t);
   void BeginSequentialVariableUnformattedInputRecord(IoErrorHandler &);
-  void BeginSequentialVariableFormattedInputRecord(IoErrorHandler &);
+  void BeginVariableFormattedInputRecord(IoErrorHandler &);
   void BackspaceFixedRecord(IoErrorHandler &);
   void BackspaceVariableUnformattedRecord(IoErrorHandler &);
   void BackspaceVariableFormattedRecord(IoErrorHandler &);
-  bool SetSequentialVariableFormattedRecordLength();
+  bool SetVariableFormattedRecordLength();
   void DoImpliedEndfile(IoErrorHandler &);
   void DoEndfile(IoErrorHandler &);
   void CommitWrites();
 
   int unitNumber_{-1};
   Direction direction_{Direction::Output};
-  bool impliedEndfile_{false}; // seq. output has taken place
+  bool impliedEndfile_{false}; // sequential/stream output has taken place
   bool beganReadingRecord_{false};
 
   Lock lock_;
