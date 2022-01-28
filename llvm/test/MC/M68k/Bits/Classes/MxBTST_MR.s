@@ -7,6 +7,20 @@ btst	%d0, (%a1)
 ; CHECK-SAME: encoding: [0x03,0x10]
 btst	%d1, (%a0)
 
+; CHECK:      btst  %d0, (%a1)+
+; CHECK-SAME: encoding: [0x01,0x19]
+btst	%d0, (%a1)+
+; CHECK:      btst  %d1, (%a0)+
+; CHECK-SAME: encoding: [0x03,0x18]
+btst	%d1, (%a0)+
+
+; CHECK:      btst  %d0, -(%a1)
+; CHECK-SAME: encoding: [0x01,0x21]
+btst	%d0, -(%a1)
+; CHECK:      btst  %d1, -(%a0)
+; CHECK-SAME: encoding: [0x03,0x20]
+btst	%d1, -(%a0)
+
 ; CHECK:      btst  %d0, (-1,%a1)
 ; CHECK-SAME: encoding: [0x01,0x29,0xff,0xff]
 btst	%d0, (-1,%a1)

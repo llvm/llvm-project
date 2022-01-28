@@ -79,6 +79,10 @@ def BTST32di : MxBTST_RI<MxType32d>;
 // Memory BTST limited to 8 bits only
 def BTST8jd : MxBTST_MR<MxType8d, MxType8.JOp, MxType8.JPat,
                         MxEncEAj_0, MxExtEmpty>;
+def BTST8od : MxBTST_MR<MxType8d, MxType8.OOp, MxType8.OPat,
+                        MxEncEAo_0, MxExtEmpty>;
+def BTST8ed : MxBTST_MR<MxType8d, MxType8.EOp, MxType8.EPat,
+                        MxEncEAe_0, MxExtEmpty>;
 def BTST8pd : MxBTST_MR<MxType8d, MxType8.POp, MxType8.PPat,
                         MxEncEAp_0, MxExtI16_0>;
 def BTST8fd : MxBTST_MR<MxType8d, MxType8.FOp, MxType8.FPat,
@@ -90,6 +94,10 @@ def BTST8kd : MxBTST_MR<MxType8d, MxType8.KOp, MxType8.KPat,
 
 def BTST8ji : MxBTST_MI<MxType8d, MxType8.JOp, MxType8.JPat,
                         MxEncEAj_0, MxExtEmpty>;
+def BTST8oi : MxBTST_MI<MxType8d, MxType8.OOp, MxType8.OPat,
+                        MxEncEAo_0, MxExtEmpty>;
+def BTST8ei : MxBTST_MI<MxType8d, MxType8.EOp, MxType8.EPat,
+                        MxEncEAe_0, MxExtEmpty>;
 def BTST8pi : MxBTST_MI<MxType8d, MxType8.POp, MxType8.PPat,
                         MxEncEAp_0, MxExtI16_0>;
 def BTST8fi : MxBTST_MI<MxType8d, MxType8.FOp, MxType8.FPat,
