@@ -3746,6 +3746,10 @@ SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
   if (OpVT != MVT::f16 && OpVT != MVT::bf16)
     return SDValue();
 
+  // Bitcasts between f16 and bf16 are legal.
+  if (ArgVT == MVT::f16 || ArgVT == MVT::bf16)
+    return Op;
+
   assert(ArgVT == MVT::i16);
   SDLoc DL(Op);
 

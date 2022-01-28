@@ -7546,6 +7546,9 @@ def : Pat<(i64 (bitconvert (f64 FPR64:$Xn))),
 def : Pat<(i64 (bitconvert (v1f64 V64:$Vn))),
           (COPY_TO_REGCLASS V64:$Vn, GPR64)>;
 
+def : Pat<(f16 (bitconvert (bf16 FPR16:$src))), (f16 FPR16:$src)>;
+def : Pat<(bf16 (bitconvert (f16 FPR16:$src))), (bf16 FPR16:$src)>;
+
 let Predicates = [IsLE] in {
 def : Pat<(v1i64 (bitconvert (v2i32 FPR64:$src))), (v1i64 FPR64:$src)>;
 def : Pat<(v1i64 (bitconvert (v4i16 FPR64:$src))), (v1i64 FPR64:$src)>;
