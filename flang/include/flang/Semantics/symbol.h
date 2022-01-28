@@ -665,6 +665,11 @@ public:
   // for a parameterized derived type instantiation with the instance's scope.
   const DerivedTypeSpec *GetParentTypeSpec(const Scope * = nullptr) const;
 
+  // If a derived type's symbol refers to an extended derived type,
+  // return the parent component's symbol.  The scope of the derived type
+  // can be overridden.
+  const Symbol *GetParentComponent(const Scope * = nullptr) const;
+
   SemanticsContext &GetSemanticsContext() const;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
@@ -685,11 +690,6 @@ private:
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Symbol &);
   friend llvm::raw_ostream &DumpForUnparse(
       llvm::raw_ostream &, const Symbol &, bool);
-
-  // If a derived type's symbol refers to an extended derived type,
-  // return the parent component's symbol.  The scope of the derived type
-  // can be overridden.
-  const Symbol *GetParentComponent(const Scope * = nullptr) const;
 
   template <std::size_t> friend class Symbols;
   template <class, std::size_t> friend class std::array;
