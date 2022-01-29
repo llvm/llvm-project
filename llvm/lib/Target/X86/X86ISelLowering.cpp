@@ -29915,7 +29915,7 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
     }
 
     // Attempt to fold per-element (ExtVT) shift as unpack(y,x) << zext(z)
-    if ((IsCst && !IsFSHR && EltSizeInBits == 8) ||
+    if (((IsCst || !Subtarget.hasAVX512()) && !IsFSHR && EltSizeInBits == 8) ||
         supportedVectorVarShift(ExtVT, Subtarget, ShiftOpc)) {
       SDValue Z = DAG.getConstant(0, DL, VT);
       SDValue RLo = DAG.getBitcast(ExtVT, getUnpackl(DAG, DL, VT, Op1, Op0));
