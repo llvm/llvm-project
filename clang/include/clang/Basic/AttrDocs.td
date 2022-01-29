@@ -432,7 +432,7 @@ implementation detail and not intended to be used by external users.
 
 The syntax of the attribute is as follows:
 
-.. code-block:: c++
+.. code-block:: text
 
   class __attribute__((sycl_special_class)) accessor {};
   class [[clang::sycl_special_class]] accessor {};
