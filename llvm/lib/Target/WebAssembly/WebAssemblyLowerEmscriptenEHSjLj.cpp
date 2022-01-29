@@ -875,7 +875,7 @@ static void nullifySetjmp(Function *F) {
   SmallVector<Instruction *, 1> ToErase;
 
   for (User *U : make_early_inc_range(SetjmpF->users())) {
-    auto *CB = dyn_cast<CallBase>(U);
+    auto *CB = cast<CallBase>(U);
     BasicBlock *BB = CB->getParent();
     if (BB->getParent() != F) // in other function
       continue;
@@ -1320,7 +1320,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   SmallVector<PHINode *, 4> SetjmpRetPHIs;
   Function *SetjmpF = M.getFunction("setjmp");
   for (auto *U : make_early_inc_range(SetjmpF->users())) {
-    auto *CB = dyn_cast<CallBase>(U);
+    auto *CB = cast<CallBase>(U);
     BasicBlock *BB = CB->getParent();
     if (BB->getParent() != &F) // in other function
       continue;
