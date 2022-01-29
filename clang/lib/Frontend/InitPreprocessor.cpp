@@ -25,6 +25,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
 using namespace clang;
 
 static bool MacroBodyEndsInBackslash(StringRef MacroBody) {
@@ -913,6 +914,13 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   Builder.defineMacro("__INT_WIDTH__", Twine(TI.getIntWidth()));
   Builder.defineMacro("__LONG_WIDTH__", Twine(TI.getLongWidth()));
   Builder.defineMacro("__LLONG_WIDTH__", Twine(TI.getLongLongWidth()));
+
+  size_t BitIntMaxWidth = TI.getMaxBitIntWidth();
+  assert(BitIntMaxWidth <= llvm::IntegerType::MAX_INT_BITS &&
+         "Target defined a max bit width larger than LLVM can support!");
+  assert(BitIntMaxWidth >= TI.getLongLongWidth() &&
+         "Target defined a max bit width smaller than the C standard allows!");
+  Builder.defineMacro("__BITINT_MAXWIDTH__", Twine(BitIntMaxWidth));
 
   DefineTypeSize("__SCHAR_MAX__", TargetInfo::SignedChar, TI, Builder);
   DefineTypeSize("__SHRT_MAX__", TargetInfo::SignedShort, TI, Builder);
