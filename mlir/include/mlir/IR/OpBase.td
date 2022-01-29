@@ -903,41 +903,38 @@ class NestedTupleOf<list<Type> allowedTypes> :
 //===----------------------------------------------------------------------===//
 // Common type constraints
 //===----------------------------------------------------------------------===//
+// Type constraint for types that are "like" some type or set of types T, that is
+// they're either a T, a vector of Ts, or a tensor of Ts
+class TypeOrContainer<Type allowedType, string name> : TypeConstraint<Or<[
+  allowedType.predicate, VectorOf<[allowedType]>.predicate,
+  TensorOf<[allowedType]>.predicate]>,
+  name>;
+
+// Temporary constraint to allow gradual transition to supporting 0-D vectors.
+// TODO: Remove this when all ops support 0-D vectors.
+class TypeOrContainerOfAnyRank<Type allowedType, string name> : TypeConstraint<Or<[
+  allowedType.predicate, VectorOfAnyRankOf<[allowedType]>.predicate,
+  TensorOf<[allowedType]>.predicate]>,
+  name>;
+
 
 // Type constraint for bool-like types: bools, vectors of bools, tensors of
 // bools.
-def BoolLike : TypeConstraint<Or<[I1.predicate, VectorOf<[I1]>.predicate,
-                                  TensorOf<[I1]>.predicate]>,
-    "bool-like">;
+def BoolLike : TypeOrContainer<I1, "bool-like">;
 
-// Temporary constraint to allow gradual transition to supporting 0-D vectors.
-// TODO: Remove this when all ops support 0-D vectors.
-def BoolLikeOfAnyRank : TypeConstraint<Or<[
-        I1.predicate,
-        VectorOfAnyRankOf<[I1]>.predicate,
-        TensorOf<[I1]>.predicate]>,
-    "bool-like">;
+def BoolLikeOfAnyRank : TypeOrContainerOfAnyRank<I1, "bool-like">;
 
 // Type constraint for signless-integer-like types: signless integers, indices,
 // vectors of signless integers or indices, tensors of signless integers.
-def SignlessIntegerLike : TypeConstraint<Or<[
-        AnySignlessIntegerOrIndex.predicate,
-        VectorOf<[AnySignlessIntegerOrIndex]>.predicate,
-        TensorOf<[AnySignlessIntegerOrIndex]>.predicate]>,
+def SignlessIntegerLike : TypeOrContainer<AnySignlessIntegerOrIndex,
     "signless-integer-like">;
 
-// Temporary constraint to allow gradual transition to supporting 0-D vectors.
-// TODO: Remove this when all ops support 0-D vectors.
-def SignlessIntegerLikeOfAnyRank : TypeConstraint<Or<[
-        AnySignlessIntegerOrIndex.predicate,
-        VectorOfAnyRankOf<[AnySignlessIntegerOrIndex]>.predicate,
-        TensorOf<[AnySignlessIntegerOrIndex]>.predicate]>,
+def SignlessIntegerLikeOfAnyRank : TypeOrContainerOfAnyRank<
+    AnySignlessIntegerOrIndex,
     "signless-integer-like">;
 
 // Type constraint for float-like types: floats, vectors or tensors thereof.
-def FloatLike : TypeConstraint<Or<[AnyFloat.predicate,
-        VectorOf<[AnyFloat]>.predicate, TensorOf<[AnyFloat]>.predicate]>,
-    "floating-point-like">;
+def FloatLike : TypeOrContainer<AnyFloat, "floating-point-like">;
 
 // Type constraint for signless-integer-like or float-like types.
 def SignlessIntegerOrFloatLike : TypeConstraint<Or<[
