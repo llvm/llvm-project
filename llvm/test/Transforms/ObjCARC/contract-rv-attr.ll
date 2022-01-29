@@ -2,8 +2,8 @@
 ; RUN: opt -passes=objc-arc-contract -S < %s | FileCheck %s
 
 ; CHECK-LABEL: define void @test0() {
-; CHECK: %[[CALL:.*]] = notail call i8* @foo() [ "clang.arc.attachedcall"() ]
-; CHECK: call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %[[CALL]])
+; CHECK: %[[CALL:.*]] = notail call i8* @foo() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+; CHECK-NOT: call i8* @llvm.objc.retainAutoreleasedReturnValue(
 
 define void @test0() {
   %call1 = call i8* @foo() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
@@ -11,8 +11,8 @@ define void @test0() {
 }
 
 ; CHECK-LABEL: define void @test1() {
-; CHECK: %[[CALL:.*]] = notail call i8* @foo() [ "clang.arc.attachedcall"() ]
-; CHECK: call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* %[[CALL]])
+; CHECK: %[[CALL:.*]] = notail call i8* @foo() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
+; CHECK-NOT: call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(
 
 define void @test1() {
   %call1 = call i8* @foo() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
@@ -20,15 +20,15 @@ define void @test1() {
 }
 
 ; CHECK-LABEL:define i8* @test2(
-; CHECK: %[[CALL1:.*]] = invoke i8* @foo() [ "clang.arc.attachedcall"() ]
+; CHECK: %[[V0:.*]] = invoke i8* @foo() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
 
-; CHECK: %[[V0:.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %[[CALL1]])
-; CHECK-NEXT: br
+; CHECK-NOT: = call i8* @llvm.objc.retainAutoreleasedReturnValue(
+; CHECK: br
 
-; CHECK: %[[CALL3:.*]] = invoke i8* @foo() [ "clang.arc.attachedcall"() ]
+; CHECK: %[[V2:.*]] = invoke i8* @foo() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
 
-; CHECK: %[[V2:.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %[[CALL3]])
-; CHECK-NEXT: br
+; CHECK-NOT: = call i8* @llvm.objc.retainAutoreleasedReturnValue(
+; CHECK: br
 
 ; CHECK: %[[RETVAL:.*]] = phi i8* [ %[[V0]], {{.*}} ], [ %[[V2]], {{.*}} ]
 ; CHECK: ret i8* %[[RETVAL]]

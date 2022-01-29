@@ -123,20 +123,9 @@ BundledRetainClaimRVs::~BundledRetainClaimRVs() {
       // can't be tail calls.
       if (auto *CI = dyn_cast<CallInst>(CB))
         CI->setTailCallKind(CallInst::TCK_NoTail);
-
-      if (UseMarker) {
-        // Remove the retainRV/claimRV function operand from the operand bundle
-        // to reflect the fact that the backend is responsible for emitting only
-        // the marker instruction, but not the retainRV/claimRV call.
-        OperandBundleDef OB("clang.arc.attachedcall", None);
-        auto *NewCB = CallBase::Create(CB, OB, CB);
-        CB->replaceAllUsesWith(NewCB);
-        CB->eraseFromParent();
-      }
     }
 
-    if (!ContractPass || !UseMarker)
-      EraseInstruction(P.first);
+    EraseInstruction(P.first);
   }
 
   RVCalls.clear();
