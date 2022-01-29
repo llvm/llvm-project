@@ -14,8 +14,8 @@
 set(LIBOMPTARGET_BUILD_NVPTX_BCLIB FALSE CACHE BOOL
   "Whether build NVPTX deviceRTL on CUDA free system.")
 
-if (NOT (LIBOMPTARGET_DEP_CUDA_FOUND OR LIBOMPTARGET_BUILD_NVPTX_BCLIB))
-  libomptarget_say("Not building NVPTX deviceRTL by default on CUDA free system.")
+if (NOT LIBOMPTARGET_BUILD_NVPTX_BCLIB)
+  libomptarget_say("Not building NVPTX deviceRTL: Disabled by LIBOMPTARGET_BUILD_NVPTX_BCLIB")
   return()
 endif()
 
