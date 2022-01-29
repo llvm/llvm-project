@@ -21,8 +21,6 @@ namespace clang {
 class Expr;
 } // namespace clang
 
-using namespace clang;
-
 namespace cir {
 
 // FIXME: for now we are reusing this from lib/Clang/CodeGenFunction.h, which
@@ -33,20 +31,20 @@ class CIRGenFunction {
 public:
   /// If a return statement is being visited, this holds the return statment's
   /// result expression.
-  const Expr *RetExpr = nullptr;
+  const clang::Expr *RetExpr = nullptr;
 
   mlir::Value RetValue = nullptr;
   mlir::Type FnRetTy;
   clang::QualType FnRetQualTy;
 
   ///  Return the TypeEvaluationKind of QualType \c T.
-  static TypeEvaluationKind getEvaluationKind(QualType T);
+  static TypeEvaluationKind getEvaluationKind(clang::QualType T);
 
-  static bool hasScalarEvaluationKind(QualType T) {
+  static bool hasScalarEvaluationKind(clang::QualType T) {
     return getEvaluationKind(T) == TEK_Scalar;
   }
 
-  static bool hasAggregateEvaluationKind(QualType T) {
+  static bool hasAggregateEvaluationKind(clang::QualType T) {
     return getEvaluationKind(T) == TEK_Aggregate;
   }
 

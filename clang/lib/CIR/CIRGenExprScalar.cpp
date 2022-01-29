@@ -8,11 +8,11 @@
 #include "mlir/IR/Value.h"
 
 using namespace cir;
+using namespace clang;
 
 namespace {
 
-class ScalarExprEmitter
-    : public clang::StmtVisitor<ScalarExprEmitter, mlir::Value> {
+class ScalarExprEmitter : public StmtVisitor<ScalarExprEmitter, mlir::Value> {
   LLVM_ATTRIBUTE_UNUSED CIRGenFunction &CGF;
   CIRGenModule &CGM;
   mlir::OpBuilder &Builder;
@@ -22,12 +22,12 @@ public:
                     mlir::OpBuilder &builder)
       : CGF(cgf), CGM(cgm), Builder(builder) {}
 
-  mlir::Value Visit(clang::Expr *E) {
+  mlir::Value Visit(Expr *E) {
     return StmtVisitor<ScalarExprEmitter, mlir::Value>::Visit(E);
   }
 
   /// Emits the address of the l-value, then loads and returns the result.
-  mlir::Value buildLoadOfLValue(const clang::Expr *E) {
+  mlir::Value buildLoadOfLValue(const Expr *E) {
     LValue LV = CGM.buildLValue(E);
     auto load = Builder.create<mlir::cir::LoadOp>(
         CGM.getLoc(E->getExprLoc()), CGM.getCIRType(E->getType()),
@@ -37,7 +37,7 @@ public:
   }
 
   // Handle l-values.
-  mlir::Value VisitDeclRefExpr(clang::DeclRefExpr *E) {
+  mlir::Value VisitDeclRefExpr(DeclRefExpr *E) {
     // FIXME: we could try to emit this as constant first, see
     // CGF.tryEmitAsConstant(E)
     return buildLoadOfLValue(E);
@@ -47,16 +47,16 @@ public:
   // casts have to handle a more broad range of conversions than explicit
   // casts, as they handle things like function to ptr-to-function decay
   // etc.
-  mlir::Value VisitCastExpr(clang::CastExpr *CE) {
-    clang::Expr *E = CE->getSubExpr();
-    clang::QualType DestTy = CE->getType();
-    clang::CastKind Kind = CE->getCastKind();
+  mlir::Value VisitCastExpr(CastExpr *CE) {
+    Expr *E = CE->getSubExpr();
+    QualType DestTy = CE->getType();
+    CastKind Kind = CE->getCastKind();
     switch (Kind) {
-    case clang::CK_LValueToRValue:
+    case CK_LValueToRValue:
       assert(CGM.getASTContext().hasSameUnqualifiedType(E->getType(), DestTy));
       assert(E->isGLValue() && "lvalue-to-rvalue applied to r-value!");
-      return Visit(const_cast<clang::Expr *>(E));
-    case clang::CK_NullToPointer: {
+      return Visit(const_cast<Expr *>(E));
+    case CK_NullToPointer: {
       // FIXME: use MustVisitNullValue(E) and evaluate expr.
       // Note that DestTy is used as the MLIR type instead of a custom
       // nullptr type.
@@ -65,7 +65,7 @@ public:
           CGM.getLoc(E->getExprLoc()), Ty,
           mlir::cir::NullAttr::get(Builder.getContext(), Ty));
     }
-    case clang::CK_IntegralToBoolean: {
+    case CK_IntegralToBoolean: {
       return buildIntToBoolConversion(Visit(E),
                                       CGM.getLoc(CE->getSourceRange()));
     }
@@ -77,13 +77,12 @@ public:
     }
   }
 
-  mlir::Value VisitUnaryAddrOf(const clang::UnaryOperator *E) {
-    assert(!llvm::isa<clang::MemberPointerType>(E->getType()) &&
-           "not implemented");
+  mlir::Value VisitUnaryAddrOf(const UnaryOperator *E) {
+    assert(!llvm::isa<MemberPointerType>(E->getType()) && "not implemented");
     return CGM.buildLValue(E->getSubExpr()).getPointer();
   }
 
-  mlir::Value VisitCXXBoolLiteralExpr(const clang::CXXBoolLiteralExpr *E) {
+  mlir::Value VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E) {
     mlir::Type Ty = CGM.getCIRType(E->getType());
     return Builder.create<mlir::cir::ConstantOp>(
         CGM.getLoc(E->getExprLoc()), Ty, Builder.getBoolAttr(E->getValue()));
@@ -92,17 +91,16 @@ public:
   struct BinOpInfo {
     mlir::Value LHS;
     mlir::Value RHS;
-    clang::SourceRange Loc;
-    clang::QualType Ty;                   // Computation Type.
-    clang::BinaryOperator::Opcode Opcode; // Opcode of BinOp to perform
-    clang::FPOptions FPFeatures;
-    const clang::Expr
-        *E; // Entire expr, for error unsupported.  May not be binop.
+    SourceRange Loc;
+    QualType Ty;                   // Computation Type.
+    BinaryOperator::Opcode Opcode; // Opcode of BinOp to perform
+    FPOptions FPFeatures;
+    const Expr *E; // Entire expr, for error unsupported.  May not be binop.
 
     /// Check if the binop computes a division or a remainder.
     bool isDivremOp() const {
-      return Opcode == clang::BO_Div || Opcode == clang::BO_Rem ||
-             Opcode == clang::BO_DivAssign || Opcode == clang::BO_RemAssign;
+      return Opcode == BO_Div || Opcode == BO_Rem || Opcode == BO_DivAssign ||
+             Opcode == BO_RemAssign;
     }
 
     /// Check if at least one operand is a fixed point type. In such cases,
@@ -111,18 +109,18 @@ public:
     bool isFixedPointOp() const {
       // We cannot simply check the result type since comparison operations
       // return an int.
-      if (const auto *BinOp = llvm::dyn_cast<clang::BinaryOperator>(E)) {
-        clang::QualType LHSType = BinOp->getLHS()->getType();
-        clang::QualType RHSType = BinOp->getRHS()->getType();
+      if (const auto *BinOp = llvm::dyn_cast<BinaryOperator>(E)) {
+        QualType LHSType = BinOp->getLHS()->getType();
+        QualType RHSType = BinOp->getRHS()->getType();
         return LHSType->isFixedPointType() || RHSType->isFixedPointType();
       }
-      if (const auto *UnOp = llvm::dyn_cast<clang::UnaryOperator>(E))
+      if (const auto *UnOp = llvm::dyn_cast<UnaryOperator>(E))
         return UnOp->getSubExpr()->getType()->isFixedPointType();
       return false;
     }
   };
 
-  BinOpInfo buildBinOps(const clang::BinaryOperator *E) {
+  BinOpInfo buildBinOps(const BinaryOperator *E) {
     BinOpInfo Result;
     Result.LHS = Visit(E->getLHS());
     Result.RHS = Visit(E->getRHS());
@@ -187,7 +185,7 @@ public:
 
   // Binary operators and binary compound assignment operators.
 #define HANDLEBINOP(OP)                                                        \
-  mlir::Value VisitBin##OP(const clang::BinaryOperator *E) {                   \
+  mlir::Value VisitBin##OP(const BinaryOperator *E) {                          \
     return build##OP(buildBinOps(E));                                          \
   }
   HANDLEBINOP(Mul)
@@ -202,13 +200,12 @@ public:
   HANDLEBINOP(Or)
 #undef HANDLEBINOP
 
-  mlir::Value buildCmp(const clang::BinaryOperator *E) {
+  mlir::Value buildCmp(const BinaryOperator *E) {
     mlir::Value Result;
-    clang::QualType LHSTy = E->getLHS()->getType();
-    clang::QualType RHSTy = E->getRHS()->getType();
+    QualType LHSTy = E->getLHS()->getType();
+    QualType RHSTy = E->getRHS()->getType();
 
-    if (const clang::MemberPointerType *MPT =
-            LHSTy->getAs<clang::MemberPointerType>()) {
+    if (const MemberPointerType *MPT = LHSTy->getAs<MemberPointerType>()) {
       assert(0 && "not implemented");
     } else if (!LHSTy->isAnyComplexType() && !RHSTy->isAnyComplexType()) {
       BinOpInfo BOInfo = buildBinOps(E);
@@ -240,22 +237,22 @@ public:
 
         mlir::cir::CmpOpKind Kind;
         switch (E->getOpcode()) {
-        case clang::BO_LT:
+        case BO_LT:
           Kind = mlir::cir::CmpOpKind::lt;
           break;
-        case clang::BO_GT:
+        case BO_GT:
           Kind = mlir::cir::CmpOpKind::gt;
           break;
-        case clang::BO_LE:
+        case BO_LE:
           Kind = mlir::cir::CmpOpKind::le;
           break;
-        case clang::BO_GE:
+        case BO_GE:
           Kind = mlir::cir::CmpOpKind::ge;
           break;
-        case clang::BO_EQ:
+        case BO_EQ:
           Kind = mlir::cir::CmpOpKind::eq;
           break;
-        case clang::BO_NE:
+        case BO_NE:
           Kind = mlir::cir::CmpOpKind::ne;
           break;
         default:
@@ -281,9 +278,7 @@ public:
   }
 
 #define VISITCOMP(CODE)                                                        \
-  mlir::Value VisitBin##CODE(const clang::BinaryOperator *E) {                 \
-    return buildCmp(E);                                                        \
-  }
+  mlir::Value VisitBin##CODE(const BinaryOperator *E) { return buildCmp(E); }
   VISITCOMP(LT)
   VISITCOMP(GT)
   VISITCOMP(LE)
@@ -292,7 +287,7 @@ public:
   VISITCOMP(NE)
 #undef VISITCOMP
 
-  mlir::Value VisitExpr(clang::Expr *E) {
+  mlir::Value VisitExpr(Expr *E) {
     // Crashing here for "ScalarExprClassName"? Please implement
     // VisitScalarExprClassName(...) to get this working.
     emitError(CGM.getLoc(E->getExprLoc()), "scalar exp no implemented: '")
@@ -314,14 +309,14 @@ public:
 
   /// EmitConversionToBool - Convert the specified expression value to a
   /// boolean (i1) truth value.  This is equivalent to "Val != 0".
-  mlir::Value buildConversionToBool(mlir::Value Src, clang::QualType SrcType,
+  mlir::Value buildConversionToBool(mlir::Value Src, QualType SrcType,
                                     mlir::Location loc) {
     assert(SrcType.isCanonical() && "EmitScalarConversion strips typedefs");
 
     if (SrcType->isRealFloatingType())
       assert(0 && "not implemented");
 
-    if (auto *MPT = llvm::dyn_cast<clang::MemberPointerType>(SrcType))
+    if (auto *MPT = llvm::dyn_cast<MemberPointerType>(SrcType))
       assert(0 && "not implemented");
 
     assert((SrcType->isIntegerType() ||
@@ -337,9 +332,8 @@ public:
   /// type, both of which are CIR scalar types.
   /// TODO: do we need ScalarConversionOpts here? Should be done in another
   /// pass.
-  mlir::Value buildScalarConversion(mlir::Value Src, clang::QualType SrcType,
-                                    clang::QualType DstType,
-                                    clang::SourceLocation Loc) {
+  mlir::Value buildScalarConversion(mlir::Value Src, QualType SrcType,
+                                    QualType DstType, SourceLocation Loc) {
     if (SrcType->isFixedPointType()) {
       assert(0 && "not implemented");
     } else if (DstType->isFixedPointType()) {
@@ -390,9 +384,8 @@ public:
     if (DstType->isExtVectorType() && !SrcType->isVectorType()) {
       // Sema should add casts to make sure that the source expression's type
       // is the same as the vector's element type (sans qualifiers)
-      assert(DstType->castAs<clang::ExtVectorType>()
-                     ->getElementType()
-                     .getTypePtr() == SrcType.getTypePtr() &&
+      assert(DstType->castAs<ExtVectorType>()->getElementType().getTypePtr() ==
+                 SrcType.getTypePtr() &&
              "Splatted expr doesn't match with vector element type?");
 
       assert(0 && "not implemented");
@@ -423,7 +416,7 @@ public:
   }
 
   // Leaves.
-  mlir::Value VisitIntegerLiteral(const clang::IntegerLiteral *E) {
+  mlir::Value VisitIntegerLiteral(const IntegerLiteral *E) {
     mlir::Type Ty = CGM.getCIRType(E->getType());
     return Builder.create<mlir::cir::ConstantOp>(
         CGM.getLoc(E->getExprLoc()), Ty,
