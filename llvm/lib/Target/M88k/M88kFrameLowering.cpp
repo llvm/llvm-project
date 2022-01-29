@@ -242,14 +242,14 @@ void M88kFrameLowering::emitPrologue(MachineFunction &MF,
       BuildMI(MBB, MBBI, DL, LII.get(M88k::STriw))
           .addReg(M88k::R1, MFI.isReturnAddressTaken() ? RegState::Kill : 0)
           .addReg(M88k::R31)
-          .addImm(StackSize - MaxCallFrameSize + 4)
+          .addImm(MaxCallFrameSize + 4)
           .setMIFlag(MachineInstr::FrameSetup);
     if (setupFP) {
       // Spill %r30: st %r30, %r31, <SP> or <new FP+4>
       BuildMI(MBB, MBBI, DL, LII.get(M88k::STriw))
           .addReg(M88k::R30, RegState::Kill)
           .addReg(M88k::R31)
-          .addImm(StackSize - MaxCallFrameSize)
+          .addImm(MaxCallFrameSize)
           .setMIFlag(MachineInstr::FrameSetup);
       // Install FP: addu %r30, %r31, MaxCallFrameSize
       BuildMI(MBB, MBBI, DL, LII.get(M88k::ADDUri))
