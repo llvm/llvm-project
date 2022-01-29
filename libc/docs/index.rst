@@ -1,22 +1,13 @@
-==============================
-"llvm-libc" C Standard Library
-==============================
+=========================
+"libc" C Standard Library
+=========================
 
 .. contents:: Table of Contents
   :depth: 4
   :local:
 
-Introduction
-============
-
-This is a proposal to start *llvm-libc*, an implementation of the
-C standard library targeting C17 and above, as part of the LLVM project.
-llvm-libc will also provide platform specific extensions as relevant.
-For example, on Linux it also provides pthreads, librt and other POSIX
-extension libraries.
-
-Features
-========
+Goals
+=====
 
 llvm-libc will be developed to have a certain minimum set of features:
 
@@ -113,13 +104,19 @@ functions. For example, one cannot delegate just the `fopen` function to the
 system-libc. One will have to delegate all `FILE` related functions to the
 system-libc.
 
-Current Status
-==============
+Other Interesting Documentation
+===============================
 
-llvm-libc development is still in the planning phase.
+.. toctree::
 
-Build Bots
-==========
-
-Once the development starts, there will be llvm-libc focused builders added to
-the LLVM BuildBot.
+    build_system
+    clang_tidy_checks
+    entrypoints
+    fuzzing
+    ground_truth_specification
+    header_generation
+    implementation_standard
+    integration_test
+    mechanics_of_public_api
+    redirectors
+    source_layout
