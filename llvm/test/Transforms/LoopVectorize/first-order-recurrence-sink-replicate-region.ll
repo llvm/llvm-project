@@ -172,7 +172,8 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, i32* %ptr) optsize 
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%and.red> = phi ir<1234>, ir<%and.red.next>
-; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
+; CHECK-NEXT:   EMIT vp<[[WIDEN_CAN:%.+]]> = WIDEN-CANONICAL-INDUCTION vp<[[CAN_IV]]>
+; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule vp<[[WIDEN_CAN]]> vp<[[BTC]]>
 ; CHECK-NEXT: Successor(s): loop.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.0:

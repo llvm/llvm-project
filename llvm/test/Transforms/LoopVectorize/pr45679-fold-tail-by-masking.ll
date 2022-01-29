@@ -150,28 +150,32 @@ define void @pr45679(i32* %A) optsize {
 ; VF1UF4-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[INDUCTION3]], 13
 ; VF1UF4-NEXT:    br i1 [[TMP0]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; VF1UF4:       pred.store.if:
-; VF1UF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[INDUCTION]]
+; VF1UF4-NEXT:    [[SUNK_IND0:%.*]] = add i32 [[INDEX]], 0
+; VF1UF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[SUNK_IND0]]
 ; VF1UF4-NEXT:    store i32 13, i32* [[TMP4]], align 1
 ; VF1UF4-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VF1UF4:       pred.store.continue:
 ; VF1UF4-NEXT:    br i1 [[TMP1]], label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5:%.*]]
-; VF1UF4:       pred.store.if4:
-; VF1UF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[INDUCTION1]]
+; VF1UF4:       pred.store.if7:
+; VF1UF4-NEXT:    [[SUNK_IND1:%.*]] = add i32 [[INDEX]], 1
+; VF1UF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[SUNK_IND1]]
 ; VF1UF4-NEXT:    store i32 13, i32* [[TMP5]], align 1
 ; VF1UF4-NEXT:    br label [[PRED_STORE_CONTINUE5]]
-; VF1UF4:       pred.store.continue5:
+; VF1UF4:       pred.store.continue8:
 ; VF1UF4-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF6:%.*]], label [[PRED_STORE_CONTINUE7:%.*]]
-; VF1UF4:       pred.store.if6:
-; VF1UF4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[INDUCTION2]]
+; VF1UF4:       pred.store.if9:
+; VF1UF4-NEXT:    [[SUNK_IND2:%.*]] = add i32 [[INDEX]], 2
+; VF1UF4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[SUNK_IND2]]
 ; VF1UF4-NEXT:    store i32 13, i32* [[TMP6]], align 1
 ; VF1UF4-NEXT:    br label [[PRED_STORE_CONTINUE7]]
-; VF1UF4:       pred.store.continue7:
+; VF1UF4:       pred.store.continue10:
 ; VF1UF4-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF8:%.*]], label [[PRED_STORE_CONTINUE9]]
-; VF1UF4:       pred.store.if8:
-; VF1UF4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[INDUCTION3]]
+; VF1UF4:       pred.store.if11:
+; VF1UF4-NEXT:    [[SUNK_IND3:%.*]] = add i32 [[INDEX]], 3
+; VF1UF4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[SUNK_IND3]]
 ; VF1UF4-NEXT:    store i32 13, i32* [[TMP7]], align 1
 ; VF1UF4-NEXT:    br label [[PRED_STORE_CONTINUE9]]
-; VF1UF4:       pred.store.continue9:
+; VF1UF4:       pred.store.continue12:
 ; VF1UF4-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; VF1UF4-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
 ; VF1UF4-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]]

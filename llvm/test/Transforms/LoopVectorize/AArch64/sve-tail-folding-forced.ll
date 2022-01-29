@@ -25,12 +25,6 @@ define void @simple_memset(i32 %val, i32* %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    br label %vector.body
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT2:%.*]], %vector.body ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[INDEX1]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT3]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
-; CHECK-NEXT:    [[TMP6:%.*]] = add <vscale x 4 x i64> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = mul <vscale x 4 x i64> [[TMP6]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i64> [[BROADCAST_SPLAT4]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX1]], 0
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[TMP8]], i64 [[UMAX]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, i32* [[PTR:%.*]], i64 [[TMP8]]

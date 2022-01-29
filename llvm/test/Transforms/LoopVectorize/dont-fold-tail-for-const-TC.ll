@@ -14,11 +14,6 @@ define dso_local void @constTC(i32* noalias nocapture %A) optsize {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[INDEX]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1>
-; CHECK-NEXT:    [[INDUCTION1:%.*]] = add <2 x i32> [[BROADCAST_SPLAT]], <i32 2, i32 3>
-; CHECK-NEXT:    [[INDUCTION2:%.*]] = add <2 x i32> [[BROADCAST_SPLAT]], <i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 4
