@@ -5,8 +5,8 @@ add_clang_executable(clangd-index-server
   Server.cpp
 
   DEPENDS
-  RemoteIndexProto
-  RemoteIndexServiceProto
+  clangdRemoteIndexProto
+  clangdRemoteIndexServiceProto
   )
 
 target_link_libraries(clangd-index-server
@@ -14,9 +14,9 @@ target_link_libraries(clangd-index-server
   clangDaemon
   clangdSupport
 
-  MonitoringServiceProto
-  RemoteIndexProto
-  RemoteIndexServiceProto
+  clangdMonitoringServiceProto
+  clangdRemoteIndexProto
+  clangdRemoteIndexServiceProto
   clangdRemoteMarshalling
 
   ${REFLECTION_LIBRARY}
