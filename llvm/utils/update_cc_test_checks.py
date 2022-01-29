@@ -398,8 +398,7 @@ def main():
                 output_lines.append('//')
               added.add(mangled)
               common.add_ir_checks(output_lines, '//', filecheck_run_list, func_dict, mangled,
-                                   False, args.function_signature, global_vars_seen_dict,
-                                   is_filtered=builder.is_filtered())
+                                   False, args.function_signature, global_vars_seen_dict)
               if line.rstrip('\n') == '//':
                 include_line = False
 
