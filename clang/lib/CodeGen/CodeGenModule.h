@@ -394,13 +394,6 @@ private:
   llvm::MapVector<GlobalDecl, StringRef> MangledDeclNames;
   llvm::StringMap<GlobalDecl, llvm::BumpPtrAllocator> Manglings;
 
-  // An ordered map of canonical GlobalDecls paired with the cpu-index for
-  // cpu-specific name manglings.
-  llvm::MapVector<std::pair<GlobalDecl, unsigned>, StringRef>
-      CPUSpecificMangledDeclNames;
-  llvm::StringMap<std::pair<GlobalDecl, unsigned>, llvm::BumpPtrAllocator>
-      CPUSpecificManglings;
-
   /// Global annotations.
   std::vector<llvm::Constant*> Annotations;
 
