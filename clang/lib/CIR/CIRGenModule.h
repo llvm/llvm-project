@@ -530,24 +530,24 @@ public:
     /// (e.g. OpenCL) or alloca casted to generic pointer for address space
     /// agnostic languages (e.g. C++). Invalid if the variable was emitted
     /// as a global constant.
-    RawAddress Addr;
+    Address Addr;
 
     /// True if the variable is of aggregate type and has a constant
     /// initializer.
     bool IsConstantAggregate;
 
     struct Invalid {};
-    AutoVarEmission(Invalid) : Variable(nullptr), Addr(RawAddress::invalid()) {}
+    AutoVarEmission(Invalid) : Variable(nullptr), Addr(Address::invalid()) {}
 
     AutoVarEmission(const VarDecl &variable)
-        : Variable(&variable), Addr(RawAddress::invalid()),
+        : Variable(&variable), Addr(Address::invalid()),
           IsConstantAggregate(false) {}
 
     static AutoVarEmission invalid() { return AutoVarEmission(Invalid()); }
     /// Returns the raw, allocated address, which is not necessarily
     /// the address of the object itself. It is casted to default
     /// address space for address space agnostic languages.
-    RawAddress getAllocatedAddress() const { return Addr; }
+    Address getAllocatedAddress() const { return Addr; }
   };
 
   /// Determine whether an object of this type can be emitted
@@ -577,7 +577,7 @@ public:
   void buildStoreOfScalar(mlir::Value value, LValue lvalue,
                           const Decl *InitDecl);
 
-  void buildStoreOfScalar(mlir::Value Value, RawAddress Addr, bool Volatile,
+  void buildStoreOfScalar(mlir::Value Value, Address Addr, bool Volatile,
                           QualType Ty, LValueBaseInfo BaseInfo,
                           const Decl *InitDecl, bool isNontemporal);
 
@@ -658,7 +658,7 @@ public:
 
   /// Given an expression of pointer type, try to
   /// derive a more accurate bound on the alignment of the pointer.
-  RawAddress buildPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo);
+  Address buildPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo);
 
   LValue buildUnaryOpLValue(const UnaryOperator *E);
 

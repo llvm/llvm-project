@@ -206,7 +206,7 @@ CIRGenModule::buildAutoVarAlloca(const VarDecl &D) {
 
   // TODO: what about emitting lifetime markers for MSVC catch parameters?
   // TODO: something like @llvm.lifetime.start/end here? revisit this later.
-  emission.Addr = RawAddress{addr, alignment};
+  emission.Addr = Address{addr, alignment};
   return emission;
 }
 
@@ -252,7 +252,7 @@ void CIRGenModule::buildStoreOfScalar(mlir::Value value, LValue lvalue,
                      lvalue.getBaseInfo(), InitDecl, false);
 }
 
-void CIRGenModule::buildStoreOfScalar(mlir::Value Value, RawAddress Addr,
+void CIRGenModule::buildStoreOfScalar(mlir::Value Value, Address Addr,
                                       bool Volatile, QualType Ty,
                                       LValueBaseInfo BaseInfo,
                                       const Decl *InitDecl,
@@ -355,7 +355,7 @@ void CIRGenModule::buildAutoVarInit(const AutoVarEmission &emission) {
     return;
   }
 
-  const RawAddress Loc = emission.Addr;
+  const Address Loc = emission.Addr;
 
   // Note: constexpr already initializes everything correctly.
   LangOptions::TrivialAutoVarInitKind trivialAutoVarInit =
@@ -365,7 +365,7 @@ void CIRGenModule::buildAutoVarInit(const AutoVarEmission &emission) {
                   ? LangOptions::TrivialAutoVarInitKind::Uninitialized
                   : astCtx.getLangOpts().getTrivialAutoVarInit()));
 
-  auto initializeWhatIsTechnicallyUninitialized = [&](RawAddress Loc) {
+  auto initializeWhatIsTechnicallyUninitialized = [&](Address Loc) {
     if (trivialAutoVarInit ==
         LangOptions::TrivialAutoVarInitKind::Uninitialized)
       return;
@@ -689,7 +689,7 @@ LValue CIRGenModule::buildDeclRefLValue(const DeclRefExpr *E) {
     mlir::Value V = symbolTable.lookup(VD);
     assert(V && "Name lookup must succeed");
 
-    LValue LV = LValue::makeAddr(RawAddress(V, CharUnits::fromQuantity(4)),
+    LValue LV = LValue::makeAddr(Address(V, CharUnits::fromQuantity(4)),
                                  VD->getType(), AlignmentSource::Decl);
     return LV;
   }
@@ -845,8 +845,8 @@ CharUnits CIRGenModule::getNaturalTypeAlignment(QualType T,
 
 /// Given an expression of pointer type, try to
 /// derive a more accurate bound on the alignment of the pointer.
-RawAddress CIRGenModule::buildPointerWithAlignment(const Expr *E,
-                                                   LValueBaseInfo *BaseInfo) {
+Address CIRGenModule::buildPointerWithAlignment(const Expr *E,
+                                                LValueBaseInfo *BaseInfo) {
   // We allow this with ObjC object pointers because of fragile ABIs.
   assert(E->getType()->isPointerType() ||
          E->getType()->isObjCObjectPointerType());
@@ -881,7 +881,7 @@ RawAddress CIRGenModule::buildPointerWithAlignment(const Expr *E,
   // TODO: conditional operators, comma.
   // Otherwise, use the alignment of the type.
   CharUnits Align = getNaturalPointeeTypeAlignment(E->getType(), BaseInfo);
-  return RawAddress(buildScalarExpr(E), Align);
+  return Address(buildScalarExpr(E), Align);
 }
 
 LValue CIRGenModule::buildUnaryOpLValue(const UnaryOperator *E) {
@@ -897,7 +897,7 @@ LValue CIRGenModule::buildUnaryOpLValue(const UnaryOperator *E) {
 
     LValueBaseInfo BaseInfo;
     // TODO: add TBAAInfo
-    RawAddress Addr = buildPointerWithAlignment(E->getSubExpr(), &BaseInfo);
+    Address Addr = buildPointerWithAlignment(E->getSubExpr(), &BaseInfo);
     LValue LV = LValue::makeAddr(Addr, T, BaseInfo);
     // TODO: set addr space
     // TODO: ObjC/GC/__weak write barrier stuff.
@@ -935,7 +935,7 @@ LValue CIRGenModule::buildLValue(const Expr *E) {
     llvm_unreachable("cannot emit a property reference directly");
   }
 
-  return LValue::makeAddr(RawAddress::invalid(), E->getType());
+  return LValue::makeAddr(Address::invalid(), E->getType());
 }
 
 /// EmitIgnoredExpr - Emit code to compute the specified expression,
