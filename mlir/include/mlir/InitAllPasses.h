@@ -27,6 +27,7 @@
 #include "mlir/Dialect/SCF/Passes.h"
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 #include "mlir/Dialect/Shape/Transforms/Passes.h"
+#include "mlir/Dialect/SparseTensor/Pipelines/Passes.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/Transforms/Passes.h"
@@ -70,6 +71,9 @@ inline void registerAllPasses() {
   registerStandardPasses();
   tensor::registerTensorPasses();
   tosa::registerTosaOptPasses();
+
+  // Dialect pipelines
+  sparse_tensor::registerSparseTensorPipelines();
 }
 
 } // namespace mlir

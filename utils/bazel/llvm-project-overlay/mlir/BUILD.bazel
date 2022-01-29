@@ -1977,6 +1977,23 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "SparseTensorPipelines",
+    srcs = glob(["lib/Dialect/SparseTensor/Pipelines/*.cpp"]),
+    hdrs = ["include/mlir/Dialect/SparseTensor/Pipelines/Passes.h"],
+    includes = ["include"],
+    deps = [
+        ":BufferizationTransforms",
+        ":ConversionPasses",
+        ":LinalgTransforms",
+        ":Pass",
+        ":SparseTensor",
+        ":SparseTensorTransforms",
+        ":StandardOpsTransforms",
+        ":TensorTransforms",
+    ],
+)
+
 td_library(
     name = "StdOpsTdFiles",
     srcs = [
@@ -5697,6 +5714,7 @@ cc_library(
         ":ShapeTransforms",
         ":ShapeTransformsPassIncGen",
         ":SparseTensor",
+        ":SparseTensorPipelines",
         ":SparseTensorTransforms",
         ":StandardOps",
         ":StandardOpsTransforms",
