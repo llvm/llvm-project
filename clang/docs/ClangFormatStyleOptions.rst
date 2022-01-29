@@ -162,7 +162,7 @@ the configuration (without a prefix: ``Auto``).
     <https://www.webkit.org/coding/coding-style.html>`_
   * ``Microsoft``
     A style complying with `Microsoft's style guide
-    <https://docs.microsoft.com/en-us/visualstudio/ide/editorconfig-code-style-settings-reference?view=vs-2017>`_
+    <https://docs.microsoft.com/en-us/visualstudio/ide/editorconfig-code-style-settings-reference>`_
   * ``GNU``
     A style complying with the `GNU coding standards
     <https://www.gnu.org/prep/standards/standards.html>`_

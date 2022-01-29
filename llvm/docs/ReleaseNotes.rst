@@ -65,7 +65,7 @@ Changes to the LLVM IR
 Changes to building LLVM
 ------------------------
 
-* ...
+* Building LLVM with Visual Studio now requires version 2019 or later.
 
 Changes to TableGen
 -------------------

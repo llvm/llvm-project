@@ -77,12 +77,21 @@
 /// * 1916: VS2017, version 15.9
 /// * 1920: VS2019, version 16.0
 /// * 1921: VS2019, version 16.1
+/// * 1922: VS2019, version 16.2
+/// * 1923: VS2019, version 16.3
+/// * 1924: VS2019, version 16.4
+/// * 1925: VS2019, version 16.5
+/// * 1926: VS2019, version 16.6
+/// * 1927: VS2019, version 16.7
+/// * 1928: VS2019, version 16.8 + 16.9
+/// * 1929: VS2019, version 16.10 + 16.11
+/// * 1930: VS2022, version 17.0
 #ifdef _MSC_VER
 #define LLVM_MSC_PREREQ(version) (_MSC_VER >= (version))
 
-// We require at least MSVC 2017.
-#if !LLVM_MSC_PREREQ(1910)
-#error LLVM requires at least MSVC 2017.
+// We require at least VS 2019.
+#if !LLVM_MSC_PREREQ(1920)
+#error LLVM requires at least VS 2019.
 #endif
 
 #else
@@ -94,12 +103,8 @@
 /// Sadly, this is separate from just rvalue reference support because GCC
 /// and MSVC implemented this later than everything else. This appears to be
 /// corrected in MSVC 2019 but not MSVC 2017.
-#if __has_feature(cxx_rvalue_references) || defined(__GNUC__) ||               \
-    LLVM_MSC_PREREQ(1920)
+/// FIXME: Remove LLVM_HAS_RVALUE_REFERENCE_THIS macro
 #define LLVM_HAS_RVALUE_REFERENCE_THIS 1
-#else
-#define LLVM_HAS_RVALUE_REFERENCE_THIS 0
-#endif
 
 /// Expands to '&' if ref-qualifiers for *this are supported.
 ///

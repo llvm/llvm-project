@@ -3657,7 +3657,7 @@ When using CMake and the Visual Studio generators, the toolset can be set with t
 
   ::
 
-    cmake -G"Visual Studio 15 2017" -T LLVM ..
+    cmake -G"Visual Studio 16 2019" -T LLVM ..
 
 When using CMake with the Ninja generator, set the ``CMAKE_C_COMPILER`` and
 ``CMAKE_CXX_COMPILER`` variables to clang-cl:

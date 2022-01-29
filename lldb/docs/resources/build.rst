@@ -86,7 +86,7 @@ LLDB must use debug python as well.
 Windows
 *******
 
-* Visual Studio 2017.
+* Visual Studio 2019.
 * The latest Windows SDK.
 * The Active Template Library (ATL).
 * `GnuWin32 <http://gnuwin32.sourceforge.net/>`_ for CoreUtils and Make.
@@ -121,8 +121,8 @@ process. They only need to be performed once.
 
 ::
 
-> regsvr32 "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\DIA SDK\bin\msdia140.dll"
-> regsvr32 "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\DIA SDK\bin\amd64\msdia140.dll"
+> regsvr32 "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\DIA SDK\bin\msdia140.dll"
+> regsvr32 "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\DIA SDK\bin\amd64\msdia140.dll"
 
 Any command prompt from which you build LLDB should have a valid Visual Studio
 environment setup. This means you should open an appropriate `Developer Command
@@ -300,7 +300,7 @@ project in another directory.
 
 ::
 
-  $ cmake -G "Visual Studio 15 2017 Win64" -Thost=x64 <cmake variables> <path to root of llvm source tree>
+  $ cmake -G "Visual Studio 16 2019" -A x64 -T host=x64 <cmake variables> <path to root of llvm source tree>
 
 Then you can open the .sln file in Visual Studio, set lldb as the startup
 project, and use F5 to run it. You need only edit the project settings to set
