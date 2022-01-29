@@ -97,9 +97,9 @@ private:
 
   /// Declare a variable in the current scope, return success if the variable
   /// wasn't declared yet.
-  mlir::LogicalResult declare(const Decl *var, QualType T, mlir::Location loc,
-                              CharUnits alignment, mlir::Value &addr,
-                              bool IsParam = false);
+  mlir::LogicalResult declare(const clang::Decl *var, clang::QualType T,
+                              mlir::Location loc, clang::CharUnits alignment,
+                              mlir::Value &addr, bool IsParam = false);
 
 public:
   mlir::ModuleOp getModule() { return theModule; }
@@ -107,14 +107,14 @@ public:
   clang::ASTContext &getASTContext() { return astCtx; }
 
   /// Helpers to convert Clang's SourceLocation to a MLIR Location.
-  mlir::Location getLoc(SourceLocation SLoc);
+  mlir::Location getLoc(clang::SourceLocation SLoc);
 
-  mlir::Location getLoc(SourceRange SLoc);
+  mlir::Location getLoc(clang::SourceRange SLoc);
 
   mlir::Location getLoc(mlir::Location lhs, mlir::Location rhs);
 
   struct AutoVarEmission {
-    const VarDecl *Variable;
+    const clang::VarDecl *Variable;
     /// The address of the alloca for languages with explicit address space
     /// (e.g. OpenCL) or alloca casted to generic pointer for address space
     /// agnostic languages (e.g. C++). Invalid if the variable was emitted
@@ -128,7 +128,7 @@ public:
     struct Invalid {};
     AutoVarEmission(Invalid) : Variable(nullptr), Addr(Address::invalid()) {}
 
-    AutoVarEmission(const VarDecl &variable)
+    AutoVarEmission(const clang::VarDecl &variable)
         : Variable(&variable), Addr(Address::invalid()),
           IsConstantAggregate(false) {}
 
@@ -148,34 +148,36 @@ public:
   /// FIXME: in LLVM codegen path this is part of CGM, which doesn't seem
   /// like necessary, since (1) it doesn't use CGM at all and (2) is AST type
   /// query specific.
-  bool isTypeConstant(QualType Ty, bool ExcludeCtor);
+  bool isTypeConstant(clang::QualType Ty, bool ExcludeCtor);
 
   /// Emit the alloca and debug information for a
   /// local variable.  Does not emit initialization or destruction.
-  AutoVarEmission buildAutoVarAlloca(const VarDecl &D);
+  AutoVarEmission buildAutoVarAlloca(const clang::VarDecl &D);
 
   /// Determine whether the given initializer is trivial in the sense
   /// that it requires no code to be generated.
-  bool isTrivialInitializer(const Expr *Init);
+  bool isTrivialInitializer(const clang::Expr *Init);
 
   // TODO: this can also be abstrated into common AST helpers
-  bool hasBooleanRepresentation(QualType Ty);
+  bool hasBooleanRepresentation(clang::QualType Ty);
 
-  mlir::Value buildToMemory(mlir::Value Value, QualType Ty);
+  mlir::Value buildToMemory(mlir::Value Value, clang::QualType Ty);
 
   void buildStoreOfScalar(mlir::Value value, LValue lvalue,
-                          const Decl *InitDecl);
+                          const clang::Decl *InitDecl);
 
   void buildStoreOfScalar(mlir::Value Value, Address Addr, bool Volatile,
-                          QualType Ty, LValueBaseInfo BaseInfo,
-                          const Decl *InitDecl, bool isNontemporal);
+                          clang::QualType Ty, LValueBaseInfo BaseInfo,
+                          const clang::Decl *InitDecl, bool isNontemporal);
 
   /// Store the specified rvalue into the specified
   /// lvalue, where both are guaranteed to the have the same type, and that type
   /// is 'Ty'.
-  void buldStoreThroughLValue(RValue Src, LValue Dst, const Decl *InitDecl);
+  void buldStoreThroughLValue(RValue Src, LValue Dst,
+                              const clang::Decl *InitDecl);
 
-  void buildScalarInit(const Expr *init, const ValueDecl *D, LValue lvalue);
+  void buildScalarInit(const clang::Expr *init, const clang::ValueDecl *D,
+                       LValue lvalue);
 
   /// Emit an expression as an initializer for an object (variable, field, etc.)
   /// at the given location.  The expression is not necessarily the normal
@@ -185,7 +187,8 @@ public:
   /// \param init the initializing expression
   /// \param D the object to act as if we're initializing
   /// \param lvalue the lvalue to initialize
-  void buildExprAsInit(const Expr *init, const ValueDecl *D, LValue lvalue);
+  void buildExprAsInit(const clang::Expr *init, const clang::ValueDecl *D,
+                       LValue lvalue);
 
   void buildAutoVarInit(const AutoVarEmission &emission);
 
@@ -194,92 +197,96 @@ public:
   /// Emit code and set up symbol table for a variable declaration with auto,
   /// register, or no storage class specifier. These turn into simple stack
   /// objects, globals depending on target.
-  void buildAutoVarDecl(const VarDecl &D);
+  void buildAutoVarDecl(const clang::VarDecl &D);
 
   /// This method handles emission of any variable declaration
   /// inside a function, including static vars etc.
-  void buildVarDecl(const VarDecl &D);
+  void buildVarDecl(const clang::VarDecl &D);
 
-  void buildDecl(const Decl &D);
+  void buildDecl(const clang::Decl &D);
 
   /// Emit the computation of the specified expression of scalar type,
   /// ignoring the result.
-  mlir::Value buildScalarExpr(const Expr *E);
+  mlir::Value buildScalarExpr(const clang::Expr *E);
 
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are CIR scalar types.
-  mlir::Value buildScalarConversion(mlir::Value Src, QualType SrcTy,
-                                    QualType DstTy, SourceLocation Loc);
+  mlir::Value buildScalarConversion(mlir::Value Src, clang::QualType SrcTy,
+                                    clang::QualType DstTy,
+                                    clang::SourceLocation Loc);
 
-  mlir::LogicalResult buildReturnStmt(const ReturnStmt &S);
+  mlir::LogicalResult buildReturnStmt(const clang::ReturnStmt &S);
 
-  mlir::LogicalResult buildDeclStmt(const DeclStmt &S);
+  mlir::LogicalResult buildDeclStmt(const clang::DeclStmt &S);
 
-  mlir::LogicalResult buildSimpleStmt(const Stmt *S, bool useCurrentScope);
+  mlir::LogicalResult buildSimpleStmt(const clang::Stmt *S,
+                                      bool useCurrentScope);
 
-  LValue buildDeclRefLValue(const DeclRefExpr *E);
+  LValue buildDeclRefLValue(const clang::DeclRefExpr *E);
 
   /// Emit code to compute the specified expression which
   /// can have any type.  The result is returned as an RValue struct.
   /// TODO: if this is an aggregate expression, add a AggValueSlot to indicate
   /// where the result should be returned.
-  RValue buildAnyExpr(const Expr *E);
+  RValue buildAnyExpr(const clang::Expr *E);
 
-  LValue buildBinaryOperatorLValue(const BinaryOperator *E);
+  LValue buildBinaryOperatorLValue(const clang::BinaryOperator *E);
 
   /// FIXME: this could likely be a common helper and not necessarily related
   /// with codegen.
   /// Return the best known alignment for an unknown pointer to a
   /// particular class.
-  CharUnits getClassPointerAlignment(const CXXRecordDecl *RD);
+  clang::CharUnits getClassPointerAlignment(const clang::CXXRecordDecl *RD);
 
   /// FIXME: this could likely be a common helper and not necessarily related
   /// with codegen.
   /// TODO: Add TBAAAccessInfo
-  CharUnits getNaturalPointeeTypeAlignment(QualType T,
-                                           LValueBaseInfo *BaseInfo);
+  clang::CharUnits getNaturalPointeeTypeAlignment(clang::QualType T,
+                                                  LValueBaseInfo *BaseInfo);
 
   /// FIXME: this could likely be a common helper and not necessarily related
   /// with codegen.
   /// TODO: Add TBAAAccessInfo
-  CharUnits getNaturalTypeAlignment(QualType T, LValueBaseInfo *BaseInfo,
-                                    bool forPointeeType);
+  clang::CharUnits getNaturalTypeAlignment(clang::QualType T,
+                                           LValueBaseInfo *BaseInfo,
+                                           bool forPointeeType);
 
   /// Given an expression of pointer type, try to
   /// derive a more accurate bound on the alignment of the pointer.
-  Address buildPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo);
+  Address buildPointerWithAlignment(const clang::Expr *E,
+                                    LValueBaseInfo *BaseInfo);
 
-  LValue buildUnaryOpLValue(const UnaryOperator *E);
+  LValue buildUnaryOpLValue(const clang::UnaryOperator *E);
 
   /// Emit code to compute a designator that specifies the location
   /// of the expression.
   /// FIXME: document this function better.
-  LValue buildLValue(const Expr *E);
+  LValue buildLValue(const clang::Expr *E);
 
   /// EmitIgnoredExpr - Emit code to compute the specified expression,
   /// ignoring the result.
-  void buildIgnoredExpr(const Expr *E);
+  void buildIgnoredExpr(const clang::Expr *E);
 
   /// If the specified expression does not fold
   /// to a constant, or if it does but contains a label, return false.  If it
   /// constant folds return true and set the boolean result in Result.
-  bool ConstantFoldsToSimpleInteger(const Expr *Cond, bool &ResultBool,
+  bool ConstantFoldsToSimpleInteger(const clang::Expr *Cond, bool &ResultBool,
                                     bool AllowLabels);
 
   /// Return true if the statement contains a label in it.  If
   /// this statement is not executed normally, it not containing a label means
   /// that we can just remove the code.
-  bool ContainsLabel(const Stmt *S, bool IgnoreCaseStmts = false);
+  bool ContainsLabel(const clang::Stmt *S, bool IgnoreCaseStmts = false);
 
   /// If the specified expression does not fold
   /// to a constant, or if it does but contains a label, return false.  If it
   /// constant folds return true and set the folded value.
-  bool ConstantFoldsToSimpleInteger(const Expr *Cond, llvm::APSInt &ResultInt,
-                                    bool AllowLabels);
+  bool ConstantFoldsToSimpleInteger(const clang::Expr *Cond,
+                                    llvm::APSInt &ResultInt, bool AllowLabels);
 
   /// Perform the usual unary conversions on the specified
   /// expression and compare the result against zero, returning an Int1Ty value.
-  mlir::Value evaluateExprAsBool(const Expr *E);
+  mlir::Value evaluateExprAsBool(const clang::Expr *E);
 
   /// Emit an if on a boolean condition to the specified blocks.
   /// FIXME: Based on the condition, this might try to simplify the codegen of
@@ -287,27 +294,30 @@ public:
   /// times we expect the condition to evaluate to true based on PGO data. We
   /// might decide to leave this as a separate pass (see EmitBranchOnBoolExpr
   /// for extra ideas).
-  mlir::LogicalResult buildIfOnBoolExpr(const Expr *cond, mlir::Location loc,
-                                        const Stmt *thenS, const Stmt *elseS);
+  mlir::LogicalResult buildIfOnBoolExpr(const clang::Expr *cond,
+                                        mlir::Location loc,
+                                        const clang::Stmt *thenS,
+                                        const clang::Stmt *elseS);
 
-  mlir::LogicalResult buildIfStmt(const IfStmt &S);
+  mlir::LogicalResult buildIfStmt(const clang::IfStmt &S);
 
   // Build CIR for a statement. useCurrentScope should be true if no
   // new scopes need be created when finding a compound statement.
-  mlir::LogicalResult buildStmt(const Stmt *S, bool useCurrentScope);
+  mlir::LogicalResult buildStmt(const clang::Stmt *S, bool useCurrentScope);
 
-  mlir::LogicalResult buildFunctionBody(const Stmt *Body);
+  mlir::LogicalResult buildFunctionBody(const clang::Stmt *Body);
 
-  mlir::LogicalResult buildCompoundStmt(const CompoundStmt &S);
+  mlir::LogicalResult buildCompoundStmt(const clang::CompoundStmt &S);
 
-  mlir::LogicalResult buildCompoundStmtWithoutScope(const CompoundStmt &S);
+  mlir::LogicalResult
+  buildCompoundStmtWithoutScope(const clang::CompoundStmt &S);
 
-  void buildTopLevelDecl(Decl *decl);
+  void buildTopLevelDecl(clang::Decl *decl);
 
   // Emit a new function and add it to the MLIR module.
-  mlir::FuncOp buildFunction(const FunctionDecl *FD);
+  mlir::FuncOp buildFunction(const clang::FunctionDecl *FD);
 
-  mlir::Type getCIRType(const QualType &type);
+  mlir::Type getCIRType(const clang::QualType &type);
 
   void verifyModule();
 };
