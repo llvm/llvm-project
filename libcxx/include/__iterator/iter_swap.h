@@ -28,6 +28,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
+// [iter.cust.swap]
+
 namespace ranges {
 namespace __iter_swap {
   template<class _I1, class _I2>
@@ -79,12 +81,11 @@ namespace __iter_swap {
       *_VSTD::forward<_T1>(__x) = _VSTD::move(__old);
     }
   };
-} // end namespace __iter_swap
+} // namespace __iter_swap
 
 inline namespace __cpo {
   inline constexpr auto iter_swap = __iter_swap::__fn{};
 } // namespace __cpo
-
 } // namespace ranges
 
 template<class _I1, class _I2 = _I1>

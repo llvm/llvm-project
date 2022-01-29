@@ -28,13 +28,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 // [concept.swappable]
-namespace ranges::__swap {
-  // Deleted to inhibit ADL
+
+namespace ranges {
+namespace __swap {
+
   template<class _Tp>
   void swap(_Tp&, _Tp&) = delete;
 
-
-  // [1]
   template<class _Tp, class _Up>
   concept __unqualified_swappable_with =
     (__class_or_enum<remove_cvref_t<_Tp>> || __class_or_enum<remove_cvref_t<_Up>>) &&
@@ -89,11 +89,12 @@ namespace ranges::__swap {
       __y = _VSTD::exchange(__x, _VSTD::move(__y));
     }
   };
-} // namespace ranges::__swap
+} // namespace __swap
 
-namespace ranges::inline __cpo {
+inline namespace __cpo {
   inline constexpr auto swap = __swap::__fn{};
-} // namespace ranges::__cpo
+} // namespace __cpo
+} // namespace ranges
 
 template<class _Tp>
 concept swappable = requires(_Tp& __a, _Tp& __b) { ranges::swap(__a, __b); };
