@@ -2765,13 +2765,13 @@ readAddressAreas(DWARFContext &dwarf, InputSection *sec) {
 }
 
 template <class ELFT>
-static std::vector<GdbIndexSection::NameAttrEntry>
+static SmallVector<GdbIndexSection::NameAttrEntry, 0>
 readPubNamesAndTypes(const LLDDwarfObj<ELFT> &obj,
                      const SmallVectorImpl<GdbIndexSection::CuEntry> &cus) {
   const LLDDWARFSection &pubNames = obj.getGnuPubnamesSection();
   const LLDDWARFSection &pubTypes = obj.getGnuPubtypesSection();
 
-  std::vector<GdbIndexSection::NameAttrEntry> ret;
+  SmallVector<GdbIndexSection::NameAttrEntry, 0> ret;
   for (const LLDDWARFSection *pub : {&pubNames, &pubTypes}) {
     DWARFDataExtractor data(obj, *pub, config->isLE, config->wordsize);
     DWARFDebugPubTable table;
@@ -2798,9 +2798,9 @@ readPubNamesAndTypes(const LLDDwarfObj<ELFT> &obj,
 
 // Create a list of symbols from a given list of symbol names and types
 // by uniquifying them by name.
-static std::vector<GdbIndexSection::GdbSymbol>
-createSymbols(ArrayRef<std::vector<GdbIndexSection::NameAttrEntry>> nameAttrs,
-              const std::vector<GdbIndexSection::GdbChunk> &chunks) {
+static SmallVector<GdbIndexSection::GdbSymbol, 0> createSymbols(
+    ArrayRef<SmallVector<GdbIndexSection::NameAttrEntry, 0>> nameAttrs,
+    const SmallVector<GdbIndexSection::GdbChunk, 0> &chunks) {
   using GdbSymbol = GdbIndexSection::GdbSymbol;
   using NameAttrEntry = GdbIndexSection::NameAttrEntry;
 
@@ -2827,7 +2827,7 @@ createSymbols(ArrayRef<std::vector<GdbIndexSection::NameAttrEntry>> nameAttrs,
   size_t shift = 32 - countTrailingZeros(numShards);
 
   // Instantiate GdbSymbols while uniqufying them by name.
-  auto symbols = std::make_unique<std::vector<GdbSymbol>[]>(numShards);
+  auto symbols = std::make_unique<SmallVector<GdbSymbol, 0>[]>(numShards);
 
   parallelForEachN(0, concurrency, [&](size_t threadId) {
     uint32_t i = 0;
@@ -2857,9 +2857,9 @@ createSymbols(ArrayRef<std::vector<GdbIndexSection::NameAttrEntry>> nameAttrs,
 
   // The return type is a flattened vector, so we'll copy each vector
   // contents to Ret.
-  std::vector<GdbSymbol> ret;
+  SmallVector<GdbSymbol, 0> ret;
   ret.reserve(numSymbols);
-  for (std::vector<GdbSymbol> &vec :
+  for (SmallVector<GdbSymbol, 0> &vec :
        makeMutableArrayRef(symbols.get(), numShards))
     for (GdbSymbol &sym : vec)
       ret.push_back(std::move(sym));
@@ -2906,8 +2906,8 @@ template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
     return !s->isLive();
   });
 
-  std::vector<GdbChunk> chunks(files.size());
-  std::vector<std::vector<NameAttrEntry>> nameAttrs(files.size());
+  SmallVector<GdbChunk, 0> chunks(files.size());
+  SmallVector<SmallVector<NameAttrEntry, 0>, 0> nameAttrs(files.size());
 
   parallelForEachN(0, files.size(), [&](size_t i) {
     // To keep memory usage low, we don't want to keep cached DWARFContext, so
