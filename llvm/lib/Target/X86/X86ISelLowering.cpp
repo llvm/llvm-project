@@ -29915,7 +29915,7 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
     }
 
     // Attempt to fold per-element (ExtVT) shift as unpack(y,x) << zext(z)
-    if ((IsCst && !IsFSHR && EltSizeInBits == 8) ||
+    if (((IsCst || !Subtarget.hasAVX512()) && !IsFSHR && EltSizeInBits == 8) ||
         supportedVectorVarShift(ExtVT, Subtarget, ShiftOpc)) {
       SDValue Z = DAG.getConstant(0, DL, VT);
       SDValue RLo = DAG.getBitcast(ExtVT, getUnpackl(DAG, DL, VT, Op1, Op0));
@@ -40905,6 +40905,28 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     if (Known.One[BitWidth - ShAmt - 1])
       Known.One.setHighBits(ShAmt);
     return false;
+  }
+  case X86ISD::BLENDV: {
+    SDValue Sel = Op.getOperand(0);
+    SDValue LHS = Op.getOperand(1);
+    SDValue RHS = Op.getOperand(2);
+
+    APInt SignMask = APInt::getSignMask(BitWidth);
+    SDValue NewSel = SimplifyMultipleUseDemandedBits(
+        Sel, SignMask, OriginalDemandedElts, TLO.DAG, Depth + 1);
+    SDValue NewLHS = SimplifyMultipleUseDemandedBits(
+        LHS, OriginalDemandedBits, OriginalDemandedElts, TLO.DAG, Depth + 1);
+    SDValue NewRHS = SimplifyMultipleUseDemandedBits(
+        RHS, OriginalDemandedBits, OriginalDemandedElts, TLO.DAG, Depth + 1);
+
+    if (NewSel || NewLHS || NewRHS) {
+      NewSel = NewSel ? NewSel : Sel;
+      NewLHS = NewLHS ? NewLHS : LHS;
+      NewRHS = NewRHS ? NewRHS : RHS;
+      return TLO.CombineTo(Op, TLO.DAG.getNode(X86ISD::BLENDV, SDLoc(Op), VT,
+                                               NewSel, NewLHS, NewRHS));
+    }
+    break;
   }
   case X86ISD::PEXTRB:
   case X86ISD::PEXTRW: {

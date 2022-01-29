@@ -535,8 +535,8 @@ define <2 x i64> @shrunkblend_nonvselectuse(<2 x i1> %cond, <2 x i64> %a, <2 x i
 ; SSE41-LABEL: shrunkblend_nonvselectuse:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    psllq $63, %xmm0
-; SSE41-NEXT:    psrad $31, %xmm0
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
+; SSE41-NEXT:    psrad $31, %xmm0
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE41-NEXT:    paddq %xmm2, %xmm0
 ; SSE41-NEXT:    retq
