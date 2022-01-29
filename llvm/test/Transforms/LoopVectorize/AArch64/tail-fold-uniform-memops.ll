@@ -11,9 +11,6 @@ define void @uniform_load(i32* noalias %dst, i32* noalias readonly %src, i64 %n)
 ; CHECK-LABEL: @uniform_load(
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[IDX_NEXT:%.*]], %vector.body ]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> poison, i64 [[IDX]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[TMP2]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[IDX]], 0
 ; CHECK-NEXT:    [[LOOP_PRED:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[TMP3]], i64 %n)
 ; CHECK-NEXT:    [[LOAD_VAL:%.*]] = load i32, i32* %src, align 4
@@ -55,9 +52,6 @@ define void @cond_uniform_load(i32* nocapture %dst, i32* nocapture readonly %src
 ; CHECK-NEXT:    [[SRC_SPLAT:%.*]] = shufflevector <4 x i32*> [[TMP1]], <4 x i32*> poison, <4 x i32> zeroinitializer
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[IDX_NEXT:%.*]], %vector.body ]
-; CHECK:         [[TMP1:%.*]] = insertelement <4 x i64> poison, i64 [[IDX]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[TMP2]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[IDX]], 0
 ; CHECK-NEXT:    [[LOOP_PRED:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[TMP3]], i64 %n)
 ; CHECK:         [[COND_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* {{%.*}}, i32 4, <4 x i1> [[LOOP_PRED]], <4 x i32> poison)

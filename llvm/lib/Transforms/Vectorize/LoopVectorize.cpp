@@ -2527,27 +2527,6 @@ void InnerLoopVectorizer::widenIntOrFpInduction(
     return ScalarIV;
   };
 
-  // Create the vector values from the scalar IV, in the absence of creating a
-  // vector IV.
-  auto CreateSplatIV = [&](Value *ScalarIV, Value *Step) {
-    Value *Broadcasted = getBroadcastInstrs(ScalarIV);
-    for (unsigned Part = 0; Part < UF; ++Part) {
-      Value *StartIdx;
-      if (Step->getType()->isFloatingPointTy())
-        StartIdx =
-            getRuntimeVFAsFloat(Builder, Step->getType(), State.VF * Part);
-      else
-        StartIdx = getRuntimeVF(Builder, Step->getType(), State.VF * Part);
-
-      Value *EntryPart =
-          getStepVector(Broadcasted, StartIdx, Step, ID.getInductionOpcode(),
-                        State.VF, State.Builder);
-      State.set(Def, EntryPart, Part);
-      if (Trunc)
-        addMetadata(EntryPart, Trunc);
-    }
-  };
-
   // Fast-math-flags propagate from the original induction instruction.
   IRBuilder<>::FastMathFlagGuard FMFG(Builder);
   if (ID.getInductionBinOp() && isa<FPMathOperator>(ID.getInductionBinOp()))
@@ -2583,33 +2562,18 @@ void InnerLoopVectorizer::widenIntOrFpInduction(
     return;
   }
 
-  // If only a vector induction is needed, create it and return.
-  if (!Def->needsScalarIV()) {
+  // Create a new independent vector induction variable, if one is needed.
+  if (Def->needsVectorIV())
     createVectorIntOrFpInductionPHI(ID, Step, Start, EntryVal, Def, State);
-    return;
-  }
 
-  // Try to create a new independent vector induction variable. If we can't
-  // create the phi node, we will splat the scalar induction variable in each
-  // loop iteration.
-  if (Def->needsVectorIV()) {
-    createVectorIntOrFpInductionPHI(ID, Step, Start, EntryVal, Def, State);
-    Value *ScalarIV = CreateScalarIV(Step);
+  if (Def->needsScalarIV()) {
     // Create scalar steps that can be used by instructions we will later
     // scalarize. Note that the addition of the scalar steps will not increase
     // the number of instructions in the loop in the common case prior to
     // InstCombine. We will be trading one vector extract for each scalar step.
+    Value *ScalarIV = CreateScalarIV(Step);
     buildScalarSteps(ScalarIV, Step, EntryVal, ID, Def, State);
-    return;
   }
-
-  // All IV users are scalar instructions, so only emit a scalar IV, not a
-  // vectorised IV. Except when we tail-fold, then the splat IV feeds the
-  // predicate used by the masked loads/stores.
-  Value *ScalarIV = CreateScalarIV(Step);
-  if (!Cost->isScalarEpilogueAllowed())
-    CreateSplatIV(ScalarIV, Step);
-  buildScalarSteps(ScalarIV, Step, EntryVal, ID, Def, State);
 }
 
 void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
