@@ -141,6 +141,52 @@ bb:
   ret i1 %all_eq
 }
 
+define i1 @reduce_and_pointer_cast_ne(i8* %arg, i8* %arg1) {
+; CHECK-LABEL: @reduce_and_pointer_cast_ne(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[PTR1:%.*]] = bitcast i8* [[ARG1:%.*]] to <8 x i8>*
+; CHECK-NEXT:    [[PTR2:%.*]] = bitcast i8* [[ARG:%.*]] to <8 x i8>*
+; CHECK-NEXT:    [[LHS:%.*]] = load <8 x i8>, <8 x i8>* [[PTR1]], align 8
+; CHECK-NEXT:    [[RHS:%.*]] = load <8 x i8>, <8 x i8>* [[PTR2]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <8 x i8> [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i1> [[CMP]] to i8
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[TMP0]], 0
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+bb:
+  %ptr1 = bitcast i8* %arg1 to <8 x i8>*
+  %ptr2 = bitcast i8* %arg to <8 x i8>*
+  %lhs = load <8 x i8>, <8 x i8>* %ptr1
+  %rhs = load <8 x i8>, <8 x i8>* %ptr2
+  %cmp = icmp eq <8 x i8> %lhs, %rhs
+  %all_eq = call i1 @llvm.vector.reduce.and.v8i32(<8 x i1> %cmp)
+  %any_ne = xor i1 %all_eq, 1
+  ret i1 %any_ne
+}
+
+define i1 @reduce_and_pointer_cast_ne_wide(i8* %arg, i8* %arg1) {
+; CHECK-LABEL: @reduce_and_pointer_cast_ne_wide(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[PTR1:%.*]] = bitcast i8* [[ARG1:%.*]] to <8 x i16>*
+; CHECK-NEXT:    [[PTR2:%.*]] = bitcast i8* [[ARG:%.*]] to <8 x i16>*
+; CHECK-NEXT:    [[LHS:%.*]] = load <8 x i16>, <8 x i16>* [[PTR1]], align 16
+; CHECK-NEXT:    [[RHS:%.*]] = load <8 x i16>, <8 x i16>* [[PTR2]], align 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <8 x i16> [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i1> [[CMP]] to i8
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[TMP0]], 0
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+bb:
+  %ptr1 = bitcast i8* %arg1 to <8 x i16>*
+  %ptr2 = bitcast i8* %arg to <8 x i16>*
+  %lhs = load <8 x i16>, <8 x i16>* %ptr1
+  %rhs = load <8 x i16>, <8 x i16>* %ptr2
+  %cmp = icmp eq <8 x i16> %lhs, %rhs
+  %all_eq = call i1 @llvm.vector.reduce.and.v8i32(<8 x i1> %cmp)
+  %any_ne = xor i1 %all_eq, 1
+  ret i1 %any_ne
+}
+
 declare i1 @llvm.vector.reduce.and.v8i32(<8 x i1> %a)
 declare i32 @llvm.vector.reduce.and.v4i32(<4 x i32> %a)
 declare i64 @llvm.vector.reduce.and.v8i64(<8 x i64> %a)
