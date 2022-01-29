@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file implements the BitVector class.
-//
+///
+/// \file
+/// This file implements the BitVector class.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_BITVECTOR_H

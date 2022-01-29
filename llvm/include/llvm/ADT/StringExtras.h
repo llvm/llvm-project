@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file contains some functions that are useful when dealing with strings.
-//
+///
+/// \file
+/// This file contains some functions that are useful when dealing with strings.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_STRINGEXTRAS_H

@@ -5,10 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines generic set operations that may be used on set's of
-// different types, and different element types.
-//
+///
+/// \file
+/// This file defines generic set operations that may be used on set's of
+/// different types, and different element types.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_SETOPERATIONS_H

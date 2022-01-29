@@ -5,10 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines the make_scope_exit function, which executes user-defined
-// cleanup logic at scope exit.
-//
+///
+/// \file
+/// This file defines the make_scope_exit function, which executes user-defined
+/// cleanup logic at scope exit.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_SCOPEEXIT_H

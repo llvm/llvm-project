@@ -43,6 +43,7 @@ def riscv_fslw   : SDNode<"RISCVISD::FSLW",   SDT_RISCVIntShiftDOpW>;
 def riscv_fsrw   : SDNode<"RISCVISD::FSRW",   SDT_RISCVIntShiftDOpW>;
 def riscv_fsl    : SDNode<"RISCVISD::FSL",    SDTIntShiftDOp>;
 def riscv_fsr    : SDNode<"RISCVISD::FSR",    SDTIntShiftDOp>;
+def riscv_brev8  : SDNode<"RISCVISD::BREV8",  SDTIntUnaryOp>;
 def riscv_grev   : SDNode<"RISCVISD::GREV",   SDTIntBinOp>;
 def riscv_grevw  : SDNode<"RISCVISD::GREVW",  SDT_RISCVIntBinOpW>;
 def riscv_gorc   : SDNode<"RISCVISD::GORC",   SDTIntBinOp>;
@@ -861,7 +862,9 @@ let Predicates = [HasStdExtZbbOrZbpOrZbkb] in {
 def : PatGprImm<rotr, RORI, uimmlog2xlen>;
 def : Pat<(rotl GPR:$rs1, uimmlog2xlen:$shamt),
           (RORI GPR:$rs1, (ImmSubFromXLen uimmlog2xlen:$shamt))>;
+}
 
+let Predicates = [HasStdExtZbbOrZbp] in {
 // We treat orc.b as a separate instruction, so match it directly. We also
 // lower the Zbb orc.b intrinsic to this.
 def : Pat<(riscv_gorc GPR:$rs1, 7), (ORC_B GPR:$rs1)>;
@@ -1190,6 +1193,7 @@ let Predicates = [HasStdExtZbf, IsRV64] in
 def : PatGprGpr<riscv_bfpw, BFPW>;
 
 let Predicates = [HasStdExtZbkb] in {
+def : PatGpr<riscv_brev8, BREV8>;
 def : PatGpr<int_riscv_brev8, BREV8>;
 } // Predicates = [HasStdExtZbkb]
 
