@@ -16,6 +16,7 @@
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/Sarif.h"
 #include "clang/Basic/Stack.h"
+#include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -33,6 +34,7 @@
 #include "clang/Sema/MultiplexExternalSemaSource.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
 #include "clang/Serialization/ASTReader.h"
+#include "clang/Serialization/ASTWriter.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/BuryPointer.h"
@@ -184,17 +186,83 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
   if (!FoundAllPlugins)
     return nullptr;
 
-  // If there are no registered plugins we don't need to wrap the consumer
-  if (FrontendPluginRegistry::begin() == FrontendPluginRegistry::end())
-    return Consumer;
-
   // If this is a code completion run, avoid invoking the plugin consumers
   if (CI.hasCodeCompletionConsumer())
     return Consumer;
 
+  // Do we want to emit a BMI as a second artefact of the compile, on demand if
+  // the source generates an interface?
+  // We do this for C++20 modules, if the input is source, we do not stop after
+  // the Preprocessor and we intend to emit an output.  Note that we do not need
+  // to consider the case in which a BMI is explicitly the main output of the
+  // compilation.
+  InputKind IK = getCurrentFileKind();
+  bool EmitBMI = CI.getLangOpts().CPlusPlusModules &&
+                 IK.getFormat() == InputKind::Format::Source &&
+                 !this->usesPreprocessorOnly() &&
+                (CI.getFrontendOpts().ProgramAction == frontend::EmitObj ||
+                 CI.getFrontendOpts().ProgramAction == frontend::EmitAssembly ||
+                 CI.getFrontendOpts().ProgramAction == frontend::EmitBC ||
+                 CI.getFrontendOpts().ProgramAction == frontend::EmitLLVM ||
+                 CI.getFrontendOpts().ProgramAction == frontend::EmitLLVMOnly ||
+                 CI.getFrontendOpts().ProgramAction == frontend::EmitCodeGenOnly);
+
+  // If there are no registered plugins and we do not need to emit a BMI, we
+  // do not need to wrap the consumer in a MultiplexConsumer.
+  if (!EmitBMI &&
+      FrontendPluginRegistry::begin() == FrontendPluginRegistry::end())
+    return Consumer;
+
+  // List of AST consumers for this source.
+  std::vector<std::unique_ptr<ASTConsumer>> Consumers;
+
+  // First, add a pair of consumers that will write the AST as a CMI for this
+  // module.  ??? : Should any plugins that precede the main consumer also be
+  // run before this.
+  if (EmitBMI) {
+    // Make a default output filename (this would be overwritten by the one
+    // derived from the module to BMI name-mapping determined from any export
+    // statement).  We do not open this on the output stream, but provide it
+    // as a fallback.
+    // The default here is to output the pcm alongside the main output.
+    std::string XOut
+      = llvm::sys::path::parent_path(CI.getFrontendOpts().OutputFile).str();
+    std::string XIn = llvm::sys::path::filename(InFile).str();
+    if (!XOut.empty()) {
+      XOut += llvm::sys::path::get_separator();
+      XOut += XIn;
+    } else
+      XOut = XIn;
+
+    SmallString<128> Path(XOut);
+    llvm::sys::path::replace_extension(Path, "pcm");
+    XOut = std::string(Path.str());
+
+    std::unique_ptr<raw_pwrite_stream> OS;
+    std::string Sysroot;
+    auto Buffer = std::make_shared<PCHBuffer>();
+
+    // Add a job to build the CMI from the AST.
+    // ??? : change the CTOR flags to note that this is a CXX20 module?
+    Consumers.push_back(std::make_unique<PCHGenerator>(
+      CI.getPreprocessor(), CI.getModuleCache(), XOut, Sysroot, Buffer,
+      CI.getFrontendOpts().ModuleFileExtensions,
+      /*AllowASTWithErrors=*/false,
+      /*IncludeTimestamps=*/false,
+      /*BuildingImplicitModule=*/false,
+      /*ShouldCacheASTInMemory=*/false,
+      /*IsForBMI=*/true));
+
+    // This writes the CMI (if one is needed), but does not open the output
+    // file unless/until it is required.
+    Consumers.push_back(CI.getPCHContainerWriter()
+                        .CreatePCHDeferredContainerGenerator(
+                        CI, std::string(InFile), XOut, std::move(OS), Buffer));
+  }
+
   // Collect the list of plugins that go before the main action (in Consumers)
   // or after it (in AfterConsumers)
-  std::vector<std::unique_ptr<ASTConsumer>> Consumers;
+
   std::vector<std::unique_ptr<ASTConsumer>> AfterConsumers;
   for (const FrontendPluginRegistry::entry &Plugin :
        FrontendPluginRegistry::entries()) {
