@@ -103,39 +103,58 @@ using namespace clang;
 using namespace llvm::opt;
 
 static llvm::Optional<llvm::Triple>
-getHIPOffloadTargetTriple(const Driver &D, const ArgList &Args) {
-  if (Args.hasArg(options::OPT_offload_EQ)) {
-    auto HIPOffloadTargets = Args.getAllArgValues(options::OPT_offload_EQ);
+getOffloadTargetTriple(const Driver &D, const ArgList &Args) {
+  auto OffloadTargets = Args.getAllArgValues(options::OPT_offload_EQ);
+  // Offload compilation flow does not support multiple targets for now. We
+  // need the HIPActionBuilder (and possibly the CudaActionBuilder{,Base}too)
+  // to support multiple tool chains first.
+  switch (OffloadTargets.size()) {
+  default:
+    D.Diag(diag::err_drv_only_one_offload_target_supported);
+    return llvm::None;
+  case 0:
+    D.Diag(diag::err_drv_invalid_or_unsupported_offload_target) << "";
+    return llvm::None;
+  case 1:
+    break;
+  }
+  return llvm::Triple(OffloadTargets[0]);
+}
 
-    // HIP compilation flow does not support multiple targets for now. We need
-    // the HIPActionBuilder (and possibly the CudaActionBuilder{,Base}too) to
-    // support multiple tool chains first.
-    switch (HIPOffloadTargets.size()) {
-    default:
-      D.Diag(diag::err_drv_only_one_offload_target_supported_in) << "HIP";
-      return llvm::None;
-    case 0:
-      D.Diag(diag::err_drv_invalid_or_unsupported_offload_target) << "";
-      return llvm::None;
-    case 1:
-      break;
-    }
-    llvm::Triple TT(HIPOffloadTargets[0]);
-    if (TT.getArch() == llvm::Triple::amdgcn &&
-        TT.getVendor() == llvm::Triple::AMD &&
-        TT.getOS() == llvm::Triple::AMDHSA)
+static llvm::Optional<llvm::Triple>
+getNVIDIAOffloadTargetTriple(const Driver &D, const ArgList &Args,
+                             const llvm::Triple &HostTriple) {
+  if (!Args.hasArg(options::OPT_offload_EQ)) {
+    return llvm::Triple(HostTriple.isArch64Bit() ? "nvptx64-nvidia-cuda"
+                                                 : "nvptx-nvidia-cuda");
+  }
+  auto TT = getOffloadTargetTriple(D, Args);
+  if (TT && (TT->getArch() == llvm::Triple::spirv32 ||
+             TT->getArch() == llvm::Triple::spirv64)) {
+    if (Args.hasArg(options::OPT_emit_llvm))
       return TT;
-    if (TT.getArch() == llvm::Triple::spirv64 &&
-        TT.getVendor() == llvm::Triple::UnknownVendor &&
-        TT.getOS() == llvm::Triple::UnknownOS)
-      return TT;
-    D.Diag(diag::err_drv_invalid_or_unsupported_offload_target)
-        << HIPOffloadTargets[0];
+    D.Diag(diag::err_drv_cuda_offload_only_emit_bc);
     return llvm::None;
   }
-
-  static const llvm::Triple T("amdgcn-amd-amdhsa"); // Default HIP triple.
-  return T;
+  D.Diag(diag::err_drv_invalid_or_unsupported_offload_target) << TT->str();
+  return llvm::None;
+}
+static llvm::Optional<llvm::Triple>
+getHIPOffloadTargetTriple(const Driver &D, const ArgList &Args) {
+  if (!Args.hasArg(options::OPT_offload_EQ)) {
+    return llvm::Triple("amdgcn-amd-amdhsa"); // Default HIP triple.
+  }
+  auto TT = getOffloadTargetTriple(D, Args);
+  if (!TT)
+    return llvm::None;
+  if (TT->getArch() == llvm::Triple::amdgcn &&
+      TT->getVendor() == llvm::Triple::AMD &&
+      TT->getOS() == llvm::Triple::AMDHSA)
+    return TT;
+  if (TT->getArch() == llvm::Triple::spirv64)
+    return TT;
+  D.Diag(diag::err_drv_invalid_or_unsupported_offload_target) << TT->str();
+  return llvm::None;
 }
 
 // static
@@ -719,17 +738,17 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
   if (IsCuda) {
     const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
     const llvm::Triple &HostTriple = HostTC->getTriple();
-    StringRef DeviceTripleStr;
     auto OFK = Action::OFK_Cuda;
-    DeviceTripleStr =
-        HostTriple.isArch64Bit() ? "nvptx64-nvidia-cuda" : "nvptx-nvidia-cuda";
-    llvm::Triple CudaTriple(DeviceTripleStr);
+    auto CudaTriple =
+        getNVIDIAOffloadTargetTriple(*this, C.getInputArgs(), HostTriple);
+    if (!CudaTriple)
+      return;
     // Use the CUDA and host triples as the key into the ToolChains map,
     // because the device toolchain we create depends on both.
-    auto &CudaTC = ToolChains[CudaTriple.str() + "/" + HostTriple.str()];
+    auto &CudaTC = ToolChains[CudaTriple->str() + "/" + HostTriple.str()];
     if (!CudaTC) {
       CudaTC = std::make_unique<toolchains::CudaToolChain>(
-          *this, CudaTriple, *HostTC, C.getInputArgs(), OFK);
+          *this, *CudaTriple, *HostTC, C.getInputArgs(), OFK);
     }
     C.addOffloadDeviceToolChain(CudaTC.get(), OFK);
   } else if (IsHIP) {
