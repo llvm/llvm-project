@@ -1589,9 +1589,11 @@ uint32_t DynamicReloc::getSymIndex(SymbolTableBaseSection *symTab) const {
 
 RelocationBaseSection::RelocationBaseSection(StringRef name, uint32_t type,
                                              int32_t dynamicTag,
-                                             int32_t sizeDynamicTag)
+                                             int32_t sizeDynamicTag,
+                                             bool combreloc)
     : SyntheticSection(SHF_ALLOC, type, config->wordsize, name),
-      dynamicTag(dynamicTag), sizeDynamicTag(sizeDynamicTag) {}
+      dynamicTag(dynamicTag), sizeDynamicTag(sizeDynamicTag),
+      combreloc(combreloc) {}
 
 void RelocationBaseSection::addSymbolReloc(RelType dynType,
                                            InputSectionBase &isec,
@@ -1640,10 +1642,13 @@ void RelocationBaseSection::addReloc(DynamicReloc::Kind kind, RelType dynType,
   addReloc({dynType, &inputSec, offsetInSec, kind, sym, addend, expr});
 }
 
-void RelocationBaseSection::addReloc(const DynamicReloc &reloc) {
-  if (reloc.type == target->relativeRel)
-    ++numRelativeRelocs;
-  relocs.push_back(reloc);
+void RelocationBaseSection::partitionRels() {
+  if (!combreloc)
+    return;
+  const RelType relativeRel = target->relativeRel;
+  numRelativeRelocs =
+      llvm::partition(relocs, [=](auto &r) { return r.type == relativeRel; }) -
+      relocs.begin();
 }
 
 void RelocationBaseSection::finalizeContents() {
@@ -1667,20 +1672,6 @@ void RelocationBaseSection::finalizeContents() {
   }
 }
 
-RelrBaseSection::RelrBaseSection()
-    : SyntheticSection(SHF_ALLOC,
-                       config->useAndroidRelrTags ? SHT_ANDROID_RELR : SHT_RELR,
-                       config->wordsize, ".relr.dyn") {}
-
-template <class ELFT>
-static void encodeDynamicReloc(typename ELFT::Rela *p,
-                               const DynamicReloc &rel) {
-  p->r_offset = rel.r_offset;
-  p->setSymbolAndType(rel.r_sym, rel.type, config->isMips64EL);
-  if (config->isRela)
-    p->r_addend = rel.addend;
-}
-
 void DynamicReloc::computeRaw(SymbolTableBaseSection *symtab) {
   r_offset = getOffset();
   r_sym = getSymIndex(symtab);
@@ -1688,27 +1679,15 @@ void DynamicReloc::computeRaw(SymbolTableBaseSection *symtab) {
   kind = AddendOnly; // Catch errors
 }
 
-template <class ELFT>
-RelocationSection<ELFT>::RelocationSection(StringRef name, bool sort)
-    : RelocationBaseSection(name, config->isRela ? SHT_RELA : SHT_REL,
-                            config->isRela ? DT_RELA : DT_REL,
-                            config->isRela ? DT_RELASZ : DT_RELSZ),
-      sort(sort) {
-  this->entsize = config->isRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
-}
-
-template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *buf) {
+void RelocationBaseSection::computeRels() {
   SymbolTableBaseSection *symTab = getPartition().dynSymTab.get();
-
   parallelForEach(relocs,
                   [symTab](DynamicReloc &rel) { rel.computeRaw(symTab); });
   // Sort by (!IsRelative,SymIndex,r_offset). DT_REL[A]COUNT requires us to
   // place R_*_RELATIVE first. SymIndex is to improve locality, while r_offset
   // is to make results easier to read.
-  if (sort) {
-    const RelType relativeRel = target->relativeRel;
-    auto nonRelative =
-        llvm::partition(relocs, [=](auto &r) { return r.type == relativeRel; });
+  if (combreloc) {
+    auto nonRelative = relocs.begin() + numRelativeRelocs;
     parallelSort(relocs.begin(), nonRelative,
                  [&](auto &a, auto &b) { return a.r_offset < b.r_offset; });
     // Non-relative relocations are few, so don't bother with parallelSort.
@@ -1716,12 +1695,32 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *buf) {
       return std::tie(a.r_sym, a.r_offset) < std::tie(b.r_sym, b.r_offset);
     });
   }
+}
 
+template <class ELFT>
+RelocationSection<ELFT>::RelocationSection(StringRef name, bool combreloc)
+    : RelocationBaseSection(name, config->isRela ? SHT_RELA : SHT_REL,
+                            config->isRela ? DT_RELA : DT_REL,
+                            config->isRela ? DT_RELASZ : DT_RELSZ, combreloc) {
+  this->entsize = config->isRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
+}
+
+template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *buf) {
+  computeRels();
   for (const DynamicReloc &rel : relocs) {
-    encodeDynamicReloc<ELFT>(reinterpret_cast<Elf_Rela *>(buf), rel);
+    auto *p = reinterpret_cast<Elf_Rela *>(buf);
+    p->r_offset = rel.r_offset;
+    p->setSymbolAndType(rel.r_sym, rel.type, config->isMips64EL);
+    if (config->isRela)
+      p->r_addend = rel.addend;
     buf += config->isRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
   }
 }
+
+RelrBaseSection::RelrBaseSection()
+    : SyntheticSection(SHF_ALLOC,
+                       config->useAndroidRelrTags ? SHT_ANDROID_RELR : SHT_RELR,
+                       config->wordsize, ".relr.dyn") {}
 
 template <class ELFT>
 AndroidPackedRelocationSection<ELFT>::AndroidPackedRelocationSection(
@@ -1729,7 +1728,8 @@ AndroidPackedRelocationSection<ELFT>::AndroidPackedRelocationSection(
     : RelocationBaseSection(
           name, config->isRela ? SHT_ANDROID_RELA : SHT_ANDROID_REL,
           config->isRela ? DT_ANDROID_RELA : DT_ANDROID_REL,
-          config->isRela ? DT_ANDROID_RELASZ : DT_ANDROID_RELSZ) {
+          config->isRela ? DT_ANDROID_RELASZ : DT_ANDROID_RELSZ,
+          /*combreloc=*/false) {
   this->entsize = 1;
 }
 
