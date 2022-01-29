@@ -15,7 +15,7 @@ include "mlir/Dialect/Bufferization/IR/BufferizationBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CopyOpInterface.td"
 
-class Bufferization_Op<string mnemonic, list<OpTrait> traits = []>
+class Bufferization_Op<string mnemonic, list<Trait> traits = []>
     : Op<Bufferization_Dialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//

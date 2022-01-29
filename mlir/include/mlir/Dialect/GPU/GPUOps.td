@@ -26,7 +26,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // GPU Dialect operations.
 //===----------------------------------------------------------------------===//
 
-class GPU_Op<string mnemonic, list<OpTrait> traits = []> :
+class GPU_Op<string mnemonic, list<Trait> traits = []> :
     Op<GPU_Dialect, mnemonic, traits>;
 
 def GPU_Dimension : I32EnumAttr<"Dimension",
@@ -41,7 +41,7 @@ def GPU_Dimension : I32EnumAttr<"Dimension",
 }
 def GPU_DimensionAttr : EnumAttr<GPU_Dialect, GPU_Dimension, "dim">;
 
-class GPU_IndexOp<string mnemonic, list<OpTrait> traits = []> :
+class GPU_IndexOp<string mnemonic, list<Trait> traits = []> :
     GPU_Op<mnemonic, !listconcat(traits, [NoSideEffect])>,
     Arguments<(ins GPU_DimensionAttr:$dimension)>, Results<(outs Index)> {
   let assemblyFormat = "$dimension attr-dict";

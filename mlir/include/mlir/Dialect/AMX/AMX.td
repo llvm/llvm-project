@@ -61,11 +61,11 @@ def AMX_Dialect : Dialect {
 // AMX Op and IntrOp definitions.
 //===----------------------------------------------------------------------===//
 
-class AMX_Op<string mnemonic, list<OpTrait> traits = []> :
+class AMX_Op<string mnemonic, list<Trait> traits = []> :
   Op<AMX_Dialect, mnemonic, traits> {}
 
 // The "internal" intrinsics are meant for compiler usage.
-class AMX_IntrOp<string mnemonic, int numResults, list<OpTrait> traits = []> :
+class AMX_IntrOp<string mnemonic, int numResults, list<Trait> traits = []> :
   LLVM_IntrOpBase<AMX_Dialect, mnemonic,
                   "x86_" # !subst(".", "_", mnemonic) # "_internal",
                   [], [], traits, numResults>;

@@ -158,7 +158,7 @@ class LLVM_ScalarOrVectorOf<Type element> :
 
 // Base class for LLVM operations. Defines the interface to the llvm::IRBuilder
 // used to translate to LLVM IR proper.
-class LLVM_OpBase<Dialect dialect, string mnemonic, list<OpTrait> traits = []> :
+class LLVM_OpBase<Dialect dialect, string mnemonic, list<Trait> traits = []> :
     Op<dialect, mnemonic, traits> {
   // A pattern for constructing the LLVM IR Instruction (or other Value) that
   // corresponds to this op.  This pattern can use `builder` to refer to an
@@ -182,7 +182,7 @@ class LLVM_OpBase<Dialect dialect, string mnemonic, list<OpTrait> traits = []> :
 // their name automatically. LLVM operations have either zero or one result,
 // this class is specialized below for both cases and should not be used
 // directly.
-class LLVM_Op<string mnemonic, list<OpTrait> traits = []> :
+class LLVM_Op<string mnemonic, list<Trait> traits = []> :
     LLVM_OpBase<LLVM_Dialect, mnemonic, traits>;
 
 // Case of the LLVM enum attribute backed by I64Attr with customized string
@@ -256,7 +256,7 @@ def LLVM_IntrPatterns {
 // `llvm::Intrinsic` enum; one usually wants these to be related.
 class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                       list<int> overloadedResults, list<int> overloadedOperands,
-                      list<OpTrait> traits, int numResults,
+                      list<Trait> traits, int numResults,
                       bit requiresAccessGroup = 0, bit requiresAliasScope = 0>
     : LLVM_OpBase<dialect, opName, traits>,
       Results<!if(!gt(numResults, 0), (outs LLVM_Type:$res), (outs))> {
@@ -287,7 +287,7 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
 // Base class for LLVM intrinsic operations, should not be used directly. Places
 // the intrinsic into the LLVM dialect and prefixes its name with "intr.".
 class LLVM_IntrOp<string mnem, list<int> overloadedResults,
-                  list<int> overloadedOperands, list<OpTrait> traits,
+                  list<int> overloadedOperands, list<Trait> traits,
                   int numResults, bit requiresAccessGroup = 0,
                   bit requiresAliasScope = 0>
     : LLVM_IntrOpBase<LLVM_Dialect, "intr." # mnem, !subst(".", "_", mnem),
@@ -309,7 +309,7 @@ class LLVM_IntrOp<string mnem, list<int> overloadedResults,
 // one (as indicated by `[0]`) is necessary to resolve the overloaded intrinsic.
 // The Op has no results.
 class LLVM_ZeroResultIntrOp<string mnem, list<int> overloadedOperands = [],
-                            list<OpTrait> traits = []>
+                            list<Trait> traits = []>
     : LLVM_IntrOp<mnem, [], overloadedOperands, traits, 0>;
 
 // Base class for LLVM intrinsic operations returning one result. Places the
@@ -320,7 +320,7 @@ class LLVM_ZeroResultIntrOp<string mnem, list<int> overloadedOperands = [],
 // empty otherwise.
 class LLVM_OneResultIntrOp<string mnem, list<int> overloadedResults = [],
                            list<int> overloadedOperands = [],
-                           list<OpTrait> traits = []>
+                           list<Trait> traits = []>
     : LLVM_IntrOp<mnem, overloadedResults, overloadedOperands, traits, 1>;
 
 // LLVM vector reduction over a single vector.

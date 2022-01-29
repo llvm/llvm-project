@@ -25,7 +25,7 @@ def Vector_Dialect : Dialect {
 }
 
 // Base class for Vector dialect ops.
-class Vector_Op<string mnemonic, list<OpTrait> traits = []> :
+class Vector_Op<string mnemonic, list<Trait> traits = []> :
     Op<Vector_Dialect, mnemonic, traits> {
   // For every vector op, there needs to be a:
   //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)

@@ -32,7 +32,7 @@ include "TestAttrDefs.td"
 include "TestTypeDefs.td"
 
 
-class TEST_Op<string mnemonic, list<OpTrait> traits = []> :
+class TEST_Op<string mnemonic, list<Trait> traits = []> :
     Op<Test_Dialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
@@ -2160,7 +2160,7 @@ def FormatInferType2Op : TEST_Op<"format_infer_type2", [DeclareOpInterfaceMethod
 
 // Base class for testing mixing allOperandTypes, allOperands, and
 // inferResultTypes.
-class FormatInferAllTypesBaseOp<string mnemonic, list<OpTrait> traits = []>
+class FormatInferAllTypesBaseOp<string mnemonic, list<Trait> traits = []>
     : TEST_Op<mnemonic, [InferTypeOpInterface] # traits> {
   let arguments = (ins Variadic<AnyType>:$args);
   let results = (outs Variadic<AnyType>:$outs);
@@ -2292,7 +2292,7 @@ def RegionYieldOp : TEST_Op<"region_yield",
   ];
 }
 
-class BufferBasedOpBase<string mnemonic, list<OpTrait> traits>
+class BufferBasedOpBase<string mnemonic, list<Trait> traits>
     : TEST_Op<mnemonic, traits> {
   let description = [{
     A buffer based operation, that uses memRefs as input and output.
@@ -2424,7 +2424,7 @@ def TableGenBuildOp4 : TEST_Op<"tblgen_build_4", [SameOperandsAndResultType]> {
 // Base class for testing `build` methods for ops with
 // InferReturnTypeOpInterface.
 class TableGenBuildInferReturnTypeBaseOp<string mnemonic,
-                                         list<OpTrait> traits = []>
+                                         list<Trait> traits = []>
     : TEST_Op<mnemonic, [InferTypeOpInterface] # traits> {
   let arguments = (ins Variadic<AnyType>:$inputs);
   let results = (outs AnyType:$result);

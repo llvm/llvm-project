@@ -5,7 +5,7 @@ include "mlir/IR/OpBase.td"
 def Test_Dialect : Dialect {
   let name = "test";
 }
-class NS_Op<string mnemonic, list<OpTrait> traits> :
+class NS_Op<string mnemonic, list<Trait> traits> :
     Op<Test_Dialect, mnemonic, traits>;
 
 def I32OrF32 : Type<CPred<"$_self.isInteger(32) || $_self.isF32()">,

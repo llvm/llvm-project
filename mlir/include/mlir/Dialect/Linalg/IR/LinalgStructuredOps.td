@@ -24,7 +24,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // Linalg ops that correspond to library calls operate on ShapedType as their
 // first operands. These may be optionally followed by non-view operands
 // depending on the specific Linalg op.
-class LinalgStructuredBase_Op<string mnemonic, list<OpTrait> props>
+class LinalgStructuredBase_Op<string mnemonic, list<Trait> props>
   : Op<Linalg_Dialect, mnemonic, !listconcat([
        SingleBlockImplicitTerminator<"YieldOp">,
        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
@@ -44,7 +44,7 @@ class LinalgStructuredBase_Op<string mnemonic, list<OpTrait> props>
   }];
 }
 
-class LinalgStructured_Op<string mnemonic, list<OpTrait> props>
+class LinalgStructured_Op<string mnemonic, list<Trait> props>
   : LinalgStructuredBase_Op<mnemonic, !listconcat(props, [])> {
   code structuredOpsDecls = structuredOpsBaseDecls # [{
     std::string getLibraryCallName() {

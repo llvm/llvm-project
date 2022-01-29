@@ -31,7 +31,7 @@ def StandardOps_Dialect : Dialect {
 }
 
 // Base class for Standard dialect ops.
-class Std_Op<string mnemonic, list<OpTrait> traits = []> :
+class Std_Op<string mnemonic, list<Trait> traits = []> :
     Op<StandardOps_Dialect, mnemonic, traits> {
   // For every standard op, there needs to be a:
   //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)
@@ -46,7 +46,7 @@ class Std_Op<string mnemonic, list<OpTrait> traits = []> :
 
 // Base class for unary ops. Requires single operand and result. Individual
 // classes will have `operand` accessor.
-class UnaryOp<string mnemonic, list<OpTrait> traits = []> :
+class UnaryOp<string mnemonic, list<Trait> traits = []> :
     Op<StandardOps_Dialect, mnemonic, !listconcat(traits, [NoSideEffect])> {
   let results = (outs AnyType);
   let printer = [{
@@ -55,14 +55,14 @@ class UnaryOp<string mnemonic, list<OpTrait> traits = []> :
 }
 
 class UnaryOpSameOperandAndResultType<string mnemonic,
-                                      list<OpTrait> traits = []> :
+                                      list<Trait> traits = []> :
     UnaryOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType])> {
   let parser = [{
     return impl::parseOneResultSameOperandTypeOp(parser, result);
   }];
 }
 
-class FloatUnaryOp<string mnemonic, list<OpTrait> traits = []> :
+class FloatUnaryOp<string mnemonic, list<Trait> traits = []> :
     UnaryOpSameOperandAndResultType<mnemonic, traits # [
     DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
     ElementwiseMappable.traits>, Arguments<(ins FloatLike:$operand)>;
@@ -70,7 +70,7 @@ class FloatUnaryOp<string mnemonic, list<OpTrait> traits = []> :
 // Base class for standard arithmetic operations.  Requires operands and
 // results to be of the same type, but does not constrain them to specific
 // types.
-class ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
+class ArithmeticOp<string mnemonic, list<Trait> traits = []> :
     Op<StandardOps_Dialect, mnemonic, traits # [NoSideEffect,
     SameOperandsAndResultType,
     DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
@@ -84,7 +84,7 @@ class ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
 }
 
 // Base class for standard binary arithmetic operations.
-class ArithmeticBinaryOp<string mnemonic, list<OpTrait> traits = []> :
+class ArithmeticBinaryOp<string mnemonic, list<Trait> traits = []> :
     ArithmeticOp<mnemonic, traits> {
 
   let parser = [{
@@ -93,7 +93,7 @@ class ArithmeticBinaryOp<string mnemonic, list<OpTrait> traits = []> :
 }
 
 // Base class for standard ternary arithmetic operations.
-class ArithmeticTernaryOp<string mnemonic, list<OpTrait> traits = []> :
+class ArithmeticTernaryOp<string mnemonic, list<Trait> traits = []> :
     ArithmeticOp<mnemonic, traits> {
 
   let parser = [{
@@ -113,7 +113,7 @@ class ArithmeticTernaryOp<string mnemonic, list<OpTrait> traits = []> :
 //
 //     <op>i %0, %1 : i32
 //
-class IntBinaryOp<string mnemonic, list<OpTrait> traits = []> :
+class IntBinaryOp<string mnemonic, list<Trait> traits = []> :
     ArithmeticBinaryOp<mnemonic,
       !listconcat(traits,
                   [DeclareOpInterfaceMethods<VectorUnrollOpInterface>])>,
@@ -128,7 +128,7 @@ class IntBinaryOp<string mnemonic, list<OpTrait> traits = []> :
 //
 //     <op>f %0, %1 : f32
 //
-class FloatBinaryOp<string mnemonic, list<OpTrait> traits = []> :
+class FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
     ArithmeticBinaryOp<mnemonic,
       !listconcat(traits,
                   [DeclareOpInterfaceMethods<VectorUnrollOpInterface>])>,
@@ -143,7 +143,7 @@ class FloatBinaryOp<string mnemonic, list<OpTrait> traits = []> :
 //
 //     <op> %0, %1, %2 : f32
 //
-class FloatTernaryOp<string mnemonic, list<OpTrait> traits = []> :
+class FloatTernaryOp<string mnemonic, list<Trait> traits = []> :
     ArithmeticTernaryOp<mnemonic,
       !listconcat(traits,
                   [DeclareOpInterfaceMethods<VectorUnrollOpInterface>])>,

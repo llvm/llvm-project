@@ -18,7 +18,7 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 class SPV_CastOp<string mnemonic, Type resultType, Type operandType,
-                 list<OpTrait> traits = []> :
+                 list<Trait> traits = []> :
       SPV_Op<mnemonic,
              !listconcat(traits,
                          [NoSideEffect, SameOperandsAndResultShape])> {

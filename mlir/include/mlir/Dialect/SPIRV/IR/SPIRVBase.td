@@ -4248,7 +4248,7 @@ def SPV_OpcodeAttr :
 //===----------------------------------------------------------------------===//
 
 // Base class for all SPIR-V ops.
-class SPV_Op<string mnemonic, list<OpTrait> traits = []> :
+class SPV_Op<string mnemonic, list<Trait> traits = []> :
     Op<SPIRV_Dialect, mnemonic, !listconcat(traits, [
          // TODO: We don't need all of the following traits for every op; only
          // the suitable ones should be added automatically after ODS supports
@@ -4310,7 +4310,7 @@ class SPV_Op<string mnemonic, list<OpTrait> traits = []> :
 }
 
 class SPV_UnaryOp<string mnemonic, Type resultType, Type operandType,
-                  list<OpTrait> traits = []> :
+                  list<Trait> traits = []> :
       SPV_Op<mnemonic, traits> {
   let arguments = (ins
     SPV_ScalarOrVectorOf<operandType>:$operand
@@ -4327,7 +4327,7 @@ class SPV_UnaryOp<string mnemonic, Type resultType, Type operandType,
 }
 
 class SPV_BinaryOp<string mnemonic, Type resultType, Type operandsType,
-                   list<OpTrait> traits = []> :
+                   list<Trait> traits = []> :
       SPV_Op<mnemonic, traits> {
   let arguments = (ins
     SPV_ScalarOrVectorOf<operandsType>:$operand1,
@@ -4345,7 +4345,7 @@ class SPV_BinaryOp<string mnemonic, Type resultType, Type operandsType,
 }
 
 class SPV_ExtInstOp<string mnemonic, string setPrefix, string setName,
-                    int opcode, list<OpTrait> traits = []> :
+                    int opcode, list<Trait> traits = []> :
   SPV_Op<setPrefix # "." # mnemonic, traits> {
 
   // Extended instruction sets have no direct opcode (they share the

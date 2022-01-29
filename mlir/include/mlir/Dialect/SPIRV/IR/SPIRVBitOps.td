@@ -17,13 +17,13 @@
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-class SPV_BitBinaryOp<string mnemonic, list<OpTrait> traits = []> :
+class SPV_BitBinaryOp<string mnemonic, list<Trait> traits = []> :
       // All the operands type used in bit instructions are SPV_Integer.
       SPV_BinaryOp<mnemonic, SPV_Integer, SPV_Integer,
                    !listconcat(traits,
                                [NoSideEffect, SameOperandsAndResultType])>;
 
-class SPV_BitFieldExtractOp<string mnemonic, list<OpTrait> traits = []> :
+class SPV_BitFieldExtractOp<string mnemonic, list<Trait> traits = []> :
       SPV_Op<mnemonic, !listconcat(traits,
              [NoSideEffect, AllTypesMatch<["base", "result"]>])> {
   let arguments = (ins
@@ -43,12 +43,12 @@ class SPV_BitFieldExtractOp<string mnemonic, list<OpTrait> traits = []> :
   }];
 }
 
-class SPV_BitUnaryOp<string mnemonic, list<OpTrait> traits = []> :
+class SPV_BitUnaryOp<string mnemonic, list<Trait> traits = []> :
       SPV_UnaryOp<mnemonic, SPV_Integer, SPV_Integer,
                    !listconcat(traits,
                                [NoSideEffect, SameOperandsAndResultType])>;
 
-class SPV_ShiftOp<string mnemonic, list<OpTrait> traits = []> :
+class SPV_ShiftOp<string mnemonic, list<Trait> traits = []> :
       SPV_BinaryOp<mnemonic, SPV_Integer, SPV_Integer,
                    !listconcat(traits,
                                [NoSideEffect, SameOperandsAndResultShape])> {

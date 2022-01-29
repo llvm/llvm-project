@@ -33,7 +33,7 @@ def OpenACC_Dialect : Dialect {
 include "mlir/Dialect/OpenACC/AccCommon.td"
 
 // Base class for OpenACC dialect ops.
-class OpenACC_Op<string mnemonic, list<OpTrait> traits = []> :
+class OpenACC_Op<string mnemonic, list<Trait> traits = []> :
   Op<OpenACC_Dialect, mnemonic, traits> {
 
   let printer = [{ return ::print(p, *this); }];

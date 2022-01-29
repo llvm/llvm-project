@@ -6,7 +6,7 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 def Test_Dialect : Dialect {
   let name = "test";
 }
-class NS_Op<string mnemonic, list<OpTrait> traits> :
+class NS_Op<string mnemonic, list<Trait> traits> :
     Op<Test_Dialect, mnemonic, traits>;
 
 def OpA : NS_Op<"one_normal_result_op", []> {

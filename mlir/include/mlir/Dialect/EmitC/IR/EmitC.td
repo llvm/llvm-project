@@ -23,7 +23,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 //===----------------------------------------------------------------------===//
 
 // Base class for EmitC dialect ops.
-class EmitC_Op<string mnemonic, list<OpTrait> traits = []>
+class EmitC_Op<string mnemonic, list<Trait> traits = []>
     : Op<EmitC_Dialect, mnemonic, traits> {
   let verifier = "return ::verify(*this);";
 }

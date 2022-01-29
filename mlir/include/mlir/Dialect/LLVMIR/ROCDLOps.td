@@ -37,7 +37,7 @@ def ROCDL_Dialect : Dialect {
 // ROCDL op definitions
 //===----------------------------------------------------------------------===//
 
-class ROCDL_Op<string mnemonic, list<OpTrait> traits = []> :
+class ROCDL_Op<string mnemonic, list<Trait> traits = []> :
   LLVM_OpBase<ROCDL_Dialect, mnemonic, traits> {
 }
 
@@ -46,7 +46,7 @@ class ROCDL_Op<string mnemonic, list<OpTrait> traits = []> :
 //===----------------------------------------------------------------------===//
 
 class ROCDL_SpecialRegisterOp<string mnemonic,
-    list<OpTrait> traits = []> :
+    list<Trait> traits = []> :
   ROCDL_Op<mnemonic, !listconcat(traits, [NoSideEffect])>,
   Results<(outs LLVM_Type:$res)>, Arguments<(ins)> {
   string llvmBuilder = "$res = createIntrinsicCall(builder,"
@@ -55,7 +55,7 @@ class ROCDL_SpecialRegisterOp<string mnemonic,
 }
 
 class ROCDL_DeviceFunctionOp<string mnemonic, string device_function,
-                             int parameter, list<OpTrait> traits = []> :
+                             int parameter, list<Trait> traits = []> :
   ROCDL_Op<mnemonic, !listconcat(traits, [NoSideEffect])>,
   Results<(outs LLVM_Type:$res)>, Arguments<(ins)> {
   string llvmBuilder = "$res = createDeviceFunctionCall(builder, \""
@@ -113,7 +113,7 @@ def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
 //===---------------------------------------------------------------------===//
 // Xdlops intrinsics
 
-class ROCDL_Mfma_IntrOp<string mnemonic, list<OpTrait> traits = []> :
+class ROCDL_Mfma_IntrOp<string mnemonic, list<Trait> traits = []> :
   LLVM_IntrOpBase<ROCDL_Dialect, mnemonic,
                   "amdgcn_" # !subst(".","_", mnemonic),
                   [], [], traits, 1>,

@@ -552,7 +552,7 @@ void Operator::populateOpStructure() {
     insert = [&](llvm::ListInit *traitList) {
       for (auto *traitInit : *traitList) {
         auto *def = cast<DefInit>(traitInit)->getDef();
-        if (def->isSubClassOf("OpTraitList")) {
+        if (def->isSubClassOf("TraitList")) {
           insert(def->getValueAsListInit("traits"));
           continue;
         }

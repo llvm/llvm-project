@@ -32,7 +32,7 @@ def OpenMP_Dialect : Dialect {
 // OmpCommon requires definition of OpenACC_Dialect.
 include "mlir/Dialect/OpenMP/OmpCommon.td"
 
-class OpenMP_Op<string mnemonic, list<OpTrait> traits = []> :
+class OpenMP_Op<string mnemonic, list<Trait> traits = []> :
       Op<OpenMP_Dialect, mnemonic, traits>;
 
 // Type which can be constraint accepting standard integers and indices.
