@@ -35,23 +35,24 @@
 # CMDLINE-NEXT: {{^libcmdline\.a}}
 
 ## LLD tries to resolve dependent library specifiers in the following order:
-##   1) The literal name in the current working directory.
-##   2) The literal name in a library search path.
-##   3) The name, prefixed with "lib" and suffixed with ".so" or ".a" in a
+##   1) The name, prefixed with "lib" and suffixed with ".so" or ".a" in a
 ##      library search path. This means that a directive of "foo.a" could lead
 ##      to a library named "libfoo.a.a" being linked in.
+##   2) The literal name in a library search path.
+##   3) The literal name in the current working directory.
 ## When using library search paths for dependent libraries, LLD follows the same
 ## rules as for libraries specified on the command line.
 # RUN: cp %t.dir/foo.a %t.cwd/foo.a
 # RUN: cp %t.dir/foo.a %t.dir/libfoo.a.a
+
 # RUN: ld.lld %t.o -o /dev/null -L %t.dir --trace 2>&1 | \
-# RUN:   FileCheck %s -DOBJ=%t.o -DDIR=%t.dir --check-prefix=CWD \
+# RUN:   FileCheck %s -DOBJ=%t.o -DDIR=%t.dir --check-prefix=LIBA-DIR \
 # RUN:                --implicit-check-not=foo.a --implicit-check-not=libbar.so
 
-# CWD:      [[OBJ]]
-# CWD-NEXT: {{^foo\.a}}
+# LIBA-DIR:      [[OBJ]]
+# LIBA-DIR-NEXT: [[DIR]]{{[\\/]}}libfoo.a.a
 
-# RUN: rm %t.cwd/foo.a
+# RUN: rm %t.dir/libfoo.a.a
 # RUN: ld.lld %t.o -o /dev/null -L %t.dir --trace 2>&1 | \
 # RUN:   FileCheck %s -DOBJ=%t.o -DDIR=%t.dir --check-prefix=PLAIN-DIR \
 # RUN:                --implicit-check-not=foo.a --implicit-check-not=libbar.so
@@ -61,11 +62,11 @@
 
 # RUN: rm %t.dir/foo.a
 # RUN: ld.lld %t.o -o /dev/null -L %t.dir --trace 2>&1 | \
-# RUN:   FileCheck %s -DOBJ=%t.o -DDIR=%t.dir --check-prefix=LIBA-DIR \
+# RUN:   FileCheck %s -DOBJ=%t.o -DDIR=%t.dir --check-prefix=CWD \
 # RUN:                --implicit-check-not=foo.a --implicit-check-not=libbar.so
 
-# LIBA-DIR:      [[OBJ]]
-# LIBA-DIR-NEXT: [[DIR]]{{[\\/]}}libfoo.a.a
+# CWD:      [[OBJ]]
+# CWD-NEXT: {{^foo\.a}}
 
     call foo
 .section ".deplibs","MS",@llvm_dependent_libraries,1
