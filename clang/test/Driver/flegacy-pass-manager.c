@@ -1,9 +1,9 @@
 // RUN: %clang -### -c -flegacy-pass-manager -fno-legacy-pass-manager %s 2>&1 | FileCheck --check-prefixes=NOWARN,NEW %s
 // RUN: %clang -### -c -fno-legacy-pass-manager -flegacy-pass-manager %s 2>&1 | FileCheck --check-prefixes=NOWARN,LEGACY %s
 
-/// -f[no-]experimental-new-pass-manager are legacy aliases when the new PM was still experimental.
-// RUN: %clang -### -c -fno-experimental-new-pass-manager -fexperimental-new-pass-manager %s 2>&1 | FileCheck --check-prefixes=NOWARN,NEW %s
-// RUN: %clang -### -c -fexperimental-new-pass-manager -fno-experimental-new-pass-manager %s 2>&1 | FileCheck --check-prefixes=NOWARN,LEGACY %s
+/// -fexperimental-new-pass-manager is a legacy alias. -fno-experimental-new-pass-manager has been removed.
+// RUN: %clang -### -c -fexperimental-new-pass-manager %s 2>&1 | FileCheck --check-prefixes=NOWARN,NEW %s
+// RUN: not %clang -### -fno-experimental-new-pass-manager %s
 
 // NOWARN-NOT: warning: argument unused
 
@@ -20,7 +20,6 @@
 // LTO_NEW:    "-plugin-opt=new-pass-manager"
 
 // RUN: %clang -### -target x86_64-linux -flto -flegacy-pass-manager %s 2>&1 | FileCheck --check-prefix=LTO_LEGACY %s
-// RUN: %clang -### -target x86_64-linux -flto=thin -fno-experimental-new-pass-manager %s 2>&1 | FileCheck --check-prefix=LTO_LEGACY %s
 
 // LTO_LEGACY: "-plugin-opt=legacy-pass-manager"
 

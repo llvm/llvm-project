@@ -107,7 +107,10 @@ Modified Compiler Flags
 Removed Compiler Flags
 -------------------------
 
-- ...
+- ``-fno-experimental-new-pass-manager`` has been removed.
+  ``-flegacy-pass-manager`` can be used as a makeshift,
+  Using the legacy pass manager for the optimization pipeline was deprecated in
+  13.0.0 and will be removed after 14.0.0.
 
 New Pragmas in Clang
 --------------------
