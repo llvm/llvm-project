@@ -27,6 +27,12 @@ class ObjectFilePCHContainerWriter : public PCHContainerWriter {
                               const std::string &OutputFileName,
                               std::unique_ptr<llvm::raw_pwrite_stream> OS,
                               std::shared_ptr<PCHBuffer> Buffer) const override;
+
+  std::unique_ptr<ASTConsumer> CreatePCHDeferredContainerGenerator(
+      CompilerInstance &CI, const std::string &MainFileName,
+      const std::string &OutputFileName,
+      std::unique_ptr<llvm::raw_pwrite_stream> OS,
+      std::shared_ptr<PCHBuffer> Buffer) const override;
 };
 
 /// A PCHContainerReader implementation that uses LLVM to

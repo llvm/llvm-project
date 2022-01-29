@@ -26,6 +26,7 @@ class CompilerInstance;
 
 struct PCHBuffer {
   ASTFileSignature Signature;
+  std::string PresumedFileName;
   llvm::SmallVector<char, 0> Data;
   bool IsComplete;
 };
@@ -47,6 +48,15 @@ public:
                               const std::string &OutputFileName,
                               std::unique_ptr<llvm::raw_pwrite_stream> OS,
                               std::shared_ptr<PCHBuffer> Buffer) const = 0;
+
+  /// Return an ASTConsumer that can be chained with a
+  /// PCHGenerator that produces a wrapper file format containing a
+  /// serialized AST bitstream.
+  virtual std::unique_ptr<ASTConsumer> CreatePCHDeferredContainerGenerator(
+      CompilerInstance &CI, const std::string &MainFileName,
+      const std::string &OutputFileName,
+      std::unique_ptr<llvm::raw_pwrite_stream> OS,
+      std::shared_ptr<PCHBuffer> Buffer) const = 0;
 };
 
 /// This abstract interface provides operations for unwrapping
@@ -74,6 +84,12 @@ class RawPCHContainerWriter : public PCHContainerWriter {
                               const std::string &OutputFileName,
                               std::unique_ptr<llvm::raw_pwrite_stream> OS,
                               std::shared_ptr<PCHBuffer> Buffer) const override;
+
+  std::unique_ptr<ASTConsumer> CreatePCHDeferredContainerGenerator(
+      CompilerInstance &CI, const std::string &MainFileName,
+      const std::string &OutputFileName,
+      std::unique_ptr<llvm::raw_pwrite_stream> OS,
+      std::shared_ptr<PCHBuffer> Buffer) const override;
 };
 
 /// Implements read operations for a raw pass-through PCH container.
