@@ -712,3 +712,29 @@ define i1 @eq_cast_zext_use2(<5 x i3> %b) {
   %r = icmp eq i35 %bc, 0
   ret i1 %r
 }
+
+define i1 @eq_cast_eq_ptr-1(<2 x i4*> %x, <2 x i4*> %y) {
+; CHECK-LABEL: @eq_cast_eq_ptr-1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp ne <2 x i4*> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp eq <2 x i4*> %x, %y
+  %b = bitcast <2 x i1> %ic to i2
+  %r = icmp eq i2 %b, -1
+  ret i1 %r
+}
+
+define i1 @eq_cast_ne_ptr-1(<2 x i4*> %x, <2 x i4*> %y) {
+; CHECK-LABEL: @eq_cast_ne_ptr-1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp ne <2 x i4*> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i2 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp eq <2 x i4*> %x, %y
+  %b = bitcast <2 x i1> %ic to i2
+  %r = icmp ne i2 %b, -1
+  ret i1 %r
+}
