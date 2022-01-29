@@ -808,13 +808,13 @@ def : Pat<(m88k_hi tglobaladdr:$dst), (ORriu (i32 R0), tglobaladdr:$dst)>;
 // Flow control
 // ---------------------------------------------------------------------------//
 
-let isTerminator = 1, isBarrier = 1 in {
+let isBarrier = 1, isBranch = 1, isTerminator = 1, isIndirectBranch = 1 in {
   def JMP : F_JMP<0b11000, (outs), (ins GPR:$rs2), "jmp", [(brind GPR:$rs2)]>;
   let hasDelaySlot = 1 in
     def JMPn : F_JMP<0b11000, (outs), (ins GPR:$rs2), "jmp.n">;
 }
 
-let isCall = 1, isBarrier = 1 in {
+let isCall = 1 in {
   def JSR : F_JMP<0b11001, (outs), (ins GPR:$rs2), "jsr">;
   let hasDelaySlot = 1 in
     def JSRn : F_JMP<0b11001, (outs), (ins GPR:$rs2), "jsr.n">;
@@ -831,10 +831,11 @@ let isReturn = 1, isTerminator = 1, isBarrier = 1, Uses = [R1] in {
 let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
   def BR : F_BRANCH<0b11000, (outs), (ins brtarget26:$d26), "br",
                     [(br bb:$d26)]>;
-
   let hasDelaySlot = 1 in
     def BRn : F_BRANCH<0b11000, (outs), (ins brtarget26:$d26), "br.n">;
+}
 
+let isBranch = 1, isTerminator = 1 in {
   def BB0 : F_BCOND<0b11010,
                     (outs), (ins imm32zx5:$m5, GPR:$rs1, brtarget16:$d16),
                     "bb0">;
@@ -855,7 +856,9 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
                         (outs), (ins ccode:$m5, GPR:$rs1, brtarget16:$d16),
                         "bcnd.n">;
   }
+}
 
+let isTrap = 1 in {
   def TB0 : F_TB<0b1101000, (outs), (ins imm32zx5:$b5, GPR:$rs1, Vec9:$vec9),
                  "tb0">;
   def TB1 : F_TB<0b1101100, (outs), (ins imm32zx5:$b5, GPR:$rs1, Vec9:$vec9),
