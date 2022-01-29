@@ -569,27 +569,6 @@ void CIRGenModule::buildDecl(const Decl &D) {
   }
 }
 
-/// Emit the computation of the specified expression of scalar type,
-/// ignoring the result.
-mlir::Value CIRGenModule::buildScalarExpr(const Expr *E) {
-  assert(E && CIRGenFunction::hasScalarEvaluationKind(E->getType()) &&
-         "Invalid scalar expression to emit");
-
-  return ScalarExprEmitter(*CurCGF, *this).Visit(const_cast<Expr *>(E));
-}
-
-/// Emit a conversion from the specified type to the specified destination
-/// type, both of which are CIR scalar types.
-mlir::Value CIRGenModule::buildScalarConversion(mlir::Value Src, QualType SrcTy,
-                                                QualType DstTy,
-                                                SourceLocation Loc) {
-  assert(CIRGenFunction::hasScalarEvaluationKind(SrcTy) &&
-         CIRGenFunction::hasScalarEvaluationKind(DstTy) &&
-         "Invalid scalar expression to emit");
-  return ScalarExprEmitter(*CurCGF, *this)
-      .buildScalarConversion(Src, SrcTy, DstTy, Loc);
-}
-
 mlir::LogicalResult CIRGenModule::buildReturnStmt(const ReturnStmt &S) {
   assert(!(astCtx.getLangOpts().ElideConstructors && S.getNRVOCandidate() &&
            S.getNRVOCandidate()->isNRVOVariable()) &&
