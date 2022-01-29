@@ -417,6 +417,7 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
     case MachO::LC_SUB_UMBRELLA:
     case MachO::LC_SUB_CLIENT:
     case MachO::LC_SUB_LIBRARY:
+    case MachO::LC_LINKER_OPTION:
       // Nothing to update.
       break;
     default:

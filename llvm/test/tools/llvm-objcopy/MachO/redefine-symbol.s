@@ -43,6 +43,7 @@
 # RUN: llvm-objcopy --strip-symbol _ba --redefine-sym _foo=_ba %t %t.noba
 # RUN: llvm-readobj --symbols %t.noba | FileCheck %s --check-prefix=NOTSTRIPPED
 
+.linker_option "-lc"
 .globl _func
 _func:
 
