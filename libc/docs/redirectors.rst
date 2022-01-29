@@ -32,9 +32,8 @@ Implementation of redirecting entrypoints
 
 Let us take the ``round`` function from ``math.h`` as an example to see what
 it's implementation looks like when it just redirects to the ``round`` function
-from the system libc.
+from the system libc::
 
-::
     namespace llvm_libc {
 
     double __redirected_round(double);

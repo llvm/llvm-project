@@ -80,6 +80,8 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
   endif()
 endif()
 
+option(LIBC_INCLUDE_DOCS "Build the libc documentation." ${LLVM_INCLUDE_DOCS})
+
 include(CMakeParseArguments)
 include(LLVMLibCRules)
 include(LLVMLibCCheckCpuFeatures)
@@ -138,3 +140,7 @@ if(LLVM_INCLUDE_TESTS)
 endif()
 
 add_subdirectory(benchmarks)
+
+if (LIBC_INCLUDE_DOCS)
+  add_subdirectory(docs)
+endif()
