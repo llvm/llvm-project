@@ -273,7 +273,6 @@ can be better.
    CodeOfConduct
    Proposals/GitHubMove
    BugpointRedesign
-   Proposals/LLVMLibC
    Proposals/TestSuite
    Proposals/VariableNames
    Proposals/VectorizationPlan
@@ -288,9 +287,6 @@ can be better.
 
 :doc:`BugpointRedesign`
    Design doc for a redesign of the Bugpoint tool.
-
-:doc:`Proposals/LLVMLibC`
-   Proposal to add a libc implementation under the LLVM project.
 
 :doc:`Proposals/TestSuite`
    Proposals for additional benchmarks/programs for llvm's test-suite.
