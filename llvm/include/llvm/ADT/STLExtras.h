@@ -5,12 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file contains some templates that are useful if you are working with the
-// STL at all.
-//
-// No library is required when using these functions.
-//
+///
+/// \file
+/// This file contains some templates that are useful if you are working with
+/// the STL at all.
+///
+/// No library is required when using these functions.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_STLEXTRAS_H

@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file implements the SmallBitVector class.
-//
+///
+/// \file
+/// This file implements the SmallBitVector class.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_SMALLBITVECTOR_H

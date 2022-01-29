@@ -5,18 +5,19 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This template implementation resides in a separate file so that it
-// does not get injected into every .cpp file that includes the
-// generic header.
-//
-// DO NOT INCLUDE THIS FILE WHEN MERELY USING CYCLEINFO.
-//
-// This file should only be included by files that implement a
-// specialization of the relevant templates. Currently these are:
-// - CycleAnalysis.cpp
-// - MachineCycleAnalysis.cpp
-//
+///
+/// \file
+/// This template implementation resides in a separate file so that it
+/// does not get injected into every .cpp file that includes the
+/// generic header.
+///
+/// DO NOT INCLUDE THIS FILE WHEN MERELY USING CYCLEINFO.
+///
+/// This file should only be included by files that implement a
+/// specialization of the relevant templates. Currently these are:
+/// - CycleAnalysis.cpp
+/// - MachineCycleAnalysis.cpp
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_GENERICCYCLEIMPL_H
