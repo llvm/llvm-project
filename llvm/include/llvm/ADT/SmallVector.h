@@ -568,6 +568,16 @@ protected:
   explicit SmallVectorImpl(unsigned N)
       : SmallVectorTemplateBase<T>(N) {}
 
+  void assignRemote(SmallVectorImpl &&RHS) {
+    this->destroy_range(this->begin(), this->end());
+    if (!this->isSmall())
+      free(this->begin());
+    this->BeginX = RHS.BeginX;
+    this->Size = RHS.Size;
+    this->Capacity = RHS.Capacity;
+    RHS.resetToSmall();
+  }
+
 public:
   SmallVectorImpl(const SmallVectorImpl &) = delete;
 
@@ -1032,12 +1042,7 @@ SmallVectorImpl<T> &SmallVectorImpl<T>::operator=(SmallVectorImpl<T> &&RHS) {
 
   // If the RHS isn't small, clear this vector and then steal its buffer.
   if (!RHS.isSmall()) {
-    this->destroy_range(this->begin(), this->end());
-    if (!this->isSmall()) free(this->begin());
-    this->BeginX = RHS.BeginX;
-    this->Size = RHS.Size;
-    this->Capacity = RHS.Capacity;
-    RHS.resetToSmall();
+    this->assignRemote(std::move(RHS));
     return *this;
   }
 
@@ -1228,7 +1233,20 @@ public:
   }
 
   SmallVector &operator=(SmallVector &&RHS) {
-    SmallVectorImpl<T>::operator=(::std::move(RHS));
+    if (N) {
+      SmallVectorImpl<T>::operator=(::std::move(RHS));
+      return *this;
+    }
+    // SmallVectorImpl<T>::operator= does not leverage N==0. Optimize the
+    // case.
+    if (this == &RHS)
+      return *this;
+    if (RHS.empty()) {
+      this->destroy_range(this->begin(), this->end());
+      this->Size = 0;
+    } else {
+      this->assignRemote(std::move(RHS));
+    }
     return *this;
   }
 
