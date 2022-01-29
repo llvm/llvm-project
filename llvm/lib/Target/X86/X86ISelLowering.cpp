@@ -12574,6 +12574,8 @@ static SDValue lowerShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
   if (ForceV2Zero)
     V2 = getZeroVector(VT, Subtarget, DAG, DL);
 
+  unsigned NumElts = VT.getVectorNumElements();
+
   switch (VT.SimpleTy) {
   case MVT::v4i64:
   case MVT::v8i32:
@@ -12632,8 +12634,7 @@ static SDValue lowerShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
       return Masked;
 
     if (Subtarget.hasBWI() && Subtarget.hasVLX()) {
-      MVT IntegerType =
-          MVT::getIntegerVT(std::max((int)VT.getVectorNumElements(), 8));
+      MVT IntegerType = MVT::getIntegerVT(std::max<unsigned>(NumElts, 8));
       SDValue MaskNode = DAG.getConstant(BlendMask, DL, IntegerType);
       return getVectorMaskingNode(V2, MaskNode, V1, Subtarget, DAG);
     }
@@ -12702,8 +12703,7 @@ static SDValue lowerShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
 
     // Otherwise load an immediate into a GPR, cast to k-register, and use a
     // masked move.
-    MVT IntegerType =
-        MVT::getIntegerVT(std::max((int)VT.getVectorNumElements(), 8));
+    MVT IntegerType = MVT::getIntegerVT(std::max<unsigned>(NumElts, 8));
     SDValue MaskNode = DAG.getConstant(BlendMask, DL, IntegerType);
     return getVectorMaskingNode(V2, MaskNode, V1, Subtarget, DAG);
   }
