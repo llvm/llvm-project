@@ -709,20 +709,27 @@ bool AArch64ExpandPseudo::expandSVESpillFill(MachineBasicBlock &MBB,
 
 bool AArch64ExpandPseudo::expandCALL_RVMARKER(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
-  // Expand CALL_RVMARKER pseudo to a branch, followed by the special `mov x29,
-  // x29` marker. Mark the sequence as bundle, to avoid passes moving other code
-  // in between.
+  // Expand CALL_RVMARKER pseudo to:
+  // - a branch to the call target, followed by
+  // - the special `mov x29, x29` marker, and
+  // - another branch, to the runtime function
+  // Mark the sequence as bundle, to avoid passes moving other code in between.
   MachineInstr &MI = *MBBI;
 
   MachineInstr *OriginalCall;
-  MachineOperand &CallTarget = MI.getOperand(0);
+  MachineOperand &RVTarget = MI.getOperand(0);
+  MachineOperand &CallTarget = MI.getOperand(1);
+  assert((CallTarget.isGlobal() || CallTarget.isReg()) &&
+         "invalid operand for regular call");
+  assert(RVTarget.isGlobal() && "invalid operand for attached call");
+
   unsigned RegMaskStartIdx;
-  if (MI.getOperand(1).isImm()) {
+  if (MI.getOperand(2).isImm()) {
     // Pointer auth call.
-    MachineOperand &Discriminator = MI.getOperand(2);
-    assert(MI.getOperand(1).isImm() &&
+    MachineOperand &Discriminator = MI.getOperand(3);
+    assert(MI.getOperand(2).isImm() &&
            "first operand of ptrauth call must be an immediate");
-    int64_t Imm = MI.getOperand(1).getImm();
+    int64_t Imm = MI.getOperand(2).getImm();
     assert((Imm == 0 || Imm == 1) && "invalid ptrauth immediate");
     assert(Discriminator.isReg() &&
            "ptrauth discriminator call must be a register");
@@ -742,7 +749,7 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
       OriginalCall->addOperand(CallTarget);
     }
 
-    RegMaskStartIdx = 3;
+    RegMaskStartIdx = 4;
   } else {
     // Regular call.
     assert((CallTarget.isGlobal() || CallTarget.isReg()) &&
@@ -751,10 +758,10 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
     OriginalCall =
         BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
     OriginalCall->addOperand(CallTarget);
-    RegMaskStartIdx = 1;
+    RegMaskStartIdx = 2;
   }
 
-  // Skip argument register arguments. Those are added during ISel, but are not
+  // Skip register arguments. Those are added during ISel, but are not
   // needed for the concrete branch.
   while (!MI.getOperand(RegMaskStartIdx).isRegMask()) {
     auto MOP = MI.getOperand(RegMaskStartIdx);
@@ -767,17 +774,22 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
        llvm::drop_begin(MI.operands(), RegMaskStartIdx))
     OriginalCall->addOperand(MO);
 
-  auto *Marker = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
+  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
                      .addReg(AArch64::FP, RegState::Define)
                      .addReg(AArch64::XZR)
                      .addReg(AArch64::FP)
-                     .addImm(0)
+                     .addImm(0);
+
+  auto *RVCall = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::BL))
+                     .add(RVTarget)
                      .getInstr();
+
   if (MI.shouldUpdateCallSiteInfo())
-    MBB.getParent()->moveCallSiteInfo(&MI, Marker);
+    MBB.getParent()->moveCallSiteInfo(&MI, OriginalCall);
+
   MI.eraseFromParent();
   finalizeBundle(MBB, OriginalCall->getIterator(),
-                 std::next(Marker->getIterator()));
+                 std::next(RVCall->getIterator()));
   return true;
 }
 

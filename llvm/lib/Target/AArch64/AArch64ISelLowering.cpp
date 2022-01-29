@@ -6517,12 +6517,18 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   // Calls with operand bundle "clang.arc.attachedcall" are special. They should
-  // be expanded to the call, directly followed by a special marker sequence.
-  // Use the CALL_RVMARKER to do that.
+  // be expanded to the call, directly followed by a special marker sequence and
+  // a call to an ObjC library function.  Use CALL_RVMARKER to do that.
   if (CLI.CB && objcarc::hasAttachedCallOpBundle(CLI.CB)) {
     assert(!IsTailCall &&
            "tail calls cannot be marked with clang.arc.attachedcall");
     Opc = AArch64ISD::CALL_RVMARKER;
+
+    // Add a target global address for the retainRV/claimRV runtime function
+    // just before the call target.
+    Function *ARCFn = *objcarc::getAttachedARCFunction(CLI.CB);
+    auto GA = DAG.getTargetGlobalAddress(ARCFn, DL, PtrVT);
+    Ops.insert(Ops.begin() + 1, GA);
   }
 
   // Returns a chain and a flag for retval copy to use.

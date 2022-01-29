@@ -2459,7 +2459,7 @@ bool ObjCARCOpt::run(Function &F, AAResults &AA) {
     return false;
 
   Changed = CFGChanged = false;
-  BundledRetainClaimRVs BRV(false, objcarc::getRVInstMarker(*F.getParent()));
+  BundledRetainClaimRVs BRV(/*ContractPass=*/false);
   BundledInsts = &BRV;
 
   LLVM_DEBUG(dbgs() << "<<< ObjCARCOpt: Visiting Function: " << F.getName()
