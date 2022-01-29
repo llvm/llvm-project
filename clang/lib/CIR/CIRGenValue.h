@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_LIB_CIR_CIRGENVALUE_H
 #define LLVM_CLANG_LIB_CIR_CIRGENVALUE_H
 
+#include "Address.h"
 #include "CIRGenFunction.h"
 
 #include "mlir/IR/Value.h"
@@ -22,34 +23,6 @@
 #include "llvm/ADT/PointerIntPair.h"
 
 namespace cir {
-
-class RawAddress {
-  mlir::Value Pointer;
-  clang::CharUnits Alignment;
-
-public:
-  RawAddress(mlir::Value pointer, clang::CharUnits alignment)
-      : Pointer(pointer), Alignment(alignment) {
-    assert((!alignment.isZero() || pointer == nullptr) &&
-           "creating valid address with invalid alignment");
-  }
-
-  static RawAddress invalid() {
-    return RawAddress(nullptr, clang::CharUnits());
-  }
-  bool isValid() const { return Pointer != nullptr; }
-
-  mlir::Value getPointer() const {
-    // assert(isValid());
-    return Pointer;
-  }
-
-  /// Return the alignment of this pointer.
-  clang::CharUnits getAlignment() const {
-    // assert(isValid());
-    return Alignment;
-  }
-};
 
 /// This trivial value class is used to represent the result of an
 /// expression that is evaluated.  It can be one of three things: either a
@@ -89,9 +62,9 @@ public:
 
   /// getAggregateAddr() - Return the Value* of the address of the
   /// aggregate.
-  RawAddress getAggregateAddress() const {
+  Address getAggregateAddress() const {
     assert(0 && "not implemented");
-    return RawAddress::invalid();
+    return Address::invalid();
   }
 
   static RValue getIgnored() {
@@ -117,7 +90,7 @@ public:
   // FIXME: Aggregate rvalues need to retain information about whether they
   // are volatile or not.  Remove default to find all places that probably
   // get this wrong.
-  static RValue getAggregate(RawAddress addr, bool isVolatile = false) {
+  static RValue getAggregate(Address addr, bool isVolatile = false) {
     assert(0 && "not implemented");
     return RValue{};
   }
@@ -214,14 +187,12 @@ public:
     return clang::CharUnits::fromQuantity(Alignment);
   }
 
-  RawAddress getAddress() const {
-    return RawAddress(getPointer(), getAlignment());
-  }
+  Address getAddress() const { return Address(getPointer(), getAlignment()); }
 
   LValueBaseInfo getBaseInfo() const { return BaseInfo; }
   void setBaseInfo(LValueBaseInfo Info) { BaseInfo = Info; }
 
-  static LValue makeAddr(RawAddress address, clang::QualType T,
+  static LValue makeAddr(Address address, clang::QualType T,
                          AlignmentSource Source = AlignmentSource::Type) {
     LValue R;
     R.V = address.getPointer();
@@ -231,7 +202,7 @@ public:
   }
 
   // FIXME: only have one of these static methods.
-  static LValue makeAddr(RawAddress address, clang::QualType T,
+  static LValue makeAddr(Address address, clang::QualType T,
                          LValueBaseInfo LBI) {
     LValue R;
     R.V = address.getPointer();
