@@ -133,6 +133,10 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
 
+  unsigned NumOperands = MI.getNumOperands();
+  const ValueMapping *OperandsMapping = nullptr;
+  unsigned MappingID = DefaultMappingID;
+
   switch (Opc) {
     // Arithmetic ops.
   case TargetOpcode::G_ADD:
@@ -149,6 +153,8 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_SHL:
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR:
+    OperandsMapping = getValueMapping(PMI_GR32);
+    break;
     // Floating point ops.
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FSUB:
@@ -157,42 +163,33 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     return getSameKindOfOperandsMapping(MI);
   case TargetOpcode::G_UBFX:
   case TargetOpcode::G_SBFX:
-    return getInstructionMapping(
-        DefaultMappingID, /*Cost=*/1,
-        getOperandsMapping(
-            {getValueMapping(PMI_GR32), getValueMapping(PMI_GR32),
-             getValueMapping(PMI_GR32), getValueMapping(PMI_GR32)}),
-        /*NumOperands*/ MI.getNumOperands());
+    OperandsMapping = getOperandsMapping(
+        {getValueMapping(PMI_GR32), getValueMapping(PMI_GR32),
+         getValueMapping(PMI_GR32), getValueMapping(PMI_GR32)});
+    break;
   case TargetOpcode::G_TRUNC:
-    return getInstructionMapping(DefaultMappingID, /*Cost=*/1,
-                                 getValueMapping(PMI_GR32),
-                                 /*NumOperands*/ MI.getNumOperands());
+    OperandsMapping = getValueMapping(PMI_GR32);
+    break;
   case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD:
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
-    return getInstructionMapping(DefaultMappingID, /*Cost=*/1,
-                                 getValueMapping(PMI_GR32),
-                                 /*NumOperands*/ MI.getNumOperands());
+    OperandsMapping = getValueMapping(PMI_GR32);
+    break;
   case TargetOpcode::G_FRAME_INDEX:
   case TargetOpcode::G_GLOBAL_VALUE:
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_BRCOND:
-    return getInstructionMapping(
-        DefaultMappingID, /*Cost=*/1,
-        getOperandsMapping({getValueMapping(PMI_GR32), nullptr}),
-        /*NumOperands*/ MI.getNumOperands());
+    OperandsMapping = getOperandsMapping({getValueMapping(PMI_GR32), nullptr});
+    break;
   case TargetOpcode::G_BR:
-    return getInstructionMapping(DefaultMappingID, /*Cost=*/1,
-                                 getOperandsMapping({nullptr}),
-                                 /*NumOperands*/ MI.getNumOperands());
+    OperandsMapping = getOperandsMapping({nullptr});
+    break;
   case TargetOpcode::G_ICMP:
-    return getInstructionMapping(
-        DefaultMappingID, /*Cost=*/1,
-        getOperandsMapping({getValueMapping(PMI_GR32), nullptr,
-                            getValueMapping(PMI_GR32),
-                            getValueMapping(PMI_GR32)}),
-        /*NumOperands*/ MI.getNumOperands());
+    OperandsMapping = getOperandsMapping({getValueMapping(PMI_GR32), nullptr,
+                                          getValueMapping(PMI_GR32),
+                                          getValueMapping(PMI_GR32)});
+    break;
   case TargetOpcode::G_MERGE_VALUES: {
     // We only support G_MERGE_VALUES for creating a double precision floating
     // point value out of two GPRs.
@@ -202,12 +199,10 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (Ty.getSizeInBits() != 64 || Ty1.getSizeInBits() != 32 ||
         Ty2.getSizeInBits() != 32)
       return getInvalidInstructionMapping();
-    return getInstructionMapping(
-        DefaultMappingID, /*Cost=*/1,
-        getOperandsMapping({getValueMapping(PMI_GR64),
-                            getValueMapping(PMI_GR32),
-                            getValueMapping(PMI_GR32)}),
-        /*NumOperands*/ MI.getNumOperands());
+    OperandsMapping = getOperandsMapping({getValueMapping(PMI_GR64),
+                                          getValueMapping(PMI_GR32),
+                                          getValueMapping(PMI_GR32)});
+    break;
   }
   case TargetOpcode::G_UNMERGE_VALUES: {
     // We only support G_UNMERGE_VALUES for splitting a double precision
@@ -218,12 +213,10 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (Ty.getSizeInBits() != 32 || Ty1.getSizeInBits() != 32 ||
         Ty2.getSizeInBits() != 64)
       return getInvalidInstructionMapping();
-    return getInstructionMapping(
-        DefaultMappingID, /*Cost=*/1,
-        getOperandsMapping({getValueMapping(PMI_GR32),
-                            getValueMapping(PMI_GR32),
-                            getValueMapping(PMI_GR64)}),
-        /*NumOperands*/ MI.getNumOperands());
+    OperandsMapping = getOperandsMapping({getValueMapping(PMI_GR32),
+                                          getValueMapping(PMI_GR32),
+                                          getValueMapping(PMI_GR64)});
+    break;
   }
   case TargetOpcode::COPY: {
     Register DstReg = MI.getOperand(0).getReg();
@@ -266,9 +259,13 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         // We only care about the mapping of the destination for COPY.
         /*NumOperands*/ Opc == TargetOpcode::G_BITCAST ? 2 : 1);
   }
+  default:
+    MI.dump();
+    return getInvalidInstructionMapping();
   }
-  MI.dump();
-  llvm_unreachable("The target must implement this");
+
+  return getInstructionMapping(MappingID, /*Cost=*/1, OperandsMapping,
+                               NumOperands);
 }
 
 RegisterBankInfo::InstructionMappings
