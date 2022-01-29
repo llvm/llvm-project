@@ -862,7 +862,9 @@ let Predicates = [HasStdExtZbbOrZbpOrZbkb] in {
 def : PatGprImm<rotr, RORI, uimmlog2xlen>;
 def : Pat<(rotl GPR:$rs1, uimmlog2xlen:$shamt),
           (RORI GPR:$rs1, (ImmSubFromXLen uimmlog2xlen:$shamt))>;
+}
 
+let Predicates = [HasStdExtZbbOrZbp] in {
 // We treat orc.b as a separate instruction, so match it directly. We also
 // lower the Zbb orc.b intrinsic to this.
 def : Pat<(riscv_gorc GPR:$rs1, 7), (ORC_B GPR:$rs1)>;
