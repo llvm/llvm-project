@@ -174,7 +174,12 @@ C Language Changes in Clang
   ``_BitInt(N)`` is supported as an extension in older C modes and in all C++
   modes. Note: the ABI for ``_BitInt(N)`` is still in the process of being
   stabilized, so this type should not yet be used in interfaces that require
-  ABI stability.
+  ABI stability. The maximum width supported by Clang can be obtained from the
+  ``BITINT_MAXWIDTH`` macro in ``<limits.h>``. Currently, Clang supports bit
+  widths <= 128 because backends are not yet able to cope with some math
+  operations (like division) on wider integer types. See
+  `PR44994 <https://github.com/llvm/llvm-project/issues/44994>`_ for more
+  information.
 - When using ``asm goto`` with outputs whose constraint modifier is ``"+"``, we
   now change the numbering of the labels to occur after hidden tied inputs for
   better compatibility with GCC.  For better portability between different

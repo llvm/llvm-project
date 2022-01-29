@@ -74,8 +74,11 @@ _Static_assert(ULLONG_WIDTH >= 64);
 _Static_assert(ULLONG_WIDTH / CHAR_BIT == sizeof(unsigned long long));
 _Static_assert(LLONG_WIDTH == ULLONG_WIDTH);
 _Static_assert(LLONG_WIDTH / CHAR_BIT == sizeof(signed long long));
+
+_Static_assert(BITINT_MAXWIDTH >= ULLONG_WIDTH);
 #else
 /* None of these are defined. */
 int BOOL_WIDTH, CHAR_WIDTH, SCHAR_WIDTH, UCHAR_WIDTH, USHRT_WIDTH, SHRT_WIDTH,
-    UINT_WIDTH, INT_WIDTH, ULONG_WIDTH, LONG_WIDTH, ULLONG_WIDTH, LLONG_WIDTH;
+    UINT_WIDTH, INT_WIDTH, ULONG_WIDTH, LONG_WIDTH, ULLONG_WIDTH, LLONG_WIDTH,
+    BITINT_MAXWIDTH;
 #endif
