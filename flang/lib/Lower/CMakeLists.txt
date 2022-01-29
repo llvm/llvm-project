@@ -5,7 +5,6 @@ add_flang_library(FortranLower
   CharacterRuntime.cpp
   Coarray.cpp
   ConvertType.cpp
-  IntrinsicCall.cpp
   IO.cpp
   Mangler.cpp
   OpenACC.cpp

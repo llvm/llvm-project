@@ -8,7 +8,6 @@
 
 #include "flang/Lower/CharacterExpr.h"
 #include "flang/Lower/ConvertType.h"
-#include "flang/Lower/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/DoLoopHelper.h"
 
 //===----------------------------------------------------------------------===//
@@ -244,9 +243,12 @@ void Fortran::lower::CharacterExprHelper::createAssign(
   // Copy the minimum of the lhs and rhs lengths and pad the lhs remainder
   // if needed.
   mlir::Value copyCount = lhs.getLen();
-  if (!compileTimeSameLength)
+  if (!compileTimeSameLength) {
+    auto cmp = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
+                                             lhs.getLen(), rhs.getLen());
     copyCount =
-        Fortran::lower::genMin(builder, loc, {lhs.getLen(), rhs.getLen()});
+        builder.create<mlir::SelectOp>(loc, cmp, lhs.getLen(), rhs.getLen());
+  }
 
   fir::CharBoxValue safeRhs = rhs;
   if (needToMaterialize(rhs)) {
