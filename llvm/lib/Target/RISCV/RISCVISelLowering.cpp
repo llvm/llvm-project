@@ -282,6 +282,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                        (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb())
                            ? Legal
                            : Expand);
+    // Zbkb can use rev8+brev8 to implement bitreverse.
+    setOperationAction(ISD::BITREVERSE, XLenVT,
+                       Subtarget.hasStdExtZbkb() ? Custom : Expand);
   }
 
   if (Subtarget.hasStdExtZbb()) {
@@ -2955,17 +2958,23 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return LowerINTRINSIC_VOID(Op, DAG);
   case ISD::BSWAP:
   case ISD::BITREVERSE: {
-    // Convert BSWAP/BITREVERSE to GREVI to enable GREVI combinining.
-    assert(Subtarget.hasStdExtZbp() && "Unexpected custom legalisation");
     MVT VT = Op.getSimpleValueType();
     SDLoc DL(Op);
-    // Start with the maximum immediate value which is the bitwidth - 1.
-    unsigned Imm = VT.getSizeInBits() - 1;
-    // If this is BSWAP rather than BITREVERSE, clear the lower 3 bits.
-    if (Op.getOpcode() == ISD::BSWAP)
-      Imm &= ~0x7U;
-    return DAG.getNode(RISCVISD::GREV, DL, VT, Op.getOperand(0),
-                       DAG.getConstant(Imm, DL, VT));
+    if (Subtarget.hasStdExtZbp()) {
+      // Convert BSWAP/BITREVERSE to GREVI to enable GREVI combinining.
+      // Start with the maximum immediate value which is the bitwidth - 1.
+      unsigned Imm = VT.getSizeInBits() - 1;
+      // If this is BSWAP rather than BITREVERSE, clear the lower 3 bits.
+      if (Op.getOpcode() == ISD::BSWAP)
+        Imm &= ~0x7U;
+      return DAG.getNode(RISCVISD::GREV, DL, VT, Op.getOperand(0),
+                         DAG.getConstant(Imm, DL, VT));
+    }
+    assert(Subtarget.hasStdExtZbkb() && "Unexpected custom legalization");
+    assert(Op.getOpcode() == ISD::BITREVERSE && "Unexpected opcode");
+    // Expand bitreverse to a bswap(rev8) followed by brev8.
+    SDValue BSwap = DAG.getNode(ISD::BSWAP, DL, VT, Op.getOperand(0));
+    return DAG.getNode(RISCVISD::BREV8, DL, VT, BSwap);
   }
   case ISD::FSHL:
   case ISD::FSHR: {
@@ -10097,6 +10106,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(STRICT_FCVT_W_RV64)
   NODE_NAME_CASE(STRICT_FCVT_WU_RV64)
   NODE_NAME_CASE(READ_CYCLE_WIDE)
+  NODE_NAME_CASE(BREV8)
   NODE_NAME_CASE(GREV)
   NODE_NAME_CASE(GREVW)
   NODE_NAME_CASE(GORC)
