@@ -422,7 +422,8 @@ let Predicates = [IsMC881100] in {
 }
 
 // TODO Aliases div -> divs, mul -> mulu. Renames from 88100
-
+defm : BinaryOpPat<"ADDU", add>;
+defm : BinaryOpPat<"SUBU", sub>;
 defm : BinaryOpPat<"MULU", mul>;
 defm : BinaryOpPat<"DIVS", sdiv>; // TODO Correct?
 //def : Pat<(umullohi GPR:$rs1, GPR:$rs2), (MULUrrd GPR:$rs1, GPR:$rs2)>;
