@@ -20,6 +20,7 @@
 #include "../GlobList.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
@@ -386,6 +387,11 @@ getVfsFromFile(const std::string &OverlayFile,
 
 int clangTidyMain(int argc, const char **argv) {
   llvm::InitLLVM X(argc, argv);
+
+  // Enable help for -load option, if plugins are enabled.
+  if (cl::Option *LoadOpt = cl::getRegisteredOptions().lookup("load"))
+    LoadOpt->addCategory(ClangTidyCategory);
+
   llvm::Expected<CommonOptionsParser> OptionsParser =
       CommonOptionsParser::create(argc, argv, ClangTidyCategory,
                                   cl::ZeroOrMore);
