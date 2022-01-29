@@ -8,9 +8,12 @@
 #endif // _MSC_VER
 
 // Each version should have an IFunc and an alias.
+// LINUX: @SingleVersion = weak_odr alias void (), void ()* @SingleVersion.ifunc
 // LINUX: @TwoVersions = weak_odr alias void (), void ()* @TwoVersions.ifunc
+// LINUX: @OrderDispatchUsageSpecific = weak_odr alias void (), void ()* @OrderDispatchUsageSpecific.ifunc
 // LINUX: @TwoVersionsSameAttr = weak_odr alias void (), void ()* @TwoVersionsSameAttr.ifunc
 // LINUX: @ThreeVersionsSameAttr = weak_odr alias void (), void ()* @ThreeVersionsSameAttr.ifunc
+// LINUX: @OrderSpecificUsageDispatch = weak_odr alias void (), void ()* @OrderSpecificUsageDispatch.ifunc
 // LINUX: @NoSpecifics = weak_odr alias void (), void ()* @NoSpecifics.ifunc
 // LINUX: @HasGeneric = weak_odr alias void (), void ()* @HasGeneric.ifunc
 // LINUX: @HasParams = weak_odr alias void (i32, double), void (i32, double)* @HasParams.ifunc
@@ -18,10 +21,12 @@
 // LINUX: @GenericAndPentium = weak_odr alias i32 (i32, double), i32 (i32, double)* @GenericAndPentium.ifunc
 // LINUX: @DispatchFirst = weak_odr alias i32 (), i32 ()* @DispatchFirst.ifunc
 
-// LINUX: @TwoVersions.ifunc = weak_odr ifunc void (), void ()* ()* @TwoVersions.resolver
 // LINUX: @SingleVersion.ifunc = weak_odr ifunc void (), void ()* ()* @SingleVersion.resolver
+// LINUX: @TwoVersions.ifunc = weak_odr ifunc void (), void ()* ()* @TwoVersions.resolver
+// LINUX: @OrderDispatchUsageSpecific.ifunc = weak_odr ifunc void (), void ()* ()* @OrderDispatchUsageSpecific.resolver
 // LINUX: @TwoVersionsSameAttr.ifunc = weak_odr ifunc void (), void ()* ()* @TwoVersionsSameAttr.resolver
 // LINUX: @ThreeVersionsSameAttr.ifunc = weak_odr ifunc void (), void ()* ()* @ThreeVersionsSameAttr.resolver
+// LINUX: @OrderSpecificUsageDispatch.ifunc = weak_odr ifunc void (), void ()* ()* @OrderSpecificUsageDispatch.resolver
 // LINUX: @NoSpecifics.ifunc = weak_odr ifunc void (), void ()* ()* @NoSpecifics.resolver
 // LINUX: @HasGeneric.ifunc = weak_odr ifunc void (), void ()* ()* @HasGeneric.resolver
 // LINUX: @HasParams.ifunc = weak_odr ifunc void (i32, double), void (i32, double)* ()* @HasParams.resolver
@@ -33,6 +38,21 @@ ATTR(cpu_specific(ivybridge))
 void SingleVersion(void){}
 // LINUX: define{{.*}} void @SingleVersion.S() #[[S:[0-9]+]]
 // WINDOWS: define dso_local void @SingleVersion.S() #[[S:[0-9]+]]
+
+ATTR(cpu_dispatch(ivybridge))
+void SingleVersion(void);
+// LINUX: define weak_odr void ()* @SingleVersion.resolver()
+// LINUX: call void @__cpu_indicator_init
+// LINUX: ret void ()* @SingleVersion.S
+// LINUX: call void @llvm.trap
+// LINUX: unreachable
+
+// WINDOWS: define weak_odr dso_local void @SingleVersion() comdat
+// WINDOWS: call void @__cpu_indicator_init()
+// WINDOWS: call void @SingleVersion.S()
+// WINDOWS-NEXT: ret void
+// WINDOWS: call void @llvm.trap
+// WINDOWS: unreachable
 
 ATTR(cpu_specific(ivybridge))
 void NotCalled(void){}
@@ -80,6 +100,31 @@ void ThreeVersionsSameAttr(void){}
 // CHECK: define {{.*}}void @ThreeVersionsSameAttr.S() #[[S]]
 // CHECK: define {{.*}}void @ThreeVersionsSameAttr.Z() #[[K]]
 
+ATTR(cpu_specific(knl))
+void CpuSpecificNoDispatch(void) {}
+// CHECK: define {{.*}}void @CpuSpecificNoDispatch.Z() #[[K:[0-9]+]]
+
+ATTR(cpu_dispatch(knl))
+void OrderDispatchUsageSpecific(void);
+// LINUX: define weak_odr void ()* @OrderDispatchUsageSpecific.resolver()
+// LINUX: call void @__cpu_indicator_init
+// LINUX: ret void ()* @OrderDispatchUsageSpecific.Z
+// LINUX: call void @llvm.trap
+// LINUX: unreachable
+
+// WINDOWS: define weak_odr dso_local void @OrderDispatchUsageSpecific() comdat
+// WINDOWS: call void @__cpu_indicator_init()
+// WINDOWS: call void @OrderDispatchUsageSpecific.Z()
+// WINDOWS-NEXT: ret void
+// WINDOWS: call void @llvm.trap
+// WINDOWS: unreachable
+
+// CHECK: define {{.*}}void @OrderDispatchUsageSpecific.Z()
+
+ATTR(cpu_specific(knl))
+void OrderSpecificUsageDispatch(void) {}
+// CHECK: define {{.*}}void @OrderSpecificUsageDispatch.Z() #[[K:[0-9]+]]
+
 void usages(void) {
   SingleVersion();
   // LINUX: @SingleVersion.ifunc()
@@ -93,7 +138,18 @@ void usages(void) {
   ThreeVersionsSameAttr();
   // LINUX: @ThreeVersionsSameAttr.ifunc()
   // WINDOWS: @ThreeVersionsSameAttr()
+  CpuSpecificNoDispatch();
+  // LINUX: @CpuSpecificNoDispatch.ifunc()
+  // WINDOWS: @CpuSpecificNoDispatch()
+  OrderDispatchUsageSpecific();
+  // LINUX: @OrderDispatchUsageSpecific.ifunc()
+  // WINDOWS: @OrderDispatchUsageSpecific()
+  OrderSpecificUsageDispatch();
+  // LINUX: @OrderSpecificUsageDispatch.ifunc()
+  // WINDOWS: @OrderSpecificUsageDispatch()
 }
+
+// LINUX: declare void @CpuSpecificNoDispatch.ifunc()
 
 // has an extra config to emit!
 ATTR(cpu_dispatch(ivybridge, knl, atom))
@@ -135,6 +191,16 @@ void ThreeVersionsSameAttr(void){}
 // WINDOWS-NEXT: ret void
 // WINDOWS: call void @llvm.trap
 // WINDOWS: unreachable
+
+ATTR(cpu_dispatch(knl))
+void OrderSpecificUsageDispatch(void);
+// LINUX: define weak_odr void ()* @OrderSpecificUsageDispatch.resolver()
+// LINUX: ret void ()* @OrderSpecificUsageDispatch.Z
+
+// WINDOWS: define weak_odr dso_local void @OrderSpecificUsageDispatch() comdat
+// WINDOWS: call void @__cpu_indicator_init
+// WINDOWS: call void @OrderSpecificUsageDispatch.Z
+// WINDOWS-NEXT: ret void
 
 // No Cpu Specific options.
 ATTR(cpu_dispatch(atom, ivybridge, knl))
@@ -269,6 +335,9 @@ int DispatchFirst(void) {return 1;}
 
 // WINDOWS: define dso_local i32 @DispatchFirst.B
 // WINDOWS: ret i32 1
+
+ATTR(cpu_specific(knl))
+void OrderDispatchUsageSpecific(void) {}
 
 // CHECK: attributes #[[S]] = {{.*}}"target-features"="+avx,+cmov,+crc32,+cx8,+f16c,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
 // CHECK: attributes #[[K]] = {{.*}}"target-features"="+adx,+avx,+avx2,+avx512cd,+avx512er,+avx512f,+avx512pf,+bmi,+cmov,+crc32,+cx8,+f16c,+fma,+lzcnt,+mmx,+movbe,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
