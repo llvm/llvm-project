@@ -24,7 +24,7 @@ bb:
   br label %bb2
 
 bb2:                                              ; preds = %bb2, %bb
-  %tmp3 = phi %struct.foo* [ undef, %bb ], [ %tmp6, %bb2 ]
+  %tmp3 = phi %struct.foo* [ poison, %bb ], [ %tmp6, %bb2 ]
   %tmp4 = getelementptr %struct.foo, %struct.foo* %tmp3, i64 0, i32 1
   %tmp5 = load i32, i32* %tmp4
   %tmp6 = load %struct.foo*, %struct.foo** @global

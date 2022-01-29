@@ -505,17 +505,16 @@ declare i32* @wombat()
 ;; change in the verifier, as it goes from a constant value to a
 ;; phi of [true, false]
 
-define void @test12() {
+define void @test12(i32* %p) {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* null
+; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* %p
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[TMP]], 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB2:%.*]], label [[BB8:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i1 [ true, [[BB2]] ], [ false, [[BB7:%.*]] ]
-; CHECK-NEXT:    br i1 [[PHIOFOPS]], label [[BB6:%.*]], label [[BB7]]
+; CHECK-NEXT:    br i1 true, label [[BB6:%.*]], label [[BB7]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    br label [[BB7]]
 ; CHECK:       bb7:
@@ -524,7 +523,7 @@ define void @test12() {
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %tmp = load i32, i32* null
+  %tmp = load i32, i32* %p
   %tmp1 = icmp sgt i32 %tmp, 0
   br i1 %tmp1, label %bb2, label %bb8
 
@@ -532,7 +531,7 @@ bb2:                                              ; preds = %bb
   br label %bb3
 
 bb3:                                              ; preds = %bb7, %bb2
-  %tmp4 = phi i32 [ %tmp, %bb2 ], [ undef, %bb7 ]
+  %tmp4 = phi i32 [ %tmp, %bb2 ], [ poison, %bb7 ]
   %tmp5 = icmp sgt i32 %tmp4, 0
   br i1 %tmp5, label %bb6, label %bb7
 
