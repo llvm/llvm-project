@@ -521,6 +521,15 @@ void CodeGenSchedModels::collectProcModels() {
   RecVec ProcRecords = Records.getAllDerivedDefinitions("Processor");
   llvm::sort(ProcRecords, LessRecordFieldName());
 
+  // Check for duplicated names.
+  auto I = std::adjacent_find(ProcRecords.begin(), ProcRecords.end(),
+                              [](const Record *Rec1, const Record *Rec2) {
+    return Rec1->getValueAsString("Name") == Rec2->getValueAsString("Name");
+  });
+  if (I != ProcRecords.end())
+    PrintFatalError((*I)->getLoc(), "Duplicate processor name " +
+                    (*I)->getValueAsString("Name"));
+
   // Reserve space because we can. Reallocation would be ok.
   ProcModels.reserve(ProcRecords.size()+1);
 
