@@ -50,7 +50,7 @@ if.then17.i:                                      ; preds = %for.body8.i
   br label %for.inc24.i
 
 for.inc24.i:                                      ; preds = %if.then17.i, %for.body8.i
-  %nIdx.1.i = phi i32 [ undef, %if.then17.i ], [ %nIdx.052.i, %for.body8.i ]
+  %nIdx.1.i = phi i32 [ poison, %if.then17.i ], [ %nIdx.052.i, %for.body8.i ]
   br label %for.body8.i
 
 if.else58:                                        ; preds = %for.body

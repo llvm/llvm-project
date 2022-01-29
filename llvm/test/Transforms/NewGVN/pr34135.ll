@@ -3,7 +3,7 @@
 ;; Make sure we don't incorrectly use predicateinfo to simplify phi of ops cases
 source_filename = "pr34135.ll"
 
-define void @snork(i32 %arg) {
+define void @snork(i32 noundef %arg) {
 ; CHECK-LABEL: @snork(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = sext i32 [[ARG:%.*]] to i64
