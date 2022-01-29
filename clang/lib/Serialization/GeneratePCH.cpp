@@ -85,6 +85,21 @@ void PCHGenerator::HandleTranslationUnit(ASTContext &Ctx) {
     assert(Module && !Module->IsFromModuleFile &&
            "trying to re-write a module?");
 
+    // Here we would ideally use a P1184 server to find the module name.
+    // However, in the short-term we are going to (ab-)use the name/file pairs
+    // that can be specified with -fmodule-file=Name=Path.  If there is no
+    // entry there, then we fall back to the default CMI name, based on the
+    // source file name.
+    HeaderSearch &HS = PP.getHeaderSearchInfo();
+    const HeaderSearchOptions &HSOpts = HS.getHeaderSearchOpts();
+    std::string ModuleFilename;
+    if (!HSOpts.PrebuiltModuleFiles.empty() ||
+        !HSOpts.PrebuiltModulePaths.empty())
+      ModuleFilename = HS.getPrebuiltModuleFileName(Module->Name);
+
+    if (!ModuleFilename.empty())
+      OutputFile = ModuleFilename;
+
     // So now attach that name to the buffer we are about to create.
     Buffer->PresumedFileName = OutputFile;
   }

@@ -77,6 +77,7 @@ public:
           OS.reset(new llvm::raw_fd_ostream(FD, /*shouldClose=*/true));
           *OS << Buffer->Data;
           OS->flush(); // Make sure it hits disk now.
+          // Here we would notify P1184 servers that the module is created
         } else
           llvm::dbgs() << " Problem creating : " << Buffer->PresumedFileName
                        << "\n";
