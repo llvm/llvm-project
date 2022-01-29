@@ -478,7 +478,9 @@ bool serialization::needsAnonymousDeclarationNumber(const NamedDecl *D) {
   // Otherwise, we only care about anonymous class members / block-scope decls.
   // FIXME: We need to handle lambdas and blocks within inline / templated
   // variables too.
-  if (D->getDeclName() || !isa<RecordDecl>(D->getLexicalDeclContext()))
+  if (D->getDeclName())
+    return false;
+  if (!isa<RecordDecl, ObjCInterfaceDecl>(D->getLexicalDeclContext()))
     return false;
   return isa<TagDecl>(D) || isa<FieldDecl>(D);
 }
