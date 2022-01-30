@@ -13,6 +13,18 @@ define i64 @brev8(i64 %a) nounwind {
   ret i64 %val
 }
 
+; Test that rev8 is recognized as preserving zero extension.
+define zeroext i16 @brev8_knownbits(i16 zeroext %a) nounwind {
+; RV64ZBKB-LABEL: brev8_knownbits:
+; RV64ZBKB:       # %bb.0:
+; RV64ZBKB-NEXT:    brev8 a0, a0
+; RV64ZBKB-NEXT:    ret
+  %zext = zext i16 %a to i64
+  %val = call i64 @llvm.riscv.brev8(i64 %zext)
+  %trunc = trunc i64 %val to i16
+  ret i16 %trunc
+}
+
 declare i64 @llvm.bswap.i64(i64)
 
 define i64 @rev8_i64(i64 %a) {
