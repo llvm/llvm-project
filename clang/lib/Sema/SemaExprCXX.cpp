@@ -564,7 +564,7 @@ ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
                                 SourceLocation RParenLoc) {
   bool WasEvaluated = false;
   if (E && !E->isTypeDependent()) {
-    if (E->getType()->isPlaceholderType()) {
+    if (E->hasPlaceholderType()) {
       ExprResult result = CheckPlaceholderExpr(E);
       if (result.isInvalid()) return ExprError();
       E = result.get();
@@ -5704,7 +5704,7 @@ ExprResult Sema::BuildExpressionTrait(ExpressionTrait ET,
                                       SourceLocation RParen) {
   if (Queried->isTypeDependent()) {
     // Delay type-checking for type-dependent expressions.
-  } else if (Queried->getType()->isPlaceholderType()) {
+  } else if (Queried->hasPlaceholderType()) {
     ExprResult PE = CheckPlaceholderExpr(Queried);
     if (PE.isInvalid()) return ExprError();
     return BuildExpressionTrait(ET, KWLoc, PE.get(), RParen);
@@ -5720,8 +5720,7 @@ QualType Sema::CheckPointerToMemberOperands(ExprResult &LHS, ExprResult &RHS,
                                             ExprValueKind &VK,
                                             SourceLocation Loc,
                                             bool isIndirect) {
-  assert(!LHS.get()->getType()->isPlaceholderType() &&
-         !RHS.get()->getType()->isPlaceholderType() &&
+  assert(!LHS.get()->hasPlaceholderType() && !RHS.get()->hasPlaceholderType() &&
          "placeholders should have been weeded out by now");
 
   // The LHS undergoes lvalue conversions if this is ->*, and undergoes the

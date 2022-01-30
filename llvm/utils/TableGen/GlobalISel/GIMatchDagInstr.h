@@ -9,11 +9,14 @@
 #ifndef LLVM_UTILS_TABLEGEN_GIMATCHDAGINSTR_H
 #define LLVM_UTILS_TABLEGEN_GIMATCHDAGINSTR_H
 
-#include "GIMatchDagOperands.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
+class CodeGenInstruction;
 class GIMatchDag;
+class GIMatchDagOperandList;
 
 /// Represents an instruction in the match DAG. This object knows very little
 /// about the actual instruction to be matched as the bulk of that is in

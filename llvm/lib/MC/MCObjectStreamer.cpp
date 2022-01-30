@@ -119,8 +119,31 @@ void MCObjectStreamer::resolvePendingFixups() {
       continue;
     }
     flushPendingLabels(PendingFixup.DF, PendingFixup.DF->getContents().size());
-    PendingFixup.Fixup.setOffset(PendingFixup.Sym->getOffset());
-    PendingFixup.DF->getFixups().push_back(PendingFixup.Fixup);
+    PendingFixup.Fixup.setOffset(PendingFixup.Sym->getOffset() +
+                                 PendingFixup.Fixup.getOffset());
+
+    // If the location symbol to relocate is in MCEncodedFragmentWithFixups,
+    // put the Fixup into location symbol's fragment. Otherwise
+    // put into PendingFixup.DF
+    MCFragment *SymFragment = PendingFixup.Sym->getFragment();
+    switch (SymFragment->getKind()) {
+    case MCFragment::FT_Relaxable:
+    case MCFragment::FT_Dwarf:
+    case MCFragment::FT_PseudoProbe:
+      cast<MCEncodedFragmentWithFixups<8, 1>>(SymFragment)
+          ->getFixups()
+          .push_back(PendingFixup.Fixup);
+      break;
+    case MCFragment::FT_Data:
+    case MCFragment::FT_CVDefRange:
+      cast<MCEncodedFragmentWithFixups<32, 4>>(SymFragment)
+          ->getFixups()
+          .push_back(PendingFixup.Fixup);
+      break;
+    default:
+      PendingFixup.DF->getFixups().push_back(PendingFixup.Fixup);
+      break;
+    }
   }
   PendingFixups.clear();
 }
@@ -816,8 +839,9 @@ MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
     return None;
   }
 
-  PendingFixups.emplace_back(&SRE.getSymbol(), DF,
-                             MCFixup::create(-1, Expr, Kind, Loc));
+  PendingFixups.emplace_back(
+      &SRE.getSymbol(), DF,
+      MCFixup::create(OffsetVal.getConstant(), Expr, Kind, Loc));
   return None;
 }
 

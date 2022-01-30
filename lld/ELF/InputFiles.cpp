@@ -401,14 +401,15 @@ uint32_t ObjFile<ELFT>::getSectionIndex(const Elf_Sym &sym) const {
 }
 
 template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
+  object::ELFFile<ELFT> obj = this->getObj();
   // Read a section table. justSymbols is usually false.
   if (this->justSymbols)
     initializeJustSymbols();
   else
-    initializeSections(ignoreComdats);
+    initializeSections(ignoreComdats, obj);
 
   // Read a symbol table.
-  initializeSymbols();
+  initializeSymbols(obj);
 }
 
 // Sections with SHT_GROUP and comdat bits define comdat section groups.
@@ -490,12 +491,12 @@ template <class ELFT> void ObjFile<ELFT>::initializeJustSymbols() {
 static void addDependentLibrary(StringRef specifier, const InputFile *f) {
   if (!config->dependentLibraries)
     return;
-  if (fs::exists(specifier))
-    driver->addFile(specifier, /*withLOption=*/false);
+  if (Optional<std::string> s = searchLibraryBaseName(specifier))
+    driver->addFile(*s, /*withLOption=*/true);
   else if (Optional<std::string> s = findFromSearchPaths(specifier))
     driver->addFile(*s, /*withLOption=*/true);
-  else if (Optional<std::string> s = searchLibraryBaseName(specifier))
-    driver->addFile(*s, /*withLOption=*/true);
+  else if (fs::exists(specifier))
+    driver->addFile(specifier, /*withLOption=*/false);
   else
     error(toString(f) +
           ": unable to find library from dependent library specifier: " +
@@ -541,9 +542,8 @@ static void handleSectionGroup(ArrayRef<InputSectionBase *> sections,
 }
 
 template <class ELFT>
-void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
-  const ELFFile<ELFT> &obj = this->getObj();
-
+void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
+                                       const llvm::object::ELFFile<ELFT> &obj) {
   ArrayRef<Elf_Shdr> objSections = getELFShdrs<ELFT>();
   StringRef shstrtab = CHECK(obj.getSectionStringTable(objSections), this);
   uint64_t size = objSections.size();
@@ -602,7 +602,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
               .second;
       if (keepGroup) {
         if (config->relocatable)
-          this->sections[i] = createInputSection(i, sec, shstrtab);
+          this->sections[i] = createInputSection(
+              i, sec, check(obj.getSectionName(sec, shstrtab)));
         selectedGroups.push_back(entries);
         continue;
       }
@@ -626,7 +627,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
     case SHT_NULL:
       break;
     default:
-      this->sections[i] = createInputSection(i, sec, shstrtab);
+      this->sections[i] =
+          createInputSection(i, sec, check(obj.getSectionName(sec, shstrtab)));
     }
   }
 
@@ -891,10 +893,8 @@ InputSectionBase *ObjFile<ELFT>::getRelocTarget(uint32_t idx,
 template <class ELFT>
 InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
                                                     const Elf_Shdr &sec,
-                                                    StringRef shstrtab) {
-  StringRef name = CHECK(getObj().getSectionName(sec, shstrtab), this);
-
-  if (config->emachine == EM_ARM && sec.sh_type == SHT_ARM_ATTRIBUTES) {
+                                                    StringRef name) {
+  if (sec.sh_type == SHT_ARM_ATTRIBUTES && config->emachine == EM_ARM) {
     ARMAttributeParser attributes;
     ArrayRef<uint8_t> contents = check(this->getObj().getSectionContents(sec));
     if (Error e = attributes.parse(contents, config->ekind == ELF32LEKind
@@ -918,7 +918,7 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
     }
   }
 
-  if (config->emachine == EM_RISCV && sec.sh_type == SHT_RISCV_ATTRIBUTES) {
+  if (sec.sh_type == SHT_RISCV_ATTRIBUTES && config->emachine == EM_RISCV) {
     RISCVAttributeParser attributes;
     ArrayRef<uint8_t> contents = check(this->getObj().getSectionContents(sec));
     if (Error e = attributes.parse(contents, support::little)) {
@@ -1040,7 +1040,8 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
 
 // Initialize this->Symbols. this->Symbols is a parallel array as
 // its corresponding ELF symbol table.
-template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
+template <class ELFT>
+void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
   ArrayRef<InputSectionBase *> sections(this->sections);
   SymbolTable &symtab = *elf::symtab;
 
@@ -1053,7 +1054,11 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
 
   for (size_t i = 0, end = firstGlobal; i != end; ++i) {
     const Elf_Sym &eSym = eSyms[i];
-    uint32_t secIdx = getSectionIndex(eSym);
+    uint32_t secIdx = eSym.st_shndx;
+    if (LLVM_UNLIKELY(secIdx == SHN_XINDEX))
+      secIdx = check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
+    else if (secIdx >= SHN_LORESERVE)
+      secIdx = 0;
     if (LLVM_UNLIKELY(secIdx >= sections.size()))
       fatal(toString(this) + ": invalid section index: " + Twine(secIdx));
     if (LLVM_UNLIKELY(eSym.getBinding() != STB_LOCAL))
@@ -1093,7 +1098,11 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
                   Twine(firstGlobal) + ")");
       continue;
     }
-    uint32_t secIdx = getSectionIndex(eSym);
+    uint32_t secIdx = eSym.st_shndx;
+    if (LLVM_UNLIKELY(secIdx == SHN_XINDEX))
+      secIdx = check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
+    else if (secIdx >= SHN_LORESERVE)
+      secIdx = 0;
     if (LLVM_UNLIKELY(secIdx >= sections.size()))
       fatal(toString(this) + ": invalid section index: " + Twine(secIdx));
     InputSectionBase *sec = sections[secIdx];

@@ -21,7 +21,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 void NameToDIE::Finalize() {
-  m_map.Sort();
+  m_map.Sort(std::less<DIERef>());
   m_map.SizeToFit();
 }
 

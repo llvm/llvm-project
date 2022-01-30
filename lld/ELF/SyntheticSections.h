@@ -515,11 +515,11 @@ private:
 class RelocationBaseSection : public SyntheticSection {
 public:
   RelocationBaseSection(StringRef name, uint32_t type, int32_t dynamicTag,
-                        int32_t sizeDynamicTag);
+                        int32_t sizeDynamicTag, bool combreloc);
   /// Add a dynamic relocation without writing an addend to the output section.
   /// This overload can be used if the addends are written directly instead of
   /// using relocations on the input section (e.g. MipsGotSection::writeTo()).
-  void addReloc(const DynamicReloc &reloc);
+  void addReloc(const DynamicReloc &reloc) { relocs.push_back(reloc); }
   /// Add a dynamic relocation against \p sym with an optional addend.
   void addSymbolReloc(RelType dynType, InputSectionBase &isec,
                       uint64_t offsetInSec, Symbol &sym, int64_t addend = 0,
@@ -541,6 +541,7 @@ public:
   bool isNeeded() const override { return !relocs.empty(); }
   size_t getSize() const override { return relocs.size() * this->entsize; }
   size_t getRelativeRelocCount() const { return numRelativeRelocs; }
+  void partitionRels();
   void finalizeContents() override;
   static bool classof(const SectionBase *d) {
     return SyntheticSection::classof(d) &&
@@ -551,7 +552,9 @@ public:
   SmallVector<DynamicReloc, 0> relocs;
 
 protected:
-  size_t numRelativeRelocs = 0;
+  void computeRels();
+  size_t numRelativeRelocs = 0; // used by -z combreloc
+  bool combreloc;
 };
 
 template <class ELFT>
@@ -560,11 +563,8 @@ class RelocationSection final : public RelocationBaseSection {
   using Elf_Rela = typename ELFT::Rela;
 
 public:
-  RelocationSection(StringRef name, bool sort);
+  RelocationSection(StringRef name, bool combreloc);
   void writeTo(uint8_t *buf) override;
-
-private:
-  bool sort;
 };
 
 template <class ELFT>
@@ -820,10 +820,10 @@ private:
 
   // Each chunk contains information gathered from debug sections of a
   // single object file.
-  std::vector<GdbChunk> chunks;
+  SmallVector<GdbChunk, 0> chunks;
 
   // A symbol table for this .gdb_index section.
-  std::vector<GdbSymbol> symbols;
+  SmallVector<GdbSymbol, 0> symbols;
 
   size_t size;
 };
@@ -980,7 +980,7 @@ class MipsAbiFlagsSection final : public SyntheticSection {
   using Elf_Mips_ABIFlags = llvm::object::Elf_Mips_ABIFlags<ELFT>;
 
 public:
-  static MipsAbiFlagsSection *create();
+  static std::unique_ptr<MipsAbiFlagsSection> create();
 
   MipsAbiFlagsSection(Elf_Mips_ABIFlags flags);
   size_t getSize() const override { return sizeof(Elf_Mips_ABIFlags); }
@@ -996,7 +996,7 @@ template <class ELFT> class MipsOptionsSection final : public SyntheticSection {
   using Elf_Mips_RegInfo = llvm::object::Elf_Mips_RegInfo<ELFT>;
 
 public:
-  static MipsOptionsSection *create();
+  static std::unique_ptr<MipsOptionsSection<ELFT>> create();
 
   MipsOptionsSection(Elf_Mips_RegInfo reginfo);
   void writeTo(uint8_t *buf) override;
@@ -1014,7 +1014,7 @@ template <class ELFT> class MipsReginfoSection final : public SyntheticSection {
   using Elf_Mips_RegInfo = llvm::object::Elf_Mips_RegInfo<ELFT>;
 
 public:
-  static MipsReginfoSection *create();
+  static std::unique_ptr<MipsReginfoSection> create();
 
   MipsReginfoSection(Elf_Mips_RegInfo reginfo);
   size_t getSize() const override { return sizeof(Elf_Mips_RegInfo); }
@@ -1244,7 +1244,10 @@ struct InStruct {
   std::unique_ptr<GotPltSection> gotPlt;
   std::unique_ptr<IgotPltSection> igotPlt;
   std::unique_ptr<PPC64LongBranchTargetSection> ppc64LongBranchTarget;
+  std::unique_ptr<SyntheticSection> mipsAbiFlags;
   std::unique_ptr<MipsGotSection> mipsGot;
+  std::unique_ptr<SyntheticSection> mipsOptions;
+  std::unique_ptr<SyntheticSection> mipsReginfo;
   std::unique_ptr<MipsRldMapSection> mipsRldMap;
   std::unique_ptr<SyntheticSection> partEnd;
   std::unique_ptr<SyntheticSection> partIndex;

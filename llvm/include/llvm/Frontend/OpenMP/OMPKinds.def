@@ -386,6 +386,13 @@ __OMP_RTL(__kmpc_aligned_alloc, false, VoidPtr, /* Int */ Int32, SizeTy, SizeTy,
           VoidPtr)
 __OMP_RTL(__kmpc_free, false, Void, /* Int */ Int32, VoidPtr, VoidPtr)
 
+__OMP_RTL(__tgt_interop_init, false, Void, IdentPtr, Int32, VoidPtrPtr, Int64,
+          Int32, Int32, VoidPtr, Int32)
+__OMP_RTL(__tgt_interop_destroy, false, Void, IdentPtr, Int32, VoidPtrPtr,
+          Int32, Int32, VoidPtr, Int32)
+__OMP_RTL(__tgt_interop_use, false, Void, IdentPtr, Int32, VoidPtrPtr, Int32,
+          Int32, VoidPtr, Int32)
+
 __OMP_RTL(__kmpc_init_allocator, false, /* omp_allocator_handle_t */ VoidPtr,
           /* Int */ Int32, /* omp_memespace_handle_t */ VoidPtr,
           /* Int */ Int32, /* omp_alloctrait_t */ VoidPtr)

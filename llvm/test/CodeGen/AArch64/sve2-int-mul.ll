@@ -59,8 +59,7 @@ define <vscale x 4 x i32> @mul_i32_imm_neg(<vscale x 4 x i32> %a) {
 define <vscale x 2 x i64> @mul_i64_imm(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: mul_i64_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #255
-; CHECK-NEXT:    mov z1.d, x8
+; CHECK-NEXT:    mov z1.d, #255 // =0xff
 ; CHECK-NEXT:    mul z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %elt = insertelement <vscale x 2 x i64> undef, i64 255, i32 0

@@ -20,8 +20,9 @@ namespace __omp_backend
 
 template <typename _RandomAccessIterator, typename _Compare, typename _LeafSort>
 void
-__parallel_stable_partial_sort(_RandomAccessIterator __xs, _RandomAccessIterator __xe, _Compare __comp,
-                               _LeafSort __leaf_sort, std::size_t /* __nsort */)
+__parallel_stable_partial_sort(__pstl::__internal::__openmp_backend_tag, _RandomAccessIterator __xs,
+                               _RandomAccessIterator __xe, _Compare __comp, _LeafSort __leaf_sort,
+                               std::size_t /* __nsort */)
 {
     // TODO: "Parallel partial sort needs to be implemented.");
     __leaf_sort(__xs, __xe, __comp);

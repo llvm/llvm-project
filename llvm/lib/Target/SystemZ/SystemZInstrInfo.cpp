@@ -1652,6 +1652,13 @@ unsigned SystemZInstrInfo::getOpcodeForOffset(unsigned Opcode,
   return 0;
 }
 
+bool SystemZInstrInfo::hasDisplacementPairInsn(unsigned Opcode) const {
+  const MCInstrDesc &MCID = get(Opcode);
+  if (MCID.TSFlags & SystemZII::Has20BitOffset)
+    return SystemZ::getDisp12Opcode(Opcode) >= 0;
+  return SystemZ::getDisp20Opcode(Opcode) >= 0;
+}
+
 unsigned SystemZInstrInfo::getLoadAndTest(unsigned Opcode) const {
   switch (Opcode) {
   case SystemZ::L:      return SystemZ::LT;

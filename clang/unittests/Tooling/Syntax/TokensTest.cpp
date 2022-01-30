@@ -40,7 +40,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Annotations.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
-#include "gmock/gmock.h"
 #include <cassert>
 #include <cstdlib>
 #include <gmock/gmock.h>

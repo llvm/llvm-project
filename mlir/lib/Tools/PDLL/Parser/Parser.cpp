@@ -116,11 +116,11 @@ private:
   /// Try to define a variable decl with the given components, returns the
   /// variable on success.
   FailureOr<ast::VariableDecl *>
-  defineVariableDecl(StringRef name, llvm::SMRange nameLoc, ast::Type type,
+  defineVariableDecl(StringRef name, SMRange nameLoc, ast::Type type,
                      ast::Expr *initExpr,
                      ArrayRef<ast::ConstraintRef> constraints);
   FailureOr<ast::VariableDecl *>
-  defineVariableDecl(StringRef name, llvm::SMRange nameLoc, ast::Type type,
+  defineVariableDecl(StringRef name, SMRange nameLoc, ast::Type type,
                      ArrayRef<ast::ConstraintRef> constraints);
 
   /// Parse the constraint reference list for a variable decl.
@@ -136,7 +136,7 @@ private:
   /// existing constraints that have already been parsed for the same entity
   /// that will be constrained by this constraint.
   FailureOr<ast::ConstraintRef>
-  parseConstraint(Optional<llvm::SMRange> &typeConstraint,
+  parseConstraint(Optional<SMRange> &typeConstraint,
                   ArrayRef<ast::ConstraintRef> existingConstraints);
 
   //===--------------------------------------------------------------------===//
@@ -146,7 +146,7 @@ private:
 
   /// Identifier expressions.
   FailureOr<ast::Expr *> parseAttributeExpr();
-  FailureOr<ast::Expr *> parseDeclRefExpr(StringRef name, llvm::SMRange loc);
+  FailureOr<ast::Expr *> parseDeclRefExpr(StringRef name, SMRange loc);
   FailureOr<ast::Expr *> parseIdentifierExpr();
   FailureOr<ast::Expr *> parseMemberAccessExpr(ast::Expr *parentExpr);
   FailureOr<ast::OpNameDecl *> parseOperationName(bool allowEmptyName = false);
@@ -176,14 +176,14 @@ private:
   /// Try to create a pattern decl with the given components, returning the
   /// Pattern on success.
   FailureOr<ast::PatternDecl *>
-  createPatternDecl(llvm::SMRange loc, const ast::Name *name,
+  createPatternDecl(SMRange loc, const ast::Name *name,
                     const ParsedPatternMetadata &metadata,
                     ast::CompoundStmt *body);
 
   /// Try to create a variable decl with the given components, returning the
   /// Variable on success.
   FailureOr<ast::VariableDecl *>
-  createVariableDecl(StringRef name, llvm::SMRange loc, ast::Expr *initializer,
+  createVariableDecl(StringRef name, SMRange loc, ast::Expr *initializer,
                      ArrayRef<ast::ConstraintRef> constraints);
 
   /// Validate the constraints used to constraint a variable decl.
@@ -206,49 +206,49 @@ private:
   //===--------------------------------------------------------------------===//
   // Exprs
 
-  FailureOr<ast::DeclRefExpr *> createDeclRefExpr(llvm::SMRange loc,
+  FailureOr<ast::DeclRefExpr *> createDeclRefExpr(SMRange loc,
                                                   ast::Decl *decl);
   FailureOr<ast::DeclRefExpr *>
-  createInlineVariableExpr(ast::Type type, StringRef name, llvm::SMRange loc,
+  createInlineVariableExpr(ast::Type type, StringRef name, SMRange loc,
                            ArrayRef<ast::ConstraintRef> constraints);
   FailureOr<ast::MemberAccessExpr *>
   createMemberAccessExpr(ast::Expr *parentExpr, StringRef name,
-                         llvm::SMRange loc);
+                         SMRange loc);
 
   /// Validate the member access `name` into the given parent expression. On
   /// success, this also returns the type of the member accessed.
   FailureOr<ast::Type> validateMemberAccess(ast::Expr *parentExpr,
-                                            StringRef name, llvm::SMRange loc);
+                                            StringRef name, SMRange loc);
   FailureOr<ast::OperationExpr *>
-  createOperationExpr(llvm::SMRange loc, const ast::OpNameDecl *name,
+  createOperationExpr(SMRange loc, const ast::OpNameDecl *name,
                       MutableArrayRef<ast::Expr *> operands,
                       MutableArrayRef<ast::NamedAttributeDecl *> attributes,
                       MutableArrayRef<ast::Expr *> results);
   LogicalResult
-  validateOperationOperands(llvm::SMRange loc, Optional<StringRef> name,
+  validateOperationOperands(SMRange loc, Optional<StringRef> name,
                             MutableArrayRef<ast::Expr *> operands);
-  LogicalResult validateOperationResults(llvm::SMRange loc,
+  LogicalResult validateOperationResults(SMRange loc,
                                          Optional<StringRef> name,
                                          MutableArrayRef<ast::Expr *> results);
   LogicalResult
-  validateOperationOperandsOrResults(llvm::SMRange loc,
+  validateOperationOperandsOrResults(SMRange loc,
                                      Optional<StringRef> name,
                                      MutableArrayRef<ast::Expr *> values,
                                      ast::Type singleTy, ast::Type rangeTy);
-  FailureOr<ast::TupleExpr *> createTupleExpr(llvm::SMRange loc,
+  FailureOr<ast::TupleExpr *> createTupleExpr(SMRange loc,
                                               ArrayRef<ast::Expr *> elements,
                                               ArrayRef<StringRef> elementNames);
 
   //===--------------------------------------------------------------------===//
   // Stmts
 
-  FailureOr<ast::EraseStmt *> createEraseStmt(llvm::SMRange loc,
+  FailureOr<ast::EraseStmt *> createEraseStmt(SMRange loc,
                                               ast::Expr *rootOp);
   FailureOr<ast::ReplaceStmt *>
-  createReplaceStmt(llvm::SMRange loc, ast::Expr *rootOp,
+  createReplaceStmt(SMRange loc, ast::Expr *rootOp,
                     MutableArrayRef<ast::Expr *> replValues);
   FailureOr<ast::RewriteStmt *>
-  createRewriteStmt(llvm::SMRange loc, ast::Expr *rootOp,
+  createRewriteStmt(SMRange loc, ast::Expr *rootOp,
                     ast::CompoundStmt *rewriteBody);
 
   //===--------------------------------------------------------------------===//
@@ -280,7 +280,7 @@ private:
   }
 
   /// Reset the lexer to the location at the given position.
-  void resetToken(llvm::SMRange tokLoc) {
+  void resetToken(SMRange tokLoc) {
     lexer.resetPointer(tokLoc.Start.getPointer());
     curToken = lexer.lexToken();
   }
@@ -293,15 +293,15 @@ private:
     consumeToken();
     return success();
   }
-  LogicalResult emitError(llvm::SMRange loc, const Twine &msg) {
+  LogicalResult emitError(SMRange loc, const Twine &msg) {
     lexer.emitError(loc, msg);
     return failure();
   }
   LogicalResult emitError(const Twine &msg) {
     return emitError(curToken.getLoc(), msg);
   }
-  LogicalResult emitErrorAndNote(llvm::SMRange loc, const Twine &msg,
-                                 llvm::SMRange noteLoc, const Twine &note) {
+  LogicalResult emitErrorAndNote(SMRange loc, const Twine &msg,
+                                 SMRange noteLoc, const Twine &note) {
     lexer.emitErrorAndNote(loc, msg, noteLoc, note);
     return failure();
   }
@@ -333,7 +333,7 @@ private:
 } // namespace
 
 FailureOr<ast::Module *> Parser::parseModule() {
-  llvm::SMLoc moduleLoc = curToken.getStartLoc();
+  SMLoc moduleLoc = curToken.getStartLoc();
   pushDeclScope();
 
   // Parse the top-level decls of the module.
@@ -464,14 +464,14 @@ LogicalResult Parser::parseDirective(SmallVector<ast::Decl *> &decls) {
 }
 
 LogicalResult Parser::parseInclude(SmallVector<ast::Decl *> &decls) {
-  llvm::SMRange loc = curToken.getLoc();
+  SMRange loc = curToken.getLoc();
   consumeToken(Token::directive);
 
   // Parse the file being included.
   if (!curToken.isString())
     return emitError(loc,
                      "expected string file name after `include` directive");
-  llvm::SMRange fileLoc = curToken.getLoc();
+  SMRange fileLoc = curToken.getLoc();
   std::string filenameStr = curToken.getStringValue();
   StringRef filename = filenameStr;
   consumeToken();
@@ -548,7 +548,7 @@ FailureOr<ast::NamedAttributeDecl *> Parser::parseNamedAttributeDecl() {
 }
 
 FailureOr<ast::Decl *> Parser::parsePatternDecl() {
-  llvm::SMRange loc = curToken.getLoc();
+  SMRange loc = curToken.getLoc();
   consumeToken(Token::kw_Pattern);
   llvm::SaveAndRestore<ParserContext> saveCtx(parserContext,
                                               ParserContext::PatternMatch);
@@ -598,14 +598,14 @@ FailureOr<ast::Decl *> Parser::parsePatternDecl() {
 
 LogicalResult
 Parser::parsePatternDeclMetadata(ParsedPatternMetadata &metadata) {
-  Optional<llvm::SMRange> benefitLoc;
-  Optional<llvm::SMRange> hasBoundedRecursionLoc;
+  Optional<SMRange> benefitLoc;
+  Optional<SMRange> hasBoundedRecursionLoc;
 
   do {
     if (curToken.isNot(Token::identifier))
       return emitError("expected pattern metadata identifier");
     StringRef metadataStr = curToken.getSpelling();
-    llvm::SMRange metadataLoc = curToken.getLoc();
+    SMRange metadataLoc = curToken.getLoc();
     consumeToken(Token::identifier);
 
     // Parse the benefit metadata: benefit(<integer-value>)
@@ -677,7 +677,7 @@ LogicalResult Parser::checkDefineNamedDecl(const ast::Name &name) {
 }
 
 FailureOr<ast::VariableDecl *>
-Parser::defineVariableDecl(StringRef name, llvm::SMRange nameLoc,
+Parser::defineVariableDecl(StringRef name, SMRange nameLoc,
                            ast::Type type, ast::Expr *initExpr,
                            ArrayRef<ast::ConstraintRef> constraints) {
   assert(curDeclScope && "defining variable outside of decl scope");
@@ -699,7 +699,7 @@ Parser::defineVariableDecl(StringRef name, llvm::SMRange nameLoc,
 }
 
 FailureOr<ast::VariableDecl *>
-Parser::defineVariableDecl(StringRef name, llvm::SMRange nameLoc,
+Parser::defineVariableDecl(StringRef name, SMRange nameLoc,
                            ast::Type type,
                            ArrayRef<ast::ConstraintRef> constraints) {
   return defineVariableDecl(name, nameLoc, type, /*initExpr=*/nullptr,
@@ -708,7 +708,7 @@ Parser::defineVariableDecl(StringRef name, llvm::SMRange nameLoc,
 
 LogicalResult Parser::parseVariableDeclConstraintList(
     SmallVectorImpl<ast::ConstraintRef> &constraints) {
-  Optional<llvm::SMRange> typeConstraint;
+  Optional<SMRange> typeConstraint;
   auto parseSingleConstraint = [&] {
     FailureOr<ast::ConstraintRef> constraint =
         parseConstraint(typeConstraint, constraints);
@@ -730,7 +730,7 @@ LogicalResult Parser::parseVariableDeclConstraintList(
 }
 
 FailureOr<ast::ConstraintRef>
-Parser::parseConstraint(Optional<llvm::SMRange> &typeConstraint,
+Parser::parseConstraint(Optional<SMRange> &typeConstraint,
                         ArrayRef<ast::ConstraintRef> existingConstraints) {
   auto parseTypeConstraint = [&](ast::Expr *&typeExpr) -> LogicalResult {
     if (typeConstraint)
@@ -746,7 +746,7 @@ Parser::parseConstraint(Optional<llvm::SMRange> &typeConstraint,
     return success();
   };
 
-  llvm::SMRange loc = curToken.getLoc();
+  SMRange loc = curToken.getLoc();
   switch (curToken.getKind()) {
   case Token::kw_Attr: {
     consumeToken(Token::kw_Attr);
@@ -871,7 +871,7 @@ FailureOr<ast::Expr *> Parser::parseExpr() {
 }
 
 FailureOr<ast::Expr *> Parser::parseAttributeExpr() {
-  llvm::SMRange loc = curToken.getLoc();
+  SMRange loc = curToken.getLoc();
   consumeToken(Token::kw_attr);
 
   // If we aren't followed by a `<`, the `attr` keyword is treated as a normal
@@ -893,7 +893,7 @@ FailureOr<ast::Expr *> Parser::parseAttributeExpr() {
 }
 
 FailureOr<ast::Expr *> Parser::parseDeclRefExpr(StringRef name,
-                                                llvm::SMRange loc) {
+                                                SMRange loc) {
   ast::Decl *decl = curDeclScope->lookup(name);
   if (!decl)
     return emitError(loc, "undefined reference to `" + name + "`");
@@ -903,7 +903,7 @@ FailureOr<ast::Expr *> Parser::parseDeclRefExpr(StringRef name,
 
 FailureOr<ast::Expr *> Parser::parseIdentifierExpr() {
   StringRef name = curToken.getSpelling();
-  llvm::SMRange nameLoc = curToken.getLoc();
+  SMRange nameLoc = curToken.getLoc();
   consumeToken();
 
   // Check to see if this is a decl ref expression that defines a variable
@@ -922,7 +922,7 @@ FailureOr<ast::Expr *> Parser::parseIdentifierExpr() {
 }
 
 FailureOr<ast::Expr *> Parser::parseMemberAccessExpr(ast::Expr *parentExpr) {
-  llvm::SMRange loc = curToken.getLoc();
+  SMRange loc = curToken.getLoc();
   consumeToken(Token::dot);
 
   // Parse the member name.
@@ -937,12 +937,12 @@ FailureOr<ast::Expr *> Parser::parseMemberAccessExpr(ast::Expr *parentExpr) {
 }
 
 FailureOr<ast::OpNameDecl *> Parser::parseOperationName(bool allowEmptyName) {
-  llvm::SMRange loc = curToken.getLoc();
+  SMRange loc = curToken.getLoc();
 
   // Handle the case of an no operation name.
   if (curToken.isNot(Token::identifier) && !curToken.isKeyword()) {
     if (allowEmptyName)
-      return ast::OpNameDecl::create(ctx, llvm::SMRange());
+      return ast::OpNameDecl::create(ctx, SMRange());
     return emitError("expected dialect namespace");
   }
   StringRef name = curToken.getSpelling();
@@ -968,7 +968,7 @@ FailureOr<ast::OpNameDecl *> Parser::parseOperationName(bool allowEmptyName) {
 FailureOr<ast::OpNameDecl *>
 Parser::parseWrappedOperationName(bool allowEmptyName) {
   if (!consumeIf(Token::less))
-    return ast::OpNameDecl::create(ctx, llvm::SMRange());
+    return ast::OpNameDecl::create(ctx, SMRange());
 
   FailureOr<ast::OpNameDecl *> opNameDecl = parseOperationName(allowEmptyName);
   if (failed(opNameDecl))
@@ -980,7 +980,7 @@ Parser::parseWrappedOperationName(bool allowEmptyName) {
 }
 
 FailureOr<ast::Expr *> Parser::parseOperationExpr() {
-  llvm::SMRange loc = curToken.getLoc();
+  SMRange loc = curToken.getLoc();
   consumeToken(Token::kw_op);
 
   // If it isn't followed by a `<`, the `op` keyword is treated as a normal
@@ -1053,10 +1053,10 @@ FailureOr<ast::Expr *> Parser::parseOperationExpr() {
 }
 
 FailureOr<ast::Expr *> Parser::parseTupleExpr() {
-  llvm::SMRange loc = curToken.getLoc();
+  SMRange loc = curToken.getLoc();
   consumeToken(Token::l_paren);
 
-  DenseMap<StringRef, llvm::SMRange> usedNames;
+  DenseMap<StringRef, SMRange> usedNames;
   SmallVector<StringRef> elementNames;
   SmallVector<ast::Expr *> elements;
   if (curToken.isNot(Token::r_paren)) {
@@ -1105,7 +1105,7 @@ FailureOr<ast::Expr *> Parser::parseTupleExpr() {
 }
 
 FailureOr<ast::Expr *> Parser::parseTypeExpr() {
-  llvm::SMRange loc = curToken.getLoc();
+  SMRange loc = curToken.getLoc();
   consumeToken(Token::kw_type);
 
   // If we aren't followed by a `<`, the `type` keyword is treated as a normal
@@ -1127,7 +1127,7 @@ FailureOr<ast::Expr *> Parser::parseTypeExpr() {
 
 FailureOr<ast::Expr *> Parser::parseUnderscoreExpr() {
   StringRef name = curToken.getSpelling();
-  llvm::SMRange nameLoc = curToken.getLoc();
+  SMRange nameLoc = curToken.getLoc();
   consumeToken(Token::underscore);
 
   // Underscore expressions require a constraint list.
@@ -1175,7 +1175,7 @@ FailureOr<ast::Stmt *> Parser::parseStmt(bool expectTerminalSemicolon) {
 }
 
 FailureOr<ast::CompoundStmt *> Parser::parseCompoundStmt() {
-  llvm::SMLoc startLoc = curToken.getStartLoc();
+  SMLoc startLoc = curToken.getStartLoc();
   consumeToken(Token::l_brace);
 
   // Push a new block scope and parse any nested statements.
@@ -1190,14 +1190,14 @@ FailureOr<ast::CompoundStmt *> Parser::parseCompoundStmt() {
   popDeclScope();
 
   // Consume the end brace.
-  llvm::SMRange location(startLoc, curToken.getEndLoc());
+  SMRange location(startLoc, curToken.getEndLoc());
   consumeToken(Token::r_brace);
 
   return ast::CompoundStmt::create(ctx, location, statements);
 }
 
 FailureOr<ast::EraseStmt *> Parser::parseEraseStmt() {
-  llvm::SMRange loc = curToken.getLoc();
+  SMRange loc = curToken.getLoc();
   consumeToken(Token::kw_erase);
 
   // Parse the root operation expression.
@@ -1209,11 +1209,11 @@ FailureOr<ast::EraseStmt *> Parser::parseEraseStmt() {
 }
 
 FailureOr<ast::LetStmt *> Parser::parseLetStmt() {
-  llvm::SMRange loc = curToken.getLoc();
+  SMRange loc = curToken.getLoc();
   consumeToken(Token::kw_let);
 
   // Parse the name of the new variable.
-  llvm::SMRange varLoc = curToken.getLoc();
+  SMRange varLoc = curToken.getLoc();
   if (curToken.isNot(Token::identifier) && !curToken.isDependentKeyword()) {
     // `_` is a reserved variable name.
     if (curToken.is(Token::underscore)) {
@@ -1269,7 +1269,7 @@ FailureOr<ast::LetStmt *> Parser::parseLetStmt() {
 }
 
 FailureOr<ast::ReplaceStmt *> Parser::parseReplaceStmt() {
-  llvm::SMRange loc = curToken.getLoc();
+  SMRange loc = curToken.getLoc();
   consumeToken(Token::kw_replace);
 
   // Parse the root operation expression.
@@ -1315,7 +1315,7 @@ FailureOr<ast::ReplaceStmt *> Parser::parseReplaceStmt() {
 }
 
 FailureOr<ast::RewriteStmt *> Parser::parseRewriteStmt() {
-  llvm::SMRange loc = curToken.getLoc();
+  SMRange loc = curToken.getLoc();
   consumeToken(Token::kw_rewrite);
 
   // Parse the root operation.
@@ -1348,7 +1348,7 @@ FailureOr<ast::RewriteStmt *> Parser::parseRewriteStmt() {
 // Decls
 
 FailureOr<ast::PatternDecl *>
-Parser::createPatternDecl(llvm::SMRange loc, const ast::Name *name,
+Parser::createPatternDecl(SMRange loc, const ast::Name *name,
                           const ParsedPatternMetadata &metadata,
                           ast::CompoundStmt *body) {
   return ast::PatternDecl::create(ctx, loc, name, metadata.benefit,
@@ -1356,7 +1356,7 @@ Parser::createPatternDecl(llvm::SMRange loc, const ast::Name *name,
 }
 
 FailureOr<ast::VariableDecl *>
-Parser::createVariableDecl(StringRef name, llvm::SMRange loc,
+Parser::createVariableDecl(StringRef name, SMRange loc,
                            ast::Expr *initializer,
                            ArrayRef<ast::ConstraintRef> constraints) {
   // The type of the variable, which is expected to be inferred by either a
@@ -1473,7 +1473,7 @@ Parser::validateTypeRangeConstraintExpr(const ast::Expr *typeExpr) {
 //===----------------------------------------------------------------------===//
 // Exprs
 
-FailureOr<ast::DeclRefExpr *> Parser::createDeclRefExpr(llvm::SMRange loc,
+FailureOr<ast::DeclRefExpr *> Parser::createDeclRefExpr(SMRange loc,
                                                         ast::Decl *decl) {
   // Check the type of decl being referenced.
   ast::Type declType;
@@ -1488,7 +1488,7 @@ FailureOr<ast::DeclRefExpr *> Parser::createDeclRefExpr(llvm::SMRange loc,
 
 FailureOr<ast::DeclRefExpr *>
 Parser::createInlineVariableExpr(ast::Type type, StringRef name,
-                                 llvm::SMRange loc,
+                                 SMRange loc,
                                  ArrayRef<ast::ConstraintRef> constraints) {
   FailureOr<ast::VariableDecl *> decl =
       defineVariableDecl(name, loc, type, constraints);
@@ -1499,7 +1499,7 @@ Parser::createInlineVariableExpr(ast::Type type, StringRef name,
 
 FailureOr<ast::MemberAccessExpr *>
 Parser::createMemberAccessExpr(ast::Expr *parentExpr, StringRef name,
-                               llvm::SMRange loc) {
+                               SMRange loc) {
   // Validate the member name for the given parent expression.
   FailureOr<ast::Type> memberType = validateMemberAccess(parentExpr, name, loc);
   if (failed(memberType))
@@ -1510,7 +1510,7 @@ Parser::createMemberAccessExpr(ast::Expr *parentExpr, StringRef name,
 
 FailureOr<ast::Type> Parser::validateMemberAccess(ast::Expr *parentExpr,
                                                   StringRef name,
-                                                  llvm::SMRange loc) {
+                                                  SMRange loc) {
   ast::Type parentType = parentExpr->getType();
   if (parentType.isa<ast::OperationType>()) {
     if (name == ast::AllResultsMemberAccessExpr::getMemberName())
@@ -1536,7 +1536,7 @@ FailureOr<ast::Type> Parser::validateMemberAccess(ast::Expr *parentExpr,
 }
 
 FailureOr<ast::OperationExpr *> Parser::createOperationExpr(
-    llvm::SMRange loc, const ast::OpNameDecl *name,
+    SMRange loc, const ast::OpNameDecl *name,
     MutableArrayRef<ast::Expr *> operands,
     MutableArrayRef<ast::NamedAttributeDecl *> attributes,
     MutableArrayRef<ast::Expr *> results) {
@@ -1566,21 +1566,21 @@ FailureOr<ast::OperationExpr *> Parser::createOperationExpr(
 }
 
 LogicalResult
-Parser::validateOperationOperands(llvm::SMRange loc, Optional<StringRef> name,
+Parser::validateOperationOperands(SMRange loc, Optional<StringRef> name,
                                   MutableArrayRef<ast::Expr *> operands) {
   return validateOperationOperandsOrResults(loc, name, operands, valueTy,
                                             valueRangeTy);
 }
 
 LogicalResult
-Parser::validateOperationResults(llvm::SMRange loc, Optional<StringRef> name,
+Parser::validateOperationResults(SMRange loc, Optional<StringRef> name,
                                  MutableArrayRef<ast::Expr *> results) {
   return validateOperationOperandsOrResults(loc, name, results, typeTy,
                                             typeRangeTy);
 }
 
 LogicalResult Parser::validateOperationOperandsOrResults(
-    llvm::SMRange loc, Optional<StringRef> name,
+    SMRange loc, Optional<StringRef> name,
     MutableArrayRef<ast::Expr *> values, ast::Type singleTy,
     ast::Type rangeTy) {
   // All operation types accept a single range parameter.
@@ -1619,7 +1619,7 @@ LogicalResult Parser::validateOperationOperandsOrResults(
 }
 
 FailureOr<ast::TupleExpr *>
-Parser::createTupleExpr(llvm::SMRange loc, ArrayRef<ast::Expr *> elements,
+Parser::createTupleExpr(SMRange loc, ArrayRef<ast::Expr *> elements,
                         ArrayRef<StringRef> elementNames) {
   for (const ast::Expr *element : elements) {
     ast::Type eleTy = element->getType();
@@ -1635,7 +1635,7 @@ Parser::createTupleExpr(llvm::SMRange loc, ArrayRef<ast::Expr *> elements,
 //===----------------------------------------------------------------------===//
 // Stmts
 
-FailureOr<ast::EraseStmt *> Parser::createEraseStmt(llvm::SMRange loc,
+FailureOr<ast::EraseStmt *> Parser::createEraseStmt(SMRange loc,
                                                     ast::Expr *rootOp) {
   // Check that root is an Operation.
   ast::Type rootType = rootOp->getType();
@@ -1646,7 +1646,7 @@ FailureOr<ast::EraseStmt *> Parser::createEraseStmt(llvm::SMRange loc,
 }
 
 FailureOr<ast::ReplaceStmt *>
-Parser::createReplaceStmt(llvm::SMRange loc, ast::Expr *rootOp,
+Parser::createReplaceStmt(SMRange loc, ast::Expr *rootOp,
                           MutableArrayRef<ast::Expr *> replValues) {
   // Check that root is an Operation.
   ast::Type rootType = rootOp->getType();
@@ -1681,7 +1681,7 @@ Parser::createReplaceStmt(llvm::SMRange loc, ast::Expr *rootOp,
 }
 
 FailureOr<ast::RewriteStmt *>
-Parser::createRewriteStmt(llvm::SMRange loc, ast::Expr *rootOp,
+Parser::createRewriteStmt(SMRange loc, ast::Expr *rootOp,
                           ast::CompoundStmt *rewriteBody) {
   // Check that root is an Operation.
   ast::Type rootType = rootOp->getType();

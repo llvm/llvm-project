@@ -280,27 +280,31 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     }
 
     /// Erase a single argument at `argIndex`.
-    void eraseArgument(unsigned argIndex) { eraseArguments({argIndex}); }
+    void eraseArgument(unsigned argIndex) {
+      BitVector argsToErase($_op.getNumArguments());
+      argsToErase.set(argIndex);
+      eraseArguments(argsToErase);
+    }
 
     /// Erases the arguments listed in `argIndices`.
-    /// `argIndices` is allowed to have duplicates and can be in any order.
-    void eraseArguments(ArrayRef<unsigned> argIndices) {
-      unsigned originalNumArgs = $_op.getNumArguments();
-      Type newType = $_op.getTypeWithoutArgsAndResults(argIndices, {});
-      function_interface_impl::eraseFunctionArguments(this->getOperation(), argIndices,
-                                                originalNumArgs, newType);
+    void eraseArguments(const BitVector &argIndices) {
+      Type newType = $_op.getTypeWithoutArgs(argIndices);
+      function_interface_impl::eraseFunctionArguments(
+        this->getOperation(), argIndices, newType);
     }
 
     /// Erase a single result at `resultIndex`.
-    void eraseResult(unsigned resultIndex) { eraseResults({resultIndex}); }
+    void eraseResult(unsigned resultIndex) {
+      BitVector resultsToErase($_op.getNumResults());
+      resultsToErase.set(resultIndex);
+      eraseResults(resultsToErase);
+    }
 
     /// Erases the results listed in `resultIndices`.
-    /// `resultIndices` is allowed to have duplicates and can be in any order.
-    void eraseResults(ArrayRef<unsigned> resultIndices) {
-      unsigned originalNumResults = $_op.getNumResults();
-      Type newType = $_op.getTypeWithoutArgsAndResults({}, resultIndices);
+    void eraseResults(const BitVector &resultIndices) {
+      Type newType = $_op.getTypeWithoutResults(resultIndices);
       function_interface_impl::eraseFunctionResults(
-          this->getOperation(), resultIndices, originalNumResults, newType);
+          this->getOperation(), resultIndices, newType);
     }
 
     /// Return the type of this function with the specified arguments and
@@ -320,16 +324,27 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
 
     /// Return the type of this function without the specified arguments and
     /// results. This is used to update the function's signature in the
-    /// `eraseArguments` and `eraseResults` methods. The arrays of indices are
-    /// allowed to have duplicates and can be in any order.
+    /// `eraseArguments` and `eraseResults` methods.
     Type getTypeWithoutArgsAndResults(
-      ArrayRef<unsigned> argIndices, ArrayRef<unsigned> resultIndices) {
+      const BitVector &argIndices, const BitVector &resultIndices) {
       SmallVector<Type> argStorage, resultStorage;
       TypeRange newArgTypes = function_interface_impl::filterTypesOut(
           $_op.getArgumentTypes(), argIndices, argStorage);
       TypeRange newResultTypes = function_interface_impl::filterTypesOut(
           $_op.getResultTypes(), resultIndices, resultStorage);
       return $_op.cloneTypeWith(newArgTypes, newResultTypes);
+    }
+    Type getTypeWithoutArgs(const BitVector &argIndices) {
+      SmallVector<Type> argStorage;
+      TypeRange newArgTypes = function_interface_impl::filterTypesOut(
+          $_op.getArgumentTypes(), argIndices, argStorage);
+      return $_op.cloneTypeWith(newArgTypes, $_op.getResultTypes());
+    }
+    Type getTypeWithoutResults(const BitVector &resultIndices) {
+      SmallVector<Type> resultStorage;
+      TypeRange newResultTypes = function_interface_impl::filterTypesOut(
+          $_op.getResultTypes(), resultIndices, resultStorage);
+      return $_op.cloneTypeWith($_op.getArgumentTypes(), newResultTypes);
     }
 
     //===------------------------------------------------------------------===//

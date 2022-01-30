@@ -43,14 +43,13 @@ cl::opt<bool>
 cl::opt<bool>
     DisableIntrinsics("no-ir-sim-intrinsics", cl::init(false), cl::ReallyHidden,
                       cl::desc("Don't match or outline intrinsics"));
+} // namespace llvm
 
 IRInstructionData::IRInstructionData(Instruction &I, bool Legality,
                                      IRInstructionDataList &IDList)
     : Inst(&I), Legal(Legality), IDL(&IDList) {
   initializeInstruction();
 }
-
-} // namespace llvm
 
 void IRInstructionData::initializeInstruction() {
   // We check for whether we have a comparison instruction.  If it is, we
@@ -74,6 +73,12 @@ void IRInstructionData::initializeInstruction() {
 
     OperVals.push_back(OI.get());
   }
+
+  // We capture the incoming BasicBlocks as values as well as the incoming
+  // Values in order to check for structural similarity.
+  if (PHINode *PN = dyn_cast<PHINode>(Inst))
+    for (BasicBlock *BB : PN->blocks())
+      OperVals.push_back(BB);
 }
 
 IRInstructionData::IRInstructionData(IRInstructionDataList &IDList)
@@ -108,8 +113,54 @@ void IRInstructionData::setCalleeName(bool MatchByName) {
   assert(CI && "Instruction must be call");
 
   CalleeName = "";
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
+    // To hash intrinsics, we use the opcode, and types like the other
+    // instructions, but also, the Intrinsic ID, and the Name of the
+    // intrinsic.
+    Intrinsic::ID IntrinsicID = II->getIntrinsicID();
+    FunctionType *FT = II->getFunctionType();
+    // If there is an overloaded name, we have to use the complex version
+    // of getName to get the entire string.
+    if (Intrinsic::isOverloaded(IntrinsicID))
+      CalleeName =
+          Intrinsic::getName(IntrinsicID, FT->params(), II->getModule(), FT);
+    // If there is not an overloaded name, we only need to use this version.
+    else
+      CalleeName = Intrinsic::getName(IntrinsicID).str();
+
+    return;
+  }
+
   if (!CI->isIndirectCall() && MatchByName)
     CalleeName = CI->getCalledFunction()->getName().str();
+}
+
+void IRInstructionData::setPHIPredecessors(
+    DenseMap<BasicBlock *, unsigned> &BasicBlockToInteger) {
+  assert(isa<PHINode>(Inst) && "Instruction must be phi node");
+
+  PHINode *PN = cast<PHINode>(Inst);
+  DenseMap<BasicBlock *, unsigned>::iterator BBNumIt;
+
+  BBNumIt = BasicBlockToInteger.find(PN->getParent());
+  assert(BBNumIt != BasicBlockToInteger.end() &&
+         "Could not find location for BasicBlock!");
+
+  int CurrentBlockNumber = static_cast<int>(BBNumIt->second);
+
+  // Convert the incoming blocks of the PHINode to an integer value, based on
+  // the relative distances between the current block and the incoming block.
+  for (unsigned Idx = 0; Idx < PN->getNumIncomingValues(); Idx++) {
+    BasicBlock *Incoming = PN->getIncomingBlock(Idx);
+    BBNumIt = BasicBlockToInteger.find(Incoming);
+    assert(BBNumIt != BasicBlockToInteger.end() &&
+           "Could not find number for BasicBlock!");
+    int OtherBlockNumber = static_cast<int>(BBNumIt->second);
+
+    int Relative = OtherBlockNumber - CurrentBlockNumber;
+    RelativeBlockLocations.push_back(Relative);
+    RelativeBlockLocations.push_back(Relative);
+  }
 }
 
 CmpInst::Predicate IRInstructionData::predicateForConsistency(CmpInst *CI) {
@@ -273,6 +324,9 @@ unsigned IRInstructionMapper::mapToLegalUnsigned(
 
   if (isa<CallInst>(*It))
     ID->setCalleeName(EnableMatchCallsByName);
+
+  if (isa<PHINode>(*It))
+    ID->setPHIPredecessors(BasicBlockToInteger);
 
   // Add to the instruction list
   bool WasInserted;

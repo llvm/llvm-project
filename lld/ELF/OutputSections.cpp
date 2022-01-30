@@ -12,6 +12,7 @@
 #include "SymbolTable.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "lld/Common/Arrays.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -21,8 +22,6 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/TimeProfiler.h"
-#include <regex>
-#include <unordered_set>
 #if LLVM_ENABLE_ZLIB
 #include <zlib.h>
 #endif
@@ -330,30 +329,20 @@ template <class ELFT> void OutputSection::maybeCompress() {
 
   llvm::TimeTraceScope timeScope("Compress debug sections");
 
-  // Create a section header.
-  zDebugHeader.resize(sizeof(Elf_Chdr));
-  auto *hdr = reinterpret_cast<Elf_Chdr *>(zDebugHeader.data());
-  hdr->ch_type = ELFCOMPRESS_ZLIB;
-  hdr->ch_size = size;
-  hdr->ch_addralign = alignment;
-
-  // Write section contents to a temporary buffer and compress it.
-  std::vector<uint8_t> buf(size);
-  writeTo<ELFT>(buf.data());
-  // We chose 1 as the default compression level because it is the fastest. If
-  // -O2 is given, we use level 6 to compress debug info more by ~15%. We found
-  // that level 7 to 9 doesn't make much difference (~1% more compression) while
-  // they take significant amount of time (~2x), so level 6 seems enough.
+  // Write uncompressed data to a temporary zero-initialized buffer.
+  auto buf = std::make_unique<uint8_t[]>(size);
+  writeTo<ELFT>(buf.get());
+  // We chose 1 (Z_BEST_SPEED) as the default compression level because it is
+  // the fastest. If -O2 is given, we use level 6 to compress debug info more by
+  // ~15%. We found that level 7 to 9 doesn't make much difference (~1% more
+  // compression) while they take significant amount of time (~2x), so level 6
+  // seems enough.
   const int level = config->optimize >= 2 ? 6 : Z_BEST_SPEED;
 
   // Split input into 1-MiB shards.
   constexpr size_t shardSize = 1 << 20;
-  const size_t numShards = (size + shardSize - 1) / shardSize;
-  auto shardsIn = std::make_unique<ArrayRef<uint8_t>[]>(numShards);
-  for (size_t i = 0, start = 0, end; start != buf.size(); ++i, start = end) {
-    end = std::min(start + shardSize, buf.size());
-    shardsIn[i] = makeArrayRef<uint8_t>(buf.data() + start, end - start);
-  }
+  auto shardsIn = split(makeArrayRef<uint8_t>(buf.get(), size), shardSize);
+  const size_t numShards = shardsIn.size();
 
   // Compress shards and compute Alder-32 checksums. Use Z_SYNC_FLUSH for all
   // shards but the last to flush the output to a byte boundary to be
@@ -368,6 +357,7 @@ template <class ELFT> void OutputSection::maybeCompress() {
 
   // Update section size and combine Alder-32 checksums.
   uint32_t checksum = 1;       // Initial Adler-32 value
+  compressed.uncompressedSize = size;
   size = sizeof(Elf_Chdr) + 2; // Elf_Chdir and zlib header
   for (size_t i = 0; i != numShards; ++i) {
     size += shardsOut[i].size();
@@ -404,9 +394,11 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *buf) {
   // we've already compressed section contents. If that's the case,
   // just write it down.
   if (compressed.shards) {
-    memcpy(buf, zDebugHeader.data(), zDebugHeader.size());
-    buf += zDebugHeader.size();
-    size -= zDebugHeader.size();
+    auto *chdr = reinterpret_cast<typename ELFT::Chdr *>(buf);
+    chdr->ch_type = ELFCOMPRESS_ZLIB;
+    chdr->ch_size = compressed.uncompressedSize;
+    chdr->ch_addralign = alignment;
+    buf += sizeof(*chdr);
 
     // Compute shard offsets.
     auto offsets = std::make_unique<size_t[]>(compressed.numShards);
@@ -421,7 +413,7 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *buf) {
              compressed.shards[i].size());
     });
 
-    write32be(buf + size - 4, compressed.checksum);
+    write32be(buf + (size - sizeof(*chdr) - 4), compressed.checksum);
     return;
   }
 
@@ -474,7 +466,7 @@ static void finalizeShtGroup(OutputSection *os,
 
   // Some group members may be combined or discarded, so we need to compute the
   // new size. The content will be rewritten in InputSection::copyShtGroup.
-  std::unordered_set<uint32_t> seen;
+  DenseSet<uint32_t> seen;
   ArrayRef<InputSectionBase *> sections = section->file->getSections();
   for (const uint32_t &idx : section->getDataAs<uint32_t>().slice(1))
     if (OutputSection *osec = sections[read32(&idx)]->getOutputSection())
@@ -524,18 +516,15 @@ void OutputSection::finalize() {
 // crtbegin files.
 //
 // Gcc uses any of crtbegin[<empty>|S|T].o.
-// Clang uses Gcc's plus clang_rt.crtbegin[<empty>|S|T][-<arch>|<empty>].o.
+// Clang uses Gcc's plus clang_rt.crtbegin[-<arch>|<empty>].o.
 
-static bool isCrtbegin(StringRef s) {
-  static std::regex re(R"((clang_rt\.)?crtbegin[ST]?(-.*)?\.o)");
+static bool isCrt(StringRef s, StringRef beginEnd) {
   s = sys::path::filename(s);
-  return std::regex_match(s.begin(), s.end(), re);
-}
-
-static bool isCrtend(StringRef s) {
-  static std::regex re(R"((clang_rt\.)?crtend[ST]?(-.*)?\.o)");
-  s = sys::path::filename(s);
-  return std::regex_match(s.begin(), s.end(), re);
+  if (!s.consume_back(".o"))
+    return false;
+  if (s.consume_front("clang_rt."))
+    return s.consume_front(beginEnd);
+  return s.consume_front(beginEnd) && s.size() <= 1;
 }
 
 // .ctors and .dtors are sorted by this order:
@@ -557,12 +546,12 @@ static bool isCrtend(StringRef s) {
 // are too many real-world use cases of .ctors, so we had no choice to
 // support that with this rather ad-hoc semantics.
 static bool compCtors(const InputSection *a, const InputSection *b) {
-  bool beginA = isCrtbegin(a->file->getName());
-  bool beginB = isCrtbegin(b->file->getName());
+  bool beginA = isCrt(a->file->getName(), "crtbegin");
+  bool beginB = isCrt(b->file->getName(), "crtbegin");
   if (beginA != beginB)
     return beginA;
-  bool endA = isCrtend(a->file->getName());
-  bool endB = isCrtend(b->file->getName());
+  bool endA = isCrt(a->file->getName(), "crtend");
+  bool endB = isCrt(b->file->getName(), "crtend");
   if (endA != endB)
     return endB;
   return getPriority(a->name) > getPriority(b->name);

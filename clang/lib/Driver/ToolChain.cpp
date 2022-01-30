@@ -110,6 +110,10 @@ bool ToolChain::useRelaxRelocations() const {
   return ENABLE_X86_RELAX_RELOCATIONS;
 }
 
+bool ToolChain::defaultToIEEELongDouble() const {
+  return PPC_LINUX_DEFAULT_IEEELONGDOUBLE && getTriple().isOSLinux();
+}
+
 SanitizerArgs
 ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const {
   SanitizerArgs SanArgs(*this, JobArgs, !SanitizerArgsChecked);
@@ -1182,8 +1186,10 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
         A->getOption().matches(options::OPT_Xopenmp_target);
 
     if (A->getOption().matches(options::OPT_Xopenmp_target_EQ)) {
+      llvm::Triple TT(getOpenMPTriple(A->getValue(0)));
+
       // Passing device args: -Xopenmp-target=<triple> -opt=val.
-      if (A->getValue(0) == getTripleString())
+      if (TT.getTriple() == getTripleString())
         Index = Args.getBaseArgs().MakeIndex(A->getValue(1));
       else
         continue;

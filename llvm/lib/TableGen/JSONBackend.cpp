@@ -11,12 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/TableGen/Error.h"
-#include "llvm/TableGen/Record.h"
-#include "llvm/TableGen/TableGenBackend.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/TableGen/Record.h"
 
 #define DEBUG_TYPE "json-emitter"
 

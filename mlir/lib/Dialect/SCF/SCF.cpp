@@ -1188,6 +1188,20 @@ LogicalResult IfOp::fold(ArrayRef<Attribute> operands,
   return success();
 }
 
+void IfOp::getRegionInvocationBounds(
+    ArrayRef<Attribute> operands,
+    SmallVectorImpl<InvocationBounds> &invocationBounds) {
+  if (auto cond = operands[0].dyn_cast_or_null<BoolAttr>()) {
+    // If the condition is known, then one region is known to be executed once
+    // and the other zero times.
+    invocationBounds.emplace_back(0, cond.getValue() ? 1 : 0);
+    invocationBounds.emplace_back(0, cond.getValue() ? 0 : 1);
+  } else {
+    // Non-constant condition. Each region may be executed 0 or 1 times.
+    invocationBounds.assign(2, {0, 1});
+  }
+}
+
 namespace {
 // Pattern to remove unused IfOp results.
 struct RemoveUnusedResults : public OpRewritePattern<IfOp> {
@@ -2189,7 +2203,7 @@ static ParseResult parseWhileOp(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   FunctionType functionType;
-  llvm::SMLoc typeLoc = parser.getCurrentLocation();
+  SMLoc typeLoc = parser.getCurrentLocation();
   if (failed(parser.parseColonType(functionType)))
     return failure();
 
@@ -2537,7 +2551,7 @@ struct WhileUnusedArg : public OpRewritePattern<WhileOp> {
 };
 } // namespace
 
-void WhileOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void WhileOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
   results.insert<WhileConditionTruth, WhileUnusedResult, WhileCmpCond,
                  WhileUnusedArg>(context);

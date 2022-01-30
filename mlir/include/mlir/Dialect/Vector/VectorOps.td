@@ -39,17 +39,17 @@ class Vector_Op<string mnemonic, list<OpTrait> traits = []> :
 }
 
 // The "kind" of combining function for contractions and reductions.
-def COMBINING_KIND_ADD : BitEnumAttrCase<"ADD", 0x1, "add">;
-def COMBINING_KIND_MUL : BitEnumAttrCase<"MUL", 0x2, "mul">;
-def COMBINING_KIND_MINUI : BitEnumAttrCase<"MINUI", 0x4, "minui">;
-def COMBINING_KIND_MINSI : BitEnumAttrCase<"MINSI", 0x8, "minsi">;
-def COMBINING_KIND_MINF : BitEnumAttrCase<"MINF", 0x10, "minf">;
-def COMBINING_KIND_MAXUI : BitEnumAttrCase<"MAXUI", 0x20, "maxui">;
-def COMBINING_KIND_MAXSI : BitEnumAttrCase<"MAXSI", 0x40, "maxsi">;
-def COMBINING_KIND_MAXF : BitEnumAttrCase<"MAXF", 0x80, "maxf">;
-def COMBINING_KIND_AND : BitEnumAttrCase<"AND", 0x100, "and">;
-def COMBINING_KIND_OR  : BitEnumAttrCase<"OR", 0x200, "or">;
-def COMBINING_KIND_XOR : BitEnumAttrCase<"XOR", 0x400, "xor">;
+def COMBINING_KIND_ADD : BitEnumAttrCaseBit<"ADD", 0, "add">;
+def COMBINING_KIND_MUL : BitEnumAttrCaseBit<"MUL", 1, "mul">;
+def COMBINING_KIND_MINUI : BitEnumAttrCaseBit<"MINUI", 2, "minui">;
+def COMBINING_KIND_MINSI : BitEnumAttrCaseBit<"MINSI", 3, "minsi">;
+def COMBINING_KIND_MINF : BitEnumAttrCaseBit<"MINF", 4, "minf">;
+def COMBINING_KIND_MAXUI : BitEnumAttrCaseBit<"MAXUI", 5, "maxui">;
+def COMBINING_KIND_MAXSI : BitEnumAttrCaseBit<"MAXSI", 6, "maxsi">;
+def COMBINING_KIND_MAXF : BitEnumAttrCaseBit<"MAXF", 7, "maxf">;
+def COMBINING_KIND_AND : BitEnumAttrCaseBit<"AND", 8, "and">;
+def COMBINING_KIND_OR  : BitEnumAttrCaseBit<"OR", 9, "or">;
+def COMBINING_KIND_XOR : BitEnumAttrCaseBit<"XOR", 10, "xor">;
 
 def CombiningKind : BitEnumAttr<
     "CombiningKind",
@@ -2427,6 +2427,64 @@ def VectorScaleOp : Vector_Op<"vscale",
   let results = (outs Index:$res);
   let assemblyFormat = "attr-dict";
   let verifier = ?;
+}
+
+//===----------------------------------------------------------------------===//
+// VectorScanOp
+//===----------------------------------------------------------------------===//
+
+def Vector_ScanOp :
+  Vector_Op<"scan", [NoSideEffect,
+    AllTypesMatch<["source", "dest"]>,
+    AllTypesMatch<["initial_value", "accumulated_value"]> ]>,
+    Arguments<(ins Vector_CombiningKindAttr:$kind,
+                   AnyVector:$source,
+                   AnyVectorOfAnyRank:$initial_value,
+                   I64Attr:$reduction_dim,
+                   BoolAttr:$inclusive)>,
+    Results<(outs AnyVector:$dest,
+                  AnyVectorOfAnyRank:$accumulated_value)> {
+  let summary = "Scan operation";
+  let description = [{
+    Performs an inclusive/exclusive scan on an n-D vector along a single
+    dimension returning an n-D result vector using the given
+    operation (add/mul/min/max for int/fp and and/or/xor for
+    int only) and a specified value for the initial value. The operator
+    returns the result of scan as well as the result of the last
+    reduction in the scan.
+
+    Example:
+
+    ```mlir
+    %1:2 = vector.scan <add>, %0, %acc {inclusive = false, reduction_dim = 1 : i64} :
+      vector<4x8x16x32xf32>, vector<4x16x32xf32>
+    ```
+  }];
+  let builders = [
+    OpBuilder<(ins "Value":$source, "Value":$initial_value,
+                   "CombiningKind":$kind,
+                   CArg<"int64_t", "0">:$reduction_dim,
+                   CArg<"bool", "true">:$inclusive)>
+  ];
+  let extraClassDeclaration = [{
+    static StringRef getKindAttrName() { return "kind"; }
+    static StringRef getReductionDimAttrName() { return "reduction_dim"; }
+    VectorType getSourceType() {
+      return source().getType().cast<VectorType>();
+    }
+    VectorType getDestType() {
+      return dest().getType().cast<VectorType>();
+    }
+    VectorType getAccumulatorType() {
+      return accumulated_value().getType().cast<VectorType>();
+    }
+    VectorType getInitialValueType() {
+      return initial_value().getType().cast<VectorType>();
+    }
+  }];
+  let assemblyFormat =
+    "$kind `,` $source `,` $initial_value attr-dict `:` "
+    "type($source) `,` type($initial_value) ";
 }
 
 #endif // VECTOR_OPS

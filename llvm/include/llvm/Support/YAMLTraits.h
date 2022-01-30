@@ -9,6 +9,7 @@
 #ifndef LLVM_SUPPORT_YAMLTRAITS_H
 #define LLVM_SUPPORT_YAMLTRAITS_H
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -20,7 +21,6 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -34,6 +34,9 @@
 #include <vector>
 
 namespace llvm {
+
+class VersionTuple;
+
 namespace yaml {
 
 enum class NodeKind : uint8_t {
@@ -1519,7 +1522,7 @@ private:
   std::error_code                     EC;
   BumpPtrAllocator                    StringAllocator;
   document_iterator                   DocIterator;
-  std::vector<bool>                   BitValuesUsed;
+  llvm::BitVector                     BitValuesUsed;
   HNode *CurrentNode = nullptr;
   bool                                ScalarMatchFound = false;
   bool AllowUnknownKeys = false;

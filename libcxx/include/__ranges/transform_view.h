@@ -195,9 +195,7 @@ public:
     : __parent_(__i.__parent_), __current_(_VSTD::move(__i.__current_)) {}
 
   _LIBCPP_HIDE_FROM_ABI
-  constexpr iterator_t<_Base> base() const&
-    requires copyable<iterator_t<_Base>>
-  {
+  constexpr const iterator_t<_Base>& base() const& noexcept {
     return __current_;
   }
 

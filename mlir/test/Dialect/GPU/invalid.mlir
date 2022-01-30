@@ -121,6 +121,21 @@ module attributes {gpu.container_module} {
 // -----
 
 module attributes {gpu.container_module} {
+  gpu.module @kernels {
+    // expected-note@+1 {{see the kernel definition here}}
+    memref.global "private" @kernel_1 : memref<4xi32>
+  }
+
+  func @launch_func_undefined_function(%sz : index) {
+    // expected-error@+1 {{referenced kernel '@kernels::@kernel_1' is not a function}}
+    gpu.launch_func @kernels::@kernel_1 blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz)
+    return
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
   module @kernels {
     gpu.func @kernel_1(%arg1 : !llvm.ptr<f32>) kernel {
       gpu.return

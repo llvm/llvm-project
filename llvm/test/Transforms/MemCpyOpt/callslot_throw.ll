@@ -25,7 +25,7 @@ define void @test2(i32* nocapture noalias dereferenceable(4) %x) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[T:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @may_throw(i32* nonnull [[T]]) [[ATTR0:#.*]]
+; CHECK-NEXT:    call void @may_throw(i32* nonnull [[T]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[T]], align 4
 ; CHECK-NEXT:    call void @always_throws()
 ; CHECK-NEXT:    store i32 [[LOAD]], i32* [[X:%.*]], align 4
@@ -36,6 +36,40 @@ entry:
   call void @may_throw(i32* nonnull %t) nounwind
   %load = load i32, i32* %t, align 4
   call void @always_throws()
+  store i32 %load, i32* %x, align 4
+  ret void
+}
+
+; byval argument is not visible on unwind.
+define void @test_byval(i32* nocapture noalias dereferenceable(4) byval(i32) %x) {
+; CHECK-LABEL: @test_byval(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[T:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    call void @may_throw(i32* nonnull [[X:%.*]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %t = alloca i32, align 4
+  call void @may_throw(i32* nonnull %t)
+  %load = load i32, i32* %t, align 4
+  store i32 %load, i32* %x, align 4
+  ret void
+}
+
+; TODO: With updated semantics, sret could also be invisible on unwind.
+define void @test_sret(i32* nocapture noalias dereferenceable(4) sret(i32) %x) {
+; CHECK-LABEL: @test_sret(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[T:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    call void @may_throw(i32* nonnull [[T]])
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[T]], align 4
+; CHECK-NEXT:    store i32 [[LOAD]], i32* [[X:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %t = alloca i32, align 4
+  call void @may_throw(i32* nonnull %t)
+  %load = load i32, i32* %t, align 4
   store i32 %load, i32* %x, align 4
   ret void
 }

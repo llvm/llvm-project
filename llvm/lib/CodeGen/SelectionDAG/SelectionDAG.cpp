@@ -4282,7 +4282,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
           // scalar cases.
           Type *CstTy = Cst->getType();
           if (CstTy->isVectorTy() &&
-              (NumElts * VTBits) == CstTy->getPrimitiveSizeInBits()) {
+              (NumElts * VTBits) == CstTy->getPrimitiveSizeInBits() &&
+              VTBits == CstTy->getScalarSizeInBits()) {
             Tmp = VTBits;
             for (unsigned i = 0; i != NumElts; ++i) {
               if (!DemandedElts[i])
@@ -5638,8 +5639,13 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       std::swap(N1, N2);
   }
 
-  ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
-  ConstantSDNode *N2C = dyn_cast<ConstantSDNode>(N2);
+  auto *N1C = dyn_cast<ConstantSDNode>(N1);
+  auto *N2C = dyn_cast<ConstantSDNode>(N2);
+
+  // Don't allow undefs in vector splats - we might be returning N2 when folding
+  // to zero etc.
+  ConstantSDNode *N2CV =
+      isConstOrConstSplat(N2, /*AllowUndefs*/ false, /*AllowTruncation*/ true);
 
   switch (Opcode) {
   default: break;
@@ -5670,9 +5676,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            N1.getValueType() == VT && "Binary operator types must match!");
     // (X & 0) -> 0.  This commonly occurs when legalizing i64 values, so it's
     // worth handling here.
-    if (N2C && N2C->isZero())
+    if (N2CV && N2CV->isZero())
       return N2;
-    if (N2C && N2C->isAllOnes()) // X & -1 -> X
+    if (N2CV && N2CV->isAllOnes()) // X & -1 -> X
       return N1;
     break;
   case ISD::OR:
@@ -5684,7 +5690,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            N1.getValueType() == VT && "Binary operator types must match!");
     // (X ^|+- 0) -> X.  This commonly occurs when legalizing i64 values, so
     // it's worth handling here.
-    if (N2C && N2C->isZero())
+    if (N2CV && N2CV->isZero())
       return N1;
     if ((Opcode == ISD::ADD || Opcode == ISD::SUB) && VT.isVector() &&
         VT.getVectorElementType() == MVT::i1)
@@ -5790,7 +5796,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     // size of the value, the shift/rotate count is guaranteed to be zero.
     if (VT == MVT::i1)
       return N1;
-    if (N2C && N2C->isZero())
+    if (N2CV && N2CV->isZero())
       return N1;
     break;
   case ISD::FP_ROUND:

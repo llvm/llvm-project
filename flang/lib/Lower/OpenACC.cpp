@@ -13,10 +13,10 @@
 #include "flang/Lower/OpenACC.h"
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
-#include "flang/Lower/FIRBuilder.h"
 #include "flang/Lower/PFTBuilder.h"
-#include "flang/Lower/Support/BoxValue.h"
 #include "flang/Lower/Todo.h"
+#include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -87,8 +87,7 @@ static void addOperand(SmallVectorImpl<Value> &operands,
 }
 
 template <typename Op, typename Terminator>
-static Op createRegionOp(Fortran::lower::FirOpBuilder &builder,
-                         mlir::Location loc,
+static Op createRegionOp(fir::FirOpBuilder &builder, mlir::Location loc,
                          const SmallVectorImpl<Value> &operands,
                          const SmallVectorImpl<int32_t> &operandSegments) {
   llvm::ArrayRef<mlir::Type> argTy;
@@ -108,8 +107,7 @@ static Op createRegionOp(Fortran::lower::FirOpBuilder &builder,
 }
 
 template <typename Op>
-static Op createSimpleOp(Fortran::lower::FirOpBuilder &builder,
-                         mlir::Location loc,
+static Op createSimpleOp(fir::FirOpBuilder &builder, mlir::Location loc,
                          const SmallVectorImpl<Value> &operands,
                          const SmallVectorImpl<int32_t> &operandSegments) {
   llvm::ArrayRef<mlir::Type> argTy;
@@ -910,7 +908,8 @@ genACC(Fortran::lower::AbstractConverter &converter,
   } else if (standaloneDirective.v == llvm::acc::Directive::ACCD_shutdown) {
     genACCInitShutdownOp<mlir::acc::ShutdownOp>(converter, accClauseList);
   } else if (standaloneDirective.v == llvm::acc::Directive::ACCD_set) {
-    TODO(converter.genLocation(), "OpenACC set directive not lowered yet!");
+    TODO(converter.getCurrentLocation(),
+         "OpenACC set directive not lowered yet!");
   } else if (standaloneDirective.v == llvm::acc::Directive::ACCD_update) {
     genACCUpdateOp(converter, accClauseList);
   }
@@ -1003,7 +1002,7 @@ void Fortran::lower::genOpenACCConstruct(
           },
           [&](const Fortran::parser::OpenACCCombinedConstruct
                   &combinedConstruct) {
-            TODO(converter.genLocation(),
+            TODO(converter.getCurrentLocation(),
                  "OpenACC Combined construct not lowered yet!");
           },
           [&](const Fortran::parser::OpenACCLoopConstruct &loopConstruct) {
@@ -1015,18 +1014,18 @@ void Fortran::lower::genOpenACCConstruct(
           },
           [&](const Fortran::parser::OpenACCRoutineConstruct
                   &routineConstruct) {
-            TODO(converter.genLocation(),
+            TODO(converter.getCurrentLocation(),
                  "OpenACC Routine construct not lowered yet!");
           },
           [&](const Fortran::parser::OpenACCCacheConstruct &cacheConstruct) {
-            TODO(converter.genLocation(),
+            TODO(converter.getCurrentLocation(),
                  "OpenACC Cache construct not lowered yet!");
           },
           [&](const Fortran::parser::OpenACCWaitConstruct &waitConstruct) {
             genACC(converter, eval, waitConstruct);
           },
           [&](const Fortran::parser::OpenACCAtomicConstruct &atomicConstruct) {
-            TODO(converter.genLocation(),
+            TODO(converter.getCurrentLocation(),
                  "OpenACC Atomic construct not lowered yet!");
           },
       },

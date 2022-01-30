@@ -38,8 +38,8 @@ entry:
   ret i8* %call
 }
 
-define i8* @rv_marker_1_claim() {
-; CHECK-LABEL:  rv_marker_1_claim:
+define i8* @rv_marker_1_unsafeClaim() {
+; CHECK-LABEL:  rv_marker_1_unsafeClaim:
 ; CHECK:         pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq   _foo1

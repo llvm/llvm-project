@@ -936,6 +936,12 @@
 # CHECK-BE: xscvsqqp 8, 28                        # encoding: [0xfd,0x0b,0xe6,0x88]
 # CHECK-LE: xscvsqqp 8, 28                        # encoding: [0x88,0xe6,0x0b,0xfd]
             xscvsqqp 8, 28
+# CHECK-BE: xsmaxcqp 2, 2, 3                      # encoding: [0xfc,0x42,0x1d,0x48]
+# CHECK-LE: xsmaxcqp 2, 2, 3                      # encoding: [0x48,0x1d,0x42,0xfc]
+            xsmaxcqp 2, 2, 3
+# CHECK-BE: xsmincqp 2, 2, 3                      # encoding: [0xfc,0x42,0x1d,0xc8]
+# CHECK-LE: xsmincqp 2, 2, 3                      # encoding: [0xc8,0x1d,0x42,0xfc]
+            xsmincqp 2, 2, 3
 # CHECK-BE: vstribr 2, 2                          # encoding: [0x10,0x41,0x10,0x0d]
 # CHECK-LE: vstribr 2, 2                          # encoding: [0x0d,0x10,0x41,0x10]
             vstribr 2, 2

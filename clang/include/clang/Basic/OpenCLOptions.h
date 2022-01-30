@@ -212,6 +212,15 @@ private:
   bool isEnabled(llvm::StringRef Ext) const;
 
   OpenCLOptionInfoMap OptMap;
+
+  // First feature in a pair requires the second one to be supported.
+  using FeatureDepEntry = std::pair<llvm::StringRef, llvm::StringRef>;
+  using FeatureDepList = llvm::SmallVector<FeatureDepEntry, 8>;
+
+  static const FeatureDepList DependentFeaturesList;
+
+  // Extensions and equivalent feature pairs.
+  static const llvm::StringMap<llvm::StringRef> FeatureExtensionMap;
 };
 
 } // end namespace clang

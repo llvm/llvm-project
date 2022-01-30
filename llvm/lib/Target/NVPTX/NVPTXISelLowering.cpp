@@ -574,7 +574,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   for (const auto &Op : {ISD::FMINIMUM, ISD::FMAXIMUM}) {
     setFP16OperationAction(Op, MVT::f16, GetMinMaxAction(Expand), Expand);
     setOperationAction(Op, MVT::f32, GetMinMaxAction(Expand));
-    setOperationAction(Op, MVT::f64, GetMinMaxAction(Expand));
     setFP16OperationAction(Op, MVT::v2f16, GetMinMaxAction(Expand), Expand);
   }
 

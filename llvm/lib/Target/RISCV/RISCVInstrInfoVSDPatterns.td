@@ -539,7 +539,7 @@ defm : VPatIntegerSetCCSDNode_VV_VX_VI<SETNE,  "PseudoVMSNE">;
 defm : VPatIntegerSetCCSDNode_VV_VX<SETLT,  "PseudoVMSLT">;
 defm : VPatIntegerSetCCSDNode_VV_VX<SETULT, "PseudoVMSLTU">;
 defm : VPatIntegerSetCCSDNode_VIPlus1<SETLT, "PseudoVMSLE",
-                                      SplatPat_simm5_plus1>;
+                                      SplatPat_simm5_plus1_nonzero>;
 defm : VPatIntegerSetCCSDNode_VIPlus1<SETULT, "PseudoVMSLEU",
                                       SplatPat_simm5_plus1_nonzero>;
 

@@ -5,6 +5,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 %struct.__jmp_buf_tag = type { [6 x i32], i32, [32 x i32] }
+%struct.Temp = type { i8 }
 @_ZL3buf = internal global [1 x %struct.__jmp_buf_tag] zeroinitializer, align 16
 
 ; void test() {
@@ -17,8 +18,7 @@ target triple = "wasm32-unknown-unknown"
 ;   }
 ; }
 define void @setjmp_and_try() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
-; CHECK-LABEL: @setjmp_and_try(
-
+; CHECK-LABEL: @setjmp_and_try
 entry:
   %call = call i32 @setjmp(%struct.__jmp_buf_tag* getelementptr inbounds ([1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* @_ZL3buf, i32 0, i32 0)) #0
   %cmp = icmp ne i32 %call, 0
@@ -66,7 +66,7 @@ return:                                           ; preds = %catch.start, %if.en
 ;   }
 ; }
 define void @setjmp_within_try() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
-; CHECK-LABEL: @setjmp_within_try(
+; CHECK-LABEL: @setjmp_within_try
 entry:
   %jmpval = alloca i32, align 4
   %exn.slot = alloca i8*, align 4
@@ -141,7 +141,7 @@ invoke.cont2:                                     ; preds = %if.end
 ;   }
 ; }
 define void @setjmp_and_nested_try() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
-; CHECK-LABEL: @setjmp_and_nested_try(
+; CHECK-LABEL: @setjmp_and_nested_try
 entry:
   %call = call i32 @setjmp(%struct.__jmp_buf_tag* getelementptr inbounds ([1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* @_ZL3buf, i32 0, i32 0)) #0
   %cmp = icmp ne i32 %call, 0
@@ -239,7 +239,64 @@ terminate:                                        ; preds = %ehcleanup
 ; CHECK-NEXT:    catchswitch within none [label %catch.longjmp] unwind to caller
 }
 
+; void @cleanuppad_no_parent {
+;   jmp_buf buf;
+;   Temp t;
+;   setjmp(buf);
+; }
+define void @cleanuppad_no_parent() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+; CHECK-LABEL: @cleanuppad_no_parent
+entry:
+  %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
+  %t = alloca %struct.Temp, align 1
+  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
+  %call = invoke i32 @setjmp(%struct.__jmp_buf_tag* noundef %arraydecay) #0
+          to label %invoke.cont unwind label %ehcleanup
+
+invoke.cont:                                      ; preds = %entry
+  %call1 = call noundef %struct.Temp* @_ZN4TempD2Ev(%struct.Temp* noundef %t) #2
+  ret void
+
+ehcleanup:                                        ; preds = %entry
+  %0 = cleanuppad within none []
+  ; After SjLj transformation, this will be converted to an invoke that
+  ; eventually unwinds to %catch.dispatch.longjmp. But in case a call has a
+  ; "funclet" attribute, we should unwind to the funclet's unwind destination
+  ; first to preserve the scoping structure. But this call's parent is %0
+  ; (cleanuppad), whose parent is 'none', so we should unwind directly to
+  ; %catch.dispatch.longjmp.
+  %call2 = call noundef %struct.Temp* @_ZN4TempD2Ev(%struct.Temp* noundef %t) #2 [ "funclet"(token %0) ]
+; CHECK: %call13 = invoke {{.*}} %struct.Temp* @_ZN4TempD2Ev(%struct.Temp*
+; CHECK-NEXT:    to label {{.*}} unwind label %catch.dispatch.longjmp
+  cleanupret from %0 unwind to caller
+}
+
+; This case was adapted from @cleanuppad_no_parent by removing allocas and
+; destructor calls, to generate a situation that there's only 'invoke @setjmp'
+; and no other longjmpable calls.
+define i32 @setjmp_only() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+; CHECK-LABEL: @setjmp_only
+entry:
+  %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
+  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
+  %call = invoke i32 @setjmp(%struct.__jmp_buf_tag* noundef %arraydecay) #0
+          to label %invoke.cont unwind label %ehcleanup
+
+invoke.cont:                                      ; preds = %entry
+  ret i32 %call
+; CHECK: invoke.cont:
+; The remaining setjmp call is converted to constant 0, because setjmp returns 0
+; when called directly.
+; CHECK:   ret i32 0
+
+ehcleanup:                                        ; preds = %entry
+  %0 = cleanuppad within none []
+  cleanupret from %0 unwind to caller
+}
+
 declare void @foo()
+; Function Attrs: nounwind
+declare %struct.Temp* @_ZN4TempD2Ev(%struct.Temp* %this) #2
 ; Function Attrs: returns_twice
 declare i32 @setjmp(%struct.__jmp_buf_tag*) #0
 ; Function Attrs: noreturn

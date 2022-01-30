@@ -31,23 +31,11 @@ define void @test(i16 %x, i64 %y, i32* %ptr) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE12:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], [[INC]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[OFFSET_IDX]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[INC]], i32 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i64> [[DOTSPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <2 x i64> <i64 0, i64 1>, [[DOTSPLAT]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i64> [[BROADCAST_SPLAT2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 0, [[INC]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], [[TMP4]]
 ; CHECK-NEXT:    [[OFFSET_IDX3:%.*]] = mul i64 [[INDEX]], [[INC]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[OFFSET_IDX3]] to i8
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[INC]] to i8
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <2 x i8> poison, i8 [[TMP6]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <2 x i8> [[BROADCAST_SPLATINSERT4]], <2 x i8> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[DOTSPLATINSERT6:%.*]] = insertelement <2 x i8> poison, i8 [[TMP7]], i32 0
-; CHECK-NEXT:    [[DOTSPLAT7:%.*]] = shufflevector <2 x i8> [[DOTSPLATINSERT6]], <2 x i8> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = mul <2 x i8> <i8 0, i8 1>, [[DOTSPLAT7]]
-; CHECK-NEXT:    [[INDUCTION8:%.*]] = add <2 x i8> [[BROADCAST_SPLAT5]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul i8 0, [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i8 [[TMP6]], [[TMP9]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT9:%.*]] = insertelement <2 x i64> poison, i64 [[INDEX]], i32 0
@@ -62,10 +50,10 @@ define void @test(i16 %x, i64 %y, i32* %ptr) {
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP11]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[PRED_STORE_IF11:%.*]], label [[PRED_STORE_CONTINUE12]]
-; CHECK:       pred.store.if11:
+; CHECK:       pred.store.if4:
 ; CHECK-NEXT:    store i32 0, i32* [[PTR]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE12]]
-; CHECK:       pred.store.continue12:
+; CHECK:       pred.store.continue5:
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i8 [[TMP10]], 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

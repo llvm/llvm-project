@@ -154,30 +154,24 @@ bool TextInstrProfReader::hasFormat(const MemoryBuffer &Buffer) {
 // with a leading ':' will be reported an error format.
 Error TextInstrProfReader::readHeader() {
   Symtab.reset(new InstrProfSymtab());
-  bool IsIRInstr = false;
-  bool IsEntryFirst = false;
-  bool IsCS = false;
 
   while (Line->startswith(":")) {
     StringRef Str = Line->substr(1);
     if (Str.equals_insensitive("ir"))
-      IsIRInstr = true;
+      ProfileKind |= InstrProfKind::IR;
     else if (Str.equals_insensitive("fe"))
-      IsIRInstr = false;
+      ProfileKind |= InstrProfKind::FE;
     else if (Str.equals_insensitive("csir")) {
-      IsIRInstr = true;
-      IsCS = true;
+      ProfileKind |= InstrProfKind::IR;
+      ProfileKind |= InstrProfKind::CS;
     } else if (Str.equals_insensitive("entry_first"))
-      IsEntryFirst = true;
+      ProfileKind |= InstrProfKind::BB;
     else if (Str.equals_insensitive("not_entry_first"))
-      IsEntryFirst = false;
+      ProfileKind &= ~InstrProfKind::BB;
     else
       return error(instrprof_error::bad_header);
     ++Line;
   }
-  IsIRLevelProfile = IsIRInstr;
-  InstrEntryBBEnabled = IsEntryFirst;
-  HasCSIRLevelProfile = IsCS;
   return success();
 }
 
@@ -485,9 +479,15 @@ Error RawInstrProfReader<IntPtrT>::readRawCounts(
   Record.Counts.clear();
   Record.Counts.reserve(NumCounters);
   for (uint32_t I = 0; I < NumCounters; I++) {
-    const auto *CounterValue = reinterpret_cast<const uint64_t *>(
-        CountersStart + CounterBaseOffset + I * getCounterTypeSize());
-    Record.Counts.push_back(swap(*CounterValue));
+    const char *Ptr =
+        CountersStart + CounterBaseOffset + I * getCounterTypeSize();
+    if (hasSingleByteCoverage()) {
+      // A value of zero signifies the block is covered.
+      Record.Counts.push_back(*Ptr == 0 ? 1 : 0);
+    } else {
+      const auto *CounterValue = reinterpret_cast<const uint64_t *>(Ptr);
+      Record.Counts.push_back(swap(*CounterValue));
+    }
   }
 
   return success();

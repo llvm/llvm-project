@@ -7,7 +7,6 @@
 
 ## Check that .private_extern symbols are marked as local in the symbol table
 ## and aren't in the export trie.
-## Dead-stripped symbols should also not be in a map file output.
 # RUN: %lld -lSystem -dead_strip -map %t/map -u _ref_private_extern_u \
 # RUN:     %t/basics.o -o %t/basics
 # RUN: llvm-objdump --syms --section-headers %t/basics | \
@@ -16,7 +15,6 @@
 # RUN:     --exports-trie --indirect-symbols %t/basics | \
 # RUN:     FileCheck --check-prefix=EXECDATA --implicit-check-not _unref %s
 # RUN: llvm-otool -l %t/basics | grep -q 'segname __PAGEZERO'
-# RUN: FileCheck --check-prefix=MAP --implicit-check-not _unref %s < %t/map
 # EXEC-LABEL: Sections:
 # EXEC-LABEL: Name
 # EXEC-NEXT:  __text
@@ -44,7 +42,33 @@
 # EXECDATA-DAG:   _ref_com
 # EXECDATA-DAG:   _no_dead_strip_globl
 # EXECDATA-DAG:   __mh_execute_header
+
+## Check that dead stripped symbols get listed properly.
+# RUN: FileCheck --check-prefix=MAP %s < %t/map
+
 # MAP: _main
+# MAP-LABEL: Dead Stripped Symbols
+# MAP: <<dead>> [ 1] _unref_com
+# MAP: <<dead>> [ 1] _unref_data
+# MAP: <<dead>> [ 1] _unref_extern
+# MAP: <<dead>> [ 1] _unref_local
+# MAP: <<dead>> [ 1] _unref_private_extern
+# MAP: <<dead>> [ 1] l_unref_data
+
+## Run dead stripping on code without any dead symbols.
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/no-dead-symbols.s -o %t/no-dead-symbols.o
+# RUN: %lld -lSystem -dead_strip -map %t/no-dead-symbols-map \
+# RUN:     %t/no-dead-symbols.o -o %t/no-dead-symbols
+## Mark the end of the file with a string.
+# RUN: FileCheck --check-prefix=NODEADSYMBOLS %s < %t/no-dead-symbols-map
+
+# NODEADSYMBOLS-LABEL: # Symbols:
+# NODEADSYMBOLS-NEXT: # Address File Name
+# NODEADSYMBOLS-NEXT: _main
+# NODEADSYMBOLS-LABEL: # Dead Stripped Symbols:
+# NODEADSYMBOLS-NEXT: # Address File Name
+# NODEADSYMBOLS-EMPTY:
 
 # RUN: %lld -dylib -dead_strip -u _ref_private_extern_u %t/basics.o -o %t/basics.dylib
 # RUN: llvm-objdump --syms %t/basics.dylib | \
@@ -878,6 +902,12 @@ _main:
   retq
 
 .subsections_via_symbols
+
+#--- no-dead-symbols.s
+.text
+.globl _main
+_main:
+  retq
 
 #--- literals.s
 .cstring

@@ -467,6 +467,8 @@ class DeviceRTLTy {
     E.Table.EntriesBegin = E.Table.EntriesEnd = nullptr;
   }
 
+public:
+
   CUstream getStream(const int DeviceId, __tgt_async_info *AsyncInfo) const {
     assert(AsyncInfo && "AsyncInfo is nullptr");
 
@@ -481,7 +483,6 @@ class DeviceRTLTy {
     return reinterpret_cast<CUstream>(AsyncInfo->Queue);
   }
 
-public:
   // This class should not be copied
   DeviceRTLTy(const DeviceRTLTy &) = delete;
   DeviceRTLTy(DeviceRTLTy &&) = delete;
@@ -1424,6 +1425,45 @@ public:
 
     return OFFLOAD_SUCCESS;
   }
+
+  int releaseAsyncInfo(int DeviceId, __tgt_async_info *AsyncInfo) const {
+    if (AsyncInfo->Queue) {
+      StreamPool[DeviceId]->release(
+          reinterpret_cast<CUstream>(AsyncInfo->Queue));
+      AsyncInfo->Queue = nullptr;
+    }
+
+    return OFFLOAD_SUCCESS;
+  }
+
+  int initAsyncInfo(int DeviceId, __tgt_async_info **AsyncInfo) const {
+    CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
+    if (!checkResult(Err, "error returned from cuCtxSetCurrent"))
+      return OFFLOAD_FAIL;
+
+    *AsyncInfo = new __tgt_async_info;
+    getStream(DeviceId, *AsyncInfo);
+    return OFFLOAD_SUCCESS;
+  }
+
+  int initDeviceInfo(int DeviceId, __tgt_device_info *DeviceInfo,
+                     const char **ErrStr) const {
+    assert(DeviceInfo && "DeviceInfo is nullptr");
+
+    if (!DeviceInfo->Context)
+      DeviceInfo->Context = DeviceData[DeviceId].Context;
+    if (!DeviceInfo->Device) {
+      CUdevice Dev;
+      CUresult Err = cuDeviceGet(&Dev, DeviceId);
+      if (Err == CUDA_SUCCESS) {
+        DeviceInfo->Device = reinterpret_cast<void *>(Dev);
+      } else {
+        cuGetErrorString(Err, ErrStr);
+        return OFFLOAD_FAIL;
+      }
+    }
+    return OFFLOAD_SUCCESS;
+  }
 };
 
 DeviceRTLTy DeviceRTL;
@@ -1662,6 +1702,31 @@ int32_t __tgt_rtl_destroy_event(int32_t device_id, void *event_ptr) {
   assert(event_ptr && "event is nullptr");
 
   return DeviceRTL.destroyEvent(event_ptr);
+}
+
+int32_t __tgt_rtl_release_async_info(int32_t device_id,
+                                     __tgt_async_info *async_info) {
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+  assert(async_info && "async_info is nullptr");
+
+  return DeviceRTL.releaseAsyncInfo(device_id, async_info);
+}
+
+int32_t __tgt_rtl_init_async_info(int32_t device_id,
+                                  __tgt_async_info **async_info) {
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+  assert(async_info && "async_info is nullptr");
+
+  return DeviceRTL.initAsyncInfo(device_id, async_info);
+}
+
+int32_t __tgt_rtl_init_device_info(int32_t device_id,
+                                   __tgt_device_info *device_info_ptr,
+                                   const char **err_str) {
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+  assert(device_info_ptr && "device_info_ptr is nullptr");
+
+  return DeviceRTL.initDeviceInfo(device_id, device_info_ptr, err_str);
 }
 
 #ifdef __cplusplus

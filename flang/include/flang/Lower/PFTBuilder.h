@@ -354,6 +354,13 @@ struct ProgramUnit : ProgramVariant {
   PftNode parent;
 };
 
+/// Helper to get location from FunctionLikeUnit/ModuleLikeUnit begin/end
+/// statements.
+template <typename T>
+static parser::CharBlock stmtSourceLoc(const T &stmt) {
+  return stmt.visit(common::visitors{[](const auto &x) { return x.source; }});
+}
+
 /// A variable captures an object to be created per the declaration part of a
 /// function like unit.
 ///

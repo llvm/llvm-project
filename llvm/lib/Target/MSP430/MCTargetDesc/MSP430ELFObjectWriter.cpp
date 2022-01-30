@@ -9,7 +9,6 @@
 #include "MCTargetDesc/MSP430FixupKinds.h"
 #include "MCTargetDesc/MSP430MCTargetDesc.h"
 
-#include "MCTargetDesc/MSP430MCTargetDesc.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectWriter.h"

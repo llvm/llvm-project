@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines DenseMapInfo traits for DenseMap.
-//
+///
+/// \file
+/// This file defines DenseMapInfo traits for DenseMap.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_DENSEMAPINFO_H

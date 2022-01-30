@@ -65,7 +65,7 @@ func @tensor.cast_chain_invalid(%input: tensor<4x8xi32>) -> tensor<8x4xi32> {
 // -----
 
 // CHECK-LABEL: func @fold_extract
-func @fold_extract(%arg0 : index) -> (f32, f16, f16, i32) {
+func @fold_extract(%arg0 : index) -> (f32, f16, f16, i32, complex<f32>) {
   %const_0 = arith.constant 0 : index
   %const_1 = arith.constant 1 : index
   %const_3 = arith.constant 3 : index
@@ -87,11 +87,16 @@ func @fold_extract(%arg0 : index) -> (f32, f16, f16, i32) {
   %ext_3 = tensor.extract %2[%const_0, %const_0, %const_0] : tensor<2x2x2xf16>
 
   // Fold an extract into a dense tensor.
-   %3 = arith.constant dense<[[[1, -2, 1, 36]], [[0, 2, -1, 64]]]> : tensor<2x1x4xi32>
+  %3 = arith.constant dense<[[[1, -2, 1, 36]], [[0, 2, -1, 64]]]> : tensor<2x1x4xi32>
   %ext_4 = tensor.extract %3[%const_1, %const_0, %const_3] : tensor<2x1x4xi32>
 
-  // CHECK-NEXT: return [[C4]], [[CM2]], [[C0]], [[C64]]
-  return %ext_1, %ext_2, %ext_3, %ext_4 : f32, f16, f16, i32
+  // Fold an extract into a complex constant.
+  // CHECK-DAG: [[C5:%.+]] = complex.constant [1.200000e+00 : f32, 2.300000e+00 : f32] : complex<f32>
+  %4 = arith.constant dense<(1.2, 2.3)> : tensor<complex<f32>>
+  %ext_5 = tensor.extract %4[] : tensor<complex<f32>>
+
+  // CHECK-NEXT: return [[C4]], [[CM2]], [[C0]], [[C64]], [[C5]]
+  return %ext_1, %ext_2, %ext_3, %ext_4, %ext_5 : f32, f16, f16, i32, complex<f32>
 }
 
 // -----
@@ -1177,4 +1182,40 @@ func @pad_nofold_static_zero(%arg0: tensor<?x?x?xf32>, %pad_value: f32) -> tenso
     } : tensor<?x?x?xf32> to tensor<2x3x4xf32>
 
   return %0 : tensor<2x3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_collapse_shape_from_elements
+func @fold_collapse_shape_from_elements(%arg0: i32) -> tensor<i32> {
+  // CHECK: %[[FROM:.+]] = tensor.from_elements %arg0 : tensor<i32>
+  // CHECK: return %[[FROM]] : tensor<i32>
+  %0 = tensor.from_elements %arg0 : tensor<1xi32>
+  %1 = tensor.collapse_shape %0 [] : tensor<1xi32> into tensor<i32>
+  return %1 : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_expand_shape_from_elements
+func @fold_expand_shape_from_elements(%arg0: i32) -> tensor<1xi32> {
+  // CHECK: %[[FROM:.+]] = tensor.from_elements %arg0 : tensor<1xi32>
+  // CHECK: return %[[FROM]] : tensor<1xi32>
+  %0 = tensor.from_elements %arg0 : tensor<i32>
+  %1 = tensor.expand_shape %0 [] : tensor<i32> into tensor<1xi32>
+  return %1 : tensor<1xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @propogate_index_cast
+func @propogate_index_cast(%arg0: tensor<1xi32>) -> index {
+  // CHECK: %[[IDX:.+]] = arith.constant 0
+  // CHECK: %[[EXT:.+]] = tensor.extract %arg0[%[[IDX]]] : tensor<1xi32>
+  // CHECK: %[[CAST:.+]] = arith.index_cast %[[EXT]]
+  // CHECK: return %[[CAST]] : index
+  %c0 = arith.constant 0 : index
+  %0 = arith.index_cast %arg0 : tensor<1xi32> to tensor<1xindex>
+  %1 = tensor.extract %0[%c0] : tensor<1xindex>
+  return %1 : index
 }

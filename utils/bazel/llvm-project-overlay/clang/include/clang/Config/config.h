@@ -92,6 +92,9 @@
 /* enable x86 relax relocations by default */
 #define ENABLE_X86_RELAX_RELOCATIONS 1
 
+/* enable IEEE binary128 as default long double format on PowerPC Linux. */
+#define PPC_LINUX_DEFAULT_IEEELONGDOUBLE 0
+
 /* Enable the experimental new pass manager by default */
 #define ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER 0
 

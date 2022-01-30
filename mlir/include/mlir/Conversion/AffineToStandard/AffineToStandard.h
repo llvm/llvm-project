@@ -25,7 +25,6 @@ class Value;
 class ValueRange;
 
 class RewritePatternSet;
-using OwningRewritePatternList = RewritePatternSet;
 
 /// Emit code that computes the given affine expression using standard
 /// arithmetic operations applied to the provided dimension and symbol values.

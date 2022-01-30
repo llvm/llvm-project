@@ -119,9 +119,6 @@ static std::string getInstrProfErrString(instrprof_error Err,
   case instrprof_error::unable_to_correlate_profile:
     OS << "unable to correlate profile";
     break;
-  case instrprof_error::unsupported_debug_format:
-    OS << "unsupported debug info format (only DWARF is supported)";
-    break;
   case instrprof_error::invalid_prof:
     OS << "invalid profile created. Please file a bug "
           "at: " BUG_REPORT_URL
@@ -1182,32 +1179,6 @@ bool canRenameComdatFunc(const Function &F, bool CheckAddressTaken) {
     return true;
   }
   return true;
-}
-
-// Create a COMDAT variable INSTR_PROF_RAW_VERSION_VAR to make the runtime
-// aware this is an ir_level profile so it can set the version flag.
-GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS,
-                                            bool InstrEntryBBEnabled,
-                                            bool DebugInfoCorrelate) {
-  const StringRef VarName(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
-  Type *IntTy64 = Type::getInt64Ty(M.getContext());
-  uint64_t ProfileVersion = (INSTR_PROF_RAW_VERSION | VARIANT_MASK_IR_PROF);
-  if (IsCS)
-    ProfileVersion |= VARIANT_MASK_CSIR_PROF;
-  if (InstrEntryBBEnabled)
-    ProfileVersion |= VARIANT_MASK_INSTR_ENTRY;
-  if (DebugInfoCorrelate)
-    ProfileVersion |= VARIANT_MASK_DBG_CORRELATE;
-  auto IRLevelVersionVariable = new GlobalVariable(
-      M, IntTy64, true, GlobalValue::WeakAnyLinkage,
-      Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)), VarName);
-  IRLevelVersionVariable->setVisibility(GlobalValue::DefaultVisibility);
-  Triple TT(M.getTargetTriple());
-  if (TT.supportsCOMDAT()) {
-    IRLevelVersionVariable->setLinkage(GlobalValue::ExternalLinkage);
-    IRLevelVersionVariable->setComdat(M.getOrInsertComdat(VarName));
-  }
-  return IRLevelVersionVariable;
 }
 
 // Create the variable for the profile file name.

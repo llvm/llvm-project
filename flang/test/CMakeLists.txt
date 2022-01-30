@@ -46,7 +46,7 @@ set(FLANG_TEST_PARAMS
   flang_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py)
 
 set(FLANG_TEST_DEPENDS
-  flang-new llvm-config FileCheck count not module_files fir-opt tco
+  flang-new llvm-config FileCheck count not module_files fir-opt tco bbc
 )
 
 if (FLANG_INCLUDE_TESTS)

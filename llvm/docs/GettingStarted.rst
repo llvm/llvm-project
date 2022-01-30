@@ -238,7 +238,7 @@ popular host toolchains for specific minimum versions in our build systems:
 * Clang 3.5
 * Apple Clang 6.0
 * GCC 5.1
-* Visual Studio 2017
+* Visual Studio 2019
 
 Anything older than these toolchains *may* work, but will require forcing the
 build system with a special option and is not really a supported host platform.
@@ -273,8 +273,8 @@ Getting a Modern Host C++ Toolchain
 This section mostly applies to Linux and older BSDs. On macOS, you should
 have a sufficiently modern Xcode, or you will likely need to upgrade until you
 do. Windows does not have a "system compiler", so you must install either Visual
-Studio 2017 or a recent version of mingw64. FreeBSD 10.0 and newer have a modern
-Clang as the system compiler.
+Studio 2019 (or later), or a recent version of mingw64. FreeBSD 10.0 and newer
+have a modern Clang as the system compiler.
 
 However, some Linux distributions and some other or older BSDs sometimes have
 extremely old versions of GCC. These steps attempt to help you upgrade you

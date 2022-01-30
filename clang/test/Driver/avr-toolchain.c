@@ -25,7 +25,12 @@
 // CHECK3-SAME: {{^}} "[[SYSROOT]]/usr/avr/include"
 
 // RUN: %clang %s -### -target avr 2>&1 | FileCheck -check-prefix=CC1 %s
-// CC1: clang{{.*}} "-cc1" "-triple" "avr" {{.*}} "-fno-use-init-array"
+// CC1: clang{{.*}} "-cc1" "-triple" "avr" {{.*}} "-fno-use-init-array" "-fno-use-cxa-atexit"
+
+// RUN: %clang %s -### -target avr -fuse-init-array -fuse-cxa-atexit 2>&1 | FileCheck -check-prefix=CHECK4 %s
+// CHECK4: clang{{.*}} "-cc1" "-triple" "avr"
+// CHECK4-NOT: "-fno-use-init-array"
+// CHECK4-NOT: "-fno-use-cxa-atexit"
 
 // RUN: %clang %s -### -target avr --sysroot %S/Inputs/basic_avr_tree 2>&1 -nostdinc | FileCheck --check-prefix=NOSTDINC %s
 // RUN: %clang %s -### -target avr --sysroot %S/Inputs/basic_avr_tree 2>&1 -nostdlibinc | FileCheck --check-prefix=NOSTDINC %s

@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_SCF_TRANSFORMS_H_
 #define MLIR_DIALECT_SCF_TRANSFORMS_H_
 
-#include "mlir/Dialect/SCF/AffineCanonicalizationUtils.h"
+#include "mlir/Dialect/SCF/Utils/AffineCanonicalizationUtils.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 
@@ -27,7 +27,6 @@ class Region;
 class RewriterBase;
 class TypeConverter;
 class RewritePatternSet;
-using OwningRewritePatternList = RewritePatternSet;
 class Operation;
 class Value;
 class ValueRange;

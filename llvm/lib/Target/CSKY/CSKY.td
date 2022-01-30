@@ -11,6 +11,40 @@ include "llvm/Target/Target.td"
 //===----------------------------------------------------------------------===//
 // CSKY subtarget features and instruction predicates.
 //===----------------------------------------------------------------------===//
+def ModeHardFloat :
+  SubtargetFeature<"hard-float", "UseHardFloat",
+                   "true", "Use hard floating point features">;
+def ModeHardFloatABI :
+  SubtargetFeature<"hard-float-abi", "UseHardFloatABI",
+                   "true", "Use hard floating point ABI to pass args">;
+
+def FeatureFPUV2_SF
+    : SubtargetFeature<"fpuv2_sf", "HasFPUv2SingleFloat", "true",
+                       "Enable FPUv2 single float instructions">;
+def HasFPUv2_SF : Predicate<"Subtarget->hasFPUv2SingleFloat()">,
+                  AssemblerPredicate<(all_of FeatureFPUV2_SF),
+                  "Enable FPUv2 single float instructions">;
+
+def FeatureFPUV2_DF
+    : SubtargetFeature<"fpuv2_df", "HasFPUv2DoubleFloat", "true",
+                       "Enable FPUv2 double float instructions">;
+def HasFPUv2_DF : Predicate<"Subtarget->hasFPUv2DoubleFloat()">,
+                  AssemblerPredicate<(all_of FeatureFPUV2_DF),
+                  "Enable FPUv2 double float instructions">;
+
+def FeatureFPUV3_SF
+    : SubtargetFeature<"fpuv3_sf", "HasFPUv3SingleFloat", "true",
+                       "Enable FPUv3 single float instructions">;
+def HasFPUv3_SF : Predicate<"Subtarget->hasFPUv3SingleFloat()">,
+                  AssemblerPredicate<(all_of FeatureFPUV3_SF),
+                  "Enable FPUv3 single float instructions">;
+
+def FeatureFPUV3_DF
+    : SubtargetFeature<"fpuv3_df", "HasFPUv3DoubleFloat", "true",
+                       "Enable FPUv3 double float instructions">;
+def HasFPUv3_DF : Predicate<"Subtarget->hasFPUv3DoubleFloat()">,
+                  AssemblerPredicate<(all_of FeatureFPUV3_DF),
+                  "Enable FPUv3 double float instructions">;
 
 def FeatureBTST16 : SubtargetFeature<"btst16", "HasBTST16", "true",
                                      "Use the 16-bit btsti instruction">;

@@ -3,7 +3,7 @@
 ; The tests in this file check that we do not simplify based on metadata that is
 ; not available on all code paths.
 
-; RUN: opt < %s -S -newgvn | FileCheck %s
+; RUN: opt < %s -S -passes=newgvn | FileCheck %s
 
 define i1 @test1(i32** %arg, i1 %arg2) {
 ; CHECK-LABEL: @test1(

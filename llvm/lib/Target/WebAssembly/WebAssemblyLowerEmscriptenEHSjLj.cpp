@@ -560,6 +560,9 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallBase *CI) {
       NEltArg = NEltArg.getValue() + 1;
     FnAttrs.addAllocSizeAttr(SizeArg, NEltArg);
   }
+  // In case the callee has 'noreturn' attribute, We need to remove it, because
+  // we expect invoke wrappers to return.
+  FnAttrs.removeAttribute(Attribute::NoReturn);
 
   // Reconstruct the AttributesList based on the vector we constructed.
   AttributeList NewCallAL = AttributeList::get(
@@ -630,9 +633,9 @@ static bool canLongjmp(const Value *Callee) {
 
   // Exception-catching related functions
   //
-  // We intentionally excluded __cxa_end_catch here even though it surely cannot
-  // longjmp, in order to maintain the unwind relationship from all existing
-  // catchpads (and calls within them) to catch.dispatch.longjmp.
+  // We intentionally treat __cxa_end_catch longjmpable in Wasm SjLj even though
+  // it surely cannot longjmp, in order to maintain the unwind relationship from
+  // all existing catchpads (and calls within them) to catch.dispatch.longjmp.
   //
   // In Wasm EH + Wasm SjLj, we
   // 1. Make all catchswitch and cleanuppad that unwind to caller unwind to
@@ -663,6 +666,8 @@ static bool canLongjmp(const Value *Callee) {
   //
   // The comment block in findWasmUnwindDestinations() in
   // SelectionDAGBuilder.cpp is addressing a similar problem.
+  if (CalleeName == "__cxa_end_catch")
+    return WebAssembly::WasmEnableSjLj;
   if (CalleeName == "__cxa_begin_catch" ||
       CalleeName == "__cxa_allocate_exception" || CalleeName == "__cxa_throw" ||
       CalleeName == "__clang_call_terminate")
@@ -869,15 +874,17 @@ static void nullifySetjmp(Function *F) {
   Function *SetjmpF = M.getFunction("setjmp");
   SmallVector<Instruction *, 1> ToErase;
 
-  for (User *U : SetjmpF->users()) {
-    auto *CI = dyn_cast<CallInst>(U);
-    // FIXME 'invoke' to setjmp can happen when we use Wasm EH + Wasm SjLj, but
-    // we don't support two being used together yet.
-    if (!CI)
-      report_fatal_error("Wasm EH + Wasm SjLj is not fully supported yet");
-    BasicBlock *BB = CI->getParent();
+  for (User *U : make_early_inc_range(SetjmpF->users())) {
+    auto *CB = cast<CallBase>(U);
+    BasicBlock *BB = CB->getParent();
     if (BB->getParent() != F) // in other function
       continue;
+    CallInst *CI = nullptr;
+    // setjmp cannot throw. So if it is an invoke, lower it to a call
+    if (auto *II = dyn_cast<InvokeInst>(CB))
+      CI = llvm::changeToCall(II);
+    else
+      CI = cast<CallInst>(CB);
     ToErase.push_back(CI);
     CI->replaceAllUsesWith(IRB.getInt32(0));
   }
@@ -1313,10 +1320,13 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   SmallVector<PHINode *, 4> SetjmpRetPHIs;
   Function *SetjmpF = M.getFunction("setjmp");
   for (auto *U : make_early_inc_range(SetjmpF->users())) {
-    auto *CB = dyn_cast<CallBase>(U);
+    auto *CB = cast<CallBase>(U);
     BasicBlock *BB = CB->getParent();
     if (BB->getParent() != &F) // in other function
       continue;
+    if (CB->getOperandBundle(LLVMContext::OB_funclet))
+      report_fatal_error(
+          "setjmp within a catch clause is not supported in Wasm EH");
 
     CallInst *CI = nullptr;
     // setjmp cannot throw. So if it is an invoke, lower it to a call
@@ -1815,10 +1825,10 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
     BasicBlock *UnwindDest = nullptr;
     if (auto Bundle = CI->getOperandBundle(LLVMContext::OB_funclet)) {
       Instruction *FromPad = cast<Instruction>(Bundle->Inputs[0]);
-      while (!UnwindDest && FromPad) {
+      while (!UnwindDest) {
         if (auto *CPI = dyn_cast<CatchPadInst>(FromPad)) {
           UnwindDest = CPI->getCatchSwitch()->getUnwindDest();
-          FromPad = nullptr; // stop searching
+          break;
         } else if (auto *CPI = dyn_cast<CleanupPadInst>(FromPad)) {
           // getCleanupRetUnwindDest() can return nullptr when
           // 1. This cleanuppad's matching cleanupret uwninds to caller
@@ -1826,7 +1836,10 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
           //    unreachable.
           // In case of 2, we need to traverse the parent pad chain.
           UnwindDest = getCleanupRetUnwindDest(CPI);
-          FromPad = cast<Instruction>(CPI->getParentPad());
+          Value *ParentPad = CPI->getParentPad();
+          if (isa<ConstantTokenNone>(ParentPad))
+            break;
+          FromPad = cast<Instruction>(ParentPad);
         }
       }
     }

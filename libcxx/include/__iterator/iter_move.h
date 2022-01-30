@@ -25,7 +25,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
-namespace ranges::__iter_move {
+// [iterator.cust.move]
+
+namespace ranges {
+namespace __iter_move {
+
 void iter_move();
 
 template<class _Ip>
@@ -69,14 +73,15 @@ struct __fn {
   // [iterator.cust.move]/1.3
   // Otherwise, ranges::iter_move(E) is ill-formed.
 };
-} // namespace ranges::__iter_move
+} // namespace __iter_move
 
-namespace ranges::inline __cpo {
+inline namespace __cpo {
   inline constexpr auto iter_move = __iter_move::__fn{};
-}
+} // namespace __cpo
+} // namespace ranges
 
 template<__dereferenceable _Tp>
-requires requires(_Tp& __t) { { ranges::iter_move(__t) } -> __referenceable; }
+  requires requires(_Tp& __t) { { ranges::iter_move(__t) } -> __referenceable; }
 using iter_rvalue_reference_t = decltype(ranges::iter_move(declval<_Tp&>()));
 
 #endif // !_LIBCPP_HAS_NO_RANGES

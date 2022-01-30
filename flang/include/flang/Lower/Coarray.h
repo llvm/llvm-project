@@ -10,7 +10,7 @@
 #define FORTRAN_LOWER_COARRAY_H
 
 #include "flang/Lower/AbstractConverter.h"
-#include "flang/Lower/Support/BoxValue.h"
+#include "flang/Optimizer/Builder/BoxValue.h"
 
 namespace Fortran {
 

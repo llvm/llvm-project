@@ -51,7 +51,7 @@ tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_NUM_FORMAT_UINT
 // expected ')' in parentheses expression
 
 v_bfe_u32 v0, 1+(100, v1, v2
-// CHECK: error: expected ')' in parentheses expression
+// CHECK: :[[#@LINE-1]]:21: error: expected ')'
 // CHECK-NEXT:{{^}}v_bfe_u32 v0, 1+(100, v1, v2
 // CHECK-NEXT:{{^}}                    ^
 

@@ -443,8 +443,11 @@ public:
     // FIXME: Implement array initialization.
   }
 
-  // FIXME: Add support for:
-  // - CXXBoolLiteralExpr
+  void VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *S) {
+    auto &Loc = Env.createStorageLocation(*S);
+    Env.setStorageLocation(*S, Loc);
+    Env.setValue(Loc, Env.getBoolLiteralValue(S->getValue()));
+  }
 
 private:
   Environment &Env;

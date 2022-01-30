@@ -234,7 +234,7 @@
 #endif
 #endif /* __arm__ */
 
-#if defined(__ppc__) || defined(__powerpc64__)
+#if defined(__powerpc__)
 #define PPC_LEFT_SHIFT(index) << (index)
 #endif
 

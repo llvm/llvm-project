@@ -16,6 +16,7 @@ unittest("ClangTidyTests") {
     "//clang/lib/Frontend",
     "//clang/lib/Lex",
     "//clang/lib/Serialization",
+    "//clang/lib/Testing",
     "//clang/lib/Tooling",
     "//clang/lib/Tooling/Core",
     "//clang/lib/Tooling/Transformer",

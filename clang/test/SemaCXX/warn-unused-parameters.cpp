@@ -32,3 +32,7 @@ static int test_pack(T... t, T... s)
   auto l = [&t...]() { return sizeof...(s); };
   return l();
 }
+
+// Do not warn on naked functions.
+[[gnu::naked]] int nakedFunction(int a, float b, const char* c) { ; }
+__attribute__((naked)) void nakedFunction(int a, int b) { ; }

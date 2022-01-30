@@ -583,3 +583,19 @@ func @dim_of_tiled_loop_result_no_canonicalize(%arg0: tensor<?x?xf32>, %arg1: te
   %r2 = tensor.dim %r, %c0 : tensor<?x?xf32>
   return %r2 : index
 }
+
+// -----
+
+// CHECK: func @fold_self_copy
+func @fold_self_copy(%0 : memref<4x16xf32>) {
+// CHECK-NEXT: return
+  linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, 
+                                   affine_map<(d0, d1) -> (d0, d1)>], 
+                  iterator_types = ["parallel", "parallel"]} 
+    ins(%0 : memref<4x16xf32>) 
+    outs(%0 : memref<4x16xf32>) {
+      ^bb0(%arg4: f32, %arg5: f32):
+        linalg.yield %arg4 : f32
+    }
+  return 
+}

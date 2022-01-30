@@ -585,6 +585,55 @@ for.end:                                         ; preds = %for.body
   ret float %rdx
 }
 
+; Negative test - loop contains two fadds and only one fadd has the fast flag,
+; which we cannot safely reorder.
+define float @fadd_multiple_one_flag(float* noalias nocapture %a, float* noalias nocapture %b, i64 %n) {
+; CHECK-ORDERED-LABEL: @fadd_multiple_one_flag
+; CHECK-ORDERED-NOT: vector.body
+
+; CHECK-UNORDERED-LABEL: @fadd_multiple_one_flag
+; CHECK-UNORDERED: vector.body
+; CHECK-UNORDERED: %[[PHI:.*]] = phi <8 x float> [ <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %vector.ph ], [ %[[VEC_FADD2:.*]], %vector.body ]
+; CHECK-UNORDERED: %[[VEC_LOAD1:.*]] = load <8 x float>, <8 x float>
+; CHECK-UNORDERED: %[[VEC_FADD1:.*]] = fadd <8 x float> %[[PHI]], %[[VEC_LOAD1]]
+; CHECK-UNORDERED: %[[VEC_LOAD2:.*]] = load <8 x float>, <8 x float>
+; CHECK-UNORDERED: %[[VEC_FADD2]] = fadd fast <8 x float> %[[VEC_FADD1]], %[[VEC_LOAD2]]
+; CHECK-UNORDERED: middle.block
+; CHECK-UNORDERED: %[[RDX:.*]] = call float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> %[[VEC_FADD2]])
+; CHECK-UNORDERED: for.body
+; CHECK-UNORDERED: %[[SUM:.*]] = phi float [ %bc.merge.rdx, %scalar.ph ], [ %[[FADD2:.*]], %for.body ]
+; CHECK-UNORDERED: %[[LOAD1:.*]] = load float, float*
+; CHECK-UNORDERED: %[[FADD1:.*]] = fadd float %sum, %[[LOAD1]]
+; CHECK-UNORDERED: %[[LOAD2:.*]] = load float, float*
+; CHECK-UNORDERED: %[[FADD2]] = fadd fast float %[[FADD1]], %[[LOAD2]]
+; CHECK-UNORDERED: for.end
+; CHECK-UNORDERED: %[[RET:.*]] = phi float [ %[[FADD2]], %for.body ], [ %[[RDX]], %middle.block ]
+; CHECK-UNORDERED: ret float %[[RET]]
+
+; CHECK-NOT-VECTORIZED-LABEL: @fadd_multiple_one_flag
+; CHECK-NOT-VECTORIZED-NOT: vector.body
+
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %sum = phi float [ -0.000000e+00, %entry ], [ %add3, %for.body ]
+  %arrayidx = getelementptr inbounds float, float* %a, i64 %iv
+  %0 = load float, float* %arrayidx, align 4
+  %add = fadd float %sum, %0
+  %arrayidx2 = getelementptr inbounds float, float* %b, i64 %iv
+  %1 = load float, float* %arrayidx2, align 4
+  %add3 = fadd fast float %add, %1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
+
+for.end:                                         ; preds = %for.body
+  %rdx = phi float [ %add3, %for.body ]
+  ret float %rdx
+}
+
 ; Tests with both a floating point reduction & induction, e.g.
 ;
 ;float fp_iv_rdx_loop(float *values, float init, float * __restrict__ A, int N) {

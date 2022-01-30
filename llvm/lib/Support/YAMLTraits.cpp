@@ -18,6 +18,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -298,7 +299,7 @@ void Input::endEnumScalar() {
 bool Input::beginBitSetScalar(bool &DoClear) {
   BitValuesUsed.clear();
   if (SequenceHNode *SQ = dyn_cast<SequenceHNode>(CurrentNode)) {
-    BitValuesUsed.insert(BitValuesUsed.begin(), SQ->Entries.size(), false);
+    BitValuesUsed.resize(SQ->Entries.size());
   } else {
     setError(CurrentNode, "expected sequence of bit values");
   }

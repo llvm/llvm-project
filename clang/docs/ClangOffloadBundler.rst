@@ -478,6 +478,8 @@ Additional Options while Archive Unbundling
   Check if input heterogeneous device archive follows rules for composition
   as defined in :ref:`code-object-composition` before creating device-specific
   archive(s).
+clang-offload-bundler determines whether a device binary is compatible with a
+target by comparing bundle ID's. Two bundle ID's are considered compatible if:
 
 **-debug-only=CodeObjectCompatibility**
   Verbose printing of matched/unmatched comparisons between bundle entry id of

@@ -167,3 +167,41 @@ wasm::ValType WebAssembly::regClassToValType(unsigned RC) {
     llvm_unreachable("unexpected type");
   }
 }
+
+void WebAssembly::wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,
+                                    const SmallVector<MVT, 1> &VTs) {
+  assert(!Sym->getType());
+
+  // Tables are represented as Arrays in LLVM IR therefore
+  // they reach this point as aggregate Array types with an element type
+  // that is a reference type.
+  wasm::ValType Type;
+  bool IsTable = false;
+  if (GlobalVT->isArrayTy() &&
+      WebAssembly::isRefType(GlobalVT->getArrayElementType())) {
+    MVT VT;
+    IsTable = true;
+    switch (GlobalVT->getArrayElementType()->getPointerAddressSpace()) {
+    case WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF:
+      VT = MVT::funcref;
+      break;
+    case WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF:
+      VT = MVT::externref;
+      break;
+    default:
+      report_fatal_error("unhandled address space type");
+    }
+    Type = WebAssembly::toValType(VT);
+  } else if (VTs.size() == 1) {
+    Type = WebAssembly::toValType(VTs[0]);
+  } else
+    report_fatal_error("Aggregate globals not yet implemented");
+
+  if (IsTable) {
+    Sym->setType(wasm::WASM_SYMBOL_TYPE_TABLE);
+    Sym->setTableType(Type);
+  } else {
+    Sym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
+    Sym->setGlobalType(wasm::WasmGlobalType{uint8_t(Type), /*Mutable=*/true});
+  }
+}

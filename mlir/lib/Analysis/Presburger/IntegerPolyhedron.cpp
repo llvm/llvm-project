@@ -63,6 +63,26 @@ void IntegerPolyhedron::append(const IntegerPolyhedron &other) {
   }
 }
 
+Optional<SmallVector<Fraction, 8>>
+IntegerPolyhedron::getRationalLexMin() const {
+  assert(numSymbols == 0 && "Symbols are not supported!");
+  Optional<SmallVector<Fraction, 8>> maybeLexMin =
+      LexSimplex(*this).getRationalLexMin();
+
+  if (!maybeLexMin)
+    return {};
+
+  // The Simplex returns the lexmin over all the variables including locals. But
+  // locals are not actually part of the space and should not be returned in the
+  // result. Since the locals are placed last in the list of identifiers, they
+  // will be minimized last in the lexmin. So simply truncating out the locals
+  // from the end of the answer gives the desired lexmin over the dimensions.
+  assert(maybeLexMin->size() == getNumIds() &&
+         "Incorrect number of vars in lexMin!");
+  maybeLexMin->resize(getNumDimAndSymbolIds());
+  return maybeLexMin;
+}
+
 unsigned IntegerPolyhedron::insertDimId(unsigned pos, unsigned num) {
   return insertId(IdKind::Dimension, pos, num);
 }

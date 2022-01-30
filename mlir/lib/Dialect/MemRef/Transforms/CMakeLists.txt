@@ -1,4 +1,6 @@
 add_mlir_dialect_library(MLIRMemRefTransforms
+  ComposeSubView.cpp
+  ExpandOps.cpp
   FoldSubViewOps.cpp
   NormalizeMemRefs.cpp
   ResolveShapedTypeResultDims.cpp

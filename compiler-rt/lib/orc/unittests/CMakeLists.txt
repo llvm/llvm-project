@@ -37,6 +37,7 @@ set(ORC_TEST_ARCH ${ORC_SUPPORTED_ARCH})
 set(ORC_UNITTEST_LINK_FLAGS
   ${COMPILER_RT_UNITTEST_LINK_FLAGS}
   ${CMAKE_THREAD_LIBS_INIT}
+  ${SANITIZER_TEST_CXX_LIBRARIES}
   )
 
 if(APPLE)
@@ -50,10 +51,6 @@ else()
   append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread ORC_UNITTEST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBEXECINFO -lexecinfo ORC_UNITTEST_LINK_FLAGS)
 endif()
-
-foreach(lib ${SANITIZER_TEST_CXX_LIBRARIES})
-  list(APPEND ORC_UNITTEST_LINK_FLAGS -l${lib})
-endforeach()
 
 set(ORC_DEPS gtest orc)
 # ORC uses C++ standard library headers.

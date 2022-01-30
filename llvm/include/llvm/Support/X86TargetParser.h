@@ -14,10 +14,10 @@
 #define LLVM_SUPPORT_X86TARGETPARSER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace llvm {
+template <typename T> class SmallVectorImpl;
 class StringRef;
 
 namespace X86 {

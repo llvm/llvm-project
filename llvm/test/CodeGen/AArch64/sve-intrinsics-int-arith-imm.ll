@@ -514,9 +514,8 @@ define <vscale x 2 x i64> @smax_i64(<vscale x 2 x i64> %a) {
 define <vscale x 2 x i64> @smax_i64_out_of_range(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: smax_i64_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #65535
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z1.d, x8
+; CHECK-NEXT:    mov z1.d, #65535 // =0xffff
 ; CHECK-NEXT:    smax z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
@@ -832,9 +831,8 @@ define <vscale x 2 x i64> @umax_i64(<vscale x 2 x i64> %a) {
 define <vscale x 2 x i64> @umax_i64_out_of_range(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: umax_i64_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #65535
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z1.d, x8
+; CHECK-NEXT:    mov z1.d, #65535 // =0xffff
 ; CHECK-NEXT:    umax z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
@@ -991,9 +989,8 @@ define <vscale x 2 x i64> @umin_i64(<vscale x 2 x i64> %a) {
 define <vscale x 2 x i64> @umin_i64_out_of_range(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: umin_i64_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #65535
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z1.d, x8
+; CHECK-NEXT:    mov z1.d, #65535 // =0xffff
 ; CHECK-NEXT:    umin z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)

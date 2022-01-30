@@ -1360,3 +1360,5 @@ def CONSTPOOL_ENTRY : CSKYPseudo<(outs),
   (ins i32imm:$instid, i32imm:$cpidx, i32imm:$size), "", []>;
 
 include "CSKYInstrInfo16Instr.td"
+include "CSKYInstrInfoF1.td"
+include "CSKYInstrInfoF2.td"

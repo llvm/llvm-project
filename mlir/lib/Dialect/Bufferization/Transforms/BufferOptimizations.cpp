@@ -32,7 +32,6 @@ static bool isKnownControlFlowInterface(Operation *op) {
 /// transformation is only applied to small buffers since large buffers could
 /// exceed the stack space.
 static bool defaultIsSmallAlloc(Value alloc, unsigned maximumSizeInBytes,
-                                unsigned bitwidthOfIndexType,
                                 unsigned maxRankOfAllocatedMemRef) {
   auto type = alloc.getType().dyn_cast<ShapedType>();
   if (!type || !alloc.getDefiningOp<memref::AllocOp>())
@@ -51,10 +50,8 @@ static bool defaultIsSmallAlloc(Value alloc, unsigned maximumSizeInBytes,
     }
     return false;
   }
-  // For index types, use the provided size, as the type does not know.
-  unsigned int bitwidth = type.getElementType().isIndex()
-                              ? bitwidthOfIndexType
-                              : type.getElementTypeBitWidth();
+  unsigned bitwidth = mlir::DataLayout::closest(alloc.getDefiningOp())
+                          .getTypeSizeInBits(type.getElementType());
   return type.getNumElements() * bitwidth <= maximumSizeInBytes * 8;
 }
 
@@ -390,10 +387,8 @@ class PromoteBuffersToStackPass
     : public PromoteBuffersToStackBase<PromoteBuffersToStackPass> {
 public:
   PromoteBuffersToStackPass(unsigned maxAllocSizeInBytes,
-                            unsigned bitwidthOfIndexType,
                             unsigned maxRankOfAllocatedMemRef) {
     this->maxAllocSizeInBytes = maxAllocSizeInBytes;
-    this->bitwidthOfIndexType = bitwidthOfIndexType;
     this->maxRankOfAllocatedMemRef = maxRankOfAllocatedMemRef;
   }
 
@@ -404,7 +399,6 @@ public:
     if (isSmallAlloc == nullptr) {
       isSmallAlloc = [=](Value alloc) {
         return defaultIsSmallAlloc(alloc, maxAllocSizeInBytes,
-                                   bitwidthOfIndexType,
                                    maxRankOfAllocatedMemRef);
       };
     }
@@ -432,10 +426,9 @@ std::unique_ptr<Pass> mlir::bufferization::createBufferLoopHoistingPass() {
 }
 
 std::unique_ptr<Pass> mlir::bufferization::createPromoteBuffersToStackPass(
-    unsigned maxAllocSizeInBytes, unsigned bitwidthOfIndexType,
-    unsigned maxRankOfAllocatedMemRef) {
-  return std::make_unique<PromoteBuffersToStackPass>(
-      maxAllocSizeInBytes, bitwidthOfIndexType, maxRankOfAllocatedMemRef);
+    unsigned maxAllocSizeInBytes, unsigned maxRankOfAllocatedMemRef) {
+  return std::make_unique<PromoteBuffersToStackPass>(maxAllocSizeInBytes,
+                                                     maxRankOfAllocatedMemRef);
 }
 
 std::unique_ptr<Pass> mlir::bufferization::createPromoteBuffersToStackPass(

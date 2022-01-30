@@ -1,6 +1,6 @@
 ; Skip dead MemoryPhis when performing memory congruency verification
 ; in NewGVN.
-; RUN: opt -S -newgvn %s | FileCheck %s
+; RUN: opt -S -passes=newgvn %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK: define void @tinkywinky() {

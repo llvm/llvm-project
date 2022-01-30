@@ -26,6 +26,7 @@ class InterestingMemoryOperand {
 public:
   Use *PtrUse;
   bool IsWrite;
+  Type *OpType;
   uint64_t TypeSize;
   MaybeAlign Alignment;
   // The mask Value, if we're looking at a masked load/store.
@@ -34,7 +35,8 @@ public:
   InterestingMemoryOperand(Instruction *I, unsigned OperandNo, bool IsWrite,
                            class Type *OpType, MaybeAlign Alignment,
                            Value *MaybeMask = nullptr)
-      : IsWrite(IsWrite), Alignment(Alignment), MaybeMask(MaybeMask) {
+      : IsWrite(IsWrite), OpType(OpType), Alignment(Alignment),
+        MaybeMask(MaybeMask) {
     const DataLayout &DL = I->getModule()->getDataLayout();
     TypeSize = DL.getTypeStoreSizeInBits(OpType);
     PtrUse = &I->getOperandUse(OperandNo);
@@ -64,7 +66,7 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
   }
   SmallVector<Instruction *, 8> ReachableRetVec;
   unsigned NumCoveredExits = 0;
-  for (auto &RI : RetVec) {
+  for (auto *RI : RetVec) {
     if (!isPotentiallyReachable(Start, RI, nullptr, &DT))
       continue;
     ReachableRetVec.push_back(RI);
@@ -81,7 +83,7 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
     for (auto *End : Ends)
       Callback(End);
   } else {
-    for (auto &RI : ReachableRetVec)
+    for (auto *RI : ReachableRetVec)
       Callback(RI);
     // We may have inserted untag outside of the lifetime interval.
     // Signal the caller to remove the lifetime end call for this alloca.

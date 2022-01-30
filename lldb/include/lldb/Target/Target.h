@@ -991,7 +991,7 @@ public:
   ///     manually set following this function call).
   ///
   /// \return
-  ///     \b true if the architecture was successfully set, \bfalse otherwise.
+  ///     \b true if the architecture was successfully set, \b false otherwise.
   bool SetArchitecture(const ArchSpec &arch_spec, bool set_platform = false);
 
   bool MergeArchitecture(const ArchSpec &arch_spec);
@@ -1019,10 +1019,11 @@ public:
                     lldb::addr_t *load_addr_ptr = nullptr);
 
   size_t ReadCStringFromMemory(const Address &addr, std::string &out_str,
-                               Status &error);
+                               Status &error, bool force_live_memory = false);
 
   size_t ReadCStringFromMemory(const Address &addr, char *dst,
-                               size_t dst_max_len, Status &result_error);
+                               size_t dst_max_len, Status &result_error,
+                               bool force_live_memory = false);
 
   /// Read a NULL terminated string from memory
   ///

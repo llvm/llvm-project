@@ -535,6 +535,14 @@ def unmerge_cst : GICombineRule<
   (apply [{ Helper.applyCombineUnmergeConstant(*${d}, ${info}); }])
 >;
 
+// Fold (unmerge undef) -> undef, undef, ...
+def unmerge_undef : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$info),
+  (match (wip_match_opcode G_UNMERGE_VALUES): $root,
+         [{ return Helper.matchCombineUnmergeUndef(*${root}, ${info}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])
+>;
+
 // Transform x,y<dead> = unmerge z -> x = trunc z.
 def unmerge_dead_to_trunc : GICombineRule<
   (defs root:$d),
@@ -844,7 +852,8 @@ def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      propagate_undef_any_op,
                                      propagate_undef_all_ops,
                                      propagate_undef_shuffle_mask,
-                                     erase_undef_store]>;
+                                     erase_undef_store,
+                                     unmerge_undef]>;
 
 def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         binop_same_val, binop_left_to_zero,

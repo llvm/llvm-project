@@ -115,8 +115,9 @@ __parallel_stable_sort_body(_RandomAccessIterator __xs, _RandomAccessIterator __
 
 template <class _ExecutionPolicy, typename _RandomAccessIterator, typename _Compare, typename _LeafSort>
 void
-__parallel_stable_sort(_ExecutionPolicy&& /*__exec*/, _RandomAccessIterator __xs, _RandomAccessIterator __xe,
-                       _Compare __comp, _LeafSort __leaf_sort, std::size_t __nsort = 0)
+__parallel_stable_sort(__pstl::__internal::__openmp_backend_tag __tag, _ExecutionPolicy&& /*__exec*/,
+                       _RandomAccessIterator __xs, _RandomAccessIterator __xe, _Compare __comp, _LeafSort __leaf_sort,
+                       std::size_t __nsort = 0)
 {
     auto __count = static_cast<std::size_t>(__xe - __xs);
     if (__count <= __default_chunk_size || __nsort < __count)
@@ -136,7 +137,7 @@ __parallel_stable_sort(_ExecutionPolicy&& /*__exec*/, _RandomAccessIterator __xs
         }
         else
         {
-            __pstl::__omp_backend::__parallel_stable_partial_sort(__xs, __xe, __comp, __leaf_sort, __nsort);
+            __pstl::__omp_backend::__parallel_stable_partial_sort(__tag, __xs, __xe, __comp, __leaf_sort, __nsort);
         }
     }
     else
@@ -149,7 +150,7 @@ __parallel_stable_sort(_ExecutionPolicy&& /*__exec*/, _RandomAccessIterator __xs
         }
         else
         {
-            __pstl::__omp_backend::__parallel_stable_partial_sort(__xs, __xe, __comp, __leaf_sort, __nsort);
+            __pstl::__omp_backend::__parallel_stable_partial_sort(__tag, __xs, __xe, __comp, __leaf_sort, __nsort);
         }
     }
 }

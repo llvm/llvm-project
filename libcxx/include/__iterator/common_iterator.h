@@ -29,6 +29,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
+template<class _Iter>
+concept __can_use_postfix_proxy =
+  constructible_from<iter_value_t<_Iter>, iter_reference_t<_Iter>> &&
+  move_constructible<iter_value_t<_Iter>>;
+
 template<input_or_output_iterator _Iter, sentinel_for<_Iter> _Sent>
   requires (!same_as<_Iter, _Sent> && copyable<_Iter>)
 class common_iterator {
@@ -54,10 +59,6 @@ class common_iterator {
       : __value(_VSTD::forward<iter_reference_t<_Iter>>(__x)) {}
 
   public:
-    constexpr static bool __valid_for_iter =
-      constructible_from<iter_value_t<_Iter>, iter_reference_t<_Iter>> &&
-      move_constructible<iter_value_t<_Iter>>;
-
     constexpr const iter_value_t<_Iter>& operator*() const noexcept {
       return __value;
     }
@@ -148,7 +149,7 @@ public:
       ++*this;
       return __tmp;
     } else if constexpr (requires (_Iter& __i) { { *__i++ } -> __referenceable; } ||
-                         !__postfix_proxy::__valid_for_iter) {
+                         !__can_use_postfix_proxy<_Iter>) {
       return _VSTD::__unchecked_get<_Iter>(__hold_)++;
     } else {
       __postfix_proxy __p(**this);
@@ -261,7 +262,7 @@ struct __arrow_type_or_void<_Iter, _Sent> {
     using type = decltype(declval<const common_iterator<_Iter, _Sent>&>().operator->());
 };
 
-template<class _Iter, class _Sent>
+template<input_iterator _Iter, class _Sent>
 struct iterator_traits<common_iterator<_Iter, _Sent>> {
   using iterator_concept = _If<forward_iterator<_Iter>,
                                forward_iterator_tag,
@@ -274,7 +275,6 @@ struct iterator_traits<common_iterator<_Iter, _Sent>> {
   using difference_type = iter_difference_t<_Iter>;
   using reference = iter_reference_t<_Iter>;
 };
-
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 

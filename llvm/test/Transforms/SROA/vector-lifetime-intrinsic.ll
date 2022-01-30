@@ -1,4 +1,4 @@
-; RUN: opt -sroa -S < %s | FileCheck %s
+; RUN: opt -passes=sroa -S < %s | FileCheck %s
 
 target datalayout = "e-p:64:32-i64:32-v32:32-n32-S64"
 

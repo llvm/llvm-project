@@ -36,7 +36,7 @@ and software you will need.
 
 Hardware
 --------
-Any system that can adequately run Visual Studio 2017 is fine. The LLVM
+Any system that can adequately run Visual Studio 2019 is fine. The LLVM
 source tree including the git index consumes approximately 3GB.
 Object files, libraries and executables consume approximately 5GB in
 Release mode and much more in Debug mode. SSD drive and >16GB RAM are
@@ -45,13 +45,14 @@ recommended.
 
 Software
 --------
-You will need `Visual Studio <https://visualstudio.microsoft.com/>`_ 2017 or
-higher, with the latest Update installed. Visual Studio Community Edition
+You will need `Visual Studio <https://visualstudio.microsoft.com/>`_ 2019 or
+later, with the latest Update installed. Visual Studio Community Edition
 suffices.
 
 You will also need the `CMake <http://www.cmake.org/>`_ build system since it
 generates the project files you will use to build with. CMake is bundled with
-Visual Studio 2019 so separate installation is not required.
+Visual Studio 2019 so separate installation is not required. If you do install
+CMake separately, Visual Studio 2022 will require CMake Version 3.21 or later.
 
 If you would like to run the LLVM tests you will need `Python
 <http://www.python.org/>`_. Version 3.6 and newer are known to work. You can

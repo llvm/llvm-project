@@ -10,7 +10,7 @@ declare_args() {
 
 target_flags_string = ""
 
-foreach(flag, target_flags + target_ldflags + [ "-fuse-ld=lld" ]) {
+foreach(flag, target_flags + target_ldflags) {
   if (target_flags_string != "") {
     target_flags_string += " "
   }

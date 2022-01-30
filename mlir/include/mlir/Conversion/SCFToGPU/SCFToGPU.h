@@ -18,7 +18,6 @@ class MLIRContext;
 class Value;
 class Operation;
 class RewritePatternSet;
-using OwningRewritePatternList = RewritePatternSet;
 
 namespace scf {
 class ForOp;

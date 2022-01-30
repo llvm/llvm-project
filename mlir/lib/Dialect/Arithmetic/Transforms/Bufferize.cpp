@@ -8,61 +8,57 @@
 
 #include "PassDetail.h"
 
+#include "mlir/Dialect/Arithmetic/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 
 using namespace mlir;
+using namespace bufferization;
 
 namespace {
-
-/// Bufferize arith.index_cast.
-struct BufferizeIndexCastOp : public OpConversionPattern<arith::IndexCastOp> {
-  using OpConversionPattern::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(arith::IndexCastOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto tensorType = op.getType().cast<RankedTensorType>();
-    rewriter.replaceOpWithNewOp<arith::IndexCastOp>(
-        op, adaptor.getIn(),
-        MemRefType::get(tensorType.getShape(), tensorType.getElementType()));
-    return success();
-  }
-};
-
 /// Pass to bufferize Arithmetic ops.
 struct ArithmeticBufferizePass
     : public ArithmeticBufferizeBase<ArithmeticBufferizePass> {
+  ArithmeticBufferizePass(uint64_t alignment = 0, bool constantOpOnly = false)
+      : ArithmeticBufferizeBase<ArithmeticBufferizePass>(),
+        constantOpOnly(constantOpOnly) {
+    this->alignment = alignment;
+  }
+
   void runOnOperation() override {
-    bufferization::BufferizeTypeConverter typeConverter;
-    RewritePatternSet patterns(&getContext());
-    ConversionTarget target(getContext());
+    std::unique_ptr<BufferizationOptions> options =
+        getPartialBufferizationOptions();
+    if (constantOpOnly) {
+      options->addToOperationFilter<arith::ConstantOp>();
+    } else {
+      options->addToDialectFilter<arith::ArithmeticDialect>();
+    }
+    options->bufferAlignment = alignment;
 
-    target.addLegalDialect<arith::ArithmeticDialect, memref::MemRefDialect>();
-
-    arith::populateArithmeticBufferizePatterns(typeConverter, patterns);
-
-    target.addDynamicallyLegalOp<arith::IndexCastOp>(
-        [&](arith::IndexCastOp op) {
-          return typeConverter.isLegal(op.getType());
-        });
-
-    if (failed(applyPartialConversion(getOperation(), target,
-                                      std::move(patterns))))
+    if (failed(bufferizeOp(getOperation(), *options)))
       signalPassFailure();
   }
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<bufferization::BufferizationDialect, memref::MemRefDialect,
+                    arith::ArithmeticDialect>();
+    arith::registerBufferizableOpInterfaceExternalModels(registry);
+  }
+
+private:
+  bool constantOpOnly;
 };
-
 } // namespace
-
-void mlir::arith::populateArithmeticBufferizePatterns(
-    bufferization::BufferizeTypeConverter &typeConverter,
-    RewritePatternSet &patterns) {
-  patterns.add<BufferizeIndexCastOp>(typeConverter, patterns.getContext());
-}
 
 std::unique_ptr<Pass> mlir::arith::createArithmeticBufferizePass() {
   return std::make_unique<ArithmeticBufferizePass>();
+}
+
+std::unique_ptr<Pass>
+mlir::arith::createConstantBufferizePass(uint64_t alignment) {
+  return std::make_unique<ArithmeticBufferizePass>(alignment,
+                                                   /*constantOpOnly=*/true);
 }

@@ -44,7 +44,6 @@ extern llvm::cl::opt<unsigned long long> HeatmapMinAddress;
 extern llvm::cl::opt<bool> HotData;
 extern llvm::cl::opt<bool> HotFunctionsAtEnd;
 extern llvm::cl::opt<bool> HotText;
-extern llvm::cl::opt<std::string> InputFilename;
 extern llvm::cl::opt<bool> Instrument;
 extern llvm::cl::opt<std::string> OutputFilename;
 extern llvm::cl::opt<std::string> PerfData;

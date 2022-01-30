@@ -2485,13 +2485,11 @@ ObjC ARC Attached Call Operand Bundles
 
 A ``"clang.arc.attachedcall"`` operand bundle on a call indicates the call is
 implicitly followed by a marker instruction and a call to an ObjC runtime
-function that uses the result of the call. The operand bundle takes either the
+function that uses the result of the call. The operand bundle takes a mandatory
 pointer to the runtime function (``@objc_retainAutoreleasedReturnValue`` or
-``@objc_unsafeClaimAutoreleasedReturnValue``) or no arguments. If the bundle
-doesn't take any arguments, only the marker instruction has to be emitted after
-the call; the runtime function calls don't have to be emitted since they already
-have been emitted. The return value of a call with this bundle is used by a call
-to ``@llvm.objc.clang.arc.noop.use`` unless the called function's return type is
+``@objc_unsafeClaimAutoreleasedReturnValue``).
+The return value of a call with this bundle is used by a call to
+``@llvm.objc.clang.arc.noop.use`` unless the called function's return type is
 void, in which case the operand bundle is ignored.
 
 .. code-block:: llvm
@@ -2501,11 +2499,8 @@ void, in which case the operand bundle is ignored.
    call i8* @foo() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
    call i8* @foo() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_unsafeClaimAutoreleasedReturnValue) ]
 
-   ; Only the marker instruction is inserted after the call to @foo.
-   call i8* @foo() [ "clang.arc.attachedcall"() ]
-
 The operand bundle is needed to ensure the call is immediately followed by the
-marker instruction or the ObjC runtime call in the final output.
+marker instruction and the ObjC runtime call in the final output.
 
 .. _moduleasm:
 
@@ -13143,6 +13138,33 @@ Semantics:
 """"""""""
 See description of '``llvm.instrprof.increment``' intrinsic.
 
+'``llvm.instrprof.cover``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.instrprof.cover(i8* <name>, i64 <hash>,
+                                         i32 <num-counters>, i32 <index>)
+
+Overview:
+"""""""""
+
+The '``llvm.instrprof.cover``' intrinsic is used to implement coverage
+instrumentation.
+
+Arguments:
+""""""""""
+The arguments are the same as the first four arguments of
+'``llvm.instrprof.increment``'.
+
+Semantics:
+""""""""""
+Similar to the '``llvm.instrprof.increment``' intrinsic, but it stores zero to
+the profiling variable to signify that the function has been covered. We store
+zero because this is more efficient on some targets.
 
 '``llvm.instrprof.value.profile``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

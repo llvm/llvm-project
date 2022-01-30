@@ -17,6 +17,8 @@ test1:
 test:
   %d = load i32, i32* %0, align 4
   br i1 true, label %first, label %next
+dummy:
+  ret void
 first:
   %2 = phi i32 [ %d, %test ], [ %e, %test1 ], [ %c, %entry ]
   ret void
@@ -37,6 +39,8 @@ test1:
 test:
   %d = load i32, i32* %0, align 4
   br i1 true, label %first, label %next
+dummy:
+  ret void
 first:
   %2 = phi i32 [ %d, %test ], [ %e, %test1 ], [ %c, %entry ]
   ret void
@@ -55,6 +59,8 @@ next:
 ; CHECK-NEXT:    [[DOTCE_RELOAD:%.*]] = load i32, i32* [[DOTCE_LOC]], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST]])
 ; CHECK-NEXT:    br i1 [[TARGETBLOCK]], label [[FIRST:%.*]], label [[NEXT:%.*]]
+; CHECK: dummy:
+; CHECK-NEXT:  ret void
 ; CHECK:       first:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[DOTCE_RELOAD]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret void
@@ -74,6 +80,8 @@ next:
 ; CHECK-NEXT:    [[DOTCE_RELOAD:%.*]] = load i32, i32* [[DOTCE_LOC]], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST]])
 ; CHECK-NEXT:    br i1 [[TARGETBLOCK]], label [[FIRST:%.*]], label [[NEXT:%.*]]
+; CHECK: dummy:
+; CHECK-NEXT:  ret void
 ; CHECK:       first:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[DOTCE_RELOAD]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret void
