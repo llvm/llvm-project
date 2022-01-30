@@ -666,6 +666,7 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
     return MCRegister::NoRegister;
   }
   assert(CandidatePos < ValidPosLimit);
+  (void)ValidPosLimit;
   return Regs[CandidatePos].first;
 }
 
