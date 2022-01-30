@@ -100,10 +100,27 @@ private:
     if (Style.Language == FormatStyle::LK_Java || Style.isJavaScript() ||
         Style.isCSharp())
       return 0;
-    if (RootToken.isAccessSpecifier(false) ||
-        RootToken.isObjCAccessSpecifier() ||
-        (RootToken.isOneOf(Keywords.kw_signals, Keywords.kw_qsignals) &&
-         RootToken.Next && RootToken.Next->is(tok::colon))) {
+
+    auto IsAccessModifier = [this, &RootToken]() {
+      if (RootToken.isAccessSpecifier(Style.isCpp()))
+        return true;
+      else if (RootToken.isObjCAccessSpecifier())
+        return true;
+      // Handle Qt signals.
+      else if ((RootToken.isOneOf(Keywords.kw_signals, Keywords.kw_qsignals) &&
+                RootToken.Next && RootToken.Next->is(tok::colon)))
+        return true;
+      else if (RootToken.Next &&
+               RootToken.Next->isOneOf(Keywords.kw_slots, Keywords.kw_qslots) &&
+               RootToken.Next->Next && RootToken.Next->Next->is(tok::colon))
+        return true;
+      // Handle malformed access specifier e.g. 'private' without trailing ':'.
+      else if (!RootToken.Next && RootToken.isAccessSpecifier(false))
+        return true;
+      return false;
+    };
+
+    if (IsAccessModifier()) {
       // The AccessModifierOffset may be overridden by IndentAccessModifiers,
       // in which case we take a negative value of the IndentWidth to simulate
       // the upper indent level.
