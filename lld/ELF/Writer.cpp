@@ -327,12 +327,12 @@ template <class ELFT> void elf::createSyntheticSections() {
       in.mipsRldMap = std::make_unique<MipsRldMapSection>();
       add(*in.mipsRldMap);
     }
-    if (auto *sec = MipsAbiFlagsSection<ELFT>::create())
-      add(*sec);
-    if (auto *sec = MipsOptionsSection<ELFT>::create())
-      add(*sec);
-    if (auto *sec = MipsReginfoSection<ELFT>::create())
-      add(*sec);
+    if ((in.mipsAbiFlags = MipsAbiFlagsSection<ELFT>::create()))
+      add(*in.mipsAbiFlags);
+    if ((in.mipsOptions = MipsOptionsSection<ELFT>::create()))
+      add(*in.mipsOptions);
+    if ((in.mipsReginfo = MipsReginfoSection<ELFT>::create()))
+      add(*in.mipsReginfo);
   }
 
   StringRef relaDynName = config->isRela ? ".rela.dyn" : ".rel.dyn";

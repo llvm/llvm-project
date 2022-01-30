@@ -196,8 +196,8 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
           toString(std::move(err)));
 
   // Take ownership of memory buffers created for members of thin archives.
-  for (std::unique_ptr<MemoryBuffer> &mb : file->takeThinBuffers())
-    make<std::unique_ptr<MemoryBuffer>>(std::move(mb));
+  std::vector<std::unique_ptr<MemoryBuffer>> mbs = file->takeThinBuffers();
+  std::move(mbs.begin(), mbs.end(), std::back_inserter(memoryBuffers));
 
   return v;
 }

@@ -12,6 +12,7 @@
 #include "SymbolTable.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "lld/Common/Arrays.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -342,12 +343,8 @@ template <class ELFT> void OutputSection::maybeCompress() {
 
   // Split input into 1-MiB shards.
   constexpr size_t shardSize = 1 << 20;
-  const size_t numShards = (size + shardSize - 1) / shardSize;
-  auto shardsIn = std::make_unique<ArrayRef<uint8_t>[]>(numShards);
-  for (size_t i = 0, start = 0, end; start != size; ++i, start = end) {
-    end = std::min(start + shardSize, (size_t)size);
-    shardsIn[i] = makeArrayRef<uint8_t>(buf.get() + start, end - start);
-  }
+  auto shardsIn = split(makeArrayRef<uint8_t>(buf.get(), size), shardSize);
+  const size_t numShards = shardsIn.size();
 
   // Compress shards and compute Alder-32 checksums. Use Z_SYNC_FLUSH for all
   // shards but the last to flush the output to a byte boundary to be
