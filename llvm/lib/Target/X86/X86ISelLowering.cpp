@@ -49098,8 +49098,13 @@ static SDValue combineVectorTruncation(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // SSSE3's pshufb results in less instructions in the cases below.
-  if (Subtarget.hasSSSE3() && NumElems == 8 && InSVT != MVT::i64)
-    return SDValue();
+  if (Subtarget.hasSSSE3() && NumElems == 8) {
+    if (InSVT == MVT::i16)
+      return SDValue();
+    if (InSVT == MVT::i32 &&
+        (OutSVT == MVT::i8 || !Subtarget.hasSSE41() || Subtarget.hasInt256()))
+      return SDValue();
+  }
 
   SDLoc DL(N);
   // SSE2 provides PACKUS for only 2 x v8i16 -> v16i8 and SSE4.1 provides PACKUS

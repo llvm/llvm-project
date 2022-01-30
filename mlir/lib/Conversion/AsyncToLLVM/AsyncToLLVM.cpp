@@ -349,10 +349,10 @@ public:
     coroSize = rewriter.create<LLVM::AddOp>(op->getLoc(), coroSize, coroAlign);
     coroSize =
         rewriter.create<LLVM::SubOp>(op->getLoc(), coroSize, makeConstant(1));
-    Value NegCoroAlign =
+    Value negCoroAlign =
         rewriter.create<LLVM::SubOp>(op->getLoc(), makeConstant(0), coroAlign);
     coroSize =
-        rewriter.create<LLVM::AndOp>(op->getLoc(), coroSize, NegCoroAlign);
+        rewriter.create<LLVM::AndOp>(op->getLoc(), coroSize, negCoroAlign);
 
     // Allocate memory for the coroutine frame.
     auto allocFuncOp = LLVM::lookupOrCreateAlignedAllocFn(

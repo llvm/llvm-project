@@ -4465,9 +4465,13 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getRegister(RISCV::X4, PtrVT);
   }
   case Intrinsic::riscv_orc_b:
-    // Lower to the GORCI encoding for orc.b.
-    return DAG.getNode(RISCVISD::GORC, DL, XLenVT, Op.getOperand(1),
+  case Intrinsic::riscv_brev8: {
+    // Lower to the GORCI encoding for orc.b or the GREVI encoding for brev8.
+    unsigned Opc =
+        IntNo == Intrinsic::riscv_brev8 ? RISCVISD::GREV : RISCVISD::GORC;
+    return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1),
                        DAG.getConstant(7, DL, XLenVT));
+  }
   case Intrinsic::riscv_grev:
   case Intrinsic::riscv_gorc: {
     unsigned Opc =

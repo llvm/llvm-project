@@ -325,8 +325,8 @@ AtanApproximation::matchAndRewrite(math::AtanOp op,
   p = builder.create<arith::MulFOp>(x, p);
 
   // Remap the solution for over [0.0, 1.0] to [0.0, inf]
-  auto half_pi = broadcast(builder, f32Cst(builder, 1.57079632679f), shape);
-  Value sub = builder.create<arith::SubFOp>(half_pi, p);
+  auto halfPi = broadcast(builder, f32Cst(builder, 1.57079632679f), shape);
+  Value sub = builder.create<arith::SubFOp>(halfPi, p);
   Value select = builder.create<SelectOp>(compare, p, sub);
 
   // Correct for signing of the input.
@@ -366,40 +366,38 @@ Atan2Approximation::matchAndRewrite(math::Atan2Op op,
   // Determine what the atan would be for a 180 degree rotation.
   auto zero = broadcast(builder, f32Cst(builder, 0.0f), shape);
   auto pi = broadcast(builder, f32Cst(builder, 3.14159265359f), shape);
-  auto add_pi = builder.create<arith::AddFOp>(atan, pi);
-  auto sub_pi = builder.create<arith::SubFOp>(atan, pi);
-  auto atan_gt =
+  auto addPi = builder.create<arith::AddFOp>(atan, pi);
+  auto subPi = builder.create<arith::SubFOp>(atan, pi);
+  auto atanGt =
       builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, atan, zero);
-  auto flipped_atan = builder.create<SelectOp>(atan_gt, sub_pi, add_pi);
+  auto flippedAtan = builder.create<SelectOp>(atanGt, subPi, addPi);
 
   // Determine whether to directly use atan or use the 180 degree flip
-  auto x_gt = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, x, zero);
-  Value result = builder.create<SelectOp>(x_gt, atan, flipped_atan);
+  auto xGt = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, x, zero);
+  Value result = builder.create<SelectOp>(xGt, atan, flippedAtan);
 
   // Handle x = 0, y > 0
-  Value x_zero =
+  Value xZero =
       builder.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, x, zero);
-  Value y_gt =
-      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, y, zero);
-  Value is_half_pi = builder.create<arith::AndIOp>(x_zero, y_gt);
-  auto half_pi = broadcast(builder, f32Cst(builder, 1.57079632679f), shape);
-  result = builder.create<SelectOp>(is_half_pi, half_pi, result);
+  Value yGt = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, y, zero);
+  Value isHalfPi = builder.create<arith::AndIOp>(xZero, yGt);
+  auto halfPi = broadcast(builder, f32Cst(builder, 1.57079632679f), shape);
+  result = builder.create<SelectOp>(isHalfPi, halfPi, result);
 
   // Handle x = 0, y < 0
-  Value y_lt =
-      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, y, zero);
-  Value is_negative_half_pi_pi = builder.create<arith::AndIOp>(x_zero, y_lt);
-  auto negative_half_pi_pi =
+  Value yLt = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, y, zero);
+  Value isNegativeHalfPiPi = builder.create<arith::AndIOp>(xZero, yLt);
+  auto negativeHalfPiPi =
       broadcast(builder, f32Cst(builder, -1.57079632679), shape);
-  result = builder.create<SelectOp>(is_negative_half_pi_pi, negative_half_pi_pi,
-                                    result);
+  result =
+      builder.create<SelectOp>(isNegativeHalfPiPi, negativeHalfPiPi, result);
 
   // Handle x = 0, y = 0;
-  Value y_zero =
+  Value yZero =
       builder.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, y, zero);
-  Value is_nan = builder.create<arith::AndIOp>(x_zero, y_zero);
-  Value cst_nan = broadcast(builder, f32FromBits(builder, 0x7fc00000), shape);
-  result = builder.create<SelectOp>(is_nan, cst_nan, result);
+  Value isNan = builder.create<arith::AndIOp>(xZero, yZero);
+  Value cstNan = broadcast(builder, f32FromBits(builder, 0x7fc00000), shape);
+  result = builder.create<SelectOp>(isNan, cstNan, result);
 
   rewriter.replaceOp(op, result);
   return success();
