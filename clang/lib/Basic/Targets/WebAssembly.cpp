@@ -255,6 +255,7 @@ ArrayRef<Builtin::Info> WebAssemblyTargetInfo::getTargetBuiltins() const {
 
 void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags,
                                    LangOptions &Opts) {
+  TargetInfo::adjust(Diags, Opts);
   // If the Atomics feature isn't available, turn off POSIXThreads and
   // ThreadModel, so that we don't predefine _REENTRANT or __STDCPP_THREADS__.
   if (!HasAtomics) {
