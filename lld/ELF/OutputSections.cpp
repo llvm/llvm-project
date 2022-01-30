@@ -22,7 +22,6 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/TimeProfiler.h"
-#include <regex>
 #include <unordered_set>
 #if LLVM_ENABLE_ZLIB
 #include <zlib.h>
@@ -518,18 +517,15 @@ void OutputSection::finalize() {
 // crtbegin files.
 //
 // Gcc uses any of crtbegin[<empty>|S|T].o.
-// Clang uses Gcc's plus clang_rt.crtbegin[<empty>|S|T][-<arch>|<empty>].o.
+// Clang uses Gcc's plus clang_rt.crtbegin[-<arch>|<empty>].o.
 
-static bool isCrtbegin(StringRef s) {
-  static std::regex re(R"((clang_rt\.)?crtbegin[ST]?(-.*)?\.o)");
+static bool isCrt(StringRef s, StringRef beginEnd) {
   s = sys::path::filename(s);
-  return std::regex_match(s.begin(), s.end(), re);
-}
-
-static bool isCrtend(StringRef s) {
-  static std::regex re(R"((clang_rt\.)?crtend[ST]?(-.*)?\.o)");
-  s = sys::path::filename(s);
-  return std::regex_match(s.begin(), s.end(), re);
+  if (!s.consume_back(".o"))
+    return false;
+  if (s.consume_front("clang_rt."))
+    return s.consume_front(beginEnd);
+  return s.consume_front(beginEnd) && s.size() <= 1;
 }
 
 // .ctors and .dtors are sorted by this order:
@@ -551,12 +547,12 @@ static bool isCrtend(StringRef s) {
 // are too many real-world use cases of .ctors, so we had no choice to
 // support that with this rather ad-hoc semantics.
 static bool compCtors(const InputSection *a, const InputSection *b) {
-  bool beginA = isCrtbegin(a->file->getName());
-  bool beginB = isCrtbegin(b->file->getName());
+  bool beginA = isCrt(a->file->getName(), "crtbegin");
+  bool beginB = isCrt(b->file->getName(), "crtbegin");
   if (beginA != beginB)
     return beginA;
-  bool endA = isCrtend(a->file->getName());
-  bool endB = isCrtend(b->file->getName());
+  bool endA = isCrt(a->file->getName(), "crtend");
+  bool endB = isCrt(b->file->getName(), "crtend");
   if (endA != endB)
     return endB;
   return getPriority(a->name) > getPriority(b->name);
