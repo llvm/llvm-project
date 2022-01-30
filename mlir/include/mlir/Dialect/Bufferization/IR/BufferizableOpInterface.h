@@ -27,19 +27,21 @@ class FuncOp;
 
 namespace bufferization {
 
-// TODO: from some HW description.
-static constexpr int64_t kBufferAlignments = 128;
-
 class BufferizableOpInterface;
 struct BufferizationOptions;
 class BufferizationState;
 
 /// Options for ComprehensiveBufferize.
 struct BufferizationOptions {
-  using AllocationFn = std::function<FailureOr<Value>(OpBuilder &, Location,
-                                                      MemRefType, ValueRange)>;
+  /// Allocator function: Generate a memref allocation with the given type,
+  /// dynamic extents and alignment.
+  using AllocationFn = std::function<FailureOr<Value>(
+      OpBuilder &, Location, MemRefType, ValueRange, unsigned int)>;
+  /// Deallocator function: Deallocate a buffer that was allocated with
+  /// AllocatorFn.
   using DeallocationFn =
       std::function<LogicalResult(OpBuilder &, Location, Value)>;
+  /// Memcpy function: Generate a memcpy between two buffers.
   using MemCpyFn =
       std::function<LogicalResult(OpBuilder &, Location, Value, Value)>;
 
@@ -50,14 +52,13 @@ struct BufferizationOptions {
 
   /// Return `true` if the op is allowed to be bufferized.
   bool isOpAllowed(Operation *op) const {
-    if (!dialectFilter.hasValue())
+    if (!hasFilter)
       return true;
-    return dialectFilter->contains(op->getDialect()->getNamespace());
+    return dialectFilter.contains(op->getDialect()->getNamespace()) ||
+           operationFilter.contains(op->getName().getStringRef());
   }
 
-  /// Allow-list the given dialects in the dialect filter. Only ops from
-  /// allow-listed dialects will be bufferized. If no dialect is added, ops from
-  /// any dialect will be bufferized.
+  /// Allow the given dialects and activate the filter (`hasFilter`).
   template <typename... DialectTs>
   void addToDialectFilter() {
     // The following expands a call to addToDialectFilterImpl for each dialect
@@ -66,6 +67,13 @@ struct BufferizationOptions {
     // FIXME: In c++17 this can be simplified by using 'fold expressions'.
     (void)std::initializer_list<int>{
         0, (addToDialectFilterImpl<DialectTs>(), 0)...};
+  }
+
+  /// Allow the given ops and activate the filter (`hasFilter`).
+  template <typename... OpTys> void addToOperationFilter() {
+    // FIXME: In c++17 this can be simplified by using 'fold expressions'.
+    (void)std::initializer_list<int>{0,
+                                     (addToOperationFilterImpl<OpTys>(), 0)...};
   }
 
   /// Try to cast the given op to BufferizableOpInterface if the op is allow
@@ -110,23 +118,36 @@ struct BufferizationOptions {
   /// For debugging only. Should be used together with `testAnalysisOnly`.
   bool printConflicts = false;
 
-  /// Only bufferize ops from dialects that are allowed-listed by the filter.
-  /// All other ops are ignored. This option controls the scope of partial
-  /// bufferization.
+  /// Buffer alignment for new memory allocations.
+  unsigned int bufferAlignment = 128;
+
+  /// If set to `true`, only ops that belong to a filtered dialect
+  /// (`dialectFilter`) and filtered ops (`operationFilter`) are processed. All
+  /// other ops are ignored. If set to `false`, all ops are bufferized (as long
+  /// as they implement BufferizableOpInterface).
   ///
-  /// Note: If no filter is specified, all ops are bufferized (as long as they
-  /// implement BufferizableOpInterface). If a filter is specified,
-  /// `allowUnknownOps` should be enabled. Otherwise, bufferization would fail
-  /// when encountering an op that is forbidden by the filter.
-  Optional<DenseSet<StringRef>> dialectFilter;
+  /// If a filter is specified, `allowUnknownOps` should be enabled. Otherwise,
+  /// bufferization would fail when encountering a non-filtered op.
+  bool hasFilter = false;
+
+  /// A set of allowed dialects.
+  DenseSet<StringRef> dialectFilter;
+
+  /// A set of allowed ops.
+  DenseSet<StringRef> operationFilter;
 
 private:
-  /// Allow-list a dialect in the dialect filter.
+  /// Allow a dialect.
   template <typename DialectT>
   void addToDialectFilterImpl() {
-    if (!dialectFilter.hasValue())
-      dialectFilter.emplace();
-    dialectFilter->insert(DialectT::getDialectNamespace());
+    hasFilter = true;
+    dialectFilter.insert(DialectT::getDialectNamespace());
+  }
+
+  /// Allow an op.
+  template <typename OpTy> void addToOperationFilterImpl() {
+    hasFilter = true;
+    operationFilter.insert(OpTy::getOperationName());
   }
 };
 

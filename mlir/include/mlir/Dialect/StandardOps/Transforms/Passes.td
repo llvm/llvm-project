@@ -47,23 +47,4 @@ def FuncBufferize : Pass<"func-bufferize", "ModuleOp"> {
                            "memref::MemRefDialect"];
 }
 
-def TensorConstantBufferize : Pass<"tensor-constant-bufferize", "ModuleOp"> {
-  let summary = "Bufferize tensor constants.";
-  let description = [{
-    This pass bufferizes tensor constants.
-
-    This pass needs to be a module pass because it inserts memref.global
-    ops into the module, which cannot be done safely from a function pass due to
-    multi-threading. Most other bufferization passes can run in parallel at
-    function granularity.
-  }];
-  let constructor = "mlir::createTensorConstantBufferizePass()";
-  let dependentDialects = ["bufferization::BufferizationDialect",
-                           "memref::MemRefDialect"];
-  let options = [
-    Option<"alignment", "alignment", "unsigned", /*default=*/"0",
-           "Create global memrefs with a specified alignment">,
-  ];
-}
-
 #endif // MLIR_DIALECT_STANDARD_TRANSFORMS_PASSES

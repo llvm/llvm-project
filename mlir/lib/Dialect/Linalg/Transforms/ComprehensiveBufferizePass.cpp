@@ -71,9 +71,10 @@ static void applyEnablingTransformations(ModuleOp moduleOp) {
 
 static FailureOr<Value> allocationFnUsingAlloca(OpBuilder &b, Location loc,
                                                 MemRefType type,
-                                                ValueRange dynShape) {
+                                                ValueRange dynShape,
+                                                unsigned int bufferAlignment) {
   Value allocated = b.create<memref::AllocaOp>(
-      loc, type, dynShape, b.getI64IntegerAttr(kBufferAlignments));
+      loc, type, dynShape, b.getI64IntegerAttr(bufferAlignment));
   return allocated;
 }
 

@@ -144,16 +144,27 @@ bool BufferPlacementTransformationBase::isLoop(Operation *op) {
 // BufferPlacementTransformationBase
 //===----------------------------------------------------------------------===//
 
-memref::GlobalOp GlobalCreator::getGlobalFor(arith::ConstantOp constantOp) {
+FailureOr<memref::GlobalOp>
+bufferization::getGlobalFor(arith::ConstantOp constantOp, uint64_t alignment) {
   auto type = constantOp.getType().cast<RankedTensorType>();
-
-  BufferizeTypeConverter typeConverter;
+  auto moduleOp = constantOp->getParentOfType<ModuleOp>();
+  if (!moduleOp)
+    return failure();
 
   // If we already have a global for this constant value, no need to do
   // anything else.
-  auto it = globals.find(constantOp.getValue());
-  if (it != globals.end())
-    return cast<memref::GlobalOp>(it->second);
+  for (Operation &op : moduleOp.getRegion().getOps()) {
+    auto globalOp = dyn_cast<memref::GlobalOp>(&op);
+    if (!globalOp)
+      continue;
+    if (!globalOp.initial_value().hasValue())
+      continue;
+    uint64_t opAlignment =
+        globalOp.alignment().hasValue() ? globalOp.alignment().getValue() : 0;
+    Attribute initialValue = globalOp.initial_value().getValue();
+    if (opAlignment == alignment && initialValue == constantOp.getValue())
+      return globalOp;
+  }
 
   // Create a builder without an insertion point. We will insert using the
   // symbol table to guarantee unique names.
@@ -171,6 +182,7 @@ memref::GlobalOp GlobalCreator::getGlobalFor(arith::ConstantOp constantOp) {
       alignment > 0 ? IntegerAttr::get(globalBuilder.getI64Type(), alignment)
                     : IntegerAttr();
 
+  BufferizeTypeConverter typeConverter;
   auto global = globalBuilder.create<memref::GlobalOp>(
       constantOp.getLoc(), (Twine("__constant_") + os.str()).str(),
       /*sym_visibility=*/globalBuilder.getStringAttr("private"),
@@ -182,6 +194,5 @@ memref::GlobalOp GlobalCreator::getGlobalFor(arith::ConstantOp constantOp) {
   // The symbol table inserts at the end of the module, but globals are a bit
   // nicer if they are at the beginning.
   global->moveBefore(&moduleOp.front());
-  globals[constantOp.getValue()] = global;
   return global;
 }

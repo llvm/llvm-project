@@ -9,6 +9,7 @@
 #include "mlir/Dialect/SparseTensor/Pipelines/Passes.h"
 
 #include "mlir/Conversion/Passes.h"
+#include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
@@ -33,7 +34,7 @@ void mlir::sparse_tensor::buildSparseCompiler(
   pm.addPass(createConvertVectorToSCFPass());
   pm.addPass(createLowerToCFGPass()); // --convert-scf-to-std
   pm.addPass(createFuncBufferizePass());
-  pm.addPass(createTensorConstantBufferizePass());
+  pm.addPass(arith::createConstantBufferizePass());
   pm.addPass(createTensorBufferizePass());
   pm.addPass(createStdBufferizePass());
   pm.addPass(mlir::bufferization::createFinalizingBufferizePass());

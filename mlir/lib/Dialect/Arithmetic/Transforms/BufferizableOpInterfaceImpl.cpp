@@ -39,8 +39,11 @@ struct ConstantOpInterface
 
     // Create global memory segment and replace tensor with memref pointing to
     // that memory segment.
-    GlobalCreator globalCreator(moduleOp);
-    auto globalMemref = globalCreator.getGlobalFor(constantOp);
+    FailureOr<memref::GlobalOp> globalOp =
+        getGlobalFor(constantOp, state.getOptions().bufferAlignment);
+    if (failed(globalOp))
+      return failure();
+    memref::GlobalOp globalMemref = globalOp.getValue();
     replaceOpWithNewBufferizedOp<memref::GetGlobalOp>(
         rewriter, op, globalMemref.type(), globalMemref.getName());
 

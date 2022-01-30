@@ -4,7 +4,7 @@
 // RUN: FileCheck %s --check-prefix=CHECK-MIR
 //
 // RUN: mlir-opt %s -sparsification --sparse-tensor-conversion \
-// RUN: --func-bufferize --tensor-constant-bufferize           \
+// RUN: --func-bufferize --arith-bufferize           \
 // RUN: --tensor-bufferize --finalizing-bufferize |            \
 // RUN: FileCheck %s --check-prefix=CHECK-LIR
 
