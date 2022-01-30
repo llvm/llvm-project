@@ -260,6 +260,7 @@ void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags,
   if (!HasAtomics) {
     Opts.POSIXThreads = false;
     Opts.setThreadModel(LangOptions::ThreadModelKind::Single);
+    Opts.ThreadsafeStatics = false;
   }
 }
 
