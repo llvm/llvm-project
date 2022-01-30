@@ -1828,7 +1828,6 @@ static void replaceCommonSymbols() {
 
       auto *bss = make<BssSection>("COMMON", s->size, s->alignment);
       bss->file = s->file;
-      bss->markDead();
       inputSections.push_back(bss);
       s->replace(Defined{s->file, s->getName(), s->binding, s->stOther, s->type,
                          /*value=*/0, s->size, bss});

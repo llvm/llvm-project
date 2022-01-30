@@ -315,8 +315,7 @@ template <class ELFT> void elf::createSyntheticSections() {
   // If there is a SECTIONS command and a .data.rel.ro section name use name
   // .data.rel.ro.bss so that we match in the .data.rel.ro output section.
   // This makes sure our relro is contiguous.
-  bool hasDataRelRo =
-      script->hasSectionsCommand && findSection(".data.rel.ro", 0);
+  bool hasDataRelRo = script->hasSectionsCommand && findSection(".data.rel.ro");
   in.bssRelRo = std::make_unique<BssSection>(
       hasDataRelRo ? ".data.rel.ro.bss" : ".bss.rel.ro", 0, 1);
   add(*in.bssRelRo);

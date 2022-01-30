@@ -65,7 +65,7 @@ public:
   // The 1-indexed partition that this section is assigned to by the garbage
   // collector, or 0 if this section is dead. Normally there is only one
   // partition, so this will either be 0 or 1.
-  uint8_t partition;
+  uint8_t partition = 1;
   elf::Partition &getPartition() const;
 
   // These corresponds to the fields in Elf_Shdr.
@@ -96,8 +96,8 @@ protected:
                         uint32_t entsize, uint32_t alignment, uint32_t type,
                         uint32_t info, uint32_t link)
       : name(name), sectionKind(sectionKind), bss(false), keepUnique(false),
-        partition(0), alignment(alignment), flags(flags), entsize(entsize),
-        type(type), link(link), info(info) {}
+        alignment(alignment), flags(flags), entsize(entsize), type(type),
+        link(link), info(info) {}
 };
 
 // This corresponds to a section of an input file.
