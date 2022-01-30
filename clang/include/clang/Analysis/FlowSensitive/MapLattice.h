@@ -112,7 +112,7 @@ template <typename Key, typename ElementLattice>
 std::ostream &
 operator<<(std::ostream &Os,
            const clang::dataflow::MapLattice<Key, ElementLattice> &M) {
-  std::string Separator = "";
+  std::string Separator;
   Os << "{";
   for (const auto &E : M) {
     Os << std::exchange(Separator, ", ") << E.first << " => " << E.second;
@@ -125,7 +125,7 @@ template <typename ElementLattice>
 std::ostream &
 operator<<(std::ostream &Os,
            const clang::dataflow::VarMapLattice<ElementLattice> &M) {
-  std::string Separator = "";
+  std::string Separator;
   Os << "{";
   for (const auto &E : M) {
     Os << std::exchange(Separator, ", ") << E.first->getName().str() << " => "
