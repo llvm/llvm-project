@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -linalg-comprehensive-module-bufferize="allow-return-memref init-tensor-elimination" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -linalg-comprehensive-module-bufferize="allow-return-memref init-tensor-elimination" -canonicalize -split-input-file | FileCheck %s
 
 // -----
 
@@ -61,4 +61,63 @@ func @buffer_forwarding_no_conflict(
   %r1 = tensor.insert_slice %f into %t[42][%sz][1]: tensor<?xf32> into tensor<?xf32>
 
   return %r1: tensor<?xf32>
+}
+
+// -----
+
+//      CHECK: func @insertion_point_inside_loop(
+// CHECK-SAME:     %[[t:.*]]: memref<?xf32, #{{.*}}>, %[[sz:.*]]: index)
+func @insertion_point_inside_loop(%t : tensor<?xf32>, %sz : index) -> (tensor<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+
+  // CHECK-NOT: memref.alloc
+  %blank = linalg.init_tensor [5] : tensor<5xf32>
+
+  // CHECK: scf.for %[[iv:.*]] = %{{.*}} to %[[sz]] step %{{.*}} {
+  %r = scf.for %iv = %c0 to %sz step %c5 iter_args(%bb = %t) -> (tensor<?xf32>) {
+    // CHECK: %[[subview:.*]] = memref.subview %[[t]][%[[iv]]] [5] [1]
+    %iv_i32 = arith.index_cast %iv : index to i32
+    %f = arith.sitofp %iv_i32 : i32 to f32
+
+    // CHECK: linalg.fill(%{{.*}}, %[[subview]])
+    %filled = linalg.fill(%f, %blank) : f32, tensor<5xf32> -> tensor<5xf32>
+
+    // CHECK-NOT: memref.copy
+    %inserted = tensor.insert_slice %filled into %bb[%iv][5][1] : tensor<5xf32> into tensor<?xf32>
+    scf.yield %inserted : tensor<?xf32>
+  }
+
+  return %r : tensor<?xf32>
+}
+
+// -----
+
+//      CHECK: func @insertion_point_outside_loop(
+// CHECK-SAME:     %[[t:.*]]: memref<?xf32, #{{.*}}>, %[[sz:.*]]: index, %[[idx:.*]]: index)
+func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
+                                   %idx : index) -> (tensor<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+
+  // CHECK-NOT: memref.alloc
+  // CHECK: %[[subview:.*]] = memref.subview %[[t]][%[[idx]]] [5] [1]
+  %blank = linalg.init_tensor [5] : tensor<5xf32>
+
+  // CHECK: scf.for %[[iv:.*]] = %{{.*}} to %[[sz]] step %{{.*}} {
+  %r = scf.for %iv = %c0 to %sz step %c5 iter_args(%bb = %t) -> (tensor<?xf32>) {
+    %iv_i32 = arith.index_cast %iv : index to i32
+    %f = arith.sitofp %iv_i32 : i32 to f32
+
+    // CHECK: linalg.fill(%{{.*}}, %[[subview]])
+    %filled = linalg.fill(%f, %blank) : f32, tensor<5xf32> -> tensor<5xf32>
+
+    // CHECK-NOT: memref.copy
+    %inserted = tensor.insert_slice %filled into %bb[%idx][5][1] : tensor<5xf32> into tensor<?xf32>
+    scf.yield %inserted : tensor<?xf32>
+  }
+
+  return %r : tensor<?xf32>
 }

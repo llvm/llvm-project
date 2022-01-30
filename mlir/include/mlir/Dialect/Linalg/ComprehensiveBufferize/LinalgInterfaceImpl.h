@@ -20,7 +20,10 @@ namespace linalg_ext {
 
 struct InitTensorEliminationStep : public bufferization::PostAnalysisStep {
   /// A function that matches anchor OpOperands for InitTensorOp elimination.
-  using AnchorMatchFn = std::function<bool(OpOperand &)>;
+  /// If an OpOperand is matched, the function should populate the SmallVector
+  /// with all values that are needed during `RewriteFn` to produce the
+  /// replacement value.
+  using AnchorMatchFn = std::function<bool(OpOperand &, SmallVector<Value> &)>;
 
   /// A function that rewrites matched anchors.
   using RewriteFn = std::function<Value(OpBuilder &, Location, OpOperand &)>;

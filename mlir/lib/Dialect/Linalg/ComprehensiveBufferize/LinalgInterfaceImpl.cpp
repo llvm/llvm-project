@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
 
 using namespace mlir;
@@ -444,6 +445,79 @@ struct LinalgOpInterfaceHelper<> {
 
 } // namespace
 
+/// Return true if all `neededValues` are in scope at the given
+/// `insertionPoint`.
+static bool
+neededValuesDominateInsertionPoint(const DominanceInfo &domInfo,
+                                   Operation *insertionPoint,
+                                   const SmallVector<Value> &neededValues) {
+  for (Value val : neededValues) {
+    if (auto bbArg = val.dyn_cast<BlockArgument>()) {
+      Block *owner = bbArg.getOwner();
+      if (!owner->findAncestorOpInBlock(*insertionPoint))
+        return false;
+    } else {
+      auto opResult = val.cast<OpResult>();
+      if (!domInfo.dominates(opResult.getOwner(), insertionPoint))
+        return false;
+    }
+  }
+  return true;
+}
+
+/// Return true if the given `insertionPoint` dominates all uses of
+/// `initTensorOp`.
+static bool insertionPointDominatesUses(const DominanceInfo &domInfo,
+                                        Operation *insertionPoint,
+                                        Operation *initTensorOp) {
+  for (Operation *user : initTensorOp->getUsers())
+    if (!domInfo.dominates(insertionPoint, user))
+      return false;
+  return true;
+}
+
+/// Find a valid insertion point for a replacement of `initTensorOp`, assuming
+/// that the replacement may use any value from `neededValues`.
+static Operation *
+findValidInsertionPoint(Operation *initTensorOp,
+                        const SmallVector<Value> &neededValues) {
+  DominanceInfo domInfo;
+
+  // Gather all possible insertion points: the location of `initTensorOp` and
+  // right after the definition of each value in `neededValues`.
+  SmallVector<Operation *> insertionPointCandidates;
+  insertionPointCandidates.push_back(initTensorOp);
+  for (Value val : neededValues) {
+    // Note: The anchor op is using all of `neededValues`, so:
+    // * in case of a block argument: There must be at least one op in the block
+    //                                (the anchor op or one of its parents).
+    // * in case of an OpResult: There must be at least one op right after the
+    //                           defining op (the anchor op or one of its
+    //                           parents).
+    if (auto bbArg = val.dyn_cast<BlockArgument>()) {
+      insertionPointCandidates.push_back(
+          &bbArg.getOwner()->getOperations().front());
+    } else {
+      insertionPointCandidates.push_back(val.getDefiningOp()->getNextNode());
+    }
+  }
+
+  // Select first matching insertion point.
+  for (Operation *insertionPoint : insertionPointCandidates) {
+    // Check if all needed values are in scope.
+    if (!neededValuesDominateInsertionPoint(domInfo, insertionPoint,
+                                            neededValues))
+      continue;
+    // Check if the insertion point is before all uses.
+    if (!insertionPointDominatesUses(domInfo, insertionPoint, initTensorOp))
+      continue;
+    return insertionPoint;
+  }
+
+  // No suitable insertion point was found.
+  return nullptr;
+}
+
 /// Try to eliminate InitTensorOps inside `op`. An InitTensorOp is replaced
 /// with the the result of `rewriteFunc` if it is anchored on a matching
 /// OpOperand. "Anchored" means that there is a path on the reverse SSA use-def
@@ -462,8 +536,10 @@ mlir::linalg::comprehensive_bufferize::linalg_ext::InitTensorEliminationStep::
       // Skip operands that do not bufferize inplace.
       if (!aliasInfo.isInPlace(operand))
         continue;
+      // All values that are needed to create the replacement op.
+      SmallVector<Value> neededValues;
       // Is this a matching OpOperand?
-      if (!anchorMatchFunc(operand))
+      if (!anchorMatchFunc(operand, neededValues))
         continue;
       SetVector<Value> maybeInitTensor =
           state.findValueInReverseUseDefChain(operand.get(), [&](Value val) {
@@ -492,8 +568,14 @@ mlir::linalg::comprehensive_bufferize::linalg_ext::InitTensorEliminationStep::
         return WalkResult::skip();
       Value initTensor = maybeInitTensor.front();
 
+      // Find a suitable insertion point.
+      Operation *insertionPoint =
+          findValidInsertionPoint(initTensor.getDefiningOp(), neededValues);
+      if (!insertionPoint)
+        continue;
+
       // Create a replacement for the InitTensorOp.
-      b.setInsertionPoint(initTensor.getDefiningOp());
+      b.setInsertionPoint(insertionPoint);
       Value replacement = rewriteFunc(b, initTensor.getLoc(), operand);
       if (!replacement)
         continue;
@@ -552,7 +634,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
   return eliminateInitTensors(
       op, state, aliasInfo,
       /*anchorMatchFunc=*/
-      [&](OpOperand &operand) {
+      [&](OpOperand &operand, SmallVector<Value> &neededValues) {
         auto insertSliceOp =
             dyn_cast<tensor::InsertSliceOp>(operand.getOwner());
         if (!insertSliceOp)
@@ -560,7 +642,19 @@ LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
         // Only inplace bufferized InsertSliceOps are eligible.
         if (!aliasInfo.isInPlace(insertSliceOp->getOpOperand(1) /*dest*/))
           return false;
-        return &operand == &insertSliceOp->getOpOperand(0) /*source*/;
+        if (&operand != &insertSliceOp->getOpOperand(0) /*source*/)
+          return false;
+
+        // Collect all values that are needed to construct the replacement op.
+        neededValues.append(insertSliceOp.offsets().begin(),
+                            insertSliceOp.offsets().end());
+        neededValues.append(insertSliceOp.sizes().begin(),
+                            insertSliceOp.sizes().end());
+        neededValues.append(insertSliceOp.strides().begin(),
+                            insertSliceOp.strides().end());
+        neededValues.push_back(insertSliceOp.dest());
+
+        return true;
       },
       /*rewriteFunc=*/
       [](OpBuilder &b, Location loc, OpOperand &operand) {
