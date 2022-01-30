@@ -47,7 +47,7 @@ constexpr const ::llvm::StringLiteral
 //===----------------------------------------------------------------------===//
 
 // Default constructor for BufferizationOptions.
-BufferizationOptions::BufferizationOptions() {}
+BufferizationOptions::BufferizationOptions() = default;
 
 BufferizableOpInterface
 BufferizationOptions::dynCastBufferizableOp(Operation *op) const {
