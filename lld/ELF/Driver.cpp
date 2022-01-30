@@ -2179,14 +2179,14 @@ static void checkAndReportMissingFeature(StringRef config, uint32_t features,
 //
 // This is also the case with AARCH64's BTI and PAC which use the similar
 // GNU_PROPERTY_AARCH64_FEATURE_1_AND mechanism.
-template <class ELFT> static uint32_t getAndFeatures() {
+static uint32_t getAndFeatures() {
   if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
       config->emachine != EM_AARCH64)
     return 0;
 
   uint32_t ret = -1;
-  for (InputFile *f : objectFiles) {
-    uint32_t features = cast<ObjFile<ELFT>>(f)->andFeatures;
+  for (ELFFileBase *f : objectFiles) {
+    uint32_t features = f->andFeatures;
 
     checkAndReportMissingFeature(
         config->zBtiReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_BTI,
@@ -2472,7 +2472,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Read .note.gnu.property sections from input object files which
   // contain a hint to tweak linker's and loader's behaviors.
-  config->andFeatures = getAndFeatures<ELFT>();
+  config->andFeatures = getAndFeatures();
 
   // The Target instance handles target-specific stuff, such as applying
   // relocations or writing a PLT section. It also contains target-dependent
