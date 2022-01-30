@@ -1054,8 +1054,11 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
 
   for (size_t i = 0, end = firstGlobal; i != end; ++i) {
     const Elf_Sym &eSym = eSyms[i];
-    const uint32_t secIdx = check(obj.getSectionIndex(eSym, eSyms, shndxTable));
-
+    uint32_t secIdx = eSym.st_shndx;
+    if (LLVM_UNLIKELY(secIdx == SHN_XINDEX))
+      secIdx = check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
+    else if (secIdx >= SHN_LORESERVE)
+      secIdx = 0;
     if (LLVM_UNLIKELY(secIdx >= sections.size()))
       fatal(toString(this) + ": invalid section index: " + Twine(secIdx));
     if (LLVM_UNLIKELY(eSym.getBinding() != STB_LOCAL))
@@ -1095,7 +1098,11 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
                   Twine(firstGlobal) + ")");
       continue;
     }
-    const uint32_t secIdx = check(obj.getSectionIndex(eSym, eSyms, shndxTable));
+    uint32_t secIdx = eSym.st_shndx;
+    if (LLVM_UNLIKELY(secIdx == SHN_XINDEX))
+      secIdx = check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
+    else if (secIdx >= SHN_LORESERVE)
+      secIdx = 0;
     if (LLVM_UNLIKELY(secIdx >= sections.size()))
       fatal(toString(this) + ": invalid section index: " + Twine(secIdx));
     InputSectionBase *sec = sections[secIdx];
