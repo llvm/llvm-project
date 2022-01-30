@@ -588,21 +588,13 @@ def BFPW : ALUW_rr<0b0100100, 0b111, "bfpw">,
            Sched<[WriteBFP32, ReadBFP32, ReadBFP32]>;
 
 let Predicates = [HasStdExtZbbOrZbp, IsRV32] in {
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def ZEXT_H_RV32 : RVInstR<0b0000100, 0b100, OPC_OP, (outs GPR:$rd),
-                          (ins GPR:$rs1), "zext.h", "$rd, $rs1">,
-                 Sched<[WriteIALU, ReadIALU]> {
-  let rs2 = 0b00000;
-}
+def ZEXT_H_RV32 : RVBUnary<0b0000100, 0b00000, 0b100, OPC_OP, "zext.h">,
+                  Sched<[WriteIALU, ReadIALU]>;
 } // Predicates = [HasStdExtZbbOrZbp, IsRV32]
 
 let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def ZEXT_H_RV64 : RVInstR<0b0000100, 0b100, OPC_OP_32, (outs GPR:$rd),
-                          (ins GPR:$rs1), "zext.h", "$rd, $rs1">,
-                 Sched<[WriteIALU, ReadIALU]> {
-  let rs2 = 0b00000;
-}
+def ZEXT_H_RV64 : RVBUnary<0b0000100, 0b00000, 0b100, OPC_OP_32, "zext.h">,
+                  Sched<[WriteIALU, ReadIALU]>;
 } // Predicates = [HasStdExtZbbOrZbp, IsRV64]
 
 // We treat rev8 and orc.b as standalone instructions even though they use a
