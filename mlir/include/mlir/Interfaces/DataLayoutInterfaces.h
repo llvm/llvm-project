@@ -173,9 +173,7 @@ private:
   void checkValid() const;
 
   /// Operation defining the scope of requests.
-  // TODO: this is mutable because the generated interface method are not const.
-  // Update the generator to support const methods and change this to const.
-  mutable Operation *scope;
+  Operation *scope;
 
   /// Caches for individual requests.
   mutable DenseMap<Type, unsigned> sizes;
