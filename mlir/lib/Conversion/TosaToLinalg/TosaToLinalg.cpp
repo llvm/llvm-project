@@ -1624,7 +1624,7 @@ public:
       }
 
       auto unitVal = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getIntegerAttr(resultElementTy, 1 << shift));
+          loc, rewriter.getIntegerAttr(resultElementTy, 1LL << shift));
       Value rightPart = dx;
       Value leftPart = rewriter.create<arith::SubIOp>(loc, unitVal, dx);
 

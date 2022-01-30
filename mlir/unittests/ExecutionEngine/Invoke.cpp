@@ -31,6 +31,9 @@
 
 using namespace mlir;
 
+// The JIT isn't supported on Windows at that time
+#ifndef _WIN32
+
 static struct LLVMInitializer {
   LLVMInitializer() {
     llvm::InitializeNativeTarget();
@@ -48,9 +51,6 @@ static LogicalResult lowerToLLVMDialect(ModuleOp module) {
   pm.addPass(mlir::createReconcileUnrealizedCastsPass());
   return pm.run(module);
 }
-
-// The JIT isn't supported on Windows at that time
-#ifndef _WIN32
 
 TEST(MLIRExecutionEngine, AddInteger) {
   std::string moduleStr = R"mlir(

@@ -28,7 +28,7 @@ class EnumParameter<EnumAttrInfo enumInfo>
                           enumInfo.stringToSymbolFnName # [{(enumKeyword);
     if (maybeEnum)
       return *maybeEnum;
-    return {$_parser.emitError(loc, "expected }] #
+    return {(::mlir::LogicalResult)$_parser.emitError(loc, "expected }] #
     cppType # [{ to be one of: }] #
     !interleave(!foreach(enum, enumInfo.enumerants, enum.str), ", ") # [{")};
   }()}];

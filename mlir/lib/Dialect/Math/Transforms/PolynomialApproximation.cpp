@@ -314,10 +314,10 @@ AtanApproximation::matchAndRewrite(math::AtanOp op,
 
   // Perform the Taylor series approximation for atan over the range
   // [-1.0, 1.0].
-  auto n1 = broadcast(builder, f32Cst(builder, 0.14418283), shape);
-  auto n2 = broadcast(builder, f32Cst(builder, -0.34999234), shape);
-  auto n3 = broadcast(builder, f32Cst(builder, -0.01067831), shape);
-  auto n4 = broadcast(builder, f32Cst(builder, 1.00209986), shape);
+  auto n1 = broadcast(builder, f32Cst(builder, 0.14418283f), shape);
+  auto n2 = broadcast(builder, f32Cst(builder, -0.34999234f), shape);
+  auto n3 = broadcast(builder, f32Cst(builder, -0.01067831f), shape);
+  auto n4 = broadcast(builder, f32Cst(builder, 1.00209986f), shape);
 
   Value p = builder.create<math::FmaOp>(x, n1, n2);
   p = builder.create<math::FmaOp>(x, p, n3);
@@ -388,7 +388,7 @@ Atan2Approximation::matchAndRewrite(math::Atan2Op op,
   Value yLt = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, y, zero);
   Value isNegativeHalfPiPi = builder.create<arith::AndIOp>(xZero, yLt);
   auto negativeHalfPiPi =
-      broadcast(builder, f32Cst(builder, -1.57079632679), shape);
+      broadcast(builder, f32Cst(builder, -1.57079632679f), shape);
   result =
       builder.create<SelectOp>(isNegativeHalfPiPi, negativeHalfPiPi, result);
 
@@ -1063,8 +1063,8 @@ LogicalResult SinAndCosApproximation<isSine, OpTy>::matchAndRewrite(
     return builder.create<arith::OrIOp>(a, b);
   };
 
-  Value twoOverPi = bcast(f32Cst(builder, TWO_OVER_PI));
-  Value piOverTwo = bcast(f32Cst(builder, PI_OVER_2));
+  Value twoOverPi = bcast(f32Cst(builder, (float)TWO_OVER_PI));
+  Value piOverTwo = bcast(f32Cst(builder, (float)PI_OVER_2));
 
   Value x = op.getOperand();
 

@@ -241,6 +241,7 @@ private:
                  : getCmpFactory<arith::CmpIOp, arith::CmpIPredicate,
                                  arith::CmpIPredicate::ult>();
     }
+    llvm_unreachable("unknown GPU AllReduceOperation");
   }
 
   /// Returns an accumulator factory that creates an op of type T.
