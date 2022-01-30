@@ -82,11 +82,15 @@ static MachineMemOperand *getMachineMemOperand(MachineBasicBlock &MBB, int FI,
                                  MFI.getObjectAlign(FI));
 }
 
+static bool isAnalyzableBranchOpc(unsigned BranchOpc) {
+  return BranchOpc == M88k::BR || BranchOpc == M88k::BSR ||
+         BranchOpc == M88k::BCND || BranchOpc == M88k::BB0 ||
+         BranchOpc == M88k::BB1;
+}
+
 bool M88kInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
                                           int64_t BrOffset) const {
-  assert(BranchOpc == M88k::BR || BranchOpc == M88k::BSR ||
-         BranchOpc == M88k::BCND || BranchOpc == M88k::BB0 ||
-         BranchOpc == M88k::BB1 && "Unexpected branch opcode");
+  assert(isAnalyzableBranchOpc(BranchOpc) && "Unexpected branch opcode");
   int Bits = (BranchOpc == M88k::BR || BranchOpc == M88k::BSR) ? 26 : 16;
   return isIntN(Bits, BrOffset / 4);
 }
@@ -197,6 +201,12 @@ bool M88kInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 
   // We can't handle blocks with more than 2 terminators.
   if (NumTerminators > 2)
+    return true;
+
+  // We can't handle all branch opcodes.
+  if (!isAnalyzableBranchOpc(I->getOpcode()) ||
+      (NumTerminators == 2 &&
+       !isAnalyzableBranchOpc(std::prev(I)->getOpcode())))
     return true;
 
   // Handle a single unconditional branch.
