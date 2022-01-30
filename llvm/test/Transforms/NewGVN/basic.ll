@@ -44,8 +44,7 @@ define i8 @simplify_add_poison(i8 %x) {
 
 define i8 @simplify_xor_poison(i8 %x) {
 ; CHECK-LABEL: @simplify_xor_poison(
-; CHECK-NEXT:    [[R:%.*]] = xor i8 poison, [[X:%.*]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 poison
 ;
   %r = xor i8 poison, %x
   ret i8 %r
@@ -61,8 +60,7 @@ define i8 @simplify_sdiv_poison(i8 %x) {
 
 define i8 @simplify_urem_poison(i8 %x) {
 ; CHECK-LABEL: @simplify_urem_poison(
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[X:%.*]], poison
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 poison
 ;
   %r = urem i8 %x, poison
   ret i8 %r
