@@ -51181,6 +51181,30 @@ static SDValue combineMOVMSK(SDNode *N, SelectionDAG &DAG,
                        DAG.getConstant(NotMask, DL, VT));
   }
 
+  // Fold movmsk(icmp_eq(and(x,c1),0)) -> movmsk(not(shl(x,c2)))
+  // iff pow2splat(c1).
+  if (Src.getOpcode() == X86ISD::PCMPEQ &&
+      Src.getOperand(0).getOpcode() == ISD::AND &&
+      ISD::isBuildVectorAllZeros(Src.getOperand(1).getNode())) {
+    SDValue LHS = Src.getOperand(0).getOperand(0);
+    SDValue RHS = Src.getOperand(0).getOperand(1);
+    KnownBits KnownRHS = DAG.computeKnownBits(RHS);
+    if (KnownRHS.isConstant() && KnownRHS.getConstant().isPowerOf2()) {
+      SDLoc DL(N);
+      MVT ShiftVT = SrcVT;
+      if (ShiftVT.getScalarType() == MVT::i8) {
+        // vXi8 shifts - we only care about the signbit so can use PSLLW.
+        ShiftVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
+        LHS = DAG.getBitcast(ShiftVT, LHS);
+      }
+      unsigned ShiftAmt = KnownRHS.getConstant().countLeadingZeros();
+      LHS = getTargetVShiftByConstNode(X86ISD::VSHLI, DL, ShiftVT, LHS,
+                                       ShiftAmt, DAG);
+      LHS = DAG.getNOT(DL, DAG.getBitcast(SrcVT, LHS), SrcVT);
+      return DAG.getNode(X86ISD::MOVMSK, DL, VT, LHS);
+    }
+  }
+
   // Simplify the inputs.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   APInt DemandedMask(APInt::getAllOnes(NumBits));
