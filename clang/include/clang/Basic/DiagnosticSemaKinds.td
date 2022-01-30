@@ -10991,6 +10991,8 @@ def ext_module_import_not_at_top_level_noop : ExtWarn<
 def note_module_import_not_at_top_level : Note<"%0 begins here">;
 def err_module_self_import : Error<
   "import of module '%0' appears within same top-level module '%1'">;
+def err_module_self_import_cxx20 : Error<
+  "import of module '%0' appears within its own %select{interface|implementation}1">;
 def err_module_import_in_implementation : Error<
   "@import of module '%0' in implementation of '%1'; use #import">;
 
@@ -11024,6 +11026,8 @@ def err_export_using_internal : Error<
 def err_export_not_in_module_interface : Error<
   "export declaration can only be used within a module interface unit"
   "%select{ after the module declaration|}0">;
+def err_export_partition_impl : Error<
+  "module partition implementations cannot be exported">;
 def err_export_in_private_module_fragment : Error<
   "export declaration cannot be used in a private module fragment">;
 def note_private_module_fragment : Note<
