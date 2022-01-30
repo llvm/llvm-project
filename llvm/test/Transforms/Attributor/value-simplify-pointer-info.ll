@@ -4075,7 +4075,7 @@ define dso_local void @test_nested_memory(float* %dst, double* %src) {
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = bitcast i8* [[SRC2]] to double**
 ; IS__CGSCC_OPM-NEXT:    store double* [[SRC]], double** [[TMP1]], align 8
 ; IS__CGSCC_OPM-NEXT:    store i8* [[CALL]], i8** bitcast (%struct.STy** getelementptr inbounds ([[STRUCT_STY]], %struct.STy* @global, i64 0, i32 2) to i8**), align 8
-; IS__CGSCC_OPM-NEXT:    call fastcc void @nested_memory_callee(%struct.STy* noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(24) [[LOCAL]]) #[[ATTR17:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    call fastcc void @nested_memory_callee(%struct.STy* noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(24) [[LOCAL]]) #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test_nested_memory
@@ -4091,7 +4091,7 @@ define dso_local void @test_nested_memory(float* %dst, double* %src) {
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = bitcast i8* [[SRC2]] to double**
 ; IS__CGSCC_NPM-NEXT:    store double* [[SRC]], double** [[TMP2]], align 8
 ; IS__CGSCC_NPM-NEXT:    store i8* [[TMP1]], i8** bitcast (%struct.STy** getelementptr inbounds ([[STRUCT_STY]], %struct.STy* @global, i64 0, i32 2) to i8**), align 8
-; IS__CGSCC_NPM-NEXT:    call fastcc void @nested_memory_callee(float* noalias nocapture nofree nonnull readnone undef, double* noalias nocapture nofree nonnull readnone undef, %struct.STy* noalias nocapture nofree nonnull readnone align 8 dereferenceable(24) undef) #[[ATTR15:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    call fastcc void @nested_memory_callee(float* noalias nocapture nofree nonnull readnone undef, double* noalias nocapture nofree nonnull readnone undef, %struct.STy* noalias nocapture nofree nonnull readnone align 8 dereferenceable(24) undef) #[[ATTR14]]
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
 entry:
@@ -4507,8 +4507,7 @@ for.body7:                                        ; preds = %for.cond4
 ; IS__CGSCC_OPM: attributes #[[ATTR13]] = { argmemonly nofree nosync nounwind }
 ; IS__CGSCC_OPM: attributes #[[ATTR14]] = { willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR15]] = { nounwind willreturn writeonly }
-; IS__CGSCC_OPM: attributes #[[ATTR16]] = { nounwind writeonly }
-; IS__CGSCC_OPM: attributes #[[ATTR17]] = { nounwind }
+; IS__CGSCC_OPM: attributes #[[ATTR16]] = { nounwind }
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
 ; IS__CGSCC_NPM: attributes #[[ATTR1]] = { argmemonly nofree nosync nounwind willreturn }
@@ -4524,8 +4523,7 @@ for.body7:                                        ; preds = %for.cond4
 ; IS__CGSCC_NPM: attributes #[[ATTR11:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
 ; IS__CGSCC_NPM: attributes #[[ATTR12]] = { willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR13]] = { nounwind willreturn writeonly }
-; IS__CGSCC_NPM: attributes #[[ATTR14]] = { nounwind writeonly }
-; IS__CGSCC_NPM: attributes #[[ATTR15]] = { nounwind }
+; IS__CGSCC_NPM: attributes #[[ATTR14]] = { nounwind }
 ;.
 ; IS__TUNIT____: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 ; IS__TUNIT____: [[META1:![0-9]+]] = !{i32 7, !"uwtable", i32 1}

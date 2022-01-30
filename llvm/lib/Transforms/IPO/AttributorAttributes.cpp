@@ -2893,16 +2893,10 @@ struct AAWillReturnImpl : public AAWillReturn {
         (!getAssociatedFunction() || !getAssociatedFunction()->mustProgress()))
       return false;
 
-    const auto &MemAA =
-        A.getAAFor<AAMemoryBehavior>(*this, getIRPosition(), DepClassTy::NONE);
-    if (!MemAA.isAssumedReadOnly())
-      return false;
-    if (KnownOnly && !MemAA.isKnownReadOnly())
-      return false;
-    if (!MemAA.isKnownReadOnly())
-      A.recordDependence(MemAA, *this, DepClassTy::OPTIONAL);
-
-    return true;
+    bool IsKnown;
+    if (AA::isAssumedReadOnly(A, getIRPosition(), *this, IsKnown))
+      return IsKnown || !KnownOnly;
+    return false;
   }
 
   /// See AbstractAttribute::updateImpl(...).
@@ -3107,9 +3101,8 @@ struct AANoAliasArgument final
       return Base::updateImpl(A);
 
     // If the argument is read-only, no-alias cannot break synchronization.
-    const auto &MemBehaviorAA = A.getAAFor<AAMemoryBehavior>(
-        *this, getIRPosition(), DepClassTy::OPTIONAL);
-    if (MemBehaviorAA.isAssumedReadOnly())
+    bool IsKnown;
+    if (AA::isAssumedReadOnly(A, getIRPosition(), *this, IsKnown))
       return Base::updateImpl(A);
 
     // If the argument is never passed through callbacks, no-alias cannot break
@@ -3465,14 +3458,8 @@ struct AAIsDeadValueImpl : public AAIsDead {
     if (!NoUnwindAA.isKnownNoUnwind())
       A.recordDependence(NoUnwindAA, *this, DepClassTy::OPTIONAL);
 
-    const auto &MemBehaviorAA =
-        A.getAndUpdateAAFor<AAMemoryBehavior>(*this, CallIRP, DepClassTy::NONE);
-    if (MemBehaviorAA.isAssumedReadOnly()) {
-      if (!MemBehaviorAA.isKnownReadOnly())
-        A.recordDependence(MemBehaviorAA, *this, DepClassTy::OPTIONAL);
-      return true;
-    }
-    return false;
+    bool IsKnown;
+    return AA::isAssumedReadOnly(A, CallIRP, *this, IsKnown);
   }
 };
 
@@ -5020,14 +5007,11 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
   AANoCapture::StateType T;
 
   // Readonly means we cannot capture through memory.
-  const auto &FnMemAA =
-      A.getAAFor<AAMemoryBehavior>(*this, FnPos, DepClassTy::NONE);
-  if (FnMemAA.isAssumedReadOnly()) {
+  bool IsKnown;
+  if (AA::isAssumedReadOnly(A, FnPos, *this, IsKnown)) {
     T.addKnownBits(NOT_CAPTURED_IN_MEM);
-    if (FnMemAA.isKnownReadOnly())
+    if (IsKnown)
       addKnownBits(NOT_CAPTURED_IN_MEM);
-    else
-      A.recordDependence(FnMemAA, *this, DepClassTy::OPTIONAL);
   }
 
   // Make sure all returned values are different than the underlying value.
@@ -5420,9 +5404,8 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
     if (Arg->hasByValAttr()) {
       // TODO: We probably need to verify synchronization is not an issue, e.g.,
       //       there is no race by not copying a constant byval.
-      const auto &MemAA = A.getAAFor<AAMemoryBehavior>(*this, getIRPosition(),
-                                                       DepClassTy::REQUIRED);
-      if (!MemAA.isAssumedReadOnly())
+      bool IsKnown;
+      if (!AA::isAssumedReadOnly(A, getIRPosition(), *this, IsKnown))
         return indicatePessimisticFixpoint();
     }
 
@@ -6922,9 +6905,8 @@ struct AAPrivatizablePtrCallSiteArgument final
       return indicatePessimisticFixpoint();
     }
 
-    const auto &MemBehaviorAA =
-        A.getAAFor<AAMemoryBehavior>(*this, IRP, DepClassTy::REQUIRED);
-    if (!MemBehaviorAA.isAssumedReadOnly()) {
+    bool IsKnown;
+    if (!AA::isAssumedReadOnly(A, IRP, *this, IsKnown)) {
       LLVM_DEBUG(dbgs() << "[AAPrivatizablePtr] pointer is written!\n");
       return indicatePessimisticFixpoint();
     }

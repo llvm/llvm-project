@@ -395,6 +395,47 @@ bool AA::getPotentialCopiesOfStoredValue(
   return true;
 }
 
+static bool isAssumedReadOnlyOrReadNone(Attributor &A, const IRPosition &IRP,
+                                        const AbstractAttribute &QueryingAA,
+                                        bool RequireReadNone, bool &IsKnown) {
+
+  IRPosition::Kind Kind = IRP.getPositionKind();
+  if (Kind == IRPosition::IRP_FUNCTION || Kind == IRPosition::IRP_CALL_SITE) {
+    const auto &MemLocAA =
+        A.getAAFor<AAMemoryLocation>(QueryingAA, IRP, DepClassTy::NONE);
+    if (MemLocAA.isAssumedReadNone()) {
+      IsKnown = MemLocAA.isKnownReadNone();
+      if (!IsKnown)
+        A.recordDependence(MemLocAA, QueryingAA, DepClassTy::OPTIONAL);
+      return true;
+    }
+  }
+
+  const auto &MemBehaviorAA =
+      A.getAAFor<AAMemoryBehavior>(QueryingAA, IRP, DepClassTy::NONE);
+  if (MemBehaviorAA.isAssumedReadNone() ||
+      (!RequireReadNone && MemBehaviorAA.isAssumedReadOnly())) {
+    IsKnown = RequireReadNone ? MemBehaviorAA.isKnownReadNone()
+                              : MemBehaviorAA.isKnownReadOnly();
+    if (!IsKnown)
+      A.recordDependence(MemBehaviorAA, QueryingAA, DepClassTy::OPTIONAL);
+    return true;
+  }
+
+  return false;
+}
+
+bool AA::isAssumedReadOnly(Attributor &A, const IRPosition &IRP,
+                           const AbstractAttribute &QueryingAA, bool &IsKnown) {
+  return isAssumedReadOnlyOrReadNone(A, IRP, QueryingAA,
+                                     /* RequireReadNone */ false, IsKnown);
+}
+bool AA::isAssumedReadNone(Attributor &A, const IRPosition &IRP,
+                           const AbstractAttribute &QueryingAA, bool &IsKnown) {
+  return isAssumedReadOnlyOrReadNone(A, IRP, QueryingAA,
+                                     /* RequireReadNone */ true, IsKnown);
+}
+
 /// Return true if \p New is equal or worse than \p Old.
 static bool isEqualOrWorse(const Attribute &New, const Attribute &Old) {
   if (!Old.isIntAttribute())
