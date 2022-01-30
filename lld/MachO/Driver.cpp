@@ -1484,6 +1484,12 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
         inputFiles.insert(make<OpaqueFile>(*buffer, segName, sectName));
     }
 
+    for (const Arg *arg : args.filtered(OPT_add_empty_section)) {
+      StringRef segName = arg->getValue(0);
+      StringRef sectName = arg->getValue(1);
+      inputFiles.insert(make<OpaqueFile>(MemoryBufferRef(), segName, sectName));
+    }
+
     gatherInputSections();
     if (config->callGraphProfileSort)
       extractCallGraphProfile();

@@ -36486,9 +36486,8 @@ static SDValue narrowLoadToVZLoad(LoadSDNode *LN, MVT MemVT, MVT VT,
 // TODO: Investigate sharing more of this with shuffle lowering.
 static bool matchUnaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
                               bool AllowFloatDomain, bool AllowIntDomain,
-                              SDValue &V1, const SDLoc &DL, SelectionDAG &DAG,
-                              const X86Subtarget &Subtarget, unsigned &Shuffle,
-                              MVT &SrcVT, MVT &DstVT) {
+                              SDValue V1, const X86Subtarget &Subtarget,
+                              unsigned &Shuffle, MVT &SrcVT, MVT &DstVT) {
   unsigned NumMaskElts = Mask.size();
   unsigned MaskEltSize = MaskVT.getScalarSizeInBits();
 
@@ -36530,9 +36529,6 @@ static bool matchUnaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
         MVT ScalarTy = MaskVT.isInteger() ? MaskVT.getScalarType() :
                                             MVT::getIntegerVT(MaskEltSize);
         SrcVT = MVT::getVectorVT(ScalarTy, SrcSize / MaskEltSize);
-
-        if (SrcVT.getSizeInBits() != MaskVT.getSizeInBits())
-          V1 = extractSubVector(V1, 0, DAG, DL, SrcSize);
 
         Shuffle = unsigned(MatchAny ? ISD::ANY_EXTEND : ISD::ZERO_EXTEND);
         if (SrcVT.getVectorNumElements() != NumDstElts)
@@ -37111,6 +37107,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   assert((Inputs.size() == 1 || Inputs.size() == 2) &&
          "Unexpected number of shuffle inputs!");
 
+  SDLoc DL(Root);
   MVT RootVT = Root.getSimpleValueType();
   unsigned RootSizeInBits = RootVT.getSizeInBits();
   unsigned NumRootElts = RootVT.getVectorNumElements();
@@ -37118,6 +37115,8 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   // Canonicalize shuffle input op to the requested type.
   // TODO: Support cases where Op is smaller than VT.
   auto CanonicalizeShuffleInput = [&](MVT VT, SDValue Op) {
+    if (VT.getSizeInBits() < Op.getValueSizeInBits())
+      Op = extractSubVector(Op, 0, DAG, DL, VT.getSizeInBits());
     return DAG.getBitcast(VT, Op);
   };
 
@@ -37133,7 +37132,6 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   assert(VT1.getSizeInBits() == RootSizeInBits &&
          VT2.getSizeInBits() == RootSizeInBits && "Vector size mismatch");
 
-  SDLoc DL(Root);
   SDValue Res;
 
   unsigned NumBaseMaskElts = BaseMask.size();
@@ -37402,15 +37400,13 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       }
     }
 
-    SDValue NewV1 = V1; // Save operand in case early exit happens.
-    if (matchUnaryShuffle(MaskVT, Mask, AllowFloatDomain, AllowIntDomain, NewV1,
-                          DL, DAG, Subtarget, Shuffle, ShuffleSrcVT,
-                          ShuffleVT) &&
+    if (matchUnaryShuffle(MaskVT, Mask, AllowFloatDomain, AllowIntDomain, V1,
+                          Subtarget, Shuffle, ShuffleSrcVT, ShuffleVT) &&
         (!IsMaskedShuffle ||
          (NumRootElts == ShuffleVT.getVectorNumElements()))) {
       if (Depth == 0 && Root.getOpcode() == Shuffle)
         return SDValue(); // Nothing to do!
-      Res = CanonicalizeShuffleInput(ShuffleSrcVT, NewV1);
+      Res = CanonicalizeShuffleInput(ShuffleSrcVT, V1);
       Res = DAG.getNode(Shuffle, DL, ShuffleVT, Res);
       return DAG.getBitcast(RootVT, Res);
     }
@@ -51179,6 +51175,30 @@ static SDValue combineMOVMSK(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(ISD::XOR, DL, VT,
                        DAG.getNode(X86ISD::MOVMSK, DL, VT, Src.getOperand(0)),
                        DAG.getConstant(NotMask, DL, VT));
+  }
+
+  // Fold movmsk(icmp_eq(and(x,c1),0)) -> movmsk(not(shl(x,c2)))
+  // iff pow2splat(c1).
+  if (Src.getOpcode() == X86ISD::PCMPEQ &&
+      Src.getOperand(0).getOpcode() == ISD::AND &&
+      ISD::isBuildVectorAllZeros(Src.getOperand(1).getNode())) {
+    SDValue LHS = Src.getOperand(0).getOperand(0);
+    SDValue RHS = Src.getOperand(0).getOperand(1);
+    KnownBits KnownRHS = DAG.computeKnownBits(RHS);
+    if (KnownRHS.isConstant() && KnownRHS.getConstant().isPowerOf2()) {
+      SDLoc DL(N);
+      MVT ShiftVT = SrcVT;
+      if (ShiftVT.getScalarType() == MVT::i8) {
+        // vXi8 shifts - we only care about the signbit so can use PSLLW.
+        ShiftVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
+        LHS = DAG.getBitcast(ShiftVT, LHS);
+      }
+      unsigned ShiftAmt = KnownRHS.getConstant().countLeadingZeros();
+      LHS = getTargetVShiftByConstNode(X86ISD::VSHLI, DL, ShiftVT, LHS,
+                                       ShiftAmt, DAG);
+      LHS = DAG.getNOT(DL, DAG.getBitcast(SrcVT, LHS), SrcVT);
+      return DAG.getNode(X86ISD::MOVMSK, DL, VT, LHS);
+    }
   }
 
   // Simplify the inputs.

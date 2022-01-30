@@ -666,7 +666,7 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
   // sunk load: whether it is volatile, and what its alignment is.
   bool IsVolatile = FirstLI->isVolatile();
   Align LoadAlignment = FirstLI->getAlign();
-  unsigned LoadAddrSpace = FirstLI->getPointerAddressSpace();
+  const unsigned LoadAddrSpace = FirstLI->getPointerAddressSpace();
 
   // We can't sink the load if the loaded value could be modified between the
   // load and the PHI.
@@ -681,19 +681,21 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
       FirstLI->getParent()->getTerminator()->getNumSuccessors() != 1)
     return nullptr;
 
-  // Check to see if all arguments are the same operation.
   for (auto Incoming : drop_begin(zip(PN.blocks(), PN.incoming_values()))) {
     BasicBlock *InBB = std::get<0>(Incoming);
     Value *InVal = std::get<1>(Incoming);
     LoadInst *LI = dyn_cast<LoadInst>(InVal);
-    if (!LI || !LI->hasOneUser())
+    if (!LI || !LI->hasOneUser() || LI->isAtomic())
+      return nullptr;
+
+    // Make sure all arguments are the same type of operation.
+    if (LI->isVolatile() != IsVolatile ||
+        LI->getPointerAddressSpace() != LoadAddrSpace)
       return nullptr;
 
     // We can't sink the load if the loaded value could be modified between
     // the load and the PHI.
-    if (LI->isVolatile() != IsVolatile || LI->getParent() != InBB ||
-        LI->getPointerAddressSpace() != LoadAddrSpace ||
-        !isSafeAndProfitableToSinkLoad(LI))
+    if (LI->getParent() != InBB || !isSafeAndProfitableToSinkLoad(LI))
       return nullptr;
 
     LoadAlignment = std::min(LoadAlignment, LI->getAlign());
