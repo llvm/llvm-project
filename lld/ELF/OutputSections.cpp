@@ -22,7 +22,6 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/TimeProfiler.h"
-#include <unordered_set>
 #if LLVM_ENABLE_ZLIB
 #include <zlib.h>
 #endif
@@ -467,7 +466,7 @@ static void finalizeShtGroup(OutputSection *os,
 
   // Some group members may be combined or discarded, so we need to compute the
   // new size. The content will be rewritten in InputSection::copyShtGroup.
-  std::unordered_set<uint32_t> seen;
+  DenseSet<uint32_t> seen;
   ArrayRef<InputSectionBase *> sections = section->file->getSections();
   for (const uint32_t &idx : section->getDataAs<uint32_t>().slice(1))
     if (OutputSection *osec = sections[read32(&idx)]->getOutputSection())
