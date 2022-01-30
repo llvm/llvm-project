@@ -855,6 +855,10 @@ let Predicates = [HasStdExtZbpOrZbkb] in {
 // We treat brev8 as a separate instruction, so match it directly. We also
 // use this for brev8 when lowering bitreverse with Zbkb.
 def : Pat<(riscv_grev GPR:$rs1, 7), (BREV8 GPR:$rs1)>;
+
+// We treat zip and unzip as separate instructions, so match it directly.
+def : Pat<(i32 (riscv_shfl GPR:$rs1, 15)), (ZIP_RV32 GPR:$rs1)>;
+def : Pat<(i32 (riscv_unshfl GPR:$rs1, 15)), (UNZIP_RV32 GPR:$rs1)>;
 }
 
 let Predicates = [HasStdExtZbp] in {
@@ -897,10 +901,6 @@ def : Pat<(i32 (rotl (riscv_grev GPR:$rs1, 24), (i32 16))), (GREVI GPR:$rs1, 8)>
 
 // We treat rev8 as a separate instruction, so match it directly.
 def : Pat<(i32 (riscv_grev GPR:$rs1, 24)), (REV8_RV32 GPR:$rs1)>;
-
-// We treat zip and unzip as separate instructions, so match it directly.
-def : Pat<(i32 (riscv_shfl GPR:$rs1, 15)), (ZIP_RV32 GPR:$rs1)>;
-def : Pat<(i32 (riscv_unshfl GPR:$rs1, 15)), (UNZIP_RV32 GPR:$rs1)>;
 } // Predicates = [HasStdExtZbp, IsRV32]
 
 let Predicates = [HasStdExtZbp, IsRV64] in {
@@ -1171,11 +1171,6 @@ def : PatGprGpr<riscv_bfp, BFP>;
 
 let Predicates = [HasStdExtZbf, IsRV64] in
 def : PatGprGpr<riscv_bfpw, BFPW>;
-
-let Predicates = [HasStdExtZbkb, IsRV32] in {
-def : PatGpr<int_riscv_zip, ZIP_RV32>;
-def : PatGpr<int_riscv_unzip, UNZIP_RV32>;
-} // Predicates = [HasStdExtZbkb, IsRV32]
 
 let Predicates = [HasStdExtZbkx] in {
 def : PatGprGpr<int_riscv_xperm4, XPERM4>;

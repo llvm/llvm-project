@@ -4478,6 +4478,17 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         IntNo == Intrinsic::riscv_grev ? RISCVISD::GREV : RISCVISD::GORC;
     return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1), Op.getOperand(2));
   }
+  case Intrinsic::riscv_zip:
+  case Intrinsic::riscv_unzip: {
+    // Lower to the SHFLI encoding for zip or the UNSHFLI encoding for unzip.
+    // For i32 the immdiate is 15. For i64 the immediate is 31.
+    unsigned Opc =
+        IntNo == Intrinsic::riscv_zip ? RISCVISD::SHFL : RISCVISD::UNSHFL;
+    unsigned BitWidth = Op.getValueSizeInBits();
+    assert(isPowerOf2_32(BitWidth) && BitWidth >= 2 && "Unexpected bit width");
+    return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1),
+                       DAG.getConstant((BitWidth / 2) - 1, DL, XLenVT));
+  }
   case Intrinsic::riscv_shfl:
   case Intrinsic::riscv_unshfl: {
     unsigned Opc =
