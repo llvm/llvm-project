@@ -43,7 +43,6 @@ def riscv_fslw   : SDNode<"RISCVISD::FSLW",   SDT_RISCVIntShiftDOpW>;
 def riscv_fsrw   : SDNode<"RISCVISD::FSRW",   SDT_RISCVIntShiftDOpW>;
 def riscv_fsl    : SDNode<"RISCVISD::FSL",    SDTIntShiftDOp>;
 def riscv_fsr    : SDNode<"RISCVISD::FSR",    SDTIntShiftDOp>;
-def riscv_brev8  : SDNode<"RISCVISD::BREV8",  SDTIntUnaryOp>;
 def riscv_grev   : SDNode<"RISCVISD::GREV",   SDTIntBinOp>;
 def riscv_grevw  : SDNode<"RISCVISD::GREVW",  SDT_RISCVIntBinOpW>;
 def riscv_gorc   : SDNode<"RISCVISD::GORC",   SDTIntBinOp>;
@@ -852,14 +851,17 @@ let Predicates = [HasStdExtZbbOrZbp] in {
 def : Pat<(riscv_gorc GPR:$rs1, 7), (ORC_B GPR:$rs1)>;
 }
 
+let Predicates = [HasStdExtZbpOrZbkb] in {
+// We treat brev8 as a separate instruction, so match it directly. We also
+// use this for brev8 when lowering bitreverse with Zbkb.
+def : Pat<(riscv_grev GPR:$rs1, 7), (BREV8 GPR:$rs1)>;
+}
+
 let Predicates = [HasStdExtZbp] in {
 def : PatGprGpr<riscv_grev, GREV>;
 def : PatGprGpr<riscv_gorc, GORC>;
 def : PatGprImm<riscv_grev, GREVI, uimmlog2xlen>;
 def : PatGprImm<riscv_gorc, GORCI, uimmlog2xlen>;
-
-// We treat brev8 as a separate instruction, so match it directly.
-def : Pat<(riscv_grev GPR:$rs1, 7), (BREV8 GPR:$rs1)>;
 
 def : PatGprGpr<riscv_shfl, SHFL>;
 def : PatGprGpr<riscv_unshfl, UNSHFL>;
@@ -1171,7 +1173,6 @@ let Predicates = [HasStdExtZbf, IsRV64] in
 def : PatGprGpr<riscv_bfpw, BFPW>;
 
 let Predicates = [HasStdExtZbkb] in {
-def : PatGpr<riscv_brev8, BREV8>;
 def : PatGpr<int_riscv_brev8, BREV8>;
 } // Predicates = [HasStdExtZbkb]
 
