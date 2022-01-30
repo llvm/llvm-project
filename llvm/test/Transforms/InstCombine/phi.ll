@@ -547,6 +547,31 @@ bb2:        ; preds = %bb1, %entry
   ret i32 %res
 }
 
+; FIXME: Atomic and non-atomic loads should not be combined.
+define i32 @PR51435(i32* %ptr, i32* %atomic_ptr, i1 %c) {
+; CHECK-LABEL: @PR51435(
+; CHECK:       entry:
+; CHECK-NEXT:    br i1 %c, label %if, label %end
+; CHECK:       if:
+; CHECK-NEXT:    [[ATOMIC:%.*]] = load atomic i32, i32* %atomic_ptr acquire, align 4
+; CHECK-NEXT:    br label %end
+; CHECK:       end:
+; CHECK-NEXT:    [[COND_IN:%.*]] = phi i32* [ %ptr, %entry ], [ %atomic_ptr, %if ]
+; CHECK-NEXT:    [[COND:%.*]] = load i32, i32* [[COND_IN]], align 4
+; CHECK-NEXT:    ret i32 [[COND]]
+entry:
+  %x = load i32, i32* %ptr, align 4
+  br i1 %c, label %if, label %end
+
+if:
+  %y = load atomic i32, i32* %atomic_ptr acquire, align 4
+  br label %end
+
+end:
+  %cond = phi i32 [ %x, %entry ], [ %y, %if ]
+  ret i32 %cond
+}
+
 define i1 @test18(i1 %cond) {
 ; CHECK-LABEL: @test18(
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[TRUE:%.*]], label [[FALSE:%.*]]
