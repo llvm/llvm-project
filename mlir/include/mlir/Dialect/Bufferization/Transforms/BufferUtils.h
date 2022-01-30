@@ -121,22 +121,12 @@ protected:
   Liveness liveness;
 };
 
-// Support class to create global ops for tensor-valued constants in the
-// program. Globals are created lazily at the top of the `moduleOp` with pretty
+// Create a global op for the given tensor-valued constant in the program.
+// Globals are created lazily at the top of the enclosing ModuleOp with pretty
 // names. Duplicates are avoided.
-class GlobalCreator {
-public:
-  GlobalCreator(ModuleOp module, unsigned alignment = 0)
-      : moduleOp(module), alignment(alignment) {}
-  memref::GlobalOp getGlobalFor(arith::ConstantOp constantOp);
+FailureOr<memref::GlobalOp> getGlobalFor(arith::ConstantOp constantOp,
+                                         uint64_t alignment);
 
-private:
-  ModuleOp moduleOp;
-  unsigned alignment;
-  // This could use memref::GlobalOp key but we avoid introducing a new
-  // dependence to the memref dialect for this.
-  DenseMap<Attribute, Operation *> globals;
-};
 } // namespace bufferization
 } // namespace mlir
 
