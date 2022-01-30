@@ -23,10 +23,6 @@ class BufferizeTypeConverter;
 
 class RewritePatternSet;
 
-void populateStdBufferizePatterns(
-    bufferization::BufferizeTypeConverter &typeConverter,
-    RewritePatternSet &patterns);
-
 /// Creates an instance of std bufferization pass.
 std::unique_ptr<Pass> createStdBufferizePass();
 
