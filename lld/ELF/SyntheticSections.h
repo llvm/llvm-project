@@ -820,10 +820,10 @@ private:
 
   // Each chunk contains information gathered from debug sections of a
   // single object file.
-  std::vector<GdbChunk> chunks;
+  SmallVector<GdbChunk, 0> chunks;
 
   // A symbol table for this .gdb_index section.
-  std::vector<GdbSymbol> symbols;
+  SmallVector<GdbSymbol, 0> symbols;
 
   size_t size;
 };
