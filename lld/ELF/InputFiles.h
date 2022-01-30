@@ -211,6 +211,7 @@ protected:
   uint32_t firstGlobal = 0;
 
 public:
+  uint32_t andFeatures = 0;
   bool hasCommonSyms = false;
 };
 
@@ -266,8 +267,6 @@ public:
   // used to create the relocatable object and required to support
   // R_MIPS_GPREL16 / R_MIPS_GPREL32 relocations.
   uint32_t mipsGp0 = 0;
-
-  uint32_t andFeatures = 0;
 
   // True if the file defines functions compiled with
   // -fsplit-stack. Usually false.

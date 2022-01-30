@@ -379,6 +379,11 @@ void AVRToolChain::addClangTargetOptions(
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
                           options::OPT_fno_use_init_array, false))
     CC1Args.push_back("-fno-use-init-array");
+  // Use `-fno-use-cxa-atexit` as default, since avr-libc does not support
+  // `__cxa_atexit()`.
+  if (!DriverArgs.hasFlag(options::OPT_fuse_cxa_atexit,
+                          options::OPT_fno_use_cxa_atexit, false))
+    CC1Args.push_back("-fno-use-cxa-atexit");
 }
 
 Tool *AVRToolChain::buildLinker() const {
