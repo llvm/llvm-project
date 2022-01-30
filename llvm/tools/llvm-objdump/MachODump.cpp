@@ -188,8 +188,12 @@ typedef DiceTable::iterator dice_table_iterator;
 namespace {
 struct ScopedXarFile {
   xar_t xar;
-  ScopedXarFile(const char *filename, int32_t flags)
-      : xar(xar_open(filename, flags)) {}
+  ScopedXarFile(const char *filename, int32_t flags) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    xar = xar_open(filename, flags);
+#pragma clang diagnostic pop
+  }
   ~ScopedXarFile() {
     if (xar)
       xar_close(xar);
