@@ -2212,40 +2212,6 @@ void InstrRefBasedLDV::buildMLocValueMap(
   // redundant PHIs.
 }
 
-// Boilerplate for feeding MachineBasicBlocks into IDF calculator. Provide
-// template specialisations for graph traits and a successor enumerator.
-namespace llvm {
-template <> struct GraphTraits<MachineBasicBlock> {
-  using NodeRef = MachineBasicBlock *;
-  using ChildIteratorType = MachineBasicBlock::succ_iterator;
-
-  static NodeRef getEntryNode(MachineBasicBlock *BB) { return BB; }
-  static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
-  static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
-};
-
-template <> struct GraphTraits<const MachineBasicBlock> {
-  using NodeRef = const MachineBasicBlock *;
-  using ChildIteratorType = MachineBasicBlock::const_succ_iterator;
-
-  static NodeRef getEntryNode(const MachineBasicBlock *BB) { return BB; }
-  static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
-  static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
-};
-
-using MachineDomTreeBase = DomTreeBase<MachineBasicBlock>::NodeType;
-using MachineDomTreeChildGetter =
-    typename IDFCalculatorDetail::ChildrenGetterTy<MachineDomTreeBase, false>;
-
-namespace IDFCalculatorDetail {
-template <>
-typename MachineDomTreeChildGetter::ChildrenTy
-MachineDomTreeChildGetter::get(const NodeRef &N) {
-  return {N->succ_begin(), N->succ_end()};
-}
-} // namespace IDFCalculatorDetail
-} // namespace llvm
-
 void InstrRefBasedLDV::BlockPHIPlacement(
     const SmallPtrSetImpl<MachineBasicBlock *> &AllBlocks,
     const SmallPtrSetImpl<MachineBasicBlock *> &DefBlocks,
@@ -2253,8 +2219,7 @@ void InstrRefBasedLDV::BlockPHIPlacement(
   // Apply IDF calculator to the designated set of location defs, storing
   // required PHIs into PHIBlocks. Uses the dominator tree stored in the
   // InstrRefBasedLDV object.
-  IDFCalculatorDetail::ChildrenGetterTy<MachineDomTreeBase, false> foo;
-  IDFCalculatorBase<MachineDomTreeBase, false> IDF(DomTree->getBase(), foo);
+  IDFCalculatorBase<MachineBasicBlock, false> IDF(DomTree->getBase());
 
   IDF.setLiveInBlocks(AllBlocks);
   IDF.setDefiningBlocks(DefBlocks);

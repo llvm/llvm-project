@@ -83,7 +83,7 @@ TEST(RegionBranchOpInterface, MutuallyExclusiveOps) {
   registry.insert<CFTestDialect>();
   MLIRContext ctx(registry);
 
-  OwningModuleRef module = parseSourceString(ir, &ctx);
+  OwningOpRef<ModuleOp> module = parseSourceString(ir, &ctx);
   Operation *testOp = &module->getBody()->getOperations().front();
   Operation *op1 = &testOp->getRegion(0).front().front();
   Operation *op2 = &testOp->getRegion(1).front().front();
@@ -104,7 +104,7 @@ TEST(RegionBranchOpInterface, NotMutuallyExclusiveOps) {
   registry.insert<CFTestDialect>();
   MLIRContext ctx(registry);
 
-  OwningModuleRef module = parseSourceString(ir, &ctx);
+  OwningOpRef<ModuleOp> module = parseSourceString(ir, &ctx);
   Operation *testOp = &module->getBody()->getOperations().front();
   Operation *op1 = &testOp->getRegion(0).front().front();
   Operation *op2 = &testOp->getRegion(1).front().front();
@@ -131,7 +131,7 @@ TEST(RegionBranchOpInterface, NestedMutuallyExclusiveOps) {
   registry.insert<CFTestDialect>();
   MLIRContext ctx(registry);
 
-  OwningModuleRef module = parseSourceString(ir, &ctx);
+  OwningOpRef<ModuleOp> module = parseSourceString(ir, &ctx);
   Operation *testOp = &module->getBody()->getOperations().front();
   Operation *op1 =
       &testOp->getRegion(0).front().front().getRegion(0).front().front();
