@@ -46,8 +46,8 @@ public:
   MachineRegisterInfo *RegInfo;
   SelectionDAG *CurDAG;
   std::unique_ptr<SelectionDAGBuilder> SDB;
-  AAResults *AA;
-  GCFunctionInfo *GFI;
+  AAResults *AA = nullptr;
+  GCFunctionInfo *GFI = nullptr;
   CodeGenOpt::Level OptLevel;
   const TargetInstrInfo *TII;
   const TargetLowering *TLI;
@@ -199,7 +199,7 @@ public:
 protected:
   /// DAGSize - Size of DAG being instruction selected.
   ///
-  unsigned DAGSize;
+  unsigned DAGSize = 0;
 
   /// ReplaceUses - replace all uses of the old node F with the use
   /// of the new node T.

@@ -656,10 +656,10 @@ public:
   };
 
   /// Basic-block the load instructions are within
-  BasicBlock *BB;
+  BasicBlock *BB = nullptr;
 
   /// Pointer value of all participation load instructions
-  Value *PV;
+  Value *PV = nullptr;
 
   /// Participating load instructions
   std::set<LoadInst *> LIs;
@@ -668,7 +668,7 @@ public:
   std::set<Instruction *> Is;
 
   /// Final shuffle-vector instruction
-  ShuffleVectorInst *SVI;
+  ShuffleVectorInst *SVI = nullptr;
 
   /// Information of the offset for each vector element
   ElementInfo *EI;
@@ -676,8 +676,7 @@ public:
   /// Vector Type
   FixedVectorType *const VTy;
 
-  VectorInfo(FixedVectorType *VTy)
-      : BB(nullptr), PV(nullptr), SVI(nullptr), VTy(VTy) {
+  VectorInfo(FixedVectorType *VTy) : VTy(VTy) {
     EI = new ElementInfo[VTy->getNumElements()];
   }
 
