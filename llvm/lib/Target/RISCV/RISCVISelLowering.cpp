@@ -2974,7 +2974,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     assert(Op.getOpcode() == ISD::BITREVERSE && "Unexpected opcode");
     // Expand bitreverse to a bswap(rev8) followed by brev8.
     SDValue BSwap = DAG.getNode(ISD::BSWAP, DL, VT, Op.getOperand(0));
-    return DAG.getNode(RISCVISD::BREV8, DL, VT, BSwap);
+    // We use the Zbp grevi encoding for rev.b/brev8 which will be recognized
+    // as brev8 by an isel pattern.
+    return DAG.getNode(RISCVISD::GREV, DL, VT, BSwap,
+                       DAG.getConstant(7, DL, VT));
   }
   case ISD::FSHL:
   case ISD::FSHR: {
@@ -10106,7 +10109,6 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(STRICT_FCVT_W_RV64)
   NODE_NAME_CASE(STRICT_FCVT_WU_RV64)
   NODE_NAME_CASE(READ_CYCLE_WIDE)
-  NODE_NAME_CASE(BREV8)
   NODE_NAME_CASE(GREV)
   NODE_NAME_CASE(GREVW)
   NODE_NAME_CASE(GORC)

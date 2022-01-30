@@ -99,8 +99,6 @@ enum NodeType : unsigned {
   // READ_CYCLE_WIDE - A read of the 64-bit cycle CSR on a 32-bit target
   // (returns (Lo, Hi)). It takes a chain operand.
   READ_CYCLE_WIDE,
-  // Reverse bits in each byte.
-  BREV8,
   // Generalized Reverse and Generalized Or-Combine - directly matching the
   // semantics of the named RISC-V instructions. Lowered as custom nodes as
   // TableGen chokes when faced with commutative permutations in deeply-nested
