@@ -352,12 +352,7 @@ static inline ArrayRef<VersionDefinition> namedVersionDefs() {
   return llvm::makeArrayRef(config->versionDefinitions).slice(2);
 }
 
-static inline void errorOrWarn(const Twine &msg) {
-  if (!config->noinhibitExec)
-    error(msg);
-  else
-    warn(msg);
-}
+void errorOrWarn(const Twine &msg);
 
 static inline void internalLinkerError(StringRef loc, const Twine &msg) {
   errorOrWarn(loc + "internal linker error: " + msg + "\n" +
