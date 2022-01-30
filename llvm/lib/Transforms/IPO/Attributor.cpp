@@ -1060,8 +1060,14 @@ bool Attributor::checkForAllUses(
     const Use *U = Worklist.pop_back_val();
     if (isa<PHINode>(U->getUser()) && !Visited.insert(U).second)
       continue;
-    LLVM_DEBUG(dbgs() << "[Attributor] Check use: " << **U << " in "
-                      << *U->getUser() << "\n");
+    LLVM_DEBUG({
+      if (auto *Fn = dyn_cast<Function>(U->getUser()))
+        dbgs() << "[Attributor] Check use: " << **U << " in " << Fn->getName()
+               << "\n";
+      else
+        dbgs() << "[Attributor] Check use: " << **U << " in " << *U->getUser()
+               << "\n";
+    });
     bool UsedAssumedInformation = false;
     if (isAssumedDead(*U, &QueryingAA, LivenessAA, UsedAssumedInformation,
                       CheckBBLivenessOnly, LivenessDepClass)) {
@@ -1151,8 +1157,14 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
   SmallVector<const Use *, 8> Uses(make_pointer_range(Fn.uses()));
   for (unsigned u = 0; u < Uses.size(); ++u) {
     const Use &U = *Uses[u];
-    LLVM_DEBUG(dbgs() << "[Attributor] Check use: " << *U << " in "
-                      << *U.getUser() << "\n");
+    LLVM_DEBUG({
+      if (auto *Fn = dyn_cast<Function>(U))
+        dbgs() << "[Attributor] Check use: " << Fn->getName() << " in "
+               << *U.getUser() << "\n";
+      else
+        dbgs() << "[Attributor] Check use: " << *U << " in " << *U.getUser()
+               << "\n";
+    });
     bool UsedAssumedInformation = false;
     if (isAssumedDead(U, QueryingAA, nullptr, UsedAssumedInformation,
                       /* CheckBBLivenessOnly */ true)) {
