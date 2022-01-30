@@ -1,6 +1,6 @@
 # Check unreachable code elimination
 
-RUN: %clangxx %p/Inputs/unreachable.s -o %t.exe
+RUN: %clangxx %cxxflags %p/Inputs/unreachable.s -o %t.exe
 RUN: llvm-bolt %t.exe -o %t \
 RUN:   -reorder-blocks=none -split-functions=1 -eliminate-unreachable \
 RUN:   -funcs=foo -use-gnu-stack -print-cfg -print-finalized \

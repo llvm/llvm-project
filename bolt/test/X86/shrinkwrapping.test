@@ -2,7 +2,7 @@
 # shrink-wrapping when optimizing a function without
 # frame pointers.
 
-RUN: %clangxx -O3 %S/Inputs/exc4sw.S -o %t.exe -Wl,-q
+RUN: %clangxx %cxxflags %S/Inputs/exc4sw.S -o %t.exe -Wl,-q
 RUN: llvm-bolt %t.exe -o %t -relocs -frame-opt=all \
 RUN:   -data=%p/Inputs/exc4sw.fdata -reorder-blocks=cache 2>&1 | \
 RUN:   FileCheck %s --check-prefix=CHECK-BOLT
