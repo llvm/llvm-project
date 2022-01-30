@@ -1,4 +1,4 @@
-//===- SCFInterfaceImpl.cpp - SCF Impl. of BufferizableOpInterface --------===//
+//===- BufferizableOpInterfaceImpl.cpp - Impl. of BufferizableOpInterface -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/SCFInterfaceImpl.h"
+#include "mlir/Dialect/SCF/BufferizableOpInterfaceImpl.h"
+
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/SCF/SCF.h"
@@ -14,12 +15,13 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 
+using namespace mlir;
 using namespace mlir::bufferization;
+using namespace mlir::scf;
 
 namespace mlir {
-namespace linalg {
-namespace comprehensive_bufferize {
-namespace scf_ext {
+namespace scf {
+namespace {
 
 // bufferization.to_memref is not allowed to change the rank.
 static void ensureToMemrefOpIsValid(Value tensor, Type memrefType) {
@@ -384,42 +386,6 @@ struct ForOpInterface
   }
 };
 
-LogicalResult
-mlir::linalg::comprehensive_bufferize::scf_ext::AssertScfForAliasingProperties::
-    run(Operation *op, BufferizationState &state,
-        BufferizationAliasInfo &aliasInfo, SmallVector<Operation *> &newOps) {
-  LogicalResult status = success();
-
-  op->walk([&](scf::ForOp forOp) {
-    auto yieldOp =
-        cast<scf::YieldOp>(forOp.getLoopBody().front().getTerminator());
-    for (OpOperand &operand : yieldOp->getOpOperands()) {
-      auto tensorType = operand.get().getType().dyn_cast<TensorType>();
-      if (!tensorType)
-        continue;
-
-      OpOperand &forOperand = forOp.getOpOperandForResult(
-          forOp->getResult(operand.getOperandNumber()));
-      auto bbArg = forOp.getRegionIterArgForOpOperand(forOperand);
-      // Note: This is overly strict. We should check for aliasing bufferized
-      // values. But we don't have a "must-alias" analysis yet.
-      if (!aliasInfo.areEquivalentBufferizedValues(operand.get(), bbArg)) {
-        // TODO: this could get resolved with copies but it can also turn into
-        // swaps so we need to be careful about order of copies.
-        status =
-            yieldOp->emitError()
-            << "Yield operand #" << operand.getOperandNumber()
-            << " does not bufferize to a buffer that is aliasing the matching"
-            << " enclosing scf::for operand";
-        return WalkResult::interrupt();
-      }
-    }
-    return WalkResult::advance();
-  });
-
-  return status;
-}
-
 /// Bufferization of scf.yield. Bufferized as part of their enclosing ops, so
 /// this is for analysis only.
 struct YieldOpInterface
@@ -462,18 +428,51 @@ struct YieldOpInterface
   }
 };
 
-} // namespace scf_ext
-} // namespace comprehensive_bufferize
-} // namespace linalg
+} // namespace
+} // namespace scf
 } // namespace mlir
 
-void mlir::linalg::comprehensive_bufferize::scf_ext::
-    registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
-  registry.addOpInterface<scf::ExecuteRegionOp,
-                          scf_ext::ExecuteRegionOpInterface>();
-  registry.addOpInterface<scf::ForOp, scf_ext::ForOpInterface>();
-  registry.addOpInterface<scf::IfOp, scf_ext::IfOpInterface>();
-  registry.addOpInterface<scf::YieldOp, scf_ext::YieldOpInterface>();
-  registry.addOpInterface<scf::ParallelOp,
-                          AllocationHoistingBarrierOnly<scf::ParallelOp>>();
+LogicalResult mlir::scf::AssertScfForAliasingProperties::run(
+    Operation *op, BufferizationState &state, BufferizationAliasInfo &aliasInfo,
+    SmallVector<Operation *> &newOps) {
+  LogicalResult status = success();
+
+  op->walk([&](scf::ForOp forOp) {
+    auto yieldOp =
+        cast<scf::YieldOp>(forOp.getLoopBody().front().getTerminator());
+    for (OpOperand &operand : yieldOp->getOpOperands()) {
+      auto tensorType = operand.get().getType().dyn_cast<TensorType>();
+      if (!tensorType)
+        continue;
+
+      OpOperand &forOperand = forOp.getOpOperandForResult(
+          forOp->getResult(operand.getOperandNumber()));
+      auto bbArg = forOp.getRegionIterArgForOpOperand(forOperand);
+      // Note: This is overly strict. We should check for aliasing bufferized
+      // values. But we don't have a "must-alias" analysis yet.
+      if (!aliasInfo.areEquivalentBufferizedValues(operand.get(), bbArg)) {
+        // TODO: this could get resolved with copies but it can also turn into
+        // swaps so we need to be careful about order of copies.
+        status =
+            yieldOp->emitError()
+            << "Yield operand #" << operand.getOperandNumber()
+            << " does not bufferize to a buffer that is aliasing the matching"
+            << " enclosing scf::for operand";
+        return WalkResult::interrupt();
+      }
+    }
+    return WalkResult::advance();
+  });
+
+  return status;
+}
+
+void mlir::scf::registerBufferizableOpInterfaceExternalModels(
+    DialectRegistry &registry) {
+  registry.addOpInterface<ExecuteRegionOp, ExecuteRegionOpInterface>();
+  registry.addOpInterface<ForOp, ForOpInterface>();
+  registry.addOpInterface<IfOp, IfOpInterface>();
+  registry.addOpInterface<YieldOp, YieldOpInterface>();
+  registry
+      .addOpInterface<ParallelOp, AllocationHoistingBarrierOnly<ParallelOp>>();
 }

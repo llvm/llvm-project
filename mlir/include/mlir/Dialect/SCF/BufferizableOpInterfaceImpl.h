@@ -1,4 +1,4 @@
-//===- SCFInterfaceImpl.h - SCF Impl. of BufferizableOpInterface ----------===//
+//===- BufferizableOpInterfaceImpl.h - Impl. of BufferizableOpInterface ---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_SCFINTERFACEIMPL_H
-#define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_SCFINTERFACEIMPL_H
+#ifndef MLIR_DIALECT_SCF_BUFFERIZABLEOPINTERFACEIMPL_H
+#define MLIR_DIALECT_SCF_BUFFERIZABLEOPINTERFACEIMPL_H
 
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 
 namespace mlir {
-
 class DialectRegistry;
 
-namespace linalg {
-namespace comprehensive_bufferize {
-namespace scf_ext {
-
+namespace scf {
 /// Assert that yielded values of an scf.for op are aliasing their corresponding
 /// bbArgs. This is required because the i-th OpResult of an scf.for op is
 /// currently assumed to alias with the i-th iter_arg (in the absence of
@@ -30,10 +26,7 @@ struct AssertScfForAliasingProperties : public bufferization::PostAnalysisStep {
 };
 
 void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry);
-
-} // namespace scf_ext
-} // namespace comprehensive_bufferize
-} // namespace linalg
+} // namespace scf
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_SCFINTERFACEIMPL_H
+#endif // MLIR_DIALECT_SCF_BUFFERIZABLEOPINTERFACEIMPL_H
