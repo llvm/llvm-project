@@ -1983,6 +1983,7 @@ cc_library(
     hdrs = ["include/mlir/Dialect/SparseTensor/Pipelines/Passes.h"],
     includes = ["include"],
     deps = [
+        ":ArithmeticTransforms",
         ":BufferizationTransforms",
         ":ConversionPasses",
         ":LinalgTransforms",
