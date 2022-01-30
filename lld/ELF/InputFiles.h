@@ -281,14 +281,15 @@ public:
   DWARFCache *getDwarf();
 
 private:
-  void initializeSections(bool ignoreComdats);
-  void initializeSymbols();
+  void initializeSections(bool ignoreComdats,
+                          const llvm::object::ELFFile<ELFT> &obj);
+  void initializeSymbols(const llvm::object::ELFFile<ELFT> &obj);
   void initializeJustSymbols();
 
   InputSectionBase *getRelocTarget(uint32_t idx, const Elf_Shdr &sec,
                                    uint32_t info);
   InputSectionBase *createInputSection(uint32_t idx, const Elf_Shdr &sec,
-                                       StringRef shstrtab);
+                                       StringRef name, StringRef shstrtab);
 
   bool shouldMerge(const Elf_Shdr &sec, StringRef name);
 
