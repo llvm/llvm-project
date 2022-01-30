@@ -1054,8 +1054,7 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
 
   for (size_t i = 0, end = firstGlobal; i != end; ++i) {
     const Elf_Sym &eSym = eSyms[i];
-    const uint32_t secIdx =
-        check(obj.getSectionIndex(eSym, getELFSyms<ELFT>(), shndxTable));
+    const uint32_t secIdx = check(obj.getSectionIndex(eSym, eSyms, shndxTable));
 
     if (LLVM_UNLIKELY(secIdx >= sections.size()))
       fatal(toString(this) + ": invalid section index: " + Twine(secIdx));
@@ -1096,8 +1095,7 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
                   Twine(firstGlobal) + ")");
       continue;
     }
-    const uint32_t secIdx =
-        check(obj.getSectionIndex(eSym, getELFSyms<ELFT>(), shndxTable));
+    const uint32_t secIdx = check(obj.getSectionIndex(eSym, eSyms, shndxTable));
     if (LLVM_UNLIKELY(secIdx >= sections.size()))
       fatal(toString(this) + ": invalid section index: " + Twine(secIdx));
     InputSectionBase *sec = sections[secIdx];
