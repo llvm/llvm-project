@@ -132,7 +132,6 @@ define void @early_exit(i16* %p, i32 %n) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, i16* [[TMP6]], i32 0
@@ -269,7 +268,6 @@ define void @multiple_unique_exit(i16* %p, i32 %n) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, i16* [[TMP6]], i32 0
@@ -354,7 +352,6 @@ define i32 @multiple_unique_exit2(i16* %p, i32 %n) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, i16* [[TMP6]], i32 0
@@ -441,7 +438,6 @@ define i32 @multiple_unique_exit3(i16* %p, i32 %n) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, i16* [[TMP6]], i32 0
@@ -529,7 +525,6 @@ define i32 @multiple_exit_blocks(i16* %p, i32 %n) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, i16* [[TMP6]], i32 0
@@ -621,7 +616,6 @@ define i32 @multiple_exit_blocks2(i16* %p, i32 %n) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, i16* [[TMP6]], i32 0
@@ -1154,7 +1148,6 @@ define i32 @me_reduction(i32* %addr) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, i32* [[ADDR:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, i32* [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP3]] to <2 x i32>*

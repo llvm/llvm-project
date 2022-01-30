@@ -25,46 +25,15 @@ define i32 @conversion_cost1(i32 %n, i8* nocapture %A, float* nocapture %B) noun
 ; CHECK-NEXT:    [[VEC_IND1:%.*]] = phi <32 x i8> [ <i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23, i8 24, i8 25, i8 26, i8 27, i8 28, i8 29, i8 30, i8 31, i8 32, i8 33, i8 34>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 2
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX]], 3
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX]], 4
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[OFFSET_IDX]], 5
-; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[OFFSET_IDX]], 6
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX]], 7
-; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[OFFSET_IDX]], 8
-; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[OFFSET_IDX]], 9
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], 10
-; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[OFFSET_IDX]], 11
-; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[OFFSET_IDX]], 12
-; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[OFFSET_IDX]], 13
-; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[OFFSET_IDX]], 14
-; CHECK-NEXT:    [[TMP20:%.*]] = add i64 [[OFFSET_IDX]], 15
-; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[OFFSET_IDX]], 16
-; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[OFFSET_IDX]], 17
-; CHECK-NEXT:    [[TMP23:%.*]] = add i64 [[OFFSET_IDX]], 18
-; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[OFFSET_IDX]], 19
-; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[OFFSET_IDX]], 20
-; CHECK-NEXT:    [[TMP26:%.*]] = add i64 [[OFFSET_IDX]], 21
-; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[OFFSET_IDX]], 22
-; CHECK-NEXT:    [[TMP28:%.*]] = add i64 [[OFFSET_IDX]], 23
-; CHECK-NEXT:    [[TMP29:%.*]] = add i64 [[OFFSET_IDX]], 24
-; CHECK-NEXT:    [[TMP30:%.*]] = add i64 [[OFFSET_IDX]], 25
-; CHECK-NEXT:    [[TMP31:%.*]] = add i64 [[OFFSET_IDX]], 26
-; CHECK-NEXT:    [[TMP32:%.*]] = add i64 [[OFFSET_IDX]], 27
-; CHECK-NEXT:    [[TMP33:%.*]] = add i64 [[OFFSET_IDX]], 28
-; CHECK-NEXT:    [[TMP34:%.*]] = add i64 [[OFFSET_IDX]], 29
-; CHECK-NEXT:    [[TMP35:%.*]] = add i64 [[OFFSET_IDX]], 30
-; CHECK-NEXT:    [[TMP36:%.*]] = add i64 [[OFFSET_IDX]], 31
-; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i8, i8* [[A:%.*]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i8, i8* [[TMP37]], i32 0
-; CHECK-NEXT:    [[TMP39:%.*]] = bitcast i8* [[TMP38]] to <32 x i8>*
-; CHECK-NEXT:    store <32 x i8> [[VEC_IND1]], <32 x i8>* [[TMP39]], align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, i8* [[A:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, i8* [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to <32 x i8>*
+; CHECK-NEXT:    store <32 x i8> [[VEC_IND1]], <32 x i8>* [[TMP8]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <32 x i64> [[VEC_IND]], <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
 ; CHECK-NEXT:    [[VEC_IND_NEXT2]] = add <32 x i8> [[VEC_IND1]], <i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32, i8 32>
-; CHECK-NEXT:    [[TMP40:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP40]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[DOT_CRIT_EDGE_LOOPEXIT:%.*]], label [[SCALAR_PH]]
@@ -73,9 +42,9 @@ define i32 @conversion_cost1(i32 %n, i8* nocapture %A, float* nocapture %B) noun
 ; CHECK-NEXT:    br label [[DOTLR_PH:%.*]]
 ; CHECK:       .lr.ph:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[DOTLR_PH]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[TMP41:%.*]] = trunc i64 [[INDVARS_IV]] to i8
-; CHECK-NEXT:    [[TMP42:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 [[TMP41]], i8* [[TMP42]], align 1
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[INDVARS_IV]] to i8
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store i8 [[TMP10]], i8* [[TMP11]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]
