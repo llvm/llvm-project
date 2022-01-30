@@ -177,9 +177,7 @@ bool M88kFrameLowering::spillCalleeSavedRegisters(
   for (auto &CS : CSI) {
     // Add the callee-saved register as live-in.
     Register Reg = CS.getReg();
-    bool IsRetAddrIsTaken =
-        Reg == M88k::R1 && MF->getFrameInfo().isReturnAddressTaken();
-    if (!IsRetAddrIsTaken)
+    if (!MBB.isLiveIn(Reg))
       MBB.addLiveIn(Reg);
 
     // We save all registers except %r1 and %r30, which are saved as part of the
@@ -187,9 +185,8 @@ bool M88kFrameLowering::spillCalleeSavedRegisters(
     // Save in the normal TargetInstrInfo way.
     // TODO Identify register pairs and use them to save two registers at once.
     if (Reg != M88k::R1 && Reg != M88k::R30) {
-      bool IsKill = !IsRetAddrIsTaken;
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-      TII->storeRegToStackSlot(MBB, MBBI, Reg, /*isKill=*/IsKill,
+      TII->storeRegToStackSlot(MBB, MBBI, Reg, /*isKill=*/true,
                                CS.getFrameIdx(), RC, TRI);
     }
   }
@@ -217,6 +214,7 @@ void M88kFrameLowering::emitPrologue(MachineFunction &MF,
   const M88kInstrInfo &LII =
       *static_cast<const M88kInstrInfo *>(STI.getInstrInfo());
   MachineBasicBlock::iterator MBBI = MBB.begin();
+  std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
@@ -227,8 +225,18 @@ void M88kFrameLowering::emitPrologue(MachineFunction &MF,
 
   unsigned MaxCallFrameSize = MFI.getMaxCallFrameSize();
 
-  bool setupFP = hasFP(MF);
-  assert((setupFP || MaxCallFrameSize == 0) && "Call frame without FP");
+  bool SetupFP = hasFP(MF);
+  assert((SetupFP || MaxCallFrameSize == 0) && "Call frame without FP");
+  assert(!SetupFP || std::find_if(CSI.begin(), CSI.end(),
+                                  [](const CalleeSavedInfo &CS) {
+                                    return CS.getReg() == M88k::R30;
+                                  }) != CSI.end() &&
+                         "Frame pointer not saved");
+
+  bool SaveRA =
+      std::find_if(CSI.begin(), CSI.end(), [](const CalleeSavedInfo &CS) {
+        return CS.getReg() == M88k::R1;
+      }) != CSI.end();
 
   if (StackSize) {
     // Create subu %r31, %r31, StackSize
@@ -237,14 +245,14 @@ void M88kFrameLowering::emitPrologue(MachineFunction &MF,
         .addReg(M88k::R31)
         .addImm(StackSize)
         .setMIFlag(MachineInstr::FrameSetup);
-    if (MFI.hasCalls())
+    if (SaveRA)
       // Spill %r1: st %r1, %r31, <SP+4> or <new FP+4>
       BuildMI(MBB, MBBI, DL, LII.get(M88k::STriw))
-          .addReg(M88k::R1, MFI.isReturnAddressTaken() ? RegState::Kill : 0)
+          .addReg(M88k::R1)
           .addReg(M88k::R31)
           .addImm(MaxCallFrameSize + 4)
           .setMIFlag(MachineInstr::FrameSetup);
-    if (setupFP) {
+    if (SetupFP) {
       // Spill %r30: st %r30, %r31, <SP> or <new FP+4>
       BuildMI(MBB, MBBI, DL, LII.get(M88k::STriw))
           .addReg(M88k::R30, RegState::Kill)
