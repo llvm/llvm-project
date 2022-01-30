@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -sparsification="vectorization-strategy=2 vl=16" -for-loop-peeling -canonicalize | \
+// RUN: mlir-opt %s -sparsification="vectorization-strategy=2 vl=16" -scf-for-loop-peeling -canonicalize | \
 // RUN:   FileCheck %s
 
 #SparseVector = #sparse_tensor.encoding<{

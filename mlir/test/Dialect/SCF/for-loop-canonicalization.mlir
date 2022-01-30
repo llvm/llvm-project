@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -for-loop-canonicalization -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -scf-for-loop-canonicalization -split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @scf_for_canonicalize_min
 //       CHECK:   %[[C2:.*]] = arith.constant 2 : i64

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-linalg-transform-patterns="test-tile-scalarize-dynamic-dims" -for-loop-canonicalization -canonicalize -split-input-file | \
+// RUN: mlir-opt %s -test-linalg-transform-patterns="test-tile-scalarize-dynamic-dims" -scf-for-loop-canonicalization -canonicalize -split-input-file | \
 // RUN:     FileCheck %s
 
 // CHECK-LABEL: func @matmul_partly_dynamic_tensor(
