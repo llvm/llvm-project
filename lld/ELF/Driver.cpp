@@ -77,6 +77,13 @@ std::unique_ptr<LinkerDriver> elf::driver;
 static void setConfigs(opt::InputArgList &args);
 static void readConfigs(opt::InputArgList &args);
 
+void elf::errorOrWarn(const Twine &msg) {
+  if (config->noinhibitExec)
+    warn(msg);
+  else
+    error(msg);
+}
+
 bool elf::link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
                llvm::raw_ostream &stderrOS, bool exitEarly,
                bool disableOutput) {
