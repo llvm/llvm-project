@@ -18,12 +18,12 @@
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/AffineInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/LinalgInterfaceImpl.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/SCFInterfaceImpl.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/StdInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/VectorInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
+#include "mlir/Dialect/SCF/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/StandardOps/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Pass/PassManager.h"
@@ -61,8 +61,8 @@ struct TestComprehensiveFunctionBufferize
     affine_ext::registerBufferizableOpInterfaceExternalModels(registry);
     arith::registerBufferizableOpInterfaceExternalModels(registry);
     linalg_ext::registerBufferizableOpInterfaceExternalModels(registry);
-    scf_ext::registerBufferizableOpInterfaceExternalModels(registry);
-    std_ext::registerBufferizableOpInterfaceExternalModels(registry);
+    scf::registerBufferizableOpInterfaceExternalModels(registry);
+    mlir::registerBufferizableOpInterfaceExternalModels(registry);
     tensor::registerBufferizableOpInterfaceExternalModels(registry);
     vector_ext::registerBufferizableOpInterfaceExternalModels(registry);
   }
@@ -106,7 +106,7 @@ void TestComprehensiveFunctionBufferize::runOnOperation() {
   auto options = std::make_unique<AnalysisBufferizationOptions>();
 
   if (!allowReturnMemref)
-    options->addPostAnalysisStep<scf_ext::AssertScfForAliasingProperties>();
+    options->addPostAnalysisStep<scf::AssertScfForAliasingProperties>();
 
   options->allowReturnMemref = allowReturnMemref;
   options->allowUnknownOps = allowUnknownOps;
@@ -116,9 +116,9 @@ void TestComprehensiveFunctionBufferize::runOnOperation() {
   options->createDeallocs = createDeallocs;
 
   if (dialectFilter.hasValue()) {
-    options->dialectFilter.emplace();
+    options->hasFilter = true;
     for (const std::string &dialectNamespace : dialectFilter)
-      options->dialectFilter->insert(dialectNamespace);
+      options->dialectFilter.insert(dialectNamespace);
   }
 
   Operation *op = getOperation();

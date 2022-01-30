@@ -2602,17 +2602,15 @@ void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
   }
 
   // Determine the number of scalars we need to generate for each unroll
-  // iteration. If EntryVal is uniform, we only need to generate the first
-  // lane. Otherwise, we generate all VF values.
-  bool IsUniform =
-      Cost->isUniformAfterVectorization(cast<Instruction>(EntryVal), State.VF);
-  unsigned Lanes = IsUniform ? 1 : State.VF.getKnownMinValue();
+  // iteration.
+  bool FirstLaneOnly = vputils::onlyFirstLaneUsed(Def);
+  unsigned Lanes = FirstLaneOnly ? 1 : State.VF.getKnownMinValue();
   // Compute the scalar steps and save the results in State.
   Type *IntStepTy = IntegerType::get(ScalarIVTy->getContext(),
                                      ScalarIVTy->getScalarSizeInBits());
   Type *VecIVTy = nullptr;
   Value *UnitStepVec = nullptr, *SplatStep = nullptr, *SplatIV = nullptr;
-  if (!IsUniform && State.VF.isScalable()) {
+  if (!FirstLaneOnly && State.VF.isScalable()) {
     VecIVTy = VectorType::get(ScalarIVTy, State.VF);
     UnitStepVec =
         Builder.CreateStepVector(VectorType::get(IntStepTy, State.VF));
@@ -2623,7 +2621,7 @@ void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     Value *StartIdx0 = createStepForVF(Builder, IntStepTy, State.VF, Part);
 
-    if (!IsUniform && State.VF.isScalable()) {
+    if (!FirstLaneOnly && State.VF.isScalable()) {
       auto *SplatStartIdx = Builder.CreateVectorSplat(State.VF, StartIdx0);
       auto *InitVec = Builder.CreateAdd(SplatStartIdx, UnitStepVec);
       if (ScalarIVTy->isFloatingPointTy())

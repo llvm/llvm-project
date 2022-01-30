@@ -1782,6 +1782,7 @@ cc_library(
         "lib/Dialect/SCF/Transforms/*.h",
     ]),
     hdrs = [
+        "include/mlir/Dialect/SCF/BufferizableOpInterfaceImpl.h",
         "include/mlir/Dialect/SCF/Passes.h",
         "include/mlir/Dialect/SCF/Transforms.h",
     ],
@@ -1983,6 +1984,7 @@ cc_library(
     hdrs = ["include/mlir/Dialect/SparseTensor/Pipelines/Passes.h"],
     includes = ["include"],
     deps = [
+        ":ArithmeticTransforms",
         ":BufferizationTransforms",
         ":ConversionPasses",
         ":LinalgTransforms",
@@ -2434,6 +2436,7 @@ cc_library(
             "include/mlir/Dialect/SCF/*.h",
         ],
         exclude = [
+            "include/mlir/Dialect/SCF/BufferizableOpInterfaceImpl.h",
             "include/mlir/Dialect/SCF/Transforms.h",
         ],
     ),
@@ -6656,43 +6659,6 @@ cc_library(
 )
 
 cc_library(
-    name = "SCFBufferizableOpInterfaceImpl",
-    srcs = [
-        "lib/Dialect/Linalg/ComprehensiveBufferize/SCFInterfaceImpl.cpp",
-    ],
-    hdrs = [
-        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/SCFInterfaceImpl.h",
-    ],
-    includes = ["include"],
-    deps = [
-        ":BufferizationDialect",
-        ":BufferizationTransforms",
-        ":IR",
-        ":SCFDialect",
-        ":Support",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "StdBufferizableOpInterfaceImpl",
-    srcs = [
-        "lib/Dialect/Linalg/ComprehensiveBufferize/StdInterfaceImpl.cpp",
-    ],
-    hdrs = [
-        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/StdInterfaceImpl.h",
-    ],
-    includes = ["include"],
-    deps = [
-        ":BufferizationDialect",
-        ":IR",
-        ":StandardOps",
-        ":Support",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
     name = "VectorBufferizableOpInterfaceImpl",
     srcs = [
         "lib/Dialect/Linalg/ComprehensiveBufferize/VectorInterfaceImpl.cpp",
@@ -6927,13 +6893,11 @@ cc_library(
         ":MemRefDialect",
         ":ModuleBufferization",
         ":Pass",
-        ":SCFBufferizableOpInterfaceImpl",
         ":SCFDialect",
         ":SCFTransforms",
         ":SCFUtils",
         ":StandardOps",
         ":StandardOpsTransforms",
-        ":StdBufferizableOpInterfaceImpl",
         ":Support",
         ":TensorDialect",
         ":TensorTransforms",
