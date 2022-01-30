@@ -242,6 +242,7 @@ protected:
 // have to be as compact as possible, which is why we don't store the size (can
 // be found by looking at the next one).
 struct SectionPiece {
+  SectionPiece() = default;
   SectionPiece(size_t off, uint32_t hash, bool live)
       : inputOff(off), live(live), hash(hash >> 1) {}
 
