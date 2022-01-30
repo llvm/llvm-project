@@ -251,6 +251,8 @@ static Value *constructPointer(Type *ResTy, Type *PtrElemTy, Value *Ptr,
 /// once. Note that the value used for the callback may still be the value
 /// associated with \p IRP (due to PHIs). To limit how much effort is invested,
 /// we will never visit more values than specified by \p MaxValues.
+/// If \p Intraprocedural is set to true only values valid in the scope of
+/// \p CtxI will be visited and simplification into other scopes is prevented.
 template <typename StateTy>
 static bool genericValueTraversal(
     Attributor &A, IRPosition IRP, const AbstractAttribute &QueryingAA,
@@ -258,7 +260,8 @@ static bool genericValueTraversal(
     function_ref<bool(Value &, const Instruction *, StateTy &, bool)>
         VisitValueCB,
     const Instruction *CtxI, bool UseValueSimplify = true, int MaxValues = 16,
-    function_ref<Value *(Value *)> StripCB = nullptr) {
+    function_ref<Value *(Value *)> StripCB = nullptr,
+    bool Intraprocedural = false) {
 
   const AAIsDead *LivenessAA = nullptr;
   if (IRP.getAnchorScope())
@@ -351,18 +354,40 @@ static bool genericValueTraversal(
       continue;
     }
 
+    if (auto *Arg = dyn_cast<Argument>(V)) {
+      if (!Intraprocedural && !Arg->hasPassPointeeByValueCopyAttr()) {
+        SmallVector<Item> CallSiteValues;
+        bool AllCallSitesKnown = true;
+        if (A.checkForAllCallSites(
+                [&](AbstractCallSite ACS) {
+                  // Callbacks might not have a corresponding call site operand,
+                  // stick with the argument in that case.
+                  Value *CSOp = ACS.getCallArgOperand(*Arg);
+                  if (!CSOp)
+                    return false;
+                  CallSiteValues.push_back({CSOp, ACS.getInstruction()});
+                  return true;
+                },
+                *Arg->getParent(), true, &QueryingAA, AllCallSitesKnown)) {
+          Worklist.append(CallSiteValues);
+          continue;
+        }
+      }
+    }
+
     if (UseValueSimplify && !isa<Constant>(V)) {
       bool UsedAssumedInformation = false;
       Optional<Value *> SimpleV =
           A.getAssumedSimplified(*V, QueryingAA, UsedAssumedInformation);
       if (!SimpleV.hasValue())
         continue;
-      if (!SimpleV.getValue())
-        return false;
       Value *NewV = SimpleV.getValue();
-      if (NewV != V) {
-        Worklist.push_back({NewV, CtxI});
-        continue;
+      if (NewV && NewV != V) {
+        if (!Intraprocedural || !CtxI ||
+            AA::isValidInScope(*NewV, CtxI->getFunction())) {
+          Worklist.push_back({NewV, CtxI});
+          continue;
+        }
       }
     }
 
@@ -385,7 +410,8 @@ static bool genericValueTraversal(
 bool AA::getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
                                      SmallVectorImpl<Value *> &Objects,
                                      const AbstractAttribute &QueryingAA,
-                                     const Instruction *CtxI) {
+                                     const Instruction *CtxI,
+                                     bool Intraprocedural) {
   auto StripCB = [&](Value *V) { return getUnderlyingObject(V); };
   SmallPtrSet<Value *, 8> SeenObjects;
   auto VisitValueCB = [&SeenObjects](Value &Val, const Instruction *,
@@ -397,7 +423,7 @@ bool AA::getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
   };
   if (!genericValueTraversal<decltype(Objects)>(
           A, IRPosition::value(Ptr), QueryingAA, Objects, VisitValueCB, CtxI,
-          true, 32, StripCB))
+          true, 32, StripCB, Intraprocedural))
     return false;
   return true;
 }
@@ -1815,17 +1841,9 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
 
   auto ReturnValueCB = [&](Value &V, const Instruction *CtxI, ReturnInst &Ret,
                            bool) -> bool {
-    bool UsedAssumedInformation = false;
-    Optional<Value *> SimpleRetVal =
-        A.getAssumedSimplified(V, *this, UsedAssumedInformation);
-    if (!SimpleRetVal.hasValue())
-      return true;
-    if (!SimpleRetVal.getValue())
-      return false;
-    Value *RetVal = *SimpleRetVal;
-    assert(AA::isValidInScope(*RetVal, Ret.getFunction()) &&
+    assert(AA::isValidInScope(V, Ret.getFunction()) &&
            "Assumed returned value should be valid in function scope!");
-    if (ReturnedValues[RetVal].insert(&Ret))
+    if (ReturnedValues[&V].insert(&Ret))
       Changed = ChangeStatus::CHANGED;
     return true;
   };
@@ -1834,7 +1852,8 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
     ReturnInst &Ret = cast<ReturnInst>(I);
     return genericValueTraversal<ReturnInst>(
         A, IRPosition::value(*Ret.getReturnValue()), *this, Ret, ReturnValueCB,
-        &I);
+        &I, /* UseValueSimplify */ true, /* MaxValues */ 16,
+        /* StripCB */ nullptr, /* Intraprocedural */ true);
   };
 
   // Discover returned values from all live returned instructions in the
@@ -7735,7 +7754,8 @@ void AAMemoryLocationImpl::categorizePtrValue(
                     << getMemoryLocationsAsStr(State.getAssumed()) << "]\n");
 
   SmallVector<Value *, 8> Objects;
-  if (!AA::getAssumedUnderlyingObjects(A, Ptr, Objects, *this, &I)) {
+  if (!AA::getAssumedUnderlyingObjects(A, Ptr, Objects, *this, &I,
+                                       /* Intraprocedural */ true)) {
     LLVM_DEBUG(
         dbgs() << "[AAMemoryLocation] Pointer locations not categorized\n");
     updateStateAndAccessesMap(State, NO_UNKOWN_MEM, &I, nullptr, Changed,
