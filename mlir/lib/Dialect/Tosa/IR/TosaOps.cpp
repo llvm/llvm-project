@@ -538,17 +538,16 @@ struct ClampClampOptimization : public OpRewritePattern<tosa::ClampOp> {
       return failure();
 
     if (tosa::ClampOp clampOp = dyn_cast<tosa::ClampOp>(definingOp)) {
-      auto min_fp = std::max(op.min_fp(), clampOp.min_fp()).convertToFloat();
-      auto max_fp = std::min(op.max_fp(), clampOp.max_fp()).convertToFloat();
+      auto minFp = std::max(op.min_fp(), clampOp.min_fp()).convertToFloat();
+      auto maxFp = std::min(op.max_fp(), clampOp.max_fp()).convertToFloat();
 
-      auto min_int = std::max(op.min_int(), clampOp.min_int());
-      auto max_int = std::min(op.max_int(), clampOp.max_int());
+      auto minInt = std::max(op.min_int(), clampOp.min_int());
+      auto maxInt = std::min(op.max_int(), clampOp.max_int());
 
       rewriter.replaceOpWithNewOp<tosa::ClampOp>(
-          op, op.getType(), clampOp.input(),
-          rewriter.getI64IntegerAttr(min_int),
-          rewriter.getI64IntegerAttr(max_int), rewriter.getF32FloatAttr(min_fp),
-          rewriter.getF32FloatAttr(max_fp));
+          op, op.getType(), clampOp.input(), rewriter.getI64IntegerAttr(minInt),
+          rewriter.getI64IntegerAttr(maxInt), rewriter.getF32FloatAttr(minFp),
+          rewriter.getF32FloatAttr(maxFp));
       return success();
     }
 
