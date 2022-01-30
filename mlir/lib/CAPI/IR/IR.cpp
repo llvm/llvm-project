@@ -177,7 +177,8 @@ MlirModule mlirModuleCreateEmpty(MlirLocation location) {
 }
 
 MlirModule mlirModuleCreateParse(MlirContext context, MlirStringRef module) {
-  OwningModuleRef owning = parseSourceString(unwrap(module), unwrap(context));
+  OwningOpRef<ModuleOp> owning =
+      parseSourceString(unwrap(module), unwrap(context));
   if (!owning)
     return MlirModule{nullptr};
   return MlirModule{owning.release().getOperation()};
@@ -192,8 +193,9 @@ MlirBlock mlirModuleGetBody(MlirModule module) {
 }
 
 void mlirModuleDestroy(MlirModule module) {
-  // Transfer ownership to an OwningModuleRef so that its destructor is called.
-  OwningModuleRef(unwrap(module));
+  // Transfer ownership to an OwningOpRef<ModuleOp> so that its destructor is
+  // called.
+  OwningOpRef<ModuleOp>(unwrap(module));
 }
 
 MlirOperation mlirModuleGetOperation(MlirModule module) {

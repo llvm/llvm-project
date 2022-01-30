@@ -62,7 +62,7 @@ static void registerTranslateToMLIRFunction(
     StringRef name, const TranslateSourceMgrToMLIRFunction &function) {
   auto wrappedFn = [function](llvm::SourceMgr &sourceMgr, raw_ostream &output,
                               MLIRContext *context) {
-    OwningModuleRef module = function(sourceMgr, context);
+    OwningOpRef<ModuleOp> module = function(sourceMgr, context);
     if (!module || failed(verify(*module)))
       return failure();
     module->print(output);
@@ -101,7 +101,7 @@ TranslateFromMLIRRegistration::TranslateFromMLIRRegistration(
     DialectRegistry registry;
     dialectRegistration(registry);
     context->appendDialectRegistry(registry);
-    auto module = OwningModuleRef(parseSourceFile(sourceMgr, context));
+    auto module = OwningOpRef<ModuleOp>(parseSourceFile(sourceMgr, context));
     if (!module || failed(verify(*module)))
       return failure();
     return function(module.get(), output);

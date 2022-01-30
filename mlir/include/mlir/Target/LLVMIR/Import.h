@@ -25,14 +25,14 @@ class Module;
 namespace mlir {
 
 class DialectRegistry;
-class OwningModuleRef;
+
 class MLIRContext;
 
 /// Convert the given LLVM module into MLIR's LLVM dialect.  The LLVM context is
 /// extracted from the registered LLVM IR dialect. In case of error, report it
 /// to the error handler registered with the MLIR context, if any (obtained from
 /// the MLIR module), and return `{}`.
-OwningModuleRef
+OwningOpRef<ModuleOp>
 translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
                         MLIRContext *context);
 

@@ -25,21 +25,22 @@ class DialectRegistry;
 struct LogicalResult;
 class MLIRContext;
 class ModuleOp;
-class OwningModuleRef;
+template <typename OpTy>
+class OwningOpRef;
 
 /// Interface of the function that translates the sources managed by `sourceMgr`
 /// to MLIR. The source manager has at least one buffer. The implementation
 /// should create a new MLIR ModuleOp in the given context and return a pointer
 /// to it, or a nullptr in case of any error.
-using TranslateSourceMgrToMLIRFunction =
-    std::function<OwningModuleRef(llvm::SourceMgr &sourceMgr, MLIRContext *)>;
+using TranslateSourceMgrToMLIRFunction = std::function<OwningOpRef<ModuleOp>(
+    llvm::SourceMgr &sourceMgr, MLIRContext *)>;
 
 /// Interface of the function that translates the given string to MLIR. The
 /// implementation should create a new MLIR ModuleOp in the given context. If
 /// source-related error reporting is required from within the function, use
 /// TranslateSourceMgrToMLIRFunction instead.
 using TranslateStringRefToMLIRFunction =
-    std::function<OwningModuleRef(llvm::StringRef, MLIRContext *)>;
+    std::function<OwningOpRef<ModuleOp>(llvm::StringRef, MLIRContext *)>;
 
 /// Interface of the function that translates MLIR to a different format and
 /// outputs the result to a stream. It is allowed to modify the module.

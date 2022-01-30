@@ -47,7 +47,7 @@ protected:
 
   DialectRegistry registry;
   MLIRContext ctx;
-  OwningModuleRef module;
+  OwningOpRef<ModuleOp> module;
   FuncOp mapFn;
 };
 

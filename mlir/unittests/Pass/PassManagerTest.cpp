@@ -50,7 +50,7 @@ TEST(PassManagerTest, OpSpecificAnalysis) {
   Builder builder(&context);
 
   // Create a module with 2 functions.
-  OwningModuleRef module(ModuleOp::create(UnknownLoc::get(&context)));
+  OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
   for (StringRef name : {"secret", "not_secret"}) {
     FuncOp func =
         FuncOp::create(builder.getUnknownLoc(), name,
@@ -95,7 +95,7 @@ TEST(PassManagerTest, InvalidPass) {
   context.allowUnregisteredDialects();
 
   // Create a module
-  OwningModuleRef module(ModuleOp::create(UnknownLoc::get(&context)));
+  OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
 
   // Add a single "invalid_op" operation
   OpBuilder builder(&module->getBodyRegion());

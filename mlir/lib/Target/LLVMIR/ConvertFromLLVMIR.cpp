@@ -854,11 +854,11 @@ LogicalResult Importer::processBasicBlock(llvm::BasicBlock *bb, Block *block) {
   return success();
 }
 
-OwningModuleRef
+OwningOpRef<ModuleOp>
 mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
                               MLIRContext *context) {
   context->loadDialect<LLVMDialect>();
-  OwningModuleRef module(ModuleOp::create(
+  OwningOpRef<ModuleOp> module(ModuleOp::create(
       FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
 
   Importer deserializer(context, module.get());
@@ -876,8 +876,8 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
 
 // Deserializes the LLVM bitcode stored in `input` into an MLIR module in the
 // LLVM dialect.
-OwningModuleRef translateLLVMIRToModule(llvm::SourceMgr &sourceMgr,
-                                        MLIRContext *context) {
+OwningOpRef<ModuleOp> translateLLVMIRToModule(llvm::SourceMgr &sourceMgr,
+                                              MLIRContext *context) {
   llvm::SMDiagnostic err;
   llvm::LLVMContext llvmContext;
   std::unique_ptr<llvm::Module> llvmModule = llvm::parseIR(

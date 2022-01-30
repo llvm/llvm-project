@@ -447,8 +447,8 @@ private:
 namespace toy {
 
 // The public API for codegen.
-mlir::OwningModuleRef mlirGen(mlir::MLIRContext &context,
-                              ModuleAST &moduleAST) {
+mlir::OwningOpRef<mlir::ModuleOp> mlirGen(mlir::MLIRContext &context,
+                                          ModuleAST &moduleAST) {
   return MLIRGenImpl(context).mlirGen(moduleAST);
 }
 
