@@ -188,15 +188,14 @@ void TestLinalgCodegenStrategy::runStrategy(
   CodegenStrategy strategy;
   strategy
       .tileAndFuseIf(fuse && !tileSizes.empty(), anchorOpName,
-                     std::move(tilingAndFusionOptions))
-      .tileIf(!fuse && !tileSizes.empty(), anchorOpName,
-              std::move(tilingOptions))
+                     tilingAndFusionOptions)
+      .tileIf(!fuse && !tileSizes.empty(), anchorOpName, tilingOptions)
       .promoteIf(!fuse && promote, anchorOpName,
                  LinalgPromotionOptions()
                      .setAlignment(16)
                      .setUseFullTileBuffersByDefault(promoteFullTile))
       .tileIf(!fuse && !registerTileSizes.empty(), anchorOpName,
-              std::move(registerTilingOptions))
+              registerTilingOptions)
       .promoteIf(!fuse && registerPromote, anchorOpName,
                  LinalgPromotionOptions()
                      .setAlignment(16)
