@@ -37,7 +37,7 @@ namespace IDFCalculatorDetail {
 /// May be specialized if, for example, one wouldn't like to return nullpointer
 /// successors.
 template <class NodeTy, bool IsPostDom> struct ChildrenGetterTy {
-  using NodeRef = typename GraphTraits<NodeTy>::NodeRef;
+  using NodeRef = typename GraphTraits<NodeTy *>::NodeRef;
   using ChildrenTy = SmallVector<NodeRef, 8>;
 
   ChildrenTy get(const NodeRef &N);

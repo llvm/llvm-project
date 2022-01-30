@@ -193,7 +193,7 @@ namespace IDFCalculatorDetail {
 /// Specialize ChildrenGetterTy to skip nullpointer successors.
 template <bool IsPostDom>
 struct ChildrenGetterTy<clang::CFGBlock, IsPostDom> {
-  using NodeRef = typename GraphTraits<clang::CFGBlock>::NodeRef;
+  using NodeRef = typename GraphTraits<clang::CFGBlock *>::NodeRef;
   using ChildrenTy = SmallVector<NodeRef, 8>;
 
   ChildrenTy get(const NodeRef &N) {
