@@ -16,7 +16,7 @@
 #include "fp_lib.h"
 
 #if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
-COMPILER_RT_ABI fp_t __floatunsitf(unsigned int a) {
+COMPILER_RT_ABI fp_t __floatunsitf(su_int a) {
 
   const int aWidth = sizeof a * CHAR_BIT;
 

@@ -12,9 +12,9 @@
 
 // Returns: long integer converted to long double
 
-COMPILER_RT_ABI long double __floatunditf(unsigned long long a);
+COMPILER_RT_ABI long double __floatunditf(du_int a);
 
-int test__floatunditf(unsigned long long a, uint64_t expectedHi, uint64_t expectedLo)
+int test__floatunditf(du_int a, uint64_t expectedHi, uint64_t expectedLo)
 {
     long double x = __floatunditf(a);
     int ret = compareResultLD(x, expectedHi, expectedLo);
