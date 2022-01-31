@@ -8333,23 +8333,62 @@ let Predicates = [HasLS64] in {
 }
 
 let Predicates = [HasMOPS] in {
-  defm CPYFP : MOPSMemoryCopyInsns<0b00, "cpyfp">;
-  defm CPYFM : MOPSMemoryCopyInsns<0b01, "cpyfm">;
-  defm CPYFE : MOPSMemoryCopyInsns<0b10, "cpyfe">;
+  let Defs = [NZCV] in {
+    defm CPYFP : MOPSMemoryCopyInsns<0b00, "cpyfp">;
 
-  defm CPYP : MOPSMemoryMoveInsns<0b00, "cpyp">;
-  defm CPYM : MOPSMemoryMoveInsns<0b01, "cpym">;
-  defm CPYE : MOPSMemoryMoveInsns<0b10, "cpye">;
+    defm CPYP : MOPSMemoryMoveInsns<0b00, "cpyp">;
 
-  defm SETP : MOPSMemorySetInsns<0b00, "setp">;
-  defm SETM : MOPSMemorySetInsns<0b01, "setm">;
-  defm SETE : MOPSMemorySetInsns<0b10, "sete">;
+    defm SETP : MOPSMemorySetInsns<0b00, "setp">;
+  }
+  let Uses = [NZCV] in {
+    defm CPYFM : MOPSMemoryCopyInsns<0b01, "cpyfm">;
+    defm CPYFE : MOPSMemoryCopyInsns<0b10, "cpyfe">;
+
+    defm CPYM : MOPSMemoryMoveInsns<0b01, "cpym">;
+    defm CPYE : MOPSMemoryMoveInsns<0b10, "cpye">;
+
+    defm SETM : MOPSMemorySetInsns<0b01, "setm">;
+    defm SETE : MOPSMemorySetInsns<0b10, "sete">;
+  }
 }
 let Predicates = [HasMOPS, HasMTE] in {
-  defm SETGP     : MOPSMemorySetTaggingInsns<0b00, "setgp">;
-  defm SETGM     : MOPSMemorySetTaggingInsns<0b01, "setgm">;
-  // Can't use SETGE because it's a reserved name in TargetSelectionDAG.td
-  defm MOPSSETGE : MOPSMemorySetTaggingInsns<0b10, "setge">;
+  let Defs = [NZCV] in {
+    defm SETGP     : MOPSMemorySetTaggingInsns<0b00, "setgp">;
+  }
+  let Uses = [NZCV] in {
+    defm SETGM     : MOPSMemorySetTaggingInsns<0b01, "setgm">;
+    // Can't use SETGE because it's a reserved name in TargetSelectionDAG.td
+    defm MOPSSETGE : MOPSMemorySetTaggingInsns<0b10, "setge">;
+  }
+}
+
+// MOPS Node operands: 0: Dst, 1: Src or Value, 2: Size, 3: Chain
+// MOPS Node results: 0: Dst writeback, 1: Size writeback, 2: Chain
+def SDT_AArch64mops : SDTypeProfile<2, 3, [ SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2> ]>;
+def AArch64mops_memset : SDNode<"AArch64ISD::MOPS_MEMSET", SDT_AArch64mops>;
+def AArch64mops_memset_tagging : SDNode<"AArch64ISD::MOPS_MEMSET_TAGGING", SDT_AArch64mops>;
+def AArch64mops_memcopy : SDNode<"AArch64ISD::MOPS_MEMCOPY", SDT_AArch64mops>;
+def AArch64mops_memmove : SDNode<"AArch64ISD::MOPS_MEMMOVE", SDT_AArch64mops>;
+
+let Predicates = [HasMOPS], Defs = [NZCV], Size = 12, mayStore = 1 in {
+  let mayLoad = 1 in {
+    def MOPSMemoryCopyPseudo : Pseudo<(outs GPR64common:$Rd_wb, GPR64common:$Rs_wb, GPR64:$Rn_wb),
+                                      (ins GPR64common:$Rd, GPR64common:$Rs, GPR64:$Rn),
+                                      [], "$Rd = $Rd_wb,$Rs = $Rs_wb,$Rn = $Rn_wb">, Sched<[]>;
+    def MOPSMemoryMovePseudo : Pseudo<(outs GPR64common:$Rd_wb, GPR64common:$Rs_wb, GPR64:$Rn_wb),
+                                      (ins GPR64common:$Rd, GPR64common:$Rs, GPR64:$Rn),
+                                      [], "$Rd = $Rd_wb,$Rs = $Rs_wb,$Rn = $Rn_wb">, Sched<[]>;
+  }
+  let mayLoad = 0 in {
+    def MOPSMemorySetPseudo  : Pseudo<(outs GPR64common:$Rd_wb, GPR64:$Rn_wb),
+                                      (ins GPR64common:$Rd, GPR64:$Rn, GPR64:$Rm),
+                                      [], "$Rd = $Rd_wb,$Rn = $Rn_wb">, Sched<[]>;
+  }
+}
+let Predicates = [HasMOPS, HasMTE], Defs = [NZCV], Size = 12, mayLoad = 0, mayStore = 1 in {
+  def MOPSMemorySetTaggingPseudo : Pseudo<(outs GPR64common:$Rd_wb, GPR64:$Rn_wb),
+                                          (ins GPR64common:$Rd, GPR64:$Rn, GPR64:$Rm),
+                                          [], "$Rd = $Rd_wb,$Rn = $Rn_wb">, Sched<[]>;
 }
 
 let Defs = [X16, X17], mayStore = 1, isCodeGenOnly = 1 in

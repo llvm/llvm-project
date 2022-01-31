@@ -64,3 +64,21 @@ struct Range2 {
 };
 static_assert( std::ranges::common_range<Range2>);
 static_assert(!std::ranges::common_range<Range2 const>);
+
+// Test ADL-proofing.
+struct Incomplete;
+template<class T> struct Holder { T t; };
+
+static_assert(!std::ranges::common_range<Holder<Incomplete>*>);
+static_assert(!std::ranges::common_range<Holder<Incomplete>*&>);
+static_assert(!std::ranges::common_range<Holder<Incomplete>*&&>);
+static_assert(!std::ranges::common_range<Holder<Incomplete>* const>);
+static_assert(!std::ranges::common_range<Holder<Incomplete>* const&>);
+static_assert(!std::ranges::common_range<Holder<Incomplete>* const&&>);
+
+static_assert( std::ranges::common_range<Holder<Incomplete>*[10]>);
+static_assert( std::ranges::common_range<Holder<Incomplete>*(&)[10]>);
+static_assert( std::ranges::common_range<Holder<Incomplete>*(&&)[10]>);
+static_assert( std::ranges::common_range<Holder<Incomplete>* const[10]>);
+static_assert( std::ranges::common_range<Holder<Incomplete>* const(&)[10]>);
+static_assert( std::ranges::common_range<Holder<Incomplete>* const(&&)[10]>);

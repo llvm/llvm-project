@@ -21,7 +21,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 
 // Base class for Linalg dialect ops that do not correspond to library calls.
-class Linalg_Op<string mnemonic, list<OpTrait> traits = []> :
+class Linalg_Op<string mnemonic, list<Trait> traits = []> :
     Op<Linalg_Dialect, mnemonic, traits> {
   // For every linalg op, there needs to be a:
   //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)

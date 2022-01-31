@@ -43,7 +43,7 @@ def NVVM_Dialect : Dialect {
 // NVVM op definitions
 //===----------------------------------------------------------------------===//
 
-class NVVM_Op<string mnemonic, list<OpTrait> traits = []> :
+class NVVM_Op<string mnemonic, list<Trait> traits = []> :
   LLVM_OpBase<NVVM_Dialect, mnemonic, traits> {
 }
 
@@ -52,7 +52,7 @@ class NVVM_Op<string mnemonic, list<OpTrait> traits = []> :
 //===----------------------------------------------------------------------===//
 
 class NVVM_IntrOp<string mnem, list<int> overloadedResults,
-                  list<int> overloadedOperands, list<OpTrait> traits,
+                  list<int> overloadedOperands, list<Trait> traits,
                   int numResults>
   : LLVM_IntrOpBase<NVVM_Dialect, mnem, "nvvm_" # !subst(".", "_", mnem),
                     overloadedResults, overloadedOperands, traits, numResults>;
@@ -63,7 +63,7 @@ class NVVM_IntrOp<string mnem, list<int> overloadedResults,
 //===----------------------------------------------------------------------===//
 
 class NVVM_SpecialRegisterOp<string mnemonic,
-    list<OpTrait> traits = []> :
+    list<Trait> traits = []> :
   NVVM_IntrOp<mnemonic, [], [], !listconcat(traits, [NoSideEffect]), 1>,
   Arguments<(ins)> {
   let assemblyFormat = "attr-dict `:` type($res)";

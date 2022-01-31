@@ -155,3 +155,17 @@ TEST(InstSizes, TLSDESC_CALLSEQ) {
         EXPECT_EQ(16u, II.getInstSizeInBytes(*I));
       });
 }
+
+TEST(InstSizes, MOPSMemorySetTaggingPseudo) {
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+
+  runChecks(TM.get(), II.get(), "",
+            "  renamable $x0, dead renamable $x1 = MOPSMemorySetTaggingPseudo "
+            "killed renamable $x0, killed renamable $x1, killed renamable $x2, "
+            "implicit-def dead $nzcv\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(12u, II.getInstSizeInBytes(*I));
+            });
+}

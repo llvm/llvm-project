@@ -11,6 +11,7 @@ add_llvm_component_library(LLVMBitWriter
   Analysis
   Core
   MC
+  TransformUtils
   Object
   Support
   )

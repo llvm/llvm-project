@@ -9,5 +9,6 @@ add_mlir_dialect_library(MLIRAsync
 
   LINK_LIBS PUBLIC
   MLIRDialect
+  MLIRInferTypeOpInterface
   MLIRIR
   )

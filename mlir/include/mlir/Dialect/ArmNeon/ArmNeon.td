@@ -38,7 +38,7 @@ def ArmNeon_Dialect : Dialect {
 // intrinsic.
 class ArmNeon_IntrOp<string mnemonic, list<int> overloadedResults,
                      list<int> overloadedOperands, int numResults,
-                     list<OpTrait> traits = [], bit requiresAccessGroup = 0,
+                     list<Trait> traits = [], bit requiresAccessGroup = 0,
                      bit requiresAliasScope = 0>
     : LLVM_IntrOpBase</*dialect=*/ArmNeon_Dialect,
                       /*opName=*/"intr." # mnemonic,
@@ -53,14 +53,14 @@ class ArmNeon_IntrOp<string mnemonic, list<int> overloadedResults,
 // ArmNeon dialect op that corresponds to an LLVM IR intrinsic with one
 // overloaded result.
 class ArmNeon_OverloadedOneResultIntrOp<string mnemonic,
-                                        list<OpTrait> traits = []>
+                                        list<Trait> traits = []>
   : ArmNeon_IntrOp<mnemonic, [0], [], 1, traits>;
 
 // ArmNeon dialect op that corresponds to an LLVM IR intrinsic with one
 // overloaded result and overloaded operands list.
 class ArmNeon_OverloadedOperandsWithOneResultIntrOp<string mnemonic,
                                                     list<int> overloadedOperands,
-                                                    list<OpTrait> traits = []>
+                                                    list<Trait> traits = []>
   : ArmNeon_IntrOp<mnemonic, [0], overloadedOperands, 1, traits>;
 
 def SMullOp : ArmNeon_OverloadedOneResultIntrOp<"smull", [
@@ -120,7 +120,7 @@ def SdotOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"sdot",[1], [
     "$a `,` $b `,` $c attr-dict `:` type($b) `,` type($c) `to` type($res)";
   }
 
-class ArmNeon_2dOp<string mnemonic, list<OpTrait> traits = []>
+class ArmNeon_2dOp<string mnemonic, list<Trait> traits = []>
     : Op</*dialect=*/ArmNeon_Dialect,
          /*opName=*/"2d." # mnemonic,
          /*traits=*/traits>;

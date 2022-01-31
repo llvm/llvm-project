@@ -10,6 +10,7 @@
 ; RUN: sed -i 's/\\n feature/\n feature/g' %t1
 ; RUN: sed -i 's/\\n/ /g' %t1
 ; RUN: FileCheck --input-file %t1 %s --check-prefixes=CHECK,NOML
+; RUN: diff %t1 %S/Inputs/reference-log-noml.txt
 
 ; RUN: rm -rf %t && mkdir %t
 ; RUN: %python %S/../../../lib/Analysis/models/gen-regalloc-eviction-test-model.py %t

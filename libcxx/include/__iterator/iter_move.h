@@ -32,10 +32,12 @@ namespace __iter_move {
 
 void iter_move();
 
-template<class _Ip>
-concept __unqualified_iter_move = requires(_Ip&& __i) {
-    iter_move(_VSTD::forward<_Ip>(__i));
-};
+template <class _Tp>
+concept __unqualified_iter_move =
+  __class_or_enum<remove_cvref_t<_Tp>> &&
+  requires (_Tp&& __t) {
+    iter_move(_VSTD::forward<_Tp>(__t));
+  };
 
 // [iterator.cust.move]/1
 // The name ranges::iter_move denotes a customization point object.

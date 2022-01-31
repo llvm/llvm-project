@@ -4351,6 +4351,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool IsHIP = JA.isOffloading(Action::OFK_HIP);
   bool IsHIPDevice = JA.isDeviceOffloading(Action::OFK_HIP);
   bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
+  bool IsOpenMPHost = JA.isHostOffloading(Action::OFK_OpenMP);
   bool IsHeaderModulePrecompile = isa<HeaderModulePrecompileJobAction>(JA);
   bool IsDeviceOffloadAction = !(JA.isDeviceOffloading(Action::OFK_None) ||
                                  JA.isDeviceOffloading(Action::OFK_Host));
@@ -4369,6 +4370,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       IsHeaderModulePrecompile ? HeaderModuleInput : Inputs[0];
 
   InputInfoList ModuleHeaderInputs;
+  InputInfoList OpenMPHostInputs;
   const InputInfo *CudaDeviceInput = nullptr;
   const InputInfo *OpenMPDeviceInput = nullptr;
   for (const InputInfo &I : Inputs) {
@@ -4387,6 +4389,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CudaDeviceInput = &I;
     } else if (IsOpenMPDevice && !OpenMPDeviceInput) {
       OpenMPDeviceInput = &I;
+    } else if (IsOpenMPHost) {
+      OpenMPHostInputs.push_back(I);
     } else {
       llvm_unreachable("unexpectedly given multiple inputs");
     }
@@ -6893,6 +6897,25 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  // Host-side OpenMP offloading recieves the device object files and embeds it
+  // in a named section including the associated target triple and architecture.
+  if (IsOpenMPHost && !OpenMPHostInputs.empty()) {
+    auto InputFile = OpenMPHostInputs.begin();
+    auto OpenMPTCs = C.getOffloadToolChains<Action::OFK_OpenMP>();
+    for (auto TI = OpenMPTCs.first, TE = OpenMPTCs.second; TI != TE;
+         ++TI, ++InputFile) {
+      const ToolChain *TC = TI->second;
+      const ArgList &TCArgs = C.getArgsForToolChain(TC, "", Action::OFK_OpenMP);
+      StringRef File =
+          C.getArgs().MakeArgString(TC->getInputFilename(*InputFile));
+      StringRef InputName = Clang::getBaseInputStem(Args, Inputs);
+
+      CmdArgs.push_back(Args.MakeArgString(
+          "-fembed-offload-object=" + File + "," + TC->getTripleString() + "." +
+          TCArgs.getLastArgValue(options::OPT_march_EQ) + "." + InputName));
+    }
+  }
+
   if (Triple.isAMDGPU()) {
     handleAMDGPUCodeObjectVersionOptions(D, Args, CmdArgs);
 
@@ -8118,4 +8141,29 @@ void OffloadWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       JA, *this, ResponseFileSupport::None(),
       Args.MakeArgString(getToolChain().GetProgramPath(getShortName())),
       CmdArgs, Inputs, Output));
+}
+
+void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
+                                 const InputInfo &Output,
+                                 const InputInfoList &Inputs,
+                                 const ArgList &Args,
+                                 const char *LinkingOutput) const {
+  ArgStringList CmdArgs;
+
+  // Construct the link job so we can wrap around it.
+  Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
+  const auto &LinkCommand = C.getJobs().getJobs().back();
+
+  CmdArgs.push_back("-linker-path");
+  CmdArgs.push_back(LinkCommand->getExecutable());
+  for (const char *LinkArg : LinkCommand->getArguments())
+    CmdArgs.push_back(LinkArg);
+
+  const char *Exec =
+      Args.MakeArgString(getToolChain().GetProgramPath("clang-linker-wrapper"));
+
+  // Replace the executable and arguments associated with the link job to the
+  // wrapper.
+  LinkCommand->replaceExecutable(Exec);
+  LinkCommand->replaceArguments(CmdArgs);
 }

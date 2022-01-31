@@ -25,7 +25,7 @@ include "mlir/IR/SymbolInterfaces.td"
 //===----------------------------------------------------------------------===//
 
 // Base class for the operation in this dialect
-class Shape_Op<string mnemonic, list<OpTrait> traits = []> :
+class Shape_Op<string mnemonic, list<Trait> traits = []> :
     Op<ShapeDialect, mnemonic, traits>;
 
 def Shape_AddOp : Shape_Op<"add",
