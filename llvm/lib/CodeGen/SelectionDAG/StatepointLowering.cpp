@@ -990,15 +990,21 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   return ReturnVal;
 }
 
-static std::pair<bool, bool> getGCResultLocality(const GCStatepointInst &S) {
-  std::pair<bool, bool> Res(false, false);
-  for (auto *U : S.users())
-    if (auto *GRI = dyn_cast<GCResultInst>(U)) {
-      if (GRI->getParent() == S.getParent())
-        Res.first = true;
-      else
-        Res.second = true;
-    }
+/// Return two gc.results if present.  First result is a block local
+/// gc.result, second result is a non-block local gc.result.  Corresponding
+/// entry will be nullptr if not present.
+static std::pair<const GCResultInst*, const GCResultInst*>
+getGCResultLocality(const GCStatepointInst &S) {
+  std::pair<const GCResultInst *, const GCResultInst*> Res(nullptr, nullptr);
+  for (auto *U : S.users()) {
+    auto *GRI = dyn_cast<GCResultInst>(U);
+    if (!GRI)
+      continue;
+    if (GRI->getParent() == S.getParent())
+      Res.first = GRI;
+    else
+      Res.second = GRI;
+  }
   return Res;
 }
 
@@ -1087,12 +1093,11 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
   SDValue ReturnValue = LowerAsSTATEPOINT(SI);
 
   // Export the result value if needed
-  const std::pair<bool, bool> GCResultLocality = getGCResultLocality(I);
-  Type *RetTy = I.getActualReturnType();
+  const auto GCResultLocality = getGCResultLocality(I);
 
-  if (RetTy->isVoidTy() ||
-      (!GCResultLocality.first && !GCResultLocality.second)) {
-    // The return value is not needed, just generate a poison value. 
+  if (!GCResultLocality.first && !GCResultLocality.second) {
+    // The return value is not needed, just generate a poison value.
+    // Note: This covers the void return case.
     setValue(&I, DAG.getIntPtrConstant(-1, getCurSDLoc()));
     return;
   }
@@ -1114,6 +1119,7 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
   // manually.
   // TODO: To eliminate this problem we can remove gc.result intrinsics
   //       completely and make statepoint call to return a tuple.
+  Type *RetTy = GCResultLocality.second->getType();
   unsigned Reg = FuncInfo.CreateRegs(RetTy);
   RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
                    DAG.getDataLayout(), Reg, RetTy,
