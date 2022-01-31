@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRVectorTransforms
+  BufferizableOpInterfaceImpl.cpp
   VectorDropLeadUnitDim.cpp
   VectorInsertExtractStridedSliceRewritePatterns.cpp
   VectorMultiDimReductionTransforms.cpp
@@ -16,6 +17,7 @@ add_mlir_dialect_library(MLIRVectorTransforms
   MLIRAffineAnalysis
   MLIRAffineUtils
   MLIRArithmetic
+  MLIRBufferization
   MLIRDialectUtils
   MLIRIR
   MLIRLinalg

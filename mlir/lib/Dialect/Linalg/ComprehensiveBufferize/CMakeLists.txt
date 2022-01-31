@@ -25,15 +25,6 @@ add_mlir_dialect_library(MLIRLinalgBufferizableOpInterfaceImpl
   MLIRTensor
 )
 
-add_mlir_dialect_library(MLIRVectorBufferizableOpInterfaceImpl
-  VectorInterfaceImpl.cpp
-
-  LINK_LIBS PUBLIC
-  MLIRBufferization
-  MLIRIR
-  MLIRVector
-)
-
 add_mlir_dialect_library(MLIRModuleBufferization
   ModuleBufferization.cpp
 
