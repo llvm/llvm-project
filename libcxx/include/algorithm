@@ -20,7 +20,10 @@ namespace std
 
 namespace ranges {
   template <class I1, class I2>
-    struct in_in_result; // since C++20
+    struct in_in_result;     // since C++20
+
+  template <class I1, class I2, class O>
+    struct in_in_out_result; // since C++20
 }
 
 template <class InputIterator, class Predicate>
@@ -696,6 +699,7 @@ template<class InputIterator, class OutputIterator>
 #include <__algorithm/generate.h>
 #include <__algorithm/generate_n.h>
 #include <__algorithm/half_positive.h>
+#include <__algorithm/in_in_out_result.h>
 #include <__algorithm/in_in_result.h>
 #include <__algorithm/in_out_result.h>
 #include <__algorithm/includes.h>

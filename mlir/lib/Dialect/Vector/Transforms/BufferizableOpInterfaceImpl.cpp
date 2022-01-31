@@ -1,4 +1,4 @@
-//===- VectorInterfaceImpl.cpp - Vector Impl. of BufferizableOpInterface --===//
+//===- BufferizableOpInterfaceImpl.cpp - Impl. of BufferizableOpInterface -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/VectorInterfaceImpl.h"
+#include "mlir/Dialect/Vector/Transforms/BufferizableOpInterfaceImpl.h"
+
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
 
+using namespace mlir;
 using namespace mlir::bufferization;
+using namespace mlir::vector;
 
 namespace mlir {
-namespace linalg {
-namespace comprehensive_bufferize {
-namespace vector_ext {
+namespace vector {
+namespace {
 
 /// Bufferization of vector.transfer_read. Replaced with a new
 /// vector.transfer_read that operates on a memref.
@@ -113,15 +115,12 @@ struct TransferWriteOpInterface
   }
 };
 
-} // namespace vector_ext
-} // namespace comprehensive_bufferize
-} // namespace linalg
+} // namespace
+} // namespace vector
 } // namespace mlir
 
-void mlir::linalg::comprehensive_bufferize::vector_ext::
-    registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
-  registry.addOpInterface<vector::TransferReadOp,
-                          vector_ext::TransferReadOpInterface>();
-  registry.addOpInterface<vector::TransferWriteOp,
-                          vector_ext::TransferWriteOpInterface>();
+void mlir::vector::registerBufferizableOpInterfaceExternalModels(
+    DialectRegistry &registry) {
+  registry.addOpInterface<TransferReadOp, TransferReadOpInterface>();
+  registry.addOpInterface<TransferWriteOp, TransferWriteOpInterface>();
 }

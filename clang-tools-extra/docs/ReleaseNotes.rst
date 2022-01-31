@@ -47,7 +47,85 @@ Major New Features
 Improvements to clangd
 ----------------------
 
-The improvements are...
+- `clangd/inlayHints <https://clangd.llvm.org/extensions#inlay-hints>`_
+  LSP extension to provide information not directly available in code,
+  like parameter names, deduced types and designated initializers.
+
+- Diagnostics and fixes for `unused include
+  <https://clangd.llvm.org/design/include-cleaner>`_ directives, according to
+  IWYU style. Off by default, can be turned on through
+  `Diagnostics.IncludeCleaner <https://clangd.llvm.org/config#unusedincludes>`_
+  config option.
+
+- Support for ``textDocument/typeDefinition`` LSP request.
+
+- Relevant diagnostics are emitted with ``Deprecated`` and ``Unnecessary``
+  tags from LSP 3.15.
+
+- Richer ``semanticTokens`` information for:
+
+  - Virtual methods
+  - Mutable reference arguments
+  - Lambda captures
+
+- Support for attributes, (e.g. ``[[nodiscard, gsl::Owner(Foo)]]``) in various
+  features like hover, code completion, go-to-definition.
+
+- ``#pragma mark`` directives now show up in document outline.
+
+- ``hover`` on include directives shows the resolved header path.
+
+- ``hover`` on character literals shows their numeric value.
+
+- Include desugared types in hover, controlled with `Hover.ShowAKA
+  <https://clangd.llvm.org/config#showaka>`_ config option.
+
+- Extra diagnostic fixes to insert includes:
+
+  - Includes are suggested in C even when an implicit declaration is generated.
+  - Incomplete types (some additional cases).
+
+- Code completion for ``/*ParameterName=*/`` commetns.
+
+- Provide and improve signature help for:
+
+  - Variadic functions
+  - Template argument lists
+  - Braced constructor calls
+  - Aggregate initializers
+  - Constructor initializers
+
+- Improved handling of short identifiers in code completion and workspace symbol
+  requests.
+
+- Improved handling of symbols introduced via using declarations.
+
+- Provide extra warnings specified in ``.clang-tidy`` config files by
+  ``ExtraArgs(Before)`` sections.
+
+- `CompileFlags.Compiler <https://clangd.llvm.org/config#compiler>`_ config
+  option to override executable name in compile flags.
+
+- Compile flags like ``-xc++-header`` that must precede input file names are now
+  added correctly by the
+  `CompileFlags.Add <https://clangd.llvm.org/config#add>`_ config option.
+
+- The "populate switch" code action is now offered as a fix for ``-Wswitch``
+  warnings, and works with C/ObjC enums.
+
+- ``clangd --check=/path/to/file.cpp`` now reads config files in ancestor
+  directories, in addition to user config file.
+
+- Improved compile flags handling in ``clangd-indexer``.
+
+- ``-use-dirty-headers`` command line flag to use dirty buffer contents when
+  parsing headers, rather than the saved on-disk contents.
+
+- Improved handling of ObjC/ObjC++ constructs.
+
+- Include request context on crashes when possible.
+
+- Various stability and performance improvements.
 
 Improvements to clang-doc
 -------------------------
