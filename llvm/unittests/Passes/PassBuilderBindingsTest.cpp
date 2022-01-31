@@ -10,13 +10,18 @@
 #include "llvm-c/Transforms/PassBuilder.h"
 #include "llvm-c/Types.h"
 #include "gtest/gtest.h"
+#include <string.h>
 
 using namespace llvm;
 
 class PassBuilderCTest : public testing::Test {
   void SetUp() override {
-    LLVMInitializeAllTargetInfos();
     char *Triple = LLVMGetDefaultTargetTriple();
+    if (strlen(Triple) == 0) {
+      GTEST_SKIP();
+      return;
+    }
+    LLVMInitializeAllTargetInfos();
     char *Err;
     LLVMTargetRef Target;
     if (LLVMGetTargetFromTriple(Triple, &Target, &Err)) {
@@ -32,6 +37,9 @@ class PassBuilderCTest : public testing::Test {
   }
 
   void TearDown() override {
+    char *Triple = LLVMGetDefaultTargetTriple();
+    if (strlen(Triple) == 0)
+      return; // Skipped, so nothing to tear down
     LLVMDisposeTargetMachine(TM);
     LLVMDisposeModule(Module);
     LLVMContextDispose(Context);
