@@ -25,6 +25,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "llvm/ADT/Any.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/Support/Error.h"
 
 namespace clang {
 namespace dataflow {
@@ -40,7 +41,7 @@ struct TypeErasedLattice {
 };
 
 /// Type-erased base class for dataflow analyses built on a single lattice type.
-class TypeErasedDataflowAnalysis : public Environment::Merger {
+class TypeErasedDataflowAnalysis : public Environment::ValueModel {
   /// Determines whether to apply the built-in transfer functions.
   // FIXME: Remove this option once the framework supports composing analyses
   // (at which point the built-in transfer functions can be simply a standalone
@@ -115,8 +116,9 @@ TypeErasedDataflowAnalysisState transferBlock(
 
 /// Performs dataflow analysis and returns a mapping from basic block IDs to
 /// dataflow analysis states that model the respective basic blocks. Indices
-/// of the returned vector correspond to basic block IDs.
-std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>>
+/// of the returned vector correspond to basic block IDs. Returns an error if
+/// the dataflow analysis cannot be performed successfully.
+llvm::Expected<std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(const ControlFlowContext &CFCtx,
                               TypeErasedDataflowAnalysis &Analysis,
                               const Environment &InitEnv);

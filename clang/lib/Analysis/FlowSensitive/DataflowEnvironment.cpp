@@ -41,6 +41,21 @@ llvm::DenseMap<K, V> intersectDenseMaps(const llvm::DenseMap<K, V> &Map1,
   return Result;
 }
 
+/// Returns true if and only if `Val1` is equivalent to `Val2`.
+static bool equivalentValues(QualType Type, Value *Val1, Value *Val2,
+                             Environment::ValueModel &Model) {
+  if (Val1 == Val2)
+    return true;
+
+  if (auto *IndVal1 = dyn_cast<IndirectionValue>(Val1)) {
+    auto *IndVal2 = cast<IndirectionValue>(Val2);
+    assert(IndVal1->getKind() == IndVal2->getKind());
+    return &IndVal1->getPointeeLoc() == &IndVal2->getPointeeLoc();
+  }
+
+  return Model.compareEquivalent(Type, *Val1, *Val2);
+}
+
 Environment::Environment(DataflowAnalysisContext &DACtx,
                          const DeclContext &DeclCtx)
     : Environment(DACtx) {
@@ -68,13 +83,40 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
   }
 }
 
-bool Environment::operator==(const Environment &Other) const {
+bool Environment::equivalentTo(const Environment &Other,
+                               Environment::ValueModel &Model) const {
   assert(DACtx == Other.DACtx);
-  return DeclToLoc == Other.DeclToLoc && LocToVal == Other.LocToVal;
+
+  if (DeclToLoc != Other.DeclToLoc)
+    return false;
+
+  if (ExprToLoc != Other.ExprToLoc)
+    return false;
+
+  if (LocToVal.size() != Other.LocToVal.size())
+    return false;
+
+  for (auto &Entry : LocToVal) {
+    const StorageLocation *Loc = Entry.first;
+    assert(Loc != nullptr);
+
+    Value *Val = Entry.second;
+    assert(Val != nullptr);
+
+    auto It = Other.LocToVal.find(Loc);
+    if (It == Other.LocToVal.end())
+      return false;
+    assert(It->second != nullptr);
+
+    if (!equivalentValues(Loc->getType(), Val, It->second, Model))
+      return false;
+  }
+
+  return true;
 }
 
 LatticeJoinEffect Environment::join(const Environment &Other,
-                                    Environment::Merger &Merger) {
+                                    Environment::ValueModel &Model) {
   assert(DACtx == Other.DACtx);
 
   auto Effect = LatticeJoinEffect::Unchanged;
@@ -89,7 +131,7 @@ LatticeJoinEffect Environment::join(const Environment &Other,
   if (ExprToLocSizeBefore != ExprToLoc.size())
     Effect = LatticeJoinEffect::Changed;
 
-  // Move `LocToVal` so that `Environment::Merger::merge` can safely assign
+  // Move `LocToVal` so that `Environment::ValueModel::merge` can safely assign
   // values to storage locations while this code iterates over the current
   // assignments.
   llvm::DenseMap<const StorageLocation *, Value *> OldLocToVal =
@@ -106,23 +148,16 @@ LatticeJoinEffect Environment::join(const Environment &Other,
       continue;
     assert(It->second != nullptr);
 
-    if (It->second == Val) {
+    if (equivalentValues(Loc->getType(), Val, It->second, Model)) {
       LocToVal.insert({Loc, Val});
       continue;
     }
 
-    if (auto *FirstVal = dyn_cast<PointerValue>(Val)) {
-      auto *SecondVal = cast<PointerValue>(It->second);
-      if (&FirstVal->getPointeeLoc() == &SecondVal->getPointeeLoc()) {
-        LocToVal.insert({Loc, FirstVal});
-        continue;
-      }
-    }
-
-    // FIXME: Consider destroying `MergedValue` immediately if `Merger::merge`
-    // returns false to avoid storing unneeded values in `DACtx`.
+    // FIXME: Consider destroying `MergedValue` immediately if
+    // `ValueModel::merge` returns false to avoid storing unneeded values in
+    // `DACtx`.
     if (Value *MergedVal = createValue(Loc->getType()))
-      if (Merger.merge(Loc->getType(), *Val, *It->second, *MergedVal, *this))
+      if (Model.merge(Loc->getType(), *Val, *It->second, *MergedVal, *this))
         LocToVal.insert({Loc, MergedVal});
   }
   if (OldLocToVal.size() != LocToVal.size())

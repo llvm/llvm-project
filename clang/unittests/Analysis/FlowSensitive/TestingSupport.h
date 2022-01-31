@@ -112,11 +112,13 @@ llvm::Error checkDataflow(
       StmtToAnnotations = buildStatementToAnnotationMapping(F, AnnotatedCode);
   if (!StmtToAnnotations)
     return StmtToAnnotations.takeError();
-
   auto &Annotations = *StmtToAnnotations;
 
-  std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates =
-      runTypeErasedDataflowAnalysis(*CFCtx, Analysis, Env);
+  llvm::Expected<std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>>>
+      MaybeBlockStates = runTypeErasedDataflowAnalysis(*CFCtx, Analysis, Env);
+  if (!MaybeBlockStates)
+    return MaybeBlockStates.takeError();
+  auto &BlockStates = *MaybeBlockStates;
 
   if (BlockStates.empty()) {
     Expectations({}, Context);
