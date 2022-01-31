@@ -470,9 +470,9 @@ struct TestVectorTransferFullPartialSplitPatterns
   }
 
   Option<bool> useLinalgOps{
-      *this, "use-linalg-copy",
+      *this, "use-memref-copy",
       llvm::cl::desc("Split using a unmasked vector.transfer + linalg.fill + "
-                     "linalg.copy operations."),
+                     "memref.copy operations."),
       llvm::cl::init(false)};
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();

@@ -8,8 +8,6 @@
 
 // CHECK-DAG: #[[$id_2d:.*]] = affine_map<(d0, d1, d2) -> (d0, d2)>
 // CHECK-DAG: #[[$id_1d:.*]] = affine_map<(d0, d1, d2) -> (d1)>
-// CHECK-DAG: #[[$permute_0:.*]] = affine_map<(d0, d1, d2) -> (d0, d2, d1)>
-// CHECK-DAG: #[[$permute_1:.*]] = affine_map<(d0, d1, d2) -> (d2, d1, d0)>
 // CHECK-DAG: #[[$strided1D:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 // CHECK-DAG: #[[$strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 // CHECK-DAG: #[[$strided3D:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>
@@ -94,37 +92,6 @@ func @fill_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1:
 // CHECK-LABEL: func @fill_view3(
 //       CHECK:  %{{.*}}: memref<?x?x?xf32, #[[$strided3D]]>, %{{.*}}: f32) {
 //       CHECK:   linalg.fill(%{{.*}}, %{{.*}}) : f32, memref<?x?x?xf32, #[[$strided3D]]>
-
-// -----
-
-
-func @copy_view(%arg0: memref<?xf32, offset: ?, strides: [1]>,
-                %arg1: memref<?xf32, offset: ?, strides: [1]>) {
-  linalg.copy(%arg0, %arg1) : memref<?xf32, offset: ?, strides: [1]>,
-                              memref<?xf32, offset: ?, strides: [1]>
-  return
-}
-// CHECK-LABEL: func @copy_view(
-//       CHECK:   linalg.copy(%{{.*}}, %{{.*}}) :
-//  CHECK-SAME:     memref<?xf32, #[[$strided1D]]>, memref<?xf32, #[[$strided1D]]>
-
-// -----
-
-
-func @copy_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>,
-                 %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
-  linalg.copy(%arg0, %arg1) {inputPermutation = affine_map<(i, j, k) -> (i, k, j)>,
-                             outputPermutation = affine_map<(i, j, k) -> (k, j, i)>} :
-    memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>
-  return
-}
-// CHECK-LABEL: func @copy_view3(
-//       CHECK:  %{{.*}}: memref<?x?x?xf32, #[[$strided3D]]>, %{{.*}}: memref<?x?x?xf32, #[[$strided3D]]>) {
-//       CHECK:   linalg.copy(%{{.*}}, %{{.*}}) {
-//  CHECK-SAME:     inputPermutation = #[[$permute_0]],
-//  CHECK-SAME:     outputPermutation = #[[$permute_1]]} :
-//  CHECK-SAME:     memref<?x?x?xf32, #[[$strided3D]]>,
-//  CHECK-SAME:     memref<?x?x?xf32, #[[$strided3D]]>
 
 // -----
 
