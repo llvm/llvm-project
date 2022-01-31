@@ -188,6 +188,13 @@ OPTIONS
   Look up the object using the given build ID, specified as a hexadecimal
   string. Mutually exclusive with :option:`--obj`.
 
+.. option:: --debuginfod, --no-debuginfod
+
+  Whether or not to try debuginfod lookups for debug binaries. Unless specified,
+  debuginfod is only enabled if libcurl was compiled in (``LLVM_ENABLE_CURL``)
+  and at least one server URL was provided by the environment variable
+  ``DEBUGINFOD_URLS``.
+
 .. _llvm-symbolizer-opt-C:
 
 .. option:: --demangle, -C
