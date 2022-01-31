@@ -6,10 +6,12 @@
 define <vscale x 8 x float> @fcvts_nxv8f16(<vscale x 8 x half> %a) {
 ; CHECK-LABEL: fcvts_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uunpklo z1.s, z0.h
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uunpkhi z2.s, z0.h
+; CHECK-NEXT:    movprfx z0, z1
 ; CHECK-NEXT:    fcvt z0.s, p0/m, z1.h
+; CHECK-NEXT:    movprfx z1, z2
 ; CHECK-NEXT:    fcvt z1.s, p0/m, z2.h
 ; CHECK-NEXT:    ret
   %res = fpext <vscale x 8 x half> %a to <vscale x 8 x float>
@@ -19,10 +21,12 @@ define <vscale x 8 x float> @fcvts_nxv8f16(<vscale x 8 x half> %a) {
 define <vscale x 4 x double> @fcvtd_nxv4f16(<vscale x 4 x half> %a) {
 ; CHECK-LABEL: fcvtd_nxv4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpkhi z2.d, z0.s
+; CHECK-NEXT:    movprfx z0, z1
 ; CHECK-NEXT:    fcvt z0.d, p0/m, z1.h
+; CHECK-NEXT:    movprfx z1, z2
 ; CHECK-NEXT:    fcvt z1.d, p0/m, z2.h
 ; CHECK-NEXT:    ret
   %res = fpext <vscale x 4 x half> %a to <vscale x 4 x double>
@@ -33,15 +37,18 @@ define <vscale x 8 x double> @fcvtd_nxv8f16(<vscale x 8 x half> %a) {
 ; CHECK-LABEL: fcvtd_nxv8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uunpklo z1.s, z0.h
-; CHECK-NEXT:    uunpkhi z0.s, z0.h
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    uunpkhi z0.s, z0.h
 ; CHECK-NEXT:    uunpklo z2.d, z1.s
 ; CHECK-NEXT:    uunpkhi z1.d, z1.s
 ; CHECK-NEXT:    uunpklo z3.d, z0.s
-; CHECK-NEXT:    uunpkhi z4.d, z0.s
-; CHECK-NEXT:    fcvt z0.d, p0/m, z2.h
 ; CHECK-NEXT:    fcvt z1.d, p0/m, z1.h
+; CHECK-NEXT:    uunpkhi z4.d, z0.s
+; CHECK-NEXT:    movprfx z0, z2
+; CHECK-NEXT:    fcvt z0.d, p0/m, z2.h
+; CHECK-NEXT:    movprfx z2, z3
 ; CHECK-NEXT:    fcvt z2.d, p0/m, z3.h
+; CHECK-NEXT:    movprfx z3, z4
 ; CHECK-NEXT:    fcvt z3.d, p0/m, z4.h
 ; CHECK-NEXT:    ret
   %res = fpext <vscale x 8 x half> %a to <vscale x 8 x double>
@@ -51,10 +58,12 @@ define <vscale x 8 x double> @fcvtd_nxv8f16(<vscale x 8 x half> %a) {
 define <vscale x 4 x double> @fcvtd_nxv4f32(<vscale x 4 x float> %a) {
 ; CHECK-LABEL: fcvtd_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpkhi z2.d, z0.s
+; CHECK-NEXT:    movprfx z0, z1
 ; CHECK-NEXT:    fcvt z0.d, p0/m, z1.s
+; CHECK-NEXT:    movprfx z1, z2
 ; CHECK-NEXT:    fcvt z1.d, p0/m, z2.s
 ; CHECK-NEXT:    ret
   %res = fpext <vscale x 4 x float> %a to <vscale x 4 x double>
@@ -64,14 +73,18 @@ define <vscale x 4 x double> @fcvtd_nxv4f32(<vscale x 4 x float> %a) {
 define <vscale x 8 x double> @fcvtd_nxv8f32(<vscale x 8 x float> %a) {
 ; CHECK-LABEL: fcvtd_nxv8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpklo z2.d, z0.s
 ; CHECK-NEXT:    uunpkhi z3.d, z0.s
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpklo z4.d, z1.s
 ; CHECK-NEXT:    uunpkhi z5.d, z1.s
+; CHECK-NEXT:    movprfx z0, z2
 ; CHECK-NEXT:    fcvt z0.d, p0/m, z2.s
+; CHECK-NEXT:    movprfx z1, z3
 ; CHECK-NEXT:    fcvt z1.d, p0/m, z3.s
+; CHECK-NEXT:    movprfx z2, z4
 ; CHECK-NEXT:    fcvt z2.d, p0/m, z4.s
+; CHECK-NEXT:    movprfx z3, z5
 ; CHECK-NEXT:    fcvt z3.d, p0/m, z5.s
 ; CHECK-NEXT:    ret
   %res = fpext <vscale x 8 x float> %a to <vscale x 8 x double>
@@ -182,10 +195,12 @@ define <vscale x 8 x i16> @fcvtzs_h_nxv8f64(<vscale x 8 x double> %a) {
 define <vscale x 4 x i64> @fcvtzs_d_nxv4f32(<vscale x 4 x float> %a) {
 ; CHECK-LABEL: fcvtzs_d_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpkhi z2.d, z0.s
+; CHECK-NEXT:    movprfx z0, z1
 ; CHECK-NEXT:    fcvtzs z0.d, p0/m, z1.s
+; CHECK-NEXT:    movprfx z1, z2
 ; CHECK-NEXT:    fcvtzs z1.d, p0/m, z2.s
 ; CHECK-NEXT:    ret
   %res = fptosi <vscale x 4 x float> %a to <vscale x 4 x i64>
@@ -195,14 +210,18 @@ define <vscale x 4 x i64> @fcvtzs_d_nxv4f32(<vscale x 4 x float> %a) {
 define <vscale x 16 x i32> @fcvtzs_s_nxv16f16(<vscale x 16 x half> %a) {
 ; CHECK-LABEL: fcvtzs_s_nxv16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uunpklo z2.s, z0.h
 ; CHECK-NEXT:    uunpkhi z3.s, z0.h
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uunpklo z4.s, z1.h
 ; CHECK-NEXT:    uunpkhi z5.s, z1.h
+; CHECK-NEXT:    movprfx z0, z2
 ; CHECK-NEXT:    fcvtzs z0.s, p0/m, z2.h
+; CHECK-NEXT:    movprfx z1, z3
 ; CHECK-NEXT:    fcvtzs z1.s, p0/m, z3.h
+; CHECK-NEXT:    movprfx z2, z4
 ; CHECK-NEXT:    fcvtzs z2.s, p0/m, z4.h
+; CHECK-NEXT:    movprfx z3, z5
 ; CHECK-NEXT:    fcvtzs z3.s, p0/m, z5.h
 ; CHECK-NEXT:    ret
   %res = fptosi <vscale x 16 x half> %a to <vscale x 16 x i32>
@@ -228,10 +247,12 @@ define <vscale x 4 x i32> @fcvtzu_s_nxv4f64(<vscale x 4 x double> %a) {
 define <vscale x 4 x i64> @fcvtzu_d_nxv4f32(<vscale x 4 x float> %a) {
 ; CHECK-LABEL: fcvtzu_d_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpkhi z2.d, z0.s
+; CHECK-NEXT:    movprfx z0, z1
 ; CHECK-NEXT:    fcvtzu z0.d, p0/m, z1.s
+; CHECK-NEXT:    movprfx z1, z2
 ; CHECK-NEXT:    fcvtzu z1.d, p0/m, z2.s
 ; CHECK-NEXT:    ret
   %res = fptoui <vscale x 4 x float> %a to <vscale x 4 x i64>
@@ -274,15 +295,18 @@ define <vscale x 16 x float> @scvtf_s_nxv16i8(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: scvtf_s_nxv16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sunpklo z1.h, z0.b
-; CHECK-NEXT:    sunpkhi z0.h, z0.b
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    sunpkhi z0.h, z0.b
 ; CHECK-NEXT:    sunpklo z2.s, z1.h
 ; CHECK-NEXT:    sunpkhi z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z3.s, z0.h
-; CHECK-NEXT:    sunpkhi z4.s, z0.h
-; CHECK-NEXT:    scvtf z0.s, p0/m, z2.s
 ; CHECK-NEXT:    scvtf z1.s, p0/m, z1.s
+; CHECK-NEXT:    sunpkhi z4.s, z0.h
+; CHECK-NEXT:    movprfx z0, z2
+; CHECK-NEXT:    scvtf z0.s, p0/m, z2.s
+; CHECK-NEXT:    movprfx z2, z3
 ; CHECK-NEXT:    scvtf z2.s, p0/m, z3.s
+; CHECK-NEXT:    movprfx z3, z4
 ; CHECK-NEXT:    scvtf z3.s, p0/m, z4.s
 ; CHECK-NEXT:    ret
   %res = sitofp <vscale x 16 x i8> %a to <vscale x 16 x float>
@@ -292,10 +316,12 @@ define <vscale x 16 x float> @scvtf_s_nxv16i8(<vscale x 16 x i8> %a) {
 define <vscale x 4 x double> @scvtf_d_nxv4i32(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: scvtf_d_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    sunpklo z1.d, z0.s
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    sunpkhi z2.d, z0.s
+; CHECK-NEXT:    movprfx z0, z1
 ; CHECK-NEXT:    scvtf z0.d, p0/m, z1.d
+; CHECK-NEXT:    movprfx z1, z2
 ; CHECK-NEXT:    scvtf z1.d, p0/m, z2.d
 ; CHECK-NEXT:    ret
   %res = sitofp <vscale x 4 x i32> %a to <vscale x 4 x double>
@@ -352,10 +378,12 @@ define <vscale x 8 x half> @ucvtf_h_nxv8i64(<vscale x 8 x i64> %a) {
 define <vscale x 4 x double> @ucvtf_d_nxv4i32(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: ucvtf_d_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpkhi z2.d, z0.s
+; CHECK-NEXT:    movprfx z0, z1
 ; CHECK-NEXT:    ucvtf z0.d, p0/m, z1.d
+; CHECK-NEXT:    movprfx z1, z2
 ; CHECK-NEXT:    ucvtf z1.d, p0/m, z2.d
 ; CHECK-NEXT:    ret
   %res = uitofp <vscale x 4 x i32> %a to <vscale x 4 x double>

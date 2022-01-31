@@ -898,3 +898,377 @@ define <vscale x 2 x double> @ucvtf_d_nxv2i64(<vscale x 2 x i64> %a) {
   %res = uitofp <vscale x 2 x i64> %a to <vscale x 2 x double>
   ret <vscale x 2 x double> %res
 }
+
+define <vscale x 4 x float> @fcvt_htos_movprfx(<vscale x 4 x half> %a, <vscale x 4 x half> %b) {
+; CHECK-LABEL: fcvt_htos_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvt z0.s, p0/m, z1.h
+; CHECK-NEXT:    ret
+  %res = fpext <vscale x 4 x half> %b to <vscale x 4 x float>
+  ret <vscale x 4 x float> %res
+}
+
+define <vscale x 2 x double> @fcvt_htod_movprfx(<vscale x 2 x half> %a, <vscale x 2 x half> %b) {
+; CHECK-LABEL: fcvt_htod_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvt z0.d, p0/m, z1.h
+; CHECK-NEXT:    ret
+  %res = fpext <vscale x 2 x half> %b to <vscale x 2 x double>
+  ret <vscale x 2 x double> %res
+}
+
+define <vscale x 2 x double> @fcvt_stod_movprfx(<vscale x 2 x float> %a, <vscale x 2 x float> %b) {
+; CHECK-LABEL: fcvt_stod_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvt z0.d, p0/m, z1.s
+; CHECK-NEXT:    ret
+  %res = fpext <vscale x 2 x float> %b to <vscale x 2 x double>
+  ret <vscale x 2 x double> %res
+}
+
+define <vscale x 4 x half> @fcvt_stoh_movprfx(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: fcvt_stoh_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvt z0.h, p0/m, z1.s
+; CHECK-NEXT:    ret
+  %res = fptrunc <vscale x 4 x float> %b to <vscale x 4 x half>
+  ret <vscale x 4 x half> %res
+}
+
+define <vscale x 2 x half> @fcvt_dtoh_movprfx(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: fcvt_dtoh_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvt z0.h, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %res = fptrunc <vscale x 2 x double> %b to <vscale x 2 x half>
+  ret <vscale x 2 x half> %res
+}
+
+define <vscale x 2 x float> @fcvt_dtos_movprfx(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: fcvt_dtos_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvt z0.s, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %res = fptrunc <vscale x 2 x double> %b to <vscale x 2 x float>
+  ret <vscale x 2 x float> %res
+}
+
+define <vscale x 8 x half> @scvtf_htoh_movprfx(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: scvtf_htoh_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    scvtf z0.h, p0/m, z1.h
+; CHECK-NEXT:    ret
+  %res = sitofp <vscale x 8 x i16> %b to <vscale x 8 x half>
+  ret <vscale x 8 x half> %res
+}
+
+define <vscale x 4 x float> @scvtf_stos_movprfx(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: scvtf_stos_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    scvtf z0.s, p0/m, z1.s
+; CHECK-NEXT:    ret
+  %res = sitofp <vscale x 4 x i32> %b to <vscale x 4 x float>
+  ret <vscale x 4 x float> %res
+}
+
+define <vscale x 2 x double> @scvtf_stod_movprfx(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b) {
+; CHECK-LABEL: scvtf_stod_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    scvtf z0.d, p0/m, z1.s
+; CHECK-NEXT:    ret
+  %res = sitofp <vscale x 2 x i32> %b to <vscale x 2 x double>
+  ret <vscale x 2 x double> %res
+}
+
+define <vscale x 2 x float> @scvtf_dtos_movprfx(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: scvtf_dtos_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    scvtf z0.s, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %res = sitofp <vscale x 2 x i64> %b to <vscale x 2 x float>
+  ret <vscale x 2 x float> %res
+}
+
+define <vscale x 4 x half> @scvtf_stoh_movprfx(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: scvtf_stoh_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    scvtf z0.h, p0/m, z1.s
+; CHECK-NEXT:    ret
+  %res = sitofp <vscale x 4 x i32> %b to <vscale x 4 x half>
+  ret <vscale x 4 x half> %res
+}
+
+define <vscale x 2 x half> @scvtf_dtoh_movprfx(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: scvtf_dtoh_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    scvtf z0.h, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %res = sitofp <vscale x 2 x i64> %b to <vscale x 2 x half>
+  ret <vscale x 2 x half> %res
+}
+
+define <vscale x 2 x double> @scvtf_dtod_movprfx(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: scvtf_dtod_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    scvtf z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %res = sitofp <vscale x 2 x i64> %b to <vscale x 2 x double>
+  ret <vscale x 2 x double> %res
+}
+
+define <vscale x 4 x float> @ucvtf_stos_movprfx(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: ucvtf_stos_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z1.s
+; CHECK-NEXT:    ret
+  %res = uitofp <vscale x 4 x i32> %b to <vscale x 4 x float>
+  ret <vscale x 4 x float> %res
+}
+
+define <vscale x 8 x half> @ucvtf_htoh_movprfx(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: ucvtf_htoh_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ucvtf z0.h, p0/m, z1.h
+; CHECK-NEXT:    ret
+  %res = uitofp <vscale x 8 x i16> %b to <vscale x 8 x half>
+  ret <vscale x 8 x half> %res
+}
+
+define <vscale x 2 x double> @ucvtf_stod_movprfx(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b) {
+; CHECK-LABEL: ucvtf_stod_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z1.s
+; CHECK-NEXT:    ret
+  %res = uitofp <vscale x 2 x i32> %b to <vscale x 2 x double>
+  ret <vscale x 2 x double> %res
+}
+
+define <vscale x 4 x half> @ucvtf_stoh_movprfx(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: ucvtf_stoh_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ucvtf z0.h, p0/m, z1.s
+; CHECK-NEXT:    ret
+  %res = uitofp <vscale x 4 x i32> %b to <vscale x 4 x half>
+  ret <vscale x 4 x half> %res
+}
+
+define <vscale x 2 x float> @ucvtf_dtos_movprfx(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: ucvtf_dtos_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %res = uitofp <vscale x 2 x i64> %b to <vscale x 2 x float>
+  ret <vscale x 2 x float> %res
+}
+
+define <vscale x 2 x half> @ucvtf_dtoh_movprfx(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: ucvtf_dtoh_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ucvtf z0.h, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %res = uitofp <vscale x 2 x i64> %b to <vscale x 2 x half>
+  ret <vscale x 2 x half> %res
+}
+
+define <vscale x 2 x double> @ucvtf_dtod_movprfx(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: ucvtf_dtod_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %res = uitofp <vscale x 2 x i64> %b to <vscale x 2 x double>
+  ret <vscale x 2 x double> %res
+}
+
+define <vscale x 8 x i16> @fcvtzs_htoh_movprfx(<vscale x 8 x half> %a, <vscale x 8 x half> %b) {
+; CHECK-LABEL: fcvtzs_htoh_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvtzs z0.h, p0/m, z1.h
+; CHECK-NEXT:    ret
+  %res = fptosi <vscale x 8 x half> %b to <vscale x 8 x i16>
+  ret <vscale x 8 x i16> %res
+}
+
+define <vscale x 4 x i32> @fcvtzs_stos_movprfx(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: fcvtzs_stos_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvtzs z0.s, p0/m, z1.s
+; CHECK-NEXT:    ret
+  %res = fptosi <vscale x 4 x float> %b to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 2 x i32> @fcvtzs_dtos_movprfx(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: fcvtzs_dtos_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %res = fptosi <vscale x 2 x double> %b to <vscale x 2 x i32>
+  ret <vscale x 2 x i32> %res
+}
+
+define <vscale x 2 x i64> @fcvtzs_stod_movprfx(<vscale x 2 x float> %a, <vscale x 2 x float> %b) {
+; CHECK-LABEL: fcvtzs_stod_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z1.s
+; CHECK-NEXT:    ret
+  %res = fptosi <vscale x 2 x float> %b to <vscale x 2 x i64>
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 4 x i32> @fcvtzs_htos_movprfx(<vscale x 4 x half> %a, <vscale x 4 x half> %b) {
+; CHECK-LABEL: fcvtzs_htos_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvtzs z0.s, p0/m, z1.h
+; CHECK-NEXT:    ret
+  %res = fptosi <vscale x 4 x half> %b to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 2 x i64> @fcvtzs_htod_movprfx(<vscale x 2 x half> %a, <vscale x 2 x half> %b) {
+; CHECK-LABEL: fcvtzs_htod_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z1.h
+; CHECK-NEXT:    ret
+  %res = fptosi <vscale x 2 x half> %b to <vscale x 2 x i64>
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 2 x i64> @fcvtzs_dtod_movprfx(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: fcvtzs_dtod_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %res = fptosi <vscale x 2 x double> %b to <vscale x 2 x i64>
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 8 x i16> @fcvtzu_htoh_movprfx(<vscale x 8 x half> %a, <vscale x 8 x half> %b) {
+; CHECK-LABEL: fcvtzu_htoh_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvtzu z0.h, p0/m, z1.h
+; CHECK-NEXT:    ret
+  %res = fptoui <vscale x 8 x half> %b to <vscale x 8 x i16>
+  ret <vscale x 8 x i16> %res
+}
+
+define <vscale x 4 x i32> @fcvtzu_stos_movprfx(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: fcvtzu_stos_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvtzu z0.s, p0/m, z1.s
+; CHECK-NEXT:    ret
+  %res = fptoui <vscale x 4 x float> %b to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 2 x i32> @fcvtzu_dtos_movprfx(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: fcvtzu_dtos_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %res = fptoui <vscale x 2 x double> %b to <vscale x 2 x i32>
+  ret <vscale x 2 x i32> %res
+}
+
+define <vscale x 2 x i64> @fcvtzu_stod_movprfx(<vscale x 2 x float> %a, <vscale x 2 x float> %b) {
+; CHECK-LABEL: fcvtzu_stod_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvtzu z0.d, p0/m, z1.s
+; CHECK-NEXT:    ret
+  %res = fptoui <vscale x 2 x float> %b to <vscale x 2 x i64>
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 4 x i32> @fcvtzu_htos_movprfx(<vscale x 4 x half> %a, <vscale x 4 x half> %b) {
+; CHECK-LABEL: fcvtzu_htos_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvtzu z0.s, p0/m, z1.h
+; CHECK-NEXT:    ret
+  %res = fptoui <vscale x 4 x half> %b to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 2 x i64> @fcvtzu_htod_movprfx(<vscale x 2 x half> %a, <vscale x 2 x half> %b) {
+; CHECK-LABEL: fcvtzu_htod_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvtzu z0.d, p0/m, z1.h
+; CHECK-NEXT:    ret
+  %res = fptoui <vscale x 2 x half> %b to <vscale x 2 x i64>
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 2 x i64> @fcvtzu_dtod_movprfx(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: fcvtzu_dtod_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    fcvtzu z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %res = fptoui <vscale x 2 x double> %b to <vscale x 2 x i64>
+  ret <vscale x 2 x i64> %res
+}
