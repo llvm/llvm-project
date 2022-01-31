@@ -2247,8 +2247,12 @@ bool TargetLowering::SimplifyDemandedBits(
     }
     break;
   }
-  case ISD::ADD:
   case ISD::MUL:
+    // 'Quadratic Reciprocity': mul(x,x) -> 0 if we're only demanding bit[1]
+    if (DemandedBits == 2 && Op.getOperand(0) == Op.getOperand(1))
+      return TLO.CombineTo(Op, TLO.DAG.getConstant(0, dl, VT));
+    LLVM_FALLTHROUGH;
+  case ISD::ADD:
   case ISD::SUB: {
     // Add, Sub, and Mul don't demand any bits in positions beyond that
     // of the highest bit demanded of them.
