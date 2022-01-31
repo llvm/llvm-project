@@ -6214,6 +6214,14 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
   if (MUL)
     DelInstrs.push_back(MUL);
   DelInstrs.push_back(&Root);
+
+  // Set the flags on the inserted instructions to be the merged flags of the
+  // instructions that we have combined.
+  uint16_t Flags = Root.getFlags();
+  if (MUL)
+    Flags = Root.mergeFlagsWith(*MUL);
+  for (auto *MI : InsInstrs)
+    MI->setFlags(Flags);
 }
 
 /// Replace csincr-branch sequence by simple conditional branch
