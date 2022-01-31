@@ -877,7 +877,7 @@ class basic_parser_impl { // non-template implementation of basic_parser<t>
 public:
   basic_parser_impl(Option &) {}
 
-  virtual ~basic_parser_impl() {}
+  virtual ~basic_parser_impl() = default;
 
   enum ValueExpected getValueExpectedFlagDefault() const {
     return ValueRequired;

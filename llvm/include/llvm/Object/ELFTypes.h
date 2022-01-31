@@ -699,7 +699,7 @@ private:
     }
   }
 
-  Elf_Note_Iterator_Impl() {}
+  Elf_Note_Iterator_Impl() = default;
   explicit Elf_Note_Iterator_Impl(Error &Err) : Err(&Err) {}
   Elf_Note_Iterator_Impl(const uint8_t *Start, size_t Size, Error &Err)
       : RemainingSize(Size), Err(&Err) {

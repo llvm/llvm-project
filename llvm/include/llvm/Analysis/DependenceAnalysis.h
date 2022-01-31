@@ -76,7 +76,7 @@ namespace llvm {
   public:
     Dependence(Instruction *Source, Instruction *Destination)
         : Src(Source), Dst(Destination) {}
-    virtual ~Dependence() {}
+    virtual ~Dependence() = default;
 
     /// Dependence::DVEntry - Each level in the distance/direction vector
     /// has a direction (or perhaps a union of several directions), and

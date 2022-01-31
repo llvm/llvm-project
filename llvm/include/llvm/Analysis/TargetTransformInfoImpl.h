@@ -42,8 +42,7 @@ protected:
 
 public:
   // Provide value semantics. MSVC requires that we spell all of these out.
-  TargetTransformInfoImplBase(const TargetTransformInfoImplBase &Arg)
-      : DL(Arg.DL) {}
+  TargetTransformInfoImplBase(const TargetTransformInfoImplBase &Arg) = default;
   TargetTransformInfoImplBase(TargetTransformInfoImplBase &&Arg) : DL(Arg.DL) {}
 
   const DataLayout &getDataLayout() const { return DL; }

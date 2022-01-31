@@ -39,8 +39,8 @@ struct Request {
 
 class DIPrinter {
 public:
-  DIPrinter() {}
-  virtual ~DIPrinter() {}
+  DIPrinter() = default;
+  virtual ~DIPrinter() = default;
 
   virtual void print(const Request &Request, const DILineInfo &Info) = 0;
   virtual void print(const Request &Request, const DIInliningInfo &Info) = 0;

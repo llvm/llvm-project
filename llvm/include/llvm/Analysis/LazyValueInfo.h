@@ -38,7 +38,7 @@ class LazyValueInfo {
   void operator=(const LazyValueInfo&) = delete;
 public:
   ~LazyValueInfo();
-  LazyValueInfo() {}
+  LazyValueInfo() = default;
   LazyValueInfo(AssumptionCache *AC_, const DataLayout *DL_,
                 TargetLibraryInfo *TLI_)
       : AC(AC_), DL(DL_), TLI(TLI_) {}

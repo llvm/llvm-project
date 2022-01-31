@@ -75,7 +75,7 @@ private:
 
 class OptBisectInstrumentation {
 public:
-  OptBisectInstrumentation() {}
+  OptBisectInstrumentation() = default;
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 };
 

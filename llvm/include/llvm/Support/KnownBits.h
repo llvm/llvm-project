@@ -31,7 +31,7 @@ private:
 
 public:
   // Default construct Zero and One.
-  KnownBits() {}
+  KnownBits() = default;
 
   /// Create a known bits object of BitWidth bits initialized to unknown.
   KnownBits(unsigned BitWidth) : Zero(BitWidth, 0), One(BitWidth, 0) {}

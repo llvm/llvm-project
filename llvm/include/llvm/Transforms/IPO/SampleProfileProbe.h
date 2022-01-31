@@ -154,7 +154,7 @@ class PseudoProbeUpdatePass : public PassInfoMixin<PseudoProbeUpdatePass> {
   void runOnFunction(Function &F, FunctionAnalysisManager &FAM);
 
 public:
-  PseudoProbeUpdatePass() {}
+  PseudoProbeUpdatePass() = default;
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

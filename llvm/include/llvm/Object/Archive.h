@@ -45,7 +45,7 @@ protected:
 public:
   friend class Archive;
   virtual std::unique_ptr<AbstractArchiveMemberHeader> clone() const = 0;
-  virtual ~AbstractArchiveMemberHeader(){};
+  virtual ~AbstractArchiveMemberHeader() = default;
 
   /// Get the name without looking up long names.
   virtual Expected<StringRef> getRawName() const = 0;

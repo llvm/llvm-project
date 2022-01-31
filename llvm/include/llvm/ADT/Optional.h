@@ -242,7 +242,7 @@ template <typename T> class Optional {
 public:
   using value_type = T;
 
-  constexpr Optional() {}
+  constexpr Optional() = default;
   constexpr Optional(NoneType) {}
 
   constexpr Optional(const T &y) : Storage(in_place, y) {}

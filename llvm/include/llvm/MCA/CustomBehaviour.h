@@ -41,7 +41,7 @@ public:
   InstrPostProcess(const MCSubtargetInfo &STI, const MCInstrInfo &MCII)
       : STI(STI), MCII(MCII) {}
 
-  virtual ~InstrPostProcess() {}
+  virtual ~InstrPostProcess() = default;
 
   /// This method can be overriden by targets to modify the mca::Instruction
   /// object after it has been lowered from the MCInst.

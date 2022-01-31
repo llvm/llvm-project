@@ -55,7 +55,7 @@ public:
 
   enum InstrProfCorrelatorKind { CK_32Bit, CK_64Bit };
   InstrProfCorrelatorKind getKind() const { return Kind; }
-  virtual ~InstrProfCorrelator() {}
+  virtual ~InstrProfCorrelator() = default;
 
 protected:
   struct Context {

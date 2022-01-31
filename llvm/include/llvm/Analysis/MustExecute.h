@@ -281,9 +281,7 @@ struct MustBeExecutedIterator {
 
   using ExplorerTy = MustBeExecutedContextExplorer;
 
-  MustBeExecutedIterator(const MustBeExecutedIterator &Other)
-      : Visited(Other.Visited), Explorer(Other.Explorer),
-        CurInst(Other.CurInst), Head(Other.Head), Tail(Other.Tail) {}
+  MustBeExecutedIterator(const MustBeExecutedIterator &Other) = default;
 
   MustBeExecutedIterator(MustBeExecutedIterator &&Other)
       : Visited(std::move(Other.Visited)), Explorer(Other.Explorer),
@@ -299,7 +297,7 @@ struct MustBeExecutedIterator {
     return *this;
   }
 
-  ~MustBeExecutedIterator() {}
+  ~MustBeExecutedIterator() = default;
 
   /// Pre- and post-increment operators.
   ///{

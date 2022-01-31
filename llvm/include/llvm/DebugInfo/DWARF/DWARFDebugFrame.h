@@ -535,7 +535,7 @@ public:
       : Kind(K), IsDWARF64(IsDWARF64), Offset(Offset), Length(Length),
         CFIs(CodeAlign, DataAlign, Arch) {}
 
-  virtual ~FrameEntry() {}
+  virtual ~FrameEntry() = default;
 
   FrameKind getKind() const { return Kind; }
   uint64_t getOffset() const { return Offset; }

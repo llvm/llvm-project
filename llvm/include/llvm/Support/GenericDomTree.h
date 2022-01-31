@@ -260,7 +260,7 @@ protected:
   friend struct DomTreeBuilder::SemiNCAInfo<DominatorTreeBase>;
 
  public:
-  DominatorTreeBase() {}
+  DominatorTreeBase() = default;
 
   DominatorTreeBase(DominatorTreeBase &&Arg)
       : Roots(std::move(Arg.Roots)),

@@ -560,7 +560,7 @@ public:
 /// Name matcher supporting fuzzy matching of symbol names to names in profiles.
 class InstrProfReaderRemapper {
 public:
-  virtual ~InstrProfReaderRemapper() {}
+  virtual ~InstrProfReaderRemapper() = default;
   virtual Error populateRemappings() { return Error::success(); }
   virtual Error getRecords(StringRef FuncName,
                            ArrayRef<NamedInstrProfRecord> &Data) = 0;
