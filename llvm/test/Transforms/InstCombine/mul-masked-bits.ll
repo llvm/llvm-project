@@ -91,3 +91,25 @@ define i67 @one_demanded_low_bit(i67 %x) {
   %r = and i67 %m, 1
   ret i67 %r
 }
+
+define i33 @squared_one_demanded_low_bit(i33 %x) {
+; CHECK-LABEL: @squared_one_demanded_low_bit(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i33 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = and i33 [[MUL]], 1
+; CHECK-NEXT:    ret i33 [[AND]]
+;
+  %mul = mul i33 %x, %x
+  %and = and i33 %mul, 1
+  ret i33 %and
+}
+
+define <2 x i8> @squared_one_demanded_low_bit_splat(<2 x i8> %x) {
+; CHECK-LABEL: @squared_one_demanded_low_bit_splat(
+; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i8> [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = or <2 x i8> [[MUL]], <i8 -2, i8 -2>
+; CHECK-NEXT:    ret <2 x i8> [[AND]]
+;
+  %mul = mul <2 x i8> %x, %x
+  %and = or <2 x i8> %mul, <i8 254, i8 254>
+  ret <2 x i8> %and
+}
