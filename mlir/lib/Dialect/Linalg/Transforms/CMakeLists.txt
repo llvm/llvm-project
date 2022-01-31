@@ -47,9 +47,8 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRLinalgUtils
   MLIRModuleBufferization
   MLIRSCF
-  MLIRSCFBufferizableOpInterfaceImpl
   MLIRSCFTransforms
-  MLIRStdBufferizableOpInterfaceImpl
+  MLIRSCFUtils
   MLIRPass
   MLIRStandard
   MLIRStandardOpsTransforms

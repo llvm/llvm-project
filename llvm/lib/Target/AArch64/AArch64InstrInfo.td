@@ -2324,8 +2324,8 @@ def : Pat<(AArch64call GPR64noip:$Rn),
           (BLRNoIP GPR64noip:$Rn)>,
       Requires<[SLSBLRMitigation]>;
 
-def : Pat<(AArch64call_rvmarker GPR64:$Rn),
-          (BLR_RVMARKER GPR64:$Rn)>,
+def : Pat<(AArch64call_rvmarker (i64 tglobaladdr:$rvfunc), GPR64:$Rn),
+          (BLR_RVMARKER tglobaladdr:$rvfunc, GPR64:$Rn)>,
       Requires<[NoSLSBLRMitigation]>;
 
 let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
@@ -7545,6 +7545,9 @@ def : Pat<(i64 (bitconvert (f64 FPR64:$Xn))),
           (COPY_TO_REGCLASS FPR64:$Xn, GPR64)>;
 def : Pat<(i64 (bitconvert (v1f64 V64:$Vn))),
           (COPY_TO_REGCLASS V64:$Vn, GPR64)>;
+
+def : Pat<(f16 (bitconvert (bf16 FPR16:$src))), (f16 FPR16:$src)>;
+def : Pat<(bf16 (bitconvert (f16 FPR16:$src))), (bf16 FPR16:$src)>;
 
 let Predicates = [IsLE] in {
 def : Pat<(v1i64 (bitconvert (v2i32 FPR64:$src))), (v1i64 FPR64:$src)>;

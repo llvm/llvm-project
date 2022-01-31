@@ -47,7 +47,8 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         auto *Phi = cast<PHINode>(VPPhi->getUnderlyingValue());
         if (const auto *II = GetIntOrFpInductionDescriptor(Phi)) {
           VPValue *Start = Plan->getOrAddVPValue(II->getStartValue());
-          NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, *II);
+          NewRecipe =
+              new VPWidenIntOrFpInductionRecipe(Phi, Start, *II, false, true);
         } else {
           Plan->addVPValue(Phi, VPPhi);
           continue;
@@ -341,10 +342,16 @@ void VPlanTransforms::removeRedundantCanonicalIVs(VPlan &Plan) {
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
     auto *WidenOriginalIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
 
-    // If the induction recipe is canonical and the types match, use it
-    // directly.
-    if (WidenOriginalIV && WidenOriginalIV->isCanonical() &&
-        WidenOriginalIV->getScalarType() == WidenNewIV->getScalarType()) {
+    if (!WidenOriginalIV || !WidenOriginalIV->isCanonical() ||
+        WidenOriginalIV->getScalarType() != WidenNewIV->getScalarType())
+      continue;
+
+    // Replace WidenNewIV with WidenOriginalIV if WidenOriginalIV provides
+    // everything WidenNewIV's users need. That is, WidenOriginalIV will
+    // generate a vector phi or all users of WidenNewIV demand the first lane
+    // only.
+    if (WidenOriginalIV->needsVectorIV() ||
+        vputils::onlyFirstLaneUsed(WidenNewIV)) {
       WidenNewIV->replaceAllUsesWith(WidenOriginalIV);
       WidenNewIV->eraseFromParent();
       return;

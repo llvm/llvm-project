@@ -1,5 +1,5 @@
 ; XFAIL: *
-; RUN: opt < %s -basic-aa -newgvn -S | FileCheck %s
+; RUN: opt < %s -passes=newgvn -S | FileCheck %s
 
 @a = external global i32		; <i32*> [#uses=7]
 

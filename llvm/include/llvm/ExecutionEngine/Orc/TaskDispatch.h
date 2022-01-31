@@ -35,7 +35,7 @@ class Task : public RTTIExtends<Task, RTTIRoot> {
 public:
   static char ID;
 
-  virtual ~Task() {}
+  virtual ~Task() = default;
 
   /// Description of the task to be performed. Used for logging.
   virtual void printDescription(raw_ostream &OS) = 0;

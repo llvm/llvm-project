@@ -342,6 +342,33 @@ static const char *ValueProfKindDescr[] = {
 #include "llvm/ProfileData/InstrProfData.inc"
 };
 
+// Create a COMDAT variable INSTR_PROF_RAW_VERSION_VAR to make the runtime
+// aware this is an ir_level profile so it can set the version flag.
+static GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS) {
+  const StringRef VarName(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
+  Type *IntTy64 = Type::getInt64Ty(M.getContext());
+  uint64_t ProfileVersion = (INSTR_PROF_RAW_VERSION | VARIANT_MASK_IR_PROF);
+  if (IsCS)
+    ProfileVersion |= VARIANT_MASK_CSIR_PROF;
+  if (PGOInstrumentEntry)
+    ProfileVersion |= VARIANT_MASK_INSTR_ENTRY;
+  if (DebugInfoCorrelate)
+    ProfileVersion |= VARIANT_MASK_DBG_CORRELATE;
+  if (PGOFunctionEntryCoverage)
+    ProfileVersion |=
+        VARIANT_MASK_BYTE_COVERAGE | VARIANT_MASK_FUNCTION_ENTRY_ONLY;
+  auto IRLevelVersionVariable = new GlobalVariable(
+      M, IntTy64, true, GlobalValue::WeakAnyLinkage,
+      Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)), VarName);
+  IRLevelVersionVariable->setVisibility(GlobalValue::DefaultVisibility);
+  Triple TT(M.getTargetTriple());
+  if (TT.supportsCOMDAT()) {
+    IRLevelVersionVariable->setLinkage(GlobalValue::ExternalLinkage);
+    IRLevelVersionVariable->setComdat(M.getOrInsertComdat(VarName));
+  }
+  return IRLevelVersionVariable;
+}
+
 namespace {
 
 /// The select instruction visitor plays three roles specified
@@ -474,9 +501,7 @@ private:
     createProfileFileNameVar(M, InstrProfileOutput);
     // The variable in a comdat may be discarded by LTO. Ensure the
     // declaration will be retained.
-    appendToCompilerUsed(M, createIRLevelProfileFlagVar(
-                                M, /*IsCS=*/true, PGOInstrumentEntry,
-                                DebugInfoCorrelate, PGOFunctionEntryCoverage));
+    appendToCompilerUsed(M, createIRLevelProfileFlagVar(M, /*IsCS=*/true));
     return false;
   }
   std::string InstrProfileOutput;
@@ -1646,8 +1671,7 @@ static bool InstrumentAllFunctions(
   // For the context-sensitve instrumentation, we should have a separated pass
   // (before LTO/ThinLTO linking) to create these variables.
   if (!IsCS)
-    createIRLevelProfileFlagVar(M, /*IsCS=*/false, PGOInstrumentEntry,
-                                DebugInfoCorrelate, PGOFunctionEntryCoverage);
+    createIRLevelProfileFlagVar(M, /*IsCS=*/false);
   std::unordered_multimap<Comdat *, GlobalValue *> ComdatMembers;
   collectComdatMembers(M, ComdatMembers);
 
@@ -1669,9 +1693,7 @@ PGOInstrumentationGenCreateVar::run(Module &M, ModuleAnalysisManager &AM) {
   createProfileFileNameVar(M, CSInstrName);
   // The variable in a comdat may be discarded by LTO. Ensure the declaration
   // will be retained.
-  appendToCompilerUsed(M, createIRLevelProfileFlagVar(
-                              M, /*IsCS=*/true, PGOInstrumentEntry,
-                              DebugInfoCorrelate, PGOFunctionEntryCoverage));
+  appendToCompilerUsed(M, createIRLevelProfileFlagVar(M, /*IsCS=*/true));
   return PreservedAnalyses::all();
 }
 

@@ -254,8 +254,8 @@ unsigned
 BreakableStringLiteral::getRemainingLength(unsigned LineIndex, unsigned Offset,
                                            unsigned StartColumn) const {
   return UnbreakableTailLength + Postfix.size() +
-         encoding::columnWidthWithTabs(Line.substr(Offset, StringRef::npos),
-                                       StartColumn, Style.TabWidth, Encoding);
+         encoding::columnWidthWithTabs(Line.substr(Offset), StartColumn,
+                                       Style.TabWidth, Encoding);
 }
 
 unsigned BreakableStringLiteral::getContentStartColumn(unsigned LineIndex,
@@ -539,29 +539,28 @@ unsigned BreakableBlockComment::getRangeLength(unsigned LineIndex,
                                                unsigned Offset,
                                                StringRef::size_type Length,
                                                unsigned StartColumn) const {
-  unsigned LineLength =
-      encoding::columnWidthWithTabs(Content[LineIndex].substr(Offset, Length),
-                                    StartColumn, Style.TabWidth, Encoding);
-  // FIXME: This should go into getRemainingLength instead, but we currently
-  // break tests when putting it there. Investigate how to fix those tests.
-  // The last line gets a "*/" postfix.
-  if (LineIndex + 1 == Lines.size()) {
-    LineLength += 2;
-    // We never need a decoration when breaking just the trailing "*/" postfix.
-    // Note that checking that Length == 0 is not enough, since Length could
-    // also be StringRef::npos.
-    if (Content[LineIndex].substr(Offset, StringRef::npos).empty()) {
-      LineLength -= Decoration.size();
-    }
-  }
-  return LineLength;
+  return encoding::columnWidthWithTabs(
+      Content[LineIndex].substr(Offset, Length), StartColumn, Style.TabWidth,
+      Encoding);
 }
 
 unsigned BreakableBlockComment::getRemainingLength(unsigned LineIndex,
                                                    unsigned Offset,
                                                    unsigned StartColumn) const {
-  return UnbreakableTailLength +
-         getRangeLength(LineIndex, Offset, StringRef::npos, StartColumn);
+  unsigned LineLength =
+      UnbreakableTailLength +
+      getRangeLength(LineIndex, Offset, StringRef::npos, StartColumn);
+  if (LineIndex + 1 == Lines.size()) {
+    LineLength += 2;
+    // We never need a decoration when breaking just the trailing "*/" postfix.
+    bool HasRemainingText = Offset < Content[LineIndex].size();
+    if (!HasRemainingText) {
+      bool HasDecoration = Lines[LineIndex].ltrim().startswith(Decoration);
+      if (HasDecoration)
+        LineLength -= Decoration.size();
+    }
+  }
+  return LineLength;
 }
 
 unsigned BreakableBlockComment::getContentStartColumn(unsigned LineIndex,

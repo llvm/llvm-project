@@ -1143,8 +1143,7 @@ defm autolink : BoolFOption<"autolink",
 // languages and accept other values such as CPU/GPU architectures,
 // offload kinds and target aliases.
 def offload_EQ : CommaJoined<["--"], "offload=">, Flags<[NoXarchOption]>,
-  HelpText<"Specify comma-separated list of offloading target triples"
-           " (HIP only)">;
+  HelpText<"Specify comma-separated list of offloading target triples (CUDA and HIP only)">;
 
 // C++ Coroutines TS
 defm coroutines_ts : BoolFOption<"coroutines-ts",
@@ -1907,7 +1906,7 @@ defm legacy_pass_manager : BoolOption<"f", "legacy-pass-manager",
 def fexperimental_new_pass_manager : Flag<["-"], "fexperimental-new-pass-manager">,
   Group<f_clang_Group>, Flags<[CC1Option]>, Alias<fno_legacy_pass_manager>;
 def fno_experimental_new_pass_manager : Flag<["-"], "fno-experimental-new-pass-manager">,
-  Group<f_clang_Group>, Flags<[CC1Option]>, Alias<flegacy_pass_manager>;
+  Group<f_clang_Group>, Flags<[CC1Option,NoDriverOption]>, Alias<flegacy_pass_manager>;
 def fexperimental_strict_floating_point : Flag<["-"], "fexperimental-strict-floating-point">,
   Group<f_clang_Group>, Flags<[CC1Option]>,
   HelpText<"Enables experimental strict floating point in LLVM.">,

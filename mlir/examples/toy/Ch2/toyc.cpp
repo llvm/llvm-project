@@ -78,7 +78,7 @@ int dumpMLIR() {
     auto moduleAST = parseInputFile(inputFilename);
     if (!moduleAST)
       return 6;
-    mlir::OwningModuleRef module = mlirGen(context, *moduleAST);
+    mlir::OwningOpRef<mlir::ModuleOp> module = mlirGen(context, *moduleAST);
     if (!module)
       return 1;
 
@@ -97,7 +97,8 @@ int dumpMLIR() {
   // Parse the input mlir.
   llvm::SourceMgr sourceMgr;
   sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), llvm::SMLoc());
-  mlir::OwningModuleRef module = mlir::parseSourceFile(sourceMgr, &context);
+  mlir::OwningOpRef<mlir::ModuleOp> module =
+      mlir::parseSourceFile(sourceMgr, &context);
   if (!module) {
     llvm::errs() << "Error can't load file " << inputFilename << "\n";
     return 3;

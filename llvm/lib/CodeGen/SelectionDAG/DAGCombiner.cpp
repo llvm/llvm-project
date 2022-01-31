@@ -143,7 +143,7 @@ namespace {
     SelectionDAG &DAG;
     const TargetLowering &TLI;
     const SelectionDAGTargetInfo *STI;
-    CombineLevel Level;
+    CombineLevel Level = BeforeLegalizeTypes;
     CodeGenOpt::Level OptLevel;
     bool LegalDAG = false;
     bool LegalOperations = false;
@@ -238,8 +238,7 @@ namespace {
   public:
     DAGCombiner(SelectionDAG &D, AliasAnalysis *AA, CodeGenOpt::Level OL)
         : DAG(D), TLI(D.getTargetLoweringInfo()),
-          STI(D.getSubtarget().getSelectionDAGInfo()),
-          Level(BeforeLegalizeTypes), OptLevel(OL), AA(AA) {
+          STI(D.getSubtarget().getSelectionDAGInfo()), OptLevel(OL), AA(AA) {
       ForCodeSize = DAG.shouldOptForSize();
       DisableGenericCombines = STI && STI->disableGenericCombines(OptLevel);
 
@@ -14580,7 +14579,7 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
   unsigned NumElts = 1;
   EVT VT = N->getValueType(0);
   if (VT.isVector() && DAG.isSplatValue(N1))
-    NumElts = VT.getVectorNumElements();
+    NumElts = VT.getVectorMinNumElements();
 
   if (!MinUses || (N1->use_size() * NumElts) < MinUses)
     return SDValue();

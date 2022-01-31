@@ -86,42 +86,49 @@ LLDB must use debug python as well.
 Windows
 *******
 
-* Visual Studio 2017.
+* Visual Studio 2019.
 * The latest Windows SDK.
 * The Active Template Library (ATL).
 * `GnuWin32 <http://gnuwin32.sourceforge.net/>`_ for CoreUtils and Make.
 * `Python 3 <https://www.python.org/downloads/windows/>`_.  Make sure to (1) get
   the x64 variant if that's what you're targetting and (2) install the debug
-  library if you want to build a debug lldb.
+  library if you want to build a debug lldb. The standalone installer is the
+  easiest way to get the debug library.
 * `Python Tools for Visual Studio
-  <https://github.com/Microsoft/PTVS/releases>`_. If you plan to debug test
-  failures or even write new tests at all, PTVS is an indispensable debugging
+  <https://github.com/Microsoft/PTVS/>`_. If you plan to debug test failures
+  or even write new tests at all, PTVS is an indispensable debugging
   extension to VS that enables full editing and debugging support for Python
   (including mixed native/managed debugging).
+* `SWIG for Windows <http://www.swig.org/download.html>_`
 
 The steps outlined here describes how to set up your system and install the
 required dependencies such that they can be found when needed during the build
 process. They only need to be performed once.
 
-#. Install Visual Studio with the Windows SDK and ATL components.
+#. Install Visual Studio with the "Desktop Development with C++" workload and
+   the "Python Development" workload.
 #. Install GnuWin32, making sure ``<GnuWin32 install dir>\bin`` is added to
    your PATH environment variable. Verify that utilities like ``dirname`` and
    ``make`` are available from your terminal.
 #. Install SWIG for Windows, making sure ``<SWIG install dir>`` is added to
    your PATH environment variable. Verify that ``swig`` is available from your
    terminal.
+#. Install Python 3 from the standalone installer and include the debug libraries
+   in the install, making sure the Python install path is added to your PATH
+   environment variable.
 #. Register the Debug Interface Access DLLs with the Registry from a privileged
    terminal.
 
 ::
 
-> regsvr32 "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\DIA SDK\bin\msdia140.dll"
-> regsvr32 "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\DIA SDK\bin\amd64\msdia140.dll"
+> regsvr32 "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\DIA SDK\bin\msdia140.dll"
+> regsvr32 "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\DIA SDK\bin\amd64\msdia140.dll"
 
 Any command prompt from which you build LLDB should have a valid Visual Studio
-environment setup. This means you should run ``vcvarsall.bat`` or open an
-appropriate Visual Studio Command Prompt corresponding to the version you wish
-to use.
+environment setup. This means you should open an appropriate `Developer Command
+Prompt for VS <https://docs.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=vs-2019>`_
+corresponding to the version you wish to use or run ``vcvarsall.bat`` or
+``VsDevCmd.bat``.
 
 macOS
 *****
@@ -293,7 +300,7 @@ project in another directory.
 
 ::
 
-  $ cmake -G "Visual Studio 15 2017 Win64" -Thost=x64 <cmake variables> <path to root of llvm source tree>
+  $ cmake -G "Visual Studio 16 2019" -A x64 -T host=x64 <cmake variables> <path to root of llvm source tree>
 
 Then you can open the .sln file in Visual Studio, set lldb as the startup
 project, and use F5 to run it. You need only edit the project settings to set

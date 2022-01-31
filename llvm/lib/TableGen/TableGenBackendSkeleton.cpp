@@ -10,21 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/TableGen/Error.h"
-#include "llvm/TableGen/Record.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <algorithm>
-#include <set>
-#include <string>
-#include <vector>
 
 #define DEBUG_TYPE "skeleton-emitter"
+
+namespace llvm {
+class RecordKeeper;
+class raw_ostream;
+} // namespace llvm
 
 using namespace llvm;
 

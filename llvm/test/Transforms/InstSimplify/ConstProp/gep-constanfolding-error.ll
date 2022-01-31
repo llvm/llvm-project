@@ -1,5 +1,5 @@
 ; RUN: opt -gvn -S -o - %s | FileCheck %s
-; RUN: opt -newgvn -S -o - %s | FileCheck %s
+; RUN: opt -passes=newgvn -S -o - %s | FileCheck %s
 ; Test that the constantfolding getelementptr computation results in
 ; j[5][4][1] (j+239)
 ; and not [1][4][4][1] (#449) which is an incorrect out-of-range error

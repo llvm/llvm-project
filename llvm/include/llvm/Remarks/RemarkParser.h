@@ -27,7 +27,7 @@ class EndOfFileError : public ErrorInfo<EndOfFileError> {
 public:
   static char ID;
 
-  EndOfFileError() {}
+  EndOfFileError() = default;
 
   void log(raw_ostream &OS) const override { OS << "End of file reached."; }
   std::error_code convertToErrorCode() const override {

@@ -20,14 +20,7 @@
 namespace clang {
 
 class ASTContext;
-class CompilerInstance;
 class SourceManager;
-namespace ast_matchers {
-class MatchFinder;
-} // namespace ast_matchers
-namespace tooling {
-class CompilationDatabase;
-} // namespace tooling
 
 namespace tidy {
 class CachedGlobList;

@@ -15,7 +15,7 @@
 
 #include "DebugOptions.h"
 
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLArrayExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/CommandLine.h"

@@ -31,23 +31,6 @@
 #define GET_OP_CLASSES
 #include "mlir/IR/BuiltinOps.h.inc"
 
-//===----------------------------------------------------------------------===//
-// Dialect Utilities
-//===----------------------------------------------------------------------===//
-
-namespace mlir {
-/// This class acts as an owning reference to a module, and will automatically
-/// destroy the held module on destruction if the held module is valid.
-// TODO: Remove this class in favor of using OwningOpRef directly.
-class OwningModuleRef : public OwningOpRef<ModuleOp> {
-public:
-  using OwningOpRef<ModuleOp>::OwningOpRef;
-  OwningModuleRef() = default;
-  OwningModuleRef(OwningOpRef<ModuleOp> &&other)
-      : OwningOpRef<ModuleOp>(std::move(other)) {}
-};
-} // namespace mlir
-
 namespace llvm {
 /// Allow stealing the low bits of FuncOp.
 template <>

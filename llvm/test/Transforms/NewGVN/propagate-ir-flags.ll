@@ -1,4 +1,4 @@
-; RUN: opt < %s -newgvn -S | FileCheck %s
+; RUN: opt < %s -passes=newgvn -S | FileCheck %s
 
 ; CHECK-LABEL: func_fast
 ; CHECK:       fadd fast double

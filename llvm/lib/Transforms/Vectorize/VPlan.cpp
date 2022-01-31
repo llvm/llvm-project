@@ -1649,3 +1649,9 @@ void VPSlotTracker::assignSlots(const VPlan &Plan) {
       for (VPValue *Def : Recipe.definedValues())
         assignSlot(Def);
 }
+
+bool vputils::onlyFirstLaneUsed(VPValue *Def) {
+  return all_of(Def->users(), [Def](VPUser *U) {
+    return cast<VPRecipeBase>(U)->onlyFirstLaneUsed(Def);
+  });
+}

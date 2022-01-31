@@ -49,14 +49,13 @@ class CalleeSavedInfo {
   /// The long-term solution is to model the liveness of callee-saved registers
   /// by implicit uses on the return instructions, however, the required
   /// changes in the ARM backend would be quite extensive.
-  bool Restored;
+  bool Restored = true;
   /// Flag indicating whether the register is spilled to stack or another
   /// register.
-  bool SpilledToReg;
+  bool SpilledToReg = false;
 
 public:
-  explicit CalleeSavedInfo(unsigned R, int FI = 0)
-  : Reg(R), FrameIdx(FI), Restored(true), SpilledToReg(false) {}
+  explicit CalleeSavedInfo(unsigned R, int FI = 0) : Reg(R), FrameIdx(FI) {}
 
   // Accessors.
   Register getReg()                        const { return Reg; }
@@ -180,14 +179,14 @@ private:
     /// If true, the object has been sign-extended.
     bool isSExt = false;
 
-    uint8_t SSPLayout;
+    uint8_t SSPLayout = SSPLK_None;
 
     StackObject(uint64_t Size, Align Alignment, int64_t SPOffset,
                 bool IsImmutable, bool IsSpillSlot, const AllocaInst *Alloca,
                 bool IsAliased, uint8_t StackID = 0)
         : SPOffset(SPOffset), Size(Size), Alignment(Alignment),
           isImmutable(IsImmutable), isSpillSlot(IsSpillSlot), StackID(StackID),
-          Alloca(Alloca), isAliased(IsAliased), SSPLayout(SSPLK_None) {}
+          Alloca(Alloca), isAliased(IsAliased) {}
   };
 
   /// The alignment of the stack.

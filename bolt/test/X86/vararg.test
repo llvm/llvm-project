@@ -4,7 +4,7 @@
 
 REQUIRES: x86_64-linux
 
-RUN: %clangxx %p/../Inputs/vararg.s -o %t -Wl,-q
+RUN: %clangxx %cxxflags %p/../Inputs/vararg.s -o %t -Wl,-q
 RUN: llvm-bolt %t -o /dev/null -print-cfg -print-only=.*printf.* |& FileCheck %s
 
 CHECK: IsSimple    : 0

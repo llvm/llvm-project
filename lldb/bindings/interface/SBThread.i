@@ -409,7 +409,7 @@ public:
     Retruns a SBValue object representing the siginfo for the current signal.
     ") GetSiginfo;
     lldb::SBValue
-    GetSiginfo(SBError &error);
+    GetSiginfo();
 
     STRING_EXTENSION(SBThread)
 

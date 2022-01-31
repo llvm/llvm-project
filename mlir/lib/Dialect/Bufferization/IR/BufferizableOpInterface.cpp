@@ -47,7 +47,7 @@ constexpr const ::llvm::StringLiteral
 //===----------------------------------------------------------------------===//
 
 // Default constructor for BufferizationOptions.
-BufferizationOptions::BufferizationOptions() {}
+BufferizationOptions::BufferizationOptions() = default;
 
 BufferizableOpInterface
 BufferizationOptions::dynCastBufferizableOp(Operation *op) const {
@@ -464,11 +464,12 @@ bufferization::createAlloc(OpBuilder &b, Location loc, MemRefType type,
                            ValueRange dynShape,
                            const BufferizationOptions &options) {
   if (options.allocationFn)
-    return (*options.allocationFn)(b, loc, type, dynShape);
+    return (*options.allocationFn)(b, loc, type, dynShape,
+                                   options.bufferAlignment);
 
   // Default bufferallocation via AllocOp.
   Value allocated = b.create<memref::AllocOp>(
-      loc, type, dynShape, b.getI64IntegerAttr(kBufferAlignments));
+      loc, type, dynShape, b.getI64IntegerAttr(options.bufferAlignment));
   return allocated;
 }
 

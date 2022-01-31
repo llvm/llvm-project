@@ -99,9 +99,9 @@ static bool isSignExtendingOpW(const MachineInstr &MI) {
   case RISCV::SLTI:
   case RISCV::SLTU:
   case RISCV::SLTIU:
-  case RISCV::SEXTB:
-  case RISCV::SEXTH:
-  case RISCV::ZEXTH_RV64:
+  case RISCV::SEXT_B:
+  case RISCV::SEXT_H:
+  case RISCV::ZEXT_H_RV64:
     return true;
   // shifting right sufficiently makes the value 32-bit sign-extended
   case RISCV::SRAI:

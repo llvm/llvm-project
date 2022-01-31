@@ -19,7 +19,7 @@ namespace llvm {
 // Visitor class that finds all indirect call.
 struct PGOIndirectCallVisitor : public InstVisitor<PGOIndirectCallVisitor> {
   std::vector<CallBase *> IndirectCalls;
-  PGOIndirectCallVisitor() {}
+  PGOIndirectCallVisitor() = default;
 
   void visitCallBase(CallBase &Call) {
     if (Call.isIndirectCall())

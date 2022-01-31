@@ -77,6 +77,13 @@ std::unique_ptr<LinkerDriver> elf::driver;
 static void setConfigs(opt::InputArgList &args);
 static void readConfigs(opt::InputArgList &args);
 
+void elf::errorOrWarn(const Twine &msg) {
+  if (config->noinhibitExec)
+    warn(msg);
+  else
+    error(msg);
+}
+
 bool elf::link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
                llvm::raw_ostream &stderrOS, bool exitEarly,
                bool disableOutput) {
@@ -189,8 +196,8 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
           toString(std::move(err)));
 
   // Take ownership of memory buffers created for members of thin archives.
-  for (std::unique_ptr<MemoryBuffer> &mb : file->takeThinBuffers())
-    make<std::unique_ptr<MemoryBuffer>>(std::move(mb));
+  std::vector<std::unique_ptr<MemoryBuffer>> mbs = file->takeThinBuffers();
+  std::move(mbs.begin(), mbs.end(), std::back_inserter(memoryBuffers));
 
   return v;
 }
@@ -1821,7 +1828,6 @@ static void replaceCommonSymbols() {
 
       auto *bss = make<BssSection>("COMMON", s->size, s->alignment);
       bss->file = s->file;
-      bss->markDead();
       inputSections.push_back(bss);
       s->replace(Defined{s->file, s->getName(), s->binding, s->stOther, s->type,
                          /*value=*/0, s->size, bss});
@@ -2172,14 +2178,14 @@ static void checkAndReportMissingFeature(StringRef config, uint32_t features,
 //
 // This is also the case with AARCH64's BTI and PAC which use the similar
 // GNU_PROPERTY_AARCH64_FEATURE_1_AND mechanism.
-template <class ELFT> static uint32_t getAndFeatures() {
+static uint32_t getAndFeatures() {
   if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
       config->emachine != EM_AARCH64)
     return 0;
 
   uint32_t ret = -1;
-  for (InputFile *f : objectFiles) {
-    uint32_t features = cast<ObjFile<ELFT>>(f)->andFeatures;
+  for (ELFFileBase *f : objectFiles) {
+    uint32_t features = f->andFeatures;
 
     checkAndReportMissingFeature(
         config->zBtiReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_BTI,
@@ -2465,7 +2471,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Read .note.gnu.property sections from input object files which
   // contain a hint to tweak linker's and loader's behaviors.
-  config->andFeatures = getAndFeatures<ELFT>();
+  config->andFeatures = getAndFeatures();
 
   // The Target instance handles target-specific stuff, such as applying
   // relocations or writing a PLT section. It also contains target-dependent

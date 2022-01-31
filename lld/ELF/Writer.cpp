@@ -315,8 +315,7 @@ template <class ELFT> void elf::createSyntheticSections() {
   // If there is a SECTIONS command and a .data.rel.ro section name use name
   // .data.rel.ro.bss so that we match in the .data.rel.ro output section.
   // This makes sure our relro is contiguous.
-  bool hasDataRelRo =
-      script->hasSectionsCommand && findSection(".data.rel.ro", 0);
+  bool hasDataRelRo = script->hasSectionsCommand && findSection(".data.rel.ro");
   in.bssRelRo = std::make_unique<BssSection>(
       hasDataRelRo ? ".data.rel.ro.bss" : ".bss.rel.ro", 0, 1);
   add(*in.bssRelRo);
@@ -327,12 +326,12 @@ template <class ELFT> void elf::createSyntheticSections() {
       in.mipsRldMap = std::make_unique<MipsRldMapSection>();
       add(*in.mipsRldMap);
     }
-    if (auto *sec = MipsAbiFlagsSection<ELFT>::create())
-      add(*sec);
-    if (auto *sec = MipsOptionsSection<ELFT>::create())
-      add(*sec);
-    if (auto *sec = MipsReginfoSection<ELFT>::create())
-      add(*sec);
+    if ((in.mipsAbiFlags = MipsAbiFlagsSection<ELFT>::create()))
+      add(*in.mipsAbiFlags);
+    if ((in.mipsOptions = MipsOptionsSection<ELFT>::create()))
+      add(*in.mipsOptions);
+    if ((in.mipsReginfo = MipsReginfoSection<ELFT>::create()))
+      add(*in.mipsReginfo);
   }
 
   StringRef relaDynName = config->isRela ? ".rela.dyn" : ".rel.dyn";
@@ -2086,11 +2085,16 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // Dynamic section must be the last one in this list and dynamic
     // symbol table section (dynSymTab) must be the first one.
     for (Partition &part : partitions) {
+      if (part.relaDyn) {
+        // Compute DT_RELACOUNT to be used by part.dynamic.
+        part.relaDyn->partitionRels();
+        finalizeSynthetic(part.relaDyn.get());
+      }
+
       finalizeSynthetic(part.dynSymTab.get());
       finalizeSynthetic(part.gnuHashTab.get());
       finalizeSynthetic(part.hashTab.get());
       finalizeSynthetic(part.verDef.get());
-      finalizeSynthetic(part.relaDyn.get());
       finalizeSynthetic(part.relrDyn.get());
       finalizeSynthetic(part.ehFrameHdr.get());
       finalizeSynthetic(part.verSym.get());

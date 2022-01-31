@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines the ImutAVLTree and ImmutableSet classes.
-//
+///
+/// \file
+/// This file defines the ImutAVLTree and ImmutableSet classes.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_IMMUTABLESET_H

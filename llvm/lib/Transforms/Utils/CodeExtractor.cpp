@@ -857,8 +857,8 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       (ParamTy.size() + AggParamTy.size()) ==
           (inputs.size() + outputs.size()) &&
       "Number of scalar and aggregate params does not match inputs, outputs");
-  assert(StructValues.empty() ||
-         AggregateArgs && "Expeced StructValues only with AggregateArgs set");
+  assert((StructValues.empty() || AggregateArgs) &&
+         "Expeced StructValues only with AggregateArgs set");
 
   // Concatenate scalar and aggregate params in ParamTy.
   size_t NumScalarParams = ParamTy.size();

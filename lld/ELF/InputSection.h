@@ -65,7 +65,7 @@ public:
   // The 1-indexed partition that this section is assigned to by the garbage
   // collector, or 0 if this section is dead. Normally there is only one
   // partition, so this will either be 0 or 1.
-  uint8_t partition;
+  uint8_t partition = 1;
   elf::Partition &getPartition() const;
 
   // These corresponds to the fields in Elf_Shdr.
@@ -96,8 +96,8 @@ protected:
                         uint32_t entsize, uint32_t alignment, uint32_t type,
                         uint32_t info, uint32_t link)
       : name(name), sectionKind(sectionKind), bss(false), keepUnique(false),
-        partition(0), alignment(alignment), flags(flags), entsize(entsize),
-        type(type), link(link), info(info) {}
+        alignment(alignment), flags(flags), entsize(entsize), type(type),
+        link(link), info(info) {}
 };
 
 // This corresponds to a section of an input file.
@@ -118,6 +118,12 @@ public:
   // ObjFile<ELFT>, but in order to avoid ELFT, we use InputFile as
   // its static type.
   InputFile *file;
+
+  // Input sections are part of an output section. Special sections
+  // like .eh_frame and merge sections are first combined into a
+  // synthetic section that is then added to an output section. In all
+  // cases this points one level up.
+  SectionBase *parent = nullptr;
 
   // Section index of the relocation section if exists.
   uint32_t relSecIdx = 0;
@@ -158,12 +164,6 @@ public:
       uncompress();
     return rawData;
   }
-
-  // Input sections are part of an output section. Special sections
-  // like .eh_frame and merge sections are first combined into a
-  // synthetic section that is then added to an output section. In all
-  // cases this points one level up.
-  SectionBase *parent = nullptr;
 
   // The next member in the section group if this section is in a group. This is
   // used by --gc-sections.
@@ -242,6 +242,7 @@ protected:
 // have to be as compact as possible, which is why we don't store the size (can
 // be found by looking at the next one).
 struct SectionPiece {
+  SectionPiece() = default;
   SectionPiece(size_t off, uint32_t hash, bool live)
       : inputOff(off), live(live), hash(hash >> 1) {}
 
@@ -292,7 +293,7 @@ public:
   SyntheticSection *getParent() const;
 
 private:
-  void splitStrings(ArrayRef<uint8_t> a, size_t size);
+  void splitStrings(StringRef s, size_t size);
   void splitNonStrings(ArrayRef<uint8_t> a, size_t size);
 };
 

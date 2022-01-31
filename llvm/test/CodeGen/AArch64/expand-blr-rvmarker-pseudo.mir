@@ -25,6 +25,7 @@
     ret void
   }
 
+  declare i8* @attachedcall()
 ...
 ---
 
@@ -33,6 +34,7 @@
 # CHECK-NEXT:    BUNDLE implicit-def $lr, implicit-def $w30, implicit-def $sp, implicit-def $wsp, implicit-def dead $x0, implicit-def $fp, implicit-def $w29, implicit $x0, implicit $sp, implicit $xzr, implicit $fp {
 # CHECK-NEXT:      BLR $x0, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
 # CHECK-NEXT:      ORRXrs $xzr, $fp, 0
+# CHECK-NEXT:      BL @attachedcall, implicit-def $lr, implicit internal $sp
 # CHECK-NEXT:   }
 # CHECK-NEXT:    RET undef $lr, implicit killed $w0
 #
@@ -44,7 +46,7 @@ body:             |
     bb.0:
         liveins: $lr, $x0
 
-        BLR_RVMARKER $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+        BLR_RVMARKER @attachedcall, $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
         RET_ReallyLR implicit killed $w0
 ...
 
@@ -53,6 +55,7 @@ body:             |
 # CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $w30, implicit-def $sp, implicit-def $wsp, implicit-def dead $x0, implicit-def $fp, implicit-def $w29, implicit $sp, implicit $x0, implicit $xzr, implicit $fp {
 # CHECK-NEXT:      BL @foo, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
 # CHECK-NEXT:      $fp = ORRXrs $xzr, $fp, 0
+# CHECK-NEXT:      BL @attachedcall, implicit-def $lr, implicit internal $sp
 # CHECK-NEXT:    }
 # CHECK-NEXT:    RET undef $lr, implicit killed $w0
 #
@@ -61,7 +64,7 @@ body:             |
     bb.0:
         liveins: $lr, $x0
 
-        BLR_RVMARKER @foo, $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+        BLR_RVMARKER @attachedcall, @foo, $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
         RET_ReallyLR implicit killed $w0
 ...
 
@@ -70,6 +73,7 @@ body:             |
 # CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $w30, implicit-def $sp, implicit-def $wsp, implicit-def $x0, implicit-def $w0, implicit-def $fp, implicit-def $w29, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $xzr, implicit $fp {
 # CHECK-NEXT:      BL @foo, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
 # CHECK-NEXT:      $fp = ORRXrs $xzr, $fp, 0
+# CHECK-NEXT:      BL @attachedcall, implicit-def $lr, implicit internal $sp
 # CHECK-NEXT:    }
 # CHECK-NEXT:    RET undef $lr
 #
@@ -78,7 +82,7 @@ body:             |
     bb.0:
         liveins: $lr, $x0, $x1, $x2
 
-        BLR_RVMARKER @foo, $x0, $x1, $x2, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
+        BLR_RVMARKER @attachedcall, @foo, $x0, $x1, $x2, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
         RET_ReallyLR
 ...
 
@@ -87,6 +91,7 @@ body:             |
 # CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $w30, implicit-def $sp, implicit-def $wsp, implicit-def dead $x0, implicit-def $fp, implicit-def $w29, implicit $sp, implicit $w0, implicit $w1, implicit $xzr, implicit $fp {
 # CHECK-NEXT:      BL @foo, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $w1, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
 # CHECK-NEXT:      $fp = ORRXrs $xzr, $fp, 0
+# CHECK-NEXT:      BL @attachedcall, implicit-def $lr, implicit internal $sp
 # CHECK-NEXT:    }
 # CHECK-NEXT:    RET undef $lr, implicit killed $w0
 #
@@ -95,7 +100,7 @@ body:             |
     bb.0:
         liveins: $lr, $w0, $w1
 
-        BLR_RVMARKER @foo, $w0, $w1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+        BLR_RVMARKER @attachedcall, @foo, $w0, $w1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
         RET_ReallyLR implicit killed $w0
 ...
 
@@ -105,6 +110,7 @@ body:             |
 # CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $w30, implicit-def $sp, implicit-def $wsp, implicit-def dead $x0, implicit-def $fp, implicit-def $w29, implicit $x8, implicit $sp, implicit $w0, implicit $w1, implicit $xzr, implicit $fp {
 # CHECK-NEXT:      BLR $x8, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $w1, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
 # CHECK-NEXT:      $fp = ORRXrs $xzr, $fp, 0
+# CHECK-NEXT:      BL @attachedcall, implicit-def $lr, implicit internal $sp
 # CHECK-NEXT:    }
 # CHECK-NEXT:    RET undef $lr, implicit killed $w0
 #
@@ -113,6 +119,6 @@ body:             |
     bb.0:
         liveins: $lr, $x8, $w0, $w1
 
-        BLR_RVMARKER $x8, $w0, $w1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+        BLR_RVMARKER @attachedcall, $x8, $w0, $w1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
         RET_ReallyLR implicit killed $w0
 ...

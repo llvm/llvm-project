@@ -4263,6 +4263,44 @@ void CreateMaskOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<CreateMaskFolder>(context);
 }
 
+//===----------------------------------------------------------------------===//
+// ScanOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(ScanOp op) {
+  VectorType srcType = op.getSourceType();
+  VectorType initialType = op.getInitialValueType();
+  // Check reduction dimension < rank.
+  int64_t srcRank = srcType.getRank();
+  int64_t reductionDim = op.reduction_dim();
+  if (reductionDim >= srcRank)
+    return op.emitOpError("reduction dimension ")
+           << reductionDim << " has to be less than " << srcRank;
+
+  // Check that rank(initial_value) = rank(src) - 1.
+  int64_t initialValueRank = initialType.getRank();
+  if (initialValueRank != srcRank - 1)
+    return op.emitOpError("initial value rank ")
+           << initialValueRank << " has to be equal to " << srcRank - 1;
+
+  // Check shapes of initial value and src.
+  ArrayRef<int64_t> srcShape = srcType.getShape();
+  ArrayRef<int64_t> initialValueShapes = initialType.getShape();
+  SmallVector<int64_t> expectedShape;
+  for (int i = 0; i < srcRank; i++) {
+    if (i != reductionDim)
+      expectedShape.push_back(srcShape[i]);
+  }
+  if (llvm::any_of(llvm::zip(initialValueShapes, expectedShape),
+                   [](std::tuple<int64_t, int64_t> s) {
+                     return std::get<0>(s) != std::get<1>(s);
+                   })) {
+    return op.emitOpError("incompatible input/initial value shapes");
+  }
+
+  return success();
+}
+
 void mlir::vector::populateVectorToVectorCanonicalizationPatterns(
     RewritePatternSet &patterns) {
   patterns

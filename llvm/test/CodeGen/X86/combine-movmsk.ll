@@ -220,6 +220,73 @@ define i1 @pmovmskb_noneof_v16i8_positive(<16 x i8> %a0) {
   ret i1 %4
 }
 
+; MOVMSK(CMPEQ(AND(X,C1),0)) -> MOVMSK(NOT(SHL(X,C2)))
+define i32 @movmskpd_pow2_mask(<2 x i64> %a0) {
+; SSE2-LABEL: movmskpd_pow2_mask:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,0,3,2]
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    movmskpd %xmm0, %eax
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: movmskpd_pow2_mask:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    movmskpd %xmm0, %eax
+; SSE42-NEXT:    xorl $3, %eax
+; SSE42-NEXT:    retq
+;
+; AVX-LABEL: movmskpd_pow2_mask:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovmskpd %xmm0, %eax
+; AVX-NEXT:    xorl $3, %eax
+; AVX-NEXT:    retq
+  %1 = and <2 x i64> %a0, <i64 -9223372036854775808, i64 -9223372036854775808>
+  %2 = icmp eq <2 x i64> %1, zeroinitializer
+  %3 = sext <2 x i1> %2 to <2 x i64>
+  %4 = bitcast <2 x i64> %3 to <2 x double>
+  %5 = tail call i32 @llvm.x86.sse2.movmsk.pd(<2 x double> %4)
+  ret i32 %5
+}
+
+define i32 @movmskps_pow2_mask(<4 x i32> %a0) {
+; SSE-LABEL: movmskps_pow2_mask:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pslld $29, %xmm0
+; SSE-NEXT:    movmskps %xmm0, %eax
+; SSE-NEXT:    xorl $15, %eax
+; SSE-NEXT:    retq
+  %1 = and <4 x i32> %a0, <i32 4, i32 4, i32 4, i32 4>
+  %2 = icmp eq <4 x i32> %1, zeroinitializer
+  %3 = sext <4 x i1> %2 to <4 x i32>
+  %4 = bitcast <4 x i32> %3 to <4 x float>
+  %5 = tail call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %4)
+  ret i32 %5
+}
+
+define i32 @pmovmskb_pow2_mask(<16 x i8> %a0) {
+; SSE-LABEL: pmovmskb_pow2_mask:
+; SSE:       # %bb.0:
+; SSE-NEXT:    psllw $7, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %eax
+; SSE-NEXT:    xorl $65535, %eax # imm = 0xFFFF
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: pmovmskb_pow2_mask:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsllw $7, %xmm0, %xmm0
+; AVX-NEXT:    vpmovmskb %xmm0, %eax
+; AVX-NEXT:    xorl $65535, %eax # imm = 0xFFFF
+; AVX-NEXT:    retq
+  %1 = and <16 x i8> %a0, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %2 = icmp eq <16 x i8> %1, zeroinitializer
+  %3 = sext <16 x i1> %2 to <16 x i8>
+  %4 = tail call i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8> %3)
+  ret i32 %4
+}
+
 ; AND(MOVMSK(X),MOVMSK(Y)) -> MOVMSK(AND(X,Y))
 ; XOR(MOVMSK(X),MOVMSK(Y)) -> MOVMSK(XOR(X,Y))
 ; OR(MOVMSK(X),MOVMSK(Y)) -> MOVMSK(OR(X,Y))
@@ -305,4 +372,36 @@ define i32 @or_pmovmskb_pmovmskb(<16 x i8> %a0, <8 x i16> %a1) {
   %6 = tail call i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8> %5)
   %7 = or i32 %3, %6
   ret i32 %7
+}
+
+; We can't fold to ptest if we're not checking every pcmpeq result
+define i32 @movmskps_ptest_numelts_mismatch(<16 x i8> %a0) {
+; SSE-LABEL: movmskps_ptest_numelts_mismatch:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE-NEXT:    movmskps %xmm1, %ecx
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    cmpl $15, %ecx
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    negl %eax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: movmskps_ptest_numelts_mismatch:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovmskps %xmm0, %ecx
+; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    cmpl $15, %ecx
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    negl %eax
+; AVX-NEXT:    retq
+  %1 = icmp eq <16 x i8> %a0, zeroinitializer
+  %2 = sext <16 x i1> %1 to <16 x i8>
+  %3 = bitcast <16 x i8> %2 to <4 x float>
+  %4 = tail call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %3)
+  %5 = icmp eq i32 %4, 15
+  %6 = sext i1 %5 to i32
+  ret i32 %6
 }

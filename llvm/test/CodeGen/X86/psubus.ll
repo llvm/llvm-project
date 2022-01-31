@@ -1164,16 +1164,15 @@ define <8 x i16> @test16(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
 ; AVX1-NEXT:    vpmaxud %xmm2, %xmm4, %xmm2
 ; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm5, %xmm5
-; AVX1-NEXT:    vpxor %xmm5, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vpxor %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vpmaxud %xmm3, %xmm1, %xmm3
 ; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm1, %xmm3
-; AVX1-NEXT:    vpxor %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vpxor %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vpackssdw %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = <0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u>
-; AVX1-NEXT:    vpshufb %xmm3, %xmm4, %xmm4
-; AVX1-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm4[0]
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vpackusdw %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vzeroupper

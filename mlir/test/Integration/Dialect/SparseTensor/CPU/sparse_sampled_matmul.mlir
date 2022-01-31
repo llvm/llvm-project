@@ -1,9 +1,4 @@
-// RUN: mlir-opt %s \
-// RUN:   --sparsification --sparse-tensor-conversion \
-// RUN:   --convert-vector-to-scf --convert-scf-to-std \
-// RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
-// RUN:   --std-bufferize --finalizing-bufferize  \
-// RUN:   --convert-vector-to-llvm --convert-memref-to-llvm --convert-std-to-llvm --reconcile-unrealized-casts | \
+// RUN: mlir-opt %s --sparse-compiler | \
 // RUN: TENSOR0="%mlir_integration_test_dir/data/test.mtx" \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
@@ -13,11 +8,7 @@
 // Do the same run, but now with SIMDization as well. This should not change the outcome.
 //
 // RUN: mlir-opt %s \
-// RUN:   --sparsification="vectorization-strategy=2 vl=4 enable-simd-index32" --sparse-tensor-conversion \
-// RUN:   --convert-vector-to-scf --convert-scf-to-std \
-// RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
-// RUN:   --std-bufferize --finalizing-bufferize --lower-affine \
-// RUN:   --convert-vector-to-llvm --convert-memref-to-llvm --convert-std-to-llvm --reconcile-unrealized-casts | \
+// RUN:   --sparse-compiler="vectorization-strategy=2 vl=4 enable-simd-index32" | \
 // RUN: TENSOR0="%mlir_integration_test_dir/data/test.mtx" \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \

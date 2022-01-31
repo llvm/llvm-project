@@ -5,21 +5,23 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file contains some templates that are useful if you are working with the
-// STL at all.
-//
-// No library is required when using these functions.
-//
+///
+/// \file
+/// This file contains some templates that are useful if you are working with
+/// the STL at all.
+///
+/// No library is required when using these functions.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_STLEXTRAS_H
 #define LLVM_ADT_STLEXTRAS_H
 
-#include "llvm/ADT/identity.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLArrayExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/identity.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Config/abi-breaking.h"
@@ -1410,7 +1412,7 @@ constexpr decltype(auto) makeVisitor(CallableTs &&...Callables) {
 }
 
 //===----------------------------------------------------------------------===//
-//     Extra additions for arrays
+//     Extra additions to <algorithm>
 //===----------------------------------------------------------------------===//
 
 // We have a copy here so that LLVM behaves the same when using different
@@ -1428,12 +1430,6 @@ void shuffle(Iterator first, Iterator last, RNG &&g) {
     if (offset != difference_type(0))
       std::iter_swap(first, first + offset);
   }
-}
-
-/// Find the length of an array.
-template <class T, std::size_t N>
-constexpr inline size_t array_lengthof(T (&)[N]) {
-  return N;
 }
 
 /// Adapt std::less<T> for array_pod_sort.
@@ -1562,10 +1558,6 @@ template <typename Container, typename Compare>
 inline void sort(Container &&C, Compare Comp) {
   llvm::sort(adl_begin(C), adl_end(C), Comp);
 }
-
-//===----------------------------------------------------------------------===//
-//     Extra additions to <algorithm>
-//===----------------------------------------------------------------------===//
 
 /// Get the size of a range. This is a wrapper function around std::distance
 /// which is only enabled when the operation is O(1).

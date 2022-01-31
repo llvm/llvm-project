@@ -10,7 +10,7 @@
 #include "RTBuilder.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/CharacterExpr.h"
-#include "flang/Lower/FIRBuilder.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Runtime/character.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 
@@ -55,7 +55,7 @@ inline int64_t getLength(mlir::Type argTy) {
 /// Get (or generate) the MLIR FuncOp for a given runtime function.
 template <typename E>
 static mlir::FuncOp getRuntimeFunc(mlir::Location loc,
-                                   Fortran::lower::FirOpBuilder &builder) {
+                                   fir::FirOpBuilder &builder) {
   auto name = getName<E>();
   auto func = builder.getNamedFunction(name);
   if (func)

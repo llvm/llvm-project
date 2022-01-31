@@ -97,10 +97,9 @@ The code, slightly simplified and annotated, is reproduced here:
 
 Looking first at the partial bufferization passes, we see that there are a
 sequence of `FuncOp` passes (which run in parallel on functions). These function
-passes are bracketed by `tensor-constant-bufferize` and `func-bufferize`, which
-are module passes (and thus serialize the parallel compilation process). These
-two passes must be module passes because they make changes to the top-level
-module.
+passes are bracketed by `arith-bufferize` and `func-bufferize`, which are module
+passes (and thus serialize the parallel compilation process). These two passes
+must be module passes because they make changes to the top-level module.
 
 The bulk of the bufferization work is done by the function passes. Most of these
 passes are provided as part of the upstream MLIR distribution and bufferize
@@ -235,11 +234,11 @@ which helps with this in general.
     -   This is an example of a pass that is not split along dialect
         subdivisions.
 
--   `tensor-constant-bufferize`
-    ([code](https://github.com/llvm/llvm-project/blob/bc8acf2ce8ad6e8c9b1d97b2e02d3f4ad26e1d9d/mlir/lib/Dialect/StandardOps/Transforms/TensorConstantBufferize.cpp#L1),
-    [test](https://github.com/llvm/llvm-project/blob/bc8acf2ce8ad6e8c9b1d97b2e02d3f4ad26e1d9d/mlir/test/Dialect/Standard/tensor-constant-bufferize.mlir#L1))
+-   `arith-bufferize`
+    ([code](https://github.com/llvm/llvm-project/blob/446425f89871aa7849c5615e6b695ebd10c9b34a/mlir/lib/Dialect/Arithmetic/Transforms/Bufferize.cpp),
+    [test](https://github.com/llvm/llvm-project/blob/d1aed486efc6d35a81ca4acbabb4203c4b91cda9/mlir/test/Dialect/Arithmetic/bufferize.mlir))
 
-    -   Bufferizes only `arith.constant` ops of `tensor` type.
+    -   Bufferizes only `arith` ops of `tensor` type.
     -   This is an example of setting up the legality so that only a subset of
         `arith.constant` ops get bufferized.
     -   This is an example of a pass that is not split along dialect

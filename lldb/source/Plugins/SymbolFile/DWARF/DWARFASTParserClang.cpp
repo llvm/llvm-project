@@ -443,8 +443,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   if (!die)
     return nullptr;
 
-  Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
-                                        DWARF_LOG_LOOKUPS));
+  Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
 
   SymbolFileDWARF *dwarf = die.GetDWARF();
   if (log) {
@@ -548,8 +547,7 @@ lldb::TypeSP
 DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
                                        const DWARFDIE &die,
                                        ParsedDWARFTypeAttributes &attrs) {
-  Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
-                                        DWARF_LOG_LOOKUPS));
+  Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
   SymbolFileDWARF *dwarf = die.GetDWARF();
   const dw_tag_t tag = die.Tag();
   LanguageType cu_language = SymbolFileDWARF::GetLanguage(*die.GetCU());
@@ -771,8 +769,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
 TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
                                       const DWARFDIE &die,
                                       ParsedDWARFTypeAttributes &attrs) {
-  Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
-                                        DWARF_LOG_LOOKUPS));
+  Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
   SymbolFileDWARF *dwarf = die.GetDWARF();
   const dw_tag_t tag = die.Tag();
   TypeSP type_sp;
@@ -900,8 +897,7 @@ ConvertDWARFCallingConventionToClang(const ParsedDWARFTypeAttributes &attrs) {
     break;
   }
 
-  Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
-                                        DWARF_LOG_LOOKUPS));
+  Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
   LLDB_LOG(log, "Unsupported DW_AT_calling_convention value: {0}",
            attrs.calling_convention);
   // Use the default calling convention as a fallback.
@@ -910,8 +906,7 @@ ConvertDWARFCallingConventionToClang(const ParsedDWARFTypeAttributes &attrs) {
 
 TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
                            ParsedDWARFTypeAttributes &attrs) {
-  Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
-                                        DWARF_LOG_LOOKUPS));
+  Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
 
   SymbolFileDWARF *dwarf = die.GetDWARF();
   const dw_tag_t tag = die.Tag();
@@ -1562,8 +1557,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   const dw_tag_t tag = die.Tag();
   SymbolFileDWARF *dwarf = die.GetDWARF();
   LanguageType cu_language = SymbolFileDWARF::GetLanguage(*die.GetCU());
-  Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_TYPE_COMPLETION |
-                                          DWARF_LOG_LOOKUPS);
+  Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
 
   // UniqueDWARFASTType is large, so don't create a local variables on the
   // stack, put it on the heap. This function is often called recursively and
@@ -2214,12 +2208,6 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
 
   const dw_tag_t tag = die.Tag();
 
-  Log *log =
-      nullptr; // (LogChannelDWARF::GetLogIfAny(DWARF_LOG_DEBUG_INFO|DWARF_LOG_TYPE_COMPLETION));
-  if (log)
-    dwarf->GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
-        log, "0x%8.8" PRIx64 ": %s '%s' resolving forward declaration...",
-        die.GetID(), die.GetTagAsCString(), type->GetName().AsCString());
   assert(clang_type);
   DWARFAttributes attributes;
   switch (tag) {
@@ -3452,30 +3440,6 @@ DWARFASTParserClang::ResolveNamespaceDIE(const DWARFDIE &die) {
       namespace_decl = m_ast.GetUniqueNamespaceDeclaration(
           namespace_name, containing_decl_ctx, GetOwningClangModule(die),
           is_inline);
-      Log *log =
-          nullptr; // (LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO));
-      if (log) {
-        SymbolFileDWARF *dwarf = die.GetDWARF();
-        if (namespace_name) {
-          dwarf->GetObjectFile()->GetModule()->LogMessage(
-              log,
-              "ASTContext => %p: 0x%8.8" PRIx64
-              ": DW_TAG_namespace with DW_AT_name(\"%s\") => "
-              "clang::NamespaceDecl *%p (original = %p)",
-              static_cast<void *>(&m_ast.getASTContext()), die.GetID(),
-              namespace_name, static_cast<void *>(namespace_decl),
-              static_cast<void *>(namespace_decl->getOriginalNamespace()));
-        } else {
-          dwarf->GetObjectFile()->GetModule()->LogMessage(
-              log,
-              "ASTContext => %p: 0x%8.8" PRIx64
-              ": DW_TAG_namespace (anonymous) => clang::NamespaceDecl *%p "
-              "(original = %p)",
-              static_cast<void *>(&m_ast.getASTContext()), die.GetID(),
-              static_cast<void *>(namespace_decl),
-              static_cast<void *>(namespace_decl->getOriginalNamespace()));
-        }
-      }
 
       if (namespace_decl)
         LinkDeclContextToDIE((clang::DeclContext *)namespace_decl, die);
@@ -3580,23 +3544,12 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
   }
   const uint32_t src_size = src_name_to_die.GetSize();
   const uint32_t dst_size = dst_name_to_die.GetSize();
-  Log *log = nullptr; // (LogChannelDWARF::GetLogIfAny(DWARF_LOG_DEBUG_INFO |
-                      // DWARF_LOG_TYPE_COMPLETION));
 
   // Is everything kosher so we can go through the members at top speed?
   bool fast_path = true;
 
-  if (src_size != dst_size) {
-    if (src_size != 0 && dst_size != 0) {
-      LLDB_LOGF(log,
-                "warning: trying to unique class DIE 0x%8.8x to 0x%8.8x, "
-                "but they didn't have the same size (src=%d, dst=%d)",
-                src_class_die.GetOffset(), dst_class_die.GetOffset(), src_size,
-                dst_size);
-    }
-
+  if (src_size != dst_size)
     fast_path = false;
-  }
 
   uint32_t idx;
 
@@ -3605,15 +3558,8 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
       src_die = src_name_to_die.GetValueAtIndexUnchecked(idx);
       dst_die = dst_name_to_die.GetValueAtIndexUnchecked(idx);
 
-      if (src_die.Tag() != dst_die.Tag()) {
-        LLDB_LOGF(log,
-                  "warning: tried to unique class DIE 0x%8.8x to 0x%8.8x, "
-                  "but 0x%8.8x (%s) tags didn't match 0x%8.8x (%s)",
-                  src_class_die.GetOffset(), dst_class_die.GetOffset(),
-                  src_die.GetOffset(), src_die.GetTagAsCString(),
-                  dst_die.GetOffset(), dst_die.GetTagAsCString());
+      if (src_die.Tag() != dst_die.Tag())
         fast_path = false;
-      }
 
       const char *src_name = src_die.GetMangledName();
       const char *dst_name = dst_die.GetMangledName();
@@ -3621,12 +3567,6 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
       // Make sure the names match
       if (src_name == dst_name || (strcmp(src_name, dst_name) == 0))
         continue;
-
-      LLDB_LOGF(log,
-                "warning: tried to unique class DIE 0x%8.8x to 0x%8.8x, "
-                "but 0x%8.8x (%s) names didn't match 0x%8.8x (%s)",
-                src_class_die.GetOffset(), dst_class_die.GetOffset(),
-                src_die.GetOffset(), src_name, dst_die.GetOffset(), dst_name);
 
       fast_path = false;
     }
@@ -3649,33 +3589,13 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
 
       clang::DeclContext *src_decl_ctx =
           src_dwarf_ast_parser->m_die_to_decl_ctx[src_die.GetDIE()];
-      if (src_decl_ctx) {
-        LLDB_LOGF(log, "uniquing decl context %p from 0x%8.8x for 0x%8.8x",
-                  static_cast<void *>(src_decl_ctx), src_die.GetOffset(),
-                  dst_die.GetOffset());
+      if (src_decl_ctx)
         dst_dwarf_ast_parser->LinkDeclContextToDIE(src_decl_ctx, dst_die);
-      } else {
-        LLDB_LOGF(log,
-                  "warning: tried to unique decl context from 0x%8.8x for "
-                  "0x%8.8x, but none was found",
-                  src_die.GetOffset(), dst_die.GetOffset());
-      }
 
       Type *src_child_type =
           dst_die.GetDWARF()->GetDIEToType()[src_die.GetDIE()];
-      if (src_child_type) {
-        LLDB_LOGF(log,
-                  "uniquing type %p (uid=0x%" PRIx64
-                  ") from 0x%8.8x for 0x%8.8x",
-                  static_cast<void *>(src_child_type), src_child_type->GetID(),
-                  src_die.GetOffset(), dst_die.GetOffset());
+      if (src_child_type)
         dst_die.GetDWARF()->GetDIEToType()[dst_die.GetDIE()] = src_child_type;
-      } else {
-        LLDB_LOGF(log,
-                  "warning: tried to unique lldb_private::Type from "
-                  "0x%8.8x for 0x%8.8x, but none was found",
-                  src_die.GetOffset(), dst_die.GetOffset());
-      }
     }
   } else {
     // We must do this slowly.  For each member of the destination, look up a
@@ -3693,38 +3613,16 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
         if (src_die && (src_die.Tag() == dst_die.Tag())) {
           clang::DeclContext *src_decl_ctx =
               src_dwarf_ast_parser->m_die_to_decl_ctx[src_die.GetDIE()];
-          if (src_decl_ctx) {
-            LLDB_LOGF(log, "uniquing decl context %p from 0x%8.8x for 0x%8.8x",
-                      static_cast<void *>(src_decl_ctx), src_die.GetOffset(),
-                      dst_die.GetOffset());
+          if (src_decl_ctx)
             dst_dwarf_ast_parser->LinkDeclContextToDIE(src_decl_ctx, dst_die);
-          } else {
-            LLDB_LOGF(log,
-                      "warning: tried to unique decl context from 0x%8.8x "
-                      "for 0x%8.8x, but none was found",
-                      src_die.GetOffset(), dst_die.GetOffset());
-          }
 
           Type *src_child_type =
               dst_die.GetDWARF()->GetDIEToType()[src_die.GetDIE()];
           if (src_child_type) {
-            LLDB_LOGF(
-                log,
-                "uniquing type %p (uid=0x%" PRIx64 ") from 0x%8.8x for 0x%8.8x",
-                static_cast<void *>(src_child_type), src_child_type->GetID(),
-                src_die.GetOffset(), dst_die.GetOffset());
             dst_die.GetDWARF()->GetDIEToType()[dst_die.GetDIE()] =
                 src_child_type;
-          } else {
-            LLDB_LOGF(log,
-                      "warning: tried to unique lldb_private::Type from "
-                      "0x%8.8x for 0x%8.8x, but none was found",
-                      src_die.GetOffset(), dst_die.GetOffset());
           }
         } else {
-          LLDB_LOGF(log, "warning: couldn't find a match for 0x%8.8x",
-                    dst_die.GetOffset());
-
           failures.push_back(dst_die);
         }
       }
@@ -3748,47 +3646,20 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
         // Both classes have the artificial types, link them
         clang::DeclContext *src_decl_ctx =
             src_dwarf_ast_parser->m_die_to_decl_ctx[src_die.GetDIE()];
-        if (src_decl_ctx) {
-          LLDB_LOGF(log, "uniquing decl context %p from 0x%8.8x for 0x%8.8x",
-                    static_cast<void *>(src_decl_ctx), src_die.GetOffset(),
-                    dst_die.GetOffset());
+        if (src_decl_ctx)
           dst_dwarf_ast_parser->LinkDeclContextToDIE(src_decl_ctx, dst_die);
-        } else {
-          LLDB_LOGF(log,
-                    "warning: tried to unique decl context from 0x%8.8x "
-                    "for 0x%8.8x, but none was found",
-                    src_die.GetOffset(), dst_die.GetOffset());
-        }
 
         Type *src_child_type =
             dst_die.GetDWARF()->GetDIEToType()[src_die.GetDIE()];
-        if (src_child_type) {
-          LLDB_LOGF(
-              log,
-              "uniquing type %p (uid=0x%" PRIx64 ") from 0x%8.8x for 0x%8.8x",
-              static_cast<void *>(src_child_type), src_child_type->GetID(),
-              src_die.GetOffset(), dst_die.GetOffset());
+        if (src_child_type)
           dst_die.GetDWARF()->GetDIEToType()[dst_die.GetDIE()] = src_child_type;
-        } else {
-          LLDB_LOGF(log,
-                    "warning: tried to unique lldb_private::Type from "
-                    "0x%8.8x for 0x%8.8x, but none was found",
-                    src_die.GetOffset(), dst_die.GetOffset());
-        }
       }
     }
   }
 
   if (dst_size_artificial) {
     for (idx = 0; idx < dst_size_artificial; ++idx) {
-      ConstString dst_name_artificial =
-          dst_name_to_die_artificial.GetCStringAtIndex(idx);
       dst_die = dst_name_to_die_artificial.GetValueAtIndexUnchecked(idx);
-      LLDB_LOGF(log,
-                "warning: need to create artificial method for 0x%8.8x for "
-                "method '%s'",
-                dst_die.GetOffset(), dst_name_artificial.GetCString());
-
       failures.push_back(dst_die);
     }
   }

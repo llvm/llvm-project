@@ -7,14 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Triple.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLArrayExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/ARMTargetParser.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/SwapByteOrder.h"
-#include "llvm/Support/ARMTargetParser.h"
 #include "llvm/Support/VersionTuple.h"
 #include <cassert>
 #include <cstring>

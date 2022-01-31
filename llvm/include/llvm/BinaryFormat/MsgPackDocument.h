@@ -218,7 +218,7 @@ private:
 /// A DocNode that is a map.
 class MapDocNode : public DocNode {
 public:
-  MapDocNode() {}
+  MapDocNode() = default;
   MapDocNode(DocNode &N) : DocNode(N) { assert(getKind() == Type::Map); }
 
   // Map access methods.
@@ -248,7 +248,7 @@ public:
 /// A DocNode that is an array.
 class ArrayDocNode : public DocNode {
 public:
-  ArrayDocNode() {}
+  ArrayDocNode() = default;
   ArrayDocNode(DocNode &N) : DocNode(N) { assert(getKind() == Type::Array); }
 
   // Array access methods.

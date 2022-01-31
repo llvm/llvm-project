@@ -514,9 +514,8 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         target = self.createTarget(target_yaml)
         process = self.connect(target)
 
-        error = lldb.SBError()
-        siginfo = process.threads[0].GetSiginfo(error)
-        self.assertTrue(siginfo, error)
+        siginfo = process.threads[0].GetSiginfo()
+        self.assertTrue(siginfo.GetError().Success(), siginfo.GetError())
 
         for key, value in expected.items():
             self.assertEqual(siginfo.GetValueForExpressionPath("." + key)

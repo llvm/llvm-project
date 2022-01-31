@@ -42,6 +42,9 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
                                             const MCValue &Target,
                                             const MCFixup &Fixup,
                                             bool IsPCRel) const {
+  MCFixupKind Kind = Fixup.getKind();
+  if (Kind >= FirstLiteralRelocationKind)
+    return Kind - FirstLiteralRelocationKind;
 
   if (const SparcMCExpr *SExpr = dyn_cast<SparcMCExpr>(Fixup.getValue())) {
     if (SExpr->getKind() == SparcMCExpr::VK_Sparc_R_DISP32)
@@ -68,6 +71,7 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
   switch(Fixup.getTargetKind()) {
   default:
     llvm_unreachable("Unimplemented fixup -> relocation");
+  case FK_NONE:                  return ELF::R_SPARC_NONE;
   case FK_Data_1:                return ELF::R_SPARC_8;
   case FK_Data_2:                return ((Fixup.getOffset() % 2)
                                          ? ELF::R_SPARC_UA16

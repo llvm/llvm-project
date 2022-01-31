@@ -8,6 +8,7 @@
 
 #include "MCTargetDesc/SparcFixupKinds.h"
 #include "MCTargetDesc/SparcMCTargetDesc.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
@@ -131,6 +132,23 @@ namespace {
       return Sparc::NumTargetFixupKinds;
     }
 
+    Optional<MCFixupKind> getFixupKind(StringRef Name) const override {
+      unsigned Type;
+      Type = llvm::StringSwitch<unsigned>(Name)
+#define ELF_RELOC(X, Y) .Case(#X, Y)
+#include "llvm/BinaryFormat/ELFRelocs/Sparc.def"
+#undef ELF_RELOC
+                 .Case("BFD_RELOC_NONE", ELF::R_SPARC_NONE)
+                 .Case("BFD_RELOC_8", ELF::R_SPARC_8)
+                 .Case("BFD_RELOC_16", ELF::R_SPARC_16)
+                 .Case("BFD_RELOC_32", ELF::R_SPARC_32)
+                 .Case("BFD_RELOC_64", ELF::R_SPARC_64)
+                 .Default(-1u);
+      if (Type == -1u)
+        return None;
+      return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
+    }
+
     const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
       const static MCFixupKindInfo InfosBE[Sparc::NumTargetFixupKinds] = {
         // name                    offset bits  flags
@@ -216,6 +234,11 @@ namespace {
         { "fixup_sparc_tls_le_lox10",   0,  0,  0 }
       };
 
+      // Fixup kinds from .reloc directive are like R_SPARC_NONE. They do
+      // not require any extra processing.
+      if (Kind >= FirstLiteralRelocationKind)
+        return MCAsmBackend::getFixupKindInfo(FK_NONE);
+
       if (Kind < FirstTargetFixupKind)
         return MCAsmBackend::getFixupKindInfo(Kind);
 
@@ -229,6 +252,8 @@ namespace {
 
     bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
                                const MCValue &Target) override {
+      if (Fixup.getKind() >= FirstLiteralRelocationKind)
+        return true;
       switch ((Sparc::Fixups)Fixup.getKind()) {
       default:
         return false;
@@ -299,6 +324,8 @@ namespace {
                     uint64_t Value, bool IsResolved,
                     const MCSubtargetInfo *STI) const override {
 
+      if (Fixup.getKind() >= FirstLiteralRelocationKind)
+        return;
       Value = adjustFixupValue(Fixup.getKind(), Value);
       if (!Value) return;           // Doesn't change encoding.
 

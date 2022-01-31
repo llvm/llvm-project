@@ -810,7 +810,7 @@ ExprResult Sema::ActOnCoawaitExpr(Scope *S, SourceLocation Loc, Expr *E) {
 
   checkSuspensionContext(*this, Loc, "co_await");
 
-  if (E->getType()->isPlaceholderType()) {
+  if (E->hasPlaceholderType()) {
     ExprResult R = CheckPlaceholderExpr(E);
     if (R.isInvalid()) return ExprError();
     E = R.get();
@@ -828,7 +828,7 @@ ExprResult Sema::BuildUnresolvedCoawaitExpr(SourceLocation Loc, Expr *E,
   if (!FSI)
     return ExprError();
 
-  if (E->getType()->isPlaceholderType()) {
+  if (E->hasPlaceholderType()) {
     ExprResult R = CheckPlaceholderExpr(E);
     if (R.isInvalid())
       return ExprError();
@@ -866,7 +866,7 @@ ExprResult Sema::BuildResolvedCoawaitExpr(SourceLocation Loc, Expr *E,
   if (!Coroutine)
     return ExprError();
 
-  if (E->getType()->isPlaceholderType()) {
+  if (E->hasPlaceholderType()) {
     ExprResult R = CheckPlaceholderExpr(E);
     if (R.isInvalid()) return ExprError();
     E = R.get();
@@ -927,7 +927,7 @@ ExprResult Sema::BuildCoyieldExpr(SourceLocation Loc, Expr *E) {
   if (!Coroutine)
     return ExprError();
 
-  if (E->getType()->isPlaceholderType()) {
+  if (E->hasPlaceholderType()) {
     ExprResult R = CheckPlaceholderExpr(E);
     if (R.isInvalid()) return ExprError();
     E = R.get();
@@ -970,8 +970,8 @@ StmtResult Sema::BuildCoreturnStmt(SourceLocation Loc, Expr *E,
   if (!FSI)
     return StmtError();
 
-  if (E && E->getType()->isPlaceholderType() &&
-      !E->getType()->isSpecificPlaceholderType(BuiltinType::Overload)) {
+  if (E && E->hasPlaceholderType() &&
+      !E->hasPlaceholderType(BuiltinType::Overload)) {
     ExprResult R = CheckPlaceholderExpr(E);
     if (R.isInvalid()) return StmtError();
     E = R.get();

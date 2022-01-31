@@ -26,9 +26,9 @@ add_mlir_library(MLIRLinalgTestPasses
   MLIRMemRef
   MLIRPass
   MLIRSCF
-  MLIRSCFBufferizableOpInterfaceImpl
-  MLIRStdBufferizableOpInterfaceImpl
+  MLIRSCFTransforms
   MLIRStandard
+  MLIRStandardOpsTransforms
   MLIRTensor
   MLIRTensorTransforms
   MLIRTransformUtils

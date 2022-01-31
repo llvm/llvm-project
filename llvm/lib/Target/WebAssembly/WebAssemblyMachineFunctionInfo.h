@@ -166,6 +166,10 @@ public:
   void setWasmEHFuncInfo(WasmEHFuncInfo *Info) { WasmEHInfo = Info; }
 };
 
+void computeLegalValueVTs(const WebAssemblyTargetLowering &TLI,
+                          LLVMContext &Ctx, const DataLayout &DL, Type *Ty,
+                          SmallVectorImpl<MVT> &ValueVTs);
+
 void computeLegalValueVTs(const Function &F, const TargetMachine &TM, Type *Ty,
                           SmallVectorImpl<MVT> &ValueVTs);
 

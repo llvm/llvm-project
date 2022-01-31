@@ -262,7 +262,20 @@ struct IRInstructionData
           llvm::hash_value(ID.Inst->getType()),
           llvm::hash_value(ID.getPredicate()),
           llvm::hash_combine_range(OperTypes.begin(), OperTypes.end()));
-    else if (isa<CallInst>(ID.Inst)) {
+
+    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(ID.Inst)) {
+      // To hash intrinsics, we use the opcode, and types like the other
+      // instructions, but also, the Intrinsic ID, and the Name of the
+      // intrinsic.
+      Intrinsic::ID IntrinsicID = II->getIntrinsicID();
+      return llvm::hash_combine(
+          llvm::hash_value(ID.Inst->getOpcode()),
+          llvm::hash_value(ID.Inst->getType()), llvm::hash_value(IntrinsicID),
+          llvm::hash_value(*ID.CalleeName),
+          llvm::hash_combine_range(OperTypes.begin(), OperTypes.end()));
+    }
+
+    if (isa<CallInst>(ID.Inst)) {
       std::string FunctionName = *ID.CalleeName;
       return llvm::hash_combine(
           llvm::hash_value(ID.Inst->getOpcode()),
@@ -270,6 +283,7 @@ struct IRInstructionData
           llvm::hash_value(ID.Inst->getType()), llvm::hash_value(FunctionName),
           llvm::hash_combine_range(OperTypes.begin(), OperTypes.end()));
     }
+
     return llvm::hash_combine(
         llvm::hash_value(ID.Inst->getOpcode()),
         llvm::hash_value(ID.Inst->getType()),
@@ -499,7 +513,7 @@ struct IRInstructionMapper {
   /// be analyzed for similarity.
   struct InstructionClassification
       : public InstVisitor<InstructionClassification, InstrType> {
-    InstructionClassification() {}
+    InstructionClassification() = default;
 
     // TODO: Determine a scheme to resolve when the label is similar enough.
     InstrType visitBranchInst(BranchInst &BI) {
@@ -525,8 +539,17 @@ struct IRInstructionMapper {
     // analyzed for similarity as it has no bearing on the outcome of the
     // program.
     InstrType visitDbgInfoIntrinsic(DbgInfoIntrinsic &DII) { return Invisible; }
-    // TODO: Handle specific intrinsics.
-    InstrType visitIntrinsicInst(IntrinsicInst &II) { return Illegal; }
+    InstrType visitIntrinsicInst(IntrinsicInst &II) {
+      // These are disabled due to complications in the CodeExtractor when
+      // outlining these instructions.  For instance, It is unclear what we
+      // should do when moving only the start or end lifetime instruction into
+      // an outlined function. Also, assume-like intrinsics could be removed
+      // from the region, removing arguments, causing discrepencies in the
+      // number of inputs between different regions.
+      if (II.isLifetimeStartOrEnd() || II.isAssumeLikeIntrinsic())
+        return Illegal;
+      return EnableIntrinsics ? Legal : Illegal;
+    }
     // We only allow call instructions where the function has a name and
     // is not an indirect call.
     InstrType visitCallInst(CallInst &CI) {
@@ -553,6 +576,10 @@ struct IRInstructionMapper {
     // The flag variable that lets the classifier know whether we should
     // allow indirect calls to be considered legal instructions.
     bool EnableIndirectCalls = false;
+
+    // Flag that lets the classifier know whether we should allow intrinsics to
+    // be checked for similarity.
+    bool EnableIntrinsics = false;
   };
 
   /// Maps an Instruction to a member of InstrType.
@@ -939,10 +966,12 @@ class IRSimilarityIdentifier {
 public:
   IRSimilarityIdentifier(bool MatchBranches = true,
                          bool MatchIndirectCalls = true,
-                         bool MatchCallsWithName = false)
+                         bool MatchCallsWithName = false,
+                         bool MatchIntrinsics = true)
       : Mapper(&InstDataAllocator, &InstDataListAllocator),
         EnableBranches(MatchBranches), EnableIndirectCalls(MatchIndirectCalls),
-        EnableMatchingCallsByName(MatchCallsWithName) {}
+        EnableMatchingCallsByName(MatchCallsWithName),
+        EnableIntrinsics(MatchIntrinsics) {}
 
 private:
   /// Map the instructions in the module to unsigned integers, using mapping
@@ -1030,6 +1059,10 @@ private:
   /// similar if they do not have the same name, only the same calling
   /// convention, attributes and type signature.
   bool EnableMatchingCallsByName = true;
+
+  /// The flag variable that marks whether we should check intrinsics for
+  /// similarity.
+  bool EnableIntrinsics = true;
 
   /// The SimilarityGroups found with the most recent run of \ref
   /// findSimilarity. None if there is no recent run.

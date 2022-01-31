@@ -1242,3 +1242,92 @@ entry:
   ret <16 x i8> %splat.splat
 }
 
+; The following test case should not produce a load and splat node,
+; as we cannot handle extending loads (from f32 to f64), and this test
+; shows that there are multiple uses of the extending load (other than
+; a build vector node). `lxvdsx` should not be produced in this case.
+define <2 x double> @test_v2f64_multiple_use(float* nocapture readonly %a, double* nocapture %b, double* nocapture %c) {
+; P9-LABEL: test_v2f64_multiple_use:
+; P9:       # %bb.0: # %entry
+; P9-NEXT:    lfs f0, 0(r3)
+; P9-NEXT:    xxspltd v2, vs0, 0
+; P9-NEXT:    lfd f1, 0(r4)
+; P9-NEXT:    xsadddp f1, f1, f0
+; P9-NEXT:    stfd f1, 0(r4)
+; P9-NEXT:    lfd f1, 0(r5)
+; P9-NEXT:    xsadddp f1, f1, f0
+; P9-NEXT:    stfd f1, 0(r5)
+; P9-NEXT:    blr
+;
+; P8-LABEL: test_v2f64_multiple_use:
+; P8:       # %bb.0: # %entry
+; P8-NEXT:    lfs f0, 0(r3)
+; P8-NEXT:    lfd f1, 0(r4)
+; P8-NEXT:    xsadddp f1, f1, f0
+; P8-NEXT:    xxspltd v2, vs0, 0
+; P8-NEXT:    stfd f1, 0(r4)
+; P8-NEXT:    lfd f1, 0(r5)
+; P8-NEXT:    xsadddp f1, f1, f0
+; P8-NEXT:    stfd f1, 0(r5)
+; P8-NEXT:    blr
+;
+; P7-LABEL: test_v2f64_multiple_use:
+; P7:       # %bb.0: # %entry
+; P7-NEXT:    lfs f0, 0(r3)
+; P7-NEXT:    lfd f1, 0(r4)
+; P7-NEXT:    xsadddp f1, f1, f0
+; P7-NEXT:    xxspltd v2, vs0, 0
+; P7-NEXT:    stfd f1, 0(r4)
+; P7-NEXT:    lfd f1, 0(r5)
+; P7-NEXT:    xsadddp f1, f1, f0
+; P7-NEXT:    stfd f1, 0(r5)
+; P7-NEXT:    blr
+;
+; P9-AIX32-LABEL: test_v2f64_multiple_use:
+; P9-AIX32:       # %bb.0: # %entry
+; P9-AIX32-NEXT:    lfs f0, 0(r3)
+; P9-AIX32-NEXT:    xxmrghd v2, vs0, vs0
+; P9-AIX32-NEXT:    lfd f1, 0(r4)
+; P9-AIX32-NEXT:    xsadddp f1, f1, f0
+; P9-AIX32-NEXT:    stfd f1, 0(r4)
+; P9-AIX32-NEXT:    lfd f1, 0(r5)
+; P9-AIX32-NEXT:    xsadddp f1, f1, f0
+; P9-AIX32-NEXT:    stfd f1, 0(r5)
+; P9-AIX32-NEXT:    blr
+;
+; P8-AIX32-LABEL: test_v2f64_multiple_use:
+; P8-AIX32:       # %bb.0: # %entry
+; P8-AIX32-NEXT:    lfs f0, 0(r3)
+; P8-AIX32-NEXT:    lfd f1, 0(r4)
+; P8-AIX32-NEXT:    xsadddp f1, f1, f0
+; P8-AIX32-NEXT:    xxmrghd v2, vs0, vs0
+; P8-AIX32-NEXT:    stfd f1, 0(r4)
+; P8-AIX32-NEXT:    lfd f1, 0(r5)
+; P8-AIX32-NEXT:    xsadddp f1, f1, f0
+; P8-AIX32-NEXT:    stfd f1, 0(r5)
+; P8-AIX32-NEXT:    blr
+;
+; P7-AIX32-LABEL: test_v2f64_multiple_use:
+; P7-AIX32:       # %bb.0: # %entry
+; P7-AIX32-NEXT:    lfs f0, 0(r3)
+; P7-AIX32-NEXT:    lfd f1, 0(r4)
+; P7-AIX32-NEXT:    xsadddp f1, f1, f0
+; P7-AIX32-NEXT:    xxmrghd v2, vs0, vs0
+; P7-AIX32-NEXT:    stfd f1, 0(r4)
+; P7-AIX32-NEXT:    lfd f1, 0(r5)
+; P7-AIX32-NEXT:    xsadddp f1, f1, f0
+; P7-AIX32-NEXT:    stfd f1, 0(r5)
+; P7-AIX32-NEXT:    blr
+entry:
+  %0 = load float, float* %a, align 4
+  %conv = fpext float %0 to double
+  %1 = load double, double* %b, align 8
+  %add = fadd double %1, %conv
+  store double %add, double* %b, align 8
+  %2 = load double, double* %c, align 8
+  %add2 = fadd double %2, %conv
+  store double %add2, double* %c, align 8
+  %vecinit = insertelement <2 x double> undef, double %conv, i64 0
+  %vecinit5 = shufflevector <2 x double> %vecinit, <2 x double> poison, <2 x i32> zeroinitializer
+  ret <2 x double> %vecinit5
+}

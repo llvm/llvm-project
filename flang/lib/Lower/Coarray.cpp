@@ -12,9 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/Coarray.h"
-#include "SymbolMap.h"
 #include "flang/Lower/AbstractConverter.h"
-#include "flang/Lower/FIRBuilder.h"
+#include "flang/Lower/SymbolMap.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 

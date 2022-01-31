@@ -96,7 +96,8 @@ std::unique_ptr<toy::ModuleAST> parseInputFile(llvm::StringRef filename) {
   return parser.parseModule();
 }
 
-int loadMLIR(mlir::MLIRContext &context, mlir::OwningModuleRef &module) {
+int loadMLIR(mlir::MLIRContext &context,
+             mlir::OwningOpRef<mlir::ModuleOp> &module) {
   // Handle '.toy' input to the compiler.
   if (inputType != InputType::MLIR &&
       !llvm::StringRef(inputFilename).endswith(".mlir")) {
@@ -127,7 +128,7 @@ int loadMLIR(mlir::MLIRContext &context, mlir::OwningModuleRef &module) {
 }
 
 int loadAndProcessMLIR(mlir::MLIRContext &context,
-                       mlir::OwningModuleRef &module) {
+                       mlir::OwningOpRef<mlir::ModuleOp> &module) {
   if (int error = loadMLIR(context, module))
     return error;
 
@@ -267,7 +268,7 @@ int main(int argc, char **argv) {
   // Load our Dialect in this MLIR Context.
   context.getOrLoadDialect<mlir::toy::ToyDialect>();
 
-  mlir::OwningModuleRef module;
+  mlir::OwningOpRef<mlir::ModuleOp> module;
   if (int error = loadAndProcessMLIR(context, module))
     return error;
 

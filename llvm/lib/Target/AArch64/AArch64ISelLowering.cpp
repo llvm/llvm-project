@@ -2201,7 +2201,6 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::INSR)
     MAKE_CASE(AArch64ISD::PTEST)
     MAKE_CASE(AArch64ISD::PTRUE)
-    MAKE_CASE(AArch64ISD::PFALSE)
     MAKE_CASE(AArch64ISD::LD1_MERGE_ZERO)
     MAKE_CASE(AArch64ISD::LD1S_MERGE_ZERO)
     MAKE_CASE(AArch64ISD::LDNF1_MERGE_ZERO)
@@ -3745,6 +3744,10 @@ SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
 
   if (OpVT != MVT::f16 && OpVT != MVT::bf16)
     return SDValue();
+
+  // Bitcasts between f16 and bf16 are legal.
+  if (ArgVT == MVT::f16 || ArgVT == MVT::bf16)
+    return Op;
 
   assert(ArgVT == MVT::i16);
   SDLoc DL(Op);
@@ -6475,12 +6478,18 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   unsigned CallOpc = AArch64ISD::CALL;
   // Calls with operand bundle "clang.arc.attachedcall" are special. They should
-  // be expanded to the call, directly followed by a special marker sequence.
-  // Use the CALL_RVMARKER to do that.
+  // be expanded to the call, directly followed by a special marker sequence and
+  // a call to an ObjC library function.  Use CALL_RVMARKER to do that.
   if (CLI.CB && objcarc::hasAttachedCallOpBundle(CLI.CB)) {
     assert(!IsTailCall &&
            "tail calls cannot be marked with clang.arc.attachedcall");
     CallOpc = AArch64ISD::CALL_RVMARKER;
+
+    // Add a target global address for the retainRV/claimRV runtime function
+    // just before the call target.
+    Function *ARCFn = *objcarc::getAttachedARCFunction(CLI.CB);
+    auto GA = DAG.getTargetGlobalAddress(ARCFn, DL, PtrVT);
+    Ops.insert(Ops.begin() + 1, GA);
   }
 
   // Returns a chain and a flag for retval copy to use.
@@ -9985,8 +9994,9 @@ SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
     // The only legal i1 vectors are SVE vectors, so we can use SVE-specific
     // lowering code.
     if (auto *ConstVal = dyn_cast<ConstantSDNode>(SplatVal)) {
+      // We can hande the zero case during isel.
       if (ConstVal->isZero())
-        return DAG.getNode(AArch64ISD::PFALSE, dl, VT);
+        return Op;
       if (ConstVal->isOne())
         return getPTrue(DAG, dl, VT, AArch64SVEPredPattern::all);
     }
@@ -15092,7 +15102,7 @@ static bool isAllInactivePredicate(SDValue N) {
   while (N.getOpcode() == AArch64ISD::REINTERPRET_CAST)
     N = N.getOperand(0);
 
-  return N.getOpcode() == AArch64ISD::PFALSE;
+  return ISD::isConstantSplatVectorAllZeros(N.getNode());
 }
 
 static bool isAllActivePredicate(SelectionDAG &DAG, SDValue N) {
@@ -15393,6 +15403,46 @@ static SDValue performIntrinsicCombine(SDNode *N,
   return SDValue();
 }
 
+static bool isCheapToExtend(const SDValue &N) {
+  unsigned OC = N->getOpcode();
+  return OC == ISD::LOAD || OC == ISD::MLOAD ||
+         ISD::isConstantSplatVectorAllZeros(N.getNode());
+}
+
+static SDValue
+performSignExtendSetCCCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                              SelectionDAG &DAG) {
+  // If we have (sext (setcc A B)) and A and B are cheap to extend,
+  // we can move the sext into the arguments and have the same result. For
+  // example, if A and B are both loads, we can make those extending loads and
+  // avoid an extra instruction. This pattern appears often in VLS code
+  // generation where the inputs to the setcc have a different size to the
+  // instruction that wants to use the result of the setcc.
+  assert(N->getOpcode() == ISD::SIGN_EXTEND &&
+         N->getOperand(0)->getOpcode() == ISD::SETCC);
+  const SDValue SetCC = N->getOperand(0);
+
+  ISD::CondCode Code =
+      cast<CondCodeSDNode>(SetCC->getOperand(2).getNode())->get();
+
+  ISD::NodeType ExtType =
+      isSignedIntSetCC(Code) ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+
+  if (isCheapToExtend(SetCC.getOperand(0)) &&
+      isCheapToExtend(SetCC.getOperand(1))) {
+    const SDValue Ext1 =
+        DAG.getNode(ExtType, SDLoc(N), N->getValueType(0), SetCC.getOperand(0));
+    const SDValue Ext2 =
+        DAG.getNode(ExtType, SDLoc(N), N->getValueType(0), SetCC.getOperand(1));
+
+    return DAG.getSetCC(
+        SDLoc(SetCC), N->getValueType(0), Ext1, Ext2,
+        cast<CondCodeSDNode>(SetCC->getOperand(2).getNode())->get());
+  }
+
+  return SDValue();
+}
+
 static SDValue performExtendCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG) {
@@ -15411,6 +15461,12 @@ static SDValue performExtendCombine(SDNode *N,
 
     return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), N->getValueType(0), NewABD);
   }
+
+  if (N->getValueType(0).isFixedLengthVector() &&
+      N->getOpcode() == ISD::SIGN_EXTEND &&
+      N->getOperand(0)->getOpcode() == ISD::SETCC)
+    return performSignExtendSetCCCombine(N, DCI, DAG);
+
   return SDValue();
 }
 

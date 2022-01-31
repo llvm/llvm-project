@@ -7285,7 +7285,9 @@ half4 __ovld fract(half4 x, half4 *iptr);
 half8 __ovld fract(half8 x, half8 *iptr);
 half16 __ovld fract(half16 x, half16 *iptr);
 #endif //cl_khr_fp16
-#else
+#endif //defined(__opencl_c_generic_address_space)
+
+#if defined(__opencl_c_named_address_space_builtins)
 float __ovld fract(float x, __global float *iptr);
 float2 __ovld fract(float2 x, __global float2 *iptr);
 float3 __ovld fract(float3 x, __global float3 *iptr);
@@ -7344,7 +7346,7 @@ half4 __ovld fract(half4 x, __private half4 *iptr);
 half8 __ovld fract(half8 x, __private half8 *iptr);
 half16 __ovld fract(half16 x, __private half16 *iptr);
 #endif //cl_khr_fp16
-#endif //defined(__opencl_c_generic_address_space)
+#endif //defined(__opencl_c_named_address_space_builtins)
 
 /**
  * Extract mantissa and exponent from x. For each
@@ -7375,7 +7377,9 @@ half4 __ovld frexp(half4 x, int4 *exp);
 half8 __ovld frexp(half8 x, int8 *exp);
 half16 __ovld frexp(half16 x, int16 *exp);
 #endif //cl_khr_fp16
-#else
+#endif //defined(__opencl_c_generic_address_space)
+
+#if defined(__opencl_c_named_address_space_builtins)
 float __ovld frexp(float x, __global int *exp);
 float2 __ovld frexp(float2 x, __global int2 *exp);
 float3 __ovld frexp(float3 x, __global int3 *exp);
@@ -7434,7 +7438,7 @@ half4 __ovld frexp(half4 x, __private int4 *exp);
 half8 __ovld frexp(half8 x, __private int8 *exp);
 half16 __ovld frexp(half16 x, __private int16 *exp);
 #endif //cl_khr_fp16
-#endif //defined(__opencl_c_generic_address_space)
+#endif //defined(__opencl_c_named_address_space_builtins)
 
 /**
  * Compute the value of the square root of x^2 + y^2
@@ -7582,7 +7586,9 @@ half4 __ovld lgamma_r(half4 x, int4 *signp);
 half8 __ovld lgamma_r(half8 x, int8 *signp);
 half16 __ovld lgamma_r(half16 x, int16 *signp);
 #endif //cl_khr_fp16
-#else
+#endif //defined(__opencl_c_generic_address_space)
+
+#if defined(__opencl_c_named_address_space_builtins)
 float __ovld lgamma_r(float x, __global int *signp);
 float2 __ovld lgamma_r(float2 x, __global int2 *signp);
 float3 __ovld lgamma_r(float3 x, __global int3 *signp);
@@ -7641,7 +7647,7 @@ half4 __ovld lgamma_r(half4 x, __private int4 *signp);
 half8 __ovld lgamma_r(half8 x, __private int8 *signp);
 half16 __ovld lgamma_r(half16 x, __private int16 *signp);
 #endif //cl_khr_fp16
-#endif //defined(__opencl_c_generic_address_space)
+#endif //defined(__opencl_c_named_address_space_builtins)
 
 /**
  * Compute natural logarithm.
@@ -7888,7 +7894,9 @@ half4 __ovld modf(half4 x, half4 *iptr);
 half8 __ovld modf(half8 x, half8 *iptr);
 half16 __ovld modf(half16 x, half16 *iptr);
 #endif //cl_khr_fp16
-#else
+#endif //defined(__opencl_c_generic_address_space)
+
+#if defined(__opencl_c_named_address_space_builtins)
 float __ovld modf(float x, __global float *iptr);
 float2 __ovld modf(float2 x, __global float2 *iptr);
 float3 __ovld modf(float3 x, __global float3 *iptr);
@@ -7947,7 +7955,7 @@ half4 __ovld modf(half4 x, __private half4 *iptr);
 half8 __ovld modf(half8 x, __private half8 *iptr);
 half16 __ovld modf(half16 x, __private half16 *iptr);
 #endif //cl_khr_fp16
-#endif //defined(__opencl_c_generic_address_space)
+#endif //defined(__opencl_c_named_address_space_builtins)
 
 /**
  * Returns a quiet NaN. The nancode may be placed
@@ -8147,9 +8155,10 @@ half3 __ovld remquo(half3 x, half3 y, int3 *quo);
 half4 __ovld remquo(half4 x, half4 y, int4 *quo);
 half8 __ovld remquo(half8 x, half8 y, int8 *quo);
 half16 __ovld remquo(half16 x, half16 y, int16 *quo);
-
 #endif //cl_khr_fp16
-#else
+#endif //defined(__opencl_c_generic_address_space)
+
+#if defined(__opencl_c_named_address_space_builtins)
 float __ovld remquo(float x, float y, __global int *quo);
 float2 __ovld remquo(float2 x, float2 y, __global int2 *quo);
 float3 __ovld remquo(float3 x, float3 y, __global int3 *quo);
@@ -8208,7 +8217,7 @@ half4 __ovld remquo(half4 x, half4 y, __private int4 *quo);
 half8 __ovld remquo(half8 x, half8 y, __private int8 *quo);
 half16 __ovld remquo(half16 x, half16 y, __private int16 *quo);
 #endif //cl_khr_fp16
-#endif //defined(__opencl_c_generic_address_space)
+#endif //defined(__opencl_c_named_address_space_builtins)
 /**
  * Round to integral value (using round to nearest
  * even rounding mode) in floating-point format.
@@ -8372,7 +8381,9 @@ half4 __ovld sincos(half4 x, half4 *cosval);
 half8 __ovld sincos(half8 x, half8 *cosval);
 half16 __ovld sincos(half16 x, half16 *cosval);
 #endif //cl_khr_fp16
-#else
+#endif //defined(__opencl_c_generic_address_space)
+
+#if defined(__opencl_c_named_address_space_builtins)
 float __ovld sincos(float x, __global float *cosval);
 float2 __ovld sincos(float2 x, __global float2 *cosval);
 float3 __ovld sincos(float3 x, __global float3 *cosval);
@@ -8431,7 +8442,7 @@ half4 __ovld sincos(half4 x, __private half4 *cosval);
 half8 __ovld sincos(half8 x, __private half8 *cosval);
 half16 __ovld sincos(half16 x, __private half16 *cosval);
 #endif //cl_khr_fp16
-#endif //defined(__opencl_c_generic_address_space)
+#endif //defined(__opencl_c_named_address_space_builtins)
 
 /**
  * Compute hyperbolic sine.
@@ -11315,7 +11326,9 @@ half4 __ovld __purefn vload4(size_t offset, const half *p);
 half8 __ovld __purefn vload8(size_t offset, const half *p);
 half16 __ovld __purefn vload16(size_t offset, const half *p);
 #endif //cl_khr_fp16
-#else
+#endif //defined(__opencl_c_generic_address_space)
+
+#if defined(__opencl_c_named_address_space_builtins)
 char2 __ovld __purefn vload2(size_t offset, const __global char *p);
 uchar2 __ovld __purefn vload2(size_t offset, const __global uchar *p);
 short2 __ovld __purefn vload2(size_t offset, const __global short *p);
@@ -11490,7 +11503,7 @@ half4 __ovld __purefn vload4(size_t offset, const __private half *p);
 half8 __ovld __purefn vload8(size_t offset, const __private half *p);
 half16 __ovld __purefn vload16(size_t offset, const __private half *p);
 #endif //cl_khr_fp16
-#endif //defined(__opencl_c_generic_address_space)
+#endif //defined(__opencl_c_named_address_space_builtins)
 
 #if defined(__opencl_c_generic_address_space)
 void __ovld vstore2(char2 data, size_t offset, char *p);
@@ -11553,7 +11566,9 @@ void __ovld vstore4(half4 data, size_t offset, half *p);
 void __ovld vstore8(half8 data, size_t offset, half *p);
 void __ovld vstore16(half16 data, size_t offset, half *p);
 #endif //cl_khr_fp16
-#else
+#endif //defined(__opencl_c_generic_address_space)
+
+#if defined(__opencl_c_named_address_space_builtins)
 void __ovld vstore2(char2 data, size_t offset, __global char *p);
 void __ovld vstore2(uchar2 data, size_t offset, __global uchar *p);
 void __ovld vstore2(short2 data, size_t offset, __global short *p);
@@ -11726,7 +11741,7 @@ void __ovld vstore4(half4 data, size_t offset, __private half *p);
 void __ovld vstore8(half8 data, size_t offset, __private half *p);
 void __ovld vstore16(half16 data, size_t offset, __private half *p);
 #endif //cl_khr_fp16
-#endif //defined(__opencl_c_generic_address_space)
+#endif //defined(__opencl_c_named_address_space_builtins)
 
 /**
  * Read sizeof (half) bytes of data from address
@@ -11739,11 +11754,13 @@ void __ovld vstore16(half16 data, size_t offset, __private half *p);
 float __ovld __purefn vload_half(size_t offset, const __constant half *p);
 #if defined(__opencl_c_generic_address_space)
 float __ovld __purefn vload_half(size_t offset, const half *p);
-#else
+#endif //defined(__opencl_c_generic_address_space)
+
+#if defined(__opencl_c_named_address_space_builtins)
 float __ovld __purefn vload_half(size_t offset, const __global half *p);
 float __ovld __purefn vload_half(size_t offset, const __local half *p);
 float __ovld __purefn vload_half(size_t offset, const __private half *p);
-#endif //defined(__opencl_c_generic_address_space)
+#endif //defined(__opencl_c_named_address_space_builtins)
 
 /**
  * Read sizeof (halfn) bytes of data from address
@@ -11764,7 +11781,9 @@ float3 __ovld __purefn vload_half3(size_t offset, const half *p);
 float4 __ovld __purefn vload_half4(size_t offset, const half *p);
 float8 __ovld __purefn vload_half8(size_t offset, const half *p);
 float16 __ovld __purefn vload_half16(size_t offset, const half *p);
-#else
+#endif //defined(__opencl_c_generic_address_space)
+
+#if defined(__opencl_c_named_address_space_builtins)
 float2 __ovld __purefn vload_half2(size_t offset, const __global half *p);
 float3 __ovld __purefn vload_half3(size_t offset, const __global half *p);
 float4 __ovld __purefn vload_half4(size_t offset, const __global half *p);
@@ -11780,7 +11799,7 @@ float3 __ovld __purefn vload_half3(size_t offset, const __private half *p);
 float4 __ovld __purefn vload_half4(size_t offset, const __private half *p);
 float8 __ovld __purefn vload_half8(size_t offset, const __private half *p);
 float16 __ovld __purefn vload_half16(size_t offset, const __private half *p);
-#endif //defined(__opencl_c_generic_address_space)
+#endif //defined(__opencl_c_named_address_space_builtins)
 
 /**
  * The float value given by data is first
@@ -11806,7 +11825,9 @@ void __ovld vstore_half_rtz(double data, size_t offset, half *p);
 void __ovld vstore_half_rtp(double data, size_t offset, half *p);
 void __ovld vstore_half_rtn(double data, size_t offset, half *p);
 #endif //cl_khr_fp64
-#else
+#endif //defined(__opencl_c_generic_address_space)
+
+#if defined(__opencl_c_named_address_space_builtins)
 void __ovld vstore_half(float data, size_t offset, __global half *p);
 void __ovld vstore_half_rte(float data, size_t offset, __global half *p);
 void __ovld vstore_half_rtz(float data, size_t offset, __global half *p);
@@ -11839,7 +11860,7 @@ void __ovld vstore_half_rtz(double data, size_t offset, __private half *p);
 void __ovld vstore_half_rtp(double data, size_t offset, __private half *p);
 void __ovld vstore_half_rtn(double data, size_t offset, __private half *p);
 #endif //cl_khr_fp64
-#endif //defined(__opencl_c_generic_address_space)
+#endif //defined(__opencl_c_named_address_space_builtins)
 
 /**
  * The floatn value given by data is converted to
@@ -11905,7 +11926,9 @@ void __ovld vstore_half4_rtn(double4 data, size_t offset, half *p);
 void __ovld vstore_half8_rtn(double8 data, size_t offset, half *p);
 void __ovld vstore_half16_rtn(double16 data, size_t offset, half *p);
 #endif //cl_khr_fp64
-#else
+#endif //defined(__opencl_c_generic_address_space)
+
+#if defined(__opencl_c_named_address_space_builtins)
 void __ovld vstore_half2(float2 data, size_t offset, __global half *p);
 void __ovld vstore_half3(float3 data, size_t offset, __global half *p);
 void __ovld vstore_half4(float4 data, size_t offset, __global half *p);
@@ -12058,7 +12081,7 @@ void __ovld vstore_half4_rtn(double4 data, size_t offset, __private half *p);
 void __ovld vstore_half8_rtn(double8 data, size_t offset, __private half *p);
 void __ovld vstore_half16_rtn(double16 data, size_t offset, __private half *p);
 #endif //cl_khr_fp64
-#endif //defined(__opencl_c_generic_address_space)
+#endif //defined(__opencl_c_named_address_space_builtins)
 
 /**
  * For n = 1, 2, 4, 8 and 16 read sizeof (halfn)
@@ -12084,7 +12107,9 @@ float3 __ovld __purefn vloada_half3(size_t offset, const half *p);
 float4 __ovld __purefn vloada_half4(size_t offset, const half *p);
 float8 __ovld __purefn vloada_half8(size_t offset, const half *p);
 float16 __ovld __purefn vloada_half16(size_t offset, const half *p);
-#else
+#endif //defined(__opencl_c_generic_address_space)
+
+#if defined(__opencl_c_named_address_space_builtins)
 float2 __ovld __purefn vloada_half2(size_t offset, const __global half *p);
 float3 __ovld __purefn vloada_half3(size_t offset, const __global half *p);
 float4 __ovld __purefn vloada_half4(size_t offset, const __global half *p);
@@ -12100,7 +12125,7 @@ float3 __ovld __purefn vloada_half3(size_t offset, const __private half *p);
 float4 __ovld __purefn vloada_half4(size_t offset, const __private half *p);
 float8 __ovld __purefn vloada_half8(size_t offset, const __private half *p);
 float16 __ovld __purefn vloada_half16(size_t offset, const __private half *p);
-#endif //defined(__opencl_c_generic_address_space)
+#endif //defined(__opencl_c_named_address_space_builtins)
 
 /**
  * The floatn value given by data is converted to
@@ -12180,8 +12205,9 @@ void __ovld vstorea_half4_rtn(double4 data, size_t offset, half *p);
 void __ovld vstorea_half8_rtn(double8 data, size_t offset, half *p);
 void __ovld vstorea_half16_rtn(double16 data, size_t offset, half *p);
 #endif //cl_khr_fp64
+#endif //defined(__opencl_c_generic_address_space)
 
-#else
+#if defined(__opencl_c_named_address_space_builtins)
 void __ovld vstorea_half2(float2 data, size_t offset, __global half *p);
 void __ovld vstorea_half3(float3 data, size_t offset, __global half *p);
 void __ovld vstorea_half4(float4 data, size_t offset, __global half *p);
@@ -12363,7 +12389,7 @@ void __ovld vstorea_half4_rtn(double4 data,size_t offset, __private half *p);
 void __ovld vstorea_half8_rtn(double8 data,size_t offset, __private half *p);
 void __ovld vstorea_half16_rtn(double16 data,size_t offset, __private half *p);
 #endif //cl_khr_fp64
-#endif //defined(__opencl_c_generic_address_space)
+#endif //defined(__opencl_c_named_address_space_builtins)
 
 // OpenCL v1.1 s6.11.8, v1.2 s6.12.8, v2.0 s6.13.8 - Synchronization Functions
 
@@ -18512,6 +18538,8 @@ int __ovld arm_dot_acc_sat(char4 a, char4 b, int c);
 
 // Disable any extensions we may have enabled previously.
 #pragma OPENCL EXTENSION all : disable
+
+#undef __opencl_c_named_address_space_builtins
 
 #undef __cnfn
 #undef __ovld

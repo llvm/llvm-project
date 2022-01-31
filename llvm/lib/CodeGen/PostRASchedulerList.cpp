@@ -139,7 +139,7 @@ namespace {
     ///
     /// This is the instruction number from the top of the current block, not
     /// the SlotIndex. It is only used by the AntiDepBreaker.
-    unsigned EndIndex;
+    unsigned EndIndex = 0;
 
   public:
     SchedulePostRATDList(
@@ -206,7 +206,7 @@ SchedulePostRATDList::SchedulePostRATDList(
     const RegisterClassInfo &RCI,
     TargetSubtargetInfo::AntiDepBreakMode AntiDepMode,
     SmallVectorImpl<const TargetRegisterClass *> &CriticalPathRCs)
-    : ScheduleDAGInstrs(MF, &MLI), AA(AA), EndIndex(0) {
+    : ScheduleDAGInstrs(MF, &MLI), AA(AA) {
 
   const InstrItineraryData *InstrItins =
       MF.getSubtarget().getInstrItineraryData();

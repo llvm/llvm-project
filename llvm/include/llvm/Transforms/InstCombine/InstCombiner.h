@@ -93,7 +93,7 @@ public:
         MinimizeSize(MinimizeSize), AA(AA), AC(AC), TLI(TLI), DT(DT), DL(DL),
         SQ(DL, &TLI, &DT, &AC), ORE(ORE), BFI(BFI), PSI(PSI), LI(LI) {}
 
-  virtual ~InstCombiner() {}
+  virtual ~InstCombiner() = default;
 
   /// Return the source operand of a potentially bitcasted value while
   /// optionally checking if it has one use. If there is no bitcast or the one

@@ -53,9 +53,9 @@ namespace ISD {
     unsigned IsCopyElisionCandidate : 1; ///< Argument copy elision candidate
     unsigned IsPointer : 1;
 
-    unsigned ByValOrByRefSize; ///< Byval or byref struct size
+    unsigned ByValOrByRefSize = 0; ///< Byval or byref struct size
 
-    unsigned PointerAddrSpace; ///< Address space of pointer argument
+    unsigned PointerAddrSpace = 0; ///< Address space of pointer argument
 
   public:
     ArgFlagsTy()
@@ -65,8 +65,7 @@ namespace ISD {
           IsSwiftError(0), IsCFGuardTarget(0), IsHva(0), IsHvaStart(0),
           IsSecArgPass(0), MemAlign(0), OrigAlign(0),
           IsInConsecutiveRegsLast(0), IsInConsecutiveRegs(0),
-          IsCopyElisionCandidate(0), IsPointer(0), ByValOrByRefSize(0),
-          PointerAddrSpace(0) {
+          IsCopyElisionCandidate(0), IsPointer(0) {
       static_assert(sizeof(*this) == 3 * sizeof(unsigned), "flags are too big");
     }
 

@@ -32,10 +32,15 @@ orn t0, t1, t2
 # CHECK-ASM: encoding: [0xb3,0x42,0x73,0x40]
 xnor t0, t1, t2
 
-# CHECK-ASM: pack t0, t1, zero
-# CHECK-OBJ: zext.h t0, t1
+# CHECK-ASM-AND-OBJ: pack t0, t1, t2
+# CHECK-ASM: encoding: [0xb3,0x42,0x73,0x08]
+pack t0, t1, t2
+
+# Test the encoding used for zext.h for RV32.
+# CHECK-ASM-AND-OBJ: pack t0, t1, zero
 # CHECK-ASM: encoding: [0xb3,0x42,0x03,0x08]
 pack t0, t1, x0
+
 # CHECK-ASM-AND-OBJ: packh t0, t1, t2
 # CHECK-ASM: encoding: [0xb3,0x72,0x73,0x08]
 packh t0, t1, t2

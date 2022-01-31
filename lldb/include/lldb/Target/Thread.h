@@ -1185,10 +1185,7 @@ public:
 
   lldb::ThreadSP GetCurrentExceptionBacktrace();
 
-  virtual llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-  GetSiginfo(size_t max_size) const {
-    return llvm::make_error<UnimplementedError>();
-  }
+  lldb::ValueObjectSP GetSiginfoValue();
 
 protected:
   friend class ThreadPlan;
@@ -1238,6 +1235,11 @@ protected:
   }
 
   void FrameSelectedCallback(lldb_private::StackFrame *frame);
+
+  virtual llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  GetSiginfo(size_t max_size) const {
+    return llvm::make_error<UnimplementedError>();
+  }
 
   // Classes that inherit from Process can see and modify these
   lldb::ProcessWP m_process_wp;    ///< The process that owns this thread.

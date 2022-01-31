@@ -446,6 +446,25 @@ TEST_F(SortImportsTestJS, RespectsClangFormatOffInNamedImports) {
              "const x =   1;");
 }
 
+TEST_F(SortImportsTestJS, ImportEqAliases) {
+  verifySort("import {B} from 'bar';\n"
+             "import {A} from 'foo';\n"
+             "\n"
+             "import Z = A.C;\n"
+             "import Y = B.C.Z;\n"
+             "\n"
+             "export {Z};\n"
+             "\n"
+             "console.log(Z);\n",
+             "import {A} from 'foo';\n"
+             "import Z = A.C;\n"
+             "export {Z};\n"
+             "import {B} from 'bar';\n"
+             "import Y = B.C.Z;\n"
+             "\n"
+             "console.log(Z);\n");
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang
