@@ -656,6 +656,8 @@ def ProcA710    : SubtargetFeature<"cortex-a710", "ARMProcFamily",
                                    "CortexA710", "Cortex-A710 ARM processors", []>;
 def ProcX1      : SubtargetFeature<"cortex-x1", "ARMProcFamily", "CortexX1",
                                    "Cortex-X1 ARM processors", []>;
+def ProcX1C     : SubtargetFeature<"cortex-x1c", "ARMProcFamily", "CortexX1C",
+                                   "Cortex-X1C ARM processors", []>;
 
 def ProcV1      : SubtargetFeature<"neoverse-v1", "ARMProcFamily",
                                    "NeoverseV1", "Neoverse-V1 ARM processors", []>;
@@ -1436,6 +1438,14 @@ def : ProcNoItin<"cortex-a710",                         [ARMv9a, ProcA710,
                                                          FeatureSB]>;
 
 def : ProcNoItin<"cortex-x1",                           [ARMv82a, ProcX1,
+                                                         FeatureHWDivThumb,
+                                                         FeatureHWDivARM,
+                                                         FeatureCrypto,
+                                                         FeatureCRC,
+                                                         FeatureFullFP16,
+                                                         FeatureDotProd]>;
+
+def : ProcNoItin<"cortex-x1c",                          [ARMv82a, ProcX1C,
                                                          FeatureHWDivThumb,
                                                          FeatureHWDivARM,
                                                          FeatureCrypto,

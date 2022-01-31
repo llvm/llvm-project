@@ -328,6 +328,8 @@ ARM_CPU_NAME("cortex-a710", ARMV9A, FK_NEON_FP_ARMV8, false,
               ARM::AEK_I8MM))
 ARM_CPU_NAME("cortex-x1", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
              (ARM::AEK_FP16 | ARM::AEK_DOTPROD))
+ARM_CPU_NAME("cortex-x1c", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
+             (ARM::AEK_FP16 | ARM::AEK_DOTPROD))
 ARM_CPU_NAME("neoverse-n1", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
              (ARM::AEK_FP16 | ARM::AEK_DOTPROD))
 ARM_CPU_NAME("neoverse-n2", ARMV8_5A, FK_CRYPTO_NEON_FP_ARMV8, false,

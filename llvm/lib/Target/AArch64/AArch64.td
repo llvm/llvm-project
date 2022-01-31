@@ -972,6 +972,10 @@ def ProcessorFeatures {
   list<SubtargetFeature> X1   = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
                                  FeatureNEON, FeatureRCPC, FeaturePerfMon,
                                  FeatureSPE, FeatureFullFP16, FeatureDotProd];
+  list<SubtargetFeature> X1C  = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
+                                 FeatureNEON, FeatureRCPC, FeaturePerfMon,
+                                 FeatureSPE, FeatureFullFP16, FeatureDotProd,
+                                 FeaturePAuth];
   list<SubtargetFeature> X2   = [HasV9_0aOps, FeatureNEON, FeaturePerfMon,
                                  FeatureMatMulInt8, FeatureBF16, FeatureAM,
                                  FeatureMTE, FeatureETE, FeatureSVE2BitPerm,
@@ -1085,6 +1089,8 @@ def : ProcessorModel<"cortex-a710", CortexA57Model, ProcessorFeatures.A710,
 def : ProcessorModel<"cortex-r82", CortexA55Model, ProcessorFeatures.R82,
                      [TuneR82]>;
 def : ProcessorModel<"cortex-x1", CortexA57Model, ProcessorFeatures.X1,
+                     [TuneX1]>;
+def : ProcessorModel<"cortex-x1c", CortexA57Model, ProcessorFeatures.X1C,
                      [TuneX1]>;
 def : ProcessorModel<"cortex-x2", CortexA57Model, ProcessorFeatures.X2,
                      [TuneX2]>;

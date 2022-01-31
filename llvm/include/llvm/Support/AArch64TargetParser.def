@@ -204,6 +204,9 @@ AARCH64_CPU_NAME("cortex-r82", ARMV8R, FK_CRYPTO_NEON_FP_ARMV8, false,
 AARCH64_CPU_NAME("cortex-x1", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_FP16 | AArch64::AEK_DOTPROD | AArch64::AEK_RCPC |
                   AArch64::AEK_SSBS))
+AARCH64_CPU_NAME("cortex-x1c", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
+                 (AArch64::AEK_FP16 | AArch64::AEK_DOTPROD | AArch64::AEK_RCPC |
+                  AArch64::AEK_SSBS | AArch64::AEK_PAUTH))
 AARCH64_CPU_NAME("cortex-x2", ARMV9A, FK_NEON_FP_ARMV8, false,
                  (AArch64::AEK_MTE | AArch64::AEK_BF16 | AArch64::AEK_I8MM |
                   AArch64::AEK_PAUTH | AArch64::AEK_SSBS | AArch64::AEK_SB |

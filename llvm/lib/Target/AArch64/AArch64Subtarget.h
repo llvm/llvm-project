@@ -63,6 +63,7 @@ public:
     CortexA710,
     CortexR82,
     CortexX1,
+    CortexX1C,
     CortexX2,
     ExynosM3,
     Falkor,
