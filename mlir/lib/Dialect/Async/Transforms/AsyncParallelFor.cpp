@@ -23,6 +23,7 @@
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
 
@@ -799,19 +800,53 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
         numUnrollableLoops++;
     }
 
-    // With large number of threads the value of creating many compute blocks
-    // is reduced because the problem typically becomes memory bound. For small
-    // number of threads it helps with stragglers.
-    float overshardingFactor = numWorkerThreads <= 4    ? 8.0
-                               : numWorkerThreads <= 8  ? 4.0
-                               : numWorkerThreads <= 16 ? 2.0
-                               : numWorkerThreads <= 32 ? 1.0
-                               : numWorkerThreads <= 64 ? 0.8
-                                                        : 0.6;
+    Value numWorkerThreadsVal;
+    if (numWorkerThreads >= 0)
+      numWorkerThreadsVal = b.create<arith::ConstantIndexOp>(numWorkerThreads);
+    else
+      numWorkerThreadsVal = b.create<async::RuntimeNumWorkerThreadsOp>();
 
-    // Do not overload worker threads with too many compute blocks.
-    Value maxComputeBlocks = b.create<arith::ConstantIndexOp>(
-        std::max(1, static_cast<int>(numWorkerThreads * overshardingFactor)));
+    // With large number of threads the value of creating many compute blocks
+    // is reduced because the problem typically becomes memory bound. For this
+    // reason we scale the number of workers using an equivalent to the
+    // following logic:
+    //   float overshardingFactor = numWorkerThreads <= 4    ? 8.0
+    //                              : numWorkerThreads <= 8  ? 4.0
+    //                              : numWorkerThreads <= 16 ? 2.0
+    //                              : numWorkerThreads <= 32 ? 1.0
+    //                              : numWorkerThreads <= 64 ? 0.8
+    //                                                       : 0.6;
+
+    // Pairs of non-inclusive lower end of the bracket and factor that the
+    // number of workers needs to be scaled with if it falls in that bucket.
+    const SmallVector<std::pair<int, float>> overshardingBrackets = {
+        {4, 4.0f}, {8, 2.0f}, {16, 1.0f}, {32, 0.8f}, {64, 0.6f}};
+    const float initialOvershardingFactor = 8.0f;
+
+    Value scalingFactor = b.create<arith::ConstantFloatOp>(
+        llvm::APFloat(initialOvershardingFactor), b.getF32Type());
+    for (const std::pair<int, float> &p : overshardingBrackets) {
+      Value bracketBegin = b.create<arith::ConstantIndexOp>(p.first);
+      Value inBracket = b.create<arith::CmpIOp>(
+          arith::CmpIPredicate::sgt, numWorkerThreadsVal, bracketBegin);
+      Value bracketScalingFactor = b.create<arith::ConstantFloatOp>(
+          llvm::APFloat(p.second), b.getF32Type());
+      scalingFactor =
+          b.create<SelectOp>(inBracket, bracketScalingFactor, scalingFactor);
+    }
+    Value numWorkersIndex =
+        b.create<arith::IndexCastOp>(numWorkerThreadsVal, b.getI32Type());
+    Value numWorkersFloat =
+        b.create<arith::SIToFPOp>(numWorkersIndex, b.getF32Type());
+    Value scaledNumWorkers =
+        b.create<arith::MulFOp>(scalingFactor, numWorkersFloat);
+    Value scaledNumInt =
+        b.create<arith::FPToSIOp>(scaledNumWorkers, b.getI32Type());
+    Value scaledWorkers =
+        b.create<arith::IndexCastOp>(scaledNumInt, b.getIndexType());
+
+    Value maxComputeBlocks = b.create<arith::MaxSIOp>(
+        b.create<arith::ConstantIndexOp>(1), scaledWorkers);
 
     // Compute parallel block size from the parallel problem size:
     //   blockSize = min(tripCount,

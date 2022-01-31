@@ -438,6 +438,10 @@ extern "C" void mlirAsyncRuntimeAwaitAllInGroupAndExecute(AsyncGroup *group,
   }
 }
 
+extern "C" int64_t mlirAsyncRuntimGetNumWorkerThreads() {
+  return getDefaultAsyncRuntime()->getThreadPool().getThreadCount();
+}
+
 //===----------------------------------------------------------------------===//
 // Small async runtime support library for testing.
 //===----------------------------------------------------------------------===//
@@ -515,6 +519,8 @@ void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols) {
                &mlir::runtime::mlirAsyncRuntimeAwaitAllInGroup);
   exportSymbol("mlirAsyncRuntimeAwaitAllInGroupAndExecute",
                &mlir::runtime::mlirAsyncRuntimeAwaitAllInGroupAndExecute);
+  exportSymbol("mlirAsyncRuntimGetNumWorkerThreads",
+               &mlir::runtime::mlirAsyncRuntimGetNumWorkerThreads);
   exportSymbol("mlirAsyncRuntimePrintCurrentThreadId",
                &mlir::runtime::mlirAsyncRuntimePrintCurrentThreadId);
 }

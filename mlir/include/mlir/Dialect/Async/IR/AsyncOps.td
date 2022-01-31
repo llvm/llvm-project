@@ -16,6 +16,7 @@
 include "mlir/Dialect/Async/IR/AsyncDialect.td"
 include "mlir/Dialect/Async/IR/AsyncTypes.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -527,6 +528,19 @@ def Async_RuntimeDropRefOp : Async_Op<"runtime.drop_ref"> {
   let assemblyFormat = [{
     $operand attr-dict `:` type($operand)
   }];
+}
+
+def Async_RuntimeNumWorkerThreadsOp :
+  Async_Op<"runtime.num_worker_threads",
+           [DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+  let summary = "gets the number of threads in the threadpool from the runtime";
+  let description = [{
+    The `async.runtime.num_worker_threads` operation gets the number of threads
+    in the threadpool from the runtime.
+  }];
+
+  let results = (outs Index:$result);
+  let assemblyFormat = "attr-dict `:` type($result)";
 }
 
 #endif // ASYNC_OPS
