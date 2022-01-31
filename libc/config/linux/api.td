@@ -242,3 +242,7 @@ def ThreadsAPI : PublicAPI<"threads.h"> {
 def UniStdAPI : PublicAPI<"unistd.h"> {
   let Types = ["size_t", "ssize_t"];
 }
+
+def SysStatAPI : PublicAPI<"sys/stat.h"> {
+  let Types = ["mode_t"];
+}

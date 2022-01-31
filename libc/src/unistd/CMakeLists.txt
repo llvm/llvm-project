@@ -24,6 +24,27 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  rmdir
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.rmdir
+)
+
+add_entrypoint_object(
+  unlink
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.unlink
+)
+
+add_entrypoint_object(
+  unlinkat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.unlinkat
+)
+
+add_entrypoint_object(
   write
   ALIAS
   DEPENDS
