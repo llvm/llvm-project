@@ -9,6 +9,6 @@ add_llvm_tool(merge-fdata
 set_target_properties(merge-fdata PROPERTIES FOLDER "BOLT")
 
 # Emit relocations for BOLT meta test (bolt/test/runtime/meta-merge-fdata.test)
-if (UNIX AND NOT APPLE)
+if (BOLT_INCLUDE_TESTS AND UNIX AND NOT APPLE)
   target_link_options(merge-fdata PRIVATE LINKER:--emit-relocs)
 endif()
