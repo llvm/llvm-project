@@ -23,7 +23,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_RANGES)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 // [iterator.cust.move]
 
@@ -84,7 +84,7 @@ template<__dereferenceable _Tp>
   requires requires(_Tp& __t) { { ranges::iter_move(__t) } -> __referenceable; }
 using iter_rvalue_reference_t = decltype(ranges::iter_move(declval<_Tp&>()));
 
-#endif // !_LIBCPP_HAS_NO_RANGES
+#endif // !_LIBCPP_HAS_NO_CONCEPTS
 
 _LIBCPP_END_NAMESPACE_STD
 
