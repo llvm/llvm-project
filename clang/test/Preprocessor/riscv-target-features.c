@@ -226,6 +226,7 @@
 // RUN: %clang -target riscv64-unknown-linux-gnu \
 // RUN: -march=rv64izfhmin1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZFHMIN-EXT %s
+// CHECK-ZFHMIN-EXT: __riscv_f 2000000{{$}}
 // CHECK-ZFHMIN-EXT: __riscv_zfhmin 1000000{{$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu \
@@ -234,6 +235,7 @@
 // RUN: %clang -target riscv64-unknown-linux-gnu \
 // RUN: -march=rv64izfh1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZFH-EXT %s
+// CHECK-ZFH-EXT: __riscv_f 2000000{{$}}
 // CHECK-ZFH-EXT: __riscv_zfh 1000000{{$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu \
