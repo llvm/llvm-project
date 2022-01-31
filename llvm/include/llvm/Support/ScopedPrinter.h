@@ -793,7 +793,6 @@ struct DelimitedScope {
   DelimitedScope(ScopedPrinter &W) : W(&W) {}
   DelimitedScope() : W(nullptr) {}
   virtual ~DelimitedScope() = default;
-  ;
   virtual void setPrinter(ScopedPrinter &W) = 0;
   ScopedPrinter *W;
 };

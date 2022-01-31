@@ -269,7 +269,6 @@ public:
   uint32_t ChildrenToProcess = 0;
 
   MCDecodedPseudoProbeInlineTree() = default;
-  ;
   MCDecodedPseudoProbeInlineTree(const InlineSite &Site) : ISite(Site){};
 
   // Return false if it's a dummy inline site
