@@ -69,7 +69,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -4973,6 +4972,39 @@ void llvm::EmbedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
       M, ATy, false, llvm::GlobalValue::AppendingLinkage,
       llvm::ConstantArray::get(ATy, UsedArray), "llvm.compiler.used");
   NewUsed->setSection("llvm.metadata");
+}
+
+static void appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values) {
+  GlobalVariable *GV = M.getGlobalVariable("llvm.compiler.used");
+  SmallPtrSet<Constant *, 16> InitAsSet;
+  SmallVector<Constant *, 16> Init;
+  if (GV) {
+    if (GV->hasInitializer()) {
+      auto *CA = cast<ConstantArray>(GV->getInitializer());
+      for (auto &Op : CA->operands()) {
+        Constant *C = cast_or_null<Constant>(Op);
+        if (InitAsSet.insert(C).second)
+          Init.push_back(C);
+      }
+    }
+    GV->eraseFromParent();
+  }
+
+  Type *Int8PtrTy = llvm::Type::getInt8PtrTy(M.getContext());
+  for (auto *V : Values) {
+    Constant *C = ConstantExpr::getPointerBitCastOrAddrSpaceCast(V, Int8PtrTy);
+    if (InitAsSet.insert(C).second)
+      Init.push_back(C);
+  }
+
+  if (Init.empty())
+    return;
+
+  ArrayType *ATy = ArrayType::get(Int8PtrTy, Init.size());
+  GV = new llvm::GlobalVariable(M, ATy, false, GlobalValue::AppendingLinkage,
+                                ConstantArray::get(ATy, Init),
+                                "llvm.compiler.used");
+  GV->setSection("llvm.metadata");
 }
 
 void llvm::EmbedBufferInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
