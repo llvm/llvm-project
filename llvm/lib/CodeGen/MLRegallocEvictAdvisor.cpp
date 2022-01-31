@@ -220,6 +220,20 @@ void resetInputs(MLModelRunner &Runner) {
 #undef _RESET
 }
 
+// Per-live interval components that get aggregated into the feature values that
+// will be passed to the evaluator.
+struct LIFeatureComponents {
+  double R = 0;
+  double W = 0;
+  double RW = 0;
+  double IndVarUpdates = 0;
+  double HintWeights = 0.0;
+  int64_t NrDefsAndUses = 0;
+  float HottestBlockFreq = 0.0;
+  bool HasPreferredReg = false;
+  bool IsRemat = false;
+};
+
 using CandidateRegList =
     std::array<std::pair<MCRegister, bool>, NumberOfInterferences>;
 using FeaturesListNormalizer = std::array<float, FeatureIDs::FeatureCount>;
@@ -276,6 +290,9 @@ private:
     return getDefaultAdvisor().canEvictHintInterference(VirtReg, PhysReg,
                                                         FixedRegisters);
   }
+
+  const LIFeatureComponents
+  getLIFeatureComponents(const LiveInterval &LI) const;
 
   // Hold on to a default advisor for:
   // 1) the implementation of canEvictHintInterference, because we didn't learn
@@ -670,6 +687,51 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   return Regs[CandidatePos].first;
 }
 
+const LIFeatureComponents
+MLEvictAdvisor::getLIFeatureComponents(const LiveInterval &LI) const {
+  LIFeatureComponents Ret;
+  SmallPtrSet<MachineInstr *, 8> Visited;
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  Ret.HasPreferredReg = VRM->hasPreferredPhys(LI.reg());
+
+  for (MachineRegisterInfo::reg_instr_nodbg_iterator
+           I = MRI->reg_instr_nodbg_begin(LI.reg()),
+           E = MRI->reg_instr_nodbg_end();
+       I != E;) {
+    MachineInstr *MI = &*(I++);
+
+    ++Ret.NrDefsAndUses;
+    if (!Visited.insert(MI).second)
+      continue;
+
+    if (MI->isIdentityCopy() || MI->isImplicitDef())
+      continue;
+
+    bool Reads, Writes;
+    std::tie(Reads, Writes) = MI->readsWritesVirtualRegister(LI.reg());
+
+    float Freq = MBFI.getBlockFreqRelativeToEntryBlock(MI->getParent());
+    Ret.HottestBlockFreq = std::max(Freq, Ret.HottestBlockFreq);
+
+    Ret.R += (Reads && !Writes) * Freq;
+    Ret.W += (!Reads && Writes) * Freq;
+    Ret.RW += (Reads && Writes) * Freq;
+
+    auto *MBB = MI->getParent();
+    auto *Loop = Loops.getLoopFor(MBB);
+    bool IsExiting = Loop ? Loop->isLoopExiting(MBB) : false;
+
+    if (Writes && IsExiting && LIS->isLiveOutOfMBB(LI, MBB))
+      Ret.IndVarUpdates += Freq;
+
+    if (MI->isCopy() && VirtRegAuxInfo::copyHint(MI, LI.reg(), TRI, *MRI))
+      Ret.HintWeights += Freq;
+  }
+  Ret.IsRemat = VirtRegAuxInfo::isRematerializable(
+      LI, *LIS, *VRM, *MF.getSubtarget().getInstrInfo());
+  return Ret;
+}
+
 // Overall, this currently mimics what we do for weight calculation, but instead
 // of accummulating the various features, we keep them separate.
 void MLEvictAdvisor::extractFeatures(
@@ -678,11 +740,11 @@ void MLEvictAdvisor::extractFeatures(
     int64_t IsHint, int64_t LocalIntfsCount, float NrUrgent) const {
   int64_t NrDefsAndUses = 0;
   int64_t NrBrokenHints = 0;
-  float R = 0;
-  float W = 0;
-  float RW = 0;
-  float IndVarUpdates = 0;
-  float HintWeights = 0.0;
+  double R = 0.0;
+  double W = 0.0;
+  double RW = 0.0;
+  double IndVarUpdates = 0.0;
+  double HintWeights = 0.0;
   float StartBBFreq = 0.0;
   float EndBBFreq = 0.0;
   float HottestBlockFreq = 0.0;
@@ -709,46 +771,19 @@ void MLEvictAdvisor::extractFeatures(
 
     if (LI.endIndex() > EndSI)
       EndSI = LI.endIndex();
+    const LIFeatureComponents LIFC = getLIFeatureComponents(LI);
+    NrBrokenHints += LIFC.HasPreferredReg;
 
-    SmallPtrSet<MachineInstr *, 8> Visited;
-    const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-    NrBrokenHints += VRM->hasPreferredPhys(LI.reg());
+    NrDefsAndUses += LIFC.NrDefsAndUses;
+    HottestBlockFreq = std::max(HottestBlockFreq, LIFC.HottestBlockFreq);
+    R += LIFC.R;
+    W += LIFC.W;
+    RW += LIFC.RW;
 
-    for (MachineRegisterInfo::reg_instr_nodbg_iterator
-             I = MRI->reg_instr_nodbg_begin(LI.reg()),
-             E = MRI->reg_instr_nodbg_end();
-         I != E;) {
-      MachineInstr *MI = &*(I++);
+    IndVarUpdates += LIFC.IndVarUpdates;
 
-      ++NrDefsAndUses;
-      if (!Visited.insert(MI).second)
-        continue;
-
-      if (MI->isIdentityCopy() || MI->isImplicitDef())
-        continue;
-
-      bool Reads, Writes;
-      std::tie(Reads, Writes) = MI->readsWritesVirtualRegister(LI.reg());
-
-      float Freq = MBFI.getBlockFreqRelativeToEntryBlock(MI->getParent());
-      if (Freq > HottestBlockFreq)
-        HottestBlockFreq = Freq;
-      R += (Reads && !Writes) * Freq;
-      W += (!Reads && Writes) * Freq;
-      RW += (Reads && Writes) * Freq;
-
-      auto *MBB = MI->getParent();
-      auto *Loop = Loops.getLoopFor(MBB);
-      bool IsExiting = Loop ? Loop->isLoopExiting(MBB) : false;
-
-      if (Writes && IsExiting && LIS->isLiveOutOfMBB(LI, MBB))
-        IndVarUpdates += Freq;
-
-      if (MI->isCopy() && VirtRegAuxInfo::copyHint(MI, LI.reg(), TRI, *MRI))
-        HintWeights += Freq;
-    }
-    NrRematerializable += VirtRegAuxInfo::isRematerializable(
-        LI, *LIS, *VRM, *MF.getSubtarget().getInstrInfo());
+    HintWeights += LIFC.HintWeights;
+    NrRematerializable += LIFC.IsRemat;
   }
   size_t Size = 0;
   if (!Intervals.empty()) {
