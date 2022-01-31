@@ -456,8 +456,11 @@ def get_run_handler(triple):
 
 ##### Generator of assembly CHECK lines
 
-def add_asm_checks(output_lines, comment_marker, prefix_list, func_dict, func_name):
+def add_asm_checks(output_lines, comment_marker, prefix_list, func_dict,
+                   func_name, is_filtered):
   # Label format is based on ASM string.
   check_label_format = '{} %s-LABEL: %s%s:'.format(comment_marker)
   global_vars_seen_dict = {}
-  common.add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, check_label_format, True, False, global_vars_seen_dict)
+  common.add_checks(output_lines, comment_marker, prefix_list, func_dict,
+                    func_name, check_label_format, True, False,
+                    global_vars_seen_dict, is_filtered = is_filtered)
