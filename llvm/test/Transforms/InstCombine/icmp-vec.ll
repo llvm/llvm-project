@@ -443,9 +443,9 @@ define i1 @eq_cast_ne-1(<2 x i7> %x, <2 x i7> %y) {
 
 define i1 @eq_cast_ne-1-legal-scalar(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @eq_cast_ne-1-legal-scalar(
-; CHECK-NEXT:    [[IC:%.*]] = icmp ne <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[IC]] to i2
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i2 [[TMP1]], 0
+; CHECK-NEXT:    [[X_SCALAR:%.*]] = bitcast <2 x i8> [[X:%.*]] to i16
+; CHECK-NEXT:    [[Y_SCALAR:%.*]] = bitcast <2 x i8> [[Y:%.*]] to i16
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i16 [[X_SCALAR]], [[Y_SCALAR]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %ic = icmp eq <2 x i8> %x, %y

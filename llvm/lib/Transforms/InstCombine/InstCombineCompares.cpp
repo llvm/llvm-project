@@ -5897,13 +5897,15 @@ static Instruction *foldReductionIdiom(ICmpInst &I,
   // Match lowering of @llvm.vector.reduce.and. Turn
   ///   %vec_ne = icmp ne <8 x i8> %lhs, %rhs
   ///   %scalar_ne = bitcast <8 x i1> %vec_ne to i8
-  ///   %all_eq = icmp eq i8 %scalar_ne, 0
+  ///   %res = icmp <pred> i8 %scalar_ne, 0
   ///
   /// into
   ///
   ///   %lhs.scalar = bitcast <8 x i8> %lhs to i64
   ///   %rhs.scalar = bitcast <8 x i8> %rhs to i64
-  ///   %all_eq = icmp eq i64 %lhs.scalar, %rhs.scalar
+  ///   %res = icmp <pred> i64 %lhs.scalar, %rhs.scalar
+  ///
+  /// for <pred> in {ne, eq}.
   if (!match(&I, m_ICmp(OuterPred,
                         m_OneUse(m_BitCast(m_OneUse(
                             m_ICmp(InnerPred, m_Value(LHS), m_Value(RHS))))),
@@ -5918,12 +5920,11 @@ static Instruction *foldReductionIdiom(ICmpInst &I,
   if (!DL.isLegalInteger(NumBits))
     return nullptr;
 
-  // TODO: Generalize to isEquality and support other patterns.
-  if (OuterPred == ICmpInst::ICMP_EQ && InnerPred == ICmpInst::ICMP_NE) {
+  if (ICmpInst::isEquality(OuterPred) && InnerPred == ICmpInst::ICMP_NE) {
     auto *ScalarTy = Builder.getIntNTy(NumBits);
     LHS = Builder.CreateBitCast(LHS, ScalarTy, LHS->getName() + ".scalar");
     RHS = Builder.CreateBitCast(RHS, ScalarTy, RHS->getName() + ".scalar");
-    return ICmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ, LHS, RHS,
+    return ICmpInst::Create(Instruction::ICmp, OuterPred, LHS, RHS,
                             I.getName());
   }
 
