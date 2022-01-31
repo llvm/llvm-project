@@ -376,23 +376,16 @@ def ConstantOp : Std_Op<"constant",
     operation ::= ssa-id `=` `std.constant` attribute-value `:` type
     ```
 
-    The `constant` operation produces an SSA value equal to some constant
-    specified by an attribute. This is the way that MLIR uses to form simple
-    integer and floating point constants, as well as more exotic things like
-    references to functions and tensor/vector constants.
+    The `constant` operation produces an SSA value from a symbol reference to a
+    `builtin.func` operation
 
     Example:
 
     ```mlir
-    // Complex constant
-    %1 = constant [1.0 : f32, 1.0 : f32] : complex<f32>
-
     // Reference to function @myfn.
     %2 = constant @myfn : (tensor<16xf32>, f32) -> tensor<16xf32>
 
     // Equivalent generic forms
-    %1 = "std.constant"() {value = [1.0 : f32, 1.0 : f32] : complex<f32>}
-       : () -> complex<f32>
     %2 = "std.constant"() {value = @myfn}
        : () -> ((tensor<16xf32>, f32) -> tensor<16xf32>)
     ```
@@ -403,15 +396,9 @@ def ConstantOp : Std_Op<"constant",
     ([rationale](../Rationale/Rationale.md#multithreading-the-compiler)).
   }];
 
-  let arguments = (ins AnyAttr:$value);
+  let arguments = (ins FlatSymbolRefAttr:$value);
   let results = (outs AnyType);
-
-  let builders = [
-    OpBuilder<(ins "Attribute":$value),
-    [{ build($_builder, $_state, value.getType(), value); }]>,
-    OpBuilder<(ins "Attribute":$value, "Type":$type),
-    [{ build($_builder, $_state, type, value); }]>,
-  ];
+  let assemblyFormat = "attr-dict $value `:` type(results)";
 
   let extraClassDeclaration = [{
     /// Returns true if a constant operation can be built with the given value

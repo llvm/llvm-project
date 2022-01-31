@@ -1,7 +1,7 @@
 // RUN: mlir-opt -split-input-file %s -verify-diagnostics
 
 func @unsupported_attribute() {
-  // expected-error @+1 {{unsupported 'value' attribute: "" : index}}
+  // expected-error @+1 {{invalid kind of attribute specified}}
   %0 = constant "" : index
   return
 }
