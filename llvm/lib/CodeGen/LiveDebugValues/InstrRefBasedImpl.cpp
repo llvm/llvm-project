@@ -2430,8 +2430,71 @@ bool InstrRefBasedLDV::vlocJoin(
   }
 }
 
-void InstrRefBasedLDV::buildVLocValueMap(const DILocation *DILoc,
-    const SmallSet<DebugVariable, 4> &VarsWeCareAbout,
+void InstrRefBasedLDV::getBlocksForScope(
+    const DILocation *DILoc,
+    SmallPtrSetImpl<const MachineBasicBlock *> &BlocksToExplore,
+    const SmallPtrSetImpl<MachineBasicBlock *> &AssignBlocks) {
+  // Get the set of "normal" in-lexical-scope blocks.
+  LS.getMachineBasicBlocks(DILoc, BlocksToExplore);
+
+  // VarLoc LiveDebugValues tracks variable locations that are defined in
+  // blocks not in scope. This is something we could legitimately ignore, but
+  // lets allow it for now for the sake of coverage.
+  BlocksToExplore.insert(AssignBlocks.begin(), AssignBlocks.end());
+
+  // Storage for artificial blocks we intend to add to BlocksToExplore.
+  DenseSet<const MachineBasicBlock *> ToAdd;
+
+  // To avoid needlessly dropping large volumes of variable locations, propagate
+  // variables through aritifical blocks, i.e. those that don't have any
+  // instructions in scope at all. To accurately replicate VarLoc
+  // LiveDebugValues, this means exploring all artificial successors too.
+  // Perform a depth-first-search to enumerate those blocks.
+  for (auto *MBB : BlocksToExplore) {
+    // Depth-first-search state: each node is a block and which successor
+    // we're currently exploring.
+    SmallVector<std::pair<const MachineBasicBlock *,
+                          MachineBasicBlock::const_succ_iterator>,
+                8>
+        DFS;
+
+    // Find any artificial successors not already tracked.
+    for (auto *succ : MBB->successors()) {
+      if (BlocksToExplore.count(succ))
+        continue;
+      if (!ArtificialBlocks.count(succ))
+        continue;
+      ToAdd.insert(succ);
+      DFS.push_back({succ, succ->succ_begin()});
+    }
+
+    // Search all those blocks, depth first.
+    while (!DFS.empty()) {
+      const MachineBasicBlock *CurBB = DFS.back().first;
+      MachineBasicBlock::const_succ_iterator &CurSucc = DFS.back().second;
+      // Walk back if we've explored this blocks successors to the end.
+      if (CurSucc == CurBB->succ_end()) {
+        DFS.pop_back();
+        continue;
+      }
+
+      // If the current successor is artificial and unexplored, descend into
+      // it.
+      if (!ToAdd.count(*CurSucc) && ArtificialBlocks.count(*CurSucc)) {
+        ToAdd.insert(*CurSucc);
+        DFS.push_back({*CurSucc, (*CurSucc)->succ_begin()});
+        continue;
+      }
+
+      ++CurSucc;
+    }
+  };
+
+  BlocksToExplore.insert(ToAdd.begin(), ToAdd.end());
+}
+
+void InstrRefBasedLDV::buildVLocValueMap(
+    const DILocation *DILoc, const SmallSet<DebugVariable, 4> &VarsWeCareAbout,
     SmallPtrSetImpl<MachineBasicBlock *> &AssignBlocks, LiveInsT &Output,
     ValueIDNum **MOutLocs, ValueIDNum **MInLocs,
     SmallVectorImpl<VLocTracker> &AllTheVLocs) {
@@ -2455,74 +2518,7 @@ void InstrRefBasedLDV::buildVLocValueMap(const DILocation *DILoc,
     return BBToOrder[A] < BBToOrder[B];
   };
 
-  LS.getMachineBasicBlocks(DILoc, BlocksToExplore);
-
-  // A separate container to distinguish "blocks we're exploring" versus
-  // "blocks that are potentially in scope. See comment at start of vlocJoin.
-  SmallPtrSet<const MachineBasicBlock *, 8> InScopeBlocks = BlocksToExplore;
-
-  // VarLoc LiveDebugValues tracks variable locations that are defined in
-  // blocks not in scope. This is something we could legitimately ignore, but
-  // lets allow it for now for the sake of coverage.
-  BlocksToExplore.insert(AssignBlocks.begin(), AssignBlocks.end());
-
-  // We also need to propagate variable values through any artificial blocks
-  // that immediately follow blocks in scope.
-  DenseSet<const MachineBasicBlock *> ToAdd;
-
-  // Helper lambda: For a given block in scope, perform a depth first search
-  // of all the artificial successors, adding them to the ToAdd collection.
-  auto AccumulateArtificialBlocks =
-      [this, &ToAdd, &BlocksToExplore,
-       &InScopeBlocks](const MachineBasicBlock *MBB) {
-        // Depth-first-search state: each node is a block and which successor
-        // we're currently exploring.
-        SmallVector<std::pair<const MachineBasicBlock *,
-                              MachineBasicBlock::const_succ_iterator>,
-                    8>
-            DFS;
-
-        // Find any artificial successors not already tracked.
-        for (auto *succ : MBB->successors()) {
-          if (BlocksToExplore.count(succ) || InScopeBlocks.count(succ))
-            continue;
-          if (!ArtificialBlocks.count(succ))
-            continue;
-          ToAdd.insert(succ);
-          DFS.push_back(std::make_pair(succ, succ->succ_begin()));
-        }
-
-        // Search all those blocks, depth first.
-        while (!DFS.empty()) {
-          const MachineBasicBlock *CurBB = DFS.back().first;
-          MachineBasicBlock::const_succ_iterator &CurSucc = DFS.back().second;
-          // Walk back if we've explored this blocks successors to the end.
-          if (CurSucc == CurBB->succ_end()) {
-            DFS.pop_back();
-            continue;
-          }
-
-          // If the current successor is artificial and unexplored, descend into
-          // it.
-          if (!ToAdd.count(*CurSucc) && ArtificialBlocks.count(*CurSucc)) {
-            ToAdd.insert(*CurSucc);
-            DFS.push_back(std::make_pair(*CurSucc, (*CurSucc)->succ_begin()));
-            continue;
-          }
-
-          ++CurSucc;
-        }
-      };
-
-  // Search in-scope blocks and those containing a DBG_VALUE from this scope
-  // for artificial successors.
-  for (auto *MBB : BlocksToExplore)
-    AccumulateArtificialBlocks(MBB);
-  for (auto *MBB : InScopeBlocks)
-    AccumulateArtificialBlocks(MBB);
-
-  BlocksToExplore.insert(ToAdd.begin(), ToAdd.end());
-  InScopeBlocks.insert(ToAdd.begin(), ToAdd.end());
+  getBlocksForScope(DILoc, BlocksToExplore, AssignBlocks);
 
   // Single block scope: not interesting! No propagation at all. Note that
   // this could probably go above ArtificialBlocks without damage, but
@@ -2812,39 +2808,7 @@ void InstrRefBasedLDV::emitLocations(
     }
   }
 
-  // Go through all the transfers recorded in the TransferTracker -- this is
-  // both the live-ins to a block, and any movements of values that happen
-  // in the middle.
-  for (const auto &P : TTracker->Transfers) {
-    // We have to insert DBG_VALUEs in a consistent order, otherwise they
-    // appear in DWARF in different orders. Use the order that they appear
-    // when walking through each block / each instruction, stored in
-    // AllVarsNumbering.
-    SmallVector<std::pair<unsigned, MachineInstr *>> Insts;
-    for (MachineInstr *MI : P.Insts) {
-      DebugVariable Var(MI->getDebugVariable(), MI->getDebugExpression(),
-                        MI->getDebugLoc()->getInlinedAt());
-      Insts.emplace_back(AllVarsNumbering.find(Var)->second, MI);
-    }
-    llvm::sort(Insts,
-               [](const auto &A, const auto &B) { return A.first < B.first; });
-
-    // Insert either before or after the designated point...
-    if (P.MBB) {
-      MachineBasicBlock &MBB = *P.MBB;
-      for (const auto &Pair : Insts)
-        MBB.insert(P.Pos, Pair.second);
-    } else {
-      // Terminators, like tail calls, can clobber things. Don't try and place
-      // transfers after them.
-      if (P.Pos->isTerminator())
-        continue;
-
-      MachineBasicBlock &MBB = *P.Pos->getParent();
-      for (const auto &Pair : Insts)
-        MBB.insertAfterBundle(P.Pos, Pair.second);
-    }
-  }
+   emitTransfers(AllVarsNumbering);
 }
 
 void InstrRefBasedLDV::initialSetup(MachineFunction &MF) {
@@ -2887,6 +2851,45 @@ void InstrRefBasedLDV::initialSetup(MachineFunction &MF) {
     }
   }
 #endif
+}
+
+bool InstrRefBasedLDV::emitTransfers(
+        DenseMap<DebugVariable, unsigned> &AllVarsNumbering) {
+  // Go through all the transfers recorded in the TransferTracker -- this is
+  // both the live-ins to a block, and any movements of values that happen
+  // in the middle.
+  for (const auto &P : TTracker->Transfers) {
+    // We have to insert DBG_VALUEs in a consistent order, otherwise they
+    // appear in DWARF in different orders. Use the order that they appear
+    // when walking through each block / each instruction, stored in
+    // AllVarsNumbering.
+    SmallVector<std::pair<unsigned, MachineInstr *>> Insts;
+    for (MachineInstr *MI : P.Insts) {
+      DebugVariable Var(MI->getDebugVariable(), MI->getDebugExpression(),
+                        MI->getDebugLoc()->getInlinedAt());
+      Insts.emplace_back(AllVarsNumbering.find(Var)->second, MI);
+    }
+    llvm::sort(Insts,
+               [](const auto &A, const auto &B) { return A.first < B.first; });
+
+    // Insert either before or after the designated point...
+    if (P.MBB) {
+      MachineBasicBlock &MBB = *P.MBB;
+      for (const auto &Pair : Insts)
+        MBB.insert(P.Pos, Pair.second);
+    } else {
+      // Terminators, like tail calls, can clobber things. Don't try and place
+      // transfers after them.
+      if (P.Pos->isTerminator())
+        continue;
+
+      MachineBasicBlock &MBB = *P.Pos->getParent();
+      for (const auto &Pair : Insts)
+        MBB.insertAfterBundle(P.Pos, Pair.second);
+    }
+  }
+
+  return TTracker->Transfers.size() != 0;
 }
 
 /// Calculate the liveness information for the given machine function and
@@ -2995,14 +2998,14 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   DenseMap<DebugVariable, unsigned> AllVarsNumbering;
 
   // Map from one LexicalScope to all the variables in that scope.
-  DenseMap<const LexicalScope *, SmallSet<DebugVariable, 4>> ScopeToVars;
+  ScopeToVarsT ScopeToVars;
 
-  // Map from One lexical scope to all blocks in that scope.
-  DenseMap<const LexicalScope *, SmallPtrSet<MachineBasicBlock *, 4>>
-      ScopeToBlocks;
+  // Map from One lexical scope to all blocks where assignments happen for
+  // that scope.
+  ScopeToAssignBlocksT ScopeToAssignBlocks;
 
-  // Store a DILocation that describes a scope.
-  DenseMap<const LexicalScope *, const DILocation *> ScopeToDILocation;
+  // Store map of DILocations that describes scopes.
+  ScopeToDILocT ScopeToDILocation;
 
   // To mirror old LiveDebugValues, enumerate variables in RPOT order. Otherwise
   // the order is unimportant, it just has to be stable.
@@ -3022,7 +3025,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
 
       AllVarsNumbering.insert(std::make_pair(Var, AllVarsNumbering.size()));
       ScopeToVars[Scope].insert(Var);
-      ScopeToBlocks[Scope].insert(VTracker->MBB);
+      ScopeToAssignBlocks[Scope].insert(VTracker->MBB);
       ScopeToDILocation[Scope] = ScopeLoc;
       ++VarAssignCount;
     }
@@ -3046,7 +3049,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
     // a map of variables to values in SavedLiveIns.
     for (auto &P : ScopeToVars) {
       buildVLocValueMap(ScopeToDILocation[P.first], P.second,
-                   ScopeToBlocks[P.first], SavedLiveIns, MOutLocs, MInLocs,
+                   ScopeToAssignBlocks[P.first], SavedLiveIns, MOutLocs, MInLocs,
                    vlocs);
     }
 
