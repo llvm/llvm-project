@@ -990,6 +990,18 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   return ReturnVal;
 }
 
+static std::pair<bool, bool> getGCResultLocality(const GCStatepointInst &S) {
+  std::pair<bool, bool> Res(false, false);
+  for (auto *U : S.users())
+    if (auto *GRI = dyn_cast<GCResultInst>(U)) {
+      if (GRI->getParent() == S.getParent())
+        Res.first = true;
+      else
+        Res.second = true;
+    }
+  return Res;
+}
+
 void
 SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
                                      const BasicBlock *EHPadBB /*= nullptr*/) {
@@ -1075,7 +1087,7 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
   SDValue ReturnValue = LowerAsSTATEPOINT(SI);
 
   // Export the result value if needed
-  const std::pair<bool, bool> GCResultLocality = I.getGCResultLocality();
+  const std::pair<bool, bool> GCResultLocality = getGCResultLocality(I);
   Type *RetTy = I.getActualReturnType();
 
   if (RetTy->isVoidTy() ||
