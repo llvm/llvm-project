@@ -34,6 +34,7 @@ add_mlir_dialect_library(MLIRAffineTransforms
   MLIRStandard
   MLIRTransformUtils
   MLIRVector
+  MLIRVectorUtils
   MLIRVectorToLLVM
   )
 

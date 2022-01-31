@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_VECTOR_VECTORTRANSFORMS_H
-#define MLIR_DIALECT_VECTOR_VECTORTRANSFORMS_H
+#ifndef MLIR_DIALECT_VECTOR_TRANSFORMS_VECTORTRANSFORMS_H
+#define MLIR_DIALECT_VECTOR_TRANSFORMS_VECTORTRANSFORMS_H
 
-#include "mlir/Dialect/Vector/VectorRewritePatterns.h"
-#include "mlir/Dialect/Vector/VectorUtils.h"
+#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 
 namespace mlir {
 class MLIRContext;
@@ -94,4 +94,4 @@ void transferOpflowOpt(FuncOp func);
 } // namespace vector
 } // namespace mlir
 
-#endif // MLIR_DIALECT_VECTOR_VECTORTRANSFORMS_H
+#endif // MLIR_DIALECT_VECTOR_TRANSFORMS_VECTORTRANSFORMS_H

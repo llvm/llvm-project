@@ -84,9 +84,6 @@ void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
   Value *Ptr = I.getPointerOperand();
   if (!DA->isUniform(Ptr))
     return;
-  auto isGlobalLoad = [&](LoadInst &Load)->bool {
-    return Load.getPointerAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
-  };
   // We're tracking up to the Function boundaries, and cannot go beyond because
   // of FunctionPass restrictions. We can ensure that is memory not clobbered
   // for memory operations that are live in to entry points only.
@@ -99,7 +96,7 @@ void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
   }
 
   bool NotClobbered = false;
-  bool GlobalLoad = isGlobalLoad(I);
+  bool GlobalLoad = I.getPointerAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
   if (PtrI)
     NotClobbered = GlobalLoad && !isClobberedInFunction(&I);
   else if (isa<Argument>(Ptr) || isa<GlobalValue>(Ptr)) {

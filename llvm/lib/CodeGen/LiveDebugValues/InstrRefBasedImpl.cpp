@@ -2593,7 +2593,15 @@ void InstrRefBasedLDV::buildVLocValueMap(const DILocation *DILoc,
 
     SmallVector<MachineBasicBlock *, 32> PHIBlocks;
 
-    // Request the set of PHIs we should insert for this variable.
+    // Request the set of PHIs we should insert for this variable. If there's
+    // only one value definition, things are very simple.
+    if (DefBlocks.size() == 1) {
+      placePHIsForSingleVarDefinition(MutBlocksToExplore, *DefBlocks.begin(),
+                                      AllTheVLocs, Var, Output);
+      continue;
+    }
+
+    // Otherwise: we need to place PHIs through SSA and propagate values.
     BlockPHIPlacement(MutBlocksToExplore, DefBlocks, PHIBlocks);
 
     // Insert PHIs into the per-block live-in tables for this variable.
@@ -2732,6 +2740,39 @@ void InstrRefBasedLDV::buildVLocValueMap(const DILocation *DILoc,
 
   BlockOrders.clear();
   BlocksToExplore.clear();
+}
+
+void InstrRefBasedLDV::placePHIsForSingleVarDefinition(
+    const SmallPtrSetImpl<MachineBasicBlock *> &InScopeBlocks,
+    MachineBasicBlock *AssignMBB, SmallVectorImpl<VLocTracker> &AllTheVLocs,
+    const DebugVariable &Var, LiveInsT &Output) {
+  // If there is a single definition of the variable, then working out it's
+  // value everywhere is very simple: it's every block dominated by the
+  // definition. At the dominance frontier, the usual algorithm would:
+  //  * Place PHIs,
+  //  * Propagate values into them,
+  //  * Find there's no incoming variable value from the other incoming branches
+  //    of the dominance frontier,
+  //  * Specify there's no variable value in blocks past the frontier.
+  // This is a common case, hence it's worth special-casing it.
+
+  // Pick out the variables value from the block transfer function.
+  VLocTracker &VLocs = AllTheVLocs[AssignMBB->getNumber()];
+  auto ValueIt = VLocs.Vars.find(Var);
+  const DbgValue &Value = ValueIt->second;
+
+  // Assign the variable value to entry to each dominated block that's in scope.
+  // Skip the definition block -- it's assigned the variable value in the middle
+  // of the block somewhere.
+  for (auto *ScopeBlock : InScopeBlocks) {
+    if (!DomTree->properlyDominates(AssignMBB, ScopeBlock))
+      continue;
+
+    Output[ScopeBlock->getNumber()].push_back({Var, Value});
+  }
+
+  // All blocks that aren't dominated have no live-in value, thus no variable
+  // value will be given to them.
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

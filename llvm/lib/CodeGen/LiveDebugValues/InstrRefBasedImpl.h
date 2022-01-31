@@ -958,6 +958,15 @@ private:
                      ValueIDNum **MInLocs,
                      SmallVectorImpl<MLocTransferMap> &MLocTransfer);
 
+  /// Propagate variable values to blocks in the common case where there's
+  /// only one value assigned to the variable. This function has better
+  /// performance as it doesn't have to find the dominance frontier between
+  /// different assignments.
+  void placePHIsForSingleVarDefinition(
+          const SmallPtrSetImpl<MachineBasicBlock *> &InScopeBlocks,
+          MachineBasicBlock *MBB, SmallVectorImpl<VLocTracker> &AllTheVLocs,
+          const DebugVariable &Var, LiveInsT &Output);
+
   /// Calculate the iterated-dominance-frontier for a set of defs, using the
   /// existing LLVM facilities for this. Works for a single "value" or
   /// machine/variable location.

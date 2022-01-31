@@ -14,14 +14,12 @@
 #define LLVM_REMARKS_YAML_REMARK_PARSER_H
 
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Remarks/RemarkParser.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
-#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 

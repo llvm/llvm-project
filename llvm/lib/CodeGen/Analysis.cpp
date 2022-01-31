@@ -585,7 +585,7 @@ bool llvm::attributesPermitTailCall(const Function *F, const Instruction *I,
   // goes, they shouldn't affect whether the call is a tail call.
   for (const auto &Attr : {Attribute::Alignment, Attribute::Dereferenceable,
                            Attribute::DereferenceableOrNull, Attribute::NoAlias,
-                           Attribute::NonNull}) {
+                           Attribute::NonNull, Attribute::NoUndef}) {
     CallerAttrs.removeAttribute(Attr);
     CalleeAttrs.removeAttribute(Attr);
   }

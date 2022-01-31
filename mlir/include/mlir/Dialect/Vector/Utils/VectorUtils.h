@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_VECTOR_VECTORUTILS_H_
-#define MLIR_DIALECT_VECTOR_VECTORUTILS_H_
+#ifndef MLIR_DIALECT_VECTOR_UTILS_VECTORUTILS_H_
+#define MLIR_DIALECT_VECTOR_UTILS_VECTORUTILS_H_
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
@@ -46,15 +46,6 @@ int64_t computeMaxLinearIndex(ArrayRef<int64_t> basis);
 /// TODO: needs better doc of how it is used.
 SmallVector<int64_t, 4> computeStrides(ArrayRef<int64_t> shape,
                                        ArrayRef<int64_t> sizes);
-
-/// Computes and returns the linearized index of 'offsets' w.r.t. 'basis'.
-int64_t linearize(ArrayRef<int64_t> offsets, ArrayRef<int64_t> basis);
-
-/// Given the strides together with a linear index in the dimension
-/// space, returns the vector-space offsets in each dimension for a
-/// de-linearized index.
-SmallVector<int64_t, 4> delinearize(ArrayRef<int64_t> strides,
-                                    int64_t linearIndex);
 
 /// Given the target sizes of a vector, together with vector-space offsets,
 /// returns the element-space offsets for each dimension.
@@ -158,38 +149,6 @@ AffineMap
 makePermutationMap(Operation *insertPoint, ArrayRef<Value> indices,
                    const DenseMap<Operation *, unsigned> &loopToVectorDim);
 
-/// Build the default minor identity map suitable for a vector transfer. This
-/// also handles the case memref<... x vector<...>> -> vector<...> in which the
-/// rank of the identity map must take the vector element type into account.
-AffineMap getTransferMinorIdentityMap(ShapedType shapedType,
-                                      VectorType vectorType);
-
-/// Return true if we can prove that the transfer operations access disjoint
-/// memory.
-bool isDisjointTransferSet(VectorTransferOpInterface transferA,
-                           VectorTransferOpInterface transferB);
-
-/// Same behavior as `isDisjointTransferSet` but doesn't require the operations
-/// to have the same tensor/memref. This allows comparing operations accessing
-/// different tensors.
-bool isDisjointTransferIndices(VectorTransferOpInterface transferA,
-                               VectorTransferOpInterface transferB);
-
-/// Return true if the transfer_write fully writes the data accessed by the
-/// transfer_read.
-bool checkSameValueRAW(vector::TransferWriteOp defWrite,
-                       vector::TransferReadOp read);
-
-/// Return true if the write op fully over-write the priorWrite transfer_write
-/// op.
-bool checkSameValueWAW(vector::TransferWriteOp write,
-                       vector::TransferWriteOp priorWrite);
-
-// Helper that returns a subset of `arrayAttr` as a vector of int64_t.
-SmallVector<int64_t, 4> getI64SubArray(ArrayAttr arrayAttr,
-                                       unsigned dropFront = 0,
-                                       unsigned dropBack = 0);
-
 namespace matcher {
 
 /// Matches vector.transfer_read, vector.transfer_write and ops that return a
@@ -205,4 +164,4 @@ bool operatesOnSuperVectorsOf(Operation &op, VectorType subVectorType);
 } // namespace matcher
 } // namespace mlir
 
-#endif // MLIR_DIALECT_VECTOR_VECTORUTILS_H_
+#endif // MLIR_DIALECT_VECTOR_UTILS_VECTORUTILS_H_

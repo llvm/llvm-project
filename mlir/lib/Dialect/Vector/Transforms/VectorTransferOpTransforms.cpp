@@ -12,9 +12,9 @@
 //===----------------------------------------------------------------------===//
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
-#include "mlir/Dialect/Vector/VectorTransforms.h"
-#include "mlir/Dialect/Vector/VectorUtils.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
 #include "llvm/ADT/STLExtras.h"
@@ -113,7 +113,7 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
     } else {
       if (auto read = dyn_cast<vector::TransferReadOp>(user)) {
         // Don't need to consider disjoint reads.
-        if (isDisjointTransferSet(
+        if (vector::isDisjointTransferSet(
                 cast<VectorTransferOpInterface>(write.getOperation()),
                 cast<VectorTransferOpInterface>(read.getOperation())))
           continue;
@@ -169,7 +169,7 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
     if (auto write = dyn_cast<vector::TransferWriteOp>(user)) {
       // If there is a write, but we can prove that it is disjoint we can ignore
       // the write.
-      if (isDisjointTransferSet(
+      if (vector::isDisjointTransferSet(
               cast<VectorTransferOpInterface>(write.getOperation()),
               cast<VectorTransferOpInterface>(read.getOperation())))
         continue;

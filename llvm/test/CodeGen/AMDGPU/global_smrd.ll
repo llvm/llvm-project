@@ -23,6 +23,24 @@ bb:
   ret void
 }
 
+; uniform loads before and after an aliasing store
+; FIXME: The second load should not be converted to an SMEM load!
+; CHECK-LABEL: @uniform_load_store_load
+; CHECK: s_load_dwordx4
+; CHECK: s_load_dword
+; CHECK: flat_store_dword
+; CHECK: s_load_dword
+; CHECK: flat_store_dword
+
+define amdgpu_kernel void @uniform_load_store_load(float addrspace(1)* %arg0, float addrspace(1)* %arg1) {
+bb:
+  %tmp2 = load float, float addrspace(1)* %arg0, !tbaa !8
+  store float %tmp2, float addrspace(1)* %arg1, !tbaa !8
+  %tmp3 = load float, float addrspace(1)* %arg0, !tbaa !8
+  store float %tmp3, float addrspace(1)* %arg1, !tbaa !8
+  ret void
+}
+
 ; non-uniform loads
 ; CHECK-LABEL: @non-uniform_load
 ; CHECK: flat_load_dword
