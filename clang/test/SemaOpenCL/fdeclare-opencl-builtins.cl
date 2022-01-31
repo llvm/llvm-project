@@ -70,12 +70,15 @@ typedef struct {int a;} ndrange_t;
 
 // Enable extensions that are enabled in opencl-c-base.h.
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+#define __opencl_c_generic_address_space 1
 #define cl_khr_subgroup_extended_types 1
 #define cl_khr_subgroup_ballot 1
 #define cl_khr_subgroup_non_uniform_arithmetic 1
 #define cl_khr_subgroup_clustered_reduce 1
 #define __opencl_c_read_write_images 1
 #endif
+
+#define __opencl_c_named_address_space_builtins 1
 #endif
 
 kernel void test_pointers(volatile global void *global_p, global const int4 *a) {

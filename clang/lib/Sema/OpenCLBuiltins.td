@@ -85,6 +85,8 @@ def FuncExtKhrMipmapImageWrites          : FunctionExtension<"cl_khr_mipmap_imag
 def FuncExtKhrGlMsaaSharing              : FunctionExtension<"cl_khr_gl_msaa_sharing">;
 def FuncExtKhrGlMsaaSharingReadWrite     : FunctionExtension<"cl_khr_gl_msaa_sharing __opencl_c_read_write_images">;
 
+def FuncExtOpenCLCGenericAddressSpace    : FunctionExtension<"__opencl_c_generic_address_space">;
+def FuncExtOpenCLCNamedAddressSpaceBuiltins : FunctionExtension<"__opencl_c_named_address_space_builtins">;
 def FuncExtOpenCLCPipes                  : FunctionExtension<"__opencl_c_pipes">;
 def FuncExtOpenCLCWGCollectiveFunctions  : FunctionExtension<"__opencl_c_work_group_collective_functions">;
 def FuncExtOpenCLCReadWriteImages        : FunctionExtension<"__opencl_c_read_write_images">;
@@ -591,10 +593,10 @@ multiclass MathWithPointer<list<AddressSpace> addrspaces> {
   }
 }
 
-let MaxVersion = CL20 in {
+let Extension = FuncExtOpenCLCNamedAddressSpaceBuiltins in {
   defm : MathWithPointer<[GlobalAS, LocalAS, PrivateAS]>;
 }
-let MinVersion = CL20 in {
+let Extension = FuncExtOpenCLCGenericAddressSpace in {
   defm : MathWithPointer<[GenericAS]>;
 }
 
@@ -840,10 +842,10 @@ multiclass VloadVstore<list<AddressSpace> addrspaces, bit defStores> {
   }
 }
 
-let MaxVersion = CL20 in {
+let Extension = FuncExtOpenCLCNamedAddressSpaceBuiltins in {
   defm : VloadVstore<[GlobalAS, LocalAS, PrivateAS], 1>;
 }
-let MinVersion = CL20 in {
+let Extension = FuncExtOpenCLCGenericAddressSpace in {
   defm : VloadVstore<[GenericAS], 1>;
 }
 // vload with constant address space is available regardless of version.
@@ -874,10 +876,10 @@ multiclass VloadVstoreHalf<list<AddressSpace> addrspaces, bit defStores> {
   }
 }
 
-let MaxVersion = CL20 in {
+let Extension = FuncExtOpenCLCNamedAddressSpaceBuiltins in {
   defm : VloadVstoreHalf<[GlobalAS, LocalAS, PrivateAS], 1>;
 }
-let MinVersion = CL20 in {
+let Extension = FuncExtOpenCLCGenericAddressSpace in {
   defm : VloadVstoreHalf<[GenericAS], 1>;
 }
 // vload_half and vloada_half with constant address space are available regardless of version.
