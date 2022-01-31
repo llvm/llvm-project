@@ -1217,6 +1217,7 @@ if(NOT LLVM_TOOLCHAIN_TOOLS)
     llvm-nm
     llvm-objcopy
     llvm-objdump
+    llvm-pdbutil
     llvm-rc
     llvm-readobj
     llvm-size
