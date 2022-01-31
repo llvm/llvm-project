@@ -349,7 +349,7 @@ struct LinalgPromotionOptions {
     return *this;
   }
   /// Callback function to do the copy of data to and from the promoted
-  /// subview. If None then a memref.copy is used.
+  /// subview. If None then a linalg.copy is used.
   Optional<CopyCallbackFn> copyInFn = None;
   Optional<CopyCallbackFn> copyOutFn = None;
   LinalgPromotionOptions &setCopyInOutFns(CopyCallbackFn const &copyIn,
@@ -389,9 +389,6 @@ FailureOr<LinalgOp> promoteSubViews(OpBuilder &b, LinalgOp op,
 
 /// Emit a suitable vector form for a Linalg op with fully static shape.
 LogicalResult vectorize(RewriterBase &builder, LinalgOp linalgOp);
-
-/// Emit a suitable vector form for a Copy op with fully static shape.
-LogicalResult vectorizeCopy(RewriterBase &builder, memref::CopyOp copyOp);
 
 /// Emit a loop nest of `scf.for` with the proper body for `linalgOp`.
 FailureOr<LinalgLoops> linalgOpToLoops(PatternRewriter &rewriter,
@@ -937,15 +934,6 @@ private:
   LinalgTransformationFilter filter;
 };
 
-/// `filter` controls LinalgTransformMarker matching and update when specified.
-/// See `vectorizeLinalgOp` for more details.
-struct CopyVectorizationPattern : public OpRewritePattern<memref::CopyOp> {
-  using OpRewritePattern<memref::CopyOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(memref::CopyOp copyOp,
-                                PatternRewriter &rewriter) const override;
-};
-
 /// Return vector::CombiningKind for the given op.
 llvm::Optional<vector::CombiningKind> getCombinerOpKind(Operation *combinerOp);
 
@@ -1218,7 +1206,7 @@ void populatePadOpVectorizationPatterns(RewritePatternSet &patterns,
 ///    %subView = subview %allocOrView ...
 ///    [optional] linalg.fill(%allocOrView, %cst) ...
 ///    ...
-///    memref.copy(%in, %subView) ...
+///    linalg.copy(%in, %subView) ...
 ///    vector.transfer_read %allocOrView[...], %cst ...
 /// ```
 /// into
@@ -1229,8 +1217,8 @@ void populatePadOpVectorizationPatterns(RewritePatternSet &patterns,
 ///    ...
 ///    vector.transfer_read %in[...], %cst ...
 /// ```
-/// Where there is no interleaved use between memref.copy and transfer_read as
-/// well as no interleaved use between linalg.fill and memref.copy (if
+/// Where there is no interleaved use between linalg.copy and transfer_read as
+/// well as no interleaved use between linalg.fill and linalg.copy (if
 /// linalg.fill is specified).
 /// This is a custom rewrite to forward partial reads (with optional fills) to
 /// vector.transfer_read.
@@ -1249,7 +1237,7 @@ struct LinalgCopyVTRForwardingPattern
 ///    %subView = subview %allocOrView...
 ///    ...
 ///    vector.transfer_write %..., %allocOrView[...]
-///    memref.copy(%subView, %out)
+///    linalg.copy(%subView, %out)
 /// ```
 /// into
 /// ```
@@ -1259,7 +1247,7 @@ struct LinalgCopyVTRForwardingPattern
 ///    ...
 ///    vector.transfer_write %..., %out[...]
 /// ```
-/// Where there is no interleaved use between transfer_write and memref.copy.
+/// Where there is no interleaved use between transfer_write and linalg.copy.
 /// This is a custom rewrite to forward partial writes to vector.transfer_write.
 struct LinalgCopyVTWForwardingPattern
     : public OpRewritePattern<vector::TransferWriteOp> {

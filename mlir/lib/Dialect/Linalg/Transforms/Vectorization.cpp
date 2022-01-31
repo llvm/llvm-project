@@ -656,38 +656,6 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter,
   return success();
 }
 
-LogicalResult mlir::linalg::vectorizeCopy(RewriterBase &rewriter,
-                                          memref::CopyOp copyOp) {
-
-  auto srcType = copyOp.source().getType().cast<MemRefType>();
-  auto dstType = copyOp.target().getType().cast<MemRefType>();
-  if (!srcType.hasStaticShape() || !dstType.hasStaticShape())
-    return failure();
-
-  auto readType =
-      VectorType::get(srcType.getShape(), getElementTypeOrSelf(srcType));
-  auto writeType =
-      VectorType::get(dstType.getShape(), getElementTypeOrSelf(dstType));
-
-  Location loc = copyOp->getLoc();
-  Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  SmallVector<Value> indices(srcType.getRank(), zero);
-
-  Value readValue = rewriter.create<vector::TransferReadOp>(
-      loc, readType, copyOp.source(), indices,
-      rewriter.getMultiDimIdentityMap(srcType.getRank()));
-  if (readValue.getType().cast<VectorType>().getRank() == 0) {
-    readValue = rewriter.create<vector::ExtractElementOp>(loc, readValue);
-    readValue = rewriter.create<vector::BroadcastOp>(loc, writeType, readValue);
-  }
-  Operation *writeValue = rewriter.create<vector::TransferWriteOp>(
-      loc, readValue, copyOp.target(), indices,
-      rewriter.getMultiDimIdentityMap(srcType.getRank()));
-  copyOp->getParentOfType<FuncOp>().dump();
-  rewriter.replaceOp(copyOp, writeValue->getResults());
-  return success();
-}
-
 //----------------------------------------------------------------------------//
 // Misc. vectorization patterns.
 //----------------------------------------------------------------------------//
@@ -1200,11 +1168,11 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
   LDBG("with subView " << subView);
 
   // Find the copy into `subView` without interleaved uses.
-  memref::CopyOp copyOp;
+  CopyOp copyOp;
   for (auto &u : subView.getUses()) {
-    if (auto newCopyOp = dyn_cast<memref::CopyOp>(u.getOwner())) {
-      assert(newCopyOp.target().getType().isa<MemRefType>());
-      if (newCopyOp.target() != subView)
+    if (auto newCopyOp = dyn_cast<CopyOp>(u.getOwner())) {
+      assert(newCopyOp.output().getType().isa<MemRefType>());
+      if (newCopyOp.output() != subView)
         continue;
       LDBG("copy candidate " << *newCopyOp);
       if (mayExistInterleavedUses(newCopyOp, xferOp, {viewOrAlloc, subView}))
@@ -1238,10 +1206,10 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
   if (maybeFillOp)
     LDBG("with maybeFillOp " << *maybeFillOp);
 
-  // `in` is the subview that memref.copy reads. Replace it.
-  Value in = copyOp.source();
+  // `in` is the subview that linalg.copy reads. Replace it.
+  Value in = copyOp.input();
 
-  // memref.copy + linalg.fill can be used to create a padded local buffer.
+  // linalg.copy + linalg.fill can be used to create a padded local buffer.
   // The `masked` attribute is only valid on this padded buffer.
   // When forwarding to vector.transfer_read, the attribute must be reset
   // conservatively.
@@ -1280,10 +1248,10 @@ LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
   Value subView = subViewOp.getResult();
 
   // Find the copy from `subView` without interleaved uses.
-  memref::CopyOp copyOp;
+  CopyOp copyOp;
   for (auto &u : subViewOp.getResult().getUses()) {
-    if (auto newCopyOp = dyn_cast<memref::CopyOp>(u.getOwner())) {
-      if (newCopyOp.source() != subView)
+    if (auto newCopyOp = dyn_cast<CopyOp>(u.getOwner())) {
+      if (newCopyOp.getInputOperand(0)->get() != subView)
         continue;
       if (mayExistInterleavedUses(xferOp, newCopyOp, {viewOrAlloc, subView}))
         continue;
@@ -1295,11 +1263,11 @@ LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
     return failure();
 
   // `out` is the subview copied into that we replace.
-  assert(copyOp.target().getType().isa<MemRefType>());
-  Value out = copyOp.target();
+  assert(copyOp.output().getType().isa<MemRefType>());
+  Value out = copyOp.output();
 
   // Forward vector.transfer into copy.
-  // memref.copy + linalg.fill can be used to create a padded local buffer.
+  // linalg.copy + linalg.fill can be used to create a padded local buffer.
   // The `masked` attribute is only valid on this padded buffer.
   // When forwarding to vector.transfer_write, the attribute must be reset
   // conservatively.

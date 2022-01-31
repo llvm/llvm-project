@@ -144,7 +144,7 @@ struct TestLinalgCodegenStrategy
           "Split vector transfers between slow (masked) and fast "
           "(unmasked) variants. Possible options are:\n"
           "\tnone: keep unsplit vector.transfer and pay the full price\n"
-          "\tmemref.copy: use linalg.fill + memref.copy for the slow path\n"
+          "\tlinalg-copy: use linalg.fill + linalg.copy for the slow path\n"
           "\tvector-transfers: use extra small unmasked vector.transfer for"
           " the slow path\n"),
       llvm::cl::init("none")};
@@ -167,7 +167,7 @@ struct TestLinalgCodegenStrategy
           "latch on:\n"
           "\tlinalg.matmul: anchor on linalg.matmul\n"
           "\tlinalg.matmul_column_major: anchor on linalg.matmul_column_major\n"
-          "\tmemref.copy: anchor on memref.copy\n"
+          "\tlinalg.copy: anchor on linalg.copy\n"
           "\tlinalg.fill: anchor on linalg.fill\n"),
       llvm::cl::init("")};
   Option<std::string> anchorFuncOpName{
@@ -305,7 +305,7 @@ void TestLinalgCodegenStrategy::runOnOperation() {
       llvm::StringSwitch<vector::VectorTransferSplit>(
           splitVectorTransfersTo.getValue())
           .Case("none", vector::VectorTransferSplit::None)
-          .Case("memref-copy", vector::VectorTransferSplit::LinalgCopy)
+          .Case("linalg-copy", vector::VectorTransferSplit::LinalgCopy)
           .Case("vector-transfers", vector::VectorTransferSplit::VectorTransfer)
           .Default(vector::VectorTransferSplit::None);
 

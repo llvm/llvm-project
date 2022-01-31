@@ -545,6 +545,7 @@ seem generally appealing.
 Additionally, `linalg` provides a small subset of commonly named operations:
 
 ```
+* `linalg.copy`,
 * `linalg.fill`,
 * `linalg.dot`,
 * `linalg.matmul`,
