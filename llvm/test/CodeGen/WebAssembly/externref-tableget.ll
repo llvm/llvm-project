@@ -73,5 +73,4 @@ define %externref @get_externref_from_table_with_var_offset2(i32 %i) {
   ret %externref %ref
 }
 
-; CHECK:       .tabletype externref_table, externref
-; CHECK-LABEL: externref_table:
+; CHECK: .tabletype externref_table, externref
