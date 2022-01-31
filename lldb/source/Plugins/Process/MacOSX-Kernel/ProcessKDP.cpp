@@ -381,7 +381,7 @@ ProcessKDP::DoAttachToProcessWithName(const char *process_name,
 void ProcessKDP::DidAttach(ArchSpec &process_arch) {
   Process::DidAttach(process_arch);
 
-  Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PROCESS));
+  Log *log = GetLog(KDPLog::Process);
   LLDB_LOGF(log, "ProcessKDP::DidAttach()");
   if (GetID() != LLDB_INVALID_PROCESS_ID) {
     GetHostArchitecture(process_arch);
@@ -400,7 +400,7 @@ Status ProcessKDP::WillResume() { return Status(); }
 
 Status ProcessKDP::DoResume() {
   Status error;
-  Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PROCESS));
+  Log *log = GetLog(KDPLog::Process);
   // Only start the async thread if we try to do any process control
   if (!m_async_thread.IsJoinable())
     StartAsyncThread();
@@ -492,7 +492,7 @@ lldb::ThreadSP ProcessKDP::GetKernelThread() {
 bool ProcessKDP::DoUpdateThreadList(ThreadList &old_thread_list,
                                     ThreadList &new_thread_list) {
   // locker will keep a mutex locked until it goes out of scope
-  Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_THREAD));
+  Log *log = GetLog(KDPLog::Thread);
   LLDB_LOGV(log, "pid = {0}", GetID());
 
   // Even though there is a CPU mask, it doesn't mean we can see each CPU
@@ -530,7 +530,7 @@ Status ProcessKDP::DoHalt(bool &caused_stop) {
 
 Status ProcessKDP::DoDetach(bool keep_stopped) {
   Status error;
-  Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PROCESS));
+  Log *log = GetLog(KDPLog::Process);
   LLDB_LOGF(log, "ProcessKDP::DoDetach(keep_stopped = %i)", keep_stopped);
 
   if (m_comm.IsRunning()) {
@@ -715,7 +715,7 @@ void ProcessKDP::DebuggerInitialize(lldb_private::Debugger &debugger) {
 }
 
 bool ProcessKDP::StartAsyncThread() {
-  Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PROCESS));
+  Log *log = GetLog(KDPLog::Process);
 
   LLDB_LOGF(log, "ProcessKDP::StartAsyncThread ()");
 
@@ -725,9 +725,8 @@ bool ProcessKDP::StartAsyncThread() {
   llvm::Expected<HostThread> async_thread = ThreadLauncher::LaunchThread(
       "<lldb.process.kdp-remote.async>", ProcessKDP::AsyncThread, this);
   if (!async_thread) {
-    LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST),
-             "failed to launch host thread: {}",
-             llvm::toString(async_thread.takeError()));
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Host), async_thread.takeError(),
+                   "failed to launch host thread: {}");
     return false;
   }
   m_async_thread = *async_thread;
@@ -735,7 +734,7 @@ bool ProcessKDP::StartAsyncThread() {
 }
 
 void ProcessKDP::StopAsyncThread() {
-  Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PROCESS));
+  Log *log = GetLog(KDPLog::Process);
 
   LLDB_LOGF(log, "ProcessKDP::StopAsyncThread ()");
 
@@ -751,7 +750,7 @@ void *ProcessKDP::AsyncThread(void *arg) {
 
   const lldb::pid_t pid = process->GetID();
 
-  Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PROCESS));
+  Log *log = GetLog(KDPLog::Process);
   LLDB_LOGF(log,
             "ProcessKDP::AsyncThread (arg = %p, pid = %" PRIu64
             ") thread starting...",
