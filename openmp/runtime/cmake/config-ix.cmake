@@ -139,7 +139,7 @@ elseif(NOT APPLE)
 endif()
 
 # Check Intel(R) C Compiler specific flags
-if(CMAKE_C_COMPILER_ID STREQUAL "Intel")
+if(CMAKE_C_COMPILER_ID STREQUAL "Intel" OR CMAKE_C_COMPILER_ID STREQUAL "IntelLLVM")
   check_cxx_compiler_flag(/Qlong_double LIBOMP_HAVE_LONG_DOUBLE_FLAG)
   check_cxx_compiler_flag(/Qdiag-disable:177 LIBOMP_HAVE_DIAG_DISABLE_177_FLAG)
   check_cxx_compiler_flag(/Qinline-min-size=1 LIBOMP_HAVE_INLINE_MIN_SIZE_FLAG)
@@ -247,7 +247,7 @@ libomp_check_version_symbols(LIBOMP_HAVE_VERSION_SYMBOLS)
 # Check if quad precision types are available
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
   set(LIBOMP_HAVE_QUAD_PRECISION TRUE)
-elseif(CMAKE_C_COMPILER_ID STREQUAL "Intel")
+elseif(CMAKE_C_COMPILER_ID STREQUAL "Intel" OR CMAKE_C_COMPILER_ID STREQUAL "IntelLLVM")
   if(LIBOMP_HAVE_EXTENDED_FLOAT_TYPES_FLAG)
     set(LIBOMP_HAVE_QUAD_PRECISION TRUE)
   else()

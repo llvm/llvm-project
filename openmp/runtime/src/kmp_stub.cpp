@@ -159,11 +159,11 @@ void *kmp_malloc(size_t size) {
 }
 void *kmp_aligned_malloc(size_t sz, size_t a) {
   i;
-  int err;
   void *res;
 #if KMP_OS_WINDOWS
   res = _aligned_malloc(sz, a);
 #else
+  int err;
   if ((err = posix_memalign(&res, a, sz))) {
     errno = err; // can be EINVAL or ENOMEM
     res = NULL;
@@ -393,12 +393,12 @@ void *omp_alloc(size_t size, omp_allocator_handle_t allocator) {
 
 void *omp_aligned_alloc(size_t a, size_t size, omp_allocator_handle_t al) {
   i;
-  int err;
   void *res;
 #if KMP_OS_WINDOWS
   res = _aligned_malloc(size, a);
 #else
-  if (err = posix_memalign(&res, a, size)) {
+  int err;
+  if ((err = posix_memalign(&res, a, size))) {
     errno = err; // can be EINVAL or ENOMEM
     res = NULL;
   }
@@ -420,12 +420,12 @@ void *omp_calloc(size_t nmemb, size_t size, omp_allocator_handle_t al) {
 void *omp_aligned_calloc(size_t a, size_t nmemb, size_t size,
                          omp_allocator_handle_t al) {
   i;
-  int err;
   void *res;
 #if KMP_OS_WINDOWS
   res = _aligned_recalloc(NULL, nmemb, size, a);
 #else
-  if (err = posix_memalign(&res, a, nmemb * size)) {
+  int err;
+  if ((err = posix_memalign(&res, a, nmemb * size))) {
     errno = err; // can be EINVAL or ENOMEM
     res = NULL;
   }

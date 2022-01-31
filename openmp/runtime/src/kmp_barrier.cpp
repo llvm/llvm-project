@@ -2163,7 +2163,6 @@ void __kmp_join_barrier(int gtid) {
 
   kmp_info_t *this_thr = __kmp_threads[gtid];
   kmp_team_t *team;
-  kmp_uint nproc;
   int tid;
 #ifdef KMP_DEBUG
   int team_id;
@@ -2176,12 +2175,14 @@ void __kmp_join_barrier(int gtid) {
     itt_sync_obj = __kmp_itt_barrier_object(gtid, bs_forkjoin_barrier);
 #endif
 #endif /* USE_ITT_BUILD */
+#if ((USE_ITT_BUILD && USE_ITT_NOTIFY) || defined KMP_DEBUG)
+  int nproc = this_thr->th.th_team_nproc;
+#endif
   KMP_MB();
 
   // Get current info
   team = this_thr->th.th_team;
-  nproc = this_thr->th.th_team_nproc;
-  KMP_DEBUG_ASSERT((int)nproc == team->t.t_nproc);
+  KMP_DEBUG_ASSERT(nproc == team->t.t_nproc);
   tid = __kmp_tid_from_gtid(gtid);
 #ifdef KMP_DEBUG
   team_id = team->t.t_id;
@@ -2354,7 +2355,7 @@ void __kmp_join_barrier(int gtid) {
           // Set arrive time to zero to be able to check it in
           // __kmp_invoke_task(); the same is done inside the loop below
           this_thr->th.th_bar_arrive_time = 0;
-          for (kmp_uint i = 1; i < nproc; ++i) {
+          for (int i = 1; i < nproc; ++i) {
             delta += (cur_time - other_threads[i]->th.th_bar_arrive_time);
             other_threads[i]->th.th_bar_arrive_time = 0;
           }

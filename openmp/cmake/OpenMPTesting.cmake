@@ -76,12 +76,14 @@ macro(extract_test_compiler_information lang file)
   list(GET information 2 version)
   list(GET information 3 openmp_flags)
   list(GET information 4 has_tsan_flags)
+  list(GET information 5 has_omit_frame_pointer_flags)
 
   set(OPENMP_TEST_${lang}_COMPILER_PATH ${path})
   set(OPENMP_TEST_${lang}_COMPILER_ID ${id})
   set(OPENMP_TEST_${lang}_COMPILER_VERSION ${version})
   set(OPENMP_TEST_${lang}_COMPILER_OPENMP_FLAGS ${openmp_flags})
   set(OPENMP_TEST_${lang}_COMPILER_HAS_TSAN_FLAGS ${has_tsan_flags})
+  set(OPENMP_TEST_${lang}_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS ${has_omit_frame_pointer_flags})
 endmacro()
 
 # Function to set variables with information about the test compiler.
@@ -98,6 +100,7 @@ function(set_test_compiler_information dir)
     set(OPENMP_TEST_COMPILER_VERSION "${OPENMP_TEST_C_COMPILER_VERSION}" PARENT_SCOPE)
     set(OPENMP_TEST_COMPILER_OPENMP_FLAGS "${OPENMP_TEST_C_COMPILER_OPENMP_FLAGS}" PARENT_SCOPE)
     set(OPENMP_TEST_COMPILER_HAS_TSAN_FLAGS "${OPENMP_TEST_C_COMPILER_HAS_TSAN_FLAGS}" PARENT_SCOPE)
+    set(OPENMP_TEST_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS "${OPENMP_TEST_C_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS}" PARENT_SCOPE)
 
     # Determine major version.
     string(REGEX MATCH "[0-9]+" major "${OPENMP_TEST_C_COMPILER_VERSION}")
@@ -149,6 +152,7 @@ else()
   endif()
   # TODO: Implement blockaddress in GlobalISel and remove this flag!
   set(OPENMP_TEST_COMPILER_OPENMP_FLAGS "-fopenmp ${OPENMP_TEST_COMPILER_THREAD_FLAGS} -fno-experimental-isel")
+  set(OPENMP_TEST_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS 1)
 endif()
 
 # Function to set compiler features for use in lit.

@@ -1954,7 +1954,7 @@ static inline bool __kmp_is_unlocked_queuing_lock(kmp_queuing_lock_t *lck) {
 
 // We need a fence here, since we must ensure that no memory operations
 // from later in this thread float above that read.
-#if KMP_COMPILER_ICC
+#if KMP_COMPILER_ICC || KMP_COMPILER_ICX
   _mm_mfence();
 #else
   __sync_synchronize();
