@@ -66,10 +66,10 @@ public:
   void emitEndOfAsmFile(Module &M) override;
   void EmitProducerInfo(Module &M);
   void EmitTargetFeatures(Module &M);
+  void emitSymbolType(const MCSymbolWasm *Sym);
   void emitGlobalVariable(const GlobalVariable *GV) override;
   void emitJumpTableInfo() override;
   void emitConstantPool() override;
-  void emitLinkage(const GlobalValue *, MCSymbol *) const override;
   void emitFunctionBodyStart() override;
   void emitInstruction(const MachineInstr *MI) override;
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,

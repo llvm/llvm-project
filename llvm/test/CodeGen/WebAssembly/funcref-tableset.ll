@@ -78,4 +78,5 @@ define void @set_funcref_table_with_var_offset2(%funcref %g, i32 %i) {
   ret void
 }
 
-; CHECK: .tabletype funcref_table, funcref
+;       CHECK: .tabletype funcref_table, funcref
+; CHECK-LABEL: funcref_table:

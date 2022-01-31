@@ -54,28 +54,26 @@ define i32 @return_extern_i32_global() {
 }
 
 
-; CHECK: .globl i32_global
 ; CHECK: .globaltype i32_global, i32
+; CHECK: .globl i32_global
 ; CHECK-LABEL: i32_global:
 
-; CHECK: .globl i64_global
 ; CHECK: .globaltype i64_global, i64
+; CHECK: .globl i64_global
 ; CHECK-LABEL: i64_global:
 
-; CHECK: .globl f32_global
 ; CHECK: .globaltype f32_global, f32
+; CHECK: .globl f32_global
 ; CHECK-LABEL: f32_global:
 
-; CHECK: .globl f64_global
 ; CHECK: .globaltype f64_global, f64
+; CHECK: .globl f64_global
 ; CHECK-LABEL: f64_global:
 
-; FIXME: are we still expecting these to be emitted?
-
+; CHECK: .globaltype i32_external_used, i32
 ; CHECK-NOT: .global i32_external_used
-; CHECK-NOT: .globaltype i32_external_used, i32
 ; CHECK-NOT: i32_external_used:
 
+; CHECK: .globaltype i32_external_unused, i32
 ; CHECK-NOT: .global i32_external_unused
-; CHECK-NOT: .globaltype i32_external_unused, i32
 ; CHECK-NOT: i32_external_unused:
