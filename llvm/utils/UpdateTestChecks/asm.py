@@ -30,11 +30,11 @@ ASM_FUNCTION_ARM_RE = re.compile(
         flags=(re.M | re.S))
 
 ASM_FUNCTION_AARCH64_RE = re.compile(
-     r'^_?(?P<func>[^:]+):[ \t]*\/\/[ \t]*@"?(?P=func)"?( (Function|Tail Call))?\n'
-     r'(?:[ \t]+.cfi_startproc\n)?'  # drop optional cfi noise
-     r'(?P<body>.*?)\n'
+     r'^(?P<func>[^:\n]+):\n'
+     r'[ \t]+.cfi_startproc\n'  # drop optional cfi noise
+     r'(?P<body>(.|\n|\r)*?)\n'
      # This list is incomplete
-     r'.Lfunc_end[0-9]+:\n',
+     r'\.Lfunc_end[0-9]+:\n',
      flags=(re.M | re.S))
 
 ASM_FUNCTION_AMDGPU_RE = re.compile(
