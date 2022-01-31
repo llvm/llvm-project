@@ -145,7 +145,7 @@ void SignalHandlerCheck::check(const MatchFinder::MatchResult &Result) {
   // Check for special case when the signal handler itself is an unsafe external
   // function.
   if (!isFunctionAsyncSafe(HandlerDecl)) {
-    reportBug(HandlerDecl, HandlerExpr, SignalCall, HandlerDecl);
+    reportBug(HandlerDecl, HandlerExpr, /*DirectHandler=*/true);
     return;
   }
 
@@ -160,7 +160,8 @@ void SignalHandlerCheck::check(const MatchFinder::MatchResult &Result) {
     if (CallF && !isFunctionAsyncSafe(CallF)) {
       assert(Itr.getPathLength() >= 2);
       reportBug(CallF, findCallExpr(Itr.getPath(Itr.getPathLength() - 2), *Itr),
-                SignalCall, HandlerDecl);
+                /*DirectHandler=*/false);
+      reportHandlerCommon(Itr, SignalCall, HandlerDecl, HandlerExpr);
     }
   }
 }
@@ -186,17 +187,34 @@ bool SignalHandlerCheck::isSystemCallAsyncSafe(const FunctionDecl *FD) const {
 }
 
 void SignalHandlerCheck::reportBug(const FunctionDecl *CalledFunction,
-                                   const Expr *CallOrRef,
-                                   const CallExpr *SignalCall,
-                                   const FunctionDecl *HandlerDecl) {
+                                   const Expr *CallOrRef, bool DirectHandler) {
   diag(CallOrRef->getBeginLoc(),
-       "%0 may not be asynchronous-safe; "
-       "calling it from a signal handler may be dangerous")
-      << CalledFunction;
-  diag(SignalCall->getSourceRange().getBegin(),
-       "signal handler registered here", DiagnosticIDs::Note);
-  diag(HandlerDecl->getBeginLoc(), "handler function declared here",
-       DiagnosticIDs::Note);
+       "%0 may not be asynchronous-safe; %select{calling it from|using it as}1 "
+       "a signal handler may be dangerous")
+      << CalledFunction << DirectHandler;
+}
+
+void SignalHandlerCheck::reportHandlerCommon(
+    llvm::df_iterator<clang::CallGraphNode *> Itr, const CallExpr *SignalCall,
+    const FunctionDecl *HandlerDecl, const Expr *HandlerRef) {
+  int CallLevel = Itr.getPathLength() - 2;
+  assert(CallLevel >= -1 && "Empty iterator?");
+
+  const CallGraphNode *Caller = Itr.getPath(CallLevel + 1), *Callee = nullptr;
+  while (CallLevel >= 0) {
+    Callee = Caller;
+    Caller = Itr.getPath(CallLevel);
+    const Expr *CE = findCallExpr(Caller, Callee);
+    diag(CE->getBeginLoc(), "function %0 called here from %1",
+         DiagnosticIDs::Note)
+        << cast<FunctionDecl>(Callee->getDecl())
+        << cast<FunctionDecl>(Caller->getDecl());
+    --CallLevel;
+  }
+
+  diag(HandlerRef->getBeginLoc(),
+       "function %0 registered here as signal handler", DiagnosticIDs::Note)
+      << HandlerDecl;
 }
 
 // This is the minimal set of safe functions.
