@@ -808,8 +808,8 @@ static Loops stripmineSink(scf::ForOp forOp, Value factor,
     Value stepped = b.create<arith::AddIOp>(t.getLoc(), iv, forOp.getStep());
     Value less = b.create<arith::CmpIOp>(t.getLoc(), arith::CmpIPredicate::slt,
                                          forOp.getUpperBound(), stepped);
-    Value ub =
-        b.create<SelectOp>(t.getLoc(), less, forOp.getUpperBound(), stepped);
+    Value ub = b.create<arith::SelectOp>(t.getLoc(), less,
+                                         forOp.getUpperBound(), stepped);
 
     // Splice [begin, begin + nOps - 1) into `newForOp` and replace uses.
     auto newForOp = b.create<scf::ForOp>(t.getLoc(), iv, ub, originalStep);

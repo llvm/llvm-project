@@ -1306,8 +1306,8 @@ struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
       if (trueVal == falseVal)
         results[it.index()] = trueVal;
       else
-        results[it.index()] =
-            rewriter.create<SelectOp>(op.getLoc(), cond, trueVal, falseVal);
+        results[it.index()] = rewriter.create<arith::SelectOp>(
+            op.getLoc(), cond, trueVal, falseVal);
     }
 
     rewriter.replaceOp(op, results);

@@ -427,13 +427,6 @@ func @multireturn_caller() {
   return
 }
 
-// CHECK-LABEL: @select
-func @select(%arg0 : i1, %arg1 : i32, %arg2 : i32) -> i32 {
-// CHECK: = llvm.select %arg0, %arg1, %arg2 : i1, i32
-  %0 = select %arg0, %arg1, %arg2 : i32
-  return %0 : i32
-}
-
 // CHECK-LABEL: @dfs_block_order
 func @dfs_block_order(%arg0: i32) -> (i32) {
 // CHECK-NEXT:  %[[CST:.*]] = llvm.mlir.constant(42 : i32) : i32
@@ -514,19 +507,6 @@ func @fmaf(%arg0: f32, %arg1: vector<4xf32>) {
   %0 = math.fma %arg0, %arg0, %arg0 : f32
   // CHECK: %[[V:.*]] = "llvm.intr.fma"(%[[ARG1]], %[[ARG1]], %[[ARG1]]) : (vector<4xf32>, vector<4xf32>, vector<4xf32>) -> vector<4xf32>
   %1 = math.fma %arg1, %arg1, %arg1 : vector<4xf32>
-  std.return
-}
-
-// -----
-
-// CHECK-LABEL: func @select_2dvector(
-func @select_2dvector(%arg0 : vector<4x3xi1>, %arg1 : vector<4x3xi32>, %arg2 : vector<4x3xi32>) {
-  // CHECK: %[[EXTRACT1:.*]] = llvm.extractvalue %arg0[0] : !llvm.array<4 x vector<3xi1>>
-  // CHECK: %[[EXTRACT2:.*]] = llvm.extractvalue %arg1[0] : !llvm.array<4 x vector<3xi32>>
-  // CHECK: %[[EXTRACT3:.*]] = llvm.extractvalue %arg2[0] : !llvm.array<4 x vector<3xi32>>
-  // CHECK: %[[SELECT:.*]] = llvm.select %[[EXTRACT1]], %[[EXTRACT2]], %[[EXTRACT3]] : vector<3xi1>, vector<3xi32>
-  // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[SELECT]], %0[0] : !llvm.array<4 x vector<3xi32>>
-  %0 = select %arg0, %arg1, %arg2 : vector<4x3xi1>, vector<4x3xi32>
   std.return
 }
 

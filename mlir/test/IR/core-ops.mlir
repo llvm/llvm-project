@@ -61,20 +61,20 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   %tci1 = arith.constant dense<1> : tensor<42xi1>
   %vci1 = arith.constant dense<1> : vector<42xi1>
 
-  // CHECK: %{{.*}} = select %{{.*}}, %arg3, %arg3 : index
-  %21 = select %true, %idx, %idx : index
+  // CHECK: %{{.*}} = arith.select %{{.*}}, %arg3, %arg3 : index
+  %21 = arith.select %true, %idx, %idx : index
 
-  // CHECK: %{{.*}} = select %{{.*}}, %{{.*}}, %{{.*}} : tensor<42xi1>, tensor<42xi32>
-  %22 = select %tci1, %tci32, %tci32 : tensor<42 x i1>, tensor<42 x i32>
+  // CHECK: %{{.*}} = arith.select %{{.*}}, %{{.*}}, %{{.*}} : tensor<42xi1>, tensor<42xi32>
+  %22 = arith.select %tci1, %tci32, %tci32 : tensor<42 x i1>, tensor<42 x i32>
 
-  // CHECK: %{{.*}} = select %{{.*}}, %{{.*}}, %{{.*}} : vector<42xi1>, vector<42xi32>
-  %23 = select %vci1, %vci32, %vci32 : vector<42 x i1>, vector<42 x i32>
+  // CHECK: %{{.*}} = arith.select %{{.*}}, %{{.*}}, %{{.*}} : vector<42xi1>, vector<42xi32>
+  %23 = arith.select %vci1, %vci32, %vci32 : vector<42 x i1>, vector<42 x i32>
 
-  // CHECK: %{{.*}} = select %{{.*}}, %arg3, %arg3 : index
-  %24 = "std.select"(%true, %idx, %idx) : (i1, index, index) -> index
+  // CHECK: %{{.*}} = arith.select %{{.*}}, %arg3, %arg3 : index
+  %24 = "arith.select"(%true, %idx, %idx) : (i1, index, index) -> index
 
-  // CHECK: %{{.*}} = select %{{.*}}, %{{.*}}, %{{.*}} : tensor<42xi32>
-  %25 = std.select %true, %tci32, %tci32 : tensor<42 x i32>
+  // CHECK: %{{.*}} = arith.select %{{.*}}, %{{.*}}, %{{.*}} : tensor<42xi32>
+  %25 = arith.select %true, %tci32, %tci32 : tensor<42 x i32>
 
   %64 = arith.constant dense<0.> : vector<4 x f32>
   %tcf32 = arith.constant dense<0.> : tensor<42 x f32>

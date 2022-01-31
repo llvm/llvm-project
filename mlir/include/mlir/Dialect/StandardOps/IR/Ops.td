@@ -457,57 +457,6 @@ def ReturnOp : Std_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
 }
 
 //===----------------------------------------------------------------------===//
-// SelectOp
-//===----------------------------------------------------------------------===//
-
-def SelectOp : Std_Op<"select", [NoSideEffect,
-    AllTypesMatch<["true_value", "false_value", "result"]>,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
-    ElementwiseMappable.traits> {
-  let summary = "select operation";
-  let description = [{
-    The `select` operation chooses one value based on a binary condition
-    supplied as its first operand. If the value of the first operand is `1`,
-    the second operand is chosen, otherwise the third operand is chosen.
-    The second and the third operand must have the same type.
-
-    The operation applies to vectors and tensors elementwise given the _shape_
-    of all operands is identical. The choice is made for each element
-    individually based on the value at the same position as the element in the
-    condition operand. If an i1 is provided as the condition, the entire vector
-    or tensor is chosen.
-
-    The `select` operation combined with [`cmpi`](#stdcmpi-cmpiop) can be used
-    to implement `min` and `max` with signed or unsigned comparison semantics.
-
-    Example:
-
-    ```mlir
-    // Custom form of scalar selection.
-    %x = select %cond, %true, %false : i32
-
-    // Generic form of the same operation.
-    %x = "std.select"(%cond, %true, %false) : (i1, i32, i32) -> i32
-
-    // Element-wise vector selection.
-    %vx = std.select %vcond, %vtrue, %vfalse : vector<42xi1>, vector<42xf32>
-
-    // Full vector selection.
-    %vx = std.select %cond, %vtrue, %vfalse : vector<42xf32>
-    ```
-  }];
-
-  let arguments = (ins BoolLike:$condition,
-                       AnyType:$true_value,
-                       AnyType:$false_value);
-  let results = (outs AnyType:$result);
-
-  let hasCanonicalizer = 1;
-  let hasFolder = 1;
-  let hasVerifier = 1;
-}
-
-//===----------------------------------------------------------------------===//
 // SwitchOp
 //===----------------------------------------------------------------------===//
 

@@ -49,7 +49,8 @@ static LogicalResult convertTanhOp(math::TanhOp op, PatternRewriter &rewriter) {
   Value zero = rewriter.create<arith::ConstantOp>(loc, floatZero);
   Value cmpRes = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OGE,
                                                 op.getOperand(), zero);
-  rewriter.replaceOpWithNewOp<SelectOp>(op, cmpRes, positiveRes, negativeRes);
+  rewriter.replaceOpWithNewOp<arith::SelectOp>(op, cmpRes, positiveRes,
+                                               negativeRes);
   return success();
 }
 

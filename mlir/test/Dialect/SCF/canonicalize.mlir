@@ -280,7 +280,7 @@ func @to_select1(%cond: i1) -> index {
 // CHECK-LABEL:   func @to_select1
 // CHECK-DAG:       [[C0:%.*]] = arith.constant 0 : index
 // CHECK-DAG:       [[C1:%.*]] = arith.constant 1 : index
-// CHECK:           [[V0:%.*]] = select {{.*}}, [[C0]], [[C1]]
+// CHECK:           [[V0:%.*]] = arith.select {{.*}}, [[C0]], [[C1]]
 // CHECK:           return [[V0]] : index
 
 // -----
@@ -299,7 +299,7 @@ func @to_select_same_val(%cond: i1) -> (index, index) {
 // CHECK-LABEL:   func @to_select_same_val
 // CHECK-DAG:       [[C0:%.*]] = arith.constant 0 : index
 // CHECK-DAG:       [[C1:%.*]] = arith.constant 1 : index
-// CHECK:           [[V0:%.*]] = select {{.*}}, [[C0]], [[C1]]
+// CHECK:           [[V0:%.*]] = arith.select {{.*}}, [[C0]], [[C1]]
 // CHECK:           return [[V0]], [[C1]] : index, index
 
 // -----
@@ -322,8 +322,8 @@ func @to_select2(%cond: i1) -> (index, index) {
 // CHECK-DAG:       [[C1:%.*]] = arith.constant 1 : index
 // CHECK-DAG:       [[C2:%.*]] = arith.constant 2 : index
 // CHECK-DAG:       [[C3:%.*]] = arith.constant 3 : index
-// CHECK:           [[V0:%.*]] = select {{.*}}, [[C0]], [[C2]]
-// CHECK:           [[V1:%.*]] = select {{.*}}, [[C1]], [[C3]]
+// CHECK:           [[V0:%.*]] = arith.select {{.*}}, [[C0]], [[C2]]
+// CHECK:           [[V1:%.*]] = arith.select {{.*}}, [[C1]], [[C3]]
 // CHECK:           return [[V0]], [[V1]] : index
 
 // -----

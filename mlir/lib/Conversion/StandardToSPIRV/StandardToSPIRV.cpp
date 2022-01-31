@@ -46,15 +46,6 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts std.select to spv.Select.
-class SelectOpPattern final : public OpConversionPattern<SelectOp> {
-public:
-  using OpConversionPattern<SelectOp>::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(SelectOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override;
-};
-
 /// Converts std.br to spv.Branch.
 struct BranchOpPattern final : public OpConversionPattern<BranchOp> {
   using OpConversionPattern<BranchOp>::OpConversionPattern;
@@ -156,19 +147,6 @@ ReturnOpPattern::matchAndRewrite(ReturnOp returnOp, OpAdaptor adaptor,
 }
 
 //===----------------------------------------------------------------------===//
-// SelectOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult
-SelectOpPattern::matchAndRewrite(SelectOp op, OpAdaptor adaptor,
-                                 ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, adaptor.getCondition(),
-                                               adaptor.getTrueValue(),
-                                               adaptor.getFalseValue());
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // BranchOpPattern
 //===----------------------------------------------------------------------===//
 
@@ -211,8 +189,8 @@ void populateStandardToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
       spirv::ElementwiseOpPattern<arith::MinSIOp, spirv::GLSLSMinOp>,
       spirv::ElementwiseOpPattern<arith::MinUIOp, spirv::GLSLUMinOp>,
 
-      ReturnOpPattern, SelectOpPattern, BranchOpPattern, CondBranchOpPattern>(
-      typeConverter, context);
+      ReturnOpPattern, BranchOpPattern, CondBranchOpPattern>(typeConverter,
+                                                             context);
 }
 
 void populateTensorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,

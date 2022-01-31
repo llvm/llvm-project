@@ -66,6 +66,8 @@ using FPToSIOpLowering =
     VectorConvertToLLVMPattern<arith::FPToSIOp, LLVM::FPToSIOp>;
 using BitcastOpLowering =
     VectorConvertToLLVMPattern<arith::BitcastOp, LLVM::BitcastOp>;
+using SelectOpLowering =
+    VectorConvertToLLVMPattern<arith::SelectOp, LLVM::SelectOp>;
 
 //===----------------------------------------------------------------------===//
 // Op Lowering Patterns
@@ -292,7 +294,8 @@ void mlir::arith::populateArithmeticToLLVMConversionPatterns(
     IndexCastOpLowering,
     BitcastOpLowering,
     CmpIOpLowering,
-    CmpFOpLowering
+    CmpFOpLowering,
+    SelectOpLowering
   >(converter);
   // clang-format on
 }

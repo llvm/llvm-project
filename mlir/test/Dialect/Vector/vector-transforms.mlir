@@ -355,10 +355,10 @@ func @cancelling_shape_cast_ops(%arg0 : vector<2x4xf32>) -> vector<2x4xf32> {
 //       CHECK:   %[[VT5:.*]] = vector.transfer_read %[[ARG1]][%[[C0]], %[[C2]]], {{.*}} : memref<4x4xf32>, vector<2x2xf32>
 //       CHECK:   %[[VT6:.*]] = vector.transfer_read %[[ARG1]][%[[C2]], %[[C0]]], {{.*}} : memref<4x4xf32>, vector<2x2xf32>
 //       CHECK:   %[[VT7:.*]] = vector.transfer_read %[[ARG1]][%[[C2]], %[[C2]]], {{.*}} : memref<4x4xf32>, vector<2x2xf32>
-//       CHECK:   %[[SEL0:.*]] = select %[[CMP0]], %[[VT0]], %[[VT4]] : vector<2x2xi1>, vector<2x2xf32>
-//       CHECK:   %[[SEL1:.*]] = select %[[CMP1]], %[[VT1]], %[[VT5]] : vector<2x2xi1>, vector<2x2xf32>
-//       CHECK:   %[[SEL2:.*]] = select %[[CMP2]], %[[VT2]], %[[VT6]] : vector<2x2xi1>, vector<2x2xf32>
-//       CHECK:   %[[SEL3:.*]] = select %[[CMP3]], %[[VT3]], %[[VT7]] : vector<2x2xi1>, vector<2x2xf32>
+//       CHECK:   %[[SEL0:.*]] = arith.select %[[CMP0]], %[[VT0]], %[[VT4]] : vector<2x2xi1>, vector<2x2xf32>
+//       CHECK:   %[[SEL1:.*]] = arith.select %[[CMP1]], %[[VT1]], %[[VT5]] : vector<2x2xi1>, vector<2x2xf32>
+//       CHECK:   %[[SEL2:.*]] = arith.select %[[CMP2]], %[[VT2]], %[[VT6]] : vector<2x2xi1>, vector<2x2xf32>
+//       CHECK:   %[[SEL3:.*]] = arith.select %[[CMP3]], %[[VT3]], %[[VT7]] : vector<2x2xi1>, vector<2x2xf32>
 //       CHECK:   vector.transfer_write %[[SEL0]], %[[ARG0]][%[[C0]], %[[C0]]] {{.*}} : vector<2x2xf32>, memref<4x4xf32>
 //       CHECK:   vector.transfer_write %[[SEL1]], %[[ARG0]][%[[C0]], %[[C2]]] {{.*}} : vector<2x2xf32>, memref<4x4xf32>
 //       CHECK:   vector.transfer_write %[[SEL2]], %[[ARG0]][%[[C2]], %[[C0]]] {{.*}} : vector<2x2xf32>, memref<4x4xf32>
@@ -372,7 +372,7 @@ func @elementwise_unroll(%arg0 : memref<4x4xf32>, %arg1 : memref<4x4xf32>) {
   // Vector transfer split pattern only support single user right now.
   %2 = vector.transfer_read %arg0[%c0, %c0], %cf0 : memref<4x4xf32>, vector<4x4xf32>
   %3 = vector.transfer_read %arg1[%c0, %c0], %cf0 : memref<4x4xf32>, vector<4x4xf32>
-  %4 = select %cond, %2, %3 : vector<4x4xi1>, vector<4x4xf32>
+  %4 = arith.select %cond, %2, %3 : vector<4x4xi1>, vector<4x4xf32>
   vector.transfer_write %4, %arg0[%c0, %c0] : vector<4x4xf32>, memref<4x4xf32>
   return
 }
@@ -510,12 +510,12 @@ func @cast_away_elementwise_leading_one_dims(
   // CHECK:  vector.extract %{{.*}}[0] : vector<1x4xf32>
   // CHECK:  select %{{.*}}, %{{.*}}, %{{.*}} : vector<4xi1>, vector<4xf32>
   // CHECK:  vector.broadcast %{{.*}} : vector<4xf32> to vector<1x4xf32>
-  %2 = select %1, %arg3, %arg2 : vector<1x4xi1>, vector<1x4xf32>
+  %2 = arith.select %1, %arg3, %arg2 : vector<1x4xi1>, vector<1x4xf32>
   // CHECK:  vector.extract %{{.*}}[0] : vector<1x4xf32>
   // CHECK:  vector.extract %{{.*}}[0] : vector<1x4xf32>
   // CHECK:  select %arg4, %12, %{{.*}} : vector<4xf32>
   // CHECK:  vector.broadcast %{{.*}} : vector<4xf32> to vector<1x4xf32>
-  %3 = select %arg4, %arg3, %arg2 : vector<1x4xf32>
+  %3 = arith.select %arg4, %arg3, %arg2 : vector<1x4xf32>
   return %0, %1, %2, %3: vector<1x1x8xf32>, vector<1x4xi1>, vector<1x4xf32>, vector<1x4xf32>
 }
 

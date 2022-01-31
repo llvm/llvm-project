@@ -40,7 +40,7 @@ struct CeilDivUIOpConverter : public OpRewritePattern<arith::CeilDivUIOp> {
     Value minusOne = rewriter.create<arith::SubIOp>(loc, a, one);
     Value quotient = rewriter.create<arith::DivUIOp>(loc, minusOne, b);
     Value plusOne = rewriter.create<arith::AddIOp>(loc, quotient, one);
-    rewriter.replaceOpWithNewOp<SelectOp>(op, compare, zero, plusOne);
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, compare, zero, plusOne);
     return success();
   }
 };
@@ -62,7 +62,7 @@ struct CeilDivSIOpConverter : public OpRewritePattern<arith::CeilDivSIOp> {
     // Compute x = (b>0) ? -1 : 1.
     Value compare =
         rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sgt, b, zero);
-    Value x = rewriter.create<SelectOp>(loc, compare, minusOne, plusOne);
+    Value x = rewriter.create<arith::SelectOp>(loc, compare, minusOne, plusOne);
     // Compute positive res: 1 + ((x+a)/b).
     Value xPlusA = rewriter.create<arith::AddIOp>(loc, x, a);
     Value xPlusADivB = rewriter.create<arith::DivSIOp>(loc, xPlusA, b);
@@ -91,7 +91,8 @@ struct CeilDivSIOpConverter : public OpRewritePattern<arith::CeilDivSIOp> {
     Value compareRes =
         rewriter.create<arith::OrIOp>(loc, firstTerm, secondTerm);
     // Perform substitution and return success.
-    rewriter.replaceOpWithNewOp<SelectOp>(op, compareRes, posRes, negRes);
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, compareRes, posRes,
+                                                 negRes);
     return success();
   }
 };
@@ -113,7 +114,7 @@ struct FloorDivSIOpConverter : public OpRewritePattern<arith::FloorDivSIOp> {
     // Compute x = (b<0) ? 1 : -1.
     Value compare =
         rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, b, zero);
-    Value x = rewriter.create<SelectOp>(loc, compare, plusOne, minusOne);
+    Value x = rewriter.create<arith::SelectOp>(loc, compare, plusOne, minusOne);
     // Compute negative res: -1 - ((x-a)/b).
     Value xMinusA = rewriter.create<arith::SubIOp>(loc, x, a);
     Value xMinusADivB = rewriter.create<arith::DivSIOp>(loc, xMinusA, b);
@@ -140,7 +141,8 @@ struct FloorDivSIOpConverter : public OpRewritePattern<arith::FloorDivSIOp> {
     Value compareRes =
         rewriter.create<arith::OrIOp>(loc, firstTerm, secondTerm);
     // Perform substitution and return success.
-    rewriter.replaceOpWithNewOp<SelectOp>(op, compareRes, negRes, posRes);
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, compareRes, negRes,
+                                                 posRes);
     return success();
   }
 };
@@ -161,12 +163,12 @@ public:
                   pred == arith::CmpFPredicate::ULT,
                   "pred must be either UGT or ULT");
     Value cmp = rewriter.create<arith::CmpFOp>(loc, pred, lhs, rhs);
-    Value select = rewriter.create<SelectOp>(loc, cmp, lhs, rhs);
+    Value select = rewriter.create<arith::SelectOp>(loc, cmp, lhs, rhs);
 
     // Handle the case where rhs is NaN: 'isNaN(rhs) ? rhs : select'.
     Value isNaN = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::UNO,
                                                  rhs, rhs);
-    rewriter.replaceOpWithNewOp<SelectOp>(op, isNaN, rhs, select);
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, isNaN, rhs, select);
     return success();
   }
 };
@@ -182,7 +184,7 @@ public:
 
     Location loc = op.getLoc();
     Value cmp = rewriter.create<arith::CmpIOp>(loc, pred, lhs, rhs);
-    rewriter.replaceOpWithNewOp<SelectOp>(op, cmp, lhs, rhs);
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, cmp, lhs, rhs);
     return success();
   }
 };

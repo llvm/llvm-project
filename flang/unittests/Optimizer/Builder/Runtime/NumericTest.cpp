@@ -56,8 +56,8 @@ void testGenNearest(fir::FirOpBuilder &builder, mlir::Type xType,
   checkCallOp(nearest.getDefiningOp(), fctName, 2, /*addLocArg=*/false);
   auto callOp = mlir::dyn_cast<fir::CallOp>(nearest.getDefiningOp());
   mlir::Value select = callOp.getOperands()[1];
-  EXPECT_TRUE(mlir::isa<mlir::SelectOp>(select.getDefiningOp()));
-  auto selectOp = mlir::dyn_cast<mlir::SelectOp>(select.getDefiningOp());
+  EXPECT_TRUE(mlir::isa<mlir::arith::SelectOp>(select.getDefiningOp()));
+  auto selectOp = mlir::dyn_cast<mlir::arith::SelectOp>(select.getDefiningOp());
   mlir::Value cmp = selectOp.getCondition();
   EXPECT_TRUE(mlir::isa<mlir::arith::CmpFOp>(cmp.getDefiningOp()));
   auto cmpOp = mlir::dyn_cast<mlir::arith::CmpFOp>(cmp.getDefiningOp());

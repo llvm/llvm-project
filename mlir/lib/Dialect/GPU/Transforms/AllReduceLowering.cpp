@@ -258,7 +258,7 @@ private:
   AccumulatorFactory getCmpFactory() const {
     return [&](Value lhs, Value rhs) {
       Value cmp = rewriter.create<T>(loc, predicate, lhs, rhs);
-      return rewriter.create<SelectOp>(loc, cmp, lhs, rhs);
+      return rewriter.create<arith::SelectOp>(loc, cmp, lhs, rhs);
     };
   }
 

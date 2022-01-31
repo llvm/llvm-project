@@ -59,7 +59,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
     auto cmp = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sgt,
                                               args[0], zero);
     auto neg = rewriter.create<arith::SubIOp>(loc, zero, args[0]);
-    return rewriter.create<mlir::SelectOp>(loc, cmp, args[0], neg);
+    return rewriter.create<arith::SelectOp>(loc, cmp, args[0], neg);
   }
 
   // tosa::AddOp
@@ -380,33 +380,33 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
   if (isa<tosa::SelectOp>(op)) {
     elementTy = op->getOperand(1).getType().cast<ShapedType>().getElementType();
     if (elementTy.isa<FloatType>() || elementTy.isa<IntegerType>())
-      return rewriter.create<mlir::SelectOp>(loc, args[0], args[1], args[2]);
+      return rewriter.create<arith::SelectOp>(loc, args[0], args[1], args[2]);
   }
 
   // tosa::MaximumOp
   if (isa<tosa::MaximumOp>(op) && elementTy.isa<FloatType>()) {
     auto predicate = rewriter.create<arith::CmpFOp>(
         loc, arith::CmpFPredicate::OGT, args[0], args[1]);
-    return rewriter.create<mlir::SelectOp>(loc, predicate, args[0], args[1]);
+    return rewriter.create<arith::SelectOp>(loc, predicate, args[0], args[1]);
   }
 
   if (isa<tosa::MaximumOp>(op) && elementTy.isSignlessInteger()) {
     auto predicate = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::sgt, args[0], args[1]);
-    return rewriter.create<mlir::SelectOp>(loc, predicate, args[0], args[1]);
+    return rewriter.create<arith::SelectOp>(loc, predicate, args[0], args[1]);
   }
 
   // tosa::MinimumOp
   if (isa<tosa::MinimumOp>(op) && elementTy.isa<FloatType>()) {
     auto predicate = rewriter.create<arith::CmpFOp>(
         loc, arith::CmpFPredicate::OLT, args[0], args[1]);
-    return rewriter.create<mlir::SelectOp>(loc, predicate, args[0], args[1]);
+    return rewriter.create<arith::SelectOp>(loc, predicate, args[0], args[1]);
   }
 
   if (isa<tosa::MinimumOp>(op) && elementTy.isSignlessInteger()) {
     auto predicate = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::slt, args[0], args[1]);
-    return rewriter.create<mlir::SelectOp>(loc, predicate, args[0], args[1]);
+    return rewriter.create<arith::SelectOp>(loc, predicate, args[0], args[1]);
   }
 
   // tosa::CeilOp
@@ -558,7 +558,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
       auto negative = rewriter.create<arith::CmpFOp>(
           loc, arith::CmpFPredicate::OLT, args[0], zero);
       auto rounded =
-          rewriter.create<mlir::SelectOp>(loc, negative, subbed, added);
+          rewriter.create<arith::SelectOp>(loc, negative, subbed, added);
 
       auto clamped = clampHelper<arith::CmpFOp>(
           loc, rounded, intMin, intMax, arith::CmpFPredicate::OLT, rewriter);
@@ -792,25 +792,25 @@ static Value createLinalgBodyCalculationForReduceOp(Operation *op,
   if (isa<tosa::ReduceMinOp>(op) && elementTy.isa<FloatType>()) {
     auto predicate = rewriter.create<arith::CmpFOp>(
         loc, arith::CmpFPredicate::OLT, args[0], args[1]);
-    return rewriter.create<mlir::SelectOp>(loc, predicate, args[0], args[1]);
+    return rewriter.create<arith::SelectOp>(loc, predicate, args[0], args[1]);
   }
 
   if (isa<tosa::ReduceMinOp>(op) && elementTy.isa<IntegerType>()) {
     auto predicate = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::slt, args[0], args[1]);
-    return rewriter.create<mlir::SelectOp>(loc, predicate, args[0], args[1]);
+    return rewriter.create<arith::SelectOp>(loc, predicate, args[0], args[1]);
   }
 
   if (isa<tosa::ReduceMaxOp>(op) && elementTy.isa<FloatType>()) {
     auto predicate = rewriter.create<arith::CmpFOp>(
         loc, arith::CmpFPredicate::OGT, args[0], args[1]);
-    return rewriter.create<mlir::SelectOp>(loc, predicate, args[0], args[1]);
+    return rewriter.create<arith::SelectOp>(loc, predicate, args[0], args[1]);
   }
 
   if (isa<tosa::ReduceMaxOp>(op) && elementTy.isa<IntegerType>()) {
     auto predicate = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::sgt, args[0], args[1]);
-    return rewriter.create<mlir::SelectOp>(loc, predicate, args[0], args[1]);
+    return rewriter.create<arith::SelectOp>(loc, predicate, args[0], args[1]);
   }
 
   if (isa<tosa::ReduceAllOp>(op) && elementTy.isInteger(1))
@@ -1525,9 +1525,9 @@ public:
           loc, rewriter.getI32IntegerAttr(1));
 
       auto yOffset =
-          rewriter.create<mlir::SelectOp>(loc, yPred, oneVal, zeroVal);
+          rewriter.create<arith::SelectOp>(loc, yPred, oneVal, zeroVal);
       auto xOffset =
-          rewriter.create<mlir::SelectOp>(loc, xPred, oneVal, zeroVal);
+          rewriter.create<arith::SelectOp>(loc, xPred, oneVal, zeroVal);
 
       iy = rewriter.create<arith::AddIOp>(loc, iy, yOffset);
       ix = rewriter.create<arith::AddIOp>(loc, ix, xOffset);
@@ -2052,9 +2052,9 @@ public:
             return;
           }
 
-          auto resultMax = rewriter.create<mlir::SelectOp>(nestedLoc, predicate,
-                                                           newValue, oldValue);
-          auto resultIndex = rewriter.create<mlir::SelectOp>(
+          auto resultMax = rewriter.create<arith::SelectOp>(
+              nestedLoc, predicate, newValue, oldValue);
+          auto resultIndex = rewriter.create<arith::SelectOp>(
               nestedLoc, predicate, newIndex, oldIndex);
           nestedBuilder.create<linalg::YieldOp>(
               nestedLoc, ValueRange({resultIndex, resultMax}));

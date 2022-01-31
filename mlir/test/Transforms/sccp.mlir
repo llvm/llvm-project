@@ -9,7 +9,7 @@ func @no_control_flow(%arg0: i32) -> i32 {
 
   %cond = arith.constant true
   %cst_1 = arith.constant 1 : i32
-  %select = select %cond, %cst_1, %arg0 : i32
+  %select = arith.select %cond, %cst_1, %arg0 : i32
   return %select : i32
 }
 

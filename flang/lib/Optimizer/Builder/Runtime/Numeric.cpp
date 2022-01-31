@@ -295,7 +295,8 @@ mlir::Value fir::runtime::genNearest(fir::FirOpBuilder &builder,
   mlir::Value False = builder.createIntegerConstant(loc, boolTy, 0);
   mlir::Value True = builder.createIntegerConstant(loc, boolTy, 1);
 
-  mlir::Value positive = builder.create<mlir::SelectOp>(loc, cmp, True, False);
+  mlir::Value positive =
+      builder.create<mlir::arith::SelectOp>(loc, cmp, True, False);
   auto args = fir::runtime::createArguments(builder, loc, funcTy, x, positive);
 
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);

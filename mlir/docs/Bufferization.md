@@ -87,7 +87,6 @@ The code, slightly simplified and annotated, is reproduced here:
   pm.addNestedPass<FuncOp>(createTCPBufferizePass()); // Bufferizes the downstream `tcp` dialect.
   pm.addNestedPass<FuncOp>(createSCFBufferizePass());
   pm.addNestedPass<FuncOp>(createLinalgBufferizePass());
-  pm.addNestedPass<FuncOp>(createStdBufferizePass());
   pm.addNestedPass<FuncOp>(createTensorBufferizePass());
   pm.addPass(createFuncBufferizePass());
 

@@ -97,7 +97,7 @@ func @matmul1(%a: tensor<10x20xf32, #DCSR>,
 // CHECK:               %[[VAL_43:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_40]]] : memref<?xindex>
 // CHECK:               %[[VAL_44:.*]] = memref.load %[[VAL_15]]{{\[}}%[[VAL_41]]] : memref<?xindex>
 // CHECK:               %[[VAL_45:.*]] = arith.cmpi ult, %[[VAL_44]], %[[VAL_43]] : index
-// CHECK:               %[[VAL_46:.*]] = select %[[VAL_45]], %[[VAL_44]], %[[VAL_43]] : index
+// CHECK:               %[[VAL_46:.*]] = arith.select %[[VAL_45]], %[[VAL_44]], %[[VAL_43]] : index
 // CHECK:               %[[VAL_47:.*]] = arith.cmpi eq, %[[VAL_43]], %[[VAL_46]] : index
 // CHECK:               %[[VAL_48:.*]] = arith.cmpi eq, %[[VAL_44]], %[[VAL_46]] : index
 // CHECK:               %[[VAL_49:.*]] = arith.andi %[[VAL_47]], %[[VAL_48]] : i1
@@ -131,10 +131,10 @@ func @matmul1(%a: tensor<10x20xf32, #DCSR>,
 // CHECK:               }
 // CHECK:               %[[VAL_69:.*]] = arith.cmpi eq, %[[VAL_43]], %[[VAL_46]] : index
 // CHECK:               %[[VAL_70:.*]] = arith.addi %[[VAL_40]], %[[VAL_4]] : index
-// CHECK:               %[[VAL_71:.*]] = select %[[VAL_69]], %[[VAL_70]], %[[VAL_40]] : index
+// CHECK:               %[[VAL_71:.*]] = arith.select %[[VAL_69]], %[[VAL_70]], %[[VAL_40]] : index
 // CHECK:               %[[VAL_72:.*]] = arith.cmpi eq, %[[VAL_44]], %[[VAL_46]] : index
 // CHECK:               %[[VAL_73:.*]] = arith.addi %[[VAL_41]], %[[VAL_4]] : index
-// CHECK:               %[[VAL_74:.*]] = select %[[VAL_72]], %[[VAL_73]], %[[VAL_41]] : index
+// CHECK:               %[[VAL_74:.*]] = arith.select %[[VAL_72]], %[[VAL_73]], %[[VAL_41]] : index
 // CHECK:               scf.yield %[[VAL_71]], %[[VAL_74]], %[[VAL_75:.*]] : index, index, index
 // CHECK:             }
 // CHECK:             sparse_tensor.compress %[[VAL_8]], %[[VAL_19]], %[[VAL_24]], %[[VAL_25]], %[[VAL_26]], %[[VAL_76:.*]]#2 : tensor<4x4xf64, #sparse_tensor.encoding<{{{.*}}}>>, memref<?xindex>, memref<?xf64>, memref<?xi1>, memref<?xindex>, index

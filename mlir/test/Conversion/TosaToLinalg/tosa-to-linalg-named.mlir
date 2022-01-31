@@ -228,28 +228,28 @@ func @avg_pool(%arg0: tensor<1x6x34x62xf32>) -> (tensor<1x5x33x62xf32>) {
   // CHECK:   [[PAD0:%.+]] = arith.constant 1
   // CHECK:   [[SUBP0:%.+]] = arith.subi [[IDX1]], [[PAD0]]
   // CHECK:   [[P0CMP:%.+]] = arith.cmpi slt, [[SUBP0]], [[ZERO]]
-  // CHECK:   [[SELP0:%.+]] = select [[P0CMP]], [[SUBP0]], [[ZERO]]
+  // CHECK:   [[SELP0:%.+]] = arith.select [[P0CMP]], [[SUBP0]], [[ZERO]]
   // CHECK:   [[ADDP0:%.+]] = arith.addi [[KH]], [[SELP0]]
   // CHECK:   [[PAD1:%.+]] = arith.constant 1
   // CHECK:   [[SUBP1:%.+]] = arith.subi [[NY]], [[PAD1]]
   // CHECK:   [[P1CMP:%.+]] = arith.cmpi slt, [[SUBP1]], [[ZERO]]
-  // CHECK:   [[SELP1:%.+]] = select [[P1CMP]], [[SUBP1]], [[ZERO]]
+  // CHECK:   [[SELP1:%.+]] = arith.select [[P1CMP]], [[SUBP1]], [[ZERO]]
   // CHECK:   [[ADDP1:%.+]] = arith.addi [[ADDP0]], [[SELP1]]
   // CHECK:   [[YCMP:%.+]] = arith.cmpi slt, [[ADDP1]], [[ONE]]
-  // CHECK:   [[YSEL:%.+]] = select [[YCMP]], [[ONE]], [[ADDP1]]
+  // CHECK:   [[YSEL:%.+]] = arith.select [[YCMP]], [[ONE]], [[ADDP1]]
   // CHECK:   [[KW:%.+]] = arith.constant 4 : index
   // CHECK:   [[PAD2:%.+]] = arith.constant 1 : index
   // CHECK:   [[SUBP2:%.+]] = arith.subi [[IDX2]], [[PAD2]]
   // CHECK:   [[P2CMP:%.+]] = arith.cmpi slt, [[SUBP2]], [[ZERO]]
-  // CHECK:   [[SELP2:%.+]] = select [[P2CMP]], [[SUBP2]], [[ZERO]]
+  // CHECK:   [[SELP2:%.+]] = arith.select [[P2CMP]], [[SUBP2]], [[ZERO]]
   // CHECK:   [[ADDP2:%.+]] = arith.addi [[KW]], [[SELP2]]
   // CHECK:   [[PAD3:%.+]] = arith.constant 1 : index
   // CHECK:   [[SUBP3:%.+]] = arith.subi [[NX]], [[PAD3]]
   // CHECK:   [[P3CMP:%.+]] = arith.cmpi slt, [[SUBP3]], [[ZERO]]
-  // CHECK:   [[SELP3:%.+]] = select [[P3CMP]], [[SUBP3]], [[ZERO]]
+  // CHECK:   [[SELP3:%.+]] = arith.select [[P3CMP]], [[SUBP3]], [[ZERO]]
   // CHECK:   [[ADDP3:%.+]] = arith.addi [[ADDP2]], [[SELP3]]
   // CHECK:   [[XCMP:%.+]] = arith.cmpi slt, [[ADDP3]], [[ONE]]
-  // CHECK:   [[XSEL:%.+]] = select [[XCMP]], [[ONE]], [[ADDP3]]
+  // CHECK:   [[XSEL:%.+]] = arith.select [[XCMP]], [[ONE]], [[ADDP3]]
 
   // Given the valid coverage of the pooling region, normalize the summation.
   // CHECK:   [[C:%.+]] = arith.muli [[YSEL]], [[XSEL]]
@@ -299,9 +299,9 @@ func @avg_pool_i8(%arg0 : tensor<1x128x128x2xi8>) -> () {
   // CHECK: %[[MIN:.+]] = arith.constant -128
   // CHECK: %[[MAX:.+]] = arith.constant 127
   // CHECK: %[[CMP_MIN:.+]] = arith.cmpi slt, %[[OUT]], %[[MIN]]
-  // CHECK: %[[CLMP_MIN:.+]] = select %[[CMP_MIN]], %[[MIN]], %[[OUT]]
+  // CHECK: %[[CLMP_MIN:.+]] = arith.select %[[CMP_MIN]], %[[MIN]], %[[OUT]]
   // CHECK: %[[CMP_MAX:.+]] = arith.cmpi slt, %[[MAX]], %[[OUT]]
-  // CHECK: %[[CLMP_MAX:.+]] = select %[[CMP_MAX]], %[[MAX]], %[[CLMP_MIN]]
+  // CHECK: %[[CLMP_MAX:.+]] = arith.select %[[CMP_MAX]], %[[MAX]], %[[CLMP_MIN]]
   // CHECK: %[[TRUNC:.+]] = arith.trunci %[[CLMP_MAX]]
   // CHECK: linalg.yield %[[TRUNC]]
   %0 = "tosa.avg_pool2d"(%arg0) {kernel = [4, 4], pad = [0, 0, 0, 0], quantization_info = {input_zp = -128 : i32, output_zp = -128 : i32}, stride = [4, 4]} : (tensor<1x128x128x2xi8>) -> tensor<1x32x32x2xi8>
@@ -328,9 +328,9 @@ func @avg_pool_i16(%arg0 : tensor<1x128x128x2xi16>) -> () {
   // CHECK: %[[MIN:.+]] = arith.constant -32768
   // CHECK: %[[MAX:.+]] = arith.constant 32767
   // CHECK: %[[CMP_MIN:.+]] = arith.cmpi slt, %[[OUT]], %[[MIN]]
-  // CHECK: %[[CLMP_MIN:.+]] = select %[[CMP_MIN]], %[[MIN]], %[[OUT]]
+  // CHECK: %[[CLMP_MIN:.+]] = arith.select %[[CMP_MIN]], %[[MIN]], %[[OUT]]
   // CHECK: %[[CMP_MAX:.+]] = arith.cmpi slt, %[[MAX]], %[[OUT]]
-  // CHECK: %[[CLMP_MAX:.+]] = select %[[CMP_MAX]], %[[MAX]], %[[CLMP_MIN]]
+  // CHECK: %[[CLMP_MAX:.+]] = arith.select %[[CMP_MAX]], %[[MAX]], %[[CLMP_MIN]]
   // CHECK: %[[TRUNC:.+]] = arith.trunci %[[CLMP_MAX]]
   // CHECK: linalg.yield %[[TRUNC]]
   %0 = "tosa.avg_pool2d"(%arg0) {kernel = [4, 4], pad = [0, 0, 0, 0], quantization_info = {input_zp = -128 : i32, output_zp = -128 : i32}, stride = [4, 4]} : (tensor<1x128x128x2xi16>) -> tensor<1x32x32x2xi16>

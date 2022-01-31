@@ -58,7 +58,7 @@
 // CHECK:             }
 // CHECK:             %[[VAL_26:.*]] = arith.cmpi eq, %[[VAL_20]], %[[VAL_19]] : index
 // CHECK:             %[[VAL_27:.*]] = arith.addi %[[VAL_18]], %[[VAL_6]] : index
-// CHECK:             %[[VAL_28:.*]] = select %[[VAL_26]], %[[VAL_27]], %[[VAL_18]] : index
+// CHECK:             %[[VAL_28:.*]] = arith.select %[[VAL_26]], %[[VAL_27]], %[[VAL_18]] : index
 // CHECK:             %[[VAL_29:.*]] = arith.addi %[[VAL_19]], %[[VAL_6]] : index
 // CHECK:             scf.yield %[[VAL_28]], %[[VAL_29]] : index, index
 // CHECK:           }
@@ -120,7 +120,7 @@ func @add(%arga: tensor<32xi64, #SV>,
 // CHECK:             }
 // CHECK:             %[[VAL_28:.*]] = arith.cmpi eq, %[[VAL_21]], %[[VAL_20]] : index
 // CHECK:             %[[VAL_29:.*]] = arith.addi %[[VAL_19]], %[[VAL_6]] : index
-// CHECK:             %[[VAL_30:.*]] = select %[[VAL_28]], %[[VAL_29]], %[[VAL_19]] : index
+// CHECK:             %[[VAL_30:.*]] = arith.select %[[VAL_28]], %[[VAL_29]], %[[VAL_19]] : index
 // CHECK:             %[[VAL_31:.*]] = arith.addi %[[VAL_20]], %[[VAL_6]] : index
 // CHECK:             scf.yield %[[VAL_30]], %[[VAL_31]] : index, index
 // CHECK:           }
@@ -321,7 +321,7 @@ func @and(%arga: tensor<32xi64, #SV>,
 // CHECK:             }
 // CHECK:             %[[VAL_26:.*]] = arith.cmpi eq, %[[VAL_20]], %[[VAL_19]] : index
 // CHECK:             %[[VAL_27:.*]] = arith.addi %[[VAL_18]], %[[VAL_6]] : index
-// CHECK:             %[[VAL_28:.*]] = select %[[VAL_26]], %[[VAL_27]], %[[VAL_18]] : index
+// CHECK:             %[[VAL_28:.*]] = arith.select %[[VAL_26]], %[[VAL_27]], %[[VAL_18]] : index
 // CHECK:             %[[VAL_29:.*]] = arith.addi %[[VAL_19]], %[[VAL_6]] : index
 // CHECK:             scf.yield %[[VAL_28]], %[[VAL_29]] : index, index
 // CHECK:           }
@@ -381,7 +381,7 @@ func @or(%arga: tensor<32xi64, #SV>,
 // CHECK:             }
 // CHECK:             %[[VAL_26:.*]] = arith.cmpi eq, %[[VAL_20]], %[[VAL_19]] : index
 // CHECK:             %[[VAL_27:.*]] = arith.addi %[[VAL_18]], %[[VAL_6]] : index
-// CHECK:             %[[VAL_28:.*]] = select %[[VAL_26]], %[[VAL_27]], %[[VAL_18]] : index
+// CHECK:             %[[VAL_28:.*]] = arith.select %[[VAL_26]], %[[VAL_27]], %[[VAL_18]] : index
 // CHECK:             %[[VAL_29:.*]] = arith.addi %[[VAL_19]], %[[VAL_6]] : index
 // CHECK:             scf.yield %[[VAL_28]], %[[VAL_29]] : index, index
 // CHECK:           }

@@ -1393,6 +1393,173 @@ OpFoldResult arith::CmpFOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// SelectOp
+//===----------------------------------------------------------------------===//
+
+// Transforms a select of a boolean to arithmetic operations
+//
+//  arith.select %arg, %x, %y : i1
+//
+//  becomes
+//
+//  and(%arg, %x) or and(!%arg, %y)
+struct SelectI1Simplify : public OpRewritePattern<arith::SelectOp> {
+  using OpRewritePattern<arith::SelectOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(arith::SelectOp op,
+                                PatternRewriter &rewriter) const override {
+    if (!op.getType().isInteger(1))
+      return failure();
+
+    Value falseConstant =
+        rewriter.create<arith::ConstantIntOp>(op.getLoc(), true, 1);
+    Value notCondition = rewriter.create<arith::XOrIOp>(
+        op.getLoc(), op.getCondition(), falseConstant);
+
+    Value trueVal = rewriter.create<arith::AndIOp>(
+        op.getLoc(), op.getCondition(), op.getTrueValue());
+    Value falseVal = rewriter.create<arith::AndIOp>(op.getLoc(), notCondition,
+                                                    op.getFalseValue());
+    rewriter.replaceOpWithNewOp<arith::OrIOp>(op, trueVal, falseVal);
+    return success();
+  }
+};
+
+//  select %arg, %c1, %c0 => extui %arg
+struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
+  using OpRewritePattern<arith::SelectOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(arith::SelectOp op,
+                                PatternRewriter &rewriter) const override {
+    // Cannot extui i1 to i1, or i1 to f32
+    if (!op.getType().isa<IntegerType>() || op.getType().isInteger(1))
+      return failure();
+
+    // select %x, c1, %c0 => extui %arg
+    if (matchPattern(op.getTrueValue(), m_One()))
+      if (matchPattern(op.getFalseValue(), m_Zero())) {
+        rewriter.replaceOpWithNewOp<arith::ExtUIOp>(op, op.getType(),
+                                                    op.getCondition());
+        return success();
+      }
+
+    // select %x, c0, %c1 => extui (xor %arg, true)
+    if (matchPattern(op.getTrueValue(), m_Zero()))
+      if (matchPattern(op.getFalseValue(), m_One())) {
+        rewriter.replaceOpWithNewOp<arith::ExtUIOp>(
+            op, op.getType(),
+            rewriter.create<arith::XOrIOp>(
+                op.getLoc(), op.getCondition(),
+                rewriter.create<arith::ConstantIntOp>(
+                    op.getLoc(), 1, op.getCondition().getType())));
+        return success();
+      }
+
+    return failure();
+  }
+};
+
+void arith::SelectOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                  MLIRContext *context) {
+  results.insert<SelectI1Simplify, SelectToExtUI>(context);
+}
+
+OpFoldResult arith::SelectOp::fold(ArrayRef<Attribute> operands) {
+  Value trueVal = getTrueValue();
+  Value falseVal = getFalseValue();
+  if (trueVal == falseVal)
+    return trueVal;
+
+  Value condition = getCondition();
+
+  // select true, %0, %1 => %0
+  if (matchPattern(condition, m_One()))
+    return trueVal;
+
+  // select false, %0, %1 => %1
+  if (matchPattern(condition, m_Zero()))
+    return falseVal;
+
+  // select %x, true, false => %x
+  if (getType().isInteger(1))
+    if (matchPattern(getTrueValue(), m_One()))
+      if (matchPattern(getFalseValue(), m_Zero()))
+        return condition;
+
+  if (auto cmp = dyn_cast_or_null<arith::CmpIOp>(condition.getDefiningOp())) {
+    auto pred = cmp.getPredicate();
+    if (pred == arith::CmpIPredicate::eq || pred == arith::CmpIPredicate::ne) {
+      auto cmpLhs = cmp.getLhs();
+      auto cmpRhs = cmp.getRhs();
+
+      // %0 = arith.cmpi eq, %arg0, %arg1
+      // %1 = arith.select %0, %arg0, %arg1 => %arg1
+
+      // %0 = arith.cmpi ne, %arg0, %arg1
+      // %1 = arith.select %0, %arg0, %arg1 => %arg0
+
+      if ((cmpLhs == trueVal && cmpRhs == falseVal) ||
+          (cmpRhs == trueVal && cmpLhs == falseVal))
+        return pred == arith::CmpIPredicate::ne ? trueVal : falseVal;
+    }
+  }
+  return nullptr;
+}
+
+static void print(OpAsmPrinter &p, arith::SelectOp op) {
+  p << " " << op.getOperands();
+  p.printOptionalAttrDict(op->getAttrs());
+  p << " : ";
+  if (ShapedType condType = op.getCondition().getType().dyn_cast<ShapedType>())
+    p << condType << ", ";
+  p << op.getType();
+}
+
+static ParseResult parseSelectOp(OpAsmParser &parser, OperationState &result) {
+  Type conditionType, resultType;
+  SmallVector<OpAsmParser::OperandType, 3> operands;
+  if (parser.parseOperandList(operands, /*requiredOperandCount=*/3) ||
+      parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonType(resultType))
+    return failure();
+
+  // Check for the explicit condition type if this is a masked tensor or vector.
+  if (succeeded(parser.parseOptionalComma())) {
+    conditionType = resultType;
+    if (parser.parseType(resultType))
+      return failure();
+  } else {
+    conditionType = parser.getBuilder().getI1Type();
+  }
+
+  result.addTypes(resultType);
+  return parser.resolveOperands(operands,
+                                {conditionType, resultType, resultType},
+                                parser.getNameLoc(), result.operands);
+}
+
+LogicalResult arith::SelectOp::verify() {
+  Type conditionType = getCondition().getType();
+  if (conditionType.isSignlessInteger(1))
+    return success();
+
+  // If the result type is a vector or tensor, the type can be a mask with the
+  // same elements.
+  Type resultType = getType();
+  if (!resultType.isa<TensorType, VectorType>())
+    return emitOpError() << "expected condition to be a signless i1, but got "
+                         << conditionType;
+  Type shapedConditionType = getI1SameShape(resultType);
+  if (conditionType != shapedConditionType) {
+    return emitOpError() << "expected condition type to have the same shape "
+                            "as the result type, expected "
+                         << shapedConditionType << ", but got "
+                         << conditionType;
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Atomic Enum
 //===----------------------------------------------------------------------===//
 

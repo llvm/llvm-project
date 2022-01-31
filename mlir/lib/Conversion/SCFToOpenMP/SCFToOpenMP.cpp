@@ -71,8 +71,9 @@ template <
 static bool
 matchSelectReduction(Block &block, ArrayRef<Predicate> lessThanPredicates,
                      ArrayRef<Predicate> greaterThanPredicates, bool &isMin) {
-  static_assert(llvm::is_one_of<SelectOpTy, SelectOp, LLVM::SelectOp>::value,
-                "only std and llvm select ops are supported");
+  static_assert(
+      llvm::is_one_of<SelectOpTy, arith::SelectOp, LLVM::SelectOp>::value,
+      "only arithmetic and llvm select ops are supported");
 
   // Expect exactly three operations in the block.
   if (block.empty() || llvm::hasSingleElement(block) ||
@@ -290,7 +291,7 @@ static omp::ReductionDeclareOp declareReduction(PatternRewriter &builder,
 
   // Match select-based min/max reductions.
   bool isMin;
-  if (matchSelectReduction<arith::CmpFOp, SelectOp>(
+  if (matchSelectReduction<arith::CmpFOp, arith::SelectOp>(
           reduction, {arith::CmpFPredicate::OLT, arith::CmpFPredicate::OLE},
           {arith::CmpFPredicate::OGT, arith::CmpFPredicate::OGE}, isMin) ||
       matchSelectReduction<LLVM::FCmpOp, LLVM::SelectOp>(
@@ -299,7 +300,7 @@ static omp::ReductionDeclareOp declareReduction(PatternRewriter &builder,
     return createDecl(builder, symbolTable, reduce,
                       minMaxValueForFloat(type, !isMin));
   }
-  if (matchSelectReduction<arith::CmpIOp, SelectOp>(
+  if (matchSelectReduction<arith::CmpIOp, arith::SelectOp>(
           reduction, {arith::CmpIPredicate::slt, arith::CmpIPredicate::sle},
           {arith::CmpIPredicate::sgt, arith::CmpIPredicate::sge}, isMin) ||
       matchSelectReduction<LLVM::ICmpOp, LLVM::SelectOp>(
@@ -311,7 +312,7 @@ static omp::ReductionDeclareOp declareReduction(PatternRewriter &builder,
                         isMin ? LLVM::AtomicBinOp::min : LLVM::AtomicBinOp::max,
                         decl, reduce);
   }
-  if (matchSelectReduction<arith::CmpIOp, SelectOp>(
+  if (matchSelectReduction<arith::CmpIOp, arith::SelectOp>(
           reduction, {arith::CmpIPredicate::ult, arith::CmpIPredicate::ule},
           {arith::CmpIPredicate::ugt, arith::CmpIPredicate::uge}, isMin) ||
       matchSelectReduction<LLVM::ICmpOp, LLVM::SelectOp>(

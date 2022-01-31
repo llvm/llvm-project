@@ -93,5 +93,5 @@ Value ArithBuilder::slt(Value lhs, Value rhs) {
   return b.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OLT, lhs, rhs);
 }
 Value ArithBuilder::select(Value cmp, Value lhs, Value rhs) {
-  return b.create<SelectOp>(loc, cmp, lhs, rhs);
+  return b.create<arith::SelectOp>(loc, cmp, lhs, rhs);
 }

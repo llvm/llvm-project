@@ -92,7 +92,7 @@ func @reduction2(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK: combiner
 // CHECK: ^{{.*}}(%[[ARG0:.*]]: f32, %[[ARG1:.*]]: f32)
 // CHECK: %[[CMP:.*]] = arith.cmpf oge, %[[ARG0]], %[[ARG1]]
-// CHECK: %[[RES:.*]] = select %[[CMP]], %[[ARG0]], %[[ARG1]]
+// CHECK: %[[RES:.*]] = arith.select %[[CMP]], %[[ARG0]], %[[ARG1]]
 // CHECK: omp.yield(%[[RES]] : f32)
 
 // CHECK-NOT: atomic
@@ -108,7 +108,7 @@ func @reduction3(%arg0 : index, %arg1 : index, %arg2 : index,
     scf.reduce(%one) : f32 {
     ^bb0(%lhs : f32, %rhs: f32):
       %cmp = arith.cmpf oge, %lhs, %rhs : f32
-      %res = select %cmp, %lhs, %rhs : f32
+      %res = arith.select %cmp, %lhs, %rhs : f32
       scf.reduce.return %res : f32
     }
   }
@@ -126,7 +126,7 @@ func @reduction3(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK: combiner
 // CHECK: ^{{.*}}(%[[ARG0:.*]]: f32, %[[ARG1:.*]]: f32)
 // CHECK: %[[CMP:.*]] = arith.cmpf oge, %[[ARG0]], %[[ARG1]]
-// CHECK: %[[RES:.*]] = select %[[CMP]], %[[ARG0]], %[[ARG1]]
+// CHECK: %[[RES:.*]] = arith.select %[[CMP]], %[[ARG0]], %[[ARG1]]
 // CHECK: omp.yield(%[[RES]] : f32)
 
 // CHECK-NOT: atomic
@@ -140,7 +140,7 @@ func @reduction3(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK: combiner
 // CHECK: ^{{.*}}(%[[ARG0:.*]]: i64, %[[ARG1:.*]]: i64)
 // CHECK: %[[CMP:.*]] = arith.cmpi slt, %[[ARG0]], %[[ARG1]]
-// CHECK: %[[RES:.*]] = select %[[CMP]], %[[ARG1]], %[[ARG0]]
+// CHECK: %[[RES:.*]] = arith.select %[[CMP]], %[[ARG1]], %[[ARG0]]
 // CHECK: omp.yield(%[[RES]] : i64)
 
 // CHECK: atomic
@@ -172,7 +172,7 @@ func @reduction4(%arg0 : index, %arg1 : index, %arg2 : index,
     scf.reduce(%one) : f32 {
     ^bb0(%lhs : f32, %rhs: f32):
       %cmp = arith.cmpf oge, %lhs, %rhs : f32
-      %res = select %cmp, %lhs, %rhs : f32
+      %res = arith.select %cmp, %lhs, %rhs : f32
       scf.reduce.return %res : f32
     }
     // CHECK: arith.fptosi
@@ -181,7 +181,7 @@ func @reduction4(%arg0 : index, %arg1 : index, %arg2 : index,
     scf.reduce(%1) : i64 {
     ^bb1(%lhs: i64, %rhs: i64):
       %cmp = arith.cmpi slt, %lhs, %rhs : i64
-      %res = select %cmp, %rhs, %lhs : i64
+      %res = arith.select %cmp, %rhs, %lhs : i64
       scf.reduce.return %res : i64
     }
     // CHECK: omp.yield

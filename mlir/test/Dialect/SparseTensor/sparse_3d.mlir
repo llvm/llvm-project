@@ -152,7 +152,7 @@ func @mul_ddd(%arga: tensor<32x16x8xf32, #Tddd>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:                 }
 // CHECK:                 %[[VAL_35:.*]] = arith.cmpi eq, %[[VAL_29]], %[[VAL_28]] : index
 // CHECK:                 %[[VAL_36:.*]] = arith.addi %[[VAL_27]], %[[VAL_9]] : index
-// CHECK:                 %[[VAL_37:.*]] = select %[[VAL_35]], %[[VAL_36]], %[[VAL_27]] : index
+// CHECK:                 %[[VAL_37:.*]] = arith.select %[[VAL_35]], %[[VAL_36]], %[[VAL_27]] : index
 // CHECK:                 %[[VAL_38:.*]] = arith.addi %[[VAL_28]], %[[VAL_9]] : index
 // CHECK:                 scf.yield %[[VAL_37]], %[[VAL_38]] : index, index
 // CHECK:               }
@@ -270,7 +270,7 @@ func @mul_dds(%arga: tensor<32x16x8xf32, #Tdds>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:               }
 // CHECK:               %[[VAL_35:.*]] = arith.cmpi eq, %[[VAL_25]], %[[VAL_24]] : index
 // CHECK:               %[[VAL_36:.*]] = arith.addi %[[VAL_23]], %[[VAL_8]] : index
-// CHECK:               %[[VAL_37:.*]] = select %[[VAL_35]], %[[VAL_36]], %[[VAL_23]] : index
+// CHECK:               %[[VAL_37:.*]] = arith.select %[[VAL_35]], %[[VAL_36]], %[[VAL_23]] : index
 // CHECK:               %[[VAL_38:.*]] = arith.addi %[[VAL_24]], %[[VAL_8]] : index
 // CHECK:               scf.yield %[[VAL_37]], %[[VAL_38]] : index, index
 // CHECK:             }
@@ -396,7 +396,7 @@ func @mul_dsd(%arga: tensor<32x16x8xf32, #Tdsd>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:                   }
 // CHECK:                   %[[VAL_45:.*]] = arith.cmpi eq, %[[VAL_39]], %[[VAL_38]] : index
 // CHECK:                   %[[VAL_46:.*]] = arith.addi %[[VAL_37]], %[[VAL_9]] : index
-// CHECK:                   %[[VAL_47:.*]] = select %[[VAL_45]], %[[VAL_46]], %[[VAL_37]] : index
+// CHECK:                   %[[VAL_47:.*]] = arith.select %[[VAL_45]], %[[VAL_46]], %[[VAL_37]] : index
 // CHECK:                   %[[VAL_48:.*]] = arith.addi %[[VAL_38]], %[[VAL_9]] : index
 // CHECK:                   scf.yield %[[VAL_47]], %[[VAL_48]] : index, index
 // CHECK:                 }
@@ -415,7 +415,7 @@ func @mul_dsd(%arga: tensor<32x16x8xf32, #Tdsd>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:               }
 // CHECK:               %[[VAL_54:.*]] = arith.cmpi eq, %[[VAL_28]], %[[VAL_27]] : index
 // CHECK:               %[[VAL_55:.*]] = arith.addi %[[VAL_26]], %[[VAL_9]] : index
-// CHECK:               %[[VAL_56:.*]] = select %[[VAL_54]], %[[VAL_55]], %[[VAL_26]] : index
+// CHECK:               %[[VAL_56:.*]] = arith.select %[[VAL_54]], %[[VAL_55]], %[[VAL_26]] : index
 // CHECK:               %[[VAL_57:.*]] = arith.addi %[[VAL_27]], %[[VAL_9]] : index
 // CHECK:               scf.yield %[[VAL_56]], %[[VAL_57]] : index, index
 // CHECK:             }
@@ -541,7 +541,7 @@ func @mul_dss(%arga: tensor<32x16x8xf32, #Tdss>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:             }
 // CHECK:             %[[VAL_37:.*]] = arith.cmpi eq, %[[VAL_23]], %[[VAL_22]] : index
 // CHECK:             %[[VAL_38:.*]] = arith.addi %[[VAL_21]], %[[VAL_8]] : index
-// CHECK:             %[[VAL_39:.*]] = select %[[VAL_37]], %[[VAL_38]], %[[VAL_21]] : index
+// CHECK:             %[[VAL_39:.*]] = arith.select %[[VAL_37]], %[[VAL_38]], %[[VAL_21]] : index
 // CHECK:             %[[VAL_40:.*]] = arith.addi %[[VAL_22]], %[[VAL_8]] : index
 // CHECK:             scf.yield %[[VAL_39]], %[[VAL_40]] : index, index
 // CHECK:           }
@@ -670,7 +670,7 @@ func @mul_sdd(%arga: tensor<32x16x8xf32, #Tsdd>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:                   }
 // CHECK:                   %[[VAL_46:.*]] = arith.cmpi eq, %[[VAL_40]], %[[VAL_39]] : index
 // CHECK:                   %[[VAL_47:.*]] = arith.addi %[[VAL_38]], %[[VAL_9]] : index
-// CHECK:                   %[[VAL_48:.*]] = select %[[VAL_46]], %[[VAL_47]], %[[VAL_38]] : index
+// CHECK:                   %[[VAL_48:.*]] = arith.select %[[VAL_46]], %[[VAL_47]], %[[VAL_38]] : index
 // CHECK:                   %[[VAL_49:.*]] = arith.addi %[[VAL_39]], %[[VAL_9]] : index
 // CHECK:                   scf.yield %[[VAL_48]], %[[VAL_49]] : index, index
 // CHECK:                 }
@@ -692,7 +692,7 @@ func @mul_sdd(%arga: tensor<32x16x8xf32, #Tsdd>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:             }
 // CHECK:             %[[VAL_56:.*]] = arith.cmpi eq, %[[VAL_26]], %[[VAL_25]] : index
 // CHECK:             %[[VAL_57:.*]] = arith.addi %[[VAL_24]], %[[VAL_9]] : index
-// CHECK:             %[[VAL_58:.*]] = select %[[VAL_56]], %[[VAL_57]], %[[VAL_24]] : index
+// CHECK:             %[[VAL_58:.*]] = arith.select %[[VAL_56]], %[[VAL_57]], %[[VAL_24]] : index
 // CHECK:             %[[VAL_59:.*]] = arith.addi %[[VAL_25]], %[[VAL_9]] : index
 // CHECK:             scf.yield %[[VAL_58]], %[[VAL_59]] : index, index
 // CHECK:           }
@@ -827,7 +827,7 @@ func @mul_sds(%arga: tensor<32x16x8xf32, #Tsds>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:                 }
 // CHECK:                 %[[VAL_46:.*]] = arith.cmpi eq, %[[VAL_36]], %[[VAL_35]] : index
 // CHECK:                 %[[VAL_47:.*]] = arith.addi %[[VAL_34]], %[[VAL_8]] : index
-// CHECK:                 %[[VAL_48:.*]] = select %[[VAL_46]], %[[VAL_47]], %[[VAL_34]] : index
+// CHECK:                 %[[VAL_48:.*]] = arith.select %[[VAL_46]], %[[VAL_47]], %[[VAL_34]] : index
 // CHECK:                 %[[VAL_49:.*]] = arith.addi %[[VAL_35]], %[[VAL_8]] : index
 // CHECK:                 scf.yield %[[VAL_48]], %[[VAL_49]] : index, index
 // CHECK:               }
@@ -850,7 +850,7 @@ func @mul_sds(%arga: tensor<32x16x8xf32, #Tsds>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:             }
 // CHECK:             %[[VAL_57:.*]] = arith.cmpi eq, %[[VAL_25]], %[[VAL_24]] : index
 // CHECK:             %[[VAL_58:.*]] = arith.addi %[[VAL_23]], %[[VAL_8]] : index
-// CHECK:             %[[VAL_59:.*]] = select %[[VAL_57]], %[[VAL_58]], %[[VAL_23]] : index
+// CHECK:             %[[VAL_59:.*]] = arith.select %[[VAL_57]], %[[VAL_58]], %[[VAL_23]] : index
 // CHECK:             %[[VAL_60:.*]] = arith.addi %[[VAL_24]], %[[VAL_8]] : index
 // CHECK:             scf.yield %[[VAL_59]], %[[VAL_60]] : index, index
 // CHECK:           }
@@ -992,7 +992,7 @@ func @mul_ssd(%arga: tensor<32x16x8xf32, #Tssd>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:                     }
 // CHECK:                     %[[VAL_56:.*]] = arith.cmpi eq, %[[VAL_50]], %[[VAL_49]] : index
 // CHECK:                     %[[VAL_57:.*]] = arith.addi %[[VAL_48]], %[[VAL_9]] : index
-// CHECK:                     %[[VAL_58:.*]] = select %[[VAL_56]], %[[VAL_57]], %[[VAL_48]] : index
+// CHECK:                     %[[VAL_58:.*]] = arith.select %[[VAL_56]], %[[VAL_57]], %[[VAL_48]] : index
 // CHECK:                     %[[VAL_59:.*]] = arith.addi %[[VAL_49]], %[[VAL_9]] : index
 // CHECK:                     scf.yield %[[VAL_58]], %[[VAL_59]] : index, index
 // CHECK:                   }
@@ -1011,7 +1011,7 @@ func @mul_ssd(%arga: tensor<32x16x8xf32, #Tssd>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:                 }
 // CHECK:                 %[[VAL_65:.*]] = arith.cmpi eq, %[[VAL_39]], %[[VAL_38]] : index
 // CHECK:                 %[[VAL_66:.*]] = arith.addi %[[VAL_37]], %[[VAL_9]] : index
-// CHECK:                 %[[VAL_67:.*]] = select %[[VAL_65]], %[[VAL_66]], %[[VAL_37]] : index
+// CHECK:                 %[[VAL_67:.*]] = arith.select %[[VAL_65]], %[[VAL_66]], %[[VAL_37]] : index
 // CHECK:                 %[[VAL_68:.*]] = arith.addi %[[VAL_38]], %[[VAL_9]] : index
 // CHECK:                 scf.yield %[[VAL_67]], %[[VAL_68]] : index, index
 // CHECK:               }
@@ -1034,7 +1034,7 @@ func @mul_ssd(%arga: tensor<32x16x8xf32, #Tssd>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:             }
 // CHECK:             %[[VAL_76:.*]] = arith.cmpi eq, %[[VAL_28]], %[[VAL_27]] : index
 // CHECK:             %[[VAL_77:.*]] = arith.addi %[[VAL_26]], %[[VAL_9]] : index
-// CHECK:             %[[VAL_78:.*]] = select %[[VAL_76]], %[[VAL_77]], %[[VAL_26]] : index
+// CHECK:             %[[VAL_78:.*]] = arith.select %[[VAL_76]], %[[VAL_77]], %[[VAL_26]] : index
 // CHECK:             %[[VAL_79:.*]] = arith.addi %[[VAL_27]], %[[VAL_9]] : index
 // CHECK:             scf.yield %[[VAL_78]], %[[VAL_79]] : index, index
 // CHECK:           }

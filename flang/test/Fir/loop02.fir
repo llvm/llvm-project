@@ -23,7 +23,7 @@ func private @y(%addr : !fir.ref<index>)
 // CHECK:           %[[VAL_6:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_7:.*]] = arith.cmpi sle, %[[VAL_5]], %[[VAL_6]] : index
 // CHECK:           %[[VAL_8:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_9:.*]] = select %[[VAL_7]], %[[VAL_8]], %[[VAL_5]] : index
+// CHECK:           %[[VAL_9:.*]] = arith.select %[[VAL_7]], %[[VAL_8]], %[[VAL_5]] : index
 // CHECK:           br ^bb1(%[[VAL_1]], %[[VAL_9]] : index, index)
 // CHECK:         ^bb1(%[[VAL_10:.*]]: index, %[[VAL_11:.*]]: index):
 // CHECK:           %[[VAL_12:.*]] = arith.constant 0 : index

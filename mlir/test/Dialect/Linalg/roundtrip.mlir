@@ -220,12 +220,12 @@ func @generic_with_multiple_tensor_outputs(
     outs(%1, %3 : tensor<i32>, tensor<i32>) {
   ^bb0(%arg3: i32, %arg4: i32, %arg5: i32, %arg6: i32):  
     %5 = arith.cmpi sge, %arg3, %arg5 : i32
-    %6 = select %5, %arg3, %arg5 : i32
+    %6 = arith.select %5, %arg3, %arg5 : i32
     %7 = arith.cmpi eq, %arg3, %arg5 : i32
     %8 = arith.cmpi slt, %arg4, %arg6 : i32
-    %9 = select %8, %arg4, %arg6 : i32
-    %10 = select %5, %arg4, %arg6 : i32
-    %11 = select %7, %9, %10 : i32
+    %9 = arith.select %8, %arg4, %arg6 : i32
+    %10 = arith.select %5, %arg4, %arg6 : i32
+    %11 = arith.select %7, %9, %10 : i32
     linalg.yield %6, %11 : i32, i32
   } -> (tensor<i32>, tensor<i32>)
   return %4#0, %4#1 : tensor<i32>, tensor<i32>
