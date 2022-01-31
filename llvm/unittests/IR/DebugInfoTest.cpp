@@ -251,12 +251,33 @@ TEST(DIBuilder, CreateStringType) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M(new Module("MyModule", Ctx));
   DIBuilder DIB(*M);
+  DIScope *Scope = DISubprogram::getDistinct(
+      Ctx, nullptr, "", "", nullptr, 0, nullptr, 0, nullptr, 0, 0,
+      DINode::FlagZero, DISubprogram::SPFlagZero, nullptr);
+  DIFile *F = DIB.createFile("main.c", "/");
   StringRef StrName = "string";
-  DIStringType *StringType = DIB.createStringType(StrName, nullptr);
+  DIVariable *StringLen = DIB.createAutoVariable(Scope, StrName, F, 0, nullptr,
+                                                 false, DINode::FlagZero, 0);
+  DIExpression *StringLocationExp = DIB.createExpression();
+  DIExpression *StringLengthExp = DIB.createExpression();
+  DIStringType *StringType =
+      DIB.createStringType(StrName, StringLen, StringLocationExp);
 
   EXPECT_TRUE(isa_and_nonnull<DIStringType>(StringType));
   EXPECT_EQ(StringType->getName(), "string");
-  EXPECT_EQ(StringType->getStringLength(), nullptr);
+  EXPECT_EQ(StringType,
+            DIStringType::get(Ctx, dwarf::DW_TAG_string_type, StrName,
+                              StringLen, StringLocationExp, nullptr, 0, 0, 0));
+
+  DIStringType *StringTypeExp =
+      DIB.createStringTypeExp(StrName, StringLengthExp, StringLocationExp);
+
+  EXPECT_TRUE(isa_and_nonnull<DIStringType>(StringTypeExp));
+  EXPECT_EQ(StringTypeExp->getName(), "string");
+  EXPECT_EQ(StringTypeExp,
+            DIStringType::get(Ctx, dwarf::DW_TAG_string_type, StrName,
+                              StringLengthExp, StringLocationExp, nullptr, 0, 0,
+                              0));
 }
 
 TEST(DIBuilder, DIEnumerator) {
