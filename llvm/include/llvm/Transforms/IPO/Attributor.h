@@ -1377,6 +1377,9 @@ struct Attributor {
     return AA;
   }
 
+  /// Allows a query AA to request an update if a new query was received.
+  void registerForUpdate(AbstractAttribute &AA);
+
   /// Explicitly record a dependence from \p FromAA to \p ToAA, that is if
   /// \p FromAA changes \p ToAA should be updated as well.
   ///
@@ -2070,6 +2073,10 @@ private:
 
   /// Callback to get an OptimizationRemarkEmitter from a Function *.
   Optional<OptimizationRemarkGetter> OREGetter;
+
+  /// Container with all the query AAs that requested an update via
+  /// registerForUpdate.
+  SmallSetVector<AbstractAttribute *, 16> QueryAAsAwaitingUpdate;
 
   /// The name of the pass to emit remarks for.
   const char *PassName = "";
@@ -2807,6 +2814,14 @@ struct AbstractAttribute : public IRPosition, public AADepGraphNode {
   ///    a subset of the IR, or attributes in-flight, that have to be looked at
   ///    in the `updateImpl` method.
   virtual void initialize(Attributor &A) {}
+
+  /// A query AA is always scheduled as long as we do updates because it does
+  /// lazy computation that cannot be determined to be done from the outside.
+  /// However, while query AAs will not be fixed if they do not have outstanding
+  /// dependences, we will only schedule them like other AAs. If a query AA that
+  /// received a new query it needs to request an update via
+  /// `Attributor::requestUpdateForAA`.
+  virtual bool isQueryAA() const { return false; }
 
   /// Return the internal abstract state for inspection.
   virtual StateType &getState() = 0;
@@ -4614,6 +4629,9 @@ struct AAFunctionReachability
   using Base = StateWrapper<BooleanState, AbstractAttribute>;
 
   AAFunctionReachability(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// See AbstractAttribute::isQueryAA.
+  bool isQueryAA() const override { return true; }
 
   /// If the function represented by this possition can reach \p Fn.
   virtual bool canReach(Attributor &A, const Function &Fn) const = 0;

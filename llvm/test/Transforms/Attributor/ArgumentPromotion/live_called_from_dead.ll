@@ -6,9 +6,7 @@
 
 
 define internal void @dead() {
-; IS__CGSCC____: Function Attrs: norecurse
-; IS__CGSCC____-LABEL: define {{[^@]+}}@dead
-; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
+; IS__CGSCC____-LABEL: define {{[^@]+}}@dead() {
 ; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i32 @test(i32* noalias noundef align 4294967296 null)
 ; IS__CGSCC____-NEXT:    ret void
 ;
@@ -19,7 +17,7 @@ define internal void @dead() {
 define internal i32 @test(i32* %X, i32* %Y) {
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test
-; IS__CGSCC____-SAME: (i32* noalias nocapture nofree noundef writeonly align 4 [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; IS__CGSCC____-SAME: (i32* noalias nocapture nofree noundef writeonly align 4 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC____-NEXT:    br i1 true, label [[LIVE:%.*]], label [[DEAD:%.*]]
 ; IS__CGSCC____:       live:
 ; IS__CGSCC____-NEXT:    store i32 0, i32* [[X]], align 4
@@ -40,9 +38,9 @@ dead:
 define internal i32 @caller(i32* %B) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller
-; IS__CGSCC____-SAME: () #[[ATTR2:[0-9]+]] {
+; IS__CGSCC____-SAME: () #[[ATTR1:[0-9]+]] {
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = alloca i32, align 4
-; IS__CGSCC____-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR3:[0-9]+]]
+; IS__CGSCC____-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR2:[0-9]+]]
 ; IS__CGSCC____-NEXT:    ret i32 undef
 ;
   %A = alloca i32
@@ -60,7 +58,7 @@ define i32 @callercaller() {
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@callercaller
-; IS__CGSCC____-SAME: () #[[ATTR2]] {
+; IS__CGSCC____-SAME: () #[[ATTR1]] {
 ; IS__CGSCC____-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; IS__CGSCC____-NEXT:    ret i32 0
 ;
@@ -73,8 +71,7 @@ define i32 @callercaller() {
 ;.
 ; IS__TUNIT____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { norecurse }
-; IS__CGSCC____: attributes #[[ATTR1]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
-; IS__CGSCC____: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR3]] = { nofree nosync nounwind willreturn writeonly }
+; IS__CGSCC____: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
+; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn writeonly }
 ;.

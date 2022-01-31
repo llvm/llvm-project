@@ -181,16 +181,16 @@ define void @local_alloca_simplifiable_1(%struct.S* noalias sret(%struct.S) alig
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    [[S:%.*]] = alloca [[STRUCT_S]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[I:%.*]] = bitcast %struct.S* [[S]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 24, i8* nocapture nofree noundef nonnull align 4 dereferenceable(24) [[I]]) #[[ATTR14:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 24, i8* nocapture nofree noundef nonnull align 4 dereferenceable(24) [[I]]) #[[ATTR13:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 3
 ; IS__CGSCC_OPM-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 4
 ; IS__CGSCC_OPM-NEXT:    [[F3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 5
 ; IS__CGSCC_OPM-NEXT:    [[I1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 0
-; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(24) [[I1]], i32 noundef 1) #[[ATTR15:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(24) [[I1]], i32 noundef 1) #[[ATTR14:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    [[I2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 1
-; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(20) [[I2]], i32 noundef 2) #[[ATTR15]]
+; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(20) [[I2]], i32 noundef 2) #[[ATTR14]]
 ; IS__CGSCC_OPM-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 2
-; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(16) [[I3]], i32 noundef 3) #[[ATTR15]]
+; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(16) [[I3]], i32 noundef 3) #[[ATTR14]]
 ; IS__CGSCC_OPM-NEXT:    [[F12:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 3
 ; IS__CGSCC_OPM-NEXT:    store float 0x3FF19999A0000000, float* [[F12]], align 4, !tbaa [[TBAA7:![0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    [[MUL:%.*]] = fmul float 0x40019999A0000000, 2.000000e+00
@@ -208,7 +208,7 @@ define void @local_alloca_simplifiable_1(%struct.S* noalias sret(%struct.S) alig
 ; IS__CGSCC_OPM-NEXT:    [[I316:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 2
 ; IS__CGSCC_OPM-NEXT:    store i32 [[ADD15]], i32* [[I316]], align 4, !tbaa [[TBAA14:![0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    [[I12:%.*]] = bitcast %struct.S* [[S]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 24, i8* nocapture nofree noundef nonnull align 4 dereferenceable(24) [[I12]]) #[[ATTR14]]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 24, i8* nocapture nofree noundef nonnull align 4 dereferenceable(24) [[I12]]) #[[ATTR13]]
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM: Function Attrs: argmemonly nofree nosync nounwind willreturn
@@ -217,16 +217,16 @@ define void @local_alloca_simplifiable_1(%struct.S* noalias sret(%struct.S) alig
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[S:%.*]] = alloca [[STRUCT_S]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[I:%.*]] = bitcast %struct.S* [[S]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 24, i8* nocapture nofree noundef nonnull align 4 dereferenceable(24) [[I]]) #[[ATTR12:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 24, i8* nocapture nofree noundef nonnull align 4 dereferenceable(24) [[I]]) #[[ATTR11:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 3
 ; IS__CGSCC_NPM-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 4
 ; IS__CGSCC_NPM-NEXT:    [[F3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 5
 ; IS__CGSCC_NPM-NEXT:    [[I1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 0
-; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(24) [[I1]], i32 noundef 1) #[[ATTR13:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(24) [[I1]], i32 noundef 1) #[[ATTR12:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    [[I2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 1
-; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(20) [[I2]], i32 noundef 2) #[[ATTR13]]
+; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(20) [[I2]], i32 noundef 2) #[[ATTR12]]
 ; IS__CGSCC_NPM-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 2
-; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(16) [[I3]], i32 noundef 3) #[[ATTR13]]
+; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(16) [[I3]], i32 noundef 3) #[[ATTR12]]
 ; IS__CGSCC_NPM-NEXT:    [[F12:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 3
 ; IS__CGSCC_NPM-NEXT:    store float 0x3FF19999A0000000, float* [[F12]], align 4, !tbaa [[TBAA7:![0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    [[MUL:%.*]] = fmul float 0x40019999A0000000, 2.000000e+00
@@ -244,7 +244,7 @@ define void @local_alloca_simplifiable_1(%struct.S* noalias sret(%struct.S) alig
 ; IS__CGSCC_NPM-NEXT:    [[I316:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 2
 ; IS__CGSCC_NPM-NEXT:    store i32 [[ADD15]], i32* [[I316]], align 4, !tbaa [[TBAA14:![0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    [[I12:%.*]] = bitcast %struct.S* [[S]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 24, i8* nocapture nofree noundef nonnull align 4 dereferenceable(24) [[I12]]) #[[ATTR12]]
+; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 24, i8* nocapture nofree noundef nonnull align 4 dereferenceable(24) [[I12]]) #[[ATTR11]]
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
 entry:
@@ -539,7 +539,7 @@ define void @local_alloca_simplifiable_2() {
 ; IS__CGSCC_OPM-NEXT:    store i8 0, i8* [[ARRAYIDX25]], align 1, !tbaa [[TBAA15]]
 ; IS__CGSCC_OPM-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 500
 ; IS__CGSCC_OPM-NEXT:    [[I22:%.*]] = bitcast i8* [[ARRAYIDX26]] to i32*
-; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nofree noundef nonnull writeonly align 4 dereferenceable(4) [[I22]], i32 noundef 0) #[[ATTR16:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nofree noundef nonnull writeonly align 4 dereferenceable(4) [[I22]], i32 noundef 0) #[[ATTR15:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    br label [[FOR_COND28:%.*]]
 ; IS__CGSCC_OPM:       for.cond28:
 ; IS__CGSCC_OPM-NEXT:    [[INDVARS_IV12:%.*]] = phi i64 [ [[INDVARS_IV_NEXT13:%.*]], [[FOR_INC36:%.*]] ], [ 0, [[FOR_END24]] ]
@@ -565,7 +565,7 @@ define void @local_alloca_simplifiable_2() {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; IS__CGSCC_NPM-NEXT:    [[I:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 0
-; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 1024, i8* nocapture nofree noundef nonnull align 16 dereferenceable(1024) [[I]]) #[[ATTR12]]
+; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 1024, i8* nocapture nofree noundef nonnull align 16 dereferenceable(1024) [[I]]) #[[ATTR11]]
 ; IS__CGSCC_NPM-NEXT:    br label [[FOR_COND:%.*]]
 ; IS__CGSCC_NPM:       for.cond:
 ; IS__CGSCC_NPM-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[ENTRY:%.*]] ]
@@ -622,7 +622,7 @@ define void @local_alloca_simplifiable_2() {
 ; IS__CGSCC_NPM-NEXT:    store i8 0, i8* [[ARRAYIDX25]], align 1, !tbaa [[TBAA15]]
 ; IS__CGSCC_NPM-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 500
 ; IS__CGSCC_NPM-NEXT:    [[I22:%.*]] = bitcast i8* [[ARRAYIDX26]] to i32*
-; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nofree noundef nonnull writeonly align 4 dereferenceable(4) [[I22]], i32 noundef 0) #[[ATTR14:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nofree noundef nonnull writeonly align 4 dereferenceable(4) [[I22]], i32 noundef 0) #[[ATTR13:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    br label [[FOR_COND28:%.*]]
 ; IS__CGSCC_NPM:       for.cond28:
 ; IS__CGSCC_NPM-NEXT:    [[INDVARS_IV12:%.*]] = phi i64 [ [[INDVARS_IV_NEXT13:%.*]], [[FOR_INC36:%.*]] ], [ 0, [[FOR_END24]] ]
@@ -755,41 +755,27 @@ for.end38:                                        ; preds = %for.cond.cleanup30
 ;    }
 ;
 define i32 @local_alloca_simplifiable_3() {
-; IS__TUNIT_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@local_alloca_simplifiable_3
-; IS__TUNIT_OPM-SAME: () #[[ATTR3:[0-9]+]] {
-; IS__TUNIT_OPM-NEXT:    [[A:%.*]] = alloca i32, align 4
-; IS__TUNIT_OPM-NEXT:    store i32 1, i32* [[A]], align 4
-; IS__TUNIT_OPM-NEXT:    br label [[SPLIT:%.*]]
-; IS__TUNIT_OPM:       split:
-; IS__TUNIT_OPM-NEXT:    store i32 2, i32* [[A]], align 4
-; IS__TUNIT_OPM-NEXT:    [[L:%.*]] = load i32, i32* [[A]], align 4
-; IS__TUNIT_OPM-NEXT:    ret i32 [[L]]
+; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@local_alloca_simplifiable_3
+; IS__TUNIT____-SAME: () #[[ATTR3:[0-9]+]] {
+; IS__TUNIT____-NEXT:    [[A:%.*]] = alloca i32, align 4
+; IS__TUNIT____-NEXT:    store i32 1, i32* [[A]], align 4
+; IS__TUNIT____-NEXT:    br label [[SPLIT:%.*]]
+; IS__TUNIT____:       split:
+; IS__TUNIT____-NEXT:    store i32 2, i32* [[A]], align 4
+; IS__TUNIT____-NEXT:    [[L:%.*]] = load i32, i32* [[A]], align 4
+; IS__TUNIT____-NEXT:    ret i32 [[L]]
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@local_alloca_simplifiable_3
-; IS__TUNIT_NPM-SAME: () #[[ATTR3:[0-9]+]] {
-; IS__TUNIT_NPM-NEXT:    br label [[SPLIT:%.*]]
-; IS__TUNIT_NPM:       split:
-; IS__TUNIT_NPM-NEXT:    ret i32 2
-;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@local_alloca_simplifiable_3
-; IS__CGSCC_OPM-SAME: () #[[ATTR2:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    [[A:%.*]] = alloca i32, align 4
-; IS__CGSCC_OPM-NEXT:    store i32 1, i32* [[A]], align 4
-; IS__CGSCC_OPM-NEXT:    br label [[SPLIT:%.*]]
-; IS__CGSCC_OPM:       split:
-; IS__CGSCC_OPM-NEXT:    store i32 2, i32* [[A]], align 4
-; IS__CGSCC_OPM-NEXT:    [[L:%.*]] = load i32, i32* [[A]], align 4
-; IS__CGSCC_OPM-NEXT:    ret i32 [[L]]
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@local_alloca_simplifiable_3
-; IS__CGSCC_NPM-SAME: () #[[ATTR2:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    br label [[SPLIT:%.*]]
-; IS__CGSCC_NPM:       split:
-; IS__CGSCC_NPM-NEXT:    ret i32 2
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@local_alloca_simplifiable_3
+; IS__CGSCC____-SAME: () #[[ATTR2:[0-9]+]] {
+; IS__CGSCC____-NEXT:    [[A:%.*]] = alloca i32, align 4
+; IS__CGSCC____-NEXT:    store i32 1, i32* [[A]], align 4
+; IS__CGSCC____-NEXT:    br label [[SPLIT:%.*]]
+; IS__CGSCC____:       split:
+; IS__CGSCC____-NEXT:    store i32 2, i32* [[A]], align 4
+; IS__CGSCC____-NEXT:    [[L:%.*]] = load i32, i32* [[A]], align 4
+; IS__CGSCC____-NEXT:    ret i32 [[L]]
 ;
   %A = alloca i32, align 4
   store i32 1, i32* %A
@@ -807,12 +793,12 @@ split:
 define i32 @local_alloca_simplifiable_4() {
 ; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@local_alloca_simplifiable_4
-; IS__TUNIT____-SAME: () #[[ATTR3:[0-9]+]] {
+; IS__TUNIT____-SAME: () #[[ATTR3]] {
 ; IS__TUNIT____-NEXT:    ret i32 undef
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@local_alloca_simplifiable_4
-; IS__CGSCC____-SAME: () #[[ATTR2:[0-9]+]] {
+; IS__CGSCC____-SAME: () #[[ATTR2]] {
 ; IS__CGSCC____-NEXT:    ret i32 undef
 ;
   %A = alloca i32, align 4
@@ -869,7 +855,7 @@ define i32 @multi_obj_simplifiable_1(i32 %cnd) {
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    [[L:%.*]] = alloca i32, align 4
 ; IS__CGSCC_OPM-NEXT:    [[I:%.*]] = bitcast i32* [[L]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR14]]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR13]]
 ; IS__CGSCC_OPM-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[CND]], 0
 ; IS__CGSCC_OPM-NEXT:    br i1 [[TOBOOL_NOT]], label [[COND_FALSE:%.*]], label [[COND_TRUE:%.*]]
 ; IS__CGSCC_OPM:       cond.true:
@@ -878,7 +864,7 @@ define i32 @multi_obj_simplifiable_1(i32 %cnd) {
 ; IS__CGSCC_OPM-NEXT:    br label [[COND_END]]
 ; IS__CGSCC_OPM:       cond.end:
 ; IS__CGSCC_OPM-NEXT:    [[I2:%.*]] = bitcast i32* [[L]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I2]]) #[[ATTR14]]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I2]]) #[[ATTR13]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 5
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
@@ -887,7 +873,7 @@ define i32 @multi_obj_simplifiable_1(i32 %cnd) {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[L:%.*]] = alloca i32, align 4
 ; IS__CGSCC_NPM-NEXT:    [[I:%.*]] = bitcast i32* [[L]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR12]]
+; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR11]]
 ; IS__CGSCC_NPM-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[CND]], 0
 ; IS__CGSCC_NPM-NEXT:    br i1 [[TOBOOL_NOT]], label [[COND_FALSE:%.*]], label [[COND_TRUE:%.*]]
 ; IS__CGSCC_NPM:       cond.true:
@@ -896,7 +882,7 @@ define i32 @multi_obj_simplifiable_1(i32 %cnd) {
 ; IS__CGSCC_NPM-NEXT:    br label [[COND_END]]
 ; IS__CGSCC_NPM:       cond.end:
 ; IS__CGSCC_NPM-NEXT:    [[I2:%.*]] = bitcast i32* [[L]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I2]]) #[[ATTR12]]
+; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I2]]) #[[ATTR11]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 5
 ;
 entry:
@@ -973,7 +959,7 @@ define i32 @multi_obj_simplifiable_2(i32 %cnd) {
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    [[L:%.*]] = alloca i32, align 4
 ; IS__CGSCC_OPM-NEXT:    [[I:%.*]] = bitcast i32* [[L]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR14]]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR13]]
 ; IS__CGSCC_OPM-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[CND]], 0
 ; IS__CGSCC_OPM-NEXT:    br i1 [[TOBOOL_NOT]], label [[COND_FALSE:%.*]], label [[COND_TRUE:%.*]]
 ; IS__CGSCC_OPM:       cond.true:
@@ -982,7 +968,7 @@ define i32 @multi_obj_simplifiable_2(i32 %cnd) {
 ; IS__CGSCC_OPM-NEXT:    br label [[COND_END]]
 ; IS__CGSCC_OPM:       cond.end:
 ; IS__CGSCC_OPM-NEXT:    [[I1:%.*]] = bitcast i32* [[L]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I1]]) #[[ATTR14]]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I1]]) #[[ATTR13]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 5
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
@@ -991,7 +977,7 @@ define i32 @multi_obj_simplifiable_2(i32 %cnd) {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[L:%.*]] = alloca i32, align 4
 ; IS__CGSCC_NPM-NEXT:    [[I:%.*]] = bitcast i32* [[L]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR12]]
+; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR11]]
 ; IS__CGSCC_NPM-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[CND]], 0
 ; IS__CGSCC_NPM-NEXT:    br i1 [[TOBOOL_NOT]], label [[COND_FALSE:%.*]], label [[COND_TRUE:%.*]]
 ; IS__CGSCC_NPM:       cond.true:
@@ -1000,7 +986,7 @@ define i32 @multi_obj_simplifiable_2(i32 %cnd) {
 ; IS__CGSCC_NPM-NEXT:    br label [[COND_END]]
 ; IS__CGSCC_NPM:       cond.end:
 ; IS__CGSCC_NPM-NEXT:    [[I1:%.*]] = bitcast i32* [[L]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I1]]) #[[ATTR12]]
+; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I1]]) #[[ATTR11]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 5
 ;
 entry:
@@ -1098,9 +1084,9 @@ define void @static_global_simplifiable_1(%struct.S* noalias sret(%struct.S) ali
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@static_global_simplifiable_1
 ; IS__CGSCC_OPM-SAME: (%struct.S* noalias nocapture nofree nonnull writeonly sret([[STRUCT_S:%.*]]) align 4 dereferenceable(24) [[AGG_RESULT:%.*]]) #[[ATTR4:[0-9]+]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(24) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i32 0, i32 0), i32 noundef 1) #[[ATTR15]]
-; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(20) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 1), i32 noundef 2) #[[ATTR15]]
-; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(16) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 2), i32 noundef 3) #[[ATTR15]]
+; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(24) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i32 0, i32 0), i32 noundef 1) #[[ATTR14]]
+; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(20) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 1), i32 noundef 2) #[[ATTR14]]
+; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(16) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 2), i32 noundef 3) #[[ATTR14]]
 ; IS__CGSCC_OPM-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 3
 ; IS__CGSCC_OPM-NEXT:    store float 0x3FF19999A0000000, float* [[F1]], align 4, !tbaa [[TBAA7]]
 ; IS__CGSCC_OPM-NEXT:    [[MUL:%.*]] = fmul float 0x40019999A0000000, 2.000000e+00
@@ -1123,9 +1109,9 @@ define void @static_global_simplifiable_1(%struct.S* noalias sret(%struct.S) ali
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@static_global_simplifiable_1
 ; IS__CGSCC_NPM-SAME: (%struct.S* noalias nocapture nofree nonnull writeonly sret([[STRUCT_S:%.*]]) align 4 dereferenceable(24) [[AGG_RESULT:%.*]]) #[[ATTR4:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(24) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i32 0, i32 0), i32 noundef 1) #[[ATTR13]]
-; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(20) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 1), i32 noundef 2) #[[ATTR13]]
-; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(16) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 2), i32 noundef 3) #[[ATTR13]]
+; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(24) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i32 0, i32 0), i32 noundef 1) #[[ATTR12]]
+; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(20) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 1), i32 noundef 2) #[[ATTR12]]
+; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(16) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 2), i32 noundef 3) #[[ATTR12]]
 ; IS__CGSCC_NPM-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 3
 ; IS__CGSCC_NPM-NEXT:    store float 0x3FF19999A0000000, float* [[F1]], align 4, !tbaa [[TBAA7]]
 ; IS__CGSCC_NPM-NEXT:    [[MUL:%.*]] = fmul float 0x40019999A0000000, 2.000000e+00
@@ -1385,7 +1371,7 @@ define void @static_global_simplifiable_2() {
 ; IS__CGSCC_OPM-NEXT:    br label [[FOR_COND13]], !llvm.loop [[LOOP26:![0-9]+]]
 ; IS__CGSCC_OPM:       for.end23:
 ; IS__CGSCC_OPM-NEXT:    store i8 0, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @GBytes, i64 0, i64 1023), align 1, !tbaa [[TBAA15]]
-; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nofree noundef nonnull writeonly align 4 dereferenceable(4) bitcast (i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @GBytes, i64 0, i64 500) to i32*), i32 noundef 0) #[[ATTR16]]
+; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nofree noundef nonnull writeonly align 4 dereferenceable(4) bitcast (i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @GBytes, i64 0, i64 500) to i32*), i32 noundef 0) #[[ATTR15]]
 ; IS__CGSCC_OPM-NEXT:    br label [[FOR_COND25:%.*]]
 ; IS__CGSCC_OPM:       for.cond25:
 ; IS__CGSCC_OPM-NEXT:    [[INDVARS_IV12:%.*]] = phi i64 [ [[INDVARS_IV_NEXT13:%.*]], [[FOR_INC33:%.*]] ], [ 0, [[FOR_END23]] ]
@@ -1458,7 +1444,7 @@ define void @static_global_simplifiable_2() {
 ; IS__CGSCC_NPM-NEXT:    br label [[FOR_COND13]], !llvm.loop [[LOOP26:![0-9]+]]
 ; IS__CGSCC_NPM:       for.end23:
 ; IS__CGSCC_NPM-NEXT:    store i8 0, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @GBytes, i64 0, i64 1023), align 1, !tbaa [[TBAA15]]
-; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nofree noundef nonnull writeonly align 4 dereferenceable(4) bitcast (i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @GBytes, i64 0, i64 500) to i32*), i32 noundef 0) #[[ATTR14]]
+; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nofree noundef nonnull writeonly align 4 dereferenceable(4) bitcast (i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @GBytes, i64 0, i64 500) to i32*), i32 noundef 0) #[[ATTR13]]
 ; IS__CGSCC_NPM-NEXT:    br label [[FOR_COND25:%.*]]
 ; IS__CGSCC_NPM:       for.cond25:
 ; IS__CGSCC_NPM-NEXT:    [[INDVARS_IV12:%.*]] = phi i64 [ [[INDVARS_IV_NEXT13:%.*]], [[FOR_INC33:%.*]] ], [ 0, [[FOR_END23]] ]
@@ -1725,11 +1711,11 @@ define void @noalias_arg_simplifiable_1(%struct.S* noalias sret(%struct.S) align
 ; IS__CGSCC_OPM-NEXT:    [[F3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 5
 ; IS__CGSCC_OPM-NEXT:    store float 0x400A666660000000, float* [[F3]], align 4, !tbaa [[TBAA11]]
 ; IS__CGSCC_OPM-NEXT:    [[I1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 0
-; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 8 dereferenceable(24) [[I1]], i32 noundef 1) #[[ATTR15]]
+; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 8 dereferenceable(24) [[I1]], i32 noundef 1) #[[ATTR14]]
 ; IS__CGSCC_OPM-NEXT:    [[I2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 1
-; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(20) [[I2]], i32 noundef 2) #[[ATTR15]]
+; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(20) [[I2]], i32 noundef 2) #[[ATTR14]]
 ; IS__CGSCC_OPM-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 2
-; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 8 dereferenceable(16) [[I3]], i32 noundef 3) #[[ATTR15]]
+; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 8 dereferenceable(16) [[I3]], i32 noundef 3) #[[ATTR14]]
 ; IS__CGSCC_OPM-NEXT:    [[F11:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 3
 ; IS__CGSCC_OPM-NEXT:    [[I:%.*]] = load float, float* [[F11]], align 4, !tbaa [[TBAA7]]
 ; IS__CGSCC_OPM-NEXT:    [[F12:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 3
@@ -1775,11 +1761,11 @@ define void @noalias_arg_simplifiable_1(%struct.S* noalias sret(%struct.S) align
 ; IS__CGSCC_NPM-NEXT:    [[F3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 5
 ; IS__CGSCC_NPM-NEXT:    store float 0x400A666660000000, float* [[F3]], align 4, !tbaa [[TBAA11]]
 ; IS__CGSCC_NPM-NEXT:    [[I1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 0
-; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 8 dereferenceable(24) [[I1]], i32 noundef 1) #[[ATTR13]]
+; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 8 dereferenceable(24) [[I1]], i32 noundef 1) #[[ATTR12]]
 ; IS__CGSCC_NPM-NEXT:    [[I2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 1
-; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(20) [[I2]], i32 noundef 2) #[[ATTR13]]
+; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(20) [[I2]], i32 noundef 2) #[[ATTR12]]
 ; IS__CGSCC_NPM-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 2
-; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 8 dereferenceable(16) [[I3]], i32 noundef 3) #[[ATTR13]]
+; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 8 dereferenceable(16) [[I3]], i32 noundef 3) #[[ATTR12]]
 ; IS__CGSCC_NPM-NEXT:    [[F11:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 3
 ; IS__CGSCC_NPM-NEXT:    [[I:%.*]] = load float, float* [[F11]], align 4, !tbaa [[TBAA7]]
 ; IS__CGSCC_NPM-NEXT:    [[F12:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 3
@@ -2096,7 +2082,7 @@ define void @noalias_arg_simplifiable_2(i8* %Bytes) {
 ; IS__CGSCC_OPM-NEXT:    store i8 0, i8* [[ARRAYIDX24]], align 1, !tbaa [[TBAA15]]
 ; IS__CGSCC_OPM-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds i8, i8* [[BYTES]], i64 500
 ; IS__CGSCC_OPM-NEXT:    [[I21:%.*]] = bitcast i8* [[ARRAYIDX25]] to i32*
-; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nofree noundef nonnull writeonly align 4 dereferenceable(4) [[I21]], i32 noundef 0) #[[ATTR16]]
+; IS__CGSCC_OPM-NEXT:    call void @write_arg(i32* nofree noundef nonnull writeonly align 4 dereferenceable(4) [[I21]], i32 noundef 0) #[[ATTR15]]
 ; IS__CGSCC_OPM-NEXT:    br label [[FOR_COND27:%.*]]
 ; IS__CGSCC_OPM:       for.cond27:
 ; IS__CGSCC_OPM-NEXT:    [[INDVARS_IV12:%.*]] = phi i64 [ [[INDVARS_IV_NEXT13:%.*]], [[FOR_INC35:%.*]] ], [ 0, [[FOR_END23]] ]
@@ -2175,7 +2161,7 @@ define void @noalias_arg_simplifiable_2(i8* %Bytes) {
 ; IS__CGSCC_NPM-NEXT:    store i8 0, i8* [[ARRAYIDX24]], align 1, !tbaa [[TBAA15]]
 ; IS__CGSCC_NPM-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds i8, i8* [[BYTES]], i64 500
 ; IS__CGSCC_NPM-NEXT:    [[I21:%.*]] = bitcast i8* [[ARRAYIDX25]] to i32*
-; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nofree noundef nonnull writeonly align 4 dereferenceable(4) [[I21]], i32 noundef 0) #[[ATTR14]]
+; IS__CGSCC_NPM-NEXT:    call void @write_arg(i32* nofree noundef nonnull writeonly align 4 dereferenceable(4) [[I21]], i32 noundef 0) #[[ATTR13]]
 ; IS__CGSCC_NPM-NEXT:    br label [[FOR_COND27:%.*]]
 ; IS__CGSCC_NPM:       for.cond27:
 ; IS__CGSCC_NPM-NEXT:    [[INDVARS_IV12:%.*]] = phi i64 [ [[INDVARS_IV_NEXT13:%.*]], [[FOR_INC35:%.*]] ], [ 0, [[FOR_END23]] ]
@@ -2303,80 +2289,80 @@ for.end37:                                        ; preds = %for.cond.cleanup29
 ;    }
 ;
 define i32 @local_alloca_not_simplifiable_1() {
-; IS________OPM-LABEL: define {{[^@]+}}@local_alloca_not_simplifiable_1() {
-; IS________OPM-NEXT:  entry:
-; IS________OPM-NEXT:    [[X:%.*]] = alloca i32, align 4
-; IS________OPM-NEXT:    [[Y:%.*]] = alloca i32, align 4
-; IS________OPM-NEXT:    [[I:%.*]] = bitcast i32* [[X]] to i8*
-; IS________OPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR14:[0-9]+]]
-; IS________OPM-NEXT:    [[I1:%.*]] = bitcast i32* [[Y]] to i8*
-; IS________OPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I1]]) #[[ATTR14]]
-; IS________OPM-NEXT:    store i32 1, i32* [[Y]], align 4, !tbaa [[TBAA3]]
-; IS________OPM-NEXT:    store i32 1, i32* [[X]], align 4, !tbaa [[TBAA3]]
-; IS________OPM-NEXT:    [[I2:%.*]] = bitcast i32* [[X]] to i8*
-; IS________OPM-NEXT:    call void @escape(i8* noundef nonnull align 4 dereferenceable(4) [[I2]])
-; IS________OPM-NEXT:    call void @write_random(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[Y]])
-; IS________OPM-NEXT:    [[I3:%.*]] = load i32, i32* [[X]], align 4, !tbaa [[TBAA3]]
-; IS________OPM-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[I3]], 0
-; IS________OPM-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i32 2, i32 1
-; IS________OPM-NEXT:    [[I4:%.*]] = load i32, i32* [[Y]], align 4, !tbaa [[TBAA3]]
-; IS________OPM-NEXT:    [[ADD:%.*]] = add nsw i32 [[I3]], [[I4]]
-; IS________OPM-NEXT:    [[ADD1:%.*]] = add nsw i32 [[ADD]], [[COND]]
-; IS________OPM-NEXT:    [[I5:%.*]] = bitcast i32* [[Y]] to i8*
-; IS________OPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I5]])
-; IS________OPM-NEXT:    [[I6:%.*]] = bitcast i32* [[X]] to i8*
-; IS________OPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I6]])
-; IS________OPM-NEXT:    ret i32 [[ADD1]]
+; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@local_alloca_not_simplifiable_1() {
+; IS__TUNIT_OPM-NEXT:  entry:
+; IS__TUNIT_OPM-NEXT:    [[X:%.*]] = alloca i32, align 4
+; IS__TUNIT_OPM-NEXT:    [[Y:%.*]] = alloca i32, align 4
+; IS__TUNIT_OPM-NEXT:    [[I:%.*]] = bitcast i32* [[X]] to i8*
+; IS__TUNIT_OPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR14]]
+; IS__TUNIT_OPM-NEXT:    [[I1:%.*]] = bitcast i32* [[Y]] to i8*
+; IS__TUNIT_OPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I1]]) #[[ATTR14]]
+; IS__TUNIT_OPM-NEXT:    store i32 1, i32* [[Y]], align 4, !tbaa [[TBAA3]]
+; IS__TUNIT_OPM-NEXT:    store i32 1, i32* [[X]], align 4, !tbaa [[TBAA3]]
+; IS__TUNIT_OPM-NEXT:    [[I2:%.*]] = bitcast i32* [[X]] to i8*
+; IS__TUNIT_OPM-NEXT:    call void @escape(i8* noundef nonnull align 4 dereferenceable(4) [[I2]])
+; IS__TUNIT_OPM-NEXT:    call void @write_random(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[Y]])
+; IS__TUNIT_OPM-NEXT:    [[I3:%.*]] = load i32, i32* [[X]], align 4, !tbaa [[TBAA3]]
+; IS__TUNIT_OPM-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[I3]], 0
+; IS__TUNIT_OPM-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i32 2, i32 1
+; IS__TUNIT_OPM-NEXT:    [[I4:%.*]] = load i32, i32* [[Y]], align 4, !tbaa [[TBAA3]]
+; IS__TUNIT_OPM-NEXT:    [[ADD:%.*]] = add nsw i32 [[I3]], [[I4]]
+; IS__TUNIT_OPM-NEXT:    [[ADD1:%.*]] = add nsw i32 [[ADD]], [[COND]]
+; IS__TUNIT_OPM-NEXT:    [[I5:%.*]] = bitcast i32* [[Y]] to i8*
+; IS__TUNIT_OPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I5]])
+; IS__TUNIT_OPM-NEXT:    [[I6:%.*]] = bitcast i32* [[X]] to i8*
+; IS__TUNIT_OPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I6]])
+; IS__TUNIT_OPM-NEXT:    ret i32 [[ADD1]]
 ;
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@local_alloca_not_simplifiable_1() {
-; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[X:%.*]] = alloca i32, align 4
-; IS__TUNIT_NPM-NEXT:    [[Y:%.*]] = alloca i32, align 4
-; IS__TUNIT_NPM-NEXT:    [[I:%.*]] = bitcast i32* [[X]] to i8*
-; IS__TUNIT_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR11]]
-; IS__TUNIT_NPM-NEXT:    [[I1:%.*]] = bitcast i32* [[Y]] to i8*
-; IS__TUNIT_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I1]]) #[[ATTR11]]
-; IS__TUNIT_NPM-NEXT:    store i32 1, i32* [[Y]], align 4, !tbaa [[TBAA3]]
-; IS__TUNIT_NPM-NEXT:    store i32 1, i32* [[X]], align 4, !tbaa [[TBAA3]]
-; IS__TUNIT_NPM-NEXT:    [[I2:%.*]] = bitcast i32* [[X]] to i8*
-; IS__TUNIT_NPM-NEXT:    call void @escape(i8* noundef nonnull align 4 dereferenceable(4) [[I2]])
-; IS__TUNIT_NPM-NEXT:    call void @write_random(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[Y]])
-; IS__TUNIT_NPM-NEXT:    [[I3:%.*]] = load i32, i32* [[X]], align 4, !tbaa [[TBAA3]]
-; IS__TUNIT_NPM-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[I3]], 0
-; IS__TUNIT_NPM-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i32 2, i32 1
-; IS__TUNIT_NPM-NEXT:    [[I4:%.*]] = load i32, i32* [[Y]], align 4, !tbaa [[TBAA3]]
-; IS__TUNIT_NPM-NEXT:    [[ADD:%.*]] = add nsw i32 [[I3]], [[I4]]
-; IS__TUNIT_NPM-NEXT:    [[ADD1:%.*]] = add nsw i32 [[ADD]], [[COND]]
-; IS__TUNIT_NPM-NEXT:    [[I5:%.*]] = bitcast i32* [[Y]] to i8*
-; IS__TUNIT_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I5]])
-; IS__TUNIT_NPM-NEXT:    [[I6:%.*]] = bitcast i32* [[X]] to i8*
-; IS__TUNIT_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I6]])
-; IS__TUNIT_NPM-NEXT:    ret i32 [[ADD1]]
+; IS________NPM-LABEL: define {{[^@]+}}@local_alloca_not_simplifiable_1() {
+; IS________NPM-NEXT:  entry:
+; IS________NPM-NEXT:    [[X:%.*]] = alloca i32, align 4
+; IS________NPM-NEXT:    [[Y:%.*]] = alloca i32, align 4
+; IS________NPM-NEXT:    [[I:%.*]] = bitcast i32* [[X]] to i8*
+; IS________NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR11:[0-9]+]]
+; IS________NPM-NEXT:    [[I1:%.*]] = bitcast i32* [[Y]] to i8*
+; IS________NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I1]]) #[[ATTR11]]
+; IS________NPM-NEXT:    store i32 1, i32* [[Y]], align 4, !tbaa [[TBAA3]]
+; IS________NPM-NEXT:    store i32 1, i32* [[X]], align 4, !tbaa [[TBAA3]]
+; IS________NPM-NEXT:    [[I2:%.*]] = bitcast i32* [[X]] to i8*
+; IS________NPM-NEXT:    call void @escape(i8* noundef nonnull align 4 dereferenceable(4) [[I2]])
+; IS________NPM-NEXT:    call void @write_random(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[Y]])
+; IS________NPM-NEXT:    [[I3:%.*]] = load i32, i32* [[X]], align 4, !tbaa [[TBAA3]]
+; IS________NPM-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[I3]], 0
+; IS________NPM-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i32 2, i32 1
+; IS________NPM-NEXT:    [[I4:%.*]] = load i32, i32* [[Y]], align 4, !tbaa [[TBAA3]]
+; IS________NPM-NEXT:    [[ADD:%.*]] = add nsw i32 [[I3]], [[I4]]
+; IS________NPM-NEXT:    [[ADD1:%.*]] = add nsw i32 [[ADD]], [[COND]]
+; IS________NPM-NEXT:    [[I5:%.*]] = bitcast i32* [[Y]] to i8*
+; IS________NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I5]])
+; IS________NPM-NEXT:    [[I6:%.*]] = bitcast i32* [[X]] to i8*
+; IS________NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I6]])
+; IS________NPM-NEXT:    ret i32 [[ADD1]]
 ;
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@local_alloca_not_simplifiable_1() {
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    [[X:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    [[Y:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    [[I:%.*]] = bitcast i32* [[X]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR12]]
-; IS__CGSCC_NPM-NEXT:    [[I1:%.*]] = bitcast i32* [[Y]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I1]]) #[[ATTR12]]
-; IS__CGSCC_NPM-NEXT:    store i32 1, i32* [[Y]], align 4, !tbaa [[TBAA3]]
-; IS__CGSCC_NPM-NEXT:    store i32 1, i32* [[X]], align 4, !tbaa [[TBAA3]]
-; IS__CGSCC_NPM-NEXT:    [[I2:%.*]] = bitcast i32* [[X]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @escape(i8* noundef nonnull align 4 dereferenceable(4) [[I2]])
-; IS__CGSCC_NPM-NEXT:    call void @write_random(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[Y]])
-; IS__CGSCC_NPM-NEXT:    [[I3:%.*]] = load i32, i32* [[X]], align 4, !tbaa [[TBAA3]]
-; IS__CGSCC_NPM-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[I3]], 0
-; IS__CGSCC_NPM-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i32 2, i32 1
-; IS__CGSCC_NPM-NEXT:    [[I4:%.*]] = load i32, i32* [[Y]], align 4, !tbaa [[TBAA3]]
-; IS__CGSCC_NPM-NEXT:    [[ADD:%.*]] = add nsw i32 [[I3]], [[I4]]
-; IS__CGSCC_NPM-NEXT:    [[ADD1:%.*]] = add nsw i32 [[ADD]], [[COND]]
-; IS__CGSCC_NPM-NEXT:    [[I5:%.*]] = bitcast i32* [[Y]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I5]])
-; IS__CGSCC_NPM-NEXT:    [[I6:%.*]] = bitcast i32* [[X]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I6]])
-; IS__CGSCC_NPM-NEXT:    ret i32 [[ADD1]]
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@local_alloca_not_simplifiable_1() {
+; IS__CGSCC_OPM-NEXT:  entry:
+; IS__CGSCC_OPM-NEXT:    [[X:%.*]] = alloca i32, align 4
+; IS__CGSCC_OPM-NEXT:    [[Y:%.*]] = alloca i32, align 4
+; IS__CGSCC_OPM-NEXT:    [[I:%.*]] = bitcast i32* [[X]] to i8*
+; IS__CGSCC_OPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR13]]
+; IS__CGSCC_OPM-NEXT:    [[I1:%.*]] = bitcast i32* [[Y]] to i8*
+; IS__CGSCC_OPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I1]]) #[[ATTR13]]
+; IS__CGSCC_OPM-NEXT:    store i32 1, i32* [[Y]], align 4, !tbaa [[TBAA3]]
+; IS__CGSCC_OPM-NEXT:    store i32 1, i32* [[X]], align 4, !tbaa [[TBAA3]]
+; IS__CGSCC_OPM-NEXT:    [[I2:%.*]] = bitcast i32* [[X]] to i8*
+; IS__CGSCC_OPM-NEXT:    call void @escape(i8* noundef nonnull align 4 dereferenceable(4) [[I2]])
+; IS__CGSCC_OPM-NEXT:    call void @write_random(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[Y]])
+; IS__CGSCC_OPM-NEXT:    [[I3:%.*]] = load i32, i32* [[X]], align 4, !tbaa [[TBAA3]]
+; IS__CGSCC_OPM-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[I3]], 0
+; IS__CGSCC_OPM-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i32 2, i32 1
+; IS__CGSCC_OPM-NEXT:    [[I4:%.*]] = load i32, i32* [[Y]], align 4, !tbaa [[TBAA3]]
+; IS__CGSCC_OPM-NEXT:    [[ADD:%.*]] = add nsw i32 [[I3]], [[I4]]
+; IS__CGSCC_OPM-NEXT:    [[ADD1:%.*]] = add nsw i32 [[ADD]], [[COND]]
+; IS__CGSCC_OPM-NEXT:    [[I5:%.*]] = bitcast i32* [[Y]] to i8*
+; IS__CGSCC_OPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I5]])
+; IS__CGSCC_OPM-NEXT:    [[I6:%.*]] = bitcast i32* [[X]] to i8*
+; IS__CGSCC_OPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I6]])
+; IS__CGSCC_OPM-NEXT:    ret i32 [[ADD1]]
 ;
 entry:
   %X = alloca i32, align 4
@@ -3213,12 +3199,12 @@ define dso_local i32 @round_trip_malloc(i32 %x) {
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@round_trip_malloc
 ; IS__CGSCC_OPM-SAME: (i32 [[X:%.*]]) {
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call noalias i8* @malloc(i64 noundef 4) #[[ATTR11:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call noalias i8* @malloc(i64 noundef 4) #[[ATTR16:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL]] to i32*
 ; IS__CGSCC_OPM-NEXT:    store i32 [[X]], i32* [[TMP0]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP0]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @free(i8* noundef [[TMP2]]) #[[ATTR11]]
+; IS__CGSCC_OPM-NEXT:    call void @free(i8* noundef [[TMP2]]) #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
@@ -3248,12 +3234,12 @@ define dso_local i32 @round_trip_malloc_constant() {
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@round_trip_malloc_constant() {
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call noalias i8* @malloc(i64 noundef 4) #[[ATTR11]]
+; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call noalias i8* @malloc(i64 noundef 4) #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL]] to i32*
 ; IS__CGSCC_OPM-NEXT:    store i32 7, i32* [[TMP0]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP0]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @free(i8* noundef [[TMP2]]) #[[ATTR11]]
+; IS__CGSCC_OPM-NEXT:    call void @free(i8* noundef [[TMP2]]) #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
@@ -3302,7 +3288,7 @@ define dso_local i32 @conditional_malloc(i32 %x) {
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@conditional_malloc
 ; IS__CGSCC_OPM-SAME: (i32 [[X:%.*]]) {
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call noalias i8* @malloc(i64 noundef 4) #[[ATTR11]]
+; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call noalias i8* @malloc(i64 noundef 4) #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL]] to i32*
 ; IS__CGSCC_OPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[X]], 0
 ; IS__CGSCC_OPM-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
@@ -3351,7 +3337,7 @@ define dso_local i32 @round_trip_calloc(i32 %x) {
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@round_trip_calloc
 ; IS__CGSCC_OPM-SAME: (i32 [[X:%.*]]) {
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call noalias i8* @calloc(i64 noundef 4, i64 noundef 1) #[[ATTR11]]
+; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call noalias i8* @calloc(i64 noundef 4, i64 noundef 1) #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL]] to i32*
 ; IS__CGSCC_OPM-NEXT:    store i32 [[X]], i32* [[TMP0]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
@@ -3385,7 +3371,7 @@ define dso_local i32 @round_trip_calloc_constant() {
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@round_trip_calloc_constant() {
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call noalias i8* @calloc(i64 noundef 4, i64 noundef 1) #[[ATTR11]]
+; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call noalias i8* @calloc(i64 noundef 4, i64 noundef 1) #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL]] to i32*
 ; IS__CGSCC_OPM-NEXT:    store i32 11, i32* [[TMP0]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
@@ -3436,7 +3422,7 @@ define dso_local i32 @conditional_calloc(i32 %x) {
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@conditional_calloc
 ; IS__CGSCC_OPM-SAME: (i32 [[X:%.*]]) {
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call noalias i8* @calloc(i64 noundef 1, i64 noundef 4) #[[ATTR11]]
+; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call noalias i8* @calloc(i64 noundef 1, i64 noundef 4) #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL]] to i32*
 ; IS__CGSCC_OPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[X]], 0
 ; IS__CGSCC_OPM-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
@@ -3446,7 +3432,7 @@ define dso_local i32 @conditional_calloc(i32 %x) {
 ; IS__CGSCC_OPM:       if.end:
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP0]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @free(i8* [[TMP2]]) #[[ATTR11]]
+; IS__CGSCC_OPM-NEXT:    call void @free(i8* [[TMP2]]) #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
@@ -3496,7 +3482,7 @@ define dso_local i32 @conditional_calloc_zero(i1 %c) {
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@conditional_calloc_zero
 ; IS__CGSCC_OPM-SAME: (i1 [[C:%.*]]) {
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call noalias i8* @calloc(i64 noundef 1, i64 noundef 4) #[[ATTR11]]
+; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call noalias i8* @calloc(i64 noundef 1, i64 noundef 4) #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL]] to i32*
 ; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; IS__CGSCC_OPM:       if.then:
@@ -3505,7 +3491,7 @@ define dso_local i32 @conditional_calloc_zero(i1 %c) {
 ; IS__CGSCC_OPM:       if.end:
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP0]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @free(i8* [[TMP2]]) #[[ATTR11]]
+; IS__CGSCC_OPM-NEXT:    call void @free(i8* [[TMP2]]) #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
@@ -3545,7 +3531,7 @@ define dso_local i32* @malloc_like(i32 %s) {
 ; IS__CGSCC_OPM-SAME: (i32 [[S:%.*]]) {
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    [[CONV:%.*]] = sext i32 [[S]] to i64
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call noalias i8* @malloc(i64 [[CONV]]) #[[ATTR11]]
+; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call noalias i8* @malloc(i64 [[CONV]]) #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL]] to i32*
 ; IS__CGSCC_OPM-NEXT:    ret i32* [[TMP0]]
 ;
@@ -3553,7 +3539,7 @@ define dso_local i32* @malloc_like(i32 %s) {
 ; IS__CGSCC_NPM-SAME: (i32 [[S:%.*]]) {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[CONV:%.*]] = sext i32 [[S]] to i64
-; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call noalias i8* @malloc(i64 [[CONV]]) #[[ATTR9:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call noalias i8* @malloc(i64 [[CONV]]) #[[ATTR14:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL]] to i32*
 ; IS__CGSCC_NPM-NEXT:    ret i32* [[TMP0]]
 ;
@@ -3588,21 +3574,21 @@ define dso_local i32 @round_trip_malloc_like(i32 %x) {
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@round_trip_malloc_like
 ; IS__CGSCC_OPM-SAME: (i32 [[X:%.*]]) {
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32* @malloc_like(i32 noundef 4) #[[ATTR11]]
+; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32* @malloc_like(i32 noundef 4) #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    store i32 [[X]], i32* [[CALL]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CALL]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = bitcast i32* [[CALL]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @free(i8* noundef [[TMP1]]) #[[ATTR11]]
+; IS__CGSCC_OPM-NEXT:    call void @free(i8* noundef [[TMP1]]) #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[TMP0]]
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@round_trip_malloc_like
 ; IS__CGSCC_NPM-SAME: (i32 [[X:%.*]]) {
 ; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32* @malloc_like(i32 noundef 4) #[[ATTR9]]
+; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32* @malloc_like(i32 noundef 4) #[[ATTR14]]
 ; IS__CGSCC_NPM-NEXT:    store i32 [[X]], i32* [[CALL]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CALL]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = bitcast i32* [[CALL]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @free(i8* noundef [[TMP1]]) #[[ATTR9]]
+; IS__CGSCC_NPM-NEXT:    call void @free(i8* noundef [[TMP1]]) #[[ATTR14]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
@@ -3638,21 +3624,21 @@ define dso_local i32 @round_trip_unknown_alloc(i32 %x) {
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@round_trip_unknown_alloc
 ; IS__CGSCC_OPM-SAME: (i32 [[X:%.*]]) {
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32* @unknown_alloc(i32 noundef 4) #[[ATTR11]]
+; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32* @unknown_alloc(i32 noundef 4) #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    store i32 [[X]], i32* [[CALL]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CALL]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = bitcast i32* [[CALL]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @free(i8* noundef [[TMP1]]) #[[ATTR11]]
+; IS__CGSCC_OPM-NEXT:    call void @free(i8* noundef [[TMP1]]) #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[TMP0]]
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@round_trip_unknown_alloc
 ; IS__CGSCC_NPM-SAME: (i32 [[X:%.*]]) {
 ; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32* @unknown_alloc(i32 noundef 4) #[[ATTR9]]
+; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32* @unknown_alloc(i32 noundef 4) #[[ATTR14]]
 ; IS__CGSCC_NPM-NEXT:    store i32 [[X]], i32* [[CALL]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CALL]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = bitcast i32* [[CALL]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @free(i8* noundef [[TMP1]]) #[[ATTR9]]
+; IS__CGSCC_NPM-NEXT:    call void @free(i8* noundef [[TMP1]]) #[[ATTR14]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
@@ -3700,7 +3686,7 @@ define dso_local i32 @conditional_unknown_alloc(i32 %x) {
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@conditional_unknown_alloc
 ; IS__CGSCC_OPM-SAME: (i32 [[X:%.*]]) {
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call noalias i32* @unknown_alloc(i32 noundef 4) #[[ATTR11]]
+; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call noalias i32* @unknown_alloc(i32 noundef 4) #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[X]], 0
 ; IS__CGSCC_OPM-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; IS__CGSCC_OPM:       if.then:
@@ -3709,13 +3695,13 @@ define dso_local i32 @conditional_unknown_alloc(i32 %x) {
 ; IS__CGSCC_OPM:       if.end:
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CALL]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = bitcast i32* [[CALL]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @free(i8* [[TMP1]]) #[[ATTR11]]
+; IS__CGSCC_OPM-NEXT:    call void @free(i8* [[TMP1]]) #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[TMP0]]
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@conditional_unknown_alloc
 ; IS__CGSCC_NPM-SAME: (i32 [[X:%.*]]) {
 ; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call noalias i32* @unknown_alloc(i32 noundef 4) #[[ATTR9]]
+; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call noalias i32* @unknown_alloc(i32 noundef 4) #[[ATTR14]]
 ; IS__CGSCC_NPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[X]], 0
 ; IS__CGSCC_NPM-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; IS__CGSCC_NPM:       if.then:
@@ -3724,7 +3710,7 @@ define dso_local i32 @conditional_unknown_alloc(i32 %x) {
 ; IS__CGSCC_NPM:       if.end:
 ; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CALL]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = bitcast i32* [[CALL]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @free(i8* [[TMP1]]) #[[ATTR9]]
+; IS__CGSCC_NPM-NEXT:    call void @free(i8* [[TMP1]]) #[[ATTR14]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
@@ -3781,9 +3767,8 @@ define dso_local void @test_nested_memory(float* %dst, double* %src) {
 ; IS__TUNIT_NPM-NEXT:    call fastcc void @nested_memory_callee() #[[ATTR14:[0-9]+]]
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_OPM: Function Attrs: norecurse
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@test_nested_memory
-; IS__CGSCC_OPM-SAME: (float* nocapture nofree writeonly [[DST:%.*]], double* nocapture nofree readonly [[SRC:%.*]]) #[[ATTR11]] {
+; IS__CGSCC_OPM-SAME: (float* nocapture nofree writeonly [[DST:%.*]], double* nocapture nofree readonly [[SRC:%.*]]) {
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    [[LOCAL:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = bitcast %struct.STy* [[LOCAL]] to i8*
@@ -3795,12 +3780,11 @@ define dso_local void @test_nested_memory(float* %dst, double* %src) {
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = bitcast i8* [[SRC2]] to double**
 ; IS__CGSCC_OPM-NEXT:    store double* [[SRC]], double** [[TMP1]], align 8
 ; IS__CGSCC_OPM-NEXT:    store i8* [[CALL]], i8** bitcast (%struct.STy** getelementptr inbounds ([[STRUCT_STY]], %struct.STy* @global, i64 0, i32 2) to i8**), align 8
-; IS__CGSCC_OPM-NEXT:    call fastcc void @nested_memory_callee() #[[ATTR16]]
+; IS__CGSCC_OPM-NEXT:    call fastcc void @nested_memory_callee() #[[ATTR15]]
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: norecurse
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test_nested_memory
-; IS__CGSCC_NPM-SAME: (float* nocapture nofree writeonly [[DST:%.*]], double* nocapture nofree readonly [[SRC:%.*]]) #[[ATTR9]] {
+; IS__CGSCC_NPM-SAME: (float* nocapture nofree writeonly [[DST:%.*]], double* nocapture nofree readonly [[SRC:%.*]]) {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[LOCAL:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = bitcast %struct.STy* [[LOCAL]] to i8*
@@ -3812,7 +3796,7 @@ define dso_local void @test_nested_memory(float* %dst, double* %src) {
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = bitcast i8* [[SRC2]] to double**
 ; IS__CGSCC_NPM-NEXT:    store double* [[SRC]], double** [[TMP2]], align 8
 ; IS__CGSCC_NPM-NEXT:    store i8* [[TMP1]], i8** bitcast (%struct.STy** getelementptr inbounds ([[STRUCT_STY]], %struct.STy* @global, i64 0, i32 2) to i8**), align 8
-; IS__CGSCC_NPM-NEXT:    call fastcc void @nested_memory_callee() #[[ATTR14]]
+; IS__CGSCC_NPM-NEXT:    call fastcc void @nested_memory_callee() #[[ATTR13]]
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
 entry:
@@ -3832,47 +3816,47 @@ entry:
 }
 
 define internal fastcc void @nested_memory_callee(%struct.STy* nocapture readonly %S) nofree norecurse nounwind uwtable {
-; IS________OPM: Function Attrs: nofree norecurse nosync nounwind uwtable willreturn
-; IS________OPM-LABEL: define {{[^@]+}}@nested_memory_callee
-; IS________OPM-SAME: () #[[ATTR12:[0-9]+]] {
-; IS________OPM-NEXT:  entry:
-; IS________OPM-NEXT:    [[TMP0:%.*]] = load %struct.STy*, %struct.STy** getelementptr inbounds ([[STRUCT_STY:%.*]], %struct.STy* @global, i64 0, i32 2), align 8
-; IS________OPM-NEXT:    [[SRC:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 1
-; IS________OPM-NEXT:    [[TMP1:%.*]] = load double*, double** [[SRC]], align 8
-; IS________OPM-NEXT:    [[TMP2:%.*]] = load double, double* [[TMP1]], align 8
-; IS________OPM-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP2]] to float
-; IS________OPM-NEXT:    [[DST:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 0
-; IS________OPM-NEXT:    [[TMP3:%.*]] = load float*, float** [[DST]], align 8
-; IS________OPM-NEXT:    store float [[CONV]], float* [[TMP3]], align 4
-; IS________OPM-NEXT:    ret void
+; IS__TUNIT_OPM: Function Attrs: nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@nested_memory_callee
+; IS__TUNIT_OPM-SAME: () #[[ATTR12:[0-9]+]] {
+; IS__TUNIT_OPM-NEXT:  entry:
+; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = load %struct.STy*, %struct.STy** getelementptr inbounds ([[STRUCT_STY:%.*]], %struct.STy* @global, i64 0, i32 2), align 8
+; IS__TUNIT_OPM-NEXT:    [[SRC:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 1
+; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = load double*, double** [[SRC]], align 8
+; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = load double, double* [[TMP1]], align 8
+; IS__TUNIT_OPM-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP2]] to float
+; IS__TUNIT_OPM-NEXT:    [[DST:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 0
+; IS__TUNIT_OPM-NEXT:    [[TMP3:%.*]] = load float*, float** [[DST]], align 8
+; IS__TUNIT_OPM-NEXT:    store float [[CONV]], float* [[TMP3]], align 4
+; IS__TUNIT_OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree norecurse nosync nounwind uwtable willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@nested_memory_callee
-; IS__TUNIT_NPM-SAME: () #[[ATTR9:[0-9]+]] {
-; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load %struct.STy*, %struct.STy** getelementptr inbounds ([[STRUCT_STY:%.*]], %struct.STy* @global, i64 0, i32 2), align 8
-; IS__TUNIT_NPM-NEXT:    [[SRC:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 1
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load double*, double** [[SRC]], align 8
-; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load double, double* [[TMP1]], align 8
-; IS__TUNIT_NPM-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP2]] to float
-; IS__TUNIT_NPM-NEXT:    [[DST:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 0
-; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = load float*, float** [[DST]], align 8
-; IS__TUNIT_NPM-NEXT:    store float [[CONV]], float* [[TMP3]], align 4
-; IS__TUNIT_NPM-NEXT:    ret void
+; IS________NPM: Function Attrs: nofree norecurse nosync nounwind uwtable willreturn
+; IS________NPM-LABEL: define {{[^@]+}}@nested_memory_callee
+; IS________NPM-SAME: () #[[ATTR9:[0-9]+]] {
+; IS________NPM-NEXT:  entry:
+; IS________NPM-NEXT:    [[TMP0:%.*]] = load %struct.STy*, %struct.STy** getelementptr inbounds ([[STRUCT_STY:%.*]], %struct.STy* @global, i64 0, i32 2), align 8
+; IS________NPM-NEXT:    [[SRC:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 1
+; IS________NPM-NEXT:    [[TMP1:%.*]] = load double*, double** [[SRC]], align 8
+; IS________NPM-NEXT:    [[TMP2:%.*]] = load double, double* [[TMP1]], align 8
+; IS________NPM-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP2]] to float
+; IS________NPM-NEXT:    [[DST:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 0
+; IS________NPM-NEXT:    [[TMP3:%.*]] = load float*, float** [[DST]], align 8
+; IS________NPM-NEXT:    store float [[CONV]], float* [[TMP3]], align 4
+; IS________NPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind uwtable willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@nested_memory_callee
-; IS__CGSCC_NPM-SAME: () #[[ATTR10:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load %struct.STy*, %struct.STy** getelementptr inbounds ([[STRUCT_STY:%.*]], %struct.STy* @global, i64 0, i32 2), align 8
-; IS__CGSCC_NPM-NEXT:    [[SRC:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 1
-; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = load double*, double** [[SRC]], align 8
-; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = load double, double* [[TMP1]], align 8
-; IS__CGSCC_NPM-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP2]] to float
-; IS__CGSCC_NPM-NEXT:    [[DST:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 0
-; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = load float*, float** [[DST]], align 8
-; IS__CGSCC_NPM-NEXT:    store float [[CONV]], float* [[TMP3]], align 4
-; IS__CGSCC_NPM-NEXT:    ret void
+; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@nested_memory_callee
+; IS__CGSCC_OPM-SAME: () #[[ATTR11:[0-9]+]] {
+; IS__CGSCC_OPM-NEXT:  entry:
+; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = load %struct.STy*, %struct.STy** getelementptr inbounds ([[STRUCT_STY:%.*]], %struct.STy* @global, i64 0, i32 2), align 8
+; IS__CGSCC_OPM-NEXT:    [[SRC:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 1
+; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = load double*, double** [[SRC]], align 8
+; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = load double, double* [[TMP1]], align 8
+; IS__CGSCC_OPM-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP2]] to float
+; IS__CGSCC_OPM-NEXT:    [[DST:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 0
+; IS__CGSCC_OPM-NEXT:    [[TMP3:%.*]] = load float*, float** [[DST]], align 8
+; IS__CGSCC_OPM-NEXT:    store float [[CONV]], float* [[TMP3]], align 4
+; IS__CGSCC_OPM-NEXT:    ret void
 ;
 entry:
   %inner = getelementptr inbounds %struct.STy, %struct.STy* %S, i64 0, i32 2
@@ -3892,134 +3876,134 @@ entry:
 ; Make sure the access %1 is not forwarded to the loads %2 and %3 as the indices are
 ; varying and the accesses thus not "exact". This used to simplify %cmp12 to true.
 define hidden void @no_propagation_of_unknown_index_access(i32* %in, i32* %out, i32 %idx) #0 {
-; IS________OPM: Function Attrs: argmemonly nofree nosync nounwind
-; IS________OPM-LABEL: define {{[^@]+}}@no_propagation_of_unknown_index_access
-; IS________OPM-SAME: (i32* nocapture nofree readonly [[IN:%.*]], i32* nocapture nofree writeonly [[OUT:%.*]], i32 [[IDX:%.*]]) #[[ATTR13:[0-9]+]] {
-; IS________OPM-NEXT:  entry:
-; IS________OPM-NEXT:    [[BUF:%.*]] = alloca [128 x i32], align 16
-; IS________OPM-NEXT:    [[TMP0:%.*]] = bitcast [128 x i32]* [[BUF]] to i8*
-; IS________OPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 512, i8* nocapture nofree noundef nonnull align 16 dereferenceable(512) [[TMP0]])
-; IS________OPM-NEXT:    br label [[FOR_COND:%.*]]
-; IS________OPM:       for.cond:
-; IS________OPM-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
-; IS________OPM-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], 128
-; IS________OPM-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
-; IS________OPM:       for.cond.cleanup:
-; IS________OPM-NEXT:    br label [[FOR_COND4:%.*]]
-; IS________OPM:       for.body:
-; IS________OPM-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I_0]] to i64
-; IS________OPM-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[IN]], i64 [[IDXPROM]]
-; IS________OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
-; IS________OPM-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM]]
-; IS________OPM-NEXT:    store i32 [[TMP1]], i32* [[ARRAYIDX2]], align 4
-; IS________OPM-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
-; IS________OPM-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP10:![0-9]+]]
-; IS________OPM:       for.cond4:
-; IS________OPM-NEXT:    [[I3_0:%.*]] = phi i32 [ 0, [[FOR_COND_CLEANUP]] ], [ [[INC16:%.*]], [[FOR_BODY7:%.*]] ]
-; IS________OPM-NEXT:    [[CMP5:%.*]] = icmp slt i32 [[I3_0]], 128
-; IS________OPM-NEXT:    br i1 [[CMP5]], label [[FOR_BODY7]], label [[FOR_COND_CLEANUP6:%.*]]
-; IS________OPM:       for.cond.cleanup6:
-; IS________OPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 512, i8* nocapture nofree noundef nonnull align 16 dereferenceable(512) [[TMP0]])
-; IS________OPM-NEXT:    ret void
-; IS________OPM:       for.body7:
-; IS________OPM-NEXT:    [[IDXPROM8:%.*]] = sext i32 [[I3_0]] to i64
-; IS________OPM-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM8]]
-; IS________OPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX9]], align 4
-; IS________OPM-NEXT:    [[IDXPROM10:%.*]] = sext i32 [[IDX]] to i64
-; IS________OPM-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM10]]
-; IS________OPM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ARRAYIDX11]], align 4
-; IS________OPM-NEXT:    [[CMP12:%.*]] = icmp sle i32 [[TMP2]], [[TMP3]]
-; IS________OPM-NEXT:    [[CONV:%.*]] = zext i1 [[CMP12]] to i32
-; IS________OPM-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 [[IDXPROM8]]
-; IS________OPM-NEXT:    store i32 [[CONV]], i32* [[ARRAYIDX14]], align 4
-; IS________OPM-NEXT:    [[INC16]] = add nsw i32 [[I3_0]], 1
-; IS________OPM-NEXT:    br label [[FOR_COND4]], !llvm.loop [[LOOP12:![0-9]+]]
+; IS__TUNIT_OPM: Function Attrs: argmemonly nofree nosync nounwind
+; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@no_propagation_of_unknown_index_access
+; IS__TUNIT_OPM-SAME: (i32* nocapture nofree readonly [[IN:%.*]], i32* nocapture nofree writeonly [[OUT:%.*]], i32 [[IDX:%.*]]) #[[ATTR13:[0-9]+]] {
+; IS__TUNIT_OPM-NEXT:  entry:
+; IS__TUNIT_OPM-NEXT:    [[BUF:%.*]] = alloca [128 x i32], align 16
+; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = bitcast [128 x i32]* [[BUF]] to i8*
+; IS__TUNIT_OPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 512, i8* nocapture nofree noundef nonnull align 16 dereferenceable(512) [[TMP0]])
+; IS__TUNIT_OPM-NEXT:    br label [[FOR_COND:%.*]]
+; IS__TUNIT_OPM:       for.cond:
+; IS__TUNIT_OPM-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
+; IS__TUNIT_OPM-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], 128
+; IS__TUNIT_OPM-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
+; IS__TUNIT_OPM:       for.cond.cleanup:
+; IS__TUNIT_OPM-NEXT:    br label [[FOR_COND4:%.*]]
+; IS__TUNIT_OPM:       for.body:
+; IS__TUNIT_OPM-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I_0]] to i64
+; IS__TUNIT_OPM-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[IN]], i64 [[IDXPROM]]
+; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; IS__TUNIT_OPM-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM]]
+; IS__TUNIT_OPM-NEXT:    store i32 [[TMP1]], i32* [[ARRAYIDX2]], align 4
+; IS__TUNIT_OPM-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
+; IS__TUNIT_OPM-NEXT:    br label [[FOR_COND]], !llvm.loop [[TBAA10]]
+; IS__TUNIT_OPM:       for.cond4:
+; IS__TUNIT_OPM-NEXT:    [[I3_0:%.*]] = phi i32 [ 0, [[FOR_COND_CLEANUP]] ], [ [[INC16:%.*]], [[FOR_BODY7:%.*]] ]
+; IS__TUNIT_OPM-NEXT:    [[CMP5:%.*]] = icmp slt i32 [[I3_0]], 128
+; IS__TUNIT_OPM-NEXT:    br i1 [[CMP5]], label [[FOR_BODY7]], label [[FOR_COND_CLEANUP6:%.*]]
+; IS__TUNIT_OPM:       for.cond.cleanup6:
+; IS__TUNIT_OPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 512, i8* nocapture nofree noundef nonnull align 16 dereferenceable(512) [[TMP0]])
+; IS__TUNIT_OPM-NEXT:    ret void
+; IS__TUNIT_OPM:       for.body7:
+; IS__TUNIT_OPM-NEXT:    [[IDXPROM8:%.*]] = sext i32 [[I3_0]] to i64
+; IS__TUNIT_OPM-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM8]]
+; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX9]], align 4
+; IS__TUNIT_OPM-NEXT:    [[IDXPROM10:%.*]] = sext i32 [[IDX]] to i64
+; IS__TUNIT_OPM-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM10]]
+; IS__TUNIT_OPM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ARRAYIDX11]], align 4
+; IS__TUNIT_OPM-NEXT:    [[CMP12:%.*]] = icmp sle i32 [[TMP2]], [[TMP3]]
+; IS__TUNIT_OPM-NEXT:    [[CONV:%.*]] = zext i1 [[CMP12]] to i32
+; IS__TUNIT_OPM-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 [[IDXPROM8]]
+; IS__TUNIT_OPM-NEXT:    store i32 [[CONV]], i32* [[ARRAYIDX14]], align 4
+; IS__TUNIT_OPM-NEXT:    [[INC16]] = add nsw i32 [[I3_0]], 1
+; IS__TUNIT_OPM-NEXT:    br label [[FOR_COND4]], !llvm.loop [[TBAA12]]
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly nofree nosync nounwind willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@no_propagation_of_unknown_index_access
-; IS__TUNIT_NPM-SAME: (i32* nocapture nofree readonly [[IN:%.*]], i32* nocapture nofree writeonly [[OUT:%.*]], i32 [[IDX:%.*]]) #[[ATTR1]] {
-; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[BUF:%.*]] = alloca [128 x i32], align 16
-; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = bitcast [128 x i32]* [[BUF]] to i8*
-; IS__TUNIT_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 512, i8* nocapture nofree noundef nonnull align 16 dereferenceable(512) [[TMP0]]) #[[ATTR11]]
-; IS__TUNIT_NPM-NEXT:    br label [[FOR_COND:%.*]]
-; IS__TUNIT_NPM:       for.cond:
-; IS__TUNIT_NPM-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
-; IS__TUNIT_NPM-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], 128
-; IS__TUNIT_NPM-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
-; IS__TUNIT_NPM:       for.cond.cleanup:
-; IS__TUNIT_NPM-NEXT:    br label [[FOR_COND4:%.*]]
-; IS__TUNIT_NPM:       for.body:
-; IS__TUNIT_NPM-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I_0]] to i64
-; IS__TUNIT_NPM-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[IN]], i64 [[IDXPROM]]
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
-; IS__TUNIT_NPM-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM]]
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP1]], i32* [[ARRAYIDX2]], align 4
-; IS__TUNIT_NPM-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
-; IS__TUNIT_NPM-NEXT:    br label [[FOR_COND]], !llvm.loop [[TBAA10]]
-; IS__TUNIT_NPM:       for.cond4:
-; IS__TUNIT_NPM-NEXT:    [[I3_0:%.*]] = phi i32 [ 0, [[FOR_COND_CLEANUP]] ], [ [[INC16:%.*]], [[FOR_BODY7:%.*]] ]
-; IS__TUNIT_NPM-NEXT:    [[CMP5:%.*]] = icmp slt i32 [[I3_0]], 128
-; IS__TUNIT_NPM-NEXT:    br i1 [[CMP5]], label [[FOR_BODY7]], label [[FOR_COND_CLEANUP6:%.*]]
-; IS__TUNIT_NPM:       for.cond.cleanup6:
-; IS__TUNIT_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 512, i8* nocapture nofree noundef nonnull align 16 dereferenceable(512) [[TMP0]]) #[[ATTR11]]
-; IS__TUNIT_NPM-NEXT:    ret void
-; IS__TUNIT_NPM:       for.body7:
-; IS__TUNIT_NPM-NEXT:    [[IDXPROM8:%.*]] = sext i32 [[I3_0]] to i64
-; IS__TUNIT_NPM-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM8]]
-; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX9]], align 4
-; IS__TUNIT_NPM-NEXT:    [[IDXPROM10:%.*]] = sext i32 [[IDX]] to i64
-; IS__TUNIT_NPM-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM10]]
-; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ARRAYIDX11]], align 4
-; IS__TUNIT_NPM-NEXT:    [[CMP12:%.*]] = icmp sle i32 [[TMP2]], [[TMP3]]
-; IS__TUNIT_NPM-NEXT:    [[CONV:%.*]] = zext i1 [[CMP12]] to i32
-; IS__TUNIT_NPM-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 [[IDXPROM8]]
-; IS__TUNIT_NPM-NEXT:    store i32 [[CONV]], i32* [[ARRAYIDX14]], align 4
-; IS__TUNIT_NPM-NEXT:    [[INC16]] = add nsw i32 [[I3_0]], 1
-; IS__TUNIT_NPM-NEXT:    br label [[FOR_COND4]], !llvm.loop [[TBAA12]]
+; IS________NPM: Function Attrs: argmemonly nofree nosync nounwind willreturn
+; IS________NPM-LABEL: define {{[^@]+}}@no_propagation_of_unknown_index_access
+; IS________NPM-SAME: (i32* nocapture nofree readonly [[IN:%.*]], i32* nocapture nofree writeonly [[OUT:%.*]], i32 [[IDX:%.*]]) #[[ATTR1:[0-9]+]] {
+; IS________NPM-NEXT:  entry:
+; IS________NPM-NEXT:    [[BUF:%.*]] = alloca [128 x i32], align 16
+; IS________NPM-NEXT:    [[TMP0:%.*]] = bitcast [128 x i32]* [[BUF]] to i8*
+; IS________NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 512, i8* nocapture nofree noundef nonnull align 16 dereferenceable(512) [[TMP0]]) #[[ATTR11]]
+; IS________NPM-NEXT:    br label [[FOR_COND:%.*]]
+; IS________NPM:       for.cond:
+; IS________NPM-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
+; IS________NPM-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], 128
+; IS________NPM-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
+; IS________NPM:       for.cond.cleanup:
+; IS________NPM-NEXT:    br label [[FOR_COND4:%.*]]
+; IS________NPM:       for.body:
+; IS________NPM-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I_0]] to i64
+; IS________NPM-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[IN]], i64 [[IDXPROM]]
+; IS________NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; IS________NPM-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM]]
+; IS________NPM-NEXT:    store i32 [[TMP1]], i32* [[ARRAYIDX2]], align 4
+; IS________NPM-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
+; IS________NPM-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP10:![0-9]+]]
+; IS________NPM:       for.cond4:
+; IS________NPM-NEXT:    [[I3_0:%.*]] = phi i32 [ 0, [[FOR_COND_CLEANUP]] ], [ [[INC16:%.*]], [[FOR_BODY7:%.*]] ]
+; IS________NPM-NEXT:    [[CMP5:%.*]] = icmp slt i32 [[I3_0]], 128
+; IS________NPM-NEXT:    br i1 [[CMP5]], label [[FOR_BODY7]], label [[FOR_COND_CLEANUP6:%.*]]
+; IS________NPM:       for.cond.cleanup6:
+; IS________NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 512, i8* nocapture nofree noundef nonnull align 16 dereferenceable(512) [[TMP0]]) #[[ATTR11]]
+; IS________NPM-NEXT:    ret void
+; IS________NPM:       for.body7:
+; IS________NPM-NEXT:    [[IDXPROM8:%.*]] = sext i32 [[I3_0]] to i64
+; IS________NPM-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM8]]
+; IS________NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX9]], align 4
+; IS________NPM-NEXT:    [[IDXPROM10:%.*]] = sext i32 [[IDX]] to i64
+; IS________NPM-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM10]]
+; IS________NPM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ARRAYIDX11]], align 4
+; IS________NPM-NEXT:    [[CMP12:%.*]] = icmp sle i32 [[TMP2]], [[TMP3]]
+; IS________NPM-NEXT:    [[CONV:%.*]] = zext i1 [[CMP12]] to i32
+; IS________NPM-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 [[IDXPROM8]]
+; IS________NPM-NEXT:    store i32 [[CONV]], i32* [[ARRAYIDX14]], align 4
+; IS________NPM-NEXT:    [[INC16]] = add nsw i32 [[I3_0]], 1
+; IS________NPM-NEXT:    br label [[FOR_COND4]], !llvm.loop [[LOOP12:![0-9]+]]
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly nofree nosync nounwind willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@no_propagation_of_unknown_index_access
-; IS__CGSCC_NPM-SAME: (i32* nocapture nofree readonly [[IN:%.*]], i32* nocapture nofree writeonly [[OUT:%.*]], i32 [[IDX:%.*]]) #[[ATTR1]] {
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    [[BUF:%.*]] = alloca [128 x i32], align 16
-; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = bitcast [128 x i32]* [[BUF]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 512, i8* nocapture nofree noundef nonnull align 16 dereferenceable(512) [[TMP0]]) #[[ATTR12]]
-; IS__CGSCC_NPM-NEXT:    br label [[FOR_COND:%.*]]
-; IS__CGSCC_NPM:       for.cond:
-; IS__CGSCC_NPM-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
-; IS__CGSCC_NPM-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], 128
-; IS__CGSCC_NPM-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
-; IS__CGSCC_NPM:       for.cond.cleanup:
-; IS__CGSCC_NPM-NEXT:    br label [[FOR_COND4:%.*]]
-; IS__CGSCC_NPM:       for.body:
-; IS__CGSCC_NPM-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I_0]] to i64
-; IS__CGSCC_NPM-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[IN]], i64 [[IDXPROM]]
-; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
-; IS__CGSCC_NPM-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM]]
-; IS__CGSCC_NPM-NEXT:    store i32 [[TMP1]], i32* [[ARRAYIDX2]], align 4
-; IS__CGSCC_NPM-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
-; IS__CGSCC_NPM-NEXT:    br label [[FOR_COND]], !llvm.loop [[TBAA10]]
-; IS__CGSCC_NPM:       for.cond4:
-; IS__CGSCC_NPM-NEXT:    [[I3_0:%.*]] = phi i32 [ 0, [[FOR_COND_CLEANUP]] ], [ [[INC16:%.*]], [[FOR_BODY7:%.*]] ]
-; IS__CGSCC_NPM-NEXT:    [[CMP5:%.*]] = icmp slt i32 [[I3_0]], 128
-; IS__CGSCC_NPM-NEXT:    br i1 [[CMP5]], label [[FOR_BODY7]], label [[FOR_COND_CLEANUP6:%.*]]
-; IS__CGSCC_NPM:       for.cond.cleanup6:
-; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 512, i8* nocapture nofree noundef nonnull align 16 dereferenceable(512) [[TMP0]]) #[[ATTR12]]
-; IS__CGSCC_NPM-NEXT:    ret void
-; IS__CGSCC_NPM:       for.body7:
-; IS__CGSCC_NPM-NEXT:    [[IDXPROM8:%.*]] = sext i32 [[I3_0]] to i64
-; IS__CGSCC_NPM-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM8]]
-; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX9]], align 4
-; IS__CGSCC_NPM-NEXT:    [[IDXPROM10:%.*]] = sext i32 [[IDX]] to i64
-; IS__CGSCC_NPM-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM10]]
-; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ARRAYIDX11]], align 4
-; IS__CGSCC_NPM-NEXT:    [[CMP12:%.*]] = icmp sle i32 [[TMP2]], [[TMP3]]
-; IS__CGSCC_NPM-NEXT:    [[CONV:%.*]] = zext i1 [[CMP12]] to i32
-; IS__CGSCC_NPM-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 [[IDXPROM8]]
-; IS__CGSCC_NPM-NEXT:    store i32 [[CONV]], i32* [[ARRAYIDX14]], align 4
-; IS__CGSCC_NPM-NEXT:    [[INC16]] = add nsw i32 [[I3_0]], 1
-; IS__CGSCC_NPM-NEXT:    br label [[FOR_COND4]], !llvm.loop [[TBAA12]]
+; IS__CGSCC_OPM: Function Attrs: argmemonly nofree nosync nounwind
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@no_propagation_of_unknown_index_access
+; IS__CGSCC_OPM-SAME: (i32* nocapture nofree readonly [[IN:%.*]], i32* nocapture nofree writeonly [[OUT:%.*]], i32 [[IDX:%.*]]) #[[ATTR12:[0-9]+]] {
+; IS__CGSCC_OPM-NEXT:  entry:
+; IS__CGSCC_OPM-NEXT:    [[BUF:%.*]] = alloca [128 x i32], align 16
+; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = bitcast [128 x i32]* [[BUF]] to i8*
+; IS__CGSCC_OPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 512, i8* nocapture nofree noundef nonnull align 16 dereferenceable(512) [[TMP0]])
+; IS__CGSCC_OPM-NEXT:    br label [[FOR_COND:%.*]]
+; IS__CGSCC_OPM:       for.cond:
+; IS__CGSCC_OPM-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
+; IS__CGSCC_OPM-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], 128
+; IS__CGSCC_OPM-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
+; IS__CGSCC_OPM:       for.cond.cleanup:
+; IS__CGSCC_OPM-NEXT:    br label [[FOR_COND4:%.*]]
+; IS__CGSCC_OPM:       for.body:
+; IS__CGSCC_OPM-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I_0]] to i64
+; IS__CGSCC_OPM-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[IN]], i64 [[IDXPROM]]
+; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; IS__CGSCC_OPM-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM]]
+; IS__CGSCC_OPM-NEXT:    store i32 [[TMP1]], i32* [[ARRAYIDX2]], align 4
+; IS__CGSCC_OPM-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
+; IS__CGSCC_OPM-NEXT:    br label [[FOR_COND]], !llvm.loop [[TBAA10]]
+; IS__CGSCC_OPM:       for.cond4:
+; IS__CGSCC_OPM-NEXT:    [[I3_0:%.*]] = phi i32 [ 0, [[FOR_COND_CLEANUP]] ], [ [[INC16:%.*]], [[FOR_BODY7:%.*]] ]
+; IS__CGSCC_OPM-NEXT:    [[CMP5:%.*]] = icmp slt i32 [[I3_0]], 128
+; IS__CGSCC_OPM-NEXT:    br i1 [[CMP5]], label [[FOR_BODY7]], label [[FOR_COND_CLEANUP6:%.*]]
+; IS__CGSCC_OPM:       for.cond.cleanup6:
+; IS__CGSCC_OPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 512, i8* nocapture nofree noundef nonnull align 16 dereferenceable(512) [[TMP0]])
+; IS__CGSCC_OPM-NEXT:    ret void
+; IS__CGSCC_OPM:       for.body7:
+; IS__CGSCC_OPM-NEXT:    [[IDXPROM8:%.*]] = sext i32 [[I3_0]] to i64
+; IS__CGSCC_OPM-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM8]]
+; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX9]], align 4
+; IS__CGSCC_OPM-NEXT:    [[IDXPROM10:%.*]] = sext i32 [[IDX]] to i64
+; IS__CGSCC_OPM-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM10]]
+; IS__CGSCC_OPM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ARRAYIDX11]], align 4
+; IS__CGSCC_OPM-NEXT:    [[CMP12:%.*]] = icmp sle i32 [[TMP2]], [[TMP3]]
+; IS__CGSCC_OPM-NEXT:    [[CONV:%.*]] = zext i1 [[CMP12]] to i32
+; IS__CGSCC_OPM-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 [[IDXPROM8]]
+; IS__CGSCC_OPM-NEXT:    store i32 [[CONV]], i32* [[ARRAYIDX14]], align 4
+; IS__CGSCC_OPM-NEXT:    [[INC16]] = add nsw i32 [[I3_0]], 1
+; IS__CGSCC_OPM-NEXT:    br label [[FOR_COND4]], !llvm.loop [[TBAA12]]
 ;
 entry:
   %buf = alloca [128 x i32], align 16
@@ -4151,12 +4135,12 @@ for.body7:                                        ; preds = %for.cond4
 ; IS__CGSCC_OPM: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind readnone }
 ; IS__CGSCC_OPM: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind }
 ; IS__CGSCC_OPM: attributes #[[ATTR10]] = { nofree norecurse nosync nounwind writeonly }
-; IS__CGSCC_OPM: attributes #[[ATTR11]] = { norecurse }
-; IS__CGSCC_OPM: attributes #[[ATTR12]] = { nofree norecurse nosync nounwind uwtable willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR13]] = { argmemonly nofree nosync nounwind }
-; IS__CGSCC_OPM: attributes #[[ATTR14]] = { willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR15]] = { nounwind willreturn writeonly }
-; IS__CGSCC_OPM: attributes #[[ATTR16]] = { nounwind }
+; IS__CGSCC_OPM: attributes #[[ATTR11]] = { nofree norecurse nosync nounwind uwtable willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR12]] = { argmemonly nofree nosync nounwind }
+; IS__CGSCC_OPM: attributes #[[ATTR13]] = { willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR14]] = { nounwind willreturn writeonly }
+; IS__CGSCC_OPM: attributes #[[ATTR15]] = { nounwind }
+; IS__CGSCC_OPM: attributes #[[ATTR16]] = { norecurse }
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
 ; IS__CGSCC_NPM: attributes #[[ATTR1]] = { argmemonly nofree nosync nounwind willreturn }
@@ -4167,12 +4151,12 @@ for.body7:                                        ; preds = %for.cond4
 ; IS__CGSCC_NPM: attributes #[[ATTR6]] = { argmemonly nofree norecurse nosync nounwind willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR7]] = { nofree norecurse nosync nounwind readonly willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind writeonly }
-; IS__CGSCC_NPM: attributes #[[ATTR9]] = { norecurse }
-; IS__CGSCC_NPM: attributes #[[ATTR10]] = { nofree norecurse nosync nounwind uwtable willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR11:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
-; IS__CGSCC_NPM: attributes #[[ATTR12]] = { willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR13]] = { nounwind willreturn writeonly }
-; IS__CGSCC_NPM: attributes #[[ATTR14]] = { nounwind }
+; IS__CGSCC_NPM: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind uwtable willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR10:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
+; IS__CGSCC_NPM: attributes #[[ATTR11]] = { willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR12]] = { nounwind willreturn writeonly }
+; IS__CGSCC_NPM: attributes #[[ATTR13]] = { nounwind }
+; IS__CGSCC_NPM: attributes #[[ATTR14]] = { norecurse }
 ;.
 ; IS__TUNIT____: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 ; IS__TUNIT____: [[META1:![0-9]+]] = !{i32 7, !"uwtable", i32 1}

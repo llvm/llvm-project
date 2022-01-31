@@ -1516,6 +1516,9 @@ void Attributor::runTillFixpoint() {
     // Note that dependent ones are added above.
     Worklist.clear();
     Worklist.insert(ChangedAAs.begin(), ChangedAAs.end());
+    Worklist.insert(QueryAAsAwaitingUpdate.begin(),
+                    QueryAAsAwaitingUpdate.end());
+    QueryAAsAwaitingUpdate.clear();
 
   } while (!Worklist.empty() && (IterationCounter++ < MaxFixedPointIterations ||
                                  VerifyMaxFixpointIterations));
@@ -1573,6 +1576,12 @@ void Attributor::runTillFixpoint() {
     llvm_unreachable("The fixpoint was not reached with exactly the number of "
                      "specified iterations!");
   }
+}
+
+void Attributor::registerForUpdate(AbstractAttribute &AA) {
+  assert(AA.isQueryAA() &&
+         "Non-query AAs should not be required to register for updates!");
+  QueryAAsAwaitingUpdate.insert(&AA);
 }
 
 ChangeStatus Attributor::manifestAttributes() {
@@ -1980,7 +1989,7 @@ ChangeStatus Attributor::updateAA(AbstractAttribute &AA) {
                      /* CheckBBLivenessOnly */ true))
     CS = AA.update(*this);
 
-  if (DV.empty()) {
+  if (!AA.isQueryAA() && DV.empty()) {
     // If the attribute did not query any non-fix information, the state
     // will not change and we can indicate that right away.
     AAState.indicateOptimisticFixpoint();
