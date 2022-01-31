@@ -20,6 +20,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
 
 namespace llvm {
 class AssumptionCache;

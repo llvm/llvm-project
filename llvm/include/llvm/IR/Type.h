@@ -15,7 +15,6 @@
 #define LLVM_IR_TYPE_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -33,6 +32,7 @@ class LLVMContext;
 class PointerType;
 class raw_ostream;
 class StringRef;
+template <typename PtrType> class SmallPtrSetImpl;
 
 /// The instances of the Type class are immutable: once they are created,
 /// they are never changed.  Also note that only one instance of a particular

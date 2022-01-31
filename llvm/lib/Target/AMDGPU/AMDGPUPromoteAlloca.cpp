@@ -13,15 +13,16 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/Pass.h"
 #include "llvm/Target/TargetMachine.h"
-#include "Utils/AMDGPUBaseInfo.h"
 
 #define DEBUG_TYPE "amdgpu-promote-alloca"
 

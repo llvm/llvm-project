@@ -14,12 +14,15 @@
 #ifndef LLVM_IR_REPLACECONSTANT_H
 #define LLVM_IR_REPLACECONSTANT_H
 
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Instruction.h"
 #include <map>
 #include <vector>
 
 namespace llvm {
+
+class ConstantExpr;
+class Instruction;
+class Use;
+template <typename PtrType> class SmallPtrSetImpl;
 
 /// The given instruction \p I contains given constant expression \p CE as one
 /// of its operands, possibly nested within constant expression trees. Convert

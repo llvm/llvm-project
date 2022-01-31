@@ -14,14 +14,20 @@
 #ifndef LLVM_IR_LLVMREMARKSTREAMER_H
 #define LLVM_IR_LLVMREMARKSTREAMER_H
 
-#include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/Remarks/RemarkStreamer.h"
+#include "llvm/Remarks/Remark.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ToolOutputFile.h"
 #include <memory>
 #include <string>
 
 namespace llvm {
+
+class DiagnosticInfoOptimizationBase;
+class LLVMContext;
+class ToolOutputFile;
+namespace remarks {
+class RemarkStreamer;
+}
+
 /// Streamer for LLVM remarks which has logic for dealing with DiagnosticInfo
 /// objects.
 class LLVMRemarkStreamer {

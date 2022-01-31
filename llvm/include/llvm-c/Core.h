@@ -16,7 +16,6 @@
 #define LLVM_C_CORE_H
 
 #include "llvm-c/Deprecated.h"
-#include "llvm-c/ErrorHandling.h"
 #include "llvm-c/ExternC.h"
 #include "llvm-c/Types.h"
 

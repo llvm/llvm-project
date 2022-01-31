@@ -14,19 +14,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Dominators.h"
-#include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/PassRegistry.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/GenericDomTreeConstruction.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
+
+#include <cassert>
+
+namespace llvm {
+class Argument;
+class Constant;
+class Value;
+} // namespace llvm
 using namespace llvm;
 
 bool llvm::VerifyDomInfo = false;

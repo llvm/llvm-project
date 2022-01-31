@@ -16,6 +16,7 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Pass.h"
 
 namespace llvm {
 struct ReplaceWithVeclib : public PassInfoMixin<ReplaceWithVeclib> {

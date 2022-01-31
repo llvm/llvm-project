@@ -18,6 +18,7 @@
 #include "llvm/ADT/GenericCycleInfo.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/SSAContext.h"
+#include "llvm/Pass.h"
 
 namespace llvm {
 extern template class GenericCycleInfo<SSAContext>;

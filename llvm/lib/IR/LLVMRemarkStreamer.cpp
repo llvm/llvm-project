@@ -15,7 +15,9 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Remarks/RemarkStreamer.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/ToolOutputFile.h"
 
 using namespace llvm;
 

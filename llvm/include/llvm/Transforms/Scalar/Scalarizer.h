@@ -18,6 +18,7 @@
 #define LLVM_TRANSFORMS_SCALAR_SCALARIZER_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
 
 namespace llvm {
 

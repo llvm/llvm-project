@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_LOADSTOREVECTORIZER_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
 
 namespace llvm {
 

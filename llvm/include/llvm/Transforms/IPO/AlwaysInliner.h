@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_IPO_ALWAYSINLINER_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
 
 namespace llvm {
 

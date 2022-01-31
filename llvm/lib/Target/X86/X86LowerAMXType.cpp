@@ -61,6 +61,8 @@
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/Local.h"
 
+#include <map>
+
 using namespace llvm;
 using namespace PatternMatch;
 

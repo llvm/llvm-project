@@ -8,10 +8,12 @@
 
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
-#include "llvm/IR/Value.h"
-#include <new>
 
 namespace llvm {
+
+class User;
+template <typename> struct simplify_type;
+class Value;
 
 void Use::swap(Use &RHS) {
   if (Val == RHS.Val)

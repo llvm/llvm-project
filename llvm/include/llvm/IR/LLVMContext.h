@@ -36,7 +36,6 @@ template <typename T> class StringMapEntry;
 class StringRef;
 class Twine;
 class LLVMRemarkStreamer;
-class raw_ostream;
 
 namespace remarks {
 class RemarkStreamer;
