@@ -145,14 +145,12 @@ bb:
 define i1 @reduce_or_pointer_cast_ne(i8* %arg, i8* %arg1) {
 ; CHECK-LABEL: @reduce_or_pointer_cast_ne(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[PTR1:%.*]] = bitcast i8* [[ARG1:%.*]] to <8 x i8>*
-; CHECK-NEXT:    [[PTR2:%.*]] = bitcast i8* [[ARG:%.*]] to <8 x i8>*
-; CHECK-NEXT:    [[LHS:%.*]] = load <8 x i8>, <8 x i8>* [[PTR1]], align 8
-; CHECK-NEXT:    [[RHS:%.*]] = load <8 x i8>, <8 x i8>* [[PTR2]], align 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <8 x i8> [[LHS]], [[RHS]]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i1> [[CMP]] to i8
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[TMP0]], 0
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[ARG1:%.*]] to i64*
+; CHECK-NEXT:    [[LHS1:%.*]] = load i64, i64* [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[ARG:%.*]] to i64*
+; CHECK-NEXT:    [[RHS2:%.*]] = load i64, i64* [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[LHS1]], [[RHS2]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
 bb:
   %ptr1 = bitcast i8* %arg1 to <8 x i8>*
