@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_VECTOR_VECTOROPS_H
-#define MLIR_DIALECT_VECTOR_VECTOROPS_H
+#ifndef MLIR_DIALECT_VECTOR_IR_VECTOROPS_H
+#define MLIR_DIALECT_VECTOR_IR_VECTOROPS_H
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -27,13 +27,15 @@
 #include "llvm/ADT/StringExtras.h"
 
 // Pull in all enum type definitions and utility function declarations.
-#include "mlir/Dialect/Vector/VectorOpsEnums.h.inc"
+#include "mlir/Dialect/Vector/IR/VectorOpsEnums.h.inc"
 
 namespace mlir {
 class MLIRContext;
 class RewritePatternSet;
 
 namespace vector {
+class TransferReadOp;
+class TransferWriteOp;
 class VectorDialect;
 
 namespace detail {
@@ -152,18 +154,35 @@ Value getVectorReductionOp(arith::AtomicRMWKind op, OpBuilder &builder,
 /// return true for memrefs with no strides.
 bool isLastMemrefDimUnitStride(MemRefType type);
 
-namespace impl {
 /// Build the default minor identity map suitable for a vector transfer. This
 /// also handles the case memref<... x vector<...>> -> vector<...> in which the
 /// rank of the identity map must take the vector element type into account.
 AffineMap getTransferMinorIdentityMap(ShapedType shapedType,
                                       VectorType vectorType);
-} // namespace impl
+
+/// Return true if the transfer_write fully writes the data accessed by the
+/// transfer_read.
+bool checkSameValueRAW(TransferWriteOp defWrite, TransferReadOp read);
+
+/// Return true if the write op fully over-write the priorWrite transfer_write
+/// op.
+bool checkSameValueWAW(TransferWriteOp write, TransferWriteOp priorWrite);
+
+/// Same behavior as `isDisjointTransferSet` but doesn't require the operations
+/// to have the same tensor/memref. This allows comparing operations accessing
+/// different tensors.
+bool isDisjointTransferIndices(VectorTransferOpInterface transferA,
+                               VectorTransferOpInterface transferB);
+
+/// Return true if we can prove that the transfer operations access disjoint
+/// memory.
+bool isDisjointTransferSet(VectorTransferOpInterface transferA,
+                           VectorTransferOpInterface transferB);
 } // namespace vector
 } // namespace mlir
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/Vector/VectorOps.h.inc"
-#include "mlir/Dialect/Vector/VectorOpsDialect.h.inc"
+#include "mlir/Dialect/Vector/IR/VectorOps.h.inc"
+#include "mlir/Dialect/Vector/IR/VectorOpsDialect.h.inc"
 
-#endif // MLIR_DIALECT_VECTOR_VECTOROPS_H
+#endif // MLIR_DIALECT_VECTOR_IR_VECTOROPS_H

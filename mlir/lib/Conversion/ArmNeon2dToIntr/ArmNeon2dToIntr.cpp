@@ -9,7 +9,7 @@
 #include "mlir/Conversion/ArmNeon2dToIntr/ArmNeon2dToIntr.h"
 #include "../PassDetail.h"
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"

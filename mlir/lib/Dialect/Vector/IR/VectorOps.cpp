@@ -11,14 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
+
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
-#include "mlir/Dialect/Vector/VectorUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -35,9 +36,9 @@
 #include "llvm/ADT/bit.h"
 #include <numeric>
 
-#include "mlir/Dialect/Vector/VectorOpsDialect.cpp.inc"
+#include "mlir/Dialect/Vector/IR/VectorOpsDialect.cpp.inc"
 // Pull in all enum type and utility function definitions.
-#include "mlir/Dialect/Vector/VectorOpsEnums.cpp.inc"
+#include "mlir/Dialect/Vector/IR/VectorOpsEnums.cpp.inc"
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -117,6 +118,80 @@ bool mlir::vector::isLastMemrefDimUnitStride(MemRefType type) {
   SmallVector<int64_t> strides;
   auto successStrides = getStridesAndOffset(type, strides, offset);
   return succeeded(successStrides) && (strides.empty() || strides.back() == 1);
+}
+
+AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
+                                                    VectorType vectorType) {
+  int64_t elementVectorRank = 0;
+  VectorType elementVectorType =
+      shapedType.getElementType().dyn_cast<VectorType>();
+  if (elementVectorType)
+    elementVectorRank += elementVectorType.getRank();
+  // 0-d transfers are to/from tensor<t>/memref<t> and vector<1xt>.
+  // TODO: replace once we have 0-d vectors.
+  if (shapedType.getRank() == 0 &&
+      vectorType.getShape() == ArrayRef<int64_t>{1})
+    return AffineMap::get(
+        /*numDims=*/0, /*numSymbols=*/0,
+        getAffineConstantExpr(0, shapedType.getContext()));
+  return AffineMap::getMinorIdentityMap(
+      shapedType.getRank(), vectorType.getRank() - elementVectorRank,
+      shapedType.getContext());
+}
+
+bool mlir::vector::checkSameValueRAW(vector::TransferWriteOp defWrite,
+                                     vector::TransferReadOp read) {
+  return !defWrite.hasOutOfBoundsDim() && !defWrite.mask() && !read.mask() &&
+         defWrite.indices() == read.indices() &&
+         defWrite.getVectorType() == read.getVectorType() &&
+         defWrite.permutation_map() == read.permutation_map();
+}
+
+bool mlir::vector::checkSameValueWAW(vector::TransferWriteOp write,
+                                     vector::TransferWriteOp priorWrite) {
+  return priorWrite.indices() == write.indices() &&
+         priorWrite.mask() == write.mask() &&
+         priorWrite.getVectorType() == write.getVectorType() &&
+         priorWrite.permutation_map() == write.permutation_map();
+}
+
+bool mlir::vector::isDisjointTransferIndices(
+    VectorTransferOpInterface transferA, VectorTransferOpInterface transferB) {
+  // For simplicity only look at transfer of same type.
+  if (transferA.getVectorType() != transferB.getVectorType())
+    return false;
+  unsigned rankOffset = transferA.getLeadingShapedRank();
+  for (unsigned i = 0, e = transferA.indices().size(); i < e; i++) {
+    auto indexA = transferA.indices()[i].getDefiningOp<arith::ConstantOp>();
+    auto indexB = transferB.indices()[i].getDefiningOp<arith::ConstantOp>();
+    // If any of the indices are dynamic we cannot prove anything.
+    if (!indexA || !indexB)
+      continue;
+
+    if (i < rankOffset) {
+      // For leading dimensions, if we can prove that index are different we
+      // know we are accessing disjoint slices.
+      if (indexA.getValue().cast<IntegerAttr>().getInt() !=
+          indexB.getValue().cast<IntegerAttr>().getInt())
+        return true;
+    } else {
+      // For this dimension, we slice a part of the memref we need to make sure
+      // the intervals accessed don't overlap.
+      int64_t distance =
+          std::abs(indexA.getValue().cast<IntegerAttr>().getInt() -
+                   indexB.getValue().cast<IntegerAttr>().getInt());
+      if (distance >= transferA.getVectorType().getDimSize(i - rankOffset))
+        return true;
+    }
+  }
+  return false;
+}
+
+bool mlir::vector::isDisjointTransferSet(VectorTransferOpInterface transferA,
+                                         VectorTransferOpInterface transferB) {
+  if (transferA.source() != transferB.source())
+    return false;
+  return isDisjointTransferIndices(transferA, transferB);
 }
 
 //===----------------------------------------------------------------------===//
@@ -233,7 +308,7 @@ void VectorDialect::initialize() {
 
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/Vector/VectorOps.cpp.inc"
+#include "mlir/Dialect/Vector/IR/VectorOps.cpp.inc"
       >();
 }
 
@@ -4311,4 +4386,4 @@ void mlir::vector::populateVectorToVectorCanonicalizationPatterns(
 }
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/Vector/VectorOps.cpp.inc"
+#include "mlir/Dialect/Vector/IR/VectorOps.cpp.inc"
