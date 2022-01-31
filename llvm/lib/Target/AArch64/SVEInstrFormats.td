@@ -370,6 +370,14 @@ class SVE_1_Op_Passthru_Round_Pat<ValueType vtd, SDPatternOperator op, ValueType
 : Pat<(vtd (op pg:$Op1, vts:$Op2, (i64 timm0_1), vtd:$Op3)),
       (inst $Op3, $Op1, $Op2)>;
 
+multiclass SVE_1_Op_PassthruUndef_Round_Pat<ValueType vtd, SDPatternOperator op, ValueType pg,
+                                  ValueType vts, Instruction inst>{
+  def : Pat<(vtd (op pg:$Op1, vts:$Op2, (i64 timm0_1), (vtd undef))),
+            (inst (IMPLICIT_DEF), $Op1, $Op2)>;
+  def : Pat<(vtd (op (pg (SVEAllActive:$Op1)), vts:$Op2, (i64 timm0_1), vtd:$Op3)),
+            (inst $Op3, $Op1, $Op2)>;
+}
+
 class SVE_1_Op_Imm_OptLsl_Reverse_Pat<ValueType vt, SDPatternOperator op, ZPRRegOp zprty,
                                       ValueType it, ComplexPattern cpx, Instruction inst>
   : Pat<(vt (op (vt (AArch64dup (it (cpx i32:$imm, i32:$shift)))), (vt zprty:$Op1))),
@@ -2589,8 +2597,8 @@ multiclass sve_fp_2op_p_zd<bits<7> opc, string asm,
                            SDPatternOperator int_op,
                            SDPatternOperator ir_op, ValueType vt1,
                            ValueType vt2, ValueType vt3, ElementSizeEnum Sz> {
-  def NAME : sve_fp_2op_p_zd<opc, asm, i_zprtype, o_zprtype, Sz>;
-
+  def NAME : sve_fp_2op_p_zd<opc, asm, i_zprtype, o_zprtype, Sz>,
+             SVEPseudo2Instr<NAME, 1>;
   // convert vt1 to a packed type for the intrinsic patterns
   defvar packedvt1 = !cond(!eq(!cast<string>(vt1), "nxv2f16"): nxv8f16,
                            !eq(!cast<string>(vt1), "nxv4f16"): nxv8f16,
@@ -2604,8 +2612,11 @@ multiclass sve_fp_2op_p_zd<bits<7> opc, string asm,
                            1 : vt3);
 
   def : SVE_3_Op_Pat<packedvt1, int_op, packedvt1, vt2, packedvt3, !cast<Instruction>(NAME)>;
-
   def : SVE_1_Op_Passthru_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME)>;
+
+  def _UNDEF : PredOneOpPassthruPseudo<NAME, !cast<ZPRRegOp>(i_zprtype)>;
+
+  defm : SVE_1_Op_PassthruUndef_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME # _UNDEF)>;
 }
 
 multiclass sve_fp_2op_p_zdr<bits<7> opc, string asm,
@@ -2614,7 +2625,8 @@ multiclass sve_fp_2op_p_zdr<bits<7> opc, string asm,
                             SDPatternOperator int_op,
                             SDPatternOperator ir_op, ValueType vt1,
                             ValueType vt2, ValueType vt3, ElementSizeEnum Sz> {
-  def NAME : sve_fp_2op_p_zd<opc, asm, i_zprtype, o_zprtype, Sz>;
+  def NAME : sve_fp_2op_p_zd<opc, asm, i_zprtype, o_zprtype, Sz>,
+             SVEPseudo2Instr<NAME, 1>;
 
   // convert vt1 to a packed type for the intrinsic patterns
   defvar packedvt1 = !cond(!eq(!cast<string>(vt1), "nxv2f16"): nxv8f16,
@@ -2623,8 +2635,11 @@ multiclass sve_fp_2op_p_zdr<bits<7> opc, string asm,
                            1 : vt1);
 
   def : SVE_3_Op_Pat<packedvt1, int_op, packedvt1, vt2, vt3, !cast<Instruction>(NAME)>;
-
   def : SVE_1_Op_Passthru_Round_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME)>;
+
+  def _UNDEF : PredOneOpPassthruPseudo<NAME, !cast<ZPRRegOp>(i_zprtype)>;
+
+  defm : SVE_1_Op_PassthruUndef_Round_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME # _UNDEF)>;
 }
 
 multiclass sve_fp_2op_p_zd_HSD<bits<5> opc, string asm, SDPatternOperator op> {

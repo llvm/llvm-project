@@ -1679,60 +1679,61 @@ let Predicates = [HasSVEorStreamingSVE] in {
   defm FCVTZS_ZPmZ_DtoD : sve_fp_2op_p_zd< 0b1111110, "fcvtzs", ZPR64, ZPR64, null_frag,                     AArch64fcvtzs_mt, nxv2i64, nxv2i1, nxv2f64, ElementSizeD>;
   defm FCVTZU_ZPmZ_DtoD : sve_fp_2op_p_zd< 0b1111111, "fcvtzu", ZPR64, ZPR64, null_frag,                     AArch64fcvtzu_mt, nxv2i64, nxv2i1, nxv2f64, ElementSizeD>;
 
-  def : Pat<(nxv2f32 (AArch64fcvte_mt (nxv2i1 PPR:$Pg), (nxv2f16 ZPR:$Zs), (nxv2f32 ZPR:$Zd))),
-            (FCVT_ZPmZ_HtoS ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
+  //These patterns exist to improve the code quality of conversions on unpacked types.
+  def : Pat<(nxv2f32 (AArch64fcvte_mt (nxv2i1 (SVEAllActive):$Pg), (nxv2f16 ZPR:$Zs), (nxv2f32 ZPR:$Zd))),
+            (FCVT_ZPmZ_HtoS_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
   // FP_ROUND has an additional 'precise' flag which indicates the type of rounding.
   // This is ignored by the pattern below where it is matched by (i64 timm0_1)
-  def : Pat<(nxv2f16 (AArch64fcvtr_mt (nxv2i1 PPR:$Pg), (nxv2f32 ZPR:$Zs), (i64 timm0_1), (nxv2f16 ZPR:$Zd))),
-            (FCVT_ZPmZ_StoH ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
+  def : Pat<(nxv2f16 (AArch64fcvtr_mt (nxv2i1 (SVEAllActive):$Pg), (nxv2f32 ZPR:$Zs), (i64 timm0_1), (nxv2f16 ZPR:$Zd))),
+            (FCVT_ZPmZ_StoH_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
-  // Floating-point -> signed integer
-  def : Pat<(nxv2f16 (AArch64scvtf_mt (nxv2i1 PPR:$Pg),
+  // Signed integer -> Floating-point 
+  def : Pat<(nxv2f16 (AArch64scvtf_mt (nxv2i1 (SVEAllActive):$Pg),
                       (sext_inreg (nxv2i64 ZPR:$Zs), nxv2i16), (nxv2f16 ZPR:$Zd))),
-            (SCVTF_ZPmZ_HtoH ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
+            (SCVTF_ZPmZ_HtoH_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
-  def : Pat<(nxv4f16 (AArch64scvtf_mt (nxv4i1 PPR:$Pg),
+  def : Pat<(nxv4f16 (AArch64scvtf_mt (nxv4i1 (SVEAllActive):$Pg),
                       (sext_inreg (nxv4i32 ZPR:$Zs), nxv4i16), (nxv4f16 ZPR:$Zd))),
-            (SCVTF_ZPmZ_HtoH ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
+            (SCVTF_ZPmZ_HtoH_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
-  def : Pat<(nxv2f16 (AArch64scvtf_mt (nxv2i1 PPR:$Pg),
+  def : Pat<(nxv2f16 (AArch64scvtf_mt (nxv2i1 (SVEAllActive):$Pg),
                       (sext_inreg (nxv2i64 ZPR:$Zs), nxv2i32), (nxv2f16 ZPR:$Zd))),
-            (SCVTF_ZPmZ_StoH ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
+            (SCVTF_ZPmZ_StoH_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
-  def : Pat<(nxv2f32 (AArch64scvtf_mt (nxv2i1 PPR:$Pg),
+  def : Pat<(nxv2f32 (AArch64scvtf_mt (nxv2i1 (SVEAllActive):$Pg),
                       (sext_inreg (nxv2i64 ZPR:$Zs), nxv2i32), (nxv2f32 ZPR:$Zd))),
-            (SCVTF_ZPmZ_StoS ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
+            (SCVTF_ZPmZ_StoS_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
-  def : Pat<(nxv2f64 (AArch64scvtf_mt (nxv2i1 PPR:$Pg),
+  def : Pat<(nxv2f64 (AArch64scvtf_mt (nxv2i1 (SVEAllActive):$Pg),
                       (sext_inreg (nxv2i64 ZPR:$Zs), nxv2i32), (nxv2f64 ZPR:$Zd))),
-            (SCVTF_ZPmZ_StoD ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
+            (SCVTF_ZPmZ_StoD_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
-  // Floating-point -> unsigned integer
-  def : Pat<(nxv2f16 (AArch64ucvtf_mt (nxv2i1 PPR:$Pg),
+  // Unsigned integer -> Floating-point
+  def : Pat<(nxv2f16 (AArch64ucvtf_mt (nxv2i1 (SVEAllActive):$Pg),
                       (and (nxv2i64 ZPR:$Zs),
                        (nxv2i64 (AArch64dup (i64 0xFFFF)))), (nxv2f16 ZPR:$Zd))),
-            (UCVTF_ZPmZ_HtoH ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
+            (UCVTF_ZPmZ_HtoH_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
-  def : Pat<(nxv2f16 (AArch64ucvtf_mt (nxv2i1 PPR:$Pg),
+  def : Pat<(nxv2f16 (AArch64ucvtf_mt (nxv2i1 (SVEAllActive):$Pg),
                       (and (nxv2i64 ZPR:$Zs),
                        (nxv2i64 (AArch64dup (i64 0xFFFFFFFF)))), (nxv2f16 ZPR:$Zd))),
-            (UCVTF_ZPmZ_StoH ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
+            (UCVTF_ZPmZ_StoH_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
-  def : Pat<(nxv4f16 (AArch64ucvtf_mt (nxv4i1 PPR:$Pg),
+  def : Pat<(nxv4f16 (AArch64ucvtf_mt (nxv4i1 (SVEAllActive):$Pg),
                       (and (nxv4i32 ZPR:$Zs),
                        (nxv4i32 (AArch64dup (i32 0xFFFF)))), (nxv4f16 ZPR:$Zd))),
-            (UCVTF_ZPmZ_HtoH ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
+            (UCVTF_ZPmZ_HtoH_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
-  def : Pat<(nxv2f32 (AArch64ucvtf_mt (nxv2i1 PPR:$Pg),
+  def : Pat<(nxv2f32 (AArch64ucvtf_mt (nxv2i1 (SVEAllActive):$Pg),
                       (and (nxv2i64 ZPR:$Zs),
                        (nxv2i64 (AArch64dup (i64 0xFFFFFFFF)))), (nxv2f32 ZPR:$Zd))),
-            (UCVTF_ZPmZ_StoS ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
+            (UCVTF_ZPmZ_StoS_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
-  def : Pat<(nxv2f64 (AArch64ucvtf_mt (nxv2i1 PPR:$Pg),
+  def : Pat<(nxv2f64 (AArch64ucvtf_mt (nxv2i1 (SVEAllActive):$Pg),
                       (and (nxv2i64 ZPR:$Zs),
                        (nxv2i64 (AArch64dup (i64 0xFFFFFFFF)))), (nxv2f64 ZPR:$Zd))),
-            (UCVTF_ZPmZ_StoD ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
+            (UCVTF_ZPmZ_StoD_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
   defm FRINTN_ZPmZ : sve_fp_2op_p_zd_HSD<0b00000, "frintn", AArch64frintn_mt>;
   defm FRINTP_ZPmZ : sve_fp_2op_p_zd_HSD<0b00001, "frintp", AArch64frintp_mt>;
