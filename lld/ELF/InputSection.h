@@ -293,7 +293,7 @@ public:
   SyntheticSection *getParent() const;
 
 private:
-  void splitStrings(ArrayRef<uint8_t> a, size_t size);
+  void splitStrings(StringRef s, size_t size);
   void splitNonStrings(ArrayRef<uint8_t> a, size_t size);
 };
 
