@@ -6769,9 +6769,12 @@ void ResolveNamesVisitor::CheckImports() {
 void ResolveNamesVisitor::CheckImport(
     const SourceName &location, const SourceName &name) {
   if (auto *symbol{FindInScope(name)}) {
-    Say(location, "'%s' from host is not accessible"_err_en_US, name)
-        .Attach(symbol->name(), "'%s' is hidden by this entity"_en_US,
-            symbol->name());
+    const Symbol &ultimate{symbol->GetUltimate()};
+    if (&ultimate.owner() == &currScope()) {
+      Say(location, "'%s' from host is not accessible"_err_en_US, name)
+          .Attach(symbol->name(), "'%s' is hidden by this entity"_en_US,
+              symbol->name());
+    }
   }
 }
 
