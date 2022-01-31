@@ -18,6 +18,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/SHA1.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -694,20 +695,30 @@ void DebugAbbrevWriter::addUnitAbbreviations(DWARFUnit &Unit) {
   if (!Abbrevs)
     return;
 
-  // Multiple units may share the same abbreviations. Only add abbreviations
-  // for the first unit and reuse them.
-  const uint64_t AbbrevOffset = Unit.getAbbreviationsOffset();
-  if (UnitsAbbrevData.find(AbbrevOffset) != UnitsAbbrevData.end())
-    return;
-
-  AbbrevData &UnitData = UnitsAbbrevData[AbbrevOffset];
-  UnitData.Buffer = std::make_unique<DebugBufferVector>();
-  UnitData.Stream = std::make_unique<raw_svector_ostream>(*UnitData.Buffer);
-
   const PatchesTy &UnitPatches = Patches[&Unit];
 
+  // We are duplicating abbrev sections, to handle the case where for one CU we
+  // modify it, but for another we don't.
+  auto UnitDataPtr = std::make_unique<AbbrevData>();
+  AbbrevData &UnitData = *UnitDataPtr.get();
+  UnitData.Buffer = std::make_unique<DebugBufferVector>();
+  UnitData.Stream = std::make_unique<raw_svector_ostream>(*UnitData.Buffer);
   raw_svector_ostream &OS = *UnitData.Stream.get();
 
+  // Returns true if AbbrevData is re-used, false otherwise.
+  auto hashAndAddAbbrev = [&](StringRef AbbrevData) -> bool {
+    llvm::SHA1 Hasher;
+    Hasher.update(AbbrevData);
+    StringRef Key = Hasher.final();
+    auto Iter = AbbrevDataCache.find(Key);
+    if (Iter != AbbrevDataCache.end()) {
+      UnitsAbbrevData[&Unit] = Iter->second.get();
+      return true;
+    }
+    AbbrevDataCache[Key] = std::move(UnitDataPtr);
+    UnitsAbbrevData[&Unit] = &UnitData;
+    return false;
+  };
   // Take a fast path if there are no patches to apply. Simply copy the original
   // contents.
   if (UnitPatches.empty()) {
@@ -756,9 +767,10 @@ void DebugAbbrevWriter::addUnitAbbreviations(DWARFUnit &Unit) {
       AbbrevContents = AbbrevSectionContents;
     }
 
-    OS.reserveExtraSpace(AbbrevContents.size());
-    OS << AbbrevContents;
-
+    if (!hashAndAddAbbrev(AbbrevContents)) {
+      OS.reserveExtraSpace(AbbrevContents.size());
+      OS << AbbrevContents;
+    }
     return;
   }
 
@@ -798,9 +810,13 @@ void DebugAbbrevWriter::addUnitAbbreviations(DWARFUnit &Unit) {
     encodeULEB128(0, OS);
   }
   encodeULEB128(0, OS);
+
+  hashAndAddAbbrev(OS.str());
 }
 
 std::unique_ptr<DebugBufferVector> DebugAbbrevWriter::finalize() {
+  // Used to create determinism for writing out abbrevs.
+  std::vector<AbbrevData *> Abbrevs;
   if (DWOId) {
     // We expect abbrev_offset to always be zero for DWO units as there
     // should be one CU per DWO, and TUs should share the same abbreviation
@@ -818,33 +834,40 @@ std::unique_ptr<DebugBufferVector> DebugAbbrevWriter::finalize() {
       }
     }
 
+    DWARFUnit *Unit = Context.getDWOCompileUnitForHash(*DWOId);
     // Issue abbreviations for the DWO CU only.
-    addUnitAbbreviations(*Context.getDWOCompileUnitForHash(*DWOId));
+    addUnitAbbreviations(*Unit);
+    AbbrevData *Abbrev = UnitsAbbrevData[Unit];
+    Abbrevs.push_back(Abbrev);
   } else {
+    Abbrevs.reserve(Context.getNumCompileUnits() + Context.getNumTypeUnits());
+    std::unordered_set<AbbrevData *> ProcessedAbbrevs;
     // Add abbreviations from compile and type non-DWO units.
-    for (const std::unique_ptr<DWARFUnit> &Unit : Context.normal_units())
+    for (const std::unique_ptr<DWARFUnit> &Unit : Context.normal_units()) {
       addUnitAbbreviations(*Unit);
+      AbbrevData *Abbrev = UnitsAbbrevData[Unit.get()];
+      if (!ProcessedAbbrevs.insert(Abbrev).second)
+        continue;
+      Abbrevs.push_back(Abbrev);
+    }
   }
 
   DebugBufferVector ReturnBuffer;
-
   // Pre-calculate the total size of abbrev section.
   uint64_t Size = 0;
-  for (const auto &KV : UnitsAbbrevData) {
-    const AbbrevData &UnitData = KV.second;
-    Size += UnitData.Buffer->size();
-  }
+  for (const AbbrevData *UnitData : Abbrevs)
+    Size += UnitData->Buffer->size();
+
   ReturnBuffer.reserve(Size);
 
   uint64_t Pos = 0;
-  for (auto &KV : UnitsAbbrevData) {
-    AbbrevData &UnitData = KV.second;
-    ReturnBuffer.append(*UnitData.Buffer);
-    UnitData.Offset = Pos;
-    Pos += UnitData.Buffer->size();
+  for (AbbrevData *UnitData : Abbrevs) {
+    ReturnBuffer.append(*UnitData->Buffer);
+    UnitData->Offset = Pos;
+    Pos += UnitData->Buffer->size();
 
-    UnitData.Buffer.reset();
-    UnitData.Stream.reset();
+    UnitData->Buffer.reset();
+    UnitData->Stream.reset();
   }
 
   return std::make_unique<DebugBufferVector>(ReturnBuffer);
