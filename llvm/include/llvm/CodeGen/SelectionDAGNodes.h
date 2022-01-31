@@ -741,11 +741,9 @@ public:
     using reference = value_type &;
 
     use_iterator() = default;
-    use_iterator(const use_iterator &I) : Op(I.Op) {}
+    use_iterator(const use_iterator &I) = default;
 
-    bool operator==(const use_iterator &x) const {
-      return Op == x.Op;
-    }
+    bool operator==(const use_iterator &x) const { return Op == x.Op; }
     bool operator!=(const use_iterator &x) const {
       return !operator==(x);
     }

@@ -615,16 +615,15 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   for (auto I = Order.begin(), E = Order.getOrderLimitEnd(OrderLimit); I != E;
        ++I, ++Pos) {
     MCRegister PhysReg = *I;
-    Regs[Pos] = std::make_pair(PhysReg, true);
+    assert(!Regs[Pos].second);
     assert(PhysReg);
     if (!canAllocatePhysReg(CostPerUseLimit, PhysReg)) {
-      Regs[Pos].second = false;
       continue;
     }
     if (loadInterferenceFeatures(VirtReg, PhysReg, I.isHint(), FixedRegisters,
                                  Largest, Pos)) {
       ++Available;
-      Regs[Pos].second = true;
+      Regs[Pos] = std::make_pair(PhysReg, true);
     }
   }
   if (Available == 0) {
@@ -632,6 +631,7 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
     assert(!MustFindEviction);
     return MCRegister::NoRegister;
   }
+  const size_t ValidPosLimit = Pos;
   // If we must find eviction, the candidate should be masked out of the
   // decision making process.
   Regs[CandidateVirtRegPos].second = !MustFindEviction;
@@ -665,6 +665,8 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
     assert(!MustFindEviction);
     return MCRegister::NoRegister;
   }
+  assert(CandidatePos < ValidPosLimit);
+  (void)ValidPosLimit;
   return Regs[CandidatePos].first;
 }
 

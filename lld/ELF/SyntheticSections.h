@@ -40,9 +40,7 @@ public:
   SyntheticSection(uint64_t flags, uint32_t type, uint32_t alignment,
                    StringRef name)
       : InputSection(nullptr, flags, type, alignment, {}, name,
-                     InputSectionBase::Synthetic) {
-    markLive();
-  }
+                     InputSectionBase::Synthetic) {}
 
   virtual ~SyntheticSection() = default;
   virtual void writeTo(uint8_t *buf) = 0;

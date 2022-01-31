@@ -30,7 +30,7 @@ class GISelChangeObserver {
   SmallPtrSet<MachineInstr *, 4> ChangingAllUsesOfReg;
 
 public:
-  virtual ~GISelChangeObserver() {}
+  virtual ~GISelChangeObserver() = default;
 
   /// An instruction is about to be erased.
   virtual void erasingInstr(MachineInstr &MI) = 0;
