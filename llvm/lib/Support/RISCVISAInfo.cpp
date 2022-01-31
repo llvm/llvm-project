@@ -738,7 +738,7 @@ Error RISCVISAInfo::checkDependency() {
 
 static const char *ImpliedExtsV[] = {"zvl128b", "f", "d"};
 static const char *ImpliedExtsZfhmin[] = {"f"};
-static const char *ImpliedExtsZfh[] = {"zfhmin"};
+static const char *ImpliedExtsZfh[] = {"f"};
 static const char *ImpliedExtsZve64d[] = {"zve64f"};
 static const char *ImpliedExtsZve64f[] = {"zve64x", "zve32f"};
 static const char *ImpliedExtsZve64x[] = {"zve32x", "zvl64b"};
