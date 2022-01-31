@@ -434,5 +434,201 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}no_alias_atomic_rmw_relaxed:
+; GCN: ds_add_u32
+; GCN: s_load_dword s
+; GCN-NOT: global_load_dword
+; GCN: global_store_dword
+define protected amdgpu_kernel void @no_alias_atomic_rmw_relaxed(i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
+; CHECK-LABEL: @no_alias_atomic_rmw_relaxed(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UNUSED:%.*]] = atomicrmw add i32 addrspace(3)* @LDS, i32 5 monotonic, align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32 addrspace(1)* [[IN:%.*]], i64 0, !amdgpu.uniform !0, !amdgpu.noclobber !0
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32 addrspace(1)* [[GEP]], align 4
+; CHECK-NEXT:    store i32 [[LD]], i32 addrspace(1)* [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %unused = atomicrmw add i32 addrspace(3)* @LDS, i32 5 monotonic
+  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 0
+  %ld = load i32, i32 addrspace(1)* %gep, align 4
+  store i32 %ld, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}no_alias_atomic_cmpxchg:
+; GCN: ds_cmpst_b32
+; GCN: s_load_dword s
+; GCN-NOT: global_load_dword
+; GCN: global_store_dword
+define protected amdgpu_kernel void @no_alias_atomic_cmpxchg(i32 addrspace(1)* %in, i32 addrspace(1)* %out, i32 %swap) {
+; CHECK-LABEL: @no_alias_atomic_cmpxchg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UNUSED:%.*]] = cmpxchg i32 addrspace(3)* @LDS, i32 7, i32 [[SWAP:%.*]] seq_cst monotonic, align 4
+; CHECK-NEXT:    fence syncscope("workgroup") release
+; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    fence syncscope("workgroup") acquire
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32 addrspace(1)* [[IN:%.*]], i64 0, !amdgpu.uniform !0, !amdgpu.noclobber !0
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32 addrspace(1)* [[GEP]], align 4
+; CHECK-NEXT:    store i32 [[LD]], i32 addrspace(1)* [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %unused = cmpxchg i32 addrspace(3)* @LDS, i32 7, i32 %swap seq_cst monotonic
+  fence syncscope("workgroup") release
+  tail call void @llvm.amdgcn.s.barrier()
+  fence syncscope("workgroup") acquire
+  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 0
+  %ld = load i32, i32 addrspace(1)* %gep, align 4
+  store i32 %ld, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}no_alias_atomic_rmw:
+; GCN: ds_add_u32
+; GCN: s_load_dword s
+; GCN-NOT: global_load_dword
+; GCN: global_store_dword
+define protected amdgpu_kernel void @no_alias_atomic_rmw(i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
+; CHECK-LABEL: @no_alias_atomic_rmw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UNUSED:%.*]] = atomicrmw add i32 addrspace(3)* @LDS, i32 5 seq_cst, align 4
+; CHECK-NEXT:    fence syncscope("workgroup") release
+; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    fence syncscope("workgroup") acquire
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32 addrspace(1)* [[IN:%.*]], i64 0, !amdgpu.uniform !0, !amdgpu.noclobber !0
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32 addrspace(1)* [[GEP]], align 4
+; CHECK-NEXT:    store i32 [[LD]], i32 addrspace(1)* [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %unused = atomicrmw add i32 addrspace(3)* @LDS, i32 5 seq_cst
+  fence syncscope("workgroup") release
+  tail call void @llvm.amdgcn.s.barrier()
+  fence syncscope("workgroup") acquire
+  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 0
+  %ld = load i32, i32 addrspace(1)* %gep, align 4
+  store i32 %ld, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}may_alias_atomic_cmpxchg:
+; GCN: global_atomic_cmpswap
+; GCN: global_load_dword
+; GCN: global_store_dword
+define protected amdgpu_kernel void @may_alias_atomic_cmpxchg(i32 addrspace(1)* %in, i32 addrspace(1)* %out, i32 %swap) {
+; CHECK-LABEL: @may_alias_atomic_cmpxchg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UNUSED:%.*]] = cmpxchg i32 addrspace(1)* [[OUT:%.*]], i32 7, i32 [[SWAP:%.*]] seq_cst monotonic, align 4
+; CHECK-NEXT:    fence syncscope("workgroup") release
+; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    fence syncscope("workgroup") acquire
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32 addrspace(1)* [[IN:%.*]], i64 0, !amdgpu.uniform !0
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32 addrspace(1)* [[GEP]], align 4
+; CHECK-NEXT:    store i32 [[LD]], i32 addrspace(1)* [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %unused = cmpxchg i32 addrspace(1)* %out, i32 7, i32 %swap seq_cst monotonic
+  fence syncscope("workgroup") release
+  tail call void @llvm.amdgcn.s.barrier()
+  fence syncscope("workgroup") acquire
+  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 0
+  %ld = load i32, i32 addrspace(1)* %gep, align 4
+  store i32 %ld, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}may_alias_atomic_rmw:
+; GCN: global_atomic_add
+; GCN: global_load_dword
+; GCN: global_store_dword
+define protected amdgpu_kernel void @may_alias_atomic_rmw(i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
+; CHECK-LABEL: @may_alias_atomic_rmw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UNUSED:%.*]] = atomicrmw add i32 addrspace(1)* [[OUT:%.*]], i32 5 seq_cst, align 4
+; CHECK-NEXT:    fence syncscope("workgroup") release
+; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    fence syncscope("workgroup") acquire
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32 addrspace(1)* [[IN:%.*]], i64 0, !amdgpu.uniform !0
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32 addrspace(1)* [[GEP]], align 4
+; CHECK-NEXT:    store i32 [[LD]], i32 addrspace(1)* [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %unused = atomicrmw add i32 addrspace(1)* %out, i32 5 seq_cst
+  fence syncscope("workgroup") release
+  tail call void @llvm.amdgcn.s.barrier()
+  fence syncscope("workgroup") acquire
+  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 0
+  %ld = load i32, i32 addrspace(1)* %gep, align 4
+  store i32 %ld, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}no_alias_atomic_rmw_then_clobber:
+; CGN: global_store_dword
+; CGN: global_store_dword
+; GCN: ds_add_u32
+; GCN: global_load_dword
+; GCN: global_store_dword
+define protected amdgpu_kernel void @no_alias_atomic_rmw_then_clobber(i32 addrspace(1)* %in, i32 addrspace(1)* %out, i32 addrspace(1)* noalias %noalias) {
+; CHECK-LABEL: @no_alias_atomic_rmw_then_clobber(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 1, i32 addrspace(1)* [[OUT:%.*]], align 4
+; CHECK-NEXT:    store i32 2, i32 addrspace(1)* [[NOALIAS:%.*]], align 4
+; CHECK-NEXT:    [[UNUSED:%.*]] = atomicrmw add i32 addrspace(3)* @LDS, i32 5 seq_cst, align 4
+; CHECK-NEXT:    fence syncscope("workgroup") release
+; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    fence syncscope("workgroup") acquire
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32 addrspace(1)* [[IN:%.*]], i64 0, !amdgpu.uniform !0
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32 addrspace(1)* [[GEP]], align 4
+; CHECK-NEXT:    store i32 [[LD]], i32 addrspace(1)* [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i32 1, i32 addrspace(1)* %out, align 4
+  store i32 2, i32 addrspace(1)* %noalias, align 4
+  %unused = atomicrmw add i32 addrspace(3)* @LDS, i32 5 seq_cst
+  fence syncscope("workgroup") release
+  tail call void @llvm.amdgcn.s.barrier()
+  fence syncscope("workgroup") acquire
+  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 0
+  %ld = load i32, i32 addrspace(1)* %gep, align 4
+  store i32 %ld, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}no_alias_atomic_rmw_then_no_alias_store:
+; CGN: global_store_dword
+; GCN: ds_add_u32
+; GCN: s_load_dword s
+; GCN-NOT: global_load_dword
+; GCN: global_store_dword
+define protected amdgpu_kernel void @no_alias_atomic_rmw_then_no_alias_store(i32 addrspace(1)* %in, i32 addrspace(1)* %out, i32 addrspace(1)* noalias %noalias) {
+; CHECK-LABEL: @no_alias_atomic_rmw_then_no_alias_store(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 2, i32 addrspace(1)* [[NOALIAS:%.*]], align 4
+; CHECK-NEXT:    [[UNUSED:%.*]] = atomicrmw add i32 addrspace(3)* @LDS, i32 5 seq_cst, align 4
+; CHECK-NEXT:    fence syncscope("workgroup") release
+; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    fence syncscope("workgroup") acquire
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32 addrspace(1)* [[IN:%.*]], i64 0, !amdgpu.uniform !0, !amdgpu.noclobber !0
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32 addrspace(1)* [[GEP]], align 4
+; CHECK-NEXT:    store i32 [[LD]], i32 addrspace(1)* [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i32 2, i32 addrspace(1)* %noalias, align 4
+  %unused = atomicrmw add i32 addrspace(3)* @LDS, i32 5 seq_cst
+  fence syncscope("workgroup") release
+  tail call void @llvm.amdgcn.s.barrier()
+  fence syncscope("workgroup") acquire
+  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 0
+  %ld = load i32, i32 addrspace(1)* %gep, align 4
+  store i32 %ld, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
 declare void @llvm.amdgcn.s.barrier()
 declare void @llvm.amdgcn.wave.barrier()

@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/InstVisitor.h"
@@ -31,6 +32,7 @@ class AMDGPUAnnotateUniformValues : public FunctionPass,
                        public InstVisitor<AMDGPUAnnotateUniformValues> {
   LegacyDivergenceAnalysis *DA;
   MemorySSA *MSSA;
+  AliasAnalysis *AA;
   DenseMap<Value*, GetElementPtrInst*> noClobberClones;
   bool isEntryFunc;
 
@@ -46,6 +48,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LegacyDivergenceAnalysis>();
     AU.addRequired<MemorySSAWrapperPass>();
+    AU.addRequired<AAResultsWrapperPass>();
     AU.setPreservesAll();
  }
 
@@ -60,6 +63,7 @@ INITIALIZE_PASS_BEGIN(AMDGPUAnnotateUniformValues, DEBUG_TYPE,
                       "Add AMDGPU uniform metadata", false, false)
 INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
 INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(AMDGPUAnnotateUniformValues, DEBUG_TYPE,
                     "Add AMDGPU uniform metadata", false, false)
 
@@ -78,7 +82,7 @@ bool AMDGPUAnnotateUniformValues::isClobberedInFunction(LoadInst *Load) {
   SmallSet<MemoryAccess *, 8> Visited;
   MemoryLocation Loc(MemoryLocation::get(Load));
 
-  const auto isReallyAClobber = [](MemoryDef *Def) -> bool {
+  const auto isReallyAClobber = [this, Load](MemoryDef *Def) -> bool {
     Instruction *DefInst = Def->getMemoryInst();
     LLVM_DEBUG(dbgs() << "  Def: " << *DefInst << '\n');
 
@@ -94,6 +98,17 @@ bool AMDGPUAnnotateUniformValues::isClobberedInFunction(LoadInst *Load) {
         break;
       }
     }
+
+    // Ignore atomics not aliasing with the original load, any atomic is a
+    // universal MemoryDef from MSSA's point of view too, just like a fence.
+    const auto checkNoAlias = [this, Load](auto I) -> bool {
+      return I && AA->isNoAlias(I->getPointerOperand(),
+                                Load->getPointerOperand());
+    };
+
+    if (checkNoAlias(dyn_cast<AtomicCmpXchgInst>(DefInst)) ||
+        checkNoAlias(dyn_cast<AtomicRMWInst>(DefInst)))
+      return false;
 
     return true;
   };
@@ -197,6 +212,7 @@ bool AMDGPUAnnotateUniformValues::runOnFunction(Function &F) {
 
   DA = &getAnalysis<LegacyDivergenceAnalysis>();
   MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
+  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   isEntryFunc = AMDGPU::isEntryFunctionCC(F.getCallingConv());
 
   visit(F);
