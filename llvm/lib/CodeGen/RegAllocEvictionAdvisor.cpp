@@ -66,7 +66,7 @@ public:
 
 private:
   std::unique_ptr<RegAllocEvictionAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+  getAdvisor(MachineFunction &MF, const RAGreedy &RA) override {
     return std::make_unique<DefaultEvictionAdvisor>(MF, RA);
   }
   bool doInitialization(Module &M) override {
@@ -113,7 +113,7 @@ StringRef RegAllocEvictionAdvisorAnalysis::getPassName() const {
   llvm_unreachable("Unknown advisor kind");
 }
 
-RegAllocEvictionAdvisor::RegAllocEvictionAdvisor(const MachineFunction &MF,
+RegAllocEvictionAdvisor::RegAllocEvictionAdvisor(MachineFunction &MF,
                                                  const RAGreedy &RA)
     : MF(MF), RA(RA), Matrix(RA.getInterferenceMatrix()),
       LIS(RA.getLiveIntervals()), VRM(RA.getVirtRegMap()),

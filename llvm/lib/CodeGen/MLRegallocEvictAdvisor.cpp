@@ -227,8 +227,8 @@ using FeaturesListNormalizer = std::array<float, FeatureIDs::FeatureCount>;
 /// The ML evictor (commonalities between release and development mode)
 class MLEvictAdvisor : public RegAllocEvictionAdvisor {
 public:
-  MLEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
-                 MLModelRunner *Runner, const MachineBlockFrequencyInfo &MBFI,
+  MLEvictAdvisor(MachineFunction &MF, const RAGreedy &RA, MLModelRunner *Runner,
+                 const MachineBlockFrequencyInfo &MBFI,
                  const MachineLoopInfo &Loops);
 
 protected:
@@ -319,7 +319,7 @@ private:
   }
 
   std::unique_ptr<RegAllocEvictionAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+  getAdvisor(MachineFunction &MF, const RAGreedy &RA) override {
     if (!Runner)
       Runner = std::make_unique<ReleaseModeModelRunner<RegallocEvictModel>>(
           MF.getFunction().getContext(), FeatureNames, DecisionName);
@@ -364,7 +364,7 @@ static const std::vector<TensorSpec> TrainingInputFeatures{
 
 class DevelopmentModeEvictAdvisor : public MLEvictAdvisor {
 public:
-  DevelopmentModeEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+  DevelopmentModeEvictAdvisor(MachineFunction &MF, const RAGreedy &RA,
                               MLModelRunner *Runner,
                               const MachineBlockFrequencyInfo &MBFI,
                               const MachineLoopInfo &Loops, Logger *Log)
@@ -420,7 +420,7 @@ private:
   }
 
   std::unique_ptr<RegAllocEvictionAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+  getAdvisor(MachineFunction &MF, const RAGreedy &RA) override {
     LLVMContext &Ctx = MF.getFunction().getContext();
     if (ModelUnderTraining.empty() && TrainingLog.empty()) {
       Ctx.emitError("Regalloc development mode should be requested with at "
@@ -480,7 +480,7 @@ float MLEvictAdvisor::getInitialQueueSize(const MachineFunction &MF) {
   return Ret;
 }
 
-MLEvictAdvisor::MLEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+MLEvictAdvisor::MLEvictAdvisor(MachineFunction &MF, const RAGreedy &RA,
                                MLModelRunner *Runner,
                                const MachineBlockFrequencyInfo &MBFI,
                                const MachineLoopInfo &Loops)
