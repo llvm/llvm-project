@@ -77,6 +77,9 @@ New Compiler Flags
 
 - Clang plugin arguments can now be passed through the compiler driver via
   ``-fplugin-arg-pluginname-arg``, similar to GCC's ``-fplugin-arg``.
+- The ``-mno-bti-at-return-twice`` flag will make sure a BTI instruction won't
+  be added after a setjmp or possible other return-twice construct (ARM backend
+  only).
 
 Deprecated Compiler Flags
 -------------------------
@@ -292,6 +295,11 @@ Arm and AArch64 Support in Clang
 - The --aarch64-none-elf target now uses the BareMetal driver rather than the
   GNU driver. Programs that depend on clang invoking GCC as the linker driver
   should use GCC as the linker in the build system.
+
+- The ``-mbranch-protection`` flag will now also work for the ARM backend.
+
+- The ``attribute((target("branch-protection=...)))`` attributes will now also
+  work for the ARM backend.
 
 Floating Point Support in Clang
 -------------------------------
