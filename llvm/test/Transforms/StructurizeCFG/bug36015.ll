@@ -18,7 +18,7 @@ loop.inner:
   br i1 %cond.inner, label %if, label %else
 
 ; CHECK: if:
-; CHECK:   %cond.if = icmp sge i32 %ctr.if, %count
+; CHECK:   %cond.if.inv = xor i1 %cond.if, true
 ; CHECK:   br label %Flow
 if:
   %ctr.if = add i32 %ctr.loop.inner, 1
@@ -27,7 +27,7 @@ if:
   br i1 %cond.if, label %loop.inner, label %exit
 
 ; CHECK: Flow:
-; CHECK:   %1 = phi i1 [ %cond.if, %if ], [ true, %loop.inner ]
+; CHECK:   %1 = phi i1 [ %cond.if.inv, %if ], [ true, %loop.inner ]
 ; CHECK:   %2 = phi i1 [ false, %if ], [ true, %loop.inner ]
 ; CHECK:   br i1 %1, label %Flow1, label %loop.inner
 
@@ -43,7 +43,7 @@ else:
   br i1 %cond.else, label %loop.outer, label %exit
 
 ; CHECK: Flow2:
-; CHECK:   %4 = phi i1 [ %cond.else, %else ], [ true, %Flow1 ]
+; CHECK:   %4 = phi i1 [ %cond.else.inv, %else ], [ true, %Flow1 ]
 ; CHECK:   br i1 %4, label %exit, label %loop.outer
 
 exit:

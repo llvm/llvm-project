@@ -25,8 +25,9 @@ define amdgpu_vs void @multi_else_break(<4 x float> %vec, i32 %ub, i32 %cont) {
 ; OPT:       Flow:
 ; OPT-NEXT:    [[TMP4]] = phi i32 [ [[TMP47]], [[ENDIF]] ], [ [[TMP0]], [[LOOP]] ]
 ; OPT-NEXT:    [[TMP5:%.*]] = phi i1 [ [[TMP51:%.*]], [[ENDIF]] ], [ true, [[LOOP]] ]
+; OPT-NEXT:    [[TMP6:%.*]] = phi i1 [ [[TMP51_INV:%.*]], [[ENDIF]] ], [ true, [[LOOP]] ]
 ; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP3]])
-; OPT-NEXT:    [[TMP7]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP5]], i64 [[PHI_BROKEN]])
+; OPT-NEXT:    [[TMP7]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP6]], i64 [[PHI_BROKEN]])
 ; OPT-NEXT:    [[TMP8:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP7]])
 ; OPT-NEXT:    [[TMP9]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP5]], i64 [[PHI_BROKEN2]])
 ; OPT-NEXT:    br i1 [[TMP8]], label [[FLOW1]], label [[LOOP]]
@@ -38,7 +39,8 @@ define amdgpu_vs void @multi_else_break(<4 x float> %vec, i32 %ub, i32 %cont) {
 ; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP9]])
 ; OPT-NEXT:    ret void
 ; OPT:       ENDIF:
-; OPT-NEXT:    [[TMP51]] = icmp ne i32 [[TMP47]], [[CONT:%.*]]
+; OPT-NEXT:    [[TMP51]] = icmp eq i32 [[TMP47]], [[CONT:%.*]]
+; OPT-NEXT:    [[TMP51_INV]] = xor i1 [[TMP51]], true
 ; OPT-NEXT:    br label [[FLOW]]
 ;
 ; GCN-LABEL: multi_else_break:
@@ -121,13 +123,14 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[LOAD0:%.*]] = load volatile i32, i32 addrspace(1)* undef, align 4
 ; OPT-NEXT:    br label [[NODEBLOCK:%.*]]
 ; OPT:       NodeBlock:
-; OPT-NEXT:    [[PIVOT:%.*]] = icmp sge i32 [[LOAD0]], 1
-; OPT-NEXT:    br i1 [[PIVOT]], label [[LEAFBLOCK1:%.*]], label [[FLOW:%.*]]
+; OPT-NEXT:    [[PIVOT:%.*]] = icmp slt i32 [[LOAD0]], 1
+; OPT-NEXT:    [[PIVOT_INV:%.*]] = xor i1 [[PIVOT]], true
+; OPT-NEXT:    br i1 [[PIVOT_INV]], label [[LEAFBLOCK1:%.*]], label [[FLOW:%.*]]
 ; OPT:       LeafBlock1:
 ; OPT-NEXT:    [[SWITCHLEAF2:%.*]] = icmp eq i32 [[LOAD0]], 1
 ; OPT-NEXT:    br i1 [[SWITCHLEAF2]], label [[CASE1:%.*]], label [[FLOW3:%.*]]
 ; OPT:       Flow3:
-; OPT-NEXT:    [[TMP0:%.*]] = phi i1 [ [[CMP2:%.*]], [[CASE1]] ], [ true, [[LEAFBLOCK1]] ]
+; OPT-NEXT:    [[TMP0:%.*]] = phi i1 [ [[CMP2_INV:%.*]], [[CASE1]] ], [ true, [[LEAFBLOCK1]] ]
 ; OPT-NEXT:    [[TMP1:%.*]] = phi i1 [ false, [[CASE1]] ], [ true, [[LEAFBLOCK1]] ]
 ; OPT-NEXT:    br label [[FLOW]]
 ; OPT:       LeafBlock:
@@ -141,7 +144,8 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    br i1 [[TMP5]], label [[FLOW6:%.*]], label [[BB1]]
 ; OPT:       case0:
 ; OPT-NEXT:    [[LOAD1:%.*]] = load volatile i32, i32 addrspace(1)* undef, align 4
-; OPT-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[TMP]], [[LOAD1]]
+; OPT-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP]], [[LOAD1]]
+; OPT-NEXT:    [[CMP1_INV:%.*]] = xor i1 [[CMP1]], true
 ; OPT-NEXT:    br label [[FLOW5]]
 ; OPT:       Flow:
 ; OPT-NEXT:    [[TMP6]] = phi i1 [ [[TMP0]], [[FLOW3]] ], [ true, [[NODEBLOCK]] ]
@@ -150,10 +154,11 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    br i1 [[TMP8]], label [[LEAFBLOCK:%.*]], label [[FLOW4]]
 ; OPT:       case1:
 ; OPT-NEXT:    [[LOAD2:%.*]] = load volatile i32, i32 addrspace(1)* undef, align 4
-; OPT-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[TMP]], [[LOAD2]]
+; OPT-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[TMP]], [[LOAD2]]
+; OPT-NEXT:    [[CMP2_INV]] = xor i1 [[CMP2]], true
 ; OPT-NEXT:    br label [[FLOW3]]
 ; OPT:       Flow5:
-; OPT-NEXT:    [[TMP9]] = phi i1 [ [[CMP1]], [[CASE0]] ], [ [[TMP6]], [[LEAFBLOCK]] ]
+; OPT-NEXT:    [[TMP9]] = phi i1 [ [[CMP1_INV]], [[CASE0]] ], [ [[TMP6]], [[LEAFBLOCK]] ]
 ; OPT-NEXT:    [[TMP10]] = phi i1 [ false, [[CASE0]] ], [ true, [[LEAFBLOCK]] ]
 ; OPT-NEXT:    br label [[FLOW4]]
 ; OPT:       Flow6:
@@ -191,8 +196,8 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    s_mov_b64 s[6:7], -1
 ; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, 1, v1
+; GCN-NEXT:    s_mov_b64 s[6:7], -1
 ; GCN-NEXT:    s_and_b64 vcc, exec, vcc
 ; GCN-NEXT:    ; implicit-def: $sgpr8_sgpr9
 ; GCN-NEXT:    s_mov_b64 s[10:11], -1

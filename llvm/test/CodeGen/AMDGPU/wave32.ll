@@ -172,8 +172,8 @@ endif:
 ; GFX1064: s_andn2_b64 exec, exec, s[{{[0-9:]+}}]
 ; GCN:     s_cbranch_execz
 ; GCN:   .LBB{{.*}}:
-; GFX1032: s_and_saveexec_b32 s{{[0-9]+}}, s{{[0-9]+}}
-; GFX1064: s_and_saveexec_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}]
+; GFX1032: s_and_saveexec_b32 s{{[0-9]+}}, vcc_lo
+; GFX1064: s_and_saveexec_b64 s[{{[0-9:]+}}], vcc{{$}}
 ; GCN:     s_cbranch_execz
 ; GCN:   ; %bb.{{[0-9]+}}:
 ; GCN:   .LBB{{.*}}:

@@ -3343,14 +3343,6 @@ Value *llvm::invertCondition(Value *Condition) {
       if (I->getParent() == Parent && match(I, m_Not(m_Specific(Condition))))
         return I;
 
-  // Fourth: Modify an existing instruction
-  if (Condition->hasOneUse()) {
-    if (auto *CI = dyn_cast<CmpInst>(Condition)) {
-      CI->setPredicate(CI->getInversePredicate());
-      return Condition;
-    }
-  }
-
   // Last option: Create a new instruction
   auto *Inverted =
       BinaryOperator::CreateNot(Condition, Condition->getName() + ".inv");
