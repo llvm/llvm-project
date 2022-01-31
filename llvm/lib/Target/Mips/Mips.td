@@ -150,11 +150,12 @@ def FeatureMips64r6    : SubtargetFeature<"mips64r6", "MipsArchVersion",
                                  FeatureNaN2008, FeatureAbs2008]>;
 def FeatureNanoMips    : SubtargetFeature<"nanomips", "MipsArchVersion",
                                 "NanoMips",
-                                "NanoMips ISA Support [experimental]">;
+                                          "NanoMips ISA Support [experimental]",
+                                          [FeatureRelax]>;
 def FeatureNMS1        : SubtargetFeature<"nms1", "MipsArchVersion",
                                 "NanoMips",
                                 "NanoMips ISA Support [experimental]">;
-def FeatureI7200        : SubtargetFeature<"i7200", "MipsArchVersion",
+def FeatureI7200       : SubtargetFeature<"i7200", "MipsArchVersion",
                                 "NanoMips",
                                 "NanoMips ISA Support [experimental]">;
 def FeatureSym32       : SubtargetFeature<"sym32", "HasSym32", "true",
@@ -162,6 +163,10 @@ def FeatureSym32       : SubtargetFeature<"sym32", "HasSym32", "true",
 
 def FeatureMips16  : SubtargetFeature<"mips16", "InMips16Mode", "true",
                                       "Mips16 mode">;
+
+def FeatureRelax       : SubtargetFeature<"relax", "UseLinkerRelax",
+                                "true",
+                                "Enable linker relaxation">;
 
 def FeatureDSP : SubtargetFeature<"dsp", "HasDSP", "true", "Mips DSP ASE">;
 def FeatureDSPR2 : SubtargetFeature<"dspr2", "HasDSPR2", "true",

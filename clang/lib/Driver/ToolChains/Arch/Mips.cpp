@@ -409,6 +409,14 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     } else
       D.Diag(diag::err_drv_unknown_indirect_jump_opt) << Val;
   }
+
+  if (Triple.isNanoMips()) {
+    if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true))
+      Features.push_back("+relax");
+    else
+      Features.push_back("-relax");
+  }
+
 }
 
 mips::IEEE754Standard mips::getIEEE754Standard(StringRef &CPU) {
