@@ -123,14 +123,17 @@ extern "C" void workshareloop_unsigned(float *a, float *b, float *c, float *d) {
 // CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[DOTSTART]], align 4
 // CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[TMP6]], [[TMP7]]
 // CHECK-NEXT:    [[TMP8:%.*]] = load i32, i32* [[DOTSTEP]], align 4
-// CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], [[TMP8]]
+// CHECK-NEXT:    [[SUB1:%.*]] = sub i32 [[TMP8]], 1
+// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SUB]], [[SUB1]]
+// CHECK-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTSTEP]], align 4
+// CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[ADD]], [[TMP9]]
 // CHECK-NEXT:    br label [[COND_END:%.*]]
 // CHECK:       cond.false:
 // CHECK-NEXT:    br label [[COND_END]]
 // CHECK:       cond.end:
 // CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[DIV]], [[COND_TRUE]] ], [ 0, [[COND_FALSE]] ]
-// CHECK-NEXT:    [[TMP9:%.*]] = load i32*, i32** [[DISTANCE_ADDR]], align 8
-// CHECK-NEXT:    store i32 [[COND]], i32* [[TMP9]], align 4
+// CHECK-NEXT:    [[TMP10:%.*]] = load i32*, i32** [[DISTANCE_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[COND]], i32* [[TMP10]], align 4
 // CHECK-NEXT:    ret void
 //
 //

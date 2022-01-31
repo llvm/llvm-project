@@ -206,7 +206,10 @@ void unroll_partial_heuristic_runtime_for(int n, float *a, float *b, float *c, f
 // CHECK-NEXT:    %[[TMP10:.+]] = load i32, i32* %[[DOTSTART]], align 4
 // CHECK-NEXT:    %[[SUB:.+]] = sub nsw i32 %[[TMP9]], %[[TMP10]]
 // CHECK-NEXT:    %[[TMP11:.+]] = load i32, i32* %[[DOTSTEP]], align 4
-// CHECK-NEXT:    %[[DIV:.+]] = udiv i32 %[[SUB]], %[[TMP11]]
+// CHECK-NEXT:    %[[SUB1:.+]] = sub i32 %[[TMP11]], 1
+// CHECK-NEXT:    %[[ADD:.+]] = add i32 %[[SUB]], %[[SUB1]]
+// CHECK-NEXT:    %[[TMP12:.+]] = load i32, i32* %[[DOTSTEP]], align 4
+// CHECK-NEXT:    %[[DIV:.+]] = udiv i32 %[[ADD]], %[[TMP12]]
 // CHECK-NEXT:    br label %[[COND_END:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[COND_FALSE]]:
@@ -214,8 +217,8 @@ void unroll_partial_heuristic_runtime_for(int n, float *a, float *b, float *c, f
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[COND_END]]:
 // CHECK-NEXT:    %[[COND:.+]] = phi i32 [ %[[DIV]], %[[COND_TRUE]] ], [ 0, %[[COND_FALSE]] ]
-// CHECK-NEXT:    %[[TMP12:.+]] = load i32*, i32** %[[DISTANCE_ADDR]], align 8
-// CHECK-NEXT:    store i32 %[[COND]], i32* %[[TMP12]], align 4
+// CHECK-NEXT:    %[[TMP13:.+]] = load i32*, i32** %[[DISTANCE_ADDR]], align 8
+// CHECK-NEXT:    store i32 %[[COND]], i32* %[[TMP13]], align 4
 // CHECK-NEXT:    ret void
 // CHECK-NEXT:  }
 
