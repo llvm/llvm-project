@@ -4585,6 +4585,39 @@ bool CombinerHelper::matchMulOBy2(MachineInstr &MI, BuildFnTy &MatchInfo) {
   return true;
 }
 
+bool CombinerHelper::matchMulOBy0(MachineInstr &MI, BuildFnTy &MatchInfo) {
+  // (G_*MULO x, 0) -> 0 + no carry out
+  unsigned Opc = MI.getOpcode();
+  assert(Opc == TargetOpcode::G_UMULO || Opc == TargetOpcode::G_SMULO);
+  if (!mi_match(MI.getOperand(3).getReg(), MRI, m_SpecificICstOrSplat(0)))
+    return false;
+  Register Dst = MI.getOperand(0).getReg();
+  Register Carry = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT CarryTy = MRI.getType(Carry);
+  if (DstTy.isVector()) {
+    LLT DstEltTy = DstTy.getElementType();
+    if (!isLegalOrBeforeLegalizer(
+            {TargetOpcode::G_BUILD_VECTOR, {DstTy, DstEltTy}}) ||
+        !isLegalOrBeforeLegalizer({TargetOpcode::G_CONSTANT, {DstEltTy}}))
+      return false;
+    LLT CarryEltTy = CarryTy.getElementType();
+    if (!isLegalOrBeforeLegalizer(
+            {TargetOpcode::G_BUILD_VECTOR, {CarryTy, CarryEltTy}}) ||
+        !isLegalOrBeforeLegalizer({TargetOpcode::G_CONSTANT, {CarryEltTy}}))
+      return false;
+  } else {
+    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_CONSTANT, {DstTy}}) ||
+        !isLegalOrBeforeLegalizer({TargetOpcode::G_CONSTANT, {CarryTy}}))
+      return false;
+  }
+  MatchInfo = [=](MachineIRBuilder &B) {
+    B.buildConstant(Dst, 0);
+    B.buildConstant(Carry, 0);
+  };
+  return true;
+}
+
 MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::G_UDIV);
   auto &UDiv = cast<GenericMachineInstr>(MI);
