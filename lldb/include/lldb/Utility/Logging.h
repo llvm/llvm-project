@@ -52,43 +52,6 @@ enum class LLDBLog : Log::MaskType {
 
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
-// Log Bits specific to logging in lldb
-#define LIBLLDB_LOG_PROCESS ::lldb_private::LLDBLog::Process
-#define LIBLLDB_LOG_THREAD ::lldb_private::LLDBLog::Thread
-#define LIBLLDB_LOG_DYNAMIC_LOADER ::lldb_private::LLDBLog::DynamicLoader
-#define LIBLLDB_LOG_EVENTS ::lldb_private::LLDBLog::Events
-#define LIBLLDB_LOG_BREAKPOINTS ::lldb_private::LLDBLog::Breakpoints
-#define LIBLLDB_LOG_WATCHPOINTS ::lldb_private::LLDBLog::Watchpoints
-#define LIBLLDB_LOG_STEP ::lldb_private::LLDBLog::Step
-#define LIBLLDB_LOG_EXPRESSIONS ::lldb_private::LLDBLog::Expressions
-#define LIBLLDB_LOG_TEMPORARY ::lldb_private::LLDBLog::Temporary
-#define LIBLLDB_LOG_STATE ::lldb_private::LLDBLog::State
-#define LIBLLDB_LOG_OBJECT ::lldb_private::LLDBLog::Object
-#define LIBLLDB_LOG_COMMUNICATION ::lldb_private::LLDBLog::Communication
-#define LIBLLDB_LOG_CONNECTION ::lldb_private::LLDBLog::Connection
-#define LIBLLDB_LOG_HOST ::lldb_private::LLDBLog::Host
-#define LIBLLDB_LOG_UNWIND ::lldb_private::LLDBLog::Unwind
-#define LIBLLDB_LOG_API ::lldb_private::LLDBLog::API
-#define LIBLLDB_LOG_SCRIPT ::lldb_private::LLDBLog::Script
-#define LIBLLDB_LOG_COMMANDS ::lldb_private::LLDBLog::Commands
-#define LIBLLDB_LOG_TYPES ::lldb_private::LLDBLog::Types
-#define LIBLLDB_LOG_SYMBOLS ::lldb_private::LLDBLog::Symbols
-#define LIBLLDB_LOG_MODULES ::lldb_private::LLDBLog::Modules
-#define LIBLLDB_LOG_TARGET ::lldb_private::LLDBLog::Target
-#define LIBLLDB_LOG_MMAP ::lldb_private::LLDBLog::MMap
-#define LIBLLDB_LOG_OS ::lldb_private::LLDBLog::OS
-#define LIBLLDB_LOG_PLATFORM ::lldb_private::LLDBLog::Platform
-#define LIBLLDB_LOG_SYSTEM_RUNTIME ::lldb_private::LLDBLog::SystemRuntime
-#define LIBLLDB_LOG_JIT_LOADER ::lldb_private::LLDBLog::JITLoader
-#define LIBLLDB_LOG_LANGUAGE ::lldb_private::LLDBLog::Language
-#define LIBLLDB_LOG_DATAFORMATTERS ::lldb_private::LLDBLog::DataFormatters
-#define LIBLLDB_LOG_DEMANGLE ::lldb_private::LLDBLog::Demangle
-#define LIBLLDB_LOG_AST ::lldb_private::LLDBLog::AST
-
-Log *GetLogIfAllCategoriesSet(LLDBLog mask);
-
-Log *GetLogIfAnyCategoriesSet(LLDBLog mask);
-
 void InitializeLldbChannel();
 
 template <> Log::Channel &LogChannelFor<LLDBLog>();

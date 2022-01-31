@@ -51,7 +51,7 @@ bool ThreadPlanStepOverBreakpoint::DoPlanExplainsStop(Event *event_ptr) {
   if (stop_info_sp) {
     StopReason reason = stop_info_sp->GetStopReason();
 
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+    Log *log = GetLog(LLDBLog::Step);
     LLDB_LOG(log, "Step over breakpoint stopped for reason: {0}.",
              Thread::StopReasonAsString(reason));
 
@@ -134,7 +134,7 @@ bool ThreadPlanStepOverBreakpoint::MischiefManaged() {
     // didn't get a chance to run.
     return false;
   } else {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+    Log *log = GetLog(LLDBLog::Step);
     LLDB_LOGF(log, "Completed step over breakpoint plan.");
     // Otherwise, re-enable the breakpoint we were stepping over, and we're
     // done.

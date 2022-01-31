@@ -79,11 +79,3 @@ template <> Log::Channel &lldb_private::LogChannelFor<LLDBLog>() {
 void lldb_private::InitializeLldbChannel() {
   Log::Register("lldb", g_log_channel);
 }
-
-Log *lldb_private::GetLogIfAllCategoriesSet(LLDBLog mask) {
-  return GetLog(mask);
-}
-
-Log *lldb_private::GetLogIfAnyCategoriesSet(LLDBLog mask) {
-  return GetLog(mask);
-}

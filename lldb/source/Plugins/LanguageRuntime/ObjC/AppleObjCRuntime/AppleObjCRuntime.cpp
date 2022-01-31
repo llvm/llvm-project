@@ -504,7 +504,7 @@ ValueObjectSP AppleObjCRuntime::GetExceptionObjectForThread(
 ///         GetBacktraceThreadFromException.
 LLVM_NODISCARD
 static ThreadSP FailExceptionParsing(llvm::StringRef msg) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
   LLDB_LOG(log, "Failed getting backtrace from exception: {0}", msg);
   return ThreadSP();
 }

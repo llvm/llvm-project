@@ -169,7 +169,7 @@ Error UdtRecordCompleter::visitKnownMember(
             TypeSystemClang::SetIntegerInitializerForVariable(
                 decl, constant.Value.extOrTrunc(type_width));
           } else {
-            LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_AST),
+            LLDB_LOG(GetLog(LLDBLog::AST),
                      "Class '{0}' has a member '{1}' of type '{2}' ({3} bits) "
                      "which resolves to a wider constant value ({4} bits). "
                      "Ignoring constant.",
@@ -190,7 +190,7 @@ Error UdtRecordCompleter::visitKnownMember(
               decl->setConstexpr(true);
             } else {
               LLDB_LOG(
-                  GetLogIfAllCategoriesSet(LIBLLDB_LOG_AST),
+                  GetLog(LLDBLog::AST),
                   "Class '{0}' has a member '{1}' of type '{2}' ({3} bits) "
                   "which resolves to a constant value of mismatched width "
                   "({4} bits). Ignoring constant.",

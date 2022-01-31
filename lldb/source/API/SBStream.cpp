@@ -98,7 +98,7 @@ void SBStream::RedirectToFile(const char *path, bool append) {
   llvm::Expected<FileUP> file =
       FileSystem::Instance().Open(FileSpec(path), open_options);
   if (!file) {
-    LLDB_LOG_ERROR(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), file.takeError(),
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), file.takeError(),
                    "Cannot open {1}: {0}", path);
     return;
   }

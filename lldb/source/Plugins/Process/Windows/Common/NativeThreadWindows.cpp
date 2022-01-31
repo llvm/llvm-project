@@ -48,7 +48,7 @@ Status NativeThreadWindows::DoResume(lldb::StateType resume_state) {
     return Status();
 
   if (resume_state == eStateStepping) {
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+    Log *log = GetLog(LLDBLog::Thread);
 
     uint32_t flags_index =
         GetRegisterContext().ConvertRegisterKindToRegisterNumber(
@@ -118,7 +118,7 @@ void NativeThreadWindows::SetStopReason(ThreadStopInfo stop_info,
 
 bool NativeThreadWindows::GetStopReason(ThreadStopInfo &stop_info,
                                         std::string &description) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+  Log *log = GetLog(LLDBLog::Thread);
 
   switch (m_state) {
   case eStateStopped:

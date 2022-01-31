@@ -143,8 +143,7 @@ Searcher::CallbackReturn BreakpointResolverAddress::SearchCallback(
       if (bp_loc_sp && !breakpoint.IsInternal()) {
         StreamString s;
         bp_loc_sp->GetDescription(&s, lldb::eDescriptionLevelVerbose);
-        Log *log(
-            lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+        Log *log = GetLog(LLDBLog::Breakpoints);
         LLDB_LOGF(log, "Added location: %s\n", s.GetData());
       }
     } else {

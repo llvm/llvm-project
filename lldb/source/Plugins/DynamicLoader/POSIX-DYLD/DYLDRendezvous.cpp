@@ -34,7 +34,7 @@ DYLDRendezvous::DYLDRendezvous(Process *process)
 }
 
 addr_t DYLDRendezvous::ResolveRendezvousAddress() {
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   addr_t info_location;
   addr_t info_addr;
   Status error;
@@ -113,7 +113,7 @@ addr_t DYLDRendezvous::ResolveRendezvousAddress() {
 
 void DYLDRendezvous::UpdateExecutablePath() {
   if (m_process) {
-    Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+    Log *log = GetLog(LLDBLog::DynamicLoader);
     Module *exe_mod = m_process->GetTarget().GetExecutableModulePointer();
     if (exe_mod) {
       m_exe_file_spec = exe_mod->GetPlatformFileSpec();
@@ -129,7 +129,7 @@ void DYLDRendezvous::UpdateExecutablePath() {
 }
 
 bool DYLDRendezvous::Resolve() {
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
 
   const size_t word_size = 4;
   Rendezvous info;

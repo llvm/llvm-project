@@ -160,7 +160,7 @@ static Environment ComputeLaunchEnvironment(Environment target,
 lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
                                                Debugger &debugger,
                                                Target &target, Status &error) {
-  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
+  Log *log = GetLog(LLDBLog::Platform);
 
   FileSpec qemu = GetGlobalProperties().GetEmulatorPath();
   if (!qemu)

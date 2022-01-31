@@ -95,7 +95,7 @@ static int g_sighup_received_count = 0;
 static void sighup_handler(MainLoopBase &mainloop) {
   ++g_sighup_received_count;
 
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
   LLDB_LOGF(log, "lldb-server:%s swallowing SIGHUP (receive count=%d)",
             __FUNCTION__, g_sighup_received_count);
 

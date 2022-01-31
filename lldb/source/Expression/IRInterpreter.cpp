@@ -41,6 +41,7 @@
 #include <map>
 
 using namespace llvm;
+using lldb_private::LLDBLog;
 
 static std::string PrintValue(const Value *value, bool truncate = false) {
   std::string s;
@@ -325,8 +326,7 @@ public:
 
     m_values[value] = data_address;
 
-    lldb_private::Log *log(
-        lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+    lldb_private::Log *log(GetLog(LLDBLog::Expressions));
 
     if (log) {
       LLDB_LOGF(log, "Made an allocation for argument %s",
@@ -484,8 +484,7 @@ static bool CanResolveConstant(llvm::Constant *constant) {
 bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
                                  lldb_private::Status &error,
                                  const bool support_function_calls) {
-  lldb_private::Log *log(
-      lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  lldb_private::Log *log(GetLog(LLDBLog::Expressions));
 
   bool saw_function_with_body = false;
   for (Function &f : module) {
@@ -637,8 +636,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
                               lldb::addr_t stack_frame_bottom,
                               lldb::addr_t stack_frame_top,
                               lldb_private::ExecutionContext &exe_ctx) {
-  lldb_private::Log *log(
-      lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  lldb_private::Log *log(GetLog(LLDBLog::Expressions));
 
   if (log) {
     std::string s;

@@ -80,7 +80,7 @@ FileSpec GetSymbolFileSpec(const FileSpec &module_file_spec) {
 
 void DeleteExistingModule(const FileSpec &root_dir_spec,
                           const FileSpec &sysroot_module_path_spec) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES));
+  Log *log = GetLog(LLDBLog::Modules);
   UUID module_uuid;
   {
     auto module_sp =

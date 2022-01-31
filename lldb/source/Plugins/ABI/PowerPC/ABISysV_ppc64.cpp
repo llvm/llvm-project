@@ -80,7 +80,7 @@ ABISysV_ppc64::CreateInstance(lldb::ProcessSP process_sp,
 bool ABISysV_ppc64::PrepareTrivialCall(Thread &thread, addr_t sp,
                                        addr_t func_addr, addr_t return_addr,
                                        llvm::ArrayRef<addr_t> args) const {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (log) {
     StreamString s;
@@ -478,8 +478,7 @@ class ReturnValueExtractor {
     Type m_type;
     RegisterContext *m_reg_ctx;
     ByteOrder m_byte_order;
-    Log *m_log =
-        lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+    Log *m_log = GetLog(LLDBLog::Expressions);
   };
 
   Register GetGPR(uint32_t index) const {
@@ -555,7 +554,7 @@ private:
   int32_t m_src_offs = 0;
   int32_t m_dst_offs = 0;
   bool m_packed = false;
-  Log *m_log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+  Log *m_log = GetLog(LLDBLog::Expressions);
   RegisterContext *m_reg_ctx;
   ProcessSP m_process_sp;
   ByteOrder m_byte_order;
@@ -934,7 +933,7 @@ ABISysV_ppc64::GetReturnValueObjectSimple(Thread &thread,
 
   auto exp_extractor = ReturnValueExtractor::Create(thread, type);
   if (!exp_extractor) {
-    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+    Log *log = GetLog(LLDBLog::Expressions);
     LLDB_LOG_ERROR(log, exp_extractor.takeError(),
                    "Extracting return value failed: {0}");
     return ValueObjectSP();

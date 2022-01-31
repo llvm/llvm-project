@@ -1050,7 +1050,7 @@ PythonException::PythonException(const char *caller) {
       PyErr_Clear();
     }
   }
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT);
+  Log *log = GetLog(LLDBLog::Script);
   if (caller)
     LLDB_LOGF(log, "%s failed with exception: %s", caller, toCString());
   else

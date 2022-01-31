@@ -225,7 +225,7 @@ ThreadSP ThreadList::FindThreadByIndexID(uint32_t index_id, bool can_update) {
 bool ThreadList::ShouldStop(Event *event_ptr) {
   // Running events should never stop, obviously...
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
 
   // The ShouldStop method of the threads can do a whole lot of work, figuring
   // out whether the thread plan conditions are met.  So we don't want to keep
@@ -360,7 +360,7 @@ Vote ThreadList::ShouldReportStop(Event *event_ptr) {
   m_process->UpdateThreadListIfNeeded();
   collection::iterator pos, end = m_threads.end();
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
 
   LLDB_LOGF(log, "ThreadList::%s %" PRIu64 " threads", __FUNCTION__,
             (uint64_t)m_threads.size());
@@ -416,7 +416,7 @@ Vote ThreadList::ShouldReportRun(Event *event_ptr) {
   // Run through the threads and ask whether we should report this event. The
   // rule is NO vote wins over everything, a YES vote wins over no opinion.
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
 
   for (pos = m_threads.begin(); pos != end; ++pos) {
     if ((*pos)->GetResumeState() != eStateSuspended) {
@@ -460,7 +460,7 @@ void ThreadList::RefreshStateAfterStop() {
 
   m_process->UpdateThreadListIfNeeded();
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   if (log && log->GetVerbose())
     LLDB_LOGF(log,
               "Turning off notification of new threads while single stepping "
@@ -514,13 +514,13 @@ bool ThreadList::WillResume() {
   }
 
   if (wants_solo_run) {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+    Log *log = GetLog(LLDBLog::Step);
     if (log && log->GetVerbose())
       LLDB_LOGF(log, "Turning on notification of new threads while single "
                      "stepping a thread.");
     m_process->StartNoticingNewThreads();
   } else {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+    Log *log = GetLog(LLDBLog::Step);
     if (log && log->GetVerbose())
       LLDB_LOGF(log, "Turning off notification of new threads while single "
                      "stepping a thread.");

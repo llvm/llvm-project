@@ -106,7 +106,7 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
 
     func_decl->setParams(ArrayRef<ParmVarDecl *>(parm_var_decls));
   } else {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+    Log *log = GetLog(LLDBLog::Expressions);
 
     LLDB_LOG(log, "Function type wasn't a FunctionProtoType");
   }

@@ -169,7 +169,7 @@ StateType ThreadPlanRunToAddress::GetPlanRunState() { return eStateRunning; }
 bool ThreadPlanRunToAddress::WillStop() { return true; }
 
 bool ThreadPlanRunToAddress::MischiefManaged() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
 
   if (AtOurAddress()) {
     // Remove the breakpoint

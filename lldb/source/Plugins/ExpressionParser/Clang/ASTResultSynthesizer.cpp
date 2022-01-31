@@ -53,7 +53,7 @@ void ASTResultSynthesizer::Initialize(ASTContext &Context) {
 }
 
 void ASTResultSynthesizer::TransformTopLevelDecl(Decl *D) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (NamedDecl *named_decl = dyn_cast<NamedDecl>(D)) {
     if (log && log->GetVerbose()) {
@@ -112,7 +112,7 @@ bool ASTResultSynthesizer::HandleTopLevelDecl(DeclGroupRef D) {
 }
 
 bool ASTResultSynthesizer::SynthesizeFunctionResult(FunctionDecl *FunDecl) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (!m_sema)
     return false;
@@ -154,7 +154,7 @@ bool ASTResultSynthesizer::SynthesizeFunctionResult(FunctionDecl *FunDecl) {
 
 bool ASTResultSynthesizer::SynthesizeObjCMethodResult(
     ObjCMethodDecl *MethodDecl) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (!m_sema)
     return false;
@@ -198,7 +198,7 @@ bool ASTResultSynthesizer::SynthesizeObjCMethodResult(
 
 bool ASTResultSynthesizer::SynthesizeBodyResult(CompoundStmt *Body,
                                                 DeclContext *DC) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   ASTContext &Ctx(*m_ast_context);
 
@@ -407,7 +407,7 @@ void ASTResultSynthesizer::MaybeRecordPersistentType(TypeDecl *D) {
   if (name.size() == 0 || name[0] != '$')
     return;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   ConstString name_cs(name.str().c_str());
 
@@ -427,7 +427,7 @@ void ASTResultSynthesizer::RecordPersistentDecl(NamedDecl *D) {
   if (name.size() == 0)
     return;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   ConstString name_cs(name.str().c_str());
 
@@ -455,7 +455,7 @@ void ASTResultSynthesizer::CommitPersistentDecls() {
         &scratch_ctx->getASTContext(), decl);
 
     if (!D_scratch) {
-      Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+      Log *log = GetLog(LLDBLog::Expressions);
 
       if (log) {
         std::string s;

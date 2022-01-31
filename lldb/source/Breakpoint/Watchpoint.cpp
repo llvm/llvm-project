@@ -40,9 +40,8 @@ Watchpoint::Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
     auto type_system_or_err =
         target.GetScratchTypeSystemForLanguage(eLanguageTypeC);
     if (auto err = type_system_or_err.takeError()) {
-      LLDB_LOG_ERROR(
-          lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_WATCHPOINTS),
-          std::move(err), "Failed to set type.");
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Watchpoints), std::move(err),
+                     "Failed to set type.");
     } else {
       m_type = type_system_or_err->GetBuiltinTypeForEncodingAndBitSize(
           eEncodingUint, 8 * size);
