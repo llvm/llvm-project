@@ -5330,6 +5330,12 @@ InputInfoList Driver::BuildJobsForActionNoCache(
         A->getOffloadingDeviceKind(), TC->getTriple().normalize(),
         /*CreatePrefixForHost=*/!!A->getOffloadingHostActiveKinds() &&
             !AtTopLevel);
+    std::string TargetIDStr = TC->getTargetID();
+    if (!TargetIDStr.empty() && BoundArch.empty()) {
+      BoundArch = StringRef(TargetIDStr);
+      OffloadingPrefix.append("-").append(TargetIDStr);
+    }
+
     if (isa<OffloadWrapperJobAction>(JA)) {
         if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o))
           BaseInput = FinalOutput->getValue();
@@ -5340,9 +5346,6 @@ InputInfoList Driver::BuildJobsForActionNoCache(
         BaseInput = C.getArgs().MakeArgString(BaseNm + "-wrapper");
     }
 
-    std::string TargetIDStr = TC->getTargetID();
-    if (!TargetIDStr.empty() && BoundArch.empty())
-      BoundArch = StringRef(TargetIDStr);
     Result = InputInfo(A, GetNamedOutputPath(C, *JA, BaseInput, BoundArch,
                                              AtTopLevel, MultipleArchs,
                                              OffloadingPrefix),
@@ -5522,11 +5525,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
         llvm::sys::path::append(TmpName,
                                 Split.first + "-" + BoundArch + "." + Suffix);
       } else {
-        if (BoundArch.empty())
-          TmpName = GetTemporaryPath(Split.first, Suffix);
-        else
-          TmpName = GetTemporaryPath(Split.first,
-                                     SmallString<16>(BoundArch + "." + Suffix));
+        TmpName = GetTemporaryPath(Split.first, Suffix);
       }
     }
     return C.addTempFile(C.getArgs().MakeArgString(TmpName));

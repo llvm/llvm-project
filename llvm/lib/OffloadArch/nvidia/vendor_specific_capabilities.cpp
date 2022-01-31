@@ -20,7 +20,9 @@
 #include <vector>
 
 std::string getNVPTXCapabilities(uint16_t vid, uint16_t devid, std::string oa) {
-  std::string nvidia_capabilities;
+  std::string nvidia_capabilities(oa);
+#if 0
+  // This is how they could set requirements for specific version of nvidia driver
   std::string file_contents =
       getFileContents(std::string("/sys/module/nvidia/version"));
   if (!file_contents.empty()) {
@@ -29,8 +31,10 @@ std::string getNVPTXCapabilities(uint16_t vid, uint16_t devid, std::string oa) {
     char sbuf[16];
     sscanf(file_contents.c_str(), "%d.%d\n", &ver, &rel);
     snprintf(sbuf, 16, "v%d.%d", ver, rel);
+    nvidia_capabilities.append(":");
     nvidia_capabilities.append(sbuf);
   }
   // FIXME: Add capability for running cuda version
+#endif
   return nvidia_capabilities;
 }

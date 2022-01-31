@@ -5333,6 +5333,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add the target cpu
   std::string CPU = getCPUName(D, Args, Triple, /*FromAs*/ false);
+  // In case args have been translated and -march deleted, get GPU from TC
+  if (CPU.empty())
+    CPU = TC.getTargetID();
   if (!CPU.empty()) {
     CmdArgs.push_back("-target-cpu");
     CmdArgs.push_back(Args.MakeArgString(CPU));
@@ -8264,15 +8267,7 @@ void OffloadWrapper::ConstructJob(Compilation &C, const JobAction &JA,
 
       // FIXME: Add other architecture target ids here
       CmdArgs.push_back(Args.MakeArgString(OffloadArchs.c_str()));
-
-      auto FileStem = llvm::sys::path::stem(I.getFilename());
-      auto FileName = Twine(FileStem + "-" + TargetID +
-                            llvm::sys::path::extension(I.getFilename()))
-                          .str();
-      if (C.getDriver().isSaveTempsEnabled()) {
-        FileName.append(".out");
-      }
-      CmdArgs.push_back(Args.MakeArgString(FileName.c_str()));
+      CmdArgs.push_back(I.getFilename());
     }
   }
 
