@@ -236,8 +236,8 @@ define amdgpu_kernel void @nested_loop_conditions(i64 addrspace(1)* nocapture %a
 ; IR:       Flow1:
 ; IR-NEXT:    [[TMP11]] = phi <4 x i32> [ [[MY_TMP9:%.*]], [[BB21:%.*]] ], [ undef, [[BB14]] ]
 ; IR-NEXT:    [[TMP12]] = phi i32 [ [[MY_TMP10:%.*]], [[BB21]] ], [ undef, [[BB14]] ]
-; IR-NEXT:    [[TMP13:%.*]] = phi i1 [ [[TMP18:%.*]], [[BB21]] ], [ true, [[BB14]] ]
-; IR-NEXT:    [[TMP14]] = phi i1 [ [[TMP18]], [[BB21]] ], [ false, [[BB14]] ]
+; IR-NEXT:    [[TMP13:%.*]] = phi i1 [ [[MY_TMP12:%.*]], [[BB21]] ], [ true, [[BB14]] ]
+; IR-NEXT:    [[TMP14]] = phi i1 [ [[MY_TMP12]], [[BB21]] ], [ false, [[BB14]] ]
 ; IR-NEXT:    [[TMP15:%.*]] = phi i1 [ false, [[BB21]] ], [ true, [[BB14]] ]
 ; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP10]])
 ; IR-NEXT:    [[TMP16]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP13]], i64 [[PHI_BROKEN]])
@@ -262,8 +262,7 @@ define amdgpu_kernel void @nested_loop_conditions(i64 addrspace(1)* nocapture %a
 ; IR-NEXT:    [[MY_TMP9]] = load <4 x i32>, <4 x i32> addrspace(1)* [[MY_TMP8]], align 16
 ; IR-NEXT:    [[MY_TMP10]] = extractelement <4 x i32> [[MY_TMP9]], i64 0
 ; IR-NEXT:    [[MY_TMP11:%.*]] = load volatile i32, i32 addrspace(1)* undef
-; IR-NEXT:    [[MY_TMP12:%.*]] = icmp slt i32 [[MY_TMP11]], 9
-; IR-NEXT:    [[TMP18]] = xor i1 [[MY_TMP12]], true
+; IR-NEXT:    [[MY_TMP12]] = icmp sge i32 [[MY_TMP11]], 9
 ; IR-NEXT:    br label [[FLOW1]]
 ; IR:       Flow2:
 ; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP16]])
