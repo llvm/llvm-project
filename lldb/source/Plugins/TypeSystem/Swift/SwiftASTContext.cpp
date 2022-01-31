@@ -1846,6 +1846,22 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
     return {};
   }
 
+  if (swift_ast_sp->HasFatalErrors()) {
+    logError(swift_ast_sp->GetFatalErrors().AsCString());
+    return {};
+  }
+
+  {
+    LLDB_SCOPED_TIMERF("%s (getStdlibModule)", m_description.c_str());
+    const bool can_create = true;
+    swift::ModuleDecl *stdlib =
+        swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create);
+    if (!stdlib || IsDWARFImported(*stdlib)) {
+      logError("couldn't load the Swift stdlib");
+      return {};
+    }
+  }
+
   std::vector<std::string> module_names;
   swift_ast_sp->RegisterSectionModules(module, module_names);
   if (!module_names.size()) {
@@ -1865,17 +1881,6 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   if (swift_ast_sp->HasFatalErrors()) {
     logError(swift_ast_sp->GetFatalErrors().AsCString());
     return {};
-  }
-
-  {
-    LLDB_SCOPED_TIMERF("%s (getStdlibModule)", m_description.c_str());
-    const bool can_create = true;
-    swift::ModuleDecl *stdlib =
-        swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create);
-    if (!stdlib || IsDWARFImported(*stdlib)) {
-      logError("couldn't load the Swift stdlib");
-      return {};
-    }
   }
 
   return swift_ast_sp;
