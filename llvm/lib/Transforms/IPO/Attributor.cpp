@@ -436,6 +436,121 @@ bool AA::isAssumedReadNone(Attributor &A, const IRPosition &IRP,
                                      /* RequireReadNone */ true, IsKnown);
 }
 
+static bool
+isPotentiallyReachable(Attributor &A, const Instruction &FromI,
+                       const Instruction *ToI, const Function &ToFn,
+                       const AbstractAttribute &QueryingAA,
+                       std::function<bool(const Function &F)> GoBackwardsCB) {
+  LLVM_DEBUG(dbgs() << "[AA] isPotentiallyReachable @" << ToFn.getName()
+                    << " from " << FromI << " [GBCB: " << bool(GoBackwardsCB)
+                    << "]\n");
+
+  SmallPtrSet<const Instruction *, 8> Visited;
+  SmallVector<const Instruction *> Worklist;
+  Worklist.push_back(&FromI);
+
+  while (!Worklist.empty()) {
+    const Instruction *CurFromI = Worklist.pop_back_val();
+    if (!Visited.insert(CurFromI).second)
+      continue;
+
+    const Function *FromFn = CurFromI->getFunction();
+    if (FromFn == &ToFn) {
+      if (!ToI)
+        return true;
+      LLVM_DEBUG(dbgs() << "[AA] check " << *ToI << " from " << *CurFromI
+                        << " intraprocedurally\n");
+      const auto &ReachabilityAA = A.getAAFor<AAReachability>(
+          QueryingAA, IRPosition::function(ToFn), DepClassTy::OPTIONAL);
+      bool Result = ReachabilityAA.isAssumedReachable(A, *CurFromI, *ToI);
+      LLVM_DEBUG(dbgs() << "[AA] " << *CurFromI << " "
+                        << (Result ? "can potentially " : "cannot ") << "reach "
+                        << *ToI << " [Intra]\n");
+      if (Result)
+        return true;
+      continue;
+    }
+
+    // TODO: If we can go arbitrarily backwards we will eventually reach an
+    // entry point that can reach ToI. Only once this takes a set of blocks
+    // through which we cannot go, or once we track internal functions not
+    // accessible from the outside, it makes sense to perform backwards analysis
+    // in the absence of a GoBackwardsCB.
+    if (!GoBackwardsCB) {
+      LLVM_DEBUG(dbgs() << "[AA] check @" << ToFn.getName() << " from "
+                        << *CurFromI << " is not checked backwards, abort\n");
+      return true;
+    }
+
+    // Check if the current instruction is already known to reach the ToFn.
+    const auto &FnReachabilityAA = A.getAAFor<AAFunctionReachability>(
+        QueryingAA, IRPosition::function(*FromFn), DepClassTy::OPTIONAL);
+    bool Result = FnReachabilityAA.instructionCanReach(
+        A, *CurFromI, ToFn, /* UseBackwards */ false);
+    LLVM_DEBUG(dbgs() << "[AA] " << *CurFromI << " in @" << FromFn->getName()
+                      << " " << (Result ? "can potentially " : "cannot ")
+                      << "reach @" << ToFn.getName() << " [FromFn]\n");
+    if (Result)
+      return true;
+
+    // If we do not go backwards from the FromFn we are done here and so far we
+    // could not find a way to reach ToFn/ToI.
+    if (!GoBackwardsCB(*FromFn))
+      continue;
+
+    LLVM_DEBUG(dbgs() << "Stepping backwards to the call sites of @"
+                      << FromFn->getName() << "\n");
+
+    auto CheckCallSite = [&](AbstractCallSite ACS) {
+      CallBase *CB = ACS.getInstruction();
+      if (!CB)
+        return false;
+
+      if (isa<InvokeInst>(CB))
+        return false;
+
+      Instruction *Inst = CB->getNextNonDebugInstruction();
+      Worklist.push_back(Inst);
+      return true;
+    };
+
+    bool AllCallSitesKnown;
+    Result = !A.checkForAllCallSites(CheckCallSite, *FromFn,
+                                     /* RequireAllCallSites */ true,
+                                     &QueryingAA, AllCallSitesKnown);
+    if (Result) {
+      LLVM_DEBUG(dbgs() << "[AA] stepping back to call sites from " << *CurFromI
+                        << " in @" << FromFn->getName()
+                        << " failed, give up\n");
+      return true;
+    }
+
+    LLVM_DEBUG(dbgs() << "[AA] stepped back to call sites from " << *CurFromI
+                      << " in @" << FromFn->getName()
+                      << " worklist size is: " << Worklist.size() << "\n");
+  }
+  return false;
+}
+
+bool AA::isPotentiallyReachable(
+    Attributor &A, const Instruction &FromI, const Instruction &ToI,
+    const AbstractAttribute &QueryingAA,
+    std::function<bool(const Function &F)> GoBackwardsCB) {
+  LLVM_DEBUG(dbgs() << "[AA] isPotentiallyReachable " << ToI << " from "
+                    << FromI << " [GBCB: " << bool(GoBackwardsCB) << "]\n");
+  const Function *ToFn = ToI.getFunction();
+  return ::isPotentiallyReachable(A, FromI, &ToI, *ToFn, QueryingAA,
+                                  GoBackwardsCB);
+}
+
+bool AA::isPotentiallyReachable(
+    Attributor &A, const Instruction &FromI, const Function &ToFn,
+    const AbstractAttribute &QueryingAA,
+    std::function<bool(const Function &F)> GoBackwardsCB) {
+  return ::isPotentiallyReachable(A, FromI, /* ToI */ nullptr, ToFn, QueryingAA,
+                                  GoBackwardsCB);
+}
+
 /// Return true if \p New is equal or worse than \p Old.
 static bool isEqualOrWorse(const Attribute &New, const Attribute &Old) {
   if (!Old.isIntAttribute())
@@ -1464,9 +1579,11 @@ void Attributor::runTillFixpoint() {
         InvalidAA->Deps.pop_back();
         AbstractAttribute *DepAA = cast<AbstractAttribute>(Dep.getPointer());
         if (Dep.getInt() == unsigned(DepClassTy::OPTIONAL)) {
+          LLVM_DEBUG(dbgs() << " - recompute: " << *DepAA);
           Worklist.insert(DepAA);
           continue;
         }
+        LLVM_DEBUG(dbgs() << " - invalidate: " << *DepAA);
         DepAA->getState().indicatePessimisticFixpoint();
         assert(DepAA->getState().isAtFixpoint() && "Expected fixpoint state!");
         if (!DepAA->getState().isValidState())

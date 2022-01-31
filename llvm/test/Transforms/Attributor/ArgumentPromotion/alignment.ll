@@ -76,7 +76,7 @@ define i32 @callercaller() {
 ; CHECK-LABEL: define {{[^@]+}}@callercaller
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    ret i32 3
+; CHECK-NEXT:    ret i32 undef
 ;
   %B = alloca i32
   store i32 2, i32* %B

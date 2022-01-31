@@ -217,6 +217,24 @@ bool isAssumedReadOnly(Attributor &A, const IRPosition &IRP,
 bool isAssumedReadNone(Attributor &A, const IRPosition &IRP,
                        const AbstractAttribute &QueryingAA, bool &IsKnown);
 
+/// Return true if \p ToI is potentially reachable from \p FromI. The two
+/// instructions do not need to be in the same function. \p GoBackwardsCB
+/// can be provided to convey domain knowledge about the "lifespan" the user is
+/// interested in. By default, the callers of \p FromI are checked as well to
+/// determine if \p ToI can be reached. If the query is not interested in
+/// callers beyond a certain point, e.g., a GPU kernel entry or the function
+/// containing an alloca, the \p GoBackwardsCB should return false.
+bool isPotentiallyReachable(
+    Attributor &A, const Instruction &FromI, const Instruction &ToI,
+    const AbstractAttribute &QueryingAA,
+    std::function<bool(const Function &F)> GoBackwardsCB = nullptr);
+
+/// Same as above but it is sufficient to reach any instruction in \p ToFn.
+bool isPotentiallyReachable(
+    Attributor &A, const Instruction &FromI, const Function &ToFn,
+    const AbstractAttribute &QueryingAA,
+    std::function<bool(const Function &F)> GoBackwardsCB);
+
 } // namespace AA
 
 /// The value passed to the line option that defines the maximal initialization
@@ -4636,11 +4654,12 @@ struct AAFunctionReachability
   /// If the function represented by this possition can reach \p Fn.
   virtual bool canReach(Attributor &A, const Function &Fn) const = 0;
 
-  /// Can \p CB reach \p Fn
+  /// Can \p CB reach \p Fn.
   virtual bool canReach(Attributor &A, CallBase &CB,
                         const Function &Fn) const = 0;
 
-  /// Can  \p Inst reach \p Fn
+  /// Can  \p Inst reach \p Fn.
+  /// See also AA::isPotentiallyReachable.
   virtual bool instructionCanReach(Attributor &A, const Instruction &Inst,
                                    const Function &Fn,
                                    bool UseBackwards = true) const = 0;
