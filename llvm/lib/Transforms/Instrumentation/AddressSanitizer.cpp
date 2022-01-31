@@ -1527,22 +1527,22 @@ void AddressSanitizer::getInterestingMemoryOperands(
     return;
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
-    if (!ClInstrumentReads || ignoreAccess(LI, LI->getPointerOperand()))
+    if (!ClInstrumentReads || ignoreAccess(I, LI->getPointerOperand()))
       return;
     Interesting.emplace_back(I, LI->getPointerOperandIndex(), false,
                              LI->getType(), LI->getAlign());
   } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
-    if (!ClInstrumentWrites || ignoreAccess(LI, SI->getPointerOperand()))
+    if (!ClInstrumentWrites || ignoreAccess(I, SI->getPointerOperand()))
       return;
     Interesting.emplace_back(I, SI->getPointerOperandIndex(), true,
                              SI->getValueOperand()->getType(), SI->getAlign());
   } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(I)) {
-    if (!ClInstrumentAtomics || ignoreAccess(LI, RMW->getPointerOperand()))
+    if (!ClInstrumentAtomics || ignoreAccess(I, RMW->getPointerOperand()))
       return;
     Interesting.emplace_back(I, RMW->getPointerOperandIndex(), true,
                              RMW->getValOperand()->getType(), None);
   } else if (AtomicCmpXchgInst *XCHG = dyn_cast<AtomicCmpXchgInst>(I)) {
-    if (!ClInstrumentAtomics || ignoreAccess(LI, XCHG->getPointerOperand()))
+    if (!ClInstrumentAtomics || ignoreAccess(I, XCHG->getPointerOperand()))
       return;
     Interesting.emplace_back(I, XCHG->getPointerOperandIndex(), true,
                              XCHG->getCompareOperand()->getType(), None);
@@ -1556,7 +1556,7 @@ void AddressSanitizer::getInterestingMemoryOperands(
         return;
 
       auto BasePtr = CI->getOperand(OpOffset);
-      if (ignoreAccess(LI, BasePtr))
+      if (ignoreAccess(I, BasePtr))
         return;
       Type *Ty = IsWrite ? CI->getArgOperand(0)->getType() : CI->getType();
       MaybeAlign Alignment = Align(1);
@@ -1568,7 +1568,7 @@ void AddressSanitizer::getInterestingMemoryOperands(
     } else {
       for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ArgNo++) {
         if (!ClInstrumentByval || !CI->isByValArgument(ArgNo) ||
-            ignoreAccess(LI, CI->getArgOperand(ArgNo)))
+            ignoreAccess(I, CI->getArgOperand(ArgNo)))
           continue;
         Type *Ty = CI->getParamByValType(ArgNo);
         Interesting.emplace_back(I, ArgNo, false, Ty, Align(1));
