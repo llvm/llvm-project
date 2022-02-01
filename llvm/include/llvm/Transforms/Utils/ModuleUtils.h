@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include <utility> // for std::pair
 
 namespace llvm {
@@ -105,6 +106,10 @@ void filterDeadComdatFunctions(
 /// semantic effect if it performs global initialization), we cannot produce a
 /// unique identifier for this module, so we return the empty string.
 std::string getUniqueModuleId(Module *M);
+
+/// Embed the memory buffer \p Buf into the module \p M as a global using the
+/// specified section name.
+void embedBufferInModule(Module &M, MemoryBufferRef Buf, StringRef SectionName);
 
 class CallInst;
 namespace VFABI {

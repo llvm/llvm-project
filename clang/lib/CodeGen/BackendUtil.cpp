@@ -84,6 +84,7 @@
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
 #include <memory>
@@ -1775,6 +1776,6 @@ void clang::EmbedObject(llvm::Module *M, const CodeGenOptions &CGOpts,
 
     SmallString<128> SectionName(
         {".llvm.offloading.", std::get<1>(FilenameAndSection)});
-    llvm::EmbedBufferInModule(*M, **ObjectOrErr, SectionName);
+    llvm::embedBufferInModule(*M, **ObjectOrErr, SectionName);
   }
 }
