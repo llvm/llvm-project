@@ -501,7 +501,7 @@ Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
   // Create a new file to write the linked device image to.
   SmallString<128> TempFile;
   if (std::error_code EC = sys::fs::createTemporaryFile(
-          TheTriple.getArchName() + "-" + Arch, "cubin", TempFile))
+          "lto-" + TheTriple.getArchName() + "-" + Arch, "cubin", TempFile))
     return createFileError(TempFile, EC);
   TempFiles.push_back(static_cast<std::string>(TempFile));
 
@@ -576,6 +576,50 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles,
   return static_cast<std::string>(TempFile);
 }
 } // namespace nvptx
+namespace amdgcn {
+Expected<std::string> link(ArrayRef<std::string> InputFiles,
+                           ArrayRef<std::string> LinkerArgs, Triple TheTriple,
+                           StringRef Arch) {
+  // AMDGPU uses the lld binary to link device object files.
+  ErrorOr<std::string> LLDPath =
+      sys::findProgramByName("lld", sys::path::parent_path(LinkerExecutable));
+  if (!LLDPath)
+    LLDPath = sys::findProgramByName("lld");
+  if (!LLDPath)
+    return createStringError(LLDPath.getError(),
+                             "Unable to find 'lld' in path");
+
+  // Create a new file to write the linked device image to.
+  SmallString<128> TempFile;
+  if (std::error_code EC = sys::fs::createTemporaryFile(
+          TheTriple.getArchName() + "-" + Arch + "-image", "out", TempFile))
+    return createFileError(TempFile, EC);
+  TempFiles.push_back(static_cast<std::string>(TempFile));
+
+  SmallVector<StringRef, 16> CmdArgs;
+  CmdArgs.push_back(*LLDPath);
+  CmdArgs.push_back("-flavor");
+  CmdArgs.push_back("gnu");
+  CmdArgs.push_back("--no-undefined");
+  CmdArgs.push_back("-shared");
+  CmdArgs.push_back("-o");
+  CmdArgs.push_back(TempFile);
+
+  // Copy system library paths used by the host linker.
+  for (StringRef Arg : LinkerArgs)
+    if (Arg.startswith("-L"))
+      CmdArgs.push_back(Arg);
+
+  // Add extracted input files.
+  for (StringRef Input : InputFiles)
+    CmdArgs.push_back(Input);
+
+  if (sys::ExecuteAndWait(*LLDPath, CmdArgs))
+    return createStringError(inconvertibleErrorCode(), "'lld' failed");
+
+  return static_cast<std::string>(TempFile);
+}
+} // namespace amdgcn
 
 Expected<std::string> linkDevice(ArrayRef<std::string> InputFiles,
                                  ArrayRef<std::string> LinkerArgs,
@@ -585,7 +629,7 @@ Expected<std::string> linkDevice(ArrayRef<std::string> InputFiles,
   case Triple::nvptx64:
     return nvptx::link(InputFiles, LinkerArgs, TheTriple, Arch);
   case Triple::amdgcn:
-    // TODO: AMDGCN linking support.
+    return amdgcn::link(InputFiles, LinkerArgs, TheTriple, Arch);
   case Triple::x86:
   case Triple::x86_64:
     // TODO: x86 linking support.
