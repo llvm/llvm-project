@@ -54,13 +54,21 @@ New Features
   added. This is useful for building libc++ in an embedded setting, and it adds itself to the various
   freestanding-friendly options provided by libc++.
 
-- ``_LIBCPP_DEBUG`` equals to ``1`` enables the randomization of unspecified
-  behavior of standard algorithms (e.g. equal elements in ``std::sort`` or
-  randomization of both sides of partition for ``std::nth_element``)
+- Defining ``_LIBCPP_DEBUG`` to ``1`` enables the randomization of unspecified
+  behavior in standard algorithms (e.g. the ordering of equal elements in ``std::sort``, or
+  the ordering of both sides of the partition in ``std::nth_element``).
 
 - Floating-point support for ``std::to_chars`` support has been added.
   Thanks to Stephan T. Lavavej and Microsoft for providing their implementation
   to libc++.
+
+- The C++20 ``<coroutine>`` implementation has been completed.
+
+- More C++20 features have been implemented. :doc:`Status/Cxx20` has the full
+  overview of libc++'s C++20 implementation status.
+
+- More C++2b features have been implemented. :doc:`Status/Cxx2b` has the full
+  overview of libc++'s C++2b implementation status.
 
 API Changes
 -----------
@@ -127,6 +135,11 @@ API Changes
   the behavior to shrink, even though that makes ``std::basic_string::reserve()`` not
   a synonym for ``std::basic_string::reserve(0)`` in any Standard mode anymore.
 
+- The ``<experimental/coroutine>`` header is deprecated, as is any
+  use of coroutines without C++20. Use C++20's ``<coroutine>`` header
+  instead. The ``<experimental/coroutine>`` header will be removed
+  in LLVM 15.
+
 ABI Changes
 -----------
 
@@ -165,13 +178,13 @@ Build System Changes
   Consider using a Bootstrapping build to build libc++ with a fresh Clang if you
   can't use the system compiler to build libc++ anymore.
 
-- Historically, there has been numerous ways of building libc++ and libc++abi. This has
-  culminated in over 5 different ways to build the runtimes, which made it impossible to
-  maintain with a good level of support. Starting with this release, the runtimes support
+- Historically, there have been numerous ways of building libc++ and libc++abi. This has
+  led to at least 5 different ways to build the runtimes, which was impossible to
+  maintain with a good level of support. Starting with this release, libc++ and libc++abi support
   exactly two ways of being built, which should cater to all use-cases. Furthermore,
   these builds are as lightweight as possible and will work consistently even when targeting
-  embedded platforms, which used not to be the case. Please see the documentation on building
-  libc++ to see those two ways of building and migrate over to the appropriate build instructions
+  embedded platforms, which used not to be the case. :doc:`BuildingLibcxx` describes
+  those two ways of building. Please migrate over to the appropriate build instructions
   as soon as possible.
 
   All other ways to build are deprecated and will not be supported in the next release.
@@ -206,8 +219,8 @@ Build System Changes
 
       -DLLVM_RUNTIME_TARGETS=i386-unknown-linux
 
-- Libc++, libc++abi and libunwind will not be built with ``-fPIC`` by default anymore.
-  If you want to build those runtimes with position independent code, please specify
+- Libc++, libc++abi, and libunwind will not be built with ``-fPIC`` by default anymore.
+  If you want to build those runtimes with position-independent code, please specify
   ``-DCMAKE_POSITION_INDEPENDENT_CODE=ON`` explicitly when configuring the build, or
   ``-DRUNTIMES_<target-name>_CMAKE_POSITION_INDEPENDENT_CODE=ON`` if using the
   bootstrapping build.
