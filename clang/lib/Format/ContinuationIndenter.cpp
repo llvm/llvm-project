@@ -1817,8 +1817,8 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
       ContentStartsOnNewline || (NewCode->find('\n') != std::string::npos);
   if (IsMultiline) {
     // Break before further function parameters on all levels.
-    for (unsigned i = 0, e = State.Stack.size(); i != e; ++i)
-      State.Stack[i].BreakBeforeParameter = true;
+    for (ParenState &Paren : State.Stack)
+      Paren.BreakBeforeParameter = true;
   }
   return Fixes.second + PrefixExcessCharacters * Style.PenaltyExcessCharacter;
 }
@@ -1826,8 +1826,8 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
 unsigned ContinuationIndenter::addMultilineToken(const FormatToken &Current,
                                                  LineState &State) {
   // Break before further function parameters on all levels.
-  for (unsigned i = 0, e = State.Stack.size(); i != e; ++i)
-    State.Stack[i].BreakBeforeParameter = true;
+  for (ParenState &Paren : State.Stack)
+    Paren.BreakBeforeParameter = true;
 
   unsigned ColumnsUsed = State.Column;
   // We can only affect layout of the first and the last line, so the penalty
@@ -2380,8 +2380,8 @@ ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
     // the next parameter on all levels, so that the next parameter is clearly
     // visible. Line comments already introduce a break.
     if (Current.isNot(TT_LineComment)) {
-      for (unsigned i = 0, e = State.Stack.size(); i != e; ++i)
-        State.Stack[i].BreakBeforeParameter = true;
+      for (ParenState &Paren : State.Stack)
+        Paren.BreakBeforeParameter = true;
     }
 
     if (Current.is(TT_BlockComment))

@@ -687,9 +687,9 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
   } while (Tok->Tok.isNot(tok::eof) && !LBraceStack.empty());
 
   // Assume other blocks for all unclosed opening braces.
-  for (unsigned i = 0, e = LBraceStack.size(); i != e; ++i) {
-    if (LBraceStack[i]->is(BK_Unknown))
-      LBraceStack[i]->setBlockKind(BK_Block);
+  for (FormatToken *LBrace : LBraceStack) {
+    if (LBrace->is(BK_Unknown))
+      LBrace->setBlockKind(BK_Block);
   }
 
   FormatTok = Tokens->setPosition(StoredPosition);
