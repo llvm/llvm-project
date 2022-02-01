@@ -83,7 +83,7 @@ namespace __begin {
 
     void operator()(auto&&) const = delete;
   };
-}
+} // namespace __begin
 
 inline namespace __cpo {
   inline constexpr auto begin = __begin::__fn{};
@@ -150,7 +150,7 @@ namespace __end {
 
     void operator()(auto&&) const = delete;
   };
-}
+} // namespace __end
 
 inline namespace __cpo {
   inline constexpr auto end = __end::__fn{};
@@ -178,7 +178,7 @@ namespace __cbegin {
       -> decltype(      ranges::begin(static_cast<const _Tp&&>(__t)))
       { return          ranges::begin(static_cast<const _Tp&&>(__t)); }
   };
-}
+} // namespace __cbegin
 
 inline namespace __cpo {
   inline constexpr auto cbegin = __cbegin::__fn{};
@@ -206,7 +206,7 @@ namespace __cend {
       -> decltype(      ranges::end(static_cast<const _Tp&&>(__t)))
       { return          ranges::end(static_cast<const _Tp&&>(__t)); }
   };
-}
+} // namespace __cend
 
 inline namespace __cpo {
   inline constexpr auto cend = __cend::__fn{};

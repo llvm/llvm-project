@@ -68,7 +68,7 @@ namespace __empty {
       return ranges::begin(__t) == ranges::end(__t);
     }
   };
-}
+} // namespace __empty
 
 inline namespace __cpo {
   inline constexpr auto empty = __empty::__fn{};

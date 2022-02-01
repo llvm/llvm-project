@@ -1664,7 +1664,7 @@ __func<_Fp, _Alloc, _Rp(_A0, _A1, _A2)>::target_type() const
 
 #endif // _LIBCPP_NO_RTTI
 
-}  // __function
+} // namespace __function
 
 template<class _Rp>
 class _LIBCPP_TEMPLATE_VIS function<_Rp()>

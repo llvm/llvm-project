@@ -120,11 +120,11 @@ namespace __common {
       -> decltype(      common_view{_VSTD::forward<_Range>(__range)})
       { return          common_view{_VSTD::forward<_Range>(__range)}; }
   };
-}
+} // namespace __common
 
 inline namespace __cpo {
   inline constexpr auto common = __common::__fn{};
-}
+} // namespace __cpo
 } // namespace views
 } // namespace ranges
 

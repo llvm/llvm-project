@@ -1252,7 +1252,7 @@ template <class _Tp, class... _Types>
 using __best_match_t =
     typename invoke_result_t<_MakeOverloads<_Types...>, _Tp, _Tp>::type;
 
-} // __variant_detail
+} // namespace __variant_detail
 
 template <class... _Types>
 class _LIBCPP_TEMPLATE_VIS variant

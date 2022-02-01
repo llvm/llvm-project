@@ -397,7 +397,7 @@ namespace __iota {
 
 inline namespace __cpo {
   inline constexpr auto iota = __iota::__fn{};
-}
+} // namespace __cpo
 } // namespace views
 } // namespace ranges
 
