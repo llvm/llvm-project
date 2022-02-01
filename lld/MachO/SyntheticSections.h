@@ -62,6 +62,8 @@ public:
     align = target->wordSize;
   }
 
+  // Implementations of this method can assume that the regular (non-__LINKEDIT)
+  // sections already have their addresses assigned.
   virtual void finalizeContents() {}
 
   // Sections in __LINKEDIT are special: their offsets are recorded in the

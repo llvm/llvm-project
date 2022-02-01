@@ -81,9 +81,8 @@ public:
       notFounds.insert(path.str());
   }
 
-  // Writes the dependencies to specified path.
-  // The content is sorted by its Op Code, then within each section,
-  // alphabetical order.
+  // Writes the dependencies to specified path. The content is first sorted by
+  // OpCode and then by the filename (in alphabetical order).
   void write(llvm::StringRef version,
              const llvm::SetVector<InputFile *> &inputs,
              llvm::StringRef output);
