@@ -170,7 +170,7 @@ struct __is_std_span : false_type {};
 template <class _Tp, size_t _Sz>
 struct __is_std_span<span<_Tp, _Sz>> : true_type {};
 
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 template <class _Range, class _ElementType>
 concept __span_compatible_range =
   ranges::contiguous_range<_Range> &&
@@ -234,7 +234,7 @@ public:
       _LIBCPP_ASSERT(__last - __first == _Extent,
                      "invalid range in span's constructor (iterator, sentinel): last - first != extent");
     }
-#endif
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
     _LIBCPP_INLINE_VISIBILITY constexpr span(type_identity_t<element_type> (&__arr)[_Extent]) noexcept : __data{__arr} {}
 
@@ -248,13 +248,13 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     constexpr span(const array<_OtherElementType, _Extent>& __arr) noexcept : __data{__arr.data()} {}
 
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
     template <__span_compatible_range<element_type> _Range>
     _LIBCPP_INLINE_VISIBILITY
     constexpr explicit span(_Range&& __r) : __data{ranges::data(__r)} {
       _LIBCPP_ASSERT(ranges::size(__r) == _Extent, "size mismatch in span's constructor (range)");
     }
-#endif
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
     template <class _OtherElementType>
     _LIBCPP_INLINE_VISIBILITY
@@ -418,7 +418,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     constexpr span(_It __first, _End __last)
         : __data(_VSTD::to_address(__first)), __size(__last - __first) {}
-#endif
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
     template <size_t _Sz>
     _LIBCPP_INLINE_VISIBILITY
@@ -434,11 +434,11 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     constexpr span(const array<_OtherElementType, _Sz>& __arr) noexcept : __data{__arr.data()}, __size{_Sz} {}
 
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
     template <__span_compatible_range<element_type> _Range>
     _LIBCPP_INLINE_VISIBILITY
     constexpr span(_Range&& __r) : __data(ranges::data(__r)), __size{ranges::size(__r)} {}
-#  endif
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
     template <class _OtherElementType, size_t _OtherExtent>
     _LIBCPP_INLINE_VISIBILITY
@@ -565,10 +565,9 @@ auto as_writable_bytes(span<_Tp, _Extent> __s) noexcept
 { return __s.__as_writable_bytes(); }
 
 #if !defined(_LIBCPP_HAS_NO_CONCEPTS)
-//  Deduction guides
 template<contiguous_iterator _It, class _EndOrSize>
     span(_It, _EndOrSize) -> span<remove_reference_t<iter_reference_t<_It>>>;
-#endif
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 template<class _Tp, size_t _Sz>
     span(_Tp (&)[_Sz]) -> span<_Tp, _Sz>;
@@ -579,7 +578,7 @@ template<class _Tp, size_t _Sz>
 template<class _Tp, size_t _Sz>
     span(const array<_Tp, _Sz>&) -> span<const _Tp, _Sz>;
 
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 template<ranges::contiguous_range _Range>
     span(_Range&&) -> span<remove_reference_t<ranges::range_reference_t<_Range>>>;
 #endif

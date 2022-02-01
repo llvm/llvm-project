@@ -294,9 +294,9 @@ public:
     {
       _LIBCPP_ASSERT((__end - __begin) >= 0, "std::string_view::string_view(iterator, sentinel) received invalid range");
     }
-#endif
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
-#if _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
     template <class _Range>
       requires (
         !is_same_v<remove_cvref_t<_Range>, basic_string_view> &&
@@ -720,10 +720,10 @@ inline constexpr bool ranges::enable_borrowed_range<basic_string_view<_CharT, _T
 #if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 template <contiguous_iterator _It, sized_sentinel_for<_It> _End>
   basic_string_view(_It, _End) -> basic_string_view<iter_value_t<_It>>;
-#endif
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 
-#if _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 template <ranges::contiguous_range _Range>
   basic_string_view(_Range) -> basic_string_view<ranges::range_value_t<_Range>>;
 #endif

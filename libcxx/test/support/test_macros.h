@@ -243,10 +243,6 @@
 #define LIBCPP_ONLY(...) static_assert(true, "")
 #endif
 
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
-#define TEST_SUPPORTS_RANGES
-#endif
-
 #define TEST_IGNORE_NODISCARD (void)
 
 namespace test_macros_detail {

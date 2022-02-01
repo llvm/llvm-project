@@ -491,7 +491,8 @@ private:
     const T *current_;
 };
 
-#ifdef TEST_SUPPORTS_RANGES
+#if TEST_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+
 template <class It>
 class cpp20_input_iterator
 {
@@ -676,7 +677,8 @@ private:
     difference_type stride_count_ = 0;
     difference_type stride_displacement_ = 0;
 };
-#endif // TEST_SUPPORTS_RANGES
+
+#endif // TEST_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 #if TEST_STD_VER > 17
 template <class It>
