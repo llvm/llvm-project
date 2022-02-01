@@ -4502,7 +4502,7 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
       // Determine the number of scalars we need to generate for each unroll
       // iteration. If the instruction is uniform, we only need to generate the
       // first lane. Otherwise, we generate all VF values.
-      bool IsUniform = Cost->isUniformAfterVectorization(P, State.VF);
+      bool IsUniform = vputils::onlyFirstLaneUsed(PhiR);
       assert((IsUniform || !State.VF.isScalable()) &&
              "Cannot scalarize a scalable VF");
       unsigned Lanes = IsUniform ? 1 : State.VF.getFixedValue();
