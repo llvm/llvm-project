@@ -53,7 +53,7 @@ def PDLInterp_Dialect : Dialect {
 //===----------------------------------------------------------------------===//
 
 // Generic interpreter operation.
-class PDLInterp_Op<string mnemonic, list<OpTrait> traits = []> :
+class PDLInterp_Op<string mnemonic, list<Trait> traits = []> :
     Op<PDLInterp_Dialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
@@ -61,7 +61,7 @@ class PDLInterp_Op<string mnemonic, list<OpTrait> traits = []> :
 
 // Check operations evaluate a predicate on a positional value and then
 // conditionally branch on the result.
-class PDLInterp_PredicateOp<string mnemonic, list<OpTrait> traits = []> :
+class PDLInterp_PredicateOp<string mnemonic, list<Trait> traits = []> :
     PDLInterp_Op<mnemonic, !listconcat([Terminator], traits)> {
   let successors = (successor AnySuccessor:$trueDest, AnySuccessor:$falseDest);
 }
@@ -71,7 +71,7 @@ class PDLInterp_PredicateOp<string mnemonic, list<OpTrait> traits = []> :
 
 // Switch operations evaluate a predicate on a positional value and then
 // conditionally branch on the result.
-class PDLInterp_SwitchOp<string mnemonic, list<OpTrait> traits = []> :
+class PDLInterp_SwitchOp<string mnemonic, list<Trait> traits = []> :
     PDLInterp_Op<mnemonic, !listconcat([Terminator], traits)> {
   let successors = (successor AnySuccessor:$defaultDest,
                               VariadicSuccessor<AnySuccessor>:$cases);

@@ -20,7 +20,7 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 //===----------------------------------------------------------------------===//
 
 // Base class for all OpenCL ops.
-class SPV_OCLOp<string mnemonic, int opcode, list<OpTrait> traits = []> :
+class SPV_OCLOp<string mnemonic, int opcode, list<Trait> traits = []> :
   SPV_ExtInstOp<mnemonic, "OCL", "OpenCL.std", opcode, traits> {
 
   let availability = [
@@ -33,7 +33,7 @@ class SPV_OCLOp<string mnemonic, int opcode, list<OpTrait> traits = []> :
 
 // Base class for OpenCL unary ops.
 class SPV_OCLUnaryOp<string mnemonic, int opcode, Type resultType,
-                     Type operandType, list<OpTrait> traits = []> :
+                     Type operandType, list<Trait> traits = []> :
   SPV_OCLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
 
   let arguments = (ins
@@ -54,12 +54,12 @@ class SPV_OCLUnaryOp<string mnemonic, int opcode, Type resultType,
 // Base class for OpenCL Unary arithmetic ops where return type matches
 // the operand type.
 class SPV_OCLUnaryArithmeticOp<string mnemonic, int opcode, Type type,
-                               list<OpTrait> traits = []> :
+                               list<Trait> traits = []> :
   SPV_OCLUnaryOp<mnemonic, opcode, type, type, traits>;
 
 // Base class for OpenCL binary ops.
 class SPV_OCLBinaryOp<string mnemonic, int opcode, Type resultType,
-                      Type operandType, list<OpTrait> traits = []> :
+                      Type operandType, list<Trait> traits = []> :
   SPV_OCLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
 
   let arguments = (ins
@@ -81,7 +81,7 @@ class SPV_OCLBinaryOp<string mnemonic, int opcode, Type resultType,
 // Base class for OpenCL Binary arithmetic ops where operand types and
 // return type matches.
 class SPV_OCLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
-                                list<OpTrait> traits = []> :
+                                list<Trait> traits = []> :
   SPV_OCLBinaryOp<mnemonic, opcode, type, type, traits>;
 
 // -----

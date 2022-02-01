@@ -25,7 +25,7 @@ def MemRefTypeAttr
   let constBuilderCall = "::mlir::TypeAttr::get($0)";
 }
 
-class MemRef_Op<string mnemonic, list<OpTrait> traits = []>
+class MemRef_Op<string mnemonic, list<Trait> traits = []>
     : Op<MemRef_Dialect, mnemonic, traits> {
   let printer = [{ return ::print(p, *this); }];
   let verifier = [{ return ::verify(*this); }];
@@ -42,7 +42,7 @@ class MemRef_Op<string mnemonic, list<OpTrait> traits = []>
 //
 class AllocLikeOp<string mnemonic,
                   Resource resource,
-                  list<OpTrait> traits = []> :
+                  list<Trait> traits = []> :
     MemRef_Op<mnemonic,
     !listconcat([
       AttrSizedOperandSegments
@@ -1166,7 +1166,7 @@ def MemRef_ReshapeOp: MemRef_Op<"reshape", [
 // ExpandShapeOp / CollapseShapeOp
 //===----------------------------------------------------------------------===//
 
-class MemRef_ReassociativeReshapeOp<string mnemonic, list<OpTrait> traits = []> :
+class MemRef_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
     MemRef_Op<mnemonic, !listconcat(traits,
       [NoSideEffect, ViewLikeOpInterface])>,
     Arguments<(ins AnyStridedMemRef:$src, IndexListArrayAttr:$reassociation)>,

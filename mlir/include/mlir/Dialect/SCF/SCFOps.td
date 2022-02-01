@@ -25,7 +25,7 @@ def SCF_Dialect : Dialect {
 }
 
 // Base class for SCF dialect ops.
-class SCF_Op<string mnemonic, list<OpTrait> traits = []> :
+class SCF_Op<string mnemonic, list<Trait> traits = []> :
     Op<SCF_Dialect, mnemonic, traits> {
   // For every standard op, there needs to be a:
   //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)

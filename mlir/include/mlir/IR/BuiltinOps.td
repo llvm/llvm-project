@@ -25,7 +25,7 @@ include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // Base class for Builtin dialect ops.
-class Builtin_Op<string mnemonic, list<OpTrait> traits = []> :
+class Builtin_Op<string mnemonic, list<Trait> traits = []> :
     Op<Builtin_Dialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
