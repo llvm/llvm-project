@@ -357,7 +357,7 @@ typedef DenseMap<BasicBlock *, CloneList> DuplicateBlockMap;
 
 // This map keeps track of all the new definitions for an instruction. This
 // information is needed when restoring SSA form after cloning blocks.
-typedef DenseMap<Instruction *, std::vector<Instruction *>> DefMap;
+typedef MapVector<Instruction *, std::vector<Instruction *>> DefMap;
 
 inline raw_ostream &operator<<(raw_ostream &OS, const PathType &Path) {
   OS << "< ";
@@ -1126,6 +1126,9 @@ private:
   /// Add new value mappings to the DefMap to keep track of all new definitions
   /// for a particular instruction. These will be used while updating SSA form.
   void updateDefMap(DefMap &NewDefs, ValueToValueMapTy &VMap) {
+    SmallVector<std::pair<Instruction *, Instruction *>> NewDefsVector;
+    NewDefsVector.reserve(VMap.size());
+
     for (auto Entry : VMap) {
       Instruction *Inst =
           dyn_cast<Instruction>(const_cast<Value *>(Entry.first));
@@ -1138,11 +1141,18 @@ private:
       if (!Cloned)
         continue;
 
-      if (NewDefs.find(Inst) == NewDefs.end())
-        NewDefs[Inst] = {Cloned};
-      else
-        NewDefs[Inst].push_back(Cloned);
+      NewDefsVector.push_back({Inst, Cloned});
     }
+
+    // Sort the defs to get deterministic insertion order into NewDefs.
+    sort(NewDefsVector, [](const auto &LHS, const auto &RHS) {
+      if (LHS.first == RHS.first)
+        return LHS.second->comesBefore(RHS.second);
+      return LHS.first->comesBefore(RHS.first);
+    });
+
+    for (const auto &KV : NewDefsVector)
+      NewDefs[KV.first].push_back(KV.second);
   }
 
   /// Update the last branch of a particular cloned path to point to the correct
