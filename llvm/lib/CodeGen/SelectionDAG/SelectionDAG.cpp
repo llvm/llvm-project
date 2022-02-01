@@ -2449,7 +2449,7 @@ SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &DemandedBits,
   switch (V.getOpcode()) {
   default:
     return TLI->SimplifyMultipleUseDemandedBits(V, DemandedBits, DemandedElts,
-                                                *this, 0);
+                                                *this);
   case ISD::Constant: {
     const APInt &CVal = cast<ConstantSDNode>(V)->getAPIntValue();
     APInt NewVal = CVal & DemandedBits;
