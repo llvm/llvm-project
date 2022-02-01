@@ -210,7 +210,6 @@ public:
   SizeOffsetType visitConstantPointerNull(ConstantPointerNull&);
   SizeOffsetType visitExtractElementInst(ExtractElementInst &I);
   SizeOffsetType visitExtractValueInst(ExtractValueInst &I);
-  SizeOffsetType visitGEPOperator(GEPOperator &GEP);
   SizeOffsetType visitGlobalAlias(GlobalAlias &GA);
   SizeOffsetType visitGlobalVariable(GlobalVariable &GV);
   SizeOffsetType visitIntToPtrInst(IntToPtrInst&);
@@ -221,6 +220,7 @@ public:
   SizeOffsetType visitInstruction(Instruction &I);
 
 private:
+  SizeOffsetType computeImpl(Value *V);
   bool CheckedZextOrTrunc(APInt &I);
 };
 
