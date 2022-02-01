@@ -999,10 +999,11 @@ bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
 
 void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
   VSETVLIInfo CurInfo;
-  // BBLocalInfo tracks the VL/VTYPE state way BBInfo.Change was calculated in
-  // computeIncomingVLVTYPE. We need this to apply canSkipVSETVLIForLoadStore
-  // the same way computeIncomingVLVTYPE did. We can't include predecessor
-  // information in that decision to avoid disagreeing with the global analysis.
+  // BBLocalInfo tracks the VL/VTYPE state the same way BBInfo.Change was
+  // calculated in computeIncomingVLVTYPE. We need this to apply
+  // canSkipVSETVLIForLoadStore the same way computeIncomingVLVTYPE did. We
+  // can't include predecessor information in that decision to avoid disagreeing
+  // with the global analysis.
   VSETVLIInfo BBLocalInfo;
   // Only be set if current VSETVLIInfo is from an explicit VSET(I)VLI.
   MachineInstr *PrevVSETVLIMI = nullptr;
