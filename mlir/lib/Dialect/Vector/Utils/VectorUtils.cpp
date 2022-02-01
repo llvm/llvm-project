@@ -10,14 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Vector/VectorUtils.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
+
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Operation.h"
@@ -62,26 +63,6 @@ SmallVector<int64_t, 4> mlir::computeStrides(ArrayRef<int64_t> shape,
   for (int64_t r = rank - 2; r >= 0; --r)
     sliceStrides[r] = sliceStrides[r + 1] * sliceDimCounts[r + 1];
   return sliceStrides;
-}
-
-int64_t mlir::linearize(ArrayRef<int64_t> offsets, ArrayRef<int64_t> basis) {
-  assert(offsets.size() == basis.size());
-  int64_t linearIndex = 0;
-  for (unsigned idx = 0, e = basis.size(); idx < e; ++idx)
-    linearIndex += offsets[idx] * basis[idx];
-  return linearIndex;
-}
-
-SmallVector<int64_t, 4> mlir::delinearize(ArrayRef<int64_t> sliceStrides,
-                                          int64_t index) {
-  int64_t rank = sliceStrides.size();
-  SmallVector<int64_t, 4> vectorOffsets(rank);
-  for (int64_t r = 0; r < rank; ++r) {
-    assert(sliceStrides[r] > 0);
-    vectorOffsets[r] = index / sliceStrides[r];
-    index %= sliceStrides[r];
-  }
-  return vectorOffsets;
 }
 
 SmallVector<int64_t, 4> mlir::computeElementOffsetsFromVectorSliceOffsets(
@@ -233,25 +214,6 @@ AffineMap mlir::makePermutationMap(
   return makePermutationMap(op->getBlock(), indices, loopToVectorDim);
 }
 
-AffineMap mlir::getTransferMinorIdentityMap(ShapedType shapedType,
-                                            VectorType vectorType) {
-  int64_t elementVectorRank = 0;
-  VectorType elementVectorType =
-      shapedType.getElementType().dyn_cast<VectorType>();
-  if (elementVectorType)
-    elementVectorRank += elementVectorType.getRank();
-  // 0-d transfers are to/from tensor<t>/memref<t> and vector<1xt>.
-  // TODO: replace once we have 0-d vectors.
-  if (shapedType.getRank() == 0 &&
-      vectorType.getShape() == ArrayRef<int64_t>{1})
-    return AffineMap::get(
-        /*numDims=*/0, /*numSymbols=*/0,
-        getAffineConstantExpr(0, shapedType.getContext()));
-  return AffineMap::getMinorIdentityMap(
-      shapedType.getRank(), vectorType.getRank() - elementVectorRank,
-      shapedType.getContext());
-}
-
 bool matcher::operatesOnSuperVectorsOf(Operation &op,
                                        VectorType subVectorType) {
   // First, extract the vector type and distinguish between:
@@ -303,72 +265,4 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
   // the vector type (but we would have to look at the compute and distinguish
   // between parallel, reduction and possibly other cases.
   return ratio.hasValue();
-}
-
-bool mlir::isDisjointTransferIndices(VectorTransferOpInterface transferA,
-                                     VectorTransferOpInterface transferB) {
-  // For simplicity only look at transfer of same type.
-  if (transferA.getVectorType() != transferB.getVectorType())
-    return false;
-  unsigned rankOffset = transferA.getLeadingShapedRank();
-  for (unsigned i = 0, e = transferA.indices().size(); i < e; i++) {
-    auto indexA = transferA.indices()[i].getDefiningOp<arith::ConstantOp>();
-    auto indexB = transferB.indices()[i].getDefiningOp<arith::ConstantOp>();
-    // If any of the indices are dynamic we cannot prove anything.
-    if (!indexA || !indexB)
-      continue;
-
-    if (i < rankOffset) {
-      // For leading dimensions, if we can prove that index are different we
-      // know we are accessing disjoint slices.
-      if (indexA.getValue().cast<IntegerAttr>().getInt() !=
-          indexB.getValue().cast<IntegerAttr>().getInt())
-        return true;
-    } else {
-      // For this dimension, we slice a part of the memref we need to make sure
-      // the intervals accessed don't overlap.
-      int64_t distance =
-          std::abs(indexA.getValue().cast<IntegerAttr>().getInt() -
-                   indexB.getValue().cast<IntegerAttr>().getInt());
-      if (distance >= transferA.getVectorType().getDimSize(i - rankOffset))
-        return true;
-    }
-  }
-  return false;
-}
-
-bool mlir::isDisjointTransferSet(VectorTransferOpInterface transferA,
-                                 VectorTransferOpInterface transferB) {
-  if (transferA.source() != transferB.source())
-    return false;
-  return isDisjointTransferIndices(transferA, transferB);
-}
-
-bool mlir::checkSameValueRAW(vector::TransferWriteOp defWrite,
-                             vector::TransferReadOp read) {
-  return !defWrite.hasOutOfBoundsDim() && !defWrite.mask() && !read.mask() &&
-         defWrite.indices() == read.indices() &&
-         defWrite.getVectorType() == read.getVectorType() &&
-         defWrite.permutation_map() == read.permutation_map();
-}
-
-bool mlir::checkSameValueWAW(vector::TransferWriteOp write,
-                             vector::TransferWriteOp priorWrite) {
-  return priorWrite.indices() == write.indices() &&
-         priorWrite.mask() == write.mask() &&
-         priorWrite.getVectorType() == write.getVectorType() &&
-         priorWrite.permutation_map() == write.permutation_map();
-}
-
-SmallVector<int64_t, 4> mlir::getI64SubArray(ArrayAttr arrayAttr,
-                                             unsigned dropFront,
-                                             unsigned dropBack) {
-  assert(arrayAttr.size() > dropFront + dropBack && "Out of bounds");
-  auto range = arrayAttr.getAsRange<IntegerAttr>();
-  SmallVector<int64_t, 4> res;
-  res.reserve(arrayAttr.size() - dropFront - dropBack);
-  for (auto it = range.begin() + dropFront, eit = range.end() - dropBack;
-       it != eit; ++it)
-    res.push_back((*it).getValue().getSExtValue());
-  return res;
 }
