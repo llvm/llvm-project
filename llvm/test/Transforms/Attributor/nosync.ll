@@ -444,7 +444,7 @@ declare float @llvm.cos(float %val) readnone
 ; TEST 19 - positive, readnone & non-convergent intrinsic.
 
 define i32 @cos_test(float %x) {
-; CHECK: Function Attrs: nofree nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; CHECK-LABEL: define {{[^@]+}}@cos_test
 ; CHECK-SAME: (float [[X:%.*]]) #[[ATTR15:[0-9]+]] {
 ; CHECK-NEXT:    ret i32 4
@@ -454,13 +454,13 @@ define i32 @cos_test(float %x) {
 }
 
 define float @cos_test2(float %x) {
-; NOT_CGSCC_OPM: Function Attrs: nofree nosync nounwind readnone willreturn
+; NOT_CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@cos_test2
 ; NOT_CGSCC_OPM-SAME: (float [[X:%.*]]) #[[ATTR15]] {
 ; NOT_CGSCC_OPM-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]]) #[[ATTR21:[0-9]+]]
 ; NOT_CGSCC_OPM-NEXT:    ret float [[C]]
 ;
-; IS__CGSCC_OPM: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@cos_test2
 ; IS__CGSCC_OPM-SAME: (float [[X:%.*]]) #[[ATTR15]] {
 ; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]]) #[[ATTR22:[0-9]+]]
@@ -485,9 +485,9 @@ define float @cos_test2(float %x) {
 ; NOT_CGSCC_OPM: attributes #[[ATTR12:[0-9]+]] = { convergent readnone }
 ; NOT_CGSCC_OPM: attributes #[[ATTR13]] = { readnone }
 ; NOT_CGSCC_OPM: attributes #[[ATTR14]] = { nounwind }
-; NOT_CGSCC_OPM: attributes #[[ATTR15]] = { nofree nosync nounwind readnone willreturn }
+; NOT_CGSCC_OPM: attributes #[[ATTR15]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; NOT_CGSCC_OPM: attributes #[[ATTR16:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
-; NOT_CGSCC_OPM: attributes #[[ATTR17:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
+; NOT_CGSCC_OPM: attributes #[[ATTR17:[0-9]+]] = { nocallback nofree nosync nounwind readnone speculatable willreturn }
 ; NOT_CGSCC_OPM: attributes #[[ATTR18]] = { nofree nounwind }
 ; NOT_CGSCC_OPM: attributes #[[ATTR19]] = { willreturn }
 ; NOT_CGSCC_OPM: attributes #[[ATTR20]] = { willreturn writeonly }
@@ -508,9 +508,9 @@ define float @cos_test2(float %x) {
 ; IS__CGSCC_OPM: attributes #[[ATTR12:[0-9]+]] = { convergent readnone }
 ; IS__CGSCC_OPM: attributes #[[ATTR13]] = { readnone }
 ; IS__CGSCC_OPM: attributes #[[ATTR14]] = { nounwind }
-; IS__CGSCC_OPM: attributes #[[ATTR15]] = { nofree nosync nounwind readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR15]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR16:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
-; IS__CGSCC_OPM: attributes #[[ATTR17:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR17:[0-9]+]] = { nocallback nofree nosync nounwind readnone speculatable willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR18]] = { nofree nounwind }
 ; IS__CGSCC_OPM: attributes #[[ATTR19]] = { nounwind willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR20]] = { willreturn }

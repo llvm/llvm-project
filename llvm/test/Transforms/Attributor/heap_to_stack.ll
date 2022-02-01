@@ -854,14 +854,14 @@ define void @test16d(i8 %v, i8** %P) {
 ; IS________OPM: attributes #[[ATTR1:[0-9]+]] = { nofree nosync willreturn }
 ; IS________OPM: attributes #[[ATTR2:[0-9]+]] = { nofree nounwind }
 ; IS________OPM: attributes #[[ATTR3]] = { noreturn }
-; IS________OPM: attributes #[[ATTR4:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn }
+; IS________OPM: attributes #[[ATTR4:[0-9]+]] = { argmemonly nocallback nofree nosync nounwind willreturn }
 ; IS________OPM: attributes #[[ATTR5]] = { nounwind }
 ;.
 ; IS________NPM: attributes #[[ATTR0:[0-9]+]] = { nounwind willreturn }
 ; IS________NPM: attributes #[[ATTR1:[0-9]+]] = { nofree nosync willreturn }
 ; IS________NPM: attributes #[[ATTR2:[0-9]+]] = { nofree nounwind }
 ; IS________NPM: attributes #[[ATTR3]] = { noreturn }
-; IS________NPM: attributes #[[ATTR4:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn }
+; IS________NPM: attributes #[[ATTR4:[0-9]+]] = { argmemonly nocallback nofree nosync nounwind willreturn }
 ; IS________NPM: attributes #[[ATTR5:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
 ; IS________NPM: attributes #[[ATTR6]] = { nounwind }
 ;.

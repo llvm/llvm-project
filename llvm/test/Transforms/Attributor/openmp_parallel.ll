@@ -288,7 +288,7 @@ attributes #2 = { nounwind }
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind uwtable }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { alwaysinline nofree norecurse nounwind uwtable }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { argmemonly nocallback nofree nosync nounwind willreturn }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META1:![0-9]+]] = !{!2}
