@@ -336,6 +336,9 @@ void __kmpc_barrier(IdentTy *Loc, int32_t TId) {
   if (mapping::isMainThreadInGenericMode())
     return __kmpc_flush(Loc);
 
+  if (mapping::isSPMDMode())
+    return __kmpc_barrier_simple_spmd(Loc, TId);
+
   impl::namedBarrier();
 }
 
