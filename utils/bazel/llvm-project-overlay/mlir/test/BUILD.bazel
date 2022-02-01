@@ -400,7 +400,6 @@ cc_library(
         "//mlir:LinalgTransforms",
         "//mlir:MemRefDialect",
         "//mlir:Pass",
-        "//mlir:SCFBufferizableOpInterfaceImpl",
         "//mlir:SCFDialect",
         "//mlir:SCFTransforms",
         "//mlir:StandardOps",

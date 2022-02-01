@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRSCFTransforms
+  BufferizableOpInterfaceImpl.cpp
   Bufferize.cpp
   ForToWhile.cpp
   LoopCanonicalization.cpp
@@ -20,6 +21,7 @@ add_mlir_dialect_library(MLIRSCFTransforms
   MLIRAffine
   MLIRAffineAnalysis
   MLIRArithmetic
+  MLIRBufferization
   MLIRBufferizationTransforms
   MLIRDialectUtils
   MLIRIR

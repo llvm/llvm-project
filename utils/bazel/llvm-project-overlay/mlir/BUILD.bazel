@@ -1782,6 +1782,7 @@ cc_library(
         "lib/Dialect/SCF/Transforms/*.h",
     ]),
     hdrs = [
+        "include/mlir/Dialect/SCF/BufferizableOpInterfaceImpl.h",
         "include/mlir/Dialect/SCF/Passes.h",
         "include/mlir/Dialect/SCF/Transforms.h",
     ],
@@ -2435,6 +2436,7 @@ cc_library(
             "include/mlir/Dialect/SCF/*.h",
         ],
         exclude = [
+            "include/mlir/Dialect/SCF/BufferizableOpInterfaceImpl.h",
             "include/mlir/Dialect/SCF/Transforms.h",
         ],
     ),
@@ -6657,25 +6659,6 @@ cc_library(
 )
 
 cc_library(
-    name = "SCFBufferizableOpInterfaceImpl",
-    srcs = [
-        "lib/Dialect/Linalg/ComprehensiveBufferize/SCFInterfaceImpl.cpp",
-    ],
-    hdrs = [
-        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/SCFInterfaceImpl.h",
-    ],
-    includes = ["include"],
-    deps = [
-        ":BufferizationDialect",
-        ":BufferizationTransforms",
-        ":IR",
-        ":SCFDialect",
-        ":Support",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
     name = "StdBufferizableOpInterfaceImpl",
     srcs = [
         "lib/Dialect/Linalg/ComprehensiveBufferize/StdInterfaceImpl.cpp",
@@ -6928,7 +6911,6 @@ cc_library(
         ":MemRefDialect",
         ":ModuleBufferization",
         ":Pass",
-        ":SCFBufferizableOpInterfaceImpl",
         ":SCFDialect",
         ":SCFTransforms",
         ":SCFUtils",
