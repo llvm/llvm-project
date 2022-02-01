@@ -360,3 +360,10 @@
 // NEW_DRIVER: "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[DEVICE_ASM]]"], output: "[[DEVICE_OBJ:.+]]" 
 // NEW_DRIVER: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[HOST_BC]]", "[[DEVICE_OBJ]]"], output: "[[HOST_OBJ:.+]]" 
 // NEW_DRIVER: "x86_64-unknown-linux-gnu" - "[[LINKER:.+]]", inputs: ["[[HOST_OBJ]]"], output: "openmp-offload-gpu"
+
+// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvida-cuda -march=sm_70 \
+// RUN:          --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-new-nvptx-test.bc \
+// RUN:          -fopenmp-new-driver -no-canonical-prefixes -nogpulib %s -o openmp-offload-gpu 2>&1 \
+// RUN:   | FileCheck -check-prefix=NEW_DRIVER_EMBEDDING %s
+
+// NEW_DRIVER_EMBEDDING: -fembed-offload-object=[[CUBIN:.*\.cubin]],nvptx64-nvidia-cuda.sm_70
