@@ -26,10 +26,10 @@ namespace {
 
 using ::testing::UnorderedElementsAreArray;
 
-auto CreateExpectedSymbolDetails = [](const std::string &name,
-                                      const std::string &container,
+auto CreateExpectedSymbolDetails = [](const std::string &Name,
+                                      const std::string &Container,
                                       const std::string &USR) {
-  return SymbolDetails{name, container, USR, SymbolID(USR)};
+  return SymbolDetails{Name, Container, USR, SymbolID(USR)};
 };
 
 TEST(SymbolInfoTests, All) {

@@ -1,9 +1,7 @@
 // RUN: mlir-opt %s -convert-linalg-to-loops -convert-vector-to-scf='full-unroll=true' -lower-affine -convert-scf-to-std -convert-vector-to-llvm -convert-memref-to-llvm  -convert-std-to-llvm='use-bare-ptr-memref-call-conv=1' -convert-arith-to-llvm -reconcile-unrealized-casts |\
-// RUN: mlir-translate --mlir-to-llvmir
-
-// TODO: Reactivate the following, it produces the right result but somehow a return error code 2 or 10 sneaks in.
-// R-UN: %lli --entry-function=entry --mattr="avx512f" --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext
-// R-UN: FileCheck %s
+// RUN: mlir-translate --mlir-to-llvmir |\
+// RUN: %lli --entry-function=entry --mattr="avx512f" --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext |\
+// RUN: FileCheck %s
 
 module {
 
@@ -12,7 +10,7 @@ module {
     dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : tensor<16 x i32>)
       : !llvm.array<16 x i32>
 
-  llvm.func @entry() {
+  llvm.func @entry() -> i32 {
     %c0 = llvm.mlir.constant(0 : index) : i64
 
     %1 = llvm.mlir.addressof @const16 : !llvm.ptr<array<16 x i32>>
@@ -36,7 +34,8 @@ module {
     %v9 = vector.extract %v[9]: vector<16xi32>
     vector.print %v9 : i32
 
-    llvm.return
+    %i0 = arith.constant 0 : i32
+    llvm.return %i0 : i32
   }
 }
 

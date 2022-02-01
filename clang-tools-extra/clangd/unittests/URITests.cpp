@@ -23,9 +23,9 @@ namespace {
 
 using ::testing::AllOf;
 
-MATCHER_P(Scheme, S, "") { return arg.scheme() == S; }
-MATCHER_P(Authority, A, "") { return arg.authority() == A; }
-MATCHER_P(Body, B, "") { return arg.body() == B; }
+MATCHER_P(scheme, S, "") { return arg.scheme() == S; }
+MATCHER_P(authority, A, "") { return arg.authority() == A; }
+MATCHER_P(body, B, "") { return arg.body() == B; }
 
 std::string createOrDie(llvm::StringRef AbsolutePath,
                         llvm::StringRef Scheme = "file") {
@@ -43,10 +43,10 @@ URI parseOrDie(llvm::StringRef Uri) {
 }
 
 TEST(PercentEncodingTest, Encode) {
-  EXPECT_EQ(URI("x", /*Authority=*/"", "a/b/c").toString(), "x:a/b/c");
-  EXPECT_EQ(URI("x", /*Authority=*/"", "a!b;c~").toString(), "x:a%21b%3Bc~");
-  EXPECT_EQ(URI("x", /*Authority=*/"", "a123b").toString(), "x:a123b");
-  EXPECT_EQ(URI("x", /*Authority=*/"", "a:b;c").toString(), "x:a:b%3Bc");
+  EXPECT_EQ(URI("x", /*authority=*/"", "a/b/c").toString(), "x:a/b/c");
+  EXPECT_EQ(URI("x", /*authority=*/"", "a!b;c~").toString(), "x:a%21b%3Bc~");
+  EXPECT_EQ(URI("x", /*authority=*/"", "a123b").toString(), "x:a123b");
+  EXPECT_EQ(URI("x", /*authority=*/"", "a:b;c").toString(), "x:a:b%3Bc");
 }
 
 TEST(PercentEncodingTest, Decode) {
@@ -94,32 +94,32 @@ TEST(URITest, FailedCreate) {
 
 TEST(URITest, Parse) {
   EXPECT_THAT(parseOrDie("file://auth/x/y/z"),
-              AllOf(Scheme("file"), Authority("auth"), Body("/x/y/z")));
+              AllOf(scheme("file"), authority("auth"), body("/x/y/z")));
 
   EXPECT_THAT(parseOrDie("file://au%3dth/%28x%29/y/%5c%20z"),
-              AllOf(Scheme("file"), Authority("au=th"), Body("/(x)/y/\\ z")));
+              AllOf(scheme("file"), authority("au=th"), body("/(x)/y/\\ z")));
 
   EXPECT_THAT(parseOrDie("file:///%28x%29/y/%5c%20z"),
-              AllOf(Scheme("file"), Authority(""), Body("/(x)/y/\\ z")));
+              AllOf(scheme("file"), authority(""), body("/(x)/y/\\ z")));
   EXPECT_THAT(parseOrDie("file:///x/y/z"),
-              AllOf(Scheme("file"), Authority(""), Body("/x/y/z")));
+              AllOf(scheme("file"), authority(""), body("/x/y/z")));
   EXPECT_THAT(parseOrDie("file:"),
-              AllOf(Scheme("file"), Authority(""), Body("")));
+              AllOf(scheme("file"), authority(""), body("")));
   EXPECT_THAT(parseOrDie("file:///x/y/z%2"),
-              AllOf(Scheme("file"), Authority(""), Body("/x/y/z%2")));
+              AllOf(scheme("file"), authority(""), body("/x/y/z%2")));
   EXPECT_THAT(parseOrDie("http://llvm.org"),
-              AllOf(Scheme("http"), Authority("llvm.org"), Body("")));
+              AllOf(scheme("http"), authority("llvm.org"), body("")));
   EXPECT_THAT(parseOrDie("http://llvm.org/"),
-              AllOf(Scheme("http"), Authority("llvm.org"), Body("/")));
+              AllOf(scheme("http"), authority("llvm.org"), body("/")));
   EXPECT_THAT(parseOrDie("http://llvm.org/D"),
-              AllOf(Scheme("http"), Authority("llvm.org"), Body("/D")));
+              AllOf(scheme("http"), authority("llvm.org"), body("/D")));
   EXPECT_THAT(parseOrDie("http:/"),
-              AllOf(Scheme("http"), Authority(""), Body("/")));
+              AllOf(scheme("http"), authority(""), body("/")));
   EXPECT_THAT(parseOrDie("urn:isbn:0451450523"),
-              AllOf(Scheme("urn"), Authority(""), Body("isbn:0451450523")));
+              AllOf(scheme("urn"), authority(""), body("isbn:0451450523")));
   EXPECT_THAT(
       parseOrDie("file:///c:/windows/system32/"),
-      AllOf(Scheme("file"), Authority(""), Body("/c:/windows/system32/")));
+      AllOf(scheme("file"), authority(""), body("/c:/windows/system32/")));
 }
 
 TEST(URITest, ParseFailed) {
