@@ -906,9 +906,8 @@ bool DAGCombiner::isSetCCEquivalent(SDValue N, SDValue &LHS, SDValue &RHS,
     return true;
   }
 
-  if (N.getOpcode() != ISD::SELECT_CC ||
-      !TLI.isConstTrueVal(N.getOperand(2).getNode()) ||
-      !TLI.isConstFalseVal(N.getOperand(3).getNode()))
+  if (N.getOpcode() != ISD::SELECT_CC || !TLI.isConstTrueVal(N.getOperand(2)) ||
+      !TLI.isConstFalseVal(N.getOperand(3)))
     return false;
 
   if (TLI.getBooleanContents(N.getValueType()) ==
@@ -8035,8 +8034,8 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   // fold !(x cc y) -> (x !cc y)
   unsigned N0Opcode = N0.getOpcode();
   SDValue LHS, RHS, CC;
-  if (TLI.isConstTrueVal(N1.getNode()) &&
-      isSetCCEquivalent(N0, LHS, RHS, CC, /*MatchStrict*/true)) {
+  if (TLI.isConstTrueVal(N1) &&
+      isSetCCEquivalent(N0, LHS, RHS, CC, /*MatchStrict*/ true)) {
     ISD::CondCode NotCC = ISD::getSetCCInverse(cast<CondCodeSDNode>(CC)->get(),
                                                LHS.getValueType());
     if (!LegalOperations ||
