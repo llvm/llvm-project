@@ -21,7 +21,7 @@ namespace llvm {
 bool canPeel(Loop *L);
 
 bool peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI, ScalarEvolution *SE,
-              DominatorTree *DT, AssumptionCache *AC, bool PreserveLCSSA);
+              DominatorTree &DT, AssumptionCache *AC, bool PreserveLCSSA);
 
 TargetTransformInfo::PeelingPreferences
 gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
