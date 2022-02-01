@@ -12,11 +12,11 @@ Section,Description,Dependencies,Assignee,Complete
 | `iter_difference_t <https://llvm.org/D99863>`_",,Christopher Di Bella,✅
 `[iterator.traits] <https://wg21.link/iterator.traits>`_,`Updates to iterator_traits <https://llvm.org/D99855>`_,"| indirectly_readable_traits
 | incrementable_traits",Christopher Di Bella,✅
-`[special.mem.concepts] <https://wg21.link/special.mem.concepts>`_,"| `nothrow-input-iterator <https://llvm.org/TODO>`_
-| `nothrow-sentinel-for <https://llvm.org/TODO>`_
-| `nothrow-input-range <https://llvm.org/TODO>`_
-| `nothrow-forward-iterator <https://llvm.org/TODO>`_
-| `nothrow-forward-range <https://llvm.org/TODO>`_","| [iterator.concepts]
+`[special.mem.concepts] <https://wg21.link/special.mem.concepts>`_,"| `nothrow-input-iterator <https://llvm.org/D114761>`_
+| `nothrow-sentinel-for <https://llvm.org/D114761>`_
+| `nothrow-input-range <https://llvm.org/D114761>`_
+| `nothrow-forward-iterator <https://llvm.org/D114761>`_
+| `nothrow-forward-range <https://llvm.org/D114761>`_","| [iterator.concepts]
 | [range.refinements]",Konstantin Varlamov,✅
 `[specialized.algorithms] <https://wg21.link/specialized.algorithms>`_,"| `ranges::uninitialized_default_construct <https://llvm.org/D115315>`_
 | `ranges::uninitialized_default_construct_n <https://llvm.org/D115315>`_
@@ -142,9 +142,9 @@ Section,Description,Dependencies,Assignee,Complete
 `[range.ref.view] <https://wg21.link/range.ref.view>`_,`ref_view <https://llvm.org/D102020>`_,[view.interface],Zoe Carver,✅
 `[range.filter] <https://wg21.link/range.filter>`_,`filter_view <https://llvm.org/D109086>`_,[range.all],Louis Dionne,Under review
 `[range.transform] <https://wg21.link/range.transform>`_,`transform_view <https://llvm.org/D103056>`_,[range.all],Zoe Carver,✅
-`[range.take] <https://wg21.link/range.take>`_,take_view,[range.all],Zoe Carver,✅
-`[range.join] <https://wg21.link/range.join>`_,join_view,[range.all],Zoe Carver,✅
-`[range.split] <https://wg21.link/range.split>`_,split_view,[range.all],Zoe Carver,In progress
-`[range.counted] <https://wg21.link/range.counted>`_,view::counted,[range.subrange],Zoe Carver,✅
-`[range.common] <https://wg21.link/range.common>`_,common_view,[range.all],Zoe Carver,✅
-`[range.reverse] <https://wg21.link/range.reverse>`_,reverse_view,[range.all],Zoe Carver,✅
+`[range.take] <https://wg21.link/range.take>`_,`take_view <https://llvm.org/D106507>`,[range.all],Zoe Carver,✅
+`[range.join] <https://wg21.link/range.join>`_,`join_view <https://llvm.org/D107671>`,[range.all],Zoe Carver,✅
+`[range.split] <https://wg21.link/range.split>`_,`split_view <https://llvm.org/D107500>`,[range.all],Zoe Carver,In progress
+`[range.counted] <https://wg21.link/range.counted>`_,`view::counted <https://llvm.org/D106923>`,[range.subrange],Zoe Carver,✅
+`[range.common] <https://wg21.link/range.common>`_,`common_view <https://llvm.org/D105753>`,[range.all],Zoe Carver,✅
+`[range.reverse] <https://wg21.link/range.reverse>`_,`reverse_view <https://llvm.org/D107096>`,[range.all],Zoe Carver,✅
