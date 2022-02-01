@@ -1402,4 +1402,126 @@ define i32 @deep_or2(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %x, i32 %y) {
   ret i32 %sel
 }
 
+; This test is trying to test that multiple ccmp's don't get created in a way
+; that they would have multiple uses. It doesn't seem to.
+define i32 @multiccmp(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %x, i32 %y) #0 {
+; CHECK-LABEL: multiccmp:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    stp x22, x21, [sp, #-48]! ; 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #16] ; 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #32] ; 16-byte Folded Spill
+; CHECK-NEXT:    mov x19, x5
+; CHECK-NEXT:    cmp w0, w1
+; CHECK-NEXT:    cset w20, gt
+; CHECK-NEXT:    cmp w2, w3
+; CHECK-NEXT:    cset w21, ne
+; CHECK-NEXT:    tst w20, w21
+; CHECK-NEXT:    csel w0, w5, w4, ne
+; CHECK-NEXT:    bl _callee
+; CHECK-NEXT:    tst w20, w21
+; CHECK-NEXT:    csel w0, w0, w19, ne
+; CHECK-NEXT:    bl _callee
+; CHECK-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
+; CHECK-NEXT:    ldp x20, x19, [sp, #16] ; 16-byte Folded Reload
+; CHECK-NEXT:    ldp x22, x21, [sp], #48 ; 16-byte Folded Reload
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: multiccmp:
+; GISEL:       ; %bb.0: ; %entry
+; GISEL-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
+; GISEL-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; GISEL-NEXT:    mov x19, x5
+; GISEL-NEXT:    cmp w0, w1
+; GISEL-NEXT:    cset w8, gt
+; GISEL-NEXT:    cmp w2, w3
+; GISEL-NEXT:    cset w9, ne
+; GISEL-NEXT:    and w20, w8, w9
+; GISEL-NEXT:    tst w20, #0x1
+; GISEL-NEXT:    csel w0, w5, w4, ne
+; GISEL-NEXT:    bl _callee
+; GISEL-NEXT:    tst w20, #0x1
+; GISEL-NEXT:    csel w0, w0, w19, ne
+; GISEL-NEXT:    bl _callee
+; GISEL-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; GISEL-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; GISEL-NEXT:    ret
+entry:
+  %c0 = icmp sgt i32 %s0, %s1
+  %c1 = icmp ne i32 %s2, %s3
+  %a = and i1 %c0, %c1
+  %s = select i1 %a, i32 %y, i32 %x
+  %o = call i32 @callee(i32 %s)
+  %z1 = select i1 %a, i32 %o, i32 %y
+  %p = call i32 @callee(i32 %z1)
+  ret i32 %p
+}
+
+define i32 @multiccmp2(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %x, i32 %y) #0 {
+; CHECK-LABEL: multiccmp2:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    stp x22, x21, [sp, #-48]! ; 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #16] ; 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #32] ; 16-byte Folded Spill
+; CHECK-NEXT:    mov x19, x5
+; CHECK-NEXT:    mov x20, x3
+; CHECK-NEXT:    mov x21, x0
+; CHECK-NEXT:    cmp w0, w1
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    cmp w2, w3
+; CHECK-NEXT:    cset w22, ne
+; CHECK-NEXT:    tst w8, w22
+; CHECK-NEXT:    csel w0, w5, w4, ne
+; CHECK-NEXT:    bl _callee
+; CHECK-NEXT:    cmp w21, w20
+; CHECK-NEXT:    cset w8, eq
+; CHECK-NEXT:    tst w22, w8
+; CHECK-NEXT:    csel w0, w0, w19, ne
+; CHECK-NEXT:    bl _callee
+; CHECK-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
+; CHECK-NEXT:    ldp x20, x19, [sp, #16] ; 16-byte Folded Reload
+; CHECK-NEXT:    ldp x22, x21, [sp], #48 ; 16-byte Folded Reload
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: multiccmp2:
+; GISEL:       ; %bb.0: ; %entry
+; GISEL-NEXT:    stp x22, x21, [sp, #-48]! ; 16-byte Folded Spill
+; GISEL-NEXT:    stp x20, x19, [sp, #16] ; 16-byte Folded Spill
+; GISEL-NEXT:    stp x29, x30, [sp, #32] ; 16-byte Folded Spill
+; GISEL-NEXT:    mov x19, x0
+; GISEL-NEXT:    mov x20, x3
+; GISEL-NEXT:    mov x21, x5
+; GISEL-NEXT:    cmp w0, w1
+; GISEL-NEXT:    cset w8, gt
+; GISEL-NEXT:    cmp w2, w3
+; GISEL-NEXT:    cset w22, ne
+; GISEL-NEXT:    and w8, w8, w22
+; GISEL-NEXT:    tst w8, #0x1
+; GISEL-NEXT:    csel w0, w5, w4, ne
+; GISEL-NEXT:    bl _callee
+; GISEL-NEXT:    cmp w19, w20
+; GISEL-NEXT:    cset w8, eq
+; GISEL-NEXT:    and w8, w22, w8
+; GISEL-NEXT:    tst w8, #0x1
+; GISEL-NEXT:    csel w0, w0, w21, ne
+; GISEL-NEXT:    bl _callee
+; GISEL-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
+; GISEL-NEXT:    ldp x20, x19, [sp, #16] ; 16-byte Folded Reload
+; GISEL-NEXT:    ldp x22, x21, [sp], #48 ; 16-byte Folded Reload
+; GISEL-NEXT:    ret
+entry:
+  %c0 = icmp sgt i32 %s0, %s1
+  %c1 = icmp ne i32 %s2, %s3
+  %a = and i1 %c0, %c1
+  %z = zext i1 %a to i32
+  %s = select i1 %a, i32 %y, i32 %x
+  %o = call i32 @callee(i32 %s)
+
+  %c2 = icmp eq i32 %s0, %s3
+  %a1 = and i1 %c1, %c2
+  %z1 = select i1 %a1, i32 %o, i32 %y
+  %p = call i32 @callee(i32 %z1)
+  ret i32 %p
+}
+declare i32 @callee(i32)
+
 attributes #0 = { nounwind }
