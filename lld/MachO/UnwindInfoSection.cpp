@@ -392,7 +392,7 @@ UnwindInfoSectionImpl<Ptr>::findLsdaReloc(ConcatInputSection *isec) const {
 }
 
 // Scan the __LD,__compact_unwind entries and compute the space needs of
-// __TEXT,__unwind_info and __TEXT,__eh_frame
+// __TEXT,__unwind_info and __TEXT,__eh_frame.
 template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
   if (symbols.empty())
     return;
