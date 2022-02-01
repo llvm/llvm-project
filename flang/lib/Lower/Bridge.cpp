@@ -175,6 +175,8 @@ public:
     setCurrentPosition(Fortran::lower::pft::stmtSourceLoc(funit.endStmt));
     if (funit.isMainProgram())
       genExitRoutine();
+    else
+      genFIRProcedureExit(funit, funit.getSubprogramSymbol());
     funit.finalBlock = nullptr;
     LLVM_DEBUG(llvm::dbgs() << "*** Lowering result:\n\n"
                             << *builder->getFunction() << '\n');
@@ -239,6 +241,15 @@ private:
       builder->create<mlir::ReturnOp>(toLocation());
   }
   void genFIR(const Fortran::parser::EndProgramStmt &) { genExitRoutine(); }
+
+  void genFIRProcedureExit(Fortran::lower::pft::FunctionLikeUnit &funit,
+                           const Fortran::semantics::Symbol &symbol) {
+    if (Fortran::semantics::IsFunction(symbol)) {
+      TODO(toLocation(), "Function lowering");
+    } else {
+      genExitRoutine();
+    }
+  }
 
   void genFIR(const Fortran::parser::CallStmt &stmt) {
     TODO(toLocation(), "CallStmt lowering");
@@ -606,9 +617,8 @@ private:
     TODO(toLocation(), "EndSelectStmt lowering");
   }
 
-  void genFIR(const Fortran::parser::EndSubroutineStmt &) {
-    TODO(toLocation(), "EndSubroutineStmt lowering");
-  }
+  // Nop statements - No code, or code is generated at the construct level.
+  void genFIR(const Fortran::parser::EndSubroutineStmt &) {} // nop
 
   void genFIR(const Fortran::parser::EntryStmt &) {
     TODO(toLocation(), "EntryStmt lowering");
