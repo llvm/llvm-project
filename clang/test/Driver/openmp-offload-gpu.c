@@ -350,3 +350,13 @@
 
 // TRIPLE: "-triple" "nvptx64-nvidia-cuda"
 // TRIPLE: "-target-cpu" "sm_35"
+
+// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
+// RUN:          -fopenmp-new-driver -no-canonical-prefixes -ccc-print-bindings %s -o openmp-offload-gpu 2>&1 \
+// RUN:   | FileCheck -check-prefix=NEW_DRIVER %s
+
+// NEW_DRIVER: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[HOST_INPUT:.+]]"], output: "[[HOST_BC:.+]]" 
+// NEW_DRIVER: "nvptx64-nvidia-cuda" - "clang", inputs: ["[[DEVICE_INPUT:.+]]", "[[HOST_BC]]"], output: "[[DEVICE_ASM:.+]]"
+// NEW_DRIVER: "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[DEVICE_ASM]]"], output: "[[DEVICE_OBJ:.+]]" 
+// NEW_DRIVER: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[HOST_BC]]", "[[DEVICE_OBJ]]"], output: "[[HOST_OBJ:.+]]" 
+// NEW_DRIVER: "x86_64-unknown-linux-gnu" - "[[LINKER:.+]]", inputs: ["[[HOST_OBJ]]"], output: "openmp-offload-gpu"
