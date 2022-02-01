@@ -17,7 +17,7 @@
 
 #include "int_lib.h"
 
-COMPILER_RT_ABI fp_t __floatunsisf(unsigned int a) {
+COMPILER_RT_ABI fp_t __floatunsisf(su_int a) {
 
   const int aWidth = sizeof a * CHAR_BIT;
 

@@ -12,9 +12,9 @@
 
 // Returns: long integer converted to long double
 
-COMPILER_RT_ABI long double __floatditf(long long a);
+COMPILER_RT_ABI long double __floatditf(di_int a);
 
-int test__floatditf(long long a, uint64_t expectedHi, uint64_t expectedLo)
+int test__floatditf(di_int a, uint64_t expectedHi, uint64_t expectedLo)
 {
     long double x = __floatditf(a);
     int ret = compareResultLD(x, expectedHi, expectedLo);
