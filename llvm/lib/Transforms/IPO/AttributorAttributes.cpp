@@ -1130,19 +1130,63 @@ struct AAPointerInfoImpl
         QueryingAA, IRPosition::function(*LI.getFunction()),
         DepClassTy::OPTIONAL);
 
-    // Helper to determine if the instruction may reach the load.
-    auto IsReachableFrom = [&](const Instruction &I) {
-      const auto &ReachabilityAA = A.getAAFor<AAReachability>(
-          QueryingAA, IRPosition::function(*I.getFunction()),
-          DepClassTy::OPTIONAL);
-      return ReachabilityAA.isAssumedReachable(A, I, LI);
-    };
-
-    const bool CanUseCFGResoning =
-        NoRecurseAA.isKnownNoRecurse() && CanIgnoreThreading(LI);
+    const bool CanUseCFGResoning = CanIgnoreThreading(LI);
     InformationCache &InfoCache = A.getInfoCache();
     const DominatorTree *DT =
-        InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(Scope);
+        NoRecurseAA.isKnownNoRecurse()
+            ? InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(
+                  Scope)
+            : nullptr;
+
+    enum GPUAddressSpace : unsigned {
+      Generic = 0,
+      Global = 1,
+      Shared = 3,
+      Constant = 4,
+      Local = 5,
+    };
+
+    // Helper to check if a value has "kernel lifetime", that is it will not
+    // outlive a GPU kernel. This is true for shared, constant, and local
+    // globals on AMD and NVIDIA GPUs.
+    auto HasKernelLifetime = [&](Value *V, Module &M) {
+      Triple T(M.getTargetTriple());
+      if (!(T.isAMDGPU() || T.isNVPTX()))
+        return false;
+      switch (V->getType()->getPointerAddressSpace()) {
+      case GPUAddressSpace::Shared:
+      case GPUAddressSpace::Constant:
+      case GPUAddressSpace::Local:
+        return true;
+      default:
+        return false;
+      };
+    };
+
+    // The IsLiveInCalleeCB will be used by the AA::isPotentiallyReachable query
+    // to determine if we should look at reachability from the callee. For
+    // certain pointers we know the lifetime and we do not have to step into the
+    // callee to determine reachability as the pointer would be dead in the
+    // callee. See the conditional initialization below.
+    std::function<bool(const Function &)> IsLiveInCalleeCB;
+
+    if (auto *AI = dyn_cast<AllocaInst>(&getAssociatedValue())) {
+      // If the alloca containing function is not recursive the alloca
+      // must be dead in the callee.
+      const Function *AIFn = AI->getFunction();
+      const auto &NoRecurseAA = A.getAAFor<AANoRecurse>(
+          *this, IRPosition::function(*AIFn), DepClassTy::OPTIONAL);
+      if (NoRecurseAA.isAssumedNoRecurse()) {
+        IsLiveInCalleeCB = [AIFn](const Function &Fn) { return AIFn != &Fn; };
+      }
+    } else if (auto *GV = dyn_cast<GlobalValue>(&getAssociatedValue())) {
+      // If the global has kernel lifetime we can stop if we reach a kernel
+      // as it is "dead" in the (unknown) callees.
+      if (HasKernelLifetime(GV, *GV->getParent()))
+        IsLiveInCalleeCB = [](const Function &Fn) {
+          return !Fn.hasFnAttribute("kernel");
+        };
+    }
 
     auto AccessCB = [&](const Access &Acc, bool Exact) {
       if (!Acc.isWrite())
@@ -1151,7 +1195,8 @@ struct AAPointerInfoImpl
       // For now we only filter accesses based on CFG reasoning which does not
       // work yet if we have threading effects, or the access is complicated.
       if (CanUseCFGResoning) {
-        if (!IsReachableFrom(*Acc.getLocalInst()))
+        if (!AA::isPotentiallyReachable(A, *Acc.getLocalInst(), LI, QueryingAA,
+                                        IsLiveInCalleeCB))
           return true;
         if (DT && Exact &&
             (Acc.getLocalInst()->getFunction() == LI.getFunction()) &&
@@ -9674,7 +9719,7 @@ private:
       if (!Reachability.isAssumedReachable(A, Inst, CBInst))
         return true;
 
-      const auto &CB = cast<CallBase>(CBInst);
+      auto &CB = cast<CallBase>(CBInst);
       const AACallEdges &AAEdges = A.getAAFor<AACallEdges>(
           *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
 
@@ -9684,47 +9729,8 @@ private:
 
     bool UsedAssumedInformation = false;
     return A.checkForAllCallLikeInstructions(CheckCallBase, *this,
-                                             UsedAssumedInformation);
-  }
-
-  ChangeStatus checkReachableBackwards(Attributor &A, QuerySet &Set) {
-    ChangeStatus Change = ChangeStatus::UNCHANGED;
-
-    // For all remaining instruction queries, check
-    // callers. A call inside that function might satisfy the query.
-    auto CheckCallSite = [&](AbstractCallSite CallSite) {
-      CallBase *CB = CallSite.getInstruction();
-      if (!CB)
-        return false;
-
-      if (isa<InvokeInst>(CB))
-        return false;
-
-      Instruction *Inst = CB->getNextNonDebugInstruction();
-      const AAFunctionReachability &AA = A.getAAFor<AAFunctionReachability>(
-          *this, IRPosition::function(*Inst->getFunction()),
-          DepClassTy::REQUIRED);
-      for (const Function *Fn : make_early_inc_range(Set.Unreachable)) {
-        if (AA.instructionCanReach(A, *Inst, *Fn, /* UseBackwards */ false)) {
-          Set.markReachable(*Fn);
-          Change = ChangeStatus::CHANGED;
-        }
-      }
-      return true;
-    };
-
-    bool NoUnknownCall = true;
-    if (A.checkForAllCallSites(CheckCallSite, *this, true, NoUnknownCall))
-      return Change;
-
-    // If we don't know all callsites we have to assume that we can reach fn.
-    for (auto &QSet : InstQueriesBackwards) {
-      if (!QSet.second.CanReachUnknownCallee)
-        Change = ChangeStatus::CHANGED;
-      QSet.second.CanReachUnknownCallee = true;
-    }
-
-    return Change;
+                                             UsedAssumedInformation,
+                                             /* CheckBBLivenessOnly */ true);
   }
 
 public:
@@ -9776,12 +9782,15 @@ public:
     if (!isValidState())
       return true;
 
-    const auto &Reachability = &A.getAAFor<AAReachability>(
+    if (UseBackwards)
+      return AA::isPotentiallyReachable(A, Inst, Fn, *this, nullptr);
+
+    const auto &Reachability = A.getAAFor<AAReachability>(
         *this, IRPosition::function(*getAssociatedFunction()),
         DepClassTy::REQUIRED);
 
     SmallVector<const AACallEdges *> CallEdges;
-    bool AllKnown = getReachableCallEdges(A, *Reachability, Inst, CallEdges);
+    bool AllKnown = getReachableCallEdges(A, Reachability, Inst, CallEdges);
     // Attributor returns attributes as const, so this function has to be
     // const for users of this attribute to use it without having to do
     // a const_cast.
@@ -9791,25 +9800,7 @@ public:
     if (!AllKnown)
       InstQSet.CanReachUnknownCallee = true;
 
-    bool ForwardsResult = InstQSet.isReachable(A, *NonConstThis, CallEdges, Fn);
-    if (ForwardsResult)
-      return true;
-    // We are done.
-    if (!UseBackwards)
-      return false;
-
-    QuerySet &InstBackwardsQSet = NonConstThis->InstQueriesBackwards[&Inst];
-
-    Optional<bool> BackwardsCached = InstBackwardsQSet.isCachedReachable(Fn);
-    if (BackwardsCached.hasValue())
-      return BackwardsCached.getValue();
-
-    // Assume unreachable, to prevent problems.
-    InstBackwardsQSet.Unreachable.insert(&Fn);
-
-    // Check backwards reachability.
-    NonConstThis->checkReachableBackwards(A, InstBackwardsQSet);
-    return InstBackwardsQSet.isCachedReachable(Fn).getValue();
+    return InstQSet.isReachable(A, *NonConstThis, CallEdges, Fn);
   }
 
   /// See AbstractAttribute::updateImpl(...).
@@ -9847,10 +9838,6 @@ public:
       Change |= InstPair.second.update(A, *this, CallEdges);
     }
 
-    // Update backwards queries.
-    for (auto &QueryPair : InstQueriesBackwards)
-      Change |= checkReachableBackwards(A, QueryPair.second);
-
     return Change;
   }
 
@@ -9879,9 +9866,6 @@ private:
 
   /// This is for instruction queries than scan "forward".
   DenseMap<const Instruction *, QueryResolver> InstQueries;
-
-  /// This is for instruction queries than scan "backward".
-  DenseMap<const Instruction *, QuerySet> InstQueriesBackwards;
 };
 
 /// ---------------------- Assumption Propagation ------------------------------
