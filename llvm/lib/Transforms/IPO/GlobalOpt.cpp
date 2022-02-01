@@ -352,14 +352,10 @@ static bool collectSRATypes(DenseMap<uint64_t, Type *> &Types, GlobalValue *GV,
   while (!Worklist.empty()) {
     Use *U = Worklist.pop_back_val();
     User *V = U->getUser();
-    if (isa<BitCastOperator>(V) || isa<AddrSpaceCastOperator>(V)) {
-      AppendUses(V);
-      continue;
-    }
 
-    if (auto *GEP = dyn_cast<GEPOperator>(V)) {
-      if (!GEP->hasAllConstantIndices())
-        return false;
+    auto *GEP = dyn_cast<GEPOperator>(V);
+    if (isa<BitCastOperator>(V) || isa<AddrSpaceCastOperator>(V) ||
+        (GEP && GEP->hasAllConstantIndices())) {
       AppendUses(V);
       continue;
     }
