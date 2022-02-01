@@ -95,7 +95,7 @@ struct ExecuteRegionOpInterface
     auto yieldOp = cast<scf::YieldOp>(newBlock->getTerminator());
     rewriter.setInsertionPoint(yieldOp);
     SmallVector<Value> newYieldValues;
-    for (auto it : llvm::enumerate(yieldOp.getResults())) {
+    for (const auto &it : llvm::enumerate(yieldOp.getResults())) {
       Value val = it.value();
       if (val.getType().isa<TensorType>()) {
         newYieldValues.push_back(rewriter.create<bufferization::ToMemrefOp>(
@@ -109,7 +109,7 @@ struct ExecuteRegionOpInterface
     // Update all uses of the old op.
     rewriter.setInsertionPointAfter(newOp);
     SmallVector<Value> newResults;
-    for (auto it : llvm::enumerate(executeRegionOp->getResultTypes())) {
+    for (const auto &it : llvm::enumerate(executeRegionOp->getResultTypes())) {
       if (it.value().isa<TensorType>()) {
         newResults.push_back(rewriter.create<bufferization::ToTensorOp>(
             executeRegionOp.getLoc(), newOp->getResult(it.index())));
