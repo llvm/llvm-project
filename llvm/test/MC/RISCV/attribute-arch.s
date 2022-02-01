@@ -123,7 +123,7 @@
 # CHECK: attribute      5, "rv32i2p0_f2p0_zfhmin1p0"
 
 .attribute arch, "rv32ifzfh1p0"
-# CHECK: attribute      5, "rv32i2p0_f2p0_zfh1p0_zfhmin1p0"
+# CHECK: attribute      5, "rv32i2p0_f2p0_zfh1p0"
 
 .attribute arch, "rv32i_zbkb1p0"
 # CHECK: attribute      5, "rv32i2p0_zbkb1p0"
