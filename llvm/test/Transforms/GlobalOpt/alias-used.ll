@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 
-@c = global i8 42
+@c = dso_local global i8 42
 
 @i = internal global i8 42
 ; CHECK: @ia = internal global i8 42
@@ -30,7 +30,7 @@
 @ca = internal alias i8, i8* @c
 ; CHECK: @ca = internal alias i8, i8* @c
 
-define void @f() {
+define hidden void @f() {
   ret void
 }
 
