@@ -19,6 +19,7 @@ class PassBuilderCTest : public testing::Test {
     char *Triple = LLVMGetDefaultTargetTriple();
     if (strlen(Triple) == 0) {
       GTEST_SKIP();
+      LLVMDisposeMessage(Triple);
       return;
     }
     LLVMInitializeAllTargetInfos();
@@ -38,8 +39,11 @@ class PassBuilderCTest : public testing::Test {
 
   void TearDown() override {
     char *Triple = LLVMGetDefaultTargetTriple();
-    if (strlen(Triple) == 0)
+    if (strlen(Triple) == 0) {
+      LLVMDisposeMessage(Triple);
       return; // Skipped, so nothing to tear down
+    }
+    LLVMDisposeMessage(Triple);
     LLVMDisposeTargetMachine(TM);
     LLVMDisposeModule(Module);
     LLVMContextDispose(Context);
