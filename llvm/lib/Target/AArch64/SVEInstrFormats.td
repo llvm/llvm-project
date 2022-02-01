@@ -771,7 +771,7 @@ multiclass sve_int_count_r_x64<bits<5> opc, string asm,
   def : Pat<(i64 (op GPR64:$Rn, (nxv2i1 PPRAny:$Pg))),
             (!cast<Instruction>(NAME # _D) PPRAny:$Pg, $Rn)>;
 
-  // Combine cntp with combine_op
+  // combine_op(x, cntp(all_active, p)) ==> inst p, x
   def : Pat<(i64 (combine_op GPR64:$Rn, (int_aarch64_sve_cntp_oneuse (nxv16i1 (SVEAllActive)), (nxv16i1 PPRAny:$pred)))),
             (!cast<Instruction>(NAME # _B) PPRAny:$pred, $Rn)>;
   def : Pat<(i64 (combine_op GPR64:$Rn, (int_aarch64_sve_cntp_oneuse (nxv8i1 (SVEAllActive)), (nxv8i1 PPRAny:$pred)))),
@@ -779,6 +779,16 @@ multiclass sve_int_count_r_x64<bits<5> opc, string asm,
   def : Pat<(i64 (combine_op GPR64:$Rn, (int_aarch64_sve_cntp_oneuse (nxv4i1 (SVEAllActive)), (nxv4i1 PPRAny:$pred)))),
             (!cast<Instruction>(NAME # _S) PPRAny:$pred, $Rn)>;
   def : Pat<(i64 (combine_op GPR64:$Rn, (int_aarch64_sve_cntp_oneuse (nxv2i1 (SVEAllActive)), (nxv2i1 PPRAny:$pred)))),
+            (!cast<Instruction>(NAME # _D) PPRAny:$pred, $Rn)>;
+
+  // combine_op(x, cntp(p, p)) ==> inst p, x
+  def : Pat<(i64 (combine_op GPR64:$Rn, (int_aarch64_sve_cntp_oneuse (nxv16i1 PPRAny:$pred), (nxv16i1 PPRAny:$pred)))),
+            (!cast<Instruction>(NAME # _B) PPRAny:$pred, $Rn)>;
+  def : Pat<(i64 (combine_op GPR64:$Rn, (int_aarch64_sve_cntp_oneuse (nxv8i1 PPRAny:$pred), (nxv8i1 PPRAny:$pred)))),
+            (!cast<Instruction>(NAME # _H) PPRAny:$pred, $Rn)>;
+  def : Pat<(i64 (combine_op GPR64:$Rn, (int_aarch64_sve_cntp_oneuse (nxv4i1 PPRAny:$pred), (nxv4i1 PPRAny:$pred)))),
+            (!cast<Instruction>(NAME # _S) PPRAny:$pred, $Rn)>;
+  def : Pat<(i64 (combine_op GPR64:$Rn, (int_aarch64_sve_cntp_oneuse (nxv2i1 PPRAny:$pred), (nxv2i1 PPRAny:$pred)))),
             (!cast<Instruction>(NAME # _D) PPRAny:$pred, $Rn)>;
 }
 
