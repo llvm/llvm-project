@@ -58,7 +58,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRTransforms
   MLIRTransformUtils
   MLIRVector
-  MLIRVectorBufferizableOpInterfaceImpl
   MLIRVectorTransforms
   MLIRVectorUtils
   MLIRX86VectorTransforms

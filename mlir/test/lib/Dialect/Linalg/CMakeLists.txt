@@ -33,6 +33,6 @@ add_mlir_library(MLIRLinalgTestPasses
   MLIRTensorTransforms
   MLIRTransformUtils
   MLIRVector
-  MLIRVectorBufferizableOpInterfaceImpl
   MLIRVectorToSCF
+  MLIRVectorTransforms
   )
