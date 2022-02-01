@@ -1,5 +1,5 @@
-# R UN: llc -mtriple=aarch64-- -run-pass=legalizer %s \
-# R UN:     -mcpu=cortex-a75 -o - 2>&1 | FileCheck %s --check-prefixes=CHECK
+# RUN: llc -mtriple=aarch64-- -run-pass=legalizer %s \
+# RUN:     -mcpu=cortex-a75 -o - 2>&1 | FileCheck %s --check-prefixes=CHECK
 
 # RUN: llc -mtriple=aarch64-- -run-pass=legalizer %s -debug-only=legalizer-info \
 # RUN:     -mcpu=cortex-a75 -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,DEBUG
