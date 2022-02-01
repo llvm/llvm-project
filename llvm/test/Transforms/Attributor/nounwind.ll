@@ -21,15 +21,20 @@ define i32 @foo1() {
 
 ; TEST 2
 define i32 @scc1_foo() {
-; NOT_CGSCC_NPM: Function Attrs: nofree noreturn nosync nounwind readnone willreturn
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@scc1_foo
-; NOT_CGSCC_NPM-SAME: () #[[ATTR1:[0-9]+]] {
-; NOT_CGSCC_NPM-NEXT:    unreachable
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@scc1_foo
+; IS__TUNIT____-SAME: () #[[ATTR0]] {
+; IS__TUNIT____-NEXT:    ret i32 1
 ;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; IS__CGSCC_OPM: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@scc1_foo
+; IS__CGSCC_OPM-SAME: () #[[ATTR1:[0-9]+]] {
+; IS__CGSCC_OPM-NEXT:    ret i32 1
+;
+; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@scc1_foo
-; IS__CGSCC_NPM-SAME: () #[[ATTR1:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    unreachable
+; IS__CGSCC_NPM-SAME: () #[[ATTR0]] {
+; IS__CGSCC_NPM-NEXT:    ret i32 1
 ;
   %1 = call i32 @scc1_bar()
   ret i32 1
@@ -38,15 +43,20 @@ define i32 @scc1_foo() {
 
 ; TEST 3
 define i32 @scc1_bar() {
-; NOT_CGSCC_NPM: Function Attrs: nofree noreturn nosync nounwind readnone willreturn
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@scc1_bar
-; NOT_CGSCC_NPM-SAME: () #[[ATTR1]] {
-; NOT_CGSCC_NPM-NEXT:    unreachable
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@scc1_bar
+; IS__TUNIT____-SAME: () #[[ATTR0]] {
+; IS__TUNIT____-NEXT:    ret i32 1
 ;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; IS__CGSCC_OPM: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@scc1_bar
+; IS__CGSCC_OPM-SAME: () #[[ATTR1]] {
+; IS__CGSCC_OPM-NEXT:    ret i32 1
+;
+; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@scc1_bar
-; IS__CGSCC_NPM-SAME: () #[[ATTR1]] {
-; IS__CGSCC_NPM-NEXT:    unreachable
+; IS__CGSCC_NPM-SAME: () #[[ATTR0]] {
+; IS__CGSCC_NPM-NEXT:    ret i32 1
 ;
   %1 = call i32 @scc1_foo()
   ret i32 1
@@ -149,11 +159,9 @@ declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
 ;.
 ; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
-; IS__TUNIT____: attributes #[[ATTR1]] = { nofree noreturn nosync nounwind readnone willreturn }
 ;.
 ; IS__CGSCC_OPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR1]] = { nofree noreturn nosync nounwind readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR1]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
 ;.

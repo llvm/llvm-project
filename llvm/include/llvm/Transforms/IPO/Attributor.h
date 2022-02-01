@@ -350,6 +350,14 @@ struct IRPosition {
     return IRPosition(const_cast<Value &>(V), IRP_FLOAT, CBContext);
   }
 
+  /// Create a position describing the instruction \p I. This is different from
+  /// the value version because call sites are treated as intrusctions rather
+  /// than their return value in this function.
+  static const IRPosition inst(const Instruction &I,
+                               const CallBaseContext *CBContext = nullptr) {
+    return IRPosition(const_cast<Instruction &>(I), IRP_FLOAT, CBContext);
+  }
+
   /// Create a position describing the function scope of \p F.
   /// \p CBContext is used for call base specific analysis.
   static const IRPosition function(const Function &F,
@@ -678,7 +686,7 @@ private:
       break;
     case IRPosition::IRP_FLOAT:
       // Special case for floating functions.
-      if (isa<Function>(AnchorVal))
+      if (isa<Function>(AnchorVal) || isa<CallBase>(AnchorVal))
         Enc = {&AnchorVal, ENC_FLOATING_FUNCTION};
       else
         Enc = {&AnchorVal, ENC_VALUE};

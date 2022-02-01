@@ -1190,17 +1190,17 @@ unreachable_label:
 ;15.2
 
 define void @unreachable_exit_negative1() #0 {
-; IS__TUNIT____: Function Attrs: noinline noreturn nounwind uwtable
+; IS__TUNIT____: Function Attrs: noinline nounwind uwtable
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@unreachable_exit_negative1
-; IS__TUNIT____-SAME: () #[[ATTR5]] {
+; IS__TUNIT____-SAME: () #[[ATTR6]] {
 ; IS__TUNIT____-NEXT:    tail call void @exit(i32 noundef 0) #[[ATTR4]]
 ; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       unreachable_label:
 ; IS__TUNIT____-NEXT:    unreachable
 ;
-; IS__CGSCC____: Function Attrs: noinline noreturn nounwind uwtable
+; IS__CGSCC____: Function Attrs: noinline nounwind uwtable
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@unreachable_exit_negative1
-; IS__CGSCC____-SAME: () #[[ATTR6]] {
+; IS__CGSCC____-SAME: () #[[ATTR7]] {
 ; IS__CGSCC____-NEXT:    tail call void @exit(i32 noundef 0) #[[ATTR5]]
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       unreachable_label:
@@ -1275,15 +1275,15 @@ unreachable_label:
 declare void @llvm.eh.sjlj.longjmp(i8*)
 
 define void @call_longjmp(i8* nocapture readnone %0) local_unnamed_addr #0 {
-; IS__TUNIT____: Function Attrs: noinline noreturn nounwind uwtable
+; IS__TUNIT____: Function Attrs: noinline nounwind uwtable
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@call_longjmp
-; IS__TUNIT____-SAME: (i8* nocapture readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR5]] {
+; IS__TUNIT____-SAME: (i8* nocapture readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR6]] {
 ; IS__TUNIT____-NEXT:    tail call void @llvm.eh.sjlj.longjmp(i8* noalias readnone [[TMP0]]) #[[ATTR4]]
 ; IS__TUNIT____-NEXT:    unreachable
 ;
-; IS__CGSCC____: Function Attrs: noinline noreturn nounwind uwtable
+; IS__CGSCC____: Function Attrs: noinline nounwind uwtable
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@call_longjmp
-; IS__CGSCC____-SAME: (i8* nocapture readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR6]] {
+; IS__CGSCC____-SAME: (i8* nocapture readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 ; IS__CGSCC____-NEXT:    tail call void @llvm.eh.sjlj.longjmp(i8* noalias readnone [[TMP0]]) #[[ATTR5]]
 ; IS__CGSCC____-NEXT:    unreachable
 ;

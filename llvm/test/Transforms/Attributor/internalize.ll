@@ -6,8 +6,8 @@
 
 ; Deep Wrapper enabled
 
-; RUN: opt -attributor -attributor-manifest-internal  -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=11 -attributor-allow-deep-wrappers -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_CGSCC_NPM,NOT_CGSCC_OPM,NOT_TUNIT_NPM,IS__TUNIT____,IS________OPM,IS__TUNIT_OPM,CHECK_ENABLED,NOT_CGSCC_NPM_ENABLED,NOT_CGSCC_OPM_ENABLED,NOT_TUNIT_NPM_ENABLED,IS__TUNIT_____ENABLED,IS________OPM_ENABLED,IS__TUNIT_OPM_ENABLED
-; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=11 -attributor-allow-deep-wrappers -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_CGSCC_OPM,NOT_CGSCC_NPM,NOT_TUNIT_OPM,IS__TUNIT____,IS________NPM,IS__TUNIT_NPM,CHECK_ENABLED,NOT_CGSCC_OPM_ENABLED,NOT_CGSCC_NPM_ENABLED,NOT_TUNIT_OPM_ENABLED,IS__TUNIT_____ENABLED,IS________NPM_ENABLED,IS__TUNIT_NPM_ENABLED
+; RUN: opt -attributor -attributor-manifest-internal  -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=1 -attributor-allow-deep-wrappers -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_CGSCC_NPM,NOT_CGSCC_OPM,NOT_TUNIT_NPM,IS__TUNIT____,IS________OPM,IS__TUNIT_OPM,CHECK_ENABLED,NOT_CGSCC_NPM_ENABLED,NOT_CGSCC_OPM_ENABLED,NOT_TUNIT_NPM_ENABLED,IS__TUNIT_____ENABLED,IS________OPM_ENABLED,IS__TUNIT_OPM_ENABLED
+; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=1 -attributor-allow-deep-wrappers -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_CGSCC_OPM,NOT_CGSCC_NPM,NOT_TUNIT_OPM,IS__TUNIT____,IS________NPM,IS__TUNIT_NPM,CHECK_ENABLED,NOT_CGSCC_OPM_ENABLED,NOT_CGSCC_NPM_ENABLED,NOT_TUNIT_OPM_ENABLED,IS__TUNIT_____ENABLED,IS________NPM_ENABLED,IS__TUNIT_NPM_ENABLED
 
 ; TEST 1: This function is of linkage `linkonce`, we cannot internalize this
 ;         function and use information derived from it
@@ -131,9 +131,9 @@ define void @unused_arg_caller() {
 ; CHECK_DISABLED-NEXT:    call void @unused_arg(i8 noundef 0)
 ; CHECK_DISABLED-NEXT:    ret void
 ;
-; CHECK_ENABLED: Function Attrs: nofree noreturn nosync nounwind readnone willreturn
+; CHECK_ENABLED: Function Attrs: nofree nosync nounwind readnone willreturn
 ; CHECK_ENABLED-LABEL: define {{[^@]+}}@unused_arg_caller
-; CHECK_ENABLED-SAME: () #[[ATTR1:[0-9]+]] {
+; CHECK_ENABLED-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK_ENABLED-NEXT:    unreachable
 ;
 ; IS__CGSCC_____ENABLED: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
@@ -158,7 +158,6 @@ define linkonce_odr hidden void @__clang_call_terminate() {
 ; IS__CGSCC_____ENABLED: attributes #[[ATTR1:[0-9]+]] = { nofree noreturn nosync nounwind readnone willreturn }
 ; IS__CGSCC_____ENABLED: attributes #[[ATTR2]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
 ;.
-; CHECK_ENABLED: attributes #[[ATTR0:[0-9]+]] = { nofree nosync nounwind readnone willreturn }
-; CHECK_ENABLED: attributes #[[ATTR1]] = { nofree noreturn nosync nounwind readnone willreturn }
-; CHECK_ENABLED: attributes #[[ATTR2:[0-9]+]] = { nounwind readnone }
+; CHECK_ENABLED: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
+; CHECK_ENABLED: attributes #[[ATTR1:[0-9]+]] = { nounwind readnone }
 ;.
