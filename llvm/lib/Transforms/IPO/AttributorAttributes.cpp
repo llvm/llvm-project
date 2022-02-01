@@ -9607,12 +9607,17 @@ private:
       return Change;
     }
 
-    bool isReachable(Attributor &A, const AAFunctionReachability &AA,
+    bool isReachable(Attributor &A, AAFunctionReachability &AA,
                      ArrayRef<const AACallEdges *> AAEdgesList,
                      const Function &Fn) {
       Optional<bool> Cached = isCachedReachable(Fn);
       if (Cached.hasValue())
         return Cached.getValue();
+
+      // The query was not cached, thus it is new. We need to request an update
+      // explicitly to make sure this the information is properly run to a
+      // fixpoint.
+      A.registerForUpdate(AA);
 
       // We need to assume that this function can't reach Fn to prevent
       // an infinite loop if this function is recursive.
@@ -9727,6 +9732,9 @@ public:
       : AAFunctionReachability(IRP, A) {}
 
   bool canReach(Attributor &A, const Function &Fn) const override {
+    if (!isValidState())
+      return true;
+
     const AACallEdges &AAEdges =
         A.getAAFor<AACallEdges>(*this, getIRPosition(), DepClassTy::REQUIRED);
 
@@ -9735,8 +9743,8 @@ public:
     // a const_cast.
     // This is a hack for us to be able to cache queries.
     auto *NonConstThis = const_cast<AAFunctionReachabilityFunction *>(this);
-    bool Result =
-        NonConstThis->WholeFunction.isReachable(A, *this, {&AAEdges}, Fn);
+    bool Result = NonConstThis->WholeFunction.isReachable(A, *NonConstThis,
+                                                          {&AAEdges}, Fn);
 
     return Result;
   }
@@ -9744,6 +9752,9 @@ public:
   /// Can \p CB reach \p Fn
   bool canReach(Attributor &A, CallBase &CB,
                 const Function &Fn) const override {
+    if (!isValidState())
+      return true;
+
     const AACallEdges &AAEdges = A.getAAFor<AACallEdges>(
         *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
 
@@ -9754,7 +9765,7 @@ public:
     auto *NonConstThis = const_cast<AAFunctionReachabilityFunction *>(this);
     QueryResolver &CBQuery = NonConstThis->CBQueries[&CB];
 
-    bool Result = CBQuery.isReachable(A, *this, {&AAEdges}, Fn);
+    bool Result = CBQuery.isReachable(A, *NonConstThis, {&AAEdges}, Fn);
 
     return Result;
   }
@@ -9762,6 +9773,9 @@ public:
   bool instructionCanReach(Attributor &A, const Instruction &Inst,
                            const Function &Fn,
                            bool UseBackwards) const override {
+    if (!isValidState())
+      return true;
+
     const auto &Reachability = &A.getAAFor<AAReachability>(
         *this, IRPosition::function(*getAssociatedFunction()),
         DepClassTy::REQUIRED);
@@ -9777,7 +9791,7 @@ public:
     if (!AllKnown)
       InstQSet.CanReachUnknownCallee = true;
 
-    bool ForwardsResult = InstQSet.isReachable(A, *this, CallEdges, Fn);
+    bool ForwardsResult = InstQSet.isReachable(A, *NonConstThis, CallEdges, Fn);
     if (ForwardsResult)
       return true;
     // We are done.

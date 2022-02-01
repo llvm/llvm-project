@@ -211,7 +211,7 @@ define i32 @scc1(i32* %0) noinline nounwind uwtable {
 ; IS__CGSCC_OPM: Function Attrs: argmemonly nofree noinline nounwind uwtable
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@scc1
 ; IS__CGSCC_OPM-SAME: (i32* nofree [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    tail call void @scc2(i32* nofree [[TMP0]]) #[[ATTR8:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    tail call void @scc2(i32* nofree [[TMP0]]) #[[ATTR19:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    [[VAL:%.*]] = tail call i32 @volatile_load(i32* nofree noundef align 4 [[TMP0]]) #[[ATTR20:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[VAL]]
 ;
@@ -228,17 +228,11 @@ define i32 @scc1(i32* %0) noinline nounwind uwtable {
 }
 
 define void @scc2(i32* %0) noinline nounwind uwtable {
-; NOT_CGSCC_OPM: Function Attrs: argmemonly nofree noinline nounwind uwtable
-; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@scc2
-; NOT_CGSCC_OPM-SAME: (i32* nofree [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] {
-; NOT_CGSCC_OPM-NEXT:    [[TMP2:%.*]] = tail call i32 @scc1(i32* nofree [[TMP0]]) #[[ATTR19:[0-9]+]]
-; NOT_CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: argmemonly nofree noinline norecurse nounwind uwtable
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@scc2
-; IS__CGSCC_OPM-SAME: (i32* nofree [[TMP0:%.*]]) #[[ATTR6:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = tail call i32 @scc1(i32* nofree [[TMP0]]) #[[ATTR21:[0-9]+]]
-; IS__CGSCC_OPM-NEXT:    ret void
+; CHECK: Function Attrs: argmemonly nofree noinline nounwind uwtable
+; CHECK-LABEL: define {{[^@]+}}@scc2
+; CHECK-SAME: (i32* nofree [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] {
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @scc1(i32* nofree [[TMP0]]) #[[ATTR19:[0-9]+]]
+; CHECK-NEXT:    ret void
 ;
   tail call i32 @scc1(i32* %0);
   ret void;
@@ -264,23 +258,14 @@ define void @scc2(i32* %0) noinline nounwind uwtable {
 %"struct.std::__atomic_base" = type { i8 }
 
 define void @foo1(i32* %0, %"struct.std::atomic"* %1) {
-; NOT_CGSCC_OPM: Function Attrs: nofree norecurse nounwind willreturn
-; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@foo1
-; NOT_CGSCC_OPM-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[TMP0:%.*]], %"struct.std::atomic"* nocapture nofree nonnull writeonly dereferenceable(1) [[TMP1:%.*]]) #[[ATTR6:[0-9]+]] {
-; NOT_CGSCC_OPM-NEXT:    store i32 100, i32* [[TMP0]], align 4
-; NOT_CGSCC_OPM-NEXT:    fence release
-; NOT_CGSCC_OPM-NEXT:    [[TMP3:%.*]] = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* [[TMP1]], i64 0, i32 0, i32 0
-; NOT_CGSCC_OPM-NEXT:    store atomic i8 1, i8* [[TMP3]] monotonic, align 1
-; NOT_CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nounwind willreturn
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@foo1
-; IS__CGSCC_OPM-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[TMP0:%.*]], %"struct.std::atomic"* nocapture nofree nonnull writeonly dereferenceable(1) [[TMP1:%.*]]) #[[ATTR7:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    store i32 100, i32* [[TMP0]], align 4
-; IS__CGSCC_OPM-NEXT:    fence release
-; IS__CGSCC_OPM-NEXT:    [[TMP3:%.*]] = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* [[TMP1]], i64 0, i32 0, i32 0
-; IS__CGSCC_OPM-NEXT:    store atomic i8 1, i8* [[TMP3]] monotonic, align 1
-; IS__CGSCC_OPM-NEXT:    ret void
+; CHECK: Function Attrs: nofree norecurse nounwind willreturn
+; CHECK-LABEL: define {{[^@]+}}@foo1
+; CHECK-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[TMP0:%.*]], %"struct.std::atomic"* nocapture nofree nonnull writeonly dereferenceable(1) [[TMP1:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-NEXT:    store i32 100, i32* [[TMP0]], align 4
+; CHECK-NEXT:    fence release
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* [[TMP1]], i64 0, i32 0, i32 0
+; CHECK-NEXT:    store atomic i8 1, i8* [[TMP3]] monotonic, align 1
+; CHECK-NEXT:    ret void
 ;
   store i32 100, i32* %0, align 4
   fence release
@@ -290,33 +275,19 @@ define void @foo1(i32* %0, %"struct.std::atomic"* %1) {
 }
 
 define void @bar(i32* %0, %"struct.std::atomic"* %1) {
-; NOT_CGSCC_OPM: Function Attrs: nofree norecurse nounwind
-; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@bar
-; NOT_CGSCC_OPM-SAME: (i32* nocapture nofree readnone [[TMP0:%.*]], %"struct.std::atomic"* nocapture nofree nonnull readonly dereferenceable(1) [[TMP1:%.*]]) #[[ATTR7:[0-9]+]] {
-; NOT_CGSCC_OPM-NEXT:    [[TMP3:%.*]] = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* [[TMP1]], i64 0, i32 0, i32 0
-; NOT_CGSCC_OPM-NEXT:    br label [[TMP4:%.*]]
-; NOT_CGSCC_OPM:       4:
-; NOT_CGSCC_OPM-NEXT:    [[TMP5:%.*]] = load atomic i8, i8* [[TMP3]] monotonic, align 1
-; NOT_CGSCC_OPM-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], 1
-; NOT_CGSCC_OPM-NEXT:    [[TMP7:%.*]] = icmp eq i8 [[TMP6]], 0
-; NOT_CGSCC_OPM-NEXT:    br i1 [[TMP7]], label [[TMP4]], label [[TMP8:%.*]]
-; NOT_CGSCC_OPM:       8:
-; NOT_CGSCC_OPM-NEXT:    fence acquire
-; NOT_CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nounwind
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@bar
-; IS__CGSCC_OPM-SAME: (i32* nocapture nofree readnone [[TMP0:%.*]], %"struct.std::atomic"* nocapture nofree nonnull readonly dereferenceable(1) [[TMP1:%.*]]) #[[ATTR8]] {
-; IS__CGSCC_OPM-NEXT:    [[TMP3:%.*]] = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* [[TMP1]], i64 0, i32 0, i32 0
-; IS__CGSCC_OPM-NEXT:    br label [[TMP4:%.*]]
-; IS__CGSCC_OPM:       4:
-; IS__CGSCC_OPM-NEXT:    [[TMP5:%.*]] = load atomic i8, i8* [[TMP3]] monotonic, align 1
-; IS__CGSCC_OPM-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], 1
-; IS__CGSCC_OPM-NEXT:    [[TMP7:%.*]] = icmp eq i8 [[TMP6]], 0
-; IS__CGSCC_OPM-NEXT:    br i1 [[TMP7]], label [[TMP4]], label [[TMP8:%.*]]
-; IS__CGSCC_OPM:       8:
-; IS__CGSCC_OPM-NEXT:    fence acquire
-; IS__CGSCC_OPM-NEXT:    ret void
+; CHECK: Function Attrs: nofree norecurse nounwind
+; CHECK-LABEL: define {{[^@]+}}@bar
+; CHECK-SAME: (i32* nocapture nofree readnone [[TMP0:%.*]], %"struct.std::atomic"* nocapture nofree nonnull readonly dereferenceable(1) [[TMP1:%.*]]) #[[ATTR7:[0-9]+]] {
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* [[TMP1]], i64 0, i32 0, i32 0
+; CHECK-NEXT:    br label [[TMP4:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = load atomic i8, i8* [[TMP3]] monotonic, align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i8 [[TMP6]], 0
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP4]], label [[TMP8:%.*]]
+; CHECK:       8:
+; CHECK-NEXT:    fence acquire
+; CHECK-NEXT:    ret void
 ;
   %3 = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* %1, i64 0, i32 0, i32 0
   br label %4
@@ -334,23 +305,14 @@ define void @bar(i32* %0, %"struct.std::atomic"* %1) {
 
 ; TEST 13 - Fence syncscope("singlethread") seq_cst
 define void @foo1_singlethread(i32* %0, %"struct.std::atomic"* %1) {
-; NOT_CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind willreturn
-; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@foo1_singlethread
-; NOT_CGSCC_OPM-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[TMP0:%.*]], %"struct.std::atomic"* nocapture nofree nonnull writeonly dereferenceable(1) [[TMP1:%.*]]) #[[ATTR8:[0-9]+]] {
-; NOT_CGSCC_OPM-NEXT:    store i32 100, i32* [[TMP0]], align 4
-; NOT_CGSCC_OPM-NEXT:    fence syncscope("singlethread") release
-; NOT_CGSCC_OPM-NEXT:    [[TMP3:%.*]] = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* [[TMP1]], i64 0, i32 0, i32 0
-; NOT_CGSCC_OPM-NEXT:    store atomic i8 1, i8* [[TMP3]] monotonic, align 1
-; NOT_CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind willreturn
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@foo1_singlethread
-; IS__CGSCC_OPM-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[TMP0:%.*]], %"struct.std::atomic"* nocapture nofree nonnull writeonly dereferenceable(1) [[TMP1:%.*]]) #[[ATTR9:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    store i32 100, i32* [[TMP0]], align 4
-; IS__CGSCC_OPM-NEXT:    fence syncscope("singlethread") release
-; IS__CGSCC_OPM-NEXT:    [[TMP3:%.*]] = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* [[TMP1]], i64 0, i32 0, i32 0
-; IS__CGSCC_OPM-NEXT:    store atomic i8 1, i8* [[TMP3]] monotonic, align 1
-; IS__CGSCC_OPM-NEXT:    ret void
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn
+; CHECK-LABEL: define {{[^@]+}}@foo1_singlethread
+; CHECK-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[TMP0:%.*]], %"struct.std::atomic"* nocapture nofree nonnull writeonly dereferenceable(1) [[TMP1:%.*]]) #[[ATTR8:[0-9]+]] {
+; CHECK-NEXT:    store i32 100, i32* [[TMP0]], align 4
+; CHECK-NEXT:    fence syncscope("singlethread") release
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* [[TMP1]], i64 0, i32 0, i32 0
+; CHECK-NEXT:    store atomic i8 1, i8* [[TMP3]] monotonic, align 1
+; CHECK-NEXT:    ret void
 ;
   store i32 100, i32* %0, align 4
   fence syncscope("singlethread") release
@@ -360,33 +322,19 @@ define void @foo1_singlethread(i32* %0, %"struct.std::atomic"* %1) {
 }
 
 define void @bar_singlethread(i32* %0, %"struct.std::atomic"* %1) {
-; NOT_CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind
-; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@bar_singlethread
-; NOT_CGSCC_OPM-SAME: (i32* nocapture nofree readnone [[TMP0:%.*]], %"struct.std::atomic"* nocapture nofree nonnull readonly dereferenceable(1) [[TMP1:%.*]]) #[[ATTR9:[0-9]+]] {
-; NOT_CGSCC_OPM-NEXT:    [[TMP3:%.*]] = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* [[TMP1]], i64 0, i32 0, i32 0
-; NOT_CGSCC_OPM-NEXT:    br label [[TMP4:%.*]]
-; NOT_CGSCC_OPM:       4:
-; NOT_CGSCC_OPM-NEXT:    [[TMP5:%.*]] = load atomic i8, i8* [[TMP3]] monotonic, align 1
-; NOT_CGSCC_OPM-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], 1
-; NOT_CGSCC_OPM-NEXT:    [[TMP7:%.*]] = icmp eq i8 [[TMP6]], 0
-; NOT_CGSCC_OPM-NEXT:    br i1 [[TMP7]], label [[TMP4]], label [[TMP8:%.*]]
-; NOT_CGSCC_OPM:       8:
-; NOT_CGSCC_OPM-NEXT:    fence syncscope("singlethread") acquire
-; NOT_CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@bar_singlethread
-; IS__CGSCC_OPM-SAME: (i32* nocapture nofree readnone [[TMP0:%.*]], %"struct.std::atomic"* nocapture nofree nonnull readonly dereferenceable(1) [[TMP1:%.*]]) #[[ATTR10:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    [[TMP3:%.*]] = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* [[TMP1]], i64 0, i32 0, i32 0
-; IS__CGSCC_OPM-NEXT:    br label [[TMP4:%.*]]
-; IS__CGSCC_OPM:       4:
-; IS__CGSCC_OPM-NEXT:    [[TMP5:%.*]] = load atomic i8, i8* [[TMP3]] monotonic, align 1
-; IS__CGSCC_OPM-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], 1
-; IS__CGSCC_OPM-NEXT:    [[TMP7:%.*]] = icmp eq i8 [[TMP6]], 0
-; IS__CGSCC_OPM-NEXT:    br i1 [[TMP7]], label [[TMP4]], label [[TMP8:%.*]]
-; IS__CGSCC_OPM:       8:
-; IS__CGSCC_OPM-NEXT:    fence syncscope("singlethread") acquire
-; IS__CGSCC_OPM-NEXT:    ret void
+; CHECK: Function Attrs: nofree norecurse nosync nounwind
+; CHECK-LABEL: define {{[^@]+}}@bar_singlethread
+; CHECK-SAME: (i32* nocapture nofree readnone [[TMP0:%.*]], %"struct.std::atomic"* nocapture nofree nonnull readonly dereferenceable(1) [[TMP1:%.*]]) #[[ATTR9:[0-9]+]] {
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* [[TMP1]], i64 0, i32 0, i32 0
+; CHECK-NEXT:    br label [[TMP4:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = load atomic i8, i8* [[TMP3]] monotonic, align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i8 [[TMP6]], 0
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP4]], label [[TMP8:%.*]]
+; CHECK:       8:
+; CHECK-NEXT:    fence syncscope("singlethread") acquire
+; CHECK-NEXT:    ret void
 ;
   %3 = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* %1, i64 0, i32 0, i32 0
   br label %4
@@ -418,8 +366,8 @@ define i32 @memcpy_volatile(i8* %ptr1, i8* %ptr2) {
 ;
 ; IS__CGSCC_OPM: Function Attrs: argmemonly nofree nounwind willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@memcpy_volatile
-; IS__CGSCC_OPM-SAME: (i8* nocapture nofree writeonly [[PTR1:%.*]], i8* nocapture nofree readonly [[PTR2:%.*]]) #[[ATTR11:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture nofree writeonly [[PTR1]], i8* noalias nocapture nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR22:[0-9]+]]
+; IS__CGSCC_OPM-SAME: (i8* nocapture nofree writeonly [[PTR1:%.*]], i8* nocapture nofree readonly [[PTR2:%.*]]) #[[ATTR10:[0-9]+]] {
+; IS__CGSCC_OPM-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture nofree writeonly [[PTR1]], i8* noalias nocapture nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR21:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 4
 ;
   call void @llvm.memcpy(i8* %ptr1, i8* %ptr2, i32 8, i1 1)
@@ -439,8 +387,8 @@ define i32 @memset_non_volatile(i8* %ptr1, i8 %val) {
 ;
 ; IS__CGSCC_OPM: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@memset_non_volatile
-; IS__CGSCC_OPM-SAME: (i8* nocapture nofree writeonly [[PTR1:%.*]], i8 [[VAL:%.*]]) #[[ATTR12:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i32(i8* nocapture nofree writeonly [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false) #[[ATTR23:[0-9]+]]
+; IS__CGSCC_OPM-SAME: (i8* nocapture nofree writeonly [[PTR1:%.*]], i8 [[VAL:%.*]]) #[[ATTR11:[0-9]+]] {
+; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i32(i8* nocapture nofree writeonly [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false) #[[ATTR22:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 4
 ;
   call void @llvm.memset(i8* %ptr1, i8 %val, i32 8, i1 0)
@@ -463,17 +411,11 @@ declare void @readnone_test() convergent readnone
 
 ; TEST 17 - negative. Convergent
 define void @convergent_readnone(){
-; NOT_CGSCC_OPM: Function Attrs: readnone
-; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@convergent_readnone
-; NOT_CGSCC_OPM-SAME: () #[[ATTR13:[0-9]+]] {
-; NOT_CGSCC_OPM-NEXT:    call void @readnone_test()
-; NOT_CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: readnone
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@convergent_readnone
-; IS__CGSCC_OPM-SAME: () #[[ATTR14:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    call void @readnone_test()
-; IS__CGSCC_OPM-NEXT:    ret void
+; CHECK: Function Attrs: readnone
+; CHECK-LABEL: define {{[^@]+}}@convergent_readnone
+; CHECK-SAME: () #[[ATTR13:[0-9]+]] {
+; CHECK-NEXT:    call void @readnone_test()
+; CHECK-NEXT:    ret void
 ;
   call void @readnone_test()
   ret void
@@ -487,17 +429,11 @@ declare void @llvm.x86.sse2.clflush(i8*)
 ; TEST 18 - negative. Synchronizing intrinsic
 
 define void @i_totally_sync() {
-; NOT_CGSCC_OPM: Function Attrs: nounwind
-; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@i_totally_sync
-; NOT_CGSCC_OPM-SAME: () #[[ATTR14:[0-9]+]] {
-; NOT_CGSCC_OPM-NEXT:    tail call void @llvm.x86.sse2.clflush(i8* noundef nonnull align 4 dereferenceable(4) bitcast (i32* @a to i8*))
-; NOT_CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: nounwind
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@i_totally_sync
-; IS__CGSCC_OPM-SAME: () #[[ATTR15:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    tail call void @llvm.x86.sse2.clflush(i8* noundef nonnull align 4 dereferenceable(4) bitcast (i32* @a to i8*))
-; IS__CGSCC_OPM-NEXT:    ret void
+; CHECK: Function Attrs: nounwind
+; CHECK-LABEL: define {{[^@]+}}@i_totally_sync
+; CHECK-SAME: () #[[ATTR14:[0-9]+]] {
+; CHECK-NEXT:    tail call void @llvm.x86.sse2.clflush(i8* noundef nonnull align 4 dereferenceable(4) bitcast (i32* @a to i8*))
+; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.x86.sse2.clflush(i8* bitcast (i32* @a to i8*))
   ret void
@@ -508,15 +444,10 @@ declare float @llvm.cos(float %val) readnone
 ; TEST 19 - positive, readnone & non-convergent intrinsic.
 
 define i32 @cos_test(float %x) {
-; NOT_CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@cos_test
-; NOT_CGSCC_OPM-SAME: (float [[X:%.*]]) #[[ATTR15:[0-9]+]] {
-; NOT_CGSCC_OPM-NEXT:    ret i32 4
-;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@cos_test
-; IS__CGSCC_OPM-SAME: (float [[X:%.*]]) #[[ATTR16:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    ret i32 4
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@cos_test
+; CHECK-SAME: (float [[X:%.*]]) #[[ATTR15:[0-9]+]] {
+; CHECK-NEXT:    ret i32 4
 ;
   call float @llvm.cos(float %x)
   ret i32 4
@@ -531,8 +462,8 @@ define float @cos_test2(float %x) {
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@cos_test2
-; IS__CGSCC_OPM-SAME: (float [[X:%.*]]) #[[ATTR17:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]]) #[[ATTR24:[0-9]+]]
+; IS__CGSCC_OPM-SAME: (float [[X:%.*]]) #[[ATTR16:[0-9]+]] {
+; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]]) #[[ATTR23:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    ret float [[C]]
 ;
   %c = call float @llvm.cos(float %x)
@@ -569,23 +500,22 @@ define float @cos_test2(float %x) {
 ; IS__CGSCC_OPM: attributes #[[ATTR3]] = { noinline nosync nounwind uwtable }
 ; IS__CGSCC_OPM: attributes #[[ATTR4]] = { noinline nounwind uwtable }
 ; IS__CGSCC_OPM: attributes #[[ATTR5]] = { argmemonly nofree noinline nounwind uwtable }
-; IS__CGSCC_OPM: attributes #[[ATTR6]] = { argmemonly nofree noinline norecurse nounwind uwtable }
-; IS__CGSCC_OPM: attributes #[[ATTR7]] = { nofree norecurse nounwind willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR8]] = { nofree norecurse nounwind }
-; IS__CGSCC_OPM: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR10]] = { nofree norecurse nosync nounwind }
-; IS__CGSCC_OPM: attributes #[[ATTR11]] = { argmemonly nofree nounwind willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR12]] = { argmemonly nofree nosync nounwind willreturn writeonly }
-; IS__CGSCC_OPM: attributes #[[ATTR13:[0-9]+]] = { convergent readnone }
-; IS__CGSCC_OPM: attributes #[[ATTR14]] = { readnone }
-; IS__CGSCC_OPM: attributes #[[ATTR15]] = { nounwind }
-; IS__CGSCC_OPM: attributes #[[ATTR16]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR17]] = { nofree nosync nounwind readnone willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR18:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
-; IS__CGSCC_OPM: attributes #[[ATTR19:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR6]] = { nofree norecurse nounwind willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR7]] = { nofree norecurse nounwind }
+; IS__CGSCC_OPM: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind }
+; IS__CGSCC_OPM: attributes #[[ATTR10]] = { argmemonly nofree nounwind willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR11]] = { argmemonly nofree nosync nounwind willreturn writeonly }
+; IS__CGSCC_OPM: attributes #[[ATTR12:[0-9]+]] = { convergent readnone }
+; IS__CGSCC_OPM: attributes #[[ATTR13]] = { readnone }
+; IS__CGSCC_OPM: attributes #[[ATTR14]] = { nounwind }
+; IS__CGSCC_OPM: attributes #[[ATTR15]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR16]] = { nofree nosync nounwind readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR17:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
+; IS__CGSCC_OPM: attributes #[[ATTR18:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR19]] = { nofree nounwind }
 ; IS__CGSCC_OPM: attributes #[[ATTR20]] = { nounwind willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR21]] = { nofree nounwind }
-; IS__CGSCC_OPM: attributes #[[ATTR22]] = { willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR23]] = { willreturn writeonly }
-; IS__CGSCC_OPM: attributes #[[ATTR24]] = { readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR21]] = { willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR22]] = { willreturn writeonly }
+; IS__CGSCC_OPM: attributes #[[ATTR23]] = { readnone willreturn }
 ;.

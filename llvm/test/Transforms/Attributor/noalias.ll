@@ -914,7 +914,7 @@ l2:
 ; IS__CGSCC____: attributes #[[ATTR7]] = { nofree norecurse nosync nounwind willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR8]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR9]] = { nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR10]] = { readonly willreturn }
+; IS__CGSCC____: attributes #[[ATTR10]] = { nounwind readonly willreturn }
 ; IS__CGSCC____: attributes #[[ATTR11]] = { willreturn }
 ; IS__CGSCC____: attributes #[[ATTR12]] = { nounwind willreturn writeonly }
 ;.

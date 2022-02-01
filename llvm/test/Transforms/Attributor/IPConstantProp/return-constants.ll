@@ -97,10 +97,10 @@ define i32 @caller2(i1 %Q) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller2
 ; IS__CGSCC____-SAME: (i1 [[Q:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]]) #[[ATTR1]]
+; IS__CGSCC____-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]]) #[[ATTR2:[0-9]+]]
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = extractvalue [[TMP0]] [[X]], 0
 ; IS__CGSCC____-NEXT:    [[B:%.*]] = extractvalue [[TMP0]] [[X]], 1
-; IS__CGSCC____-NEXT:    [[Y:%.*]] = call [[TMP0]] @bar(i1 [[Q]]) #[[ATTR2:[0-9]+]]
+; IS__CGSCC____-NEXT:    [[Y:%.*]] = call [[TMP0]] @bar(i1 [[Q]]) #[[ATTR2]]
 ; IS__CGSCC____-NEXT:    [[C:%.*]] = extractvalue [[TMP0]] [[Y]], 0
 ; IS__CGSCC____-NEXT:    [[D:%.*]] = extractvalue [[TMP0]] [[Y]], 1
 ; IS__CGSCC____-NEXT:    [[M:%.*]] = add i32 [[A]], [[C]]
@@ -125,6 +125,6 @@ define i32 @caller2(i1 %Q) {
 ; IS__TUNIT____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR2]] = { readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR1]] = { readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR2]] = { nounwind readnone willreturn }
 ;.
