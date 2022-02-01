@@ -403,9 +403,9 @@ public:
 
 class LegalizeRuleSet {
   /// When non-zero, the opcode we are an alias of
-  unsigned AliasOf;
+  unsigned AliasOf = 0;
   /// If true, there is another opcode that aliases this one
-  bool IsAliasedByAnother;
+  bool IsAliasedByAnother = false;
   SmallVector<LegalizeRule, 2> Rules;
 
 #ifndef NDEBUG
@@ -556,7 +556,7 @@ class LegalizeRuleSet {
   }
 
 public:
-  LegalizeRuleSet() : AliasOf(0), IsAliasedByAnother(false) {}
+  LegalizeRuleSet() = default;
 
   bool isAliasedByAnother() { return IsAliasedByAnother; }
   void setIsAliasedByAnother() { IsAliasedByAnother = true; }
