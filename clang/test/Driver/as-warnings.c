@@ -1,3 +1,7 @@
+// RUN: %clang -### %s --target=x86_64-pc-linux-gnu -c -Wa,--fatal-warnings 2>&1 | FileCheck %s --check-prefix=FATAL_WARNINGS
+
+// FATAL_WARNINGS: "-massembler-fatal-warnings"
+
 // RUN: %clang -### %s -c -o tmp.o -target i686-pc-linux-gnu -fno-integrated-as -Wa,--no-warn 2>&1 | FileCheck -check-prefix=CHECK-NOIAS %s
 // RUN: %clang -### %s -c -o tmp.o -integrated-as -Wa,--no-warn 2>&1 | FileCheck %s
 
@@ -17,7 +21,6 @@
 // CHECK-NOIAS: "--no-warn"
 // CHECK-NOIASW: "-W"
 // CHECK-AS-NOWARN-NOT: warning:
-// CHECK-AS-FATAL-NOT: warning:
-// CHECK-AS-FATAL: error
+// CHECK-AS-FATAL: error: .warning directive invoked in source file
 
 __asm(".warning");
