@@ -7,7 +7,6 @@ add_flang_library(FortranLower
   CharacterRuntime.cpp
   Coarray.cpp
   ConvertType.cpp
-  IO.cpp
   Mangler.cpp
   OpenACC.cpp
   OpenMP.cpp
