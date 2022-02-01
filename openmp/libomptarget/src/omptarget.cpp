@@ -224,9 +224,8 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
         for (auto &Device : PM->Devices)
           dumpTargetPointerMappings(Loc, *Device);
       else
-        FAILURE_MESSAGE("Run with LIBOMPTARGET_INFO=%d to dump host-target "
-                        "pointer mappings.\n",
-                        OMP_INFOTYPE_DUMP_TABLE);
+        FAILURE_MESSAGE("Consult https://openmp.llvm.org/design/Runtimes.html "
+                        "for debugging options.\n");
 
       SourceInfo info(Loc);
       if (info.isAvailible())
