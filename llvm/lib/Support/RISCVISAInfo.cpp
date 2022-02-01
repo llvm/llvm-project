@@ -737,6 +737,7 @@ Error RISCVISAInfo::checkDependency() {
 }
 
 static const char *ImpliedExtsV[] = {"zvl128b", "f", "d"};
+static const char *ImpliedExtsZfhmin[] = {"f"};
 static const char *ImpliedExtsZfh[] = {"zfhmin"};
 static const char *ImpliedExtsZve64d[] = {"zve64f"};
 static const char *ImpliedExtsZve64f[] = {"zve64x", "zve32f"};
@@ -772,6 +773,7 @@ struct ImpliedExtsEntry {
 static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {{"v"}, {ImpliedExtsV}},
     {{"zfh"}, {ImpliedExtsZfh}},
+    {{"zfhmin"}, {ImpliedExtsZfhmin}},
     {{"zk"}, {ImpliedExtsZk}},
     {{"zkn"}, {ImpliedExtsZkn}},
     {{"zks"}, {ImpliedExtsZks}},
