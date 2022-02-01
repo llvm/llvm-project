@@ -1,4 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// FIXME -Wno-aix-compat added temporarily while the diagnostic is being
+// refined.
+
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-aix-compat %s
 // expected-no-diagnostics
 template <typename T>
 struct A {

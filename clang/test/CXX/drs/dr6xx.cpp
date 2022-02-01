@@ -1,8 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+// FIXME -Wno-aix-compat added temporarily while the diagnostic is being
+// refined.
+// RUN: %clang_cc1 -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking -Wno-aix-compat
+// RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking -Wno-aix-compat
+// RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking -Wno-aix-compat
+// RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking -Wno-aix-compat
+// RUN: %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking -Wno-aix-compat
 
 namespace std {
   struct type_info {};
