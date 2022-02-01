@@ -27,25 +27,15 @@ bb5:		; preds = %entry
 }
 
 define i32 @term_Sharing(i32* %Term) nounwind {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@term_Sharing
-; IS__TUNIT____-SAME: (i32* nocapture nofree readnone [[TERM:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    br i1 false, label [[BB_I:%.*]], label [[BB14:%.*]]
-; IS__TUNIT____:       bb.i:
-; IS__TUNIT____-NEXT:    unreachable
-; IS__TUNIT____:       bb14:
-; IS__TUNIT____-NEXT:    ret i32 0
-;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@term_Sharing
-; IS__CGSCC____-SAME: (i32* nocapture nofree readnone [[TERM:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    br i1 false, label [[BB_I:%.*]], label [[BB14:%.*]]
-; IS__CGSCC____:       bb.i:
-; IS__CGSCC____-NEXT:    unreachable
-; IS__CGSCC____:       bb14:
-; IS__CGSCC____-NEXT:    ret i32 0
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@term_Sharing
+; CHECK-SAME: (i32* nocapture nofree readnone [[TERM:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[BB_I:%.*]], label [[BB14:%.*]]
+; CHECK:       bb.i:
+; CHECK-NEXT:    unreachable
+; CHECK:       bb14:
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   br i1 false, label %bb.i, label %bb14
@@ -58,7 +48,5 @@ bb14:		; preds = %entry
   ret i32 0
 }
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
-;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.

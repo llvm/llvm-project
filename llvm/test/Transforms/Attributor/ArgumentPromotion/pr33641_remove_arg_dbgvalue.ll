@@ -14,17 +14,11 @@
 %fun_t = type void (%p_t)*
 
 define void @foo() {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@foo
-; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__TUNIT____-NEXT:    [[TMP:%.*]] = alloca void (i16*)*, align 8
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@foo
-; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__CGSCC____-NEXT:    [[TMP:%.*]] = alloca void (i16*)*, align 8
-; IS__CGSCC____-NEXT:    ret void
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@foo
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[TMP:%.*]] = alloca void (i16*)*, align 8
+; CHECK-NEXT:    ret void
 ;
   %tmp = alloca %fun_t
   store %fun_t @bar, %fun_t* %tmp
@@ -60,11 +54,8 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !5 = !DIExpression()
 !6 = !DILocation(line: 1, column: 1, scope: !3)
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
-; IS__TUNIT____: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
-;.
-; IS__CGSCC_OPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
+; NOT_CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; NOT_CGSCC_NPM: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }

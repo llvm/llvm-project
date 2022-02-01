@@ -7,61 +7,33 @@ target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux"
 
 define void @test(i32 signext %n) {
-; IS__TUNIT____: Function Attrs: nofree noreturn nosync nounwind readnone
-; IS__TUNIT____-LABEL: define {{[^@]+}}@test
-; IS__TUNIT____-SAME: (i32 signext [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    unreachable
-; IS__TUNIT____:       if.then:
-; IS__TUNIT____-NEXT:    unreachable
-; IS__TUNIT____:       if.end:
-; IS__TUNIT____-NEXT:    unreachable
-; IS__TUNIT____:       if.then2:
-; IS__TUNIT____-NEXT:    unreachable
-; IS__TUNIT____:       if.end4:
-; IS__TUNIT____-NEXT:    unreachable
-; IS__TUNIT____:       if.then9:
-; IS__TUNIT____-NEXT:    unreachable
-; IS__TUNIT____:       if.then12:
-; IS__TUNIT____-NEXT:    unreachable
-; IS__TUNIT____:       if.else14:
-; IS__TUNIT____-NEXT:    unreachable
-; IS__TUNIT____:       do.body:
-; IS__TUNIT____-NEXT:    unreachable
-; IS__TUNIT____:       if.then33:
-; IS__TUNIT____-NEXT:    unreachable
-; IS__TUNIT____:       cond.false.i28:
-; IS__TUNIT____-NEXT:    unreachable
-; IS__TUNIT____:       _ZN5boost4math4signIgEEiRKT_.exit30:
-; IS__TUNIT____-NEXT:    unreachable
-;
-; IS__CGSCC____: Function Attrs: nofree norecurse noreturn nosync nounwind readnone
-; IS__CGSCC____-LABEL: define {{[^@]+}}@test
-; IS__CGSCC____-SAME: (i32 signext [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    unreachable
-; IS__CGSCC____:       if.then:
-; IS__CGSCC____-NEXT:    unreachable
-; IS__CGSCC____:       if.end:
-; IS__CGSCC____-NEXT:    unreachable
-; IS__CGSCC____:       if.then2:
-; IS__CGSCC____-NEXT:    unreachable
-; IS__CGSCC____:       if.end4:
-; IS__CGSCC____-NEXT:    unreachable
-; IS__CGSCC____:       if.then9:
-; IS__CGSCC____-NEXT:    unreachable
-; IS__CGSCC____:       if.then12:
-; IS__CGSCC____-NEXT:    unreachable
-; IS__CGSCC____:       if.else14:
-; IS__CGSCC____-NEXT:    unreachable
-; IS__CGSCC____:       do.body:
-; IS__CGSCC____-NEXT:    unreachable
-; IS__CGSCC____:       if.then33:
-; IS__CGSCC____-NEXT:    unreachable
-; IS__CGSCC____:       cond.false.i28:
-; IS__CGSCC____-NEXT:    unreachable
-; IS__CGSCC____:       _ZN5boost4math4signIgEEiRKT_.exit30:
-; IS__CGSCC____-NEXT:    unreachable
+; CHECK: Function Attrs: nofree norecurse noreturn nosync nounwind readnone
+; CHECK-LABEL: define {{[^@]+}}@test
+; CHECK-SAME: (i32 signext [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.then:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.end:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.then2:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.end4:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.then9:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.then12:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.else14:
+; CHECK-NEXT:    unreachable
+; CHECK:       do.body:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.then33:
+; CHECK-NEXT:    unreachable
+; CHECK:       cond.false.i28:
+; CHECK-NEXT:    unreachable
+; CHECK:       _ZN5boost4math4signIgEEiRKT_.exit30:
+; CHECK-NEXT:    unreachable
 ;
 
 entry:
@@ -109,7 +81,5 @@ _ZN5boost4math4signIgEEiRKT_.exit30:              ; preds = %cond.false.i28, %if
 }
 
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree noreturn nosync nounwind readnone }
-;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind readnone }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind readnone }
 ;.

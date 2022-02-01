@@ -167,7 +167,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK: Function Attrs: nofree nosync nounwind willreturn writeonly
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
 ; CHECK-LABEL: define {{[^@]+}}@use.internalized
 ; CHECK-SAME: (i8* nofree writeonly align 4 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -182,7 +182,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK-NEXT:    ret void
 ;
 ;.
-; CHECK: attributes #[[ATTR0]] = { nofree nosync nounwind willreturn writeonly }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn writeonly }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nosync nounwind }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nounwind readnone speculatable }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }

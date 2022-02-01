@@ -45,7 +45,9 @@ define dso_local i32 @main() {
 ; IS__TUNIT____-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(i64* noundef nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias nocapture noundef align 4294967296 null, i8* (i8*)* noundef nonnull @buz, i8* noalias nofree noundef nonnull readnone align 8 dereferenceable(1) "no-capture-maybe-returned" [[ALLOC2]])
 ; IS__TUNIT____-NEXT:    ret i32 0
 ;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@main() {
+; IS__CGSCC____: Function Attrs: norecurse
+; IS__CGSCC____-LABEL: define {{[^@]+}}@main
+; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[ALLOC1:%.*]] = alloca i8, align 8
 ; IS__CGSCC____-NEXT:    [[ALLOC2:%.*]] = alloca i8, align 8
@@ -70,7 +72,7 @@ entry:
 declare !callback !0 dso_local i32 @pthread_create(i64*, %union.pthread_attr_t*, i8* (i8*)*, i8*)
 
 define internal i8* @foo(i8* %arg) {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@foo
 ; IS__TUNIT____-SAME: (i8* noalias nocapture nofree readnone align 4294967296 [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__TUNIT____-NEXT:  entry:
@@ -78,7 +80,7 @@ define internal i8* @foo(i8* %arg) {
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@foo
-; IS__CGSCC____-SAME: (i8* noalias nocapture nofree readnone align 4294967296 [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
+; IS__CGSCC____-SAME: (i8* noalias nocapture nofree readnone align 4294967296 [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    ret i8* null
 ;
@@ -87,7 +89,7 @@ entry:
 }
 
 define internal i8* @bar(i8* %arg) {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@bar
 ; IS__TUNIT____-SAME: (i8* noalias nocapture nofree nonnull readnone align 8 dereferenceable(8) [[ARG:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT____-NEXT:  entry:
@@ -95,7 +97,7 @@ define internal i8* @bar(i8* %arg) {
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@bar
-; IS__CGSCC____-SAME: (i8* noalias nocapture nofree nonnull readnone align 8 dereferenceable(8) [[ARG:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-SAME: (i8* noalias nocapture nofree nonnull readnone align 8 dereferenceable(8) [[ARG:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    ret i8* bitcast (i8** @GlobalVPtr to i8*)
 ;
@@ -104,7 +106,7 @@ entry:
 }
 
 define internal i8* @baz(i8* %arg) {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@baz
 ; IS__TUNIT____-SAME: (i8* noalias nofree noundef nonnull readnone returned align 8 dereferenceable(1) "no-capture-maybe-returned" [[ARG:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT____-NEXT:  entry:
@@ -112,7 +114,7 @@ define internal i8* @baz(i8* %arg) {
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@baz
-; IS__CGSCC____-SAME: (i8* noalias nofree noundef nonnull readnone returned align 8 dereferenceable(1) "no-capture-maybe-returned" [[ARG:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-SAME: (i8* noalias nofree noundef nonnull readnone returned align 8 dereferenceable(1) "no-capture-maybe-returned" [[ARG:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    ret i8* [[ARG]]
 ;
@@ -121,7 +123,7 @@ entry:
 }
 
 define internal i8* @buz(i8* %arg) {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@buz
 ; IS__TUNIT____-SAME: (i8* noalias nofree noundef nonnull readnone returned align 8 dereferenceable(1) "no-capture-maybe-returned" [[ARG:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT____-NEXT:  entry:
@@ -129,7 +131,7 @@ define internal i8* @buz(i8* %arg) {
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@buz
-; IS__CGSCC____-SAME: (i8* noalias nofree noundef nonnull readnone returned align 8 dereferenceable(1) "no-capture-maybe-returned" [[ARG:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-SAME: (i8* noalias nofree noundef nonnull readnone returned align 8 dereferenceable(1) "no-capture-maybe-returned" [[ARG:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    ret i8* [[ARG]]
 ;
@@ -140,9 +142,10 @@ entry:
 !1 = !{i64 2, i64 3, i1 false}
 !0 = !{!1}
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
+; IS__TUNIT____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR0]] = { norecurse }
+; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!1}
 ; CHECK: [[META1:![0-9]+]] = !{i64 2, i64 3, i1 false}

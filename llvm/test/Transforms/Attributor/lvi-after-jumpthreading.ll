@@ -5,67 +5,36 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_OPM,IS__CGSCC____,IS________NPM,IS__CGSCC_NPM
 
 define i8 @test1(i32 %a, i32 %length) {
-; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind readnone
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@test1
-; IS__TUNIT_OPM-SAME: (i32 [[A:%.*]], i32 [[LENGTH:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    br label [[LOOP:%.*]]
-; IS__TUNIT_OPM:       loop:
-; IS__TUNIT_OPM-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; IS__TUNIT_OPM-NEXT:    [[CND:%.*]] = icmp sge i32 [[IV]], 0
-; IS__TUNIT_OPM-NEXT:    br i1 [[CND]], label [[BACKEDGE]], label [[EXIT:%.*]]
-; IS__TUNIT_OPM:       backedge:
-; IS__TUNIT_OPM-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
-; IS__TUNIT_OPM-NEXT:    [[CONT:%.*]] = icmp slt i32 [[IV_NEXT]], 400
-; IS__TUNIT_OPM-NEXT:    br i1 [[CONT]], label [[LOOP]], label [[EXIT]]
-; IS__TUNIT_OPM:       exit:
-; IS__TUNIT_OPM-NEXT:    ret i8 0
+; IS________OPM: Function Attrs: nofree norecurse nosync nounwind readnone
+; IS________OPM-LABEL: define {{[^@]+}}@test1
+; IS________OPM-SAME: (i32 [[A:%.*]], i32 [[LENGTH:%.*]]) #[[ATTR0:[0-9]+]] {
+; IS________OPM-NEXT:  entry:
+; IS________OPM-NEXT:    br label [[LOOP:%.*]]
+; IS________OPM:       loop:
+; IS________OPM-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; IS________OPM-NEXT:    [[CND:%.*]] = icmp sge i32 [[IV]], 0
+; IS________OPM-NEXT:    br i1 [[CND]], label [[BACKEDGE]], label [[EXIT:%.*]]
+; IS________OPM:       backedge:
+; IS________OPM-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
+; IS________OPM-NEXT:    [[CONT:%.*]] = icmp slt i32 [[IV_NEXT]], 400
+; IS________OPM-NEXT:    br i1 [[CONT]], label [[LOOP]], label [[EXIT]]
+; IS________OPM:       exit:
+; IS________OPM-NEXT:    ret i8 0
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@test1
-; IS__TUNIT_NPM-SAME: (i32 [[A:%.*]], i32 [[LENGTH:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    br label [[LOOP:%.*]]
-; IS__TUNIT_NPM:       loop:
-; IS__TUNIT_NPM-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; IS__TUNIT_NPM-NEXT:    br label [[BACKEDGE]]
-; IS__TUNIT_NPM:       backedge:
-; IS__TUNIT_NPM-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
-; IS__TUNIT_NPM-NEXT:    [[CONT:%.*]] = icmp slt i32 [[IV_NEXT]], 400
-; IS__TUNIT_NPM-NEXT:    br i1 [[CONT]], label [[LOOP]], label [[EXIT:%.*]]
-; IS__TUNIT_NPM:       exit:
-; IS__TUNIT_NPM-NEXT:    ret i8 0
-;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@test1
-; IS__CGSCC_OPM-SAME: (i32 [[A:%.*]], i32 [[LENGTH:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    br label [[LOOP:%.*]]
-; IS__CGSCC_OPM:       loop:
-; IS__CGSCC_OPM-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; IS__CGSCC_OPM-NEXT:    [[CND:%.*]] = icmp sge i32 [[IV]], 0
-; IS__CGSCC_OPM-NEXT:    br i1 [[CND]], label [[BACKEDGE]], label [[EXIT:%.*]]
-; IS__CGSCC_OPM:       backedge:
-; IS__CGSCC_OPM-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
-; IS__CGSCC_OPM-NEXT:    [[CONT:%.*]] = icmp slt i32 [[IV_NEXT]], 400
-; IS__CGSCC_OPM-NEXT:    br i1 [[CONT]], label [[LOOP]], label [[EXIT]]
-; IS__CGSCC_OPM:       exit:
-; IS__CGSCC_OPM-NEXT:    ret i8 0
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test1
-; IS__CGSCC_NPM-SAME: (i32 [[A:%.*]], i32 [[LENGTH:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    br label [[LOOP:%.*]]
-; IS__CGSCC_NPM:       loop:
-; IS__CGSCC_NPM-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; IS__CGSCC_NPM-NEXT:    br label [[BACKEDGE]]
-; IS__CGSCC_NPM:       backedge:
-; IS__CGSCC_NPM-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
-; IS__CGSCC_NPM-NEXT:    [[CONT:%.*]] = icmp slt i32 [[IV_NEXT]], 400
-; IS__CGSCC_NPM-NEXT:    br i1 [[CONT]], label [[LOOP]], label [[EXIT:%.*]]
-; IS__CGSCC_NPM:       exit:
-; IS__CGSCC_NPM-NEXT:    ret i8 0
+; IS________NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS________NPM-LABEL: define {{[^@]+}}@test1
+; IS________NPM-SAME: (i32 [[A:%.*]], i32 [[LENGTH:%.*]]) #[[ATTR0:[0-9]+]] {
+; IS________NPM-NEXT:  entry:
+; IS________NPM-NEXT:    br label [[LOOP:%.*]]
+; IS________NPM:       loop:
+; IS________NPM-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; IS________NPM-NEXT:    br label [[BACKEDGE]]
+; IS________NPM:       backedge:
+; IS________NPM-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
+; IS________NPM-NEXT:    [[CONT:%.*]] = icmp slt i32 [[IV_NEXT]], 400
+; IS________NPM-NEXT:    br i1 [[CONT]], label [[LOOP]], label [[EXIT:%.*]]
+; IS________NPM:       exit:
+; IS________NPM-NEXT:    ret i8 0
 ;
 entry:
   br label %loop
@@ -85,89 +54,47 @@ exit:
 }
 
 define i8 @test2(i32 %n) {
-; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind readnone
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@test2
-; IS__TUNIT_OPM-SAME: (i32 [[N:%.*]]) #[[ATTR0]] {
-; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    br label [[LOOP:%.*]]
-; IS__TUNIT_OPM:       loop:
-; IS__TUNIT_OPM-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; IS__TUNIT_OPM-NEXT:    [[IV2:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ [[IV2_NEXT:%.*]], [[BACKEDGE]] ]
-; IS__TUNIT_OPM-NEXT:    [[CND1:%.*]] = icmp sge i32 [[IV]], 0
-; IS__TUNIT_OPM-NEXT:    [[CND2:%.*]] = icmp sgt i32 [[IV2]], 0
-; IS__TUNIT_OPM-NEXT:    [[CND:%.*]] = and i1 [[CND1]], [[CND2]]
-; IS__TUNIT_OPM-NEXT:    br i1 [[CND]], label [[BACKEDGE]], label [[EXIT:%.*]]
-; IS__TUNIT_OPM:       backedge:
-; IS__TUNIT_OPM-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
-; IS__TUNIT_OPM-NEXT:    [[IV2_NEXT]] = sub nsw i32 [[IV2]], 1
-; IS__TUNIT_OPM-NEXT:    [[CONT1:%.*]] = icmp slt i32 [[IV_NEXT]], 400
-; IS__TUNIT_OPM-NEXT:    [[CONT2:%.*]] = icmp sgt i32 [[IV2_NEXT]], 0
-; IS__TUNIT_OPM-NEXT:    [[CONT:%.*]] = and i1 [[CONT1]], [[CONT2]]
-; IS__TUNIT_OPM-NEXT:    br i1 [[CONT]], label [[LOOP]], label [[EXIT]]
-; IS__TUNIT_OPM:       exit:
-; IS__TUNIT_OPM-NEXT:    ret i8 0
+; IS________OPM: Function Attrs: nofree norecurse nosync nounwind readnone
+; IS________OPM-LABEL: define {{[^@]+}}@test2
+; IS________OPM-SAME: (i32 [[N:%.*]]) #[[ATTR0]] {
+; IS________OPM-NEXT:  entry:
+; IS________OPM-NEXT:    br label [[LOOP:%.*]]
+; IS________OPM:       loop:
+; IS________OPM-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; IS________OPM-NEXT:    [[IV2:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ [[IV2_NEXT:%.*]], [[BACKEDGE]] ]
+; IS________OPM-NEXT:    [[CND1:%.*]] = icmp sge i32 [[IV]], 0
+; IS________OPM-NEXT:    [[CND2:%.*]] = icmp sgt i32 [[IV2]], 0
+; IS________OPM-NEXT:    [[CND:%.*]] = and i1 [[CND1]], [[CND2]]
+; IS________OPM-NEXT:    br i1 [[CND]], label [[BACKEDGE]], label [[EXIT:%.*]]
+; IS________OPM:       backedge:
+; IS________OPM-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
+; IS________OPM-NEXT:    [[IV2_NEXT]] = sub nsw i32 [[IV2]], 1
+; IS________OPM-NEXT:    [[CONT1:%.*]] = icmp slt i32 [[IV_NEXT]], 400
+; IS________OPM-NEXT:    [[CONT2:%.*]] = icmp sgt i32 [[IV2_NEXT]], 0
+; IS________OPM-NEXT:    [[CONT:%.*]] = and i1 [[CONT1]], [[CONT2]]
+; IS________OPM-NEXT:    br i1 [[CONT]], label [[LOOP]], label [[EXIT]]
+; IS________OPM:       exit:
+; IS________OPM-NEXT:    ret i8 0
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@test2
-; IS__TUNIT_NPM-SAME: (i32 [[N:%.*]]) #[[ATTR0]] {
-; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    br label [[LOOP:%.*]]
-; IS__TUNIT_NPM:       loop:
-; IS__TUNIT_NPM-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; IS__TUNIT_NPM-NEXT:    [[IV2:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ [[IV2_NEXT:%.*]], [[BACKEDGE]] ]
-; IS__TUNIT_NPM-NEXT:    [[CND2:%.*]] = icmp sgt i32 [[IV2]], 0
-; IS__TUNIT_NPM-NEXT:    br i1 [[CND2]], label [[BACKEDGE]], label [[EXIT:%.*]]
-; IS__TUNIT_NPM:       backedge:
-; IS__TUNIT_NPM-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
-; IS__TUNIT_NPM-NEXT:    [[IV2_NEXT]] = sub nsw i32 [[IV2]], 1
-; IS__TUNIT_NPM-NEXT:    [[CONT1:%.*]] = icmp slt i32 [[IV_NEXT]], 400
-; IS__TUNIT_NPM-NEXT:    [[CONT2:%.*]] = icmp sgt i32 [[IV2_NEXT]], 0
-; IS__TUNIT_NPM-NEXT:    [[CONT:%.*]] = and i1 [[CONT1]], [[CONT2]]
-; IS__TUNIT_NPM-NEXT:    br i1 [[CONT]], label [[LOOP]], label [[EXIT]]
-; IS__TUNIT_NPM:       exit:
-; IS__TUNIT_NPM-NEXT:    ret i8 0
-;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@test2
-; IS__CGSCC_OPM-SAME: (i32 [[N:%.*]]) #[[ATTR0]] {
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    br label [[LOOP:%.*]]
-; IS__CGSCC_OPM:       loop:
-; IS__CGSCC_OPM-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; IS__CGSCC_OPM-NEXT:    [[IV2:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ [[IV2_NEXT:%.*]], [[BACKEDGE]] ]
-; IS__CGSCC_OPM-NEXT:    [[CND1:%.*]] = icmp sge i32 [[IV]], 0
-; IS__CGSCC_OPM-NEXT:    [[CND2:%.*]] = icmp sgt i32 [[IV2]], 0
-; IS__CGSCC_OPM-NEXT:    [[CND:%.*]] = and i1 [[CND1]], [[CND2]]
-; IS__CGSCC_OPM-NEXT:    br i1 [[CND]], label [[BACKEDGE]], label [[EXIT:%.*]]
-; IS__CGSCC_OPM:       backedge:
-; IS__CGSCC_OPM-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
-; IS__CGSCC_OPM-NEXT:    [[IV2_NEXT]] = sub nsw i32 [[IV2]], 1
-; IS__CGSCC_OPM-NEXT:    [[CONT1:%.*]] = icmp slt i32 [[IV_NEXT]], 400
-; IS__CGSCC_OPM-NEXT:    [[CONT2:%.*]] = icmp sgt i32 [[IV2_NEXT]], 0
-; IS__CGSCC_OPM-NEXT:    [[CONT:%.*]] = and i1 [[CONT1]], [[CONT2]]
-; IS__CGSCC_OPM-NEXT:    br i1 [[CONT]], label [[LOOP]], label [[EXIT]]
-; IS__CGSCC_OPM:       exit:
-; IS__CGSCC_OPM-NEXT:    ret i8 0
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test2
-; IS__CGSCC_NPM-SAME: (i32 [[N:%.*]]) #[[ATTR0]] {
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    br label [[LOOP:%.*]]
-; IS__CGSCC_NPM:       loop:
-; IS__CGSCC_NPM-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; IS__CGSCC_NPM-NEXT:    [[IV2:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ [[IV2_NEXT:%.*]], [[BACKEDGE]] ]
-; IS__CGSCC_NPM-NEXT:    [[CND2:%.*]] = icmp sgt i32 [[IV2]], 0
-; IS__CGSCC_NPM-NEXT:    br i1 [[CND2]], label [[BACKEDGE]], label [[EXIT:%.*]]
-; IS__CGSCC_NPM:       backedge:
-; IS__CGSCC_NPM-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
-; IS__CGSCC_NPM-NEXT:    [[IV2_NEXT]] = sub nsw i32 [[IV2]], 1
-; IS__CGSCC_NPM-NEXT:    [[CONT1:%.*]] = icmp slt i32 [[IV_NEXT]], 400
-; IS__CGSCC_NPM-NEXT:    [[CONT2:%.*]] = icmp sgt i32 [[IV2_NEXT]], 0
-; IS__CGSCC_NPM-NEXT:    [[CONT:%.*]] = and i1 [[CONT1]], [[CONT2]]
-; IS__CGSCC_NPM-NEXT:    br i1 [[CONT]], label [[LOOP]], label [[EXIT]]
-; IS__CGSCC_NPM:       exit:
-; IS__CGSCC_NPM-NEXT:    ret i8 0
+; IS________NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS________NPM-LABEL: define {{[^@]+}}@test2
+; IS________NPM-SAME: (i32 [[N:%.*]]) #[[ATTR0]] {
+; IS________NPM-NEXT:  entry:
+; IS________NPM-NEXT:    br label [[LOOP:%.*]]
+; IS________NPM:       loop:
+; IS________NPM-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; IS________NPM-NEXT:    [[IV2:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ [[IV2_NEXT:%.*]], [[BACKEDGE]] ]
+; IS________NPM-NEXT:    [[CND2:%.*]] = icmp sgt i32 [[IV2]], 0
+; IS________NPM-NEXT:    br i1 [[CND2]], label [[BACKEDGE]], label [[EXIT:%.*]]
+; IS________NPM:       backedge:
+; IS________NPM-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
+; IS________NPM-NEXT:    [[IV2_NEXT]] = sub nsw i32 [[IV2]], 1
+; IS________NPM-NEXT:    [[CONT1:%.*]] = icmp slt i32 [[IV_NEXT]], 400
+; IS________NPM-NEXT:    [[CONT2:%.*]] = icmp sgt i32 [[IV2_NEXT]], 0
+; IS________NPM-NEXT:    [[CONT:%.*]] = and i1 [[CONT1]], [[CONT2]]
+; IS________NPM-NEXT:    br i1 [[CONT]], label [[LOOP]], label [[EXIT]]
+; IS________NPM:       exit:
+; IS________NPM-NEXT:    ret i8 0
 ;
 entry:
   br label %loop
@@ -315,23 +242,13 @@ declare void @llvm.assume(i1) nounwind
 declare void @dummy(i1) nounwind
 declare void @llvm.experimental.guard(i1, ...)
 ;.
-; IS__TUNIT_OPM: attributes #[[ATTR0]] = { nofree nosync nounwind readnone }
-; IS__TUNIT_OPM: attributes #[[ATTR1:[0-9]+]] = { inaccessiblememonly nofree nosync nounwind willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR2]] = { nounwind }
-; IS__TUNIT_OPM: attributes #[[ATTR3:[0-9]+]] = { nofree nosync willreturn }
+; IS________OPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone }
+; IS________OPM: attributes #[[ATTR1:[0-9]+]] = { inaccessiblememonly nofree nosync nounwind willreturn }
+; IS________OPM: attributes #[[ATTR2]] = { nounwind }
+; IS________OPM: attributes #[[ATTR3:[0-9]+]] = { nofree nosync willreturn }
 ;.
-; IS__TUNIT_NPM: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
-; IS__TUNIT_NPM: attributes #[[ATTR1:[0-9]+]] = { inaccessiblememonly nofree nosync nounwind willreturn }
-; IS__TUNIT_NPM: attributes #[[ATTR2]] = { nounwind }
-; IS__TUNIT_NPM: attributes #[[ATTR3:[0-9]+]] = { nofree nosync willreturn }
-;.
-; IS__CGSCC_OPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone }
-; IS__CGSCC_OPM: attributes #[[ATTR1:[0-9]+]] = { inaccessiblememonly nofree nosync nounwind willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR2]] = { nounwind }
-; IS__CGSCC_OPM: attributes #[[ATTR3:[0-9]+]] = { nofree nosync willreturn }
-;.
-; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR1:[0-9]+]] = { inaccessiblememonly nofree nosync nounwind willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR2]] = { nounwind }
-; IS__CGSCC_NPM: attributes #[[ATTR3:[0-9]+]] = { nofree nosync willreturn }
+; IS________NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS________NPM: attributes #[[ATTR1:[0-9]+]] = { inaccessiblememonly nofree nosync nounwind willreturn }
+; IS________NPM: attributes #[[ATTR2]] = { nounwind }
+; IS________NPM: attributes #[[ATTR3:[0-9]+]] = { nofree nosync willreturn }
 ;.

@@ -53,8 +53,9 @@ define dso_local void @foo(i32 %N) {
 ; IS__TUNIT_NPM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 3, void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*, i32*, float*, i64)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[N_ADDR]], float* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) undef, i64 undef)
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
+; IS__CGSCC_OPM: Function Attrs: norecurse
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@foo
-; IS__CGSCC_OPM-SAME: (i32 [[N:%.*]]) {
+; IS__CGSCC_OPM-SAME: (i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 ; IS__CGSCC_OPM-NEXT:    [[P:%.*]] = alloca float, align 4
@@ -63,8 +64,9 @@ define dso_local void @foo(i32 %N) {
 ; IS__CGSCC_OPM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 3, void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*, i32*, float*, i64)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[N_ADDR]], float* noalias nocapture nofree noundef nonnull readnone align 4 dereferenceable(4) [[P]], i64 noundef 4617315517961601024)
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
+; IS__CGSCC_NPM: Function Attrs: norecurse
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@foo
-; IS__CGSCC_NPM-SAME: (i32 [[N:%.*]]) {
+; IS__CGSCC_NPM-SAME: (i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 ; IS__CGSCC_NPM-NEXT:    [[P:%.*]] = alloca float, align 4
@@ -204,8 +206,9 @@ define internal void @.omp_outlined.(i32* noalias %.global_tid., i32* noalias %.
 ; IS__TUNIT_NPM:       omp.precond.end:
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
+; IS__CGSCC_OPM: Function Attrs: norecurse
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@.omp_outlined.
-; IS__CGSCC_OPM-SAME: (i32* noalias nocapture nofree readonly [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[N:%.*]], float* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[P:%.*]], i64 [[Q:%.*]]) {
+; IS__CGSCC_OPM-SAME: (i32* noalias nocapture nofree readonly [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[N:%.*]], float* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[P:%.*]], i64 [[Q:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    [[Q_ADDR:%.*]] = alloca i64, align 8
 ; IS__CGSCC_OPM-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
@@ -264,8 +267,9 @@ define internal void @.omp_outlined.(i32* noalias %.global_tid., i32* noalias %.
 ; IS__CGSCC_OPM:       omp.precond.end:
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
+; IS__CGSCC_NPM: Function Attrs: norecurse
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@.omp_outlined.
-; IS__CGSCC_NPM-SAME: (i32* noalias nocapture nofree readonly [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[N:%.*]], float* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[P:%.*]], i64 [[Q:%.*]]) {
+; IS__CGSCC_NPM-SAME: (i32* noalias nocapture nofree readonly [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[N:%.*]], float* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[P:%.*]], i64 [[Q:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[Q_ADDR:%.*]] = alloca i64, align 8
 ; IS__CGSCC_NPM-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
@@ -406,6 +410,8 @@ declare !callback !0 dso_local void @__kmpc_fork_call(%struct.ident_t*, i32, voi
 
 !1 = !{i64 2, i64 -1, i64 -1, i1 true}
 !0 = !{!1}
+;.
+; IS__CGSCC____: attributes #[[ATTR0:[0-9]+]] = { norecurse }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!1}
 ; CHECK: [[META1:![0-9]+]] = !{i64 2, i64 -1, i64 -1, i1 true}

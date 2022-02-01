@@ -34,6 +34,7 @@ BasicBlock1:
 }
 
 define void @patatino(i32, i32, i32) local_unnamed_addr #1 {
+; CHECK: Function Attrs: norecurse
 ; CHECK-LABEL: define {{[^@]+}}@patatino
 ; CHECK-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  bb:
@@ -52,5 +53,5 @@ attributes #0 = { naked }
 attributes #1 = { "frame-pointer"="all" }
 ;.
 ; CHECK: attributes #[[ATTR0]] = { naked }
-; CHECK: attributes #[[ATTR1]] = { "frame-pointer"="all" }
+; CHECK: attributes #[[ATTR1]] = { norecurse "frame-pointer"="all" }
 ;.

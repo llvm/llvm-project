@@ -19,9 +19,9 @@ entry:
 }
 
 define i32 @main() nounwind  {
-; CHECK: Function Attrs: nounwind
+; CHECK: Function Attrs: norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@main
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @foo() #[[ATTR0]]
 ; CHECK-NEXT:    ret i32 [[R]]
@@ -33,4 +33,5 @@ entry:
 
 ;.
 ; CHECK: attributes #[[ATTR0]] = { nounwind }
+; CHECK: attributes #[[ATTR1]] = { norecurse nounwind }
 ;.

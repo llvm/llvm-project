@@ -27,17 +27,11 @@ F:              ; preds = %0
 }
 
 define i32 @foo() {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@foo
-; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__TUNIT____-NEXT:    [[A:%.*]] = alloca i32, align 4
-; IS__TUNIT____-NEXT:    ret i32 17
-;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@foo
-; IS__CGSCC____-SAME: () #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    [[A:%.*]] = alloca i32, align 4
-; IS__CGSCC____-NEXT:    ret i32 17
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@foo
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    ret i32 17
 ;
   %A = alloca i32         ; <i32*> [#uses=2]
   store i32 17, i32* %A
@@ -46,7 +40,5 @@ define i32 @foo() {
 }
 
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
-;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.
