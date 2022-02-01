@@ -1409,18 +1409,20 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
 
   // Look for any clobbers performed by a register mask. Only test locations
   // that are actually being tracked.
-  for (auto L : MTracker->locations()) {
-    // Stack locations can't be clobbered by regmasks.
-    if (MTracker->isSpill(L.Idx))
-      continue;
+  if (!RegMaskPtrs.empty()) {
+    for (auto L : MTracker->locations()) {
+      // Stack locations can't be clobbered by regmasks.
+      if (MTracker->isSpill(L.Idx))
+        continue;
 
-    Register Reg = MTracker->LocIdxToLocID[L.Idx];
-    if (IgnoreSPAlias(Reg))
-      continue;
+      Register Reg = MTracker->LocIdxToLocID[L.Idx];
+      if (IgnoreSPAlias(Reg))
+        continue;
 
-    for (auto *MO : RegMaskPtrs)
-      if (MO->clobbersPhysReg(Reg))
-        TTracker->clobberMloc(L.Idx, MI.getIterator(), false);
+      for (auto *MO : RegMaskPtrs)
+        if (MO->clobbersPhysReg(Reg))
+          TTracker->clobberMloc(L.Idx, MI.getIterator(), false);
+    }
   }
 
   // Tell TTracker about any folded stack store.
