@@ -1180,7 +1180,7 @@ void SelectionDAGBuilder::visitGCResult(const GCResultInst &CI) {
   // register because statepoint and actual call return types can be
   // different, and getValue() will use CopyFromReg of the wrong type,
   // which is always i32 in our case.
-  Type *RetTy = SI->getActualReturnType();
+  Type *RetTy = CI.getType();
   SDValue CopyFromReg = getCopyFromRegs(SI, RetTy);
   
   assert(CopyFromReg.getNode());
