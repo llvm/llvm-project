@@ -210,8 +210,8 @@ std::pair<tooling::Replacements, unsigned> NamespaceEndCommentsFixer::analyze(
 
   // Spin through the lines and ensure we have balanced braces.
   int Braces = 0;
-  for (size_t I = 0, E = AnnotatedLines.size(); I != E; ++I) {
-    FormatToken *Tok = AnnotatedLines[I]->First;
+  for (AnnotatedLine *Line : AnnotatedLines) {
+    FormatToken *Tok = Line->First;
     while (Tok) {
       Braces += Tok->is(tok::l_brace) ? 1 : Tok->is(tok::r_brace) ? -1 : 0;
       Tok = Tok->Next;

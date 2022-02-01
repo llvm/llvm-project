@@ -1030,7 +1030,7 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
 
   // Now go through and fixup the spaces.
   auto *CellIter = Cells.begin();
-  for (auto i = 0U; i < CellDescs.CellCount; i++, ++CellIter) {
+  for (auto i = 0U; i < CellDescs.CellCount; ++i, ++CellIter) {
     unsigned NetWidth = 0U;
     if (isSplitCell(*CellIter))
       NetWidth = getNetWidth(Cells.begin(), CellIter, CellDescs.InitialSpaces);
