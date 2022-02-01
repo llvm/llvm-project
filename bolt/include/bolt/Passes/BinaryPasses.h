@@ -295,6 +295,16 @@ public:
 
 /// Perform simple peephole optimizations.
 class Peepholes : public BinaryFunctionPass {
+public:
+  enum PeepholeOpts : char {
+    PEEP_NONE = 0x0,
+    PEEP_DOUBLE_JUMPS = 0x2,
+    PEEP_TAILCALL_TRAPS = 0x4,
+    PEEP_USELESS_BRANCHES = 0x8,
+    PEEP_ALL = 0xf
+  };
+
+private:
   uint64_t NumDoubleJumps{0};
   uint64_t TailCallTraps{0};
   uint64_t NumUselessCondBranches{0};
