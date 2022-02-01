@@ -12,10 +12,22 @@
 // File creation flags
 #define O_CLOEXEC 02000000
 #define O_CREAT 00000100
+
+#ifdef __aarch64__
+#define O_DIRECTORY 040000
+#else
 #define O_DIRECTORY 00200000
+#endif
+
 #define O_EXCL 00000200
 #define O_NOCTTY 00000400
+
+#ifdef __aarch64__
+#define O_NOFOLLOW 0100000
+#else
 #define O_NOFOLLOW 00400000
+#endif
+
 #define O_TRUNC 00001000
 #define O_TMPFILE (020000000 | O_DIRECTORY)
 
