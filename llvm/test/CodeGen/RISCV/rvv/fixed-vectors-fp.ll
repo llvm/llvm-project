@@ -343,8 +343,8 @@ define void @copysign_vf_v8f16(<8 x half>* %x, half %y) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
-  %b = insertelement <8 x half> undef, half %y, i32 0
-  %c = shufflevector <8 x half> %b, <8 x half> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x half> poison, half %y, i32 0
+  %c = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> zeroinitializer
   %d = call <8 x half> @llvm.copysign.v8f16(<8 x half> %a, <8 x half> %c)
   store <8 x half> %d, <8 x half>* %x
   ret void
@@ -359,8 +359,8 @@ define void @copysign_vf_v4f32(<4 x float>* %x, float %y) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
-  %b = insertelement <4 x float> undef, float %y, i32 0
-  %c = shufflevector <4 x float> %b, <4 x float> undef, <4 x i32> zeroinitializer
+  %b = insertelement <4 x float> poison, float %y, i32 0
+  %c = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> zeroinitializer
   %d = call <4 x float> @llvm.copysign.v4f32(<4 x float> %a, <4 x float> %c)
   store <4 x float> %d, <4 x float>* %x
   ret void
@@ -375,8 +375,8 @@ define void @copysign_vf_v2f64(<2 x double>* %x, double %y) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
-  %b = insertelement <2 x double> undef, double %y, i32 0
-  %c = shufflevector <2 x double> %b, <2 x double> undef, <2 x i32> zeroinitializer
+  %b = insertelement <2 x double> poison, double %y, i32 0
+  %c = shufflevector <2 x double> %b, <2 x double> poison, <2 x i32> zeroinitializer
   %d = call <2 x double> @llvm.copysign.v2f64(<2 x double> %a, <2 x double> %c)
   store <2 x double> %d, <2 x double>* %x
   ret void
@@ -1384,8 +1384,8 @@ define void @fadd_vf_v8f16(<8 x half>* %x, half %y) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
-  %b = insertelement <8 x half> undef, half %y, i32 0
-  %c = shufflevector <8 x half> %b, <8 x half> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x half> poison, half %y, i32 0
+  %c = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> zeroinitializer
   %d = fadd <8 x half> %a, %c
   store <8 x half> %d, <8 x half>* %x
   ret void
@@ -1400,8 +1400,8 @@ define void @fadd_vf_v4f32(<4 x float>* %x, float %y) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
-  %b = insertelement <4 x float> undef, float %y, i32 0
-  %c = shufflevector <4 x float> %b, <4 x float> undef, <4 x i32> zeroinitializer
+  %b = insertelement <4 x float> poison, float %y, i32 0
+  %c = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> zeroinitializer
   %d = fadd <4 x float> %a, %c
   store <4 x float> %d, <4 x float>* %x
   ret void
@@ -1416,8 +1416,8 @@ define void @fadd_vf_v2f64(<2 x double>* %x, double %y) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
-  %b = insertelement <2 x double> undef, double %y, i32 0
-  %c = shufflevector <2 x double> %b, <2 x double> undef, <2 x i32> zeroinitializer
+  %b = insertelement <2 x double> poison, double %y, i32 0
+  %c = shufflevector <2 x double> %b, <2 x double> poison, <2 x i32> zeroinitializer
   %d = fadd <2 x double> %a, %c
   store <2 x double> %d, <2 x double>* %x
   ret void
@@ -1432,8 +1432,8 @@ define void @fadd_fv_v8f16(<8 x half>* %x, half %y) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
-  %b = insertelement <8 x half> undef, half %y, i32 0
-  %c = shufflevector <8 x half> %b, <8 x half> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x half> poison, half %y, i32 0
+  %c = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> zeroinitializer
   %d = fadd <8 x half> %c, %a
   store <8 x half> %d, <8 x half>* %x
   ret void
@@ -1448,8 +1448,8 @@ define void @fadd_fv_v4f32(<4 x float>* %x, float %y) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
-  %b = insertelement <4 x float> undef, float %y, i32 0
-  %c = shufflevector <4 x float> %b, <4 x float> undef, <4 x i32> zeroinitializer
+  %b = insertelement <4 x float> poison, float %y, i32 0
+  %c = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> zeroinitializer
   %d = fadd <4 x float> %c, %a
   store <4 x float> %d, <4 x float>* %x
   ret void
@@ -1464,8 +1464,8 @@ define void @fadd_fv_v2f64(<2 x double>* %x, double %y) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
-  %b = insertelement <2 x double> undef, double %y, i32 0
-  %c = shufflevector <2 x double> %b, <2 x double> undef, <2 x i32> zeroinitializer
+  %b = insertelement <2 x double> poison, double %y, i32 0
+  %c = shufflevector <2 x double> %b, <2 x double> poison, <2 x i32> zeroinitializer
   %d = fadd <2 x double> %c, %a
   store <2 x double> %d, <2 x double>* %x
   ret void
@@ -1480,8 +1480,8 @@ define void @fsub_vf_v8f16(<8 x half>* %x, half %y) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
-  %b = insertelement <8 x half> undef, half %y, i32 0
-  %c = shufflevector <8 x half> %b, <8 x half> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x half> poison, half %y, i32 0
+  %c = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> zeroinitializer
   %d = fsub <8 x half> %a, %c
   store <8 x half> %d, <8 x half>* %x
   ret void
@@ -1496,8 +1496,8 @@ define void @fsub_vf_v4f32(<4 x float>* %x, float %y) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
-  %b = insertelement <4 x float> undef, float %y, i32 0
-  %c = shufflevector <4 x float> %b, <4 x float> undef, <4 x i32> zeroinitializer
+  %b = insertelement <4 x float> poison, float %y, i32 0
+  %c = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> zeroinitializer
   %d = fsub <4 x float> %a, %c
   store <4 x float> %d, <4 x float>* %x
   ret void
@@ -1512,8 +1512,8 @@ define void @fsub_vf_v2f64(<2 x double>* %x, double %y) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
-  %b = insertelement <2 x double> undef, double %y, i32 0
-  %c = shufflevector <2 x double> %b, <2 x double> undef, <2 x i32> zeroinitializer
+  %b = insertelement <2 x double> poison, double %y, i32 0
+  %c = shufflevector <2 x double> %b, <2 x double> poison, <2 x i32> zeroinitializer
   %d = fsub <2 x double> %a, %c
   store <2 x double> %d, <2 x double>* %x
   ret void
@@ -1528,8 +1528,8 @@ define void @fsub_fv_v8f16(<8 x half>* %x, half %y) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
-  %b = insertelement <8 x half> undef, half %y, i32 0
-  %c = shufflevector <8 x half> %b, <8 x half> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x half> poison, half %y, i32 0
+  %c = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> zeroinitializer
   %d = fsub <8 x half> %c, %a
   store <8 x half> %d, <8 x half>* %x
   ret void
@@ -1544,8 +1544,8 @@ define void @fsub_fv_v4f32(<4 x float>* %x, float %y) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
-  %b = insertelement <4 x float> undef, float %y, i32 0
-  %c = shufflevector <4 x float> %b, <4 x float> undef, <4 x i32> zeroinitializer
+  %b = insertelement <4 x float> poison, float %y, i32 0
+  %c = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> zeroinitializer
   %d = fsub <4 x float> %c, %a
   store <4 x float> %d, <4 x float>* %x
   ret void
@@ -1560,8 +1560,8 @@ define void @fsub_fv_v2f64(<2 x double>* %x, double %y) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
-  %b = insertelement <2 x double> undef, double %y, i32 0
-  %c = shufflevector <2 x double> %b, <2 x double> undef, <2 x i32> zeroinitializer
+  %b = insertelement <2 x double> poison, double %y, i32 0
+  %c = shufflevector <2 x double> %b, <2 x double> poison, <2 x i32> zeroinitializer
   %d = fsub <2 x double> %c, %a
   store <2 x double> %d, <2 x double>* %x
   ret void
@@ -1576,8 +1576,8 @@ define void @fmul_vf_v8f16(<8 x half>* %x, half %y) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
-  %b = insertelement <8 x half> undef, half %y, i32 0
-  %c = shufflevector <8 x half> %b, <8 x half> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x half> poison, half %y, i32 0
+  %c = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> zeroinitializer
   %d = fmul <8 x half> %a, %c
   store <8 x half> %d, <8 x half>* %x
   ret void
@@ -1592,8 +1592,8 @@ define void @fmul_vf_v4f32(<4 x float>* %x, float %y) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
-  %b = insertelement <4 x float> undef, float %y, i32 0
-  %c = shufflevector <4 x float> %b, <4 x float> undef, <4 x i32> zeroinitializer
+  %b = insertelement <4 x float> poison, float %y, i32 0
+  %c = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> zeroinitializer
   %d = fmul <4 x float> %a, %c
   store <4 x float> %d, <4 x float>* %x
   ret void
@@ -1608,8 +1608,8 @@ define void @fmul_vf_v2f64(<2 x double>* %x, double %y) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
-  %b = insertelement <2 x double> undef, double %y, i32 0
-  %c = shufflevector <2 x double> %b, <2 x double> undef, <2 x i32> zeroinitializer
+  %b = insertelement <2 x double> poison, double %y, i32 0
+  %c = shufflevector <2 x double> %b, <2 x double> poison, <2 x i32> zeroinitializer
   %d = fmul <2 x double> %a, %c
   store <2 x double> %d, <2 x double>* %x
   ret void
@@ -1624,8 +1624,8 @@ define void @fmul_fv_v8f16(<8 x half>* %x, half %y) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
-  %b = insertelement <8 x half> undef, half %y, i32 0
-  %c = shufflevector <8 x half> %b, <8 x half> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x half> poison, half %y, i32 0
+  %c = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> zeroinitializer
   %d = fmul <8 x half> %c, %a
   store <8 x half> %d, <8 x half>* %x
   ret void
@@ -1640,8 +1640,8 @@ define void @fmul_fv_v4f32(<4 x float>* %x, float %y) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
-  %b = insertelement <4 x float> undef, float %y, i32 0
-  %c = shufflevector <4 x float> %b, <4 x float> undef, <4 x i32> zeroinitializer
+  %b = insertelement <4 x float> poison, float %y, i32 0
+  %c = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> zeroinitializer
   %d = fmul <4 x float> %c, %a
   store <4 x float> %d, <4 x float>* %x
   ret void
@@ -1656,8 +1656,8 @@ define void @fmul_fv_v2f64(<2 x double>* %x, double %y) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
-  %b = insertelement <2 x double> undef, double %y, i32 0
-  %c = shufflevector <2 x double> %b, <2 x double> undef, <2 x i32> zeroinitializer
+  %b = insertelement <2 x double> poison, double %y, i32 0
+  %c = shufflevector <2 x double> %b, <2 x double> poison, <2 x i32> zeroinitializer
   %d = fmul <2 x double> %c, %a
   store <2 x double> %d, <2 x double>* %x
   ret void
@@ -1672,8 +1672,8 @@ define void @fdiv_vf_v8f16(<8 x half>* %x, half %y) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
-  %b = insertelement <8 x half> undef, half %y, i32 0
-  %c = shufflevector <8 x half> %b, <8 x half> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x half> poison, half %y, i32 0
+  %c = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> zeroinitializer
   %d = fdiv <8 x half> %a, %c
   store <8 x half> %d, <8 x half>* %x
   ret void
@@ -1688,8 +1688,8 @@ define void @fdiv_vf_v4f32(<4 x float>* %x, float %y) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
-  %b = insertelement <4 x float> undef, float %y, i32 0
-  %c = shufflevector <4 x float> %b, <4 x float> undef, <4 x i32> zeroinitializer
+  %b = insertelement <4 x float> poison, float %y, i32 0
+  %c = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> zeroinitializer
   %d = fdiv <4 x float> %a, %c
   store <4 x float> %d, <4 x float>* %x
   ret void
@@ -1704,8 +1704,8 @@ define void @fdiv_vf_v2f64(<2 x double>* %x, double %y) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
-  %b = insertelement <2 x double> undef, double %y, i32 0
-  %c = shufflevector <2 x double> %b, <2 x double> undef, <2 x i32> zeroinitializer
+  %b = insertelement <2 x double> poison, double %y, i32 0
+  %c = shufflevector <2 x double> %b, <2 x double> poison, <2 x i32> zeroinitializer
   %d = fdiv <2 x double> %a, %c
   store <2 x double> %d, <2 x double>* %x
   ret void
@@ -1720,8 +1720,8 @@ define void @fdiv_fv_v8f16(<8 x half>* %x, half %y) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
-  %b = insertelement <8 x half> undef, half %y, i32 0
-  %c = shufflevector <8 x half> %b, <8 x half> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x half> poison, half %y, i32 0
+  %c = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> zeroinitializer
   %d = fdiv <8 x half> %c, %a
   store <8 x half> %d, <8 x half>* %x
   ret void
@@ -1736,8 +1736,8 @@ define void @fdiv_fv_v4f32(<4 x float>* %x, float %y) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
-  %b = insertelement <4 x float> undef, float %y, i32 0
-  %c = shufflevector <4 x float> %b, <4 x float> undef, <4 x i32> zeroinitializer
+  %b = insertelement <4 x float> poison, float %y, i32 0
+  %c = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> zeroinitializer
   %d = fdiv <4 x float> %c, %a
   store <4 x float> %d, <4 x float>* %x
   ret void
@@ -1752,8 +1752,8 @@ define void @fdiv_fv_v2f64(<2 x double>* %x, double %y) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
-  %b = insertelement <2 x double> undef, double %y, i32 0
-  %c = shufflevector <2 x double> %b, <2 x double> undef, <2 x i32> zeroinitializer
+  %b = insertelement <2 x double> poison, double %y, i32 0
+  %c = shufflevector <2 x double> %b, <2 x double> poison, <2 x i32> zeroinitializer
   %d = fdiv <2 x double> %c, %a
   store <2 x double> %d, <2 x double>* %x
   ret void
@@ -1770,8 +1770,8 @@ define void @fma_vf_v8f16(<8 x half>* %x, <8 x half>* %y, half %z) {
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
   %b = load <8 x half>, <8 x half>* %y
-  %c = insertelement <8 x half> undef, half %z, i32 0
-  %d = shufflevector <8 x half> %c, <8 x half> undef, <8 x i32> zeroinitializer
+  %c = insertelement <8 x half> poison, half %z, i32 0
+  %d = shufflevector <8 x half> %c, <8 x half> poison, <8 x i32> zeroinitializer
   %e = call <8 x half> @llvm.fma.v8f16(<8 x half> %a, <8 x half> %d, <8 x half> %b)
   store <8 x half> %e, <8 x half>* %x
   ret void
@@ -1788,8 +1788,8 @@ define void @fma_vf_v4f32(<4 x float>* %x, <4 x float>* %y, float %z) {
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
   %b = load <4 x float>, <4 x float>* %y
-  %c = insertelement <4 x float> undef, float %z, i32 0
-  %d = shufflevector <4 x float> %c, <4 x float> undef, <4 x i32> zeroinitializer
+  %c = insertelement <4 x float> poison, float %z, i32 0
+  %d = shufflevector <4 x float> %c, <4 x float> poison, <4 x i32> zeroinitializer
   %e = call <4 x float> @llvm.fma.v4f32(<4 x float> %a, <4 x float> %d, <4 x float> %b)
   store <4 x float> %e, <4 x float>* %x
   ret void
@@ -1806,8 +1806,8 @@ define void @fma_vf_v2f64(<2 x double>* %x, <2 x double>* %y, double %z) {
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
   %b = load <2 x double>, <2 x double>* %y
-  %c = insertelement <2 x double> undef, double %z, i32 0
-  %d = shufflevector <2 x double> %c, <2 x double> undef, <2 x i32> zeroinitializer
+  %c = insertelement <2 x double> poison, double %z, i32 0
+  %d = shufflevector <2 x double> %c, <2 x double> poison, <2 x i32> zeroinitializer
   %e = call <2 x double> @llvm.fma.v2f64(<2 x double> %a, <2 x double> %d, <2 x double> %b)
   store <2 x double> %e, <2 x double>* %x
   ret void
@@ -1824,8 +1824,8 @@ define void @fma_fv_v8f16(<8 x half>* %x, <8 x half>* %y, half %z) {
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
   %b = load <8 x half>, <8 x half>* %y
-  %c = insertelement <8 x half> undef, half %z, i32 0
-  %d = shufflevector <8 x half> %c, <8 x half> undef, <8 x i32> zeroinitializer
+  %c = insertelement <8 x half> poison, half %z, i32 0
+  %d = shufflevector <8 x half> %c, <8 x half> poison, <8 x i32> zeroinitializer
   %e = call <8 x half> @llvm.fma.v8f16(<8 x half> %d, <8 x half> %a, <8 x half> %b)
   store <8 x half> %e, <8 x half>* %x
   ret void
@@ -1842,8 +1842,8 @@ define void @fma_fv_v4f32(<4 x float>* %x, <4 x float>* %y, float %z) {
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
   %b = load <4 x float>, <4 x float>* %y
-  %c = insertelement <4 x float> undef, float %z, i32 0
-  %d = shufflevector <4 x float> %c, <4 x float> undef, <4 x i32> zeroinitializer
+  %c = insertelement <4 x float> poison, float %z, i32 0
+  %d = shufflevector <4 x float> %c, <4 x float> poison, <4 x i32> zeroinitializer
   %e = call <4 x float> @llvm.fma.v4f32(<4 x float> %d, <4 x float> %a, <4 x float> %b)
   store <4 x float> %e, <4 x float>* %x
   ret void
@@ -1860,8 +1860,8 @@ define void @fma_fv_v2f64(<2 x double>* %x, <2 x double>* %y, double %z) {
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
   %b = load <2 x double>, <2 x double>* %y
-  %c = insertelement <2 x double> undef, double %z, i32 0
-  %d = shufflevector <2 x double> %c, <2 x double> undef, <2 x i32> zeroinitializer
+  %c = insertelement <2 x double> poison, double %z, i32 0
+  %d = shufflevector <2 x double> %c, <2 x double> poison, <2 x i32> zeroinitializer
   %e = call <2 x double> @llvm.fma.v2f64(<2 x double> %d, <2 x double> %a, <2 x double> %b)
   store <2 x double> %e, <2 x double>* %x
   ret void
@@ -1878,8 +1878,8 @@ define void @fmsub_vf_v8f16(<8 x half>* %x, <8 x half>* %y, half %z) {
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
   %b = load <8 x half>, <8 x half>* %y
-  %c = insertelement <8 x half> undef, half %z, i32 0
-  %d = shufflevector <8 x half> %c, <8 x half> undef, <8 x i32> zeroinitializer
+  %c = insertelement <8 x half> poison, half %z, i32 0
+  %d = shufflevector <8 x half> %c, <8 x half> poison, <8 x i32> zeroinitializer
   %neg = fneg <8 x half> %b
   %e = call <8 x half> @llvm.fma.v8f16(<8 x half> %a, <8 x half> %d, <8 x half> %neg)
   store <8 x half> %e, <8 x half>* %x
@@ -1897,8 +1897,8 @@ define void @fnmsub_vf_v4f32(<4 x float>* %x, <4 x float>* %y, float %z) {
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
   %b = load <4 x float>, <4 x float>* %y
-  %c = insertelement <4 x float> undef, float %z, i32 0
-  %d = shufflevector <4 x float> %c, <4 x float> undef, <4 x i32> zeroinitializer
+  %c = insertelement <4 x float> poison, float %z, i32 0
+  %d = shufflevector <4 x float> %c, <4 x float> poison, <4 x i32> zeroinitializer
   %neg = fneg <4 x float> %a
   %e = call <4 x float> @llvm.fma.v4f32(<4 x float> %neg, <4 x float> %d, <4 x float> %b)
   store <4 x float> %e, <4 x float>* %x
@@ -1916,8 +1916,8 @@ define void @fnmadd_vf_v2f64(<2 x double>* %x, <2 x double>* %y, double %z) {
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
   %b = load <2 x double>, <2 x double>* %y
-  %c = insertelement <2 x double> undef, double %z, i32 0
-  %d = shufflevector <2 x double> %c, <2 x double> undef, <2 x i32> zeroinitializer
+  %c = insertelement <2 x double> poison, double %z, i32 0
+  %d = shufflevector <2 x double> %c, <2 x double> poison, <2 x i32> zeroinitializer
   %neg = fneg <2 x double> %a
   %neg2 = fneg <2 x double> %b
   %e = call <2 x double> @llvm.fma.v2f64(<2 x double> %neg, <2 x double> %d, <2 x double> %neg2)
@@ -1936,8 +1936,8 @@ define void @fnmsub_fv_v4f32(<4 x float>* %x, <4 x float>* %y, float %z) {
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
   %b = load <4 x float>, <4 x float>* %y
-  %c = insertelement <4 x float> undef, float %z, i32 0
-  %d = shufflevector <4 x float> %c, <4 x float> undef, <4 x i32> zeroinitializer
+  %c = insertelement <4 x float> poison, float %z, i32 0
+  %d = shufflevector <4 x float> %c, <4 x float> poison, <4 x i32> zeroinitializer
   %neg = fneg <4 x float> %d
   %e = call <4 x float> @llvm.fma.v4f32(<4 x float> %neg, <4 x float> %a, <4 x float> %b)
   store <4 x float> %e, <4 x float>* %x
@@ -1955,8 +1955,8 @@ define void @fnmadd_fv_v2f64(<2 x double>* %x, <2 x double>* %y, double %z) {
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
   %b = load <2 x double>, <2 x double>* %y
-  %c = insertelement <2 x double> undef, double %z, i32 0
-  %d = shufflevector <2 x double> %c, <2 x double> undef, <2 x i32> zeroinitializer
+  %c = insertelement <2 x double> poison, double %z, i32 0
+  %d = shufflevector <2 x double> %c, <2 x double> poison, <2 x i32> zeroinitializer
   %neg = fneg <2 x double> %d
   %neg2 = fneg <2 x double> %b
   %e = call <2 x double> @llvm.fma.v2f64(<2 x double> %neg, <2 x double> %a, <2 x double> %neg2)

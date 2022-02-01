@@ -64,7 +64,7 @@ define <4 x i16> @vrgather_permute_shuffle_vu_v4i16(<4 x i16> %x) {
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %s = shufflevector <4 x i16> %x, <4 x i16> undef, <4 x i32> <i32 1, i32 2, i32 0, i32 1>
+  %s = shufflevector <4 x i16> %x, <4 x i16> poison, <4 x i32> <i32 1, i32 2, i32 0, i32 1>
   ret <4 x i16> %s
 }
 
@@ -78,7 +78,7 @@ define <4 x i16> @vrgather_permute_shuffle_uv_v4i16(<4 x i16> %x) {
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %s = shufflevector <4 x i16> undef, <4 x i16> %x, <4 x i32> <i32 5, i32 6, i32 4, i32 5>
+  %s = shufflevector <4 x i16> poison, <4 x i16> %x, <4 x i32> <i32 5, i32 6, i32 4, i32 5>
   ret <4 x i16> %s
 }
 
@@ -157,7 +157,7 @@ define <8 x i64> @vrgather_permute_shuffle_vu_v8i64(<8 x i64> %x) {
 ; RV64-NEXT:    vrgather.vv v12, v8, v16
 ; RV64-NEXT:    vmv.v.v v8, v12
 ; RV64-NEXT:    ret
-  %s = shufflevector <8 x i64> %x, <8 x i64> undef, <8 x i32> <i32 1, i32 2, i32 0, i32 1, i32 7, i32 6, i32 0, i32 1>
+  %s = shufflevector <8 x i64> %x, <8 x i64> poison, <8 x i32> <i32 1, i32 2, i32 0, i32 1, i32 7, i32 6, i32 0, i32 1>
   ret <8 x i64> %s
 }
 
@@ -182,7 +182,7 @@ define <8 x i64> @vrgather_permute_shuffle_uv_v8i64(<8 x i64> %x) {
 ; RV64-NEXT:    vrgather.vv v12, v8, v16
 ; RV64-NEXT:    vmv.v.v v8, v12
 ; RV64-NEXT:    ret
-  %s = shufflevector <8 x i64> undef, <8 x i64> %x, <8 x i32> <i32 9, i32 10, i32 8, i32 9, i32 15, i32 8, i32 8, i32 11>
+  %s = shufflevector <8 x i64> poison, <8 x i64> %x, <8 x i32> <i32 9, i32 10, i32 8, i32 9, i32 15, i32 8, i32 8, i32 11>
   ret <8 x i64> %s
 }
 
@@ -322,8 +322,8 @@ define <4 x i8> @interleave_shuffles(<4 x i8> %x) {
 ; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    vwmaccu.vx v8, a0, v10
 ; CHECK-NEXT:    ret
-  %y = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
-  %z = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %y = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
+  %z = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %w = shufflevector <4 x i8> %y, <4 x i8> %z, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
   ret <4 x i8> %w
 }
@@ -531,7 +531,7 @@ define <8 x i8> @widen_splat_ve3(<4 x i8> %v) {
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vrgather.vi v8, v9, 3
 ; CHECK-NEXT:    ret
-  %shuf = shufflevector <4 x i8> %v, <4 x i8> undef, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+  %shuf = shufflevector <4 x i8> %v, <4 x i8> poison, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   ret <8 x i8> %shuf
 }
 

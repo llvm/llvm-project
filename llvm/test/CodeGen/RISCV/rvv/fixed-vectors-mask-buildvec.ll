@@ -71,7 +71,7 @@ define <1 x i1> @buildvec_mask_nonconst_v1i1(i1 %x) {
 ; RV64-ELEN8-NEXT:    vmv.v.x v8, a0
 ; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
 ; RV64-ELEN8-NEXT:    ret
-  %1 = insertelement <1 x i1> undef, i1 %x, i32 0
+  %1 = insertelement <1 x i1> poison, i1 %x, i32 0
   ret <1 x i1> %1
 }
 
@@ -131,7 +131,7 @@ define <1 x i1> @buildvec_mask_optsize_nonconst_v1i1(i1 %x) optsize {
 ; RV64-ELEN8-NEXT:    vmv.v.x v8, a0
 ; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
 ; RV64-ELEN8-NEXT:    ret
-  %1 = insertelement <1 x i1> undef, i1 %x, i32 0
+  %1 = insertelement <1 x i1> poison, i1 %x, i32 0
   ret <1 x i1> %1
 }
 
@@ -212,7 +212,7 @@ define <2 x i1> @buildvec_mask_nonconst_v2i1(i1 %x, i1 %y) {
 ; RV64-ELEN8-NEXT:    vand.vi v8, v8, 1
 ; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
 ; RV64-ELEN8-NEXT:    ret
-  %1 = insertelement <2 x i1> undef, i1 %x, i32 0
+  %1 = insertelement <2 x i1> poison, i1 %x, i32 0
   %2 = insertelement <2 x i1> %1,  i1 %y, i32 1
   ret <2 x i1> %2
 }
@@ -316,7 +316,7 @@ define <2 x i1> @buildvec_mask_optsize_nonconst_v2i1(i1 %x, i1 %y) optsize {
 ; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
 ; RV64-ELEN8-NEXT:    addi sp, sp, 16
 ; RV64-ELEN8-NEXT:    ret
-  %1 = insertelement <2 x i1> undef, i1 %x, i32 0
+  %1 = insertelement <2 x i1> poison, i1 %x, i32 0
   %2 = insertelement <2 x i1> %1,  i1 %y, i32 1
   ret <2 x i1> %2
 }
@@ -561,7 +561,7 @@ define <4 x i1> @buildvec_mask_nonconst_v4i1(i1 %x, i1 %y) {
 ; RV64-ELEN8-NEXT:    vand.vi v8, v8, 1
 ; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
 ; RV64-ELEN8-NEXT:    ret
-  %1 = insertelement <4 x i1> undef, i1 %x, i32 0
+  %1 = insertelement <4 x i1> poison, i1 %x, i32 0
   %2 = insertelement <4 x i1> %1,  i1 %x, i32 1
   %3 = insertelement <4 x i1> %2,  i1 %y, i32 2
   %4 = insertelement <4 x i1> %3,  i1 %y, i32 3
@@ -681,7 +681,7 @@ define <4 x i1> @buildvec_mask_optsize_nonconst_v4i1(i1 %x, i1 %y) optsize {
 ; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
 ; RV64-ELEN8-NEXT:    addi sp, sp, 16
 ; RV64-ELEN8-NEXT:    ret
-  %1 = insertelement <4 x i1> undef, i1 %x, i32 0
+  %1 = insertelement <4 x i1> poison, i1 %x, i32 0
   %2 = insertelement <4 x i1> %1,  i1 %x, i32 1
   %3 = insertelement <4 x i1> %2,  i1 %y, i32 2
   %4 = insertelement <4 x i1> %3,  i1 %y, i32 3
@@ -807,7 +807,7 @@ define <4 x i1> @buildvec_mask_nonconst_v4i1_2(i1 %x, i1 %y) {
 ; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
 ; RV64-ELEN8-NEXT:    addi sp, sp, 16
 ; RV64-ELEN8-NEXT:    ret
-  %1 = insertelement <4 x i1> undef, i1 0, i32 0
+  %1 = insertelement <4 x i1> poison, i1 0, i32 0
   %2 = insertelement <4 x i1> %1,  i1 %x, i32 1
   %3 = insertelement <4 x i1> %2,  i1  1, i32 2
   %4 = insertelement <4 x i1> %3,  i1 %y, i32 3
@@ -950,7 +950,7 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1(i1 %x, i1 %y) {
 ; RV64-ELEN8-NEXT:    vand.vi v8, v8, 1
 ; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
 ; RV64-ELEN8-NEXT:    ret
-  %1 = insertelement <8 x i1> undef, i1 %x, i32 0
+  %1 = insertelement <8 x i1> poison, i1 %x, i32 0
   %2 = insertelement <8 x i1> %1,  i1 %x, i32 1
   %3 = insertelement <8 x i1> %2,  i1 %y, i32 2
   %4 = insertelement <8 x i1> %3,  i1 %y, i32 3
@@ -1108,7 +1108,7 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %w) {
 ; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
 ; RV64-ELEN8-NEXT:    addi sp, sp, 16
 ; RV64-ELEN8-NEXT:    ret
-  %1 = insertelement <8 x i1> undef, i1 %x, i32 0
+  %1 = insertelement <8 x i1> poison, i1 %x, i32 0
   %2 = insertelement <8 x i1> %1,  i1 %x, i32 1
   %3 = insertelement <8 x i1> %2,  i1  1, i32 2
   %4 = insertelement <8 x i1> %3,  i1 %y, i32 3
@@ -1266,7 +1266,7 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %
 ; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
 ; RV64-ELEN8-NEXT:    addi sp, sp, 16
 ; RV64-ELEN8-NEXT:    ret
-  %1 = insertelement <8 x i1> undef, i1 %x, i32 0
+  %1 = insertelement <8 x i1> poison, i1 %x, i32 0
   %2 = insertelement <8 x i1> %1,  i1 %x, i32 1
   %3 = insertelement <8 x i1> %2,  i1  1, i32 2
   %4 = insertelement <8 x i1> %3,  i1 %y, i32 3
@@ -1417,7 +1417,7 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1(i1 %x, i1 %y) optsize {
 ; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
 ; RV64-ELEN8-NEXT:    addi sp, sp, 16
 ; RV64-ELEN8-NEXT:    ret
-  %1 = insertelement <8 x i1> undef, i1 %x, i32 0
+  %1 = insertelement <8 x i1> poison, i1 %x, i32 0
   %2 = insertelement <8 x i1> %1,  i1 %x, i32 1
   %3 = insertelement <8 x i1> %2,  i1 %y, i32 2
   %4 = insertelement <8 x i1> %3,  i1 %y, i32 3

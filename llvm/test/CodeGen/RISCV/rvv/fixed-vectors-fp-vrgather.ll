@@ -14,8 +14,8 @@ define void @gather_const_v8f16(<8 x half>* %x) {
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
   %b = extractelement <8 x half> %a, i32 5
-  %c = insertelement <8 x half> undef, half %b, i32 0
-  %d = shufflevector <8 x half> %c, <8 x half> undef, <8 x i32> zeroinitializer
+  %c = insertelement <8 x half> poison, half %b, i32 0
+  %d = shufflevector <8 x half> %c, <8 x half> poison, <8 x i32> zeroinitializer
   store <8 x half> %d, <8 x half>* %x
   ret void
 }
@@ -30,8 +30,8 @@ define void @gather_const_v4f32(<4 x float>* %x) {
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
   %b = extractelement <4 x float> %a, i32 2
-  %c = insertelement <4 x float> undef, float %b, i32 0
-  %d = shufflevector <4 x float> %c, <4 x float> undef, <4 x i32> zeroinitializer
+  %c = insertelement <4 x float> poison, float %b, i32 0
+  %d = shufflevector <4 x float> %c, <4 x float> poison, <4 x i32> zeroinitializer
   store <4 x float> %d, <4 x float>* %x
   ret void
 }
@@ -45,8 +45,8 @@ define void @gather_const_v2f64(<2 x double>* %x) {
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
   %b = extractelement <2 x double> %a, i32 0
-  %c = insertelement <2 x double> undef, double %b, i32 0
-  %d = shufflevector <2 x double> %c, <2 x double> undef, <2 x i32> zeroinitializer
+  %c = insertelement <2 x double> poison, double %b, i32 0
+  %d = shufflevector <2 x double> %c, <2 x double> poison, <2 x i32> zeroinitializer
   store <2 x double> %d, <2 x double>* %x
   ret void
 }
@@ -84,8 +84,8 @@ define void @gather_const_v64f16(<64 x half>* %x) {
 ; LMULMAX1-NEXT:    ret
   %a = load <64 x half>, <64 x half>* %x
   %b = extractelement <64 x half> %a, i32 47
-  %c = insertelement <64 x half> undef, half %b, i32 0
-  %d = shufflevector <64 x half> %c, <64 x half> undef, <64 x i32> zeroinitializer
+  %c = insertelement <64 x half> poison, half %b, i32 0
+  %d = shufflevector <64 x half> %c, <64 x half> poison, <64 x i32> zeroinitializer
   store <64 x half> %d, <64 x half>* %x
   ret void
 }
@@ -123,8 +123,8 @@ define void @gather_const_v32f32(<32 x float>* %x) {
 ; LMULMAX1-NEXT:    ret
   %a = load <32 x float>, <32 x float>* %x
   %b = extractelement <32 x float> %a, i32 17
-  %c = insertelement <32 x float> undef, float %b, i32 0
-  %d = shufflevector <32 x float> %c, <32 x float> undef, <32 x i32> zeroinitializer
+  %c = insertelement <32 x float> poison, float %b, i32 0
+  %d = shufflevector <32 x float> %c, <32 x float> poison, <32 x i32> zeroinitializer
   store <32 x float> %d, <32 x float>* %x
   ret void
 }
@@ -160,8 +160,8 @@ define void @gather_const_v16f64(<16 x double>* %x) {
 ; LMULMAX1-NEXT:    ret
   %a = load <16 x double>, <16 x double>* %x
   %b = extractelement <16 x double> %a, i32 10
-  %c = insertelement <16 x double> undef, double %b, i32 0
-  %d = shufflevector <16 x double> %c, <16 x double> undef, <16 x i32> zeroinitializer
+  %c = insertelement <16 x double> poison, double %b, i32 0
+  %d = shufflevector <16 x double> %c, <16 x double> poison, <16 x i32> zeroinitializer
   store <16 x double> %d, <16 x double>* %x
   ret void
 }
