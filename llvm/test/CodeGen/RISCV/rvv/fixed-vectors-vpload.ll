@@ -46,7 +46,7 @@ define <4 x i8> @vpload_v4i8_allones_mask(<4 x i8>* %ptr, i32 zeroext %evl) {
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <4 x i1> undef, i1 true, i32 0
+  %a = insertelement <4 x i1> poison, i1 true, i32 0
   %b = shufflevector <4 x i1> %a, <4 x i1> poison, <4 x i32> zeroinitializer
   %load = call <4 x i8> @llvm.vp.load.v4i8.p0v4i8(<4 x i8>* %ptr, <4 x i1> %b, i32 %evl)
   ret <4 x i8> %load
@@ -106,7 +106,7 @@ define <8 x i16> @vpload_v8i16_allones_mask(<8 x i16>* %ptr, i32 zeroext %evl) {
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <8 x i1> undef, i1 true, i32 0
+  %a = insertelement <8 x i1> poison, i1 true, i32 0
   %b = shufflevector <8 x i1> %a, <8 x i1> poison, <8 x i32> zeroinitializer
   %load = call <8 x i16> @llvm.vp.load.v8i16.p0v8i16(<8 x i16>* %ptr, <8 x i1> %b, i32 %evl)
   ret <8 x i16> %load
@@ -154,7 +154,7 @@ define <6 x i32> @vpload_v6i32_allones_mask(<6 x i32>* %ptr, i32 zeroext %evl) {
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <6 x i1> undef, i1 true, i32 0
+  %a = insertelement <6 x i1> poison, i1 true, i32 0
   %b = shufflevector <6 x i1> %a, <6 x i1> poison, <6 x i32> zeroinitializer
   %load = call <6 x i32> @llvm.vp.load.v6i32.p0v6i32(<6 x i32>* %ptr, <6 x i1> %b, i32 %evl)
   ret <6 x i32> %load
@@ -178,7 +178,7 @@ define <8 x i32> @vpload_v8i32_allones_mask(<8 x i32>* %ptr, i32 zeroext %evl) {
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <8 x i1> undef, i1 true, i32 0
+  %a = insertelement <8 x i1> poison, i1 true, i32 0
   %b = shufflevector <8 x i1> %a, <8 x i1> poison, <8 x i32> zeroinitializer
   %load = call <8 x i32> @llvm.vp.load.v8i32.p0v8i32(<8 x i32>* %ptr, <8 x i1> %b, i32 %evl)
   ret <8 x i32> %load
@@ -214,7 +214,7 @@ define <4 x i64> @vpload_v4i64_allones_mask(<4 x i64>* %ptr, i32 zeroext %evl) {
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <4 x i1> undef, i1 true, i32 0
+  %a = insertelement <4 x i1> poison, i1 true, i32 0
   %b = shufflevector <4 x i1> %a, <4 x i1> poison, <4 x i32> zeroinitializer
   %load = call <4 x i64> @llvm.vp.load.v4i64.p0v4i64(<4 x i64>* %ptr, <4 x i1> %b, i32 %evl)
   ret <4 x i64> %load
@@ -250,7 +250,7 @@ define <2 x half> @vpload_v2f16_allones_mask(<2 x half>* %ptr, i32 zeroext %evl)
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <2 x i1> undef, i1 true, i32 0
+  %a = insertelement <2 x i1> poison, i1 true, i32 0
   %b = shufflevector <2 x i1> %a, <2 x i1> poison, <2 x i32> zeroinitializer
   %load = call <2 x half> @llvm.vp.load.v2f16.p0v2f16(<2 x half>* %ptr, <2 x i1> %b, i32 %evl)
   ret <2 x half> %load
@@ -322,7 +322,7 @@ define <8 x float> @vpload_v8f32_allones_mask(<8 x float>* %ptr, i32 zeroext %ev
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <8 x i1> undef, i1 true, i32 0
+  %a = insertelement <8 x i1> poison, i1 true, i32 0
   %b = shufflevector <8 x i1> %a, <8 x i1> poison, <8 x i32> zeroinitializer
   %load = call <8 x float> @llvm.vp.load.v8f32.p0v8f32(<8 x float>* %ptr, <8 x i1> %b, i32 %evl)
   ret <8 x float> %load
@@ -358,7 +358,7 @@ define <4 x double> @vpload_v4f64_allones_mask(<4 x double>* %ptr, i32 zeroext %
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <4 x i1> undef, i1 true, i32 0
+  %a = insertelement <4 x i1> poison, i1 true, i32 0
   %b = shufflevector <4 x i1> %a, <4 x i1> poison, <4 x i32> zeroinitializer
   %load = call <4 x double> @llvm.vp.load.v4f64.p0v4f64(<4 x double>* %ptr, <4 x i1> %b, i32 %evl)
   ret <4 x double> %load
