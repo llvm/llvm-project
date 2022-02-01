@@ -243,7 +243,7 @@
 #define LIBCPP_ONLY(...) static_assert(true, "")
 #endif
 
-#if !defined(_LIBCPP_HAS_NO_RANGES)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 #define TEST_SUPPORTS_RANGES
 #endif
 

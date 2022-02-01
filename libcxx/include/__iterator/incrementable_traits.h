@@ -20,7 +20,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_RANGES)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 // [incrementable.traits]
 template<class> struct incrementable_traits {};
@@ -65,7 +65,7 @@ using iter_difference_t = typename conditional_t<__is_primary_template<iterator_
                                                  incrementable_traits<remove_cvref_t<_Ip> >,
                                                  iterator_traits<remove_cvref_t<_Ip> > >::difference_type;
 
-#endif // !defined(_LIBCPP_HAS_NO_RANGES)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 _LIBCPP_END_NAMESPACE_STD
 
