@@ -350,13 +350,8 @@ void VPlanTransforms::removeRedundantCanonicalIVs(VPlan &Plan) {
     // everything WidenNewIV's users need. That is, WidenOriginalIV will
     // generate a vector phi or all users of WidenNewIV demand the first lane
     // only.
-    bool WidenNewIVOnlyFirstLaneUsed =
-        all_of(WidenNewIV->users(), [](VPUser *U) {
-          auto *R = dyn_cast<VPRecipeBase>(U);
-          auto *VPI = dyn_cast_or_null<VPInstruction>(R);
-          return VPI && VPI->getOpcode() == VPInstruction::ActiveLaneMask;
-        });
-    if (WidenOriginalIV->needsVectorIV() || WidenNewIVOnlyFirstLaneUsed) {
+    if (WidenOriginalIV->needsVectorIV() ||
+        vputils::onlyFirstLaneUsed(WidenNewIV)) {
       WidenNewIV->replaceAllUsesWith(WidenOriginalIV);
       WidenNewIV->eraseFromParent();
       return;
