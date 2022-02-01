@@ -192,6 +192,7 @@ struct FusionCandidate {
         GuardBranch(L->getLoopGuardBranch()), PP(PP), AbleToPeel(canPeel(L)),
         Peeled(false), DT(DT), PDT(PDT), ORE(ORE) {
 
+    assert(DT && "Expected non-null DT!");
     // Walk over all blocks in the loop and check for conditions that may
     // prevent fusion. For each block, walk over all instructions and collect
     // the memory reads and writes If any instructions that prevent fusion are
