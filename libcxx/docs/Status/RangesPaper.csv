@@ -71,7 +71,7 @@ Section,Description,Dependencies,Assignee,Complete
 `[range.iter.ops] <https://wg21.link/range.iter.ops>`_,"| `ranges::advance <https://llvm.org/D101922>`_
 | `ranges::distance <https://llvm.org/D102789>`_
 | `ranges::next <https://llvm.org/D102563>`_
-| `ranges::prev <https://llvm.org/D102564>`_",[iterator.concepts],Christopher Di Bella,In progress
+| `ranges::prev <https://llvm.org/D102564>`_",[iterator.concepts],Christopher Di Bella and Arthur O'Dwyer,✅
 `[predef.iterators] <https://wg21.link/predef.iterators>`_,Updates to predefined iterators.,"| [iterator.concepts]
 | [iterator.cust.swap]
 | [iterator.cust.move]",Unassigned,Not started
