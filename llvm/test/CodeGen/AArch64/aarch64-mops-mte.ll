@@ -324,3 +324,34 @@ entry:
   %r = tail call i8* @llvm.aarch64.mops.memset.tag(i8* %dst, i8 %value_trunc, i64 %size)
   ret i8* %r
 }
+
+define i8* @memset_tagged_size_aligned(i8* %dst, i64 %size, i32 %value) {
+; GISel-O0-LABEL: memset_tagged_size_aligned:
+; GISel-O0:       // %bb.0: // %entry
+; GISel-O0-NEXT:    // implicit-def: $x8
+; GISel-O0-NEXT:    mov w8, w2
+; GISel-O0-NEXT:    setgp [x0]!, x1!, x8
+; GISel-O0-NEXT:    setgm [x0]!, x1!, x8
+; GISel-O0-NEXT:    setge [x0]!, x1!, x8
+; GISel-O0-NEXT:    ret
+;
+; GISel-LABEL: memset_tagged_size_aligned:
+; GISel:       // %bb.0: // %entry
+; GISel-NEXT:    // kill: def $w2 killed $w2 def $x2
+; GISel-NEXT:    setgp [x0]!, x1!, x2
+; GISel-NEXT:    setgm [x0]!, x1!, x2
+; GISel-NEXT:    setge [x0]!, x1!, x2
+; GISel-NEXT:    ret
+;
+; SDAG-LABEL: memset_tagged_size_aligned:
+; SDAG:       // %bb.0: // %entry
+; SDAG-NEXT:    // kill: def $w2 killed $w2 def $x2
+; SDAG-NEXT:    setgp [x0]!, x1!, x2
+; SDAG-NEXT:    setgm [x0]!, x1!, x2
+; SDAG-NEXT:    setge [x0]!, x1!, x2
+; SDAG-NEXT:    ret
+entry:
+  %value_trunc = trunc i32 %value to i8
+  %r = tail call i8* @llvm.aarch64.mops.memset.tag(i8* align 16 %dst, i8 %value_trunc, i64 %size)
+  ret i8* %r
+}
