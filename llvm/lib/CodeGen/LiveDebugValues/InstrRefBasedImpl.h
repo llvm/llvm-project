@@ -132,6 +132,11 @@ public:
     u.s = {Block, Inst, Loc.asU64()};
   }
 
+  ValueIDNum &operator=(const ValueIDNum &Other) {
+    u.Value = Other.u.Value;
+    return *this;
+  }
+
   uint64_t getBlock() const { return u.s.BlockNo; }
   uint64_t getInst() const { return u.s.InstNo; }
   uint64_t getLoc() const { return u.s.LocNo; }
