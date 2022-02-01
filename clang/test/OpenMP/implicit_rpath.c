@@ -1,4 +1,5 @@
 // UNSUPPORTED: system-windows
+// UNSUPPORTED: hexagon
 
 // RUN: %clang -fopenmp %s -L%S/Inputs -o %t && llvm-readelf --dynamic-table %t | FileCheck %s --check-prefixes=CHECK-DEFAULT
 // RUN: %clang -fopenmp -fopenmp-implicit-rpath %s -L%S/Inputs -o %t && llvm-readelf --dynamic-table %t | FileCheck %s --check-prefixes=CHECK-EXPLICIT
