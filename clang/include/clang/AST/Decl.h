@@ -3486,6 +3486,24 @@ public:
   /// parameters.
   bool isDependentType() const { return isDependentContext(); }
 
+  /// Whether this declaration was a definition in some module but was forced
+  /// to be a declaration.
+  ///
+  /// Useful for clients checking if a module has a definition of a specific
+  /// symbol and not interested in the final AST with deduplicated definitions.
+  bool isThisDeclarationADemotedDefinition() const {
+    return TagDeclBits.IsThisDeclarationADemotedDefinition;
+  }
+
+  /// Mark a definition as a declaration and maintain information it _was_
+  /// a definition.
+  void demoteThisDefinitionToDeclaration() {
+    assert(isCompleteDefinition() &&
+           "Should demote definitions only, not forward declarations");
+    setCompleteDefinition(false);
+    TagDeclBits.IsThisDeclarationADemotedDefinition = true;
+  }
+
   /// Starts the definition of this tag declaration.
   ///
   /// This method should be invoked at the beginning of the definition
