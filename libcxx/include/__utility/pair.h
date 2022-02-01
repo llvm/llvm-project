@@ -315,7 +315,7 @@ private:
 #endif
 };
 
-#if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER > 14
 template<class _T1, class _T2>
 pair(_T1, _T2) -> pair<_T1, _T2>;
 #endif
@@ -388,6 +388,22 @@ operator<=(const pair<_T1,_T2>& __x, const pair<_T1,_T2>& __y)
 }
 
 #endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+
+#if _LIBCPP_STD_VER > 20
+template <class _T1, class _T2, class _U1, class _U2, template<class> class _TQual, template<class> class _UQual>
+    requires requires { typename pair<common_reference_t<_TQual<_T1>, _UQual<_U1>>,
+                                      common_reference_t<_TQual<_T2>, _UQual<_U2>>>; }
+struct basic_common_reference<pair<_T1, _T2>, pair<_U1, _U2>, _TQual, _UQual> {
+    using type = pair<common_reference_t<_TQual<_T1>, _UQual<_U1>>,
+                      common_reference_t<_TQual<_T2>, _UQual<_U2>>>;
+};
+
+template <class _T1, class _T2, class _U1, class _U2>
+    requires requires { typename pair<common_type_t<_T1, _U1>, common_type_t<_T2, _U2>>; }
+struct common_type<pair<_T1, _T2>, pair<_U1, _U2>> {
+    using type = pair<common_type_t<_T1, _U1>, common_type_t<_T2, _U2>>;
+};
+#endif
 
 template <class _T1, class _T2>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
