@@ -1172,10 +1172,6 @@ def : PatGprGpr<riscv_bfp, BFP>;
 let Predicates = [HasStdExtZbf, IsRV64] in
 def : PatGprGpr<riscv_bfpw, BFPW>;
 
-let Predicates = [HasStdExtZbkb] in {
-def : PatGpr<int_riscv_brev8, BREV8>;
-} // Predicates = [HasStdExtZbkb]
-
 let Predicates = [HasStdExtZbkb, IsRV32] in {
 def : PatGpr<int_riscv_zip, ZIP_RV32>;
 def : PatGpr<int_riscv_unzip, UNZIP_RV32>;
