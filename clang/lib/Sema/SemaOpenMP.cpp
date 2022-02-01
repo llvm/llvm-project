@@ -5327,6 +5327,8 @@ static CapturedStmt *buildDistanceFunc(Sema &Actions, QualType LogicalTy,
 
     IntegerLiteral *Zero = IntegerLiteral::Create(
         Ctx, llvm::APInt(Ctx.getIntWidth(LogicalTy), 0), LogicalTy, {});
+    IntegerLiteral *One = IntegerLiteral::Create(
+        Ctx, llvm::APInt(Ctx.getIntWidth(LogicalTy), 1), LogicalTy, {});
     Expr *Dist;
     if (Rel == BO_NE) {
       // When using a != comparison, the increment can be +1 or -1. This can be
@@ -5381,18 +5383,25 @@ static CapturedStmt *buildDistanceFunc(Sema &Actions, QualType LogicalTy,
 
       if (Rel == BO_LE || Rel == BO_GE) {
         // Add one to the range if the relational operator is inclusive.
-        Range = AssertSuccess(Actions.BuildBinOp(
-            nullptr, {}, BO_Add, Range,
-            Actions.ActOnIntegerConstant(SourceLocation(), 1).get()));
+        Range =
+            AssertSuccess(Actions.BuildBinOp(nullptr, {}, BO_Add, Range, One));
       }
 
-      // Divide by the absolute step amount.
+      // Divide by the absolute step amount. If the range is not a multiple of
+      // the step size, rounding-up the effective upper bound ensures that the
+      // last iteration is included.
+      // Note that the rounding-up may cause an overflow in a temporry that
+      // could be avoided, but would have occured in a C-style for-loop as well.
       Expr *Divisor = BuildVarRef(NewStep);
       if (Rel == BO_GE || Rel == BO_GT)
         Divisor =
             AssertSuccess(Actions.BuildUnaryOp(nullptr, {}, UO_Minus, Divisor));
+      Expr *DivisorMinusOne =
+          AssertSuccess(Actions.BuildBinOp(nullptr, {}, BO_Sub, Divisor, One));
+      Expr *RangeRoundUp = AssertSuccess(
+          Actions.BuildBinOp(nullptr, {}, BO_Add, Range, DivisorMinusOne));
       Dist = AssertSuccess(
-          Actions.BuildBinOp(nullptr, {}, BO_Div, Range, Divisor));
+          Actions.BuildBinOp(nullptr, {}, BO_Div, RangeRoundUp, Divisor));
 
       // If there is not at least one iteration, the range contains garbage. Fix
       // to zero in this case.
