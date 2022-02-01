@@ -32,7 +32,8 @@ NORETURN void RTNAME(Abort)(NO_ARGUMENTS);
 
 // Crash with an error message when the program dynamically violates a Fortran
 // constraint.
-NORETURN void RTNAME(Crash)(const char *message, const char *source, int line);
+NORETURN void RTNAME(ReportFatalUserError)(
+    const char *message, const char *source, int line);
 
 FORTRAN_EXTERN_C_END
 

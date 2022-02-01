@@ -91,6 +91,7 @@ TEST(TestProgramEnd, CrashTest) {
   static const std::string tailMessage{":343\\): "};
   static const std::string fullMessage{
       headMessage + fileName + tailMessage + crashMessage};
-  EXPECT_DEATH(RTNAME(Crash)(crashMessage.c_str(), fileName.c_str(), 343),
+  EXPECT_DEATH(
+      RTNAME(ReportFatalUserError)(crashMessage.c_str(), fileName.c_str(), 343),
       fullMessage.c_str());
 }
