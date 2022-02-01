@@ -392,7 +392,7 @@ struct FrameIndex {
   bool IsFixed;
   SMRange SourceRange;
 
-  FrameIndex() {}
+  FrameIndex() = default;
   FrameIndex(int FI, const llvm::MachineFrameInfo &MFI);
 
   Expected<int> getFI(const llvm::MachineFrameInfo &MFI) const;
@@ -671,7 +671,7 @@ template <> struct MappingTraits<MachineFrameInfo> {
 /// Targets should override this in a way that mirrors the implementation of
 /// llvm::MachineFunctionInfo.
 struct MachineFunctionInfo {
-  virtual ~MachineFunctionInfo() {}
+  virtual ~MachineFunctionInfo() = default;
   virtual void mappingImpl(IO &YamlIO) {}
 };
 

@@ -473,7 +473,7 @@ class PassManager : public PassInfoMixin<
                         PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...>> {
 public:
   /// Construct a pass manager.
-  explicit PassManager() {}
+  explicit PassManager() = default;
 
   // FIXME: These are equivalent to the default move constructor/move
   // assignment. However, using = default triggers linker errors due to the

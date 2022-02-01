@@ -227,7 +227,7 @@ enum class DepClassTy {
 /// The data structure for the nodes of a dependency graph
 struct AADepGraphNode {
 public:
-  virtual ~AADepGraphNode(){};
+  virtual ~AADepGraphNode() = default;
   using DepTy = PointerIntPair<AADepGraphNode *, 1>;
 
 protected:
@@ -266,8 +266,8 @@ public:
 /// then it means that B depends on A, and when the state of A is
 /// updated, node B should also be updated
 struct AADepGraph {
-  AADepGraph() {}
-  ~AADepGraph() {}
+  AADepGraph() = default;
+  ~AADepGraph() = default;
 
   using DepTy = AADepGraphNode::DepTy;
   static AADepGraphNode *DepGetVal(DepTy &DT) { return DT.getPointer(); }
@@ -844,7 +844,7 @@ struct AnalysisGetter {
   }
 
   AnalysisGetter(FunctionAnalysisManager &FAM) : FAM(&FAM) {}
-  AnalysisGetter() {}
+  AnalysisGetter() = default;
 
 private:
   FunctionAnalysisManager *FAM = nullptr;
@@ -2081,7 +2081,7 @@ private:
 /// additional methods to directly modify the state based if needed. See the
 /// class comments for help.
 struct AbstractState {
-  virtual ~AbstractState() {}
+  virtual ~AbstractState() = default;
 
   /// Return if this abstract state is in a valid state. If false, no
   /// information provided should be used.
@@ -2122,7 +2122,7 @@ template <typename base_ty, base_ty BestState, base_ty WorstState>
 struct IntegerStateBase : public AbstractState {
   using base_t = base_ty;
 
-  IntegerStateBase() {}
+  IntegerStateBase() = default;
   IntegerStateBase(base_t Assumed) : Assumed(Assumed) {}
 
   /// Return the best possible representable state.
@@ -2365,7 +2365,7 @@ struct BooleanState : public IntegerStateBase<bool, true, false> {
   using super = IntegerStateBase<bool, true, false>;
   using base_t = IntegerStateBase::base_t;
 
-  BooleanState() {}
+  BooleanState() = default;
   BooleanState(base_t Assumed) : super(Assumed) {}
 
   /// Set the assumed value to \p Value but never below the known one.
@@ -2773,7 +2773,7 @@ struct AbstractAttribute : public IRPosition, public AADepGraphNode {
   AbstractAttribute(const IRPosition &IRP) : IRPosition(IRP) {}
 
   /// Virtual destructor.
-  virtual ~AbstractAttribute() {}
+  virtual ~AbstractAttribute() = default;
 
   /// This function is used to identify if an \p DGN is of type
   /// AbstractAttribute so that the dyn_cast and cast can use such information
@@ -4419,7 +4419,7 @@ private:
 
 struct AACallGraphNode {
   AACallGraphNode(Attributor &A) : A(A) {}
-  virtual ~AACallGraphNode() {}
+  virtual ~AACallGraphNode() = default;
 
   virtual AACallEdgeIterator optimisticEdgesBegin() const = 0;
   virtual AACallEdgeIterator optimisticEdgesEnd() const = 0;
@@ -4485,7 +4485,7 @@ struct AACallEdges : public StateWrapper<BooleanState, AbstractAttribute>,
 // Synthetic root node for the Attributor's internal call graph.
 struct AttributorCallGraph : public AACallGraphNode {
   AttributorCallGraph(Attributor &A) : AACallGraphNode(A) {}
-  virtual ~AttributorCallGraph() {}
+  virtual ~AttributorCallGraph() = default;
 
   AACallEdgeIterator optimisticEdgesBegin() const override {
     return AACallEdgeIterator(A, A.Functions.begin());
@@ -4639,21 +4639,12 @@ struct AAPointerInfo : public AbstractAttribute {
            AccessKind Kind, Type *Ty)
         : LocalI(LocalI), RemoteI(RemoteI), Content(Content), Kind(Kind),
           Ty(Ty) {}
-    Access(const Access &Other)
-        : LocalI(Other.LocalI), RemoteI(Other.RemoteI), Content(Other.Content),
-          Kind(Other.Kind), Ty(Other.Ty) {}
+    Access(const Access &Other) = default;
     Access(const Access &&Other)
         : LocalI(Other.LocalI), RemoteI(Other.RemoteI), Content(Other.Content),
           Kind(Other.Kind), Ty(Other.Ty) {}
 
-    Access &operator=(const Access &Other) {
-      LocalI = Other.LocalI;
-      RemoteI = Other.RemoteI;
-      Content = Other.Content;
-      Kind = Other.Kind;
-      Ty = Other.Ty;
-      return *this;
-    }
+    Access &operator=(const Access &Other) = default;
     bool operator==(const Access &R) const {
       return LocalI == R.LocalI && RemoteI == R.RemoteI &&
              Content == R.Content && Kind == R.Kind;

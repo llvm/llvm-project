@@ -78,7 +78,7 @@ template <typename ContextT> class GenericCycleInfoCompute {
     unsigned Start = 0; // DFS start; positive if block is found
     unsigned End = 0;   // DFS end
 
-    DFSInfo() {}
+    DFSInfo() = default;
     explicit DFSInfo(unsigned Start) : Start(Start) {}
 
     /// Whether this node is an ancestor (or equal to) the node \p Other
