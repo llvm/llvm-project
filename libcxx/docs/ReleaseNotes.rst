@@ -140,6 +140,10 @@ API Changes
   instead. The ``<experimental/coroutine>`` header will be removed
   in LLVM 15.
 
+- ``_VSTD`` is now an alias for ``std`` instead of ``std::_LIBCPP_ABI_NAMESPACE``.
+  This is technically not a functional change, except for folks that might have been
+  using ``_VSTD`` in creative ways (which has never been officially supported).
+
 ABI Changes
 -----------
 
