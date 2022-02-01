@@ -344,6 +344,10 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
         if (Changes[ScopeStart - 1].Tok->is(TT_FunctionDeclarationName))
           return true;
 
+        // Lambda.
+        if (Changes[ScopeStart - 1].Tok->is(TT_LambdaLBrace))
+          return false;
+
         // Continued function declaration
         if (ScopeStart > Start + 1 &&
             Changes[ScopeStart - 2].Tok->is(TT_FunctionDeclarationName))
@@ -352,8 +356,13 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
         // Continued function call
         if (ScopeStart > Start + 1 &&
             Changes[ScopeStart - 2].Tok->is(tok::identifier) &&
-            Changes[ScopeStart - 1].Tok->is(tok::l_paren))
+            Changes[ScopeStart - 1].Tok->is(tok::l_paren) &&
+            Changes[ScopeStart].Tok->isNot(TT_LambdaLSquare)) {
+          if (Changes[i].Tok->MatchingParen &&
+              Changes[i].Tok->MatchingParen->is(TT_LambdaLBrace))
+            return false;
           return Style.BinPackArguments;
+        }
 
         // Ternary operator
         if (Changes[i].Tok->is(TT_ConditionalExpr))
@@ -372,8 +381,15 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
         if (ScopeStart > Start + 1 &&
             Changes[ScopeStart - 2].Tok->isNot(tok::identifier) &&
             Changes[ScopeStart - 1].Tok->is(tok::l_brace) &&
-            Changes[i].Tok->isNot(tok::r_brace))
+            Changes[i].Tok->isNot(tok::r_brace)) {
+          for (unsigned OuterScopeStart : llvm::reverse(ScopeStack)) {
+            // Lambda.
+            if (OuterScopeStart > Start &&
+                Changes[OuterScopeStart - 1].Tok->is(TT_LambdaLBrace))
+              return false;
+          }
           return true;
+        }
 
         return false;
       };
