@@ -17,9 +17,16 @@ MlirStringRef mlirDialectHandleGetNamespace(MlirDialectHandle handle) {
   return unwrap(handle)->getNamespaceHook();
 }
 
+void mlirDialectHandleInsertDialect(MlirDialectHandle handle,
+                                    MlirDialectRegistry registry) {
+  unwrap(handle)->insertHook(registry);
+}
+
 void mlirDialectHandleRegisterDialect(MlirDialectHandle handle,
                                       MlirContext ctx) {
-  unwrap(handle)->registerHook(ctx);
+  mlir::DialectRegistry registry;
+  mlirDialectHandleInsertDialect(handle, wrap(&registry));
+  unwrap(ctx)->appendDialectRegistry(registry);
 }
 
 MlirDialect mlirDialectHandleLoadDialect(MlirDialectHandle handle,

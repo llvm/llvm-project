@@ -9,6 +9,7 @@ add_flang_library(FortranLower
   OpenACC.cpp
   OpenMP.cpp
   PFTBuilder.cpp
+  Runtime.cpp
   SymbolMap.cpp
 
   DEPENDS

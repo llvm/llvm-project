@@ -304,9 +304,10 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
   // these sections in the __DWARF segment instead.
   if (!Ctx->getSwift5ReflectionSegmentName().empty()) {
 #define HANDLE_SWIFT_SECTION(KIND, MACHO, ELF, COFF)                           \
-  Swift5ReflectionSections[llvm::swift::Swift5ReflectionSectionKind::KIND] =   \
-      Ctx->getMachOSection(Ctx->getSwift5ReflectionSegmentName().data(),       \
-                           MACHO, 0, SectionKind::getMetadata());
+  Swift5ReflectionSections                                                     \
+      [llvm::binaryformat::Swift5ReflectionSectionKind::KIND] =                \
+          Ctx->getMachOSection(Ctx->getSwift5ReflectionSegmentName().data(),   \
+                               MACHO, 0, SectionKind::getMetadata());
 #include "llvm/BinaryFormat/Swift.def"
   }
 
