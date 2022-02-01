@@ -341,10 +341,7 @@ static bool genericValueTraversal(
              "Expected liveness in the presence of instructions!");
       for (unsigned u = 0, e = PHI->getNumIncomingValues(); u < e; u++) {
         BasicBlock *IncomingBB = PHI->getIncomingBlock(u);
-        bool UsedAssumedInformation = false;
-        if (A.isAssumedDead(*IncomingBB->getTerminator(), &QueryingAA,
-                            LivenessAA, UsedAssumedInformation,
-                            /* CheckBBLivenessOnly */ true)) {
+        if (LivenessAA->isEdgeDead(IncomingBB, PHI->getParent())) {
           AnyDead = true;
           continue;
         }
