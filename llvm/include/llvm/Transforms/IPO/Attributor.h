@@ -4616,17 +4616,25 @@ struct AAFunctionReachability
   AAFunctionReachability(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
   /// If the function represented by this possition can reach \p Fn.
-  virtual bool canReach(Attributor &A, Function *Fn) const = 0;
+  virtual bool canReach(Attributor &A, const Function &Fn) const = 0;
 
   /// Can \p CB reach \p Fn
-  virtual bool canReach(Attributor &A, CallBase &CB, Function *Fn) const = 0;
+  virtual bool canReach(Attributor &A, CallBase &CB,
+                        const Function &Fn) const = 0;
+
+  /// Can  \p Inst reach \p Fn
+  virtual bool instructionCanReach(Attributor &A, const Instruction &Inst,
+                                   const Function &Fn,
+                                   bool UseBackwards = true) const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAFunctionReachability &createForPosition(const IRPosition &IRP,
                                                    Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAFunctionReachability"; }
+  const std::string getName() const override {
+    return "AAFunctionReachability";
+  }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
