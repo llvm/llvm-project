@@ -3790,6 +3790,7 @@ struct AAIsDeadFunction : public AAIsDead {
       if (!AssumedLiveBlocks.count(&BB)) {
         A.deleteAfterManifest(BB);
         ++BUILD_STAT_NAME(AAIsDead, BasicBlock);
+        HasChanged = ChangeStatus::CHANGED;
       }
 
     return HasChanged;
@@ -3799,7 +3800,7 @@ struct AAIsDeadFunction : public AAIsDead {
   ChangeStatus updateImpl(Attributor &A) override;
 
   bool isEdgeDead(const BasicBlock *From, const BasicBlock *To) const override {
-    return !AssumedLiveEdges.count(std::make_pair(From, To));
+    return isValidState() && !AssumedLiveEdges.count(std::make_pair(From, To));
   }
 
   /// See AbstractAttribute::trackStatistics()
