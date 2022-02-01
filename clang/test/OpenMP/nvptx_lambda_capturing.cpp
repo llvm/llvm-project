@@ -784,7 +784,7 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[CLASS_ANON]], %class.anon* [[TMP6]], i32 0, i32 0
 // CHECK2-NEXT:    store %struct.S* [[TMP0]], %struct.S** [[TMP7]], align 8
 // CHECK2-NEXT:    [[TMP8:%.*]] = load %class.anon*, %class.anon** [[_TMP2]], align 8
-// CHECK2-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon* noundef nonnull align 8 dereferenceable(8) [[TMP8]]) #[[ATTR6:[0-9]+]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon* noundef nonnull align 8 dereferenceable(8) [[TMP8]]) #[[ATTR7:[0-9]+]]
 // CHECK2-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK2-NEXT:    ret void
 // CHECK2:       worker.exit:
@@ -837,7 +837,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__omp_outlined__
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %struct.S* noundef [[THIS:%.*]], %class.anon* noundef nonnull align 8 dereferenceable(8) [[L:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %struct.S* noundef [[THIS:%.*]], %class.anon* noundef nonnull align 8 dereferenceable(8) [[L:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -862,7 +862,7 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[CLASS_ANON]], %class.anon* [[TMP5]], i32 0, i32 0
 // CHECK2-NEXT:    store %struct.S* [[TMP0]], %struct.S** [[TMP6]], align 8
 // CHECK2-NEXT:    [[TMP7:%.*]] = load %class.anon*, %class.anon** [[_TMP2]], align 8
-// CHECK2-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon* noundef nonnull align 8 dereferenceable(8) [[TMP7]]) #[[ATTR6]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon* noundef nonnull align 8 dereferenceable(8) [[TMP7]]) #[[ATTR7]]
 // CHECK2-NEXT:    ret void
 //
 //
@@ -929,7 +929,7 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], %class.anon.0* [[TMP12]], i32 0, i32 4
 // CHECK2-NEXT:    store i32* [[TMP2]], i32** [[TMP19]], align 8
 // CHECK2-NEXT:    [[TMP20:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP4]], align 8
-// CHECK2-NEXT:    [[CALL:%.*]] = call noundef i64 @"_ZZ4mainENK3$_0clEv"(%class.anon.0* noundef nonnull align 8 dereferenceable(40) [[TMP20]]) #[[ATTR6]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call noundef i64 @"_ZZ4mainENK3$_0clEv"(%class.anon.0* noundef nonnull align 8 dereferenceable(40) [[TMP20]]) #[[ATTR7]]
 // CHECK2-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK2-NEXT:    ret void
 // CHECK2:       worker.exit:
@@ -999,7 +999,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__omp_outlined__1
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[B:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[C:%.*]], i32* noundef [[D:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[A:%.*]], %class.anon.0* noundef nonnull align 8 dereferenceable(40) [[L:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[B:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[C:%.*]], i32* noundef [[D:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[A:%.*]], %class.anon.0* noundef nonnull align 8 dereferenceable(40) [[L:%.*]]) #[[ATTR4]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1067,7 +1067,7 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], %class.anon.0* [[TMP14]], i32 0, i32 4
 // CHECK2-NEXT:    store i32* [[A10]], i32** [[TMP21]], align 8
 // CHECK2-NEXT:    [[TMP22:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP4]], align 8
-// CHECK2-NEXT:    [[CALL:%.*]] = call noundef i64 @"_ZZ4mainENK3$_0clEv"(%class.anon.0* noundef nonnull align 8 dereferenceable(40) [[TMP22]]) #[[ATTR6]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call noundef i64 @"_ZZ4mainENK3$_0clEv"(%class.anon.0* noundef nonnull align 8 dereferenceable(40) [[TMP22]]) #[[ATTR7]]
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1098,7 +1098,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__omp_outlined__2
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %class.anon* noundef nonnull align 8 dereferenceable(8) [[T:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %class.anon* noundef nonnull align 8 dereferenceable(8) [[T:%.*]]) #[[ATTR4]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1118,7 +1118,7 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    store %class.anon* [[T1]], %class.anon** [[_TMP2]], align 8
 // CHECK2-NEXT:    [[TMP4:%.*]] = load %class.anon*, %class.anon** [[_TMP2]], align 8
 // CHECK2-NEXT:    [[TMP5:%.*]] = load %class.anon*, %class.anon** [[_TMP2]], align 8
-// CHECK2-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon* noundef nonnull align 8 dereferenceable(8) [[TMP5]]) #[[ATTR6]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon* noundef nonnull align 8 dereferenceable(8) [[TMP5]]) #[[ATTR7]]
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1185,7 +1185,7 @@ int main(int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[CLASS_ANON]], %class.anon* [[TMP12]], i32 0, i32 4
 // CHECK3-NEXT:    store i32* [[TMP2]], i32** [[TMP19]], align 8
 // CHECK3-NEXT:    [[TMP20:%.*]] = load %class.anon*, %class.anon** [[_TMP4]], align 8
-// CHECK3-NEXT:    [[CALL:%.*]] = call noundef i64 @"_ZZ4mainENK3$_0clEv"(%class.anon* noundef nonnull align 8 dereferenceable(40) [[TMP20]]) #[[ATTR6:[0-9]+]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call noundef i64 @"_ZZ4mainENK3$_0clEv"(%class.anon* noundef nonnull align 8 dereferenceable(40) [[TMP20]]) #[[ATTR7:[0-9]+]]
 // CHECK3-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK3-NEXT:    ret void
 // CHECK3:       worker.exit:
@@ -1255,7 +1255,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@__omp_outlined__
-// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[B:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[C:%.*]], i32* noundef [[D:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[A:%.*]], %class.anon* noundef nonnull align 8 dereferenceable(40) [[L:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[B:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[C:%.*]], i32* noundef [[D:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[A:%.*]], %class.anon* noundef nonnull align 8 dereferenceable(40) [[L:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1323,7 +1323,7 @@ int main(int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[CLASS_ANON]], %class.anon* [[TMP14]], i32 0, i32 4
 // CHECK3-NEXT:    store i32* [[A10]], i32** [[TMP21]], align 8
 // CHECK3-NEXT:    [[TMP22:%.*]] = load %class.anon*, %class.anon** [[_TMP4]], align 8
-// CHECK3-NEXT:    [[CALL:%.*]] = call noundef i64 @"_ZZ4mainENK3$_0clEv"(%class.anon* noundef nonnull align 8 dereferenceable(40) [[TMP22]]) #[[ATTR6]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call noundef i64 @"_ZZ4mainENK3$_0clEv"(%class.anon* noundef nonnull align 8 dereferenceable(40) [[TMP22]]) #[[ATTR7]]
 // CHECK3-NEXT:    ret void
 //
 //
@@ -1353,7 +1353,7 @@ int main(int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], %class.anon.0* [[TMP6]], i32 0, i32 0
 // CHECK3-NEXT:    store %struct.S* [[TMP0]], %struct.S** [[TMP7]], align 8
 // CHECK3-NEXT:    [[TMP8:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP2]], align 8
-// CHECK3-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* noundef nonnull align 8 dereferenceable(8) [[TMP8]]) #[[ATTR6]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* noundef nonnull align 8 dereferenceable(8) [[TMP8]]) #[[ATTR7]]
 // CHECK3-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK3-NEXT:    ret void
 // CHECK3:       worker.exit:
@@ -1406,7 +1406,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@__omp_outlined__1
-// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %struct.S* noundef [[THIS:%.*]], %class.anon.0* noundef nonnull align 8 dereferenceable(8) [[L:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %struct.S* noundef [[THIS:%.*]], %class.anon.0* noundef nonnull align 8 dereferenceable(8) [[L:%.*]]) #[[ATTR4]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1431,7 +1431,7 @@ int main(int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], %class.anon.0* [[TMP5]], i32 0, i32 0
 // CHECK3-NEXT:    store %struct.S* [[TMP0]], %struct.S** [[TMP6]], align 8
 // CHECK3-NEXT:    [[TMP7:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP2]], align 8
-// CHECK3-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* noundef nonnull align 8 dereferenceable(8) [[TMP7]]) #[[ATTR6]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* noundef nonnull align 8 dereferenceable(8) [[TMP7]]) #[[ATTR7]]
 // CHECK3-NEXT:    ret void
 //
 //
@@ -1462,7 +1462,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@__omp_outlined__2
-// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %class.anon.0* noundef nonnull align 8 dereferenceable(8) [[T:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %class.anon.0* noundef nonnull align 8 dereferenceable(8) [[T:%.*]]) #[[ATTR4]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1482,7 +1482,7 @@ int main(int argc, char **argv) {
 // CHECK3-NEXT:    store %class.anon.0* [[T1]], %class.anon.0** [[_TMP2]], align 8
 // CHECK3-NEXT:    [[TMP4:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP2]], align 8
 // CHECK3-NEXT:    [[TMP5:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP2]], align 8
-// CHECK3-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* noundef nonnull align 8 dereferenceable(8) [[TMP5]]) #[[ATTR6]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* noundef nonnull align 8 dereferenceable(8) [[TMP5]]) #[[ATTR7]]
 // CHECK3-NEXT:    ret void
 //
 //
@@ -1549,7 +1549,7 @@ int main(int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[CLASS_ANON]], %class.anon* [[TMP12]], i32 0, i32 4
 // CHECK4-NEXT:    store i32* [[TMP2]], i32** [[TMP19]], align 8
 // CHECK4-NEXT:    [[TMP20:%.*]] = load %class.anon*, %class.anon** [[_TMP4]], align 8
-// CHECK4-NEXT:    [[CALL:%.*]] = call noundef i64 @"_ZZ4mainENK3$_0clEv"(%class.anon* noundef nonnull align 8 dereferenceable(40) [[TMP20]]) #[[ATTR6:[0-9]+]]
+// CHECK4-NEXT:    [[CALL:%.*]] = call noundef i64 @"_ZZ4mainENK3$_0clEv"(%class.anon* noundef nonnull align 8 dereferenceable(40) [[TMP20]]) #[[ATTR7:[0-9]+]]
 // CHECK4-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK4-NEXT:    ret void
 // CHECK4:       worker.exit:
@@ -1619,7 +1619,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@__omp_outlined__
-// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[B:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[C:%.*]], i32* noundef [[D:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[A:%.*]], %class.anon* noundef nonnull align 8 dereferenceable(40) [[L:%.*]]) #[[ATTR0]] {
+// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[B:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[C:%.*]], i32* noundef [[D:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[A:%.*]], %class.anon* noundef nonnull align 8 dereferenceable(40) [[L:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1687,7 +1687,7 @@ int main(int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[CLASS_ANON]], %class.anon* [[TMP14]], i32 0, i32 4
 // CHECK4-NEXT:    store i32* [[A10]], i32** [[TMP21]], align 8
 // CHECK4-NEXT:    [[TMP22:%.*]] = load %class.anon*, %class.anon** [[_TMP4]], align 8
-// CHECK4-NEXT:    [[CALL:%.*]] = call noundef i64 @"_ZZ4mainENK3$_0clEv"(%class.anon* noundef nonnull align 8 dereferenceable(40) [[TMP22]]) #[[ATTR6]]
+// CHECK4-NEXT:    [[CALL:%.*]] = call noundef i64 @"_ZZ4mainENK3$_0clEv"(%class.anon* noundef nonnull align 8 dereferenceable(40) [[TMP22]]) #[[ATTR7]]
 // CHECK4-NEXT:    ret void
 //
 //
@@ -1717,7 +1717,7 @@ int main(int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], %class.anon.0* [[TMP6]], i32 0, i32 0
 // CHECK4-NEXT:    store %struct.S* [[TMP0]], %struct.S** [[TMP7]], align 8
 // CHECK4-NEXT:    [[TMP8:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP2]], align 8
-// CHECK4-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* noundef nonnull align 8 dereferenceable(8) [[TMP8]]) #[[ATTR6]]
+// CHECK4-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* noundef nonnull align 8 dereferenceable(8) [[TMP8]]) #[[ATTR7]]
 // CHECK4-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK4-NEXT:    ret void
 // CHECK4:       worker.exit:
@@ -1770,7 +1770,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@__omp_outlined__1
-// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %struct.S* noundef [[THIS:%.*]], %class.anon.0* noundef nonnull align 8 dereferenceable(8) [[L:%.*]]) #[[ATTR0]] {
+// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %struct.S* noundef [[THIS:%.*]], %class.anon.0* noundef nonnull align 8 dereferenceable(8) [[L:%.*]]) #[[ATTR4]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1795,7 +1795,7 @@ int main(int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], %class.anon.0* [[TMP5]], i32 0, i32 0
 // CHECK4-NEXT:    store %struct.S* [[TMP0]], %struct.S** [[TMP6]], align 8
 // CHECK4-NEXT:    [[TMP7:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP2]], align 8
-// CHECK4-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* noundef nonnull align 8 dereferenceable(8) [[TMP7]]) #[[ATTR6]]
+// CHECK4-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* noundef nonnull align 8 dereferenceable(8) [[TMP7]]) #[[ATTR7]]
 // CHECK4-NEXT:    ret void
 //
 //
@@ -1826,7 +1826,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@__omp_outlined__2
-// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %class.anon.0* noundef nonnull align 8 dereferenceable(8) [[T:%.*]]) #[[ATTR0]] {
+// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %class.anon.0* noundef nonnull align 8 dereferenceable(8) [[T:%.*]]) #[[ATTR4]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1846,6 +1846,6 @@ int main(int argc, char **argv) {
 // CHECK4-NEXT:    store %class.anon.0* [[T1]], %class.anon.0** [[_TMP2]], align 8
 // CHECK4-NEXT:    [[TMP4:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP2]], align 8
 // CHECK4-NEXT:    [[TMP5:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP2]], align 8
-// CHECK4-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* noundef nonnull align 8 dereferenceable(8) [[TMP5]]) #[[ATTR6]]
+// CHECK4-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* noundef nonnull align 8 dereferenceable(8) [[TMP5]]) #[[ATTR7]]
 // CHECK4-NEXT:    ret void
 //

@@ -32,10 +32,10 @@ int callable(int x) {
   return x + 1;
 }
 
-  // DEFAULT: attributes #0 = { convergent noinline norecurse nounwind optnone "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-  // CPU: attributes #0 = { convergent noinline norecurse nounwind optnone "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "target-features"="+16-bit-insts,+ci-insts,+dpp,+flat-address-space,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst" }
-  // NOIEEE: attributes #0 = { convergent noinline norecurse nounwind optnone "amdgpu-ieee"="false" "frame-pointer"="none" "min-legal-vector-width"="0" "no-nans-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-  // UNSAFEATOMIC: attributes #0 = { convergent noinline norecurse nounwind optnone "amdgpu-unsafe-fp-atomics"="true" "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+  // DEFAULT: attributes #0 = { convergent noinline norecurse nounwind optnone "frame-pointer"="none" "kernel" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+  // CPU: attributes #0 = { convergent noinline norecurse nounwind optnone "frame-pointer"="none" "kernel" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "target-features"="+16-bit-insts,+ci-insts,+dpp,+flat-address-space,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst" }
+  // NOIEEE: attributes #0 = { convergent noinline norecurse nounwind optnone "amdgpu-ieee"="false" "frame-pointer"="none" "kernel" "min-legal-vector-width"="0" "no-nans-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+  // UNSAFEATOMIC: attributes #0 = { convergent noinline norecurse nounwind optnone "amdgpu-unsafe-fp-atomics"="true" "frame-pointer"="none" "kernel" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 
 // DEFAULT: attributes #1 = { convergent mustprogress noinline nounwind optnone "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CPU: attributes #1 = { convergent mustprogress noinline nounwind optnone "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "target-features"="+16-bit-insts,+ci-insts,+dpp,+flat-address-space,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst" }
