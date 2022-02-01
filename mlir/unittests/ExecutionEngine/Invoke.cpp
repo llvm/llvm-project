@@ -63,7 +63,7 @@ TEST(MLIRExecutionEngine, AddInteger) {
   registerAllDialects(registry);
   registerLLVMDialectTranslation(registry);
   MLIRContext context(registry);
-  OwningModuleRef module = parseSourceString(moduleStr, &context);
+  OwningOpRef<ModuleOp> module = parseSourceString(moduleStr, &context);
   ASSERT_TRUE(!!module);
   ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
   auto jitOrError = ExecutionEngine::create(*module);
@@ -88,7 +88,7 @@ TEST(MLIRExecutionEngine, SubtractFloat) {
   registerAllDialects(registry);
   registerLLVMDialectTranslation(registry);
   MLIRContext context(registry);
-  OwningModuleRef module = parseSourceString(moduleStr, &context);
+  OwningOpRef<ModuleOp> module = parseSourceString(moduleStr, &context);
   ASSERT_TRUE(!!module);
   ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
   auto jitOrError = ExecutionEngine::create(*module);
@@ -207,7 +207,7 @@ TEST(NativeMemRefJit, BasicMemref) {
   registerAllDialects(registry);
   registerLLVMDialectTranslation(registry);
   MLIRContext context(registry);
-  OwningModuleRef module = parseSourceString(moduleStr, &context);
+  OwningOpRef<ModuleOp> module = parseSourceString(moduleStr, &context);
   ASSERT_TRUE(!!module);
   ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
   auto jitOrError = ExecutionEngine::create(*module);

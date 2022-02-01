@@ -32,7 +32,7 @@ TEST(AnalysisManagerTest, FineGrainModuleAnalysisPreservation) {
   MLIRContext context;
 
   // Test fine grain invalidation of the module analysis manager.
-  OwningModuleRef module(ModuleOp::create(UnknownLoc::get(&context)));
+  OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
   ModuleAnalysisManager mam(*module, /*passInstrumentor=*/nullptr);
   AnalysisManager am = mam;
 
@@ -54,7 +54,7 @@ TEST(AnalysisManagerTest, FineGrainFunctionAnalysisPreservation) {
   Builder builder(&context);
 
   // Create a function and a module.
-  OwningModuleRef module(ModuleOp::create(UnknownLoc::get(&context)));
+  OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
   FuncOp func1 =
       FuncOp::create(builder.getUnknownLoc(), "foo",
                      builder.getFunctionType(llvm::None, llvm::None));
@@ -84,7 +84,7 @@ TEST(AnalysisManagerTest, FineGrainChildFunctionAnalysisPreservation) {
   Builder builder(&context);
 
   // Create a function and a module.
-  OwningModuleRef module(ModuleOp::create(UnknownLoc::get(&context)));
+  OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
   FuncOp func1 =
       FuncOp::create(builder.getUnknownLoc(), "foo",
                      builder.getFunctionType(llvm::None, llvm::None));
@@ -128,7 +128,7 @@ TEST(AnalysisManagerTest, CustomInvalidation) {
   Builder builder(&context);
 
   // Create a function and a module.
-  OwningModuleRef module(ModuleOp::create(UnknownLoc::get(&context)));
+  OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
   ModuleAnalysisManager mam(*module, /*passInstrumentor=*/nullptr);
   AnalysisManager am = mam;
 
@@ -150,7 +150,7 @@ TEST(AnalysisManagerTest, OpSpecificAnalysis) {
   MLIRContext context;
 
   // Create a module.
-  OwningModuleRef module(ModuleOp::create(UnknownLoc::get(&context)));
+  OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
   ModuleAnalysisManager mam(*module, /*passInstrumentor=*/nullptr);
   AnalysisManager am = mam;
 
@@ -174,7 +174,7 @@ TEST(AnalysisManagerTest, DependentAnalysis) {
   MLIRContext context;
 
   // Create a module.
-  OwningModuleRef module(ModuleOp::create(UnknownLoc::get(&context)));
+  OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
   ModuleAnalysisManager mam(*module, /*passInstrumentor=*/nullptr);
   AnalysisManager am = mam;
 
@@ -205,7 +205,7 @@ TEST(AnalysisManagerTest, NestedDependentAnalysis) {
   MLIRContext context;
 
   // Create a module.
-  OwningModuleRef module(ModuleOp::create(UnknownLoc::get(&context)));
+  OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
   ModuleAnalysisManager mam(*module, /*passInstrumentor=*/nullptr);
   AnalysisManager am = mam;
 
@@ -237,7 +237,7 @@ TEST(AnalysisManagerTest, DependentAnalysis2Ctors) {
   MLIRContext context;
 
   // Create a module.
-  OwningModuleRef module(ModuleOp::create(UnknownLoc::get(&context)));
+  OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
   ModuleAnalysisManager mam(*module, /*passInstrumentor=*/nullptr);
   AnalysisManager am = mam;
 
