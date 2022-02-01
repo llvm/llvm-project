@@ -385,8 +385,8 @@ define void @test12_1() {
 define void @test12_2(){
 ; CHECK-LABEL: define {{[^@]+}}@test12_2() {
 ; CHECK-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
-; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[A]])
-; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[A]])
+; CHECK-NEXT:    tail call void @use_nocapture(i8* nocapture [[A]])
+; CHECK-NEXT:    tail call void @use_nocapture(i8* nocapture [[A]])
 ; CHECK-NEXT:    tail call void @use(i8* [[A]])
 ; CHECK-NEXT:    tail call void @use_nocapture(i8* nocapture [[A]])
 ; CHECK-NEXT:    ret void
@@ -695,7 +695,7 @@ define void @test15_caller(i32* noalias %p, i32 %c) {
 ; NOT_CGSCC_NPM-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C]], 0
 ; NOT_CGSCC_NPM-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; NOT_CGSCC_NPM:       if.then:
-; NOT_CGSCC_NPM-NEXT:    tail call void @only_store(i32* noalias nocapture nofree writeonly align 4 [[P]]) #[[ATTR7]]
+; NOT_CGSCC_NPM-NEXT:    tail call void @only_store(i32* nocapture nofree writeonly align 4 [[P]]) #[[ATTR7]]
 ; NOT_CGSCC_NPM-NEXT:    br label [[IF_END]]
 ; NOT_CGSCC_NPM:       if.end:
 ; NOT_CGSCC_NPM-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]]) #[[ATTR7]]
@@ -752,7 +752,7 @@ define internal void @test16_sub(i32* noalias %p, i32 %c1, i32 %c2) {
 ; NOT_CGSCC_NPM-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C1]], 0
 ; NOT_CGSCC_NPM-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; NOT_CGSCC_NPM:       if.then:
-; NOT_CGSCC_NPM-NEXT:    tail call void @only_store(i32* noalias nocapture nofree writeonly align 4 [[P]]) #[[ATTR7]]
+; NOT_CGSCC_NPM-NEXT:    tail call void @only_store(i32* nocapture nofree writeonly align 4 [[P]]) #[[ATTR7]]
 ; NOT_CGSCC_NPM-NEXT:    tail call void @make_alias(i32* nofree writeonly align 4 [[P]]) #[[ATTR7]]
 ; NOT_CGSCC_NPM-NEXT:    br label [[IF_END]]
 ; NOT_CGSCC_NPM:       if.end:

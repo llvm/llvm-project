@@ -13,7 +13,7 @@ define internal void @internal(void (i8*)* %fp) {
 ; IS__TUNIT____-SAME: (void (i8*)* nonnull [[FP:%.*]]) {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    [[A:%.*]] = alloca i32, align 4
-; IS__TUNIT____-NEXT:    call void @foo(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1:[0-9]+]]
+; IS__TUNIT____-NEXT:    call void @foo(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1:[0-9]+]]
 ; IS__TUNIT____-NEXT:    call void [[FP]](i8* bitcast (void (i32*)* @foo to i8*))
 ; IS__TUNIT____-NEXT:    call void @callback1(void (i32*)* noundef nonnull @foo)
 ; IS__TUNIT____-NEXT:    call void @callback2(void (i8*)* noundef bitcast (void (i32*)* @foo to void (i8*)*))
@@ -26,8 +26,7 @@ define internal void @internal(void (i8*)* %fp) {
 ; IS__CGSCC____-SAME: (void (i8*)* noundef nonnull [[FP:%.*]]) {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = alloca i32, align 4
-; IS__CGSCC____-NEXT:    [[TMP:%.*]] = bitcast i32* [[A]] to i8*
-; IS__CGSCC____-NEXT:    call void @foo(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1:[0-9]+]]
+; IS__CGSCC____-NEXT:    call void @foo(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1:[0-9]+]]
 ; IS__CGSCC____-NEXT:    call void [[FP]](i8* bitcast (void (i32*)* @foo to i8*))
 ; IS__CGSCC____-NEXT:    call void @callback1(void (i32*)* noundef nonnull @foo)
 ; IS__CGSCC____-NEXT:    call void @callback2(void (i8*)* noundef bitcast (void (i32*)* @foo to void (i8*)*))
@@ -56,7 +55,7 @@ define void @external(void (i8*)* %fp) {
 ; IS__TUNIT____-SAME: (void (i8*)* [[FP:%.*]]) {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    [[A:%.*]] = alloca i32, align 4
-; IS__TUNIT____-NEXT:    call void @foo(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1]]
+; IS__TUNIT____-NEXT:    call void @foo(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1]]
 ; IS__TUNIT____-NEXT:    call void @callback1(void (i32*)* noundef nonnull @foo)
 ; IS__TUNIT____-NEXT:    call void @callback2(void (i8*)* noundef bitcast (void (i32*)* @foo to void (i8*)*))
 ; IS__TUNIT____-NEXT:    call void @callback2(void (i8*)* [[FP]])
@@ -70,7 +69,7 @@ define void @external(void (i8*)* %fp) {
 ; IS__CGSCC____-SAME: (void (i8*)* [[FP:%.*]]) {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = alloca i32, align 4
-; IS__CGSCC____-NEXT:    call void @foo(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1]]
+; IS__CGSCC____-NEXT:    call void @foo(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1]]
 ; IS__CGSCC____-NEXT:    call void @callback1(void (i32*)* noundef nonnull @foo)
 ; IS__CGSCC____-NEXT:    call void @callback2(void (i8*)* noundef bitcast (void (i32*)* @foo to void (i8*)*))
 ; IS__CGSCC____-NEXT:    call void @callback2(void (i8*)* [[FP]])

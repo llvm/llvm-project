@@ -16,6 +16,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -67,6 +68,12 @@ static cl::opt<unsigned, true> MaxPotentialValues(
              "tracked for each position."),
     cl::location(llvm::PotentialConstantIntValuesState::MaxPotentialValues),
     cl::init(7));
+
+static cl::opt<unsigned>
+    MaxInterferingWrites("attributor-max-interfering-writes", cl::Hidden,
+                         cl::desc("Maximum number of interfering writes to "
+                                  "check before assuming all might interfere."),
+                         cl::init(6));
 
 STATISTIC(NumAAs, "Number of abstract attributes created");
 
@@ -1056,6 +1063,120 @@ struct AAPointerInfoImpl
       StoreInst &SI, function_ref<bool(const AAPointerInfo::Access &, bool)> CB)
       const override {
     return State::forallInterferingAccesses(SI, CB);
+  }
+  bool forallInterferingWrites(
+      Attributor &A, const AbstractAttribute &QueryingAA, LoadInst &LI,
+      function_ref<bool(const Access &, bool)> UserCB) const override {
+    SmallPtrSet<const Access *, 8> DominatingWrites;
+    SmallVector<std::pair<const Access *, bool>, 8> InterferingWrites;
+
+    Function &Scope = *LI.getFunction();
+    const auto &NoSyncAA = A.getAAFor<AANoSync>(
+        QueryingAA, IRPosition::function(Scope), DepClassTy::OPTIONAL);
+    const auto *ExecDomainAA = A.lookupAAFor<AAExecutionDomain>(
+        IRPosition::function(Scope), &QueryingAA, DepClassTy::OPTIONAL);
+    const bool NoSync = NoSyncAA.isAssumedNoSync();
+
+    // Helper to determine if we need to consider threading, which we cannot
+    // right now. However, if the function is (assumed) nosync or the thread
+    // executing all instructions is the main thread only we can ignore
+    // threading.
+    auto CanIgnoreThreading = [&](const Instruction &I) -> bool {
+      if (NoSync)
+        return true;
+      if (ExecDomainAA && ExecDomainAA->isExecutedByInitialThreadOnly(I))
+        return true;
+      return false;
+    };
+
+    // Helper to determine if the access is executed by the same thread as the
+    // load, for now it is sufficient to avoid any potential threading effects
+    // as we cannot deal with them anyway.
+    auto IsSameThreadAsLoad = [&](const Access &Acc) -> bool {
+      return CanIgnoreThreading(*Acc.getLocalInst());
+    };
+
+    // TODO: Use inter-procedural reachability and dominance.
+    const auto &NoRecurseAA = A.getAAFor<AANoRecurse>(
+        QueryingAA, IRPosition::function(*LI.getFunction()),
+        DepClassTy::OPTIONAL);
+
+    // Helper to determine if the instruction may reach the load.
+    auto IsReachableFrom = [&](const Instruction &I) {
+      const auto &ReachabilityAA = A.getAAFor<AAReachability>(
+          QueryingAA, IRPosition::function(*I.getFunction()),
+          DepClassTy::OPTIONAL);
+      return ReachabilityAA.isAssumedReachable(A, I, LI);
+    };
+
+    const bool CanUseCFGResoning =
+        NoRecurseAA.isKnownNoRecurse() && CanIgnoreThreading(LI);
+    InformationCache &InfoCache = A.getInfoCache();
+    const DominatorTree *DT =
+        InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(Scope);
+
+    auto AccessCB = [&](const Access &Acc, bool Exact) {
+      if (!Acc.isWrite())
+        return true;
+
+      // For now we only filter accesses based on CFG reasoning which does not
+      // work yet if we have threading effects, or the access is complicated.
+      if (CanUseCFGResoning) {
+        if (!IsReachableFrom(*Acc.getLocalInst()))
+          return true;
+        if (DT && Exact &&
+            (Acc.getLocalInst()->getFunction() == LI.getFunction()) &&
+            IsSameThreadAsLoad(Acc)) {
+          if (DT->dominates(Acc.getLocalInst(), &LI))
+            DominatingWrites.insert(&Acc);
+        }
+      }
+
+      InterferingWrites.push_back({&Acc, Exact});
+      return true;
+    };
+    if (!State::forallInterferingAccesses(LI, AccessCB))
+      return false;
+
+    // If we cannot use CFG reasoning we only filter the non-write accesses
+    // and are done here.
+    if (!CanUseCFGResoning) {
+      for (auto &It : InterferingWrites)
+        if (!UserCB(*It.first, It.second))
+          return false;
+      return true;
+    }
+
+    // Helper to determine if we can skip a specific write access. This is in
+    // the worst case quadratic as we are looking for another write that will
+    // hide the effect of this one.
+    auto CanSkipAccess = [&](const Access &Acc, bool Exact) {
+      if (!IsSameThreadAsLoad(Acc))
+        return false;
+      if (!DominatingWrites.count(&Acc))
+        return false;
+      for (const Access *DomAcc : DominatingWrites) {
+        assert(Acc.getLocalInst()->getFunction() ==
+                   DomAcc->getLocalInst()->getFunction() &&
+               "Expected dominating writes to be in the same function!");
+
+        if (DomAcc != &Acc &&
+            DT->dominates(Acc.getLocalInst(), DomAcc->getLocalInst())) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    // Run the user callback on all writes we cannot skip and return if that
+    // succeeded for all or not.
+    unsigned NumInterferingWrites = InterferingWrites.size();
+    for (auto &It : InterferingWrites)
+      if (!DT || NumInterferingWrites > MaxInterferingWrites ||
+          !CanSkipAccess(*It.first, It.second))
+        if (!UserCB(*It.first, It.second))
+          return false;
+    return true;
   }
 
   ChangeStatus translateAndAddCalleeState(Attributor &A,
@@ -2878,6 +2999,10 @@ struct AAReachabilityImpl : AAReachability {
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
+    const auto &NoRecurseAA = A.getAAFor<AANoRecurse>(
+        *this, IRPosition::function(*getAnchorScope()), DepClassTy::REQUIRED);
+    if (!NoRecurseAA.isAssumedNoRecurse())
+      return indicatePessimisticFixpoint();
     return ChangeStatus::UNCHANGED;
   }
 };
@@ -5238,8 +5363,6 @@ struct AAValueSimplifyImpl : AAValueSimplify {
 
       auto CheckAccess = [&](const AAPointerInfo::Access &Acc, bool IsExact) {
         LLVM_DEBUG(dbgs() << " - visit access " << Acc << "\n");
-        if (!Acc.isWrite())
-          return true;
         if (Acc.isWrittenValueYetUndetermined())
           return true;
         Value *Content = Acc.getWrittenValue();
@@ -5259,7 +5382,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
 
       auto &PI = A.getAAFor<AAPointerInfo>(AA, IRPosition::value(*Obj),
                                            DepClassTy::REQUIRED);
-      if (!PI.forallInterferingAccesses(L, CheckAccess))
+      if (!PI.forallInterferingWrites(A, AA, L, CheckAccess))
         return false;
     }
     return true;
