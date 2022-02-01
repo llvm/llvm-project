@@ -1861,9 +1861,7 @@ static QualType typeForNode(const SelectionTree::Node *N) {
       QualType VisitCXXThrowExpr(const CXXThrowExpr *S) {
         return S->getSubExpr()->getType();
       }
-      // FIXME(sammccall): this should be VisitCoyieldExpr
-      // see https://reviews.llvm.org/D115634
-      QualType visitCoyieldStmt(const CoyieldExpr *S) {
+      QualType VisitCoyieldExpr(const CoyieldExpr *S) {
         return type(S->getOperand());
       }
       // Treat a designated initializer like a reference to the field.

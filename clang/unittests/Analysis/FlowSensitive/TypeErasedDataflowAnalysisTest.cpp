@@ -19,6 +19,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
@@ -49,53 +50,35 @@ using ::testing::Test;
 using ::testing::UnorderedElementsAre;
 
 template <typename AnalysisT>
-class AnalysisCallback : public ast_matchers::MatchFinder::MatchCallback {
-public:
-  AnalysisCallback(AnalysisT (*MakeAnalysis)(ASTContext &))
-      : MakeAnalysis(MakeAnalysis) {}
-  void run(const ast_matchers::MatchFinder::MatchResult &Result) override {
-    assert(BlockStates.empty());
-
-    const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func");
-    assert(Func != nullptr);
-
-    Stmt *Body = Func->getBody();
-    assert(Body != nullptr);
-
-    auto CFCtx = llvm::cantFail(
-        ControlFlowContext::build(nullptr, Body, Result.Context));
-
-    AnalysisT Analysis = MakeAnalysis(*Result.Context);
-    DataflowAnalysisContext DACtx;
-    Environment Env(DACtx);
-    BlockStates = runDataflowAnalysis(CFCtx, Analysis, Env);
-  }
-
-  AnalysisT (*MakeAnalysis)(ASTContext &);
-  std::vector<
-      llvm::Optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>
-      BlockStates;
-};
-
-template <typename AnalysisT>
-std::vector<llvm::Optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>
+llvm::Expected<std::vector<
+    llvm::Optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>>
 runAnalysis(llvm::StringRef Code, AnalysisT (*MakeAnalysis)(ASTContext &)) {
   std::unique_ptr<ASTUnit> AST =
       tooling::buildASTFromCodeWithArgs(Code, {"-std=c++11"});
 
-  AnalysisCallback<AnalysisT> Callback(MakeAnalysis);
-  ast_matchers::MatchFinder Finder;
-  Finder.addMatcher(
-      ast_matchers::functionDecl(ast_matchers::hasName("target")).bind("func"),
-      &Callback);
-  Finder.matchAST(AST->getASTContext());
+  auto *Func = selectFirst<FunctionDecl>(
+      "func", match(functionDecl(ast_matchers::hasName("target")).bind("func"),
+                    AST->getASTContext()));
+  assert(Func != nullptr);
 
-  return Callback.BlockStates;
+  Stmt *Body = Func->getBody();
+  assert(Body != nullptr);
+
+  auto CFCtx = llvm::cantFail(
+      ControlFlowContext::build(nullptr, Body, &AST->getASTContext()));
+
+  AnalysisT Analysis = MakeAnalysis(AST->getASTContext());
+  DataflowAnalysisContext DACtx;
+  Environment Env(DACtx);
+
+  return runDataflowAnalysis(CFCtx, Analysis, Env);
 }
 
 TEST(DataflowAnalysisTest, NoopAnalysis) {
-  auto BlockStates = runAnalysis<NoopAnalysis>(
-      "void target() {}", [](ASTContext &C) { return NoopAnalysis(C, false); });
+  auto BlockStates = llvm::cantFail(
+      runAnalysis<NoopAnalysis>("void target() {}", [](ASTContext &C) {
+        return NoopAnalysis(C, false);
+      }));
   EXPECT_EQ(BlockStates.size(), 2u);
   EXPECT_TRUE(BlockStates[0].hasValue());
   EXPECT_TRUE(BlockStates[1].hasValue());
@@ -132,18 +115,15 @@ public:
 };
 
 TEST(DataflowAnalysisTest, NonConvergingAnalysis) {
-  auto BlockStates = runAnalysis<NonConvergingAnalysis>(
-      R"(
+  std::string Code = R"(
     void target() {
       while(true) {}
     }
-  )",
-      [](ASTContext &C) { return NonConvergingAnalysis(C); });
-  EXPECT_EQ(BlockStates.size(), 4u);
-  EXPECT_TRUE(BlockStates[0].hasValue());
-  EXPECT_TRUE(BlockStates[1].hasValue());
-  EXPECT_TRUE(BlockStates[2].hasValue());
-  EXPECT_TRUE(BlockStates[3].hasValue());
+  )";
+  auto Res = runAnalysis<NonConvergingAnalysis>(
+      Code, [](ASTContext &C) { return NonConvergingAnalysis(C); });
+  EXPECT_EQ(llvm::toString(Res.takeError()),
+            "maximum number of iterations reached");
 }
 
 struct FunctionCallLattice {
@@ -317,8 +297,9 @@ TEST_F(NoreturnDestructorTest, ConditionalOperatorNestedBranchReturns) {
 class OptionalIntAnalysis
     : public DataflowAnalysis<OptionalIntAnalysis, NoopLattice> {
 public:
-  explicit OptionalIntAnalysis(ASTContext &Context)
-      : DataflowAnalysis<OptionalIntAnalysis, NoopLattice>(Context) {}
+  explicit OptionalIntAnalysis(ASTContext &Context, BoolValue &HasValueTop)
+      : DataflowAnalysis<OptionalIntAnalysis, NoopLattice>(Context),
+        HasValueTop(HasValueTop) {}
 
   static NoopLattice initialElement() { return {}; }
 
@@ -353,8 +334,20 @@ public:
     }
   }
 
+  bool compareEquivalent(QualType Type, const Value &Val1,
+                         const Value &Val2) final {
+    // Nothing to say about a value that does not model an `OptionalInt`.
+    if (!Type->isRecordType() ||
+        Type->getAsCXXRecordDecl()->getQualifiedNameAsString() != "OptionalInt")
+      return false;
+
+    return cast<StructValue>(&Val1)->getProperty("has_value") ==
+           cast<StructValue>(&Val2)->getProperty("has_value");
+  }
+
   bool merge(QualType Type, const Value &Val1, const Value &Val2,
              Value &MergedVal, Environment &Env) final {
+    // Nothing to say about a value that does not model an `OptionalInt`.
     if (!Type->isRecordType() ||
         Type->getAsCXXRecordDecl()->getQualifiedNameAsString() != "OptionalInt")
       return false;
@@ -369,12 +362,12 @@ public:
     if (HasValue2 == nullptr)
       return false;
 
-    if (HasValue1 != HasValue2)
-      return false;
-
-    cast<StructValue>(&MergedVal)->setProperty("has_value", *HasValue1);
+    assert(HasValue1 != HasValue2);
+    cast<StructValue>(&MergedVal)->setProperty("has_value", HasValueTop);
     return true;
   }
+
+  BoolValue &HasValueTop;
 };
 
 class WideningTest : public Test {
@@ -392,8 +385,10 @@ protected:
     ASSERT_THAT_ERROR(
         test::checkDataflow<OptionalIntAnalysis>(
             Code, "target",
-            [](ASTContext &Context, Environment &Env) {
-              return OptionalIntAnalysis(Context);
+            [this](ASTContext &Context, Environment &Env) {
+              assert(HasValueTop == nullptr);
+              HasValueTop = &Env.takeOwnership(std::make_unique<BoolValue>());
+              return OptionalIntAnalysis(Context, *HasValueTop);
             },
             [&Match](
                 llvm::ArrayRef<
@@ -403,6 +398,8 @@ protected:
             {"-fsyntax-only", "-std=c++17"}, FilesContents),
         llvm::Succeeded());
   }
+
+  BoolValue *HasValueTop = nullptr;
 };
 
 TEST_F(WideningTest, JoinDistinctValuesWithDistinctProperties) {
@@ -421,10 +418,11 @@ TEST_F(WideningTest, JoinDistinctValuesWithDistinctProperties) {
     }
   )";
   runDataflow(
-      Code, [](llvm::ArrayRef<
-                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
-                   Results,
-               ASTContext &ASTCtx) {
+      Code,
+      [this](llvm::ArrayRef<
+                 std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                 Results,
+             ASTContext &ASTCtx) {
         ASSERT_THAT(Results,
                     ElementsAre(Pair("p3", _), Pair("p2", _), Pair("p1", _)));
         const Environment &Env1 = Results[2].second.Env;
@@ -442,7 +440,7 @@ TEST_F(WideningTest, JoinDistinctValuesWithDistinctProperties) {
                   &Env1.getBoolLiteralValue(false));
         EXPECT_EQ(GetFooValue(Env2)->getProperty("has_value"),
                   &Env2.getBoolLiteralValue(true));
-        EXPECT_THAT(Env3.getValue(*FooDecl, SkipPast::None), IsNull());
+        EXPECT_EQ(GetFooValue(Env3)->getProperty("has_value"), HasValueTop);
       });
 }
 
@@ -494,7 +492,7 @@ TEST_F(WideningTest, JoinDistinctValuesWithSameProperties) {
       });
 }
 
-TEST_F(WideningTest, DistinctPointersToTheSameLocation) {
+TEST_F(WideningTest, DistinctPointersToTheSameLocationAreEquivalent) {
   std::string Code = R"(
     void target(int Foo, bool Cond) {
       int *Bar = &Foo;
@@ -524,6 +522,38 @@ TEST_F(WideningTest, DistinctPointersToTheSameLocation) {
                 const auto *BarVal =
                     cast<PointerValue>(Env.getValue(*BarDecl, SkipPast::None));
                 EXPECT_EQ(&BarVal->getPointeeLoc(), FooLoc);
+              });
+}
+
+TEST_F(WideningTest, DistinctValuesWithSamePropertiesAreEquivalent) {
+  std::string Code = R"(
+    #include "widening_test_defs.h"
+
+    void target(bool Cond) {
+      OptionalInt Foo;
+      Foo = 1;
+      while (Cond) {
+        Foo = 2;
+      }
+      (void)0;
+      /*[[p]]*/
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const auto *FooVal =
+                    cast<StructValue>(Env.getValue(*FooDecl, SkipPast::None));
+                EXPECT_EQ(FooVal->getProperty("has_value"),
+                          &Env.getBoolLiteralValue(true));
               });
 }
 

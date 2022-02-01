@@ -51,19 +51,36 @@ enum class SkipPast {
 /// Holds the state of the program (store and heap) at a given program point.
 class Environment {
 public:
-  /// Supplements `Environment` with non-standard join operations.
-  class Merger {
+  /// Supplements `Environment` with non-standard comparison and join
+  /// operations.
+  class ValueModel {
   public:
-    virtual ~Merger() = default;
+    virtual ~ValueModel() = default;
 
-    /// Given distinct `Val1` and `Val2`, modifies `MergedVal` to approximate
-    /// both `Val1` and `Val2`. This could be a strict lattice join or a more
-    /// general widening operation. If this function returns true, `MergedVal`
-    /// will be assigned to a storage location of type `Type` in `Env`.
+    /// Returns true if and only if `Val1` is equivalent to `Val2`.
     ///
     /// Requirements:
     ///
     ///  `Val1` and `Val2` must be distinct.
+    ///
+    ///  `Val1` and `Val2` must model values of type `Type`.
+    virtual bool compareEquivalent(QualType Type, const Value &Val1,
+                                   const Value &Val2) {
+      // FIXME: Consider adding QualType to StructValue and removing the Type
+      // argument here.
+      return false;
+    }
+
+    /// Modifies `MergedVal` to approximate both `Val1` and `Val2`. This could
+    /// be a strict lattice join or a more general widening operation. If this
+    /// function returns true, `MergedVal` will be assigned to a storage
+    /// location of type `Type` in `Env`.
+    ///
+    /// Requirements:
+    ///
+    ///  `Val1` and `Val2` must be distinct.
+    ///
+    ///  `Val1`, `Val2`, and `MergedVal` must model values of type `Type`.
     virtual bool merge(QualType Type, const Value &Val1, const Value &Val2,
                        Value &MergedVal, Environment &Env) {
       return false;
@@ -84,9 +101,29 @@ public:
   /// with a symbolic representation of the `this` pointee.
   Environment(DataflowAnalysisContext &DACtx, const DeclContext &DeclCtx);
 
-  bool operator==(const Environment &) const;
+  /// Returns true if and only if the environment is equivalent to `Other`, i.e
+  /// the two environments:
+  ///  - have the same mappings from declarations to storage locations,
+  ///  - have the same mappings from expressions to storage locations,
+  ///  - have the same or equivalent (according to `Model`) values assigned to
+  ///    the same storage locations.
+  ///
+  /// Requirements:
+  ///
+  ///  `Other` and `this` must use the same `DataflowAnalysisContext`.
+  bool equivalentTo(const Environment &Other,
+                    Environment::ValueModel &Model) const;
 
-  LatticeJoinEffect join(const Environment &, Environment::Merger &);
+  /// Joins the environment with `Other` by taking the intersection of storage
+  /// locations and values that are stored in them. Distinct values that are
+  /// assigned to the same storage locations in the environment and `Other` are
+  /// merged using `Model`.
+  ///
+  /// Requirements:
+  ///
+  ///  `Other` and `this` must use the same `DataflowAnalysisContext`.
+  LatticeJoinEffect join(const Environment &Other,
+                         Environment::ValueModel &Model);
 
   // FIXME: Rename `createOrGetStorageLocation` to `getOrCreateStorageLocation`,
   // `getStableStorageLocation`, or something more appropriate.
