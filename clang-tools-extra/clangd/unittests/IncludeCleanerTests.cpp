@@ -272,7 +272,7 @@ TEST(IncludeCleaner, Stdlib) {
   }
 }
 
-MATCHER_P(WrittenInclusion, Written, "") {
+MATCHER_P(writtenInclusion, Written, "") {
   if (arg.Written != Written)
     *result_listener << arg.Written;
   return arg.Written == Written;
@@ -302,7 +302,7 @@ TEST(IncludeCleaner, StdlibUnused) {
   auto AST = TU.build();
 
   auto Unused = computeUnusedIncludes(AST);
-  EXPECT_THAT(Unused, ElementsAre(Pointee(WrittenInclusion("<queue>"))));
+  EXPECT_THAT(Unused, ElementsAre(Pointee(writtenInclusion("<queue>"))));
 }
 
 TEST(IncludeCleaner, GetUnusedHeaders) {

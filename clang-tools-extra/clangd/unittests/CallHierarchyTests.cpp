@@ -52,15 +52,15 @@ using ::testing::Matcher;
 using ::testing::UnorderedElementsAre;
 
 // Helpers for matching call hierarchy data structures.
-MATCHER_P(WithName, N, "") { return arg.name == N; }
-MATCHER_P(WithSelectionRange, R, "") { return arg.selectionRange == R; }
+MATCHER_P(withName, N, "") { return arg.name == N; }
+MATCHER_P(withSelectionRange, R, "") { return arg.selectionRange == R; }
 
 template <class ItemMatcher>
-::testing::Matcher<CallHierarchyIncomingCall> From(ItemMatcher M) {
+::testing::Matcher<CallHierarchyIncomingCall> from(ItemMatcher M) {
   return Field(&CallHierarchyIncomingCall::from, M);
 }
 template <class... RangeMatchers>
-::testing::Matcher<CallHierarchyIncomingCall> FromRanges(RangeMatchers... M) {
+::testing::Matcher<CallHierarchyIncomingCall> fromRanges(RangeMatchers... M) {
   return Field(&CallHierarchyIncomingCall::fromRanges,
                UnorderedElementsAre(M...));
 }
@@ -86,23 +86,23 @@ TEST(CallHierarchy, IncomingOneFileCpp) {
 
   std::vector<CallHierarchyItem> Items =
       prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
-  ASSERT_THAT(Items, ElementsAre(WithName("callee")));
+  ASSERT_THAT(Items, ElementsAre(withName("callee")));
   auto IncomingLevel1 = incomingCalls(Items[0], Index.get());
   ASSERT_THAT(IncomingLevel1,
-              ElementsAre(AllOf(From(WithName("caller1")),
-                                FromRanges(Source.range("Callee")))));
+              ElementsAre(AllOf(from(withName("caller1")),
+                                fromRanges(Source.range("Callee")))));
   auto IncomingLevel2 = incomingCalls(IncomingLevel1[0].from, Index.get());
   ASSERT_THAT(IncomingLevel2,
-              ElementsAre(AllOf(From(WithName("caller2")),
-                                FromRanges(Source.range("Caller1A"),
+              ElementsAre(AllOf(from(withName("caller2")),
+                                fromRanges(Source.range("Caller1A"),
                                            Source.range("Caller1B"))),
-                          AllOf(From(WithName("caller3")),
-                                FromRanges(Source.range("Caller1C")))));
+                          AllOf(from(withName("caller3")),
+                                fromRanges(Source.range("Caller1C")))));
 
   auto IncomingLevel3 = incomingCalls(IncomingLevel2[0].from, Index.get());
   ASSERT_THAT(IncomingLevel3,
-              ElementsAre(AllOf(From(WithName("caller3")),
-                                FromRanges(Source.range("Caller2")))));
+              ElementsAre(AllOf(from(withName("caller3")),
+                                fromRanges(Source.range("Caller2")))));
 
   auto IncomingLevel4 = incomingCalls(IncomingLevel3[0].from, Index.get());
   EXPECT_THAT(IncomingLevel4, IsEmpty());
@@ -131,23 +131,23 @@ TEST(CallHierarchy, IncomingOneFileObjC) {
   auto Index = TU.index();
   std::vector<CallHierarchyItem> Items =
       prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
-  ASSERT_THAT(Items, ElementsAre(WithName("callee")));
+  ASSERT_THAT(Items, ElementsAre(withName("callee")));
   auto IncomingLevel1 = incomingCalls(Items[0], Index.get());
   ASSERT_THAT(IncomingLevel1,
-              ElementsAre(AllOf(From(WithName("caller1")),
-                                FromRanges(Source.range("Callee")))));
+              ElementsAre(AllOf(from(withName("caller1")),
+                                fromRanges(Source.range("Callee")))));
   auto IncomingLevel2 = incomingCalls(IncomingLevel1[0].from, Index.get());
   ASSERT_THAT(IncomingLevel2,
-              ElementsAre(AllOf(From(WithName("caller2")),
-                                FromRanges(Source.range("Caller1A"),
+              ElementsAre(AllOf(from(withName("caller2")),
+                                fromRanges(Source.range("Caller1A"),
                                            Source.range("Caller1B"))),
-                          AllOf(From(WithName("caller3")),
-                                FromRanges(Source.range("Caller1C")))));
+                          AllOf(from(withName("caller3")),
+                                fromRanges(Source.range("Caller1C")))));
 
   auto IncomingLevel3 = incomingCalls(IncomingLevel2[0].from, Index.get());
   ASSERT_THAT(IncomingLevel3,
-              ElementsAre(AllOf(From(WithName("caller3")),
-                                FromRanges(Source.range("Caller2")))));
+              ElementsAre(AllOf(from(withName("caller3")),
+                                fromRanges(Source.range("Caller2")))));
 
   auto IncomingLevel4 = incomingCalls(IncomingLevel3[0].from, Index.get());
   EXPECT_THAT(IncomingLevel4, IsEmpty());
@@ -174,16 +174,16 @@ TEST(CallHierarchy, MainFileOnlyRef) {
 
   std::vector<CallHierarchyItem> Items =
       prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
-  ASSERT_THAT(Items, ElementsAre(WithName("callee")));
+  ASSERT_THAT(Items, ElementsAre(withName("callee")));
   auto IncomingLevel1 = incomingCalls(Items[0], Index.get());
   ASSERT_THAT(IncomingLevel1,
-              ElementsAre(AllOf(From(WithName("caller1")),
-                                FromRanges(Source.range("Callee")))));
+              ElementsAre(AllOf(from(withName("caller1")),
+                                fromRanges(Source.range("Callee")))));
 
   auto IncomingLevel2 = incomingCalls(IncomingLevel1[0].from, Index.get());
   EXPECT_THAT(IncomingLevel2,
-              ElementsAre(AllOf(From(WithName("caller2")),
-                                FromRanges(Source.range("Caller1")))));
+              ElementsAre(AllOf(from(withName("caller2")),
+                                fromRanges(Source.range("Caller1")))));
 }
 
 TEST(CallHierarchy, IncomingQualified) {
@@ -207,13 +207,13 @@ TEST(CallHierarchy, IncomingQualified) {
 
   std::vector<CallHierarchyItem> Items =
       prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
-  ASSERT_THAT(Items, ElementsAre(WithName("Waldo::find")));
+  ASSERT_THAT(Items, ElementsAre(withName("Waldo::find")));
   auto Incoming = incomingCalls(Items[0], Index.get());
   EXPECT_THAT(Incoming,
-              ElementsAre(AllOf(From(WithName("caller1")),
-                                FromRanges(Source.range("Caller1"))),
-                          AllOf(From(WithName("caller2")),
-                                FromRanges(Source.range("Caller2")))));
+              ElementsAre(AllOf(from(withName("caller1")),
+                                fromRanges(Source.range("Caller1"))),
+                          AllOf(from(withName("caller2")),
+                                fromRanges(Source.range("Caller2")))));
 }
 
 TEST(CallHierarchy, IncomingMultiFileCpp) {
@@ -273,24 +273,24 @@ TEST(CallHierarchy, IncomingMultiFileCpp) {
   auto CheckCallHierarchy = [&](ParsedAST &AST, Position Pos, PathRef TUPath) {
     std::vector<CallHierarchyItem> Items =
         prepareCallHierarchy(AST, Pos, TUPath);
-    ASSERT_THAT(Items, ElementsAre(WithName("callee")));
+    ASSERT_THAT(Items, ElementsAre(withName("callee")));
     auto IncomingLevel1 = incomingCalls(Items[0], Index.get());
     ASSERT_THAT(IncomingLevel1,
-                ElementsAre(AllOf(From(WithName("caller1")),
-                                  FromRanges(Caller1C.range()))));
+                ElementsAre(AllOf(from(withName("caller1")),
+                                  fromRanges(Caller1C.range()))));
 
     auto IncomingLevel2 = incomingCalls(IncomingLevel1[0].from, Index.get());
     ASSERT_THAT(
         IncomingLevel2,
-        ElementsAre(AllOf(From(WithName("caller2")),
-                          FromRanges(Caller2C.range("A"), Caller2C.range("B"))),
-                    AllOf(From(WithName("caller3")),
-                          FromRanges(Caller3C.range("Caller1")))));
+        ElementsAre(AllOf(from(withName("caller2")),
+                          fromRanges(Caller2C.range("A"), Caller2C.range("B"))),
+                    AllOf(from(withName("caller3")),
+                          fromRanges(Caller3C.range("Caller1")))));
 
     auto IncomingLevel3 = incomingCalls(IncomingLevel2[0].from, Index.get());
     ASSERT_THAT(IncomingLevel3,
-                ElementsAre(AllOf(From(WithName("caller3")),
-                                  FromRanges(Caller3C.range("Caller2")))));
+                ElementsAre(AllOf(from(withName("caller3")),
+                                  fromRanges(Caller3C.range("Caller2")))));
 
     auto IncomingLevel4 = incomingCalls(IncomingLevel3[0].from, Index.get());
     EXPECT_THAT(IncomingLevel4, IsEmpty());
@@ -382,24 +382,24 @@ TEST(CallHierarchy, IncomingMultiFileObjC) {
   auto CheckCallHierarchy = [&](ParsedAST &AST, Position Pos, PathRef TUPath) {
     std::vector<CallHierarchyItem> Items =
         prepareCallHierarchy(AST, Pos, TUPath);
-    ASSERT_THAT(Items, ElementsAre(WithName("callee")));
+    ASSERT_THAT(Items, ElementsAre(withName("callee")));
     auto IncomingLevel1 = incomingCalls(Items[0], Index.get());
     ASSERT_THAT(IncomingLevel1,
-                ElementsAre(AllOf(From(WithName("caller1")),
-                                  FromRanges(Caller1C.range()))));
+                ElementsAre(AllOf(from(withName("caller1")),
+                                  fromRanges(Caller1C.range()))));
 
     auto IncomingLevel2 = incomingCalls(IncomingLevel1[0].from, Index.get());
     ASSERT_THAT(
         IncomingLevel2,
-        ElementsAre(AllOf(From(WithName("caller2")),
-                          FromRanges(Caller2C.range("A"), Caller2C.range("B"))),
-                    AllOf(From(WithName("caller3")),
-                          FromRanges(Caller3C.range("Caller1")))));
+        ElementsAre(AllOf(from(withName("caller2")),
+                          fromRanges(Caller2C.range("A"), Caller2C.range("B"))),
+                    AllOf(from(withName("caller3")),
+                          fromRanges(Caller3C.range("Caller1")))));
 
     auto IncomingLevel3 = incomingCalls(IncomingLevel2[0].from, Index.get());
     ASSERT_THAT(IncomingLevel3,
-                ElementsAre(AllOf(From(WithName("caller3")),
-                                  FromRanges(Caller3C.range("Caller2")))));
+                ElementsAre(AllOf(from(withName("caller3")),
+                                  fromRanges(Caller3C.range("Caller2")))));
 
     auto IncomingLevel4 = incomingCalls(IncomingLevel3[0].from, Index.get());
     EXPECT_THAT(IncomingLevel4, IsEmpty());
@@ -444,15 +444,15 @@ TEST(CallHierarchy, CallInLocalVarDecl) {
 
   std::vector<CallHierarchyItem> Items =
       prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
-  ASSERT_THAT(Items, ElementsAre(WithName("callee")));
+  ASSERT_THAT(Items, ElementsAre(withName("callee")));
 
   auto Incoming = incomingCalls(Items[0], Index.get());
   ASSERT_THAT(
       Incoming,
       ElementsAre(
-          AllOf(From(WithName("caller1")), FromRanges(Source.range("call1"))),
-          AllOf(From(WithName("caller2")), FromRanges(Source.range("call2"))),
-          AllOf(From(WithName("caller3")), FromRanges(Source.range("call3")))));
+          AllOf(from(withName("caller1")), fromRanges(Source.range("call1"))),
+          AllOf(from(withName("caller2")), fromRanges(Source.range("call2"))),
+          AllOf(from(withName("caller3")), fromRanges(Source.range("call3")))));
 }
 
 } // namespace

@@ -100,10 +100,10 @@ namespace {
 class ASTWorker;
 } // namespace
 
-static clang::clangd::Key<std::string> kFileBeingProcessed;
+static clang::clangd::Key<std::string> FileBeingProcessed;
 
 llvm::Optional<llvm::StringRef> TUScheduler::getFileBeingProcessedInContext() {
-  if (auto *File = Context::current().get(kFileBeingProcessed))
+  if (auto *File = Context::current().get(FileBeingProcessed))
     return llvm::StringRef(*File);
   return None;
 }
@@ -1228,7 +1228,7 @@ void ASTWorker::startTask(llvm::StringRef Name,
     }
 
     // Allow this request to be cancelled if invalidated.
-    Context Ctx = Context::current().derive(kFileBeingProcessed, FileName);
+    Context Ctx = Context::current().derive(FileBeingProcessed, FileName);
     Canceler Invalidate = nullptr;
     if (Invalidation) {
       WithContext WC(std::move(Ctx));
@@ -1656,7 +1656,7 @@ void TUScheduler::runWithPreamble(llvm::StringRef Name, PathRef File,
   auto Task = [Worker, Consistency, Name = Name.str(), File = File.str(),
                Contents = It->second->Contents,
                Command = Worker->getCurrentCompileCommand(),
-               Ctx = Context::current().derive(kFileBeingProcessed,
+               Ctx = Context::current().derive(FileBeingProcessed,
                                                std::string(File)),
                Action = std::move(Action), this]() mutable {
     ThreadCrashReporter ScopedReporter([&Name, &Contents, &Command]() {
