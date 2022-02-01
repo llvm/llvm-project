@@ -722,11 +722,6 @@ LogicalResult mlir::linalg::LinalgVectorizationPattern::matchAndRewrite(
   return vectorize(rewriter, linalgOp);
 }
 
-LogicalResult mlir::linalg::CopyVectorizationPattern::matchAndRewrite(
-    memref::CopyOp copyOp, PatternRewriter &rewriter) const {
-  return vectorizeCopy(rewriter, copyOp);
-}
-
 LogicalResult mlir::linalg::applyStagedPatterns(
     Operation *op, ArrayRef<FrozenRewritePatternSet> stage1Patterns,
     const FrozenRewritePatternSet &stage2Patterns,
