@@ -65,15 +65,18 @@ static bool analyzeGlobalAux(const Value *V, GlobalStatus &GS,
 
   for (const Use &U : V->uses()) {
     const User *UR = U.getUser();
-    if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(UR)) {
-      // If the result of the constantexpr isn't pointer type, then we won't
-      // know to expect it in various places.  Just reject early.
-      if (!isa<PointerType>(CE->getType()))
-        return true;
-
-      // FIXME: Do we need to add constexpr selects to VisitedUsers?
-      if (analyzeGlobalAux(CE, GS, VisitedUsers))
-        return true;
+    if (const Constant *C = dyn_cast<Constant>(UR)) {
+      const ConstantExpr *CE = dyn_cast<ConstantExpr>(C);
+      if (CE && isa<PointerType>(CE->getType())) {
+        // Recursively analyze pointer-typed constant expressions.
+        // FIXME: Do we need to add constexpr selects to VisitedUsers?
+        if (analyzeGlobalAux(CE, GS, VisitedUsers))
+          return true;
+      } else {
+        // Ignore dead constant users.
+        if (!isSafeToDestroyConstant(C))
+          return true;
+      }
     } else if (const Instruction *I = dyn_cast<Instruction>(UR)) {
       if (!GS.HasMultipleAccessingFunctions) {
         const Function *F = I->getParent()->getParent();
@@ -169,10 +172,6 @@ static bool analyzeGlobalAux(const Value *V, GlobalStatus &GS,
       } else {
         return true; // Any other non-load instruction might take address!
       }
-    } else if (const Constant *C = dyn_cast<Constant>(UR)) {
-      // We might have a dead and dangling constant hanging off of here.
-      if (!isSafeToDestroyConstant(C))
-        return true;
     } else {
       // Otherwise must be some other user.
       return true;
