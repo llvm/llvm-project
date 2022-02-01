@@ -1428,10 +1428,14 @@ bool InductionDescriptor::isInductionPHI(
 
   ConstantInt *CV = ConstStep->getValue();
   const DataLayout &DL = Phi->getModule()->getDataLayout();
-  int64_t Size = static_cast<int64_t>(DL.getTypeAllocSize(ElementType));
-  if (!Size)
+  TypeSize TySize = DL.getTypeAllocSize(ElementType);
+  // TODO: We could potentially support this for scalable vectors if we can
+  // prove at compile time that the constant step is always a multiple of
+  // the scalable type.
+  if (TySize.isZero() || TySize.isScalable())
     return false;
 
+  int64_t Size = static_cast<int64_t>(TySize.getFixedSize());
   int64_t CVSize = CV->getSExtValue();
   if (CVSize % Size)
     return false;
