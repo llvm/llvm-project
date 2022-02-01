@@ -65,7 +65,9 @@ static cl::list<std::string>
 /// Path of the current binary.
 static std::string LinkerExecutable;
 
+/// Temporary files created by the linker wrapper.
 static SmallVector<std::string, 16> TempFiles;
+
 /// Magic section string that marks the existence of offloading data. The
 /// section string will be formatted as `.llvm.offloading.<triple>.<arch>`.
 #define OFFLOAD_SECTION_MAGIC_STR ".llvm.offloading."
@@ -551,6 +553,44 @@ Expected<std::string> wrapDeviceImage(StringRef ImageFile) {
   return static_cast<std::string>(ObjectFile);
 }
 
+Optional<std::string> findFile(StringRef Dir, const Twine &Name) {
+  SmallString<128> Path;
+  // TODO: Parse `--sysroot` somewhere and use it here.
+  sys::path::append(Path, Dir, Name);
+  if (sys::fs::exists(Path))
+    return static_cast<std::string>(Path);
+  return None;
+}
+
+Optional<std::string> findFromSearchPaths(StringRef Name,
+                                          ArrayRef<StringRef> SearchPaths) {
+  for (StringRef Dir : SearchPaths)
+    if (Optional<std::string> File = findFile(Dir, Name))
+      return File;
+  return None;
+}
+
+Optional<std::string> searchLibraryBaseName(StringRef Name,
+                                            ArrayRef<StringRef> SearchPaths) {
+  for (StringRef Dir : SearchPaths) {
+    if (Optional<std::string> File = findFile(Dir, "lib" + Name + ".a"))
+      return File;
+  }
+  return None;
+}
+
+/// Search for static libraries in the linker's library path given input like
+/// `-lfoo` or `-l:libfoo.a`.
+Optional<std::string> searchLibrary(StringRef Input,
+                                    ArrayRef<StringRef> SearchPaths) {
+  if (!Input.startswith("-l"))
+    return None;
+  StringRef Name = Input.drop_front(2);
+  if (Name.startswith(":"))
+    return findFromSearchPaths(Name.drop_front(), SearchPaths);
+  return searchLibraryBaseName(Name, SearchPaths);
+}
+
 } // namespace
 
 int main(int argc, const char **argv) {
@@ -581,16 +621,26 @@ int main(int argc, const char **argv) {
   for (const std::string &Arg : HostLinkerArgs)
     LinkerArgs.push_back(Arg);
 
+  SmallVector<StringRef, 16> LibraryPaths;
+  for (const StringRef Arg : LinkerArgs)
+    if (Arg.startswith("-L"))
+      LibraryPaths.push_back(Arg.drop_front(2));
+
   // Try to extract device code from the linker input and replace the linker
   // input with a new file that has the device section stripped.
   SmallVector<DeviceFile, 4> DeviceFiles;
   for (std::string &Arg : LinkerArgs) {
-    if (sys::path::extension(Arg) == ".o" ||
-        sys::path::extension(Arg) == ".a") {
+    // Search for static libraries in the library link path.
+    std::string Filename = Arg;
+    if (Optional<std::string> Library = searchLibrary(Arg, LibraryPaths))
+      Filename = *Library;
+
+    if (sys::path::extension(Filename) == ".o" ||
+        sys::path::extension(Filename) == ".a") {
       ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-          MemoryBuffer::getFileOrSTDIN(Arg);
+          MemoryBuffer::getFileOrSTDIN(Filename);
       if (std::error_code EC = BufferOrErr.getError())
-        return reportError(createFileError(Arg, EC));
+        return reportError(createFileError(Filename, EC));
 
       auto NewFileOrErr =
           extractFromBuffer(std::move(*BufferOrErr), DeviceFiles);
