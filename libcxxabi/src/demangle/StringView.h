@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 //
 // FIXME: Use std::string_view instead when we support C++17.
+// There are two copies of this file in the source tree.  The one under
+// libcxxabi is the original and the one under llvm is the copy.  Use
+// cp-to-llvm.sh to update the copy.  See README.txt for more details.
 //
 //===----------------------------------------------------------------------===//
 
