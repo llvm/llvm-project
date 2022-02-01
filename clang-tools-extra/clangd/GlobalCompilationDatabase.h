@@ -24,8 +24,6 @@
 namespace clang {
 namespace clangd {
 
-class Logger;
-
 struct ProjectInfo {
   // The directory in which the compilation database was discovered.
   // Empty if directory-based compilation database discovery was not used.
