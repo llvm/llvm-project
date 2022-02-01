@@ -23,6 +23,7 @@ Parsing::~Parsing() {}
 const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
   options_ = options;
   AllSources &allSources{allCooked_.allSources()};
+  allSources.ClearSearchPath();
   if (options.isModuleFile) {
     for (const auto &path : options.searchDirectories) {
       allSources.AppendSearchPathDirectory(path);

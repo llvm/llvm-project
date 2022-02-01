@@ -85,6 +85,9 @@ public:
   const std::vector<std::string> &searchDirectories() const {
     return searchDirectories_;
   }
+  const std::vector<std::string> &intrinsicModuleDirectories() const {
+    return intrinsicModuleDirectories_;
+  }
   const std::string &moduleDirectory() const { return moduleDirectory_; }
   const std::string &moduleFileSuffix() const { return moduleFileSuffix_; }
   bool warnOnNonstandardUsage() const { return warnOnNonstandardUsage_; }
@@ -92,6 +95,7 @@ public:
   bool debugModuleWriter() const { return debugModuleWriter_; }
   const evaluate::IntrinsicProcTable &intrinsics() const { return intrinsics_; }
   Scope &globalScope() { return globalScope_; }
+  Scope &intrinsicModulesScope() { return intrinsicModulesScope_; }
   parser::Messages &messages() { return messages_; }
   evaluate::FoldingContext &foldingContext() { return foldingContext_; }
   parser::AllCookedSources &allCookedSources() { return allCookedSources_; }
@@ -103,6 +107,11 @@ public:
   }
   SemanticsContext &set_searchDirectories(const std::vector<std::string> &x) {
     searchDirectories_ = x;
+    return *this;
+  }
+  SemanticsContext &set_intrinsicModuleDirectories(
+      const std::vector<std::string> &x) {
+    intrinsicModuleDirectories_ = x;
     return *this;
   }
   SemanticsContext &set_moduleDirectory(const std::string &x) {
@@ -196,6 +205,7 @@ private:
   parser::AllCookedSources &allCookedSources_;
   std::optional<parser::CharBlock> location_;
   std::vector<std::string> searchDirectories_;
+  std::vector<std::string> intrinsicModuleDirectories_;
   std::string moduleDirectory_{"."s};
   std::string moduleFileSuffix_{".mod"};
   bool warnOnNonstandardUsage_{false};
@@ -203,6 +213,7 @@ private:
   bool debugModuleWriter_{false};
   const evaluate::IntrinsicProcTable intrinsics_;
   Scope globalScope_;
+  Scope &intrinsicModulesScope_;
   parser::Messages messages_;
   evaluate::FoldingContext foldingContext_;
   ConstructStack constructStack_;
