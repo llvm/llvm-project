@@ -438,8 +438,7 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
     if (!dialect)
       continue;
 
-    const auto *iface =
-        dialect->getRegisteredInterface<DataLayoutDialectInterface>();
+    const auto *iface = dyn_cast<DataLayoutDialectInterface>(dialect);
     if (!iface) {
       return emitError(loc)
              << "the '" << dialect->getNamespace()
