@@ -81,7 +81,7 @@ struct TestLinalgTransforms
   Option<bool> testVectorTransferForwardingPatterns{
       *this, "test-vector-transfer-forwarding-patterns",
       llvm::cl::desc(
-          "Test a fused pass that forwards linalg.copy to vector.transfer"),
+          "Test a fused pass that forwards memref.copy to vector.transfer"),
       llvm::cl::init(false)};
   Option<bool> testGenericToVectorPattern{
       *this, "test-linalg-to-vector-patterns",
@@ -232,7 +232,8 @@ static void applyPatterns(FuncOp funcOp) {
   //===--------------------------------------------------------------------===//
   patterns.add<LinalgVectorizationPattern>(
       ctx, LinalgTransformationFilter(StringAttr::get(ctx, "VECTORIZE"))
-               .addOpFilter<MatmulOp, FillOp, CopyOp, GenericOp>());
+               .addOpFilter<MatmulOp, FillOp, GenericOp>());
+  patterns.add<CopyVectorizationPattern>(ctx);
 
   //===--------------------------------------------------------------------===//
   // Linalg generic interchange pattern.
@@ -301,7 +302,8 @@ static void fillL1TilingAndMatmulToVectorPatterns(
                MatmulOp::getOperationName(), ctx, LinalgVectorizationOptions(),
                LinalgTransformationFilter(StringAttr::get(ctx, "VEC"))));
   patternsVector.back().add<LinalgVectorizationPattern>(
-      ctx, LinalgTransformationFilter().addOpFilter<FillOp, CopyOp>());
+      ctx, LinalgTransformationFilter().addOpFilter<FillOp>());
+  patternsVector.back().add<CopyVectorizationPattern>(ctx);
 }
 
 //===----------------------------------------------------------------------===//
@@ -339,7 +341,7 @@ static LogicalResult copyCallBackFn(OpBuilder &b, Value src, Value dst,
                                             FloatAttr::get(floatType, 42.0));
     b.create<FillOp>(src.getLoc(), cst, dst);
   }
-  b.create<CopyOp>(src.getLoc(), src, dst);
+  b.create<memref::CopyOp>(src.getLoc(), src, dst);
   return success();
 }
 
@@ -546,10 +548,11 @@ static void applyVectorTransferForwardingPatterns(FuncOp funcOp) {
 
 static void applyLinalgToVectorPatterns(FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
+  auto *ctx = funcOp.getContext();
   patterns.add<LinalgVectorizationPattern>(
-      funcOp.getContext(),
-      LinalgTransformationFilter()
-          .addOpFilter<ContractionOpInterface, FillOp, CopyOp, GenericOp>());
+      ctx, LinalgTransformationFilter()
+               .addOpFilter<ContractionOpInterface, FillOp, GenericOp>());
+  patterns.add<CopyVectorizationPattern>(ctx);
   populatePadOpVectorizationPatterns(patterns);
   populateConvolutionVectorizationPatterns(patterns);
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
