@@ -955,6 +955,11 @@
 // CHECK-CORTEX-X1-MFPU: "-target-feature" "+sha2"
 // CHECK-CORTEX-X1-MFPU: "-target-feature" "+aes"
 
+// RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-x1c -mfpu=crypto-neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-CORTEX-X1C-MFPU %s
+// CHECK-CORTEX-CORTEX-X1C: "-cc1"{{.*}} "-triple" "armv8.2a-{{.*}} "-target-cpu" "cortex-x1c"
+// CHECK-CORTEX-CORTEX-X1C-MFPU: "-cc1"{{.*}} "-target-feature" "+fp-armv8"
+// CHECK-CORTEX-CORTEX-X1C-MFPU: "-target-feature" "+crypto"
+
 // RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a78 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A78 %s
 // RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a78 -mfpu=crypto-neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A78-MFPU %s
 // CHECK-CORTEX-A78: "-cc1"{{.*}} "-triple" "armv8.2a-{{.*}} "-target-cpu" "cortex-a78"
