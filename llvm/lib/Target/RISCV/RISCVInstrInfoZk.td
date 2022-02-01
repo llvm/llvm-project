@@ -1,4 +1,4 @@
-//===- RISCVInstrInfoZk.td - RISC-V Scalar Crypto instructions - tablegen -*===//
+//===- RISCVInstrInfoZk.td - RISC-V 'Zk' instructions ------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
