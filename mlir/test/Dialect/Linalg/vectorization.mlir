@@ -212,7 +212,7 @@ func @test_vectorize_fill_scalar(%A : memref<f32>, %arg0 : f32) {
 func @test_vectorize_copy(%A : memref<8x16xf32>, %B : memref<8x16xf32>) {
   //       CHECK: %[[V:.*]] = vector.transfer_read {{.*}} : memref<8x16xf32>, vector<8x16xf32>
   //       CHECK: vector.transfer_write %[[V]], {{.*}} : vector<8x16xf32>, memref<8x16xf32>
-  linalg.copy(%A, %B) :  memref<8x16xf32>, memref<8x16xf32>
+  memref.copy %A, %B :  memref<8x16xf32> to memref<8x16xf32>
   return
 }
 
@@ -225,7 +225,7 @@ func @test_vectorize_copy_scalar(%A : memref<f32>, %B : memref<f32>) {
   //       CHECK:   %[[val:.*]] = vector.extractelement %[[V]][] : vector<f32>
   //       CHECK:   %[[VV:.*]] = vector.broadcast %[[val]] : f32 to vector<f32>
   //       CHECK:   vector.transfer_write %[[VV]], %[[B]][] : vector<f32>, memref<f32>
-  linalg.copy(%A, %B) :  memref<f32>, memref<f32>
+  memref.copy %A, %B :  memref<f32> to memref<f32>
   return
 }
 
@@ -462,7 +462,7 @@ func @generic_vectorize_broadcast_transpose(
   iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
   ins(%B, %A, %A, %B: memref<4x4xf32>, memref<4xf32>, memref<4xf32>, memref<4x4xf32>)
   outs(%C : memref<4x4x4x4xf32>) {
-  ^bb0(%arg0: f32, %arg1: f32, %arg2: f32, %arg3: f32, %arg4: f32):  
+  ^bb0(%arg0: f32, %arg1: f32, %arg2: f32, %arg3: f32, %arg4: f32):
     %s = arith.subf %arg0, %arg1 : f32
     %a = arith.addf %arg2, %s : f32
     %b = arith.addf %arg3, %a : f32
@@ -775,7 +775,7 @@ func @sum_exp(%input: tensor<4x16x8xf32>, %output: tensor<4x16xf32>)
       ],
       iterator_types = ["parallel", "parallel", "reduction"]
     } ins(%input : tensor<4x16x8xf32>) outs(%output : tensor<4x16xf32>) {
-    ^bb0(%arg0: f32, %arg1: f32):  
+    ^bb0(%arg0: f32, %arg1: f32):
       %1 = math.exp %arg0 : f32
       %2 = arith.addf %1, %arg1 : f32
       linalg.yield %2 : f32
@@ -811,7 +811,7 @@ func @sum_exp_2(%input: tensor<3x2xf32>, %input_2: tensor<5x4xf32>, %output: ten
       ],
       iterator_types = ["parallel", "reduction", "reduction", "parallel"]
     } ins(%input, %input_2 : tensor<3x2xf32>, tensor<5x4xf32>) outs(%output : tensor<5x2xf32>) {
-    ^bb0(%arg0: f32, %arg1: f32, %arg2: f32):  
+    ^bb0(%arg0: f32, %arg1: f32, %arg2: f32):
       %1 = math.exp %arg0 : f32
       %2 = math.exp %arg1 : f32
       %3 = arith.addf %1, %2 : f32
@@ -838,7 +838,7 @@ func @red_max_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
                                           affine_map<(d0, d1) -> (d0)>],
                          iterator_types = ["parallel", "reduction"]}
                          ins(%arg0 : tensor<4x4xf32>) outs(%fill : tensor<4xf32>) {
-  ^bb0(%in0: f32, %out0: f32):  
+  ^bb0(%in0: f32, %out0: f32):
     %max = arith.maxf %in0, %out0 : f32
     linalg.yield %max : f32
   } -> tensor<4xf32>
@@ -863,7 +863,7 @@ func @red_min_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
                                           affine_map<(d0, d1) -> (d0)>],
                          iterator_types = ["parallel", "reduction"]}
                          ins(%arg0 : tensor<4x4xf32>) outs(%fill : tensor<4xf32>) {
-  ^bb0(%in0: f32, %out0: f32):  
+  ^bb0(%in0: f32, %out0: f32):
     %min = arith.minf %out0, %in0 : f32
     linalg.yield %min : f32
   } -> tensor<4xf32>
@@ -886,7 +886,7 @@ func @red_mul_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
                                           affine_map<(d0, d1) -> (d0)>],
                          iterator_types = ["parallel", "reduction"]}
                          ins(%arg0 : tensor<4x4xf32>) outs(%fill : tensor<4xf32>) {
-  ^bb0(%in0: f32, %out0: f32):  
+  ^bb0(%in0: f32, %out0: f32):
     %mul = arith.mulf %in0, %out0 : f32
     linalg.yield %mul : f32
   } -> tensor<4xf32>
@@ -909,7 +909,7 @@ func @red_or_2d(%arg0: tensor<4x4xi1>) -> tensor<4xi1> {
                                           affine_map<(d0, d1) -> (d0)>],
                          iterator_types = ["parallel", "reduction"]}
                          ins(%arg0 : tensor<4x4xi1>) outs(%fill : tensor<4xi1>) {
-  ^bb0(%in0: i1, %out0: i1):  
+  ^bb0(%in0: i1, %out0: i1):
     %or = arith.ori %in0, %out0 : i1
     linalg.yield %or : i1
   } -> tensor<4xi1>
@@ -932,7 +932,7 @@ func @red_and_2d(%arg0: tensor<4x4xi1>) -> tensor<4xi1> {
                                           affine_map<(d0, d1) -> (d0)>],
                          iterator_types = ["parallel", "reduction"]}
                          ins(%arg0 : tensor<4x4xi1>) outs(%fill : tensor<4xi1>) {
-  ^bb0(%in0: i1, %out0: i1):  
+  ^bb0(%in0: i1, %out0: i1):
     %and = arith.andi %in0, %out0 : i1
     linalg.yield %and : i1
   } -> tensor<4xi1>
@@ -955,7 +955,7 @@ func @red_xor_2d(%arg0: tensor<4x4xi1>) -> tensor<4xi1> {
                                           affine_map<(d0, d1) -> (d0)>],
                          iterator_types = ["parallel", "reduction"]}
                          ins(%arg0 : tensor<4x4xi1>) outs(%fill : tensor<4xi1>) {
-  ^bb0(%in0: i1, %out0: i1):  
+  ^bb0(%in0: i1, %out0: i1):
     %xor = arith.xori %in0, %out0 : i1
     linalg.yield %xor : i1
   } -> tensor<4xi1>
@@ -1050,7 +1050,7 @@ func @reduce_1d(%arg0: tensor<32xf32>) -> tensor<f32> {
          iterator_types = ["reduction"]}
          ins(%arg0 : tensor<32xf32>)
          outs(%1 : tensor<f32>) {
-    ^bb0(%a: f32, %b: f32):  
+    ^bb0(%a: f32, %b: f32):
       %3 = arith.addf %a, %b : f32
       linalg.yield %3 : f32
     } -> tensor<f32>

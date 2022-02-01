@@ -62,14 +62,14 @@ func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 //     DYNAMIC:         memref.view %{{.*}}[{{.*}}][{{.*}}] : memref<?xi8> to memref<?x?xf32>
 //       CHECK:         %[[partialC:.*]] = memref.subview %[[fullC]]{{.*}} : memref<?x?xf32> to memref<?x?xf32, #[[$strided2D]]>
 
-//       CHECK:         linalg.copy(%[[vA]], %[[partialA]]) : memref<?x?xf32, #[[$strided2D]]>, memref<?x?xf32, #[[$strided2D]]>
-//       CHECK:         linalg.copy(%[[vB]], %[[partialB]]) : memref<?x?xf32, #[[$strided2D]]>, memref<?x?xf32, #[[$strided2D]]>
-//       CHECK:         linalg.copy(%[[vC]], %[[partialC]]) : memref<?x?xf32, #[[$strided2D]]>, memref<?x?xf32, #[[$strided2D]]>
+//       CHECK:         emref.copy %[[vA]], %[[partialA]] : memref<?x?xf32, #[[$strided2D]]> to memref<?x?xf32, #[[$strided2D]]>
+//       CHECK:         memref.copy %[[vB]], %[[partialB]] : memref<?x?xf32, #[[$strided2D]]> to memref<?x?xf32, #[[$strided2D]]>
+//       CHECK:         memref.copy %[[vC]], %[[partialC]] : memref<?x?xf32, #[[$strided2D]]> to memref<?x?xf32, #[[$strided2D]]>
 //
 //       CHECK:         linalg.matmul ins(%[[partialA]], %[[partialB]]{{.*}} outs(%[[partialC]]
 //
-//       CHECK:         linalg.copy(%[[partialC]], %[[vC]]) :
-//       CHECK:           memref<?x?xf32, #[[$strided2D]]>,
+//       CHECK:         memref.copy %[[partialC]], %[[vC]] :
+//       CHECK:           memref<?x?xf32, #[[$strided2D]]> to
 //       CHECK:           memref<?x?xf32, #[[$strided2D]]>
 //
 //       CHECK:         memref.dealloc %[[tmpA]] : memref<32xi8>
@@ -132,14 +132,14 @@ func @matmul_f64(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 //     DYNAMIC:         memref.view %{{.*}}[{{.*}}][{{.*}}] : memref<?xi8> to memref<?x?xf64>
 //       CHECK:         %[[partialC_f64:.*]] = memref.subview %[[fullC_f64]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<?x?xf64> to memref<?x?xf64, #[[$strided2D]]>
 
-//       CHECK:         linalg.copy(%[[vA_f64]], %[[partialA_f64]]) : memref<?x?xf64, #[[$strided2D]]>, memref<?x?xf64, #[[$strided2D]]>
-//       CHECK:         linalg.copy(%[[vB_f64]], %[[partialB_f64]]) : memref<?x?xf64, #[[$strided2D]]>, memref<?x?xf64, #[[$strided2D]]>
-//       CHECK:         linalg.copy(%[[vC_f64]], %[[partialC_f64]]) : memref<?x?xf64, #[[$strided2D]]>, memref<?x?xf64, #[[$strided2D]]>
+//       CHECK:         memref.copy %[[vA_f64]], %[[partialA_f64]] : memref<?x?xf64, #[[$strided2D]]> to memref<?x?xf64, #[[$strided2D]]>
+//       CHECK:         memref.copy %[[vB_f64]], %[[partialB_f64]] : memref<?x?xf64, #[[$strided2D]]> to memref<?x?xf64, #[[$strided2D]]>
+//       CHECK:         memref.copy %[[vC_f64]], %[[partialC_f64]] : memref<?x?xf64, #[[$strided2D]]> to memref<?x?xf64, #[[$strided2D]]>
 //
 //       CHECK:         linalg.matmul ins(%[[partialA_f64]], %[[partialB_f64]]{{.*}} outs(%[[partialC_f64]]
 //
-//       CHECK:         linalg.copy(%[[partialC_f64]], %[[vC_f64]]) :
-//       CHECK:           memref<?x?xf64, #[[$strided2D]]>,
+//       CHECK:         memref.copy %[[partialC_f64]], %[[vC_f64]] :
+//       CHECK:           memref<?x?xf64, #[[$strided2D]]> to
 //       CHECK:           memref<?x?xf64, #[[$strided2D]]>
 //
 //       CHECK:         memref.dealloc %[[tmpA_f64]] : memref<64xi8>

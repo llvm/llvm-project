@@ -373,110 +373,6 @@ private:
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// CopyOp
-//===----------------------------------------------------------------------===//
-void CopyOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block) {
-  assert(block.getNumArguments() == 2 && "CopyOp regionBuilder expects 2 args");
-  b.create<linalg::YieldOp>(block.getArgument(0));
-}
-
-void CopyOp::build(OpBuilder &builder, OperationState &result, Value input,
-                   Value output, AffineMap inputPermutation,
-                   AffineMap outputPermutation,
-                   ArrayRef<NamedAttribute> namedAttrs) {
-  result.addOperands({input, output});
-  result.addAttributes(namedAttrs);
-  if (inputPermutation)
-    result.addAttribute("inputPermutation",
-                        AffineMapAttr::get(inputPermutation));
-  if (outputPermutation)
-    result.addAttribute("outputPermutation",
-                        AffineMapAttr::get(outputPermutation));
-  result.addRegion();
-  fillStructuredOpRegion<CopyOp>(builder, *result.regions.front(),
-                                 TypeRange{input.getType()},
-                                 TypeRange{output.getType()});
-}
-
-ParseResult parseCopyOpRegion(OpAsmParser &parser, Region &r, Type inputType,
-                              Type outputType) {
-  OpBuilder opBuilder(parser.getContext());
-  fillStructuredOpRegion<CopyOp>(opBuilder, r, TypeRange{inputType},
-                                 TypeRange{outputType});
-  return success();
-}
-
-/// CopyOp region is elided when printing.
-void printCopyOpRegion(OpAsmPrinter &, Operation *, Region &, Type, Type) {}
-
-static LogicalResult verify(CopyOp op) {
-  OpOperand *output = op.getOutputOperand(0);
-  OpOperand *input = op.getInputOperand(0);
-  if (getElementTypeOrSelf(input->get()) != getElementTypeOrSelf(output->get()))
-    return op.emitOpError("expects views of the same type");
-  if (op.getRank(input) != op.getRank(output))
-    return op.emitOpError("expects views of the same rank");
-  auto rank = op.getNumParallelLoops();
-  auto inputPermutationMap = op.inputPermutation();
-  if (inputPermutationMap) {
-    if (inputPermutationMap->getNumInputs() != rank)
-      return op.emitOpError("expects optional input_permutation map of rank ")
-             << rank;
-    if (!inputPermutationMap->isPermutation())
-      return op.emitOpError(
-          "expects optional input_permutation map to be a permutation");
-  }
-  auto outputPermutationMap = op.outputPermutation();
-  if (outputPermutationMap) {
-    if (outputPermutationMap->getNumInputs() != rank)
-      return op.emitOpError("expects optional output_permutation map of rank ")
-             << rank;
-    if (!outputPermutationMap->isPermutation())
-      return op.emitOpError(
-          "expects optional output_permutation map to be a permutation");
-  }
-  if (rank == 0 && inputPermutationMap)
-    return op.emitOpError("expected no input permutation when rank == 0");
-  if (rank == 0 && outputPermutationMap)
-    return op.emitOpError("expected no output permutation when rank == 0");
-  return success();
-}
-
-void CopyOp::getEffects(
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  effects.emplace_back(MemoryEffects::Read::get(), input(),
-                       SideEffects::DefaultResource::get());
-  effects.emplace_back(MemoryEffects::Write::get(), output(),
-                       SideEffects::DefaultResource::get());
-}
-
-namespace {
-/// Remove copy operations that copy data inplace. Requirements are:
-/// 1) The input and output values are identical.
-/// 2) The input and output permutation maps are identical.
-struct EraseIdentityCopyOp : public OpRewritePattern<CopyOp> {
-  using OpRewritePattern<CopyOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(CopyOp copyOp,
-                                PatternRewriter &rewriter) const override {
-    assert(copyOp.hasBufferSemantics());
-    if (copyOp.input() == copyOp.output() &&
-        copyOp.inputPermutation() == copyOp.outputPermutation()) {
-      rewriter.eraseOp(copyOp);
-      return success();
-    }
-    return failure();
-  }
-};
-} // namespace
-
-void CopyOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                         MLIRContext *context) {
-  results.add<EraseIdentityCopyOp>(context);
-}
-
-//===----------------------------------------------------------------------===//
 // FillOp
 //===----------------------------------------------------------------------===//
 void FillOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block) {
@@ -2165,7 +2061,6 @@ struct FoldTensorCastOp : public OpInterfaceRewritePattern<LinalgOp> {
     return foldMemRefCast(*this);                                              \
   }
 
-LINALGOP_FOLDERS(CopyOp)
 LINALGOP_FOLDERS(FillOp)
 LINALGOP_FOLDERS(GenericOp)
 

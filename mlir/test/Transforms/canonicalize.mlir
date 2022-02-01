@@ -1194,7 +1194,7 @@ func @clone_loop_alloc(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<2
     memref.dealloc %5 : memref<2xf32>
     scf.yield %6 : memref<2xf32>
   }
-  linalg.copy(%2, %arg4) : memref<2xf32>, memref<2xf32>
+  memref.copy %2, %arg4 : memref<2xf32> to memref<2xf32>
   memref.dealloc %2 : memref<2xf32>
   return
 }
@@ -1204,7 +1204,7 @@ func @clone_loop_alloc(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<2
 // CHECK-NEXT: memref.dealloc
 // CHECK-NEXT: %[[ALLOC2:.*]] = memref.alloc
 // CHECK-NEXT: scf.yield %[[ALLOC2]]
-// CHECK: linalg.copy(%[[ALLOC1]]
+// CHECK: memref.copy %[[ALLOC1]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC1]]
 
 // -----
