@@ -458,7 +458,6 @@ struct OMPInformationCache : public InformationCache {
     RTLFunctions.insert(F);                                                    \
     if (declMatchesRTFTypes(F, OMPBuilder._ReturnType, ArgsTypes)) {           \
       RuntimeFunctionIDMap[F] = _Enum;                                         \
-      F->removeFnAttr(Attribute::NoInline);                                    \
       auto &RFI = RFIs[_Enum];                                                 \
       RFI.Kind = _Enum;                                                        \
       RFI.Name = _Name;                                                        \
@@ -479,6 +478,15 @@ struct OMPInformationCache : public InformationCache {
     }                                                                          \
   }
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
+
+    // Remove the `noinline` attribute from `__kmpc`, `_OMP::` and `omp_`
+    // functions, except if `optnone` is present.
+    for (Function &F : M) {
+      for (StringRef Prefix : {"__kmpc", "_ZN4_OMP", "omp_"})
+        if (F.getName().startswith(Prefix) &&
+            !F.hasFnAttribute(Attribute::OptimizeNone))
+          F.removeFnAttr(Attribute::NoInline);
+    }
 
     // TODO: We should attach the attributes defined in OMPKinds.def.
   }
