@@ -1347,8 +1347,13 @@ void WhitespaceManager::storeReplacement(SourceRange Range, StringRef Text) {
 
 void WhitespaceManager::appendNewlineText(std::string &Text,
                                           unsigned Newlines) {
-  for (unsigned i = 0; i < Newlines; ++i)
-    Text.append(UseCRLF ? "\r\n" : "\n");
+  if (UseCRLF) {
+    Text.reserve(Text.size() + 2 * Newlines);
+    for (unsigned i = 0; i < Newlines; ++i)
+      Text.append("\r\n");
+  } else {
+    Text.append(Newlines, '\n');
+  }
 }
 
 void WhitespaceManager::appendEscapedNewlineText(
