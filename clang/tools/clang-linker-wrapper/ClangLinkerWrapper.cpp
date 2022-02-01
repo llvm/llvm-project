@@ -68,8 +68,13 @@ static cl::opt<std::string>
 
 static cl::opt<std::string> OptLevel("opt-level",
                                      cl::desc("Optimization level for LTO"),
-                                     cl::init("O0"),
+                                     cl::init("O2"),
                                      cl::cat(ClangLinkerWrapperCategory));
+
+static cl::opt<std::string>
+    BitcodeLibrary("target-library",
+                   cl::desc("Path for the target bitcode library"),
+                   cl::cat(ClangLinkerWrapperCategory));
 
 // Do not parse linker options.
 static cl::list<std::string>
@@ -197,7 +202,7 @@ extractFromBinary(const ObjectFile &Obj,
       std::unique_ptr<FileOutputBuffer> Output = std::move(*OutputOrErr);
       std::copy(Contents->begin(), Contents->end(), Output->getBufferStart());
       if (Error E = Output->commit())
-        return E;
+        return std::move(E);
 
       DeviceFiles.emplace_back(DeviceTriple, Arch, TempFile);
       ToBeStripped.push_back(*Name);
@@ -225,7 +230,7 @@ extractFromBinary(const ObjectFile &Obj,
     std::unique_ptr<FileOutputBuffer> Output = std::move(*OutputOrErr);
     std::copy(Contents.begin(), Contents.end(), Output->getBufferStart());
     if (Error E = Output->commit())
-      return E;
+      return std::move(E);
     StripFile = TempFile;
   }
 
@@ -307,7 +312,7 @@ extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
     std::unique_ptr<FileOutputBuffer> Output = std::move(*OutputOrErr);
     std::copy(Contents.begin(), Contents.end(), Output->getBufferStart());
     if (Error E = Output->commit())
-      return E;
+      return std::move(E);
 
     DeviceFiles.emplace_back(DeviceTriple, Arch, TempFile);
     ToBeDeleted.push_back(&GV);
@@ -318,7 +323,7 @@ extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
 
   // We need to materialize the lazy module before we make any changes.
   if (Error Err = M->materializeAll())
-    return Err;
+    return std::move(Err);
 
   // Remove the global from the module and write it to a new file.
   for (GlobalVariable *GV : ToBeDeleted) {
@@ -392,7 +397,7 @@ extractFromArchive(const Archive &Library,
   }
 
   if (Err)
-    return Err;
+    return std::move(Err);
 
   if (!NewMembers)
     return None;
@@ -406,9 +411,9 @@ extractFromArchive(const Archive &Library,
 
   std::unique_ptr<MemoryBuffer> Buffer =
       MemoryBuffer::getMemBuffer(Library.getMemoryBufferRef(), false);
-  if (Error WriteErr = writeArchive(TempFile, Members, true, Library.kind(),
+  if (Error Err = writeArchive(TempFile, Members, true, Library.kind(),
                                     true, Library.isThin(), std::move(Buffer)))
-    return WriteErr;
+    return std::move(Err);
 
   return static_cast<std::string>(TempFile);
 }
@@ -726,7 +731,7 @@ Expected<Optional<std::string>> linkBitcodeFiles(ArrayRef<StringRef> InputFiles,
 
     // Add the bitcode file with its resolved symbols to the LTO job.
     if (Error Err = LTOBackend->add(std::move(BitcodeFile), Resolutions))
-      return Err;
+      return std::move(Err);
   }
 
   // Run the LTO job to compile the bitcode.
@@ -744,7 +749,7 @@ Expected<Optional<std::string>> linkBitcodeFiles(ArrayRef<StringRef> InputFiles,
         std::make_unique<llvm::raw_fd_ostream>(FD, true));
   };
   if (Error Err = LTOBackend->run(AddStream))
-    return Err;
+    return std::move(Err);
 
   for (auto &File : Files) {
     if (!TheTriple.isNVPTX())
@@ -955,6 +960,17 @@ int main(int argc, const char **argv) {
       if (NewFileOrErr->hasValue())
         Arg = **NewFileOrErr;
     }
+  }
+
+  // Add the device bitcode library to the device files if it was passed in.
+  if (!BitcodeLibrary.empty()) {
+    // FIXME: Hacky workaround to avoid a backend crash at O0.
+    if (OptLevel[1] - '0' == 0)
+      OptLevel[1] = '1';
+    auto DeviceAndPath = StringRef(BitcodeLibrary).split('=');
+    auto TripleAndArch = DeviceAndPath.first.rsplit('-');
+    DeviceFiles.emplace_back(TripleAndArch.first, TripleAndArch.second,
+                             DeviceAndPath.second);
   }
 
   // Link the device images extracted from the linker input.
