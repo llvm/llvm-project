@@ -461,12 +461,23 @@ fp16_fml_fallthrough:
     }
   }
 
-  const char *Archs[] = {"+v8.6a", "+v8.7a", "+v8.8a",
-                         "+v9.1a", "+v9.2a", "+v9.3a"};
-  auto Pos = std::find_first_of(Features.begin(), Features.end(),
-                                std::begin(Archs), std::end(Archs));
+  // FIXME: these insertions should ideally be automated using default
+  // extensions support from the backend target parser.
+  const char *v8691OrLater[] = {"+v8.6a", "+v8.7a", "+v8.8a",
+                                "+v9.1a", "+v9.2a", "+v9.3a"};
+  auto Pos =
+      std::find_first_of(Features.begin(), Features.end(),
+                         std::begin(v8691OrLater), std::end(v8691OrLater));
   if (Pos != std::end(Features))
     Pos = Features.insert(std::next(Pos), {"+i8mm", "+bf16"});
+
+  // For Armv8.8-a/Armv9.3-a or later, FEAT_HBC and FEAT_MOPS are enabled by
+  // default.
+  const char *v8893OrLater[] = {"+v8.8a", "+v9.3a"};
+  Pos = std::find_first_of(Features.begin(), Features.end(),
+                           std::begin(v8893OrLater), std::end(v8893OrLater));
+  if (Pos != std::end(Features))
+    Pos = Features.insert(std::next(Pos), {"+hbc", "+mops"});
 
   if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
                                options::OPT_munaligned_access)) {
