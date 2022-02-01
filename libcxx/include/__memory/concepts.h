@@ -25,7 +25,8 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+
 namespace ranges {
 
 // [special.mem.concepts]
@@ -59,7 +60,8 @@ concept __nothrow_forward_range =
     __nothrow_forward_iterator<iterator_t<_Rp>>;
 
 } // namespace ranges
-#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
+
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 _LIBCPP_END_NAMESPACE_STD
 
