@@ -885,9 +885,8 @@ void IRPosition::verify() {
            "Expected a nullptr for an invalid position!");
     return;
   case IRP_FLOAT:
-    assert((!isa<CallBase>(&getAssociatedValue()) &&
-            !isa<Argument>(&getAssociatedValue())) &&
-           "Expected specialized kind for call base and argument values!");
+    assert((!isa<Argument>(&getAssociatedValue())) &&
+           "Expected specialized kind for argument values!");
     return;
   case IRP_RETURNED:
     assert(isa<Function>(getAsValuePtr()) &&
