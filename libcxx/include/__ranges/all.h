@@ -64,7 +64,7 @@ namespace __all {
       return ranges::owning_view{_VSTD::forward<_Tp>(__t)};
     }
   };
-}
+} // namespace __all
 
 inline namespace __cpo {
   inline constexpr auto all = __all::__fn{};

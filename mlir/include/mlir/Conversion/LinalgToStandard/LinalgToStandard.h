@@ -39,25 +39,6 @@ public:
                                 PatternRewriter &rewriter) const override;
 };
 
-/// Rewrite pattern specialization for CopyOp, kicks in when both input and
-/// output permutations are left unspecified or are the identity.
-class CopyOpToLibraryCallRewrite : public OpRewritePattern<CopyOp> {
-public:
-  using OpRewritePattern<CopyOp>::OpRewritePattern;
-  LogicalResult matchAndRewrite(CopyOp op,
-                                PatternRewriter &rewriter) const override;
-};
-
-/// Rewrite CopyOp with permutations into a sequence of TransposeOp and
-/// permutation-free CopyOp. This interplays with TransposeOpConversion and
-/// LinalgConversion<CopyOp> to create a path to the LLVM dialect.
-class CopyTransposeRewrite : public OpRewritePattern<CopyOp> {
-public:
-  using OpRewritePattern<CopyOp>::OpRewritePattern;
-  LogicalResult matchAndRewrite(CopyOp op,
-                                PatternRewriter &rewriter) const override;
-};
-
 /// Populate the given list with patterns that convert from Linalg to Standard.
 void populateLinalgToStandardConversionPatterns(RewritePatternSet &patterns);
 

@@ -42,7 +42,7 @@ void test() {
 // CHECK1-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK1-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4, !tbaa [[TBAA8:![0-9]+]]
-// CHECK1-NEXT:    call void @__omp_outlined__(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR5:[0-9]+]]
+// CHECK1-NEXT:    call void @__omp_outlined__(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR6:[0-9]+]]
 // CHECK1-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK1-NEXT:    ret void
 // CHECK1:       worker.exit:
@@ -50,7 +50,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__omp_outlined__
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -73,21 +73,21 @@ void test() {
 // CHECK1-NEXT:    [[PARTIAL_SUM:%.*]] = call align 16 i8* @__kmpc_alloc_shared(i64 8)
 // CHECK1-NEXT:    [[PARTIAL_SUM_ON_STACK:%.*]] = bitcast i8* [[PARTIAL_SUM]] to %"class.std::complex"*
 // CHECK1-NEXT:    [[TMP0:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP0]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP0]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP1:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP1]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP1]]) #[[ATTR6]]
 // CHECK1-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP2:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP2]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP2]]) #[[ATTR6]]
 // CHECK1-NEXT:    store i32 99, i32* [[DOTOMP_UB]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP3:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR6]]
 // CHECK1-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP4:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR6]]
 // CHECK1-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP5:%.*]] = bitcast i32* [[IB]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP5]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP5]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP7]], i32 92, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -118,16 +118,16 @@ void test() {
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD]], i32* [[IB]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP14:%.*]] = bitcast float* [[REF_TMP]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP14]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP14]]) #[[ATTR6]]
 // CHECK1-NEXT:    store float 0.000000e+00, float* [[REF_TMP]], align 4, !tbaa [[TBAA14:![0-9]+]]
 // CHECK1-NEXT:    [[TMP15:%.*]] = bitcast float* [[REF_TMP2]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP15]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP15]]) #[[ATTR6]]
 // CHECK1-NEXT:    store float 0.000000e+00, float* [[REF_TMP2]], align 4, !tbaa [[TBAA14]]
-// CHECK1-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM_ON_STACK]], float* nonnull align 4 dereferenceable(4) [[REF_TMP]], float* nonnull align 4 dereferenceable(4) [[REF_TMP2]]) #[[ATTR10:[0-9]+]]
+// CHECK1-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM_ON_STACK]], float* nonnull align 4 dereferenceable(4) [[REF_TMP]], float* nonnull align 4 dereferenceable(4) [[REF_TMP2]]) #[[ATTR11:[0-9]+]]
 // CHECK1-NEXT:    [[TMP16:%.*]] = bitcast float* [[REF_TMP2]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP16]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP16]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP17:%.*]] = bitcast float* [[REF_TMP]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP17]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP17]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP18:%.*]] = load i32, i32* [[IB]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[MUL3:%.*]] = mul nsw i32 [[TMP18]], 4
 // CHECK1-NEXT:    store i32 [[MUL3]], i32* [[ISTART_ON_STACK]], align 4, !tbaa [[TBAA8]]
@@ -159,17 +159,17 @@ void test() {
 // CHECK1:       omp.loop.exit:
 // CHECK1-NEXT:    call void @__kmpc_distribute_static_fini(%struct.ident_t* @[[GLOB2]], i32 [[TMP7]])
 // CHECK1-NEXT:    [[TMP28:%.*]] = bitcast i32* [[IB]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP28]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP28]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP29:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP29]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP29]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP30:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP30]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP30]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP31:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP31]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP31]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP32:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP32]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP32]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP33:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP33]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP33]]) #[[ATTR6]]
 // CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[PARTIAL_SUM]], i64 8)
 // CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[IEND]], i64 4)
 // CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[ISTART]], i64 4)
@@ -177,7 +177,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZNSt7complexIfEC1ERKfS2_
-// CHECK1-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]], float* nonnull align 4 dereferenceable(4) [[__RE:%.*]], float* nonnull align 4 dereferenceable(4) [[__IM:%.*]]) unnamed_addr #[[ATTR3:[0-9]+]] comdat align 2 {
+// CHECK1-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]], float* nonnull align 4 dereferenceable(4) [[__RE:%.*]], float* nonnull align 4 dereferenceable(4) [[__IM:%.*]]) unnamed_addr #[[ATTR4:[0-9]+]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex"*, align 8
 // CHECK1-NEXT:    [[__RE_ADDR:%.*]] = alloca float*, align 8
@@ -188,12 +188,12 @@ void test() {
 // CHECK1-NEXT:    [[THIS1:%.*]] = load %"class.std::complex"*, %"class.std::complex"** [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load float*, float** [[__RE_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = load float*, float** [[__IM_ADDR]], align 8
-// CHECK1-NEXT:    call void @_ZNSt7complexIfEC2ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS1]], float* nonnull align 4 dereferenceable(4) [[TMP0]], float* nonnull align 4 dereferenceable(4) [[TMP1]]) #[[ATTR10]]
+// CHECK1-NEXT:    call void @_ZNSt7complexIfEC2ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS1]], float* nonnull align 4 dereferenceable(4) [[TMP0]], float* nonnull align 4 dereferenceable(4) [[TMP1]]) #[[ATTR11]]
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__omp_outlined__1
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[ISTART:%.*]], i32* nonnull align 4 dereferenceable(4) [[IEND:%.*]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM:%.*]]) #[[ATTR0]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[ISTART:%.*]], i32* nonnull align 4 dereferenceable(4) [[IEND:%.*]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -227,17 +227,17 @@ void test() {
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[IEND_ADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK1-NEXT:    [[TMP2:%.*]] = load %"class.std::complex"*, %"class.std::complex"** [[PARTIAL_SUM_ADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK1-NEXT:    [[TMP3:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP4:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP0]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    store i32 [[TMP5]], i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP6:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_1]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP6]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP6]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP1]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_1]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP8:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_2]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP8]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP8]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[SUB:%.*]] = sub i32 [[TMP9]], [[TMP10]]
@@ -247,44 +247,44 @@ void test() {
 // CHECK1-NEXT:    [[SUB4:%.*]] = sub i32 [[DIV]], 1
 // CHECK1-NEXT:    store i32 [[SUB4]], i32* [[DOTCAPTURE_EXPR_2]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP11:%.*]] = bitcast i32* [[I]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP11]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP11]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    store i32 [[TMP12]], i32* [[I]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP13:%.*]] = bitcast i32* [[I]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP13]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP13]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP14]], [[TMP15]]
 // CHECK1-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // CHECK1:       omp.precond.then:
 // CHECK1-NEXT:    [[TMP16:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP16]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP16]]) #[[ATTR6]]
 // CHECK1-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP17:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP17]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP17]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    store i32 [[TMP18]], i32* [[DOTOMP_UB]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP19:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP19]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP19]]) #[[ATTR6]]
 // CHECK1-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP20:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP20]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP20]]) #[[ATTR6]]
 // CHECK1-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP21:%.*]] = bitcast %"class.std::complex"* [[PARTIAL_SUM5]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP21]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP21]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP22:%.*]] = bitcast float* [[REF_TMP]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP22]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP22]]) #[[ATTR6]]
 // CHECK1-NEXT:    store float 0.000000e+00, float* [[REF_TMP]], align 4, !tbaa [[TBAA14]]
 // CHECK1-NEXT:    [[TMP23:%.*]] = bitcast float* [[REF_TMP6]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP23]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP23]]) #[[ATTR6]]
 // CHECK1-NEXT:    store float 0.000000e+00, float* [[REF_TMP6]], align 4, !tbaa [[TBAA14]]
-// CHECK1-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]], float* nonnull align 4 dereferenceable(4) [[REF_TMP]], float* nonnull align 4 dereferenceable(4) [[REF_TMP6]]) #[[ATTR10]]
+// CHECK1-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]], float* nonnull align 4 dereferenceable(4) [[REF_TMP]], float* nonnull align 4 dereferenceable(4) [[REF_TMP6]]) #[[ATTR11]]
 // CHECK1-NEXT:    [[TMP24:%.*]] = bitcast float* [[REF_TMP6]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP24]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP24]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP25:%.*]] = bitcast float* [[REF_TMP]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP25]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP25]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP26:%.*]] = bitcast i32* [[I7]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP26]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP26]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP27:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP28:%.*]] = load i32, i32* [[TMP27]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 [[TMP28]], i32 33, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -329,25 +329,25 @@ void test() {
 // CHECK1-NEXT:    [[ADD13:%.*]] = add i32 [[TMP38]], [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD13]], i32* [[I7]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP40:%.*]] = bitcast %"class.std::complex"* [[REF_TMP14]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP40]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP40]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP41:%.*]] = bitcast float* [[REF_TMP15]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP41]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP41]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP42:%.*]] = load i32, i32* [[I7]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP42]] to float
 // CHECK1-NEXT:    store float [[CONV]], float* [[REF_TMP15]], align 4, !tbaa [[TBAA14]]
 // CHECK1-NEXT:    [[TMP43:%.*]] = bitcast float* [[REF_TMP16]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP43]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP43]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP44:%.*]] = load i32, i32* [[I7]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[CONV17:%.*]] = sitofp i32 [[TMP44]] to float
 // CHECK1-NEXT:    store float [[CONV17]], float* [[REF_TMP16]], align 4, !tbaa [[TBAA14]]
-// CHECK1-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[REF_TMP14]], float* nonnull align 4 dereferenceable(4) [[REF_TMP15]], float* nonnull align 4 dereferenceable(4) [[REF_TMP16]]) #[[ATTR10]]
-// CHECK1-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) %"class.std::complex"* @_ZNSt7complexIfEpLIfEERS0_RKS_IT_E(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[REF_TMP14]]) #[[ATTR10]]
+// CHECK1-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[REF_TMP14]], float* nonnull align 4 dereferenceable(4) [[REF_TMP15]], float* nonnull align 4 dereferenceable(4) [[REF_TMP16]]) #[[ATTR11]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) %"class.std::complex"* @_ZNSt7complexIfEpLIfEERS0_RKS_IT_E(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[REF_TMP14]]) #[[ATTR11]]
 // CHECK1-NEXT:    [[TMP45:%.*]] = bitcast float* [[REF_TMP16]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP45]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP45]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP46:%.*]] = bitcast float* [[REF_TMP15]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP46]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP46]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP47:%.*]] = bitcast %"class.std::complex"* [[REF_TMP14]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP47]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP47]]) #[[ATTR6]]
 // CHECK1-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK1:       omp.body.continue:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -382,37 +382,37 @@ void test() {
 // CHECK1-NEXT:    [[TMP61:%.*]] = icmp eq i32 [[TMP60]], 1
 // CHECK1-NEXT:    br i1 [[TMP61]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK1:       .omp.reduction.then:
-// CHECK1-NEXT:    [[CALL21:%.*]] = call nonnull align 4 dereferenceable(8) %"class.std::complex"* @_ZNSt7complexIfEpLIfEERS0_RKS_IT_E(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[TMP2]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]]) #[[ATTR10]]
+// CHECK1-NEXT:    [[CALL21:%.*]] = call nonnull align 4 dereferenceable(8) %"class.std::complex"* @_ZNSt7complexIfEpLIfEERS0_RKS_IT_E(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[TMP2]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]]) #[[ATTR11]]
 // CHECK1-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP56]])
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK1:       .omp.reduction.done:
 // CHECK1-NEXT:    [[TMP62:%.*]] = bitcast i32* [[I7]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP62]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP62]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP63:%.*]] = bitcast %"class.std::complex"* [[PARTIAL_SUM5]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP63]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP63]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP64:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP64]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP64]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP65:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP65]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP65]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP66:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP66]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP66]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP67:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP67]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP67]]) #[[ATTR6]]
 // CHECK1-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK1:       omp.precond.end:
 // CHECK1-NEXT:    [[TMP68:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_2]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP68]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP68]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP69:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_1]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP69]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP69]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP70:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP70]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP70]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP71:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP71]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP71]]) #[[ATTR6]]
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZNSt7complexIfEpLIfEERS0_RKS_IT_E
-// CHECK1-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[__C:%.*]]) #[[ATTR4:[0-9]+]] comdat align 2 {
+// CHECK1-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[__C:%.*]]) #[[ATTR5:[0-9]+]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex"*, align 8
 // CHECK1-NEXT:    [[__C_ADDR:%.*]] = alloca %"class.std::complex"*, align 8
@@ -420,13 +420,13 @@ void test() {
 // CHECK1-NEXT:    store %"class.std::complex"* [[__C]], %"class.std::complex"** [[__C_ADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK1-NEXT:    [[THIS1:%.*]] = load %"class.std::complex"*, %"class.std::complex"** [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load %"class.std::complex"*, %"class.std::complex"** [[__C_ADDR]], align 8, !tbaa [[TBAA12]]
-// CHECK1-NEXT:    [[CALL:%.*]] = call float @_ZNKSt7complexIfE4realEv(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[TMP0]]) #[[ATTR10]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call float @_ZNKSt7complexIfE4realEv(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[TMP0]]) #[[ATTR11]]
 // CHECK1-NEXT:    [[__RE_:%.*]] = getelementptr inbounds %"class.std::complex", %"class.std::complex"* [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP1:%.*]] = load float, float* [[__RE_]], align 4, !tbaa [[TBAA16:![0-9]+]]
 // CHECK1-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[CALL]]
 // CHECK1-NEXT:    store float [[ADD]], float* [[__RE_]], align 4, !tbaa [[TBAA16]]
 // CHECK1-NEXT:    [[TMP2:%.*]] = load %"class.std::complex"*, %"class.std::complex"** [[__C_ADDR]], align 8, !tbaa [[TBAA12]]
-// CHECK1-NEXT:    [[CALL2:%.*]] = call float @_ZNKSt7complexIfE4imagEv(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[TMP2]]) #[[ATTR10]]
+// CHECK1-NEXT:    [[CALL2:%.*]] = call float @_ZNKSt7complexIfE4imagEv(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[TMP2]]) #[[ATTR11]]
 // CHECK1-NEXT:    [[__IM_:%.*]] = getelementptr inbounds %"class.std::complex", %"class.std::complex"* [[THIS1]], i32 0, i32 1
 // CHECK1-NEXT:    [[TMP3:%.*]] = load float, float* [[__IM_]], align 4, !tbaa [[TBAA18:![0-9]+]]
 // CHECK1-NEXT:    [[ADD3:%.*]] = fadd float [[TMP3]], [[CALL2]]
@@ -435,7 +435,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func
-// CHECK1-SAME: (i8* [[TMP0:%.*]], i16 signext [[TMP1:%.*]], i16 signext [[TMP2:%.*]], i16 signext [[TMP3:%.*]]) #[[ATTR6:[0-9]+]] {
+// CHECK1-SAME: (i8* [[TMP0:%.*]], i16 signext [[TMP1:%.*]], i16 signext [[TMP2:%.*]], i16 signext [[TMP3:%.*]]) #[[ATTR7:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i16, align 2
@@ -485,7 +485,7 @@ void test() {
 // CHECK1:       then:
 // CHECK1-NEXT:    [[TMP36:%.*]] = bitcast [1 x i8*]* [[TMP5]] to i8*
 // CHECK1-NEXT:    [[TMP37:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]] to i8*
-// CHECK1-NEXT:    call void @"_omp$reduction$reduction_func"(i8* [[TMP36]], i8* [[TMP37]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @"_omp$reduction$reduction_func"(i8* [[TMP36]], i8* [[TMP37]]) #[[ATTR6]]
 // CHECK1-NEXT:    br label [[IFCONT:%.*]]
 // CHECK1:       else:
 // CHECK1-NEXT:    br label [[IFCONT]]
@@ -512,7 +512,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func
-// CHECK1-SAME: (i8* [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR6]] {
+// CHECK1-SAME: (i8* [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -573,7 +573,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__omp_outlined__1_wrapper
-// CHECK1-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR6]] {
+// CHECK1-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -593,7 +593,7 @@ void test() {
 // CHECK1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i64 2
 // CHECK1-NEXT:    [[TMP10:%.*]] = bitcast i8** [[TMP9]] to %"class.std::complex"**
 // CHECK1-NEXT:    [[TMP11:%.*]] = load %"class.std::complex"*, %"class.std::complex"** [[TMP10]], align 8, !tbaa [[TBAA12]]
-// CHECK1-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]], i32* [[TMP8]], %"class.std::complex"* [[TMP11]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]], i32* [[TMP8]], %"class.std::complex"* [[TMP11]]) #[[ATTR6]]
 // CHECK1-NEXT:    ret void
 //
 //
@@ -609,7 +609,7 @@ void test() {
 // CHECK1-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK1-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4, !tbaa [[TBAA8]]
-// CHECK1-NEXT:    call void @__omp_outlined__2(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @__omp_outlined__2(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR6]]
 // CHECK1-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK1-NEXT:    ret void
 // CHECK1:       worker.exit:
@@ -617,7 +617,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__omp_outlined__2
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -640,21 +640,21 @@ void test() {
 // CHECK1-NEXT:    [[PARTIAL_SUM:%.*]] = call align 16 i8* @__kmpc_alloc_shared(i64 16)
 // CHECK1-NEXT:    [[PARTIAL_SUM_ON_STACK:%.*]] = bitcast i8* [[PARTIAL_SUM]] to %"class.std::complex.0"*
 // CHECK1-NEXT:    [[TMP0:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP0]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP0]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP1:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP1]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP1]]) #[[ATTR6]]
 // CHECK1-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP2:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP2]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP2]]) #[[ATTR6]]
 // CHECK1-NEXT:    store i32 99, i32* [[DOTOMP_UB]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP3:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR6]]
 // CHECK1-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP4:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR6]]
 // CHECK1-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP5:%.*]] = bitcast i32* [[IB]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP5]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP5]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP7]], i32 92, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -685,16 +685,16 @@ void test() {
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD]], i32* [[IB]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP14:%.*]] = bitcast double* [[REF_TMP]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP14]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP14]]) #[[ATTR6]]
 // CHECK1-NEXT:    store double 0.000000e+00, double* [[REF_TMP]], align 8, !tbaa [[TBAA22:![0-9]+]]
 // CHECK1-NEXT:    [[TMP15:%.*]] = bitcast double* [[REF_TMP2]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP15]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP15]]) #[[ATTR6]]
 // CHECK1-NEXT:    store double 0.000000e+00, double* [[REF_TMP2]], align 8, !tbaa [[TBAA22]]
-// CHECK1-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM_ON_STACK]], double* nonnull align 8 dereferenceable(8) [[REF_TMP]], double* nonnull align 8 dereferenceable(8) [[REF_TMP2]]) #[[ATTR10]]
+// CHECK1-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM_ON_STACK]], double* nonnull align 8 dereferenceable(8) [[REF_TMP]], double* nonnull align 8 dereferenceable(8) [[REF_TMP2]]) #[[ATTR11]]
 // CHECK1-NEXT:    [[TMP16:%.*]] = bitcast double* [[REF_TMP2]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP16]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP16]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP17:%.*]] = bitcast double* [[REF_TMP]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP17]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP17]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP18:%.*]] = load i32, i32* [[IB]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[MUL3:%.*]] = mul nsw i32 [[TMP18]], 4
 // CHECK1-NEXT:    store i32 [[MUL3]], i32* [[ISTART_ON_STACK]], align 4, !tbaa [[TBAA8]]
@@ -726,17 +726,17 @@ void test() {
 // CHECK1:       omp.loop.exit:
 // CHECK1-NEXT:    call void @__kmpc_distribute_static_fini(%struct.ident_t* @[[GLOB2]], i32 [[TMP7]])
 // CHECK1-NEXT:    [[TMP28:%.*]] = bitcast i32* [[IB]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP28]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP28]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP29:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP29]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP29]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP30:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP30]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP30]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP31:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP31]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP31]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP32:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP32]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP32]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP33:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP33]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP33]]) #[[ATTR6]]
 // CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[PARTIAL_SUM]], i64 16)
 // CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[IEND]], i64 4)
 // CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[ISTART]], i64 4)
@@ -744,7 +744,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZNSt7complexIdEC1ERKdS2_
-// CHECK1-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]], double* nonnull align 8 dereferenceable(8) [[__RE:%.*]], double* nonnull align 8 dereferenceable(8) [[__IM:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 {
+// CHECK1-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]], double* nonnull align 8 dereferenceable(8) [[__RE:%.*]], double* nonnull align 8 dereferenceable(8) [[__IM:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex.0"*, align 8
 // CHECK1-NEXT:    [[__RE_ADDR:%.*]] = alloca double*, align 8
@@ -755,12 +755,12 @@ void test() {
 // CHECK1-NEXT:    [[THIS1:%.*]] = load %"class.std::complex.0"*, %"class.std::complex.0"** [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load double*, double** [[__RE_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = load double*, double** [[__IM_ADDR]], align 8
-// CHECK1-NEXT:    call void @_ZNSt7complexIdEC2ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS1]], double* nonnull align 8 dereferenceable(8) [[TMP0]], double* nonnull align 8 dereferenceable(8) [[TMP1]]) #[[ATTR10]]
+// CHECK1-NEXT:    call void @_ZNSt7complexIdEC2ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS1]], double* nonnull align 8 dereferenceable(8) [[TMP0]], double* nonnull align 8 dereferenceable(8) [[TMP1]]) #[[ATTR11]]
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__omp_outlined__3
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[ISTART:%.*]], i32* nonnull align 4 dereferenceable(4) [[IEND:%.*]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM:%.*]]) #[[ATTR0]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[ISTART:%.*]], i32* nonnull align 4 dereferenceable(4) [[IEND:%.*]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -794,17 +794,17 @@ void test() {
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[IEND_ADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK1-NEXT:    [[TMP2:%.*]] = load %"class.std::complex.0"*, %"class.std::complex.0"** [[PARTIAL_SUM_ADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK1-NEXT:    [[TMP3:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP4:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP0]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    store i32 [[TMP5]], i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP6:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_1]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP6]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP6]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP1]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_1]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP8:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_2]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP8]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP8]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[SUB:%.*]] = sub i32 [[TMP9]], [[TMP10]]
@@ -814,44 +814,44 @@ void test() {
 // CHECK1-NEXT:    [[SUB4:%.*]] = sub i32 [[DIV]], 1
 // CHECK1-NEXT:    store i32 [[SUB4]], i32* [[DOTCAPTURE_EXPR_2]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP11:%.*]] = bitcast i32* [[I]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP11]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP11]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    store i32 [[TMP12]], i32* [[I]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP13:%.*]] = bitcast i32* [[I]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP13]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP13]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP14]], [[TMP15]]
 // CHECK1-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // CHECK1:       omp.precond.then:
 // CHECK1-NEXT:    [[TMP16:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP16]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP16]]) #[[ATTR6]]
 // CHECK1-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP17:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP17]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP17]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    store i32 [[TMP18]], i32* [[DOTOMP_UB]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP19:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP19]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP19]]) #[[ATTR6]]
 // CHECK1-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP20:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP20]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP20]]) #[[ATTR6]]
 // CHECK1-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP21:%.*]] = bitcast %"class.std::complex.0"* [[PARTIAL_SUM5]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[TMP21]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[TMP21]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP22:%.*]] = bitcast double* [[REF_TMP]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP22]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP22]]) #[[ATTR6]]
 // CHECK1-NEXT:    store double 0.000000e+00, double* [[REF_TMP]], align 8, !tbaa [[TBAA22]]
 // CHECK1-NEXT:    [[TMP23:%.*]] = bitcast double* [[REF_TMP6]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP23]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP23]]) #[[ATTR6]]
 // CHECK1-NEXT:    store double 0.000000e+00, double* [[REF_TMP6]], align 8, !tbaa [[TBAA22]]
-// CHECK1-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]], double* nonnull align 8 dereferenceable(8) [[REF_TMP]], double* nonnull align 8 dereferenceable(8) [[REF_TMP6]]) #[[ATTR10]]
+// CHECK1-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]], double* nonnull align 8 dereferenceable(8) [[REF_TMP]], double* nonnull align 8 dereferenceable(8) [[REF_TMP6]]) #[[ATTR11]]
 // CHECK1-NEXT:    [[TMP24:%.*]] = bitcast double* [[REF_TMP6]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP24]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP24]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP25:%.*]] = bitcast double* [[REF_TMP]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP25]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP25]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP26:%.*]] = bitcast i32* [[I7]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP26]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP26]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP27:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP28:%.*]] = load i32, i32* [[TMP27]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB3]], i32 [[TMP28]], i32 33, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -896,25 +896,25 @@ void test() {
 // CHECK1-NEXT:    [[ADD13:%.*]] = add i32 [[TMP38]], [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD13]], i32* [[I7]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[TMP40:%.*]] = bitcast %"class.std::complex.0"* [[REF_TMP14]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[TMP40]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[TMP40]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP41:%.*]] = bitcast double* [[REF_TMP15]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP41]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP41]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP42:%.*]] = load i32, i32* [[I7]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP42]] to double
 // CHECK1-NEXT:    store double [[CONV]], double* [[REF_TMP15]], align 8, !tbaa [[TBAA22]]
 // CHECK1-NEXT:    [[TMP43:%.*]] = bitcast double* [[REF_TMP16]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP43]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP43]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP44:%.*]] = load i32, i32* [[I7]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[CONV17:%.*]] = sitofp i32 [[TMP44]] to double
 // CHECK1-NEXT:    store double [[CONV17]], double* [[REF_TMP16]], align 8, !tbaa [[TBAA22]]
-// CHECK1-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[REF_TMP14]], double* nonnull align 8 dereferenceable(8) [[REF_TMP15]], double* nonnull align 8 dereferenceable(8) [[REF_TMP16]]) #[[ATTR10]]
-// CHECK1-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(16) %"class.std::complex.0"* @_ZNSt7complexIdEpLIdEERS0_RKS_IT_E(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[REF_TMP14]]) #[[ATTR10]]
+// CHECK1-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[REF_TMP14]], double* nonnull align 8 dereferenceable(8) [[REF_TMP15]], double* nonnull align 8 dereferenceable(8) [[REF_TMP16]]) #[[ATTR11]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(16) %"class.std::complex.0"* @_ZNSt7complexIdEpLIdEERS0_RKS_IT_E(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[REF_TMP14]]) #[[ATTR11]]
 // CHECK1-NEXT:    [[TMP45:%.*]] = bitcast double* [[REF_TMP16]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP45]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP45]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP46:%.*]] = bitcast double* [[REF_TMP15]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP46]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP46]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP47:%.*]] = bitcast %"class.std::complex.0"* [[REF_TMP14]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* [[TMP47]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* [[TMP47]]) #[[ATTR6]]
 // CHECK1-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK1:       omp.body.continue:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -949,37 +949,37 @@ void test() {
 // CHECK1-NEXT:    [[TMP61:%.*]] = icmp eq i32 [[TMP60]], 1
 // CHECK1-NEXT:    br i1 [[TMP61]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK1:       .omp.reduction.then:
-// CHECK1-NEXT:    [[CALL21:%.*]] = call nonnull align 8 dereferenceable(16) %"class.std::complex.0"* @_ZNSt7complexIdEpLIdEERS0_RKS_IT_E(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[TMP2]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]]) #[[ATTR10]]
+// CHECK1-NEXT:    [[CALL21:%.*]] = call nonnull align 8 dereferenceable(16) %"class.std::complex.0"* @_ZNSt7complexIdEpLIdEERS0_RKS_IT_E(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[TMP2]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]]) #[[ATTR11]]
 // CHECK1-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP56]])
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK1:       .omp.reduction.done:
 // CHECK1-NEXT:    [[TMP62:%.*]] = bitcast i32* [[I7]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP62]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP62]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP63:%.*]] = bitcast %"class.std::complex.0"* [[PARTIAL_SUM5]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* [[TMP63]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* [[TMP63]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP64:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP64]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP64]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP65:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP65]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP65]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP66:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP66]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP66]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP67:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP67]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP67]]) #[[ATTR6]]
 // CHECK1-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK1:       omp.precond.end:
 // CHECK1-NEXT:    [[TMP68:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_2]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP68]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP68]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP69:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_1]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP69]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP69]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP70:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP70]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP70]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[TMP71:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP71]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP71]]) #[[ATTR6]]
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZNSt7complexIdEpLIdEERS0_RKS_IT_E
-// CHECK1-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[__C:%.*]]) #[[ATTR4]] comdat align 2 {
+// CHECK1-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[__C:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex.0"*, align 8
 // CHECK1-NEXT:    [[__C_ADDR:%.*]] = alloca %"class.std::complex.0"*, align 8
@@ -987,13 +987,13 @@ void test() {
 // CHECK1-NEXT:    store %"class.std::complex.0"* [[__C]], %"class.std::complex.0"** [[__C_ADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK1-NEXT:    [[THIS1:%.*]] = load %"class.std::complex.0"*, %"class.std::complex.0"** [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load %"class.std::complex.0"*, %"class.std::complex.0"** [[__C_ADDR]], align 8, !tbaa [[TBAA12]]
-// CHECK1-NEXT:    [[CALL:%.*]] = call double @_ZNKSt7complexIdE4realEv(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[TMP0]]) #[[ATTR10]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call double @_ZNKSt7complexIdE4realEv(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[TMP0]]) #[[ATTR11]]
 // CHECK1-NEXT:    [[__RE_:%.*]] = getelementptr inbounds %"class.std::complex.0", %"class.std::complex.0"* [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP1:%.*]] = load double, double* [[__RE_]], align 8, !tbaa [[TBAA24:![0-9]+]]
 // CHECK1-NEXT:    [[ADD:%.*]] = fadd double [[TMP1]], [[CALL]]
 // CHECK1-NEXT:    store double [[ADD]], double* [[__RE_]], align 8, !tbaa [[TBAA24]]
 // CHECK1-NEXT:    [[TMP2:%.*]] = load %"class.std::complex.0"*, %"class.std::complex.0"** [[__C_ADDR]], align 8, !tbaa [[TBAA12]]
-// CHECK1-NEXT:    [[CALL2:%.*]] = call double @_ZNKSt7complexIdE4imagEv(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[TMP2]]) #[[ATTR10]]
+// CHECK1-NEXT:    [[CALL2:%.*]] = call double @_ZNKSt7complexIdE4imagEv(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[TMP2]]) #[[ATTR11]]
 // CHECK1-NEXT:    [[__IM_:%.*]] = getelementptr inbounds %"class.std::complex.0", %"class.std::complex.0"* [[THIS1]], i32 0, i32 1
 // CHECK1-NEXT:    [[TMP3:%.*]] = load double, double* [[__IM_]], align 8, !tbaa [[TBAA26:![0-9]+]]
 // CHECK1-NEXT:    [[ADD3:%.*]] = fadd double [[TMP3]], [[CALL2]]
@@ -1002,7 +1002,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func5
-// CHECK1-SAME: (i8* [[TMP0:%.*]], i16 signext [[TMP1:%.*]], i16 signext [[TMP2:%.*]], i16 signext [[TMP3:%.*]]) #[[ATTR6]] {
+// CHECK1-SAME: (i8* [[TMP0:%.*]], i16 signext [[TMP1:%.*]], i16 signext [[TMP2:%.*]], i16 signext [[TMP3:%.*]]) #[[ATTR7]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i16, align 2
@@ -1066,7 +1066,7 @@ void test() {
 // CHECK1:       then:
 // CHECK1-NEXT:    [[TMP44:%.*]] = bitcast [1 x i8*]* [[TMP5]] to i8*
 // CHECK1-NEXT:    [[TMP45:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]] to i8*
-// CHECK1-NEXT:    call void @"_omp$reduction$reduction_func4"(i8* [[TMP44]], i8* [[TMP45]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @"_omp$reduction$reduction_func4"(i8* [[TMP44]], i8* [[TMP45]]) #[[ATTR6]]
 // CHECK1-NEXT:    br label [[IFCONT:%.*]]
 // CHECK1:       else:
 // CHECK1-NEXT:    br label [[IFCONT]]
@@ -1093,7 +1093,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func6
-// CHECK1-SAME: (i8* [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR6]] {
+// CHECK1-SAME: (i8* [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -1154,7 +1154,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__omp_outlined__3_wrapper
-// CHECK1-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR6]] {
+// CHECK1-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -1174,12 +1174,12 @@ void test() {
 // CHECK1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i64 2
 // CHECK1-NEXT:    [[TMP10:%.*]] = bitcast i8** [[TMP9]] to %"class.std::complex.0"**
 // CHECK1-NEXT:    [[TMP11:%.*]] = load %"class.std::complex.0"*, %"class.std::complex.0"** [[TMP10]], align 8, !tbaa [[TBAA12]]
-// CHECK1-NEXT:    call void @__omp_outlined__3(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]], i32* [[TMP8]], %"class.std::complex.0"* [[TMP11]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @__omp_outlined__3(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]], i32* [[TMP8]], %"class.std::complex.0"* [[TMP11]]) #[[ATTR6]]
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZNSt7complexIfEC2ERKfS2_
-// CHECK1-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]], float* nonnull align 4 dereferenceable(4) [[__RE:%.*]], float* nonnull align 4 dereferenceable(4) [[__IM:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 {
+// CHECK1-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]], float* nonnull align 4 dereferenceable(4) [[__RE:%.*]], float* nonnull align 4 dereferenceable(4) [[__IM:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex"*, align 8
 // CHECK1-NEXT:    [[__RE_ADDR:%.*]] = alloca float*, align 8
@@ -1200,7 +1200,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZNKSt7complexIfE4realEv
-// CHECK1-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR4]] comdat align 2 {
+// CHECK1-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex"*, align 8
 // CHECK1-NEXT:    store %"class.std::complex"* [[THIS]], %"class.std::complex"** [[THIS_ADDR]], align 8, !tbaa [[TBAA12]]
@@ -1211,7 +1211,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZNKSt7complexIfE4imagEv
-// CHECK1-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR4]] comdat align 2 {
+// CHECK1-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex"*, align 8
 // CHECK1-NEXT:    store %"class.std::complex"* [[THIS]], %"class.std::complex"** [[THIS_ADDR]], align 8, !tbaa [[TBAA12]]
@@ -1222,7 +1222,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZNSt7complexIdEC2ERKdS2_
-// CHECK1-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]], double* nonnull align 8 dereferenceable(8) [[__RE:%.*]], double* nonnull align 8 dereferenceable(8) [[__IM:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 {
+// CHECK1-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]], double* nonnull align 8 dereferenceable(8) [[__RE:%.*]], double* nonnull align 8 dereferenceable(8) [[__IM:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex.0"*, align 8
 // CHECK1-NEXT:    [[__RE_ADDR:%.*]] = alloca double*, align 8
@@ -1243,7 +1243,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZNKSt7complexIdE4realEv
-// CHECK1-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]]) #[[ATTR4]] comdat align 2 {
+// CHECK1-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex.0"*, align 8
 // CHECK1-NEXT:    store %"class.std::complex.0"* [[THIS]], %"class.std::complex.0"** [[THIS_ADDR]], align 8, !tbaa [[TBAA12]]
@@ -1254,7 +1254,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZNKSt7complexIdE4imagEv
-// CHECK1-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]]) #[[ATTR4]] comdat align 2 {
+// CHECK1-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex.0"*, align 8
 // CHECK1-NEXT:    store %"class.std::complex.0"* [[THIS]], %"class.std::complex.0"** [[THIS_ADDR]], align 8, !tbaa [[TBAA12]]
@@ -1276,7 +1276,7 @@ void test() {
 // CHECK2-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK2-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4, !tbaa [[TBAA8:![0-9]+]]
-// CHECK2-NEXT:    call void @__omp_outlined__(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR5:[0-9]+]]
+// CHECK2-NEXT:    call void @__omp_outlined__(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR6:[0-9]+]]
 // CHECK2-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK2-NEXT:    ret void
 // CHECK2:       worker.exit:
@@ -1284,7 +1284,7 @@ void test() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__omp_outlined__
-// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1307,21 +1307,21 @@ void test() {
 // CHECK2-NEXT:    [[PARTIAL_SUM:%.*]] = call align 16 i8* @__kmpc_alloc_shared(i64 8)
 // CHECK2-NEXT:    [[PARTIAL_SUM_ON_STACK:%.*]] = bitcast i8* [[PARTIAL_SUM]] to %"class.std::complex"*
 // CHECK2-NEXT:    [[TMP0:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP0]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP0]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP1:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP1]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP1]]) #[[ATTR6]]
 // CHECK2-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP2:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP2]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP2]]) #[[ATTR6]]
 // CHECK2-NEXT:    store i32 99, i32* [[DOTOMP_UB]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP3:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR6]]
 // CHECK2-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP4:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR6]]
 // CHECK2-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP5:%.*]] = bitcast i32* [[IB]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP5]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP5]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP6:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP7]], i32 92, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -1352,16 +1352,16 @@ void test() {
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK2-NEXT:    store i32 [[ADD]], i32* [[IB]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP14:%.*]] = bitcast float* [[REF_TMP]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP14]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP14]]) #[[ATTR6]]
 // CHECK2-NEXT:    store float 0.000000e+00, float* [[REF_TMP]], align 4, !tbaa [[TBAA14:![0-9]+]]
 // CHECK2-NEXT:    [[TMP15:%.*]] = bitcast float* [[REF_TMP2]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP15]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP15]]) #[[ATTR6]]
 // CHECK2-NEXT:    store float 0.000000e+00, float* [[REF_TMP2]], align 4, !tbaa [[TBAA14]]
-// CHECK2-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM_ON_STACK]], float* nonnull align 4 dereferenceable(4) [[REF_TMP]], float* nonnull align 4 dereferenceable(4) [[REF_TMP2]]) #[[ATTR10:[0-9]+]]
+// CHECK2-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM_ON_STACK]], float* nonnull align 4 dereferenceable(4) [[REF_TMP]], float* nonnull align 4 dereferenceable(4) [[REF_TMP2]]) #[[ATTR11:[0-9]+]]
 // CHECK2-NEXT:    [[TMP16:%.*]] = bitcast float* [[REF_TMP2]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP16]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP16]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP17:%.*]] = bitcast float* [[REF_TMP]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP17]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP17]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP18:%.*]] = load i32, i32* [[IB]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[MUL3:%.*]] = mul nsw i32 [[TMP18]], 4
 // CHECK2-NEXT:    store i32 [[MUL3]], i32* [[ISTART_ON_STACK]], align 4, !tbaa [[TBAA8]]
@@ -1393,17 +1393,17 @@ void test() {
 // CHECK2:       omp.loop.exit:
 // CHECK2-NEXT:    call void @__kmpc_distribute_static_fini(%struct.ident_t* @[[GLOB2]], i32 [[TMP7]])
 // CHECK2-NEXT:    [[TMP28:%.*]] = bitcast i32* [[IB]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP28]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP28]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP29:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP29]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP29]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP30:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP30]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP30]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP31:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP31]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP31]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP32:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP32]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP32]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP33:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP33]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP33]]) #[[ATTR6]]
 // CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[PARTIAL_SUM]], i64 8)
 // CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[IEND]], i64 4)
 // CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[ISTART]], i64 4)
@@ -1411,7 +1411,7 @@ void test() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZNSt7complexIfEC1ERKfS2_
-// CHECK2-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]], float* nonnull align 4 dereferenceable(4) [[__RE:%.*]], float* nonnull align 4 dereferenceable(4) [[__IM:%.*]]) unnamed_addr #[[ATTR3:[0-9]+]] comdat align 2 {
+// CHECK2-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]], float* nonnull align 4 dereferenceable(4) [[__RE:%.*]], float* nonnull align 4 dereferenceable(4) [[__IM:%.*]]) unnamed_addr #[[ATTR4:[0-9]+]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex"*, align 8
 // CHECK2-NEXT:    [[__RE_ADDR:%.*]] = alloca float*, align 8
@@ -1422,12 +1422,12 @@ void test() {
 // CHECK2-NEXT:    [[THIS1:%.*]] = load %"class.std::complex"*, %"class.std::complex"** [[THIS_ADDR]], align 8
 // CHECK2-NEXT:    [[TMP0:%.*]] = load float*, float** [[__RE_ADDR]], align 8
 // CHECK2-NEXT:    [[TMP1:%.*]] = load float*, float** [[__IM_ADDR]], align 8
-// CHECK2-NEXT:    call void @_ZNSt7complexIfEC2ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS1]], float* nonnull align 4 dereferenceable(4) [[TMP0]], float* nonnull align 4 dereferenceable(4) [[TMP1]]) #[[ATTR10]]
+// CHECK2-NEXT:    call void @_ZNSt7complexIfEC2ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS1]], float* nonnull align 4 dereferenceable(4) [[TMP0]], float* nonnull align 4 dereferenceable(4) [[TMP1]]) #[[ATTR11]]
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__omp_outlined__1
-// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[ISTART:%.*]], i32* nonnull align 4 dereferenceable(4) [[IEND:%.*]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[ISTART:%.*]], i32* nonnull align 4 dereferenceable(4) [[IEND:%.*]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1461,17 +1461,17 @@ void test() {
 // CHECK2-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[IEND_ADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK2-NEXT:    [[TMP2:%.*]] = load %"class.std::complex"*, %"class.std::complex"** [[PARTIAL_SUM_ADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK2-NEXT:    [[TMP3:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP4:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP0]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    store i32 [[TMP5]], i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP6:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_1]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP6]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP6]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP1]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_1]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP8:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_2]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP8]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP8]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[SUB:%.*]] = sub i32 [[TMP9]], [[TMP10]]
@@ -1481,44 +1481,44 @@ void test() {
 // CHECK2-NEXT:    [[SUB4:%.*]] = sub i32 [[DIV]], 1
 // CHECK2-NEXT:    store i32 [[SUB4]], i32* [[DOTCAPTURE_EXPR_2]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP11:%.*]] = bitcast i32* [[I]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP11]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP11]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    store i32 [[TMP12]], i32* [[I]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP13:%.*]] = bitcast i32* [[I]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP13]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP13]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP14]], [[TMP15]]
 // CHECK2-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // CHECK2:       omp.precond.then:
 // CHECK2-NEXT:    [[TMP16:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP16]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP16]]) #[[ATTR6]]
 // CHECK2-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP17:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP17]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP17]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    store i32 [[TMP18]], i32* [[DOTOMP_UB]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP19:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP19]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP19]]) #[[ATTR6]]
 // CHECK2-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP20:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP20]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP20]]) #[[ATTR6]]
 // CHECK2-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP21:%.*]] = bitcast %"class.std::complex"* [[PARTIAL_SUM5]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP21]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP21]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP22:%.*]] = bitcast float* [[REF_TMP]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP22]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP22]]) #[[ATTR6]]
 // CHECK2-NEXT:    store float 0.000000e+00, float* [[REF_TMP]], align 4, !tbaa [[TBAA14]]
 // CHECK2-NEXT:    [[TMP23:%.*]] = bitcast float* [[REF_TMP6]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP23]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP23]]) #[[ATTR6]]
 // CHECK2-NEXT:    store float 0.000000e+00, float* [[REF_TMP6]], align 4, !tbaa [[TBAA14]]
-// CHECK2-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]], float* nonnull align 4 dereferenceable(4) [[REF_TMP]], float* nonnull align 4 dereferenceable(4) [[REF_TMP6]]) #[[ATTR10]]
+// CHECK2-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]], float* nonnull align 4 dereferenceable(4) [[REF_TMP]], float* nonnull align 4 dereferenceable(4) [[REF_TMP6]]) #[[ATTR11]]
 // CHECK2-NEXT:    [[TMP24:%.*]] = bitcast float* [[REF_TMP6]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP24]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP24]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP25:%.*]] = bitcast float* [[REF_TMP]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP25]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP25]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP26:%.*]] = bitcast i32* [[I7]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP26]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP26]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP27:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP28:%.*]] = load i32, i32* [[TMP27]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 [[TMP28]], i32 33, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -1563,25 +1563,25 @@ void test() {
 // CHECK2-NEXT:    [[ADD13:%.*]] = add i32 [[TMP38]], [[MUL]]
 // CHECK2-NEXT:    store i32 [[ADD13]], i32* [[I7]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP40:%.*]] = bitcast %"class.std::complex"* [[REF_TMP14]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP40]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP40]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP41:%.*]] = bitcast float* [[REF_TMP15]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP41]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP41]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP42:%.*]] = load i32, i32* [[I7]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP42]] to float
 // CHECK2-NEXT:    store float [[CONV]], float* [[REF_TMP15]], align 4, !tbaa [[TBAA14]]
 // CHECK2-NEXT:    [[TMP43:%.*]] = bitcast float* [[REF_TMP16]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP43]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP43]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP44:%.*]] = load i32, i32* [[I7]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[CONV17:%.*]] = sitofp i32 [[TMP44]] to float
 // CHECK2-NEXT:    store float [[CONV17]], float* [[REF_TMP16]], align 4, !tbaa [[TBAA14]]
-// CHECK2-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[REF_TMP14]], float* nonnull align 4 dereferenceable(4) [[REF_TMP15]], float* nonnull align 4 dereferenceable(4) [[REF_TMP16]]) #[[ATTR10]]
-// CHECK2-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) %"class.std::complex"* @_ZNSt7complexIfEpLIfEERS0_RKS_IT_E(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[REF_TMP14]]) #[[ATTR10]]
+// CHECK2-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[REF_TMP14]], float* nonnull align 4 dereferenceable(4) [[REF_TMP15]], float* nonnull align 4 dereferenceable(4) [[REF_TMP16]]) #[[ATTR11]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) %"class.std::complex"* @_ZNSt7complexIfEpLIfEERS0_RKS_IT_E(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[REF_TMP14]]) #[[ATTR11]]
 // CHECK2-NEXT:    [[TMP45:%.*]] = bitcast float* [[REF_TMP16]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP45]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP45]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP46:%.*]] = bitcast float* [[REF_TMP15]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP46]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP46]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP47:%.*]] = bitcast %"class.std::complex"* [[REF_TMP14]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP47]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP47]]) #[[ATTR6]]
 // CHECK2-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK2:       omp.body.continue:
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -1616,37 +1616,37 @@ void test() {
 // CHECK2-NEXT:    [[TMP61:%.*]] = icmp eq i32 [[TMP60]], 1
 // CHECK2-NEXT:    br i1 [[TMP61]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK2:       .omp.reduction.then:
-// CHECK2-NEXT:    [[CALL21:%.*]] = call nonnull align 4 dereferenceable(8) %"class.std::complex"* @_ZNSt7complexIfEpLIfEERS0_RKS_IT_E(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[TMP2]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]]) #[[ATTR10]]
+// CHECK2-NEXT:    [[CALL21:%.*]] = call nonnull align 4 dereferenceable(8) %"class.std::complex"* @_ZNSt7complexIfEpLIfEERS0_RKS_IT_E(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[TMP2]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]]) #[[ATTR11]]
 // CHECK2-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP56]])
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK2:       .omp.reduction.done:
 // CHECK2-NEXT:    [[TMP62:%.*]] = bitcast i32* [[I7]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP62]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP62]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP63:%.*]] = bitcast %"class.std::complex"* [[PARTIAL_SUM5]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP63]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP63]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP64:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP64]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP64]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP65:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP65]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP65]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP66:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP66]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP66]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP67:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP67]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP67]]) #[[ATTR6]]
 // CHECK2-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK2:       omp.precond.end:
 // CHECK2-NEXT:    [[TMP68:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_2]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP68]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP68]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP69:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_1]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP69]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP69]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP70:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP70]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP70]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP71:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP71]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP71]]) #[[ATTR6]]
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZNSt7complexIfEpLIfEERS0_RKS_IT_E
-// CHECK2-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[__C:%.*]]) #[[ATTR4:[0-9]+]] comdat align 2 {
+// CHECK2-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[__C:%.*]]) #[[ATTR5:[0-9]+]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex"*, align 8
 // CHECK2-NEXT:    [[__C_ADDR:%.*]] = alloca %"class.std::complex"*, align 8
@@ -1654,13 +1654,13 @@ void test() {
 // CHECK2-NEXT:    store %"class.std::complex"* [[__C]], %"class.std::complex"** [[__C_ADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK2-NEXT:    [[THIS1:%.*]] = load %"class.std::complex"*, %"class.std::complex"** [[THIS_ADDR]], align 8
 // CHECK2-NEXT:    [[TMP0:%.*]] = load %"class.std::complex"*, %"class.std::complex"** [[__C_ADDR]], align 8, !tbaa [[TBAA12]]
-// CHECK2-NEXT:    [[CALL:%.*]] = call float @_ZNKSt7complexIfE4realEv(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[TMP0]]) #[[ATTR10]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call float @_ZNKSt7complexIfE4realEv(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[TMP0]]) #[[ATTR11]]
 // CHECK2-NEXT:    [[__RE_:%.*]] = getelementptr inbounds %"class.std::complex", %"class.std::complex"* [[THIS1]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP1:%.*]] = load float, float* [[__RE_]], align 4, !tbaa [[TBAA16:![0-9]+]]
 // CHECK2-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[CALL]]
 // CHECK2-NEXT:    store float [[ADD]], float* [[__RE_]], align 4, !tbaa [[TBAA16]]
 // CHECK2-NEXT:    [[TMP2:%.*]] = load %"class.std::complex"*, %"class.std::complex"** [[__C_ADDR]], align 8, !tbaa [[TBAA12]]
-// CHECK2-NEXT:    [[CALL2:%.*]] = call float @_ZNKSt7complexIfE4imagEv(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[TMP2]]) #[[ATTR10]]
+// CHECK2-NEXT:    [[CALL2:%.*]] = call float @_ZNKSt7complexIfE4imagEv(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[TMP2]]) #[[ATTR11]]
 // CHECK2-NEXT:    [[__IM_:%.*]] = getelementptr inbounds %"class.std::complex", %"class.std::complex"* [[THIS1]], i32 0, i32 1
 // CHECK2-NEXT:    [[TMP3:%.*]] = load float, float* [[__IM_]], align 4, !tbaa [[TBAA18:![0-9]+]]
 // CHECK2-NEXT:    [[ADD3:%.*]] = fadd float [[TMP3]], [[CALL2]]
@@ -1669,7 +1669,7 @@ void test() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func
-// CHECK2-SAME: (i8* [[TMP0:%.*]], i16 signext [[TMP1:%.*]], i16 signext [[TMP2:%.*]], i16 signext [[TMP3:%.*]]) #[[ATTR6:[0-9]+]] {
+// CHECK2-SAME: (i8* [[TMP0:%.*]], i16 signext [[TMP1:%.*]], i16 signext [[TMP2:%.*]], i16 signext [[TMP3:%.*]]) #[[ATTR7:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i16, align 2
@@ -1719,7 +1719,7 @@ void test() {
 // CHECK2:       then:
 // CHECK2-NEXT:    [[TMP36:%.*]] = bitcast [1 x i8*]* [[TMP5]] to i8*
 // CHECK2-NEXT:    [[TMP37:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]] to i8*
-// CHECK2-NEXT:    call void @"_omp$reduction$reduction_func"(i8* [[TMP36]], i8* [[TMP37]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @"_omp$reduction$reduction_func"(i8* [[TMP36]], i8* [[TMP37]]) #[[ATTR6]]
 // CHECK2-NEXT:    br label [[IFCONT:%.*]]
 // CHECK2:       else:
 // CHECK2-NEXT:    br label [[IFCONT]]
@@ -1746,7 +1746,7 @@ void test() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func
-// CHECK2-SAME: (i8* [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR6]] {
+// CHECK2-SAME: (i8* [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -1807,7 +1807,7 @@ void test() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__omp_outlined__1_wrapper
-// CHECK2-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR6]] {
+// CHECK2-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -1827,7 +1827,7 @@ void test() {
 // CHECK2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i64 2
 // CHECK2-NEXT:    [[TMP10:%.*]] = bitcast i8** [[TMP9]] to %"class.std::complex"**
 // CHECK2-NEXT:    [[TMP11:%.*]] = load %"class.std::complex"*, %"class.std::complex"** [[TMP10]], align 8, !tbaa [[TBAA12]]
-// CHECK2-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]], i32* [[TMP8]], %"class.std::complex"* [[TMP11]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]], i32* [[TMP8]], %"class.std::complex"* [[TMP11]]) #[[ATTR6]]
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1843,7 +1843,7 @@ void test() {
 // CHECK2-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK2-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4, !tbaa [[TBAA8]]
-// CHECK2-NEXT:    call void @__omp_outlined__2(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @__omp_outlined__2(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR6]]
 // CHECK2-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK2-NEXT:    ret void
 // CHECK2:       worker.exit:
@@ -1851,7 +1851,7 @@ void test() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__omp_outlined__2
-// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1874,21 +1874,21 @@ void test() {
 // CHECK2-NEXT:    [[PARTIAL_SUM:%.*]] = call align 16 i8* @__kmpc_alloc_shared(i64 16)
 // CHECK2-NEXT:    [[PARTIAL_SUM_ON_STACK:%.*]] = bitcast i8* [[PARTIAL_SUM]] to %"class.std::complex.0"*
 // CHECK2-NEXT:    [[TMP0:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP0]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP0]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP1:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP1]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP1]]) #[[ATTR6]]
 // CHECK2-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP2:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP2]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP2]]) #[[ATTR6]]
 // CHECK2-NEXT:    store i32 99, i32* [[DOTOMP_UB]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP3:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR6]]
 // CHECK2-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP4:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR6]]
 // CHECK2-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP5:%.*]] = bitcast i32* [[IB]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP5]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP5]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP6:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP7]], i32 92, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -1919,16 +1919,16 @@ void test() {
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK2-NEXT:    store i32 [[ADD]], i32* [[IB]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP14:%.*]] = bitcast double* [[REF_TMP]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP14]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP14]]) #[[ATTR6]]
 // CHECK2-NEXT:    store double 0.000000e+00, double* [[REF_TMP]], align 8, !tbaa [[TBAA22:![0-9]+]]
 // CHECK2-NEXT:    [[TMP15:%.*]] = bitcast double* [[REF_TMP2]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP15]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP15]]) #[[ATTR6]]
 // CHECK2-NEXT:    store double 0.000000e+00, double* [[REF_TMP2]], align 8, !tbaa [[TBAA22]]
-// CHECK2-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM_ON_STACK]], double* nonnull align 8 dereferenceable(8) [[REF_TMP]], double* nonnull align 8 dereferenceable(8) [[REF_TMP2]]) #[[ATTR10]]
+// CHECK2-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM_ON_STACK]], double* nonnull align 8 dereferenceable(8) [[REF_TMP]], double* nonnull align 8 dereferenceable(8) [[REF_TMP2]]) #[[ATTR11]]
 // CHECK2-NEXT:    [[TMP16:%.*]] = bitcast double* [[REF_TMP2]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP16]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP16]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP17:%.*]] = bitcast double* [[REF_TMP]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP17]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP17]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP18:%.*]] = load i32, i32* [[IB]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[MUL3:%.*]] = mul nsw i32 [[TMP18]], 4
 // CHECK2-NEXT:    store i32 [[MUL3]], i32* [[ISTART_ON_STACK]], align 4, !tbaa [[TBAA8]]
@@ -1960,17 +1960,17 @@ void test() {
 // CHECK2:       omp.loop.exit:
 // CHECK2-NEXT:    call void @__kmpc_distribute_static_fini(%struct.ident_t* @[[GLOB2]], i32 [[TMP7]])
 // CHECK2-NEXT:    [[TMP28:%.*]] = bitcast i32* [[IB]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP28]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP28]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP29:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP29]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP29]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP30:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP30]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP30]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP31:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP31]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP31]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP32:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP32]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP32]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP33:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP33]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP33]]) #[[ATTR6]]
 // CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[PARTIAL_SUM]], i64 16)
 // CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[IEND]], i64 4)
 // CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[ISTART]], i64 4)
@@ -1978,7 +1978,7 @@ void test() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZNSt7complexIdEC1ERKdS2_
-// CHECK2-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]], double* nonnull align 8 dereferenceable(8) [[__RE:%.*]], double* nonnull align 8 dereferenceable(8) [[__IM:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 {
+// CHECK2-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]], double* nonnull align 8 dereferenceable(8) [[__RE:%.*]], double* nonnull align 8 dereferenceable(8) [[__IM:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex.0"*, align 8
 // CHECK2-NEXT:    [[__RE_ADDR:%.*]] = alloca double*, align 8
@@ -1989,12 +1989,12 @@ void test() {
 // CHECK2-NEXT:    [[THIS1:%.*]] = load %"class.std::complex.0"*, %"class.std::complex.0"** [[THIS_ADDR]], align 8
 // CHECK2-NEXT:    [[TMP0:%.*]] = load double*, double** [[__RE_ADDR]], align 8
 // CHECK2-NEXT:    [[TMP1:%.*]] = load double*, double** [[__IM_ADDR]], align 8
-// CHECK2-NEXT:    call void @_ZNSt7complexIdEC2ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS1]], double* nonnull align 8 dereferenceable(8) [[TMP0]], double* nonnull align 8 dereferenceable(8) [[TMP1]]) #[[ATTR10]]
+// CHECK2-NEXT:    call void @_ZNSt7complexIdEC2ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS1]], double* nonnull align 8 dereferenceable(8) [[TMP0]], double* nonnull align 8 dereferenceable(8) [[TMP1]]) #[[ATTR11]]
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__omp_outlined__3
-// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[ISTART:%.*]], i32* nonnull align 4 dereferenceable(4) [[IEND:%.*]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[ISTART:%.*]], i32* nonnull align 4 dereferenceable(4) [[IEND:%.*]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2028,17 +2028,17 @@ void test() {
 // CHECK2-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[IEND_ADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK2-NEXT:    [[TMP2:%.*]] = load %"class.std::complex.0"*, %"class.std::complex.0"** [[PARTIAL_SUM_ADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK2-NEXT:    [[TMP3:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP4:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP0]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    store i32 [[TMP5]], i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP6:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_1]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP6]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP6]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP1]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_1]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP8:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_2]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP8]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP8]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[SUB:%.*]] = sub i32 [[TMP9]], [[TMP10]]
@@ -2048,44 +2048,44 @@ void test() {
 // CHECK2-NEXT:    [[SUB4:%.*]] = sub i32 [[DIV]], 1
 // CHECK2-NEXT:    store i32 [[SUB4]], i32* [[DOTCAPTURE_EXPR_2]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP11:%.*]] = bitcast i32* [[I]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP11]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP11]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    store i32 [[TMP12]], i32* [[I]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP13:%.*]] = bitcast i32* [[I]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP13]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP13]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP14]], [[TMP15]]
 // CHECK2-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // CHECK2:       omp.precond.then:
 // CHECK2-NEXT:    [[TMP16:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP16]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP16]]) #[[ATTR6]]
 // CHECK2-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP17:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP17]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP17]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    store i32 [[TMP18]], i32* [[DOTOMP_UB]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP19:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP19]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP19]]) #[[ATTR6]]
 // CHECK2-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP20:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP20]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP20]]) #[[ATTR6]]
 // CHECK2-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP21:%.*]] = bitcast %"class.std::complex.0"* [[PARTIAL_SUM5]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[TMP21]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[TMP21]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP22:%.*]] = bitcast double* [[REF_TMP]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP22]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP22]]) #[[ATTR6]]
 // CHECK2-NEXT:    store double 0.000000e+00, double* [[REF_TMP]], align 8, !tbaa [[TBAA22]]
 // CHECK2-NEXT:    [[TMP23:%.*]] = bitcast double* [[REF_TMP6]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP23]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP23]]) #[[ATTR6]]
 // CHECK2-NEXT:    store double 0.000000e+00, double* [[REF_TMP6]], align 8, !tbaa [[TBAA22]]
-// CHECK2-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]], double* nonnull align 8 dereferenceable(8) [[REF_TMP]], double* nonnull align 8 dereferenceable(8) [[REF_TMP6]]) #[[ATTR10]]
+// CHECK2-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]], double* nonnull align 8 dereferenceable(8) [[REF_TMP]], double* nonnull align 8 dereferenceable(8) [[REF_TMP6]]) #[[ATTR11]]
 // CHECK2-NEXT:    [[TMP24:%.*]] = bitcast double* [[REF_TMP6]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP24]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP24]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP25:%.*]] = bitcast double* [[REF_TMP]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP25]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP25]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP26:%.*]] = bitcast i32* [[I7]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP26]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP26]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP27:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP28:%.*]] = load i32, i32* [[TMP27]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB3]], i32 [[TMP28]], i32 33, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -2130,25 +2130,25 @@ void test() {
 // CHECK2-NEXT:    [[ADD13:%.*]] = add i32 [[TMP38]], [[MUL]]
 // CHECK2-NEXT:    store i32 [[ADD13]], i32* [[I7]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[TMP40:%.*]] = bitcast %"class.std::complex.0"* [[REF_TMP14]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[TMP40]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[TMP40]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP41:%.*]] = bitcast double* [[REF_TMP15]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP41]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP41]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP42:%.*]] = load i32, i32* [[I7]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP42]] to double
 // CHECK2-NEXT:    store double [[CONV]], double* [[REF_TMP15]], align 8, !tbaa [[TBAA22]]
 // CHECK2-NEXT:    [[TMP43:%.*]] = bitcast double* [[REF_TMP16]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP43]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP43]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP44:%.*]] = load i32, i32* [[I7]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[CONV17:%.*]] = sitofp i32 [[TMP44]] to double
 // CHECK2-NEXT:    store double [[CONV17]], double* [[REF_TMP16]], align 8, !tbaa [[TBAA22]]
-// CHECK2-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[REF_TMP14]], double* nonnull align 8 dereferenceable(8) [[REF_TMP15]], double* nonnull align 8 dereferenceable(8) [[REF_TMP16]]) #[[ATTR10]]
-// CHECK2-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(16) %"class.std::complex.0"* @_ZNSt7complexIdEpLIdEERS0_RKS_IT_E(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[REF_TMP14]]) #[[ATTR10]]
+// CHECK2-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[REF_TMP14]], double* nonnull align 8 dereferenceable(8) [[REF_TMP15]], double* nonnull align 8 dereferenceable(8) [[REF_TMP16]]) #[[ATTR11]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(16) %"class.std::complex.0"* @_ZNSt7complexIdEpLIdEERS0_RKS_IT_E(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[REF_TMP14]]) #[[ATTR11]]
 // CHECK2-NEXT:    [[TMP45:%.*]] = bitcast double* [[REF_TMP16]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP45]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP45]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP46:%.*]] = bitcast double* [[REF_TMP15]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP46]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP46]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP47:%.*]] = bitcast %"class.std::complex.0"* [[REF_TMP14]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* [[TMP47]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* [[TMP47]]) #[[ATTR6]]
 // CHECK2-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK2:       omp.body.continue:
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -2183,37 +2183,37 @@ void test() {
 // CHECK2-NEXT:    [[TMP61:%.*]] = icmp eq i32 [[TMP60]], 1
 // CHECK2-NEXT:    br i1 [[TMP61]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK2:       .omp.reduction.then:
-// CHECK2-NEXT:    [[CALL21:%.*]] = call nonnull align 8 dereferenceable(16) %"class.std::complex.0"* @_ZNSt7complexIdEpLIdEERS0_RKS_IT_E(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[TMP2]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]]) #[[ATTR10]]
+// CHECK2-NEXT:    [[CALL21:%.*]] = call nonnull align 8 dereferenceable(16) %"class.std::complex.0"* @_ZNSt7complexIdEpLIdEERS0_RKS_IT_E(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[TMP2]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]]) #[[ATTR11]]
 // CHECK2-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP56]])
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK2:       .omp.reduction.done:
 // CHECK2-NEXT:    [[TMP62:%.*]] = bitcast i32* [[I7]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP62]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP62]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP63:%.*]] = bitcast %"class.std::complex.0"* [[PARTIAL_SUM5]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* [[TMP63]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* [[TMP63]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP64:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP64]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP64]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP65:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP65]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP65]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP66:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP66]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP66]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP67:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP67]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP67]]) #[[ATTR6]]
 // CHECK2-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK2:       omp.precond.end:
 // CHECK2-NEXT:    [[TMP68:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_2]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP68]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP68]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP69:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_1]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP69]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP69]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP70:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP70]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP70]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[TMP71:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP71]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP71]]) #[[ATTR6]]
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZNSt7complexIdEpLIdEERS0_RKS_IT_E
-// CHECK2-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[__C:%.*]]) #[[ATTR4]] comdat align 2 {
+// CHECK2-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[__C:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex.0"*, align 8
 // CHECK2-NEXT:    [[__C_ADDR:%.*]] = alloca %"class.std::complex.0"*, align 8
@@ -2221,13 +2221,13 @@ void test() {
 // CHECK2-NEXT:    store %"class.std::complex.0"* [[__C]], %"class.std::complex.0"** [[__C_ADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK2-NEXT:    [[THIS1:%.*]] = load %"class.std::complex.0"*, %"class.std::complex.0"** [[THIS_ADDR]], align 8
 // CHECK2-NEXT:    [[TMP0:%.*]] = load %"class.std::complex.0"*, %"class.std::complex.0"** [[__C_ADDR]], align 8, !tbaa [[TBAA12]]
-// CHECK2-NEXT:    [[CALL:%.*]] = call double @_ZNKSt7complexIdE4realEv(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[TMP0]]) #[[ATTR10]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call double @_ZNKSt7complexIdE4realEv(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[TMP0]]) #[[ATTR11]]
 // CHECK2-NEXT:    [[__RE_:%.*]] = getelementptr inbounds %"class.std::complex.0", %"class.std::complex.0"* [[THIS1]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP1:%.*]] = load double, double* [[__RE_]], align 8, !tbaa [[TBAA24:![0-9]+]]
 // CHECK2-NEXT:    [[ADD:%.*]] = fadd double [[TMP1]], [[CALL]]
 // CHECK2-NEXT:    store double [[ADD]], double* [[__RE_]], align 8, !tbaa [[TBAA24]]
 // CHECK2-NEXT:    [[TMP2:%.*]] = load %"class.std::complex.0"*, %"class.std::complex.0"** [[__C_ADDR]], align 8, !tbaa [[TBAA12]]
-// CHECK2-NEXT:    [[CALL2:%.*]] = call double @_ZNKSt7complexIdE4imagEv(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[TMP2]]) #[[ATTR10]]
+// CHECK2-NEXT:    [[CALL2:%.*]] = call double @_ZNKSt7complexIdE4imagEv(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[TMP2]]) #[[ATTR11]]
 // CHECK2-NEXT:    [[__IM_:%.*]] = getelementptr inbounds %"class.std::complex.0", %"class.std::complex.0"* [[THIS1]], i32 0, i32 1
 // CHECK2-NEXT:    [[TMP3:%.*]] = load double, double* [[__IM_]], align 8, !tbaa [[TBAA26:![0-9]+]]
 // CHECK2-NEXT:    [[ADD3:%.*]] = fadd double [[TMP3]], [[CALL2]]
@@ -2236,7 +2236,7 @@ void test() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func5
-// CHECK2-SAME: (i8* [[TMP0:%.*]], i16 signext [[TMP1:%.*]], i16 signext [[TMP2:%.*]], i16 signext [[TMP3:%.*]]) #[[ATTR6]] {
+// CHECK2-SAME: (i8* [[TMP0:%.*]], i16 signext [[TMP1:%.*]], i16 signext [[TMP2:%.*]], i16 signext [[TMP3:%.*]]) #[[ATTR7]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i16, align 2
@@ -2300,7 +2300,7 @@ void test() {
 // CHECK2:       then:
 // CHECK2-NEXT:    [[TMP44:%.*]] = bitcast [1 x i8*]* [[TMP5]] to i8*
 // CHECK2-NEXT:    [[TMP45:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]] to i8*
-// CHECK2-NEXT:    call void @"_omp$reduction$reduction_func4"(i8* [[TMP44]], i8* [[TMP45]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @"_omp$reduction$reduction_func4"(i8* [[TMP44]], i8* [[TMP45]]) #[[ATTR6]]
 // CHECK2-NEXT:    br label [[IFCONT:%.*]]
 // CHECK2:       else:
 // CHECK2-NEXT:    br label [[IFCONT]]
@@ -2327,7 +2327,7 @@ void test() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func6
-// CHECK2-SAME: (i8* [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR6]] {
+// CHECK2-SAME: (i8* [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -2388,7 +2388,7 @@ void test() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__omp_outlined__3_wrapper
-// CHECK2-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR6]] {
+// CHECK2-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -2408,12 +2408,12 @@ void test() {
 // CHECK2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i64 2
 // CHECK2-NEXT:    [[TMP10:%.*]] = bitcast i8** [[TMP9]] to %"class.std::complex.0"**
 // CHECK2-NEXT:    [[TMP11:%.*]] = load %"class.std::complex.0"*, %"class.std::complex.0"** [[TMP10]], align 8, !tbaa [[TBAA12]]
-// CHECK2-NEXT:    call void @__omp_outlined__3(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]], i32* [[TMP8]], %"class.std::complex.0"* [[TMP11]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @__omp_outlined__3(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]], i32* [[TMP8]], %"class.std::complex.0"* [[TMP11]]) #[[ATTR6]]
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZNSt7complexIfEC2ERKfS2_
-// CHECK2-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]], float* nonnull align 4 dereferenceable(4) [[__RE:%.*]], float* nonnull align 4 dereferenceable(4) [[__IM:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 {
+// CHECK2-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]], float* nonnull align 4 dereferenceable(4) [[__RE:%.*]], float* nonnull align 4 dereferenceable(4) [[__IM:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex"*, align 8
 // CHECK2-NEXT:    [[__RE_ADDR:%.*]] = alloca float*, align 8
@@ -2434,7 +2434,7 @@ void test() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZNKSt7complexIfE4realEv
-// CHECK2-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR4]] comdat align 2 {
+// CHECK2-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex"*, align 8
 // CHECK2-NEXT:    store %"class.std::complex"* [[THIS]], %"class.std::complex"** [[THIS_ADDR]], align 8, !tbaa [[TBAA12]]
@@ -2445,7 +2445,7 @@ void test() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZNKSt7complexIfE4imagEv
-// CHECK2-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR4]] comdat align 2 {
+// CHECK2-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex"*, align 8
 // CHECK2-NEXT:    store %"class.std::complex"* [[THIS]], %"class.std::complex"** [[THIS_ADDR]], align 8, !tbaa [[TBAA12]]
@@ -2456,7 +2456,7 @@ void test() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZNSt7complexIdEC2ERKdS2_
-// CHECK2-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]], double* nonnull align 8 dereferenceable(8) [[__RE:%.*]], double* nonnull align 8 dereferenceable(8) [[__IM:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 {
+// CHECK2-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]], double* nonnull align 8 dereferenceable(8) [[__RE:%.*]], double* nonnull align 8 dereferenceable(8) [[__IM:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex.0"*, align 8
 // CHECK2-NEXT:    [[__RE_ADDR:%.*]] = alloca double*, align 8
@@ -2477,7 +2477,7 @@ void test() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZNKSt7complexIdE4realEv
-// CHECK2-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]]) #[[ATTR4]] comdat align 2 {
+// CHECK2-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex.0"*, align 8
 // CHECK2-NEXT:    store %"class.std::complex.0"* [[THIS]], %"class.std::complex.0"** [[THIS_ADDR]], align 8, !tbaa [[TBAA12]]
@@ -2488,7 +2488,7 @@ void test() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZNKSt7complexIdE4imagEv
-// CHECK2-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]]) #[[ATTR4]] comdat align 2 {
+// CHECK2-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex.0"*, align 8
 // CHECK2-NEXT:    store %"class.std::complex.0"* [[THIS]], %"class.std::complex.0"** [[THIS_ADDR]], align 8, !tbaa [[TBAA12]]
@@ -2510,7 +2510,7 @@ void test() {
 // CHECK3-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK3-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK3-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4, !tbaa [[TBAA8:![0-9]+]]
-// CHECK3-NEXT:    call void @__omp_outlined__(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR5:[0-9]+]]
+// CHECK3-NEXT:    call void @__omp_outlined__(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR6:[0-9]+]]
 // CHECK3-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK3-NEXT:    ret void
 // CHECK3:       worker.exit:
@@ -2518,7 +2518,7 @@ void test() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@__omp_outlined__
-// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2541,21 +2541,21 @@ void test() {
 // CHECK3-NEXT:    [[PARTIAL_SUM:%.*]] = call align 16 i8* @__kmpc_alloc_shared(i64 8)
 // CHECK3-NEXT:    [[PARTIAL_SUM_ON_STACK:%.*]] = bitcast i8* [[PARTIAL_SUM]] to %"class.std::complex"*
 // CHECK3-NEXT:    [[TMP0:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP0]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP0]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP1:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP1]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP1]]) #[[ATTR6]]
 // CHECK3-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP2:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP2]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP2]]) #[[ATTR6]]
 // CHECK3-NEXT:    store i32 99, i32* [[DOTOMP_UB]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP3:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR6]]
 // CHECK3-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP4:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR6]]
 // CHECK3-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP5:%.*]] = bitcast i32* [[IB]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP5]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP5]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP6:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK3-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP7]], i32 92, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -2586,16 +2586,16 @@ void test() {
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK3-NEXT:    store i32 [[ADD]], i32* [[IB]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP14:%.*]] = bitcast float* [[REF_TMP]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP14]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP14]]) #[[ATTR6]]
 // CHECK3-NEXT:    store float 0.000000e+00, float* [[REF_TMP]], align 4, !tbaa [[TBAA14:![0-9]+]]
 // CHECK3-NEXT:    [[TMP15:%.*]] = bitcast float* [[REF_TMP2]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP15]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP15]]) #[[ATTR6]]
 // CHECK3-NEXT:    store float 0.000000e+00, float* [[REF_TMP2]], align 4, !tbaa [[TBAA14]]
-// CHECK3-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM_ON_STACK]], float* nonnull align 4 dereferenceable(4) [[REF_TMP]], float* nonnull align 4 dereferenceable(4) [[REF_TMP2]]) #[[ATTR10:[0-9]+]]
+// CHECK3-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM_ON_STACK]], float* nonnull align 4 dereferenceable(4) [[REF_TMP]], float* nonnull align 4 dereferenceable(4) [[REF_TMP2]]) #[[ATTR11:[0-9]+]]
 // CHECK3-NEXT:    [[TMP16:%.*]] = bitcast float* [[REF_TMP2]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP16]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP16]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP17:%.*]] = bitcast float* [[REF_TMP]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP17]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP17]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP18:%.*]] = load i32, i32* [[IB]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[MUL3:%.*]] = mul nsw i32 [[TMP18]], 4
 // CHECK3-NEXT:    store i32 [[MUL3]], i32* [[ISTART_ON_STACK]], align 4, !tbaa [[TBAA8]]
@@ -2627,17 +2627,17 @@ void test() {
 // CHECK3:       omp.loop.exit:
 // CHECK3-NEXT:    call void @__kmpc_distribute_static_fini(%struct.ident_t* @[[GLOB2]], i32 [[TMP7]])
 // CHECK3-NEXT:    [[TMP28:%.*]] = bitcast i32* [[IB]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP28]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP28]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP29:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP29]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP29]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP30:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP30]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP30]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP31:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP31]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP31]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP32:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP32]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP32]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP33:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP33]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP33]]) #[[ATTR6]]
 // CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[PARTIAL_SUM]], i64 8)
 // CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[IEND]], i64 4)
 // CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[ISTART]], i64 4)
@@ -2645,7 +2645,7 @@ void test() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZNSt7complexIfEC1ERKfS2_
-// CHECK3-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]], float* nonnull align 4 dereferenceable(4) [[__RE:%.*]], float* nonnull align 4 dereferenceable(4) [[__IM:%.*]]) unnamed_addr #[[ATTR3:[0-9]+]] comdat align 2 {
+// CHECK3-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]], float* nonnull align 4 dereferenceable(4) [[__RE:%.*]], float* nonnull align 4 dereferenceable(4) [[__IM:%.*]]) unnamed_addr #[[ATTR4:[0-9]+]] comdat align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex"*, align 8
 // CHECK3-NEXT:    [[__RE_ADDR:%.*]] = alloca float*, align 8
@@ -2656,12 +2656,12 @@ void test() {
 // CHECK3-NEXT:    [[THIS1:%.*]] = load %"class.std::complex"*, %"class.std::complex"** [[THIS_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP0:%.*]] = load float*, float** [[__RE_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP1:%.*]] = load float*, float** [[__IM_ADDR]], align 8
-// CHECK3-NEXT:    call void @_ZNSt7complexIfEC2ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS1]], float* nonnull align 4 dereferenceable(4) [[TMP0]], float* nonnull align 4 dereferenceable(4) [[TMP1]]) #[[ATTR10]]
+// CHECK3-NEXT:    call void @_ZNSt7complexIfEC2ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS1]], float* nonnull align 4 dereferenceable(4) [[TMP0]], float* nonnull align 4 dereferenceable(4) [[TMP1]]) #[[ATTR11]]
 // CHECK3-NEXT:    ret void
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@__omp_outlined__1
-// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[ISTART:%.*]], i32* nonnull align 4 dereferenceable(4) [[IEND:%.*]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[ISTART:%.*]], i32* nonnull align 4 dereferenceable(4) [[IEND:%.*]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2695,17 +2695,17 @@ void test() {
 // CHECK3-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[IEND_ADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK3-NEXT:    [[TMP2:%.*]] = load %"class.std::complex"*, %"class.std::complex"** [[PARTIAL_SUM_ADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK3-NEXT:    [[TMP3:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP4:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP0]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    store i32 [[TMP5]], i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP6:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_1]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP6]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP6]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP1]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_1]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP8:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_2]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP8]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP8]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[SUB:%.*]] = sub i32 [[TMP9]], [[TMP10]]
@@ -2715,44 +2715,44 @@ void test() {
 // CHECK3-NEXT:    [[SUB4:%.*]] = sub i32 [[DIV]], 1
 // CHECK3-NEXT:    store i32 [[SUB4]], i32* [[DOTCAPTURE_EXPR_2]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP11:%.*]] = bitcast i32* [[I]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP11]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP11]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    store i32 [[TMP12]], i32* [[I]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP13:%.*]] = bitcast i32* [[I]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP13]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP13]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP14]], [[TMP15]]
 // CHECK3-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // CHECK3:       omp.precond.then:
 // CHECK3-NEXT:    [[TMP16:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP16]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP16]]) #[[ATTR6]]
 // CHECK3-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP17:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP17]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP17]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    store i32 [[TMP18]], i32* [[DOTOMP_UB]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP19:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP19]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP19]]) #[[ATTR6]]
 // CHECK3-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP20:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP20]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP20]]) #[[ATTR6]]
 // CHECK3-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP21:%.*]] = bitcast %"class.std::complex"* [[PARTIAL_SUM5]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP21]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP21]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP22:%.*]] = bitcast float* [[REF_TMP]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP22]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP22]]) #[[ATTR6]]
 // CHECK3-NEXT:    store float 0.000000e+00, float* [[REF_TMP]], align 4, !tbaa [[TBAA14]]
 // CHECK3-NEXT:    [[TMP23:%.*]] = bitcast float* [[REF_TMP6]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP23]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP23]]) #[[ATTR6]]
 // CHECK3-NEXT:    store float 0.000000e+00, float* [[REF_TMP6]], align 4, !tbaa [[TBAA14]]
-// CHECK3-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]], float* nonnull align 4 dereferenceable(4) [[REF_TMP]], float* nonnull align 4 dereferenceable(4) [[REF_TMP6]]) #[[ATTR10]]
+// CHECK3-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]], float* nonnull align 4 dereferenceable(4) [[REF_TMP]], float* nonnull align 4 dereferenceable(4) [[REF_TMP6]]) #[[ATTR11]]
 // CHECK3-NEXT:    [[TMP24:%.*]] = bitcast float* [[REF_TMP6]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP24]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP24]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP25:%.*]] = bitcast float* [[REF_TMP]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP25]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP25]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP26:%.*]] = bitcast i32* [[I7]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP26]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP26]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP27:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK3-NEXT:    [[TMP28:%.*]] = load i32, i32* [[TMP27]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 [[TMP28]], i32 33, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -2797,25 +2797,25 @@ void test() {
 // CHECK3-NEXT:    [[ADD13:%.*]] = add i32 [[TMP38]], [[MUL]]
 // CHECK3-NEXT:    store i32 [[ADD13]], i32* [[I7]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP40:%.*]] = bitcast %"class.std::complex"* [[REF_TMP14]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP40]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP40]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP41:%.*]] = bitcast float* [[REF_TMP15]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP41]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP41]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP42:%.*]] = load i32, i32* [[I7]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP42]] to float
 // CHECK3-NEXT:    store float [[CONV]], float* [[REF_TMP15]], align 4, !tbaa [[TBAA14]]
 // CHECK3-NEXT:    [[TMP43:%.*]] = bitcast float* [[REF_TMP16]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP43]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP43]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP44:%.*]] = load i32, i32* [[I7]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[CONV17:%.*]] = sitofp i32 [[TMP44]] to float
 // CHECK3-NEXT:    store float [[CONV17]], float* [[REF_TMP16]], align 4, !tbaa [[TBAA14]]
-// CHECK3-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[REF_TMP14]], float* nonnull align 4 dereferenceable(4) [[REF_TMP15]], float* nonnull align 4 dereferenceable(4) [[REF_TMP16]]) #[[ATTR10]]
-// CHECK3-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) %"class.std::complex"* @_ZNSt7complexIfEpLIfEERS0_RKS_IT_E(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[REF_TMP14]]) #[[ATTR10]]
+// CHECK3-NEXT:    call void @_ZNSt7complexIfEC1ERKfS2_(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[REF_TMP14]], float* nonnull align 4 dereferenceable(4) [[REF_TMP15]], float* nonnull align 4 dereferenceable(4) [[REF_TMP16]]) #[[ATTR11]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) %"class.std::complex"* @_ZNSt7complexIfEpLIfEERS0_RKS_IT_E(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[REF_TMP14]]) #[[ATTR11]]
 // CHECK3-NEXT:    [[TMP45:%.*]] = bitcast float* [[REF_TMP16]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP45]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP45]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP46:%.*]] = bitcast float* [[REF_TMP15]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP46]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP46]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP47:%.*]] = bitcast %"class.std::complex"* [[REF_TMP14]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP47]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP47]]) #[[ATTR6]]
 // CHECK3-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK3:       omp.body.continue:
 // CHECK3-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -2850,37 +2850,37 @@ void test() {
 // CHECK3-NEXT:    [[TMP61:%.*]] = icmp eq i32 [[TMP60]], 1
 // CHECK3-NEXT:    br i1 [[TMP61]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK3:       .omp.reduction.then:
-// CHECK3-NEXT:    [[CALL21:%.*]] = call nonnull align 4 dereferenceable(8) %"class.std::complex"* @_ZNSt7complexIfEpLIfEERS0_RKS_IT_E(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[TMP2]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]]) #[[ATTR10]]
+// CHECK3-NEXT:    [[CALL21:%.*]] = call nonnull align 4 dereferenceable(8) %"class.std::complex"* @_ZNSt7complexIfEpLIfEERS0_RKS_IT_E(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[TMP2]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[PARTIAL_SUM5]]) #[[ATTR11]]
 // CHECK3-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP56]])
 // CHECK3-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK3:       .omp.reduction.done:
 // CHECK3-NEXT:    [[TMP62:%.*]] = bitcast i32* [[I7]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP62]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP62]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP63:%.*]] = bitcast %"class.std::complex"* [[PARTIAL_SUM5]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP63]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP63]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP64:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP64]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP64]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP65:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP65]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP65]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP66:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP66]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP66]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP67:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP67]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP67]]) #[[ATTR6]]
 // CHECK3-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK3:       omp.precond.end:
 // CHECK3-NEXT:    [[TMP68:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_2]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP68]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP68]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP69:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_1]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP69]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP69]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP70:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP70]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP70]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP71:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP71]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP71]]) #[[ATTR6]]
 // CHECK3-NEXT:    ret void
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZNSt7complexIfEpLIfEERS0_RKS_IT_E
-// CHECK3-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[__C:%.*]]) #[[ATTR4:[0-9]+]] comdat align 2 {
+// CHECK3-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]], %"class.std::complex"* nonnull align 4 dereferenceable(8) [[__C:%.*]]) #[[ATTR5:[0-9]+]] comdat align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex"*, align 8
 // CHECK3-NEXT:    [[__C_ADDR:%.*]] = alloca %"class.std::complex"*, align 8
@@ -2888,13 +2888,13 @@ void test() {
 // CHECK3-NEXT:    store %"class.std::complex"* [[__C]], %"class.std::complex"** [[__C_ADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK3-NEXT:    [[THIS1:%.*]] = load %"class.std::complex"*, %"class.std::complex"** [[THIS_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP0:%.*]] = load %"class.std::complex"*, %"class.std::complex"** [[__C_ADDR]], align 8, !tbaa [[TBAA12]]
-// CHECK3-NEXT:    [[CALL:%.*]] = call float @_ZNKSt7complexIfE4realEv(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[TMP0]]) #[[ATTR10]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call float @_ZNKSt7complexIfE4realEv(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[TMP0]]) #[[ATTR11]]
 // CHECK3-NEXT:    [[__RE_:%.*]] = getelementptr inbounds %"class.std::complex", %"class.std::complex"* [[THIS1]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP1:%.*]] = load float, float* [[__RE_]], align 4, !tbaa [[TBAA16:![0-9]+]]
 // CHECK3-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[CALL]]
 // CHECK3-NEXT:    store float [[ADD]], float* [[__RE_]], align 4, !tbaa [[TBAA16]]
 // CHECK3-NEXT:    [[TMP2:%.*]] = load %"class.std::complex"*, %"class.std::complex"** [[__C_ADDR]], align 8, !tbaa [[TBAA12]]
-// CHECK3-NEXT:    [[CALL2:%.*]] = call float @_ZNKSt7complexIfE4imagEv(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[TMP2]]) #[[ATTR10]]
+// CHECK3-NEXT:    [[CALL2:%.*]] = call float @_ZNKSt7complexIfE4imagEv(%"class.std::complex"* nonnull align 4 dereferenceable(8) [[TMP2]]) #[[ATTR11]]
 // CHECK3-NEXT:    [[__IM_:%.*]] = getelementptr inbounds %"class.std::complex", %"class.std::complex"* [[THIS1]], i32 0, i32 1
 // CHECK3-NEXT:    [[TMP3:%.*]] = load float, float* [[__IM_]], align 4, !tbaa [[TBAA18:![0-9]+]]
 // CHECK3-NEXT:    [[ADD3:%.*]] = fadd float [[TMP3]], [[CALL2]]
@@ -2903,7 +2903,7 @@ void test() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func
-// CHECK3-SAME: (i8* [[TMP0:%.*]], i16 signext [[TMP1:%.*]], i16 signext [[TMP2:%.*]], i16 signext [[TMP3:%.*]]) #[[ATTR6:[0-9]+]] {
+// CHECK3-SAME: (i8* [[TMP0:%.*]], i16 signext [[TMP1:%.*]], i16 signext [[TMP2:%.*]], i16 signext [[TMP3:%.*]]) #[[ATTR7:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK3-NEXT:    [[DOTADDR1:%.*]] = alloca i16, align 2
@@ -2953,7 +2953,7 @@ void test() {
 // CHECK3:       then:
 // CHECK3-NEXT:    [[TMP36:%.*]] = bitcast [1 x i8*]* [[TMP5]] to i8*
 // CHECK3-NEXT:    [[TMP37:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]] to i8*
-// CHECK3-NEXT:    call void @"_omp$reduction$reduction_func"(i8* [[TMP36]], i8* [[TMP37]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @"_omp$reduction$reduction_func"(i8* [[TMP36]], i8* [[TMP37]]) #[[ATTR6]]
 // CHECK3-NEXT:    br label [[IFCONT:%.*]]
 // CHECK3:       else:
 // CHECK3-NEXT:    br label [[IFCONT]]
@@ -2980,7 +2980,7 @@ void test() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func
-// CHECK3-SAME: (i8* [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR6]] {
+// CHECK3-SAME: (i8* [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK3-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -3041,7 +3041,7 @@ void test() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@__omp_outlined__1_wrapper
-// CHECK3-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR6]] {
+// CHECK3-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK3-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -3061,7 +3061,7 @@ void test() {
 // CHECK3-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i64 2
 // CHECK3-NEXT:    [[TMP10:%.*]] = bitcast i8** [[TMP9]] to %"class.std::complex"**
 // CHECK3-NEXT:    [[TMP11:%.*]] = load %"class.std::complex"*, %"class.std::complex"** [[TMP10]], align 8, !tbaa [[TBAA12]]
-// CHECK3-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]], i32* [[TMP8]], %"class.std::complex"* [[TMP11]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]], i32* [[TMP8]], %"class.std::complex"* [[TMP11]]) #[[ATTR6]]
 // CHECK3-NEXT:    ret void
 //
 //
@@ -3077,7 +3077,7 @@ void test() {
 // CHECK3-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK3-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK3-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4, !tbaa [[TBAA8]]
-// CHECK3-NEXT:    call void @__omp_outlined__2(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @__omp_outlined__2(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR6]]
 // CHECK3-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 // CHECK3-NEXT:    ret void
 // CHECK3:       worker.exit:
@@ -3085,7 +3085,7 @@ void test() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@__omp_outlined__2
-// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3108,21 +3108,21 @@ void test() {
 // CHECK3-NEXT:    [[PARTIAL_SUM:%.*]] = call align 16 i8* @__kmpc_alloc_shared(i64 16)
 // CHECK3-NEXT:    [[PARTIAL_SUM_ON_STACK:%.*]] = bitcast i8* [[PARTIAL_SUM]] to %"class.std::complex.0"*
 // CHECK3-NEXT:    [[TMP0:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP0]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP0]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP1:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP1]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP1]]) #[[ATTR6]]
 // CHECK3-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP2:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP2]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP2]]) #[[ATTR6]]
 // CHECK3-NEXT:    store i32 99, i32* [[DOTOMP_UB]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP3:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR6]]
 // CHECK3-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP4:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR6]]
 // CHECK3-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP5:%.*]] = bitcast i32* [[IB]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP5]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP5]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP6:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK3-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    call void @__kmpc_distribute_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP7]], i32 92, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -3153,16 +3153,16 @@ void test() {
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK3-NEXT:    store i32 [[ADD]], i32* [[IB]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP14:%.*]] = bitcast double* [[REF_TMP]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP14]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP14]]) #[[ATTR6]]
 // CHECK3-NEXT:    store double 0.000000e+00, double* [[REF_TMP]], align 8, !tbaa [[TBAA22:![0-9]+]]
 // CHECK3-NEXT:    [[TMP15:%.*]] = bitcast double* [[REF_TMP2]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP15]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP15]]) #[[ATTR6]]
 // CHECK3-NEXT:    store double 0.000000e+00, double* [[REF_TMP2]], align 8, !tbaa [[TBAA22]]
-// CHECK3-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM_ON_STACK]], double* nonnull align 8 dereferenceable(8) [[REF_TMP]], double* nonnull align 8 dereferenceable(8) [[REF_TMP2]]) #[[ATTR10]]
+// CHECK3-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM_ON_STACK]], double* nonnull align 8 dereferenceable(8) [[REF_TMP]], double* nonnull align 8 dereferenceable(8) [[REF_TMP2]]) #[[ATTR11]]
 // CHECK3-NEXT:    [[TMP16:%.*]] = bitcast double* [[REF_TMP2]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP16]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP16]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP17:%.*]] = bitcast double* [[REF_TMP]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP17]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP17]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP18:%.*]] = load i32, i32* [[IB]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[MUL3:%.*]] = mul nsw i32 [[TMP18]], 4
 // CHECK3-NEXT:    store i32 [[MUL3]], i32* [[ISTART_ON_STACK]], align 4, !tbaa [[TBAA8]]
@@ -3194,17 +3194,17 @@ void test() {
 // CHECK3:       omp.loop.exit:
 // CHECK3-NEXT:    call void @__kmpc_distribute_static_fini(%struct.ident_t* @[[GLOB2]], i32 [[TMP7]])
 // CHECK3-NEXT:    [[TMP28:%.*]] = bitcast i32* [[IB]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP28]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP28]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP29:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP29]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP29]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP30:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP30]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP30]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP31:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP31]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP31]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP32:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP32]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP32]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP33:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP33]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP33]]) #[[ATTR6]]
 // CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[PARTIAL_SUM]], i64 16)
 // CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[IEND]], i64 4)
 // CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[ISTART]], i64 4)
@@ -3212,7 +3212,7 @@ void test() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZNSt7complexIdEC1ERKdS2_
-// CHECK3-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]], double* nonnull align 8 dereferenceable(8) [[__RE:%.*]], double* nonnull align 8 dereferenceable(8) [[__IM:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 {
+// CHECK3-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]], double* nonnull align 8 dereferenceable(8) [[__RE:%.*]], double* nonnull align 8 dereferenceable(8) [[__IM:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex.0"*, align 8
 // CHECK3-NEXT:    [[__RE_ADDR:%.*]] = alloca double*, align 8
@@ -3223,12 +3223,12 @@ void test() {
 // CHECK3-NEXT:    [[THIS1:%.*]] = load %"class.std::complex.0"*, %"class.std::complex.0"** [[THIS_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP0:%.*]] = load double*, double** [[__RE_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP1:%.*]] = load double*, double** [[__IM_ADDR]], align 8
-// CHECK3-NEXT:    call void @_ZNSt7complexIdEC2ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS1]], double* nonnull align 8 dereferenceable(8) [[TMP0]], double* nonnull align 8 dereferenceable(8) [[TMP1]]) #[[ATTR10]]
+// CHECK3-NEXT:    call void @_ZNSt7complexIdEC2ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS1]], double* nonnull align 8 dereferenceable(8) [[TMP0]], double* nonnull align 8 dereferenceable(8) [[TMP1]]) #[[ATTR11]]
 // CHECK3-NEXT:    ret void
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@__omp_outlined__3
-// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[ISTART:%.*]], i32* nonnull align 4 dereferenceable(4) [[IEND:%.*]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[ISTART:%.*]], i32* nonnull align 4 dereferenceable(4) [[IEND:%.*]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3262,17 +3262,17 @@ void test() {
 // CHECK3-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[IEND_ADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK3-NEXT:    [[TMP2:%.*]] = load %"class.std::complex.0"*, %"class.std::complex.0"** [[PARTIAL_SUM_ADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK3-NEXT:    [[TMP3:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP3]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP4:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP0]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    store i32 [[TMP5]], i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP6:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_1]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP6]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP6]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP1]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_1]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP8:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_2]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP8]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP8]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[SUB:%.*]] = sub i32 [[TMP9]], [[TMP10]]
@@ -3282,44 +3282,44 @@ void test() {
 // CHECK3-NEXT:    [[SUB4:%.*]] = sub i32 [[DIV]], 1
 // CHECK3-NEXT:    store i32 [[SUB4]], i32* [[DOTCAPTURE_EXPR_2]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP11:%.*]] = bitcast i32* [[I]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP11]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP11]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    store i32 [[TMP12]], i32* [[I]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP13:%.*]] = bitcast i32* [[I]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP13]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP13]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP14]], [[TMP15]]
 // CHECK3-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // CHECK3:       omp.precond.then:
 // CHECK3-NEXT:    [[TMP16:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP16]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP16]]) #[[ATTR6]]
 // CHECK3-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP17:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP17]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP17]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_2]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    store i32 [[TMP18]], i32* [[DOTOMP_UB]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP19:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP19]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP19]]) #[[ATTR6]]
 // CHECK3-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP20:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP20]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP20]]) #[[ATTR6]]
 // CHECK3-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP21:%.*]] = bitcast %"class.std::complex.0"* [[PARTIAL_SUM5]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[TMP21]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[TMP21]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP22:%.*]] = bitcast double* [[REF_TMP]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP22]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP22]]) #[[ATTR6]]
 // CHECK3-NEXT:    store double 0.000000e+00, double* [[REF_TMP]], align 8, !tbaa [[TBAA22]]
 // CHECK3-NEXT:    [[TMP23:%.*]] = bitcast double* [[REF_TMP6]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP23]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP23]]) #[[ATTR6]]
 // CHECK3-NEXT:    store double 0.000000e+00, double* [[REF_TMP6]], align 8, !tbaa [[TBAA22]]
-// CHECK3-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]], double* nonnull align 8 dereferenceable(8) [[REF_TMP]], double* nonnull align 8 dereferenceable(8) [[REF_TMP6]]) #[[ATTR10]]
+// CHECK3-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]], double* nonnull align 8 dereferenceable(8) [[REF_TMP]], double* nonnull align 8 dereferenceable(8) [[REF_TMP6]]) #[[ATTR11]]
 // CHECK3-NEXT:    [[TMP24:%.*]] = bitcast double* [[REF_TMP6]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP24]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP24]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP25:%.*]] = bitcast double* [[REF_TMP]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP25]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP25]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP26:%.*]] = bitcast i32* [[I7]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP26]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP26]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP27:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK3-NEXT:    [[TMP28:%.*]] = load i32, i32* [[TMP27]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB3]], i32 [[TMP28]], i32 33, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -3364,25 +3364,25 @@ void test() {
 // CHECK3-NEXT:    [[ADD13:%.*]] = add i32 [[TMP38]], [[MUL]]
 // CHECK3-NEXT:    store i32 [[ADD13]], i32* [[I7]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[TMP40:%.*]] = bitcast %"class.std::complex.0"* [[REF_TMP14]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[TMP40]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[TMP40]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP41:%.*]] = bitcast double* [[REF_TMP15]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP41]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP41]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP42:%.*]] = load i32, i32* [[I7]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP42]] to double
 // CHECK3-NEXT:    store double [[CONV]], double* [[REF_TMP15]], align 8, !tbaa [[TBAA22]]
 // CHECK3-NEXT:    [[TMP43:%.*]] = bitcast double* [[REF_TMP16]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP43]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP43]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP44:%.*]] = load i32, i32* [[I7]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[CONV17:%.*]] = sitofp i32 [[TMP44]] to double
 // CHECK3-NEXT:    store double [[CONV17]], double* [[REF_TMP16]], align 8, !tbaa [[TBAA22]]
-// CHECK3-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[REF_TMP14]], double* nonnull align 8 dereferenceable(8) [[REF_TMP15]], double* nonnull align 8 dereferenceable(8) [[REF_TMP16]]) #[[ATTR10]]
-// CHECK3-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(16) %"class.std::complex.0"* @_ZNSt7complexIdEpLIdEERS0_RKS_IT_E(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[REF_TMP14]]) #[[ATTR10]]
+// CHECK3-NEXT:    call void @_ZNSt7complexIdEC1ERKdS2_(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[REF_TMP14]], double* nonnull align 8 dereferenceable(8) [[REF_TMP15]], double* nonnull align 8 dereferenceable(8) [[REF_TMP16]]) #[[ATTR11]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(16) %"class.std::complex.0"* @_ZNSt7complexIdEpLIdEERS0_RKS_IT_E(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[REF_TMP14]]) #[[ATTR11]]
 // CHECK3-NEXT:    [[TMP45:%.*]] = bitcast double* [[REF_TMP16]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP45]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP45]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP46:%.*]] = bitcast double* [[REF_TMP15]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP46]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP46]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP47:%.*]] = bitcast %"class.std::complex.0"* [[REF_TMP14]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* [[TMP47]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* [[TMP47]]) #[[ATTR6]]
 // CHECK3-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK3:       omp.body.continue:
 // CHECK3-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -3417,37 +3417,37 @@ void test() {
 // CHECK3-NEXT:    [[TMP61:%.*]] = icmp eq i32 [[TMP60]], 1
 // CHECK3-NEXT:    br i1 [[TMP61]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK3:       .omp.reduction.then:
-// CHECK3-NEXT:    [[CALL21:%.*]] = call nonnull align 8 dereferenceable(16) %"class.std::complex.0"* @_ZNSt7complexIdEpLIdEERS0_RKS_IT_E(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[TMP2]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]]) #[[ATTR10]]
+// CHECK3-NEXT:    [[CALL21:%.*]] = call nonnull align 8 dereferenceable(16) %"class.std::complex.0"* @_ZNSt7complexIdEpLIdEERS0_RKS_IT_E(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[TMP2]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[PARTIAL_SUM5]]) #[[ATTR11]]
 // CHECK3-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP56]])
 // CHECK3-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK3:       .omp.reduction.done:
 // CHECK3-NEXT:    [[TMP62:%.*]] = bitcast i32* [[I7]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP62]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP62]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP63:%.*]] = bitcast %"class.std::complex.0"* [[PARTIAL_SUM5]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* [[TMP63]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* [[TMP63]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP64:%.*]] = bitcast i32* [[DOTOMP_IS_LAST]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP64]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP64]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP65:%.*]] = bitcast i32* [[DOTOMP_STRIDE]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP65]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP65]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP66:%.*]] = bitcast i32* [[DOTOMP_UB]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP66]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP66]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP67:%.*]] = bitcast i32* [[DOTOMP_LB]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP67]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP67]]) #[[ATTR6]]
 // CHECK3-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK3:       omp.precond.end:
 // CHECK3-NEXT:    [[TMP68:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_2]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP68]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP68]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP69:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_1]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP69]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP69]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP70:%.*]] = bitcast i32* [[DOTCAPTURE_EXPR_]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP70]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP70]]) #[[ATTR6]]
 // CHECK3-NEXT:    [[TMP71:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
-// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP71]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP71]]) #[[ATTR6]]
 // CHECK3-NEXT:    ret void
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZNSt7complexIdEpLIdEERS0_RKS_IT_E
-// CHECK3-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[__C:%.*]]) #[[ATTR4]] comdat align 2 {
+// CHECK3-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]], %"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[__C:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex.0"*, align 8
 // CHECK3-NEXT:    [[__C_ADDR:%.*]] = alloca %"class.std::complex.0"*, align 8
@@ -3455,13 +3455,13 @@ void test() {
 // CHECK3-NEXT:    store %"class.std::complex.0"* [[__C]], %"class.std::complex.0"** [[__C_ADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK3-NEXT:    [[THIS1:%.*]] = load %"class.std::complex.0"*, %"class.std::complex.0"** [[THIS_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP0:%.*]] = load %"class.std::complex.0"*, %"class.std::complex.0"** [[__C_ADDR]], align 8, !tbaa [[TBAA12]]
-// CHECK3-NEXT:    [[CALL:%.*]] = call double @_ZNKSt7complexIdE4realEv(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[TMP0]]) #[[ATTR10]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call double @_ZNKSt7complexIdE4realEv(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[TMP0]]) #[[ATTR11]]
 // CHECK3-NEXT:    [[__RE_:%.*]] = getelementptr inbounds %"class.std::complex.0", %"class.std::complex.0"* [[THIS1]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP1:%.*]] = load double, double* [[__RE_]], align 8, !tbaa [[TBAA24:![0-9]+]]
 // CHECK3-NEXT:    [[ADD:%.*]] = fadd double [[TMP1]], [[CALL]]
 // CHECK3-NEXT:    store double [[ADD]], double* [[__RE_]], align 8, !tbaa [[TBAA24]]
 // CHECK3-NEXT:    [[TMP2:%.*]] = load %"class.std::complex.0"*, %"class.std::complex.0"** [[__C_ADDR]], align 8, !tbaa [[TBAA12]]
-// CHECK3-NEXT:    [[CALL2:%.*]] = call double @_ZNKSt7complexIdE4imagEv(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[TMP2]]) #[[ATTR10]]
+// CHECK3-NEXT:    [[CALL2:%.*]] = call double @_ZNKSt7complexIdE4imagEv(%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[TMP2]]) #[[ATTR11]]
 // CHECK3-NEXT:    [[__IM_:%.*]] = getelementptr inbounds %"class.std::complex.0", %"class.std::complex.0"* [[THIS1]], i32 0, i32 1
 // CHECK3-NEXT:    [[TMP3:%.*]] = load double, double* [[__IM_]], align 8, !tbaa [[TBAA26:![0-9]+]]
 // CHECK3-NEXT:    [[ADD3:%.*]] = fadd double [[TMP3]], [[CALL2]]
@@ -3470,7 +3470,7 @@ void test() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func5
-// CHECK3-SAME: (i8* [[TMP0:%.*]], i16 signext [[TMP1:%.*]], i16 signext [[TMP2:%.*]], i16 signext [[TMP3:%.*]]) #[[ATTR6]] {
+// CHECK3-SAME: (i8* [[TMP0:%.*]], i16 signext [[TMP1:%.*]], i16 signext [[TMP2:%.*]], i16 signext [[TMP3:%.*]]) #[[ATTR7]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK3-NEXT:    [[DOTADDR1:%.*]] = alloca i16, align 2
@@ -3534,7 +3534,7 @@ void test() {
 // CHECK3:       then:
 // CHECK3-NEXT:    [[TMP44:%.*]] = bitcast [1 x i8*]* [[TMP5]] to i8*
 // CHECK3-NEXT:    [[TMP45:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]] to i8*
-// CHECK3-NEXT:    call void @"_omp$reduction$reduction_func4"(i8* [[TMP44]], i8* [[TMP45]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @"_omp$reduction$reduction_func4"(i8* [[TMP44]], i8* [[TMP45]]) #[[ATTR6]]
 // CHECK3-NEXT:    br label [[IFCONT:%.*]]
 // CHECK3:       else:
 // CHECK3-NEXT:    br label [[IFCONT]]
@@ -3561,7 +3561,7 @@ void test() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func6
-// CHECK3-SAME: (i8* [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR6]] {
+// CHECK3-SAME: (i8* [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK3-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -3622,7 +3622,7 @@ void test() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@__omp_outlined__3_wrapper
-// CHECK3-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR6]] {
+// CHECK3-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK3-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -3642,12 +3642,12 @@ void test() {
 // CHECK3-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i64 2
 // CHECK3-NEXT:    [[TMP10:%.*]] = bitcast i8** [[TMP9]] to %"class.std::complex.0"**
 // CHECK3-NEXT:    [[TMP11:%.*]] = load %"class.std::complex.0"*, %"class.std::complex.0"** [[TMP10]], align 8, !tbaa [[TBAA12]]
-// CHECK3-NEXT:    call void @__omp_outlined__3(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]], i32* [[TMP8]], %"class.std::complex.0"* [[TMP11]]) #[[ATTR5]]
+// CHECK3-NEXT:    call void @__omp_outlined__3(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]], i32* [[TMP8]], %"class.std::complex.0"* [[TMP11]]) #[[ATTR6]]
 // CHECK3-NEXT:    ret void
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZNSt7complexIfEC2ERKfS2_
-// CHECK3-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]], float* nonnull align 4 dereferenceable(4) [[__RE:%.*]], float* nonnull align 4 dereferenceable(4) [[__IM:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 {
+// CHECK3-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]], float* nonnull align 4 dereferenceable(4) [[__RE:%.*]], float* nonnull align 4 dereferenceable(4) [[__IM:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex"*, align 8
 // CHECK3-NEXT:    [[__RE_ADDR:%.*]] = alloca float*, align 8
@@ -3668,7 +3668,7 @@ void test() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZNKSt7complexIfE4realEv
-// CHECK3-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR4]] comdat align 2 {
+// CHECK3-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex"*, align 8
 // CHECK3-NEXT:    store %"class.std::complex"* [[THIS]], %"class.std::complex"** [[THIS_ADDR]], align 8, !tbaa [[TBAA12]]
@@ -3679,7 +3679,7 @@ void test() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZNKSt7complexIfE4imagEv
-// CHECK3-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR4]] comdat align 2 {
+// CHECK3-SAME: (%"class.std::complex"* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex"*, align 8
 // CHECK3-NEXT:    store %"class.std::complex"* [[THIS]], %"class.std::complex"** [[THIS_ADDR]], align 8, !tbaa [[TBAA12]]
@@ -3690,7 +3690,7 @@ void test() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZNSt7complexIdEC2ERKdS2_
-// CHECK3-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]], double* nonnull align 8 dereferenceable(8) [[__RE:%.*]], double* nonnull align 8 dereferenceable(8) [[__IM:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 {
+// CHECK3-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]], double* nonnull align 8 dereferenceable(8) [[__RE:%.*]], double* nonnull align 8 dereferenceable(8) [[__IM:%.*]]) unnamed_addr #[[ATTR4]] comdat align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex.0"*, align 8
 // CHECK3-NEXT:    [[__RE_ADDR:%.*]] = alloca double*, align 8
@@ -3711,7 +3711,7 @@ void test() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZNKSt7complexIdE4realEv
-// CHECK3-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]]) #[[ATTR4]] comdat align 2 {
+// CHECK3-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex.0"*, align 8
 // CHECK3-NEXT:    store %"class.std::complex.0"* [[THIS]], %"class.std::complex.0"** [[THIS_ADDR]], align 8, !tbaa [[TBAA12]]
@@ -3722,7 +3722,7 @@ void test() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZNKSt7complexIdE4imagEv
-// CHECK3-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]]) #[[ATTR4]] comdat align 2 {
+// CHECK3-SAME: (%"class.std::complex.0"* nonnull align 8 dereferenceable(16) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %"class.std::complex.0"*, align 8
 // CHECK3-NEXT:    store %"class.std::complex.0"* [[THIS]], %"class.std::complex.0"** [[THIS_ADDR]], align 8, !tbaa [[TBAA12]]

@@ -83,22 +83,7 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
     if (!zlib::isAvailable())
       error(toString(file) + ": contains a compressed section, " +
             "but zlib is not available");
-    switch (config->ekind) {
-    case ELF32LEKind:
-      parseCompressedHeader<ELF32LE>();
-      break;
-    case ELF32BEKind:
-      parseCompressedHeader<ELF32BE>();
-      break;
-    case ELF64LEKind:
-      parseCompressedHeader<ELF64LE>();
-      break;
-    case ELF64BEKind:
-      parseCompressedHeader<ELF64BE>();
-      break;
-    default:
-      llvm_unreachable("unknown ELFT");
-    }
+    invokeELFT(parseCompressedHeader);
   }
 }
 

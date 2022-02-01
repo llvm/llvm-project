@@ -29,7 +29,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
   template<class>
   inline constexpr bool disable_sized_range = false;
-}
+} // namespace ranges
 
 // [range.prim.size]
 
@@ -97,7 +97,7 @@ namespace __size {
       return _VSTD::__to_unsigned_like(ranges::end(__t) - ranges::begin(__t));
     }
   };
-}
+} // namespace __size
 
 inline namespace __cpo {
   inline constexpr auto size = __size::__fn{};
@@ -121,7 +121,7 @@ namespace __ssize {
         return static_cast<_Signed>(ranges::size(__t));
     }
   };
-}
+} // namespace __ssize
 
 inline namespace __cpo {
   inline constexpr auto ssize = __ssize::__fn{};

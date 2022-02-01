@@ -45,7 +45,7 @@ int main() {
 // CHECK1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK1:       user_code.entry:
 // CHECK1-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK1-NEXT:    call void @_Z3usePi(i32* noundef [[TMP0]]) #[[ATTR6:[0-9]+]]
+// CHECK1-NEXT:    call void @_Z3usePi(i32* noundef [[TMP0]]) #[[ATTR7:[0-9]+]]
 // CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
 // CHECK1-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP0]] to i8*
 // CHECK1-NEXT:    store i8* [[TMP4]], i8** [[TMP3]], align 8
@@ -73,7 +73,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__omp_outlined__
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR0]] {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -82,12 +82,12 @@ int main() {
 // CHECK1-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 // CHECK1-NEXT:    store i32* [[C]], i32** [[C_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C_ADDR]], align 8
-// CHECK1-NEXT:    call void @_Z3usePi(i32* noundef [[TMP0]]) #[[ATTR6]]
+// CHECK1-NEXT:    call void @_Z3usePi(i32* noundef [[TMP0]]) #[[ATTR7]]
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__omp_outlined___wrapper
-// CHECK1-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK1-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -101,12 +101,12 @@ int main() {
 // CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i64 0
 // CHECK1-NEXT:    [[TMP4:%.*]] = bitcast i8** [[TMP3]] to i32**
 // CHECK1-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[TMP4]], align 8
-// CHECK1-NEXT:    call void @__omp_outlined__(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]]) #[[ATTR3:[0-9]+]]
+// CHECK1-NEXT:    call void @__omp_outlined__(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]]) #[[ATTR4:[0-9]+]]
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__omp_outlined__1
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32** noundef nonnull align 8 dereferenceable(8) [[C:%.*]]) #[[ATTR0]] {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32** noundef nonnull align 8 dereferenceable(8) [[C:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -116,7 +116,7 @@ int main() {
 // CHECK1-NEXT:    store i32** [[C]], i32*** [[C_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32**, i32*** [[C_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[TMP0]], align 8
-// CHECK1-NEXT:    call void @_Z4workPi(i32* noundef [[TMP1]]) #[[ATTR6]]
+// CHECK1-NEXT:    call void @_Z4workPi(i32* noundef [[TMP1]]) #[[ATTR7]]
 // CHECK1-NEXT:    ret void
 //
 //
@@ -130,7 +130,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to i8*
 // CHECK1-NEXT:    [[TMP2:%.*]] = bitcast i32* [[ATOMIC_TEMP]] to i8*
-// CHECK1-NEXT:    call void @__atomic_load(i64 noundef 4, i8* noundef [[TMP1]], i8* noundef [[TMP2]], i32 noundef 0) #[[ATTR6]]
+// CHECK1-NEXT:    call void @__atomic_load(i64 noundef 4, i8* noundef [[TMP1]], i8* noundef [[TMP2]], i32 noundef 0) #[[ATTR7]]
 // CHECK1-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK1:       atomic_cont:
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ATOMIC_TEMP]], align 4
@@ -139,14 +139,14 @@ int main() {
 // CHECK1-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP0]] to i8*
 // CHECK1-NEXT:    [[TMP5:%.*]] = bitcast i32* [[ATOMIC_TEMP]] to i8*
 // CHECK1-NEXT:    [[TMP6:%.*]] = bitcast i32* [[ATOMIC_TEMP1]] to i8*
-// CHECK1-NEXT:    [[CALL:%.*]] = call noundef zeroext i1 @__atomic_compare_exchange(i64 noundef 4, i8* noundef [[TMP4]], i8* noundef [[TMP5]], i8* noundef [[TMP6]], i32 noundef 0, i32 noundef 0) #[[ATTR6]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call noundef zeroext i1 @__atomic_compare_exchange(i64 noundef 4, i8* noundef [[TMP4]], i8* noundef [[TMP5]], i8* noundef [[TMP6]], i32 noundef 0, i32 noundef 0) #[[ATTR7]]
 // CHECK1-NEXT:    br i1 [[CALL]], label [[ATOMIC_EXIT:%.*]], label [[ATOMIC_CONT]]
 // CHECK1:       atomic_exit:
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__omp_outlined__1_wrapper
-// CHECK1-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -160,7 +160,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i64 0
 // CHECK1-NEXT:    [[TMP4:%.*]] = bitcast i8** [[TMP3]] to i32***
 // CHECK1-NEXT:    [[TMP5:%.*]] = load i32**, i32*** [[TMP4]], align 8
-// CHECK1-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32** [[TMP5]]) #[[ATTR3]]
+// CHECK1-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32** [[TMP5]]) #[[ATTR4]]
 // CHECK1-NEXT:    ret void
 //
 //
@@ -176,7 +176,7 @@ int main() {
 // CHECK2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK2:       user_code.entry:
 // CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK2-NEXT:    call void @_Z3usePi(i32* noundef [[TMP0]]) #[[ATTR6:[0-9]+]]
+// CHECK2-NEXT:    call void @_Z3usePi(i32* noundef [[TMP0]]) #[[ATTR7:[0-9]+]]
 // CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP0]] to i8*
 // CHECK2-NEXT:    store i8* [[TMP4]], i8** [[TMP3]], align 4
@@ -204,7 +204,7 @@ int main() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__omp_outlined__
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -213,12 +213,12 @@ int main() {
 // CHECK2-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 4
 // CHECK2-NEXT:    store i32* [[C]], i32** [[C_ADDR]], align 4
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C_ADDR]], align 4
-// CHECK2-NEXT:    call void @_Z3usePi(i32* noundef [[TMP0]]) #[[ATTR6]]
+// CHECK2-NEXT:    call void @_Z3usePi(i32* noundef [[TMP0]]) #[[ATTR7]]
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__omp_outlined___wrapper
-// CHECK2-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK2-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -232,12 +232,12 @@ int main() {
 // CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i32 0
 // CHECK2-NEXT:    [[TMP4:%.*]] = bitcast i8** [[TMP3]] to i32**
 // CHECK2-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[TMP4]], align 4
-// CHECK2-NEXT:    call void @__omp_outlined__(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]]) #[[ATTR3:[0-9]+]]
+// CHECK2-NEXT:    call void @__omp_outlined__(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]]) #[[ATTR4:[0-9]+]]
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__omp_outlined__1
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32** noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32** noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR2]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -247,7 +247,7 @@ int main() {
 // CHECK2-NEXT:    store i32** [[C]], i32*** [[C_ADDR]], align 4
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32**, i32*** [[C_ADDR]], align 4
 // CHECK2-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[TMP0]], align 4
-// CHECK2-NEXT:    call void @_Z4workPi(i32* noundef [[TMP1]]) #[[ATTR6]]
+// CHECK2-NEXT:    call void @_Z4workPi(i32* noundef [[TMP1]]) #[[ATTR7]]
 // CHECK2-NEXT:    ret void
 //
 //
@@ -261,7 +261,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C_ADDR]], align 4
 // CHECK2-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to i8*
 // CHECK2-NEXT:    [[TMP2:%.*]] = bitcast i32* [[ATOMIC_TEMP]] to i8*
-// CHECK2-NEXT:    call void @__atomic_load(i32 noundef 4, i8* noundef [[TMP1]], i8* noundef [[TMP2]], i32 noundef 0) #[[ATTR6]]
+// CHECK2-NEXT:    call void @__atomic_load(i32 noundef 4, i8* noundef [[TMP1]], i8* noundef [[TMP2]], i32 noundef 0) #[[ATTR7]]
 // CHECK2-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK2:       atomic_cont:
 // CHECK2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ATOMIC_TEMP]], align 4
@@ -270,14 +270,14 @@ int main() {
 // CHECK2-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP0]] to i8*
 // CHECK2-NEXT:    [[TMP5:%.*]] = bitcast i32* [[ATOMIC_TEMP]] to i8*
 // CHECK2-NEXT:    [[TMP6:%.*]] = bitcast i32* [[ATOMIC_TEMP1]] to i8*
-// CHECK2-NEXT:    [[CALL:%.*]] = call noundef zeroext i1 @__atomic_compare_exchange(i32 noundef 4, i8* noundef [[TMP4]], i8* noundef [[TMP5]], i8* noundef [[TMP6]], i32 noundef 0, i32 noundef 0) #[[ATTR6]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call noundef zeroext i1 @__atomic_compare_exchange(i32 noundef 4, i8* noundef [[TMP4]], i8* noundef [[TMP5]], i8* noundef [[TMP6]], i32 noundef 0, i32 noundef 0) #[[ATTR7]]
 // CHECK2-NEXT:    br i1 [[CALL]], label [[ATOMIC_EXIT:%.*]], label [[ATOMIC_CONT]]
 // CHECK2:       atomic_exit:
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__omp_outlined__1_wrapper
-// CHECK2-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK2-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -291,7 +291,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i32 0
 // CHECK2-NEXT:    [[TMP4:%.*]] = bitcast i8** [[TMP3]] to i32***
 // CHECK2-NEXT:    [[TMP5:%.*]] = load i32**, i32*** [[TMP4]], align 4
-// CHECK2-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32** [[TMP5]]) #[[ATTR3]]
+// CHECK2-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32** [[TMP5]]) #[[ATTR4]]
 // CHECK2-NEXT:    ret void
 //
 //
@@ -307,7 +307,7 @@ int main() {
 // CHECK3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK3:       user_code.entry:
 // CHECK3-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK3-NEXT:    call void @_Z3usePi(i32* noundef [[TMP0]]) #[[ATTR6:[0-9]+]]
+// CHECK3-NEXT:    call void @_Z3usePi(i32* noundef [[TMP0]]) #[[ATTR7:[0-9]+]]
 // CHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP0]] to i8*
 // CHECK3-NEXT:    store i8* [[TMP4]], i8** [[TMP3]], align 4
@@ -335,7 +335,7 @@ int main() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@__omp_outlined__
-// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -344,12 +344,12 @@ int main() {
 // CHECK3-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 4
 // CHECK3-NEXT:    store i32* [[C]], i32** [[C_ADDR]], align 4
 // CHECK3-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C_ADDR]], align 4
-// CHECK3-NEXT:    call void @_Z3usePi(i32* noundef [[TMP0]]) #[[ATTR6]]
+// CHECK3-NEXT:    call void @_Z3usePi(i32* noundef [[TMP0]]) #[[ATTR7]]
 // CHECK3-NEXT:    ret void
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@__omp_outlined___wrapper
-// CHECK3-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK3-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK3-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -363,12 +363,12 @@ int main() {
 // CHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i32 0
 // CHECK3-NEXT:    [[TMP4:%.*]] = bitcast i8** [[TMP3]] to i32**
 // CHECK3-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[TMP4]], align 4
-// CHECK3-NEXT:    call void @__omp_outlined__(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]]) #[[ATTR3:[0-9]+]]
+// CHECK3-NEXT:    call void @__omp_outlined__(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]]) #[[ATTR4:[0-9]+]]
 // CHECK3-NEXT:    ret void
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@__omp_outlined__1
-// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32** noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32** noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR2]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -378,7 +378,7 @@ int main() {
 // CHECK3-NEXT:    store i32** [[C]], i32*** [[C_ADDR]], align 4
 // CHECK3-NEXT:    [[TMP0:%.*]] = load i32**, i32*** [[C_ADDR]], align 4
 // CHECK3-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[TMP0]], align 4
-// CHECK3-NEXT:    call void @_Z4workPi(i32* noundef [[TMP1]]) #[[ATTR6]]
+// CHECK3-NEXT:    call void @_Z4workPi(i32* noundef [[TMP1]]) #[[ATTR7]]
 // CHECK3-NEXT:    ret void
 //
 //
@@ -392,7 +392,7 @@ int main() {
 // CHECK3-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C_ADDR]], align 4
 // CHECK3-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to i8*
 // CHECK3-NEXT:    [[TMP2:%.*]] = bitcast i32* [[ATOMIC_TEMP]] to i8*
-// CHECK3-NEXT:    call void @__atomic_load(i32 noundef 4, i8* noundef [[TMP1]], i8* noundef [[TMP2]], i32 noundef 0) #[[ATTR6]]
+// CHECK3-NEXT:    call void @__atomic_load(i32 noundef 4, i8* noundef [[TMP1]], i8* noundef [[TMP2]], i32 noundef 0) #[[ATTR7]]
 // CHECK3-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK3:       atomic_cont:
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ATOMIC_TEMP]], align 4
@@ -401,14 +401,14 @@ int main() {
 // CHECK3-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP0]] to i8*
 // CHECK3-NEXT:    [[TMP5:%.*]] = bitcast i32* [[ATOMIC_TEMP]] to i8*
 // CHECK3-NEXT:    [[TMP6:%.*]] = bitcast i32* [[ATOMIC_TEMP1]] to i8*
-// CHECK3-NEXT:    [[CALL:%.*]] = call noundef zeroext i1 @__atomic_compare_exchange(i32 noundef 4, i8* noundef [[TMP4]], i8* noundef [[TMP5]], i8* noundef [[TMP6]], i32 noundef 0, i32 noundef 0) #[[ATTR6]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call noundef zeroext i1 @__atomic_compare_exchange(i32 noundef 4, i8* noundef [[TMP4]], i8* noundef [[TMP5]], i8* noundef [[TMP6]], i32 noundef 0, i32 noundef 0) #[[ATTR7]]
 // CHECK3-NEXT:    br i1 [[CALL]], label [[ATOMIC_EXIT:%.*]], label [[ATOMIC_CONT]]
 // CHECK3:       atomic_exit:
 // CHECK3-NEXT:    ret void
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@__omp_outlined__1_wrapper
-// CHECK3-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK3-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK3-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -422,6 +422,6 @@ int main() {
 // CHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i32 0
 // CHECK3-NEXT:    [[TMP4:%.*]] = bitcast i8** [[TMP3]] to i32***
 // CHECK3-NEXT:    [[TMP5:%.*]] = load i32**, i32*** [[TMP4]], align 4
-// CHECK3-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32** [[TMP5]]) #[[ATTR3]]
+// CHECK3-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32** [[TMP5]]) #[[ATTR4]]
 // CHECK3-NEXT:    ret void
 //

@@ -1,6 +1,6 @@
 # Discourse Migration Guide 
 
-## Current Status of Migration: Starting Feburary 1, 2022 at 10 am PST. Expected downtime for Discourse until 5pm PST. 
+## Current Status of Migration: Started. Mailman is back up and the moved lists are in emergency moderation mode. Discourse is read only. Expected downtime for Discourse until 5pm PST. 
 
 This document is intended to help LLVM users to migrate from the mailing lists to
 Discourse. Discourse has two basic ways for interaction: Via the [web
