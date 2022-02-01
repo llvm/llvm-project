@@ -116,9 +116,9 @@ void TestComprehensiveFunctionBufferize::runOnOperation() {
   options->createDeallocs = createDeallocs;
 
   if (dialectFilter.hasValue()) {
-    options->dialectFilter.emplace();
+    options->hasFilter = true;
     for (const std::string &dialectNamespace : dialectFilter)
-      options->dialectFilter->insert(dialectNamespace);
+      options->dialectFilter.insert(dialectNamespace);
   }
 
   Operation *op = getOperation();

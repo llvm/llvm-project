@@ -22,10 +22,21 @@ namespace {
 /// Pass to bufferize Arithmetic ops.
 struct ArithmeticBufferizePass
     : public ArithmeticBufferizeBase<ArithmeticBufferizePass> {
+  ArithmeticBufferizePass(uint64_t alignment = 0, bool constantOpOnly = false)
+      : ArithmeticBufferizeBase<ArithmeticBufferizePass>(),
+        constantOpOnly(constantOpOnly) {
+    this->alignment = alignment;
+  }
+
   void runOnOperation() override {
     std::unique_ptr<BufferizationOptions> options =
         getPartialBufferizationOptions();
-    options->addToDialectFilter<arith::ArithmeticDialect>();
+    if (constantOpOnly) {
+      options->addToOperationFilter<arith::ConstantOp>();
+    } else {
+      options->addToDialectFilter<arith::ArithmeticDialect>();
+    }
+    options->bufferAlignment = alignment;
 
     if (failed(bufferizeOp(getOperation(), *options)))
       signalPassFailure();
@@ -36,9 +47,18 @@ struct ArithmeticBufferizePass
                     arith::ArithmeticDialect>();
     arith::registerBufferizableOpInterfaceExternalModels(registry);
   }
+
+private:
+  bool constantOpOnly;
 };
 } // namespace
 
 std::unique_ptr<Pass> mlir::arith::createArithmeticBufferizePass() {
   return std::make_unique<ArithmeticBufferizePass>();
+}
+
+std::unique_ptr<Pass>
+mlir::arith::createConstantBufferizePass(uint64_t alignment) {
+  return std::make_unique<ArithmeticBufferizePass>(alignment,
+                                                   /*constantOpOnly=*/true);
 }
