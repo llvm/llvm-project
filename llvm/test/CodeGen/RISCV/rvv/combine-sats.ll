@@ -116,8 +116,8 @@ define <8 x i16> @vselect_sub_2_v8i16(<8 x i16> %x, i16 zeroext %w) nounwind {
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
 entry:
-  %0 = insertelement <8 x i16> undef, i16 %w, i32 0
-  %broadcast15 = shufflevector <8 x i16> %0, <8 x i16> undef, <8 x i32> zeroinitializer
+  %0 = insertelement <8 x i16> poison, i16 %w, i32 0
+  %broadcast15 = shufflevector <8 x i16> %0, <8 x i16> poison, <8 x i32> zeroinitializer
   %1 = icmp ult <8 x i16> %x, %broadcast15
   %2 = sub <8 x i16> %x, %broadcast15
   %res = select <8 x i1> %1, <8 x i16> zeroinitializer, <8 x i16> %2
@@ -131,8 +131,8 @@ define <vscale x 8 x i16> @vselect_sub_2_nxv8i16(<vscale x 8 x i16> %x, i16 zero
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
 entry:
-  %0 = insertelement <vscale x 8 x i16> undef, i16 %w, i32 0
-  %broadcast15 = shufflevector <vscale x 8 x i16> %0, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %0 = insertelement <vscale x 8 x i16> poison, i16 %w, i32 0
+  %broadcast15 = shufflevector <vscale x 8 x i16> %0, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   %1 = icmp ult <vscale x 8 x i16> %x, %broadcast15
   %2 = sub <vscale x 8 x i16> %x, %broadcast15
   %res = select <vscale x 8 x i1> %1, <vscale x 8 x i16> zeroinitializer, <vscale x 8 x i16> %2

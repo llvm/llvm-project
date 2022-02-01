@@ -27,8 +27,8 @@ define <vscale x 1 x half> @vfnmsub_vf_nxv1f16(<vscale x 1 x half> %va, <vscale 
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
 ; CHECK-NEXT:    vfnmadd.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x half> undef, half %c, i32 0
-  %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x half> poison, half %c, i32 0
+  %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> poison, <vscale x 1 x i32> zeroinitializer
   %neg = fneg <vscale x 1 x half> %va
   %neg2 = fneg <vscale x 1 x half> %vb
   %vd = call <vscale x 1 x half> @llvm.fma.v1f16(<vscale x 1 x half> %neg, <vscale x 1 x half> %splat, <vscale x 1 x half> %neg2)
@@ -55,8 +55,8 @@ define <vscale x 2 x half> @vfnmsub_vf_nxv2f16(<vscale x 2 x half> %va, <vscale 
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vfnmadd.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x half> undef, half %c, i32 0
-  %splat = shufflevector <vscale x 2 x half> %head, <vscale x 2 x half> undef, <vscale x 2 x i32> zeroinitializer
+  %head = insertelement <vscale x 2 x half> poison, half %c, i32 0
+  %splat = shufflevector <vscale x 2 x half> %head, <vscale x 2 x half> poison, <vscale x 2 x i32> zeroinitializer
   %neg = fneg <vscale x 2 x half> %va
   %neg2 = fneg <vscale x 2 x half> %vb
   %vd = call <vscale x 2 x half> @llvm.fma.v2f16(<vscale x 2 x half> %splat, <vscale x 2 x half> %neg, <vscale x 2 x half> %neg2)
@@ -83,8 +83,8 @@ define <vscale x 4 x half> @vfnmsub_vf_nxv4f16(<vscale x 4 x half> %va, <vscale 
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vfnmadd.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x half> undef, half %c, i32 0
-  %splat = shufflevector <vscale x 4 x half> %head, <vscale x 4 x half> undef, <vscale x 4 x i32> zeroinitializer
+  %head = insertelement <vscale x 4 x half> poison, half %c, i32 0
+  %splat = shufflevector <vscale x 4 x half> %head, <vscale x 4 x half> poison, <vscale x 4 x i32> zeroinitializer
   %neg = fneg <vscale x 4 x half> %splat
   %neg2 = fneg <vscale x 4 x half> %vb
   %vd = call <vscale x 4 x half> @llvm.fma.v4f16(<vscale x 4 x half> %va, <vscale x 4 x half> %neg, <vscale x 4 x half> %neg2)
@@ -111,8 +111,8 @@ define <vscale x 8 x half> @vfnmsub_vf_nxv8f16(<vscale x 8 x half> %va, <vscale 
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x half> undef, half %c, i32 0
-  %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x half> poison, half %c, i32 0
+  %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %neg = fneg <vscale x 8 x half> %splat
   %neg2 = fneg <vscale x 8 x half> %va
   %vd = call <vscale x 8 x half> @llvm.fma.v8f16(<vscale x 8 x half> %vb, <vscale x 8 x half> %neg, <vscale x 8 x half> %neg2)
@@ -139,8 +139,8 @@ define <vscale x 16 x half> @vfnmsub_vf_nxv16f16(<vscale x 16 x half> %va, <vsca
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
 ; CHECK-NEXT:    vfnmadd.vf v8, fa0, v12
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x half> undef, half %c, i32 0
-  %splat = shufflevector <vscale x 16 x half> %head, <vscale x 16 x half> undef, <vscale x 16 x i32> zeroinitializer
+  %head = insertelement <vscale x 16 x half> poison, half %c, i32 0
+  %splat = shufflevector <vscale x 16 x half> %head, <vscale x 16 x half> poison, <vscale x 16 x i32> zeroinitializer
   %neg = fneg <vscale x 16 x half> %splat
   %neg2 = fneg <vscale x 16 x half> %vb
   %vd = call <vscale x 16 x half> @llvm.fma.v16f16(<vscale x 16 x half> %neg, <vscale x 16 x half> %va, <vscale x 16 x half> %neg2)
@@ -168,8 +168,8 @@ define <vscale x 32 x half> @vfnmsub_vf_nxv32f16(<vscale x 32 x half> %va, <vsca
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v8, fa0, v16
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 32 x half> undef, half %c, i32 0
-  %splat = shufflevector <vscale x 32 x half> %head, <vscale x 32 x half> undef, <vscale x 32 x i32> zeroinitializer
+  %head = insertelement <vscale x 32 x half> poison, half %c, i32 0
+  %splat = shufflevector <vscale x 32 x half> %head, <vscale x 32 x half> poison, <vscale x 32 x i32> zeroinitializer
   %neg = fneg <vscale x 32 x half> %splat
   %neg2 = fneg <vscale x 32 x half> %va
   %vd = call <vscale x 32 x half> @llvm.fma.v32f16(<vscale x 32 x half> %neg, <vscale x 32 x half> %vb, <vscale x 32 x half> %neg2)
@@ -196,8 +196,8 @@ define <vscale x 1 x float> @vfnmsub_vf_nxv1f32(<vscale x 1 x float> %va, <vscal
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vfnmadd.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x float> undef, float %c, i32 0
-  %splat = shufflevector <vscale x 1 x float> %head, <vscale x 1 x float> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x float> poison, float %c, i32 0
+  %splat = shufflevector <vscale x 1 x float> %head, <vscale x 1 x float> poison, <vscale x 1 x i32> zeroinitializer
   %neg = fneg <vscale x 1 x float> %va
   %neg2 = fneg <vscale x 1 x float> %vb
   %vd = call <vscale x 1 x float> @llvm.fma.v1f32(<vscale x 1 x float> %neg, <vscale x 1 x float> %splat, <vscale x 1 x float> %neg2)
@@ -224,8 +224,8 @@ define <vscale x 2 x float> @vfnmsub_vf_nxv2f32(<vscale x 2 x float> %va, <vscal
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfnmadd.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x float> undef, float %c, i32 0
-  %splat = shufflevector <vscale x 2 x float> %head, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
+  %head = insertelement <vscale x 2 x float> poison, float %c, i32 0
+  %splat = shufflevector <vscale x 2 x float> %head, <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
   %neg = fneg <vscale x 2 x float> %va
   %neg2 = fneg <vscale x 2 x float> %vb
   %vd = call <vscale x 2 x float> @llvm.fma.v2f32(<vscale x 2 x float> %splat, <vscale x 2 x float> %neg, <vscale x 2 x float> %neg2)
@@ -252,8 +252,8 @@ define <vscale x 4 x float> @vfnmsub_vf_nxv4f32(<vscale x 4 x float> %va, <vscal
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vfnmadd.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x float> undef, float %c, i32 0
-  %splat = shufflevector <vscale x 4 x float> %head, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
+  %head = insertelement <vscale x 4 x float> poison, float %c, i32 0
+  %splat = shufflevector <vscale x 4 x float> %head, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
   %neg = fneg <vscale x 4 x float> %splat
   %neg2 = fneg <vscale x 4 x float> %vb
   %vd = call <vscale x 4 x float> @llvm.fma.v4f32(<vscale x 4 x float> %va, <vscale x 4 x float> %neg, <vscale x 4 x float> %neg2)
@@ -280,8 +280,8 @@ define <vscale x 8 x float> @vfnmsub_vf_nxv8f32(<vscale x 8 x float> %va, <vscal
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v8, fa0, v12
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x float> undef, float %c, i32 0
-  %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x float> poison, float %c, i32 0
+  %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
   %neg = fneg <vscale x 8 x float> %splat
   %neg2 = fneg <vscale x 8 x float> %va
   %vd = call <vscale x 8 x float> @llvm.fma.v8f32(<vscale x 8 x float> %vb, <vscale x 8 x float> %neg, <vscale x 8 x float> %neg2)
@@ -309,8 +309,8 @@ define <vscale x 16 x float> @vfnmsub_vf_nxv16f32(<vscale x 16 x float> %va, <vs
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
 ; CHECK-NEXT:    vfnmadd.vf v8, fa0, v16
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x float> undef, float %c, i32 0
-  %splat = shufflevector <vscale x 16 x float> %head, <vscale x 16 x float> undef, <vscale x 16 x i32> zeroinitializer
+  %head = insertelement <vscale x 16 x float> poison, float %c, i32 0
+  %splat = shufflevector <vscale x 16 x float> %head, <vscale x 16 x float> poison, <vscale x 16 x i32> zeroinitializer
   %neg = fneg <vscale x 16 x float> %splat
   %neg2 = fneg <vscale x 16 x float> %vb
   %vd = call <vscale x 16 x float> @llvm.fma.v16f32(<vscale x 16 x float> %neg, <vscale x 16 x float> %va, <vscale x 16 x float> %neg2)
@@ -337,8 +337,8 @@ define <vscale x 1 x double> @vfnmsub_vf_nxv1f64(<vscale x 1 x double> %va, <vsc
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vfnmadd.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x double> undef, double %c, i32 0
-  %splat = shufflevector <vscale x 1 x double> %head, <vscale x 1 x double> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x double> poison, double %c, i32 0
+  %splat = shufflevector <vscale x 1 x double> %head, <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer
   %neg = fneg <vscale x 1 x double> %va
   %neg2 = fneg <vscale x 1 x double> %vb
   %vd = call <vscale x 1 x double> @llvm.fma.v1f64(<vscale x 1 x double> %neg, <vscale x 1 x double> %splat, <vscale x 1 x double> %neg2)
@@ -365,8 +365,8 @@ define <vscale x 2 x double> @vfnmsub_vf_nxv2f64(<vscale x 2 x double> %va, <vsc
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
 ; CHECK-NEXT:    vfnmadd.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x double> undef, double %c, i32 0
-  %splat = shufflevector <vscale x 2 x double> %head, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
+  %head = insertelement <vscale x 2 x double> poison, double %c, i32 0
+  %splat = shufflevector <vscale x 2 x double> %head, <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
   %neg = fneg <vscale x 2 x double> %va
   %neg2 = fneg <vscale x 2 x double> %vb
   %vd = call <vscale x 2 x double> @llvm.fma.v2f64(<vscale x 2 x double> %splat, <vscale x 2 x double> %neg, <vscale x 2 x double> %neg2)
@@ -393,8 +393,8 @@ define <vscale x 4 x double> @vfnmsub_vf_nxv4f64(<vscale x 4 x double> %va, <vsc
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
 ; CHECK-NEXT:    vfnmadd.vf v8, fa0, v12
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x double> undef, double %c, i32 0
-  %splat = shufflevector <vscale x 4 x double> %head, <vscale x 4 x double> undef, <vscale x 4 x i32> zeroinitializer
+  %head = insertelement <vscale x 4 x double> poison, double %c, i32 0
+  %splat = shufflevector <vscale x 4 x double> %head, <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer
   %neg = fneg <vscale x 4 x double> %splat
   %neg2 = fneg <vscale x 4 x double> %vb
   %vd = call <vscale x 4 x double> @llvm.fma.v4f64(<vscale x 4 x double> %va, <vscale x 4 x double> %neg, <vscale x 4 x double> %neg2)
@@ -422,8 +422,8 @@ define <vscale x 8 x double> @vfnmsub_vf_nxv8f64(<vscale x 8 x double> %va, <vsc
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v8, fa0, v16
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x double> undef, double %c, i32 0
-  %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x double> poison, double %c, i32 0
+  %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer
   %neg = fneg <vscale x 8 x double> %splat
   %neg2 = fneg <vscale x 8 x double> %va
   %vd = call <vscale x 8 x double> @llvm.fma.v8f64(<vscale x 8 x double> %vb, <vscale x 8 x double> %neg, <vscale x 8 x double> %neg2)

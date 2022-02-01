@@ -139,8 +139,8 @@ define void @mscatter_truemask_nxv4i8(<vscale x 4 x i8> %val, <vscale x 4 x i8*>
 ; RV64-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v12
 ; RV64-NEXT:    ret
-  %mhead = insertelement <vscale x 4 x i1> undef, i1 1, i32 0
-  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
+  %mhead = insertelement <vscale x 4 x i1> poison, i1 1, i32 0
+  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   call void @llvm.masked.scatter.nxv4i8.nxv4p0i8(<vscale x 4 x i8> %val, <vscale x 4 x i8*> %ptrs, i32 1, <vscale x 4 x i1> %mtrue)
   ret void
 }
@@ -304,8 +304,8 @@ define void @mscatter_truemask_nxv4i16(<vscale x 4 x i16> %val, <vscale x 4 x i1
 ; RV64-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v12
 ; RV64-NEXT:    ret
-  %mhead = insertelement <vscale x 4 x i1> undef, i1 1, i32 0
-  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
+  %mhead = insertelement <vscale x 4 x i1> poison, i1 1, i32 0
+  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   call void @llvm.masked.scatter.nxv4i16.nxv4p0i16(<vscale x 4 x i16> %val, <vscale x 4 x i16*> %ptrs, i32 2, <vscale x 4 x i1> %mtrue)
   ret void
 }
@@ -519,8 +519,8 @@ define void @mscatter_truemask_nxv4i32(<vscale x 4 x i32> %val, <vscale x 4 x i3
 ; RV64-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v12
 ; RV64-NEXT:    ret
-  %mhead = insertelement <vscale x 4 x i1> undef, i1 1, i32 0
-  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
+  %mhead = insertelement <vscale x 4 x i1> poison, i1 1, i32 0
+  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   call void @llvm.masked.scatter.nxv4i32.nxv4p0i32(<vscale x 4 x i32> %val, <vscale x 4 x i32*> %ptrs, i32 4, <vscale x 4 x i1> %mtrue)
   ret void
 }
@@ -778,8 +778,8 @@ define void @mscatter_truemask_nxv4i64(<vscale x 4 x i64> %val, <vscale x 4 x i6
 ; RV64-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v12
 ; RV64-NEXT:    ret
-  %mhead = insertelement <vscale x 4 x i1> undef, i1 1, i32 0
-  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
+  %mhead = insertelement <vscale x 4 x i1> poison, i1 1, i32 0
+  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   call void @llvm.masked.scatter.nxv4i64.nxv4p0i64(<vscale x 4 x i64> %val, <vscale x 4 x i64*> %ptrs, i32 8, <vscale x 4 x i1> %mtrue)
   ret void
 }
@@ -1117,8 +1117,8 @@ define void @mscatter_truemask_nxv4f16(<vscale x 4 x half> %val, <vscale x 4 x h
 ; RV64-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v12
 ; RV64-NEXT:    ret
-  %mhead = insertelement <vscale x 4 x i1> undef, i1 1, i32 0
-  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
+  %mhead = insertelement <vscale x 4 x i1> poison, i1 1, i32 0
+  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   call void @llvm.masked.scatter.nxv4f16.nxv4p0f16(<vscale x 4 x half> %val, <vscale x 4 x half*> %ptrs, i32 2, <vscale x 4 x i1> %mtrue)
   ret void
 }
@@ -1313,8 +1313,8 @@ define void @mscatter_truemask_nxv4f32(<vscale x 4 x float> %val, <vscale x 4 x 
 ; RV64-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v12
 ; RV64-NEXT:    ret
-  %mhead = insertelement <vscale x 4 x i1> undef, i1 1, i32 0
-  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
+  %mhead = insertelement <vscale x 4 x i1> poison, i1 1, i32 0
+  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   call void @llvm.masked.scatter.nxv4f32.nxv4p0f32(<vscale x 4 x float> %val, <vscale x 4 x float*> %ptrs, i32 4, <vscale x 4 x i1> %mtrue)
   ret void
 }
@@ -1572,8 +1572,8 @@ define void @mscatter_truemask_nxv4f64(<vscale x 4 x double> %val, <vscale x 4 x
 ; RV64-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v12
 ; RV64-NEXT:    ret
-  %mhead = insertelement <vscale x 4 x i1> undef, i1 1, i32 0
-  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
+  %mhead = insertelement <vscale x 4 x i1> poison, i1 1, i32 0
+  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   call void @llvm.masked.scatter.nxv4f64.nxv4p0f64(<vscale x 4 x double> %val, <vscale x 4 x double*> %ptrs, i32 8, <vscale x 4 x i1> %mtrue)
   ret void
 }

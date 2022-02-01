@@ -258,8 +258,8 @@ define <vscale x 2 x i8> @masked_load_allones_mask(<vscale x 2 x i8>* %a, <vscal
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %insert = insertelement <vscale x 2 x i1> undef, i1 1, i32 0
-  %mask = shufflevector <vscale x 2 x i1> %insert, <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer
+  %insert = insertelement <vscale x 2 x i1> poison, i1 1, i32 0
+  %mask = shufflevector <vscale x 2 x i1> %insert, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(<vscale x 2 x i8>* %a, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> %maskedoff)
   ret <vscale x 2 x i8> %load
 }
