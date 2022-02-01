@@ -276,6 +276,8 @@ class StructurizeCFG {
 
   void insertConditions(bool Loops);
 
+  void simplifyConditions();
+
   void delPhiValues(BasicBlock *From, BasicBlock *To);
 
   void addPhiValues(BasicBlock *From, BasicBlock *To);
@@ -584,6 +586,28 @@ void StructurizeCFG::insertConditions(bool Loops) {
       Term->setCondition(PhiInserter.GetValueInMiddleOfBlock(Parent));
     }
   }
+}
+
+/// Simplify any inverted conditions that were built by buildConditions.
+void StructurizeCFG::simplifyConditions() {
+  SmallVector<Instruction *> InstToErase;
+  for (auto &I : concat<PredMap::value_type>(Predicates, LoopPreds)) {
+    auto &Preds = I.second;
+    for (auto &J : Preds) {
+      auto &Cond = J.second;
+      Instruction *Inverted;
+      if (match(Cond, m_Not(m_OneUse(m_Instruction(Inverted)))) &&
+          !Cond->use_empty()) {
+        if (auto *InvertedCmp = dyn_cast<CmpInst>(Inverted)) {
+          InvertedCmp->setPredicate(InvertedCmp->getInversePredicate());
+          Cond->replaceAllUsesWith(InvertedCmp);
+          InstToErase.push_back(cast<Instruction>(Cond));
+        }
+      }
+    }
+  }
+  for (auto *I : InstToErase)
+    I->eraseFromParent();
 }
 
 /// Remove all PHI values coming from "From" into "To" and remember
@@ -1065,6 +1089,7 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT) {
   createFlow();
   insertConditions(false);
   insertConditions(true);
+  simplifyConditions();
   setPhiValues();
   simplifyAffectedPhis();
   rebuildSSA();
