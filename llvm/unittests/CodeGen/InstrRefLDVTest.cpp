@@ -642,7 +642,7 @@ TEST_F(InstrRefLDVTest, MTransferCopies) {
   // it's not completely clear why, but here we only care about correctly
   // identifying the slot, not that all the surrounding data is correct.
   SpillLoc L = {getRegByName("RSP"), StackOffset::getFixed(-8)};
-  SpillLocationNo SpillNo = MTracker->getOrTrackSpillLoc(L);
+  SpillLocationNo SpillNo = *MTracker->getOrTrackSpillLoc(L);
   unsigned SpillLocID = MTracker->getLocID(SpillNo, {64, 0});
   LocIdx SpillLoc = MTracker->getSpillMLoc(SpillLocID);
   ValueIDNum V = MTracker->readMLoc(SpillLoc);
@@ -766,7 +766,7 @@ TEST_F(InstrRefLDVTest, MTransferSubregSpills) {
     ValueIDNum DefNum(0, 1, RegLoc);
     // Read the corresponding subreg field from the stack.
     SpillLoc L = {getRegByName("RSP"), StackOffset::getFixed(-8)};
-    SpillLocationNo SpillNo = MTracker->getOrTrackSpillLoc(L);
+    SpillLocationNo SpillNo = *MTracker->getOrTrackSpillLoc(L);
     unsigned SpillID = MTracker->getLocID(SpillNo, SubRegIdxes[I]);
     LocIdx SpillLoc = MTracker->getSpillMLoc(SpillID);
     ValueIDNum SpillValue = MTracker->readMLoc(SpillLoc);
@@ -803,7 +803,7 @@ TEST_F(InstrRefLDVTest, MTransferSubregSpills) {
   // $rbx should contain something else; today it's a def at the spill point
   // of the 4 byte value.
   SpillLoc L = {getRegByName("RSP"), StackOffset::getFixed(-8)};
-  SpillLocationNo SpillNo = MTracker->getOrTrackSpillLoc(L);
+  SpillLocationNo SpillNo = *MTracker->getOrTrackSpillLoc(L);
   unsigned SpillID = MTracker->getLocID(SpillNo, {64, 0});
   LocIdx Spill64Loc = MTracker->getSpillMLoc(SpillID);
   ValueIDNum DefAtSpill64(0, 3, Spill64Loc);
@@ -817,7 +817,7 @@ TEST_F(InstrRefLDVTest, MTransferSubregSpills) {
     LocIdx RegLoc = MTracker->getRegMLoc(getRegByName(SubRegNames[I]));
     ValueIDNum DefNum(0, 1, RegLoc);
     // Read the corresponding subreg field from the stack.
-    SpillNo = MTracker->getOrTrackSpillLoc(L);
+    SpillNo = *MTracker->getOrTrackSpillLoc(L);
     SpillID = MTracker->getLocID(SpillNo, SubRegIdxes[I]);
     LocIdx SpillLoc = MTracker->getSpillMLoc(SpillID);
     ValueIDNum SpillValue = MTracker->readMLoc(SpillLoc);
@@ -846,7 +846,7 @@ TEST_F(InstrRefLDVTest, MTransferSubregSpills) {
 
   for (unsigned int I = 0; I < 5; ++I) {
     // Read subreg fields from the stack.
-    SpillLocationNo SpillNo = MTracker->getOrTrackSpillLoc(L);
+    SpillLocationNo SpillNo = *MTracker->getOrTrackSpillLoc(L);
     unsigned SpillID = MTracker->getLocID(SpillNo, SubRegIdxes[I]);
     LocIdx SpillLoc = MTracker->getSpillMLoc(SpillID);
     ValueIDNum SpillValue = MTracker->readMLoc(SpillLoc);
@@ -859,7 +859,7 @@ TEST_F(InstrRefLDVTest, MTransferSubregSpills) {
 
   // Read xmm0's position and ensure it has a value. Should be the live-in
   // value to the block, as IMPLICIT_DEF isn't a real def.
-  SpillNo = MTracker->getOrTrackSpillLoc(L);
+  SpillNo = *MTracker->getOrTrackSpillLoc(L);
   SpillID = MTracker->getLocID(SpillNo, {128, 0});
   LocIdx Spill128Loc = MTracker->getSpillMLoc(SpillID);
   SpillValue = MTracker->readMLoc(Spill128Loc);
@@ -1097,7 +1097,7 @@ TEST_F(InstrRefLDVTest, MLocDiamondSpills) {
 
   // Create a stack location and ensure it's tracked.
   SpillLoc SL = {getRegByName("RSP"), StackOffset::getFixed(-8)};
-  SpillLocationNo SpillNo = MTracker->getOrTrackSpillLoc(SL);
+  SpillLocationNo SpillNo = *MTracker->getOrTrackSpillLoc(SL);
   ASSERT_EQ(MTracker->getNumLocs(), 10u); // Tracks all possible stack locs.
   // Locations are: RSP, stack slots from 2^3 bits wide up to 2^9 for zmm regs,
   // then slots for sub_8bit_hi and sub_16bit_hi ({8, 8} and {16, 16}).
