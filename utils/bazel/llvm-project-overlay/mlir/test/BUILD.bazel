@@ -403,7 +403,7 @@ cc_library(
         "//mlir:SCFDialect",
         "//mlir:SCFTransforms",
         "//mlir:StandardOps",
-        "//mlir:StdBufferizableOpInterfaceImpl",
+        "//mlir:StandardOpsTransforms",
         "//mlir:TensorDialect",
         "//mlir:TensorTransforms",
         "//mlir:TransformUtils",

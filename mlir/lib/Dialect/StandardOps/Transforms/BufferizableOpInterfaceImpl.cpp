@@ -1,4 +1,4 @@
-//===- StdInterfaceImpl.cpp - Standard Impl. of BufferizableOpInterface ---===//
+//===- BufferizableOpInterfaceImpl.cpp - Impl. of BufferizableOpInterface -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/StdInterfaceImpl.h"
+#include "mlir/Dialect/StandardOps/Transforms/BufferizableOpInterfaceImpl.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
 
+using namespace mlir;
 using namespace mlir::bufferization;
 
 namespace mlir {
-namespace linalg {
-namespace comprehensive_bufferize {
-namespace std_ext {
+namespace {
 
 /// Bufferization of std.select. Just replace the operands.
 struct SelectOpInterface
@@ -69,12 +68,10 @@ struct SelectOpInterface
   }
 };
 
-} // namespace std_ext
-} // namespace comprehensive_bufferize
-} // namespace linalg
+} // namespace
 } // namespace mlir
 
-void mlir::linalg::comprehensive_bufferize::std_ext::
-    registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
-  registry.addOpInterface<SelectOp, std_ext::SelectOpInterface>();
+void mlir::registerBufferizableOpInterfaceExternalModels(
+    DialectRegistry &registry) {
+  registry.addOpInterface<SelectOp, SelectOpInterface>();
 }
