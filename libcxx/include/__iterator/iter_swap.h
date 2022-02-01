@@ -36,9 +36,11 @@ namespace __iter_swap {
   void iter_swap(_I1, _I2) = delete;
 
   template<class _T1, class _T2>
-  concept __unqualified_iter_swap = requires(_T1&& __x, _T2&& __y) {
-    iter_swap(_VSTD::forward<_T1>(__x), _VSTD::forward<_T2>(__y));
-  };
+  concept __unqualified_iter_swap =
+    (__class_or_enum<remove_cvref_t<_T1>> || __class_or_enum<remove_cvref_t<_T2>>) &&
+    requires (_T1&& __x, _T2&& __y) {
+      iter_swap(_VSTD::forward<_T1>(__x), _VSTD::forward<_T2>(__y));
+    };
 
   template<class _T1, class _T2>
   concept __readable_swappable =
