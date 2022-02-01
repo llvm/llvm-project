@@ -968,6 +968,8 @@ static void createSymbolTable(object::Archive *OldArchive) {
   if (OldArchive->hasSymbolTable())
     return;
 
+  if (OldArchive->isThin())
+    Thin = true;
   performWriteOperation(CreateSymTab, OldArchive, nullptr, nullptr);
 }
 
