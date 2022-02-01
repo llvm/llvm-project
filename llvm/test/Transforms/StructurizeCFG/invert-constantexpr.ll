@@ -6,8 +6,7 @@
 define void @invert_constantexpr_condition(i32 %arg, i32 %arg1) #0 {
 ; CHECK-LABEL: @invert_constantexpr_condition(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = icmp eq i32 [[ARG:%.*]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[TMP]], true
+; CHECK-NEXT:    [[TMP:%.*]] = icmp ne i32 [[ARG:%.*]], 0
 ; CHECK-NEXT:    br i1 icmp eq (i32 ptrtoint (i32* @g to i32), i32 0), label [[BB2:%.*]], label [[FLOW:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[FLOW]]
@@ -16,8 +15,8 @@ define void @invert_constantexpr_condition(i32 %arg, i32 %arg1) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[TMP4]], icmp eq (i32 ptrtoint (i32* @g to i32), i32 0)
 ; CHECK-NEXT:    br label [[BB8:%.*]]
 ; CHECK:       Flow:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ [[TMP0]], [[BB2]] ], [ icmp ne (i32 ptrtoint (i32* @g to i32), i32 0), [[BB:%.*]] ]
-; CHECK-NEXT:    br i1 [[TMP1]], label [[BB6]], label [[BB3:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ [[TMP]], [[BB2]] ], [ icmp ne (i32 ptrtoint (i32* @g to i32), i32 0), [[BB:%.*]] ]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[BB6]], label [[BB3:%.*]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    [[TMP7]] = icmp slt i32 [[ARG]], [[ARG1:%.*]]
 ; CHECK-NEXT:    br label [[BB3]]
