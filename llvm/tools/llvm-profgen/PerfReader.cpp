@@ -1212,6 +1212,7 @@ void PerfScriptReader::parsePerfTraces() {
   warnTruncatedStack();
   warnInvalidRange();
   generateUnsymbolizedProfile();
+  AggregatedSamples.clear();
 
   if (SkipSymbolization)
     writeUnsymbolizedProfile(OutputFilename);
