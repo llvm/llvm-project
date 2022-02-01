@@ -1086,7 +1086,7 @@ public:
 
   // Links to the ARMExidxSections so we can transfer the relocations once the
   // layout is known.
-  std::vector<InputSection *> exidxSections;
+  SmallVector<InputSection *, 0> exidxSections;
 
 private:
   size_t size = 0;
@@ -1095,7 +1095,7 @@ private:
   // InputObjects, we store pointers to the executable sections that need
   // .ARM.exidx sections. We can then use the dependentSections of these to
   // either find the .ARM.exidx section or know that we need to generate one.
-  std::vector<InputSection *> executableSections;
+  SmallVector<InputSection *, 0> executableSections;
 
   // The executable InputSection with the highest address to use for the
   // sentinel. We store separately from ExecutableSections as merging of
