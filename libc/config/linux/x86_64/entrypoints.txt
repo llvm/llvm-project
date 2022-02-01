@@ -85,10 +85,17 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
 
+    # sys/stat.h entrypoints
+    libc.src.sys.stat.mkdir
+    libc.src.sys.stat.mkdirat
+
     # unistd.h entrypoints
     libc.src.unistd.close
     libc.src.unistd.fsync
     libc.src.unistd.read
+    libc.src.unistd.rmdir
+    libc.src.unistd.unlink
+    libc.src.unistd.unlinkat
     libc.src.unistd.write
 )
 

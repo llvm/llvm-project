@@ -47,9 +47,12 @@ bool isHsaAbiVersion3(const MCSubtargetInfo *STI);
 /// \returns True if HSA OS ABI Version identification is 4,
 /// false otherwise.
 bool isHsaAbiVersion4(const MCSubtargetInfo *STI);
+/// \returns True if HSA OS ABI Version identification is 5,
+/// false otherwise.
+bool isHsaAbiVersion5(const MCSubtargetInfo *STI);
 /// \returns True if HSA OS ABI Version identification is 3 or 4,
 /// false otherwise.
-bool isHsaAbiVersion3Or4(const MCSubtargetInfo *STI);
+bool isHsaAbiVersion3AndAbove(const MCSubtargetInfo *STI);
 
 struct GcnBufferFormatInfo {
   unsigned Format;

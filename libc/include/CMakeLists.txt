@@ -168,6 +168,15 @@ add_gen_header(
 )
 
 add_gen_header(
+  sys_stat
+  DEF_FILE sys/stat.h.def
+  GEN_HDR sys/stat.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.mode_t
+)
+
+add_gen_header(
   sys_syscall
   DEF_FILE sys/syscall.h.def
   GEN_HDR sys/syscall.h
