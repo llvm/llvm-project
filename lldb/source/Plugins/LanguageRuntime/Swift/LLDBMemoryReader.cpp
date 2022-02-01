@@ -529,9 +529,9 @@ LLDBMemoryReader::resolveRemoteAddress(uint64_t address) const {
   }
 
   LLDB_LOGV(log,
-            "[MemoryReader] Unsuccessfully resolved mapped address {1:x} "
+            "[MemoryReader] Successfully resolved mapped address {1:x} "
             "into file address {1:x}",
-            address, address);
+            address, resolved);
   return resolved;
 }
 
