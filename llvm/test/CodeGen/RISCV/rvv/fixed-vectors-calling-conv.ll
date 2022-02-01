@@ -673,8 +673,8 @@ define <32 x i32> @ret_v32i32_param_v32i32_v32i32_v32i32_i32(<32 x i32> %x, <32 
 ; LMULMAX1-NEXT:    ret
   %r = add <32 x i32> %x, %y
   %s = add <32 x i32> %r, %z
-  %head = insertelement <32 x i32> undef, i32 %w, i32 0
-  %splat = shufflevector <32 x i32> %head, <32 x i32> undef, <32 x i32> zeroinitializer
+  %head = insertelement <32 x i32> poison, i32 %w, i32 0
+  %splat = shufflevector <32 x i32> %head, <32 x i32> poison, <32 x i32> zeroinitializer
   %t = add <32 x i32> %s, %splat
   ret <32 x i32> %t
 }
