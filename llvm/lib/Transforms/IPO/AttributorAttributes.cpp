@@ -15,8 +15,8 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SCCIterator.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -288,8 +288,11 @@ static bool genericValueTraversal(
       continue;
 
     // Make sure we limit the compile time for complex expressions.
-    if (Iteration++ >= MaxValues)
+    if (Iteration++ >= MaxValues) {
+      LLVM_DEBUG(dbgs() << "Generic value traversal reached iteration limit: "
+                        << Iteration << "!\n");
       return false;
+    }
 
     // Explicitly look through calls with a "returned" attribute if we do
     // not have a pointer as stripPointerCasts only works on them.
@@ -367,8 +370,11 @@ static bool genericValueTraversal(
     }
 
     // Once a leaf is reached we inform the user through the callback.
-    if (!VisitValueCB(*V, CtxI, State, Iteration > 1))
+    if (!VisitValueCB(*V, CtxI, State, Iteration > 1)) {
+      LLVM_DEBUG(dbgs() << "Generic value traversal visit callback failed for: "
+                        << *V << "!\n");
       return false;
+    }
   } while (!Worklist.empty());
 
   // If we actually used liveness information so we have to record a dependence.
@@ -1320,9 +1326,8 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
                             << " : " << *Idx << "\n");
           return false;
         }
-        UsrOI.Offset = PtrOI.Offset +
-                       DL.getIndexedOffsetInType(
-                           GEP->getSourceElementType(), Indices);
+        UsrOI.Offset = PtrOI.Offset + DL.getIndexedOffsetInType(
+                                          GEP->getSourceElementType(), Indices);
         Follow = true;
         return true;
       }
