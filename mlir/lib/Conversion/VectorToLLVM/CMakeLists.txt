@@ -25,6 +25,7 @@ add_mlir_conversion_library(MLIRVectorToLLVM
   MLIRTargetLLVMIRExport
   MLIRTransforms
   MLIRVector
+  MLIRVectorTransforms
   MLIRX86Vector
   MLIRX86VectorTransforms
   )

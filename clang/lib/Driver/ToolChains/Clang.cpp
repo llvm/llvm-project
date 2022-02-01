@@ -4351,6 +4351,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool IsHIP = JA.isOffloading(Action::OFK_HIP);
   bool IsHIPDevice = JA.isDeviceOffloading(Action::OFK_HIP);
   bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
+  bool IsOpenMPHost = JA.isHostOffloading(Action::OFK_OpenMP);
   bool IsHeaderModulePrecompile = isa<HeaderModulePrecompileJobAction>(JA);
   bool IsDeviceOffloadAction = !(JA.isDeviceOffloading(Action::OFK_None) ||
                                  JA.isDeviceOffloading(Action::OFK_Host));
@@ -4369,6 +4370,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       IsHeaderModulePrecompile ? HeaderModuleInput : Inputs[0];
 
   InputInfoList ModuleHeaderInputs;
+  InputInfoList OpenMPHostInputs;
   const InputInfo *CudaDeviceInput = nullptr;
   const InputInfo *OpenMPDeviceInput = nullptr;
   for (const InputInfo &I : Inputs) {
@@ -4387,6 +4389,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CudaDeviceInput = &I;
     } else if (IsOpenMPDevice && !OpenMPDeviceInput) {
       OpenMPDeviceInput = &I;
+    } else if (IsOpenMPHost) {
+      OpenMPHostInputs.push_back(I);
     } else {
       llvm_unreachable("unexpectedly given multiple inputs");
     }
@@ -4615,7 +4619,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (JA.getType() == types::TY_LLVM_BC)
       CmdArgs.push_back("-emit-llvm-uselists");
 
-    if (IsUsingLTO) {
+    if (IsUsingLTO && !Args.hasArg(options::OPT_fopenmp_new_driver)) {
       // Only AMDGPU supports device-side LTO.
       if (IsDeviceOffloadAction && !Triple.isAMDGPU()) {
         D.Diag(diag::err_drv_unsupported_opt_for_target)
@@ -6893,6 +6897,25 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  // Host-side OpenMP offloading recieves the device object files and embeds it
+  // in a named section including the associated target triple and architecture.
+  if (IsOpenMPHost && !OpenMPHostInputs.empty()) {
+    auto InputFile = OpenMPHostInputs.begin();
+    auto OpenMPTCs = C.getOffloadToolChains<Action::OFK_OpenMP>();
+    for (auto TI = OpenMPTCs.first, TE = OpenMPTCs.second; TI != TE;
+         ++TI, ++InputFile) {
+      const ToolChain *TC = TI->second;
+      const ArgList &TCArgs = C.getArgsForToolChain(TC, "", Action::OFK_OpenMP);
+      StringRef File =
+          C.getArgs().MakeArgString(TC->getInputFilename(*InputFile));
+      StringRef InputName = Clang::getBaseInputStem(Args, Inputs);
+
+      CmdArgs.push_back(Args.MakeArgString(
+          "-fembed-offload-object=" + File + "," + TC->getTripleString() + "." +
+          TCArgs.getLastArgValue(options::OPT_march_EQ) + "." + InputName));
+    }
+  }
+
   if (Triple.isAMDGPU()) {
     handleAMDGPUCodeObjectVersionOptions(D, Args, CmdArgs);
 
@@ -8118,4 +8141,123 @@ void OffloadWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       JA, *this, ResponseFileSupport::None(),
       Args.MakeArgString(getToolChain().GetProgramPath(getShortName())),
       CmdArgs, Inputs, Output));
+}
+
+void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
+                                 const InputInfo &Output,
+                                 const InputInfoList &Inputs,
+                                 const ArgList &Args,
+                                 const char *LinkingOutput) const {
+  ArgStringList CmdArgs;
+
+  if (getToolChain().getDriver().isUsingLTO(/* IsOffload */ true)) {
+    // Pass in target features for each toolchain.
+    auto OpenMPTCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();
+    for (auto &I :
+         llvm::make_range(OpenMPTCRange.first, OpenMPTCRange.second)) {
+      const ToolChain *TC = I.second;
+      const ArgList &TCArgs = C.getArgsForToolChain(TC, "", Action::OFK_OpenMP);
+      ArgStringList FeatureArgs;
+      TC->addClangTargetOptions(TCArgs, FeatureArgs, Action::OFK_OpenMP);
+      auto FeatureIt = llvm::find(FeatureArgs, "-target-feature");
+      CmdArgs.push_back(Args.MakeArgString(
+          "-target-feature=" + TC->getTripleString() + "=" + *(FeatureIt + 1)));
+    }
+
+    // Pass in the bitcode library to be linked during LTO.
+    for (auto &I : llvm::make_range(OpenMPTCRange.first, OpenMPTCRange.second)) {
+      const ToolChain *TC = I.second;
+      const Driver &D = TC->getDriver();
+      const ArgList &TCArgs = C.getArgsForToolChain(TC, "", Action::OFK_OpenMP);
+      StringRef Arch = TCArgs.getLastArgValue(options::OPT_march_EQ);
+
+      std::string BitcodeSuffix;
+      if (TCArgs.hasFlag(options::OPT_fopenmp_target_new_runtime,
+                         options::OPT_fno_openmp_target_new_runtime, true))
+        BitcodeSuffix += "new-";
+      if (TC->getTriple().isNVPTX())
+        BitcodeSuffix += "nvptx-";
+      else if (TC->getTriple().isAMDGPU())
+        BitcodeSuffix += "amdgpu-";
+      BitcodeSuffix += Arch;
+
+      ArgStringList BitcodeLibrary;
+      addOpenMPDeviceRTL(D, TCArgs, BitcodeLibrary, BitcodeSuffix,
+                         TC->getTriple());
+
+      if (!BitcodeLibrary.empty())
+        CmdArgs.push_back(
+            Args.MakeArgString("-target-library=" + TC->getTripleString() +
+                               "-" + Arch + "=" + BitcodeLibrary.back()));
+    }
+
+    // Pass in the optimization level to use for LTO.
+    if (const Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+      StringRef OOpt;
+      if (A->getOption().matches(options::OPT_O4) ||
+          A->getOption().matches(options::OPT_Ofast))
+        OOpt = "3";
+      else if (A->getOption().matches(options::OPT_O)) {
+        OOpt = A->getValue();
+        if (OOpt == "g")
+          OOpt = "1";
+        else if (OOpt == "s" || OOpt == "z")
+          OOpt = "2";
+      } else if (A->getOption().matches(options::OPT_O0))
+        OOpt = "0";
+      if (!OOpt.empty())
+        CmdArgs.push_back(Args.MakeArgString(Twine("-opt-level=O") + OOpt));
+    }
+  }
+
+  // Construct the link job so we can wrap around it.
+  Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
+  const auto &LinkCommand = C.getJobs().getJobs().back();
+
+  CmdArgs.push_back("-host-triple");
+  CmdArgs.push_back(Args.MakeArgString(getToolChain().getTripleString()));
+  if (Args.hasArg(options::OPT_v))
+    CmdArgs.push_back("-v");
+
+  // Add debug information if present.
+  if (const Arg *A = Args.getLastArg(options::OPT_g_Group)) {
+    const Option &Opt = A->getOption();
+    if (Opt.matches(options::OPT_gN_Group)) {
+      if (Opt.matches(options::OPT_gline_directives_only) ||
+          Opt.matches(options::OPT_gline_tables_only))
+        CmdArgs.push_back("-gline-directives-only");
+    } else
+      CmdArgs.push_back("-g");
+  }
+
+  for (const auto &A : Args.getAllArgValues(options::OPT_Xcuda_ptxas))
+    CmdArgs.push_back(Args.MakeArgString("-ptxas-args=" + A));
+
+  // Forward remarks passes to the LLVM backend in the wrapper.
+  if (const Arg *A = Args.getLastArg(options::OPT_Rpass_EQ))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-pass-remarks=") + A->getValue()));
+  if (const Arg *A = Args.getLastArg(options::OPT_Rpass_missed_EQ))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-pass-remarks-missed=") + A->getValue()));
+  if (const Arg *A = Args.getLastArg(options::OPT_Rpass_analysis_EQ))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-pass-remarks-analysis=") + A->getValue()));
+  if (Args.getLastArg(options::OPT_save_temps_EQ))
+    CmdArgs.push_back("-save-temps");
+
+  // Add the linker arguments to be forwarded by the wrapper.
+  CmdArgs.push_back("-linker-path");
+  CmdArgs.push_back(LinkCommand->getExecutable());
+  CmdArgs.push_back("--");
+  for (const char *LinkArg : LinkCommand->getArguments())
+    CmdArgs.push_back(LinkArg);
+
+  const char *Exec =
+      Args.MakeArgString(getToolChain().GetProgramPath("clang-linker-wrapper"));
+
+  // Replace the executable and arguments of the link job with the
+  // wrapper.
+  LinkCommand->replaceExecutable(Exec);
+  LinkCommand->replaceArguments(CmdArgs);
 }

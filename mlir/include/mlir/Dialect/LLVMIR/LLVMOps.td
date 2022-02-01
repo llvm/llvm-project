@@ -112,12 +112,12 @@ def LLVM_TerminatorPassthroughOpBuilder :
 
 // Base class for LLVM terminator operations.  All terminator operations have
 // zero results and an optional list of successors.
-class LLVM_TerminatorOp<string mnemonic, list<OpTrait> traits = []> :
+class LLVM_TerminatorOp<string mnemonic, list<Trait> traits = []> :
     LLVM_Op<mnemonic, !listconcat(traits, [Terminator])>;
 
 // Class for arithmetic binary operations.
 class LLVM_ArithmeticOpBase<Type type, string mnemonic,
-                            string builderFunc, list<OpTrait> traits = []> :
+                            string builderFunc, list<Trait> traits = []> :
     LLVM_Op<mnemonic,
            !listconcat([NoSideEffect, SameOperandsAndResultType], traits)>,
     LLVM_Builder<"$res = builder." # builderFunc # "($lhs, $rhs);"> {
@@ -128,12 +128,12 @@ class LLVM_ArithmeticOpBase<Type type, string mnemonic,
   let assemblyFormat = "$lhs `,` $rhs custom<LLVMOpAttrs>(attr-dict) `:` type($res)";
 }
 class LLVM_IntArithmeticOp<string mnemonic, string builderFunc,
-                           list<OpTrait> traits = []> :
+                           list<Trait> traits = []> :
     LLVM_ArithmeticOpBase<AnyInteger, mnemonic, builderFunc, traits> {
   let arguments = commonArgs;
 }
 class LLVM_FloatArithmeticOp<string mnemonic, string builderFunc,
-                             list<OpTrait> traits = []> :
+                             list<Trait> traits = []> :
     LLVM_ArithmeticOpBase<LLVM_AnyFloat, mnemonic, builderFunc,
     !listconcat([DeclareOpInterfaceMethods<FastmathFlagsInterface>], traits)> {
   dag fmfArg = (ins DefaultValuedAttr<LLVM_FMFAttr, "{}">:$fastmathFlags);
@@ -142,7 +142,7 @@ class LLVM_FloatArithmeticOp<string mnemonic, string builderFunc,
 
 // Class for arithmetic unary operations.
 class LLVM_UnaryFloatArithmeticOp<Type type, string mnemonic,
-                             string builderFunc, list<OpTrait> traits = []> :
+                             string builderFunc, list<Trait> traits = []> :
     LLVM_Op<mnemonic,
            !listconcat([NoSideEffect, SameOperandsAndResultType, DeclareOpInterfaceMethods<FastmathFlagsInterface>], traits)>,
     LLVM_Builder<"$res = builder." # builderFunc # "($operand);"> {
@@ -415,7 +415,7 @@ def LLVM_StoreOp : LLVM_Op<"store">, MemoryOpWithAlignmentAndAttributes {
 
 // Casts.
 class LLVM_CastOp<string mnemonic, string builderFunc, Type type,
-                  Type resultType, list<OpTrait> traits = []> :
+                  Type resultType, list<Trait> traits = []> :
     LLVM_Op<mnemonic, !listconcat([NoSideEffect], traits)>,
     LLVM_Builder<"$res = builder." # builderFunc # "($arg, $_resultType);"> {
   let arguments = (ins type:$arg);
@@ -1411,31 +1411,31 @@ def LLVM_ConstantOp
 // operations and intrinsics. However, we systematically prefix them with
 // "intr." to avoid potential name clashes.
 
-class LLVM_UnaryIntrinsicOp<string func, list<OpTrait> traits = []> :
+class LLVM_UnaryIntrinsicOp<string func, list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0],
            !listconcat([NoSideEffect, SameOperandsAndResultType], traits)> {
   let arguments = (ins LLVM_Type:$in);
 }
 
-class LLVM_BinarySameArgsIntrinsicOp<string func, list<OpTrait> traits = []> :
+class LLVM_BinarySameArgsIntrinsicOp<string func, list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0],
            !listconcat([NoSideEffect, SameOperandsAndResultType], traits)> {
   let arguments = (ins LLVM_Type:$a, LLVM_Type:$b);
 }
 
-class LLVM_BinaryIntrinsicOp<string func, list<OpTrait> traits = []> :
+class LLVM_BinaryIntrinsicOp<string func, list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0,1],
            !listconcat([NoSideEffect], traits)> {
   let arguments = (ins LLVM_Type:$a, LLVM_Type:$b);
 }
 
-class LLVM_TernarySameArgsIntrinsicOp<string func, list<OpTrait> traits = []> :
+class LLVM_TernarySameArgsIntrinsicOp<string func, list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0],
            !listconcat([NoSideEffect, SameOperandsAndResultType], traits)> {
   let arguments = (ins LLVM_Type:$a, LLVM_Type:$b, LLVM_Type:$c);
 }
 
-class LLVM_CountZerosIntrinsicOp<string func, list<OpTrait> traits = []> :
+class LLVM_CountZerosIntrinsicOp<string func, list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0],
            !listconcat([NoSideEffect], traits)> {
   let arguments = (ins LLVM_Type:$in, I<1>:$zero_undefined);

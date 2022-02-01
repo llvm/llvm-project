@@ -27,6 +27,7 @@
 
 ; CHECK-O: Running pass: Annotation2Metadata
 ; CHECK-O-NEXT: Running pass: CrossDSOCFIPass
+; CHECK-O-NEXT: Running pass: OpenMPOptPass
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: ForceFunctionAttrsPass
 ; CHECK-O-NEXT: Running pass: InferFunctionAttrsPass
@@ -87,6 +88,7 @@
 ; CHECK-O23SZ-NEXT: Running analysis: GlobalsAA on [module]
 ; CHECK-O23SZ-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}AAManager
 ; CHECK-O23SZ-NEXT: Invalidating analysis: AAManager on foo
+; CHECK-O23SZ-NEXT: Running pass: OpenMPOptCGSCCPass on (foo)
 ; CHECK-O23SZ-NEXT: Running pass: LoopSimplifyPass on foo
 ; CHECK-O23SZ-NEXT: Running analysis: LoopAnalysis on foo
 ; CHECK-O23SZ-NEXT: Running pass: LCSSAPass on foo

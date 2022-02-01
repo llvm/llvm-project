@@ -12,7 +12,10 @@
 
 // iter_type put(iter_type s, ios_base& iob, char_type fill, double v) const;
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
+// FIXME: The printf functions in Microsoft's CRT have a couple quirks in
+// corner cases, failing this test.
+// XFAIL: msvc
+
 // XFAIL: LIBCXX-AIX-FIXME
 
 #include <locale>

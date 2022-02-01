@@ -1961,6 +1961,13 @@ class VariadicSuccessor<Successor successor>
 // Trait represents a trait regarding an attribute, operation, or type.
 class Trait;
 
+// Define a Trait corresponding to a list of Traits, this allows for specifying
+// a list of traits as trait. Avoids needing to do `[Traits, ...] # ListOfTraits
+// # [Others, ...]` while still allowing providing convenient groupings.
+class TraitList<list<Trait> props> : Trait {
+  list<Trait> traits = props;
+}
+
 // NativeTrait corresponds to the MLIR C++ trait mechanism. The purpose to wrap
 // around C++ symbol string with this class is to make traits specified for
 // entities in TableGen less alien and more integrated.
@@ -1994,58 +2001,34 @@ class PredTrait<string descr, Pred pred> : Trait {
 // TypeTrait definitions
 //===----------------------------------------------------------------------===//
 
-// TypeTrait represents a trait regarding a type.
-// TODO: Remove this class in favor of using Trait.
-class TypeTrait;
-
 // These classes are used to define type specific traits.
-class NativeTypeTrait<string name> : NativeTrait<name, "Type">, TypeTrait;
+class NativeTypeTrait<string name> : NativeTrait<name, "Type">;
 class ParamNativeTypeTrait<string prop, string params>
-    : ParamNativeTrait<prop, params, "Type">, TypeTrait;
-class GenInternalTypeTrait<string prop>
-    : GenInternalTrait<prop, "Type">, TypeTrait;
-class PredTypeTrait<string descr, Pred pred>
-    : PredTrait<descr, pred>, TypeTrait;
+    : ParamNativeTrait<prop, params, "Type">;
+class GenInternalTypeTrait<string prop> : GenInternalTrait<prop, "Type">;
+class PredTypeTrait<string descr, Pred pred> : PredTrait<descr, pred>;
 
 //===----------------------------------------------------------------------===//
 // AttrTrait definitions
 //===----------------------------------------------------------------------===//
 
-// AttrTrait represents a trait regarding an attribute.
-// TODO: Remove this class in favor of using Trait.
-class AttrTrait;
-
 // These classes are used to define attribute specific traits.
-class NativeAttrTrait<string name> : NativeTrait<name, "Attribute">, AttrTrait;
+class NativeAttrTrait<string name> : NativeTrait<name, "Attribute">;
 class ParamNativeAttrTrait<string prop, string params>
-    : ParamNativeTrait<prop, params, "Attribute">, AttrTrait;
-class GenInternalAttrTrait<string prop>
-    : GenInternalTrait<prop, "Attribute">, AttrTrait;
-class PredAttrTrait<string descr, Pred pred>
-    : PredTrait<descr, pred>, AttrTrait;
+    : ParamNativeTrait<prop, params, "Attribute">;
+class GenInternalAttrTrait<string prop> : GenInternalTrait<prop, "Attribute">;
+class PredAttrTrait<string descr, Pred pred> : PredTrait<descr, pred>;
 
 //===----------------------------------------------------------------------===//
 // OpTrait definitions
 //===----------------------------------------------------------------------===//
 
-// OpTrait represents a trait regarding an operation.
-// TODO: Remove this class in favor of using Trait.
-class OpTrait;
-
-// Define a OpTrait corresponding to a list of OpTraits, this allows for
-// specifying a list of traits as trait. Avoids needing to do
-// `[Traits, ...] # ListOfTraits # [Others, ...]` while still allowing providing
-// convenient groupings.
-class OpTraitList<list<OpTrait> props> : OpTrait {
-  list<OpTrait> traits = props;
-}
-
 // These classes are used to define operation specific traits.
-class NativeOpTrait<string name> : NativeTrait<name, "Op">, OpTrait;
+class NativeOpTrait<string name> : NativeTrait<name, "Op">;
 class ParamNativeOpTrait<string prop, string params>
-    : ParamNativeTrait<prop, params, "Op">, OpTrait;
-class GenInternalOpTrait<string prop> : GenInternalTrait<prop, "Op">, OpTrait;
-class PredOpTrait<string descr, Pred pred> : PredTrait<descr, pred>, OpTrait;
+    : ParamNativeTrait<prop, params, "Op">;
+class GenInternalOpTrait<string prop> : GenInternalTrait<prop, "Op">;
+class PredOpTrait<string descr, Pred pred> : PredTrait<descr, pred>;
 
 // Op defines an affine scope.
 def AffineScope : NativeOpTrait<"AffineScope">;
@@ -2093,14 +2076,12 @@ def Tensorizable : NativeOpTrait<"Tensorizable">;
 
 // Group together `Elementwise`, `Scalarizable`, `Vectorizable`, and
 // `Tensorizable` for convenience.
-def ElementwiseMappable {
-  list<OpTrait> traits = [
+def ElementwiseMappable : TraitList<[
     Elementwise,
     Scalarizable,
     Vectorizable,
     Tensorizable,
-  ];
-}
+]>;
 
 // Op's regions have a single block.
 def SingleBlock : NativeOpTrait<"SingleBlock">;
@@ -2184,7 +2165,7 @@ class InterfaceTrait<string name> : NativeTrait<"", ""> {
 // C++. The purpose to wrap around C++ symbol string with this class is to make
 // interfaces specified for ops in TableGen less alien and more integrated.
 class OpInterfaceTrait<string name, code verifyBody = [{}]>
-    : InterfaceTrait<name>, OpTrait {
+    : InterfaceTrait<name> {
   // Specify the body of the verification function. `$_op` will be replaced with
   // the operation being verified.
   code verify = verifyBody;
@@ -2376,7 +2357,7 @@ class Res<Constraint constraint, string desc = "",
   : OpVariable<constraint, desc, decorators>;
 
 // Base class for all ops.
-class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
+class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
   // The dialect of the op.
   Dialect opDialect = dialect;
 
@@ -2460,7 +2441,7 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
 
   // Op traits.
   // Note: The list of traits will be uniqued by ODS.
-  list<OpTrait> traits = props;
+  list<Trait> traits = props;
 
   // Additional code that will be added to the public part of the generated
   // C++ code of the op declaration.
@@ -2475,7 +2456,7 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
 // Base class for ops with static/dynamic offset, sizes and strides
 // attributes/arguments.
 class BaseOpWithOffsetSizesAndStrides<Dialect dialect, string mnemonic,
-                                      list<OpTrait> traits = []> :
+                                      list<Trait> traits = []> :
   Op<dialect, mnemonic, traits> {
 
   // For every such op, there needs to be a:

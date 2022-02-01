@@ -2378,8 +2378,9 @@ bool Lexer::SkipLineComment(Token &Result, const char *CurPtr,
                             bool &TokAtPhysicalStartOfLine) {
   // If Line comments aren't explicitly enabled for this language, emit an
   // extension warning.
-  if (!LangOpts.LineComment && !isLexingRawMode()) {
-    Diag(BufferPtr, diag::ext_line_comment);
+  if (!LangOpts.LineComment) {
+    if (!isLexingRawMode()) // There's no PP in raw mode, so can't emit diags.
+      Diag(BufferPtr, diag::ext_line_comment);
 
     // Mark them enabled so we only emit one warning for this translation
     // unit.

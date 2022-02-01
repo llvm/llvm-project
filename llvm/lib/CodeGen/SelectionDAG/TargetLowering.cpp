@@ -63,7 +63,7 @@ bool TargetLowering::isInTailCallPosition(SelectionDAG &DAG, SDNode *Node,
   AttrBuilder CallerAttrs(F.getContext(), F.getAttributes().getRetAttrs());
   for (const auto &Attr : {Attribute::Alignment, Attribute::Dereferenceable,
                            Attribute::DereferenceableOrNull, Attribute::NoAlias,
-                           Attribute::NonNull})
+                           Attribute::NonNull, Attribute::NoUndef})
     CallerAttrs.removeAttribute(Attr);
 
   if (CallerAttrs.hasAttributes())
@@ -598,6 +598,23 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
   KnownBits Known;
 
   bool Simplified = SimplifyDemandedBits(Op, DemandedBits, Known, TLO);
+  if (Simplified) {
+    DCI.AddToWorklist(Op.getNode());
+    DCI.CommitTargetLoweringOpt(TLO);
+  }
+  return Simplified;
+}
+
+bool TargetLowering::SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
+                                          const APInt &DemandedElts,
+                                          DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
+                        !DCI.isBeforeLegalizeOps());
+  KnownBits Known;
+
+  bool Simplified =
+      SimplifyDemandedBits(Op, DemandedBits, DemandedElts, Known, TLO);
   if (Simplified) {
     DCI.AddToWorklist(Op.getNode());
     DCI.CommitTargetLoweringOpt(TLO);
@@ -2247,8 +2264,12 @@ bool TargetLowering::SimplifyDemandedBits(
     }
     break;
   }
-  case ISD::ADD:
   case ISD::MUL:
+    // 'Quadratic Reciprocity': mul(x,x) -> 0 if we're only demanding bit[1]
+    if (DemandedBits == 2 && Op.getOperand(0) == Op.getOperand(1))
+      return TLO.CombineTo(Op, TLO.DAG.getConstant(0, dl, VT));
+    LLVM_FALLTHROUGH;
+  case ISD::ADD:
   case ISD::SUB: {
     // Add, Sub, and Mul don't demand any bits in positions beyond that
     // of the highest bit demanded of them.
@@ -3173,29 +3194,25 @@ bool TargetLowering::isSplatValueForTargetNode(SDValue Op,
 // FIXME: Ideally, this would use ISD::isConstantSplatVector(), but that must
 // work with truncating build vectors and vectors with elements of less than
 // 8 bits.
-bool TargetLowering::isConstTrueVal(const SDNode *N) const {
+bool TargetLowering::isConstTrueVal(SDValue N) const {
   if (!N)
     return false;
 
+  unsigned EltWidth;
   APInt CVal;
-  if (auto *CN = dyn_cast<ConstantSDNode>(N)) {
+  if (ConstantSDNode *CN = isConstOrConstSplat(N, /*AllowUndefs=*/false,
+                                               /*AllowTruncation=*/true)) {
     CVal = CN->getAPIntValue();
-  } else if (auto *BV = dyn_cast<BuildVectorSDNode>(N)) {
-    auto *CN = BV->getConstantSplatNode();
-    if (!CN)
-      return false;
-
-    // If this is a truncating build vector, truncate the splat value.
-    // Otherwise, we may fail to match the expected values below.
-    unsigned BVEltWidth = BV->getValueType(0).getScalarSizeInBits();
-    CVal = CN->getAPIntValue();
-    if (BVEltWidth < CVal.getBitWidth())
-      CVal = CVal.trunc(BVEltWidth);
-  } else {
+    EltWidth = N.getValueType().getScalarSizeInBits();
+  } else
     return false;
-  }
 
-  switch (getBooleanContents(N->getValueType(0))) {
+  // If this is a truncating splat, truncate the splat value.
+  // Otherwise, we may fail to match the expected values below.
+  if (EltWidth < CVal.getBitWidth())
+    CVal = CVal.trunc(EltWidth);
+
+  switch (getBooleanContents(N.getValueType())) {
   case UndefinedBooleanContent:
     return CVal[0];
   case ZeroOrOneBooleanContent:
@@ -3207,7 +3224,7 @@ bool TargetLowering::isConstTrueVal(const SDNode *N) const {
   llvm_unreachable("Invalid boolean contents");
 }
 
-bool TargetLowering::isConstFalseVal(const SDNode *N) const {
+bool TargetLowering::isConstFalseVal(SDValue N) const {
   if (!N)
     return false;
 
@@ -3742,7 +3759,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         if (TopSetCC.getValueType() == MVT::i1 && VT == MVT::i1 &&
             TopSetCC.getOpcode() == ISD::SETCC &&
             (N0Opc == ISD::ZERO_EXTEND || N0Opc == ISD::SIGN_EXTEND) &&
-            (isConstFalseVal(N1C) ||
+            (isConstFalseVal(N1) ||
              isExtendedTrueVal(N1C, N0->getValueType(0), SExt))) {
 
           bool Inverse = (N1C->isZero() && Cond == ISD::SETEQ) ||

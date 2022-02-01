@@ -139,8 +139,10 @@ define void @constrained_if_register_class() {
 ; CHECK-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_cmp_lg_u32 s4, 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB4_4
-; CHECK-NEXT:  ; %bb.1: ; %bb2
+; CHECK-NEXT:    s_cbranch_scc0 .LBB4_2
+; CHECK-NEXT:  .LBB4_1: ; %bb12
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+; CHECK-NEXT:  .LBB4_2: ; %bb2
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, const.ptr@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, const.ptr@gotpcrel32@hi+12
@@ -153,15 +155,13 @@ define void @constrained_if_register_class() {
 ; CHECK-NEXT:    s_mov_b32 s4, -1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, 1.0, v0
-; CHECK-NEXT:    s_cbranch_vccnz .LBB4_3
-; CHECK-NEXT:  ; %bb.2: ; %bb7
+; CHECK-NEXT:    s_cbranch_vccnz .LBB4_4
+; CHECK-NEXT:  ; %bb.3: ; %bb7
 ; CHECK-NEXT:    s_mov_b32 s4, 0
-; CHECK-NEXT:  .LBB4_3: ; %bb8
+; CHECK-NEXT:  .LBB4_4: ; %bb8
 ; CHECK-NEXT:    s_cmp_lg_u32 s4, 0
-; CHECK-NEXT:    s_cbranch_scc0 .LBB4_5
-; CHECK-NEXT:  .LBB4_4: ; %bb12
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-; CHECK-NEXT:  .LBB4_5: ; %bb11
+; CHECK-NEXT:    s_cbranch_scc1 .LBB4_1
+; CHECK-NEXT:  ; %bb.5: ; %bb11
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 4.0
 ; CHECK-NEXT:    buffer_store_dword v0, v0, s[0:3], 0 offen
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)

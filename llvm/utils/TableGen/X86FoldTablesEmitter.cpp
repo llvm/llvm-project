@@ -40,8 +40,6 @@ struct ManualMapEntry {
       : RegInstStr(RegInstStr), MemInstStr(MemInstStr), Strategy(Strategy) {}
 };
 
-class IsMatch;
-
 // List of instructions requiring explicitly aligned memory.
 const char *ExplicitAlign[] = {"MOVDQA",  "MOVAPS",  "MOVAPD",  "MOVNTPS",
                                "MOVNTPD", "MOVNTDQ", "MOVNTDQA"};

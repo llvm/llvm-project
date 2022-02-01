@@ -14,7 +14,9 @@
 
 #include "lock.h"
 #include "unit.h"
+#include "flang/Common/constexpr-bitset.h"
 #include "flang/Runtime/memory.h"
+#include <cstdint>
 #include <cstdlib>
 
 namespace Fortran::runtime::io {
@@ -40,10 +42,7 @@ public:
     return Find(path);
   }
 
-  ExternalFileUnit &NewUnit(const Terminator &terminator) {
-    CriticalSection critical{lock_};
-    return Create(nextNewUnit_--, terminator);
-  }
+  ExternalFileUnit &NewUnit(const Terminator &);
 
   // To prevent races, the unit is removed from the map if it exists,
   // and put on the closing_ list until DestroyClosed() is called.
@@ -84,7 +83,7 @@ private:
 
   Lock lock_;
   OwningPtr<Chain> bucket_[buckets_]{}; // all owned by *this
-  int nextNewUnit_{-1000}; // see 12.5.6.12 in Fortran 2018
+  common::BitSet<64> busyNewUnits_;
   OwningPtr<Chain> closing_{nullptr}; // units during CLOSE statement
 };
 } // namespace Fortran::runtime::io

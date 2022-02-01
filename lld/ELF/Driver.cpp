@@ -1719,7 +1719,7 @@ static void handleUndefinedGlob(StringRef arg) {
 
   // Calling sym->extract() in the loop is not safe because it may add new
   // symbols to the symbol table, invalidating the current iterator.
-  std::vector<Symbol *> syms;
+  SmallVector<Symbol *, 0> syms;
   for (Symbol *sym : symtab->symbols())
     if (!sym->isPlaceholder() && pat->match(sym->getName()))
       syms.push_back(sym);

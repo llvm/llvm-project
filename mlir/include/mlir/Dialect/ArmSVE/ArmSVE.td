@@ -34,21 +34,21 @@ def ArmSVE_Dialect : Dialect {
 // ArmSVE op definitions
 //===----------------------------------------------------------------------===//
 
-class ArmSVE_Op<string mnemonic, list<OpTrait> traits = []> :
+class ArmSVE_Op<string mnemonic, list<Trait> traits = []> :
   Op<ArmSVE_Dialect, mnemonic, traits> {}
 
 class ArmSVE_IntrBinaryOverloadedOp<string mnemonic,
-                                    list<OpTrait> traits = []> :
+                                    list<Trait> traits = []> :
   LLVM_IntrOpBase</*Dialect dialect=*/ArmSVE_Dialect,
                   /*string opName=*/"intr." # mnemonic,
                   /*string enumName=*/"aarch64_sve_" # !subst(".", "_", mnemonic),
                   /*list<int> overloadedResults=*/[0],
                   /*list<int> overloadedOperands=*/[], // defined by result overload
-                  /*list<OpTrait> traits=*/traits,
+                  /*list<Trait> traits=*/traits,
                   /*int numResults=*/1>;
 
 class ScalableMaskedFOp<string mnemonic, string op_description,
-                        list<OpTrait> traits = []> :
+                        list<Trait> traits = []> :
   ArmSVE_Op<mnemonic, !listconcat(traits,
                        [AllTypesMatch<["src1", "src2", "res"]>,
                         TypesMatchWith<
@@ -71,7 +71,7 @@ class ScalableMaskedFOp<string mnemonic, string op_description,
 }
 
 class ScalableMaskedIOp<string mnemonic, string op_description,
-                        list<OpTrait> traits = []> :
+                        list<Trait> traits = []> :
   ArmSVE_Op<mnemonic, !listconcat(traits,
                        [AllTypesMatch<["src1", "src2", "res"]>,
                         TypesMatchWith<

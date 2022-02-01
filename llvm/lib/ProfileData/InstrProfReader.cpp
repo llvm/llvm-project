@@ -38,6 +38,28 @@
 
 using namespace llvm;
 
+// Extracts the variant information from the top 8 bits in the version and
+// returns an enum specifying the variants present.
+static InstrProfKind getProfileKindFromVersion(uint64_t Version) {
+  InstrProfKind ProfileKind = InstrProfKind::Unknown;
+  if (Version & VARIANT_MASK_IR_PROF) {
+    ProfileKind |= InstrProfKind::IR;
+  }
+  if (Version & VARIANT_MASK_CSIR_PROF) {
+    ProfileKind |= InstrProfKind::CS;
+  }
+  if (Version & VARIANT_MASK_INSTR_ENTRY) {
+    ProfileKind |= InstrProfKind::BB;
+  }
+  if (Version & VARIANT_MASK_BYTE_COVERAGE) {
+    ProfileKind |= InstrProfKind::SingleByteCoverage;
+  }
+  if (Version & VARIANT_MASK_FUNCTION_ENTRY_ONLY) {
+    ProfileKind |= InstrProfKind::FunctionEntryOnly;
+  }
+  return ProfileKind;
+}
+
 static Expected<std::unique_ptr<MemoryBuffer>>
 setupMemoryBuffer(const Twine &Path) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
@@ -295,6 +317,11 @@ Error TextInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
     return error(std::move(E));
 
   return success();
+}
+
+template <class IntPtrT>
+InstrProfKind RawInstrProfReader<IntPtrT>::getProfileKind() const {
+  return getProfileKindFromVersion(Version);
 }
 
 template <class IntPtrT>
@@ -716,6 +743,11 @@ InstrProfReaderIndex<HashTableImpl>::InstrProfReaderIndex(
       Buckets, Payload, Base,
       typename HashTableImpl::InfoType(HashType, Version)));
   RecordIterator = HashTable->data_begin();
+}
+
+template <typename HashTableImpl>
+InstrProfKind InstrProfReaderIndex<HashTableImpl>::getProfileKind() const {
+  return getProfileKindFromVersion(FormatVersion);
 }
 
 namespace {

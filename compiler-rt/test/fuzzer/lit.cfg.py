@@ -58,6 +58,9 @@ if sys.platform.startswith('linux'):
 else:
   lit_config.note('linux feature unavailable')
 
+if config.arm_thumb:
+  config.available_features.add('thumb')
+
 config.substitutions.append(('%build_dir', config.cmake_binary_dir))
 libfuzzer_src_root = os.path.join(config.compiler_rt_src_root, "lib", "fuzzer")
 config.substitutions.append(('%libfuzzer_src', libfuzzer_src_root))

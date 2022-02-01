@@ -1482,7 +1482,12 @@ line option ``-regalloc=...``:
 Prolog/Epilog Code Insertion
 ----------------------------
 
+.. note::
+
+  To Be Written
+
 Compact Unwind
+--------------
 
 Throwing an exception requires *unwinding* out of a function. The information on
 how to unwind a given function is traditionally expressed in DWARF unwind

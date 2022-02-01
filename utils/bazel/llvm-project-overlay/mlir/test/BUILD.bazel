@@ -338,6 +338,7 @@ cc_library(
         "//mlir:Support",
         "//mlir:Transforms",
         "//mlir:VectorOps",
+        "//mlir:VectorUtils",
     ],
 )
 
@@ -407,9 +408,9 @@ cc_library(
         "//mlir:TensorDialect",
         "//mlir:TensorTransforms",
         "//mlir:TransformUtils",
-        "//mlir:VectorBufferizableOpInterfaceImpl",
         "//mlir:VectorOps",
         "//mlir:VectorToSCF",
+        "//mlir:VectorTransforms",
     ],
 )
 
@@ -526,6 +527,7 @@ cc_library(
         "//mlir:TransformUtils",
         "//mlir:VectorOps",
         "//mlir:VectorToSCF",
+        "//mlir:VectorTransforms",
         "//mlir:X86Vector",
     ],
 )

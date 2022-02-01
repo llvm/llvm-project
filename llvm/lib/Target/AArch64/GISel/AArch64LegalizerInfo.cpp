@@ -699,8 +699,28 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_DYN_STACKALLOC).lower();
 
-  getActionDefinitionsBuilder({G_BZERO, G_MEMCPY, G_MEMMOVE, G_MEMSET})
-      .libcall();
+  if (ST.hasMOPS()) {
+    // G_BZERO is not supported. Currently it is only emitted by
+    // PreLegalizerCombiner for G_MEMSET with zero constant.
+    getActionDefinitionsBuilder(G_BZERO).unsupported();
+
+    getActionDefinitionsBuilder(G_MEMSET)
+        .legalForCartesianProduct({p0}, {s64}, {s64})
+        .customForCartesianProduct({p0}, {s8}, {s64})
+        .immIdx(0); // Inform verifier imm idx 0 is handled.
+
+    getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE})
+        .legalForCartesianProduct({p0}, {p0}, {s64})
+        .immIdx(0); // Inform verifier imm idx 0 is handled.
+
+    // G_MEMCPY_INLINE does not have a tailcall immediate
+    getActionDefinitionsBuilder(G_MEMCPY_INLINE)
+        .legalForCartesianProduct({p0}, {p0}, {s64});
+
+  } else {
+    getActionDefinitionsBuilder({G_BZERO, G_MEMCPY, G_MEMMOVE, G_MEMSET})
+        .libcall();
+  }
 
   // FIXME: Legal types are only legal with NEON.
   getActionDefinitionsBuilder(G_ABS)
@@ -832,6 +852,11 @@ bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeAtomicCmpxchg128(MI, MRI, Helper);
   case TargetOpcode::G_CTTZ:
     return legalizeCTTZ(MI, Helper);
+  case TargetOpcode::G_BZERO:
+  case TargetOpcode::G_MEMCPY:
+  case TargetOpcode::G_MEMMOVE:
+  case TargetOpcode::G_MEMSET:
+    return legalizeMemOps(MI, Helper);
   }
 
   llvm_unreachable("expected switch to return");
@@ -987,6 +1012,15 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MachineIRBuilder &MIB = Helper.MIRBuilder;
     MIB.buildConstant(MI.getOperand(0).getReg(), 0);
     MI.eraseFromParent();
+    return true;
+  }
+  case Intrinsic::aarch64_mops_memset_tag: {
+    assert(MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS);
+    // Zext the value to 64 bit
+    MachineIRBuilder MIB(MI);
+    auto &Value = MI.getOperand(3);
+    Register ZExtValueReg = MIB.buildAnyExt(LLT::scalar(64), Value).getReg(0);
+    Value.setReg(ZExtValueReg);
     return true;
   }
   }
@@ -1358,4 +1392,21 @@ bool AArch64LegalizerInfo::legalizeCTTZ(MachineInstr &MI,
   MIRBuilder.buildCTLZ(MI.getOperand(0).getReg(), BitReverse);
   MI.eraseFromParent();
   return true;
+}
+
+bool AArch64LegalizerInfo::legalizeMemOps(MachineInstr &MI,
+                                          LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+
+  // Tagged version MOPSMemorySetTagged is legalised in legalizeIntrinsic
+  if (MI.getOpcode() == TargetOpcode::G_MEMSET) {
+    // Zext the value operand to 64 bit
+    auto &Value = MI.getOperand(1);
+    Register ZExtValueReg =
+        MIRBuilder.buildAnyExt(LLT::scalar(64), Value).getReg(0);
+    Value.setReg(ZExtValueReg);
+    return true;
+  }
+
+  return false;
 }

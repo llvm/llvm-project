@@ -452,6 +452,12 @@ enum NodeType : unsigned {
   LDP,
   STP,
   STNP,
+
+  // Memory Operations
+  MOPS_MEMSET,
+  MOPS_MEMSET_TAGGING,
+  MOPS_MEMCOPY,
+  MOPS_MEMMOVE,
 };
 
 } // end namespace AArch64ISD
@@ -889,6 +895,7 @@ private:
 
   SDValue LowerMLOAD(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
 
   bool isEligibleForTailCallOptimization(

@@ -91,7 +91,7 @@ define weak void @__omp_offloading_2b_10393b5_spmd_l12() #0 {
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; CHECK:       user_code.entry:
-; CHECK-NEXT:    call void @spmd_helper() #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    call void @spmd_helper() #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       worker.exit:
@@ -124,7 +124,7 @@ define weak void @__omp_offloading_2b_10393b5_generic_l20() #0 {
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; CHECK:       user_code.entry:
-; CHECK-NEXT:    call void @generic_helper() #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    call void @generic_helper() #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1, i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       worker.exit:
@@ -147,11 +147,11 @@ worker.exit:                                      ; preds = %entry
 ; Function Attrs: convergent noinline nounwind
 define internal void @spmd_helper() #1 {
 ; CHECK-LABEL: define {{[^@]+}}@spmd_helper
-; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
-; CHECK-NEXT:    call void @leaf() #[[ATTR7:[0-9]+]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* noundef @[[GLOB2]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    call void @leaf() #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* noundef @[[GLOB2]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB2]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__ to i8*), i8* noundef @__omp_outlined___wrapper.ID, i8** noundef [[TMP1]], i64 noundef 0)
 ; CHECK-NEXT:    ret void
@@ -172,7 +172,7 @@ define internal void @__omp_outlined__(i32* noalias %.global_tid., i32* noalias 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    call void @unknown() #[[ATTR8:[0-9]+]]
+; CHECK-NEXT:    call void @unknown() #[[ATTR7:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -194,7 +194,7 @@ define internal void @__omp_outlined___wrapper(i16 zeroext %0, i32 %1) #2 {
 ; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
 ; CHECK-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
-; CHECK-NEXT:    call void @__omp_outlined__(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+; CHECK-NEXT:    call void @__omp_outlined__(i32* noalias nocapture noundef nonnull readnone align 4 dereferenceable(4) [[DOTADDR1]], i32* noalias nocapture noundef nonnull readnone align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -221,7 +221,7 @@ declare void @__kmpc_parallel_51(%struct.ident_t*, i32, i32, i32, i32, i8*, i8*,
 ; Function Attrs: convergent noinline nounwind
 define internal void @leaf() #1 {
 ; CHECK-LABEL: define {{[^@]+}}@leaf
-; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 42, i32* @G, align 4
 ; CHECK-NEXT:    ret void
@@ -234,9 +234,9 @@ entry:
 ; Function Attrs: convergent noinline nounwind
 define internal void @generic_helper() #1 {
 ; CHECK-LABEL: define {{[^@]+}}@generic_helper
-; CHECK-SAME: () #[[ATTR4]] {
+; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @leaf() #[[ATTR7]]
+; CHECK-NEXT:    call void @leaf() #[[ATTR6]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -270,14 +270,13 @@ attributes #5 = { convergent }
 !9 = !{!"clang version 14.0.0"}
 ;.
 ; CHECK: attributes #[[ATTR0]] = { convergent noinline norecurse nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
-; CHECK: attributes #[[ATTR1]] = { convergent noinline nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
-; CHECK: attributes #[[ATTR2]] = { nounwind }
-; CHECK: attributes #[[ATTR3:[0-9]+]] = { alwaysinline }
-; CHECK: attributes #[[ATTR4]] = { convergent nofree noinline nosync nounwind willreturn writeonly "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
-; CHECK: attributes #[[ATTR5]] = { convergent nounwind }
-; CHECK: attributes #[[ATTR6]] = { convergent nounwind writeonly }
-; CHECK: attributes #[[ATTR7]] = { convergent nofree nosync nounwind willreturn writeonly }
-; CHECK: attributes #[[ATTR8]] = { convergent }
+; CHECK: attributes #[[ATTR1]] = { nounwind }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { alwaysinline }
+; CHECK: attributes #[[ATTR3]] = { convergent nofree noinline norecurse nosync nounwind willreturn writeonly "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
+; CHECK: attributes #[[ATTR4]] = { convergent nounwind }
+; CHECK: attributes #[[ATTR5]] = { convergent nounwind writeonly }
+; CHECK: attributes #[[ATTR6]] = { convergent nofree nosync nounwind willreturn writeonly }
+; CHECK: attributes #[[ATTR7]] = { convergent }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 0, i32 43, i32 17011637, !"spmd", i32 12, i32 0}
 ; CHECK: [[META1:![0-9]+]] = !{i32 0, i32 43, i32 17011637, !"generic", i32 20, i32 1}

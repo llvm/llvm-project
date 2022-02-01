@@ -8,7 +8,7 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 def TestDialect : Dialect {
   let name = "test";
 }
-class TestFormat_Op<string fmt, list<OpTrait> traits = []>
+class TestFormat_Op<string fmt, list<Trait> traits = []>
     : Op<TestDialect, "format_op", traits> {
   let assemblyFormat = fmt;
 }
@@ -97,7 +97,7 @@ def DirectiveFunctionalTypeInvalidA : TestFormat_Op<[{
 def DirectiveFunctionalTypeInvalidB : TestFormat_Op<[{
   functional-type
 }]>;
-// CHECK: error: expected directive, literal, variable, or optional group
+// CHECK: error: expected literal, variable, directive, or optional group
 def DirectiveFunctionalTypeInvalidC : TestFormat_Op<[{
   functional-type(
 }]>;
@@ -105,7 +105,7 @@ def DirectiveFunctionalTypeInvalidC : TestFormat_Op<[{
 def DirectiveFunctionalTypeInvalidD : TestFormat_Op<[{
   functional-type(operands
 }]>;
-// CHECK: error: expected directive, literal, variable, or optional group
+// CHECK: error: expected literal, variable, directive, or optional group
 def DirectiveFunctionalTypeInvalidE : TestFormat_Op<[{
   functional-type(operands,
 }]>;
@@ -262,7 +262,7 @@ def DirectiveSuccessorsInvalidA : TestFormat_Op<[{
 def DirectiveTypeInvalidA : TestFormat_Op<[{
   type
 }]>;
-// CHECK: error: expected directive, literal, variable, or optional group
+// CHECK: error: expected literal, variable, directive, or optional group
 def DirectiveTypeInvalidB : TestFormat_Op<[{
   type(
 }]>;
@@ -278,7 +278,7 @@ def DirectiveTypeValid : TestFormat_Op<[{
 //===----------------------------------------------------------------------===//
 // functional-type/type operands
 
-// CHECK: error: literals may only be used in a top-level section of the format
+// CHECK: error: literals may only be used in the top-level section of the format
 def DirectiveTypeZOperandInvalidA : TestFormat_Op<[{
   type(`literal`)
 }]>;
@@ -334,7 +334,7 @@ def LiteralInvalidC : TestFormat_Op<[{
 }]>;
 
 // CHECK: error: unexpected end of file in literal
-// CHECK: error: expected directive, literal, variable, or optional group
+// CHECK: error: expected literal, variable, directive, or optional group
 def LiteralInvalidD : TestFormat_Op<[{
   `
 }]>;
@@ -352,15 +352,15 @@ def LiteralValid : TestFormat_Op<[{
 def OptionalInvalidA : TestFormat_Op<[{
   type(($attr^)?) attr-dict
 }]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
-// CHECK: error: expected directive, literal, variable, or optional group
+// CHECK: error: expected literal, variable, directive, or optional group
 def OptionalInvalidB : TestFormat_Op<[{
   () attr-dict
 }]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
-// CHECK: error: optional group specified no anchor element
+// CHECK: error: optional group has no anchor element
 def OptionalInvalidC : TestFormat_Op<[{
   ($attr)? attr-dict
 }]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
-// CHECK: error: first parsable element of an operand group must be an attribute, literal, operand, or region
+// CHECK: error: first parsable element of an optional group must be a literal or variable
 def OptionalInvalidD : TestFormat_Op<[{
   (type($operand) $operand^)? attr-dict
 }]>, Arguments<(ins Optional<I64>:$operand)>;
@@ -370,15 +370,15 @@ def OptionalInvalidE : TestFormat_Op<[{
 }]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
 // CHECK: error: only one element can be marked as the anchor of an optional group
 def OptionalInvalidF : TestFormat_Op<[{
-  ($attr^ $attr2^) attr-dict
+  ($attr^ $attr2^)? attr-dict
 }]>, Arguments<(ins OptionalAttr<I64Attr>:$attr, OptionalAttr<I64Attr>:$attr2)>;
 // CHECK: error: only optional attributes can be used to anchor an optional group
 def OptionalInvalidG : TestFormat_Op<[{
-  ($attr^) attr-dict
+  ($attr^)? attr-dict
 }]>, Arguments<(ins I64Attr:$attr)>;
 // CHECK: error: only variable length operands can be used within an optional group
 def OptionalInvalidH : TestFormat_Op<[{
-  ($arg^) attr-dict
+  ($arg^)? attr-dict
 }]>, Arguments<(ins I64:$arg)>;
 // CHECK: error: only literals, types, and variables can be used within an optional group
 def OptionalInvalidI : TestFormat_Op<[{
@@ -386,7 +386,7 @@ def OptionalInvalidI : TestFormat_Op<[{
 }]>, Arguments<(ins Variadic<I64>:$arg)>;
 // CHECK: error: only literals, types, and variables can be used within an optional group
 def OptionalInvalidJ : TestFormat_Op<[{
-  (attr-dict)
+  (attr-dict^)?
 }]>;
 // CHECK: error: expected '?' after optional group
 def OptionalInvalidK : TestFormat_Op<[{
@@ -404,7 +404,7 @@ def OptionalInvalidM : TestFormat_Op<[{
 def OptionalInvalidN : TestFormat_Op<[{
   ($arg^):
 }]>, Arguments<(ins Variadic<I64>:$arg)>;
-// CHECK: error: expected directive, literal, variable, or optional group
+// CHECK: error: expected literal, variable, directive, or optional group
 def OptionalInvalidO : TestFormat_Op<[{
   ($arg^):(`test`
 }]>, Arguments<(ins Variadic<I64>:$arg)>;

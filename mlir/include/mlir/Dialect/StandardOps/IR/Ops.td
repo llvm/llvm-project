@@ -31,7 +31,7 @@ def StandardOps_Dialect : Dialect {
 }
 
 // Base class for Standard dialect ops.
-class Std_Op<string mnemonic, list<OpTrait> traits = []> :
+class Std_Op<string mnemonic, list<Trait> traits = []> :
     Op<StandardOps_Dialect, mnemonic, traits> {
   // For every standard op, there needs to be a:
   //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)
@@ -43,111 +43,6 @@ class Std_Op<string mnemonic, list<OpTrait> traits = []> :
   let verifier = [{ return ::verify(*this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
-
-// Base class for unary ops. Requires single operand and result. Individual
-// classes will have `operand` accessor.
-class UnaryOp<string mnemonic, list<OpTrait> traits = []> :
-    Op<StandardOps_Dialect, mnemonic, !listconcat(traits, [NoSideEffect])> {
-  let results = (outs AnyType);
-  let printer = [{
-    return printStandardUnaryOp(this->getOperation(), p);
-  }];
-}
-
-class UnaryOpSameOperandAndResultType<string mnemonic,
-                                      list<OpTrait> traits = []> :
-    UnaryOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType])> {
-  let parser = [{
-    return impl::parseOneResultSameOperandTypeOp(parser, result);
-  }];
-}
-
-class FloatUnaryOp<string mnemonic, list<OpTrait> traits = []> :
-    UnaryOpSameOperandAndResultType<mnemonic, traits # [
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
-    ElementwiseMappable.traits>, Arguments<(ins FloatLike:$operand)>;
-
-// Base class for standard arithmetic operations.  Requires operands and
-// results to be of the same type, but does not constrain them to specific
-// types.
-class ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
-    Op<StandardOps_Dialect, mnemonic, traits # [NoSideEffect,
-    SameOperandsAndResultType,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
-    ElementwiseMappable.traits> {
-
-  let results = (outs AnyType:$result);
-
-  let parser = [{
-    return impl::parseOneResultSameOperandTypeOp(parser, result);
-  }];
-}
-
-// Base class for standard binary arithmetic operations.
-class ArithmeticBinaryOp<string mnemonic, list<OpTrait> traits = []> :
-    ArithmeticOp<mnemonic, traits> {
-
-  let parser = [{
-    return impl::parseOneResultSameOperandTypeOp(parser, result);
-  }];
-}
-
-// Base class for standard ternary arithmetic operations.
-class ArithmeticTernaryOp<string mnemonic, list<OpTrait> traits = []> :
-    ArithmeticOp<mnemonic, traits> {
-
-  let parser = [{
-    return impl::parseOneResultSameOperandTypeOp(parser, result);
-  }];
-
-  let printer = [{
-    return printStandardTernaryOp(this->getOperation(), p);
-  }];
-}
-
-// Base class for standard arithmetic operations on integers, vectors and
-// tensors thereof.  This operation takes two operands and returns one result,
-// each of these is required to be of the same type.  This type may be an
-// integer scalar type, a vector whose element type is an integer type, or an
-// integer tensor.  The custom assembly form of the operation is as follows
-//
-//     <op>i %0, %1 : i32
-//
-class IntBinaryOp<string mnemonic, list<OpTrait> traits = []> :
-    ArithmeticBinaryOp<mnemonic,
-      !listconcat(traits,
-                  [DeclareOpInterfaceMethods<VectorUnrollOpInterface>])>,
-    Arguments<(ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs)>;
-
-// Base class for standard arithmetic binary operations on floats, vectors and
-// tensors thereof.  This operation has two operands and returns one result,
-// each of these is required to be of the same type.  This type may be a
-// floating point scalar type, a vector whose element type is a floating point
-// type, or a floating point tensor.  The custom assembly form of the operation
-// is as follows
-//
-//     <op>f %0, %1 : f32
-//
-class FloatBinaryOp<string mnemonic, list<OpTrait> traits = []> :
-    ArithmeticBinaryOp<mnemonic,
-      !listconcat(traits,
-                  [DeclareOpInterfaceMethods<VectorUnrollOpInterface>])>,
-    Arguments<(ins FloatLike:$lhs, FloatLike:$rhs)>;
-
-// Base class for standard arithmetic ternary operations on floats, vectors and
-// tensors thereof.  This operation has three operands and returns one result,
-// each of these is required to be of the same type.  This type may be a
-// floating point scalar type, a vector whose element type is a floating point
-// type, or a floating point tensor.  The custom assembly form of the operation
-// is as follows
-//
-//     <op> %0, %1, %2 : f32
-//
-class FloatTernaryOp<string mnemonic, list<OpTrait> traits = []> :
-    ArithmeticTernaryOp<mnemonic,
-      !listconcat(traits,
-                  [DeclareOpInterfaceMethods<VectorUnrollOpInterface>])>,
-    Arguments<(ins FloatLike:$a, FloatLike:$b, FloatLike:$c)>;
 
 //===----------------------------------------------------------------------===//
 // AssertOp

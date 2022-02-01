@@ -552,7 +552,7 @@ def StdCLibraryFunctionArgsChecker : Checker<"StdCLibraryFunctionArgs">,
            "or is EOF.">,
   Dependencies<[StdCLibraryFunctionsChecker]>,
   WeakDependencies<[CallAndMessageChecker, NonNullParamChecker, StreamChecker]>,
-  Documentation<NotDocumented>;
+  Documentation<HasAlphaDocumentation>;
 
 } // end "alpha.unix"
 

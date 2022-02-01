@@ -18,9 +18,10 @@ add_mlir_library(MLIRAffineTransformsTestPasses
   Core
 
   LINK_LIBS PUBLIC
+  MLIRAffineTransforms
+  MLIRAffineUtils
   MLIRIR
   MLIRPass
-  MLIRAffineTransforms
   MLIRSupport
-  MLIRAffineUtils
+  MLIRVectorUtils
   )

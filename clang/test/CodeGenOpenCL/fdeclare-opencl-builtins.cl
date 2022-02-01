@@ -1,5 +1,12 @@
-// RUN: %clang_cc1 -emit-llvm -o - -O0 -triple spir-unknown-unknown -cl-std=CL1.2 -finclude-default-header %s | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm -o - -O0 -triple spir-unknown-unknown -cl-std=CL1.2 -fdeclare-opencl-builtins -finclude-default-header %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -o - -O0 -triple spir-unknown-unknown -cl-std=CL1.2 -finclude-default-header %s \
+// RUN: | FileCheck %s --check-prefixes CHECK,CHECK-NOGAS
+// RUN: %clang_cc1 -emit-llvm -o - -O0 -triple spir-unknown-unknown -cl-std=CL1.2 -fdeclare-opencl-builtins -finclude-default-header %s \
+// RUN: | FileCheck %s --check-prefixes CHECK,CHECK-NOGAS
+// RUN: %clang_cc1 -emit-llvm -o - -O0 -triple spir-unknown-unknown -cl-std=CL3.0 -fdeclare-opencl-builtins -finclude-default-header %s \
+// RUN: | FileCheck %s --check-prefixes CHECK,CHECK-GAS
+// RUN: %clang_cc1 -emit-llvm -o - -O0 -triple spir-unknown-unknown -cl-std=CL3.0 -fdeclare-opencl-builtins -finclude-default-header \
+// RUN: -cl-ext=-__opencl_c_generic_address_space,-__opencl_c_pipes,-__opencl_c_device_enqueue %s \
+// RUN: | FileCheck %s --check-prefixes CHECK,CHECK-NOGAS
 
 // Test that mix is correctly defined.
 // CHECK-LABEL: @test_float
@@ -30,6 +37,15 @@ kernel void test_pure_attr(read_only image1d_t img) {
 // CHECK: call spir_func i32 @_Z12get_local_idj
 kernel void test_mangling() {
   size_t lid = get_local_id(0);
+}
+
+// Test that the correct builtin is called depending on the generic address
+// space feature availability.
+// CHECK-LABEL: @test_generic_optionality
+// CHECK-GAS: call spir_func float @_Z5fractfPU3AS4f
+// CHECK-NOGAS: call spir_func float @_Z5fractfPf
+void test_generic_optionality(float a, float *b) {
+  float res = fract(a, b);
 }
 
 // CHECK: attributes [[ATTR_CONST]] =

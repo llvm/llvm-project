@@ -390,26 +390,15 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
   //   align=4
   //   alignstack=8
   //
-  if (hasAttribute(Attribute::Alignment)) {
-    std::string Result;
-    Result += "align";
-    Result += (InAttrGrp) ? "=" : " ";
-    Result += utostr(getValueAsInt());
-    return Result;
-  }
+  if (hasAttribute(Attribute::Alignment))
+    return (InAttrGrp ? "align=" + Twine(getValueAsInt())
+                      : "align " + Twine(getValueAsInt()))
+        .str();
 
   auto AttrWithBytesToString = [&](const char *Name) {
-    std::string Result;
-    Result += Name;
-    if (InAttrGrp) {
-      Result += "=";
-      Result += utostr(getValueAsInt());
-    } else {
-      Result += "(";
-      Result += utostr(getValueAsInt());
-      Result += ")";
-    }
-    return Result;
+    return (InAttrGrp ? Name + ("=" + Twine(getValueAsInt()))
+                      : Name + ("(" + Twine(getValueAsInt())) + ")")
+        .str();
   };
 
   if (hasAttribute(Attribute::StackAlignment))
@@ -426,26 +415,18 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     Optional<unsigned> NumElems;
     std::tie(ElemSize, NumElems) = getAllocSizeArgs();
 
-    std::string Result = "allocsize(";
-    Result += utostr(ElemSize);
-    if (NumElems.hasValue()) {
-      Result += ',';
-      Result += utostr(*NumElems);
-    }
-    Result += ')';
-    return Result;
+    return (NumElems
+                ? "allocsize(" + Twine(ElemSize) + "," + Twine(*NumElems) + ")"
+                : "allocsize(" + Twine(ElemSize) + ")")
+        .str();
   }
 
   if (hasAttribute(Attribute::VScaleRange)) {
     unsigned MinValue = getVScaleRangeMin();
     Optional<unsigned> MaxValue = getVScaleRangeMax();
-
-    std::string Result = "vscale_range(";
-    Result += utostr(MinValue);
-    Result += ',';
-    Result += utostr(MaxValue.getValueOr(0));
-    Result += ')';
-    return Result;
+    return ("vscale_range(" + Twine(MinValue) + "," +
+            Twine(MaxValue.getValueOr(0)) + ")")
+        .str();
   }
 
   // Convert target-dependent attributes to strings of the form:

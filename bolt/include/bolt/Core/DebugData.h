@@ -715,8 +715,11 @@ class DebugAbbrevWriter {
     std::unique_ptr<DebugBufferVector> Buffer;
     std::unique_ptr<raw_svector_ostream> Stream;
   };
-  /// Map original unit abbrev offset to abbreviations data.
-  std::map<uint64_t, AbbrevData> UnitsAbbrevData;
+  /// Map original unit to abbreviations data.
+  std::unordered_map<const DWARFUnit *, AbbrevData *> UnitsAbbrevData;
+
+  /// Map from Hash Signature to AbbrevData.
+  llvm::StringMap<std::unique_ptr<AbbrevData>> AbbrevDataCache;
 
   /// Attributes substitution (patch) information.
   struct PatchInfo {
@@ -783,10 +786,8 @@ public:
   /// Return an offset in the finalized abbrev section corresponding to CU/TU.
   uint64_t getAbbreviationsOffsetForUnit(const DWARFUnit &Unit) {
     assert(!DWOId && "offsets are tracked for non-DWO units only");
-    assert(UnitsAbbrevData.find(Unit.getAbbreviationsOffset()) !=
-               UnitsAbbrevData.end() &&
-           "no abbrev data found for unit");
-    return UnitsAbbrevData[Unit.getAbbreviationsOffset()].Offset;
+    assert(UnitsAbbrevData.count(&Unit) && "no abbrev data found for unit");
+    return UnitsAbbrevData[&Unit]->Offset;
   }
 };
 

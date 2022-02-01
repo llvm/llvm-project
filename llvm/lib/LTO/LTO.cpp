@@ -1372,7 +1372,7 @@ public:
                       sys::fs::OpenFlags::OF_None);
     if (EC)
       return errorCodeToError(EC);
-    WriteIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex);
+    writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex);
 
     if (ShouldEmitImportsFiles) {
       EC = EmitImportsFiles(ModulePath, NewModulePath + ".imports",

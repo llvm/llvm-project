@@ -50,3 +50,20 @@ define i8* @test6() nounwind {
   %ret = tail call align 8 i8* @foo()
   ret i8* %ret
 }
+
+
+define noundef i8* @test7() nounwind {
+; CHECK-LABEL: test7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    jmp foo # TAILCALL
+  %ret = tail call i8* @foo()
+  ret i8* %ret
+}
+
+define i8* @test8() nounwind {
+; CHECK-LABEL: test8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    jmp foo # TAILCALL
+  %ret = tail call noundef i8* @foo()
+  ret i8* %ret
+}

@@ -4782,6 +4782,7 @@ bool AMDGPULegalizerInfo::legalizeTrapIntrinsic(MachineInstr &MI,
     case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
       return legalizeTrapHsaQueuePtr(MI, MRI, B);
     case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
       return ST.supportsGetDoorbellID() ?
           legalizeTrapHsa(MI, MRI, B) :
           legalizeTrapHsaQueuePtr(MI, MRI, B);

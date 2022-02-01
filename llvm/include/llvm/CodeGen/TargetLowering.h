@@ -3485,6 +3485,12 @@ public:
   bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
                             DAGCombinerInfo &DCI) const;
 
+  /// Helper wrapper around SimplifyDemandedBits.
+  /// Adds Op back to the worklist upon success.
+  bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
+                            const APInt &DemandedElts,
+                            DAGCombinerInfo &DCI) const;
+
   /// More limited version of SimplifyDemandedBits that can be used to "look
   /// through" ops that don't contribute to the DemandedBits/DemandedElts -
   /// bitwise ops etc.
@@ -3676,11 +3682,11 @@ public:
 
   /// Return if the N is a constant or constant vector equal to the true value
   /// from getBooleanContents().
-  bool isConstTrueVal(const SDNode *N) const;
+  bool isConstTrueVal(SDValue N) const;
 
   /// Return if the N is a constant or constant vector equal to the false value
   /// from getBooleanContents().
-  bool isConstFalseVal(const SDNode *N) const;
+  bool isConstFalseVal(SDValue N) const;
 
   /// Return if \p N is a True value when extended to \p VT.
   bool isExtendedTrueVal(const ConstantSDNode *N, EVT VT, bool SExt) const;

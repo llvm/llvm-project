@@ -1,5 +1,7 @@
 add_libc_testsuite(libc_unistd_unittests)
 
+add_subdirectory(testdata)
+
 add_libc_unittest(
   read_write_test
   SUITE
@@ -15,4 +17,46 @@ add_libc_unittest(
     libc.src.unistd.read
     libc.src.unistd.write
     libc.test.errno_setter_matcher
+)
+
+add_libc_unittest(
+  rmdir_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    rmdir_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.fcntl
+    libc.src.sys.stat.mkdir
+    libc.src.unistd.rmdir
+)
+
+add_libc_unittest(
+  unlink_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    unlink_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.unistd
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.unlink
+)
+
+add_libc_unittest(
+  unlinkat_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    unlinkat_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.unistd
+    libc.src.fcntl.open
+    libc.src.fcntl.openat
+    libc.src.unistd.close
+    libc.src.unistd.unlinkat
 )

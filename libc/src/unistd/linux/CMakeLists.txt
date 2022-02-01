@@ -38,6 +38,48 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  rmdir
+  SRCS
+    rmdir.cpp
+  HDRS
+    ../rmdir.h
+  DEPENDS
+    libc.include.fcntl
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.__errno_location
+)
+
+add_entrypoint_object(
+  unlink
+  SRCS
+    unlink.cpp
+  HDRS
+    ../unlink.h
+  DEPENDS
+    libc.include.fcntl
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.__errno_location
+)
+
+add_entrypoint_object(
+  unlinkat
+  SRCS
+    unlinkat.cpp
+  HDRS
+    ../unlinkat.h
+  DEPENDS
+    libc.include.fcntl
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.__errno_location
+)
+
+add_entrypoint_object(
   write
   SRCS
     write.cpp

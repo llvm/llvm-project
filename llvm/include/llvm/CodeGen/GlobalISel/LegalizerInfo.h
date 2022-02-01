@@ -432,16 +432,6 @@ class LegalizeRuleSet {
     return TypeIdx;
   }
 
-  unsigned immIdx(unsigned ImmIdx) {
-    assert(ImmIdx <= (MCOI::OPERAND_LAST_GENERIC_IMM -
-                      MCOI::OPERAND_FIRST_GENERIC_IMM) &&
-           "Imm Index is out of bounds");
-#ifndef NDEBUG
-    ImmIdxsCovered.set(ImmIdx);
-#endif
-    return ImmIdx;
-  }
-
   void markAllIdxsAsCovered() {
 #ifndef NDEBUG
     TypeIdxsCovered.set();
@@ -567,6 +557,16 @@ public:
     AliasOf = Opcode;
   }
   unsigned getAlias() const { return AliasOf; }
+
+  unsigned immIdx(unsigned ImmIdx) {
+    assert(ImmIdx <= (MCOI::OPERAND_LAST_GENERIC_IMM -
+                      MCOI::OPERAND_FIRST_GENERIC_IMM) &&
+           "Imm Index is out of bounds");
+#ifndef NDEBUG
+    ImmIdxsCovered.set(ImmIdx);
+#endif
+    return ImmIdx;
+  }
 
   /// The instruction is legal if predicate is true.
   LegalizeRuleSet &legalIf(LegalityPredicate Predicate) {
@@ -824,10 +824,21 @@ public:
   LegalizeRuleSet &customForCartesianProduct(std::initializer_list<LLT> Types) {
     return actionForCartesianProduct(LegalizeAction::Custom, Types);
   }
+  /// The instruction is custom when type indexes 0 and 1 are both in their
+  /// respective lists.
   LegalizeRuleSet &
   customForCartesianProduct(std::initializer_list<LLT> Types0,
                             std::initializer_list<LLT> Types1) {
     return actionForCartesianProduct(LegalizeAction::Custom, Types0, Types1);
+  }
+  /// The instruction is custom when when type indexes 0, 1, and 2 are all in
+  /// their respective lists.
+  LegalizeRuleSet &
+  customForCartesianProduct(std::initializer_list<LLT> Types0,
+                            std::initializer_list<LLT> Types1,
+                            std::initializer_list<LLT> Types2) {
+    return actionForCartesianProduct(LegalizeAction::Custom, Types0, Types1,
+                                     Types2);
   }
 
   /// Unconditionally custom lower.

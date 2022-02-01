@@ -548,11 +548,10 @@ getLambdaProperties(const MatchFinder::MatchResult &Result) {
   LambdaProperties LP;
 
   const auto *Bind = Result.Nodes.getNodeAs<CallExpr>("bind");
-  const auto *Decl = dyn_cast<FunctionDecl>(Bind->getCalleeDecl());
-  const auto *NS =
-      dyn_cast<NamespaceDecl>(Decl->getEnclosingNamespaceContext());
+  const auto *Decl = cast<FunctionDecl>(Bind->getCalleeDecl());
+  const auto *NS = cast<NamespaceDecl>(Decl->getEnclosingNamespaceContext());
   while (NS->isInlineNamespace())
-    NS = dyn_cast<NamespaceDecl>(NS->getDeclContext());
+    NS = cast<NamespaceDecl>(NS->getDeclContext());
   LP.BindNamespace = NS->getName();
 
   LP.Callable.Type = getCallableType(Result);

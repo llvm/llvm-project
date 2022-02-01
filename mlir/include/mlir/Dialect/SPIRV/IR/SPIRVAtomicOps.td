@@ -14,7 +14,7 @@
 #ifndef MLIR_DIALECT_SPIRV_IR_ATOMIC_OPS
 #define MLIR_DIALECT_SPIRV_IR_ATOMIC_OPS
 
-class SPV_AtomicUpdateOp<string mnemonic, list<OpTrait> traits = []> :
+class SPV_AtomicUpdateOp<string mnemonic, list<Trait> traits = []> :
   SPV_Op<mnemonic, traits> {
   let parser = [{ return ::parseAtomicUpdateOp(parser, result, false); }];
   let printer = [{ return ::printAtomicUpdateOp(getOperation(), p); }];
@@ -31,7 +31,7 @@ class SPV_AtomicUpdateOp<string mnemonic, list<OpTrait> traits = []> :
   );
 }
 
-class SPV_AtomicUpdateWithValueOp<string mnemonic, list<OpTrait> traits = []> :
+class SPV_AtomicUpdateWithValueOp<string mnemonic, list<Trait> traits = []> :
   SPV_Op<mnemonic, traits> {
   let parser = [{ return ::parseAtomicUpdateOp(parser, result, true); }];
   let printer = [{ return ::printAtomicUpdateOp(getOperation(), p); }];
