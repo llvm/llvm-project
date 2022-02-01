@@ -99,6 +99,8 @@ Optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI) {
     return ELF::ELFABIVERSION_AMDGPU_HSA_V3;
   case 4:
     return ELF::ELFABIVERSION_AMDGPU_HSA_V4;
+  case 5:
+    return ELF::ELFABIVERSION_AMDGPU_HSA_V5;
   default:
     report_fatal_error(Twine("Unsupported AMDHSA Code Object Version ") +
                        Twine(AmdhsaCodeObjectVersion));
@@ -123,8 +125,15 @@ bool isHsaAbiVersion4(const MCSubtargetInfo *STI) {
   return false;
 }
 
-bool isHsaAbiVersion3Or4(const MCSubtargetInfo *STI) {
-  return isHsaAbiVersion3(STI) || isHsaAbiVersion4(STI);
+bool isHsaAbiVersion5(const MCSubtargetInfo *STI) {
+  if (Optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
+    return *HsaAbiVer == ELF::ELFABIVERSION_AMDGPU_HSA_V5;
+  return false;
+}
+
+bool isHsaAbiVersion3AndAbove(const MCSubtargetInfo *STI) {
+  return isHsaAbiVersion3(STI) || isHsaAbiVersion4(STI) ||
+         isHsaAbiVersion5(STI);
 }
 
 #define GET_MIMGBaseOpcodesTable_IMPL
@@ -495,6 +504,7 @@ std::string AMDGPUTargetID::toString() const {
         Features += "+sram-ecc";
       break;
     case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
       // sramecc.
       if (getSramEccSetting() == TargetIDSetting::Off)
         Features += ":sramecc-";
