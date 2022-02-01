@@ -33,7 +33,7 @@ public:
 private:
   void createFiles(llvm::opt::InputArgList &args);
   void inferMachineType();
-  template <class ELFT> void link(llvm::opt::InputArgList &args);
+  void link(llvm::opt::InputArgList &args);
   template <class ELFT> void compileBitcodeFiles(bool skipLinkedOutput);
 
   // True if we are in --whole-archive and --no-whole-archive.
