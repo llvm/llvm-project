@@ -8,10 +8,7 @@ declare <2 x i16> @llvm.ushl.sat.v2i16(<2 x i16>, <2 x i16>)
 define i16 @combine_shl_undef(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shl_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    csetm w8, ne
-; CHECK-NEXT:    lsr w0, w8, #16
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.ushl.sat.i16(i16 undef, i16 %y)
   ret i16 %tmp
@@ -21,10 +18,6 @@ define i16 @combine_shl_undef(i16 %x, i16 %y) nounwind {
 define i16 @combine_shl_by_undef(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shl_by_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w8, w0, #16
-; CHECK-NEXT:    cmp w8, w8
-; CHECK-NEXT:    csinv w8, w8, wzr, eq
-; CHECK-NEXT:    lsr w0, w8, #16
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.ushl.sat.i16(i16 %x, i16 undef)
   ret i16 %tmp
@@ -34,10 +27,7 @@ define i16 @combine_shl_by_undef(i16 %x, i16 %y) nounwind {
 define i16 @combine_shl_poison(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shl_poison:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    csetm w8, ne
-; CHECK-NEXT:    lsr w0, w8, #16
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.ushl.sat.i16(i16 poison, i16 %y)
   ret i16 %tmp
@@ -47,10 +37,6 @@ define i16 @combine_shl_poison(i16 %x, i16 %y) nounwind {
 define i16 @combine_shl_by_poison(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shl_by_poison:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w8, w0, #16
-; CHECK-NEXT:    cmp w8, w8
-; CHECK-NEXT:    csinv w8, w8, wzr, eq
-; CHECK-NEXT:    lsr w0, w8, #16
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.ushl.sat.i16(i16 %x, i16 poison)
   ret i16 %tmp
@@ -60,10 +46,6 @@ define i16 @combine_shl_by_poison(i16 %x, i16 %y) nounwind {
 define i16 @combine_shl_by_bitwidth(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shl_by_bitwidth:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w8, w0, #16
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    csetm w8, ne
-; CHECK-NEXT:    lsr w0, w8, #16
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.ushl.sat.i16(i16 %x, i16 16)
   ret i16 %tmp
@@ -73,10 +55,7 @@ define i16 @combine_shl_by_bitwidth(i16 %x, i16 %y) nounwind {
 define i16 @combine_shl_zero(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shl_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    csetm w8, ne
-; CHECK-NEXT:    lsr w0, w8, #16
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.ushl.sat.i16(i16 0, i16 %y)
   ret i16 %tmp
@@ -86,10 +65,6 @@ define i16 @combine_shl_zero(i16 %x, i16 %y) nounwind {
 define i16 @combine_shlsat_by_zero(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shlsat_by_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w8, w0, #16
-; CHECK-NEXT:    cmp w8, w8
-; CHECK-NEXT:    csinv w8, w8, wzr, eq
-; CHECK-NEXT:    lsr w0, w8, #16
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.ushl.sat.i16(i16 %x, i16 0)
   ret i16 %tmp
@@ -99,11 +74,7 @@ define i16 @combine_shlsat_by_zero(i16 %x, i16 %y) nounwind {
 define i16 @combine_shlsat_constfold(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shlsat_constfold:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #524288
-; CHECK-NEXT:    cmp w8, #128, lsl #12 // =524288
-; CHECK-NEXT:    mov w8, #2097152
-; CHECK-NEXT:    csinv w8, w8, wzr, eq
-; CHECK-NEXT:    lsr w0, w8, #16
+; CHECK-NEXT:    mov w0, #32
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.ushl.sat.i16(i16 8, i16 2)
   ret i16 %tmp
@@ -113,10 +84,7 @@ define i16 @combine_shlsat_constfold(i16 %x, i16 %y) nounwind {
 define i16 @combine_shlsat_satmax(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shlsat_satmax:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #524288
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    csetm w8, ne
-; CHECK-NEXT:    lsr w0, w8, #16
+; CHECK-NEXT:    mov w0, #65535
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.ushl.sat.i16(i16 8, i16 15)
   ret i16 %tmp
@@ -130,17 +98,8 @@ define void @combine_shlsat_vector() nounwind {
 ; CHECK-LABEL: combine_shlsat_vector:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    mov w8, #524288
-; CHECK-NEXT:    mov w9, #2097152
-; CHECK-NEXT:    cmp w8, #128, lsl #12 // =524288
-; CHECK-NEXT:    csinv w9, w9, wzr, eq
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    csetm w8, ne
-; CHECK-NEXT:    fmov s0, w9
-; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    ushr v0.2s, v0.2s, #16
-; CHECK-NEXT:    mov w1, v0.s[1]
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    mov w0, #32
+; CHECK-NEXT:    mov w1, #65535
 ; CHECK-NEXT:    bl sink2xi16
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

@@ -8,12 +8,7 @@ declare <4 x i16> @llvm.sshl.sat.v4i16(<4 x i16>, <4 x i16>)
 define i16 @combine_shl_undef(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shl_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    mov w9, #-2147483648
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    cinv w9, w9, ge
-; CHECK-NEXT:    csel w8, w9, w8, ne
-; CHECK-NEXT:    asr w0, w8, #16
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.sshl.sat.i16(i16 undef, i16 %y)
   ret i16 %tmp
@@ -23,13 +18,6 @@ define i16 @combine_shl_undef(i16 %x, i16 %y) nounwind {
 define i16 @combine_shl_by_undef(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shl_by_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w9, w0, #16
-; CHECK-NEXT:    mov w8, #-2147483648
-; CHECK-NEXT:    cmp w9, #0
-; CHECK-NEXT:    cinv w8, w8, ge
-; CHECK-NEXT:    cmp w9, w9
-; CHECK-NEXT:    csel w8, w8, w9, ne
-; CHECK-NEXT:    asr w0, w8, #16
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.sshl.sat.i16(i16 %x, i16 undef)
   ret i16 %tmp
@@ -39,12 +27,7 @@ define i16 @combine_shl_by_undef(i16 %x, i16 %y) nounwind {
 define i16 @combine_shl_poison(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shl_poison:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    mov w9, #-2147483648
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    cinv w9, w9, ge
-; CHECK-NEXT:    csel w8, w9, w8, ne
-; CHECK-NEXT:    asr w0, w8, #16
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.sshl.sat.i16(i16 poison, i16 %y)
   ret i16 %tmp
@@ -54,13 +37,6 @@ define i16 @combine_shl_poison(i16 %x, i16 %y) nounwind {
 define i16 @combine_shl_by_poison(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shl_by_poison:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w9, w0, #16
-; CHECK-NEXT:    mov w8, #-2147483648
-; CHECK-NEXT:    cmp w9, #0
-; CHECK-NEXT:    cinv w8, w8, ge
-; CHECK-NEXT:    cmp w9, w9
-; CHECK-NEXT:    csel w8, w8, w9, ne
-; CHECK-NEXT:    asr w0, w8, #16
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.sshl.sat.i16(i16 %x, i16 poison)
   ret i16 %tmp
@@ -70,12 +46,6 @@ define i16 @combine_shl_by_poison(i16 %x, i16 %y) nounwind {
 define i16 @combine_shl_by_bitwidth(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shl_by_bitwidth:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w9, w0, #16
-; CHECK-NEXT:    mov w8, #-2147483648
-; CHECK-NEXT:    cmp w9, #0
-; CHECK-NEXT:    cinv w8, w8, ge
-; CHECK-NEXT:    csel w8, w8, wzr, ne
-; CHECK-NEXT:    asr w0, w8, #16
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.sshl.sat.i16(i16 %x, i16 16)
   ret i16 %tmp
@@ -85,12 +55,7 @@ define i16 @combine_shl_by_bitwidth(i16 %x, i16 %y) nounwind {
 define i16 @combine_shl_zero(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shl_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    mov w9, #-2147483648
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    cinv w9, w9, ge
-; CHECK-NEXT:    csel w8, w9, w8, ne
-; CHECK-NEXT:    asr w0, w8, #16
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.sshl.sat.i16(i16 0, i16 %y)
   ret i16 %tmp
@@ -100,13 +65,6 @@ define i16 @combine_shl_zero(i16 %x, i16 %y) nounwind {
 define i16 @combine_shlsat_by_zero(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shlsat_by_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w9, w0, #16
-; CHECK-NEXT:    mov w8, #-2147483648
-; CHECK-NEXT:    cmp w9, #0
-; CHECK-NEXT:    cinv w8, w8, ge
-; CHECK-NEXT:    cmp w9, w9
-; CHECK-NEXT:    csel w8, w8, w9, ne
-; CHECK-NEXT:    asr w0, w8, #16
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.sshl.sat.i16(i16 %x, i16 0)
   ret i16 %tmp
@@ -116,14 +74,7 @@ define i16 @combine_shlsat_by_zero(i16 %x, i16 %y) nounwind {
 define i16 @combine_shlsat_constfold(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shlsat_constfold:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #524288
-; CHECK-NEXT:    mov w9, #-2147483648
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    cinv w9, w9, ge
-; CHECK-NEXT:    cmp w8, #128, lsl #12 // =524288
-; CHECK-NEXT:    mov w8, #2097152
-; CHECK-NEXT:    csel w8, w9, w8, ne
-; CHECK-NEXT:    asr w0, w8, #16
+; CHECK-NEXT:    mov w0, #32
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.sshl.sat.i16(i16 8, i16 2)
   ret i16 %tmp
@@ -133,12 +84,7 @@ define i16 @combine_shlsat_constfold(i16 %x, i16 %y) nounwind {
 define i16 @combine_shlsat_satmax(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shlsat_satmax:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #524288
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    mov w8, #-2147483648
-; CHECK-NEXT:    cinv w8, w8, ge
-; CHECK-NEXT:    csel w8, w8, wzr, ne
-; CHECK-NEXT:    asr w0, w8, #16
+; CHECK-NEXT:    mov w0, #32767
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.sshl.sat.i16(i16 8, i16 15)
   ret i16 %tmp
@@ -148,12 +94,7 @@ define i16 @combine_shlsat_satmax(i16 %x, i16 %y) nounwind {
 define i16 @combine_shlsat_satmin(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: combine_shlsat_satmin:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-524288
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    mov w8, #-2147483648
-; CHECK-NEXT:    cinv w8, w8, ge
-; CHECK-NEXT:    csel w8, w8, wzr, ne
-; CHECK-NEXT:    asr w0, w8, #16
+; CHECK-NEXT:    mov w0, #32768
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.sshl.sat.i16(i16 -8, i16 15)
   ret i16 %tmp
@@ -166,33 +107,10 @@ define void @combine_shlsat_vector() nounwind {
 ; CHECK-LABEL: combine_shlsat_vector:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    mov w8, #524288
-; CHECK-NEXT:    mov w9, #-2147483648
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    cinv w10, w9, ge
-; CHECK-NEXT:    csel w11, w10, wzr, ne
-; CHECK-NEXT:    cmp w8, #128, lsl #12 // =524288
-; CHECK-NEXT:    mov w8, #2097152
-; CHECK-NEXT:    asr w11, w11, #16
-; CHECK-NEXT:    csel w8, w10, w8, ne
-; CHECK-NEXT:    mov w10, #-524288
-; CHECK-NEXT:    asr w8, w8, #16
-; CHECK-NEXT:    cmp w10, #0
-; CHECK-NEXT:    cinv w9, w9, ge
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    csel w8, w9, wzr, ne
-; CHECK-NEXT:    cmn w10, #128, lsl #12 // =524288
-; CHECK-NEXT:    mov w10, #-2097152
-; CHECK-NEXT:    csel w9, w9, w10, ne
-; CHECK-NEXT:    asr w8, w8, #16
-; CHECK-NEXT:    mov v0.h[1], w11
-; CHECK-NEXT:    asr w9, w9, #16
-; CHECK-NEXT:    mov v0.h[2], w9
-; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    umov w0, v0.h[0]
-; CHECK-NEXT:    umov w1, v0.h[1]
-; CHECK-NEXT:    umov w2, v0.h[2]
-; CHECK-NEXT:    umov w3, v0.h[3]
+; CHECK-NEXT:    mov w0, #32
+; CHECK-NEXT:    mov w1, #32767
+; CHECK-NEXT:    mov w2, #65504
+; CHECK-NEXT:    mov w3, #32768
 ; CHECK-NEXT:    bl sink4xi16
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
