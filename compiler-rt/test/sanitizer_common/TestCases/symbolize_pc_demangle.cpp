@@ -12,7 +12,7 @@
 char buffer[10000];
 
 __attribute__((noinline)) static void Symbolize() {
-  __sanitizer_symbolize_pc(__builtin_return_address(0), "%p %F %L", buffer,
+  __sanitizer_symbolize_pc(__sanitizer_return_address(), "%p %F %L", buffer,
                            sizeof(buffer));
   for (char *p = buffer; strlen(p); p += strlen(p) + 1)
     printf("%s\n", p);
