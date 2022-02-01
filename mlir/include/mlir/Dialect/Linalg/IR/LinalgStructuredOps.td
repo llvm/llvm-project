@@ -16,7 +16,6 @@
 
 include "mlir/Dialect/Linalg/IR/LinalgBase.td"
 include "mlir/Dialect/Linalg/IR/LinalgInterfaces.td"
-include "mlir/Interfaces/CopyOpInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -57,119 +56,6 @@ class LinalgStructured_Op<string mnemonic, list<Trait> props>
 //===----------------------------------------------------------------------===//
 // Named Linalg ops, implemented as special configurations of generic ops.
 //===----------------------------------------------------------------------===//
-// At the moment these are not declarative and require a bunch of C++ code.
-// In the future, these should be migrated to a declarative specification.
-def CopyOp : LinalgStructured_Op<"copy", [CopyOpInterface]> {
-  let description = [{
-    Copies the data in the input view into the output view.
-
-    Usage:
-
-    ```mlir
-    linalg.copy(%arg0, %arg1) : memref<?xf32, stride_specification>,
-                                memref<?xf32, stride_specification>
-    ```
-
-    One possible lowering to loop form is:
-
-    ```mlir
-    %0 = linalg.dim %arg0, 0 : index
-    scf.for %i0 = %c0 to %0 step %c1 {
-      %1 = load %arg0[%i0] : memref<?xf32, stride_specification>
-      store %1, %arg1[%i0] : memref<?xf32, stride_specification>
-    }
-    ```
-
-    Optionally, can take `input_permutation` and `output_permutation` attributes
-    to reorder the dimensions of the input and output views.
-
-    Usage:
-
-    ```mlir
-    linalg.copy(%arg0, %arg1) {inputPermutation : (i, j, k) -> (i, k, j),
-                               outputPermutation : (i, j, k) -> (k, j, i)} :
-      memref<?x?x?xf32, stride_specification>,
-      memref<?x?x?xf32, stride_specification>
-    ```
-
-    One possible lowering to loop form is:
-
-    ```mlir
-    %0 = linalg.dim %arg0, 0
-    %1 = linalg.dim %arg0, 1
-    %2 = linalg.dim %arg0, 2
-    scf.for %i0 = %c0 to %{{.*}} step %c1 {
-      scf.for %i1 = %c0 to %{{.*}} step %c1 {
-        scf.for %i2 = %c0 to %{{.*}} step %c1 {
-          %3 = load %arg0[%i0, %i2, %i1] :
-                  memref<?x?x?xf32, stride_specification>
-          store %3, %arg1[%i2, %i1, %i0] :
-                  memref<?x?x?xf32, stride_specification>
-    ```
-
-    The views are expected to be compatible for correctness but this is not
-    enforced at the moment.
-  }];
-
-  let arguments = (ins
-    AnyStridedMemRef:$input,
-    AnyStridedMemRef:$output,
-    OptionalAttr<AffineMapAttr>:$inputPermutation,
-    OptionalAttr<AffineMapAttr>:$outputPermutation);
-  let regions = (region AnyRegion:$region);
-
-  let builders = [
-    OpBuilder<(ins "Value":$input, "Value":$output,
-      CArg<"AffineMap", "AffineMap()">:$inputPermutation,
-      CArg<"AffineMap", "AffineMap()">:$outputPermutation,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>];
-
-  let extraClassDeclaration = structuredOpsDecls # [{
-    ValueRange inputs() { return getOperands().take_front(); }
-    ValueRange outputs() { return getOperands().take_back(); }
-
-    // Rank-polymorphic.
-    //   filling_value -> O(ivs) with parallel iterators.
-    ArrayAttr iterator_types() {
-      int64_t nPar = getRank(getInputOperand(0));
-      return Builder(getContext()).getStrArrayAttr(
-        SmallVector<StringRef, 8>(nPar, getParallelIteratorTypeName()));
-    }
-
-    // I(input_perm(ivs)) -> O(output_perm(ivs))
-    ArrayAttr indexing_maps() {
-      MLIRContext *context = getContext();
-      auto maybeInputMap = inputPermutation();
-      auto maybeOutputMap = outputPermutation();
-      int64_t inputRank = getRank(getInputOperand(0));
-      int64_t outputRank = getRank(getOutputOperand(0));
-      return Builder(getContext()).getAffineMapArrayAttr({
-          extractOrIdentityMap(maybeInputMap, inputRank, context),
-          extractOrIdentityMap(maybeOutputMap, outputRank, context)});
-    }
-
-    Value getSource() { return input();}
-    Value getTarget() { return output(); }
-
-    static void regionBuilder(ImplicitLocOpBuilder &b, Block &block);
-    static std::function<void(ImplicitLocOpBuilder &b, Block &block)>
-    getRegionBuilder() {
-      return &regionBuilder;
-    }
-    static unsigned getNumRegionArgs() { return 2; }
-  }];
-  let verifier = [{ return ::verify(*this); }];
-
-  let assemblyFormat = [{
-    `(` $input `,` $output `)` attr-dict `:`
-        type($input) `,` type($output)
-      custom<CopyOpRegion>($region, ref(type($input)), ref(type($input)))
-  }];
-
-  let hasCanonicalizer = 1;
-  let hasFolder = 1;
-  let skipDefaultBuilders = 1;
-}
 
 def FillOp : LinalgStructured_Op<"fill", []> {
   let arguments = (ins

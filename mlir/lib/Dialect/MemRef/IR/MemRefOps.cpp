@@ -508,6 +508,21 @@ void CopyOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<FoldCopyOfCast, FoldSelfCopy>(context);
 }
 
+LogicalResult CopyOp::fold(ArrayRef<Attribute> cstOperands,
+                           SmallVectorImpl<OpFoldResult> &results) {
+  /// copy(memrefcast) -> copy
+  bool folded = false;
+  Operation *op = *this;
+  for (OpOperand &operand : op->getOpOperands()) {
+    auto castOp = operand.get().getDefiningOp<memref::CastOp>();
+    if (castOp && memref::CastOp::canFoldIntoConsumerOp(castOp)) {
+      operand.set(castOp.getOperand());
+      folded = true;
+    }
+  }
+  return success(folded);
+}
+
 //===----------------------------------------------------------------------===//
 // DeallocOp
 //===----------------------------------------------------------------------===//

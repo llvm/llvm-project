@@ -52,7 +52,7 @@ def LinalgComprehensiveModuleBufferize :
     Option<"useAlloca", "use-alloca", "bool",
            /*default=*/"false",
            "Use stack allocations for memrefs (for testing purposes only)">,
-    Option<"useLinalgCopy", "use-linalg-copy", "bool",
+    Option<"useLinalgCopy", "use-memref.copy", "bool",
            /*default=*/"false",
            "Use a copy operation implemented as a Linalg op.">,
     Option<"fullyDynamicLayoutMaps", "fully-dynamic-layout-maps", "bool",
