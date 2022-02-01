@@ -79,7 +79,7 @@ Section,Description,Dependencies,Assignee,Complete
 | Updates to move_iterator","| [iterator.concepts]
 | [iterator.cust.swap]
 | [iterator.cust.move]",Unassigned,Not started
-`[move.sentinel] <https://wg21.link/move.sentinel>`_,,[predef.iterators],Unassigned,Not started
+`[move.sentinel] <https://wg21.link/move.sentinel>`_,move_sentinel,[predef.iterators],Unassigned,Not started
 `[common.iterator] <https://wg21.link/common.iterator>`_,`common_iterator <https://llvm.org/D103335>`_,"| [iterator.concepts]
 | [iterator.cust.swap]
 | [iterator.cust.move]",Zoe Carver,✅
@@ -88,7 +88,12 @@ Section,Description,Dependencies,Assignee,Complete
 | [iterator.cust.swap]
 | [iterator.cust.move]
 | [default.sentinels]",Zoe Carver,✅
-`[stream.iterators] <https://wg21.link/stream.iterators>`_,,[default.sentinels],Unassigned,Not started
+`[stream.iterators] <https://wg21.link/stream.iterators>`_,"
+| Updates to istream_iterator
+| Updates to ostream_iterator
+| Updates to istreambuf_iterator
+| Updates to ostreambuf_iterator
+",[default.sentinels],Unassigned,Not started
 `[range.access] <https://wg21.link/range.access>`_,"| `ranges::begin <https://llvm.org/D100255>`_
 | `ranges::end <https://llvm.org/D100255>`_
 | `range::cbegin <https://llvm.org/D100255>`_
