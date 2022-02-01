@@ -258,7 +258,7 @@ func @generalize_soft_plus_2d_f32(%input: tensor<16x32xf32>, %output: tensor<16x
 //      CHECK: %[[C1:.+]] = arith.constant 1.000000e+00 : f32
 //      CHECK: ^{{.*}}(%[[IN:.+]]: f32, %[[OUT:.+]]: f32
 // CHECK-NEXT:   %[[EXP:.+]] = math.exp %[[IN]] : f32
-// CHECK-NEXT:   %[[SUM:.+]] = arith.addf %[[C1]], %[[EXP]] : f32
+// CHECK-NEXT:   %[[SUM:.+]] = arith.addf %[[EXP]], %[[C1]] : f32
 // CHECK-NEXT:   %[[LOG:.+]] = math.log %[[SUM]] : f32
 // CHECK-NEXT:   linalg.yield %[[LOG]] : f32
 // CHECK-NEXT: -> tensor<16x32xf32>

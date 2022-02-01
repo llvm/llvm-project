@@ -594,7 +594,7 @@ def Arith_NegFOp : Arith_FloatUnaryOp<"negf"> {
 // AddFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_AddFOp : Arith_FloatBinaryOp<"addf"> {
+def Arith_AddFOp : Arith_FloatBinaryOp<"addf", [Commutative]> {
   let summary = "floating point addition operation";
   let description = [{
     The `addf` operation takes two operands and returns one result, each of
@@ -627,6 +627,28 @@ def Arith_AddFOp : Arith_FloatBinaryOp<"addf"> {
 
 def Arith_SubFOp : Arith_FloatBinaryOp<"subf"> {
   let summary = "floating point subtraction operation";
+  let description = [{
+    The `subf` operation takes two operands and returns one result, each of
+    these is required to be the same type. This type may be a floating point
+    scalar type, a vector whose element type is a floating point type, or a
+    floating point tensor.
+
+    Example:
+
+    ```mlir
+    // Scalar subtraction.
+    %a = arith.subf %b, %c : f64
+
+    // SIMD vector subtraction, e.g. for Intel SSE.
+    %f = arith.subf %g, %h : vector<4xf32>
+
+    // Tensor subtraction.
+    %x = arith.subf %y, %z : tensor<4x?xbf16>
+    ```
+
+    TODO: In the distant future, this will accept optional attributes for fast
+    math, contraction, rounding mode, and other controls.
+  }];
   let hasFolder = 1;
 }
 
@@ -723,7 +745,7 @@ def Arith_MinUIOp : Arith_IntBinaryOp<"minui"> {
 // MulFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MulFOp : Arith_FloatBinaryOp<"mulf"> {
+def Arith_MulFOp : Arith_FloatBinaryOp<"mulf", [Commutative]> {
   let summary = "floating point multiplication operation";
   let description = [{
     The `mulf` operation takes two operands and returns one result, each of
