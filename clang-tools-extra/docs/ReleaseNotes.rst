@@ -48,7 +48,7 @@ Improvements to clangd
 ----------------------
 
 - `clangd/inlayHints <https://clangd.llvm.org/extensions#inlay-hints>`_
-  extension to provide hints about not directly available information in code,
+  LSP extension to provide information not directly available in code,
   like parameter names, deduced types and designated initializers.
 
 - Diagnostics and fixes for `unused include
@@ -57,35 +57,38 @@ Improvements to clangd
   `Diagnostics.IncludeCleaner <https://clangd.llvm.org/config#unusedincludes>`_
   config option.
 
-- Implementation for `textDocument/typeDefinition` LSP request.
+- Support for ``textDocument/typeDefinition`` LSP request.
 
-- Relevant diagnostics are emitted with `Deprecated` and `Unnecessary` tags from
-  LSP.
+- Relevant diagnostics are emitted with ``Deprecated`` and ``Unnecessary``
+  tags from LSP 3.15.
 
-- New semantic highlighting kinds for:
+- Richer ``semanticTokens`` information for:
+
   - Virtual methods
   - Mutable reference arguments
   - Lambda captures
 
-- Support for attributes, (e.g.  `[[nodiscard, gsl::Owner(Foo)]]`) in various
+- Support for attributes, (e.g. ``[[nodiscard, gsl::Owner(Foo)]]``) in various
   features like hover, code completion, go-to-definition.
 
-- `#pragma mark` directives now show up in document outline.
+- ``#pragma mark`` directives now show up in document outline.
 
-- Hover displays:
-  - Resolved paths for include directives.
-  - Details about character litearls.
+- ``hover`` on include directives shows the resolved header path.
+
+- ``hover`` on character literals shows their numeric value.
 
 - Include desugared types in hover, controlled with `Hover.ShowAKA
   <https://clangd.llvm.org/config#showaka>`_ config option.
 
-- Diagnostic fixes in more contexts like:
-  - Incomplete type errors.
-  - Implicit symbol declarations in C.
+- Extra diagnostic fixes to insert includes:
 
-- Code completion for parameter name comments.
+  - Includes are suggested in C even when an implicit declaration is generated.
+  - Incomplete types (some additional cases).
+
+- Code completion for ``/*ParameterName=*/`` commetns.
 
 - Provide and improve signature help for:
+
   - Variadic functions
   - Template argument lists
   - Braced constructor calls
@@ -97,27 +100,26 @@ Improvements to clangd
 
 - Improved handling of symbols introduced via using declarations.
 
-- Respect warning flags mentioned in `.clang-tidy` config files in
-  `ExtraArgs(Before)` sections.
+- Provide extra warnings specified in ``.clang-tidy`` config files by
+  ``ExtraArgs(Before)`` sections.
 
 - `CompileFlags.Compiler <https://clangd.llvm.org/config#compiler>`_ config
   option to override executable name in compile flags.
 
-- Compile flags effecting inputs (like -xc++-header) can now be added through
+- Compile flags like ``-xc++-header`` that must precede input file names are now
+  added correctly by the
   `CompileFlags.Add <https://clangd.llvm.org/config#add>`_ config option.
 
-- PopulateSwitch code action is now offered as a fix for `-Wswitch` warnings and
-  works with C/ObjC enums.
+- The "populate switch" code action is now offered as a fix for ``-Wswitch``
+  warnings, and works with C/ObjC enums.
 
-- `clangd --check=/path/to/file.cpp` now reads config files in ancestor
+- ``clangd --check=/path/to/file.cpp`` now reads config files in ancestor
   directories, in addition to user config file.
 
-- Improved compile flags handling in `clangd-indexer`.
+- Improved compile flags handling in ``clangd-indexer``.
 
-- Include documentation for annotations in code completion items.
-
-- `-use-dirty-headers` command line flag to use dirty buffer contents when
-  building preambles, rather than saved on-disk contents.
+- ``-use-dirty-headers`` command line flag to use dirty buffer contents when
+  parsing headers, rather than the saved on-disk contents.
 
 - Improved handling of ObjC/ObjC++ constructs.
 
