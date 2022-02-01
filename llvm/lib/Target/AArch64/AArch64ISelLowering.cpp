@@ -15620,6 +15620,12 @@ performSignExtendSetCCCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
          N->getOperand(0)->getOpcode() == ISD::SETCC);
   const SDValue SetCC = N->getOperand(0);
 
+  const SDValue CCOp0 = SetCC.getOperand(0);
+  const SDValue CCOp1 = SetCC.getOperand(1);
+  if (!CCOp0->getValueType(0).isInteger() ||
+      !CCOp1->getValueType(0).isInteger())
+    return SDValue();
+
   ISD::CondCode Code =
       cast<CondCodeSDNode>(SetCC->getOperand(2).getNode())->get();
 
@@ -15629,9 +15635,9 @@ performSignExtendSetCCCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (isCheapToExtend(SetCC.getOperand(0)) &&
       isCheapToExtend(SetCC.getOperand(1))) {
     const SDValue Ext1 =
-        DAG.getNode(ExtType, SDLoc(N), N->getValueType(0), SetCC.getOperand(0));
+        DAG.getNode(ExtType, SDLoc(N), N->getValueType(0), CCOp0);
     const SDValue Ext2 =
-        DAG.getNode(ExtType, SDLoc(N), N->getValueType(0), SetCC.getOperand(1));
+        DAG.getNode(ExtType, SDLoc(N), N->getValueType(0), CCOp1);
 
     return DAG.getSetCC(
         SDLoc(SetCC), N->getValueType(0), Ext1, Ext2,
