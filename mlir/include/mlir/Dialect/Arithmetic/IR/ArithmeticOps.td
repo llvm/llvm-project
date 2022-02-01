@@ -653,6 +653,7 @@ def Arith_MaxFOp : Arith_FloatBinaryOp<"maxf", [Commutative]> {
     %a = arith.maxf %b, %c : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -696,6 +697,7 @@ def Arith_MinFOp : Arith_FloatBinaryOp<"minf", [Commutative]> {
     %a = arith.minf %b, %c : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
