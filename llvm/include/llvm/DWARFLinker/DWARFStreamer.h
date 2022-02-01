@@ -88,7 +88,7 @@ public:
 
   /// Emit the swift reflection section stored in \p Buffer.
   void emitSwiftReflectionSection(
-      llvm::swift::Swift5ReflectionSectionKind ReflSectionKind,
+      llvm::binaryformat::Swift5ReflectionSectionKind ReflSectionKind,
       StringRef Buffer, uint32_t Alignment, uint32_t Size);
 
   /// Emit debug_ranges for \p FuncRange by translating the

@@ -9,7 +9,7 @@
 #define LLVM_BINARYFORMAT_SWIFT_H
 
 namespace llvm {
-namespace swift {
+namespace binaryformat {
 
 enum Swift5ReflectionSectionKind {
 #define HANDLE_SWIFT_SECTION(KIND, MACHO, ELF, COFF) KIND,
@@ -18,7 +18,7 @@ enum Swift5ReflectionSectionKind {
   unknown,
   last = unknown
 };
-} // end of namespace swift
+} // end of namespace binaryformat
 } // end of namespace llvm
 
 #endif

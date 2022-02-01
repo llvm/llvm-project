@@ -291,9 +291,9 @@ protected:
   virtual void getRelocationTypeName(DataRefImpl Rel,
                                      SmallVectorImpl<char> &Result) const = 0;
 
-  virtual llvm::swift::Swift5ReflectionSectionKind
+  virtual llvm::binaryformat::Swift5ReflectionSectionKind
   mapReflectionSectionNameToEnumValue(StringRef SectionName) const {
-    return llvm::swift::Swift5ReflectionSectionKind::unknown;
+    return llvm::binaryformat::Swift5ReflectionSectionKind::unknown;
   };
 
   Expected<uint64_t> getSymbolValue(DataRefImpl Symb) const;

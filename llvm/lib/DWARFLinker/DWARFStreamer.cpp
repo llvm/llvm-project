@@ -305,8 +305,8 @@ void DwarfStreamer::emitSwiftAST(StringRef Buffer) {
 }
 
 void DwarfStreamer::emitSwiftReflectionSection(
-    llvm::swift::Swift5ReflectionSectionKind ReflSectionKind, StringRef Buffer,
-    uint32_t Alignment, uint32_t Size) {
+    llvm::binaryformat::Swift5ReflectionSectionKind ReflSectionKind,
+    StringRef Buffer, uint32_t Alignment, uint32_t Size) {
   MCSection *ReflectionSection =
       MOFI->getSwift5ReflectionSection(ReflSectionKind);
   if (ReflectionSection == nullptr)
