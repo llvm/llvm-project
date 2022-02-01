@@ -202,7 +202,9 @@ TEST_F(AttributorTestBase, AAReachabilityTest) {
 
   // The second instruction of F9 can't reach the first call.
   ASSERT_FALSE(F9AA.instructionCanReach(A, F9SecondInst, F3, false));
-  ASSERT_FALSE(F9AA.instructionCanReach(A, F9SecondInst, F3, true));
+  // TODO: Without lifetime limiting callback this query does actually not make
+  //       much sense. "Anything" is reachable from the caller of func10.
+  ASSERT_TRUE(F9AA.instructionCanReach(A, F9SecondInst, F3, true));
 
   // The first instruction of F9 can reach the first call.
   ASSERT_TRUE(F9AA.instructionCanReach(A, F9FirstInst, F3));
