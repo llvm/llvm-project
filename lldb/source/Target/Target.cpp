@@ -2371,6 +2371,9 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
         // thread) is holding a read lock to the scratch context and
         // replacing it could cause a use-after-free later on.
         if (GetSwiftScratchContextLock().try_lock()) {
+          auto unlock = llvm::make_scope_exit([this] {
+            GetSwiftScratchContextLock().unlock();
+          });
           if (m_use_scratch_typesystem_per_module)
             DisplayFallbackSwiftContextErrors(swift_ast_ctx);
           else if (StreamSP errs = GetDebugger().GetAsyncErrorStream()) {
@@ -2420,7 +2423,6 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
             type_system_or_err = llvm::make_error<llvm::StringError>(
                 "DIAF", llvm::inconvertibleErrorCode());
           }
-          GetSwiftScratchContextLock().unlock();
         }
       }
     } else if (create_on_demand) {
