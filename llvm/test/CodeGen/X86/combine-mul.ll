@@ -393,7 +393,7 @@ define <4 x i32> @combine_mul_self_knownbits_vector(<4 x i32> %x) {
   ret <4 x i32> %2
 }
 
-; mul(x,x) - bit[1] is 0, but if demanding the other bits the source must not be undef/poison
+; mul(x,x) - bit[1] is 0, but if demanding the other bits the source must not be undef
 
 define i64 @combine_mul_self_demandedbits(i64 %x) {
 ; SSE-LABEL: combine_mul_self_demandedbits:

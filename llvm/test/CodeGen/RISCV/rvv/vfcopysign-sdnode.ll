@@ -22,8 +22,8 @@ define <vscale x 1 x half> @vfcopysign_vf_nxv1f16(<vscale x 1 x half> %vm, half 
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x half> undef, half %s, i32 0
-  %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x half> poison, half %s, i32 0
+  %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> poison, <vscale x 1 x i32> zeroinitializer
   %r = call <vscale x 1 x half> @llvm.copysign.nxv1f16(<vscale x 1 x half> %vm, <vscale x 1 x half> %splat)
   ret <vscale x 1 x half> %r
 }
@@ -45,8 +45,8 @@ define <vscale x 1 x half> @vfcopynsign_vf_nxv1f16(<vscale x 1 x half> %vm, half
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x half> undef, half %s, i32 0
-  %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x half> poison, half %s, i32 0
+  %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> poison, <vscale x 1 x i32> zeroinitializer
   %n = fneg <vscale x 1 x half> %splat
   %r = call <vscale x 1 x half> @llvm.copysign.nxv1f16(<vscale x 1 x half> %vm, <vscale x 1 x half> %n)
   ret <vscale x 1 x half> %r
@@ -73,8 +73,8 @@ define <vscale x 1 x half> @vfcopysign_exttrunc_vf_nxv1f16_nxv1f32(<vscale x 1 x
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v9
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x float> undef, float %s, i32 0
-  %splat = shufflevector <vscale x 1 x float> %head, <vscale x 1 x float> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x float> poison, float %s, i32 0
+  %splat = shufflevector <vscale x 1 x float> %head, <vscale x 1 x float> poison, <vscale x 1 x i32> zeroinitializer
   %esplat = fptrunc <vscale x 1 x float> %splat to <vscale x 1 x half>
   %r = call <vscale x 1 x half> @llvm.copysign.nxv1f16(<vscale x 1 x half> %vm, <vscale x 1 x half> %esplat)
   ret <vscale x 1 x half> %r
@@ -102,8 +102,8 @@ define <vscale x 1 x half> @vfcopynsign_exttrunc_vf_nxv1f16_nxv1f32(<vscale x 1 
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v9
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x float> undef, float %s, i32 0
-  %splat = shufflevector <vscale x 1 x float> %head, <vscale x 1 x float> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x float> poison, float %s, i32 0
+  %splat = shufflevector <vscale x 1 x float> %head, <vscale x 1 x float> poison, <vscale x 1 x i32> zeroinitializer
   %n = fneg <vscale x 1 x float> %splat
   %eneg = fptrunc <vscale x 1 x float> %n to <vscale x 1 x half>
   %r = call <vscale x 1 x half> @llvm.copysign.nxv1f16(<vscale x 1 x half> %vm, <vscale x 1 x half> %eneg)
@@ -135,8 +135,8 @@ define <vscale x 1 x half> @vfcopysign_exttrunc_vf_nxv1f16_nxv1f64(<vscale x 1 x
 ; CHECK-NEXT:    vfncvt.f.f.w v9, v10
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x double> undef, double %s, i32 0
-  %splat = shufflevector <vscale x 1 x double> %head, <vscale x 1 x double> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x double> poison, double %s, i32 0
+  %splat = shufflevector <vscale x 1 x double> %head, <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer
   %esplat = fptrunc <vscale x 1 x double> %splat to <vscale x 1 x half>
   %r = call <vscale x 1 x half> @llvm.copysign.nxv1f16(<vscale x 1 x half> %vm, <vscale x 1 x half> %esplat)
   ret <vscale x 1 x half> %r
@@ -168,8 +168,8 @@ define <vscale x 1 x half> @vfcopynsign_exttrunc_vf_nxv1f16_nxv1f64(<vscale x 1 
 ; CHECK-NEXT:    vfncvt.f.f.w v9, v10
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x double> undef, double %s, i32 0
-  %splat = shufflevector <vscale x 1 x double> %head, <vscale x 1 x double> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x double> poison, double %s, i32 0
+  %splat = shufflevector <vscale x 1 x double> %head, <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer
   %n = fneg <vscale x 1 x double> %splat
   %eneg = fptrunc <vscale x 1 x double> %n to <vscale x 1 x half>
   %r = call <vscale x 1 x half> @llvm.copysign.nxv1f16(<vscale x 1 x half> %vm, <vscale x 1 x half> %eneg)
@@ -194,8 +194,8 @@ define <vscale x 2 x half> @vfcopysign_vf_nxv2f16(<vscale x 2 x half> %vm, half 
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x half> undef, half %s, i32 0
-  %splat = shufflevector <vscale x 2 x half> %head, <vscale x 2 x half> undef, <vscale x 2 x i32> zeroinitializer
+  %head = insertelement <vscale x 2 x half> poison, half %s, i32 0
+  %splat = shufflevector <vscale x 2 x half> %head, <vscale x 2 x half> poison, <vscale x 2 x i32> zeroinitializer
   %r = call <vscale x 2 x half> @llvm.copysign.nxv2f16(<vscale x 2 x half> %vm, <vscale x 2 x half> %splat)
   ret <vscale x 2 x half> %r
 }
@@ -217,8 +217,8 @@ define <vscale x 2 x half> @vfcopynsign_vf_nxv2f16(<vscale x 2 x half> %vm, half
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x half> undef, half %s, i32 0
-  %splat = shufflevector <vscale x 2 x half> %head, <vscale x 2 x half> undef, <vscale x 2 x i32> zeroinitializer
+  %head = insertelement <vscale x 2 x half> poison, half %s, i32 0
+  %splat = shufflevector <vscale x 2 x half> %head, <vscale x 2 x half> poison, <vscale x 2 x i32> zeroinitializer
   %n = fneg <vscale x 2 x half> %splat
   %r = call <vscale x 2 x half> @llvm.copysign.nxv2f16(<vscale x 2 x half> %vm, <vscale x 2 x half> %n)
   ret <vscale x 2 x half> %r
@@ -242,8 +242,8 @@ define <vscale x 4 x half> @vfcopysign_vf_nxv4f16(<vscale x 4 x half> %vm, half 
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x half> undef, half %s, i32 0
-  %splat = shufflevector <vscale x 4 x half> %head, <vscale x 4 x half> undef, <vscale x 4 x i32> zeroinitializer
+  %head = insertelement <vscale x 4 x half> poison, half %s, i32 0
+  %splat = shufflevector <vscale x 4 x half> %head, <vscale x 4 x half> poison, <vscale x 4 x i32> zeroinitializer
   %r = call <vscale x 4 x half> @llvm.copysign.nxv4f16(<vscale x 4 x half> %vm, <vscale x 4 x half> %splat)
   ret <vscale x 4 x half> %r
 }
@@ -265,8 +265,8 @@ define <vscale x 4 x half> @vfcopynsign_vf_nxv4f16(<vscale x 4 x half> %vm, half
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x half> undef, half %s, i32 0
-  %splat = shufflevector <vscale x 4 x half> %head, <vscale x 4 x half> undef, <vscale x 4 x i32> zeroinitializer
+  %head = insertelement <vscale x 4 x half> poison, half %s, i32 0
+  %splat = shufflevector <vscale x 4 x half> %head, <vscale x 4 x half> poison, <vscale x 4 x i32> zeroinitializer
   %n = fneg <vscale x 4 x half> %splat
   %r = call <vscale x 4 x half> @llvm.copysign.nxv4f16(<vscale x 4 x half> %vm, <vscale x 4 x half> %n)
   ret <vscale x 4 x half> %r
@@ -290,8 +290,8 @@ define <vscale x 8 x half> @vfcopysign_vf_nxv8f16(<vscale x 8 x half> %vm, half 
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x half> undef, half %s, i32 0
-  %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x half> poison, half %s, i32 0
+  %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %r = call <vscale x 8 x half> @llvm.copysign.nxv8f16(<vscale x 8 x half> %vm, <vscale x 8 x half> %splat)
   ret <vscale x 8 x half> %r
 }
@@ -313,8 +313,8 @@ define <vscale x 8 x half> @vfcopynsign_vf_nxv8f16(<vscale x 8 x half> %vm, half
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x half> undef, half %s, i32 0
-  %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x half> poison, half %s, i32 0
+  %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %n = fneg <vscale x 8 x half> %splat
   %r = call <vscale x 8 x half> @llvm.copysign.nxv8f16(<vscale x 8 x half> %vm, <vscale x 8 x half> %n)
   ret <vscale x 8 x half> %r
@@ -341,8 +341,8 @@ define <vscale x 8 x half> @vfcopysign_exttrunc_vf_nxv8f16_nxv8f32(<vscale x 8 x
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v12
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x float> undef, float %s, i32 0
-  %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x float> poison, float %s, i32 0
+  %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
   %esplat = fptrunc <vscale x 8 x float> %splat to <vscale x 8 x half>
   %r = call <vscale x 8 x half> @llvm.copysign.nxv8f16(<vscale x 8 x half> %vm, <vscale x 8 x half> %esplat)
   ret <vscale x 8 x half> %r
@@ -370,8 +370,8 @@ define <vscale x 8 x half> @vfcopynsign_exttrunc_vf_nxv8f16_nxv8f32(<vscale x 8 
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v12
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x float> undef, float %s, i32 0
-  %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x float> poison, float %s, i32 0
+  %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
   %n = fneg <vscale x 8 x float> %splat
   %eneg = fptrunc <vscale x 8 x float> %n to <vscale x 8 x half>
   %r = call <vscale x 8 x half> @llvm.copysign.nxv8f16(<vscale x 8 x half> %vm, <vscale x 8 x half> %eneg)
@@ -403,8 +403,8 @@ define <vscale x 8 x half> @vfcopysign_exttrunc_vf_nxv8f16_nxv8f64(<vscale x 8 x
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v12
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x double> undef, double %s, i32 0
-  %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x double> poison, double %s, i32 0
+  %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer
   %esplat = fptrunc <vscale x 8 x double> %splat to <vscale x 8 x half>
   %r = call <vscale x 8 x half> @llvm.copysign.nxv8f16(<vscale x 8 x half> %vm, <vscale x 8 x half> %esplat)
   ret <vscale x 8 x half> %r
@@ -436,8 +436,8 @@ define <vscale x 8 x half> @vfcopynsign_exttrunc_vf_nxv8f16_nxv8f64(<vscale x 8 
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v12
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x double> undef, double %s, i32 0
-  %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x double> poison, double %s, i32 0
+  %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer
   %n = fneg <vscale x 8 x double> %splat
   %eneg = fptrunc <vscale x 8 x double> %n to <vscale x 8 x half>
   %r = call <vscale x 8 x half> @llvm.copysign.nxv8f16(<vscale x 8 x half> %vm, <vscale x 8 x half> %eneg)
@@ -462,8 +462,8 @@ define <vscale x 16 x half> @vfcopysign_vf_nxv16f16(<vscale x 16 x half> %vm, ha
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x half> undef, half %s, i32 0
-  %splat = shufflevector <vscale x 16 x half> %head, <vscale x 16 x half> undef, <vscale x 16 x i32> zeroinitializer
+  %head = insertelement <vscale x 16 x half> poison, half %s, i32 0
+  %splat = shufflevector <vscale x 16 x half> %head, <vscale x 16 x half> poison, <vscale x 16 x i32> zeroinitializer
   %r = call <vscale x 16 x half> @llvm.copysign.nxv16f16(<vscale x 16 x half> %vm, <vscale x 16 x half> %splat)
   ret <vscale x 16 x half> %r
 }
@@ -485,8 +485,8 @@ define <vscale x 16 x half> @vfcopynsign_vf_nxv16f16(<vscale x 16 x half> %vm, h
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x half> undef, half %s, i32 0
-  %splat = shufflevector <vscale x 16 x half> %head, <vscale x 16 x half> undef, <vscale x 16 x i32> zeroinitializer
+  %head = insertelement <vscale x 16 x half> poison, half %s, i32 0
+  %splat = shufflevector <vscale x 16 x half> %head, <vscale x 16 x half> poison, <vscale x 16 x i32> zeroinitializer
   %n = fneg <vscale x 16 x half> %splat
   %r = call <vscale x 16 x half> @llvm.copysign.nxv16f16(<vscale x 16 x half> %vm, <vscale x 16 x half> %n)
   ret <vscale x 16 x half> %r
@@ -510,8 +510,8 @@ define <vscale x 32 x half> @vfcopysign_vf_nxv32f16(<vscale x 32 x half> %vm, ha
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 32 x half> undef, half %s, i32 0
-  %splat = shufflevector <vscale x 32 x half> %head, <vscale x 32 x half> undef, <vscale x 32 x i32> zeroinitializer
+  %head = insertelement <vscale x 32 x half> poison, half %s, i32 0
+  %splat = shufflevector <vscale x 32 x half> %head, <vscale x 32 x half> poison, <vscale x 32 x i32> zeroinitializer
   %r = call <vscale x 32 x half> @llvm.copysign.nxv32f16(<vscale x 32 x half> %vm, <vscale x 32 x half> %splat)
   ret <vscale x 32 x half> %r
 }
@@ -533,8 +533,8 @@ define <vscale x 32 x half> @vfcopynsign_vf_nxv32f16(<vscale x 32 x half> %vm, h
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 32 x half> undef, half %s, i32 0
-  %splat = shufflevector <vscale x 32 x half> %head, <vscale x 32 x half> undef, <vscale x 32 x i32> zeroinitializer
+  %head = insertelement <vscale x 32 x half> poison, half %s, i32 0
+  %splat = shufflevector <vscale x 32 x half> %head, <vscale x 32 x half> poison, <vscale x 32 x i32> zeroinitializer
   %n = fneg <vscale x 32 x half> %splat
   %r = call <vscale x 32 x half> @llvm.copysign.nxv32f16(<vscale x 32 x half> %vm, <vscale x 32 x half> %n)
   ret <vscale x 32 x half> %r
@@ -558,8 +558,8 @@ define <vscale x 1 x float> @vfcopysign_vf_nxv1f32(<vscale x 1 x float> %vm, flo
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x float> undef, float %s, i32 0
-  %splat = shufflevector <vscale x 1 x float> %head, <vscale x 1 x float> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x float> poison, float %s, i32 0
+  %splat = shufflevector <vscale x 1 x float> %head, <vscale x 1 x float> poison, <vscale x 1 x i32> zeroinitializer
   %r = call <vscale x 1 x float> @llvm.copysign.nxv1f32(<vscale x 1 x float> %vm, <vscale x 1 x float> %splat)
   ret <vscale x 1 x float> %r
 }
@@ -581,8 +581,8 @@ define <vscale x 1 x float> @vfcopynsign_vf_nxv1f32(<vscale x 1 x float> %vm, fl
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x float> undef, float %s, i32 0
-  %splat = shufflevector <vscale x 1 x float> %head, <vscale x 1 x float> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x float> poison, float %s, i32 0
+  %splat = shufflevector <vscale x 1 x float> %head, <vscale x 1 x float> poison, <vscale x 1 x i32> zeroinitializer
   %n = fneg <vscale x 1 x float> %splat
   %r = call <vscale x 1 x float> @llvm.copysign.nxv1f32(<vscale x 1 x float> %vm, <vscale x 1 x float> %n)
   ret <vscale x 1 x float> %r
@@ -610,8 +610,8 @@ define <vscale x 1 x float> @vfcopysign_exttrunc_vf_nxv1f32_nxv1f16(<vscale x 1 
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x half> undef, half %s, i32 0
-  %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x half> poison, half %s, i32 0
+  %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> poison, <vscale x 1 x i32> zeroinitializer
   %esplat = fpext <vscale x 1 x half> %splat to <vscale x 1 x float>
   %r = call <vscale x 1 x float> @llvm.copysign.nxv1f32(<vscale x 1 x float> %vm, <vscale x 1 x float> %esplat)
   ret <vscale x 1 x float> %r
@@ -640,8 +640,8 @@ define <vscale x 1 x float> @vfcopynsign_exttrunc_vf_nxv1f32_nxv1f16(<vscale x 1
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x half> undef, half %s, i32 0
-  %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x half> poison, half %s, i32 0
+  %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> poison, <vscale x 1 x i32> zeroinitializer
   %n = fneg <vscale x 1 x half> %splat
   %eneg = fpext <vscale x 1 x half> %n to <vscale x 1 x float>
   %r = call <vscale x 1 x float> @llvm.copysign.nxv1f32(<vscale x 1 x float> %vm, <vscale x 1 x float> %eneg)
@@ -669,8 +669,8 @@ define <vscale x 1 x float> @vfcopysign_exttrunc_vf_nxv1f32_nxv1f64(<vscale x 1 
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v9
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x double> undef, double %s, i32 0
-  %splat = shufflevector <vscale x 1 x double> %head, <vscale x 1 x double> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x double> poison, double %s, i32 0
+  %splat = shufflevector <vscale x 1 x double> %head, <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer
   %esplat = fptrunc <vscale x 1 x double> %splat to <vscale x 1 x float>
   %r = call <vscale x 1 x float> @llvm.copysign.nxv1f32(<vscale x 1 x float> %vm, <vscale x 1 x float> %esplat)
   ret <vscale x 1 x float> %r
@@ -698,8 +698,8 @@ define <vscale x 1 x float> @vfcopynsign_exttrunc_vf_nxv1f32_nxv1f64(<vscale x 1
 ; CHECK-NEXT:    vfncvt.f.f.w v10, v9
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x double> undef, double %s, i32 0
-  %splat = shufflevector <vscale x 1 x double> %head, <vscale x 1 x double> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x double> poison, double %s, i32 0
+  %splat = shufflevector <vscale x 1 x double> %head, <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer
   %n = fneg <vscale x 1 x double> %splat
   %eneg = fptrunc <vscale x 1 x double> %n to <vscale x 1 x float>
   %r = call <vscale x 1 x float> @llvm.copysign.nxv1f32(<vscale x 1 x float> %vm, <vscale x 1 x float> %eneg)
@@ -724,8 +724,8 @@ define <vscale x 2 x float> @vfcopysign_vf_nxv2f32(<vscale x 2 x float> %vm, flo
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x float> undef, float %s, i32 0
-  %splat = shufflevector <vscale x 2 x float> %head, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
+  %head = insertelement <vscale x 2 x float> poison, float %s, i32 0
+  %splat = shufflevector <vscale x 2 x float> %head, <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
   %r = call <vscale x 2 x float> @llvm.copysign.nxv2f32(<vscale x 2 x float> %vm, <vscale x 2 x float> %splat)
   ret <vscale x 2 x float> %r
 }
@@ -747,8 +747,8 @@ define <vscale x 2 x float> @vfcopynsign_vf_nxv2f32(<vscale x 2 x float> %vm, fl
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x float> undef, float %s, i32 0
-  %splat = shufflevector <vscale x 2 x float> %head, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
+  %head = insertelement <vscale x 2 x float> poison, float %s, i32 0
+  %splat = shufflevector <vscale x 2 x float> %head, <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
   %n = fneg <vscale x 2 x float> %splat
   %r = call <vscale x 2 x float> @llvm.copysign.nxv2f32(<vscale x 2 x float> %vm, <vscale x 2 x float> %n)
   ret <vscale x 2 x float> %r
@@ -772,8 +772,8 @@ define <vscale x 4 x float> @vfcopysign_vf_nxv4f32(<vscale x 4 x float> %vm, flo
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x float> undef, float %s, i32 0
-  %splat = shufflevector <vscale x 4 x float> %head, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
+  %head = insertelement <vscale x 4 x float> poison, float %s, i32 0
+  %splat = shufflevector <vscale x 4 x float> %head, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
   %r = call <vscale x 4 x float> @llvm.copysign.nxv4f32(<vscale x 4 x float> %vm, <vscale x 4 x float> %splat)
   ret <vscale x 4 x float> %r
 }
@@ -795,8 +795,8 @@ define <vscale x 4 x float> @vfcopynsign_vf_nxv4f32(<vscale x 4 x float> %vm, fl
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x float> undef, float %s, i32 0
-  %splat = shufflevector <vscale x 4 x float> %head, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
+  %head = insertelement <vscale x 4 x float> poison, float %s, i32 0
+  %splat = shufflevector <vscale x 4 x float> %head, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
   %n = fneg <vscale x 4 x float> %splat
   %r = call <vscale x 4 x float> @llvm.copysign.nxv4f32(<vscale x 4 x float> %vm, <vscale x 4 x float> %n)
   ret <vscale x 4 x float> %r
@@ -820,8 +820,8 @@ define <vscale x 8 x float> @vfcopysign_vf_nxv8f32(<vscale x 8 x float> %vm, flo
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x float> undef, float %s, i32 0
-  %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x float> poison, float %s, i32 0
+  %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
   %r = call <vscale x 8 x float> @llvm.copysign.nxv8f32(<vscale x 8 x float> %vm, <vscale x 8 x float> %splat)
   ret <vscale x 8 x float> %r
 }
@@ -843,8 +843,8 @@ define <vscale x 8 x float> @vfcopynsign_vf_nxv8f32(<vscale x 8 x float> %vm, fl
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x float> undef, float %s, i32 0
-  %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x float> poison, float %s, i32 0
+  %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
   %n = fneg <vscale x 8 x float> %splat
   %r = call <vscale x 8 x float> @llvm.copysign.nxv8f32(<vscale x 8 x float> %vm, <vscale x 8 x float> %n)
   ret <vscale x 8 x float> %r
@@ -872,8 +872,8 @@ define <vscale x 8 x float> @vfcopysign_exttrunc_vf_nxv8f32_nxv8f16(<vscale x 8 
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v16
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x half> undef, half %s, i32 0
-  %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x half> poison, half %s, i32 0
+  %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %esplat = fpext <vscale x 8 x half> %splat to <vscale x 8 x float>
   %r = call <vscale x 8 x float> @llvm.copysign.nxv8f32(<vscale x 8 x float> %vm, <vscale x 8 x float> %esplat)
   ret <vscale x 8 x float> %r
@@ -902,8 +902,8 @@ define <vscale x 8 x float> @vfcopynsign_exttrunc_vf_nxv8f32_nxv8f16(<vscale x 8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v16
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x half> undef, half %s, i32 0
-  %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x half> poison, half %s, i32 0
+  %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %n = fneg <vscale x 8 x half> %splat
   %eneg = fpext <vscale x 8 x half> %n to <vscale x 8 x float>
   %r = call <vscale x 8 x float> @llvm.copysign.nxv8f32(<vscale x 8 x float> %vm, <vscale x 8 x float> %eneg)
@@ -931,8 +931,8 @@ define <vscale x 8 x float> @vfcopysign_exttrunc_vf_nxv8f32_nxv8f64(<vscale x 8 
 ; CHECK-NEXT:    vfncvt.f.f.w v12, v16
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v12
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x double> undef, double %s, i32 0
-  %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x double> poison, double %s, i32 0
+  %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer
   %esplat = fptrunc <vscale x 8 x double> %splat to <vscale x 8 x float>
   %r = call <vscale x 8 x float> @llvm.copysign.nxv8f32(<vscale x 8 x float> %vm, <vscale x 8 x float> %esplat)
   ret <vscale x 8 x float> %r
@@ -960,8 +960,8 @@ define <vscale x 8 x float> @vfcopynsign_exttrunc_vf_nxv8f32_nxv8f64(<vscale x 8
 ; CHECK-NEXT:    vfncvt.f.f.w v12, v16
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v12
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x double> undef, double %s, i32 0
-  %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x double> poison, double %s, i32 0
+  %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer
   %n = fneg <vscale x 8 x double> %splat
   %eneg = fptrunc <vscale x 8 x double> %n to <vscale x 8 x float>
   %r = call <vscale x 8 x float> @llvm.copysign.nxv8f32(<vscale x 8 x float> %vm, <vscale x 8 x float> %eneg)
@@ -986,8 +986,8 @@ define <vscale x 16 x float> @vfcopysign_vf_nxv16f32(<vscale x 16 x float> %vm, 
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x float> undef, float %s, i32 0
-  %splat = shufflevector <vscale x 16 x float> %head, <vscale x 16 x float> undef, <vscale x 16 x i32> zeroinitializer
+  %head = insertelement <vscale x 16 x float> poison, float %s, i32 0
+  %splat = shufflevector <vscale x 16 x float> %head, <vscale x 16 x float> poison, <vscale x 16 x i32> zeroinitializer
   %r = call <vscale x 16 x float> @llvm.copysign.nxv16f32(<vscale x 16 x float> %vm, <vscale x 16 x float> %splat)
   ret <vscale x 16 x float> %r
 }
@@ -1009,8 +1009,8 @@ define <vscale x 16 x float> @vfcopynsign_vf_nxv16f32(<vscale x 16 x float> %vm,
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x float> undef, float %s, i32 0
-  %splat = shufflevector <vscale x 16 x float> %head, <vscale x 16 x float> undef, <vscale x 16 x i32> zeroinitializer
+  %head = insertelement <vscale x 16 x float> poison, float %s, i32 0
+  %splat = shufflevector <vscale x 16 x float> %head, <vscale x 16 x float> poison, <vscale x 16 x i32> zeroinitializer
   %n = fneg <vscale x 16 x float> %splat
   %r = call <vscale x 16 x float> @llvm.copysign.nxv16f32(<vscale x 16 x float> %vm, <vscale x 16 x float> %n)
   ret <vscale x 16 x float> %r
@@ -1034,8 +1034,8 @@ define <vscale x 1 x double> @vfcopysign_vf_nxv1f64(<vscale x 1 x double> %vm, d
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x double> undef, double %s, i32 0
-  %splat = shufflevector <vscale x 1 x double> %head, <vscale x 1 x double> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x double> poison, double %s, i32 0
+  %splat = shufflevector <vscale x 1 x double> %head, <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer
   %r = call <vscale x 1 x double> @llvm.copysign.nxv1f64(<vscale x 1 x double> %vm, <vscale x 1 x double> %splat)
   ret <vscale x 1 x double> %r
 }
@@ -1057,8 +1057,8 @@ define <vscale x 1 x double> @vfcopynsign_vf_nxv1f64(<vscale x 1 x double> %vm, 
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x double> undef, double %s, i32 0
-  %splat = shufflevector <vscale x 1 x double> %head, <vscale x 1 x double> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x double> poison, double %s, i32 0
+  %splat = shufflevector <vscale x 1 x double> %head, <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer
   %n = fneg <vscale x 1 x double> %splat
   %r = call <vscale x 1 x double> @llvm.copysign.nxv1f64(<vscale x 1 x double> %vm, <vscale x 1 x double> %n)
   ret <vscale x 1 x double> %r
@@ -1090,8 +1090,8 @@ define <vscale x 1 x double> @vfcopysign_exttrunc_vf_nxv1f64_nxv1f16(<vscale x 1
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x half> undef, half %s, i32 0
-  %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x half> poison, half %s, i32 0
+  %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> poison, <vscale x 1 x i32> zeroinitializer
   %esplat = fpext <vscale x 1 x half> %splat to <vscale x 1 x double>
   %r = call <vscale x 1 x double> @llvm.copysign.nxv1f64(<vscale x 1 x double> %vm, <vscale x 1 x double> %esplat)
   ret <vscale x 1 x double> %r
@@ -1124,8 +1124,8 @@ define <vscale x 1 x double> @vfcopynsign_exttrunc_vf_nxv1f64_nxv1f16(<vscale x 
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x half> undef, half %s, i32 0
-  %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x half> poison, half %s, i32 0
+  %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> poison, <vscale x 1 x i32> zeroinitializer
   %n = fneg <vscale x 1 x half> %splat
   %eneg = fpext <vscale x 1 x half> %n to <vscale x 1 x double>
   %r = call <vscale x 1 x double> @llvm.copysign.nxv1f64(<vscale x 1 x double> %vm, <vscale x 1 x double> %eneg)
@@ -1154,8 +1154,8 @@ define <vscale x 1 x double> @vfcopysign_exttrunc_vf_nxv1f64_nxv1f32(<vscale x 1
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x float> undef, float %s, i32 0
-  %splat = shufflevector <vscale x 1 x float> %head, <vscale x 1 x float> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x float> poison, float %s, i32 0
+  %splat = shufflevector <vscale x 1 x float> %head, <vscale x 1 x float> poison, <vscale x 1 x i32> zeroinitializer
   %esplat = fpext <vscale x 1 x float> %splat to <vscale x 1 x double>
   %r = call <vscale x 1 x double> @llvm.copysign.nxv1f64(<vscale x 1 x double> %vm, <vscale x 1 x double> %esplat)
   ret <vscale x 1 x double> %r
@@ -1184,8 +1184,8 @@ define <vscale x 1 x double> @vfcopynsign_exttrunc_vf_nxv1f64_nxv1f32(<vscale x 
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x float> undef, float %s, i32 0
-  %splat = shufflevector <vscale x 1 x float> %head, <vscale x 1 x float> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x float> poison, float %s, i32 0
+  %splat = shufflevector <vscale x 1 x float> %head, <vscale x 1 x float> poison, <vscale x 1 x i32> zeroinitializer
   %n = fneg <vscale x 1 x float> %splat
   %eneg = fpext <vscale x 1 x float> %n to <vscale x 1 x double>
   %r = call <vscale x 1 x double> @llvm.copysign.nxv1f64(<vscale x 1 x double> %vm, <vscale x 1 x double> %eneg)
@@ -1210,8 +1210,8 @@ define <vscale x 2 x double> @vfcopysign_vf_nxv2f64(<vscale x 2 x double> %vm, d
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x double> undef, double %s, i32 0
-  %splat = shufflevector <vscale x 2 x double> %head, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
+  %head = insertelement <vscale x 2 x double> poison, double %s, i32 0
+  %splat = shufflevector <vscale x 2 x double> %head, <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
   %r = call <vscale x 2 x double> @llvm.copysign.nxv2f64(<vscale x 2 x double> %vm, <vscale x 2 x double> %splat)
   ret <vscale x 2 x double> %r
 }
@@ -1233,8 +1233,8 @@ define <vscale x 2 x double> @vfcopynsign_vf_nxv2f64(<vscale x 2 x double> %vm, 
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x double> undef, double %s, i32 0
-  %splat = shufflevector <vscale x 2 x double> %head, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
+  %head = insertelement <vscale x 2 x double> poison, double %s, i32 0
+  %splat = shufflevector <vscale x 2 x double> %head, <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
   %n = fneg <vscale x 2 x double> %splat
   %r = call <vscale x 2 x double> @llvm.copysign.nxv2f64(<vscale x 2 x double> %vm, <vscale x 2 x double> %n)
   ret <vscale x 2 x double> %r
@@ -1258,8 +1258,8 @@ define <vscale x 4 x double> @vfcopysign_vf_nxv4f64(<vscale x 4 x double> %vm, d
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x double> undef, double %s, i32 0
-  %splat = shufflevector <vscale x 4 x double> %head, <vscale x 4 x double> undef, <vscale x 4 x i32> zeroinitializer
+  %head = insertelement <vscale x 4 x double> poison, double %s, i32 0
+  %splat = shufflevector <vscale x 4 x double> %head, <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer
   %r = call <vscale x 4 x double> @llvm.copysign.nxv4f64(<vscale x 4 x double> %vm, <vscale x 4 x double> %splat)
   ret <vscale x 4 x double> %r
 }
@@ -1281,8 +1281,8 @@ define <vscale x 4 x double> @vfcopynsign_vf_nxv4f64(<vscale x 4 x double> %vm, 
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x double> undef, double %s, i32 0
-  %splat = shufflevector <vscale x 4 x double> %head, <vscale x 4 x double> undef, <vscale x 4 x i32> zeroinitializer
+  %head = insertelement <vscale x 4 x double> poison, double %s, i32 0
+  %splat = shufflevector <vscale x 4 x double> %head, <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer
   %n = fneg <vscale x 4 x double> %splat
   %r = call <vscale x 4 x double> @llvm.copysign.nxv4f64(<vscale x 4 x double> %vm, <vscale x 4 x double> %n)
   ret <vscale x 4 x double> %r
@@ -1306,8 +1306,8 @@ define <vscale x 8 x double> @vfcopysign_vf_nxv8f64(<vscale x 8 x double> %vm, d
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vfsgnj.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x double> undef, double %s, i32 0
-  %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x double> poison, double %s, i32 0
+  %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer
   %r = call <vscale x 8 x double> @llvm.copysign.nxv8f64(<vscale x 8 x double> %vm, <vscale x 8 x double> %splat)
   ret <vscale x 8 x double> %r
 }
@@ -1329,8 +1329,8 @@ define <vscale x 8 x double> @vfcopynsign_vf_nxv8f64(<vscale x 8 x double> %vm, 
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x double> undef, double %s, i32 0
-  %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x double> poison, double %s, i32 0
+  %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer
   %n = fneg <vscale x 8 x double> %splat
   %r = call <vscale x 8 x double> @llvm.copysign.nxv8f64(<vscale x 8 x double> %vm, <vscale x 8 x double> %n)
   ret <vscale x 8 x double> %r
@@ -1362,8 +1362,8 @@ define <vscale x 8 x double> @vfcopysign_exttrunc_vf_nxv8f64_nxv8f16(<vscale x 8
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v24
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x half> undef, half %s, i32 0
-  %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x half> poison, half %s, i32 0
+  %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %esplat = fpext <vscale x 8 x half> %splat to <vscale x 8 x double>
   %r = call <vscale x 8 x double> @llvm.copysign.nxv8f64(<vscale x 8 x double> %vm, <vscale x 8 x double> %esplat)
   ret <vscale x 8 x double> %r
@@ -1396,8 +1396,8 @@ define <vscale x 8 x double> @vfcopynsign_exttrunc_vf_nxv8f64_nxv8f16(<vscale x 
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v24
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x half> undef, half %s, i32 0
-  %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x half> poison, half %s, i32 0
+  %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   %n = fneg <vscale x 8 x half> %splat
   %eneg = fpext <vscale x 8 x half> %n to <vscale x 8 x double>
   %r = call <vscale x 8 x double> @llvm.copysign.nxv8f64(<vscale x 8 x double> %vm, <vscale x 8 x double> %eneg)
@@ -1426,8 +1426,8 @@ define <vscale x 8 x double> @vfcopysign_exttrunc_vf_nxv8f64_nxv8f32(<vscale x 8
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v24
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x float> undef, float %s, i32 0
-  %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x float> poison, float %s, i32 0
+  %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
   %esplat = fpext <vscale x 8 x float> %splat to <vscale x 8 x double>
   %r = call <vscale x 8 x double> @llvm.copysign.nxv8f64(<vscale x 8 x double> %vm, <vscale x 8 x double> %esplat)
   ret <vscale x 8 x double> %r
@@ -1456,8 +1456,8 @@ define <vscale x 8 x double> @vfcopynsign_exttrunc_vf_nxv8f64_nxv8f32(<vscale x 
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v24
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x float> undef, float %s, i32 0
-  %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x float> poison, float %s, i32 0
+  %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
   %n = fneg <vscale x 8 x float> %splat
   %eneg = fpext <vscale x 8 x float> %n to <vscale x 8 x double>
   %r = call <vscale x 8 x double> @llvm.copysign.nxv8f64(<vscale x 8 x double> %vm, <vscale x 8 x double> %eneg)

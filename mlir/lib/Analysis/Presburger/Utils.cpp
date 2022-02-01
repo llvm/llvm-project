@@ -140,14 +140,79 @@ static LogicalResult getDivRepr(const IntegerPolyhedron &cst, unsigned pos,
   return success();
 }
 
+/// Check if the pos^th identifier can be represented as a division using
+/// equality at position `eqInd`.
+///
+/// For example:
+///     32*k == 16*i + j - 31                 <-- `eqInd` for 'k'
+///     expr = 16*i + j - 31, divisor = 32
+///     k = (16*i + j - 31) floordiv 32
+///
+/// If successful, `expr` is set to dividend of the division and `divisor` is
+/// set to the denominator of the division. The final division expression is
+/// normalized by GCD.
+static LogicalResult getDivRepr(const IntegerPolyhedron &cst, unsigned pos,
+                                unsigned eqInd, SmallVector<int64_t, 8> &expr,
+                                unsigned &divisor) {
+
+  assert(pos <= cst.getNumIds() && "Invalid identifier position");
+  assert(eqInd <= cst.getNumEqualities() && "Invalid equality position");
+
+  // Extract divisor, the divisor can be negative and hence its sign information
+  // is stored in `signDiv` to reverse the sign of dividend's coefficients.
+  // Equality must involve the pos-th variable and hence `temp_div` != 0.
+  int64_t temp_div = cst.atEq(eqInd, pos);
+  if (temp_div == 0)
+    return failure();
+  int64_t signDiv = temp_div < 0 ? -1 : 1;
+
+  // The divisor is always a positive integer.
+  divisor = temp_div * signDiv;
+
+  expr.resize(cst.getNumCols(), 0);
+  for (unsigned i = 0, e = cst.getNumIds(); i < e; ++i)
+    if (i != pos)
+      expr[i] = signDiv * cst.atEq(eqInd, i);
+
+  expr.back() = signDiv * cst.atEq(eqInd, cst.getNumCols() - 1);
+  normalizeDivisionByGCD(expr, divisor);
+
+  return success();
+}
+
+// Returns `false` if the constraints depends on a variable for which an
+// explicit representation has not been found yet, otherwise returns `true`.
+static bool checkExplicitRepresentation(const IntegerPolyhedron &cst,
+                                        ArrayRef<bool> foundRepr,
+                                        SmallVectorImpl<int64_t> &dividend,
+                                        unsigned pos) {
+  // Exit to avoid circular dependencies between divisions.
+  unsigned c, f;
+  for (c = 0, f = cst.getNumIds(); c < f; ++c) {
+    if (c == pos)
+      continue;
+    if (!foundRepr[c] && dividend[c] != 0)
+      break;
+  }
+
+  // Expression can't be constructed as it depends on a yet unknown
+  // identifier.
+  // TODO: Visit/compute the identifiers in an order so that this doesn't
+  // happen. More complex but much more efficient.
+  if (c < f)
+    return false;
+  return true;
+}
+
 /// Check if the pos^th identifier can be expressed as a floordiv of an affine
 /// function of other identifiers (where the divisor is a positive constant).
 /// `foundRepr` contains a boolean for each identifier indicating if the
 /// explicit representation for that identifier has already been computed.
-/// Returns the upper and lower bound inequalities using which the floordiv can
-/// be computed. If the representation could be computed, `dividend` and
-/// `denominator` are set. If the representation could not be computed,
-/// `llvm::None` is returned.
+/// Returns the `MaybeLocalRepr` struct which contains the indices of the
+/// constraints that can be expressed as a floordiv of an affine function. If
+/// the representation could be computed, `dividend` and `denominator` are set.
+/// If the representation could not be computed, the kind attribute in
+/// `MaybeLocalRepr` is set to None.
 MaybeLocalRepr presburger_utils::computeSingleVarRepr(
     const IntegerPolyhedron &cst, ArrayRef<bool> foundRepr, unsigned pos,
     SmallVector<int64_t, 8> &dividend, unsigned &divisor) {
@@ -155,9 +220,9 @@ MaybeLocalRepr presburger_utils::computeSingleVarRepr(
   assert(foundRepr.size() == cst.getNumIds() &&
          "Size of foundRepr does not match total number of variables");
 
-  SmallVector<unsigned, 4> lbIndices, ubIndices;
-  cst.getLowerAndUpperBoundIndices(pos, &lbIndices, &ubIndices);
-  MaybeLocalRepr repr;
+  SmallVector<unsigned, 4> lbIndices, ubIndices, eqIndices;
+  cst.getLowerAndUpperBoundIndices(pos, &lbIndices, &ubIndices, &eqIndices);
+  MaybeLocalRepr repr{};
 
   for (unsigned ubPos : ubIndices) {
     for (unsigned lbPos : lbIndices) {
@@ -165,28 +230,25 @@ MaybeLocalRepr presburger_utils::computeSingleVarRepr(
       if (failed(getDivRepr(cst, pos, ubPos, lbPos, dividend, divisor)))
         continue;
 
-      // Check if the inequalities depend on a variable for which
-      // an explicit representation has not been found yet.
-      // Exit to avoid circular dependencies between divisions.
-      unsigned c, f;
-      for (c = 0, f = cst.getNumIds(); c < f; ++c) {
-        if (c == pos)
-          continue;
-        if (!foundRepr[c] && dividend[c] != 0)
-          break;
-      }
-
-      // Expression can't be constructed as it depends on a yet unknown
-      // identifier.
-      // TODO: Visit/compute the identifiers in an order so that this doesn't
-      // happen. More complex but much more efficient.
-      if (c < f)
+      if (!checkExplicitRepresentation(cst, foundRepr, dividend, pos))
         continue;
 
       repr.kind = ReprKind::Inequality;
       repr.repr.inEqualityPair = {ubPos, lbPos};
       return repr;
     }
+  }
+  for (unsigned eqPos : eqIndices) {
+    // Attempt to get divison representation from eqPos.
+    if (failed(getDivRepr(cst, pos, eqPos, dividend, divisor)))
+      continue;
+
+    if (!checkExplicitRepresentation(cst, foundRepr, dividend, pos))
+      continue;
+
+    repr.kind = ReprKind::Equality;
+    repr.repr.equalityIdx = eqPos;
+    return repr;
   }
   return repr;
 }

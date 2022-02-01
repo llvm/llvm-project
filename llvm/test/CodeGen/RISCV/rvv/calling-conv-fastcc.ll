@@ -274,8 +274,8 @@ define fastcc <vscale x 32 x i32> @ret_nxv32i32_param_nxv32i32_nxv32i32_nxv32i32
 ; CHECK-NEXT:    ret
   %r = add <vscale x 32 x i32> %x, %y
   %s = add <vscale x 32 x i32> %r, %z
-  %head = insertelement <vscale x 32 x i32> undef, i32 %w, i32 0
-  %splat = shufflevector <vscale x 32 x i32> %head, <vscale x 32 x i32> undef, <vscale x 32 x i32> zeroinitializer
+  %head = insertelement <vscale x 32 x i32> poison, i32 %w, i32 0
+  %splat = shufflevector <vscale x 32 x i32> %head, <vscale x 32 x i32> poison, <vscale x 32 x i32> zeroinitializer
   %t = add <vscale x 32 x i32> %s, %splat
   ret <vscale x 32 x i32> %t
 }

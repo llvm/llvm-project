@@ -13,7 +13,7 @@ RUN: llvm-objdump -t %t.small.o | FileCheck %s --check-prefixes=SYMBOLS,SYMBOLS-
 
 # Add a .gnu_debuglink section, forcing the object back to big format.
 RUN: llvm-objcopy --add-gnu-debuglink=%t.in.o %t.small.o %t.big.o
- llvm-objdump -t %t.big.o | FileCheck %s --check-prefixes=SYMBOLS,SYMBOLS-BIG,SYMBOLS-REMOVED-BIG
+RUN: llvm-objdump -t %t.big.o | FileCheck %s --check-prefixes=SYMBOLS,SYMBOLS-BIG,SYMBOLS-REMOVED-BIG
 
 # In big object format, the .file symbol occupies one symbol table entry for
 # the auxillary data, but needs two entries in the small format, forcing the
