@@ -4,6 +4,8 @@ set(LLVM_LINK_COMPONENTS
   Core
   BinaryFormat
   MC
+  Target
+  Analysis
   Passes
   IRReader
   Object

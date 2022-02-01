@@ -23,6 +23,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/Binary.h"
@@ -42,6 +43,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -958,6 +960,49 @@ Error linkDeviceFiles(ArrayRef<DeviceFile> DeviceFiles,
   return Error::success();
 }
 
+// Compile the module to an object file using the appropriate target machine for
+// the host triple.
+Expected<std::string> compileModule(Module &M) {
+  if (M.getTargetTriple().empty())
+    M.setTargetTriple(HostTriple);
+
+  std::string Msg;
+  const Target *T = TargetRegistry::lookupTarget(M.getTargetTriple(), Msg);
+  if (!T)
+    return createStringError(inconvertibleErrorCode(), Msg);
+
+  auto Options =
+      codegen::InitTargetOptionsFromCodeGenFlags(Triple(M.getTargetTriple()));
+  StringRef CPU = "";
+  StringRef Features = "";
+  std::unique_ptr<TargetMachine> TM(T->createTargetMachine(
+      HostTriple, CPU, Features, Options, Reloc::PIC_, M.getCodeModel()));
+
+  if (M.getDataLayout().isDefault())
+    M.setDataLayout(TM->createDataLayout());
+
+  SmallString<128> ObjectFile;
+  int FD = -1;
+  if (Error Err = createOutputFile(sys::path::filename(ExecutableName) +
+                                       "offload-wrapper",
+                                   "o", ObjectFile))
+    return std::move(Err);
+  if (std::error_code EC = sys::fs::openFileForWrite(ObjectFile, FD))
+    return errorCodeToError(EC);
+
+  auto OS = std::make_unique<llvm::raw_fd_ostream>(FD, true);
+
+  legacy::PassManager CodeGenPasses;
+  TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
+  CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
+  if (TM->addPassesToEmitFile(CodeGenPasses, *OS, nullptr, CGFT_ObjectFile))
+    return createStringError(inconvertibleErrorCode(),
+                             "Failed to execute host backend");
+  CodeGenPasses.run(M);
+
+  return static_cast<std::string>(ObjectFile);
+}
+
 /// Creates an object file containing the device image stored in the filename \p
 /// ImageFile that can be linked with the host.
 Expected<std::string> wrapDeviceImage(StringRef ImageFile) {
@@ -987,30 +1032,11 @@ Expected<std::string> wrapDeviceImage(StringRef ImageFile) {
     return createStringError(inconvertibleErrorCode(),
                              "'clang-offload-wrapper' failed");
 
-  ErrorOr<std::string> CompilerPath = sys::findProgramByName("llc");
-  if (!WrapperPath)
-    return createStringError(WrapperPath.getError(),
-                             "Unable to find 'llc' in path");
+  LLVMContext Context;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseIRFile(BitcodeFile, Err, Context);
 
-  // Create a new file to write the wrapped bitcode file to.
-  SmallString<128> ObjectFile;
-  if (Error Err = createOutputFile(sys::path::filename(ExecutableName) +
-                                       "-offload-wrapper",
-                                   "o", ObjectFile))
-    return std::move(Err);
-
-  SmallVector<StringRef, 4> CompilerArgs;
-  CompilerArgs.push_back(*CompilerPath);
-  CompilerArgs.push_back("--filetype=obj");
-  CompilerArgs.push_back("--relocation-model=pic");
-  CompilerArgs.push_back("-o");
-  CompilerArgs.push_back(ObjectFile);
-  CompilerArgs.push_back(BitcodeFile);
-
-  if (sys::ExecuteAndWait(*CompilerPath, CompilerArgs))
-    return createStringError(inconvertibleErrorCode(), "'llc' failed");
-
-  return static_cast<std::string>(ObjectFile);
+  return compileModule(*M);
 }
 
 Optional<std::string> findFile(StringRef Dir, const Twine &Name) {
