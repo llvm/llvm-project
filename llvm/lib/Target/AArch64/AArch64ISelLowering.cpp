@@ -11933,7 +11933,7 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::getVT(Val->getType());
     Info.ptrVal = Dst;
     Info.offset = 0;
-    Info.align = DL.getABITypeAlign(PtrTy->getElementType());
+    Info.align = DL.getABITypeAlign(PtrTy->getPointerElementType());
     Info.flags = MachineMemOperand::MOStore;
     // The size of the memory being operated on is unknown at this point
     Info.size = MemoryLocation::UnknownSize;
