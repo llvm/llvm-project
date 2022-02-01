@@ -523,10 +523,13 @@ class JSONCrashLogParser:
     def parse_thread_registers(self, json_thread_state):
         registers = dict()
         for key, state in json_thread_state.items():
+            if key == "rosetta":
+               registers.update(self.parse_thread_registers(state))
+               continue
             try:
                value = int(state['value'])
                registers[key] = value
-            except (TypeError, ValueError):
+            except (KeyError, ValueError, TypeError):
                pass
         return registers
 
