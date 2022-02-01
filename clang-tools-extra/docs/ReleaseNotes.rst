@@ -207,6 +207,8 @@ Improvements to clang-tidy
 - Added support for `NOLINTBEGIN` ... `NOLINTEND` comments to suppress
   Clang-Tidy warnings over multiple lines.
 
+- Added support for external plugin checks with `-load`.
+
 New checks
 ^^^^^^^^^^
 
