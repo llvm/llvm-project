@@ -201,7 +201,7 @@ public:
 protected:
   /// If the concrete type didn't implement a custom verifier hook, just fall
   /// back to this one which accepts everything.
-  LogicalResult verify() { return success(); }
+  LogicalResult verifyInvariants() { return success(); }
 
   /// Parse the custom form of an operation. Unless overridden, this method will
   /// first try to get an operation parser from the op's dialect. Otherwise the
@@ -1604,6 +1604,7 @@ class Op : public OpState, public Traits<ConcreteType>... {
 public:
   /// Inherit getOperation from `OpState`.
   using OpState::getOperation;
+  using OpState::verifyInvariants;
 
   /// Return if this operation contains the provided trait.
   template <template <typename T> class Trait>
@@ -1834,8 +1835,15 @@ private:
     return cast<ConcreteType>(op).print(p);
   }
   /// Implementation of `VerifyInvariantsFn` OperationName hook.
+  static LogicalResult verifyInvariants(Operation *op) {
+    static_assert(hasNoDataMembers(),
+                  "Op class shouldn't define new data members");
+    return failure(
+        failed(op_definition_impl::verifyTraits<VerifiableTraitsTupleT>(op)) ||
+        failed(cast<ConcreteType>(op).verifyInvariants()));
+  }
   static OperationName::VerifyInvariantsFn getVerifyInvariantsFn() {
-    return &verifyInvariants;
+    return static_cast<LogicalResult (*)(Operation *)>(&verifyInvariants);
   }
 
   static constexpr bool hasNoDataMembers() {
@@ -1843,14 +1851,6 @@ private:
     // its size to an ad-hoc EmptyOp.
     class EmptyOp : public Op<EmptyOp, Traits...> {};
     return sizeof(ConcreteType) == sizeof(EmptyOp);
-  }
-
-  static LogicalResult verifyInvariants(Operation *op) {
-    static_assert(hasNoDataMembers(),
-                  "Op class shouldn't define new data members");
-    return failure(
-        failed(op_definition_impl::verifyTraits<VerifiableTraitsTupleT>(op)) ||
-        failed(cast<ConcreteType>(op).verify()));
   }
 
   /// Allow access to internal implementation methods.

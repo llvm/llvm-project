@@ -564,14 +564,13 @@ Verification code will be automatically generated for
 _additional_ verification, you can use
 
 ```tablegen
-let verifier = [{
-  ...
-}];
+let hasVerifier = 1;
 ```
 
-Code placed in `verifier` will be called after the auto-generated verification
-code. The order of trait verification excluding those of `verifier` should not
-be relied upon.
+This will generate a `LogicalResult verify()` method declaration on the op class
+that can be defined with any additional verification constraints. This method
+will be invoked after the auto-generated verification code. The order of trait
+verification excluding those of `hasVerifier` should not be relied upon.
 
 ### Declarative Assembly Format
 

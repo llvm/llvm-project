@@ -86,7 +86,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
     errs() << "Error can't load file " << inputFilename << '\n';
     return mlir::failure();
   }
-  if (mlir::failed(owningRef->verify())) {
+  if (mlir::failed(owningRef->verifyInvariants())) {
     errs() << "Error verifying FIR module\n";
     return mlir::failure();
   }
