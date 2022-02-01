@@ -32,27 +32,49 @@ define internal i1 @recursive_inst_comparator(i1* %a, i1* %b) {
 }
 
 define internal i1 @recursive_inst_generator(i1 %c, i1* %p) {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@recursive_inst_generator
-; IS__TUNIT____-SAME: (i1 [[C:%.*]], i1* nofree [[P:%.*]]) {
-; IS__TUNIT____-NEXT:    [[A:%.*]] = call i1* @geti1Ptr()
-; IS__TUNIT____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
-; IS__TUNIT____:       t:
-; IS__TUNIT____-NEXT:    [[R1:%.*]] = call i1 @recursive_inst_comparator(i1* noalias nofree readnone [[A]], i1* noalias nofree readnone [[P]]) #[[ATTR4:[0-9]+]]
-; IS__TUNIT____-NEXT:    ret i1 [[R1]]
-; IS__TUNIT____:       f:
-; IS__TUNIT____-NEXT:    [[R2:%.*]] = call i1 @recursive_inst_generator(i1 noundef true, i1* nofree [[A]])
-; IS__TUNIT____-NEXT:    ret i1 [[R2]]
+; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@recursive_inst_generator
+; IS__TUNIT_OPM-SAME: (i1 [[C:%.*]], i1* nofree [[P:%.*]]) {
+; IS__TUNIT_OPM-NEXT:    [[A:%.*]] = call i1* @geti1Ptr()
+; IS__TUNIT_OPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; IS__TUNIT_OPM:       t:
+; IS__TUNIT_OPM-NEXT:    [[R1:%.*]] = call i1 @recursive_inst_comparator(i1* noalias nofree readnone [[A]], i1* noalias nofree readnone [[P]]) #[[ATTR4:[0-9]+]]
+; IS__TUNIT_OPM-NEXT:    ret i1 [[R1]]
+; IS__TUNIT_OPM:       f:
+; IS__TUNIT_OPM-NEXT:    [[R2:%.*]] = call i1 @recursive_inst_generator(i1 noundef true, i1* nofree [[A]])
+; IS__TUNIT_OPM-NEXT:    ret i1 [[R2]]
 ;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@recursive_inst_generator
-; IS__CGSCC____-SAME: (i1 [[C:%.*]], i1* nofree [[P:%.*]]) {
-; IS__CGSCC____-NEXT:    [[A:%.*]] = call i1* @geti1Ptr()
-; IS__CGSCC____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
-; IS__CGSCC____:       t:
-; IS__CGSCC____-NEXT:    [[R1:%.*]] = call i1 @recursive_inst_comparator(i1* noalias nofree readnone [[A]], i1* noalias nofree readnone [[P]])
-; IS__CGSCC____-NEXT:    ret i1 [[R1]]
-; IS__CGSCC____:       f:
-; IS__CGSCC____-NEXT:    [[R2:%.*]] = call i1 @recursive_inst_generator(i1 noundef true, i1* nofree [[A]])
-; IS__CGSCC____-NEXT:    ret i1 [[R2]]
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@recursive_inst_generator
+; IS__TUNIT_NPM-SAME: (i1 [[C:%.*]], i1* nofree [[P:%.*]]) {
+; IS__TUNIT_NPM-NEXT:    [[A:%.*]] = call i1* @geti1Ptr()
+; IS__TUNIT_NPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; IS__TUNIT_NPM:       t:
+; IS__TUNIT_NPM-NEXT:    [[R1:%.*]] = call i1 @recursive_inst_comparator(i1* noalias nofree readnone [[A]], i1* noalias nofree readnone [[A]]) #[[ATTR4:[0-9]+]]
+; IS__TUNIT_NPM-NEXT:    ret i1 [[R1]]
+; IS__TUNIT_NPM:       f:
+; IS__TUNIT_NPM-NEXT:    [[R2:%.*]] = call i1 @recursive_inst_generator(i1 noundef true, i1* nofree [[A]])
+; IS__TUNIT_NPM-NEXT:    ret i1 [[R2]]
+;
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@recursive_inst_generator
+; IS__CGSCC_OPM-SAME: (i1 [[C:%.*]], i1* nofree [[P:%.*]]) {
+; IS__CGSCC_OPM-NEXT:    [[A:%.*]] = call i1* @geti1Ptr()
+; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; IS__CGSCC_OPM:       t:
+; IS__CGSCC_OPM-NEXT:    [[R1:%.*]] = call i1 @recursive_inst_comparator(i1* noalias nofree readnone [[A]], i1* noalias nofree readnone [[P]])
+; IS__CGSCC_OPM-NEXT:    ret i1 [[R1]]
+; IS__CGSCC_OPM:       f:
+; IS__CGSCC_OPM-NEXT:    [[R2:%.*]] = call i1 @recursive_inst_generator(i1 noundef true, i1* nofree [[A]])
+; IS__CGSCC_OPM-NEXT:    ret i1 [[R2]]
+;
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@recursive_inst_generator
+; IS__CGSCC_NPM-SAME: (i1 [[C:%.*]]) {
+; IS__CGSCC_NPM-NEXT:    [[A:%.*]] = call i1* @geti1Ptr()
+; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; IS__CGSCC_NPM:       t:
+; IS__CGSCC_NPM-NEXT:    [[R1:%.*]] = call i1 @recursive_inst_comparator(i1* noalias nofree readnone [[A]], i1* noalias nofree readnone [[A]])
+; IS__CGSCC_NPM-NEXT:    ret i1 [[R1]]
+; IS__CGSCC_NPM:       f:
+; IS__CGSCC_NPM-NEXT:    [[R2:%.*]] = call i1 @recursive_inst_generator(i1 noundef true)
+; IS__CGSCC_NPM-NEXT:    ret i1 [[R2]]
 ;
   %a = call i1* @geti1Ptr()
   br i1 %c, label %t, label %f
@@ -66,10 +88,15 @@ f:
 
 ; FIXME: This should *not* return true.
 define i1 @recursive_inst_generator_caller(i1 %c) {
-; CHECK-LABEL: define {{[^@]+}}@recursive_inst_generator_caller
-; CHECK-SAME: (i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[CALL:%.*]] = call i1 @recursive_inst_generator(i1 [[C]], i1* undef)
-; CHECK-NEXT:    ret i1 [[CALL]]
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@recursive_inst_generator_caller
+; NOT_CGSCC_NPM-SAME: (i1 [[C:%.*]]) {
+; NOT_CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i1 @recursive_inst_generator(i1 [[C]], i1* undef)
+; NOT_CGSCC_NPM-NEXT:    ret i1 [[CALL]]
+;
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@recursive_inst_generator_caller
+; IS__CGSCC_NPM-SAME: (i1 [[C:%.*]]) {
+; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i1 @recursive_inst_generator(i1 [[C]])
+; IS__CGSCC_NPM-NEXT:    ret i1 [[CALL]]
 ;
   %call = call i1 @recursive_inst_generator(i1 %c, i1* undef)
   ret i1 %call
@@ -338,7 +365,7 @@ define i1 @recursive_inst_compare_caller_global3(i1 %c) {
 ; IS__TUNIT____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone }
 ; IS__TUNIT____: attributes #[[ATTR2]] = { argmemonly nofree nosync nounwind }
 ; IS__TUNIT____: attributes #[[ATTR3]] = { nofree nosync nounwind }
-; IS__TUNIT____: attributes #[[ATTR4]] = { nounwind readnone }
+; IS__TUNIT____: attributes #[[ATTR4:[0-9]+]] = { nounwind readnone }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone }

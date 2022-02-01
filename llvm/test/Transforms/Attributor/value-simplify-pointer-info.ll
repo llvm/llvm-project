@@ -4029,38 +4029,32 @@ define dso_local void @test_nested_memory(float* %dst, double* %src) {
 ; IS__TUNIT_OPM-SAME: (float* nocapture nofree writeonly [[DST:%.*]], double* nocapture nofree readonly [[SRC:%.*]]) {
 ; IS__TUNIT_OPM-NEXT:  entry:
 ; IS__TUNIT_OPM-NEXT:    [[LOCAL:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
+; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = bitcast %struct.STy* [[LOCAL]] to i8*
 ; IS__TUNIT_OPM-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[LOCAL]], i64 0, i32 2
-; IS__TUNIT_OPM-NEXT:    store %struct.STy* @global, %struct.STy** [[INNER]], align 8
 ; IS__TUNIT_OPM-NEXT:    [[CALL:%.*]] = call noalias dereferenceable_or_null(24) i8* @malloc(i64 noundef 24)
 ; IS__TUNIT_OPM-NEXT:    [[DST1:%.*]] = bitcast i8* [[CALL]] to float**
 ; IS__TUNIT_OPM-NEXT:    store float* [[DST]], float** [[DST1]], align 8
 ; IS__TUNIT_OPM-NEXT:    [[SRC2:%.*]] = getelementptr inbounds i8, i8* [[CALL]], i64 8
-; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = bitcast i8* [[SRC2]] to double**
-; IS__TUNIT_OPM-NEXT:    store double* [[SRC]], double** [[TMP0]], align 8
+; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = bitcast i8* [[SRC2]] to double**
+; IS__TUNIT_OPM-NEXT:    store double* [[SRC]], double** [[TMP1]], align 8
 ; IS__TUNIT_OPM-NEXT:    store i8* [[CALL]], i8** bitcast (%struct.STy** getelementptr inbounds ([[STRUCT_STY]], %struct.STy* @global, i64 0, i32 2) to i8**), align 8
-; IS__TUNIT_OPM-NEXT:    call fastcc void @nested_memory_callee(%struct.STy* noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(24) [[LOCAL]]) #[[ATTR13:[0-9]+]]
+; IS__TUNIT_OPM-NEXT:    call fastcc void @nested_memory_callee() #[[ATTR13:[0-9]+]]
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@test_nested_memory
 ; IS__TUNIT_NPM-SAME: (float* nocapture nofree writeonly [[DST:%.*]], double* nocapture nofree readonly [[SRC:%.*]]) {
 ; IS__TUNIT_NPM-NEXT:  entry:
 ; IS__TUNIT_NPM-NEXT:    [[LOCAL:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
+; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = bitcast %struct.STy* [[LOCAL]] to i8*
 ; IS__TUNIT_NPM-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[LOCAL]], i64 0, i32 2
-; IS__TUNIT_NPM-NEXT:    store %struct.STy* @global, %struct.STy** [[INNER]], align 8
-; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 24, align 1
-; IS__TUNIT_NPM-NEXT:    [[DST1:%.*]] = bitcast i8* [[TMP0]] to float**
+; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 24, align 1
+; IS__TUNIT_NPM-NEXT:    [[DST1:%.*]] = bitcast i8* [[TMP1]] to float**
 ; IS__TUNIT_NPM-NEXT:    store float* [[DST]], float** [[DST1]], align 8
-; IS__TUNIT_NPM-NEXT:    [[SRC2:%.*]] = getelementptr inbounds i8, i8* [[TMP0]], i64 8
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = bitcast i8* [[SRC2]] to double**
-; IS__TUNIT_NPM-NEXT:    store double* [[SRC]], double** [[TMP1]], align 8
-; IS__TUNIT_NPM-NEXT:    store i8* [[TMP0]], i8** bitcast (%struct.STy** getelementptr inbounds ([[STRUCT_STY]], %struct.STy* @global, i64 0, i32 2) to i8**), align 8
-; IS__TUNIT_NPM-NEXT:    [[LOCAL_CAST:%.*]] = bitcast %struct.STy* [[LOCAL]] to float**
-; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load float*, float** [[LOCAL_CAST]], align 8
-; IS__TUNIT_NPM-NEXT:    [[LOCAL_0_1:%.*]] = getelementptr [[STRUCT_STY]], %struct.STy* [[LOCAL]], i64 0, i32 1
-; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = load double*, double** [[LOCAL_0_1]], align 8
-; IS__TUNIT_NPM-NEXT:    [[LOCAL_0_2:%.*]] = getelementptr [[STRUCT_STY]], %struct.STy* [[LOCAL]], i64 0, i32 2
-; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = load %struct.STy*, %struct.STy** [[LOCAL_0_2]], align 8
-; IS__TUNIT_NPM-NEXT:    call fastcc void @nested_memory_callee(float* [[TMP2]], double* [[TMP3]], %struct.STy* [[TMP4]]) #[[ATTR11:[0-9]+]]
+; IS__TUNIT_NPM-NEXT:    [[SRC2:%.*]] = getelementptr inbounds i8, i8* [[TMP1]], i64 8
+; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = bitcast i8* [[SRC2]] to double**
+; IS__TUNIT_NPM-NEXT:    store double* [[SRC]], double** [[TMP2]], align 8
+; IS__TUNIT_NPM-NEXT:    store i8* [[TMP1]], i8** bitcast (%struct.STy** getelementptr inbounds ([[STRUCT_STY]], %struct.STy* @global, i64 0, i32 2) to i8**), align 8
+; IS__TUNIT_NPM-NEXT:    call fastcc void @nested_memory_callee() #[[ATTR11:[0-9]+]]
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@test_nested_memory
@@ -4069,7 +4063,6 @@ define dso_local void @test_nested_memory(float* %dst, double* %src) {
 ; IS__CGSCC_OPM-NEXT:    [[LOCAL:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = bitcast %struct.STy* [[LOCAL]] to i8*
 ; IS__CGSCC_OPM-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[LOCAL]], i64 0, i32 2
-; IS__CGSCC_OPM-NEXT:    store %struct.STy* @global, %struct.STy** [[INNER]], align 8
 ; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call noalias dereferenceable_or_null(24) i8* @malloc(i64 noundef 24)
 ; IS__CGSCC_OPM-NEXT:    [[DST1:%.*]] = bitcast i8* [[CALL]] to float**
 ; IS__CGSCC_OPM-NEXT:    store float* [[DST]], float** [[DST1]], align 8
@@ -4077,7 +4070,7 @@ define dso_local void @test_nested_memory(float* %dst, double* %src) {
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = bitcast i8* [[SRC2]] to double**
 ; IS__CGSCC_OPM-NEXT:    store double* [[SRC]], double** [[TMP1]], align 8
 ; IS__CGSCC_OPM-NEXT:    store i8* [[CALL]], i8** bitcast (%struct.STy** getelementptr inbounds ([[STRUCT_STY]], %struct.STy* @global, i64 0, i32 2) to i8**), align 8
-; IS__CGSCC_OPM-NEXT:    call fastcc void @nested_memory_callee(%struct.STy* noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(24) [[LOCAL]]) #[[ATTR16]]
+; IS__CGSCC_OPM-NEXT:    call fastcc void @nested_memory_callee() #[[ATTR16]]
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test_nested_memory
@@ -4093,7 +4086,7 @@ define dso_local void @test_nested_memory(float* %dst, double* %src) {
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = bitcast i8* [[SRC2]] to double**
 ; IS__CGSCC_NPM-NEXT:    store double* [[SRC]], double** [[TMP2]], align 8
 ; IS__CGSCC_NPM-NEXT:    store i8* [[TMP1]], i8** bitcast (%struct.STy** getelementptr inbounds ([[STRUCT_STY]], %struct.STy* @global, i64 0, i32 2) to i8**), align 8
-; IS__CGSCC_NPM-NEXT:    call fastcc void @nested_memory_callee(float* noalias nocapture nofree nonnull readnone undef, double* noalias nocapture nofree nonnull readnone undef, %struct.STy* noalias nocapture nofree nonnull readnone align 8 dereferenceable(24) undef) #[[ATTR14]]
+; IS__CGSCC_NPM-NEXT:    call fastcc void @nested_memory_callee() #[[ATTR14]]
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
 entry:
@@ -4115,81 +4108,58 @@ entry:
 define internal fastcc void @nested_memory_callee(%struct.STy* nocapture readonly %S) nofree norecurse nounwind uwtable {
 ; IS__TUNIT_OPM: Function Attrs: nofree norecurse nosync nounwind uwtable willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@nested_memory_callee
-; IS__TUNIT_OPM-SAME: (%struct.STy* noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(24) [[S:%.*]]) #[[ATTR9:[0-9]+]] {
+; IS__TUNIT_OPM-SAME: () #[[ATTR9:[0-9]+]] {
 ; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY:%.*]], %struct.STy* [[S]], i64 0, i32 2
-; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = load %struct.STy*, %struct.STy** [[INNER]], align 8
-; IS__TUNIT_OPM-NEXT:    [[INNER1:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 2
-; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = load %struct.STy*, %struct.STy** [[INNER1]], align 8
-; IS__TUNIT_OPM-NEXT:    [[SRC:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP1]], i64 0, i32 1
-; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = load double*, double** [[SRC]], align 8
-; IS__TUNIT_OPM-NEXT:    [[TMP3:%.*]] = load double, double* [[TMP2]], align 8
-; IS__TUNIT_OPM-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP3]] to float
-; IS__TUNIT_OPM-NEXT:    [[DST:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP1]], i64 0, i32 0
-; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = load float*, float** [[DST]], align 8
-; IS__TUNIT_OPM-NEXT:    store float [[CONV]], float* [[TMP4]], align 4
+; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = load %struct.STy*, %struct.STy** getelementptr inbounds ([[STRUCT_STY:%.*]], %struct.STy* @global, i64 0, i32 2), align 8
+; IS__TUNIT_OPM-NEXT:    [[SRC:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 1
+; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = load double*, double** [[SRC]], align 8
+; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = load double, double* [[TMP1]], align 8
+; IS__TUNIT_OPM-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP2]] to float
+; IS__TUNIT_OPM-NEXT:    [[DST:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 0
+; IS__TUNIT_OPM-NEXT:    [[TMP3:%.*]] = load float*, float** [[DST]], align 8
+; IS__TUNIT_OPM-NEXT:    store float [[CONV]], float* [[TMP3]], align 4
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree norecurse nosync nounwind uwtable willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@nested_memory_callee
-; IS__TUNIT_NPM-SAME: (float* [[TMP0:%.*]], double* [[TMP1:%.*]], %struct.STy* [[TMP2:%.*]]) #[[ATTR7:[0-9]+]] {
+; IS__TUNIT_NPM-SAME: () #[[ATTR7:[0-9]+]] {
 ; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[S_PRIV:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
-; IS__TUNIT_NPM-NEXT:    [[S_PRIV_CAST:%.*]] = bitcast %struct.STy* [[S_PRIV]] to float**
-; IS__TUNIT_NPM-NEXT:    store float* [[TMP0]], float** [[S_PRIV_CAST]], align 8
-; IS__TUNIT_NPM-NEXT:    [[S_PRIV_0_1:%.*]] = getelementptr [[STRUCT_STY]], %struct.STy* [[S_PRIV]], i64 0, i32 1
-; IS__TUNIT_NPM-NEXT:    store double* [[TMP1]], double** [[S_PRIV_0_1]], align 8
-; IS__TUNIT_NPM-NEXT:    [[S_PRIV_0_2:%.*]] = getelementptr [[STRUCT_STY]], %struct.STy* [[S_PRIV]], i64 0, i32 2
-; IS__TUNIT_NPM-NEXT:    store %struct.STy* [[TMP2]], %struct.STy** [[S_PRIV_0_2]], align 8
-; IS__TUNIT_NPM-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[S_PRIV]], i64 0, i32 2
-; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = load %struct.STy*, %struct.STy** [[INNER]], align 8
-; IS__TUNIT_NPM-NEXT:    [[INNER1:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP3]], i64 0, i32 2
-; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = load %struct.STy*, %struct.STy** [[INNER1]], align 8
-; IS__TUNIT_NPM-NEXT:    [[SRC:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP4]], i64 0, i32 1
-; IS__TUNIT_NPM-NEXT:    [[TMP5:%.*]] = load double*, double** [[SRC]], align 8
-; IS__TUNIT_NPM-NEXT:    [[TMP6:%.*]] = load double, double* [[TMP5]], align 8
-; IS__TUNIT_NPM-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP6]] to float
-; IS__TUNIT_NPM-NEXT:    [[DST:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP4]], i64 0, i32 0
-; IS__TUNIT_NPM-NEXT:    [[TMP7:%.*]] = load float*, float** [[DST]], align 8
-; IS__TUNIT_NPM-NEXT:    store float [[CONV]], float* [[TMP7]], align 4
+; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load %struct.STy*, %struct.STy** getelementptr inbounds ([[STRUCT_STY:%.*]], %struct.STy* @global, i64 0, i32 2), align 8
+; IS__TUNIT_NPM-NEXT:    [[SRC:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 1
+; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load double*, double** [[SRC]], align 8
+; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load double, double* [[TMP1]], align 8
+; IS__TUNIT_NPM-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP2]] to float
+; IS__TUNIT_NPM-NEXT:    [[DST:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 0
+; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = load float*, float** [[DST]], align 8
+; IS__TUNIT_NPM-NEXT:    store float [[CONV]], float* [[TMP3]], align 4
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind uwtable willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@nested_memory_callee
-; IS__CGSCC_OPM-SAME: (%struct.STy* noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(24) [[S:%.*]]) #[[ATTR12:[0-9]+]] {
+; IS__CGSCC_OPM-SAME: () #[[ATTR12:[0-9]+]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY:%.*]], %struct.STy* [[S]], i64 0, i32 2
-; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = load %struct.STy*, %struct.STy** [[INNER]], align 8
-; IS__CGSCC_OPM-NEXT:    [[INNER1:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 2
-; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = load %struct.STy*, %struct.STy** [[INNER1]], align 8
-; IS__CGSCC_OPM-NEXT:    [[SRC:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP1]], i64 0, i32 1
-; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = load double*, double** [[SRC]], align 8
-; IS__CGSCC_OPM-NEXT:    [[TMP3:%.*]] = load double, double* [[TMP2]], align 8
-; IS__CGSCC_OPM-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP3]] to float
-; IS__CGSCC_OPM-NEXT:    [[DST:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP1]], i64 0, i32 0
-; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = load float*, float** [[DST]], align 8
-; IS__CGSCC_OPM-NEXT:    store float [[CONV]], float* [[TMP4]], align 4
+; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = load %struct.STy*, %struct.STy** getelementptr inbounds ([[STRUCT_STY:%.*]], %struct.STy* @global, i64 0, i32 2), align 8
+; IS__CGSCC_OPM-NEXT:    [[SRC:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 1
+; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = load double*, double** [[SRC]], align 8
+; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = load double, double* [[TMP1]], align 8
+; IS__CGSCC_OPM-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP2]] to float
+; IS__CGSCC_OPM-NEXT:    [[DST:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 0
+; IS__CGSCC_OPM-NEXT:    [[TMP3:%.*]] = load float*, float** [[DST]], align 8
+; IS__CGSCC_OPM-NEXT:    store float [[CONV]], float* [[TMP3]], align 4
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind uwtable willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@nested_memory_callee
-; IS__CGSCC_NPM-SAME: (float* noalias nocapture nofree nonnull readnone [[TMP0:%.*]], double* noalias nocapture nofree nonnull readnone [[TMP1:%.*]], %struct.STy* noalias nocapture nofree nonnull readnone align 8 dereferenceable(24) [[TMP2:%.*]]) #[[ATTR10:[0-9]+]] {
+; IS__CGSCC_NPM-SAME: () #[[ATTR10:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    [[S_PRIV:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
-; IS__CGSCC_NPM-NEXT:    [[S_PRIV_CAST:%.*]] = bitcast %struct.STy* [[S_PRIV]] to float**
-; IS__CGSCC_NPM-NEXT:    [[S_PRIV_0_1:%.*]] = getelementptr [[STRUCT_STY]], %struct.STy* [[S_PRIV]], i64 0, i32 1
-; IS__CGSCC_NPM-NEXT:    [[S_PRIV_0_2:%.*]] = getelementptr [[STRUCT_STY]], %struct.STy* [[S_PRIV]], i64 0, i32 2
-; IS__CGSCC_NPM-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[S_PRIV]], i64 0, i32 2
-; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = load %struct.STy*, %struct.STy** [[INNER]], align 8
-; IS__CGSCC_NPM-NEXT:    [[INNER1:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* @global, i64 0, i32 2
-; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = load %struct.STy*, %struct.STy** getelementptr inbounds ([[STRUCT_STY]], %struct.STy* @global, i64 0, i32 2), align 8
-; IS__CGSCC_NPM-NEXT:    [[SRC:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP4]], i64 0, i32 1
-; IS__CGSCC_NPM-NEXT:    [[TMP5:%.*]] = load double*, double** [[SRC]], align 8
-; IS__CGSCC_NPM-NEXT:    [[TMP6:%.*]] = load double, double* [[TMP5]], align 8
-; IS__CGSCC_NPM-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP6]] to float
-; IS__CGSCC_NPM-NEXT:    [[DST:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP4]], i64 0, i32 0
-; IS__CGSCC_NPM-NEXT:    [[TMP7:%.*]] = load float*, float** [[DST]], align 8
-; IS__CGSCC_NPM-NEXT:    store float [[CONV]], float* [[TMP7]], align 4
+; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load %struct.STy*, %struct.STy** getelementptr inbounds ([[STRUCT_STY:%.*]], %struct.STy* @global, i64 0, i32 2), align 8
+; IS__CGSCC_NPM-NEXT:    [[SRC:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 1
+; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = load double*, double** [[SRC]], align 8
+; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = load double, double* [[TMP1]], align 8
+; IS__CGSCC_NPM-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP2]] to float
+; IS__CGSCC_NPM-NEXT:    [[DST:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP0]], i64 0, i32 0
+; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = load float*, float** [[DST]], align 8
+; IS__CGSCC_NPM-NEXT:    store float [[CONV]], float* [[TMP3]], align 4
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
 entry:

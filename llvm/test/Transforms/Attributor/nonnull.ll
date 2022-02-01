@@ -550,14 +550,14 @@ define internal i32* @f2(i32* %arg) {
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@f2
 ; NOT_CGSCC_OPM-SAME: (i32* nofree nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR4]] {
 ; NOT_CGSCC_OPM-NEXT:  bb:
-; NOT_CGSCC_OPM-NEXT:    [[TMP:%.*]] = tail call i32* @f1(i32* nofree nonnull readonly align 4 dereferenceable(4) [[ARG]]) #[[ATTR12]]
+; NOT_CGSCC_OPM-NEXT:    [[TMP:%.*]] = tail call i32* @f1(i32* nofree readonly [[ARG]]) #[[ATTR12]]
 ; NOT_CGSCC_OPM-NEXT:    ret i32* [[TMP]]
 ;
 ; IS__CGSCC_OPM: Function Attrs: argmemonly nofree nosync nounwind readonly
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@f2
 ; IS__CGSCC_OPM-SAME: (i32* nofree nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR5]] {
 ; IS__CGSCC_OPM-NEXT:  bb:
-; IS__CGSCC_OPM-NEXT:    [[TMP:%.*]] = tail call i32* @f1(i32* nofree nonnull readonly align 4 dereferenceable(4) [[ARG]]) #[[ATTR13]]
+; IS__CGSCC_OPM-NEXT:    [[TMP:%.*]] = tail call i32* @f1(i32* nofree readonly [[ARG]]) #[[ATTR13]]
 ; IS__CGSCC_OPM-NEXT:    ret i32* [[TMP]]
 ;
 bb:
