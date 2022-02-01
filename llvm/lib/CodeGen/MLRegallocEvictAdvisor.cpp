@@ -230,7 +230,6 @@ struct LIFeatureComponents {
   double HintWeights = 0.0;
   int64_t NrDefsAndUses = 0;
   float HottestBlockFreq = 0.0;
-  bool HasPreferredReg = false;
   bool IsRemat = false;
 };
 
@@ -692,7 +691,6 @@ MLEvictAdvisor::getLIFeatureComponents(const LiveInterval &LI) const {
   LIFeatureComponents Ret;
   SmallPtrSet<MachineInstr *, 8> Visited;
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-  Ret.HasPreferredReg = VRM->hasPreferredPhys(LI.reg());
 
   for (MachineRegisterInfo::reg_instr_nodbg_iterator
            I = MRI->reg_instr_nodbg_begin(LI.reg()),
@@ -772,7 +770,7 @@ void MLEvictAdvisor::extractFeatures(
     if (LI.endIndex() > EndSI)
       EndSI = LI.endIndex();
     const LIFeatureComponents LIFC = getLIFeatureComponents(LI);
-    NrBrokenHints += LIFC.HasPreferredReg;
+    NrBrokenHints += VRM->hasPreferredPhys(LI.reg());
 
     NrDefsAndUses += LIFC.NrDefsAndUses;
     HottestBlockFreq = std::max(HottestBlockFreq, LIFC.HottestBlockFreq);
