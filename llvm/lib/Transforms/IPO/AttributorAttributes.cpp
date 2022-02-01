@@ -1766,24 +1766,16 @@ struct AANoSyncImpl : AANoSync {
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override;
-
-  /// Helper function used to determine whether an instruction is non-relaxed
-  /// atomic. In other words, if an atomic instruction does not have unordered
-  /// or monotonic ordering
-  static bool isNonRelaxedAtomic(Instruction *I);
-
-  /// Helper function specific for intrinsics which are potentially volatile
-  static bool isNoSyncIntrinsic(Instruction *I);
 };
 
-bool AANoSyncImpl::isNonRelaxedAtomic(Instruction *I) {
+bool AANoSync::isNonRelaxedAtomic(const Instruction *I) {
   if (!I->isAtomic())
     return false;
 
   if (auto *FI = dyn_cast<FenceInst>(I))
     // All legal orderings for fence are stronger than monotonic.
     return FI->getSyncScopeID() != SyncScope::SingleThread;
-  else if (auto *AI = dyn_cast<AtomicCmpXchgInst>(I)) {
+  if (auto *AI = dyn_cast<AtomicCmpXchgInst>(I)) {
     // Unordered is not a legal ordering for cmpxchg.
     return (AI->getSuccessOrdering() != AtomicOrdering::Monotonic ||
             AI->getFailureOrdering() != AtomicOrdering::Monotonic);
@@ -1812,7 +1804,7 @@ bool AANoSyncImpl::isNonRelaxedAtomic(Instruction *I) {
 /// Return true if this intrinsic is nosync.  This is only used for intrinsics
 /// which would be nosync except that they have a volatile flag.  All other
 /// intrinsics are simply annotated with the nosync attribute in Intrinsics.td.
-bool AANoSyncImpl::isNoSyncIntrinsic(Instruction *I) {
+bool AANoSync::isNoSyncIntrinsic(const Instruction *I) {
   if (auto *MI = dyn_cast<MemIntrinsic>(I))
     return !MI->isVolatile();
   return false;
@@ -1821,24 +1813,7 @@ bool AANoSyncImpl::isNoSyncIntrinsic(Instruction *I) {
 ChangeStatus AANoSyncImpl::updateImpl(Attributor &A) {
 
   auto CheckRWInstForNoSync = [&](Instruction &I) {
-    /// We are looking for volatile instructions or Non-Relaxed atomics.
-
-    if (const auto *CB = dyn_cast<CallBase>(&I)) {
-      if (CB->hasFnAttr(Attribute::NoSync))
-        return true;
-
-      if (isNoSyncIntrinsic(&I))
-        return true;
-
-      const auto &NoSyncAA = A.getAAFor<AANoSync>(
-          *this, IRPosition::callsite_function(*CB), DepClassTy::REQUIRED);
-      return NoSyncAA.isAssumedNoSync();
-    }
-
-    if (!I.isVolatile() && !isNonRelaxedAtomic(&I))
-      return true;
-
-    return false;
+    return AA::isNoSyncInst(A, I, *this);
   };
 
   auto CheckForNoSync = [&](Instruction &I) {

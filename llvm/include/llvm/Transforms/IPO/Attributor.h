@@ -139,6 +139,11 @@ class Function;
 /// Abstract Attribute helper functions.
 namespace AA {
 
+/// Return true if \p I is a `nosync` instruction. Use generic reasoning and
+/// potentially the corresponding AANoSync.
+bool isNoSyncInst(Attributor &A, const Instruction &I,
+                  const AbstractAttribute &QueryingAA);
+
 /// Return true if \p V is dynamically unique, that is, there are no two
 /// "instances" of \p V at runtime with different values.
 bool isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
@@ -2988,6 +2993,14 @@ struct AANoSync
 
   /// Returns true if "nosync" is known.
   bool isKnownNoSync() const { return getKnown(); }
+
+  /// Helper function used to determine whether an instruction is non-relaxed
+  /// atomic. In other words, if an atomic instruction does not have unordered
+  /// or monotonic ordering
+  static bool isNonRelaxedAtomic(const Instruction *I);
+
+  /// Helper function specific for intrinsics which are potentially volatile.
+  static bool isNoSyncIntrinsic(const Instruction *I);
 
   /// Create an abstract attribute view for the position \p IRP.
   static AANoSync &createForPosition(const IRPosition &IRP, Attributor &A);

@@ -183,6 +183,31 @@ ChangeStatus &llvm::operator&=(ChangeStatus &L, ChangeStatus R) {
 }
 ///}
 
+bool AA::isNoSyncInst(Attributor &A, const Instruction &I,
+                      const AbstractAttribute &QueryingAA) {
+  // We are looking for volatile instructions or non-relaxed atomics.
+  if (const auto *CB = dyn_cast<CallBase>(&I)) {
+    if (CB->hasFnAttr(Attribute::NoSync))
+      return true;
+
+    // Non-convergent and readnone imply nosync.
+    if (!CB->isConvergent() && !CB->mayReadOrWriteMemory())
+      return true;
+
+    if (AANoSync::isNoSyncIntrinsic(&I))
+      return true;
+
+    const auto &NoSyncAA = A.getAAFor<AANoSync>(
+        QueryingAA, IRPosition::callsite_function(*CB), DepClassTy::OPTIONAL);
+    return NoSyncAA.isAssumedNoSync();
+  }
+
+  if (!I.mayReadOrWriteMemory())
+    return true;
+
+  return !I.isVolatile() && !AANoSync::isNonRelaxedAtomic(&I);
+}
+
 bool AA::isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
                              const Value &V) {
   if (auto *C = dyn_cast<Constant>(&V))
