@@ -34,14 +34,16 @@ build:generic_clang --repo_env=CC=clang
 # C++14 standard version is required.
 build:generic_clang --cxxopt=-std=c++14 --host_cxxopt=-std=c++14
 
+# Use `-Wall` and `-Werror` for Clang.
+build:generic_clang --copt=-Wall --copt=-Werror --host_copt=-Wall --host_copt=-Werror
+
 # The Clang available on MacOS has a warning that isn't clean on MLIR code. The
 # warning doesn't show up with more recent Clangs, so just disable for now.
 build:generic_clang --cxxopt=-Wno-range-loop-analysis --host_cxxopt=-Wno-range-loop-analysis
 
-# Use `-Wall` and `-Werror` for Clang.
-build:generic_clang --copt=-Wall --copt=-Werror --host_copt=-Wall --host_copt=-Werror
-# This doesn't appear to be enforced by any upstream bot.
-build:generic_clang --copt=-Wno-unused --host_copt=-Wno-unused
+# Build errors are not a helpful way to enforce deprecation in-repo and it is
+# not the point of the Bazel build to catch usage of deprecated APIs.
+build:generic_clang --copt=-Wno-deprecated --host_copt=-Wno-deprecated
 
 ###############################################################################
 # Options for "generic_gcc" builds: these options should generally apply to
@@ -56,6 +58,10 @@ build:generic_gcc --repo_env=CC=gcc
 
 # C++14 standard version is required.
 build:generic_gcc --cxxopt=-std=c++14 --host_cxxopt=-std=c++14
+
+# Build errors are not a helpful way to enforce deprecation in-repo and it is
+# not the point of the Bazel build to catch usage of deprecated APIs.
+build:generic_gcc --copt=-Wno-deprecated --host_copt=-Wno-deprecated
 
 # Disable GCC warnings that are noisy and/or false positives on LLVM code.
 # These need to be global as some code triggering these is in header files.
