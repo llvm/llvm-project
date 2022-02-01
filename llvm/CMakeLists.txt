@@ -28,6 +28,11 @@ if (NOT PACKAGE_VERSION)
     "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX}")
 endif()
 
+if(NOT DEFINED LLVM_SHLIB_SYMBOL_VERSION)
+  # "Symbol version prefix for libLLVM.so"
+  set(LLVM_SHLIB_SYMBOL_VERSION "LLVM_${LLVM_VERSION_MAJOR}")
+endif()
+
 if ((CMAKE_GENERATOR MATCHES "Visual Studio") AND (MSVC_TOOLSET_VERSION LESS 142) AND (CMAKE_GENERATOR_TOOLSET STREQUAL ""))
   message(WARNING "Visual Studio generators use the x86 host compiler by "
                   "default, even for 64-bit targets. This can result in linker "
