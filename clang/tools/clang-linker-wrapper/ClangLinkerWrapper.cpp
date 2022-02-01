@@ -123,6 +123,9 @@ static cl::list<std::string>
 /// Path of the current binary.
 static const char *LinkerExecutable;
 
+/// Filename of the executable being created.
+static StringRef ExecutableName;
+
 /// Temporary files created by the linker wrapper.
 static SmallVector<std::string, 16> TempFiles;
 
@@ -242,8 +245,9 @@ extractFromBinary(const ObjectFile &Obj,
       SmallString<128> TempFile;
       StringRef DeviceExtension = getDeviceFileExtension(
           DeviceTriple, identify_magic(*Contents) == file_magic::bitcode);
-      if (Error Err = createOutputFile(Prefix + "-device-" + DeviceTriple,
-                                       DeviceExtension, TempFile))
+      if (Error Err =
+              createOutputFile(Prefix + "-device-" + DeviceTriple + "-" + Arch,
+                               DeviceExtension, TempFile))
         return std::move(Err);
 
       Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
@@ -348,8 +352,9 @@ extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
     SmallString<128> TempFile;
     StringRef DeviceExtension = getDeviceFileExtension(
         DeviceTriple, identify_magic(Contents) == file_magic::bitcode);
-    if (Error Err = createOutputFile(Prefix + "-device-" + DeviceTriple,
-                                     DeviceExtension, TempFile))
+    if (Error Err =
+            createOutputFile(Prefix + "-device-" + DeviceTriple + "-" + Arch,
+                             DeviceExtension, TempFile))
       return std::move(Err);
 
     Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
@@ -501,8 +506,10 @@ Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
 
   // Create a new file to write the linked device image to.
   SmallString<128> TempFile;
-  if (Error Err = createOutputFile(
-          "lto-" + TheTriple.getArchName() + "-" + Arch, "cubin", TempFile))
+  if (Error Err =
+          createOutputFile(sys::path::filename(ExecutableName) + "-device-" +
+                               TheTriple.getArchName() + "-" + Arch,
+                           "cubin", TempFile))
     return std::move(Err);
 
   // TODO: Pass in arguments like `-g` and `-v` from the driver.
@@ -544,8 +551,10 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles,
 
   // Create a new file to write the linked device image to.
   SmallString<128> TempFile;
-  if (Error Err = createOutputFile(
-          TheTriple.getArchName() + "-" + Arch + "-image", "out", TempFile))
+  if (Error Err =
+          createOutputFile(sys::path::filename(ExecutableName) + "-device-" +
+                               TheTriple.getArchName() + "-" + Arch,
+                           "out", TempFile))
     return std::move(Err);
 
   SmallVector<StringRef, 16> CmdArgs;
@@ -590,8 +599,9 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles,
 
   // Create a new file to write the linked device image to.
   SmallString<128> TempFile;
-  if (Error Err = createOutputFile(
-          TheTriple.getArchName() + "-" + Arch + "-image", "out", TempFile))
+  if (Error Err = createOutputFile(sys::path::filename(ExecutableName) + "-" +
+                                       TheTriple.getArchName() + "-" + Arch,
+                                   "out", TempFile))
     return std::move(Err);
 
   SmallVector<StringRef, 16> CmdArgs;
@@ -716,8 +726,9 @@ std::unique_ptr<lto::LTO> createLTO(
     };
     Conf.PostInternalizeModuleHook = [&](size_t, const Module &M) {
       SmallString<128> TempFile;
-      if (Error Err =
-              createOutputFile("lto-" + TheTriple.getTriple(), "bc", TempFile))
+      if (Error Err = createOutputFile(sys::path::filename(ExecutableName) +
+                                           "-device-" + TheTriple.getTriple(),
+                                       "bc", TempFile))
         HandleError(std::move(Err));
 
       std::error_code EC;
@@ -799,8 +810,6 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
   if (BitcodeFiles.empty())
     return Error::success();
 
-  assert(!BitcodeLibrary.empty() && "Bitcode linking without `-foffload-lto`");
-
   auto HandleError = [&](Error Err) {
     logAllUnhandledErrors(std::move(Err),
                           WithColor::error(errs(), LinkerExecutable));
@@ -810,8 +819,9 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
   // LTO Module hook to output bitcode without running the backend.
   auto OutputBitcode = [&](size_t Task, const Module &M) {
     SmallString<128> TempFile;
-    if (Error Err =
-            createOutputFile("jit-" + TheTriple.getTriple(), "bc", TempFile))
+    if (Error Err = createOutputFile(sys::path::filename(ExecutableName) +
+                                         "-jit-" + TheTriple.getTriple(),
+                                     "bc", TempFile))
       HandleError(std::move(Err));
 
     std::error_code EC;
@@ -887,12 +897,12 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
     int FD = -1;
     auto &TempFile = Files[Task];
     StringRef Extension = (TheTriple.isNVPTX()) ? "s" : "o";
-    if (Error Err = createOutputFile("lto-" + TheTriple.getTriple(), Extension,
-                                     TempFile))
+    if (Error Err = createOutputFile(sys::path::filename(ExecutableName) +
+                                         "-lto-" + TheTriple.getTriple(),
+                                     Extension, TempFile))
       HandleError(std::move(Err));
     if (std::error_code EC = sys::fs::openFileForWrite(TempFile, FD))
       HandleError(errorCodeToError(EC));
-    TempFiles.push_back(static_cast<std::string>(TempFile));
     return std::make_unique<CachedFileStream>(
         std::make_unique<llvm::raw_fd_ostream>(FD, true));
   };
@@ -967,7 +977,9 @@ Expected<std::string> wrapDeviceImage(StringRef ImageFile) {
 
   // Create a new file to write the wrapped bitcode file to.
   SmallString<128> BitcodeFile;
-  if (Error Err = createOutputFile("offload-wrapper", "bc", BitcodeFile))
+  if (Error Err = createOutputFile(sys::path::filename(ExecutableName) +
+                                       "-offload-wrapper",
+                                   "bc", BitcodeFile))
     return std::move(Err);
 
   SmallVector<StringRef, 4> WrapperArgs;
@@ -989,7 +1001,9 @@ Expected<std::string> wrapDeviceImage(StringRef ImageFile) {
 
   // Create a new file to write the wrapped bitcode file to.
   SmallString<128> ObjectFile;
-  if (Error Err = createOutputFile("offload-wrapper", "o", ObjectFile))
+  if (Error Err = createOutputFile(sys::path::filename(ExecutableName) +
+                                       "-offload-wrapper",
+                                   "o", ObjectFile))
     return std::move(Err);
 
   SmallVector<StringRef, 4> CompilerArgs;
@@ -1082,21 +1096,29 @@ int main(int argc, const char **argv) {
     LinkerArgs.push_back(Arg);
 
   SmallVector<StringRef, 16> LibraryPaths;
-  for (const StringRef Arg : LinkerArgs)
+  for (auto AI = LinkerArgs.begin(), AE = LinkerArgs.end(); AI != AE; ++AI) {
+    StringRef Arg = *AI;
+
     if (Arg.startswith("-L"))
       LibraryPaths.push_back(Arg.drop_front(2));
+    if (Arg == "-o")
+      ExecutableName = *(AI + 1);
+  }
 
   // Try to extract device code from the linker input and replace the linker
   // input with a new file that has the device section stripped.
   SmallVector<DeviceFile, 4> DeviceFiles;
   for (std::string &Arg : LinkerArgs) {
+    if (Arg == ExecutableName)
+      continue;
+
     // Search for static libraries in the library link path.
     std::string Filename = Arg;
     if (Optional<std::string> Library = searchLibrary(Arg, LibraryPaths))
       Filename = *Library;
 
-    if (sys::fs::exists(Filename) && (sys::path::extension(Filename) == ".o" ||
-                                      sys::path::extension(Filename) == ".a")) {
+    if ((sys::path::extension(Filename) == ".o" ||
+         sys::path::extension(Filename) == ".a")) {
       ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
           MemoryBuffer::getFileOrSTDIN(Filename);
       if (std::error_code EC = BufferOrErr.getError())
