@@ -5,6 +5,7 @@ add_entrypoint_object(
   HDRS
     ../mkdir.h
   DEPENDS
+    libc.include.fcntl
     libc.include.sys_stat
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil

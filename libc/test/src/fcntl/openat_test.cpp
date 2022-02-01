@@ -15,6 +15,7 @@
 #include "utils/testutils/FDReader.h"
 
 #include <errno.h>
+#include <fcntl.h>
 
 TEST(LlvmLibcUniStd, OpenAndReadTest) {
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;

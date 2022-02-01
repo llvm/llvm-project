@@ -44,6 +44,7 @@ add_entrypoint_object(
   HDRS
     ../rmdir.h
   DEPENDS
+    libc.include.fcntl
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -57,6 +58,7 @@ add_entrypoint_object(
   HDRS
     ../unlink.h
   DEPENDS
+    libc.include.fcntl
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -70,6 +72,7 @@ add_entrypoint_object(
   HDRS
     ../unlinkat.h
   DEPENDS
+    libc.include.fcntl
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil

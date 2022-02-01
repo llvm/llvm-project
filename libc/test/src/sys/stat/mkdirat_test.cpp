@@ -17,7 +17,7 @@
 
 TEST(LlvmLibcMkdiratTest, CreateAndRemove) {
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *TEST_DIR = "testdata/rmdir.testdir";
+  constexpr const char *TEST_DIR = "testdata/mkdirat.testdir";
   ASSERT_THAT(__llvm_libc::mkdirat(AT_FDCWD, TEST_DIR, S_IRWXU), Succeeds(0));
   ASSERT_THAT(__llvm_libc::rmdir(TEST_DIR), Succeeds(0));
 }

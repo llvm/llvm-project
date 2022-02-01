@@ -12,6 +12,7 @@
 #include "src/__support/common.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace __llvm_libc {
@@ -20,7 +21,7 @@ LLVM_LIBC_FUNCTION(int, rmdir, (const char *path)) {
 #ifdef SYS_rmdir
   long ret = __llvm_libc::syscall(SYS_rmdir, path);
 #elif defined(SYS_unlinkat)
-  long ret = __llvm_libc::syscall(SYS_unlinkat, AT_FDCWD, path, 0);
+  long ret = __llvm_libc::syscall(SYS_unlinkat, AT_FDCWD, path, AT_REMOVEDIR);
 #else
 #error "rmdir and unlinkat syscalls not available."
 #endif
