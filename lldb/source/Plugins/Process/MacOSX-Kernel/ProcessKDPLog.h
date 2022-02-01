@@ -28,24 +28,10 @@ enum class KDPLog : Log::MaskType {
   Watchpoints = Log::ChannelFlag<10>,
   LLVM_MARK_AS_BITMASK_ENUM(Watchpoints)
 };
-#define KDP_LOG_PROCESS ::lldb_private::KDPLog::Process
-#define KDP_LOG_THREAD ::lldb_private::KDPLog::Thread
-#define KDP_LOG_PACKETS ::lldb_private::KDPLog::Packets
-#define KDP_LOG_MEMORY ::lldb_private::KDPLog::Memory
-#define KDP_LOG_MEMORY_DATA_SHORT ::lldb_private::KDPLog::MemoryDataShort
-#define KDP_LOG_MEMORY_DATA_LONG ::lldb_private::KDPLog::MemoryDataLong
-#define KDP_LOG_BREAKPOINTS ::lldb_private::KDPLog::Breakpoints
-#define KDP_LOG_WATCHPOINTS ::lldb_private::KDPLog::Watchpoints
-#define KDP_LOG_STEP ::lldb_private::KDPLog::Step
-#define KDP_LOG_COMM ::lldb_private::KDPLog::Comm
-#define KDP_LOG_ASYNC ::lldb_private::KDPLog::Async
-#define KDP_LOG_DEFAULT KDP_LOG_PACKETS
 
 class ProcessKDPLog {
 public:
   static void Initialize();
-
-  static Log *GetLogIfAllCategoriesSet(KDPLog mask) { return GetLog(mask); }
 };
 
 template <> Log::Channel &LogChannelFor<KDPLog>();
