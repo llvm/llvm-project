@@ -1531,9 +1531,14 @@ bool HWAddressSanitizer::sanitizeFunction(
         }
       }
 
-      if (isa<ReturnInst>(Inst) || isa<ResumeInst>(Inst) ||
-          isa<CleanupReturnInst>(Inst))
+      if (isa<ReturnInst>(Inst)) {
+        if (CallInst *CI = Inst.getParent()->getTerminatingMustTailCall())
+          RetVec.push_back(CI);
+        else
+          RetVec.push_back(&Inst);
+      } else if (isa<ResumeInst, CleanupReturnInst>(Inst)) {
         RetVec.push_back(&Inst);
+      }
 
       if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
         for (Value *V : DVI->location_ops()) {
