@@ -375,35 +375,6 @@ protected:
   OperationPass(const OperationPass &) = default;
 };
 
-/// NOTICE: This class is deprecated in favor of `OperationPass<FuncOp>`
-/// and will be removed soon.
-/// A model for providing function pass specific utilities.
-///
-/// Derived function passes are expected to provide the following:
-///   - A 'void runOnFunction()' method.
-///   - A 'StringRef getName() const' method.
-///   - A 'std::unique_ptr<Pass> clonePass() const' method.
-class [[deprecated(
-    "Use OperationPass<FuncOp> instead: See "
-    "https://llvm.discourse.group/t/"
-    "functionpass-deprecated-in-favor-of-operationpass-funcop")]] FunctionPass
-    : public OperationPass<FuncOp> {
-public:
-  using OperationPass<FuncOp>::OperationPass;
-
-  /// The polymorphic API that runs the pass over the currently held function.
-  virtual void runOnFunction() = 0;
-
-  /// The polymorphic API that runs the pass over the currently held operation.
-  void runOnOperation() final {
-    if (!getFunction().isExternal())
-      runOnFunction();
-  }
-
-  /// Return the current function being transformed.
-  FuncOp getFunction() { return this->getOperation(); }
-};
-
 /// This class provides a CRTP wrapper around a base pass class to define
 /// several necessary utility methods. This should only be used for passes that
 /// are not suitably represented using the declarative pass specification(i.e.
