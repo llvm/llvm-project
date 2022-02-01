@@ -111,6 +111,10 @@ static cl::opt<DebugKind> DebugInfo(
                           "Direction information"),
                clEnumValN(FullDebugInfo, "g", "Full debugging support")));
 
+static cl::opt<bool> SaveTemps("save-temps", cl::ZeroOrMore,
+                               cl::desc("Save intermediary results."),
+                               cl::cat(ClangLinkerWrapperCategory));
+
 // Do not parse linker options.
 static cl::list<std::string>
     HostLinkerArgs(cl::Positional,
@@ -155,6 +159,21 @@ static StringRef getDeviceFileExtension(StringRef DeviceTriple,
   if (TheTriple.isNVPTX())
     return "cubin";
   return "o";
+}
+
+Error createOutputFile(const Twine &Prefix, StringRef Extension,
+                       SmallString<128> &NewFilename) {
+  if (!SaveTemps) {
+    if (std::error_code EC =
+            sys::fs::createTemporaryFile(Prefix, Extension, NewFilename))
+      return createFileError(NewFilename, EC);
+    TempFiles.push_back(static_cast<std::string>(NewFilename));
+  } else {
+    const Twine &Filename = Prefix + "." + Extension;
+    Filename.toNullTerminatedStringRef(NewFilename);
+  }
+
+  return Error::success();
 }
 
 Error runLinker(std::string &LinkerPath, SmallVectorImpl<std::string> &Args) {
@@ -204,11 +223,8 @@ void removeFromCompilerUsed(Module &M, GlobalValue &Value) {
 Expected<Optional<std::string>>
 extractFromBinary(const ObjectFile &Obj,
                   SmallVectorImpl<DeviceFile> &DeviceFiles) {
-
   StringRef Extension = sys::path::extension(Obj.getFileName()).drop_front();
-  StringRef Prefix = sys::path::stem(Obj.getFileName()).take_until([](char C) {
-    return C == '-';
-  });
+  StringRef Prefix = sys::path::stem(Obj.getFileName());
   SmallVector<StringRef, 4> ToBeStripped;
 
   // Extract data from sections of the form `.llvm.offloading.<triple>.<arch>`.
@@ -226,10 +242,9 @@ extractFromBinary(const ObjectFile &Obj,
       SmallString<128> TempFile;
       StringRef DeviceExtension = getDeviceFileExtension(
           DeviceTriple, identify_magic(*Contents) == file_magic::bitcode);
-      if (std::error_code EC = sys::fs::createTemporaryFile(
-              Prefix + "-device-" + DeviceTriple, DeviceExtension, TempFile))
-        return createFileError(TempFile, EC);
-      TempFiles.push_back(static_cast<std::string>(TempFile));
+      if (Error Err = createOutputFile(Prefix + "-device-" + DeviceTriple,
+                                       DeviceExtension, TempFile))
+        return std::move(Err);
 
       Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
           FileOutputBuffer::create(TempFile, Sec.getSize());
@@ -253,10 +268,9 @@ extractFromBinary(const ObjectFile &Obj,
   SmallString<128> StripFile = Obj.getFileName();
   if (!sys::fs::exists(StripFile)) {
     SmallString<128> TempFile;
-    if (std::error_code EC = sys::fs::createTemporaryFile(
-            sys::path::stem(StripFile), "o", TempFile))
-      return createFileError(TempFile, EC);
-    TempFiles.push_back(static_cast<std::string>(TempFile));
+    if (Error Err = createOutputFile(sys::path::stem(StripFile),
+                                     sys::path::extension(StripFile), TempFile))
+      return std::move(Err);
 
     auto Contents = Obj.getMemoryBufferRef().getBuffer();
     Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
@@ -278,10 +292,8 @@ extractFromBinary(const ObjectFile &Obj,
                              "Unable to find 'llvm-strip' in path");
 
   SmallString<128> TempFile;
-  if (std::error_code EC =
-          sys::fs::createTemporaryFile(Prefix + "-host", Extension, TempFile))
-    return createFileError(TempFile, EC);
-  TempFiles.push_back(static_cast<std::string>(TempFile));
+  if (Error Err = createOutputFile(Prefix + "-host", Extension, TempFile))
+    return std::move(Err);
 
   SmallVector<StringRef, 8> StripArgs;
   StripArgs.push_back(*StripPath);
@@ -336,10 +348,9 @@ extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
     SmallString<128> TempFile;
     StringRef DeviceExtension = getDeviceFileExtension(
         DeviceTriple, identify_magic(Contents) == file_magic::bitcode);
-    if (std::error_code EC = sys::fs::createTemporaryFile(
-            Prefix + "-device-" + DeviceTriple, DeviceExtension, TempFile))
-      return createFileError(TempFile, EC);
-    TempFiles.push_back(static_cast<std::string>(TempFile));
+    if (Error Err = createOutputFile(Prefix + "-device-" + DeviceTriple,
+                                     DeviceExtension, TempFile))
+      return std::move(Err);
 
     Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
         FileOutputBuffer::create(TempFile, Contents.size());
@@ -368,10 +379,8 @@ extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
   }
 
   SmallString<128> TempFile;
-  if (std::error_code EC =
-          sys::fs::createTemporaryFile(Prefix + "-host", Extension, TempFile))
-    return createFileError(TempFile, EC);
-  TempFiles.push_back(static_cast<std::string>(TempFile));
+  if (Error Err = createOutputFile(Prefix + "-host", Extension, TempFile))
+    return std::move(Err);
 
   std::error_code EC;
   raw_fd_ostream HostOutput(TempFile, EC, sys::fs::OF_None);
@@ -384,13 +393,6 @@ extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
 Expected<Optional<std::string>>
 extractFromArchive(const Archive &Library,
                    SmallVectorImpl<DeviceFile> &DeviceFiles) {
-
-  StringRef Extension =
-      sys::path::extension(Library.getFileName()).drop_front();
-  StringRef Prefix =
-      sys::path::stem(Library.getFileName()).take_until([](char C) {
-        return C == '-';
-      });
 
   bool NewMembers = false;
   SmallVector<NewArchiveMember, 8> Members;
@@ -440,10 +442,9 @@ extractFromArchive(const Archive &Library,
 
   // Create a new static library using the stripped host files.
   SmallString<128> TempFile;
-  if (std::error_code EC =
-          sys::fs::createTemporaryFile(Prefix + "-host", Extension, TempFile))
-    return createFileError(TempFile, EC);
-  TempFiles.push_back(static_cast<std::string>(TempFile));
+  StringRef Prefix = sys::path::stem(Library.getFileName());
+  if (Error Err = createOutputFile(Prefix + "-host", "a", TempFile))
+    return std::move(Err);
 
   std::unique_ptr<MemoryBuffer> Buffer =
       MemoryBuffer::getMemBuffer(Library.getMemoryBufferRef(), false);
@@ -500,10 +501,9 @@ Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
 
   // Create a new file to write the linked device image to.
   SmallString<128> TempFile;
-  if (std::error_code EC = sys::fs::createTemporaryFile(
+  if (Error Err = createOutputFile(
           "lto-" + TheTriple.getArchName() + "-" + Arch, "cubin", TempFile))
-    return createFileError(TempFile, EC);
-  TempFiles.push_back(static_cast<std::string>(TempFile));
+    return std::move(Err);
 
   // TODO: Pass in arguments like `-g` and `-v` from the driver.
   SmallVector<StringRef, 16> CmdArgs;
@@ -544,10 +544,9 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles,
 
   // Create a new file to write the linked device image to.
   SmallString<128> TempFile;
-  if (std::error_code EC = sys::fs::createTemporaryFile(
+  if (Error Err = createOutputFile(
           TheTriple.getArchName() + "-" + Arch + "-image", "out", TempFile))
-    return createFileError(TempFile, EC);
-  TempFiles.push_back(static_cast<std::string>(TempFile));
+    return std::move(Err);
 
   SmallVector<StringRef, 16> CmdArgs;
   CmdArgs.push_back(*NvlinkPath);
@@ -591,10 +590,9 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles,
 
   // Create a new file to write the linked device image to.
   SmallString<128> TempFile;
-  if (std::error_code EC = sys::fs::createTemporaryFile(
+  if (Error Err = createOutputFile(
           TheTriple.getArchName() + "-" + Arch + "-image", "out", TempFile))
-    return createFileError(TempFile, EC);
-  TempFiles.push_back(static_cast<std::string>(TempFile));
+    return std::move(Err);
 
   SmallVector<StringRef, 16> CmdArgs;
   CmdArgs.push_back(*LLDPath);
@@ -710,6 +708,26 @@ std::unique_ptr<lto::LTO> createLTO(
   Conf.PTO.LoopVectorization = Conf.OptLevel > 1;
   Conf.PTO.SLPVectorization = Conf.OptLevel > 1;
 
+  if (SaveTemps) {
+    auto HandleError = [&](Error Err) {
+      logAllUnhandledErrors(std::move(Err),
+                            WithColor::error(errs(), LinkerExecutable));
+      exit(1);
+    };
+    Conf.PostInternalizeModuleHook = [&](size_t, const Module &M) {
+      SmallString<128> TempFile;
+      if (Error Err =
+              createOutputFile("lto-" + TheTriple.getTriple(), "bc", TempFile))
+        HandleError(std::move(Err));
+
+      std::error_code EC;
+      raw_fd_ostream LinkedBitcode(TempFile, EC, sys::fs::OF_None);
+      if (EC)
+        HandleError(errorCodeToError(EC));
+      WriteBitcodeToFile(M, LinkedBitcode);
+      return true;
+    };
+  }
   Conf.PostOptModuleHook = Hook;
   if (TheTriple.isNVPTX())
     Conf.CGFileType = CGFT_AssemblyFile;
@@ -783,33 +801,33 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
 
   assert(!BitcodeLibrary.empty() && "Bitcode linking without `-foffload-lto`");
 
-  auto HandleError = [&](std::error_code EC) {
-    logAllUnhandledErrors(errorCodeToError(EC),
+  auto HandleError = [&](Error Err) {
+    logAllUnhandledErrors(std::move(Err),
                           WithColor::error(errs(), LinkerExecutable));
     exit(1);
   };
 
   // LTO Module hook to output bitcode without running the backend.
-  auto LinkOnly = [&](size_t Task, const Module &M) {
+  auto OutputBitcode = [&](size_t Task, const Module &M) {
     SmallString<128> TempFile;
-    if (std::error_code EC = sys::fs::createTemporaryFile(
-            "jit-" + TheTriple.getTriple(), "bc", TempFile))
-      HandleError(EC);
+    if (Error Err =
+            createOutputFile("jit-" + TheTriple.getTriple(), "bc", TempFile))
+      HandleError(std::move(Err));
+
     std::error_code EC;
     raw_fd_ostream LinkedBitcode(TempFile, EC, sys::fs::OF_None);
     if (EC)
-      HandleError(EC);
+      HandleError(errorCodeToError(EC));
     WriteBitcodeToFile(M, LinkedBitcode);
-    TempFiles.push_back(static_cast<std::string>(TempFile));
     NewInputFiles.push_back(static_cast<std::string>(TempFile));
     return false;
   };
 
   // We assume visibility of the whole program if every input file was bitcode.
   bool WholeProgram = BitcodeFiles.size() == InputFiles.size();
-  auto LTOBackend = (EmbedBitcode)
-                        ? createLTO(TheTriple, Arch, WholeProgram, LinkOnly)
-                        : createLTO(TheTriple, Arch, WholeProgram);
+  auto LTOBackend =
+      (EmbedBitcode) ? createLTO(TheTriple, Arch, WholeProgram, OutputBitcode)
+                     : createLTO(TheTriple, Arch, WholeProgram);
 
   // We need to resolve the symbols so the LTO backend knows which symbols need
   // to be kept or can be internalized. This is a simplified symbol resolution
@@ -869,9 +887,11 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
     int FD = -1;
     auto &TempFile = Files[Task];
     StringRef Extension = (TheTriple.isNVPTX()) ? "s" : "o";
-    if (std::error_code EC = sys::fs::createTemporaryFile(
-            "lto-" + TheTriple.getTriple(), Extension, FD, TempFile))
-      HandleError(EC);
+    if (Error Err = createOutputFile("lto-" + TheTriple.getTriple(), Extension,
+                                     TempFile))
+      HandleError(std::move(Err));
+    if (std::error_code EC = sys::fs::openFileForWrite(TempFile, FD))
+      HandleError(errorCodeToError(EC));
     TempFiles.push_back(static_cast<std::string>(TempFile));
     return std::make_unique<CachedFileStream>(
         std::make_unique<llvm::raw_fd_ostream>(FD, true));
@@ -947,17 +967,13 @@ Expected<std::string> wrapDeviceImage(StringRef ImageFile) {
 
   // Create a new file to write the wrapped bitcode file to.
   SmallString<128> BitcodeFile;
-  if (std::error_code EC =
-          sys::fs::createTemporaryFile("wrapper", "bc", BitcodeFile))
-    return createFileError(BitcodeFile, EC);
-  TempFiles.push_back(static_cast<std::string>(BitcodeFile));
+  if (Error Err = createOutputFile("offload-wrapper", "bc", BitcodeFile))
+    return std::move(Err);
 
-  // TODO: Optionally pass the host triple in somewhere.
-  Triple HostTriple(sys::getDefaultTargetTriple());
   SmallVector<StringRef, 4> WrapperArgs;
   WrapperArgs.push_back(*WrapperPath);
   WrapperArgs.push_back("-target");
-  WrapperArgs.push_back(HostTriple.getTriple());
+  WrapperArgs.push_back(HostTriple);
   WrapperArgs.push_back("-o");
   WrapperArgs.push_back(BitcodeFile);
   WrapperArgs.push_back(ImageFile);
@@ -973,10 +989,8 @@ Expected<std::string> wrapDeviceImage(StringRef ImageFile) {
 
   // Create a new file to write the wrapped bitcode file to.
   SmallString<128> ObjectFile;
-  if (std::error_code EC =
-          sys::fs::createTemporaryFile("image", "o", ObjectFile))
-    return createFileError(BitcodeFile, EC);
-  TempFiles.push_back(static_cast<std::string>(ObjectFile));
+  if (Error Err = createOutputFile("offload-wrapper", "o", ObjectFile))
+    return std::move(Err);
 
   SmallVector<StringRef, 4> CompilerArgs;
   CompilerArgs.push_back(*CompilerPath);
