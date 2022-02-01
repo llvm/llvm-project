@@ -8274,12 +8274,17 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     }
     break;
   }
-  case RISCVISD::READ_VLENB:
-    // We assume VLENB is at least 16 bytes.
-    Known.Zero.setLowBits(4);
+  case RISCVISD::READ_VLENB: {
+    // If we know the minimum VLen from Zvl extensions, we can use that to
+    // determine the trailing zeros of VLENB.
+    // FIXME: Limit to 128 bit vectors until we have more testing.
+    unsigned MinVLenB = std::min(128U, Subtarget.getMinVLen()) / 8;
+    if (MinVLenB > 0)
+      Known.Zero.setLowBits(Log2_32(MinVLenB));
     // We assume VLENB is no more than 65536 / 8 bytes.
     Known.Zero.setBitsFrom(14);
     break;
+  }
   case ISD::INTRINSIC_W_CHAIN:
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IntNo =
