@@ -220,7 +220,7 @@ define i1 @pmovmskb_noneof_v16i8_positive(<16 x i8> %a0) {
   ret i1 %4
 }
 
-; TODO: MOVMSK(CMPEQ(AND(X,C1),0)) -> MOVMSK(NOT(SHL(X,C2)))
+; MOVMSK(CMPEQ(AND(X,C1),0)) -> MOVMSK(NOT(SHL(X,C2)))
 define i32 @movmskpd_pow2_mask(<2 x i64> %a0) {
 ; SSE2-LABEL: movmskpd_pow2_mask:
 ; SSE2:       # %bb.0:
@@ -234,18 +234,14 @@ define i32 @movmskpd_pow2_mask(<2 x i64> %a0) {
 ;
 ; SSE42-LABEL: movmskpd_pow2_mask:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE42-NEXT:    pxor %xmm1, %xmm1
-; SSE42-NEXT:    pcmpeqq %xmm0, %xmm1
-; SSE42-NEXT:    movmskpd %xmm1, %eax
+; SSE42-NEXT:    movmskpd %xmm0, %eax
+; SSE42-NEXT:    xorl $3, %eax
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: movmskpd_pow2_mask:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovmskpd %xmm0, %eax
+; AVX-NEXT:    xorl $3, %eax
 ; AVX-NEXT:    retq
   %1 = and <2 x i64> %a0, <i64 -9223372036854775808, i64 -9223372036854775808>
   %2 = icmp eq <2 x i64> %1, zeroinitializer
@@ -258,10 +254,9 @@ define i32 @movmskpd_pow2_mask(<2 x i64> %a0) {
 define i32 @movmskps_pow2_mask(<4 x i32> %a0) {
 ; SSE-LABEL: movmskps_pow2_mask:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE-NEXT:    movmskps %xmm1, %eax
+; SSE-NEXT:    pslld $29, %xmm0
+; SSE-NEXT:    movmskps %xmm0, %eax
+; SSE-NEXT:    xorl $15, %eax
 ; SSE-NEXT:    retq
   %1 = and <4 x i32> %a0, <i32 4, i32 4, i32 4, i32 4>
   %2 = icmp eq <4 x i32> %1, zeroinitializer
@@ -274,18 +269,16 @@ define i32 @movmskps_pow2_mask(<4 x i32> %a0) {
 define i32 @pmovmskb_pow2_mask(<16 x i8> %a0) {
 ; SSE-LABEL: pmovmskb_pow2_mask:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE-NEXT:    pmovmskb %xmm1, %eax
+; SSE-NEXT:    psllw $7, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %eax
+; SSE-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: pmovmskb_pow2_mask:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; AVX-NEXT:    vpmovmskb %xmm0, %eax
+; AVX-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; AVX-NEXT:    retq
   %1 = and <16 x i8> %a0, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %2 = icmp eq <16 x i8> %1, zeroinitializer
