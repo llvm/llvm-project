@@ -66,18 +66,7 @@ class _SparseCompiler:
 
   def __init__(self):
     self.pipeline = (
-        f'sparsification,'
-        f'sparse-tensor-conversion,'
-        f'builtin.func(linalg-bufferize,convert-linalg-to-loops,convert-vector-to-scf),'
-        f'convert-scf-to-std,'
-        f'func-bufferize,'
-        f'arith-bufferize,'
-        f'builtin.func(tensor-bufferize,finalizing-bufferize),'
-        f'convert-vector-to-llvm{{reassociate-fp-reductions=1 enable-index-optimizations=1}},'
-        f'lower-affine,'
-        f'convert-memref-to-llvm,'
-        f'convert-std-to-llvm,'
-        f'reconcile-unrealized-casts')
+        f'sparse-compiler{{reassociate-fp-reductions=1 enable-index-optimizations=1}}')
 
   def __call__(self, module: ir.Module):
     passmanager.PassManager.parse(self.pipeline).run(module)
