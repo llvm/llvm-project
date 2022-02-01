@@ -723,12 +723,6 @@ Error RISCVISAInfo::checkDependency() {
         errc::invalid_argument,
         "zvl*b requires v or zve* extension to also be specified");
 
-  // Could not implement Zve* extension and the V extension at the same time.
-  if (HasZve32x && HasV)
-    return createStringError(
-        errc::invalid_argument,
-        "It is illegal to specify the v extension with zve* extensions");
-
   // Additional dependency checks.
   // TODO: The 'q' extension requires rv64.
   // TODO: It is illegal to specify 'e' extensions with 'f' and 'd'.
