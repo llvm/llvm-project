@@ -33,6 +33,9 @@ ELF Improvements
   (`D110014 <https://reviews.llvm.org/D110014>`_)
 * If ``-Map`` is specified, ``--cref`` will be printed to the specified file.
   (`D114663 <https://reviews.llvm.org/D114663>`_)
+* No longer deduplicate local symbol names at the default optimization level of ``-O1``.
+  This results in a larger ``.strtab`` (usually less than 1%) but a faster link
+  time. Use optimization level ``-O2`` to restore the deduplication.
 
 Architecture specific changes:
 
