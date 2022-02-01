@@ -65,10 +65,10 @@ struct CapturedDiags {
   }
 };
 
-MATCHER_P(DiagMessage, M, "") { return arg.Message == M; }
-MATCHER_P(DiagKind, K, "") { return arg.Kind == K; }
-MATCHER_P(DiagPos, P, "") { return arg.Pos == P; }
-MATCHER_P(DiagRange, R, "") { return arg.Rng == R; }
+MATCHER_P(diagMessage, M, "") { return arg.Message == M; }
+MATCHER_P(diagKind, K, "") { return arg.Kind == K; }
+MATCHER_P(diagPos, P, "") { return arg.Pos == P; }
+MATCHER_P(diagRange, R, "") { return arg.Rng == R; }
 
 inline Position toPosition(llvm::SMLoc L, const llvm::SourceMgr &SM) {
   auto LineCol = SM.getLineAndColumn(L);

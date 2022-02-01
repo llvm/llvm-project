@@ -114,8 +114,8 @@ DirectIncludes:
 ...
 )";
 
-MATCHER_P(ID, I, "") { return arg.ID == cantFail(SymbolID::fromStr(I)); }
-MATCHER_P(QName, Name, "") { return (arg.Scope + arg.Name).str() == Name; }
+MATCHER_P(id, I, "") { return arg.ID == cantFail(SymbolID::fromStr(I)); }
+MATCHER_P(qName, Name, "") { return (arg.Scope + arg.Name).str() == Name; }
 MATCHER_P2(IncludeHeaderWithRef, IncludeHeader, References, "") {
   return (arg.IncludeHeader == IncludeHeader) && (arg.References == References);
 }
@@ -134,14 +134,14 @@ TEST(SerializationTest, YAMLConversions) {
   ASSERT_TRUE(bool(ParsedYAML->Symbols));
   EXPECT_THAT(
       *ParsedYAML->Symbols,
-      UnorderedElementsAre(ID("057557CEBF6E6B2D"), ID("057557CEBF6E6B2E")));
+      UnorderedElementsAre(id("057557CEBF6E6B2D"), id("057557CEBF6E6B2E")));
 
   auto Sym1 = *ParsedYAML->Symbols->find(
       cantFail(SymbolID::fromStr("057557CEBF6E6B2D")));
   auto Sym2 = *ParsedYAML->Symbols->find(
       cantFail(SymbolID::fromStr("057557CEBF6E6B2E")));
 
-  EXPECT_THAT(Sym1, QName("clang::Foo1"));
+  EXPECT_THAT(Sym1, qName("clang::Foo1"));
   EXPECT_EQ(Sym1.Signature, "");
   EXPECT_EQ(Sym1.Documentation, "Foo doc");
   EXPECT_EQ(Sym1.ReturnType, "int");
@@ -154,7 +154,7 @@ TEST(SerializationTest, YAMLConversions) {
               UnorderedElementsAre(IncludeHeaderWithRef("include1", 7u),
                                    IncludeHeaderWithRef("include2", 3u)));
 
-  EXPECT_THAT(Sym2, QName("clang::Foo2"));
+  EXPECT_THAT(Sym2, qName("clang::Foo2"));
   EXPECT_EQ(Sym2.Signature, "-sig");
   EXPECT_EQ(Sym2.ReturnType, "");
   EXPECT_EQ(llvm::StringRef(Sym2.CanonicalDeclaration.FileURI),
@@ -194,20 +194,20 @@ TEST(SerializationTest, YAMLConversions) {
   EXPECT_EQ(IGNDeserialized.Flags, IncludeGraphNode::SourceFlag(1));
 }
 
-std::vector<std::string> YAMLFromSymbols(const SymbolSlab &Slab) {
+std::vector<std::string> yamlFromSymbols(const SymbolSlab &Slab) {
   std::vector<std::string> Result;
   for (const auto &Sym : Slab)
     Result.push_back(toYAML(Sym));
   return Result;
 }
-std::vector<std::string> YAMLFromRefs(const RefSlab &Slab) {
+std::vector<std::string> yamlFromRefs(const RefSlab &Slab) {
   std::vector<std::string> Result;
   for (const auto &Refs : Slab)
     Result.push_back(toYAML(Refs));
   return Result;
 }
 
-std::vector<std::string> YAMLFromRelations(const RelationSlab &Slab) {
+std::vector<std::string> yamlFromRelations(const RelationSlab &Slab) {
   std::vector<std::string> Result;
   for (const auto &Rel : Slab)
     Result.push_back(toYAML(Rel));
@@ -230,12 +230,12 @@ TEST(SerializationTest, BinaryConversions) {
   ASSERT_TRUE(In2->Relations);
 
   // Assert the YAML serializations match, for nice comparisons and diffs.
-  EXPECT_THAT(YAMLFromSymbols(*In2->Symbols),
-              UnorderedElementsAreArray(YAMLFromSymbols(*In->Symbols)));
-  EXPECT_THAT(YAMLFromRefs(*In2->Refs),
-              UnorderedElementsAreArray(YAMLFromRefs(*In->Refs)));
-  EXPECT_THAT(YAMLFromRelations(*In2->Relations),
-              UnorderedElementsAreArray(YAMLFromRelations(*In->Relations)));
+  EXPECT_THAT(yamlFromSymbols(*In2->Symbols),
+              UnorderedElementsAreArray(yamlFromSymbols(*In->Symbols)));
+  EXPECT_THAT(yamlFromRefs(*In2->Refs),
+              UnorderedElementsAreArray(yamlFromRefs(*In->Refs)));
+  EXPECT_THAT(yamlFromRelations(*In2->Relations),
+              UnorderedElementsAreArray(yamlFromRelations(*In->Relations)));
 }
 
 TEST(SerializationTest, SrcsTest) {
@@ -265,10 +265,10 @@ TEST(SerializationTest, SrcsTest) {
     ASSERT_TRUE(In->Sources);
     ASSERT_TRUE(In->Sources->count(IGN.URI));
     // Assert the YAML serializations match, for nice comparisons and diffs.
-    EXPECT_THAT(YAMLFromSymbols(*In->Symbols),
-                UnorderedElementsAreArray(YAMLFromSymbols(*In->Symbols)));
-    EXPECT_THAT(YAMLFromRefs(*In->Refs),
-                UnorderedElementsAreArray(YAMLFromRefs(*In->Refs)));
+    EXPECT_THAT(yamlFromSymbols(*In->Symbols),
+                UnorderedElementsAreArray(yamlFromSymbols(*In->Symbols)));
+    EXPECT_THAT(yamlFromRefs(*In->Refs),
+                UnorderedElementsAreArray(yamlFromRefs(*In->Refs)));
     auto IGNDeserialized = In->Sources->lookup(IGN.URI);
     EXPECT_EQ(IGNDeserialized.Digest, IGN.Digest);
     EXPECT_EQ(IGNDeserialized.DirectIncludes, IGN.DirectIncludes);
