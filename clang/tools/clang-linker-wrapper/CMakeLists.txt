@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   BinaryFormat
   MC
   Target
+  TransformUtils
   Analysis
   Passes
   IRReader
@@ -19,6 +20,7 @@ endif()
 
 add_clang_executable(clang-linker-wrapper
   ClangLinkerWrapper.cpp
+  OffloadWrapper.cpp
 
   DEPENDS
   ${tablegen_deps}
