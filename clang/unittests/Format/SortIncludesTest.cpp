@@ -70,6 +70,21 @@ TEST_F(SortIncludesTest, BasicSorting) {
                  {tooling::Range(25, 1)}));
 }
 
+TEST_F(SortIncludesTest, TrailingComments) {
+  EXPECT_EQ("#include \"a.h\"\n"
+            "#include \"b.h\" /* long\n"
+            "                  * long\n"
+            "                  * comment*/\n"
+            "#include \"c.h\"\n"
+            "#include \"d.h\"\n",
+            sort("#include \"a.h\"\n"
+                 "#include \"c.h\"\n"
+                 "#include \"b.h\" /* long\n"
+                 "                  * long\n"
+                 "                  * comment*/\n"
+                 "#include \"d.h\"\n"));
+}
+
 TEST_F(SortIncludesTest, SortedIncludesUsingSortPriorityAttribute) {
   FmtStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
   FmtStyle.IncludeStyle.IncludeCategories = {

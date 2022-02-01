@@ -580,10 +580,6 @@ OpFoldResult arith::AddFOp::fold(ArrayRef<Attribute> operands) {
   if (matchPattern(getRhs(), m_NegZeroFloat()))
     return getLhs();
 
-  // addf(-0, x) -> x
-  if (matchPattern(getLhs(), m_NegZeroFloat()))
-    return getRhs();
-
   return constFoldBinaryOp<FloatAttr>(
       operands, [](const APFloat &a, const APFloat &b) { return a + b; });
 }

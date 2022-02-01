@@ -658,7 +658,7 @@ func @test_addf(%arg0 : f32) -> (f32, f32, f32, f32) {
   %c0 = arith.constant 0.0 : f32
   %c-0 = arith.constant -0.0 : f32
   %c1 = arith.constant 1.0 : f32
-  %0 = arith.addf %arg0, %c0 : f32
+  %0 = arith.addf %c0, %arg0 : f32
   %1 = arith.addf %arg0, %c-0 : f32
   %2 = arith.addf %c-0, %arg0 : f32
   %3 = arith.addf %c1, %c1 : f32
@@ -685,15 +685,18 @@ func @test_subf(%arg0 : f16) -> (f16, f16, f16) {
 // -----
 
 // CHECK-LABEL: @test_mulf(
-func @test_mulf(%arg0 : f32) -> (f32, f32, f32) {
-  // CHECK-NEXT:  %[[C4:.+]] = arith.constant 4.0
-  // CHECK-NEXT:   return %arg0, %arg0, %[[C4]]
+func @test_mulf(%arg0 : f32) -> (f32, f32, f32, f32) {
+  // CHECK-DAG:   %[[C2:.+]] = arith.constant 2.0
+  // CHECK-DAG:   %[[C4:.+]] = arith.constant 4.0
+  // CHECK-NEXT:  %[[X:.+]] = arith.mulf %arg0, %[[C2]]
+  // CHECK-NEXT:  return %[[X]], %arg0, %arg0, %[[C4]]
   %c1 = arith.constant 1.0 : f32
   %c2 = arith.constant 2.0 : f32
-  %0 = arith.mulf %arg0, %c1 : f32
-  %1 = arith.mulf %c1, %arg0 : f32
-  %2 = arith.mulf %c2, %c2 : f32
-  return %0, %1, %2 : f32, f32, f32
+  %0 = arith.mulf %c2, %arg0 : f32
+  %1 = arith.mulf %arg0, %c1 : f32
+  %2 = arith.mulf %c1, %arg0 : f32
+  %3 = arith.mulf %c2, %c2 : f32
+  return %0, %1, %2, %3 : f32, f32, f32, f32
 }
 
 // -----

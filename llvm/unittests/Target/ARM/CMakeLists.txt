@@ -10,6 +10,7 @@ set(LLVM_LINK_COMPONENTS
   CodeGen
   GlobalISel
   MC
+  MIRParser
   SelectionDAG
   Support
   Target
@@ -17,4 +18,5 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_target_unittest(ARMTests
   MachineInstrTest.cpp
+  InstSizes.cpp
   )

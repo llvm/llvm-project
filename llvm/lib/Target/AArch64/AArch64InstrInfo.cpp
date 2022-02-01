@@ -93,9 +93,18 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   //        before the assembly printer.
   unsigned NumBytes = 0;
   const MCInstrDesc &Desc = MI.getDesc();
+
+  // Size should be preferably set in
+  // llvm/lib/Target/AArch64/AArch64InstrInfo.td (default case).
+  // Specific cases handle instructions of variable sizes
   switch (Desc.getOpcode()) {
   default:
-    // Anything not explicitly designated otherwise is a normal 4-byte insn.
+    if (Desc.getSize())
+      return Desc.getSize();
+
+    // Anything not explicitly designated otherwise (i.e. pseudo-instructions
+    // with fixed constant size but not specified in .td file) is a normal
+    // 4-byte insn.
     NumBytes = 4;
     break;
   case TargetOpcode::STACKMAP:
@@ -115,32 +124,8 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     if (NumBytes == 0)
       NumBytes = 4;
     break;
-  case AArch64::TLSDESC_CALLSEQ:
-    // This gets lowered to an instruction sequence which takes 16 bytes
-    NumBytes = 16;
-    break;
-  case AArch64::SpeculationBarrierISBDSBEndBB:
-    // This gets lowered to 2 4-byte instructions.
-    NumBytes = 8;
-    break;
-  case AArch64::SpeculationBarrierSBEndBB:
-    // This gets lowered to 1 4-byte instructions.
-    NumBytes = 4;
-    break;
-  case AArch64::JumpTableDest32:
-  case AArch64::JumpTableDest16:
-  case AArch64::JumpTableDest8:
-  case AArch64::MOPSMemoryCopyPseudo:
-  case AArch64::MOPSMemoryMovePseudo:
-  case AArch64::MOPSMemorySetPseudo:
-  case AArch64::MOPSMemorySetTaggingPseudo:
-    NumBytes = 12;
-    break;
   case AArch64::SPACE:
     NumBytes = MI.getOperand(1).getImm();
-    break;
-  case AArch64::StoreSwiftAsyncContext:
-    NumBytes = 20;
     break;
   case TargetOpcode::BUNDLE:
     NumBytes = getInstBundleLength(MI);

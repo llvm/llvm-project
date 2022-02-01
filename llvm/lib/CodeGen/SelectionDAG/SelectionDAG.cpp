@@ -5242,6 +5242,8 @@ static llvm::Optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
   case ISD::UADDSAT: return C1.uadd_sat(C2);
   case ISD::SSUBSAT: return C1.ssub_sat(C2);
   case ISD::USUBSAT: return C1.usub_sat(C2);
+  case ISD::SSHLSAT: return C1.sshl_sat(C2);
+  case ISD::USHLSAT: return C1.ushl_sat(C2);
   case ISD::UDIV:
     if (!C2.getBoolValue())
       break;
