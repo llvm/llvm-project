@@ -32,7 +32,7 @@
 ## Symbol 'x' is nonpreemptible, but --no-relax surpresses relaxations.
 # RUN: ld.lld %t/a.o -T %t/linker.t --no-relax -o %t/no-relax
 # RUN: llvm-objdump --no-show-raw-insn -d %t/no-relax | \
-#   FileCheck --check-prefix=X1-NO-RELAX %s
+# RUN:   FileCheck --check-prefix=X1-NO-RELAX %s
 
 # X1-NO-RELAX:      adrp   x1
 # X1-NO-RELAX-NEXT: ldr
