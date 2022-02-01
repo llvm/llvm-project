@@ -904,7 +904,6 @@ cc_library(
         "include/llvm/Bitcode/BitcodeWriter.h",
         "include/llvm/Bitcode/BitcodeWriterPass.h",
         "include/llvm/Bitcode/LLVMBitCodes.h",
-        "include/llvm/Transforms/Utils/ModuleUtils.h",
     ],
     copts = llvm_copts,
     deps = [
