@@ -310,7 +310,7 @@ void LinkerScript::processInsertCommands() {
   for (const InsertCommand &cmd : insertCommands) {
     for (StringRef name : cmd.names) {
       // If base is empty, it may have been discarded by
-      // adjustSectionsBeforeSorting(). We do not handle such output sections.
+      // adjustOutputSections(). We do not handle such output sections.
       auto from = llvm::find_if(sectionCommands, [&](SectionCommand *subCmd) {
         return isa<OutputSection>(subCmd) &&
                cast<OutputSection>(subCmd)->name == name;
@@ -1114,7 +1114,7 @@ static void maybePropagatePhdrs(OutputSection &sec,
   }
 }
 
-void LinkerScript::adjustSectionsBeforeSorting() {
+void LinkerScript::adjustOutputSections() {
   // If the output section contains only symbol assignments, create a
   // corresponding output section. The issue is what to do with linker script
   // like ".foo : { symbol = 42; }". One option would be to convert it to

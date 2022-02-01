@@ -319,7 +319,7 @@ public:
 
   void addOrphanSections();
   void diagnoseOrphanHandling() const;
-  void adjustSectionsBeforeSorting();
+  void adjustOutputSections();
   void adjustSectionsAfterSorting();
 
   SmallVector<PhdrEntry *, 0> createPhdrs();
