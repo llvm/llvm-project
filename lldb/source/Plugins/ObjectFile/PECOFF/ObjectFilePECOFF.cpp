@@ -1194,13 +1194,10 @@ ObjectFile::Type ObjectFilePECOFF::CalculateType() {
 
 ObjectFile::Strata ObjectFilePECOFF::CalculateStrata() { return eStrataUser; }
 
-llvm::StringRef ObjectFilePECOFF::GetReflectionSectionIdentifier(
-    swift::ReflectionSectionKind section) {
 #ifdef LLDB_ENABLE_SWIFT
-  swift::SwiftObjectFileFormatCOFF file_format_coff;
-  return file_format_coff.getSectionName(section);
-#else
-  llvm_unreachable("Swift support disabled");
-#endif //LLDB_ENABLE_SWIFT
+bool ObjectFilePECOFF::CanContainSwiftReflectionData(const Section &section) {
+  swift::SwiftObjectFileFormatCOFF file_format;
+  return file_format.sectionContainsReflectionData(
+      section.GetName().GetStringRef());
 }
-
+#endif // LLDB_ENABLE_SWIFT

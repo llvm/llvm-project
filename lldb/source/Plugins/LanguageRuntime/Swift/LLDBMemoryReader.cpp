@@ -1,9 +1,12 @@
 #include "LLDBMemoryReader.h"
+#include "lldb/Core/Address.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Logging.h"
 
 #include "llvm/Support/MathExtras.h"
+#include "swift/Demangling/Demangle.h"
 
 using namespace lldb;
 using namespace lldb_private;

@@ -708,6 +708,12 @@ public:
   virtual llvm::StringRef
   GetReflectionSectionIdentifier(swift::ReflectionSectionKind section);
 
+#ifdef LLDB_ENABLE_SWIFT
+  virtual bool CanContainSwiftReflectionData(const Section &section) {
+    return false;
+  }
+#endif // LLDB_ENABLE_SWIFT
+
   /// Load binaries listed in a corefile
   ///
   /// A corefile may have metadata listing binaries that can be loaded,
