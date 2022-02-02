@@ -17,13 +17,13 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#ifndef _LIBCPP_HAS_NO_CONCEPTS
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 template <class _I1, class _I2, class _Rp, class _P1 = identity, class _P2 = identity>
 concept indirectly_comparable =
   indirect_binary_predicate<_Rp, projected<_I1, _P1>, projected<_I2, _P2>>;
 
-#endif // _LIBCPP_HAS_NO_CONCEPTS
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 _LIBCPP_END_NAMESPACE_STD
 
