@@ -126,6 +126,7 @@ function(add_libc_multi_impl_benchmark name)
         target_link_libraries(${benchmark_name} PUBLIC json ${entrypoint_object_file})
         string(TOUPPER ${name} name_upper)
         target_compile_definitions(${benchmark_name} PRIVATE "-DLIBC_BENCHMARK_FUNCTION_${name_upper}=__llvm_libc::${name}" "-DLIBC_BENCHMARK_FUNCTION_NAME=\"${fq_config_name}\"")
+        llvm_update_compile_flags(${benchmark_name})
     else()
       message(STATUS "Skipping benchmark for '${fq_config_name}' insufficient host cpu features '${required_cpu_features}'")
     endif()
@@ -151,7 +152,6 @@ add_executable(libc.benchmarks.memory_functions.opt_host
   LibcMemoryGoogleBenchmarkMain.cpp
   LibcDefaultImplementations.cpp
 )
-
 target_link_libraries(libc.benchmarks.memory_functions.opt_host
   PRIVATE
   libc-memory-benchmark
@@ -163,5 +163,6 @@ target_link_libraries(libc.benchmarks.memory_functions.opt_host
   libc.src.string.memmove_opt_host
   benchmark_main
 )
+llvm_update_compile_flags(libc.benchmarks.memory_functions.opt_host)
 
 add_subdirectory(automemcpy)
