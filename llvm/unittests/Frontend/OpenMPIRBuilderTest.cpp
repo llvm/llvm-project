@@ -3031,6 +3031,63 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicCapture) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
+TEST_F(OpenMPIRBuilderTest, OMPAtomicCompare) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
+  LLVMContext &Ctx = M->getContext();
+  IntegerType *Int32 = Type::getInt32Ty(Ctx);
+  AllocaInst *XVal = Builder.CreateAlloca(Int32);
+  XVal->setName("x");
+  StoreInst *Init =
+      Builder.CreateStore(ConstantInt::get(Type::getInt32Ty(Ctx), 0U), XVal);
+
+  OpenMPIRBuilder::AtomicOpValue XSigned = {XVal, Int32, true, false};
+  OpenMPIRBuilder::AtomicOpValue XUnsigned = {XVal, Int32, false, false};
+  AtomicOrdering AO = AtomicOrdering::Monotonic;
+  ConstantInt *Expr = ConstantInt::get(Type::getInt32Ty(Ctx), 1U);
+  ConstantInt *D = ConstantInt::get(Type::getInt32Ty(Ctx), 1U);
+  OMPAtomicCompareOp OpMax = OMPAtomicCompareOp::MAX;
+  OMPAtomicCompareOp OpEQ = OMPAtomicCompareOp::EQ;
+
+  Builder.restoreIP(OMPBuilder.createAtomicCompare(Builder, XSigned, Expr,
+                                                   nullptr, AO, OpMax, true));
+  Builder.restoreIP(OMPBuilder.createAtomicCompare(Builder, XUnsigned, Expr,
+                                                   nullptr, AO, OpMax, false));
+  Builder.restoreIP(OMPBuilder.createAtomicCompare(Builder, XSigned, Expr, D,
+                                                   AO, OpEQ, true));
+
+  BasicBlock *EntryBB = BB;
+  EXPECT_EQ(EntryBB->getParent()->size(), 1U);
+  EXPECT_EQ(EntryBB->size(), 5U);
+
+  AtomicRMWInst *ARWM1 = dyn_cast<AtomicRMWInst>(Init->getNextNode());
+  EXPECT_NE(ARWM1, nullptr);
+  EXPECT_EQ(ARWM1->getPointerOperand(), XVal);
+  EXPECT_EQ(ARWM1->getValOperand(), Expr);
+  EXPECT_EQ(ARWM1->getOperation(), AtomicRMWInst::Min);
+
+  AtomicRMWInst *ARWM2 = dyn_cast<AtomicRMWInst>(ARWM1->getNextNode());
+  EXPECT_NE(ARWM2, nullptr);
+  EXPECT_EQ(ARWM2->getPointerOperand(), XVal);
+  EXPECT_EQ(ARWM2->getValOperand(), Expr);
+  EXPECT_EQ(ARWM2->getOperation(), AtomicRMWInst::UMax);
+
+  AtomicCmpXchgInst *AXCHG = dyn_cast<AtomicCmpXchgInst>(ARWM2->getNextNode());
+  EXPECT_NE(AXCHG, nullptr);
+  EXPECT_EQ(AXCHG->getPointerOperand(), XVal);
+  EXPECT_EQ(AXCHG->getCompareOperand(), Expr);
+  EXPECT_EQ(AXCHG->getNewValOperand(), D);
+
+  Builder.CreateRetVoid();
+  OMPBuilder.finalize();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
 /// Returns the single instruction of InstTy type in BB that uses the value V.
 /// If there is more than one such instruction, returns null.
 template <typename InstTy>
