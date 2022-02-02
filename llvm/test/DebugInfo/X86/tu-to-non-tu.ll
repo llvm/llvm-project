@@ -1,17 +1,41 @@
 ; RUN: llc -filetype=obj -O0 -generate-type-units -mtriple=x86_64-unknown-linux-gnu < %s \
 ; RUN:     | llvm-dwarfdump -debug-info -debug-types - | FileCheck %s
 
-; Test that a type unit referencing a non-type unit (in this case, it's
-; bordering on an ODR violation - a type with linkage references a type without
-; linkage, so there's no way for the first type to be defined in more than one
-; translation unit, so there's no need for it to be in a type unit - but this
-; is quirky/rare and an easy way to test a broader issue). The type unit should
-; not end up with a whole definition of the referenced type - instead it should
-; have a declaration of the type, while the definition remains in the primary
-; CU.
-; (again, arguably in this instance - since the type is only referenced once, it
-; could go in the TU only - but that requires tracking usage & then deciding
-; where to put types, which isn't worthwhile right now)
+; Test that a type unit referencing a non-type unit produces a declaration of
+; the referent in the referee.
+
+; This test was intended to test this:
+
+; * Also check that an attempt to reference an internal linkage (defined in an anonymous
+; * namespace) type from a type unit (could happen with a pimpl idiom, for instance -
+; * it does mean the linkage-having type can only be defined in one translation
+; * unit anyway) forces the referent to not be placed in a type unit (because the
+; * declaration of the internal linkage type would be ambiguous/wouldn't allow a
+; * consumer to find the definition with certainty)
+
+; But the implementation was buggy, so for now, it's reverted but still test covered.
+; A buggy input/case looks like this:
+;  namespace {
+;  template <typename> struct a {};
+;  } // namespace
+;  class c {
+;    c();
+;  };
+;  class b {
+;    b();
+;    a<c> ax;
+;  };
+;  b::b() {}
+;  c::c() {}
+
+; I haven't bothered adding a test case for this ^ to avoid regression, as
+; likely we'll move in a different direction entirely, since this approach is
+; incomplete anyway. Specifically it looks like we want a flag on DICompositeType
+; to indicate whether it should go in a type unit - the current frontend strategy
+; of omitting the 'identifier' field is inadequate (since it breaks LLVM IR linking
+; type resolution - leaving a separate decl/def of the same type), so if we fix that
+; we can fix the internal-referencing issue by using such a flag instead of trying
+; to figure it out in the backend.
 
 ; Built from the following source, compiled with this command:
 ; $ clang++-tot decl.cpp -g -fdebug-types-section -c
@@ -86,6 +110,13 @@
 ; CHECK-LABEL: Type Unit:
 ; CHECK: DW_TAG_structure_type
 ; CHECK-NOT: DW_TAG
+; CHECK: DW_AT_name {{.*}}"ref_internal"
+; CHECK-NOT: DW_TAG
+; CHECK: DW_AT_byte_size
+
+; CHECK-LABEL: Type Unit:
+; CHECK: DW_TAG_structure_type
+; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_name {{.*}}"ref_templ_non_tu"
 ; CHECK: DW_TAG_structure_type
 ; CHECK-NEXT: DW_AT_declaration       (true)
@@ -120,18 +151,10 @@
 ; CHECK-NEXT:   DW_AT_declaration       (true)
 ; CHECK-NEXT:   DW_AT_signature (0xb1cde890d320f5c2)
 
-; CHECK: DW_TAG_namespace
-; CHECK-NOT: {{DW_AT_name|DW_TAG}}
 ; CHECK: DW_TAG_structure_type
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_name {{.*}}"non_tu"
 
-
-; CHECK: DW_TAG_structure_type
-; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name {{.*}}"ref_internal"
-; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_byte_size
 
 ; CHECK: DW_TAG_namespace
 ; CHECK-NOT: {{DW_TAG|DW_AT}}
