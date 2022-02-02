@@ -2284,14 +2284,17 @@ static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Lo,
     if ((LoC >> 31) == HiC)
       return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Lo, VL);
 
-    // If vl is equal to VLMax and Hi constant is equal to Lo, we could use
+    // If vl is equal to XLEN_MAX and Hi constant is equal to Lo, we could use
     // vmv.v.x whose EEW = 32 to lower it.
     auto *Const = dyn_cast<ConstantSDNode>(VL);
-    if (LoC == HiC && Const && Const->getSExtValue() == RISCV::VLMaxSentinel) {
+    if (LoC == HiC && Const && Const->isAllOnesValue() &&
+        Const->getOpcode() != ISD::TargetConstant) {
       MVT InterVT = MVT::getVectorVT(MVT::i32, VT.getVectorElementCount() * 2);
       // TODO: if vl <= min(VLMAX), we can also do this. But we could not
       // access the subtarget here now.
-      auto InterVec = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, InterVT, Lo, VL);
+      auto InterVec = DAG.getNode(
+          RISCVISD::VMV_V_X_VL, DL, InterVT, Lo,
+          DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, MVT::i32));
       return DAG.getNode(ISD::BITCAST, DL, VT, InterVec);
     }
   }
@@ -4062,7 +4065,7 @@ SDValue RISCVTargetLowering::lowerSPLAT_VECTOR_PARTS(SDValue Op,
 
   // Fall back to use a stack store and stride x0 vector load. Use X0 as VL.
   return DAG.getNode(RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL, DL, VecVT, Lo, Hi,
-                     DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, MVT::i64));
+                     DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, MVT::i32));
 }
 
 // Custom-lower extensions from mask vectors by using a vselect either with 1
