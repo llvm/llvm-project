@@ -172,7 +172,7 @@ public:
 // Formats textual output.  `Fmt` is a string consisting of one or more
 // replacement sequences with the following grammar:
 //
-// rep_field ::= "{" [index] ["," layout] [":" format] "}"
+// rep_field ::= "{" index ["," layout] [":" format] "}"
 // index     ::= <non-negative integer>
 // layout    ::= [[[char]loc]width]
 // format    ::= <any string not containing "{" or "}">
