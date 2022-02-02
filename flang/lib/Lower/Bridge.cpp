@@ -15,6 +15,7 @@
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
+#include "flang/Lower/Runtime.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Support/FIRContext.h"
@@ -553,8 +554,9 @@ private:
     TODO(toLocation(), "FailImageStmt lowering");
   }
 
+  // call STOP, ERROR STOP in runtime
   void genFIR(const Fortran::parser::StopStmt &stmt) {
-    TODO(toLocation(), "StopStmt lowering");
+    genStopStatement(*this, stmt);
   }
 
   void genFIR(const Fortran::parser::ReturnStmt &stmt) {

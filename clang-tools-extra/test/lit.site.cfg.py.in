@@ -4,6 +4,7 @@ import sys
 
 config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
 config.llvm_libs_dir = "@LLVM_LIBS_DIR@"
+config.llvm_plugin_ext = "@LLVM_PLUGIN_EXT@"
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.clang_tools_binary_dir = "@CLANG_TOOLS_BINARY_DIR@"
 config.clang_tools_dir = "@CLANG_TOOLS_DIR@"
@@ -11,6 +12,7 @@ config.clang_libs_dir = "@SHLIBDIR@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.target_triple = "@TARGET_TRIPLE@"
 config.clang_tidy_staticanalyzer = @CLANG_TIDY_ENABLE_STATIC_ANALYZER@
+config.has_plugins = @LLVM_ENABLE_PLUGINS@ & ~@LLVM_INSTALL_TOOLCHAIN_ONLY@
 
 # Support substitution of the tools and libs dirs with user parameters. This is
 # used when we can't determine the tool dir at configuration time.

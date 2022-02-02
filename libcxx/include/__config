@@ -821,10 +821,10 @@ typedef __char32_t char32_t;
 // Inline namespaces are available in Clang/GCC/MSVC regardless of C++ dialect.
 #define _LIBCPP_BEGIN_NAMESPACE_STD namespace std { inline namespace _LIBCPP_ABI_NAMESPACE {
 #define _LIBCPP_END_NAMESPACE_STD  } }
-#define _VSTD std::_LIBCPP_ABI_NAMESPACE
+#define _VSTD std
 _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER > 14
 #define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM \
   _LIBCPP_BEGIN_NAMESPACE_STD inline namespace __fs { namespace filesystem {
 #else
