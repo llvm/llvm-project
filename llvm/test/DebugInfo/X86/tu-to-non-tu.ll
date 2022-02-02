@@ -1,15 +1,17 @@
 ; RUN: llc -filetype=obj -O0 -generate-type-units -mtriple=x86_64-unknown-linux-gnu < %s \
 ; RUN:     | llvm-dwarfdump -debug-info -debug-types - | FileCheck %s
 
-; Test that a type unit referencing a non-type unit produces a declaration of
-; the referent in the referee.
-
-; Also check that an attempt to reference an internal linkage (defined in an anonymous
-; namespace) type from a type unit (could happen with a pimpl idiom, for instance -
-; it does mean the linkage-having type can only be defined in one translation
-; unit anyway) forces the referent to not be placed in a type unit (because the
-; declaration of the internal linkage type would be ambiguous/wouldn't allow a
-; consumer to find the definition with certainty)
+; Test that a type unit referencing a non-type unit (in this case, it's
+; bordering on an ODR violation - a type with linkage references a type without
+; linkage, so there's no way for the first type to be defined in more than one
+; translation unit, so there's no need for it to be in a type unit - but this
+; is quirky/rare and an easy way to test a broader issue). The type unit should
+; not end up with a whole definition of the referenced type - instead it should
+; have a declaration of the type, while the definition remains in the primary
+; CU.
+; (again, arguably in this instance - since the type is only referenced once, it
+; could go in the TU only - but that requires tracking usage & then deciding
+; where to put types, which isn't worthwhile right now)
 
 ; Built from the following source, compiled with this command:
 ; $ clang++-tot decl.cpp -g -fdebug-types-section -c
@@ -118,6 +120,8 @@
 ; CHECK-NEXT:   DW_AT_declaration       (true)
 ; CHECK-NEXT:   DW_AT_signature (0xb1cde890d320f5c2)
 
+; CHECK: DW_TAG_namespace
+; CHECK-NOT: {{DW_AT_name|DW_TAG}}
 ; CHECK: DW_TAG_structure_type
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_name {{.*}}"non_tu"
