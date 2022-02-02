@@ -11,6 +11,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
 
 namespace llvm {

@@ -22,6 +22,7 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -31,7 +32,6 @@
 
 namespace llvm {
 
-class BasicBlock;
 class Instruction;
 class Use;
 

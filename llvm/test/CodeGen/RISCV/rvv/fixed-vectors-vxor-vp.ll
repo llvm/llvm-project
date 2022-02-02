@@ -55,10 +55,8 @@ define <2 x i8> @vxor_vx_v2i8(<2 x i8> %va, i8 %b, <2 x i1> %m, i32 zeroext %evl
 define <2 x i8> @vxor_vx_v2i8_commute(<2 x i8> %va, i8 %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vx_v2i8_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
-; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
-; CHECK-NEXT:    vxor.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vxor.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i8> poison, i8 %b, i32 0
   %vb = shufflevector <2 x i8> %elt.head, <2 x i8> poison, <2 x i32> zeroinitializer

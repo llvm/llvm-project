@@ -30,8 +30,6 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/MathExtras.h"
 using namespace llvm;
 using namespace llvm::PatternMatch;
 

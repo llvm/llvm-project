@@ -8317,9 +8317,11 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   default:
     break;
   case RISCVISD::SELECT_CC: {
-    unsigned Tmp = DAG.ComputeNumSignBits(Op.getOperand(3), DemandedElts, Depth + 1);
+    unsigned Tmp =
+        DAG.ComputeNumSignBits(Op.getOperand(3), DemandedElts, Depth + 1);
     if (Tmp == 1) return 1;  // Early out.
-    unsigned Tmp2 = DAG.ComputeNumSignBits(Op.getOperand(4), DemandedElts, Depth + 1);
+    unsigned Tmp2 =
+        DAG.ComputeNumSignBits(Op.getOperand(4), DemandedElts, Depth + 1);
     return std::min(Tmp, Tmp2);
   }
   case RISCVISD::SLLW:
@@ -8362,15 +8364,18 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
     }
     break;
   }
-  case RISCVISD::VMV_X_S:
+  case RISCVISD::VMV_X_S: {
     // The number of sign bits of the scalar result is computed by obtaining the
     // element type of the input vector operand, subtracting its width from the
     // XLEN, and then adding one (sign bit within the element type). If the
     // element type is wider than XLen, the least-significant XLEN bits are
     // taken.
-    if (Op.getOperand(0).getScalarValueSizeInBits() > Subtarget.getXLen())
-      return 1;
-    return Subtarget.getXLen() - Op.getOperand(0).getScalarValueSizeInBits() + 1;
+    unsigned XLen = Subtarget.getXLen();
+    unsigned EltBits = Op.getOperand(0).getScalarValueSizeInBits();
+    if (EltBits <= XLen)
+      return XLen - EltBits + 1;
+    break;
+  }
   }
 
   return 1;

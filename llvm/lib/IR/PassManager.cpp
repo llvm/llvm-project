@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/PassManager.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/LLVMContext.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/IR/PassManagerImpl.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 

@@ -227,6 +227,8 @@ class AArch64Relaxer {
 public:
   explicit AArch64Relaxer(ArrayRef<Relocation> relocs);
 
+  bool tryRelaxAdrpAdd(const Relocation &adrpRel, const Relocation &addRel,
+                       uint64_t secAddr, uint8_t *buf) const;
   bool tryRelaxAdrpLdr(const Relocation &adrpRel, const Relocation &ldrRel,
                        uint64_t secAddr, uint8_t *buf) const;
 };

@@ -14,7 +14,6 @@
 #ifndef LLVM_LIB_IR_LLVMCONTEXTIMPL_H
 #define LLVM_LIB_IR_LLVMCONTEXTIMPL_H
 
-#include "AttributeImpl.h"
 #include "ConstantsContext.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -34,13 +33,14 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/TrackingMDRef.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/StringSaver.h"
-#include "llvm/Support/YAMLTraits.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -52,9 +52,23 @@
 
 namespace llvm {
 
+class AttributeImpl;
+class AttributeListImpl;
+class AttributeSetNode;
+class BasicBlock;
+struct DiagnosticHandler;
+class ElementCount;
+class Function;
+class GlobalObject;
+class GlobalValue;
+class InlineAsm;
+class LLVMRemarkStreamer;
+class OptPassGate;
+namespace remarks {
+class RemarkStreamer;
+}
+template <typename T> class StringMapEntry;
 class StringRef;
-class Type;
-class Value;
 class ValueHandleBase;
 
 using DenseMapAPIntKeyInfo = DenseMapInfo<APInt>;

@@ -1025,6 +1025,14 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
       }
       target.relocate(bufLoc, rel, targetVA);
       break;
+    case R_AARCH64_PAGE_PC:
+      if (i + 1 < size && aarch64relaxer.tryRelaxAdrpAdd(
+                              rel, relocations[i + 1], secAddr, buf)) {
+        ++i;
+        continue;
+      }
+      target.relocate(bufLoc, rel, targetVA);
+      break;
     case R_PPC64_RELAX_GOT_PC: {
       // The R_PPC64_PCREL_OPT relocation must appear immediately after
       // R_PPC64_GOT_PCREL34 in the relocations table at the same offset.

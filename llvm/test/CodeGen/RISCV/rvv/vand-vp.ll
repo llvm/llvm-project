@@ -1045,10 +1045,8 @@ define <vscale x 32 x i16> @vand_vx_nxv32i16(<vscale x 32 x i16> %va, i16 %b, <v
 define <vscale x 32 x i16> @vand_vx_nxv32i16_commute(<vscale x 32 x i16> %va, i16 %b, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vand_vx_nxv32i16_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e16, m8, ta, mu
-; CHECK-NEXT:    vmv.v.x v16, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, mu
-; CHECK-NEXT:    vand.vv v8, v16, v8, v0.t
+; CHECK-NEXT:    vand.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x i16> poison, i16 %b, i32 0
   %vb = shufflevector <vscale x 32 x i16> %elt.head, <vscale x 32 x i16> poison, <vscale x 32 x i32> zeroinitializer
