@@ -267,7 +267,7 @@ bool LLDBMemoryReader::readBytes(swift::remote::RemoteAddress address,
     maybeAddr = resolveRemoteAddress(address.getAddressData());
 
   if (!maybeAddr) {
-    LLDB_LOGV(log, "[MemoryReader] could not resolve address {1:x}",
+    LLDB_LOGV(log, "[MemoryReader] could not resolve address {0:x}",
               address.getAddressData());
     return false;
   }
@@ -344,7 +344,7 @@ bool LLDBMemoryReader::readString(swift::remote::RemoteAddress address,
     maybeAddr = resolveRemoteAddress(address.getAddressData());
 
   if (!maybeAddr) {
-    LLDB_LOGV(log, "[MemoryReader] could not resolve address {1:x}",
+    LLDB_LOGV(log, "[MemoryReader] could not resolve address {0:x}",
               address.getAddressData());
     return false;
   }
