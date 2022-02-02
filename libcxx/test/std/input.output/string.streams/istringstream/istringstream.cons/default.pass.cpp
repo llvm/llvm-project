@@ -60,7 +60,7 @@ int main(int, char**)
 
 #if TEST_STD_VER >= 11
     test<std::istringstream>();
-#   ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<std::wistringstream>();
 #   endif
 #endif
