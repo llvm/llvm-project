@@ -234,7 +234,7 @@ MaybeLocalRepr presburger_utils::computeSingleVarRepr(
         continue;
 
       repr.kind = ReprKind::Inequality;
-      repr.repr.inEqualityPair = {ubPos, lbPos};
+      repr.repr.inequalityPair = {ubPos, lbPos};
       return repr;
     }
   }

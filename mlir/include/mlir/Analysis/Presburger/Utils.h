@@ -35,7 +35,7 @@ struct MaybeLocalRepr {
     unsigned equalityIdx;
     struct {
       unsigned lowerBoundIdx, upperBoundIdx;
-    } inEqualityPair;
+    } inequalityPair;
   } repr;
 };
 
