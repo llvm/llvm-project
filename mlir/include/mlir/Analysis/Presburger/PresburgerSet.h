@@ -77,6 +77,9 @@ public:
   /// divisions.
   PresburgerSet subtract(const PresburgerSet &set) const;
 
+  /// Return true if this set is a subset of the given set, and false otherwise.
+  bool isSubsetOf(const PresburgerSet &set) const;
+
   /// Return true if this set is equal to the given set, and false otherwise.
   /// All local variables in both sets must correspond to floor divisions.
   bool isEqual(const PresburgerSet &set) const;
