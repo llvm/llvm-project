@@ -8,6 +8,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"
 
 ; CHECK: Report: unsafe dependent memory operations in loop
+; CHECK-NEXT:  Backward loop carried data dependence.
 ; CHECK-NEXT: Dependences:
 ; CHECK-NEXT:   Backward:
 ; CHECK-NEXT:     %loadA = load i16, i16* %arrayidxA, align 2 ->

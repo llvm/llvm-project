@@ -8,6 +8,7 @@ define void @single_stride(i32* noalias %A, i32* noalias %B, i64 %N, i64 %stride
 ; CHECK-LABEL: Loop access info in function 'single_stride':
 ; CHECK-NEXT:  loop:
 ; CHECK-NEXT:    Report: unsafe dependent memory operations in loop.
+; CHECK-NEXT:    Backward loop carried data dependence.
 ; CHECK-NEXT:    Dependences:
 ; CHECK-NEXT:      Backward:
 ; CHECK-NEXT:          %load = load i32, i32* %gep.A, align 4 ->
@@ -51,6 +52,7 @@ define void @single_stride_struct({ i32, i8 }* noalias %A, { i32, i8 }* noalias 
 ; CHECK-LABEL: Loop access info in function 'single_stride_struct':
 ; CHECK-NEXT:  loop:
 ; CHECK-NEXT:    Report: unsafe dependent memory operations in loop.
+; CHECK-NEXT:    Backward loop carried data dependence.
 ; CHECK-NEXT:    Dependences:
 ; CHECK-NEXT:      Backward:
 ; CHECK-NEXT:          %load = load { i32, i8 }, { i32, i8 }* %gep.A, align 4 ->
@@ -97,6 +99,7 @@ define void @two_strides(i32* noalias %A, i32* noalias %B, i64 %N, i64 %stride.1
 ; CHECK-LABEL: Loop access info in function 'two_strides':
 ; CHECK-NEXT:  loop:
 ; CHECK-NEXT:    Report: unsafe dependent memory operations in loop.
+; CHECK-NEXT:    Backward loop carried data dependence.
 ; CHECK-NEXT:    Dependences:
 ; CHECK-NEXT:      Backward:
 ; CHECK-NEXT:          %load = load i32, i32* %gep.A, align 4 ->

@@ -605,6 +605,11 @@ private:
   /// invariant.
   void collectStridedAccess(Value *LoadOrStoreInst);
 
+  // Emits the first unsafe memory dependence in a loop.
+  // Emits nothing if there are no unsafe dependences
+  // or if the dependences were not recorded.
+  void emitUnsafeDependenceRemark();
+
   std::unique_ptr<PredicatedScalarEvolution> PSE;
 
   /// We need to check that all of the pointers in this list are disjoint
