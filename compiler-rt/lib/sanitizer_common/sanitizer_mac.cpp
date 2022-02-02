@@ -871,9 +871,9 @@ void LogFullErrorReport(const char *buffer) {
 SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
 #if defined(__x86_64__) || defined(__i386__)
   ucontext_t *ucontext = static_cast<ucontext_t*>(context);
-  return ucontext->uc_mcontext->__es.__err & 2 /*T_PF_WRITE*/ ? WRITE : READ;
+  return ucontext->uc_mcontext->__es.__err & 2 /*T_PF_WRITE*/ ? Write : Read;
 #else
-  return UNKNOWN;
+  return Unknown;
 #endif
 }
 
