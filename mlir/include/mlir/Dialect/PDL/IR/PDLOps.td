@@ -26,7 +26,6 @@ class PDL_Op<string mnemonic, list<Trait> traits = []>
     : Op<PDL_Dialect, mnemonic, traits> {
   let printer = [{ ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
-  let verifier = [{ return ::verify(*this); }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -66,6 +65,7 @@ def PDL_ApplyNativeConstraintOp
             params.empty() ? ArrayAttr() : $_builder.getArrayAttr(params));
     }]>,
   ];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -118,6 +118,7 @@ def PDL_ApplyNativeRewriteOp
     $name ($constParams^)? (`(` $args^ `:` type($args) `)`)?
     (`:` type($results)^)? attr-dict
   }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -164,6 +165,7 @@ def PDL_AttributeOp : PDL_Op<"attribute", [NoSideEffect]> {
       build($_builder, $_state, $_builder.getType<AttributeType>(), Value(), attr);
     }]>,
   ];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -185,7 +187,6 @@ def PDL_EraseOp : PDL_Op<"erase", [HasParent<"pdl::RewriteOp">]> {
   }];
   let arguments = (ins PDL_Operation:$operation);
   let assemblyFormat = "$operation attr-dict";
-  let verifier = ?;
 }
 
 //===----------------------------------------------------------------------===//
@@ -224,6 +225,7 @@ def PDL_OperandOp
       build($_builder, $_state, $_builder.getType<ValueType>(), Value());
     }]>,
   ];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -263,6 +265,7 @@ def PDL_OperandsOp
             Value());
     }]>,
   ];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -396,6 +399,7 @@ def PDL_OperationOp : PDL_Op<"operation", [AttrSizedOperandSegments]> {
     /// inference.
     bool hasTypeInference();
   }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -452,6 +456,7 @@ def PDL_PatternOp : PDL_Op<"pattern", [
     /// Returns the rewrite operation of this pattern.
     RewriteOp getRewriter();
   }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -492,6 +497,7 @@ def PDL_ReplaceOp : PDL_Op<"replace", [
     $operation `with` (`(` $replValues^ `:` type($replValues) `)`)?
     ($replOperation^)? attr-dict
   }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -524,7 +530,6 @@ def PDL_ResultOp : PDL_Op<"result", [NoSideEffect]> {
   let arguments = (ins PDL_Operation:$parent, I32Attr:$index);
   let results = (outs PDL_Value:$val);
   let assemblyFormat = "$index `of` $parent attr-dict";
-  let verifier = ?;
 }
 
 //===----------------------------------------------------------------------===//
@@ -567,6 +572,7 @@ def PDL_ResultsOp : PDL_Op<"results", [NoSideEffect]> {
     ($index^)? `of` $parent custom<ResultsValueType>(ref($index), type($val))
     attr-dict
   }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -629,6 +635,7 @@ def PDL_RewriteOp : PDL_Op<"rewrite", [
               ($body^)?
     attr-dict-with-keyword
   }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -657,6 +664,7 @@ def PDL_TypeOp : PDL_Op<"type", [NoSideEffect]> {
   let arguments = (ins OptionalAttr<TypeAttr>:$type);
   let results = (outs PDL_Type:$result);
   let assemblyFormat = "attr-dict (`:` $type^)?";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -685,6 +693,7 @@ def PDL_TypesOp : PDL_Op<"types", [NoSideEffect]> {
   let arguments = (ins OptionalAttr<TypeArrayAttr>:$types);
   let results = (outs PDL_RangeOf<PDL_Type>:$result);
   let assemblyFormat = "attr-dict (`:` $types^)?";
+  let hasVerifier = 1;
 }
 
 #endif // MLIR_DIALECT_PDL_IR_PDLOPS

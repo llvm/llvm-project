@@ -27,6 +27,21 @@ void PDLInterpDialect::initialize() {
       >();
 }
 
+template <typename OpT>
+static LogicalResult verifySwitchOp(OpT op) {
+  // Verify that the number of case destinations matches the number of case
+  // values.
+  size_t numDests = op.cases().size();
+  size_t numValues = op.caseValues().size();
+  if (numDests != numValues) {
+    return op.emitOpError(
+               "expected number of cases to match the number of case "
+               "values, got ")
+           << numDests << " but expected " << numValues;
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // pdl_interp::CreateOperationOp
 //===----------------------------------------------------------------------===//
@@ -131,17 +146,17 @@ static void print(OpAsmPrinter &p, ForEachOp op) {
   p.printSuccessor(op.successor());
 }
 
-static LogicalResult verify(ForEachOp op) {
+LogicalResult ForEachOp::verify() {
   // Verify that the operation has exactly one argument.
-  if (op.region().getNumArguments() != 1)
-    return op.emitOpError("requires exactly one argument");
+  if (region().getNumArguments() != 1)
+    return emitOpError("requires exactly one argument");
 
   // Verify that the loop variable and the operand (value range)
   // have compatible types.
-  BlockArgument arg = op.getLoopVariable();
+  BlockArgument arg = getLoopVariable();
   Type rangeType = pdl::RangeType::get(arg.getType());
-  if (rangeType != op.values().getType())
-    return op.emitOpError("operand must be a range of loop variable type");
+  if (rangeType != values().getType())
+    return emitOpError("operand must be a range of loop variable type");
 
   return success();
 }
@@ -155,6 +170,42 @@ static Type getGetValueTypeOpValueType(Type type) {
   Type valueTy = pdl::ValueType::get(type.getContext());
   return type.isa<pdl::RangeType>() ? pdl::RangeType::get(valueTy) : valueTy;
 }
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::SwitchAttributeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult SwitchAttributeOp::verify() { return verifySwitchOp(*this); }
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::SwitchOperandCountOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult SwitchOperandCountOp::verify() { return verifySwitchOp(*this); }
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::SwitchOperationNameOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult SwitchOperationNameOp::verify() { return verifySwitchOp(*this); }
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::SwitchResultCountOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult SwitchResultCountOp::verify() { return verifySwitchOp(*this); }
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::SwitchTypeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult SwitchTypeOp::verify() { return verifySwitchOp(*this); }
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::SwitchTypesOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult SwitchTypesOp::verify() { return verifySwitchOp(*this); }
 
 //===----------------------------------------------------------------------===//
 // TableGen Auto-Generated Op and Interface Definitions
