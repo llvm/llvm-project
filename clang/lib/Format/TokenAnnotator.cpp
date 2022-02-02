@@ -1388,9 +1388,8 @@ public:
     }
 
     for (const auto &ctx : Contexts) {
-      if (ctx.InStructArrayInitializer) {
+      if (ctx.InStructArrayInitializer)
         return LT_ArrayOfStructInitializer;
-      }
     }
 
     return LT_Other;

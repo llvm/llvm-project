@@ -2092,9 +2092,8 @@ public:
 
 private:
   void cleanupLine(AnnotatedLine *Line) {
-    for (auto *Child : Line->Children) {
+    for (auto *Child : Line->Children)
       cleanupLine(Child);
-    }
 
     if (Line->Affected) {
       cleanupRight(Line->First, tok::comma, tok::comma);
@@ -2120,9 +2119,8 @@ private:
     std::set<unsigned> DeletedLines;
     for (unsigned i = 0, e = AnnotatedLines.size(); i != e; ++i) {
       auto &Line = *AnnotatedLines[i];
-      if (Line.startsWithNamespace()) {
+      if (Line.startsWithNamespace())
         checkEmptyNamespace(AnnotatedLines, i, i, DeletedLines);
-      }
     }
 
     for (auto Line : DeletedLines) {
@@ -2184,9 +2182,8 @@ private:
             AnnotatedLines[CurrentLine]->Last->Tok.getEndLoc())))
       return false;
 
-    for (unsigned i = InitLine; i <= CurrentLine; ++i) {
+    for (unsigned i = InitLine; i <= CurrentLine; ++i)
       DeletedLines.insert(i);
-    }
 
     return true;
   }
