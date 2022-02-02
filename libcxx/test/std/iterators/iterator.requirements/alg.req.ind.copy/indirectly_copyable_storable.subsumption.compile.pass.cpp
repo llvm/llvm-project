@@ -10,20 +10,20 @@
 // UNSUPPORTED: libcpp-no-concepts
 
 // template<class In, class Out>
-// concept indirectly_movable_storable;
+// concept indirectly_copyable_storable;
 
 #include <iterator>
 
 template<class I, class O>
-  requires std::indirectly_movable<I, O>
-constexpr bool indirectly_movable_storable_subsumption() {
+  requires std::indirectly_copyable<I, O>
+constexpr bool indirectly_copyable_storable_subsumption() {
   return false;
 }
 
 template<class I, class O>
-  requires std::indirectly_movable_storable<I, O>
-constexpr bool indirectly_movable_storable_subsumption() {
+  requires std::indirectly_copyable_storable<I, O>
+constexpr bool indirectly_copyable_storable_subsumption() {
   return true;
 }
 
-static_assert(indirectly_movable_storable_subsumption<int*, int*>());
+static_assert(indirectly_copyable_storable_subsumption<int*, int*>());
