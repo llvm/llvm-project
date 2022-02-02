@@ -410,13 +410,14 @@ BreakableBlockComment::BreakableBlockComment(
     // now we just wrap them without stars.
     Decoration = "";
   }
-  for (size_t i = 1, e = Lines.size(); i < e && !Decoration.empty(); ++i) {
+  for (size_t i = 1, e = Content.size(); i < e && !Decoration.empty(); ++i) {
+    const StringRef &Text = Content[i];
     // If the last line is empty, the closing "*/" will have a star.
-    if (i + 1 == e && Content[i].empty())
+    if (i + 1 == e && Text.empty())
       break;
-    if (!Content[i].empty() && i + 1 != e && Decoration.startswith(Content[i]))
+    if (!Text.empty() && i + 1 != e && Decoration.startswith(Text))
       continue;
-    while (!Content[i].startswith(Decoration))
+    while (!Text.startswith(Decoration))
       Decoration = Decoration.drop_back(1);
   }
 
