@@ -1071,18 +1071,6 @@ private:
               const LiveIdxT &LiveOuts, ValueIDNum **MOutLocs,
               const SmallVectorImpl<const MachineBasicBlock *> &BlockOrders);
 
-  /// Given the solutions to the two dataflow problems, machine value locations
-  /// in \p MInLocs and live-in variable values in \p SavedLiveIns, runs the
-  /// TransferTracker class over the function to produce live-in and transfer
-  /// DBG_VALUEs, then inserts them. Groups of DBG_VALUEs are inserted in the
-  /// order given by AllVarsNumbering -- this could be any stable order, but
-  /// right now "order of appearence in function, when explored in RPO", so
-  /// that we can compare explictly against VarLocBasedImpl.
-  void emitLocations(MachineFunction &MF, LiveInsT SavedLiveIns,
-                     ValueIDNum **MOutLocs, ValueIDNum **MInLocs,
-                     DenseMap<DebugVariable, unsigned> &AllVarsNumbering,
-                     const TargetPassConfig &TPC);
-
   /// Take collections of DBG_VALUE instructions stored in TTracker, and
   /// install them into their output blocks. Preserves a stable order of
   /// DBG_VALUEs produced (which would otherwise cause nondeterminism) through
@@ -1092,6 +1080,28 @@ private:
   /// Boilerplate computation of some initial sets, artifical blocks and
   /// RPOT block ordering.
   void initialSetup(MachineFunction &MF);
+
+  /// Produce a map of the last lexical scope that uses a block, using the
+  /// scopes DFSOut number. Mapping is block-number to DFSOut.
+  /// \p EjectionMap Pre-allocated vector in which to install the built ma.
+  /// \p ScopeToDILocation Mapping of LexicalScopes to their DILocations.
+  /// \p AssignBlocks Map of blocks where assignments happen for a scope.
+  void makeDepthFirstEjectionMap(SmallVectorImpl<unsigned> &EjectionMap,
+                                 const ScopeToDILocT &ScopeToDILocation,
+                                 ScopeToAssignBlocksT &AssignBlocks);
+
+  /// When determining per-block variable values and emitting to DBG_VALUEs,
+  /// this function explores by lexical scope depth. Doing so means that per
+  /// block information can be fully computed before exploration finishes,
+  /// allowing us to emit it and free data structures earlier than otherwise.
+  /// It's also good for locality.
+  bool depthFirstVLocAndEmit(
+      unsigned MaxNumBlocks, const ScopeToDILocT &ScopeToDILocation,
+      const ScopeToVarsT &ScopeToVars, ScopeToAssignBlocksT &ScopeToBlocks,
+      LiveInsT &Output, ValueIDNum **MOutLocs, ValueIDNum **MInLocs,
+      SmallVectorImpl<VLocTracker> &AllTheVLocs, MachineFunction &MF,
+      DenseMap<DebugVariable, unsigned> &AllVarsNumbering,
+      const TargetPassConfig &TPC);
 
   bool ExtendRanges(MachineFunction &MF, MachineDominatorTree *DomTree,
                     TargetPassConfig *TPC, unsigned InputBBLimit,
