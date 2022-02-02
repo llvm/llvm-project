@@ -110,7 +110,6 @@ def GPU_SubgroupIdOp : GPU_Op<"subgroup_id", [NoSideEffect]>,
   }];
 
   let assemblyFormat = "attr-dict `:` type($result)";
-  let verifier = [{ return success(); }];
 }
 
 def GPU_NumSubgroupsOp : GPU_Op<"num_subgroups", [NoSideEffect]>,
@@ -126,7 +125,6 @@ def GPU_NumSubgroupsOp : GPU_Op<"num_subgroups", [NoSideEffect]>,
   }];
 
   let assemblyFormat = "attr-dict `:` type($result)";
-  let verifier = [{ return success(); }];
 }
 
 def GPU_SubgroupSizeOp : GPU_Op<"subgroup_size", [NoSideEffect]>,
@@ -142,7 +140,6 @@ def GPU_SubgroupSizeOp : GPU_Op<"subgroup_size", [NoSideEffect]>,
   }];
 
   let assemblyFormat = "attr-dict `:` type($result)";
-  let verifier = [{ return success(); }];
 }
 
 def GPU_GPUFuncOp : GPU_Op<"func", [
@@ -298,7 +295,6 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     LogicalResult verifyBody();
   }];
 
-  // let verifier = [{ return ::verifFuncOpy(*this); }];
   let printer = [{ printGPUFuncOp(p, *this); }];
   let parser = [{ return parseGPUFuncOp(parser, result); }];
 }
@@ -434,7 +430,6 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func",
     static StringRef getKernelAttrName() { return "kernel"; }
   }];
 
-  let verifier = [{ return ::verify(*this); }];
   let assemblyFormat = [{
       custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
       $kernel
@@ -443,6 +438,7 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func",
       (`dynamic_shared_memory_size` $dynamicSharedMemorySize^)?
       custom<LaunchFuncOperands>($operands, type($operands)) attr-dict
   }];
+  let hasVerifier = 1;
 }
 
 def GPU_LaunchOp : GPU_Op<"launch">,
@@ -562,8 +558,8 @@ def GPU_LaunchOp : GPU_Op<"launch">,
 
   let parser = [{ return parseLaunchOp(parser, result); }];
   let printer = [{ printLaunchOp(p, *this); }];
-  let verifier = [{ return ::verify(*this); }];
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
 }
 
 def GPU_PrintfOp : GPU_Op<"printf", [MemoryEffects<[MemWrite]>]>,
@@ -595,7 +591,7 @@ def GPU_ReturnOp : GPU_Op<"return", [HasParent<"GPUFuncOp">, NoSideEffect,
   let builders = [OpBuilder<(ins), [{ // empty}]>];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 }
 
 def GPU_TerminatorOp : GPU_Op<"terminator", [HasParent<"LaunchOp">,
@@ -682,9 +678,9 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
     in convergence.
   }];
   let regions = (region AnyRegion:$body);
-  let verifier = [{ return ::verifyAllReduce(*this); }];
   let assemblyFormat = [{ custom<AllReduceOperation>($op) $value $body attr-dict
                           `:` functional-type(operands, results) }];
+  let hasVerifier = 1;
 }
 
 def GPU_ShuffleOpXor  : I32EnumAttrCase<"XOR",  0, "xor">;
@@ -822,7 +818,6 @@ def GPU_HostRegisterOp : GPU_Op<"host_register">,
   }];
 
   let assemblyFormat = "$value attr-dict `:` type($value)";
-  let verifier = [{ return success(); }];
 }
 
 def GPU_WaitOp : GPU_Op<"wait", [GPU_AsyncOpInterface]> {
@@ -971,8 +966,8 @@ def GPU_MemcpyOp : GPU_Op<"memcpy", [GPU_AsyncOpInterface]> {
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
     $dst`,` $src `:` type($dst)`,` type($src) attr-dict
   }];
-  let verifier = [{ return ::verify(*this); }];
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 def GPU_MemsetOp : GPU_Op<"memset",
@@ -1006,8 +1001,6 @@ def GPU_MemsetOp : GPU_Op<"memset",
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
     $dst`,` $value `:` type($dst)`,` type($value) attr-dict
   }];
-  // MemsetOp is fully verified by traits.
-  let verifier = [{ return success(); }];
   let hasFolder = 1;
 }
 
@@ -1048,8 +1041,7 @@ def GPU_SubgroupMmaLoadMatrixOp : GPU_Op<"subgroup_mma_load_matrix",
   let assemblyFormat = [{
     $srcMemref`[`$indices`]` attr-dict `:` type($srcMemref) `->` type($res)
   }];
-
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 }
 
 def GPU_SubgroupMmaStoreMatrixOp : GPU_Op<"subgroup_mma_store_matrix",
@@ -1086,8 +1078,7 @@ def GPU_SubgroupMmaStoreMatrixOp : GPU_Op<"subgroup_mma_store_matrix",
   let assemblyFormat = [{
     $src`,` $dstMemref`[`$indices`]` attr-dict `:` type($src)`,` type($dstMemref)
   }];
-
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 }
 
 def GPU_SubgroupMmaComputeOp : GPU_Op<"subgroup_mma_compute",
@@ -1125,8 +1116,7 @@ def GPU_SubgroupMmaComputeOp : GPU_Op<"subgroup_mma_compute",
   let assemblyFormat = [{
     $opA`,` $opB`,` $opC attr-dict `:` type($opA)`,` type($opB) `->` type($res)
   }];
-
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 }
 
 def GPU_SubgroupMmaConstantMatrixOp : GPU_Op<"subgroup_mma_constant_matrix",
