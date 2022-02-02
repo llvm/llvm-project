@@ -731,6 +731,10 @@ TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
   Target->setCommandLineOpenCLOpts();
   Target->setMaxAtomicWidth();
 
+  if (!Opts->DarwinTargetVariantTriple.empty())
+    Target->DarwinTargetVariantTriple =
+        llvm::Triple(Opts->DarwinTargetVariantTriple);
+
   if (!Target->validateTarget(Diags))
     return nullptr;
 
