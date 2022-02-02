@@ -24219,6 +24219,16 @@ TEST_F(FormatTest, AlignAfterOpenBracketBlockIndentForStatement) {
                Style);
 }
 
+TEST_F(FormatTest, UnderstandsDigraphs) {
+  verifyFormat("int arr<:5:> = {};");
+  verifyFormat("int arr[5] = <%%>;");
+  verifyFormat("int arr<:::qualified_variable:> = {};");
+  verifyFormat("int arr[::qualified_variable] = <%%>;");
+  verifyFormat("%:include <header>");
+  verifyFormat("%:define A x##y");
+  verifyFormat("#define A x%:%:y");
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
