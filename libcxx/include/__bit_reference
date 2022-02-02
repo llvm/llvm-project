@@ -65,6 +65,16 @@ public:
         return *this;
     }
 
+#if _LIBCPP_STD_VER > 20
+    _LIBCPP_HIDE_FROM_ABI const __bit_reference& operator=(bool __x) const noexcept {
+        if (__x)
+            *__seg_ |= __mask_;
+        else
+            *__seg_ &= ~__mask_;
+        return *this;
+    }
+#endif
+
     _LIBCPP_INLINE_VISIBILITY
     __bit_reference& operator=(const __bit_reference& __x) _NOEXCEPT
         {return operator=(static_cast<bool>(__x));}
