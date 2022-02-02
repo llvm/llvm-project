@@ -178,7 +178,7 @@ template <> struct DenseMapInfo<GVNPass::Expression> {
 /// implicitly associated with a rematerialization point which is the
 /// location of the instruction from which it was formed.
 struct llvm::gvn::AvailableValue {
-  enum ValType {
+  enum class ValType {
     SimpleVal, // A simple offsetted value that is accessed.
     LoadVal,   // A value produced by a load.
     MemIntrin, // A memory intrinsic which is loaded from.
@@ -188,76 +188,78 @@ struct llvm::gvn::AvailableValue {
                // can be replace by a value select.
   };
 
-  /// V - The value that is live out of the block.
-  PointerIntPair<Value *, 3, ValType> Val;
+  /// Val - The value that is live out of the block.
+  Value *Val;
+  /// Kind of the live-out value.
+  ValType Kind;
 
   /// Offset - The byte offset in Val that is interesting for the load query.
   unsigned Offset = 0;
 
   static AvailableValue get(Value *V, unsigned Offset = 0) {
     AvailableValue Res;
-    Res.Val.setPointer(V);
-    Res.Val.setInt(SimpleVal);
+    Res.Val = V;
+    Res.Kind = ValType::SimpleVal;
     Res.Offset = Offset;
     return Res;
   }
 
   static AvailableValue getMI(MemIntrinsic *MI, unsigned Offset = 0) {
     AvailableValue Res;
-    Res.Val.setPointer(MI);
-    Res.Val.setInt(MemIntrin);
+    Res.Val = MI;
+    Res.Kind = ValType::MemIntrin;
     Res.Offset = Offset;
     return Res;
   }
 
   static AvailableValue getLoad(LoadInst *Load, unsigned Offset = 0) {
     AvailableValue Res;
-    Res.Val.setPointer(Load);
-    Res.Val.setInt(LoadVal);
+    Res.Val = Load;
+    Res.Kind = ValType::LoadVal;
     Res.Offset = Offset;
     return Res;
   }
 
   static AvailableValue getUndef() {
     AvailableValue Res;
-    Res.Val.setPointer(nullptr);
-    Res.Val.setInt(UndefVal);
+    Res.Val = nullptr;
+    Res.Kind = ValType::UndefVal;
     Res.Offset = 0;
     return Res;
   }
 
   static AvailableValue getSelect(SelectInst *Sel) {
     AvailableValue Res;
-    Res.Val.setPointer(Sel);
-    Res.Val.setInt(SelectVal);
+    Res.Val = Sel;
+    Res.Kind = ValType::SelectVal;
     Res.Offset = 0;
     return Res;
   }
 
-  bool isSimpleValue() const { return Val.getInt() == SimpleVal; }
-  bool isCoercedLoadValue() const { return Val.getInt() == LoadVal; }
-  bool isMemIntrinValue() const { return Val.getInt() == MemIntrin; }
-  bool isUndefValue() const { return Val.getInt() == UndefVal; }
-  bool isSelectValue() const { return Val.getInt() == SelectVal; }
+  bool isSimpleValue() const { return Kind == ValType::SimpleVal; }
+  bool isCoercedLoadValue() const { return Kind == ValType::LoadVal; }
+  bool isMemIntrinValue() const { return Kind == ValType::MemIntrin; }
+  bool isUndefValue() const { return Kind == ValType::UndefVal; }
+  bool isSelectValue() const { return Kind == ValType::SelectVal; }
 
   Value *getSimpleValue() const {
     assert(isSimpleValue() && "Wrong accessor");
-    return Val.getPointer();
+    return Val;
   }
 
   LoadInst *getCoercedLoadValue() const {
     assert(isCoercedLoadValue() && "Wrong accessor");
-    return cast<LoadInst>(Val.getPointer());
+    return cast<LoadInst>(Val);
   }
 
   MemIntrinsic *getMemIntrinValue() const {
     assert(isMemIntrinValue() && "Wrong accessor");
-    return cast<MemIntrinsic>(Val.getPointer());
+    return cast<MemIntrinsic>(Val);
   }
 
   SelectInst *getSelectValue() const {
     assert(isSelectValue() && "Wrong accessor");
-    return cast<SelectInst>(Val.getPointer());
+    return cast<SelectInst>(Val);
   }
 
   /// Emit code at the specified insertion point to adjust the value defined
