@@ -42,13 +42,13 @@ def COp : NS_Op<"c_op", []> {
 // CHECK: static ::mlir::LogicalResult [[$ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
 // CHECK-NEXT: {{.*::mlir::Attribute attr}}
 // CHECK: static ::mlir::LogicalResult [[$DAG_MATCHER:static_dag_matcher.*]](
-// CHECK: if(failed([[$ATTR_CONSTRAINT]]
-// CHECK: if(failed([[$TYPE_CONSTRAINT]]
+// CHECK: if(::mlir::failed([[$ATTR_CONSTRAINT]]
+// CHECK: if(::mlir::failed([[$TYPE_CONSTRAINT]]
 
-// CHECK: if(failed([[$DAG_MATCHER]](rewriter, op1, tblgen_ops
+// CHECK: if(::mlir::failed([[$DAG_MATCHER]](rewriter, op1, tblgen_ops
 def : Pat<(AOp (BOp I32Attr:$attr, I32:$int)),
           (AOp $int)>;
 
-// CHECK: if(failed([[$DAG_MATCHER]](rewriter, op1, tblgen_ops
+// CHECK: if(::mlir::failed([[$DAG_MATCHER]](rewriter, op1, tblgen_ops
 def : Pat<(COp $_, (BOp I32Attr:$attr, I32:$int)),
           (COp $attr, $int)>;
