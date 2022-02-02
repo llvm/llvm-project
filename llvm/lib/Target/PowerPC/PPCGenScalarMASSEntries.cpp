@@ -62,12 +62,20 @@ private:
 // Returns true if 'afn' flag exists on the call instruction with the math
 // function
 bool PPCGenScalarMASSEntries::isCandidateSafeToLower(const CallInst &CI) const {
+  // skip functions with no scalar or vector FP type (like cosisin)
+  if (!isa<FPMathOperator>(CI))
+    return false;
+
   return CI.hasApproxFunc();
 }
 
 // Returns true if 'nnan', 'ninf' and 'nsz' flags exist on the call instruction
 // with the math function
 bool PPCGenScalarMASSEntries::isFiniteCallSafe(const CallInst &CI) const {
+  // skip functions with no scalar or vector FP type (like cosisin)
+  if (!isa<FPMathOperator>(CI))
+    return false;
+
   // FIXME: no-errno and trapping-math need to be set for MASS converstion
   // but they don't have IR representation.
   return CI.hasNoNaNs() && CI.hasNoInfs() && CI.hasNoSignedZeros();
