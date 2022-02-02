@@ -2345,7 +2345,7 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
     }
 
     // FIXME: Move this to the top. Currently this causes VALIDATE
-    // errors on resilient types, and FOundation overlay types. These
+    // errors on resilient types, and Foundation overlay types. These
     // are most likely bugs in the Swift compiler that need to be
     // resolved first.
 
