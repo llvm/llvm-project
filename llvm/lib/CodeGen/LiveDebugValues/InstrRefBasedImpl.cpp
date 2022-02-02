@@ -3122,6 +3122,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   DebugPHINumToValue.clear();
   OverlapFragments.clear();
   SeenFragments.clear();
+  SeenDbgPHIs.clear();
 
   return Changed;
 }
@@ -3387,6 +3388,21 @@ Optional<ValueIDNum> InstrRefBasedLDV::resolveDbgPHIs(MachineFunction &MF,
                                                       ValueIDNum **MLiveIns,
                                                       MachineInstr &Here,
                                                       uint64_t InstrNum) {
+  // This function will be called twice per DBG_INSTR_REF, and might end up
+  // computing lots of SSA information: memoize it.
+  auto SeenDbgPHIIt = SeenDbgPHIs.find(&Here);
+  if (SeenDbgPHIIt != SeenDbgPHIs.end())
+    return SeenDbgPHIIt->second;
+
+  Optional<ValueIDNum> Result =
+      resolveDbgPHIsImpl(MF, MLiveOuts, MLiveIns, Here, InstrNum);
+  SeenDbgPHIs.insert({&Here, Result});
+  return Result;
+}
+
+Optional<ValueIDNum> InstrRefBasedLDV::resolveDbgPHIsImpl(
+    MachineFunction &MF, ValueIDNum **MLiveOuts, ValueIDNum **MLiveIns,
+    MachineInstr &Here, uint64_t InstrNum) {
   // Pick out records of DBG_PHI instructions that have been observed. If there
   // are none, then we cannot compute a value number.
   auto RangePair = std::equal_range(DebugPHINumToValue.begin(),
