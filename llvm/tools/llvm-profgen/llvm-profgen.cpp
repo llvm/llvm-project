@@ -158,6 +158,9 @@ int main(int argc, const char *argv[]) {
       ProfileGeneratorBase::create(Binary.get(), Reader->getSampleCounters(),
                                    Reader->profileIsCSFlat());
   Generator->generateProfile();
+  // The Reader object, espcially its SampleCounters field, is not needed at
+  // this point, so releasing it to reduce peak memory usage.
+  Reader.release();
   Generator->write();
 
   return EXIT_SUCCESS;
