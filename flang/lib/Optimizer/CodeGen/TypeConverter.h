@@ -111,11 +111,15 @@ public:
     });
     addConversion([&](mlir::TupleType tuple) {
       LLVM_DEBUG(llvm::dbgs() << "type convert: " << tuple << '\n');
-      llvm::SmallVector<mlir::Type> inMembers;
-      tuple.getFlattenedTypes(inMembers);
       llvm::SmallVector<mlir::Type> members;
-      for (auto mem : inMembers)
-        members.push_back(convertType(mem).cast<mlir::Type>());
+      for (auto mem : tuple.getTypes()) {
+        // Prevent fir.box from degenerating to a pointer to a descriptor in the
+        // context of a tuple type.
+        if (auto box = mem.dyn_cast<fir::BoxType>())
+          members.push_back(convertBoxTypeAsStruct(box));
+        else
+          members.push_back(convertType(mem).cast<mlir::Type>());
+      }
       return mlir::LLVM::LLVMStructType::getLiteral(&getContext(), members,
                                                     /*isPacked=*/false);
     });
@@ -140,7 +144,12 @@ public:
     }
     llvm::SmallVector<mlir::Type> members;
     for (auto mem : derived.getTypeList()) {
-      members.push_back(convertType(mem.second).cast<mlir::Type>());
+      // Prevent fir.box from degenerating to a pointer to a descriptor in the
+      // context of a record type.
+      if (auto box = mem.second.dyn_cast<fir::BoxType>())
+        members.push_back(convertBoxTypeAsStruct(box));
+      else
+        members.push_back(convertType(mem.second).cast<mlir::Type>());
     }
     if (mlir::failed(st.setBody(members, /*isPacked=*/false)))
       return failure();
@@ -225,6 +234,14 @@ public:
     return mlir::LLVM::LLVMPointerType::get(
         mlir::LLVM::LLVMStructType::getLiteral(&getContext(), dataDescFields,
                                                /*isPacked=*/false));
+  }
+
+  /// Convert fir.box type to the corresponding llvm struct type instead of a
+  /// pointer to this struct type.
+  mlir::Type convertBoxTypeAsStruct(BoxType box) {
+    return convertBoxType(box)
+        .cast<mlir::LLVM::LLVMPointerType>()
+        .getElementType();
   }
 
   unsigned characterBitsize(fir::CharacterType charTy) {

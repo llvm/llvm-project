@@ -61,11 +61,11 @@ static bool isaIntegerType(mlir::Type ty) {
 }
 
 bool verifyRecordMemberType(mlir::Type ty) {
-  return !(ty.isa<BoxType>() || ty.isa<BoxCharType>() ||
-           ty.isa<BoxProcType>() || ty.isa<ShapeType>() ||
-           ty.isa<ShapeShiftType>() || ty.isa<ShiftType>() ||
-           ty.isa<SliceType>() || ty.isa<FieldType>() || ty.isa<LenType>() ||
-           ty.isa<ReferenceType>() || ty.isa<TypeDescType>());
+  return !(ty.isa<BoxCharType>() || ty.isa<BoxProcType>() ||
+           ty.isa<ShapeType>() || ty.isa<ShapeShiftType>() ||
+           ty.isa<ShiftType>() || ty.isa<SliceType>() || ty.isa<FieldType>() ||
+           ty.isa<LenType>() || ty.isa<ReferenceType>() ||
+           ty.isa<TypeDescType>());
 }
 
 bool verifySameLists(llvm::ArrayRef<RecordType::TypePair> a1,
