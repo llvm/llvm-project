@@ -578,6 +578,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
       (data_sp->GetByteSize() > (reg_data_min_size + GetSVEHeaderSize()));
 
   if (contains_sve_reg_data) {
+#if LLDB_HAVE_USER_SVE_HEADER
     // We have SVE register data first write SVE header.
     ::memcpy(GetSVEHeader(), src, GetSVEHeaderSize());
     if (!sve_vl_valid(m_sve_header.vl)) {
@@ -609,6 +610,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
     m_sve_buffer_is_valid = true;
     error = WriteAllSVE();
     src += GetSVEBufferSize();
+#endif
   } else {
     ::memcpy(GetFPRBuffer(), src, GetFPRSize());
     m_fpu_is_valid = true;
