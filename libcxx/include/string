@@ -618,18 +618,6 @@ operator+(const basic_string<_CharT, _Traits, _Allocator>& __x, _CharT __y);
 
 _LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS string operator+<char, char_traits<char>, allocator<char> >(char const*, string const&))
 
-#ifndef _LIBCPP_ABI_NO_BASIC_STRING_BASE_CLASS
-template <bool>
-struct __basic_string_common;
-
-template <>
-struct __basic_string_common<true> {
-    // Both are defined in string.cpp
-    _LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void __throw_length_error() const;
-    _LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void __throw_out_of_range() const;
-};
-#endif
-
 template <class _Iter>
 struct __string_is_trivial_iterator : public false_type {};
 
@@ -682,9 +670,6 @@ class
     _LIBCPP_PREFERRED_NAME(u32string)
 #endif
     basic_string
-#ifndef _LIBCPP_ABI_NO_BASIC_STRING_BASE_CLASS
-    : private __basic_string_common<true> // This base class is historical, but it needs to remain for ABI compatibility
-#endif
 {
 public:
     typedef basic_string                                 __self;

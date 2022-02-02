@@ -21,15 +21,26 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#ifndef _LIBCPP_ABI_NO_BASIC_STRING_BASE_CLASS
+#ifndef _LIBCPP_ABI_DO_NOT_EXPORT_BASIC_STRING_COMMON
+
+template <bool>
+struct __basic_string_common;
+
+// The struct isn't declared anymore in the headers. It's only here for ABI compatibility.
+template <>
+struct __basic_string_common<true> {
+    _LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void __throw_length_error() const;
+    _LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void __throw_out_of_range() const;
+};
+
 void __basic_string_common<true>::__throw_length_error() const {
-    _VSTD::__throw_length_error("basic_string");
+    std::__throw_length_error("basic_string");
+}
+void __basic_string_common<true>::__throw_out_of_range() const {
+    std::__throw_out_of_range("basic_string");
 }
 
-void __basic_string_common<true>::__throw_out_of_range() const {
-    _VSTD::__throw_out_of_range("basic_string");
-}
-#endif
+#endif // _LIBCPP_ABI_DO_NOT_EXPORT_BASIC_STRING_COMMON
 
 #define _LIBCPP_EXTERN_TEMPLATE_DEFINE(...) template __VA_ARGS__;
 #ifdef _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
