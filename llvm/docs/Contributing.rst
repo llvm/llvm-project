@@ -32,7 +32,7 @@ let people know you are working on it.
 
 Then try to reproduce and fix the bug with upstream LLVM. Start by building
 LLVM from source as described in :doc:`GettingStarted` and
-and use the built binaries to reproduce the failure described in the bug. Use
+use the built binaries to reproduce the failure described in the bug. Use
 a debug build (`-DCMAKE_BUILD_TYPE=Debug`) or a build with assertions
 (`-DLLVM_ENABLE_ASSERTIONS=On`, enabled for Debug builds).
 
