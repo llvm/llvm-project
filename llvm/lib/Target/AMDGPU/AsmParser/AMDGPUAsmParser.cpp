@@ -1125,7 +1125,9 @@ raw_ostream &operator <<(raw_ostream &OS, AMDGPUOperand::Modifiers Mods) {
 class KernelScopeInfo {
   int SgprIndexUnusedMin = -1;
   int VgprIndexUnusedMin = -1;
+  int AgprIndexUnusedMin = -1;
   MCContext *Ctx = nullptr;
+  MCSubtargetInfo const *MSTI = nullptr;
 
   void usesSgprAt(int i) {
     if (i >= SgprIndexUnusedMin) {
@@ -1144,7 +1146,31 @@ class KernelScopeInfo {
       if (Ctx) {
         MCSymbol* const Sym =
           Ctx->getOrCreateSymbol(Twine(".kernel.vgpr_count"));
-        Sym->setVariableValue(MCConstantExpr::create(VgprIndexUnusedMin, *Ctx));
+        int totalVGPR = getTotalNumVGPRs(isGFX90A(*MSTI), AgprIndexUnusedMin,
+                                         VgprIndexUnusedMin);
+        Sym->setVariableValue(MCConstantExpr::create(totalVGPR, *Ctx));
+      }
+    }
+  }
+
+  void usesAgprAt(int i) {
+    // Instruction will error in AMDGPUAsmParser::MatchAndEmitInstruction
+    if (!hasMAIInsts(*MSTI))
+      return;
+
+    if (i >= AgprIndexUnusedMin) {
+      AgprIndexUnusedMin = ++i;
+      if (Ctx) {
+        MCSymbol* const Sym =
+          Ctx->getOrCreateSymbol(Twine(".kernel.agpr_count"));
+        Sym->setVariableValue(MCConstantExpr::create(AgprIndexUnusedMin, *Ctx));
+
+        // Also update vgpr_count (dependent on agpr_count for gfx908/gfx90a)
+        MCSymbol* const vSym =
+          Ctx->getOrCreateSymbol(Twine(".kernel.vgpr_count"));
+        int totalVGPR = getTotalNumVGPRs(isGFX90A(*MSTI), AgprIndexUnusedMin,
+                                         VgprIndexUnusedMin);
+        vSym->setVariableValue(MCConstantExpr::create(totalVGPR, *Ctx));
       }
     }
   }
@@ -1154,14 +1180,19 @@ public:
 
   void initialize(MCContext &Context) {
     Ctx = &Context;
+    MSTI = Ctx->getSubtargetInfo();
+
     usesSgprAt(SgprIndexUnusedMin = -1);
     usesVgprAt(VgprIndexUnusedMin = -1);
+    if (hasMAIInsts(*MSTI)) {
+      usesAgprAt(AgprIndexUnusedMin = -1);
+    }
   }
 
   void usesRegister(RegisterKind RegKind, unsigned DwordRegIndex, unsigned RegWidth) {
     switch (RegKind) {
       case IS_SGPR: usesSgprAt(DwordRegIndex + RegWidth - 1); break;
-      case IS_AGPR: // fall through
+      case IS_AGPR: usesAgprAt(DwordRegIndex + RegWidth - 1); break;
       case IS_VGPR: usesVgprAt(DwordRegIndex + RegWidth - 1); break;
       default: break;
     }
