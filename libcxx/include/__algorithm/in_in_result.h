@@ -14,11 +14,16 @@
 #include <__config>
 #include <__utility/move.h>
 
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#pragma GCC system_header
+#endif
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#ifndef _LIBCPP_HAS_NO_CONCEPTS
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 namespace ranges {
+
 template <class _I1, class _I2>
 struct in_in_result {
   [[no_unique_address]] _I1 in1;
@@ -36,9 +41,10 @@ struct in_in_result {
   _LIBCPP_HIDE_FROM_ABI constexpr
   operator in_in_result<_II1, _II2>() && { return {_VSTD::move(in1), _VSTD::move(in2)}; }
 };
+
 } // namespace ranges
 
-#endif // _LIBCPP_HAS_NO_CONCEPTS
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 _LIBCPP_END_NAMESPACE_STD
 

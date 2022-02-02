@@ -196,7 +196,7 @@ struct std::basic_common_reference<A, std::tuple<B>, TQual, UQual> {
   using type = tuple<UQual<B>>;
 };
 
-static_assert(std::is_same_v<std::common_reference_t<A, std::tuple<B>,std::tuple<D>>, std::tuple<B>>);
+static_assert(std::is_same_v<std::common_reference_t<A, std::tuple<B>, std::tuple<D>>, std::tuple<B>>);
 
 
 static_assert(std::is_same_v<std::common_reference_t<std::pair<int, int>>,

@@ -60,6 +60,8 @@ static cl::opt<std::string> ModelUnderTraining(
 
 #endif // #ifdef LLVM_HAVE_TF_API
 
+extern cl::opt<unsigned> EvictInterferenceCutoff;
+
 /// The score injection pass.
 /// This pass calculates the score for a function and inserts it in the log, but
 /// this happens only in development mode. It's a no-op otherwise.
@@ -544,9 +546,11 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
     LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, *Units);
     // Different from the default heuristic, we don't make any assumptions about
     // what having more than 10 results in the query may mean.
-    const auto &IFIntervals = Q.interferingVRegs();
+    const auto &IFIntervals = Q.interferingVRegs(EvictInterferenceCutoff);
     if (IFIntervals.empty() && InterferingIntervals.empty())
       continue;
+    if (IFIntervals.size() >= EvictInterferenceCutoff)
+      return false;
     InterferingIntervals.append(IFIntervals.begin(), IFIntervals.end());
     for (LiveInterval *Intf : reverse(IFIntervals)) {
       assert(Register::isVirtualRegister(Intf->reg()) &&
