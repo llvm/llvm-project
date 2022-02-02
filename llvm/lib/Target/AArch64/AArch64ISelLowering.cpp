@@ -1341,6 +1341,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::UDIV, VT, Custom);
     }
 
+    // NEON doesn't support 64-bit vector integer muls, but SVE does.
+    setOperationAction(ISD::MUL, MVT::v1i64, Custom);
+    setOperationAction(ISD::MUL, MVT::v2i64, Custom);
+
     // NOTE: Currently this has to happen after computeRegisterProperties rather
     // than the preferred option of combining it with the addRegisterClass call.
     if (Subtarget->useSVEForFixedLengthVectors()) {
@@ -1367,8 +1371,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::CTLZ, MVT::v1i64, Custom);
       setOperationAction(ISD::CTLZ, MVT::v2i64, Custom);
       setOperationAction(ISD::CTTZ, MVT::v1i64, Custom);
-      setOperationAction(ISD::MUL, MVT::v1i64, Custom);
-      setOperationAction(ISD::MUL, MVT::v2i64, Custom);
       setOperationAction(ISD::MULHS, MVT::v1i64, Custom);
       setOperationAction(ISD::MULHS, MVT::v2i64, Custom);
       setOperationAction(ISD::MULHU, MVT::v1i64, Custom);
@@ -3950,9 +3952,7 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   // If SVE is available then i64 vector multiplications can also be made legal.
   bool OverrideNEON = VT == MVT::v2i64 || VT == MVT::v1i64;
 
-  if (VT.isScalableVector() ||
-      useSVEForFixedLengthVectorVT(
-          VT, OverrideNEON && Subtarget->useSVEForFixedLengthVectors()))
+  if (VT.isScalableVector() || useSVEForFixedLengthVectorVT(VT, OverrideNEON))
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::MUL_PRED);
 
   // Multiplications are only custom-lowered for 128-bit vectors so that
