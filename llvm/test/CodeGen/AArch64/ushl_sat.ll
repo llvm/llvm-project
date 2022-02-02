@@ -117,12 +117,7 @@ define void @combine_shlsat_vector() nounwind {
 define i16 @combine_shlsat_to_shl(i16 %x) nounwind {
 ; CHECK-LABEL: combine_shlsat_to_shl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xfffc
-; CHECK-NEXT:    lsl w9, w8, #14
-; CHECK-NEXT:    lsl w8, w8, #16
-; CHECK-NEXT:    cmp w9, w9
-; CHECK-NEXT:    csinv w8, w8, wzr, eq
-; CHECK-NEXT:    lsr w0, w8, #16
+; CHECK-NEXT:    and w0, w0, #0xfffffffc
 ; CHECK-NEXT:    ret
   %x2 = lshr i16 %x, 2
   %tmp = call i16 @llvm.ushl.sat.i16(i16 %x2, i16 2)
@@ -150,22 +145,7 @@ define i16 @combine_shlsat_to_shl_no_fold(i16 %x) nounwind {
 define <2 x i16> @combine_shlsat_to_shl_vec(<2 x i8> %a) nounwind {
 ; CHECK-LABEL: combine_shlsat_to_shl_vec:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d1, #0x0000ff000000ff
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    shl v0.2s, v0.2s, #16
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    and w10, w8, #0xffffff
-; CHECK-NEXT:    lsl w11, w8, #8
-; CHECK-NEXT:    cmp w8, w10
-; CHECK-NEXT:    and w8, w9, #0xffffff
-; CHECK-NEXT:    csinv w10, w11, wzr, eq
-; CHECK-NEXT:    lsl w11, w9, #8
-; CHECK-NEXT:    cmp w9, w8
-; CHECK-NEXT:    csinv w8, w11, wzr, eq
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov v0.s[1], w10
-; CHECK-NEXT:    ushr v0.2s, v0.2s, #16
+; CHECK-NEXT:    shl v0.2s, v0.2s, #8
 ; CHECK-NEXT:    ret
   %ext = zext <2 x i8> %a to <2 x i16>
   %tmp = call <2 x i16> @llvm.ushl.sat.v2i16(
