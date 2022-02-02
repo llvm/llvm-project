@@ -73,7 +73,7 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
         .setMIFlag(MachineInstr::FrameSetup);
 
     BuildMI(MBB, MBBI, DL, TII.get(AVR::INRdA), AVR::R0)
-        .addImm(0x3f)
+        .addImm(STI.getIORegSREG())
         .setMIFlag(MachineInstr::FrameSetup);
     BuildMI(MBB, MBBI, DL, TII.get(AVR::PUSHRr))
         .addReg(AVR::R0, RegState::Kill)
@@ -144,7 +144,7 @@ static void restoreStatusRegister(MachineFunction &MF, MachineBasicBlock &MBB) {
   if (AFI->isInterruptOrSignalHandler()) {
     BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), AVR::R0);
     BuildMI(MBB, MBBI, DL, TII.get(AVR::OUTARr))
-        .addImm(0x3f)
+        .addImm(STI.getIORegSREG())
         .addReg(AVR::R0, RegState::Kill);
     BuildMI(MBB, MBBI, DL, TII.get(AVR::POPWRd), AVR::R1R0);
   }
