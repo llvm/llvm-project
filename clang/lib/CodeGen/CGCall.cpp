@@ -38,6 +38,7 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Type.h"
 #include "llvm/Transforms/Utils/Local.h"
 using namespace clang;
 using namespace CodeGen;
@@ -1056,10 +1057,19 @@ void CodeGenFunction::ExpandTypeFromArgs(QualType Ty, LValue LV,
     // Call EmitStoreOfScalar except when the lvalue is a bitfield to emit a
     // primitive store.
     assert(isa<NoExpansion>(Exp.get()));
-    if (LV.isBitField())
-      EmitStoreThroughLValue(RValue::get(&*AI++), LV);
-    else
-      EmitStoreOfScalar(&*AI++, LV);
+    llvm::Value *Arg = &*AI++;
+    if (LV.isBitField()) {
+      EmitStoreThroughLValue(RValue::get(Arg), LV);
+    } else {
+      // TODO: currently there are some places are inconsistent in what LLVM
+      // pointer type they use (see D118744). Once clang uses opaque pointers
+      // all LLVM pointer types will be the same and we can remove this check.
+      if (Arg->getType()->isPointerTy()) {
+        Address Addr = LV.getAddress(*this);
+        Arg = Builder.CreateBitCast(Arg, Addr.getElementType());
+      }
+      EmitStoreOfScalar(Arg, LV);
+    }
   }
 }
 
