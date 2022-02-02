@@ -330,7 +330,7 @@ private:
                nsToken->TokenText == getNamespaceTokenText(I[i + 1]) &&
                closingLine == I[i + 1]->MatchingClosingBlockLineIndex &&
                I[i + 1]->Last->TotalLength < Limit;
-             i++, closingLine--) {
+             i++, --closingLine) {
           // No extra indent for compacted namespaces
           IndentTracker.skipLine(*I[i + 1]);
 
@@ -346,7 +346,7 @@ private:
                nsToken->TokenText ==
                    getMatchingNamespaceTokenText(I[i + 1], AnnotatedLines) &&
                openingLine == I[i + 1]->MatchingOpeningBlockLineIndex;
-             i++, openingLine--) {
+             i++, --openingLine) {
           // No space between consecutive braces
           I[i + 1]->First->SpacesRequiredBefore = !I[i]->Last->is(tok::r_brace);
 
