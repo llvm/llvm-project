@@ -1,4 +1,4 @@
-; RUN: llc -aarch64-sve-vector-bits-min=128  -asm-verbose=0 < %s | FileCheck %s -check-prefix=NO_SVE
+; RUN: llc -aarch64-sve-vector-bits-min=128  -asm-verbose=0 < %s | FileCheck %s -check-prefixes=VBITS_EQ_128
 ; RUN: llc -aarch64-sve-vector-bits-min=256  -asm-verbose=0 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_EQ_256
 ; RUN: llc -aarch64-sve-vector-bits-min=384  -asm-verbose=0 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_EQ_256
 ; RUN: llc -aarch64-sve-vector-bits-min=512  -asm-verbose=0 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_EQ_512
@@ -17,14 +17,12 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-; Don't use SVE when its registers are no bigger than NEON.
-; NO_SVE-NOT: ptrue
-
 ;
 ; SREM
 ;
 
 ; Vector vXi8 sdiv are not legal for NEON so use SVE when available.
+; FIXME: We should be able to improve the codegen for >= 256 bits here.
 define <8 x i8> @srem_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; CHECK-LABEL: srem_v8i8:
 ; CHECK: sunpklo [[OP2_LO:z[0-9]+]].h, [[OP2:z[0-9]+]].b
@@ -52,6 +50,22 @@ define <8 x i8> @srem_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; CHECK-NEXT: mov [[FINAL]].b[7], [[SCALAR8]]
 ; CHECK-NEXT: mls v0.8b, [[FINAL]].8b, v1.8b
 ; CHECK: ret
+
+; VBITS_EQ_128-LABEL: srem_v8i8:
+; VBITS_EQ_128:         sshll v2.8h, v1.8b, #0
+; VBITS_EQ_128-NEXT:    sshll v3.8h, v0.8b, #0
+; VBITS_EQ_128-NEXT:    ptrue p0.s, vl4
+; VBITS_EQ_128-NEXT:    sunpkhi z4.s, z2.h
+; VBITS_EQ_128-NEXT:    sunpkhi z5.s, z3.h
+; VBITS_EQ_128-NEXT:    sunpklo z2.s, z2.h
+; VBITS_EQ_128-NEXT:    sunpklo z3.s, z3.h
+; VBITS_EQ_128-NEXT:    sdivr z4.s, p0/m, z4.s, z5.s
+; VBITS_EQ_128-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
+; VBITS_EQ_128-NEXT:    uzp1 z2.h, z2.h, z4.h
+; VBITS_EQ_128-NEXT:    xtn v2.8b, v2.8h
+; VBITS_EQ_128-NEXT:    mls v0.8b, v2.8b, v1.8b
+; VBITS_EQ_128-NEXT:    ret
+
   %res = srem <8 x i8> %op1, %op2
   ret <8 x i8> %res
 }
@@ -84,6 +98,31 @@ define <16 x i8> @srem_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 ; VBITS_GE_512-NEXT: uzp1 [[UZP2:z[0-9]+]].b, [[UZP1]].b, [[UZP1]].b
 ; VBITS_GE_512-NEXT: mls v0.16b, v2.16b, v1.16b
 ; CHECK: ret
+
+; VBITS_EQ_128-LABEL: srem_v16i8:
+; VBITS_EQ_128:         sunpkhi z2.h, z1.b
+; VBITS_EQ_128-NEXT:    sunpkhi z3.h, z0.b
+; VBITS_EQ_128-NEXT:    ptrue p0.s, vl4
+; VBITS_EQ_128-NEXT:    sunpkhi z5.s, z2.h
+; VBITS_EQ_128-NEXT:    sunpkhi z6.s, z3.h
+; VBITS_EQ_128-NEXT:    sunpklo z2.s, z2.h
+; VBITS_EQ_128-NEXT:    sunpklo z3.s, z3.h
+; VBITS_EQ_128-NEXT:    sunpklo z4.h, z1.b
+; VBITS_EQ_128-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
+; VBITS_EQ_128-NEXT:    sunpklo z3.h, z0.b
+; VBITS_EQ_128-NEXT:    sdivr z5.s, p0/m, z5.s, z6.s
+; VBITS_EQ_128-NEXT:    sunpkhi z6.s, z4.h
+; VBITS_EQ_128-NEXT:    sunpkhi z7.s, z3.h
+; VBITS_EQ_128-NEXT:    sunpklo z4.s, z4.h
+; VBITS_EQ_128-NEXT:    sunpklo z3.s, z3.h
+; VBITS_EQ_128-NEXT:    sdivr z6.s, p0/m, z6.s, z7.s
+; VBITS_EQ_128-NEXT:    sdiv z3.s, p0/m, z3.s, z4.s
+; VBITS_EQ_128-NEXT:    uzp1 z2.h, z2.h, z5.h
+; VBITS_EQ_128-NEXT:    uzp1 z3.h, z3.h, z6.h
+; VBITS_EQ_128-NEXT:    uzp1 z2.b, z3.b, z2.b
+; VBITS_EQ_128-NEXT:    mls v0.16b, v2.16b, v1.16b
+; VBITS_EQ_128-NEXT:    ret
+
   %res = srem <16 x i8> %op1, %op2
   ret <16 x i8> %res
 }
@@ -330,6 +369,7 @@ define void @srem_v256i8(<256 x i8>* %a, <256 x i8>* %b) #0 {
 }
 
 ; Vector vXi16 sdiv are not legal for NEON so use SVE when available.
+; FIXME: We should be able to improve the codegen for >= 256 bits here.
 define <4 x i16> @srem_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 ; CHECK-LABEL: srem_v4i16:
 ; CHECK: sshll v2.4s, v1.4h, #0
@@ -345,6 +385,16 @@ define <4 x i16> @srem_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 ; CHECK-NEXT: mov [[VEC2]].h[3], [[SCALAR3]]
 ; CHECK-NEXT: mls v0.4h, [[VEC2]].4h, v1.4h
 ; CHECK: ret
+
+; VBITS_EQ_128-LABEL: srem_v4i16:
+; VBITS_EQ_128:         sshll v2.4s, v1.4h, #0
+; VBITS_EQ_128-NEXT:    sshll v3.4s, v0.4h, #0
+; VBITS_EQ_128-NEXT:    ptrue p0.s, vl4
+; VBITS_EQ_128-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
+; VBITS_EQ_128-NEXT:    xtn v2.4h, v2.4s
+; VBITS_EQ_128-NEXT:    mls v0.4h, v2.4h, v1.4h
+; VBITS_EQ_128-NEXT:    ret
+
   %res = srem <4 x i16> %op1, %op2
   ret <4 x i16> %res
 }
@@ -358,6 +408,20 @@ define <8 x i16> @srem_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
 ; CHECK-NEXT: uzp1 [[UZP1:z[0-9]+]].h, [[DIV1]].h, [[DIV1]].h
 ; CHECK-NEXT: mls v0.8h, v2.8h, v1.8h
 ; CHECK: ret
+
+; VBITS_EQ_128-LABEL: srem_v8i16:
+; VBITS_EQ_128:         ptrue p0.s, vl4
+; VBITS_EQ_128-NEXT:    sunpkhi z2.s, z1.h
+; VBITS_EQ_128-NEXT:    sunpkhi z3.s, z0.h
+; VBITS_EQ_128-NEXT:    sunpklo z4.s, z1.h
+; VBITS_EQ_128-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
+; VBITS_EQ_128-NEXT:    sunpklo z5.s, z0.h
+; VBITS_EQ_128-NEXT:    movprfx z3, z5
+; VBITS_EQ_128-NEXT:    sdiv z3.s, p0/m, z3.s, z4.s
+; VBITS_EQ_128-NEXT:    uzp1 z2.h, z3.h, z2.h
+; VBITS_EQ_128-NEXT:    mls v0.8h, v2.8h, v1.8h
+; VBITS_EQ_128-NEXT:    ret
+
   %res = srem <8 x i16> %op1, %op2
   ret <8 x i16> %res
 }
@@ -395,6 +459,7 @@ define void @srem_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; VBITS_GE_512-NEXT: sub [[OP1]].h, [[PG1]]/m, [[OP1]].h, [[OP2]].h
 ; VBITS_GE_512-NEXT: st1h { [[OP1:z[0-9]+]].h }, [[PG1]], [x0]
 ; CHECK: ret
+
   %op1 = load <16 x i16>, <16 x i16>* %a
   %op2 = load <16 x i16>, <16 x i16>* %b
   %res = srem <16 x i16> %op1, %op2
@@ -513,6 +578,14 @@ define <2 x i32> @srem_v2i32(<2 x i32> %op1, <2 x i32> %op2) #0 {
 ; CHECK-NEXT: sdiv z2.s, [[PG]]/m, [[PFX]].s, z1.s
 ; CHECK-NEXT: mls v0.2s, v2.2s, v1.2s
 ; CHECK: ret
+
+; VBITS_EQ_128-LABEL: srem_v2i32:
+; VBITS_EQ_128:         ptrue p0.s, vl2
+; VBITS_EQ_128-NEXT:    movprfx z2, z0
+; VBITS_EQ_128-NEXT:    sdiv z2.s, p0/m, z2.s, z1.s
+; VBITS_EQ_128-NEXT:    mls v0.2s, v2.2s, v1.2s
+; VBITS_EQ_128-NEXT:    ret
+
   %res = srem <2 x i32> %op1, %op2
   ret <2 x i32> %res
 }
@@ -525,6 +598,14 @@ define <4 x i32> @srem_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
 ; CHECK-NEXT: sdiv z2.s, [[PG]]/m, [[PFX]].s, z1.s
 ; CHECK-NEXT: mls v0.4s, v2.4s, v1.4s
 ; CHECK-NEXT: ret
+
+; VBITS_EQ_128-LABEL: srem_v4i32:
+; VBITS_EQ_128:         ptrue p0.s, vl4
+; VBITS_EQ_128-NEXT:    movprfx z2, z0
+; VBITS_EQ_128-NEXT:    sdiv z2.s, p0/m, z2.s, z1.s
+; VBITS_EQ_128-NEXT:    mls v0.4s, v2.4s, v1.4s
+; VBITS_EQ_128-NEXT:    ret
+
   %res = srem <4 x i32> %op1, %op2
   ret <4 x i32> %res
 }
@@ -602,6 +683,7 @@ define void @srem_v64i32(<64 x i32>* %a, <64 x i32>* %b) #0 {
 }
 
 ; Vector i64 sdiv are not legal for NEON so use SVE when available.
+; FIXME: We should be able to improve the codegen for the 128 bits case here.
 define <1 x i64> @srem_v1i64(<1 x i64> %op1, <1 x i64> %op2) #0 {
 ; CHECK-LABEL: srem_v1i64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl1
@@ -610,11 +692,24 @@ define <1 x i64> @srem_v1i64(<1 x i64> %op1, <1 x i64> %op2) #0 {
 ; CHECK-NEXT: mul z1.d, [[PG]]/m, [[OP2]].d, [[DIV]].d
 ; CHECK-NEXT: sub d0, d0, d1
 ; CHECK-NEXT: ret
+
+; VBITS_EQ_128-LABEL: srem_v1i64:
+; VBITS_EQ_128:         ptrue p0.d, vl1
+; VBITS_EQ_128-NEXT:    movprfx z2, z0
+; VBITS_EQ_128-NEXT:    sdiv z2.d, p0/m, z2.d, z1.d
+; VBITS_EQ_128-NEXT:    fmov x8, d2
+; VBITS_EQ_128-NEXT:    fmov x9, d1
+; VBITS_EQ_128-NEXT:    mul x8, x8, x9
+; VBITS_EQ_128-NEXT:    fmov d1, x8
+; VBITS_EQ_128-NEXT:    sub d0, d0, d1
+; VBITS_EQ_128-NEXT:    ret
+
   %res = srem <1 x i64> %op1, %op2
   ret <1 x i64> %res
 }
 
 ; Vector i64 sdiv are not legal for NEON so use SVE when available.
+; FIXME: We should be able to improve the codegen for the 128 bits case here.
 define <2 x i64> @srem_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
 ; CHECK-LABEL: srem_v2i64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl2
@@ -623,6 +718,22 @@ define <2 x i64> @srem_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
 ; CHECK-NEXT: mul z1.d, [[PG]]/m, [[OP2]].d, [[DIV]].d
 ; CHECK-NEXT: sub v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT: ret
+
+; VBITS_EQ_128-LABEL: srem_v2i64:
+; VBITS_EQ_128:         ptrue p0.d, vl2
+; VBITS_EQ_128-NEXT:    movprfx z2, z0
+; VBITS_EQ_128-NEXT:    sdiv z2.d, p0/m, z2.d, z1.d
+; VBITS_EQ_128-NEXT:    fmov x9, d2
+; VBITS_EQ_128-NEXT:    fmov x10, d1
+; VBITS_EQ_128-NEXT:    mov x8, v2.d[1]
+; VBITS_EQ_128-NEXT:    mov x11, v1.d[1]
+; VBITS_EQ_128-NEXT:    mul x9, x9, x10
+; VBITS_EQ_128-NEXT:    mul x8, x8, x11
+; VBITS_EQ_128-NEXT:    fmov d1, x9
+; VBITS_EQ_128-NEXT:    mov v1.d[1], x8
+; VBITS_EQ_128-NEXT:    sub v0.2d, v0.2d, v1.2d
+; VBITS_EQ_128-NEXT:    ret
+
   %res = srem <2 x i64> %op1, %op2
   ret <2 x i64> %res
 }
@@ -704,6 +815,7 @@ define void @srem_v32i64(<32 x i64>* %a, <32 x i64>* %b) #0 {
 ;
 
 ; Vector vXi8 udiv are not legal for NEON so use SVE when available.
+; FIXME: We should be able to improve the codegen for >= 256 bits here.
 define <8 x i8> @urem_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; CHECK-LABEL: urem_v8i8:
 ; CHECK: uunpklo [[OP2_LO:z[0-9]+]].h, [[OP2:z[0-9]+]].b
@@ -731,6 +843,22 @@ define <8 x i8> @urem_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; CHECK-NEXT: mov [[FINAL]].b[7], [[SCALAR7]]
 ; CHECK-NEXT: mls v0.8b, [[FINAL]].8b, v1.8b
 ; CHECK: ret
+
+; VBITS_EQ_128-LABEL: urem_v8i8:
+; VBITS_EQ_128:         ushll v2.8h, v1.8b, #0
+; VBITS_EQ_128-NEXT:    ushll v3.8h, v0.8b, #0
+; VBITS_EQ_128-NEXT:    ptrue p0.s, vl4
+; VBITS_EQ_128-NEXT:    uunpkhi z4.s, z2.h
+; VBITS_EQ_128-NEXT:    uunpkhi z5.s, z3.h
+; VBITS_EQ_128-NEXT:    uunpklo z2.s, z2.h
+; VBITS_EQ_128-NEXT:    uunpklo z3.s, z3.h
+; VBITS_EQ_128-NEXT:    udivr z4.s, p0/m, z4.s, z5.s
+; VBITS_EQ_128-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
+; VBITS_EQ_128-NEXT:    uzp1 z2.h, z2.h, z4.h
+; VBITS_EQ_128-NEXT:    xtn v2.8b, v2.8h
+; VBITS_EQ_128-NEXT:    mls v0.8b, v2.8b, v1.8b
+; VBITS_EQ_128-NEXT:    ret
+
   %res = urem <8 x i8> %op1, %op2
   ret <8 x i8> %res
 }
@@ -763,6 +891,31 @@ define <16 x i8> @urem_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 ; VBITS_GE_512-NEXT: uzp1 [[UZP2:z[0-9]+]].b, [[UZP1]].b, [[UZP1]].b
 ; VBITS_GE_512-NEXT: mls v0.16b, v2.16b, v1.16b
 ; CHECK: ret
+
+; VBITS_EQ_128-LABEL: urem_v16i8:
+; VBITS_EQ_128:         uunpkhi z2.h, z1.b
+; VBITS_EQ_128-NEXT:    uunpkhi z3.h, z0.b
+; VBITS_EQ_128-NEXT:    ptrue p0.s, vl4
+; VBITS_EQ_128-NEXT:    uunpkhi z5.s, z2.h
+; VBITS_EQ_128-NEXT:    uunpkhi z6.s, z3.h
+; VBITS_EQ_128-NEXT:    uunpklo z2.s, z2.h
+; VBITS_EQ_128-NEXT:    uunpklo z3.s, z3.h
+; VBITS_EQ_128-NEXT:    uunpklo z4.h, z1.b
+; VBITS_EQ_128-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
+; VBITS_EQ_128-NEXT:    uunpklo z3.h, z0.b
+; VBITS_EQ_128-NEXT:    udivr z5.s, p0/m, z5.s, z6.s
+; VBITS_EQ_128-NEXT:    uunpkhi z6.s, z4.h
+; VBITS_EQ_128-NEXT:    uunpkhi z7.s, z3.h
+; VBITS_EQ_128-NEXT:    uunpklo z4.s, z4.h
+; VBITS_EQ_128-NEXT:    uunpklo z3.s, z3.h
+; VBITS_EQ_128-NEXT:    udivr z6.s, p0/m, z6.s, z7.s
+; VBITS_EQ_128-NEXT:    udiv z3.s, p0/m, z3.s, z4.s
+; VBITS_EQ_128-NEXT:    uzp1 z2.h, z2.h, z5.h
+; VBITS_EQ_128-NEXT:    uzp1 z3.h, z3.h, z6.h
+; VBITS_EQ_128-NEXT:    uzp1 z2.b, z3.b, z2.b
+; VBITS_EQ_128-NEXT:    mls v0.16b, v2.16b, v1.16b
+; VBITS_EQ_128-NEXT:    ret
+
   %res = urem <16 x i8> %op1, %op2
   ret <16 x i8> %res
 }
@@ -1007,6 +1160,7 @@ define void @urem_v256i8(<256 x i8>* %a, <256 x i8>* %b) #0 {
 }
 
 ; Vector vXi16 udiv are not legal for NEON so use SVE when available.
+; FIXME: We should be able to improve the codegen for >= 256 bits here.
 define <4 x i16> @urem_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 ; CHECK-LABEL: urem_v4i16:
 ; CHECK: ushll v2.4s, v1.4h, #0
@@ -1022,6 +1176,16 @@ define <4 x i16> @urem_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 ; CHECK-NEXT: mov [[VECO]].h[3], [[SCALAR3]]
 ; CHECK-NEXT: mls v0.4h, [[VECO]].4h, v1.4h
 ; CHECK: ret
+
+; VBITS_EQ_128-LABEL: urem_v4i16:
+; VBITS_EQ_128:         ushll v2.4s, v1.4h, #0
+; VBITS_EQ_128-NEXT:    ushll v3.4s, v0.4h, #0
+; VBITS_EQ_128-NEXT:    ptrue p0.s, vl4
+; VBITS_EQ_128-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
+; VBITS_EQ_128-NEXT:    xtn v2.4h, v2.4s
+; VBITS_EQ_128-NEXT:    mls v0.4h, v2.4h, v1.4h
+; VBITS_EQ_128-NEXT:    ret
+
   %res = urem <4 x i16> %op1, %op2
   ret <4 x i16> %res
 }
@@ -1035,6 +1199,20 @@ define <8 x i16> @urem_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
 ; CHECK-NEXT: uzp1 [[UZP1:z[0-9]+]].h, [[DIV1]].h, [[DIV1]].h
 ; CHECK-NEXT: mls v0.8h, v2.8h, v1.8h
 ; CHECK: ret
+
+; VBITS_EQ_128-LABEL: urem_v8i16:
+; VBITS_EQ_128:         ptrue p0.s, vl4
+; VBITS_EQ_128-NEXT:    uunpkhi z2.s, z1.h
+; VBITS_EQ_128-NEXT:    uunpkhi z3.s, z0.h
+; VBITS_EQ_128-NEXT:    uunpklo z4.s, z1.h
+; VBITS_EQ_128-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
+; VBITS_EQ_128-NEXT:    uunpklo z5.s, z0.h
+; VBITS_EQ_128-NEXT:    movprfx z3, z5
+; VBITS_EQ_128-NEXT:    udiv z3.s, p0/m, z3.s, z4.s
+; VBITS_EQ_128-NEXT:    uzp1 z2.h, z3.h, z2.h
+; VBITS_EQ_128-NEXT:    mls v0.8h, v2.8h, v1.8h
+; VBITS_EQ_128-NEXT:    ret
+
   %res = urem <8 x i16> %op1, %op2
   ret <8 x i16> %res
 }
@@ -1190,6 +1368,14 @@ define <2 x i32> @urem_v2i32(<2 x i32> %op1, <2 x i32> %op2) #0 {
 ; CHECK-NEXT: udiv z2.s, [[PG]]/m, [[PFX]].s, z1.s
 ; CHECK-NEXT: mls v0.2s, v2.2s, v1.2s
 ; CHECK: ret
+
+; VBITS_EQ_128-LABEL: urem_v2i32:
+; VBITS_EQ_128:         ptrue p0.s, vl2
+; VBITS_EQ_128-NEXT:    movprfx z2, z0
+; VBITS_EQ_128-NEXT:    udiv z2.s, p0/m, z2.s, z1.s
+; VBITS_EQ_128-NEXT:    mls v0.2s, v2.2s, v1.2s
+; VBITS_EQ_128-NEXT:    ret
+
   %res = urem <2 x i32> %op1, %op2
   ret <2 x i32> %res
 }
@@ -1202,6 +1388,14 @@ define <4 x i32> @urem_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
 ; CHECK-NEXT: udiv z2.s, [[PG]]/m, [[PFX]].s, z1.s
 ; CHECK-NEXT: mls v0.4s, v2.4s, v1.4s
 ; CHECK-NEXT: ret
+
+; VBITS_EQ_128-LABEL: urem_v4i32:
+; VBITS_EQ_128:         ptrue p0.s, vl4
+; VBITS_EQ_128-NEXT:    movprfx z2, z0
+; VBITS_EQ_128-NEXT:    udiv z2.s, p0/m, z2.s, z1.s
+; VBITS_EQ_128-NEXT:    mls v0.4s, v2.4s, v1.4s
+; VBITS_EQ_128-NEXT:    ret
+
   %res = urem <4 x i32> %op1, %op2
   ret <4 x i32> %res
 }
@@ -1279,6 +1473,7 @@ define void @urem_v64i32(<64 x i32>* %a, <64 x i32>* %b) #0 {
 }
 
 ; Vector i64 udiv are not legal for NEON so use SVE when available.
+; FIXME: We should be able to improve the codegen for the 128 bits case here.
 define <1 x i64> @urem_v1i64(<1 x i64> %op1, <1 x i64> %op2) #0 {
 ; CHECK-LABEL: urem_v1i64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl1
@@ -1287,11 +1482,24 @@ define <1 x i64> @urem_v1i64(<1 x i64> %op1, <1 x i64> %op2) #0 {
 ; CHECK-NEXT: mul z1.d, [[PG]]/m, [[OP2]].d, [[DIV]].d
 ; CHECK-NEXT: sub d0, d0, d1
 ; CHECK-NEXT: ret
+
+; VBITS_EQ_128-LABEL: urem_v1i64:
+; VBITS_EQ_128:         ptrue p0.d, vl1
+; VBITS_EQ_128-NEXT:    movprfx z2, z0
+; VBITS_EQ_128-NEXT:    udiv z2.d, p0/m, z2.d, z1.d
+; VBITS_EQ_128-NEXT:    fmov x8, d2
+; VBITS_EQ_128-NEXT:    fmov x9, d1
+; VBITS_EQ_128-NEXT:    mul x8, x8, x9
+; VBITS_EQ_128-NEXT:    fmov d1, x8
+; VBITS_EQ_128-NEXT:    sub d0, d0, d1
+; VBITS_EQ_128-NEXT:    ret
+
   %res = urem <1 x i64> %op1, %op2
   ret <1 x i64> %res
 }
 
 ; Vector i64 udiv are not legal for NEON so use SVE when available.
+; FIXME: We should be able to improve the codegen for the 128 bits case here.
 define <2 x i64> @urem_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
 ; CHECK-LABEL: urem_v2i64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl2
@@ -1300,6 +1508,22 @@ define <2 x i64> @urem_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
 ; CHECK-NEXT: mul z1.d, [[PG]]/m, [[OP2]].d, [[DIV]].d
 ; CHECK-NEXT: sub v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT: ret
+
+; VBITS_EQ_128-LABEL: urem_v2i64:
+; VBITS_EQ_128:         ptrue p0.d, vl2
+; VBITS_EQ_128-NEXT:    movprfx z2, z0
+; VBITS_EQ_128-NEXT:    udiv z2.d, p0/m, z2.d, z1.d
+; VBITS_EQ_128-NEXT:    fmov x9, d2
+; VBITS_EQ_128-NEXT:    fmov x10, d1
+; VBITS_EQ_128-NEXT:    mov x8, v2.d[1]
+; VBITS_EQ_128-NEXT:    mov x11, v1.d[1]
+; VBITS_EQ_128-NEXT:    mul x9, x9, x10
+; VBITS_EQ_128-NEXT:    mul x8, x8, x11
+; VBITS_EQ_128-NEXT:    fmov d1, x9
+; VBITS_EQ_128-NEXT:    mov v1.d[1], x8
+; VBITS_EQ_128-NEXT:    sub v0.2d, v0.2d, v1.2d
+; VBITS_EQ_128-NEXT:    ret
+
   %res = urem <2 x i64> %op1, %op2
   ret <2 x i64> %res
 }

@@ -17,6 +17,7 @@
 #include <string>
 
 namespace llvm {
+class FunctionPass;
 class ModulePass;
 } // namespace llvm
 

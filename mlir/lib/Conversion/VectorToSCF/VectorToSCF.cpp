@@ -267,15 +267,22 @@ struct BufferAllocs {
   Value maskBuffer;
 };
 
+// TODO: Parallelism and threadlocal considerations with a ParallelScope trait.
+static Operation *getAutomaticAllocationScope(Operation *op) {
+  Operation *scope =
+      op->getParentWithTrait<OpTrait::AutomaticAllocationScope>();
+  assert(scope && "Expected op to be inside automatic allocation scope");
+  return scope;
+}
+
 /// Allocate temporary buffers for data (vector) and mask (if present).
-/// TODO: Parallelism and threadlocal considerations.
 template <typename OpTy>
 static BufferAllocs allocBuffers(OpBuilder &b, OpTy xferOp) {
   Location loc = xferOp.getLoc();
   OpBuilder::InsertionGuard guard(b);
-  Operation *scope =
-      xferOp->template getParentWithTrait<OpTrait::AutomaticAllocationScope>();
-  assert(scope && "Expected op to be inside automatic allocation scope");
+  Operation *scope = getAutomaticAllocationScope(xferOp);
+  assert(scope->getNumRegions() == 1 &&
+         "AutomaticAllocationScope with >1 regions");
   b.setInsertionPointToStart(&scope->getRegion(0).front());
 
   BufferAllocs result;

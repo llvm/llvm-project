@@ -1,7 +1,7 @@
 Section,Description,Dependencies,Assignee,Complete
-| `[tuple.syn] <https://wg21.link/tuple.syn>`_, "`[tuple] basic_common_reference, common_type <https://reviews.llvm.org/D116538>`_", None, Nikolas Klauser, |In Progress|
+| `[tuple.syn] <https://wg21.link/tuple.syn>`_, "`[tuple] basic_common_reference, common_type <https://reviews.llvm.org/D116538>`_", None, Nikolas Klauser, |Complete|
 | `[tuple.tuple] <https://wg21.link/tuple.tuple>`_, "`[tuple] constructor, assignment and swap overloads <https://reviews.llvm.org/D116621>`_", None, Nikolas Klauser, |In Progress|
-| `[utility.syn] <https://wg21.link/utility.syn>`_, "[pair] basic_common_reference, common_type", None, Nikolas Klauser, |Not Started|
+| `[utility.syn] <https://wg21.link/utility.syn>`_, "[pair] basic_common_reference, common_type", None, Nikolas Klauser, |Complete|
 | `[pairs.pair] <https://wg21.link/pairs.pair>`_, "[pair] constructor, assignment and swap overloads", None, Nikolas Klauser, |Not Started|
 "| `[memory.syn] <https://wg21.link/memory.syn>`_
 | `[allocator.uses.construction] <https://wg21.link/allocator.uses.construction>`_", "[pair] uses_allocator_construction_args overloads", None, Unassigned, |Not Started|

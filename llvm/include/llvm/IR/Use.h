@@ -25,7 +25,6 @@
 #define LLVM_IR_USE_H
 
 #include "llvm-c/Types.h"
-#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Compiler.h"
 
