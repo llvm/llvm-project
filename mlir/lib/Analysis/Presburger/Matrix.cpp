@@ -203,6 +203,29 @@ void Matrix::negateColumn(unsigned column) {
     at(row, column) = -at(row, column);
 }
 
+SmallVector<int64_t, 8>
+Matrix::preMultiplyWithRow(ArrayRef<int64_t> rowVec) const {
+  assert(rowVec.size() == getNumRows() && "Invalid row vector dimension!");
+
+  SmallVector<int64_t, 8> result(getNumColumns(), 0);
+  for (unsigned col = 0, e = getNumColumns(); col < e; ++col)
+    for (unsigned i = 0, e = getNumRows(); i < e; ++i)
+      result[col] += rowVec[i] * at(i, col);
+  return result;
+}
+
+SmallVector<int64_t, 8>
+Matrix::postMultiplyWithColumn(ArrayRef<int64_t> colVec) const {
+  assert(getNumColumns() == colVec.size() &&
+         "Invalid column vector dimension!");
+
+  SmallVector<int64_t, 8> result(getNumRows(), 0);
+  for (unsigned row = 0, e = getNumRows(); row < e; row++)
+    for (unsigned i = 0, e = getNumColumns(); i < e; i++)
+      result[row] += at(row, i) * colVec[i];
+  return result;
+}
+
 void Matrix::print(raw_ostream &os) const {
   for (unsigned row = 0; row < nRows; ++row) {
     for (unsigned column = 0; column < nColumns; ++column)
