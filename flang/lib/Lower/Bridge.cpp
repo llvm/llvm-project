@@ -71,12 +71,13 @@ public:
     return lookupSymbol(sym).getAddr();
   }
 
-  mlir::Value genExprAddr(const Fortran::lower::SomeExpr &expr,
-                          mlir::Location *loc = nullptr) override final {
+  fir::ExtendedValue genExprAddr(const Fortran::lower::SomeExpr &expr,
+                                 mlir::Location *loc = nullptr) override final {
     TODO_NOLOC("Not implemented. Needed for more complex expression lowering");
   }
-  mlir::Value genExprValue(const Fortran::lower::SomeExpr &expr,
-                           mlir::Location *loc = nullptr) override final {
+  fir::ExtendedValue
+  genExprValue(const Fortran::lower::SomeExpr &expr,
+               mlir::Location *loc = nullptr) override final {
     TODO_NOLOC("Not implemented. Needed for more complex expression lowering");
   }
 
