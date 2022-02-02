@@ -20,6 +20,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
 #include "llvm/Bitstream/BitstreamReader.h"

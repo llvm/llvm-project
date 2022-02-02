@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/LLVMContext.h"
 #include "gtest/gtest.h"
