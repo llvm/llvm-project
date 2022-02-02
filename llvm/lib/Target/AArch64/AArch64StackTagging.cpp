@@ -579,8 +579,9 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
           Allocas[AI].LifetimeEnd.push_back(II);
       }
 
-      if (isa<ReturnInst, ResumeInst, CleanupReturnInst>(&I))
-        RetVec.push_back(&I);
+      Instruction *ExitUntag = getUntagLocationIfFunctionExit(I);
+      if (ExitUntag)
+        RetVec.push_back(ExitUntag);
     }
   }
 
