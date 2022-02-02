@@ -24,7 +24,7 @@
 
 #ifdef __cplusplus
 
-#define _LIBCPP_VERSION 14000
+#define _LIBCPP_VERSION 15000
 
 #ifndef _LIBCPP_ABI_VERSION
 #  define _LIBCPP_ABI_VERSION 1
