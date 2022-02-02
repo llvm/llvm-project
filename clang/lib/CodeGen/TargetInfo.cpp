@@ -9474,6 +9474,28 @@ class SparcV8TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   SparcV8TargetCodeGenInfo(CodeGenTypes &CGT)
       : TargetCodeGenInfo(std::make_unique<SparcV8ABIInfo>(CGT)) {}
+
+  llvm::Value *decodeReturnAddress(CodeGen::CodeGenFunction &CGF,
+                                   llvm::Value *Address) const override {
+    int Offset;
+    if (isAggregateTypeForABI(CGF.CurFnInfo->getReturnType()))
+      Offset = 12;
+    else
+      Offset = 8;
+    return CGF.Builder.CreateGEP(CGF.Int8Ty, Address,
+                                 llvm::ConstantInt::get(CGF.Int32Ty, Offset));
+  }
+
+  llvm::Value *encodeReturnAddress(CodeGen::CodeGenFunction &CGF,
+                                   llvm::Value *Address) const override {
+    int Offset;
+    if (isAggregateTypeForABI(CGF.CurFnInfo->getReturnType()))
+      Offset = -12;
+    else
+      Offset = -8;
+    return CGF.Builder.CreateGEP(CGF.Int8Ty, Address,
+                                 llvm::ConstantInt::get(CGF.Int32Ty, Offset));
+  }
 };
 } // end anonymous namespace
 
@@ -9748,6 +9770,18 @@ public:
 
   bool initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
                                llvm::Value *Address) const override;
+
+  llvm::Value *decodeReturnAddress(CodeGen::CodeGenFunction &CGF,
+                                   llvm::Value *Address) const override {
+    return CGF.Builder.CreateGEP(CGF.Int8Ty, Address,
+                                 llvm::ConstantInt::get(CGF.Int32Ty, 8));
+  }
+
+  llvm::Value *encodeReturnAddress(CodeGen::CodeGenFunction &CGF,
+                                   llvm::Value *Address) const override {
+    return CGF.Builder.CreateGEP(CGF.Int8Ty, Address,
+                                 llvm::ConstantInt::get(CGF.Int32Ty, -8));
+  }
 };
 } // end anonymous namespace
 
