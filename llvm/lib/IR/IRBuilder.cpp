@@ -785,31 +785,26 @@ InvokeInst *IRBuilderBase::CreateGCStatepointInvoke(
 }
 
 CallInst *IRBuilderBase::CreateGCResult(Instruction *Statepoint,
-                                       Type *ResultType,
-                                       const Twine &Name) {
- Intrinsic::ID ID = Intrinsic::experimental_gc_result;
- Module *M = BB->getParent()->getParent();
- Type *Types[] = {ResultType};
- Function *FnGCResult = Intrinsic::getDeclaration(M, ID, Types);
+                                        Type *ResultType, const Twine &Name) {
+  Intrinsic::ID ID = Intrinsic::experimental_gc_result;
+  Module *M = BB->getParent()->getParent();
+  Type *Types[] = {ResultType};
+  Function *FnGCResult = Intrinsic::getDeclaration(M, ID, Types);
 
- Value *Args[] = {Statepoint};
- return createCallHelper(FnGCResult, Args, this, Name);
+  Value *Args[] = {Statepoint};
+  return createCallHelper(FnGCResult, Args, this, Name);
 }
 
 CallInst *IRBuilderBase::CreateGCRelocate(Instruction *Statepoint,
-                                         int BaseOffset,
-                                         int DerivedOffset,
-                                         Type *ResultType,
-                                         const Twine &Name) {
- Module *M = BB->getParent()->getParent();
- Type *Types[] = {ResultType};
- Function *FnGCRelocate =
-     Intrinsic::getDeclaration(M, Intrinsic::experimental_gc_relocate, Types);
+                                          int BaseOffset, int DerivedOffset,
+                                          Type *ResultType, const Twine &Name) {
+  Module *M = BB->getParent()->getParent();
+  Type *Types[] = {ResultType};
+  Function *FnGCRelocate =
+      Intrinsic::getDeclaration(M, Intrinsic::experimental_gc_relocate, Types);
 
- Value *Args[] = {Statepoint,
-                  getInt32(BaseOffset),
-                  getInt32(DerivedOffset)};
- return createCallHelper(FnGCRelocate, Args, this, Name);
+  Value *Args[] = {Statepoint, getInt32(BaseOffset), getInt32(DerivedOffset)};
+  return createCallHelper(FnGCRelocate, Args, this, Name);
 }
 
 CallInst *IRBuilderBase::CreateGCGetPointerBase(Value *DerivedPtr,
