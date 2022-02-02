@@ -184,9 +184,8 @@ public:
   }
 
   ~ScopedLineState() {
-    if (!Parser.Line->Tokens.empty()) {
+    if (!Parser.Line->Tokens.empty())
       Parser.addUnwrappedLine();
-    }
     assert(Parser.Line->Tokens.empty());
     Parser.Line = std::move(PreBlockLine);
     if (Parser.CurrentLines == &Parser.PreprocessorDirectives)
@@ -474,11 +473,10 @@ bool UnwrappedLineParser::parseLevel(bool HasOpeningBrace, IfStmtKind *IfKind) {
   bool SwitchLabelEncountered = false;
   do {
     tok::TokenKind kind = FormatTok->Tok.getKind();
-    if (FormatTok->getType() == TT_MacroBlockBegin) {
+    if (FormatTok->getType() == TT_MacroBlockBegin)
       kind = tok::l_brace;
-    } else if (FormatTok->getType() == TT_MacroBlockEnd) {
+    else if (FormatTok->getType() == TT_MacroBlockEnd)
       kind = tok::r_brace;
-    }
 
     switch (kind) {
     case tok::comment:
@@ -501,9 +499,8 @@ bool UnwrappedLineParser::parseLevel(bool HasOpeningBrace, IfStmtKind *IfKind) {
           return false;
         if (FormatTok->isNot(tok::r_brace) || StatementCount != 1 ||
             IsPrecededByCommentOrPPDirective ||
-            precededByCommentOrPPDirective()) {
+            precededByCommentOrPPDirective())
           return false;
-        }
         const FormatToken *Next = Tokens->peekNextToken();
         if (Next->is(tok::comment) && Next->NewlinesBefore == 0)
           return false;
@@ -687,10 +684,9 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
   } while (Tok->Tok.isNot(tok::eof) && !LBraceStack.empty());
 
   // Assume other blocks for all unclosed opening braces.
-  for (FormatToken *LBrace : LBraceStack) {
+  for (FormatToken *LBrace : LBraceStack)
     if (LBrace->is(BK_Unknown))
       LBrace->setBlockKind(BK_Block);
-  }
 
   FormatTok = Tokens->setPosition(StoredPosition);
 }
@@ -952,9 +948,8 @@ void UnwrappedLineParser::conditionalCompilationAlternative() {
 void UnwrappedLineParser::conditionalCompilationEnd() {
   assert(PPBranchLevel < (int)PPLevelBranchIndex.size());
   if (PPBranchLevel >= 0 && !PPChainBranchIndex.empty()) {
-    if (PPChainBranchIndex.top() + 1 > PPLevelBranchCount[PPBranchLevel]) {
+    if (PPChainBranchIndex.top() + 1 > PPLevelBranchCount[PPBranchLevel])
       PPLevelBranchCount[PPBranchLevel] = PPChainBranchIndex.top() + 1;
-    }
   }
   // Guard against #endif's without #if.
   if (PPBranchLevel > -1)
@@ -1042,9 +1037,8 @@ void UnwrappedLineParser::parsePPDefine() {
 
   nextToken();
   if (FormatTok->Tok.getKind() == tok::l_paren &&
-      !FormatTok->hasWhitespaceBefore()) {
+      !FormatTok->hasWhitespaceBefore())
     parseParens();
-  }
   if (Style.IndentPPDirectives != FormatStyle::PPDIS_None)
     Line->Level += PPBranchLevel + 1;
   addUnwrappedLine();
@@ -1540,9 +1534,8 @@ void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
     case tok::kw_struct:
     case tok::kw_union:
     case tok::kw_class:
-      if (parseStructLike()) {
+      if (parseStructLike())
         return;
-      }
       break;
     case tok::period:
       nextToken();
@@ -1669,9 +1662,8 @@ void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
       }
 
       if (FormatTok->is(Keywords.kw_interface)) {
-        if (parseStructLike()) {
+        if (parseStructLike())
           return;
-        }
         break;
       }
 
@@ -1961,9 +1953,8 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
     return false;
   }
   nextToken();
-  if (FormatTok->is(tok::l_square)) {
+  if (FormatTok->is(tok::l_square))
     return false;
-  }
   parseSquare(/*LambdaIntroducer=*/true);
   return true;
 }
@@ -2410,20 +2401,18 @@ void UnwrappedLineParser::parseTryCatch() {
     }
   }
   // Parse try with resource.
-  if (Style.Language == FormatStyle::LK_Java && FormatTok->is(tok::l_paren)) {
+  if (Style.Language == FormatStyle::LK_Java && FormatTok->is(tok::l_paren))
     parseParens();
-  }
 
   keepAncestorBraces();
 
   if (FormatTok->is(tok::l_brace)) {
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
     parseBlock();
-    if (Style.BraceWrapping.BeforeCatch) {
+    if (Style.BraceWrapping.BeforeCatch)
       addUnwrappedLine();
-    } else {
+    else
       NeedsUnwrappedLine = true;
-    }
   } else if (!FormatTok->is(tok::kw_catch)) {
     // The C++ standard requires a compound-statement after a try.
     // If there's none, we try to assume there's a structuralElement
@@ -2483,12 +2472,11 @@ void UnwrappedLineParser::parseNamespace() {
   } else {
     while (FormatTok->isOneOf(tok::identifier, tok::coloncolon, tok::kw_inline,
                               tok::l_square, tok::period) ||
-           (Style.isCSharp() && FormatTok->is(tok::kw_union))) {
+           (Style.isCSharp() && FormatTok->is(tok::kw_union)))
       if (FormatTok->is(tok::l_square))
         parseSquare();
       else
         nextToken();
-    }
   }
   if (FormatTok->Tok.is(tok::l_brace)) {
     if (ShouldBreakBeforeBrace(Style, InitialToken))
@@ -2655,9 +2643,8 @@ void UnwrappedLineParser::parseLabel(bool LeftAlignLabel) {
           FormatStyle::BWACS_Always) {
         addUnwrappedLine();
         if (!Style.IndentCaseBlocks &&
-            Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths) {
+            Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths)
           ++Line->Level;
-        }
       }
       parseStructuralElement();
     }
@@ -2782,17 +2769,15 @@ void UnwrappedLineParser::parseConstraintExpression(
       }
       nextToken();
     }
-    if (FormatTok->Tok.is(tok::kw_requires)) {
+    if (FormatTok->Tok.is(tok::kw_requires))
       parseRequiresExpression(OriginalLevel);
-    }
     if (FormatTok->Tok.is(tok::less)) {
       parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
                       /*ClosingBraceKind=*/tok::greater);
     }
 
-    if (FormatTok->Tok.is(tok::l_paren)) {
+    if (FormatTok->Tok.is(tok::l_paren))
       parseParens();
-    }
     if (FormatTok->Tok.is(tok::l_brace)) {
       if (Style.BraceWrapping.AfterFunction)
         addUnwrappedLine();
@@ -2804,18 +2789,15 @@ void UnwrappedLineParser::parseConstraintExpression(
       nextToken();
       addUnwrappedLine();
     }
-    if (FormatTok->Tok.is(tok::colon)) {
+    if (FormatTok->Tok.is(tok::colon))
       return;
-    }
     if (!FormatTok->Tok.isOneOf(tok::ampamp, tok::pipepipe)) {
       if (FormatTok->Previous &&
           !FormatTok->Previous->isOneOf(tok::identifier, tok::kw_requires,
-                                        tok::coloncolon)) {
+                                        tok::coloncolon))
         addUnwrappedLine();
-      }
-      if (Style.IndentRequires && OriginalLevel != Line->Level) {
+      if (Style.IndentRequires && OriginalLevel != Line->Level)
         --Line->Level;
-      }
       break;
     } else {
       FormatTok->setType(TT_ConstraintJunctions);
@@ -2831,9 +2813,8 @@ void UnwrappedLineParser::parseRequires() {
   unsigned OriginalLevel = Line->Level;
   if (FormatTok->Previous && FormatTok->Previous->is(tok::greater)) {
     addUnwrappedLine();
-    if (Style.IndentRequires) {
+    if (Style.IndentRequires)
       ++Line->Level;
-    }
   }
   nextToken();
 
@@ -2956,27 +2937,23 @@ bool UnwrappedLineParser::tryToParseSimpleAttribute() {
   ScopedTokenPosition AutoPosition(Tokens);
   FormatToken *Tok = Tokens->getNextToken();
   // We already read the first [ check for the second.
-  if (!Tok->is(tok::l_square)) {
+  if (!Tok->is(tok::l_square))
     return false;
-  }
   // Double check that the attribute is just something
   // fairly simple.
   while (Tok->isNot(tok::eof)) {
-    if (Tok->is(tok::r_square)) {
+    if (Tok->is(tok::r_square))
       break;
-    }
     Tok = Tokens->getNextToken();
   }
   if (Tok->is(tok::eof))
     return false;
   Tok = Tokens->getNextToken();
-  if (!Tok->is(tok::r_square)) {
+  if (!Tok->is(tok::r_square))
     return false;
-  }
   Tok = Tokens->getNextToken();
-  if (Tok->is(tok::semi)) {
+  if (Tok->is(tok::semi))
     return false;
-  }
   return true;
 }
 
@@ -3201,16 +3178,14 @@ void UnwrappedLineParser::parseObjCInterfaceOrImplementation() {
 
   // @interface can be followed by a lightweight generic
   // specialization list, then either a base class or a category.
-  if (FormatTok->Tok.is(tok::less)) {
+  if (FormatTok->Tok.is(tok::less))
     parseObjCLightweightGenerics();
-  }
   if (FormatTok->Tok.is(tok::colon)) {
     nextToken();
     nextToken(); // base class name
     // The base class can also have lightweight generics applied to it.
-    if (FormatTok->Tok.is(tok::less)) {
+    if (FormatTok->Tok.is(tok::less))
       parseObjCLightweightGenerics();
-    }
   } else if (FormatTok->Tok.is(tok::l_paren))
     // Skip category, if present.
     parseParens();
@@ -3496,13 +3471,11 @@ continuesLineCommentSection(const FormatToken &FormatTok,
     PreviousToken = Node.Tok;
 
     // Grab the last newline preceding a token in this unwrapped line.
-    if (Node.Tok->NewlinesBefore > 0) {
+    if (Node.Tok->NewlinesBefore > 0)
       MinColumnToken = Node.Tok;
-    }
   }
-  if (PreviousToken && PreviousToken->is(tok::l_brace)) {
+  if (PreviousToken && PreviousToken->is(tok::l_brace))
     MinColumnToken = PreviousToken;
-  }
 
   return continuesLineComment(FormatTok, /*Previous=*/Line.Tokens.back().Tok,
                               MinColumnToken);
@@ -3587,14 +3560,12 @@ void UnwrappedLineParser::distributeComments(
           continuesLineCommentSection(*FormatTok, *Line, CommentPragmasRegex);
     }
     if (!FormatTok->ContinuesLineCommentSection &&
-        (isOnNewLine(*FormatTok) || FormatTok->IsFirst)) {
+        (isOnNewLine(*FormatTok) || FormatTok->IsFirst))
       ShouldPushCommentsInCurrentLine = false;
-    }
-    if (ShouldPushCommentsInCurrentLine) {
+    if (ShouldPushCommentsInCurrentLine)
       pushToken(FormatTok);
-    } else {
+    else
       CommentsBeforeNextToken.push_back(FormatTok);
-    }
   }
 }
 
@@ -3606,13 +3577,12 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
     while (FormatTok->getType() == TT_ConflictStart ||
            FormatTok->getType() == TT_ConflictEnd ||
            FormatTok->getType() == TT_ConflictAlternative) {
-      if (FormatTok->getType() == TT_ConflictStart) {
+      if (FormatTok->getType() == TT_ConflictStart)
         conditionalCompilationStart(/*Unreachable=*/false);
-      } else if (FormatTok->getType() == TT_ConflictAlternative) {
+      else if (FormatTok->getType() == TT_ConflictAlternative)
         conditionalCompilationAlternative();
-      } else if (FormatTok->getType() == TT_ConflictEnd) {
+      else if (FormatTok->getType() == TT_ConflictEnd)
         conditionalCompilationEnd();
-      }
       FormatTok = Tokens->getNextToken();
       FormatTok->MustBreakBefore = true;
     }
@@ -3640,9 +3610,8 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
     }
 
     if (!PPStack.empty() && (PPStack.back().Kind == PP_Unreachable) &&
-        !Line->InPPDirective) {
+        !Line->InPPDirective)
       continue;
-    }
 
     if (!FormatTok->Tok.is(tok::comment)) {
       distributeComments(Comments, FormatTok);

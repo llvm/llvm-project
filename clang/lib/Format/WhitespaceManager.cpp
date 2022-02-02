@@ -260,11 +260,9 @@ void WhitespaceManager::calculateLineBreakInformation() {
 
     Change.ConditionalsLevel = ConditionalsLevel;
 
-    for (unsigned i = Change.Tok->FakeRParens; i > 0 && ScopeStack.size();
-         --i) {
+    for (unsigned i = Change.Tok->FakeRParens; i > 0 && ScopeStack.size(); --i)
       if (ScopeStack.pop_back_val())
         --ConditionalsLevel;
-    }
   }
 }
 
@@ -527,9 +525,8 @@ static unsigned AlignTokens(
       LineIsComment = true;
     }
 
-    if (!Changes[i].Tok->is(tok::comment)) {
+    if (!Changes[i].Tok->is(tok::comment))
       LineIsComment = false;
-    }
 
     if (Changes[i].Tok->is(tok::comma)) {
       ++CommasBeforeMatch;
@@ -705,9 +702,8 @@ void WhitespaceManager::alignConsecutiveMacros() {
       LineIsComment = true;
     }
 
-    if (!Changes[I].Tok->is(tok::comment)) {
+    if (!Changes[I].Tok->is(tok::comment))
       LineIsComment = false;
-    }
 
     if (!AlignMacrosMatches(Changes[I]))
       continue;
@@ -834,10 +830,9 @@ void WhitespaceManager::alignChainedConditionals() {
     // Ensure we keep alignment of wrapped operands with non-wrapped operands
     // Since we actually align the operators, the wrapped operands need the
     // extra offset to be properly aligned.
-    for (Change &C : Changes) {
+    for (Change &C : Changes)
       if (AlignWrappedOperand(C))
         C.StartOfTokenColumn -= 2;
-    }
     AlignTokens(
         Style,
         [this](Change const &C) {
@@ -939,9 +934,8 @@ void WhitespaceManager::alignTrailingComments(unsigned Start, unsigned End,
                                               unsigned Column) {
   for (unsigned i = Start; i != End; ++i) {
     int Shift = 0;
-    if (Changes[i].IsTrailingComment) {
+    if (Changes[i].IsTrailingComment)
       Shift = Column - Changes[i].StartOfTokenColumn;
-    }
     if (Changes[i].StartOfBlockComment) {
       Shift = Changes[i].IndentationOffset +
               Changes[i].StartOfBlockComment->StartOfTokenColumn -
@@ -1135,10 +1129,9 @@ bool WhitespaceManager::isSplitCell(const CellDescription &Cell) {
   if (Cell.HasSplit)
     return true;
   for (const auto *Next = Cell.NextColumnElement; Next != nullptr;
-       Next = Next->NextColumnElement) {
+       Next = Next->NextColumnElement)
     if (Next->HasSplit)
       return true;
-  }
   return false;
 }
 
@@ -1277,10 +1270,9 @@ void WhitespaceManager::alignToStartOfCell(unsigned Start, unsigned End) {
     return;
   // If the line is broken anywhere in there make sure everything
   // is aligned to the parent
-  for (auto i = Start + 1; i < End; i++) {
+  for (auto i = Start + 1; i < End; i++)
     if (Changes[i].NewlinesBefore > 0)
       Changes[i].Spaces = Changes[Start].Spaces;
-  }
 }
 
 WhitespaceManager::CellDescriptions

@@ -187,9 +187,8 @@ public:
     // harmless and will be stripped by the subsequent formatting pass.
     // FIXME: A better long term fix is to re-calculate Ranges after sorting.
     unsigned PreviousSize = PreviousText.size();
-    while (ReferencesText.size() < PreviousSize) {
+    while (ReferencesText.size() < PreviousSize)
       ReferencesText += " ";
-    }
 
     // Separate references from the main code body of the file.
     if (FirstNonImportLine && FirstNonImportLine->First->NewlinesBefore < 2 &&
@@ -511,9 +510,8 @@ private:
         nextToken();
         while (Current->is(tok::identifier)) {
           nextToken();
-          if (Current->is(tok::semi)) {
+          if (Current->is(tok::semi))
             return true;
-          }
           if (!Current->is(tok::period))
             return false;
           nextToken();

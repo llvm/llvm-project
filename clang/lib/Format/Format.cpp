@@ -665,13 +665,12 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("QualifierAlignment", Style.QualifierAlignment);
 
     // Default Order for Left/Right based Qualifier alignment.
-    if (Style.QualifierAlignment == FormatStyle::QAS_Right) {
+    if (Style.QualifierAlignment == FormatStyle::QAS_Right)
       Style.QualifierOrder = {"type", "const", "volatile"};
-    } else if (Style.QualifierAlignment == FormatStyle::QAS_Left) {
+    else if (Style.QualifierAlignment == FormatStyle::QAS_Left)
       Style.QualifierOrder = {"const", "volatile", "type"};
-    } else if (Style.QualifierAlignment == FormatStyle::QAS_Custom) {
+    else if (Style.QualifierAlignment == FormatStyle::QAS_Custom)
       IO.mapOptional("QualifierOrder", Style.QualifierOrder);
-    }
 
     IO.mapOptional("CompactNamespaces", Style.CompactNamespaces);
     IO.mapOptional("ConstructorInitializerIndentWidth",
@@ -893,9 +892,8 @@ template <> struct MappingTraits<FormatStyle::SpacesInLineComment> {
     IO.mapOptional("Maximum", signedMaximum);
     Space.Maximum = static_cast<unsigned>(signedMaximum);
 
-    if (Space.Maximum != -1u) {
+    if (Space.Maximum != -1u)
       Space.Minimum = std::min(Space.Minimum, Space.Maximum);
-    }
   }
 };
 
@@ -1267,12 +1265,10 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.WhitespaceSensitiveMacros.push_back("CF_SWIFT_NAME");
 
   // Defaults that differ when not C++.
-  if (Language == FormatStyle::LK_TableGen) {
+  if (Language == FormatStyle::LK_TableGen)
     LLVMStyle.SpacesInContainerLiterals = false;
-  }
-  if (LLVMStyle.isJson()) {
+  if (LLVMStyle.isJson())
     LLVMStyle.ColumnLimit = 0;
-  }
 
   return LLVMStyle;
 }
@@ -1581,27 +1577,26 @@ FormatStyle getNoStyle() {
 
 bool getPredefinedStyle(StringRef Name, FormatStyle::LanguageKind Language,
                         FormatStyle *Style) {
-  if (Name.equals_insensitive("llvm")) {
+  if (Name.equals_insensitive("llvm"))
     *Style = getLLVMStyle(Language);
-  } else if (Name.equals_insensitive("chromium")) {
+  else if (Name.equals_insensitive("chromium"))
     *Style = getChromiumStyle(Language);
-  } else if (Name.equals_insensitive("mozilla")) {
+  else if (Name.equals_insensitive("mozilla"))
     *Style = getMozillaStyle();
-  } else if (Name.equals_insensitive("google")) {
+  else if (Name.equals_insensitive("google"))
     *Style = getGoogleStyle(Language);
-  } else if (Name.equals_insensitive("webkit")) {
+  else if (Name.equals_insensitive("webkit"))
     *Style = getWebKitStyle();
-  } else if (Name.equals_insensitive("gnu")) {
+  else if (Name.equals_insensitive("gnu"))
     *Style = getGNUStyle();
-  } else if (Name.equals_insensitive("microsoft")) {
+  else if (Name.equals_insensitive("microsoft"))
     *Style = getMicrosoftStyle(Language);
-  } else if (Name.equals_insensitive("none")) {
+  else if (Name.equals_insensitive("none"))
     *Style = getNoStyle();
-  } else if (Name.equals_insensitive("inheritparentconfig")) {
+  else if (Name.equals_insensitive("inheritparentconfig"))
     Style->InheritsParentConfig = true;
-  } else {
+  else
     return false;
-  }
 
   Style->Language = Language;
   return true;
@@ -2107,10 +2102,9 @@ private:
   }
 
   bool containsOnlyComments(const AnnotatedLine &Line) {
-    for (FormatToken *Tok = Line.First; Tok != nullptr; Tok = Tok->Next) {
+    for (FormatToken *Tok = Line.First; Tok != nullptr; Tok = Tok->Next)
       if (Tok->isNot(tok::comment))
         return false;
-    }
     return true;
   }
 
@@ -2247,10 +2241,8 @@ private:
     unsigned Idx = 0;
     while (Idx < Tokens.size()) {
       unsigned St = Idx, End = Idx;
-      while ((End + 1) < Tokens.size() &&
-             Tokens[End]->Next == Tokens[End + 1]) {
+      while ((End + 1) < Tokens.size() && Tokens[End]->Next == Tokens[End + 1])
         ++End;
-      }
       auto SR = CharSourceRange::getCharRange(Tokens[St]->Tok.getLocation(),
                                               Tokens[End]->Tok.getEndLoc());
       auto Err =
@@ -2441,11 +2433,10 @@ struct JavaImportDirective {
 // Determines whether 'Ranges' intersects with ('Start', 'End').
 static bool affectsRange(ArrayRef<tooling::Range> Ranges, unsigned Start,
                          unsigned End) {
-  for (auto Range : Ranges) {
+  for (auto Range : Ranges)
     if (Range.getOffset() < End &&
         Range.getOffset() + Range.getLength() > Start)
       return true;
-  }
   return false;
 }
 
@@ -2521,7 +2512,7 @@ static void sortCppIncludes(const FormatStyle &Style,
   SmallVector<unsigned, 16> Indices =
       llvm::to_vector<16>(llvm::seq<unsigned>(0, Includes.size()));
 
-  if (Style.SortIncludes == FormatStyle::SI_CaseInsensitive) {
+  if (Style.SortIncludes == FormatStyle::SI_CaseInsensitive)
     llvm::stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
       const auto LHSFilenameLower = Includes[LHSI].Filename.lower();
       const auto RHSFilenameLower = Includes[RHSI].Filename.lower();
@@ -2530,12 +2521,11 @@ static void sortCppIncludes(const FormatStyle &Style,
              std::tie(Includes[RHSI].Priority, RHSFilenameLower,
                       Includes[RHSI].Filename);
     });
-  } else {
+  else
     llvm::stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
       return std::tie(Includes[LHSI].Priority, Includes[LHSI].Filename) <
              std::tie(Includes[RHSI].Priority, Includes[RHSI].Filename);
     });
-  }
 
   // The index of the include on which the cursor will be put after
   // sorting/deduplicating.
@@ -2651,9 +2641,8 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
       FormattingOff = true;
     }
 
-    if (Trimmed.contains(RawStringTermination)) {
+    if (Trimmed.contains(RawStringTermination))
       FormattingOff = false;
-    }
 
     if (Trimmed == "// clang-format off" || Trimmed == "/* clang-format off */")
       FormattingOff = true;
@@ -2848,9 +2837,8 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
       StringRef Static = Matches[1];
       StringRef Identifier = Matches[2];
       bool IsStatic = false;
-      if (Static.contains("static")) {
+      if (Static.contains("static"))
         IsStatic = true;
-      }
       ImportsInBlock.push_back(
           {Identifier, Line, Prev, AssociatedCommentLines, IsStatic});
       AssociatedCommentLines.clear();
@@ -3071,9 +3059,8 @@ reformat(const FormatStyle &Style, StringRef Code,
     // add a replacement to remove the "x = " from the result.
     if (!Replaces.add(tooling::Replacement(FileName, 0, 4, ""))) {
       // apply the reformatting changes and the removal of "x = ".
-      if (applyAllReplacements(Code, Replaces)) {
+      if (applyAllReplacements(Code, Replaces))
         return {Replaces, 0};
-      }
     }
     return {tooling::Replacements(), 0};
   }
@@ -3329,9 +3316,8 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
                                      StringRef FallbackStyleName,
                                      StringRef Code, llvm::vfs::FileSystem *FS,
                                      bool AllowUnknownOptions) {
-  if (!FS) {
+  if (!FS)
     FS = llvm::vfs::getRealFileSystem().get();
-  }
   FormatStyle Style = getLLVMStyle(guessLanguage(FileName, Code));
 
   FormatStyle FallbackStyle = getNoStyle();
@@ -3417,9 +3403,8 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
 
     auto Status = FS->status(Directory);
     if (!Status ||
-        Status->getType() != llvm::sys::fs::file_type::directory_file) {
+        Status->getType() != llvm::sys::fs::file_type::directory_file)
       continue;
-    }
 
     for (const auto &F : FilesToLookFor) {
       SmallString<128> ConfigFile(Directory);
