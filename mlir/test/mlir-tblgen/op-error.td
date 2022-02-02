@@ -9,6 +9,8 @@
 // RUN: not mlir-tblgen -gen-op-decls -I %S/../../include -DERROR9 %s 2>&1 | FileCheck --check-prefix=ERROR9 %s
 // RUN: not mlir-tblgen -gen-op-decls -I %S/../../include -DERROR10 %s 2>&1 | FileCheck --check-prefix=ERROR10 %s
 // RUN: not mlir-tblgen -gen-op-decls -I %S/../../include -DERROR11 %s 2>&1 | FileCheck --check-prefix=ERROR11 %s
+// RUN: not mlir-tblgen -gen-op-decls -I %S/../../include -DERROR12 %s 2>&1 | FileCheck --check-prefix=ERROR12 %s
+// RUN: not mlir-tblgen -gen-op-decls -I %S/../../include -DERROR13 %s 2>&1 | FileCheck --check-prefix=ERROR13 %s
 
 include "mlir/IR/OpBase.td"
 
@@ -103,4 +105,22 @@ def OpWithDuplicatedArgResultNames : Op<Test_Dialect, "default_value"> {
   let successors = (successor AnySuccessor:$target);
   let regions = (region AnyRegion:$target);
 }
+#endif
+
+#ifdef ERROR12
+def OpTraitA : NativeOpTrait<"OpTraitA"> {}
+def OpTraitB : NativeOpTrait<"OpTraitB", [OpTraitA]> {}
+
+// ERROR12: error: OpTraitB requires OpTraitA to precede it in traits list
+def OpTraitWithoutDependentTrait : Op<Test_Dialect, "default_value", [OpTraitB]> {}
+#endif
+
+#ifdef ERROR13
+def OpTraitA : NativeOpTrait<"OpTraitA"> {}
+def OpInterfaceB : OpInterface<"OpInterfaceB"> {
+  let dependentTraits = [OpTraitA];
+}
+
+// ERROR13: error: OpInterfaceB::Trait requires OpTraitA to precede it in traits list
+def OpInterfaceWithoutDependentTrait : Op<Test_Dialect, "default_value", [OpInterfaceB]> {}
 #endif
