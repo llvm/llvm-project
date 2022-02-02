@@ -31,6 +31,7 @@ enum class ReprKind { Inequality, Equality, None };
 /// and `upperBoundIdx` is set. By default the kind attribute is set to None.
 struct MaybeLocalRepr {
   ReprKind kind = ReprKind::None;
+  explicit operator bool() const { return kind != ReprKind::None; }
   union {
     unsigned equalityIdx;
     struct {
