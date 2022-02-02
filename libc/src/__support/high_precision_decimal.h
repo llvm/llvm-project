@@ -111,7 +111,7 @@ class HighPrecisionDecimal {
   uint8_t digits[MAX_NUM_DIGITS];
 
 private:
-  bool should_round_up(uint32_t roundToDigit) {
+  bool should_round_up(int32_t roundToDigit) {
     if (roundToDigit < 0 || roundToDigit >= this->num_digits) {
       return false;
     }
