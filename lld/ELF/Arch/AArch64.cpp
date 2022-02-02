@@ -591,6 +591,55 @@ AArch64Relaxer::AArch64Relaxer(ArrayRef<Relocation> relocs) {
   safeToRelaxAdrpLdr = i == size;
 }
 
+bool AArch64Relaxer::tryRelaxAdrpAdd(const Relocation &adrpRel,
+                                     const Relocation &addRel, uint64_t secAddr,
+                                     uint8_t *buf) const {
+  // When the address of sym is within the range of ADR then
+  // we may relax
+  // ADRP xn, sym
+  // ADD  xn, xn, :lo12: sym
+  // to
+  // NOP
+  // ADR xn, sym
+  if (!config->relax || adrpRel.type != R_AARCH64_ADR_PREL_PG_HI21 ||
+      addRel.type != R_AARCH64_ADD_ABS_LO12_NC)
+    return false;
+  // Check if the relocations apply to consecutive instructions.
+  if (adrpRel.offset + 4 != addRel.offset)
+    return false;
+  if (adrpRel.sym != addRel.sym)
+    return false;
+  if (adrpRel.addend != 0 || addRel.addend != 0)
+    return false;
+
+  uint32_t adrpInstr = read32le(buf + adrpRel.offset);
+  uint32_t addInstr = read32le(buf + addRel.offset);
+  // Check if the first instruction is ADRP and the second instruction is ADD.
+  if ((adrpInstr & 0x9f000000) != 0x90000000 ||
+      (addInstr & 0xffc00000) != 0x91000000)
+    return false;
+  uint32_t adrpDestReg = adrpInstr & 0x1f;
+  uint32_t addDestReg = addInstr & 0x1f;
+  uint32_t addSrcReg = (addInstr >> 5) & 0x1f;
+  if (adrpDestReg != addDestReg || adrpDestReg != addSrcReg)
+    return false;
+
+  Symbol &sym = *adrpRel.sym;
+  // Check if the address difference is within 1MiB range.
+  int64_t val = sym.getVA() - (secAddr + addRel.offset);
+  if (val < -1024 * 1024 || val >= 1024 * 1024)
+    return false;
+
+  Relocation adrRel = {R_ABS, R_AARCH64_ADR_PREL_LO21, addRel.offset,
+                       /*addend=*/0, &sym};
+  // nop
+  write32le(buf + adrpRel.offset, 0xd503201f);
+  // adr x_<dest_reg>
+  write32le(buf + adrRel.offset, 0x10000000 | adrpDestReg);
+  target->relocate(buf + adrRel.offset, adrRel, val);
+  return true;
+}
+
 bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
                                      const Relocation &ldrRel, uint64_t secAddr,
                                      uint8_t *buf) const {
@@ -657,6 +706,7 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
                                     getAArch64Page(secAddr + adrpSymRel.offset),
                                 64));
   target->relocate(buf + addRel.offset, addRel, SignExtend64(sym.getVA(), 64));
+  tryRelaxAdrpAdd(adrpSymRel, addRel, secAddr, buf);
   return true;
 }
 

@@ -5,7 +5,7 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %t/unpaired.s -o %t/unpaired.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %t/lone-ldr.s -o %t/lone-ldr.o
 
-# RUN: ld.lld %t/a.o -T %t/linker.t -o %t/a
+# RUN: ld.lld %t/a.o -T %t/out-of-adr-range.t -o %t/a
 # RUN: llvm-objdump --no-show-raw-insn -d %t/a | FileCheck %s
 
 ## Symbol 'x' is nonpreemptible, the relaxation should be applied.
@@ -29,8 +29,15 @@
 # CHECK-NEXT: adrp   x6
 # CHECK-NEXT: ldr
 
+# RUN: ld.lld %t/a.o -T %t/within-adr-range.t -o %t/a
+# RUN: llvm-objdump --no-show-raw-insn -d %t/a | FileCheck --check-prefix=ADR %s
+
+## Symbol 'x' is nonpreemptible, the relaxation should be applied.
+# ADR:        nop
+# ADR-NEXT:   adr    x1
+
 ## Symbol 'x' is nonpreemptible, but --no-relax surpresses relaxations.
-# RUN: ld.lld %t/a.o -T %t/linker.t --no-relax -o %t/no-relax
+# RUN: ld.lld %t/a.o -T %t/out-of-adr-range.t --no-relax -o %t/no-relax
 # RUN: llvm-objdump --no-show-raw-insn -d %t/no-relax | \
 # RUN:   FileCheck --check-prefix=X1-NO-RELAX %s
 
@@ -61,10 +68,18 @@
 
 ## This linker script ensures that .rodata and .text are sufficiently (>1M)
 ## far apart so that the adrp + ldr pair cannot be relaxed to adr + nop.
-#--- linker.t
+#--- out-of-adr-range.t
 SECTIONS {
  .rodata 0x1000: { *(.rodata) }
  .text   0x200100: { *(.text) }
+}
+
+## This linker script ensures that .rodata and .text are sufficiently (<1M)
+## close to each other so that the adrp + ldr pair can be relaxed to nop + adr.
+#--- within-adr-range.t
+SECTIONS {
+ .rodata 0x1000: { *(.rodata) }
+ .text   0x2000: { *(.text) }
 }
 
 ## This linker script ensures that .rodata and .text are sufficiently (>4GB)
