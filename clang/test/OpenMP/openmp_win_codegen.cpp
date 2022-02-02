@@ -73,7 +73,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP2]], align 4
 // CHECK1-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP3]], [8 x i32]* @.gomp_critical_user_.var) [ "funclet"(token [[TMP1]]) ]
 // CHECK1-NEXT:    invoke void @"?bar@@YAXXZ"() [ "funclet"(token [[TMP1]]) ]
-// CHECK1-NEXT:    to label [[INVOKE_CONT1:%.*]] unwind label [[EHCLEANUP:%.*]]
+// CHECK1-NEXT:    to label [[INVOKE_CONT1:%.*]] unwind label [[TERMINATE2:%.*]]
 // CHECK1:       invoke.cont1:
 // CHECK1-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP3]], [8 x i32]* @.gomp_critical_user_.var) [ "funclet"(token [[TMP1]]) ]
 // CHECK1-NEXT:    catchret from [[TMP1]] to label [[CATCHRET_DEST:%.*]]
@@ -83,17 +83,13 @@ int main() {
 // CHECK1-NEXT:    ret void
 // CHECK1:       invoke.cont:
 // CHECK1-NEXT:    br label [[TRY_CONT]]
-// CHECK1:       ehcleanup:
-// CHECK1-NEXT:    [[TMP4:%.*]] = cleanuppad within [[TMP1]] []
-// CHECK1-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP3]], [8 x i32]* @.gomp_critical_user_.var) [ "funclet"(token [[TMP4]]) ]
-// CHECK1-NEXT:    cleanupret from [[TMP4]] unwind label [[TERMINATE2:%.*]]
 // CHECK1:       terminate:
-// CHECK1-NEXT:    [[TMP5:%.*]] = cleanuppad within none []
-// CHECK1-NEXT:    call void @"?terminate@@YAXXZ"() #[[ATTR7:[0-9]+]] [ "funclet"(token [[TMP5]]) ]
+// CHECK1-NEXT:    [[TMP4:%.*]] = cleanuppad within none []
+// CHECK1-NEXT:    call void @"?terminate@@YAXXZ"() #[[ATTR7:[0-9]+]] [ "funclet"(token [[TMP4]]) ]
 // CHECK1-NEXT:    unreachable
 // CHECK1:       terminate2:
-// CHECK1-NEXT:    [[TMP6:%.*]] = cleanuppad within [[TMP1]] []
-// CHECK1-NEXT:    call void @"?terminate@@YAXXZ"() #[[ATTR7]] [ "funclet"(token [[TMP6]]) ]
+// CHECK1-NEXT:    [[TMP5:%.*]] = cleanuppad within [[TMP1]] []
+// CHECK1-NEXT:    call void @"?terminate@@YAXXZ"() #[[ATTR7]] [ "funclet"(token [[TMP5]]) ]
 // CHECK1-NEXT:    unreachable
 //
 //
