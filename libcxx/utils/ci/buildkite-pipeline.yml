@@ -203,8 +203,8 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Clang 12"
-    command: "libcxx/utils/ci/run-buildbot generic-clang-12"
+  - label: "Clang 13"
+    command: "libcxx/utils/ci/run-buildbot generic-clang-13"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
@@ -217,8 +217,8 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Clang 13"
-    command: "libcxx/utils/ci/run-buildbot generic-clang-13"
+  - label: "Clang 14"
+    command: "libcxx/utils/ci/run-buildbot generic-clang-14"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
