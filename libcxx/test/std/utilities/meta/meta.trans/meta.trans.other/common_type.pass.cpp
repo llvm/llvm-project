@@ -360,7 +360,7 @@ int main(int, char**)
     static_assert(std::is_same_v<std::common_type_t<std::tuple<const int&>>, std::tuple<int>>);
     static_assert(std::is_same_v<std::common_type_t<std::tuple<const volatile int&>, std::tuple<const volatile long&>>, std::tuple<long>>);
 
-    static_assert(std::is_same_v<std::common_type_t<A, std::tuple<B>,std::tuple<C>>, std::tuple<B>>);
+    static_assert(std::is_same_v<std::common_type_t<A, std::tuple<B>, std::tuple<C>>, std::tuple<B>>);
 
     static_assert(std::is_same_v<std::common_type_t<std::pair<int, int>>, std::pair<int, int>>);
     static_assert(std::is_same_v<std::common_type_t<std::pair<int, long>, std::pair<long, int>>, std::pair<long, long>>);
@@ -373,7 +373,7 @@ int main(int, char**)
                                                     std::pair<const volatile long&, const volatile int&>>,
                                                     std::pair<long, long>>);
 
-    static_assert(std::is_same_v<std::common_type_t<A, std::tuple<B>,std::tuple<C>>, std::tuple<B>>);
+    static_assert(std::is_same_v<std::common_type_t<A, std::tuple<B>, std::tuple<C>>, std::tuple<B>>);
 #endif
 
   return 0;
