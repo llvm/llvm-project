@@ -14,9 +14,11 @@
 
 #include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/InitializePasses.h"
 
 #define DEBUG_TYPE "amdgpu-annotate-uniform"
@@ -70,9 +72,68 @@ static void setNoClobberMetadata(Instruction *I) {
   I->setMetadata("amdgpu.noclobber", MDNode::get(I->getContext(), {}));
 }
 
-bool AMDGPUAnnotateUniformValues::isClobberedInFunction(LoadInst * Load) {
-  const MemoryAccess *MA = MSSA->getWalker()->getClobberingMemoryAccess(Load);
-  return !MSSA->isLiveOnEntryDef(MA);
+bool AMDGPUAnnotateUniformValues::isClobberedInFunction(LoadInst *Load) {
+  MemorySSAWalker *Walker = MSSA->getWalker();
+  SmallVector<MemoryAccess *> WorkList{Walker->getClobberingMemoryAccess(Load)};
+  SmallSet<MemoryAccess *, 8> Visited;
+  MemoryLocation Loc(MemoryLocation::get(Load));
+
+  const auto isReallyAClobber = [](MemoryDef *Def) -> bool {
+    Instruction *DefInst = Def->getMemoryInst();
+    LLVM_DEBUG(dbgs() << "  Def: " << *DefInst << '\n');
+
+    if (isa<FenceInst>(DefInst))
+      return false;
+
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(DefInst)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::amdgcn_s_barrier:
+      case Intrinsic::amdgcn_wave_barrier:
+        return false;
+      default:
+        break;
+      }
+    }
+
+    return true;
+  };
+
+  LLVM_DEBUG(dbgs() << "Checking clobbering of: " << *Load << '\n');
+
+  // Start with a nearest dominating clobbering access, it will be either
+  // live on entry (nothing to do, load is not clobbered), MemoryDef, or
+  // MemoryPhi if several MemoryDefs can define this memory state. In that
+  // case add all Defs to WorkList and continue going up and checking all
+  // the definitions of this memory location until the root. When all the
+  // defs are exhausted and came to the entry state we have no clobber.
+  // Along the scan ignore barriers and fences which are considered clobbers
+  // by the MemorySSA, but not really writing anything into the memory.
+  while (!WorkList.empty()) {
+    MemoryAccess *MA = WorkList.pop_back_val();
+    if (!Visited.insert(MA).second)
+      continue;
+
+    if (MSSA->isLiveOnEntryDef(MA))
+      continue;
+
+    if (MemoryDef *Def = dyn_cast<MemoryDef>(MA)) {
+      if (isReallyAClobber(Def)) {
+        LLVM_DEBUG(dbgs() << "      -> load is clobbered\n");
+        return true;
+      }
+
+      WorkList.push_back(
+          Walker->getClobberingMemoryAccess(Def->getDefiningAccess(), Loc));
+      continue;
+    }
+
+    const MemoryPhi *Phi = cast<MemoryPhi>(MA);
+    for (auto &Use : Phi->incoming_values())
+      WorkList.push_back(cast<MemoryAccess>(&Use));
+  }
+
+  LLVM_DEBUG(dbgs() << "      -> no clobber\n");
+  return false;
 }
 
 void AMDGPUAnnotateUniformValues::visitBranchInst(BranchInst &I) {
