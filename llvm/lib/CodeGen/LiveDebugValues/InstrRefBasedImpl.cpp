@@ -788,15 +788,9 @@ void MLocTracker::writeRegMask(const MachineOperand *MO, unsigned CurBB,
   Masks.push_back(std::make_pair(MO, InstID));
 }
 
-Optional<SpillLocationNo> MLocTracker::getOrTrackSpillLoc(SpillLoc L) {
+SpillLocationNo MLocTracker::getOrTrackSpillLoc(SpillLoc L) {
   SpillLocationNo SpillID(SpillLocs.idFor(L));
-
   if (SpillID.id() == 0) {
-    // If there is no location, and we have reached the limit of how many stack
-    // slots to track, then don't track this one.
-    if (SpillLocs.size() >= StackWorkingSetLimit)
-      return None;
-
     // Spill location is untracked: create record for this one, and all
     // subregister slots too.
     SpillID = SpillLocationNo(SpillLocs.insert(L));
@@ -935,7 +929,7 @@ bool InstrRefBasedLDV::isCalleeSaved(LocIdx L) const {
 // void InstrRefBasedLDV::printVarLocInMBB(..)
 #endif
 
-Optional<SpillLocationNo>
+SpillLocationNo
 InstrRefBasedLDV::extractSpillBaseRegAndOffset(const MachineInstr &MI) {
   assert(MI.hasOneMemOperand() &&
          "Spill instruction does not have exactly one memory operand?");
@@ -950,11 +944,8 @@ InstrRefBasedLDV::extractSpillBaseRegAndOffset(const MachineInstr &MI) {
   return MTracker->getOrTrackSpillLoc({Reg, Offset});
 }
 
-Optional<LocIdx>
-InstrRefBasedLDV::findLocationForMemOperand(const MachineInstr &MI) {
-  Optional<SpillLocationNo> SpillLoc = extractSpillBaseRegAndOffset(MI);
-  if (!SpillLoc)
-    return None;
+Optional<LocIdx> InstrRefBasedLDV::findLocationForMemOperand(const MachineInstr &MI) {
+  SpillLocationNo SpillLoc =  extractSpillBaseRegAndOffset(MI);
 
   // Where in the stack slot is this value defined -- i.e., what size of value
   // is this? An important question, because it could be loaded into a register
@@ -970,7 +961,7 @@ InstrRefBasedLDV::findLocationForMemOperand(const MachineInstr &MI) {
     // occur, but the safe action is to indicate the variable is optimised out.
     return None;
 
-  unsigned SpillID = MTracker->getSpillIDWithIdx(*SpillLoc, IdxIt->second);
+  unsigned SpillID = MTracker->getSpillIDWithIdx(SpillLoc, IdxIt->second);
   return MTracker->getSpillMLoc(SpillID);
 }
 
@@ -1301,12 +1292,7 @@ bool InstrRefBasedLDV::transferDebugPHI(MachineInstr &MI) {
     Register Base;
     StackOffset Offs = TFI->getFrameIndexReference(*MI.getMF(), FI, Base);
     SpillLoc SL = {Base, Offs};
-    Optional<SpillLocationNo> SpillNo = MTracker->getOrTrackSpillLoc(SL);
-
-    // We might be able to find a value, but have chosen not to, to avoid
-    // tracking too much stack information.
-    if (!SpillNo)
-      return true;
+    SpillLocationNo SpillNo = MTracker->getOrTrackSpillLoc(SL);
 
     // Problem: what value should we extract from the stack? LLVM does not
     // record what size the last store to the slot was, and it would become
@@ -1318,7 +1304,7 @@ bool InstrRefBasedLDV::transferDebugPHI(MachineInstr &MI) {
     Optional<ValueIDNum> Result = None;
     Optional<LocIdx> SpillLoc = None;
     for (unsigned CS : CandidateSizes) {
-      unsigned SpillID = MTracker->getLocID(*SpillNo, {CS, 0});
+      unsigned SpillID = MTracker->getLocID(SpillNo, {CS, 0});
       SpillLoc = MTracker->getSpillMLoc(SpillID);
       ValueIDNum Val = MTracker->readMLoc(*SpillLoc);
       // If this value was defined in it's own position, then it was probably
@@ -1335,7 +1321,7 @@ bool InstrRefBasedLDV::transferDebugPHI(MachineInstr &MI) {
     // "supposed" to be is more complex, and benefits a small number of
     // locations.
     if (!Result) {
-      unsigned SpillID = MTracker->getLocID(*SpillNo, {64, 0});
+      unsigned SpillID = MTracker->getLocID(SpillNo, {64, 0});
       SpillLoc = MTracker->getSpillMLoc(SpillID);
       Result = MTracker->readMLoc(*SpillLoc);
     }
@@ -1412,12 +1398,11 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
 
   // If this instruction writes to a spill slot, def that slot.
   if (hasFoldedStackStore(MI)) {
-    if (Optional<SpillLocationNo> SpillNo = extractSpillBaseRegAndOffset(MI)) {
-      for (unsigned int I = 0; I < MTracker->NumSlotIdxes; ++I) {
-        unsigned SpillID = MTracker->getSpillIDWithIdx(*SpillNo, I);
-        LocIdx L = MTracker->getSpillMLoc(SpillID);
-        MTracker->setMLoc(L, ValueIDNum(CurBB, CurInst, L));
-      }
+    SpillLocationNo SpillNo = extractSpillBaseRegAndOffset(MI);
+    for (unsigned int I = 0; I < MTracker->NumSlotIdxes; ++I) {
+      unsigned SpillID = MTracker->getSpillIDWithIdx(SpillNo, I);
+      LocIdx L = MTracker->getSpillMLoc(SpillID);
+      MTracker->setMLoc(L, ValueIDNum(CurBB, CurInst, L));
     }
   }
 
@@ -1454,12 +1439,11 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
 
   // Tell TTracker about any folded stack store.
   if (hasFoldedStackStore(MI)) {
-    if (Optional<SpillLocationNo> SpillNo = extractSpillBaseRegAndOffset(MI)) {
-      for (unsigned int I = 0; I < MTracker->NumSlotIdxes; ++I) {
-        unsigned SpillID = MTracker->getSpillIDWithIdx(*SpillNo, I);
-        LocIdx L = MTracker->getSpillMLoc(SpillID);
-        TTracker->clobberMloc(L, MI.getIterator(), true);
-      }
+    SpillLocationNo SpillNo = extractSpillBaseRegAndOffset(MI);
+    for (unsigned int I = 0; I < MTracker->NumSlotIdxes; ++I) {
+      unsigned SpillID = MTracker->getSpillIDWithIdx(SpillNo, I);
+      LocIdx L = MTracker->getSpillMLoc(SpillID);
+      TTracker->clobberMloc(L, MI.getIterator(), true);
     }
   }
 }
@@ -1495,24 +1479,23 @@ void InstrRefBasedLDV::performCopy(Register SrcRegNum, Register DstRegNum) {
   }
 }
 
-Optional<SpillLocationNo>
-InstrRefBasedLDV::isSpillInstruction(const MachineInstr &MI,
-                                     MachineFunction *MF) {
+bool InstrRefBasedLDV::isSpillInstruction(const MachineInstr &MI,
+                                          MachineFunction *MF) {
   // TODO: Handle multiple stores folded into one.
   if (!MI.hasOneMemOperand())
-    return None;
+    return false;
 
   // Reject any memory operand that's aliased -- we can't guarantee its value.
   auto MMOI = MI.memoperands_begin();
   const PseudoSourceValue *PVal = (*MMOI)->getPseudoValue();
   if (PVal->isAliased(MFI))
-    return None;
+    return false;
 
   if (!MI.getSpillSize(TII) && !MI.getFoldedSpillSize(TII))
-    return None; // This is not a spill instruction, since no valid size was
-                 // returned from either function.
+    return false; // This is not a spill instruction, since no valid size was
+                  // returned from either function.
 
-  return extractSpillBaseRegAndOffset(MI);
+  return true;
 }
 
 bool InstrRefBasedLDV::isLocationSpill(const MachineInstr &MI,
@@ -1569,11 +1552,13 @@ bool InstrRefBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI) {
   // First, if there are any DBG_VALUEs pointing at a spill slot that is
   // written to, terminate that variable location. The value in memory
   // will have changed. DbgEntityHistoryCalculator doesn't try to detect this.
-  if (Optional<SpillLocationNo> Loc = isSpillInstruction(MI, MF)) {
+  if (isSpillInstruction(MI, MF)) {
+    SpillLocationNo Loc = extractSpillBaseRegAndOffset(MI);
+
     // Un-set this location and clobber, so that earlier locations don't
     // continue past this store.
     for (unsigned SlotIdx = 0; SlotIdx < MTracker->NumSlotIdxes; ++SlotIdx) {
-      unsigned SpillID = MTracker->getSpillIDWithIdx(*Loc, SlotIdx);
+      unsigned SpillID = MTracker->getSpillIDWithIdx(Loc, SlotIdx);
       Optional<LocIdx> MLoc = MTracker->getSpillMLoc(SpillID);
       if (!MLoc)
         continue;
@@ -1591,9 +1576,7 @@ bool InstrRefBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI) {
 
   // Try to recognise spill and restore instructions that may transfer a value.
   if (isLocationSpill(MI, MF, Reg)) {
-    // isLocationSpill returning true should guarantee we can extract a
-    // location.
-    SpillLocationNo Loc = *extractSpillBaseRegAndOffset(MI);
+    SpillLocationNo Loc = extractSpillBaseRegAndOffset(MI);
 
     auto DoTransfer = [&](Register SrcReg, unsigned SpillID) {
       auto ReadValue = MTracker->readReg(SrcReg);
@@ -1620,9 +1603,10 @@ bool InstrRefBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI) {
     unsigned SpillID = MTracker->getLocID(Loc, {Size, 0});
     DoTransfer(Reg, SpillID);
   } else {
-    Optional<SpillLocationNo> Loc = isRestoreInstruction(MI, MF, Reg);
-    if (!Loc)
+    Optional<SpillLocationNo> OptLoc = isRestoreInstruction(MI, MF, Reg);
+    if (!OptLoc)
       return false;
+    SpillLocationNo Loc = *OptLoc;
 
     // Assumption: we're reading from the base of the stack slot, not some
     // offset into it. It seems very unlikely LLVM would ever generate
@@ -1649,13 +1633,13 @@ bool InstrRefBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI) {
 
     for (MCSubRegIterator SRI(Reg, TRI, false); SRI.isValid(); ++SRI) {
       unsigned Subreg = TRI->getSubRegIndex(Reg, *SRI);
-      unsigned SpillID = MTracker->getLocID(*Loc, Subreg);
+      unsigned SpillID = MTracker->getLocID(Loc, Subreg);
       DoTransfer(*SRI, SpillID);
     }
 
     // Directly look up this registers slot idx by size, and transfer.
     unsigned Size = TRI->getRegSizeInBits(Reg, *MRI);
-    unsigned SpillID = MTracker->getLocID(*Loc, {Size, 0});
+    unsigned SpillID = MTracker->getLocID(Loc, {Size, 0});
     DoTransfer(Reg, SpillID);
   }
   return true;
