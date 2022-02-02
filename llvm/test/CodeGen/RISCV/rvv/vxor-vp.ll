@@ -873,10 +873,8 @@ define <vscale x 1 x i16> @vxor_vx_nxv1i16(<vscale x 1 x i16> %va, i16 %b, <vsca
 define <vscale x 1 x i16> @vxor_vx_nxv1i16_commute(<vscale x 1 x i16> %va, i16 %b, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vx_nxv1i16_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e16, mf4, ta, mu
-; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
-; CHECK-NEXT:    vxor.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vxor.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i16> poison, i16 %b, i32 0
   %vb = shufflevector <vscale x 1 x i16> %elt.head, <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer
