@@ -26,25 +26,29 @@
 
 using namespace llvm;
 
+extern cl::OptionCategory LLVMReduceOptions;
+
 static cl::opt<bool> AbortOnInvalidReduction(
     "abort-on-invalid-reduction",
-    cl::desc("Abort if any reduction results in invalid IR"));
+    cl::desc("Abort if any reduction results in invalid IR"),
+    cl::cat(LLVMReduceOptions));
 
 static cl::opt<unsigned int> StartingGranularityLevel(
     "starting-granularity-level",
-    cl::desc("Number of times to divide chunks prior to first test"));
+    cl::desc("Number of times to divide chunks prior to first test"),
+    cl::cat(LLVMReduceOptions));
 
 static cl::opt<bool> TmpFilesAsBitcode(
     "write-tmp-files-as-bitcode",
     cl::desc("Write temporary files as bitcode, instead of textual IR"),
-    cl::init(false));
+    cl::init(false), cl::cat(LLVMReduceOptions));
 
 #ifdef LLVM_ENABLE_THREADS
 static cl::opt<unsigned> NumJobs(
     "j",
     cl::desc("Maximum number of threads to use to process chunks. Set to 1 to "
              "disables parallelism."),
-    cl::init(1));
+    cl::init(1), cl::cat(LLVMReduceOptions));
 #else
 unsigned NumJobs = 1;
 #endif
