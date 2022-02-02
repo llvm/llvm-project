@@ -277,7 +277,7 @@ bool LLDBMemoryReader::readBytes(swift::remote::RemoteAddress address,
       stream.PutHex8(dest[i]);
       stream.PutChar(' ');
     }
-    return stream.GetData();
+    return std::string(stream.GetData());
   };
   LLDB_LOGV(log, "[MemoryReader] memory read returned data: {0}",
             format_data(dest, size));
@@ -319,9 +319,9 @@ bool LLDBMemoryReader::readString(swift::remote::RemoteAddress address,
           stream.PutHex8(c);
         }
       }
-      return stream.GetData();
+      return std::string(stream.GetData());
     };
-    LLDB_LOGV(log, "[MemoryReader] memory read returned data: \"{0}\"",
+    LLDB_LOGV(log, "[MemoryReader] memory read returned string: \"{0}\"",
               format_string(dest));
     return true;
   }
