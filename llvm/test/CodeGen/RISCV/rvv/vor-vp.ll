@@ -1121,10 +1121,8 @@ define <vscale x 2 x i32> @vor_vx_nxv2i32(<vscale x 2 x i32> %va, i32 %b, <vscal
 define <vscale x 2 x i32> @vor_vx_nxv2i32_commute(<vscale x 2 x i32> %va, i32 %b, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vor_vx_nxv2i32_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, mu
-; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
-; CHECK-NEXT:    vor.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vor.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x i32> poison, i32 %b, i32 0
   %vb = shufflevector <vscale x 2 x i32> %elt.head, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer

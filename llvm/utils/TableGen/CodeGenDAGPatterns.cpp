@@ -4645,39 +4645,33 @@ static void GenerateVariantsOf(TreePatternNodePtr N,
   // If this node is commutative, consider the commuted order.
   bool isCommIntrinsic = N->isCommutativeIntrinsic(CDP);
   if (NodeInfo.hasProperty(SDNPCommutative) || isCommIntrinsic) {
-    assert((N->getNumChildren()>=2 || isCommIntrinsic) &&
+    unsigned Skip = isCommIntrinsic ? 1 : 0; // First operand is intrinsic id.
+    assert(N->getNumChildren() >= (2 + Skip) &&
            "Commutative but doesn't have 2 children!");
-    // Don't count children which are actually register references.
-    unsigned NC = 0;
-    for (unsigned i = 0, e = N->getNumChildren(); i != e; ++i) {
+    // Don't allow commuting children which are actually register references.
+    bool NoRegisters = true;
+    unsigned i = 0 + Skip;
+    unsigned e = 2 + Skip;
+    for (; i != e; ++i) {
       TreePatternNode *Child = N->getChild(i);
       if (Child->isLeaf())
         if (DefInit *DI = dyn_cast<DefInit>(Child->getLeafValue())) {
           Record *RR = DI->getDef();
           if (RR->isSubClassOf("Register"))
-            continue;
+            NoRegisters = false;
         }
-      NC++;
     }
     // Consider the commuted order.
-    if (isCommIntrinsic) {
-      // Commutative intrinsic. First operand is the intrinsic id, 2nd and 3rd
-      // operands are the commutative operands, and there might be more operands
-      // after those.
-      assert(NC >= 3 &&
-             "Commutative intrinsic should have at least 3 children!");
+    if (NoRegisters) {
       std::vector<std::vector<TreePatternNodePtr>> Variants;
-      Variants.push_back(std::move(ChildVariants[0])); // Intrinsic id.
-      Variants.push_back(std::move(ChildVariants[2]));
-      Variants.push_back(std::move(ChildVariants[1]));
-      for (unsigned i = 3; i != NC; ++i)
-        Variants.push_back(std::move(ChildVariants[i]));
-      CombineChildVariants(N, Variants, OutVariants, CDP, DepVars);
-    } else if (NC == N->getNumChildren()) {
-      std::vector<std::vector<TreePatternNodePtr>> Variants;
-      Variants.push_back(std::move(ChildVariants[1]));
-      Variants.push_back(std::move(ChildVariants[0]));
-      for (unsigned i = 2; i != NC; ++i)
+      unsigned i = 0;
+      if (isCommIntrinsic)
+        Variants.push_back(std::move(ChildVariants[i++])); // Intrinsic id.
+      Variants.push_back(std::move(ChildVariants[i + 1]));
+      Variants.push_back(std::move(ChildVariants[i]));
+      i += 2;
+      // Remaining operands are not commuted.
+      for (; i != N->getNumChildren(); ++i)
         Variants.push_back(std::move(ChildVariants[i]));
       CombineChildVariants(N, Variants, OutVariants, CDP, DepVars);
     }

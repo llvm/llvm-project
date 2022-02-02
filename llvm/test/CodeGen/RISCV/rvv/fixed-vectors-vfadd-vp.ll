@@ -255,10 +255,8 @@ define <2 x float> @vfadd_vf_v2f32(<2 x float> %va, float %b, <2 x i1> %m, i32 z
 define <2 x float> @vfadd_vf_v2f32_commute(<2 x float> %va, float %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfadd_vf_v2f32_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
-; CHECK-NEXT:    vfadd.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vfadd.vf v8, v8, fa0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x float> poison, float %b, i32 0
   %vb = shufflevector <2 x float> %elt.head, <2 x float> poison, <2 x i32> zeroinitializer

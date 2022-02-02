@@ -355,10 +355,8 @@ define <8 x i16> @vmul_vx_v8i16(<8 x i16> %va, i16 %b, <8 x i1> %m, i32 zeroext 
 define <8 x i16> @vmul_vx_v8i16_commute(<8 x i16> %va, i16 %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmul_vx_v8i16_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
-; CHECK-NEXT:    vmul.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x i16> poison, i16 %b, i32 0
   %vb = shufflevector <8 x i16> %elt.head, <8 x i16> poison, <8 x i32> zeroinitializer
