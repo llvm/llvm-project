@@ -1329,8 +1329,6 @@ bool HWAddressSanitizer::instrumentLandingPads(
   return true;
 }
 
-
-
 bool HWAddressSanitizer::instrumentStack(
     bool ShouldDetectUseAfterScope,
     MapVector<AllocaInst *, AllocaInfo> &AllocasToInstrument,
