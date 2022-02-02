@@ -432,6 +432,9 @@ bool Section::ContainsOnlyDebugInfo() const {
   case eSectionTypeOther:
     return false;
 
+#ifdef LLDB_ENABLE_SWIFT
+  case eSectionTypeSwiftModules:
+#endif
   case eSectionTypeDebug:
   case eSectionTypeDWARFDebugAbbrev:
   case eSectionTypeDWARFDebugAbbrevDwo:
