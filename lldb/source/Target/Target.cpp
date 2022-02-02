@@ -4912,10 +4912,5 @@ std::recursive_mutex &Target::GetAPIMutex() {
     return m_mutex;
 }
 
-bool Target::RegisterSwiftContextMessageKey(std::string Key) {
-  std::unique_lock<std::mutex> guard{m_swift_messages_mutex};
-  return m_swift_messages_issued.insert(std::move(Key)).second;
-}
-
 /// Get metrics associated with this target in JSON format.
 llvm::json::Value Target::ReportStatistics() { return m_stats.ToJSON(*this); }

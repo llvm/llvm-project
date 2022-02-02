@@ -1956,7 +1956,7 @@ static SwiftASTContext *GetModuleSwiftASTContext(Module &module) {
 /// its module SwiftASTContext to Target.
 static void
 ProcessModule(ModuleSP module_sp, std::string m_description,
-              bool use_all_compiler_flags, Target &target,
+              bool use_all_compiler_flags, Target &target, llvm::Triple triple,
               std::vector<std::string> &module_search_paths,
               std::vector<std::pair<std::string, bool>> &framework_search_paths,
               std::vector<std::string> &extra_clang_args) {
@@ -2032,37 +2032,6 @@ ProcessModule(ModuleSP module_sp, std::string m_description,
   if (!HasSwiftModules(*module_sp))
     return;
 
-  SwiftASTContext *ast_context = GetModuleSwiftASTContext(*module_sp);
-  if (!ast_context || ast_context->HasFatalErrors() ||
-      !ast_context->GetClangImporter()) {
-    // Make sure we warn about this module load failure, the one
-    // that comes from loading types often gets swallowed up and not
-    // seen, this is the only reliable point where we can show this.
-    // But only do it once per UUID so we don't overwhelm the user
-    // with warnings.
-    UUID module_uuid(module_sp->GetUUID());
-    bool unique_message =
-        target.RegisterSwiftContextMessageKey(module_uuid.GetAsString());
-    if (!unique_message)
-      return;
-    std::string buf;
-    {
-      llvm::raw_string_ostream ss(buf);
-      module_sp->GetDescription(ss, eDescriptionLevelBrief);
-      if (ast_context && ast_context->HasFatalErrors())
-        ss << ": " << ast_context->GetFatalErrors().AsCString("unknown error");
-    }
-    target.GetDebugger().GetErrorStreamSP()->Printf(
-        "Error while loading Swift module:\n%s\n"
-        "Debug info from this module will be unavailable in the "
-        "debugger.\n\n",
-        buf.c_str());
-    return;
-  }
-
-  if (ast_context->HasErrors())
-    return;
-
   // Load search path options from the module.
   if (!use_all_compiler_flags &&
       target.GetExecutableModulePointer() != module_sp.get())
@@ -2078,7 +2047,6 @@ ProcessModule(ModuleSP module_sp, std::string m_description,
   //        older versions of the same .swiftinterface.
   if (auto dsym = GetDSYMBundle(*module_sp)) {
     llvm::SmallString<256> path(*dsym);
-    llvm::Triple triple(ast_context->GetTriple());
     StringRef arch = llvm::Triple::getArchTypeName(triple.getArch());
     llvm::sys::path::append(path, "Contents", "Resources", "Swift", arch);
     bool exists = false;
@@ -2292,11 +2260,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   const bool use_all_compiler_flags =
       !got_serialized_options || target.GetUseAllCompilerFlags();
 
-  warmup_astcontexts();
   for (size_t mi = 0; mi != num_images; ++mi) {
     std::vector<std::string> extra_clang_args;
     ProcessModule(target.GetImages().GetModuleAtIndex(mi), m_description,
-                  use_all_compiler_flags, target, module_search_paths,
+                  use_all_compiler_flags, target, triple, module_search_paths,
                   framework_search_paths, extra_clang_args);
     swift_ast_sp->AddExtraClangArgs(extra_clang_args);
   }
@@ -5114,7 +5081,7 @@ void SwiftASTContextForExpressions::ModulesDidLoad(ModuleList &module_list) {
     std::vector<std::string> extra_clang_args;
     lldb::ModuleSP module_sp = module_list.GetModuleAtIndex(mi);
     ProcessModule(module_sp, m_description, use_all_compiler_flags, *target_sp,
-                  module_search_paths, framework_search_paths,
+                  GetTriple(), module_search_paths, framework_search_paths,
                   extra_clang_args);
     // If the use-all-compiler-flags setting is enabled, the expression
     // context is supposed to merge all search paths from all dylibs.

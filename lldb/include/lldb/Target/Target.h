@@ -1486,16 +1486,7 @@ public:
     return m_use_scratch_typesystem_per_module;
   }
 
-private:
-  std::mutex m_swift_messages_mutex;
-  std::unordered_set<std::string> m_swift_messages_issued;
-
 public:
-  /// Register that a message (uniquely identified by \p Key) about a Swift
-  /// context is about to be displayed to the user. Returns true iff the message
-  /// has not already been displayed.
-  bool RegisterSwiftContextMessageKey(std::string Key);
-
   StackFrameRecognizerManager &GetFrameRecognizerManager() {
     return *m_frame_recognizer_manager_up;
   }
