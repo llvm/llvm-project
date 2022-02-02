@@ -889,6 +889,10 @@ template <typename A> bool IsAllocatableOrPointer(const A &x) {
       semantics::Attrs{semantics::Attr::POINTER, semantics::Attr::ALLOCATABLE});
 }
 
+// Like IsAllocatableOrPointer, but accepts pointer function results as being
+// pointers.
+bool IsAllocatableOrPointerObject(const Expr<SomeType> &, FoldingContext &);
+
 // Procedure and pointer detection predicates
 bool IsProcedure(const Expr<SomeType> &);
 bool IsFunction(const Expr<SomeType> &);
@@ -896,6 +900,10 @@ bool IsProcedurePointerTarget(const Expr<SomeType> &);
 bool IsBareNullPointer(const Expr<SomeType> *); // NULL() w/o MOLD=
 bool IsNullPointer(const Expr<SomeType> &);
 bool IsObjectPointer(const Expr<SomeType> &, FoldingContext &);
+
+// Can Expr be passed as absent to an optional dummy argument.
+// See 15.5.2.12 point 1 for more details.
+bool MayBePassedAsAbsentOptional(const Expr<SomeType> &, FoldingContext &);
 
 // Extracts the chain of symbols from a designator, which has perhaps been
 // wrapped in an Expr<>, removing all of the (co)subscripts.  The
