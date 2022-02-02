@@ -32,8 +32,8 @@ Section,Description,Dependencies,Assignee,Complete
 | `ranges::destroy <https://llvm.org/D116078>`_
 | `ranges::destroy_at <https://llvm.org/D116078>`_
 | `ranges::destroy_n <https://llvm.org/D116078>`_",[special.mem.concepts],Konstantin Varlamov,✅
-`[strings] <https://wg21.link/strings>`_,Adds begin/end and updates const_iterator.,[iterator.concepts],Unassigned,Not started
-`[views.span] <https://wg21.link/views.span>`_,Same as [strings],[iterator.concepts],Unassigned,Not started
+`[strings] <https://wg21.link/strings>`_,`Adds begin/end and updates const_iterator. <https://llvm.org/D118687>`_,[iterator.concepts],Konstantin Varlamov,✅
+`[views.span] <https://wg21.link/views.span>`_,`Same as [strings] <https://llvm.org/D118687>`_,[iterator.concepts],Konstantin Varlamov,✅
 `[iterator.cust.move] <https://wg21.link/iterator.cust.move>`_,`ranges::iter_move <https://llvm.org/D99873>`_,,Zoe Carver,✅
 `[iterator.cust.swap] <https://wg21.link/iterator.cust.swap>`_,`ranges::iter_swap <https://llvm.org/D102809>`_,iter_value_t,Zoe Carver,✅
 `[iterator.concepts] <https://wg21.link/iterator.concepts>`_,"| `indirectly_readable <https://llvm.org/D100073>`_
