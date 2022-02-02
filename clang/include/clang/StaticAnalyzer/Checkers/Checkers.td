@@ -376,6 +376,11 @@ def TrustNonnullChecker : Checker<"TrustNonnull">,
            "are not null">,
   Documentation<NotDocumented>;
 
+def TrustReturnsNonnullChecker : Checker<"TrustReturnsNonnull">,
+  HelpText<"Trust that returns from methods annotated with returns_nonnull "
+           "are not null">,
+  Documentation<NotDocumented>;
+
 } // end "apiModeling"
 
 //===----------------------------------------------------------------------===//
