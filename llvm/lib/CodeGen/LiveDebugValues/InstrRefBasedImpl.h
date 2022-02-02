@@ -864,6 +864,12 @@ private:
   OverlapMap OverlapFragments;
   VarToFragments SeenFragments;
 
+  /// Mapping of DBG_INSTR_REF instructions to their values, for those
+  /// DBG_INSTR_REFs that call resolveDbgPHIs. These variable references solve
+  /// a mini SSA problem caused by DBG_PHIs being cloned, this collection caches
+  /// the result.
+  DenseMap<MachineInstr *, Optional<ValueIDNum>> SeenDbgPHIs;
+
   /// True if we need to examine call instructions for stack clobbers. We
   /// normally assume that they don't clobber SP, but stack probes on Windows
   /// do.
@@ -943,6 +949,12 @@ private:
                                       ValueIDNum **MLiveOuts,
                                       ValueIDNum **MLiveIns, MachineInstr &Here,
                                       uint64_t InstrNum);
+
+  Optional<ValueIDNum> resolveDbgPHIsImpl(MachineFunction &MF,
+                                          ValueIDNum **MLiveOuts,
+                                          ValueIDNum **MLiveIns,
+                                          MachineInstr &Here,
+                                          uint64_t InstrNum);
 
   /// Step through the function, recording register definitions and movements
   /// in an MLocTracker. Convert the observations into a per-block transfer
