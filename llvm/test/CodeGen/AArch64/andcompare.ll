@@ -5,10 +5,8 @@ define i32 @and_eq_eq(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_eq_eq:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, eq
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, eq
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp eq i32 %s0, %s1
@@ -22,10 +20,8 @@ define i32 @and_eq_ne(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_eq_ne:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ne
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #4, eq
+; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp eq i32 %s0, %s1
@@ -39,10 +35,8 @@ define i32 @and_eq_ult(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_eq_ult:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #2, eq
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp eq i32 %s0, %s1
@@ -56,10 +50,8 @@ define i32 @and_eq_ule(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_eq_ule:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ls
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #2, eq
+; CHECK-NEXT:    cset w0, ls
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp eq i32 %s0, %s1
@@ -73,10 +65,8 @@ define i32 @and_eq_ugt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_eq_ugt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, hi
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, eq
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp eq i32 %s0, %s1
@@ -90,10 +80,8 @@ define i32 @and_eq_uge(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_eq_uge:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, hs
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, eq
+; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp eq i32 %s0, %s1
@@ -107,10 +95,8 @@ define i32 @and_eq_slt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_eq_slt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, lt
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, eq
+; CHECK-NEXT:    cset w0, lt
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp eq i32 %s0, %s1
@@ -124,10 +110,8 @@ define i32 @and_eq_sle(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_eq_sle:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, le
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, eq
+; CHECK-NEXT:    cset w0, le
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp eq i32 %s0, %s1
@@ -141,10 +125,8 @@ define i32 @and_eq_sgt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_eq_sgt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, gt
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #4, eq
+; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp eq i32 %s0, %s1
@@ -158,10 +140,8 @@ define i32 @and_eq_sge(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_eq_sge:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ge
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #8, eq
+; CHECK-NEXT:    cset w0, ge
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp eq i32 %s0, %s1
@@ -175,10 +155,8 @@ define i32 @and_ne_eq(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ne_eq:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, eq
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, ne
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ne i32 %s0, %s1
@@ -192,10 +170,8 @@ define i32 @and_ne_ne(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ne_ne:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ne
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #4, ne
+; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ne i32 %s0, %s1
@@ -209,10 +185,8 @@ define i32 @and_ne_ult(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ne_ult:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #2, ne
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ne i32 %s0, %s1
@@ -226,10 +200,8 @@ define i32 @and_ne_ule(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ne_ule:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ls
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #2, ne
+; CHECK-NEXT:    cset w0, ls
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ne i32 %s0, %s1
@@ -243,10 +215,8 @@ define i32 @and_ne_ugt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ne_ugt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, hi
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, ne
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ne i32 %s0, %s1
@@ -260,10 +230,8 @@ define i32 @and_ne_uge(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ne_uge:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, hs
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, ne
+; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ne i32 %s0, %s1
@@ -277,10 +245,8 @@ define i32 @and_ne_slt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ne_slt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, lt
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, ne
+; CHECK-NEXT:    cset w0, lt
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ne i32 %s0, %s1
@@ -294,10 +260,8 @@ define i32 @and_ne_sle(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ne_sle:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, le
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, ne
+; CHECK-NEXT:    cset w0, le
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ne i32 %s0, %s1
@@ -311,10 +275,8 @@ define i32 @and_ne_sgt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ne_sgt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, gt
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #4, ne
+; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ne i32 %s0, %s1
@@ -328,10 +290,8 @@ define i32 @and_ne_sge(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ne_sge:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ge
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #8, ne
+; CHECK-NEXT:    cset w0, ge
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ne i32 %s0, %s1
@@ -345,10 +305,8 @@ define i32 @and_ult_eq(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ult_eq:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, eq
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, lo
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ult i32 %s0, %s1
@@ -362,10 +320,8 @@ define i32 @and_ult_ne(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ult_ne:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ne
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #4, lo
+; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ult i32 %s0, %s1
@@ -379,10 +335,8 @@ define i32 @and_ult_ult(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ult_ult:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #2, lo
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ult i32 %s0, %s1
@@ -396,10 +350,8 @@ define i32 @and_ult_ule(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ult_ule:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ls
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #2, lo
+; CHECK-NEXT:    cset w0, ls
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ult i32 %s0, %s1
@@ -413,10 +365,8 @@ define i32 @and_ult_ugt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ult_ugt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, hi
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, lo
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ult i32 %s0, %s1
@@ -430,10 +380,8 @@ define i32 @and_ult_uge(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ult_uge:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, hs
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, lo
+; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ult i32 %s0, %s1
@@ -447,10 +395,8 @@ define i32 @and_ult_slt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ult_slt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, lt
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, lo
+; CHECK-NEXT:    cset w0, lt
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ult i32 %s0, %s1
@@ -464,10 +410,8 @@ define i32 @and_ult_sle(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ult_sle:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, le
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, lo
+; CHECK-NEXT:    cset w0, le
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ult i32 %s0, %s1
@@ -481,10 +425,8 @@ define i32 @and_ult_sgt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ult_sgt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, gt
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #4, lo
+; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ult i32 %s0, %s1
@@ -498,10 +440,8 @@ define i32 @and_ult_sge(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ult_sge:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ge
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #8, lo
+; CHECK-NEXT:    cset w0, ge
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ult i32 %s0, %s1
@@ -515,10 +455,8 @@ define i32 @and_ule_eq(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ule_eq:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ls
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, eq
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, ls
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ule i32 %s0, %s1
@@ -532,10 +470,8 @@ define i32 @and_ule_ne(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ule_ne:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ls
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ne
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #4, ls
+; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ule i32 %s0, %s1
@@ -549,10 +485,8 @@ define i32 @and_ule_ult(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ule_ult:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ls
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #2, ls
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ule i32 %s0, %s1
@@ -566,10 +500,8 @@ define i32 @and_ule_ule(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ule_ule:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ls
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ls
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #2, ls
+; CHECK-NEXT:    cset w0, ls
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ule i32 %s0, %s1
@@ -583,10 +515,8 @@ define i32 @and_ule_ugt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ule_ugt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ls
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, hi
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, ls
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ule i32 %s0, %s1
@@ -600,10 +530,8 @@ define i32 @and_ule_uge(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ule_uge:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ls
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, hs
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, ls
+; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ule i32 %s0, %s1
@@ -617,10 +545,8 @@ define i32 @and_ule_slt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ule_slt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ls
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, lt
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, ls
+; CHECK-NEXT:    cset w0, lt
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ule i32 %s0, %s1
@@ -634,10 +560,8 @@ define i32 @and_ule_sle(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ule_sle:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ls
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, le
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, ls
+; CHECK-NEXT:    cset w0, le
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ule i32 %s0, %s1
@@ -651,10 +575,8 @@ define i32 @and_ule_sgt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ule_sgt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ls
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, gt
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #4, ls
+; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ule i32 %s0, %s1
@@ -668,10 +590,8 @@ define i32 @and_ule_sge(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ule_sge:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ls
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ge
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #8, ls
+; CHECK-NEXT:    cset w0, ge
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ule i32 %s0, %s1
@@ -685,10 +605,8 @@ define i32 @and_ugt_eq(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ugt_eq:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, eq
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, hi
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ugt i32 %s0, %s1
@@ -702,10 +620,8 @@ define i32 @and_ugt_ne(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ugt_ne:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ne
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #4, hi
+; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ugt i32 %s0, %s1
@@ -719,10 +635,8 @@ define i32 @and_ugt_ult(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ugt_ult:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #2, hi
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ugt i32 %s0, %s1
@@ -736,10 +650,8 @@ define i32 @and_ugt_ule(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ugt_ule:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ls
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #2, hi
+; CHECK-NEXT:    cset w0, ls
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ugt i32 %s0, %s1
@@ -753,10 +665,8 @@ define i32 @and_ugt_ugt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ugt_ugt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, hi
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, hi
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ugt i32 %s0, %s1
@@ -770,10 +680,8 @@ define i32 @and_ugt_uge(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ugt_uge:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, hs
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, hi
+; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ugt i32 %s0, %s1
@@ -787,10 +695,8 @@ define i32 @and_ugt_slt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ugt_slt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, lt
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, hi
+; CHECK-NEXT:    cset w0, lt
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ugt i32 %s0, %s1
@@ -804,10 +710,8 @@ define i32 @and_ugt_sle(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ugt_sle:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, le
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, hi
+; CHECK-NEXT:    cset w0, le
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ugt i32 %s0, %s1
@@ -821,10 +725,8 @@ define i32 @and_ugt_sgt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ugt_sgt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, gt
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #4, hi
+; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ugt i32 %s0, %s1
@@ -838,10 +740,8 @@ define i32 @and_ugt_sge(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_ugt_sge:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ge
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #8, hi
+; CHECK-NEXT:    cset w0, ge
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp ugt i32 %s0, %s1
@@ -855,10 +755,8 @@ define i32 @and_uge_eq(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_uge_eq:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, eq
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, hs
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp uge i32 %s0, %s1
@@ -872,10 +770,8 @@ define i32 @and_uge_ne(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_uge_ne:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ne
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #4, hs
+; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp uge i32 %s0, %s1
@@ -889,10 +785,8 @@ define i32 @and_uge_ult(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_uge_ult:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #2, hs
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp uge i32 %s0, %s1
@@ -906,10 +800,8 @@ define i32 @and_uge_ule(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_uge_ule:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ls
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #2, hs
+; CHECK-NEXT:    cset w0, ls
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp uge i32 %s0, %s1
@@ -923,10 +815,8 @@ define i32 @and_uge_ugt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_uge_ugt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, hi
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, hs
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp uge i32 %s0, %s1
@@ -940,10 +830,8 @@ define i32 @and_uge_uge(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_uge_uge:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, hs
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, hs
+; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp uge i32 %s0, %s1
@@ -957,10 +845,8 @@ define i32 @and_uge_slt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_uge_slt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, lt
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, hs
+; CHECK-NEXT:    cset w0, lt
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp uge i32 %s0, %s1
@@ -974,10 +860,8 @@ define i32 @and_uge_sle(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_uge_sle:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, le
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, hs
+; CHECK-NEXT:    cset w0, le
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp uge i32 %s0, %s1
@@ -991,10 +875,8 @@ define i32 @and_uge_sgt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_uge_sgt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, gt
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #4, hs
+; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp uge i32 %s0, %s1
@@ -1008,10 +890,8 @@ define i32 @and_uge_sge(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_uge_sge:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ge
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #8, hs
+; CHECK-NEXT:    cset w0, ge
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp uge i32 %s0, %s1
@@ -1025,10 +905,8 @@ define i32 @and_slt_eq(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_slt_eq:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, eq
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, lt
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp slt i32 %s0, %s1
@@ -1042,10 +920,8 @@ define i32 @and_slt_ne(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_slt_ne:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ne
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #4, lt
+; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp slt i32 %s0, %s1
@@ -1059,10 +935,8 @@ define i32 @and_slt_ult(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_slt_ult:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #2, lt
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp slt i32 %s0, %s1
@@ -1076,10 +950,8 @@ define i32 @and_slt_ule(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_slt_ule:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ls
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #2, lt
+; CHECK-NEXT:    cset w0, ls
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp slt i32 %s0, %s1
@@ -1093,10 +965,8 @@ define i32 @and_slt_ugt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_slt_ugt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, hi
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, lt
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp slt i32 %s0, %s1
@@ -1110,10 +980,8 @@ define i32 @and_slt_uge(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_slt_uge:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, hs
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, lt
+; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp slt i32 %s0, %s1
@@ -1127,10 +995,8 @@ define i32 @and_slt_slt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_slt_slt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, lt
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, lt
+; CHECK-NEXT:    cset w0, lt
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp slt i32 %s0, %s1
@@ -1144,10 +1010,8 @@ define i32 @and_slt_sle(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_slt_sle:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, le
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, lt
+; CHECK-NEXT:    cset w0, le
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp slt i32 %s0, %s1
@@ -1161,10 +1025,8 @@ define i32 @and_slt_sgt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_slt_sgt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, gt
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #4, lt
+; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp slt i32 %s0, %s1
@@ -1178,10 +1040,8 @@ define i32 @and_slt_sge(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_slt_sge:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ge
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #8, lt
+; CHECK-NEXT:    cset w0, ge
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp slt i32 %s0, %s1
@@ -1195,10 +1055,8 @@ define i32 @and_sle_eq(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sle_eq:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, le
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, eq
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, le
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sle i32 %s0, %s1
@@ -1212,10 +1070,8 @@ define i32 @and_sle_ne(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sle_ne:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, le
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ne
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #4, le
+; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sle i32 %s0, %s1
@@ -1229,10 +1085,8 @@ define i32 @and_sle_ult(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sle_ult:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, le
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #2, le
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sle i32 %s0, %s1
@@ -1246,10 +1100,8 @@ define i32 @and_sle_ule(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sle_ule:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, le
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ls
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #2, le
+; CHECK-NEXT:    cset w0, ls
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sle i32 %s0, %s1
@@ -1263,10 +1115,8 @@ define i32 @and_sle_ugt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sle_ugt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, le
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, hi
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, le
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sle i32 %s0, %s1
@@ -1280,10 +1130,8 @@ define i32 @and_sle_uge(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sle_uge:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, le
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, hs
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, le
+; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sle i32 %s0, %s1
@@ -1297,10 +1145,8 @@ define i32 @and_sle_slt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sle_slt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, le
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, lt
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, le
+; CHECK-NEXT:    cset w0, lt
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sle i32 %s0, %s1
@@ -1314,10 +1160,8 @@ define i32 @and_sle_sle(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sle_sle:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, le
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, le
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, le
+; CHECK-NEXT:    cset w0, le
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sle i32 %s0, %s1
@@ -1331,10 +1175,8 @@ define i32 @and_sle_sgt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sle_sgt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, le
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, gt
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #4, le
+; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sle i32 %s0, %s1
@@ -1348,10 +1190,8 @@ define i32 @and_sle_sge(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sle_sge:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, le
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ge
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #8, le
+; CHECK-NEXT:    cset w0, ge
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sle i32 %s0, %s1
@@ -1365,10 +1205,8 @@ define i32 @and_sgt_eq(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sgt_eq:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, gt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, eq
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, gt
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sgt i32 %s0, %s1
@@ -1382,10 +1220,8 @@ define i32 @and_sgt_ne(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sgt_ne:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, gt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ne
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #4, gt
+; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sgt i32 %s0, %s1
@@ -1399,10 +1235,8 @@ define i32 @and_sgt_ult(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sgt_ult:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, gt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #2, gt
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sgt i32 %s0, %s1
@@ -1416,10 +1250,8 @@ define i32 @and_sgt_ule(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sgt_ule:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, gt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ls
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #2, gt
+; CHECK-NEXT:    cset w0, ls
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sgt i32 %s0, %s1
@@ -1433,10 +1265,8 @@ define i32 @and_sgt_ugt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sgt_ugt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, gt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, hi
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, gt
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sgt i32 %s0, %s1
@@ -1450,10 +1280,8 @@ define i32 @and_sgt_uge(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sgt_uge:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, gt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, hs
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, gt
+; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sgt i32 %s0, %s1
@@ -1467,10 +1295,8 @@ define i32 @and_sgt_slt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sgt_slt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, gt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, lt
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, gt
+; CHECK-NEXT:    cset w0, lt
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sgt i32 %s0, %s1
@@ -1484,10 +1310,8 @@ define i32 @and_sgt_sle(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sgt_sle:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, gt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, le
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, gt
+; CHECK-NEXT:    cset w0, le
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sgt i32 %s0, %s1
@@ -1501,10 +1325,8 @@ define i32 @and_sgt_sgt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sgt_sgt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, gt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, gt
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #4, gt
+; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sgt i32 %s0, %s1
@@ -1518,10 +1340,8 @@ define i32 @and_sgt_sge(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sgt_sge:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, gt
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ge
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #8, gt
+; CHECK-NEXT:    cset w0, ge
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sgt i32 %s0, %s1
@@ -1535,10 +1355,8 @@ define i32 @and_sge_eq(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sge_eq:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ge
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, eq
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, ge
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sge i32 %s0, %s1
@@ -1552,10 +1370,8 @@ define i32 @and_sge_ne(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sge_ne:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ge
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ne
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #4, ge
+; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sge i32 %s0, %s1
@@ -1569,10 +1385,8 @@ define i32 @and_sge_ult(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sge_ult:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ge
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #2, ge
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sge i32 %s0, %s1
@@ -1586,10 +1400,8 @@ define i32 @and_sge_ule(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sge_ule:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ge
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ls
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #2, ge
+; CHECK-NEXT:    cset w0, ls
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sge i32 %s0, %s1
@@ -1603,10 +1415,8 @@ define i32 @and_sge_ugt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sge_ugt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ge
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, hi
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, ge
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sge i32 %s0, %s1
@@ -1620,10 +1430,8 @@ define i32 @and_sge_uge(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sge_uge:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ge
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, hs
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, ge
+; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sge i32 %s0, %s1
@@ -1637,10 +1445,8 @@ define i32 @and_sge_slt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sge_slt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ge
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, lt
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, ge
+; CHECK-NEXT:    cset w0, lt
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sge i32 %s0, %s1
@@ -1654,10 +1460,8 @@ define i32 @and_sge_sle(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sge_sle:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ge
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, le
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, ge
+; CHECK-NEXT:    cset w0, le
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sge i32 %s0, %s1
@@ -1671,10 +1475,8 @@ define i32 @and_sge_sgt(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sge_sgt:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ge
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, gt
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #4, ge
+; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sge i32 %s0, %s1
@@ -1688,10 +1490,8 @@ define i32 @and_sge_sge(i32 %s0, i32 %s1, i32 %s2, i32 %s3) {
 ; CHECK-LABEL: and_sge_sge:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ge
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, ge
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #8, ge
+; CHECK-NEXT:    cset w0, ge
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp sge i32 %s0, %s1

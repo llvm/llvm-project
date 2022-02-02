@@ -718,15 +718,11 @@ define i64 @select_noccmp1(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
 ; CHECK-LABEL: select_noccmp1:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    cmp x0, #13
-; CHECK-NEXT:    cset w9, gt
+; CHECK-NEXT:    ccmp x0, #13, #4, lt
+; CHECK-NEXT:    cset w8, gt
 ; CHECK-NEXT:    cmp x2, #2
-; CHECK-NEXT:    cset w10, lt
-; CHECK-NEXT:    cmp x2, #4
-; CHECK-NEXT:    cset w11, gt
-; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    and w9, w10, w11
+; CHECK-NEXT:    ccmp x2, #4, #4, lt
+; CHECK-NEXT:    cset w9, gt
 ; CHECK-NEXT:    orr w8, w8, w9
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csel x0, xzr, x3, ne
