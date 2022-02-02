@@ -522,16 +522,16 @@ LLDBMemoryReader::resolveRemoteAddress(uint64_t address) const {
   Address resolved(file_address, object_file->GetSectionList());
   if (!resolved.IsValid()) {
     LLDB_LOG(log,
-             "[MemoryReader] Could not make a real address out of file "
-             "address {1:x} and object file {}",
+             "[MemoryReader] Could not make a real address out of file address "
+             "{0:x} and object file {1}",
              file_address, object_file->GetFileSpec().GetFilename());
     return {};
   }
 
   LLDB_LOGV(log,
-            "[MemoryReader] Successfully resolved mapped address {1:x} "
-            "into file address {1:x}",
-            address, resolved);
+            "[MemoryReader] Successfully resolved mapped address {0:x} into "
+            "file address {1:x}",
+            address, resolved.GetFileAddress());
   return resolved;
 }
 
