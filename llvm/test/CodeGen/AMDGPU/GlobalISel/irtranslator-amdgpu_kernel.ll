@@ -1678,7 +1678,7 @@ define amdgpu_kernel void @byref_global_i32_arg(i32 addrspace(1)* nocapture %out
   ; HSA-VI-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
   ; HSA-VI-NEXT:   [[ADDRSPACE_CAST:%[0-9]+]]:_(p1) = G_ADDRSPACE_CAST [[PTR_ADD1]](p4)
   ; HSA-VI-NEXT:   [[COPY1:%[0-9]+]]:_(p1) = COPY [[ADDRSPACE_CAST]](p1)
-  ; HSA-VI-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[COPY1]](p1) :: (dereferenceable load (s32) from %ir.1, addrspace 1)
+  ; HSA-VI-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[COPY1]](p1) :: (dereferenceable "amdgpu-noclobber" load (s32) from %ir.1, addrspace 1)
   ; HSA-VI-NEXT:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (store (s32) into %ir.out, addrspace 1)
   ; HSA-VI-NEXT:   S_ENDPGM 0
   ; LEGACY-MESA-VI-LABEL: name: byref_global_i32_arg
@@ -1693,7 +1693,7 @@ define amdgpu_kernel void @byref_global_i32_arg(i32 addrspace(1)* nocapture %out
   ; LEGACY-MESA-VI-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
   ; LEGACY-MESA-VI-NEXT:   [[ADDRSPACE_CAST:%[0-9]+]]:_(p1) = G_ADDRSPACE_CAST [[PTR_ADD1]](p4)
   ; LEGACY-MESA-VI-NEXT:   [[COPY1:%[0-9]+]]:_(p1) = COPY [[ADDRSPACE_CAST]](p1)
-  ; LEGACY-MESA-VI-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[COPY1]](p1) :: (dereferenceable load (s32) from %ir.1, addrspace 1)
+  ; LEGACY-MESA-VI-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[COPY1]](p1) :: (dereferenceable "amdgpu-noclobber" load (s32) from %ir.1, addrspace 1)
   ; LEGACY-MESA-VI-NEXT:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (store (s32) into %ir.out, addrspace 1)
   ; LEGACY-MESA-VI-NEXT:   S_ENDPGM 0
   %in = load i32, i32 addrspace(1)* %in.byref

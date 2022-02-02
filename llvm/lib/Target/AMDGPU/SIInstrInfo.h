@@ -35,6 +35,11 @@ class RegScavenger;
 class TargetRegisterClass;
 class ScheduleHazardRecognizer;
 
+/// Mark the MMO of a uniform load if there are no potentially clobbering stores
+/// on any path from the start of an entry function to this load.
+static const MachineMemOperand::Flags MONoClobber =
+    MachineMemOperand::MOTargetFlag1;
+
 class SIInstrInfo final : public AMDGPUGenInstrInfo {
 private:
   const SIRegisterInfo RI;
@@ -1035,6 +1040,9 @@ public:
 
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const override;
+
+  ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
+  getSerializableMachineMemOperandTargetFlags() const override;
 
   ScheduleHazardRecognizer *
   CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
