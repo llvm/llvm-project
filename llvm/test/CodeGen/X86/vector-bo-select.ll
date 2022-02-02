@@ -328,6 +328,72 @@ define <8 x float> @fadd_v8f32_cast_cond(i8 noundef zeroext %pb, <8 x float> nou
   ret <8 x float> %r
 }
 
+define <8 x double> @fadd_v8f64_cast_cond(i8 noundef zeroext %pb, <8 x double> noundef %x, <8 x double> noundef %y) {
+; AVX2-LABEL: fadd_v8f64_cast_cond:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    movl %edi, %eax
+; AVX2-NEXT:    shrb %al
+; AVX2-NEXT:    andb $1, %al
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    movl %edi, %ecx
+; AVX2-NEXT:    andb $1, %cl
+; AVX2-NEXT:    movzbl %cl, %ecx
+; AVX2-NEXT:    vmovd %ecx, %xmm4
+; AVX2-NEXT:    vpinsrb $2, %eax, %xmm4, %xmm4
+; AVX2-NEXT:    movl %edi, %eax
+; AVX2-NEXT:    shrb $2, %al
+; AVX2-NEXT:    andb $1, %al
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    vpinsrb $4, %eax, %xmm4, %xmm4
+; AVX2-NEXT:    movl %edi, %eax
+; AVX2-NEXT:    shrb $3, %al
+; AVX2-NEXT:    andb $1, %al
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    vpinsrb $6, %eax, %xmm4, %xmm4
+; AVX2-NEXT:    movl %edi, %eax
+; AVX2-NEXT:    shrb $4, %al
+; AVX2-NEXT:    andb $1, %al
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    vpinsrb $8, %eax, %xmm4, %xmm5
+; AVX2-NEXT:    movl %edi, %eax
+; AVX2-NEXT:    shrb $5, %al
+; AVX2-NEXT:    andb $1, %al
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    vpinsrb $10, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    movl %edi, %eax
+; AVX2-NEXT:    shrb $6, %al
+; AVX2-NEXT:    andb $1, %al
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    vpinsrb $12, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    shrb $7, %dil
+; AVX2-NEXT:    movzbl %dil, %eax
+; AVX2-NEXT:    vpinsrb $14, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    vpunpckhwd {{.*#+}} xmm5 = xmm5[4,4,5,5,6,6,7,7]
+; AVX2-NEXT:    vpslld $31, %xmm5, %xmm5
+; AVX2-NEXT:    vpmovsxdq %xmm5, %ymm5
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm6 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX2-NEXT:    vblendvpd %ymm5, %ymm3, %ymm6, %ymm3
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} xmm4 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero
+; AVX2-NEXT:    vpslld $31, %xmm4, %xmm4
+; AVX2-NEXT:    vpmovsxdq %xmm4, %ymm4
+; AVX2-NEXT:    vblendvpd %ymm4, %ymm2, %ymm6, %ymm2
+; AVX2-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vaddpd %ymm3, %ymm1, %ymm1
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: fadd_v8f64_cast_cond:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    kmovw %edi, %k1
+; AVX512-NEXT:    vbroadcastsd {{.*#+}} zmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX512-NEXT:    vmovapd %zmm1, %zmm2 {%k1}
+; AVX512-NEXT:    vaddpd %zmm2, %zmm0, %zmm0
+; AVX512-NEXT:    retq
+  %b = bitcast i8 %pb to <8 x i1>
+  %s = select <8 x i1> %b, <8 x double> %y, <8 x double> <double -0.0, double -0.0, double -0.0, double -0.0, double -0.0, double -0.0, double -0.0, double -0.0>
+  %r = fadd <8 x double> %x, %s
+  ret <8 x double> %r
+}
+
 define <8 x float> @fsub_v8f32_cast_cond(i8 noundef zeroext %pb, <8 x float> noundef %x, <8 x float> noundef %y) {
 ; AVX2-LABEL: fsub_v8f32_cast_cond:
 ; AVX2:       # %bb.0:
@@ -398,4 +464,70 @@ define <8 x float> @fsub_v8f32_cast_cond(i8 noundef zeroext %pb, <8 x float> nou
   %s = select <8 x i1> %b, <8 x float> %y, <8 x float> zeroinitializer
   %r = fsub <8 x float> %x, %s
   ret <8 x float> %r
+}
+
+define <8 x double> @fsub_v8f64_cast_cond(i8 noundef zeroext %pb, <8 x double> noundef %x, <8 x double> noundef %y) {
+; AVX2-LABEL: fsub_v8f64_cast_cond:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    movl %edi, %eax
+; AVX2-NEXT:    shrb %al
+; AVX2-NEXT:    andb $1, %al
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    movl %edi, %ecx
+; AVX2-NEXT:    andb $1, %cl
+; AVX2-NEXT:    movzbl %cl, %ecx
+; AVX2-NEXT:    vmovd %ecx, %xmm4
+; AVX2-NEXT:    vpinsrb $2, %eax, %xmm4, %xmm4
+; AVX2-NEXT:    movl %edi, %eax
+; AVX2-NEXT:    shrb $2, %al
+; AVX2-NEXT:    andb $1, %al
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    vpinsrb $4, %eax, %xmm4, %xmm4
+; AVX2-NEXT:    movl %edi, %eax
+; AVX2-NEXT:    shrb $3, %al
+; AVX2-NEXT:    andb $1, %al
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    vpinsrb $6, %eax, %xmm4, %xmm4
+; AVX2-NEXT:    movl %edi, %eax
+; AVX2-NEXT:    shrb $4, %al
+; AVX2-NEXT:    andb $1, %al
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    vpinsrb $8, %eax, %xmm4, %xmm5
+; AVX2-NEXT:    movl %edi, %eax
+; AVX2-NEXT:    shrb $5, %al
+; AVX2-NEXT:    andb $1, %al
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    vpinsrb $10, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    movl %edi, %eax
+; AVX2-NEXT:    shrb $6, %al
+; AVX2-NEXT:    andb $1, %al
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    vpinsrb $12, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    shrb $7, %dil
+; AVX2-NEXT:    movzbl %dil, %eax
+; AVX2-NEXT:    vpinsrb $14, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    vpunpckhwd {{.*#+}} xmm5 = xmm5[4,4,5,5,6,6,7,7]
+; AVX2-NEXT:    vpslld $31, %xmm5, %xmm5
+; AVX2-NEXT:    vpsrad $31, %xmm5, %xmm5
+; AVX2-NEXT:    vpmovsxdq %xmm5, %ymm5
+; AVX2-NEXT:    vpand %ymm3, %ymm5, %ymm3
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} xmm4 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero
+; AVX2-NEXT:    vpslld $31, %xmm4, %xmm4
+; AVX2-NEXT:    vpsrad $31, %xmm4, %xmm4
+; AVX2-NEXT:    vpmovsxdq %xmm4, %ymm4
+; AVX2-NEXT:    vpand %ymm2, %ymm4, %ymm2
+; AVX2-NEXT:    vsubpd %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vsubpd %ymm3, %ymm1, %ymm1
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: fsub_v8f64_cast_cond:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    kmovw %edi, %k1
+; AVX512-NEXT:    vmovapd %zmm1, %zmm1 {%k1} {z}
+; AVX512-NEXT:    vsubpd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    retq
+  %b = bitcast i8 %pb to <8 x i1>
+  %s = select <8 x i1> %b, <8 x double> %y, <8 x double> zeroinitializer
+  %r = fsub <8 x double> %x, %s
+  ret <8 x double> %r
 }
