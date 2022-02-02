@@ -15,7 +15,7 @@
 namespace llvm {
 namespace {
 bool maybeReachableFromEachOther(const SmallVectorImpl<IntrinsicInst *> &Insts,
-                                 const DominatorTree &DT, size_t MaxLifetimes) {
+                                 const DominatorTree *DT, size_t MaxLifetimes) {
   // If we have too many lifetime ends, give up, as the algorithm below is N^2.
   if (Insts.size() > MaxLifetimes)
     return true;
@@ -23,7 +23,7 @@ bool maybeReachableFromEachOther(const SmallVectorImpl<IntrinsicInst *> &Insts,
     for (size_t J = 0; J < Insts.size(); ++J) {
       if (I == J)
         continue;
-      if (isPotentiallyReachable(Insts[I], Insts[J], nullptr, &DT))
+      if (isPotentiallyReachable(Insts[I], Insts[J], nullptr, DT))
         return true;
     }
   }
@@ -33,7 +33,7 @@ bool maybeReachableFromEachOther(const SmallVectorImpl<IntrinsicInst *> &Insts,
 
 bool isStandardLifetime(const SmallVectorImpl<IntrinsicInst *> &LifetimeStart,
                         const SmallVectorImpl<IntrinsicInst *> &LifetimeEnd,
-                        const DominatorTree &DT, size_t MaxLifetimes) {
+                        const DominatorTree *DT, size_t MaxLifetimes) {
   // An alloca that has exactly one start and end in every possible execution.
   // If it has multiple ends, they have to be unreachable from each other, so
   // at most one of them is actually used for each execution of the function.

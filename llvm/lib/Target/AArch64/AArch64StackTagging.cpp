@@ -78,6 +78,12 @@ static cl::opt<unsigned>
     ClMergeInitSizeLimit("stack-tagging-merge-init-size-limit", cl::init(272),
                          cl::Hidden);
 
+static cl::opt<size_t> ClMaxLifetimes(
+    "stack-tagging-max-lifetimes-for-alloca", cl::Hidden, cl::init(3),
+    cl::ReallyHidden,
+    cl::desc("How many lifetime ends to handle for a single alloca."),
+    cl::Optional);
+
 static const Align kTagGranuleSize = Align(16);
 
 namespace {
@@ -645,14 +651,17 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     Info.AI->replaceAllUsesWith(TagPCall);
     TagPCall->setOperand(0, Info.AI);
 
+    bool StandardLifetime =
+        UnrecognizedLifetimes.empty() &&
+        isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT,
+                           ClMaxLifetimes);
     // Calls to functions that may return twice (e.g. setjmp) confuse the
     // postdominator analysis, and will leave us to keep memory tagged after
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
-    if (UnrecognizedLifetimes.empty() && Info.LifetimeStart.size() == 1 &&
-        Info.LifetimeEnd.size() == 1 && !CallsReturnTwice) {
+    if (UnrecognizedLifetimes.empty() && StandardLifetime &&
+        !CallsReturnTwice) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
-      IntrinsicInst *End = Info.LifetimeEnd[0];
       uint64_t Size =
           cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
       Size = alignTo(Size, kTagGranuleSize);
@@ -661,8 +670,10 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
       auto TagEnd = [&](Instruction *Node) { untagAlloca(AI, Node, Size); };
       if (!DT || !PDT ||
           !forAllReachableExits(*DT, *PDT, Start, Info.LifetimeEnd, RetVec,
-                                TagEnd))
-        End->eraseFromParent();
+                                TagEnd)) {
+        for (auto *End : Info.LifetimeEnd)
+          End->eraseFromParent();
+      }
     } else {
       uint64_t Size = Info.AI->getAllocationSizeInBits(*DL).getValue() / 8;
       Value *Ptr = IRB.CreatePointerCast(TagPCall, IRB.getInt8PtrTy());
