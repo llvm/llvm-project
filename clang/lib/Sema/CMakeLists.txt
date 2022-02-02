@@ -107,6 +107,7 @@ add_clang_library(clangSema
   omp_gen
   ClangDriverOptions
   MLIRCIROpsIncGen
+  MLIRCIR
 
   LINK_LIBS
   clangAPINotes
