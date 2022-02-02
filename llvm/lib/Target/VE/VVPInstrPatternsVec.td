@@ -237,6 +237,13 @@ defm : Binary_rv_vr_vv_ShortLong<vvp_fdiv,
                               f64, v256f64, "VFDIVD",
                               f32, v256f32, "VFDIVS">;
 
+defm : Binary_rv_vv<c_vvp_fadd,
+                    i64, v512f32, v512i1, "PVFADD">;
+defm : Binary_rv_vv<c_vvp_fmul,
+                    i64, v512f32, v512i1, "PVFMUL">;
+defm : Binary_rv_vv<vvp_fsub,
+                    i64, v512f32, v512i1, "PVFSUB">;
+
 multiclass Merge_mvv<
     SDPatternOperator OpNode,
     ValueType DataVT, ValueType MaskVT,
