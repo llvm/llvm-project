@@ -1,6 +1,6 @@
 # Discourse Migration Guide 
 
-## Current Status of Migration: Migration complete and we are doing our final checks. Discourse still in read-only for a bit more as we finish.
+## Current Status of Migration: Final checks of migration are complete. Discourse should be online shortly.
 
 This document is intended to help LLVM users to migrate from the mailing lists to
 Discourse. Discourse has two basic ways for interaction: Via the [web
