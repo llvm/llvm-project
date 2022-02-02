@@ -83,8 +83,8 @@ define <32 x half> @test_int_x86_avx512fp16_maskz_sub_ph_512(<32 x half> %src, <
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vsubph %zmm2, %zmm1, %zmm0 {%k1} {z}
-; CHECK-NEXT:    vsubph (%rsi), %zmm1, %zmm1 {%k1} {z}
-; CHECK-NEXT:    vsubph %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vsubph (%rsi), %zmm1, %zmm1
+; CHECK-NEXT:    vsubph %zmm1, %zmm0, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %mask = bitcast i32 %msk to <32 x i1>
   %val = load <32 x half>, <32 x half>* %ptr
