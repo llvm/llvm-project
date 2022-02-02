@@ -1,6 +1,6 @@
 # Discourse Migration Guide 
 
-## Current Status of Migration: Final checks of migration are complete. Discourse should be online shortly.
+## Current Status of Migration: Discourse is back online at a new URL: [https://discourse.llvm.org](https://discourse.llvm.org). The old one still works as well. We are aware of an issue with reply by email to emails from before the merge. We will update once we know more.
 
 This document is intended to help LLVM users to migrate from the mailing lists to
 Discourse. Discourse has two basic ways for interaction: Via the [web

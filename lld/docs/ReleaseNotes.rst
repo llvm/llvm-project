@@ -1,19 +1,21 @@
-========================
-lld 14.0.0 Release Notes
-========================
+===========================
+lld |release| Release Notes
+===========================
 
 .. contents::
     :local:
 
-.. warning::
-   These are in-progress notes for the upcoming LLVM 14.0.0 release.
-   Release notes for previous releases can be found on
-   `the Download Page <https://releases.llvm.org/download.html>`_.
+.. only:: PreRelease
+
+  .. warning::
+     These are in-progress notes for the upcoming LLVM |release| release.
+     Release notes for previous releases can be found on
+     `the Download Page <https://releases.llvm.org/download.html>`_.
 
 Introduction
 ============
 
-This document contains the release notes for the lld linker, release 14.0.0.
+This document contains the release notes for the lld linker, release |release|.
 Here we describe the status of lld, including major improvements
 from the previous release. All lld releases may be downloaded
 from the `LLVM releases web site <https://llvm.org/releases/>`_.
