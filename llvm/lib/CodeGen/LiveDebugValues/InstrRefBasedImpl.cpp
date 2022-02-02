@@ -3027,6 +3027,16 @@ bool InstrRefBasedLDV::depthFirstVLocAndEmit(
     if (MOutLocs[MBB->getNumber()])
       EjectBlock(*MBB);
 
+  // Finally, there might have been gaps in the block numbering, from dead
+  // blocks being deleted or folded. In those scenarios, we might allocate a
+  // block-table that's never ejected, meaning we have to free it at the end.
+  for (unsigned int I = 0; I < MaxNumBlocks; ++I) {
+    if (MInLocs[I]) {
+      delete[] MInLocs[I];
+      delete[] MOutLocs[I];
+    }
+  }
+
   return emitTransfers(AllVarsNumbering);
 }
 
