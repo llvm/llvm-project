@@ -229,7 +229,22 @@ def SDT_RISCVVWBinOp_VL : SDTypeProfile<1, 4, [SDTCisVec<0>,
 def riscv_vwmul_vl  : SDNode<"RISCVISD::VWMUL_VL",  SDT_RISCVVWBinOp_VL, [SDNPCommutative]>;
 def riscv_vwmulu_vl : SDNode<"RISCVISD::VWMULU_VL", SDT_RISCVVWBinOp_VL, [SDNPCommutative]>;
 def riscv_vwmulsu_vl : SDNode<"RISCVISD::VWMULSU_VL", SDT_RISCVVWBinOp_VL>;
+def riscv_vwadd_vl :  SDNode<"RISCVISD::VWADD_VL",  SDT_RISCVVWBinOp_VL, [SDNPCommutative]>;
 def riscv_vwaddu_vl : SDNode<"RISCVISD::VWADDU_VL", SDT_RISCVVWBinOp_VL, [SDNPCommutative]>;
+def riscv_vwsub_vl :  SDNode<"RISCVISD::VWSUB_VL",  SDT_RISCVVWBinOp_VL, [SDNPCommutative]>;
+def riscv_vwsubu_vl : SDNode<"RISCVISD::VWSUBU_VL", SDT_RISCVVWBinOp_VL, [SDNPCommutative]>;
+
+def SDT_RISCVVWBinOpW_VL : SDTypeProfile<1, 4, [SDTCisVec<0>,
+                                                SDTCisSameAs<0, 1>,
+                                                SDTCisSameNumEltsAs<1, 2>,
+                                                SDTCisOpSmallerThanOp<2, 1>,
+                                                SDTCisSameNumEltsAs<1, 3>,
+                                                SDTCVecEltisVT<3, i1>,
+                                                SDTCisVT<4, XLenVT>]>;
+def riscv_vwadd_w_vl :  SDNode<"RISCVISD::VWADD_W_VL",  SDT_RISCVVWBinOpW_VL>;
+def riscv_vwaddu_w_vl : SDNode<"RISCVISD::VWADDU_W_VL", SDT_RISCVVWBinOpW_VL>;
+def riscv_vwsub_w_vl :  SDNode<"RISCVISD::VWSUB_W_VL",  SDT_RISCVVWBinOpW_VL>;
+def riscv_vwsubu_w_vl : SDNode<"RISCVISD::VWSUBU_W_VL", SDT_RISCVVWBinOpW_VL>;
 
 def SDTRVVVecReduce : SDTypeProfile<1, 5, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisSameAs<0, 3>,
@@ -267,32 +282,35 @@ def sew16simm5 : ComplexPattern<XLenVT, 1, "selectRVVSimm5<16>", []>;
 def sew32simm5 : ComplexPattern<XLenVT, 1, "selectRVVSimm5<32>", []>;
 def sew64simm5 : ComplexPattern<XLenVT, 1, "selectRVVSimm5<64>", []>;
 
-multiclass VPatBinaryVL_VV<SDNode vop,
-                           string instruction_name,
-                           ValueType result_type,
-                           ValueType op_type,
-                           ValueType mask_type,
-                           int sew,
-                           LMULInfo vlmul,
-                           VReg op_reg_class> {
+multiclass VPatBinaryVL_V<SDNode vop,
+                          string instruction_name,
+                          string suffix,
+                          ValueType result_type,
+                          ValueType op1_type,
+                          ValueType op2_type,
+                          ValueType mask_type,
+                          int sew,
+                          LMULInfo vlmul,
+                          VReg op1_reg_class,
+                          VReg op2_reg_class> {
   def : Pat<(result_type (vop
-                         (op_type op_reg_class:$rs1),
-                         (op_type op_reg_class:$rs2),
+                         (op1_type op1_reg_class:$rs1),
+                         (op2_type op2_reg_class:$rs2),
                          (mask_type true_mask),
                          VLOpFrag)),
-            (!cast<Instruction>(instruction_name#"_VV_"# vlmul.MX)
-                         op_reg_class:$rs1,
-                         op_reg_class:$rs2,
+            (!cast<Instruction>(instruction_name#"_"#suffix#"_"# vlmul.MX)
+                         op1_reg_class:$rs1,
+                         op2_reg_class:$rs2,
                          GPR:$vl, sew)>;
   def : Pat<(result_type (vop
-                         (op_type op_reg_class:$rs1),
-                         (op_type op_reg_class:$rs2),
+                         (op1_type op1_reg_class:$rs1),
+                         (op2_type op2_reg_class:$rs2),
                          (mask_type V0),
                          VLOpFrag)),
-        (!cast<Instruction>(instruction_name#"_VV_"# vlmul.MX#"_MASK")
+        (!cast<Instruction>(instruction_name#"_"#suffix#"_"# vlmul.MX#"_MASK")
                      (result_type (IMPLICIT_DEF)),
-                     op_reg_class:$rs1,
-                     op_reg_class:$rs2,
+                     op1_reg_class:$rs1,
+                     op2_reg_class:$rs2,
                      (mask_type V0), GPR:$vl, sew, TAIL_AGNOSTIC)>;
 }
 
@@ -300,7 +318,8 @@ multiclass VPatBinaryVL_XI<SDNode vop,
                            string instruction_name,
                            string suffix,
                            ValueType result_type,
-                           ValueType vop_type,
+                           ValueType vop1_type,
+                           ValueType vop2_type,
                            ValueType mask_type,
                            int sew,
                            LMULInfo vlmul,
@@ -308,8 +327,8 @@ multiclass VPatBinaryVL_XI<SDNode vop,
                            ComplexPattern SplatPatKind,
                            DAGOperand xop_kind> {
   def : Pat<(result_type (vop
-                     (vop_type vop_reg_class:$rs1),
-                     (vop_type (SplatPatKind (XLenVT xop_kind:$rs2))),
+                     (vop1_type vop_reg_class:$rs1),
+                     (vop2_type (SplatPatKind (XLenVT xop_kind:$rs2))),
                      (mask_type true_mask),
                      VLOpFrag)),
         (!cast<Instruction>(instruction_name#_#suffix#_# vlmul.MX)
@@ -317,8 +336,8 @@ multiclass VPatBinaryVL_XI<SDNode vop,
                      xop_kind:$rs2,
                      GPR:$vl, sew)>;
   def : Pat<(result_type (vop
-                     (vop_type vop_reg_class:$rs1),
-                     (vop_type (SplatPatKind (XLenVT xop_kind:$rs2))),
+                     (vop1_type vop_reg_class:$rs1),
+                     (vop2_type (SplatPatKind (XLenVT xop_kind:$rs2))),
                      (mask_type V0),
                      VLOpFrag)),
         (!cast<Instruction>(instruction_name#_#suffix#_# vlmul.MX#"_MASK")
@@ -330,12 +349,12 @@ multiclass VPatBinaryVL_XI<SDNode vop,
 
 multiclass VPatBinaryVL_VV_VX<SDNode vop, string instruction_name> {
   foreach vti = AllIntegerVectors in {
-    defm : VPatBinaryVL_VV<vop, instruction_name,
-                           vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                           vti.LMul, vti.RegClass>;
+    defm : VPatBinaryVL_V<vop, instruction_name, "VV",
+                           vti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                           vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass>;
     defm : VPatBinaryVL_XI<vop, instruction_name, "VX",
-                           vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                           vti.LMul, vti.RegClass, SplatPat, GPR>;
+                           vti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                           vti.Log2SEW, vti.LMul, vti.RegClass, SplatPat, GPR>;
   }
 }
 
@@ -344,8 +363,8 @@ multiclass VPatBinaryVL_VV_VX_VI<SDNode vop, string instruction_name,
     : VPatBinaryVL_VV_VX<vop, instruction_name> {
   foreach vti = AllIntegerVectors in {
     defm : VPatBinaryVL_XI<vop, instruction_name, "VI",
-                           vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                           vti.LMul, vti.RegClass,
+                           vti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                           vti.Log2SEW, vti.LMul, vti.RegClass,
                            !cast<ComplexPattern>(SplatPat#_#ImmType),
                            ImmType>;
   }
@@ -355,12 +374,26 @@ multiclass VPatBinaryWVL_VV_VX<SDNode vop, string instruction_name> {
   foreach VtiToWti = AllWidenableIntVectors in {
     defvar vti = VtiToWti.Vti;
     defvar wti = VtiToWti.Wti;
-    defm : VPatBinaryVL_VV<vop, instruction_name,
-                           wti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                           vti.LMul, vti.RegClass>;
+    defm : VPatBinaryVL_V<vop, instruction_name, "VV",
+                           wti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                           vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass>;
     defm : VPatBinaryVL_XI<vop, instruction_name, "VX",
-                           wti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                           vti.LMul, vti.RegClass, SplatPat, GPR>;
+                           wti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                           vti.Log2SEW, vti.LMul, vti.RegClass, SplatPat, GPR>;
+  }
+}
+multiclass VPatBinaryWVL_VV_VX_WV_WX<SDNode vop, SDNode vop_w,
+                                     string instruction_name>
+    : VPatBinaryWVL_VV_VX<vop, instruction_name> {
+  foreach VtiToWti = AllWidenableIntVectors in {
+    defvar vti = VtiToWti.Vti;
+    defvar wti = VtiToWti.Wti;
+    defm : VPatBinaryVL_V<vop_w, instruction_name, "WV",
+                           wti.Vector, wti.Vector, vti.Vector, vti.Mask,
+                           vti.Log2SEW, vti.LMul, wti.RegClass, vti.RegClass>;
+    defm : VPatBinaryVL_XI<vop_w, instruction_name, "WX",
+                           wti.Vector, wti.Vector, vti.Vector, vti.Mask,
+                           vti.Log2SEW, vti.LMul, wti.RegClass, SplatPat, GPR>;
   }
 }
 
@@ -394,9 +427,9 @@ multiclass VPatBinaryVL_VF<SDNode vop,
 
 multiclass VPatBinaryFPVL_VV_VF<SDNode vop, string instruction_name> {
   foreach vti = AllFloatVectors in {
-    defm : VPatBinaryVL_VV<vop, instruction_name,
-                           vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                           vti.LMul, vti.RegClass>;
+    defm : VPatBinaryVL_V<vop, instruction_name, "VV",
+                          vti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                          vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass>;
     defm : VPatBinaryVL_VF<vop, instruction_name#"_V"#vti.ScalarSuffix,
                            vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
                            vti.LMul, vti.RegClass, vti.ScalarRegClass>;
@@ -723,7 +756,10 @@ foreach vti = AllIntegerVectors in {
 }
 
 // 12.2. Vector Widening Integer Add/Subtract
-defm : VPatBinaryWVL_VV_VX<riscv_vwaddu_vl, "PseudoVWADDU">;
+defm : VPatBinaryWVL_VV_VX_WV_WX<riscv_vwadd_vl,  riscv_vwadd_w_vl,  "PseudoVWADD">;
+defm : VPatBinaryWVL_VV_VX_WV_WX<riscv_vwaddu_vl, riscv_vwaddu_w_vl, "PseudoVWADDU">;
+defm : VPatBinaryWVL_VV_VX_WV_WX<riscv_vwsub_vl,  riscv_vwsub_w_vl,  "PseudoVWSUB">;
+defm : VPatBinaryWVL_VV_VX_WV_WX<riscv_vwsubu_vl, riscv_vwsubu_w_vl, "PseudoVWSUBU">;
 
 // 12.3. Vector Integer Extension
 defm : VPatExtendSDNode_V_VL<riscv_zext_vl, "PseudoVZEXT", "VF2",
