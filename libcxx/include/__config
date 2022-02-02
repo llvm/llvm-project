@@ -115,7 +115,7 @@
 // about ABI compatibility.
 #  define _LIBCPP_ABI_NO_RANDOM_DEVICE_COMPATIBILITY_LAYOUT
 // Remove basic_string common base
-#  define _LIBCPP_ABI_NO_BASIC_STRING_BASE_CLASS
+#  define _LIBCPP_ABI_DO_NOT_EXPORT_BASIC_STRING_COMMON
 #elif _LIBCPP_ABI_VERSION == 1
 #  if !defined(_LIBCPP_OBJECT_FORMAT_COFF)
 // Enable compiling copies of now inline methods into the dylib to support
