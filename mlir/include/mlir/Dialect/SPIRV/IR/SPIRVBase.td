@@ -4272,10 +4272,10 @@ class SPV_Op<string mnemonic, list<Trait> traits = []> :
   // * static ParseResult parse<op-c++-class-name>(OpAsmParser &parser,
   //                                               OperationState &result)
   // * static void print(OpAsmPrinter &p, <op-c++-class-name> op)
-  // * static LogicalResult verify(<op-c++-class-name> op)
+  // * LogicalResult <op-c++-class-name>::verify()
   let parser = [{ return ::parse$cppClass(parser, result); }];
   let printer = [{ return ::print(*this, p); }];
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 
   // Specifies whether this op has a direct corresponding SPIR-V binary
   // instruction opcode. The (de)serializer use this field to determine whether
@@ -4323,7 +4323,7 @@ class SPV_UnaryOp<string mnemonic, Type resultType, Type operandType,
   let parser = [{ return ::parseUnaryOp(parser, result); }];
   let printer = [{ return ::printUnaryOp(getOperation(), p); }];
   // No additional verification needed in addition to the ODS-generated ones.
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 }
 
 class SPV_BinaryOp<string mnemonic, Type resultType, Type operandsType,
@@ -4341,7 +4341,7 @@ class SPV_BinaryOp<string mnemonic, Type resultType, Type operandsType,
   let parser = [{ return impl::parseOneResultSameOperandTypeOp(parser, result); }];
   let printer = [{ return impl::printOneResultOp(getOperation(), p); }];
   // No additional verification needed in addition to the ODS-generated ones.
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 }
 
 class SPV_ExtInstOp<string mnemonic, string setPrefix, string setName,

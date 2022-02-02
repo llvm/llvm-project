@@ -1309,7 +1309,7 @@ sometimes we need to manually write additional verification logic in
 [`SPIRVOps.cpp`][MlirSpirvOpsCpp] in a function with the following signature:
 
 ```c++
-static LogicalResult verify(spirv::<spirv-op-symbol>Op op);
+LogicalResult spirv::<spirv-op-symbol>Op::verify();
 ```
 
 See any such function in [`SPIRVOps.cpp`][MlirSpirvOpsCpp] as an example.
@@ -1318,7 +1318,7 @@ If no additional verification is needed, one needs to add the following to
 the op's Op Definition Spec:
 
 ```
-let verifier = [{ return success(); }];
+let hasVerifier = 0;
 ```
 
 To suppress the requirement of the above C++ verification function.

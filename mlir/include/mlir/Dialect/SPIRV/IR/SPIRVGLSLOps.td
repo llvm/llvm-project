@@ -49,7 +49,7 @@ class SPV_GLSLUnaryOp<string mnemonic, int opcode, Type resultType,
 
   let printer = [{ return printUnaryOp(getOperation(), p); }];
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 }
 
 // Base class for GLSL Unary arithmetic ops where return type matches
@@ -76,7 +76,7 @@ class SPV_GLSLBinaryOp<string mnemonic, int opcode, Type resultType,
 
   let printer = [{ return impl::printOneResultOp(getOperation(), p); }];
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 }
 
 // Base class for GLSL Binary arithmetic ops where operand types and
@@ -104,7 +104,7 @@ class SPV_GLSLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
 
   let printer = [{ return impl::printOneResultOp(getOperation(), p); }];
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 }
 
 // -----
@@ -1133,8 +1133,6 @@ def SPV_GLSLFrexpStructOp : SPV_GLSLOp<"FrexpStruct", 52, [NoSideEffect]> {
   let assemblyFormat = [{
     attr-dict $operand `:` type($operand) `->` type($result)
   }];
-
-  let verifier = [{ return ::verifyGLSLFrexpStructOp(*this); }];
 }
 
 def SPV_GLSLLdexpOp :
@@ -1187,8 +1185,6 @@ def SPV_GLSLLdexpOp :
   let assemblyFormat = [{
     attr-dict $x `:` type($x) `,` $exp `:` type($exp) `->` type($y)
   }];
-
-  let verifier = [{ return ::verify(*this); }];
 }
 
 def SPV_GLSLFMixOp :
@@ -1227,7 +1223,7 @@ def SPV_GLSLFMixOp :
     attr-dict $x `:` type($x) `,` $y `:` type($y) `,` $a `:` type($a) `->` type($result)
   }];
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 }
 
 #endif // MLIR_DIALECT_SPIRV_IR_GLSL_OPS

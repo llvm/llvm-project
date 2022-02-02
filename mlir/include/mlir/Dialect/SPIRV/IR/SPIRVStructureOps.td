@@ -241,7 +241,7 @@ def SPV_ExecutionModeOp : SPV_Op<"ExecutionMode", [InModuleScope]> {
 
   let results = (outs);
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 
   let autogenSerialization = 0;
 
@@ -296,7 +296,7 @@ def SPV_FuncOp : SPV_Op<"func", [
 
   let regions = (region AnyRegion:$body);
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 
   let builders = [
     OpBuilder<(ins "StringRef":$name, "FunctionType":$type,
@@ -788,7 +788,7 @@ def SPV_YieldOp : SPV_Op<"mlir.yield", [
 
   let assemblyFormat = "attr-dict $operand `:` type($operand)";
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 }
 
 // -----

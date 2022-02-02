@@ -51,7 +51,7 @@ def SPV_BranchOp : SPV_Op<"Branch", [
 
   let successors = (successor AnySuccessor:$target);
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 
   let builders = [
     OpBuilder<(ins "Block *":$successor, CArg<"ValueRange", "{}">:$arguments),

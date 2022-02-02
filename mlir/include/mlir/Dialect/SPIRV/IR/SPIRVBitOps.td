@@ -36,7 +36,7 @@ class SPV_BitFieldExtractOp<string mnemonic, list<Trait> traits = []> :
     SPV_ScalarOrVectorOf<SPV_Integer>:$result
   );
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 
   let assemblyFormat = [{
     operands attr-dict `:` type($base) `,` type($offset) `,` type($count)
@@ -54,7 +54,7 @@ class SPV_ShiftOp<string mnemonic, list<Trait> traits = []> :
                                [NoSideEffect, SameOperandsAndResultShape])> {
   let parser = [{ return ::parseShiftOp(parser, result); }];
   let printer = [{ ::printShiftOp(this->getOperation(), p); }];
-  let verifier = [{ return ::verifyShiftOp(this->getOperation()); }];
+  let hasVerifier = 1;
 }
 
 // -----
@@ -162,7 +162,7 @@ def SPV_BitFieldInsertOp : SPV_Op<"BitFieldInsert",
     SPV_ScalarOrVectorOf<SPV_Integer>:$result
   );
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 
   let assemblyFormat = [{
     operands attr-dict `:` type($base) `,` type($offset) `,` type($count)
