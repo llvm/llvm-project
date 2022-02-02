@@ -223,6 +223,7 @@ namespace std::ranges {
 #include <__ranges/take_view.h>
 #include <__ranges/transform_view.h>
 #include <__ranges/view_interface.h>
+#include <__ranges/views.h>
 #include <compare>          // Required by the standard.
 #include <initializer_list> // Required by the standard.
 #include <iterator>         // Required by the standard.
@@ -232,15 +233,5 @@ namespace std::ranges {
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
-
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
-
-_LIBCPP_BEGIN_NAMESPACE_STD
-
-namespace views = ranges::views;
-
-_LIBCPP_END_NAMESPACE_STD
-
-#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 #endif // _LIBCPP_RANGES
