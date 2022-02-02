@@ -76,8 +76,8 @@ def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
     OpBuilder<(ins "double":$value)>
   ];
 
-  // Invoke a static verify method to verify this constant operation.
-  let verifier = [{ return ::verify(*this); }];
+  // Indicate that additional verification for this operation is necessary.
+  let hasVerifier = 1;
 }
 
 def AddOp : Toy_Op<"add"> {
@@ -224,7 +224,7 @@ def ReturnOp : Toy_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
   }];
 
   // Invoke a static verify method to verify this return operation.
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 }
 
 def TransposeOp : Toy_Op<"transpose"> {
@@ -243,7 +243,7 @@ def TransposeOp : Toy_Op<"transpose"> {
   ];
 
   // Invoke a static verify method to verify this transpose operation.
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 }
 
 #endif // TOY_OPS
