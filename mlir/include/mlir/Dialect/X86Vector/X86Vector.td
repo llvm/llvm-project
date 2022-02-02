@@ -76,7 +76,6 @@ def MaskCompressOp : AVX512_Op<"mask.compress", [NoSideEffect,
   with their respective bit set in writemask `k`) to `dst`, and pass through the
   remaining elements from `src`.
   }];
-  let verifier = [{ return ::verify(*this); }];
   let arguments = (ins VectorOfLengthAndType<[16, 8],
                                              [I1]>:$k,
                    VectorOfLengthAndType<[16, 8],
@@ -88,6 +87,7 @@ def MaskCompressOp : AVX512_Op<"mask.compress", [NoSideEffect,
                                             [F32, I32, F64, I64]>:$dst);
   let assemblyFormat = "$k `,` $a (`,` $src^)? attr-dict"
                        " `:` type($dst) (`,` type($src)^)?";
+  let hasVerifier = 1;
 }
 
 def MaskCompressIntrOp : AVX512_IntrOverloadedOp<"mask.compress", [
