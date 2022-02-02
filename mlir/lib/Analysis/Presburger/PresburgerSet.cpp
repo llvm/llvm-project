@@ -369,11 +369,9 @@ bool PresburgerSet::isEqual(const PresburgerSet &set) const {
 /// false otherwise.
 bool PresburgerSet::isIntegerEmpty() const {
   // The set is empty iff all of the disjuncts are empty.
-  for (const IntegerPolyhedron &poly : integerPolyhedrons) {
-    if (!poly.isIntegerEmpty())
-      return false;
-  }
-  return true;
+  return std::all_of(
+      integerPolyhedrons.begin(), integerPolyhedrons.end(),
+      [](const IntegerPolyhedron &poly) { return poly.isIntegerEmpty(); });
 }
 
 bool PresburgerSet::findIntegerSample(SmallVectorImpl<int64_t> &sample) {
