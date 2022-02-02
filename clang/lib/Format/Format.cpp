@@ -34,6 +34,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
@@ -44,7 +45,6 @@
 #include <algorithm>
 #include <memory>
 #include <mutex>
-#include <numeric>
 #include <string>
 #include <unordered_map>
 
@@ -2521,9 +2521,8 @@ static void sortCppIncludes(const FormatStyle &Style,
   unsigned IncludesBlockSize = IncludesEndOffset - IncludesBeginOffset;
   if (!affectsRange(Ranges, IncludesBeginOffset, IncludesEndOffset))
     return;
-  SmallVector<unsigned, 16> Indices;
-  Indices.resize(Includes.size());
-  std::iota(Indices.begin(), Indices.end(), 0);
+  SmallVector<unsigned, 16> Indices =
+      llvm::to_vector<16>(llvm::seq<unsigned>(0, Includes.size()));
 
   if (Style.SortIncludes == FormatStyle::SI_CaseInsensitive) {
     llvm::stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
@@ -2750,10 +2749,8 @@ static void sortJavaImports(const FormatStyle &Style,
   if (!affectsRange(Ranges, ImportsBeginOffset, ImportsEndOffset))
     return;
 
-  SmallVector<unsigned, 16> Indices;
-  Indices.resize(Imports.size());
-  std::iota(Indices.begin(), Indices.end(), 0);
-
+  SmallVector<unsigned, 16> Indices =
+      llvm::to_vector<16>(llvm::seq<unsigned>(0, Imports.size()));
   SmallVector<unsigned, 16> JavaImportGroups;
   JavaImportGroups.reserve(Imports.size());
   for (const JavaImportDirective &Import : Imports)
