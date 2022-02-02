@@ -63,7 +63,7 @@ namespace std::numbers {
 #include <type_traits>
 #include <version>
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -128,6 +128,6 @@ inline constexpr double phi        = phi_v<double>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif //_LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif //!defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 #endif // _LIBCPP_NUMBERS

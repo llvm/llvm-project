@@ -330,7 +330,7 @@ operator==(const pair<_T1,_T2>& __x, const pair<_T1,_T2>& __y)
     return __x.first == __y.first && __x.second == __y.second;
 }
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 template <class _T1, class _T2>
 _LIBCPP_HIDE_FROM_ABI constexpr
@@ -345,7 +345,7 @@ operator<=>(const pair<_T1,_T2>& __x, const pair<_T1,_T2>& __y)
     return _VSTD::__synth_three_way(__x.second, __y.second);
 }
 
-#else // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#else // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 template <class _T1, class _T2>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
@@ -387,7 +387,7 @@ operator<=(const pair<_T1,_T2>& __x, const pair<_T1,_T2>& __y)
     return !(__y < __x);
 }
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 template <class _T1, class _T2>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
