@@ -185,8 +185,8 @@ struct TransferWritePermutationLowering
     auto newMap = AffineMap::getMinorIdentityMap(
         map.getNumDims(), map.getNumResults(), rewriter.getContext());
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-        op, Type(), newVec, op.source(), op.indices(),
-        AffineMapAttr::get(newMap), newMask, newInBoundsAttr);
+        op, newVec, op.source(), op.indices(), AffineMapAttr::get(newMap),
+        newMask, newInBoundsAttr);
 
     return success();
   }
