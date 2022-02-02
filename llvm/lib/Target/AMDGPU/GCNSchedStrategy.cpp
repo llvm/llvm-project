@@ -493,14 +493,14 @@ void GCNScheduleDAGMILive::computeBlockPressure(const MachineBasicBlock *MBB) {
 
   auto I = MBB->begin();
   auto LiveInIt = MBBLiveIns.find(MBB);
+  auto &Rgn = Regions[CurRegion];
+  auto *NonDbgMI = &*skipDebugInstructionsForward(Rgn.first, Rgn.second);
   if (LiveInIt != MBBLiveIns.end()) {
     auto LiveIn = std::move(LiveInIt->second);
     RPTracker.reset(*MBB->begin(), &LiveIn);
     MBBLiveIns.erase(LiveInIt);
   } else {
-    auto &Rgn = Regions[CurRegion];
     I = Rgn.first;
-    auto *NonDbgMI = &*skipDebugInstructionsForward(Rgn.first, Rgn.second);
     auto LRS = BBLiveInMap.lookup(NonDbgMI);
 #ifdef EXPENSIVE_CHECKS
     assert(isEqual(getLiveRegsBefore(*NonDbgMI, *LIS), LRS));
@@ -511,7 +511,7 @@ void GCNScheduleDAGMILive::computeBlockPressure(const MachineBasicBlock *MBB) {
   for ( ; ; ) {
     I = RPTracker.getNext();
 
-    if (Regions[CurRegion].first == I) {
+    if (Regions[CurRegion].first == I || NonDbgMI == I) {
       LiveIns[CurRegion] = RPTracker.getLiveRegs();
       RPTracker.clearMaxPressure();
     }
