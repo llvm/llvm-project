@@ -21,7 +21,6 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 class SparseTensor_Op<string mnemonic, list<Trait> traits = []>
   : Op<SparseTensor_Dialect, mnemonic, traits> {
   let printer = [{ return ::print(p, *this); }];
-  let verifier = [{ return ::verify(*this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
@@ -50,6 +49,7 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", [NoSideEffect]>,
     ```
   }];
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
+  let hasVerifier = 1;
 }
 
 def SparseTensor_InitOp : SparseTensor_Op<"init", [NoSideEffect]>,
@@ -72,6 +72,7 @@ def SparseTensor_InitOp : SparseTensor_Op<"init", [NoSideEffect]>,
     ```
   }];
   let assemblyFormat = "`[` $sizes `]` attr-dict `:` type($result)";
+  let hasVerifier = 1;
 }
 
 def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
@@ -113,6 +114,7 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
   }];
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [NoSideEffect]>,
@@ -137,6 +139,7 @@ def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [NoSideEffect]>,
   }];
   let assemblyFormat = "$tensor `,` $dim attr-dict `:` type($tensor)"
       " `to` type($result)";
+  let hasVerifier = 1;
 }
 
 def SparseTensor_ToIndicesOp : SparseTensor_Op<"indices", [NoSideEffect]>,
@@ -161,6 +164,7 @@ def SparseTensor_ToIndicesOp : SparseTensor_Op<"indices", [NoSideEffect]>,
   }];
   let assemblyFormat = "$tensor `,` $dim attr-dict `:` type($tensor)"
       " `to` type($result)";
+  let hasVerifier = 1;
 }
 
 def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [NoSideEffect]>,
@@ -183,6 +187,7 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [NoSideEffect]>,
     ```
   }];
   let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($result)";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -217,6 +222,7 @@ def SparseTensor_LexInsertOp : SparseTensor_Op<"lex_insert", []>,
   }];
   let assemblyFormat = "$tensor `,` $indices `,` $value attr-dict `:`"
                        " type($tensor) `,` type($indices) `,` type($value)";
+  let hasVerifier = 1;
 }
 
 def SparseTensor_ExpandOp : SparseTensor_Op<"expand", []>,
@@ -258,6 +264,7 @@ def SparseTensor_ExpandOp : SparseTensor_Op<"expand", []>,
   }];
   let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($values)"
                        " `,` type($filled) `,` type($added) `,` type($count)";
+  let hasVerifier = 1;
 }
 
 def SparseTensor_CompressOp : SparseTensor_Op<"compress", []>,
@@ -292,6 +299,7 @@ def SparseTensor_CompressOp : SparseTensor_Op<"compress", []>,
                         " $added `,` $count attr-dict `:` type($tensor) `,`"
 			" type($indices) `,` type($values) `,` type($filled) `,`"
 			" type($added) `,` type($count)";
+  let hasVerifier = 1;
 }
 
 def SparseTensor_LoadOp : SparseTensor_Op<"load", [SameOperandsAndResultType]>,
@@ -324,6 +332,7 @@ def SparseTensor_LoadOp : SparseTensor_Op<"load", [SameOperandsAndResultType]>,
     ```
   }];
   let assemblyFormat = "$tensor (`hasInserts` $hasInserts^)? attr-dict `:` type($tensor)";
+  let hasVerifier = 1;
 }
 
 def SparseTensor_ReleaseOp : SparseTensor_Op<"release", []>,
@@ -349,6 +358,7 @@ def SparseTensor_ReleaseOp : SparseTensor_Op<"release", []>,
     ```
   }];
   let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
+  let hasVerifier = 1;
 }
 
 def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
@@ -369,6 +379,7 @@ def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
     ```
   }];
   let assemblyFormat = "$tensor `,` $dest attr-dict `:` type($tensor) `,` type($dest)";
+  let hasVerifier = 1;
 }
 
 #endif // SPARSETENSOR_OPS

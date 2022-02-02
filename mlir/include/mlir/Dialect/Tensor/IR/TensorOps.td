@@ -20,7 +20,6 @@ include "mlir/Interfaces/ViewLikeInterface.td"
 class Tensor_Op<string mnemonic, list<Trait> traits = []>
     : Op<Tensor_Dialect, mnemonic, traits> {
   let printer = [{ return ::print(p, *this); }];
-  let verifier = [{ return ::verify(*this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
@@ -59,7 +58,6 @@ def Tensor_CastOp : Tensor_Op<"cast", [
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 
   let hasCanonicalizer = 1;
-  let verifier = ?;
 }
 
 //===----------------------------------------------------------------------===//
@@ -111,6 +109,7 @@ def Tensor_DimOp : Tensor_Op<"dim", [NoSideEffect]> {
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -151,6 +150,7 @@ def Tensor_ExtractOp : Tensor_Op<"extract",
     }]>];
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 
@@ -303,6 +303,7 @@ def Tensor_ExtractSliceOp : BaseOpWithOffsetSizesAndStrides<
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -338,9 +339,6 @@ def Tensor_FromElementsOp : Tensor_Op<"from_elements", [
   let results = (outs AnyStaticShapeTensor:$result);
 
   let assemblyFormat = "$elements attr-dict `:` type($result)";
-
-  // This op is fully verified by its traits.
-  let verifier = ?;
 
   let skipDefaultBuilders = 1;
   let builders = [
@@ -394,6 +392,7 @@ def Tensor_GenerateOp : Tensor_Op<"generate",
   ];
 
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -445,6 +444,7 @@ def Tensor_InsertOp : Tensor_Op<"insert",
     }]>];
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -564,6 +564,7 @@ def Tensor_InsertSliceOp : BaseOpWithOffsetSizesAndStrides<
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -586,7 +587,6 @@ def Tensor_RankOp : Tensor_Op<"rank", [NoSideEffect]> {
   let arguments = (ins AnyTensor:$tensor);
   let results = (outs Index);
 
-  let verifier = ?;
   let hasFolder = 1;
   let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
 }
@@ -650,6 +650,7 @@ def Tensor_ReshapeOp: Tensor_Op<"reshape", [NoSideEffect]>  {
   let assemblyFormat = [{
     $source `(` $shape `)` attr-dict `:` functional-type(operands, results)
   }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -718,6 +719,7 @@ class Tensor_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parseReshapeLikeOp(parser, result); }];
 }
@@ -748,6 +750,7 @@ def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
     ```
   }];
   let extraClassDeclaration = commonExtraClassDeclaration;
+  let hasVerifier = 1;
 }
 
 def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
@@ -776,6 +779,7 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
     ```
   }];
   let extraClassDeclaration = commonExtraClassDeclaration;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -961,6 +965,7 @@ def Tensor_PadOp : Tensor_Op<"pad", [AttrSizedOperandSegments, NoSideEffect,
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 
@@ -984,7 +989,6 @@ def Tensor_YieldOp : Tensor_Op<"yield",
   // Dummy builder to appease code in templated ensureTerminator that
   // GenerateOp's auto-generated parser calls.
   let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
-  let verifier = ?;
 }
 
 #endif // TENSOR_OPS
