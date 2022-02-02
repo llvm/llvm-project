@@ -22,7 +22,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cctype>
-#include <cstddef>
 #include <cstdlib>
 
 using namespace llvm;

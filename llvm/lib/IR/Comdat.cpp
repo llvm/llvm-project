@@ -11,11 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/Comdat.h"
-#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringMapEntry.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Value.h"
 
 using namespace llvm;
 

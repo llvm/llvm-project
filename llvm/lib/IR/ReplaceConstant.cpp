@@ -12,9 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/ReplaceConstant.h"
-#include "llvm/IR/IRBuilder.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/NoFolder.h"
 #include "llvm/IR/ValueMap.h"
 
 namespace llvm {

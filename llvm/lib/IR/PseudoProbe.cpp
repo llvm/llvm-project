@@ -15,7 +15,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
-#include <unordered_set>
+#include "llvm/IR/IntrinsicInst.h"
 
 using namespace llvm;
 

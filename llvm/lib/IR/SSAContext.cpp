@@ -13,10 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/SSAContext.h"
-#include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/ModuleSlotTracker.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
