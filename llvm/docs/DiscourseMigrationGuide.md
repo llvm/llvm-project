@@ -1,6 +1,6 @@
 # Discourse Migration Guide 
 
-## Current Status of Migration: Started. Mailman is back up and the moved lists are in emergency moderation mode. Discourse is read only. Expected downtime for Discourse until 5pm PST. 
+## Current Status of Migration: Migration complete and we are doing our final checks. Discourse still in read-only for a bit more as we finish.
 
 This document is intended to help LLVM users to migrate from the mailing lists to
 Discourse. Discourse has two basic ways for interaction: Via the [web
