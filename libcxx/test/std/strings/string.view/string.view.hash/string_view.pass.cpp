@@ -61,7 +61,7 @@ int main(int, char**)
 #if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
     test<std::u8string_view>();
 #endif
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
+#ifndef TEST_HAS_NO_UNICODE_CHARS
     test<std::u16string_view>();
     test<std::u32string_view>();
 #endif

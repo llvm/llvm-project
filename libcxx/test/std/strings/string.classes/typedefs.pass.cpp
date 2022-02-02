@@ -31,10 +31,10 @@ int main(int, char**)
 #if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
     static_assert((std::is_same<std::u8string, std::basic_string<char8_t> >::value), "");
 #endif
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
+#ifndef TEST_HAS_NO_UNICODE_CHARS
     static_assert((std::is_same<std::u16string, std::basic_string<char16_t> >::value), "");
     static_assert((std::is_same<std::u32string, std::basic_string<char32_t> >::value), "");
-#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif // TEST_HAS_NO_UNICODE_CHARS
 
   return 0;
 }

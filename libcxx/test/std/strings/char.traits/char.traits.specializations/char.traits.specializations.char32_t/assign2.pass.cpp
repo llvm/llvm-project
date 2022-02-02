@@ -29,7 +29,7 @@ constexpr bool test_constexpr()
 
 int main(int, char**)
 {
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
+#ifndef TEST_HAS_NO_UNICODE_CHARS
 #if TEST_STD_VER >= 11
     char32_t c = U'\0';
     std::char_traits<char32_t>::assign(c, U'a');
@@ -39,7 +39,7 @@ int main(int, char**)
 #if TEST_STD_VER > 14
     static_assert(test_constexpr(), "" );
 #endif
-#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif // TEST_HAS_NO_UNICODE_CHARS
 
   return 0;
 }
