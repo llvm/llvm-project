@@ -1056,7 +1056,7 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
 
   // Only handle this instruction when we are building the variable value
   // transfer function.
-  if (!VTracker)
+  if (!VTracker && !TTracker)
     return false;
 
   unsigned InstNo = MI.getOperand(0).getImm();
@@ -1212,7 +1212,8 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
   // for DBG_INSTR_REFs as DBG_VALUEs (just, the former can refer to values that
   // aren't immediately available).
   DbgValueProperties Properties(Expr, false);
-  VTracker->defVar(MI, Properties, NewID);
+  if (VTracker)
+    VTracker->defVar(MI, Properties, NewID);
 
   // If we're on the final pass through the function, decompose this INSTR_REF
   // into a plain DBG_VALUE.
@@ -2853,6 +2854,7 @@ void InstrRefBasedLDV::emitLocations(
     const TargetPassConfig &TPC) {
   TTracker = new TransferTracker(TII, MTracker, MF, *TRI, CalleeSavedRegs, TPC);
   unsigned NumLocs = MTracker->getNumLocs();
+  VTracker = nullptr;
 
   // For each block, load in the machine value locations and variable value
   // live-ins, then step through each instruction in the block. New DBG_VALUEs
@@ -2871,6 +2873,15 @@ void InstrRefBasedLDV::emitLocations(
       TTracker->checkInstForNewValues(CurInst, MI.getIterator());
       ++CurInst;
     }
+
+    // Our block information has now been converted into DBG_VALUEs, to be
+    // inserted below. Free the memory we allocated to track variable / register
+    // values. If we don't, we needlessy record the same info in memory twice.
+    delete[] MInLocs[bbnum];
+    delete[] MOutLocs[bbnum];
+    MInLocs[bbnum] = nullptr;
+    MOutLocs[bbnum] = nullptr;
+    SavedLiveIns[bbnum].clear();
   }
 
    emitTransfers(AllVarsNumbering);
@@ -3107,6 +3118,12 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
                       << " has " << MaxNumBlocks << " basic blocks and "
                       << VarAssignCount
                       << " variable assignments, exceeding limits.\n");
+
+    // Perform memory cleanup that emitLocations would do otherwise.
+    for (int Idx = 0; Idx < MaxNumBlocks; ++Idx) {
+      delete[] MOutLocs[Idx];
+      delete[] MInLocs[Idx];
+    }
   } else {
     // Compute the extended ranges, iterating over scopes. There might be
     // something to be said for ordering them by size/locality, but that's for
@@ -3118,6 +3135,9 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
                    vlocs);
     }
 
+    // Now that we've analysed variable assignments, free any tracking data.
+    vlocs.clear();
+
     // Using the computed value locations and variable values for each block,
     // create the DBG_VALUE instructions representing the extended variable
     // locations.
@@ -3127,11 +3147,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
     Changed = TTracker->Transfers.size() != 0;
   }
 
-  // Common clean-up of memory.
-  for (int Idx = 0; Idx < MaxNumBlocks; ++Idx) {
-    delete[] MOutLocs[Idx];
-    delete[] MInLocs[Idx];
-  }
+  // Elements of these arrays will be deleted by emitLocations.
   delete[] MOutLocs;
   delete[] MInLocs;
 
