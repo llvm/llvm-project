@@ -246,7 +246,14 @@ enum NodeType : unsigned {
   VWMUL_VL,
   VWMULU_VL,
   VWMULSU_VL,
+  VWADD_VL,
   VWADDU_VL,
+  VWSUB_VL,
+  VWSUBU_VL,
+  VWADD_W_VL,
+  VWADDU_W_VL,
+  VWSUB_W_VL,
+  VWSUBU_W_VL,
 
   // Vector compare producing a mask. Fourth operand is input mask. Fifth
   // operand is VL.

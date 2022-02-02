@@ -90,7 +90,7 @@ concept incrementable =
 template<class _Ip>
 concept input_or_output_iterator =
   requires(_Ip __i) {
-    { *__i } -> __referenceable;
+    { *__i } -> __can_reference;
   } &&
   weakly_incrementable<_Ip>;
 

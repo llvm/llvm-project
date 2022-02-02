@@ -2024,11 +2024,31 @@ class PredAttrTrait<string descr, Pred pred> : PredTrait<descr, pred>;
 //===----------------------------------------------------------------------===//
 
 // These classes are used to define operation specific traits.
-class NativeOpTrait<string name> : NativeTrait<name, "Op">;
-class ParamNativeOpTrait<string prop, string params>
-    : ParamNativeTrait<prop, params, "Op">;
-class GenInternalOpTrait<string prop> : GenInternalTrait<prop, "Op">;
-class PredOpTrait<string descr, Pred pred> : PredTrait<descr, pred>;
+class NativeOpTrait<string name, list<Trait> traits = []>
+    : NativeTrait<name, "Op"> {
+  // Specify the list of traits that need to be verified before the verification
+  // of this NativeOpTrait.
+  list<Trait> dependentTraits = traits;
+}
+class ParamNativeOpTrait<string prop, string params,
+                         list<Trait> traits = []>
+    : ParamNativeTrait<prop, params, "Op"> {
+  // Specify the list of traits that need to be verified before the verification
+  // of this ParamNativeOpTrait.
+  list<Trait> dependentTraits = traits;
+}
+class GenInternalOpTrait<string prop, list<Trait> traits = []>
+    : GenInternalTrait<prop, "Op"> {
+  // Specify the list of traits that need to be verified before the verification
+  // of this GenInternalOpTrait.
+  list<Trait> dependentTraits = traits;
+}
+class PredOpTrait<string descr, Pred pred, list<Trait> traits = []>
+    : PredTrait<descr, pred> {
+  // Specify the list of traits that need to be verified before the verification
+  // of this PredOpTrait.
+  list<Trait> dependentTraits = traits;
+}
 
 // Op defines an affine scope.
 def AffineScope : NativeOpTrait<"AffineScope">;
@@ -2164,11 +2184,16 @@ class InterfaceTrait<string name> : NativeTrait<"", ""> {
 // OpInterfaceTrait corresponds to a specific 'OpInterface' class defined in
 // C++. The purpose to wrap around C++ symbol string with this class is to make
 // interfaces specified for ops in TableGen less alien and more integrated.
-class OpInterfaceTrait<string name, code verifyBody = [{}]>
+class OpInterfaceTrait<string name, code verifyBody = [{}],
+                       list<Trait> traits = []>
     : InterfaceTrait<name> {
   // Specify the body of the verification function. `$_op` will be replaced with
   // the operation being verified.
   code verify = verifyBody;
+
+  // Specify the list of traits that need to be verified before the verification
+  // of this OpInterfaceTrait.
+  list<Trait> dependentTraits = traits;
 }
 
 // This class represents a single, optionally static, interface method.
