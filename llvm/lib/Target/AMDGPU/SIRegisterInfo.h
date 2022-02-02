@@ -64,6 +64,8 @@ public:
   MCRegister reservedPrivateSegmentBufferReg(const MachineFunction &MF) const;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
+  bool isAsmClobberable(const MachineFunction &MF,
+                        MCRegister PhysReg) const override;
 
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
   const MCPhysReg *getCalleeSavedRegsViaCopy(const MachineFunction *MF) const;

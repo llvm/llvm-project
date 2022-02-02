@@ -690,6 +690,11 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
+bool SIRegisterInfo::isAsmClobberable(const MachineFunction &MF,
+                                      MCRegister PhysReg) const {
+  return !MF.getRegInfo().isReserved(PhysReg);
+}
+
 bool SIRegisterInfo::shouldRealignStack(const MachineFunction &MF) const {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   // On entry, the base address is 0, so it can't possibly need any more
