@@ -90,7 +90,7 @@ acc.update wait_devnum(%cst: index) host(%value: memref<10xf32>)
 
 %cst = arith.constant 1 : index
 %value = memref.alloc() : memref<10xf32>
-// expected-error@+1 {{async attribute cannot appear with  asyncOperand}}
+// expected-error@+1 {{async attribute cannot appear with asyncOperand}}
 acc.update async(%cst: index) host(%value: memref<10xf32>) attributes {async}
 
 // -----
