@@ -184,23 +184,23 @@ static LogicalResult getDivRepr(const IntegerPolyhedron &cst, unsigned pos,
 // explicit representation has not been found yet, otherwise returns `true`.
 static bool checkExplicitRepresentation(const IntegerPolyhedron &cst,
                                         ArrayRef<bool> foundRepr,
-                                        SmallVectorImpl<int64_t> &dividend,
+                                        ArrayRef<int64_t> dividend,
                                         unsigned pos) {
   // Exit to avoid circular dependencies between divisions.
-  unsigned c, f;
-  for (c = 0, f = cst.getNumIds(); c < f; ++c) {
+  for (unsigned c = 0, e = cst.getNumIds(); c < e; ++c) {
     if (c == pos)
       continue;
-    if (!foundRepr[c] && dividend[c] != 0)
-      break;
+
+    if (!foundRepr[c] && dividend[c] != 0) {
+      // Expression can't be constructed as it depends on a yet unknown
+      // identifier.
+      //
+      // TODO: Visit/compute the identifiers in an order so that this doesn't
+      // happen. More complex but much more efficient.
+      return false;
+    }
   }
 
-  // Expression can't be constructed as it depends on a yet unknown
-  // identifier.
-  // TODO: Visit/compute the identifiers in an order so that this doesn't
-  // happen. More complex but much more efficient.
-  if (c < f)
-    return false;
   return true;
 }
 
