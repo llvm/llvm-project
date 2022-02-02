@@ -95,6 +95,12 @@ struct pair
                                 is_nothrow_swappable_v<T2>);                     // constexpr in C++20
 };
 
+template<class T1, class T2, class U1, class U2, template<class> class TQual, template<class> class UQual>
+struct basic_common_reference<pair<T1, T2>, pair<U1, U2>, TQual, UQual>;         // since C++23
+
+template<class T1, class T2, class U1, class U2>
+struct common_type<pair<T1, T2>, pair<U1, U2>>;                                  // since C++23
+
 template<class T1, class T2> pair(T1, T2) -> pair<T1, T2>;
 
 template <class T1, class T2> bool operator==(const pair<T1,T2>&, const pair<T1,T2>&); // constexpr in C++14
