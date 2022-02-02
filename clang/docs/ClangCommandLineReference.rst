@@ -2077,6 +2077,10 @@ Enable debugging in the OpenMP offloading device RTL
 
 Use the new bitcode library for OpenMP offloading
 
+.. option:: -fopenmp-new-driver
+
+Use the new scheme for creating and linking OpenMP offloading code
+
 .. option:: -fopenmp-version=<arg>
 
 Set OpenMP version (e.g. 45 for OpenMP 4.5, 50 for OpenMP 5.0). Default value is 50.

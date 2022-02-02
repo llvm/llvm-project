@@ -14,7 +14,8 @@ This tool works as a wrapper over a linking job. The tool is used to create
 linked device images for offloading. It scans the linker's input for embedded
 device offloading data stored in sections ``.llvm.offloading.<triple>.<arch>``
 and extracts it as a temporary file. The extracted device files will then be
-passed to a device linking job to create a final device image.
+passed to a device linking job to create a final device image. The sections will
+also be stripped and the resulting file passed back to the host linker.
 
 Usage
 =====
@@ -37,16 +38,16 @@ override parsing.
   
   clang-linker-wrapper options:
   
-    --host-triple=<string>    - Triple to use for the host compilation
-    --linker-path=<string>    - Path of linker binary
-    --opt-level=<string>      - Optimization level for LTO
-    --ptxas-option=<string>   - Argument to pass to the ptxas invocation
-    --save-temps              - Save intermediary results.
-    --strip-sections          - Strip offloading sections from the host object file.
-    --target-embed-bc         - Embed linked bitcode instead of an executable device image
-    --target-feature=<string> - Target features for triple
-    --target-library=<string> - Path for the target bitcode library
-    -v                        - Verbose output from tools
+    --host-triple=<string>     - Triple to use for the host compilation
+    --linker-path=<string>     - Path of linker binary
+    --opt-level=<string>       - Optimization level for LTO
+    --ptxas-option=<string>    - Argument to pass to the ptxas invocation
+    --save-temps               - Save intermediary results.
+    --strip-sections           - Strip offloading sections from the host object file.
+    --target-embed-bc          - Embed linked bitcode instead of an executable device image
+    --target-feature=<string>  - Target features for triple
+    --bitcode-library=<string> - Path for the target bitcode library
+    -v                         - Verbose output from tools
 
 Example
 =======
@@ -58,4 +59,4 @@ section and run a device linking job on it.
 
 .. code-block:: console
 
-  clang-linker-wrapper -host-triple x86_64-unknown-linux-gnu -linker-path /usr/bin/ld -- <Args>
+  clang-linker-wrapper -host-triple x86_64 -linker-path /usr/bin/ld -- <Args>
