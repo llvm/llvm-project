@@ -42,6 +42,32 @@ Optional<unsigned> getVVPOpcode(unsigned Opcode) {
   return None;
 }
 
+bool maySafelyIgnoreMask(SDValue Op) {
+  auto VVPOpc = getVVPOpcode(Op->getOpcode());
+  auto Opc = VVPOpc.getValueOr(Op->getOpcode());
+
+  switch (Opc) {
+  case VEISD::VVP_SDIV:
+  case VEISD::VVP_UDIV:
+  case VEISD::VVP_FDIV:
+  case VEISD::VVP_SELECT:
+    return false;
+
+  default:
+    return true;
+  }
+}
+
+bool isVVPOrVEC(unsigned Opcode) {
+  switch (Opcode) {
+  case VEISD::VEC_BROADCAST:
+#define ADD_VVP_OP(VVPNAME, ...) case VEISD::VVPNAME:
+#include "VVPNodes.def"
+    return true;
+  }
+  return false;
+}
+
 bool isVVPBinaryOp(unsigned VVPOpcode) {
   switch (VVPOpcode) {
 #define ADD_BINARY_VVP_OP(VVPNAME, ...)                                        \
@@ -50,6 +76,44 @@ bool isVVPBinaryOp(unsigned VVPOpcode) {
 #include "VVPNodes.def"
   }
   return false;
+}
+
+// Return the AVL operand position for this VVP or VEC Op.
+Optional<int> getAVLPos(unsigned Opc) {
+  // This is only available for VP SDNodes
+  auto PosOpt = ISD::getVPExplicitVectorLengthIdx(Opc);
+  if (PosOpt)
+    return *PosOpt;
+
+  // VVP Opcodes.
+  if (isVVPBinaryOp(Opc))
+    return 3;
+
+  // VM Opcodes.
+  switch (Opc) {
+  case VEISD::VEC_BROADCAST:
+    return 1;
+  case VEISD::VVP_SELECT:
+    return 3;
+  }
+
+  return None;
+}
+
+bool isLegalAVL(SDValue AVL) { return AVL->getOpcode() == VEISD::LEGALAVL; }
+
+SDValue getNodeAVL(SDValue Op) {
+  auto PosOpt = getAVLPos(Op->getOpcode());
+  return PosOpt ? Op->getOperand(*PosOpt) : SDValue();
+}
+
+std::pair<SDValue, bool> getAnnotatedNodeAVL(SDValue Op) {
+  SDValue AVL = getNodeAVL(Op);
+  if (!AVL)
+    return {SDValue(), true};
+  if (isLegalAVL(AVL))
+    return {AVL->getOperand(0), true};
+  return {AVL, false};
 }
 
 SDValue VECustomDAG::getConstant(uint64_t Val, EVT VT, bool IsTarget,
@@ -76,6 +140,12 @@ SDValue VECustomDAG::getBroadcast(EVT ResultVT, SDValue Scalar,
   }
 
   return getNode(VEISD::VEC_BROADCAST, ResultVT, {Scalar, AVL});
+}
+
+SDValue VECustomDAG::annotateLegalAVL(SDValue AVL) const {
+  if (isLegalAVL(AVL))
+    return AVL;
+  return getNode(VEISD::LEGALAVL, AVL.getValueType(), AVL);
 }
 
 } // namespace llvm

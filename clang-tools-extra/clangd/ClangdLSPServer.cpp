@@ -71,8 +71,8 @@ llvm::Optional<int64_t> decodeVersion(llvm::StringRef Encoded) {
   return llvm::None;
 }
 
-const llvm::StringLiteral APPLY_FIX_COMMAND = "clangd.applyFix";
-const llvm::StringLiteral APPLY_TWEAK_COMMAND = "clangd.applyTweak";
+const llvm::StringLiteral ApplyFixCommand = "clangd.applyFix";
+const llvm::StringLiteral ApplyTweakCommand = "clangd.applyTweak";
 
 /// Transforms a tweak into a code action that would apply it if executed.
 /// EXPECTS: T.prepare() was called and returned true.
@@ -88,7 +88,7 @@ CodeAction toCodeAction(const ClangdServer::TweakRef &T, const URIForFile &File,
   //        directly.
   CA.command.emplace();
   CA.command->title = T.Title;
-  CA.command->command = std::string(APPLY_TWEAK_COMMAND);
+  CA.command->command = std::string(ApplyTweakCommand);
   TweakArgs Args;
   Args.file = File;
   Args.tweakID = T.ID;
@@ -950,7 +950,7 @@ static llvm::Optional<Command> asCommand(const CodeAction &Action) {
   if (Action.command) {
     Cmd = *Action.command;
   } else if (Action.edit) {
-    Cmd.command = std::string(APPLY_FIX_COMMAND);
+    Cmd.command = std::string(ApplyFixCommand);
     Cmd.argument = *Action.edit;
   } else {
     return None;
@@ -1495,8 +1495,8 @@ void ClangdLSPServer::bindMethods(LSPBinder &Bind,
   Bind.method("$/memoryUsage", this, &ClangdLSPServer::onMemoryUsage);
   if (Opts.FoldingRanges)
     Bind.method("textDocument/foldingRange", this, &ClangdLSPServer::onFoldingRange);
-  Bind.command(APPLY_FIX_COMMAND, this, &ClangdLSPServer::onCommandApplyEdit);
-  Bind.command(APPLY_TWEAK_COMMAND, this, &ClangdLSPServer::onCommandApplyTweak);
+  Bind.command(ApplyFixCommand, this, &ClangdLSPServer::onCommandApplyEdit);
+  Bind.command(ApplyTweakCommand, this, &ClangdLSPServer::onCommandApplyTweak);
 
   ApplyWorkspaceEdit = Bind.outgoingMethod("workspace/applyEdit");
   PublishDiagnostics = Bind.outgoingNotification("textDocument/publishDiagnostics");

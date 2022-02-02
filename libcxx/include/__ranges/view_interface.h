@@ -186,7 +186,7 @@ public:
   }
 };
 
-}
+} // namespace ranges
 
 #endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 

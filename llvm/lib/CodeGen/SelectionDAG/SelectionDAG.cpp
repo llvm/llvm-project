@@ -2449,7 +2449,7 @@ SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &DemandedBits,
   switch (V.getOpcode()) {
   default:
     return TLI->SimplifyMultipleUseDemandedBits(V, DemandedBits, DemandedElts,
-                                                *this, 0);
+                                                *this);
   case ISD::Constant: {
     const APInt &CVal = cast<ConstantSDNode>(V)->getAPIntValue();
     APInt NewVal = CVal & DemandedBits;
@@ -3082,6 +3082,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     bool SelfMultiply = Op.getOperand(0) == Op.getOperand(1);
+    // TODO: SelfMultiply can be poison, but not undef.
     SelfMultiply &= isGuaranteedNotToBeUndefOrPoison(
         Op.getOperand(0), DemandedElts, false, Depth + 1);
     Known = KnownBits::mul(Known, Known2, SelfMultiply);

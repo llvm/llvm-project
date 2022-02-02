@@ -270,7 +270,7 @@ createFullPartialLinalgCopy(RewriterBase &b, vector::TransferReadOp xferOp,
         std::pair<Value, Value> copyArgs = createSubViewIntersection(
             rewriter, cast<VectorTransferOpInterface>(xferOp.getOperation()),
             alloc);
-        b.create<linalg::CopyOp>(loc, copyArgs.first, copyArgs.second);
+        b.create<memref::CopyOp>(loc, copyArgs.first, copyArgs.second);
         Value casted =
             b.create<memref::CastOp>(loc, alloc, compatibleMemRefType);
         scf::ValueVector viewAndIndices{casted};
@@ -403,7 +403,7 @@ static void createFullPartialLinalgCopy(RewriterBase &b,
     std::pair<Value, Value> copyArgs = createSubViewIntersection(
         rewriter, cast<VectorTransferOpInterface>(xferOp.getOperation()),
         alloc);
-    b.create<linalg::CopyOp>(loc, copyArgs.first, copyArgs.second);
+    b.create<memref::CopyOp>(loc, copyArgs.first, copyArgs.second);
     b.create<scf::YieldOp>(loc, ValueRange{});
   });
 }

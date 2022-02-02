@@ -42,7 +42,7 @@ def BufferDeallocation : Pass<"buffer-deallocation", "FuncOp"> {
         }: memref<2xf32>, memref<2xf32>
         br ^bb3(%0 : memref<2xf32>)
       ^bb3(%1: memref<2xf32>):
-        "linalg.copy"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
+        "memref.copy"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
         return
       }
     }
@@ -58,7 +58,7 @@ def BufferDeallocation : Pass<"buffer-deallocation", "FuncOp"> {
         cond_br %arg0, ^bb1, ^bb2
       ^bb1:  // pred: ^bb0
         %0 = memref.alloc() : memref<2xf32>
-        linalg.copy(%arg1, %0) : memref<2xf32>, memref<2xf32>
+        memref.copy(%arg1, %0) : memref<2xf32>, memref<2xf32>
         br ^bb3(%0 : memref<2xf32>)
       ^bb2:  // pred: ^bb0
         %1 = memref.alloc() : memref<2xf32>
@@ -72,11 +72,11 @@ def BufferDeallocation : Pass<"buffer-deallocation", "FuncOp"> {
           linalg.yield %4 : f32
         }: memref<2xf32>, memref<2xf32>
         %2 = memref.alloc() : memref<2xf32>
-        linalg.copy(%1, %2) : memref<2xf32>, memref<2xf32>
+        memref.copy(%1, %2) : memref<2xf32>, memref<2xf32>
         dealloc %1 : memref<2xf32>
         br ^bb3(%2 : memref<2xf32>)
       ^bb3(%3: memref<2xf32>):  // 2 preds: ^bb1, ^bb2
-        linalg.copy(%3, %arg2) : memref<2xf32>, memref<2xf32>
+        memref.copy(%3, %arg2) : memref<2xf32>, memref<2xf32>
         dealloc %3 : memref<2xf32>
         return
       }

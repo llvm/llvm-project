@@ -53,6 +53,11 @@ intptr_t mlirContextGetNumRegisteredDialects(MlirContext context) {
   return static_cast<intptr_t>(unwrap(context)->getAvailableDialects().size());
 }
 
+void mlirContextAppendDialectRegistry(MlirContext ctx,
+                                      MlirDialectRegistry registry) {
+  unwrap(ctx)->appendDialectRegistry(*unwrap(registry));
+}
+
 // TODO: expose a cheaper way than constructing + sorting a vector only to take
 // its size.
 intptr_t mlirContextGetNumLoadedDialects(MlirContext context) {
@@ -86,6 +91,18 @@ bool mlirDialectEqual(MlirDialect dialect1, MlirDialect dialect2) {
 
 MlirStringRef mlirDialectGetNamespace(MlirDialect dialect) {
   return wrap(unwrap(dialect)->getNamespace());
+}
+
+//===----------------------------------------------------------------------===//
+// DialectRegistry API.
+//===----------------------------------------------------------------------===//
+
+MlirDialectRegistry mlirDialectRegistryCreate() {
+  return wrap(new DialectRegistry());
+}
+
+void mlirDialectRegistryDestroy(MlirDialectRegistry registry) {
+  delete unwrap(registry);
 }
 
 //===----------------------------------------------------------------------===//

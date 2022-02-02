@@ -177,6 +177,7 @@ public:
 
   void parseLoadCommands(MemoryBufferRef mb);
   void parseReexports(const llvm::MachO::InterfaceFile &interface);
+  bool isReferenced() const { return numReferencedSymbols > 0; }
 
   static bool classof(const InputFile *f) { return f->kind() == DylibKind; }
 
@@ -187,21 +188,17 @@ public:
   uint32_t compatibilityVersion = 0;
   uint32_t currentVersion = 0;
   int64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel
+  unsigned numReferencedSymbols = 0;
   RefState refState;
   bool reexport = false;
   bool forceNeeded = false;
   bool forceWeakImport = false;
   bool deadStrippable = false;
   bool explicitlyLinked = false;
-
-  unsigned numReferencedSymbols = 0;
-
-  bool isReferenced() const { return numReferencedSymbols > 0; }
-
   // An executable can be used as a bundle loader that will load the output
   // file being linked, and that contains symbols referenced, but not
   // implemented in the bundle. When used like this, it is very similar
-  // to a Dylib, so we re-used the same class to represent it.
+  // to a dylib, so we've used the same class to represent it.
   bool isBundleLoader;
 
 private:

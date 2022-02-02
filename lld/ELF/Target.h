@@ -227,6 +227,8 @@ class AArch64Relaxer {
 public:
   explicit AArch64Relaxer(ArrayRef<Relocation> relocs);
 
+  bool tryRelaxAdrpAdd(const Relocation &adrpRel, const Relocation &addRel,
+                       uint64_t secAddr, uint8_t *buf) const;
   bool tryRelaxAdrpLdr(const Relocation &adrpRel, const Relocation &ldrRel,
                        uint64_t secAddr, uint8_t *buf) const;
 };
@@ -297,5 +299,26 @@ inline void write64(void *p, uint64_t v) {
 }
 } // namespace elf
 } // namespace lld
+
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+#endif
+#define invokeELFT(f, ...)                                                     \
+  switch (config->ekind) {                                                     \
+  case ELF32LEKind:                                                            \
+    f<ELF32LE>(__VA_ARGS__);                                                   \
+    break;                                                                     \
+  case ELF32BEKind:                                                            \
+    f<ELF32BE>(__VA_ARGS__);                                                   \
+    break;                                                                     \
+  case ELF64LEKind:                                                            \
+    f<ELF64LE>(__VA_ARGS__);                                                   \
+    break;                                                                     \
+  case ELF64BEKind:                                                            \
+    f<ELF64BE>(__VA_ARGS__);                                                   \
+    break;                                                                     \
+  default:                                                                     \
+    llvm_unreachable("unknown config->ekind");                                 \
+  }
 
 #endif

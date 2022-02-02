@@ -1,5 +1,5 @@
 # RUN: rm -rf %t && split-file %s %t
-
+; REQUIRES: default_target
 ; RUN: llvm-as < %t/hasCtor.ll > %t.bc
 ; RUN: llvm-lto %t.bc -query-hasCtorDtor | FileCheck %s --check-prefixes=POSITIVE
 

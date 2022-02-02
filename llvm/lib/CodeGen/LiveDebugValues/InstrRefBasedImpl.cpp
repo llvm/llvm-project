@@ -274,6 +274,13 @@ public:
 
     // Map of the preferred location for each value.
     DenseMap<ValueIDNum, LocIdx> ValueToLoc;
+
+    // Initialized the preferred-location map with illegal locations, to be
+    // filled in later.
+    for (auto &VLoc : VLocs)
+      if (VLoc.second.Kind == DbgValue::Def)
+        ValueToLoc.insert({VLoc.second.ID, LocIdx::MakeIllegalLoc()});
+
     ActiveMLocs.reserve(VLocs.size());
     ActiveVLocs.reserve(VLocs.size());
 
@@ -285,21 +292,20 @@ public:
       ValueIDNum &VNum = MLocs[Idx.asU64()];
       VarLocs.push_back(VNum);
 
-      // Short-circuit unnecessary preferred location update.
-      if (VLocs.empty())
+      // Is there a variable that wants a location for this value? If not, skip.
+      auto VIt = ValueToLoc.find(VNum);
+      if (VIt == ValueToLoc.end())
         continue;
 
-      auto it = ValueToLoc.find(VNum);
+      LocIdx CurLoc = VIt->second;
       // In order of preference, pick:
       //  * Callee saved registers,
       //  * Other registers,
       //  * Spill slots.
-      if (it == ValueToLoc.end() || MTracker->isSpill(it->second) ||
-          (!isCalleeSaved(it->second) && isCalleeSaved(Idx.asU64()))) {
+      if (CurLoc.isIllegal() || MTracker->isSpill(CurLoc) ||
+          (!isCalleeSaved(CurLoc) && isCalleeSaved(Idx.asU64()))) {
         // Insert, or overwrite if insertion failed.
-        auto PrefLocRes = ValueToLoc.insert(std::make_pair(VNum, Idx));
-        if (!PrefLocRes.second)
-          PrefLocRes.first->second = Idx;
+        VIt->second = Idx;
       }
     }
 
@@ -314,7 +320,7 @@ public:
       // If the value has no location, we can't make a variable location.
       const ValueIDNum &Num = Var.second.ID;
       auto ValuesPreferredLoc = ValueToLoc.find(Num);
-      if (ValuesPreferredLoc == ValueToLoc.end()) {
+      if (ValuesPreferredLoc->second.isIllegal()) {
         // If it's a def that occurs in this block, register it as a
         // use-before-def to be resolved as we step through the block.
         if (Num.getBlock() == (unsigned)MBB.getNumber() && !Num.isPHI())
@@ -1374,18 +1380,20 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
 
   // Look for any clobbers performed by a register mask. Only test locations
   // that are actually being tracked.
-  for (auto L : MTracker->locations()) {
-    // Stack locations can't be clobbered by regmasks.
-    if (MTracker->isSpill(L.Idx))
-      continue;
+  if (!RegMaskPtrs.empty()) {
+    for (auto L : MTracker->locations()) {
+      // Stack locations can't be clobbered by regmasks.
+      if (MTracker->isSpill(L.Idx))
+        continue;
 
-    Register Reg = MTracker->LocIdxToLocID[L.Idx];
-    if (IgnoreSPAlias(Reg))
-      continue;
+      Register Reg = MTracker->LocIdxToLocID[L.Idx];
+      if (IgnoreSPAlias(Reg))
+        continue;
 
-    for (auto *MO : RegMaskPtrs)
-      if (MO->clobbersPhysReg(Reg))
-        TTracker->clobberMloc(L.Idx, MI.getIterator(), false);
+      for (auto *MO : RegMaskPtrs)
+        if (MO->clobbersPhysReg(Reg))
+          TTracker->clobberMloc(L.Idx, MI.getIterator(), false);
+    }
   }
 
   // Tell TTracker about any folded stack store.

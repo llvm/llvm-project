@@ -1108,8 +1108,10 @@ template <class LP> void Writer::run() {
   treatSpecialUndefineds();
   if (config->entry && !isa<Undefined>(config->entry))
     prepareBranchTarget(config->entry);
+
   // Canonicalization of all pointers to InputSections should be handled by
-  // these two methods.
+  // these two scan* methods. I.e. from this point onward, for all live
+  // InputSections, we should have `isec->canonical() == isec`.
   scanSymbols();
   scanRelocations();
 
@@ -1119,6 +1121,8 @@ template <class LP> void Writer::run() {
 
   if (in.stubHelper->isNeeded())
     in.stubHelper->setup();
+  // At this point, we should know exactly which output sections are needed,
+  // courtesy of scanSymbols() and scanRelocations().
   createOutputSections<LP>();
 
   // After this point, we create no new segments; HOWEVER, we might
@@ -1146,11 +1150,10 @@ void macho::resetWriter() { LCDylib::resetInstanceCount(); }
 
 void macho::createSyntheticSections() {
   in.header = make<MachHeaderSection>();
-  if (config->dedupLiterals) {
+  if (config->dedupLiterals)
     in.cStringSection = make<DeduplicatedCStringSection>();
-  } else {
+  else
     in.cStringSection = make<CStringSection>();
-  }
   in.wordLiteralSection =
       config->dedupLiterals ? make<WordLiteralSection>() : nullptr;
   in.rebase = make<RebaseSection>();

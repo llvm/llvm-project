@@ -30,8 +30,8 @@ define void @vselect_vx_v8i32(i32 %a, <8 x i32>* %b, <8 x i1>* %cc, <8 x i32>* %
 ; CHECK-NEXT:    vse32.v v8, (a3)
 ; CHECK-NEXT:    ret
   %vb = load <8 x i32>, <8 x i32>* %b
-  %ahead = insertelement <8 x i32> undef, i32 %a, i32 0
-  %va = shufflevector <8 x i32> %ahead, <8 x i32> undef, <8 x i32> zeroinitializer
+  %ahead = insertelement <8 x i32> poison, i32 %a, i32 0
+  %va = shufflevector <8 x i32> %ahead, <8 x i32> poison, <8 x i32> zeroinitializer
   %vcc = load <8 x i1>, <8 x i1>* %cc
   %vsel = select <8 x i1> %vcc, <8 x i32> %va, <8 x i32> %vb
   store <8 x i32> %vsel, <8 x i32>* %z
@@ -48,8 +48,8 @@ define void @vselect_vi_v8i32(<8 x i32>* %b, <8 x i1>* %cc, <8 x i32>* %z) {
 ; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
   %vb = load <8 x i32>, <8 x i32>* %b
-  %a = insertelement <8 x i32> undef, i32 -1, i32 0
-  %va = shufflevector <8 x i32> %a, <8 x i32> undef, <8 x i32> zeroinitializer
+  %a = insertelement <8 x i32> poison, i32 -1, i32 0
+  %va = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> zeroinitializer
   %vcc = load <8 x i1>, <8 x i1>* %cc
   %vsel = select <8 x i1> %vcc, <8 x i32> %va, <8 x i32> %vb
   store <8 x i32> %vsel, <8 x i32>* %z
@@ -84,8 +84,8 @@ define void @vselect_vx_v8f32(float %a, <8 x float>* %b, <8 x i1>* %cc, <8 x flo
 ; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
   %vb = load <8 x float>, <8 x float>* %b
-  %ahead = insertelement <8 x float> undef, float %a, i32 0
-  %va = shufflevector <8 x float> %ahead, <8 x float> undef, <8 x i32> zeroinitializer
+  %ahead = insertelement <8 x float> poison, float %a, i32 0
+  %va = shufflevector <8 x float> %ahead, <8 x float> poison, <8 x i32> zeroinitializer
   %vcc = load <8 x i1>, <8 x i1>* %cc
   %vsel = select <8 x i1> %vcc, <8 x float> %va, <8 x float> %vb
   store <8 x float> %vsel, <8 x float>* %z
@@ -102,8 +102,8 @@ define void @vselect_vfpzero_v8f32(<8 x float>* %b, <8 x i1>* %cc, <8 x float>* 
 ; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
   %vb = load <8 x float>, <8 x float>* %b
-  %a = insertelement <8 x float> undef, float 0.0, i32 0
-  %va = shufflevector <8 x float> %a, <8 x float> undef, <8 x i32> zeroinitializer
+  %a = insertelement <8 x float> poison, float 0.0, i32 0
+  %va = shufflevector <8 x float> %a, <8 x float> poison, <8 x i32> zeroinitializer
   %vcc = load <8 x i1>, <8 x i1>* %cc
   %vsel = select <8 x i1> %vcc, <8 x float> %va, <8 x float> %vb
   store <8 x float> %vsel, <8 x float>* %z
@@ -138,8 +138,8 @@ define void @vselect_vx_v16i16(i16 signext %a, <16 x i16>* %b, <16 x i1>* %cc, <
 ; CHECK-NEXT:    vse16.v v8, (a3)
 ; CHECK-NEXT:    ret
   %vb = load <16 x i16>, <16 x i16>* %b
-  %ahead = insertelement <16 x i16> undef, i16 %a, i32 0
-  %va = shufflevector <16 x i16> %ahead, <16 x i16> undef, <16 x i32> zeroinitializer
+  %ahead = insertelement <16 x i16> poison, i16 %a, i32 0
+  %va = shufflevector <16 x i16> %ahead, <16 x i16> poison, <16 x i32> zeroinitializer
   %vcc = load <16 x i1>, <16 x i1>* %cc
   %vsel = select <16 x i1> %vcc, <16 x i16> %va, <16 x i16> %vb
   store <16 x i16> %vsel, <16 x i16>* %z
@@ -156,8 +156,8 @@ define void @vselect_vi_v16i16(<16 x i16>* %b, <16 x i1>* %cc, <16 x i16>* %z) {
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    ret
   %vb = load <16 x i16>, <16 x i16>* %b
-  %a = insertelement <16 x i16> undef, i16 4, i32 0
-  %va = shufflevector <16 x i16> %a, <16 x i16> undef, <16 x i32> zeroinitializer
+  %a = insertelement <16 x i16> poison, i16 4, i32 0
+  %va = shufflevector <16 x i16> %a, <16 x i16> poison, <16 x i32> zeroinitializer
   %vcc = load <16 x i1>, <16 x i1>* %cc
   %vsel = select <16 x i1> %vcc, <16 x i16> %va, <16 x i16> %vb
   store <16 x i16> %vsel, <16 x i16>* %z
@@ -194,8 +194,8 @@ define void @vselect_vx_v32f16(half %a, <32 x half>* %b, <32 x i1>* %cc, <32 x h
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    ret
   %vb = load <32 x half>, <32 x half>* %b
-  %ahead = insertelement <32 x half> undef, half %a, i32 0
-  %va = shufflevector <32 x half> %ahead, <32 x half> undef, <32 x i32> zeroinitializer
+  %ahead = insertelement <32 x half> poison, half %a, i32 0
+  %va = shufflevector <32 x half> %ahead, <32 x half> poison, <32 x i32> zeroinitializer
   %vcc = load <32 x i1>, <32 x i1>* %cc
   %vsel = select <32 x i1> %vcc, <32 x half> %va, <32 x half> %vb
   store <32 x half> %vsel, <32 x half>* %z
@@ -213,8 +213,8 @@ define void @vselect_vfpzero_v32f16(<32 x half>* %b, <32 x i1>* %cc, <32 x half>
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    ret
   %vb = load <32 x half>, <32 x half>* %b
-  %a = insertelement <32 x half> undef, half 0.0, i32 0
-  %va = shufflevector <32 x half> %a, <32 x half> undef, <32 x i32> zeroinitializer
+  %a = insertelement <32 x half> poison, half 0.0, i32 0
+  %va = shufflevector <32 x half> %a, <32 x half> poison, <32 x i32> zeroinitializer
   %vcc = load <32 x i1>, <32 x i1>* %cc
   %vsel = select <32 x i1> %vcc, <32 x half> %va, <32 x half> %vb
   store <32 x half> %vsel, <32 x half>* %z

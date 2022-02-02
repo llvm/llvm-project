@@ -149,3 +149,9 @@ clangd_benchmarks_dir = os.path.join(os.path.dirname(config.clang_tools_dir),
                                      "clangd", "benchmarks")
 config.substitutions.append(('%clangd-benchmark-dir',
                              '%s' % (clangd_benchmarks_dir)))
+config.substitutions.append(('%llvmshlibdir', config.clang_libs_dir))
+config.substitutions.append(('%pluginext', config.llvm_plugin_ext))
+
+# Plugins (loadable modules)
+if config.has_plugins and config.llvm_plugin_ext:
+    config.available_features.add('plugins')

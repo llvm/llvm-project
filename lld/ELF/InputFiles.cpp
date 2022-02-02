@@ -13,6 +13,7 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
+#include "Target.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/DWARF.h"
 #include "llvm/ADT/STLExtras.h"
@@ -217,24 +218,7 @@ template <class ELFT> static void doParseFile(InputFile *file) {
 }
 
 // Add symbols in File to the symbol table.
-void elf::parseFile(InputFile *file) {
-  switch (config->ekind) {
-  case ELF32LEKind:
-    doParseFile<ELF32LE>(file);
-    return;
-  case ELF32BEKind:
-    doParseFile<ELF32BE>(file);
-    return;
-  case ELF64LEKind:
-    doParseFile<ELF64LE>(file);
-    return;
-  case ELF64BEKind:
-    doParseFile<ELF64BE>(file);
-    return;
-  default:
-    llvm_unreachable("unknown ELFT");
-  }
-}
+void elf::parseFile(InputFile *file) { invokeELFT(doParseFile, file); }
 
 // Concatenates arguments to construct a string representing an error location.
 static std::string createFileLineMsg(StringRef path, unsigned line) {

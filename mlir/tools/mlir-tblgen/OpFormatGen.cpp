@@ -2707,7 +2707,7 @@ OpFormatParser::parseQualifiedDirective(SMLoc loc, Context context) {
         return element;
       })
       .Default([&](auto *element) {
-        return emitError(
+        return this->emitError(
             loc,
             "'qualified' directive expects an attribute or a `type` directive");
       });

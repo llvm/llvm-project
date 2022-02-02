@@ -407,6 +407,7 @@ def CopyOp : MemRef_Op<"copy",
   }];
 
   let hasCanonicalizer = 1;
+  let hasFolder = 1;
   let verifier = ?;
 }
 

@@ -99,8 +99,8 @@ bool EditIntegerInput(
   std::optional<int> remaining;
   std::optional<char32_t> next;
   bool negate{ScanNumericPrefix(io, edit, next, remaining)};
-  common::UnsignedInt128 value;
-  bool any{false};
+  common::UnsignedInt128 value{0};
+  bool any{negate};
   for (; next; next = io.NextInField(remaining)) {
     char32_t ch{*next};
     if (ch == ' ' || ch == '\t') {
@@ -122,11 +122,11 @@ bool EditIntegerInput(
     value += digit;
     any = true;
   }
-  if (any) {
-    if (negate) {
-      value = -value;
-    }
-    std::memcpy(n, &value, kind);
+  if (negate) {
+    value = -value;
+  }
+  if (any || !io.GetConnectionState().IsAtEOF()) {
+    std::memcpy(n, &value, kind); // a blank field means zero
   }
   return any;
 }
@@ -155,7 +155,9 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
   }
   if (next.value_or(' ') == ' ') { // empty/blank field means zero
     remaining.reset();
-    Put('0');
+    if (!io.GetConnectionState().IsAtEOF()) {
+      Put('0');
+    }
     return got;
   }
   char32_t decimal{GetDecimalPoint(edit)};
@@ -524,7 +526,7 @@ static bool EditListDirectedDefaultCharacterInput(
     io.HandleRelativePosition(1);
     return EditDelimitedCharacterInput(io, x, length, *ch);
   }
-  if (IsNamelistName(io)) {
+  if (IsNamelistName(io) || io.GetConnectionState().IsAtEOF()) {
     return false;
   }
   // Undelimited list-directed character input: stop at a value separator
@@ -561,6 +563,9 @@ bool EditDefaultCharacterInput(
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with a CHARACTER data item",
         edit.descriptor);
+    return false;
+  }
+  if (io.GetConnectionState().IsAtEOF()) {
     return false;
   }
   std::optional<int> remaining{length};

@@ -1030,7 +1030,7 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
 
   // Now go through and fixup the spaces.
   auto *CellIter = Cells.begin();
-  for (auto i = 0U; i < CellDescs.CellCount; i++, ++CellIter) {
+  for (auto i = 0U; i < CellDescs.CellCount; ++i, ++CellIter) {
     unsigned NetWidth = 0U;
     if (isSplitCell(*CellIter))
       NetWidth = getNetWidth(Cells.begin(), CellIter, CellDescs.InitialSpaces);
@@ -1347,8 +1347,13 @@ void WhitespaceManager::storeReplacement(SourceRange Range, StringRef Text) {
 
 void WhitespaceManager::appendNewlineText(std::string &Text,
                                           unsigned Newlines) {
-  for (unsigned i = 0; i < Newlines; ++i)
-    Text.append(UseCRLF ? "\r\n" : "\n");
+  if (UseCRLF) {
+    Text.reserve(Text.size() + 2 * Newlines);
+    for (unsigned i = 0; i < Newlines; ++i)
+      Text.append("\r\n");
+  } else {
+    Text.append(Newlines, '\n');
+  }
 }
 
 void WhitespaceManager::appendEscapedNewlineText(

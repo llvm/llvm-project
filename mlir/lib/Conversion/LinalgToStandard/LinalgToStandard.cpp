@@ -96,10 +96,6 @@ createTypeCanonicalizedMemRefOperands(OpBuilder &b, Location loc,
 
 LogicalResult mlir::linalg::LinalgOpToLibraryCallRewrite::matchAndRewrite(
     LinalgOp op, PatternRewriter &rewriter) const {
-  // Only LinalgOp for which there is no specialized pattern go through this.
-  if (isa<CopyOp>(op))
-    return failure();
-
   auto libraryCallName = getLibraryCallSymbolRef(op, rewriter);
   if (!libraryCallName)
     return failure();
@@ -113,65 +109,13 @@ LogicalResult mlir::linalg::LinalgOpToLibraryCallRewrite::matchAndRewrite(
   return success();
 }
 
-LogicalResult mlir::linalg::CopyOpToLibraryCallRewrite::matchAndRewrite(
-    CopyOp op, PatternRewriter &rewriter) const {
-  auto inputPerm = op.inputPermutation();
-  if (inputPerm.hasValue() && !inputPerm->isIdentity())
-    return failure();
-  auto outputPerm = op.outputPermutation();
-  if (outputPerm.hasValue() && !outputPerm->isIdentity())
-    return failure();
-
-  auto libraryCallName = getLibraryCallSymbolRef(op, rewriter);
-  if (!libraryCallName)
-    return failure();
-
-  rewriter.replaceOpWithNewOp<mlir::CallOp>(
-      op, libraryCallName.getValue(), TypeRange(),
-      createTypeCanonicalizedMemRefOperands(rewriter, op.getLoc(),
-                                            op.getOperands()));
-  return success();
-}
-
-LogicalResult mlir::linalg::CopyTransposeRewrite::matchAndRewrite(
-    CopyOp op, PatternRewriter &rewriter) const {
-  Value in = op.input(), out = op.output();
-
-  // If either inputPerm or outputPerm are non-identities, insert transposes.
-  auto inputPerm = op.inputPermutation();
-  if (inputPerm.hasValue() && !inputPerm->isIdentity())
-    in = rewriter.create<memref::TransposeOp>(op.getLoc(), in,
-                                              AffineMapAttr::get(*inputPerm));
-  auto outputPerm = op.outputPermutation();
-  if (outputPerm.hasValue() && !outputPerm->isIdentity())
-    out = rewriter.create<memref::TransposeOp>(op.getLoc(), out,
-                                               AffineMapAttr::get(*outputPerm));
-
-  // If nothing was transposed, fail and let the conversion kick in.
-  if (in == op.input() && out == op.output())
-    return failure();
-
-  auto libraryCallName = getLibraryCallSymbolRef(op, rewriter);
-  if (!libraryCallName)
-    return failure();
-
-  rewriter.replaceOpWithNewOp<mlir::CallOp>(
-      op, libraryCallName.getValue(), TypeRange(),
-      createTypeCanonicalizedMemRefOperands(rewriter, op.getLoc(), {in, out}));
-  return success();
-}
 
 /// Populate the given list with patterns that convert from Linalg to Standard.
 void mlir::linalg::populateLinalgToStandardConversionPatterns(
     RewritePatternSet &patterns) {
   // TODO: ConvOp conversion needs to export a descriptor with relevant
   // attribute values such as kernel striding and dilation.
-  // clang-format off
-  patterns.add<
-      CopyOpToLibraryCallRewrite,
-      CopyTransposeRewrite,
-      LinalgOpToLibraryCallRewrite>(patterns.getContext());
-  // clang-format on
+  patterns.add<LinalgOpToLibraryCallRewrite>(patterns.getContext());
 }
 
 namespace {

@@ -211,6 +211,15 @@ void __sanitizer_symbolize_pc(void *pc, const char *fmt, char *out_buf,
 // Same as __sanitizer_symbolize_pc, but for data section (i.e. globals).
 void __sanitizer_symbolize_global(void *data_ptr, const char *fmt,
                                   char *out_buf, size_t out_buf_size);
+// Determine the return address.
+#if !defined(_MSC_VER) || defined(__clang__)
+#define __sanitizer_return_address()                                           \
+  __builtin_extract_return_addr(__builtin_return_address(0))
+#else
+extern "C" void *_ReturnAddress(void);
+#pragma intrinsic(_ReturnAddress)
+#define __sanitizer_return_address() _ReturnAddress()
+#endif
 
 /// Sets the callback to be called immediately before death on error.
 ///
