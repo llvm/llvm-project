@@ -58,9 +58,9 @@ static cl::opt<std::string> ModelUnderTraining(
     "regalloc-model", cl::Hidden,
     cl::desc("The model being trained for register allocation eviction"));
 
-extern cl::opt<unsigned> EvictInterferenceCutoff;
-
 #endif // #ifdef LLVM_HAVE_TF_API
+
+extern cl::opt<unsigned> EvictInterferenceCutoff;
 
 /// The score injection pass.
 /// This pass calculates the score for a function and inserts it in the log, but
