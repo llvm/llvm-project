@@ -302,8 +302,8 @@ DIStringType *DIBuilder::createStringType(StringRef Name,
 }
 
 DIStringType *DIBuilder::createStringType(StringRef Name,
-                                             DIExpression *StringLengthExp,
-                                             DIExpression *StrLocationExp) {
+                                          DIExpression *StringLengthExp,
+                                          DIExpression *StrLocationExp) {
   assert(!Name.empty() && "Unable to create type without name");
   return DIStringType::get(VMContext, dwarf::DW_TAG_string_type, Name, nullptr,
                            StringLengthExp, StrLocationExp, 0, 0, 0);
