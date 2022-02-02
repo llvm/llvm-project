@@ -3519,7 +3519,7 @@ Code object V5 metadata is the same as
                                                        support a last work-group in each dimension being partial.
                                                        This count only includes the non-partial work-group count.
                                                        This is not the same as the value in the AQL dispatch packet,
-                                                       which has the grid size in work-items. If the grid dimentionality
+                                                       which has the grid size in work-items. If the grid dimensionality
                                                        is 1, then must be 1.
 
                                                      "hidden_block_count_z"
@@ -3528,7 +3528,7 @@ Code object V5 metadata is the same as
                                                        support a last work-group in each dimension being partial.
                                                        This count only includes the non-partial work-group count.
                                                        This is not the same as the value in the AQL dispatch packet,
-                                                       which has the grid size in work-items. If the grid dimentionality
+                                                       which has the grid size in work-items. If the grid dimensionality
                                                        is 1 or 2, then must be 1.
 
                                                      "hidden_group_size_x"
@@ -3541,15 +3541,15 @@ Code object V5 metadata is the same as
                                                        The grid dispatch work-group size for the Y dimension is
                                                        passed in the kernarg. This size only applies to the
                                                        non-partial work-groups. This is the same value as the AQL
-                                                       dispatch packet work-group size. If the grid dimentionality
+                                                       dispatch packet work-group size. If the grid dimensionality
                                                        is 1, then must be 1.
 
                                                      "hidden_group_size_z"
                                                        The grid dispatch work-group size for the Z dimension is
                                                        passed in the kernarg. This size only applies to the
                                                        non-partial work-groups. This is the same value as the AQL
-                                                       dispatch packet work-group size. If the grid dimentionality
-                                                       is 1, then must be 1 or 2.
+                                                       dispatch packet work-group size. If the grid dimensionality
+                                                       is 1 or 2, then must be 1.
 
                                                      "hidden_remainder_x"
                                                        The grid dispatch work group size of the the partial work group
@@ -3567,8 +3567,8 @@ Code object V5 metadata is the same as
                                                        work group does not exist in the Z dimension.
 
                                                      "hidden_grid_dims"
-                                                       The grid dispatch dimentionality. This is the same value
-                                                       as the AQL dispatch packet dimentionality. Must be a value
+                                                       The grid dispatch dimensionality. This is the same value
+                                                       as the AQL dispatch packet dimensionality. Must be a value
                                                        between 1 and 3.
 
                                                      "hidden_private_base"
