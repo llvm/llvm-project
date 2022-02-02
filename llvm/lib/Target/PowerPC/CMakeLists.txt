@@ -55,6 +55,7 @@ add_llvm_target(PowerPCCodeGen
   PPCExpandISEL.cpp
   PPCPreEmitPeephole.cpp
   PPCLowerMASSVEntries.cpp
+  PPCGenScalarMASSEntries.cpp
   GISel/PPCCallLowering.cpp
   GISel/PPCRegisterBankInfo.cpp
   GISel/PPCLegalizerInfo.cpp

@@ -123,6 +123,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializePPCTLSDynamicCallPass(PR);
   initializePPCMIPeepholePass(PR);
   initializePPCLowerMASSVEntriesPass(PR);
+  initializePPCGenScalarMASSEntriesPass(PR);
   initializePPCExpandAtomicPseudoPass(PR);
   initializeGlobalISel(PR);
 }
@@ -428,6 +429,12 @@ void PPCPassConfig::addIRPasses() {
 
   // Lower generic MASSV routines to PowerPC subtarget-specific entries.
   addPass(createPPCLowerMASSVEntriesPass());
+
+  // Generate PowerPC target-specific entries for scalar math functions
+  // that are available in IBM MASS (scalar) library.
+  if (TM->getOptLevel() == CodeGenOpt::Aggressive) {
+    addPass(createPPCGenScalarMASSEntriesPass());
+  }
 
   // If explicitly requested, add explicit data prefetch intrinsics.
   if (EnablePrefetch.getNumOccurrences() > 0)

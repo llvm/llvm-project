@@ -84,6 +84,10 @@ FunctionPass *createPPCCTRLoops();
   void initializePPCLowerMASSVEntriesPass(PassRegistry &);
   extern char &PPCLowerMASSVEntriesID;
 
+  ModulePass *createPPCGenScalarMASSEntriesPass();
+  void initializePPCGenScalarMASSEntriesPass(PassRegistry &);
+  extern char &PPCGenScalarMASSEntriesID;
+
   InstructionSelector *
   createPPCInstructionSelector(const PPCTargetMachine &, const PPCSubtarget &,
                                const PPCRegisterBankInfo &);

@@ -63,6 +63,7 @@ void TargetMachine::resetTargetOptions(const Function &F) const {
   RESET_OPTION(NoInfsFPMath, "no-infs-fp-math");
   RESET_OPTION(NoNaNsFPMath, "no-nans-fp-math");
   RESET_OPTION(NoSignedZerosFPMath, "no-signed-zeros-fp-math");
+  RESET_OPTION(ApproxFuncFPMath, "approx-func-fp-math");
 }
 
 /// Returns the code generation relocation model. The choices are static, PIC,
