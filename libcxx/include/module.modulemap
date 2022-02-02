@@ -817,6 +817,7 @@ module std [system] {
         export functional.__functional.perfect_forward
       }
       module view_interface         { private header "__ranges/view_interface.h" }
+      module views                  { private header "__ranges/views.h" }
     }
   }
   module ratio {

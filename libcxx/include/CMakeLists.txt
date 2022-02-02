@@ -351,6 +351,7 @@ set(files
   __ranges/take_view.h
   __ranges/transform_view.h
   __ranges/view_interface.h
+  __ranges/views.h
   __split_buffer
   __std_stream
   __string
