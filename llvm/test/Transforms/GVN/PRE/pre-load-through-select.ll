@@ -9,13 +9,15 @@ define i32 @test_pointer_phi_select_simp_1(i32* %a, i32* %b, i1 %cond)  {
 ; CHECK-NEXT:    [[L_1:%.*]] = load i32, i32* [[A:%.*]], align 4
 ; CHECK-NEXT:    [[L_2:%.*]] = load i32, i32* [[B:%.*]], align 4
 ; CHECK-NEXT:    [[CMP_I_I_I:%.*]] = icmp ult i32 [[L_1]], [[L_2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[CMP_I_I_I]], i32 [[L_1]], i32 [[L_2]]
 ; CHECK-NEXT:    [[MIN_SELECT:%.*]] = select i1 [[CMP_I_I_I]], i32* [[A]], i32* [[B]]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       else:
+; CHECK-NEXT:    [[RES_2_PRE:%.*]] = load i32, i32* [[A]], align 4
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[RES_2:%.*]] = phi i32 [ [[TMP0]], [[THEN]] ], [ [[RES_2_PRE]], [[ELSE]] ]
 ; CHECK-NEXT:    [[P:%.*]] = phi i32* [ [[MIN_SELECT]], [[THEN]] ], [ [[A]], [[ELSE]] ]
-; CHECK-NEXT:    [[RES_2:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[RES_2]]
 ;
 entry:
@@ -118,13 +120,15 @@ define i32 @test_pointer_phi_select_simp_store_noclobber(i32* %a, i32* %b, i32* 
 ; CHECK-NEXT:    [[L_2:%.*]] = load i32, i32* [[B:%.*]], align 4
 ; CHECK-NEXT:    store i32 99, i32* [[C:%.*]], align 4
 ; CHECK-NEXT:    [[CMP_I_I_I:%.*]] = icmp ult i32 [[L_1]], [[L_2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[CMP_I_I_I]], i32 [[L_1]], i32 [[L_2]]
 ; CHECK-NEXT:    [[MIN_SELECT:%.*]] = select i1 [[CMP_I_I_I]], i32* [[A]], i32* [[B]]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       else:
+; CHECK-NEXT:    [[RES_2_PRE:%.*]] = load i32, i32* [[A]], align 4
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[RES_2:%.*]] = phi i32 [ [[TMP0]], [[THEN]] ], [ [[RES_2_PRE]], [[ELSE]] ]
 ; CHECK-NEXT:    [[P:%.*]] = phi i32* [ [[MIN_SELECT]], [[THEN]] ], [ [[A]], [[ELSE]] ]
-; CHECK-NEXT:    [[RES_2:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[RES_2]]
 ;
 entry:
@@ -648,9 +652,9 @@ define i32 @test_pointer_phi_select_single_block_store(i32* %a, i32* %b)  {
 ; CHECK-NEXT:    [[L_1:%.*]] = load i32, i32* [[A:%.*]], align 4
 ; CHECK-NEXT:    [[L_2:%.*]] = load i32, i32* [[B:%.*]], align 4
 ; CHECK-NEXT:    [[CMP_I_I_I:%.*]] = icmp ult i32 [[L_1]], [[L_2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[CMP_I_I_I]], i32 [[L_1]], i32 [[L_2]]
 ; CHECK-NEXT:    [[MIN_SELECT:%.*]] = select i1 [[CMP_I_I_I]], i32* [[A]], i32* [[B]]
-; CHECK-NEXT:    [[RES_0:%.*]] = load i32, i32* [[MIN_SELECT]], align 4
-; CHECK-NEXT:    ret i32 [[RES_0]]
+; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
   %l.1 = load i32, i32* %a, align 4
@@ -721,5 +725,26 @@ entry:
   %cmp.i.i.i = icmp ult i32 %l.1, %l.2
   %min.select  = select i1 %cmp.i.i.i, i32* %a, i32* %b
   %res.0 = load i32, i32* %min.select, align 4
+  ret i32 %res.0
+}
+
+define i32 @test_pointer_phi_select_single_block_store_after(i32* %a, i32* %b, i32* %c)  {
+; CHECK-LABEL: @test_pointer_phi_select_single_block_store_after(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[L_1:%.*]] = load i32, i32* [[A:%.*]], align 4
+; CHECK-NEXT:    [[L_2:%.*]] = load i32, i32* [[B:%.*]], align 4
+; CHECK-NEXT:    [[CMP_I_I_I:%.*]] = icmp ult i32 [[L_1]], [[L_2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[CMP_I_I_I]], i32 [[L_1]], i32 [[L_2]]
+; CHECK-NEXT:    [[MIN_SELECT:%.*]] = select i1 [[CMP_I_I_I]], i32* [[A]], i32* [[B]]
+; CHECK-NEXT:    store i32 99, i32* [[C:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+entry:
+  %l.1 = load i32, i32* %a, align 4
+  %l.2 = load i32, i32* %b, align 4
+  %cmp.i.i.i = icmp ult i32 %l.1, %l.2
+  %min.select  = select i1 %cmp.i.i.i, i32* %a, i32* %b
+  %res.0 = load i32, i32* %min.select, align 4
+  store i32 99, i32* %c
   ret i32 %res.0
 }
