@@ -53,6 +53,7 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <sstream>
@@ -301,8 +302,6 @@ public:
   void tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag, size_t Size);
   Value *tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong, Value *Tag);
   Value *untagPointer(IRBuilder<> &IRB, Value *PtrLong);
-  static bool isStandardLifetime(const AllocaInfo &AllocaInfo,
-                                 const DominatorTree &DT);
   bool instrumentStack(
       bool ShouldDetectUseAfterScope,
       MapVector<AllocaInst *, AllocaInfo> &AllocasToInstrument,
@@ -1330,34 +1329,7 @@ bool HWAddressSanitizer::instrumentLandingPads(
   return true;
 }
 
-static bool
-maybeReachableFromEachOther(const SmallVectorImpl<IntrinsicInst *> &Insts,
-                            const DominatorTree &DT) {
-  // If we have too many lifetime ends, give up, as the algorithm below is N^2.
-  if (Insts.size() > ClMaxLifetimes)
-    return true;
-  for (size_t I = 0; I < Insts.size(); ++I) {
-    for (size_t J = 0; J < Insts.size(); ++J) {
-      if (I == J)
-        continue;
-      if (isPotentiallyReachable(Insts[I], Insts[J], nullptr, &DT))
-        return true;
-    }
-  }
-  return false;
-}
 
-// static
-bool HWAddressSanitizer::isStandardLifetime(const AllocaInfo &AllocaInfo,
-                                            const DominatorTree &DT) {
-  // An alloca that has exactly one start and end in every possible execution.
-  // If it has multiple ends, they have to be unreachable from each other, so
-  // at most one of them is actually used for each execution of the function.
-  return AllocaInfo.LifetimeStart.size() == 1 &&
-         (AllocaInfo.LifetimeEnd.size() == 1 ||
-          (AllocaInfo.LifetimeEnd.size() > 0 &&
-           !maybeReachableFromEachOther(AllocaInfo.LifetimeEnd, DT)));
-}
 
 bool HWAddressSanitizer::instrumentStack(
     bool ShouldDetectUseAfterScope,
@@ -1411,7 +1383,9 @@ bool HWAddressSanitizer::instrumentStack(
       tagAlloca(IRB, AI, UARTag, AlignedSize);
     };
     bool StandardLifetime =
-        UnrecognizedLifetimes.empty() && isStandardLifetime(Info, GetDT());
+        UnrecognizedLifetimes.empty() &&
+        isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, GetDT(),
+                           ClMaxLifetimes);
     if (ShouldDetectUseAfterScope && StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
       IRB.SetInsertPoint(Start->getNextNode());
