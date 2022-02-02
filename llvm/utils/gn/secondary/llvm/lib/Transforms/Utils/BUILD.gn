@@ -57,6 +57,7 @@ static_library("Utils") {
     "MatrixUtils.cpp",
     "Mem2Reg.cpp",
     "MemoryOpRemark.cpp",
+    "MemoryTaggingSupport.cpp",
     "MetaRenamer.cpp",
     "ModuleUtils.cpp",
     "NameAnonGlobals.cpp",
