@@ -33,10 +33,12 @@
 #include <unordered_set>
 #include <vector>
 
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
-# include <regex>
-# include <ostream>
-# include <istream>
+#include "test_macros.h"
+
+#ifndef TEST_HAS_NO_LOCALIZATION
+#  include <regex>
+#  include <ostream>
+#  include <istream>
 #endif
 
 #ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY
@@ -199,14 +201,14 @@ static_assert(testIOIterator<std::front_insert_iterator<std::vector<int>>, std::
 static_assert(testIOIterator<std::insert_iterator<std::vector<int>>, std::output_iterator_tag>());
 static_assert(testConstWithoutConcept<std::istream_iterator<int, char>, int, std::input_iterator_tag>());
 
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if !defined(TEST_HAS_NO_LOCALIZATION)
 static_assert(testWithoutConcept<std::istreambuf_iterator<char>, char, long long, char, char*, std::input_iterator_tag>());
 static_assert(testWithoutConcept<std::move_iterator<int*>, int, std::ptrdiff_t, int&&, int*, std::random_access_iterator_tag>());
 static_assert(testIOIterator<std::ostream_iterator<int, char>, std::output_iterator_tag>());
 static_assert(testIOIterator<std::ostreambuf_iterator<int, char>, std::output_iterator_tag>());
 static_assert(testConstWithoutConcept<std::cregex_iterator, std::cmatch, std::forward_iterator_tag>());
 static_assert(testConstWithoutConcept<std::cregex_token_iterator, std::csub_match, std::forward_iterator_tag>());
-#endif // !_LIBCPP_HAS_NO_LOCALIZATION
+#endif // !TEST_HAS_NO_LOCALIZATION
 
 #ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY
 static_assert(testWithoutConcept<std::filesystem::directory_iterator, std::filesystem::directory_entry, std::ptrdiff_t,
