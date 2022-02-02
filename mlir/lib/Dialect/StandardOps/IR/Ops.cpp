@@ -612,31 +612,31 @@ static ParseResult parseConstantOp(OpAsmParser &parser,
 
 /// The constant op requires an attribute, and furthermore requires that it
 /// matches the return type.
-static LogicalResult verify(ConstantOp &op) {
-  auto value = op.getValue();
+LogicalResult ConstantOp::verify() {
+  auto value = getValue();
   if (!value)
-    return op.emitOpError("requires a 'value' attribute");
+    return emitOpError("requires a 'value' attribute");
 
-  Type type = op.getType();
+  Type type = getType();
   if (!value.getType().isa<NoneType>() && type != value.getType())
-    return op.emitOpError() << "requires attribute's type (" << value.getType()
-                            << ") to match op's return type (" << type << ")";
+    return emitOpError() << "requires attribute's type (" << value.getType()
+                         << ") to match op's return type (" << type << ")";
 
   if (type.isa<FunctionType>()) {
     auto fnAttr = value.dyn_cast<FlatSymbolRefAttr>();
     if (!fnAttr)
-      return op.emitOpError("requires 'value' to be a function reference");
+      return emitOpError("requires 'value' to be a function reference");
 
     // Try to find the referenced function.
-    auto fn =
-        op->getParentOfType<ModuleOp>().lookupSymbol<FuncOp>(fnAttr.getValue());
+    auto fn = (*this)->getParentOfType<ModuleOp>().lookupSymbol<FuncOp>(
+        fnAttr.getValue());
     if (!fn)
-      return op.emitOpError()
-             << "reference to undefined function '" << fnAttr.getValue() << "'";
+      return emitOpError() << "reference to undefined function '"
+                           << fnAttr.getValue() << "'";
 
     // Check that the referenced function has the correct type.
     if (fn.getType() != type)
-      return op.emitOpError("reference to function with mismatched type");
+      return emitOpError("reference to function with mismatched type");
 
     return success();
   }
@@ -644,7 +644,7 @@ static LogicalResult verify(ConstantOp &op) {
   if (type.isa<NoneType>() && value.isa<UnitAttr>())
     return success();
 
-  return op.emitOpError("unsupported 'value' attribute: ") << value;
+  return emitOpError("unsupported 'value' attribute: ") << value;
 }
 
 OpFoldResult ConstantOp::fold(ArrayRef<Attribute> operands) {
@@ -676,23 +676,23 @@ bool ConstantOp::isBuildableWith(Attribute value, Type type) {
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(ReturnOp op) {
-  auto function = cast<FuncOp>(op->getParentOp());
+LogicalResult ReturnOp::verify() {
+  auto function = cast<FuncOp>((*this)->getParentOp());
 
   // The operand number and types must match the function signature.
   const auto &results = function.getType().getResults();
-  if (op.getNumOperands() != results.size())
-    return op.emitOpError("has ")
-           << op.getNumOperands() << " operands, but enclosing function (@"
+  if (getNumOperands() != results.size())
+    return emitOpError("has ")
+           << getNumOperands() << " operands, but enclosing function (@"
            << function.getName() << ") returns " << results.size();
 
   for (unsigned i = 0, e = results.size(); i != e; ++i)
-    if (op.getOperand(i).getType() != results[i])
-      return op.emitError()
-             << "type of return operand " << i << " ("
-             << op.getOperand(i).getType()
-             << ") doesn't match function result type (" << results[i] << ")"
-             << " in function @" << function.getName();
+    if (getOperand(i).getType() != results[i])
+      return emitError() << "type of return operand " << i << " ("
+                         << getOperand(i).getType()
+                         << ") doesn't match function result type ("
+                         << results[i] << ")"
+                         << " in function @" << function.getName();
 
   return success();
 }
@@ -843,24 +843,23 @@ static ParseResult parseSelectOp(OpAsmParser &parser, OperationState &result) {
                                 parser.getNameLoc(), result.operands);
 }
 
-static LogicalResult verify(SelectOp op) {
-  Type conditionType = op.getCondition().getType();
+LogicalResult SelectOp::verify() {
+  Type conditionType = getCondition().getType();
   if (conditionType.isSignlessInteger(1))
     return success();
 
   // If the result type is a vector or tensor, the type can be a mask with the
   // same elements.
-  Type resultType = op.getType();
+  Type resultType = getType();
   if (!resultType.isa<TensorType, VectorType>())
-    return op.emitOpError()
-           << "expected condition to be a signless i1, but got "
-           << conditionType;
+    return emitOpError() << "expected condition to be a signless i1, but got "
+                         << conditionType;
   Type shapedConditionType = getI1SameShape(resultType);
   if (conditionType != shapedConditionType)
-    return op.emitOpError()
-           << "expected condition type to have the same shape "
-              "as the result type, expected "
-           << shapedConditionType << ", but got " << conditionType;
+    return emitOpError() << "expected condition type to have the same shape "
+                            "as the result type, expected "
+                         << shapedConditionType << ", but got "
+                         << conditionType;
   return success();
 }
 
@@ -868,11 +867,10 @@ static LogicalResult verify(SelectOp op) {
 // SplatOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(SplatOp op) {
+LogicalResult SplatOp::verify() {
   // TODO: we could replace this by a trait.
-  if (op.getOperand().getType() !=
-      op.getType().cast<ShapedType>().getElementType())
-    return op.emitError("operand should be of elemental type of result type");
+  if (getOperand().getType() != getType().cast<ShapedType>().getElementType())
+    return emitError("operand should be of elemental type of result type");
 
   return success();
 }
@@ -995,26 +993,26 @@ static void printSwitchOpCases(
   p.printNewline();
 }
 
-static LogicalResult verify(SwitchOp op) {
-  auto caseValues = op.getCaseValues();
-  auto caseDestinations = op.getCaseDestinations();
+LogicalResult SwitchOp::verify() {
+  auto caseValues = getCaseValues();
+  auto caseDestinations = getCaseDestinations();
 
   if (!caseValues && caseDestinations.empty())
     return success();
 
-  Type flagType = op.getFlag().getType();
+  Type flagType = getFlag().getType();
   Type caseValueType = caseValues->getType().getElementType();
   if (caseValueType != flagType)
-    return op.emitOpError()
-           << "'flag' type (" << flagType << ") should match case value type ("
-           << caseValueType << ")";
+    return emitOpError() << "'flag' type (" << flagType
+                         << ") should match case value type (" << caseValueType
+                         << ")";
 
   if (caseValues &&
       caseValues->size() != static_cast<int64_t>(caseDestinations.size()))
-    return op.emitOpError() << "number of case values (" << caseValues->size()
-                            << ") should match number of "
-                               "case destinations ("
-                            << caseDestinations.size() << ")";
+    return emitOpError() << "number of case values (" << caseValues->size()
+                         << ") should match number of "
+                            "case destinations ("
+                         << caseDestinations.size() << ")";
   return success();
 }
 

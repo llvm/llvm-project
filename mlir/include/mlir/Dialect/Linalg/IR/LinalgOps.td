@@ -25,12 +25,10 @@ class Linalg_Op<string mnemonic, list<Trait> traits = []> :
     Op<Linalg_Dialect, mnemonic, traits> {
   // For every linalg op, there needs to be a:
   //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)
-  //   * LogicalResult verify(${C++ class of Op} op)
   //   * ParseResult parse${C++ class of Op}(OpAsmParser &parser,
   //                                         OperationState &result)
   // functions.
   let printer = [{ return ::print(p, *this); }];
-  let verifier = [{ return ::verify(*this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
@@ -53,8 +51,6 @@ def Linalg_InitTensorOp : Linalg_Op<"init_tensor",
     custom<OperandsOrIntegersSizesList>($sizes, $static_sizes) attr-dict
     `:` type($result)
   }];
-
-  let verifier = [{ return ::verify(*this); }];
 
   let extraClassDeclaration = [{
     static StringRef getStaticSizesAttrName() {
@@ -127,6 +123,7 @@ def Linalg_InitTensorOp : Linalg_Op<"init_tensor",
   ];
 
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
 }
 
 def Linalg_YieldOp : Linalg_Op<"yield", [NoSideEffect, ReturnLike, Terminator]>,
@@ -144,6 +141,7 @@ def Linalg_YieldOp : Linalg_Op<"yield", [NoSideEffect, ReturnLike, Terminator]>,
     ```
   }];
   let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
+  let hasVerifier = 1;
 }
 
 def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
@@ -426,6 +424,7 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 def Linalg_IndexOp : Linalg_Op<"index", [NoSideEffect]>,
@@ -469,6 +468,7 @@ def Linalg_IndexOp : Linalg_Op<"index", [NoSideEffect]>,
   }];
 
   let assemblyFormat = [{ $dim attr-dict `:` type($result) }];
+  let hasVerifier = 1;
 }
 
 #endif // LINALG_OPS

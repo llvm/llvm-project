@@ -24,9 +24,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // Base class for EmitC dialect ops.
 class EmitC_Op<string mnemonic, list<Trait> traits = []>
-    : Op<EmitC_Dialect, mnemonic, traits> {
-  let verifier = "return ::verify(*this);";
-}
+    : Op<EmitC_Dialect, mnemonic, traits>;
 
 def EmitC_ApplyOp : EmitC_Op<"apply", []> {
   let summary = "Apply operation";
@@ -54,6 +52,7 @@ def EmitC_ApplyOp : EmitC_Op<"apply", []> {
   let assemblyFormat = [{
     $applicableOperator `(` $operand `)` attr-dict `:` functional-type($operand, results)
   }];
+  let hasVerifier = 1;
 }
 
 def EmitC_CallOp : EmitC_Op<"call", []> {
@@ -85,6 +84,7 @@ def EmitC_CallOp : EmitC_Op<"call", []> {
   let assemblyFormat = [{
     $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
   }];
+  let hasVerifier = 1;
 }
 
 def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
@@ -113,6 +113,7 @@ def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
   let results = (outs AnyType);
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 def EmitC_IncludeOp
@@ -144,7 +145,6 @@ def EmitC_IncludeOp
   );
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
-  let verifier = ?;
 }
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITC

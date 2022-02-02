@@ -158,7 +158,6 @@ def Arith_ConstantOp : Op<Arithmetic_Dialect, "constant",
   // of strings and signed/unsigned integers (for now) as an artefact of
   // splitting the Standard dialect.
   let results = (outs /*SignlessIntegerOrFloatLike*/AnyType:$result);
-  let verifier = [{ return ::verify(*this); }];
 
   let builders = [
     OpBuilder<(ins "Attribute":$value),
@@ -175,6 +174,7 @@ def Arith_ConstantOp : Op<Arithmetic_Dialect, "constant",
 
   let hasFolder = 1;
   let assemblyFormat = "attr-dict $value";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -814,7 +814,7 @@ def Arith_ExtUIOp : Arith_IToICastOp<"extui"> {
   }];
 
   let hasFolder = 1;
-  let verifier = [{ return verifyExtOp<IntegerType>(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -845,7 +845,7 @@ def Arith_ExtSIOp : Arith_IToICastOp<"extsi"> {
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
-  let verifier = [{ return verifyExtOp<IntegerType>(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -859,8 +859,7 @@ def Arith_ExtFOp : Arith_FToFCastOp<"extf"> {
     The destination type must to be strictly wider than the source type.
     When operating on vectors, casts elementwise.
   }];
-
-  let verifier = [{ return verifyExtOp<FloatType>(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -887,7 +886,7 @@ def Arith_TruncIOp : Arith_IToICastOp<"trunci"> {
   }];
 
   let hasFolder = 1;
-  let verifier = [{ return verifyTruncateOp<IntegerType>(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -904,7 +903,7 @@ def Arith_TruncFOp : Arith_FToFCastOp<"truncf"> {
   }];
 
   let hasFolder = 1;
-  let verifier = [{ return verifyTruncateOp<FloatType>(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

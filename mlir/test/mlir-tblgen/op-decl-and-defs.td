@@ -40,10 +40,10 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
                   OpBuilder<(ins CArg<"int", "0">:$integer)>];
   let parser = [{ foo }];
   let printer = [{ bar }];
-  let verifier = [{ baz }];
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     // Display a graph for debugging purposes.

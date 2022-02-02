@@ -38,18 +38,18 @@ bool ConstantOp::isBuildableWith(Attribute value, Type type) {
   return false;
 }
 
-static LogicalResult verify(ConstantOp op) {
-  ArrayAttr arrayAttr = op.getValue();
+LogicalResult ConstantOp::verify() {
+  ArrayAttr arrayAttr = getValue();
   if (arrayAttr.size() != 2) {
-    return op.emitOpError(
+    return emitOpError(
         "requires 'value' to be a complex constant, represented as array of "
         "two values");
   }
 
-  auto complexEltTy = op.getType().getElementType();
+  auto complexEltTy = getType().getElementType();
   if (complexEltTy != arrayAttr[0].getType() ||
       complexEltTy != arrayAttr[1].getType()) {
-    return op.emitOpError()
+    return emitOpError()
            << "requires attribute's element types (" << arrayAttr[0].getType()
            << ", " << arrayAttr[1].getType()
            << ") to match the element type of the op's return type ("

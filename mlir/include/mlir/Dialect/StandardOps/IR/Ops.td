@@ -35,12 +35,10 @@ class Std_Op<string mnemonic, list<Trait> traits = []> :
     Op<StandardOps_Dialect, mnemonic, traits> {
   // For every standard op, there needs to be a:
   //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)
-  //   * LogicalResult verify(${C++ class of Op} op)
   //   * ParseResult parse${C++ class of Op}(OpAsmParser &parser,
   //                                         OperationState &result)
   // functions.
   let printer = [{ return ::print(p, *this); }];
-  let verifier = [{ return ::verify(*this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
@@ -66,10 +64,6 @@ def AssertOp : Std_Op<"assert"> {
   let arguments = (ins I1:$arg, StrAttr:$msg);
 
   let assemblyFormat = "$arg `,` $msg attr-dict";
-
-  // AssertOp is fully verified by its traits.
-  let verifier = ?;
-
   let hasCanonicalizeMethod = 1;
 }
 
@@ -106,9 +100,6 @@ def BranchOp : Std_Op<"br",
       $_state.addSuccessors(dest);
       $_state.addOperands(destOperands);
     }]>];
-
-  // BranchOp is fully verified by traits.
-  let verifier = ?;
 
   let extraClassDeclaration = [{
     void setDest(Block *block);
@@ -189,7 +180,6 @@ def CallOp : Std_Op<"call",
   let assemblyFormat = [{
     $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
   }];
-  let verifier = ?;
 }
 
 //===----------------------------------------------------------------------===//
@@ -250,7 +240,6 @@ def CallIndirectOp : Std_Op<"call_indirect", [
     CallInterfaceCallable getCallableForCallee() { return getCallee(); }
   }];
 
-  let verifier = ?;
   let hasCanonicalizeMethod = 1;
 
   let assemblyFormat =
@@ -310,9 +299,6 @@ def CondBranchOp : Std_Op<"cond_br",
       build($_builder, $_state, condition, trueDest, ValueRange(), falseDest,
             falseOperands);
     }]>];
-
-  // CondBranchOp is fully verified by traits.
-  let verifier = ?;
 
   let extraClassDeclaration = [{
     // These are the indices into the dests list.
@@ -434,6 +420,7 @@ def ConstantOp : Std_Op<"constant",
   }];
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -466,6 +453,7 @@ def ReturnOp : Std_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
     [{ build($_builder, $_state, llvm::None); }]>];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -516,6 +504,7 @@ def SelectOp : Std_Op<"select", [NoSideEffect,
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -562,6 +551,7 @@ def SplatOp : Std_Op<"splat", [NoSideEffect,
     [{ build($_builder, $_state, aggregateType, element); }]>];
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 
   let assemblyFormat = "$input attr-dict `:` type($aggregate)";
 }
@@ -652,6 +642,7 @@ def SwitchOp : Std_Op<"switch",
   }];
 
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
 }
 
 #endif // STANDARD_OPS

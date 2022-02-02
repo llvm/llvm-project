@@ -26,7 +26,6 @@ class ComplexArithmeticOp<string mnemonic, list<Trait> traits = []> :
   let arguments = (ins Complex<AnyFloat>:$lhs, Complex<AnyFloat>:$rhs);
   let results = (outs Complex<AnyFloat>:$result);
   let assemblyFormat = "$lhs `,` $rhs  attr-dict `:` type($result)";
-  let verifier = ?;
 }
 
 // Base class for standard unary operations on complex numbers with a
@@ -36,7 +35,6 @@ class ComplexUnaryOp<string mnemonic, list<Trait> traits = []> :
     Complex_Op<mnemonic, traits # [NoSideEffect, Elementwise]> {
   let arguments = (ins Complex<AnyFloat>:$complex);
   let assemblyFormat = "$complex attr-dict `:` type($complex)";
-  let verifier = ?;
 }
 
 //===----------------------------------------------------------------------===//
@@ -102,7 +100,7 @@ def ConstantOp : Complex_Op<"constant", [
 
   let assemblyFormat = "$value attr-dict `:` type($complex)";
   let hasFolder = 1;
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
   
   let extraClassDeclaration = [{
     /// Returns true if a constant operation can be built with the given value

@@ -107,19 +107,19 @@ void arith::ConstantOp::getAsmResultNames(
 
 /// TODO: disallow arith.constant to return anything other than signless integer
 /// or float like.
-static LogicalResult verify(arith::ConstantOp op) {
-  auto type = op.getType();
+LogicalResult arith::ConstantOp::verify() {
+  auto type = getType();
   // The value's type must match the return type.
-  if (op.getValue().getType() != type) {
-    return op.emitOpError() << "value type " << op.getValue().getType()
-                            << " must match return type: " << type;
+  if (getValue().getType() != type) {
+    return emitOpError() << "value type " << getValue().getType()
+                         << " must match return type: " << type;
   }
   // Integer values must be signless.
   if (type.isa<IntegerType>() && !type.cast<IntegerType>().isSignless())
-    return op.emitOpError("integer return type must be signless");
+    return emitOpError("integer return type must be signless");
   // Any float or elements attribute are acceptable.
-  if (!op.getValue().isa<IntegerAttr, FloatAttr, ElementsAttr>()) {
-    return op.emitOpError(
+  if (!getValue().isa<IntegerAttr, FloatAttr, ElementsAttr>()) {
+    return emitOpError(
         "value must be an integer, float, or elements attribute");
   }
   return success();
@@ -886,6 +886,10 @@ bool arith::ExtUIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return checkWidthChangeCast<std::greater, IntegerType>(inputs, outputs);
 }
 
+LogicalResult arith::ExtUIOp::verify() {
+  return verifyExtOp<IntegerType>(*this);
+}
+
 //===----------------------------------------------------------------------===//
 // ExtSIOp
 //===----------------------------------------------------------------------===//
@@ -912,6 +916,10 @@ void arith::ExtSIOp::getCanonicalizationPatterns(
   patterns.insert<ExtSIOfExtUI>(context);
 }
 
+LogicalResult arith::ExtSIOp::verify() {
+  return verifyExtOp<IntegerType>(*this);
+}
+
 //===----------------------------------------------------------------------===//
 // ExtFOp
 //===----------------------------------------------------------------------===//
@@ -919,6 +927,8 @@ void arith::ExtSIOp::getCanonicalizationPatterns(
 bool arith::ExtFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return checkWidthChangeCast<std::greater, FloatType>(inputs, outputs);
 }
+
+LogicalResult arith::ExtFOp::verify() { return verifyExtOp<FloatType>(*this); }
 
 //===----------------------------------------------------------------------===//
 // TruncIOp
@@ -954,6 +964,10 @@ bool arith::TruncIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return checkWidthChangeCast<std::less, IntegerType>(inputs, outputs);
 }
 
+LogicalResult arith::TruncIOp::verify() {
+  return verifyTruncateOp<IntegerType>(*this);
+}
+
 //===----------------------------------------------------------------------===//
 // TruncFOp
 //===----------------------------------------------------------------------===//
@@ -981,6 +995,10 @@ OpFoldResult arith::TruncFOp::fold(ArrayRef<Attribute> operands) {
 
 bool arith::TruncFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return checkWidthChangeCast<std::less, FloatType>(inputs, outputs);
+}
+
+LogicalResult arith::TruncFOp::verify() {
+  return verifyTruncateOp<FloatType>(*this);
 }
 
 //===----------------------------------------------------------------------===//
