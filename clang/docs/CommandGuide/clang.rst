@@ -323,7 +323,11 @@ number of cross compilers, or may only support a native target.
 
 .. option:: -arch <architecture>
 
-  Specify the architecture to build for.
+  Specify the architecture to build for (Mac OS X specific).
+
+.. option:: -target <architecture>
+
+  Specify the architecture to build for (all platforms).
 
 .. option:: -mmacosx-version-min=<version>
 
