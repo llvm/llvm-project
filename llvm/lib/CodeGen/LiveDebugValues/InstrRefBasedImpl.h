@@ -616,9 +616,7 @@ public:
   void writeRegMask(const MachineOperand *MO, unsigned CurBB, unsigned InstID);
 
   /// Find LocIdx for SpillLoc \p L, creating a new one if it's not tracked.
-  /// Returns None when in scenarios where a spill slot could be tracked, but
-  /// we would likely run into resource limitations.
-  Optional<SpillLocationNo> getOrTrackSpillLoc(SpillLoc L);
+  SpillLocationNo getOrTrackSpillLoc(SpillLoc L);
 
   // Get LocIdx of a spill ID.
   LocIdx getSpillMLoc(unsigned SpillID) {
@@ -875,8 +873,7 @@ private:
   StringRef StackProbeSymbolName;
 
   /// Tests whether this instruction is a spill to a stack slot.
-  Optional<SpillLocationNo> isSpillInstruction(const MachineInstr &MI,
-                                               MachineFunction *MF);
+  bool isSpillInstruction(const MachineInstr &MI, MachineFunction *MF);
 
   /// Decide if @MI is a spill instruction and return true if it is. We use 2
   /// criteria to make this decision:
@@ -894,8 +891,7 @@ private:
 
   /// Given a spill instruction, extract the spill slot information, ensure it's
   /// tracked, and return the spill number.
-  Optional<SpillLocationNo>
-  extractSpillBaseRegAndOffset(const MachineInstr &MI);
+  SpillLocationNo extractSpillBaseRegAndOffset(const MachineInstr &MI);
 
   /// Observe a single instruction while stepping through a block.
   void process(MachineInstr &MI, ValueIDNum **MLiveOuts = nullptr,
