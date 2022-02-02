@@ -211,9 +211,9 @@ void ProfiledBinary::load() {
   if (!DebugBinaryPath.empty()) {
     OwningBinary<Binary> DebugPath =
         unwrapOrError(createBinary(DebugBinaryPath), DebugBinaryPath);
-    loadSymbolsFromDWARF(*dyn_cast<ObjectFile>(DebugPath.getBinary()));
+    loadSymbolsFromDWARF(*cast<ObjectFile>(DebugPath.getBinary()));
   } else {
-    loadSymbolsFromDWARF(*dyn_cast<ObjectFile>(&ExeBinary));
+    loadSymbolsFromDWARF(*cast<ObjectFile>(&ExeBinary));
   }
 
   // Disassemble the text sections.
