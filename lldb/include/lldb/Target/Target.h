@@ -169,8 +169,6 @@ public:
 
   llvm::StringRef GetSwiftExtraClangFlags() const;
 
-  bool GetSwiftCreateModuleContextsInParallel() const;
-
   bool GetSwiftReadMetadataFromFileCache() const;
 
   bool GetEnableAutoImportClangModules() const;

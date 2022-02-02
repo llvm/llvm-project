@@ -2145,44 +2145,19 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     handled_sdk_path = true;
   }
 
-  auto warmup_astcontexts = [&]() {
-    if (target.GetSwiftCreateModuleContextsInParallel()) {
-      // The first call to GetTypeSystemForLanguage() on a module will
-      // trigger the import (and thus most likely the rebuild) of all
-      // the Clang modules that were imported in this module. This can
-      // be a lot of work (potentially ten seconds per module), but it
-      // can be performed in parallel.
-      const unsigned threads =
-          repro::Reproducer::Instance().IsReplaying() ? 1 : 0;
-      llvm::ThreadPool pool(llvm::hardware_concurrency(threads));
-      for (size_t mi = 0; mi != num_images; ++mi) {
-        auto module_sp = target.GetImages().GetModuleAtIndex(mi);
-        pool.async([=] {
-          GetModuleSwiftASTContext(*module_sp);
-        });
-      }
-      pool.wait();
-    }
-  };
-
   if (!handled_sdk_path) {
-    warmup_astcontexts();
     for (size_t mi = 0; mi != num_images; ++mi) {
       ModuleSP module_sp = target.GetImages().GetModuleAtIndex(mi);
       if (!HasSwiftModules(*module_sp))
         continue;
 
-      SwiftASTContext *module_swift_ast = GetModuleSwiftASTContext(*module_sp);
-      if (!module_swift_ast || module_swift_ast->HasFatalErrors() ||
-          !module_swift_ast->GetClangImporter())
-        continue;
+      std::string sdk_path = GetSDKPathFromDebugInfo(m_description, *module_sp);
 
-      StringRef platform_sdk_path = module_swift_ast->GetPlatformSDKPath();
-      if (platform_sdk_path.empty())
+      if (sdk_path.empty())
         continue;
 
       handled_sdk_path = true;
-      swift_ast_sp->SetPlatformSDKPath(platform_sdk_path);
+      swift_ast_sp->SetPlatformSDKPath(sdk_path);
       break;
     }
   }
