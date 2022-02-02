@@ -115,6 +115,16 @@ public:
   /// intersection with no simplification of any sort attempted.
   void append(const IntegerPolyhedron &other);
 
+  /// Return whether `this` and `other` are equal. This is integer-exact
+  /// and somewhat expensive, since it uses the integer emptiness check
+  /// (see IntegerPolyhedron::findIntegerSample()).
+  bool isEqual(const IntegerPolyhedron &other) const;
+
+  /// Return whether this is a subset of the given IntegerPolyhedron. This is
+  /// integer-exact and somewhat expensive, since it uses the integer emptiness
+  /// check (see IntegerPolyhedron::findIntegerSample()).
+  bool isSubsetOf(const IntegerPolyhedron &other) const;
+
   /// Returns the value at the specified equality row and column.
   inline int64_t atEq(unsigned i, unsigned j) const { return equalities(i, j); }
   inline int64_t &atEq(unsigned i, unsigned j) { return equalities(i, j); }
@@ -275,12 +285,14 @@ public:
   /// and the denominators in `denominators`. If no explicit representation
   /// could be found for the `i^th` local identifier, `denominators[i]` is set
   /// to 0.
-  void getLocalReprs(std::vector<SmallVector<int64_t, 8>> &dividends,
-                     SmallVector<unsigned, 4> &denominators,
-                     std::vector<presburger_utils::MaybeLocalRepr> &repr) const;
-  void getLocalReprs(std::vector<presburger_utils::MaybeLocalRepr> &repr) const;
-  void getLocalReprs(std::vector<SmallVector<int64_t, 8>> &dividends,
-                     SmallVector<unsigned, 4> &denominators) const;
+  void
+  getLocalReprs(SmallVectorImpl<SmallVector<int64_t, 8>> &dividends,
+                SmallVectorImpl<unsigned> &denominators,
+                SmallVectorImpl<presburger_utils::MaybeLocalRepr> &repr) const;
+  void
+  getLocalReprs(SmallVectorImpl<presburger_utils::MaybeLocalRepr> &repr) const;
+  void getLocalReprs(SmallVectorImpl<SmallVector<int64_t, 8>> &dividends,
+                     SmallVectorImpl<unsigned> &denominators) const;
 
   /// The type of bound: equal, lower bound or upper bound.
   enum BoundType { EQ, LB, UB };

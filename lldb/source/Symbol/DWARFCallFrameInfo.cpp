@@ -396,7 +396,7 @@ DWARFCallFrameInfo::ParseCIE(const dw_offset_t cie_offset) {
 
 void DWARFCallFrameInfo::GetCFIData() {
   if (!m_cfi_data_initialized) {
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+    Log *log = GetLog(LLDBLog::Unwind);
     if (log)
       m_objfile.GetModule()->LogMessage(log, "Reading EH frame info");
     m_objfile.ReadSectionData(m_section_sp.get(), m_cfi_data);
@@ -525,7 +525,7 @@ void DWARFCallFrameInfo::GetFDEIndex() {
 bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
                                          Address startaddr,
                                          UnwindPlan &unwind_plan) {
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND);
+  Log *log = GetLog(LLDBLog::Unwind);
   lldb::offset_t offset = dwarf_offset;
   lldb::offset_t current_entry = offset;
 

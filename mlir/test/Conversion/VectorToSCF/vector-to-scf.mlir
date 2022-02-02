@@ -481,3 +481,22 @@ func @transfer_write_strided(%A : vector<4xf32>, %B : memref<8x4xf32, affine_map
 // CHECK-LABEL: transfer_write_strided(
 // CHECK: scf.for
 // CHECK: store
+
+// -----
+
+func private @fake_side_effecting_fun(%0: vector<2x2xf32>) -> ()
+
+// CHECK-LABEL: transfer_read_within_async_execute
+func @transfer_read_within_async_execute(%A : memref<2x2xf32>) -> !async.token {
+  %c0 = arith.constant 0 : index
+  %f0 = arith.constant 0.0 : f32
+  // CHECK-NOT: alloca
+  //     CHECK: async.execute
+  //     CHECK:   alloca
+  %token = async.execute {
+    %0 = vector.transfer_read %A[%c0, %c0], %f0 : memref<2x2xf32>, vector<2x2xf32>
+    call @fake_side_effecting_fun(%0) : (vector<2x2xf32>) -> ()
+    async.yield
+  }
+  return %token : !async.token
+}

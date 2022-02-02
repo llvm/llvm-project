@@ -27,9 +27,8 @@ define <4 x float> @fadd_v4f32(<4 x i1> %b, <4 x float> noundef %x, <4 x float> 
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vptestmd %xmm0, %xmm0, %k1
-; AVX512VL-NEXT:    vbroadcastss {{.*#+}} xmm0 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; AVX512VL-NEXT:    vmovaps %xmm2, %xmm0 {%k1}
-; AVX512VL-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; AVX512VL-NEXT:    vaddps %xmm2, %xmm1, %xmm1 {%k1}
+; AVX512VL-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
   %s = select <4 x i1> %b, <4 x float> %y, <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>
   %r = fadd <4 x float> %x, %s
@@ -62,9 +61,8 @@ define <8 x float> @fadd_v8f32_commute(<8 x i1> %b, <8 x float> noundef %x, <8 x
 ; AVX512VL-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX512VL-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vptestmd %ymm0, %ymm0, %k1
-; AVX512VL-NEXT:    vbroadcastss {{.*#+}} ymm0 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; AVX512VL-NEXT:    vmovaps %ymm2, %ymm0 {%k1}
-; AVX512VL-NEXT:    vaddps %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vaddps %ymm2, %ymm1, %ymm1 {%k1}
+; AVX512VL-NEXT:    vmovaps %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
   %s = select <8 x i1> %b, <8 x float> %y, <8 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>
   %r = fadd <8 x float> %s, %x
@@ -92,8 +90,8 @@ define <16 x float> @fadd_v16f32_swap(<16 x i1> %b, <16 x float> noundef %x, <16
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512-NEXT:    vpslld $31, %zmm0, %zmm0
 ; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512-NEXT:    vbroadcastss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2 {%k1}
 ; AVX512-NEXT:    vaddps %zmm2, %zmm1, %zmm0
+; AVX512-NEXT:    vmovaps %zmm1, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
   %s = select <16 x i1> %b, <16 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, <16 x float> %y
   %r = fadd <16 x float> %x, %s
@@ -121,8 +119,8 @@ define <16 x float> @fadd_v16f32_commute_swap(<16 x i1> %b, <16 x float> noundef
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512-NEXT:    vpslld $31, %zmm0, %zmm0
 ; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512-NEXT:    vbroadcastss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2 {%k1}
-; AVX512-NEXT:    vaddps %zmm1, %zmm2, %zmm0
+; AVX512-NEXT:    vaddps %zmm2, %zmm1, %zmm0
+; AVX512-NEXT:    vmovaps %zmm1, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
   %s = select <16 x i1> %b, <16 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, <16 x float> %y
   %r = fadd <16 x float> %s, %x
@@ -152,13 +150,15 @@ define <4 x float> @fsub_v4f32(<4 x i1> %b, <4 x float> noundef %x, <4 x float> 
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vptestmd %xmm0, %xmm0, %k1
-; AVX512VL-NEXT:    vmovaps %xmm2, %xmm0 {%k1} {z}
-; AVX512VL-NEXT:    vsubps %xmm0, %xmm1, %xmm0
+; AVX512VL-NEXT:    vsubps %xmm2, %xmm1, %xmm1 {%k1}
+; AVX512VL-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
   %s = select <4 x i1> %b, <4 x float> %y, <4 x float> zeroinitializer
   %r = fsub <4 x float> %x, %s
   ret <4 x float> %r
 }
+
+; negative test - fsub is not commutative; there is no identity constant for operand 0
 
 define <8 x float> @fsub_v8f32_commute(<8 x i1> %b, <8 x float> noundef %x, <8 x float> noundef %y) {
 ; AVX2-LABEL: fsub_v8f32_commute:
@@ -214,14 +214,16 @@ define <16 x float> @fsub_v16f32_swap(<16 x i1> %b, <16 x float> noundef %x, <16
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512-NEXT:    vpslld $31, %zmm0, %zmm0
-; AVX512-NEXT:    vptestnmd %zmm0, %zmm0, %k1
-; AVX512-NEXT:    vmovaps %zmm2, %zmm0 {%k1} {z}
-; AVX512-NEXT:    vsubps %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vsubps %zmm2, %zmm1, %zmm0
+; AVX512-NEXT:    vmovaps %zmm1, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
   %s = select <16 x i1> %b, <16 x float> zeroinitializer, <16 x float> %y
   %r = fsub <16 x float> %x, %s
   ret <16 x float> %r
 }
+
+; negative test - fsub is not commutative; there is no identity constant for operand 0
 
 define <16 x float> @fsub_v16f32_commute_swap(<16 x i1> %b, <16 x float> noundef %x, <16 x float> noundef %y) {
 ; AVX2-LABEL: fsub_v16f32_commute_swap:
@@ -570,9 +572,7 @@ define <8 x float> @fadd_v8f32_cast_cond(i8 noundef zeroext %pb, <8 x float> nou
 ; AVX512VL-LABEL: fadd_v8f32_cast_cond:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    kmovw %edi, %k1
-; AVX512VL-NEXT:    vbroadcastss {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; AVX512VL-NEXT:    vmovaps %ymm1, %ymm2 {%k1}
-; AVX512VL-NEXT:    vaddps %ymm2, %ymm0, %ymm0
+; AVX512VL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 {%k1}
 ; AVX512VL-NEXT:    retq
   %b = bitcast i8 %pb to <8 x i1>
   %s = select <8 x i1> %b, <8 x float> %y, <8 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>
@@ -636,9 +636,7 @@ define <8 x double> @fadd_v8f64_cast_cond(i8 noundef zeroext %pb, <8 x double> n
 ; AVX512-LABEL: fadd_v8f64_cast_cond:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vbroadcastsd {{.*#+}} zmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; AVX512-NEXT:    vmovapd %zmm1, %zmm2 {%k1}
-; AVX512-NEXT:    vaddpd %zmm2, %zmm0, %zmm0
+; AVX512-NEXT:    vaddpd %zmm1, %zmm0, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
   %b = bitcast i8 %pb to <8 x i1>
   %s = select <8 x i1> %b, <8 x double> %y, <8 x double> <double -0.0, double -0.0, double -0.0, double -0.0, double -0.0, double -0.0, double -0.0, double -0.0>
@@ -709,8 +707,7 @@ define <8 x float> @fsub_v8f32_cast_cond(i8 noundef zeroext %pb, <8 x float> nou
 ; AVX512VL-LABEL: fsub_v8f32_cast_cond:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    kmovw %edi, %k1
-; AVX512VL-NEXT:    vmovaps %ymm1, %ymm1 {%k1} {z}
-; AVX512VL-NEXT:    vsubps %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vsubps %ymm1, %ymm0, %ymm0 {%k1}
 ; AVX512VL-NEXT:    retq
   %b = bitcast i8 %pb to <8 x i1>
   %s = select <8 x i1> %b, <8 x float> %y, <8 x float> zeroinitializer
@@ -775,8 +772,7 @@ define <8 x double> @fsub_v8f64_cast_cond(i8 noundef zeroext %pb, <8 x double> n
 ; AVX512-LABEL: fsub_v8f64_cast_cond:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vmovapd %zmm1, %zmm1 {%k1} {z}
-; AVX512-NEXT:    vsubpd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vsubpd %zmm1, %zmm0, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
   %b = bitcast i8 %pb to <8 x i1>
   %s = select <8 x i1> %b, <8 x double> %y, <8 x double> zeroinitializer

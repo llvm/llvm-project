@@ -168,10 +168,9 @@ void DefinitionBlockSeparator::separateBlocks(
       TargetToken = TargetLine->First;
       while (TargetToken && !TargetToken->is(tok::r_brace))
         TargetToken = TargetToken->Next;
-      if (!TargetToken) {
+      if (!TargetToken)
         while (I < Lines.size() && !Lines[I]->First->is(tok::r_brace))
           ++I;
-      }
     } else if (CurrentLine->First->closesScope()) {
       if (OpeningLineIndex > Lines.size())
         continue;

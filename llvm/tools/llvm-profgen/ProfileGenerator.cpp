@@ -820,8 +820,7 @@ static void extractPrefixContextStack(
 
 void CSProfileGenerator::generateProbeBasedProfile() {
   for (const auto &CI : SampleCounters) {
-    const ProbeBasedCtxKey *CtxKey =
-        dyn_cast<ProbeBasedCtxKey>(CI.first.getPtr());
+    const auto *CtxKey = cast<ProbeBasedCtxKey>(CI.first.getPtr());
     SampleContextFrameVector ContextStack;
     extractPrefixContextStack(ContextStack, CtxKey->Probes, Binary);
     // Fill in function body samples from probes, also infer caller's samples

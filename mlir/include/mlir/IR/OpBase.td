@@ -2798,7 +2798,8 @@ class NativeCodeCall<string expr, int returns = 1> {
 
 class NativeCodeCallVoid<string expr> : NativeCodeCall<expr, 0>;
 
-def ConstantLikeMatcher : NativeCodeCall<"success(matchPattern($_self->getResult(0), m_Constant(&$0)))">;
+def ConstantLikeMatcher : NativeCodeCall<"::mlir::success("
+    "::mlir::matchPattern($_self->getResult(0), ::mlir::m_Constant(&$0)))">;
 
 //===----------------------------------------------------------------------===//
 // Rewrite directives

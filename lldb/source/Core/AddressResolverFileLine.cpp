@@ -40,7 +40,7 @@ AddressResolverFileLine::SearchCallback(SearchFilter &filter,
   SymbolContextList sc_list;
   CompileUnit *cu = context.comp_unit;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
 
   // TODO: Handle SourceLocationSpec column information
   cu->ResolveSymbolContext(m_src_location_spec, eSymbolContextEverything,

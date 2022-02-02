@@ -192,7 +192,7 @@ llvm::Expected<uint32_t> DynamicRegisterInfo::ByteOffsetFromRegInfoDict(
 size_t
 DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
                                      const ArchSpec &arch) {
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT);
+  Log *log = GetLog(LLDBLog::Object);
   assert(!m_finalized);
   StructuredData::Array *sets = nullptr;
   if (dict.GetValueForKeyAsArray("sets", sets)) {

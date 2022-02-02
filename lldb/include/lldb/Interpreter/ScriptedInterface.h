@@ -34,8 +34,8 @@ public:
   static Ret ErrorWithMessage(llvm::StringRef caller_name,
                               llvm::StringRef error_msg, Status &error,
                               LLDBLog log_caterogy = LLDBLog::Process) {
-    LLDB_LOGF(GetLogIfAllCategoriesSet(log_caterogy), "%s ERROR = %s",
-              caller_name.data(), error_msg.data());
+    LLDB_LOGF(GetLog(log_caterogy), "%s ERROR = %s", caller_name.data(),
+              error_msg.data());
     error.SetErrorString(llvm::Twine(caller_name + llvm::Twine(" ERROR = ") +
                                      llvm::Twine(error_msg))
                              .str());

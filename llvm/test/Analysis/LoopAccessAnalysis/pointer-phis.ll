@@ -127,6 +127,7 @@ define i32 @load_with_pointer_phi_outside_loop(double* %A, double* %B, double* %
 ; CHECK-LABEL: 'load_with_pointer_phi_outside_loop'
 ; CHECK-NEXT:  loop.header:
 ; CHECK-NEXT:    Report: unsafe dependent memory operations in loop
+; CHECK-NEXT:    Unknown data dependence.
 ; CHECK-NEXT:    Dependences:
 ; CHECK-NEXT:      Unknown:
 ; CHECK-NEXT:          %v8 = load double, double* %ptr, align 8 ->
@@ -164,6 +165,7 @@ define i32 @store_with_pointer_phi_outside_loop(double* %A, double* %B, double* 
 ; CHECK-LABEL: 'store_with_pointer_phi_outside_loop'
 ; CHECK-NEXT:  loop.header:
 ; CHECK-NEXT:    Report: unsafe dependent memory operations in loop.
+; CHECK-NEXT:    Unknown data dependence.
 ; CHECK-NEXT:    Dependences:
 ; CHECK-NEXT:      Unknown:
 ; CHECK-NEXT:          %v8 = load double, double* %arrayidx, align 8 ->
@@ -201,6 +203,7 @@ define i32 @store_with_pointer_phi_incoming_phi(double* %A, double* %B, double* 
 ; CHECK-LABEL: 'store_with_pointer_phi_incoming_phi'
 ; CHECK-NEXT:  loop.header:
 ; CHECK-NEXT:    Report: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:    Unknown data dependence.
 ; CHECK-NEXT:    Dependences:
 ; CHECK-NEXT:      Unknown:
 ; CHECK-NEXT:          %v8 = load double, double* %arrayidx, align 8 ->
@@ -277,6 +280,7 @@ define i32 @store_with_pointer_phi_incoming_phi_irreducible_cycle(double* %A, do
 ; CHECK-LABEL: 'store_with_pointer_phi_incoming_phi_irreducible_cycle'
 ; CHECK-NEXT:  loop.header:
 ; CHECK-NEXT:    Report: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:    Unknown data dependence.
 ; CHECK-NEXT:    Dependences:
 ; CHECK-NEXT:      Unknown:
 ; CHECK-NEXT:          %v8 = load double, double* %arrayidx, align 8 ->
@@ -348,6 +352,7 @@ define i32 @store_with_pointer_phi_outside_loop_select(double* %A, double* %B, d
 ; CHECK-LABEL: 'store_with_pointer_phi_outside_loop_select'
 ; CHECK-NEXT:  loop.header:
 ; CHECK-NEXT:    Report: unsafe dependent memory operations in loop.
+; CHECK-NEXT:    Unknown data dependence.
 ; CHECK-NEXT:    Dependences:
 ; CHECK-NEXT:      Unknown:
 ; CHECK-NEXT:          %v8 = load double, double* %arrayidx, align 8 ->
@@ -413,6 +418,7 @@ define void @phi_load_store_memdep_check(i1 %c, i16* %A, i16* %B, i16* %C) {
 ; CHECK-LABEL: Loop access info in function 'phi_load_store_memdep_check':
 ; CHECK-NEXT:   for.body:
 ; CHECK-NEXT:    Report: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:    Unknown data dependence.
 ; CHECK-NEXT:    Dependences:
 ; CHECK-NEXT:      Unknown:
 ; CHECK-NEXT:          %lv3 = load i16, i16* %c.sink, align 2 ->

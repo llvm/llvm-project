@@ -125,7 +125,7 @@ ScriptedThread::CreateRegisterContextForFrame(StackFrame *frame) {
   if (!reg_data)
     return GetInterface()->ErrorWithMessage<lldb::RegisterContextSP>(
         LLVM_PRETTY_FUNCTION, "Failed to get scripted thread registers data.",
-        error, LIBLLDB_LOG_THREAD);
+        error, LLDBLog::Thread);
 
   DataBufferSP data_sp(
       std::make_shared<DataBufferHeap>(reg_data->c_str(), reg_data->size()));
@@ -133,7 +133,7 @@ ScriptedThread::CreateRegisterContextForFrame(StackFrame *frame) {
   if (!data_sp->GetByteSize())
     return GetInterface()->ErrorWithMessage<lldb::RegisterContextSP>(
         LLVM_PRETTY_FUNCTION, "Failed to copy raw registers data.", error,
-        LIBLLDB_LOG_THREAD);
+        LLDBLog::Thread);
 
   std::shared_ptr<RegisterContextMemory> reg_ctx_memory =
       std::make_shared<RegisterContextMemory>(
@@ -141,7 +141,7 @@ ScriptedThread::CreateRegisterContextForFrame(StackFrame *frame) {
   if (!reg_ctx_memory)
     return GetInterface()->ErrorWithMessage<lldb::RegisterContextSP>(
         LLVM_PRETTY_FUNCTION, "Failed to create a register context.", error,
-        LIBLLDB_LOG_THREAD);
+        LLDBLog::Thread);
 
   reg_ctx_memory->SetAllRegisterData(data_sp);
   m_reg_context_sp = reg_ctx_memory;
@@ -156,7 +156,7 @@ bool ScriptedThread::CalculateStopInfo() {
   if (!dict_sp)
     return GetInterface()->ErrorWithMessage<bool>(
         LLVM_PRETTY_FUNCTION, "Failed to get scripted thread stop info.", error,
-        LIBLLDB_LOG_THREAD);
+        LLDBLog::Thread);
 
   lldb::StopInfoSP stop_info_sp;
   lldb::StopReason stop_reason_type;
@@ -165,14 +165,14 @@ bool ScriptedThread::CalculateStopInfo() {
     return GetInterface()->ErrorWithMessage<bool>(
         LLVM_PRETTY_FUNCTION,
         "Couldn't find value for key 'type' in stop reason dictionary.", error,
-        LIBLLDB_LOG_THREAD);
+        LLDBLog::Thread);
 
   StructuredData::Dictionary *data_dict;
   if (!dict_sp->GetValueForKeyAsDictionary("data", data_dict))
     return GetInterface()->ErrorWithMessage<bool>(
         LLVM_PRETTY_FUNCTION,
         "Couldn't find value for key 'data' in stop reason dictionary.", error,
-        LIBLLDB_LOG_THREAD);
+        LLDBLog::Thread);
 
   switch (stop_reason_type) {
   case lldb::eStopReasonNone:
@@ -206,7 +206,7 @@ bool ScriptedThread::CalculateStopInfo() {
         llvm::Twine("Unsupported stop reason type (" +
                     llvm::Twine(stop_reason_type) + llvm::Twine(")."))
             .str(),
-        error, LIBLLDB_LOG_THREAD);
+        error, LLDBLog::Thread);
   }
 
   if (!stop_info_sp)
@@ -236,7 +236,7 @@ std::shared_ptr<DynamicRegisterInfo> ScriptedThread::GetDynamicRegisterInfo() {
           ->ErrorWithMessage<std::shared_ptr<DynamicRegisterInfo>>(
               LLVM_PRETTY_FUNCTION,
               "Failed to get scripted thread registers info.", error,
-              LIBLLDB_LOG_THREAD);
+              LLDBLog::Thread);
 
     m_register_info_sp = std::make_shared<DynamicRegisterInfo>(
         *reg_info, m_scripted_process.GetTarget().GetArchitecture());

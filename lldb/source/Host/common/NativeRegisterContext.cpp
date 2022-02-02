@@ -122,7 +122,7 @@ const char *NativeRegisterContext::GetRegisterSetNameForRegisterAtIndex(
 }
 
 lldb::addr_t NativeRegisterContext::GetPC(lldb::addr_t fail_value) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+  Log *log = GetLog(LLDBLog::Thread);
 
   uint32_t reg = ConvertRegisterKindToRegisterNumber(eRegisterKindGeneric,
                                                      LLDB_REGNUM_GENERIC_PC);
@@ -197,7 +197,7 @@ NativeRegisterContext::ReadRegisterAsUnsigned(uint32_t reg,
 uint64_t
 NativeRegisterContext::ReadRegisterAsUnsigned(const RegisterInfo *reg_info,
                                               lldb::addr_t fail_value) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+  Log *log = GetLog(LLDBLog::Thread);
 
   if (reg_info) {
     RegisterValue value;

@@ -182,7 +182,7 @@ bool CompactUnwindInfo::GetUnwindPlan(Target &target, Address addr,
 
     if (ArchSpec arch = m_objfile.GetArchitecture()) {
 
-      Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+      Log *log = GetLog(LLDBLog::Unwind);
       if (log && log->GetVerbose()) {
         StreamString strm;
         addr.Dump(
@@ -251,7 +251,7 @@ void CompactUnwindInfo::ScanIndex(const ProcessSP &process_sp) {
     return;
   }
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+  Log *log = GetLog(LLDBLog::Unwind);
   if (log)
     m_objfile.GetModule()->LogMessage(
         log, "Reading compact unwind first-level indexes");
