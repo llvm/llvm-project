@@ -277,17 +277,16 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
     ArrayRef<uint8_t> data = {isZeroFill(sec.flags) ? nullptr
                                                     : buf + sec.offset,
                               static_cast<size_t>(sec.size)};
+    sections.push_back(sec.addr);
     if (sec.align >= 32) {
       error("alignment " + std::to_string(sec.align) + " of section " + name +
             " is too large");
-      sections.push_back(sec.addr);
       continue;
     }
     uint32_t align = 1 << sec.align;
     uint32_t flags = sec.flags;
 
     auto splitRecords = [&](int recordSize) -> void {
-      sections.push_back(sec.addr);
       if (data.empty())
         return;
       Subsections &subsections = sections.back().subsections;
@@ -321,7 +320,6 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
         isec = make<WordLiteralInputSection>(segname, name, this, data, align,
                                              flags);
       }
-      sections.push_back(sec.addr);
       sections.back().subsections.push_back({0, isec});
     } else if (auto recordSize = getRecordSize(segname, name)) {
       splitRecords(*recordSize);
@@ -350,10 +348,9 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
       // ld64 does not appear to emit contents from sections within the __LLVM
       // segment. Symbols within those sections point to bitcode metadata
       // instead of actual symbols. Global symbols within those sections could
-      // have the same name without causing duplicate symbol errors. Push an
-      // empty entry to ensure indices line up for the remaining sections.
+      // have the same name without causing duplicate symbol errors. To avoid
+      // spurious duplicate symbol errors, we do not parse these sections.
       // TODO: Evaluate whether the bitcode metadata is needed.
-      sections.push_back(sec.addr);
     } else {
       auto *isec =
           make<ConcatInputSection>(segname, name, this, data, align, flags);
@@ -361,12 +358,9 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
           isec->getSegName() == segment_names::dwarf) {
         // Instead of emitting DWARF sections, we emit STABS symbols to the
         // object files that contain them. We filter them out early to avoid
-        // parsing their relocations unnecessarily. But we must still push an
-        // empty entry to ensure the indices line up for the remaining sections.
-        sections.push_back(sec.addr);
+        // parsing their relocations unnecessarily.
         debugSections.push_back(isec);
       } else {
-        sections.push_back(sec.addr);
         sections.back().subsections.push_back({0, isec});
       }
     }
