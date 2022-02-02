@@ -387,9 +387,6 @@ struct BarePtrFuncOpConversion : public FuncOpConversionBase {
   }
 };
 
-// Straightforward lowerings.
-using SelectOpLowering = VectorConvertToLLVMPattern<SelectOp, LLVM::SelectOp>;
-
 /// Lower `std.assert`. The default lowering calls the `abort` function if the
 /// assertion is violated and has no effect otherwise. The failure message is
 /// ignored by the default lowering but should be propagated by any custom
@@ -438,31 +435,19 @@ struct ConstantOpLowering : public ConvertOpToLLVMPattern<ConstantOp> {
   LogicalResult
   matchAndRewrite(ConstantOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // If constant refers to a function, convert it to "addressof".
-    if (auto symbolRef = op.getValue().dyn_cast<FlatSymbolRefAttr>()) {
-      auto type = typeConverter->convertType(op.getResult().getType());
-      if (!type || !LLVM::isCompatibleType(type))
-        return rewriter.notifyMatchFailure(op, "failed to convert result type");
+    auto type = typeConverter->convertType(op.getResult().getType());
+    if (!type || !LLVM::isCompatibleType(type))
+      return rewriter.notifyMatchFailure(op, "failed to convert result type");
 
-      auto newOp = rewriter.create<LLVM::AddressOfOp>(op.getLoc(), type,
-                                                      symbolRef.getValue());
-      for (const NamedAttribute &attr : op->getAttrs()) {
-        if (attr.getName().strref() == "value")
-          continue;
-        newOp->setAttr(attr.getName(), attr.getValue());
-      }
-      rewriter.replaceOp(op, newOp->getResults());
-      return success();
+    auto newOp =
+        rewriter.create<LLVM::AddressOfOp>(op.getLoc(), type, op.getValue());
+    for (const NamedAttribute &attr : op->getAttrs()) {
+      if (attr.getName().strref() == "value")
+        continue;
+      newOp->setAttr(attr.getName(), attr.getValue());
     }
-
-    // Calling into other scopes (non-flat reference) is not supported in LLVM.
-    if (op.getValue().isa<SymbolRefAttr>())
-      return rewriter.notifyMatchFailure(
-          op, "referring to a symbol outside of the current module");
-
-    return LLVM::detail::oneToOneRewrite(
-        op, LLVM::ConstantOp::getOperationName(), adaptor.getOperands(),
-        *getTypeConverter(), rewriter);
+    rewriter.replaceOp(op, newOp->getResults());
+    return success();
   }
 };
 
@@ -663,99 +648,6 @@ struct SwitchOpLowering
   using Super::Super;
 };
 
-// The Splat operation is lowered to an insertelement + a shufflevector
-// operation. Splat to only 0-d and 1-d vector result types are lowered.
-struct SplatOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
-  using ConvertOpToLLVMPattern<SplatOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(SplatOp splatOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    VectorType resultType = splatOp.getType().dyn_cast<VectorType>();
-    if (!resultType || resultType.getRank() > 1)
-      return failure();
-
-    // First insert it into an undef vector so we can shuffle it.
-    auto vectorType = typeConverter->convertType(splatOp.getType());
-    Value undef = rewriter.create<LLVM::UndefOp>(splatOp.getLoc(), vectorType);
-    auto zero = rewriter.create<LLVM::ConstantOp>(
-        splatOp.getLoc(),
-        typeConverter->convertType(rewriter.getIntegerType(32)),
-        rewriter.getZeroAttr(rewriter.getIntegerType(32)));
-
-    // For 0-d vector, we simply do `insertelement`.
-    if (resultType.getRank() == 0) {
-      rewriter.replaceOpWithNewOp<LLVM::InsertElementOp>(
-          splatOp, vectorType, undef, adaptor.getInput(), zero);
-      return success();
-    }
-
-    // For 1-d vector, we additionally do a `vectorshuffle`.
-    auto v = rewriter.create<LLVM::InsertElementOp>(
-        splatOp.getLoc(), vectorType, undef, adaptor.getInput(), zero);
-
-    int64_t width = splatOp.getType().cast<VectorType>().getDimSize(0);
-    SmallVector<int32_t, 4> zeroValues(width, 0);
-
-    // Shuffle the value across the desired number of elements.
-    ArrayAttr zeroAttrs = rewriter.getI32ArrayAttr(zeroValues);
-    rewriter.replaceOpWithNewOp<LLVM::ShuffleVectorOp>(splatOp, v, undef,
-                                                       zeroAttrs);
-    return success();
-  }
-};
-
-// The Splat operation is lowered to an insertelement + a shufflevector
-// operation. Splat to only 2+-d vector result types are lowered by the
-// SplatNdOpLowering, the 1-d case is handled by SplatOpLowering.
-struct SplatNdOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
-  using ConvertOpToLLVMPattern<SplatOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(SplatOp splatOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    VectorType resultType = splatOp.getType().dyn_cast<VectorType>();
-    if (!resultType || resultType.getRank() <= 1)
-      return failure();
-
-    // First insert it into an undef vector so we can shuffle it.
-    auto loc = splatOp.getLoc();
-    auto vectorTypeInfo =
-        LLVM::detail::extractNDVectorTypeInfo(resultType, *getTypeConverter());
-    auto llvmNDVectorTy = vectorTypeInfo.llvmNDVectorTy;
-    auto llvm1DVectorTy = vectorTypeInfo.llvm1DVectorTy;
-    if (!llvmNDVectorTy || !llvm1DVectorTy)
-      return failure();
-
-    // Construct returned value.
-    Value desc = rewriter.create<LLVM::UndefOp>(loc, llvmNDVectorTy);
-
-    // Construct a 1-D vector with the splatted value that we insert in all the
-    // places within the returned descriptor.
-    Value vdesc = rewriter.create<LLVM::UndefOp>(loc, llvm1DVectorTy);
-    auto zero = rewriter.create<LLVM::ConstantOp>(
-        loc, typeConverter->convertType(rewriter.getIntegerType(32)),
-        rewriter.getZeroAttr(rewriter.getIntegerType(32)));
-    Value v = rewriter.create<LLVM::InsertElementOp>(loc, llvm1DVectorTy, vdesc,
-                                                     adaptor.getInput(), zero);
-
-    // Shuffle the value across the desired number of elements.
-    int64_t width = resultType.getDimSize(resultType.getRank() - 1);
-    SmallVector<int32_t, 4> zeroValues(width, 0);
-    ArrayAttr zeroAttrs = rewriter.getI32ArrayAttr(zeroValues);
-    v = rewriter.create<LLVM::ShuffleVectorOp>(loc, v, v, zeroAttrs);
-
-    // Iterate of linear index, convert to coords space and insert splatted 1-D
-    // vector in each position.
-    nDVectorIterate(vectorTypeInfo, rewriter, [&](ArrayAttr position) {
-      desc = rewriter.create<LLVM::InsertValueOp>(loc, llvmNDVectorTy, desc, v,
-                                                  position);
-    });
-    rewriter.replaceOp(splatOp, desc);
-    return success();
-  }
-};
-
 } // namespace
 
 void mlir::populateStdToLLVMFuncOpConversionPattern(
@@ -778,9 +670,6 @@ void mlir::populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
       CondBranchOpLowering,
       ConstantOpLowering,
       ReturnOpLowering,
-      SelectOpLowering,
-      SplatOpLowering,
-      SplatNdOpLowering,
       SwitchOpLowering>(converter);
   // clang-format on
 }

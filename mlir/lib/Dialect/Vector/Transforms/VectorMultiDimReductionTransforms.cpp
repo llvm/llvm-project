@@ -307,7 +307,7 @@ struct TwoDimMultiReductionToReduction
       return failure();
 
     auto loc = multiReductionOp.getLoc();
-    Value result = rewriter.create<ConstantOp>(
+    Value result = rewriter.create<arith::ConstantOp>(
         loc, multiReductionOp.getDestType(),
         rewriter.getZeroAttr(multiReductionOp.getDestType()));
     int outerDim = multiReductionOp.getSourceVectorType().getShape()[0];

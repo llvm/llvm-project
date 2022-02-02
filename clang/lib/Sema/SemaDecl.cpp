@@ -9193,7 +9193,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       }
       if ((Parent->isClass() || Parent->isStruct()) &&
           Parent->hasAttr<SYCLSpecialClassAttr>() &&
-          NewFD->getKind() == Decl::Kind::CXXMethod &&
+          NewFD->getKind() == Decl::Kind::CXXMethod && NewFD->getIdentifier() &&
           NewFD->getName() == "__init" && D.isFunctionDefinition()) {
         if (auto *Def = Parent->getDefinition())
           Def->setInitMethod(true);

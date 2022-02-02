@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -linalg-bufferize -std-bufferize \
+// RUN: mlir-opt %s -linalg-bufferize \
 // RUN: -arith-bufferize -tensor-bufferize -func-bufferize \
 // RUN: -finalizing-bufferize -buffer-deallocation -convert-linalg-to-llvm \
 // RUN: -convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | \

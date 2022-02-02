@@ -1051,8 +1051,6 @@ int main() {
 // CHECK1-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_S:%.*]], align 8
-// CHECK1-NEXT:    [[EXN_SLOT:%.*]] = alloca i8*, align 8
-// CHECK1-NEXT:    [[EHSELECTOR_SLOT:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 // CHECK1-NEXT:    store i32 0, i32* [[DOTOMP_COMB_LB]], align 4
@@ -1086,7 +1084,7 @@ int main() {
 // CHECK1-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
 // CHECK1:       invoke.cont:
 // CHECK1-NEXT:    [[CALL:%.*]] = invoke noundef signext i8 @_ZN1ScvcEv(%struct.S* noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
-// CHECK1-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD:%.*]]
+// CHECK1-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[TERMINATE_LPAD]]
 // CHECK1:       invoke.cont2:
 // CHECK1-NEXT:    [[TMP7:%.*]] = sext i8 [[CALL]] to i32
 // CHECK1-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB3]], i32 [[TMP1]], i32 [[TMP7]])
@@ -1103,29 +1101,16 @@ int main() {
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP12]], [[TMP13]]
 // CHECK1-NEXT:    store i32 [[ADD]], i32* [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND]]
-// CHECK1:       lpad:
-// CHECK1-NEXT:    [[TMP14:%.*]] = landingpad { i8*, i32 }
-// CHECK1-NEXT:    catch i8* null
-// CHECK1-NEXT:    [[TMP15:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 0
-// CHECK1-NEXT:    store i8* [[TMP15]], i8** [[EXN_SLOT]], align 8
-// CHECK1-NEXT:    [[TMP16:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 1
-// CHECK1-NEXT:    store i32 [[TMP16]], i32* [[EHSELECTOR_SLOT]], align 4
-// CHECK1-NEXT:    call void @_ZN1SD1Ev(%struct.S* noundef nonnull align 8 dereferenceable(24) [[REF_TMP]]) #[[ATTR6]]
-// CHECK1-NEXT:    br label [[TERMINATE_HANDLER:%.*]]
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK1:       omp.loop.exit:
 // CHECK1-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]])
 // CHECK1-NEXT:    ret void
 // CHECK1:       terminate.lpad:
-// CHECK1-NEXT:    [[TMP17:%.*]] = landingpad { i8*, i32 }
+// CHECK1-NEXT:    [[TMP14:%.*]] = landingpad { i8*, i32 }
 // CHECK1-NEXT:    catch i8* null
-// CHECK1-NEXT:    [[TMP18:%.*]] = extractvalue { i8*, i32 } [[TMP17]], 0
-// CHECK1-NEXT:    call void @__clang_call_terminate(i8* [[TMP18]]) #[[ATTR10]]
-// CHECK1-NEXT:    unreachable
-// CHECK1:       terminate.handler:
-// CHECK1-NEXT:    [[EXN:%.*]] = load i8*, i8** [[EXN_SLOT]], align 8
-// CHECK1-NEXT:    call void @__clang_call_terminate(i8* [[EXN]]) #[[ATTR10]]
+// CHECK1-NEXT:    [[TMP15:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 0
+// CHECK1-NEXT:    call void @__clang_call_terminate(i8* [[TMP15]]) #[[ATTR10]]
 // CHECK1-NEXT:    unreachable
 //
 //
@@ -2173,8 +2158,6 @@ int main() {
 // CHECK2-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_S:%.*]], align 8
-// CHECK2-NEXT:    [[EXN_SLOT:%.*]] = alloca i8*, align 8
-// CHECK2-NEXT:    [[EHSELECTOR_SLOT:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 // CHECK2-NEXT:    store i32 0, i32* [[DOTOMP_COMB_LB]], align 4
@@ -2208,7 +2191,7 @@ int main() {
 // CHECK2-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
 // CHECK2:       invoke.cont:
 // CHECK2-NEXT:    [[CALL:%.*]] = invoke noundef signext i8 @_ZN1ScvcEv(%struct.S* noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
-// CHECK2-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD:%.*]]
+// CHECK2-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[TERMINATE_LPAD]]
 // CHECK2:       invoke.cont2:
 // CHECK2-NEXT:    [[TMP7:%.*]] = sext i8 [[CALL]] to i32
 // CHECK2-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB3]], i32 [[TMP1]], i32 [[TMP7]])
@@ -2225,29 +2208,16 @@ int main() {
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP12]], [[TMP13]]
 // CHECK2-NEXT:    store i32 [[ADD]], i32* [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_COND]]
-// CHECK2:       lpad:
-// CHECK2-NEXT:    [[TMP14:%.*]] = landingpad { i8*, i32 }
-// CHECK2-NEXT:    catch i8* null
-// CHECK2-NEXT:    [[TMP15:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 0
-// CHECK2-NEXT:    store i8* [[TMP15]], i8** [[EXN_SLOT]], align 8
-// CHECK2-NEXT:    [[TMP16:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 1
-// CHECK2-NEXT:    store i32 [[TMP16]], i32* [[EHSELECTOR_SLOT]], align 4
-// CHECK2-NEXT:    call void @_ZN1SD1Ev(%struct.S* noundef nonnull align 8 dereferenceable(24) [[REF_TMP]]) #[[ATTR6]]
-// CHECK2-NEXT:    br label [[TERMINATE_HANDLER:%.*]]
 // CHECK2:       omp.inner.for.end:
 // CHECK2-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK2:       omp.loop.exit:
 // CHECK2-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]])
 // CHECK2-NEXT:    ret void
 // CHECK2:       terminate.lpad:
-// CHECK2-NEXT:    [[TMP17:%.*]] = landingpad { i8*, i32 }
+// CHECK2-NEXT:    [[TMP14:%.*]] = landingpad { i8*, i32 }
 // CHECK2-NEXT:    catch i8* null
-// CHECK2-NEXT:    [[TMP18:%.*]] = extractvalue { i8*, i32 } [[TMP17]], 0
-// CHECK2-NEXT:    call void @__clang_call_terminate(i8* [[TMP18]]) #[[ATTR10]]
-// CHECK2-NEXT:    unreachable
-// CHECK2:       terminate.handler:
-// CHECK2-NEXT:    [[EXN:%.*]] = load i8*, i8** [[EXN_SLOT]], align 8
-// CHECK2-NEXT:    call void @__clang_call_terminate(i8* [[EXN]]) #[[ATTR10]]
+// CHECK2-NEXT:    [[TMP15:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 0
+// CHECK2-NEXT:    call void @__clang_call_terminate(i8* [[TMP15]]) #[[ATTR10]]
 // CHECK2-NEXT:    unreachable
 //
 //
@@ -3286,8 +3256,6 @@ int main() {
 // CHECK5-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_S:%.*]], align 8
-// CHECK5-NEXT:    [[EXN_SLOT:%.*]] = alloca i8*, align 8
-// CHECK5-NEXT:    [[EHSELECTOR_SLOT:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK5-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 // CHECK5-NEXT:    store i32 0, i32* [[DOTOMP_COMB_LB]], align 4
@@ -3321,7 +3289,7 @@ int main() {
 // CHECK5-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
 // CHECK5:       invoke.cont:
 // CHECK5-NEXT:    [[CALL:%.*]] = invoke noundef signext i8 @_ZN1ScvcEv(%struct.S* noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
-// CHECK5-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD:%.*]]
+// CHECK5-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[TERMINATE_LPAD]]
 // CHECK5:       invoke.cont2:
 // CHECK5-NEXT:    [[TMP7:%.*]] = sext i8 [[CALL]] to i32
 // CHECK5-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB3]], i32 [[TMP1]], i32 [[TMP7]])
@@ -3338,29 +3306,16 @@ int main() {
 // CHECK5-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP12]], [[TMP13]]
 // CHECK5-NEXT:    store i32 [[ADD]], i32* [[DOTOMP_IV]], align 4
 // CHECK5-NEXT:    br label [[OMP_INNER_FOR_COND]]
-// CHECK5:       lpad:
-// CHECK5-NEXT:    [[TMP14:%.*]] = landingpad { i8*, i32 }
-// CHECK5-NEXT:    catch i8* null
-// CHECK5-NEXT:    [[TMP15:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 0
-// CHECK5-NEXT:    store i8* [[TMP15]], i8** [[EXN_SLOT]], align 8
-// CHECK5-NEXT:    [[TMP16:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 1
-// CHECK5-NEXT:    store i32 [[TMP16]], i32* [[EHSELECTOR_SLOT]], align 4
-// CHECK5-NEXT:    call void @_ZN1SD1Ev(%struct.S* noundef nonnull align 8 dereferenceable(24) [[REF_TMP]]) #[[ATTR6]]
-// CHECK5-NEXT:    br label [[TERMINATE_HANDLER:%.*]]
 // CHECK5:       omp.inner.for.end:
 // CHECK5-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK5:       omp.loop.exit:
 // CHECK5-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]])
 // CHECK5-NEXT:    ret void
 // CHECK5:       terminate.lpad:
-// CHECK5-NEXT:    [[TMP17:%.*]] = landingpad { i8*, i32 }
+// CHECK5-NEXT:    [[TMP14:%.*]] = landingpad { i8*, i32 }
 // CHECK5-NEXT:    catch i8* null
-// CHECK5-NEXT:    [[TMP18:%.*]] = extractvalue { i8*, i32 } [[TMP17]], 0
-// CHECK5-NEXT:    call void @__clang_call_terminate(i8* [[TMP18]]) #[[ATTR10]]
-// CHECK5-NEXT:    unreachable
-// CHECK5:       terminate.handler:
-// CHECK5-NEXT:    [[EXN:%.*]] = load i8*, i8** [[EXN_SLOT]], align 8
-// CHECK5-NEXT:    call void @__clang_call_terminate(i8* [[EXN]]) #[[ATTR10]]
+// CHECK5-NEXT:    [[TMP15:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 0
+// CHECK5-NEXT:    call void @__clang_call_terminate(i8* [[TMP15]]) #[[ATTR10]]
 // CHECK5-NEXT:    unreachable
 //
 //
@@ -4408,8 +4363,6 @@ int main() {
 // CHECK6-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // CHECK6-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK6-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_S:%.*]], align 8
-// CHECK6-NEXT:    [[EXN_SLOT:%.*]] = alloca i8*, align 8
-// CHECK6-NEXT:    [[EHSELECTOR_SLOT:%.*]] = alloca i32, align 4
 // CHECK6-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK6-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 // CHECK6-NEXT:    store i32 0, i32* [[DOTOMP_COMB_LB]], align 4
@@ -4443,7 +4396,7 @@ int main() {
 // CHECK6-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
 // CHECK6:       invoke.cont:
 // CHECK6-NEXT:    [[CALL:%.*]] = invoke noundef signext i8 @_ZN1ScvcEv(%struct.S* noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
-// CHECK6-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD:%.*]]
+// CHECK6-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[TERMINATE_LPAD]]
 // CHECK6:       invoke.cont2:
 // CHECK6-NEXT:    [[TMP7:%.*]] = sext i8 [[CALL]] to i32
 // CHECK6-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB3]], i32 [[TMP1]], i32 [[TMP7]])
@@ -4460,29 +4413,16 @@ int main() {
 // CHECK6-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP12]], [[TMP13]]
 // CHECK6-NEXT:    store i32 [[ADD]], i32* [[DOTOMP_IV]], align 4
 // CHECK6-NEXT:    br label [[OMP_INNER_FOR_COND]]
-// CHECK6:       lpad:
-// CHECK6-NEXT:    [[TMP14:%.*]] = landingpad { i8*, i32 }
-// CHECK6-NEXT:    catch i8* null
-// CHECK6-NEXT:    [[TMP15:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 0
-// CHECK6-NEXT:    store i8* [[TMP15]], i8** [[EXN_SLOT]], align 8
-// CHECK6-NEXT:    [[TMP16:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 1
-// CHECK6-NEXT:    store i32 [[TMP16]], i32* [[EHSELECTOR_SLOT]], align 4
-// CHECK6-NEXT:    call void @_ZN1SD1Ev(%struct.S* noundef nonnull align 8 dereferenceable(24) [[REF_TMP]]) #[[ATTR6]]
-// CHECK6-NEXT:    br label [[TERMINATE_HANDLER:%.*]]
 // CHECK6:       omp.inner.for.end:
 // CHECK6-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK6:       omp.loop.exit:
 // CHECK6-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]])
 // CHECK6-NEXT:    ret void
 // CHECK6:       terminate.lpad:
-// CHECK6-NEXT:    [[TMP17:%.*]] = landingpad { i8*, i32 }
+// CHECK6-NEXT:    [[TMP14:%.*]] = landingpad { i8*, i32 }
 // CHECK6-NEXT:    catch i8* null
-// CHECK6-NEXT:    [[TMP18:%.*]] = extractvalue { i8*, i32 } [[TMP17]], 0
-// CHECK6-NEXT:    call void @__clang_call_terminate(i8* [[TMP18]]) #[[ATTR10]]
-// CHECK6-NEXT:    unreachable
-// CHECK6:       terminate.handler:
-// CHECK6-NEXT:    [[EXN:%.*]] = load i8*, i8** [[EXN_SLOT]], align 8
-// CHECK6-NEXT:    call void @__clang_call_terminate(i8* [[EXN]]) #[[ATTR10]]
+// CHECK6-NEXT:    [[TMP15:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 0
+// CHECK6-NEXT:    call void @__clang_call_terminate(i8* [[TMP15]]) #[[ATTR10]]
 // CHECK6-NEXT:    unreachable
 //
 //
@@ -5539,8 +5479,6 @@ int main() {
 // CHECK9-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_S:%.*]], align 8
-// CHECK9-NEXT:    [[EXN_SLOT:%.*]] = alloca i8*, align 8
-// CHECK9-NEXT:    [[EHSELECTOR_SLOT:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK9-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 // CHECK9-NEXT:    store i32 0, i32* [[DOTOMP_COMB_LB]], align 4
@@ -5574,7 +5512,7 @@ int main() {
 // CHECK9-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
 // CHECK9:       invoke.cont:
 // CHECK9-NEXT:    [[CALL:%.*]] = invoke noundef i8 @_ZN1ScvcEv(%struct.S* noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
-// CHECK9-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD:%.*]]
+// CHECK9-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[TERMINATE_LPAD]]
 // CHECK9:       invoke.cont2:
 // CHECK9-NEXT:    [[TMP7:%.*]] = sext i8 [[CALL]] to i32
 // CHECK9-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB3]], i32 [[TMP1]], i32 [[TMP7]])
@@ -5591,29 +5529,16 @@ int main() {
 // CHECK9-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP12]], [[TMP13]]
 // CHECK9-NEXT:    store i32 [[ADD]], i32* [[DOTOMP_IV]], align 4
 // CHECK9-NEXT:    br label [[OMP_INNER_FOR_COND]]
-// CHECK9:       lpad:
-// CHECK9-NEXT:    [[TMP14:%.*]] = landingpad { i8*, i32 }
-// CHECK9-NEXT:    catch i8* null
-// CHECK9-NEXT:    [[TMP15:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 0
-// CHECK9-NEXT:    store i8* [[TMP15]], i8** [[EXN_SLOT]], align 8
-// CHECK9-NEXT:    [[TMP16:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 1
-// CHECK9-NEXT:    store i32 [[TMP16]], i32* [[EHSELECTOR_SLOT]], align 4
-// CHECK9-NEXT:    call void @_ZN1SD1Ev(%struct.S* noundef nonnull align 8 dereferenceable(24) [[REF_TMP]]) #[[ATTR6]]
-// CHECK9-NEXT:    br label [[TERMINATE_HANDLER:%.*]]
 // CHECK9:       omp.inner.for.end:
 // CHECK9-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK9:       omp.loop.exit:
 // CHECK9-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]])
 // CHECK9-NEXT:    ret void
 // CHECK9:       terminate.lpad:
-// CHECK9-NEXT:    [[TMP17:%.*]] = landingpad { i8*, i32 }
+// CHECK9-NEXT:    [[TMP14:%.*]] = landingpad { i8*, i32 }
 // CHECK9-NEXT:    catch i8* null
-// CHECK9-NEXT:    [[TMP18:%.*]] = extractvalue { i8*, i32 } [[TMP17]], 0
-// CHECK9-NEXT:    call void @__clang_call_terminate(i8* [[TMP18]]) #[[ATTR10]]
-// CHECK9-NEXT:    unreachable
-// CHECK9:       terminate.handler:
-// CHECK9-NEXT:    [[EXN:%.*]] = load i8*, i8** [[EXN_SLOT]], align 8
-// CHECK9-NEXT:    call void @__clang_call_terminate(i8* [[EXN]]) #[[ATTR10]]
+// CHECK9-NEXT:    [[TMP15:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 0
+// CHECK9-NEXT:    call void @__clang_call_terminate(i8* [[TMP15]]) #[[ATTR10]]
 // CHECK9-NEXT:    unreachable
 //
 //
@@ -6661,8 +6586,6 @@ int main() {
 // CHECK10-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // CHECK10-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK10-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_S:%.*]], align 8
-// CHECK10-NEXT:    [[EXN_SLOT:%.*]] = alloca i8*, align 8
-// CHECK10-NEXT:    [[EHSELECTOR_SLOT:%.*]] = alloca i32, align 4
 // CHECK10-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK10-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 // CHECK10-NEXT:    store i32 0, i32* [[DOTOMP_COMB_LB]], align 4
@@ -6696,7 +6619,7 @@ int main() {
 // CHECK10-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
 // CHECK10:       invoke.cont:
 // CHECK10-NEXT:    [[CALL:%.*]] = invoke noundef i8 @_ZN1ScvcEv(%struct.S* noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
-// CHECK10-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD:%.*]]
+// CHECK10-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[TERMINATE_LPAD]]
 // CHECK10:       invoke.cont2:
 // CHECK10-NEXT:    [[TMP7:%.*]] = sext i8 [[CALL]] to i32
 // CHECK10-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB3]], i32 [[TMP1]], i32 [[TMP7]])
@@ -6713,29 +6636,16 @@ int main() {
 // CHECK10-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP12]], [[TMP13]]
 // CHECK10-NEXT:    store i32 [[ADD]], i32* [[DOTOMP_IV]], align 4
 // CHECK10-NEXT:    br label [[OMP_INNER_FOR_COND]]
-// CHECK10:       lpad:
-// CHECK10-NEXT:    [[TMP14:%.*]] = landingpad { i8*, i32 }
-// CHECK10-NEXT:    catch i8* null
-// CHECK10-NEXT:    [[TMP15:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 0
-// CHECK10-NEXT:    store i8* [[TMP15]], i8** [[EXN_SLOT]], align 8
-// CHECK10-NEXT:    [[TMP16:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 1
-// CHECK10-NEXT:    store i32 [[TMP16]], i32* [[EHSELECTOR_SLOT]], align 4
-// CHECK10-NEXT:    call void @_ZN1SD1Ev(%struct.S* noundef nonnull align 8 dereferenceable(24) [[REF_TMP]]) #[[ATTR6]]
-// CHECK10-NEXT:    br label [[TERMINATE_HANDLER:%.*]]
 // CHECK10:       omp.inner.for.end:
 // CHECK10-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK10:       omp.loop.exit:
 // CHECK10-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]])
 // CHECK10-NEXT:    ret void
 // CHECK10:       terminate.lpad:
-// CHECK10-NEXT:    [[TMP17:%.*]] = landingpad { i8*, i32 }
+// CHECK10-NEXT:    [[TMP14:%.*]] = landingpad { i8*, i32 }
 // CHECK10-NEXT:    catch i8* null
-// CHECK10-NEXT:    [[TMP18:%.*]] = extractvalue { i8*, i32 } [[TMP17]], 0
-// CHECK10-NEXT:    call void @__clang_call_terminate(i8* [[TMP18]]) #[[ATTR10]]
-// CHECK10-NEXT:    unreachable
-// CHECK10:       terminate.handler:
-// CHECK10-NEXT:    [[EXN:%.*]] = load i8*, i8** [[EXN_SLOT]], align 8
-// CHECK10-NEXT:    call void @__clang_call_terminate(i8* [[EXN]]) #[[ATTR10]]
+// CHECK10-NEXT:    [[TMP15:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 0
+// CHECK10-NEXT:    call void @__clang_call_terminate(i8* [[TMP15]]) #[[ATTR10]]
 // CHECK10-NEXT:    unreachable
 //
 //
@@ -7774,8 +7684,6 @@ int main() {
 // CHECK13-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_S:%.*]], align 8
-// CHECK13-NEXT:    [[EXN_SLOT:%.*]] = alloca i8*, align 8
-// CHECK13-NEXT:    [[EHSELECTOR_SLOT:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK13-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 // CHECK13-NEXT:    store i32 0, i32* [[DOTOMP_COMB_LB]], align 4
@@ -7809,7 +7717,7 @@ int main() {
 // CHECK13-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
 // CHECK13:       invoke.cont:
 // CHECK13-NEXT:    [[CALL:%.*]] = invoke noundef i8 @_ZN1ScvcEv(%struct.S* noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
-// CHECK13-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD:%.*]]
+// CHECK13-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[TERMINATE_LPAD]]
 // CHECK13:       invoke.cont2:
 // CHECK13-NEXT:    [[TMP7:%.*]] = sext i8 [[CALL]] to i32
 // CHECK13-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB3]], i32 [[TMP1]], i32 [[TMP7]])
@@ -7826,29 +7734,16 @@ int main() {
 // CHECK13-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP12]], [[TMP13]]
 // CHECK13-NEXT:    store i32 [[ADD]], i32* [[DOTOMP_IV]], align 4
 // CHECK13-NEXT:    br label [[OMP_INNER_FOR_COND]]
-// CHECK13:       lpad:
-// CHECK13-NEXT:    [[TMP14:%.*]] = landingpad { i8*, i32 }
-// CHECK13-NEXT:    catch i8* null
-// CHECK13-NEXT:    [[TMP15:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 0
-// CHECK13-NEXT:    store i8* [[TMP15]], i8** [[EXN_SLOT]], align 8
-// CHECK13-NEXT:    [[TMP16:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 1
-// CHECK13-NEXT:    store i32 [[TMP16]], i32* [[EHSELECTOR_SLOT]], align 4
-// CHECK13-NEXT:    call void @_ZN1SD1Ev(%struct.S* noundef nonnull align 8 dereferenceable(24) [[REF_TMP]]) #[[ATTR6]]
-// CHECK13-NEXT:    br label [[TERMINATE_HANDLER:%.*]]
 // CHECK13:       omp.inner.for.end:
 // CHECK13-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK13:       omp.loop.exit:
 // CHECK13-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]])
 // CHECK13-NEXT:    ret void
 // CHECK13:       terminate.lpad:
-// CHECK13-NEXT:    [[TMP17:%.*]] = landingpad { i8*, i32 }
+// CHECK13-NEXT:    [[TMP14:%.*]] = landingpad { i8*, i32 }
 // CHECK13-NEXT:    catch i8* null
-// CHECK13-NEXT:    [[TMP18:%.*]] = extractvalue { i8*, i32 } [[TMP17]], 0
-// CHECK13-NEXT:    call void @__clang_call_terminate(i8* [[TMP18]]) #[[ATTR10]]
-// CHECK13-NEXT:    unreachable
-// CHECK13:       terminate.handler:
-// CHECK13-NEXT:    [[EXN:%.*]] = load i8*, i8** [[EXN_SLOT]], align 8
-// CHECK13-NEXT:    call void @__clang_call_terminate(i8* [[EXN]]) #[[ATTR10]]
+// CHECK13-NEXT:    [[TMP15:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 0
+// CHECK13-NEXT:    call void @__clang_call_terminate(i8* [[TMP15]]) #[[ATTR10]]
 // CHECK13-NEXT:    unreachable
 //
 //
@@ -8896,8 +8791,6 @@ int main() {
 // CHECK14-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // CHECK14-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK14-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_S:%.*]], align 8
-// CHECK14-NEXT:    [[EXN_SLOT:%.*]] = alloca i8*, align 8
-// CHECK14-NEXT:    [[EHSELECTOR_SLOT:%.*]] = alloca i32, align 4
 // CHECK14-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK14-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 // CHECK14-NEXT:    store i32 0, i32* [[DOTOMP_COMB_LB]], align 4
@@ -8931,7 +8824,7 @@ int main() {
 // CHECK14-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
 // CHECK14:       invoke.cont:
 // CHECK14-NEXT:    [[CALL:%.*]] = invoke noundef i8 @_ZN1ScvcEv(%struct.S* noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
-// CHECK14-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD:%.*]]
+// CHECK14-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[TERMINATE_LPAD]]
 // CHECK14:       invoke.cont2:
 // CHECK14-NEXT:    [[TMP7:%.*]] = sext i8 [[CALL]] to i32
 // CHECK14-NEXT:    call void @__kmpc_push_num_threads(%struct.ident_t* @[[GLOB3]], i32 [[TMP1]], i32 [[TMP7]])
@@ -8948,29 +8841,16 @@ int main() {
 // CHECK14-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP12]], [[TMP13]]
 // CHECK14-NEXT:    store i32 [[ADD]], i32* [[DOTOMP_IV]], align 4
 // CHECK14-NEXT:    br label [[OMP_INNER_FOR_COND]]
-// CHECK14:       lpad:
-// CHECK14-NEXT:    [[TMP14:%.*]] = landingpad { i8*, i32 }
-// CHECK14-NEXT:    catch i8* null
-// CHECK14-NEXT:    [[TMP15:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 0
-// CHECK14-NEXT:    store i8* [[TMP15]], i8** [[EXN_SLOT]], align 8
-// CHECK14-NEXT:    [[TMP16:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 1
-// CHECK14-NEXT:    store i32 [[TMP16]], i32* [[EHSELECTOR_SLOT]], align 4
-// CHECK14-NEXT:    call void @_ZN1SD1Ev(%struct.S* noundef nonnull align 8 dereferenceable(24) [[REF_TMP]]) #[[ATTR6]]
-// CHECK14-NEXT:    br label [[TERMINATE_HANDLER:%.*]]
 // CHECK14:       omp.inner.for.end:
 // CHECK14-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK14:       omp.loop.exit:
 // CHECK14-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]])
 // CHECK14-NEXT:    ret void
 // CHECK14:       terminate.lpad:
-// CHECK14-NEXT:    [[TMP17:%.*]] = landingpad { i8*, i32 }
+// CHECK14-NEXT:    [[TMP14:%.*]] = landingpad { i8*, i32 }
 // CHECK14-NEXT:    catch i8* null
-// CHECK14-NEXT:    [[TMP18:%.*]] = extractvalue { i8*, i32 } [[TMP17]], 0
-// CHECK14-NEXT:    call void @__clang_call_terminate(i8* [[TMP18]]) #[[ATTR10]]
-// CHECK14-NEXT:    unreachable
-// CHECK14:       terminate.handler:
-// CHECK14-NEXT:    [[EXN:%.*]] = load i8*, i8** [[EXN_SLOT]], align 8
-// CHECK14-NEXT:    call void @__clang_call_terminate(i8* [[EXN]]) #[[ATTR10]]
+// CHECK14-NEXT:    [[TMP15:%.*]] = extractvalue { i8*, i32 } [[TMP14]], 0
+// CHECK14-NEXT:    call void @__clang_call_terminate(i8* [[TMP15]]) #[[ATTR10]]
 // CHECK14-NEXT:    unreachable
 //
 //

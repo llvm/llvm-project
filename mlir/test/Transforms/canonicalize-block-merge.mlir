@@ -55,7 +55,7 @@ func @mismatch_unknown_terminator(%arg0 : i32, %arg1 : i32) -> i32 {
 // CHECK-LABEL: func @mismatch_operands
 // CHECK-SAME: %[[COND:.*]]: i1, %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32
 func @mismatch_operands(%cond : i1, %arg0 : i32, %arg1 : i32) -> i32 {
-  // CHECK: %[[RES:.*]] = select %[[COND]], %[[ARG0]], %[[ARG1]]
+  // CHECK: %[[RES:.*]] = arith.select %[[COND]], %[[ARG0]], %[[ARG1]]
   // CHECK: return %[[RES]]
 
   cond_br %cond, ^bb1, ^bb2
@@ -71,8 +71,8 @@ func @mismatch_operands(%cond : i1, %arg0 : i32, %arg1 : i32) -> i32 {
 // CHECK-LABEL: func @mismatch_operands_matching_arguments(
 // CHECK-SAME: %[[COND:.*]]: i1, %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32
 func @mismatch_operands_matching_arguments(%cond : i1, %arg0 : i32, %arg1 : i32) -> (i32, i32) {
-  // CHECK: %[[RES0:.*]] = select %[[COND]], %[[ARG1]], %[[ARG0]]
-  // CHECK: %[[RES1:.*]] = select %[[COND]], %[[ARG0]], %[[ARG1]]
+  // CHECK: %[[RES0:.*]] = arith.select %[[COND]], %[[ARG1]], %[[ARG0]]
+  // CHECK: %[[RES1:.*]] = arith.select %[[COND]], %[[ARG0]], %[[ARG1]]
   // CHECK: return %[[RES1]], %[[RES0]]
 
   cond_br %cond, ^bb1(%arg1 : i32), ^bb2(%arg0 : i32)

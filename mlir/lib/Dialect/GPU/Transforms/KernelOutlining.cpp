@@ -59,7 +59,7 @@ static void injectGpuIndexOperations(Location loc, Region &launchFuncOpBody,
 /// operations may not have side-effects, as otherwise sinking (and hence
 /// duplicating them) is not legal.
 static bool isSinkingBeneficiary(Operation *op) {
-  return isa<arith::ConstantOp, ConstantOp, memref::DimOp, SelectOp,
+  return isa<arith::ConstantOp, ConstantOp, memref::DimOp, arith::SelectOp,
              arith::CmpIOp>(op);
 }
 

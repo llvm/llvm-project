@@ -23,7 +23,6 @@ add_mlir_dialect_library(MLIRVectorTransforms
   MLIRLinalg
   MLIRMemRef
   MLIRSCF
-  MLIRStandard
   MLIRVector
   MLIRVectorInterfaces
   MLIRVectorUtils

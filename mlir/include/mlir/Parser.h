@@ -67,7 +67,7 @@ inline OwningOpRef<ContainerOpT> constructContainerOpForParserIfNecessary(
 
   // After splicing, verify just this operation to ensure it can properly
   // contain the operations inside of it.
-  if (failed(op.verify()))
+  if (failed(op.verifyInvariants()))
     return OwningOpRef<ContainerOpT>();
   return opRef;
 }

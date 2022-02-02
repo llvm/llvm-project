@@ -892,3 +892,21 @@ func @vector_srem(%arg0: vector<3xi16>, %arg1: vector<3xi16>) {
 }
 
 } // end module
+
+// -----
+
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [Shader, Int8, Int16, Int64, Float16, Float64],
+             [SPV_KHR_storage_buffer_storage_class]>, {}>
+} {
+
+// CHECK-LABEL: @select
+func @select(%arg0 : i32, %arg1 : i32) {
+  %0 = arith.cmpi sle, %arg0, %arg1 : i32
+  // CHECK: spv.Select
+  %1 = arith.select %0, %arg0, %arg1 : i32
+  return
+}
+
+} // end module

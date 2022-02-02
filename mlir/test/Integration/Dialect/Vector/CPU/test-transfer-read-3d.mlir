@@ -72,7 +72,7 @@ func @transfer_read_3d_transposed(%A : memref<?x?x?x?xf32>,
 func @transfer_write_3d(%A : memref<?x?x?x?xf32>,
                         %o: index, %a: index, %b: index, %c: index) {
   %fn1 = arith.constant -1.0 : f32
-  %vf0 = splat %fn1 : vector<2x9x3xf32>
+  %vf0 = vector.splat %fn1 : vector<2x9x3xf32>
   vector.transfer_write %vf0, %A[%o, %a, %b, %c]
       : vector<2x9x3xf32>, memref<?x?x?x?xf32>
   return

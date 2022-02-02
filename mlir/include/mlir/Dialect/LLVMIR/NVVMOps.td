@@ -131,22 +131,11 @@ def NVVM_ShflOp :
       $res = createIntrinsicCall(builder,
           intId, {$dst, $val, $offset, $mask_and_clamp});
   }];
-  let verifier = [{
-    if (!(*this)->getAttrOfType<UnitAttr>("return_value_and_is_valid"))
-      return success();
-    auto type = getType().dyn_cast<LLVM::LLVMStructType>();
-    auto elementType = (type && type.getBody().size() == 2)
-                     ? type.getBody()[1].dyn_cast<IntegerType>()
-                     : nullptr;
-    if (!elementType || elementType.getWidth() != 1)
-      return emitError("expected return type to be a two-element struct with "
-                       "i1 as the second element");
-    return success();
-  }];
   let assemblyFormat = [{
     $kind $dst `,` $val `,` $offset `,` $mask_and_clamp  attr-dict
      `:` type($val) `->` type($res)
    }];
+   let hasVerifier = 1;
 }
 
 def NVVM_VoteBallotOp :
@@ -183,12 +172,8 @@ def NVVM_CpAsyncOp : NVVM_Op<"cp.async.shared.global">,
       }
       createIntrinsicCall(builder, id, {$dst, $src});
   }];
-  let verifier = [{
-    if (size() != 4 && size() != 8 && size() != 16)
-      return emitError("expected byte size to be either 4, 8 or 16.");
-    return success();
-  }];
   let assemblyFormat = "$dst `,` $src `,` $size attr-dict";
+  let hasVerifier = 1;
 }
 
 def NVVM_CpAsyncCommitGroupOp : NVVM_Op<"cp.async.commit.group"> {
@@ -220,7 +205,7 @@ def NVVM_MmaOp :
         builder, llvm::Intrinsic::nvvm_mma_m8n8k4_row_col_f32_f32, $args);
   }];
   let assemblyFormat = "$args attr-dict `:` functional-type($args, $res)";
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 }
 
 /// Helpers to instantiate different version of wmma intrinsics.
@@ -538,7 +523,7 @@ def NVVM_WMMALoadOp: NVVM_Op<"wmma.load">,
     }];
 
   let assemblyFormat = "$ptr `,` $stride attr-dict `:` functional-type($ptr, $res)";
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 }
 
 def NVVM_WMMAStoreOp : NVVM_Op<"wmma.store">,
@@ -593,7 +578,7 @@ def NVVM_WMMAStoreOp : NVVM_Op<"wmma.store">,
   }];
 
   let assemblyFormat = "$ptr `,` $stride `,` $args attr-dict `:` type($ptr) `,` type($args)";
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 }
 
 // Base class for all the variants of WMMA mmaOps that may be defined.
@@ -647,7 +632,7 @@ def NVVM_WMMAMmaOp : NVVM_Op<"wmma.mma">,
   }];
 
   let assemblyFormat = "$args attr-dict `:` functional-type($args, $res)";
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 }
 
 #endif // NVVMIR_OPS

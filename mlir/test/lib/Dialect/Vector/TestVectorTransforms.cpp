@@ -65,7 +65,7 @@ struct TestVectorToVectorLowering
 private:
   // Return the target shape based on op type.
   static Optional<SmallVector<int64_t, 4>> getShape(Operation *op) {
-    if (isa<arith::AddFOp, SelectOp, arith::CmpFOp>(op))
+    if (isa<arith::AddFOp, arith::SelectOp, arith::CmpFOp>(op))
       return SmallVector<int64_t, 4>(2, 2);
     if (isa<vector::ContractionOp>(op))
       return SmallVector<int64_t, 4>(3, 2);
@@ -96,8 +96,8 @@ private:
   }
 
   static LogicalResult filter(Operation *op) {
-    return success(isa<arith::AddFOp, SelectOp, arith::CmpFOp, ContractionOp,
-                       TransferReadOp, TransferWriteOp>(op));
+    return success(isa<arith::AddFOp, arith::SelectOp, arith::CmpFOp,
+                       ContractionOp, TransferReadOp, TransferWriteOp>(op));
   }
 };
 

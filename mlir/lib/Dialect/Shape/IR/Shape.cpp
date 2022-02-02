@@ -419,6 +419,10 @@ void AssumingOp::build(
   result.addTypes(assumingTypes);
 }
 
+LogicalResult AssumingOp::verify() {
+  return RegionBranchOpInterface::verifyTypes(*this);
+}
+
 //===----------------------------------------------------------------------===//
 // AddOp
 //===----------------------------------------------------------------------===//
@@ -448,6 +452,8 @@ OpFoldResult mlir::shape::AddOp::fold(ArrayRef<Attribute> operands) {
   return constFoldBinaryOp<IntegerAttr>(
       operands, [](APInt a, const APInt &b) { return std::move(a) + b; });
 }
+
+LogicalResult shape::AddOp::verify() { return verifySizeOrIndexOp(*this); }
 
 //===----------------------------------------------------------------------===//
 // AssumingAllOp
@@ -529,10 +535,10 @@ OpFoldResult AssumingAllOp::fold(ArrayRef<Attribute> operands) {
   return BoolAttr::get(getContext(), true);
 }
 
-static LogicalResult verify(AssumingAllOp op) {
+LogicalResult AssumingAllOp::verify() {
   // Ensure that AssumingAllOp contains at least one operand
-  if (op.getNumOperands() == 0)
-    return op.emitOpError("no operands specified");
+  if (getNumOperands() == 0)
+    return emitOpError("no operands specified");
 
   return success();
 }
@@ -575,8 +581,8 @@ OpFoldResult BroadcastOp::fold(ArrayRef<Attribute> operands) {
   return builder.getIndexTensorAttr(resultShape);
 }
 
-static LogicalResult verify(BroadcastOp op) {
-  return verifyShapeOrExtentTensorOp(op);
+LogicalResult BroadcastOp::verify() {
+  return verifyShapeOrExtentTensorOp(*this);
 }
 
 namespace {
@@ -912,10 +918,10 @@ OpFoldResult CstrBroadcastableOp::fold(ArrayRef<Attribute> operands) {
   return nullptr;
 }
 
-static LogicalResult verify(CstrBroadcastableOp op) {
+LogicalResult CstrBroadcastableOp::verify() {
   // Ensure that AssumingAllOp contains at least one operand
-  if (op.getNumOperands() < 2)
-    return op.emitOpError("required at least 2 input shapes");
+  if (getNumOperands() < 2)
+    return emitOpError("required at least 2 input shapes");
   return success();
 }
 
@@ -1015,6 +1021,8 @@ bool mlir::shape::DivOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
   // SizeType is compatible with IndexType.
   return eachHasOnlyOneOfTypes<SizeType, IndexType>(l, r);
 }
+
+LogicalResult DivOp::verify() { return verifySizeOrIndexOp(*this); }
 
 //===----------------------------------------------------------------------===//
 // ShapeEqOp
@@ -1172,6 +1180,8 @@ bool mlir::shape::GetExtentOp::isCompatibleReturnTypes(TypeRange l,
   return eachHasOnlyOneOfTypes<SizeType, IndexType>(l, r);
 }
 
+LogicalResult GetExtentOp::verify() { return verifySizeOrIndexOp(*this); }
+
 //===----------------------------------------------------------------------===//
 // IsBroadcastableOp
 //===----------------------------------------------------------------------===//
@@ -1298,6 +1308,8 @@ bool mlir::shape::RankOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
   return eachHasOnlyOneOfTypes<SizeType, IndexType>(l, r);
 }
 
+LogicalResult shape::RankOp::verify() { return verifySizeOrIndexOp(*this); }
+
 //===----------------------------------------------------------------------===//
 // NumElementsOp
 //===----------------------------------------------------------------------===//
@@ -1331,6 +1343,10 @@ bool mlir::shape::NumElementsOp::isCompatibleReturnTypes(TypeRange l,
                                                          TypeRange r) {
   // SizeType is compatible with IndexType.
   return eachHasOnlyOneOfTypes<SizeType, IndexType>(l, r);
+}
+
+LogicalResult shape::NumElementsOp::verify() {
+  return verifySizeOrIndexOp(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1429,6 +1445,9 @@ bool mlir::shape::MulOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
   // SizeType is compatible with IndexType.
   return eachHasOnlyOneOfTypes<SizeType, IndexType>(l, r);
 }
+
+LogicalResult shape::MulOp::verify() { return verifySizeOrIndexOp(*this); }
+
 //===----------------------------------------------------------------------===//
 // ShapeOfOp
 //===----------------------------------------------------------------------===//
@@ -1535,6 +1554,10 @@ bool mlir::shape::ShapeOfOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
   return false;
 }
 
+LogicalResult shape::ShapeOfOp::verify() {
+  return verifyShapeOrExtentTensorOp(*this);
+}
+
 //===----------------------------------------------------------------------===//
 // SizeToIndexOp
 //===----------------------------------------------------------------------===//
@@ -1556,18 +1579,17 @@ void SizeToIndexOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 // YieldOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(shape::YieldOp op) {
-  auto *parentOp = op->getParentOp();
+LogicalResult shape::YieldOp::verify() {
+  auto *parentOp = (*this)->getParentOp();
   auto results = parentOp->getResults();
-  auto operands = op.getOperands();
+  auto operands = getOperands();
 
-  if (parentOp->getNumResults() != op.getNumOperands())
-    return op.emitOpError() << "number of operands does not match number of "
-                               "results of its parent";
+  if (parentOp->getNumResults() != getNumOperands())
+    return emitOpError() << "number of operands does not match number of "
+                            "results of its parent";
   for (auto e : llvm::zip(results, operands))
     if (std::get<0>(e).getType() != std::get<1>(e).getType())
-      return op.emitOpError()
-             << "types mismatch between yield op and its parent";
+      return emitOpError() << "types mismatch between yield op and its parent";
 
   return success();
 }
@@ -1639,41 +1661,42 @@ void ReduceOp::build(OpBuilder &builder, OperationState &result, Value shape,
   }
 }
 
-static LogicalResult verify(ReduceOp op) {
+LogicalResult ReduceOp::verify() {
   // Verify block arg types.
-  Block &block = op.getRegion().front();
+  Block &block = getRegion().front();
 
   // The block takes index, extent, and aggregated values as arguments.
-  auto blockArgsCount = op.getInitVals().size() + 2;
+  auto blockArgsCount = getInitVals().size() + 2;
   if (block.getNumArguments() != blockArgsCount)
-    return op.emitOpError() << "ReduceOp body is expected to have "
-                            << blockArgsCount << " arguments";
+    return emitOpError() << "ReduceOp body is expected to have "
+                         << blockArgsCount << " arguments";
 
   // The first block argument is the index and must always be of type `index`.
   if (!block.getArgument(0).getType().isa<IndexType>())
-    return op.emitOpError(
+    return emitOpError(
         "argument 0 of ReduceOp body is expected to be of IndexType");
 
   // The second block argument is the extent and must be of type `size` or
   // `index`, depending on whether the reduce operation is applied to a shape or
   // to an extent tensor.
   Type extentTy = block.getArgument(1).getType();
-  if (op.getShape().getType().isa<ShapeType>()) {
+  if (getShape().getType().isa<ShapeType>()) {
     if (!extentTy.isa<SizeType>())
-      return op.emitOpError("argument 1 of ReduceOp body is expected to be of "
-                            "SizeType if the ReduceOp operates on a ShapeType");
+      return emitOpError("argument 1 of ReduceOp body is expected to be of "
+                         "SizeType if the ReduceOp operates on a ShapeType");
   } else {
     if (!extentTy.isa<IndexType>())
-      return op.emitOpError(
+      return emitOpError(
           "argument 1 of ReduceOp body is expected to be of IndexType if the "
           "ReduceOp operates on an extent tensor");
   }
 
-  for (const auto &type : llvm::enumerate(op.getInitVals()))
+  for (const auto &type : llvm::enumerate(getInitVals()))
     if (block.getArgument(type.index() + 2).getType() != type.value().getType())
-      return op.emitOpError()
-             << "type mismatch between argument " << type.index() + 2
-             << " of ReduceOp body and initial value " << type.index();
+      return emitOpError() << "type mismatch between argument "
+                           << type.index() + 2
+                           << " of ReduceOp body and initial value "
+                           << type.index();
   return success();
 }
 

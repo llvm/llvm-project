@@ -33,17 +33,17 @@ void AsyncDialect::initialize() {
 // YieldOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(YieldOp op) {
+LogicalResult YieldOp::verify() {
   // Get the underlying value types from async values returned from the
   // parent `async.execute` operation.
-  auto executeOp = op->getParentOfType<ExecuteOp>();
+  auto executeOp = (*this)->getParentOfType<ExecuteOp>();
   auto types = llvm::map_range(executeOp.results(), [](const OpResult &result) {
     return result.getType().cast<ValueType>().getValueType();
   });
 
-  if (op.getOperandTypes() != types)
-    return op.emitOpError("operand types do not match the types returned from "
-                          "the parent ExecuteOp");
+  if (getOperandTypes() != types)
+    return emitOpError("operand types do not match the types returned from "
+                       "the parent ExecuteOp");
 
   return success();
 }
@@ -228,16 +228,16 @@ static ParseResult parseExecuteOp(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-static LogicalResult verify(ExecuteOp op) {
+LogicalResult ExecuteOp::verify() {
   // Unwrap async.execute value operands types.
-  auto unwrappedTypes = llvm::map_range(op.operands(), [](Value operand) {
+  auto unwrappedTypes = llvm::map_range(operands(), [](Value operand) {
     return operand.getType().cast<ValueType>().getValueType();
   });
 
   // Verify that unwrapped argument types matches the body region arguments.
-  if (op.body().getArgumentTypes() != unwrappedTypes)
-    return op.emitOpError("async body region argument types do not match the "
-                          "execute operation arguments types");
+  if (body().getArgumentTypes() != unwrappedTypes)
+    return emitOpError("async body region argument types do not match the "
+                       "execute operation arguments types");
 
   return success();
 }
@@ -303,19 +303,19 @@ static void printAwaitResultType(OpAsmPrinter &p, Operation *op,
   p << operandType;
 }
 
-static LogicalResult verify(AwaitOp op) {
-  Type argType = op.operand().getType();
+LogicalResult AwaitOp::verify() {
+  Type argType = operand().getType();
 
   // Awaiting on a token does not have any results.
-  if (argType.isa<TokenType>() && !op.getResultTypes().empty())
-    return op.emitOpError("awaiting on a token must have empty result");
+  if (argType.isa<TokenType>() && !getResultTypes().empty())
+    return emitOpError("awaiting on a token must have empty result");
 
   // Awaiting on a value unwraps the async value type.
   if (auto value = argType.dyn_cast<ValueType>()) {
-    if (*op.getResultType() != value.getValueType())
-      return op.emitOpError()
-             << "result type " << *op.getResultType()
-             << " does not match async value type " << value.getValueType();
+    if (*getResultType() != value.getValueType())
+      return emitOpError() << "result type " << *getResultType()
+                           << " does not match async value type "
+                           << value.getValueType();
   }
 
   return success();

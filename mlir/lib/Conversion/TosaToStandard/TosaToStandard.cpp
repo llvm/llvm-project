@@ -135,7 +135,7 @@ public:
       Value valueGreaterThanZero = rewriter.create<arith::CmpIOp>(
           loc, arith::CmpIPredicate::sge, value32, zero32);
 
-      Value doubleRound64 = rewriter.create<mlir::SelectOp>(
+      Value doubleRound64 = rewriter.create<arith::SelectOp>(
           loc, valueGreaterThanZero, roundAdd64, roundSub64);
 
       // We only perform double rounding if the shift value is greater than 32.
@@ -143,8 +143,8 @@ public:
           loc, getConstantAttr(i32Ty, 32, rewriter));
       Value shiftGreaterThanThirtyTwo = rewriter.create<arith::CmpIOp>(
           loc, arith::CmpIPredicate::sge, shift32, thirtyTwo32);
-      round64 = rewriter.create<mlir::SelectOp>(loc, shiftGreaterThanThirtyTwo,
-                                                doubleRound64, round64);
+      round64 = rewriter.create<arith::SelectOp>(loc, shiftGreaterThanThirtyTwo,
+                                                 doubleRound64, round64);
     }
 
     // The computation below equates to the following pseudocode:

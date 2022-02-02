@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
@@ -32,8 +31,6 @@ Operation *MemRefDialect::materializeConstant(OpBuilder &builder,
                                               Location loc) {
   if (arith::ConstantOp::isBuildableWith(value, type))
     return builder.create<arith::ConstantOp>(loc, value, type);
-  if (ConstantOp::isBuildableWith(value, type))
-    return builder.create<ConstantOp>(loc, value, type);
   return nullptr;
 }
 
@@ -67,6 +64,10 @@ Type mlir::memref::getTensorTypeFromMemRefType(Type type) {
   return NoneType::get(type.getContext());
 }
 
+LogicalResult memref::CastOp::verify() {
+  return impl::verifyCastOp(*this, areCastCompatible);
+}
+
 //===----------------------------------------------------------------------===//
 // AllocOp / AllocaOp
 //===----------------------------------------------------------------------===//
@@ -95,15 +96,15 @@ static LogicalResult verifyAllocLikeOp(AllocLikeOp op) {
   return success();
 }
 
-static LogicalResult verify(AllocOp op) { return verifyAllocLikeOp(op); }
+LogicalResult AllocOp::verify() { return verifyAllocLikeOp(*this); }
 
-static LogicalResult verify(AllocaOp op) {
+LogicalResult AllocaOp::verify() {
   // An alloca op needs to have an ancestor with an allocation scope trait.
-  if (!op->getParentWithTrait<OpTrait::AutomaticAllocationScope>())
-    return op.emitOpError(
+  if (!(*this)->getParentWithTrait<OpTrait::AutomaticAllocationScope>())
+    return emitOpError(
         "requires an ancestor op with AutomaticAllocationScope trait");
 
-  return verifyAllocLikeOp(op);
+  return verifyAllocLikeOp(*this);
 }
 
 namespace {
@@ -246,11 +247,8 @@ static ParseResult parseAllocaScopeOp(OpAsmParser &parser,
   return success();
 }
 
-static LogicalResult verify(AllocaScopeOp op) {
-  if (failed(RegionBranchOpInterface::verifyTypes(op)))
-    return failure();
-
-  return success();
+LogicalResult AllocaScopeOp::verify() {
+  return RegionBranchOpInterface::verifyTypes(*this);
 }
 
 void AllocaScopeOp::getSuccessorRegions(
@@ -268,10 +266,9 @@ void AllocaScopeOp::getSuccessorRegions(
 // AssumeAlignmentOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(AssumeAlignmentOp op) {
-  unsigned alignment = op.alignment();
-  if (!llvm::isPowerOf2_32(alignment))
-    return op.emitOpError("alignment must be power of 2");
+LogicalResult AssumeAlignmentOp::verify() {
+  if (!llvm::isPowerOf2_32(alignment()))
+    return emitOpError("alignment must be power of 2");
   return success();
 }
 
@@ -556,17 +553,17 @@ Optional<int64_t> DimOp::getConstantIndex() {
   return {};
 }
 
-static LogicalResult verify(DimOp op) {
+LogicalResult DimOp::verify() {
   // Assume unknown index to be in range.
-  Optional<int64_t> index = op.getConstantIndex();
+  Optional<int64_t> index = getConstantIndex();
   if (!index.hasValue())
     return success();
 
   // Check that constant index is not knowingly out of range.
-  auto type = op.source().getType();
+  auto type = source().getType();
   if (auto memrefType = type.dyn_cast<MemRefType>()) {
     if (index.getValue() >= memrefType.getRank())
-      return op.emitOpError("index is out of range");
+      return emitOpError("index is out of range");
   } else if (type.isa<UnrankedMemRefType>()) {
     // Assume index to be in range.
   } else {
@@ -866,67 +863,66 @@ static ParseResult parseDmaStartOp(OpAsmParser &parser,
   return success();
 }
 
-static LogicalResult verify(DmaStartOp op) {
-  unsigned numOperands = op.getNumOperands();
+LogicalResult DmaStartOp::verify() {
+  unsigned numOperands = getNumOperands();
 
   // Mandatory non-variadic operands are: src memref, dst memref, tag memref and
   // the number of elements.
   if (numOperands < 4)
-    return op.emitOpError("expected at least 4 operands");
+    return emitOpError("expected at least 4 operands");
 
   // Check types of operands. The order of these calls is important: the later
   // calls rely on some type properties to compute the operand position.
   // 1. Source memref.
-  if (!op.getSrcMemRef().getType().isa<MemRefType>())
-    return op.emitOpError("expected source to be of memref type");
-  if (numOperands < op.getSrcMemRefRank() + 4)
-    return op.emitOpError()
-           << "expected at least " << op.getSrcMemRefRank() + 4 << " operands";
-  if (!op.getSrcIndices().empty() &&
-      !llvm::all_of(op.getSrcIndices().getTypes(),
+  if (!getSrcMemRef().getType().isa<MemRefType>())
+    return emitOpError("expected source to be of memref type");
+  if (numOperands < getSrcMemRefRank() + 4)
+    return emitOpError() << "expected at least " << getSrcMemRefRank() + 4
+                         << " operands";
+  if (!getSrcIndices().empty() &&
+      !llvm::all_of(getSrcIndices().getTypes(),
                     [](Type t) { return t.isIndex(); }))
-    return op.emitOpError("expected source indices to be of index type");
+    return emitOpError("expected source indices to be of index type");
 
   // 2. Destination memref.
-  if (!op.getDstMemRef().getType().isa<MemRefType>())
-    return op.emitOpError("expected destination to be of memref type");
-  unsigned numExpectedOperands =
-      op.getSrcMemRefRank() + op.getDstMemRefRank() + 4;
+  if (!getDstMemRef().getType().isa<MemRefType>())
+    return emitOpError("expected destination to be of memref type");
+  unsigned numExpectedOperands = getSrcMemRefRank() + getDstMemRefRank() + 4;
   if (numOperands < numExpectedOperands)
-    return op.emitOpError()
-           << "expected at least " << numExpectedOperands << " operands";
-  if (!op.getDstIndices().empty() &&
-      !llvm::all_of(op.getDstIndices().getTypes(),
+    return emitOpError() << "expected at least " << numExpectedOperands
+                         << " operands";
+  if (!getDstIndices().empty() &&
+      !llvm::all_of(getDstIndices().getTypes(),
                     [](Type t) { return t.isIndex(); }))
-    return op.emitOpError("expected destination indices to be of index type");
+    return emitOpError("expected destination indices to be of index type");
 
   // 3. Number of elements.
-  if (!op.getNumElements().getType().isIndex())
-    return op.emitOpError("expected num elements to be of index type");
+  if (!getNumElements().getType().isIndex())
+    return emitOpError("expected num elements to be of index type");
 
   // 4. Tag memref.
-  if (!op.getTagMemRef().getType().isa<MemRefType>())
-    return op.emitOpError("expected tag to be of memref type");
-  numExpectedOperands += op.getTagMemRefRank();
+  if (!getTagMemRef().getType().isa<MemRefType>())
+    return emitOpError("expected tag to be of memref type");
+  numExpectedOperands += getTagMemRefRank();
   if (numOperands < numExpectedOperands)
-    return op.emitOpError()
-           << "expected at least " << numExpectedOperands << " operands";
-  if (!op.getTagIndices().empty() &&
-      !llvm::all_of(op.getTagIndices().getTypes(),
+    return emitOpError() << "expected at least " << numExpectedOperands
+                         << " operands";
+  if (!getTagIndices().empty() &&
+      !llvm::all_of(getTagIndices().getTypes(),
                     [](Type t) { return t.isIndex(); }))
-    return op.emitOpError("expected tag indices to be of index type");
+    return emitOpError("expected tag indices to be of index type");
 
   // Optional stride-related operands must be either both present or both
   // absent.
   if (numOperands != numExpectedOperands &&
       numOperands != numExpectedOperands + 2)
-    return op.emitOpError("incorrect number of operands");
+    return emitOpError("incorrect number of operands");
 
   // 5. Strides.
-  if (op.isStrided()) {
-    if (!op.getStride().getType().isIndex() ||
-        !op.getNumElementsPerStride().getType().isIndex())
-      return op.emitOpError(
+  if (isStrided()) {
+    if (!getStride().getType().isIndex() ||
+        !getNumElementsPerStride().getType().isIndex())
+      return emitOpError(
           "expected stride and num elements per stride to be of type index");
   }
 
@@ -949,14 +945,14 @@ LogicalResult DmaWaitOp::fold(ArrayRef<Attribute> cstOperands,
   return foldMemRefCast(*this);
 }
 
-static LogicalResult verify(DmaWaitOp op) {
+LogicalResult DmaWaitOp::verify() {
   // Check that the number of tag indices matches the tagMemRef rank.
-  unsigned numTagIndices = op.tagIndices().size();
-  unsigned tagMemRefRank = op.getTagMemRefRank();
+  unsigned numTagIndices = tagIndices().size();
+  unsigned tagMemRefRank = getTagMemRefRank();
   if (numTagIndices != tagMemRefRank)
-    return op.emitOpError() << "expected tagIndices to have the same number of "
-                               "elements as the tagMemRef rank, expected "
-                            << tagMemRefRank << ", but got " << numTagIndices;
+    return emitOpError() << "expected tagIndices to have the same number of "
+                            "elements as the tagMemRef rank, expected "
+                         << tagMemRefRank << ", but got " << numTagIndices;
   return success();
 }
 
@@ -979,14 +975,13 @@ void GenericAtomicRMWOp::build(OpBuilder &builder, OperationState &result,
   }
 }
 
-static LogicalResult verify(GenericAtomicRMWOp op) {
-  auto &body = op.getRegion();
+LogicalResult GenericAtomicRMWOp::verify() {
+  auto &body = getRegion();
   if (body.getNumArguments() != 1)
-    return op.emitOpError("expected single number of entry block arguments");
+    return emitOpError("expected single number of entry block arguments");
 
-  if (op.getResult().getType() != body.getArgument(0).getType())
-    return op.emitOpError(
-        "expected block argument of the same type result type");
+  if (getResult().getType() != body.getArgument(0).getType())
+    return emitOpError("expected block argument of the same type result type");
 
   bool hasSideEffects =
       body.walk([&](Operation *nestedOp) {
@@ -1034,12 +1029,12 @@ static void print(OpAsmPrinter &p, GenericAtomicRMWOp op) {
 // AtomicYieldOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(AtomicYieldOp op) {
-  Type parentType = op->getParentOp()->getResultTypes().front();
-  Type resultType = op.result().getType();
+LogicalResult AtomicYieldOp::verify() {
+  Type parentType = (*this)->getParentOp()->getResultTypes().front();
+  Type resultType = result().getType();
   if (parentType != resultType)
-    return op.emitOpError() << "types mismatch between yield op: " << resultType
-                            << " and its parent: " << parentType;
+    return emitOpError() << "types mismatch between yield op: " << resultType
+                         << " and its parent: " << parentType;
   return success();
 }
 
@@ -1090,19 +1085,19 @@ parseGlobalMemrefOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
   return success();
 }
 
-static LogicalResult verify(GlobalOp op) {
-  auto memrefType = op.type().dyn_cast<MemRefType>();
+LogicalResult GlobalOp::verify() {
+  auto memrefType = type().dyn_cast<MemRefType>();
   if (!memrefType || !memrefType.hasStaticShape())
-    return op.emitOpError("type should be static shaped memref, but got ")
-           << op.type();
+    return emitOpError("type should be static shaped memref, but got ")
+           << type();
 
   // Verify that the initial value, if present, is either a unit attribute or
   // an elements attribute.
-  if (op.initial_value().hasValue()) {
-    Attribute initValue = op.initial_value().getValue();
+  if (initial_value().hasValue()) {
+    Attribute initValue = initial_value().getValue();
     if (!initValue.isa<UnitAttr>() && !initValue.isa<ElementsAttr>())
-      return op.emitOpError("initial value should be a unit or elements "
-                            "attribute, but got ")
+      return emitOpError("initial value should be a unit or elements "
+                         "attribute, but got ")
              << initValue;
 
     // Check that the type of the initial value is compatible with the type of
@@ -1111,17 +1106,17 @@ static LogicalResult verify(GlobalOp op) {
       Type initType = initValue.getType();
       Type tensorType = getTensorTypeFromMemRefType(memrefType);
       if (initType != tensorType)
-        return op.emitOpError("initial value expected to be of type ")
+        return emitOpError("initial value expected to be of type ")
                << tensorType << ", but was of type " << initType;
     }
   }
 
-  if (Optional<uint64_t> alignAttr = op.alignment()) {
+  if (Optional<uint64_t> alignAttr = alignment()) {
     uint64_t alignment = alignAttr.getValue();
 
     if (!llvm::isPowerOf2_64(alignment))
-      return op->emitError() << "alignment attribute value " << alignment
-                             << " is not a power of 2";
+      return emitError() << "alignment attribute value " << alignment
+                         << " is not a power of 2";
   }
 
   // TODO: verify visibility for declarations.
@@ -1154,9 +1149,9 @@ GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 // LoadOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(LoadOp op) {
-  if (op.getNumOperands() != 1 + op.getMemRefType().getRank())
-    return op.emitOpError("incorrect number of indices for load");
+LogicalResult LoadOp::verify() {
+  if (getNumOperands() != 1 + getMemRefType().getRank())
+    return emitOpError("incorrect number of indices for load");
   return success();
 }
 
@@ -1224,9 +1219,9 @@ static ParseResult parsePrefetchOp(OpAsmParser &parser,
   return success();
 }
 
-static LogicalResult verify(PrefetchOp op) {
-  if (op.getNumOperands() != 1 + op.getMemRefType().getRank())
-    return op.emitOpError("too few indices");
+LogicalResult PrefetchOp::verify() {
+  if (getNumOperands() != 1 + getMemRefType().getRank())
+    return emitOpError("too few indices");
 
   return success();
 }
@@ -1306,26 +1301,25 @@ void ReinterpretCastOp::build(OpBuilder &b, OperationState &result,
 
 // TODO: ponder whether we want to allow missing trailing sizes/strides that are
 // completed automatically, like we have for subview and extract_slice.
-static LogicalResult verify(ReinterpretCastOp op) {
+LogicalResult ReinterpretCastOp::verify() {
   // The source and result memrefs should be in the same memory space.
-  auto srcType = op.source().getType().cast<BaseMemRefType>();
-  auto resultType = op.getType().cast<MemRefType>();
+  auto srcType = source().getType().cast<BaseMemRefType>();
+  auto resultType = getType().cast<MemRefType>();
   if (srcType.getMemorySpace() != resultType.getMemorySpace())
-    return op.emitError("different memory spaces specified for source type ")
+    return emitError("different memory spaces specified for source type ")
            << srcType << " and result memref type " << resultType;
   if (srcType.getElementType() != resultType.getElementType())
-    return op.emitError("different element types specified for source type ")
+    return emitError("different element types specified for source type ")
            << srcType << " and result memref type " << resultType;
 
   // Match sizes in result memref type and in static_sizes attribute.
-  for (auto &en :
-       llvm::enumerate(llvm::zip(resultType.getShape(),
-                                 extractFromI64ArrayAttr(op.static_sizes())))) {
+  for (auto &en : llvm::enumerate(llvm::zip(
+           resultType.getShape(), extractFromI64ArrayAttr(static_sizes())))) {
     int64_t resultSize = std::get<0>(en.value());
     int64_t expectedSize = std::get<1>(en.value());
     if (!ShapedType::isDynamic(resultSize) &&
         !ShapedType::isDynamic(expectedSize) && resultSize != expectedSize)
-      return op.emitError("expected result type with size = ")
+      return emitError("expected result type with size = ")
              << expectedSize << " instead of " << resultSize
              << " in dim = " << en.index();
   }
@@ -1336,27 +1330,26 @@ static LogicalResult verify(ReinterpretCastOp op) {
   int64_t resultOffset;
   SmallVector<int64_t, 4> resultStrides;
   if (failed(getStridesAndOffset(resultType, resultStrides, resultOffset)))
-    return op.emitError(
-               "expected result type to have strided layout but found ")
+    return emitError("expected result type to have strided layout but found ")
            << resultType;
 
   // Match offset in result memref type and in static_offsets attribute.
-  int64_t expectedOffset = extractFromI64ArrayAttr(op.static_offsets()).front();
+  int64_t expectedOffset = extractFromI64ArrayAttr(static_offsets()).front();
   if (!ShapedType::isDynamicStrideOrOffset(resultOffset) &&
       !ShapedType::isDynamicStrideOrOffset(expectedOffset) &&
       resultOffset != expectedOffset)
-    return op.emitError("expected result type with offset = ")
+    return emitError("expected result type with offset = ")
            << resultOffset << " instead of " << expectedOffset;
 
   // Match strides in result memref type and in static_strides attribute.
   for (auto &en : llvm::enumerate(llvm::zip(
-           resultStrides, extractFromI64ArrayAttr(op.static_strides())))) {
+           resultStrides, extractFromI64ArrayAttr(static_strides())))) {
     int64_t resultStride = std::get<0>(en.value());
     int64_t expectedStride = std::get<1>(en.value());
     if (!ShapedType::isDynamicStrideOrOffset(resultStride) &&
         !ShapedType::isDynamicStrideOrOffset(expectedStride) &&
         resultStride != expectedStride)
-      return op.emitError("expected result type with stride = ")
+      return emitError("expected result type with stride = ")
              << expectedStride << " instead of " << resultStride
              << " in dim = " << en.index();
   }
@@ -1532,8 +1525,8 @@ static LogicalResult verifyReshapeOp(ReshapeOp op, MemRefType expandedType,
   return success();
 }
 
-static LogicalResult verify(ExpandShapeOp op) {
-  return verifyReshapeOp(op, op.getResultType(), op.getSrcType());
+LogicalResult ExpandShapeOp::verify() {
+  return verifyReshapeOp(*this, getResultType(), getSrcType());
 }
 
 void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
@@ -1542,8 +1535,8 @@ void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
               CollapseMixedReshapeOps<ExpandShapeOp, CollapseShapeOp>>(context);
 }
 
-static LogicalResult verify(CollapseShapeOp op) {
-  return verifyReshapeOp(op, op.getSrcType(), op.getResultType());
+LogicalResult CollapseShapeOp::verify() {
+  return verifyReshapeOp(*this, getSrcType(), getResultType());
 }
 
 struct CollapseShapeOpMemRefCastFolder
@@ -1593,32 +1586,30 @@ OpFoldResult CollapseShapeOp::fold(ArrayRef<Attribute> operands) {
 // ReshapeOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(ReshapeOp op) {
-  Type operandType = op.source().getType();
-  Type resultType = op.result().getType();
+LogicalResult ReshapeOp::verify() {
+  Type operandType = source().getType();
+  Type resultType = result().getType();
 
   Type operandElementType = operandType.cast<ShapedType>().getElementType();
   Type resultElementType = resultType.cast<ShapedType>().getElementType();
   if (operandElementType != resultElementType)
-    return op.emitOpError("element types of source and destination memref "
-                          "types should be the same");
+    return emitOpError("element types of source and destination memref "
+                       "types should be the same");
 
   if (auto operandMemRefType = operandType.dyn_cast<MemRefType>())
     if (!operandMemRefType.getLayout().isIdentity())
-      return op.emitOpError(
-          "source memref type should have identity affine map");
+      return emitOpError("source memref type should have identity affine map");
 
-  int64_t shapeSize = op.shape().getType().cast<MemRefType>().getDimSize(0);
+  int64_t shapeSize = shape().getType().cast<MemRefType>().getDimSize(0);
   auto resultMemRefType = resultType.dyn_cast<MemRefType>();
   if (resultMemRefType) {
     if (!resultMemRefType.getLayout().isIdentity())
-      return op.emitOpError(
-          "result memref type should have identity affine map");
+      return emitOpError("result memref type should have identity affine map");
     if (shapeSize == ShapedType::kDynamicSize)
-      return op.emitOpError("cannot use shape operand with dynamic length to "
-                            "reshape to statically-ranked memref type");
+      return emitOpError("cannot use shape operand with dynamic length to "
+                         "reshape to statically-ranked memref type");
     if (shapeSize != resultMemRefType.getRank())
-      return op.emitOpError(
+      return emitOpError(
           "length of shape operand differs from the result's memref rank");
   }
   return success();
@@ -1628,9 +1619,9 @@ static LogicalResult verify(ReshapeOp op) {
 // StoreOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(StoreOp op) {
-  if (op.getNumOperands() != 2 + op.getMemRefType().getRank())
-    return op.emitOpError("store index operand count not equal to memref rank");
+LogicalResult StoreOp::verify() {
+  if (getNumOperands() != 2 + getMemRefType().getRank())
+    return emitOpError("store index operand count not equal to memref rank");
 
   return success();
 }
@@ -1951,29 +1942,29 @@ static LogicalResult produceSubViewErrorMsg(SliceVerificationResult result,
 }
 
 /// Verifier for SubViewOp.
-static LogicalResult verify(SubViewOp op) {
-  MemRefType baseType = op.getSourceType();
-  MemRefType subViewType = op.getType();
+LogicalResult SubViewOp::verify() {
+  MemRefType baseType = getSourceType();
+  MemRefType subViewType = getType();
 
   // The base memref and the view memref should be in the same memory space.
   if (baseType.getMemorySpace() != subViewType.getMemorySpace())
-    return op.emitError("different memory spaces specified for base memref "
-                        "type ")
+    return emitError("different memory spaces specified for base memref "
+                     "type ")
            << baseType << " and subview memref type " << subViewType;
 
   // Verify that the base memref type has a strided layout map.
   if (!isStrided(baseType))
-    return op.emitError("base type ") << baseType << " is not strided";
+    return emitError("base type ") << baseType << " is not strided";
 
   // Verify result type against inferred type.
   auto expectedType = SubViewOp::inferResultType(
-      baseType, extractFromI64ArrayAttr(op.static_offsets()),
-      extractFromI64ArrayAttr(op.static_sizes()),
-      extractFromI64ArrayAttr(op.static_strides()));
+      baseType, extractFromI64ArrayAttr(static_offsets()),
+      extractFromI64ArrayAttr(static_sizes()),
+      extractFromI64ArrayAttr(static_strides()));
 
   auto result = isRankReducedMemRefType(expectedType.cast<MemRefType>(),
-                                        subViewType, op.getMixedSizes());
-  return produceSubViewErrorMsg(result, op, expectedType);
+                                        subViewType, getMixedSizes());
+  return produceSubViewErrorMsg(result, *this, expectedType);
 }
 
 raw_ostream &mlir::operator<<(raw_ostream &os, const Range &range) {
@@ -2278,18 +2269,17 @@ static ParseResult parseTransposeOp(OpAsmParser &parser,
   return success();
 }
 
-static LogicalResult verify(TransposeOp op) {
-  if (!op.permutation().isPermutation())
-    return op.emitOpError("expected a permutation map");
-  if (op.permutation().getNumDims() != op.getShapedType().getRank())
-    return op.emitOpError(
-        "expected a permutation map of same rank as the input");
+LogicalResult TransposeOp::verify() {
+  if (!permutation().isPermutation())
+    return emitOpError("expected a permutation map");
+  if (permutation().getNumDims() != getShapedType().getRank())
+    return emitOpError("expected a permutation map of same rank as the input");
 
-  auto srcType = op.in().getType().cast<MemRefType>();
-  auto dstType = op.getType().cast<MemRefType>();
-  auto transposedType = inferTransposeResultType(srcType, op.permutation());
+  auto srcType = in().getType().cast<MemRefType>();
+  auto dstType = getType().cast<MemRefType>();
+  auto transposedType = inferTransposeResultType(srcType, permutation());
   if (dstType != transposedType)
-    return op.emitOpError("output type ")
+    return emitOpError("output type ")
            << dstType << " does not match transposed input type " << srcType
            << ", " << transposedType;
   return success();
@@ -2338,29 +2328,28 @@ static void print(OpAsmPrinter &p, ViewOp op) {
   p << " : " << op.getOperand(0).getType() << " to " << op.getType();
 }
 
-static LogicalResult verify(ViewOp op) {
-  auto baseType = op.getOperand(0).getType().cast<MemRefType>();
-  auto viewType = op.getType();
+LogicalResult ViewOp::verify() {
+  auto baseType = getOperand(0).getType().cast<MemRefType>();
+  auto viewType = getType();
 
   // The base memref should have identity layout map (or none).
   if (!baseType.getLayout().isIdentity())
-    return op.emitError("unsupported map for base memref type ") << baseType;
+    return emitError("unsupported map for base memref type ") << baseType;
 
   // The result memref should have identity layout map (or none).
   if (!viewType.getLayout().isIdentity())
-    return op.emitError("unsupported map for result memref type ") << viewType;
+    return emitError("unsupported map for result memref type ") << viewType;
 
   // The base memref and the view memref should be in the same memory space.
   if (baseType.getMemorySpace() != viewType.getMemorySpace())
-    return op.emitError("different memory spaces specified for base memref "
-                        "type ")
+    return emitError("different memory spaces specified for base memref "
+                     "type ")
            << baseType << " and view memref type " << viewType;
 
   // Verify that we have the correct number of sizes for the result type.
   unsigned numDynamicDims = viewType.getNumDynamicDims();
-  if (op.sizes().size() != numDynamicDims)
-    return op.emitError("incorrect number of size operands for type ")
-           << viewType;
+  if (sizes().size() != numDynamicDims)
+    return emitError("incorrect number of size operands for type ") << viewType;
 
   return success();
 }
@@ -2467,19 +2456,19 @@ void ViewOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // AtomicRMWOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(AtomicRMWOp op) {
-  if (op.getMemRefType().getRank() != op.getNumOperands() - 2)
-    return op.emitOpError(
+LogicalResult AtomicRMWOp::verify() {
+  if (getMemRefType().getRank() != getNumOperands() - 2)
+    return emitOpError(
         "expects the number of subscripts to be equal to memref rank");
-  switch (op.kind()) {
+  switch (kind()) {
   case arith::AtomicRMWKind::addf:
   case arith::AtomicRMWKind::maxf:
   case arith::AtomicRMWKind::minf:
   case arith::AtomicRMWKind::mulf:
-    if (!op.value().getType().isa<FloatType>())
-      return op.emitOpError()
-             << "with kind '" << arith::stringifyAtomicRMWKind(op.kind())
-             << "' expects a floating-point type";
+    if (!value().getType().isa<FloatType>())
+      return emitOpError() << "with kind '"
+                           << arith::stringifyAtomicRMWKind(kind())
+                           << "' expects a floating-point type";
     break;
   case arith::AtomicRMWKind::addi:
   case arith::AtomicRMWKind::maxs:
@@ -2489,10 +2478,10 @@ static LogicalResult verify(AtomicRMWOp op) {
   case arith::AtomicRMWKind::muli:
   case arith::AtomicRMWKind::ori:
   case arith::AtomicRMWKind::andi:
-    if (!op.value().getType().isa<IntegerType>())
-      return op.emitOpError()
-             << "with kind '" << arith::stringifyAtomicRMWKind(op.kind())
-             << "' expects an integer type";
+    if (!value().getType().isa<IntegerType>())
+      return emitOpError() << "with kind '"
+                           << arith::stringifyAtomicRMWKind(kind())
+                           << "' expects an integer type";
     break;
   default:
     break;

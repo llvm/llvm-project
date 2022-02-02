@@ -2451,7 +2451,16 @@ class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
   // Custom assembly format.
   string assemblyFormat = ?;
 
-  // Custom verifier.
+  // A bit indicating if the operation has additional invariants that need to
+  // verified (aside from those verified by other ODS constructs). If set to `1`,
+  // an additional `LogicalResult verify()` declaration will be generated on the
+  // operation class. The operation should implement this method and verify the
+  // additional necessary invariants.
+  bit hasVerifier = 0;
+  // A custom code block corresponding to the extra verification code of the
+  // operation.
+  // NOTE: This field is deprecated in favor of `hasVerifier` and is slated for
+  // deletion.
   code verifier = ?;
 
   // Whether this op has associated canonicalization patterns.
@@ -2486,12 +2495,10 @@ class BaseOpWithOffsetSizesAndStrides<Dialect dialect, string mnemonic,
 
   // For every such op, there needs to be a:
   //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)
-  //   * LogicalResult verify(${C++ class of Op} op)
   //   * ParseResult parse${C++ class of Op}(OpAsmParser &parser,
   //                                         OperationState &result)
   // functions.
   let printer = [{ return ::print(p, *this); }];
-  let verifier = [{ return ::verify(*this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
 
   code extraBaseClassDeclaration = [{

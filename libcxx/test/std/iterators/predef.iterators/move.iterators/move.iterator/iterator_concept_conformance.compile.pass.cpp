@@ -23,4 +23,6 @@ static_assert(std::sentinel_for<iterator, iterator>);
 static_assert(std::sized_sentinel_for<iterator, iterator>);
 static_assert(!std::indirectly_movable<int*, iterator>);
 static_assert(!std::indirectly_movable_storable<int*, iterator>);
+static_assert(!std::indirectly_copyable<int*, iterator>);
+static_assert(!std::indirectly_copyable_storable<int*, iterator>);
 static_assert(!std::indirectly_swappable<iterator, iterator>);

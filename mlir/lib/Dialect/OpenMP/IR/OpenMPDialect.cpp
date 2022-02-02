@@ -165,9 +165,9 @@ static void printAllocateAndAllocator(OpAsmPrinter &p,
   }
 }
 
-static LogicalResult verifyParallelOp(ParallelOp op) {
-  if (op.allocate_vars().size() != op.allocators_vars().size())
-    return op.emitError(
+LogicalResult ParallelOp::verify() {
+  if (allocate_vars().size() != allocators_vars().size())
+    return emitError(
         "expected equal sizes for allocate and allocator variables");
   return success();
 }
@@ -1072,31 +1072,31 @@ static void printSectionsOp(OpAsmPrinter &p, SectionsOp op) {
   p.printRegion(op.region());
 }
 
-static LogicalResult verifySectionsOp(SectionsOp op) {
-
+LogicalResult SectionsOp::verify() {
   // A list item may not appear in more than one clause on the same directive,
   // except that it may be specified in both firstprivate and lastprivate
   // clauses.
-  for (auto var : op.private_vars()) {
-    if (llvm::is_contained(op.firstprivate_vars(), var))
-      return op.emitOpError()
+  for (auto var : private_vars()) {
+    if (llvm::is_contained(firstprivate_vars(), var))
+      return emitOpError()
              << "operand used in both private and firstprivate clauses";
-    if (llvm::is_contained(op.lastprivate_vars(), var))
-      return op.emitOpError()
+    if (llvm::is_contained(lastprivate_vars(), var))
+      return emitOpError()
              << "operand used in both private and lastprivate clauses";
   }
 
-  if (op.allocate_vars().size() != op.allocators_vars().size())
-    return op.emitError(
+  if (allocate_vars().size() != allocators_vars().size())
+    return emitError(
         "expected equal sizes for allocate and allocator variables");
 
-  for (auto &inst : *op.region().begin()) {
-    if (!(isa<SectionOp>(inst) || isa<TerminatorOp>(inst)))
-      op.emitOpError()
-          << "expected omp.section op or terminator op inside region";
+  for (auto &inst : *region().begin()) {
+    if (!(isa<SectionOp>(inst) || isa<TerminatorOp>(inst))) {
+      return emitOpError()
+             << "expected omp.section op or terminator op inside region";
+    }
   }
 
-  return verifyReductionVarList(op, op.reductions(), op.reduction_vars());
+  return verifyReductionVarList(*this, reductions(), reduction_vars());
 }
 
 /// Parses an OpenMP Workshare Loop operation
@@ -1224,65 +1224,65 @@ static void printAtomicReductionRegion(OpAsmPrinter &printer,
   printer.printRegion(region);
 }
 
-static LogicalResult verifyReductionDeclareOp(ReductionDeclareOp op) {
-  if (op.initializerRegion().empty())
-    return op.emitOpError() << "expects non-empty initializer region";
-  Block &initializerEntryBlock = op.initializerRegion().front();
+LogicalResult ReductionDeclareOp::verify() {
+  if (initializerRegion().empty())
+    return emitOpError() << "expects non-empty initializer region";
+  Block &initializerEntryBlock = initializerRegion().front();
   if (initializerEntryBlock.getNumArguments() != 1 ||
-      initializerEntryBlock.getArgument(0).getType() != op.type()) {
-    return op.emitOpError() << "expects initializer region with one argument "
-                               "of the reduction type";
+      initializerEntryBlock.getArgument(0).getType() != type()) {
+    return emitOpError() << "expects initializer region with one argument "
+                            "of the reduction type";
   }
 
-  for (YieldOp yieldOp : op.initializerRegion().getOps<YieldOp>()) {
+  for (YieldOp yieldOp : initializerRegion().getOps<YieldOp>()) {
     if (yieldOp.results().size() != 1 ||
-        yieldOp.results().getTypes()[0] != op.type())
-      return op.emitOpError() << "expects initializer region to yield a value "
-                                 "of the reduction type";
+        yieldOp.results().getTypes()[0] != type())
+      return emitOpError() << "expects initializer region to yield a value "
+                              "of the reduction type";
   }
 
-  if (op.reductionRegion().empty())
-    return op.emitOpError() << "expects non-empty reduction region";
-  Block &reductionEntryBlock = op.reductionRegion().front();
+  if (reductionRegion().empty())
+    return emitOpError() << "expects non-empty reduction region";
+  Block &reductionEntryBlock = reductionRegion().front();
   if (reductionEntryBlock.getNumArguments() != 2 ||
       reductionEntryBlock.getArgumentTypes()[0] !=
           reductionEntryBlock.getArgumentTypes()[1] ||
-      reductionEntryBlock.getArgumentTypes()[0] != op.type())
-    return op.emitOpError() << "expects reduction region with two arguments of "
-                               "the reduction type";
-  for (YieldOp yieldOp : op.reductionRegion().getOps<YieldOp>()) {
+      reductionEntryBlock.getArgumentTypes()[0] != type())
+    return emitOpError() << "expects reduction region with two arguments of "
+                            "the reduction type";
+  for (YieldOp yieldOp : reductionRegion().getOps<YieldOp>()) {
     if (yieldOp.results().size() != 1 ||
-        yieldOp.results().getTypes()[0] != op.type())
-      return op.emitOpError() << "expects reduction region to yield a value "
-                                 "of the reduction type";
+        yieldOp.results().getTypes()[0] != type())
+      return emitOpError() << "expects reduction region to yield a value "
+                              "of the reduction type";
   }
 
-  if (op.atomicReductionRegion().empty())
+  if (atomicReductionRegion().empty())
     return success();
 
-  Block &atomicReductionEntryBlock = op.atomicReductionRegion().front();
+  Block &atomicReductionEntryBlock = atomicReductionRegion().front();
   if (atomicReductionEntryBlock.getNumArguments() != 2 ||
       atomicReductionEntryBlock.getArgumentTypes()[0] !=
           atomicReductionEntryBlock.getArgumentTypes()[1])
-    return op.emitOpError() << "expects atomic reduction region with two "
-                               "arguments of the same type";
+    return emitOpError() << "expects atomic reduction region with two "
+                            "arguments of the same type";
   auto ptrType = atomicReductionEntryBlock.getArgumentTypes()[0]
                      .dyn_cast<PointerLikeType>();
-  if (!ptrType || ptrType.getElementType() != op.type())
-    return op.emitOpError() << "expects atomic reduction region arguments to "
-                               "be accumulators containing the reduction type";
+  if (!ptrType || ptrType.getElementType() != type())
+    return emitOpError() << "expects atomic reduction region arguments to "
+                            "be accumulators containing the reduction type";
   return success();
 }
 
-static LogicalResult verifyReductionOp(ReductionOp op) {
+LogicalResult ReductionOp::verify() {
   // TODO: generalize this to an op interface when there is more than one op
   // that supports reductions.
-  auto container = op->getParentOfType<WsLoopOp>();
+  auto container = (*this)->getParentOfType<WsLoopOp>();
   for (unsigned i = 0, e = container.getNumReductionVars(); i < e; ++i)
-    if (container.reduction_vars()[i] == op.accumulator())
+    if (container.reduction_vars()[i] == accumulator())
       return success();
 
-  return op.emitOpError() << "the accumulator is not used by the parent";
+  return emitOpError() << "the accumulator is not used by the parent";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1368,27 +1368,26 @@ void WsLoopOp::build(OpBuilder &builder, OperationState &result,
   }
 }
 
-static LogicalResult verifyWsLoopOp(WsLoopOp op) {
-  return verifyReductionVarList(op, op.reductions(), op.reduction_vars());
+LogicalResult WsLoopOp::verify() {
+  return verifyReductionVarList(*this, reductions(), reduction_vars());
 }
 
 //===----------------------------------------------------------------------===//
 // Verifier for critical construct (2.17.1)
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verifyCriticalDeclareOp(CriticalDeclareOp op) {
-  return verifySynchronizationHint(op, op.hint());
+LogicalResult CriticalDeclareOp::verify() {
+  return verifySynchronizationHint(*this, hint());
 }
 
-static LogicalResult verifyCriticalOp(CriticalOp op) {
-
-  if (op.nameAttr()) {
-    auto symbolRef = op.nameAttr().cast<SymbolRefAttr>();
-    auto decl =
-        SymbolTable::lookupNearestSymbolFrom<CriticalDeclareOp>(op, symbolRef);
+LogicalResult CriticalOp::verify() {
+  if (nameAttr()) {
+    SymbolRefAttr symbolRef = nameAttr();
+    auto decl = SymbolTable::lookupNearestSymbolFrom<CriticalDeclareOp>(
+        *this, symbolRef);
     if (!decl) {
-      return op.emitOpError() << "expected symbol reference " << symbolRef
-                              << " to point to a critical declaration";
+      return emitOpError() << "expected symbol reference " << symbolRef
+                           << " to point to a critical declaration";
     }
   }
 
@@ -1399,34 +1398,34 @@ static LogicalResult verifyCriticalOp(CriticalOp op) {
 // Verifier for ordered construct
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verifyOrderedOp(OrderedOp op) {
-  auto container = op->getParentOfType<WsLoopOp>();
+LogicalResult OrderedOp::verify() {
+  auto container = (*this)->getParentOfType<WsLoopOp>();
   if (!container || !container.ordered_valAttr() ||
       container.ordered_valAttr().getInt() == 0)
-    return op.emitOpError() << "ordered depend directive must be closely "
-                            << "nested inside a worksharing-loop with ordered "
-                            << "clause with parameter present";
+    return emitOpError() << "ordered depend directive must be closely "
+                         << "nested inside a worksharing-loop with ordered "
+                         << "clause with parameter present";
 
   if (container.ordered_valAttr().getInt() !=
-      (int64_t)op.num_loops_val().getValue())
-    return op.emitOpError() << "number of variables in depend clause does not "
-                            << "match number of iteration variables in the "
-                            << "doacross loop";
+      (int64_t)num_loops_val().getValue())
+    return emitOpError() << "number of variables in depend clause does not "
+                         << "match number of iteration variables in the "
+                         << "doacross loop";
 
   return success();
 }
 
-static LogicalResult verifyOrderedRegionOp(OrderedRegionOp op) {
+LogicalResult OrderedRegionOp::verify() {
   // TODO: The code generation for ordered simd directive is not supported yet.
-  if (op.simd())
+  if (simd())
     return failure();
 
-  if (auto container = op->getParentOfType<WsLoopOp>()) {
+  if (auto container = (*this)->getParentOfType<WsLoopOp>()) {
     if (!container.ordered_valAttr() ||
         container.ordered_valAttr().getInt() != 0)
-      return op.emitOpError() << "ordered region must be closely nested inside "
-                              << "a worksharing-loop region with an ordered "
-                              << "clause without parameter present";
+      return emitOpError() << "ordered region must be closely nested inside "
+                           << "a worksharing-loop region with an ordered "
+                           << "clause without parameter present";
   }
 
   return success();
@@ -1468,18 +1467,18 @@ static void printAtomicReadOp(OpAsmPrinter &p, AtomicReadOp op) {
 }
 
 /// Verifier for AtomicReadOp
-static LogicalResult verifyAtomicReadOp(AtomicReadOp op) {
-  if (auto mo = op.memory_order()) {
+LogicalResult AtomicReadOp::verify() {
+  if (auto mo = memory_order()) {
     if (*mo == ClauseMemoryOrderKind::acq_rel ||
         *mo == ClauseMemoryOrderKind::release) {
-      return op.emitError(
+      return emitError(
           "memory-order must not be acq_rel or release for atomic reads");
     }
   }
-  if (op.x() == op.v())
-    return op.emitError(
+  if (x() == v())
+    return emitError(
         "read and write must not be to the same location for atomic reads");
-  return verifySynchronizationHint(op, op.hint());
+  return verifySynchronizationHint(*this, hint());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1521,15 +1520,15 @@ static void printAtomicWriteOp(OpAsmPrinter &p, AtomicWriteOp op) {
 }
 
 /// Verifier for AtomicWriteOp
-static LogicalResult verifyAtomicWriteOp(AtomicWriteOp op) {
-  if (auto mo = op.memory_order()) {
+LogicalResult AtomicWriteOp::verify() {
+  if (auto mo = memory_order()) {
     if (*mo == ClauseMemoryOrderKind::acq_rel ||
         *mo == ClauseMemoryOrderKind::acquire) {
-      return op.emitError(
+      return emitError(
           "memory-order must not be acq_rel or acquire for atomic writes");
     }
   }
-  return verifySynchronizationHint(op, op.hint());
+  return verifySynchronizationHint(*this, hint());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1601,11 +1600,11 @@ static void printAtomicUpdateOp(OpAsmPrinter &p, AtomicUpdateOp op) {
 }
 
 /// Verifier for AtomicUpdateOp
-static LogicalResult verifyAtomicUpdateOp(AtomicUpdateOp op) {
-  if (auto mo = op.memory_order()) {
+LogicalResult AtomicUpdateOp::verify() {
+  if (auto mo = memory_order()) {
     if (*mo == ClauseMemoryOrderKind::acq_rel ||
         *mo == ClauseMemoryOrderKind::acquire) {
-      return op.emitError(
+      return emitError(
           "memory-order must not be acq_rel or acquire for atomic updates");
     }
   }
@@ -1637,10 +1636,10 @@ static void printAtomicCaptureOp(OpAsmPrinter &p, AtomicCaptureOp op) {
 }
 
 /// Verifier for AtomicCaptureOp
-static LogicalResult verifyAtomicCaptureOp(AtomicCaptureOp op) {
-  Block::OpListType &ops = op.region().front().getOperations();
+LogicalResult AtomicCaptureOp::verify() {
+  Block::OpListType &ops = region().front().getOperations();
   if (ops.size() != 3)
-    return emitError(op.getLoc())
+    return emitError()
            << "expected three operations in omp.atomic.capture region (one "
               "terminator, and two atomic ops)";
   auto &firstOp = ops.front();
@@ -1654,21 +1653,21 @@ static LogicalResult verifyAtomicCaptureOp(AtomicCaptureOp op) {
   if (!((firstUpdateStmt && secondReadStmt) ||
         (firstReadStmt && secondUpdateStmt) ||
         (firstReadStmt && secondWriteStmt)))
-    return emitError(ops.front().getLoc())
+    return ops.front().emitError()
            << "invalid sequence of operations in the capture region";
   if (firstUpdateStmt && secondReadStmt &&
       firstUpdateStmt.x() != secondReadStmt.x())
-    return emitError(firstUpdateStmt.getLoc())
+    return firstUpdateStmt.emitError()
            << "updated variable in omp.atomic.update must be captured in "
               "second operation";
   if (firstReadStmt && secondUpdateStmt &&
       firstReadStmt.x() != secondUpdateStmt.x())
-    return emitError(firstReadStmt.getLoc())
+    return firstReadStmt.emitError()
            << "captured variable in omp.atomic.read must be updated in second "
               "operation";
   if (firstReadStmt && secondWriteStmt &&
       firstReadStmt.x() != secondWriteStmt.address())
-    return emitError(firstReadStmt.getLoc())
+    return firstReadStmt.emitError()
            << "captured variable in omp.atomic.read must be updated in "
               "second operation";
   return success();

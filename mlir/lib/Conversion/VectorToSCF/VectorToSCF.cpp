@@ -425,7 +425,7 @@ struct Strategy<TransferReadOp> {
     Location loc = xferOp.getLoc();
     auto bufferType = buffer.getType().dyn_cast<ShapedType>();
     auto vecType = bufferType.getElementType().dyn_cast<VectorType>();
-    auto vec = b.create<SplatOp>(loc, vecType, xferOp.padding());
+    auto vec = b.create<vector::SplatOp>(loc, vecType, xferOp.padding());
     b.create<memref::StoreOp>(loc, vec, buffer, storeIndices);
 
     return Value();
@@ -855,8 +855,8 @@ struct UnrollTransferReadConversion
     if (auto insertOp = getInsertOp(xferOp))
       return insertOp.dest();
     Location loc = xferOp.getLoc();
-    return rewriter.create<SplatOp>(loc, xferOp.getVectorType(),
-                                    xferOp.padding());
+    return rewriter.create<vector::SplatOp>(loc, xferOp.getVectorType(),
+                                            xferOp.padding());
   }
 
   /// If the result of the TransferReadOp has exactly one user, which is a
@@ -1143,7 +1143,8 @@ struct Strategy1d<TransferReadOp> {
   static Value initialLoopState(OpBuilder &b, TransferReadOp xferOp) {
     // Inititalize vector with padding value.
     Location loc = xferOp.getLoc();
-    return b.create<SplatOp>(loc, xferOp.getVectorType(), xferOp.padding());
+    return b.create<vector::SplatOp>(loc, xferOp.getVectorType(),
+                                     xferOp.padding());
   }
 };
 
