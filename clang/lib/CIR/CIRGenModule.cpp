@@ -616,6 +616,18 @@ mlir::LogicalResult CIRGenModule::buildDeclStmt(const DeclStmt &S) {
   return mlir::success();
 }
 
+mlir::LogicalResult CIRGenModule::buildGotoStmt(const GotoStmt &S) {
+  // FIXME: LLVM codegen inserts emit stop point here for debug info
+  // sake when the insertion point is available, but doesn't do
+  // anything special when there isn't. We haven't implemented debug
+  // info support just yet, look at this again once we have it.
+  assert(builder.getInsertionBlock() && "not yet implemented");
+  assert(0 && "not implemented");
+  // FIXME: add something like
+  // EmitBranchThroughCleanup(getJumpDestForLabel(S.getLabel()));
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRGenModule::buildSimpleStmt(const Stmt *S,
                                                   bool useCurrentScope) {
   switch (S->getStmtClass()) {
@@ -629,12 +641,14 @@ mlir::LogicalResult CIRGenModule::buildSimpleStmt(const Stmt *S,
                : buildCompoundStmt(cast<CompoundStmt>(*S));
   case Stmt::ReturnStmtClass:
     return buildReturnStmt(cast<ReturnStmt>(*S));
+  case Stmt::GotoStmtClass:
+    return buildGotoStmt(cast<GotoStmt>(*S));
+
   case Stmt::NullStmtClass:
     break;
 
   case Stmt::LabelStmtClass:
   case Stmt::AttributedStmtClass:
-  case Stmt::GotoStmtClass:
   case Stmt::BreakStmtClass:
   case Stmt::ContinueStmtClass:
   case Stmt::DefaultStmtClass:

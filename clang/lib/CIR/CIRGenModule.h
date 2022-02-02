@@ -216,6 +216,7 @@ public:
                                     clang::SourceLocation Loc);
 
   mlir::LogicalResult buildReturnStmt(const clang::ReturnStmt &S);
+  mlir::LogicalResult buildGotoStmt(const clang::GotoStmt &S);
 
   mlir::LogicalResult buildDeclStmt(const clang::DeclStmt &S);
 
