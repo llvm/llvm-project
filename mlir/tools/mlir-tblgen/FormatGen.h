@@ -158,7 +158,9 @@ private:
 /// dialect.
 class FormatElement {
 public:
-  /// The top-level kinds of format elements.
+  virtual ~FormatElement();
+
+  // The top-level kinds of format elements.
   enum Kind { Literal, Variable, Whitespace, Directive, Optional };
 
   /// Support LLVM-style RTTI.
@@ -410,8 +412,12 @@ protected:
   /// Allocate and construct a format element.
   template <typename FormatElementT, typename... Args>
   FormatElementT *create(Args &&...args) {
-    FormatElementT *ptr = allocator.Allocate<FormatElementT>();
-    ::new (ptr) FormatElementT(std::forward<Args>(args)...);
+    // FormatElementT *ptr = allocator.Allocate<FormatElementT>();
+    // ::new (ptr) FormatElementT(std::forward<Args>(args)...);
+    // return ptr;
+    auto mem = std::make_unique<FormatElementT>(std::forward<Args>(args)...);
+    FormatElementT *ptr = mem.get();
+    allocator.push_back(std::move(mem));
     return ptr;
   }
 
@@ -493,7 +499,10 @@ protected:
 private:
   /// The format parser retains ownership of the format elements in a bump
   /// pointer allocator.
-  llvm::BumpPtrAllocator allocator;
+  // FIXME: FormatElement with `std::vector` need to be converted to use
+  // trailing objects.
+  // llvm::BumpPtrAllocator allocator;
+  std::vector<std::unique_ptr<FormatElement>> allocator;
   /// The format lexer to use.
   FormatLexer lexer;
   /// The current token in the lexer.

@@ -181,6 +181,8 @@ FormatToken FormatLexer::lexIdentifier(const char *tokStart) {
 // FormatParser
 //===----------------------------------------------------------------------===//
 
+FormatElement::~FormatElement() = default;
+
 FormatParser::~FormatParser() = default;
 
 FailureOr<std::vector<FormatElement *>> FormatParser::parse() {
