@@ -54,6 +54,8 @@ private:
   void renderHI16(MachineInstrBuilder &MIB, const MachineInstr &I,
                   int OpIdx = -1) const;
 
+  bool selectGlobalValue(MachineInstr &I, MachineBasicBlock &MBB,
+                         MachineRegisterInfo &MRI) const;
   bool selectUbfx(MachineInstr &I, MachineBasicBlock &MBB,
                   MachineRegisterInfo &MRI) const;
   bool selectICmp(MachineInstr &I, MachineBasicBlock &MBB,
@@ -156,6 +158,29 @@ void M88kInstructionSelector::renderHI16(MachineInstrBuilder &MIB,
   uint64_t Val = I.getOperand(1).getCImm()->getZExtValue();
   Val = (Val & 0x00000000FFFF0000ULL) >> 16;
   MIB.addImm(Val);
+}
+
+bool M88kInstructionSelector::selectGlobalValue(
+    MachineInstr &I, MachineBasicBlock &MBB, MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_GLOBAL_VALUE && "Unexpected G code");
+
+  const GlobalValue *GV = I.getOperand(1).getGlobal();
+
+  Register Temp = MRI.createVirtualRegister(&M88k::GPRRCRegClass);
+  MachineInstr *MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::ORriu))
+                         .addReg(Temp, RegState::Define)
+                         .addReg(M88k::R0)
+                         .addGlobalAddress(GV, 0, M88kII::MO_ABS_HI);
+  if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
+    return false;
+
+  MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::ORri))
+           .add(I.getOperand(0))
+           .addReg(Temp, RegState::Kill)
+           .addGlobalAddress(GV, 0, M88kII::MO_ABS_LO);
+
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 }
 
 bool M88kInstructionSelector::selectUbfx(MachineInstr &I,
@@ -548,6 +573,8 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
     return true;
 
   switch (I.getOpcode()) {
+  case TargetOpcode::G_GLOBAL_VALUE:
+    return selectGlobalValue(I, MBB, MRI);
   case TargetOpcode::G_UBFX:
   case TargetOpcode::G_SBFX:
     return selectUbfx(I, MBB, MRI);
