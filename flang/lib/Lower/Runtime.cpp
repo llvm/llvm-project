@@ -68,3 +68,13 @@ void Fortran::lower::genStopStatement(
   builder.create<fir::CallOp>(loc, callee, operands);
   genUnreachable(builder, loc);
 }
+
+void Fortran::lower::genPauseStatement(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::parser::PauseStmt &) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Location loc = converter.getCurrentLocation();
+  mlir::FuncOp callee =
+      fir::runtime::getRuntimeFunc<mkRTKey(PauseStatement)>(loc, builder);
+  builder.create<fir::CallOp>(loc, callee, llvm::None);
+}

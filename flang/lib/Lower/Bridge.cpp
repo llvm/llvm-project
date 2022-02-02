@@ -547,7 +547,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::PauseStmt &stmt) {
-    TODO(toLocation(), "PauseStmt lowering");
+    genPauseStatement(*this, stmt);
   }
 
   void genFIR(const Fortran::parser::FailImageStmt &stmt) {
