@@ -2796,6 +2796,11 @@ void InstrRefBasedLDV::placePHIsForSingleVarDefinition(
   auto ValueIt = VLocs.Vars.find(Var);
   const DbgValue &Value = ValueIt->second;
 
+  // If it's an explicit assignment of "undef", that means there is no location
+  // anyway, anywhere.
+  if (Value.Kind == DbgValue::Undef)
+    return;
+
   // Assign the variable value to entry to each dominated block that's in scope.
   // Skip the definition block -- it's assigned the variable value in the middle
   // of the block somewhere.

@@ -1,9 +1,11 @@
 # RUN: llc %s -march=x86-64 -run-pass=livedebugvalues -o - \
 # RUN:       -experimental-debug-variable-locations=true \
-# RUN:     | FileCheck %s -implicit-check-not=DBG_VALUE
+# RUN:     | FileCheck %s -implicit-check-not=DBG_VALUE \
+# RUN:        --check-prefixes=CHECK,COMMON
 # RUN: llc %s -march=x86-64 -run-pass=livedebugvalues -o - \
 # RUN:       -experimental-debug-variable-locations=false \
-# RUN:     | FileCheck %s --check-prefixes=VARLOC -implicit-check-not=DBG_VALUE
+# RUN:     | FileCheck %s -implicit-check-not=DBG_VALUE \
+# RUN:        --check-prefixes=VARLOC,COMMON
 #
 # This test is designed to stimulate a simplification of variable-value
 # propagation in InstrRefBasedLDV. When we only have a single assignment of
@@ -63,10 +65,21 @@
 # VARLOC-LABEL: bb.3:
 # VARLOC:       DBG_VALUE
 #
+## Common tail for 'test2' -- this is checking that the assignment of undef or
+## $noreg in single-assignment mode doesn't lead to trouble further down the
+## line, specifically assertion failures.
+#
+# COMMON-LABEL: name: test2
+# COMMON: DBG_VALUE $noreg
 --- |
   define i32 @_Z8bb_to_bb() local_unnamed_addr !dbg !12 {
   entry:
     ret i32 0, !dbg !17
+  }
+
+  define i32 @test2() local_unnamed_addr !dbg !112 {
+  entry:
+    ret i32 0, !dbg !117
   }
 
   !llvm.dbg.cu = !{!0}
@@ -94,6 +107,13 @@
   !18 = distinct !DILexicalBlock(scope: !12, file: !1, line: 1, column: 1)
   !19 = distinct !DILexicalBlock(scope: !12, file: !1, line: 1, column: 1)
   !20 = !DILocation(line: 10, scope: !19)
+  !112 = distinct !DISubprogram(name: "test2", linkageName: "102", scope: !1, file: !1, line: 6, type: !13, scopeLine: 6, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !115)
+  !115 = !{!116}
+  !116 = !DILocalVariable(name: "myVar", scope: !118, file: !1, line: 7, type: !6)
+  !117 = !DILocation(line: 10, scope: !118)
+  !118 = distinct !DILexicalBlock(scope: !112, file: !1, line: 1, column: 1)
+  !119 = distinct !DILexicalBlock(scope: !112, file: !1, line: 1, column: 1)
+  !120 = !DILocation(line: 10, scope: !119)
 
 ...
 ---
@@ -136,3 +156,44 @@ body:  |
 
   bb.6:
     RET 0, debug-location !17
+...
+---
+name: test2
+debugValueSubstitutions:
+  - { srcinst: 4, srcop: 0, dstinst: 3, dstop: 0, subreg: 0 }
+body:  |
+  bb.0.entry:
+    successors: %bb.1, %bb.5, %bb.6
+
+    $rax = MOV64ri 1, debug-instr-number 1, debug-location !117
+    JCC_1 %bb.5, 1, implicit $eflags
+    JCC_1 %bb.6, 2, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    DBG_VALUE $noreg, $noreg, !116, !DIExpression(), debug-location !117
+    JCC_1 %bb.3, 1, implicit $eflags, debug-location !117
+
+  bb.2:
+    successors: %bb.4
+
+    JMP_1 %bb.4, debug-location !120
+
+  bb.3:
+    successors: %bb.4
+
+    JMP_1 %bb.4, debug-location !117
+
+  bb.4:
+    successors: %bb.5, %bb.6
+
+    JCC_1 %bb.5, 1, implicit $eflags, debug-location !117
+    JMP_1 %bb.6, debug-location !117
+
+  bb.5:
+    RET 0, debug-location !117
+
+  bb.6:
+    RET 0, debug-location !117
