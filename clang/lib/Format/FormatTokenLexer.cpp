@@ -621,9 +621,9 @@ void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
   if (LastBreak != StringRef::npos) {
     CSharpStringLiteral->IsMultiline = true;
     unsigned StartColumn = 0;
-    CSharpStringLiteral->LastLineColumnWidth = encoding::columnWidthWithTabs(
-        LiteralText.substr(LastBreak + 1, LiteralText.size()), StartColumn,
-        Style.TabWidth, Encoding);
+    CSharpStringLiteral->LastLineColumnWidth =
+        encoding::columnWidthWithTabs(LiteralText.substr(LastBreak + 1),
+                                      StartColumn, Style.TabWidth, Encoding);
   }
 
   SourceLocation loc = Offset < Lex->getBuffer().end()
@@ -688,9 +688,9 @@ void FormatTokenLexer::handleTemplateStrings() {
   if (LastBreak != StringRef::npos) {
     BacktickToken->IsMultiline = true;
     unsigned StartColumn = 0; // The template tail spans the entire line.
-    BacktickToken->LastLineColumnWidth = encoding::columnWidthWithTabs(
-        LiteralText.substr(LastBreak + 1, LiteralText.size()), StartColumn,
-        Style.TabWidth, Encoding);
+    BacktickToken->LastLineColumnWidth =
+        encoding::columnWidthWithTabs(LiteralText.substr(LastBreak + 1),
+                                      StartColumn, Style.TabWidth, Encoding);
   }
 
   SourceLocation loc = Offset < Lex->getBuffer().end()
