@@ -102,24 +102,6 @@
 #define LLVM_MSC_PREREQ(version) 0
 #endif
 
-/// Does the compiler support ref-qualifiers for *this?
-///
-/// Sadly, this is separate from just rvalue reference support because GCC
-/// and MSVC implemented this later than everything else. This appears to be
-/// corrected in MSVC 2019 but not MSVC 2017.
-/// FIXME: Remove LLVM_HAS_RVALUE_REFERENCE_THIS macro
-#define LLVM_HAS_RVALUE_REFERENCE_THIS 1
-
-/// Expands to '&' if ref-qualifiers for *this are supported.
-///
-/// This can be used to provide lvalue/rvalue overrides of member functions.
-/// The rvalue override should be guarded by LLVM_HAS_RVALUE_REFERENCE_THIS
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
-#define LLVM_LVALUE_FUNCTION &
-#else
-#define LLVM_LVALUE_FUNCTION
-#endif
-
 /// LLVM_LIBRARY_VISIBILITY - If a class marked with this attribute is linked
 /// into a shared library, then the class should be private to the library and
 /// not accessible from outside it.  Can also be used to mark variables and
