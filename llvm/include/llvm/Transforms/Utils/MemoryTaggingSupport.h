@@ -12,6 +12,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_MEMORYTAGGINGSUPPORT_H
 #define LLVM_TRANSFORMS_UTILS_MEMORYTAGGINGSUPPORT_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/Dominators.h"
@@ -68,6 +69,9 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
 bool isStandardLifetime(const SmallVectorImpl<IntrinsicInst *> &LifetimeStart,
                         const SmallVectorImpl<IntrinsicInst *> &LifetimeEnd,
                         const DominatorTree *DT, size_t MaxLifetimes);
+
+Instruction *getUntagLocationIfFunctionExit(Instruction &Inst);
+
 } // namespace llvm
 
 #endif

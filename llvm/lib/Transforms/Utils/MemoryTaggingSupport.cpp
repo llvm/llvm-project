@@ -42,4 +42,16 @@ bool isStandardLifetime(const SmallVectorImpl<IntrinsicInst *> &LifetimeStart,
           (LifetimeEnd.size() > 0 &&
            !maybeReachableFromEachOther(LifetimeEnd, DT, MaxLifetimes)));
 }
+
+Instruction *getUntagLocationIfFunctionExit(Instruction &Inst) {
+  if (isa<ReturnInst>(Inst)) {
+    if (CallInst *CI = Inst.getParent()->getTerminatingMustTailCall())
+      return CI;
+    return &Inst;
+  }
+  if (isa<ResumeInst, CleanupReturnInst>(Inst)) {
+    return &Inst;
+  }
+  return nullptr;
+}
 } // namespace llvm
