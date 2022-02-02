@@ -36,9 +36,6 @@
 #include <set>
 #include <stack>
 #include <span>
-#ifndef _LIBCPP_HAS_NO_THREADS
-#  include <thread>
-#endif
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
@@ -50,6 +47,9 @@
 
 #ifndef TEST_HAS_NO_LOCALIZATION
 #  include <regex>
+#endif
+#ifndef TEST_HAS_NO_THREADS
+#  include <thread>
 #endif
 
 // Validate default template argument.
@@ -217,7 +217,7 @@ void test_P1636() {
 #ifndef TEST_HAS_NO_LOCALIZATION
   assert_formatter_is_disabled<std::sub_match<CharT*>, CharT>();
 #endif
-#ifndef _LIBCPP_HAS_NO_THREADS
+#ifndef TEST_HAS_NO_THREADS
   assert_formatter_is_disabled<std::thread::id, CharT>();
 #endif
   assert_formatter_is_disabled<std::unique_ptr<int>, CharT>();
