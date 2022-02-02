@@ -251,7 +251,7 @@ public:
         explicit duration(const _Rep2& __r,
             typename enable_if
             <
-               is_convertible<_Rep2, rep>::value &&
+               is_convertible<const _Rep2&, rep>::value &&
                (treat_as_floating_point<rep>::value ||
                !treat_as_floating_point<_Rep2>::value)
             >::type* = nullptr)
