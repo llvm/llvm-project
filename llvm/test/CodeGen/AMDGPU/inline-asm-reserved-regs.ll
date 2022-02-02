@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs -o /dev/null 2>&1 %s | FileCheck -check-prefix=ERR %s
 
-; ERR: warning: inline asm clobber list contains reserved registers: VGPR42
+; ERR: warning: inline asm clobber list contains reserved registers: v42
 ; ERR: note: Reserved registers on the clobber list may not be preserved across the asm statement, and clobbering them may lead to undefined behaviour.
 define amdgpu_kernel void @clobber_occupancy_limited_vgpr() #0 {
 entry:
@@ -8,7 +8,7 @@ entry:
   ret void
 }
 
-; ERR: warning: inline asm clobber list contains reserved registers: VGPR42_VGPR43
+; ERR: warning: inline asm clobber list contains reserved registers: v[42:43]
 ; ERR: note: Reserved registers on the clobber list may not be preserved across the asm statement, and clobbering them may lead to undefined behaviour.
 define amdgpu_kernel void @clobber_occupancy_limited_vgpr64() #0 {
 entry:
@@ -16,7 +16,7 @@ entry:
   ret void
 }
 
-; ERR: warning: inline asm clobber list contains reserved registers: M0
+; ERR: warning: inline asm clobber list contains reserved registers: m0
 ; ERR: note: Reserved registers on the clobber list may not be preserved across the asm statement, and clobbering them may lead to undefined behaviour.
 define amdgpu_kernel void @clobber_m0() {
 entry:
@@ -24,7 +24,7 @@ entry:
   ret void
 }
 
-; ERR: warning: inline asm clobber list contains reserved registers: EXEC
+; ERR: warning: inline asm clobber list contains reserved registers: exec
 ; ERR: note: Reserved registers on the clobber list may not be preserved across the asm statement, and clobbering them may lead to undefined behaviour.
 define amdgpu_kernel void @clobber_exec() {
 entry:
@@ -32,7 +32,7 @@ entry:
   ret void
 }
 
-; ERR: warning: inline asm clobber list contains reserved registers: EXEC_LO
+; ERR: warning: inline asm clobber list contains reserved registers: exec_lo
 ; ERR: note: Reserved registers on the clobber list may not be preserved across the asm statement, and clobbering them may lead to undefined behaviour.
 define amdgpu_kernel void @clobber_exec_lo() {
 entry:
