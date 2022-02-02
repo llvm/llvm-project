@@ -72,7 +72,11 @@ Section,Description,Dependencies,Assignee,Complete
 | `ranges::distance <https://llvm.org/D102789>`_
 | `ranges::next <https://llvm.org/D102563>`_
 | `ranges::prev <https://llvm.org/D102564>`_",[iterator.concepts],Christopher Di Bella and Arthur O'Dwyer,✅
-`[predef.iterators] <https://wg21.link/predef.iterators>`_,Updates to predefined iterators.,"| [iterator.concepts]
+`[predef.iterators] <https://wg21.link/predef.iterators>`_,"
+| Updates to reverse_iterator
+| Updates to back_insert_iterator
+| Updates to front_insert_iterator
+| Updates to move_iterator","| [iterator.concepts]
 | [iterator.cust.swap]
 | [iterator.cust.move]",Unassigned,Not started
 `[move.sentinel] <https://wg21.link/move.sentinel>`_,,[predef.iterators],Unassigned,Not started
