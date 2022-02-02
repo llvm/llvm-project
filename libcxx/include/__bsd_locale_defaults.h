@@ -15,7 +15,7 @@
 #define _LIBCPP_BSD_LOCALE_DEFAULTS_H
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 #define __libcpp_mb_cur_max_l(loc)                          MB_CUR_MAX_L(loc)

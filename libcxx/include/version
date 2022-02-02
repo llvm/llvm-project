@@ -183,7 +183,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 #include <__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 // clang-format off
