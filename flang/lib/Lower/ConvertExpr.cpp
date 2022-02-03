@@ -44,10 +44,9 @@ public:
   using ExtValue = fir::ExtendedValue;
 
   explicit ScalarExprLowering(mlir::Location loc,
-                              Fortran::lower::AbstractConverter &converter,
-                              Fortran::lower::SymMap &symMap)
+                              Fortran::lower::AbstractConverter &converter)
       : location{loc}, converter{converter},
-        builder{converter.getFirOpBuilder()}, symMap{symMap} {}
+        builder{converter.getFirOpBuilder()} {}
 
   mlir::Location getLoc() { return location; }
 
@@ -336,13 +335,12 @@ private:
   mlir::Location location;
   Fortran::lower::AbstractConverter &converter;
   fir::FirOpBuilder &builder;
-  Fortran::lower::SymMap &symMap;
 };
 } // namespace
 
 fir::ExtendedValue Fortran::lower::createSomeExtendedExpression(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
-    const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &symMap) {
+    const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &) {
   LLVM_DEBUG(expr.AsFortran(llvm::dbgs() << "expr: ") << '\n');
-  return ScalarExprLowering{loc, converter, symMap}.genval(expr);
+  return ScalarExprLowering{loc, converter}.genval(expr);
 }
