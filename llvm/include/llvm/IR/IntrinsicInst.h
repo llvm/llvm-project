@@ -492,6 +492,9 @@ public:
 class ConstrainedFPCmpIntrinsic : public ConstrainedFPIntrinsic {
 public:
   FCmpInst::Predicate getPredicate() const;
+  bool isSignaling() const {
+    return getIntrinsicID() == Intrinsic::experimental_constrained_fcmps;
+  }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
