@@ -138,7 +138,8 @@ void LoopPipelinerInternal::emitPrologue(PatternRewriter &rewriter) {
   auto yield = cast<scf::YieldOp>(forOp.getBody()->getTerminator());
   for (int64_t i = 0; i < maxStage; i++) {
     // special handling for induction variable as the increment is implicit.
-    Value iv = rewriter.create<arith::ConstantIndexOp>(forOp.getLoc(), lb + i);
+    Value iv =
+        rewriter.create<arith::ConstantIndexOp>(forOp.getLoc(), lb + i * step);
     setValueMapping(forOp.getInductionVar(), iv, i);
     for (Operation *op : opOrder) {
       if (stages[op] > i)
