@@ -125,11 +125,11 @@ static void print(OpAsmPrinter &p, ExecuteRegionOp op) {
   p.printOptionalAttrDict(op->getAttrs());
 }
 
-static LogicalResult verify(ExecuteRegionOp op) {
-  if (op.getRegion().empty())
-    return op.emitOpError("region needs to have at least one block");
-  if (op.getRegion().front().getNumArguments() > 0)
-    return op.emitOpError("region cannot have any arguments");
+LogicalResult ExecuteRegionOp::verify() {
+  if (getRegion().empty())
+    return emitOpError("region needs to have at least one block");
+  if (getRegion().front().getNumArguments() > 0)
+    return emitOpError("region cannot have any arguments");
   return success();
 }
 
@@ -276,47 +276,47 @@ void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
   }
 }
 
-static LogicalResult verify(ForOp op) {
-  if (auto cst = op.getStep().getDefiningOp<arith::ConstantIndexOp>())
+LogicalResult ForOp::verify() {
+  if (auto cst = getStep().getDefiningOp<arith::ConstantIndexOp>())
     if (cst.value() <= 0)
-      return op.emitOpError("constant step operand must be positive");
+      return emitOpError("constant step operand must be positive");
 
   // Check that the body defines as single block argument for the induction
   // variable.
-  auto *body = op.getBody();
+  auto *body = getBody();
   if (!body->getArgument(0).getType().isIndex())
-    return op.emitOpError(
+    return emitOpError(
         "expected body first argument to be an index argument for "
         "the induction variable");
 
-  auto opNumResults = op.getNumResults();
+  auto opNumResults = getNumResults();
   if (opNumResults == 0)
     return success();
   // If ForOp defines values, check that the number and types of
   // the defined values match ForOp initial iter operands and backedge
   // basic block arguments.
-  if (op.getNumIterOperands() != opNumResults)
-    return op.emitOpError(
+  if (getNumIterOperands() != opNumResults)
+    return emitOpError(
         "mismatch in number of loop-carried values and defined values");
-  if (op.getNumRegionIterArgs() != opNumResults)
-    return op.emitOpError(
+  if (getNumRegionIterArgs() != opNumResults)
+    return emitOpError(
         "mismatch in number of basic block args and defined values");
-  auto iterOperands = op.getIterOperands();
-  auto iterArgs = op.getRegionIterArgs();
-  auto opResults = op.getResults();
+  auto iterOperands = getIterOperands();
+  auto iterArgs = getRegionIterArgs();
+  auto opResults = getResults();
   unsigned i = 0;
   for (auto e : llvm::zip(iterOperands, iterArgs, opResults)) {
     if (std::get<0>(e).getType() != std::get<2>(e).getType())
-      return op.emitOpError() << "types mismatch between " << i
-                              << "th iter operand and defined value";
+      return emitOpError() << "types mismatch between " << i
+                           << "th iter operand and defined value";
     if (std::get<1>(e).getType() != std::get<2>(e).getType())
-      return op.emitOpError() << "types mismatch between " << i
-                              << "th iter region arg and defined value";
+      return emitOpError() << "types mismatch between " << i
+                           << "th iter region arg and defined value";
 
     i++;
   }
 
-  return RegionBranchOpInterface::verifyTypes(op);
+  return RegionBranchOpInterface::verifyTypes(*this);
 }
 
 /// Prints the initialization list in the form of
@@ -1062,11 +1062,11 @@ void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
   build(builder, result, TypeRange(), cond, thenBuilder, elseBuilder);
 }
 
-static LogicalResult verify(IfOp op) {
-  if (op.getNumResults() != 0 && op.getElseRegion().empty())
-    return op.emitOpError("must have an else block if defining values");
+LogicalResult IfOp::verify() {
+  if (getNumResults() != 0 && getElseRegion().empty())
+    return emitOpError("must have an else block if defining values");
 
-  return RegionBranchOpInterface::verifyTypes(op);
+  return RegionBranchOpInterface::verifyTypes(*this);
 }
 
 static ParseResult parseIfOp(OpAsmParser &parser, OperationState &result) {
@@ -1723,32 +1723,31 @@ void ParallelOp::build(
         wrapper);
 }
 
-static LogicalResult verify(ParallelOp op) {
+LogicalResult ParallelOp::verify() {
   // Check that there is at least one value in lowerBound, upperBound and step.
   // It is sufficient to test only step, because it is ensured already that the
   // number of elements in lowerBound, upperBound and step are the same.
-  Operation::operand_range stepValues = op.getStep();
+  Operation::operand_range stepValues = getStep();
   if (stepValues.empty())
-    return op.emitOpError(
+    return emitOpError(
         "needs at least one tuple element for lowerBound, upperBound and step");
 
   // Check whether all constant step values are positive.
   for (Value stepValue : stepValues)
     if (auto cst = stepValue.getDefiningOp<arith::ConstantIndexOp>())
       if (cst.value() <= 0)
-        return op.emitOpError("constant step operand must be positive");
+        return emitOpError("constant step operand must be positive");
 
   // Check that the body defines the same number of block arguments as the
   // number of tuple elements in step.
-  Block *body = op.getBody();
+  Block *body = getBody();
   if (body->getNumArguments() != stepValues.size())
-    return op.emitOpError()
-           << "expects the same number of induction variables: "
-           << body->getNumArguments()
-           << " as bound and step values: " << stepValues.size();
+    return emitOpError() << "expects the same number of induction variables: "
+                         << body->getNumArguments()
+                         << " as bound and step values: " << stepValues.size();
   for (auto arg : body->getArguments())
     if (!arg.getType().isIndex())
-      return op.emitOpError(
+      return emitOpError(
           "expects arguments for the induction variable to be of index type");
 
   // Check that the yield has no results
@@ -1759,20 +1758,20 @@ static LogicalResult verify(ParallelOp op) {
 
   // Check that the number of results is the same as the number of ReduceOps.
   SmallVector<ReduceOp, 4> reductions(body->getOps<ReduceOp>());
-  auto resultsSize = op.getResults().size();
+  auto resultsSize = getResults().size();
   auto reductionsSize = reductions.size();
-  auto initValsSize = op.getInitVals().size();
+  auto initValsSize = getInitVals().size();
   if (resultsSize != reductionsSize)
-    return op.emitOpError()
-           << "expects number of results: " << resultsSize
-           << " to be the same as number of reductions: " << reductionsSize;
+    return emitOpError() << "expects number of results: " << resultsSize
+                         << " to be the same as number of reductions: "
+                         << reductionsSize;
   if (resultsSize != initValsSize)
-    return op.emitOpError()
-           << "expects number of results: " << resultsSize
-           << " to be the same as number of initial values: " << initValsSize;
+    return emitOpError() << "expects number of results: " << resultsSize
+                         << " to be the same as number of initial values: "
+                         << initValsSize;
 
   // Check that the types of the results and reductions are the same.
-  for (auto resultAndReduce : llvm::zip(op.getResults(), reductions)) {
+  for (auto resultAndReduce : llvm::zip(getResults(), reductions)) {
     auto resultType = std::get<0>(resultAndReduce).getType();
     auto reduceOp = std::get<1>(resultAndReduce);
     auto reduceType = reduceOp.getOperand().getType();
@@ -2075,23 +2074,23 @@ void ReduceOp::build(
                   body->getArgument(1));
 }
 
-static LogicalResult verify(ReduceOp op) {
+LogicalResult ReduceOp::verify() {
   // The region of a ReduceOp has two arguments of the same type as its operand.
-  auto type = op.getOperand().getType();
-  Block &block = op.getReductionOperator().front();
+  auto type = getOperand().getType();
+  Block &block = getReductionOperator().front();
   if (block.empty())
-    return op.emitOpError("the block inside reduce should not be empty");
+    return emitOpError("the block inside reduce should not be empty");
   if (block.getNumArguments() != 2 ||
       llvm::any_of(block.getArguments(), [&](const BlockArgument &arg) {
         return arg.getType() != type;
       }))
-    return op.emitOpError()
-           << "expects two arguments to reduce block of type " << type;
+    return emitOpError() << "expects two arguments to reduce block of type "
+                         << type;
 
   // Check that the block is terminated by a ReduceReturnOp.
   if (!isa<ReduceReturnOp>(block.getTerminator()))
-    return op.emitOpError("the block inside reduce should be terminated with a "
-                          "'scf.reduce.return' op");
+    return emitOpError("the block inside reduce should be terminated with a "
+                       "'scf.reduce.return' op");
 
   return success();
 }
@@ -2127,14 +2126,14 @@ static void print(OpAsmPrinter &p, ReduceOp op) {
 // ReduceReturnOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(ReduceReturnOp op) {
+LogicalResult ReduceReturnOp::verify() {
   // The type of the return value should be the same type as the type of the
   // operand of the enclosing ReduceOp.
-  auto reduceOp = cast<ReduceOp>(op->getParentOp());
+  auto reduceOp = cast<ReduceOp>((*this)->getParentOp());
   Type reduceType = reduceOp.getOperand().getType();
-  if (reduceType != op.getResult().getType())
-    return op.emitOpError() << "needs to have type " << reduceType
-                            << " (the type of the enclosing ReduceOp)";
+  if (reduceType != getResult().getType())
+    return emitOpError() << "needs to have type " << reduceType
+                         << " (the type of the enclosing ReduceOp)";
   return success();
 }
 
@@ -2278,18 +2277,18 @@ static TerminatorTy verifyAndGetTerminator(scf::WhileOp op, Region &region,
   return nullptr;
 }
 
-static LogicalResult verify(scf::WhileOp op) {
-  if (failed(RegionBranchOpInterface::verifyTypes(op)))
+LogicalResult scf::WhileOp::verify() {
+  if (failed(RegionBranchOpInterface::verifyTypes(*this)))
     return failure();
 
   auto beforeTerminator = verifyAndGetTerminator<scf::ConditionOp>(
-      op, op.getBefore(),
+      *this, getBefore(),
       "expects the 'before' region to terminate with 'scf.condition'");
   if (!beforeTerminator)
     return failure();
 
   auto afterTerminator = verifyAndGetTerminator<scf::YieldOp>(
-      op, op.getAfter(),
+      *this, getAfter(),
       "expects the 'after' region to terminate with 'scf.yield'");
   return success(afterTerminator != nullptr);
 }
