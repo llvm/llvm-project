@@ -4828,9 +4828,11 @@ InputInfoList Driver::BuildJobsForActionNoCache(
 
     // We may have already built this action as a part of the offloading
     // toolchain, return the cached input if so.
+    StringRef Arch =
+        (TargetDeviceOffloadKind == Action::OFK_Host) ? StringRef() : BoundArch;
     std::pair<const Action *, std::string> ActionTC = {
         OA->getHostDependence(),
-        GetTriplePlusArchString(TC, BoundArch, TargetDeviceOffloadKind)};
+        GetTriplePlusArchString(TC, Arch, TargetDeviceOffloadKind)};
     if (CachedResults.find(ActionTC) != CachedResults.end()) {
       InputInfoList Inputs = CachedResults[ActionTC];
       Inputs.append(OffloadDependencesInputInfo);
