@@ -376,8 +376,7 @@ def YieldOp : CIR_Op<"yield", [Pure, ReturnLike, Terminator,
 //===----------------------------------------------------------------------===//
 
 def ScopeOp : CIR_Op<"scope", [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-       SingleBlockImplicitTerminator<"cir::YieldOp">, RecursivelySpeculatable,
-       AutomaticAllocationScope, NoRegionArguments]> {
+       RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments]> {
   let summary = "";
   let description = [{
     "cir.scope" contains one region and defines a strict "scope" for all new
