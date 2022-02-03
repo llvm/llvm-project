@@ -237,8 +237,8 @@ std::string llvm::getUniqueModuleId(Module *M) {
   return ("." + Str).str();
 }
 
-void VFABI::setVectorVariantNames(
-    CallInst *CI, const SmallVector<std::string, 8> &VariantMappings) {
+void VFABI::setVectorVariantNames(CallInst *CI,
+                                  ArrayRef<std::string> VariantMappings) {
   if (VariantMappings.empty())
     return;
 
