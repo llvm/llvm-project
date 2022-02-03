@@ -19,6 +19,7 @@
 #include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Host/linux/Support.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 #include "lldb/lldb-enumerations.h"

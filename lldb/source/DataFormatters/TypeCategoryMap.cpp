@@ -9,8 +9,8 @@
 #include "lldb/DataFormatters/TypeCategoryMap.h"
 
 #include "lldb/DataFormatters/FormatClasses.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-
 
 using namespace lldb;
 using namespace lldb_private;

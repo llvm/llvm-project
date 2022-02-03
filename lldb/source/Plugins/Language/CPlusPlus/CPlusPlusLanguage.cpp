@@ -29,6 +29,7 @@
 #include "lldb/DataFormatters/VectorType.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 

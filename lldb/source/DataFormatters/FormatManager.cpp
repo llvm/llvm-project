@@ -8,15 +8,14 @@
 
 #include "lldb/DataFormatters/FormatManager.h"
 
-#include "llvm/ADT/STLExtras.h"
-
-
 #include "lldb/Core/Debugger.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/LanguageCategory.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "llvm/ADT/STLExtras.h"
 
 // BEGIN SWIFT
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"

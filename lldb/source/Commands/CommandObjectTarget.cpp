@@ -47,6 +47,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Timer.h"
 

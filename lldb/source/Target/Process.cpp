@@ -65,6 +65,7 @@
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/Event.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/ProcessInfo.h"

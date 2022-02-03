@@ -23,6 +23,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlanStepOverRange.h"
 #include "lldb/Target/ThreadPlanStepThrough.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 #include <memory>
