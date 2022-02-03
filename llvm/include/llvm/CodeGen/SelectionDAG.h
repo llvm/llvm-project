@@ -1412,6 +1412,11 @@ public:
   /// Return an AssertAlignSDNode.
   SDValue getAssertAlign(const SDLoc &DL, SDValue V, Align A);
 
+  /// Swap N1 and N2 if Opcode is a commutative binary opcode
+  /// and the canonical form expects the opposite order.
+  void canonicalizeCommutativeBinop(unsigned Opcode, SDValue &N1,
+                                    SDValue &N2) const;
+
   /// Return the specified value casted to
   /// the target's desired shift amount type.
   SDValue getShiftAmountOperand(EVT LHSTy, SDValue Op);

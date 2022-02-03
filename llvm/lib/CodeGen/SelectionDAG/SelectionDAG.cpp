@@ -5629,20 +5629,34 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   return getNode(Opcode, DL, VT, N1, N2, Flags);
 }
 
+void SelectionDAG::canonicalizeCommutativeBinop(unsigned Opcode, SDValue &N1,
+                                                SDValue &N2) const {
+  if (!TLI->isCommutativeBinOp(Opcode))
+    return;
+
+  // Canonicalize:
+  //   binop(const, nonconst) -> binop(nonconst, const)
+  bool IsN1C = isConstantIntBuildVectorOrConstantInt(N1);
+  bool IsN2C = isConstantIntBuildVectorOrConstantInt(N2);
+  bool IsN1CFP = isConstantFPBuildVectorOrConstantFP(N1);
+  bool IsN2CFP = isConstantFPBuildVectorOrConstantFP(N2);
+  if ((IsN1C && !IsN2C) || (IsN1CFP && !IsN2CFP))
+    std::swap(N1, N2);
+
+  // Canonicalize:
+  //  binop(splat(x), step_vector) -> binop(step_vector, splat(x))
+  else if (N1.getOpcode() == ISD::SPLAT_VECTOR &&
+           N2.getOpcode() == ISD::STEP_VECTOR)
+    std::swap(N1, N2);
+}
+
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                               SDValue N1, SDValue N2, const SDNodeFlags Flags) {
   assert(N1.getOpcode() != ISD::DELETED_NODE &&
          N2.getOpcode() != ISD::DELETED_NODE &&
          "Operand is DELETED_NODE!");
-  // Canonicalize constant to RHS if commutative.
-  if (TLI->isCommutativeBinOp(Opcode)) {
-    bool IsN1C = isConstantIntBuildVectorOrConstantInt(N1);
-    bool IsN2C = isConstantIntBuildVectorOrConstantInt(N2);
-    bool IsN1CFP = isConstantFPBuildVectorOrConstantFP(N1);
-    bool IsN2CFP = isConstantFPBuildVectorOrConstantFP(N2);
-    if ((IsN1C && !IsN2C) || (IsN1CFP && !IsN2CFP))
-      std::swap(N1, N2);
-  }
+
+  canonicalizeCommutativeBinop(Opcode, N1, N2);
 
   auto *N1C = dyn_cast<ConstantSDNode>(N1);
   auto *N2C = dyn_cast<ConstantSDNode>(N2);
