@@ -11,6 +11,8 @@
 
 #include "flang/Frontend/FrontendAction.h"
 #include "flang/Semantics/semantics.h"
+
+#include "mlir/IR/BuiltinOps.h"
 #include <memory>
 
 namespace Fortran::frontend {
@@ -31,10 +33,6 @@ struct MeasurementVisitor {
 //===----------------------------------------------------------------------===//
 
 class InputOutputTestAction : public FrontendAction {
-  void ExecuteAction() override;
-};
-
-class EmitObjAction : public FrontendAction {
   void ExecuteAction() override;
 };
 
@@ -143,6 +141,35 @@ class PrescanAndSemaDebugAction : public FrontendAction {
 };
 
 class DebugDumpAllAction : public PrescanAndSemaDebugAction {
+  void ExecuteAction() override;
+};
+
+//===----------------------------------------------------------------------===//
+// CodeGen Actions
+//===----------------------------------------------------------------------===//
+/// Abstract base class for actions that generate code (MLIR, LLVM IR, assembly
+/// and machine code). Every action that inherits from this class will at
+/// least run the prescanning, parsing, semantic checks and lower the parse
+/// tree to an MLIR module.
+class CodeGenAction : public FrontendAction {
+
+  void ExecuteAction() override = 0;
+  /// Runs prescan, parsing, sema and lowers to MLIR.
+  bool BeginSourceFileAction() override;
+
+protected:
+  /// @name MLIR
+  /// {
+  std::unique_ptr<mlir::ModuleOp> mlirModule;
+  std::unique_ptr<mlir::MLIRContext> mlirCtx;
+  /// }
+};
+
+class EmitMLIRAction : public CodeGenAction {
+  void ExecuteAction() override;
+};
+
+class EmitObjAction : public CodeGenAction {
   void ExecuteAction() override;
 };
 

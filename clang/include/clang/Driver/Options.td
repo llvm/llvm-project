@@ -4759,6 +4759,10 @@ def fno_reformat : Flag<["-"], "fno-reformat">, Group<Preprocessor_Group>,
   HelpText<"Dump the cooked character stream in -E mode">;
 defm analyzed_objects_for_unparse : OptOutFC1FFlag<"analyzed-objects-for-unparse", "", "Do not use the analyzed objects when unparsing">;
 
+def emit_mlir : Flag<["-"], "emit-mlir">, Group<Action_Group>,
+  HelpText<"Build the parse tree, then lower it to MLIR">;
+def emit_fir : Flag<["-"], "emit-fir">, Alias<emit_mlir>;
+
 }
 
 //===----------------------------------------------------------------------===//
