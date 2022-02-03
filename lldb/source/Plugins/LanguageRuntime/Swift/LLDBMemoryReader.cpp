@@ -117,6 +117,111 @@ LLDBMemoryReader::getSymbolAddress(const std::string &name) {
   return swift::remote::RemoteAddress(load_addr);
 }
 
+llvm::Optional<swift::remote::RemoteAbsolutePointer>
+LLDBMemoryReader::resolvePointerAsSymbol(swift::remote::RemoteAddress address) {
+  // If an address has a symbol, that symbol provides additional useful data to
+  // MetadataReader. Without the symbol, MetadataReader can derive the symbol
+  // by loading other parts of reflection metadata, but that work has a cost.
+  // For lldb, that data loading can be a significant performance hit. Providing
+  // a symbol greatly reduces memory read traffic to the process.
+  auto &target = m_process.GetTarget();
+  if (!target.GetSwiftUseReflectionSymbols())
+    return {};
+
+  llvm::Optional<Address> maybeAddr =
+      resolveRemoteAddress(address.getAddressData());
+  // This is not an assert, but should never happen.
+  if (!maybeAddr)
+    return {};
+
+  Address addr;
+  if (maybeAddr->IsSectionOffset()) {
+    // `address` was tagged, and then successfully mapped (resolved).
+    addr = *maybeAddr;
+  } else {
+    // `address` is a real load address.
+    if (!target.ResolveLoadAddress(address.getAddressData(), addr))
+      return {};
+  }
+
+  if (!addr.GetSection()->CanContainSwiftReflectionData())
+    return {};
+
+  if (auto *symbol = addr.CalculateSymbolContextSymbol()) {
+    auto mangledName = symbol->GetMangled().GetMangledName().GetStringRef();
+    // MemoryReader requires this to be a Swift symbol. LLDB can also be
+    // aware of local symbols, so avoid returning those.
+    if (swift::Demangle::isSwiftSymbol(mangledName))
+      return {{mangledName, 0}};
+  }
+
+  return {};
+}
+
+swift::remote::RemoteAbsolutePointer
+LLDBMemoryReader::resolvePointer(swift::remote::RemoteAddress address,
+                                 uint64_t readValue) {
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+
+  // We may have gotten a pointer to a process address, try to map it back
+  // to a tagged address so further memory reads originating from it benefit
+  // from the file-cache optimization.
+  swift::remote::RemoteAbsolutePointer process_pointer("", readValue);
+
+  auto &target = m_process.GetTarget();
+  Address addr;
+  if (!target.ResolveLoadAddress(readValue, addr)) {
+    LLDB_LOGV(log,
+              "[MemoryReader] Could not resolve load address of pointer {0:x} "
+              "read from {1:x}.",
+              readValue, address.getAddressData());
+    return process_pointer;
+  }
+
+  auto module_containing_pointer = addr.GetSection()->GetModule();
+
+  // Check if the module containing the pointer is registered with
+  // LLDBMemoryReader.
+  auto pair_iterator = std::find_if(
+      m_range_module_map.begin(), m_range_module_map.end(), [&](auto pair) {
+        return std::get<ModuleSP>(pair) == module_containing_pointer;
+      });
+
+  // We haven't registered the image that contains the pointer.
+  if (pair_iterator == m_range_module_map.end()) {
+    LLDB_LOG(log,
+              "[MemoryReader] Could not resolve find module containing pointer "
+              "{0:x} read from {1:x}.",
+              readValue, address.getAddressData());
+    return process_pointer;
+  }
+
+  // If the containing image is the first registered one, the image's tagged
+  // start address for it is the first tagged address. Otherwise, the previous
+  // pair's address is the start tagged address.
+  uint64_t start_tagged_address = pair_iterator == m_range_module_map.begin()
+                                      ? LLDB_FILE_ADDRESS_BIT
+                                      : std::prev(pair_iterator)->first;
+
+  uint64_t tagged_address = start_tagged_address + addr.GetFileAddress();
+
+  if (tagged_address >= std::get<uint64_t>(*pair_iterator)) {
+    // If the tagged address invades the next image's tagged address space,
+    // something went wrong. Log it and just return the process address.
+    LLDB_LOG(log,
+             "[MemoryReader] Pointer {0:x} read from {1:x} resolved to tagged "
+             "address {2:x}, which is outside its image address space.",
+             readValue, address.getAddressData(), tagged_address);
+    return process_pointer;
+  }
+
+  LLDB_LOGV(log,
+            "[MemoryReader] Successfully resolved pointer {0:x} read from "
+            "{1:x} to tagged address {2:x}.",
+            readValue, address.getAddressData(), tagged_address);
+  return swift::remote::RemoteAbsolutePointer("", tagged_address);
+}
+
 bool LLDBMemoryReader::readBytes(swift::remote::RemoteAddress address,
                                  uint8_t *dest, uint64_t size) {
   if (m_local_buffer) {
