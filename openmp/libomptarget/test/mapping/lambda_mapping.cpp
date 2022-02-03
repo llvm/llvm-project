@@ -1,7 +1,7 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 
 // Error on the gpu that crashes the host
-// UNSUPPORTED: amdgcn-amd-amdhsa-newRTL
+// UNSUPPORTED: amdgcn-amd-amdhsa
 
 #include <iostream>
 

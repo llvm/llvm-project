@@ -118,6 +118,6 @@ if (${amdgpu_arch_result})
   libomptarget_say("Not generating amdgcn test targets as amdgpu-arch exited with ${amdgpu_arch_result}")
 else()
   # Report to the parent scope that we are building a plugin for amdgpu
-  set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} amdgcn-amd-amdhsa-newRTL " PARENT_SCOPE)
+  set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} amdgcn-amd-amdhsa " PARENT_SCOPE)
 endif()
 

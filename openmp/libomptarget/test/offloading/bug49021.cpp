@@ -2,7 +2,6 @@
 
 // Hangs
 // UNSUPPORTED: amdgcn-amd-amdhsa
-// UNSUPPORTED: amdgcn-amd-amdhsa-newRTL
 // UNSUPPORTED: amdgcn-amd-amdhsa-newDriver
 
 #include <iostream>

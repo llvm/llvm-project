@@ -3,7 +3,6 @@
 
 // Wrong results on amdgpu
 // XFAIL: amdgcn-amd-amdhsa
-// XFAIL: amdgcn-amd-amdhsa-newRTL
 
 #include <omp.h>
 #include <stdio.h>
