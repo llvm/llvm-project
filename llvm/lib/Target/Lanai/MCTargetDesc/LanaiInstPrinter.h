@@ -36,7 +36,6 @@ public:
   void printMemSplsOperand(const MCInst *MI, int OpNo, raw_ostream &O,
                            const char *Modifier = nullptr);
   void printCCOperand(const MCInst *MI, int OpNo, raw_ostream &O);
-  void printAluOperand(const MCInst *MI, int OpNo, raw_ostream &O);
   void printHi16ImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printHi16AndImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printLo16AndImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
