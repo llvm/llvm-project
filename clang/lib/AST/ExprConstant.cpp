@@ -6124,9 +6124,6 @@ static bool HandleFunctionCall(SourceLocation CallLoc,
     if (!handleTrivialCopy(Info, MD->getParamDecl(0), Args[0], RHSValue,
                            MD->getParent()->isUnion()))
       return false;
-    if (Info.getLangOpts().CPlusPlus20 && MD->isTrivial() &&
-        !HandleUnionActiveMemberChange(Info, Args[0], *This))
-      return false;
     if (!handleAssignment(Info, Args[0], *This, MD->getThisType(),
                           RHSValue))
       return false;
@@ -7638,6 +7635,15 @@ public:
         if (!EvaluateObjectArgument(Info, Args[0], ThisVal))
           return false;
         This = &ThisVal;
+
+        // If this is syntactically a simple assignment using a trivial
+        // assignment operator, start the lifetimes of union members as needed,
+        // per C++20 [class.union]5.
+        if (Info.getLangOpts().CPlusPlus20 && OCE &&
+            OCE->getOperator() == OO_Equal && MD->isTrivial() &&
+            !HandleUnionActiveMemberChange(Info, Args[0], ThisVal))
+          return false;
+
         Args = Args.slice(1);
       } else if (MD && MD->isLambdaStaticInvoker()) {
         // Map the static invoker for the lambda back to the call operator.
