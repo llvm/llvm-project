@@ -67,7 +67,7 @@ def err_drv_no_cuda_libdevice : Error<
   "libdevice">;
 
 def err_drv_no_rocm_device_lib : Error<
-  "cannot find ROCm device library%select{| for %1}0; provide its path via "
+  "cannot find ROCm device library%select{| for %1|for ABI version %1}0; provide its path via "
   "'--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build "
   "without ROCm device library">;
 def err_drv_no_hip_runtime : Error<
