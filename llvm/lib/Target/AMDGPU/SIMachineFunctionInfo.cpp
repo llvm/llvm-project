@@ -402,7 +402,8 @@ bool SIMachineFunctionInfo::allocateVGPRSpillToAGPR(MachineFunction &MF,
   return Spill.FullyAllocated;
 }
 
-void SIMachineFunctionInfo::removeDeadFrameIndices(MachineFrameInfo &MFI) {
+bool SIMachineFunctionInfo::removeDeadFrameIndices(
+    MachineFrameInfo &MFI, bool ResetSGPRSpillStackIDs) {
   // Remove dead frame indices from function frame, however keep FP & BP since
   // spills for them haven't been inserted yet. And also make sure to remove the
   // frame indices from `SGPRToVGPRSpills` data structure, otherwise, it could
@@ -415,17 +416,28 @@ void SIMachineFunctionInfo::removeDeadFrameIndices(MachineFrameInfo &MFI) {
     }
   }
 
-  // All other SPGRs must be allocated on the default stack, so reset the stack
-  // ID.
-  for (int i = MFI.getObjectIndexBegin(), e = MFI.getObjectIndexEnd(); i != e;
-       ++i)
-    if (i != FramePointerSaveIndex && i != BasePointerSaveIndex)
-      MFI.setStackID(i, TargetStackID::Default);
+  bool HaveSGPRToMemory = false;
+
+  if (ResetSGPRSpillStackIDs) {
+    // All other SPGRs must be allocated on the default stack, so reset the
+    // stack ID.
+    for (int i = MFI.getObjectIndexBegin(), e = MFI.getObjectIndexEnd(); i != e;
+         ++i) {
+      if (i != FramePointerSaveIndex && i != BasePointerSaveIndex) {
+        if (MFI.getStackID(i) == TargetStackID::SGPRSpill) {
+          MFI.setStackID(i, TargetStackID::Default);
+          HaveSGPRToMemory = true;
+        }
+      }
+    }
+  }
 
   for (auto &R : VGPRToAGPRSpills) {
     if (R.second.IsDead)
       MFI.RemoveStackObject(R.first);
   }
+
+  return HaveSGPRToMemory;
 }
 
 int SIMachineFunctionInfo::getScavengeFI(MachineFrameInfo &MFI,
