@@ -198,6 +198,36 @@ namespace std::ranges {
   class join_view;
 }
 
+namespace std {
+  namespace views = ranges::views;
+
+  template<class T> struct tuple_size;
+  template<size_t I, class T> struct tuple_element;
+
+  template<class I, class S, ranges::subrange_kind K>
+  struct tuple_size<ranges::subrange<I, S, K>>
+    : integral_constant<size_t, 2> {};
+
+  template<class I, class S, ranges::subrange_kind K>
+  struct tuple_element<0, ranges::subrange<I, S, K>> {
+    using type = I;
+  };
+
+  template<class I, class S, ranges::subrange_kind K>
+  struct tuple_element<1, ranges::subrange<I, S, K>> {
+    using type = S;
+  };
+
+  template<class I, class S, ranges::subrange_kind K>
+  struct tuple_element<0, const ranges::subrange<I, S, K>> {
+    using type = I;
+  };
+
+  template<class I, class S, ranges::subrange_kind K>
+  struct tuple_element<1, const ranges::subrange<I, S, K>> {
+    using type = S;
+  };
+}
 */
 
 // Make sure all feature-test macros are available.

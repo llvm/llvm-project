@@ -1,5 +1,5 @@
 Section,Description,Dependencies,Assignee,Complete
-`[tuple.helper] <https://wg21.link/tuple.helper>`_,Update <tuple> includes.,None,Konstantin Varlamov,Not started
+`[tuple.helper] <https://wg21.link/tuple.helper>`_,`Update <tuple> includes. <https://llvm.org/D118686>`_,None,Konstantin Varlamov,✅
 `[range.cmp] <https://wg21.link/range.cmp>`_,"| `ranges::equal_to <https://llvm.org/D100429>`_
 | `ranges::not_equal_to <https://llvm.org/D100429>`_
 | `ranges::less <https://llvm.org/D100429>`_
