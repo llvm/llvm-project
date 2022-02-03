@@ -104,7 +104,8 @@ public:
   /// If this function returns IK_Free, it is legal to assign(VirtReg, PhysReg).
   /// When there is more than one kind of interference, the InterferenceKind
   /// with the highest enum value is returned.
-  InterferenceKind checkInterference(LiveInterval &VirtReg, MCRegister PhysReg);
+  InterferenceKind checkInterference(const LiveInterval &VirtReg,
+                                     MCRegister PhysReg);
 
   /// Check for interference in the segment [Start, End) that may prevent
   /// assignment to PhysReg. If this function returns true, there is
@@ -116,12 +117,12 @@ public:
   /// Assign VirtReg to PhysReg.
   /// This will mark VirtReg's live range as occupied in the LiveRegMatrix and
   /// update VirtRegMap. The live range is expected to be available in PhysReg.
-  void assign(LiveInterval &VirtReg, MCRegister PhysReg);
+  void assign(const LiveInterval &VirtReg, MCRegister PhysReg);
 
   /// Unassign VirtReg from its PhysReg.
   /// Assuming that VirtReg was previously assigned to a PhysReg, this undoes
   /// the assignment and updates VirtRegMap accordingly.
-  void unassign(LiveInterval &VirtReg);
+  void unassign(const LiveInterval &VirtReg);
 
   /// Returns true if the given \p PhysReg has any live intervals assigned.
   bool isPhysRegUsed(MCRegister PhysReg) const;
@@ -136,13 +137,14 @@ public:
   /// Check for regmask interference only.
   /// Return true if VirtReg crosses a regmask operand that clobbers PhysReg.
   /// If PhysReg is null, check if VirtReg crosses any regmask operands.
-  bool checkRegMaskInterference(LiveInterval &VirtReg,
+  bool checkRegMaskInterference(const LiveInterval &VirtReg,
                                 MCRegister PhysReg = MCRegister::NoRegister);
 
   /// Check for regunit interference only.
   /// Return true if VirtReg overlaps a fixed assignment of one of PhysRegs's
   /// register units.
-  bool checkRegUnitInterference(LiveInterval &VirtReg, MCRegister PhysReg);
+  bool checkRegUnitInterference(const LiveInterval &VirtReg,
+                                MCRegister PhysReg);
 
   /// Query a line of the assigned virtual register matrix directly.
   /// Use MCRegUnitIterator to enumerate all regunits in the desired PhysReg.

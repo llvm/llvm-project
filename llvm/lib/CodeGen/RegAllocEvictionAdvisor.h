@@ -99,15 +99,14 @@ public:
   /// Find a physical register that can be freed by evicting the FixedRegisters,
   /// or return NoRegister. The eviction decision is assumed to be correct (i.e.
   /// no fixed live ranges are evicted) and profitable.
-  virtual MCRegister
-  tryFindEvictionCandidate(LiveInterval &VirtReg, const AllocationOrder &Order,
-                           uint8_t CostPerUseLimit,
-                           const SmallVirtRegSet &FixedRegisters) const = 0;
+  virtual MCRegister tryFindEvictionCandidate(
+      const LiveInterval &VirtReg, const AllocationOrder &Order,
+      uint8_t CostPerUseLimit, const SmallVirtRegSet &FixedRegisters) const = 0;
 
   /// Find out if we can evict the live ranges occupying the given PhysReg,
   /// which is a hint (preferred register) for VirtReg.
   virtual bool
-  canEvictHintInterference(LiveInterval &VirtReg, MCRegister PhysReg,
+  canEvictHintInterference(const LiveInterval &VirtReg, MCRegister PhysReg,
                            const SmallVirtRegSet &FixedRegisters) const = 0;
 
   /// Returns true if the given \p PhysReg is a callee saved register and has
@@ -117,7 +116,7 @@ public:
 protected:
   RegAllocEvictionAdvisor(const MachineFunction &MF, const RAGreedy &RA);
 
-  Register canReassign(LiveInterval &VirtReg, Register PrevReg) const;
+  Register canReassign(const LiveInterval &VirtReg, Register PrevReg) const;
 
   // Get the upper limit of elements in the given Order we need to analize.
   // TODO: is this heuristic,  we could consider learning it.
@@ -204,15 +203,16 @@ public:
       : RegAllocEvictionAdvisor(MF, RA) {}
 
 private:
-  MCRegister tryFindEvictionCandidate(LiveInterval &, const AllocationOrder &,
-                                      uint8_t,
+  MCRegister tryFindEvictionCandidate(const LiveInterval &,
+                                      const AllocationOrder &, uint8_t,
                                       const SmallVirtRegSet &) const override;
-  bool canEvictHintInterference(LiveInterval &, MCRegister,
+  bool canEvictHintInterference(const LiveInterval &, MCRegister,
                                 const SmallVirtRegSet &) const override;
-  bool canEvictInterferenceBasedOnCost(LiveInterval &, MCRegister, bool,
+  bool canEvictInterferenceBasedOnCost(const LiveInterval &, MCRegister, bool,
                                        EvictionCost &,
                                        const SmallVirtRegSet &) const;
-  bool shouldEvict(LiveInterval &A, bool, LiveInterval &B, bool) const;
+  bool shouldEvict(const LiveInterval &A, bool, const LiveInterval &B,
+                   bool) const;
 };
 } // namespace llvm
 
