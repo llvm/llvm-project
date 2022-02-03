@@ -259,7 +259,7 @@ set(CROSS_TOOLCHAIN_FLAGS_NATIVE "${_CTF_NATIVE_DEFAULT}" CACHE STRING "")
 set(COMPILE_FLAGS
     -D_CRT_SECURE_NO_WARNINGS
     --target=${TRIPLE_ARCH}-windows-msvc
-    -fms-compatibility-version=19.14
+    -fms-compatibility-version=19.20
     -imsvc "${ATLMFC_INCLUDE}"
     -imsvc "${MSVC_INCLUDE}"
     -imsvc "${WINSDK_INCLUDE}/ucrt"
