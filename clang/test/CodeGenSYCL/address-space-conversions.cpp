@@ -35,7 +35,7 @@ void usages() {
   __attribute__((opencl_global_host)) int *GLOBHOST;
 
   // Explicit conversions
-  // From names address spaces to default address space
+  // From named address spaces to default address space
   // CHECK-DAG: [[GLOB_LOAD:%[a-zA-Z0-9]+]] = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* [[GLOB]].ascast
   // CHECK-DAG: [[GLOB_CAST:%[a-zA-Z0-9]+]] = addrspacecast i32 addrspace(1)* [[GLOB_LOAD]] to i32 addrspace(4)*
   // CHECK-DAG: store i32 addrspace(4)* [[GLOB_CAST]], i32 addrspace(4)* addrspace(4)* [[NoAS]].ascast
