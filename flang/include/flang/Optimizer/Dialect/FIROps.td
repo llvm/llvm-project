@@ -1595,6 +1595,40 @@ def fir_ArrayAccessOp : fir_Op<"array_access", [AttrSizedOperandSegments,
   let verifier = "return ::verify(*this);";
 }
 
+def fir_ArrayAmendOp : fir_Op<"array_amend", [NoSideEffect]> {
+  let summary = "Mark an array value as having been changed by reference.";
+
+  let description = [{
+    The `array_amend` operation marks an array value as having been changed via
+    a reference obtained by an `array_access`. It acts as a logical transaction
+    log that is used to merge the final result back with an `array_merge_store`
+    operation.
+
+    ```mlir
+      // fetch the value of one of the array value's elements
+      %1 = fir.array_access %v, %i, %j : (!fir.array<?x?xT>, index, index) -> !fir.ref<T>
+      // modify the element by storing data using %1 as a reference
+      %2 = ... %1 ...
+      // mark the array value
+      %new_v = fir.array_amend %v, %2 : (!fir.array<?x?xT>, !fir.ref<T>) -> !fir.array<?x?xT>
+    ```
+
+    More information about `array_amend` and other array operations can be
+    found in flang/docs/FIRArrayOperations.md.
+  }];
+
+  let arguments = (ins
+    fir_SequenceType:$sequence,
+    fir_ReferenceType:$memref
+  );
+
+  let results = (outs fir_SequenceType);
+
+  let assemblyFormat = [{
+    $sequence `,` $memref attr-dict `:` functional-type(operands, results)
+  }];
+}
+
 def fir_ArrayMergeStoreOp : fir_Op<"array_merge_store",
     [AttrSizedOperandSegments]> {
 
