@@ -20,8 +20,8 @@ endfunction()
 function(add_object_library target_name)
   cmake_parse_arguments(
     "ADD_OBJECT"
-    "" # No option arguments
-    "" # Single value arguments
+    "" # No optional arguments
+    "CXX_STANDARD" # Single value arguments
     "SRCS;HDRS;COMPILE_OPTIONS;DEPENDS" # Multivalue arguments
     ${ARGN}
   )
@@ -53,6 +53,14 @@ function(add_object_library target_name)
     add_dependencies(${fq_target_name} ${fq_deps_list})
   endif()
 
+  if(ADD_OBJECT_CXX_STANDARD)
+    set_target_properties(
+      ${fq_target_name}
+      PROPERTIES
+        CXX_STANDARD ${ADD_OBJECT_CXX_STANDARD}
+    )
+  endif()
+
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
@@ -80,7 +88,7 @@ function(add_entrypoint_object target_name)
   cmake_parse_arguments(
     "ADD_ENTRYPOINT_OBJ"
     "ALIAS;REDIRECTED" # Optional argument
-    "NAME" # Single value arguments
+    "NAME;CXX_STANDARD" # Single value arguments
     "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS"  # Multi value arguments
     ${ARGN}
   )
@@ -183,6 +191,14 @@ function(add_entrypoint_object target_name)
   target_compile_options(${fq_target_name} BEFORE PRIVATE ${common_compile_options} -DLLVM_LIBC_PUBLIC_PACKAGING)
   target_include_directories(${fq_target_name} PRIVATE ${include_dirs})
   add_dependencies(${fq_target_name} ${full_deps_list})
+
+  if(ADD_ENTRYPOINT_OBJ_CXX_STANDARD)
+    set_target_properties(
+      ${fq_target_name} ${internal_target_name}
+      PROPERTIES
+        CXX_STANDARD ${ADD_ENTRYPOINT_OBJ_CXX_STANDARD}
+    )
+  endif()
 
   set_target_properties(
     ${fq_target_name}

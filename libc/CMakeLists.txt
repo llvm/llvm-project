@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.13.4)
 
+# Default to C++17
+set(CMAKE_CXX_STANDARD 17)
+
 # Use old version of target_sources command which converts the source
 # file paths to full paths.
 cmake_policy(SET CMP0076 OLD)
