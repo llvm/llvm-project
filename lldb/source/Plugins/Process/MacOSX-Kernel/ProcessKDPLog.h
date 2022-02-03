@@ -10,7 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_PROCESSKDPLOG_H
 
 #include "lldb/Utility/Log.h"
-
+#include "llvm/ADT/BitmaskEnum.h"
 
 namespace lldb_private {
 
@@ -28,6 +28,7 @@ enum class KDPLog : Log::MaskType {
   Watchpoints = Log::ChannelFlag<10>,
   LLVM_MARK_AS_BITMASK_ENUM(Watchpoints)
 };
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 class ProcessKDPLog {
 public:
