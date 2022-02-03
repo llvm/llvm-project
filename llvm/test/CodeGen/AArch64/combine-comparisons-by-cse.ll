@@ -654,7 +654,7 @@ define i32 @fcmpri(i32 %argc, i8** nocapture readonly %argv) {
 ; CHECK-NEXT:    cbz x8, .LBB9_3
 ; CHECK-NEXT:  // %bb.2:
 ; CHECK-NEXT:    mov w0, #3
-; CHECK-NEXT:    b .LBB9_6
+; CHECK-NEXT:    b .LBB9_4
 ; CHECK-NEXT:  .LBB9_3: // %if.end
 ; CHECK-NEXT:    mov w0, #1
 ; CHECK-NEXT:    bl zoo
@@ -666,17 +666,14 @@ define i32 @fcmpri(i32 %argc, i8** nocapture readonly %argv) {
 ; CHECK-NEXT:    cinc w0, w19, gt
 ; CHECK-NEXT:    fmov d8, d0
 ; CHECK-NEXT:    bl xoo
-; CHECK-NEXT:    fcmp d8, #0.0
-; CHECK-NEXT:    b.gt .LBB9_5
-; CHECK-NEXT:  // %bb.4: // %cond.false12
 ; CHECK-NEXT:    fmov d0, #-1.00000000
-; CHECK-NEXT:    fadd d8, d8, d0
-; CHECK-NEXT:  .LBB9_5: // %cond.end14
-; CHECK-NEXT:    fmov d0, d8
+; CHECK-NEXT:    fcmp d8, #0.0
 ; CHECK-NEXT:    fmov d1, #-2.00000000
+; CHECK-NEXT:    fadd d0, d8, d0
+; CHECK-NEXT:    fcsel d0, d8, d0, gt
 ; CHECK-NEXT:    bl woo
 ; CHECK-NEXT:    mov w0, #4
-; CHECK-NEXT:  .LBB9_6: // %return
+; CHECK-NEXT:  .LBB9_4: // %return
 ; CHECK-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr d8, [sp], #32 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

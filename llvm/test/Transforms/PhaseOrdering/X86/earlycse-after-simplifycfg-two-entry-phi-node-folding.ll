@@ -11,13 +11,11 @@ define dso_local void @foo(i32* %in, i64 %lo, i64 %hi, i32 %ishi) #0 {
 ; ALL-LABEL: @foo(
 ; ALL-NEXT:  entry:
 ; ALL-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[ISHI:%.*]], 0
-; ALL-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[IN:%.*]], i64 [[LO:%.*]]
-; ALL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[IN]], i64 [[HI:%.*]]
-; ALL-NEXT:    [[ARRAYIDX1_SINK1:%.*]] = select i1 [[TOBOOL_NOT]], i32* [[ARRAYIDX1]], i32* [[ARRAYIDX]]
-; ALL-NEXT:    [[ARRAYIDX1_SINK:%.*]] = select i1 [[TOBOOL_NOT]], i32* [[ARRAYIDX1]], i32* [[ARRAYIDX]]
-; ALL-NEXT:    [[ARRAYVAL2:%.*]] = load i32, i32* [[ARRAYIDX1_SINK1]], align 4
+; ALL-NEXT:    [[LO_HI:%.*]] = select i1 [[TOBOOL_NOT]], i64 [[LO:%.*]], i64 [[HI:%.*]]
+; ALL-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[IN:%.*]], i64 [[LO_HI]]
+; ALL-NEXT:    [[ARRAYVAL2:%.*]] = load i32, i32* [[ARRAYIDX1]], align 4
 ; ALL-NEXT:    [[INC2:%.*]] = add nsw i32 [[ARRAYVAL2]], 1
-; ALL-NEXT:    store i32 [[INC2]], i32* [[ARRAYIDX1_SINK]], align 4
+; ALL-NEXT:    store i32 [[INC2]], i32* [[ARRAYIDX1]], align 4
 ; ALL-NEXT:    ret void
 ;
 entry:
