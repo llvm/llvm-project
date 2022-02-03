@@ -177,7 +177,11 @@ bool LLDBMemoryReader::readString(swift::remote::RemoteAddress address,
   Target &target(m_process.GetTarget());
   Address addr(address.getAddressData());
   Status error;
-  target.ReadCStringFromMemory(addr, dest, error);
+  // We only want to allow the file-cache optimization if we resolved the 
+  // address to section + offset.
+  const bool force_live_memory =
+      !readMetadataFromFileCacheEnabled() || !addr.IsSectionOffset();
+  target.ReadCStringFromMemory(addr, dest, error, force_live_memory);
   if (error.Success()) {
     auto format_string = [](const std::string &dest) {
       StreamString stream;
