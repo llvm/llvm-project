@@ -621,6 +621,10 @@ private:
   tryMergeSimpleBlock(SmallVectorImpl<AnnotatedLine *>::const_iterator I,
                       SmallVectorImpl<AnnotatedLine *>::const_iterator E,
                       unsigned Limit) {
+    // Don't merge with a preprocessor directive.
+    if (I[1]->Type == LT_PreprocessorDirective)
+      return 0;
+
     AnnotatedLine &Line = **I;
 
     // Don't merge ObjC @ keywords and methods.

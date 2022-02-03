@@ -20,7 +20,6 @@ class CrashingInferiorTestCase(TestBase):
         self.build()
         self.inferior_crashing()
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_inferior_crashing_register(self):
         """Test that lldb reliably reads registers from the inferior after crashing (command)."""
         self.build()
