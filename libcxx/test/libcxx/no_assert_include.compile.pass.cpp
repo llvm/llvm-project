@@ -9,6 +9,9 @@
 // Ensure that none of the standard C++ headers implicitly include cassert or
 // assert.h (because assert() is implemented as a macro).
 
+// The system-provided <uchar.h> seems to be broken on AIX
+// XFAIL: LIBCXX-AIX-FIXME
+
 // Prevent <ext/hash_map> from generating deprecated warnings for this test.
 #if defined(__DEPRECATED)
 #    undef __DEPRECATED
@@ -70,6 +73,7 @@
 #include <ctgmath>
 #include <ctime>
 #include <ctype.h>
+#include <cuchar>
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 #    include <cwchar>
 #endif
@@ -184,6 +188,7 @@
 #include <type_traits>
 #include <typeindex>
 #include <typeinfo>
+#include <uchar.h>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>

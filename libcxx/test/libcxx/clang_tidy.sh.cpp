@@ -74,6 +74,7 @@
 #include <ctgmath>
 #include <ctime>
 #include <ctype.h>
+#include <cuchar>
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 #    include <cwchar>
 #endif
@@ -188,6 +189,7 @@
 #include <type_traits>
 #include <typeindex>
 #include <typeinfo>
+#include <uchar.h>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
