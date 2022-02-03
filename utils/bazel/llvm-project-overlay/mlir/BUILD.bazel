@@ -2843,6 +2843,7 @@ cc_library(
         ":LinalgOps",
         ":MemRefDialect",
         ":SCFDialect",
+        ":StandardOps",
         ":Support",
         ":TensorDialect",
         ":VectorInterfaces",
