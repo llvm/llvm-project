@@ -2608,6 +2608,39 @@ TEST(IRSimilarityIdentifier, CommutativeSimilarity) {
   }
 }
 
+// This test makes sure that intrinsic functions that are marked commutative
+// are still treated as non-commutative since they are function calls.
+TEST(IRSimilarityIdentifier, InstrinsicCommutative) {
+  // If treated as commutative, we will fail to find a valid mapping, causing
+  // an assertion error.
+  StringRef ModuleString = R"(
+  define void @foo() {
+    entry:
+      %0 = call i16 @llvm.smul.fix.i16(i16 16384, i16 16384, i32 15)
+      store i16 %0, i16* undef, align 1
+      %1 = icmp eq i16 undef, 8192
+      call void @bar()
+      %2 = call i16 @llvm.smul.fix.i16(i16 -16384, i16 16384, i32 15)
+      store i16 %2, i16* undef, align 1
+      %3 = icmp eq i16 undef, -8192
+      call void @bar()
+      %4 = call i16 @llvm.smul.fix.i16(i16 -16384, i16 -16384, i32 15)
+      ret void
+  }
+
+  declare void @bar()
+
+  ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
+  declare i16 @llvm.smul.fix.i16(i16, i16, i32 immarg))";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.size() == 0);
+}
+
 // This test checks to see whether we can detect different structure in
 // commutative instructions.  In this case, the second operand in the second
 // add is different.
