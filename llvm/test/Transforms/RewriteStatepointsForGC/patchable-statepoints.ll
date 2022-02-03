@@ -8,7 +8,7 @@ declare i32 @personality_function()
 define void @test_id() gc "statepoint-example" personality i32 ()* @personality_function {
 ; CHECK-LABEL: @test_id(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 100, i32 0, void ()* @f, i32 0, i32 0, i32 0, i32 0)
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 100, i32 0, void ()* elementtype(void ()) @f, i32 0, i32 0, i32 0, i32 0)
 ; CHECK-NEXT:    to label [[NORMAL_RETURN:%.*]] unwind label [[EXCEPTIONAL_RETURN:%.*]]
 ; CHECK:       normal_return:
 ; CHECK-NEXT:    ret void
@@ -31,7 +31,7 @@ exceptional_return:
 define void @test_num_patch_bytes() gc "statepoint-example" personality i32 ()* @personality_function {
 ; CHECK-LABEL: @test_num_patch_bytes(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 99, void ()* @f, i32 0, i32 0, i32 0, i32 0)
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 99, void ()* elementtype(void ()) @f, i32 0, i32 0, i32 0, i32 0)
 ; CHECK-NEXT:    to label [[NORMAL_RETURN:%.*]] unwind label [[EXCEPTIONAL_RETURN:%.*]]
 ; CHECK:       normal_return:
 ; CHECK-NEXT:    ret void

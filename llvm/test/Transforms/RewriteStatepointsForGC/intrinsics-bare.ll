@@ -11,7 +11,7 @@ define i8 addrspace(1)* @test_duplicate_base_generation(i8 addrspace(1)* %obj1, 
 ; CHECK-NEXT:    [[OBJ2_16:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[OBJ2:%.*]], i64 16
 ; CHECK-NEXT:    [[SELECTED_BASE:%.*]] = select i1 [[C:%.*]], i8 addrspace(1)* [[OBJ2]], i8 addrspace(1)* [[OBJ1]], !is_base_value !0
 ; CHECK-NEXT:    [[SELECTED:%.*]] = select i1 [[C]], i8 addrspace(1)* [[OBJ2_16]], i8 addrspace(1)* [[OBJ1_12]]
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i8 addrspace(1)* [[SELECTED]], i8 addrspace(1)* [[SELECTED_BASE]]) ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i8 addrspace(1)* [[SELECTED]], i8 addrspace(1)* [[SELECTED_BASE]]) ]
 ; CHECK-NEXT:    [[SELECTED_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
 ; CHECK-NEXT:    [[SELECTED_BASE_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
 ; CHECK-NEXT:    ret i8 addrspace(1)* [[SELECTED_RELOCATED]]
