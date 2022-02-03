@@ -227,8 +227,8 @@ static void subtractRecursively(IntegerPolyhedron &b, Simplex &simplex,
     assert(maybeInequality.kind == ReprKind::Inequality &&
            "Subtraction is not supported when a representation of the local "
            "variables of the subtrahend cannot be found!");
-    auto lb = maybeInequality.repr.inEqualityPair.lowerBoundIdx;
-    auto ub = maybeInequality.repr.inEqualityPair.upperBoundIdx;
+    auto lb = maybeInequality.repr.inequalityPair.lowerBoundIdx;
+    auto ub = maybeInequality.repr.inequalityPair.upperBoundIdx;
 
     b.addInequality(sI.getInequality(lb));
     b.addInequality(sI.getInequality(ub));
