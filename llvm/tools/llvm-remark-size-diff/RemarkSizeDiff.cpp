@@ -236,13 +236,13 @@ static Expected<int64_t> getIntValFromKey(const remarks::Remark &Remark,
         inconvertibleErrorCode(),
         Twine("Unexpected key at argument index " + std::to_string(ArgIdx) +
               ": Expected '" + ExpectedKeyName + "', got '" + KeyName + "'"));
-  int64_t Val;
+  long long Val;
   auto ValStr = Remark.Args[ArgIdx].Val;
   if (getAsSignedInteger(ValStr, 0, Val))
     return createStringError(
         inconvertibleErrorCode(),
         Twine("Could not convert string to signed integer: " + ValStr));
-  return Val;
+  return static_cast<int64_t>(Val);
 }
 
 /// Collects relevant size information from \p Remark if it is an size-related
