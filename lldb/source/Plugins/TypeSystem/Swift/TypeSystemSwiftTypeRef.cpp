@@ -2802,18 +2802,20 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
             child_indexes));
   if (auto *exe_scope = exe_ctx->GetBestExecutionContextScope())
     if (auto *runtime =
-            SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
-      if (auto index_size = runtime->GetIndexOfChildMemberWithName(
-              GetCanonicalType(type), name, exe_ctx, omit_empty_base_classes,
-              child_indexes)) {
+            SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
+      auto found_numidx = runtime->GetIndexOfChildMemberWithName(
+          GetCanonicalType(type), name, exe_ctx, omit_empty_base_classes,
+          child_indexes);
+      if (found_numidx.first) {
+        size_t index_size = found_numidx.second.getValueOr(0);
 #ifndef NDEBUG
         // This block is a custom VALIDATE_AND_RETURN implementation to support
         // checking the return value, plus the by-ref `child_indexes`.
         if (!GetSwiftASTContext())
-          return *index_size;
+          return index_size;
         auto ast_type = ReconstructType(type);
         if (!ast_type)
-          return *index_size;
+          return index_size;
         std::vector<uint32_t> ast_child_indexes;
         auto ast_index_size =
             GetSwiftASTContext()->GetIndexOfChildMemberWithName(
@@ -2821,8 +2823,8 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
                 ast_child_indexes);
         // The runtime has more info than the AST. No useful validation can be
         // done.
-        if (*index_size > ast_index_size)
-          return *index_size;
+        if (index_size > ast_index_size)
+          return index_size;
 
         auto fail = [&]() {
           auto join = [](const auto &v) {
@@ -2841,17 +2843,20 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
           assert(false &&
                  "TypeSystemSwiftTypeRef diverges from SwiftASTContext");
         };
-        if (*index_size != ast_index_size)
+        if (index_size != ast_index_size)
           fail();
-        for (unsigned i = 0; i < *index_size; ++i)
+        for (unsigned i = 0; i < index_size; ++i)
           if (child_indexes[i] < ast_child_indexes[i])
             // When the runtime may know know about more children. When this
             // happens, indexes will be larger. But if an index is smaller, that
             // means the runtime has dropped info somehow.
             fail();
 #endif
-        return *index_size;
+        return index_size;
       }
+      // If we're here, the runtime didn't find type info.
+      assert(!found_numidx.first);
+    }
 
   LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
             "Using SwiftASTContext::GetIndexOfChildMemberWithName fallback for "

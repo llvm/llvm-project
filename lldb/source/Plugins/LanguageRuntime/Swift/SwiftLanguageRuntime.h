@@ -278,7 +278,17 @@ public:
                                               const DataExtractor &data,
                                               ExecutionContext *exe_ctx);
 
-  llvm::Optional<size_t> GetIndexOfChildMemberWithName(
+  /// Behaves like the CompilerType::GetIndexOfChildMemberWithName()
+  /// except for the more nuanced return value.
+  ///
+  /// \returns {false, {}} on error.
+  //
+  /// \returns {true, {}} if the member exists, but it is an enum case
+  ///                     without payload. Enum cases without payload
+  ///                     don't have an index.
+  ///
+  /// \returns {true, {num_idexes}} on success.
+  std::pair<bool, llvm::Optional<size_t>> GetIndexOfChildMemberWithName(
       CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
       bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes);
 

@@ -1072,26 +1072,32 @@ GetTypeFromTypeRef(TypeSystemSwiftTypeRef &ts,
   return ts.RemangleAsType(dem, node);
 }
 
-static llvm::Optional<size_t>
+static std::pair<bool, llvm::Optional<size_t>>
 findFieldWithName(const std::vector<swift::reflection::FieldInfo> &fields,
-                  llvm::StringRef name, std::vector<uint32_t> &child_indexes,
-                  uint32_t offset = 0) {
+                  llvm::StringRef name, bool is_enum,
+                  std::vector<uint32_t> &child_indexes, uint32_t offset = 0) {
   uint32_t index = 0;
+  bool is_nonpayload_enum_case = false;
   auto it = std::find_if(fields.begin(), fields.end(), [&](const auto &field) {
-    // A nonnull TypeRef is required for enum cases, where it represents cases
-    // that have a payload. In other types it will be true anyway.
-    if (field.TR == nullptr)
-      return false;
     if (name != field.Name) {
-      ++index;
+      // A nonnull TypeRef is required for enum cases, where it represents cases
+      // that have a payload. In other types it will be true anyway.
+      if (field.TR)
+        ++index;
       return false;
     }
+    if (is_enum)
+      is_nonpayload_enum_case = (field.TR == nullptr);
     return true;
   });
+  // Not found.
   if (it == fields.end())
-    return {};
+    return {false, {}};
+  // Found, but no index to report.
+  if (is_nonpayload_enum_case)
+    return {true, {}};
   child_indexes.push_back(offset + index);
-  return child_indexes.size();
+  return {true, child_indexes.size()};
 }
 
 static llvm::Optional<std::string>
@@ -1135,21 +1141,22 @@ llvm::Optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
   return {};
 }
 
-llvm::Optional<size_t> SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
+std::pair<bool, llvm::Optional<size_t>>
+SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
     CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
     bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
   LLDB_SCOPED_TIMER();
   auto *ts =
       llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(type.GetTypeSystem());
   if (!ts)
-    return {};
+    return {false, {}};
 
   using namespace swift::reflection;
   // Try the static type metadata.
   const TypeRef *tr = nullptr;
   auto *ti = GetSwiftRuntimeTypeInfo(type, exe_ctx->GetFramePtr(), &tr);
   if (!ti)
-    return {};
+    return {false, {}};
   switch (ti->getKind()) {
   case TypeInfoKind::Record: {
     // Structs and Tuples.
@@ -1159,7 +1166,7 @@ llvm::Optional<size_t> SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
     case RecordKind::ThickFunction:
       // There are two fields, `function` and `context`, but they're not exposed
       // by lldb.
-      return 0;
+      return {true, {0}};
     case RecordKind::OpaqueExistential:
       // `OpaqueExistential` is documented as:
       //     An existential is a three-word buffer followed by value metadata...
@@ -1169,17 +1176,17 @@ llvm::Optional<size_t> SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
         uint32_t index;
         if (name.take_back().getAsInteger(10, index) && index < 3) {
           child_indexes.push_back(index);
-          return child_indexes.size();
+          return {true, child_indexes.size()};
         }
       }
-      return findFieldWithName(rti->getFields(), name, child_indexes, 3);
+      return findFieldWithName(rti->getFields(), name, false, child_indexes, 3);
     default:
-      return findFieldWithName(rti->getFields(), name, child_indexes);
+      return findFieldWithName(rti->getFields(), name, false, child_indexes);
     }
   }
   case TypeInfoKind::Enum: {
     auto *eti = llvm::cast<EnumTypeInfo>(ti);
-    return findFieldWithName(eti->getCases(), name, child_indexes);
+    return findFieldWithName(eti->getCases(), name, true, child_indexes);
   }
   case TypeInfoKind::Reference: {
     // Objects.
@@ -1206,20 +1213,21 @@ llvm::Optional<size_t> SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
           break;
         auto *super_tr = builder.lookupSuperclass(current_tr);
         uint32_t offset = super_tr ? 1 : 0;
-        if (auto size = findFieldWithName(record_ti->getFields(), name,
-                                          child_indexes, offset))
-          return size;
+        auto found_size = findFieldWithName(record_ti->getFields(), name, false,
+                                            child_indexes, offset);
+        if (found_size.first)
+          return found_size;
         current_tr = super_tr;
         child_indexes.push_back(0);
       }
       child_indexes.clear();
-      return {};
+      return {false, {}};
     }
     }
   }
   default:
     // FIXME: Implement more cases.
-    return {};
+    return {false, {}};
   }
 }
 
