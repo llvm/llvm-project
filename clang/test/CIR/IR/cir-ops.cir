@@ -35,6 +35,14 @@ module  {
     %5 = cir.load %0 lvalue_to_rvalue : cir.ptr <i32>, i32
     cir.return %5 : i32
   }
+
+  func.func @s0() {
+    %0 = cir.alloca i32, cir.ptr <i32>, [uninitialized] {alignment = 4 : i64}
+    cir.scope {
+      %1 = cir.alloca i32, cir.ptr <i32>, [uninitialized] {alignment = 4 : i64}
+    }
+    cir.return
+  }
 }
 
 // CHECK: module  {
@@ -62,5 +70,11 @@ module  {
 // CHECK-NEXT:     %6 = cir.cst(4 : i32) : i32
 // CHECK-NEXT:     cir.store %6, %0 : i32, cir.ptr <i32>
 // CHECK-NEXT:   }
+
+// CHECK: func.func @s0() {
+// CHECK-NEXT:     %0 = cir.alloca i32, cir.ptr <i32>, [uninitialized] {alignment = 4 : i64}
+// CHECK-NEXT:     cir.scope {
+// CHECK-NEXT:       %1 = cir.alloca i32,  cir.ptr <i32>, [uninitialized] {alignment = 4 : i64}
+// CHECK-NEXT:     }
 
 // CHECK: }

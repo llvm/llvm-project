@@ -282,13 +282,17 @@ def ReturnOp : CIR_Op<"return", [Pure, HasParent<"FuncOp">, Terminator]> {
 
 def IfOp : CIR_Op<"if",
       [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-       SingleBlockImplicitTerminator<"cir::YieldOp">, RecursivelySpeculatable,
-       AutomaticAllocationScope, NoRegionArguments]> {
+       RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments]> {
   let summary = "if-then-else operation";
   let description = [{
     The `cir.if` operation represents an if-then-else construct for
     conditionally executing two regions of code. The operand to an if operation
-    is a boolean value. For example:
+    is a boolean value.
+
+    Each region can contain an arbitrary number of blocks but there usually be
+    only one block in each region unless the presence of return and goto.
+
+    Examples:
 
     ```mlir
     cir.if %b  {
@@ -313,7 +317,7 @@ def IfOp : CIR_Op<"if",
 
   // FIXME: for now the "then" region only has one block, that should change
   // soon as building CIR becomes more complex.
-  let regions = (region SizedRegion<1>:$thenRegion, AnyRegion:$elseRegion);
+  let regions = (region AnyRegion:$thenRegion, AnyRegion:$elseRegion);
 
   // FIXME: unify these within CIR_Ops.
   let hasCustomAssemblyFormat = 1;
@@ -329,14 +333,6 @@ def IfOp : CIR_Op<"if",
   ];
 
   let extraClassDeclaration = [{
-    OpBuilder getThenBodyBuilder(OpBuilder::Listener *listener = nullptr) {
-      Block* body = getBody(0);
-      return OpBuilder::atBlockTerminator(body, listener);
-    }
-    OpBuilder getElseBodyBuilder(OpBuilder::Listener *listener = nullptr) {
-      Block* body = getBody(1);
-      return OpBuilder::atBlockTerminator(body, listener);
-    }
     Block* thenBlock();
     Block* elseBlock();
   }];
@@ -387,13 +383,16 @@ def ScopeOp : CIR_Op<"scope", [DeclareOpInterfaceMethods<RegionBranchOpInterface
     "cir.scope" contains one region and defines a strict "scope" for all new
     values produced within its blocks.
 
+    The region can contain an arbitrary number of blocks but should usually be
+    only one block if return and goto are not present.
+
     "cir.yield" is required as a terminator and can have results, in which case
     it can be omitted. Not used anywhere just yet but might be used to explicitly
     model lifetime extension.
   }];
 
   let results = (outs Variadic<AnyType>:$results);
-  let regions = (region SizedRegion<1>:$scopeRegion);
+  let regions = (region AnyRegion:$scopeRegion);
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
