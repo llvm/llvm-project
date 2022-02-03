@@ -605,9 +605,11 @@ mlir::LogicalResult CIRGenModule::buildReturnStmt(const ReturnStmt &S) {
 }
 
 mlir::LogicalResult CIRGenModule::buildDeclStmt(const DeclStmt &S) {
-  if (!builder.getInsertionBlock())
+  if (!builder.getInsertionBlock()) {
     theModule.emitError(
         "Seems like this is unreachable code, what should we do?");
+    return mlir::failure();
+  }
 
   for (const auto *I : S.decls()) {
     buildDecl(*I);
