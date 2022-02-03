@@ -3,6 +3,8 @@
 // RUN: not mlir-tblgen -gen-rewriters -I %S/../../include -DERROR3 %s 2>&1 | FileCheck --check-prefix=ERROR3 %s
 // RUN: not mlir-tblgen -gen-rewriters -I %S/../../include -DERROR4 %s 2>&1 | FileCheck --check-prefix=ERROR4 %s
 // RUN: not mlir-tblgen -gen-rewriters -I %S/../../include -DERROR5 %s 2>&1 | FileCheck --check-prefix=ERROR5 %s
+// RUN: not mlir-tblgen -gen-rewriters -I %S/../../include -DERROR6 %s 2>&1 | FileCheck --check-prefix=ERROR6 %s
+// RUN: not mlir-tblgen -gen-rewriters -I %S/../../include -DERROR7 %s 2>&1 | FileCheck --check-prefix=ERROR7 %s
 
 include "mlir/IR/OpBase.td"
 
@@ -48,4 +50,16 @@ def : Pat<(OpB $val, AnyI32Attr:$attr), (OpA (OpA $val, $val, (returnType (OpA $
 // Check that trying to specify explicit types at the root node fails.
 // ERROR5: [[@LINE+1]]:1: error: Cannot specify explicit return types in an op
 def : Pat<(OpB $val, AnyI32Attr:$attr), (OpA $val, $val, (returnType "someType()"))>;
+#endif
+
+#ifdef ERROR6
+// Check that type constraint has one argument
+// ERROR6: [[@LINE+1]]:1: error: type constraint requires exactly one argument
+def : Pat<(OpB:$result $val, $attr), (OpA $val, $val), [(AnyInteger:$result)]>;
+#endif
+
+#ifdef ERROR7
+// Check that type constraint has one argument
+// ERROR7: [[@LINE+1]]:1: error: type constraint requires exactly one argument
+def : Pat<(OpB:$opB $val, $attr), (OpA $val, $val), [(AnyInteger $opB, $val)]>;
 #endif

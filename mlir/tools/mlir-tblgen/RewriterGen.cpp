@@ -853,6 +853,9 @@ void PatternEmitter::emitMatchLogic(DagNode tree, StringRef opName) {
 
     auto condition = constraint.getConditionTemplate();
     if (isa<TypeConstraint>(constraint)) {
+      if (entities.size() != 1)
+        PrintFatalError(loc, "type constraint requires exactly one argument");
+
       auto self = formatv("({0}.getType())",
                           symbolInfoMap.getValueAndRangeUse(entities.front()));
       emitMatchCheck(
