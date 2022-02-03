@@ -481,7 +481,7 @@ define amdgpu_kernel void @livevariables_update_missed_block(i8 addrspace(1)* %s
   ; SI-NEXT:   successors: %bb.6(0x80000000)
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   [[V_MOV_B1:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
-  ; SI-NEXT:   [[GLOBAL_LOAD_UBYTE1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_UBYTE killed [[V_MOV_B1]], 0, 0, implicit $exec :: (load (s8) from `i8 addrspace(1)* null`, addrspace 1)
+  ; SI-NEXT:   [[GLOBAL_LOAD_UBYTE1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_UBYTE killed [[V_MOV_B1]], 0, 0, implicit $exec :: ("amdgpu-noclobber" load (s8) from `i8 addrspace(1)* null`, addrspace 1)
   ; SI-NEXT:   S_BRANCH %bb.6
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.5.Flow:

@@ -125,7 +125,7 @@ define amdgpu_kernel void @s_fdiv_v4f64(<4 x double> addrspace(1)* %out, <4 x do
 }
 
 ; GCN-LABEL: {{^}}div_fast_2_x_pat_f64:
-; GCN: v_mul_f64 [[MUL:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, 0.5
+; GCN: v_mul_f64 [[MUL:v\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}, 0.5
 ; GCN: buffer_store_dwordx2 [[MUL]]
 define amdgpu_kernel void @div_fast_2_x_pat_f64(double addrspace(1)* %out) #1 {
   %x = load double, double addrspace(1)* undef
@@ -135,9 +135,9 @@ define amdgpu_kernel void @div_fast_2_x_pat_f64(double addrspace(1)* %out) #1 {
 }
 
 ; GCN-LABEL: {{^}}div_fast_k_x_pat_f64:
-; GCN-DAG: s_mov_b32 s[[K_LO:[0-9]+]], 0x9999999a
-; GCN-DAG: s_mov_b32 s[[K_HI:[0-9]+]], 0x3fb99999
-; GCN: v_mul_f64 [[MUL:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[K_LO]]:[[K_HI]]{{\]}}
+; GCN-DAG: v_mov_b32_e32 v[[K_LO:[0-9]+]], 0x9999999a
+; GCN-DAG: v_mov_b32_e32 v[[K_HI:[0-9]+]], 0x3fb99999
+; GCN: v_mul_f64 [[MUL:v\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[K_LO]]:[[K_HI]]{{\]}}
 ; GCN: buffer_store_dwordx2 [[MUL]]
 define amdgpu_kernel void @div_fast_k_x_pat_f64(double addrspace(1)* %out) #1 {
   %x = load double, double addrspace(1)* undef
@@ -147,9 +147,9 @@ define amdgpu_kernel void @div_fast_k_x_pat_f64(double addrspace(1)* %out) #1 {
 }
 
 ; GCN-LABEL: {{^}}div_fast_neg_k_x_pat_f64:
-; GCN-DAG: s_mov_b32 s[[K_LO:[0-9]+]], 0x9999999a
-; GCN-DAG: s_mov_b32 s[[K_HI:[0-9]+]], 0xbfb99999
-; GCN: v_mul_f64 [[MUL:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[K_LO]]:[[K_HI]]{{\]}}
+; GCN-DAG: v_mov_b32_e32 v[[K_LO:[0-9]+]], 0x9999999a
+; GCN-DAG: v_mov_b32_e32 v[[K_HI:[0-9]+]], 0xbfb99999
+; GCN: v_mul_f64 [[MUL:v\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[K_LO]]:[[K_HI]]{{\]}}
 ; GCN: buffer_store_dwordx2 [[MUL]]
 define amdgpu_kernel void @div_fast_neg_k_x_pat_f64(double addrspace(1)* %out) #1 {
   %x = load double, double addrspace(1)* undef

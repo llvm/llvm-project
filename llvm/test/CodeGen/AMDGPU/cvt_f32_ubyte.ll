@@ -2345,142 +2345,82 @@ bb:
 define amdgpu_kernel void @cvt_f32_ubyte0_vector() local_unnamed_addr {
 ; SI-LABEL: cvt_f32_ubyte0_vector:
 ; SI:       ; %bb.0: ; %entry
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[0:3], 0
-; SI-NEXT:    s_mov_b64 s[4:5], 0
-; SI-NEXT:    s_mov_b32 s6, 0
-; SI-NEXT:    s_mov_b32 s7, s3
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], 0
-; SI-NEXT:    s_waitcnt vmcnt(1)
-; SI-NEXT:    buffer_load_ubyte v3, v[0:1], s[4:7], 0 addr64 offset:3
-; SI-NEXT:    buffer_load_ubyte v4, v[0:1], s[4:7], 0 addr64 offset:2
-; SI-NEXT:    buffer_load_ubyte v5, v[0:1], s[4:7], 0 addr64 offset:1
-; SI-NEXT:    buffer_load_ubyte v0, v[0:1], s[4:7], 0 addr64
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0 offset:3
+; SI-NEXT:    buffer_load_ubyte v1, off, s[0:3], 0 offset:2
+; SI-NEXT:    buffer_load_ubyte v2, off, s[0:3], 0 offset:1
+; SI-NEXT:    buffer_load_ubyte v3, off, s[0:3], 0
+; SI-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; SI-NEXT:    s_waitcnt vmcnt(3)
-; SI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v3
-; SI-NEXT:    v_fma_f32 v1, v2, v1, 0.5
-; SI-NEXT:    v_cvt_u32_f32_e32 v1, v1
+; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    v_fma_f32 v0, s0, v0, 0.5
+; SI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; SI-NEXT:    s_waitcnt vmcnt(2)
-; SI-NEXT:    buffer_store_byte v4, off, s[0:3], 0
-; SI-NEXT:    s_waitcnt vmcnt(2)
-; SI-NEXT:    buffer_store_byte v5, off, s[0:3], 0
-; SI-NEXT:    s_waitcnt vmcnt(2)
-; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; SI-NEXT:    buffer_store_byte v1, off, s[0:3], 0
+; SI-NEXT:    s_waitcnt vmcnt(2)
+; SI-NEXT:    buffer_store_byte v2, off, s[0:3], 0
+; SI-NEXT:    s_waitcnt vmcnt(2)
+; SI-NEXT:    buffer_store_byte v3, off, s[0:3], 0
+; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; SI-NEXT:  .LBB40_1: ; %for.body.i
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_branch .LBB40_1
 ;
 ; VI-LABEL: cvt_f32_ubyte0_vector:
 ; VI:       ; %bb.0: ; %entry
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[0:3], 0
-; VI-NEXT:    v_mov_b32_e32 v2, -1
-; VI-NEXT:    v_mov_b32_e32 v3, s3
-; VI-NEXT:    s_mov_b64 s[4:5], exec
-; VI-NEXT:  .LBB40_1: ; =>This Inner Loop Header: Depth=1
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_readfirstlane_b32 s8, v0
-; VI-NEXT:    v_readfirstlane_b32 s9, v1
-; VI-NEXT:    v_readfirstlane_b32 s10, v2
-; VI-NEXT:    v_readfirstlane_b32 s11, v3
-; VI-NEXT:    v_cmp_eq_u64_e32 vcc, s[8:9], v[0:1]
-; VI-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[10:11], v[2:3]
-; VI-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
-; VI-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
-; VI-NEXT:    s_nop 0
-; VI-NEXT:    buffer_load_ubyte v4, off, s[8:11], 0
-; VI-NEXT:    s_xor_b64 exec, exec, s[0:1]
-; VI-NEXT:    s_cbranch_execnz .LBB40_1
-; VI-NEXT:  ; %bb.2:
-; VI-NEXT:    s_mov_b64 exec, s[4:5]
-; VI-NEXT:    s_mov_b64 s[4:5], exec
-; VI-NEXT:  .LBB40_3: ; =>This Inner Loop Header: Depth=1
-; VI-NEXT:    v_readfirstlane_b32 s8, v0
-; VI-NEXT:    v_readfirstlane_b32 s9, v1
-; VI-NEXT:    v_readfirstlane_b32 s10, v2
-; VI-NEXT:    v_readfirstlane_b32 s11, v3
-; VI-NEXT:    v_cmp_eq_u64_e32 vcc, s[8:9], v[0:1]
-; VI-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[10:11], v[2:3]
-; VI-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
-; VI-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
-; VI-NEXT:    s_nop 0
-; VI-NEXT:    buffer_load_ubyte v5, off, s[8:11], 0 offset:1
-; VI-NEXT:    s_xor_b64 exec, exec, s[0:1]
-; VI-NEXT:    s_cbranch_execnz .LBB40_3
-; VI-NEXT:  ; %bb.4:
-; VI-NEXT:    s_mov_b64 exec, s[4:5]
-; VI-NEXT:    s_mov_b64 s[4:5], exec
-; VI-NEXT:  .LBB40_5: ; =>This Inner Loop Header: Depth=1
-; VI-NEXT:    v_readfirstlane_b32 s8, v0
-; VI-NEXT:    v_readfirstlane_b32 s9, v1
-; VI-NEXT:    v_readfirstlane_b32 s10, v2
-; VI-NEXT:    v_readfirstlane_b32 s11, v3
-; VI-NEXT:    v_cmp_eq_u64_e32 vcc, s[8:9], v[0:1]
-; VI-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[10:11], v[2:3]
-; VI-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
-; VI-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
-; VI-NEXT:    s_nop 0
-; VI-NEXT:    buffer_load_ubyte v6, off, s[8:11], 0 offset:2
-; VI-NEXT:    s_xor_b64 exec, exec, s[0:1]
-; VI-NEXT:    s_cbranch_execnz .LBB40_5
-; VI-NEXT:  ; %bb.6:
-; VI-NEXT:    s_mov_b64 exec, s[4:5]
-; VI-NEXT:    s_mov_b64 s[4:5], exec
-; VI-NEXT:  .LBB40_7: ; =>This Inner Loop Header: Depth=1
-; VI-NEXT:    v_readfirstlane_b32 s8, v0
-; VI-NEXT:    v_readfirstlane_b32 s9, v1
-; VI-NEXT:    v_readfirstlane_b32 s10, v2
-; VI-NEXT:    v_readfirstlane_b32 s11, v3
-; VI-NEXT:    v_cmp_eq_u64_e32 vcc, s[8:9], v[0:1]
-; VI-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[10:11], v[2:3]
-; VI-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
-; VI-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
-; VI-NEXT:    s_nop 0
-; VI-NEXT:    buffer_load_ubyte v7, off, s[8:11], 0 offset:3
-; VI-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; VI-NEXT:    s_xor_b64 exec, exec, s[0:1]
-; VI-NEXT:    s_cbranch_execnz .LBB40_7
-; VI-NEXT:  ; %bb.8:
-; VI-NEXT:    s_mov_b64 exec, s[4:5]
-; VI-NEXT:    buffer_load_dword v0, off, s[0:3], 0
-; VI-NEXT:    s_waitcnt vmcnt(1)
-; VI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v7
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_mul_f32_e32 v0, v0, v1
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0 offset:3
+; VI-NEXT:    buffer_load_ubyte v1, off, s[0:3], 0 offset:2
+; VI-NEXT:    buffer_load_ubyte v2, off, s[0:3], 0 offset:1
+; VI-NEXT:    buffer_load_ubyte v3, off, s[0:3], 0
+; VI-NEXT:    s_load_dword s0, s[0:1], 0x0
+; VI-NEXT:    s_waitcnt vmcnt(3)
+; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_mul_f32_e32 v0, s0, v0
 ; VI-NEXT:    v_add_f32_e32 v0, 0.5, v0
 ; VI-NEXT:    v_cvt_i32_f32_e32 v0, v0
-; VI-NEXT:    buffer_store_byte v6, off, s[0:3], 0
-; VI-NEXT:    buffer_store_byte v5, off, s[0:3], 0
-; VI-NEXT:    buffer_store_byte v4, off, s[0:3], 0
+; VI-NEXT:    s_waitcnt vmcnt(2)
+; VI-NEXT:    buffer_store_byte v1, off, s[0:3], 0
+; VI-NEXT:    s_waitcnt vmcnt(2)
+; VI-NEXT:    buffer_store_byte v2, off, s[0:3], 0
+; VI-NEXT:    s_waitcnt vmcnt(2)
+; VI-NEXT:    buffer_store_byte v3, off, s[0:3], 0
 ; VI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
-; VI-NEXT:  .LBB40_9: ; %for.body.i
+; VI-NEXT:  .LBB40_1: ; %for.body.i
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
-; VI-NEXT:    s_branch .LBB40_9
+; VI-NEXT:    s_branch .LBB40_1
 ;
 ; GFX10-LABEL: cvt_f32_ubyte0_vector:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    s_clause 0x4
-; GFX10-NEXT:    global_load_ubyte v2, v[0:1], off offset:3
-; GFX10-NEXT:    global_load_dword v3, v[0:1], off
-; GFX10-NEXT:    global_load_ubyte v4, v[0:1], off offset:2
-; GFX10-NEXT:    global_load_ubyte v5, v[0:1], off offset:1
-; GFX10-NEXT:    global_load_ubyte v6, v[0:1], off
-; GFX10-NEXT:    s_waitcnt vmcnt(4)
-; GFX10-NEXT:    v_cvt_f32_ubyte0_e32 v0, v2
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x3
+; GFX10-NEXT:    global_load_ubyte v1, v0, s[0:1] offset:3
+; GFX10-NEXT:    global_load_ubyte v2, v0, s[0:1] offset:2
+; GFX10-NEXT:    global_load_ubyte v3, v0, s[0:1] offset:1
+; GFX10-NEXT:    global_load_ubyte v4, v0, s[0:1]
+; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-NEXT:    s_waitcnt vmcnt(3)
-; GFX10-NEXT:    v_fma_f32 v0, v3, v0, 0.5
+; GFX10-NEXT:    v_cvt_f32_ubyte0_e32 v0, v1
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_fma_f32 v0, s0, v0, 0.5
 ; GFX10-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX10-NEXT:    s_waitcnt vmcnt(2)
-; GFX10-NEXT:    global_store_byte v[0:1], v4, off
+; GFX10-NEXT:    global_store_byte v[0:1], v2, off
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    global_store_byte v[0:1], v5, off
+; GFX10-NEXT:    global_store_byte v[0:1], v3, off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    global_store_byte v[0:1], v6, off
+; GFX10-NEXT:    global_store_byte v[0:1], v4, off
 ; GFX10-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX10-NEXT:  .LBB40_1: ; %for.body.i
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
