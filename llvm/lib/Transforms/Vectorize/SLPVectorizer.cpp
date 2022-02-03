@@ -2467,10 +2467,13 @@ private:
     void verify() {
       if (hasValidDependencies()) {
         assert(UnscheduledDeps <= Dependencies && "invariant");
+        assert(UnscheduledDeps <= FirstInBundle->UnscheduledDepsInBundle &&
+               "bundle must have at least as many dependencies as member");
       }
 
       if (IsScheduled) {
-        assert(isSchedulingEntity() && UnscheduledDeps == 0 &&
+        assert(isSchedulingEntity() && hasValidDependencies() &&
+               UnscheduledDeps == 0 &&
                "unexpected scheduled state");
       }
     }
@@ -2729,8 +2732,17 @@ private:
       if (!ScheduleStart)
         return;
 
-      for (auto *I = ScheduleStart; I != ScheduleEnd; I = I->getNextNode())
+      assert(ScheduleStart->getParent() == ScheduleEnd->getParent() &&
+             ScheduleStart->comesBefore(ScheduleEnd) &&
+             "Not a valid scheduling region?");
+
+      for (auto *I = ScheduleStart; I != ScheduleEnd; I = I->getNextNode()) {
+        auto *SD = getScheduleData(I);
+        assert(SD && "primary scheduledata must exist in window");
+        assert(isInSchedulingRegion(SD) &&
+               "primary schedule data not in window?");
         doForAllOpcodes(I, [](ScheduleData *SD) { SD->verify(); });
+      }
     }
 
     void doForAllOpcodes(Value *V,
@@ -3883,6 +3895,10 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   BlockScheduling &BS = *BSRef.get();
 
   Optional<ScheduleData *> Bundle = BS.tryScheduleBundle(VL, this, S);
+#ifdef EXPENSIVE_CHECKS
+  // Make sure we didn't break any internal invariants
+  BS.verify();
+#endif
   if (!Bundle) {
     LLVM_DEBUG(dbgs() << "SLP: We are not able to schedule this bundle!\n");
     assert((!BS.getScheduleData(VL0) ||
