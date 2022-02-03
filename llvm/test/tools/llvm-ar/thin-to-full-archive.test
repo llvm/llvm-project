@@ -1,0 +1,26 @@
+## Test thin archives do not siletly convert to full archives on write.
+
+# RUN: rm -f %tthin.a %tfull.a 
+
+# RUN: llvm-ar -Trc %tthin.a %S/Inputs/a.txt
+# RUN: FileCheck --check-prefixes=THIN --input-file=%tthin.a %s
+
+# RUN: llvm-ar -q %tthin.a %S/Inputs/b.txt
+# RUN: FileCheck --check-prefixes=THIN --input-file=%tthin.a %s
+
+# RUN: llvm-ar -r %tthin.a %S/Inputs/c.txt
+# RUN: FileCheck --check-prefixes=THIN --input-file=%tthin.a %s
+
+# RUN: llvm-ar -am %S/Inputs/a.txt %tthin.a %S/Inputs/c.txt
+# RUN: FileCheck --check-prefixes=THIN --input-file=%tthin.a %s
+
+# RUN: llvm-ar -d %tthin.a %S/Inputs/c.txt
+# RUN: FileCheck --check-prefixes=THIN --input-file=%tthin.a %s
+
+THIN: !<thin>
+
+## Test that you can add a thin archive's contents to a full archive with 'L'
+# RUN: llvm-ar -qcL %tfull.a %tthin.a
+# RUN: FileCheck --check-prefixes=FULL --input-file=%tfull.a %s
+
+FULL: !<arch>
