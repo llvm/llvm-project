@@ -323,13 +323,33 @@ public:
     : Bits(Ref.getData(), Ref.getData() + Ref.getSize()) {}
 
   /// Add* - Add various data types to Bit data.
-  void AddPointer(const void *Ptr);
-  void AddInteger(signed I);
-  void AddInteger(unsigned I);
-  void AddInteger(long I);
-  void AddInteger(unsigned long I);
-  void AddInteger(long long I);
-  void AddInteger(unsigned long long I);
+  void AddPointer(const void *Ptr) {
+    // Note: this adds pointers to the hash using sizes and endianness that
+    // depend on the host. It doesn't matter, however, because hashing on
+    // pointer values is inherently unstable. Nothing should depend on the
+    // ordering of nodes in the folding set.
+    static_assert(sizeof(uintptr_t) <= sizeof(unsigned long long),
+                  "unexpected pointer size");
+    AddInteger(reinterpret_cast<uintptr_t>(Ptr));
+  }
+  void AddInteger(signed I) { Bits.push_back(I); }
+  void AddInteger(unsigned I) { Bits.push_back(I); }
+  void AddInteger(long I) { AddInteger((unsigned long)I); }
+  void AddInteger(unsigned long I) {
+    if (sizeof(long) == sizeof(int))
+      AddInteger(unsigned(I));
+    else if (sizeof(long) == sizeof(long long)) {
+      AddInteger((unsigned long long)I);
+    } else {
+      llvm_unreachable("unexpected sizeof(long)");
+    }
+  }
+  void AddInteger(long long I) { AddInteger((unsigned long long)I); }
+  void AddInteger(unsigned long long I) {
+    AddInteger(unsigned(I));
+    AddInteger(unsigned(I >> 32));
+  }
+
   void AddBoolean(bool B) { AddInteger(B ? 1U : 0U); }
   void AddString(StringRef String);
   void AddNodeID(const FoldingSetNodeID &ID);
