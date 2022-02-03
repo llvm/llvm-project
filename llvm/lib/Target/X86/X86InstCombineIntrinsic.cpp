@@ -354,10 +354,9 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
 
   // If the shift amount is guaranteed to be in-range we can replace it with a
   // generic shift.
-  APInt UpperBits =
-      APInt::getHighBitsSet(BitWidth, BitWidth - Log2_32(BitWidth));
-  if (llvm::MaskedValueIsZero(Amt, UpperBits,
-                              II.getModule()->getDataLayout())) {
+  KnownBits KnownAmt =
+      llvm::computeKnownBits(Amt, II.getModule()->getDataLayout());
+  if (KnownAmt.getMaxValue().ult(BitWidth)) {
     return (LogicalShift ? (ShiftLeft ? Builder.CreateShl(Vec, Amt)
                                       : Builder.CreateLShr(Vec, Amt))
                          : Builder.CreateAShr(Vec, Amt));
