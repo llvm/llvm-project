@@ -126,3 +126,15 @@ shared_library("hwasan_shared") {
     "-Wl,-z,global",
   ]
 }
+
+static_library("hwasan_preinit") {
+  output_dir = crt_current_out_dir
+  output_name = "clang_rt.${hwasan_name}_preinit$crt_current_target_suffix"
+  complete_static_lib = true
+  configs -= [
+    "//llvm/utils/gn/build:llvm_code",
+    "//llvm/utils/gn/build:thin_archive",
+  ]
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
+  sources = [ "hwasan_preinit.cpp" ]
+}
