@@ -1,0 +1,7 @@
+# Convert this file into a requirements.txt file by running:
+#
+# pip install pip-tools
+# pip-compile -o requirements.txt  requirements.txt.in
+
+PyGithub==1.55
+GitPython==3.1.26
