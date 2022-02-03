@@ -254,6 +254,22 @@ concept indirectly_movable_storable =
   constructible_from<iter_value_t<_In>, iter_rvalue_reference_t<_In>> &&
   assignable_from<iter_value_t<_In>&, iter_rvalue_reference_t<_In>>;
 
+template<class _In, class _Out>
+concept indirectly_copyable =
+  indirectly_readable<_In> &&
+  indirectly_writable<_Out, iter_reference_t<_In>>;
+
+template<class _In, class _Out>
+concept indirectly_copyable_storable =
+  indirectly_copyable<_In, _Out> &&
+  indirectly_writable<_Out, iter_value_t<_In>&> &&
+  indirectly_writable<_Out, const iter_value_t<_In>&> &&
+  indirectly_writable<_Out, iter_value_t<_In>&&> &&
+  indirectly_writable<_Out, const iter_value_t<_In>&&> &&
+  copyable<iter_value_t<_In>> &&
+  constructible_from<iter_value_t<_In>, iter_reference_t<_In>> &&
+  assignable_from<iter_value_t<_In>&, iter_reference_t<_In>>;
+
 // Note: indirectly_swappable is located in iter_swap.h to prevent a dependency cycle
 // (both iter_swap and indirectly_swappable require indirectly_readable).
 

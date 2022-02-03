@@ -32,6 +32,8 @@ static_assert(!std::sized_sentinel_for<iterator, iterator>);
 static_assert(!std::sized_sentinel_for<iterator, const_iterator>);
 static_assert(std::indirectly_movable<iterator, int*>);
 static_assert(std::indirectly_movable_storable<iterator, int*>);
+static_assert(std::indirectly_copyable<iterator, int*>);
+static_assert(std::indirectly_copyable_storable<iterator, int*>);
 static_assert(!std::indirectly_swappable<iterator, iterator>);
 
 static_assert(std::forward_iterator<const_iterator>);
@@ -43,6 +45,8 @@ static_assert(!std::sized_sentinel_for<const_iterator, iterator>);
 static_assert(!std::sized_sentinel_for<const_iterator, const_iterator>);
 static_assert(std::indirectly_movable<const_iterator, int*>);
 static_assert(std::indirectly_movable_storable<const_iterator, int*>);
+static_assert(std::indirectly_copyable<const_iterator, int*>);
+static_assert(std::indirectly_copyable_storable<const_iterator, int*>);
 static_assert(!std::indirectly_swappable<const_iterator, const_iterator>);
 
 static_assert(std::forward_iterator<local_iterator>);
@@ -54,6 +58,8 @@ static_assert(!std::sized_sentinel_for<local_iterator, local_iterator>);
 static_assert(!std::sized_sentinel_for<local_iterator, const_local_iterator>);
 static_assert(std::indirectly_movable<local_iterator, int*>);
 static_assert(std::indirectly_movable_storable<local_iterator, int*>);
+static_assert(std::indirectly_copyable<local_iterator, int*>);
+static_assert(std::indirectly_copyable_storable<local_iterator, int*>);
 static_assert(!std::indirectly_swappable<local_iterator, local_iterator>);
 
 static_assert(std::forward_iterator<const_local_iterator>);
@@ -65,4 +71,6 @@ static_assert(!std::sized_sentinel_for<const_local_iterator, local_iterator>);
 static_assert(!std::sized_sentinel_for<const_local_iterator, const_local_iterator>);
 static_assert(std::indirectly_movable<const_local_iterator, int*>);
 static_assert(std::indirectly_movable_storable<const_local_iterator, int*>);
+static_assert(std::indirectly_copyable<const_local_iterator, int*>);
+static_assert(std::indirectly_copyable_storable<const_local_iterator, int*>);
 static_assert(!std::indirectly_swappable<const_local_iterator, const_local_iterator>);
