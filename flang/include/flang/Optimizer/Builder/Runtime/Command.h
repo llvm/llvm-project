@@ -32,5 +32,14 @@ void genGetCommandArgument(fir::FirOpBuilder &, mlir::Location,
                            mlir::Value length, mlir::Value status,
                            mlir::Value errmsg);
 
+/// Generate call to GET_ENVIRONMENT_VARIABLE intrinsic runtime routine.
+/// Note that GET_ENVIRONMENT_ARGUMENT intrinsic is split between 2 functions in
+/// implementation; EnvVariableValue and EnvVariableLength. So we handle each
+/// seperately.
+void genGetEnvironmentVariable(fir::FirOpBuilder &, mlir::Location,
+                               mlir::Value number, mlir::Value value,
+                               mlir::Value length, mlir::Value status,
+                               mlir::Value trimName, mlir::Value errmsg);
+
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_COMMAND_H
