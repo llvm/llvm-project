@@ -21,7 +21,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 // [concept.assignable]
 
@@ -33,7 +33,7 @@ concept assignable_from =
     { __lhs = _VSTD::forward<_Rhs>(__rhs) } -> same_as<_Lhs>;
   };
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -280,7 +280,7 @@ class ConstantOp : public mlir::Op<
   /// traits provide.  Here we will ensure that the specific invariants of the
   /// constant operation are upheld, for example the result type must be
   /// of TensorType and matches the type of the constant `value`.
-  LogicalResult verify();
+  LogicalResult verifyInvariants();
 
   /// Provide an interface to build this operation from a set of input values.
   /// This interface is used by the `builder` classes to allow for easily
@@ -369,7 +369,7 @@ dialect.
 //   * The parent dialect of the operation.
 //   * The mnemonic for the operation, or the name without the dialect prefix.
 //   * A list of traits for the operation.
-class Toy_Op<string mnemonic, list<OpTrait> traits = []> :
+class Toy_Op<string mnemonic, list<Trait> traits = []> :
     Op<Toy_Dialect, mnemonic, traits>;
 ```
 
@@ -495,11 +495,12 @@ def ConstantOp : Toy_Op<"constant"> {
   // F64Tensor corresponds to a 64-bit floating-point TensorType.
   let results = (outs F64Tensor);
 
-  // Add additional verification logic to the constant operation. Here we invoke
-  // a static `verify` method in a C++ source file. This codeblock is executed
-  // inside of ConstantOp::verify, so we can use `this` to refer to the current
-  // operation instance.
-  let verifier = [{ return ::verify(*this); }];
+  // Add additional verification logic to the constant operation. Setting this bit
+  // to `1` will generate a `::mlir::LogicalResult verify()` declaration on the
+  // operation class that is called after ODS constructs have been verified, for
+  // example the types of arguments and results. We implement additional verification
+  // in the definition of this `verify` method in the C++ source file. 
+  let hasVerifier = 1;
 }
 ```
 

@@ -548,14 +548,36 @@ void Operator::populateOpStructure() {
     SmallPtrSet<const llvm::Init *, 32> traitSet;
     traits.reserve(traitSet.size());
 
+    // The declaration order of traits imply the verification order of traits.
+    // Some traits may require other traits to be verified first then they can
+    // do further verification based on those verified facts. If you see this
+    // error, fix the traits declaration order by checking the `dependentTraits`
+    // field.
+    auto verifyTraitValidity = [&](Record *trait) {
+      auto *dependentTraits = trait->getValueAsListInit("dependentTraits");
+      for (auto *traitInit : *dependentTraits)
+        if (traitSet.find(traitInit) == traitSet.end())
+          PrintFatalError(
+              def.getLoc(),
+              trait->getValueAsString("trait") + " requires " +
+                  cast<DefInit>(traitInit)->getDef()->getValueAsString(
+                      "trait") +
+                  " to precede it in traits list");
+    };
+
     std::function<void(llvm::ListInit *)> insert;
     insert = [&](llvm::ListInit *traitList) {
       for (auto *traitInit : *traitList) {
         auto *def = cast<DefInit>(traitInit)->getDef();
-        if (def->isSubClassOf("OpTraitList")) {
+        if (def->isSubClassOf("TraitList")) {
           insert(def->getValueAsListInit("traits"));
           continue;
         }
+
+        // Verify if the trait has all the dependent traits declared before
+        // itself.
+        verifyTraitValidity(def);
+
         // Keep traits in the same order while skipping over duplicates.
         if (traitSet.insert(traitInit).second)
           traits.push_back(Trait::create(traitInit));

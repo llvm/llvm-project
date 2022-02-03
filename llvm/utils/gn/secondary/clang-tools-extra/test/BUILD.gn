@@ -33,6 +33,8 @@ write_lit_config("lit_site_cfg") {
 
   extra_values = [
     "CLANG_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
+    "LLVM_ENABLE_PLUGINS=0",
+    "LLVM_INSTALL_TOOLCHAIN_ONLY=0",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
     "Python3_EXECUTABLE=$python_path",
@@ -42,6 +44,14 @@ write_lit_config("lit_site_cfg") {
     extra_values += [ "CLANG_TIDY_ENABLE_STATIC_ANALYZER=1" ]
   } else {
     extra_values += [ "CLANG_TIDY_ENABLE_STATIC_ANALYZER=0" ]
+  }
+
+  if (host_os == "mac") {
+    extra_values += [ "LLVM_PLUGIN_EXT=.dylib" ]
+  } else if (host_os == "win") {
+    extra_values += [ "LLVM_PLUGIN_EXT=.dll" ]
+  } else {
+    extra_values += [ "LLVM_PLUGIN_EXT=.so" ]
   }
 }
 

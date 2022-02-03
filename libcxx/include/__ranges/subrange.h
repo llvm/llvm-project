@@ -36,7 +36,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_RANGES)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 namespace ranges {
   template<class _From, class _To>
@@ -227,7 +227,7 @@ namespace ranges {
     -> subrange<iterator_t<_Range>, sentinel_t<_Range>, subrange_kind::sized>;
 
   template<size_t _Index, class _Iter, class _Sent, subrange_kind _Kind>
-    requires (_Index < 2)
+    requires ((_Index == 0 && copyable<_Iter>) || _Index == 1)
   _LIBCPP_HIDE_FROM_ABI
   constexpr auto get(const subrange<_Iter, _Sent, _Kind>& __subrange) {
     if constexpr (_Index == 0)
@@ -282,7 +282,7 @@ struct tuple_element<1, const ranges::subrange<_Ip, _Sp, _Kp>> {
   using type = _Sp;
 };
 
-#endif // !defined(_LIBCPP_HAS_NO_RANGES)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 _LIBCPP_END_NAMESPACE_STD
 

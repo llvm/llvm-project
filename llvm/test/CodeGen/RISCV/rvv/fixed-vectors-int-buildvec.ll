@@ -648,3 +648,59 @@ define void @buildvec_vid_shl_imm_v8i16(<8 x i16>* %x) {
   store <8 x i16> <i16 0, i16 512, i16 1024, i16 1536, i16 2048, i16 2560, i16 3072, i16 3584>, <8 x i16>* %x
   ret void
 }
+
+define <4 x i32> @splat_c3_v4i32(<4 x i32> %v) {
+; CHECK-LABEL: splat_c3_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vrgather.vi v9, v8, 3
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
+  %x = extractelement <4 x i32> %v, i32 3
+  %ins = insertelement <4 x i32> poison, i32 %x, i32 0
+  %splat = shufflevector <4 x i32> %ins, <4 x i32> poison, <4 x i32> zeroinitializer
+  ret <4 x i32> %splat
+}
+
+define <4 x i32> @splat_idx_v4i32(<4 x i32> %v, i64 %idx) {
+; CHECK-LABEL: splat_idx_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    ret
+  %x = extractelement <4 x i32> %v, i64 %idx
+  %ins = insertelement <4 x i32> poison, i32 %x, i32 0
+  %splat = shufflevector <4 x i32> %ins, <4 x i32> poison, <4 x i32> zeroinitializer
+  ret <4 x i32> %splat
+}
+
+define <8 x i16> @splat_c4_v8i16(<8 x i16> %v) {
+; CHECK-LABEL: splat_c4_v8i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vrgather.vi v9, v8, 4
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
+  %x = extractelement <8 x i16> %v, i32 4
+  %ins = insertelement <8 x i16> poison, i16 %x, i32 0
+  %splat = shufflevector <8 x i16> %ins, <8 x i16> poison, <8 x i32> zeroinitializer
+  ret <8 x i16> %splat
+}
+
+define <8 x i16> @splat_idx_v8i16(<8 x i16> %v, i64 %idx) {
+; CHECK-LABEL: splat_idx_v8i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    ret
+  %x = extractelement <8 x i16> %v, i64 %idx
+  %ins = insertelement <8 x i16> poison, i16 %x, i32 0
+  %splat = shufflevector <8 x i16> %ins, <8 x i16> poison, <8 x i32> zeroinitializer
+  ret <8 x i16> %splat
+}

@@ -28,7 +28,7 @@ def InvalidTypeB : InvalidType<"InvalidTypeB", "invalid_b"> {
 /// Test format has invalid syntax.
 def InvalidTypeC : InvalidType<"InvalidTypeC", "invalid_c"> {
   let parameters = (ins "int":$v0, "int":$v1);
-  // CHECK: expected literal, directive, or variable
+  // CHECK: expected literal, variable, directive, or optional group
   let assemblyFormat = "`<` $v0, $v1 `>`";
 }
 

@@ -343,3 +343,25 @@
 // RUN:   | FileCheck -check-prefix=SAVE_TEMPS_NAMES %s
 
 // SAVE_TEMPS_NAMES-NOT: "GNU::Linker"{{.*}}["[[SAVE_TEMPS_INPUT1:.*\.o]]", "[[SAVE_TEMPS_INPUT1]]"]
+
+// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64 -Xopenmp-target=nvptx64 -march=sm_35 \
+// RUN:          -save-temps -no-canonical-prefixes %s -o openmp-offload-gpu 2>&1 \
+// RUN:   | FileCheck -check-prefix=TRIPLE %s
+
+// TRIPLE: "-triple" "nvptx64-nvidia-cuda"
+// TRIPLE: "-target-cpu" "sm_35"
+
+// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
+// RUN:          -fopenmp-new-driver -no-canonical-prefixes -ccc-print-bindings %s -o openmp-offload-gpu 2>&1 \
+// RUN:   | FileCheck -check-prefix=NEW_DRIVER %s
+
+// NEW_DRIVER: "[[HOST_TRIPLE:.+]]" - "clang", inputs: ["[[HOST_INPUT:.+]]"], output: "[[HOST_BC:.+]]" 
+// NEW_DRIVER: "nvptx64-nvidia-cuda" - "clang", inputs: ["[[DEVICE_INPUT:.+]]", "[[HOST_BC]]"], output: "[[DEVICE_ASM:.+]]"
+// NEW_DRIVER: "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[DEVICE_ASM]]"], output: "[[DEVICE_OBJ:.+]]" 
+
+// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvida-cuda -march=sm_70 \
+// RUN:          --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-new-nvptx-test.bc \
+// RUN:          -fopenmp-new-driver -no-canonical-prefixes -nogpulib %s -o openmp-offload-gpu 2>&1 \
+// RUN:   | FileCheck -check-prefix=NEW_DRIVER_EMBEDDING %s
+
+// NEW_DRIVER_EMBEDDING: -fembed-offload-object=[[CUBIN:.*\.cubin]],nvptx64-nvidia-cuda.sm_70

@@ -9,6 +9,7 @@
 #include "PassDetail.h"
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -17,9 +18,8 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
-#include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
@@ -31,7 +31,7 @@ static Value cloneMemref(Location loc, Value memref, OpBuilder &b) {
   auto memrefType = memref.getType().cast<MemRefType>();
   auto alloc = b.create<memref::AllocOp>(loc, memrefType,
                                          getDynOperands(loc, memref, b));
-  b.create<linalg::CopyOp>(loc, memref, alloc);
+  b.create<memref::CopyOp>(loc, memref, alloc);
   return alloc;
 }
 
@@ -197,10 +197,10 @@ public:
 /// ```
 ///   %a = alloc(sizes)
 ///   %sv = subview %source [offsets][sizes][strides]
-///   linalg_copy(%sv, %a)
+///   memref.copy(%sv, %a)
 /// ```
 ///
-/// This pattern is arguable a std pattern once linalg::CopyOp becomes
+/// This pattern is arguable a std pattern once memref::CopyOp becomes
 /// std::CopyOp.
 class ExtractSliceOpConverter
     : public OpConversionPattern<tensor::ExtractSliceOp> {
@@ -223,7 +223,7 @@ public:
     Value subView = rewriter.create<memref::SubViewOp>(
         op.getLoc(), sourceMemref, op.getMixedOffsets(), op.getMixedSizes(),
         op.getMixedStrides());
-    rewriter.create<linalg::CopyOp>(op.getLoc(), subView, alloc);
+    rewriter.create<memref::CopyOp>(op.getLoc(), subView, alloc);
     rewriter.replaceOp(op, alloc);
     return success();
   }
@@ -235,11 +235,11 @@ public:
 /// conversion infra:
 /// ```
 ///   %sv = subview %dest [offsets][sizes][strides]
-///   linalg_copy(%source, %sv)
+///   memref.copy(%source, %sv)
 ///   // replace with %dest
 /// ```
 ///
-/// This pattern is arguable a std pattern once linalg::CopyOp becomes
+/// This pattern is arguable a std pattern once memref::CopyOp becomes
 /// std::CopyOp.
 class InsertSliceOpConverter
     : public OpConversionPattern<tensor::InsertSliceOp> {
@@ -263,7 +263,7 @@ public:
         op.getLoc(), destMemRef, op.getMixedOffsets(), op.getMixedSizes(),
         op.getMixedStrides());
     // Copy the small memref.
-    rewriter.create<linalg::CopyOp>(op.getLoc(), sourceMemRef, subview);
+    rewriter.create<memref::CopyOp>(op.getLoc(), sourceMemRef, subview);
     rewriter.replaceOp(op, destMemRef);
     return success();
   }

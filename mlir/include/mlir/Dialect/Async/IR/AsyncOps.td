@@ -16,6 +16,7 @@
 include "mlir/Dialect/Async/IR/AsyncDialect.td"
 include "mlir/Dialect/Async/IR/AsyncTypes.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -23,14 +24,15 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 //===----------------------------------------------------------------------===//
 
 // Base class for the operation in this dialect
-class Async_Op<string mnemonic, list<OpTrait> traits = []> :
+class Async_Op<string mnemonic, list<Trait> traits = []> :
     Op<AsyncDialect, mnemonic, traits>;
 
 def Async_ExecuteOp :
   Async_Op<"execute", [SingleBlockImplicitTerminator<"YieldOp">,
                        DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                                  ["getSuccessorEntryOperands"]>,
-                       AttrSizedOperandSegments]> {
+                       AttrSizedOperandSegments,
+                       AutomaticAllocationScope]> {
   let summary = "Asynchronous execute operation";
   let description = [{
     The `body` region attached to the `async.execute` operation semantically
@@ -81,9 +83,9 @@ def Async_ExecuteOp :
 
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
-  let verifier = [{ return ::verify(*this); }];
 
   let skipDefaultBuilders = 1;
+  let hasVerifier = 1;
   let builders = [
     OpBuilder<(ins "TypeRange":$resultTypes, "ValueRange":$dependencies,
       "ValueRange":$operands,
@@ -109,10 +111,8 @@ def Async_YieldOp :
   }];
 
   let arguments = (ins Variadic<AnyType>:$operands);
-
   let assemblyFormat = "($operands^ `:` type($operands))? attr-dict";
-
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 }
 
 def Async_AwaitOp : Async_Op<"await"> {
@@ -136,6 +136,7 @@ def Async_AwaitOp : Async_Op<"await"> {
   let results = (outs Optional<AnyType>:$result);
 
   let skipDefaultBuilders = 1;
+  let hasVerifier = 1;
 
   let builders = [
     OpBuilder<(ins "Value":$operand,
@@ -154,8 +155,6 @@ def Async_AwaitOp : Async_Op<"await"> {
       type($operand), type($result)
     ) attr-dict
   }];
-
-  let verifier = [{ return ::verify(*this); }];
 }
 
 def Async_CreateGroupOp : Async_Op<"create_group", [NoSideEffect]> {
@@ -527,6 +526,19 @@ def Async_RuntimeDropRefOp : Async_Op<"runtime.drop_ref"> {
   let assemblyFormat = [{
     $operand attr-dict `:` type($operand)
   }];
+}
+
+def Async_RuntimeNumWorkerThreadsOp :
+  Async_Op<"runtime.num_worker_threads",
+           [DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+  let summary = "gets the number of threads in the threadpool from the runtime";
+  let description = [{
+    The `async.runtime.num_worker_threads` operation gets the number of threads
+    in the threadpool from the runtime.
+  }];
+
+  let results = (outs Index:$result);
+  let assemblyFormat = "attr-dict `:` type($result)";
 }
 
 #endif // ASYNC_OPS

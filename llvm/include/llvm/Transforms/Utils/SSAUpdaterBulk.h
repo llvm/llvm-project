@@ -42,7 +42,7 @@ class SSAUpdaterBulk {
     SmallVector<Use *, 4> Uses;
     StringRef Name;
     Type *Ty;
-    RewriteInfo(){};
+    RewriteInfo() = default;
     RewriteInfo(StringRef &N, Type *T) : Name(N), Ty(T){};
   };
   SmallVector<RewriteInfo, 4> Rewrites;
@@ -52,10 +52,10 @@ class SSAUpdaterBulk {
   Value *computeValueAt(BasicBlock *BB, RewriteInfo &R, DominatorTree *DT);
 
 public:
-  explicit SSAUpdaterBulk(){};
+  explicit SSAUpdaterBulk() = default;
   SSAUpdaterBulk(const SSAUpdaterBulk &) = delete;
   SSAUpdaterBulk &operator=(const SSAUpdaterBulk &) = delete;
-  ~SSAUpdaterBulk(){};
+  ~SSAUpdaterBulk() = default;
 
   /// Add a new variable to the SSA rewriter. This needs to be called before
   /// AddAvailableValue or AddUse calls. The return value is the variable ID,

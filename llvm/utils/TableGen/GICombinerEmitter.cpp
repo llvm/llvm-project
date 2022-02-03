@@ -11,21 +11,21 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenTarget.h"
+#include "GlobalISel/CodeExpander.h"
+#include "GlobalISel/CodeExpansions.h"
+#include "GlobalISel/GIMatchDag.h"
+#include "GlobalISel/GIMatchDagPredicate.h"
+#include "GlobalISel/GIMatchTree.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Support/Timer.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/StringMatcher.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include "CodeGenTarget.h"
-#include "GlobalISel/CodeExpander.h"
-#include "GlobalISel/CodeExpansions.h"
-#include "GlobalISel/GIMatchDag.h"
-#include "GlobalISel/GIMatchTree.h"
 #include <cstdint>
 
 using namespace llvm;

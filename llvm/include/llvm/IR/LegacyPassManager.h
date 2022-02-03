@@ -16,11 +16,11 @@
 #ifndef LLVM_IR_LEGACYPASSMANAGER_H
 #define LLVM_IR_LEGACYPASSMANAGER_H
 
-#include "llvm/Pass.h"
 #include "llvm/Support/CBindingWrapping.h"
 
 namespace llvm {
 
+class Function;
 class Pass;
 class Module;
 

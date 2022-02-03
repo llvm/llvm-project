@@ -1,4 +1,4 @@
-; RUN: opt -newgvn -S < %s | FileCheck %s
+; RUN: opt -passes=newgvn -S < %s | FileCheck %s
 
 ; C source:
 ;

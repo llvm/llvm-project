@@ -4,8 +4,10 @@
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL1.2 -fdeclare-opencl-builtins -finclude-default-header
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -DNO_HEADER
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL3.0 -fdeclare-opencl-builtins -finclude-default-header
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++ -fdeclare-opencl-builtins -DNO_HEADER
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++ -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++2021 -fdeclare-opencl-builtins -finclude-default-header
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header -cl-ext=-cl_khr_fp64 -DNO_FP64
 
 // Test the -fdeclare-opencl-builtins option.  This is not a completeness
@@ -70,12 +72,15 @@ typedef struct {int a;} ndrange_t;
 
 // Enable extensions that are enabled in opencl-c-base.h.
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+#define __opencl_c_generic_address_space 1
 #define cl_khr_subgroup_extended_types 1
 #define cl_khr_subgroup_ballot 1
 #define cl_khr_subgroup_non_uniform_arithmetic 1
 #define cl_khr_subgroup_clustered_reduce 1
 #define __opencl_c_read_write_images 1
 #endif
+
+#define __opencl_c_named_address_space_builtins 1
 #endif
 
 kernel void test_pointers(volatile global void *global_p, global const int4 *a) {

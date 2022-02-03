@@ -47,9 +47,8 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRLinalgUtils
   MLIRModuleBufferization
   MLIRSCF
-  MLIRSCFBufferizableOpInterfaceImpl
   MLIRSCFTransforms
-  MLIRStdBufferizableOpInterfaceImpl
+  MLIRSCFUtils
   MLIRPass
   MLIRStandard
   MLIRStandardOpsTransforms
@@ -59,7 +58,8 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRTransforms
   MLIRTransformUtils
   MLIRVector
-  MLIRVectorBufferizableOpInterfaceImpl
+  MLIRVectorTransforms
+  MLIRVectorUtils
   MLIRX86VectorTransforms
   MLIRVectorToSCF
 )

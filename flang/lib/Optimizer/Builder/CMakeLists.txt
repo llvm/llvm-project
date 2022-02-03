@@ -9,10 +9,12 @@ add_flang_library(FIRBuilder
   MutableBox.cpp
   Runtime/Assign.cpp
   Runtime/Character.cpp
+  Runtime/Command.cpp
   Runtime/Derived.cpp
   Runtime/Numeric.cpp
   Runtime/Ragged.cpp
   Runtime/Reduction.cpp
+  Runtime/Stop.cpp
   Runtime/Transformational.cpp
 
   DEPENDS

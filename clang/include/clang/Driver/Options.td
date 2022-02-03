@@ -1143,8 +1143,7 @@ defm autolink : BoolFOption<"autolink",
 // languages and accept other values such as CPU/GPU architectures,
 // offload kinds and target aliases.
 def offload_EQ : CommaJoined<["--"], "offload=">, Flags<[NoXarchOption]>,
-  HelpText<"Specify comma-separated list of offloading target triples"
-           " (HIP only)">;
+  HelpText<"Specify comma-separated list of offloading target triples (CUDA and HIP only)">;
 
 // C++ Coroutines TS
 defm coroutines_ts : BoolFOption<"coroutines-ts",
@@ -1152,6 +1151,10 @@ defm coroutines_ts : BoolFOption<"coroutines-ts",
   PosFlag<SetTrue, [CC1Option], "Enable support for the C++ Coroutines TS">,
   NegFlag<SetFalse>>;
 
+def fembed_offload_object_EQ : Joined<["-"], "fembed-offload-object=">,
+  Group<f_Group>, Flags<[NoXarchOption, CC1Option]>,
+  HelpText<"Embed Offloading device-side binary into host object file as a section.">,
+  MarshallingInfoStringVector<CodeGenOpts<"OffloadObjects">>;
 def fembed_bitcode_EQ : Joined<["-"], "fembed-bitcode=">,
     Group<f_Group>, Flags<[NoXarchOption, CC1Option, CC1AsOption]>, MetaVarName<"<option>">,
     HelpText<"Embed LLVM bitcode (option: off, all, bitcode, marker)">,
@@ -1907,7 +1910,7 @@ defm legacy_pass_manager : BoolOption<"f", "legacy-pass-manager",
 def fexperimental_new_pass_manager : Flag<["-"], "fexperimental-new-pass-manager">,
   Group<f_clang_Group>, Flags<[CC1Option]>, Alias<fno_legacy_pass_manager>;
 def fno_experimental_new_pass_manager : Flag<["-"], "fno-experimental-new-pass-manager">,
-  Group<f_clang_Group>, Flags<[CC1Option]>, Alias<flegacy_pass_manager>;
+  Group<f_clang_Group>, Flags<[CC1Option,NoDriverOption]>, Alias<flegacy_pass_manager>;
 def fexperimental_strict_floating_point : Flag<["-"], "fexperimental-strict-floating-point">,
   Group<f_clang_Group>, Flags<[CC1Option]>,
   HelpText<"Enables experimental strict floating point in LLVM.">,
@@ -2473,6 +2476,8 @@ defm openmp_optimistic_collapse : BoolFOption<"openmp-optimistic-collapse",
   PosFlag<SetTrue, [CC1Option]>, NegFlag<SetFalse>, BothFlags<[NoArgumentUnused, HelpHidden]>>;
 def static_openmp: Flag<["-"], "static-openmp">,
   HelpText<"Use the static host OpenMP runtime while linking.">;
+def fopenmp_new_driver : Flag<["-"], "fopenmp-new-driver">, Flags<[CC1Option]>, Group<Action_Group>,
+  HelpText<"Use the new driver for OpenMP offloading.">;
 def fno_optimize_sibling_calls : Flag<["-"], "fno-optimize-sibling-calls">, Group<f_Group>;
 def foptimize_sibling_calls : Flag<["-"], "foptimize-sibling-calls">, Group<f_Group>;
 defm escaping_block_tail_calls : BoolFOption<"escaping-block-tail-calls",
@@ -3895,6 +3900,11 @@ def frtlib_add_rpath: Flag<["-"], "frtlib-add-rpath">, Flags<[NoArgumentUnused]>
   HelpText<"Add -rpath with architecture-specific resource directory to the linker flags">;
 def fno_rtlib_add_rpath: Flag<["-"], "fno-rtlib-add-rpath">, Flags<[NoArgumentUnused]>,
   HelpText<"Do not add -rpath with architecture-specific resource directory to the linker flags">;
+defm openmp_implicit_rpath: BoolFOption<"openmp-implicit-rpath",
+  LangOpts<"OpenMP">,
+  DefaultTrue,
+  PosFlag<SetTrue, [], "Set rpath on OpenMP executables">,
+  NegFlag<SetFalse>>;
 def r : Flag<["-"], "r">, Flags<[LinkerInput,NoArgumentUnused]>,
         Group<Link_Group>;
 def save_temps_EQ : Joined<["-", "--"], "save-temps=">, Flags<[CC1Option, NoXarchOption]>,
@@ -4767,6 +4777,13 @@ def target_abi : Separate<["-"], "target-abi">,
   MarshallingInfoString<TargetOpts<"ABI">>;
 def target_sdk_version_EQ : Joined<["-"], "target-sdk-version=">,
   HelpText<"The version of target SDK used for compilation">;
+def darwin_target_variant_triple : Separate<["-"], "darwin-target-variant-triple">,
+  HelpText<"Specify the darwin target variant triple">,
+  MarshallingInfoString<TargetOpts<"DarwinTargetVariantTriple">>,
+  Normalizer<"normalizeTriple">;
+def darwin_target_variant_sdk_version_EQ : Joined<["-"],
+  "darwin-target-variant-sdk-version=">,
+  HelpText<"The version of darwin target variant SDK used for compilation">;
 
 }
 

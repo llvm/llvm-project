@@ -5,18 +5,19 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This template implementation resides in a separate file so that it
-// does not get injected into every .cpp file that includes the
-// generic header.
-//
-// DO NOT INCLUDE THIS FILE WHEN MERELY USING CYCLEINFO.
-//
-// This file should only be included by files that implement a
-// specialization of the relevant templates. Currently these are:
-// - CycleAnalysis.cpp
-// - MachineCycleAnalysis.cpp
-//
+///
+/// \file
+/// This template implementation resides in a separate file so that it
+/// does not get injected into every .cpp file that includes the
+/// generic header.
+///
+/// DO NOT INCLUDE THIS FILE WHEN MERELY USING CYCLEINFO.
+///
+/// This file should only be included by files that implement a
+/// specialization of the relevant templates. Currently these are:
+/// - CycleAnalysis.cpp
+/// - MachineCycleAnalysis.cpp
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_GENERICCYCLEIMPL_H
@@ -77,7 +78,7 @@ template <typename ContextT> class GenericCycleInfoCompute {
     unsigned Start = 0; // DFS start; positive if block is found
     unsigned End = 0;   // DFS end
 
-    DFSInfo() {}
+    DFSInfo() = default;
     explicit DFSInfo(unsigned Start) : Start(Start) {}
 
     /// Whether this node is an ancestor (or equal to) the node \p Other

@@ -74,6 +74,9 @@ static constexpr llvm::StringRef getCharacterProcedureDummyAttrName() {
   return "fir.char_proc";
 }
 
+/// Attribute to keep track of Fortran scoping information for a symbol.
+static constexpr llvm::StringRef getSymbolAttrName() { return "fir.sym_name"; }
+
 /// Tell if \p value is:
 ///   - a function argument that has attribute \p attributeName
 ///   - or, the result of fir.alloca/fir.allocamem op that has attribute \p

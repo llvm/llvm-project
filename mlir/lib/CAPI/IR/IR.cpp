@@ -53,6 +53,11 @@ intptr_t mlirContextGetNumRegisteredDialects(MlirContext context) {
   return static_cast<intptr_t>(unwrap(context)->getAvailableDialects().size());
 }
 
+void mlirContextAppendDialectRegistry(MlirContext ctx,
+                                      MlirDialectRegistry registry) {
+  unwrap(ctx)->appendDialectRegistry(*unwrap(registry));
+}
+
 // TODO: expose a cheaper way than constructing + sorting a vector only to take
 // its size.
 intptr_t mlirContextGetNumLoadedDialects(MlirContext context) {
@@ -86,6 +91,18 @@ bool mlirDialectEqual(MlirDialect dialect1, MlirDialect dialect2) {
 
 MlirStringRef mlirDialectGetNamespace(MlirDialect dialect) {
   return wrap(unwrap(dialect)->getNamespace());
+}
+
+//===----------------------------------------------------------------------===//
+// DialectRegistry API.
+//===----------------------------------------------------------------------===//
+
+MlirDialectRegistry mlirDialectRegistryCreate() {
+  return wrap(new DialectRegistry());
+}
+
+void mlirDialectRegistryDestroy(MlirDialectRegistry registry) {
+  delete unwrap(registry);
 }
 
 //===----------------------------------------------------------------------===//
@@ -177,7 +194,8 @@ MlirModule mlirModuleCreateEmpty(MlirLocation location) {
 }
 
 MlirModule mlirModuleCreateParse(MlirContext context, MlirStringRef module) {
-  OwningModuleRef owning = parseSourceString(unwrap(module), unwrap(context));
+  OwningOpRef<ModuleOp> owning =
+      parseSourceString(unwrap(module), unwrap(context));
   if (!owning)
     return MlirModule{nullptr};
   return MlirModule{owning.release().getOperation()};
@@ -192,8 +210,9 @@ MlirBlock mlirModuleGetBody(MlirModule module) {
 }
 
 void mlirModuleDestroy(MlirModule module) {
-  // Transfer ownership to an OwningModuleRef so that its destructor is called.
-  OwningModuleRef(unwrap(module));
+  // Transfer ownership to an OwningOpRef<ModuleOp> so that its destructor is
+  // called.
+  OwningOpRef<ModuleOp>(unwrap(module));
 }
 
 MlirOperation mlirModuleGetOperation(MlirModule module) {

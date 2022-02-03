@@ -66,7 +66,7 @@ void ThreadPlanCallUserExpression::DidPop() {
 }
 
 bool ThreadPlanCallUserExpression::MischiefManaged() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
 
   if (IsPlanComplete()) {
     LLDB_LOGF(log, "ThreadPlanCallFunction(%p): Completed call function plan.",

@@ -80,7 +80,6 @@ fputil_common_hdrs = [
     "src/__support/FPUtil/NearestIntegerOperations.h",
     "src/__support/FPUtil/NormalFloat.h",
     "src/__support/FPUtil/PlatformDefs.h",
-    "src/__support/FPUtil/Sqrt.h",
 ]
 
 fputil_hdrs = selects.with_or({
@@ -88,7 +87,6 @@ fputil_hdrs = selects.with_or({
     PLATFORM_CPU_X86_64: fputil_common_hdrs + [
         "src/__support/FPUtil/x86_64/LongDoubleBits.h",
         "src/__support/FPUtil/x86_64/NextAfterLongDouble.h",
-        "src/__support/FPUtil/x86_64/SqrtLongDouble.h",
         "src/__support/FPUtil/x86_64/FEnvImpl.h",
     ],
     PLATFORM_CPU_ARM64: fputil_common_hdrs + [
@@ -101,6 +99,33 @@ cc_library(
     hdrs = fputil_hdrs,
     deps = [
         ":__support_common",
+        ":__support_standalone_cpp",
+        ":libc_root",
+    ],
+)
+
+sqrt_common_hdrs = [
+    "src/__support/FPUtil/sqrt.h",
+    "src/__support/FPUtil/generic/sqrt.h",
+    "src/__support/FPUtil/generic/sqrt_80_bit_long_double.h",
+]
+
+sqrt_hdrs = selects.with_or({
+    "//conditions:default": sqrt_common_hdrs,
+    PLATFORM_CPU_X86_64: sqrt_common_hdrs + [
+        "src/__support/FPUtil/x86_64/sqrt.h",
+    ],
+    PLATFORM_CPU_ARM64: sqrt_common_hdrs + [
+        "src/__support/FPUtil/aarch64/sqrt.h",
+    ],
+})
+
+cc_library(
+    name = "__support_fputil_sqrt",
+    hdrs = sqrt_hdrs,
+    deps = [
+        ":__support_common",
+        ":__support_fputil",
         ":__support_standalone_cpp",
         ":libc_root",
     ],
@@ -438,27 +463,22 @@ libc_math_function(
 
 libc_math_function(
     name = "sqrt",
-    specializations = [
-        "aarch64",
-        "generic",
-        "x86_64",
+    additional_deps = [
+        ":__support_fputil_sqrt",
     ],
 )
 
 libc_math_function(
     name = "sqrtf",
-    specializations = [
-        "aarch64",
-        "generic",
-        "x86_64",
+    additional_deps = [
+        ":__support_fputil_sqrt",
     ],
 )
 
 libc_math_function(
     name = "sqrtl",
-    specializations = [
-        "generic",
-        "x86_64",
+    additional_deps = [
+        ":__support_fputil_sqrt",
     ],
 )
 
@@ -796,6 +816,15 @@ libc_function(
         ":memcpy",
         ":string_memory_utils",
         ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strncpy",
+    srcs = ["src/string/strncpy.cpp"],
+    hdrs = ["src/string/strncpy.h"],
+    deps = [
+        ":__support_common",
     ],
 )
 

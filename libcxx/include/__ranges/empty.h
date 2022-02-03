@@ -22,7 +22,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_RANGES)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 // [range.prim.empty]
 
@@ -68,14 +68,14 @@ namespace __empty {
       return ranges::begin(__t) == ranges::end(__t);
     }
   };
-}
+} // namespace __empty
 
 inline namespace __cpo {
   inline constexpr auto empty = __empty::__fn{};
 } // namespace __cpo
 } // namespace ranges
 
-#endif // !defined(_LIBCPP_HAS_NO_RANGES)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 _LIBCPP_END_NAMESPACE_STD
 

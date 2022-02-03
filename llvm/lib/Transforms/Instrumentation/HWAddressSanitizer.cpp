@@ -53,6 +53,7 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <sstream>
@@ -301,9 +302,8 @@ public:
   void tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag, size_t Size);
   Value *tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong, Value *Tag);
   Value *untagPointer(IRBuilder<> &IRB, Value *PtrLong);
-  static bool isStandardLifetime(const AllocaInfo &AllocaInfo,
-                                 const DominatorTree &DT);
   bool instrumentStack(
+      bool ShouldDetectUseAfterScope,
       MapVector<AllocaInst *, AllocaInfo> &AllocasToInstrument,
       SmallVector<Instruction *, 4> &UnrecognizedLifetimes,
       DenseMap<AllocaInst *, std::vector<DbgVariableIntrinsic *>> &AllocaDbgMap,
@@ -1329,36 +1329,8 @@ bool HWAddressSanitizer::instrumentLandingPads(
   return true;
 }
 
-static bool
-maybeReachableFromEachOther(const SmallVectorImpl<IntrinsicInst *> &Insts,
-                            const DominatorTree &DT) {
-  // If we have too many lifetime ends, give up, as the algorithm below is N^2.
-  if (Insts.size() > ClMaxLifetimes)
-    return true;
-  for (size_t I = 0; I < Insts.size(); ++I) {
-    for (size_t J = 0; J < Insts.size(); ++J) {
-      if (I == J)
-        continue;
-      if (isPotentiallyReachable(Insts[I], Insts[J], nullptr, &DT))
-        return true;
-    }
-  }
-  return false;
-}
-
-// static
-bool HWAddressSanitizer::isStandardLifetime(const AllocaInfo &AllocaInfo,
-                                            const DominatorTree &DT) {
-  // An alloca that has exactly one start and end in every possible execution.
-  // If it has multiple ends, they have to be unreachable from each other, so
-  // at most one of them is actually used for each execution of the function.
-  return AllocaInfo.LifetimeStart.size() == 1 &&
-         (AllocaInfo.LifetimeEnd.size() == 1 ||
-          (AllocaInfo.LifetimeEnd.size() > 0 &&
-           !maybeReachableFromEachOther(AllocaInfo.LifetimeEnd, DT)));
-}
-
 bool HWAddressSanitizer::instrumentStack(
+    bool ShouldDetectUseAfterScope,
     MapVector<AllocaInst *, AllocaInfo> &AllocasToInstrument,
     SmallVector<Instruction *, 4> &UnrecognizedLifetimes,
     DenseMap<AllocaInst *, std::vector<DbgVariableIntrinsic *>> &AllocaDbgMap,
@@ -1409,8 +1381,10 @@ bool HWAddressSanitizer::instrumentStack(
       tagAlloca(IRB, AI, UARTag, AlignedSize);
     };
     bool StandardLifetime =
-        UnrecognizedLifetimes.empty() && isStandardLifetime(Info, GetDT());
-    if (DetectUseAfterScope && StandardLifetime) {
+        UnrecognizedLifetimes.empty() &&
+        isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, &GetDT(),
+                           ClMaxLifetimes);
+    if (ShouldDetectUseAfterScope && StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
       IRB.SetInsertPoint(Start->getNextNode());
       tagAlloca(IRB, AI, Tag, Size);
@@ -1505,8 +1479,14 @@ bool HWAddressSanitizer::sanitizeFunction(
   SmallVector<Instruction *, 8> LandingPadVec;
   SmallVector<Instruction *, 4> UnrecognizedLifetimes;
   DenseMap<AllocaInst *, std::vector<DbgVariableIntrinsic *>> AllocaDbgMap;
+  bool CallsReturnTwice = false;
   for (auto &BB : F) {
     for (auto &Inst : BB) {
+      if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
+        if (CI->canReturnTwice()) {
+          CallsReturnTwice = true;
+        }
+      }
       if (InstrumentStack) {
         if (AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
           if (isInterestingAlloca(*AI))
@@ -1531,9 +1511,14 @@ bool HWAddressSanitizer::sanitizeFunction(
         }
       }
 
-      if (isa<ReturnInst>(Inst) || isa<ResumeInst>(Inst) ||
-          isa<CleanupReturnInst>(Inst))
+      if (isa<ReturnInst>(Inst)) {
+        if (CallInst *CI = Inst.getParent()->getTerminatingMustTailCall())
+          RetVec.push_back(CI);
+        else
+          RetVec.push_back(&Inst);
+      } else if (isa<ResumeInst, CleanupReturnInst>(Inst)) {
         RetVec.push_back(&Inst);
+      }
 
       if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
         for (Value *V : DVI->location_ops()) {
@@ -1585,7 +1570,12 @@ bool HWAddressSanitizer::sanitizeFunction(
   if (!AllocasToInstrument.empty()) {
     Value *StackTag =
         ClGenerateTagsWithCalls ? nullptr : getStackBaseTag(EntryIRB);
-    instrumentStack(AllocasToInstrument, UnrecognizedLifetimes, AllocaDbgMap,
+    // Calls to functions that may return twice (e.g. setjmp) confuse the
+    // postdominator analysis, and will leave us to keep memory tagged after
+    // function return. Work around this by always untagging at every return
+    // statement if return_twice functions are called.
+    instrumentStack(DetectUseAfterScope && !CallsReturnTwice,
+                    AllocasToInstrument, UnrecognizedLifetimes, AllocaDbgMap,
                     RetVec, StackTag, GetDT, GetPDT);
   }
   // Pad and align each of the allocas that we instrumented to stop small

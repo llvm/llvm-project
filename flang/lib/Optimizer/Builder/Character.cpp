@@ -72,7 +72,7 @@ LLVM_ATTRIBUTE_UNUSED static bool needToMaterialize(mlir::Value str) {
 /// Unwrap integer constant from mlir::Value.
 static llvm::Optional<std::int64_t> getIntIfConstant(mlir::Value value) {
   if (auto *definingOp = value.getDefiningOp())
-    if (auto cst = mlir::dyn_cast<mlir::ConstantOp>(definingOp))
+    if (auto cst = mlir::dyn_cast<mlir::arith::ConstantOp>(definingOp))
       if (auto intAttr = cst.getValue().dyn_cast<mlir::IntegerAttr>())
         return intAttr.getInt();
   return {};
@@ -434,7 +434,7 @@ mlir::Value genMin(fir::FirOpBuilder &builder, mlir::Location loc,
                    mlir::Value a, mlir::Value b) {
   auto cmp =
       builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, a, b);
-  return builder.create<mlir::SelectOp>(loc, cmp, a, b);
+  return builder.create<mlir::arith::SelectOp>(loc, cmp, a, b);
 }
 
 void fir::factory::CharacterExprHelper::createAssign(
@@ -532,7 +532,8 @@ fir::CharBoxValue fir::factory::CharacterExprHelper::createSubstring(
   auto zero = builder.createIntegerConstant(loc, substringLen.getType(), 0);
   auto cdt = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
                                            substringLen, zero);
-  substringLen = builder.create<mlir::SelectOp>(loc, cdt, zero, substringLen);
+  substringLen =
+      builder.create<mlir::arith::SelectOp>(loc, cdt, zero, substringLen);
 
   return {substringRef, substringLen};
 }
@@ -570,8 +571,8 @@ fir::factory::CharacterExprHelper::createLenTrim(const fir::CharBoxValue &str) {
   // Compute length after iteration (zero if all blanks)
   mlir::Value newLen =
       builder.create<arith::AddIOp>(loc, iterWhile.getResult(1), one);
-  auto result =
-      builder.create<mlir::SelectOp>(loc, iterWhile.getResult(0), zero, newLen);
+  auto result = builder.create<mlir::arith::SelectOp>(
+      loc, iterWhile.getResult(0), zero, newLen);
   return builder.createConvert(loc, builder.getCharacterLengthType(), result);
 }
 

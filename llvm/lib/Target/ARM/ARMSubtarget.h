@@ -77,6 +77,7 @@ protected:
     CortexR52,
     CortexR7,
     CortexX1,
+    CortexX1C,
     Exynos,
     Krait,
     Kryo,

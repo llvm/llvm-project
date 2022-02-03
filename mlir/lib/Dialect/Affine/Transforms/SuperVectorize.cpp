@@ -18,8 +18,8 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
-#include "mlir/Dialect/Vector/VectorUtils.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1436,8 +1436,8 @@ static Operation *vectorizeAffineYieldOp(AffineYieldOp yieldOp,
     for (unsigned i = 0; i < newYieldOp->getNumOperands(); ++i) {
       Value result = newYieldOp->getOperand(i);
       Value iterArg = cast<AffineForOp>(newParentOp).getRegionIterArgs()[i];
-      Value maskedResult = state.builder.create<SelectOp>(result.getLoc(), mask,
-                                                          result, iterArg);
+      Value maskedResult = state.builder.create<arith::SelectOp>(
+          result.getLoc(), mask, result, iterArg);
       LLVM_DEBUG(
           dbgs() << "\n[early-vect]+++++ masking a yielded vector value: "
                  << maskedResult);

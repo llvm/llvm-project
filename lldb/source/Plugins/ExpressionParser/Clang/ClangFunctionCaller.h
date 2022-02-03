@@ -21,7 +21,6 @@
 namespace lldb_private {
 
 class ASTStructExtractor;
-class ClangExpressionParser;
 
 /// \class ClangFunctionCaller ClangFunctionCaller.h
 /// "lldb/Expression/ClangFunctionCaller.h" Encapsulates a function that can

@@ -27,7 +27,7 @@ namespace {
 using llvm::Succeeded;
 using testing::ElementsAre;
 
-MATCHER_P(DiagMessage, M, "") {
+MATCHER_P(diagMessage, M, "") {
   if (const auto *O = arg.getAsObject()) {
     if (const auto Msg = O->getString("message"))
       return *Msg == M;
@@ -125,12 +125,12 @@ TEST_F(LSPTest, Diagnostics) {
   Client.didOpen("foo.cpp", "void main(int, char**);");
   EXPECT_THAT(Client.diagnostics("foo.cpp"),
               llvm::ValueIs(testing::ElementsAre(
-                  DiagMessage("'main' must return 'int' (fix available)"))));
+                  diagMessage("'main' must return 'int' (fix available)"))));
 
   Client.didChange("foo.cpp", "int x = \"42\";");
   EXPECT_THAT(Client.diagnostics("foo.cpp"),
               llvm::ValueIs(testing::ElementsAre(
-                  DiagMessage("Cannot initialize a variable of type 'int' with "
+                  diagMessage("Cannot initialize a variable of type 'int' with "
                               "an lvalue of type 'const char[3]'"))));
 
   Client.didClose("foo.cpp");
@@ -145,8 +145,8 @@ TEST_F(LSPTest, DiagnosticsHeaderSaved) {
   )cpp");
   EXPECT_THAT(Client.diagnostics("foo.cpp"),
               llvm::ValueIs(testing::ElementsAre(
-                  DiagMessage("'foo.h' file not found"),
-                  DiagMessage("Use of undeclared identifier 'VAR'"))));
+                  diagMessage("'foo.h' file not found"),
+                  diagMessage("Use of undeclared identifier 'VAR'"))));
   // Now create the header.
   FS.Files["foo.h"] = "#define VAR original";
   Client.notify(
@@ -154,7 +154,7 @@ TEST_F(LSPTest, DiagnosticsHeaderSaved) {
       llvm::json::Object{{"textDocument", Client.documentID("foo.h")}});
   EXPECT_THAT(Client.diagnostics("foo.cpp"),
               llvm::ValueIs(testing::ElementsAre(
-                  DiagMessage("Use of undeclared identifier 'original'"))));
+                  diagMessage("Use of undeclared identifier 'original'"))));
   // Now modify the header from within the "editor".
   FS.Files["foo.h"] = "#define VAR changed";
   Client.notify(
@@ -163,7 +163,7 @@ TEST_F(LSPTest, DiagnosticsHeaderSaved) {
   // Foo.cpp should be rebuilt with new diagnostics.
   EXPECT_THAT(Client.diagnostics("foo.cpp"),
               llvm::ValueIs(testing::ElementsAre(
-                  DiagMessage("Use of undeclared identifier 'changed'"))));
+                  diagMessage("Use of undeclared identifier 'changed'"))));
 }
 
 TEST_F(LSPTest, RecordsLatencies) {
@@ -221,12 +221,12 @@ CompileFlags:
   Client.didOpen("foo.cpp", "int x = FOO;");
   EXPECT_THAT(Client.diagnostics("foo.cpp"),
               llvm::ValueIs(testing::ElementsAre(
-                  DiagMessage("Use of undeclared identifier 'FOO'"))));
+                  diagMessage("Use of undeclared identifier 'FOO'"))));
   // bar.cpp shows the configured compile command.
   Client.didOpen("bar.cpp", "int x = FOO;");
   EXPECT_THAT(Client.diagnostics("bar.cpp"),
               llvm::ValueIs(testing::ElementsAre(
-                  DiagMessage("Use of undeclared identifier 'BAR'"))));
+                  diagMessage("Use of undeclared identifier 'BAR'"))));
 }
 
 TEST_F(LSPTest, ModulesTest) {
@@ -384,7 +384,7 @@ TEST_F(LSPTest, DiagModuleTest) {
   auto &Client = start();
   Client.didOpen("foo.cpp", "test;");
   EXPECT_THAT(Client.diagnostics("foo.cpp"),
-              llvm::ValueIs(testing::ElementsAre(DiagMessage(DiagMsg))));
+              llvm::ValueIs(testing::ElementsAre(diagMessage(DiagMsg))));
 }
 } // namespace
 } // namespace clangd

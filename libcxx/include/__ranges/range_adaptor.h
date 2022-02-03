@@ -25,7 +25,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_RANGES)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 // CRTP base that one can derive from in order to be considered a range adaptor closure
 // by the library. When deriving from this class, a pipe operator will be provided to
@@ -66,7 +66,7 @@ struct __range_adaptor_closure {
     { return __range_adaptor_closure_t(_VSTD::__compose(_VSTD::forward<_OtherClosure>(__c2), _VSTD::forward<_Closure>(__c1))); }
 };
 
-#endif // !defined(_LIBCPP_HAS_NO_RANGES)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 _LIBCPP_END_NAMESPACE_STD
 

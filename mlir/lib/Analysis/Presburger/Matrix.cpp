@@ -178,6 +178,11 @@ void Matrix::copyRow(unsigned sourceRow, unsigned targetRow) {
     at(targetRow, c) = at(sourceRow, c);
 }
 
+void Matrix::fillRow(unsigned row, int64_t value) {
+  for (unsigned col = 0; col < nColumns; ++col)
+    at(row, col) = value;
+}
+
 void Matrix::addToRow(unsigned sourceRow, unsigned targetRow, int64_t scale) {
   if (scale == 0)
     return;
@@ -196,6 +201,29 @@ void Matrix::addToColumn(unsigned sourceColumn, unsigned targetColumn,
 void Matrix::negateColumn(unsigned column) {
   for (unsigned row = 0, e = getNumRows(); row < e; ++row)
     at(row, column) = -at(row, column);
+}
+
+SmallVector<int64_t, 8>
+Matrix::preMultiplyWithRow(ArrayRef<int64_t> rowVec) const {
+  assert(rowVec.size() == getNumRows() && "Invalid row vector dimension!");
+
+  SmallVector<int64_t, 8> result(getNumColumns(), 0);
+  for (unsigned col = 0, e = getNumColumns(); col < e; ++col)
+    for (unsigned i = 0, e = getNumRows(); i < e; ++i)
+      result[col] += rowVec[i] * at(i, col);
+  return result;
+}
+
+SmallVector<int64_t, 8>
+Matrix::postMultiplyWithColumn(ArrayRef<int64_t> colVec) const {
+  assert(getNumColumns() == colVec.size() &&
+         "Invalid column vector dimension!");
+
+  SmallVector<int64_t, 8> result(getNumRows(), 0);
+  for (unsigned row = 0, e = getNumRows(); row < e; row++)
+    for (unsigned i = 0, e = getNumColumns(); i < e; i++)
+      result[row] += at(row, i) * colVec[i];
+  return result;
 }
 
 void Matrix::print(raw_ostream &os) const {

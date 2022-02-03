@@ -6,6 +6,7 @@
 #
 #===------------------------------------------------------------------------===#
 
+add_subdirectory(bbc)
 add_subdirectory(f18)
 add_subdirectory(flang-driver)
 add_subdirectory(tco)

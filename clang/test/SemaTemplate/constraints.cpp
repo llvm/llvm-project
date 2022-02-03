@@ -24,35 +24,3 @@ namespace PR45589 {
   // FIXME: These diagnostics are excessive.
   static_assert(test<false, char> == 1); // expected-note 2{{while}} expected-note 2{{during}}
 }
-
-namespace PR52905 {
-// A mock for std::convertible_to. Not complete support.
-template <typename _From, typename _To>
-concept convertible_to = __is_convertible_to(_From, _To); // expected-note {{evaluated to false}}
-
-template <typename T>
-class A {
-public:
-  using iterator = void **;
-
-  iterator begin();
-  const iterator begin() const;
-};
-
-template <class T>
-concept Beginable1 = requires(T t) {
-  { t.begin }
-  ->convertible_to<typename T::iterator>; // expected-note {{not satisfied}}
-};
-
-static_assert(Beginable1<A<int>>); // expected-error {{static_assert failed}}
-                                   // expected-note@-1 {{does not satisfy 'Beginable1'}}
-
-template <class T>
-concept Beginable2 = requires(T t) {
-  { t.begin() }
-  ->convertible_to<typename T::iterator>;
-};
-
-static_assert(Beginable2<A<int>>);
-} // namespace PR52905

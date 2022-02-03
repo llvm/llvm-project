@@ -1724,9 +1724,9 @@ func @write_after_select_read_one(
   %cst = arith.constant 0.0 : f32
   %idx = arith.constant 0 : index
 
-  //      CHECK: select %{{.*}}, %[[t1]], %[[t2]]
+  //      CHECK: arith.select %{{.*}}, %[[t1]], %[[t2]]
   // CHECK-SAME:   {__inplace_operands_attr__ = ["none", "false", "true"]}
-  %s = std.select %c, %t1, %t2 : tensor<?xf32>
+  %s = arith.select %c, %t1, %t2 : tensor<?xf32>
   //      CHECK: tensor.insert
   // CHECK-SAME:   {__inplace_operands_attr__ = ["none", "true", "none"]}
   %w = tensor.insert %cst into %s[%idx] : tensor<?xf32>
@@ -1750,9 +1750,9 @@ func @write_after_select_read_both(
   %cst = arith.constant 0.0 : f32
   %idx = arith.constant 0 : index
 
-  //      CHECK: select %{{.*}}, %[[t1]], %[[t2]]
+  //      CHECK: arith.select %{{.*}}, %[[t1]], %[[t2]]
   // CHECK-SAME:   {__inplace_operands_attr__ = ["none", "false", "false"]}
-  %s = std.select %c, %t1, %t2 : tensor<?xf32>
+  %s = arith.select %c, %t1, %t2 : tensor<?xf32>
   //      CHECK: tensor.insert
   // CHECK-SAME:   {__inplace_operands_attr__ = ["none", "true", "none"]}
   %w = tensor.insert %cst into %s[%idx] : tensor<?xf32>
@@ -1779,9 +1779,9 @@ func @write_after_select_no_conflict(
   %cst = arith.constant 0.0 : f32
   %idx = arith.constant 0 : index
 
-  //      CHECK: select %{{.*}}, %[[t1]], %[[t2]]
+  //      CHECK: arith.select %{{.*}}, %[[t1]], %[[t2]]
   // CHECK-SAME:   {__inplace_operands_attr__ = ["none", "true", "true"]}
-  %s = std.select %c, %t1, %t2 : tensor<?xf32>
+  %s = arith.select %c, %t1, %t2 : tensor<?xf32>
   //      CHECK: tensor.insert
   // CHECK-SAME:   {__inplace_operands_attr__ = ["none", "true", "none"]}
   %w = tensor.insert %cst into %s[%idx] : tensor<?xf32>

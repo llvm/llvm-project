@@ -4248,7 +4248,7 @@ def SPV_OpcodeAttr :
 //===----------------------------------------------------------------------===//
 
 // Base class for all SPIR-V ops.
-class SPV_Op<string mnemonic, list<OpTrait> traits = []> :
+class SPV_Op<string mnemonic, list<Trait> traits = []> :
     Op<SPIRV_Dialect, mnemonic, !listconcat(traits, [
          // TODO: We don't need all of the following traits for every op; only
          // the suitable ones should be added automatically after ODS supports
@@ -4272,10 +4272,10 @@ class SPV_Op<string mnemonic, list<OpTrait> traits = []> :
   // * static ParseResult parse<op-c++-class-name>(OpAsmParser &parser,
   //                                               OperationState &result)
   // * static void print(OpAsmPrinter &p, <op-c++-class-name> op)
-  // * static LogicalResult verify(<op-c++-class-name> op)
+  // * LogicalResult <op-c++-class-name>::verify()
   let parser = [{ return ::parse$cppClass(parser, result); }];
   let printer = [{ return ::print(*this, p); }];
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 
   // Specifies whether this op has a direct corresponding SPIR-V binary
   // instruction opcode. The (de)serializer use this field to determine whether
@@ -4310,7 +4310,7 @@ class SPV_Op<string mnemonic, list<OpTrait> traits = []> :
 }
 
 class SPV_UnaryOp<string mnemonic, Type resultType, Type operandType,
-                  list<OpTrait> traits = []> :
+                  list<Trait> traits = []> :
       SPV_Op<mnemonic, traits> {
   let arguments = (ins
     SPV_ScalarOrVectorOf<operandType>:$operand
@@ -4323,11 +4323,11 @@ class SPV_UnaryOp<string mnemonic, Type resultType, Type operandType,
   let parser = [{ return ::parseUnaryOp(parser, result); }];
   let printer = [{ return ::printUnaryOp(getOperation(), p); }];
   // No additional verification needed in addition to the ODS-generated ones.
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 }
 
 class SPV_BinaryOp<string mnemonic, Type resultType, Type operandsType,
-                   list<OpTrait> traits = []> :
+                   list<Trait> traits = []> :
       SPV_Op<mnemonic, traits> {
   let arguments = (ins
     SPV_ScalarOrVectorOf<operandsType>:$operand1,
@@ -4341,11 +4341,11 @@ class SPV_BinaryOp<string mnemonic, Type resultType, Type operandsType,
   let parser = [{ return impl::parseOneResultSameOperandTypeOp(parser, result); }];
   let printer = [{ return impl::printOneResultOp(getOperation(), p); }];
   // No additional verification needed in addition to the ODS-generated ones.
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 }
 
 class SPV_ExtInstOp<string mnemonic, string setPrefix, string setName,
-                    int opcode, list<OpTrait> traits = []> :
+                    int opcode, list<Trait> traits = []> :
   SPV_Op<setPrefix # "." # mnemonic, traits> {
 
   // Extended instruction sets have no direct opcode (they share the

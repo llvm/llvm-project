@@ -65,7 +65,7 @@ bool CommunicationKDP::SendRequestAndGetReply(
     const CommandType command, const PacketStreamType &request_packet,
     DataExtractor &reply_packet) {
   if (IsRunning()) {
-    Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PACKETS));
+    Log *log = GetLog(KDPLog::Packets);
     if (log) {
       PacketStreamType log_strm;
       DumpPacket(log_strm, request_packet.GetData(), request_packet.GetSize());
@@ -133,7 +133,7 @@ bool CommunicationKDP::SendRequestPacketNoLock(
     const char *packet_data = request_packet.GetData();
     const size_t packet_size = request_packet.GetSize();
 
-    Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PACKETS));
+    Log *log = GetLog(KDPLog::Packets);
     if (log) {
       PacketStreamType log_strm;
       DumpPacket(log_strm, packet_data, packet_size);
@@ -178,7 +178,7 @@ size_t CommunicationKDP::WaitForPacketWithTimeoutMicroSecondsNoLock(
   uint8_t buffer[8192];
   Status error;
 
-  Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PACKETS));
+  Log *log = GetLog(KDPLog::Packets);
 
   // Check for a packet from our cache first without trying any reading...
   if (CheckForPacket(NULL, 0, packet))
@@ -231,7 +231,7 @@ bool CommunicationKDP::CheckForPacket(const uint8_t *src, size_t src_len,
   // Put the packet data into the buffer in a thread safe fashion
   std::lock_guard<std::recursive_mutex> guard(m_bytes_mutex);
 
-  Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PACKETS));
+  Log *log = GetLog(KDPLog::Packets);
 
   if (src && src_len > 0) {
     if (log && log->GetVerbose()) {

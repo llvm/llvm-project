@@ -24,7 +24,7 @@
 
 #ifdef __cplusplus
 
-#define _LIBCPP_VERSION 14000
+#define _LIBCPP_VERSION 15000
 
 #ifndef _LIBCPP_ABI_VERSION
 #  define _LIBCPP_ABI_VERSION 1
@@ -821,10 +821,10 @@ typedef __char32_t char32_t;
 // Inline namespaces are available in Clang/GCC/MSVC regardless of C++ dialect.
 #define _LIBCPP_BEGIN_NAMESPACE_STD namespace std { inline namespace _LIBCPP_ABI_NAMESPACE {
 #define _LIBCPP_END_NAMESPACE_STD  } }
-#define _VSTD std::_LIBCPP_ABI_NAMESPACE
+#define _VSTD std
 _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER > 14
 #define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM \
   _LIBCPP_BEGIN_NAMESPACE_STD inline namespace __fs { namespace filesystem {
 #else
@@ -875,12 +875,8 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_CONSTEVAL consteval
 #endif
 
-#if !defined(__cpp_concepts) || __cpp_concepts < 201907L
+#if _LIBCPP_STD_VER <= 17 || !defined(__cpp_concepts) || __cpp_concepts < 201907L
 #define _LIBCPP_HAS_NO_CONCEPTS
-#endif
-
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_HAS_NO_CONCEPTS)
-#define _LIBCPP_HAS_NO_RANGES
 #endif
 
 #ifdef __GNUC__
@@ -1258,8 +1254,9 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #  if defined(__clang__) && __has_attribute(acquire_capability)
 // Work around the attribute handling in clang.  When both __declspec and
 // __attribute__ are present, the processing goes awry preventing the definition
-// of the types.
-#    if !defined(_LIBCPP_OBJECT_FORMAT_COFF)
+// of the types. In MinGW mode, __declspec evaluates to __attribute__, and thus
+// combining the two does work.
+#    if !defined(_MSC_VER)
 #      define _LIBCPP_HAS_THREAD_SAFETY_ANNOTATIONS
 #    endif
 #  endif

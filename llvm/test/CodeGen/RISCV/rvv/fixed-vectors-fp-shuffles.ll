@@ -101,7 +101,7 @@ define <4 x double> @vrgather_permute_shuffle_vu_v4f64(<4 x double> %x) {
 ; RV64-NEXT:    vrgather.vv v10, v8, v12
 ; RV64-NEXT:    vmv.v.v v8, v10
 ; RV64-NEXT:    ret
-  %s = shufflevector <4 x double> %x, <4 x double> undef, <4 x i32> <i32 1, i32 2, i32 0, i32 1>
+  %s = shufflevector <4 x double> %x, <4 x double> poison, <4 x i32> <i32 1, i32 2, i32 0, i32 1>
   ret <4 x double> %s
 }
 
@@ -126,7 +126,7 @@ define <4 x double> @vrgather_permute_shuffle_uv_v4f64(<4 x double> %x) {
 ; RV64-NEXT:    vrgather.vv v10, v8, v12
 ; RV64-NEXT:    vmv.v.v v8, v10
 ; RV64-NEXT:    ret
-  %s = shufflevector <4 x double> undef, <4 x double> %x, <4 x i32> <i32 5, i32 6, i32 4, i32 5>
+  %s = shufflevector <4 x double> poison, <4 x double> %x, <4 x i32> <i32 5, i32 6, i32 4, i32 5>
   ret <4 x double> %s
 }
 

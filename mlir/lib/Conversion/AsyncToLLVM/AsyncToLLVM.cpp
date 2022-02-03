@@ -59,6 +59,8 @@ static constexpr const char *kAwaitValueAndExecute =
     "mlirAsyncRuntimeAwaitValueAndExecute";
 static constexpr const char *kAwaitAllAndExecute =
     "mlirAsyncRuntimeAwaitAllInGroupAndExecute";
+static constexpr const char *kGetNumWorkerThreads =
+    "mlirAsyncRuntimGetNumWorkerThreads";
 
 namespace {
 /// Async Runtime API function types.
@@ -181,6 +183,10 @@ struct AsyncAPI {
     return FunctionType::get(ctx, {GroupType::get(ctx), hdl, resume}, {});
   }
 
+  static FunctionType getNumWorkerThreads(MLIRContext *ctx) {
+    return FunctionType::get(ctx, {}, {IndexType::get(ctx)});
+  }
+
   // Auxiliary coroutine resume intrinsic wrapper.
   static Type resumeFunctionType(MLIRContext *ctx) {
     auto voidTy = LLVM::LLVMVoidType::get(ctx);
@@ -226,6 +232,7 @@ static void addAsyncRuntimeApiDeclarations(ModuleOp module) {
               AsyncAPI::awaitValueAndExecuteFunctionType(ctx));
   addFuncDecl(kAwaitAllAndExecute,
               AsyncAPI::awaitAllAndExecuteFunctionType(ctx));
+  addFuncDecl(kGetNumWorkerThreads, AsyncAPI::getNumWorkerThreads(ctx));
 }
 
 //===----------------------------------------------------------------------===//
@@ -349,10 +356,10 @@ public:
     coroSize = rewriter.create<LLVM::AddOp>(op->getLoc(), coroSize, coroAlign);
     coroSize =
         rewriter.create<LLVM::SubOp>(op->getLoc(), coroSize, makeConstant(1));
-    Value NegCoroAlign =
+    Value negCoroAlign =
         rewriter.create<LLVM::SubOp>(op->getLoc(), makeConstant(0), coroAlign);
     coroSize =
-        rewriter.create<LLVM::AndOp>(op->getLoc(), coroSize, NegCoroAlign);
+        rewriter.create<LLVM::AndOp>(op->getLoc(), coroSize, negCoroAlign);
 
     // Allocate memory for the coroutine frame.
     auto allocFuncOp = LLVM::lookupOrCreateAlignedAllocFn(
@@ -880,6 +887,30 @@ public:
 } // namespace
 
 //===----------------------------------------------------------------------===//
+// Convert async.runtime.num_worker_threads to the corresponding runtime API
+// call.
+//===----------------------------------------------------------------------===//
+
+namespace {
+class RuntimeNumWorkerThreadsOpLowering
+    : public OpConversionPattern<RuntimeNumWorkerThreadsOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(RuntimeNumWorkerThreadsOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    // Replace with a runtime API function call.
+    rewriter.replaceOpWithNewOp<CallOp>(op, kGetNumWorkerThreads,
+                                        rewriter.getIndexType());
+
+    return success();
+  }
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // Async reference counting ops lowering (`async.runtime.add_ref` and
 // `async.runtime.drop_ref` to the corresponding API calls).
 //===----------------------------------------------------------------------===//
@@ -984,8 +1015,9 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
   patterns.add<RuntimeSetAvailableOpLowering, RuntimeSetErrorOpLowering,
                RuntimeIsErrorOpLowering, RuntimeAwaitOpLowering,
                RuntimeAwaitAndResumeOpLowering, RuntimeResumeOpLowering,
-               RuntimeAddToGroupOpLowering, RuntimeAddRefOpLowering,
-               RuntimeDropRefOpLowering>(converter, ctx);
+               RuntimeAddToGroupOpLowering, RuntimeNumWorkerThreadsOpLowering,
+               RuntimeAddRefOpLowering, RuntimeDropRefOpLowering>(converter,
+                                                                  ctx);
 
   // Lower async.runtime operations that rely on LLVM type converter to convert
   // from async value payload type to the LLVM type.

@@ -19,12 +19,12 @@
 
 using namespace clang::clangd;
 
-extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
-  if (size == 0)
+extern "C" int LLVMFuzzerTestOneInput(uint8_t *Data, size_t Size) {
+  if (Size == 0)
     return 0;
 
   // fmemopen isn't portable, but I think we only run the fuzzer on Linux.
-  std::FILE *In = fmemopen(data, size, "r");
+  std::FILE *In = fmemopen(Data, Size, "r");
   auto Transport = newJSONTransport(In, llvm::nulls(),
                                     /*InMirror=*/nullptr, /*Pretty=*/false,
                                     /*Style=*/JSONStreamStyle::Delimited);

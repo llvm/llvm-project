@@ -526,7 +526,7 @@ ABISysV_mips64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch)
 bool ABISysV_mips64::PrepareTrivialCall(Thread &thread, addr_t sp,
                                         addr_t func_addr, addr_t return_addr,
                                         llvm::ArrayRef<addr_t> args) const {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (log) {
     StreamString s;

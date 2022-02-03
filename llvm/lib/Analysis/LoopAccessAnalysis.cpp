@@ -2129,13 +2129,61 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
         dbgs() << "LAA: No unsafe dependent memory operations in loop.  We"
                << (PtrRtChecking->Need ? "" : " don't")
                << " need runtime memory checks.\n");
-  else {
-    recordAnalysis("UnsafeMemDep")
-        << "unsafe dependent memory operations in loop. Use "
-           "#pragma loop distribute(enable) to allow loop distribution "
-           "to attempt to isolate the offending operations into a separate "
-           "loop";
-    LLVM_DEBUG(dbgs() << "LAA: unsafe dependent memory operations in loop\n");
+  else
+    emitUnsafeDependenceRemark();
+}
+
+void LoopAccessInfo::emitUnsafeDependenceRemark() {
+  auto Deps = getDepChecker().getDependences();
+  if (!Deps)
+    return;
+  auto Found = std::find_if(
+      Deps->begin(), Deps->end(), [](const MemoryDepChecker::Dependence &D) {
+        return MemoryDepChecker::Dependence::isSafeForVectorization(D.Type) !=
+               MemoryDepChecker::VectorizationSafetyStatus::Safe;
+      });
+  if (Found == Deps->end())
+    return;
+  MemoryDepChecker::Dependence Dep = *Found;
+
+  LLVM_DEBUG(dbgs() << "LAA: unsafe dependent memory operations in loop\n");
+
+  // Emit remark for first unsafe dependence
+  OptimizationRemarkAnalysis &R =
+      recordAnalysis("UnsafeDep", Dep.getDestination(*this))
+      << "unsafe dependent memory operations in loop. Use "
+         "#pragma loop distribute(enable) to allow loop distribution "
+         "to attempt to isolate the offending operations into a separate "
+         "loop";
+
+  switch (Dep.Type) {
+  case MemoryDepChecker::Dependence::NoDep:
+  case MemoryDepChecker::Dependence::Forward:
+  case MemoryDepChecker::Dependence::BackwardVectorizable:
+    llvm_unreachable("Unexpected dependence");
+  case MemoryDepChecker::Dependence::Backward:
+    R << "\nBackward loop carried data dependence.";
+    break;
+  case MemoryDepChecker::Dependence::ForwardButPreventsForwarding:
+    R << "\nForward loop carried data dependence that prevents "
+         "store-to-load forwarding.";
+    break;
+  case MemoryDepChecker::Dependence::BackwardVectorizableButPreventsForwarding:
+    R << "\nBackward loop carried data dependence that prevents "
+         "store-to-load forwarding.";
+    break;
+  case MemoryDepChecker::Dependence::Unknown:
+    R << "\nUnknown data dependence.";
+    break;
+  }
+
+  if (Instruction *I = Dep.getSource(*this)) {
+    DebugLoc SourceLoc = I->getDebugLoc();
+    if (auto *DD = dyn_cast_or_null<Instruction>(getPointerOperand(I)))
+      SourceLoc = DD->getDebugLoc();
+    if (SourceLoc)
+      R << " Memory location is the same as accessed at "
+        << ore::NV("Location", SourceLoc);
   }
 }
 

@@ -33,9 +33,9 @@ static __inline int src_rep_t_clz(src_rep_t a) {
   return __builtin_clzl(a);
 #else
   if (a & REP_C(0xffffffff00000000))
-    return __builtin_clz(a >> 32);
+    return clzsi(a >> 32);
   else
-    return 32 + __builtin_clz(a & REP_C(0xffffffff));
+    return 32 + clzsi(a & REP_C(0xffffffff));
 #endif
 }
 

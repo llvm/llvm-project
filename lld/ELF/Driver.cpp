@@ -77,6 +77,13 @@ std::unique_ptr<LinkerDriver> elf::driver;
 static void setConfigs(opt::InputArgList &args);
 static void readConfigs(opt::InputArgList &args);
 
+void elf::errorOrWarn(const Twine &msg) {
+  if (config->noinhibitExec)
+    warn(msg);
+  else
+    error(msg);
+}
+
 bool elf::link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
                llvm::raw_ostream &stderrOS, bool exitEarly,
                bool disableOutput) {
@@ -189,8 +196,8 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
           toString(std::move(err)));
 
   // Take ownership of memory buffers created for members of thin archives.
-  for (std::unique_ptr<MemoryBuffer> &mb : file->takeThinBuffers())
-    make<std::unique_ptr<MemoryBuffer>>(std::move(mb));
+  std::vector<std::unique_ptr<MemoryBuffer>> mbs = file->takeThinBuffers();
+  std::move(mbs.begin(), mbs.end(), std::back_inserter(memoryBuffers));
 
   return v;
 }
@@ -546,22 +553,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     // values such as a default image base address.
     target = getTarget();
 
-    switch (config->ekind) {
-    case ELF32LEKind:
-      link<ELF32LE>(args);
-      break;
-    case ELF32BEKind:
-      link<ELF32BE>(args);
-      break;
-    case ELF64LEKind:
-      link<ELF64LE>(args);
-      break;
-    case ELF64BEKind:
-      link<ELF64BE>(args);
-      break;
-    default:
-      llvm_unreachable("unknown Config->EKind");
-    }
+    link(args);
   }
 
   if (config->timeTraceEnabled) {
@@ -1712,7 +1704,7 @@ static void handleUndefinedGlob(StringRef arg) {
 
   // Calling sym->extract() in the loop is not safe because it may add new
   // symbols to the symbol table, invalidating the current iterator.
-  std::vector<Symbol *> syms;
+  SmallVector<Symbol *, 0> syms;
   for (Symbol *sym : symtab->symbols())
     if (!sym->isPlaceholder() && pat->match(sym->getName()))
       syms.push_back(sym);
@@ -1821,7 +1813,6 @@ static void replaceCommonSymbols() {
 
       auto *bss = make<BssSection>("COMMON", s->size, s->alignment);
       bss->file = s->file;
-      bss->markDead();
       inputSections.push_back(bss);
       s->replace(Defined{s->file, s->getName(), s->binding, s->stOther, s->type,
                          /*value=*/0, s->size, bss});
@@ -2172,14 +2163,14 @@ static void checkAndReportMissingFeature(StringRef config, uint32_t features,
 //
 // This is also the case with AARCH64's BTI and PAC which use the similar
 // GNU_PROPERTY_AARCH64_FEATURE_1_AND mechanism.
-template <class ELFT> static uint32_t getAndFeatures() {
+static uint32_t getAndFeatures() {
   if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
       config->emachine != EM_AARCH64)
     return 0;
 
   uint32_t ret = -1;
-  for (InputFile *f : objectFiles) {
-    uint32_t features = cast<ObjFile<ELFT>>(f)->andFeatures;
+  for (ELFFileBase *f : objectFiles) {
+    uint32_t features = f->andFeatures;
 
     checkAndReportMissingFeature(
         config->zBtiReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_BTI,
@@ -2225,7 +2216,7 @@ template <class ELFT> static uint32_t getAndFeatures() {
 
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
-template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
+void LinkerDriver::link(opt::InputArgList &args) {
   llvm::TimeTraceScope timeScope("Link", StringRef("LinkerDriver::Link"));
   // If a --hash-style option was not given, set to a default value,
   // which varies depending on the target.
@@ -2393,7 +2384,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   //
   // With this the symbol table should be complete. After this, no new names
   // except a few linker-synthesized ones will be added to the symbol table.
-  compileBitcodeFiles<ELFT>(skipLinkedOutput);
+  invokeELFT(compileBitcodeFiles, skipLinkedOutput);
 
   // Symbol resolution finished. Report backward reference problems.
   reportBackrefs();
@@ -2434,7 +2425,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     llvm::TimeTraceScope timeScope("Strip sections");
     llvm::erase_if(inputSections, [](InputSectionBase *s) {
       if (s->type == SHT_LLVM_SYMPART) {
-        readSymbolPartitionSection<ELFT>(s);
+        invokeELFT(readSymbolPartitionSection, s);
         return true;
       }
 
@@ -2465,7 +2456,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Read .note.gnu.property sections from input object files which
   // contain a hint to tweak linker's and loader's behaviors.
-  config->andFeatures = getAndFeatures<ELFT>();
+  config->andFeatures = getAndFeatures();
 
   // The Target instance handles target-specific stuff, such as applying
   // relocations or writing a PLT section. It also contains target-dependent
@@ -2501,10 +2492,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     inputSections.push_back(createCommentSection());
 
   // Split SHF_MERGE and .eh_frame sections into pieces in preparation for garbage collection.
-  splitSections<ELFT>();
+  invokeELFT(splitSections);
 
   // Garbage collection and removal of shared symbols from unused shared objects.
-  markLive<ELFT>();
+  invokeELFT(markLive);
   demoteSharedSymbols();
 
   // Make copies of any input sections that need to be copied into each
@@ -2513,7 +2504,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Create synthesized sections such as .got and .plt. This is called before
   // processSectionCommands() so that they can be placed by SECTIONS commands.
-  createSyntheticSections<ELFT>();
+  invokeELFT(createSyntheticSections);
 
   // Some input sections that are used for exception handling need to be moved
   // into synthetic sections. Do that now so that they aren't assigned to
@@ -2552,8 +2543,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Two input sections with different output sections should not be folded.
   // ICF runs after processSectionCommands() so that we know the output sections.
   if (config->icf != ICFLevel::None) {
-    findKeepUniqueSections<ELFT>(args);
-    doIcf<ELFT>();
+    invokeELFT(findKeepUniqueSections, args);
+    invokeELFT(doIcf);
   }
 
   // Read the callgraph now that we know what was gced or icfed
@@ -2561,9 +2552,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file))
       if (Optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
         readCallGraph(*buffer);
-    readCallGraphsFromObjectFiles<ELFT>();
+    invokeELFT(readCallGraphsFromObjectFiles);
   }
 
   // Write the result to the file.
-  writeResult<ELFT>();
+  invokeELFT(writeResult);
 }

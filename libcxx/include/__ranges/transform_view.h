@@ -20,7 +20,6 @@
 #include <__functional/bind_back.h>
 #include <__functional/invoke.h>
 #include <__iterator/concepts.h>
-#include <__iterator/iter_swap.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
 #include <__ranges/access.h>
@@ -42,7 +41,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_RANGES)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 namespace ranges {
 
@@ -54,7 +53,7 @@ template<class _View, class _Fn>
 concept __transform_view_constraints =
   view<_View> && is_object_v<_Fn> &&
   regular_invocable<_Fn&, range_reference_t<_View>> &&
-  __referenceable<invoke_result_t<_Fn&, range_reference_t<_View>>>;
+  __can_reference<invoke_result_t<_Fn&, range_reference_t<_View>>>;
 
 template<input_range _View, copy_constructible _Fn>
   requires __transform_view_constraints<_View, _Fn>
@@ -425,16 +424,16 @@ namespace __transform {
       noexcept(is_nothrow_constructible_v<decay_t<_Fn>, _Fn>)
     { return __range_adaptor_closure_t(_VSTD::__bind_back(*this, _VSTD::forward<_Fn>(__f))); }
   };
-}
+} // namespace __transform
 
 inline namespace __cpo {
   inline constexpr auto transform = __transform::__fn{};
-}
+} // namespace __cpo
 } // namespace views
 
 } // namespace ranges
 
-#endif // !defined(_LIBCPP_HAS_NO_RANGES)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 _LIBCPP_END_NAMESPACE_STD
 

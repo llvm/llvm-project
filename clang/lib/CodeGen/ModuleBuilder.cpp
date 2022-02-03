@@ -146,6 +146,11 @@ namespace {
       const auto &SDKVersion = Ctx->getTargetInfo().getSDKVersion();
       if (!SDKVersion.empty())
         M->setSDKVersion(SDKVersion);
+      if (const auto *TVT = Ctx->getTargetInfo().getDarwinTargetVariantTriple())
+        M->setDarwinTargetVariantTriple(TVT->getTriple());
+      if (auto TVSDKVersion =
+              Ctx->getTargetInfo().getDarwinTargetVariantSDKVersion())
+        M->setDarwinTargetVariantSDKVersion(*TVSDKVersion);
       Builder.reset(new CodeGen::CodeGenModule(Context, HeaderSearchOpts,
                                                PreprocessorOpts, CodeGenOpts,
                                                *M, Diags, CoverageInfo));

@@ -136,6 +136,13 @@ template<class In, class Out>
 template<class In, class Out>
   concept indirectly_movable_storable = see below;         // since C++20
 
+// [alg.req.ind.copy], concept indirectly_copyable
+template<class In, class Out>
+  concept indirectly_copyable = see below;                  // since C++20
+
+template<class In, class Out>
+  concept indirectly_copyable_storable = see below;         // since C++20
+
 // [alg.req.ind.swap], concept indirectly_swappable
 template<class I1, class I2 = I1>
   concept indirectly_swappable = see below;                // since C++20
@@ -165,6 +172,7 @@ struct output_iterator_tag {};
 struct forward_iterator_tag       : public input_iterator_tag         {};
 struct bidirectional_iterator_tag : public forward_iterator_tag       {};
 struct random_access_iterator_tag : public bidirectional_iterator_tag {};
+struct contiguous_iterator_tag    : public random_access_iterator_tag {};
 
 // 27.4.3, iterator operations
 template <class InputIterator, class Distance>  // constexpr in C++17

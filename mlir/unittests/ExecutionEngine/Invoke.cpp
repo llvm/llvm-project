@@ -31,6 +31,9 @@
 
 using namespace mlir;
 
+// The JIT isn't supported on Windows at that time
+#ifndef _WIN32
+
 static struct LLVMInitializer {
   LLVMInitializer() {
     llvm::InitializeNativeTarget();
@@ -49,9 +52,6 @@ static LogicalResult lowerToLLVMDialect(ModuleOp module) {
   return pm.run(module);
 }
 
-// The JIT isn't supported on Windows at that time
-#ifndef _WIN32
-
 TEST(MLIRExecutionEngine, AddInteger) {
   std::string moduleStr = R"mlir(
   func @foo(%arg0 : i32) -> i32 attributes { llvm.emit_c_interface } {
@@ -63,7 +63,7 @@ TEST(MLIRExecutionEngine, AddInteger) {
   registerAllDialects(registry);
   registerLLVMDialectTranslation(registry);
   MLIRContext context(registry);
-  OwningModuleRef module = parseSourceString(moduleStr, &context);
+  OwningOpRef<ModuleOp> module = parseSourceString(moduleStr, &context);
   ASSERT_TRUE(!!module);
   ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
   auto jitOrError = ExecutionEngine::create(*module);
@@ -88,7 +88,7 @@ TEST(MLIRExecutionEngine, SubtractFloat) {
   registerAllDialects(registry);
   registerLLVMDialectTranslation(registry);
   MLIRContext context(registry);
-  OwningModuleRef module = parseSourceString(moduleStr, &context);
+  OwningOpRef<ModuleOp> module = parseSourceString(moduleStr, &context);
   ASSERT_TRUE(!!module);
   ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
   auto jitOrError = ExecutionEngine::create(*module);
@@ -207,7 +207,7 @@ TEST(NativeMemRefJit, BasicMemref) {
   registerAllDialects(registry);
   registerLLVMDialectTranslation(registry);
   MLIRContext context(registry);
-  OwningModuleRef module = parseSourceString(moduleStr, &context);
+  OwningOpRef<ModuleOp> module = parseSourceString(moduleStr, &context);
   ASSERT_TRUE(!!module);
   ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
   auto jitOrError = ExecutionEngine::create(*module);

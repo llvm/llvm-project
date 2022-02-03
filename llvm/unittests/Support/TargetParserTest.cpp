@@ -333,7 +333,13 @@ INSTANTIATE_TEST_SUITE_P(
                          ARM::AEK_RAS | ARM::AEK_FP16 | ARM::AEK_DOTPROD |
                              ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
                              ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
-                             ARM::AEK_DSP | ARM::AEK_CRC | ARM::AEK_RAS,
+                             ARM::AEK_DSP | ARM::AEK_CRC,
+                         "8.2-A"),
+        ARMCPUTestParams("cortex-x1c", "armv8.2-a", "crypto-neon-fp-armv8",
+                         ARM::AEK_RAS | ARM::AEK_FP16 | ARM::AEK_DOTPROD |
+                             ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
+                             ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
+                             ARM::AEK_DSP | ARM::AEK_CRC,
                          "8.2-A"),
         ARMCPUTestParams("neoverse-n1", "armv8.2-a", "crypto-neon-fp-armv8",
                          ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
@@ -394,7 +400,7 @@ INSTANTIATE_TEST_SUITE_P(
                          ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                          "7-S")));
 
-static constexpr unsigned NumARMCPUArchs = 87;
+static constexpr unsigned NumARMCPUArchs = 88;
 
 TEST(TargetParserTest, testARMCPUArchList) {
   SmallVector<StringRef, NumARMCPUArchs> List;
@@ -1035,6 +1041,14 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_DOTPROD | AArch64::AEK_RCPC |
                              AArch64::AEK_SSBS,
                          "8.2-A"),
+        ARMCPUTestParams("cortex-x1c", "armv8.2-a", "crypto-neon-fp-armv8",
+                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
+                             AArch64::AEK_FP | AArch64::AEK_RDM |
+                             AArch64::AEK_SIMD | AArch64::AEK_RAS |
+                             AArch64::AEK_LSE | AArch64::AEK_FP16 |
+                             AArch64::AEK_DOTPROD | AArch64::AEK_RCPC |
+                             AArch64::AEK_SSBS | AArch64::AEK_PAUTH,
+                         "8.2-A"),
         ARMCPUTestParams("cortex-x2", "armv9-a", "neon-fp-armv8",
                          AArch64::AEK_CRC | AArch64::AEK_FP |
                              AArch64::AEK_SIMD | AArch64::AEK_RAS |
@@ -1235,7 +1249,7 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_LSE | AArch64::AEK_RDM,
                          "8.2-A")));
 
-static constexpr unsigned NumAArch64CPUArchs = 52;
+static constexpr unsigned NumAArch64CPUArchs = 53;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;

@@ -5703,6 +5703,13 @@ static bool RebuildDeclaratorInCurrentInstantiation(Sema &S, Declarator &D,
   return false;
 }
 
+/// Returns true if the declaration is declared in a system header or from a
+/// system macro.
+static bool isFromSystemHeader(SourceManager &SM, const Decl *D) {
+  return SM.isInSystemHeader(D->getLocation()) ||
+         SM.isInSystemMacro(D->getLocation());
+}
+
 void Sema::warnOnReservedIdentifier(const NamedDecl *D) {
   // Avoid warning twice on the same identifier, and don't warn on redeclaration
   // of system decl.
@@ -5710,9 +5717,10 @@ void Sema::warnOnReservedIdentifier(const NamedDecl *D) {
     return;
   ReservedIdentifierStatus Status = D->isReserved(getLangOpts());
   if (Status != ReservedIdentifierStatus::NotReserved &&
-      !Context.getSourceManager().isInSystemHeader(D->getLocation()))
+      !isFromSystemHeader(Context.getSourceManager(), D)) {
     Diag(D->getLocation(), diag::warn_reserved_extern_symbol)
         << D << static_cast<int>(Status);
+  }
 }
 
 Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
@@ -9185,7 +9193,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       }
       if ((Parent->isClass() || Parent->isStruct()) &&
           Parent->hasAttr<SYCLSpecialClassAttr>() &&
-          NewFD->getKind() == Decl::Kind::CXXMethod &&
+          NewFD->getKind() == Decl::Kind::CXXMethod && NewFD->getIdentifier() &&
           NewFD->getName() == "__init" && D.isFunctionDefinition()) {
         if (auto *Def = Parent->getDefinition())
           Def->setInitMethod(true);
@@ -14186,6 +14194,9 @@ ShouldWarnAboutMissingPrototype(const FunctionDecl *FD,
 
   // Or declarations that aren't global.
   if (!FD->isGlobal())
+    return false;
+
+  if (!FD->isExternallyVisible())
     return false;
 
   // Don't warn about C++ member functions.

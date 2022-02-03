@@ -24,7 +24,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 template<class _Tp, class... _Up>
 struct _IsSameAsAny : _Or<_IsSame<_Tp, _Up>...> {};
 

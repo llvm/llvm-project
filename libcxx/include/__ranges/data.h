@@ -24,7 +24,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_RANGES)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 // [range.prim.data]
 
@@ -64,7 +64,7 @@ namespace __data {
       return _VSTD::to_address(ranges::begin(__t));
     }
   };
-}
+} // namespace __data
 
 inline namespace __cpo {
   inline constexpr auto data = __data::__fn{};
@@ -92,14 +92,14 @@ namespace __cdata {
       -> decltype(      ranges::data(static_cast<const _Tp&&>(__t)))
       { return          ranges::data(static_cast<const _Tp&&>(__t)); }
   };
-}
+} // namespace __cdata
 
 inline namespace __cpo {
   inline constexpr auto cdata = __cdata::__fn{};
 } // namespace __cpo
 } // namespace ranges
 
-#endif // !defined(_LIBCPP_HAS_NO_RANGES)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -20,7 +20,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_RANGES)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 namespace ranges {
 
@@ -38,9 +38,9 @@ template <class _Tp>
 inline constexpr bool enable_view = derived_from<_Tp, view_base> ||
   requires { ranges::__is_derived_from_view_interface((_Tp*)nullptr, (_Tp*)nullptr); };
 
-} // end namespace ranges
+} // namespace ranges
 
-#endif // !_LIBCPP_HAS_NO_RANGES
+#endif // !_LIBCPP_HAS_NO_CONCEPTS
 
 _LIBCPP_END_NAMESPACE_STD
 

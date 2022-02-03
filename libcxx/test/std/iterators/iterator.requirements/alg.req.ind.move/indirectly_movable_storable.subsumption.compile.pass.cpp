@@ -14,8 +14,6 @@
 
 #include <iterator>
 
-#include <concepts>
-
 template<class I, class O>
   requires std::indirectly_movable<I, O>
 constexpr bool indirectly_movable_storable_subsumption() {

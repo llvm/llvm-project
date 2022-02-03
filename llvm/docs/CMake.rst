@@ -469,9 +469,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   creation of certain convenience build system targets, such as the various
   ``install-*`` and ``check-*`` targets, since IDEs don't always deal well with
   a large number of targets. This is usually autodetected, but it can be
-  configured manually to explicitly control the generation of those targets. One
-  scenario where a manual override may be desirable is when using Visual Studio
-  2017's CMake integration, which would not be detected as an IDE otherwise.
+  configured manually to explicitly control the generation of those targets.
 
 **LLVM_ENABLE_LIBCXX**:BOOL
   If the host compiler and linker supports the stdlib flag, -stdlib=libc++ is

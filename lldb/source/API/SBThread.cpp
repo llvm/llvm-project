@@ -1318,49 +1318,11 @@ lldb_private::Thread *SBThread::get() {
   return m_opaque_sp->GetThreadSP().get();
 }
 
-SBValue SBThread::GetSiginfo(SBError &error) {
-  LLDB_INSTRUMENT_VA(this, error);
+SBValue SBThread::GetSiginfo() {
+  LLDB_INSTRUMENT_VA(this);
 
-  SBValue value;
-  SBProcess process = GetProcess();
-  if (!process.IsValid()) {
-    error.SetErrorString("no process");
-    return value;
-  }
-  SBTarget target = process.GetTarget();
-  if (!target.IsValid()) {
-    error.SetErrorString("unable to get target");
-    return value;
-  }
-  SBPlatform platform = target.GetPlatform();
-  if (!platform.IsValid()) {
-    error.SetErrorString("unable to get platform");
-    return value;
-  }
-  CompilerType type = platform.GetSP()->GetSiginfoType(
-      target.GetSP()->GetArchitecture().GetTriple());
-  if (!type.IsValid()) {
-    error.SetErrorString("no siginfo_t for the platform");
-    return value;
-  }
-  llvm::Optional<uint64_t> type_size = type.GetByteSize(nullptr);
-  assert(type_size);
   ThreadSP thread_sp = m_opaque_sp->GetThreadSP();
-  if (!thread_sp) {
-    error.SetErrorString("unable to get thread");
-    return value;
-  }
-  llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> data =
-      thread_sp->GetSiginfo(type_size.getValue());
-  if (!data) {
-    error.SetErrorString(llvm::toString(data.takeError()).c_str());
-    return value;
-  }
-  SBData sb_data;
-  sb_data.SetData(error, data.get()->getBufferStart(),
-                  data.get()->getBufferSize(), process.GetByteOrder(), 0);
-  if (!sb_data.IsValid())
-    return value;
-
-  return target.CreateValueFromData("siginfo", sb_data, type);
+  if (!thread_sp)
+    return SBValue();
+  return thread_sp->GetSiginfoValue();
 }

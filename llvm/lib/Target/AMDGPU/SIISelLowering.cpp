@@ -1655,9 +1655,7 @@ EVT SITargetLowering::getOptimalMemOpType(
 
 bool SITargetLowering::isMemOpHasNoClobberedMemOperand(const SDNode *N) const {
   const MemSDNode *MemNode = cast<MemSDNode>(N);
-  const Value *Ptr = MemNode->getMemOperand()->getValue();
-  const Instruction *I = dyn_cast_or_null<Instruction>(Ptr);
-  return I && I->getMetadata("amdgpu.noclobber");
+  return MemNode->getMemOperand()->getFlags() & MONoClobber;
 }
 
 bool SITargetLowering::isNonGlobalAddrSpace(unsigned AS) {
@@ -5451,6 +5449,7 @@ SDValue SITargetLowering::lowerTRAP(SDValue Op, SelectionDAG &DAG) const {
     case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
       return lowerTrapHsaQueuePtr(Op, DAG);
     case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
       return Subtarget->supportsGetDoorbellID() ?
           lowerTrapHsa(Op, DAG) : lowerTrapHsaQueuePtr(Op, DAG);
     }
@@ -12703,4 +12702,12 @@ bool SITargetLowering::isReassocProfitable(SelectionDAG &DAG, SDValue N0,
   // base and offset
   return (DAG.isBaseWithConstantOffset(N0) &&
           hasMemSDNodeUser(*N0->use_begin()));
+}
+
+MachineMemOperand::Flags
+SITargetLowering::getTargetMMOFlags(const Instruction &I) const {
+  // Propagate metadata set by AMDGPUAnnotateUniformValues to the MMO of a load.
+  if (I.getMetadata("amdgpu.noclobber"))
+    return MONoClobber;
+  return MachineMemOperand::MONone;
 }

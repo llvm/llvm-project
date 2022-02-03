@@ -67,7 +67,7 @@ inline OwningOpRef<ContainerOpT> constructContainerOpForParserIfNecessary(
 
   // After splicing, verify just this operation to ensure it can properly
   // contain the operations inside of it.
-  if (failed(op.verify()))
+  if (failed(op.verifyInvariants()))
     return OwningOpRef<ContainerOpT>();
   return opRef;
 }
@@ -206,21 +206,21 @@ inline OwningOpRef<ContainerOpT> parseSourceString(llvm::StringRef sourceStr,
 
 /// TODO: These methods are deprecated in favor of the above template versions.
 /// They should be removed when usages have been updated.
-inline OwningModuleRef parseSourceFile(const llvm::SourceMgr &sourceMgr,
-                                       MLIRContext *context) {
+inline OwningOpRef<ModuleOp> parseSourceFile(const llvm::SourceMgr &sourceMgr,
+                                             MLIRContext *context) {
   return parseSourceFile<ModuleOp>(sourceMgr, context);
 }
-inline OwningModuleRef parseSourceFile(llvm::StringRef filename,
-                                       MLIRContext *context) {
+inline OwningOpRef<ModuleOp> parseSourceFile(llvm::StringRef filename,
+                                             MLIRContext *context) {
   return parseSourceFile<ModuleOp>(filename, context);
 }
-inline OwningModuleRef parseSourceFile(llvm::StringRef filename,
-                                       llvm::SourceMgr &sourceMgr,
-                                       MLIRContext *context) {
+inline OwningOpRef<ModuleOp> parseSourceFile(llvm::StringRef filename,
+                                             llvm::SourceMgr &sourceMgr,
+                                             MLIRContext *context) {
   return parseSourceFile<ModuleOp>(filename, sourceMgr, context);
 }
-inline OwningModuleRef parseSourceString(llvm::StringRef moduleStr,
-                                         MLIRContext *context) {
+inline OwningOpRef<ModuleOp> parseSourceString(llvm::StringRef moduleStr,
+                                               MLIRContext *context) {
   return parseSourceString<ModuleOp>(moduleStr, context);
 }
 

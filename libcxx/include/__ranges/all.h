@@ -28,7 +28,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_RANGES)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 namespace ranges::views {
 
@@ -64,7 +64,7 @@ namespace __all {
       return ranges::owning_view{_VSTD::forward<_Tp>(__t)};
     }
   };
-}
+} // namespace __all
 
 inline namespace __cpo {
   inline constexpr auto all = __all::__fn{};
@@ -75,7 +75,7 @@ using all_t = decltype(views::all(declval<_Range>()));
 
 } // namespace ranges::views
 
-#endif // !defined(_LIBCPP_HAS_NO_RANGES)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -125,7 +125,7 @@ public:
   Fortran::semantics::Semantics &semantics() { return *semantics_; }
   const Fortran::semantics::Semantics &semantics() const { return *semantics_; }
 
-  void setSemantics(std::unique_ptr<Fortran::semantics::Semantics> semantics) {
+  void SetSemantics(std::unique_ptr<Fortran::semantics::Semantics> semantics) {
     semantics_ = std::move(semantics);
   }
 

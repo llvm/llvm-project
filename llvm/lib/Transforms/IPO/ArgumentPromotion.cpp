@@ -46,6 +46,7 @@
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Argument.h"
@@ -365,26 +366,25 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
 
   // Loop over the argument list, transferring uses of the old arguments over to
   // the new arguments, also transferring over the names as well.
-  for (Function::arg_iterator I = F->arg_begin(), E = F->arg_end(),
-                              I2 = NF->arg_begin();
-       I != E; ++I) {
-    if (!ArgsToPromote.count(&*I) && !ByValArgsToTransform.count(&*I)) {
+  Function::arg_iterator I2 = NF->arg_begin();
+  for (Argument &Arg : F->args()) {
+    if (!ArgsToPromote.count(&Arg) && !ByValArgsToTransform.count(&Arg)) {
       // If this is an unmodified argument, move the name and users over to the
       // new version.
-      I->replaceAllUsesWith(&*I2);
-      I2->takeName(&*I);
+      Arg.replaceAllUsesWith(&*I2);
+      I2->takeName(&Arg);
       ++I2;
       continue;
     }
 
-    if (ByValArgsToTransform.count(&*I)) {
+    if (ByValArgsToTransform.count(&Arg)) {
       // In the callee, we create an alloca, and store each of the new incoming
       // arguments into the alloca.
       Instruction *InsertPt = &NF->begin()->front();
 
       // Just add all the struct element types.
-      Type *AgTy = I->getParamByValType();
-      Align StructAlign = *I->getParamAlign();
+      Type *AgTy = Arg.getParamByValType();
+      Align StructAlign = *Arg.getParamAlign();
       Value *TheAlloca = new AllocaInst(AgTy, DL.getAllocaAddrSpace(), nullptr,
                                         StructAlign, "", InsertPt);
       StructType *STy = cast<StructType>(AgTy);
@@ -397,41 +397,41 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
         Value *Idx = GetElementPtrInst::Create(
             AgTy, TheAlloca, Idxs, TheAlloca->getName() + "." + Twine(i),
             InsertPt);
-        I2->setName(I->getName() + "." + Twine(i));
+        I2->setName(Arg.getName() + "." + Twine(i));
         Align Alignment = commonAlignment(StructAlign, SL->getElementOffset(i));
         new StoreInst(&*I2++, Idx, false, Alignment, InsertPt);
       }
 
       // Anything that used the arg should now use the alloca.
-      I->replaceAllUsesWith(TheAlloca);
-      TheAlloca->takeName(&*I);
+      Arg.replaceAllUsesWith(TheAlloca);
+      TheAlloca->takeName(&Arg);
       continue;
     }
 
     // There potentially are metadata uses for things like llvm.dbg.value.
     // Replace them with undef, after handling the other regular uses.
     auto RauwUndefMetadata = make_scope_exit(
-        [&]() { I->replaceAllUsesWith(UndefValue::get(I->getType())); });
+        [&]() { Arg.replaceAllUsesWith(UndefValue::get(Arg.getType())); });
 
-    if (I->use_empty())
+    if (Arg.use_empty())
       continue;
 
     // Otherwise, if we promoted this argument, then all users are load
     // instructions (or GEPs with only load users), and all loads should be
     // using the new argument that we added.
-    ScalarizeTable &ArgIndices = ScalarizedElements[&*I];
+    ScalarizeTable &ArgIndices = ScalarizedElements[&Arg];
 
-    while (!I->use_empty()) {
-      if (LoadInst *LI = dyn_cast<LoadInst>(I->user_back())) {
+    while (!Arg.use_empty()) {
+      if (LoadInst *LI = dyn_cast<LoadInst>(Arg.user_back())) {
         assert(ArgIndices.begin()->second.empty() &&
                "Load element should sort to front!");
-        I2->setName(I->getName() + ".val");
+        I2->setName(Arg.getName() + ".val");
         LI->replaceAllUsesWith(&*I2);
         LI->eraseFromParent();
-        LLVM_DEBUG(dbgs() << "*** Promoted load of argument '" << I->getName()
+        LLVM_DEBUG(dbgs() << "*** Promoted load of argument '" << Arg.getName()
                           << "' in function '" << F->getName() << "'\n");
       } else {
-        GetElementPtrInst *GEP = cast<GetElementPtrInst>(I->user_back());
+        GetElementPtrInst *GEP = cast<GetElementPtrInst>(Arg.user_back());
         assert(!GEP->use_empty() &&
                "GEPs without uses should be cleaned up already");
         IndicesVector Operands;
@@ -449,7 +449,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
           assert(It != ArgIndices.end() && "GEP not handled??");
         }
 
-        TheArg->setName(formatv("{0}.{1:$[.]}.val", I->getName(),
+        TheArg->setName(formatv("{0}.{1:$[.]}.val", Arg.getName(),
                                 make_range(Operands.begin(), Operands.end())));
 
         LLVM_DEBUG(dbgs() << "*** Promoted agg argument '" << TheArg->getName()
@@ -610,12 +610,12 @@ static bool isSafeToPromoteArgument(Argument *Arg, Type *ByValTy, AAResults &AAR
     return true;
   };
 
-  // First, iterate the entry block and mark loads of (geps of) arguments as
-  // safe.
+  // First, iterate functions that are guaranteed to execution on function
+  // entry and mark loads of (geps of) arguments as safe.
   BasicBlock &EntryBlock = Arg->getParent()->front();
   // Declare this here so we can reuse it
   IndicesVector Indices;
-  for (Instruction &I : EntryBlock)
+  for (Instruction &I : EntryBlock) {
     if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
       Value *V = LI->getPointerOperand();
       if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(V)) {
@@ -648,6 +648,10 @@ static bool isSafeToPromoteArgument(Argument *Arg, Type *ByValTy, AAResults &AAR
         BaseTy = LI->getType();
       }
     }
+
+    if (!isGuaranteedToTransferExecutionToSuccessor(&I))
+      break;
+  }
 
   // Now, iterate all uses of the argument to see if there are any uses that are
   // not (GEP+)loads, or any (GEP+)loads that are not safe to promote.
@@ -830,7 +834,10 @@ static bool canPaddingBeAccessed(Argument *arg) {
   return false;
 }
 
-bool ArgumentPromotionPass::areFunctionArgsABICompatible(
+/// Check if callers and the callee \p F agree how promoted arguments would be
+/// passed. The ones that they do not agree on are eliminated from the sets but
+/// the return value has to be observed as well.
+static bool areFunctionArgsABICompatible(
     const Function &F, const TargetTransformInfo &TTI,
     SmallPtrSetImpl<Argument *> &ArgsToPromote,
     SmallPtrSetImpl<Argument *> &ByValArgsToTransform) {
@@ -1003,7 +1010,7 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
   if (ArgsToPromote.empty() && ByValArgsToTransform.empty())
     return nullptr;
 
-  if (!ArgumentPromotionPass::areFunctionArgsABICompatible(
+  if (!areFunctionArgsABICompatible(
           *F, TTI, ArgsToPromote, ByValArgsToTransform))
     return nullptr;
 

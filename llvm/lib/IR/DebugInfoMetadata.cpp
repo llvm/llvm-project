@@ -15,9 +15,9 @@
 #include "MetadataImpl.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
 
 #include <numeric>
 

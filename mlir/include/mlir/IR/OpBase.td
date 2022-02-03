@@ -903,41 +903,38 @@ class NestedTupleOf<list<Type> allowedTypes> :
 //===----------------------------------------------------------------------===//
 // Common type constraints
 //===----------------------------------------------------------------------===//
+// Type constraint for types that are "like" some type or set of types T, that is
+// they're either a T, a vector of Ts, or a tensor of Ts
+class TypeOrContainer<Type allowedType, string name> : TypeConstraint<Or<[
+  allowedType.predicate, VectorOf<[allowedType]>.predicate,
+  TensorOf<[allowedType]>.predicate]>,
+  name>;
+
+// Temporary constraint to allow gradual transition to supporting 0-D vectors.
+// TODO: Remove this when all ops support 0-D vectors.
+class TypeOrContainerOfAnyRank<Type allowedType, string name> : TypeConstraint<Or<[
+  allowedType.predicate, VectorOfAnyRankOf<[allowedType]>.predicate,
+  TensorOf<[allowedType]>.predicate]>,
+  name>;
+
 
 // Type constraint for bool-like types: bools, vectors of bools, tensors of
 // bools.
-def BoolLike : TypeConstraint<Or<[I1.predicate, VectorOf<[I1]>.predicate,
-                                  TensorOf<[I1]>.predicate]>,
-    "bool-like">;
+def BoolLike : TypeOrContainer<I1, "bool-like">;
 
-// Temporary constraint to allow gradual transition to supporting 0-D vectors.
-// TODO: Remove this when all ops support 0-D vectors.
-def BoolLikeOfAnyRank : TypeConstraint<Or<[
-        I1.predicate,
-        VectorOfAnyRankOf<[I1]>.predicate,
-        TensorOf<[I1]>.predicate]>,
-    "bool-like">;
+def BoolLikeOfAnyRank : TypeOrContainerOfAnyRank<I1, "bool-like">;
 
 // Type constraint for signless-integer-like types: signless integers, indices,
 // vectors of signless integers or indices, tensors of signless integers.
-def SignlessIntegerLike : TypeConstraint<Or<[
-        AnySignlessIntegerOrIndex.predicate,
-        VectorOf<[AnySignlessIntegerOrIndex]>.predicate,
-        TensorOf<[AnySignlessIntegerOrIndex]>.predicate]>,
+def SignlessIntegerLike : TypeOrContainer<AnySignlessIntegerOrIndex,
     "signless-integer-like">;
 
-// Temporary constraint to allow gradual transition to supporting 0-D vectors.
-// TODO: Remove this when all ops support 0-D vectors.
-def SignlessIntegerLikeOfAnyRank : TypeConstraint<Or<[
-        AnySignlessIntegerOrIndex.predicate,
-        VectorOfAnyRankOf<[AnySignlessIntegerOrIndex]>.predicate,
-        TensorOf<[AnySignlessIntegerOrIndex]>.predicate]>,
+def SignlessIntegerLikeOfAnyRank : TypeOrContainerOfAnyRank<
+    AnySignlessIntegerOrIndex,
     "signless-integer-like">;
 
 // Type constraint for float-like types: floats, vectors or tensors thereof.
-def FloatLike : TypeConstraint<Or<[AnyFloat.predicate,
-        VectorOf<[AnyFloat]>.predicate, TensorOf<[AnyFloat]>.predicate]>,
-    "floating-point-like">;
+def FloatLike : TypeOrContainer<AnyFloat, "floating-point-like">;
 
 // Type constraint for signless-integer-like or float-like types.
 def SignlessIntegerOrFloatLike : TypeConstraint<Or<[
@@ -1964,6 +1961,13 @@ class VariadicSuccessor<Successor successor>
 // Trait represents a trait regarding an attribute, operation, or type.
 class Trait;
 
+// Define a Trait corresponding to a list of Traits, this allows for specifying
+// a list of traits as trait. Avoids needing to do `[Traits, ...] # ListOfTraits
+// # [Others, ...]` while still allowing providing convenient groupings.
+class TraitList<list<Trait> props> : Trait {
+  list<Trait> traits = props;
+}
+
 // NativeTrait corresponds to the MLIR C++ trait mechanism. The purpose to wrap
 // around C++ symbol string with this class is to make traits specified for
 // entities in TableGen less alien and more integrated.
@@ -1997,58 +2001,54 @@ class PredTrait<string descr, Pred pred> : Trait {
 // TypeTrait definitions
 //===----------------------------------------------------------------------===//
 
-// TypeTrait represents a trait regarding a type.
-// TODO: Remove this class in favor of using Trait.
-class TypeTrait;
-
 // These classes are used to define type specific traits.
-class NativeTypeTrait<string name> : NativeTrait<name, "Type">, TypeTrait;
+class NativeTypeTrait<string name> : NativeTrait<name, "Type">;
 class ParamNativeTypeTrait<string prop, string params>
-    : ParamNativeTrait<prop, params, "Type">, TypeTrait;
-class GenInternalTypeTrait<string prop>
-    : GenInternalTrait<prop, "Type">, TypeTrait;
-class PredTypeTrait<string descr, Pred pred>
-    : PredTrait<descr, pred>, TypeTrait;
+    : ParamNativeTrait<prop, params, "Type">;
+class GenInternalTypeTrait<string prop> : GenInternalTrait<prop, "Type">;
+class PredTypeTrait<string descr, Pred pred> : PredTrait<descr, pred>;
 
 //===----------------------------------------------------------------------===//
 // AttrTrait definitions
 //===----------------------------------------------------------------------===//
 
-// AttrTrait represents a trait regarding an attribute.
-// TODO: Remove this class in favor of using Trait.
-class AttrTrait;
-
 // These classes are used to define attribute specific traits.
-class NativeAttrTrait<string name> : NativeTrait<name, "Attribute">, AttrTrait;
+class NativeAttrTrait<string name> : NativeTrait<name, "Attribute">;
 class ParamNativeAttrTrait<string prop, string params>
-    : ParamNativeTrait<prop, params, "Attribute">, AttrTrait;
-class GenInternalAttrTrait<string prop>
-    : GenInternalTrait<prop, "Attribute">, AttrTrait;
-class PredAttrTrait<string descr, Pred pred>
-    : PredTrait<descr, pred>, AttrTrait;
+    : ParamNativeTrait<prop, params, "Attribute">;
+class GenInternalAttrTrait<string prop> : GenInternalTrait<prop, "Attribute">;
+class PredAttrTrait<string descr, Pred pred> : PredTrait<descr, pred>;
 
 //===----------------------------------------------------------------------===//
 // OpTrait definitions
 //===----------------------------------------------------------------------===//
 
-// OpTrait represents a trait regarding an operation.
-// TODO: Remove this class in favor of using Trait.
-class OpTrait;
-
-// Define a OpTrait corresponding to a list of OpTraits, this allows for
-// specifying a list of traits as trait. Avoids needing to do
-// `[Traits, ...] # ListOfTraits # [Others, ...]` while still allowing providing
-// convenient groupings.
-class OpTraitList<list<OpTrait> props> : OpTrait {
-  list<OpTrait> traits = props;
-}
-
 // These classes are used to define operation specific traits.
-class NativeOpTrait<string name> : NativeTrait<name, "Op">, OpTrait;
-class ParamNativeOpTrait<string prop, string params>
-    : ParamNativeTrait<prop, params, "Op">, OpTrait;
-class GenInternalOpTrait<string prop> : GenInternalTrait<prop, "Op">, OpTrait;
-class PredOpTrait<string descr, Pred pred> : PredTrait<descr, pred>, OpTrait;
+class NativeOpTrait<string name, list<Trait> traits = []>
+    : NativeTrait<name, "Op"> {
+  // Specify the list of traits that need to be verified before the verification
+  // of this NativeOpTrait.
+  list<Trait> dependentTraits = traits;
+}
+class ParamNativeOpTrait<string prop, string params,
+                         list<Trait> traits = []>
+    : ParamNativeTrait<prop, params, "Op"> {
+  // Specify the list of traits that need to be verified before the verification
+  // of this ParamNativeOpTrait.
+  list<Trait> dependentTraits = traits;
+}
+class GenInternalOpTrait<string prop, list<Trait> traits = []>
+    : GenInternalTrait<prop, "Op"> {
+  // Specify the list of traits that need to be verified before the verification
+  // of this GenInternalOpTrait.
+  list<Trait> dependentTraits = traits;
+}
+class PredOpTrait<string descr, Pred pred, list<Trait> traits = []>
+    : PredTrait<descr, pred> {
+  // Specify the list of traits that need to be verified before the verification
+  // of this PredOpTrait.
+  list<Trait> dependentTraits = traits;
+}
 
 // Op defines an affine scope.
 def AffineScope : NativeOpTrait<"AffineScope">;
@@ -2096,14 +2096,12 @@ def Tensorizable : NativeOpTrait<"Tensorizable">;
 
 // Group together `Elementwise`, `Scalarizable`, `Vectorizable`, and
 // `Tensorizable` for convenience.
-def ElementwiseMappable {
-  list<OpTrait> traits = [
+def ElementwiseMappable : TraitList<[
     Elementwise,
     Scalarizable,
     Vectorizable,
     Tensorizable,
-  ];
-}
+]>;
 
 // Op's regions have a single block.
 def SingleBlock : NativeOpTrait<"SingleBlock">;
@@ -2186,11 +2184,16 @@ class InterfaceTrait<string name> : NativeTrait<"", ""> {
 // OpInterfaceTrait corresponds to a specific 'OpInterface' class defined in
 // C++. The purpose to wrap around C++ symbol string with this class is to make
 // interfaces specified for ops in TableGen less alien and more integrated.
-class OpInterfaceTrait<string name, code verifyBody = [{}]>
-    : InterfaceTrait<name>, OpTrait {
+class OpInterfaceTrait<string name, code verifyBody = [{}],
+                       list<Trait> traits = []>
+    : InterfaceTrait<name> {
   // Specify the body of the verification function. `$_op` will be replaced with
   // the operation being verified.
   code verify = verifyBody;
+
+  // Specify the list of traits that need to be verified before the verification
+  // of this OpInterfaceTrait.
+  list<Trait> dependentTraits = traits;
 }
 
 // This class represents a single, optionally static, interface method.
@@ -2379,7 +2382,7 @@ class Res<Constraint constraint, string desc = "",
   : OpVariable<constraint, desc, decorators>;
 
 // Base class for all ops.
-class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
+class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
   // The dialect of the op.
   Dialect opDialect = dialect;
 
@@ -2448,7 +2451,16 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
   // Custom assembly format.
   string assemblyFormat = ?;
 
-  // Custom verifier.
+  // A bit indicating if the operation has additional invariants that need to
+  // verified (aside from those verified by other ODS constructs). If set to `1`,
+  // an additional `LogicalResult verify()` declaration will be generated on the
+  // operation class. The operation should implement this method and verify the
+  // additional necessary invariants.
+  bit hasVerifier = 0;
+  // A custom code block corresponding to the extra verification code of the
+  // operation.
+  // NOTE: This field is deprecated in favor of `hasVerifier` and is slated for
+  // deletion.
   code verifier = ?;
 
   // Whether this op has associated canonicalization patterns.
@@ -2463,7 +2475,7 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
 
   // Op traits.
   // Note: The list of traits will be uniqued by ODS.
-  list<OpTrait> traits = props;
+  list<Trait> traits = props;
 
   // Additional code that will be added to the public part of the generated
   // C++ code of the op declaration.
@@ -2478,17 +2490,15 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
 // Base class for ops with static/dynamic offset, sizes and strides
 // attributes/arguments.
 class BaseOpWithOffsetSizesAndStrides<Dialect dialect, string mnemonic,
-                                      list<OpTrait> traits = []> :
+                                      list<Trait> traits = []> :
   Op<dialect, mnemonic, traits> {
 
   // For every such op, there needs to be a:
   //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)
-  //   * LogicalResult verify(${C++ class of Op} op)
   //   * ParseResult parse${C++ class of Op}(OpAsmParser &parser,
   //                                         OperationState &result)
   // functions.
   let printer = [{ return ::print(p, *this); }];
-  let verifier = [{ return ::verify(*this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
 
   code extraBaseClassDeclaration = [{
@@ -2820,7 +2830,8 @@ class NativeCodeCall<string expr, int returns = 1> {
 
 class NativeCodeCallVoid<string expr> : NativeCodeCall<expr, 0>;
 
-def ConstantLikeMatcher : NativeCodeCall<"success(matchPattern($_self->getResult(0), m_Constant(&$0)))">;
+def ConstantLikeMatcher : NativeCodeCall<"::mlir::success("
+    "::mlir::matchPattern($_self->getResult(0), ::mlir::m_Constant(&$0)))">;
 
 //===----------------------------------------------------------------------===//
 // Rewrite directives

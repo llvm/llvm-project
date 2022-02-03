@@ -14,8 +14,8 @@
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Error.h"
@@ -31,61 +31,12 @@ using llvm::formatv;
 //===----------------------------------------------------------------------===//
 
 namespace {
-
-/// This class represents a single format element.
-class Element {
-public:
-  /// LLVM-style RTTI.
-  enum class Kind {
-    /// This element is a directive.
-    ParamsDirective,
-    StructDirective,
-
-    /// This element is a literal.
-    Literal,
-
-    /// This element is a variable.
-    Variable,
-  };
-  Element(Kind kind) : kind(kind) {}
-  virtual ~Element() = default;
-
-  /// Return the kind of this element.
-  Kind getKind() const { return kind; }
-
-private:
-  /// The kind of this element.
-  Kind kind;
-};
-
-/// This class represents an instance of a literal element.
-class LiteralElement : public Element {
-public:
-  LiteralElement(StringRef literal)
-      : Element(Kind::Literal), literal(literal) {}
-
-  static bool classof(const Element *el) {
-    return el->getKind() == Kind::Literal;
-  }
-
-  /// Get the literal spelling.
-  StringRef getSpelling() const { return literal; }
-
-private:
-  /// The spelling of the literal for this element.
-  StringRef literal;
-};
-
 /// This class represents an instance of a variable element. A variable refers
 /// to an attribute or type parameter.
-class VariableElement : public Element {
+class ParameterElement
+    : public VariableElementBase<VariableElement::Parameter> {
 public:
-  VariableElement(AttrOrTypeParameter param)
-      : Element(Kind::Variable), param(param) {}
-
-  static bool classof(const Element *el) {
-    return el->getKind() == Kind::Variable;
-  }
+  ParameterElement(AttrOrTypeParameter param) : param(param) {}
 
   /// Get the parameter in the element.
   const AttrOrTypeParameter &getParam() const { return param; }
@@ -103,22 +54,18 @@ private:
 };
 
 /// Base class for a directive that contains references to multiple variables.
-template <Element::Kind ElementKind>
-class ParamsDirectiveBase : public Element {
+template <DirectiveElement::Kind DirectiveKind>
+class ParamsDirectiveBase : public DirectiveElementBase<DirectiveKind> {
 public:
-  using Base = ParamsDirectiveBase<ElementKind>;
+  using Base = ParamsDirectiveBase<DirectiveKind>;
 
-  ParamsDirectiveBase(SmallVector<std::unique_ptr<Element>> &&params)
-      : Element(ElementKind), params(std::move(params)) {}
-
-  static bool classof(const Element *el) {
-    return el->getKind() == ElementKind;
-  }
+  ParamsDirectiveBase(std::vector<FormatElement *> &&params)
+      : params(std::move(params)) {}
 
   /// Get the parameters contained in this directive.
   auto getParams() const {
-    return llvm::map_range(params, [](auto &el) {
-      return cast<VariableElement>(el.get())->getParam();
+    return llvm::map_range(params, [](FormatElement *el) {
+      return cast<ParameterElement>(el)->getParam();
     });
   }
 
@@ -126,13 +73,11 @@ public:
   unsigned getNumParams() const { return params.size(); }
 
   /// Take all of the parameters from this directive.
-  SmallVector<std::unique_ptr<Element>> takeParams() {
-    return std::move(params);
-  }
+  std::vector<FormatElement *> takeParams() { return std::move(params); }
 
 private:
   /// The parameters captured by this directive.
-  SmallVector<std::unique_ptr<Element>> params;
+  std::vector<FormatElement *> params;
 };
 
 /// This class represents a `params` directive that refers to all parameters
@@ -144,8 +89,7 @@ private:
 /// When used as an argument to another directive that accepts variables,
 /// `params` can be used in place of manually listing all parameters of an
 /// attribute or type.
-class ParamsDirective
-    : public ParamsDirectiveBase<Element::Kind::ParamsDirective> {
+class ParamsDirective : public ParamsDirectiveBase<DirectiveElement::Params> {
 public:
   using Base::Base;
 };
@@ -155,8 +99,7 @@ public:
 ///
 ///   `{` param-name `=` param-value (`,` param-name `=` param-value)* `}`
 ///
-class StructDirective
-    : public ParamsDirectiveBase<Element::Kind::StructDirective> {
+class StructDirective : public ParamsDirectiveBase<DirectiveElement::Struct> {
 public:
   using Base::Base;
 };
@@ -237,7 +180,7 @@ namespace {
 class AttrOrTypeFormat {
 public:
   AttrOrTypeFormat(const AttrOrTypeDef &def,
-                   std::vector<std::unique_ptr<Element>> &&elements)
+                   std::vector<FormatElement *> &&elements)
       : def(def), elements(std::move(elements)) {}
 
   /// Generate the attribute or type parser.
@@ -247,7 +190,7 @@ public:
 
 private:
   /// Generate the parser code for a specific format element.
-  void genElementParser(Element *el, FmtContext &ctx, MethodBody &os);
+  void genElementParser(FormatElement *el, FmtContext &ctx, MethodBody &os);
   /// Generate the parser code for a literal.
   void genLiteralParser(StringRef value, FmtContext &ctx, MethodBody &os);
   /// Generate the parser code for a variable.
@@ -259,7 +202,7 @@ private:
   void genStructParser(StructDirective *el, FmtContext &ctx, MethodBody &os);
 
   /// Generate the printer code for a specific format element.
-  void genElementPrinter(Element *el, FmtContext &ctx, MethodBody &os);
+  void genElementPrinter(FormatElement *el, FmtContext &ctx, MethodBody &os);
   /// Generate the printer code for a literal.
   void genLiteralPrinter(StringRef value, FmtContext &ctx, MethodBody &os);
   /// Generate the printer code for a variable.
@@ -275,7 +218,7 @@ private:
   const AttrOrTypeDef &def;
   /// The list of top-level format elements returned by the assembly format
   /// parser.
-  std::vector<std::unique_ptr<Element>> elements;
+  std::vector<FormatElement *> elements;
 
   /// Flags for printing spaces.
   bool shouldEmitSpace = false;
@@ -311,8 +254,8 @@ void AttrOrTypeFormat::genParser(MethodBody &os) {
               &ctx);
 
   /// Generate call to each parameter parser.
-  for (auto &el : elements)
-    genElementParser(el.get(), ctx, os);
+  for (FormatElement *el : elements)
+    genElementParser(el, ctx, os);
 
   /// Generate call to the attribute or type builder. Use the checked getter
   /// if one was generated.
@@ -328,11 +271,11 @@ void AttrOrTypeFormat::genParser(MethodBody &os) {
   os << ");";
 }
 
-void AttrOrTypeFormat::genElementParser(Element *el, FmtContext &ctx,
+void AttrOrTypeFormat::genElementParser(FormatElement *el, FmtContext &ctx,
                                         MethodBody &os) {
   if (auto *literal = dyn_cast<LiteralElement>(el))
     return genLiteralParser(literal->getSpelling(), ctx, os);
-  if (auto *var = dyn_cast<VariableElement>(el))
+  if (auto *var = dyn_cast<ParameterElement>(el))
     return genVariableParser(var->getParam(), ctx, os);
   if (auto *params = dyn_cast<ParamsDirective>(el))
     return genParamsParser(params, ctx, os);
@@ -435,11 +378,11 @@ void AttrOrTypeFormat::genPrinter(MethodBody &os) {
   /// Generate printers.
   shouldEmitSpace = true;
   lastWasPunctuation = false;
-  for (auto &el : elements)
-    genElementPrinter(el.get(), ctx, os);
+  for (FormatElement *el : elements)
+    genElementPrinter(el, ctx, os);
 }
 
-void AttrOrTypeFormat::genElementPrinter(Element *el, FmtContext &ctx,
+void AttrOrTypeFormat::genElementPrinter(FormatElement *el, FmtContext &ctx,
                                          MethodBody &os) {
   if (auto *literal = dyn_cast<LiteralElement>(el))
     return genLiteralPrinter(literal->getSpelling(), ctx, os);
@@ -447,7 +390,7 @@ void AttrOrTypeFormat::genElementPrinter(Element *el, FmtContext &ctx,
     return genParamsPrinter(params, ctx, os);
   if (auto *strct = dyn_cast<StructDirective>(el))
     return genStructPrinter(strct, ctx, os);
-  if (auto *var = dyn_cast<VariableElement>(el))
+  if (auto *var = dyn_cast<ParameterElement>(el))
     return genVariablePrinter(var->getParam(), ctx, os,
                               var->shouldBeQualified());
 
@@ -492,7 +435,7 @@ void AttrOrTypeFormat::genParamsPrinter(ParamsDirective *el, FmtContext &ctx,
   llvm::interleave(
       el->getParams(),
       [&](auto param) { this->genVariablePrinter(param, ctx, os); },
-      [&]() { this->genLiteralPrinter(",", ctx, os); });
+      [&] { this->genLiteralPrinter(",", ctx, os); });
 }
 
 void AttrOrTypeFormat::genStructPrinter(StructDirective *el, FmtContext &ctx,
@@ -504,75 +447,54 @@ void AttrOrTypeFormat::genStructPrinter(StructDirective *el, FmtContext &ctx,
         this->genLiteralPrinter("=", ctx, os);
         this->genVariablePrinter(param, ctx, os);
       },
-      [&]() { this->genLiteralPrinter(",", ctx, os); });
+      [&] { this->genLiteralPrinter(",", ctx, os); });
 }
 
 //===----------------------------------------------------------------------===//
-// FormatParser
+// DefFormatParser
 //===----------------------------------------------------------------------===//
 
 namespace {
-class FormatParser {
+class DefFormatParser : public FormatParser {
 public:
-  FormatParser(llvm::SourceMgr &mgr, const AttrOrTypeDef &def)
-      : lexer(mgr, def.getLoc()[0]), curToken(lexer.lexToken()), def(def),
+  DefFormatParser(llvm::SourceMgr &mgr, const AttrOrTypeDef &def)
+      : FormatParser(mgr, def.getLoc()[0]), def(def),
         seenParams(def.getNumParameters()) {}
 
   /// Parse the attribute or type format and create the format elements.
   FailureOr<AttrOrTypeFormat> parse();
 
+protected:
+  /// Verify the parsed elements.
+  LogicalResult verify(SMLoc loc, ArrayRef<FormatElement *> elements) override;
+  /// Verify the elements of a custom directive.
+  LogicalResult
+  verifyCustomDirectiveArguments(SMLoc loc,
+                                 ArrayRef<FormatElement *> arguments) override {
+    return emitError(loc, "'custom' not supported (yet)");
+  }
+  /// Verify the elements of an optional group.
+  LogicalResult
+  verifyOptionalGroupElements(SMLoc loc, ArrayRef<FormatElement *> elements,
+                              Optional<unsigned> anchorIndex) override {
+    return emitError(loc, "optional groups not (yet) supported");
+  }
+
+  /// Parse an attribute or type variable.
+  FailureOr<FormatElement *> parseVariableImpl(SMLoc loc, StringRef name,
+                                               Context ctx) override;
+  /// Parse an attribute or type format directive.
+  FailureOr<FormatElement *>
+  parseDirectiveImpl(SMLoc loc, FormatToken::Kind kind, Context ctx) override;
+
 private:
-  /// The current context of the parser when parsing an element.
-  enum ParserContext {
-    /// The element is being parsed in the default context - at the top of the
-    /// format
-    TopLevelContext,
-    /// The element is being parsed as a child to a `struct` directive.
-    StructDirective,
-  };
-
-  /// Emit an error.
-  LogicalResult emitError(const Twine &msg) {
-    lexer.emitError(curToken.getLoc(), msg);
-    return failure();
-  }
-
-  /// Parse an expected token.
-  LogicalResult parseToken(FormatToken::Kind kind, const Twine &msg) {
-    if (curToken.getKind() != kind)
-      return emitError(msg);
-    consumeToken();
-    return success();
-  }
-
-  /// Advance the lexer to the next token.
-  void consumeToken() {
-    assert(curToken.getKind() != FormatToken::eof &&
-           curToken.getKind() != FormatToken::error &&
-           "shouldn't advance past EOF or errors");
-    curToken = lexer.lexToken();
-  }
-
-  /// Parse any element.
-  FailureOr<std::unique_ptr<Element>> parseElement(ParserContext ctx);
-  /// Parse a literal element.
-  FailureOr<std::unique_ptr<Element>> parseLiteral(ParserContext ctx);
-  /// Parse a variable element.
-  FailureOr<std::unique_ptr<Element>> parseVariable(ParserContext ctx);
-  /// Parse a directive.
-  FailureOr<std::unique_ptr<Element>> parseDirective(ParserContext ctx);
   /// Parse a `params` directive.
-  FailureOr<std::unique_ptr<Element>> parseParamsDirective();
+  FailureOr<FormatElement *> parseParamsDirective(SMLoc loc);
   /// Parse a `qualified` directive.
-  FailureOr<std::unique_ptr<Element>>
-  parseQualifiedDirective(ParserContext ctx);
+  FailureOr<FormatElement *> parseQualifiedDirective(SMLoc loc, Context ctx);
   /// Parse a `struct` directive.
-  FailureOr<std::unique_ptr<Element>> parseStructDirective();
+  FailureOr<FormatElement *> parseStructDirective(SMLoc loc);
 
-  /// The current format lexer.
-  FormatLexer lexer;
-  /// The current token in the stream.
-  FormatToken curToken;
   /// Attribute or type tablegen def.
   const AttrOrTypeDef &def;
 
@@ -581,170 +503,132 @@ private:
 };
 } // namespace
 
-FailureOr<AttrOrTypeFormat> FormatParser::parse() {
-  std::vector<std::unique_ptr<Element>> elements;
-  elements.reserve(16);
-
-  /// Parse the format elements.
-  while (curToken.getKind() != FormatToken::eof) {
-    auto element = parseElement(TopLevelContext);
-    if (failed(element))
-      return failure();
-
-    /// Add the format element and continue.
-    elements.push_back(std::move(*element));
-  }
-
-  /// Check that all parameters have been seen.
+LogicalResult DefFormatParser::verify(SMLoc loc,
+                                      ArrayRef<FormatElement *> elements) {
   for (auto &it : llvm::enumerate(def.getParameters())) {
     if (!seenParams.test(it.index())) {
-      return emitError("format is missing reference to parameter: " +
-                       it.value().getName());
+      return emitError(loc, "format is missing reference to parameter: " +
+                                it.value().getName());
     }
   }
-
-  return AttrOrTypeFormat(def, std::move(elements));
+  return success();
 }
 
-FailureOr<std::unique_ptr<Element>>
-FormatParser::parseElement(ParserContext ctx) {
-  if (curToken.getKind() == FormatToken::literal)
-    return parseLiteral(ctx);
-  if (curToken.getKind() == FormatToken::variable)
-    return parseVariable(ctx);
-  if (curToken.isKeyword())
-    return parseDirective(ctx);
-
-  return emitError("expected literal, directive, or variable");
-}
-
-FailureOr<std::unique_ptr<Element>>
-FormatParser::parseLiteral(ParserContext ctx) {
-  if (ctx != TopLevelContext) {
-    return emitError(
-        "literals may only be used in the top-level section of the format");
-  }
-
-  /// Get the literal spelling without the surrounding "`".
-  auto value = curToken.getSpelling().drop_front().drop_back();
-  if (!isValidLiteral(value, [&](Twine diag) {
-        (void)emitError("expected valid literal but got '" + value +
-                        "': " + diag);
-      }))
+FailureOr<AttrOrTypeFormat> DefFormatParser::parse() {
+  FailureOr<std::vector<FormatElement *>> elements = FormatParser::parse();
+  if (failed(elements))
     return failure();
-
-  consumeToken();
-  return {std::make_unique<LiteralElement>(value)};
+  return AttrOrTypeFormat(def, std::move(*elements));
 }
 
-FailureOr<std::unique_ptr<Element>>
-FormatParser::parseVariable(ParserContext ctx) {
-  /// Get the parameter name without the preceding "$".
-  auto name = curToken.getSpelling().drop_front();
-
+FailureOr<FormatElement *>
+DefFormatParser::parseVariableImpl(SMLoc loc, StringRef name, Context ctx) {
   /// Lookup the parameter.
   ArrayRef<AttrOrTypeParameter> params = def.getParameters();
   auto *it = llvm::find_if(
       params, [&](auto &param) { return param.getName() == name; });
 
   /// Check that the parameter reference is valid.
-  if (it == params.end())
-    return emitError(def.getName() + " has no parameter named '" + name + "'");
+  if (it == params.end()) {
+    return emitError(loc,
+                     def.getName() + " has no parameter named '" + name + "'");
+  }
   auto idx = std::distance(params.begin(), it);
   if (seenParams.test(idx))
-    return emitError("duplicate parameter '" + name + "'");
+    return emitError(loc, "duplicate parameter '" + name + "'");
   seenParams.set(idx);
 
-  consumeToken();
-  return {std::make_unique<VariableElement>(*it)};
+  return create<ParameterElement>(*it);
 }
 
-FailureOr<std::unique_ptr<Element>>
-FormatParser::parseDirective(ParserContext ctx) {
+FailureOr<FormatElement *>
+DefFormatParser::parseDirectiveImpl(SMLoc loc, FormatToken::Kind kind,
+                                    Context ctx) {
 
-  switch (curToken.getKind()) {
+  switch (kind) {
   case FormatToken::kw_qualified:
-    return parseQualifiedDirective(ctx);
+    return parseQualifiedDirective(loc, ctx);
   case FormatToken::kw_params:
-    return parseParamsDirective();
+    return parseParamsDirective(loc);
   case FormatToken::kw_struct:
     if (ctx != TopLevelContext) {
       return emitError(
+          loc,
           "`struct` may only be used in the top-level section of the format");
     }
-    return parseStructDirective();
+    return parseStructDirective(loc);
+
   default:
-    return emitError("unknown directive in format: " + curToken.getSpelling());
+    return emitError(loc, "unsupported directive kind");
   }
 }
 
-FailureOr<std::unique_ptr<Element>>
-FormatParser::parseQualifiedDirective(ParserContext ctx) {
-  consumeToken();
+FailureOr<FormatElement *>
+DefFormatParser::parseQualifiedDirective(SMLoc loc, Context ctx) {
   if (failed(parseToken(FormatToken::l_paren,
                         "expected '(' before argument list")))
     return failure();
-  FailureOr<std::unique_ptr<Element>> var = parseElement(ctx);
+  FailureOr<FormatElement *> var = parseElement(ctx);
   if (failed(var))
     return var;
-  if (!isa<VariableElement>(*var))
-    return emitError("`qualified` argument list expected a variable");
-  cast<VariableElement>(var->get())->setShouldBeQualified();
+  if (!isa<ParameterElement>(*var))
+    return emitError(loc, "`qualified` argument list expected a variable");
+  cast<ParameterElement>(*var)->setShouldBeQualified();
   if (failed(
           parseToken(FormatToken::r_paren, "expected ')' after argument list")))
     return failure();
   return var;
 }
 
-FailureOr<std::unique_ptr<Element>> FormatParser::parseParamsDirective() {
-  consumeToken();
+FailureOr<FormatElement *> DefFormatParser::parseParamsDirective(SMLoc loc) {
   /// Collect all of the attribute's or type's parameters.
-  SmallVector<std::unique_ptr<Element>> vars;
+  std::vector<FormatElement *> vars;
   /// Ensure that none of the parameters have already been captured.
   for (const auto &it : llvm::enumerate(def.getParameters())) {
     if (seenParams.test(it.index())) {
-      return emitError("`params` captures duplicate parameter: " +
-                       it.value().getName());
+      return emitError(loc, "`params` captures duplicate parameter: " +
+                                it.value().getName());
     }
     seenParams.set(it.index());
-    vars.push_back(std::make_unique<VariableElement>(it.value()));
+    vars.push_back(create<ParameterElement>(it.value()));
   }
-  return {std::make_unique<ParamsDirective>(std::move(vars))};
+  return create<ParamsDirective>(std::move(vars));
 }
 
-FailureOr<std::unique_ptr<Element>> FormatParser::parseStructDirective() {
-  consumeToken();
+FailureOr<FormatElement *> DefFormatParser::parseStructDirective(SMLoc loc) {
   if (failed(parseToken(FormatToken::l_paren,
                         "expected '(' before `struct` argument list")))
     return failure();
 
   /// Parse variables captured by `struct`.
-  SmallVector<std::unique_ptr<Element>> vars;
+  std::vector<FormatElement *> vars;
 
   /// Parse first captured parameter or a `params` directive.
-  FailureOr<std::unique_ptr<Element>> var = parseElement(StructDirective);
-  if (failed(var) || !isa<VariableElement, ParamsDirective>(*var))
-    return emitError("`struct` argument list expected a variable or directive");
+  FailureOr<FormatElement *> var = parseElement(StructDirectiveContext);
+  if (failed(var) || !isa<VariableElement, ParamsDirective>(*var)) {
+    return emitError(loc,
+                     "`struct` argument list expected a variable or directive");
+  }
   if (isa<VariableElement>(*var)) {
     /// Parse any other parameters.
     vars.push_back(std::move(*var));
-    while (curToken.getKind() == FormatToken::comma) {
+    while (peekToken().is(FormatToken::comma)) {
       consumeToken();
-      var = parseElement(StructDirective);
+      var = parseElement(StructDirectiveContext);
       if (failed(var) || !isa<VariableElement>(*var))
-        return emitError("expected a variable in `struct` argument list");
+        return emitError(loc, "expected a variable in `struct` argument list");
       vars.push_back(std::move(*var));
     }
   } else {
     /// `struct(params)` captures all parameters in the attribute or type.
-    vars = cast<ParamsDirective>(var->get())->takeParams();
+    vars = cast<ParamsDirective>(*var)->takeParams();
   }
 
-  if (curToken.getKind() != FormatToken::r_paren)
-    return emitError("expected ')' at the end of an argument list");
+  if (failed(parseToken(FormatToken::r_paren,
+                        "expected ')' at the end of an argument list")))
+    return failure();
 
-  consumeToken();
-  return {std::make_unique<::StructDirective>(std::move(vars))};
+  return create<StructDirective>(std::move(vars));
 }
 
 //===----------------------------------------------------------------------===//
@@ -756,11 +640,10 @@ void mlir::tblgen::generateAttrOrTypeFormat(const AttrOrTypeDef &def,
                                             MethodBody &printer) {
   llvm::SourceMgr mgr;
   mgr.AddNewSourceBuffer(
-      llvm::MemoryBuffer::getMemBuffer(*def.getAssemblyFormat()),
-      SMLoc());
+      llvm::MemoryBuffer::getMemBuffer(*def.getAssemblyFormat()), SMLoc());
 
   /// Parse the custom assembly format>
-  FormatParser fmtParser(mgr, def);
+  DefFormatParser fmtParser(mgr, def);
   FailureOr<AttrOrTypeFormat> format = fmtParser.parse();
   if (failed(format)) {
     if (formatErrorIsFatal)

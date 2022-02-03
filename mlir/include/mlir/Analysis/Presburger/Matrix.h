@@ -106,6 +106,8 @@ public:
 
   void copyRow(unsigned sourceRow, unsigned targetRow);
 
+  void fillRow(unsigned row, int64_t value);
+
   /// Add `scale` multiples of the source row to the target row.
   void addToRow(unsigned sourceRow, unsigned targetRow, int64_t scale);
 
@@ -114,6 +116,15 @@ public:
 
   /// Negate the specified column.
   void negateColumn(unsigned column);
+
+  /// The given vector is interpreted as a row vector v. Post-multiply v with
+  /// this matrix, say M, and return vM.
+  SmallVector<int64_t, 8> preMultiplyWithRow(ArrayRef<int64_t> rowVec) const;
+
+  /// The given vector is interpreted as a column vector v. Pre-multiply v with
+  /// this matrix, say M, and return Mv.
+  SmallVector<int64_t, 8>
+  postMultiplyWithColumn(ArrayRef<int64_t> colVec) const;
 
   /// Resize the matrix to the specified dimensions. If a dimension is smaller,
   /// the values are truncated; if it is bigger, the new values are initialized

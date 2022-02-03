@@ -39,6 +39,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -671,12 +672,9 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
   // edge from this block.
   SmallVector<Value *, 8> UnwindDestPHIValues;
   BasicBlock *InvokeBB = II->getParent();
-  for (Instruction &I : *UnwindDest) {
+  for (PHINode &PHI : UnwindDest->phis()) {
     // Save the value to use for this edge.
-    PHINode *PHI = dyn_cast<PHINode>(&I);
-    if (!PHI)
-      break;
-    UnwindDestPHIValues.push_back(PHI->getIncomingValueForBlock(InvokeBB));
+    UnwindDestPHIValues.push_back(PHI.getIncomingValueForBlock(InvokeBB));
   }
 
   // Add incoming-PHI values to the unwind destination block for the given basic

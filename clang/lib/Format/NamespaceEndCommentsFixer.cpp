@@ -132,9 +132,8 @@ bool validEndComment(const FormatToken *RBraceTok, StringRef NamespaceName,
       "^/[/*] *( +([a-zA-Z0-9:_]+))?\\.? *(\\*/)?$", llvm::Regex::IgnoreCase);
 
   // Pull out just the comment text.
-  if (!CommentPattern.match(Comment->Next->TokenText, &Groups)) {
+  if (!CommentPattern.match(Comment->Next->TokenText, &Groups))
     return false;
-  }
   NamespaceNameInComment = Groups.size() > 2 ? Groups[2] : "";
 
   return (NamespaceNameInComment == NamespaceName);
@@ -210,8 +209,8 @@ std::pair<tooling::Replacements, unsigned> NamespaceEndCommentsFixer::analyze(
 
   // Spin through the lines and ensure we have balanced braces.
   int Braces = 0;
-  for (size_t I = 0, E = AnnotatedLines.size(); I != E; ++I) {
-    FormatToken *Tok = AnnotatedLines[I]->First;
+  for (AnnotatedLine *Line : AnnotatedLines) {
+    FormatToken *Tok = Line->First;
     while (Tok) {
       Braces += Tok->is(tok::l_brace) ? 1 : Tok->is(tok::r_brace) ? -1 : 0;
       Tok = Tok->Next;
@@ -220,9 +219,8 @@ std::pair<tooling::Replacements, unsigned> NamespaceEndCommentsFixer::analyze(
   // Don't attempt to comment unbalanced braces or this can
   // lead to comments being placed on the closing brace which isn't
   // the matching brace of the namespace. (occurs during incomplete editing).
-  if (Braces != 0) {
+  if (Braces != 0)
     return {Fixes, 0};
-  }
 
   std::string AllNamespaceNames;
   size_t StartLineIndex = SIZE_MAX;
@@ -241,9 +239,8 @@ std::pair<tooling::Replacements, unsigned> NamespaceEndCommentsFixer::analyze(
     const FormatToken *EndCommentPrevTok = RBraceTok;
     // Namespaces often end with '};'. In that case, attach namespace end
     // comments to the semicolon tokens.
-    if (RBraceTok->Next && RBraceTok->Next->is(tok::semi)) {
+    if (RBraceTok->Next && RBraceTok->Next->is(tok::semi))
       EndCommentPrevTok = RBraceTok->Next;
-    }
     if (StartLineIndex == SIZE_MAX)
       StartLineIndex = EndLine->MatchingOpeningBlockLineIndex;
     std::string NamespaceName = computeName(NamespaceTok);

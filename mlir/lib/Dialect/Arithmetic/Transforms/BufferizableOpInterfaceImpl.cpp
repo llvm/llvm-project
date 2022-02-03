@@ -14,12 +14,10 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
 
+using namespace mlir;
 using namespace mlir::bufferization;
 
-namespace mlir {
-namespace arith {
 namespace {
-
 /// Bufferization of arith.constant. Replace with memref.get_global.
 struct ConstantOpInterface
     : public BufferizableOpInterface::ExternalModel<ConstantOpInterface,
@@ -39,8 +37,11 @@ struct ConstantOpInterface
 
     // Create global memory segment and replace tensor with memref pointing to
     // that memory segment.
-    GlobalCreator globalCreator(moduleOp);
-    auto globalMemref = globalCreator.getGlobalFor(constantOp);
+    FailureOr<memref::GlobalOp> globalOp =
+        getGlobalFor(constantOp, state.getOptions().bufferAlignment);
+    if (failed(globalOp))
+      return failure();
+    memref::GlobalOp globalMemref = globalOp.getValue();
     replaceOpWithNewBufferizedOp<memref::GetGlobalOp>(
         rewriter, op, globalMemref.type(), globalMemref.getName());
 
@@ -99,12 +100,61 @@ struct IndexCastOpInterface
   }
 };
 
+/// Bufferization of arith.select. Just replace the operands.
+struct SelectOpInterface
+    : public BufferizableOpInterface::ExternalModel<SelectOpInterface,
+                                                    arith::SelectOp> {
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              const BufferizationState &state) const {
+    return false;
+  }
+
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               const BufferizationState &state) const {
+    return false;
+  }
+
+  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                               const BufferizationState &state) const {
+    return op->getOpResult(0) /*result*/;
+  }
+
+  SmallVector<OpOperand *>
+  getAliasingOpOperand(Operation *op, OpResult opResult,
+                       const BufferizationState &state) const {
+    return {&op->getOpOperand(1) /*true_value*/,
+            &op->getOpOperand(2) /*false_value*/};
+  }
+
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
+                          const BufferizationState &state) const {
+    auto selectOp = cast<arith::SelectOp>(op);
+
+    // `getBuffer` introduces copies if an OpOperand bufferizes out-of-place.
+    // TODO: It would be more efficient to copy the result of the `select` op
+    // instead of its OpOperands. In the worst case, 2 copies are inserted at
+    // the moment (one for each tensor). When copying the op result, only one
+    // copy would be needed.
+    Value trueBuffer =
+        *state.getBuffer(rewriter, selectOp->getOpOperand(1) /*true_value*/);
+    Value falseBuffer =
+        *state.getBuffer(rewriter, selectOp->getOpOperand(2) /*false_value*/);
+    replaceOpWithNewBufferizedOp<arith::SelectOp>(
+        rewriter, op, selectOp.getCondition(), trueBuffer, falseBuffer);
+    return success();
+  }
+
+  BufferRelation bufferRelation(Operation *op, OpResult opResult,
+                                const BufferizationState &state) const {
+    return BufferRelation::None;
+  }
+};
+
 } // namespace
-} // namespace arith
-} // namespace mlir
 
 void mlir::arith::registerBufferizableOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addOpInterface<ConstantOp, ConstantOpInterface>();
   registry.addOpInterface<IndexCastOp, IndexCastOpInterface>();
+  registry.addOpInterface<SelectOp, SelectOpInterface>();
 }

@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -newgvn -S | FileCheck %s
+; RUN: opt < %s -passes=newgvn -S | FileCheck %s
 ; PR2503
 
 @g_3 = external global i8		; <i8*> [#uses=2]

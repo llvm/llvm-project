@@ -393,6 +393,43 @@ define <4 x i32> @combine_mul_self_knownbits_vector(<4 x i32> %x) {
   ret <4 x i32> %2
 }
 
+; mul(x,x) - bit[1] is 0, but if demanding the other bits the source must not be undef
+
+define i64 @combine_mul_self_demandedbits(i64 %x) {
+; SSE-LABEL: combine_mul_self_demandedbits:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    imulq %rdi, %rax
+; SSE-NEXT:    andq $-3, %rax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_mul_self_demandedbits:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movq %rdi, %rax
+; AVX-NEXT:    imulq %rdi, %rax
+; AVX-NEXT:    andq $-3, %rax
+; AVX-NEXT:    retq
+  %1 = mul i64 %x, %x
+  %2 = and i64 %1, -3
+  ret i64 %2
+}
+
+define <4 x i32> @combine_mul_self_demandedbits_vector(<4 x i32> %x) {
+; SSE-LABEL: combine_mul_self_demandedbits_vector:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmulld %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_mul_self_demandedbits_vector:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmulld %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = freeze <4 x i32> %x
+  %2 = mul <4 x i32> %1, %1
+  %3 = and <4 x i32> %2, <i32 -3, i32 -3, i32 -3, i32 -3>
+  ret <4 x i32> %3
+}
+
 ; This would infinite loop because DAGCombiner wants to turn this into a shift,
 ; but x86 lowering wants to avoid non-uniform vector shift amounts.
 

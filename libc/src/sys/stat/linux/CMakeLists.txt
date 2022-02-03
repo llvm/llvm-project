@@ -1,0 +1,26 @@
+add_entrypoint_object(
+  mkdir
+  SRCS
+    mkdir.cpp
+  HDRS
+    ../mkdir.h
+  DEPENDS
+    libc.include.fcntl
+    libc.include.sys_stat
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.__errno_location
+)
+
+add_entrypoint_object(
+  mkdirat
+  SRCS
+    mkdirat.cpp
+  HDRS
+    ../mkdirat.h
+  DEPENDS
+    libc.include.sys_stat
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.__errno_location
+)

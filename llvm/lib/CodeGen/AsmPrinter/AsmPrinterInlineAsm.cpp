@@ -398,9 +398,9 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
   if (!RestrRegs.empty()) {
     std::string Msg = "inline asm clobber list contains reserved registers: ";
     ListSeparator LS;
-    for (const Register &RR : RestrRegs) {
+    for (const Register RR : RestrRegs) {
       Msg += LS;
-      Msg += TRI->getName(RR);
+      Msg += TRI->getRegAsmName(RR);
     }
     const char *Note =
         "Reserved registers on the clobber list may not be "

@@ -95,6 +95,8 @@ public:
 
   void LowerJumpTableDest(MCStreamer &OutStreamer, const MachineInstr &MI);
 
+  void LowerMOPS(MCStreamer &OutStreamer, const MachineInstr &MI);
+
   void LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
                      const MachineInstr &MI);
   void LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
@@ -936,6 +938,43 @@ void AArch64AsmPrinter::LowerJumpTableDest(llvm::MCStreamer &OutStreamer,
                                   .addImm(Size == 4 ? 0 : 2));
 }
 
+void AArch64AsmPrinter::LowerMOPS(llvm::MCStreamer &OutStreamer,
+                                  const llvm::MachineInstr &MI) {
+  unsigned Opcode = MI.getOpcode();
+  assert(STI->hasMOPS());
+  assert(STI->hasMTE() || Opcode != AArch64::MOPSMemorySetTaggingPseudo);
+
+  const auto Ops = [Opcode]() -> std::array<unsigned, 3> {
+    if (Opcode == AArch64::MOPSMemoryCopyPseudo)
+      return {AArch64::CPYFP, AArch64::CPYFM, AArch64::CPYFE};
+    if (Opcode == AArch64::MOPSMemoryMovePseudo)
+      return {AArch64::CPYP, AArch64::CPYM, AArch64::CPYE};
+    if (Opcode == AArch64::MOPSMemorySetPseudo)
+      return {AArch64::SETP, AArch64::SETM, AArch64::SETE};
+    if (Opcode == AArch64::MOPSMemorySetTaggingPseudo)
+      return {AArch64::SETGP, AArch64::SETGM, AArch64::MOPSSETGE};
+    llvm_unreachable("Unhandled memory operation pseudo");
+  }();
+  const bool IsSet = Opcode == AArch64::MOPSMemorySetPseudo ||
+                     Opcode == AArch64::MOPSMemorySetTaggingPseudo;
+
+  for (auto Op : Ops) {
+    int i = 0;
+    auto MCIB = MCInstBuilder(Op);
+    // Destination registers
+    MCIB.addReg(MI.getOperand(i++).getReg());
+    MCIB.addReg(MI.getOperand(i++).getReg());
+    if (!IsSet)
+      MCIB.addReg(MI.getOperand(i++).getReg());
+    // Input registers
+    MCIB.addReg(MI.getOperand(i++).getReg());
+    MCIB.addReg(MI.getOperand(i++).getReg());
+    MCIB.addReg(MI.getOperand(i++).getReg());
+
+    EmitToStreamer(OutStreamer, MCIB);
+  }
+}
+
 void AArch64AsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
                                       const MachineInstr &MI) {
   unsigned NumNOPBytes = StackMapOpers(&MI).getNumPatchBytes();
@@ -1361,6 +1400,13 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::FMOVS0:
   case AArch64::FMOVD0:
     emitFMov0(*MI);
+    return;
+
+  case AArch64::MOPSMemoryCopyPseudo:
+  case AArch64::MOPSMemoryMovePseudo:
+  case AArch64::MOPSMemorySetPseudo:
+  case AArch64::MOPSMemorySetTaggingPseudo:
+    LowerMOPS(*OutStreamer, *MI);
     return;
 
   case TargetOpcode::STACKMAP:

@@ -18,7 +18,7 @@ include "mlir/IR/OpAsmInterface.td"
 
 // Base class for Arithmetic dialect ops. Ops in this dialect have no side
 // effects and can be applied element-wise to vectors and tensors.
-class Arith_Op<string mnemonic, list<OpTrait> traits = []> :
+class Arith_Op<string mnemonic, list<Trait> traits = []> :
     Op<Arithmetic_Dialect, mnemonic, traits # [NoSideEffect,
     DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
     ElementwiseMappable.traits>;
@@ -26,41 +26,41 @@ class Arith_Op<string mnemonic, list<OpTrait> traits = []> :
 // Base class for integer and floating point arithmetic ops. All ops have one
 // result, require operands and results to be of the same type, and can accept
 // tensors or vectors of integers or floats.
-class Arith_ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
+class Arith_ArithmeticOp<string mnemonic, list<Trait> traits = []> :
     Arith_Op<mnemonic, traits # [SameOperandsAndResultType]>;
 
 // Base class for unary arithmetic operations.
-class Arith_UnaryOp<string mnemonic, list<OpTrait> traits = []> :
+class Arith_UnaryOp<string mnemonic, list<Trait> traits = []> :
     Arith_ArithmeticOp<mnemonic, traits> {
   let assemblyFormat = "$operand attr-dict `:` type($result)";
 }
 
 // Base class for binary arithmetic operations.
-class Arith_BinaryOp<string mnemonic, list<OpTrait> traits = []> :
+class Arith_BinaryOp<string mnemonic, list<Trait> traits = []> :
     Arith_ArithmeticOp<mnemonic, traits> {
   let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($result)";
 }
 
 // Base class for ternary arithmetic operations.
-class Arith_TernaryOp<string mnemonic, list<OpTrait> traits = []> :
+class Arith_TernaryOp<string mnemonic, list<Trait> traits = []> :
     Arith_ArithmeticOp<mnemonic, traits> {
   let assemblyFormat = "$a `,` $b `,` $c attr-dict `:` type($result)";
 }
 
 // Base class for integer binary operations.
-class Arith_IntBinaryOp<string mnemonic, list<OpTrait> traits = []> :
+class Arith_IntBinaryOp<string mnemonic, list<Trait> traits = []> :
     Arith_BinaryOp<mnemonic, traits>,
     Arguments<(ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs)>,
     Results<(outs SignlessIntegerLike:$result)>;
 
 // Base class for floating point unary operations.
-class Arith_FloatUnaryOp<string mnemonic, list<OpTrait> traits = []> :
+class Arith_FloatUnaryOp<string mnemonic, list<Trait> traits = []> :
     Arith_UnaryOp<mnemonic, traits>,
     Arguments<(ins FloatLike:$operand)>,
     Results<(outs FloatLike:$result)>;
 
 // Base class for floating point binary operations.
-class Arith_FloatBinaryOp<string mnemonic, list<OpTrait> traits = []> :
+class Arith_FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
     Arith_BinaryOp<mnemonic, traits>,
     Arguments<(ins FloatLike:$lhs, FloatLike:$rhs)>,
     Results<(outs FloatLike:$result)>;
@@ -68,7 +68,7 @@ class Arith_FloatBinaryOp<string mnemonic, list<OpTrait> traits = []> :
 // Base class for arithmetic cast operations. Requires a single operand and
 // result. If either is a shaped type, then the other must be of the same shape.
 class Arith_CastOp<string mnemonic, TypeConstraint From, TypeConstraint To,
-                   list<OpTrait> traits = []> :
+                   list<Trait> traits = []> :
     Arith_Op<mnemonic, traits # [SameOperandsAndResultShape,
     DeclareOpInterfaceMethods<CastOpInterface>]>,
     Arguments<(ins From:$in)>,
@@ -91,23 +91,23 @@ def SignlessFixedWidthIntegerLike : TypeConstraint<Or<[
     "signless-fixed-width-integer-like">;
 
 // Cast from an integer type to another integer type.
-class Arith_IToICastOp<string mnemonic, list<OpTrait> traits = []> :
+class Arith_IToICastOp<string mnemonic, list<Trait> traits = []> :
     Arith_CastOp<mnemonic, SignlessFixedWidthIntegerLike,
                            SignlessFixedWidthIntegerLike, traits>;
 // Cast from an integer type to a floating point type.
-class Arith_IToFCastOp<string mnemonic, list<OpTrait> traits = []> :
+class Arith_IToFCastOp<string mnemonic, list<Trait> traits = []> :
     Arith_CastOp<mnemonic, SignlessFixedWidthIntegerLike, FloatLike, traits>;
 // Cast from a floating point type to an integer type.
-class Arith_FToICastOp<string mnemonic, list<OpTrait> traits = []> :
+class Arith_FToICastOp<string mnemonic, list<Trait> traits = []> :
     Arith_CastOp<mnemonic, FloatLike, SignlessFixedWidthIntegerLike, traits>;
 // Cast from a floating point type to another floating point type.
-class Arith_FToFCastOp<string mnemonic, list<OpTrait> traits = []> :
+class Arith_FToFCastOp<string mnemonic, list<Trait> traits = []> :
     Arith_CastOp<mnemonic, FloatLike, FloatLike, traits>;
 
 // Base class for compare operations. Requires two operands of the same type
 // and returns a single `BoolLike` result. If the operand type is a vector or
 // tensor, then the result will be one of `i1` of the same shape.
-class Arith_CompareOp<string mnemonic, list<OpTrait> traits = []> :
+class Arith_CompareOp<string mnemonic, list<Trait> traits = []> :
     Arith_Op<mnemonic, traits # [SameTypeOperands, TypesMatchWith<
     "result type has i1 element type and same shape as operands",
     "lhs", "result", "::getI1SameShape($_self)">]> {
@@ -118,7 +118,7 @@ class Arith_CompareOp<string mnemonic, list<OpTrait> traits = []> :
 
 // Just like `Arith_CompareOp` but also admits 0-D vectors. Introduced
 // temporarily to allow gradual transition to 0-D vectors.
-class Arith_CompareOpOfAnyRank<string mnemonic, list<OpTrait> traits = []> :
+class Arith_CompareOpOfAnyRank<string mnemonic, list<Trait> traits = []> :
     Arith_CompareOp<mnemonic, traits> {
   let results = (outs BoolLikeOfAnyRank:$result);
 }
@@ -158,7 +158,6 @@ def Arith_ConstantOp : Op<Arithmetic_Dialect, "constant",
   // of strings and signed/unsigned integers (for now) as an artefact of
   // splitting the Standard dialect.
   let results = (outs /*SignlessIntegerOrFloatLike*/AnyType:$result);
-  let verifier = [{ return ::verify(*this); }];
 
   let builders = [
     OpBuilder<(ins "Attribute":$value),
@@ -175,6 +174,7 @@ def Arith_ConstantOp : Op<Arithmetic_Dialect, "constant",
 
   let hasFolder = 1;
   let assemblyFormat = "attr-dict $value";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -594,7 +594,7 @@ def Arith_NegFOp : Arith_FloatUnaryOp<"negf"> {
 // AddFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_AddFOp : Arith_FloatBinaryOp<"addf"> {
+def Arith_AddFOp : Arith_FloatBinaryOp<"addf", [Commutative]> {
   let summary = "floating point addition operation";
   let description = [{
     The `addf` operation takes two operands and returns one result, each of
@@ -627,6 +627,28 @@ def Arith_AddFOp : Arith_FloatBinaryOp<"addf"> {
 
 def Arith_SubFOp : Arith_FloatBinaryOp<"subf"> {
   let summary = "floating point subtraction operation";
+  let description = [{
+    The `subf` operation takes two operands and returns one result, each of
+    these is required to be the same type. This type may be a floating point
+    scalar type, a vector whose element type is a floating point type, or a
+    floating point tensor.
+
+    Example:
+
+    ```mlir
+    // Scalar subtraction.
+    %a = arith.subf %b, %c : f64
+
+    // SIMD vector subtraction, e.g. for Intel SSE.
+    %f = arith.subf %g, %h : vector<4xf32>
+
+    // Tensor subtraction.
+    %x = arith.subf %y, %z : tensor<4x?xbf16>
+    ```
+
+    TODO: In the distant future, this will accept optional attributes for fast
+    math, contraction, rounding mode, and other controls.
+  }];
   let hasFolder = 1;
 }
 
@@ -653,6 +675,7 @@ def Arith_MaxFOp : Arith_FloatBinaryOp<"maxf", [Commutative]> {
     %a = arith.maxf %b, %c : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -696,6 +719,7 @@ def Arith_MinFOp : Arith_FloatBinaryOp<"minf", [Commutative]> {
     %a = arith.minf %b, %c : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -721,7 +745,7 @@ def Arith_MinUIOp : Arith_IntBinaryOp<"minui"> {
 // MulFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MulFOp : Arith_FloatBinaryOp<"mulf"> {
+def Arith_MulFOp : Arith_FloatBinaryOp<"mulf", [Commutative]> {
   let summary = "floating point multiplication operation";
   let description = [{
     The `mulf` operation takes two operands and returns one result, each of
@@ -790,7 +814,7 @@ def Arith_ExtUIOp : Arith_IToICastOp<"extui"> {
   }];
 
   let hasFolder = 1;
-  let verifier = [{ return verifyExtOp<IntegerType>(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -821,7 +845,7 @@ def Arith_ExtSIOp : Arith_IToICastOp<"extsi"> {
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
-  let verifier = [{ return verifyExtOp<IntegerType>(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -835,8 +859,7 @@ def Arith_ExtFOp : Arith_FToFCastOp<"extf"> {
     The destination type must to be strictly wider than the source type.
     When operating on vectors, casts elementwise.
   }];
-
-  let verifier = [{ return verifyExtOp<FloatType>(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -863,7 +886,7 @@ def Arith_TruncIOp : Arith_IToICastOp<"trunci"> {
   }];
 
   let hasFolder = 1;
-  let verifier = [{ return verifyTruncateOp<IntegerType>(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -880,7 +903,7 @@ def Arith_TruncFOp : Arith_FToFCastOp<"truncf"> {
   }];
 
   let hasFolder = 1;
-  let verifier = [{ return verifyTruncateOp<FloatType>(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1065,7 +1088,7 @@ def Arith_CmpIOp : Arith_CompareOpOfAnyRank<"cmpi"> {
     %x = arith.cmpi "eq", %lhs, %rhs : vector<4xi64>
 
     // Generic form of the same operation.
-    %x = "std.arith.cmpi"(%lhs, %rhs) {predicate = 0 : i64}
+    %x = "arith.cmpi"(%lhs, %rhs) {predicate = 0 : i64}
         : (vector<4xi64>, vector<4xi64>) -> vector<4xi1>
     ```
   }];
@@ -1136,6 +1159,57 @@ def Arith_CmpFOp : Arith_CompareOp<"cmpf"> {
   }];
 
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// SelectOp
+//===----------------------------------------------------------------------===//
+
+def SelectOp : Arith_Op<"select", [
+    AllTypesMatch<["true_value", "false_value", "result"]>
+  ] # ElementwiseMappable.traits> {
+  let summary = "select operation";
+  let description = [{
+    The `arith.select` operation chooses one value based on a binary condition
+    supplied as its first operand. If the value of the first operand is `1`,
+    the second operand is chosen, otherwise the third operand is chosen.
+    The second and the third operand must have the same type.
+
+    The operation applies to vectors and tensors elementwise given the _shape_
+    of all operands is identical. The choice is made for each element
+    individually based on the value at the same position as the element in the
+    condition operand. If an i1 is provided as the condition, the entire vector
+    or tensor is chosen.
+
+    Example:
+
+    ```mlir
+    // Custom form of scalar selection.
+    %x = arith.select %cond, %true, %false : i32
+
+    // Generic form of the same operation.
+    %x = "arith.select"(%cond, %true, %false) : (i1, i32, i32) -> i32
+
+    // Element-wise vector selection.
+    %vx = arith.select %vcond, %vtrue, %vfalse : vector<42xi1>, vector<42xf32>
+
+    // Full vector selection.
+    %vx = arith.select %cond, %vtrue, %vfalse : vector<42xf32>
+    ```
+  }];
+
+  let arguments = (ins BoolLike:$condition,
+                       AnyType:$true_value,
+                       AnyType:$false_value);
+  let results = (outs AnyType:$result);
+
+  let hasCanonicalizer = 1;
+  let hasFolder = 1;
+  let hasVerifier = 1;
+  
+  // FIXME: Switch this to use the declarative assembly format.
+  let printer = [{ return ::print(p, *this); }];
+  let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
 #endif // ARITHMETIC_OPS

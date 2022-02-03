@@ -31,16 +31,16 @@ static const Scope *FindScopeContaining(
     if (predicate(*scope)) {
       return scope;
     }
-    if (scope->IsGlobal()) {
+    if (scope->IsTopLevel()) {
       return nullptr;
     }
   }
 }
 
 const Scope &GetTopLevelUnitContaining(const Scope &start) {
-  CHECK(!start.IsGlobal());
+  CHECK(!start.IsTopLevel());
   return DEREF(FindScopeContaining(
-      start, [](const Scope &scope) { return scope.parent().IsGlobal(); }));
+      start, [](const Scope &scope) { return scope.parent().IsTopLevel(); }));
 }
 
 const Scope &GetTopLevelUnitContaining(const Symbol &symbol) {
@@ -58,7 +58,7 @@ const Scope *FindModuleFileContaining(const Scope &start) {
 }
 
 const Scope &GetProgramUnitContaining(const Scope &start) {
-  CHECK(!start.IsGlobal());
+  CHECK(!start.IsTopLevel());
   return DEREF(FindScopeContaining(start, [](const Scope &scope) {
     switch (scope.kind()) {
     case Scope::Kind::Module:
@@ -80,7 +80,7 @@ const Scope *FindPureProcedureContaining(const Scope &start) {
   // N.B. We only need to examine the innermost containing program unit
   // because an internal subprogram of a pure subprogram must also
   // be pure (C1592).
-  if (start.IsGlobal()) {
+  if (start.IsTopLevel()) {
     return nullptr;
   } else {
     const Scope &scope{GetProgramUnitContaining(start)};
@@ -203,7 +203,7 @@ bool IsUseAssociated(const Symbol &symbol, const Scope &scope) {
 
 bool DoesScopeContain(
     const Scope *maybeAncestor, const Scope &maybeDescendent) {
-  return maybeAncestor && !maybeDescendent.IsGlobal() &&
+  return maybeAncestor && !maybeDescendent.IsTopLevel() &&
       FindScopeContaining(maybeDescendent.parent(),
           [&](const Scope &scope) { return &scope == maybeAncestor; });
 }
@@ -1094,6 +1094,7 @@ ProcedureDefinitionClass ClassifyProcedure(const Symbol &symbol) { // 15.2.2
     }
     switch (ultimate.owner().kind()) {
     case Scope::Kind::Global:
+    case Scope::Kind::IntrinsicModules:
       return ProcedureDefinitionClass::External;
     case Scope::Kind::Module:
       return ProcedureDefinitionClass::Module;

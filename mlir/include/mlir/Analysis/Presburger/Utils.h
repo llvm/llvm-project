@@ -35,7 +35,7 @@ struct MaybeLocalRepr {
     unsigned equalityIdx;
     struct {
       unsigned lowerBoundIdx, upperBoundIdx;
-    } inEqualityPair;
+    } inequalityPair;
   } repr;
 };
 
@@ -43,10 +43,11 @@ struct MaybeLocalRepr {
 /// function of other identifiers (where the divisor is a positive constant).
 /// `foundRepr` contains a boolean for each identifier indicating if the
 /// explicit representation for that identifier has already been computed.
-/// Returns the upper and lower bound inequalities using which the floordiv
-/// can be computed. If the representation could be computed, `dividend` and
-/// `denominator` are set. If the representation could not be computed,
-/// `llvm::None` is returned.
+/// Returns the `MaybeLocalRepr` struct which contains the indices of the
+/// constraints that can be expressed as a floordiv of an affine function. If
+/// the representation could be computed, `dividend` and `denominator` are set.
+/// If the representation could not be computed, the kind attribute in
+/// `MaybeLocalRepr` is set to None.
 MaybeLocalRepr computeSingleVarRepr(const IntegerPolyhedron &cst,
                                     ArrayRef<bool> foundRepr, unsigned pos,
                                     SmallVector<int64_t, 8> &dividend,
@@ -64,7 +65,7 @@ MaybeLocalRepr computeSingleVarRepr(const IntegerPolyhedron &cst,
 /// the divisions are not merged. `merge` can also do side effects, For example
 /// it can merge the local identifiers in IntegerPolyhedron.
 void removeDuplicateDivs(
-    std::vector<SmallVector<int64_t, 8>> &divs,
+    SmallVectorImpl<SmallVector<int64_t, 8>> &divs,
     SmallVectorImpl<unsigned> &denoms, unsigned localOffset,
     llvm::function_ref<bool(unsigned i, unsigned j)> merge);
 

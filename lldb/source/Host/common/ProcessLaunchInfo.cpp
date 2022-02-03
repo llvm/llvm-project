@@ -183,7 +183,7 @@ void ProcessLaunchInfo::SetMonitorProcessCallback(
 }
 
 bool ProcessLaunchInfo::NoOpMonitorCallback(lldb::pid_t pid, bool exited, int signal, int status) {
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS);
+  Log *log = GetLog(LLDBLog::Process);
   LLDB_LOG(log, "pid = {0}, exited = {1}, signal = {2}, status = {3}", pid,
            exited, signal, status);
   return true;
@@ -195,8 +195,7 @@ bool ProcessLaunchInfo::MonitorProcess() const {
     Host::StartMonitoringChildProcess(m_monitor_callback, GetProcessID(),
                                       m_monitor_signals);
     if (!maybe_thread)
-      LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST),
-               "failed to launch host thread: {}",
+      LLDB_LOG(GetLog(LLDBLog::Host), "failed to launch host thread: {}",
                llvm::toString(maybe_thread.takeError()));
     return true;
   }
@@ -211,7 +210,7 @@ void ProcessLaunchInfo::SetDetachOnError(bool enable) {
 }
 
 llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS);
+  Log *log = GetLog(LLDBLog::Process);
 
   bool stdin_free = GetFileActionForFD(STDIN_FILENO) == nullptr;
   bool stdout_free = GetFileActionForFD(STDOUT_FILENO) == nullptr;

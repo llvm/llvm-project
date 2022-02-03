@@ -19,10 +19,9 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Instruction.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -204,11 +203,6 @@ public:
   /// For example this could happen due to relocations on unwinding
   /// path of invoke.
   inline std::vector<const GCRelocateInst *> getGCRelocates() const;
-
-  /// Returns pair of boolean flags. The first one is true is there is
-  /// a gc.result intrinsic in the same block as statepoint. The second flag
-  /// is true if there is an intrinsic outside of the block with statepoint.
-  inline std::pair<bool, bool> getGCResultLocality() const;
 };
 
 std::vector<const GCRelocateInst *> GCStatepointInst::getGCRelocates() const {
@@ -234,18 +228,6 @@ std::vector<const GCRelocateInst *> GCStatepointInst::getGCRelocates() const {
       Result.push_back(Relocate);
   }
   return Result;
-}
-
-std::pair<bool, bool> GCStatepointInst::getGCResultLocality() const {
-  std::pair<bool, bool> Res(false, false);
-  for (auto *U : users())
-    if (auto *GRI = dyn_cast<GCResultInst>(U)) {
-      if (GRI->getParent() == this->getParent())
-        Res.first = true;
-      else
-        Res.second = true;
-    }
-  return Res;
 }
 
 /// Call sites that get wrapped by a gc.statepoint (currently only in

@@ -977,7 +977,7 @@ bool DWARFExpression::Evaluate(
   uint64_t op_piece_offset = 0;
   Value pieces; // Used for DW_OP_piece
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
   // A generic type is "an integral type that has the size of an address and an
   // unspecified signedness". For now, just use the signedness of the operand.
   // TODO: Implement a real typed stack, and store the genericness of the value
@@ -2673,7 +2673,7 @@ static DataExtractor ToDataExtractor(const llvm::DWARFLocationExpression &loc,
 llvm::Optional<DataExtractor>
 DWARFExpression::GetLocationExpression(addr_t load_function_start,
                                        addr_t addr) const {
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+  Log *log = GetLog(LLDBLog::Expressions);
 
   std::unique_ptr<llvm::DWARFLocationTable> loctable_up =
       m_dwarf_cu->GetLocationTable(m_data);

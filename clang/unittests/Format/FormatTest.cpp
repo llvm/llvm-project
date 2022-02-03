@@ -3123,6 +3123,46 @@ TEST_F(FormatTest, UnderstandsAccessSpecifiers) {
                "label:\n"
                "  signals.baz();\n"
                "}");
+  verifyFormat("private[1];");
+  verifyFormat("testArray[public] = 1;");
+  verifyFormat("public();");
+  verifyFormat("myFunc(public);");
+  verifyFormat("std::vector<int> testVec = {private};");
+  verifyFormat("private.p = 1;");
+  verifyFormat("void function(private...){};");
+  verifyFormat("if (private && public)\n");
+  verifyFormat("private &= true;");
+  verifyFormat("int x = private * public;");
+  verifyFormat("public *= private;");
+  verifyFormat("int x = public + private;");
+  verifyFormat("private++;");
+  verifyFormat("++private;");
+  verifyFormat("public += private;");
+  verifyFormat("public = public - private;");
+  verifyFormat("public->foo();");
+  verifyFormat("private--;");
+  verifyFormat("--private;");
+  verifyFormat("public -= 1;");
+  verifyFormat("if (!private && !public)\n");
+  verifyFormat("public != private;");
+  verifyFormat("int x = public / private;");
+  verifyFormat("public /= 2;");
+  verifyFormat("public = public % 2;");
+  verifyFormat("public %= 2;");
+  verifyFormat("if (public < private)\n");
+  verifyFormat("public << private;");
+  verifyFormat("public <<= private;");
+  verifyFormat("if (public > private)\n");
+  verifyFormat("public >> private;");
+  verifyFormat("public >>= private;");
+  verifyFormat("public ^ private;");
+  verifyFormat("public ^= private;");
+  verifyFormat("public | private;");
+  verifyFormat("public |= private;");
+  verifyFormat("auto x = private ? 1 : 2;");
+  verifyFormat("if (public == private)\n");
+  verifyFormat("void foo(public, private)");
+  verifyFormat("public::foo();");
 }
 
 TEST_F(FormatTest, SeparatesLogicalBlocks) {
@@ -16522,7 +16562,7 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                "y = 1;\n",
                Alignment);
 
-  Alignment.ReflowComments = true;
+  EXPECT_EQ(Alignment.ReflowComments, true);
   Alignment.ColumnLimit = 50;
   EXPECT_EQ("int x   = 0;\n"
             "int yy  = 1; /// specificlennospace\n"
@@ -16531,6 +16571,43 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                    "int yy  = 1; ///specificlennospace\n"
                    "int zzz = 2;\n",
                    Alignment));
+
+  verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};\n"
+               "auto b                     = [] {\n"
+               "  f();\n"
+               "  return;\n"
+               "};",
+               Alignment);
+  verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};\n"
+               "auto b                     = g([] {\n"
+               "  f();\n"
+               "  return;\n"
+               "});",
+               Alignment);
+  verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};\n"
+               "auto b                     = g(param, [] {\n"
+               "  f();\n"
+               "  return;\n"
+               "});",
+               Alignment);
+  verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};\n"
+               "auto b                     = [] {\n"
+               "  if (condition) {\n"
+               "    return;\n"
+               "  }\n"
+               "};",
+               Alignment);
+
+  verifyFormat("auto b = f(aaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "           ccc ? aaaaa : bbbbb,\n"
+               "           dddddddddddddddddddddddddd);",
+               Alignment);
+  // FIXME: https://llvm.org/PR53497
+  // verifyFormat("auto aaaaaaaaaaaa = f();\n"
+  //              "auto b            = f(aaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+  //              "    ccc ? aaaaa : bbbbb,\n"
+  //              "    dddddddddddddddddddddddddd);",
+  //              Alignment);
 }
 
 TEST_F(FormatTest, AlignConsecutiveBitFields) {
@@ -24140,6 +24217,16 @@ TEST_F(FormatTest, AlignAfterOpenBracketBlockIndentForStatement) {
                "  doSomething();\n"
                "}",
                Style);
+}
+
+TEST_F(FormatTest, UnderstandsDigraphs) {
+  verifyFormat("int arr<:5:> = {};");
+  verifyFormat("int arr[5] = <%%>;");
+  verifyFormat("int arr<:::qualified_variable:> = {};");
+  verifyFormat("int arr[::qualified_variable] = <%%>;");
+  verifyFormat("%:include <header>");
+  verifyFormat("%:define A x##y");
+  verifyFormat("#define A x%:%:y");
 }
 
 } // namespace

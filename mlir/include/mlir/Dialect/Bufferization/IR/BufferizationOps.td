@@ -15,7 +15,7 @@ include "mlir/Dialect/Bufferization/IR/BufferizationBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CopyOpInterface.td"
 
-class Bufferization_Op<string mnemonic, list<OpTrait> traits = []>
+class Bufferization_Op<string mnemonic, list<Trait> traits = []>
     : Op<Bufferization_Dialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
@@ -58,7 +58,6 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
   let assemblyFormat = "$input attr-dict `:` type($input) `to` type($output)";
 
   let hasFolder = 1;
-  let verifier = ?;
   let hasCanonicalizer = 1;
 }
 //===----------------------------------------------------------------------===//
@@ -97,8 +96,6 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
   let arguments = (ins Arg<AnyRankedOrUnrankedMemRef,
                        "the reference to load from", [MemRead]>:$memref);
   let results = (outs AnyTensor:$result);
-  // MemrefToTensor is fully verified by traits.
-  let verifier = ?;
 
   let builders = [
     OpBuilder<(ins "Value":$memref), [{
@@ -184,8 +181,6 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
 
   let arguments = (ins AnyTensor:$tensor);
   let results = (outs AnyRankedOrUnrankedMemRef:$memref);
-  // This op is fully verified by traits.
-  let verifier = ?;
 
   let extraClassDeclaration = [{
     //===------------------------------------------------------------------===//

@@ -123,6 +123,9 @@ extern "C" void mlirAsyncRuntimeAwaitValueAndExecute(AsyncValue *, CoroHandle,
 extern "C" void
 mlirAsyncRuntimeAwaitAllInGroupAndExecute(AsyncGroup *, CoroHandle, CoroResume);
 
+// Returns the current number of available worker threads in the threadpool.
+extern "C" int64_t mlirAsyncRuntimGetNumWorkerThreads();
+
 //===----------------------------------------------------------------------===//
 // Small async runtime support library for testing.
 //===----------------------------------------------------------------------===//

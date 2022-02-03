@@ -432,45 +432,45 @@ implementation detail and not intended to be used by external users.
 
 The syntax of the attribute is as follows:
 
-.. code-block:: c++
+.. code-block:: text
 
-   class __attribute__((sycl_special_class)) accessor {};
-   class [[clang::sycl_special_class]] accessor {};
+  class __attribute__((sycl_special_class)) accessor {};
+  class [[clang::sycl_special_class]] accessor {};
 
 This is a code example that illustrates the use of the attribute:
 
 .. code-block:: c++
 
-   class __attribute__((sycl_special_class)) SpecialType {
-   int F1;
-   int F2;
-   void __init(int f1) {
-     F1 = f1;
-     F2 = f1;
-   }
-   void __finalize() {}
-   public:
-     SpecialType() = default;
-     int getF2() const { return F2; }
-   };
+  class __attribute__((sycl_special_class)) SpecialType {
+    int F1;
+    int F2;
+    void __init(int f1) {
+      F1 = f1;
+      F2 = f1;
+    }
+    void __finalize() {}
+  public:
+    SpecialType() = default;
+    int getF2() const { return F2; }
+  };
 
-   int main () {
-   SpecialType T;
-   cgh.single_task([=] {
-     T.getF2();
-   });
-}
+  int main () {
+    SpecialType T;
+    cgh.single_task([=] {
+      T.getF2();
+    });
+  }
 
 This would trigger the following kernel entry point in the AST:
 
 .. code-block:: c++
 
-   void __sycl_kernel(int f1) {
-   SpecialType T;
-   T.__init(f1);
-   ...
-   T.__finalize()
- }
+  void __sycl_kernel(int f1) {
+    SpecialType T;
+    T.__init(f1);
+    ...
+    T.__finalize()
+  }
   }];
 }
 

@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// We need to include config.h here because LLVM_DEFAULT_TARGET_TRIPLE is not
+// defined in llvm-config.h if it is unset.
+#include "llvm/Config/config.h"
 #include "llvm/Support/Windows/WindowsSupport.h"
 #include <cstdio>
 #include <string>

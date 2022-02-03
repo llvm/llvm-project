@@ -3370,8 +3370,9 @@ QualType ASTContext::getBlockPointerType(QualType T) const {
 /// lvalue reference to the specified type.
 QualType
 ASTContext::getLValueReferenceType(QualType T, bool SpelledAsLValue) const {
-  assert(getCanonicalType(T) != OverloadTy &&
-         "Unresolved overloaded function type");
+  assert((!T->isPlaceholderType() ||
+          T->isSpecificPlaceholderType(BuiltinType::UnknownAny)) &&
+         "Unresolved placeholder type");
 
   // Unique pointers, to guarantee there is only one pointer of a particular
   // structure.
@@ -3409,6 +3410,10 @@ ASTContext::getLValueReferenceType(QualType T, bool SpelledAsLValue) const {
 /// getRValueReferenceType - Return the uniqued reference to the type for an
 /// rvalue reference to the specified type.
 QualType ASTContext::getRValueReferenceType(QualType T) const {
+  assert((!T->isPlaceholderType() ||
+          T->isSpecificPlaceholderType(BuiltinType::UnknownAny)) &&
+         "Unresolved placeholder type");
+
   // Unique pointers, to guarantee there is only one pointer of a particular
   // structure.
   llvm::FoldingSetNodeID ID;
@@ -8290,6 +8295,11 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
       *NotEncodedT = T;
     return;
 
+  case Type::BitInt:
+    if (NotEncodedT)
+      *NotEncodedT = T;
+    return;
+
   // We could see an undeduced auto type here during error recovery.
   // Just ignore it.
   case Type::Auto:
@@ -8297,7 +8307,6 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
     return;
 
   case Type::Pipe:
-  case Type::BitInt:
 #define ABSTRACT_TYPE(KIND, BASE)
 #define TYPE(KIND, BASE)
 #define DEPENDENT_TYPE(KIND, BASE) \

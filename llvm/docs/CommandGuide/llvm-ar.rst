@@ -201,10 +201,8 @@ section to determine which modifiers are applicable to which operations.
 
 .. option:: T
 
- When creating or modifying an archive, this option specifies that the
- ``archive`` will be thin. By default, archives are not created as thin
- archives and when modifying a thin archive, it will be converted to a regular
- archive.
+ Alias for ``--thin``. In many ar implementations ``T`` has a different
+ meaning, as specified by X/Open System interface.
 
 .. option:: v
 
@@ -280,6 +278,12 @@ Other
  This option selects the quoting style ``<type>`` for response files, either
  ``posix`` or ``windows``. The default when on Windows is ``windows``, otherwise the
  default is ``posix``.
+
+.. option:: --thin
+
+ When creating or modifying an archive, this option specifies that the
+ ``archive`` will be thin. By default, archives are not created as thin archives
+ and when modifying a thin archive, it will be converted to a regular archive.
 
 .. option:: --version
 

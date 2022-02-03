@@ -327,6 +327,12 @@ Tool *ToolChain::getOffloadWrapper() const {
   return OffloadWrapper.get();
 }
 
+Tool *ToolChain::getLinkerWrapper() const {
+  if (!LinkerWrapper)
+    LinkerWrapper.reset(new tools::LinkerWrapper(*this, getLink()));
+  return LinkerWrapper.get();
+}
+
 Tool *ToolChain::getTool(Action::ActionClass AC) const {
   switch (AC) {
   case Action::AssembleJobClass:
@@ -365,6 +371,8 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
 
   case Action::OffloadWrapperJobClass:
     return getOffloadWrapper();
+  case Action::LinkerWrapperJobClass:
+    return getLinkerWrapper();
   }
 
   llvm_unreachable("Invalid tool kind.");
@@ -1129,8 +1137,10 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
         A->getOption().matches(options::OPT_Xopenmp_target);
 
     if (A->getOption().matches(options::OPT_Xopenmp_target_EQ)) {
+      llvm::Triple TT(getOpenMPTriple(A->getValue(0)));
+
       // Passing device args: -Xopenmp-target=<triple> -opt=val.
-      if (A->getValue(0) == getTripleString())
+      if (TT.getTriple() == getTripleString())
         Index = Args.getBaseArgs().MakeIndex(A->getValue(1));
       else
         continue;

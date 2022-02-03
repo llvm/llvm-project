@@ -29,7 +29,7 @@ class GDBJITDebugInfoRegistrationPlugin : public ObjectLinkingLayer::Plugin {
 public:
   class DebugSectionSynthesizer {
   public:
-    virtual ~DebugSectionSynthesizer() {}
+    virtual ~DebugSectionSynthesizer() = default;
     virtual Error startSynthesis() = 0;
     virtual Error completeSynthesisAndRegister() = 0;
   };

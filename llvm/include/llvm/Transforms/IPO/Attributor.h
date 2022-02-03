@@ -132,12 +132,18 @@ struct AbstractAttribute;
 struct InformationCache;
 struct AAIsDead;
 struct AttributorCallGraph;
+struct IRPosition;
 
 class AAResults;
 class Function;
 
 /// Abstract Attribute helper functions.
 namespace AA {
+
+/// Return true if \p I is a `nosync` instruction. Use generic reasoning and
+/// potentially the corresponding AANoSync.
+bool isNoSyncInst(Attributor &A, const Instruction &I,
+                  const AbstractAttribute &QueryingAA);
 
 /// Return true if \p V is dynamically unique, that is, there are no two
 /// "instances" of \p V at runtime with different values.
@@ -185,7 +191,8 @@ Constant *getInitialValueForObj(Value &Obj, Type &Ty,
 bool getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
                                  SmallVectorImpl<Value *> &Objects,
                                  const AbstractAttribute &QueryingAA,
-                                 const Instruction *CtxI);
+                                 const Instruction *CtxI,
+                                 bool Intraprocedural = false);
 
 /// Collect all potential values of the one stored by \p SI into
 /// \p PotentialCopies. That is, the only copies that were made via the
@@ -199,6 +206,34 @@ bool getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
 bool getPotentialCopiesOfStoredValue(
     Attributor &A, StoreInst &SI, SmallSetVector<Value *, 4> &PotentialCopies,
     const AbstractAttribute &QueryingAA, bool &UsedAssumedInformation);
+
+/// Return true if \p IRP is readonly. This will query respective AAs that
+/// deduce the information and introduce dependences for \p QueryingAA.
+bool isAssumedReadOnly(Attributor &A, const IRPosition &IRP,
+                       const AbstractAttribute &QueryingAA, bool &IsKnown);
+
+/// Return true if \p IRP is readnone. This will query respective AAs that
+/// deduce the information and introduce dependences for \p QueryingAA.
+bool isAssumedReadNone(Attributor &A, const IRPosition &IRP,
+                       const AbstractAttribute &QueryingAA, bool &IsKnown);
+
+/// Return true if \p ToI is potentially reachable from \p FromI. The two
+/// instructions do not need to be in the same function. \p GoBackwardsCB
+/// can be provided to convey domain knowledge about the "lifespan" the user is
+/// interested in. By default, the callers of \p FromI are checked as well to
+/// determine if \p ToI can be reached. If the query is not interested in
+/// callers beyond a certain point, e.g., a GPU kernel entry or the function
+/// containing an alloca, the \p GoBackwardsCB should return false.
+bool isPotentiallyReachable(
+    Attributor &A, const Instruction &FromI, const Instruction &ToI,
+    const AbstractAttribute &QueryingAA,
+    std::function<bool(const Function &F)> GoBackwardsCB = nullptr);
+
+/// Same as above but it is sufficient to reach any instruction in \p ToFn.
+bool isPotentiallyReachable(
+    Attributor &A, const Instruction &FromI, const Function &ToFn,
+    const AbstractAttribute &QueryingAA,
+    std::function<bool(const Function &F)> GoBackwardsCB);
 
 } // namespace AA
 
@@ -227,7 +262,7 @@ enum class DepClassTy {
 /// The data structure for the nodes of a dependency graph
 struct AADepGraphNode {
 public:
-  virtual ~AADepGraphNode(){};
+  virtual ~AADepGraphNode() = default;
   using DepTy = PointerIntPair<AADepGraphNode *, 1>;
 
 protected:
@@ -266,8 +301,8 @@ public:
 /// then it means that B depends on A, and when the state of A is
 /// updated, node B should also be updated
 struct AADepGraph {
-  AADepGraph() {}
-  ~AADepGraph() {}
+  AADepGraph() = default;
+  ~AADepGraph() = default;
 
   using DepTy = AADepGraphNode::DepTy;
   static AADepGraphNode *DepGetVal(DepTy &DT) { return DT.getPointer(); }
@@ -332,6 +367,14 @@ struct IRPosition {
     if (auto *CB = dyn_cast<CallBase>(&V))
       return IRPosition::callsite_returned(*CB);
     return IRPosition(const_cast<Value &>(V), IRP_FLOAT, CBContext);
+  }
+
+  /// Create a position describing the instruction \p I. This is different from
+  /// the value version because call sites are treated as intrusctions rather
+  /// than their return value in this function.
+  static const IRPosition inst(const Instruction &I,
+                               const CallBaseContext *CBContext = nullptr) {
+    return IRPosition(const_cast<Instruction &>(I), IRP_FLOAT, CBContext);
   }
 
   /// Create a position describing the function scope of \p F.
@@ -662,7 +705,7 @@ private:
       break;
     case IRPosition::IRP_FLOAT:
       // Special case for floating functions.
-      if (isa<Function>(AnchorVal))
+      if (isa<Function>(AnchorVal) || isa<CallBase>(AnchorVal))
         Enc = {&AnchorVal, ENC_FLOATING_FUNCTION};
       else
         Enc = {&AnchorVal, ENC_VALUE};
@@ -844,7 +887,7 @@ struct AnalysisGetter {
   }
 
   AnalysisGetter(FunctionAnalysisManager &FAM) : FAM(&FAM) {}
-  AnalysisGetter() {}
+  AnalysisGetter() = default;
 
 private:
   FunctionAnalysisManager *FAM = nullptr;
@@ -879,7 +922,7 @@ struct InformationCache {
             [&](const Function &F) {
               return AG.getAnalysis<PostDominatorTreeAnalysis>(F);
             }),
-        AG(AG), CGSCC(CGSCC), TargetTriple(M.getTargetTriple()) {
+        AG(AG), TargetTriple(M.getTargetTriple()) {
     if (CGSCC)
       initializeModuleSlice(*CGSCC);
   }
@@ -996,13 +1039,6 @@ struct InformationCache {
     return AG.getAnalysis<AP>(F);
   }
 
-  /// Return SCC size on call graph for function \p F or 0 if unknown.
-  unsigned getSccSize(const Function &F) {
-    if (CGSCC && CGSCC->count(const_cast<Function *>(&F)))
-      return CGSCC->size();
-    return 0;
-  }
-
   /// Return datalayout used in the module.
   const DataLayout &getDL() { return DL; }
 
@@ -1091,9 +1127,6 @@ private:
 
   /// Getters for analysis.
   AnalysisGetter &AG;
-
-  /// The underlying CGSCC, or null if not available.
-  SetVector<Function *> *CGSCC;
 
   /// Set of inlineable functions
   SmallPtrSet<const Function *, 8> InlineableFunctions;
@@ -1361,6 +1394,9 @@ struct Attributor {
       return nullptr;
     return AA;
   }
+
+  /// Allows a query AA to request an update if a new query was received.
+  void registerForUpdate(AbstractAttribute &AA);
 
   /// Explicitly record a dependence from \p FromAA to \p ToAA, that is if
   /// \p FromAA changes \p ToAA should be updated as well.
@@ -1794,6 +1830,18 @@ public:
                             const AbstractAttribute &QueryingAA,
                             bool RequireAllCallSites, bool &AllCallSitesKnown);
 
+  /// Check \p Pred on all call sites of \p Fn.
+  ///
+  /// This method will evaluate \p Pred on call sites and return
+  /// true if \p Pred holds in every call sites. However, this is only possible
+  /// all call sites are known, hence the function has internal linkage.
+  /// If true is returned, \p AllCallSitesKnown is set if all possible call
+  /// sites of the function have been visited.
+  bool checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
+                            const Function &Fn, bool RequireAllCallSites,
+                            const AbstractAttribute *QueryingAA,
+                            bool &AllCallSitesKnown);
+
   /// Check \p Pred on all values potentially returned by \p F.
   ///
   /// This method will evaluate \p Pred on all values potentially returned by
@@ -1932,18 +1980,6 @@ private:
   /// may trigger further updates. (\see DependenceStack)
   void rememberDependences();
 
-  /// Check \p Pred on all call sites of \p Fn.
-  ///
-  /// This method will evaluate \p Pred on call sites and return
-  /// true if \p Pred holds in every call sites. However, this is only possible
-  /// all call sites are known, hence the function has internal linkage.
-  /// If true is returned, \p AllCallSitesKnown is set if all possible call
-  /// sites of the function have been visited.
-  bool checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
-                            const Function &Fn, bool RequireAllCallSites,
-                            const AbstractAttribute *QueryingAA,
-                            bool &AllCallSitesKnown);
-
   /// Determine if CallBase context in \p IRP should be propagated.
   bool shouldPropagateCallBaseContext(const IRPosition &IRP);
 
@@ -2056,6 +2092,10 @@ private:
   /// Callback to get an OptimizationRemarkEmitter from a Function *.
   Optional<OptimizationRemarkGetter> OREGetter;
 
+  /// Container with all the query AAs that requested an update via
+  /// registerForUpdate.
+  SmallSetVector<AbstractAttribute *, 16> QueryAAsAwaitingUpdate;
+
   /// The name of the pass to emit remarks for.
   const char *PassName = "";
 
@@ -2081,7 +2121,7 @@ private:
 /// additional methods to directly modify the state based if needed. See the
 /// class comments for help.
 struct AbstractState {
-  virtual ~AbstractState() {}
+  virtual ~AbstractState() = default;
 
   /// Return if this abstract state is in a valid state. If false, no
   /// information provided should be used.
@@ -2122,7 +2162,7 @@ template <typename base_ty, base_ty BestState, base_ty WorstState>
 struct IntegerStateBase : public AbstractState {
   using base_t = base_ty;
 
-  IntegerStateBase() {}
+  IntegerStateBase() = default;
   IntegerStateBase(base_t Assumed) : Assumed(Assumed) {}
 
   /// Return the best possible representable state.
@@ -2365,7 +2405,7 @@ struct BooleanState : public IntegerStateBase<bool, true, false> {
   using super = IntegerStateBase<bool, true, false>;
   using base_t = IntegerStateBase::base_t;
 
-  BooleanState() {}
+  BooleanState() = default;
   BooleanState(base_t Assumed) : super(Assumed) {}
 
   /// Set the assumed value to \p Value but never below the known one.
@@ -2773,7 +2813,7 @@ struct AbstractAttribute : public IRPosition, public AADepGraphNode {
   AbstractAttribute(const IRPosition &IRP) : IRPosition(IRP) {}
 
   /// Virtual destructor.
-  virtual ~AbstractAttribute() {}
+  virtual ~AbstractAttribute() = default;
 
   /// This function is used to identify if an \p DGN is of type
   /// AbstractAttribute so that the dyn_cast and cast can use such information
@@ -2792,6 +2832,14 @@ struct AbstractAttribute : public IRPosition, public AADepGraphNode {
   ///    a subset of the IR, or attributes in-flight, that have to be looked at
   ///    in the `updateImpl` method.
   virtual void initialize(Attributor &A) {}
+
+  /// A query AA is always scheduled as long as we do updates because it does
+  /// lazy computation that cannot be determined to be done from the outside.
+  /// However, while query AAs will not be fixed if they do not have outstanding
+  /// dependences, we will only schedule them like other AAs. If a query AA that
+  /// received a new query it needs to request an update via
+  /// `Attributor::requestUpdateForAA`.
+  virtual bool isQueryAA() const { return false; }
 
   /// Return the internal abstract state for inspection.
   virtual StateType &getState() = 0;
@@ -2988,6 +3036,14 @@ struct AANoSync
 
   /// Returns true if "nosync" is known.
   bool isKnownNoSync() const { return getKnown(); }
+
+  /// Helper function used to determine whether an instruction is non-relaxed
+  /// atomic. In other words, if an atomic instruction does not have unordered
+  /// or monotonic ordering
+  static bool isNonRelaxedAtomic(const Instruction *I);
+
+  /// Helper function specific for intrinsics which are potentially volatile.
+  static bool isNoSyncIntrinsic(const Instruction *I);
 
   /// Create an abstract attribute view for the position \p IRP.
   static AANoSync &createForPosition(const IRPosition &IRP, Attributor &A);
@@ -4419,7 +4475,7 @@ private:
 
 struct AACallGraphNode {
   AACallGraphNode(Attributor &A) : A(A) {}
-  virtual ~AACallGraphNode() {}
+  virtual ~AACallGraphNode() = default;
 
   virtual AACallEdgeIterator optimisticEdgesBegin() const = 0;
   virtual AACallEdgeIterator optimisticEdgesEnd() const = 0;
@@ -4485,7 +4541,7 @@ struct AACallEdges : public StateWrapper<BooleanState, AbstractAttribute>,
 // Synthetic root node for the Attributor's internal call graph.
 struct AttributorCallGraph : public AACallGraphNode {
   AttributorCallGraph(Attributor &A) : AACallGraphNode(A) {}
-  virtual ~AttributorCallGraph() {}
+  virtual ~AttributorCallGraph() = default;
 
   AACallEdgeIterator optimisticEdgesBegin() const override {
     return AACallEdgeIterator(A, A.Functions.begin());
@@ -4592,18 +4648,30 @@ struct AAFunctionReachability
 
   AAFunctionReachability(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
-  /// If the function represented by this possition can reach \p Fn.
-  virtual bool canReach(Attributor &A, Function *Fn) const = 0;
+  /// See AbstractAttribute::isQueryAA.
+  bool isQueryAA() const override { return true; }
 
-  /// Can \p CB reach \p Fn
-  virtual bool canReach(Attributor &A, CallBase &CB, Function *Fn) const = 0;
+  /// If the function represented by this possition can reach \p Fn.
+  virtual bool canReach(Attributor &A, const Function &Fn) const = 0;
+
+  /// Can \p CB reach \p Fn.
+  virtual bool canReach(Attributor &A, CallBase &CB,
+                        const Function &Fn) const = 0;
+
+  /// Can  \p Inst reach \p Fn.
+  /// See also AA::isPotentiallyReachable.
+  virtual bool instructionCanReach(Attributor &A, const Instruction &Inst,
+                                   const Function &Fn,
+                                   bool UseBackwards = true) const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAFunctionReachability &createForPosition(const IRPosition &IRP,
                                                    Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAFuncitonReacability"; }
+  const std::string getName() const override {
+    return "AAFunctionReachability";
+  }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -4639,21 +4707,12 @@ struct AAPointerInfo : public AbstractAttribute {
            AccessKind Kind, Type *Ty)
         : LocalI(LocalI), RemoteI(RemoteI), Content(Content), Kind(Kind),
           Ty(Ty) {}
-    Access(const Access &Other)
-        : LocalI(Other.LocalI), RemoteI(Other.RemoteI), Content(Other.Content),
-          Kind(Other.Kind), Ty(Other.Ty) {}
+    Access(const Access &Other) = default;
     Access(const Access &&Other)
         : LocalI(Other.LocalI), RemoteI(Other.RemoteI), Content(Other.Content),
           Kind(Other.Kind), Ty(Other.Ty) {}
 
-    Access &operator=(const Access &Other) {
-      LocalI = Other.LocalI;
-      RemoteI = Other.RemoteI;
-      Content = Other.Content;
-      Kind = Other.Kind;
-      Ty = Other.Ty;
-      return *this;
-    }
+    Access &operator=(const Access &Other) = default;
     bool operator==(const Access &R) const {
       return LocalI == R.LocalI && RemoteI == R.RemoteI &&
              Content == R.Content && Kind == R.Kind;
@@ -4740,6 +4799,15 @@ struct AAPointerInfo : public AbstractAttribute {
       LoadInst &LI, function_ref<bool(const Access &, bool)> CB) const = 0;
   virtual bool forallInterferingAccesses(
       StoreInst &SI, function_ref<bool(const Access &, bool)> CB) const = 0;
+
+  /// Call \p CB on all write accesses that might interfere with \p LI and
+  /// return true if all such accesses were known and the callback returned true
+  /// for all of them, false otherwise. In contrast to forallInterferingAccesses
+  /// this function will perform reasoning to exclude write accesses that cannot
+  /// affect the load even if they on the surface look as if they would.
+  virtual bool forallInterferingWrites(
+      Attributor &A, const AbstractAttribute &QueryingAA, LoadInst &LI,
+      function_ref<bool(const Access &, bool)> CB) const = 0;
 
   /// This function should return true if the type of the \p AA is AAPointerInfo
   static bool classof(const AbstractAttribute *AA) {

@@ -18,8 +18,9 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Approximation.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
-#include "mlir/Dialect/Vector/VectorUtils.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/Dialect/X86Vector/X86VectorDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
@@ -144,7 +145,7 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
   // Stitch results together into one large vector.
   Type resultEltType = results[0].getType().cast<VectorType>().getElementType();
   Type resultExpandedType = VectorType::get(expandedShape, resultEltType);
-  Value result = builder.create<ConstantOp>(
+  Value result = builder.create<arith::ConstantOp>(
       resultExpandedType, builder.getZeroAttr(resultExpandedType));
 
   for (int64_t i = 0; i < maxLinearIndex; ++i)
@@ -178,12 +179,12 @@ static Value f32FromBits(ImplicitLocOpBuilder &builder, uint32_t bits) {
 //----------------------------------------------------------------------------//
 
 static Value min(ImplicitLocOpBuilder &builder, Value a, Value b) {
-  return builder.create<SelectOp>(
+  return builder.create<arith::SelectOp>(
       builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, a, b), a, b);
 }
 
 static Value max(ImplicitLocOpBuilder &builder, Value a, Value b) {
-  return builder.create<SelectOp>(
+  return builder.create<arith::SelectOp>(
       builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, a, b), a, b);
 }
 
@@ -310,14 +311,14 @@ AtanApproximation::matchAndRewrite(math::AtanOp op,
   Value reciprocal = builder.create<arith::DivFOp>(one, abs);
   Value compare =
       builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, abs, reciprocal);
-  Value x = builder.create<SelectOp>(compare, abs, reciprocal);
+  Value x = builder.create<arith::SelectOp>(compare, abs, reciprocal);
 
   // Perform the Taylor series approximation for atan over the range
   // [-1.0, 1.0].
-  auto n1 = broadcast(builder, f32Cst(builder, 0.14418283), shape);
-  auto n2 = broadcast(builder, f32Cst(builder, -0.34999234), shape);
-  auto n3 = broadcast(builder, f32Cst(builder, -0.01067831), shape);
-  auto n4 = broadcast(builder, f32Cst(builder, 1.00209986), shape);
+  auto n1 = broadcast(builder, f32Cst(builder, 0.14418283f), shape);
+  auto n2 = broadcast(builder, f32Cst(builder, -0.34999234f), shape);
+  auto n3 = broadcast(builder, f32Cst(builder, -0.01067831f), shape);
+  auto n4 = broadcast(builder, f32Cst(builder, 1.00209986f), shape);
 
   Value p = builder.create<math::FmaOp>(x, n1, n2);
   p = builder.create<math::FmaOp>(x, p, n3);
@@ -325,9 +326,9 @@ AtanApproximation::matchAndRewrite(math::AtanOp op,
   p = builder.create<arith::MulFOp>(x, p);
 
   // Remap the solution for over [0.0, 1.0] to [0.0, inf]
-  auto half_pi = broadcast(builder, f32Cst(builder, 1.57079632679f), shape);
-  Value sub = builder.create<arith::SubFOp>(half_pi, p);
-  Value select = builder.create<SelectOp>(compare, p, sub);
+  auto halfPi = broadcast(builder, f32Cst(builder, 1.57079632679f), shape);
+  Value sub = builder.create<arith::SubFOp>(halfPi, p);
+  Value select = builder.create<arith::SelectOp>(compare, p, sub);
 
   // Correct for signing of the input.
   rewriter.replaceOpWithNewOp<math::CopySignOp>(op, select, operand);
@@ -366,40 +367,38 @@ Atan2Approximation::matchAndRewrite(math::Atan2Op op,
   // Determine what the atan would be for a 180 degree rotation.
   auto zero = broadcast(builder, f32Cst(builder, 0.0f), shape);
   auto pi = broadcast(builder, f32Cst(builder, 3.14159265359f), shape);
-  auto add_pi = builder.create<arith::AddFOp>(atan, pi);
-  auto sub_pi = builder.create<arith::SubFOp>(atan, pi);
-  auto atan_gt =
+  auto addPi = builder.create<arith::AddFOp>(atan, pi);
+  auto subPi = builder.create<arith::SubFOp>(atan, pi);
+  auto atanGt =
       builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, atan, zero);
-  auto flipped_atan = builder.create<SelectOp>(atan_gt, sub_pi, add_pi);
+  auto flippedAtan = builder.create<arith::SelectOp>(atanGt, subPi, addPi);
 
   // Determine whether to directly use atan or use the 180 degree flip
-  auto x_gt = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, x, zero);
-  Value result = builder.create<SelectOp>(x_gt, atan, flipped_atan);
+  auto xGt = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, x, zero);
+  Value result = builder.create<arith::SelectOp>(xGt, atan, flippedAtan);
 
   // Handle x = 0, y > 0
-  Value x_zero =
+  Value xZero =
       builder.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, x, zero);
-  Value y_gt =
-      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, y, zero);
-  Value is_half_pi = builder.create<arith::AndIOp>(x_zero, y_gt);
-  auto half_pi = broadcast(builder, f32Cst(builder, 1.57079632679f), shape);
-  result = builder.create<SelectOp>(is_half_pi, half_pi, result);
+  Value yGt = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, y, zero);
+  Value isHalfPi = builder.create<arith::AndIOp>(xZero, yGt);
+  auto halfPi = broadcast(builder, f32Cst(builder, 1.57079632679f), shape);
+  result = builder.create<arith::SelectOp>(isHalfPi, halfPi, result);
 
   // Handle x = 0, y < 0
-  Value y_lt =
-      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, y, zero);
-  Value is_negative_half_pi_pi = builder.create<arith::AndIOp>(x_zero, y_lt);
-  auto negative_half_pi_pi =
-      broadcast(builder, f32Cst(builder, -1.57079632679), shape);
-  result = builder.create<SelectOp>(is_negative_half_pi_pi, negative_half_pi_pi,
-                                    result);
+  Value yLt = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, y, zero);
+  Value isNegativeHalfPiPi = builder.create<arith::AndIOp>(xZero, yLt);
+  auto negativeHalfPiPi =
+      broadcast(builder, f32Cst(builder, -1.57079632679f), shape);
+  result = builder.create<arith::SelectOp>(isNegativeHalfPiPi, negativeHalfPiPi,
+                                           result);
 
   // Handle x = 0, y = 0;
-  Value y_zero =
+  Value yZero =
       builder.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, y, zero);
-  Value is_nan = builder.create<arith::AndIOp>(x_zero, y_zero);
-  Value cst_nan = broadcast(builder, f32FromBits(builder, 0x7fc00000), shape);
-  result = builder.create<SelectOp>(is_nan, cst_nan, result);
+  Value isNan = builder.create<arith::AndIOp>(xZero, yZero);
+  Value cstNan = broadcast(builder, f32FromBits(builder, 0x7fc00000), shape);
+  result = builder.create<arith::SelectOp>(isNan, cstNan, result);
 
   rewriter.replaceOp(op, result);
   return success();
@@ -476,8 +475,8 @@ TanhApproximation::matchAndRewrite(math::TanhOp op,
   q = builder.create<math::FmaOp>(x2, q, beta0);
 
   // Divide the numerator by the denominator.
-  Value res = builder.create<SelectOp>(tinyMask, x,
-                                       builder.create<arith::DivFOp>(p, q));
+  Value res = builder.create<arith::SelectOp>(
+      tinyMask, x, builder.create<arith::DivFOp>(p, q));
 
   rewriter.replaceOp(op, res);
 
@@ -562,11 +561,11 @@ LogApproximationBase<Op>::logMatchAndRewrite(Op op, PatternRewriter &rewriter,
   //   } else { x = x - 1.0; }
   Value mask = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, x,
                                              cstCephesSQRTHF);
-  Value tmp = builder.create<SelectOp>(mask, x, cstZero);
+  Value tmp = builder.create<arith::SelectOp>(mask, x, cstZero);
 
   x = builder.create<arith::SubFOp>(x, cstOne);
   e = builder.create<arith::SubFOp>(
-      e, builder.create<SelectOp>(mask, cstOne, cstZero));
+      e, builder.create<arith::SelectOp>(mask, cstOne, cstZero));
   x = builder.create<arith::AddFOp>(x, tmp);
 
   Value x2 = builder.create<arith::MulFOp>(x, x);
@@ -606,11 +605,11 @@ LogApproximationBase<Op>::logMatchAndRewrite(Op op, PatternRewriter &rewriter,
   //  • x == 0     -> -INF
   //  • x < 0      ->  NAN
   //  • x == +INF  -> +INF
-  Value aproximation = builder.create<SelectOp>(
+  Value aproximation = builder.create<arith::SelectOp>(
       zeroMask, cstMinusInf,
-      builder.create<SelectOp>(
+      builder.create<arith::SelectOp>(
           invalidMask, cstNan,
-          builder.create<SelectOp>(posInfMask, cstPosInf, x)));
+          builder.create<arith::SelectOp>(posInfMask, cstPosInf, x)));
 
   rewriter.replaceOp(op, aproximation);
 
@@ -684,7 +683,7 @@ Log1pApproximation::matchAndRewrite(math::Log1pOp op,
   Value logLarge = builder.create<arith::MulFOp>(
       x, builder.create<arith::DivFOp>(
              logU, builder.create<arith::SubFOp>(u, cstOne)));
-  Value approximation = builder.create<SelectOp>(
+  Value approximation = builder.create<arith::SelectOp>(
       builder.create<arith::OrIOp>(uSmall, uInf), x, logLarge);
   rewriter.replaceOp(op, approximation);
   return success();
@@ -766,7 +765,8 @@ ErfPolynomialApproximation::matchAndRewrite(math::ErfOp op,
   Value isNegativeArg = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT,
                                                       op.getOperand(), zero);
   Value negArg = builder.create<arith::NegFOp>(op.getOperand());
-  Value x = builder.create<SelectOp>(isNegativeArg, negArg, op.getOperand());
+  Value x =
+      builder.create<arith::SelectOp>(isNegativeArg, negArg, op.getOperand());
 
   Value offset = offsets[0];
   Value p[polyDegree + 1];
@@ -782,11 +782,13 @@ ErfPolynomialApproximation::matchAndRewrite(math::ErfOp op,
     isLessThanBound[j] =
         builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, x, bounds[j]);
     for (int i = 0; i <= polyDegree; ++i) {
-      p[i] = builder.create<SelectOp>(isLessThanBound[j], p[i], pp[j + 1][i]);
-      q[i] = builder.create<SelectOp>(isLessThanBound[j], q[i], qq[j + 1][i]);
+      p[i] = builder.create<arith::SelectOp>(isLessThanBound[j], p[i],
+                                             pp[j + 1][i]);
+      q[i] = builder.create<arith::SelectOp>(isLessThanBound[j], q[i],
+                                             qq[j + 1][i]);
     }
-    offset =
-        builder.create<SelectOp>(isLessThanBound[j], offset, offsets[j + 1]);
+    offset = builder.create<arith::SelectOp>(isLessThanBound[j], offset,
+                                             offsets[j + 1]);
   }
   isLessThanBound[intervalsCount - 1] = builder.create<arith::CmpFOp>(
       arith::CmpFPredicate::ULT, x, bounds[intervalsCount - 1]);
@@ -795,12 +797,13 @@ ErfPolynomialApproximation::matchAndRewrite(math::ErfOp op,
   Value qPoly = makePolynomialCalculation(builder, q, x);
   Value rationalPoly = builder.create<arith::DivFOp>(pPoly, qPoly);
   Value formula = builder.create<arith::AddFOp>(offset, rationalPoly);
-  formula = builder.create<SelectOp>(isLessThanBound[intervalsCount - 1],
-                                     formula, one);
+  formula = builder.create<arith::SelectOp>(isLessThanBound[intervalsCount - 1],
+                                            formula, one);
 
   // erf is odd function: erf(x) = -erf(-x).
   Value negFormula = builder.create<arith::NegFOp>(formula);
-  Value res = builder.create<SelectOp>(isNegativeArg, negFormula, formula);
+  Value res =
+      builder.create<arith::SelectOp>(isNegativeArg, negFormula, formula);
 
   rewriter.replaceOp(op, res);
 
@@ -918,14 +921,14 @@ ExpApproximation::matchAndRewrite(math::ExpOp op,
       builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, x, zerof32Const);
   Value isComputable = builder.create<arith::AndIOp>(rightBound, leftBound);
 
-  expY = builder.create<SelectOp>(
+  expY = builder.create<arith::SelectOp>(
       isNegInfinityX, zerof32Const,
-      builder.create<SelectOp>(
+      builder.create<arith::SelectOp>(
           isPosInfinityX, constPosInfinity,
-          builder.create<SelectOp>(isComputable, expY,
-                                   builder.create<SelectOp>(isPostiveX,
-                                                            constPosInfinity,
-                                                            underflow))));
+          builder.create<arith::SelectOp>(
+              isComputable, expY,
+              builder.create<arith::SelectOp>(isPostiveX, constPosInfinity,
+                                              underflow))));
 
   rewriter.replaceOp(op, expY);
 
@@ -982,9 +985,10 @@ ExpM1Approximation::matchAndRewrite(math::ExpM1Op op,
   // (u - 1) * (x / ~x)
   Value expm1 = builder.create<arith::MulFOp>(
       uMinusOne, builder.create<arith::DivFOp>(x, logU));
-  expm1 = builder.create<SelectOp>(isInf, u, expm1);
-  Value approximation = builder.create<SelectOp>(
-      uEqOne, x, builder.create<SelectOp>(uMinusOneEqNegOne, cstNegOne, expm1));
+  expm1 = builder.create<arith::SelectOp>(isInf, u, expm1);
+  Value approximation = builder.create<arith::SelectOp>(
+      uEqOne, x,
+      builder.create<arith::SelectOp>(uMinusOneEqNegOne, cstNegOne, expm1));
   rewriter.replaceOp(op, approximation);
   return success();
 }
@@ -1054,7 +1058,7 @@ LogicalResult SinAndCosApproximation<isSine, OpTy>::matchAndRewrite(
   };
 
   auto select = [&](Value cond, Value t, Value f) -> Value {
-    return builder.create<SelectOp>(cond, t, f);
+    return builder.create<arith::SelectOp>(cond, t, f);
   };
 
   auto fmla = [&](Value a, Value b, Value c) {
@@ -1065,8 +1069,8 @@ LogicalResult SinAndCosApproximation<isSine, OpTy>::matchAndRewrite(
     return builder.create<arith::OrIOp>(a, b);
   };
 
-  Value twoOverPi = bcast(f32Cst(builder, TWO_OVER_PI));
-  Value piOverTwo = bcast(f32Cst(builder, PI_OVER_2));
+  Value twoOverPi = bcast(f32Cst(builder, (float)TWO_OVER_PI));
+  Value piOverTwo = bcast(f32Cst(builder, (float)PI_OVER_2));
 
   Value x = op.getOperand();
 
@@ -1190,7 +1194,8 @@ RsqrtApproximation::matchAndRewrite(math::RsqrtOp op,
   // return rsqrt(+inf) = 0, rsqrt(x) = NaN if x < 0, and rsqrt(x) = +inf if
   // x is zero or a positive denormalized float (equivalent to flushing positive
   // denormalized inputs to zero).
-  Value res = builder.create<SelectOp>(notNormalFiniteMask, yApprox, yNewton);
+  Value res =
+      builder.create<arith::SelectOp>(notNormalFiniteMask, yApprox, yNewton);
   rewriter.replaceOp(op, res);
 
   return success();

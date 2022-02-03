@@ -286,7 +286,7 @@ public:
 #endif
     }
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_RANGES)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
     template <contiguous_iterator _It, sized_sentinel_for<_It> _End>
       requires (is_same_v<iter_value_t<_It>, _CharT> && !is_convertible_v<_End, size_type>)
     constexpr _LIBCPP_HIDE_FROM_ABI basic_string_view(_It __begin, _End __end)
@@ -296,7 +296,7 @@ public:
     }
 #endif
 
-#if _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_RANGES)
+#if _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
     template <class _Range>
       requires (
         !is_same_v<remove_cvref_t<_Range>, basic_string_view> &&
@@ -707,23 +707,23 @@ private:
     size_type           __size;
 };
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_RANGES)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 template <class _CharT, class _Traits>
 inline constexpr bool ranges::enable_view<basic_string_view<_CharT, _Traits>> = true;
 
 template <class _CharT, class _Traits>
 inline constexpr bool ranges::enable_borrowed_range<basic_string_view<_CharT, _Traits> > = true;
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_RANGES)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 // [string.view.deduct]
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_RANGES)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 template <contiguous_iterator _It, sized_sentinel_for<_It> _End>
   basic_string_view(_It, _End) -> basic_string_view<iter_value_t<_It>>;
 #endif
 
 
-#if _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_RANGES)
+#if _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
 template <ranges::contiguous_range _Range>
   basic_string_view(_Range) -> basic_string_view<ranges::range_value_t<_Range>>;
 #endif

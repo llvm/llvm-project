@@ -28,28 +28,28 @@ using ::testing::UnorderedElementsAre;
 namespace clang {
 namespace clangd {
 
-MATCHER_P(Named, N, "") { return arg.Name == N; }
-MATCHER_P(QName, N, "") { return (arg.Scope + arg.Name).str() == N; }
-MATCHER(Declared, "") {
+MATCHER_P(named, N, "") { return arg.Name == N; }
+MATCHER_P(qName, N, "") { return (arg.Scope + arg.Name).str() == N; }
+MATCHER(declared, "") {
   return !StringRef(arg.CanonicalDeclaration.FileURI).empty();
 }
-MATCHER(Defined, "") { return !StringRef(arg.Definition.FileURI).empty(); }
-MATCHER_P(FileURI, F, "") { return StringRef(arg.Location.FileURI) == F; }
+MATCHER(defined, "") { return !StringRef(arg.Definition.FileURI).empty(); }
+MATCHER_P(fileURI, F, "") { return StringRef(arg.Location.FileURI) == F; }
 ::testing::Matcher<const RefSlab &>
-RefsAre(std::vector<::testing::Matcher<Ref>> Matchers) {
+refsAre(std::vector<::testing::Matcher<Ref>> Matchers) {
   return ElementsAre(::testing::Pair(_, UnorderedElementsAreArray(Matchers)));
 }
 // URI cannot be empty since it references keys in the IncludeGraph.
-MATCHER(EmptyIncludeNode, "") {
+MATCHER(emptyIncludeNode, "") {
   return arg.Flags == IncludeGraphNode::SourceFlag::None && !arg.URI.empty() &&
          arg.Digest == FileDigest{{0}} && arg.DirectIncludes.empty();
 }
 
-MATCHER(HadErrors, "") {
+MATCHER(hadErrors, "") {
   return arg.Flags & IncludeGraphNode::SourceFlag::HadErrors;
 }
 
-MATCHER_P(NumReferences, N, "") { return arg.References == N; }
+MATCHER_P(numReferences, N, "") { return arg.References == N; }
 
 class MemoryShardStorage : public BackgroundIndexStorage {
   mutable std::mutex StorageMu;
@@ -159,8 +159,8 @@ TEST_F(BackgroundIndexTest, Config) {
   // Wait for both files to be indexed.
   ASSERT_TRUE(Idx.blockUntilIdleForTest());
   EXPECT_THAT(runFuzzyFind(Idx, ""),
-              UnorderedElementsAre(QName("foo"), QName("foo::two"),
-                                   QName("bar"), QName("bar::one")));
+              UnorderedElementsAre(qName("foo"), qName("foo::two"),
+                                   qName("bar"), qName("bar::one")));
 }
 
 TEST_F(BackgroundIndexTest, IndexTwoFiles) {
@@ -203,11 +203,11 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
 
   ASSERT_TRUE(Idx.blockUntilIdleForTest());
   EXPECT_THAT(runFuzzyFind(Idx, ""),
-              UnorderedElementsAre(AllOf(Named("common"), NumReferences(1U)),
-                                   AllOf(Named("A_CC"), NumReferences(0U)),
-                                   AllOf(Named("g"), NumReferences(1U)),
-                                   AllOf(Named("f_b"), Declared(),
-                                         Not(Defined()), NumReferences(0U))));
+              UnorderedElementsAre(AllOf(named("common"), numReferences(1U)),
+                                   AllOf(named("A_CC"), numReferences(0U)),
+                                   AllOf(named("g"), numReferences(1U)),
+                                   AllOf(named("f_b"), declared(),
+                                         Not(defined()), numReferences(0U))));
 
   Cmd.Filename = testPath("root/B.cc");
   Cmd.CommandLine = {"clang++", Cmd.Filename};
@@ -216,22 +216,22 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
   ASSERT_TRUE(Idx.blockUntilIdleForTest());
   // B_CC is dropped as we don't collect symbols from A.h in this compilation.
   EXPECT_THAT(runFuzzyFind(Idx, ""),
-              UnorderedElementsAre(AllOf(Named("common"), NumReferences(5U)),
-                                   AllOf(Named("A_CC"), NumReferences(0U)),
-                                   AllOf(Named("g"), NumReferences(1U)),
-                                   AllOf(Named("f_b"), Declared(), Defined(),
-                                         NumReferences(1U))));
+              UnorderedElementsAre(AllOf(named("common"), numReferences(5U)),
+                                   AllOf(named("A_CC"), numReferences(0U)),
+                                   AllOf(named("g"), numReferences(1U)),
+                                   AllOf(named("f_b"), declared(), defined(),
+                                         numReferences(1U))));
 
   auto Syms = runFuzzyFind(Idx, "common");
-  EXPECT_THAT(Syms, UnorderedElementsAre(Named("common")));
+  EXPECT_THAT(Syms, UnorderedElementsAre(named("common")));
   auto Common = *Syms.begin();
   EXPECT_THAT(getRefs(Idx, Common.ID),
-              RefsAre({FileURI("unittest:///root/A.h"),
-                       FileURI("unittest:///root/A.cc"),
-                       FileURI("unittest:///root/B.cc"),
-                       FileURI("unittest:///root/B.cc"),
-                       FileURI("unittest:///root/B.cc"),
-                       FileURI("unittest:///root/B.cc")}));
+              refsAre({fileURI("unittest:///root/A.h"),
+                       fileURI("unittest:///root/A.cc"),
+                       fileURI("unittest:///root/B.cc"),
+                       fileURI("unittest:///root/B.cc"),
+                       fileURI("unittest:///root/B.cc"),
+                       fileURI("unittest:///root/B.cc")}));
 }
 
 TEST_F(BackgroundIndexTest, MainFileRefs) {
@@ -259,8 +259,8 @@ TEST_F(BackgroundIndexTest, MainFileRefs) {
   ASSERT_TRUE(Idx.blockUntilIdleForTest());
   EXPECT_THAT(
       runFuzzyFind(Idx, ""),
-      UnorderedElementsAre(AllOf(Named("header_sym"), NumReferences(1U)),
-                           AllOf(Named("main_sym"), NumReferences(1U))));
+      UnorderedElementsAre(AllOf(named("header_sym"), numReferences(1U)),
+                           AllOf(named("main_sym"), numReferences(1U))));
 }
 
 TEST_F(BackgroundIndexTest, ShardStorageTest) {
@@ -270,7 +270,6 @@ TEST_F(BackgroundIndexTest, ShardStorageTest) {
       void f_b();
       class A_CC {};
       )cpp";
-  std::string A_CC = "";
   FS.Files[testPath("root/A.cc")] = R"cpp(
       #include "A.h"
       void g() { (void)common; }
@@ -310,19 +309,19 @@ TEST_F(BackgroundIndexTest, ShardStorageTest) {
   EXPECT_NE(ShardHeader, nullptr);
   EXPECT_THAT(
       *ShardHeader->Symbols,
-      UnorderedElementsAre(Named("common"), Named("A_CC"),
-                           AllOf(Named("f_b"), Declared(), Not(Defined()))));
+      UnorderedElementsAre(named("common"), named("A_CC"),
+                           AllOf(named("f_b"), declared(), Not(defined()))));
   for (const auto &Ref : *ShardHeader->Refs)
     EXPECT_THAT(Ref.second,
-                UnorderedElementsAre(FileURI("unittest:///root/A.h")));
+                UnorderedElementsAre(fileURI("unittest:///root/A.h")));
 
   auto ShardSource = MSS.loadShard(testPath("root/A.cc"));
   EXPECT_NE(ShardSource, nullptr);
   EXPECT_THAT(*ShardSource->Symbols,
-              UnorderedElementsAre(Named("g"), Named("B_CC")));
+              UnorderedElementsAre(named("g"), named("B_CC")));
   for (const auto &Ref : *ShardSource->Refs)
     EXPECT_THAT(Ref.second,
-                UnorderedElementsAre(FileURI("unittest:///root/A.cc")));
+                UnorderedElementsAre(fileURI("unittest:///root/A.cc")));
 
   // The BaseOf relationship between A_CC and B_CC is stored in both the file
   // containing the definition of the subject (A_CC) and the file containing
@@ -344,8 +343,8 @@ TEST_F(BackgroundIndexTest, DirectIncludesTest) {
       void f_b();
       class A_CC {};
       )cpp";
-  std::string A_CC = "#include \"A.h\"\nvoid g() { (void)common; }";
-  FS.Files[testPath("root/A.cc")] = A_CC;
+  FS.Files[testPath("root/A.cc")] =
+      "#include \"A.h\"\nvoid g() { (void)common; }";
 
   llvm::StringMap<std::string> Storage;
   size_t CacheHits = 0;
@@ -372,7 +371,7 @@ TEST_F(BackgroundIndexTest, DirectIncludesTest) {
   EXPECT_NE(ShardSource->Sources->lookup("unittest:///root/A.cc").Digest,
             FileDigest{{0}});
   EXPECT_THAT(ShardSource->Sources->lookup("unittest:///root/A.h"),
-              EmptyIncludeNode());
+              emptyIncludeNode());
 
   auto ShardHeader = MSS.loadShard(testPath("root/A.h"));
   EXPECT_TRUE(ShardHeader->Sources);
@@ -383,7 +382,7 @@ TEST_F(BackgroundIndexTest, DirectIncludesTest) {
   EXPECT_NE(ShardHeader->Sources->lookup("unittest:///root/A.h").Digest,
             FileDigest{{0}});
   EXPECT_THAT(ShardHeader->Sources->lookup("unittest:///root/B.h"),
-              EmptyIncludeNode());
+              emptyIncludeNode());
 }
 
 TEST_F(BackgroundIndexTest, ShardStorageLoad) {
@@ -432,7 +431,7 @@ TEST_F(BackgroundIndexTest, ShardStorageLoad) {
   // Check if the new symbol has arrived.
   auto ShardHeader = MSS.loadShard(testPath("root/A.h"));
   EXPECT_NE(ShardHeader, nullptr);
-  EXPECT_THAT(*ShardHeader->Symbols, Contains(Named("A_CCnew")));
+  EXPECT_THAT(*ShardHeader->Symbols, Contains(named("A_CCnew")));
 
   // Change source.
   FS.Files[testPath("root/A.cc")] =
@@ -450,11 +449,11 @@ TEST_F(BackgroundIndexTest, ShardStorageLoad) {
   // Check if the new symbol has arrived.
   ShardHeader = MSS.loadShard(testPath("root/A.h"));
   EXPECT_NE(ShardHeader, nullptr);
-  EXPECT_THAT(*ShardHeader->Symbols, Contains(Named("A_CCnew")));
+  EXPECT_THAT(*ShardHeader->Symbols, Contains(named("A_CCnew")));
   auto ShardSource = MSS.loadShard(testPath("root/A.cc"));
   EXPECT_NE(ShardSource, nullptr);
   EXPECT_THAT(*ShardSource->Symbols,
-              Contains(AllOf(Named("f_b"), Declared(), Defined())));
+              Contains(AllOf(named("f_b"), declared(), defined())));
 }
 
 TEST_F(BackgroundIndexTest, ShardStorageEmptyFile) {
@@ -522,7 +521,7 @@ TEST_F(BackgroundIndexTest, ShardStorageEmptyFile) {
   ShardHeader = MSS.loadShard(testPath("root/B.h"));
   EXPECT_NE(ShardHeader, nullptr);
   EXPECT_THAT(*ShardHeader->Symbols,
-              Contains(AllOf(Named("new_func"), Declared(), Not(Defined()))));
+              Contains(AllOf(named("new_func"), declared(), Not(defined()))));
 }
 
 TEST_F(BackgroundIndexTest, NoDotsInAbsPath) {
@@ -587,27 +586,27 @@ TEST_F(BackgroundIndexTest, UncompilableFiles) {
 
   {
     auto Shard = MSS.loadShard(testPath("A.cc"));
-    EXPECT_THAT(*Shard->Symbols, UnorderedElementsAre(Named("foo")));
+    EXPECT_THAT(*Shard->Symbols, UnorderedElementsAre(named("foo")));
     EXPECT_THAT(Shard->Sources->keys(),
                 UnorderedElementsAre("unittest:///A.cc", "unittest:///A.h",
                                      "unittest:///B.h"));
-    EXPECT_THAT(Shard->Sources->lookup("unittest:///A.cc"), HadErrors());
+    EXPECT_THAT(Shard->Sources->lookup("unittest:///A.cc"), hadErrors());
   }
 
   {
     auto Shard = MSS.loadShard(testPath("A.h"));
-    EXPECT_THAT(*Shard->Symbols, UnorderedElementsAre(Named("foo")));
+    EXPECT_THAT(*Shard->Symbols, UnorderedElementsAre(named("foo")));
     EXPECT_THAT(Shard->Sources->keys(),
                 UnorderedElementsAre("unittest:///A.h"));
-    EXPECT_THAT(Shard->Sources->lookup("unittest:///A.h"), HadErrors());
+    EXPECT_THAT(Shard->Sources->lookup("unittest:///A.h"), hadErrors());
   }
 
   {
     auto Shard = MSS.loadShard(testPath("B.h"));
-    EXPECT_THAT(*Shard->Symbols, UnorderedElementsAre(Named("asdf")));
+    EXPECT_THAT(*Shard->Symbols, UnorderedElementsAre(named("asdf")));
     EXPECT_THAT(Shard->Sources->keys(),
                 UnorderedElementsAre("unittest:///B.h", "unittest:///C.h"));
-    EXPECT_THAT(Shard->Sources->lookup("unittest:///B.h"), HadErrors());
+    EXPECT_THAT(Shard->Sources->lookup("unittest:///B.h"), hadErrors());
   }
 
   {
@@ -615,7 +614,7 @@ TEST_F(BackgroundIndexTest, UncompilableFiles) {
     EXPECT_THAT(*Shard->Symbols, UnorderedElementsAre());
     EXPECT_THAT(Shard->Sources->keys(),
                 UnorderedElementsAre("unittest:///C.h"));
-    EXPECT_THAT(Shard->Sources->lookup("unittest:///C.h"), HadErrors());
+    EXPECT_THAT(Shard->Sources->lookup("unittest:///C.h"), hadErrors());
   }
 }
 

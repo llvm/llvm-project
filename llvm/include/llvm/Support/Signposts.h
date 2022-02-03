@@ -16,11 +16,11 @@
 #ifndef LLVM_SUPPORT_SIGNPOSTS_H
 #define LLVM_SUPPORT_SIGNPOSTS_H
 
-#include "llvm/ADT/StringRef.h"
 #include <memory>
 
 namespace llvm {
 class SignpostEmitterImpl;
+class StringRef;
 
 /// Manages the emission of signposts into the recording method supported by
 /// the OS.

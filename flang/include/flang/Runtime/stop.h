@@ -30,6 +30,11 @@ NORETURN void RTNAME(ProgramEndStatement)(NO_ARGUMENTS);
 NORETURN void RTNAME(Exit)(int status = EXIT_SUCCESS);
 NORETURN void RTNAME(Abort)(NO_ARGUMENTS);
 
+// Crash with an error message when the program dynamically violates a Fortran
+// constraint.
+NORETURN void RTNAME(ReportFatalUserError)(
+    const char *message, const char *source, int line);
+
 FORTRAN_EXTERN_C_END
 
 #endif // FORTRAN_RUNTIME_STOP_H_

@@ -310,25 +310,7 @@ public:
   }
 
   /// Returns a BitsetEnum describing the attributes of the raw instr profile.
-  InstrProfKind getProfileKind() const override {
-    InstrProfKind ProfileKind = InstrProfKind::Unknown;
-    if (Version & VARIANT_MASK_IR_PROF) {
-      ProfileKind |= InstrProfKind::IR;
-    }
-    if (Version & VARIANT_MASK_CSIR_PROF) {
-      ProfileKind |= InstrProfKind::CS;
-    }
-    if (Version & VARIANT_MASK_INSTR_ENTRY) {
-      ProfileKind |= InstrProfKind::BB;
-    }
-    if (Version & VARIANT_MASK_BYTE_COVERAGE) {
-      ProfileKind |= InstrProfKind::SingleByteCoverage;
-    }
-    if (Version & VARIANT_MASK_FUNCTION_ENTRY_ONLY) {
-      ProfileKind |= InstrProfKind::FunctionEntryOnly;
-    }
-    return ProfileKind;
-  }
+  InstrProfKind getProfileKind() const override;
 
   InstrProfSymtab &getSymtab() override {
     assert(Symtab.get());
@@ -532,25 +514,7 @@ public:
     return (FormatVersion & VARIANT_MASK_FUNCTION_ENTRY_ONLY) != 0;
   }
 
-  InstrProfKind getProfileKind() const override {
-    InstrProfKind ProfileKind = InstrProfKind::Unknown;
-    if (FormatVersion & VARIANT_MASK_IR_PROF) {
-      ProfileKind |= InstrProfKind::IR;
-    }
-    if (FormatVersion & VARIANT_MASK_CSIR_PROF) {
-      ProfileKind |= InstrProfKind::CS;
-    }
-    if (FormatVersion & VARIANT_MASK_INSTR_ENTRY) {
-      ProfileKind |= InstrProfKind::BB;
-    }
-    if (FormatVersion & VARIANT_MASK_BYTE_COVERAGE) {
-      ProfileKind |= InstrProfKind::SingleByteCoverage;
-    }
-    if (FormatVersion & VARIANT_MASK_FUNCTION_ENTRY_ONLY) {
-      ProfileKind |= InstrProfKind::FunctionEntryOnly;
-    }
-    return ProfileKind;
-  }
+  InstrProfKind getProfileKind() const override;
 
   Error populateSymtab(InstrProfSymtab &Symtab) override {
     return Symtab.create(HashTable->keys());
@@ -560,7 +524,7 @@ public:
 /// Name matcher supporting fuzzy matching of symbol names to names in profiles.
 class InstrProfReaderRemapper {
 public:
-  virtual ~InstrProfReaderRemapper() {}
+  virtual ~InstrProfReaderRemapper() = default;
   virtual Error populateRemappings() { return Error::success(); }
   virtual Error getRecords(StringRef FuncName,
                            ArrayRef<NamedInstrProfRecord> &Data) = 0;

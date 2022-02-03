@@ -780,6 +780,7 @@ def : Pat<(AArch64LOADgot texternalsym:$addr),
 def : Pat<(AArch64LOADgot tconstpool:$addr),
           (LOADgot tconstpool:$addr)>;
 
+// In general these get lowered into a sequence of three 4-byte instructions.
 // 32-bit jump table destination is actually only 2 instructions since we can
 // use the table itself as a PC-relative base. But optimization occurs after
 // branch relaxation so be pessimistic.
@@ -815,8 +816,12 @@ let hasSideEffects = 1, isCodeGenOnly = 1 in {
 // SpeculationBarrierEndBB must only be used after an unconditional control
 // flow, i.e. after a terminator for which isBarrier is True.
 let hasSideEffects = 1, isCodeGenOnly = 1, isTerminator = 1, isBarrier = 1 in {
+  // This gets lowered to a pair of 4-byte instructions.
+  let Size = 8 in
   def SpeculationBarrierISBDSBEndBB
       : Pseudo<(outs), (ins), []>, Sched<[]>;
+  // This gets lowered to a 4-byte instruction.
+  let Size = 4 in
   def SpeculationBarrierSBEndBB
       : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
@@ -2324,8 +2329,8 @@ def : Pat<(AArch64call GPR64noip:$Rn),
           (BLRNoIP GPR64noip:$Rn)>,
       Requires<[SLSBLRMitigation]>;
 
-def : Pat<(AArch64call_rvmarker GPR64:$Rn),
-          (BLR_RVMARKER GPR64:$Rn)>,
+def : Pat<(AArch64call_rvmarker (i64 tglobaladdr:$rvfunc), GPR64:$Rn),
+          (BLR_RVMARKER tglobaladdr:$rvfunc, GPR64:$Rn)>,
       Requires<[NoSLSBLRMitigation]>;
 
 let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
@@ -2356,7 +2361,8 @@ def EMITBKEY : Pseudo<(outs), (ins), []>, Sched<[]> {}
 
 // FIXME: maybe the scratch register used shouldn't be fixed to X1?
 // FIXME: can "hasSideEffects be dropped?
-let isCall = 1, Defs = [LR, X0, X1], hasSideEffects = 1,
+// This gets lowered to an instruction sequence which takes 16 bytes
+let isCall = 1, Defs = [LR, X0, X1], hasSideEffects = 1, Size = 16,
     isCodeGenOnly = 1 in
 def TLSDESC_CALLSEQ
     : Pseudo<(outs), (ins i64imm:$sym),
@@ -7546,6 +7552,9 @@ def : Pat<(i64 (bitconvert (f64 FPR64:$Xn))),
 def : Pat<(i64 (bitconvert (v1f64 V64:$Vn))),
           (COPY_TO_REGCLASS V64:$Vn, GPR64)>;
 
+def : Pat<(f16 (bitconvert (bf16 FPR16:$src))), (f16 FPR16:$src)>;
+def : Pat<(bf16 (bitconvert (f16 FPR16:$src))), (bf16 FPR16:$src)>;
+
 let Predicates = [IsLE] in {
 def : Pat<(v1i64 (bitconvert (v2i32 FPR64:$src))), (v1i64 FPR64:$src)>;
 def : Pat<(v1i64 (bitconvert (v4i16 FPR64:$src))), (v1i64 FPR64:$src)>;
@@ -8330,26 +8339,67 @@ let Predicates = [HasLS64] in {
 }
 
 let Predicates = [HasMOPS] in {
-  defm CPYFP : MOPSMemoryCopyInsns<0b00, "cpyfp">;
-  defm CPYFM : MOPSMemoryCopyInsns<0b01, "cpyfm">;
-  defm CPYFE : MOPSMemoryCopyInsns<0b10, "cpyfe">;
+  let Defs = [NZCV] in {
+    defm CPYFP : MOPSMemoryCopyInsns<0b00, "cpyfp">;
 
-  defm CPYP : MOPSMemoryMoveInsns<0b00, "cpyp">;
-  defm CPYM : MOPSMemoryMoveInsns<0b01, "cpym">;
-  defm CPYE : MOPSMemoryMoveInsns<0b10, "cpye">;
+    defm CPYP : MOPSMemoryMoveInsns<0b00, "cpyp">;
 
-  defm SETP : MOPSMemorySetInsns<0b00, "setp">;
-  defm SETM : MOPSMemorySetInsns<0b01, "setm">;
-  defm SETE : MOPSMemorySetInsns<0b10, "sete">;
+    defm SETP : MOPSMemorySetInsns<0b00, "setp">;
+  }
+  let Uses = [NZCV] in {
+    defm CPYFM : MOPSMemoryCopyInsns<0b01, "cpyfm">;
+    defm CPYFE : MOPSMemoryCopyInsns<0b10, "cpyfe">;
+
+    defm CPYM : MOPSMemoryMoveInsns<0b01, "cpym">;
+    defm CPYE : MOPSMemoryMoveInsns<0b10, "cpye">;
+
+    defm SETM : MOPSMemorySetInsns<0b01, "setm">;
+    defm SETE : MOPSMemorySetInsns<0b10, "sete">;
+  }
 }
 let Predicates = [HasMOPS, HasMTE] in {
-  defm SETGP     : MOPSMemorySetTaggingInsns<0b00, "setgp">;
-  defm SETGM     : MOPSMemorySetTaggingInsns<0b01, "setgm">;
-  // Can't use SETGE because it's a reserved name in TargetSelectionDAG.td
-  defm MOPSSETGE : MOPSMemorySetTaggingInsns<0b10, "setge">;
+  let Defs = [NZCV] in {
+    defm SETGP     : MOPSMemorySetTaggingInsns<0b00, "setgp">;
+  }
+  let Uses = [NZCV] in {
+    defm SETGM     : MOPSMemorySetTaggingInsns<0b01, "setgm">;
+    // Can't use SETGE because it's a reserved name in TargetSelectionDAG.td
+    defm MOPSSETGE : MOPSMemorySetTaggingInsns<0b10, "setge">;
+  }
 }
 
-let Defs = [X16, X17], mayStore = 1, isCodeGenOnly = 1 in
+// MOPS Node operands: 0: Dst, 1: Src or Value, 2: Size, 3: Chain
+// MOPS Node results: 0: Dst writeback, 1: Size writeback, 2: Chain
+def SDT_AArch64mops : SDTypeProfile<2, 3, [ SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2> ]>;
+def AArch64mops_memset : SDNode<"AArch64ISD::MOPS_MEMSET", SDT_AArch64mops>;
+def AArch64mops_memset_tagging : SDNode<"AArch64ISD::MOPS_MEMSET_TAGGING", SDT_AArch64mops>;
+def AArch64mops_memcopy : SDNode<"AArch64ISD::MOPS_MEMCOPY", SDT_AArch64mops>;
+def AArch64mops_memmove : SDNode<"AArch64ISD::MOPS_MEMMOVE", SDT_AArch64mops>;
+
+// MOPS operations always contain three 4-byte instructions
+let Predicates = [HasMOPS], Defs = [NZCV], Size = 12, mayStore = 1 in {
+  let mayLoad = 1 in {
+    def MOPSMemoryCopyPseudo : Pseudo<(outs GPR64common:$Rd_wb, GPR64common:$Rs_wb, GPR64:$Rn_wb),
+                                      (ins GPR64common:$Rd, GPR64common:$Rs, GPR64:$Rn),
+                                      [], "$Rd = $Rd_wb,$Rs = $Rs_wb,$Rn = $Rn_wb">, Sched<[]>;
+    def MOPSMemoryMovePseudo : Pseudo<(outs GPR64common:$Rd_wb, GPR64common:$Rs_wb, GPR64:$Rn_wb),
+                                      (ins GPR64common:$Rd, GPR64common:$Rs, GPR64:$Rn),
+                                      [], "$Rd = $Rd_wb,$Rs = $Rs_wb,$Rn = $Rn_wb">, Sched<[]>;
+  }
+  let mayLoad = 0 in {
+    def MOPSMemorySetPseudo  : Pseudo<(outs GPR64common:$Rd_wb, GPR64:$Rn_wb),
+                                      (ins GPR64common:$Rd, GPR64:$Rn, GPR64:$Rm),
+                                      [], "$Rd = $Rd_wb,$Rn = $Rn_wb">, Sched<[]>;
+  }
+}
+let Predicates = [HasMOPS, HasMTE], Defs = [NZCV], Size = 12, mayLoad = 0, mayStore = 1 in {
+  def MOPSMemorySetTaggingPseudo : Pseudo<(outs GPR64common:$Rd_wb, GPR64:$Rn_wb),
+                                          (ins GPR64common:$Rd, GPR64:$Rn, GPR64:$Rm),
+                                          [], "$Rd = $Rd_wb,$Rn = $Rn_wb">, Sched<[]>;
+}
+
+// This gets lowered into an instruction sequence of 20 bytes
+let Defs = [X16, X17], mayStore = 1, isCodeGenOnly = 1, Size = 20 in
 def StoreSwiftAsyncContext
       : Pseudo<(outs), (ins GPR64:$ctx, GPR64sp:$base, simm9:$offset),
                []>, Sched<[]>;

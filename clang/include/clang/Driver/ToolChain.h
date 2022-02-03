@@ -151,6 +151,7 @@ private:
   mutable std::unique_ptr<Tool> IfsMerge;
   mutable std::unique_ptr<Tool> OffloadBundler;
   mutable std::unique_ptr<Tool> OffloadWrapper;
+  mutable std::unique_ptr<Tool> LinkerWrapper;
 
   Tool *getClang() const;
   Tool *getFlang() const;
@@ -161,6 +162,7 @@ private:
   Tool *getClangAs() const;
   Tool *getOffloadBundler() const;
   Tool *getOffloadWrapper() const;
+  Tool *getLinkerWrapper() const;
 
   mutable bool SanitizerArgsChecked = false;
   mutable std::unique_ptr<XRayArgs> XRayArguments;
@@ -710,6 +712,22 @@ public:
       const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
       const llvm::fltSemantics *FPType = nullptr) const {
     return llvm::DenormalMode::getIEEE();
+  }
+
+  // We want to expand the shortened versions of the triples passed in to
+  // the values used for the bitcode libraries.
+  static llvm::Triple getOpenMPTriple(StringRef TripleStr) {
+    llvm::Triple TT(TripleStr);
+    if (TT.getVendor() == llvm::Triple::UnknownVendor ||
+        TT.getOS() == llvm::Triple::UnknownOS) {
+      if (TT.getArch() == llvm::Triple::nvptx)
+        return llvm::Triple("nvptx-nvidia-cuda");
+      if (TT.getArch() == llvm::Triple::nvptx64)
+        return llvm::Triple("nvptx64-nvidia-cuda");
+      if (TT.getArch() == llvm::Triple::amdgcn)
+        return llvm::Triple("amdgcn-amd-amdhsa");
+    }
+    return TT;
   }
 };
 

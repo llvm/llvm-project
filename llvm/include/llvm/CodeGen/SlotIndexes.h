@@ -319,7 +319,7 @@ class raw_ostream;
     using IndexList = ilist<IndexListEntry>;
     IndexList indexList;
 
-    MachineFunction *mf;
+    MachineFunction *mf = nullptr;
 
     using Mi2IndexMap = DenseMap<const MachineInstr *, SlotIndex>;
     Mi2IndexMap mi2iMap;

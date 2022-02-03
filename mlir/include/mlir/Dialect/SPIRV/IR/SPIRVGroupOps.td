@@ -139,7 +139,7 @@ def SPV_SubgroupBallotKHROp : SPV_Op<"SubgroupBallotKHR", []> {
     SPV_Int32Vec4:$result
   );
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 
   let assemblyFormat = "$predicate attr-dict `:` type($result)";
 }

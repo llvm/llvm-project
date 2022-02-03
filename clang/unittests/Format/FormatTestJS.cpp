@@ -195,7 +195,7 @@ TEST_F(FormatTestJS, JSDocComments) {
                    getGoogleJSStyleWithColumns(20)));
 
   // FIXME: this overcounts the */ as a continuation of the 12 when breaking.
-  // Related to the FIXME in BreakableBlockComment::getRangeLength.
+  // Cf. BreakableBlockComment::getRemainingLength.
   EXPECT_EQ("/**\n"
             " * @returns {string}\n"
             " *     jsdoc line line\n"

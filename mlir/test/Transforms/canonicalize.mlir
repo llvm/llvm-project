@@ -602,14 +602,14 @@ func @lowered_affine_mod() -> (index, index) {
   %c0 = arith.constant 0 : index
   %1 = arith.cmpi slt, %0, %c0 : index
   %2 = arith.addi %0, %c42 : index
-  %3 = select %1, %2, %0 : index
+  %3 = arith.select %1, %2, %0 : index
   %c43 = arith.constant 43 : index
   %c42_0 = arith.constant 42 : index
   %4 = arith.remsi %c43, %c42_0 : index
   %c0_1 = arith.constant 0 : index
   %5 = arith.cmpi slt, %4, %c0_1 : index
   %6 = arith.addi %4, %c42_0 : index
-  %7 = select %5, %6, %4 : index
+  %7 = arith.select %5, %6, %4 : index
   return %3, %7 : index, index
 }
 
@@ -628,20 +628,20 @@ func @lowered_affine_floordiv() -> (index, index) {
   %c-1 = arith.constant -1 : index
   %0 = arith.cmpi slt, %c-43, %c0 : index
   %1 = arith.subi %c-1, %c-43 : index
-  %2 = select %0, %1, %c-43 : index
+  %2 = arith.select %0, %1, %c-43 : index
   %3 = arith.divsi %2, %c42 : index
   %4 = arith.subi %c-1, %3 : index
-  %5 = select %0, %4, %3 : index
+  %5 = arith.select %0, %4, %3 : index
   %c43 = arith.constant 43 : index
   %c42_0 = arith.constant 42 : index
   %c0_1 = arith.constant 0 : index
   %c-1_2 = arith.constant -1 : index
   %6 = arith.cmpi slt, %c43, %c0_1 : index
   %7 = arith.subi %c-1_2, %c43 : index
-  %8 = select %6, %7, %c43 : index
+  %8 = arith.select %6, %7, %c43 : index
   %9 = arith.divsi %8, %c42_0 : index
   %10 = arith.subi %c-1_2, %9 : index
-  %11 = select %6, %10, %9 : index
+  %11 = arith.select %6, %10, %9 : index
   return %5, %11 : index, index
 }
 
@@ -660,11 +660,11 @@ func @lowered_affine_ceildiv() -> (index, index) {
   %0 = arith.cmpi sle, %c-43, %c0 : index
   %1 = arith.subi %c0, %c-43 : index
   %2 = arith.subi %c-43, %c1 : index
-  %3 = select %0, %1, %2 : index
+  %3 = arith.select %0, %1, %2 : index
   %4 = arith.divsi %3, %c42 : index
   %5 = arith.subi %c0, %4 : index
   %6 = arith.addi %4, %c1 : index
-  %7 = select %0, %5, %6 : index
+  %7 = arith.select %0, %5, %6 : index
 // CHECK-DAG:  %c2 = arith.constant 2 : index
   %c43 = arith.constant 43 : index
   %c42_0 = arith.constant 42 : index
@@ -673,11 +673,11 @@ func @lowered_affine_ceildiv() -> (index, index) {
   %8 = arith.cmpi sle, %c43, %c0_1 : index
   %9 = arith.subi %c0_1, %c43 : index
   %10 = arith.subi %c43, %c1_2 : index
-  %11 = select %8, %9, %10 : index
+  %11 = arith.select %8, %9, %10 : index
   %12 = arith.divsi %11, %c42_0 : index
   %13 = arith.subi %c0_1, %12 : index
   %14 = arith.addi %12, %c1_2 : index
-  %15 = select %8, %13, %14 : index
+  %15 = arith.select %8, %13, %14 : index
 
   // CHECK-NEXT: return %c-1, %c2
   return %7, %15 : index, index
@@ -1194,7 +1194,7 @@ func @clone_loop_alloc(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<2
     memref.dealloc %5 : memref<2xf32>
     scf.yield %6 : memref<2xf32>
   }
-  linalg.copy(%2, %arg4) : memref<2xf32>, memref<2xf32>
+  memref.copy %2, %arg4 : memref<2xf32> to memref<2xf32>
   memref.dealloc %2 : memref<2xf32>
   return
 }
@@ -1204,7 +1204,7 @@ func @clone_loop_alloc(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<2
 // CHECK-NEXT: memref.dealloc
 // CHECK-NEXT: %[[ALLOC2:.*]] = memref.alloc
 // CHECK-NEXT: scf.yield %[[ALLOC2]]
-// CHECK: linalg.copy(%[[ALLOC1]]
+// CHECK: memref.copy %[[ALLOC1]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC1]]
 
 // -----

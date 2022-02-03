@@ -95,6 +95,10 @@
     ret void
   }
 
+  define void @vsetvli_loop_store() {
+    ret void
+  }
+
   ; Function Attrs: nounwind readnone
   declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, i64) #1
 
@@ -526,4 +530,72 @@ body:             |
     %11:vr = nsw PseudoVADD_VX_MF2 %6, %10, -1, 5
     $v0 = COPY %11
     PseudoRET implicit $v0
+...
+---
+name:            vsetvli_loop_store
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+  - { id: 1, class: gpr, preferred-register: '' }
+  - { id: 2, class: gpr, preferred-register: '' }
+  - { id: 3, class: gpr, preferred-register: '' }
+  - { id: 4, class: vr,  preferred-register: '' }
+  - { id: 5, class: gpr, preferred-register: '' }
+  - { id: 6, class: gpr, preferred-register: '' }
+  - { id: 7, class: vr,  preferred-register: '' }
+  - { id: 8, class: gpr, preferred-register: '' }
+  - { id: 9, class: gpr, preferred-register: '' }
+  - { id: 10, class: gpr, preferred-register: '' }
+body:             |
+  ; CHECK-LABEL: name: vsetvli_loop_store
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x10, $x11
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x10
+  ; CHECK-NEXT:   [[PseudoReadVLENB:%[0-9]+]]:gpr = PseudoReadVLENB
+  ; CHECK-NEXT:   [[SRLI:%[0-9]+]]:gpr = SRLI [[PseudoReadVLENB]], 3
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x11
+  ; CHECK-NEXT:   dead %11:gpr = PseudoVSETVLIX0 $x0, 88, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   [[PseudoVID_V_M1_:%[0-9]+]]:vr = PseudoVID_V_M1 -1, 6, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr = PHI [[COPY2]], %bb.0, %10, %bb.1
+  ; CHECK-NEXT:   [[PseudoVADD_VX_M1_:%[0-9]+]]:vr = PseudoVADD_VX_M1 [[PseudoVID_V_M1_]], [[PHI]], -1, 6, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:gpr = MUL [[PHI]], [[SRLI]]
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:gpr = ADD [[COPY]], [[MUL]]
+  ; CHECK-NEXT:   PseudoVSE32_V_MF2 killed [[PseudoVADD_VX_M1_]], killed [[ADD]], -1, 5, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI [[PHI]], 1
+  ; CHECK-NEXT:   BLTU [[ADDI]], [[COPY1]], %bb.1
+  ; CHECK-NEXT:   PseudoBR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   PseudoRET
+  bb.0:
+    liveins: $x10, $x11
+    %0:gpr = COPY $x10
+    %1:gpr = PseudoReadVLENB
+    %2:gpr = SRLI %1:gpr, 3
+    %3:gpr = COPY $x11
+    %4:vr = PseudoVID_V_M1 -1, 6
+    %5:gpr = COPY $x0
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    %6:gpr = PHI %5:gpr, %bb.0, %10:gpr, %bb.1
+    %7:vr = PseudoVADD_VX_M1 %4:vr, %6:gpr, -1, 6
+    %8:gpr = MUL %6:gpr, %2:gpr
+    %9:gpr = ADD %0:gpr, %8:gpr
+    PseudoVSE32_V_MF2 killed %7:vr, killed %9:gpr, -1, 5
+    %10:gpr = ADDI %6:gpr, 1
+    BLTU %10:gpr, %3:gpr, %bb.1
+    PseudoBR %bb.2
+
+  bb.2:
+
+    PseudoRET
 ...

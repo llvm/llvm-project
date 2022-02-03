@@ -7553,6 +7553,16 @@ SIInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   return makeArrayRef(TargetFlags);
 }
 
+ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
+SIInstrInfo::getSerializableMachineMemOperandTargetFlags() const {
+  static const std::pair<MachineMemOperand::Flags, const char *> TargetFlags[] =
+      {
+          {MONoClobber, "amdgpu-noclobber"},
+      };
+
+  return makeArrayRef(TargetFlags);
+}
+
 bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI) const {
   return !MI.isTerminator() && MI.getOpcode() != AMDGPU::COPY &&
          MI.modifiesRegister(AMDGPU::EXEC, &RI);

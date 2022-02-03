@@ -34,7 +34,7 @@ def Toy_Dialect : Dialect {
 //   * The parent dialect of the operation.
 //   * The mnemonic for the operation, or the name without the dialect prefix.
 //   * A list of traits for the operation.
-class Toy_Op<string mnemonic, list<OpTrait> traits = []> :
+class Toy_Op<string mnemonic, list<Trait> traits = []> :
     Op<Toy_Dialect, mnemonic, traits>;
 
 // Provide a definition for the Toy StructType for use in ODS. This allows for
@@ -94,8 +94,8 @@ def ConstantOp : Toy_Op<"constant",
     OpBuilder<(ins "double":$value)>
   ];
 
-  // Invoke a static verify method to verify this constant operation.
-  let verifier = [{ return ::verify(*this); }];
+  // Indicate that additional verification for this operation is necessary.
+  let hasVerifier = 1;
 
   // Set the folder bit so that we can implement constant folders.
   let hasFolder = 1;
@@ -273,8 +273,8 @@ def ReturnOp : Toy_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
     bool hasOperand() { return getNumOperands() != 0; }
   }];
 
-  // Invoke a static verify method to verify this return operation.
-  let verifier = [{ return ::verify(*this); }];
+  // Indicate that additional verification for this operation is necessary.
+  let hasVerifier = 1;
 }
 
 def StructAccessOp : Toy_Op<"struct_access", [NoSideEffect]> {
@@ -295,7 +295,8 @@ def StructAccessOp : Toy_Op<"struct_access", [NoSideEffect]> {
     OpBuilder<(ins "Value":$input, "size_t":$index)>
   ];
 
-  let verifier = [{ return ::verify(*this); }];
+  // Indicate that additional verification for this operation is necessary.
+  let hasVerifier = 1;
 
   // Set the folder bit so that we can fold constant accesses.
   let hasFolder = 1;
@@ -320,7 +321,8 @@ def StructConstantOp : Toy_Op<"struct_constant", [ConstantLike, NoSideEffect]> {
 
   let assemblyFormat = "$value attr-dict `:` type($output)";
 
-  let verifier = [{ return ::verify(*this); }];
+  // Indicate that additional verification for this operation is necessary.
+  let hasVerifier = 1;
   let hasFolder = 1;
 }
 
@@ -343,8 +345,8 @@ def TransposeOp : Toy_Op<"transpose",
     OpBuilder<(ins "Value":$input)>
   ];
 
-  // Invoke a static verify method to verify this transpose operation.
-  let verifier = [{ return ::verify(*this); }];
+  // Indicate that additional verification for this operation is necessary.
+  let hasVerifier = 1;
 }
 
 #endif // TOY_OPS

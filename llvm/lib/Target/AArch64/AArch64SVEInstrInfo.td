@@ -292,7 +292,13 @@ def SDT_AArch64Arith_Unpred : SDTypeProfile<1, 2, [
   SDTCisSameAs<0,1>, SDTCisSameAs<1,2>
 ]>;
 
-def AArch64bic : SDNode<"AArch64ISD::BIC",  SDT_AArch64Arith_Unpred>;
+def AArch64bic_node : SDNode<"AArch64ISD::BIC",  SDT_AArch64Arith_Unpred>;
+
+def AArch64bic : PatFrags<(ops node:$op1, node:$op2),
+                          [(and node:$op1, (xor node:$op2, (AArch64dup (i32 -1)))),
+                           (and node:$op1, (xor node:$op2, (AArch64dup (i64 -1)))),
+                           (and node:$op1, (xor node:$op2, (SVEAllActive))),
+                           (AArch64bic_node node:$op1, node:$op2)]>;
 
 let Predicates = [HasSVE] in {
   defm RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr", int_aarch64_sve_rdffr_z>;
@@ -734,14 +740,14 @@ let Predicates = [HasSVEorStreamingSVE] in {
   defm PFIRST  : sve_int_pfirst<0b00000, "pfirst", int_aarch64_sve_pfirst>;
   defm PNEXT   : sve_int_pnext<0b00110, "pnext", int_aarch64_sve_pnext>;
 
-  defm AND_PPzPP   : sve_int_pred_log_and<0b0000, "and", int_aarch64_sve_and_z>;
-  defm BIC_PPzPP   : sve_int_pred_log<0b0001, "bic", int_aarch64_sve_bic_z>;
+  defm AND_PPzPP   : sve_int_pred_log_v2<0b0000, "and", int_aarch64_sve_and_z, and>;
+  defm BIC_PPzPP   : sve_int_pred_log_v2<0b0001, "bic", int_aarch64_sve_bic_z, AArch64bic>;
   defm EOR_PPzPP   : sve_int_pred_log<0b0010, "eor", int_aarch64_sve_eor_z, xor>;
-  defm SEL_PPPP    : sve_int_pred_log<0b0011, "sel", vselect>;
+  defm SEL_PPPP    : sve_int_pred_log_v2<0b0011, "sel", vselect, or>;
   defm ANDS_PPzPP  : sve_int_pred_log<0b0100, "ands", null_frag>;
   defm BICS_PPzPP  : sve_int_pred_log<0b0101, "bics", null_frag>;
   defm EORS_PPzPP  : sve_int_pred_log<0b0110, "eors", null_frag>;
-  defm ORR_PPzPP   : sve_int_pred_log<0b1000, "orr", int_aarch64_sve_orr_z, or>;
+  defm ORR_PPzPP   : sve_int_pred_log<0b1000, "orr", int_aarch64_sve_orr_z>;
   defm ORN_PPzPP   : sve_int_pred_log<0b1001, "orn", int_aarch64_sve_orn_z>;
   defm NOR_PPzPP   : sve_int_pred_log<0b1010, "nor", int_aarch64_sve_nor_z>;
   defm NAND_PPzPP  : sve_int_pred_log<0b1011, "nand", int_aarch64_sve_nand_z>;

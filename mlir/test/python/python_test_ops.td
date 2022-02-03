@@ -28,7 +28,7 @@ class TestAttr<string name, string attrMnemonic>
   let mnemonic = attrMnemonic;
 }
 
-class TestOp<string mnemonic, list<OpTrait> traits = []>
+class TestOp<string mnemonic, list<Trait> traits = []>
     : Op<Python_Test_Dialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//

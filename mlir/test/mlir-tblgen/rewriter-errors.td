@@ -11,7 +11,7 @@ def A_Dialect : Dialect {
   let name = "a";
 }
 
-class A_Op<string mnemonic, list<OpTrait> traits = []> :
+class A_Op<string mnemonic, list<Trait> traits = []> :
     Op<A_Dialect, mnemonic, traits>;
 
 def OpA : A_Op<"op_a">, Arguments<(ins AnyInteger, AnyInteger)>, Results<(outs AnyInteger)>;

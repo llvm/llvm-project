@@ -6,6 +6,10 @@ CheckOptions:
     value:           CamelCase
   - key:             readability-identifier-naming.FunctionCase
     value:           camelBack
+  # Exclude from scanning as this is an exported symbol used for fuzzing
+  # throughout the code base.
+  - key:             readability-identifier-naming.FunctionIgnoredRegexp
+    value:           "LLVMFuzzerTestOneInput"
   - key:             readability-identifier-naming.MemberCase
     value:           CamelCase
   - key:             readability-identifier-naming.ParameterCase

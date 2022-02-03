@@ -1174,12 +1174,6 @@ public:
     aliasState.initialize(op, printerFlags, interfaces);
   }
 
-  /// Get an instance of the OpAsmDialectInterface for the given dialect, or
-  /// null if one wasn't registered.
-  const OpAsmDialectInterface *getOpAsmInterface(Dialect *dialect) {
-    return interfaces.getInterfaceFor(dialect);
-  }
-
   /// Get the state used for aliases.
   AliasState &getAliasState() { return aliasState; }
 

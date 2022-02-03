@@ -9,8 +9,8 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/CommonFolders.h"
-#include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -115,7 +115,10 @@ Operation *StandardOpsDialect::materializeConstant(OpBuilder &builder,
                                                    Location loc) {
   if (arith::ConstantOp::isBuildableWith(value, type))
     return builder.create<arith::ConstantOp>(loc, type, value);
-  return builder.create<ConstantOp>(loc, type, value);
+  if (ConstantOp::isBuildableWith(value, type))
+    return builder.create<ConstantOp>(loc, type,
+                                      value.cast<FlatSymbolRefAttr>());
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -305,23 +308,6 @@ LogicalResult CallIndirectOp::canonicalize(CallIndirectOp indirectCall,
 }
 
 //===----------------------------------------------------------------------===//
-// General helpers for comparison ops
-//===----------------------------------------------------------------------===//
-
-// Return the type of the same shape (scalar, vector or tensor) containing i1.
-static Type getI1SameShape(Type type) {
-  auto i1Type = IntegerType::get(type.getContext(), 1);
-  if (auto tensorType = type.dyn_cast<RankedTensorType>())
-    return RankedTensorType::get(tensorType.getShape(), i1Type);
-  if (type.isa<UnrankedTensorType>())
-    return UnrankedTensorType::get(i1Type);
-  if (auto vectorType = type.dyn_cast<VectorType>())
-    return VectorType::get(vectorType.getShape(), i1Type,
-                           vectorType.getNumScalableDims());
-  return i1Type;
-}
-
-//===----------------------------------------------------------------------===//
 // CondBranchOp
 //===----------------------------------------------------------------------===//
 
@@ -390,7 +376,7 @@ struct SimplifyPassThroughCondBranch : public OpRewritePattern<CondBranchOp> {
 ///  -> br ^bb1(A, ..., N)
 ///
 /// cond_br %cond, ^bb1(A), ^bb1(B)
-///  -> %select = select %cond, A, B
+///  -> %select = arith.select %cond, A, B
 ///     br ^bb1(%select)
 ///
 struct SimplifyCondBranchIdenticalSuccessors
@@ -426,7 +412,7 @@ struct SimplifyCondBranchIdenticalSuccessors
       if (std::get<0>(it) == std::get<1>(it))
         mergedOperands.push_back(std::get<0>(it));
       else
-        mergedOperands.push_back(rewriter.create<SelectOp>(
+        mergedOperands.push_back(rewriter.create<arith::SelectOp>(
             condbr.getLoc(), condition, std::get<0>(it), std::get<1>(it)));
     }
 
@@ -579,318 +565,60 @@ Block *CondBranchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
-static void print(OpAsmPrinter &p, ConstantOp &op) {
-  p << " ";
-  p.printOptionalAttrDict(op->getAttrs(), /*elidedAttrs=*/{"value"});
+LogicalResult ConstantOp::verify() {
+  StringRef fnName = getValue();
+  Type type = getType();
 
-  if (op->getAttrs().size() > 1)
-    p << ' ';
-  p << op.getValue();
+  // Try to find the referenced function.
+  auto fn = (*this)->getParentOfType<ModuleOp>().lookupSymbol<FuncOp>(fnName);
+  if (!fn)
+    return emitOpError() << "reference to undefined function '" << fnName
+                         << "'";
 
-  // If the value is a symbol reference, print a trailing type.
-  if (op.getValue().isa<SymbolRefAttr>())
-    p << " : " << op.getType();
-}
+  // Check that the referenced function has the correct type.
+  if (fn.getType() != type)
+    return emitOpError("reference to function with mismatched type");
 
-static ParseResult parseConstantOp(OpAsmParser &parser,
-                                   OperationState &result) {
-  Attribute valueAttr;
-  if (parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseAttribute(valueAttr, "value", result.attributes))
-    return failure();
-
-  // If the attribute is a symbol reference, then we expect a trailing type.
-  Type type;
-  if (!valueAttr.isa<SymbolRefAttr>())
-    type = valueAttr.getType();
-  else if (parser.parseColonType(type))
-    return failure();
-
-  // Add the attribute type to the list.
-  return parser.addTypeToList(type, result.types);
-}
-
-/// The constant op requires an attribute, and furthermore requires that it
-/// matches the return type.
-static LogicalResult verify(ConstantOp &op) {
-  auto value = op.getValue();
-  if (!value)
-    return op.emitOpError("requires a 'value' attribute");
-
-  Type type = op.getType();
-  if (!value.getType().isa<NoneType>() && type != value.getType())
-    return op.emitOpError() << "requires attribute's type (" << value.getType()
-                            << ") to match op's return type (" << type << ")";
-
-  if (type.isa<FunctionType>()) {
-    auto fnAttr = value.dyn_cast<FlatSymbolRefAttr>();
-    if (!fnAttr)
-      return op.emitOpError("requires 'value' to be a function reference");
-
-    // Try to find the referenced function.
-    auto fn =
-        op->getParentOfType<ModuleOp>().lookupSymbol<FuncOp>(fnAttr.getValue());
-    if (!fn)
-      return op.emitOpError()
-             << "reference to undefined function '" << fnAttr.getValue() << "'";
-
-    // Check that the referenced function has the correct type.
-    if (fn.getType() != type)
-      return op.emitOpError("reference to function with mismatched type");
-
-    return success();
-  }
-
-  if (type.isa<NoneType>() && value.isa<UnitAttr>())
-    return success();
-
-  return op.emitOpError("unsupported 'value' attribute: ") << value;
+  return success();
 }
 
 OpFoldResult ConstantOp::fold(ArrayRef<Attribute> operands) {
   assert(operands.empty() && "constant has no operands");
-  return getValue();
+  return getValueAttr();
 }
 
 void ConstantOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
-  Type type = getType();
-  if (type.isa<FunctionType>()) {
-    setNameFn(getResult(), "f");
-  } else {
-    setNameFn(getResult(), "cst");
-  }
+  setNameFn(getResult(), "f");
 }
 
-/// Returns true if a constant operation can be built with the given value and
-/// result type.
 bool ConstantOp::isBuildableWith(Attribute value, Type type) {
-  // SymbolRefAttr can only be used with a function type.
-  if (value.isa<SymbolRefAttr>())
-    return type.isa<FunctionType>();
-  // Otherwise, this must be a UnitAttr.
-  return value.isa<UnitAttr>() && type.isa<NoneType>();
+  return value.isa<FlatSymbolRefAttr>() && type.isa<FunctionType>();
 }
 
 //===----------------------------------------------------------------------===//
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(ReturnOp op) {
-  auto function = cast<FuncOp>(op->getParentOp());
+LogicalResult ReturnOp::verify() {
+  auto function = cast<FuncOp>((*this)->getParentOp());
 
   // The operand number and types must match the function signature.
   const auto &results = function.getType().getResults();
-  if (op.getNumOperands() != results.size())
-    return op.emitOpError("has ")
-           << op.getNumOperands() << " operands, but enclosing function (@"
+  if (getNumOperands() != results.size())
+    return emitOpError("has ")
+           << getNumOperands() << " operands, but enclosing function (@"
            << function.getName() << ") returns " << results.size();
 
   for (unsigned i = 0, e = results.size(); i != e; ++i)
-    if (op.getOperand(i).getType() != results[i])
-      return op.emitError()
-             << "type of return operand " << i << " ("
-             << op.getOperand(i).getType()
-             << ") doesn't match function result type (" << results[i] << ")"
-             << " in function @" << function.getName();
+    if (getOperand(i).getType() != results[i])
+      return emitError() << "type of return operand " << i << " ("
+                         << getOperand(i).getType()
+                         << ") doesn't match function result type ("
+                         << results[i] << ")"
+                         << " in function @" << function.getName();
 
   return success();
-}
-
-//===----------------------------------------------------------------------===//
-// SelectOp
-//===----------------------------------------------------------------------===//
-
-// Transforms a select of a boolean to arithmetic operations
-//
-//  select %arg, %x, %y : i1
-//
-//  becomes
-//
-//  and(%arg, %x) or and(!%arg, %y)
-struct SelectI1Simplify : public OpRewritePattern<SelectOp> {
-  using OpRewritePattern<SelectOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(SelectOp op,
-                                PatternRewriter &rewriter) const override {
-    if (!op.getType().isInteger(1))
-      return failure();
-
-    Value falseConstant =
-        rewriter.create<arith::ConstantIntOp>(op.getLoc(), true, 1);
-    Value notCondition = rewriter.create<arith::XOrIOp>(
-        op.getLoc(), op.getCondition(), falseConstant);
-
-    Value trueVal = rewriter.create<arith::AndIOp>(
-        op.getLoc(), op.getCondition(), op.getTrueValue());
-    Value falseVal = rewriter.create<arith::AndIOp>(op.getLoc(), notCondition,
-                                                    op.getFalseValue());
-    rewriter.replaceOpWithNewOp<arith::OrIOp>(op, trueVal, falseVal);
-    return success();
-  }
-};
-
-//  select %arg, %c1, %c0 => extui %arg
-struct SelectToExtUI : public OpRewritePattern<SelectOp> {
-  using OpRewritePattern<SelectOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(SelectOp op,
-                                PatternRewriter &rewriter) const override {
-    // Cannot extui i1 to i1, or i1 to f32
-    if (!op.getType().isa<IntegerType>() || op.getType().isInteger(1))
-      return failure();
-
-    // select %x, c1, %c0 => extui %arg
-    if (matchPattern(op.getTrueValue(), m_One()))
-      if (matchPattern(op.getFalseValue(), m_Zero())) {
-        rewriter.replaceOpWithNewOp<arith::ExtUIOp>(op, op.getType(),
-                                                    op.getCondition());
-        return success();
-      }
-
-    // select %x, c0, %c1 => extui (xor %arg, true)
-    if (matchPattern(op.getTrueValue(), m_Zero()))
-      if (matchPattern(op.getFalseValue(), m_One())) {
-        rewriter.replaceOpWithNewOp<arith::ExtUIOp>(
-            op, op.getType(),
-            rewriter.create<arith::XOrIOp>(
-                op.getLoc(), op.getCondition(),
-                rewriter.create<arith::ConstantIntOp>(
-                    op.getLoc(), 1, op.getCondition().getType())));
-        return success();
-      }
-
-    return failure();
-  }
-};
-
-void SelectOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                           MLIRContext *context) {
-  results.insert<SelectI1Simplify, SelectToExtUI>(context);
-}
-
-OpFoldResult SelectOp::fold(ArrayRef<Attribute> operands) {
-  auto trueVal = getTrueValue();
-  auto falseVal = getFalseValue();
-  if (trueVal == falseVal)
-    return trueVal;
-
-  auto condition = getCondition();
-
-  // select true, %0, %1 => %0
-  if (matchPattern(condition, m_One()))
-    return trueVal;
-
-  // select false, %0, %1 => %1
-  if (matchPattern(condition, m_Zero()))
-    return falseVal;
-
-  // select %x, true, false => %x
-  if (getType().isInteger(1))
-    if (matchPattern(getTrueValue(), m_One()))
-      if (matchPattern(getFalseValue(), m_Zero()))
-        return condition;
-
-  if (auto cmp = dyn_cast_or_null<arith::CmpIOp>(condition.getDefiningOp())) {
-    auto pred = cmp.getPredicate();
-    if (pred == arith::CmpIPredicate::eq || pred == arith::CmpIPredicate::ne) {
-      auto cmpLhs = cmp.getLhs();
-      auto cmpRhs = cmp.getRhs();
-
-      // %0 = arith.cmpi eq, %arg0, %arg1
-      // %1 = select %0, %arg0, %arg1 => %arg1
-
-      // %0 = arith.cmpi ne, %arg0, %arg1
-      // %1 = select %0, %arg0, %arg1 => %arg0
-
-      if ((cmpLhs == trueVal && cmpRhs == falseVal) ||
-          (cmpRhs == trueVal && cmpLhs == falseVal))
-        return pred == arith::CmpIPredicate::ne ? trueVal : falseVal;
-    }
-  }
-  return nullptr;
-}
-
-static void print(OpAsmPrinter &p, SelectOp op) {
-  p << " " << op.getOperands();
-  p.printOptionalAttrDict(op->getAttrs());
-  p << " : ";
-  if (ShapedType condType = op.getCondition().getType().dyn_cast<ShapedType>())
-    p << condType << ", ";
-  p << op.getType();
-}
-
-static ParseResult parseSelectOp(OpAsmParser &parser, OperationState &result) {
-  Type conditionType, resultType;
-  SmallVector<OpAsmParser::OperandType, 3> operands;
-  if (parser.parseOperandList(operands, /*requiredOperandCount=*/3) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(resultType))
-    return failure();
-
-  // Check for the explicit condition type if this is a masked tensor or vector.
-  if (succeeded(parser.parseOptionalComma())) {
-    conditionType = resultType;
-    if (parser.parseType(resultType))
-      return failure();
-  } else {
-    conditionType = parser.getBuilder().getI1Type();
-  }
-
-  result.addTypes(resultType);
-  return parser.resolveOperands(operands,
-                                {conditionType, resultType, resultType},
-                                parser.getNameLoc(), result.operands);
-}
-
-static LogicalResult verify(SelectOp op) {
-  Type conditionType = op.getCondition().getType();
-  if (conditionType.isSignlessInteger(1))
-    return success();
-
-  // If the result type is a vector or tensor, the type can be a mask with the
-  // same elements.
-  Type resultType = op.getType();
-  if (!resultType.isa<TensorType, VectorType>())
-    return op.emitOpError()
-           << "expected condition to be a signless i1, but got "
-           << conditionType;
-  Type shapedConditionType = getI1SameShape(resultType);
-  if (conditionType != shapedConditionType)
-    return op.emitOpError()
-           << "expected condition type to have the same shape "
-              "as the result type, expected "
-           << shapedConditionType << ", but got " << conditionType;
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// SplatOp
-//===----------------------------------------------------------------------===//
-
-static LogicalResult verify(SplatOp op) {
-  // TODO: we could replace this by a trait.
-  if (op.getOperand().getType() !=
-      op.getType().cast<ShapedType>().getElementType())
-    return op.emitError("operand should be of elemental type of result type");
-
-  return success();
-}
-
-// Constant folding hook for SplatOp.
-OpFoldResult SplatOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.size() == 1 && "splat takes one operand");
-
-  auto constOperand = operands.front();
-  if (!constOperand || !constOperand.isa<IntegerAttr, FloatAttr>())
-    return {};
-
-  auto shapedType = getType().cast<ShapedType>();
-  assert(shapedType.getElementType() == constOperand.getType() &&
-         "incorrect input attribute type for folding");
-
-  // SplatElementsAttr::get treats single value for second arg as being a splat.
-  return SplatElementsAttr::get(shapedType, {constOperand});
 }
 
 //===----------------------------------------------------------------------===//
@@ -995,26 +723,26 @@ static void printSwitchOpCases(
   p.printNewline();
 }
 
-static LogicalResult verify(SwitchOp op) {
-  auto caseValues = op.getCaseValues();
-  auto caseDestinations = op.getCaseDestinations();
+LogicalResult SwitchOp::verify() {
+  auto caseValues = getCaseValues();
+  auto caseDestinations = getCaseDestinations();
 
   if (!caseValues && caseDestinations.empty())
     return success();
 
-  Type flagType = op.getFlag().getType();
+  Type flagType = getFlag().getType();
   Type caseValueType = caseValues->getType().getElementType();
   if (caseValueType != flagType)
-    return op.emitOpError()
-           << "'flag' type (" << flagType << ") should match case value type ("
-           << caseValueType << ")";
+    return emitOpError() << "'flag' type (" << flagType
+                         << ") should match case value type (" << caseValueType
+                         << ")";
 
   if (caseValues &&
       caseValues->size() != static_cast<int64_t>(caseDestinations.size()))
-    return op.emitOpError() << "number of case values (" << caseValues->size()
-                            << ") should match number of "
-                               "case destinations ("
-                            << caseDestinations.size() << ")";
+    return emitOpError() << "number of case values (" << caseValues->size()
+                         << ") should match number of "
+                            "case destinations ("
+                         << caseDestinations.size() << ")";
   return success();
 }
 

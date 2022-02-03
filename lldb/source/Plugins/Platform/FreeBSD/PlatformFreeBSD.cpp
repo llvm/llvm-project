@@ -45,7 +45,7 @@ static uint32_t g_initialize_count = 0;
 
 
 PlatformSP PlatformFreeBSD::CreateInstance(bool force, const ArchSpec *arch) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOG(log, "force = {0}, arch=({1}, {2})", force,
            arch ? arch->GetArchitectureName() : "<null>",
            arch ? arch->GetTriple().getTriple() : "<null>");

@@ -58,3 +58,58 @@ define <4 x i1> @PR48683_vec_undef(<4 x i32> %x) {
   %c = icmp ne <4 x i32> %b, zeroinitializer
   ret <4 x i1> %c
 }
+
+define i8 @one_demanded_bit(i8 %x) {
+; CHECK-LABEL: @one_demanded_bit(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], -64
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[M]], -65
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul i8 %x, 192  ; 0b1100_0000
+  %r = or i8 %m, 191   ; 0b1011_1111
+  ret i8 %r
+}
+
+define <2 x i8> @one_demanded_bit_splat(<2 x i8> %x) {
+; CHECK-LABEL: @one_demanded_bit_splat(
+; CHECK-NEXT:    [[M:%.*]] = mul <2 x i8> [[X:%.*]], <i8 -96, i8 -96>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[M]], <i8 32, i8 32>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %m = mul <2 x i8> %x, <i8 160, i8 160> ; 0b1010_0000
+  %r = and <2 x i8> %m, <i8 32, i8 32>   ; 0b0010_0000
+  ret <2 x i8> %r
+}
+
+define i67 @one_demanded_low_bit(i67 %x) {
+; CHECK-LABEL: @one_demanded_low_bit(
+; CHECK-NEXT:    [[M:%.*]] = mul i67 [[X:%.*]], -63
+; CHECK-NEXT:    [[R:%.*]] = and i67 [[M]], 1
+; CHECK-NEXT:    ret i67 [[R]]
+;
+  %m = mul i67 %x, -63 ; any odd number will do
+  %r = and i67 %m, 1
+  ret i67 %r
+}
+
+define i33 @squared_one_demanded_low_bit(i33 %x) {
+; CHECK-LABEL: @squared_one_demanded_low_bit(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i33 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = and i33 [[MUL]], 1
+; CHECK-NEXT:    ret i33 [[AND]]
+;
+  %mul = mul i33 %x, %x
+  %and = and i33 %mul, 1
+  ret i33 %and
+}
+
+define <2 x i8> @squared_one_demanded_low_bit_splat(<2 x i8> %x) {
+; CHECK-LABEL: @squared_one_demanded_low_bit_splat(
+; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i8> [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = or <2 x i8> [[MUL]], <i8 -2, i8 -2>
+; CHECK-NEXT:    ret <2 x i8> [[AND]]
+;
+  %mul = mul <2 x i8> %x, %x
+  %and = or <2 x i8> %mul, <i8 254, i8 254>
+  ret <2 x i8> %and
+}

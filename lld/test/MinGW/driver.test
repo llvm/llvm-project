@@ -340,3 +340,8 @@ DISABLE-FIXUP: -stdcall-fixup:no
 
 RUN: ld.lld -### -m i386pep foo.o --disable-stdcall-fixup --enable-stdcall-fixup 2>&1 | FileCheck -check-prefix ENABLE-FIXUP %s
 ENABLE-FIXUP: -stdcall-fixup{{ }}
+
+RUN: ld.lld -### foo.o -m i386pep -heap 8388608,16384 2>&1 | FileCheck -check-prefix=HEAP %s
+RUN: ld.lld -### foo.o -m i386pep --heap 8388608,16384 2>&1 | FileCheck -check-prefix=HEAP %s
+RUN: ld.lld -### foo.o -m i386pep --heap=8388608,16384 2>&1 | FileCheck -check-prefix=HEAP %s
+HEAP: -heap:8388608,16384

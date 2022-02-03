@@ -213,7 +213,7 @@ static void subtractRecursively(IntegerPolyhedron &b, Simplex &simplex,
 
   // Find out which inequalities of sI correspond to division inequalities for
   // the local variables of sI.
-  std::vector<MaybeLocalRepr> repr(sI.getNumLocalIds());
+  SmallVector<MaybeLocalRepr> repr(sI.getNumLocalIds());
   sI.getLocalReprs(repr);
 
   // Add sI's locals to b, after b's locals. Also add b's locals to sI, before
@@ -227,8 +227,8 @@ static void subtractRecursively(IntegerPolyhedron &b, Simplex &simplex,
     assert(maybeInequality.kind == ReprKind::Inequality &&
            "Subtraction is not supported when a representation of the local "
            "variables of the subtrahend cannot be found!");
-    auto lb = maybeInequality.repr.inEqualityPair.lowerBoundIdx;
-    auto ub = maybeInequality.repr.inEqualityPair.upperBoundIdx;
+    auto lb = maybeInequality.repr.inequalityPair.lowerBoundIdx;
+    auto ub = maybeInequality.repr.inequalityPair.upperBoundIdx;
 
     b.addInequality(sI.getInequality(lb));
     b.addInequality(sI.getInequality(ub));
@@ -352,28 +352,26 @@ PresburgerSet PresburgerSet::subtract(const PresburgerSet &set) const {
   return result;
 }
 
-/// Two sets S and T are equal iff S contains T and T contains S.
-/// By "S contains T", we mean that S is a superset of or equal to T.
-///
-/// S contains T iff T \ S is empty, since if T \ S contains a
-/// point then this is a point that is contained in T but not S.
-///
-/// Therefore, S is equal to T iff S \ T and T \ S are both empty.
+/// T is a subset of S iff T \ S is empty, since if T \ S contains a
+/// point then this is a point that is contained in T but not S, and
+/// if T contains a point that is not in S, this also lies in T \ S.
+bool PresburgerSet::isSubsetOf(const PresburgerSet &set) const {
+  return this->subtract(set).isIntegerEmpty();
+}
+
+/// Two sets are equal iff they are subsets of each other.
 bool PresburgerSet::isEqual(const PresburgerSet &set) const {
   assertDimensionsCompatible(set, *this);
-  return this->subtract(set).isIntegerEmpty() &&
-         set.subtract(*this).isIntegerEmpty();
+  return this->isSubsetOf(set) && set.isSubsetOf(*this);
 }
 
 /// Return true if all the sets in the union are known to be integer empty,
 /// false otherwise.
 bool PresburgerSet::isIntegerEmpty() const {
   // The set is empty iff all of the disjuncts are empty.
-  for (const IntegerPolyhedron &poly : integerPolyhedrons) {
-    if (!poly.isIntegerEmpty())
-      return false;
-  }
-  return true;
+  return std::all_of(
+      integerPolyhedrons.begin(), integerPolyhedrons.end(),
+      [](const IntegerPolyhedron &poly) { return poly.isIntegerEmpty(); });
 }
 
 bool PresburgerSet::findIntegerSample(SmallVectorImpl<int64_t> &sample) {

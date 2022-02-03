@@ -139,7 +139,7 @@ class raw_ostream;
   ///
   /// ModHash is for use in ThinLTO incremental build, generated while the IR
   /// bitcode file writing.
-  void WriteThinLinkBitcodeToFile(const Module &M, raw_ostream &Out,
+  void writeThinLinkBitcodeToFile(const Module &M, raw_ostream &Out,
                                   const ModuleSummaryIndex &Index,
                                   const ModuleHash &ModHash);
 
@@ -148,7 +148,7 @@ class raw_ostream;
   /// writing the combined index file for ThinLTO. When writing a subset of the
   /// index for a distributed backend, provide the \p ModuleToSummariesForIndex
   /// map.
-  void WriteIndexToFile(const ModuleSummaryIndex &Index, raw_ostream &Out,
+  void writeIndexToFile(const ModuleSummaryIndex &Index, raw_ostream &Out,
                         const std::map<std::string, GVSummaryMapTy>
                             *ModuleToSummariesForIndex = nullptr);
 
@@ -161,7 +161,7 @@ class raw_ostream;
   /// If EmbedCmdline is set, the command line is also exported in
   /// the corresponding section (__LLVM,_cmdline / .llvmcmd) - even if CmdArgs
   /// were empty.
-  void EmbedBitcodeInModule(Module &M, MemoryBufferRef Buf, bool EmbedBitcode,
+  void embedBitcodeInModule(Module &M, MemoryBufferRef Buf, bool EmbedBitcode,
                             bool EmbedCmdline,
                             const std::vector<uint8_t> &CmdArgs);
 

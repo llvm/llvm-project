@@ -1,11 +1,11 @@
 # RUN: %clang_host -g %S/Inputs/test.c -o %t.out
 
 # RUN: cp %S/Inputs/a.out.ips %t.crash
-# RUN: python %S/patch-crashlog.py --binary %t.out --crashlog %t.crash --offsets '{"main":20, "bar":9, "foo":16}' --json
+# RUN: %python %S/patch-crashlog.py --binary %t.out --crashlog %t.crash --offsets '{"main":20, "bar":9, "foo":16}' --json
 # RUN: %lldb %t.out -o 'command script import lldb.macosx.crashlog' -o 'crashlog %t.crash' 2>&1 | FileCheck %s
 
 # RUN: cp %S/Inputs/a.out.ips %t.nometadata.crash
-# RUN: python %S/patch-crashlog.py --binary %t.out --crashlog %t.nometadata.crash --offsets '{"main":20, "bar":9, "foo":16}' --json --no-metadata
+# RUN: %python %S/patch-crashlog.py --binary %t.out --crashlog %t.nometadata.crash --offsets '{"main":20, "bar":9, "foo":16}' --json --no-metadata
 # RUN: %lldb %t.out -o 'command script import lldb.macosx.crashlog' -o 'crashlog %t.nometadata.crash' 2>&1 | FileCheck %s
 
 # CHECK: Thread[0] Crashing Thread Name EXC_BAD_ACCESS (SIGSEGV) (KERN_INVALID_ADDRESS at 0x0000000000000000)
@@ -13,5 +13,6 @@
 # CHECK: [  1] {{.*}}out`bar + 8 at test.c
 # CHECK: [  2] {{.*}}out`main + 19 at test.c
 # CHECK: rbp = 0x00007ffeec22a530
+# CHECK: tmp2 = 0x0000000000000008
 # CHECK: invalid foo
 # CHECK: invalid bar

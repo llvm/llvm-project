@@ -58,7 +58,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/ADT/ilist.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
@@ -70,7 +69,6 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -5811,14 +5809,10 @@ void Verifier::verifyAttachedCallBundle(const CallBase &Call,
          "void return type",
          Call);
 
-  Assert((BU.Inputs.empty() ||
-          (BU.Inputs.size() == 1 && isa<Function>(BU.Inputs.front()))),
-         "operand bundle \"clang.arc.attachedcall\" can take either no "
-         "arguments or one function as an argument",
+  Assert(BU.Inputs.size() == 1 && isa<Function>(BU.Inputs.front()),
+         "operand bundle \"clang.arc.attachedcall\" requires one function as "
+         "an argument",
          Call);
-
-  if (BU.Inputs.empty())
-    return;
 
   auto *Fn = cast<Function>(BU.Inputs.front());
   Intrinsic::ID IID = Fn->getIntrinsicID();

@@ -15,11 +15,10 @@
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/AffineInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/LinalgInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/ModuleBufferization.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/SCFInterfaceImpl.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/StdInterfaceImpl.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/VectorInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/Passes.h"
+#include "mlir/Dialect/SCF/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h"
+#include "mlir/Dialect/Vector/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -54,11 +53,10 @@ struct LinalgComprehensiveModuleBufferize
     affine_ext::registerBufferizableOpInterfaceExternalModels(registry);
     arith::registerBufferizableOpInterfaceExternalModels(registry);
     linalg_ext::registerBufferizableOpInterfaceExternalModels(registry);
-    scf_ext::registerBufferizableOpInterfaceExternalModels(registry);
+    scf::registerBufferizableOpInterfaceExternalModels(registry);
     std_ext::registerModuleBufferizationExternalModels(registry);
-    std_ext::registerBufferizableOpInterfaceExternalModels(registry);
     tensor::registerBufferizableOpInterfaceExternalModels(registry);
-    vector_ext::registerBufferizableOpInterfaceExternalModels(registry);
+    vector::registerBufferizableOpInterfaceExternalModels(registry);
   }
 };
 } // namespace
@@ -71,16 +69,17 @@ static void applyEnablingTransformations(ModuleOp moduleOp) {
 
 static FailureOr<Value> allocationFnUsingAlloca(OpBuilder &b, Location loc,
                                                 MemRefType type,
-                                                ValueRange dynShape) {
+                                                ValueRange dynShape,
+                                                unsigned int bufferAlignment) {
   Value allocated = b.create<memref::AllocaOp>(
-      loc, type, dynShape, b.getI64IntegerAttr(kBufferAlignments));
+      loc, type, dynShape, b.getI64IntegerAttr(bufferAlignment));
   return allocated;
 }
 
 /// Create a linalg::GenericOp version of an n-D copy that can further tile,
 /// lower to loops or vectorize, unlike the current implementation of
 /// memref::CopyOp.
-/// Do not depend on linalg::CopyOp that is getting deprecated.
+/// Do not depend on memref::CopyOp that is getting deprecated.
 static LogicalResult createLinalgCopyOp(OpBuilder &b, Location loc, Value from,
                                         Value to) {
   auto memrefTypeFrom = from.getType().cast<MemRefType>();
@@ -131,7 +130,7 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
   }
 
   // Only certain scf.for ops are supported by the analysis.
-  options->addPostAnalysisStep<scf_ext::AssertScfForAliasingProperties>();
+  options->addPostAnalysisStep<scf::AssertScfForAliasingProperties>();
 
   ModuleOp moduleOp = getOperation();
   applyEnablingTransformations(moduleOp);

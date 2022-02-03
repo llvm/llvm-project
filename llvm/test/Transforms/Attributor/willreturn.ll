@@ -12,15 +12,10 @@ target datalayout = "e-m:e-i54:64-f80:128-n8:16:32:64-S128"
 
 ; TEST 1 (positive case)
 define void @only_return() #0 {
-; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@only_return
-; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@only_return
-; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__CGSCC____-NEXT:    ret void
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK-LABEL: define {{[^@]+}}@only_return
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    ret void
 ;
   ret void
 }
@@ -35,65 +30,35 @@ define void @only_return() #0 {
 
 ; FIXME: missing willreturn
 define i32 @fib(i32 %0) local_unnamed_addr #0 {
-; IS__TUNIT_OPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@fib
-; IS__TUNIT_OPM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
-; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP0]], 2
-; IS__TUNIT_OPM-NEXT:    br i1 [[TMP2]], label [[TMP9:%.*]], label [[TMP3:%.*]]
-; IS__TUNIT_OPM:       3:
-; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = add nsw i32 [[TMP0]], -1
-; IS__TUNIT_OPM-NEXT:    [[TMP5:%.*]] = tail call i32 @fib(i32 [[TMP4]]) #[[ATTR15:[0-9]+]]
-; IS__TUNIT_OPM-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP0]], -2
-; IS__TUNIT_OPM-NEXT:    [[TMP7:%.*]] = tail call i32 @fib(i32 [[TMP6]]) #[[ATTR15]]
-; IS__TUNIT_OPM-NEXT:    [[TMP8:%.*]] = add nsw i32 [[TMP7]], [[TMP5]]
-; IS__TUNIT_OPM-NEXT:    ret i32 [[TMP8]]
-; IS__TUNIT_OPM:       9:
-; IS__TUNIT_OPM-NEXT:    ret i32 [[TMP0]]
+; IS________OPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable
+; IS________OPM-LABEL: define {{[^@]+}}@fib
+; IS________OPM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; IS________OPM-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP0]], 2
+; IS________OPM-NEXT:    br i1 [[TMP2]], label [[TMP9:%.*]], label [[TMP3:%.*]]
+; IS________OPM:       3:
+; IS________OPM-NEXT:    [[TMP4:%.*]] = add nsw i32 [[TMP0]], -1
+; IS________OPM-NEXT:    [[TMP5:%.*]] = tail call i32 @fib(i32 [[TMP4]]) #[[ATTR25:[0-9]+]]
+; IS________OPM-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP0]], -2
+; IS________OPM-NEXT:    [[TMP7:%.*]] = tail call i32 @fib(i32 [[TMP6]]) #[[ATTR25]]
+; IS________OPM-NEXT:    [[TMP8:%.*]] = add nsw i32 [[TMP7]], [[TMP5]]
+; IS________OPM-NEXT:    ret i32 [[TMP8]]
+; IS________OPM:       9:
+; IS________OPM-NEXT:    ret i32 [[TMP0]]
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@fib
-; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
-; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP0]], 2
-; IS__TUNIT_NPM-NEXT:    br i1 [[TMP2]], label [[TMP9:%.*]], label [[TMP3:%.*]]
-; IS__TUNIT_NPM:       3:
-; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = add nsw i32 [[TMP0]], -1
-; IS__TUNIT_NPM-NEXT:    [[TMP5:%.*]] = tail call i32 @fib(i32 [[TMP4]]) #[[ATTR16:[0-9]+]]
-; IS__TUNIT_NPM-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP0]], -2
-; IS__TUNIT_NPM-NEXT:    [[TMP7:%.*]] = tail call i32 @fib(i32 [[TMP6]]) #[[ATTR16]]
-; IS__TUNIT_NPM-NEXT:    [[TMP8:%.*]] = add nsw i32 [[TMP7]], [[TMP5]]
-; IS__TUNIT_NPM-NEXT:    ret i32 [[TMP8]]
-; IS__TUNIT_NPM:       9:
-; IS__TUNIT_NPM-NEXT:    ret i32 [[TMP0]]
-;
-; IS__CGSCC_OPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@fib
-; IS__CGSCC_OPM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP0]], 2
-; IS__CGSCC_OPM-NEXT:    br i1 [[TMP2]], label [[TMP9:%.*]], label [[TMP3:%.*]]
-; IS__CGSCC_OPM:       3:
-; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = add nsw i32 [[TMP0]], -1
-; IS__CGSCC_OPM-NEXT:    [[TMP5:%.*]] = tail call i32 @fib(i32 [[TMP4]]) #[[ATTR26:[0-9]+]]
-; IS__CGSCC_OPM-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP0]], -2
-; IS__CGSCC_OPM-NEXT:    [[TMP7:%.*]] = tail call i32 @fib(i32 [[TMP6]]) #[[ATTR26]]
-; IS__CGSCC_OPM-NEXT:    [[TMP8:%.*]] = add nsw i32 [[TMP7]], [[TMP5]]
-; IS__CGSCC_OPM-NEXT:    ret i32 [[TMP8]]
-; IS__CGSCC_OPM:       9:
-; IS__CGSCC_OPM-NEXT:    ret i32 [[TMP0]]
-;
-; IS__CGSCC_NPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@fib
-; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP0]], 2
-; IS__CGSCC_NPM-NEXT:    br i1 [[TMP2]], label [[TMP9:%.*]], label [[TMP3:%.*]]
-; IS__CGSCC_NPM:       3:
-; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = add nsw i32 [[TMP0]], -1
-; IS__CGSCC_NPM-NEXT:    [[TMP5:%.*]] = tail call i32 @fib(i32 [[TMP4]]) #[[ATTR28:[0-9]+]]
-; IS__CGSCC_NPM-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP0]], -2
-; IS__CGSCC_NPM-NEXT:    [[TMP7:%.*]] = tail call i32 @fib(i32 [[TMP6]]) #[[ATTR28]]
-; IS__CGSCC_NPM-NEXT:    [[TMP8:%.*]] = add nsw i32 [[TMP7]], [[TMP5]]
-; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP8]]
-; IS__CGSCC_NPM:       9:
-; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP0]]
+; IS________NPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable
+; IS________NPM-LABEL: define {{[^@]+}}@fib
+; IS________NPM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; IS________NPM-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP0]], 2
+; IS________NPM-NEXT:    br i1 [[TMP2]], label [[TMP9:%.*]], label [[TMP3:%.*]]
+; IS________NPM:       3:
+; IS________NPM-NEXT:    [[TMP4:%.*]] = add nsw i32 [[TMP0]], -1
+; IS________NPM-NEXT:    [[TMP5:%.*]] = tail call i32 @fib(i32 [[TMP4]]) #[[ATTR27:[0-9]+]]
+; IS________NPM-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP0]], -2
+; IS________NPM-NEXT:    [[TMP7:%.*]] = tail call i32 @fib(i32 [[TMP6]]) #[[ATTR27]]
+; IS________NPM-NEXT:    [[TMP8:%.*]] = add nsw i32 [[TMP7]], [[TMP5]]
+; IS________NPM-NEXT:    ret i32 [[TMP8]]
+; IS________NPM:       9:
+; IS________NPM-NEXT:    ret i32 [[TMP0]]
 ;
   %2 = icmp slt i32 %0, 2
   br i1 %2, label %9, label %3
@@ -121,41 +86,23 @@ define i32 @fib(i32 %0) local_unnamed_addr #0 {
 ; fact_maybe_not(-1) doesn't stop.
 
 define i32 @fact_maybe_not_halt(i32 %0) local_unnamed_addr #0 {
-; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable
-; IS__TUNIT____-LABEL: define {{[^@]+}}@fact_maybe_not_halt
-; IS__TUNIT____-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
-; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP0]], 0
-; IS__TUNIT____-NEXT:    br i1 [[TMP2]], label [[TMP11:%.*]], label [[TMP3:%.*]]
-; IS__TUNIT____:       3:
-; IS__TUNIT____-NEXT:    [[TMP4:%.*]] = phi i32 [ [[TMP8:%.*]], [[TMP3]] ], [ [[TMP0]], [[TMP1:%.*]] ]
-; IS__TUNIT____-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP9:%.*]], [[TMP3]] ], [ 1, [[TMP1]] ]
-; IS__TUNIT____-NEXT:    [[TMP6:%.*]] = icmp sgt i32 [[TMP4]], 0
-; IS__TUNIT____-NEXT:    [[TMP7:%.*]] = sext i1 [[TMP6]] to i32
-; IS__TUNIT____-NEXT:    [[TMP8]] = add nsw i32 [[TMP4]], [[TMP7]]
-; IS__TUNIT____-NEXT:    [[TMP9]] = mul nsw i32 [[TMP4]], [[TMP5]]
-; IS__TUNIT____-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP8]], 0
-; IS__TUNIT____-NEXT:    br i1 [[TMP10]], label [[TMP11]], label [[TMP3]]
-; IS__TUNIT____:       11:
-; IS__TUNIT____-NEXT:    [[TMP12:%.*]] = phi i32 [ 1, [[TMP1]] ], [ [[TMP9]], [[TMP3]] ]
-; IS__TUNIT____-NEXT:    ret i32 [[TMP12]]
-;
-; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
-; IS__CGSCC____-LABEL: define {{[^@]+}}@fact_maybe_not_halt
-; IS__CGSCC____-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
-; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP0]], 0
-; IS__CGSCC____-NEXT:    br i1 [[TMP2]], label [[TMP11:%.*]], label [[TMP3:%.*]]
-; IS__CGSCC____:       3:
-; IS__CGSCC____-NEXT:    [[TMP4:%.*]] = phi i32 [ [[TMP8:%.*]], [[TMP3]] ], [ [[TMP0]], [[TMP1:%.*]] ]
-; IS__CGSCC____-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP9:%.*]], [[TMP3]] ], [ 1, [[TMP1]] ]
-; IS__CGSCC____-NEXT:    [[TMP6:%.*]] = icmp sgt i32 [[TMP4]], 0
-; IS__CGSCC____-NEXT:    [[TMP7:%.*]] = sext i1 [[TMP6]] to i32
-; IS__CGSCC____-NEXT:    [[TMP8]] = add nsw i32 [[TMP4]], [[TMP7]]
-; IS__CGSCC____-NEXT:    [[TMP9]] = mul nsw i32 [[TMP4]], [[TMP5]]
-; IS__CGSCC____-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP8]], 0
-; IS__CGSCC____-NEXT:    br i1 [[TMP10]], label [[TMP11]], label [[TMP3]]
-; IS__CGSCC____:       11:
-; IS__CGSCC____-NEXT:    [[TMP12:%.*]] = phi i32 [ 1, [[TMP1]] ], [ [[TMP9]], [[TMP3]] ]
-; IS__CGSCC____-NEXT:    ret i32 [[TMP12]]
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
+; CHECK-LABEL: define {{[^@]+}}@fact_maybe_not_halt
+; CHECK-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP11:%.*]], label [[TMP3:%.*]]
+; CHECK:       3:
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ [[TMP8:%.*]], [[TMP3]] ], [ [[TMP0]], [[TMP1:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP9:%.*]], [[TMP3]] ], [ 1, [[TMP1]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt i32 [[TMP4]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = sext i1 [[TMP6]] to i32
+; CHECK-NEXT:    [[TMP8]] = add nsw i32 [[TMP4]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9]] = mul nsw i32 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP8]], 0
+; CHECK-NEXT:    br i1 [[TMP10]], label [[TMP11]], label [[TMP3]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP12:%.*]] = phi i32 [ 1, [[TMP1]] ], [ [[TMP9]], [[TMP3]] ]
+; CHECK-NEXT:    ret i32 [[TMP12]]
 ;
   %2 = icmp eq i32 %0, 0
   br i1 %2, label %11, label %3
@@ -187,69 +134,37 @@ define i32 @fact_maybe_not_halt(i32 %0) local_unnamed_addr #0 {
 ; }
 
 define i32 @fact_loop(i32 %0) local_unnamed_addr #0 {
-; IS__TUNIT_OPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@fact_loop
-; IS__TUNIT_OPM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
-; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP0]], 1
-; IS__TUNIT_OPM-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
-; IS__TUNIT_OPM:       3:
-; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = phi i32 [ 1, [[TMP1:%.*]] ], [ [[TMP8:%.*]], [[TMP5]] ]
-; IS__TUNIT_OPM-NEXT:    ret i32 [[TMP4]]
-; IS__TUNIT_OPM:       5:
-; IS__TUNIT_OPM-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP9:%.*]], [[TMP5]] ], [ 1, [[TMP1]] ]
-; IS__TUNIT_OPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8]], [[TMP5]] ], [ 1, [[TMP1]] ]
-; IS__TUNIT_OPM-NEXT:    [[TMP8]] = mul nsw i32 [[TMP6]], [[TMP7]]
-; IS__TUNIT_OPM-NEXT:    [[TMP9]] = add nuw nsw i32 [[TMP6]], 1
-; IS__TUNIT_OPM-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP6]], [[TMP0]]
-; IS__TUNIT_OPM-NEXT:    br i1 [[TMP10]], label [[TMP3]], label [[TMP5]]
+; IS________OPM: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
+; IS________OPM-LABEL: define {{[^@]+}}@fact_loop
+; IS________OPM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; IS________OPM-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP0]], 1
+; IS________OPM-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
+; IS________OPM:       3:
+; IS________OPM-NEXT:    [[TMP4:%.*]] = phi i32 [ 1, [[TMP1:%.*]] ], [ [[TMP8:%.*]], [[TMP5]] ]
+; IS________OPM-NEXT:    ret i32 [[TMP4]]
+; IS________OPM:       5:
+; IS________OPM-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP9:%.*]], [[TMP5]] ], [ 1, [[TMP1]] ]
+; IS________OPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8]], [[TMP5]] ], [ 1, [[TMP1]] ]
+; IS________OPM-NEXT:    [[TMP8]] = mul nsw i32 [[TMP6]], [[TMP7]]
+; IS________OPM-NEXT:    [[TMP9]] = add nuw nsw i32 [[TMP6]], 1
+; IS________OPM-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP6]], [[TMP0]]
+; IS________OPM-NEXT:    br i1 [[TMP10]], label [[TMP3]], label [[TMP5]]
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@fact_loop
-; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP0]], 1
-; IS__TUNIT_NPM-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
-; IS__TUNIT_NPM:       3:
-; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = phi i32 [ 1, [[TMP1:%.*]] ], [ [[TMP8:%.*]], [[TMP5]] ]
-; IS__TUNIT_NPM-NEXT:    ret i32 [[TMP4]]
-; IS__TUNIT_NPM:       5:
-; IS__TUNIT_NPM-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP9:%.*]], [[TMP5]] ], [ 1, [[TMP1]] ]
-; IS__TUNIT_NPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8]], [[TMP5]] ], [ 1, [[TMP1]] ]
-; IS__TUNIT_NPM-NEXT:    [[TMP8]] = mul nsw i32 [[TMP6]], [[TMP7]]
-; IS__TUNIT_NPM-NEXT:    [[TMP9]] = add nuw nsw i32 [[TMP6]], 1
-; IS__TUNIT_NPM-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP6]], [[TMP0]]
-; IS__TUNIT_NPM-NEXT:    br i1 [[TMP10]], label [[TMP3]], label [[TMP5]]
-;
-; IS__CGSCC_OPM: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@fact_loop
-; IS__CGSCC_OPM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2]] {
-; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP0]], 1
-; IS__CGSCC_OPM-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
-; IS__CGSCC_OPM:       3:
-; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = phi i32 [ 1, [[TMP1:%.*]] ], [ [[TMP8:%.*]], [[TMP5]] ]
-; IS__CGSCC_OPM-NEXT:    ret i32 [[TMP4]]
-; IS__CGSCC_OPM:       5:
-; IS__CGSCC_OPM-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP9:%.*]], [[TMP5]] ], [ 1, [[TMP1]] ]
-; IS__CGSCC_OPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8]], [[TMP5]] ], [ 1, [[TMP1]] ]
-; IS__CGSCC_OPM-NEXT:    [[TMP8]] = mul nsw i32 [[TMP6]], [[TMP7]]
-; IS__CGSCC_OPM-NEXT:    [[TMP9]] = add nuw nsw i32 [[TMP6]], 1
-; IS__CGSCC_OPM-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP6]], [[TMP0]]
-; IS__CGSCC_OPM-NEXT:    br i1 [[TMP10]], label [[TMP3]], label [[TMP5]]
-;
-; IS__CGSCC_NPM: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@fact_loop
-; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP0]], 1
-; IS__CGSCC_NPM-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
-; IS__CGSCC_NPM:       3:
-; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = phi i32 [ 1, [[TMP1:%.*]] ], [ [[TMP8:%.*]], [[TMP5]] ]
-; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP4]]
-; IS__CGSCC_NPM:       5:
-; IS__CGSCC_NPM-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP9:%.*]], [[TMP5]] ], [ 1, [[TMP1]] ]
-; IS__CGSCC_NPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8]], [[TMP5]] ], [ 1, [[TMP1]] ]
-; IS__CGSCC_NPM-NEXT:    [[TMP8]] = mul nsw i32 [[TMP6]], [[TMP7]]
-; IS__CGSCC_NPM-NEXT:    [[TMP9]] = add nuw nsw i32 [[TMP6]], 1
-; IS__CGSCC_NPM-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP6]], [[TMP0]]
-; IS__CGSCC_NPM-NEXT:    br i1 [[TMP10]], label [[TMP3]], label [[TMP5]]
+; IS________NPM: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; IS________NPM-LABEL: define {{[^@]+}}@fact_loop
+; IS________NPM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; IS________NPM-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP0]], 1
+; IS________NPM-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
+; IS________NPM:       3:
+; IS________NPM-NEXT:    [[TMP4:%.*]] = phi i32 [ 1, [[TMP1:%.*]] ], [ [[TMP8:%.*]], [[TMP5]] ]
+; IS________NPM-NEXT:    ret i32 [[TMP4]]
+; IS________NPM:       5:
+; IS________NPM-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP9:%.*]], [[TMP5]] ], [ 1, [[TMP1]] ]
+; IS________NPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8]], [[TMP5]] ], [ 1, [[TMP1]] ]
+; IS________NPM-NEXT:    [[TMP8]] = mul nsw i32 [[TMP6]], [[TMP7]]
+; IS________NPM-NEXT:    [[TMP9]] = add nuw nsw i32 [[TMP6]], 1
+; IS________NPM-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP6]], [[TMP0]]
+; IS________NPM-NEXT:    br i1 [[TMP10]], label [[TMP3]], label [[TMP5]]
 ;
   %2 = icmp slt i32 %0, 1
   br i1 %2, label %3, label %5
@@ -279,49 +194,27 @@ define i32 @fact_loop(i32 %0) local_unnamed_addr #0 {
 declare void @sink() nounwind willreturn nosync nofree
 
 define void @mutual_recursion1(i1 %c) #0 {
-; IS__TUNIT_OPM: Function Attrs: nofree noinline nosync nounwind uwtable
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@mutual_recursion1
-; IS__TUNIT_OPM-SAME: (i1 [[C:%.*]]) #[[ATTR3:[0-9]+]] {
-; IS__TUNIT_OPM-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
-; IS__TUNIT_OPM:       rec:
-; IS__TUNIT_OPM-NEXT:    call void @sink() #[[ATTR11:[0-9]+]]
-; IS__TUNIT_OPM-NEXT:    call void @mutual_recursion2(i1 [[C]]) #[[ATTR23:[0-9]+]]
-; IS__TUNIT_OPM-NEXT:    br label [[END]]
-; IS__TUNIT_OPM:       end:
-; IS__TUNIT_OPM-NEXT:    ret void
+; IS________OPM: Function Attrs: nofree noinline nosync nounwind uwtable
+; IS________OPM-LABEL: define {{[^@]+}}@mutual_recursion1
+; IS________OPM-SAME: (i1 [[C:%.*]]) #[[ATTR4:[0-9]+]] {
+; IS________OPM-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
+; IS________OPM:       rec:
+; IS________OPM-NEXT:    call void @sink() #[[ATTR13:[0-9]+]]
+; IS________OPM-NEXT:    call void @mutual_recursion2(i1 [[C]]) #[[ATTR26:[0-9]+]]
+; IS________OPM-NEXT:    br label [[END]]
+; IS________OPM:       end:
+; IS________OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree noinline nosync nounwind uwtable
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@mutual_recursion1
-; IS__TUNIT_NPM-SAME: (i1 [[C:%.*]]) #[[ATTR3:[0-9]+]] {
-; IS__TUNIT_NPM-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
-; IS__TUNIT_NPM:       rec:
-; IS__TUNIT_NPM-NEXT:    call void @sink() #[[ATTR11:[0-9]+]]
-; IS__TUNIT_NPM-NEXT:    call void @mutual_recursion2(i1 noundef [[C]]) #[[ATTR25:[0-9]+]]
-; IS__TUNIT_NPM-NEXT:    br label [[END]]
-; IS__TUNIT_NPM:       end:
-; IS__TUNIT_NPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: nofree noinline nosync nounwind uwtable
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@mutual_recursion1
-; IS__CGSCC_OPM-SAME: (i1 [[C:%.*]]) #[[ATTR4:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
-; IS__CGSCC_OPM:       rec:
-; IS__CGSCC_OPM-NEXT:    call void @sink() #[[ATTR14:[0-9]+]]
-; IS__CGSCC_OPM-NEXT:    call void @mutual_recursion2(i1 [[C]]) #[[ATTR27:[0-9]+]]
-; IS__CGSCC_OPM-NEXT:    br label [[END]]
-; IS__CGSCC_OPM:       end:
-; IS__CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: nofree noinline nosync nounwind uwtable
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@mutual_recursion1
-; IS__CGSCC_NPM-SAME: (i1 [[C:%.*]]) #[[ATTR4:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
-; IS__CGSCC_NPM:       rec:
-; IS__CGSCC_NPM-NEXT:    call void @sink() #[[ATTR14:[0-9]+]]
-; IS__CGSCC_NPM-NEXT:    call void @mutual_recursion2(i1 noundef [[C]]) #[[ATTR29:[0-9]+]]
-; IS__CGSCC_NPM-NEXT:    br label [[END]]
-; IS__CGSCC_NPM:       end:
-; IS__CGSCC_NPM-NEXT:    ret void
+; IS________NPM: Function Attrs: nofree noinline nosync nounwind uwtable
+; IS________NPM-LABEL: define {{[^@]+}}@mutual_recursion1
+; IS________NPM-SAME: (i1 [[C:%.*]]) #[[ATTR4:[0-9]+]] {
+; IS________NPM-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
+; IS________NPM:       rec:
+; IS________NPM-NEXT:    call void @sink() #[[ATTR13:[0-9]+]]
+; IS________NPM-NEXT:    call void @mutual_recursion2(i1 noundef [[C]]) #[[ATTR28:[0-9]+]]
+; IS________NPM-NEXT:    br label [[END]]
+; IS________NPM:       end:
+; IS________NPM-NEXT:    ret void
 ;
   br i1 %c, label %rec, label %end
 rec:
@@ -334,29 +227,17 @@ end:
 
 
 define void @mutual_recursion2(i1 %c) #0 {
-; IS__TUNIT_OPM: Function Attrs: nofree noinline nosync nounwind uwtable
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@mutual_recursion2
-; IS__TUNIT_OPM-SAME: (i1 [[C:%.*]]) #[[ATTR3]] {
-; IS__TUNIT_OPM-NEXT:    call void @mutual_recursion1(i1 [[C]]) #[[ATTR23]]
-; IS__TUNIT_OPM-NEXT:    ret void
+; IS________OPM: Function Attrs: nofree noinline nosync nounwind uwtable
+; IS________OPM-LABEL: define {{[^@]+}}@mutual_recursion2
+; IS________OPM-SAME: (i1 [[C:%.*]]) #[[ATTR4]] {
+; IS________OPM-NEXT:    call void @mutual_recursion1(i1 [[C]]) #[[ATTR26]]
+; IS________OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree noinline nosync nounwind uwtable
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@mutual_recursion2
-; IS__TUNIT_NPM-SAME: (i1 [[C:%.*]]) #[[ATTR3]] {
-; IS__TUNIT_NPM-NEXT:    call void @mutual_recursion1(i1 [[C]]) #[[ATTR25]]
-; IS__TUNIT_NPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: nofree noinline nosync nounwind uwtable
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@mutual_recursion2
-; IS__CGSCC_OPM-SAME: (i1 [[C:%.*]]) #[[ATTR4]] {
-; IS__CGSCC_OPM-NEXT:    call void @mutual_recursion1(i1 [[C]]) #[[ATTR27]]
-; IS__CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: nofree noinline nosync nounwind uwtable
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@mutual_recursion2
-; IS__CGSCC_NPM-SAME: (i1 [[C:%.*]]) #[[ATTR4]] {
-; IS__CGSCC_NPM-NEXT:    call void @mutual_recursion1(i1 [[C]]) #[[ATTR29]]
-; IS__CGSCC_NPM-NEXT:    ret void
+; IS________NPM: Function Attrs: nofree noinline nosync nounwind uwtable
+; IS________NPM-LABEL: define {{[^@]+}}@mutual_recursion2
+; IS________NPM-SAME: (i1 [[C:%.*]]) #[[ATTR4]] {
+; IS________NPM-NEXT:    call void @mutual_recursion1(i1 [[C]]) #[[ATTR28]]
+; IS________NPM-NEXT:    ret void
 ;
   call void @mutual_recursion1(i1 %c)
   ret void
@@ -370,17 +251,11 @@ define void @mutual_recursion2(i1 %c) #0 {
 declare void @exit(i32 %0) local_unnamed_addr noreturn
 
 define void @only_exit() local_unnamed_addr #0 {
-; IS__TUNIT____: Function Attrs: noinline noreturn nounwind uwtable
-; IS__TUNIT____-LABEL: define {{[^@]+}}@only_exit
-; IS__TUNIT____-SAME: () local_unnamed_addr #[[ATTR5:[0-9]+]] {
-; IS__TUNIT____-NEXT:    tail call void @exit(i32 noundef 0) #[[ATTR4:[0-9]+]]
-; IS__TUNIT____-NEXT:    unreachable
-;
-; IS__CGSCC____: Function Attrs: noinline noreturn nounwind uwtable
-; IS__CGSCC____-LABEL: define {{[^@]+}}@only_exit
-; IS__CGSCC____-SAME: () local_unnamed_addr #[[ATTR6:[0-9]+]] {
-; IS__CGSCC____-NEXT:    tail call void @exit(i32 noundef 0) #[[ATTR5:[0-9]+]]
-; IS__CGSCC____-NEXT:    unreachable
+; CHECK: Function Attrs: noinline noreturn nounwind uwtable
+; CHECK-LABEL: define {{[^@]+}}@only_exit
+; CHECK-SAME: () local_unnamed_addr #[[ATTR6:[0-9]+]] {
+; CHECK-NEXT:    tail call void @exit(i32 noundef 0) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    unreachable
 ;
   tail call void @exit(i32 0)
   unreachable
@@ -397,41 +272,23 @@ define void @only_exit() local_unnamed_addr #0 {
 ;     return;
 ; }
 define void @conditional_exit(i32 %0, i32* nocapture readonly %1) local_unnamed_addr #0 {
-; IS__TUNIT____: Function Attrs: noinline nounwind uwtable
-; IS__TUNIT____-LABEL: define {{[^@]+}}@conditional_exit
-; IS__TUNIT____-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR6:[0-9]+]] {
-; IS__TUNIT____-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0]], 0
-; IS__TUNIT____-NEXT:    br i1 [[TMP3]], label [[TMP5:%.*]], label [[TMP4:%.*]]
-; IS__TUNIT____:       4:
-; IS__TUNIT____-NEXT:    tail call void @exit(i32 noundef 0) #[[ATTR4]]
-; IS__TUNIT____-NEXT:    unreachable
-; IS__TUNIT____:       5:
-; IS__TUNIT____-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP1]], align 4
-; IS__TUNIT____-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 0
-; IS__TUNIT____-NEXT:    br i1 [[TMP7]], label [[TMP9:%.*]], label [[TMP8:%.*]]
-; IS__TUNIT____:       8:
-; IS__TUNIT____-NEXT:    tail call void @exit(i32 noundef 1) #[[ATTR4]]
-; IS__TUNIT____-NEXT:    unreachable
-; IS__TUNIT____:       9:
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC____: Function Attrs: noinline nounwind uwtable
-; IS__CGSCC____-LABEL: define {{[^@]+}}@conditional_exit
-; IS__CGSCC____-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
-; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0]], 0
-; IS__CGSCC____-NEXT:    br i1 [[TMP3]], label [[TMP5:%.*]], label [[TMP4:%.*]]
-; IS__CGSCC____:       4:
-; IS__CGSCC____-NEXT:    tail call void @exit(i32 noundef 0) #[[ATTR5]]
-; IS__CGSCC____-NEXT:    unreachable
-; IS__CGSCC____:       5:
-; IS__CGSCC____-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP1]], align 4
-; IS__CGSCC____-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 0
-; IS__CGSCC____-NEXT:    br i1 [[TMP7]], label [[TMP9:%.*]], label [[TMP8:%.*]]
-; IS__CGSCC____:       8:
-; IS__CGSCC____-NEXT:    tail call void @exit(i32 noundef 1) #[[ATTR5]]
-; IS__CGSCC____-NEXT:    unreachable
-; IS__CGSCC____:       9:
-; IS__CGSCC____-NEXT:    ret void
+; CHECK: Function Attrs: noinline nounwind uwtable
+; CHECK-LABEL: define {{[^@]+}}@conditional_exit
+; CHECK-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP5:%.*]], label [[TMP4:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    tail call void @exit(i32 noundef 0) #[[ATTR5]]
+; CHECK-NEXT:    unreachable
+; CHECK:       5:
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 0
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP9:%.*]], label [[TMP8:%.*]]
+; CHECK:       8:
+; CHECK-NEXT:    tail call void @exit(i32 noundef 1) #[[ATTR5]]
+; CHECK-NEXT:    unreachable
+; CHECK:       9:
+; CHECK-NEXT:    ret void
 ;
   %3 = icmp eq i32 %0, 0
   br i1 %3, label %5, label %4
@@ -460,44 +317,27 @@ define void @conditional_exit(i32 %0, i32* nocapture readonly %1) local_unnamed_
 declare float @llvm.floor.f32(float)
 
 define void @call_floor(float %a) #0 {
-; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@call_floor
-; IS__TUNIT____-SAME: (float [[A:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@call_floor
-; IS__CGSCC____-SAME: (float [[A:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    ret void
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK-LABEL: define {{[^@]+}}@call_floor
+; CHECK-SAME: (float [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret void
 ;
   tail call float @llvm.floor.f32(float %a)
   ret void
 }
 
 define float @call_floor2(float %a) #0 {
-; IS__TUNIT_OPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@call_floor2
-; IS__TUNIT_OPM-SAME: (float [[A:%.*]]) #[[ATTR0]] {
-; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) #[[ATTR24:[0-9]+]]
-; IS__TUNIT_OPM-NEXT:    ret float [[C]]
+; IS________OPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
+; IS________OPM-LABEL: define {{[^@]+}}@call_floor2
+; IS________OPM-SAME: (float [[A:%.*]]) #[[ATTR9:[0-9]+]] {
+; IS________OPM-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) #[[ATTR27:[0-9]+]]
+; IS________OPM-NEXT:    ret float [[C]]
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@call_floor2
-; IS__TUNIT_NPM-SAME: (float [[A:%.*]]) #[[ATTR0]] {
-; IS__TUNIT_NPM-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) #[[ATTR26:[0-9]+]]
-; IS__TUNIT_NPM-NEXT:    ret float [[C]]
-;
-; IS__CGSCC_OPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@call_floor2
-; IS__CGSCC_OPM-SAME: (float [[A:%.*]]) #[[ATTR9:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) #[[ATTR28:[0-9]+]]
-; IS__CGSCC_OPM-NEXT:    ret float [[C]]
-;
-; IS__CGSCC_NPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@call_floor2
-; IS__CGSCC_NPM-SAME: (float [[A:%.*]]) #[[ATTR9:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) #[[ATTR30:[0-9]+]]
-; IS__CGSCC_NPM-NEXT:    ret float [[C]]
+; IS________NPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
+; IS________NPM-LABEL: define {{[^@]+}}@call_floor2
+; IS________NPM-SAME: (float [[A:%.*]]) #[[ATTR9:[0-9]+]] {
+; IS________NPM-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) #[[ATTR29:[0-9]+]]
+; IS________NPM-NEXT:    ret float [[C]]
 ;
   %c = tail call float @llvm.floor.f32(float %a)
   ret float %c
@@ -513,29 +353,17 @@ define float @call_floor2(float %a) #0 {
 declare void @maybe_noreturn() #0
 
 define void @call_maybe_noreturn() #0 {
-; IS__TUNIT_OPM: Function Attrs: noinline nounwind uwtable
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@call_maybe_noreturn
-; IS__TUNIT_OPM-SAME: () #[[ATTR6]] {
-; IS__TUNIT_OPM-NEXT:    tail call void @maybe_noreturn() #[[ATTR25:[0-9]+]]
-; IS__TUNIT_OPM-NEXT:    ret void
+; IS________OPM: Function Attrs: noinline nounwind uwtable
+; IS________OPM-LABEL: define {{[^@]+}}@call_maybe_noreturn
+; IS________OPM-SAME: () #[[ATTR7]] {
+; IS________OPM-NEXT:    tail call void @maybe_noreturn() #[[ATTR28:[0-9]+]]
+; IS________OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: noinline nounwind uwtable
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@call_maybe_noreturn
-; IS__TUNIT_NPM-SAME: () #[[ATTR6]] {
-; IS__TUNIT_NPM-NEXT:    tail call void @maybe_noreturn() #[[ATTR27:[0-9]+]]
-; IS__TUNIT_NPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: noinline nounwind uwtable
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@call_maybe_noreturn
-; IS__CGSCC_OPM-SAME: () #[[ATTR7]] {
-; IS__CGSCC_OPM-NEXT:    tail call void @maybe_noreturn() #[[ATTR29:[0-9]+]]
-; IS__CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: noinline nounwind uwtable
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@call_maybe_noreturn
-; IS__CGSCC_NPM-SAME: () #[[ATTR7]] {
-; IS__CGSCC_NPM-NEXT:    tail call void @maybe_noreturn() #[[ATTR31:[0-9]+]]
-; IS__CGSCC_NPM-NEXT:    ret void
+; IS________NPM: Function Attrs: noinline nounwind uwtable
+; IS________NPM-LABEL: define {{[^@]+}}@call_maybe_noreturn
+; IS________NPM-SAME: () #[[ATTR7]] {
+; IS________NPM-NEXT:    tail call void @maybe_noreturn() #[[ATTR30:[0-9]+]]
+; IS________NPM-NEXT:    ret void
 ;
   tail call void @maybe_noreturn()
   ret void
@@ -550,46 +378,28 @@ define void @call_maybe_noreturn() #0 {
 declare void @will_return() willreturn norecurse
 
 define void @f1() #0 {
-; IS__TUNIT_OPM: Function Attrs: noinline nounwind uwtable willreturn
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@f1
-; IS__TUNIT_OPM-SAME: () #[[ATTR9:[0-9]+]] {
-; IS__TUNIT_OPM-NEXT:    tail call void @will_return() #[[ATTR26:[0-9]+]]
-; IS__TUNIT_OPM-NEXT:    ret void
+; IS________OPM: Function Attrs: noinline nounwind uwtable willreturn
+; IS________OPM-LABEL: define {{[^@]+}}@f1
+; IS________OPM-SAME: () #[[ATTR11:[0-9]+]] {
+; IS________OPM-NEXT:    tail call void @will_return() #[[ATTR29:[0-9]+]]
+; IS________OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: noinline nounwind uwtable willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@f1
-; IS__TUNIT_NPM-SAME: () #[[ATTR9:[0-9]+]] {
-; IS__TUNIT_NPM-NEXT:    tail call void @will_return() #[[ATTR28:[0-9]+]]
-; IS__TUNIT_NPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: noinline norecurse nounwind uwtable willreturn
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@f1
-; IS__CGSCC_OPM-SAME: () #[[ATTR11:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    tail call void @will_return() #[[ATTR30:[0-9]+]]
-; IS__CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: noinline norecurse nounwind uwtable willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@f1
-; IS__CGSCC_NPM-SAME: () #[[ATTR11:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    tail call void @will_return() #[[ATTR32:[0-9]+]]
-; IS__CGSCC_NPM-NEXT:    ret void
+; IS________NPM: Function Attrs: noinline nounwind uwtable willreturn
+; IS________NPM-LABEL: define {{[^@]+}}@f1
+; IS________NPM-SAME: () #[[ATTR11:[0-9]+]] {
+; IS________NPM-NEXT:    tail call void @will_return() #[[ATTR31:[0-9]+]]
+; IS________NPM-NEXT:    ret void
 ;
   tail call void @will_return()
   ret void
 }
 
 define void @f2() #0 {
-; IS__TUNIT____: Function Attrs: noinline nounwind uwtable willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@f2
-; IS__TUNIT____-SAME: () #[[ATTR9:[0-9]+]] {
-; IS__TUNIT____-NEXT:    tail call void @f1() #[[ATTR11:[0-9]+]]
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC____: Function Attrs: noinline norecurse nounwind uwtable willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@f2
-; IS__CGSCC____-SAME: () #[[ATTR11:[0-9]+]] {
-; IS__CGSCC____-NEXT:    tail call void @f1() #[[ATTR14:[0-9]+]]
-; IS__CGSCC____-NEXT:    ret void
+; CHECK: Function Attrs: noinline nounwind uwtable willreturn
+; CHECK-LABEL: define {{[^@]+}}@f2
+; CHECK-SAME: () #[[ATTR11:[0-9]+]] {
+; CHECK-NEXT:    tail call void @f1() #[[ATTR13:[0-9]+]]
+; CHECK-NEXT:    ret void
 ;
   tail call void @f1()
   ret void
@@ -600,25 +410,15 @@ define void @f2() #0 {
 ; call willreturn function in endless loop.
 
 define void @call_will_return_but_has_loop() #0 {
-; IS__TUNIT____: Function Attrs: noinline noreturn nounwind uwtable
-; IS__TUNIT____-LABEL: define {{[^@]+}}@call_will_return_but_has_loop
-; IS__TUNIT____-SAME: () #[[ATTR5]] {
-; IS__TUNIT____-NEXT:    br label [[LABEL1:%.*]]
-; IS__TUNIT____:       label1:
-; IS__TUNIT____-NEXT:    tail call void @will_return()
-; IS__TUNIT____-NEXT:    br label [[LABEL2:%.*]]
-; IS__TUNIT____:       label2:
-; IS__TUNIT____-NEXT:    br label [[LABEL1]]
-;
-; IS__CGSCC____: Function Attrs: noinline norecurse noreturn nounwind uwtable
-; IS__CGSCC____-LABEL: define {{[^@]+}}@call_will_return_but_has_loop
-; IS__CGSCC____-SAME: () #[[ATTR12:[0-9]+]] {
-; IS__CGSCC____-NEXT:    br label [[LABEL1:%.*]]
-; IS__CGSCC____:       label1:
-; IS__CGSCC____-NEXT:    tail call void @will_return()
-; IS__CGSCC____-NEXT:    br label [[LABEL2:%.*]]
-; IS__CGSCC____:       label2:
-; IS__CGSCC____-NEXT:    br label [[LABEL1]]
+; CHECK: Function Attrs: noinline noreturn nounwind uwtable
+; CHECK-LABEL: define {{[^@]+}}@call_will_return_but_has_loop
+; CHECK-SAME: () #[[ATTR6]] {
+; CHECK-NEXT:    br label [[LABEL1:%.*]]
+; CHECK:       label1:
+; CHECK-NEXT:    tail call void @will_return()
+; CHECK-NEXT:    br label [[LABEL2:%.*]]
+; CHECK:       label2:
+; CHECK-NEXT:    br label [[LABEL1]]
 ;
   br label %label1
 label1:
@@ -637,53 +437,29 @@ label2:
 declare i1 @maybe_raise_exception() #1 willreturn
 
 define void @invoke_test() personality i32 (...)* @__gxx_personality_v0 {
-; IS__TUNIT_OPM: Function Attrs: nounwind willreturn
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@invoke_test
-; IS__TUNIT_OPM-SAME: () #[[ATTR11]] personality i32 (...)* @__gxx_personality_v0 {
-; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = invoke i1 @maybe_raise_exception() #[[ATTR26]]
-; IS__TUNIT_OPM-NEXT:    to label [[N:%.*]] unwind label [[F:%.*]]
-; IS__TUNIT_OPM:       N:
-; IS__TUNIT_OPM-NEXT:    ret void
-; IS__TUNIT_OPM:       F:
-; IS__TUNIT_OPM-NEXT:    [[VAL:%.*]] = landingpad { i8*, i32 }
-; IS__TUNIT_OPM-NEXT:    catch i8* null
-; IS__TUNIT_OPM-NEXT:    ret void
+; IS________OPM: Function Attrs: nounwind willreturn
+; IS________OPM-LABEL: define {{[^@]+}}@invoke_test
+; IS________OPM-SAME: () #[[ATTR13]] personality i32 (...)* @__gxx_personality_v0 {
+; IS________OPM-NEXT:    [[TMP1:%.*]] = invoke i1 @maybe_raise_exception() #[[ATTR29]]
+; IS________OPM-NEXT:    to label [[N:%.*]] unwind label [[F:%.*]]
+; IS________OPM:       N:
+; IS________OPM-NEXT:    ret void
+; IS________OPM:       F:
+; IS________OPM-NEXT:    [[VAL:%.*]] = landingpad { i8*, i32 }
+; IS________OPM-NEXT:    catch i8* null
+; IS________OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: nounwind willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@invoke_test
-; IS__TUNIT_NPM-SAME: () #[[ATTR11]] personality i32 (...)* @__gxx_personality_v0 {
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = invoke i1 @maybe_raise_exception() #[[ATTR28]]
-; IS__TUNIT_NPM-NEXT:    to label [[N:%.*]] unwind label [[F:%.*]]
-; IS__TUNIT_NPM:       N:
-; IS__TUNIT_NPM-NEXT:    ret void
-; IS__TUNIT_NPM:       F:
-; IS__TUNIT_NPM-NEXT:    [[VAL:%.*]] = landingpad { i8*, i32 }
-; IS__TUNIT_NPM-NEXT:    catch i8* null
-; IS__TUNIT_NPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: nounwind willreturn
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@invoke_test
-; IS__CGSCC_OPM-SAME: () #[[ATTR14]] personality i32 (...)* @__gxx_personality_v0 {
-; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = invoke i1 @maybe_raise_exception() #[[ATTR30]]
-; IS__CGSCC_OPM-NEXT:    to label [[N:%.*]] unwind label [[F:%.*]]
-; IS__CGSCC_OPM:       N:
-; IS__CGSCC_OPM-NEXT:    ret void
-; IS__CGSCC_OPM:       F:
-; IS__CGSCC_OPM-NEXT:    [[VAL:%.*]] = landingpad { i8*, i32 }
-; IS__CGSCC_OPM-NEXT:    catch i8* null
-; IS__CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: nounwind willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@invoke_test
-; IS__CGSCC_NPM-SAME: () #[[ATTR14]] personality i32 (...)* @__gxx_personality_v0 {
-; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = invoke i1 @maybe_raise_exception() #[[ATTR32]]
-; IS__CGSCC_NPM-NEXT:    to label [[N:%.*]] unwind label [[F:%.*]]
-; IS__CGSCC_NPM:       N:
-; IS__CGSCC_NPM-NEXT:    ret void
-; IS__CGSCC_NPM:       F:
-; IS__CGSCC_NPM-NEXT:    [[VAL:%.*]] = landingpad { i8*, i32 }
-; IS__CGSCC_NPM-NEXT:    catch i8* null
-; IS__CGSCC_NPM-NEXT:    ret void
+; IS________NPM: Function Attrs: nounwind willreturn
+; IS________NPM-LABEL: define {{[^@]+}}@invoke_test
+; IS________NPM-SAME: () #[[ATTR13]] personality i32 (...)* @__gxx_personality_v0 {
+; IS________NPM-NEXT:    [[TMP1:%.*]] = invoke i1 @maybe_raise_exception() #[[ATTR31]]
+; IS________NPM-NEXT:    to label [[N:%.*]] unwind label [[F:%.*]]
+; IS________NPM:       N:
+; IS________NPM-NEXT:    ret void
+; IS________NPM:       F:
+; IS________NPM-NEXT:    [[VAL:%.*]] = landingpad { i8*, i32 }
+; IS________NPM-NEXT:    catch i8* null
+; IS________NPM-NEXT:    ret void
 ;
   invoke i1 @maybe_raise_exception()
   to label %N unwind label %F
@@ -709,69 +485,37 @@ declare i32 @__gxx_personality_v0(...)
 ; }
 
 define i32 @loop_constant_trip_count(i32* nocapture readonly %0) #0 {
-; IS__TUNIT_OPM: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@loop_constant_trip_count
-; IS__TUNIT_OPM-SAME: (i32* nocapture nofree readonly [[TMP0:%.*]]) #[[ATTR12:[0-9]+]] {
-; IS__TUNIT_OPM-NEXT:    br label [[TMP3:%.*]]
-; IS__TUNIT_OPM:       2:
-; IS__TUNIT_OPM-NEXT:    ret i32 [[TMP8:%.*]]
-; IS__TUNIT_OPM:       3:
-; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP1:%.*]] ], [ [[TMP9:%.*]], [[TMP3]] ]
-; IS__TUNIT_OPM-NEXT:    [[TMP5:%.*]] = phi i32 [ 0, [[TMP1]] ], [ [[TMP8]], [[TMP3]] ]
-; IS__TUNIT_OPM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 [[TMP4]]
-; IS__TUNIT_OPM-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4
-; IS__TUNIT_OPM-NEXT:    [[TMP8]] = add nsw i32 [[TMP7]], [[TMP5]]
-; IS__TUNIT_OPM-NEXT:    [[TMP9]] = add nuw nsw i64 [[TMP4]], 1
-; IS__TUNIT_OPM-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 10
-; IS__TUNIT_OPM-NEXT:    br i1 [[TMP10]], label [[TMP2:%.*]], label [[TMP3]]
+; IS________OPM: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
+; IS________OPM-LABEL: define {{[^@]+}}@loop_constant_trip_count
+; IS________OPM-SAME: (i32* nocapture nofree readonly [[TMP0:%.*]]) #[[ATTR14:[0-9]+]] {
+; IS________OPM-NEXT:    br label [[TMP3:%.*]]
+; IS________OPM:       2:
+; IS________OPM-NEXT:    ret i32 [[TMP8:%.*]]
+; IS________OPM:       3:
+; IS________OPM-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP1:%.*]] ], [ [[TMP9:%.*]], [[TMP3]] ]
+; IS________OPM-NEXT:    [[TMP5:%.*]] = phi i32 [ 0, [[TMP1]] ], [ [[TMP8]], [[TMP3]] ]
+; IS________OPM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 [[TMP4]]
+; IS________OPM-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4
+; IS________OPM-NEXT:    [[TMP8]] = add nsw i32 [[TMP7]], [[TMP5]]
+; IS________OPM-NEXT:    [[TMP9]] = add nuw nsw i64 [[TMP4]], 1
+; IS________OPM-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 10
+; IS________OPM-NEXT:    br i1 [[TMP10]], label [[TMP2:%.*]], label [[TMP3]]
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@loop_constant_trip_count
-; IS__TUNIT_NPM-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[TMP0:%.*]]) #[[ATTR12:[0-9]+]] {
-; IS__TUNIT_NPM-NEXT:    br label [[TMP3:%.*]]
-; IS__TUNIT_NPM:       2:
-; IS__TUNIT_NPM-NEXT:    ret i32 [[TMP8:%.*]]
-; IS__TUNIT_NPM:       3:
-; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP1:%.*]] ], [ [[TMP9:%.*]], [[TMP3]] ]
-; IS__TUNIT_NPM-NEXT:    [[TMP5:%.*]] = phi i32 [ 0, [[TMP1]] ], [ [[TMP8]], [[TMP3]] ]
-; IS__TUNIT_NPM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 [[TMP4]]
-; IS__TUNIT_NPM-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4
-; IS__TUNIT_NPM-NEXT:    [[TMP8]] = add nsw i32 [[TMP7]], [[TMP5]]
-; IS__TUNIT_NPM-NEXT:    [[TMP9]] = add nuw nsw i64 [[TMP4]], 1
-; IS__TUNIT_NPM-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 10
-; IS__TUNIT_NPM-NEXT:    br i1 [[TMP10]], label [[TMP2:%.*]], label [[TMP3]]
-;
-; IS__CGSCC_OPM: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@loop_constant_trip_count
-; IS__CGSCC_OPM-SAME: (i32* nocapture nofree readonly [[TMP0:%.*]]) #[[ATTR15:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    br label [[TMP3:%.*]]
-; IS__CGSCC_OPM:       2:
-; IS__CGSCC_OPM-NEXT:    ret i32 [[TMP8:%.*]]
-; IS__CGSCC_OPM:       3:
-; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP1:%.*]] ], [ [[TMP9:%.*]], [[TMP3]] ]
-; IS__CGSCC_OPM-NEXT:    [[TMP5:%.*]] = phi i32 [ 0, [[TMP1]] ], [ [[TMP8]], [[TMP3]] ]
-; IS__CGSCC_OPM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 [[TMP4]]
-; IS__CGSCC_OPM-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4
-; IS__CGSCC_OPM-NEXT:    [[TMP8]] = add nsw i32 [[TMP7]], [[TMP5]]
-; IS__CGSCC_OPM-NEXT:    [[TMP9]] = add nuw nsw i64 [[TMP4]], 1
-; IS__CGSCC_OPM-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 10
-; IS__CGSCC_OPM-NEXT:    br i1 [[TMP10]], label [[TMP2:%.*]], label [[TMP3]]
-;
-; IS__CGSCC_NPM: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@loop_constant_trip_count
-; IS__CGSCC_NPM-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[TMP0:%.*]]) #[[ATTR15:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    br label [[TMP3:%.*]]
-; IS__CGSCC_NPM:       2:
-; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP8:%.*]]
-; IS__CGSCC_NPM:       3:
-; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP1:%.*]] ], [ [[TMP9:%.*]], [[TMP3]] ]
-; IS__CGSCC_NPM-NEXT:    [[TMP5:%.*]] = phi i32 [ 0, [[TMP1]] ], [ [[TMP8]], [[TMP3]] ]
-; IS__CGSCC_NPM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 [[TMP4]]
-; IS__CGSCC_NPM-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4
-; IS__CGSCC_NPM-NEXT:    [[TMP8]] = add nsw i32 [[TMP7]], [[TMP5]]
-; IS__CGSCC_NPM-NEXT:    [[TMP9]] = add nuw nsw i64 [[TMP4]], 1
-; IS__CGSCC_NPM-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 10
-; IS__CGSCC_NPM-NEXT:    br i1 [[TMP10]], label [[TMP2:%.*]], label [[TMP3]]
+; IS________NPM: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable willreturn
+; IS________NPM-LABEL: define {{[^@]+}}@loop_constant_trip_count
+; IS________NPM-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[TMP0:%.*]]) #[[ATTR14:[0-9]+]] {
+; IS________NPM-NEXT:    br label [[TMP3:%.*]]
+; IS________NPM:       2:
+; IS________NPM-NEXT:    ret i32 [[TMP8:%.*]]
+; IS________NPM:       3:
+; IS________NPM-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP1:%.*]] ], [ [[TMP9:%.*]], [[TMP3]] ]
+; IS________NPM-NEXT:    [[TMP5:%.*]] = phi i32 [ 0, [[TMP1]] ], [ [[TMP8]], [[TMP3]] ]
+; IS________NPM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 [[TMP4]]
+; IS________NPM-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4
+; IS________NPM-NEXT:    [[TMP8]] = add nsw i32 [[TMP7]], [[TMP5]]
+; IS________NPM-NEXT:    [[TMP9]] = add nuw nsw i64 [[TMP4]], 1
+; IS________NPM-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 10
+; IS________NPM-NEXT:    br i1 [[TMP10]], label [[TMP2:%.*]], label [[TMP3]]
 ;
   br label %3
 
@@ -801,81 +545,43 @@ define i32 @loop_constant_trip_count(i32* nocapture readonly %0) #0 {
 ;     return ans;
 ; }
 define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture readonly %2, i32 %3) local_unnamed_addr #0 {
-; IS__TUNIT_OPM: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@loop_trip_count_unbound
-; IS__TUNIT_OPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* nocapture nofree readonly [[TMP2:%.*]], i32 [[TMP3:%.*]]) local_unnamed_addr #[[ATTR12]] {
-; IS__TUNIT_OPM-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP0]], [[TMP1]]
-; IS__TUNIT_OPM-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP8:%.*]]
-; IS__TUNIT_OPM:       6:
-; IS__TUNIT_OPM-NEXT:    [[TMP7:%.*]] = phi i32 [ 0, [[TMP4:%.*]] ], [ [[TMP14:%.*]], [[TMP8]] ]
-; IS__TUNIT_OPM-NEXT:    ret i32 [[TMP7]]
-; IS__TUNIT_OPM:       8:
-; IS__TUNIT_OPM-NEXT:    [[TMP9:%.*]] = phi i32 [ [[TMP15:%.*]], [[TMP8]] ], [ [[TMP0]], [[TMP4]] ]
-; IS__TUNIT_OPM-NEXT:    [[TMP10:%.*]] = phi i32 [ [[TMP14]], [[TMP8]] ], [ 0, [[TMP4]] ]
-; IS__TUNIT_OPM-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP9]] to i64
-; IS__TUNIT_OPM-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[TMP2]], i64 [[TMP11]]
-; IS__TUNIT_OPM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP12]], align 4
-; IS__TUNIT_OPM-NEXT:    [[TMP14]] = add nsw i32 [[TMP13]], [[TMP10]]
-; IS__TUNIT_OPM-NEXT:    [[TMP15]] = add i32 [[TMP9]], [[TMP3]]
-; IS__TUNIT_OPM-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP15]], [[TMP1]]
-; IS__TUNIT_OPM-NEXT:    br i1 [[TMP16]], label [[TMP6]], label [[TMP8]]
+; IS________OPM: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
+; IS________OPM-LABEL: define {{[^@]+}}@loop_trip_count_unbound
+; IS________OPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* nocapture nofree readonly [[TMP2:%.*]], i32 [[TMP3:%.*]]) local_unnamed_addr #[[ATTR14]] {
+; IS________OPM-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP0]], [[TMP1]]
+; IS________OPM-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP8:%.*]]
+; IS________OPM:       6:
+; IS________OPM-NEXT:    [[TMP7:%.*]] = phi i32 [ 0, [[TMP4:%.*]] ], [ [[TMP14:%.*]], [[TMP8]] ]
+; IS________OPM-NEXT:    ret i32 [[TMP7]]
+; IS________OPM:       8:
+; IS________OPM-NEXT:    [[TMP9:%.*]] = phi i32 [ [[TMP15:%.*]], [[TMP8]] ], [ [[TMP0]], [[TMP4]] ]
+; IS________OPM-NEXT:    [[TMP10:%.*]] = phi i32 [ [[TMP14]], [[TMP8]] ], [ 0, [[TMP4]] ]
+; IS________OPM-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP9]] to i64
+; IS________OPM-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[TMP2]], i64 [[TMP11]]
+; IS________OPM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP12]], align 4
+; IS________OPM-NEXT:    [[TMP14]] = add nsw i32 [[TMP13]], [[TMP10]]
+; IS________OPM-NEXT:    [[TMP15]] = add i32 [[TMP9]], [[TMP3]]
+; IS________OPM-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP15]], [[TMP1]]
+; IS________OPM-NEXT:    br i1 [[TMP16]], label [[TMP6]], label [[TMP8]]
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@loop_trip_count_unbound
-; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* nocapture nofree readonly [[TMP2:%.*]], i32 [[TMP3:%.*]]) local_unnamed_addr #[[ATTR13:[0-9]+]] {
-; IS__TUNIT_NPM-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP0]], [[TMP1]]
-; IS__TUNIT_NPM-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP8:%.*]]
-; IS__TUNIT_NPM:       6:
-; IS__TUNIT_NPM-NEXT:    [[TMP7:%.*]] = phi i32 [ 0, [[TMP4:%.*]] ], [ [[TMP14:%.*]], [[TMP8]] ]
-; IS__TUNIT_NPM-NEXT:    ret i32 [[TMP7]]
-; IS__TUNIT_NPM:       8:
-; IS__TUNIT_NPM-NEXT:    [[TMP9:%.*]] = phi i32 [ [[TMP15:%.*]], [[TMP8]] ], [ [[TMP0]], [[TMP4]] ]
-; IS__TUNIT_NPM-NEXT:    [[TMP10:%.*]] = phi i32 [ [[TMP14]], [[TMP8]] ], [ 0, [[TMP4]] ]
-; IS__TUNIT_NPM-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP9]] to i64
-; IS__TUNIT_NPM-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[TMP2]], i64 [[TMP11]]
-; IS__TUNIT_NPM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP12]], align 4
-; IS__TUNIT_NPM-NEXT:    [[TMP14]] = add nsw i32 [[TMP13]], [[TMP10]]
-; IS__TUNIT_NPM-NEXT:    [[TMP15]] = add i32 [[TMP9]], [[TMP3]]
-; IS__TUNIT_NPM-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP15]], [[TMP1]]
-; IS__TUNIT_NPM-NEXT:    br i1 [[TMP16]], label [[TMP6]], label [[TMP8]]
-;
-; IS__CGSCC_OPM: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@loop_trip_count_unbound
-; IS__CGSCC_OPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* nocapture nofree readonly [[TMP2:%.*]], i32 [[TMP3:%.*]]) local_unnamed_addr #[[ATTR15]] {
-; IS__CGSCC_OPM-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP0]], [[TMP1]]
-; IS__CGSCC_OPM-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP8:%.*]]
-; IS__CGSCC_OPM:       6:
-; IS__CGSCC_OPM-NEXT:    [[TMP7:%.*]] = phi i32 [ 0, [[TMP4:%.*]] ], [ [[TMP14:%.*]], [[TMP8]] ]
-; IS__CGSCC_OPM-NEXT:    ret i32 [[TMP7]]
-; IS__CGSCC_OPM:       8:
-; IS__CGSCC_OPM-NEXT:    [[TMP9:%.*]] = phi i32 [ [[TMP15:%.*]], [[TMP8]] ], [ [[TMP0]], [[TMP4]] ]
-; IS__CGSCC_OPM-NEXT:    [[TMP10:%.*]] = phi i32 [ [[TMP14]], [[TMP8]] ], [ 0, [[TMP4]] ]
-; IS__CGSCC_OPM-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP9]] to i64
-; IS__CGSCC_OPM-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[TMP2]], i64 [[TMP11]]
-; IS__CGSCC_OPM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP12]], align 4
-; IS__CGSCC_OPM-NEXT:    [[TMP14]] = add nsw i32 [[TMP13]], [[TMP10]]
-; IS__CGSCC_OPM-NEXT:    [[TMP15]] = add i32 [[TMP9]], [[TMP3]]
-; IS__CGSCC_OPM-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP15]], [[TMP1]]
-; IS__CGSCC_OPM-NEXT:    br i1 [[TMP16]], label [[TMP6]], label [[TMP8]]
-;
-; IS__CGSCC_NPM: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@loop_trip_count_unbound
-; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* nocapture nofree readonly [[TMP2:%.*]], i32 [[TMP3:%.*]]) local_unnamed_addr #[[ATTR16:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP0]], [[TMP1]]
-; IS__CGSCC_NPM-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP8:%.*]]
-; IS__CGSCC_NPM:       6:
-; IS__CGSCC_NPM-NEXT:    [[TMP7:%.*]] = phi i32 [ 0, [[TMP4:%.*]] ], [ [[TMP14:%.*]], [[TMP8]] ]
-; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP7]]
-; IS__CGSCC_NPM:       8:
-; IS__CGSCC_NPM-NEXT:    [[TMP9:%.*]] = phi i32 [ [[TMP15:%.*]], [[TMP8]] ], [ [[TMP0]], [[TMP4]] ]
-; IS__CGSCC_NPM-NEXT:    [[TMP10:%.*]] = phi i32 [ [[TMP14]], [[TMP8]] ], [ 0, [[TMP4]] ]
-; IS__CGSCC_NPM-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP9]] to i64
-; IS__CGSCC_NPM-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[TMP2]], i64 [[TMP11]]
-; IS__CGSCC_NPM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP12]], align 4
-; IS__CGSCC_NPM-NEXT:    [[TMP14]] = add nsw i32 [[TMP13]], [[TMP10]]
-; IS__CGSCC_NPM-NEXT:    [[TMP15]] = add i32 [[TMP9]], [[TMP3]]
-; IS__CGSCC_NPM-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP15]], [[TMP1]]
-; IS__CGSCC_NPM-NEXT:    br i1 [[TMP16]], label [[TMP6]], label [[TMP8]]
+; IS________NPM: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
+; IS________NPM-LABEL: define {{[^@]+}}@loop_trip_count_unbound
+; IS________NPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* nocapture nofree readonly [[TMP2:%.*]], i32 [[TMP3:%.*]]) local_unnamed_addr #[[ATTR15:[0-9]+]] {
+; IS________NPM-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP0]], [[TMP1]]
+; IS________NPM-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP8:%.*]]
+; IS________NPM:       6:
+; IS________NPM-NEXT:    [[TMP7:%.*]] = phi i32 [ 0, [[TMP4:%.*]] ], [ [[TMP14:%.*]], [[TMP8]] ]
+; IS________NPM-NEXT:    ret i32 [[TMP7]]
+; IS________NPM:       8:
+; IS________NPM-NEXT:    [[TMP9:%.*]] = phi i32 [ [[TMP15:%.*]], [[TMP8]] ], [ [[TMP0]], [[TMP4]] ]
+; IS________NPM-NEXT:    [[TMP10:%.*]] = phi i32 [ [[TMP14]], [[TMP8]] ], [ 0, [[TMP4]] ]
+; IS________NPM-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP9]] to i64
+; IS________NPM-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[TMP2]], i64 [[TMP11]]
+; IS________NPM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP12]], align 4
+; IS________NPM-NEXT:    [[TMP14]] = add nsw i32 [[TMP13]], [[TMP10]]
+; IS________NPM-NEXT:    [[TMP15]] = add i32 [[TMP9]], [[TMP3]]
+; IS________NPM-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP15]], [[TMP1]]
+; IS________NPM-NEXT:    br i1 [[TMP16]], label [[TMP6]], label [[TMP8]]
 ;
   %5 = icmp eq i32 %0, %1
   br i1 %5, label %6, label %8
@@ -909,89 +615,47 @@ define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture readonly %2, 
 
 
 define i32 @loop_trip_dec(i32 %0, i32* nocapture readonly %1) local_unnamed_addr #0 {
-; IS__TUNIT_OPM: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@loop_trip_dec
-; IS__TUNIT_OPM-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR12]] {
-; IS__TUNIT_OPM-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP0]], -1
-; IS__TUNIT_OPM-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP14:%.*]]
-; IS__TUNIT_OPM:       4:
-; IS__TUNIT_OPM-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP0]] to i64
-; IS__TUNIT_OPM-NEXT:    br label [[TMP6:%.*]]
-; IS__TUNIT_OPM:       6:
-; IS__TUNIT_OPM-NEXT:    [[TMP7:%.*]] = phi i64 [ [[TMP5]], [[TMP4]] ], [ [[TMP12:%.*]], [[TMP6]] ]
-; IS__TUNIT_OPM-NEXT:    [[TMP8:%.*]] = phi i32 [ 0, [[TMP4]] ], [ [[TMP11:%.*]], [[TMP6]] ]
-; IS__TUNIT_OPM-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[TMP1]], i64 [[TMP7]]
-; IS__TUNIT_OPM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP9]], align 4
-; IS__TUNIT_OPM-NEXT:    [[TMP11]] = add nsw i32 [[TMP10]], [[TMP8]]
-; IS__TUNIT_OPM-NEXT:    [[TMP12]] = add nsw i64 [[TMP7]], -1
-; IS__TUNIT_OPM-NEXT:    [[TMP13:%.*]] = icmp sgt i64 [[TMP7]], 0
-; IS__TUNIT_OPM-NEXT:    br i1 [[TMP13]], label [[TMP6]], label [[TMP14]]
-; IS__TUNIT_OPM:       14:
-; IS__TUNIT_OPM-NEXT:    [[TMP15:%.*]] = phi i32 [ 0, [[TMP2:%.*]] ], [ [[TMP11]], [[TMP6]] ]
-; IS__TUNIT_OPM-NEXT:    ret i32 [[TMP15]]
+; IS________OPM: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
+; IS________OPM-LABEL: define {{[^@]+}}@loop_trip_dec
+; IS________OPM-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR14]] {
+; IS________OPM-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP0]], -1
+; IS________OPM-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP14:%.*]]
+; IS________OPM:       4:
+; IS________OPM-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP0]] to i64
+; IS________OPM-NEXT:    br label [[TMP6:%.*]]
+; IS________OPM:       6:
+; IS________OPM-NEXT:    [[TMP7:%.*]] = phi i64 [ [[TMP5]], [[TMP4]] ], [ [[TMP12:%.*]], [[TMP6]] ]
+; IS________OPM-NEXT:    [[TMP8:%.*]] = phi i32 [ 0, [[TMP4]] ], [ [[TMP11:%.*]], [[TMP6]] ]
+; IS________OPM-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[TMP1]], i64 [[TMP7]]
+; IS________OPM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP9]], align 4
+; IS________OPM-NEXT:    [[TMP11]] = add nsw i32 [[TMP10]], [[TMP8]]
+; IS________OPM-NEXT:    [[TMP12]] = add nsw i64 [[TMP7]], -1
+; IS________OPM-NEXT:    [[TMP13:%.*]] = icmp sgt i64 [[TMP7]], 0
+; IS________OPM-NEXT:    br i1 [[TMP13]], label [[TMP6]], label [[TMP14]]
+; IS________OPM:       14:
+; IS________OPM-NEXT:    [[TMP15:%.*]] = phi i32 [ 0, [[TMP2:%.*]] ], [ [[TMP11]], [[TMP6]] ]
+; IS________OPM-NEXT:    ret i32 [[TMP15]]
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@loop_trip_dec
-; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR12]] {
-; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP0]], -1
-; IS__TUNIT_NPM-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP14:%.*]]
-; IS__TUNIT_NPM:       4:
-; IS__TUNIT_NPM-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP0]] to i64
-; IS__TUNIT_NPM-NEXT:    br label [[TMP6:%.*]]
-; IS__TUNIT_NPM:       6:
-; IS__TUNIT_NPM-NEXT:    [[TMP7:%.*]] = phi i64 [ [[TMP5]], [[TMP4]] ], [ [[TMP12:%.*]], [[TMP6]] ]
-; IS__TUNIT_NPM-NEXT:    [[TMP8:%.*]] = phi i32 [ 0, [[TMP4]] ], [ [[TMP11:%.*]], [[TMP6]] ]
-; IS__TUNIT_NPM-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[TMP1]], i64 [[TMP7]]
-; IS__TUNIT_NPM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP9]], align 4
-; IS__TUNIT_NPM-NEXT:    [[TMP11]] = add nsw i32 [[TMP10]], [[TMP8]]
-; IS__TUNIT_NPM-NEXT:    [[TMP12]] = add nsw i64 [[TMP7]], -1
-; IS__TUNIT_NPM-NEXT:    [[TMP13:%.*]] = icmp sgt i64 [[TMP7]], 0
-; IS__TUNIT_NPM-NEXT:    br i1 [[TMP13]], label [[TMP6]], label [[TMP14]]
-; IS__TUNIT_NPM:       14:
-; IS__TUNIT_NPM-NEXT:    [[TMP15:%.*]] = phi i32 [ 0, [[TMP2:%.*]] ], [ [[TMP11]], [[TMP6]] ]
-; IS__TUNIT_NPM-NEXT:    ret i32 [[TMP15]]
-;
-; IS__CGSCC_OPM: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@loop_trip_dec
-; IS__CGSCC_OPM-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR15]] {
-; IS__CGSCC_OPM-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP0]], -1
-; IS__CGSCC_OPM-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP14:%.*]]
-; IS__CGSCC_OPM:       4:
-; IS__CGSCC_OPM-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP0]] to i64
-; IS__CGSCC_OPM-NEXT:    br label [[TMP6:%.*]]
-; IS__CGSCC_OPM:       6:
-; IS__CGSCC_OPM-NEXT:    [[TMP7:%.*]] = phi i64 [ [[TMP5]], [[TMP4]] ], [ [[TMP12:%.*]], [[TMP6]] ]
-; IS__CGSCC_OPM-NEXT:    [[TMP8:%.*]] = phi i32 [ 0, [[TMP4]] ], [ [[TMP11:%.*]], [[TMP6]] ]
-; IS__CGSCC_OPM-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[TMP1]], i64 [[TMP7]]
-; IS__CGSCC_OPM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP9]], align 4
-; IS__CGSCC_OPM-NEXT:    [[TMP11]] = add nsw i32 [[TMP10]], [[TMP8]]
-; IS__CGSCC_OPM-NEXT:    [[TMP12]] = add nsw i64 [[TMP7]], -1
-; IS__CGSCC_OPM-NEXT:    [[TMP13:%.*]] = icmp sgt i64 [[TMP7]], 0
-; IS__CGSCC_OPM-NEXT:    br i1 [[TMP13]], label [[TMP6]], label [[TMP14]]
-; IS__CGSCC_OPM:       14:
-; IS__CGSCC_OPM-NEXT:    [[TMP15:%.*]] = phi i32 [ 0, [[TMP2:%.*]] ], [ [[TMP11]], [[TMP6]] ]
-; IS__CGSCC_OPM-NEXT:    ret i32 [[TMP15]]
-;
-; IS__CGSCC_NPM: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@loop_trip_dec
-; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR15]] {
-; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP0]], -1
-; IS__CGSCC_NPM-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP14:%.*]]
-; IS__CGSCC_NPM:       4:
-; IS__CGSCC_NPM-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP0]] to i64
-; IS__CGSCC_NPM-NEXT:    br label [[TMP6:%.*]]
-; IS__CGSCC_NPM:       6:
-; IS__CGSCC_NPM-NEXT:    [[TMP7:%.*]] = phi i64 [ [[TMP5]], [[TMP4]] ], [ [[TMP12:%.*]], [[TMP6]] ]
-; IS__CGSCC_NPM-NEXT:    [[TMP8:%.*]] = phi i32 [ 0, [[TMP4]] ], [ [[TMP11:%.*]], [[TMP6]] ]
-; IS__CGSCC_NPM-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[TMP1]], i64 [[TMP7]]
-; IS__CGSCC_NPM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP9]], align 4
-; IS__CGSCC_NPM-NEXT:    [[TMP11]] = add nsw i32 [[TMP10]], [[TMP8]]
-; IS__CGSCC_NPM-NEXT:    [[TMP12]] = add nsw i64 [[TMP7]], -1
-; IS__CGSCC_NPM-NEXT:    [[TMP13:%.*]] = icmp sgt i64 [[TMP7]], 0
-; IS__CGSCC_NPM-NEXT:    br i1 [[TMP13]], label [[TMP6]], label [[TMP14]]
-; IS__CGSCC_NPM:       14:
-; IS__CGSCC_NPM-NEXT:    [[TMP15:%.*]] = phi i32 [ 0, [[TMP2:%.*]] ], [ [[TMP11]], [[TMP6]] ]
-; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP15]]
+; IS________NPM: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable willreturn
+; IS________NPM-LABEL: define {{[^@]+}}@loop_trip_dec
+; IS________NPM-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR14]] {
+; IS________NPM-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP0]], -1
+; IS________NPM-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP14:%.*]]
+; IS________NPM:       4:
+; IS________NPM-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP0]] to i64
+; IS________NPM-NEXT:    br label [[TMP6:%.*]]
+; IS________NPM:       6:
+; IS________NPM-NEXT:    [[TMP7:%.*]] = phi i64 [ [[TMP5]], [[TMP4]] ], [ [[TMP12:%.*]], [[TMP6]] ]
+; IS________NPM-NEXT:    [[TMP8:%.*]] = phi i32 [ 0, [[TMP4]] ], [ [[TMP11:%.*]], [[TMP6]] ]
+; IS________NPM-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[TMP1]], i64 [[TMP7]]
+; IS________NPM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP9]], align 4
+; IS________NPM-NEXT:    [[TMP11]] = add nsw i32 [[TMP10]], [[TMP8]]
+; IS________NPM-NEXT:    [[TMP12]] = add nsw i64 [[TMP7]], -1
+; IS________NPM-NEXT:    [[TMP13:%.*]] = icmp sgt i64 [[TMP7]], 0
+; IS________NPM-NEXT:    br i1 [[TMP13]], label [[TMP6]], label [[TMP14]]
+; IS________NPM:       14:
+; IS________NPM-NEXT:    [[TMP15:%.*]] = phi i32 [ 0, [[TMP2:%.*]] ], [ [[TMP11]], [[TMP6]] ]
+; IS________NPM-NEXT:    ret i32 [[TMP15]]
 ;
   %3 = icmp sgt i32 %0, -1
   br i1 %3, label %4, label %14
@@ -1019,25 +683,15 @@ define i32 @loop_trip_dec(i32 %0, i32* nocapture readonly %1) local_unnamed_addr
 ; multiple return
 
 define i32 @multiple_return(i32 %a) #0 {
-; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@multiple_return
-; IS__TUNIT____-SAME: (i32 [[A:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:    [[B:%.*]] = icmp eq i32 [[A]], 0
-; IS__TUNIT____-NEXT:    br i1 [[B]], label [[T:%.*]], label [[F:%.*]]
-; IS__TUNIT____:       t:
-; IS__TUNIT____-NEXT:    ret i32 1
-; IS__TUNIT____:       f:
-; IS__TUNIT____-NEXT:    ret i32 0
-;
-; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@multiple_return
-; IS__CGSCC____-SAME: (i32 [[A:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    [[B:%.*]] = icmp eq i32 [[A]], 0
-; IS__CGSCC____-NEXT:    br i1 [[B]], label [[T:%.*]], label [[F:%.*]]
-; IS__CGSCC____:       t:
-; IS__CGSCC____-NEXT:    ret i32 1
-; IS__CGSCC____:       f:
-; IS__CGSCC____-NEXT:    ret i32 0
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK-LABEL: define {{[^@]+}}@multiple_return
+; CHECK-SAME: (i32 [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    br i1 [[B]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    ret i32 1
+; CHECK:       f:
+; CHECK-NEXT:    ret i32 0
 ;
   %b =  icmp eq i32 %a, 0
   br i1 %b, label %t, label %f
@@ -1053,37 +707,21 @@ f:
 
 ; 15.1 (positive case)
 define void @unreachable_exit_positive1() #0 {
-; IS__TUNIT_OPM: Function Attrs: noinline nounwind uwtable willreturn
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@unreachable_exit_positive1
-; IS__TUNIT_OPM-SAME: () #[[ATTR9]] {
-; IS__TUNIT_OPM-NEXT:    tail call void @will_return() #[[ATTR26]]
-; IS__TUNIT_OPM-NEXT:    ret void
-; IS__TUNIT_OPM:       unreachable_label:
-; IS__TUNIT_OPM-NEXT:    unreachable
+; IS________OPM: Function Attrs: noinline nounwind uwtable willreturn
+; IS________OPM-LABEL: define {{[^@]+}}@unreachable_exit_positive1
+; IS________OPM-SAME: () #[[ATTR11]] {
+; IS________OPM-NEXT:    tail call void @will_return() #[[ATTR29]]
+; IS________OPM-NEXT:    ret void
+; IS________OPM:       unreachable_label:
+; IS________OPM-NEXT:    unreachable
 ;
-; IS__TUNIT_NPM: Function Attrs: noinline nounwind uwtable willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@unreachable_exit_positive1
-; IS__TUNIT_NPM-SAME: () #[[ATTR9]] {
-; IS__TUNIT_NPM-NEXT:    tail call void @will_return() #[[ATTR28]]
-; IS__TUNIT_NPM-NEXT:    ret void
-; IS__TUNIT_NPM:       unreachable_label:
-; IS__TUNIT_NPM-NEXT:    unreachable
-;
-; IS__CGSCC_OPM: Function Attrs: noinline norecurse nounwind uwtable willreturn
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@unreachable_exit_positive1
-; IS__CGSCC_OPM-SAME: () #[[ATTR11]] {
-; IS__CGSCC_OPM-NEXT:    tail call void @will_return() #[[ATTR30]]
-; IS__CGSCC_OPM-NEXT:    ret void
-; IS__CGSCC_OPM:       unreachable_label:
-; IS__CGSCC_OPM-NEXT:    unreachable
-;
-; IS__CGSCC_NPM: Function Attrs: noinline norecurse nounwind uwtable willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@unreachable_exit_positive1
-; IS__CGSCC_NPM-SAME: () #[[ATTR11]] {
-; IS__CGSCC_NPM-NEXT:    tail call void @will_return() #[[ATTR32]]
-; IS__CGSCC_NPM-NEXT:    ret void
-; IS__CGSCC_NPM:       unreachable_label:
-; IS__CGSCC_NPM-NEXT:    unreachable
+; IS________NPM: Function Attrs: noinline nounwind uwtable willreturn
+; IS________NPM-LABEL: define {{[^@]+}}@unreachable_exit_positive1
+; IS________NPM-SAME: () #[[ATTR11]] {
+; IS________NPM-NEXT:    tail call void @will_return() #[[ATTR31]]
+; IS________NPM-NEXT:    ret void
+; IS________NPM:       unreachable_label:
+; IS________NPM-NEXT:    unreachable
 ;
   tail call void @will_return()
   ret void
@@ -1094,77 +732,41 @@ unreachable_label:
 }
 
 define i32 @unreachable_exit_positive2(i32) local_unnamed_addr #0 {
-; IS__TUNIT_OPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@unreachable_exit_positive2
-; IS__TUNIT_OPM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
-; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP0]], 1
-; IS__TUNIT_OPM-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
-; IS__TUNIT_OPM:       3:
-; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = phi i32 [ 1, [[TMP1:%.*]] ], [ [[TMP8:%.*]], [[TMP5]] ]
-; IS__TUNIT_OPM-NEXT:    ret i32 [[TMP4]]
-; IS__TUNIT_OPM:       5:
-; IS__TUNIT_OPM-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP9:%.*]], [[TMP5]] ], [ 1, [[TMP1]] ]
-; IS__TUNIT_OPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8]], [[TMP5]] ], [ 1, [[TMP1]] ]
-; IS__TUNIT_OPM-NEXT:    [[TMP8]] = mul nsw i32 [[TMP6]], [[TMP7]]
-; IS__TUNIT_OPM-NEXT:    [[TMP9]] = add nuw nsw i32 [[TMP6]], 1
-; IS__TUNIT_OPM-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP6]], [[TMP0]]
-; IS__TUNIT_OPM-NEXT:    br i1 [[TMP10]], label [[TMP3]], label [[TMP5]]
-; IS__TUNIT_OPM:       unreachable_label:
-; IS__TUNIT_OPM-NEXT:    unreachable
+; IS________OPM: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
+; IS________OPM-LABEL: define {{[^@]+}}@unreachable_exit_positive2
+; IS________OPM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; IS________OPM-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP0]], 1
+; IS________OPM-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
+; IS________OPM:       3:
+; IS________OPM-NEXT:    [[TMP4:%.*]] = phi i32 [ 1, [[TMP1:%.*]] ], [ [[TMP8:%.*]], [[TMP5]] ]
+; IS________OPM-NEXT:    ret i32 [[TMP4]]
+; IS________OPM:       5:
+; IS________OPM-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP9:%.*]], [[TMP5]] ], [ 1, [[TMP1]] ]
+; IS________OPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8]], [[TMP5]] ], [ 1, [[TMP1]] ]
+; IS________OPM-NEXT:    [[TMP8]] = mul nsw i32 [[TMP6]], [[TMP7]]
+; IS________OPM-NEXT:    [[TMP9]] = add nuw nsw i32 [[TMP6]], 1
+; IS________OPM-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP6]], [[TMP0]]
+; IS________OPM-NEXT:    br i1 [[TMP10]], label [[TMP3]], label [[TMP5]]
+; IS________OPM:       unreachable_label:
+; IS________OPM-NEXT:    unreachable
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@unreachable_exit_positive2
-; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP0]], 1
-; IS__TUNIT_NPM-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
-; IS__TUNIT_NPM:       3:
-; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = phi i32 [ 1, [[TMP1:%.*]] ], [ [[TMP8:%.*]], [[TMP5]] ]
-; IS__TUNIT_NPM-NEXT:    ret i32 [[TMP4]]
-; IS__TUNIT_NPM:       5:
-; IS__TUNIT_NPM-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP9:%.*]], [[TMP5]] ], [ 1, [[TMP1]] ]
-; IS__TUNIT_NPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8]], [[TMP5]] ], [ 1, [[TMP1]] ]
-; IS__TUNIT_NPM-NEXT:    [[TMP8]] = mul nsw i32 [[TMP6]], [[TMP7]]
-; IS__TUNIT_NPM-NEXT:    [[TMP9]] = add nuw nsw i32 [[TMP6]], 1
-; IS__TUNIT_NPM-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP6]], [[TMP0]]
-; IS__TUNIT_NPM-NEXT:    br i1 [[TMP10]], label [[TMP3]], label [[TMP5]]
-; IS__TUNIT_NPM:       unreachable_label:
-; IS__TUNIT_NPM-NEXT:    unreachable
-;
-; IS__CGSCC_OPM: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@unreachable_exit_positive2
-; IS__CGSCC_OPM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2]] {
-; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP0]], 1
-; IS__CGSCC_OPM-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
-; IS__CGSCC_OPM:       3:
-; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = phi i32 [ 1, [[TMP1:%.*]] ], [ [[TMP8:%.*]], [[TMP5]] ]
-; IS__CGSCC_OPM-NEXT:    ret i32 [[TMP4]]
-; IS__CGSCC_OPM:       5:
-; IS__CGSCC_OPM-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP9:%.*]], [[TMP5]] ], [ 1, [[TMP1]] ]
-; IS__CGSCC_OPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8]], [[TMP5]] ], [ 1, [[TMP1]] ]
-; IS__CGSCC_OPM-NEXT:    [[TMP8]] = mul nsw i32 [[TMP6]], [[TMP7]]
-; IS__CGSCC_OPM-NEXT:    [[TMP9]] = add nuw nsw i32 [[TMP6]], 1
-; IS__CGSCC_OPM-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP6]], [[TMP0]]
-; IS__CGSCC_OPM-NEXT:    br i1 [[TMP10]], label [[TMP3]], label [[TMP5]]
-; IS__CGSCC_OPM:       unreachable_label:
-; IS__CGSCC_OPM-NEXT:    unreachable
-;
-; IS__CGSCC_NPM: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@unreachable_exit_positive2
-; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP0]], 1
-; IS__CGSCC_NPM-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
-; IS__CGSCC_NPM:       3:
-; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = phi i32 [ 1, [[TMP1:%.*]] ], [ [[TMP8:%.*]], [[TMP5]] ]
-; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP4]]
-; IS__CGSCC_NPM:       5:
-; IS__CGSCC_NPM-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP9:%.*]], [[TMP5]] ], [ 1, [[TMP1]] ]
-; IS__CGSCC_NPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8]], [[TMP5]] ], [ 1, [[TMP1]] ]
-; IS__CGSCC_NPM-NEXT:    [[TMP8]] = mul nsw i32 [[TMP6]], [[TMP7]]
-; IS__CGSCC_NPM-NEXT:    [[TMP9]] = add nuw nsw i32 [[TMP6]], 1
-; IS__CGSCC_NPM-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP6]], [[TMP0]]
-; IS__CGSCC_NPM-NEXT:    br i1 [[TMP10]], label [[TMP3]], label [[TMP5]]
-; IS__CGSCC_NPM:       unreachable_label:
-; IS__CGSCC_NPM-NEXT:    unreachable
+; IS________NPM: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; IS________NPM-LABEL: define {{[^@]+}}@unreachable_exit_positive2
+; IS________NPM-SAME: (i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; IS________NPM-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP0]], 1
+; IS________NPM-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
+; IS________NPM:       3:
+; IS________NPM-NEXT:    [[TMP4:%.*]] = phi i32 [ 1, [[TMP1:%.*]] ], [ [[TMP8:%.*]], [[TMP5]] ]
+; IS________NPM-NEXT:    ret i32 [[TMP4]]
+; IS________NPM:       5:
+; IS________NPM-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP9:%.*]], [[TMP5]] ], [ 1, [[TMP1]] ]
+; IS________NPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8]], [[TMP5]] ], [ 1, [[TMP1]] ]
+; IS________NPM-NEXT:    [[TMP8]] = mul nsw i32 [[TMP6]], [[TMP7]]
+; IS________NPM-NEXT:    [[TMP9]] = add nuw nsw i32 [[TMP6]], 1
+; IS________NPM-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP6]], [[TMP0]]
+; IS________NPM-NEXT:    br i1 [[TMP10]], label [[TMP3]], label [[TMP5]]
+; IS________NPM:       unreachable_label:
+; IS________NPM-NEXT:    unreachable
 ;
   %2 = icmp slt i32 %0, 1
   br i1 %2, label %3, label %5
@@ -1190,21 +792,13 @@ unreachable_label:
 ;15.2
 
 define void @unreachable_exit_negative1() #0 {
-; IS__TUNIT____: Function Attrs: noinline noreturn nounwind uwtable
-; IS__TUNIT____-LABEL: define {{[^@]+}}@unreachable_exit_negative1
-; IS__TUNIT____-SAME: () #[[ATTR5]] {
-; IS__TUNIT____-NEXT:    tail call void @exit(i32 noundef 0) #[[ATTR4]]
-; IS__TUNIT____-NEXT:    unreachable
-; IS__TUNIT____:       unreachable_label:
-; IS__TUNIT____-NEXT:    unreachable
-;
-; IS__CGSCC____: Function Attrs: noinline noreturn nounwind uwtable
-; IS__CGSCC____-LABEL: define {{[^@]+}}@unreachable_exit_negative1
-; IS__CGSCC____-SAME: () #[[ATTR6]] {
-; IS__CGSCC____-NEXT:    tail call void @exit(i32 noundef 0) #[[ATTR5]]
-; IS__CGSCC____-NEXT:    unreachable
-; IS__CGSCC____:       unreachable_label:
-; IS__CGSCC____-NEXT:    unreachable
+; CHECK: Function Attrs: noinline nounwind uwtable
+; CHECK-LABEL: define {{[^@]+}}@unreachable_exit_negative1
+; CHECK-SAME: () #[[ATTR7]] {
+; CHECK-NEXT:    tail call void @exit(i32 noundef 0) #[[ATTR5]]
+; CHECK-NEXT:    unreachable
+; CHECK:       unreachable_label:
+; CHECK-NEXT:    unreachable
 ;
   tail call void @exit(i32 0)
   ret void
@@ -1215,49 +809,27 @@ unreachable_label:
 }
 
 define void @unreachable_exit_negative2() #0 {
-; IS__TUNIT_OPM: Function Attrs: nofree noinline noreturn nosync nounwind readnone uwtable
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@unreachable_exit_negative2
-; IS__TUNIT_OPM-SAME: () #[[ATTR13:[0-9]+]] {
-; IS__TUNIT_OPM-NEXT:    br label [[L1:%.*]]
-; IS__TUNIT_OPM:       L1:
-; IS__TUNIT_OPM-NEXT:    br label [[L2:%.*]]
-; IS__TUNIT_OPM:       L2:
-; IS__TUNIT_OPM-NEXT:    br label [[L1]]
-; IS__TUNIT_OPM:       unreachable_label:
-; IS__TUNIT_OPM-NEXT:    unreachable
+; IS________OPM: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable
+; IS________OPM-LABEL: define {{[^@]+}}@unreachable_exit_negative2
+; IS________OPM-SAME: () #[[ATTR15:[0-9]+]] {
+; IS________OPM-NEXT:    br label [[L1:%.*]]
+; IS________OPM:       L1:
+; IS________OPM-NEXT:    br label [[L2:%.*]]
+; IS________OPM:       L2:
+; IS________OPM-NEXT:    br label [[L1]]
+; IS________OPM:       unreachable_label:
+; IS________OPM-NEXT:    unreachable
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree noinline noreturn nosync nounwind readnone uwtable
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@unreachable_exit_negative2
-; IS__TUNIT_NPM-SAME: () #[[ATTR14:[0-9]+]] {
-; IS__TUNIT_NPM-NEXT:    br label [[L1:%.*]]
-; IS__TUNIT_NPM:       L1:
-; IS__TUNIT_NPM-NEXT:    br label [[L2:%.*]]
-; IS__TUNIT_NPM:       L2:
-; IS__TUNIT_NPM-NEXT:    br label [[L1]]
-; IS__TUNIT_NPM:       unreachable_label:
-; IS__TUNIT_NPM-NEXT:    unreachable
-;
-; IS__CGSCC_OPM: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@unreachable_exit_negative2
-; IS__CGSCC_OPM-SAME: () #[[ATTR16:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    br label [[L1:%.*]]
-; IS__CGSCC_OPM:       L1:
-; IS__CGSCC_OPM-NEXT:    br label [[L2:%.*]]
-; IS__CGSCC_OPM:       L2:
-; IS__CGSCC_OPM-NEXT:    br label [[L1]]
-; IS__CGSCC_OPM:       unreachable_label:
-; IS__CGSCC_OPM-NEXT:    unreachable
-;
-; IS__CGSCC_NPM: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@unreachable_exit_negative2
-; IS__CGSCC_NPM-SAME: () #[[ATTR17:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    br label [[L1:%.*]]
-; IS__CGSCC_NPM:       L1:
-; IS__CGSCC_NPM-NEXT:    br label [[L2:%.*]]
-; IS__CGSCC_NPM:       L2:
-; IS__CGSCC_NPM-NEXT:    br label [[L1]]
-; IS__CGSCC_NPM:       unreachable_label:
-; IS__CGSCC_NPM-NEXT:    unreachable
+; IS________NPM: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable
+; IS________NPM-LABEL: define {{[^@]+}}@unreachable_exit_negative2
+; IS________NPM-SAME: () #[[ATTR16:[0-9]+]] {
+; IS________NPM-NEXT:    br label [[L1:%.*]]
+; IS________NPM:       L1:
+; IS________NPM-NEXT:    br label [[L2:%.*]]
+; IS________NPM:       L2:
+; IS________NPM-NEXT:    br label [[L1]]
+; IS________NPM:       unreachable_label:
+; IS________NPM-NEXT:    unreachable
 ;
   br label %L1
 L1:
@@ -1275,17 +847,11 @@ unreachable_label:
 declare void @llvm.eh.sjlj.longjmp(i8*)
 
 define void @call_longjmp(i8* nocapture readnone %0) local_unnamed_addr #0 {
-; IS__TUNIT____: Function Attrs: noinline noreturn nounwind uwtable
-; IS__TUNIT____-LABEL: define {{[^@]+}}@call_longjmp
-; IS__TUNIT____-SAME: (i8* nocapture readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR5]] {
-; IS__TUNIT____-NEXT:    tail call void @llvm.eh.sjlj.longjmp(i8* noalias readnone [[TMP0]]) #[[ATTR4]]
-; IS__TUNIT____-NEXT:    unreachable
-;
-; IS__CGSCC____: Function Attrs: noinline noreturn nounwind uwtable
-; IS__CGSCC____-LABEL: define {{[^@]+}}@call_longjmp
-; IS__CGSCC____-SAME: (i8* nocapture readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR6]] {
-; IS__CGSCC____-NEXT:    tail call void @llvm.eh.sjlj.longjmp(i8* noalias readnone [[TMP0]]) #[[ATTR5]]
-; IS__CGSCC____-NEXT:    unreachable
+; CHECK: Function Attrs: noinline nounwind uwtable
+; CHECK-LABEL: define {{[^@]+}}@call_longjmp
+; CHECK-SAME: (i8* nocapture readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+; CHECK-NEXT:    tail call void @llvm.eh.sjlj.longjmp(i8* noalias readnone [[TMP0]]) #[[ATTR5]]
+; CHECK-NEXT:    unreachable
 ;
   tail call void @llvm.eh.sjlj.longjmp(i8* %0)
   ret void
@@ -1303,89 +869,47 @@ define void @call_longjmp(i8* nocapture readnone %0) local_unnamed_addr #0 {
 ; }
 
 define i32 @infinite_loop_inside_bounded_loop(i32 %n) {
-; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind readnone
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@infinite_loop_inside_bounded_loop
-; IS__TUNIT_OPM-SAME: (i32 [[N:%.*]]) #[[ATTR15]] {
-; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    br label [[FOR_COND:%.*]]
-; IS__TUNIT_OPM:       for.cond:
-; IS__TUNIT_OPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
-; IS__TUNIT_OPM-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
-; IS__TUNIT_OPM:       for.cond.cleanup:
-; IS__TUNIT_OPM-NEXT:    br label [[FOR_END:%.*]]
-; IS__TUNIT_OPM:       for.body:
-; IS__TUNIT_OPM-NEXT:    br label [[WHILE_COND:%.*]]
-; IS__TUNIT_OPM:       while.cond:
-; IS__TUNIT_OPM-NEXT:    br label [[WHILE_BODY:%.*]]
-; IS__TUNIT_OPM:       while.body:
-; IS__TUNIT_OPM-NEXT:    br label [[WHILE_COND]]
-; IS__TUNIT_OPM:       for.inc:
-; IS__TUNIT_OPM-NEXT:    unreachable
-; IS__TUNIT_OPM:       for.end:
-; IS__TUNIT_OPM-NEXT:    ret i32 0
+; IS________OPM: Function Attrs: nofree norecurse nosync nounwind readnone
+; IS________OPM-LABEL: define {{[^@]+}}@infinite_loop_inside_bounded_loop
+; IS________OPM-SAME: (i32 [[N:%.*]]) #[[ATTR17:[0-9]+]] {
+; IS________OPM-NEXT:  entry:
+; IS________OPM-NEXT:    br label [[FOR_COND:%.*]]
+; IS________OPM:       for.cond:
+; IS________OPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
+; IS________OPM-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; IS________OPM:       for.cond.cleanup:
+; IS________OPM-NEXT:    br label [[FOR_END:%.*]]
+; IS________OPM:       for.body:
+; IS________OPM-NEXT:    br label [[WHILE_COND:%.*]]
+; IS________OPM:       while.cond:
+; IS________OPM-NEXT:    br label [[WHILE_BODY:%.*]]
+; IS________OPM:       while.body:
+; IS________OPM-NEXT:    br label [[WHILE_COND]]
+; IS________OPM:       for.inc:
+; IS________OPM-NEXT:    unreachable
+; IS________OPM:       for.end:
+; IS________OPM-NEXT:    ret i32 0
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@infinite_loop_inside_bounded_loop
-; IS__TUNIT_NPM-SAME: (i32 [[N:%.*]]) #[[ATTR16]] {
-; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    br label [[FOR_COND:%.*]]
-; IS__TUNIT_NPM:       for.cond:
-; IS__TUNIT_NPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
-; IS__TUNIT_NPM-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
-; IS__TUNIT_NPM:       for.cond.cleanup:
-; IS__TUNIT_NPM-NEXT:    br label [[FOR_END:%.*]]
-; IS__TUNIT_NPM:       for.body:
-; IS__TUNIT_NPM-NEXT:    br label [[WHILE_COND:%.*]]
-; IS__TUNIT_NPM:       while.cond:
-; IS__TUNIT_NPM-NEXT:    br label [[WHILE_BODY:%.*]]
-; IS__TUNIT_NPM:       while.body:
-; IS__TUNIT_NPM-NEXT:    br label [[WHILE_COND]]
-; IS__TUNIT_NPM:       for.inc:
-; IS__TUNIT_NPM-NEXT:    unreachable
-; IS__TUNIT_NPM:       for.end:
-; IS__TUNIT_NPM-NEXT:    ret i32 0
-;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@infinite_loop_inside_bounded_loop
-; IS__CGSCC_OPM-SAME: (i32 [[N:%.*]]) #[[ATTR18:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    br label [[FOR_COND:%.*]]
-; IS__CGSCC_OPM:       for.cond:
-; IS__CGSCC_OPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
-; IS__CGSCC_OPM-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
-; IS__CGSCC_OPM:       for.cond.cleanup:
-; IS__CGSCC_OPM-NEXT:    br label [[FOR_END:%.*]]
-; IS__CGSCC_OPM:       for.body:
-; IS__CGSCC_OPM-NEXT:    br label [[WHILE_COND:%.*]]
-; IS__CGSCC_OPM:       while.cond:
-; IS__CGSCC_OPM-NEXT:    br label [[WHILE_BODY:%.*]]
-; IS__CGSCC_OPM:       while.body:
-; IS__CGSCC_OPM-NEXT:    br label [[WHILE_COND]]
-; IS__CGSCC_OPM:       for.inc:
-; IS__CGSCC_OPM-NEXT:    unreachable
-; IS__CGSCC_OPM:       for.end:
-; IS__CGSCC_OPM-NEXT:    ret i32 0
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@infinite_loop_inside_bounded_loop
-; IS__CGSCC_NPM-SAME: (i32 [[N:%.*]]) #[[ATTR19:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    br label [[FOR_COND:%.*]]
-; IS__CGSCC_NPM:       for.cond:
-; IS__CGSCC_NPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
-; IS__CGSCC_NPM-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
-; IS__CGSCC_NPM:       for.cond.cleanup:
-; IS__CGSCC_NPM-NEXT:    br label [[FOR_END:%.*]]
-; IS__CGSCC_NPM:       for.body:
-; IS__CGSCC_NPM-NEXT:    br label [[WHILE_COND:%.*]]
-; IS__CGSCC_NPM:       while.cond:
-; IS__CGSCC_NPM-NEXT:    br label [[WHILE_BODY:%.*]]
-; IS__CGSCC_NPM:       while.body:
-; IS__CGSCC_NPM-NEXT:    br label [[WHILE_COND]]
-; IS__CGSCC_NPM:       for.inc:
-; IS__CGSCC_NPM-NEXT:    unreachable
-; IS__CGSCC_NPM:       for.end:
-; IS__CGSCC_NPM-NEXT:    ret i32 0
+; IS________NPM: Function Attrs: nofree norecurse nosync nounwind readnone
+; IS________NPM-LABEL: define {{[^@]+}}@infinite_loop_inside_bounded_loop
+; IS________NPM-SAME: (i32 [[N:%.*]]) #[[ATTR18:[0-9]+]] {
+; IS________NPM-NEXT:  entry:
+; IS________NPM-NEXT:    br label [[FOR_COND:%.*]]
+; IS________NPM:       for.cond:
+; IS________NPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
+; IS________NPM-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; IS________NPM:       for.cond.cleanup:
+; IS________NPM-NEXT:    br label [[FOR_END:%.*]]
+; IS________NPM:       for.body:
+; IS________NPM-NEXT:    br label [[WHILE_COND:%.*]]
+; IS________NPM:       while.cond:
+; IS________NPM-NEXT:    br label [[WHILE_BODY:%.*]]
+; IS________NPM:       while.body:
+; IS________NPM-NEXT:    br label [[WHILE_COND]]
+; IS________NPM:       for.inc:
+; IS________NPM-NEXT:    unreachable
+; IS________NPM:       for.end:
+; IS________NPM-NEXT:    ret i32 0
 ;
 entry:
   br label %for.cond
@@ -1427,121 +951,63 @@ for.end:                                          ; preds = %for.cond.cleanup
 ; }
 
 define i32 @bounded_nested_loops(i32 %n) {
-; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind readnone
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@bounded_nested_loops
-; IS__TUNIT_OPM-SAME: (i32 [[N:%.*]]) #[[ATTR15]] {
-; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    br label [[FOR_COND:%.*]]
-; IS__TUNIT_OPM:       for.cond:
-; IS__TUNIT_OPM-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC1:%.*]], [[FOR_INC:%.*]] ]
-; IS__TUNIT_OPM-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP:%.*]], [[FOR_INC]] ]
-; IS__TUNIT_OPM-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ -1, [[FOR_INC]] ]
-; IS__TUNIT_OPM-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N_ADDR_0]]
-; IS__TUNIT_OPM-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
-; IS__TUNIT_OPM:       for.cond.cleanup:
-; IS__TUNIT_OPM-NEXT:    [[ANS_0_LCSSA:%.*]] = phi i32 [ [[ANS_0]], [[FOR_COND]] ]
-; IS__TUNIT_OPM-NEXT:    br label [[FOR_END:%.*]]
-; IS__TUNIT_OPM:       for.body:
-; IS__TUNIT_OPM-NEXT:    br label [[WHILE_COND:%.*]]
-; IS__TUNIT_OPM:       while.cond:
-; IS__TUNIT_OPM-NEXT:    br i1 true, label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
-; IS__TUNIT_OPM:       while.body:
-; IS__TUNIT_OPM-NEXT:    unreachable
-; IS__TUNIT_OPM:       while.end:
-; IS__TUNIT_OPM-NEXT:    [[TMP]] = add i32 [[N_ADDR_0]], [[ANS_0]]
-; IS__TUNIT_OPM-NEXT:    br label [[FOR_INC]]
-; IS__TUNIT_OPM:       for.inc:
-; IS__TUNIT_OPM-NEXT:    [[INC1]] = add nuw nsw i32 [[I_0]], 1
-; IS__TUNIT_OPM-NEXT:    br label [[FOR_COND]]
-; IS__TUNIT_OPM:       for.end:
-; IS__TUNIT_OPM-NEXT:    ret i32 [[ANS_0_LCSSA]]
+; IS________OPM: Function Attrs: nofree norecurse nosync nounwind readnone
+; IS________OPM-LABEL: define {{[^@]+}}@bounded_nested_loops
+; IS________OPM-SAME: (i32 [[N:%.*]]) #[[ATTR17]] {
+; IS________OPM-NEXT:  entry:
+; IS________OPM-NEXT:    br label [[FOR_COND:%.*]]
+; IS________OPM:       for.cond:
+; IS________OPM-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC1:%.*]], [[FOR_INC:%.*]] ]
+; IS________OPM-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP:%.*]], [[FOR_INC]] ]
+; IS________OPM-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ -1, [[FOR_INC]] ]
+; IS________OPM-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N_ADDR_0]]
+; IS________OPM-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; IS________OPM:       for.cond.cleanup:
+; IS________OPM-NEXT:    [[ANS_0_LCSSA:%.*]] = phi i32 [ [[ANS_0]], [[FOR_COND]] ]
+; IS________OPM-NEXT:    br label [[FOR_END:%.*]]
+; IS________OPM:       for.body:
+; IS________OPM-NEXT:    br label [[WHILE_COND:%.*]]
+; IS________OPM:       while.cond:
+; IS________OPM-NEXT:    br i1 true, label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
+; IS________OPM:       while.body:
+; IS________OPM-NEXT:    unreachable
+; IS________OPM:       while.end:
+; IS________OPM-NEXT:    [[TMP]] = add i32 [[N_ADDR_0]], [[ANS_0]]
+; IS________OPM-NEXT:    br label [[FOR_INC]]
+; IS________OPM:       for.inc:
+; IS________OPM-NEXT:    [[INC1]] = add nuw nsw i32 [[I_0]], 1
+; IS________OPM-NEXT:    br label [[FOR_COND]]
+; IS________OPM:       for.end:
+; IS________OPM-NEXT:    ret i32 [[ANS_0_LCSSA]]
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@bounded_nested_loops
-; IS__TUNIT_NPM-SAME: (i32 [[N:%.*]]) #[[ATTR17:[0-9]+]] {
-; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    br label [[FOR_COND:%.*]]
-; IS__TUNIT_NPM:       for.cond:
-; IS__TUNIT_NPM-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC1:%.*]], [[FOR_INC:%.*]] ]
-; IS__TUNIT_NPM-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP:%.*]], [[FOR_INC]] ]
-; IS__TUNIT_NPM-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ -1, [[FOR_INC]] ]
-; IS__TUNIT_NPM-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N_ADDR_0]]
-; IS__TUNIT_NPM-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
-; IS__TUNIT_NPM:       for.cond.cleanup:
-; IS__TUNIT_NPM-NEXT:    [[ANS_0_LCSSA:%.*]] = phi i32 [ [[ANS_0]], [[FOR_COND]] ]
-; IS__TUNIT_NPM-NEXT:    br label [[FOR_END:%.*]]
-; IS__TUNIT_NPM:       for.body:
-; IS__TUNIT_NPM-NEXT:    br label [[WHILE_COND:%.*]]
-; IS__TUNIT_NPM:       while.cond:
-; IS__TUNIT_NPM-NEXT:    br i1 true, label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
-; IS__TUNIT_NPM:       while.body:
-; IS__TUNIT_NPM-NEXT:    unreachable
-; IS__TUNIT_NPM:       while.end:
-; IS__TUNIT_NPM-NEXT:    [[TMP]] = add i32 [[N_ADDR_0]], [[ANS_0]]
-; IS__TUNIT_NPM-NEXT:    br label [[FOR_INC]]
-; IS__TUNIT_NPM:       for.inc:
-; IS__TUNIT_NPM-NEXT:    [[INC1]] = add nuw nsw i32 [[I_0]], 1
-; IS__TUNIT_NPM-NEXT:    br label [[FOR_COND]]
-; IS__TUNIT_NPM:       for.end:
-; IS__TUNIT_NPM-NEXT:    ret i32 [[ANS_0_LCSSA]]
-;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@bounded_nested_loops
-; IS__CGSCC_OPM-SAME: (i32 [[N:%.*]]) #[[ATTR18]] {
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    br label [[FOR_COND:%.*]]
-; IS__CGSCC_OPM:       for.cond:
-; IS__CGSCC_OPM-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC1:%.*]], [[FOR_INC:%.*]] ]
-; IS__CGSCC_OPM-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP:%.*]], [[FOR_INC]] ]
-; IS__CGSCC_OPM-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ -1, [[FOR_INC]] ]
-; IS__CGSCC_OPM-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N_ADDR_0]]
-; IS__CGSCC_OPM-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
-; IS__CGSCC_OPM:       for.cond.cleanup:
-; IS__CGSCC_OPM-NEXT:    [[ANS_0_LCSSA:%.*]] = phi i32 [ [[ANS_0]], [[FOR_COND]] ]
-; IS__CGSCC_OPM-NEXT:    br label [[FOR_END:%.*]]
-; IS__CGSCC_OPM:       for.body:
-; IS__CGSCC_OPM-NEXT:    br label [[WHILE_COND:%.*]]
-; IS__CGSCC_OPM:       while.cond:
-; IS__CGSCC_OPM-NEXT:    br i1 true, label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
-; IS__CGSCC_OPM:       while.body:
-; IS__CGSCC_OPM-NEXT:    unreachable
-; IS__CGSCC_OPM:       while.end:
-; IS__CGSCC_OPM-NEXT:    [[TMP]] = add i32 [[N_ADDR_0]], [[ANS_0]]
-; IS__CGSCC_OPM-NEXT:    br label [[FOR_INC]]
-; IS__CGSCC_OPM:       for.inc:
-; IS__CGSCC_OPM-NEXT:    [[INC1]] = add nuw nsw i32 [[I_0]], 1
-; IS__CGSCC_OPM-NEXT:    br label [[FOR_COND]]
-; IS__CGSCC_OPM:       for.end:
-; IS__CGSCC_OPM-NEXT:    ret i32 [[ANS_0_LCSSA]]
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@bounded_nested_loops
-; IS__CGSCC_NPM-SAME: (i32 [[N:%.*]]) #[[ATTR20:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    br label [[FOR_COND:%.*]]
-; IS__CGSCC_NPM:       for.cond:
-; IS__CGSCC_NPM-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC1:%.*]], [[FOR_INC:%.*]] ]
-; IS__CGSCC_NPM-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP:%.*]], [[FOR_INC]] ]
-; IS__CGSCC_NPM-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ -1, [[FOR_INC]] ]
-; IS__CGSCC_NPM-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N_ADDR_0]]
-; IS__CGSCC_NPM-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
-; IS__CGSCC_NPM:       for.cond.cleanup:
-; IS__CGSCC_NPM-NEXT:    [[ANS_0_LCSSA:%.*]] = phi i32 [ [[ANS_0]], [[FOR_COND]] ]
-; IS__CGSCC_NPM-NEXT:    br label [[FOR_END:%.*]]
-; IS__CGSCC_NPM:       for.body:
-; IS__CGSCC_NPM-NEXT:    br label [[WHILE_COND:%.*]]
-; IS__CGSCC_NPM:       while.cond:
-; IS__CGSCC_NPM-NEXT:    br i1 true, label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
-; IS__CGSCC_NPM:       while.body:
-; IS__CGSCC_NPM-NEXT:    unreachable
-; IS__CGSCC_NPM:       while.end:
-; IS__CGSCC_NPM-NEXT:    [[TMP]] = add i32 [[N_ADDR_0]], [[ANS_0]]
-; IS__CGSCC_NPM-NEXT:    br label [[FOR_INC]]
-; IS__CGSCC_NPM:       for.inc:
-; IS__CGSCC_NPM-NEXT:    [[INC1]] = add nuw nsw i32 [[I_0]], 1
-; IS__CGSCC_NPM-NEXT:    br label [[FOR_COND]]
-; IS__CGSCC_NPM:       for.end:
-; IS__CGSCC_NPM-NEXT:    ret i32 [[ANS_0_LCSSA]]
+; IS________NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS________NPM-LABEL: define {{[^@]+}}@bounded_nested_loops
+; IS________NPM-SAME: (i32 [[N:%.*]]) #[[ATTR19:[0-9]+]] {
+; IS________NPM-NEXT:  entry:
+; IS________NPM-NEXT:    br label [[FOR_COND:%.*]]
+; IS________NPM:       for.cond:
+; IS________NPM-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC1:%.*]], [[FOR_INC:%.*]] ]
+; IS________NPM-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP:%.*]], [[FOR_INC]] ]
+; IS________NPM-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ -1, [[FOR_INC]] ]
+; IS________NPM-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N_ADDR_0]]
+; IS________NPM-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; IS________NPM:       for.cond.cleanup:
+; IS________NPM-NEXT:    [[ANS_0_LCSSA:%.*]] = phi i32 [ [[ANS_0]], [[FOR_COND]] ]
+; IS________NPM-NEXT:    br label [[FOR_END:%.*]]
+; IS________NPM:       for.body:
+; IS________NPM-NEXT:    br label [[WHILE_COND:%.*]]
+; IS________NPM:       while.cond:
+; IS________NPM-NEXT:    br i1 true, label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
+; IS________NPM:       while.body:
+; IS________NPM-NEXT:    unreachable
+; IS________NPM:       while.end:
+; IS________NPM-NEXT:    [[TMP]] = add i32 [[N_ADDR_0]], [[ANS_0]]
+; IS________NPM-NEXT:    br label [[FOR_INC]]
+; IS________NPM:       for.inc:
+; IS________NPM-NEXT:    [[INC1]] = add nuw nsw i32 [[I_0]], 1
+; IS________NPM-NEXT:    br label [[FOR_COND]]
+; IS________NPM:       for.end:
+; IS________NPM-NEXT:    ret i32 [[ANS_0_LCSSA]]
 ;
 entry:
   br label %for.cond
@@ -1591,129 +1057,67 @@ for.end:                                          ; preds = %for.cond.cleanup
 ; }
 
 define i32 @bounded_loop_inside_unbounded_loop(i32 %n) {
-; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind readnone
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@bounded_loop_inside_unbounded_loop
-; IS__TUNIT_OPM-SAME: (i32 [[N:%.*]]) #[[ATTR15]] {
-; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    br label [[WHILE_COND:%.*]]
-; IS__TUNIT_OPM:       while.cond:
-; IS__TUNIT_OPM-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP2:%.*]], [[FOR_END:%.*]] ]
-; IS__TUNIT_OPM-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ [[INC:%.*]], [[FOR_END]] ]
-; IS__TUNIT_OPM-NEXT:    [[TMP:%.*]] = icmp sgt i32 [[N_ADDR_0]], -1
-; IS__TUNIT_OPM-NEXT:    [[SMAX:%.*]] = select i1 [[TMP]], i32 [[N_ADDR_0]], i32 -1
-; IS__TUNIT_OPM-NEXT:    [[INC]] = add nsw i32 [[N_ADDR_0]], 1
-; IS__TUNIT_OPM-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[N_ADDR_0]], 0
-; IS__TUNIT_OPM-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
-; IS__TUNIT_OPM:       while.body:
-; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = add i32 [[ANS_0]], 1
-; IS__TUNIT_OPM-NEXT:    br label [[FOR_COND:%.*]]
-; IS__TUNIT_OPM:       for.cond:
-; IS__TUNIT_OPM-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY:%.*]]
-; IS__TUNIT_OPM:       for.cond.cleanup:
-; IS__TUNIT_OPM-NEXT:    [[TMP2]] = add i32 [[TMP1]], [[SMAX]]
-; IS__TUNIT_OPM-NEXT:    br label [[FOR_END]]
-; IS__TUNIT_OPM:       for.body:
-; IS__TUNIT_OPM-NEXT:    unreachable
-; IS__TUNIT_OPM:       for.inc:
-; IS__TUNIT_OPM-NEXT:    unreachable
-; IS__TUNIT_OPM:       for.end:
-; IS__TUNIT_OPM-NEXT:    br label [[WHILE_COND]]
-; IS__TUNIT_OPM:       while.end:
-; IS__TUNIT_OPM-NEXT:    [[ANS_0_LCSSA:%.*]] = phi i32 [ [[ANS_0]], [[WHILE_COND]] ]
-; IS__TUNIT_OPM-NEXT:    ret i32 [[ANS_0_LCSSA]]
+; IS________OPM: Function Attrs: nofree norecurse nosync nounwind readnone
+; IS________OPM-LABEL: define {{[^@]+}}@bounded_loop_inside_unbounded_loop
+; IS________OPM-SAME: (i32 [[N:%.*]]) #[[ATTR17]] {
+; IS________OPM-NEXT:  entry:
+; IS________OPM-NEXT:    br label [[WHILE_COND:%.*]]
+; IS________OPM:       while.cond:
+; IS________OPM-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP2:%.*]], [[FOR_END:%.*]] ]
+; IS________OPM-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ [[INC:%.*]], [[FOR_END]] ]
+; IS________OPM-NEXT:    [[TMP:%.*]] = icmp sgt i32 [[N_ADDR_0]], -1
+; IS________OPM-NEXT:    [[SMAX:%.*]] = select i1 [[TMP]], i32 [[N_ADDR_0]], i32 -1
+; IS________OPM-NEXT:    [[INC]] = add nsw i32 [[N_ADDR_0]], 1
+; IS________OPM-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[N_ADDR_0]], 0
+; IS________OPM-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
+; IS________OPM:       while.body:
+; IS________OPM-NEXT:    [[TMP1:%.*]] = add i32 [[ANS_0]], 1
+; IS________OPM-NEXT:    br label [[FOR_COND:%.*]]
+; IS________OPM:       for.cond:
+; IS________OPM-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY:%.*]]
+; IS________OPM:       for.cond.cleanup:
+; IS________OPM-NEXT:    [[TMP2]] = add i32 [[TMP1]], [[SMAX]]
+; IS________OPM-NEXT:    br label [[FOR_END]]
+; IS________OPM:       for.body:
+; IS________OPM-NEXT:    unreachable
+; IS________OPM:       for.inc:
+; IS________OPM-NEXT:    unreachable
+; IS________OPM:       for.end:
+; IS________OPM-NEXT:    br label [[WHILE_COND]]
+; IS________OPM:       while.end:
+; IS________OPM-NEXT:    [[ANS_0_LCSSA:%.*]] = phi i32 [ [[ANS_0]], [[WHILE_COND]] ]
+; IS________OPM-NEXT:    ret i32 [[ANS_0_LCSSA]]
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@bounded_loop_inside_unbounded_loop
-; IS__TUNIT_NPM-SAME: (i32 [[N:%.*]]) #[[ATTR16]] {
-; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    br label [[WHILE_COND:%.*]]
-; IS__TUNIT_NPM:       while.cond:
-; IS__TUNIT_NPM-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP2:%.*]], [[FOR_END:%.*]] ]
-; IS__TUNIT_NPM-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ [[INC:%.*]], [[FOR_END]] ]
-; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = icmp sgt i32 [[N_ADDR_0]], -1
-; IS__TUNIT_NPM-NEXT:    [[SMAX:%.*]] = select i1 [[TMP]], i32 [[N_ADDR_0]], i32 -1
-; IS__TUNIT_NPM-NEXT:    [[INC]] = add nsw i32 [[N_ADDR_0]], 1
-; IS__TUNIT_NPM-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[N_ADDR_0]], 0
-; IS__TUNIT_NPM-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
-; IS__TUNIT_NPM:       while.body:
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = add i32 [[ANS_0]], 1
-; IS__TUNIT_NPM-NEXT:    br label [[FOR_COND:%.*]]
-; IS__TUNIT_NPM:       for.cond:
-; IS__TUNIT_NPM-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY:%.*]]
-; IS__TUNIT_NPM:       for.cond.cleanup:
-; IS__TUNIT_NPM-NEXT:    [[TMP2]] = add i32 [[TMP1]], [[SMAX]]
-; IS__TUNIT_NPM-NEXT:    br label [[FOR_END]]
-; IS__TUNIT_NPM:       for.body:
-; IS__TUNIT_NPM-NEXT:    unreachable
-; IS__TUNIT_NPM:       for.inc:
-; IS__TUNIT_NPM-NEXT:    unreachable
-; IS__TUNIT_NPM:       for.end:
-; IS__TUNIT_NPM-NEXT:    br label [[WHILE_COND]]
-; IS__TUNIT_NPM:       while.end:
-; IS__TUNIT_NPM-NEXT:    [[ANS_0_LCSSA:%.*]] = phi i32 [ [[ANS_0]], [[WHILE_COND]] ]
-; IS__TUNIT_NPM-NEXT:    ret i32 [[ANS_0_LCSSA]]
-;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@bounded_loop_inside_unbounded_loop
-; IS__CGSCC_OPM-SAME: (i32 [[N:%.*]]) #[[ATTR18]] {
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    br label [[WHILE_COND:%.*]]
-; IS__CGSCC_OPM:       while.cond:
-; IS__CGSCC_OPM-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP2:%.*]], [[FOR_END:%.*]] ]
-; IS__CGSCC_OPM-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ [[INC:%.*]], [[FOR_END]] ]
-; IS__CGSCC_OPM-NEXT:    [[TMP:%.*]] = icmp sgt i32 [[N_ADDR_0]], -1
-; IS__CGSCC_OPM-NEXT:    [[SMAX:%.*]] = select i1 [[TMP]], i32 [[N_ADDR_0]], i32 -1
-; IS__CGSCC_OPM-NEXT:    [[INC]] = add nsw i32 [[N_ADDR_0]], 1
-; IS__CGSCC_OPM-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[N_ADDR_0]], 0
-; IS__CGSCC_OPM-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
-; IS__CGSCC_OPM:       while.body:
-; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = add i32 [[ANS_0]], 1
-; IS__CGSCC_OPM-NEXT:    br label [[FOR_COND:%.*]]
-; IS__CGSCC_OPM:       for.cond:
-; IS__CGSCC_OPM-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY:%.*]]
-; IS__CGSCC_OPM:       for.cond.cleanup:
-; IS__CGSCC_OPM-NEXT:    [[TMP2]] = add i32 [[TMP1]], [[SMAX]]
-; IS__CGSCC_OPM-NEXT:    br label [[FOR_END]]
-; IS__CGSCC_OPM:       for.body:
-; IS__CGSCC_OPM-NEXT:    unreachable
-; IS__CGSCC_OPM:       for.inc:
-; IS__CGSCC_OPM-NEXT:    unreachable
-; IS__CGSCC_OPM:       for.end:
-; IS__CGSCC_OPM-NEXT:    br label [[WHILE_COND]]
-; IS__CGSCC_OPM:       while.end:
-; IS__CGSCC_OPM-NEXT:    [[ANS_0_LCSSA:%.*]] = phi i32 [ [[ANS_0]], [[WHILE_COND]] ]
-; IS__CGSCC_OPM-NEXT:    ret i32 [[ANS_0_LCSSA]]
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@bounded_loop_inside_unbounded_loop
-; IS__CGSCC_NPM-SAME: (i32 [[N:%.*]]) #[[ATTR19]] {
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    br label [[WHILE_COND:%.*]]
-; IS__CGSCC_NPM:       while.cond:
-; IS__CGSCC_NPM-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP2:%.*]], [[FOR_END:%.*]] ]
-; IS__CGSCC_NPM-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ [[INC:%.*]], [[FOR_END]] ]
-; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = icmp sgt i32 [[N_ADDR_0]], -1
-; IS__CGSCC_NPM-NEXT:    [[SMAX:%.*]] = select i1 [[TMP]], i32 [[N_ADDR_0]], i32 -1
-; IS__CGSCC_NPM-NEXT:    [[INC]] = add nsw i32 [[N_ADDR_0]], 1
-; IS__CGSCC_NPM-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[N_ADDR_0]], 0
-; IS__CGSCC_NPM-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
-; IS__CGSCC_NPM:       while.body:
-; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = add i32 [[ANS_0]], 1
-; IS__CGSCC_NPM-NEXT:    br label [[FOR_COND:%.*]]
-; IS__CGSCC_NPM:       for.cond:
-; IS__CGSCC_NPM-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY:%.*]]
-; IS__CGSCC_NPM:       for.cond.cleanup:
-; IS__CGSCC_NPM-NEXT:    [[TMP2]] = add i32 [[TMP1]], [[SMAX]]
-; IS__CGSCC_NPM-NEXT:    br label [[FOR_END]]
-; IS__CGSCC_NPM:       for.body:
-; IS__CGSCC_NPM-NEXT:    unreachable
-; IS__CGSCC_NPM:       for.inc:
-; IS__CGSCC_NPM-NEXT:    unreachable
-; IS__CGSCC_NPM:       for.end:
-; IS__CGSCC_NPM-NEXT:    br label [[WHILE_COND]]
-; IS__CGSCC_NPM:       while.end:
-; IS__CGSCC_NPM-NEXT:    [[ANS_0_LCSSA:%.*]] = phi i32 [ [[ANS_0]], [[WHILE_COND]] ]
-; IS__CGSCC_NPM-NEXT:    ret i32 [[ANS_0_LCSSA]]
+; IS________NPM: Function Attrs: nofree norecurse nosync nounwind readnone
+; IS________NPM-LABEL: define {{[^@]+}}@bounded_loop_inside_unbounded_loop
+; IS________NPM-SAME: (i32 [[N:%.*]]) #[[ATTR18]] {
+; IS________NPM-NEXT:  entry:
+; IS________NPM-NEXT:    br label [[WHILE_COND:%.*]]
+; IS________NPM:       while.cond:
+; IS________NPM-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP2:%.*]], [[FOR_END:%.*]] ]
+; IS________NPM-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ [[INC:%.*]], [[FOR_END]] ]
+; IS________NPM-NEXT:    [[TMP:%.*]] = icmp sgt i32 [[N_ADDR_0]], -1
+; IS________NPM-NEXT:    [[SMAX:%.*]] = select i1 [[TMP]], i32 [[N_ADDR_0]], i32 -1
+; IS________NPM-NEXT:    [[INC]] = add nsw i32 [[N_ADDR_0]], 1
+; IS________NPM-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[N_ADDR_0]], 0
+; IS________NPM-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
+; IS________NPM:       while.body:
+; IS________NPM-NEXT:    [[TMP1:%.*]] = add i32 [[ANS_0]], 1
+; IS________NPM-NEXT:    br label [[FOR_COND:%.*]]
+; IS________NPM:       for.cond:
+; IS________NPM-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY:%.*]]
+; IS________NPM:       for.cond.cleanup:
+; IS________NPM-NEXT:    [[TMP2]] = add i32 [[TMP1]], [[SMAX]]
+; IS________NPM-NEXT:    br label [[FOR_END]]
+; IS________NPM:       for.body:
+; IS________NPM-NEXT:    unreachable
+; IS________NPM:       for.inc:
+; IS________NPM-NEXT:    unreachable
+; IS________NPM:       for.end:
+; IS________NPM-NEXT:    br label [[WHILE_COND]]
+; IS________NPM:       while.end:
+; IS________NPM-NEXT:    [[ANS_0_LCSSA:%.*]] = phi i32 [ [[ANS_0]], [[WHILE_COND]] ]
+; IS________NPM-NEXT:    ret i32 [[ANS_0_LCSSA]]
 ;
 entry:
   br label %while.cond
@@ -1768,125 +1172,65 @@ while.end:                                        ; preds = %while.cond
 ; }
 
 define i32 @nested_unbounded_loops(i32 %n) {
-; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind readnone
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@nested_unbounded_loops
-; IS__TUNIT_OPM-SAME: (i32 [[N:%.*]]) #[[ATTR15]] {
-; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    br label [[WHILE_COND:%.*]]
-; IS__TUNIT_OPM:       while.cond:
-; IS__TUNIT_OPM-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP1:%.*]], [[WHILE_END10:%.*]] ]
-; IS__TUNIT_OPM-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ -1, [[WHILE_END10]] ]
-; IS__TUNIT_OPM-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[N_ADDR_0]], 0
-; IS__TUNIT_OPM-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END11:%.*]], label [[WHILE_BODY:%.*]]
-; IS__TUNIT_OPM:       while.body:
-; IS__TUNIT_OPM-NEXT:    br label [[WHILE_COND1:%.*]]
-; IS__TUNIT_OPM:       while.cond1:
-; IS__TUNIT_OPM-NEXT:    br i1 true, label [[WHILE_END:%.*]], label [[WHILE_BODY4:%.*]]
-; IS__TUNIT_OPM:       while.body4:
-; IS__TUNIT_OPM-NEXT:    unreachable
-; IS__TUNIT_OPM:       while.end:
-; IS__TUNIT_OPM-NEXT:    [[TMP:%.*]] = add i32 [[N_ADDR_0]], -2
-; IS__TUNIT_OPM-NEXT:    br label [[WHILE_COND5:%.*]]
-; IS__TUNIT_OPM:       while.cond5:
-; IS__TUNIT_OPM-NEXT:    br i1 true, label [[WHILE_END10]], label [[WHILE_BODY8:%.*]]
-; IS__TUNIT_OPM:       while.body8:
-; IS__TUNIT_OPM-NEXT:    unreachable
-; IS__TUNIT_OPM:       while.end10:
-; IS__TUNIT_OPM-NEXT:    [[TMP1]] = add i32 [[TMP]], [[ANS_0]]
-; IS__TUNIT_OPM-NEXT:    br label [[WHILE_COND]]
-; IS__TUNIT_OPM:       while.end11:
-; IS__TUNIT_OPM-NEXT:    [[ANS_0_LCSSA:%.*]] = phi i32 [ [[ANS_0]], [[WHILE_COND]] ]
-; IS__TUNIT_OPM-NEXT:    ret i32 [[ANS_0_LCSSA]]
+; IS________OPM: Function Attrs: nofree norecurse nosync nounwind readnone
+; IS________OPM-LABEL: define {{[^@]+}}@nested_unbounded_loops
+; IS________OPM-SAME: (i32 [[N:%.*]]) #[[ATTR17]] {
+; IS________OPM-NEXT:  entry:
+; IS________OPM-NEXT:    br label [[WHILE_COND:%.*]]
+; IS________OPM:       while.cond:
+; IS________OPM-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP1:%.*]], [[WHILE_END10:%.*]] ]
+; IS________OPM-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ -1, [[WHILE_END10]] ]
+; IS________OPM-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[N_ADDR_0]], 0
+; IS________OPM-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END11:%.*]], label [[WHILE_BODY:%.*]]
+; IS________OPM:       while.body:
+; IS________OPM-NEXT:    br label [[WHILE_COND1:%.*]]
+; IS________OPM:       while.cond1:
+; IS________OPM-NEXT:    br i1 true, label [[WHILE_END:%.*]], label [[WHILE_BODY4:%.*]]
+; IS________OPM:       while.body4:
+; IS________OPM-NEXT:    unreachable
+; IS________OPM:       while.end:
+; IS________OPM-NEXT:    [[TMP:%.*]] = add i32 [[N_ADDR_0]], -2
+; IS________OPM-NEXT:    br label [[WHILE_COND5:%.*]]
+; IS________OPM:       while.cond5:
+; IS________OPM-NEXT:    br i1 true, label [[WHILE_END10]], label [[WHILE_BODY8:%.*]]
+; IS________OPM:       while.body8:
+; IS________OPM-NEXT:    unreachable
+; IS________OPM:       while.end10:
+; IS________OPM-NEXT:    [[TMP1]] = add i32 [[TMP]], [[ANS_0]]
+; IS________OPM-NEXT:    br label [[WHILE_COND]]
+; IS________OPM:       while.end11:
+; IS________OPM-NEXT:    [[ANS_0_LCSSA:%.*]] = phi i32 [ [[ANS_0]], [[WHILE_COND]] ]
+; IS________OPM-NEXT:    ret i32 [[ANS_0_LCSSA]]
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@nested_unbounded_loops
-; IS__TUNIT_NPM-SAME: (i32 [[N:%.*]]) #[[ATTR16]] {
-; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    br label [[WHILE_COND:%.*]]
-; IS__TUNIT_NPM:       while.cond:
-; IS__TUNIT_NPM-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP1:%.*]], [[WHILE_END10:%.*]] ]
-; IS__TUNIT_NPM-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ -1, [[WHILE_END10]] ]
-; IS__TUNIT_NPM-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[N_ADDR_0]], 0
-; IS__TUNIT_NPM-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END11:%.*]], label [[WHILE_BODY:%.*]]
-; IS__TUNIT_NPM:       while.body:
-; IS__TUNIT_NPM-NEXT:    br label [[WHILE_COND1:%.*]]
-; IS__TUNIT_NPM:       while.cond1:
-; IS__TUNIT_NPM-NEXT:    br i1 true, label [[WHILE_END:%.*]], label [[WHILE_BODY4:%.*]]
-; IS__TUNIT_NPM:       while.body4:
-; IS__TUNIT_NPM-NEXT:    unreachable
-; IS__TUNIT_NPM:       while.end:
-; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = add i32 [[N_ADDR_0]], -2
-; IS__TUNIT_NPM-NEXT:    br label [[WHILE_COND5:%.*]]
-; IS__TUNIT_NPM:       while.cond5:
-; IS__TUNIT_NPM-NEXT:    br i1 true, label [[WHILE_END10]], label [[WHILE_BODY8:%.*]]
-; IS__TUNIT_NPM:       while.body8:
-; IS__TUNIT_NPM-NEXT:    unreachable
-; IS__TUNIT_NPM:       while.end10:
-; IS__TUNIT_NPM-NEXT:    [[TMP1]] = add i32 [[TMP]], [[ANS_0]]
-; IS__TUNIT_NPM-NEXT:    br label [[WHILE_COND]]
-; IS__TUNIT_NPM:       while.end11:
-; IS__TUNIT_NPM-NEXT:    [[ANS_0_LCSSA:%.*]] = phi i32 [ [[ANS_0]], [[WHILE_COND]] ]
-; IS__TUNIT_NPM-NEXT:    ret i32 [[ANS_0_LCSSA]]
-;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@nested_unbounded_loops
-; IS__CGSCC_OPM-SAME: (i32 [[N:%.*]]) #[[ATTR18]] {
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    br label [[WHILE_COND:%.*]]
-; IS__CGSCC_OPM:       while.cond:
-; IS__CGSCC_OPM-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP1:%.*]], [[WHILE_END10:%.*]] ]
-; IS__CGSCC_OPM-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ -1, [[WHILE_END10]] ]
-; IS__CGSCC_OPM-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[N_ADDR_0]], 0
-; IS__CGSCC_OPM-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END11:%.*]], label [[WHILE_BODY:%.*]]
-; IS__CGSCC_OPM:       while.body:
-; IS__CGSCC_OPM-NEXT:    br label [[WHILE_COND1:%.*]]
-; IS__CGSCC_OPM:       while.cond1:
-; IS__CGSCC_OPM-NEXT:    br i1 true, label [[WHILE_END:%.*]], label [[WHILE_BODY4:%.*]]
-; IS__CGSCC_OPM:       while.body4:
-; IS__CGSCC_OPM-NEXT:    unreachable
-; IS__CGSCC_OPM:       while.end:
-; IS__CGSCC_OPM-NEXT:    [[TMP:%.*]] = add i32 [[N_ADDR_0]], -2
-; IS__CGSCC_OPM-NEXT:    br label [[WHILE_COND5:%.*]]
-; IS__CGSCC_OPM:       while.cond5:
-; IS__CGSCC_OPM-NEXT:    br i1 true, label [[WHILE_END10]], label [[WHILE_BODY8:%.*]]
-; IS__CGSCC_OPM:       while.body8:
-; IS__CGSCC_OPM-NEXT:    unreachable
-; IS__CGSCC_OPM:       while.end10:
-; IS__CGSCC_OPM-NEXT:    [[TMP1]] = add i32 [[TMP]], [[ANS_0]]
-; IS__CGSCC_OPM-NEXT:    br label [[WHILE_COND]]
-; IS__CGSCC_OPM:       while.end11:
-; IS__CGSCC_OPM-NEXT:    [[ANS_0_LCSSA:%.*]] = phi i32 [ [[ANS_0]], [[WHILE_COND]] ]
-; IS__CGSCC_OPM-NEXT:    ret i32 [[ANS_0_LCSSA]]
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@nested_unbounded_loops
-; IS__CGSCC_NPM-SAME: (i32 [[N:%.*]]) #[[ATTR19]] {
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    br label [[WHILE_COND:%.*]]
-; IS__CGSCC_NPM:       while.cond:
-; IS__CGSCC_NPM-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP1:%.*]], [[WHILE_END10:%.*]] ]
-; IS__CGSCC_NPM-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ -1, [[WHILE_END10]] ]
-; IS__CGSCC_NPM-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[N_ADDR_0]], 0
-; IS__CGSCC_NPM-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END11:%.*]], label [[WHILE_BODY:%.*]]
-; IS__CGSCC_NPM:       while.body:
-; IS__CGSCC_NPM-NEXT:    br label [[WHILE_COND1:%.*]]
-; IS__CGSCC_NPM:       while.cond1:
-; IS__CGSCC_NPM-NEXT:    br i1 true, label [[WHILE_END:%.*]], label [[WHILE_BODY4:%.*]]
-; IS__CGSCC_NPM:       while.body4:
-; IS__CGSCC_NPM-NEXT:    unreachable
-; IS__CGSCC_NPM:       while.end:
-; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = add i32 [[N_ADDR_0]], -2
-; IS__CGSCC_NPM-NEXT:    br label [[WHILE_COND5:%.*]]
-; IS__CGSCC_NPM:       while.cond5:
-; IS__CGSCC_NPM-NEXT:    br i1 true, label [[WHILE_END10]], label [[WHILE_BODY8:%.*]]
-; IS__CGSCC_NPM:       while.body8:
-; IS__CGSCC_NPM-NEXT:    unreachable
-; IS__CGSCC_NPM:       while.end10:
-; IS__CGSCC_NPM-NEXT:    [[TMP1]] = add i32 [[TMP]], [[ANS_0]]
-; IS__CGSCC_NPM-NEXT:    br label [[WHILE_COND]]
-; IS__CGSCC_NPM:       while.end11:
-; IS__CGSCC_NPM-NEXT:    [[ANS_0_LCSSA:%.*]] = phi i32 [ [[ANS_0]], [[WHILE_COND]] ]
-; IS__CGSCC_NPM-NEXT:    ret i32 [[ANS_0_LCSSA]]
+; IS________NPM: Function Attrs: nofree norecurse nosync nounwind readnone
+; IS________NPM-LABEL: define {{[^@]+}}@nested_unbounded_loops
+; IS________NPM-SAME: (i32 [[N:%.*]]) #[[ATTR18]] {
+; IS________NPM-NEXT:  entry:
+; IS________NPM-NEXT:    br label [[WHILE_COND:%.*]]
+; IS________NPM:       while.cond:
+; IS________NPM-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP1:%.*]], [[WHILE_END10:%.*]] ]
+; IS________NPM-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ -1, [[WHILE_END10]] ]
+; IS________NPM-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[N_ADDR_0]], 0
+; IS________NPM-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END11:%.*]], label [[WHILE_BODY:%.*]]
+; IS________NPM:       while.body:
+; IS________NPM-NEXT:    br label [[WHILE_COND1:%.*]]
+; IS________NPM:       while.cond1:
+; IS________NPM-NEXT:    br i1 true, label [[WHILE_END:%.*]], label [[WHILE_BODY4:%.*]]
+; IS________NPM:       while.body4:
+; IS________NPM-NEXT:    unreachable
+; IS________NPM:       while.end:
+; IS________NPM-NEXT:    [[TMP:%.*]] = add i32 [[N_ADDR_0]], -2
+; IS________NPM-NEXT:    br label [[WHILE_COND5:%.*]]
+; IS________NPM:       while.cond5:
+; IS________NPM-NEXT:    br i1 true, label [[WHILE_END10]], label [[WHILE_BODY8:%.*]]
+; IS________NPM:       while.body8:
+; IS________NPM-NEXT:    unreachable
+; IS________NPM:       while.end10:
+; IS________NPM-NEXT:    [[TMP1]] = add i32 [[TMP]], [[ANS_0]]
+; IS________NPM-NEXT:    br label [[WHILE_COND]]
+; IS________NPM:       while.end11:
+; IS________NPM-NEXT:    [[ANS_0_LCSSA:%.*]] = phi i32 [ [[ANS_0]], [[WHILE_COND]] ]
+; IS________NPM-NEXT:    ret i32 [[ANS_0_LCSSA]]
 ;
 entry:
   br label %while.cond
@@ -1948,11 +1292,11 @@ while.end11:                                      ; preds = %while.cond
 ;    }
 
 define void @non_loop_cycle(i32 %n) {
-; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind readnone
+; IS__TUNIT_OPM: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@non_loop_cycle
-; IS__TUNIT_OPM-SAME: (i32 [[N:%.*]]) #[[ATTR15]] {
+; IS__TUNIT_OPM-SAME: (i32 [[N:%.*]]) #[[ATTR17]] {
 ; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    [[CALL:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR15]]
+; IS__TUNIT_OPM-NEXT:    [[CALL:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR25]]
 ; IS__TUNIT_OPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CALL]], 5
 ; IS__TUNIT_OPM-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; IS__TUNIT_OPM:       if.then:
@@ -1960,7 +1304,7 @@ define void @non_loop_cycle(i32 %n) {
 ; IS__TUNIT_OPM:       if.else:
 ; IS__TUNIT_OPM-NEXT:    br label [[ENTRY2:%.*]]
 ; IS__TUNIT_OPM:       entry1:
-; IS__TUNIT_OPM-NEXT:    [[CALL1:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR15]]
+; IS__TUNIT_OPM-NEXT:    [[CALL1:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR25]]
 ; IS__TUNIT_OPM-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[CALL1]], 5
 ; IS__TUNIT_OPM-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_ELSE4:%.*]]
 ; IS__TUNIT_OPM:       if.then3:
@@ -1968,7 +1312,7 @@ define void @non_loop_cycle(i32 %n) {
 ; IS__TUNIT_OPM:       if.else4:
 ; IS__TUNIT_OPM-NEXT:    br label [[ENTRY2]]
 ; IS__TUNIT_OPM:       entry2:
-; IS__TUNIT_OPM-NEXT:    [[CALL5:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR15]]
+; IS__TUNIT_OPM-NEXT:    [[CALL5:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR25]]
 ; IS__TUNIT_OPM-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[CALL5]], 5
 ; IS__TUNIT_OPM-NEXT:    br i1 [[CMP6]], label [[IF_THEN7:%.*]], label [[IF_ELSE8:%.*]]
 ; IS__TUNIT_OPM:       if.then7:
@@ -1978,11 +1322,11 @@ define void @non_loop_cycle(i32 %n) {
 ; IS__TUNIT_OPM:       exit:
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone
+; IS__TUNIT_NPM: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@non_loop_cycle
-; IS__TUNIT_NPM-SAME: (i32 [[N:%.*]]) #[[ATTR16]] {
+; IS__TUNIT_NPM-SAME: (i32 [[N:%.*]]) #[[ATTR18]] {
 ; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR16]]
+; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR27]]
 ; IS__TUNIT_NPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CALL]], 5
 ; IS__TUNIT_NPM-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; IS__TUNIT_NPM:       if.then:
@@ -1990,7 +1334,7 @@ define void @non_loop_cycle(i32 %n) {
 ; IS__TUNIT_NPM:       if.else:
 ; IS__TUNIT_NPM-NEXT:    br label [[ENTRY2:%.*]]
 ; IS__TUNIT_NPM:       entry1:
-; IS__TUNIT_NPM-NEXT:    [[CALL1:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR16]]
+; IS__TUNIT_NPM-NEXT:    [[CALL1:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR27]]
 ; IS__TUNIT_NPM-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[CALL1]], 5
 ; IS__TUNIT_NPM-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_ELSE4:%.*]]
 ; IS__TUNIT_NPM:       if.then3:
@@ -1998,7 +1342,7 @@ define void @non_loop_cycle(i32 %n) {
 ; IS__TUNIT_NPM:       if.else4:
 ; IS__TUNIT_NPM-NEXT:    br label [[ENTRY2]]
 ; IS__TUNIT_NPM:       entry2:
-; IS__TUNIT_NPM-NEXT:    [[CALL5:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR16]]
+; IS__TUNIT_NPM-NEXT:    [[CALL5:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR27]]
 ; IS__TUNIT_NPM-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[CALL5]], 5
 ; IS__TUNIT_NPM-NEXT:    br i1 [[CMP6]], label [[IF_THEN7:%.*]], label [[IF_ELSE8:%.*]]
 ; IS__TUNIT_NPM:       if.then7:
@@ -2010,9 +1354,9 @@ define void @non_loop_cycle(i32 %n) {
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@non_loop_cycle
-; IS__CGSCC_OPM-SAME: (i32 [[N:%.*]]) #[[ATTR18]] {
+; IS__CGSCC_OPM-SAME: (i32 [[N:%.*]]) #[[ATTR17]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR31:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR30:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CALL]], 5
 ; IS__CGSCC_OPM-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; IS__CGSCC_OPM:       if.then:
@@ -2020,7 +1364,7 @@ define void @non_loop_cycle(i32 %n) {
 ; IS__CGSCC_OPM:       if.else:
 ; IS__CGSCC_OPM-NEXT:    br label [[ENTRY2:%.*]]
 ; IS__CGSCC_OPM:       entry1:
-; IS__CGSCC_OPM-NEXT:    [[CALL1:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR31]]
+; IS__CGSCC_OPM-NEXT:    [[CALL1:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR30]]
 ; IS__CGSCC_OPM-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[CALL1]], 5
 ; IS__CGSCC_OPM-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_ELSE4:%.*]]
 ; IS__CGSCC_OPM:       if.then3:
@@ -2028,7 +1372,7 @@ define void @non_loop_cycle(i32 %n) {
 ; IS__CGSCC_OPM:       if.else4:
 ; IS__CGSCC_OPM-NEXT:    br label [[ENTRY2]]
 ; IS__CGSCC_OPM:       entry2:
-; IS__CGSCC_OPM-NEXT:    [[CALL5:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR31]]
+; IS__CGSCC_OPM-NEXT:    [[CALL5:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR30]]
 ; IS__CGSCC_OPM-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[CALL5]], 5
 ; IS__CGSCC_OPM-NEXT:    br i1 [[CMP6]], label [[IF_THEN7:%.*]], label [[IF_ELSE8:%.*]]
 ; IS__CGSCC_OPM:       if.then7:
@@ -2040,7 +1384,7 @@ define void @non_loop_cycle(i32 %n) {
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@non_loop_cycle
-; IS__CGSCC_NPM-SAME: (i32 [[N:%.*]]) #[[ATTR19]] {
+; IS__CGSCC_NPM-SAME: (i32 [[N:%.*]]) #[[ATTR18]] {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32 @fact_loop(i32 [[N]])
 ; IS__CGSCC_NPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CALL]], 5
@@ -2112,85 +1456,49 @@ declare void @unknown_mustprogress() mustprogress
 declare void @readonly_mustprogress() readonly mustprogress
 
 define void @willreturn_mustprogress_caller_1() mustprogress {
-; IS__TUNIT_OPM: Function Attrs: mustprogress
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_1
-; IS__TUNIT_OPM-SAME: () #[[ATTR18:[0-9]+]] {
-; IS__TUNIT_OPM-NEXT:    call void @unknown()
-; IS__TUNIT_OPM-NEXT:    ret void
+; IS________OPM: Function Attrs: mustprogress
+; IS________OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_1
+; IS________OPM-SAME: () #[[ATTR20:[0-9]+]] {
+; IS________OPM-NEXT:    call void @unknown()
+; IS________OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: mustprogress
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_1
-; IS__TUNIT_NPM-SAME: () #[[ATTR20:[0-9]+]] {
-; IS__TUNIT_NPM-NEXT:    call void @unknown()
-; IS__TUNIT_NPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: mustprogress
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_1
-; IS__CGSCC_OPM-SAME: () #[[ATTR21:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    call void @unknown()
-; IS__CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: mustprogress
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_1
-; IS__CGSCC_NPM-SAME: () #[[ATTR23:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    call void @unknown()
-; IS__CGSCC_NPM-NEXT:    ret void
+; IS________NPM: Function Attrs: mustprogress
+; IS________NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_1
+; IS________NPM-SAME: () #[[ATTR22:[0-9]+]] {
+; IS________NPM-NEXT:    call void @unknown()
+; IS________NPM-NEXT:    ret void
 ;
   call void @unknown()
   ret void
 }
 define void @willreturn_mustprogress_caller_2() mustprogress {
-; IS__TUNIT_OPM: Function Attrs: mustprogress readonly willreturn
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_2
-; IS__TUNIT_OPM-SAME: () #[[ATTR20:[0-9]+]] {
-; IS__TUNIT_OPM-NEXT:    call void @readonly() #[[ATTR16:[0-9]+]]
-; IS__TUNIT_OPM-NEXT:    ret void
+; IS________OPM: Function Attrs: mustprogress readonly willreturn
+; IS________OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_2
+; IS________OPM-SAME: () #[[ATTR22:[0-9]+]] {
+; IS________OPM-NEXT:    call void @readonly() #[[ATTR18:[0-9]+]]
+; IS________OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: mustprogress readonly willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_2
-; IS__TUNIT_NPM-SAME: () #[[ATTR22:[0-9]+]] {
-; IS__TUNIT_NPM-NEXT:    call void @readonly() #[[ATTR18:[0-9]+]]
-; IS__TUNIT_NPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: mustprogress readonly willreturn
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_2
-; IS__CGSCC_OPM-SAME: () #[[ATTR23:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    call void @readonly() #[[ATTR19:[0-9]+]]
-; IS__CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: mustprogress readonly willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_2
-; IS__CGSCC_NPM-SAME: () #[[ATTR25:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    call void @readonly() #[[ATTR21:[0-9]+]]
-; IS__CGSCC_NPM-NEXT:    ret void
+; IS________NPM: Function Attrs: mustprogress readonly willreturn
+; IS________NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_2
+; IS________NPM-SAME: () #[[ATTR24:[0-9]+]] {
+; IS________NPM-NEXT:    call void @readonly() #[[ATTR20:[0-9]+]]
+; IS________NPM-NEXT:    ret void
 ;
   call void @readonly()
   ret void
 }
 define void @willreturn_mustprogress_caller_3() mustprogress {
-; IS__TUNIT_OPM: Function Attrs: mustprogress nosync readnone willreturn
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_3
-; IS__TUNIT_OPM-SAME: () #[[ATTR21:[0-9]+]] {
-; IS__TUNIT_OPM-NEXT:    call void @readnone()
-; IS__TUNIT_OPM-NEXT:    ret void
+; IS________OPM: Function Attrs: mustprogress nosync readnone willreturn
+; IS________OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_3
+; IS________OPM-SAME: () #[[ATTR23:[0-9]+]] {
+; IS________OPM-NEXT:    call void @readnone()
+; IS________OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: mustprogress nosync readnone willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_3
-; IS__TUNIT_NPM-SAME: () #[[ATTR23:[0-9]+]] {
-; IS__TUNIT_NPM-NEXT:    call void @readnone()
-; IS__TUNIT_NPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: mustprogress nosync readnone willreturn
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_3
-; IS__CGSCC_OPM-SAME: () #[[ATTR24:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    call void @readnone()
-; IS__CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: mustprogress nosync readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_3
-; IS__CGSCC_NPM-SAME: () #[[ATTR26:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    call void @readnone()
-; IS__CGSCC_NPM-NEXT:    ret void
+; IS________NPM: Function Attrs: mustprogress nosync readnone willreturn
+; IS________NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_3
+; IS________NPM-SAME: () #[[ATTR25:[0-9]+]] {
+; IS________NPM-NEXT:    call void @readnone()
+; IS________NPM-NEXT:    ret void
 ;
   call void @readnone()
   ret void
@@ -2204,29 +1512,17 @@ define void @willreturn_mustprogress_callee_1() {
   ret void
 }
 define void @willreturn_mustprogress_callee_2() {
-; IS__TUNIT_OPM: Function Attrs: readonly willreturn
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_2
-; IS__TUNIT_OPM-SAME: () #[[ATTR22:[0-9]+]] {
-; IS__TUNIT_OPM-NEXT:    call void @readonly_mustprogress() #[[ATTR22]]
-; IS__TUNIT_OPM-NEXT:    ret void
+; IS________OPM: Function Attrs: readonly willreturn
+; IS________OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_2
+; IS________OPM-SAME: () #[[ATTR24:[0-9]+]] {
+; IS________OPM-NEXT:    call void @readonly_mustprogress() #[[ATTR24]]
+; IS________OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: readonly willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_2
-; IS__TUNIT_NPM-SAME: () #[[ATTR24:[0-9]+]] {
-; IS__TUNIT_NPM-NEXT:    call void @readonly_mustprogress() #[[ATTR24]]
-; IS__TUNIT_NPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: readonly willreturn
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_2
-; IS__CGSCC_OPM-SAME: () #[[ATTR25:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    call void @readonly_mustprogress() #[[ATTR25]]
-; IS__CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: readonly willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_2
-; IS__CGSCC_NPM-SAME: () #[[ATTR27:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    call void @readonly_mustprogress() #[[ATTR27]]
-; IS__CGSCC_NPM-NEXT:    ret void
+; IS________NPM: Function Attrs: readonly willreturn
+; IS________NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_2
+; IS________NPM-SAME: () #[[ATTR26:[0-9]+]] {
+; IS________NPM-NEXT:    call void @readonly_mustprogress() #[[ATTR26]]
+; IS________NPM-NEXT:    ret void
 ;
   call void @readonly_mustprogress()
   ret void
@@ -2240,29 +1536,17 @@ define void @willreturn_mustprogress_callee_3() {
   ret void
 }
 define void @willreturn_mustprogress_callee_4() {
-; IS__TUNIT_OPM: Function Attrs: readonly willreturn
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_4
-; IS__TUNIT_OPM-SAME: () #[[ATTR22]] {
-; IS__TUNIT_OPM-NEXT:    call void @willreturn_mustprogress_callee_2() #[[ATTR22]]
-; IS__TUNIT_OPM-NEXT:    ret void
+; IS________OPM: Function Attrs: readonly willreturn
+; IS________OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_4
+; IS________OPM-SAME: () #[[ATTR24]] {
+; IS________OPM-NEXT:    call void @willreturn_mustprogress_callee_2() #[[ATTR24]]
+; IS________OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: readonly willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_4
-; IS__TUNIT_NPM-SAME: () #[[ATTR24]] {
-; IS__TUNIT_NPM-NEXT:    call void @willreturn_mustprogress_callee_2() #[[ATTR24]]
-; IS__TUNIT_NPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: readonly willreturn
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_4
-; IS__CGSCC_OPM-SAME: () #[[ATTR25]] {
-; IS__CGSCC_OPM-NEXT:    call void @willreturn_mustprogress_callee_2() #[[ATTR25]]
-; IS__CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: readonly willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_4
-; IS__CGSCC_NPM-SAME: () #[[ATTR27]] {
-; IS__CGSCC_NPM-NEXT:    call void @willreturn_mustprogress_callee_2() #[[ATTR27]]
-; IS__CGSCC_NPM-NEXT:    ret void
+; IS________NPM: Function Attrs: readonly willreturn
+; IS________NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_4
+; IS________NPM-SAME: () #[[ATTR26]] {
+; IS________NPM-NEXT:    call void @willreturn_mustprogress_callee_2() #[[ATTR26]]
+; IS________NPM-NEXT:    ret void
 ;
   call void @willreturn_mustprogress_callee_2()
   ret void
@@ -2271,63 +1555,69 @@ define void @willreturn_mustprogress_callee_4() {
 attributes #0 = { nounwind uwtable noinline }
 attributes #1 = { uwtable noinline }
 ;.
-; IS__TUNIT_OPM: attributes #[[ATTR0]] = { nofree noinline nosync nounwind readnone uwtable willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone uwtable willreturn }
 ; IS__TUNIT_OPM: attributes #[[ATTR1]] = { nofree noinline nosync nounwind readnone uwtable }
-; IS__TUNIT_OPM: attributes #[[ATTR2:[0-9]+]] = { nofree nosync nounwind willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR3]] = { nofree noinline nosync nounwind uwtable }
-; IS__TUNIT_OPM: attributes #[[ATTR4]] = { noreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR5]] = { noinline noreturn nounwind uwtable }
-; IS__TUNIT_OPM: attributes #[[ATTR6]] = { noinline nounwind uwtable }
-; IS__TUNIT_OPM: attributes #[[ATTR7:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR8:[0-9]+]] = { norecurse willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR9]] = { noinline nounwind uwtable willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR10:[0-9]+]] = { noinline uwtable willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR11]] = { nounwind willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR12]] = { argmemonly nofree noinline nosync nounwind readonly uwtable }
-; IS__TUNIT_OPM: attributes #[[ATTR13]] = { nofree noinline noreturn nosync nounwind readnone uwtable }
-; IS__TUNIT_OPM: attributes #[[ATTR14:[0-9]+]] = { noreturn nounwind }
-; IS__TUNIT_OPM: attributes #[[ATTR15]] = { nofree nosync nounwind readnone }
-; IS__TUNIT_OPM: attributes #[[ATTR16]] = { readonly }
-; IS__TUNIT_OPM: attributes #[[ATTR17:[0-9]+]] = { readnone }
-; IS__TUNIT_OPM: attributes #[[ATTR18]] = { mustprogress }
-; IS__TUNIT_OPM: attributes #[[ATTR19:[0-9]+]] = { mustprogress readonly }
-; IS__TUNIT_OPM: attributes #[[ATTR20]] = { mustprogress readonly willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR21]] = { mustprogress nosync readnone willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR22]] = { readonly willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR23]] = { nofree nosync nounwind }
-; IS__TUNIT_OPM: attributes #[[ATTR24]] = { readnone willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR25]] = { nounwind }
-; IS__TUNIT_OPM: attributes #[[ATTR26]] = { willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR2]] = { nofree noinline norecurse nosync nounwind readnone uwtable }
+; IS__TUNIT_OPM: attributes #[[ATTR3:[0-9]+]] = { nofree nosync nounwind willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR4]] = { nofree noinline nosync nounwind uwtable }
+; IS__TUNIT_OPM: attributes #[[ATTR5]] = { noreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR6]] = { noinline noreturn nounwind uwtable }
+; IS__TUNIT_OPM: attributes #[[ATTR7]] = { noinline nounwind uwtable }
+; IS__TUNIT_OPM: attributes #[[ATTR8:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR9]] = { nofree noinline nosync nounwind readnone uwtable willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR10:[0-9]+]] = { norecurse willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR11]] = { noinline nounwind uwtable willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR12:[0-9]+]] = { noinline uwtable willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR13]] = { nounwind willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR14]] = { argmemonly nofree noinline norecurse nosync nounwind readonly uwtable }
+; IS__TUNIT_OPM: attributes #[[ATTR15]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable }
+; IS__TUNIT_OPM: attributes #[[ATTR16:[0-9]+]] = { noreturn nounwind }
+; IS__TUNIT_OPM: attributes #[[ATTR17]] = { nofree norecurse nosync nounwind readnone }
+; IS__TUNIT_OPM: attributes #[[ATTR18]] = { readonly }
+; IS__TUNIT_OPM: attributes #[[ATTR19:[0-9]+]] = { readnone }
+; IS__TUNIT_OPM: attributes #[[ATTR20]] = { mustprogress }
+; IS__TUNIT_OPM: attributes #[[ATTR21:[0-9]+]] = { mustprogress readonly }
+; IS__TUNIT_OPM: attributes #[[ATTR22]] = { mustprogress readonly willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR23]] = { mustprogress nosync readnone willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR24]] = { readonly willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR25]] = { nofree nosync nounwind readnone }
+; IS__TUNIT_OPM: attributes #[[ATTR26]] = { nofree nosync nounwind }
+; IS__TUNIT_OPM: attributes #[[ATTR27]] = { readnone willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR28]] = { nounwind }
+; IS__TUNIT_OPM: attributes #[[ATTR29]] = { willreturn }
 ;.
-; IS__TUNIT_NPM: attributes #[[ATTR0]] = { nofree noinline nosync nounwind readnone uwtable willreturn }
-; IS__TUNIT_NPM: attributes #[[ATTR1]] = { nofree noinline nosync nounwind readnone uwtable }
-; IS__TUNIT_NPM: attributes #[[ATTR2:[0-9]+]] = { nofree nosync nounwind willreturn }
-; IS__TUNIT_NPM: attributes #[[ATTR3]] = { nofree noinline nosync nounwind uwtable }
-; IS__TUNIT_NPM: attributes #[[ATTR4]] = { noreturn }
-; IS__TUNIT_NPM: attributes #[[ATTR5]] = { noinline noreturn nounwind uwtable }
-; IS__TUNIT_NPM: attributes #[[ATTR6]] = { noinline nounwind uwtable }
-; IS__TUNIT_NPM: attributes #[[ATTR7:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
-; IS__TUNIT_NPM: attributes #[[ATTR8:[0-9]+]] = { norecurse willreturn }
-; IS__TUNIT_NPM: attributes #[[ATTR9]] = { noinline nounwind uwtable willreturn }
-; IS__TUNIT_NPM: attributes #[[ATTR10:[0-9]+]] = { noinline uwtable willreturn }
-; IS__TUNIT_NPM: attributes #[[ATTR11]] = { nounwind willreturn }
-; IS__TUNIT_NPM: attributes #[[ATTR12]] = { argmemonly nofree noinline nosync nounwind readonly uwtable willreturn }
-; IS__TUNIT_NPM: attributes #[[ATTR13]] = { argmemonly nofree noinline nosync nounwind readonly uwtable }
-; IS__TUNIT_NPM: attributes #[[ATTR14]] = { nofree noinline noreturn nosync nounwind readnone uwtable }
-; IS__TUNIT_NPM: attributes #[[ATTR15:[0-9]+]] = { noreturn nounwind }
-; IS__TUNIT_NPM: attributes #[[ATTR16]] = { nofree nosync nounwind readnone }
-; IS__TUNIT_NPM: attributes #[[ATTR17]] = { nofree nosync nounwind readnone willreturn }
-; IS__TUNIT_NPM: attributes #[[ATTR18]] = { readonly }
-; IS__TUNIT_NPM: attributes #[[ATTR19:[0-9]+]] = { readnone }
-; IS__TUNIT_NPM: attributes #[[ATTR20]] = { mustprogress }
-; IS__TUNIT_NPM: attributes #[[ATTR21:[0-9]+]] = { mustprogress readonly }
-; IS__TUNIT_NPM: attributes #[[ATTR22]] = { mustprogress readonly willreturn }
-; IS__TUNIT_NPM: attributes #[[ATTR23]] = { mustprogress nosync readnone willreturn }
-; IS__TUNIT_NPM: attributes #[[ATTR24]] = { readonly willreturn }
-; IS__TUNIT_NPM: attributes #[[ATTR25]] = { nofree nosync nounwind }
-; IS__TUNIT_NPM: attributes #[[ATTR26]] = { readnone willreturn }
-; IS__TUNIT_NPM: attributes #[[ATTR27]] = { nounwind }
-; IS__TUNIT_NPM: attributes #[[ATTR28]] = { willreturn }
+; IS________NPM: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone uwtable willreturn }
+; IS________NPM: attributes #[[ATTR1]] = { nofree noinline nosync nounwind readnone uwtable }
+; IS________NPM: attributes #[[ATTR2]] = { nofree noinline norecurse nosync nounwind readnone uwtable }
+; IS________NPM: attributes #[[ATTR3:[0-9]+]] = { nofree nosync nounwind willreturn }
+; IS________NPM: attributes #[[ATTR4]] = { nofree noinline nosync nounwind uwtable }
+; IS________NPM: attributes #[[ATTR5]] = { noreturn }
+; IS________NPM: attributes #[[ATTR6]] = { noinline noreturn nounwind uwtable }
+; IS________NPM: attributes #[[ATTR7]] = { noinline nounwind uwtable }
+; IS________NPM: attributes #[[ATTR8:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
+; IS________NPM: attributes #[[ATTR9]] = { nofree noinline nosync nounwind readnone uwtable willreturn }
+; IS________NPM: attributes #[[ATTR10:[0-9]+]] = { norecurse willreturn }
+; IS________NPM: attributes #[[ATTR11]] = { noinline nounwind uwtable willreturn }
+; IS________NPM: attributes #[[ATTR12:[0-9]+]] = { noinline uwtable willreturn }
+; IS________NPM: attributes #[[ATTR13]] = { nounwind willreturn }
+; IS________NPM: attributes #[[ATTR14]] = { argmemonly nofree noinline norecurse nosync nounwind readonly uwtable willreturn }
+; IS________NPM: attributes #[[ATTR15]] = { argmemonly nofree noinline norecurse nosync nounwind readonly uwtable }
+; IS________NPM: attributes #[[ATTR16]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable }
+; IS________NPM: attributes #[[ATTR17:[0-9]+]] = { noreturn nounwind }
+; IS________NPM: attributes #[[ATTR18]] = { nofree norecurse nosync nounwind readnone }
+; IS________NPM: attributes #[[ATTR19]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS________NPM: attributes #[[ATTR20]] = { readonly }
+; IS________NPM: attributes #[[ATTR21:[0-9]+]] = { readnone }
+; IS________NPM: attributes #[[ATTR22]] = { mustprogress }
+; IS________NPM: attributes #[[ATTR23:[0-9]+]] = { mustprogress readonly }
+; IS________NPM: attributes #[[ATTR24]] = { mustprogress readonly willreturn }
+; IS________NPM: attributes #[[ATTR25]] = { mustprogress nosync readnone willreturn }
+; IS________NPM: attributes #[[ATTR26]] = { readonly willreturn }
+; IS________NPM: attributes #[[ATTR27]] = { nofree nosync nounwind readnone }
+; IS________NPM: attributes #[[ATTR28]] = { nofree nosync nounwind }
+; IS________NPM: attributes #[[ATTR29]] = { readnone willreturn }
+; IS________NPM: attributes #[[ATTR30]] = { nounwind }
+; IS________NPM: attributes #[[ATTR31]] = { willreturn }
 ;.
 ; IS__CGSCC_OPM: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone uwtable willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR1]] = { nofree noinline nosync nounwind readnone uwtable }
@@ -2340,59 +1630,24 @@ attributes #1 = { uwtable noinline }
 ; IS__CGSCC_OPM: attributes #[[ATTR8:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR9]] = { nofree noinline nosync nounwind readnone uwtable willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR10:[0-9]+]] = { norecurse willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR11]] = { noinline norecurse nounwind uwtable willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR12]] = { noinline norecurse noreturn nounwind uwtable }
-; IS__CGSCC_OPM: attributes #[[ATTR13:[0-9]+]] = { noinline uwtable willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR14]] = { nounwind willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR15]] = { argmemonly nofree noinline norecurse nosync nounwind readonly uwtable }
-; IS__CGSCC_OPM: attributes #[[ATTR16]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable }
-; IS__CGSCC_OPM: attributes #[[ATTR17:[0-9]+]] = { noreturn nounwind }
-; IS__CGSCC_OPM: attributes #[[ATTR18]] = { nofree norecurse nosync nounwind readnone }
-; IS__CGSCC_OPM: attributes #[[ATTR19]] = { readonly }
-; IS__CGSCC_OPM: attributes #[[ATTR20:[0-9]+]] = { readnone }
-; IS__CGSCC_OPM: attributes #[[ATTR21]] = { mustprogress }
-; IS__CGSCC_OPM: attributes #[[ATTR22:[0-9]+]] = { mustprogress readonly }
-; IS__CGSCC_OPM: attributes #[[ATTR23]] = { mustprogress readonly willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR24]] = { mustprogress nosync readnone willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR25]] = { readonly willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR26]] = { nofree nosync nounwind readnone }
-; IS__CGSCC_OPM: attributes #[[ATTR27]] = { nofree nosync nounwind }
-; IS__CGSCC_OPM: attributes #[[ATTR28]] = { readnone willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR29]] = { nounwind }
-; IS__CGSCC_OPM: attributes #[[ATTR30]] = { willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR31]] = { nounwind readnone }
-;.
-; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone uwtable willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR1]] = { nofree noinline nosync nounwind readnone uwtable }
-; IS__CGSCC_NPM: attributes #[[ATTR2]] = { nofree noinline norecurse nosync nounwind readnone uwtable }
-; IS__CGSCC_NPM: attributes #[[ATTR3:[0-9]+]] = { nofree nosync nounwind willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR4]] = { nofree noinline nosync nounwind uwtable }
-; IS__CGSCC_NPM: attributes #[[ATTR5]] = { noreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR6]] = { noinline noreturn nounwind uwtable }
-; IS__CGSCC_NPM: attributes #[[ATTR7]] = { noinline nounwind uwtable }
-; IS__CGSCC_NPM: attributes #[[ATTR8:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR9]] = { nofree noinline nosync nounwind readnone uwtable willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR10:[0-9]+]] = { norecurse willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR11]] = { noinline norecurse nounwind uwtable willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR12]] = { noinline norecurse noreturn nounwind uwtable }
-; IS__CGSCC_NPM: attributes #[[ATTR13:[0-9]+]] = { noinline uwtable willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR14]] = { nounwind willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR15]] = { argmemonly nofree noinline norecurse nosync nounwind readonly uwtable willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR16]] = { argmemonly nofree noinline norecurse nosync nounwind readonly uwtable }
-; IS__CGSCC_NPM: attributes #[[ATTR17]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable }
-; IS__CGSCC_NPM: attributes #[[ATTR18:[0-9]+]] = { noreturn nounwind }
-; IS__CGSCC_NPM: attributes #[[ATTR19]] = { nofree norecurse nosync nounwind readnone }
-; IS__CGSCC_NPM: attributes #[[ATTR20]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR21]] = { readonly }
-; IS__CGSCC_NPM: attributes #[[ATTR22:[0-9]+]] = { readnone }
-; IS__CGSCC_NPM: attributes #[[ATTR23]] = { mustprogress }
-; IS__CGSCC_NPM: attributes #[[ATTR24:[0-9]+]] = { mustprogress readonly }
-; IS__CGSCC_NPM: attributes #[[ATTR25]] = { mustprogress readonly willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR26]] = { mustprogress nosync readnone willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR27]] = { readonly willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR28]] = { nofree nosync nounwind readnone }
-; IS__CGSCC_NPM: attributes #[[ATTR29]] = { nofree nosync nounwind }
-; IS__CGSCC_NPM: attributes #[[ATTR30]] = { readnone willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR31]] = { nounwind }
-; IS__CGSCC_NPM: attributes #[[ATTR32]] = { willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR11]] = { noinline nounwind uwtable willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR12:[0-9]+]] = { noinline uwtable willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR13]] = { nounwind willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR14]] = { argmemonly nofree noinline norecurse nosync nounwind readonly uwtable }
+; IS__CGSCC_OPM: attributes #[[ATTR15]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable }
+; IS__CGSCC_OPM: attributes #[[ATTR16:[0-9]+]] = { noreturn nounwind }
+; IS__CGSCC_OPM: attributes #[[ATTR17]] = { nofree norecurse nosync nounwind readnone }
+; IS__CGSCC_OPM: attributes #[[ATTR18]] = { readonly }
+; IS__CGSCC_OPM: attributes #[[ATTR19:[0-9]+]] = { readnone }
+; IS__CGSCC_OPM: attributes #[[ATTR20]] = { mustprogress }
+; IS__CGSCC_OPM: attributes #[[ATTR21:[0-9]+]] = { mustprogress readonly }
+; IS__CGSCC_OPM: attributes #[[ATTR22]] = { mustprogress readonly willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR23]] = { mustprogress nosync readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR24]] = { readonly willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR25]] = { nofree nosync nounwind readnone }
+; IS__CGSCC_OPM: attributes #[[ATTR26]] = { nofree nosync nounwind }
+; IS__CGSCC_OPM: attributes #[[ATTR27]] = { readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR28]] = { nounwind }
+; IS__CGSCC_OPM: attributes #[[ATTR29]] = { willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR30]] = { nounwind readnone }
 ;.

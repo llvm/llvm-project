@@ -156,7 +156,8 @@ template <class _Integer>
 template <class _Integer, class = _EnableByteOverload<_Integer> >
   _LIBCPP_NODISCARD_EXT constexpr _Integer
   to_integer(byte __b) noexcept { return static_cast<_Integer>(__b); }
-}
+
+} // namespace std
 
 #endif
 

@@ -30,7 +30,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_RANGES)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 namespace ranges {
 
@@ -120,15 +120,15 @@ namespace __common {
       -> decltype(      common_view{_VSTD::forward<_Range>(__range)})
       { return          common_view{_VSTD::forward<_Range>(__range)}; }
   };
-}
+} // namespace __common
 
 inline namespace __cpo {
   inline constexpr auto common = __common::__fn{};
-}
+} // namespace __cpo
 } // namespace views
 } // namespace ranges
 
-#endif // !defined(_LIBCPP_HAS_NO_RANGES)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 _LIBCPP_END_NAMESPACE_STD
 

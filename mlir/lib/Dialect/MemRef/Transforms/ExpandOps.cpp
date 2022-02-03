@@ -67,7 +67,7 @@ public:
     Value lhs = genericOp.getCurrentValue();
     Value rhs = op.value();
     Value cmp = bodyBuilder.create<arith::CmpFOp>(loc, predicate, lhs, rhs);
-    Value select = bodyBuilder.create<SelectOp>(loc, cmp, lhs, rhs);
+    Value select = bodyBuilder.create<arith::SelectOp>(loc, cmp, lhs, rhs);
     bodyBuilder.create<memref::AtomicYieldOp>(loc, select);
 
     rewriter.replaceOp(op, genericOp.getResult());

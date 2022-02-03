@@ -22,29 +22,11 @@ target triple = "x86_64-unknown-linux-gnu"
 ;.
 define void @run() {
 ;
-; IS________OPM: Function Attrs: nofree noreturn nosync nounwind readnone
-; IS________OPM-LABEL: define {{[^@]+}}@run
-; IS________OPM-SAME: () #[[ATTR0:[0-9]+]] {
-; IS________OPM-NEXT:  entry:
-; IS________OPM-NEXT:    [[TMP0:%.*]] = call i64 @CaptureAStruct(%struct.Foo* nocapture nofree noundef nonnull readonly byval([[STRUCT_FOO:%.*]]) align 8 dereferenceable(16) @a) #[[ATTR0]]
-; IS________OPM-NEXT:    unreachable
-;
-; IS__TUNIT_NPM: Function Attrs: nofree noreturn nosync nounwind readnone
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@run
-; IS__TUNIT_NPM-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[A_CAST:%.*]] = bitcast %struct.Foo* @a to i32*
-; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A_CAST]], align 8
-; IS__TUNIT_NPM-NEXT:    [[A_0_1:%.*]] = getelementptr [[STRUCT_FOO:%.*]], %struct.Foo* @a, i64 0, i32 1
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i64, i64* [[A_0_1]], align 8
-; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = call i64 @CaptureAStruct(i32 [[TMP0]], i64 [[TMP1]]) #[[ATTR0]]
-; IS__TUNIT_NPM-NEXT:    unreachable
-;
-; IS__CGSCC____: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@run
-; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    unreachable
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@run
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    unreachable
 ;
 entry:
   tail call i8 @UseLongDoubleUnsafely(%union.u* byval(%union.u) align 16 bitcast (%struct.s* @b to %union.u*))
@@ -57,7 +39,7 @@ entry:
 define internal i8 @UseLongDoubleUnsafely(%union.u* byval(%union.u) align 16 %arg) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@UseLongDoubleUnsafely
-; IS__CGSCC____-SAME: () #[[ATTR1:[0-9]+]] {
+; IS__CGSCC____-SAME: () #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    ret i8 undef
 ;
@@ -71,7 +53,7 @@ entry:
 define internal x86_fp80 @UseLongDoubleSafely(%union.u* byval(%union.u) align 16 %arg) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@UseLongDoubleSafely
-; IS__CGSCC____-SAME: () #[[ATTR1]] {
+; IS__CGSCC____-SAME: () #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:    ret x86_fp80 undef
 ;
   %gep = getelementptr inbounds %union.u, %union.u* %arg, i64 0, i32 0
@@ -82,7 +64,7 @@ define internal x86_fp80 @UseLongDoubleSafely(%union.u* byval(%union.u) align 16
 define internal i64 @AccessPaddingOfStruct(%struct.Foo* byval(%struct.Foo) %a) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@AccessPaddingOfStruct
-; IS__CGSCC____-SAME: () #[[ATTR1]] {
+; IS__CGSCC____-SAME: () #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:    ret i64 undef
 ;
   %p = bitcast %struct.Foo* %a to i64*
@@ -103,36 +85,9 @@ define internal i64 @CaptureAStruct(%struct.Foo* byval(%struct.Foo) %a) {
 ; IS__CGSCC_OPM-NEXT:    [[GEP]] = getelementptr [[STRUCT_FOO:%.*]], %struct.Foo* [[A]], i64 0
 ; IS__CGSCC_OPM-NEXT:    br label [[LOOP]]
 ;
-; IS________OPM: Function Attrs: nofree noreturn nosync nounwind readnone
-; IS________OPM-LABEL: define {{[^@]+}}@CaptureAStruct
-; IS________OPM-SAME: (%struct.Foo* noalias nocapture nofree noundef nonnull readnone byval([[STRUCT_FOO:%.*]]) align 8 dereferenceable(16) [[A:%.*]]) #[[ATTR0]] {
-; IS________OPM-NEXT:  entry:
-; IS________OPM-NEXT:    [[A_PTR:%.*]] = alloca %struct.Foo*, align 8
-; IS________OPM-NEXT:    br label [[LOOP:%.*]]
-; IS________OPM:       loop:
-; IS________OPM-NEXT:    [[PHI:%.*]] = phi %struct.Foo* [ null, [[ENTRY:%.*]] ], [ [[A]], [[LOOP]] ]
-; IS________OPM-NEXT:    [[TMP0:%.*]] = phi %struct.Foo* [ [[A]], [[ENTRY]] ], [ [[TMP0]], [[LOOP]] ]
-; IS________OPM-NEXT:    br label [[LOOP]]
-;
-; IS__TUNIT_NPM: Function Attrs: nofree noreturn nosync nounwind readnone
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@CaptureAStruct
-; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]]) #[[ATTR0]] {
-; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
-; IS__TUNIT_NPM-NEXT:    [[A_PRIV_CAST:%.*]] = bitcast %struct.Foo* [[A_PRIV]] to i32*
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[A_PRIV_CAST]], align 4
-; IS__TUNIT_NPM-NEXT:    [[A_PRIV_0_1:%.*]] = getelementptr [[STRUCT_FOO]], %struct.Foo* [[A_PRIV]], i64 0, i32 1
-; IS__TUNIT_NPM-NEXT:    store i64 [[TMP1]], i64* [[A_PRIV_0_1]], align 8
-; IS__TUNIT_NPM-NEXT:    [[A_PTR:%.*]] = alloca %struct.Foo*, align 8
-; IS__TUNIT_NPM-NEXT:    br label [[LOOP:%.*]]
-; IS__TUNIT_NPM:       loop:
-; IS__TUNIT_NPM-NEXT:    [[PHI:%.*]] = phi %struct.Foo* [ null, [[ENTRY:%.*]] ], [ [[A_PRIV]], [[LOOP]] ]
-; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = phi %struct.Foo* [ [[A_PRIV]], [[ENTRY]] ], [ [[TMP2]], [[LOOP]] ]
-; IS__TUNIT_NPM-NEXT:    br label [[LOOP]]
-;
 ; IS__CGSCC____: Function Attrs: nofree norecurse noreturn nosync nounwind readnone
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@CaptureAStruct
-; IS__CGSCC____-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
+; IS__CGSCC____-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
 ; IS__CGSCC____-NEXT:    [[A_PRIV_CAST:%.*]] = bitcast %struct.Foo* [[A_PRIV]] to i32*
@@ -156,9 +111,8 @@ loop:
   br label %loop
 }
 ;.
-; NOT_CGSCC_NPM: attributes #[[ATTR0:[0-9]+]] = { nofree noreturn nosync nounwind readnone }
+; NOT_CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR2]] = { nofree norecurse noreturn nosync nounwind readnone }
+; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse noreturn nosync nounwind readnone }
 ;.

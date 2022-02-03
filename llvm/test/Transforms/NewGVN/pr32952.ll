@@ -1,6 +1,6 @@
 ; PR32952: Don't erroneously consider congruent two phi nodes which
 ; have the same arguments but different incoming edges.
-; RUN: opt -newgvn -S %s | FileCheck %s
+; RUN: opt -passes=newgvn -S %s | FileCheck %s
 
 @a = common global i16 0, align 2
 @.str = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1

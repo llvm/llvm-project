@@ -3987,7 +3987,7 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
     }
 
     if (!HasFeature) {
-      std::string FeatureStrs = "";
+      std::string FeatureStrs;
       for (StringRef OF : ReqOpFeatures) {
         // If the feature is 64bit, alter the string so it will print better in
         // the diagnostic.

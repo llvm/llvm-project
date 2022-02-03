@@ -22,6 +22,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/BinaryFormat/Swift.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
@@ -582,6 +583,9 @@ public:
   bool isRelocatableObject() const override;
 
   StringRef mapDebugSectionName(StringRef Name) const override;
+
+  llvm::binaryformat::Swift5ReflectionSectionKind
+  mapReflectionSectionNameToEnumValue(StringRef SectionName) const override;
 
   bool hasPageZeroSegment() const { return HasPageZeroSegment; }
 

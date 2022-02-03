@@ -28,14 +28,14 @@ int main(int, char**) {
   {
     MoveOnly mo[] = {MoveOnly{3}};
     // expected-error@array:* {{to_array requires copy constructible elements}}
-    // expected-error@array:* {{calling a private constructor}}
+    // expected-error@array:* {{call to implicitly-deleted copy constructor of 'MoveOnly'}}
     std::to_array(mo); // expected-note {{requested here}}
   }
 
   {
     const MoveOnly cmo[] = {MoveOnly{3}};
     // expected-error@array:* {{to_array requires move constructible elements}}
-    // expected-error@array:* {{calling a private constructor}}
+    // expected-error@array:* {{call to implicitly-deleted copy constructor of 'MoveOnly'}}
     std::to_array(std::move(cmo)); // expected-note {{requested here}}
   }
 

@@ -1009,7 +1009,7 @@ func @scf_if_non_equiv_yields(
     %B : tensor<4xf32> {linalg.inplaceable = false})
   -> tensor<4xf32>
 {
-  // CHECK: %[[r:.*]] = select %[[cond]], %[[A]], %[[B]]
+  // CHECK: %[[r:.*]] = arith.select %[[cond]], %[[A]], %[[B]]
   %r = scf.if %b -> (tensor<4xf32>) {
     scf.yield %A : tensor<4xf32>
   } else {
@@ -1321,8 +1321,8 @@ func @write_to_select_op_source(
   // CHECK: memref.copy %[[t1]], %[[alloc]]
   // CHECK: memref.store %{{.*}}, %[[alloc]]
   %w = tensor.insert %cst into %t1[%idx] : tensor<?xf32>
-  // CHECK: %[[select:.*]] = select %{{.*}}, %[[t1]], %[[t2]]
-  %s = std.select %c, %t1, %t2 : tensor<?xf32>
+  // CHECK: %[[select:.*]] = arith.select %{{.*}}, %[[t1]], %[[t2]]
+  %s = arith.select %c, %t1, %t2 : tensor<?xf32>
   // CHECK: return %[[select]], %[[alloc]]
   return %s, %w : tensor<?xf32>, tensor<?xf32>
 }
@@ -1343,8 +1343,8 @@ func @write_after_select_read_one(
   // CHECK: %[[alloc:.*]] = memref.alloc
   // CHECK: %[[casted:.*]] = memref.cast %[[alloc]]
   // CHECK: memref.copy %[[t1]], %[[alloc]]
-  // CHECK: %[[select:.*]] = select %{{.*}}, %[[casted]], %[[t2]]
-  %s = std.select %c, %t1, %t2 : tensor<?xf32>
+  // CHECK: %[[select:.*]] = arith.select %{{.*}}, %[[casted]], %[[t2]]
+  %s = arith.select %c, %t1, %t2 : tensor<?xf32>
 
   // CHECK: memref.store %{{.*}}, %[[select]]
   %w = tensor.insert %cst into %s[%idx] : tensor<?xf32>

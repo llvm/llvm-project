@@ -338,6 +338,7 @@ cc_library(
         "//mlir:Support",
         "//mlir:Transforms",
         "//mlir:VectorOps",
+        "//mlir:VectorUtils",
     ],
 )
 
@@ -400,17 +401,16 @@ cc_library(
         "//mlir:LinalgTransforms",
         "//mlir:MemRefDialect",
         "//mlir:Pass",
-        "//mlir:SCFBufferizableOpInterfaceImpl",
         "//mlir:SCFDialect",
         "//mlir:SCFTransforms",
         "//mlir:StandardOps",
-        "//mlir:StdBufferizableOpInterfaceImpl",
+        "//mlir:StandardOpsTransforms",
         "//mlir:TensorDialect",
         "//mlir:TensorTransforms",
         "//mlir:TransformUtils",
-        "//mlir:VectorBufferizableOpInterfaceImpl",
         "//mlir:VectorOps",
         "//mlir:VectorToSCF",
+        "//mlir:VectorTransforms",
     ],
 )
 
@@ -457,6 +457,7 @@ cc_library(
         "//mlir:Pass",
         "//mlir:SCFDialect",
         "//mlir:SCFTransforms",
+        "//mlir:SCFUtils",
         "//mlir:StandardOps",
         "//mlir:TransformUtils",
     ],
@@ -526,6 +527,7 @@ cc_library(
         "//mlir:TransformUtils",
         "//mlir:VectorOps",
         "//mlir:VectorToSCF",
+        "//mlir:VectorTransforms",
         "//mlir:X86Vector",
     ],
 )

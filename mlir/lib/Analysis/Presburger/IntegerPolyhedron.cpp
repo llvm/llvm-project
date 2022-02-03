@@ -12,6 +12,7 @@
 
 #include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
 #include "mlir/Analysis/Presburger/LinearTransform.h"
+#include "mlir/Analysis/Presburger/PresburgerSet.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/DenseMap.h"
@@ -61,6 +62,34 @@ void IntegerPolyhedron::append(const IntegerPolyhedron &other) {
   for (unsigned r = 0, e = other.getNumEqualities(); r < e; r++) {
     addEquality(other.getEquality(r));
   }
+}
+
+bool IntegerPolyhedron::isEqual(const IntegerPolyhedron &other) const {
+  return PresburgerSet(*this).isEqual(PresburgerSet(other));
+}
+
+bool IntegerPolyhedron::isSubsetOf(const IntegerPolyhedron &other) const {
+  return PresburgerSet(*this).isSubsetOf(PresburgerSet(other));
+}
+
+Optional<SmallVector<Fraction, 8>>
+IntegerPolyhedron::getRationalLexMin() const {
+  assert(numSymbols == 0 && "Symbols are not supported!");
+  Optional<SmallVector<Fraction, 8>> maybeLexMin =
+      LexSimplex(*this).getRationalLexMin();
+
+  if (!maybeLexMin)
+    return {};
+
+  // The Simplex returns the lexmin over all the variables including locals. But
+  // locals are not actually part of the space and should not be returned in the
+  // result. Since the locals are placed last in the list of identifiers, they
+  // will be minimized last in the lexmin. So simply truncating out the locals
+  // from the end of the answer gives the desired lexmin over the dimensions.
+  assert(maybeLexMin->size() == getNumIds() &&
+         "Incorrect number of vars in lexMin!");
+  maybeLexMin->resize(getNumDimAndSymbolIds());
+  return maybeLexMin;
 }
 
 unsigned IntegerPolyhedron::insertDimId(unsigned pos, unsigned num) {
@@ -800,23 +829,24 @@ bool IntegerPolyhedron::containsPoint(ArrayRef<int64_t> point) const {
   return true;
 }
 
-void IntegerPolyhedron::getLocalReprs(std::vector<MaybeLocalRepr> &repr) const {
-  std::vector<SmallVector<int64_t, 8>> dividends(getNumLocalIds());
+void IntegerPolyhedron::getLocalReprs(
+    SmallVectorImpl<MaybeLocalRepr> &repr) const {
+  SmallVector<SmallVector<int64_t, 8>> dividends(getNumLocalIds());
   SmallVector<unsigned, 4> denominators(getNumLocalIds());
   getLocalReprs(dividends, denominators, repr);
 }
 
 void IntegerPolyhedron::getLocalReprs(
-    std::vector<SmallVector<int64_t, 8>> &dividends,
-    SmallVector<unsigned, 4> &denominators) const {
-  std::vector<MaybeLocalRepr> repr(getNumLocalIds());
+    SmallVectorImpl<SmallVector<int64_t, 8>> &dividends,
+    SmallVectorImpl<unsigned> &denominators) const {
+  SmallVector<MaybeLocalRepr> repr(getNumLocalIds());
   getLocalReprs(dividends, denominators, repr);
 }
 
 void IntegerPolyhedron::getLocalReprs(
-    std::vector<SmallVector<int64_t, 8>> &dividends,
-    SmallVector<unsigned, 4> &denominators,
-    std::vector<MaybeLocalRepr> &repr) const {
+    SmallVectorImpl<SmallVector<int64_t, 8>> &dividends,
+    SmallVectorImpl<unsigned> &denominators,
+    SmallVectorImpl<MaybeLocalRepr> &repr) const {
 
   repr.resize(getNumLocalIds());
   dividends.resize(getNumLocalIds());
@@ -836,13 +866,11 @@ void IntegerPolyhedron::getLocalReprs(
       if (!foundRepr[i + divOffset]) {
         auto res = computeSingleVarRepr(*this, foundRepr, divOffset + i,
                                         dividends[i], denominators[i]);
-        if (res.kind == ReprKind::Inequality) {
-          foundRepr[i + divOffset] = true;
-          repr[i].kind = ReprKind::Inequality;
-          repr[i].repr.inEqualityPair = {res.repr.inEqualityPair.lowerBoundIdx,
-                                         res.repr.inEqualityPair.upperBoundIdx};
-          changed = true;
-        }
+        if (res.kind == ReprKind::None)
+          continue;
+        foundRepr[i + divOffset] = true;
+        repr[i] = res;
+        changed = true;
       }
     }
   } while (changed);
@@ -1076,7 +1104,7 @@ void IntegerPolyhedron::mergeLocalIds(IntegerPolyhedron &other) {
   polyB.insertLocalId(0, initLocals);
 
   // Get division representations from each poly.
-  std::vector<SmallVector<int64_t, 8>> divsA, divsB;
+  SmallVector<SmallVector<int64_t, 8>> divsA, divsB;
   SmallVector<unsigned, 4> denomsA, denomsB;
   polyA.getLocalReprs(divsA, denomsA);
   polyB.getLocalReprs(divsB, denomsB);

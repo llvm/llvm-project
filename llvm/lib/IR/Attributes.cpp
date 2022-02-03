@@ -23,7 +23,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
@@ -31,11 +30,9 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -390,26 +387,15 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
   //   align=4
   //   alignstack=8
   //
-  if (hasAttribute(Attribute::Alignment)) {
-    std::string Result;
-    Result += "align";
-    Result += (InAttrGrp) ? "=" : " ";
-    Result += utostr(getValueAsInt());
-    return Result;
-  }
+  if (hasAttribute(Attribute::Alignment))
+    return (InAttrGrp ? "align=" + Twine(getValueAsInt())
+                      : "align " + Twine(getValueAsInt()))
+        .str();
 
   auto AttrWithBytesToString = [&](const char *Name) {
-    std::string Result;
-    Result += Name;
-    if (InAttrGrp) {
-      Result += "=";
-      Result += utostr(getValueAsInt());
-    } else {
-      Result += "(";
-      Result += utostr(getValueAsInt());
-      Result += ")";
-    }
-    return Result;
+    return (InAttrGrp ? Name + ("=" + Twine(getValueAsInt()))
+                      : Name + ("(" + Twine(getValueAsInt())) + ")")
+        .str();
   };
 
   if (hasAttribute(Attribute::StackAlignment))
@@ -426,26 +412,18 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     Optional<unsigned> NumElems;
     std::tie(ElemSize, NumElems) = getAllocSizeArgs();
 
-    std::string Result = "allocsize(";
-    Result += utostr(ElemSize);
-    if (NumElems.hasValue()) {
-      Result += ',';
-      Result += utostr(*NumElems);
-    }
-    Result += ')';
-    return Result;
+    return (NumElems
+                ? "allocsize(" + Twine(ElemSize) + "," + Twine(*NumElems) + ")"
+                : "allocsize(" + Twine(ElemSize) + ")")
+        .str();
   }
 
   if (hasAttribute(Attribute::VScaleRange)) {
     unsigned MinValue = getVScaleRangeMin();
     Optional<unsigned> MaxValue = getVScaleRangeMax();
-
-    std::string Result = "vscale_range(";
-    Result += utostr(MinValue);
-    Result += ',';
-    Result += utostr(MaxValue.getValueOr(0));
-    Result += ')';
-    return Result;
+    return ("vscale_range(" + Twine(MinValue) + "," +
+            Twine(MaxValue.getValueOr(0)) + ")")
+        .str();
   }
 
   // Convert target-dependent attributes to strings of the form:

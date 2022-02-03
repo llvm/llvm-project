@@ -33,7 +33,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_RANGES)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 namespace ranges {
   template<view _View>
@@ -175,15 +175,15 @@ namespace ranges {
         -> decltype(      reverse_view{_VSTD::forward<_Range>(__range)})
         { return          reverse_view{_VSTD::forward<_Range>(__range)}; }
     };
-  }
+  } // namespace __reverse
 
   inline namespace __cpo {
     inline constexpr auto reverse = __reverse::__fn{};
-  }
+  } // namespace __cpo
   } // namespace views
 } // namespace ranges
 
-#endif // !defined(_LIBCPP_HAS_NO_RANGES)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 _LIBCPP_END_NAMESPACE_STD
 

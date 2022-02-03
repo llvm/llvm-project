@@ -3486,7 +3486,7 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
   return S;
 }
 
-const APInt gcd(const SCEVConstant *C1, const SCEVConstant *C2) {
+APInt gcd(const SCEVConstant *C1, const SCEVConstant *C2) {
   APInt A = C1->getAPInt().abs();
   APInt B = C2->getAPInt().abs();
   uint32_t ABW = A.getBitWidth();
@@ -7017,7 +7017,7 @@ bool ScalarEvolution::loopIsFiniteByAssumption(const Loop *L) {
   // A mustprogress loop without side effects must be finite.
   // TODO: The check used here is very conservative.  It's only *specific*
   // side effects which are well defined in infinite loops.
-  return isMustProgress(L) && loopHasNoSideEffects(L);
+  return isFinite(L) || (isMustProgress(L) && loopHasNoSideEffects(L));
 }
 
 const SCEV *ScalarEvolution::createSCEV(Value *V) {
@@ -8466,8 +8466,11 @@ ScalarEvolution::computeExitLimitFromICmp(const Loop *L,
     Pred = ICmpInst::getSwappedPredicate(Pred);
   }
 
+  bool ControllingFiniteLoop =
+      ControlsExit && loopHasNoAbnormalExits(L) && loopIsFiniteByAssumption(L);
   // Simplify the operands before analyzing them.
-  (void)SimplifyICmpOperands(Pred, LHS, RHS);
+  (void)SimplifyICmpOperands(Pred, LHS, RHS, /*Depth=*/0,
+                             ControllingFiniteLoop);
 
   // If we have a comparison of a chrec against a constant, try to use value
   // ranges to answer this query.
@@ -8487,9 +8490,7 @@ ScalarEvolution::computeExitLimitFromICmp(const Loop *L,
   // the same values on self-wrap of the IV, then we can infer that IV
   // doesn't self wrap because if it did, we'd have an infinite (undefined)
   // loop.
-  if (ControlsExit && isLoopInvariant(RHS, L) && loopHasNoAbnormalExits(L) &&
-      loopIsFiniteByAssumption(L)) {
-
+  if (ControllingFiniteLoop && isLoopInvariant(RHS, L)) {
     // TODO: We can peel off any functions which are invertible *in L*.  Loop
     // invariant terms are effectively constants for our purposes here.
     auto *InnerLHS = LHS;
@@ -9940,7 +9941,8 @@ static bool HasSameValue(const SCEV *A, const SCEV *B) {
 
 bool ScalarEvolution::SimplifyICmpOperands(ICmpInst::Predicate &Pred,
                                            const SCEV *&LHS, const SCEV *&RHS,
-                                           unsigned Depth) {
+                                           unsigned Depth,
+                                           bool ControllingFiniteLoop) {
   bool Changed = false;
   // Simplifies ICMP to trivial true or false by turning it into '0 == 0' or
   // '0 != 0'.
@@ -10069,10 +10071,15 @@ bool ScalarEvolution::SimplifyICmpOperands(ICmpInst::Predicate &Pred,
   }
 
   // If possible, canonicalize GE/LE comparisons to GT/LT comparisons, by
-  // adding or subtracting 1 from one of the operands.
+  // adding or subtracting 1 from one of the operands. This can be done for
+  // one of two reasons:
+  // 1) The range of the RHS does not include the (signed/unsigned) boundaries
+  // 2) The loop is finite, with this comparison controlling the exit. Since the
+  // loop is finite, the bound cannot include the corresponding boundary
+  // (otherwise it would loop forever).
   switch (Pred) {
   case ICmpInst::ICMP_SLE:
-    if (!getSignedRangeMax(RHS).isMaxSignedValue()) {
+    if (ControllingFiniteLoop || !getSignedRangeMax(RHS).isMaxSignedValue()) {
       RHS = getAddExpr(getConstant(RHS->getType(), 1, true), RHS,
                        SCEV::FlagNSW);
       Pred = ICmpInst::ICMP_SLT;
@@ -10085,7 +10092,7 @@ bool ScalarEvolution::SimplifyICmpOperands(ICmpInst::Predicate &Pred,
     }
     break;
   case ICmpInst::ICMP_SGE:
-    if (!getSignedRangeMin(RHS).isMinSignedValue()) {
+    if (ControllingFiniteLoop || !getSignedRangeMin(RHS).isMinSignedValue()) {
       RHS = getAddExpr(getConstant(RHS->getType(), (uint64_t)-1, true), RHS,
                        SCEV::FlagNSW);
       Pred = ICmpInst::ICMP_SGT;
@@ -10098,7 +10105,7 @@ bool ScalarEvolution::SimplifyICmpOperands(ICmpInst::Predicate &Pred,
     }
     break;
   case ICmpInst::ICMP_ULE:
-    if (!getUnsignedRangeMax(RHS).isMaxValue()) {
+    if (ControllingFiniteLoop || !getUnsignedRangeMax(RHS).isMaxValue()) {
       RHS = getAddExpr(getConstant(RHS->getType(), 1, true), RHS,
                        SCEV::FlagNUW);
       Pred = ICmpInst::ICMP_ULT;
@@ -10110,7 +10117,7 @@ bool ScalarEvolution::SimplifyICmpOperands(ICmpInst::Predicate &Pred,
     }
     break;
   case ICmpInst::ICMP_UGE:
-    if (!getUnsignedRangeMin(RHS).isMinValue()) {
+    if (ControllingFiniteLoop || !getUnsignedRangeMin(RHS).isMinValue()) {
       RHS = getAddExpr(getConstant(RHS->getType(), (uint64_t)-1, true), RHS);
       Pred = ICmpInst::ICMP_UGT;
       Changed = true;
@@ -10130,7 +10137,8 @@ bool ScalarEvolution::SimplifyICmpOperands(ICmpInst::Predicate &Pred,
   // Recursively simplify until we either hit a recursion limit or nothing
   // changes.
   if (Changed)
-    return SimplifyICmpOperands(Pred, LHS, RHS, Depth+1);
+    return SimplifyICmpOperands(Pred, LHS, RHS, Depth + 1,
+                                ControllingFiniteLoop);
 
   return Changed;
 }
@@ -10911,7 +10919,8 @@ bool ScalarEvolution::isImpliedCond(ICmpInst::Predicate Pred, const SCEV *LHS,
     // For unsigned and equality predicates, try to prove that both found
     // operands fit into narrow unsigned range. If so, try to prove facts in
     // narrow types.
-    if (!CmpInst::isSigned(FoundPred) && !FoundLHS->getType()->isPointerTy()) {
+    if (!CmpInst::isSigned(FoundPred) && !FoundLHS->getType()->isPointerTy() &&
+        !FoundRHS->getType()->isPointerTy()) {
       auto *NarrowType = LHS->getType();
       auto *WideType = FoundLHS->getType();
       auto BitWidth = getTypeSizeInBits(NarrowType);
@@ -10929,7 +10938,7 @@ bool ScalarEvolution::isImpliedCond(ICmpInst::Predicate Pred, const SCEV *LHS,
       }
     }
 
-    if (LHS->getType()->isPointerTy())
+    if (LHS->getType()->isPointerTy() || RHS->getType()->isPointerTy())
       return false;
     if (CmpInst::isSigned(Pred)) {
       LHS = getSignExtendExpr(LHS, FoundLHS->getType());
@@ -10940,7 +10949,7 @@ bool ScalarEvolution::isImpliedCond(ICmpInst::Predicate Pred, const SCEV *LHS,
     }
   } else if (getTypeSizeInBits(LHS->getType()) >
       getTypeSizeInBits(FoundLHS->getType())) {
-    if (FoundLHS->getType()->isPointerTy())
+    if (FoundLHS->getType()->isPointerTy() || FoundRHS->getType()->isPointerTy())
       return false;
     if (CmpInst::isSigned(FoundPred)) {
       FoundLHS = getSignExtendExpr(FoundLHS, LHS->getType());

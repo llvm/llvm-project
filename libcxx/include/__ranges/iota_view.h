@@ -39,7 +39,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_RANGES)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 namespace ranges {
   template<class _Int>
@@ -397,11 +397,11 @@ namespace __iota {
 
 inline namespace __cpo {
   inline constexpr auto iota = __iota::__fn{};
-}
+} // namespace __cpo
 } // namespace views
 } // namespace ranges
 
-#endif // !defined(_LIBCPP_HAS_NO_RANGES)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 _LIBCPP_END_NAMESPACE_STD
 

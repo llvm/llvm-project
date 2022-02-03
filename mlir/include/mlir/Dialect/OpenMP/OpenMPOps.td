@@ -32,7 +32,7 @@ def OpenMP_Dialect : Dialect {
 // OmpCommon requires definition of OpenACC_Dialect.
 include "mlir/Dialect/OpenMP/OmpCommon.td"
 
-class OpenMP_Op<string mnemonic, list<OpTrait> traits = []> :
+class OpenMP_Op<string mnemonic, list<Trait> traits = []> :
       Op<OpenMP_Dialect, mnemonic, traits>;
 
 // Type which can be constraint accepting standard integers and indices.
@@ -128,7 +128,7 @@ def ParallelOp : OpenMP_Op<"parallel", [AttrSizedOperandSegments,
   ];
   let parser = [{ return parseParallelOp(parser, result); }];
   let printer = [{ return printParallelOp(p, *this); }];
-  let verifier = [{ return ::verifyParallelOp(*this); }];
+  let hasVerifier = 1;
 }
 
 def TerminatorOp : OpenMP_Op<"terminator", [Terminator]> {
@@ -217,7 +217,7 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments]> {
 
   let parser = [{ return parseSectionsOp(parser, result); }];
   let printer = [{ return printSectionsOp(p, *this); }];
-  let verifier = [{ return verifySectionsOp(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -336,7 +336,7 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
   }];
   let parser = [{ return parseWsLoopOp(parser, result); }];
   let printer = [{ return printWsLoopOp(p, *this); }];
-  let verifier = [{ return ::verifyWsLoopOp(*this); }];
+  let hasVerifier = 1;
 }
 
 def YieldOp : OpenMP_Op<"yield",
@@ -457,8 +457,7 @@ def CriticalDeclareOp : OpenMP_Op<"critical.declare", [Symbol]> {
   let assemblyFormat = [{
     $sym_name custom<SynchronizationHint>($hint) attr-dict
   }];
-
-  let verifier = "return verifyCriticalDeclareOp(*this);";
+  let hasVerifier = 1;
 }
 
 
@@ -476,8 +475,7 @@ def CriticalOp : OpenMP_Op<"critical"> {
   let assemblyFormat = [{
     (`(` $name^ `)`)? $region attr-dict
   }];
-
-  let verifier = "return ::verifyCriticalOp(*this);";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -540,8 +538,7 @@ def OrderedOp : OpenMP_Op<"ordered"> {
     ( `depend_vec` `(` $depend_vec_vars^ `:` type($depend_vec_vars) `)` )?
     attr-dict
   }];
-
-  let verifier = "return ::verifyOrderedOp(*this);";
+  let hasVerifier = 1;
 }
 
 def OrderedRegionOp : OpenMP_Op<"ordered_region"> {
@@ -561,8 +558,7 @@ def OrderedRegionOp : OpenMP_Op<"ordered_region"> {
   let regions = (region AnyRegion:$region);
 
   let assemblyFormat = [{ ( `simd` $simd^ )? $region attr-dict}];
-
-  let verifier = "return ::verifyOrderedRegionOp(*this);";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -614,7 +610,7 @@ def AtomicReadOp : OpenMP_Op<"atomic.read"> {
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order);
   let parser = [{ return parseAtomicReadOp(parser, result); }];
   let printer = [{ return printAtomicReadOp(p, *this); }];
-  let verifier = [{ return verifyAtomicReadOp(*this); }];
+  let hasVerifier = 1;
 }
 
 def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
@@ -643,7 +639,7 @@ def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order);
   let parser = [{ return parseAtomicWriteOp(parser, result); }];
   let printer = [{ return printAtomicWriteOp(p, *this); }];
-  let verifier = [{ return verifyAtomicWriteOp(*this); }];
+  let hasVerifier = 1;
 }
 
 // TODO: autogenerate from OMP.td in future if possible.
@@ -708,7 +704,7 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update"> {
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order);
   let parser = [{ return parseAtomicUpdateOp(parser, result); }];
   let printer = [{ return printAtomicUpdateOp(p, *this); }];
-  let verifier = [{ return verifyAtomicUpdateOp(*this); }];
+  let hasVerifier = 1;
 }
 
 def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
@@ -752,7 +748,7 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
   let regions = (region SizedRegion<1>:$region);
   let parser = [{ return parseAtomicCaptureOp(parser, result); }];
   let printer = [{ return printAtomicCaptureOp(p, *this); }];
-  let verifier = [{ return verifyAtomicCaptureOp(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -789,7 +785,6 @@ def ReductionDeclareOp : OpenMP_Op<"reduction.declare", [Symbol]> {
   let regions = (region AnyRegion:$initializerRegion,
                         AnyRegion:$reductionRegion,
                         AnyRegion:$atomicReductionRegion);
-  let verifier = "return ::verifyReductionDeclareOp(*this);";
 
   let assemblyFormat = "$sym_name `:` $type attr-dict-with-keyword "
                        "`init` $initializerRegion "
@@ -804,6 +799,7 @@ def ReductionDeclareOp : OpenMP_Op<"reduction.declare", [Symbol]> {
       return atomicReductionRegion().front().getArgument(0).getType();
     }
   }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -826,7 +822,7 @@ def ReductionOp : OpenMP_Op<"reduction", [
   let arguments= (ins AnyType:$operand, OpenMP_PointerLikeType:$accumulator);
   let assemblyFormat =
     "$operand `,` $accumulator attr-dict `:` type($accumulator)";
-  let verifier = "return ::verifyReductionOp(*this);";
+  let hasVerifier = 1;
 }
 
 #endif // OPENMP_OPS

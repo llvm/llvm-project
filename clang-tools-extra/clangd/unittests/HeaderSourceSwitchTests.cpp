@@ -74,7 +74,7 @@ TEST(HeaderSourceSwitchTest, FileHeuristic) {
   EXPECT_FALSE(PathResult.hasValue());
 }
 
-MATCHER_P(DeclNamed, Name, "") {
+MATCHER_P(declNamed, Name, "") {
   if (const NamedDecl *ND = dyn_cast<NamedDecl>(arg))
     if (ND->getQualifiedNameAsString() == Name)
       return true;
@@ -106,8 +106,8 @@ TEST(HeaderSourceSwitchTest, GetLocalDecls) {
   auto AST = TU.build();
   EXPECT_THAT(getIndexableLocalDecls(AST),
               testing::UnorderedElementsAre(
-                  DeclNamed("MainF1"), DeclNamed("Foo"), DeclNamed("ns::Foo"),
-                  DeclNamed("ns::Foo::method"), DeclNamed("ns::Foo::field")));
+                  declNamed("MainF1"), declNamed("Foo"), declNamed("ns::Foo"),
+                  declNamed("ns::Foo::method"), declNamed("ns::Foo::field")));
 }
 
 TEST(HeaderSourceSwitchTest, FromHeaderToSource) {

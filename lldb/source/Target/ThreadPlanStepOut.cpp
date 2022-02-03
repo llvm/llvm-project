@@ -43,7 +43,7 @@ ThreadPlanStepOut::ThreadPlanStepOut(
       m_return_addr(LLDB_INVALID_ADDRESS), m_stop_others(stop_others),
       m_immediate_step_from_function(nullptr),
       m_calculate_return_value(gather_return_value) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   SetFlagsToDefault();
   SetupAvoidNoDebug(step_out_avoids_code_without_debug_info);
 
@@ -423,7 +423,7 @@ bool ThreadPlanStepOut::MischiefManaged() {
     // reason and we're now stopping for some other reason altogether, then
     // we're done with this step out operation.
 
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+    Log *log = GetLog(LLDBLog::Step);
     if (log)
       LLDB_LOGF(log, "Completed step out plan.");
     if (m_return_bp_id != LLDB_INVALID_BREAK_ID) {
@@ -447,7 +447,7 @@ bool ThreadPlanStepOut::QueueInlinedStepPlan(bool queue_now) {
   if (!immediate_return_from_sp)
     return false;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   if (log) {
     StreamString s;
     immediate_return_from_sp->Dump(&s, true, false);

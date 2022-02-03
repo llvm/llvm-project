@@ -32,7 +32,6 @@
 #include "CodeGenDAGPatterns.h"
 #include "SubtargetFeatureInfo.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CodeGenCoverage.h"
 #include "llvm/Support/CommandLine.h"
@@ -668,7 +667,6 @@ MatchTable &operator<<(MatchTable &Table, const MatchTableRecord &Value) {
 class OperandMatcher;
 class MatchAction;
 class PredicateMatcher;
-class RuleMatcher;
 
 class Matcher {
 public:

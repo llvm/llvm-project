@@ -875,7 +875,7 @@ Error ResourceFileWriter::visitIconOrCursorResource(const RCResource *Base) {
     FileStr = IconRes->IconLoc;
     Type = IconCursorGroupType::Icon;
   } else {
-    auto *CursorRes = dyn_cast<CursorResource>(Base);
+    auto *CursorRes = cast<CursorResource>(Base);
     FileStr = CursorRes->CursorLoc;
     Type = IconCursorGroupType::Cursor;
   }

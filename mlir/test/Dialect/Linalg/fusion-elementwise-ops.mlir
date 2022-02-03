@@ -243,7 +243,7 @@ func @generic_op_constant_fusion(%arg0 : tensor<5x?x?xf32>) -> tensor<5x?x?xf32>
 //       CHECK:   %[[CST:.*]] = arith.constant {{.*}} : f32
 //       CHECK:   linalg.generic
 //       CHECK:   ^{{.+}}(%[[ARG1:[a-zA-Z0-9_]+]]: f32, %{{.+}}: f32):
-//       CHECK:     arith.mulf %[[CST]], %[[ARG1]]
+//       CHECK:     arith.mulf %[[ARG1]], %[[CST]]
 
 // -----
 
@@ -275,7 +275,7 @@ func @generic_op_zero_dim_constant_fusion(%arg0 : tensor<5x?x?xf32>)
 //       CHECK:   %[[CST:.*]] = arith.constant {{.*}} : f32
 //       CHECK:   linalg.generic
 //       CHECK:   ^{{.*}}(%[[ARG1:[a-zA-Z0-9_]*]]: f32, %{{.*}}: f32)
-//       CHECK:     arith.mulf %[[CST]], %[[ARG1]]
+//       CHECK:     arith.mulf %[[ARG1]], %[[CST]]
 
 // -----
 

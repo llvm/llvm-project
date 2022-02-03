@@ -14,6 +14,7 @@
 #define LLVM_TRANSFORMS_SCALAR_WARNMISSEDTRANSFORMS_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
 
 namespace llvm {
 class Function;
@@ -22,7 +23,7 @@ class Function;
 class WarnMissedTransformationsPass
     : public PassInfoMixin<WarnMissedTransformationsPass> {
 public:
-  explicit WarnMissedTransformationsPass() {}
+  explicit WarnMissedTransformationsPass() = default;
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

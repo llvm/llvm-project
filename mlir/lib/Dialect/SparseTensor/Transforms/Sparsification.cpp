@@ -24,7 +24,7 @@
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/SparseTensor/Utils/Merger.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TensorEncoding.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -787,8 +787,8 @@ static void genTensorStore(Merger &merger, CodeGen &codegen,
   // Test if this is a scalarized reduction.
   if (codegen.redVal) {
     if (codegen.curVecLength > 1)
-      rhs = rewriter.create<SelectOp>(loc, codegen.curVecMask, rhs,
-                                      codegen.redVal);
+      rhs = rewriter.create<arith::SelectOp>(loc, codegen.curVecMask, rhs,
+                                             codegen.redVal);
     updateReduc(merger, codegen, rhs);
     return;
   }
@@ -1276,7 +1276,7 @@ static void genLocals(Merger &merger, CodeGen &codegen,
         if (min) {
           Value cmp = rewriter.create<arith::CmpIOp>(
               loc, arith::CmpIPredicate::ult, load, min);
-          min = rewriter.create<SelectOp>(loc, cmp, load, min);
+          min = rewriter.create<arith::SelectOp>(loc, cmp, load, min);
         } else {
           min = load;
         }
@@ -1363,7 +1363,7 @@ static void genWhileInduction(Merger &merger, CodeGen &codegen,
       Value cmp = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
                                                  op1, op2);
       Value add = rewriter.create<arith::AddIOp>(loc, op3, one);
-      operands.push_back(rewriter.create<SelectOp>(loc, cmp, add, op3));
+      operands.push_back(rewriter.create<arith::SelectOp>(loc, cmp, add, op3));
       codegen.pidxs[tensor][idx] = whileOp->getResult(o++);
     }
   }

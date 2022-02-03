@@ -441,7 +441,7 @@ s_endpgm_ordered_ps_done
 // GFX9:     s_endpgm_ordered_ps_done ; encoding: [0x00,0x00,0x9e,0xbf]
 // NOSICIVI: error: instruction not supported on this GPU
 // GFX10: s_endpgm_ordered_ps_done ; encoding: [0x00,0x00,0x9e,0xbf]
-// GFX11: s_endpgm_ordered_ps_done ; encoding: [0x00,0x00,0xb2,0xbf]
+// NOGFX11: error: instruction not supported on this GPU
 
 s_call_b64 null, 12609
 // GFX10: s_call_b64 null, 12609 ; encoding: [0x41,0x31,0x7d,0xbb]

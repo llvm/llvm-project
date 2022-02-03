@@ -18,6 +18,7 @@
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
 
 #define DEBUG_TYPE "instcombine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"

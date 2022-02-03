@@ -240,20 +240,19 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  # # Tests with the various supported ways to build libc++.
-  # TODO: Fix failures with the GDB pretty printers
-  # - label: "Bootstrapping build"
-  #   command: "libcxx/utils/ci/run-buildbot bootstrapping-build"
-  #   artifact_paths:
-  #     - "**/test-results.xml"
-  #   agents:
-  #     queue: "libcxx-builders"
-  #     os: "linux"
-  #   retry:
-  #     automatic:
-  #       - exit_status: -1  # Agent was lost
-  #         limit: 2
-  #   timeout_in_minutes: 120
+  # Tests with the various supported ways to build libc++.
+  - label: "Bootstrapping build"
+    command: "libcxx/utils/ci/run-buildbot bootstrapping-build"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
 
   - label: "Legacy Lit configuration"
     command: "libcxx/utils/ci/run-buildbot legacy-test-config"
@@ -455,6 +454,19 @@ steps:
 
   - label: "No wide characters"
     command: "libcxx/utils/ci/run-buildbot generic-no-wide-characters"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "No experimental features"
+    command: "libcxx/utils/ci/run-buildbot generic-no-experimental"
     artifact_paths:
       - "**/test-results.xml"
     agents:

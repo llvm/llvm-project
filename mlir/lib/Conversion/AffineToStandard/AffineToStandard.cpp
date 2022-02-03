@@ -19,7 +19,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
@@ -96,8 +96,8 @@ public:
         loc, arith::CmpIPredicate::slt, remainder, zeroCst);
     Value correctedRemainder =
         builder.create<arith::AddIOp>(loc, remainder, rhs);
-    Value result = builder.create<SelectOp>(loc, isRemainderNegative,
-                                            correctedRemainder, remainder);
+    Value result = builder.create<arith::SelectOp>(
+        loc, isRemainderNegative, correctedRemainder, remainder);
     return result;
   }
 
@@ -134,12 +134,12 @@ public:
         loc, arith::CmpIPredicate::slt, lhs, zeroCst);
     Value negatedDecremented = builder.create<arith::SubIOp>(loc, noneCst, lhs);
     Value dividend =
-        builder.create<SelectOp>(loc, negative, negatedDecremented, lhs);
+        builder.create<arith::SelectOp>(loc, negative, negatedDecremented, lhs);
     Value quotient = builder.create<arith::DivSIOp>(loc, dividend, rhs);
     Value correctedQuotient =
         builder.create<arith::SubIOp>(loc, noneCst, quotient);
-    Value result =
-        builder.create<SelectOp>(loc, negative, correctedQuotient, quotient);
+    Value result = builder.create<arith::SelectOp>(loc, negative,
+                                                   correctedQuotient, quotient);
     return result;
   }
 
@@ -175,14 +175,14 @@ public:
     Value negated = builder.create<arith::SubIOp>(loc, zeroCst, lhs);
     Value decremented = builder.create<arith::SubIOp>(loc, lhs, oneCst);
     Value dividend =
-        builder.create<SelectOp>(loc, nonPositive, negated, decremented);
+        builder.create<arith::SelectOp>(loc, nonPositive, negated, decremented);
     Value quotient = builder.create<arith::DivSIOp>(loc, dividend, rhs);
     Value negatedQuotient =
         builder.create<arith::SubIOp>(loc, zeroCst, quotient);
     Value incrementedQuotient =
         builder.create<arith::AddIOp>(loc, quotient, oneCst);
-    Value result = builder.create<SelectOp>(loc, nonPositive, negatedQuotient,
-                                            incrementedQuotient);
+    Value result = builder.create<arith::SelectOp>(
+        loc, nonPositive, negatedQuotient, incrementedQuotient);
     return result;
   }
 
@@ -259,7 +259,8 @@ static Value buildMinMaxReductionSeq(Location loc,
   Value value = *valueIt++;
   for (; valueIt != values.end(); ++valueIt) {
     auto cmpOp = builder.create<arith::CmpIOp>(loc, predicate, value, *valueIt);
-    value = builder.create<SelectOp>(loc, cmpOp.getResult(), value, *valueIt);
+    value = builder.create<arith::SelectOp>(loc, cmpOp.getResult(), value,
+                                            *valueIt);
   }
 
   return value;

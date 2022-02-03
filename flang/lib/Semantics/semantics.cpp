@@ -165,7 +165,7 @@ using StatementSemanticsPass2 = SemanticsVisitor<AccStructureChecker,
 
 static bool PerformStatementSemantics(
     SemanticsContext &context, parser::Program &program) {
-  ResolveNames(context, program);
+  ResolveNames(context, program, context.globalScope());
   RewriteParseTree(context, program);
   ComputeOffsets(context, context.globalScope());
   CheckDeclarations(context);
@@ -185,9 +185,10 @@ SemanticsContext::SemanticsContext(
     : defaultKinds_{defaultKinds}, languageFeatures_{languageFeatures},
       allCookedSources_{allCookedSources},
       intrinsics_{evaluate::IntrinsicProcTable::Configure(defaultKinds_)},
-      globalScope_{*this}, foldingContext_{
-                               parser::ContextualMessages{&messages_},
-                               defaultKinds_, intrinsics_} {}
+      globalScope_{*this}, intrinsicModulesScope_{globalScope_.MakeScope(
+                               Scope::Kind::IntrinsicModules, nullptr)},
+      foldingContext_{
+          parser::ContextualMessages{&messages_}, defaultKinds_, intrinsics_} {}
 
 SemanticsContext::~SemanticsContext() {}
 
@@ -246,7 +247,9 @@ Scope &SemanticsContext::FindScope(parser::CharBlock source) {
   if (auto *scope{globalScope_.FindScope(source)}) {
     return *scope;
   } else {
-    common::die("SemanticsContext::FindScope(): invalid source location");
+    common::die(
+        "SemanticsContext::FindScope(): invalid source location for '%s'",
+        source.ToString().c_str());
   }
 }
 
@@ -339,8 +342,8 @@ bool SemanticsContext::IsTempName(const std::string &name) {
 }
 
 Scope *SemanticsContext::GetBuiltinModule(const char *name) {
-  return ModFileReader{*this}.Read(
-      SourceName{name, std::strlen(name)}, nullptr, true /*silence errors*/);
+  return ModFileReader{*this}.Read(SourceName{name, std::strlen(name)},
+      true /*intrinsic*/, nullptr, true /*silence errors*/);
 }
 
 void SemanticsContext::UseFortranBuiltinsModule() {

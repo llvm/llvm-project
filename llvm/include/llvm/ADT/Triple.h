@@ -721,6 +721,41 @@ public:
            isOSBinFormatELF();
   }
 
+  /// Tests whether the target is T32.
+  bool isArmT32() const {
+    switch (getSubArch()) {
+    case Triple::ARMSubArch_v8m_baseline:
+    case Triple::ARMSubArch_v7s:
+    case Triple::ARMSubArch_v7k:
+    case Triple::ARMSubArch_v7ve:
+    case Triple::ARMSubArch_v6:
+    case Triple::ARMSubArch_v6m:
+    case Triple::ARMSubArch_v6k:
+    case Triple::ARMSubArch_v6t2:
+    case Triple::ARMSubArch_v5:
+    case Triple::ARMSubArch_v5te:
+    case Triple::ARMSubArch_v4t:
+      return false;
+    default:
+      return true;
+    }
+  }
+
+  /// Tests whether the target is an M-class.
+  bool isArmMClass() const {
+    switch (getSubArch()) {
+    case Triple::ARMSubArch_v6m:
+    case Triple::ARMSubArch_v7m:
+    case Triple::ARMSubArch_v7em:
+    case Triple::ARMSubArch_v8m_mainline:
+    case Triple::ARMSubArch_v8m_baseline:
+    case Triple::ARMSubArch_v8_1m_mainline:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   /// Tests whether the target is AArch64 (little and big endian).
   bool isAArch64() const {
     return getArch() == Triple::aarch64 || getArch() == Triple::aarch64_be ||

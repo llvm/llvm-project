@@ -10,6 +10,6 @@
 #define PYTHON_BINDINGS_VECTOR_OPS
 
 include "mlir/Bindings/Python/Attributes.td"
-include "mlir/Dialect/Vector/VectorOps.td"
+include "mlir/Dialect/Vector/IR/VectorOps.td"
 
 #endif

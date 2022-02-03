@@ -1507,7 +1507,8 @@ TEST(IRInstructionMapper, CleanuppadIllegal) {
 // are considered illegal since is extra checking needed to handle the address
 // space checking.
 
-// Checks that a memset instruction is mapped to an illegal value.
+// Checks that a memset instruction is mapped to an illegal value when
+// specified.
 TEST(IRInstructionMapper, MemSetIllegal) {
   StringRef ModuleString = R"(
   declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1)
@@ -1531,6 +1532,7 @@ TEST(IRInstructionMapper, MemSetIllegal) {
   SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
   SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
   IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableIntrinsics = false;
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
@@ -1538,7 +1540,8 @@ TEST(IRInstructionMapper, MemSetIllegal) {
   ASSERT_TRUE(UnsignedVec[2] < UnsignedVec[0]);
 }
 
-// Checks that a memcpy instruction is mapped to an illegal value.
+// Checks that a memcpy instruction is mapped to an illegal value  when
+// specified.
 TEST(IRInstructionMapper, MemCpyIllegal) {
   StringRef ModuleString = R"(
   declare void @llvm.memcpy.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1)
@@ -1562,6 +1565,7 @@ TEST(IRInstructionMapper, MemCpyIllegal) {
   SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
   SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
   IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableIntrinsics = false;
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
@@ -1570,7 +1574,8 @@ TEST(IRInstructionMapper, MemCpyIllegal) {
   ASSERT_LT(UnsignedVec[2], UnsignedVec[0]);
 }
 
-// Checks that a memmove instruction is mapped to an illegal value.
+// Checks that a memmove instruction is mapped to an illegal value  when
+// specified.
 TEST(IRInstructionMapper, MemMoveIllegal) {
   StringRef ModuleString = R"(
   declare void @llvm.memmove.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1)
@@ -1594,11 +1599,51 @@ TEST(IRInstructionMapper, MemMoveIllegal) {
   SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
   SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
   IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableIntrinsics = false;
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(7));
   ASSERT_LT(UnsignedVec[2], UnsignedVec[0]);
+}
+
+// Checks that mem* instructions are mapped to an legal value when not
+// specified, and that all the intrinsics are marked differently.
+TEST(IRInstructionMapper, MemOpsLegal) {
+  StringRef ModuleString = R"(
+  declare void @llvm.memmove.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1)
+  declare void @llvm.memcpy.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1)
+  declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1)
+
+  define i64 @function(i64 %x, i64 %z, i64 %n) {
+  entry:
+    %pool = alloca [59 x i64], align 4
+    %tmp = bitcast [59 x i64]* %pool to i8*
+    call void @llvm.memmove.p0i8.i64(i8* nonnull %tmp, i8 0, i64 236, i32 4, i1 false)
+    call void @llvm.memcpy.p0i8.i64(i8* nonnull %tmp, i8 0, i64 236, i32 4, i1 false)
+    call void @llvm.memset.p0i8.i64(i8* nonnull %tmp, i8 0, i64 236, i32 4, i1 false)
+    %cmp3 = icmp eq i64 %n, 0
+    %a = add i64 %x, %z
+    %c = add i64 %x, %z
+    ret i64 0
+  })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableIntrinsics = true;
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(9));
+  ASSERT_LT(UnsignedVec[2], UnsignedVec[3]);
+  ASSERT_LT(UnsignedVec[3], UnsignedVec[4]);
+  ASSERT_LT(UnsignedVec[4], UnsignedVec[5]);
 }
 
 // Checks that a variable argument instructions are mapped to an illegal value.
@@ -1642,6 +1687,7 @@ TEST(IRInstructionMapper, VarArgsIllegal) {
   SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
   SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
   IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableIntrinsics = false;
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
@@ -2560,6 +2606,39 @@ TEST(IRSimilarityIdentifier, CommutativeSimilarity) {
       InstIdx += 3;
     }
   }
+}
+
+// This test makes sure that intrinsic functions that are marked commutative
+// are still treated as non-commutative since they are function calls.
+TEST(IRSimilarityIdentifier, InstrinsicCommutative) {
+  // If treated as commutative, we will fail to find a valid mapping, causing
+  // an assertion error.
+  StringRef ModuleString = R"(
+  define void @foo() {
+    entry:
+      %0 = call i16 @llvm.smul.fix.i16(i16 16384, i16 16384, i32 15)
+      store i16 %0, i16* undef, align 1
+      %1 = icmp eq i16 undef, 8192
+      call void @bar()
+      %2 = call i16 @llvm.smul.fix.i16(i16 -16384, i16 16384, i32 15)
+      store i16 %2, i16* undef, align 1
+      %3 = icmp eq i16 undef, -8192
+      call void @bar()
+      %4 = call i16 @llvm.smul.fix.i16(i16 -16384, i16 -16384, i32 15)
+      ret void
+  }
+
+  declare void @bar()
+
+  ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
+  declare i16 @llvm.smul.fix.i16(i16, i16, i32 immarg))";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.size() == 0);
 }
 
 // This test checks to see whether we can detect different structure in

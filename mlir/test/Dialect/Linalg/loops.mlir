@@ -206,7 +206,14 @@ func @fill_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1:
 //       CHECKPARALLEL:     store %{{.*}}, {{.*}} : memref<?x?x?xf32, #[[$strided3D]]>
 
 func @copy_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf32, offset: ?, strides: [1]>) {
-  linalg.copy(%arg0, %arg1) : memref<?xf32, offset: ?, strides: [1]>, memref<?xf32, offset: ?, strides: [1]>
+  linalg.generic {
+    iterator_types = ["parallel"],
+    indexing_maps = [ affine_map<(i) -> (i)>, affine_map<(i) -> (i)>] }
+    ins(%arg0: memref<?xf32, offset: ?, strides: [1]>)
+   outs(%arg1: memref<?xf32, offset: ?, strides : [1]>) {
+    ^bb0(%a: f32, %b: f32):
+      linalg.yield %a : f32
+  }
   return
 }
 // CHECK-LABEL: func @copy_view(
@@ -220,38 +227,6 @@ func @copy_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf
 //       CHECKPARALLEL:   scf.parallel (%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) {
 //       CHECKPARALLEL:     %[[L:.*]] = memref.load %{{.*}}[%{{.*}}] : memref<?xf32, #[[$strided1D]]>
 //       CHECKPARALLEL:     store %[[L]], %{{.*}}[%{{.*}}] : memref<?xf32, #[[$strided1D]]>
-
-func @copy_view0(%arg0: memref<f32>, %arg1: memref<f32>) {
-  linalg.copy(%arg0, %arg1) : memref<f32>, memref<f32>
-  return
-}
-// CHECK-LABEL: func @copy_view0(%{{.*}}: memref<f32>, %{{.*}}: memref<f32>) {
-//       CHECK:   memref.load %{{.*}}[] : memref<f32>
-//       CHECK:   store %{{.*}}, %{{.*}}[] : memref<f32>
-
-// CHECKPARALLEL-LABEL: func @copy_view0(%{{.*}}: memref<f32>, %{{.*}}: memref<f32>) {
-//       CHECKPARALLEL:   memref.load %{{.*}}[] : memref<f32>
-//       CHECKPARALLEL:   store %{{.*}}, %{{.*}}[] : memref<f32>
-
-func @copy_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
-  linalg.copy(%arg0, %arg1) {inputPermutation = affine_map<(i, j, k) -> (i, k, j)>,
-                             outputPermutation = affine_map<(i, j, k) -> (k, j, i)>} :
-    memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>
-  return
-}
-// CHECK-LABEL: func @copy_view3
-//       CHECK: (%{{.*}}: memref<?x?x?xf32, #[[$strided3D]]>, %{{.*}}: memref<?x?x?xf32, #[[$strided3D]]>) {
-//       CHECK:   scf.for {{.*}} to %{{.*}}
-//       CHECK:     scf.for {{.*}} to %{{.*}}
-//       CHECK:       scf.for {{.*}} to %{{.*}}
-//       CHECK:         %[[L:.*]] = memref.load {{.*}} : memref<?x?x?xf32, #[[$strided3D]]>
-//       CHECK:         store %[[L]], {{.*}} : memref<?x?x?xf32, #[[$strided3D]]>
-
-// CHECKPARALLEL-LABEL: func @copy_view3
-//       CHECKPARALLEL: (%{{.*}}: memref<?x?x?xf32, #[[$strided3D]]>, %{{.*}}: memref<?x?x?xf32, #[[$strided3D]]>) {
-//       CHECKPARALLEL:   scf.parallel (%{{.*}}, %{{.*}}, %{{.*}}) = (%{{.*}}, %{{.*}}, %{{.*}}) to (%{{.*}}, %{{.*}}, %{{.*}}) step (%{{.*}}, %{{.*}}, %{{.*}}) {
-//       CHECKPARALLEL:     %[[L:.*]] = memref.load {{.*}} : memref<?x?x?xf32, #[[$strided3D]]>
-//       CHECKPARALLEL:     store %[[L]], {{.*}} : memref<?x?x?xf32, #[[$strided3D]]>
 
 #accesses = [
   affine_map<(i, j, k) -> (i, j)>,
@@ -533,7 +508,7 @@ func @generic_index_op_1D_reduce(%arg0: memref<?xf32>,
       %i = linalg.index 0 : index
       %0 = arith.constant 0 : index
       %1 = arith.cmpi eq, %0, %i : index
-      %2 = select %1, %b, %c : f32
+      %2 = arith.select %1, %b, %c : f32
       %3 = arith.addf %a, %2 : f32
       linalg.yield %3 : f32
   }
@@ -547,7 +522,7 @@ func @generic_index_op_1D_reduce(%arg0: memref<?xf32>,
 //       CHECK:   %[[a:.*]] = memref.load %[[ARG0]][%[[i]]]
 //       CHECK:   %[[b:.*]] = memref.load %[[ARG1]][]
 //       CHECK:   %[[c:.*]] = memref.load %[[ARG2]][]
-//       CHECK:   %[[d:.*]] = select %{{.*}}, %[[b]], %[[c]]
+//       CHECK:   %[[d:.*]] = arith.select %{{.*}}, %[[b]], %[[c]]
 //       CHECK:   %[[e:.*]] = arith.addf %[[a]], %[[d]]
 //       CHECK:   store %[[e]], %[[ARG2]][]
 
@@ -559,7 +534,7 @@ func @generic_index_op_1D_reduce(%arg0: memref<?xf32>,
 //       CHECKPARALLEL:   %[[a:.*]] = memref.load %[[ARG0]][%[[i]]]
 //       CHECKPARALLEL:   %[[b:.*]] = memref.load %[[ARG1]][]
 //       CHECKPARALLEL:   %[[c:.*]] = memref.load %[[ARG2]][]
-//       CHECKPARALLEL:   %[[d:.*]] = select %{{.*}}, %[[b]], %[[c]]
+//       CHECKPARALLEL:   %[[d:.*]] = arith.select %{{.*}}, %[[b]], %[[c]]
 //       CHECKPARALLEL:   %[[e:.*]] = arith.addf %[[a]], %[[d]]
 //       CHECKPARALLEL:   store %[[e]], %[[ARG2]][]
 
@@ -857,8 +832,14 @@ func @lower_to_loops_with_rank_reducing_subviews(
       : memref<?xi32> to memref<?xi32, offset: ?, strides: [1]>
   %1 = memref.subview %arg1[0, %arg4] [1, %arg3] [1, 1]
       : memref<?x?xi32> to memref<?xi32, offset: ?, strides : [1]>
-  linalg.copy(%0, %1)
-      : memref<?xi32, offset: ?, strides: [1]>, memref<?xi32, offset: ?, strides: [1]>
+  linalg.generic {
+    iterator_types = ["parallel"],
+    indexing_maps = [affine_map<(i) -> (i)>, affine_map<(i) -> (i)>]}
+    ins(%0: memref<?xi32, offset: ?, strides: [1]>)
+   outs(%1: memref<?xi32, offset: ?, strides : [1]>) {
+    ^bb0(%a: i32, %b: i32):
+      linalg.yield %a : i32
+  }
   return
 }
 // CHECK-LABEL: func @lower_to_loops_with_rank_reducing_subviews

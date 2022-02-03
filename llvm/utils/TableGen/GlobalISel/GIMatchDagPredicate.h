@@ -9,8 +9,12 @@
 #ifndef LLVM_UTILS_TABLEGEN_GIMATCHDAGPREDICATE_H
 #define LLVM_UTILS_TABLEGEN_GIMATCHDAGPREDICATE_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "GIMatchDag.h"
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#include "llvm/Support/raw_ostream.h"
+#endif
 
 namespace llvm {
 class CodeExpansions;

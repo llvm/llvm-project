@@ -208,7 +208,7 @@ public:
 
   bool SafeToCallFunctions();
 
-  SBValue GetSiginfo(SBError &error);
+  SBValue GetSiginfo();
 
 private:
   friend class SBBreakpoint;

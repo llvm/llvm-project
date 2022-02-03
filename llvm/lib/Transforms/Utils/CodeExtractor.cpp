@@ -33,6 +33,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
@@ -857,8 +858,8 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       (ParamTy.size() + AggParamTy.size()) ==
           (inputs.size() + outputs.size()) &&
       "Number of scalar and aggregate params does not match inputs, outputs");
-  assert(StructValues.empty() ||
-         AggregateArgs && "Expeced StructValues only with AggregateArgs set");
+  assert((StructValues.empty() || AggregateArgs) &&
+         "Expeced StructValues only with AggregateArgs set");
 
   // Concatenate scalar and aggregate params in ParamTy.
   size_t NumScalarParams = ParamTy.size();

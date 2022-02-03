@@ -411,6 +411,7 @@ static void bear_report_call(char const *fun, char const *const argv[]) {
   const char *cwd = getcwd(NULL, 0);
   if (0 == cwd) {
     perror("bear: getcwd");
+    pthread_mutex_unlock(&mutex);
     exit(EXIT_FAILURE);
   }
   char const *const out_dir = initial_env[0];
@@ -419,11 +420,13 @@ static void bear_report_call(char const *fun, char const *const argv[]) {
   if (-1 ==
       snprintf(filename, path_max_length, "%s/%d.cmd", out_dir, getpid())) {
     perror("bear: snprintf");
+    pthread_mutex_unlock(&mutex);
     exit(EXIT_FAILURE);
   }
   FILE *fd = fopen(filename, "a+");
   if (0 == fd) {
     perror("bear: fopen");
+    pthread_mutex_unlock(&mutex);
     exit(EXIT_FAILURE);
   }
   fprintf(fd, "%d%c", getpid(), RS);
@@ -437,6 +440,7 @@ static void bear_report_call(char const *fun, char const *const argv[]) {
   fprintf(fd, "%c", GS);
   if (fclose(fd)) {
     perror("bear: fclose");
+    pthread_mutex_unlock(&mutex);
     exit(EXIT_FAILURE);
   }
   free((void *)cwd);

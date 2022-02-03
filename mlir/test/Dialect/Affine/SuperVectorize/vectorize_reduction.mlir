@@ -476,7 +476,7 @@ func @vecdim_reduction_masked(%in: memref<256x512xf32>, %out: memref<256xf32>) {
 // CHECK:           %[[mask:.*]] = vector.create_mask %[[elems_left]] : vector<128xi1>
 // CHECK:           %[[ld:.*]] = vector.transfer_read %{{.*}} : memref<256x512xf32>, vector<128xf32>
 // CHECK:           %[[add:.*]] = arith.addf %[[red_iter]], %[[ld]] : vector<128xf32>
-// CHECK:           %[[new_acc:.*]] = select %[[mask]], %[[add]], %[[red_iter]] : vector<128xi1>, vector<128xf32>
+// CHECK:           %[[new_acc:.*]] = arith.select %[[mask]], %[[add]], %[[red_iter]] : vector<128xi1>, vector<128xf32>
 // CHECK:           affine.yield %[[new_acc]] : vector<128xf32>
 // CHECK:         }
 // CHECK:         %[[final_sum:.*]] = vector.reduction "add", %[[vred:.*]] : vector<128xf32> into f32
@@ -509,7 +509,7 @@ func @vecdim_reduction_masked_unknown_ub(%in: memref<256x512xf32>, %out: memref<
 // CHECK:           %[[mask:.*]] = vector.create_mask %[[elems_left]] : vector<128xi1>
 // CHECK:           %[[ld:.*]] = vector.transfer_read %{{.*}} : memref<256x512xf32>, vector<128xf32>
 // CHECK:           %[[add:.*]] = arith.addf %[[red_iter]], %[[ld]] : vector<128xf32>
-// CHECK:           %[[new_acc:.*]] = select %[[mask]], %[[add]], %[[red_iter]] : vector<128xi1>, vector<128xf32>
+// CHECK:           %[[new_acc:.*]] = arith.select %[[mask]], %[[add]], %[[red_iter]] : vector<128xi1>, vector<128xf32>
 // CHECK:           affine.yield %[[new_acc]] : vector<128xf32>
 // CHECK:         }
 // CHECK:         %[[final_sum:.*]] = vector.reduction "add", %[[vred:.*]] : vector<128xf32> into f32
@@ -562,7 +562,7 @@ func @vecdim_reduction_masked_unknown_lb(%in: memref<256x512xf32>, %out: memref<
 // CHECK:           %[[mask:.*]] = vector.create_mask %[[elems_left]] : vector<128xi1>
 // CHECK:           %[[ld:.*]] = vector.transfer_read %{{.*}} : memref<256x512xf32>, vector<128xf32>
 // CHECK:           %[[add:.*]] = arith.addf %[[red_iter]], %[[ld]] : vector<128xf32>
-// CHECK:           %[[new_acc:.*]] = select %[[mask]], %[[add]], %[[red_iter]] : vector<128xi1>, vector<128xf32>
+// CHECK:           %[[new_acc:.*]] = arith.select %[[mask]], %[[add]], %[[red_iter]] : vector<128xi1>, vector<128xf32>
 // CHECK:           affine.yield %[[new_acc]] : vector<128xf32>
 
 // -----
@@ -591,7 +591,7 @@ func @vecdim_reduction_complex_ub(%in: memref<256x512xf32>, %out: memref<256xf32
 // CHECK:           %[[mask:.*]] = vector.create_mask %[[elems_left]] : vector<128xi1>
 // CHECK:           %[[ld:.*]] = vector.transfer_read %{{.*}} : memref<256x512xf32>, vector<128xf32>
 // CHECK:           %[[add:.*]] = arith.addf %[[red_iter]], %[[ld]] : vector<128xf32>
-// CHECK:           %[[new_acc:.*]] = select %[[mask]], %[[add]], %[[red_iter]] : vector<128xi1>, vector<128xf32>
+// CHECK:           %[[new_acc:.*]] = arith.select %[[mask]], %[[add]], %[[red_iter]] : vector<128xi1>, vector<128xf32>
 // CHECK:           affine.yield %[[new_acc]] : vector<128xf32>
 
 // -----
@@ -624,7 +624,7 @@ func @vecdim_two_reductions_masked(%in: memref<256x512xf32>, %out: memref<512xf3
 // CHECK:           %[[exp:.*]] = math.exp %[[ld]] : vector<128xf32>
 // CHECK:           %[[add:.*]] = arith.addf %[[sum_iter]], %[[ld]] : vector<128xf32>
 // CHECK:           %[[eadd:.*]] = arith.addf %[[esum_iter]], %[[exp]] : vector<128xf32>
-// CHECK:           %[[new_acc:.*]] = select %[[mask]], %[[add]], %[[sum_iter]] : vector<128xi1>, vector<128xf32>
-// CHECK:           %[[new_eacc:.*]] = select %[[mask]], %[[eadd]], %[[esum_iter]] : vector<128xi1>, vector<128xf32>
+// CHECK:           %[[new_acc:.*]] = arith.select %[[mask]], %[[add]], %[[sum_iter]] : vector<128xi1>, vector<128xf32>
+// CHECK:           %[[new_eacc:.*]] = arith.select %[[mask]], %[[eadd]], %[[esum_iter]] : vector<128xi1>, vector<128xf32>
 // CHECK:           affine.yield %[[new_acc]], %[[new_eacc]] : vector<128xf32>
 // CHECK:         }

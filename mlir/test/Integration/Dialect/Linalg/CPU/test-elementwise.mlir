@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -convert-elementwise-to-linalg -std-bufferize \
-// RUN: -tensor-constant-bufferize -linalg-bufferize -tensor-bufferize \
+// RUN: mlir-opt %s -convert-elementwise-to-linalg \
+// RUN: -arith-bufferize -linalg-bufferize -tensor-bufferize \
 // RUN: -func-bufferize -buffer-deallocation -convert-linalg-to-loops \
 // RUN: -convert-linalg-to-llvm --convert-memref-to-llvm -convert-std-to-llvm \
 // RUN: -reconcile-unrealized-casts | \
