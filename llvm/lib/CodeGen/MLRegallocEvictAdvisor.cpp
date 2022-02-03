@@ -58,6 +58,8 @@ static cl::opt<std::string> ModelUnderTraining(
     "regalloc-model", cl::Hidden,
     cl::desc("The model being trained for register allocation eviction"));
 
+extern cl::opt<unsigned> EvictInterferenceCutoff;
+
 #endif // #ifdef LLVM_HAVE_TF_API
 
 /// The score injection pass.
@@ -544,9 +546,11 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
     LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, *Units);
     // Different from the default heuristic, we don't make any assumptions about
     // what having more than 10 results in the query may mean.
-    const auto &IFIntervals = Q.interferingVRegs();
+    const auto &IFIntervals = Q.interferingVRegs(EvictInterferenceCutoff);
     if (IFIntervals.empty() && InterferingIntervals.empty())
       continue;
+    if (IFIntervals.size() >= EvictInterferenceCutoff)
+      return false;
     InterferingIntervals.append(IFIntervals.begin(), IFIntervals.end());
     for (LiveInterval *Intf : reverse(IFIntervals)) {
       assert(Register::isVirtualRegister(Intf->reg()) &&
