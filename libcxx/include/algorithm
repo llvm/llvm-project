@@ -24,6 +24,9 @@ namespace ranges {
 
   template <class I1, class I2, class O>
     struct in_in_out_result; // since C++20
+
+  template <class I, class O1, class O2>
+    struct in_out_out_result; // since C++20
 }
 
 template <class InputIterator, class Predicate>
@@ -701,6 +704,7 @@ template<class InputIterator, class OutputIterator>
 #include <__algorithm/half_positive.h>
 #include <__algorithm/in_in_out_result.h>
 #include <__algorithm/in_in_result.h>
+#include <__algorithm/in_out_out_result.h>
 #include <__algorithm/in_out_result.h>
 #include <__algorithm/includes.h>
 #include <__algorithm/inplace_merge.h>

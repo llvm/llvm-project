@@ -248,6 +248,7 @@ module std [system] {
       module half_positive            { private header "__algorithm/half_positive.h" }
       module in_in_out_result         { private header "__algorithm/in_in_out_result.h" }
       module in_in_result             { private header "__algorithm/in_in_result.h" }
+      module in_out_out_result        { private header "__algorithm/in_out_out_result.h" }
       module in_out_result            { private header "__algorithm/in_out_result.h" }
       module includes                 { private header "__algorithm/includes.h" }
       module inplace_merge            { private header "__algorithm/inplace_merge.h" }
