@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TypeUtilities.h"
 
@@ -163,16 +164,29 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.resolveOperand(cond, boolType, result.operands))
     return failure();
 
+  auto getOrInsertTerminator = [&](Region *r) {
+    ::mlir::impl::ensureRegionTerminator(
+        *r, parser.getBuilder(), result.location,
+        [](OpBuilder &builder, Location loc) {
+          OperationState state(loc, YieldOp::getOperationName());
+          YieldOp::build(builder, state);
+          return Operation::create(state);
+        });
+  };
+
   // Parse the 'then' region.
-  if (parser.parseRegion(*thenRegion, /*arguments=*/{}, /*argTypes=*/{}))
+  if (parser.parseRegion(*thenRegion, /*arguments=*/{},
+                         /*argTypes=*/{}))
     return failure();
-  IfOp::ensureTerminator(*thenRegion, parser.getBuilder(), result.location);
+  assert(thenRegion->hasOneBlock() && "not yet implemented");
+  getOrInsertTerminator(thenRegion);
 
   // If we find an 'else' keyword then parse the 'else' region.
   if (!parser.parseOptionalKeyword("else")) {
     if (parser.parseRegion(*elseRegion, /*arguments=*/{}, /*argTypes=*/{}))
       return failure();
-    IfOp::ensureTerminator(*elseRegion, parser.getBuilder(), result.location);
+    assert(elseRegion->hasOneBlock() && "not yet implemented");
+    getOrInsertTerminator(elseRegion);
   }
 
   // Parse the optional attribute list.
@@ -282,7 +296,14 @@ ParseResult ScopeOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse the scope region.
   if (parser.parseRegion(*scopeRegion, /*arguments=*/{}, /*argTypes=*/{}))
     return failure();
-  ScopeOp::ensureTerminator(*scopeRegion, parser.getBuilder(), result.location);
+  assert(scopeRegion->hasOneBlock() && "not yet implemented");
+  ::mlir::impl::ensureRegionTerminator(
+      *scopeRegion, parser.getBuilder(), result.location,
+      [](OpBuilder &builder, Location loc) {
+        OperationState state(loc, YieldOp::getOperationName());
+        YieldOp::build(builder, state);
+        return Operation::create(state);
+      });
 
   // Parse the optional attribute list.
   if (parser.parseOptionalAttrDict(result.attributes))
