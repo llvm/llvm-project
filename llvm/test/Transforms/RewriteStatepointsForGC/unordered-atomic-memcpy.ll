@@ -14,11 +14,11 @@ define void @test_memcpy_gc_leaf_function(i8 addrspace(1)* %src, i64 %src_offset
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SRC_DERIVED:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]]
 ; CHECK-NEXT:    [[DEST_DERIVED:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]]
-; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 1) [[ATTR2:#.*]]
-; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 2) [[ATTR2]]
-; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 4) [[ATTR2]]
-; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 8) [[ATTR2]]
-; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 16) [[ATTR2]]
+; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 1) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 2) #[[ATTR2]]
+; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 4) #[[ATTR2]]
+; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 8) #[[ATTR2]]
+; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 16) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -109,11 +109,11 @@ define void @test_memmove_gc_leaf_function(i8 addrspace(1)* %src, i64 %src_offse
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SRC_DERIVED:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]]
 ; CHECK-NEXT:    [[DEST_DERIVED:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]]
-; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 1) [[ATTR2]]
-; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 2) [[ATTR2]]
-; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 4) [[ATTR2]]
-; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 8) [[ATTR2]]
-; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 16) [[ATTR2]]
+; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 1) #[[ATTR2]]
+; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 2) #[[ATTR2]]
+; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 4) #[[ATTR2]]
+; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 8) #[[ATTR2]]
+; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 16) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
