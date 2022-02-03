@@ -29,7 +29,7 @@ int Callback(struct dl_phdr_info *info, size_t size, void *data) {
 void Watchdog() {
   // This is just a fail-safe to turn a deadlock (in case the bug reappears)
   // into a (slow) test failure.
-  usleep(20000000);
+  usleep(40000000);
   if (!out.try_lock()) {
     write(2, "DEADLOCK\n", 9);
     exit(1);
