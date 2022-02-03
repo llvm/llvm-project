@@ -7808,10 +7808,6 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case RISCVISD::SHFLW:
   case RISCVISD::UNSHFLW: {
     // Only the lower 32 bits of LHS and lower 4 bits of RHS are read.
-    SDValue LHS = N->getOperand(0);
-    SDValue RHS = N->getOperand(1);
-    APInt LHSMask = APInt::getLowBitsSet(LHS.getValueSizeInBits(), 32);
-    APInt RHSMask = APInt::getLowBitsSet(RHS.getValueSizeInBits(), 4);
     if (SimplifyDemandedLowBitsHelper(0, 32) ||
         SimplifyDemandedLowBitsHelper(1, 4))
       return SDValue(N, 0);
