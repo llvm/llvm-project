@@ -210,7 +210,7 @@ def SPV_VectorExtractDynamicOp : SPV_Op<"VectorExtractDynamic", [
     SPV_Scalar:$result
   );
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 
   let assemblyFormat = [{
     $vector `[` $index `]` attr-dict `:` type($vector) `,` type($index)
@@ -274,7 +274,7 @@ def SPV_VectorInsertDynamicOp : SPV_Op<"VectorInsertDynamic", [
     SPV_Vector:$result
   );
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 
   let assemblyFormat = [{
     $component `,` $vector `[` $index `]` attr-dict `:` type($vector) `,` type($index)

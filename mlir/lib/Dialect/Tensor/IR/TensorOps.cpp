@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
-#include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -33,8 +33,6 @@ Operation *TensorDialect::materializeConstant(OpBuilder &builder,
   if (complex::ConstantOp::isBuildableWith(value, type))
     return builder.create<complex::ConstantOp>(loc, type,
                                                value.cast<ArrayAttr>());
-  if (ConstantOp::isBuildableWith(value, type))
-    return builder.create<ConstantOp>(loc, value, type);
   return nullptr;
 }
 
@@ -228,17 +226,17 @@ Optional<int64_t> DimOp::getConstantIndex() {
   return {};
 }
 
-static LogicalResult verify(DimOp op) {
+LogicalResult DimOp::verify() {
   // Assume unknown index to be in range.
-  Optional<int64_t> index = op.getConstantIndex();
+  Optional<int64_t> index = getConstantIndex();
   if (!index.hasValue())
     return success();
 
   // Check that constant index is not knowingly out of range.
-  auto type = op.source().getType();
+  auto type = source().getType();
   if (auto tensorType = type.dyn_cast<RankedTensorType>()) {
     if (index.getValue() >= tensorType.getRank())
-      return op.emitOpError("index is out of range");
+      return emitOpError("index is out of range");
   } else if (type.isa<UnrankedTensorType>()) {
     // Assume index to be in range.
   } else {
@@ -328,11 +326,11 @@ void DimOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // ExtractOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(ExtractOp op) {
+LogicalResult ExtractOp::verify() {
   // Verify the # indices match if we have a ranked type.
-  if (auto tensorType = op.tensor().getType().dyn_cast<RankedTensorType>())
-    if (tensorType.getRank() != static_cast<int64_t>(op.indices().size()))
-      return op.emitOpError("incorrect number of indices for extract_element");
+  if (auto tensorType = tensor().getType().dyn_cast<RankedTensorType>())
+    if (tensorType.getRank() != static_cast<int64_t>(indices().size()))
+      return emitOpError("incorrect number of indices for extract_element");
 
   return success();
 }
@@ -480,11 +478,11 @@ void FromElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // InsertOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(InsertOp op) {
+LogicalResult InsertOp::verify() {
   // Verify the # indices match if we have a ranked type.
-  if (auto destType = op.dest().getType().dyn_cast<RankedTensorType>())
-    if (destType.getRank() != static_cast<int64_t>(op.indices().size()))
-      return op.emitOpError("incorrect number of indices");
+  if (auto destType = dest().getType().dyn_cast<RankedTensorType>())
+    if (destType.getRank() != static_cast<int64_t>(indices().size()))
+      return emitOpError("incorrect number of indices");
   return success();
 }
 
@@ -502,27 +500,26 @@ OpFoldResult InsertOp::fold(ArrayRef<Attribute> operands) {
 // GenerateOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(GenerateOp op) {
+LogicalResult GenerateOp::verify() {
   // Ensure that the tensor type has as many dynamic dimensions as are specified
   // by the operands.
-  RankedTensorType resultTy = op.getType().cast<RankedTensorType>();
-  if (op.getNumOperands() != resultTy.getNumDynamicDims())
-    return op.emitError("must have as many index operands as dynamic extents "
-                        "in the result type");
+  RankedTensorType resultTy = getType().cast<RankedTensorType>();
+  if (getNumOperands() != resultTy.getNumDynamicDims())
+    return emitError("must have as many index operands as dynamic extents "
+                     "in the result type");
 
   // Ensure that region arguments span the index space.
-  if (!llvm::all_of(op.body().getArgumentTypes(),
+  if (!llvm::all_of(body().getArgumentTypes(),
                     [](Type ty) { return ty.isIndex(); }))
-    return op.emitError("all body arguments must be index");
-  if (op.body().getNumArguments() != resultTy.getRank())
-    return op.emitError("must have one body argument per input dimension");
+    return emitError("all body arguments must be index");
+  if (body().getNumArguments() != resultTy.getRank())
+    return emitError("must have one body argument per input dimension");
 
   // Ensure that the region yields an element of the right type.
-  auto yieldOp =
-      llvm::cast<YieldOp>(op.body().getBlocks().front().getTerminator());
+  auto yieldOp = cast<YieldOp>(body().getBlocks().front().getTerminator());
 
   if (yieldOp.value().getType() != resultTy.getElementType())
-    return op.emitOpError(
+    return emitOpError(
         "body must be terminated with a `yield` operation of the tensor "
         "element type");
 
@@ -686,16 +683,15 @@ static int64_t getNumElements(ShapedType type) {
   return numElements;
 }
 
-static LogicalResult verify(ReshapeOp op) {
-  TensorType operandType = op.source().getType().cast<TensorType>();
-  TensorType resultType = op.result().getType().cast<TensorType>();
+LogicalResult ReshapeOp::verify() {
+  TensorType operandType = source().getType().cast<TensorType>();
+  TensorType resultType = result().getType().cast<TensorType>();
 
   if (operandType.getElementType() != resultType.getElementType())
-    return op.emitOpError("element types of source and destination tensor "
-                          "types should be the same");
+    return emitOpError("element types of source and destination tensor "
+                       "types should be the same");
 
-  int64_t shapeSize =
-      op.shape().getType().cast<RankedTensorType>().getDimSize(0);
+  int64_t shapeSize = shape().getType().cast<RankedTensorType>().getDimSize(0);
   auto resultRankedType = resultType.dyn_cast<RankedTensorType>();
   auto operandRankedType = operandType.dyn_cast<RankedTensorType>();
 
@@ -703,14 +699,14 @@ static LogicalResult verify(ReshapeOp op) {
     if (operandRankedType && resultRankedType.hasStaticShape() &&
         operandRankedType.hasStaticShape()) {
       if (getNumElements(operandRankedType) != getNumElements(resultRankedType))
-        return op.emitOpError("source and destination tensor should have the "
-                              "same number of elements");
+        return emitOpError("source and destination tensor should have the "
+                           "same number of elements");
     }
     if (ShapedType::isDynamic(shapeSize))
-      return op.emitOpError("cannot use shape operand with dynamic length to "
-                            "reshape to statically-ranked tensor type");
+      return emitOpError("cannot use shape operand with dynamic length to "
+                         "reshape to statically-ranked tensor type");
     if (shapeSize != resultRankedType.getRank())
-      return op.emitOpError(
+      return emitOpError(
           "length of shape operand differs from the result's tensor rank");
   }
   return success();
@@ -814,12 +810,12 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
   return success();
 }
 
-static LogicalResult verify(ExpandShapeOp op) {
-  return verifyTensorReshapeOp(op, op.getResultType(), op.getSrcType());
+LogicalResult ExpandShapeOp::verify() {
+  return verifyTensorReshapeOp(*this, getResultType(), getSrcType());
 }
 
-static LogicalResult verify(CollapseShapeOp op) {
-  return verifyTensorReshapeOp(op, op.getSrcType(), op.getResultType());
+LogicalResult CollapseShapeOp::verify() {
+  return verifyTensorReshapeOp(*this, getSrcType(), getResultType());
 }
 
 namespace {
@@ -1052,14 +1048,12 @@ static LogicalResult produceSliceErrorMsg(SliceVerificationResult result,
 }
 
 /// Verifier for ExtractSliceOp.
-static LogicalResult verify(ExtractSliceOp op) {
+LogicalResult ExtractSliceOp::verify() {
   // Verify result type against inferred type.
-  auto expectedType =
-      ExtractSliceOp::inferResultType(op.getSourceType(), op.getMixedOffsets(),
-                                      op.getMixedSizes(), op.getMixedStrides());
-  auto result =
-      isRankReducedType(expectedType.cast<ShapedType>(), op.getType());
-  return produceSliceErrorMsg(result, op, expectedType);
+  auto expectedType = ExtractSliceOp::inferResultType(
+      getSourceType(), getMixedOffsets(), getMixedSizes(), getMixedStrides());
+  auto result = isRankReducedType(expectedType.cast<ShapedType>(), getType());
+  return produceSliceErrorMsg(result, *this, expectedType);
 }
 
 /// Infer the canonical type of the result of an extract_slice op. Returns a
@@ -1308,16 +1302,16 @@ void InsertSliceOp::build(OpBuilder &b, OperationState &result, Value source,
 }
 
 /// Verifier for InsertSliceOp.
-static LogicalResult verify(InsertSliceOp op) {
+LogicalResult InsertSliceOp::verify() {
   // insert_slice is the inverse of extract_slice, use the same type inference.
   auto expectedType = ExtractSliceOp::inferRankReducedResultType(
-      op.getSourceType().getRank(), op.getType(),
-      extractFromI64ArrayAttr(op.static_offsets()),
-      extractFromI64ArrayAttr(op.static_sizes()),
-      extractFromI64ArrayAttr(op.static_strides()));
+      getSourceType().getRank(), getType(),
+      extractFromI64ArrayAttr(static_offsets()),
+      extractFromI64ArrayAttr(static_sizes()),
+      extractFromI64ArrayAttr(static_strides()));
   auto result =
-      isRankReducedType(expectedType.cast<ShapedType>(), op.getSourceType());
-  return produceSliceErrorMsg(result, op, expectedType);
+      isRankReducedType(expectedType.cast<ShapedType>(), getSourceType());
+  return produceSliceErrorMsg(result, *this, expectedType);
 }
 
 /// If we have two consecutive InsertSliceOp writing to the same slice, we
@@ -1569,40 +1563,40 @@ ParseResult parseInferType(OpAsmParser &parser,
   return success();
 }
 
-static LogicalResult verify(PadOp op) {
-  auto sourceType = op.source().getType().cast<RankedTensorType>();
-  auto resultType = op.result().getType().cast<RankedTensorType>();
-  auto expectedType = PadOp::inferResultType(
-      sourceType, extractFromI64ArrayAttr(op.static_low()),
-      extractFromI64ArrayAttr(op.static_high()));
+LogicalResult PadOp::verify() {
+  auto sourceType = source().getType().cast<RankedTensorType>();
+  auto resultType = result().getType().cast<RankedTensorType>();
+  auto expectedType =
+      PadOp::inferResultType(sourceType, extractFromI64ArrayAttr(static_low()),
+                             extractFromI64ArrayAttr(static_high()));
   for (int i = 0, e = sourceType.getRank(); i < e; ++i) {
     if (resultType.getDimSize(i) == expectedType.getDimSize(i))
       continue;
     if (expectedType.isDynamicDim(i))
       continue;
-    return op.emitError("specified type ")
+    return emitError("specified type ")
            << resultType << " does not match the inferred type "
            << expectedType;
   }
 
-  auto &region = op.region();
+  auto &region = getRegion();
   unsigned rank = resultType.getRank();
   Block &block = region.front();
   if (block.getNumArguments() != rank)
-    return op.emitError("expected the block to have ") << rank << " arguments";
+    return emitError("expected the block to have ") << rank << " arguments";
 
   // Note: the number and type of yield values are checked in the YieldOp.
   for (const auto &en : llvm::enumerate(block.getArgumentTypes())) {
     if (!en.value().isIndex())
-      return op.emitOpError("expected block argument ")
+      return emitOpError("expected block argument ")
              << (en.index() + 1) << " to be an index";
   }
 
   // Ensure that the region yields an element of the right type.
   auto yieldOp = llvm::cast<YieldOp>(block.getTerminator());
   if (yieldOp.value().getType() !=
-      op.getType().cast<ShapedType>().getElementType())
-    return op.emitOpError("expected yield type to match shape element type");
+      getType().cast<ShapedType>().getElementType())
+    return emitOpError("expected yield type to match shape element type");
 
   return success();
 }
@@ -1802,6 +1796,19 @@ OpFoldResult PadOp::fold(ArrayRef<Attribute>) {
       !nofold())
     return source();
   return {};
+}
+
+//===----------------------------------------------------------------------===//
+// SplatOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult SplatOp::fold(ArrayRef<Attribute> operands) {
+  auto constOperand = operands.front();
+  if (!constOperand.isa_and_nonnull<IntegerAttr, FloatAttr>())
+    return {};
+
+  // SplatElementsAttr::get treats single value for second arg as being a splat.
+  return SplatElementsAttr::get(getType(), {constOperand});
 }
 
 //===----------------------------------------------------------------------===//

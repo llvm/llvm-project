@@ -30,8 +30,6 @@ class SPV_GroupNonUniformArithmeticOp<string mnemonic, Type type,
 
   let parser = [{ return parseGroupNonUniformArithmeticOp(parser, result); }];
   let printer = [{ printGroupNonUniformArithmeticOp(getOperation(), p); }];
-  let verifier = [{ return ::verifyGroupNonUniformArithmeticOp(getOperation()); }];
-
 }
 
 // -----

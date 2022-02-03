@@ -2024,11 +2024,31 @@ class PredAttrTrait<string descr, Pred pred> : PredTrait<descr, pred>;
 //===----------------------------------------------------------------------===//
 
 // These classes are used to define operation specific traits.
-class NativeOpTrait<string name> : NativeTrait<name, "Op">;
-class ParamNativeOpTrait<string prop, string params>
-    : ParamNativeTrait<prop, params, "Op">;
-class GenInternalOpTrait<string prop> : GenInternalTrait<prop, "Op">;
-class PredOpTrait<string descr, Pred pred> : PredTrait<descr, pred>;
+class NativeOpTrait<string name, list<Trait> traits = []>
+    : NativeTrait<name, "Op"> {
+  // Specify the list of traits that need to be verified before the verification
+  // of this NativeOpTrait.
+  list<Trait> dependentTraits = traits;
+}
+class ParamNativeOpTrait<string prop, string params,
+                         list<Trait> traits = []>
+    : ParamNativeTrait<prop, params, "Op"> {
+  // Specify the list of traits that need to be verified before the verification
+  // of this ParamNativeOpTrait.
+  list<Trait> dependentTraits = traits;
+}
+class GenInternalOpTrait<string prop, list<Trait> traits = []>
+    : GenInternalTrait<prop, "Op"> {
+  // Specify the list of traits that need to be verified before the verification
+  // of this GenInternalOpTrait.
+  list<Trait> dependentTraits = traits;
+}
+class PredOpTrait<string descr, Pred pred, list<Trait> traits = []>
+    : PredTrait<descr, pred> {
+  // Specify the list of traits that need to be verified before the verification
+  // of this PredOpTrait.
+  list<Trait> dependentTraits = traits;
+}
 
 // Op defines an affine scope.
 def AffineScope : NativeOpTrait<"AffineScope">;
@@ -2164,11 +2184,16 @@ class InterfaceTrait<string name> : NativeTrait<"", ""> {
 // OpInterfaceTrait corresponds to a specific 'OpInterface' class defined in
 // C++. The purpose to wrap around C++ symbol string with this class is to make
 // interfaces specified for ops in TableGen less alien and more integrated.
-class OpInterfaceTrait<string name, code verifyBody = [{}]>
+class OpInterfaceTrait<string name, code verifyBody = [{}],
+                       list<Trait> traits = []>
     : InterfaceTrait<name> {
   // Specify the body of the verification function. `$_op` will be replaced with
   // the operation being verified.
   code verify = verifyBody;
+
+  // Specify the list of traits that need to be verified before the verification
+  // of this OpInterfaceTrait.
+  list<Trait> dependentTraits = traits;
 }
 
 // This class represents a single, optionally static, interface method.
@@ -2426,7 +2451,16 @@ class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
   // Custom assembly format.
   string assemblyFormat = ?;
 
-  // Custom verifier.
+  // A bit indicating if the operation has additional invariants that need to
+  // verified (aside from those verified by other ODS constructs). If set to `1`,
+  // an additional `LogicalResult verify()` declaration will be generated on the
+  // operation class. The operation should implement this method and verify the
+  // additional necessary invariants.
+  bit hasVerifier = 0;
+  // A custom code block corresponding to the extra verification code of the
+  // operation.
+  // NOTE: This field is deprecated in favor of `hasVerifier` and is slated for
+  // deletion.
   code verifier = ?;
 
   // Whether this op has associated canonicalization patterns.
@@ -2461,12 +2495,10 @@ class BaseOpWithOffsetSizesAndStrides<Dialect dialect, string mnemonic,
 
   // For every such op, there needs to be a:
   //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)
-  //   * LogicalResult verify(${C++ class of Op} op)
   //   * ParseResult parse${C++ class of Op}(OpAsmParser &parser,
   //                                         OperationState &result)
   // functions.
   let printer = [{ return ::print(p, *this); }];
-  let verifier = [{ return ::verify(*this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
 
   code extraBaseClassDeclaration = [{
@@ -2798,7 +2830,8 @@ class NativeCodeCall<string expr, int returns = 1> {
 
 class NativeCodeCallVoid<string expr> : NativeCodeCall<expr, 0>;
 
-def ConstantLikeMatcher : NativeCodeCall<"success(matchPattern($_self->getResult(0), m_Constant(&$0)))">;
+def ConstantLikeMatcher : NativeCodeCall<"::mlir::success("
+    "::mlir::matchPattern($_self->getResult(0), ::mlir::m_Constant(&$0)))">;
 
 //===----------------------------------------------------------------------===//
 // Rewrite directives

@@ -42,6 +42,14 @@ static cl::opt<bool> EnableLocalReassignment(
              "may be compile time intensive"),
     cl::init(false));
 
+cl::opt<unsigned> EvictInterferenceCutoff(
+    "regalloc-eviction-max-interference-cutoff", cl::Hidden,
+    cl::desc("Number of interferences after which we declare "
+             "an interference unevictable and bail out. This "
+             "is a compilation cost-saving consideration. To "
+             "disable, pass a very large number."),
+    cl::init(10));
+
 #define DEBUG_TYPE "regalloc"
 #ifdef LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL
 #define LLVM_HAVE_TF_AOT
@@ -195,8 +203,8 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
   for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
     LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, *Units);
     // If there is 10 or more interferences, chances are one is heavier.
-    const auto &Interferences = Q.interferingVRegs(10);
-    if (Interferences.size() >= 10)
+    const auto &Interferences = Q.interferingVRegs(EvictInterferenceCutoff);
+    if (Interferences.size() >= EvictInterferenceCutoff)
       return false;
 
     // Check if any interfering live range is heavier than MaxWeight.

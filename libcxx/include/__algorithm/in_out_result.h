@@ -21,6 +21,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_HAS_NO_CONCEPTS)
+
 namespace ranges {
 
 template<class _InputIterator, class _OutputIterator>
@@ -45,6 +46,7 @@ struct in_out_result {
 };
 
 } // namespace ranges
+
 #endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 _LIBCPP_END_NAMESPACE_STD

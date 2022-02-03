@@ -262,11 +262,11 @@ func @non_symbol_defining_callable() -> i32 {
 
 // CHECK-LABEL: func private @unreferenced_private_function
 func private @unreferenced_private_function() -> i32 {
-  // CHECK: %[[RES:.*]] = select
+  // CHECK: %[[RES:.*]] = arith.select
   // CHECK: return %[[RES]] : i32
   %true = arith.constant true
   %cst0 = arith.constant 0 : i32
   %cst1 = arith.constant 1 : i32
-  %result = select %true, %cst0, %cst1 : i32
+  %result = arith.select %true, %cst0, %cst1 : i32
   return %result : i32
 }

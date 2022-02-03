@@ -70,7 +70,7 @@ void ThreadPlanPython::DidPush() {
 }
 
 bool ThreadPlanPython::ShouldStop(Event *event_ptr) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+  Log *log = GetLog(LLDBLog::Thread);
   LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
             m_class_name.c_str());
 
@@ -89,7 +89,7 @@ bool ThreadPlanPython::ShouldStop(Event *event_ptr) {
 }
 
 bool ThreadPlanPython::IsPlanStale() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+  Log *log = GetLog(LLDBLog::Thread);
   LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
             m_class_name.c_str());
 
@@ -108,7 +108,7 @@ bool ThreadPlanPython::IsPlanStale() {
 }
 
 bool ThreadPlanPython::DoPlanExplainsStop(Event *event_ptr) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+  Log *log = GetLog(LLDBLog::Thread);
   LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
             m_class_name.c_str());
 
@@ -127,7 +127,7 @@ bool ThreadPlanPython::DoPlanExplainsStop(Event *event_ptr) {
 }
 
 bool ThreadPlanPython::MischiefManaged() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+  Log *log = GetLog(LLDBLog::Thread);
   LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
             m_class_name.c_str());
   bool mischief_managed = true;
@@ -142,7 +142,7 @@ bool ThreadPlanPython::MischiefManaged() {
 }
 
 lldb::StateType ThreadPlanPython::GetPlanRunState() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+  Log *log = GetLog(LLDBLog::Thread);
   LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
             m_class_name.c_str());
   lldb::StateType run_state = eStateRunning;
@@ -164,7 +164,7 @@ void ThreadPlanPython::GetDescription(Stream *s, lldb::DescriptionLevel level) {
 }
 
 bool ThreadPlanPython::WillStop() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+  Log *log = GetLog(LLDBLog::Thread);
   LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
             m_class_name.c_str());
   return true;

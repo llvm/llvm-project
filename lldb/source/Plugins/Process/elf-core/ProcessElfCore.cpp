@@ -402,7 +402,7 @@ static void ParseFreeBSDPrStatus(ThreadData &thread_data,
   lldb::offset_t offset = 0;
   int pr_version = data.GetU32(&offset);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
   if (log) {
     if (pr_version > 1)
       LLDB_LOGF(log, "FreeBSD PRSTATUS unexpected version %d", pr_version);
@@ -430,7 +430,7 @@ static void ParseFreeBSDPrPsInfo(ProcessElfCore &process,
   lldb::offset_t offset = 0;
   int pr_version = data.GetU32(&offset);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
   if (log) {
     if (pr_version > 1)
       LLDB_LOGF(log, "FreeBSD PRPSINFO unexpected version %d", pr_version);

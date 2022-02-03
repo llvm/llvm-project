@@ -291,7 +291,7 @@ static ParallelComputeFunction createParallelComputeFunction(
     return llvm::to_vector(
         llvm::map_range(llvm::zip(args, attrs), [&](auto tuple) -> Value {
           if (IntegerAttr attr = std::get<1>(tuple))
-            return b.create<ConstantOp>(attr);
+            return b.create<arith::ConstantOp>(attr);
           return std::get<0>(tuple);
         }));
   };
@@ -404,12 +404,12 @@ static ParallelComputeFunction createParallelComputeFunction(
         } else {
           // Select nested loop lower/upper bounds depending on our position in
           // the multi-dimensional iteration space.
-          auto lb = nb.create<SelectOp>(isBlockFirstCoord[loopIdx],
-                                        blockFirstCoord[loopIdx + 1], c0);
+          auto lb = nb.create<arith::SelectOp>(
+              isBlockFirstCoord[loopIdx], blockFirstCoord[loopIdx + 1], c0);
 
-          auto ub = nb.create<SelectOp>(isBlockLastCoord[loopIdx],
-                                        blockEndCoord[loopIdx + 1],
-                                        tripCounts[loopIdx + 1]);
+          auto ub = nb.create<arith::SelectOp>(isBlockLastCoord[loopIdx],
+                                               blockEndCoord[loopIdx + 1],
+                                               tripCounts[loopIdx + 1]);
 
           nb.create<scf::ForOp>(lb, ub, c1, ValueRange(),
                                 workLoopBuilder(loopIdx + 1));
@@ -831,8 +831,8 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
           arith::CmpIPredicate::sgt, numWorkerThreadsVal, bracketBegin);
       Value bracketScalingFactor = b.create<arith::ConstantFloatOp>(
           llvm::APFloat(p.second), b.getF32Type());
-      scalingFactor =
-          b.create<SelectOp>(inBracket, bracketScalingFactor, scalingFactor);
+      scalingFactor = b.create<arith::SelectOp>(inBracket, bracketScalingFactor,
+                                                scalingFactor);
     }
     Value numWorkersIndex =
         b.create<arith::IndexCastOp>(numWorkerThreadsVal, b.getI32Type());

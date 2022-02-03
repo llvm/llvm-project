@@ -160,14 +160,14 @@ static LogicalResult getDivRepr(const IntegerPolyhedron &cst, unsigned pos,
 
   // Extract divisor, the divisor can be negative and hence its sign information
   // is stored in `signDiv` to reverse the sign of dividend's coefficients.
-  // Equality must involve the pos-th variable and hence `temp_div` != 0.
-  int64_t temp_div = cst.atEq(eqInd, pos);
-  if (temp_div == 0)
+  // Equality must involve the pos-th variable and hence `tempDiv` != 0.
+  int64_t tempDiv = cst.atEq(eqInd, pos);
+  if (tempDiv == 0)
     return failure();
-  int64_t signDiv = temp_div < 0 ? -1 : 1;
+  int64_t signDiv = tempDiv < 0 ? -1 : 1;
 
   // The divisor is always a positive integer.
-  divisor = temp_div * signDiv;
+  divisor = tempDiv * signDiv;
 
   expr.resize(cst.getNumCols(), 0);
   for (unsigned i = 0, e = cst.getNumIds(); i < e; ++i)
@@ -184,23 +184,23 @@ static LogicalResult getDivRepr(const IntegerPolyhedron &cst, unsigned pos,
 // explicit representation has not been found yet, otherwise returns `true`.
 static bool checkExplicitRepresentation(const IntegerPolyhedron &cst,
                                         ArrayRef<bool> foundRepr,
-                                        SmallVectorImpl<int64_t> &dividend,
+                                        ArrayRef<int64_t> dividend,
                                         unsigned pos) {
   // Exit to avoid circular dependencies between divisions.
-  unsigned c, f;
-  for (c = 0, f = cst.getNumIds(); c < f; ++c) {
+  for (unsigned c = 0, e = cst.getNumIds(); c < e; ++c) {
     if (c == pos)
       continue;
-    if (!foundRepr[c] && dividend[c] != 0)
-      break;
+
+    if (!foundRepr[c] && dividend[c] != 0) {
+      // Expression can't be constructed as it depends on a yet unknown
+      // identifier.
+      //
+      // TODO: Visit/compute the identifiers in an order so that this doesn't
+      // happen. More complex but much more efficient.
+      return false;
+    }
   }
 
-  // Expression can't be constructed as it depends on a yet unknown
-  // identifier.
-  // TODO: Visit/compute the identifiers in an order so that this doesn't
-  // happen. More complex but much more efficient.
-  if (c < f)
-    return false;
   return true;
 }
 
@@ -234,7 +234,7 @@ MaybeLocalRepr presburger_utils::computeSingleVarRepr(
         continue;
 
       repr.kind = ReprKind::Inequality;
-      repr.repr.inEqualityPair = {ubPos, lbPos};
+      repr.repr.inequalityPair = {ubPos, lbPos};
       return repr;
     }
   }
@@ -254,7 +254,7 @@ MaybeLocalRepr presburger_utils::computeSingleVarRepr(
 }
 
 void presburger_utils::removeDuplicateDivs(
-    std::vector<SmallVector<int64_t, 8>> &divs,
+    SmallVectorImpl<SmallVector<int64_t, 8>> &divs,
     SmallVectorImpl<unsigned> &denoms, unsigned localOffset,
     llvm::function_ref<bool(unsigned i, unsigned j)> merge) {
 

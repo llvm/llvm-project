@@ -58,7 +58,7 @@ void PlatformRemoteAppleTV::Terminate() {
 
 PlatformSP PlatformRemoteAppleTV::CreateInstance(bool force,
                                                  const ArchSpec *arch) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   if (log) {
     const char *arch_name;
     if (arch && arch->GetArchitectureName())

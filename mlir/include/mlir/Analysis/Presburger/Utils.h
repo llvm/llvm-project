@@ -35,7 +35,7 @@ struct MaybeLocalRepr {
     unsigned equalityIdx;
     struct {
       unsigned lowerBoundIdx, upperBoundIdx;
-    } inEqualityPair;
+    } inequalityPair;
   } repr;
 };
 
@@ -65,7 +65,7 @@ MaybeLocalRepr computeSingleVarRepr(const IntegerPolyhedron &cst,
 /// the divisions are not merged. `merge` can also do side effects, For example
 /// it can merge the local identifiers in IntegerPolyhedron.
 void removeDuplicateDivs(
-    std::vector<SmallVector<int64_t, 8>> &divs,
+    SmallVectorImpl<SmallVector<int64_t, 8>> &divs,
     SmallVectorImpl<unsigned> &denoms, unsigned localOffset,
     llvm::function_ref<bool(unsigned i, unsigned j)> merge);
 

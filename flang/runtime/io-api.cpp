@@ -461,14 +461,13 @@ bool IONAME(SetAdvance)(
 
 bool IONAME(SetBlank)(Cookie cookie, const char *keyword, std::size_t length) {
   IoStatementState &io{*cookie};
-  ConnectionState &connection{io.GetConnectionState()};
   static const char *keywords[]{"NULL", "ZERO", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
   case 0:
-    connection.modes.editingFlags &= ~blankZero;
+    io.mutableModes().editingFlags &= ~blankZero;
     return true;
   case 1:
-    connection.modes.editingFlags |= blankZero;
+    io.mutableModes().editingFlags |= blankZero;
     return true;
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInKeyword,
@@ -480,14 +479,13 @@ bool IONAME(SetBlank)(Cookie cookie, const char *keyword, std::size_t length) {
 bool IONAME(SetDecimal)(
     Cookie cookie, const char *keyword, std::size_t length) {
   IoStatementState &io{*cookie};
-  ConnectionState &connection{io.GetConnectionState()};
   static const char *keywords[]{"COMMA", "POINT", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
   case 0:
-    connection.modes.editingFlags |= decimalComma;
+    io.mutableModes().editingFlags |= decimalComma;
     return true;
   case 1:
-    connection.modes.editingFlags &= ~decimalComma;
+    io.mutableModes().editingFlags &= ~decimalComma;
     return true;
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInKeyword,
@@ -498,17 +496,16 @@ bool IONAME(SetDecimal)(
 
 bool IONAME(SetDelim)(Cookie cookie, const char *keyword, std::size_t length) {
   IoStatementState &io{*cookie};
-  ConnectionState &connection{io.GetConnectionState()};
   static const char *keywords[]{"APOSTROPHE", "QUOTE", "NONE", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
   case 0:
-    connection.modes.delim = '\'';
+    io.mutableModes().delim = '\'';
     return true;
   case 1:
-    connection.modes.delim = '"';
+    io.mutableModes().delim = '"';
     return true;
   case 2:
-    connection.modes.delim = '\0';
+    io.mutableModes().delim = '\0';
     return true;
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInKeyword,
@@ -519,8 +516,7 @@ bool IONAME(SetDelim)(Cookie cookie, const char *keyword, std::size_t length) {
 
 bool IONAME(SetPad)(Cookie cookie, const char *keyword, std::size_t length) {
   IoStatementState &io{*cookie};
-  ConnectionState &connection{io.GetConnectionState()};
-  connection.modes.pad =
+  io.mutableModes().pad =
       YesOrNo(keyword, length, "PAD", io.GetIoErrorHandler());
   return true;
 }
@@ -528,18 +524,17 @@ bool IONAME(SetPad)(Cookie cookie, const char *keyword, std::size_t length) {
 bool IONAME(SetPos)(Cookie cookie, std::int64_t pos) {
   IoStatementState &io{*cookie};
   ConnectionState &connection{io.GetConnectionState()};
+  IoErrorHandler &handler{io.GetIoErrorHandler()};
   if (connection.access != Access::Stream) {
-    io.GetIoErrorHandler().SignalError(
-        "POS= may not appear unless ACCESS='STREAM'");
+    handler.SignalError("POS= may not appear unless ACCESS='STREAM'");
     return false;
   }
-  if (pos < 1) {
-    io.GetIoErrorHandler().SignalError(
-        "POS=%zd is invalid", static_cast<std::intmax_t>(pos));
+  if (pos < 1) { // POS=1 is beginning of file (12.6.2.11)
+    handler.SignalError("POS=%zd is invalid", static_cast<std::intmax_t>(pos));
     return false;
   }
   if (auto *unit{io.GetExternalFileUnit()}) {
-    unit->SetPosition(pos);
+    unit->SetPosition(pos - 1, handler);
     return true;
   }
   io.GetIoErrorHandler().Crash("SetPos() on internal unit");
@@ -549,50 +544,48 @@ bool IONAME(SetPos)(Cookie cookie, std::int64_t pos) {
 bool IONAME(SetRec)(Cookie cookie, std::int64_t rec) {
   IoStatementState &io{*cookie};
   ConnectionState &connection{io.GetConnectionState()};
+  IoErrorHandler &handler{io.GetIoErrorHandler()};
   if (connection.access != Access::Direct) {
-    io.GetIoErrorHandler().SignalError(
-        "REC= may not appear unless ACCESS='DIRECT'");
+    handler.SignalError("REC= may not appear unless ACCESS='DIRECT'");
     return false;
   }
   if (!connection.openRecl) {
-    io.GetIoErrorHandler().SignalError("RECL= was not specified");
+    handler.SignalError("RECL= was not specified");
     return false;
   }
   if (rec < 1) {
-    io.GetIoErrorHandler().SignalError(
-        "REC=%zd is invalid", static_cast<std::intmax_t>(rec));
+    handler.SignalError("REC=%zd is invalid", static_cast<std::intmax_t>(rec));
     return false;
   }
   connection.currentRecordNumber = rec;
   if (auto *unit{io.GetExternalFileUnit()}) {
-    unit->SetPosition((rec - 1) * *connection.openRecl);
+    unit->SetPosition((rec - 1) * *connection.openRecl, handler);
   }
   return true;
 }
 
 bool IONAME(SetRound)(Cookie cookie, const char *keyword, std::size_t length) {
   IoStatementState &io{*cookie};
-  ConnectionState &connection{io.GetConnectionState()};
   static const char *keywords[]{"UP", "DOWN", "ZERO", "NEAREST", "COMPATIBLE",
       "PROCESSOR_DEFINED", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
   case 0:
-    connection.modes.round = decimal::RoundUp;
+    io.mutableModes().round = decimal::RoundUp;
     return true;
   case 1:
-    connection.modes.round = decimal::RoundDown;
+    io.mutableModes().round = decimal::RoundDown;
     return true;
   case 2:
-    connection.modes.round = decimal::RoundToZero;
+    io.mutableModes().round = decimal::RoundToZero;
     return true;
   case 3:
-    connection.modes.round = decimal::RoundNearest;
+    io.mutableModes().round = decimal::RoundNearest;
     return true;
   case 4:
-    connection.modes.round = decimal::RoundCompatible;
+    io.mutableModes().round = decimal::RoundCompatible;
     return true;
   case 5:
-    connection.modes.round = executionEnvironment.defaultOutputRoundingMode;
+    io.mutableModes().round = executionEnvironment.defaultOutputRoundingMode;
     return true;
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInKeyword,
@@ -603,16 +596,15 @@ bool IONAME(SetRound)(Cookie cookie, const char *keyword, std::size_t length) {
 
 bool IONAME(SetSign)(Cookie cookie, const char *keyword, std::size_t length) {
   IoStatementState &io{*cookie};
-  ConnectionState &connection{io.GetConnectionState()};
   static const char *keywords[]{
       "PLUS", "SUPPRESS", "PROCESSOR_DEFINED", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
   case 0:
-    connection.modes.editingFlags |= signPlus;
+    io.mutableModes().editingFlags |= signPlus;
     return true;
   case 1:
   case 2: // processor default is SS
-    connection.modes.editingFlags &= ~signPlus;
+    io.mutableModes().editingFlags &= ~signPlus;
     return true;
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInKeyword,

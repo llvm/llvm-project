@@ -36,7 +36,6 @@ void mlir::sparse_tensor::buildSparseCompiler(
   pm.addPass(createFuncBufferizePass());
   pm.addPass(arith::createConstantBufferizePass());
   pm.addPass(createTensorBufferizePass());
-  pm.addPass(createStdBufferizePass());
   pm.addPass(mlir::bufferization::createFinalizingBufferizePass());
   pm.addPass(createLowerAffinePass());
   pm.addPass(createConvertVectorToLLVMPass());

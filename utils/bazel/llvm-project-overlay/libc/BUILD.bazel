@@ -820,6 +820,15 @@ libc_function(
 )
 
 libc_function(
+    name = "strncpy",
+    srcs = ["src/string/strncpy.cpp"],
+    hdrs = ["src/string/strncpy.h"],
+    deps = [
+        ":__support_common",
+    ],
+)
+
+libc_function(
     name = "strcmp",
     srcs = ["src/string/strcmp.cpp"],
     hdrs = ["src/string/strcmp.h"],

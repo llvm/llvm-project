@@ -39,6 +39,10 @@
 # define __has_builtin(x) 0
 #endif
 
+#ifndef __has_include
+# define __has_include(x) 0
+#endif
+
 // Only use __has_cpp_attribute in C++ mode. GCC defines __has_cpp_attribute in
 // C mode, but the :: in __has_cpp_attribute(scoped::attribute) is invalid.
 #ifndef LLVM_HAS_CPP_ATTRIBUTE
@@ -96,24 +100,6 @@
 
 #else
 #define LLVM_MSC_PREREQ(version) 0
-#endif
-
-/// Does the compiler support ref-qualifiers for *this?
-///
-/// Sadly, this is separate from just rvalue reference support because GCC
-/// and MSVC implemented this later than everything else. This appears to be
-/// corrected in MSVC 2019 but not MSVC 2017.
-/// FIXME: Remove LLVM_HAS_RVALUE_REFERENCE_THIS macro
-#define LLVM_HAS_RVALUE_REFERENCE_THIS 1
-
-/// Expands to '&' if ref-qualifiers for *this are supported.
-///
-/// This can be used to provide lvalue/rvalue overrides of member functions.
-/// The rvalue override should be guarded by LLVM_HAS_RVALUE_REFERENCE_THIS
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
-#define LLVM_LVALUE_FUNCTION &
-#else
-#define LLVM_LVALUE_FUNCTION
 #endif
 
 /// LLVM_LIBRARY_VISIBILITY - If a class marked with this attribute is linked
@@ -444,7 +430,20 @@
 /// Whether LLVM itself is built with AddressSanitizer instrumentation.
 #if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
 # define LLVM_ADDRESS_SANITIZER_BUILD 1
+#if __has_include(<sanitizer/asan_interface.h>)
 # include <sanitizer/asan_interface.h>
+#else
+// These declarations exist to support ASan with MSVC. If MSVC eventually ships
+// asan_interface.h in their headers, then we can remove this.
+#ifdef __cplusplus
+extern "C" {
+#endif
+void __asan_poison_memory_region(void const volatile *addr, size_t size);
+void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
+#ifdef __cplusplus
+} // extern "C"
+#endif
+#endif
 #else
 # define LLVM_ADDRESS_SANITIZER_BUILD 0
 # define __asan_poison_memory_region(p, size)

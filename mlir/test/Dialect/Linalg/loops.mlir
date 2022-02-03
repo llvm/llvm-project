@@ -508,7 +508,7 @@ func @generic_index_op_1D_reduce(%arg0: memref<?xf32>,
       %i = linalg.index 0 : index
       %0 = arith.constant 0 : index
       %1 = arith.cmpi eq, %0, %i : index
-      %2 = select %1, %b, %c : f32
+      %2 = arith.select %1, %b, %c : f32
       %3 = arith.addf %a, %2 : f32
       linalg.yield %3 : f32
   }
@@ -522,7 +522,7 @@ func @generic_index_op_1D_reduce(%arg0: memref<?xf32>,
 //       CHECK:   %[[a:.*]] = memref.load %[[ARG0]][%[[i]]]
 //       CHECK:   %[[b:.*]] = memref.load %[[ARG1]][]
 //       CHECK:   %[[c:.*]] = memref.load %[[ARG2]][]
-//       CHECK:   %[[d:.*]] = select %{{.*}}, %[[b]], %[[c]]
+//       CHECK:   %[[d:.*]] = arith.select %{{.*}}, %[[b]], %[[c]]
 //       CHECK:   %[[e:.*]] = arith.addf %[[a]], %[[d]]
 //       CHECK:   store %[[e]], %[[ARG2]][]
 
@@ -534,7 +534,7 @@ func @generic_index_op_1D_reduce(%arg0: memref<?xf32>,
 //       CHECKPARALLEL:   %[[a:.*]] = memref.load %[[ARG0]][%[[i]]]
 //       CHECKPARALLEL:   %[[b:.*]] = memref.load %[[ARG1]][]
 //       CHECKPARALLEL:   %[[c:.*]] = memref.load %[[ARG2]][]
-//       CHECKPARALLEL:   %[[d:.*]] = select %{{.*}}, %[[b]], %[[c]]
+//       CHECKPARALLEL:   %[[d:.*]] = arith.select %{{.*}}, %[[b]], %[[c]]
 //       CHECKPARALLEL:   %[[e:.*]] = arith.addf %[[a]], %[[d]]
 //       CHECKPARALLEL:   store %[[e]], %[[ARG2]][]
 

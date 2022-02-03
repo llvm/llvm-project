@@ -40,14 +40,14 @@ public:
 Listener::Listener(const char *name)
     : m_name(name), m_broadcasters(), m_broadcasters_mutex(), m_events(),
       m_events_mutex() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+  Log *log = GetLog(LLDBLog::Object);
   if (log != nullptr)
     LLDB_LOGF(log, "%p Listener::Listener('%s')", static_cast<void *>(this),
               m_name.c_str());
 }
 
 Listener::~Listener() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+  Log *log = GetLog(LLDBLog::Object);
 
   Clear();
 
@@ -56,7 +56,7 @@ Listener::~Listener() {
 }
 
 void Listener::Clear() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+  Log *log = GetLog(LLDBLog::Object);
   std::lock_guard<std::recursive_mutex> broadcasters_guard(
       m_broadcasters_mutex);
   broadcaster_collection::iterator pos, end = m_broadcasters.end();
@@ -97,7 +97,7 @@ uint32_t Listener::StartListeningForEvents(Broadcaster *broadcaster,
     uint32_t acquired_mask =
         broadcaster->AddListener(this->shared_from_this(), event_mask);
 
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EVENTS));
+    Log *log = GetLog(LLDBLog::Events);
     if (log != nullptr)
       LLDB_LOGF(log,
                 "%p Listener::StartListeningForEvents (broadcaster = %p, "
@@ -128,7 +128,7 @@ uint32_t Listener::StartListeningForEvents(Broadcaster *broadcaster,
     uint32_t acquired_mask =
         broadcaster->AddListener(this->shared_from_this(), event_mask);
 
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EVENTS));
+    Log *log = GetLog(LLDBLog::Events);
     if (log != nullptr) {
       void **pointer = reinterpret_cast<void **>(&callback);
       LLDB_LOGF(log,
@@ -200,7 +200,7 @@ void Listener::BroadcasterManagerWillDestruct(BroadcasterManagerSP manager_sp) {
 }
 
 void Listener::AddEvent(EventSP &event_sp) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EVENTS));
+  Log *log = GetLog(LLDBLog::Events);
   if (log != nullptr)
     LLDB_LOGF(log, "%p Listener('%s')::AddEvent (event_sp = {%p})",
               static_cast<void *>(this), m_name.c_str(),
@@ -270,7 +270,7 @@ bool Listener::FindNextEventInternal(
   // Mutex::Locker
   // and pass the locker as the first argument. m_events_mutex is no longer
   // recursive.
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EVENTS));
+  Log *log = GetLog(LLDBLog::Events);
 
   if (m_events.empty())
     return false;
@@ -348,7 +348,7 @@ bool Listener::GetEventInternal(
     const ConstString *broadcaster_names, // nullptr for any event
     uint32_t num_broadcaster_names, uint32_t event_type_mask,
     EventSP &event_sp) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EVENTS));
+  Log *log = GetLog(LLDBLog::Events);
   LLDB_LOG(log, "this = {0}, timeout = {1} for {2}", this, timeout, m_name);
 
   std::unique_lock<std::mutex> lock(m_events_mutex);
@@ -366,12 +366,12 @@ bool Listener::GetEventInternal(
         result = m_events_condition.wait_for(lock, *timeout);
 
       if (result == std::cv_status::timeout) {
-        log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EVENTS);
+        log = GetLog(LLDBLog::Events);
         LLDB_LOGF(log, "%p Listener::GetEventInternal() timed out for %s",
                   static_cast<void *>(this), m_name.c_str());
         return false;
       } else if (result != std::cv_status::no_timeout) {
-        log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EVENTS);
+        log = GetLog(LLDBLog::Events);
         LLDB_LOGF(log, "%p Listener::GetEventInternal() unknown error for %s",
                   static_cast<void *>(this), m_name.c_str());
         return false;

@@ -1,7 +1,7 @@
 // RUN: mlir-opt -split-input-file -convert-std-to-spirv -verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
-// std.select
+// arith.select
 //===----------------------------------------------------------------------===//
 
 module attributes {
@@ -848,24 +848,6 @@ func @sitofp(%arg0 : i64) -> f64 {
 
 // -----
 
-module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Shader, Int8, Int16, Int64, Float16, Float64],
-             [SPV_KHR_storage_buffer_storage_class]>, {}>
-} {
-
-// CHECK-LABEL: @select
-func @select(%arg0 : i32, %arg1 : i32) {
-  %0 = arith.cmpi sle, %arg0, %arg1 : i32
-  // CHECK: spv.Select
-  %1 = select %0, %arg0, %arg1 : i32
-  return
-}
-
-} // end module
-
-// -----
-
 //===----------------------------------------------------------------------===//
 // std.return
 //===----------------------------------------------------------------------===//
@@ -917,21 +899,6 @@ func @tensor_extract_constant(%a : index, %b: index, %c: index) -> i32 {
   %extract = tensor.extract %cst[%a, %b, %c] : tensor<2x2x3xi32>
   // CHECK: spv.ReturnValue %[[VAL]]
   return %extract : i32
-}
-
-// -----
-
-//===----------------------------------------------------------------------===//
-// splat
-//===----------------------------------------------------------------------===//
-
-// CHECK-LABEL: func @splat
-//  CHECK-SAME: (%[[A:.+]]: f32)
-//       CHECK:   %[[VAL:.+]] = spv.CompositeConstruct %[[A]], %[[A]], %[[A]], %[[A]] : vector<4xf32>
-//       CHECK:   spv.ReturnValue %[[VAL]]
-func @splat(%f : f32) -> vector<4xf32> {
-  %splat = splat %f : vector<4xf32>
-  return %splat : vector<4xf32>
 }
 
 // -----

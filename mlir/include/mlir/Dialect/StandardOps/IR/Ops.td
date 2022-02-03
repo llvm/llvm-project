@@ -35,12 +35,10 @@ class Std_Op<string mnemonic, list<Trait> traits = []> :
     Op<StandardOps_Dialect, mnemonic, traits> {
   // For every standard op, there needs to be a:
   //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)
-  //   * LogicalResult verify(${C++ class of Op} op)
   //   * ParseResult parse${C++ class of Op}(OpAsmParser &parser,
   //                                         OperationState &result)
   // functions.
   let printer = [{ return ::print(p, *this); }];
-  let verifier = [{ return ::verify(*this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
@@ -66,10 +64,6 @@ def AssertOp : Std_Op<"assert"> {
   let arguments = (ins I1:$arg, StrAttr:$msg);
 
   let assemblyFormat = "$arg `,` $msg attr-dict";
-
-  // AssertOp is fully verified by its traits.
-  let verifier = ?;
-
   let hasCanonicalizeMethod = 1;
 }
 
@@ -106,9 +100,6 @@ def BranchOp : Std_Op<"br",
       $_state.addSuccessors(dest);
       $_state.addOperands(destOperands);
     }]>];
-
-  // BranchOp is fully verified by traits.
-  let verifier = ?;
 
   let extraClassDeclaration = [{
     void setDest(Block *block);
@@ -189,7 +180,6 @@ def CallOp : Std_Op<"call",
   let assemblyFormat = [{
     $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
   }];
-  let verifier = ?;
 }
 
 //===----------------------------------------------------------------------===//
@@ -250,7 +240,6 @@ def CallIndirectOp : Std_Op<"call_indirect", [
     CallInterfaceCallable getCallableForCallee() { return getCallee(); }
   }];
 
-  let verifier = ?;
   let hasCanonicalizeMethod = 1;
 
   let assemblyFormat =
@@ -310,9 +299,6 @@ def CondBranchOp : Std_Op<"cond_br",
       build($_builder, $_state, condition, trueDest, ValueRange(), falseDest,
             falseOperands);
     }]>];
-
-  // CondBranchOp is fully verified by traits.
-  let verifier = ?;
 
   let extraClassDeclaration = [{
     // These are the indices into the dests list.
@@ -390,23 +376,16 @@ def ConstantOp : Std_Op<"constant",
     operation ::= ssa-id `=` `std.constant` attribute-value `:` type
     ```
 
-    The `constant` operation produces an SSA value equal to some constant
-    specified by an attribute. This is the way that MLIR uses to form simple
-    integer and floating point constants, as well as more exotic things like
-    references to functions and tensor/vector constants.
+    The `constant` operation produces an SSA value from a symbol reference to a
+    `builtin.func` operation
 
     Example:
 
     ```mlir
-    // Complex constant
-    %1 = constant [1.0 : f32, 1.0 : f32] : complex<f32>
-
     // Reference to function @myfn.
     %2 = constant @myfn : (tensor<16xf32>, f32) -> tensor<16xf32>
 
     // Equivalent generic forms
-    %1 = "std.constant"() {value = [1.0 : f32, 1.0 : f32] : complex<f32>}
-       : () -> complex<f32>
     %2 = "std.constant"() {value = @myfn}
        : () -> ((tensor<16xf32>, f32) -> tensor<16xf32>)
     ```
@@ -417,15 +396,9 @@ def ConstantOp : Std_Op<"constant",
     ([rationale](../Rationale/Rationale.md#multithreading-the-compiler)).
   }];
 
-  let arguments = (ins AnyAttr:$value);
+  let arguments = (ins FlatSymbolRefAttr:$value);
   let results = (outs AnyType);
-
-  let builders = [
-    OpBuilder<(ins "Attribute":$value),
-    [{ build($_builder, $_state, value.getType(), value); }]>,
-    OpBuilder<(ins "Attribute":$value, "Type":$type),
-    [{ build($_builder, $_state, type, value); }]>,
-  ];
+  let assemblyFormat = "attr-dict $value `:` type(results)";
 
   let extraClassDeclaration = [{
     /// Returns true if a constant operation can be built with the given value
@@ -434,6 +407,7 @@ def ConstantOp : Std_Op<"constant",
   }];
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -466,104 +440,7 @@ def ReturnOp : Std_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
     [{ build($_builder, $_state, llvm::None); }]>];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
-}
-
-//===----------------------------------------------------------------------===//
-// SelectOp
-//===----------------------------------------------------------------------===//
-
-def SelectOp : Std_Op<"select", [NoSideEffect,
-    AllTypesMatch<["true_value", "false_value", "result"]>,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
-    ElementwiseMappable.traits> {
-  let summary = "select operation";
-  let description = [{
-    The `select` operation chooses one value based on a binary condition
-    supplied as its first operand. If the value of the first operand is `1`,
-    the second operand is chosen, otherwise the third operand is chosen.
-    The second and the third operand must have the same type.
-
-    The operation applies to vectors and tensors elementwise given the _shape_
-    of all operands is identical. The choice is made for each element
-    individually based on the value at the same position as the element in the
-    condition operand. If an i1 is provided as the condition, the entire vector
-    or tensor is chosen.
-
-    The `select` operation combined with [`cmpi`](#stdcmpi-cmpiop) can be used
-    to implement `min` and `max` with signed or unsigned comparison semantics.
-
-    Example:
-
-    ```mlir
-    // Custom form of scalar selection.
-    %x = select %cond, %true, %false : i32
-
-    // Generic form of the same operation.
-    %x = "std.select"(%cond, %true, %false) : (i1, i32, i32) -> i32
-
-    // Element-wise vector selection.
-    %vx = std.select %vcond, %vtrue, %vfalse : vector<42xi1>, vector<42xf32>
-
-    // Full vector selection.
-    %vx = std.select %cond, %vtrue, %vfalse : vector<42xf32>
-    ```
-  }];
-
-  let arguments = (ins BoolLike:$condition,
-                       AnyType:$true_value,
-                       AnyType:$false_value);
-  let results = (outs AnyType:$result);
-
-  let hasCanonicalizer = 1;
-  let hasFolder = 1;
-}
-
-//===----------------------------------------------------------------------===//
-// SplatOp
-//===----------------------------------------------------------------------===//
-
-def SplatOp : Std_Op<"splat", [NoSideEffect,
-     TypesMatchWith<"operand type matches element type of result",
-                    "aggregate", "input",
-                    "$_self.cast<ShapedType>().getElementType()">]> {
-  let summary = "splat or broadcast operation";
-  let description = [{
-    Broadcast the operand to all elements of the result vector or tensor. The
-    operand has to be of integer/index/float type. When the result is a tensor,
-    it has to be statically shaped.
-
-    Example:
-
-    ```mlir
-    %s = load %A[%i] : memref<128xf32>
-    %v = splat %s : vector<4xf32>
-    %t = splat %s : tensor<8x16xi32>
-    ```
-
-    TODO: This operation is easy to extend to broadcast to dynamically shaped
-    tensors in the same way dynamically shaped memrefs are handled.
-
-    ```mlir
-    // Broadcasts %s to a 2-d dynamically shaped tensor, with %m, %n binding
-    // to the sizes of the two dynamic dimensions.
-    %m = "foo"() : () -> (index)
-    %n = "bar"() : () -> (index)
-    %t = splat %s [%m, %n] : tensor<?x?xi32>
-    ```
-  }];
-
-  let arguments = (ins AnyTypeOf<[AnySignlessInteger, Index, AnyFloat],
-                                 "integer/index/float type">:$input);
-  let results = (outs AnyTypeOf<[AnyVectorOfAnyRank,
-                                 AnyStaticShapeTensor]>:$aggregate);
-
-  let builders = [
-    OpBuilder<(ins "Value":$element, "Type":$aggregateType),
-    [{ build($_builder, $_state, aggregateType, element); }]>];
-
-  let hasFolder = 1;
-
-  let assemblyFormat = "$input attr-dict `:` type($aggregate)";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -652,6 +529,7 @@ def SwitchOp : Std_Op<"switch",
   }];
 
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
 }
 
 #endif // STANDARD_OPS

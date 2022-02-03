@@ -157,7 +157,7 @@ def FuncOp : Builtin_Op<"func", [
   }];
   let parser = [{ return ::parseFuncOp(parser, result); }];
   let printer = [{ return ::print(*this, p); }];
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -221,7 +221,7 @@ def ModuleOp : Builtin_Op<"module", [
       return "builtin";
     }
   }];
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 
   // We need to ensure the block inside the region is properly terminated;
   // the auto-generated builders do not guarantee that.

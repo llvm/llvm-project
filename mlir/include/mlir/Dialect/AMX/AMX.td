@@ -91,7 +91,6 @@ def TileZeroOp : AMX_Op<"tile_zero", [NoSideEffect]> {
       %0 = amx.tile_zero : vector<16x16xbf16>
     ```
   }];
-  let verifier = [{ return ::verify(*this); }];
   let results = (outs
     VectorOfRankAndType<[2], [F32, BF16, I32, I8]>:$res);
   let extraClassDeclaration = [{
@@ -100,6 +99,7 @@ def TileZeroOp : AMX_Op<"tile_zero", [NoSideEffect]> {
     }
   }];
   let assemblyFormat = "attr-dict `:` type($res)";
+  let hasVerifier = 1;
 }
 
 //
@@ -120,7 +120,6 @@ def TileLoadOp : AMX_Op<"tile_load", [NoSideEffect]> {
       %0 = amx.tile_load %arg0[%c0, %c0] : memref<?x?xi8> into vector<16x64xi8>
     ```
   }];
-  let verifier = [{ return ::verify(*this); }];
   let arguments = (ins Arg<AnyMemRef, "load base", [MemRead]>:$base,
                    Variadic<Index>:$indices);
   let results = (outs
@@ -135,6 +134,7 @@ def TileLoadOp : AMX_Op<"tile_load", [NoSideEffect]> {
   }];
   let assemblyFormat = "$base `[` $indices `]` attr-dict `:` "
                        "type($base) `into` type($res)";
+  let hasVerifier = 1;
 }
 
 def TileStoreOp : AMX_Op<"tile_store"> {
@@ -151,7 +151,6 @@ def TileStoreOp : AMX_Op<"tile_store"> {
       amx.tile_store %arg1[%c0, %c0], %0 : memref<?x?xi8>, vector<16x64xi8>
     ```
   }];
-  let verifier = [{ return ::verify(*this); }];
   let arguments = (ins Arg<AnyMemRef, "store base", [MemWrite]>:$base,
                    Variadic<Index>:$indices,
                    VectorOfRankAndType<[2], [F32, BF16, I32, I8]>:$val);
@@ -165,6 +164,7 @@ def TileStoreOp : AMX_Op<"tile_store"> {
   }];
   let assemblyFormat = "$base `[` $indices `]` `,` $val attr-dict `:` "
                        "type($base) `,` type($val)";
+  let hasVerifier = 1;
 }
 
 //
@@ -186,7 +186,6 @@ def TileMulFOp : AMX_Op<"tile_mulf", [NoSideEffect, AllTypesMatch<["acc", "res"]
         : vector<16x32xbf16>, vector<16x32xbf16>, vector<16x16xf32>
     ```
   }];
-  let verifier = [{ return ::verify(*this); }];
   let arguments = (ins VectorOfRankAndType<[2], [F32, BF16]>:$lhs,
                        VectorOfRankAndType<[2], [F32, BF16]>:$rhs,
                        VectorOfRankAndType<[2], [F32, BF16]>:$acc);
@@ -204,6 +203,7 @@ def TileMulFOp : AMX_Op<"tile_mulf", [NoSideEffect, AllTypesMatch<["acc", "res"]
   }];
   let assemblyFormat = "$lhs `,` $rhs `,` $acc attr-dict `:` "
                        "type($lhs) `,` type($rhs) `,` type($acc) ";
+  let hasVerifier = 1;
 }
 
 def TileMulIOp : AMX_Op<"tile_muli", [NoSideEffect, AllTypesMatch<["acc", "res"]>]> {
@@ -224,7 +224,6 @@ def TileMulIOp : AMX_Op<"tile_muli", [NoSideEffect, AllTypesMatch<["acc", "res"]
         : vector<16x64xi8>, vector<16x64xi8>, vector<16x16xi32>
     ```
   }];
-  let verifier = [{ return ::verify(*this); }];
   let arguments = (ins VectorOfRankAndType<[2], [I32, I8]>:$lhs,
                        VectorOfRankAndType<[2], [I32, I8]>:$rhs,
                        VectorOfRankAndType<[2], [I32, I8]>:$acc,
@@ -245,6 +244,7 @@ def TileMulIOp : AMX_Op<"tile_muli", [NoSideEffect, AllTypesMatch<["acc", "res"]
   }];
   let assemblyFormat = "$lhs (`zext` $isZextLhs^)? `,` $rhs (`zext` $isZextRhs^)? `,` $acc attr-dict `:` "
                        "type($lhs) `,` type($rhs) `,` type($acc) ";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

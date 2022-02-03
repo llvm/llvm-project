@@ -227,12 +227,12 @@ static mlir::LogicalResult verifyConstantForType(mlir::Type type,
 
 /// Verifier for the constant operation. This corresponds to the `::verify(...)`
 /// in the op definition.
-static mlir::LogicalResult verify(ConstantOp op) {
-  return verifyConstantForType(op.getResult().getType(), op.value(), op);
+mlir::LogicalResult ConstantOp::verify() {
+  return verifyConstantForType(getResult().getType(), value(), *this);
 }
 
-static mlir::LogicalResult verify(StructConstantOp op) {
-  return verifyConstantForType(op.getResult().getType(), op.value(), op);
+mlir::LogicalResult StructConstantOp::verify() {
+  return verifyConstantForType(getResult().getType(), value(), *this);
 }
 
 /// Infer the output shape of the ConstantOp, this is required by the shape
@@ -312,28 +312,27 @@ void MulOp::inferShapes() { getResult().setType(getOperand(0).getType()); }
 //===----------------------------------------------------------------------===//
 // ReturnOp
 
-static mlir::LogicalResult verify(ReturnOp op) {
+mlir::LogicalResult ReturnOp::verify() {
   // We know that the parent operation is a function, because of the 'HasParent'
   // trait attached to the operation definition.
-  auto function = cast<FuncOp>(op->getParentOp());
+  auto function = cast<FuncOp>((*this)->getParentOp());
 
   /// ReturnOps can only have a single optional operand.
-  if (op.getNumOperands() > 1)
-    return op.emitOpError() << "expects at most 1 return operand";
+  if (getNumOperands() > 1)
+    return emitOpError() << "expects at most 1 return operand";
 
   // The operand number and types must match the function signature.
   const auto &results = function.getType().getResults();
-  if (op.getNumOperands() != results.size())
-    return op.emitOpError()
-           << "does not return the same number of values ("
-           << op.getNumOperands() << ") as the enclosing function ("
-           << results.size() << ")";
+  if (getNumOperands() != results.size())
+    return emitOpError() << "does not return the same number of values ("
+                         << getNumOperands() << ") as the enclosing function ("
+                         << results.size() << ")";
 
   // If the operation does not have an input, we are done.
-  if (!op.hasOperand())
+  if (!hasOperand())
     return mlir::success();
 
-  auto inputType = *op.operand_type_begin();
+  auto inputType = *operand_type_begin();
   auto resultType = results.front();
 
   // Check that the result type of the function matches the operand type.
@@ -341,9 +340,9 @@ static mlir::LogicalResult verify(ReturnOp op) {
       resultType.isa<mlir::UnrankedTensorType>())
     return mlir::success();
 
-  return op.emitError() << "type of return operand (" << inputType
-                        << ") doesn't match function result type ("
-                        << resultType << ")";
+  return emitError() << "type of return operand (" << inputType
+                     << ") doesn't match function result type (" << resultType
+                     << ")";
 }
 
 //===----------------------------------------------------------------------===//
@@ -360,16 +359,16 @@ void StructAccessOp::build(mlir::OpBuilder &b, mlir::OperationState &state,
   build(b, state, resultType, input, b.getI64IntegerAttr(index));
 }
 
-static mlir::LogicalResult verify(StructAccessOp op) {
-  StructType structTy = op.input().getType().cast<StructType>();
-  size_t index = op.index();
-  if (index >= structTy.getNumElementTypes())
-    return op.emitOpError()
+mlir::LogicalResult StructAccessOp::verify() {
+  StructType structTy = input().getType().cast<StructType>();
+  size_t indexValue = index();
+  if (indexValue >= structTy.getNumElementTypes())
+    return emitOpError()
            << "index should be within the range of the input struct type";
-  mlir::Type resultType = op.getResult().getType();
-  if (resultType != structTy.getElementTypes()[index])
-    return op.emitOpError() << "must have the same result type as the struct "
-                               "element referred to by the index";
+  mlir::Type resultType = getResult().getType();
+  if (resultType != structTy.getElementTypes()[indexValue])
+    return emitOpError() << "must have the same result type as the struct "
+                            "element referred to by the index";
   return mlir::success();
 }
 
@@ -388,16 +387,16 @@ void TransposeOp::inferShapes() {
   getResult().setType(RankedTensorType::get(dims, arrayTy.getElementType()));
 }
 
-static mlir::LogicalResult verify(TransposeOp op) {
-  auto inputType = op.getOperand().getType().dyn_cast<RankedTensorType>();
-  auto resultType = op.getType().dyn_cast<RankedTensorType>();
+mlir::LogicalResult TransposeOp::verify() {
+  auto inputType = getOperand().getType().dyn_cast<RankedTensorType>();
+  auto resultType = getType().dyn_cast<RankedTensorType>();
   if (!inputType || !resultType)
     return mlir::success();
 
   auto inputShape = inputType.getShape();
   if (!std::equal(inputShape.begin(), inputShape.end(),
                   resultType.getShape().rbegin())) {
-    return op.emitError()
+    return emitError()
            << "expected result shape to be a transpose of the input";
   }
   return mlir::success();

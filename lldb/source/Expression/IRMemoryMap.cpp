@@ -288,8 +288,7 @@ IRMemoryMap::Allocation::Allocation(lldb::addr_t process_alloc,
 lldb::addr_t IRMemoryMap::Malloc(size_t size, uint8_t alignment,
                                  uint32_t permissions, AllocationPolicy policy,
                                  bool zero_memory, Status &error) {
-  lldb_private::Log *log(
-      lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  lldb_private::Log *log(GetLog(LLDBLog::Expressions));
   error.Clear();
 
   lldb::ProcessSP process_sp;
@@ -476,8 +475,7 @@ void IRMemoryMap::Free(lldb::addr_t process_address, Status &error) {
   }
   }
 
-  if (lldb_private::Log *log =
-          lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS)) {
+  if (lldb_private::Log *log = GetLog(LLDBLog::Expressions)) {
     LLDB_LOGF(log,
               "IRMemoryMap::Free (0x%" PRIx64 ") freed [0x%" PRIx64
               "..0x%" PRIx64 ")",
@@ -574,8 +572,7 @@ void IRMemoryMap::WriteMemory(lldb::addr_t process_address,
     break;
   }
 
-  if (lldb_private::Log *log =
-          lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS)) {
+  if (lldb_private::Log *log = GetLog(LLDBLog::Expressions)) {
     LLDB_LOGF(log,
               "IRMemoryMap::WriteMemory (0x%" PRIx64 ", 0x%" PRIxPTR
               ", 0x%" PRId64 ") went to [0x%" PRIx64 "..0x%" PRIx64 ")",
@@ -704,8 +701,7 @@ void IRMemoryMap::ReadMemory(uint8_t *bytes, lldb::addr_t process_address,
     break;
   }
 
-  if (lldb_private::Log *log =
-          lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS)) {
+  if (lldb_private::Log *log = GetLog(LLDBLog::Expressions)) {
     LLDB_LOGF(log,
               "IRMemoryMap::ReadMemory (0x%" PRIx64 ", 0x%" PRIxPTR
               ", 0x%" PRId64 ") came from [0x%" PRIx64 "..0x%" PRIx64 ")",

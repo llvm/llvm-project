@@ -902,7 +902,7 @@ bool ArchSpec::SetArchitecture(ArchitectureType arch_type, uint32_t cpu,
           m_triple.setArch(core_def->machine);
       }
     } else {
-      Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET | LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_PLATFORM));
+      Log *log(GetLog(LLDBLog::Target | LLDBLog::Process | LLDBLog::Platform));
       LLDB_LOGF(log,
                 "Unable to find a core definition for cpu 0x%" PRIx32
                 " sub %" PRId32,

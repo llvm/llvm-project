@@ -195,11 +195,11 @@ void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
     }
   }
 
-  if (PtrI) {
+  if (PtrI)
     setUniformMetadata(PtrI);
-    if (NotClobbered)
-      setNoClobberMetadata(PtrI);
-  }
+
+  if (NotClobbered)
+    setNoClobberMetadata(&I);
 }
 
 bool AMDGPUAnnotateUniformValues::doInitialization(Module &M) {
