@@ -237,6 +237,24 @@ defm : Binary_rv_vr_vv_ShortLong<vvp_fdiv,
                               f64, v256f64, "VFDIVD",
                               f32, v256f32, "VFDIVS">;
 
+defm : Binary_rv_vv<c_vvp_and,
+                    i64, v512i32, v512i1, "PVAND">;
+defm : Binary_rv_vv<c_vvp_or,
+                    i64, v512i32, v512i1, "PVOR">;
+defm : Binary_rv_vv<c_vvp_xor,
+                    i64, v512i32, v512i1, "PVXOR">;
+
+defm : Binary_rv_vv<c_vvp_add,
+                    i64, v512i32, v512i1, "PVADDU">;
+defm : Binary_rv_vv<vvp_sub,
+                    i64, v512i32, v512i1, "PVSUBU">;
+defm : Binary_vr_vv<vvp_srl,
+                    i64, v512i32, v512i1, "PVSRL">;
+defm : Binary_vr_vv<vvp_sra,
+                    i64, v512i32, v512i1, "PVSRA">;
+defm : Binary_vr_vv<vvp_shl,
+                    i64, v512i32, v512i1, "PVSLL">;
+
 defm : Binary_rv_vv<c_vvp_fadd,
                     i64, v512f32, v512i1, "PVFADD">;
 defm : Binary_rv_vv<c_vvp_fmul,
