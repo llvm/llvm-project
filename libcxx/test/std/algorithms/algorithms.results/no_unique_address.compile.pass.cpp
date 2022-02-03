@@ -35,3 +35,12 @@ static_assert(sizeof(std::ranges::in_in_out_result<Empty, char, Empty>) == 2);
 static_assert(sizeof(std::ranges::in_in_out_result<Empty, Empty, char>) == 2);
 static_assert(sizeof(std::ranges::in_in_out_result<int, Empty, Empty2>) == sizeof(int));
 static_assert(sizeof(std::ranges::in_in_out_result<Empty, Empty, Empty>) == 3);
+
+static_assert(sizeof(std::ranges::in_out_out_result<Empty, int, int>) == 2 * sizeof(int));
+static_assert(sizeof(std::ranges::in_out_out_result<int, Empty, int>) == 2 * sizeof(int));
+static_assert(sizeof(std::ranges::in_out_out_result<int, int, Empty>) == 2 * sizeof(int));
+static_assert(sizeof(std::ranges::in_out_out_result<char, Empty, Empty>) == 2);
+static_assert(sizeof(std::ranges::in_out_out_result<Empty, char, Empty>) == 2);
+static_assert(sizeof(std::ranges::in_out_out_result<Empty, Empty, char>) == 2);
+static_assert(sizeof(std::ranges::in_out_out_result<int, Empty, Empty2>) == sizeof(int));
+static_assert(sizeof(std::ranges::in_out_out_result<Empty, Empty, Empty>) == 3);
