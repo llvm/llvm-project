@@ -2442,7 +2442,7 @@ using __copy_cvref_t = typename __copy_cvref<_From, _To>::type;
 #endif // _LIBCPP_STD_VER > 11
 
 // common_reference
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 // Let COND_RES(X, Y) be:
 template <class _Xp, class _Yp>
 using __cond_res =
@@ -2596,7 +2596,7 @@ struct common_reference<_Tp, _Up, _Vp, _Rest...>
 // bullet 5 - Otherwise, there shall be no member `type`.
 template <class...> struct common_reference {};
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 // is_assignable
 
