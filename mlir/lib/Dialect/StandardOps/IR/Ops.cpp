@@ -115,7 +115,10 @@ Operation *StandardOpsDialect::materializeConstant(OpBuilder &builder,
                                                    Location loc) {
   if (arith::ConstantOp::isBuildableWith(value, type))
     return builder.create<arith::ConstantOp>(loc, type, value);
-  return builder.create<ConstantOp>(loc, type, value);
+  if (ConstantOp::isBuildableWith(value, type))
+    return builder.create<ConstantOp>(loc, type,
+                                      value.cast<FlatSymbolRefAttr>());
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -562,97 +565,35 @@ Block *CondBranchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
-static void print(OpAsmPrinter &p, ConstantOp &op) {
-  p << " ";
-  p.printOptionalAttrDict(op->getAttrs(), /*elidedAttrs=*/{"value"});
-
-  if (op->getAttrs().size() > 1)
-    p << ' ';
-  p << op.getValue();
-
-  // If the value is a symbol reference, print a trailing type.
-  if (op.getValue().isa<SymbolRefAttr>())
-    p << " : " << op.getType();
-}
-
-static ParseResult parseConstantOp(OpAsmParser &parser,
-                                   OperationState &result) {
-  Attribute valueAttr;
-  if (parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseAttribute(valueAttr, "value", result.attributes))
-    return failure();
-
-  // If the attribute is a symbol reference, then we expect a trailing type.
-  Type type;
-  if (!valueAttr.isa<SymbolRefAttr>())
-    type = valueAttr.getType();
-  else if (parser.parseColonType(type))
-    return failure();
-
-  // Add the attribute type to the list.
-  return parser.addTypeToList(type, result.types);
-}
-
-/// The constant op requires an attribute, and furthermore requires that it
-/// matches the return type.
 LogicalResult ConstantOp::verify() {
-  auto value = getValue();
-  if (!value)
-    return emitOpError("requires a 'value' attribute");
-
+  StringRef fnName = getValue();
   Type type = getType();
-  if (!value.getType().isa<NoneType>() && type != value.getType())
-    return emitOpError() << "requires attribute's type (" << value.getType()
-                         << ") to match op's return type (" << type << ")";
 
-  if (type.isa<FunctionType>()) {
-    auto fnAttr = value.dyn_cast<FlatSymbolRefAttr>();
-    if (!fnAttr)
-      return emitOpError("requires 'value' to be a function reference");
+  // Try to find the referenced function.
+  auto fn = (*this)->getParentOfType<ModuleOp>().lookupSymbol<FuncOp>(fnName);
+  if (!fn)
+    return emitOpError() << "reference to undefined function '" << fnName
+                         << "'";
 
-    // Try to find the referenced function.
-    auto fn = (*this)->getParentOfType<ModuleOp>().lookupSymbol<FuncOp>(
-        fnAttr.getValue());
-    if (!fn)
-      return emitOpError() << "reference to undefined function '"
-                           << fnAttr.getValue() << "'";
+  // Check that the referenced function has the correct type.
+  if (fn.getType() != type)
+    return emitOpError("reference to function with mismatched type");
 
-    // Check that the referenced function has the correct type.
-    if (fn.getType() != type)
-      return emitOpError("reference to function with mismatched type");
-
-    return success();
-  }
-
-  if (type.isa<NoneType>() && value.isa<UnitAttr>())
-    return success();
-
-  return emitOpError("unsupported 'value' attribute: ") << value;
+  return success();
 }
 
 OpFoldResult ConstantOp::fold(ArrayRef<Attribute> operands) {
   assert(operands.empty() && "constant has no operands");
-  return getValue();
+  return getValueAttr();
 }
 
 void ConstantOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
-  Type type = getType();
-  if (type.isa<FunctionType>()) {
-    setNameFn(getResult(), "f");
-  } else {
-    setNameFn(getResult(), "cst");
-  }
+  setNameFn(getResult(), "f");
 }
 
-/// Returns true if a constant operation can be built with the given value and
-/// result type.
 bool ConstantOp::isBuildableWith(Attribute value, Type type) {
-  // SymbolRefAttr can only be used with a function type.
-  if (value.isa<SymbolRefAttr>())
-    return type.isa<FunctionType>();
-  // Otherwise, this must be a UnitAttr.
-  return value.isa<UnitAttr>() && type.isa<NoneType>();
+  return value.isa<FlatSymbolRefAttr>() && type.isa<FunctionType>();
 }
 
 //===----------------------------------------------------------------------===//

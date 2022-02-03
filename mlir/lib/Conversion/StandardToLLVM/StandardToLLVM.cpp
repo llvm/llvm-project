@@ -435,31 +435,19 @@ struct ConstantOpLowering : public ConvertOpToLLVMPattern<ConstantOp> {
   LogicalResult
   matchAndRewrite(ConstantOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // If constant refers to a function, convert it to "addressof".
-    if (auto symbolRef = op.getValue().dyn_cast<FlatSymbolRefAttr>()) {
-      auto type = typeConverter->convertType(op.getResult().getType());
-      if (!type || !LLVM::isCompatibleType(type))
-        return rewriter.notifyMatchFailure(op, "failed to convert result type");
+    auto type = typeConverter->convertType(op.getResult().getType());
+    if (!type || !LLVM::isCompatibleType(type))
+      return rewriter.notifyMatchFailure(op, "failed to convert result type");
 
-      auto newOp = rewriter.create<LLVM::AddressOfOp>(op.getLoc(), type,
-                                                      symbolRef.getValue());
-      for (const NamedAttribute &attr : op->getAttrs()) {
-        if (attr.getName().strref() == "value")
-          continue;
-        newOp->setAttr(attr.getName(), attr.getValue());
-      }
-      rewriter.replaceOp(op, newOp->getResults());
-      return success();
+    auto newOp =
+        rewriter.create<LLVM::AddressOfOp>(op.getLoc(), type, op.getValue());
+    for (const NamedAttribute &attr : op->getAttrs()) {
+      if (attr.getName().strref() == "value")
+        continue;
+      newOp->setAttr(attr.getName(), attr.getValue());
     }
-
-    // Calling into other scopes (non-flat reference) is not supported in LLVM.
-    if (op.getValue().isa<SymbolRefAttr>())
-      return rewriter.notifyMatchFailure(
-          op, "referring to a symbol outside of the current module");
-
-    return LLVM::detail::oneToOneRewrite(
-        op, LLVM::ConstantOp::getOperationName(), adaptor.getOperands(),
-        *getTypeConverter(), rewriter);
+    rewriter.replaceOp(op, newOp->getResults());
+    return success();
   }
 };
 

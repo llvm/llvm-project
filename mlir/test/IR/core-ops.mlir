@@ -99,9 +99,6 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: %{{.*}} = arith.cmpf oeq, %{{.*}}, %{{.*}}: vector<4xf32>
   %70 = arith.cmpf oeq, %vcf32, %vcf32 : vector<4 x f32>
 
-  // CHECK: = constant unit
-  %73 = constant unit
-
   // CHECK: arith.constant true
   %74 = arith.constant true
 

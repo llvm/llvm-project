@@ -145,7 +145,7 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
   // Stitch results together into one large vector.
   Type resultEltType = results[0].getType().cast<VectorType>().getElementType();
   Type resultExpandedType = VectorType::get(expandedShape, resultEltType);
-  Value result = builder.create<ConstantOp>(
+  Value result = builder.create<arith::ConstantOp>(
       resultExpandedType, builder.getZeroAttr(resultExpandedType));
 
   for (int64_t i = 0; i < maxLinearIndex; ++i)
