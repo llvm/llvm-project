@@ -387,9 +387,6 @@ struct BarePtrFuncOpConversion : public FuncOpConversionBase {
   }
 };
 
-// Straightforward lowerings.
-using SelectOpLowering = VectorConvertToLLVMPattern<SelectOp, LLVM::SelectOp>;
-
 /// Lower `std.assert`. The default lowering calls the `abort` function if the
 /// assertion is violated and has no effect otherwise. The failure message is
 /// ignored by the default lowering but should be propagated by any custom
@@ -685,7 +682,6 @@ void mlir::populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
       CondBranchOpLowering,
       ConstantOpLowering,
       ReturnOpLowering,
-      SelectOpLowering,
       SwitchOpLowering>(converter);
   // clang-format on
 }

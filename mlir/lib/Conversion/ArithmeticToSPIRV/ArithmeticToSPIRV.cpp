@@ -190,6 +190,15 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// Converts arith.select to spv.Select.
+class SelectOpPattern final : public OpConversionPattern<arith::SelectOp> {
+public:
+  using OpConversionPattern<arith::SelectOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(arith::SelectOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -781,6 +790,19 @@ LogicalResult CmpFOpNanNonePattern::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
+// SelectOpPattern
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+SelectOpPattern::matchAndRewrite(arith::SelectOp op, OpAdaptor adaptor,
+                                 ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, adaptor.getCondition(),
+                                               adaptor.getTrueValue(),
+                                               adaptor.getFalseValue());
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Pattern Population
 //===----------------------------------------------------------------------===//
 
@@ -820,7 +842,8 @@ void mlir::arith::populateArithmeticToSPIRVPatterns(
     TypeCastingOpPattern<arith::IndexCastOp, spirv::SConvertOp>,
     TypeCastingOpPattern<arith::BitcastOp, spirv::BitcastOp>,
     CmpIOpBooleanPattern, CmpIOpPattern,
-    CmpFOpNanNonePattern, CmpFOpPattern
+    CmpFOpNanNonePattern, CmpFOpPattern,
+    SelectOpPattern
   >(typeConverter, patterns.getContext());
   // clang-format on
 

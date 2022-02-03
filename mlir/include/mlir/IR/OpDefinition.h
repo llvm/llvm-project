@@ -1368,14 +1368,14 @@ struct Elementwise : public TraitBase<ConcreteType, Elementwise> {
 ///
 /// Example:
 /// ```
-/// %tensor_select = "std.select"(%pred_tensor, %true_val, %false_val)
+/// %tensor_select = "arith.select"(%pred_tensor, %true_val, %false_val)
 ///                      : (tensor<?xi1>, tensor<?xf32>, tensor<?xf32>)
 ///                      -> tensor<?xf32>
 /// ```
 /// can be scalarized to
 ///
 /// ```
-/// %scalar_select = "std.select"(%pred, %true_val_scalar, %false_val_scalar)
+/// %scalar_select = "arith.select"(%pred, %true_val_scalar, %false_val_scalar)
 ///                      : (i1, f32, f32) -> f32
 /// ```
 template <typename ConcreteType>
@@ -1430,12 +1430,12 @@ struct Vectorizable : public TraitBase<ConcreteType, Vectorizable> {
 /// ```
 ///
 /// ```
-/// %scalar_pred = "std.select"(%pred, %true_val, %false_val)
+/// %scalar_pred = "arith.select"(%pred, %true_val, %false_val)
 ///                    : (i1, tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
 /// ```
 /// can be tensorized to
 /// ```
-/// %tensor_pred = "std.select"(%pred, %true_val, %false_val)
+/// %tensor_pred = "arith.select"(%pred, %true_val, %false_val)
 ///                    : (tensor<?xi1>, tensor<?xf32>, tensor<?xf32>)
 ///                    -> tensor<?xf32>
 /// ```

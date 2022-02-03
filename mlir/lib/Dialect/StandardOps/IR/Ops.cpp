@@ -305,23 +305,6 @@ LogicalResult CallIndirectOp::canonicalize(CallIndirectOp indirectCall,
 }
 
 //===----------------------------------------------------------------------===//
-// General helpers for comparison ops
-//===----------------------------------------------------------------------===//
-
-// Return the type of the same shape (scalar, vector or tensor) containing i1.
-static Type getI1SameShape(Type type) {
-  auto i1Type = IntegerType::get(type.getContext(), 1);
-  if (auto tensorType = type.dyn_cast<RankedTensorType>())
-    return RankedTensorType::get(tensorType.getShape(), i1Type);
-  if (type.isa<UnrankedTensorType>())
-    return UnrankedTensorType::get(i1Type);
-  if (auto vectorType = type.dyn_cast<VectorType>())
-    return VectorType::get(vectorType.getShape(), i1Type,
-                           vectorType.getNumScalableDims());
-  return i1Type;
-}
-
-//===----------------------------------------------------------------------===//
 // CondBranchOp
 //===----------------------------------------------------------------------===//
 
@@ -390,7 +373,7 @@ struct SimplifyPassThroughCondBranch : public OpRewritePattern<CondBranchOp> {
 ///  -> br ^bb1(A, ..., N)
 ///
 /// cond_br %cond, ^bb1(A), ^bb1(B)
-///  -> %select = select %cond, A, B
+///  -> %select = arith.select %cond, A, B
 ///     br ^bb1(%select)
 ///
 struct SimplifyCondBranchIdenticalSuccessors
@@ -426,7 +409,7 @@ struct SimplifyCondBranchIdenticalSuccessors
       if (std::get<0>(it) == std::get<1>(it))
         mergedOperands.push_back(std::get<0>(it));
       else
-        mergedOperands.push_back(rewriter.create<SelectOp>(
+        mergedOperands.push_back(rewriter.create<arith::SelectOp>(
             condbr.getLoc(), condition, std::get<0>(it), std::get<1>(it)));
     }
 
@@ -694,172 +677,6 @@ LogicalResult ReturnOp::verify() {
                          << results[i] << ")"
                          << " in function @" << function.getName();
 
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// SelectOp
-//===----------------------------------------------------------------------===//
-
-// Transforms a select of a boolean to arithmetic operations
-//
-//  select %arg, %x, %y : i1
-//
-//  becomes
-//
-//  and(%arg, %x) or and(!%arg, %y)
-struct SelectI1Simplify : public OpRewritePattern<SelectOp> {
-  using OpRewritePattern<SelectOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(SelectOp op,
-                                PatternRewriter &rewriter) const override {
-    if (!op.getType().isInteger(1))
-      return failure();
-
-    Value falseConstant =
-        rewriter.create<arith::ConstantIntOp>(op.getLoc(), true, 1);
-    Value notCondition = rewriter.create<arith::XOrIOp>(
-        op.getLoc(), op.getCondition(), falseConstant);
-
-    Value trueVal = rewriter.create<arith::AndIOp>(
-        op.getLoc(), op.getCondition(), op.getTrueValue());
-    Value falseVal = rewriter.create<arith::AndIOp>(op.getLoc(), notCondition,
-                                                    op.getFalseValue());
-    rewriter.replaceOpWithNewOp<arith::OrIOp>(op, trueVal, falseVal);
-    return success();
-  }
-};
-
-//  select %arg, %c1, %c0 => extui %arg
-struct SelectToExtUI : public OpRewritePattern<SelectOp> {
-  using OpRewritePattern<SelectOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(SelectOp op,
-                                PatternRewriter &rewriter) const override {
-    // Cannot extui i1 to i1, or i1 to f32
-    if (!op.getType().isa<IntegerType>() || op.getType().isInteger(1))
-      return failure();
-
-    // select %x, c1, %c0 => extui %arg
-    if (matchPattern(op.getTrueValue(), m_One()))
-      if (matchPattern(op.getFalseValue(), m_Zero())) {
-        rewriter.replaceOpWithNewOp<arith::ExtUIOp>(op, op.getType(),
-                                                    op.getCondition());
-        return success();
-      }
-
-    // select %x, c0, %c1 => extui (xor %arg, true)
-    if (matchPattern(op.getTrueValue(), m_Zero()))
-      if (matchPattern(op.getFalseValue(), m_One())) {
-        rewriter.replaceOpWithNewOp<arith::ExtUIOp>(
-            op, op.getType(),
-            rewriter.create<arith::XOrIOp>(
-                op.getLoc(), op.getCondition(),
-                rewriter.create<arith::ConstantIntOp>(
-                    op.getLoc(), 1, op.getCondition().getType())));
-        return success();
-      }
-
-    return failure();
-  }
-};
-
-void SelectOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                           MLIRContext *context) {
-  results.insert<SelectI1Simplify, SelectToExtUI>(context);
-}
-
-OpFoldResult SelectOp::fold(ArrayRef<Attribute> operands) {
-  auto trueVal = getTrueValue();
-  auto falseVal = getFalseValue();
-  if (trueVal == falseVal)
-    return trueVal;
-
-  auto condition = getCondition();
-
-  // select true, %0, %1 => %0
-  if (matchPattern(condition, m_One()))
-    return trueVal;
-
-  // select false, %0, %1 => %1
-  if (matchPattern(condition, m_Zero()))
-    return falseVal;
-
-  // select %x, true, false => %x
-  if (getType().isInteger(1))
-    if (matchPattern(getTrueValue(), m_One()))
-      if (matchPattern(getFalseValue(), m_Zero()))
-        return condition;
-
-  if (auto cmp = dyn_cast_or_null<arith::CmpIOp>(condition.getDefiningOp())) {
-    auto pred = cmp.getPredicate();
-    if (pred == arith::CmpIPredicate::eq || pred == arith::CmpIPredicate::ne) {
-      auto cmpLhs = cmp.getLhs();
-      auto cmpRhs = cmp.getRhs();
-
-      // %0 = arith.cmpi eq, %arg0, %arg1
-      // %1 = select %0, %arg0, %arg1 => %arg1
-
-      // %0 = arith.cmpi ne, %arg0, %arg1
-      // %1 = select %0, %arg0, %arg1 => %arg0
-
-      if ((cmpLhs == trueVal && cmpRhs == falseVal) ||
-          (cmpRhs == trueVal && cmpLhs == falseVal))
-        return pred == arith::CmpIPredicate::ne ? trueVal : falseVal;
-    }
-  }
-  return nullptr;
-}
-
-static void print(OpAsmPrinter &p, SelectOp op) {
-  p << " " << op.getOperands();
-  p.printOptionalAttrDict(op->getAttrs());
-  p << " : ";
-  if (ShapedType condType = op.getCondition().getType().dyn_cast<ShapedType>())
-    p << condType << ", ";
-  p << op.getType();
-}
-
-static ParseResult parseSelectOp(OpAsmParser &parser, OperationState &result) {
-  Type conditionType, resultType;
-  SmallVector<OpAsmParser::OperandType, 3> operands;
-  if (parser.parseOperandList(operands, /*requiredOperandCount=*/3) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(resultType))
-    return failure();
-
-  // Check for the explicit condition type if this is a masked tensor or vector.
-  if (succeeded(parser.parseOptionalComma())) {
-    conditionType = resultType;
-    if (parser.parseType(resultType))
-      return failure();
-  } else {
-    conditionType = parser.getBuilder().getI1Type();
-  }
-
-  result.addTypes(resultType);
-  return parser.resolveOperands(operands,
-                                {conditionType, resultType, resultType},
-                                parser.getNameLoc(), result.operands);
-}
-
-LogicalResult SelectOp::verify() {
-  Type conditionType = getCondition().getType();
-  if (conditionType.isSignlessInteger(1))
-    return success();
-
-  // If the result type is a vector or tensor, the type can be a mask with the
-  // same elements.
-  Type resultType = getType();
-  if (!resultType.isa<TensorType, VectorType>())
-    return emitOpError() << "expected condition to be a signless i1, but got "
-                         << conditionType;
-  Type shapedConditionType = getI1SameShape(resultType);
-  if (conditionType != shapedConditionType)
-    return emitOpError() << "expected condition type to have the same shape "
-                            "as the result type, expected "
-                         << shapedConditionType << ", but got "
-                         << conditionType;
   return success();
 }
 

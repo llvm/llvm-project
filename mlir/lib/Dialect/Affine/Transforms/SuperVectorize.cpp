@@ -1436,8 +1436,8 @@ static Operation *vectorizeAffineYieldOp(AffineYieldOp yieldOp,
     for (unsigned i = 0; i < newYieldOp->getNumOperands(); ++i) {
       Value result = newYieldOp->getOperand(i);
       Value iterArg = cast<AffineForOp>(newParentOp).getRegionIterArgs()[i];
-      Value maskedResult = state.builder.create<SelectOp>(result.getLoc(), mask,
-                                                          result, iterArg);
+      Value maskedResult = state.builder.create<arith::SelectOp>(
+          result.getLoc(), mask, result, iterArg);
       LLVM_DEBUG(
           dbgs() << "\n[early-vect]+++++ masking a yielded vector value: "
                  << maskedResult);

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-elementwise-to-linalg -std-bufferize \
+// RUN: mlir-opt %s -convert-elementwise-to-linalg \
 // RUN: -arith-bufferize -linalg-bufferize -tensor-bufferize \
 // RUN: -func-bufferize -buffer-deallocation -convert-linalg-to-loops \
 // RUN: -convert-linalg-to-llvm --convert-memref-to-llvm -convert-std-to-llvm \

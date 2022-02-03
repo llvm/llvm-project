@@ -146,7 +146,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
 
           Note: This method can return multiple OpOperands, indicating that the
           given OpResult may at runtime alias with any of the OpOperands. This
-          is useful for branches and for ops such as `std.select`.
+          is useful for branches and for ops such as `arith.select`.
         }],
         /*retType=*/"SmallVector<OpOperand *>",
         /*methodName=*/"getAliasingOpOperand",

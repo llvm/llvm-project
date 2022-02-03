@@ -73,8 +73,8 @@ func @cond_br_same_successor(%cond : i1, %a : i32) {
 func @cond_br_same_successor_insert_select(
       %cond : i1, %a : i32, %b : i32, %c : tensor<2xi32>, %d : tensor<2xi32>
     ) -> (i32, tensor<2xi32>)  {
-  // CHECK: %[[RES:.*]] = select %[[COND]], %[[ARG0]], %[[ARG1]]
-  // CHECK: %[[RES2:.*]] = select %[[COND]], %[[ARG2]], %[[ARG3]]
+  // CHECK: %[[RES:.*]] = arith.select %[[COND]], %[[ARG0]], %[[ARG1]]
+  // CHECK: %[[RES2:.*]] = arith.select %[[COND]], %[[ARG2]], %[[ARG3]]
   // CHECK: return %[[RES]], %[[RES2]]
 
   cond_br %cond, ^bb1(%a, %c : i32, tensor<2xi32>), ^bb1(%b, %d : i32, tensor<2xi32>)
@@ -105,8 +105,8 @@ func @cond_br_and_br_folding(%a : i32) {
 // CHECK-LABEL: func @cond_br_passthrough(
 // CHECK-SAME: %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32, %[[COND:.*]]: i1
 func @cond_br_passthrough(%arg0 : i32, %arg1 : i32, %arg2 : i32, %cond : i1) -> (i32, i32) {
-  // CHECK: %[[RES:.*]] = select %[[COND]], %[[ARG0]], %[[ARG2]]
-  // CHECK: %[[RES2:.*]] = select %[[COND]], %[[ARG1]], %[[ARG2]]
+  // CHECK: %[[RES:.*]] = arith.select %[[COND]], %[[ARG0]], %[[ARG2]]
+  // CHECK: %[[RES2:.*]] = arith.select %[[COND]], %[[ARG1]], %[[ARG2]]
   // CHECK: return %[[RES]], %[[RES2]]
 
   cond_br %cond, ^bb1(%arg0 : i32), ^bb2(%arg2, %arg2 : i32, i32)

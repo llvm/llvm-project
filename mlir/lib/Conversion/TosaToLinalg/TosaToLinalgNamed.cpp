@@ -748,7 +748,7 @@ public:
 
             Value cmp = rewriter.create<arith::CmpIOp>(
                 loc, arith::CmpIPredicate::slt, dx, zero);
-            Value offset = rewriter.create<mlir::SelectOp>(loc, cmp, dx, zero);
+            Value offset = rewriter.create<arith::SelectOp>(loc, cmp, dx, zero);
             return rewriter.create<arith::AddIOp>(loc, v, offset)->getResult(0);
           };
 
@@ -758,7 +758,7 @@ public:
           auto kH2 = padFn(kH1, y1, pad[3]);
           auto kHCmp = rewriter.create<arith::CmpIOp>(
               loc, arith::CmpIPredicate::slt, kH2, one);
-          auto kH3 = rewriter.create<mlir::SelectOp>(loc, kHCmp, one, kH2);
+          auto kH3 = rewriter.create<arith::SelectOp>(loc, kHCmp, one, kH2);
 
           // compute the horizontal component of coverage.
           auto kW0 = rewriter.create<arith::ConstantIndexOp>(loc, kernel[1]);
@@ -766,7 +766,7 @@ public:
           auto kW2 = padFn(kW1, x1, pad[5]);
           auto kWCmp = rewriter.create<arith::CmpIOp>(
               loc, arith::CmpIPredicate::slt, kW2, one);
-          auto kW3 = rewriter.create<mlir::SelectOp>(loc, kWCmp, one, kW2);
+          auto kW3 = rewriter.create<arith::SelectOp>(loc, kWCmp, one, kW2);
 
           // Compute the total number of elements and normalize.
           Value count = rewriter.create<arith::MulIOp>(loc, kH3, kW3);

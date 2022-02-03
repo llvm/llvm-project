@@ -698,7 +698,7 @@ public:
           rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(d));
       Value val = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
                                                  bnd, idx);
-      Value sel = rewriter.create<SelectOp>(loc, val, trueVal, falseVal);
+      Value sel = rewriter.create<arith::SelectOp>(loc, val, trueVal, falseVal);
       auto pos = rewriter.getI64ArrayAttr(d);
       result =
           rewriter.create<vector::InsertOp>(loc, dstType, sel, result, pos);
