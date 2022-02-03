@@ -141,9 +141,6 @@ enum NodeType : unsigned {
   VMV_S_X_VL,
   // VFMV_S_F_VL matches the semantics of vfmv.s.f. It carries a VL operand.
   VFMV_S_F_VL,
-  // Splats an i64 scalar to a vector type (with element type i64) where the
-  // scalar is a sign-extended i32.
-  SPLAT_VECTOR_I64,
   // Splats an 64-bit value that has been split into two i32 parts. This is
   // expanded late to two scalar stores and a stride 0 vector load.
   SPLAT_VECTOR_SPLIT_I64_VL,
