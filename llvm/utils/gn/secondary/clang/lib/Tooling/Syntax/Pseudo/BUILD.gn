@@ -1,0 +1,13 @@
+static_library("Pseudo") {
+  output_name = "clangToolingSyntaxPseudo"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/Basic",
+    "//clang/lib/Lex",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "Grammar.cpp",
+    "GrammarBNF.cpp",
+  ]
+}
