@@ -1040,6 +1040,18 @@ let Extension = FuncExtOpenCLCxx in {
   }
 }
 
+// An atomic builtin with 2 additional _explicit variants.
+multiclass BuiltinAtomicExplicit<string Name, list<Type> Types> {
+  // Without explicit MemoryOrder or MemoryScope.
+  def : Builtin<Name, Types>;
+
+  // With an explicit MemoryOrder argument.
+  def : Builtin<Name # "_explicit", !listconcat(Types, [MemoryOrder])>;
+
+  // With explicit MemoryOrder and MemoryScope arguments.
+  def : Builtin<Name # "_explicit", !listconcat(Types, [MemoryOrder, MemoryScope])>;
+}
+
 // OpenCL v2.0 s6.13.11 - Atomic Functions.
 let MinVersion = CL20 in {
   def : Builtin<"atomic_work_item_fence", [Void, MemFenceFlags, MemoryOrder, MemoryScope]>;
@@ -1049,24 +1061,12 @@ let MinVersion = CL20 in {
                       [AtomicFloat, Float], [AtomicDouble, Double]] in {
     def : Builtin<"atomic_init",
         [Void, PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[1]]>;
-    def : Builtin<"atomic_store",
+    defm : BuiltinAtomicExplicit<"atomic_store",
         [Void, PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[1]]>;
-    def : Builtin<"atomic_store_explicit",
-        [Void, PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[1], MemoryOrder]>;
-    def : Builtin<"atomic_store_explicit",
-        [Void, PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[1], MemoryOrder, MemoryScope]>;
-    def : Builtin<"atomic_load",
+    defm : BuiltinAtomicExplicit<"atomic_load",
         [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>]>;
-    def : Builtin<"atomic_load_explicit",
-        [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, MemoryOrder]>;
-    def : Builtin<"atomic_load_explicit",
-        [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, MemoryOrder, MemoryScope]>;
-    def : Builtin<"atomic_exchange",
+    defm : BuiltinAtomicExplicit<"atomic_exchange",
         [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[1]]>;
-    def : Builtin<"atomic_exchange_explicit",
-        [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[1], MemoryOrder]>;
-    def : Builtin<"atomic_exchange_explicit",
-        [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[1], MemoryOrder, MemoryScope]>;
     foreach Variant = ["weak", "strong"] in {
       def : Builtin<"atomic_compare_exchange_" # Variant,
           [Bool, PointerType<VolatileType<TypePair[0]>, GenericAS>,
@@ -1084,249 +1084,125 @@ let MinVersion = CL20 in {
                       [AtomicLong, Long, Long], [AtomicULong, ULong, ULong],
                       [AtomicUIntPtr, UIntPtr, PtrDiff]] in {
     foreach ModOp = ["add", "sub"] in {
-      def : Builtin<"atomic_fetch_" # ModOp,
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
           [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[2]]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[2], MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[2], MemoryOrder, MemoryScope]>;
     }
   }
   foreach TypePair = [[AtomicInt, Int, Int], [AtomicUInt, UInt, UInt],
                       [AtomicLong, Long, Long], [AtomicULong, ULong, ULong]] in {
     foreach ModOp = ["or", "xor", "and", "min", "max"] in {
-      def : Builtin<"atomic_fetch_" # ModOp,
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
           [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[2]]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[2], MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[2], MemoryOrder, MemoryScope]>;
     }
   }
 
-  def : Builtin<"atomic_flag_clear",
+  defm : BuiltinAtomicExplicit<"atomic_flag_clear",
       [Void, PointerType<VolatileType<AtomicFlag>, GenericAS>]>;
-  def : Builtin<"atomic_flag_clear_explicit",
-      [Void, PointerType<VolatileType<AtomicFlag>, GenericAS>, MemoryOrder]>;
-  def : Builtin<"atomic_flag_clear_explicit",
-      [Void, PointerType<VolatileType<AtomicFlag>, GenericAS>, MemoryOrder, MemoryScope]>;
 
-  def : Builtin<"atomic_flag_test_and_set",
+  defm : BuiltinAtomicExplicit<"atomic_flag_test_and_set",
       [Bool, PointerType<VolatileType<AtomicFlag>, GenericAS>]>;
-  def : Builtin<"atomic_flag_test_and_set_explicit",
-      [Bool, PointerType<VolatileType<AtomicFlag>, GenericAS>, MemoryOrder]>;
-  def : Builtin<"atomic_flag_test_and_set_explicit",
-      [Bool, PointerType<VolatileType<AtomicFlag>, GenericAS>, MemoryOrder, MemoryScope]>;
 }
 
 // The functionality added by cl_ext_float_atomics extension
 let MinVersion = CL20 in {
   let Extension = FuncExtFloatAtomicsFp16GlobalLoadStore in {
-    def : Builtin<"atomic_store",
+    defm : BuiltinAtomicExplicit<"atomic_store",
         [Void, PointerType<VolatileType<AtomicHalf>, GlobalAS>, AtomicHalf]>;
-    def : Builtin<"atomic_store_explicit",
-        [Void, PointerType<VolatileType<AtomicHalf>, GlobalAS>, AtomicHalf, MemoryOrder]>;
-    def : Builtin<"atomic_store_explicit",
-        [Void, PointerType<VolatileType<AtomicHalf>, GlobalAS>, AtomicHalf, MemoryOrder, MemoryScope]>;
-    def : Builtin<"atomic_load",
+    defm : BuiltinAtomicExplicit<"atomic_load",
         [Half, PointerType<VolatileType<AtomicHalf>, GlobalAS>]>;
-    def : Builtin<"atomic_load_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, GlobalAS>, MemoryOrder]>;
-    def : Builtin<"atomic_load_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, GlobalAS>, MemoryOrder, MemoryScope]>;
-    def : Builtin<"atomic_exchange",
+    defm : BuiltinAtomicExplicit<"atomic_exchange",
         [Half, PointerType<VolatileType<AtomicHalf>, GlobalAS>, Half]>;
-    def : Builtin<"atomic_exchange_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, GlobalAS>, Half, MemoryOrder]>;
-    def : Builtin<"atomic_exchange_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, GlobalAS>, Half, MemoryOrder, MemoryScope]>;
   }
   let Extension = FuncExtFloatAtomicsFp16LocalLoadStore in {
-    def : Builtin<"atomic_store",
+    defm : BuiltinAtomicExplicit<"atomic_store",
         [Void, PointerType<VolatileType<AtomicHalf>, LocalAS>, AtomicHalf]>;
-    def : Builtin<"atomic_store_explicit",
-        [Void, PointerType<VolatileType<AtomicHalf>, LocalAS>, AtomicHalf, MemoryOrder]>;
-    def : Builtin<"atomic_store_explicit",
-        [Void, PointerType<VolatileType<AtomicHalf>, LocalAS>, AtomicHalf, MemoryOrder, MemoryScope]>;
-    def : Builtin<"atomic_load",
+    defm : BuiltinAtomicExplicit<"atomic_load",
         [Half, PointerType<VolatileType<AtomicHalf>, LocalAS>]>;
-    def : Builtin<"atomic_load_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, LocalAS>, MemoryOrder]>;
-    def : Builtin<"atomic_load_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, LocalAS>, MemoryOrder, MemoryScope]>;
-    def : Builtin<"atomic_exchange",
+    defm : BuiltinAtomicExplicit<"atomic_exchange",
         [Half, PointerType<VolatileType<AtomicHalf>, LocalAS>, Half]>;
-    def : Builtin<"atomic_exchange_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, LocalAS>, Half, MemoryOrder]>;
-    def : Builtin<"atomic_exchange_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, LocalAS>, Half, MemoryOrder, MemoryScope]>;
   }
   let Extension = FuncExtFloatAtomicsFp16GenericLoadStore in {
-    def : Builtin<"atomic_store",
+    defm : BuiltinAtomicExplicit<"atomic_store",
         [Void, PointerType<VolatileType<AtomicHalf>, GenericAS>, AtomicHalf]>;
-    def : Builtin<"atomic_store_explicit",
-        [Void, PointerType<VolatileType<AtomicHalf>, GenericAS>, AtomicHalf, MemoryOrder]>;
-    def : Builtin<"atomic_store_explicit",
-        [Void, PointerType<VolatileType<AtomicHalf>, GenericAS>, AtomicHalf, MemoryOrder, MemoryScope]>;
-    def : Builtin<"atomic_load",
+    defm : BuiltinAtomicExplicit<"atomic_load",
         [Half, PointerType<VolatileType<AtomicHalf>, GenericAS>]>;
-    def : Builtin<"atomic_load_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, GenericAS>, MemoryOrder]>;
-    def : Builtin<"atomic_load_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, GenericAS>, MemoryOrder, MemoryScope]>;
-    def : Builtin<"atomic_exchange",
+    defm : BuiltinAtomicExplicit<"atomic_exchange",
         [Half, PointerType<VolatileType<AtomicHalf>, GenericAS>, Half]>;
-    def : Builtin<"atomic_exchange_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, GenericAS>, Half, MemoryOrder]>;
-    def : Builtin<"atomic_exchange_explicit",
-        [Half, PointerType<VolatileType<AtomicHalf>, GenericAS>, Half, MemoryOrder, MemoryScope]>;
   }
   foreach ModOp = ["add", "sub"] in {
     let Extension = FuncExtFloatAtomicsFp16GlobalAdd in {
-      def : Builtin<"atomic_fetch_" # ModOp,
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
           [Half, PointerType<VolatileType<AtomicFloat>, GlobalAS>, Half]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicFloat>, GlobalAS>, Half, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicFloat>, GlobalAS>, Half, MemoryOrder, MemoryScope]>;
     }
     let Extension = FuncExtFloatAtomicsFp32GlobalAdd in {
-      def : Builtin<"atomic_fetch_" # ModOp,
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
           [Float, PointerType<VolatileType<AtomicFloat>, GlobalAS>, Float]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, GlobalAS>, Float, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, GlobalAS>, Float, MemoryOrder, MemoryScope]>;
     }
     let Extension = FuncExtFloatAtomicsFp64GlobalAdd in {
-      def : Builtin<"atomic_fetch_" # ModOp,
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
           [Double, PointerType<VolatileType<AtomicDouble>, GlobalAS>, Double]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, GlobalAS>, Double, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, GlobalAS>, Double, MemoryOrder, MemoryScope]>;
     }
     let Extension = FuncExtFloatAtomicsFp16LocalAdd in {
-      def : Builtin<"atomic_fetch_" # ModOp,
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
           [Half, PointerType<VolatileType<AtomicFloat>, LocalAS>, Half]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicFloat>, LocalAS>, Half, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicFloat>, LocalAS>, Half, MemoryOrder, MemoryScope]>;
     }
     let Extension = FuncExtFloatAtomicsFp32LocalAdd in {
-      def : Builtin<"atomic_fetch_" # ModOp,
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
           [Float, PointerType<VolatileType<AtomicFloat>, LocalAS>, Float]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, LocalAS>, Float, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, LocalAS>, Float, MemoryOrder, MemoryScope]>;
     }
     let Extension = FuncExtFloatAtomicsFp64LocalAdd in {
-      def : Builtin<"atomic_fetch_" # ModOp,
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
           [Double, PointerType<VolatileType<AtomicDouble>, LocalAS>, Double]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, LocalAS>, Double, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, LocalAS>, Double, MemoryOrder, MemoryScope]>;
     }
     let Extension = FuncExtFloatAtomicsFp16GenericAdd in {
-      def : Builtin<"atomic_fetch_" # ModOp,
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
           [Half, PointerType<VolatileType<AtomicFloat>, GenericAS>, Half]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicFloat>, GenericAS>, Half, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicFloat>, GenericAS>, Half, MemoryOrder, MemoryScope]>;
     }
     let Extension = FuncExtFloatAtomicsFp32GenericAdd in {
-      def : Builtin<"atomic_fetch_" # ModOp,
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
           [Float, PointerType<VolatileType<AtomicFloat>, GenericAS>, Float]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, GenericAS>, Float, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, GenericAS>, Float, MemoryOrder, MemoryScope]>;
     }
     let Extension = FuncExtFloatAtomicsFp64GenericAdd in {
-      def : Builtin<"atomic_fetch_" # ModOp,
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
           [Double, PointerType<VolatileType<AtomicDouble>, GenericAS>, Double]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, GenericAS>, Double, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, GenericAS>, Double, MemoryOrder, MemoryScope]>;
     }
   }
   foreach ModOp = ["min", "max"] in {
     let Extension = FuncExtFloatAtomicsFp16GlobalMinMax in {
-      def : Builtin<"atomic_fetch_" # ModOp,
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
           [Half, PointerType<VolatileType<AtomicHalf>, GlobalAS>, Half]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicHalf>, GlobalAS>, Half, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicHalf>, GlobalAS>, Half, MemoryOrder, MemoryScope]>;
     }
     let Extension = FuncExtFloatAtomicsFp32GlobalMinMax in {
-      def : Builtin<"atomic_fetch_" # ModOp,
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
           [Float, PointerType<VolatileType<AtomicFloat>, GlobalAS>, Float]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, GlobalAS>, Float, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, GlobalAS>, Float, MemoryOrder, MemoryScope]>;
     }
     let Extension = FuncExtFloatAtomicsFp64GlobalMinMax in {
-      def : Builtin<"atomic_fetch_" # ModOp,
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
           [Double, PointerType<VolatileType<AtomicDouble>, GlobalAS>, Double]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, GlobalAS>, Double, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, GlobalAS>, Double, MemoryOrder, MemoryScope]>;
     }
     let Extension = FuncExtFloatAtomicsFp16LocalMinMax in {
-      def : Builtin<"atomic_fetch_" # ModOp,
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
           [Half, PointerType<VolatileType<AtomicHalf>, LocalAS>, Half]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicHalf>, LocalAS>, Half, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicHalf>, LocalAS>, Half, MemoryOrder, MemoryScope]>;
     }
     let Extension = FuncExtFloatAtomicsFp32LocalMinMax in {
-      def : Builtin<"atomic_fetch_" # ModOp,
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
           [Float, PointerType<VolatileType<AtomicFloat>, LocalAS>, Float]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, LocalAS>, Float, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, LocalAS>, Float, MemoryOrder, MemoryScope]>;
     }
     let Extension = FuncExtFloatAtomicsFp64LocalMinMax in {
-      def : Builtin<"atomic_fetch_" # ModOp,
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
           [Double, PointerType<VolatileType<AtomicDouble>, LocalAS>, Double]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, LocalAS>, Double, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, LocalAS>, Double, MemoryOrder, MemoryScope]>;
     }
     let Extension = FuncExtFloatAtomicsFp16GenericMinMax in {
-      def : Builtin<"atomic_fetch_" # ModOp,
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
           [Half, PointerType<VolatileType<AtomicHalf>, GenericAS>, Half]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicHalf>, GenericAS>, Half, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Half, PointerType<VolatileType<AtomicHalf>, GenericAS>, Half, MemoryOrder, MemoryScope]>;
     }
     let Extension = FuncExtFloatAtomicsFp32GenericMinMax in {
-      def : Builtin<"atomic_fetch_" # ModOp,
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
           [Float, PointerType<VolatileType<AtomicFloat>, GenericAS>, Float]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, GenericAS>, Float, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Float, PointerType<VolatileType<AtomicFloat>, GenericAS>, Float, MemoryOrder, MemoryScope]>;
     }
     let Extension = FuncExtFloatAtomicsFp64GenericMinMax in {
-      def : Builtin<"atomic_fetch_" # ModOp,
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
           [Double, PointerType<VolatileType<AtomicDouble>, GenericAS>, Double]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, GenericAS>, Double, MemoryOrder]>;
-      def : Builtin<"atomic_fetch_" # ModOp # "_explicit",
-          [Double, PointerType<VolatileType<AtomicDouble>, GenericAS>, Double, MemoryOrder, MemoryScope]>;
     }
   }
 }
