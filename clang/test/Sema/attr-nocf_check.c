@@ -5,8 +5,8 @@ typedef void (*FuncPointerWithNoCfCheck)(void) __attribute__((nocf_check)); // n
 typedef void (*FuncPointer)(void);
 
 // Dont allow function declaration and definition mismatch.
-void __attribute__((nocf_check)) testNoCfCheck();   // expected-note {{previous declaration is here}}
-void testNoCfCheck(){}; //  expected-error {{conflicting types for 'testNoCfCheck'}}
+void __attribute__((nocf_check)) testNoCfCheck(void);   // expected-note {{previous declaration is here}}
+void testNoCfCheck(void){}; //  expected-error {{conflicting types for 'testNoCfCheck'}}
 
 // No variable or parameter declaration
 __attribute__((nocf_check)) int i;                              // expected-warning {{'nocf_check' attribute only applies to function}}
@@ -20,4 +20,4 @@ void testNoCfCheckMismatch(FuncPointer f) {
 }
 
 // 'nocf_check' Attribute has no parameters.
-int testNoCfCheckParams() __attribute__((nocf_check(1))); // expected-error {{'nocf_check' attribute takes no arguments}}
+int testNoCfCheckParams(void) __attribute__((nocf_check(1))); // expected-error {{'nocf_check' attribute takes no arguments}}

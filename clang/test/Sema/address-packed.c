@@ -23,7 +23,7 @@ union __attribute__((packed)) UnionArguable {
 
 typedef struct Arguable ArguableT;
 
-struct Arguable *get_arguable();
+struct Arguable *get_arguable(void);
 
 void to_void(void *);
 void to_intptr(intptr_t);
@@ -211,7 +211,7 @@ struct S6a {
     int d;
 } __attribute__((packed, aligned(16))) s6;
 
-void g8()
+void g8(void)
 { 
     f1(&s6.a); // no-warning
     f1(&s6.c); // no-warning
@@ -222,7 +222,7 @@ struct __attribute__((packed, aligned(1))) MisalignedContainee { double d; };
 struct __attribute__((aligned(8))) AlignedContainer { struct MisalignedContainee b; };
 
 struct AlignedContainer *p;
-double* g9() {
+double* g9(void) {
   return &p->b.d; // no-warning
 }
 
@@ -273,7 +273,7 @@ struct S9 {
 
 typedef struct S9 __attribute__((__aligned__(16))) aligned_S9;
 
-void g10() {
+void g10(void) {
   struct S9 x;
   struct S9 __attribute__((__aligned__(8))) y;
   aligned_S9 z;

@@ -5,4 +5,4 @@ struct a test __attribute__((interrupt)); // expected-warning {{'interrupt' attr
 
 __attribute__((interrupt(12))) void foo(void) { } // expected-error {{'interrupt' attribute takes no arguments}}
 
-__attribute__((interrupt)) void food() {}
+__attribute__((interrupt)) void food(void) {}

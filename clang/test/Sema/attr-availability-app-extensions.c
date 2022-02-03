@@ -31,7 +31,7 @@ void f1(int); // expected-note {{'f1' has been explicitly marked unavailable her
 #endif
 void f2(int); // expected-note {{'f2' has been explicitly marked unavailable here}}
 
-void test() {
+void test(void) {
   f0(1); // expected-error {{'f0' is unavailable: not available on}}
   f1(1); // expected-error {{'f1' is unavailable}}
   f2(2); // expected-error {{'f2' is unavailable: not available on}}

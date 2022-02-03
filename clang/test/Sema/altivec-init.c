@@ -35,7 +35,7 @@ void __attribute__((__overloadable__)) f(int a)
 {
 }
 
-void test()
+void test(void)
 {
   v4 vGCC;
   vector int vAltiVec;
@@ -52,7 +52,7 @@ typedef struct VecMem {
 
 // The following should not assert.  See qiongsiwu1's comment here: 
 // https://reviews.llvm.org/D115670
-void test2() {
+void test2(void) {
   vector signed local_vec = {1, 2, 3, 4};
   VecMem VM;
   VM.vec = ++local_vec;

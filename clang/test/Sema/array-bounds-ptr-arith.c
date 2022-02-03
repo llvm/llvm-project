@@ -33,7 +33,7 @@ typedef TPtr *TabHandle;
 struct RDar11387038_B { TabHandle x; };
 typedef struct RDar11387038_B RDar11387038_B;
 
-void radar11387038() {
+void radar11387038(void) {
   RDar11387038_B *pRDar11387038_B;
   struct RDar11387038* y = &(*pRDar11387038_B->x)->z[4];
 }

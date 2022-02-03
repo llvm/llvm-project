@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-void foo();
-void foo() __attribute__((unused));
-void foo() __attribute__((unused));
-void foo(){} // expected-note {{previous definition is here}}
-void foo() __attribute__((constructor)); // expected-warning {{must precede definition}}
-void foo();
+void foo(void);
+void foo(void) __attribute__((unused));
+void foo(void) __attribute__((unused));
+void foo(void){} // expected-note {{previous definition is here}}
+void foo(void) __attribute__((constructor)); // expected-warning {{must precede definition}}
+void foo(void);
 
 int bar;
 extern int bar;

@@ -20,12 +20,12 @@ void *test_no_fn_proto(int x, int y) __attribute__((alloc_align(32, 45, 37))); /
 void *passthrought(int a) {
   return test_ptr_alloc_align(a);
 }
-void *align16() {
+void *align16(void) {
   return test_ptr_alloc_align(16);
 }
-void *align15() {
+void *align15(void) {
   return test_ptr_alloc_align(15); // expected-warning {{requested alignment is not a power of 2}}
 }
-void *align1073741824() {
+void *align1073741824(void) {
   return test_ptr_alloc_align(8589934592); // expected-warning {{requested alignment must be 4294967296 bytes or smaller; maximum alignment assumed}}
 }

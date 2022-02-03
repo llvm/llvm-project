@@ -11,16 +11,16 @@ const char test3[] __attribute__((retain)) = "";
 struct __attribute__((retain)) s { // expected-warning {{'retain' attribute only applies to variables with non-local storage, functions, and Objective-C methods}}
 };
 
-void foo() {
+void foo(void) {
   static int a __attribute__((retain));
   int b __attribute__((retain)); // expected-warning {{'retain' attribute only applies to variables with non-local storage, functions, and Objective-C methods}}
   (void)a;
   (void)b;
 }
 
-__attribute__((retain,used)) static void f0() {}
-__attribute__((retain)) static void f1() {} // expected-warning {{unused function 'f1'}}
-__attribute__((retain)) void f2() {}
+__attribute__((retain,used)) static void f0(void) {}
+__attribute__((retain)) static void f1(void) {} // expected-warning {{unused function 'f1'}}
+__attribute__((retain)) void f2(void) {}
 
 /// Test attribute merging.
 int tentative;
