@@ -9,6 +9,7 @@
 #include "lldb/Host/linux/HostInfoLinux.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 #include "llvm/Support/Threading.h"

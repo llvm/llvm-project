@@ -12,8 +12,8 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/DataEncoder.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/MemoryBuffer.h"
 

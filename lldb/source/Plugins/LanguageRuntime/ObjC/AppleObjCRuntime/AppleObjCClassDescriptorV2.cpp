@@ -10,6 +10,7 @@
 
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 using namespace lldb;

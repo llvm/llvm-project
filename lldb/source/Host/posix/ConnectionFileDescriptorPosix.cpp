@@ -13,10 +13,11 @@
 #define _DARWIN_UNLIMITED_SELECT
 #endif
 
+#include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/SocketAddress.h"
-#include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/Timeout.h"
 

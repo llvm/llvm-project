@@ -41,9 +41,9 @@ add_lldb_library(lldbUtility
   GDBRemote.cpp
   IOObject.cpp
   LLDBAssert.cpp
+  LLDBLog.cpp
   Listener.cpp
   Log.cpp
-  Logging.cpp
   NameMatches.cpp
   ProcessInfo.cpp
   RegisterValue.cpp

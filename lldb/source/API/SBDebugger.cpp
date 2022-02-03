@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/API/SBDebugger.h"
 #include "SystemInitializerFull.h"
 #include "lldb/Utility/Instrumentation.h"
-
-#include "lldb/API/SBDebugger.h"
+#include "lldb/Utility/LLDBLog.h"
 
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandInterpreter.h"
