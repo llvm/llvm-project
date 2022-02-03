@@ -13,10 +13,10 @@
 #ifndef LLVM_LIB_TARGET_LANAI_MCTARGETDESC_LANAIINSTPRINTER_H
 #define LLVM_LIB_TARGET_LANAI_MCTARGETDESC_LANAIINSTPRINTER_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
+class StringRef;
 
 class LanaiInstPrinter : public MCInstPrinter {
 public:
