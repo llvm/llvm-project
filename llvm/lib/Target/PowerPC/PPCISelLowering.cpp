@@ -379,6 +379,24 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
   setOperationAction(ISD::FREM , MVT::f32, Expand);
   setOperationAction(ISD::FPOW , MVT::f32, Expand);
+
+  // MASS transformation for LLVM intrinsics with replicating fast-math flag
+  // to be consistent to PPCGenScalarMASSEntries pass
+  if (TM.getOptLevel() == CodeGenOpt::Aggressive){
+    setOperationAction(ISD::FSIN , MVT::f64, Custom);
+    setOperationAction(ISD::FCOS , MVT::f64, Custom);
+    setOperationAction(ISD::FPOW , MVT::f64, Custom);
+    setOperationAction(ISD::FLOG, MVT::f64, Custom);
+    setOperationAction(ISD::FLOG10, MVT::f64, Custom);
+    setOperationAction(ISD::FEXP, MVT::f64, Custom);
+    setOperationAction(ISD::FSIN , MVT::f32, Custom);
+    setOperationAction(ISD::FCOS , MVT::f32, Custom);
+    setOperationAction(ISD::FPOW , MVT::f32, Custom);
+    setOperationAction(ISD::FLOG, MVT::f32, Custom);
+    setOperationAction(ISD::FLOG10, MVT::f32, Custom);
+    setOperationAction(ISD::FEXP, MVT::f32, Custom);
+  }
+
   if (Subtarget.hasSPE()) {
     setOperationAction(ISD::FMA  , MVT::f64, Expand);
     setOperationAction(ISD::FMA  , MVT::f32, Expand);
@@ -11055,6 +11073,12 @@ SDValue PPCTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
 SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default: llvm_unreachable("Wasn't expecting to be able to lower this!");
+  case ISD::FPOW:               return lowerPow(Op, DAG);
+  case ISD::FSIN:               return lowerSin(Op, DAG);
+  case ISD::FCOS:               return lowerCos(Op, DAG);
+  case ISD::FLOG:               return lowerLog(Op, DAG);
+  case ISD::FLOG10:             return lowerLog10(Op, DAG);
+  case ISD::FEXP:               return lowerExp(Op, DAG);
   case ISD::ConstantPool:       return LowerConstantPool(Op, DAG);
   case ISD::BlockAddress:       return LowerBlockAddress(Op, DAG);
   case ISD::GlobalAddress:      return LowerGlobalAddress(Op, DAG);
@@ -17716,6 +17740,105 @@ bool PPCTargetLowering::splitValueIntoRegisterParts(
     return true;
   }
   return false;
+}
+
+SDValue PPCTargetLowering::lowerToLibCall(const char *LibCallName, SDValue Op,
+                                          SelectionDAG &DAG) const {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  EVT RetVT = Op.getValueType();
+  SDValue Callee =
+      DAG.getExternalSymbol(LibCallName, TLI.getPointerTy(DAG.getDataLayout()));
+  bool SignExtend = TLI.shouldSignExtendTypeInLibCall(RetVT, false);
+  TargetLowering::ArgListTy Args;
+  TargetLowering::ArgListEntry Entry;
+  for (const SDValue &N : Op->op_values()) {
+    EVT ArgVT = N.getValueType();
+    Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
+    Entry.Node = N;
+    Entry.Ty = ArgTy;
+    Entry.IsSExt = TLI.shouldSignExtendTypeInLibCall(ArgVT, SignExtend);
+    Entry.IsZExt = !Entry.IsSExt;
+    Args.push_back(Entry);
+  }
+  CLI.setDebugLoc(SDLoc(Op))
+      .setChain(DAG.getEntryNode())
+      .setLibCallee(CallingConv::C, RetVT.getTypeForEVT(*DAG.getContext()),
+                    Callee, std::move(Args))
+      .setTailCall(true)
+      .setSExtResult(SignExtend)
+      .setZExtResult(!SignExtend)
+      .setIsPostTypeLegalization(true);
+  return TLI.LowerCallTo(CLI).first;
+}
+
+SDValue PPCTargetLowering::lowerLibCallBasedOnType(
+    const char *LibCallFloatName, const char *LibCallDoubleName, SDValue Op,
+    SelectionDAG &DAG) const {
+  if (Op.getValueType() == MVT::f32)
+    return lowerToLibCall(LibCallFloatName, Op, DAG);
+
+  if (Op.getValueType() == MVT::f64)
+    return lowerToLibCall(LibCallDoubleName, Op, DAG);
+
+  return SDValue();
+}
+
+bool PPCTargetLowering::isLowringToMASSFiniteSafe(SDValue Op) const {
+  SDNodeFlags Flags = Op.getNode()->getFlags();
+  return isLowringToMASSSafe(Op) && Flags.hasNoSignedZeros() &&
+         Flags.hasNoNaNs() && Flags.hasNoInfs();
+}
+
+bool PPCTargetLowering::isLowringToMASSSafe(SDValue Op) const {
+  return Op.getNode()->getFlags().hasApproximateFuncs();
+}
+
+SDValue PPCTargetLowering::lowerLibCallBase(const char *LibCallDoubleName,
+                                            const char *LibCallFloatName,
+                                            const char *LibCallDoubleNameFinite,
+                                            const char *LibCallFloatNameFinite,
+                                            SDValue Op,
+                                            SelectionDAG &DAG) const {
+  if (!isLowringToMASSSafe(Op))
+    return SDValue();
+
+  if (!isLowringToMASSFiniteSafe(Op))
+    return lowerLibCallBasedOnType(LibCallFloatName, LibCallDoubleName, Op,
+                                   DAG);
+
+  return lowerLibCallBasedOnType(LibCallFloatNameFinite,
+                                 LibCallDoubleNameFinite, Op, DAG);
+}
+
+SDValue PPCTargetLowering::lowerPow(SDValue Op, SelectionDAG &DAG) const {
+  return lowerLibCallBase("__xl_pow", "__xl_powf", "__xl_pow_finite",
+                          "__xl_powf_finite", Op, DAG);
+}
+
+SDValue PPCTargetLowering::lowerSin(SDValue Op, SelectionDAG &DAG) const {
+  return lowerLibCallBase("__xl_sin", "__xl_sinf", "__xl_sin_finite",
+                          "__xl_sinf_finite", Op, DAG);
+}
+
+SDValue PPCTargetLowering::lowerCos(SDValue Op, SelectionDAG &DAG) const {
+  return lowerLibCallBase("__xl_cos", "__xl_cosf", "__xl_cos_finite",
+                          "__xl_cosf_finite", Op, DAG);
+}
+
+SDValue PPCTargetLowering::lowerLog(SDValue Op, SelectionDAG &DAG) const {
+  return lowerLibCallBase("__xl_log", "__xl_logf", "__xl_log_finite",
+                          "__xl_logf_finite", Op, DAG);
+}
+
+SDValue PPCTargetLowering::lowerLog10(SDValue Op, SelectionDAG &DAG) const {
+  return lowerLibCallBase("__xl_log10", "__xl_log10f", "__xl_log10_finite",
+                          "__xl_log10f_finite", Op, DAG);
+}
+
+SDValue PPCTargetLowering::lowerExp(SDValue Op, SelectionDAG &DAG) const {
+  return lowerLibCallBase("__xl_exp", "__xl_expf", "__xl_exp_finite",
+                          "__xl_expf_finite", Op, DAG);
 }
 
 // If we happen to match to an aligned D-Form, check if the Frame Index is

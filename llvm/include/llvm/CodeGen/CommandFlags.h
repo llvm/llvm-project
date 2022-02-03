@@ -62,6 +62,8 @@ bool getEnableNoNaNsFPMath();
 
 bool getEnableNoSignedZerosFPMath();
 
+bool getEnableApproxFuncFPMath();
+
 bool getEnableNoTrappingFPMath();
 
 DenormalMode::DenormalModeKind getDenormalFPMath();
