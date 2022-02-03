@@ -1510,7 +1510,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #46
+  ; CHECK: call void @f.nobuiltin() #48
 
   call fastcc noalias i32* @f.noalias() noinline
   ; CHECK: call fastcc noalias i32* @f.noalias() #12
@@ -1923,6 +1923,13 @@ declare void @byval_named_type(%named_type* byval(%named_type))
 ; CHECK: declare void @byval_type2({ i8, i8* }* byval({ i8, i8* }))
 ; CHECK: declare void @byval_named_type([8 x i8]* byval([8 x i8]))
 
+declare void @f.allocsize_one(i32) allocsize(0)
+declare void @f.allocsize_two(i32, i32) allocsize(1, 0)
+; CHECK: Function Attrs: allocsize(0)
+; CHECK: declare void @f.allocsize_one(i32)
+; CHECK: Function Attrs: allocsize(1,0)
+; CHECK: declare void @f.allocsize_two(i32, i32)
+
 ; CHECK: attributes #0 = { alignstack=4 }
 ; CHECK: attributes #1 = { alignstack=8 }
 ; CHECK: attributes #2 = { alwaysinline }
@@ -1969,7 +1976,9 @@ declare void @byval_named_type(%named_type* byval(%named_type))
 ; CHECK: attributes #43 = { strictfp }
 ; CHECK: attributes #44 = { nosanitize_coverage }
 ; CHECK: attributes #45 = { disable_sanitizer_instrumentation }
-; CHECK: attributes #46 = { builtin }
+; CHECK: attributes #46 = { allocsize(0) }
+; CHECK: attributes #47 = { allocsize(1,0) }
+; CHECK: attributes #48 = { builtin }
 
 ;; Metadata
 
