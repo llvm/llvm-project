@@ -115,7 +115,7 @@ public:
   bool isUnusedCalleeSavedReg(MCRegister PhysReg) const;
 
 protected:
-  RegAllocEvictionAdvisor(MachineFunction &MF, const RAGreedy &RA);
+  RegAllocEvictionAdvisor(const MachineFunction &MF, const RAGreedy &RA);
 
   Register canReassign(LiveInterval &VirtReg, Register PrevReg) const;
 
@@ -173,7 +173,7 @@ public:
 
   /// Get an advisor for the given context (i.e. machine function, etc)
   virtual std::unique_ptr<RegAllocEvictionAdvisor>
-  getAdvisor(MachineFunction &MF, const RAGreedy &RA) = 0;
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) = 0;
   AdvisorMode getAdvisorMode() const { return Mode; }
 
 protected:
@@ -200,7 +200,7 @@ RegAllocEvictionAdvisorAnalysis *createDevelopmentModeAdvisor();
 // out of RegAllocGreedy.cpp
 class DefaultEvictionAdvisor : public RegAllocEvictionAdvisor {
 public:
-  DefaultEvictionAdvisor(MachineFunction &MF, const RAGreedy &RA)
+  DefaultEvictionAdvisor(const MachineFunction &MF, const RAGreedy &RA)
       : RegAllocEvictionAdvisor(MF, RA) {}
 
 private:
