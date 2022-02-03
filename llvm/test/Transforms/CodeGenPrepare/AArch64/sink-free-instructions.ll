@@ -397,3 +397,100 @@ for.cond4.preheader.us.preheader:                 ; preds = %for.cond4.preheader
 for.cond4.preheader.preheader:                    ; preds = %for.cond4.preheader.lr.ph
   ret <4 x i32> zeroinitializer
 }
+
+declare <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8>, <8 x i8>)
+
+define <8 x i16> @sink_shufflevector_pmull(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: @sink_shufflevector_pmull(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 poison, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <16 x i8> [[B:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[VMULL0:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> [[TMP0]], <8 x i8> [[S2]])
+; CHECK-NEXT:    ret <8 x i16> [[VMULL0]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[S4:%.*]] = shufflevector <16 x i8> [[B]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[VMULL1:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> [[TMP1]], <8 x i8> [[S4]])
+; CHECK-NEXT:    ret <8 x i16> [[VMULL1]]
+;
+entry:
+  %s1 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %s3 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  br i1 poison, label %if.then, label %if.else
+
+if.then:
+  %s2 = shufflevector <16 x i8> %b, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %vmull0 = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> %s1, <8 x i8> %s2)
+  ret <8 x i16> %vmull0
+
+if.else:
+  %s4 = shufflevector <16 x i8> %b, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %vmull1 = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> %s3, <8 x i8> %s4)
+  ret <8 x i16> %vmull1
+}
+
+; Indexed pmull is not available on aarch64. Shuffle vector should not be sunk here.
+define <8 x i16> @no_sink_splatvector_pmull(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: @no_sink_splatvector_pmull(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    br i1 poison, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <16 x i8> [[B:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[VMULL0:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> [[S1]], <8 x i8> [[S2]])
+; CHECK-NEXT:    ret <8 x i16> [[VMULL0]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[S4:%.*]] = shufflevector <16 x i8> [[B]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[VMULL1:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> [[S3]], <8 x i8> [[S4]])
+; CHECK-NEXT:    ret <8 x i16> [[VMULL1]]
+;
+entry:
+  %s1 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %s3 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  br i1 poison, label %if.then, label %if.else
+
+if.then:
+  %s2 = shufflevector <16 x i8> %b, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %vmull0 = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> %s1, <8 x i8> %s2)
+  ret <8 x i16> %vmull0
+
+if.else:
+  %s4 = shufflevector <16 x i8> %b, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %vmull1 = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> %s3, <8 x i8> %s4)
+  ret <8 x i16> %vmull1
+}
+
+; Mask used are not suitable for pmull. Shuffle vector should not be sunk here.
+define <8 x i16> @no_sink_shufflevector_pmull(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: @no_sink_shufflevector_pmull(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    br i1 poison, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <16 x i8> [[B:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[VMULL0:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> [[S1]], <8 x i8> [[S2]])
+; CHECK-NEXT:    ret <8 x i16> [[VMULL0]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[S4:%.*]] = shufflevector <16 x i8> [[B]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[VMULL1:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> [[S3]], <8 x i8> [[S4]])
+; CHECK-NEXT:    ret <8 x i16> [[VMULL1]]
+;
+entry:
+  %s1 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %s3 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  br i1 poison, label %if.then, label %if.else
+
+if.then:
+  %s2 = shufflevector <16 x i8> %b, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %vmull0 = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> %s1, <8 x i8> %s2)
+  ret <8 x i16> %vmull0
+
+if.else:
+  %s4 = shufflevector <16 x i8> %b, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %vmull1 = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> %s3, <8 x i8> %s4)
+  ret <8 x i16> %vmull1
+}
