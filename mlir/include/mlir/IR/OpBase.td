@@ -2495,12 +2495,10 @@ class BaseOpWithOffsetSizesAndStrides<Dialect dialect, string mnemonic,
 
   // For every such op, there needs to be a:
   //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)
-  //   * LogicalResult verify(${C++ class of Op} op)
   //   * ParseResult parse${C++ class of Op}(OpAsmParser &parser,
   //                                         OperationState &result)
   // functions.
   let printer = [{ return ::print(p, *this); }];
-  let verifier = [{ return ::verify(*this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
 
   code extraBaseClassDeclaration = [{
