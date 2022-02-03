@@ -180,6 +180,15 @@ void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
   bool IsNormalCleanup = Kind & NormalCleanup;
   bool IsEHCleanup = Kind & EHCleanup;
   bool IsLifetimeMarker = Kind & LifetimeMarker;
+
+  // Per C++ [except.terminate], it is implementation-defined whether none,
+  // some, or all cleanups are called before std::terminate. Thus, when
+  // terminate is the current EH scope, we may skip adding any EH cleanup
+  // scopes.
+  if (InnermostEHScope != stable_end() &&
+      find(InnermostEHScope)->getKind() == EHScope::Terminate)
+    IsEHCleanup = false;
+
   EHCleanupScope *Scope =
     new (Buffer) EHCleanupScope(IsNormalCleanup,
                                 IsEHCleanup,
