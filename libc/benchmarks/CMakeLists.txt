@@ -29,6 +29,7 @@ function(add_libc_benchmark_unittest target_name)
     gtest
     ${LIBC_BENCHMARKS_UNITTEST_DEPENDS}
   )
+  llvm_update_compile_flags(${target_name})
 
   add_custom_command(
     TARGET ${target_name}
@@ -58,6 +59,7 @@ target_link_libraries(libc-benchmark
     LLVMSupport
     Threads::Threads
 )
+llvm_update_compile_flags(libc-benchmark)
 
 add_libc_benchmark_unittest(libc-benchmark-test
     SRCS LibcBenchmarkTest.cpp
@@ -82,6 +84,7 @@ target_link_libraries(libc-memory-benchmark
     PUBLIC
     libc-benchmark
 )
+llvm_update_compile_flags(libc-memory-benchmark)
 
 add_libc_benchmark_unittest(libc-memory-benchmark-test
     SRCS LibcMemoryBenchmarkTest.cpp
@@ -96,6 +99,7 @@ add_library(json
     JSON.h
 )
 target_link_libraries(json PUBLIC libc-memory-benchmark)
+llvm_update_compile_flags(json)
 
 add_libc_benchmark_unittest(json-test
     SRCS JSONTest.cpp
