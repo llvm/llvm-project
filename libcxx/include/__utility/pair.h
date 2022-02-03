@@ -389,7 +389,7 @@ operator<=(const pair<_T1,_T2>& __x, const pair<_T1,_T2>& __y)
 
 #endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
 template <class _T1, class _T2, class _U1, class _U2, template<class> class _TQual, template<class> class _UQual>
     requires requires { typename pair<common_reference_t<_TQual<_T1>, _UQual<_U1>>,
                                       common_reference_t<_TQual<_T2>, _UQual<_U2>>>; }
@@ -403,7 +403,7 @@ template <class _T1, class _T2, class _U1, class _U2>
 struct common_type<pair<_T1, _T2>, pair<_U1, _U2>> {
     using type = pair<common_type_t<_T1, _U1>, common_type_t<_T2, _U2>>;
 };
-#endif
+#endif // _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 template <class _T1, class _T2>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
