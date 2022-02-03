@@ -69,6 +69,7 @@ static_library("LLVMPowerPCCodeGen") {
     "PPCExpandISEL.cpp",
     "PPCFastISel.cpp",
     "PPCFrameLowering.cpp",
+    "PPCGenScalarMASSEntries.cpp",
     "PPCHazardRecognizers.cpp",
     "PPCISelDAGToDAG.cpp",
     "PPCISelLowering.cpp",
