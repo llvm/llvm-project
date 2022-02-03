@@ -17,7 +17,6 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   MLIRInferTypeOpInterface
   MLIRMemRef
   MLIRPass
-  MLIRStandard
   MLIRTensor
   MLIRTransforms
   MLIRVector

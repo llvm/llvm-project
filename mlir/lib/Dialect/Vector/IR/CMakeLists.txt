@@ -16,7 +16,6 @@ add_mlir_dialect_library(MLIRVector
   MLIRDialectUtils
   MLIRIR
   MLIRMemRef
-  MLIRStandard
   MLIRSideEffectInterfaces
   MLIRVectorInterfaces
   )
