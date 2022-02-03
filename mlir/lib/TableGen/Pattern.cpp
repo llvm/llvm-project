@@ -249,7 +249,7 @@ std::string SymbolInfoMap::SymbolInfo::getVarTypeStr(StringRef name) const {
           ->attr.getStorageType()
           .str();
     // TODO(suderman): Use a more exact type when available.
-    return "Attribute";
+    return "::mlir::Attribute";
   }
   case Kind::Operand: {
     // Use operand range for captured operands (to support potential variadic
