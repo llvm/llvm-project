@@ -18,9 +18,11 @@ add_llvm_component_library(LLVMProfileData
 
   LINK_COMPONENTS
   Core
+  Object
   Support
   Demangle
   Object
+  Symbolize
   DebugInfoDWARF
   )
 

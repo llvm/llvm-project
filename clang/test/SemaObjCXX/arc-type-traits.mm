@@ -12,7 +12,7 @@
 #define TRAIT_IS_FALSE(Trait, Type) char JOIN2(Trait,__LINE__)[Trait(Type)? -1 : 1]
 #define TRAIT_IS_TRUE_2(Trait, Type1, Type2) char JOIN2(Trait,__LINE__)[Trait(Type1, Type2)? 1 : -1]
 #define TRAIT_IS_FALSE_2(Trait, Type1, Type2) char JOIN2(Trait,__LINE__)[Trait(Type1, Type2)? -1 : 1]
-
+  
 struct HasStrong { id obj; };
 struct HasWeak { __weak id obj; };
 struct HasUnsafeUnretained { __unsafe_unretained id obj; };
@@ -213,11 +213,3 @@ TRAIT_IS_FALSE_2(__is_trivially_constructible, HasWeak, HasWeak&&);
 TRAIT_IS_TRUE_2(__is_trivially_constructible, HasUnsafeUnretained, HasUnsafeUnretained);
 TRAIT_IS_TRUE_2(__is_trivially_constructible, HasUnsafeUnretained, HasUnsafeUnretained&&);
 
-// __is_trivially_relocatable
-TRAIT_IS_TRUE(__is_trivially_relocatable, __strong id);
-TRAIT_IS_FALSE(__is_trivially_relocatable, __weak id);
-TRAIT_IS_TRUE(__is_trivially_relocatable, __autoreleasing id);
-TRAIT_IS_TRUE(__is_trivially_relocatable, __unsafe_unretained id);
-TRAIT_IS_TRUE(__is_trivially_relocatable, HasStrong);
-TRAIT_IS_FALSE(__is_trivially_relocatable, HasWeak);
-TRAIT_IS_TRUE(__is_trivially_relocatable, HasUnsafeUnretained);

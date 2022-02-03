@@ -10,6 +10,7 @@
 #define liblldb_ProcessWindowsLog_h_
 
 #include "lldb/Utility/Log.h"
+#include "llvm/ADT/BitmaskEnum.h"
 
 namespace lldb_private {
 
@@ -24,6 +25,7 @@ enum class WindowsLog : Log::MaskType {
   Thread = Log::ChannelFlag<7>,      // Log thread operations
   LLVM_MARK_AS_BITMASK_ENUM(Thread)
 };
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 class ProcessWindowsLog {
 public:

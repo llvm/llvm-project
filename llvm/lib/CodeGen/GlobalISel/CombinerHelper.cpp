@@ -131,9 +131,27 @@ isBigEndian(const SmallDenseMap<int64_t, int64_t, 8> &MemOffset2Idx,
   return BigEndian;
 }
 
+bool CombinerHelper::isPreLegalize() const { return !LI; }
+
+bool CombinerHelper::isLegal(const LegalityQuery &Query) const {
+  assert(LI && "Must have LegalizerInfo to query isLegal!");
+  return LI->getAction(Query).Action == LegalizeActions::Legal;
+}
+
 bool CombinerHelper::isLegalOrBeforeLegalizer(
     const LegalityQuery &Query) const {
-  return !LI || LI->getAction(Query).Action == LegalizeActions::Legal;
+  return isPreLegalize() || isLegal(Query);
+}
+
+bool CombinerHelper::isConstantLegalOrBeforeLegalizer(const LLT Ty) const {
+  if (!Ty.isVector())
+    return isLegalOrBeforeLegalizer({TargetOpcode::G_CONSTANT, {Ty}});
+  // Vector constants are represented as a G_BUILD_VECTOR of scalar G_CONSTANTs.
+  if (isPreLegalize())
+    return true;
+  LLT EltTy = Ty.getElementType();
+  return isLegal({TargetOpcode::G_BUILD_VECTOR, {Ty, EltTy}}) &&
+         isLegal({TargetOpcode::G_CONSTANT, {EltTy}});
 }
 
 void CombinerHelper::replaceRegWith(MachineRegisterInfo &MRI, Register FromReg,
@@ -4581,6 +4599,42 @@ bool CombinerHelper::matchMulOBy2(MachineInstr &MI, BuildFnTy &MatchInfo) {
     MI.setDesc(Builder.getTII().get(NewOpc));
     MI.getOperand(3).setReg(MI.getOperand(2).getReg());
     Observer.changedInstr(MI);
+  };
+  return true;
+}
+
+bool CombinerHelper::matchMulOBy0(MachineInstr &MI, BuildFnTy &MatchInfo) {
+  // (G_*MULO x, 0) -> 0 + no carry out
+  unsigned Opc = MI.getOpcode();
+  assert(Opc == TargetOpcode::G_UMULO || Opc == TargetOpcode::G_SMULO);
+  if (!mi_match(MI.getOperand(3).getReg(), MRI, m_SpecificICstOrSplat(0)))
+    return false;
+  Register Dst = MI.getOperand(0).getReg();
+  Register Carry = MI.getOperand(1).getReg();
+  if (!isConstantLegalOrBeforeLegalizer(MRI.getType(Dst)) ||
+      !isConstantLegalOrBeforeLegalizer(MRI.getType(Carry)))
+    return false;
+  MatchInfo = [=](MachineIRBuilder &B) {
+    B.buildConstant(Dst, 0);
+    B.buildConstant(Carry, 0);
+  };
+  return true;
+}
+
+bool CombinerHelper::matchAddOBy0(MachineInstr &MI, BuildFnTy &MatchInfo) {
+  // (G_*ADDO x, 0) -> x + no carry out
+  unsigned Opc = MI.getOpcode();
+  assert(Opc == TargetOpcode::G_UADDO || Opc == TargetOpcode::G_SADDO);
+  if (!mi_match(MI.getOperand(3).getReg(), MRI, m_SpecificICstOrSplat(0)))
+    return false;
+  Register Carry = MI.getOperand(1).getReg();
+  if (!isConstantLegalOrBeforeLegalizer(MRI.getType(Carry)))
+    return false;
+  Register Dst = MI.getOperand(0).getReg();
+  Register LHS = MI.getOperand(2).getReg();
+  MatchInfo = [=](MachineIRBuilder &B) {
+    B.buildCopy(Dst, LHS);
+    B.buildConstant(Carry, 0);
   };
   return true;
 }

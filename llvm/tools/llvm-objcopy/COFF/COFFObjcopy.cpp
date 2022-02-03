@@ -253,6 +253,35 @@ static Error handleArgs(const CommonConfig &Config,
         Characteristics);
   }
 
+  for (StringRef Flag : Config.UpdateSection) {
+    StringRef SecName, FileName;
+    std::tie(SecName, FileName) = Flag.split('=');
+
+    auto BufOrErr = MemoryBuffer::getFile(FileName);
+    if (!BufOrErr)
+      return createFileError(FileName, errorCodeToError(BufOrErr.getError()));
+    auto Buf = std::move(*BufOrErr);
+
+    auto It = llvm::find_if(Obj.getMutableSections(), [SecName](auto &Sec) {
+      return Sec.Name == SecName;
+    });
+    if (It == Obj.getMutableSections().end())
+      return createStringError(errc::invalid_argument,
+                               "could not find section with name '%s'",
+                               SecName.str().c_str());
+    size_t ContentSize = It->getContents().size();
+    if (!ContentSize)
+      return createStringError(
+          errc::invalid_argument,
+          "section '%s' cannot be updated because it does not have contents",
+          SecName.str().c_str());
+    if (ContentSize < Buf->getBufferSize())
+      return createStringError(
+          errc::invalid_argument,
+          "new section cannot be larger than previous section");
+    It->setOwnedContents({Buf->getBufferStart(), Buf->getBufferEnd()});
+  }
+
   if (!Config.AddGnuDebugLink.empty())
     if (Error E = addGnuDebugLink(Obj, Config.AddGnuDebugLink))
       return E;

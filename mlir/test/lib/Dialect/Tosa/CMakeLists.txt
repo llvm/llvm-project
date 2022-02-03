@@ -12,4 +12,5 @@ add_mlir_dialect_library(MLIRTosaTestPasses
   LINK_LIBS PUBLIC
   MLIRPass
   MLIRTosa
+  MLIRTransformUtils
   )

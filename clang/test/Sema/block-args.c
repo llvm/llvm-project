@@ -2,7 +2,7 @@
 
 void take(void*);
 
-void test() {
+void test(void) {
   take(^(int x){});
   take(^(int x, int y){});
   take(^(int x, int y){});
@@ -30,14 +30,14 @@ int main(int argc, char** argv) {
 }
 
 // radar 7528255
-void f0() {
+void f0(void) {
   ^(int, double d, char) {}(1, 1.34, 'a'); // expected-warning {{omitting the parameter name in a function definition is a C2x extension}} \
                                            // expected-warning {{omitting the parameter name in a function definition is a C2x extension}}
 }
 
 // rdar://problem/8962770
-void test4() {
-  int (^f)() = ^((x)) { }; // expected-warning {{type specifier missing}} expected-error {{type-id cannot have a name}}
+void test4(void) {
+  int (^f)(void) = ^((x)) { }; // expected-warning {{type specifier missing}} expected-error {{type-id cannot have a name}}
 }
 
 // rdar://problem/9170609

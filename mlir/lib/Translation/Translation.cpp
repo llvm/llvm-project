@@ -140,6 +140,11 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
       "o", llvm::cl::desc("Output filename"), llvm::cl::value_desc("filename"),
       llvm::cl::init("-"));
 
+  static llvm::cl::opt<bool> allowUnregisteredDialects(
+      "allow-unregistered-dialect",
+      llvm::cl::desc("Allow operation with no registered dialects"),
+      llvm::cl::init(false));
+
   static llvm::cl::opt<bool> splitInputFile(
       "split-input-file",
       llvm::cl::desc("Split the input file into pieces and "
@@ -179,6 +184,7 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
   auto processBuffer = [&](std::unique_ptr<llvm::MemoryBuffer> ownedBuffer,
                            raw_ostream &os) {
     MLIRContext context;
+    context.allowUnregisteredDialects(allowUnregisteredDialects);
     context.printOpOnDiagnostic(!verifyDiagnostics);
     llvm::SourceMgr sourceMgr;
     sourceMgr.AddNewSourceBuffer(std::move(ownedBuffer), SMLoc());

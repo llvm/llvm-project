@@ -48,7 +48,7 @@ vector signed __int128 *__attribute__((__overloadable__)) convert2(__v1slll);
 vector unsigned __int128 *__attribute__((__overloadable__)) convert2(__v1ulll);
 #endif
 
-void test() {
+void test(void) {
   __v16sc gv1;
   __v16uc gv2;
   __v8ss gv3;

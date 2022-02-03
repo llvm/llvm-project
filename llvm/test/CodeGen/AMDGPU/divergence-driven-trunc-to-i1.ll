@@ -15,13 +15,11 @@ define amdgpu_kernel void @uniform_trunc_i16_to_i1(i1 addrspace(1)* %out, i16 %x
   ; GCN-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
   ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY2]], %subreg.sub0, killed [[COPY1]], %subreg.sub1, killed [[S_MOV_B32_1]], %subreg.sub2, killed [[S_MOV_B32_]], %subreg.sub3
   ; GCN-NEXT:   [[S_SEXT_I32_I16_:%[0-9]+]]:sreg_32 = S_SEXT_I32_I16 [[S_LOAD_DWORD_IMM]]
-  ; GCN-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-  ; GCN-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[S_LOAD_DWORD_IMM]], killed [[S_MOV_B32_2]], implicit-def dead $scc
-  ; GCN-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 1, killed [[S_LSHR_B32_]], implicit-def dead $scc
-  ; GCN-NEXT:   S_CMP_EQ_U32 killed [[S_AND_B32_]], 1, implicit-def $scc
+  ; GCN-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 65536, [[S_LOAD_DWORD_IMM]], implicit-def dead $scc
+  ; GCN-NEXT:   S_CMP_LG_U32 killed [[S_AND_B32_]], 0, implicit-def $scc
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_64 = COPY $scc
-  ; GCN-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; GCN-NEXT:   S_CMP_LT_I32 killed [[S_SEXT_I32_I16_]], killed [[S_MOV_B32_3]], implicit-def $scc
+  ; GCN-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; GCN-NEXT:   S_CMP_LT_I32 killed [[S_SEXT_I32_I16_]], killed [[S_MOV_B32_2]], implicit-def $scc
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sreg_64 = COPY $scc
   ; GCN-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64_xexec = S_OR_B64 killed [[COPY4]], killed [[COPY3]], implicit-def dead $scc
   ; GCN-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed [[S_OR_B64_]], implicit $exec
@@ -173,4 +171,3 @@ define i1 @divergent_trunc_i64_to_i1(i1 addrspace(1)* %out, i64 %x, i1 %z) {
   %select = select i1 %setcc, i1 true, i1 %z
   ret i1 %select
 }
-

@@ -176,10 +176,9 @@ public:
   /// emitting diagnostics.
   void printStackTraceOnDiagnostic(bool enable);
 
-  /// Return information about all registered operations.  This isn't very
-  /// efficient: typically you should ask the operations about their properties
-  /// directly.
-  std::vector<RegisteredOperationName> getRegisteredOperations();
+  /// Return a sorted array containing the information about all registered
+  /// operations.
+  ArrayRef<RegisteredOperationName> getRegisteredOperations();
 
   /// Return true if this operation name is registered in this context.
   bool isOperationRegistered(StringRef name);

@@ -28,5 +28,5 @@ typedef int __attribute__((align_value(32))) aligned_int;
 typedef double * __attribute__((align_value(32*2))) aligned_double5;
 
 // expected-warning@+1 {{'align_value' attribute only applies to variables and typedefs}}
-void foo() __attribute__((align_value(32)));
+void bar(void) __attribute__((align_value(32)));
 

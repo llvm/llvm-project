@@ -80,7 +80,7 @@ void __attribute__((target_clones("avx2,default"), target_clones("arch=atom,defa
 dupe_normal2(void);
 
 int mv_after_use(void);
-int useage() {
+int useage(void) {
   return mv_after_use();
 }
 // expected-error@+1 {{function declaration cannot become a multiversioned function after first usage}}

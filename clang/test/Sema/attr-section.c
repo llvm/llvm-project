@@ -9,7 +9,7 @@ int y __attribute__((section(
    "sadf"))); // expected-error {{mach-o section specifier requires a segment and section separated by a comma}}
 
 // PR6007
-void test() {
+void test(void) {
   __attribute__((section("NEAR,x"))) int n1; // expected-error {{'section' attribute only applies to functions, global variables, Objective-C methods, and Objective-C properties}}
   __attribute__((section("NEAR,x"))) static int n2; // ok.
 }

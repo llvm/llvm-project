@@ -1007,6 +1007,12 @@ void UnwrappedLineParser::parsePPDefine() {
     }
   }
 
+  // In the context of a define, even keywords should be treated as normal
+  // identifiers. Setting the kind to identifier is not enough, because we need
+  // to treat additional keywords like __except as well, which are already
+  // identifiers.
+  FormatTok->Tok.setKind(tok::identifier);
+  FormatTok->Tok.setIdentifierInfo(nullptr);
   nextToken();
   if (FormatTok->Tok.getKind() == tok::l_paren &&
       !FormatTok->hasWhitespaceBefore())
@@ -3051,7 +3057,8 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       }
       if (FormatTok->is(tok::l_square)) {
         FormatToken *Previous = FormatTok->Previous;
-        if (!Previous || Previous->isNot(tok::r_paren)) {
+        if (!Previous ||
+            !(Previous->is(tok::r_paren) || Previous->isTypeOrIdentifier())) {
           // Don't try parsing a lambda if we had a closing parenthesis before,
           // it was probably a pointer to an array: int (*)[].
           if (!tryToParseLambda())
