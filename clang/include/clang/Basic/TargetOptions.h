@@ -91,6 +91,13 @@ public:
   /// * CUDA compilation uses it to control parts of CUDA compilation
   ///   in clang that depend on specific version of the CUDA SDK.
   llvm::VersionTuple SDKVersion;
+
+  /// The name of the darwin target- ariant triple to compile for.
+  std::string DarwinTargetVariantTriple;
+
+  /// The version of the darwin target variant SDK which was used during the
+  /// compilation.
+  llvm::VersionTuple DarwinTargetVariantSDKVersion;
 };
 
 }  // end namespace clang
