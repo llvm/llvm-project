@@ -70,6 +70,26 @@ class RegScavenger {
 public:
   RegScavenger() = default;
 
+  /// Record that \p Reg is in use at scavenging index \p FI. This is for
+  /// targets which need to directly manage the spilling process, and need to
+  /// update the scavenger's internal state.  It's expected this be called a
+  /// second time with \p Restore set to a non-null value, so that the
+  /// externally inserted restore instruction resets the scavenged slot
+  /// liveness when encountered.
+  void assignRegToScavengingIndex(int FI, Register Reg,
+                                  MachineInstr *Restore = nullptr) {
+    for (ScavengedInfo &Slot : Scavenged) {
+      if (Slot.FrameIndex == FI) {
+        assert(!Slot.Reg || Slot.Reg == Reg);
+        Slot.Reg = Reg;
+        Slot.Restore = Restore;
+        return;
+      }
+    }
+
+    llvm_unreachable("did not find scavenging index");
+  }
+
   /// Start tracking liveness from the begin of basic block \p MBB.
   void enterBasicBlock(MachineBasicBlock &MBB);
 
