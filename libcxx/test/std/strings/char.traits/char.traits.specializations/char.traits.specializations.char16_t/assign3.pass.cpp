@@ -19,14 +19,14 @@
 
 TEST_CONSTEXPR_CXX20 bool test()
 {
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
+#ifndef TEST_HAS_NO_UNICODE_CHARS
     char16_t s2[3] = {0};
     assert(std::char_traits<char16_t>::assign(s2, 3, char16_t(5)) == s2);
     assert(s2[0] == char16_t(5));
     assert(s2[1] == char16_t(5));
     assert(s2[2] == char16_t(5));
     assert(std::char_traits<char16_t>::assign(NULL, 0, char16_t(5)) == NULL);
-#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif // TEST_HAS_NO_UNICODE_CHARS
 
   return true;
 }

@@ -19,7 +19,7 @@
 
 int main(int, char**)
 {
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
+#ifndef TEST_HAS_NO_UNICODE_CHARS
 #if TEST_STD_VER >= 11
     assert(std::char_traits<char32_t>::not_eof(U'a') == U'a');
     assert(std::char_traits<char32_t>::not_eof(U'A') == U'A');
@@ -27,7 +27,7 @@ int main(int, char**)
     assert(std::char_traits<char32_t>::not_eof(0) == 0);
     assert(std::char_traits<char32_t>::not_eof(std::char_traits<char32_t>::eof()) !=
            std::char_traits<char32_t>::eof());
-#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif // TEST_HAS_NO_UNICODE_CHARS
 
   return 0;
 }
