@@ -110,7 +110,7 @@ std::pair<tooling::Replacements, unsigned> TokenAnalyzer::process() {
   UnwrappedLineParser Parser(Style, Lex.getKeywords(),
                              Env.getFirstStartColumn(), Tokens, *this);
   Parser.parse();
-  assert(UnwrappedLines.rbegin()->empty());
+  assert(UnwrappedLines.back().empty());
   unsigned Penalty = 0;
   for (unsigned Run = 0, RunE = UnwrappedLines.size(); Run + 1 != RunE; ++Run) {
     const auto &Lines = UnwrappedLines[Run];
