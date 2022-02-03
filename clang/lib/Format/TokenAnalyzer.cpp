@@ -116,6 +116,7 @@ std::pair<tooling::Replacements, unsigned> TokenAnalyzer::process() {
     const auto &Lines = UnwrappedLines[Run];
     LLVM_DEBUG(llvm::dbgs() << "Run " << Run << "...\n");
     SmallVector<AnnotatedLine *, 16> AnnotatedLines;
+    AnnotatedLines.reserve(Lines.size());
 
     TokenAnnotator Annotator(Style, Lex.getKeywords());
     for (const UnwrappedLine &Line : Lines) {
