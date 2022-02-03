@@ -285,12 +285,14 @@ public:
   /// and the denominators in `denominators`. If no explicit representation
   /// could be found for the `i^th` local identifier, `denominators[i]` is set
   /// to 0.
-  void getLocalReprs(std::vector<SmallVector<int64_t, 8>> &dividends,
-                     SmallVector<unsigned, 4> &denominators,
-                     std::vector<presburger_utils::MaybeLocalRepr> &repr) const;
-  void getLocalReprs(std::vector<presburger_utils::MaybeLocalRepr> &repr) const;
-  void getLocalReprs(std::vector<SmallVector<int64_t, 8>> &dividends,
-                     SmallVector<unsigned, 4> &denominators) const;
+  void
+  getLocalReprs(SmallVectorImpl<SmallVector<int64_t, 8>> &dividends,
+                SmallVectorImpl<unsigned> &denominators,
+                SmallVectorImpl<presburger_utils::MaybeLocalRepr> &repr) const;
+  void
+  getLocalReprs(SmallVectorImpl<presburger_utils::MaybeLocalRepr> &repr) const;
+  void getLocalReprs(SmallVectorImpl<SmallVector<int64_t, 8>> &dividends,
+                     SmallVectorImpl<unsigned> &denominators) const;
 
   /// The type of bound: equal, lower bound or upper bound.
   enum BoundType { EQ, LB, UB };
