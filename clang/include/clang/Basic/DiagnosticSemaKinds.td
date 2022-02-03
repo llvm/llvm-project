@@ -10696,6 +10696,8 @@ def err_omp_directive_before_requires : Error <
   "'%0' region encountered before requires directive with '%1' clause">;
 def note_omp_requires_encountered_directive : Note <
   "'%0' previously encountered here">;
+def err_omp_device_ancestor_without_requires_reverse_offload : Error <
+  "Device clause with ancestor device-modifier used without specifying 'requires reverse_offload'">;
 def err_omp_invalid_scope : Error <
   "'#pragma omp %0' directive must appear only in file scope">;
 def note_omp_invalid_length_on_this_ptr_mapping : Note <

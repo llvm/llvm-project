@@ -11,7 +11,7 @@
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
-
+#pragma omp requires reverse_offload
 void foo(int n) {
 
   // CHECK:       [[N:%.+]] = load i32, i32* [[N_ADDR:%.+]],
