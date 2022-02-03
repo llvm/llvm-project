@@ -42,6 +42,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -543,46 +544,44 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   SmallVector<Instruction *, 4> UnrecognizedLifetimes;
 
   bool CallsReturnTwice = false;
-  for (auto &BB : *F) {
-    for (Instruction &I : BB) {
-      if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-        if (CI->canReturnTwice()) {
-          CallsReturnTwice = true;
-        }
+  for (Instruction &I : instructions(F)) {
+    if (CallInst *CI = dyn_cast<CallInst>(&I)) {
+      if (CI->canReturnTwice()) {
+        CallsReturnTwice = true;
       }
-      if (auto *AI = dyn_cast<AllocaInst>(&I)) {
-        Allocas[AI].AI = AI;
-        Allocas[AI].OldAI = AI;
-        continue;
-      }
-
-      if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
-        for (Value *V : DVI->location_ops())
-          if (auto *AI = dyn_cast_or_null<AllocaInst>(V))
-            if (Allocas[AI].DbgVariableIntrinsics.empty() ||
-                Allocas[AI].DbgVariableIntrinsics.back() != DVI)
-              Allocas[AI].DbgVariableIntrinsics.push_back(DVI);
-        continue;
-      }
-
-      auto *II = dyn_cast<IntrinsicInst>(&I);
-      if (II && (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-                 II->getIntrinsicID() == Intrinsic::lifetime_end)) {
-        AllocaInst *AI = findAllocaForValue(II->getArgOperand(1));
-        if (!AI) {
-          UnrecognizedLifetimes.push_back(&I);
-          continue;
-        }
-        if (II->getIntrinsicID() == Intrinsic::lifetime_start)
-          Allocas[AI].LifetimeStart.push_back(II);
-        else
-          Allocas[AI].LifetimeEnd.push_back(II);
-      }
-
-      Instruction *ExitUntag = getUntagLocationIfFunctionExit(I);
-      if (ExitUntag)
-        RetVec.push_back(ExitUntag);
     }
+    if (auto *AI = dyn_cast<AllocaInst>(&I)) {
+      Allocas[AI].AI = AI;
+      Allocas[AI].OldAI = AI;
+      continue;
+    }
+
+    if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
+      for (Value *V : DVI->location_ops())
+        if (auto *AI = dyn_cast_or_null<AllocaInst>(V))
+          if (Allocas[AI].DbgVariableIntrinsics.empty() ||
+              Allocas[AI].DbgVariableIntrinsics.back() != DVI)
+            Allocas[AI].DbgVariableIntrinsics.push_back(DVI);
+      continue;
+    }
+
+    auto *II = dyn_cast<IntrinsicInst>(&I);
+    if (II && (II->getIntrinsicID() == Intrinsic::lifetime_start ||
+                II->getIntrinsicID() == Intrinsic::lifetime_end)) {
+      AllocaInst *AI = findAllocaForValue(II->getArgOperand(1));
+      if (!AI) {
+        UnrecognizedLifetimes.push_back(&I);
+        continue;
+      }
+      if (II->getIntrinsicID() == Intrinsic::lifetime_start)
+        Allocas[AI].LifetimeStart.push_back(II);
+      else
+        Allocas[AI].LifetimeEnd.push_back(II);
+    }
+
+    Instruction *ExitUntag = getUntagLocationIfFunctionExit(I);
+    if (ExitUntag)
+      RetVec.push_back(ExitUntag);
   }
 
   if (Allocas.empty())
