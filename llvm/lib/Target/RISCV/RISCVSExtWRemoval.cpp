@@ -89,6 +89,7 @@ static bool isSignExtendingOpW(const MachineInstr &MI) {
   case RISCV::FCVT_WU_S:
   case RISCV::FCVT_W_D:
   case RISCV::FCVT_WU_D:
+  case RISCV::FMV_X_W:
   // The following aren't W instructions, but are either sign extended from a
   // smaller size or put zeros in bits 63:31.
   case RISCV::LBU:
@@ -102,6 +103,7 @@ static bool isSignExtendingOpW(const MachineInstr &MI) {
   case RISCV::SEXT_B:
   case RISCV::SEXT_H:
   case RISCV::ZEXT_H_RV64:
+  case RISCV::FMV_X_H:
     return true;
   // shifting right sufficiently makes the value 32-bit sign-extended
   case RISCV::SRAI:
