@@ -77,8 +77,7 @@ static bool registerRSDefaultTargetOpts(clang::TargetOptions &proto,
 
 bool RenderScriptRuntimeModulePass::runOnModule(llvm::Module &module) {
   bool changed_module = false;
-  Log *log(
-      GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE | LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Language | LLDBLog::Expressions);
 
   std::string err;
   llvm::StringRef real_triple =

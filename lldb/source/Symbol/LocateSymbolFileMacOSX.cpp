@@ -44,7 +44,7 @@ static CFDictionaryRef (*g_dlsym_DBGCopyDSYMPropertyLists)(CFURLRef dsym_url) = 
 
 int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                                        ModuleSpec &return_module_spec) {
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  Log *log = GetLog(LLDBLog::Host);
   if (!ModuleList::GetGlobalModuleListProperties().GetEnableExternalLookup()) {
     LLDB_LOGF(log, "Spotlight lookup for .dSYM bundles is disabled.");
     return 0;
@@ -306,7 +306,7 @@ FileSpec Symbols::FindSymbolFileInBundle(const FileSpec &dsym_bundle_fspec,
 
 static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
                                                 ModuleSpec &module_spec) {
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  Log *log = GetLog(LLDBLog::Host);
   bool success = false;
   if (uuid_dict != NULL && CFGetTypeID(uuid_dict) == CFDictionaryGetTypeID()) {
     std::string str;
@@ -592,7 +592,7 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
                        g_dsym_for_uuid_exe_path, file_path);
 
       if (!command.GetString().empty()) {
-        Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+        Log *log = GetLog(LLDBLog::Host);
         int exit_status = -1;
         int signo = -1;
         std::string command_output;

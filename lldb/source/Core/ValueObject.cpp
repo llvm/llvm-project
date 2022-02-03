@@ -225,7 +225,7 @@ bool ValueObject::UpdateValueIfNeeded(bool update_format) {
 }
 
 bool ValueObject::UpdateFormatsIfNeeded() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+  Log *log = GetLog(LLDBLog::DataFormatters);
   LLDB_LOGF(log,
             "[%s %p] checking for FormatManager revisions. ValueObject "
             "rev: %d - Global rev: %d",

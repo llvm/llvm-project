@@ -63,7 +63,7 @@ bool ObjCLanguageRuntime::AddClass(ObjCISA isa,
 void ObjCLanguageRuntime::AddToMethodCache(lldb::addr_t class_addr,
                                            lldb::addr_t selector,
                                            lldb::addr_t impl_addr) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   if (log) {
     LLDB_LOGF(log,
               "Caching: class 0x%" PRIx64 " selector 0x%" PRIx64

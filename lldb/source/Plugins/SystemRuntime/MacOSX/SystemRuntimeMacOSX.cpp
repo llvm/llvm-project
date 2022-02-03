@@ -880,7 +880,7 @@ void SystemRuntimeMacOSX::PopulateQueuesUsingLibBTR(
     lldb_private::QueueList &queue_list) {
   Status error;
   DataBufferHeap data(queues_buffer_size, 0);
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
+  Log *log = GetLog(LLDBLog::SystemRuntime);
   if (m_process->ReadMemory(queues_buffer, data.GetBytes(), queues_buffer_size,
                             error) == queues_buffer_size &&
       error.Success()) {

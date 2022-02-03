@@ -46,7 +46,7 @@ lldb::addr_t PersistentExpressionState::LookupSymbol(ConstString name) {
 
 void PersistentExpressionState::RegisterExecutionUnit(
     lldb::IRExecutionUnitSP &execution_unit_sp) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   m_execution_units.insert(execution_unit_sp);
 

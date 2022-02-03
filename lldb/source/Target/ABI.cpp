@@ -214,7 +214,7 @@ std::unique_ptr<llvm::MCRegisterInfo> ABI::MakeMCRegisterInfo(const ArchSpec &ar
   const llvm::Target *target =
       llvm::TargetRegistry::lookupTarget(triple, lookup_error);
   if (!target) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS),
+    LLDB_LOG(GetLog(LLDBLog::Process),
              "Failed to create an llvm target for {0}: {1}", triple,
              lookup_error);
     return nullptr;

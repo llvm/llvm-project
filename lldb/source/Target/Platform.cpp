@@ -391,7 +391,7 @@ Platform::Platform(bool is_host)
       m_ignores_remote_hostname(false), m_trap_handlers(),
       m_calculated_trap_handlers(false),
       m_module_cache(std::make_unique<ModuleCache>()) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+  Log *log = GetLog(LLDBLog::Object);
   LLDB_LOGF(log, "%p Platform::Platform()", static_cast<void *>(this));
 }
 
@@ -623,7 +623,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
 Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
   Status error;
 
-  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log, "Platform::Install (src='%s', dst='%s')",
             src.GetPath().c_str(), dst.GetPath().c_str());
   FileSpec fixed_dst(dst);
@@ -733,7 +733,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
 
 bool Platform::SetWorkingDirectory(const FileSpec &file_spec) {
   if (IsHost()) {
-    Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
+    Log *log = GetLog(LLDBLog::Platform);
     LLDB_LOG(log, "{0}", file_spec);
     if (std::error_code ec = llvm::sys::fs::set_current_path(file_spec.GetPath())) {
       LLDB_LOG(log, "error: {0}", ec.message());
@@ -802,7 +802,7 @@ ConstString Platform::GetFullNameForDylib(ConstString basename) {
 }
 
 bool Platform::SetRemoteWorkingDirectory(const FileSpec &working_dir) {
-  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log, "Platform::SetRemoteWorkingDirectory('%s')",
             working_dir.GetCString());
   m_working_dir = working_dir;
@@ -1056,7 +1056,7 @@ uint32_t Platform::FindProcesses(const ProcessInstanceInfoMatch &match_info,
 
 Status Platform::LaunchProcess(ProcessLaunchInfo &launch_info) {
   Status error;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log, "Platform::%s()", __FUNCTION__);
 
   // Take care of the host case so that each subclass can just call this
@@ -1109,7 +1109,7 @@ Status Platform::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
 }
 
 Status Platform::KillProcess(const lldb::pid_t pid) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log, "Platform::%s, pid %" PRIu64, __FUNCTION__, pid);
 
   if (!IsHost()) {
@@ -1123,7 +1123,7 @@ Status Platform::KillProcess(const lldb::pid_t pid) {
 lldb::ProcessSP Platform::DebugProcess(ProcessLaunchInfo &launch_info,
                                        Debugger &debugger, Target &target,
                                        Status &error) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOG(log, "target = {0})", &target);
 
   ProcessSP process_sp;
@@ -1250,7 +1250,7 @@ bool Platform::IsCompatibleArchitecture(const ArchSpec &arch,
 
 Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
                          uint32_t uid, uint32_t gid) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log, "[PutFile] Using block by block transfer....\n");
 
   auto source_open_options =
@@ -1646,7 +1646,7 @@ bool Platform::GetCachedSharedModule(const ModuleSpec &module_spec,
       !GetGlobalPlatformProperties().GetModuleCacheDirectory())
     return false;
 
-  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
+  Log *log = GetLog(LLDBLog::Platform);
 
   // Check local cache for a module.
   auto error = m_module_cache->GetAndPut(
