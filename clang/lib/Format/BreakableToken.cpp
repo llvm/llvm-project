@@ -95,9 +95,8 @@ getCommentSplit(StringRef Text, unsigned ContentStartColumn,
     StringRef::size_type SpaceOffset =
         Text.find_first_of(Blanks, MaxSplitBytes);
     if (SpaceOffset != StringRef::npos && SpaceOffset + 1 < Text.size() &&
-        Text[SpaceOffset + 1] == '{') {
+        Text[SpaceOffset + 1] == '{')
       MaxSplitBytes = SpaceOffset + 1;
-    }
   }
 
   StringRef::size_type SpaceOffset = Text.find_last_of(Blanks, MaxSplitBytes);
@@ -397,9 +396,8 @@ BreakableBlockComment::BreakableBlockComment(
   // ** blah blah blah
   // */
   if (Lines.size() >= 2 && Content[1].startswith("**") &&
-      static_cast<unsigned>(ContentColumn[1]) == StartColumn) {
+      static_cast<unsigned>(ContentColumn[1]) == StartColumn)
     DecorationColumn = StartColumn;
-  }
 
   Decoration = "* ";
   if (Lines.size() == 1 && !FirstInLine) {
@@ -431,9 +429,8 @@ BreakableBlockComment::BreakableBlockComment(
         // correctly indented.
         LastLineNeedsDecoration = false;
         // Align the star in the last '*/' with the stars on the previous lines.
-        if (e >= 2 && !Decoration.empty()) {
+        if (e >= 2 && !Decoration.empty())
           ContentColumn[i] = DecorationColumn;
-        }
       } else if (Decoration.empty()) {
         // For all other lines, set the start column to 0 if they're empty, so
         // we do not insert trailing whitespace anywhere.
@@ -449,9 +446,8 @@ BreakableBlockComment::BreakableBlockComment(
     unsigned DecorationSize = Decoration.startswith(Content[i])
                                   ? Content[i].size()
                                   : Decoration.size();
-    if (DecorationSize) {
+    if (DecorationSize)
       ContentColumn[i] = DecorationColumn + DecorationSize;
-    }
     Content[i] = Content[i].substr(DecorationSize);
     if (!Decoration.startswith(Content[i]))
       IndentAtLineBreak =
@@ -480,11 +476,10 @@ BreakableBlockComment::BreakableBlockComment(
   LLVM_DEBUG({
     llvm::dbgs() << "IndentAtLineBreak " << IndentAtLineBreak << "\n";
     llvm::dbgs() << "DelimitersOnNewline " << DelimitersOnNewline << "\n";
-    for (size_t i = 0; i < Lines.size(); ++i) {
+    for (size_t i = 0; i < Lines.size(); ++i)
       llvm::dbgs() << i << " |" << Content[i] << "| "
                    << "CC=" << ContentColumn[i] << "| "
                    << "IN=" << (Content[i].data() - Lines[i].data()) << "\n";
-    }
   });
 }
 
@@ -584,9 +579,8 @@ unsigned BreakableBlockComment::getContentIndent(unsigned LineIndex) const {
   // /** line 0 */
   // is "* line 0", so we need to skip over the decoration in that case.
   StringRef ContentWithNoDecoration = Content[LineIndex];
-  if (LineIndex == 0 && ContentWithNoDecoration.startswith("*")) {
+  if (LineIndex == 0 && ContentWithNoDecoration.startswith("*"))
     ContentWithNoDecoration = ContentWithNoDecoration.substr(1).ltrim(Blanks);
-  }
   StringRef FirstWord = ContentWithNoDecoration.substr(
       0, ContentWithNoDecoration.find_first_of(Blanks));
   if (ContentIndentingJavadocAnnotations.find(FirstWord) !=
@@ -739,9 +733,8 @@ bool BreakableBlockComment::mayReflow(
   // Content[LineIndex] may exclude the indent after the '*' decoration. In that
   // case, we compute the start of the comment pragma manually.
   StringRef IndentContent = Content[LineIndex];
-  if (Lines[LineIndex].ltrim(Blanks).startswith("*")) {
+  if (Lines[LineIndex].ltrim(Blanks).startswith("*"))
     IndentContent = Lines[LineIndex].ltrim(Blanks).substr(1);
-  }
   return LineIndex > 0 && !CommentPragmasRegex.match(IndentContent) &&
          mayReflowContent(Content[LineIndex]) && !Tok.Finalized &&
          !switchesFormatting(tokenAt(LineIndex));
@@ -1001,9 +994,8 @@ void BreakableLineCommentSection::adaptStartOfLine(
 }
 
 void BreakableLineCommentSection::updateNextToken(LineState &State) const {
-  if (LastLineTok) {
+  if (LastLineTok)
     State.NextToken = LastLineTok->Next;
-  }
 }
 
 bool BreakableLineCommentSection::mayReflow(
@@ -1011,9 +1003,8 @@ bool BreakableLineCommentSection::mayReflow(
   // Line comments have the indent as part of the prefix, so we need to
   // recompute the start of the line.
   StringRef IndentContent = Content[LineIndex];
-  if (Lines[LineIndex].startswith("//")) {
+  if (Lines[LineIndex].startswith("//"))
     IndentContent = Lines[LineIndex].substr(2);
-  }
   // FIXME: Decide whether we want to reflow non-regular indents:
   // Currently, we only reflow when the OriginalPrefix[LineIndex] matches the
   // OriginalPrefix[LineIndex-1]. That means we don't reflow

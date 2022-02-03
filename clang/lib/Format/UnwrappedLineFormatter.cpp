@@ -274,9 +274,8 @@ private:
                    : 0;
 
       if (Tok && Tok->is(tok::kw_template) &&
-          Style.BraceWrapping.SplitEmptyRecord && EmptyBlock) {
+          Style.BraceWrapping.SplitEmptyRecord && EmptyBlock)
         return 0;
-      }
     }
 
     auto ShouldMergeShortFunctions =
@@ -358,10 +357,8 @@ private:
     }
 
     // Try to merge a function block with left brace unwrapped
-    if (TheLine->Last->is(TT_FunctionLBrace) &&
-        TheLine->First != TheLine->Last) {
+    if (TheLine->Last->is(TT_FunctionLBrace) && TheLine->First != TheLine->Last)
       return MergeShortFunctions ? tryMergeSimpleBlock(I, E, Limit) : 0;
-    }
     // Try to merge a control statement block with left brace unwrapped
     if (TheLine->Last->is(tok::l_brace) && TheLine->First != TheLine->Last &&
         TheLine->First->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for,
@@ -515,9 +512,8 @@ private:
                  : 0;
     }
     if (TheLine->InPPDirective &&
-        (TheLine->First->HasUnescapedNewline || TheLine->First->IsFirst)) {
+        (TheLine->First->HasUnescapedNewline || TheLine->First->IsFirst))
       return tryMergeSimplePPDirective(I, E, Limit);
-    }
     return 0;
   }
 
@@ -786,9 +782,8 @@ private:
                          SmallVectorImpl<AnnotatedLine *>::const_iterator E,
                          unsigned Limit) {
     if (I[0]->InPPDirective && I + 1 != E &&
-        !I[1]->First->HasUnescapedNewline && !I[1]->First->is(tok::eof)) {
+        !I[1]->First->HasUnescapedNewline && !I[1]->First->is(tok::eof))
       return Limit < 2 ? 0 : Limit - 2;
-    }
     return Limit;
   }
 
@@ -800,10 +795,9 @@ private:
   }
 
   bool containsMustBreak(const AnnotatedLine *Line) {
-    for (const FormatToken *Tok = Line->First; Tok; Tok = Tok->Next) {
+    for (const FormatToken *Tok = Line->First; Tok; Tok = Tok->Next)
       if (Tok->MustBreakBefore)
         return true;
-    }
     return false;
   }
 
@@ -905,9 +899,8 @@ protected:
       if (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
           P.NestedBlockIndent == P.LastSpace) {
         if (State.NextToken->MatchingParen &&
-            State.NextToken->MatchingParen->is(TT_LambdaLBrace)) {
+            State.NextToken->MatchingParen->is(TT_LambdaLBrace))
           State.Stack.pop_back();
-        }
         if (LBrace->is(TT_LambdaLBrace))
           AdditionalIndent = 0;
       }
@@ -1177,11 +1170,10 @@ private:
 
       LLVM_DEBUG({
         printLineState(Node->Previous->State);
-        if (Node->NewLine) {
+        if (Node->NewLine)
           llvm::dbgs() << "Penalty for placing "
                        << Node->Previous->State.NextToken->Tok.getName()
                        << " on a new line: " << Penalty << "\n";
-        }
       });
     }
   }
