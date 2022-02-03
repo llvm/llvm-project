@@ -43,8 +43,9 @@ New Features
   functions are known to be inefficient, both in memory usage and performance.
   The implementation isn't API- or ABI-stable and therefore considered
   experimental. (Some not-yet-implemented papers require an API-break.)
-  Vendors can still disable this header by turning the CMake option
-  `LIBCXX_ENABLE_INCOMPLETE_FEATURES` off.
+  As a result, it is disabled by default, however vendors can enable the
+  header by using ``-DLIBCXX_ENABLE_INCOMPLETE_FEATURES=ON`` when
+  configuring their build.
 
 - There's a new CMake option ``LIBCXX_ENABLE_UNICODE`` to disable Unicode
   support in the ``<format>`` header. This only affects the estimation of the

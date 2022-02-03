@@ -133,7 +133,7 @@ option(LIBCXX_ENABLE_INCOMPLETE_FEATURES
     "Whether to enable support for incomplete library features. Incomplete features
     are new library features under development. These features don't guarantee
     ABI stability nor the quality of completed library features. Vendors
-    shipping the library may want to disable this option." ON)
+    shipping the library may want to disable this option." OFF)
 set(LIBCXX_TEST_CONFIG "legacy.cfg.in" CACHE STRING
     "The path to the Lit testing configuration to use when running the tests.
      If a relative path is provided, it is assumed to be relative to '<monorepo>/libcxx/test/configs'.")
