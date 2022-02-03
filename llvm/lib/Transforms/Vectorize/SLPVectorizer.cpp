@@ -2666,7 +2666,7 @@ private:
         };
 
         // If BundleMember is a vector bundle, its operands may have been
-        // reordered duiring buildTree(). We therefore need to get its operands
+        // reordered during buildTree(). We therefore need to get its operands
         // through the TreeEntry.
         if (TreeEntry *TE = BundleMember->TE) {
           int Lane = BundleMember->Lane;
