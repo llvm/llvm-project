@@ -5,11 +5,11 @@
 # RUN:     -o %t/elf_riscv32_branch.o %s
 # RUN: llvm-jitlink -noexec \
 # RUN:     -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
-# RUN:     -define-abs external_func=0xfe \
+# RUN:     -abs external_func=0xfe \
 # RUN:     -check %s %t/elf_riscv64_branch.o
 # RUN: llvm-jitlink -noexec \
 # RUN:     -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
-# RUN:     -define-abs external_func=0xfe \
+# RUN:     -abs external_func=0xfe \
 # RUN:     -check %s %t/elf_riscv32_branch.o
 #
 

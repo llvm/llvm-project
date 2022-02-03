@@ -1,4 +1,4 @@
-# RUN: llvm-jitlink -noexec -define-abs __ZTIi=0x1 -define-abs ___gxx_personality_v0=0x2 %S/Inputs/MachO_x86-64_ehframe.o
+# RUN: llvm-jitlink -noexec -abs __ZTIi=0x1 -abs ___gxx_personality_v0=0x2 %S/Inputs/MachO_x86-64_ehframe.o
 #
 # Perform a no-exec link of MachO_x86-64_ehframe and verify that it does not
 # generate any errors despite the last FDE referring to the first CIE (rather
