@@ -2156,7 +2156,7 @@ Error Object::updateSection(StringRef Name, ArrayRef<uint8_t> Data) {
   if (!OldSec->hasContents())
     return createStringError(
         errc::invalid_argument,
-        "section '%s' can't be updated because it does not have contents",
+        "section '%s' cannot be updated because it does not have contents",
         Name.str().c_str());
 
   if (Data.size() > OldSec->Size && OldSec->ParentSegment)
