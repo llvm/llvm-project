@@ -22,7 +22,7 @@ namespace fir::factory {
 class CharacterExprHelper {
 public:
   /// Constructor.
-  explicit CharacterExprHelper(FirOpBuilder &builder, mlir::Location loc)
+  explicit CharacterExprHelper(fir::FirOpBuilder &builder, mlir::Location loc)
       : builder{builder}, loc{loc} {}
   CharacterExprHelper(const CharacterExprHelper &) = delete;
 
@@ -186,6 +186,39 @@ mlir::FuncOp getLlvmMemcpy(FirOpBuilder &builder);
 mlir::FuncOp getLlvmMemmove(FirOpBuilder &builder);
 mlir::FuncOp getLlvmMemset(FirOpBuilder &builder);
 mlir::FuncOp getRealloc(FirOpBuilder &builder);
+
+//===----------------------------------------------------------------------===//
+// Tools to work with Character dummy procedures
+//===----------------------------------------------------------------------===//
+
+/// Create a tuple<function type, length type> type to pass character functions
+/// as arguments along their length. The function type set in the tuple is the
+/// one provided by \p funcPointerType.
+mlir::Type getCharacterProcedureTupleType(mlir::Type funcPointerType);
+
+/// Is this tuple type holding a character function and its result length ?
+bool isCharacterProcedureTuple(mlir::Type type);
+
+/// Is \p tuple a value holding a character function address and its result
+/// length ?
+inline bool isCharacterProcedureTuple(mlir::Value tuple) {
+  return isCharacterProcedureTuple(tuple.getType());
+}
+
+/// Create a tuple<addr, len> given \p addr and \p len as well as the tuple
+/// type \p argTy. \p addr must be any function address, and \p len must be
+/// any integer. Converts will be inserted if needed if \addr and \p len
+/// types are not the same as the one inside the tuple type \p tupleType.
+mlir::Value createCharacterProcedureTuple(fir::FirOpBuilder &builder,
+                                          mlir::Location loc,
+                                          mlir::Type tupleType,
+                                          mlir::Value addr, mlir::Value len);
+
+/// Given a tuple containing a character function address and its result length,
+/// extract the tuple into a pair of value <function address, result length>.
+std::pair<mlir::Value, mlir::Value>
+extractCharacterProcedureTuple(fir::FirOpBuilder &builder, mlir::Location loc,
+                               mlir::Value tuple);
 
 } // namespace fir::factory
 

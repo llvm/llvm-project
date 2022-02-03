@@ -14,26 +14,8 @@
 //   inline constexpr bool enable_borrowed_range<reverse_view<T>> = enable_borrowed_range<T>;
 
 #include <ranges>
-#include <cassert>
 
-#include "test_iterators.h"
+#include "test_range.h"
 
-struct View : std::ranges::view_base {
-  friend int* begin(View&);
-  friend int* begin(View const&);
-  friend sentinel_wrapper<int*> end(View&);
-  friend sentinel_wrapper<int*> end(View const&);
-};
-
-struct BorrowableView : std::ranges::view_base {
-  friend int* begin(BorrowableView&);
-  friend int* begin(BorrowableView const&);
-  friend sentinel_wrapper<int*> end(BorrowableView&);
-  friend sentinel_wrapper<int*> end(BorrowableView const&);
-};
-
-template<>
-inline constexpr bool std::ranges::enable_borrowed_range<BorrowableView> = true;
-
-static_assert(!std::ranges::enable_borrowed_range<std::ranges::reverse_view<View>>);
-static_assert( std::ranges::enable_borrowed_range<std::ranges::reverse_view<BorrowableView>>);
+static_assert( std::ranges::borrowed_range<std::ranges::reverse_view<BorrowedView>>);
+static_assert(!std::ranges::borrowed_range<std::ranges::reverse_view<NonBorrowedView>>);

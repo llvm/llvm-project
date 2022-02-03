@@ -11,11 +11,21 @@
 
 include "mlir/Pass/PassBase.td"
 
-def ArithmeticBufferize : Pass<"arith-bufferize", "FuncOp"> {
+def ArithmeticBufferize : Pass<"arith-bufferize", "ModuleOp"> {
   let summary = "Bufferize Arithmetic dialect ops.";
+  let description = [{
+    This pass bufferizes arith dialect ops.
+
+    This pass needs to be a module pass because it inserts memref.global
+    ops into the module, which cannot be done safely from a function pass due to
+    multi-threading. Most other bufferization passes can run in parallel at
+    function granularity.
+  }];
   let constructor = "mlir::arith::createArithmeticBufferizePass()";
-  let dependentDialects = ["bufferization::BufferizationDialect",
-                           "memref::MemRefDialect"];
+  let options = [
+    Option<"alignment", "alignment", "unsigned", /*default=*/"0",
+           "Create global memrefs with a specified alignment">,
+  ];
 }
 
 def ArithmeticExpandOps : Pass<"arith-expand", "FuncOp"> {

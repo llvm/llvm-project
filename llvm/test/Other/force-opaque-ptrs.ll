@@ -19,6 +19,9 @@
 ; CHECK: @ga2 = alias i19, ptr @g2
 @ga2 = alias i19, i19* bitcast (i18* @g2 to i19*)
 
+; CHECK: @gi = ifunc i20 (), ptr @f
+@gi = ifunc i20 (), i20 ()* ()* bitcast (void (i32*)* @f to i20 ()* ()*)
+
 define void @f(i32* %p) {
 ; CHECK-LABEL: define {{[^@]+}}@f
 ; CHECK-SAME: (ptr [[P:%.*]]) {

@@ -132,88 +132,6 @@ LogicalResult AssertOp::canonicalize(AssertOp op, PatternRewriter &rewriter) {
 }
 
 //===----------------------------------------------------------------------===//
-// GenericAtomicRMWOp
-//===----------------------------------------------------------------------===//
-
-void GenericAtomicRMWOp::build(OpBuilder &builder, OperationState &result,
-                               Value memref, ValueRange ivs) {
-  result.addOperands(memref);
-  result.addOperands(ivs);
-
-  if (auto memrefType = memref.getType().dyn_cast<MemRefType>()) {
-    Type elementType = memrefType.getElementType();
-    result.addTypes(elementType);
-
-    Region *bodyRegion = result.addRegion();
-    bodyRegion->push_back(new Block());
-    bodyRegion->addArgument(elementType, memref.getLoc());
-  }
-}
-
-static LogicalResult verify(GenericAtomicRMWOp op) {
-  auto &body = op.getRegion();
-  if (body.getNumArguments() != 1)
-    return op.emitOpError("expected single number of entry block arguments");
-
-  if (op.getResult().getType() != body.getArgument(0).getType())
-    return op.emitOpError(
-        "expected block argument of the same type result type");
-
-  bool hasSideEffects =
-      body.walk([&](Operation *nestedOp) {
-            if (MemoryEffectOpInterface::hasNoEffect(nestedOp))
-              return WalkResult::advance();
-            nestedOp->emitError("body of 'generic_atomic_rmw' should contain "
-                                "only operations with no side effects");
-            return WalkResult::interrupt();
-          })
-          .wasInterrupted();
-  return hasSideEffects ? failure() : success();
-}
-
-static ParseResult parseGenericAtomicRMWOp(OpAsmParser &parser,
-                                           OperationState &result) {
-  OpAsmParser::OperandType memref;
-  Type memrefType;
-  SmallVector<OpAsmParser::OperandType, 4> ivs;
-
-  Type indexType = parser.getBuilder().getIndexType();
-  if (parser.parseOperand(memref) ||
-      parser.parseOperandList(ivs, OpAsmParser::Delimiter::Square) ||
-      parser.parseColonType(memrefType) ||
-      parser.resolveOperand(memref, memrefType, result.operands) ||
-      parser.resolveOperands(ivs, indexType, result.operands))
-    return failure();
-
-  Region *body = result.addRegion();
-  if (parser.parseRegion(*body, llvm::None, llvm::None) ||
-      parser.parseOptionalAttrDict(result.attributes))
-    return failure();
-  result.types.push_back(memrefType.cast<MemRefType>().getElementType());
-  return success();
-}
-
-static void print(OpAsmPrinter &p, GenericAtomicRMWOp op) {
-  p << ' ' << op.getMemref() << "[" << op.getIndices()
-    << "] : " << op.getMemref().getType() << ' ';
-  p.printRegion(op.getRegion());
-  p.printOptionalAttrDict(op->getAttrs());
-}
-
-//===----------------------------------------------------------------------===//
-// AtomicYieldOp
-//===----------------------------------------------------------------------===//
-
-static LogicalResult verify(AtomicYieldOp op) {
-  Type parentType = op->getParentOp()->getResultTypes().front();
-  Type resultType = op.getResult().getType();
-  if (parentType != resultType)
-    return op.emitOpError() << "types mismatch between yield op: " << resultType
-                            << " and its parent: " << parentType;
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // BranchOp
 //===----------------------------------------------------------------------===//
 
@@ -669,8 +587,8 @@ static void print(OpAsmPrinter &p, ConstantOp &op) {
     p << ' ';
   p << op.getValue();
 
-  // If the value is a symbol reference or Array, print a trailing type.
-  if (op.getValue().isa<SymbolRefAttr, ArrayAttr>())
+  // If the value is a symbol reference, print a trailing type.
+  if (op.getValue().isa<SymbolRefAttr>())
     p << " : " << op.getType();
 }
 
@@ -681,10 +599,9 @@ static ParseResult parseConstantOp(OpAsmParser &parser,
       parser.parseAttribute(valueAttr, "value", result.attributes))
     return failure();
 
-  // If the attribute is a symbol reference or array, then we expect a trailing
-  // type.
+  // If the attribute is a symbol reference, then we expect a trailing type.
   Type type;
-  if (!valueAttr.isa<SymbolRefAttr, ArrayAttr>())
+  if (!valueAttr.isa<SymbolRefAttr>())
     type = valueAttr.getType();
   else if (parser.parseColonType(type))
     return failure();
@@ -704,24 +621,6 @@ static LogicalResult verify(ConstantOp &op) {
   if (!value.getType().isa<NoneType>() && type != value.getType())
     return op.emitOpError() << "requires attribute's type (" << value.getType()
                             << ") to match op's return type (" << type << ")";
-
-  if (auto complexTy = type.dyn_cast<ComplexType>()) {
-    auto arrayAttr = value.dyn_cast<ArrayAttr>();
-    if (!complexTy || arrayAttr.size() != 2)
-      return op.emitOpError(
-          "requires 'value' to be a complex constant, represented as array of "
-          "two values");
-    auto complexEltTy = complexTy.getElementType();
-    if (complexEltTy != arrayAttr[0].getType() ||
-        complexEltTy != arrayAttr[1].getType()) {
-      return op.emitOpError()
-             << "requires attribute's element types (" << arrayAttr[0].getType()
-             << ", " << arrayAttr[1].getType()
-             << ") to match the element type of the op's return type ("
-             << complexEltTy << ")";
-    }
-    return success();
-  }
 
   if (type.isa<FunctionType>()) {
     auto fnAttr = value.dyn_cast<FlatSymbolRefAttr>();
@@ -769,19 +668,8 @@ bool ConstantOp::isBuildableWith(Attribute value, Type type) {
   // SymbolRefAttr can only be used with a function type.
   if (value.isa<SymbolRefAttr>())
     return type.isa<FunctionType>();
-  // The attribute must have the same type as 'type'.
-  if (!value.getType().isa<NoneType>() && value.getType() != type)
-    return false;
-  // Finally, check that the attribute kind is handled.
-  if (auto arrAttr = value.dyn_cast<ArrayAttr>()) {
-    auto complexTy = type.dyn_cast<ComplexType>();
-    if (!complexTy)
-      return false;
-    auto complexEltTy = complexTy.getElementType();
-    return arrAttr.size() == 2 && arrAttr[0].getType() == complexEltTy &&
-           arrAttr[1].getType() == complexEltTy;
-  }
-  return value.isa<UnitAttr>();
+  // Otherwise, this must be a UnitAttr.
+  return value.isa<UnitAttr>() && type.isa<NoneType>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -876,7 +764,7 @@ struct SelectToExtUI : public OpRewritePattern<SelectOp> {
   }
 };
 
-void SelectOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void SelectOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
   results.insert<SelectI1Simplify, SelectToExtUI>(context);
 }

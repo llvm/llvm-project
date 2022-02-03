@@ -39,7 +39,7 @@ define i32 @test_memmove_with_deopt() {
 ; CHECK-LABEL: Function: test_memmove_with_deopt:
 ; CHECK: Just Mod:  Ptr: i8* %A	<->  call void @llvm.memmove.p0i8.p0i8.i64(i8* %A, i8* %B, i64 -1, i1 false) [ "deopt"() ]
 ; CHECK: Just Ref:  Ptr: i8* %B	<->  call void @llvm.memmove.p0i8.p0i8.i64(i8* %A, i8* %B, i64 -1, i1 false) [ "deopt"() ]
-; CHECK: Both ModRef:  Ptr: i32* @G1	<->  call void @llvm.memmove.p0i8.p0i8.i64(i8* %A, i8* %B, i64 -1, i1 false) [ "deopt"() ]
+; CHECK: Just Ref:  Ptr: i32* @G1	<->  call void @llvm.memmove.p0i8.p0i8.i64(i8* %A, i8* %B, i64 -1, i1 false) [ "deopt"() ]
 
   %A = alloca i8
   %B = alloca i8

@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++98 -Wno-inaccessible-base
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base
+// RUN: %clang_cc1 -triple x86_64-apple-darwin    %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -DCLANG_ABI_COMPAT=13
+// RUN: %clang_cc1 -triple x86_64-scei-ps4        %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -DCLANG_ABI_COMPAT=6
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -fclang-abi-compat=6 -DCLANG_ABI_COMPAT=6
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -fclang-abi-compat=13 -DCLANG_ABI_COMPAT=13
 // expected-no-diagnostics
 
 #define SA(n, p) int a##n[(p) ? 1 : -1]
@@ -604,3 +607,37 @@ namespace PR37275 {
 #endif
 #pragma pack(pop)
 }
+
+namespace non_pod {
+struct t1 {
+protected:
+  int a;
+};
+// GCC prints warning: ignoring packed attribute because of unpacked non-POD field 't1 t2::v1'`
+struct t2 {
+  char c1;
+  short s1;
+  char c2;
+  t1 v1;
+} __attribute__((packed));
+#if defined(CLANG_ABI_COMPAT) && CLANG_ABI_COMPAT <= 13
+_Static_assert(_Alignof(t1) == 4, "");
+_Static_assert(_Alignof(t2) == 1, "");
+#else
+_Static_assert(_Alignof(t1) == 4, "");
+_Static_assert(_Alignof(t2) == 4, "");
+#endif
+_Static_assert(sizeof(t2) == 8, ""); // it's still packing the rest of the struct
+} // namespace non_pod
+
+namespace non_pod_packed {
+struct t1 {
+protected:
+  int a;
+} __attribute__((packed));
+struct t2 {
+  t1 v1;
+} __attribute__((packed));
+_Static_assert(_Alignof(t1) == 1, "");
+_Static_assert(_Alignof(t2) == 1, "");
+} // namespace non_pod_packed

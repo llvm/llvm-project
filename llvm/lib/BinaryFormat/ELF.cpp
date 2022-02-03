@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/Error.h"
 
 using namespace llvm;
 using namespace ELF;

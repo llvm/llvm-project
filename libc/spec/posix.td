@@ -17,6 +17,7 @@ def POSIX : StandardSpec<"POSIX"> {
   ConstType ConstCharPtr = ConstType<CharPtr>;
   ConstType ConstRestrictedCharPtr = ConstType<RestrictedCharPtr>;
 
+  NamedType ModeTType = NamedType<"mode_t">;
   NamedType OffTType = NamedType<"off_t">;
   NamedType SSizeTType = NamedType<"ssize_t">;
 
@@ -105,6 +106,30 @@ def POSIX : StandardSpec<"POSIX"> {
       [], // Types
       [], // Enumerations
       []  // Functions
+  >;
+
+  HeaderSpec FCntl = HeaderSpec<
+    "fcntl.h",
+    [], // Macros
+    [ModeTType],
+    [], // Enumerations
+    [
+      FunctionSpec<
+          "creat",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstCharPtr>, ArgSpec<ModeTType>]
+      >,
+      FunctionSpec<
+          "open",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstCharPtr>, ArgSpec<IntType>, ArgSpec<VarArgType>]
+      >,
+      FunctionSpec<
+          "openat",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>, ArgSpec<ConstCharPtr>, ArgSpec<IntType>, ArgSpec<VarArgType>]
+      >,
+    ]
   >;
 
   HeaderSpec SysMMan = HeaderSpec<
@@ -203,6 +228,21 @@ def POSIX : StandardSpec<"POSIX"> {
     [], // Enumerations
     [
         FunctionSpec<
+          "close",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "fsync",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "read",
+          RetValSpec<SSizeTType>,
+          [ArgSpec<IntType>, ArgSpec<VoidPtr>, ArgSpec<SizeTType>]
+        >,
+        FunctionSpec<
           "write",
           RetValSpec<SSizeTType>,
           [ArgSpec<IntType>, ArgSpec<ConstVoidPtr>, ArgSpec<SizeTType>]
@@ -280,6 +320,7 @@ def POSIX : StandardSpec<"POSIX"> {
   let Headers = [
     CType,
     Errno,
+    FCntl,
     SysMMan,
     Signal,
     UniStd,

@@ -469,19 +469,17 @@ void ObjFile::parse(bool ignoreComdats) {
   // Populate `Segments`.
   for (const WasmSegment &s : wasmObj->dataSegments()) {
     InputChunk *seg;
-    if (shouldMerge(s)) {
+    if (shouldMerge(s))
       seg = make<MergeInputChunk>(s, this);
-    } else
+    else
       seg = make<InputSegment>(s, this);
     seg->discarded = isExcludedByComdat(seg);
     // Older object files did not include WASM_SEG_FLAG_TLS and instead
     // relied on the naming convention.  To maintain compat with such objects
     // we still imply the TLS flag based on the name of the segment.
     if (!seg->isTLS() &&
-        (seg->name.startswith(".tdata") || seg->name.startswith(".tbss"))) {
+        (seg->name.startswith(".tdata") || seg->name.startswith(".tbss")))
       seg->flags |= WASM_SEG_FLAG_TLS;
-      seg->implicitTLS = true;
-    }
     segments.emplace_back(seg);
   }
   setRelocs(segments, dataSection);
@@ -581,9 +579,11 @@ Symbol *ObjFile::createDefined(const WasmSymbol &sym) {
     InputChunk *seg = segments[sym.Info.DataRef.Segment];
     auto offset = sym.Info.DataRef.Offset;
     auto size = sym.Info.DataRef.Size;
-    if (seg->implicitTLS) {
+    // Support older (e.g. llvm 13) object files that pre-date the per-symbol
+    // TLS flag, and symbols were assumed to be TLS by being defined in a TLS
+    // segment.
+    if (!(flags & WASM_SYMBOL_TLS) && seg->isTLS())
       flags |= WASM_SYMBOL_TLS;
-    }
     if (sym.isBindingLocal())
       return make<DefinedData>(name, flags, this, seg, offset, size);
     if (seg->discarded)

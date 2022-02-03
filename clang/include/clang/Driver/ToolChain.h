@@ -417,6 +417,9 @@ public:
   /// Check whether to enable x86 relax relocations by default.
   virtual bool useRelaxRelocations() const;
 
+  /// Check whether use IEEE binary128 as long double format by default.
+  bool defaultToIEEELongDouble() const;
+
   /// GetDefaultStackProtectorLevel - Get the default stack protector level for
   /// this tool chain.
   virtual LangOptions::StackProtectorMode
@@ -736,6 +739,22 @@ public:
       const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
       const llvm::fltSemantics *FPType = nullptr) const {
     return llvm::DenormalMode::getIEEE();
+  }
+
+  // We want to expand the shortened versions of the triples passed in to
+  // the values used for the bitcode libraries.
+  static llvm::Triple getOpenMPTriple(StringRef TripleStr) {
+    llvm::Triple TT(TripleStr);
+    if (TT.getVendor() == llvm::Triple::UnknownVendor ||
+        TT.getOS() == llvm::Triple::UnknownOS) {
+      if (TT.getArch() == llvm::Triple::nvptx)
+        return llvm::Triple("nvptx-nvidia-cuda");
+      if (TT.getArch() == llvm::Triple::nvptx64)
+        return llvm::Triple("nvptx64-nvidia-cuda");
+      if (TT.getArch() == llvm::Triple::amdgcn)
+        return llvm::Triple("amdgcn-amd-amdhsa");
+    }
+    return TT;
   }
 };
 

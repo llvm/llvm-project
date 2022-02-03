@@ -21,6 +21,7 @@ add_mlir_dialect_library(MLIRTensor
   LINK_LIBS PUBLIC
   MLIRArithmetic
   MLIRCastInterfaces
+  MLIRComplex
   MLIRDialectUtils
   MLIRIR
   MLIRInferTypeOpInterface

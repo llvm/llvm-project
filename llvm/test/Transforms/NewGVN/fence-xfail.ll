@@ -1,5 +1,5 @@
 ; XFAIL: *
-; RUN: opt -S -basic-aa -newgvn < %s | FileCheck %s
+; RUN: opt -S -passes=newgvn < %s | FileCheck %s
 
 @a = external constant i32
 ; We can value forward across the fence since we can (semantically) 

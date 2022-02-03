@@ -1782,6 +1782,7 @@ cc_library(
         "lib/Dialect/SCF/Transforms/*.h",
     ]),
     hdrs = [
+        "include/mlir/Dialect/SCF/BufferizableOpInterfaceImpl.h",
         "include/mlir/Dialect/SCF/Passes.h",
         "include/mlir/Dialect/SCF/Transforms.h",
     ],
@@ -1799,6 +1800,7 @@ cc_library(
         ":Pass",
         ":SCFDialect",
         ":SCFPassIncGen",
+        ":SCFUtils",
         ":StandardOps",
         ":Support",
         ":TensorDialect",
@@ -1919,13 +1921,9 @@ cc_library(
     hdrs = ["include/mlir/Dialect/SparseTensor/IR/SparseTensor.h"],
     includes = ["include"],
     deps = [
-        ":ArithmeticDialect",
         ":IR",
-        ":InferTypeOpInterface",
-        ":SideEffectInterfaces",
         ":SparseTensorAttrDefsIncGen",
         ":SparseTensorOpsIncGen",
-        ":StandardOps",
         "//llvm:Support",
     ],
 )
@@ -1966,6 +1964,8 @@ cc_library(
         ":MemRefDialect",
         ":Pass",
         ":SCFDialect",
+        ":SCFTransforms",
+        ":SCFUtils",
         ":SparseTensor",
         ":SparseTensorPassIncGen",
         ":SparseTensorUtils",
@@ -1975,6 +1975,24 @@ cc_library(
         ":Transforms",
         ":VectorOps",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "SparseTensorPipelines",
+    srcs = glob(["lib/Dialect/SparseTensor/Pipelines/*.cpp"]),
+    hdrs = ["include/mlir/Dialect/SparseTensor/Pipelines/Passes.h"],
+    includes = ["include"],
+    deps = [
+        ":ArithmeticTransforms",
+        ":BufferizationTransforms",
+        ":ConversionPasses",
+        ":LinalgTransforms",
+        ":Pass",
+        ":SparseTensor",
+        ":SparseTensorTransforms",
+        ":StandardOpsTransforms",
+        ":TensorTransforms",
     ],
 )
 
@@ -2241,6 +2259,7 @@ cc_library(
         ":MemRefDialect",
         ":Pass",
         ":SCFDialect",
+        ":SCFUtils",
         ":StandardOps",
         ":Support",
         ":Transforms",
@@ -2412,9 +2431,15 @@ cc_library(
             "lib/Dialect/SCF/*.h",
         ],
     ),
-    hdrs = glob([
-        "include/mlir/Dialect/SCF/*.h",
-    ]),
+    hdrs = glob(
+        [
+            "include/mlir/Dialect/SCF/*.h",
+        ],
+        exclude = [
+            "include/mlir/Dialect/SCF/BufferizableOpInterfaceImpl.h",
+            "include/mlir/Dialect/SCF/Transforms.h",
+        ],
+    ),
     includes = ["include"],
     deps = [
         ":ArithmeticDialect",
@@ -2422,13 +2447,39 @@ cc_library(
         ":ControlFlowInterfaces",
         ":IR",
         ":LoopLikeInterface",
-        ":MemRefDialect",
         ":Pass",
         ":SCFIncGen",
         ":SCFPassIncGen",
         ":StandardOps",
         ":Support",
-        ":TensorDialect",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "SCFUtils",
+    srcs = glob(
+        [
+            "lib/Dialect/SCF/Utils/*.cpp",
+        ],
+    ),
+    hdrs = glob(
+        [
+            "include/mlir/Dialect/SCF/Utils/*.h",
+        ],
+    ),
+    includes = ["include"],
+    deps = [
+        ":Affine",
+        ":AffineAnalysis",
+        ":Analysis",
+        ":ArithmeticDialect",
+        ":DialectUtils",
+        ":IR",
+        ":SCFDialect",
+        ":StandardOps",
+        ":Support",
+        ":Transforms",
         "//llvm:Support",
     ],
 )
@@ -2576,8 +2627,6 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithmeticDialect",
-        ":CallOpInterfaces",
-        ":CommonFolders",
         ":ControlFlowInterfaces",
         ":Dialect",
         ":IR",
@@ -2585,8 +2634,6 @@ cc_library(
         ":MLIRShapeCanonicalizationIncGen",
         ":ShapeOpsIncGen",
         ":SideEffectInterfaces",
-        ":StandardOps",
-        ":Support",
         ":TensorDialect",
         "//llvm:Support",
     ],
@@ -3103,8 +3150,6 @@ cc_library(
         ":LLVMDialect",
         ":MemRefDialect",
         ":SideEffectInterfaces",
-        ":StandardOps",
-        ":Support",
         "//llvm:Support",
     ],
 )
@@ -3161,7 +3206,6 @@ cc_library(
         ":Async",
         ":DLTIDialect",
         ":AffineUtils",
-        ":ExecutionEngineUtils",
         ":GPUDialect",
         ":GPUPassIncGen",
         ":MemRefDialect",
@@ -4338,6 +4382,7 @@ cc_library(
     deps = [
         ":ArithmeticDialect",
         ":CastOpInterfaces",
+        ":ComplexDialect",
         ":ControlFlowInterfaces",
         ":DialectUtils",
         ":IR",
@@ -5672,6 +5717,7 @@ cc_library(
         ":ShapeTransforms",
         ":ShapeTransformsPassIncGen",
         ":SparseTensor",
+        ":SparseTensorPipelines",
         ":SparseTensorTransforms",
         ":StandardOps",
         ":StandardOpsTransforms",
@@ -5732,6 +5778,7 @@ cc_binary(
         "//mlir/test:TestIR",
         "//mlir/test:TestLinalg",
         "//mlir/test:TestMath",
+        "//mlir/test:TestMemRef",
         "//mlir/test:TestPass",
         "//mlir/test:TestReducer",
         "//mlir/test:TestRewrite",
@@ -6108,10 +6155,8 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
-        ":ArithmeticDialect",
         ":IR",
         ":OpenACCOpsIncGen",
-        ":StandardOps",
         ":Transforms",
         "//llvm:Support",
     ],
@@ -6256,8 +6301,6 @@ cc_library(
         ":LLVMDialect",
         ":OpenMPInterfacesIncGen",
         ":OpenMPOpsIncGen",
-        ":SideEffectInterfaces",
-        ":StandardOps",
         "//llvm:Support",
     ],
 )
@@ -6426,7 +6469,6 @@ cc_library(
         ":QuantOpsIncGen",
         ":QuantPassIncGen",
         ":SideEffectInterfaces",
-        ":StandardOps",
         ":TransformUtils",
         "//llvm:Support",
     ],
@@ -6598,27 +6640,6 @@ cc_library(
 )
 
 cc_library(
-    name = "ArithBufferizableOpInterfaceImpl",
-    srcs = [
-        "lib/Dialect/Linalg/ComprehensiveBufferize/ArithInterfaceImpl.cpp",
-    ],
-    hdrs = [
-        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/ArithInterfaceImpl.h",
-    ],
-    includes = ["include"],
-    deps = [
-        ":ArithmeticDialect",
-        ":BufferizationDialect",
-        ":BufferizationTransforms",
-        ":IR",
-        ":MemRefDialect",
-        ":Support",
-        ":TransformUtils",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
     name = "LinalgBufferizableOpInterfaceImpl",
     srcs = [
         "lib/Dialect/Linalg/ComprehensiveBufferize/LinalgInterfaceImpl.cpp",
@@ -6634,43 +6655,6 @@ cc_library(
         ":LinalgOps",
         ":LinalgStructuredOpsIncGen",
         ":TensorDialect",
-    ],
-)
-
-cc_library(
-    name = "SCFBufferizableOpInterfaceImpl",
-    srcs = [
-        "lib/Dialect/Linalg/ComprehensiveBufferize/SCFInterfaceImpl.cpp",
-    ],
-    hdrs = [
-        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/SCFInterfaceImpl.h",
-    ],
-    includes = ["include"],
-    deps = [
-        ":BufferizationDialect",
-        ":BufferizationTransforms",
-        ":IR",
-        ":SCFDialect",
-        ":Support",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "StdBufferizableOpInterfaceImpl",
-    srcs = [
-        "lib/Dialect/Linalg/ComprehensiveBufferize/StdInterfaceImpl.cpp",
-    ],
-    hdrs = [
-        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/StdInterfaceImpl.h",
-    ],
-    includes = ["include"],
-    deps = [
-        ":BufferizationDialect",
-        ":IR",
-        ":StandardOps",
-        ":Support",
-        "//llvm:Support",
     ],
 )
 
@@ -6893,8 +6877,8 @@ cc_library(
         ":AffineBufferizableOpInterfaceImpl",
         ":AffineUtils",
         ":Analysis",
-        ":ArithBufferizableOpInterfaceImpl",
         ":ArithmeticDialect",
+        ":ArithmeticTransforms",
         ":BufferizationDialect",
         ":BufferizationTransforms",
         ":ComplexDialect",
@@ -6909,12 +6893,11 @@ cc_library(
         ":MemRefDialect",
         ":ModuleBufferization",
         ":Pass",
-        ":SCFBufferizableOpInterfaceImpl",
         ":SCFDialect",
         ":SCFTransforms",
+        ":SCFUtils",
         ":StandardOps",
         ":StandardOpsTransforms",
-        ":StdBufferizableOpInterfaceImpl",
         ":Support",
         ":TensorDialect",
         ":TensorTransforms",
@@ -7385,8 +7368,8 @@ cc_library(
         ":ComplexBaseIncGen",
         ":ComplexOpsIncGen",
         ":IR",
+        ":InferTypeOpInterface",
         ":SideEffectInterfaces",
-        ":StandardOps",
         ":Support",
         ":VectorInterfaces",
         "//llvm:Support",
@@ -7583,7 +7566,10 @@ cc_library(
         "lib/Dialect/Arithmetic/Transforms/*.cpp",
         "lib/Dialect/Arithmetic/Transforms/*.h",
     ]),
-    hdrs = ["include/mlir/Dialect/Arithmetic/Transforms/Passes.h"],
+    hdrs = [
+        "include/mlir/Dialect/Arithmetic/Transforms/BufferizableOpInterfaceImpl.h",
+        "include/mlir/Dialect/Arithmetic/Transforms/Passes.h",
+    ],
     includes = ["include"],
     deps = [
         ":ArithmeticDialect",
@@ -7594,7 +7580,10 @@ cc_library(
         ":MemRefDialect",
         ":Pass",
         ":StandardOps",
+        ":Support",
+        ":TransformUtils",
         ":Transforms",
+        "//llvm:Support",
     ],
 )
 
@@ -7849,6 +7838,7 @@ cc_library(
         ":Affine",
         ":AffineUtils",
         ":ArithmeticDialect",
+        ":ArithmeticTransforms",
         ":IR",
         ":InferTypeOpInterface",
         ":MemRefDialect",

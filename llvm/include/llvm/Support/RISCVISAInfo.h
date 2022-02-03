@@ -92,6 +92,9 @@ private:
   void updateFLen();
   void updateMinVLen();
   void updateMaxELen();
+
+  static llvm::Expected<std::unique_ptr<RISCVISAInfo>>
+  postProcessAndChecking(std::unique_ptr<RISCVISAInfo> &&ISAInfo);
 };
 
 } // namespace llvm

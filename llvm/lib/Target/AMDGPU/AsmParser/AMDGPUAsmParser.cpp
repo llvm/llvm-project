@@ -1548,6 +1548,7 @@ private:
   bool validateVccOperand(unsigned Reg) const;
   bool validateVOPLiteral(const MCInst &Inst, const OperandVector &Operands);
   bool validateMAIAccWrite(const MCInst &Inst, const OperandVector &Operands);
+  bool validateMFMA(const MCInst &Inst, const OperandVector &Operands);
   bool validateAGPRLdSt(const MCInst &Inst) const;
   bool validateVGPRAlign(const MCInst &Inst) const;
   bool validateGWS(const MCInst &Inst, const OperandVector &Operands);
@@ -3613,6 +3614,40 @@ bool AMDGPUAsmParser::validateMAIAccWrite(const MCInst &Inst,
   return true;
 }
 
+bool AMDGPUAsmParser::validateMFMA(const MCInst &Inst,
+                                   const OperandVector &Operands) {
+  const unsigned Opc = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opc);
+
+  if ((Desc.TSFlags & SIInstrFlags::IsMAI) == 0)
+    return true;
+
+  const int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
+  if (Src2Idx == -1)
+    return true;
+
+  const MCOperand &Src2 = Inst.getOperand(Src2Idx);
+  if (!Src2.isReg())
+    return true;
+
+  MCRegister Src2Reg = Src2.getReg();
+  MCRegister DstReg = Inst.getOperand(0).getReg();
+  if (Src2Reg == DstReg)
+    return true;
+
+  const MCRegisterInfo *TRI = getContext().getRegisterInfo();
+  if (TRI->getRegClass(Desc.OpInfo[0].RegClass).getSizeInBits() <= 128)
+    return true;
+
+  if (isRegIntersect(Src2Reg, DstReg, TRI)) {
+    Error(getRegLoc(mc2PseudoReg(Src2Reg), Operands),
+          "source 2 operand must not partially overlap with dst");
+    return false;
+  }
+
+  return true;
+}
+
 bool AMDGPUAsmParser::validateDivScale(const MCInst &Inst) {
   switch (Inst.getOpcode()) {
   default:
@@ -4297,6 +4332,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateMAIAccWrite(Inst, Operands)) {
     return false;
   }
+  if (!validateMFMA(Inst, Operands)) {
+    return false;
+  }
   if (!validateCoherencyBits(Inst, Operands, IDLoc)) {
     return false;
   }
@@ -4568,7 +4606,13 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   uint64_t AccumOffset = 0;
   SMRange SGPRRange;
   uint64_t NextFreeSGPR = 0;
-  unsigned UserSGPRCount = 0;
+
+  // Count the number of user SGPRs implied from the enabled feature bits.
+  unsigned ImpliedUserSGPRCount = 0;
+
+  // Track if the asm explicitly contains the directive for the user SGPR
+  // count.
+  Optional<unsigned> ExplicitUserSGPRCount;
   bool ReserveVCC = true;
   bool ReserveFlatScr = true;
   Optional<bool> EnableWavefrontSize32;
@@ -4617,6 +4661,8 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       if (!isUInt<sizeof(KD.kernarg_size) * CHAR_BIT>(Val))
         return OutOfRangeError(ValRange);
       KD.kernarg_size = Val;
+    } else if (ID == ".amdhsa_user_sgpr_count") {
+      ExplicitUserSGPRCount = Val;
     } else if (ID == ".amdhsa_user_sgpr_private_segment_buffer") {
       if (hasArchitectedFlatScratch())
         return Error(IDRange.Start,
@@ -4626,31 +4672,31 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER,
                        Val, ValRange);
       if (Val)
-        UserSGPRCount += 4;
+        ImpliedUserSGPRCount += 4;
     } else if (ID == ".amdhsa_user_sgpr_dispatch_ptr") {
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR, Val,
                        ValRange);
       if (Val)
-        UserSGPRCount += 2;
+        ImpliedUserSGPRCount += 2;
     } else if (ID == ".amdhsa_user_sgpr_queue_ptr") {
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR, Val,
                        ValRange);
       if (Val)
-        UserSGPRCount += 2;
+        ImpliedUserSGPRCount += 2;
     } else if (ID == ".amdhsa_user_sgpr_kernarg_segment_ptr") {
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR,
                        Val, ValRange);
       if (Val)
-        UserSGPRCount += 2;
+        ImpliedUserSGPRCount += 2;
     } else if (ID == ".amdhsa_user_sgpr_dispatch_id") {
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID, Val,
                        ValRange);
       if (Val)
-        UserSGPRCount += 2;
+        ImpliedUserSGPRCount += 2;
     } else if (ID == ".amdhsa_user_sgpr_flat_scratch_init") {
       if (hasArchitectedFlatScratch())
         return Error(IDRange.Start,
@@ -4660,13 +4706,13 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT, Val,
                        ValRange);
       if (Val)
-        UserSGPRCount += 2;
+        ImpliedUserSGPRCount += 2;
     } else if (ID == ".amdhsa_user_sgpr_private_segment_size") {
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE,
                        Val, ValRange);
       if (Val)
-        UserSGPRCount += 1;
+        ImpliedUserSGPRCount += 1;
     } else if (ID == ".amdhsa_wavefront_size32") {
       if (IVersion.Major < 10)
         return Error(IDRange.Start, "directive requires gfx10+", IDRange);
@@ -4849,6 +4895,13 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
                   COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT,
                   SGPRBlocks);
+
+  if (ExplicitUserSGPRCount && ImpliedUserSGPRCount > *ExplicitUserSGPRCount)
+    return TokError("amdgpu_user_sgpr_count smaller than than implied by "
+                    "enabled user SGPRs");
+
+  unsigned UserSGPRCount =
+      ExplicitUserSGPRCount ? *ExplicitUserSGPRCount : ImpliedUserSGPRCount;
 
   if (!isUInt<COMPUTE_PGM_RSRC2_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
     return TokError("too many user SGPRs enabled");

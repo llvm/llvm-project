@@ -1,7 +1,7 @@
 ; Test that SROA can deal with allocas that have more than one
 ; dbg.declare hanging off of it.
 
-; RUN: opt < %s -sroa -S | FileCheck %s
+; RUN: opt < %s -passes=sroa -S | FileCheck %s
 source_filename = "/tmp/inlinesplit.cpp"
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.15.0"

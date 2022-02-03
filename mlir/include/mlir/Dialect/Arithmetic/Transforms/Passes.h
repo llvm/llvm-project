@@ -12,19 +12,13 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-namespace bufferization {
-class BufferizeTypeConverter;
-} // namespace bufferization
-
 namespace arith {
-
-/// Add patterns to bufferize Arithmetic ops.
-void populateArithmeticBufferizePatterns(
-    bufferization::BufferizeTypeConverter &typeConverter,
-    RewritePatternSet &patterns);
 
 /// Create a pass to bufferize Arithmetic ops.
 std::unique_ptr<Pass> createArithmeticBufferizePass();
+
+/// Create a pass to bufferize arith.constant ops.
+std::unique_ptr<Pass> createConstantBufferizePass(uint64_t alignment = 0);
 
 /// Add patterns to expand Arithmetic ops for LLVM lowering.
 void populateArithmeticExpandOpsPatterns(RewritePatternSet &patterns);

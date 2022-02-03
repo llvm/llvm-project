@@ -26,13 +26,13 @@ define amdgpu_ps float @xor3(i32 %a, i32 %b, i32 %c) {
 define amdgpu_ps float @xor3_vgpr_b(i32 inreg %a, i32 %b, i32 inreg %c) {
 ; GFX9-LABEL: xor3_vgpr_b:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_xor_b32_e32 v0, s2, v0
-; GFX9-NEXT:    v_xor_b32_e32 v0, s3, v0
+; GFX9-NEXT:    s_xor_b32 s0, s3, s2
+; GFX9-NEXT:    v_xor_b32_e32 v0, s0, v0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: xor3_vgpr_b:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_xor3_b32 v0, s2, v0, s3
+; GFX10-NEXT:    v_xor3_b32 v0, s3, s2, v0
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = xor i32 %a, %b
   %result = xor i32 %x, %c

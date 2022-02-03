@@ -13,11 +13,54 @@ using namespace mlir;
 using namespace mlir::complex;
 
 //===----------------------------------------------------------------------===//
-// TableGen'd op method definitions
+// ConstantOp
 //===----------------------------------------------------------------------===//
 
-#define GET_OP_CLASSES
-#include "mlir/Dialect/Complex/IR/ComplexOps.cpp.inc"
+OpFoldResult ConstantOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.empty() && "constant has no operands");
+  return getValue();
+}
+
+void ConstantOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "cst");
+}
+
+bool ConstantOp::isBuildableWith(Attribute value, Type type) {
+  if (auto arrAttr = value.dyn_cast<ArrayAttr>()) {
+    auto complexTy = type.dyn_cast<ComplexType>();
+    if (!complexTy)
+      return false;
+    auto complexEltTy = complexTy.getElementType();
+    return arrAttr.size() == 2 && arrAttr[0].getType() == complexEltTy &&
+           arrAttr[1].getType() == complexEltTy;
+  }
+  return false;
+}
+
+static LogicalResult verify(ConstantOp op) {
+  ArrayAttr arrayAttr = op.getValue();
+  if (arrayAttr.size() != 2) {
+    return op.emitOpError(
+        "requires 'value' to be a complex constant, represented as array of "
+        "two values");
+  }
+
+  auto complexEltTy = op.getType().getElementType();
+  if (complexEltTy != arrayAttr[0].getType() ||
+      complexEltTy != arrayAttr[1].getType()) {
+    return op.emitOpError()
+           << "requires attribute's element types (" << arrayAttr[0].getType()
+           << ", " << arrayAttr[1].getType()
+           << ") to match the element type of the op's return type ("
+           << complexEltTy << ")";
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// CreateOp
+//===----------------------------------------------------------------------===//
 
 OpFoldResult CreateOp::fold(ArrayRef<Attribute> operands) {
   assert(operands.size() == 2 && "binary op takes two operands");
@@ -32,6 +75,10 @@ OpFoldResult CreateOp::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
+//===----------------------------------------------------------------------===//
+// ImOp
+//===----------------------------------------------------------------------===//
+
 OpFoldResult ImOp::fold(ArrayRef<Attribute> operands) {
   assert(operands.size() == 1 && "unary op takes 1 operand");
   ArrayAttr arrayAttr = operands[0].dyn_cast_or_null<ArrayAttr>();
@@ -42,6 +89,10 @@ OpFoldResult ImOp::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
+//===----------------------------------------------------------------------===//
+// ReOp
+//===----------------------------------------------------------------------===//
+
 OpFoldResult ReOp::fold(ArrayRef<Attribute> operands) {
   assert(operands.size() == 1 && "unary op takes 1 operand");
   ArrayAttr arrayAttr = operands[0].dyn_cast_or_null<ArrayAttr>();
@@ -51,3 +102,10 @@ OpFoldResult ReOp::fold(ArrayRef<Attribute> operands) {
     return createOp.getOperand(0);
   return {};
 }
+
+//===----------------------------------------------------------------------===//
+// TableGen'd op method definitions
+//===----------------------------------------------------------------------===//
+
+#define GET_OP_CLASSES
+#include "mlir/Dialect/Complex/IR/ComplexOps.cpp.inc"

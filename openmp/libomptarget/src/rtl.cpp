@@ -271,6 +271,12 @@ void RTLsTy::LoadRTLs() {
       dlsym(dynlib_handle, "__tgt_rtl_query_coarse_grain_mem_region");
     *((void **)&R.enable_access_to_all_agents) =
         dlsym(dynlib_handle, "__tgt_rtl_enable_access_to_all_agents");
+    *((void **)&R.release_async_info) =
+        dlsym(dynlib_handle, "__tgt_rtl_release_async_info");
+    *((void **)&R.init_async_info) =
+        dlsym(dynlib_handle, "__tgt_rtl_init_async_info");
+    *((void **)&R.init_device_info) =
+        dlsym(dynlib_handle, "__tgt_rtl_init_device_info");
   }
   delete[] libomptarget_dir_name;
 

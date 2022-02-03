@@ -17,7 +17,6 @@
 
 using namespace mlir;
 using namespace mlir::detail;
-using llvm::SMLoc;
 
 namespace {
 
@@ -81,13 +80,13 @@ private:
   AffineExpr parseSymbolSSAIdExpr();
 
   AffineExpr getAffineBinaryOpExpr(AffineHighPrecOp op, AffineExpr lhs,
-                                   AffineExpr rhs, llvm::SMLoc opLoc);
+                                   AffineExpr rhs, SMLoc opLoc);
   AffineExpr getAffineBinaryOpExpr(AffineLowPrecOp op, AffineExpr lhs,
                                    AffineExpr rhs);
   AffineExpr parseAffineOperandExpr(AffineExpr lhs);
   AffineExpr parseAffineLowPrecOpExpr(AffineExpr llhs, AffineLowPrecOp llhsOp);
   AffineExpr parseAffineHighPrecOpExpr(AffineExpr llhs, AffineHighPrecOp llhsOp,
-                                       llvm::SMLoc llhsOpLoc);
+                                       SMLoc llhsOpLoc);
   AffineExpr parseAffineConstraint(bool *isEq);
 
 private:
@@ -683,7 +682,7 @@ ParseResult Parser::parseAffineMapOrIntegerSetReference(AffineMap &map,
   return AffineParser(state).parseAffineMapOrIntegerSetInline(map, set);
 }
 ParseResult Parser::parseAffineMapReference(AffineMap &map) {
-  llvm::SMLoc curLoc = getToken().getLoc();
+  SMLoc curLoc = getToken().getLoc();
   IntegerSet set;
   if (parseAffineMapOrIntegerSetReference(map, set))
     return failure();
@@ -692,7 +691,7 @@ ParseResult Parser::parseAffineMapReference(AffineMap &map) {
   return success();
 }
 ParseResult Parser::parseIntegerSetReference(IntegerSet &set) {
-  llvm::SMLoc curLoc = getToken().getLoc();
+  SMLoc curLoc = getToken().getLoc();
   AffineMap map;
   if (parseAffineMapOrIntegerSetReference(map, set))
     return failure();

@@ -7,25 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/FunctionInterfaces.h"
-#include "mlir/Support/LLVM.h"
-#include "llvm/ADT/BitVector.h"
 
 using namespace mlir;
-
-/// Helper to call a callback once on each index in the range
-/// [0, `totalIndices`), *except* for the indices given in `indices`.
-/// `indices` is allowed to have duplicates and can be in any order.
-inline static void iterateIndicesExcept(unsigned totalIndices,
-                                        ArrayRef<unsigned> indices,
-                                        function_ref<void(unsigned)> callback) {
-  llvm::BitVector skipIndices(totalIndices);
-  for (unsigned i : indices)
-    skipIndices.set(i);
-
-  for (unsigned i = 0; i < totalIndices; ++i)
-    if (!skipIndices.test(i))
-      callback(i);
-}
 
 //===----------------------------------------------------------------------===//
 // Tablegen Interface Definitions
@@ -217,8 +200,7 @@ void mlir::function_interface_impl::insertFunctionResults(
 }
 
 void mlir::function_interface_impl::eraseFunctionArguments(
-    Operation *op, ArrayRef<unsigned> argIndices, unsigned originalNumArgs,
-    Type newType) {
+    Operation *op, const BitVector &argIndices, Type newType) {
   // There are 3 things that need to be updated:
   // - Function type.
   // - Arg attrs.
@@ -229,9 +211,9 @@ void mlir::function_interface_impl::eraseFunctionArguments(
   if (auto argAttrs = op->getAttrOfType<ArrayAttr>(getArgDictAttrName())) {
     SmallVector<DictionaryAttr, 4> newArgAttrs;
     newArgAttrs.reserve(argAttrs.size());
-    iterateIndicesExcept(originalNumArgs, argIndices, [&](unsigned i) {
-      newArgAttrs.emplace_back(argAttrs[i].cast<DictionaryAttr>());
-    });
+    for (unsigned i = 0, e = argIndices.size(); i < e; ++i)
+      if (!argIndices[i])
+        newArgAttrs.emplace_back(argAttrs[i].cast<DictionaryAttr>());
     setAllArgAttrDicts(op, newArgAttrs);
   }
 
@@ -241,8 +223,7 @@ void mlir::function_interface_impl::eraseFunctionArguments(
 }
 
 void mlir::function_interface_impl::eraseFunctionResults(
-    Operation *op, ArrayRef<unsigned> resultIndices,
-    unsigned originalNumResults, Type newType) {
+    Operation *op, const BitVector &resultIndices, Type newType) {
   // There are 2 things that need to be updated:
   // - Function type.
   // - Result attrs.
@@ -251,9 +232,9 @@ void mlir::function_interface_impl::eraseFunctionResults(
   if (auto resAttrs = op->getAttrOfType<ArrayAttr>(getResultDictAttrName())) {
     SmallVector<DictionaryAttr, 4> newResultAttrs;
     newResultAttrs.reserve(resAttrs.size());
-    iterateIndicesExcept(originalNumResults, resultIndices, [&](unsigned i) {
-      newResultAttrs.emplace_back(resAttrs[i].cast<DictionaryAttr>());
-    });
+    for (unsigned i = 0, e = resultIndices.size(); i < e; ++i)
+      if (!resultIndices[i])
+        newResultAttrs.emplace_back(resAttrs[i].cast<DictionaryAttr>());
     setAllResultAttrDicts(op, newResultAttrs);
   }
 
@@ -282,12 +263,14 @@ TypeRange mlir::function_interface_impl::insertTypesInto(
 
 TypeRange
 mlir::function_interface_impl::filterTypesOut(TypeRange types,
-                                              ArrayRef<unsigned> indices,
+                                              const BitVector &indices,
                                               SmallVectorImpl<Type> &storage) {
-  if (indices.empty())
+  if (indices.none())
     return types;
-  iterateIndicesExcept(types.size(), indices,
-                       [&](unsigned i) { storage.emplace_back(types[i]); });
+
+  for (unsigned i = 0, e = types.size(); i < e; ++i)
+    if (!indices[i])
+      storage.emplace_back(types[i]);
   return storage;
 }
 

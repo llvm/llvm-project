@@ -69,6 +69,10 @@ public:
     return llvm::DebuggerKind::Default;
   }
 
+  unsigned GetDefaultDwarfVersion() const override {
+    return 4;
+  }
+
   enum class SubDirectoryType {
     Bin,
     Include,

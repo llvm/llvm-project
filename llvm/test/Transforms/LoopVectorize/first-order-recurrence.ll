@@ -6329,43 +6329,45 @@ define i32 @sink_into_replication_region_multiple(i32 *%x, i32 %y) {
 ; UNROLL-NO-VF-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP2]], 1
 ; UNROLL-NO-VF-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NO-VF:       vector.body:
-; UNROLL-NO-VF-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE9:%.*]] ]
-; UNROLL-NO-VF-NEXT:    [[VECTOR_RECUR:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[PRED_STORE_CONTINUE9]] ]
-; UNROLL-NO-VF-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[PRED_STORE_CONTINUE9]] ]
-; UNROLL-NO-VF-NEXT:    [[VEC_PHI5:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[PRED_STORE_CONTINUE9]] ]
+; UNROLL-NO-VF-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE10:%.*]] ]
+; UNROLL-NO-VF-NEXT:    [[VECTOR_RECUR:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[PRED_STORE_CONTINUE10]] ]
+; UNROLL-NO-VF-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[PRED_STORE_CONTINUE10]] ]
+; UNROLL-NO-VF-NEXT:    [[VEC_PHI5:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[PRED_STORE_CONTINUE10]] ]
 ; UNROLL-NO-VF-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[Y]], [[INDEX]]
 ; UNROLL-NO-VF-NEXT:    [[INDUCTION:%.*]] = add i32 [[OFFSET_IDX]], 0
 ; UNROLL-NO-VF-NEXT:    [[INDUCTION2:%.*]] = add i32 [[OFFSET_IDX]], -1
-; UNROLL-NO-VF-NEXT:    [[INDUCTION3:%.*]] = add i32 [[INDEX]], 0
-; UNROLL-NO-VF-NEXT:    [[INDUCTION4:%.*]] = add i32 [[INDEX]], 1
-; UNROLL-NO-VF-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[INDUCTION3]], [[TRIP_COUNT_MINUS_1]]
-; UNROLL-NO-VF-NEXT:    [[TMP4:%.*]] = icmp ule i32 [[INDUCTION4]], [[TRIP_COUNT_MINUS_1]]
+; UNROLL-NO-VF-NEXT:    [[VEC_IV:%.*]] = add i32 [[INDEX]], 0
+; UNROLL-NO-VF-NEXT:    [[VEC_IV6:%.*]] = add i32 [[INDEX]], 1
+; UNROLL-NO-VF-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[VEC_IV]], [[TRIP_COUNT_MINUS_1]]
+; UNROLL-NO-VF-NEXT:    [[TMP4:%.*]] = icmp ule i32 [[VEC_IV6]], [[TRIP_COUNT_MINUS_1]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[TMP3]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
 ; UNROLL-NO-VF:       pred.udiv.if:
 ; UNROLL-NO-VF-NEXT:    [[TMP5:%.*]] = udiv i32 219220132, [[INDUCTION]]
 ; UNROLL-NO-VF-NEXT:    br label [[PRED_UDIV_CONTINUE]]
 ; UNROLL-NO-VF:       pred.udiv.continue:
 ; UNROLL-NO-VF-NEXT:    [[TMP6:%.*]] = phi i32 [ poison, [[VECTOR_BODY]] ], [ [[TMP5]], [[PRED_UDIV_IF]] ]
-; UNROLL-NO-VF-NEXT:    br i1 [[TMP4]], label [[PRED_UDIV_IF6:%.*]], label [[PRED_UDIV_CONTINUE7:%.*]]
-; UNROLL-NO-VF:       pred.udiv.if6:
+; UNROLL-NO-VF-NEXT:    br i1 [[TMP4]], label [[PRED_UDIV_IF7:%.*]], label [[PRED_UDIV_CONTINUE8:%.*]]
+; UNROLL-NO-VF:       pred.udiv.if7:
 ; UNROLL-NO-VF-NEXT:    [[TMP7:%.*]] = udiv i32 219220132, [[INDUCTION2]]
-; UNROLL-NO-VF-NEXT:    br label [[PRED_UDIV_CONTINUE7]]
-; UNROLL-NO-VF:       pred.udiv.continue7:
-; UNROLL-NO-VF-NEXT:    [[TMP8]] = phi i32 [ poison, [[PRED_UDIV_CONTINUE]] ], [ [[TMP7]], [[PRED_UDIV_IF6]] ]
+; UNROLL-NO-VF-NEXT:    br label [[PRED_UDIV_CONTINUE8]]
+; UNROLL-NO-VF:       pred.udiv.continue8:
+; UNROLL-NO-VF-NEXT:    [[TMP8]] = phi i32 [ poison, [[PRED_UDIV_CONTINUE]] ], [ [[TMP7]], [[PRED_UDIV_IF7]] ]
 ; UNROLL-NO-VF-NEXT:    [[TMP9]] = add i32 [[VEC_PHI]], [[VECTOR_RECUR]]
 ; UNROLL-NO-VF-NEXT:    [[TMP10]] = add i32 [[VEC_PHI5]], [[TMP6]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; UNROLL-NO-VF:       pred.store.if:
+; UNROLL-NO-VF-NEXT:    [[INDUCTION3:%.*]] = add i32 [[INDEX]], 0
 ; UNROLL-NO-VF-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, i32* [[X:%.*]], i32 [[INDUCTION3]]
 ; UNROLL-NO-VF-NEXT:    store i32 [[INDUCTION]], i32* [[TMP11]], align 4
 ; UNROLL-NO-VF-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; UNROLL-NO-VF:       pred.store.continue:
-; UNROLL-NO-VF-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF8:%.*]], label [[PRED_STORE_CONTINUE9]]
-; UNROLL-NO-VF:       pred.store.if8:
+; UNROLL-NO-VF-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF9:%.*]], label [[PRED_STORE_CONTINUE10]]
+; UNROLL-NO-VF:       pred.store.if9:
+; UNROLL-NO-VF-NEXT:    [[INDUCTION4:%.*]] = add i32 [[INDEX]], 1
 ; UNROLL-NO-VF-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[X]], i32 [[INDUCTION4]]
 ; UNROLL-NO-VF-NEXT:    store i32 [[INDUCTION2]], i32* [[TMP12]], align 4
-; UNROLL-NO-VF-NEXT:    br label [[PRED_STORE_CONTINUE9]]
-; UNROLL-NO-VF:       pred.store.continue9:
+; UNROLL-NO-VF-NEXT:    br label [[PRED_STORE_CONTINUE10]]
+; UNROLL-NO-VF:       pred.store.continue10:
 ; UNROLL-NO-VF-NEXT:    [[TMP13:%.*]] = select i1 [[TMP3]], i32 [[TMP9]], i32 [[VEC_PHI]]
 ; UNROLL-NO-VF-NEXT:    [[TMP14:%.*]] = select i1 [[TMP4]], i32 [[TMP10]], i32 [[VEC_PHI5]]
 ; UNROLL-NO-VF-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2

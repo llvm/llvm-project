@@ -98,7 +98,7 @@ static bool areElementwiseOpsFusable(GenericOp producer, GenericOp consumer,
   // case due to the output operand. For reductions, we need to check that after
   // the fusion, each loop dimension has at least one input that defines it.
   if ((consumer.getNumReductionLoops())) {
-    llvm::BitVector coveredDims(consumer.getNumLoops(), false);
+    BitVector coveredDims(consumer.getNumLoops(), false);
 
     auto addToCoveredDims = [&](AffineMap map) {
       for (auto result : map.getResults())

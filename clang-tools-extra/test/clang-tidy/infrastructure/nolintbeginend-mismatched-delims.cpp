@@ -11,4 +11,3 @@ class A { A(int i); };
 // CHECK: :[[@LINE-8]]:4: error: unmatched 'NOLIN
 // CHECK: TBEGIN' comment without a subsequent 'NOLIN
 // CHECK: TEND' comment [clang-tidy-nolint]
-// CHECK: :[[@LINE-9]]:11: warning: single-argument constructors must be marked explicit

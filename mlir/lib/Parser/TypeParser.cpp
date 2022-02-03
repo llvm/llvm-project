@@ -116,7 +116,7 @@ Type Parser::parseComplexType() {
   if (parseToken(Token::less, "expected '<' in complex type"))
     return nullptr;
 
-  llvm::SMLoc elementTypeLoc = getToken().getLoc();
+  SMLoc elementTypeLoc = getToken().getLoc();
   auto elementType = parseType();
   if (!elementType ||
       parseToken(Token::greater, "expected '>' in complex type"))
@@ -190,7 +190,7 @@ ParseResult Parser::parseStridedLayout(int64_t &offset,
 ///   memory-space ::= integer-literal | attribute
 ///
 Type Parser::parseMemRefType() {
-  llvm::SMLoc loc = getToken().getLoc();
+  SMLoc loc = getToken().getLoc();
   consumeToken(Token::kw_memref);
 
   if (parseToken(Token::less, "expected '<' in memref type"))

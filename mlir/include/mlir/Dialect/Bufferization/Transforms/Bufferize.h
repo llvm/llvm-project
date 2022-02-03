@@ -69,6 +69,21 @@ void populateEliminateBufferizeMaterializationsPatterns(
 // TODO: Extract `options` from `state` and pass as separate argument.
 LogicalResult bufferizeOp(Operation *op, const BufferizationState &state);
 
+/// Bufferize `op` and its nested ops that implement `BufferizableOpInterface`.
+/// Buffers are duplicated and copied before any tensor use that bufferizes to
+/// a memory write.
+///
+/// Note: This function bufferizes ops without utilizing analysis results. It
+/// can be used to implement partial bufferization passes.
+LogicalResult bufferizeOp(Operation *op, const BufferizationOptions &options);
+
+/// Populate the pattern set with a pattern that bufferizes ops that implement
+/// `BufferizableOpInterface`.
+void populateBufferizationPattern(const BufferizationState &state,
+                                  RewritePatternSet &patterns);
+
+std::unique_ptr<BufferizationOptions> getPartialBufferizationOptions();
+
 } // namespace bufferization
 } // namespace mlir
 

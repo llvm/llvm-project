@@ -49,14 +49,12 @@ class Pattern;
 class Region;
 class ResultRange;
 class RewritePattern;
+class RewritePatternSet;
 class Type;
 class Value;
 class ValueRange;
 template <typename ValueRangeT>
 class ValueTypeRange;
-
-class RewritePatternSet;
-using OwningRewritePatternList = RewritePatternSet;
 
 //===----------------------------------------------------------------------===//
 // OperationName
@@ -666,7 +664,7 @@ public:
 
   /// Erase the operands held by the storage that have their corresponding bit
   /// set in `eraseIndices`.
-  void eraseOperands(const llvm::BitVector &eraseIndices);
+  void eraseOperands(const BitVector &eraseIndices);
 
   /// Get the operation operands held by the storage.
   MutableArrayRef<OpOperand> getOperands() { return {operandStorage, size()}; }

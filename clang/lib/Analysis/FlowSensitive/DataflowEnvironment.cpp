@@ -73,7 +73,8 @@ bool Environment::operator==(const Environment &Other) const {
   return DeclToLoc == Other.DeclToLoc && LocToVal == Other.LocToVal;
 }
 
-LatticeJoinEffect Environment::join(const Environment &Other) {
+LatticeJoinEffect Environment::join(const Environment &Other,
+                                    Environment::Merger &Merger) {
   assert(DACtx == Other.DACtx);
 
   auto Effect = LatticeJoinEffect::Unchanged;
@@ -88,11 +89,43 @@ LatticeJoinEffect Environment::join(const Environment &Other) {
   if (ExprToLocSizeBefore != ExprToLoc.size())
     Effect = LatticeJoinEffect::Changed;
 
-  // FIXME: Add support for joining distinct values that are assigned to the
-  // same storage locations in `LocToVal` and `Other.LocToVal`.
-  const unsigned LocToValSizeBefore = LocToVal.size();
-  LocToVal = intersectDenseMaps(LocToVal, Other.LocToVal);
-  if (LocToValSizeBefore != LocToVal.size())
+  // Move `LocToVal` so that `Environment::Merger::merge` can safely assign
+  // values to storage locations while this code iterates over the current
+  // assignments.
+  llvm::DenseMap<const StorageLocation *, Value *> OldLocToVal =
+      std::move(LocToVal);
+  for (auto &Entry : OldLocToVal) {
+    const StorageLocation *Loc = Entry.first;
+    assert(Loc != nullptr);
+
+    Value *Val = Entry.second;
+    assert(Val != nullptr);
+
+    auto It = Other.LocToVal.find(Loc);
+    if (It == Other.LocToVal.end())
+      continue;
+    assert(It->second != nullptr);
+
+    if (It->second == Val) {
+      LocToVal.insert({Loc, Val});
+      continue;
+    }
+
+    if (auto *FirstVal = dyn_cast<PointerValue>(Val)) {
+      auto *SecondVal = cast<PointerValue>(It->second);
+      if (&FirstVal->getPointeeLoc() == &SecondVal->getPointeeLoc()) {
+        LocToVal.insert({Loc, FirstVal});
+        continue;
+      }
+    }
+
+    // FIXME: Consider destroying `MergedValue` immediately if `Merger::merge`
+    // returns false to avoid storing unneeded values in `DACtx`.
+    if (Value *MergedVal = createValue(Loc->getType()))
+      if (Merger.merge(Loc->getType(), *Val, *It->second, *MergedVal, *this))
+        LocToVal.insert({Loc, MergedVal});
+  }
+  if (OldLocToVal.size() != LocToVal.size())
     Effect = LatticeJoinEffect::Changed;
 
   return Effect;
@@ -100,7 +133,7 @@ LatticeJoinEffect Environment::join(const Environment &Other) {
 
 StorageLocation &Environment::createStorageLocation(QualType Type) {
   assert(!Type.isNull());
-  if (Type->isStructureOrClassType()) {
+  if (Type->isStructureOrClassType() || Type->isUnionType()) {
     // FIXME: Explore options to avoid eager initialization of fields as some of
     // them might not be needed for a particular analysis.
     llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
@@ -265,15 +298,6 @@ Value *Environment::createValueUnlessSelfReferential(
   }
 
   return nullptr;
-}
-
-StorageLocation &
-Environment::takeOwnership(std::unique_ptr<StorageLocation> Loc) {
-  return DACtx->takeOwnership(std::move(Loc));
-}
-
-Value &Environment::takeOwnership(std::unique_ptr<Value> Val) {
-  return DACtx->takeOwnership(std::move(Val));
 }
 
 StorageLocation &Environment::skip(StorageLocation &Loc, SkipPast SP) const {

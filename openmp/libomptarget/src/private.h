@@ -24,16 +24,6 @@
 #define DI_DEP_TYPE_OUT 12
 #define DI_DEP_TYPE_INOUT 13
 
-typedef struct kmp_depend_info {
-  int base_addr;
-  size_t len;
-  struct {
-    bool in : 1;
-    bool out : 1;
-    bool mtx : 1;
-  } flags;
-} kmp_depend_info_t;
-
 extern int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
                            void **args_base, void **args, int64_t *arg_sizes,
                            int64_t *arg_types, map_var_info_t *arg_names,
@@ -103,15 +93,33 @@ typedef int (*TargetDataFuncPtrTy)(ident_t *, DeviceTy &, int32_t, void **,
 #ifdef __cplusplus
 extern "C" {
 #endif
+/*!
+ * The ident structure that describes a source location.
+ * The struct is identical to the one in the kmp.h file.
+ * We maintain the same data structure for compatibility.
+ */
+typedef int kmp_int32;
+typedef intptr_t kmp_intptr_t;
+// Compiler sends us this info:
+typedef struct kmp_depend_info {
+  kmp_intptr_t base_addr;
+  size_t len;
+  struct {
+    bool in : 1;
+    bool out : 1;
+    bool mtx : 1;
+  } flags;
+} kmp_depend_info_t;
 // functions that extract info from libomp; keep in sync
 int omp_get_default_device(void) __attribute__((weak));
 int32_t __kmpc_global_thread_num(void *) __attribute__((weak));
 int __kmpc_get_target_offload(void) __attribute__((weak));
 int32_t __kmpc_omp_task_with_deps(void *, int32_t, void *, int32_t,
                                   void *, int32_t, void *) __attribute__((weak));
-int32_t __kmpc_omp_wait_deps(void *, int32_t, int32_t,
-                             void *, int32_t, void *) __attribute__((weak));
-
+void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
+                          kmp_depend_info_t *dep_list, kmp_int32 ndeps_noalias,
+                          kmp_depend_info_t *noalias_dep_list)
+    __attribute__((weak));
 #ifdef __cplusplus
 }
 #endif

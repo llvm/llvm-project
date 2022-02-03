@@ -486,33 +486,6 @@ func @splat(%a: vector<4xf32>, %b: f32) -> vector<4xf32> {
 
 // -----
 
-// CHECK-LABEL: func @generic_atomic_rmw
-func @generic_atomic_rmw(%I : memref<10xi32>, %i : index) -> i32 {
-  %x = generic_atomic_rmw %I[%i] : memref<10xi32> {
-    ^bb0(%old_value : i32):
-      %c1 = arith.constant 1 : i32
-      atomic_yield %c1 : i32
-  }
-  // CHECK: [[init:%.*]] = llvm.load %{{.*}} : !llvm.ptr<i32>
-  // CHECK-NEXT: llvm.br ^bb1([[init]] : i32)
-  // CHECK-NEXT: ^bb1([[loaded:%.*]]: i32):
-  // CHECK-NEXT: [[c1:%.*]] = llvm.mlir.constant(1 : i32)
-  // CHECK-NEXT: [[pair:%.*]] = llvm.cmpxchg %{{.*}}, [[loaded]], [[c1]]
-  // CHECK-SAME:                    acq_rel monotonic : i32
-  // CHECK-NEXT: [[new:%.*]] = llvm.extractvalue [[pair]][0]
-  // CHECK-NEXT: [[ok:%.*]] = llvm.extractvalue [[pair]][1]
-  // CHECK-NEXT: llvm.cond_br [[ok]], ^bb2, ^bb1([[new]] : i32)
-  // CHECK-NEXT: ^bb2:
-  %c2 = arith.constant 2 : i32
-  %add = arith.addi %c2, %x : i32
-  return %add : i32
-  // CHECK-NEXT: [[c2:%.*]] = llvm.mlir.constant(2 : i32)
-  // CHECK-NEXT: [[add:%.*]] = llvm.add [[c2]], [[new]] : i32
-  // CHECK-NEXT: llvm.return [[add]]
-}
-
-// -----
-
 // CHECK-LABEL: func @ceilf(
 // CHECK-SAME: f32
 func @ceilf(%arg0 : f32) {

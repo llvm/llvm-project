@@ -208,7 +208,7 @@ bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Align Alignment,
 }
 
 bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
-                                              MaybeAlign MA,
+                                              Align Alignment,
                                               const DataLayout &DL,
                                               const Instruction *CtxI,
                                               const DominatorTree *DT,
@@ -223,8 +223,6 @@ bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
   // determine the exact offset to the attributed variable, we can use that
   // information here.
 
-  // Require ABI alignment for loads without alignment specification
-  const Align Alignment = DL.getValueOrABITypeAlignment(MA, Ty);
   APInt AccessSize(DL.getPointerTypeSizeInBits(V->getType()),
                    DL.getTypeStoreSize(Ty));
   return isDereferenceableAndAlignedPointer(V, Alignment, AccessSize, DL, CtxI,

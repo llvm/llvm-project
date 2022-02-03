@@ -16,14 +16,14 @@
 
   define <vscale x 1 x i64> @load_add(<vscale x 1 x i64>* %0, <vscale x 1 x i64> %1, i64 %2) #0 {
   entry:
-    %a = call <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64>* %0, i64 %2)
+    %a = call <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64>* %0, i64 %2)
     %b = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> %a, <vscale x 1 x i64> %1, i64 %2)
     ret <vscale x 1 x i64> %b
   }
 
   define <vscale x 1 x i64> @load_zext(<vscale x 1 x i32>* %0, i64 %1) #0 {
   entry:
-    %a = call <vscale x 1 x i32> @llvm.riscv.vle.nxv1i32.i64(<vscale x 1 x i32>* %0, i64 %1)
+    %a = call <vscale x 1 x i32> @llvm.riscv.vle.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32>* %0, i64 %1)
     %b = call <vscale x 1 x i64> @llvm.riscv.vzext.nxv1i64.nxv1i32.i64(<vscale x 1 x i32> %a, i64 %1)
     ret <vscale x 1 x i64> %b
   }
@@ -66,7 +66,7 @@
 
   define <vscale x 1 x i64> @load_add_inlineasm(<vscale x 1 x i64>* %0, <vscale x 1 x i64> %1, i64 %2) #0 {
   entry:
-    %a = call <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64>* %0, i64 %2)
+    %a = call <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64>* %0, i64 %2)
     call void asm sideeffect "", ""()
     %b = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> %a, <vscale x 1 x i64> %1, i64 %2)
     ret <vscale x 1 x i64> %b
@@ -76,10 +76,10 @@
   declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, i64) #1
 
   ; Function Attrs: nounwind readonly
-  declare <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64>* nocapture, i64) #4
+  declare <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>* nocapture, i64) #4
 
   ; Function Attrs: nounwind readonly
-  declare <vscale x 1 x i32> @llvm.riscv.vle.nxv1i32.i64(<vscale x 1 x i32>* nocapture, i64) #4
+  declare <vscale x 1 x i32> @llvm.riscv.vle.nxv1i32.i64(<vscale x 1 x i32>, <vscale x 1 x i32>* nocapture, i64) #4
 
   ; Function Attrs: nounwind readnone
   declare <vscale x 1 x i64> @llvm.riscv.vzext.nxv1i64.nxv1i32.i64(<vscale x 1 x i32>, i64) #1

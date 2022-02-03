@@ -77,6 +77,7 @@
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -1736,17 +1737,17 @@ NewGVN::performSymbolicPHIEvaluation(ArrayRef<ValPair> PHIOps,
   if (Filtered.empty()) {
     // If it has undef or poison at this point, it means there are no-non-undef
     // arguments, and thus, the value of the phi node must be undef.
-    if (HasPoison && !HasUndef) {
-      LLVM_DEBUG(
-          dbgs() << "PHI Node " << *I
-                 << " has no non-poison arguments, valuing it as poison\n");
-      return createConstantExpression(PoisonValue::get(I->getType()));
-    }
     if (HasUndef) {
       LLVM_DEBUG(
           dbgs() << "PHI Node " << *I
                  << " has no non-undef arguments, valuing it as undef\n");
       return createConstantExpression(UndefValue::get(I->getType()));
+    }
+    if (HasPoison) {
+      LLVM_DEBUG(
+          dbgs() << "PHI Node " << *I
+                 << " has no non-poison arguments, valuing it as poison\n");
+      return createConstantExpression(PoisonValue::get(I->getType()));
     }
 
     LLVM_DEBUG(dbgs() << "No arguments of PHI node " << *I << " are live\n");
@@ -1757,6 +1758,11 @@ NewGVN::performSymbolicPHIEvaluation(ArrayRef<ValPair> PHIOps,
   ++Filtered.begin();
   // Can't use std::equal here, sadly, because filter.begin moves.
   if (llvm::all_of(Filtered, [&](Value *Arg) { return Arg == AllSameValue; })) {
+    // Can't fold phi(undef, X) -> X unless X can't be poison (thus X is undef
+    // in the worst case).
+    if (HasUndef && !isGuaranteedNotToBePoison(AllSameValue, AC, nullptr, DT))
+      return E;
+
     // In LLVM's non-standard representation of phi nodes, it's possible to have
     // phi nodes with cycles (IE dependent on other phis that are .... dependent
     // on the original phi node), especially in weird CFG's where some arguments
@@ -1764,8 +1770,8 @@ NewGVN::performSymbolicPHIEvaluation(ArrayRef<ValPair> PHIOps,
     // infinite loops during evaluation. We work around this by not trying to
     // really evaluate them independently, but instead using a variable
     // expression to say if one is equivalent to the other.
-    // We also special case undef, so that if we have an undef, we can't use the
-    // common value unless it dominates the phi block.
+    // We also special case undef/poison, so that if we have an undef, we can't
+    // use the common value unless it dominates the phi block.
     if (HasPoison || HasUndef) {
       // If we have undef and at least one other value, this is really a
       // multivalued phi, and we need to know if it's cycle free in order to
@@ -2587,6 +2593,15 @@ bool NewGVN::OpIsSafeForPHIOfOpsHelper(
   }
 
   auto *OrigI = cast<Instruction>(V);
+  // When we hit an instruction that reads memory (load, call, etc), we must
+  // consider any store that may happen in the loop. For now, we assume the
+  // worst: there is a store in the loop that alias with this read.
+  // The case where the load is outside the loop is already covered by the
+  // dominator check above.
+  // TODO: relax this condition
+  if (OrigI->mayReadFromMemory())
+    return false;
+
   for (auto *Op : OrigI->operand_values()) {
     if (!isa<Instruction>(Op))
       continue;
@@ -2844,14 +2859,14 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
 }
 
 // The algorithm initially places the values of the routine in the TOP
-// congruence class. The leader of TOP is the undetermined value `undef`.
+// congruence class. The leader of TOP is the undetermined value `poison`.
 // When the algorithm has finished, values still in TOP are unreachable.
 void NewGVN::initializeCongruenceClasses(Function &F) {
   NextCongruenceNum = 0;
 
   // Note that even though we use the live on entry def as a representative
   // MemoryAccess, it is *not* the same as the actual live on entry def. We
-  // have no real equivalemnt to undef for MemoryAccesses, and so we really
+  // have no real equivalent to poison for MemoryAccesses, and so we really
   // should be checking whether the MemoryAccess is top if we want to know if it
   // is equivalent to everything.  Otherwise, what this really signifies is that
   // the access "it reaches all the way back to the beginning of the function"
@@ -3022,7 +3037,7 @@ void NewGVN::valueNumberMemoryPhi(MemoryPhi *MP) {
            !isMemoryAccessTOP(cast<MemoryAccess>(U)) &&
            ReachableEdges.count({MP->getIncomingBlock(U), PHIBlock});
   });
-  // If all that is left is nothing, our memoryphi is undef. We keep it as
+  // If all that is left is nothing, our memoryphi is poison. We keep it as
   // InitialClass.  Note: The only case this should happen is if we have at
   // least one self-argument.
   if (Filtered.begin() == Filtered.end()) {

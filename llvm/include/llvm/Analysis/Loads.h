@@ -42,8 +42,7 @@ bool isDereferenceablePointer(const Value *V, Type *Ty,
 /// performs context-sensitive analysis and returns true if the pointer is
 /// dereferenceable at the specified instruction.
 bool isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
-                                        MaybeAlign Alignment,
-                                        const DataLayout &DL,
+                                        Align Alignment, const DataLayout &DL,
                                         const Instruction *CtxI = nullptr,
                                         const DominatorTree *DT = nullptr,
                                         const TargetLibraryInfo *TLI = nullptr);

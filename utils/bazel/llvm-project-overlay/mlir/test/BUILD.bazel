@@ -6,6 +6,7 @@ load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
     licenses = ["notice"],
 )
 
@@ -388,8 +389,8 @@ cc_library(
         "//llvm:Support",
         "//mlir:Affine",
         "//mlir:AffineBufferizableOpInterfaceImpl",
-        "//mlir:ArithBufferizableOpInterfaceImpl",
         "//mlir:ArithmeticDialect",
+        "//mlir:ArithmeticTransforms",
         "//mlir:BufferizationDialect",
         "//mlir:BufferizationTransforms",
         "//mlir:GPUDialect",
@@ -399,11 +400,10 @@ cc_library(
         "//mlir:LinalgTransforms",
         "//mlir:MemRefDialect",
         "//mlir:Pass",
-        "//mlir:SCFBufferizableOpInterfaceImpl",
         "//mlir:SCFDialect",
         "//mlir:SCFTransforms",
         "//mlir:StandardOps",
-        "//mlir:StdBufferizableOpInterfaceImpl",
+        "//mlir:StandardOpsTransforms",
         "//mlir:TensorDialect",
         "//mlir:TensorTransforms",
         "//mlir:TransformUtils",
@@ -430,6 +430,20 @@ cc_library(
 )
 
 cc_library(
+    name = "TestMemRef",
+    srcs = glob(["lib/Dialect/MemRef/*.cpp"]),
+    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        ":TestDialect",
+        "//mlir:Affine",
+        "//mlir:MemRefTransforms",
+        "//mlir:Pass",
+        "//mlir:Transforms",
+    ],
+)
+
+cc_library(
     name = "TestSCF",
     srcs = glob(["lib/Dialect/SCF/*.cpp"]),
     defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
@@ -442,6 +456,7 @@ cc_library(
         "//mlir:Pass",
         "//mlir:SCFDialect",
         "//mlir:SCFTransforms",
+        "//mlir:SCFUtils",
         "//mlir:StandardOps",
         "//mlir:TransformUtils",
     ],

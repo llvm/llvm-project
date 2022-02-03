@@ -143,4 +143,9 @@ void RTNAME(PauseStatementText)(const char *code, std::size_t length) {
 }
 
 [[noreturn]] void RTNAME(Abort)() { std::abort(); }
+
+[[noreturn]] void RTNAME(Crash)(
+    const char *message, const char *source, int line) {
+  Fortran::runtime::Terminator{source, line}.Crash(message);
+}
 }

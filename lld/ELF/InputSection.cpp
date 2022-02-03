@@ -27,7 +27,6 @@
 #include <algorithm>
 #include <mutex>
 #include <set>
-#include <unordered_set>
 #include <vector>
 
 using namespace llvm;
@@ -366,7 +365,7 @@ template <class ELFT> void InputSection::copyShtGroup(uint8_t *buf) {
   // different in the output. We also need to handle combined or discarded
   // members.
   ArrayRef<InputSectionBase *> sections = file->getSections();
-  std::unordered_set<uint32_t> seen;
+  DenseSet<uint32_t> seen;
   for (uint32_t idx : from.slice(1)) {
     OutputSection *osec = sections[idx]->getOutputSection();
     if (osec && seen.insert(osec->sectionIndex).second)
@@ -1261,9 +1260,8 @@ template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
 
   // Copy section contents from source object file to output file
   // and then apply relocations.
-  memcpy(buf, data().data(), data().size());
-  uint8_t *bufEnd = buf + data().size();
-  relocate<ELFT>(buf, bufEnd);
+  memcpy(buf, rawData.data(), rawData.size());
+  relocate<ELFT>(buf, buf + rawData.size());
 }
 
 void InputSection::replace(InputSection *other) {
@@ -1403,7 +1401,7 @@ void MergeInputSection::splitNonStrings(ArrayRef<uint8_t> data,
   assert((size % entSize) == 0);
   const bool live = !(flags & SHF_ALLOC) || !config->gcSections;
 
-  pieces.assign(size / entSize, SectionPiece(0, 0, false));
+  pieces.resize_for_overwrite(size / entSize);
   for (size_t i = 0, j = 0; i != size; i += entSize, j++)
     pieces[j] = {i, (uint32_t)xxHash64(data.slice(i, entSize)), live};
 }

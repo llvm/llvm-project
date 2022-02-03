@@ -18,8 +18,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Annotations.h"
+#include <cassert>
 #include <functional>
 #include <memory>
 #include <string>
@@ -29,6 +31,7 @@
 
 using namespace clang;
 using namespace dataflow;
+using namespace ast_matchers;
 
 static bool
 isAnnotationDirectlyAfterStatement(const Stmt *Stmt, unsigned AnnotationBegin,
@@ -55,7 +58,6 @@ test::buildStatementToAnnotationMapping(const FunctionDecl *Func,
                                         llvm::Annotations AnnotatedCode) {
   llvm::DenseMap<const Stmt *, std::string> Result;
 
-  using namespace ast_matchers; // NOLINT: Too many names
   auto StmtMatcher =
       findAll(stmt(unless(anyOf(hasParent(expr()), hasParent(returnStmt()))))
                   .bind("stmt"));
@@ -119,5 +121,13 @@ test::buildStatementToAnnotationMapping(const FunctionDecl *Func,
             .data());
   }
 
+  return Result;
+}
+
+const ValueDecl *test::findValueDecl(ASTContext &ASTCtx, llvm::StringRef Name) {
+  auto TargetNodes = match(valueDecl(hasName(Name)).bind("v"), ASTCtx);
+  assert(TargetNodes.size() == 1 && "Name must be unique");
+  auto *const Result = selectFirst<ValueDecl>("v", TargetNodes);
+  assert(Result != nullptr);
   return Result;
 }

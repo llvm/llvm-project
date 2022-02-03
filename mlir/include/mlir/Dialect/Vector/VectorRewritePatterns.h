@@ -171,6 +171,9 @@ void populateVectorContractLoweringPatterns(
 /// transpose/broadcast ops into the contract.
 void populateVectorReductionToContractPatterns(RewritePatternSet &patterns);
 
+/// Collect patterns to convert scan op
+void populateVectorScanLoweringPatterns(RewritePatternSet &patterns);
+
 //===----------------------------------------------------------------------===//
 // Vector.transfer patterns.
 //===----------------------------------------------------------------------===//

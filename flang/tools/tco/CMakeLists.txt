@@ -1,7 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  ${LLVM_TARGETS_TO_BUILD}
-)
-
 add_flang_tool(tco tco.cpp)
 llvm_update_compile_flags(tco)
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)

@@ -245,7 +245,7 @@ private:
 // values in a suitable way.
 class SymbolInfoMap {
 public:
-  explicit SymbolInfoMap(ArrayRef<llvm::SMLoc> loc) : loc(loc) {}
+  explicit SymbolInfoMap(ArrayRef<SMLoc> loc) : loc(loc) {}
 
   // Class for information regarding a symbol.
   class SymbolInfo {
@@ -445,7 +445,7 @@ private:
 
   // Pattern instantiation location. This is intended to be used as parameter
   // to PrintFatalError() to report errors.
-  ArrayRef<llvm::SMLoc> loc;
+  ArrayRef<SMLoc> loc;
 };
 
 // Wrapper class providing helper methods for accessing MLIR Pattern defined

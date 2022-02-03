@@ -15,7 +15,6 @@
 #include "ARMCallLowering.h"
 #include "ARMLegalizerInfo.h"
 #include "ARMRegisterBankInfo.h"
-#include "ARMSubtarget.h"
 #include "ARMFrameLowering.h"
 #include "ARMInstrInfo.h"
 #include "ARMSubtarget.h"

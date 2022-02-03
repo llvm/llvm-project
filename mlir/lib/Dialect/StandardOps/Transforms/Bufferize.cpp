@@ -12,63 +12,33 @@
 
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "PassDetail.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/StandardOps/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/IR/BlockAndValueMapping.h"
-#include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
-
-namespace {
-class BufferizeSelectOp : public OpConversionPattern<SelectOp> {
-public:
-  using OpConversionPattern::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(SelectOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    if (!op.getCondition().getType().isa<IntegerType>())
-      return rewriter.notifyMatchFailure(op, "requires scalar condition");
-
-    rewriter.replaceOpWithNewOp<SelectOp>(op, adaptor.getCondition(),
-                                          adaptor.getTrueValue(),
-                                          adaptor.getFalseValue());
-    return success();
-  }
-};
-} // namespace
-
-void mlir::populateStdBufferizePatterns(
-    bufferization::BufferizeTypeConverter &typeConverter,
-    RewritePatternSet &patterns) {
-  patterns.add<BufferizeSelectOp>(typeConverter, patterns.getContext());
-}
+using namespace mlir::bufferization;
 
 namespace {
 struct StdBufferizePass : public StdBufferizeBase<StdBufferizePass> {
   void runOnOperation() override {
-    auto *context = &getContext();
-    bufferization::BufferizeTypeConverter typeConverter;
-    RewritePatternSet patterns(context);
-    ConversionTarget target(*context);
+    std::unique_ptr<BufferizationOptions> options =
+        getPartialBufferizationOptions();
+    options->addToDialectFilter<StandardOpsDialect>();
 
-    target.addLegalDialect<scf::SCFDialect, StandardOpsDialect,
-                           memref::MemRefDialect>();
-
-    populateStdBufferizePatterns(typeConverter, patterns);
-    // We only bufferize the case of tensor selected type and scalar condition,
-    // as that boils down to a select over memref descriptors (don't need to
-    // touch the data).
-    target.addDynamicallyLegalOp<SelectOp>([&](SelectOp op) {
-      return typeConverter.isLegal(op.getType()) ||
-             !op.getCondition().getType().isa<IntegerType>();
-    });
-    if (failed(applyPartialConversion(getOperation(), target,
-                                      std::move(patterns))))
+    if (failed(bufferizeOp(getOperation(), *options)))
       signalPassFailure();
+  }
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<bufferization::BufferizationDialect, memref::MemRefDialect,
+                    StandardOpsDialect, scf::SCFDialect>();
+    mlir::registerBufferizableOpInterfaceExternalModels(registry);
   }
 };
 } // namespace

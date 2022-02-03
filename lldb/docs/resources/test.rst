@@ -599,7 +599,7 @@ A quick guide to getting started with PTVS is as follows:
     #. Right click the Project node in Solution Explorer.
     #. In the General tab, Make sure Python 3.5 Debug is the selected Interpreter.
     #. In Debug/Search Paths, enter the path to your ninja/lib/site-packages directory.
-    #. In Debug/Environment Variables, enter ``VCINSTALLDIR=C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\``.
+    #. In Debug/Environment Variables, enter ``VCINSTALLDIR=C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\``.
     #. If you want to enabled mixed mode debugging, check Enable native code debugging (this slows down debugging, so enable it only on an as-needed basis.)
 #. Set the command line for the test suite to run.
     #. Right click the project in solution explorer and choose the Debug tab.

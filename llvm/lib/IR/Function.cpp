@@ -1575,7 +1575,7 @@ static bool matchIntrinsicType(
       Type * ReferenceType = ArgTys[D.getArgumentNumber()];
       PointerType *ThisArgType = dyn_cast<PointerType>(Ty);
       return (!ThisArgType ||
-              ThisArgType->getPointerElementType() != ReferenceType);
+              !ThisArgType->isOpaqueOrPointeeTypeMatches(ReferenceType));
     }
     case IITDescriptor::PtrToElt: {
       if (D.getArgumentNumber() >= ArgTys.size())

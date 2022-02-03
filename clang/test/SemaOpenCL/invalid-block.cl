@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -verify -fblocks -cl-std=CL2.0 %s
-
+// RUN: %clang_cc1 -verify -fblocks -cl-std=CL3.0 -cl-ext=-all,+__opencl_c_device_enqueue,+__opencl_c_generic_address_space,+__opencl_c_program_scope_global_variables  %s
 // OpenCL v2.0 s6.12.5
 void f0(int (^const bl)()); // expected-error{{declaring function parameter of type 'int (__generic ^const __private)(void)' is not allowed}}
 // All blocks declarations must be const qualified and initialized.

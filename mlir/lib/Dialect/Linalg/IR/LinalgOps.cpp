@@ -843,8 +843,6 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
 
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
-    if (!genericOp.hasTensorSemantics())
-      return failure();
     // Check all indexing maps are identity.
     if (llvm::any_of(genericOp.getIndexingMaps(),
                      [](AffineMap map) { return !map.isIdentity(); }))
@@ -858,6 +856,17 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
     auto yieldOp = dyn_cast<linalg::YieldOp>(body.getTerminator());
     if (!yieldOp)
       return failure();
+
+    // In the buffer case, we need to check exact buffer equality.
+    if (genericOp.hasBufferSemantics()) {
+      if (genericOp.getNumInputs() == 1 && genericOp.getNumOutputs() == 1 &&
+          genericOp.getInputOperand(0)->get() ==
+              genericOp.getOutputOperand(0)->get()) {
+        rewriter.eraseOp(genericOp);
+        return success();
+      }
+      return failure();
+    }
 
     // Get the argument number of the returned values. That is the operand
     // number to use for replacing uses of this operation.
@@ -876,6 +885,7 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
                                                       resultType, returnedArg);
       returnedArgs.push_back(returnedArg);
     }
+
     if (returnedArgs.size() != genericOp->getNumResults())
       return failure();
     rewriter.replaceOp(genericOp, returnedArgs);
@@ -1094,7 +1104,7 @@ static void print(OpAsmPrinter &p, linalg::YieldOp op) {
 static ParseResult parseYieldOp(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 2> opInfo;
   SmallVector<Type, 2> types;
-  llvm::SMLoc loc = parser.getCurrentLocation();
+  SMLoc loc = parser.getCurrentLocation();
   return failure(parser.parseOperandList(opInfo) ||
                  parser.parseOptionalAttrDict(result.attributes) ||
                  (!opInfo.empty() && parser.parseColonTypeList(types)) ||
@@ -1308,7 +1318,7 @@ static ParseResult parseTiledLoopOp(OpAsmParser &parser,
   SmallVector<OpAsmParser::OperandType, 4> inputs, inputRegionArgs;
   SmallVector<Type, 4> inputTypes;
   if (succeeded(parser.parseOptionalKeyword("ins"))) {
-    llvm::SMLoc inputsOperandsLoc = parser.getCurrentLocation();
+    SMLoc inputsOperandsLoc = parser.getCurrentLocation();
 
     if (parser.parseAssignmentListWithTypes(inputRegionArgs, inputs,
                                             inputTypes))
@@ -1323,7 +1333,7 @@ static ParseResult parseTiledLoopOp(OpAsmParser &parser,
   SmallVector<OpAsmParser::OperandType, 4> outputs, outputRegionArgs;
   SmallVector<Type, 4> outputTypes;
   if (succeeded(parser.parseOptionalKeyword("outs"))) {
-    llvm::SMLoc outputsOperandsLoc = parser.getCurrentLocation();
+    SMLoc outputsOperandsLoc = parser.getCurrentLocation();
 
     if (parser.parseAssignmentListWithTypes(outputRegionArgs, outputs,
                                             outputTypes))
@@ -1743,7 +1753,7 @@ struct TiledLoopResultsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
 };
 } // namespace
 
-void TiledLoopOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void TiledLoopOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
   results.insert<TiledLoopInputsFolder, TiledLoopResultsFolder,
                  DimOfTiledLoopInsOutsFolder<tensor::DimOp>,
@@ -1933,7 +1943,7 @@ static ParseResult
 parseCommonStructuredOpParts(OpAsmParser &parser, OperationState &result,
                              SmallVectorImpl<Type> &inputTypes,
                              SmallVectorImpl<Type> &outputTypes) {
-  llvm::SMLoc inputsOperandsLoc, outputsOperandsLoc;
+  SMLoc inputsOperandsLoc, outputsOperandsLoc;
   SmallVector<OpAsmParser::OperandType, 4> inputsOperands, outputsOperands;
 
   parser.parseOptionalAttrDict(result.attributes);

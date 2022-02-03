@@ -129,7 +129,7 @@ int main(int, char**)
     unsigned_test<uint32_t>();
     unsigned_test<uint64_t>();
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     unsigned_test<__uint128_t>();
     signed_test<__int128_t>();
 #endif

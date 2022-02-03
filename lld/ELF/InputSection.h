@@ -119,6 +119,12 @@ public:
   // its static type.
   InputFile *file;
 
+  // Input sections are part of an output section. Special sections
+  // like .eh_frame and merge sections are first combined into a
+  // synthetic section that is then added to an output section. In all
+  // cases this points one level up.
+  SectionBase *parent = nullptr;
+
   // Section index of the relocation section if exists.
   uint32_t relSecIdx = 0;
 
@@ -158,12 +164,6 @@ public:
       uncompress();
     return rawData;
   }
-
-  // Input sections are part of an output section. Special sections
-  // like .eh_frame and merge sections are first combined into a
-  // synthetic section that is then added to an output section. In all
-  // cases this points one level up.
-  SectionBase *parent = nullptr;
 
   // The next member in the section group if this section is in a group. This is
   // used by --gc-sections.
@@ -242,6 +242,7 @@ protected:
 // have to be as compact as possible, which is why we don't store the size (can
 // be found by looking at the next one).
 struct SectionPiece {
+  SectionPiece() = default;
   SectionPiece(size_t off, uint32_t hash, bool live)
       : inputOff(off), live(live), hash(hash >> 1) {}
 

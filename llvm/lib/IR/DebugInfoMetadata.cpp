@@ -567,13 +567,16 @@ Optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
 DIStringType *DIStringType::getImpl(LLVMContext &Context, unsigned Tag,
                                     MDString *Name, Metadata *StringLength,
                                     Metadata *StringLengthExp,
+                                    Metadata *StringLocationExp,
                                     uint64_t SizeInBits, uint32_t AlignInBits,
                                     unsigned Encoding, StorageType Storage,
                                     bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DIStringType, (Tag, Name, StringLength, StringLengthExp,
-                                       SizeInBits, AlignInBits, Encoding));
-  Metadata *Ops[] = {nullptr, nullptr, Name, StringLength, StringLengthExp};
+  DEFINE_GETIMPL_LOOKUP(DIStringType,
+                        (Tag, Name, StringLength, StringLengthExp,
+                         StringLocationExp, SizeInBits, AlignInBits, Encoding));
+  Metadata *Ops[] = {nullptr,      nullptr,         Name,
+                     StringLength, StringLengthExp, StringLocationExp};
   DEFINE_GETIMPL_STORE(DIStringType, (Tag, SizeInBits, AlignInBits, Encoding),
                        Ops);
 }

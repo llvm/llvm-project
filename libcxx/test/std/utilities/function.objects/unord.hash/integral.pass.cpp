@@ -110,7 +110,7 @@ int main(int, char**)
     test<uintmax_t>();
     test<uintptr_t>();
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     test<__int128_t>();
     test<__uint128_t>();
 #endif

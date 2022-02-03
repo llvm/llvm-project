@@ -19,6 +19,7 @@
 
 #include "flang/Common/Fortran.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Support/KindMapping.h"
 #include "mlir/IR/BuiltinOps.h"
 
@@ -49,17 +50,20 @@ class LoweringBridge {
 public:
   /// Create a lowering bridge instance.
   static LoweringBridge
-  create(const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
+  create(mlir::MLIRContext &ctx,
+         const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
          const Fortran::evaluate::IntrinsicProcTable &intrinsics,
-         const Fortran::parser::AllCookedSources &allCooked) {
-    return LoweringBridge{defaultKinds, intrinsics, allCooked};
+         const Fortran::parser::AllCookedSources &allCooked,
+         llvm::StringRef triple, fir::KindMapping &kindMap) {
+    return LoweringBridge(ctx, defaultKinds, intrinsics, allCooked, triple,
+                          kindMap);
   }
 
   //===--------------------------------------------------------------------===//
   // Getters
   //===--------------------------------------------------------------------===//
 
-  mlir::MLIRContext &getMLIRContext() { return *context.get(); }
+  mlir::MLIRContext &getMLIRContext() { return context; }
   mlir::ModuleOp &getModule() { return *module.get(); }
   const Fortran::common::IntrinsicTypeDefaultKinds &getDefaultKinds() const {
     return defaultKinds;
@@ -93,18 +97,20 @@ public:
 
 private:
   explicit LoweringBridge(
+      mlir::MLIRContext &ctx,
       const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
       const Fortran::evaluate::IntrinsicProcTable &intrinsics,
-      const Fortran::parser::AllCookedSources &);
+      const Fortran::parser::AllCookedSources &cooked, llvm::StringRef triple,
+      fir::KindMapping &kindMap);
   LoweringBridge() = delete;
   LoweringBridge(const LoweringBridge &) = delete;
 
   const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds;
   const Fortran::evaluate::IntrinsicProcTable &intrinsics;
   const Fortran::parser::AllCookedSources *cooked;
-  std::unique_ptr<mlir::MLIRContext> context;
+  mlir::MLIRContext &context;
   std::unique_ptr<mlir::ModuleOp> module;
-  fir::KindMapping kindMap;
+  fir::KindMapping &kindMap;
 };
 
 } // namespace lower

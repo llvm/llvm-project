@@ -5,11 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-//  This file provides Any, a non-template class modeled in the spirit of
-//  std::any.  The idea is to provide a type-safe replacement for C's void*.
-//  It can hold a value of any copy-constructible copy-assignable type
-//
+///
+/// \file
+///  This file provides Any, a non-template class modeled in the spirit of
+///  std::any.  The idea is to provide a type-safe replacement for C's void*.
+///  It can hold a value of any copy-constructible copy-assignable type
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_ANY_H

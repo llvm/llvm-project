@@ -16,6 +16,7 @@
 #define LLVM_PROFILEDATA_INSTRPROF_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -277,6 +278,18 @@ void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName);
 /// the duplicated profile variables for Comdat functions.
 bool needsComdatForCounter(const Function &F, const Module &M);
 
+/// An enum describing the attributes of an instrumented profile.
+enum class InstrProfKind {
+  Unknown = 0x0,
+  FE = 0x1, // A frontend clang profile, incompatible with other attrs.
+  IR = 0x2, // An IR-level profile (default when -fprofile-generate is used).
+  BB = 0x4, // A profile with entry basic block instrumentation.
+  CS = 0x8, // A context sensitive IR-level profile.
+  SingleByteCoverage = 0x10, // Use single byte probes for coverage.
+  FunctionEntryOnly = 0x20,  // Only instrument the function entry basic block.
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/FunctionEntryOnly)
+};
+
 const std::error_category &instrprof_category();
 
 enum class instrprof_error {
@@ -293,7 +306,6 @@ enum class instrprof_error {
   missing_debug_info_for_correlation,
   unexpected_debug_info_for_correlation,
   unable_to_correlate_profile,
-  unsupported_debug_format,
   unknown_function,
   invalid_prof,
   hash_mismatch,
@@ -530,6 +542,12 @@ public:
 
   /// Return the name section data.
   inline StringRef getNameData() const { return Data; }
+
+  /// Dump the symbols in this table.
+  void dumpNames(raw_ostream &OS) const {
+    for (StringRef S : NameTab.keys())
+      OS << S << "\n";
+  }
 };
 
 Error InstrProfSymtab::create(StringRef D, uint64_t BaseAddr) {
@@ -1149,12 +1167,6 @@ struct Header {
 // Parse MemOP Size range option.
 void getMemOPSizeRangeFromOption(StringRef Str, int64_t &RangeStart,
                                  int64_t &RangeLast);
-
-// Create a COMDAT variable INSTR_PROF_RAW_VERSION_VAR to make the runtime
-// aware this is an ir_level profile so it can set the version flag.
-GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS,
-                                            bool InstrEntryBBEnabled,
-                                            bool DebugInfoCorrelate);
 
 // Create the variable for the profile file name.
 void createProfileFileNameVar(Module &M, StringRef InstrProfileOutput);

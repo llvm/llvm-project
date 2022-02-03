@@ -5,7 +5,11 @@
 // RUN: mlir-opt %s -linalg-comprehensive-module-bufferize="allow-return-memref test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
 // RUN: mlir-opt %s -linalg-comprehensive-module-bufferize="allow-return-memref test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
 
+// Test bufferization using memref types that have no layout map.
+// RUN: mlir-opt %s -linalg-comprehensive-module-bufferize="allow-return-memref fully-dynamic-layout-maps=0" -split-input-file | FileCheck %s --check-prefix=CHECK-NO-LAYOUT-MAP
+
 // CHECK-LABEL: func @transfer_read(%{{.*}}: memref<?xf32, #map>) -> vector<4xf32> {
+// CHECK-NO-LAYOUT-MAP-LABEL: func @transfer_read(%{{.*}}: memref<?xf32>) -> vector<4xf32>
 func @transfer_read(
     %A : tensor<?xf32> {linalg.inplaceable = false})
   -> (vector<4xf32>)
@@ -26,6 +30,7 @@ func @transfer_read(
 
 // CHECK-LABEL: func @fill_inplace(
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>
+// CHECK-NO-LAYOUT-MAP-LABEL: func @fill_inplace(%{{.*}}: memref<?xf32>) {
 func @fill_inplace(
     %A : tensor<?xf32> {linalg.inplaceable = true})
   -> tensor<?xf32>
@@ -63,6 +68,7 @@ func @tensor_extract(%A : tensor<?xf32> {linalg.inplaceable = false}) -> (f32) {
 /// No linalg.inplaceable flag, must allocate.
 // CHECK-LABEL: func @not_inplace(
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>) -> memref<?xf32> {
+// CHECK-NO-LAYOUT-MAP-LABEL: func @not_inplace(%{{.*}}: memref<?xf32>) -> memref<?xf32>
 func @not_inplace(
     %A : tensor<?xf32> {linalg.inplaceable = false})
   -> tensor<?xf32>
@@ -86,6 +92,7 @@ func @not_inplace(
 
 // CHECK-LABEL: func @not_inplace
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?x?xf32, #[[$map_2d_dyn]]>) {
+// CHECK-NO-LAYOUT-MAP-LABEL: func @not_inplace(%{{.*}}: memref<?x?xf32>) {
 func @not_inplace(
     %A : tensor<?x?xf32> {linalg.inplaceable = true})
   -> tensor<?x?xf32>
@@ -1347,56 +1354,4 @@ func @write_after_select_read_one(
 
   // CHECK: return %[[f]], %[[select]]
   return %f, %w : f32, tensor<?xf32>
-}
-
-// -----
-
-// CHECK-LABEL: func @tensor_rank(
-//  CHECK-SAME:     %[[arg0:.*]]: memref<*xf32>
-func @tensor_rank(%arg0: tensor<*xf32>) -> index {
-  // CHECK: %[[r:.*]] = memref.rank %[[arg0]]
-  %0 = tensor.rank %arg0 : tensor<*xf32>
-  // CHECK: return %[[r]] : index
-  return %0 : index
-}
-
-// -----
-
-// CHECK-LABEL: func @tensor_generate_static_and_dynamic(
-//  CHECK-SAME:     %[[arg0:.*]]: index
-func @tensor_generate_static_and_dynamic(%arg0: index) -> tensor<16x?xindex> {
-  // CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
-  // CHECK-DAG: %[[c16:.*]] = arith.constant 16 : index
-  // CHECK: %[[alloc:.*]] = memref.alloc(%[[arg0]]) {{.*}} : memref<16x?xindex>
-  // CHECK: scf.parallel (%[[arg1:.*]], %[[arg2:.*]]) = (%[[c0]], %[[c0]]) to (%[[c16]], %[[arg0]]) {{.*}} {
-  %result = tensor.generate %arg0 {
-  ^bb0(%i: index, %j: index):
-    %sum = arith.addi %i, %j : index
-    // CHECK: memref.store {{.*}}, %[[alloc]][%[[arg1]], %[[arg2]]]
-    // CHECK: scf.yield
-    tensor.yield %sum : index
-  } : tensor<16x?xindex>
-  // CHECK: }
-  return %result : tensor<16x?xindex>
-}
-
-// -----
-
-// CHECK-LABEL: func @tensor_from_elements_2d(
-//  CHECK-SAME:     %[[ELEM0:.*]]: index, %[[ELEM1:.*]]: index
-func @tensor_from_elements_2d(%arg0: index, %arg1: index) -> tensor<3x2xindex> {
-  // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
-  // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
-  // CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
-  // CHECK-DAG: %[[MEMREF:.*]] = memref.alloc() {{.*}} : memref<3x2xindex>
-  //     CHECK: store %[[ELEM0]], %[[MEMREF]][%[[C0]], %[[C0]]]
-  //     CHECK: store %[[ELEM1]], %[[MEMREF]][%[[C0]], %[[C1]]]
-  //     CHECK: store %[[ELEM0]], %[[MEMREF]][%[[C1]], %[[C0]]]
-  //     CHECK: store %[[ELEM1]], %[[MEMREF]][%[[C1]], %[[C1]]]
-  //     CHECK: store %[[ELEM0]], %[[MEMREF]][%[[C2]], %[[C0]]]
-  //     CHECK: store %[[ELEM1]], %[[MEMREF]][%[[C2]], %[[C1]]]
-  %0 = tensor.from_elements %arg0, %arg1, %arg0, %arg1, %arg0, %arg1
-         : tensor<3x2xindex>
-  //     CHECK: return %[[MEMREF]]
-  return %0 : tensor<3x2xindex>
 }

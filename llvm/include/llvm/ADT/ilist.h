@@ -5,19 +5,20 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines classes to implement an intrusive doubly linked list class
-// (i.e. each node of the list must contain a next and previous field for the
-// list.
-//
-// The ilist class itself should be a plug in replacement for list.  This list
-// replacement does not provide a constant time size() method, so be careful to
-// use empty() when you really want to know if it's empty.
-//
-// The ilist class is implemented as a circular list.  The list itself contains
-// a sentinel node, whose Next points at begin() and whose Prev points at
-// rbegin().  The sentinel node itself serves as end() and rend().
-//
+///
+/// \file
+/// This file defines classes to implement an intrusive doubly linked list class
+/// (i.e. each node of the list must contain a next and previous field for the
+/// list.
+///
+/// The ilist class itself should be a plug in replacement for list.  This list
+/// replacement does not provide a constant time size() method, so be careful to
+/// use empty() when you really want to know if it's empty.
+///
+/// The ilist class is implemented as a circular list.  The list itself contains
+/// a sentinel node, whose Next points at begin() and whose Prev points at
+/// rbegin().  The sentinel node itself serves as end() and rend().
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_ILIST_H

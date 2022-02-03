@@ -1,11 +1,17 @@
 import("//compiler-rt/target.gni")
 import("//compiler-rt/test/test.gni")
+import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/buildflags.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/version.gni")
+
+ext = ""
+if (host_os == "win") {
+  ext = ".exe"
+}
 
 write_cmake_config("lit_common_configured") {
   input = "lit.common.configured.in"
@@ -40,7 +46,7 @@ write_cmake_config("lit_common_configured") {
     "GOLD_EXECUTABLE=ld",
     "GNU_LD_EXECUTABLE=ld",
     "COMPILER_RT_RESOLVED_TEST_COMPILER=" +
-        rebase_path("$root_build_dir/bin/clang"),
+        rebase_path("$root_build_dir/bin/clang") + ext,
     "COMPILER_RT_TEST_COMPILER_ID=Clang",
     "Python3_EXECUTABLE=$python_path",
     "COMPILER_RT_DEBUG_PYBOOL=False",

@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // Functionality to perform analysis on an IntegerPolyhedron. In particular,
-// support for performing emptiness checks and redundancy checks.
+// support for performing emptiness checks, redundancy checks and obtaining the
+// lexicographically minimum rational element in a set.
 //
 //===----------------------------------------------------------------------===//
 
@@ -34,22 +35,24 @@ class GBRSimplex;
 /// by specifying the dimensionality of the set. It supports adding affine
 /// inequalities and equalities, and can perform emptiness checks, i.e., it can
 /// find a solution to the set of constraints if one exists, or say that the
-/// set is empty if no solution exists. Currently, this only works for bounded
-/// sets. Furthermore, it can find a subset of these constraints that are
-/// redundant, i.e. a subset of constraints that doesn't constrain the affine
-/// set further after adding the non-redundant constraints. Simplex can also be
-/// constructed from an IntegerPolyhedron object.
+/// set is empty if no solution exists. Furthermore, it can find a subset of
+/// these constraints that are redundant, i.e. a subset of constraints that
+/// doesn't constrain the affine set further after adding the non-redundant
+/// constraints. The LexSimplex class provides support for computing the
+/// lexicographical minimum of an IntegerPolyhedron. Both these classes can be
+/// constructed from an IntegerPolyhedron, and both inherit common
+/// functionality from SimplexBase.
 ///
-/// The implementation of the Simplex and SimplexBase classes, other than the
-/// functionality for sampling, is based on the paper
+/// The implementations of the Simplex and SimplexBase classes, other than the
+/// functionality for obtaining an integer sample, are based on the paper
 /// "Simplify: A Theorem Prover for Program Checking"
 /// by D. Detlefs, G. Nelson, J. B. Saxe.
 ///
 /// We define variables, constraints, and unknowns. Consider the example of a
 /// two-dimensional set defined by 1 + 2x + 3y >= 0 and 2x - 3y >= 0. Here,
-/// x, y, are variables while 1 + 2x + 3y >= 0, 2x - 3y >= 0 are
-/// constraints. Unknowns are either variables or constraints, i.e., x, y,
-/// 1 + 2x + 3y >= 0, 2x - 3y >= 0 are all unknowns.
+/// x, y, are variables while 1 + 2x + 3y >= 0, 2x - 3y >= 0 are constraints.
+/// Unknowns are either variables or constraints, i.e., x, y, 1 + 2x + 3y >= 0,
+/// 2x - 3y >= 0 are all unknowns.
 ///
 /// The implementation involves a matrix called a tableau, which can be thought
 /// of as a 2D matrix of rational numbers having number of rows equal to the
@@ -62,10 +65,24 @@ class GBRSimplex;
 /// since 3/6 = 1/2, 4/6 = 2/3, and 18/6 = 3.
 ///
 /// Every row and column except the first and second columns is associated with
-/// an unknown and every unknown is associated with a row or column. The second
-/// column represents the constant, explained in more detail below. An unknown
-/// associated with a row or column is said to be in row or column position
-/// respectively.
+/// an unknown and every unknown is associated with a row or column. An unknown
+/// associated with a row or column is said to be in row or column orientation
+/// respectively. As described above, the first column is the common
+/// denominator. The second column represents the constant term, explained in
+/// more detail below. These two are _fixed columns_; they always retain their
+/// position as the first and second columns. Additionally, LexSimplex stores
+/// a so-call big M parameter (explained below) in the third column, so
+/// LexSimplex has three fixed columns.
+///
+/// LexSimplex does not directly support variables which can be negative, so we
+/// introduce the so-called big M parameter, an artificial variable that is
+/// considered to have an arbitrarily large value. We then transform the
+/// variables, say x, y, z, ... to M, M + x, M + y, M + z. Since M has been
+/// added to these variables, they are now known to have non-negative values.
+/// For more details, see the documentation for LexSimplex. The big M parameter
+/// is not considered a real unknown and is not stored in the `var` data
+/// structure; rather the tableau just has an extra fixed column for it just
+/// like the constant term.
 ///
 /// The vectors var and con store information about the variables and
 /// constraints respectively, namely, whether they are in row or column
@@ -101,9 +118,13 @@ class GBRSimplex;
 /// The association of unknowns to rows and columns is called the _tableau
 /// configuration_. The _sample value_ of an unknown in a particular tableau
 /// configuration is its value if all the column unknowns were set to zero.
-/// Concretely, for unknowns in column position the sample value is zero and
-/// for unknowns in row position the sample value is the constant term divided
-/// by the common denominator.
+/// Concretely, for unknowns in column position the sample value is zero; when
+/// the big M parameter is not used, for unknowns in row position the sample
+/// value is the constant term divided by the common denominator. When the big M
+/// parameter is used, if d is the denominator, p is the big M coefficient, and
+/// c is the constant term, then the sample value is (p*M + c)/d. Since M is
+/// considered to be positive infinity, this is positive (negative) infinity
+/// when p is positive or negative, and c/d when p is zero.
 ///
 /// The tableau configuration is called _consistent_ if the sample value of all
 /// restricted unknowns is non-negative. Initially there are no constraints, and
@@ -116,36 +137,28 @@ class GBRSimplex;
 /// set of constraints is mutually contradictory and the tableau is marked
 /// _empty_, which means the set of constraints has no solution.
 ///
-/// The Simplex class supports redundancy checking via detectRedundant and
-/// isMarkedRedundant. A redundant constraint is one which is never violated as
-/// long as the other constraints are not violated, i.e., removing a redundant
-/// constraint does not change the set of solutions to the constraints. As a
-/// heuristic, constraints that have been marked redundant can be ignored for
-/// most operations. Therefore, these constraints are kept in rows 0 to
-/// nRedundant - 1, where nRedundant is a member variable that tracks the number
-/// of constraints that have been marked redundant.
-///
-/// This Simplex class also supports taking snapshots of the current state
+/// This SimplexBase class also supports taking snapshots of the current state
 /// and rolling back to prior snapshots. This works by maintaining an undo log
 /// of operations. Snapshots are just pointers to a particular location in the
 /// log, and rolling back to a snapshot is done by reverting each log entry's
-/// operation from the end until we reach the snapshot's location.
-///
-/// Finding an integer sample is done with the Generalized Basis Reduction
-/// algorithm. See the documentation for findIntegerSample and reduceBasis.
-///
-/// The SimplexBase class contains some basic functionality. In the future,
-/// lexicographic optimization will be supported by a class inheriting from
-/// SimplexBase. Functionality that will not supported by that class is placed
-/// in `Simplex`.
-
+/// operation from the end until we reach the snapshot's location. SimplexBase
+/// also supports taking a snapshot including the exact set of basis unknowns;
+/// if this functionality is used, then on rolling back the exact basis will
+/// also be restored. This is used by LexSimplex because its algorithm, unlike
+/// Simplex, is sensitive to the exact basis used at a point.
 class SimplexBase {
 public:
-  enum class Direction { Up, Down };
-
   SimplexBase() = delete;
-  explicit SimplexBase(unsigned nVar);
-  explicit SimplexBase(const IntegerPolyhedron &constraints);
+  virtual ~SimplexBase() = default;
+
+  /// Construct a SimplexBase with the specified number of variables and fixed
+  /// columns.
+  ///
+  /// For example, Simplex uses two fixed columns: the denominator and the
+  /// constant term, whereas LexSimplex has an extra fixed column for the
+  /// so-called big M parameter. For more information see the documentation for
+  /// LexSimplex.
+  SimplexBase(unsigned nVar, bool mustUseBigM);
 
   /// Returns true if the tableau is empty (has conflicting constraints),
   /// false otherwise.
@@ -154,7 +167,7 @@ public:
   /// Add an inequality to the tableau. If coeffs is c_0, c_1, ... c_n, where n
   /// is the current number of variables, then the corresponding inequality is
   /// c_n + c_0*x_0 + c_1*x_1 + ... + c_{n-1}*x_{n-1} >= 0.
-  void addInequality(ArrayRef<int64_t> coeffs);
+  virtual void addInequality(ArrayRef<int64_t> coeffs) = 0;
 
   /// Returns the number of variables in the tableau.
   unsigned getNumVariables() const;
@@ -174,7 +187,14 @@ public:
   void markEmpty();
 
   /// Get a snapshot of the current state. This is used for rolling back.
+  /// The same basis will not necessarily be restored on rolling back.
+  /// The snapshot only captures the set of variables and constraints present
+  /// in the Simplex.
   unsigned getSnapshot() const;
+
+  /// Get a snapshot of the current state including the basis. When rolling
+  /// back, the exact basis will be restored.
+  unsigned getSnapshotBasis();
 
   /// Rollback to a snapshot. This invalidates all later snapshots.
   void rollback(unsigned snapshot);
@@ -182,13 +202,13 @@ public:
   /// Add all the constraints from the given IntegerPolyhedron.
   void intersectIntegerPolyhedron(const IntegerPolyhedron &poly);
 
-  /// Returns a rational sample point. Returns an empty optional if Simplex is
-  /// empty.
+  /// Returns the current sample point, which may contain non-integer (rational)
+  /// coordinates. Returns an empty optional when the tableau is empty.
+  ///
+  /// Also returns empty when the big M parameter is used and a variable
+  /// has a non-zero big M coefficient, meaning its value is infinite or
+  /// unbounded.
   Optional<SmallVector<Fraction, 8>> getRationalSample() const;
-
-  /// Returns the current sample point if it is integral. Otherwise, returns
-  /// None.
-  Optional<SmallVector<int64_t, 8>> getSamplePointIfIntegral() const;
 
   /// Print the tableau's internal state.
   void print(raw_ostream &os) const;
@@ -223,13 +243,13 @@ protected:
     unsigned row, column;
   };
 
-  /// Find a pivot to change the sample value of row in the specified
-  /// direction. The returned pivot row will be row if and only
-  /// if the unknown is unbounded in the specified direction.
+  /// Return any row that this column can be pivoted with, ignoring tableau
+  /// consistency.
   ///
-  /// Returns a (row, col) pair denoting a pivot, or an empty Optional if
-  /// no valid pivot exists.
-  Optional<Pivot> findPivot(int row, Direction direction) const;
+  /// Returns an empty optional if no pivot is possible, which happens only when
+  /// the column unknown is a variable and no constraint has a non-zero
+  /// coefficient for it.
+  Optional<unsigned> findAnyPivotRow(unsigned col);
 
   /// Swap the row with the column in the tableau's data structures but not the
   /// tableau itself. This is used by pivot.
@@ -253,7 +273,11 @@ protected:
   Unknown &unknownFromRow(unsigned row);
 
   /// Add a new row to the tableau and the associated data structures.
-  unsigned addRow(ArrayRef<int64_t> coeffs);
+  /// The new row is considered to be a constraint; the new Unknown lives in
+  /// con.
+  ///
+  /// Returns the index of the new Unknown in con.
+  unsigned addRow(ArrayRef<int64_t> coeffs, bool makeRestricted = false);
 
   /// Normalize the given row by removing common factors between the numerator
   /// and the denominator.
@@ -263,33 +287,31 @@ protected:
   void swapRows(unsigned i, unsigned j);
   void swapColumns(unsigned i, unsigned j);
 
-  /// Restore the unknown to a non-negative sample value.
-  ///
-  /// Returns success if the unknown was successfully restored to a non-negative
-  /// sample value, failure otherwise.
-  LogicalResult restoreRow(Unknown &u);
-
   /// Enum to denote operations that need to be undone during rollback.
   enum class UndoLogEntry {
     RemoveLastConstraint,
     RemoveLastVariable,
     UnmarkEmpty,
-    UnmarkLastRedundant
+    UnmarkLastRedundant,
+    RestoreBasis
   };
+
+  /// Undo the addition of the last constraint. This will only be called from
+  /// undo, when rolling back.
+  virtual void undoLastConstraint() = 0;
+
+  /// Remove the last constraint, which must be in row orientation.
+  void removeLastConstraintRowOrientation();
 
   /// Undo the operation represented by the log entry.
   void undo(UndoLogEntry entry);
 
-  /// Find a row that can be used to pivot the column in the specified
-  /// direction. If skipRow is not null, then this row is excluded
-  /// from consideration. The returned pivot will maintain all constraints
-  /// except the column itself and skipRow, if it is set. (if these unknowns
-  /// are restricted).
-  ///
-  /// Returns the row to pivot to, or an empty Optional if the column
-  /// is unbounded in the specified direction.
-  Optional<unsigned> findPivotRow(Optional<unsigned> skipRow,
-                                  Direction direction, unsigned col) const;
+  /// Return the number of fixed columns, as described in the constructor above,
+  /// this is the number of columns beyond those for the variables in var.
+  unsigned getNumFixedCols() const { return usingBigM ? 3u : 2u; }
+
+  /// Stores whether or not a big M column is present in the tableau.
+  const bool usingBigM;
 
   /// The number of rows in the tableau.
   unsigned nRow;
@@ -312,6 +334,11 @@ protected:
   /// Holds a log of operations, used for rolling back to a previous state.
   SmallVector<UndoLogEntry, 8> undoLog;
 
+  /// Holds a vector of bases. The ith saved basis is the basis that should be
+  /// restored when processing the ith occurrance of UndoLogEntry::RestoreBasis
+  /// in undoLog. This is used by getSnapshotBasis.
+  SmallVector<SmallVector<int, 8>, 8> savedBases;
+
   /// These hold the indexes of the unknown at a given row or column position.
   /// We keep these as signed integers since that makes it convenient to check
   /// if an index corresponds to a variable or a constraint by checking the
@@ -325,12 +352,157 @@ protected:
   SmallVector<Unknown, 8> con, var;
 };
 
+/// Simplex class using the lexicographic pivot rule. Used for lexicographic
+/// optimization. The implementation of this class is based on the paper
+/// "Parametric Integer Programming" by Paul Feautrier.
+///
+/// This does not directly support negative-valued variables, so it uses the big
+/// M parameter trick to make all the variables non-negative. Basically we
+/// introduce an artifical variable M that is considered to have a value of
+/// +infinity and instead of the variables x, y, z, we internally use variables
+/// M + x, M + y, M + z, which are now guaranteed to be non-negative. See the
+/// documentation for Simplex for more details. The whole algorithm is performed
+/// without having to fix a "big enough" value of the big M parameter; it is
+/// just considered to be infinite throughout and it never appears in the final
+/// outputs. We will deal with sample values throughout that may in general be
+/// some linear expression involving M like pM + q or aM + b. We can compare
+/// these with each other. They have a total order:
+/// aM + b < pM + q iff a < p or (a == p and b < q).
+/// In particular, aM + b < 0 iff a < 0 or (a == 0 and b < 0).
+///
+/// Initially all the constraints to be added are added as rows, with no attempt
+/// to keep the tableau consistent. Pivots are only performed when some query
+/// is made, such as a call to getRationalLexMin. Care is taken to always
+/// maintain a lexicopositive basis transform, explained below.
+///
+/// Let the variables be x = (x_1, ... x_n). Let the basis unknowns at a
+/// particular point be  y = (y_1, ... y_n). We know that x = A*y + b for some
+/// n x n matrix A and n x 1 column vector b. We want every column in A to be
+/// lexicopositive, i.e., have at least one non-zero element, with the first
+/// such element being positive. This property is preserved throughout the
+/// operation of LexSimplex. Note that on construction, the basis transform A is
+/// the indentity matrix and so every column is lexicopositive. Note that for
+/// LexSimplex, for the tableau to be consistent we must have non-negative
+/// sample values not only for the constraints but also for the variables.
+/// So if the tableau is consistent then x >= 0 and y >= 0, by which we mean
+/// every element in these vectors is non-negative. (note that this is a
+/// different concept from lexicopositivity!)
+///
+/// When we arrive at a basis such the basis transform is lexicopositive and the
+/// tableau is consistent, the sample point is the lexiographically minimum
+/// point in the polytope. We will show that A*y is zero or lexicopositive when
+/// y >= 0. Adding a lexicopositive vector to b will make it lexicographically
+/// bigger, so A*y + b is lexicographically bigger than b for any y >= 0 except
+/// y = 0. This shows that no point lexicographically smaller than x = b can be
+/// obtained. Since we already know that x = b is valid point in the space, this
+/// shows that x = b is the lexicographic minimum.
+///
+/// Proof that A*y is lexicopositive or zero when y > 0. Recall that every
+/// column of A is lexicopositive. Begin by considering A_1, the first row of A.
+/// If this row is all zeros, then (A*y)_1 = (A_1)*y = 0; proceed to the next
+/// row. If we run out of rows, A*y is zero and we are done; otherwise, we
+/// encounter some row A_i that has a non-zero element. Every column is
+/// lexicopositive and so has some positive element before any negative elements
+/// occur, so the element in this row for any column, if non-zero, must be
+/// positive. Consider (A*y)_i = (A_i)*y. All the elements in both vectors are
+/// non-negative, so if this is non-zero then it must be positive. Then the
+/// first non-zero element of A*y is positive so A*y is lexicopositive.
+///
+/// Otherwise, if (A_i)*y is zero, then for every column j that had a non-zero
+/// element in A_i, y_j is zero. Thus these columns have no contribution to A*y
+/// and we can completely ignore these columns of A. We now continue downwards,
+/// looking for rows of A that have a non-zero element other than in the ignored
+/// columns. If we find one, say A_k, once again these elements must be positive
+/// since they are the first non-zero element in each of these columns, so if
+/// (A_k)*y is not zero then we have that A*y is lexicopositive and if not we
+/// ignore more columns; eventually if all these dot products become zero then
+/// A*y is zero and we are done.
+class LexSimplex : public SimplexBase {
+public:
+  explicit LexSimplex(unsigned nVar)
+      : SimplexBase(nVar, /*mustUseBigM=*/true) {}
+  explicit LexSimplex(const IntegerPolyhedron &constraints)
+      : LexSimplex(constraints.getNumIds()) {
+    intersectIntegerPolyhedron(constraints);
+  }
+  ~LexSimplex() override = default;
+
+  /// Add an inequality to the tableau. If coeffs is c_0, c_1, ... c_n, where n
+  /// is the current number of variables, then the corresponding inequality is
+  /// c_n + c_0*x_0 + c_1*x_1 + ... + c_{n-1}*x_{n-1} >= 0.
+  ///
+  /// This just adds the inequality to the tableau and does not try to create a
+  /// consistent tableau configuration.
+  void addInequality(ArrayRef<int64_t> coeffs) final {
+    addRow(coeffs, /*makeRestricted=*/true);
+  }
+
+  /// Get a snapshot of the current state. This is used for rolling back.
+  unsigned getSnapshot() { return SimplexBase::getSnapshotBasis(); }
+
+  /// Return the lexicographically minimum rational solution to the constraints.
+  Optional<SmallVector<Fraction, 8>> getRationalLexMin();
+
+protected:
+  /// Undo the addition of the last constraint. This is only called while
+  /// rolling back.
+  void undoLastConstraint() final;
+
+  /// Make the tableau configuration consistent.
+  void restoreRationalConsistency();
+
+  /// Return whether the specified row is violated;
+  bool rowIsViolated(unsigned row) const;
+
+  /// Get a constraint row that is violated, if one exists.
+  /// Otherwise, return an empty optional.
+  Optional<unsigned> maybeGetViolatedRow() const;
+
+  /// Given two potential pivot columns for a row, return the one that results
+  /// in the lexicographically smallest sample vector.
+  unsigned getLexMinPivotColumn(unsigned row, unsigned colA,
+                                unsigned colB) const;
+
+  /// Try to move the specified row to column orientation while preserving the
+  /// lexicopositivity of the basis transform. If this is not possible, return
+  /// failure. This only occurs when the constraints have no solution; the
+  /// tableau will be marked empty in such a case.
+  LogicalResult moveRowUnknownToColumn(unsigned row);
+};
+
+/// The Simplex class uses the Normal pivot rule and supports integer emptiness
+/// checks as well as detecting redundancies.
+///
+/// The Simplex class supports redundancy checking via detectRedundant and
+/// isMarkedRedundant. A redundant constraint is one which is never violated as
+/// long as the other constraints are not violated, i.e., removing a redundant
+/// constraint does not change the set of solutions to the constraints. As a
+/// heuristic, constraints that have been marked redundant can be ignored for
+/// most operations. Therefore, these constraints are kept in rows 0 to
+/// nRedundant - 1, where nRedundant is a member variable that tracks the number
+/// of constraints that have been marked redundant.
+///
+/// Finding an integer sample is done with the Generalized Basis Reduction
+/// algorithm. See the documentation for findIntegerSample and reduceBasis.
 class Simplex : public SimplexBase {
 public:
+  enum class Direction { Up, Down };
+
   Simplex() = delete;
-  explicit Simplex(unsigned nVar) : SimplexBase(nVar) {}
+  explicit Simplex(unsigned nVar) : SimplexBase(nVar, /*mustUseBigM=*/false) {}
   explicit Simplex(const IntegerPolyhedron &constraints)
-      : SimplexBase(constraints) {}
+      : Simplex(constraints.getNumIds()) {
+    intersectIntegerPolyhedron(constraints);
+  }
+  ~Simplex() override = default;
+
+  /// Add an inequality to the tableau. If coeffs is c_0, c_1, ... c_n, where n
+  /// is the current number of variables, then the corresponding inequality is
+  /// c_n + c_0*x_0 + c_1*x_1 + ... + c_{n-1}*x_{n-1} >= 0.
+  ///
+  /// This also tries to restore the tableau configuration to a consistent
+  /// state and marks the Simplex empty if this is not possible.
+  void addInequality(ArrayRef<int64_t> coeffs) final;
 
   /// Compute the maximum or minimum value of the given row, depending on
   /// direction. The specified row is never pivoted. On return, the row may
@@ -390,8 +562,43 @@ public:
   /// Otherwise, returns false.
   bool isRationalSubsetOf(const IntegerPolyhedron &poly);
 
+  /// Returns the current sample point if it is integral. Otherwise, returns
+  /// None.
+  Optional<SmallVector<int64_t, 8>> getSamplePointIfIntegral() const;
+
 private:
   friend class GBRSimplex;
+
+  /// Restore the unknown to a non-negative sample value.
+  ///
+  /// Returns success if the unknown was successfully restored to a non-negative
+  /// sample value, failure otherwise.
+  LogicalResult restoreRow(Unknown &u);
+
+  /// Find a pivot to change the sample value of row in the specified
+  /// direction while preserving tableau consistency, except that if the
+  /// direction is down then the pivot may make the specified row take a
+  /// negative value. The returned pivot row will be row if and only if the
+  /// unknown is unbounded in the specified direction.
+  ///
+  /// Returns a (row, col) pair denoting a pivot, or an empty Optional if
+  /// no valid pivot exists.
+  Optional<Pivot> findPivot(int row, Direction direction) const;
+
+  /// Find a row that can be used to pivot the column in the specified
+  /// direction. If skipRow is not null, then this row is excluded
+  /// from consideration. The returned pivot will maintain all constraints
+  /// except the column itself and skipRow, if it is set. (if these unknowns
+  /// are restricted).
+  ///
+  /// Returns the row to pivot to, or an empty Optional if the column
+  /// is unbounded in the specified direction.
+  Optional<unsigned> findPivotRow(Optional<unsigned> skipRow,
+                                  Direction direction, unsigned col) const;
+
+  /// Undo the addition of the last constraint while preserving tableau
+  /// consistency.
+  void undoLastConstraint() final;
 
   /// Compute the maximum or minimum of the specified Unknown, depending on
   /// direction. The specified unknown may be pivoted. If the unknown is

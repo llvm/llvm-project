@@ -155,8 +155,14 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
     if (SrcCounters < SrcCountersStart || SrcCounters >= SrcNameStart ||
         (SrcCounters + __llvm_profile_counter_entry_size() * NC) > SrcNameStart)
       return 1;
-    for (unsigned I = 0; I < NC; I++)
-      ((uint64_t *)DstCounters)[I] += ((uint64_t *)SrcCounters)[I];
+    for (unsigned I = 0; I < NC; I++) {
+      if (__llvm_profile_get_version() & VARIANT_MASK_BYTE_COVERAGE) {
+        // A value of zero signifies the function is covered.
+        DstCounters[I] &= SrcCounters[I];
+      } else {
+        ((uint64_t *)DstCounters)[I] += ((uint64_t *)SrcCounters)[I];
+      }
+    }
 
     /* Now merge value profile data. */
     if (!VPMergeHook)

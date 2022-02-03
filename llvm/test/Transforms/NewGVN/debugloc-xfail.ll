@@ -1,5 +1,5 @@
 ; XFAIL: *
-; RUN: opt < %s -newgvn -S | FileCheck %s
+; RUN: opt < %s -passes=newgvn -S | FileCheck %s
 ; CHECK: {{^}}for.body:
 ; CHECK-NEXT: [[VREG1:%[^ ]+]] = phi{{.*}}[[VREG2:%[^ ]+]],{{.*}}%.sink,
 ; CHECK-NOT: !dbg

@@ -112,6 +112,7 @@ complete:
 // ASM-NEXT: .amdhsa_group_segment_fixed_size 1
 // ASM-NEXT: .amdhsa_private_segment_fixed_size 1
 // ASM-NEXT: .amdhsa_kernarg_size 0
+// ASM-NEXT: .amdhsa_user_sgpr_count 15
 // ASM-NEXT: .amdhsa_user_sgpr_private_segment_buffer 1
 // ASM-NEXT: .amdhsa_user_sgpr_dispatch_ptr 1
 // ASM-NEXT: .amdhsa_user_sgpr_queue_ptr 1

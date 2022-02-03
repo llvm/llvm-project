@@ -764,6 +764,9 @@ def int_arm_neon_sha256h: SHA_3Arg_v4i32_Intrinsic;
 def int_arm_neon_sha256h2: SHA_3Arg_v4i32_Intrinsic;
 def int_arm_neon_sha256su1: SHA_3Arg_v4i32_Intrinsic;
 
+def int_arm_neon_vqrdmlah : Neon_3Arg_Intrinsic;
+def int_arm_neon_vqrdmlsh : Neon_3Arg_Intrinsic;
+
 // Armv8.2-A dot product instructions
 class Neon_Dot_Intrinsic
   : Intrinsic<[llvm_anyvector_ty],

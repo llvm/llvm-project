@@ -22,7 +22,6 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <cassert>
 #include <string>
 #include <utility>
 
@@ -30,6 +29,7 @@ namespace {
 
 using namespace clang;
 using namespace dataflow;
+using namespace test;
 using ::testing::_;
 using ::testing::ElementsAre;
 using ::testing::IsNull;
@@ -40,11 +40,14 @@ class TransferTest : public ::testing::Test {
 protected:
   template <typename Matcher>
   void runDataflow(llvm::StringRef Code, Matcher Match,
-                   LangStandard::Kind Std = LangStandard::lang_cxx17) {
+                   LangStandard::Kind Std = LangStandard::lang_cxx17,
+                   bool ApplyBuiltinTransfer = true) {
     ASSERT_THAT_ERROR(
         test::checkDataflow<NoopAnalysis>(
             Code, "target",
-            [](ASTContext &C, Environment &) { return NoopAnalysis(C); },
+            [ApplyBuiltinTransfer](ASTContext &C, Environment &) {
+              return NoopAnalysis(C, ApplyBuiltinTransfer);
+            },
             [&Match](
                 llvm::ArrayRef<
                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
@@ -58,19 +61,29 @@ protected:
   }
 };
 
-/// Returns the `ValueDecl` for the given identifier.
-///
-/// Requirements:
-///
-///  `Name` must be unique in `ASTCtx`.
-static const ValueDecl *findValueDecl(ASTContext &ASTCtx,
-                                      llvm::StringRef Name) {
-  auto TargetNodes = ast_matchers::match(
-      ast_matchers::valueDecl(ast_matchers::hasName(Name)).bind("v"), ASTCtx);
-  assert(TargetNodes.size() == 1 && "Name must be unique");
-  auto *const Result = ast_matchers::selectFirst<ValueDecl>("v", TargetNodes);
-  assert(Result != nullptr);
-  return Result;
+TEST_F(TransferTest, IntVarDeclNotTrackedWhenTransferDisabled) {
+  std::string Code = R"(
+    void target() {
+      int Foo;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](llvm::ArrayRef<
+             std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+             Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        EXPECT_EQ(Env.getStorageLocation(*FooDecl, SkipPast::None), nullptr);
+      },
+      LangStandard::lang_cxx17,
+      /*ApplyBuiltinTransfer=*/false);
 }
 
 TEST_F(TransferTest, IntVarDecl) {
@@ -1950,6 +1963,74 @@ TEST_F(TransferTest, AggregateInitialization) {
           EXPECT_EQ(&QuuxVal->getChild(*QuxDecl), QuxArgVal);
         });
   }
+}
+
+TEST_F(TransferTest, AssignToUnionMember) {
+  std::string Code = R"(
+    union A {
+      int Foo;
+    };
+
+    void target(int Bar) {
+      A Baz;
+      Baz.Foo = Bar;
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
+                ASSERT_THAT(BazDecl, NotNull());
+                ASSERT_TRUE(BazDecl->getType()->isUnionType());
+
+                const auto *BazLoc = dyn_cast_or_null<AggregateStorageLocation>(
+                    Env.getStorageLocation(*BazDecl, SkipPast::None));
+                ASSERT_THAT(BazLoc, NotNull());
+
+                // FIXME: Add support for union types.
+                EXPECT_THAT(Env.getValue(*BazLoc), IsNull());
+              });
+}
+
+TEST_F(TransferTest, AssignFromBoolLiteral) {
+  std::string Code = R"(
+    void target() {
+      bool Foo = true;
+      bool Bar = false;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        const auto *FooVal =
+            dyn_cast_or_null<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        ASSERT_THAT(FooVal, NotNull());
+
+        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+        ASSERT_THAT(BarDecl, NotNull());
+
+        const auto *BarVal =
+            dyn_cast_or_null<BoolValue>(Env.getValue(*BarDecl, SkipPast::None));
+        ASSERT_THAT(BarVal, NotNull());
+
+        EXPECT_EQ(FooVal, &Env.getBoolLiteralValue(true));
+        EXPECT_EQ(BarVal, &Env.getBoolLiteralValue(false));
+      });
 }
 
 } // namespace

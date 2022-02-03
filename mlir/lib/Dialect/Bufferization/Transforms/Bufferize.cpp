@@ -205,10 +205,60 @@ checkBufferizationResult(Operation *op, const BufferizationOptions &options) {
 LogicalResult bufferization::bufferizeOp(Operation *op,
                                          const BufferizationState &state) {
   // Bufferize the op and its nested ops.
-  OwningRewritePatternList patterns(op->getContext());
-  patterns.add<BufferizationPattern>(op->getContext(), state);
+  RewritePatternSet patterns(op->getContext());
+  populateBufferizationPattern(state, patterns);
   if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
     return failure();
 
   return checkBufferizationResult(op, state.getOptions());
+}
+
+namespace {
+/// This a "no analysis, always copy" BufferizationState. In the absence of an
+/// analysis, a buffer must be copied each time it is written to. Therefore, all
+/// OpOperands that bufferize to a memory write must bufferize out-of-place.
+class AlwaysCopyBufferizationState : public BufferizationState {
+public:
+  AlwaysCopyBufferizationState(const BufferizationOptions &options)
+      : BufferizationState(options) {}
+
+  AlwaysCopyBufferizationState(const AlwaysCopyBufferizationState &) = delete;
+
+  virtual ~AlwaysCopyBufferizationState() = default;
+
+  /// Return `true` if the given OpResult has been decided to bufferize inplace.
+  bool isInPlace(OpOperand &opOperand) const override {
+    // OpOperands that bufferize to a memory write are out-of-place, i.e., an
+    // alloc and copy is inserted.
+    return !bufferizesToMemoryWrite(opOperand);
+  }
+
+  /// Return true if `v1` and `v2` bufferize to equivalent buffers.
+  bool areEquivalentBufferizedValues(Value v1, Value v2) const override {
+    // There is no analysis, so we do not know if the values are equivalent. The
+    // conservative answer is "false".
+    return false;
+  }
+};
+} // namespace
+
+LogicalResult bufferization::bufferizeOp(Operation *op,
+                                         const BufferizationOptions &options) {
+  AlwaysCopyBufferizationState state(options);
+  return bufferizeOp(op, state);
+}
+
+void bufferization::populateBufferizationPattern(
+    const BufferizationState &state, RewritePatternSet &patterns) {
+  patterns.add<BufferizationPattern>(patterns.getContext(), state);
+}
+
+std::unique_ptr<BufferizationOptions>
+bufferization::getPartialBufferizationOptions() {
+  auto options = std::make_unique<BufferizationOptions>();
+  options->allowReturnMemref = true;
+  options->allowUnknownOps = true;
+  options->createDeallocs = false;
+  options->fullyDynamicLayoutMaps = false;
+  return options;
 }

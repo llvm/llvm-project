@@ -1856,6 +1856,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
     return false;
 
   bool SeenArrow = false;
+  bool InTemplateParameterList = false;
 
   while (FormatTok->isNot(tok::l_brace)) {
     if (FormatTok->isSimpleTypeSpecifier()) {
@@ -1871,6 +1872,14 @@ bool UnwrappedLineParser::tryToParseLambda() {
     case tok::l_square:
       parseSquare();
       break;
+    case tok::kw_class:
+    case tok::kw_template:
+    case tok::kw_typename:
+      assert(FormatTok->Previous);
+      if (FormatTok->Previous->is(tok::less))
+        InTemplateParameterList = true;
+      nextToken();
+      break;
     case tok::amp:
     case tok::star:
     case tok::kw_const:
@@ -1880,11 +1889,8 @@ bool UnwrappedLineParser::tryToParseLambda() {
     case tok::identifier:
     case tok::numeric_constant:
     case tok::coloncolon:
-    case tok::kw_class:
     case tok::kw_mutable:
     case tok::kw_noexcept:
-    case tok::kw_template:
-    case tok::kw_typename:
       nextToken();
       break;
     // Specialization of a template with an integer parameter can contain
@@ -1921,7 +1927,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
     case tok::ellipsis:
     case tok::kw_true:
     case tok::kw_false:
-      if (SeenArrow) {
+      if (SeenArrow || InTemplateParameterList) {
         nextToken();
         break;
       }
@@ -2476,7 +2482,8 @@ void UnwrappedLineParser::parseNamespace() {
     parseParens();
   } else {
     while (FormatTok->isOneOf(tok::identifier, tok::coloncolon, tok::kw_inline,
-                              tok::l_square, tok::period)) {
+                              tok::l_square, tok::period) ||
+           (Style.isCSharp() && FormatTok->is(tok::kw_union))) {
       if (FormatTok->is(tok::l_square))
         parseSquare();
       else
@@ -2862,6 +2869,7 @@ bool UnwrappedLineParser::parseEnum() {
   // Just a declaration or something is wrong.
   if (FormatTok->isNot(tok::l_brace))
     return true;
+  FormatTok->setType(TT_RecordLBrace);
   FormatTok->setBlockKind(BK_Block);
 
   if (Style.Language == FormatStyle::LK_Java) {
@@ -3081,8 +3089,15 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
         if (!tryToParseBracedList())
           break;
       }
-      if (FormatTok->is(tok::l_square) && !tryToParseLambda())
-        break;
+      if (FormatTok->is(tok::l_square)) {
+        FormatToken *Previous = FormatTok->Previous;
+        if (!Previous || Previous->isNot(tok::r_paren)) {
+          // Don't try parsing a lambda if we had a closing parenthesis before,
+          // it was probably a pointer to an array: int (*)[].
+          if (!tryToParseLambda())
+            break;
+        }
+      }
       if (FormatTok->Tok.is(tok::semi))
         return;
       if (Style.isCSharp() && FormatTok->is(Keywords.kw_where)) {
@@ -3095,6 +3110,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     }
   }
   if (FormatTok->Tok.is(tok::l_brace)) {
+    FormatTok->setType(TT_RecordLBrace);
     if (ParseAsExpr) {
       parseChildBlock();
     } else {

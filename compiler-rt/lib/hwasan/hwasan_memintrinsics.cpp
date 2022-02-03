@@ -40,5 +40,5 @@ void *__hwasan_memmove(void *to, const void *from, uptr size) {
       reinterpret_cast<uptr>(to), size);
   CheckAddressSized<ErrorAction::Recover, AccessType::Load>(
       reinterpret_cast<uptr>(from), size);
-  return memmove(UntagPtr(to), UntagPtr(from), size);
+  return memmove(to, from, size);
 }

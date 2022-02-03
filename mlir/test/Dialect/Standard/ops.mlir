@@ -51,18 +51,6 @@ func @switch_i64(%flag : i64, %caseOperand : i32) {
     return
 }
 
-// CHECK-LABEL: func @constant_complex_f32(
-func @constant_complex_f32() -> complex<f32> {
-  %result = constant [0.1 : f32, -1.0 : f32] : complex<f32>
-  return %result : complex<f32>
-}
-
-// CHECK-LABEL: func @constant_complex_f64(
-func @constant_complex_f64() -> complex<f64> {
-  %result = constant [0.1 : f64, -1.0 : f64] : complex<f64>
-  return %result : complex<f64>
-}
-
 // CHECK-LABEL: func @vector_splat_0d(
 func @vector_splat_0d(%a: f32) -> vector<f32> {
   // CHECK: splat %{{.*}} : vector<f32>

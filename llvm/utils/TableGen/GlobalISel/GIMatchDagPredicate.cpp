@@ -10,8 +10,8 @@
 
 #include "llvm/TableGen/Record.h"
 
-#include "GIMatchDagOperands.h"
 #include "../CodeGenInstruction.h"
+#include "GIMatchDag.h"
 
 using namespace llvm;
 

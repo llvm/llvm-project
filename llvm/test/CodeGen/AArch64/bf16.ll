@@ -82,3 +82,17 @@ define { <8 x bfloat>, <8 x bfloat>* } @test_store_post_v8bf16(<8 x bfloat> %val
 
   ret { <8 x bfloat>, <8 x bfloat>* } %res
 }
+
+define bfloat @test_bitcast_halftobfloat(half %a) nounwind {
+; CHECK-LABEL: test_bitcast_halftobfloat:
+; CHECK-NEXT: ret
+  %r = bitcast half %a to bfloat
+  ret bfloat %r
+}
+
+define half @test_bitcast_bfloattohalf(bfloat %a) nounwind {
+; CHECK-LABEL: test_bitcast_bfloattohalf:
+; CHECK-NEXT: ret
+  %r = bitcast bfloat %a to half
+  ret half %r
+}

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/TestHelpers.h"
 #include "src/math/cosf.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include <math.h>

@@ -138,7 +138,7 @@ class LegalizeDataOpForLLVMTranslation : public ConvertOpToLLVMPattern<Op> {
 } // namespace
 
 void mlir::populateOpenACCToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<LegalizeDataOpForLLVMTranslation<acc::DataOp>>(converter);
   patterns.add<LegalizeDataOpForLLVMTranslation<acc::EnterDataOp>>(converter);
   patterns.add<LegalizeDataOpForLLVMTranslation<acc::ExitDataOp>>(converter);
