@@ -1007,6 +1007,12 @@ void UnwrappedLineParser::parsePPDefine() {
     }
   }
 
+  // In the context of a define, even keywords should be treated as normal
+  // identifiers. Setting the kind to identifier is not enough, because we need
+  // to treat additional keywords like __except as well, which are already
+  // identifiers.
+  FormatTok->Tok.setKind(tok::identifier);
+  FormatTok->Tok.setIdentifierInfo(nullptr);
   nextToken();
   if (FormatTok->Tok.getKind() == tok::l_paren &&
       !FormatTok->hasWhitespaceBefore())
