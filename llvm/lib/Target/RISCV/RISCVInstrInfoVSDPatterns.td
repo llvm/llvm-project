@@ -22,30 +22,8 @@
 // Helpers to define the SDNode patterns.
 //===----------------------------------------------------------------------===//
 
-def SDTSplatI64 : SDTypeProfile<1, 1, [
-  SDTCVecEltisVT<0, i64>, SDTCisVT<1, i32>
-]>;
-
-def rv32_splat_i64 : SDNode<"RISCVISD::SPLAT_VECTOR_I64", SDTSplatI64>;
-
-def SDT_RISCVVMSETCLR_VL : SDTypeProfile<1, 1, [SDTCVecEltisVT<0, i1>,
-                                                SDTCisVT<1, XLenVT>]>;
-def riscv_vmclr_vl : SDNode<"RISCVISD::VMCLR_VL", SDT_RISCVVMSETCLR_VL>;
-def riscv_vmset_vl : SDNode<"RISCVISD::VMSET_VL", SDT_RISCVVMSETCLR_VL>;
-
 def rvv_vnot : PatFrag<(ops node:$in),
                        (xor node:$in, (riscv_vmset_vl (XLenVT srcvalue)))>;
-
-// Give explicit Complexity to prefer simm5/uimm5.
-def SplatPat       : ComplexPattern<vAny, 1, "selectVSplat",      [splat_vector, rv32_splat_i64], [], 1>;
-def SplatPat_simm5 : ComplexPattern<vAny, 1, "selectVSplatSimm5", [splat_vector, rv32_splat_i64], [], 2>;
-def SplatPat_uimm5 : ComplexPattern<vAny, 1, "selectVSplatUimm5", [splat_vector, rv32_splat_i64], [], 2>;
-def SplatPat_simm5_plus1
-    : ComplexPattern<vAny, 1, "selectVSplatSimm5Plus1",
-                     [splat_vector, rv32_splat_i64], [], 2>;
-def SplatPat_simm5_plus1_nonzero
-    : ComplexPattern<vAny, 1, "selectVSplatSimm5Plus1NonZero",
-                     [splat_vector, rv32_splat_i64], [], 2>;
 
 class SwapHelper<dag Prefix, dag A, dag B, dag Suffix, bit swap> {
    dag Value = !con(Prefix, !if(swap, B, A), !if(swap, A, B), Suffix);
@@ -526,7 +504,7 @@ foreach vti = AllIntegerVectors in {
 }
 foreach vti = [VI64M1, VI64M2, VI64M4, VI64M8] in {
   def : Pat<(shl (vti.Vector vti.RegClass:$rs1),
-                 (vti.Vector (rv32_splat_i64 (XLenVT 1)))),
+                 (vti.Vector (riscv_vmv_v_x_vl 1, (XLenVT srcvalue)))),
             (!cast<Instruction>("PseudoVADD_VV_"# vti.LMul.MX)
                  vti.RegClass:$rs1, vti.RegClass:$rs1, vti.AVL, vti.Log2SEW)>;
 

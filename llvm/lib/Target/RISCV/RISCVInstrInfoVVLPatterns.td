@@ -185,6 +185,11 @@ def SDT_RISCVSelect_VL  : SDTypeProfile<1, 4, [
 def riscv_vselect_vl  : SDNode<"RISCVISD::VSELECT_VL", SDT_RISCVSelect_VL>;
 def riscv_vp_merge_vl : SDNode<"RISCVISD::VP_MERGE_VL", SDT_RISCVSelect_VL>;
 
+def SDT_RISCVVMSETCLR_VL : SDTypeProfile<1, 1, [SDTCVecEltisVT<0, i1>,
+                                                SDTCisVT<1, XLenVT>]>;
+def riscv_vmclr_vl : SDNode<"RISCVISD::VMCLR_VL", SDT_RISCVVMSETCLR_VL>;
+def riscv_vmset_vl : SDNode<"RISCVISD::VMSET_VL", SDT_RISCVVMSETCLR_VL>;
+
 def SDT_RISCVMaskBinOp_VL : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
                                                  SDTCisSameAs<0, 2>,
                                                  SDTCVecEltisVT<0, i1>,
@@ -272,6 +277,17 @@ def riscv_vwmulu_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D),
 foreach kind = ["ADD", "UMAX", "SMAX", "UMIN", "SMIN", "AND", "OR", "XOR",
                 "FADD", "SEQ_FADD", "FMIN", "FMAX"] in
   def rvv_vecreduce_#kind#_vl : SDNode<"RISCVISD::VECREDUCE_"#kind#"_VL", SDTRVVVecReduce>;
+
+// Give explicit Complexity to prefer simm5/uimm5.
+def SplatPat       : ComplexPattern<vAny, 1, "selectVSplat",      [splat_vector], [], 1>;
+def SplatPat_simm5 : ComplexPattern<vAny, 1, "selectVSplatSimm5", [splat_vector], [], 2>;
+def SplatPat_uimm5 : ComplexPattern<vAny, 1, "selectVSplatUimm5", [splat_vector], [], 2>;
+def SplatPat_simm5_plus1
+    : ComplexPattern<vAny, 1, "selectVSplatSimm5Plus1",
+                     [splat_vector], [], 2>;
+def SplatPat_simm5_plus1_nonzero
+    : ComplexPattern<vAny, 1, "selectVSplatSimm5Plus1NonZero",
+                     [splat_vector], [], 2>;
 
 // Ignore the vl operand.
 def SplatFPOp : PatFrag<(ops node:$op),

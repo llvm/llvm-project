@@ -4025,7 +4025,7 @@ SDValue RISCVTargetLowering::lowerVectorMaskSplat(SDValue Op,
 // Custom-lower a SPLAT_VECTOR_PARTS where XLEN<SEW, as the SEW element type is
 // illegal (currently only vXi64 RV32).
 // FIXME: We could also catch non-constant sign-extended i32 values and lower
-// them to SPLAT_VECTOR_I64
+// them to VMV_V_X_VL.
 SDValue RISCVTargetLowering::lowerSPLAT_VECTOR_PARTS(SDValue Op,
                                                      SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -4054,14 +4054,18 @@ SDValue RISCVTargetLowering::lowerSPLAT_VECTOR_PARTS(SDValue Op,
     // If Hi constant is all the same sign bit as Lo, lower this as a custom
     // node in order to try and match RVV vector/scalar instructions.
     if ((LoC >> 31) == HiC)
-      return DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT, Lo);
+      return DAG.getNode(
+          RISCVISD::VMV_V_X_VL, DL, VecVT, Lo,
+          DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, MVT::i32));
   }
 
   // Detect cases where Hi is (SRA Lo, 31) which means Hi is Lo sign extended.
   if (Hi.getOpcode() == ISD::SRA && Hi.getOperand(0) == Lo &&
       isa<ConstantSDNode>(Hi.getOperand(1)) &&
       Hi.getConstantOperandVal(1) == 31)
-    return DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT, Lo);
+    return DAG.getNode(
+        RISCVISD::VMV_V_X_VL, DL, VecVT, Lo,
+        DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, MVT::i32));
 
   // Fall back to use a stack store and stride x0 vector load. Use X0 as VL.
   return DAG.getNode(RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL, DL, VecVT, Lo, Hi,
@@ -4089,7 +4093,7 @@ SDValue RISCVTargetLowering::lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
     // Be careful not to introduce illegal scalar types at this stage, and be
     // careful also about splatting constants as on RV32, vXi64 SPLAT_VECTOR is
     // illegal and must be expanded. Since we know that the constants are
-    // sign-extended 32-bit values, we use SPLAT_VECTOR_I64 directly.
+    // sign-extended 32-bit values, we use VMV_V_X_VL directly.
     bool IsRV32E64 =
         !Subtarget.is64Bit() && VecVT.getVectorElementType() == MVT::i64;
 
@@ -4097,9 +4101,12 @@ SDValue RISCVTargetLowering::lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
       SplatZero = DAG.getSplatVector(VecVT, DL, SplatZero);
       SplatTrueVal = DAG.getSplatVector(VecVT, DL, SplatTrueVal);
     } else {
-      SplatZero = DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT, SplatZero);
+      SplatZero =
+          DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VecVT, SplatZero,
+                      DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, XLenVT));
       SplatTrueVal =
-          DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT, SplatTrueVal);
+          DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VecVT, SplatTrueVal,
+                      DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, XLenVT));
     }
 
     return DAG.getNode(ISD::VSELECT, DL, VecVT, Src, SplatTrueVal, SplatZero);
@@ -5416,7 +5423,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
   if (!IsRV32E64)
     SplatVL = DAG.getSplatVector(IntVT, DL, VLMinus1);
   else
-    SplatVL = DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, IntVT, VLMinus1);
+    SplatVL =
+        DAG.getNode(RISCVISD::VMV_V_X_VL, DL, IntVT, VLMinus1,
+                    DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, XLenVT));
 
   SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, IntVT, Mask, VL);
   SDValue Indices =
@@ -8134,8 +8143,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       // We don't need the upper 32 bits of a 64-bit element for a shift amount.
       SDLoc DL(N);
       EVT VT = N->getValueType(0);
-      ShAmt =
-          DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VT, ShAmt.getOperand(0));
+      ShAmt = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, ShAmt.getOperand(0),
+                          DAG.getTargetConstant(RISCV::VLMaxSentinel, DL,
+                                                Subtarget.getXLenVT()));
       return DAG.getNode(N->getOpcode(), DL, VT, N->getOperand(0), ShAmt);
     }
     break;
@@ -10290,7 +10300,6 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VMV_X_S)
   NODE_NAME_CASE(VMV_S_X_VL)
   NODE_NAME_CASE(VFMV_S_F_VL)
-  NODE_NAME_CASE(SPLAT_VECTOR_I64)
   NODE_NAME_CASE(SPLAT_VECTOR_SPLIT_I64_VL)
   NODE_NAME_CASE(READ_VLENB)
   NODE_NAME_CASE(TRUNCATE_VECTOR_VL)
