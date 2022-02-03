@@ -540,7 +540,7 @@ define i1 @both_branch_to_same_block(i4 %x) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i4 [[X]], 0
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp eq i4 [[X]], 0
-; CHECK-NEXT:    [[RES:%.*]] = xor i1 true, true
+; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[C_2]], [[C_3]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:
@@ -564,7 +564,7 @@ define i1 @both_branch_to_same_block_and(i4 %x, i4 %y) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ne i4 [[X]], 0
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp eq i4 [[X]], 0
-; CHECK-NEXT:    [[RES:%.*]] = xor i1 true, false
+; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[C_3]], [[C_4]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:
@@ -591,7 +591,7 @@ define i1 @both_branch_to_same_block_or(i4 %x, i4 %y) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ne i4 [[X]], 0
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp eq i4 [[X]], 0
-; CHECK-NEXT:    [[RES:%.*]] = xor i1 false, true
+; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[C_3]], [[C_4]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:

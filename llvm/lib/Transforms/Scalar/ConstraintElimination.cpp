@@ -343,9 +343,12 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     // Succ (e.g. the case when adding a condition from a pre-header to a loop
     // header).
     auto CanAdd = [&BB, &DT](BasicBlock *Succ) {
-      return all_of(predecessors(Succ), [&BB, &DT, Succ](BasicBlock *Pred) {
-        return Pred == &BB || DT.dominates(Succ, Pred);
-      });
+      assert(isa<BranchInst>(BB.getTerminator()));
+      return any_of(successors(&BB),
+                    [Succ](const BasicBlock *S) { return S != Succ; }) &&
+             all_of(predecessors(Succ), [&BB, &DT, Succ](BasicBlock *Pred) {
+               return Pred == &BB || DT.dominates(Succ, Pred);
+             });
     };
     // If the condition is an OR of 2 compares and the false successor only has
     // the current block as predecessor, queue both negated conditions for the
