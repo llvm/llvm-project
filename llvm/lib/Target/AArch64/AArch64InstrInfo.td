@@ -643,9 +643,13 @@ def AArch64sabd     : PatFrags<(ops node:$lhs, node:$rhs),
                                 (int_aarch64_neon_sabd node:$lhs, node:$rhs)]>;
 
 def AArch64uaddlp_n : SDNode<"AArch64ISD::UADDLP", SDT_AArch64uaddlp>;
+def AArch64saddlp_n : SDNode<"AArch64ISD::SADDLP", SDT_AArch64uaddlp>;
 def AArch64uaddlp   : PatFrags<(ops node:$src),
                                [(AArch64uaddlp_n node:$src),
                                 (int_aarch64_neon_uaddlp node:$src)]>;
+def AArch64saddlp   : PatFrags<(ops node:$src),
+                               [(AArch64saddlp_n node:$src),
+                                (int_aarch64_neon_saddlp node:$src)]>;
 
 def SDT_AArch64SETTAG : SDTypeProfile<0, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
 def AArch64stg : SDNode<"AArch64ISD::STG", SDT_AArch64SETTAG, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
@@ -4312,8 +4316,8 @@ defm REV16  : SIMDTwoVectorB<0, 0b00, 0b00001, "rev16", AArch64rev16>;
 defm REV32  : SIMDTwoVectorBH<1, 0b00000, "rev32", AArch64rev32>;
 defm REV64  : SIMDTwoVectorBHS<0, 0b00000, "rev64", AArch64rev64>;
 defm SADALP : SIMDLongTwoVectorTied<0, 0b00110, "sadalp",
-       BinOpFrag<(add node:$LHS, (int_aarch64_neon_saddlp node:$RHS))> >;
-defm SADDLP : SIMDLongTwoVector<0, 0b00010, "saddlp", int_aarch64_neon_saddlp>;
+       BinOpFrag<(add node:$LHS, (AArch64saddlp node:$RHS))> >;
+defm SADDLP : SIMDLongTwoVector<0, 0b00010, "saddlp", AArch64saddlp>;
 defm SCVTF  : SIMDTwoVectorIntToFP<0, 0, 0b11101, "scvtf", sint_to_fp>;
 defm SHLL   : SIMDVectorLShiftLongBySizeBHS;
 defm SQABS  : SIMDTwoVectorBHSD<0, 0b00111, "sqabs", int_aarch64_neon_sqabs>;
