@@ -12,6 +12,7 @@
 
 #include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
 #include "mlir/Analysis/Presburger/LinearTransform.h"
+#include "mlir/Analysis/Presburger/PresburgerSet.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/DenseMap.h"
@@ -61,6 +62,14 @@ void IntegerPolyhedron::append(const IntegerPolyhedron &other) {
   for (unsigned r = 0, e = other.getNumEqualities(); r < e; r++) {
     addEquality(other.getEquality(r));
   }
+}
+
+bool IntegerPolyhedron::isEqual(const IntegerPolyhedron &other) const {
+  return PresburgerSet(*this).isEqual(PresburgerSet(other));
+}
+
+bool IntegerPolyhedron::isSubsetOf(const IntegerPolyhedron &other) const {
+  return PresburgerSet(*this).isSubsetOf(PresburgerSet(other));
 }
 
 Optional<SmallVector<Fraction, 8>>
