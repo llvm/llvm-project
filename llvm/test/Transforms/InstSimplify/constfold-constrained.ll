@@ -421,8 +421,7 @@ entry:
 define i1 @cmp_eq_01() #0 {
 ; CHECK-LABEL: @cmp_eq_01(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double 1.000000e+00, double 2.000000e+00, metadata !"oeq", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %result = call i1 @llvm.experimental.constrained.fcmp.f64(double 1.0, double 2.0, metadata !"oeq", metadata !"fpexcept.ignore") #0
@@ -432,8 +431,7 @@ entry:
 define i1 @cmp_eq_02() #0 {
 ; CHECK-LABEL: @cmp_eq_02(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double 2.000000e+00, double 2.000000e+00, metadata !"oeq", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %result = call i1 @llvm.experimental.constrained.fcmp.f64(double 2.0, double 2.0, metadata !"oeq", metadata !"fpexcept.ignore") #0
@@ -443,8 +441,7 @@ entry:
 define i1 @cmp_eq_03() #0 {
 ; CHECK-LABEL: @cmp_eq_03(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double 2.000000e+00, double 0x7FF8000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %result = call i1 @llvm.experimental.constrained.fcmp.f64(double 2.0, double 0x7ff8000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #0
@@ -454,8 +451,7 @@ entry:
 define i1 @cmp_eq_04() #0 {
 ; CHECK-LABEL: @cmp_eq_04(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double 2.000000e+00, double 0x7FF4000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %result = call i1 @llvm.experimental.constrained.fcmp.f64(double 2.0, double 0x7ff4000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #0
@@ -465,8 +461,7 @@ entry:
 define i1 @cmp_eq_05() #0 {
 ; CHECK-LABEL: @cmp_eq_05(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double 2.000000e+00, double 0x7FF8000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %result = call i1 @llvm.experimental.constrained.fcmps.f64(double 2.0, double 0x7ff8000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #0
@@ -476,8 +471,7 @@ entry:
 define i1 @cmp_eq_06() #0 {
 ; CHECK-LABEL: @cmp_eq_06(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double 2.000000e+00, double 0x7FF4000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %result = call i1 @llvm.experimental.constrained.fcmps.f64(double 2.0, double 0x7ff4000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #0
@@ -512,7 +506,7 @@ define i1 @cmp_eq_nan_03() #0 {
 ; CHECK-LABEL: @cmp_eq_nan_03(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double 0x7FF8000000000000, double 1.000000e+00, metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %result = call i1 @llvm.experimental.constrained.fcmp.f64(double 0x7ff8000000000000, double 1.0, metadata !"oeq", metadata !"fpexcept.strict") #0

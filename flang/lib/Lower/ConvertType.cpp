@@ -475,11 +475,49 @@ private:
 
 } // namespace
 
-mlir::Type Fortran::lower::getFIRType(
-    mlir::MLIRContext *context,
-    const Fortran::common::IntrinsicTypeDefaultKinds &defaults,
-    Fortran::common::TypeCategory tc, int kind) {
-  return TypeBuilder{context, defaults}.genFIRTy(tc, kind);
+template <int KIND>
+int getIntegerBits() {
+  return Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer,
+                                 KIND>::Scalar::bits;
+}
+static mlir::Type genIntegerType(mlir::MLIRContext *context, int kind) {
+  if (Fortran::evaluate::IsValidKindOfIntrinsicType(
+          Fortran::common::TypeCategory::Integer, kind)) {
+    switch (kind) {
+    case 1:
+      return mlir::IntegerType::get(context, getIntegerBits<1>());
+    case 2:
+      return mlir::IntegerType::get(context, getIntegerBits<2>());
+    case 4:
+      return mlir::IntegerType::get(context, getIntegerBits<4>());
+    case 8:
+      return mlir::IntegerType::get(context, getIntegerBits<8>());
+    case 16:
+      return mlir::IntegerType::get(context, getIntegerBits<16>());
+    }
+  }
+  llvm_unreachable("INTEGER kind not translated");
+}
+
+static mlir::Type genFIRType(mlir::MLIRContext *context,
+                             Fortran::common::TypeCategory tc, int kind) {
+  switch (tc) {
+  case Fortran::common::TypeCategory::Integer:
+    return genIntegerType(context, kind);
+  case Fortran::common::TypeCategory::Real:
+  case Fortran::common::TypeCategory::Complex:
+  case Fortran::common::TypeCategory::Logical:
+  case Fortran::common::TypeCategory::Character:
+  default:
+    break;
+  }
+  llvm_unreachable("unhandled type category");
+}
+
+mlir::Type Fortran::lower::getFIRType(mlir::MLIRContext *context,
+                                      Fortran::common::TypeCategory tc,
+                                      int kind) {
+  return genFIRType(context, tc, kind);
 }
 
 mlir::Type Fortran::lower::getFIRType(
