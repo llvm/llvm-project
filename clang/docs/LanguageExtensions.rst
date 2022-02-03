@@ -1365,6 +1365,11 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_trivially_constructible`` (C++, GNU, Microsoft)
 * ``__is_trivially_copyable`` (C++, GNU, Microsoft)
 * ``__is_trivially_destructible`` (C++, MSVC 2013)
+* ``__is_trivially_relocatable`` (Clang): Returns true if moving an object
+  of the given type, and then destroying the source object, is known to be
+  functionally equivalent to copying the underlying bytes and then dropping the
+  source object on the floor. This is true of trivial types and types which
+  were made trivially relocatable via the ``clang::trivial_abi`` attribute.
 * ``__is_union`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_unsigned`` (C++, Embarcadero):
   Returns false for enumeration types. Note, before Clang 13, returned true for
