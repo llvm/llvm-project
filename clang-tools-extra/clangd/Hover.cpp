@@ -1034,7 +1034,6 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
     // So our selection tree should be biased right. (Tested with VSCode).
     SelectionTree ST =
         SelectionTree::createRight(AST.getASTContext(), TB, Offset, Offset);
-    std::vector<const Decl *> Result;
     if (const SelectionTree::Node *N = ST.commonAncestor()) {
       // FIXME: Fill in HighlightRange with range coming from N->ASTNode.
       auto Decls = explicitReferenceTargets(N->ASTNode, DeclRelation::Alias,
