@@ -1,4 +1,7 @@
+#include "ClangTidyOptions.h"
 #include "ClangTidyTest.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/HeaderGuardCheck.h"
 #include "llvm/IncludeOrderCheck.h"
 #include "gtest/gtest.h"
@@ -9,17 +12,38 @@ namespace clang {
 namespace tidy {
 namespace test {
 
-static std::string runHeaderGuardCheck(StringRef Code, const Twine &Filename,
-                                       Optional<StringRef> ExpectedWarning) {
+template <typename T>
+static std::string runCheck(StringRef Code, const Twine &Filename,
+                            Optional<StringRef> ExpectedWarning,
+                            std::map<StringRef, StringRef> PathsToContent =
+                                std::map<StringRef, StringRef>()) {
   std::vector<ClangTidyError> Errors;
-  std::string Result = test::runCheckOnCode<LLVMHeaderGuardCheck>(
-      Code, &Errors, Filename, std::string("-xc++-header"));
+  std::string Result = test::runCheckOnCode<T>(
+      Code, &Errors, Filename, std::string("-xc++-header"), ClangTidyOptions{},
+      std::move(PathsToContent));
   if (Errors.size() != (size_t)ExpectedWarning.hasValue())
     return "invalid error count";
   if (ExpectedWarning && *ExpectedWarning != Errors.back().Message.Message)
     return "expected: '" + ExpectedWarning->str() + "', saw: '" +
            Errors.back().Message.Message + "'";
   return Result;
+}
+
+static std::string runHeaderGuardCheck(StringRef Code, const Twine &Filename,
+                                       Optional<StringRef> ExpectedWarning) {
+  return runCheck<LLVMHeaderGuardCheck>(Code, Filename,
+                                        std::move(ExpectedWarning));
+}
+
+static std::string
+runIncludeOrderCheck(StringRef Code, const Twine &Filename,
+                     Optional<StringRef> ExpectedWarning,
+                     llvm::ArrayRef<llvm::StringLiteral> Includes) {
+  std::map<StringRef, StringRef> PathsToContent;
+  for (auto Include : Includes)
+    PathsToContent.emplace(Include, "");
+  return runCheck<IncludeOrderCheck>(Code, Filename, std::move(ExpectedWarning),
+                                     PathsToContent);
 }
 
 namespace {
@@ -28,21 +52,13 @@ struct WithEndifComment : public LLVMHeaderGuardCheck {
       : LLVMHeaderGuardCheck(Name, Context) {}
   bool shouldSuggestEndifComment(StringRef Filename) override { return true; }
 };
-} // namespace
 
 static std::string
 runHeaderGuardCheckWithEndif(StringRef Code, const Twine &Filename,
                              Optional<StringRef> ExpectedWarning) {
-  std::vector<ClangTidyError> Errors;
-  std::string Result = test::runCheckOnCode<WithEndifComment>(
-      Code, &Errors, Filename, std::string("-xc++-header"));
-  if (Errors.size() != (size_t)ExpectedWarning.hasValue())
-    return "invalid error count";
-  if (ExpectedWarning && *ExpectedWarning != Errors.back().Message.Message)
-    return "expected: '" + ExpectedWarning->str() + "', saw: '" +
-           Errors.back().Message.Message + "'";
-  return Result;
+  return runCheck<WithEndifComment>(Code, Filename, std::move(ExpectedWarning));
 }
+} // namespace
 
 TEST(LLVMHeaderGuardCheckTest, FixHeaderGuards) {
   EXPECT_EQ("#ifndef LLVM_ADT_FOO_H\n"
@@ -268,6 +284,23 @@ TEST(LLVMHeaderGuardCheckTest, FixHeaderGuards) {
                 "", "\\\\?\\C:\\llvm-project\\clang-tools-extra\\clangd\\foo.h",
                 StringRef("header is missing header guard")));
 #endif
+}
+
+TEST(IncludeOrderCheck, GTestHeaders) {
+  EXPECT_EQ(
+      R"cpp(
+  #include "foo.h"
+  #include "llvm/foo.h"
+  #include "gtest/foo.h"
+  #include <algorithm>)cpp",
+      runIncludeOrderCheck(
+          R"cpp(
+  #include "foo.h"
+  #include "llvm/foo.h"
+  #include <algorithm>
+  #include "gtest/foo.h")cpp",
+          "foo.cc", StringRef("#includes are not sorted properly"),
+          {"foo.h", "algorithm", "gtest/foo.h", "llvm/foo.h"}));
 }
 
 } // namespace test
