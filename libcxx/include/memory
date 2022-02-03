@@ -828,7 +828,11 @@ template <class T> struct hash<shared_ptr<T> >;
 template <class T, class Alloc>
   inline constexpr bool uses_allocator_v = uses_allocator<T, Alloc>::value;
 
+// [ptr.align]
 void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
+
+template<size_t N, class T>
+[[nodiscard]] constexpr T* assume_aligned(T* ptr); // since C++20
 
 }  // std
 
@@ -842,6 +846,7 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 #include <__memory/allocator.h>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/allocator_traits.h>
+#include <__memory/assume_aligned.h>
 #include <__memory/compressed_pair.h>
 #include <__memory/concepts.h>
 #include <__memory/construct_at.h>
@@ -1129,7 +1134,6 @@ struct __builtin_new_allocator {
       __deallocate_bytes(__p, __n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp));
   }
 };
-
 
 _LIBCPP_END_NAMESPACE_STD
 

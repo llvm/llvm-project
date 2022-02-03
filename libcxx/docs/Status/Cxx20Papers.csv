@@ -66,7 +66,7 @@
 "`P0919R3 <https://wg21.link/P0919R3>`__","LWG","Heterogeneous lookup for unordered containers","San Diego","|Complete|","12.0"
 "`P0972R0 <https://wg21.link/P0972R0>`__","LWG","<chrono> ``zero()``\ , ``min()``\ , and ``max()``\  should be noexcept","San Diego","|Complete|","8.0"
 "`P1006R1 <https://wg21.link/P1006R1>`__","LWG","Constexpr in std::pointer_traits","San Diego","|Complete|","8.0"
-"`P1007R3 <https://wg21.link/P1007R3>`__","LWG","``std::assume_aligned``\ ","San Diego","* *",""
+"`P1007R3 <https://wg21.link/P1007R3>`__","LWG","``std::assume_aligned``\ ","San Diego","|Complete|","15.0"
 "`P1020R1 <https://wg21.link/P1020R1>`__","LWG","Smart pointer creation with default initialization","San Diego","* *",""
 "`P1032R1 <https://wg21.link/P1032R1>`__","LWG","Misc constexpr bits","San Diego","|Complete|","13.0"
 "`P1085R2 <https://wg21.link/P1085R2>`__","LWG","Should Span be Regular?","San Diego","|Complete|","8.0"
