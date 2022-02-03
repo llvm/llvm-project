@@ -631,11 +631,7 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI,
                             const DebugLoc &DL, Register DstReg, uint64_t Val,
                             MachineInstr::MIFlag Flag) const {
-  MachineFunction *MF = MBB.getParent();
-  MachineRegisterInfo &MRI = MF->getRegInfo();
   Register SrcReg = RISCV::X0;
-  Register Result = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-  unsigned Num = 0;
 
   if (!STI.is64Bit() && !isInt<32>(Val))
     report_fatal_error("Should only materialize 32-bit constants for RV32");
@@ -645,34 +641,29 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
   assert(!Seq.empty());
 
   for (RISCVMatInt::Inst &Inst : Seq) {
-    // Write the final result to DstReg if it's the last instruction in the Seq.
-    // Otherwise, write the result to the temp register.
-    if (++Num == Seq.size())
-      Result = DstReg;
-
     if (Inst.Opc == RISCV::LUI) {
-      BuildMI(MBB, MBBI, DL, get(RISCV::LUI), Result)
+      BuildMI(MBB, MBBI, DL, get(RISCV::LUI), DstReg)
           .addImm(Inst.Imm)
           .setMIFlag(Flag);
     } else if (Inst.Opc == RISCV::ADD_UW) {
-      BuildMI(MBB, MBBI, DL, get(RISCV::ADD_UW), Result)
+      BuildMI(MBB, MBBI, DL, get(RISCV::ADD_UW), DstReg)
           .addReg(SrcReg, RegState::Kill)
           .addReg(RISCV::X0)
           .setMIFlag(Flag);
     } else if (Inst.Opc == RISCV::SH1ADD || Inst.Opc == RISCV::SH2ADD ||
                Inst.Opc == RISCV::SH3ADD) {
-      BuildMI(MBB, MBBI, DL, get(Inst.Opc), Result)
+      BuildMI(MBB, MBBI, DL, get(Inst.Opc), DstReg)
           .addReg(SrcReg, RegState::Kill)
           .addReg(SrcReg, RegState::Kill)
           .setMIFlag(Flag);
     } else {
-      BuildMI(MBB, MBBI, DL, get(Inst.Opc), Result)
+      BuildMI(MBB, MBBI, DL, get(Inst.Opc), DstReg)
           .addReg(SrcReg, RegState::Kill)
           .addImm(Inst.Imm)
           .setMIFlag(Flag);
     }
     // Only the first instruction has X0 as its source.
-    SrcReg = Result;
+    SrcReg = DstReg;
   }
 }
 
