@@ -35,6 +35,7 @@ public:
   bool mayPosition() const { return mayPosition_; }
   bool mayAsynchronous() const { return mayAsynchronous_; }
   void set_mayAsynchronous(bool yes) { mayAsynchronous_ = yes; }
+  FileOffset position() const { return position_; }
   bool isTerminal() const { return isTerminal_; }
   std::optional<FileOffset> knownSize() const { return knownSize_; }
 

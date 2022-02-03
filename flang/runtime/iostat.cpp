@@ -33,8 +33,8 @@ const char *IostatErrorString(int iostat) {
     return "Invalid FORMAT";
   case IostatErrorInKeyword:
     return "Bad keyword argument value";
-  case IostatEndfileDirect:
-    return "ENDFILE on direct-access file";
+  case IostatEndfileNonSequential:
+    return "ENDFILE on non-sequential file";
   case IostatEndfileUnwritable:
     return "ENDFILE on read-only file";
   case IostatOpenBadRecl:
