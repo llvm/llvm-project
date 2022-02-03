@@ -43,8 +43,6 @@ class DyldTrieSymbolsTestCase(TestBase):
         self.assertEqual(unstripped_Z3pat_symbols.GetSize(), 1)
         unstripped_pat_symbols = unstripped_target.FindSymbols("pat")
         self.assertEqual(unstripped_pat_symbols.GetSize(), 1)
-        unstripped_patint_symbols = unstripped_target.FindSymbols("pat(int)")
-        self.assertEqual(unstripped_patint_symbols.GetSize(), 1)
 
         unstripped_bar_symbols = unstripped_target.FindSymbols("bar")
         self.assertEqual(unstripped_bar_symbols.GetSize(), 1)
@@ -77,8 +75,6 @@ class DyldTrieSymbolsTestCase(TestBase):
         self.assertEqual(stripped_Z3pat_symbols.GetSize(), 1)
         stripped_pat_symbols = stripped_target.FindSymbols("pat")
         self.assertEqual(stripped_pat_symbols.GetSize(), 1)
-        stripped_patint_symbols = stripped_target.FindSymbols("pat(int)")
-        self.assertEqual(stripped_patint_symbols.GetSize(), 1)
 
         # bar should have been strippped.  We should not find it, or the
         # stripping went wrong.
