@@ -48,7 +48,7 @@ class SPV_OCLUnaryOp<string mnemonic, int opcode, Type resultType,
 
   let printer = [{ return printUnaryOp(getOperation(), p); }];
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 }
 
 // Base class for OpenCL Unary arithmetic ops where return type matches
@@ -75,7 +75,7 @@ class SPV_OCLBinaryOp<string mnemonic, int opcode, Type resultType,
 
   let printer = [{ return impl::printOneResultOp(getOperation(), p); }];
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 }
 
 // Base class for OpenCL Binary arithmetic ops where operand types and

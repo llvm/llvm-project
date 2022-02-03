@@ -18,7 +18,6 @@ class SPV_AtomicUpdateOp<string mnemonic, list<Trait> traits = []> :
   SPV_Op<mnemonic, traits> {
   let parser = [{ return ::parseAtomicUpdateOp(parser, result, false); }];
   let printer = [{ return ::printAtomicUpdateOp(getOperation(), p); }];
-  let verifier = [{ return ::verifyAtomicUpdateOp<IntegerType>(getOperation()); }];
 
   let arguments = (ins
     SPV_AnyPtr:$pointer,
@@ -35,7 +34,6 @@ class SPV_AtomicUpdateWithValueOp<string mnemonic, list<Trait> traits = []> :
   SPV_Op<mnemonic, traits> {
   let parser = [{ return ::parseAtomicUpdateOp(parser, result, true); }];
   let printer = [{ return ::printAtomicUpdateOp(getOperation(), p); }];
-  let verifier = [{ return ::verifyAtomicUpdateOp<IntegerType>(getOperation()); }];
 
   let arguments = (ins
     SPV_AnyPtr:$pointer,
@@ -168,7 +166,6 @@ def SPV_AtomicCompareExchangeOp : SPV_Op<"AtomicCompareExchange", []> {
 
   let parser = [{ return ::parseAtomicCompareExchangeImpl(parser, result); }];
   let printer = [{ return ::printAtomicCompareExchangeImpl(*this, p); }];
-  let verifier = [{ return ::verifyAtomicCompareExchangeImpl(*this); }];
 }
 
 // -----
@@ -221,7 +218,6 @@ def SPV_AtomicCompareExchangeWeakOp : SPV_Op<"AtomicCompareExchangeWeak", []> {
 
   let parser = [{ return ::parseAtomicCompareExchangeImpl(parser, result); }];
   let printer = [{ return ::printAtomicCompareExchangeImpl(*this, p); }];
-  let verifier = [{ return ::verifyAtomicCompareExchangeImpl(*this); }];
 }
 
 // -----
@@ -338,7 +334,6 @@ def SPV_AtomicFAddEXTOp : SPV_Op<"AtomicFAddEXT", []> {
 
   let parser = [{ return ::parseAtomicUpdateOp(parser, result, true); }];
   let printer = [{ return ::printAtomicUpdateOp(getOperation(), p); }];
-  let verifier = [{ return ::verifyAtomicUpdateOp<FloatType>(getOperation()); }];
 }
 
 // -----
