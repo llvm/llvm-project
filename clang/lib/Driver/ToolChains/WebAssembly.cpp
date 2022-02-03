@@ -435,8 +435,6 @@ void WebAssembly::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   case ToolChain::CST_Libstdcxx:
     addLibStdCXXIncludePaths(DriverArgs, CC1Args);
     break;
-  default:
-    llvm_unreachable("Unknown stdlib type");
   }
 }
 
@@ -451,8 +449,6 @@ void WebAssembly::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
   case ToolChain::CST_Libstdcxx:
     CmdArgs.push_back("-lstdc++");
     break;
-  default:
-    llvm_unreachable("invalid stdlib name");
   }
 }
 
