@@ -690,6 +690,16 @@ def TestLocationDstOp : TEST_Op<"loc_dst", [SameOperandsAndResultType]> {
   let results = (outs I32:$output);
 }
 
+def TestLocationSrcNoResOp : TEST_Op<"loc_src_no_res"> {
+  let arguments = (ins I32:$input);
+  let results = (outs);
+}
+
+def TestLocationDstNoResOp : TEST_Op<"loc_dst_no_res"> {
+  let arguments = (ins I32:$input);
+  let results = (outs);
+}
+
 //===----------------------------------------------------------------------===//
 // Test Patterns
 //===----------------------------------------------------------------------===//
@@ -1374,6 +1384,11 @@ def : Pat<(TestLocationSrcOp:$res1
               (TestLocationDstOp $input, (location $res1)),
               (location "named")),
             (location "fused", $res2, $res3))>;
+
+// Test that we can use the location of an op without results
+def : Pat<(TestLocationSrcNoResOp:$loc
+            (TestLocationSrcOp (TestLocationSrcOp $input))),
+          (TestLocationDstNoResOp $input, (location $loc))>;
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (Type Builders)

@@ -1148,8 +1148,8 @@ StringRef PatternEmitter::handleReplaceWithValue(DagNode tree) {
 std::string PatternEmitter::handleLocationDirective(DagNode tree) {
   assert(tree.isLocationDirective());
   auto lookUpArgLoc = [this, &tree](int idx) {
-    const auto *const lookupFmt = "(*{0}.begin()).getLoc()";
-    return symbolInfoMap.getAllRangeUse(tree.getArgName(idx), lookupFmt);
+    const auto *const lookupFmt = "{0}.getLoc()";
+    return symbolInfoMap.getValueAndRangeUse(tree.getArgName(idx), lookupFmt);
   };
 
   if (tree.getNumArgs() == 0)
