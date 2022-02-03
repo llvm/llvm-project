@@ -66,10 +66,14 @@ static int getPriority(StringRef Filename, bool IsAngled, bool IsMainModule) {
       Filename.startswith("clang/") || Filename.startswith("clang-c/"))
     return 2;
 
-  // System headers are sorted to the end.
-  if (IsAngled || Filename.startswith("gtest/") ||
-      Filename.startswith("gmock/"))
+  // Put these between system and llvm headers to be consistent with LLVM
+  // clang-format style.
+  if (Filename.startswith("gtest/") || Filename.startswith("gmock/"))
     return 3;
+
+  // System headers are sorted to the end.
+  if (IsAngled)
+    return 4;
 
   // Other headers are inserted between the main module header and LLVM headers.
   return 1;
