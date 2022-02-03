@@ -8,7 +8,7 @@
 
 #include "lldb/API/SBTarget.h"
 #include "lldb/Utility/Instrumentation.h"
-
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/lldb-public.h"
 
 #include "lldb/API/SBBreakpoint.h"

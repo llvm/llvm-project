@@ -16,10 +16,11 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
-#include <list>
 #include <cstring>
+#include <list>
 
 using namespace lldb;
 using namespace lldb_private;

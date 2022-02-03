@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/RichManglingContext.h"
-
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
-
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
+#include "lldb/Utility/LLDBLog.h"
 
 #include "llvm/ADT/StringRef.h"
 

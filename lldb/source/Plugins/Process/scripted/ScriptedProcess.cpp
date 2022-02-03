@@ -20,6 +20,7 @@
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/State.h"
 
 #include <mutex>

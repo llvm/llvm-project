@@ -1,4 +1,4 @@
-//===-- Logging.h -----------------------------------------------*- C++ -*-===//
+//===-- LLDBLog.h -----------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_LOGGING_H
-#define LLDB_UTILITY_LOGGING_H
+#ifndef LLDB_UTILITY_LLDBLOG_H
+#define LLDB_UTILITY_LLDBLOG_H
 
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/BitmaskEnum.h"
@@ -57,4 +57,4 @@ void InitializeLldbChannel();
 template <> Log::Channel &LogChannelFor<LLDBLog>();
 } // namespace lldb_private
 
-#endif // LLDB_UTILITY_LOGGING_H
+#endif // LLDB_UTILITY_LLDBLOG_H

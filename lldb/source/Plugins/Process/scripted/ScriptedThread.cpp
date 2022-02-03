@@ -15,9 +15,7 @@
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
-
+#include "lldb/Utility/LLDBLog.h"
 #include <memory>
 
 using namespace lldb;
