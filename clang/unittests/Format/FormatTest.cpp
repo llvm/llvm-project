@@ -23965,6 +23965,19 @@ TEST_F(FormatTest, RemoveBraces) {
                "};",
                Style);
 
+  // FIXME: See https://github.com/llvm/llvm-project/issues/53543.
+#if 0
+  Style.ColumnLimit = 65;
+
+  verifyFormat("if (condition) {\n"
+               "  ff(Indices,\n"
+               "     [&](unsigned LHSI, unsigned RHSI) { return true; });\n"
+               "} else {\n"
+               "  ff(Indices,\n"
+               "     [&](unsigned LHSI, unsigned RHSI) { return true; });\n"
+               "}",
+               Style);
+
   Style.ColumnLimit = 20;
 
   verifyFormat("if (a) {\n"
@@ -23981,6 +23994,9 @@ TEST_F(FormatTest, RemoveBraces) {
                "  b = c >= 0 ? d : e;\n"
                "}",
                Style);
+#endif
+
+  Style.ColumnLimit = 20;
 
   verifyFormat("if (a)\n"
                "  b = c > 0 ? d : e;",
