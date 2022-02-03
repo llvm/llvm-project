@@ -416,17 +416,15 @@ generic-abi-unstable)
 apple-system)
     clean
 
-    sdk_root="$(xcrun --sdk macosx --show-sdk-path)"
     arch="$(uname -m)"
-
-    ${MONOREPO_ROOT}/libcxx/utils/ci/apple-install-libcxx.sh    \
-        --llvm-root ${MONOREPO_ROOT}                            \
-        --build-dir ${BUILD_DIR}                                \
-        --install-dir ${INSTALL_DIR}                            \
-        --symbols-dir "${BUILD_DIR}/symbols"                    \
-        --sdk "macosx"                                          \
-        --architectures "${arch}"                               \
-        --version "999.99"
+    xcrun --sdk macosx                                              \
+        ${MONOREPO_ROOT}/libcxx/utils/ci/apple-install-libcxx.sh    \
+            --llvm-root ${MONOREPO_ROOT}                            \
+            --build-dir ${BUILD_DIR}                                \
+            --install-dir ${INSTALL_DIR}                            \
+            --symbols-dir "${BUILD_DIR}/symbols"                    \
+            --architectures "${arch}"                               \
+            --version "999.99"
 
     # TODO: It would be better to run the tests against the fake-installed version of libc++ instead
     xcrun --sdk macosx ninja -vC "${BUILD_DIR}/${arch}" check-cxx check-cxxabi check-cxx-abilist
