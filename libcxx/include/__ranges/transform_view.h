@@ -53,7 +53,7 @@ template<class _View, class _Fn>
 concept __transform_view_constraints =
   view<_View> && is_object_v<_Fn> &&
   regular_invocable<_Fn&, range_reference_t<_View>> &&
-  __referenceable<invoke_result_t<_Fn&, range_reference_t<_View>>>;
+  __can_reference<invoke_result_t<_Fn&, range_reference_t<_View>>>;
 
 template<input_range _View, copy_constructible _Fn>
   requires __transform_view_constraints<_View, _Fn>
