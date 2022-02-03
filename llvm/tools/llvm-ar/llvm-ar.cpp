@@ -654,6 +654,11 @@ static void addChildMember(std::vector<NewArchiveMember> &Members,
                            bool FlattenArchive = false) {
   if (Thin && !M.getParent()->isThin())
     fail("cannot convert a regular archive to a thin one");
+
+  // Avoid converting an existing thin archive to a regular one.
+  if (!AddLibrary && M.getParent()->isThin())
+    Thin = true;
+
   Expected<NewArchiveMember> NMOrErr =
       NewArchiveMember::getOldMember(M, Deterministic);
   failIfError(NMOrErr.takeError());
