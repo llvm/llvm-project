@@ -324,7 +324,7 @@ std::string SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
     // means we want to capture the op itself.
     if (op->getNumResults() == 0) {
       LLVM_DEBUG(llvm::dbgs() << name << " (Op)\n");
-      return std::string(name);
+      return formatv(fmt, name);
     }
 
     // We are referencing all results of the multi-result op. A specific result
