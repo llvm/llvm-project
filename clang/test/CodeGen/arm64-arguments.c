@@ -196,6 +196,16 @@ double t2(int i, ...) {
     __builtin_va_end(ap);
     return ll;
 }
+_Bool t3(int i, ...) {
+  // CHECK: t3
+  __builtin_va_list ap;
+  __builtin_va_start(ap, i);
+  // CHECK:      %0 = va_arg {{.*}}* %ap, i8
+  // CHECK-NEXT: store i8 %0, i8* %varet, align 1
+  _Bool b = __builtin_va_arg(ap, _Bool);
+  __builtin_va_end(ap);
+  return b;
+}
 
 #include <arm_neon.h>
 
