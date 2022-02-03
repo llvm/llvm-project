@@ -34,7 +34,7 @@ void callee(int id, __global int *out) {
   out[id] = id;
 }
 
-// COMMON-LABEL: define{{.*}} spir_kernel void @device_side_enqueue(i32 addrspace(1)* %{{.*}}, i32 addrspace(1)* %b, i32 %i)
+// COMMON-LABEL: define{{.*}} spir_kernel void @device_side_enqueue(i32 addrspace(1)* align 4 %{{.*}}, i32 addrspace(1)* align 4 %b, i32 %i)
 kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // COMMON: %default_queue = alloca %opencl.queue_t*
   queue_t default_queue;

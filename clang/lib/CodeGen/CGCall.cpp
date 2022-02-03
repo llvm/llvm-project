@@ -2485,6 +2485,20 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       }
     }
 
+    // From OpenCL spec v3.0.10 section 6.3.5 Alignment of Types:
+    // > For arguments to a __kernel function declared to be a pointer to a
+    // > data type, the OpenCL compiler can assume that the pointee is always
+    // > appropriately aligned as required by the data type.
+    if (TargetDecl && TargetDecl->hasAttr<OpenCLKernelAttr>() &&
+        ParamType->isPointerType()) {
+      QualType PTy = ParamType->getPointeeType();
+      if (!PTy->isIncompleteType() && PTy->isConstantSizeType()) {
+        llvm::Align Alignment =
+            getNaturalPointeeTypeAlignment(ParamType).getAsAlign();
+        Attrs.addAlignmentAttr(Alignment);
+      }
+    }
+
     switch (FI.getExtParameterInfo(ArgNo).getABI()) {
     case ParameterABI::Ordinary:
       break;
