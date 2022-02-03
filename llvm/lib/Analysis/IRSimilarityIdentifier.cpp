@@ -254,7 +254,7 @@ bool IRSimilarity::isClose(const IRInstructionData &A,
   // name is the same.  We already know that the types are since is
   // isSameOperationAs is true.
   if (isa<CallInst>(A.Inst) && isa<CallInst>(B.Inst)) {
-    if (A.getCalleeName().str().compare(B.getCalleeName().str()) != 0)
+    if (A.getCalleeName().str() != B.getCalleeName().str())
       return false;
   }
 

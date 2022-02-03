@@ -29,17 +29,11 @@ clang_target_link_libraries(clangTidyMain
   clangToolingCore
   )
 
-# Support plugins.
-if(CLANG_PLUGIN_SUPPORT)
-  set(support_plugins SUPPORT_PLUGINS)
-endif()
-
 add_clang_tool(clang-tidy
   ClangTidyToolMain.cpp
-
-  DEPENDS
+  )
+add_dependencies(clang-tidy
   clang-resource-headers
-  ${support_plugins}
   )
 clang_target_link_libraries(clang-tidy
   PRIVATE
@@ -56,9 +50,6 @@ target_link_libraries(clang-tidy
   ${ALL_CLANG_TIDY_CHECKS}
   )
 
-if(CLANG_PLUGIN_SUPPORT)
-  export_executable_symbols_for_plugins(clang-tidy)
-endif()
 
 install(PROGRAMS clang-tidy-diff.py
   DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"

@@ -64,7 +64,7 @@ public:
 
   /// A possible completion at a given cursor position.
   struct Completion {
-    Completion() {}
+    Completion() = default;
     Completion(const std::string &TypedText, const std::string &DisplayText)
         : TypedText(TypedText), DisplayText(DisplayText) {}
 

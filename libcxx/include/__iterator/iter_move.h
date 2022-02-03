@@ -23,7 +23,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_RANGES)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 // [iterator.cust.move]
 
@@ -32,10 +32,12 @@ namespace __iter_move {
 
 void iter_move();
 
-template<class _Ip>
-concept __unqualified_iter_move = requires(_Ip&& __i) {
-    iter_move(_VSTD::forward<_Ip>(__i));
-};
+template <class _Tp>
+concept __unqualified_iter_move =
+  __class_or_enum<remove_cvref_t<_Tp>> &&
+  requires (_Tp&& __t) {
+    iter_move(_VSTD::forward<_Tp>(__t));
+  };
 
 // [iterator.cust.move]/1
 // The name ranges::iter_move denotes a customization point object.
@@ -84,7 +86,7 @@ template<__dereferenceable _Tp>
   requires requires(_Tp& __t) { { ranges::iter_move(__t) } -> __referenceable; }
 using iter_rvalue_reference_t = decltype(ranges::iter_move(declval<_Tp&>()));
 
-#endif // !_LIBCPP_HAS_NO_RANGES
+#endif // !_LIBCPP_HAS_NO_CONCEPTS
 
 _LIBCPP_END_NAMESPACE_STD
 

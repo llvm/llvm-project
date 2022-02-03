@@ -513,7 +513,7 @@ struct IRInstructionMapper {
   /// be analyzed for similarity.
   struct InstructionClassification
       : public InstVisitor<InstructionClassification, InstrType> {
-    InstructionClassification() {}
+    InstructionClassification() = default;
 
     // TODO: Determine a scheme to resolve when the label is similar enough.
     InstrType visitBranchInst(BranchInst &BI) {

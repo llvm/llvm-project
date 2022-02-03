@@ -8,7 +8,7 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 def TestDialect : Dialect {
   let name = "test";
 }
-class TestFormat_Op<string fmt, list<OpTrait> traits = []>
+class TestFormat_Op<string fmt, list<Trait> traits = []>
     : Op<TestDialect, "format_op", traits> {
   let assemblyFormat = fmt;
 }

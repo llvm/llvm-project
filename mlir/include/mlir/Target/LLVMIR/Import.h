@@ -13,6 +13,7 @@
 #ifndef MLIR_TARGET_LLVMIR_IMPORT_H
 #define MLIR_TARGET_LLVMIR_IMPORT_H
 
+#include "mlir/IR/OwningOpRef.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
@@ -25,14 +26,14 @@ class Module;
 namespace mlir {
 
 class DialectRegistry;
-class OwningModuleRef;
 class MLIRContext;
+class ModuleOp;
 
 /// Convert the given LLVM module into MLIR's LLVM dialect.  The LLVM context is
 /// extracted from the registered LLVM IR dialect. In case of error, report it
 /// to the error handler registered with the MLIR context, if any (obtained from
 /// the MLIR module), and return `{}`.
-OwningModuleRef
+OwningOpRef<ModuleOp>
 translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
                         MLIRContext *context);
 

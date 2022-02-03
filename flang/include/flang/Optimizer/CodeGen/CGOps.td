@@ -24,7 +24,7 @@ def fircg_Dialect : Dialect {
 
 // Base class for FIR CG operations.
 // All operations automatically get a prefix of "fircg.".
-class fircg_Op<string mnemonic, list<OpTrait> traits>
+class fircg_Op<string mnemonic, list<Trait> traits>
   : Op<fircg_Dialect, mnemonic, traits>;
 
 // Extended embox operation.

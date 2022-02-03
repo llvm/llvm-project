@@ -195,6 +195,7 @@ public:
 
     return 0;
   }
+  unsigned getMinVLen() const { return ZvlLen; }
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
   bool isRegisterReservedByUser(Register i) const {
     assert(i < RISCV::NUM_TARGET_REGS && "Register out of range");

@@ -1,6 +1,6 @@
 # RUN: %clang_host -g %S/Inputs/test.c -o %t.out
 # RUN: cp %S/Inputs/a.out.crash %t.crash
-# RUN: python %S/patch-crashlog.py --binary %t.out --crashlog %t.crash --offsets '{"main":20, "bar":9, "foo":16}'
+# RUN: %python %S/patch-crashlog.py --binary %t.out --crashlog %t.crash --offsets '{"main":20, "bar":9, "foo":16}'
 # RUN: %lldb %t.out -o 'command script import lldb.macosx.crashlog' -o 'crashlog %t.crash' 2>&1 | FileCheck %s
 
 # CHECK: Thread[0] EXC_BAD_ACCESS (SIGSEGV) (KERN_INVALID_ADDRESS at 0x0000000000000000)

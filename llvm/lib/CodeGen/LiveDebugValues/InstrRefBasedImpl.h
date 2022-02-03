@@ -779,6 +779,17 @@ public:
   /// Used as the result type for the variable value dataflow problem.
   using LiveInsT = SmallVector<SmallVector<VarAndLoc, 8>, 8>;
 
+  /// Mapping from lexical scopes to a DILocation in that scope.
+  using ScopeToDILocT = DenseMap<const LexicalScope *, const DILocation *>;
+
+  /// Mapping from lexical scopes to variables in that scope.
+  using ScopeToVarsT = DenseMap<const LexicalScope *, SmallSet<DebugVariable, 4>>;
+
+  /// Mapping from lexical scopes to blocks where variables in that scope are
+  /// assigned. Such blocks aren't necessarily "in" the lexical scope, it's
+  /// just a block where an assignment happens.
+  using ScopeToAssignBlocksT = DenseMap<const LexicalScope *, SmallPtrSet<MachineBasicBlock *, 4>>;
+
 private:
   MachineDominatorTree *DomTree;
   const TargetRegisterInfo *TRI;
@@ -816,7 +827,7 @@ private:
 
   /// Blocks which are artificial, i.e. blocks which exclusively contain
   /// instructions without DebugLocs, or with line 0 locations.
-  SmallPtrSet<const MachineBasicBlock *, 16> ArtificialBlocks;
+  SmallPtrSet<MachineBasicBlock *, 16> ArtificialBlocks;
 
   // Mapping of blocks to and from their RPOT order.
   DenseMap<unsigned int, MachineBasicBlock *> OrderToBB;
@@ -958,6 +969,15 @@ private:
                      ValueIDNum **MInLocs,
                      SmallVectorImpl<MLocTransferMap> &MLocTransfer);
 
+  /// Propagate variable values to blocks in the common case where there's
+  /// only one value assigned to the variable. This function has better
+  /// performance as it doesn't have to find the dominance frontier between
+  /// different assignments.
+  void placePHIsForSingleVarDefinition(
+          const SmallPtrSetImpl<MachineBasicBlock *> &InScopeBlocks,
+          MachineBasicBlock *MBB, SmallVectorImpl<VLocTracker> &AllTheVLocs,
+          const DebugVariable &Var, LiveInsT &Output);
+
   /// Calculate the iterated-dominance-frontier for a set of defs, using the
   /// existing LLVM facilities for this. Works for a single "value" or
   /// machine/variable location.
@@ -978,6 +998,19 @@ private:
   bool mlocJoin(MachineBasicBlock &MBB,
                 SmallPtrSet<const MachineBasicBlock *, 16> &Visited,
                 ValueIDNum **OutLocs, ValueIDNum *InLocs);
+
+  /// Produce a set of blocks that are in the current lexical scope. This means
+  /// those blocks that contain instructions "in" the scope, blocks where
+  /// assignments to variables in scope occur, and artificial blocks that are
+  /// successors to any of the earlier blocks. See https://llvm.org/PR48091 for
+  /// more commentry on what "in scope" means.
+  /// \p DILoc A location in the scope that we're fetching blocks for.
+  /// \p Output Set to put in-scope-blocks into.
+  /// \p AssignBlocks Blocks known to contain assignments of variables in scope.
+  void
+  getBlocksForScope(const DILocation *DILoc,
+                    SmallPtrSetImpl<const MachineBasicBlock *> &Output,
+                    const SmallPtrSetImpl<MachineBasicBlock *> &AssignBlocks);
 
   /// Solve the variable value dataflow problem, for a single lexical scope.
   /// Uses the algorithm from the file comment to resolve control flow joins
@@ -1028,6 +1061,12 @@ private:
                      ValueIDNum **MOutLocs, ValueIDNum **MInLocs,
                      DenseMap<DebugVariable, unsigned> &AllVarsNumbering,
                      const TargetPassConfig &TPC);
+
+  /// Take collections of DBG_VALUE instructions stored in TTracker, and
+  /// install them into their output blocks. Preserves a stable order of
+  /// DBG_VALUEs produced (which would otherwise cause nondeterminism) through
+  /// the AllVarsNumbering order.
+  bool emitTransfers(DenseMap<DebugVariable, unsigned> &AllVarsNumbering);
 
   /// Boilerplate computation of some initial sets, artifical blocks and
   /// RPOT block ordering.

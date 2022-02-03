@@ -52,3 +52,34 @@ entry:
   %sel = select i1 %cc, i64 0, i64 4
   ret i64 %sel
 }
+
+define <2 x double> @select_olt_load_cmp(<2 x double> %a, <2 x float>* %src) {
+; CHECK-LABEL: select_olt_load_cmp:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    ldr d2, [x0]
+; CHECK-NEXT:    fcmgt v1.2s, v2.2s, v1.2s
+; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+entry:
+  %l = load <2 x float>, <2 x float>* %src, align 4
+  %cmp = fcmp olt <2 x float> zeroinitializer, %l
+  %sel = select <2 x i1> %cmp, <2 x double> %a, <2 x double> zeroinitializer
+  ret <2 x double> %sel
+}
+
+define <4 x i32> @select_icmp_sgt(<4 x i32> %a, <4 x i8> %b) {
+; CHECK-LABEL: select_icmp_sgt:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    shl v1.4h, v1.4h, #8
+; CHECK-NEXT:    sshr v1.4h, v1.4h, #8
+; CHECK-NEXT:    cmgt v1.4h, v1.4h, #0
+; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
+; CHECK-NEXT:    bic v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+entry:
+  %cmp = icmp sgt <4 x i8> %b, zeroinitializer
+  %sel = select <4 x i1> %cmp, <4 x i32> zeroinitializer, <4 x i32> %a
+  ret <4 x i32> %sel
+}

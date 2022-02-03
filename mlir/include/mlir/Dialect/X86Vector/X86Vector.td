@@ -31,11 +31,11 @@ def X86Vector_Dialect : Dialect {
 //===----------------------------------------------------------------------===//
 
 // Operation that is part of the input dialect.
-class AVX512_Op<string mnemonic, list<OpTrait> traits = []> :
+class AVX512_Op<string mnemonic, list<Trait> traits = []> :
   Op<X86Vector_Dialect, "avx512." # mnemonic, traits> {}
 
 // Intrinsic operation used during lowering to LLVM IR.
-class AVX512_IntrOp<string mnemonic, int numResults, list<OpTrait> traits = []> :
+class AVX512_IntrOp<string mnemonic, int numResults, list<Trait> traits = []> :
   LLVM_IntrOpBase<X86Vector_Dialect, "avx512.intr." # mnemonic,
                   "x86_avx512_" # !subst(".", "_", mnemonic),
                   [], [], traits, numResults>;
@@ -43,7 +43,7 @@ class AVX512_IntrOp<string mnemonic, int numResults, list<OpTrait> traits = []> 
 // Defined by first result overload. May have to be extended for other
 // instructions in the future.
 class AVX512_IntrOverloadedOp<string mnemonic,
-                              list<OpTrait> traits = []> :
+                              list<Trait> traits = []> :
   LLVM_IntrOpBase<X86Vector_Dialect, "avx512.intr." # mnemonic,
                   "x86_avx512_" # !subst(".", "_", mnemonic),
                   /*list<int> overloadedResults=*/[0],
@@ -276,17 +276,17 @@ def Vp2IntersectQIntrOp : AVX512_IntrOp<"vp2intersect.q.512", 2, [
 //===----------------------------------------------------------------------===//
 
 // Operation that is part of the input dialect.
-class AVX_Op<string mnemonic, list<OpTrait> traits = []> :
+class AVX_Op<string mnemonic, list<Trait> traits = []> :
   Op<X86Vector_Dialect, "avx." # mnemonic, traits> {}
 
 // Operation that may be part of the input dialect, but whose
 // form is somewhere between the user view of the operation
 // and the actual lower level intrinsic in LLVM IR.
-class AVX_LowOp<string mnemonic, list<OpTrait> traits = []> :
+class AVX_LowOp<string mnemonic, list<Trait> traits = []> :
   Op<X86Vector_Dialect, "avx.intr." # mnemonic, traits> {}
 
 // Intrinsic operation used during lowering to LLVM IR.
-class AVX_IntrOp<string mnemonic, int numResults, list<OpTrait> traits = []> :
+class AVX_IntrOp<string mnemonic, int numResults, list<Trait> traits = []> :
   LLVM_IntrOpBase<X86Vector_Dialect, "avx.intr." # mnemonic,
                   "x86_avx_" # !subst(".", "_", mnemonic),
                   [], [], traits, numResults>;

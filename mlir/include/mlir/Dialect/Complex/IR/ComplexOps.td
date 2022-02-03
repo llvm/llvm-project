@@ -14,13 +14,13 @@ include "mlir/IR/OpAsmInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-class Complex_Op<string mnemonic, list<OpTrait> traits = []>
+class Complex_Op<string mnemonic, list<Trait> traits = []>
     : Op<Complex_Dialect, mnemonic, traits>;
 
 // Base class for standard arithmetic operations on complex numbers with a
 // floating-point element type. These operations take two operands and return
 // one result, all of which must be complex numbers of the same type.
-class ComplexArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
+class ComplexArithmeticOp<string mnemonic, list<Trait> traits = []> :
     Complex_Op<mnemonic, traits # [NoSideEffect, SameOperandsAndResultType,
     Elementwise]> {
   let arguments = (ins Complex<AnyFloat>:$lhs, Complex<AnyFloat>:$rhs);
@@ -32,7 +32,7 @@ class ComplexArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
 // Base class for standard unary operations on complex numbers with a
 // floating-point element type. These operations take one operand and return
 // one result; the operand must be a complex number.
-class ComplexUnaryOp<string mnemonic, list<OpTrait> traits = []> :
+class ComplexUnaryOp<string mnemonic, list<Trait> traits = []> :
     Complex_Op<mnemonic, traits # [NoSideEffect, Elementwise]> {
   let arguments = (ins Complex<AnyFloat>:$complex);
   let assemblyFormat = "$complex attr-dict `:` type($complex)";

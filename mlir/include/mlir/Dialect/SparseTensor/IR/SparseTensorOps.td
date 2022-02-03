@@ -18,7 +18,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // Base class.
 //===----------------------------------------------------------------------===//
 
-class SparseTensor_Op<string mnemonic, list<OpTrait> traits = []>
+class SparseTensor_Op<string mnemonic, list<Trait> traits = []>
   : Op<SparseTensor_Dialect, mnemonic, traits> {
   let printer = [{ return ::print(p, *this); }];
   let verifier = [{ return ::verify(*this); }];

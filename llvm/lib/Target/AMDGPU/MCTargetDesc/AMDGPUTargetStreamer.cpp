@@ -396,6 +396,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
       break;
     case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
     case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
       if (getTargetID()->isXnackSupported())
         OS << "\t\t.amdhsa_reserve_xnack_mask " << getTargetID()->isXnackOnOrAny() << '\n';
       break;
@@ -578,6 +579,7 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsAMDHSA() {
     case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
       return getEFlagsV3();
     case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
       return getEFlagsV4();
     }
   }

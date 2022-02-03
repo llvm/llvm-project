@@ -41,6 +41,21 @@
 # RUN: llvm-objdump --macho --function-starts %t/basic >> %t/objdump
 # RUN: FileCheck %s --check-prefix=BASIC < %t/objdump
 
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/local.s -o %t/local.o
+# RUN: %lld -lSystem %t/local.o -o %t/local
+# RUN: llvm-objdump --syms %t/local > %t/objdump
+# RUN: llvm-objdump --macho --function-starts %t/local >> %t/objdump
+# RUN: FileCheck %s --check-prefix=LOCAL < %t/objdump
+
+# LOCAL-LABEL: SYMBOL TABLE:
+# LOCAL-NEXT:  [[#%x,F1:]] l F __TEXT,__text +[Foo bar]
+# LOCAL-NEXT:  [[#%x,F2:]] l F __TEXT,__text _foo
+# LOCAL:       [[#%x,F3:]] g F __TEXT,__text _main
+# LOCAL-LABEL: local:
+# LOCAL:       [[#F1]]
+# LOCAL:       [[#F2]]
+# LOCAL:       [[#F3]]
+
 #--- basic.s
 .section  __TEXT,__text,regular,pure_instructions
 .globl  _f1
@@ -60,5 +75,17 @@ _main:
 .globl  _main
 _f1:
   retq
+_main:
+  retq
+
+#--- local.s
+.section __TEXT,__text
+"+[Foo bar]":
+  retq
+
+_foo:
+  retq
+
+.globl _main
 _main:
   retq

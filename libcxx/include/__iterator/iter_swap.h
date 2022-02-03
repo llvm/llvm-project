@@ -26,7 +26,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_HAS_NO_RANGES)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 // [iter.cust.swap]
 
@@ -36,9 +36,11 @@ namespace __iter_swap {
   void iter_swap(_I1, _I2) = delete;
 
   template<class _T1, class _T2>
-  concept __unqualified_iter_swap = requires(_T1&& __x, _T2&& __y) {
-    iter_swap(_VSTD::forward<_T1>(__x), _VSTD::forward<_T2>(__y));
-  };
+  concept __unqualified_iter_swap =
+    (__class_or_enum<remove_cvref_t<_T1>> || __class_or_enum<remove_cvref_t<_T2>>) &&
+    requires (_T1&& __x, _T2&& __y) {
+      iter_swap(_VSTD::forward<_T1>(__x), _VSTD::forward<_T2>(__y));
+    };
 
   template<class _T1, class _T2>
   concept __readable_swappable =
@@ -98,7 +100,7 @@ concept indirectly_swappable =
     ranges::iter_swap(__i2, __i1);
   };
 
-#endif // !defined(_LIBCPP_HAS_NO_RANGES)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 _LIBCPP_END_NAMESPACE_STD
 

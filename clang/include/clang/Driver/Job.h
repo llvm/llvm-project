@@ -211,6 +211,8 @@ public:
     Arguments = std::move(List);
   }
 
+  void replaceExecutable(const char *Exe) { Executable = Exe; }
+
   const char *getExecutable() const { return Executable; }
 
   const llvm::opt::ArgStringList &getArguments() const { return Arguments; }

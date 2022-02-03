@@ -725,6 +725,7 @@ void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
   }
 }
 
+
 void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
                                  ArgStringList &CmdArgs) {
   // Enable -frtlib-add-rpath by default for the case of VE.
@@ -785,6 +786,9 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
   }
 
   addArchSpecificRPath(TC, Args, CmdArgs);
+
+  if (RTKind == Driver::OMPRT_OMP)
+    addOpenMPRuntimeSpecificRPath(TC, Args, CmdArgs);
 
   return true;
 }

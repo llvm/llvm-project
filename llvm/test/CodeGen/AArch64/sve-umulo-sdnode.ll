@@ -14,8 +14,8 @@ define <vscale x 2 x i8> @umulo_nxv2i8(<vscale x 2 x i8> %x, <vscale x 2 x i8> %
 ; CHECK-NEXT:    umulh z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    lsr z1.d, z2.d, #8
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
-; CHECK-NEXT:    cmpne p2.d, p0/z, z1.d, #0
-; CHECK-NEXT:    orr p0.b, p0/z, p2.b, p1.b
+; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-NEXT:    mov z2.d, p0/m, #0 // =0x0
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
@@ -39,8 +39,8 @@ define <vscale x 4 x i8> @umulo_nxv4i8(<vscale x 4 x i8> %x, <vscale x 4 x i8> %
 ; CHECK-NEXT:    umulh z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    lsr z1.s, z2.s, #8
 ; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
-; CHECK-NEXT:    cmpne p2.s, p0/z, z1.s, #0
-; CHECK-NEXT:    orr p0.b, p0/z, p2.b, p1.b
+; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-NEXT:    mov z2.s, p0/m, #0 // =0x0
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
@@ -64,8 +64,8 @@ define <vscale x 8 x i8> @umulo_nxv8i8(<vscale x 8 x i8> %x, <vscale x 8 x i8> %
 ; CHECK-NEXT:    umulh z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    lsr z1.h, z2.h, #8
 ; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
-; CHECK-NEXT:    cmpne p2.h, p0/z, z1.h, #0
-; CHECK-NEXT:    orr p0.b, p0/z, p2.b, p1.b
+; CHECK-NEXT:    cmpne p0.h, p0/z, z1.h, #0
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-NEXT:    mov z2.h, p0/m, #0 // =0x0
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
@@ -169,8 +169,8 @@ define <vscale x 2 x i16> @umulo_nxv2i16(<vscale x 2 x i16> %x, <vscale x 2 x i1
 ; CHECK-NEXT:    umulh z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    lsr z1.d, z2.d, #16
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
-; CHECK-NEXT:    cmpne p2.d, p0/z, z1.d, #0
-; CHECK-NEXT:    orr p0.b, p0/z, p2.b, p1.b
+; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-NEXT:    mov z2.d, p0/m, #0 // =0x0
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
@@ -194,8 +194,8 @@ define <vscale x 4 x i16> @umulo_nxv4i16(<vscale x 4 x i16> %x, <vscale x 4 x i1
 ; CHECK-NEXT:    umulh z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    lsr z1.s, z2.s, #16
 ; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
-; CHECK-NEXT:    cmpne p2.s, p0/z, z1.s, #0
-; CHECK-NEXT:    orr p0.b, p0/z, p2.b, p1.b
+; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-NEXT:    mov z2.s, p0/m, #0 // =0x0
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
@@ -299,8 +299,8 @@ define <vscale x 2 x i32> @umulo_nxv2i32(<vscale x 2 x i32> %x, <vscale x 2 x i3
 ; CHECK-NEXT:    umulh z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    lsr z1.d, z2.d, #32
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
-; CHECK-NEXT:    cmpne p2.d, p0/z, z1.d, #0
-; CHECK-NEXT:    orr p0.b, p0/z, p2.b, p1.b
+; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-NEXT:    mov z2.d, p0/m, #0 // =0x0
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret

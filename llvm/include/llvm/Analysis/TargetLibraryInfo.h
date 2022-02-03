@@ -257,15 +257,10 @@ public:
   }
 
   // Provide value semantics.
-  TargetLibraryInfo(const TargetLibraryInfo &TLI)
-      : Impl(TLI.Impl), OverrideAsUnavailable(TLI.OverrideAsUnavailable) {}
+  TargetLibraryInfo(const TargetLibraryInfo &TLI) = default;
   TargetLibraryInfo(TargetLibraryInfo &&TLI)
       : Impl(TLI.Impl), OverrideAsUnavailable(TLI.OverrideAsUnavailable) {}
-  TargetLibraryInfo &operator=(const TargetLibraryInfo &TLI) {
-    Impl = TLI.Impl;
-    OverrideAsUnavailable = TLI.OverrideAsUnavailable;
-    return *this;
-  }
+  TargetLibraryInfo &operator=(const TargetLibraryInfo &TLI) = default;
   TargetLibraryInfo &operator=(TargetLibraryInfo &&TLI) {
     Impl = TLI.Impl;
     OverrideAsUnavailable = TLI.OverrideAsUnavailable;
@@ -448,7 +443,7 @@ public:
   ///
   /// This will use the module's triple to construct the library info for that
   /// module.
-  TargetLibraryAnalysis() {}
+  TargetLibraryAnalysis() = default;
 
   /// Construct a library analysis with baseline Module-level info.
   ///

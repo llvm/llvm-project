@@ -95,7 +95,7 @@ public:
             bool IsFixed = true)
       : ArgInfo(Regs, OrigValue.getType(), OrigIndex, Flags, IsFixed, &OrigValue) {}
 
-    ArgInfo() {}
+    ArgInfo() = default;
   };
 
   struct CallLoweringInfo {

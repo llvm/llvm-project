@@ -115,7 +115,7 @@ public:
     return SP->getKind() == ScopedPrinterKind::Base;
   }
 
-  virtual ~ScopedPrinter() {}
+  virtual ~ScopedPrinter() = default;
 
   void flush() { OS.flush(); }
 
@@ -792,13 +792,13 @@ private:
 struct DelimitedScope {
   DelimitedScope(ScopedPrinter &W) : W(&W) {}
   DelimitedScope() : W(nullptr) {}
-  virtual ~DelimitedScope(){};
+  virtual ~DelimitedScope() = default;
   virtual void setPrinter(ScopedPrinter &W) = 0;
   ScopedPrinter *W;
 };
 
 struct DictScope : DelimitedScope {
-  explicit DictScope() {}
+  explicit DictScope() = default;
   explicit DictScope(ScopedPrinter &W) : DelimitedScope(W) { W.objectBegin(); }
 
   DictScope(ScopedPrinter &W, StringRef N) : DelimitedScope(W) {
@@ -817,7 +817,7 @@ struct DictScope : DelimitedScope {
 };
 
 struct ListScope : DelimitedScope {
-  explicit ListScope() {}
+  explicit ListScope() = default;
   explicit ListScope(ScopedPrinter &W) : DelimitedScope(W) { W.arrayBegin(); }
 
   ListScope(ScopedPrinter &W, StringRef N) : DelimitedScope(W) {

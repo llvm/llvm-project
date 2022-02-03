@@ -88,6 +88,8 @@ AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
       HSAMetadataStream.reset(new HSAMD::MetadataStreamerV2());
     } else if (isHsaAbiVersion3(getGlobalSTI())) {
       HSAMetadataStream.reset(new HSAMD::MetadataStreamerV3());
+    } else if (isHsaAbiVersion5(getGlobalSTI())) {
+      HSAMetadataStream.reset(new HSAMD::MetadataStreamerV5());
     } else {
       HSAMetadataStream.reset(new HSAMD::MetadataStreamerV4());
     }
@@ -118,7 +120,7 @@ void AMDGPUAsmPrinter::emitStartOfAsmFile(Module &M) {
       TM.getTargetTriple().getOS() != Triple::AMDPAL)
     return;
 
-  if (isHsaAbiVersion3Or4(getGlobalSTI()))
+  if (isHsaAbiVersion3AndAbove(getGlobalSTI()))
     getTargetStreamer()->EmitDirectiveAMDGCNTarget();
 
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA)
@@ -127,7 +129,7 @@ void AMDGPUAsmPrinter::emitStartOfAsmFile(Module &M) {
   if (TM.getTargetTriple().getOS() == Triple::AMDPAL)
     getTargetStreamer()->getPALMetadata()->readFromIR(M);
 
-  if (isHsaAbiVersion3Or4(getGlobalSTI()))
+  if (isHsaAbiVersion3AndAbove(getGlobalSTI()))
     return;
 
   // HSA emits NT_AMD_HSA_CODE_OBJECT_VERSION for code objects v2.
@@ -259,7 +261,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
 
 void AMDGPUAsmPrinter::emitFunctionEntryLabel() {
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA &&
-      isHsaAbiVersion3Or4(getGlobalSTI())) {
+      isHsaAbiVersion3AndAbove(getGlobalSTI())) {
     AsmPrinter::emitFunctionEntryLabel();
     return;
   }

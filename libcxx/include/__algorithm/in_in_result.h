@@ -16,7 +16,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#ifndef _LIBCPP_HAS_NO_RANGES
+#ifndef _LIBCPP_HAS_NO_CONCEPTS
 
 namespace ranges {
 template <class _I1, class _I2>
@@ -38,7 +38,7 @@ struct in_in_result {
 };
 } // namespace ranges
 
-#endif // _LIBCPP_HAS_NO_RANGES
+#endif // _LIBCPP_HAS_NO_CONCEPTS
 
 _LIBCPP_END_NAMESPACE_STD
 

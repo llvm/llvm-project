@@ -19,11 +19,11 @@ include "flang/Optimizer/Dialect/FIRTypes.td"
 
 // Base class for FIR operations.
 // All operations automatically get a prefix of "fir.".
-class fir_Op<string mnemonic, list<OpTrait> traits>
+class fir_Op<string mnemonic, list<Trait> traits>
   : Op<fir_Dialect, mnemonic, traits>;
 
 // Base class for FIR operations that take a single argument
-class fir_SimpleOp<string mnemonic, list<OpTrait> traits>
+class fir_SimpleOp<string mnemonic, list<Trait> traits>
   : fir_Op<mnemonic, traits> {
 
   let assemblyFormat = [{
@@ -43,13 +43,13 @@ def fir_OneResultOpBuilder : OpBuilder<(ins
   }]>;
 
 // Base class of FIR operations that return 1 result
-class fir_OneResultOp<string mnemonic, list<OpTrait> traits = []> :
+class fir_OneResultOp<string mnemonic, list<Trait> traits = []> :
     fir_Op<mnemonic, traits>, Results<(outs fir_Type:$res)> {
   let builders = [fir_OneResultOpBuilder];
 }
 
 // Base class of FIR operations that have 1 argument and return 1 result
-class fir_SimpleOneResultOp<string mnemonic, list<OpTrait> traits = []> :
+class fir_SimpleOneResultOp<string mnemonic, list<Trait> traits = []> :
     fir_SimpleOp<mnemonic, traits> {
   let builders = [fir_OneResultOpBuilder];
 }
@@ -457,7 +457,7 @@ def fir_ZeroOp : fir_OneResultOp<"zero_bits", [NoSideEffect]> {
 // Terminator operations
 //===----------------------------------------------------------------------===//
 
-class fir_SwitchTerminatorOp<string mnemonic, list<OpTrait> traits = []> :
+class fir_SwitchTerminatorOp<string mnemonic, list<Trait> traits = []> :
     fir_Op<mnemonic, !listconcat(traits, [AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<BranchOpInterface>, Terminator])> {
 
@@ -523,7 +523,7 @@ class fir_SwitchTerminatorOp<string mnemonic, list<OpTrait> traits = []> :
 }
 
 class fir_IntegralSwitchTerminatorOp<string mnemonic,
-    list<OpTrait> traits = []> : fir_SwitchTerminatorOp<mnemonic, traits> {
+    list<Trait> traits = []> : fir_SwitchTerminatorOp<mnemonic, traits> {
 
   let skipDefaultBuilders = 1;
   let builders = [OpBuilder<(ins "mlir::Value":$selector,
@@ -2029,7 +2029,7 @@ def fir_ResultOp : fir_Op<"result",
 
 def FirRegionTerminator : SingleBlockImplicitTerminator<"ResultOp">;
 
-class region_Op<string mnemonic, list<OpTrait> traits = []> :
+class region_Op<string mnemonic, list<Trait> traits = []> :
     fir_Op<mnemonic,
     !listconcat(traits, [FirRegionTerminator, RecursiveSideEffects])> {
   let printer = "return ::print(p, *this);";
@@ -2435,7 +2435,7 @@ def fir_StringLitOp : fir_Op<"string_lit", [NoSideEffect]> {
 
 // Complex operations
 
-class fir_ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
+class fir_ArithmeticOp<string mnemonic, list<Trait> traits = []> :
     fir_Op<mnemonic,
            !listconcat(traits, [NoSideEffect, SameOperandsAndResultType])>,
     Results<(outs AnyType)> {
@@ -2444,7 +2444,7 @@ class fir_ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
   let printer = "return printBinaryOp(this->getOperation(), p);";
 }
 
-class fir_UnaryArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
+class fir_UnaryArithmeticOp<string mnemonic, list<Trait> traits = []> :
       fir_Op<mnemonic,
              !listconcat(traits, [NoSideEffect, SameOperandsAndResultType])>,
       Results<(outs AnyType)> {
@@ -2479,13 +2479,13 @@ def fir_ConstcOp : fir_Op<"constc", [NoSideEffect]> {
   }];
 }
 
-class ComplexUnaryArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
+class ComplexUnaryArithmeticOp<string mnemonic, list<Trait> traits = []> :
       fir_UnaryArithmeticOp<mnemonic, traits>,
       Arguments<(ins fir_ComplexType:$operand)>;
 
 def fir_NegcOp : ComplexUnaryArithmeticOp<"negc">;
 
-class ComplexArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
+class ComplexArithmeticOp<string mnemonic, list<Trait> traits = []> :
       fir_ArithmeticOp<mnemonic, traits>,
       Arguments<(ins fir_ComplexType:$lhs, fir_ComplexType:$rhs)>;
 

@@ -35,8 +35,8 @@ using namespace mlir;
 
 // Deserializes the SPIR-V binary module stored in the file named as
 // `inputFilename` and returns a module containing the SPIR-V module.
-static OwningModuleRef deserializeModule(const llvm::MemoryBuffer *input,
-                                         MLIRContext *context) {
+static OwningOpRef<ModuleOp> deserializeModule(const llvm::MemoryBuffer *input,
+                                               MLIRContext *context) {
   context->loadDialect<spirv::SPIRVDialect>();
 
   // Make sure the input stream can be treated as a stream of SPIR-V words
@@ -56,7 +56,7 @@ static OwningModuleRef deserializeModule(const llvm::MemoryBuffer *input,
   if (!spirvModule)
     return {};
 
-  OwningModuleRef module(ModuleOp::create(FileLineColLoc::get(
+  OwningOpRef<ModuleOp> module(ModuleOp::create(FileLineColLoc::get(
       context, input->getBufferIdentifier(), /*line=*/0, /*column=*/0)));
   module->getBody()->push_front(spirvModule.release());
 
@@ -147,7 +147,7 @@ static LogicalResult roundTripModule(ModuleOp srcModule, bool emitDebugInfo,
     return failure();
 
   // Wrap around in a new MLIR module.
-  OwningModuleRef dstModule(ModuleOp::create(
+  OwningOpRef<ModuleOp> dstModule(ModuleOp::create(
       FileLineColLoc::get(&deserializationContext,
                           /*filename=*/"", /*line=*/0, /*column=*/0)));
   dstModule->getBody()->push_front(spirvModule.release());

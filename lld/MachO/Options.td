@@ -252,6 +252,10 @@ def segcreate : MultiArg<["-"], "segcreate", 3>,
     Alias<sectcreate>,
     HelpText<"Alias for -sectcreate">,
     Group<grp_content>;
+def add_empty_section : MultiArg<["-"], "add_empty_section", 2>,
+    MetaVarName<"<segment> <section>">,
+    HelpText<"Create an empty <section> in <segment>">,
+    Group<grp_content>;
 def filelist : Separate<["-"], "filelist">,
     MetaVarName<"<file>">,
     HelpText<"Read names of files to link from <file>">,

@@ -17,7 +17,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/TilingInterface.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 
-class Tensor_Op<string mnemonic, list<OpTrait> traits = []>
+class Tensor_Op<string mnemonic, list<Trait> traits = []>
     : Op<Tensor_Dialect, mnemonic, traits> {
   let printer = [{ return ::print(p, *this); }];
   let verifier = [{ return ::verify(*this); }];
@@ -656,7 +656,7 @@ def Tensor_ReshapeOp: Tensor_Op<"reshape", [NoSideEffect]>  {
 // ExpandShapeOp / CollapseShapeOp
 //===----------------------------------------------------------------------===//
 
-class Tensor_ReassociativeReshapeOp<string mnemonic, list<OpTrait> traits = []> :
+class Tensor_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
     Tensor_Op<mnemonic, !listconcat(traits, [NoSideEffect])>,
     Arguments<(ins AnyTensor:$src, IndexListArrayAttr:$reassociation)>,
     Results<(outs AnyTensor:$result)> {

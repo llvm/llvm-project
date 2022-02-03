@@ -16,7 +16,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -90,11 +90,12 @@ resolveSourceIndices(Location loc, PatternRewriter &rewriter,
 }
 
 /// Helpers to access the memref operand for each op.
-static Value getMemRefOperand(memref::LoadOp op) { return op.memref(); }
+template <typename LoadOrStoreOpTy>
+static Value getMemRefOperand(LoadOrStoreOpTy op) {
+  return op.memref();
+}
 
 static Value getMemRefOperand(vector::TransferReadOp op) { return op.source(); }
-
-static Value getMemRefOperand(memref::StoreOp op) { return op.memref(); }
 
 static Value getMemRefOperand(vector::TransferWriteOp op) {
   return op.source();
@@ -154,12 +155,12 @@ private:
                  PatternRewriter &rewriter) const;
 };
 
-template <>
-void LoadOpOfSubViewFolder<memref::LoadOp>::replaceOp(
-    memref::LoadOp loadOp, memref::SubViewOp subViewOp,
-    ArrayRef<Value> sourceIndices, PatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<memref::LoadOp>(loadOp, subViewOp.source(),
-                                              sourceIndices);
+template <typename LoadOpTy>
+void LoadOpOfSubViewFolder<LoadOpTy>::replaceOp(
+    LoadOpTy loadOp, memref::SubViewOp subViewOp, ArrayRef<Value> sourceIndices,
+    PatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<LoadOpTy>(loadOp, subViewOp.source(),
+                                        sourceIndices);
 }
 
 template <>
@@ -178,12 +179,12 @@ void LoadOpOfSubViewFolder<vector::TransferReadOp>::replaceOp(
       /*mask=*/Value(), transferReadOp.in_boundsAttr());
 }
 
-template <>
-void StoreOpOfSubViewFolder<memref::StoreOp>::replaceOp(
-    memref::StoreOp storeOp, memref::SubViewOp subViewOp,
+template <typename StoreOpTy>
+void StoreOpOfSubViewFolder<StoreOpTy>::replaceOp(
+    StoreOpTy storeOp, memref::SubViewOp subViewOp,
     ArrayRef<Value> sourceIndices, PatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<memref::StoreOp>(
-      storeOp, storeOp.value(), subViewOp.source(), sourceIndices);
+  rewriter.replaceOpWithNewOp<StoreOpTy>(storeOp, storeOp.value(),
+                                         subViewOp.source(), sourceIndices);
 }
 
 template <>
@@ -239,8 +240,10 @@ StoreOpOfSubViewFolder<OpTy>::matchAndRewrite(OpTy storeOp,
 }
 
 void memref::populateFoldSubViewOpPatterns(RewritePatternSet &patterns) {
-  patterns.add<LoadOpOfSubViewFolder<memref::LoadOp>,
+  patterns.add<LoadOpOfSubViewFolder<AffineLoadOp>,
+               LoadOpOfSubViewFolder<memref::LoadOp>,
                LoadOpOfSubViewFolder<vector::TransferReadOp>,
+               StoreOpOfSubViewFolder<AffineStoreOp>,
                StoreOpOfSubViewFolder<memref::StoreOp>,
                StoreOpOfSubViewFolder<vector::TransferWriteOp>>(
       patterns.getContext());

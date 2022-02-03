@@ -106,7 +106,7 @@ public:
   ~Timer();
 
   /// Create an uninitialized timer, client must use 'init'.
-  explicit Timer() {}
+  explicit Timer() = default;
   void init(StringRef TimerName, StringRef TimerDescription);
   void init(StringRef TimerName, StringRef TimerDescription, TimerGroup &tg);
 

@@ -13,7 +13,7 @@ def Test_Dialect : Dialect {
   let cppNamespace = "NS";
   let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
-class NS_Op<string mnemonic, list<OpTrait> traits> :
+class NS_Op<string mnemonic, list<Trait> traits> :
     Op<Test_Dialect, mnemonic, traits>;
 
 // IsolatedFromAbove trait is included twice to ensure it gets uniqued during
@@ -264,9 +264,9 @@ def NS_JOp : NS_Op<"op_with_InferTypeOpInterface_interface", [DeclareOpInterface
 // CHECK: static void build(::mlir::OpBuilder &, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
 // CHECK: static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
 
-// Test usage of OpTraitList getting flattened during emission.
+// Test usage of TraitList getting flattened during emission.
 def NS_KOp : NS_Op<"k_op", [IsolatedFromAbove,
-    OpTraitList<[DeclareOpInterfaceMethods<InferTypeOpInterface>]>]> {
+    TraitList<[DeclareOpInterfaceMethods<InferTypeOpInterface>]>]> {
   let arguments = (ins AnyType:$a, AnyType:$b);
 }
 

@@ -35,16 +35,11 @@ public:
                               llvm::support::endianness Endian);
   explicit BinaryStreamReader(StringRef Data, llvm::support::endianness Endian);
 
-  BinaryStreamReader(const BinaryStreamReader &Other)
-      : Stream(Other.Stream), Offset(Other.Offset) {}
+  BinaryStreamReader(const BinaryStreamReader &Other) = default;
 
-  BinaryStreamReader &operator=(const BinaryStreamReader &Other) {
-    Stream = Other.Stream;
-    Offset = Other.Offset;
-    return *this;
-  }
+  BinaryStreamReader &operator=(const BinaryStreamReader &Other) = default;
 
-  virtual ~BinaryStreamReader() {}
+  virtual ~BinaryStreamReader() = default;
 
   /// Read as much as possible from the underlying string at the current offset
   /// without invoking a copy, and set \p Buffer to the resulting data slice.

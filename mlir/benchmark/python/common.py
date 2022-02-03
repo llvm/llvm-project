@@ -28,7 +28,7 @@ def setup_passes(mlir_module):
         f"(linalg-bufferize,convert-linalg-to-loops,convert-vector-to-scf),"
         f"convert-scf-to-std,"
         f"func-bufferize,"
-        f"tensor-constant-bufferize,"
+        f"arith-bufferize,"
         f"builtin.func(tensor-bufferize,std-bufferize,finalizing-bufferize),"
         f"convert-vector-to-llvm"
         f"{{reassociate-fp-reductions=1 enable-index-optimizations=1}},"

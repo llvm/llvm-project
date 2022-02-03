@@ -18,8 +18,6 @@
 #include "test_iterators.h"
 #include "test_range.h"
 
-
-
 template <template <class...> class I>
 constexpr bool check_forward_range() {
   constexpr bool result = std::ranges::forward_range<test_range<I> >;
@@ -39,3 +37,21 @@ static_assert(check_forward_range<forward_iterator>());
 static_assert(check_forward_range<bidirectional_iterator>());
 static_assert(check_forward_range<random_access_iterator>());
 static_assert(check_forward_range<contiguous_iterator>());
+
+// Test ADL-proofing.
+struct Incomplete;
+template<class T> struct Holder { T t; };
+
+static_assert(!std::ranges::forward_range<Holder<Incomplete>*>);
+static_assert(!std::ranges::forward_range<Holder<Incomplete>*&>);
+static_assert(!std::ranges::forward_range<Holder<Incomplete>*&&>);
+static_assert(!std::ranges::forward_range<Holder<Incomplete>* const>);
+static_assert(!std::ranges::forward_range<Holder<Incomplete>* const&>);
+static_assert(!std::ranges::forward_range<Holder<Incomplete>* const&&>);
+
+static_assert( std::ranges::forward_range<Holder<Incomplete>*[10]>);
+static_assert( std::ranges::forward_range<Holder<Incomplete>*(&)[10]>);
+static_assert( std::ranges::forward_range<Holder<Incomplete>*(&&)[10]>);
+static_assert( std::ranges::forward_range<Holder<Incomplete>* const[10]>);
+static_assert( std::ranges::forward_range<Holder<Incomplete>* const(&)[10]>);
+static_assert( std::ranges::forward_range<Holder<Incomplete>* const(&&)[10]>);

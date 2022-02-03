@@ -35,16 +35,11 @@ public:
   explicit BinaryStreamWriter(MutableArrayRef<uint8_t> Data,
                               llvm::support::endianness Endian);
 
-  BinaryStreamWriter(const BinaryStreamWriter &Other)
-      : Stream(Other.Stream), Offset(Other.Offset) {}
+  BinaryStreamWriter(const BinaryStreamWriter &Other) = default;
 
-  BinaryStreamWriter &operator=(const BinaryStreamWriter &Other) {
-    Stream = Other.Stream;
-    Offset = Other.Offset;
-    return *this;
-  }
+  BinaryStreamWriter &operator=(const BinaryStreamWriter &Other) = default;
 
-  virtual ~BinaryStreamWriter() {}
+  virtual ~BinaryStreamWriter() = default;
 
   /// Write the bytes specified in \p Buffer to the underlying stream.
   /// On success, updates the offset so that subsequent writes will occur
