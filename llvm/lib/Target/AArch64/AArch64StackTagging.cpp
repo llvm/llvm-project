@@ -536,8 +536,14 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   SmallVector<Instruction *, 8> RetVec;
   SmallVector<Instruction *, 4> UnrecognizedLifetimes;
 
+  bool CallsReturnTwice = false;
   for (auto &BB : *F) {
     for (Instruction &I : BB) {
+      if (CallInst *CI = dyn_cast<CallInst>(&I)) {
+        if (CI->canReturnTwice()) {
+          CallsReturnTwice = true;
+        }
+      }
       if (auto *AI = dyn_cast<AllocaInst>(&I)) {
         Allocas[AI].AI = AI;
         Allocas[AI].OldAI = AI;
@@ -639,8 +645,12 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     Info.AI->replaceAllUsesWith(TagPCall);
     TagPCall->setOperand(0, Info.AI);
 
+    // Calls to functions that may return twice (e.g. setjmp) confuse the
+    // postdominator analysis, and will leave us to keep memory tagged after
+    // function return. Work around this by always untagging at every return
+    // statement if return_twice functions are called.
     if (UnrecognizedLifetimes.empty() && Info.LifetimeStart.size() == 1 &&
-        Info.LifetimeEnd.size() == 1) {
+        Info.LifetimeEnd.size() == 1 && !CallsReturnTwice) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
       IntrinsicInst *End = Info.LifetimeEnd[0];
       uint64_t Size =
