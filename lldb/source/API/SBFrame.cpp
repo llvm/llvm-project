@@ -1042,7 +1042,7 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
                                           const SBExpressionOptions &options) {
   LLDB_INSTRUMENT_VA(this, expr, options);
 
-  Log *expr_log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *expr_log = GetLog(LLDBLog::Expressions);
 
   SBValue expr_result;
 

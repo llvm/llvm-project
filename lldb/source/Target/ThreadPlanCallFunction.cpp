@@ -50,7 +50,7 @@ bool ThreadPlanCallFunction::ConstructorSetup(
   if (!abi)
     return false;
 
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
 
   SetBreakpoints();
 
@@ -149,7 +149,7 @@ ThreadPlanCallFunction::~ThreadPlanCallFunction() {
 }
 
 void ThreadPlanCallFunction::ReportRegisterState(const char *message) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   if (log && log->GetVerbose()) {
     StreamString strm;
     RegisterContext *reg_ctx = GetThread().GetRegisterContext().get();
@@ -172,7 +172,7 @@ void ThreadPlanCallFunction::ReportRegisterState(const char *message) {
 }
 
 void ThreadPlanCallFunction::DoTakedown(bool success) {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
 
   if (!m_valid) {
     // Don't call DoTakedown if we were never valid to begin with.
@@ -248,8 +248,7 @@ Vote ThreadPlanCallFunction::ShouldReportStop(Event *event_ptr) {
 }
 
 bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STEP |
-                                                  LIBLLDB_LOG_PROCESS));
+  Log *log(GetLog(LLDBLog::Step | LLDBLog::Process));
   m_real_stop_info_sp = GetPrivateStopInfo();
 
   // If our subplan knows why we stopped, even if it's done (which would
@@ -389,7 +388,7 @@ void ThreadPlanCallFunction::DidPush() {
 bool ThreadPlanCallFunction::WillStop() { return true; }
 
 bool ThreadPlanCallFunction::MischiefManaged() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
 
   if (IsPlanComplete()) {
     LLDB_LOGF(log, "ThreadPlanCallFunction(%p): Completed call function plan.",
@@ -467,7 +466,7 @@ bool ThreadPlanCallFunction::BreakpointsExplainStop() {
         (m_objc_language_runtime &&
          m_objc_language_runtime->ExceptionBreakpointsExplainStop(
              stop_info_sp))) {
-      Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STEP));
+      Log *log = GetLog(LLDBLog::Step);
       LLDB_LOGF(log, "ThreadPlanCallFunction::BreakpointsExplainStop - Hit an "
                      "exception breakpoint, setting plan complete.");
 

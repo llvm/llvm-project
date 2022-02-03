@@ -239,7 +239,7 @@ bool ELFNote::Parse(const DataExtractor &data, lldb::offset_t *offset) {
 
   const char *cstr = data.GetCStr(offset, llvm::alignTo(n_namesz, 4));
   if (cstr == nullptr) {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS));
+    Log *log = GetLog(LLDBLog::Symbols);
     LLDB_LOGF(log, "Failed to parse note name lacking nul terminator");
 
     return false;
@@ -508,7 +508,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES));
+  Log *log = GetLog(LLDBLog::Modules);
 
   const size_t initial_count = specs.GetSize();
 
@@ -1002,7 +1002,7 @@ lldb_private::Status
 ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
                                            lldb_private::ArchSpec &arch_spec,
                                            lldb_private::UUID &uuid) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES));
+  Log *log = GetLog(LLDBLog::Modules);
   Status error;
 
   lldb::offset_t offset = 0;
@@ -1369,7 +1369,7 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
   if (header.e_shnum == 0)
     return 0;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES));
+  Log *log = GetLog(LLDBLog::Modules);
 
   section_headers.resize(header.e_shnum);
   if (section_headers.size() != header.e_shnum)
@@ -1687,7 +1687,7 @@ class VMAddressProvider {
   VMMap::Allocator Alloc;
   VMMap Segments = VMMap(Alloc);
   VMMap Sections = VMMap(Alloc);
-  lldb_private::Log *Log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES);
+  lldb_private::Log *Log = GetLog(LLDBLog::Modules);
   size_t SegmentCount = 0;
   std::string SegmentName;
 
@@ -2623,8 +2623,7 @@ unsigned ObjectFileELF::ApplyRelocations(
                ((int64_t)value > INT32_MAX && (int64_t)value < INT32_MIN)) ||
               (reloc_type(rel) == R_AARCH64_ABS32 &&
                ((int64_t)value > INT32_MAX && (int64_t)value < INT32_MIN))) {
-            Log *log =
-                lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES);
+            Log *log = GetLog(LLDBLog::Modules);
             LLDB_LOGF(log, "Failed to apply debug info relocations");
             break;
           }
