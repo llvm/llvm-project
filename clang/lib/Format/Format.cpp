@@ -3246,7 +3246,7 @@ const char *StyleOptionHelpDescription =
     ".clang-format file located in one of the parent\n"
     "directories of the source file (or current\n"
     "directory for stdin).\n"
-    "Use -style=file:<format_file_path> to explicitly specify"
+    "Use -style=file:<format_file_path> to explicitly specify\n"
     "the configuration file.\n"
     "Use -style=\"{key: value, ...}\" to set specific\n"
     "parameters, e.g.:\n"
