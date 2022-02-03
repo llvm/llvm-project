@@ -12197,6 +12197,12 @@ bool AArch64TargetLowering::shouldSinkOperands(
         Ops.push_back(&II->getOperandUse(1));
       return !Ops.empty();
 
+    case Intrinsic::aarch64_neon_pmull:
+      if (!areExtractShuffleVectors(II->getOperand(0), II->getOperand(1)))
+        return false;
+      Ops.push_back(&II->getOperandUse(0));
+      Ops.push_back(&II->getOperandUse(1));
+      return true;
     case Intrinsic::aarch64_neon_pmull64:
       if (!areOperandsOfVmullHighP64(II->getArgOperand(0),
                                      II->getArgOperand(1)))
