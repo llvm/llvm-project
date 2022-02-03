@@ -514,9 +514,10 @@ bool UnwrappedLineParser::parseLevel(bool HasOpeningBrace, IfStmtKind *IfKind) {
       FormatToken *Next;
       do {
         Next = Tokens->getNextToken();
+        assert(Next);
       } while (Next->is(tok::comment));
       FormatTok = Tokens->setPosition(StoredPosition);
-      if (Next && Next->isNot(tok::colon)) {
+      if (Next->isNot(tok::colon)) {
         // default not followed by ':' is not a case label; treat it like
         // an identifier.
         parseStructuralElement();
