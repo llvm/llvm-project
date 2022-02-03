@@ -67,7 +67,7 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
 
 bool isStandardLifetime(const SmallVectorImpl<IntrinsicInst *> &LifetimeStart,
                         const SmallVectorImpl<IntrinsicInst *> &LifetimeEnd,
-                        const DominatorTree &DT, size_t MaxLifetimes);
+                        const DominatorTree *DT, size_t MaxLifetimes);
 } // namespace llvm
 
 #endif

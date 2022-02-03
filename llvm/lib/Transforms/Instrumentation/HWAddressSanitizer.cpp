@@ -1382,7 +1382,7 @@ bool HWAddressSanitizer::instrumentStack(
     };
     bool StandardLifetime =
         UnrecognizedLifetimes.empty() &&
-        isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, GetDT(),
+        isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, &GetDT(),
                            ClMaxLifetimes);
     if (ShouldDetectUseAfterScope && StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
