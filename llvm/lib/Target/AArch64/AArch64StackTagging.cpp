@@ -583,7 +583,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
       continue;
     }
 
-    Instruction *ExitUntag = getUntagLocationIfFunctionExit(I);
+    Instruction *ExitUntag = memtag::getUntagLocationIfFunctionExit(I);
     if (ExitUntag)
       RetVec.push_back(ExitUntag);
   }
@@ -643,8 +643,8 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
 
     bool StandardLifetime =
         UnrecognizedLifetimes.empty() &&
-        isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT,
-                           ClMaxLifetimes);
+        memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT,
+                                   ClMaxLifetimes);
     // Calls to functions that may return twice (e.g. setjmp) confuse the
     // postdominator analysis, and will leave us to keep memory tagged after
     // function return. Work around this by always untagging at every return
@@ -659,8 +659,8 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
 
       auto TagEnd = [&](Instruction *Node) { untagAlloca(AI, Node, Size); };
       if (!DT || !PDT ||
-          !forAllReachableExits(*DT, *PDT, Start, Info.LifetimeEnd, RetVec,
-                                TagEnd)) {
+          !memtag::forAllReachableExits(*DT, *PDT, Start, Info.LifetimeEnd,
+                                        RetVec, TagEnd)) {
         for (auto *End : Info.LifetimeEnd)
           End->eraseFromParent();
       }
