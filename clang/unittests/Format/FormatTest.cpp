@@ -9710,6 +9710,25 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
                AlignLeftBreakTemplate);
 
   verifyFormat("void (*foopt)(int) = &func;");
+
+  FormatStyle DerivePointerAlignment = getLLVMStyle();
+  DerivePointerAlignment.DerivePointerAlignment = true;
+  // There's always a space between the function and its trailing qualifiers.
+  // This isn't evidence for PAS_Right (or for PAS_Left).
+  std::string Prefix = "void a() &;\n"
+                       "void b() &;\n";
+  verifyFormat(Prefix + "int* x;", DerivePointerAlignment);
+  verifyFormat(Prefix + "int *x;", DerivePointerAlignment);
+  // Same if the function is an overloaded operator instead.
+  Prefix = "void operator()() &;\n"
+           "void operator()() &;\n";
+  verifyFormat(Prefix + "int* x;", DerivePointerAlignment);
+  verifyFormat(Prefix + "int *x;", DerivePointerAlignment);
+  // However a space between cv-qualifiers and ref-qualifiers *is* evidence.
+  Prefix = "void a() const &;\n"
+           "void b() const &;\n";
+  EXPECT_EQ(Prefix + "int *x;",
+            format(Prefix + "int* x;", DerivePointerAlignment));
 }
 
 TEST_F(FormatTest, UnderstandsNewAndDelete) {
