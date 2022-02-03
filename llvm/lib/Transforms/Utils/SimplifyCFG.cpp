@@ -2772,7 +2772,6 @@ static bool SpeculativelyExecuteThenElseCode(BranchInst *BI,
   assert(BI->isConditional() && !isa<ConstantInt>(BI->getCondition()) &&
          BI->getSuccessor(0) != BI->getSuccessor(1) &&
          "Only for truly conditional branches.");
-  BasicBlock *BB = BI->getParent();
 
   // Which ones of our successors end up with an unconditional branch?
   SmallVector<BasicBlock *, 2> UncondSuccessors;
@@ -2828,7 +2827,7 @@ static bool SpeculativelyExecuteThenElseCode(BranchInst *BI,
                 }) &&
          "All unconditional successors must be predecessors of merge block.");
   assert((UncondSuccessors.size() != 1 ||
-          is_contained(predecessors(MergeBB), BB)) &&
+          is_contained(predecessors(MergeBB), BI->getParent())) &&
          "If there is only a single unconditional successor, then the dispatch "
          "block must also be merge block's predecessor.");
 
