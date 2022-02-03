@@ -34,9 +34,10 @@ declare i1 @llvm.type.test(i8* %ptr, metadata %bitset) nounwind readnone
 define i1 @test2(i1 zeroext %flag, i8* %y, i8* %z) #0 {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[Y_Z:%.*]] = select i1 [[FLAG:%.*]], i8* [[Y:%.*]], i8* [[Z:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = call i1 @llvm.type.test(i8* [[Y_Z]], metadata [[META1]])
-; CHECK-NEXT:    ret i1 [[S]]
+; CHECK-NEXT:    [[S:%.*]] = call i1 @llvm.type.test(i8* [[Z:%.*]], metadata [[META1]])
+; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.type.test(i8* [[Y:%.*]], metadata [[META1]])
+; CHECK-NEXT:    [[T:%.*]] = select i1 [[FLAG:%.*]], i1 [[R]], i1 [[S]]
+; CHECK-NEXT:    ret i1 [[T]]
 ;
 entry:
   br i1 %flag, label %if.then, label %if.else

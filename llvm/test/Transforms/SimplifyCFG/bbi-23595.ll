@@ -14,7 +14,7 @@
 define i16 @_Z7test_itv() {
 ; CHECK-LABEL: @_Z7test_itv(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 undef, i16 1, i16 0
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 undef, i16 1, i16 0
 ; CHECK-NEXT:    ret i16 0
 ;
 entry:
