@@ -360,9 +360,8 @@ private:
 
       auto *O = dyn_cast<MachOObjectFile>(ObjOrErr->get());
       uint32_t FileCPUType, FileCPUSubtype;
-      StringRef ArchName = O->getArchTriple().getArchName();
       std::tie(FileCPUType, FileCPUSubtype) = MachO::getCPUTypeFromArchitecture(
-          MachO::getArchitectureFromName(ArchName));
+          MachO::getArchitectureFromName(O->getArchTriple().getArchName()));
 
       // If -arch_only is specified then skip this file if it doesn't match
       // the architecture specified.
@@ -373,7 +372,7 @@ private:
       if (!NoWarningForNoSymbols && O->symbols().empty())
         WithColor::warning() << "'" + Member.MemberName +
                                     "': has no symbols for architecture " +
-                                    ArchName + "\n";
+                                    O->getArchTriple().getArchName() + "\n";
 
       uint64_t FileCPUID = getCPUID(FileCPUType, FileCPUSubtype);
       Builder.Data.MembersPerArchitecture[FileCPUID].push_back(
