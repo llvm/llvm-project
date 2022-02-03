@@ -214,24 +214,16 @@ bool Mangled::DemangleWithRichManglingInfo(
   case eManglingSchemeItanium:
     // We want the rich mangling info here, so we don't care whether or not
     // there is a demangled string in the pool already.
-    if (context.FromItaniumName(m_mangled)) {
-      // If we got an info, we have a name. Copy to string pool and connect the
-      // counterparts to accelerate later access in GetDemangledName().
-      m_demangled.SetStringWithMangledCounterpart(context.ParseFullName(),
-                                                  m_mangled);
-      return true;
-    } else {
-      m_demangled.SetCString("");
-      return false;
-    }
+    return context.FromItaniumName(m_mangled);
 
   case eManglingSchemeMSVC: {
     // We have no rich mangling for MSVC-mangled names yet, so first try to
     // demangle it if necessary.
     if (!m_demangled && !m_mangled.GetMangledCounterpart(m_demangled)) {
       if (char *d = GetMSVCDemangledStr(m_mangled.GetCString())) {
-        // If we got an info, we have a name. Copy to string pool and connect
-        // the counterparts to accelerate later access in GetDemangledName().
+        // Without the rich mangling info we have to demangle the full name.
+        // Copy it to string pool and connect the counterparts to accelerate
+        // later access in GetDemangledName().
         m_demangled.SetStringWithMangledCounterpart(llvm::StringRef(d),
                                                     m_mangled);
         ::free(d);
