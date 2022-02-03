@@ -49,6 +49,8 @@ public:
   template <typename U> bool isa() const;
   template <typename First, typename Second, typename... Rest>
   bool isa() const;
+  template <typename First, typename... Rest>
+  bool isa_and_nonnull() const;
   template <typename U> U dyn_cast() const;
   template <typename U> U dyn_cast_or_null() const;
   template <typename U> U cast() const;
@@ -112,6 +114,11 @@ template <typename U> bool Attribute::isa() const {
 template <typename First, typename Second, typename... Rest>
 bool Attribute::isa() const {
   return isa<First>() || isa<Second, Rest...>();
+}
+
+template <typename First, typename... Rest>
+bool Attribute::isa_and_nonnull() const {
+  return impl && isa<First, Rest...>();
 }
 
 template <typename U> U Attribute::dyn_cast() const {

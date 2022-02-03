@@ -15,7 +15,6 @@
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
@@ -2540,7 +2539,7 @@ public:
     auto splat = op.vector().getDefiningOp<SplatOp>();
     if (!splat)
       return failure();
-    rewriter.replaceOpWithNewOp<SplatOp>(op, op.getType(), splat.getInput());
+    rewriter.replaceOpWithNewOp<SplatOp>(op, op.getType(), splat.input());
     return success();
   }
 };
@@ -4368,6 +4367,23 @@ void mlir::vector::populateVectorToVectorCanonicalizationPatterns(
            StridedSliceConstantMaskFolder, TransposeFolder>(
           patterns.getContext());
 }
+
+//===----------------------------------------------------------------------===//
+// SplatOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult SplatOp::fold(ArrayRef<Attribute> operands) {
+  auto constOperand = operands.front();
+  if (!constOperand.isa_and_nonnull<IntegerAttr, FloatAttr>())
+    return {};
+
+  // SplatElementsAttr::get treats single value for second arg as being a splat.
+  return SplatElementsAttr::get(getType(), {constOperand});
+}
+
+//===----------------------------------------------------------------------===//
+// TableGen'd op method definitions
+//===----------------------------------------------------------------------===//
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Vector/IR/VectorOps.cpp.inc"

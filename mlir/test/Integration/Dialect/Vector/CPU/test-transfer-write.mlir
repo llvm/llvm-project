@@ -5,7 +5,7 @@
 
 func @transfer_write16_inbounds_1d(%A : memref<?xf32>, %base: index) {
   %f = arith.constant 16.0 : f32
-  %v = splat %f : vector<16xf32>
+  %v = vector.splat %f : vector<16xf32>
   vector.transfer_write %v, %A[%base]
     {permutation_map = affine_map<(d0) -> (d0)>, in_bounds = [true]}
     : vector<16xf32>, memref<?xf32>
@@ -14,7 +14,7 @@ func @transfer_write16_inbounds_1d(%A : memref<?xf32>, %base: index) {
 
 func @transfer_write13_1d(%A : memref<?xf32>, %base: index) {
   %f = arith.constant 13.0 : f32
-  %v = splat %f : vector<13xf32>
+  %v = vector.splat %f : vector<13xf32>
   vector.transfer_write %v, %A[%base]
     {permutation_map = affine_map<(d0) -> (d0)>}
     : vector<13xf32>, memref<?xf32>
@@ -23,7 +23,7 @@ func @transfer_write13_1d(%A : memref<?xf32>, %base: index) {
 
 func @transfer_write17_1d(%A : memref<?xf32>, %base: index) {
   %f = arith.constant 17.0 : f32
-  %v = splat %f : vector<17xf32>
+  %v = vector.splat %f : vector<17xf32>
   vector.transfer_write %v, %A[%base]
     {permutation_map = affine_map<(d0) -> (d0)>}
     : vector<17xf32>, memref<?xf32>

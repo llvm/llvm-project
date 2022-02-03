@@ -168,3 +168,14 @@ func @fma(%a: vector<4xf32>, %b: vector<4xf32>, %c: vector<4xf32>) -> vector<4xf
   %0 = vector.fma %a, %b, %c: vector<4xf32>
 	return %0 : vector<4xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @splat
+//  CHECK-SAME: (%[[A:.+]]: f32)
+//       CHECK:   %[[VAL:.+]] = spv.CompositeConstruct %[[A]], %[[A]], %[[A]], %[[A]] : vector<4xf32>
+//       CHECK:   return %[[VAL]]
+func @splat(%f : f32) -> vector<4xf32> {
+  %splat = vector.splat %f : vector<4xf32>
+  return %splat : vector<4xf32>
+}

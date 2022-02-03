@@ -5,17 +5,19 @@
 // CMP32-SAME: %[[ARG:.*]]: index)
 // CMP32: %[[T0:.*]] = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]> : vector<11xi32>
 // CMP32: %[[T1:.*]] = arith.index_cast %[[ARG]] : index to i32
-// CMP32: %[[T2:.*]] = splat %[[T1]] : vector<11xi32>
-// CMP32: %[[T3:.*]] = arith.cmpi slt, %[[T0]], %[[T2]] : vector<11xi32>
-// CMP32: return %[[T3]] : vector<11xi1>
+// CMP32: %[[T2:.*]] = llvm.insertelement %[[T1]], %{{.*}}[%{{.*}} : i32] : vector<11xi32>
+// CMP32: %[[T3:.*]] = llvm.shufflevector %[[T2]], %{{.*}} [0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32] : vector<11xi32>, vector<11xi32>
+// CMP32: %[[T4:.*]] = arith.cmpi slt, %[[T0]], %[[T3]] : vector<11xi32>
+// CMP32: return %[[T4]] : vector<11xi1>
 
 // CMP64-LABEL: @genbool_var_1d(
 // CMP64-SAME: %[[ARG:.*]]: index)
 // CMP64: %[[T0:.*]] = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]> : vector<11xi64>
 // CMP64: %[[T1:.*]] = arith.index_cast %[[ARG]] : index to i64
-// CMP64: %[[T2:.*]] = splat %[[T1]] : vector<11xi64>
-// CMP64: %[[T3:.*]] = arith.cmpi slt, %[[T0]], %[[T2]] : vector<11xi64>
-// CMP64: return %[[T3]] : vector<11xi1>
+// CMP64: %[[T2:.*]] = llvm.insertelement %[[T1]], %{{.*}}[%{{.*}} : i32] : vector<11xi64>
+// CMP64: %[[T3:.*]] = llvm.shufflevector %[[T2]], %{{.*}} [0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32] : vector<11xi64>, vector<11xi64>
+// CMP64: %[[T4:.*]] = arith.cmpi slt, %[[T0]], %[[T3]] : vector<11xi64>
+// CMP64: return %[[T4]] : vector<11xi1>
 
 func @genbool_var_1d(%arg0: index) -> vector<11xi1> {
   %0 = vector.create_mask %arg0 : vector<11xi1>

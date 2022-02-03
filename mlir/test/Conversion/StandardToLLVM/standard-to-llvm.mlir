@@ -456,36 +456,6 @@ func @dfs_block_order(%arg0: i32) -> (i32) {
 
 // -----
 
-// CHECK-LABEL: @splat_0d
-// CHECK-SAME: %[[ARG:.*]]: f32
-func @splat_0d(%a: f32) -> vector<f32> {
-  %v = splat %a : vector<f32>
-  return %v : vector<f32>
-}
-// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.undef : vector<1xf32>
-// CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ARG]], %[[UNDEF]][%[[ZERO]] : i32] : vector<1xf32>
-// CHECK-NEXT: llvm.return %[[V]] : vector<1xf32>
-
-// -----
-
-// CHECK-LABEL: @splat
-// CHECK-SAME: %[[A:arg[0-9]+]]: vector<4xf32>
-// CHECK-SAME: %[[ELT:arg[0-9]+]]: f32
-func @splat(%a: vector<4xf32>, %b: f32) -> vector<4xf32> {
-  %vb = splat %b : vector<4xf32>
-  %r = arith.mulf %a, %vb : vector<4xf32>
-  return %r : vector<4xf32>
-}
-// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.undef : vector<4xf32>
-// CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ELT]], %[[UNDEF]][%[[ZERO]] : i32] : vector<4xf32>
-// CHECK-NEXT: %[[SPLAT:[0-9]+]] = llvm.shufflevector %[[V]], %[[UNDEF]] [0 : i32, 0 : i32, 0 : i32, 0 : i32]
-// CHECK-NEXT: %[[SCALE:[0-9]+]] = llvm.fmul %[[A]], %[[SPLAT]] : vector<4xf32>
-// CHECK-NEXT: llvm.return %[[SCALE]] : vector<4xf32>
-
-// -----
-
 // CHECK-LABEL: func @ceilf(
 // CHECK-SAME: f32
 func @ceilf(%arg0 : f32) {

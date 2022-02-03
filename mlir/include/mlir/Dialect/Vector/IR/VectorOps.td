@@ -2421,6 +2421,41 @@ def Vector_FlatTransposeOp : Vector_Op<"flat_transpose", [NoSideEffect,
 }
 
 //===----------------------------------------------------------------------===//
+// SplatOp
+//===----------------------------------------------------------------------===//
+
+def Vector_SplatOp : Vector_Op<"splat", [
+    NoSideEffect,
+    TypesMatchWith<"operand type matches element type of result",
+                   "aggregate", "input",
+                   "$_self.cast<VectorType>().getElementType()">
+  ]> {
+  let summary = "vector splat or broadcast operation";
+  let description = [{
+    Broadcast the operand to all elements of the result vector. The operand is
+    required to be of integer/index/float type.
+
+    Example:
+
+    ```mlir
+    %s = arith.constant 10.1 : f32
+    %t = vector.splat %s : vector<8x16xi32>
+    ```
+  }];
+
+  let arguments = (ins AnyTypeOf<[AnySignlessInteger, Index, AnyFloat],
+                                 "integer/index/float type">:$input);
+  let results = (outs AnyVectorOfAnyRank:$aggregate);
+
+  let builders = [
+    OpBuilder<(ins "Value":$element, "Type":$aggregateType),
+    [{ build($_builder, $_state, aggregateType, element); }]>];
+  let assemblyFormat = "$input attr-dict `:` type($aggregate)";
+
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // VectorScaleOp
 //===----------------------------------------------------------------------===//
 
