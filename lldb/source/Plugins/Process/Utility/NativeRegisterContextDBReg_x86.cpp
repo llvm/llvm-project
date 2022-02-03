@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NativeRegisterContextDBReg_x86.h"
-
-#include "lldb/Utility/Log.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegisterValue.h"
 
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"

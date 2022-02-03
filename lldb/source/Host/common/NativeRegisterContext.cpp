@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/common/NativeRegisterContext.h"
-
-#include "lldb/Utility/Log.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegisterValue.h"
 
 #include "lldb/Host/PosixApi.h"

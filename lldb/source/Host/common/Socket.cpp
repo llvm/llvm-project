@@ -13,6 +13,7 @@
 #include "lldb/Host/SocketAddress.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Host/common/UDPSocket.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 #include "llvm/ADT/STLExtras.h"

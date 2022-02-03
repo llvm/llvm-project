@@ -12,8 +12,8 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
 #include "lldb/Utility/Status.h"
 
 #include "llvm/ADT/STLExtras.h"

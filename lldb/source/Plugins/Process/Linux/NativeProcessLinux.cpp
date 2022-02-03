@@ -38,6 +38,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringExtractor.h"

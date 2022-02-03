@@ -8,6 +8,7 @@
 
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/common/TCPSocket.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UriParser.h"

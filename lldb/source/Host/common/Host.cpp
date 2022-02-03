@@ -58,6 +58,7 @@
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/ReproducerProvider.h"

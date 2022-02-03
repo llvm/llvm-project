@@ -35,6 +35,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/GDBRemote.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/State.h"

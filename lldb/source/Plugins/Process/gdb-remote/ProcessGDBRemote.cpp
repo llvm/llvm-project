@@ -59,6 +59,7 @@
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"

@@ -11,8 +11,8 @@
 
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/Support/Compiler.h"

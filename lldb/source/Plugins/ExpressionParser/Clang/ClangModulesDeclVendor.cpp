@@ -32,6 +32,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/StreamString.h"

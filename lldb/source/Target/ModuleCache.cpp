@@ -13,6 +13,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/LockFile.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"

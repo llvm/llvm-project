@@ -9,6 +9,7 @@
 #include "Plugins/ExpressionParser/Clang/CxxModuleHandler.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "clang/Sema/Lookup.h"
 #include "llvm/Support/Error.h"

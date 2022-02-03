@@ -8,6 +8,7 @@
 
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 #include <cstdio>

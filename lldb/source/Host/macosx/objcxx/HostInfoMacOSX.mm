@@ -11,6 +11,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/macosx/HostInfoMacOSX.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
 #include "Utility/UuidCompatibility.h"

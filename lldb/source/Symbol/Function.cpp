@@ -18,6 +18,7 @@
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/Support/Casting.h"
 

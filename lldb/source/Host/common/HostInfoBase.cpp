@@ -13,6 +13,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostInfoBase.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 

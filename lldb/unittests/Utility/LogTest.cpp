@@ -11,6 +11,7 @@
 
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Threading.h"
 #include <thread>

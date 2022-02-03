@@ -117,8 +117,6 @@ public:
   };
 
 
-  static void Initialize();
-
   // Static accessors for logging channels
   static void Register(llvm::StringRef name, Channel &channel);
   static void Unregister(llvm::StringRef name);
@@ -310,4 +308,3 @@ template <typename Cat> Log *GetLog(Cat mask) {
 #endif // LLDB_UTILITY_LOG_H
 
 // TODO: Remove this and fix includes everywhere.
-#include "lldb/Utility/Logging.h"

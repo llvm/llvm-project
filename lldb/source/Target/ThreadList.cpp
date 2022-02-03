@@ -16,6 +16,7 @@
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 

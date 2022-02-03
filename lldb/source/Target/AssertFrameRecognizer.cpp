@@ -1,3 +1,4 @@
+#include "lldb/Target/AssertFrameRecognizer.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -5,11 +6,7 @@
 #include "lldb/Target/StackFrameList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
-
-#include "lldb/Target/AssertFrameRecognizer.h"
+#include "lldb/Utility/LLDBLog.h"
 
 using namespace llvm;
 using namespace lldb;

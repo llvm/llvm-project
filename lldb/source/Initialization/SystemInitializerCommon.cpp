@@ -12,7 +12,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/Socket.h"
-#include "lldb/Utility/Log.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/Version/Version.h"
@@ -125,7 +125,7 @@ llvm::Error SystemInitializerCommon::Initialize() {
   if (auto e = InitializeFileSystem())
     return e;
 
-  Log::Initialize();
+  InitializeLldbChannel();
   HostInfo::Initialize(m_shlib_dir_helper);
 
   llvm::Error error = Socket::Initialize();

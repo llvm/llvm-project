@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Breakpoint/BreakpointResolverAddress.h"
-
-
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Log.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb;

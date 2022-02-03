@@ -16,6 +16,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Utility/DataEncoder.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
