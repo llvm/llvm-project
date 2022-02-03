@@ -10,18 +10,14 @@ target triple = "x86_64-unknown-linux-gnu"
 define i1 @test1(i32 %c) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = add i32 [[C:%.*]], -104
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 12
-; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[SWITCH_TABLEIDX]] to i12
-; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i12 -2015, [[SWITCH_CAST]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i12 [[SWITCH_DOWNSHIFT]], 1
-; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = icmp ne i12 [[TMP1]], 0
-; CHECK-NEXT:    [[_3_0:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_MASKED]], i1 false
-; CHECK-NEXT:    [[_10:%.*]] = icmp eq i32 [[C]], 100
-; CHECK-NEXT:    [[_2_0:%.*]] = select i1 [[_3_0]], i1 true, i1 [[_10]]
-; CHECK-NEXT:    [[_12:%.*]] = icmp eq i32 [[C]], 119
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[_2_0]], i1 true, i1 [[_12]]
-; CHECK-NEXT:    ret i1 [[SPEC_SELECT]]
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = add i32 [[C:%.*]], -100
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 20
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[SWITCH_TABLEIDX]] to i20
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i20 -490991, [[SWITCH_CAST]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i20 [[SWITCH_DOWNSHIFT]], 1
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = icmp ne i20 [[TMP1]], 0
+; CHECK-NEXT:    [[I_0:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_MASKED]], i1 false
+; CHECK-NEXT:    ret i1 [[I_0]]
 ;
 entry:
   %_4 = alloca i8, align 1
@@ -94,15 +90,8 @@ bb3:                                              ; preds = %bb1, %bb2
 
 define i1 @test2(i32 %c) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = add i32 [[C:%.*]], -100
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 20
-; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[SWITCH_TABLEIDX]] to i20
-; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i20 -490991, [[SWITCH_CAST]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i20 [[SWITCH_DOWNSHIFT]], 1
-; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = icmp ne i20 [[TMP1]], 0
-; CHECK-NEXT:    [[I_0:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_MASKED]], i1 false
-; CHECK-NEXT:    ret i1 [[I_0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i1 @test1(i32 [[TMP0:%.*]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
 entry:
   %i = alloca i8, align 1
