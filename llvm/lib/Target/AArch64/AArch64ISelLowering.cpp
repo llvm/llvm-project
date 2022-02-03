@@ -2254,6 +2254,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::CTPOP_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::DUP_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::INDEX_VECTOR)
+    MAKE_CASE(AArch64ISD::SADDLP)
     MAKE_CASE(AArch64ISD::UADDLP)
     MAKE_CASE(AArch64ISD::CALL_RVMARKER)
     MAKE_CASE(AArch64ISD::ASSERT_ZEXT_BOOL)
@@ -4378,8 +4379,11 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(Opcode, dl, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2));
   }
+  case Intrinsic::aarch64_neon_saddlp:
   case Intrinsic::aarch64_neon_uaddlp: {
-    unsigned Opcode = AArch64ISD::UADDLP;
+    unsigned Opcode = IntNo == Intrinsic::aarch64_neon_uaddlp
+                          ? AArch64ISD::UADDLP
+                          : AArch64ISD::SADDLP;
     return DAG.getNode(Opcode, dl, Op.getValueType(), Op.getOperand(1));
   }
   case Intrinsic::aarch64_neon_sdot:
@@ -13196,6 +13200,61 @@ static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::VECREDUCE_ADD, DL, N->getValueType(0), Dot);
 }
 
+// Given an (integer) vecreduce, we know the order of the inputs does not
+// matter. We can convert UADDV(add(zext(extract_lo(x)), zext(extract_hi(x))))
+// into UADDV(UADDLP(x)). This can also happen through an extra add, where we
+// transform UADDV(add(y, add(zext(extract_lo(x)), zext(extract_hi(x))))).
+static SDValue performUADDVCombine(SDNode *N, SelectionDAG &DAG) {
+  auto DetectAddExtract = [&](SDValue A) {
+    // Look for add(zext(extract_lo(x)), zext(extract_hi(x))), returning
+    // UADDLP(x) if found.
+    if (A.getOpcode() != ISD::ADD)
+      return SDValue();
+    EVT VT = A.getValueType();
+    SDValue Op0 = A.getOperand(0);
+    SDValue Op1 = A.getOperand(1);
+    if (Op0.getOpcode() != Op0.getOpcode() ||
+        (Op0.getOpcode() != ISD::ZERO_EXTEND &&
+         Op0.getOpcode() != ISD::SIGN_EXTEND))
+      return SDValue();
+    SDValue Ext0 = Op0.getOperand(0);
+    SDValue Ext1 = Op1.getOperand(0);
+    if (Ext0.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+        Ext1.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+        Ext0.getOperand(0) != Ext1.getOperand(0))
+      return SDValue();
+    // Check that the type is twice the add types, and the extract are from
+    // upper/lower parts of the same source.
+    if (Ext0.getOperand(0).getValueType().getVectorNumElements() !=
+        VT.getVectorNumElements() * 2)
+      return SDValue();
+    if ((Ext0.getConstantOperandVal(1) != 0 &&
+         Ext1.getConstantOperandVal(1) != VT.getVectorNumElements()) &&
+        (Ext1.getConstantOperandVal(1) != 0 &&
+         Ext0.getConstantOperandVal(1) != VT.getVectorNumElements()))
+      return SDValue();
+    unsigned Opcode = Op0.getOpcode() == ISD::ZERO_EXTEND ? AArch64ISD::UADDLP
+                                                          : AArch64ISD::SADDLP;
+    return DAG.getNode(Opcode, SDLoc(A), VT, Ext0.getOperand(0));
+  };
+
+  SDValue A = N->getOperand(0);
+  if (SDValue R = DetectAddExtract(A))
+    return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0), R);
+  if (A.getOpcode() == ISD::ADD) {
+    if (SDValue R = DetectAddExtract(A.getOperand(0)))
+      return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0),
+                         DAG.getNode(ISD::ADD, SDLoc(A), A.getValueType(), R,
+                                     A.getOperand(1)));
+    if (SDValue R = DetectAddExtract(A.getOperand(1)))
+      return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0),
+                         DAG.getNode(ISD::ADD, SDLoc(A), A.getValueType(), R,
+                                     A.getOperand(0)));
+  }
+  return SDValue();
+}
+
+
 static SDValue performXorCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const AArch64Subtarget *Subtarget) {
@@ -14722,7 +14781,7 @@ static SDValue performSetccAddFolding(SDNode *Op, SelectionDAG &DAG) {
 }
 
 // ADD(UADDV a, UADDV b) -->  UADDV(ADD a, b)
-static SDValue performUADDVCombine(SDNode *N, SelectionDAG &DAG) {
+static SDValue performAddUADDVCombine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   // Only scalar integer and vector types.
   if (N->getOpcode() != ISD::ADD || !VT.isScalarInteger())
@@ -14838,7 +14897,7 @@ static SDValue performAddSubCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG) {
   // Try to change sum of two reductions.
-  if (SDValue Val = performUADDVCombine(N, DAG))
+  if (SDValue Val = performAddUADDVCombine(N, DAG))
     return Val;
   if (SDValue Val = performAddDotCombine(N, DAG))
     return Val;
@@ -17805,6 +17864,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performExtractVectorEltCombine(N, DAG);
   case ISD::VECREDUCE_ADD:
     return performVecReduceAddCombine(N, DCI.DAG, Subtarget);
+  case AArch64ISD::UADDV:
+    return performUADDVCombine(N, DAG);
   case ISD::INTRINSIC_VOID:
   case ISD::INTRINSIC_W_CHAIN:
     switch (cast<ConstantSDNode>(N->getOperand(1))->getZExtValue()) {

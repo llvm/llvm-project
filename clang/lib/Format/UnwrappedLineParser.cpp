@@ -14,7 +14,6 @@
 
 #include "UnwrappedLineParser.h"
 #include "FormatToken.h"
-#include "TokenAnnotator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -438,34 +437,8 @@ bool UnwrappedLineParser::precededByCommentOrPPDirective() const {
          (Previous->IsMultiline || Previous->NewlinesBefore > 0);
 }
 
-bool UnwrappedLineParser::mightFitOnOneLine() const {
-  const auto ColumnLimit = Style.ColumnLimit;
-  if (ColumnLimit == 0)
-    return true;
-
-  if (Lines.empty())
-    return true;
-
-  const auto &PreviousLine = Lines.back();
-  const auto &Tokens = PreviousLine.Tokens;
-  assert(!Tokens.empty());
-  const auto *LastToken = Tokens.back().Tok;
-  assert(LastToken);
-  if (!LastToken->isOneOf(tok::semi, tok::comment))
-    return true;
-
-  AnnotatedLine Line(PreviousLine);
-  assert(Line.Last == LastToken);
-
-  TokenAnnotator Annotator(Style, Keywords);
-  Annotator.annotate(Line);
-  Annotator.calculateFormattingInformation(Line);
-
-  return Line.Level * Style.IndentWidth + LastToken->TotalLength <= ColumnLimit;
-}
-
 // Returns true if a simple block, or false otherwise. (A simple block has a
-// single statement that fits on a single line.)
+// single statement.)
 bool UnwrappedLineParser::parseLevel(bool HasOpeningBrace, IfStmtKind *IfKind) {
   const bool IsPrecededByCommentOrPPDirective =
       !Style.RemoveBracesLLVM || precededByCommentOrPPDirective();
@@ -502,9 +475,7 @@ bool UnwrappedLineParser::parseLevel(bool HasOpeningBrace, IfStmtKind *IfKind) {
             precededByCommentOrPPDirective())
           return false;
         const FormatToken *Next = Tokens->peekNextToken();
-        if (Next->is(tok::comment) && Next->NewlinesBefore == 0)
-          return false;
-        return mightFitOnOneLine();
+        return Next->isNot(tok::comment) || Next->NewlinesBefore > 0;
       }
       nextToken();
       addUnwrappedLine();

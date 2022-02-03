@@ -1,0 +1,132 @@
+# RUN: llc -run-pass=machine-combiner -mtriple=aarch64-unknown-linux-gnu %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SAFE
+# RUN: llc -run-pass=machine-combiner -mtriple=aarch64-unknown-linux-gnu -enable-unsafe-fp-math %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-UNSAFE
+
+# fadd without the reassoc flags can be reassociate only when unsafe fp math is
+# enabled.
+# CHECK-LABEL: name: fadd_no_reassoc
+# CHECK:             [[ADD1:%[0-9]+]]:fpr32 = FADDSrr %0, %1
+# CHECK-SAFE-NEXT:   [[ADD2:%[0-9]+]]:fpr32 = FADDSrr killed [[ADD1]], %2
+# CHECK-SAFE-NEXT:   [[ADD3:%[0-9]+]]:fpr32 = FADDSrr killed [[ADD2]], %3
+# CHECK-UNSAFE-NEXT: [[ADD2:%[0-9]+]]:fpr32 = FADDSrr %2, %3
+# CHECK-UNSAFE-NEXT: [[ADD3:%[0-9]+]]:fpr32 = FADDSrr killed [[ADD1]], killed [[ADD2]]
+---
+name:            fadd_no_reassoc
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr32 }
+  - { id: 1, class: fpr32 }
+  - { id: 2, class: fpr32 }
+  - { id: 3, class: fpr32 }
+  - { id: 4, class: fpr32 }
+  - { id: 5, class: fpr32 }
+  - { id: 6, class: fpr32 }
+liveins:
+  - { reg: '$s0', virtual-reg: '%0' }
+  - { reg: '$s1', virtual-reg: '%1' }
+  - { reg: '$s2', virtual-reg: '%2' }
+  - { reg: '$s3', virtual-reg: '%3' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $s0, $s1, $s2, $s3
+
+    %3:fpr32 = COPY $s3
+    %2:fpr32 = COPY $s2
+    %1:fpr32 = COPY $s1
+    %0:fpr32 = COPY $s0
+    %4:fpr32 = FADDSrr %0, %1
+    %5:fpr32 = FADDSrr killed %4, %2
+    %6:fpr32 = FADDSrr killed %5, %3
+    $s0 = COPY %6
+    RET_ReallyLR implicit $s0
+
+
+# FIXME: We should be able to reassociate without unsafe fp math, but currently
+# the reassoc flag is ignored.
+# CHECK-LABEL: name: fadd_reassoc
+# CHECK:             [[ADD1:%[0-9]+]]:fpr32 = reassoc FADDSrr %0, %1
+# CHECK-SAFE-NEXT:   [[ADD2:%[0-9]+]]:fpr32 = reassoc FADDSrr killed [[ADD1]], %2
+# CHECK-SAFE-NEXT:   [[ADD3:%[0-9]+]]:fpr32 = reassoc FADDSrr killed [[ADD2]], %3
+# CHECK-UNSAFE-NEXT: [[ADD2:%[0-9]+]]:fpr32 = reassoc FADDSrr %2, %3
+# CHECK-UNSAFE-NEXT: [[ADD3:%[0-9]+]]:fpr32 = reassoc FADDSrr killed [[ADD1]], killed [[ADD2]]
+---
+name:            fadd_reassoc
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr32 }
+  - { id: 1, class: fpr32 }
+  - { id: 2, class: fpr32 }
+  - { id: 3, class: fpr32 }
+  - { id: 4, class: fpr32 }
+  - { id: 5, class: fpr32 }
+  - { id: 6, class: fpr32 }
+liveins:
+  - { reg: '$s0', virtual-reg: '%0' }
+  - { reg: '$s1', virtual-reg: '%1' }
+  - { reg: '$s2', virtual-reg: '%2' }
+  - { reg: '$s3', virtual-reg: '%3' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $s0, $s1, $s2, $s3
+
+    %3:fpr32 = COPY $s3
+    %2:fpr32 = COPY $s2
+    %1:fpr32 = COPY $s1
+    %0:fpr32 = COPY $s0
+    %4:fpr32 = reassoc FADDSrr %0, %1
+    %5:fpr32 = reassoc FADDSrr killed %4, %2
+    %6:fpr32 = reassoc FADDSrr killed %5, %3
+    $s0 = COPY %6
+    RET_ReallyLR implicit $s0
+
+
+# Check that flags on the instructions are preserved after reassociation.
+# CHECK-LABEL: name: fadd_flags
+# CHECK:             [[ADD1:%[0-9]+]]:fpr32 = nsz FADDSrr %0, %1
+# CHECK-SAFE-NEXT:   [[ADD2:%[0-9]+]]:fpr32 = nnan FADDSrr killed [[ADD1]], %2
+# CHECK-SAFE-NEXT:   [[ADD3:%[0-9]+]]:fpr32 = ninf FADDSrr killed [[ADD2]], %3
+# CHECK-UNSAFE-NEXT: [[ADD2:%[0-9]+]]:fpr32 = nnan FADDSrr %2, %3
+# CHECK-UNSAFE-NEXT: [[ADD3:%[0-9]+]]:fpr32 = ninf FADDSrr killed [[ADD1]], killed [[ADD2]]
+---
+name:            fadd_flags
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr32 }
+  - { id: 1, class: fpr32 }
+  - { id: 2, class: fpr32 }
+  - { id: 3, class: fpr32 }
+  - { id: 4, class: fpr32 }
+  - { id: 5, class: fpr32 }
+  - { id: 6, class: fpr32 }
+liveins:
+  - { reg: '$s0', virtual-reg: '%0' }
+  - { reg: '$s1', virtual-reg: '%1' }
+  - { reg: '$s2', virtual-reg: '%2' }
+  - { reg: '$s3', virtual-reg: '%3' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $s0, $s1, $s2, $s3
+
+    %3:fpr32 = COPY $s3
+    %2:fpr32 = COPY $s2
+    %1:fpr32 = COPY $s1
+    %0:fpr32 = COPY $s0
+    %4:fpr32 = nsz FADDSrr %0, %1
+    %5:fpr32 = nnan FADDSrr killed %4, %2
+    %6:fpr32 = ninf FADDSrr killed %5, %3
+    $s0 = COPY %6
+    RET_ReallyLR implicit $s0

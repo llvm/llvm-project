@@ -21,7 +21,7 @@ define i8 addrspace(1)* addrspace(1)* @test_simple(i8 addrspace(1)* %obj1, i8 ad
 ; CHECK-NEXT:    [[OBJ2_16:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[OBJ2]], i64 16
 ; CHECK-NEXT:    [[OBJ_X_BASE1:%.*]] = select i1 [[C]], i8 addrspace(1)* [[OBJ1]], i8 addrspace(1)* [[OBJ2]], !is_base_value !0
 ; CHECK-NEXT:    [[OBJ_X:%.*]] = select i1 [[C]], i8 addrspace(1)* [[OBJ1_12]], i8 addrspace(1)* [[OBJ2_16]]
-; CHECK-NEXT:    [[OBJ_Y_BASE:%.*]] = select i1 [[C]], i8 addrspace(1)* [[OBJ2]], i8 addrspace(1)* [[OBJ1]]
+; CHECK-NEXT:    [[OBJ_Y_BASE:%.*]] = select i1 [[C]], i8 addrspace(1)* [[OBJ2]], i8 addrspace(1)* [[OBJ1]], !is_base_value !0
 ; CHECK-NEXT:    [[OBJ_Y:%.*]] = select i1 [[C]], i8 addrspace(1)* [[OBJ2_16]], i8 addrspace(1)* [[OBJ1_12]]
 ; CHECK-NEXT:    [[OBJ_YA:%.*]] = bitcast i8 addrspace(1)* [[OBJ_Y]] to i8 addrspace(1)* addrspace(1)*
 ; CHECK-NEXT:    [[OBJ_X_BASE1_INT:%.*]] = ptrtoint i8 addrspace(1)* [[OBJ_X_BASE1]] to i64
@@ -111,24 +111,24 @@ entry:
 
   call void @foo() readonly [
   "deopt"(
-      i8 addrspace(1)* %obj.x.base,
-      i8 addrspace(1)* %obj.x.base_of_base_of_base,
-      i8 addrspace(1)* %obj.x.base_of_base,
-      i8 addrspace(1)* %obj.x.base_gep,
-      i8 addrspace(1)* %obj.x.base_of_base_gep,
-      i8 addrspace(1)* %obj.x.base_of_base_of_base_gep,
-      i8 addrspace(1)* %obj.x.base_gep_base,
-      i8 addrspace(1)* %obj.x.base_of_base_gep_base,
-      i8 addrspace(1)* %obj.x.base_of_base_of_base_gep_base,
-      i64 %obj.x.base_offset,
-      i64 %obj.x.base_of_base_offset,
-      i64 %obj.x.base_of_base_of_base_offset,
-      i64 %obj.x.base_gep_offset,
-      i64 %obj.x.base_of_base_gep_offset,
-      i64 %obj.x.base_of_base_of_base_gep_offset,
-      i64 %obj.x.base_gep_base_offset,
-      i64 %obj.x.base_of_base_gep_base_offset,
-      i64 %obj.x.base_of_base_of_base_gep_base_offset) ]
+  i8 addrspace(1)* %obj.x.base,
+  i8 addrspace(1)* %obj.x.base_of_base_of_base,
+  i8 addrspace(1)* %obj.x.base_of_base,
+  i8 addrspace(1)* %obj.x.base_gep,
+  i8 addrspace(1)* %obj.x.base_of_base_gep,
+  i8 addrspace(1)* %obj.x.base_of_base_of_base_gep,
+  i8 addrspace(1)* %obj.x.base_gep_base,
+  i8 addrspace(1)* %obj.x.base_of_base_gep_base,
+  i8 addrspace(1)* %obj.x.base_of_base_of_base_gep_base,
+  i64 %obj.x.base_offset,
+  i64 %obj.x.base_of_base_offset,
+  i64 %obj.x.base_of_base_of_base_offset,
+  i64 %obj.x.base_gep_offset,
+  i64 %obj.x.base_of_base_gep_offset,
+  i64 %obj.x.base_of_base_of_base_gep_offset,
+  i64 %obj.x.base_gep_base_offset,
+  i64 %obj.x.base_of_base_gep_base_offset,
+  i64 %obj.x.base_of_base_of_base_gep_base_offset) ]
 
   ret i8 addrspace(1)* %obj.x.base_of_base
 }

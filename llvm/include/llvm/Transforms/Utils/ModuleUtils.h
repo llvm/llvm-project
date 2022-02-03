@@ -115,8 +115,7 @@ class CallInst;
 namespace VFABI {
 /// Overwrite the Vector Function ABI variants attribute with the names provide
 /// in \p VariantMappings.
-void setVectorVariantNames(CallInst *CI,
-                           const SmallVector<std::string, 8> &VariantMappings);
+void setVectorVariantNames(CallInst *CI, ArrayRef<std::string> VariantMappings);
 } // End VFABI namespace
 } // End llvm namespace
 
