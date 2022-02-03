@@ -61,9 +61,8 @@ using SomeExpr = evaluate::Expr<evaluate::SomeType>;
 using SymbolRef = common::Reference<const semantics::Symbol>;
 
 /// Get a FIR type based on a category and kind.
-mlir::Type getFIRType(mlir::MLIRContext *ctxt,
-                      common::IntrinsicTypeDefaultKinds const &defaults,
-                      common::TypeCategory tc, int kind);
+mlir::Type getFIRType(mlir::MLIRContext *ctxt, common::TypeCategory tc,
+                      int kind);
 
 /// Get a FIR type based on a category.
 mlir::Type getFIRType(mlir::MLIRContext *ctxt,
@@ -75,22 +74,6 @@ mlir::Type
 translateDataRefToFIRType(mlir::MLIRContext *ctxt,
                           common::IntrinsicTypeDefaultKinds const &defaults,
                           const evaluate::DataRef &dataRef);
-
-/// Translate a Fortran::evaluate::Designator<> to an mlir::Type.
-template <common::TypeCategory TC, int KIND>
-inline mlir::Type translateDesignatorToFIRType(
-    mlir::MLIRContext *ctxt, common::IntrinsicTypeDefaultKinds const &defaults,
-    const evaluate::Designator<evaluate::Type<TC, KIND>> &) {
-  return getFIRType(ctxt, defaults, TC, KIND);
-}
-
-/// Translate a Fortran::evaluate::Designator<> to an mlir::Type.
-template <common::TypeCategory TC>
-inline mlir::Type translateDesignatorToFIRType(
-    mlir::MLIRContext *ctxt, common::IntrinsicTypeDefaultKinds const &defaults,
-    const evaluate::Designator<evaluate::SomeKind<TC>> &) {
-  return getFIRType(ctxt, defaults, TC);
-}
 
 /// Translate a SomeExpr to an mlir::Type.
 mlir::Type

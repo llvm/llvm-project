@@ -13,6 +13,8 @@
 #include "flang/Lower/Bridge.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Lower/CallInterface.h"
+#include "flang/Lower/ConvertExpr.h"
+#include "flang/Lower/ConvertType.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
@@ -73,12 +75,14 @@ public:
 
   fir::ExtendedValue genExprAddr(const Fortran::lower::SomeExpr &expr,
                                  mlir::Location *loc = nullptr) override final {
-    TODO_NOLOC("Not implemented. Needed for more complex expression lowering");
+    TODO_NOLOC("Not implemented genExprAddr. Needed for more complex "
+               "expression lowering");
   }
   fir::ExtendedValue
   genExprValue(const Fortran::lower::SomeExpr &expr,
                mlir::Location *loc = nullptr) override final {
-    TODO_NOLOC("Not implemented. Needed for more complex expression lowering");
+    return createSomeExtendedExpression(loc ? *loc : toLocation(), *this, expr,
+                                        localSymbols);
   }
 
   Fortran::evaluate::FoldingContext &getFoldingContext() override final {
@@ -86,23 +90,28 @@ public:
   }
 
   mlir::Type genType(const Fortran::evaluate::DataRef &) override final {
-    TODO_NOLOC("Not implemented. Needed for more complex expression lowering");
+    TODO_NOLOC("Not implemented genType DataRef. Needed for more complex "
+               "expression lowering");
   }
   mlir::Type genType(const Fortran::lower::SomeExpr &) override final {
-    TODO_NOLOC("Not implemented. Needed for more complex expression lowering");
+    TODO_NOLOC("Not implemented genType SomeExpr. Needed for more complex "
+               "expression lowering");
   }
   mlir::Type genType(Fortran::lower::SymbolRef) override final {
-    TODO_NOLOC("Not implemented. Needed for more complex expression lowering");
+    TODO_NOLOC("Not implemented genType SymbolRef. Needed for more complex "
+               "expression lowering");
   }
   mlir::Type genType(Fortran::common::TypeCategory tc) override final {
-    TODO_NOLOC("Not implemented. Needed for more complex expression lowering");
+    TODO_NOLOC("Not implemented genType TypeCategory. Needed for more complex "
+               "expression lowering");
   }
   mlir::Type genType(Fortran::common::TypeCategory tc,
                      int kind) override final {
-    TODO_NOLOC("Not implemented. Needed for more complex expression lowering");
+    return Fortran::lower::getFIRType(&getMLIRContext(), tc, kind);
   }
   mlir::Type genType(const Fortran::lower::pft::Variable &) override final {
-    TODO_NOLOC("Not implemented. Needed for more complex expression lowering");
+    TODO_NOLOC("Not implemented genType Variable. Needed for more complex "
+               "expression lowering");
   }
 
   void setCurrentPosition(const Fortran::parser::CharBlock &position) {
