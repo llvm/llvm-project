@@ -43,6 +43,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <type_traits>
 #include <utility>
 
 using namespace llvm;
@@ -434,16 +435,22 @@ static const std::pair<LibFunc, FreeFnsTy> FreeFnData[] = {
 };
 // clang-format on
 
-/// isLibFreeFunction - Returns true if the function is a builtin free()
-bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
+Optional<FreeFnsTy> getFreeFunctionDataForFunction(const Function *Callee,
+                                                   const LibFunc TLIFn) {
   const auto *Iter =
       find_if(FreeFnData, [TLIFn](const std::pair<LibFunc, FreeFnsTy> &P) {
         return P.first == TLIFn;
       });
-  if (Iter == std::end(FreeFnData)) {
+  if (Iter == std::end(FreeFnData))
+    return None;
+  return Iter->second;
+}
+
+/// isLibFreeFunction - Returns true if the function is a builtin free()
+bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
+  Optional<FreeFnsTy> FnData = getFreeFunctionDataForFunction(F, TLIFn);
+  if (!FnData.hasValue())
     return false;
-  }
-  const FreeFnsTy *FnData = &Iter->second;
 
   // Check free prototype.
   // FIXME: workaround for PR5130, this will be obsolete when a nobuiltin
