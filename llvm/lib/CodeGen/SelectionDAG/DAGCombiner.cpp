@@ -17604,11 +17604,9 @@ void DAGCombiner::getStoreMergeCandidates(
   }
 }
 
-// We need to check that merging these stores does not cause a loop in
-// the DAG. Any store candidate may depend on another candidate
-// indirectly through its operand (we already consider dependencies
-// through the chain). Check in parallel by searching up from
-// non-chain operands of candidates.
+// We need to check that merging these stores does not cause a loop in the
+// DAG. Any store candidate may depend on another candidate indirectly through
+// its operands. Check in parallel by searching up from operands of candidates.
 bool DAGCombiner::checkMergeStoreCandidatesForDependencies(
     SmallVectorImpl<MemOpLink> &StoreNodes, unsigned NumStores,
     SDNode *RootNode) {
@@ -17642,8 +17640,13 @@ bool DAGCombiner::checkMergeStoreCandidatesForDependencies(
     SDNode *N = StoreNodes[i].MemNode;
     // Of the 4 Store Operands:
     //   * Chain (Op 0) -> We have already considered these
-    //                    in candidate selection and can be
-    //                    safely ignored
+    //                     in candidate selection, but only by following the
+    //                     chain dependencies. We could still have a chain
+    //                     dependency to a load, that has a non-chain dep to
+    //                     another load, that depends on a store, etc. So it is
+    //                     possible to have dependencies that consist of a mix
+    //                     of chain and non-chain deps, and we need to include
+    //                     chain operands in the analysis here..
     //   * Value (Op 1) -> Cycles may happen (e.g. through load chains)
     //   * Address (Op 2) -> Merged addresses may only vary by a fixed constant,
     //                       but aren't necessarily fromt the same base node, so
@@ -17651,7 +17654,7 @@ bool DAGCombiner::checkMergeStoreCandidatesForDependencies(
     //   * (Op 3) -> Represents the pre or post-indexing offset (or undef for
     //               non-indexed stores). Not constant on all targets (e.g. ARM)
     //               and so can participate in a cycle.
-    for (unsigned j = 1; j < N->getNumOperands(); ++j)
+    for (unsigned j = 0; j < N->getNumOperands(); ++j)
       Worklist.push_back(N->getOperand(j).getNode());
   }
   // Search through DAG. We can stop early if we find a store node.

@@ -12251,7 +12251,7 @@ Syntax:
 
       declare token
         @llvm.experimental.gc.statepoint(i64 <id>, i32 <num patch bytes>,
-                       func_type <target>,
+                       func_type* elementtype(func_type) <target>,
                        i64 <#call args>, i64 <flags>,
                        ... (call parameters),
                        i64 0, i64 0)
@@ -12287,11 +12287,12 @@ statepoint still represents a call or invoke to 'target', and the nop
 sequence after patching is expected to represent an operation
 equivalent to a call or invoke to 'target'.
 
-The 'target' operand is the function actually being called.  The
-target can be specified as either a symbolic LLVM function, or as an
-arbitrary Value of appropriate function type.  Note that the function
-type must match the signature of the callee and the types of the 'call
-parameters' arguments.
+The 'target' operand is the function actually being called. The operand
+must have an :ref:`elementtype <attr_elementtype>` attribute specifying
+the function type of the target. The target can be specified as either
+a symbolic LLVM function, or as an arbitrary Value of pointer type. Note
+that the function type must match the signature of the callee and the
+types of the 'call parameters' arguments.
 
 The '#call args' operand is the number of arguments to the actual
 call.  It must exactly match the number of arguments passed in the

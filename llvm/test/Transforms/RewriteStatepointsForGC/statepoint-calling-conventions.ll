@@ -8,7 +8,7 @@
 define i64 addrspace(1)* @test_invoke_format(i64 addrspace(1)* %obj, i64 addrspace(1)* %obj1) gc "statepoint-example" personality i32 ()* @personality {
 ; CHECK-LABEL: @test_invoke_format(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = invoke coldcc token (i64, i32, i64 addrspace(1)* (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i64p1i64f(i64 2882400000, i32 0, i64 addrspace(1)* (i64 addrspace(1)*)* @callee, i32 1, i32 0, i64 addrspace(1)* [[OBJ:%.*]], i32 0, i32 0) [ "gc-live"(i64 addrspace(1)* [[OBJ1:%.*]], i64 addrspace(1)* [[OBJ]]) ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = invoke coldcc token (i64, i32, i64 addrspace(1)* (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i64p1i64f(i64 2882400000, i32 0, i64 addrspace(1)* (i64 addrspace(1)*)* elementtype(i64 addrspace(1)* (i64 addrspace(1)*)) @callee, i32 1, i32 0, i64 addrspace(1)* [[OBJ:%.*]], i32 0, i32 0) [ "gc-live"(i64 addrspace(1)* [[OBJ1:%.*]], i64 addrspace(1)* [[OBJ]]) ]
 ; CHECK-NEXT:    to label [[NORMAL_RETURN:%.*]] unwind label [[EXCEPTIONAL_RETURN:%.*]]
 ; CHECK:       normal_return:
 ; CHECK-NEXT:    [[RET_VAL1:%.*]] = call i64 addrspace(1)* @llvm.experimental.gc.result.p1i64(token [[STATEPOINT_TOKEN]])
@@ -42,7 +42,7 @@ exceptional_return:
 define i64 addrspace(1)* @test_call_format(i64 addrspace(1)* %obj, i64 addrspace(1)* %obj1) gc "statepoint-example" {
 ; CHECK-LABEL: @test_call_format(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call coldcc token (i64, i32, i64 addrspace(1)* (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i64p1i64f(i64 2882400000, i32 0, i64 addrspace(1)* (i64 addrspace(1)*)* @callee, i32 1, i32 0, i64 addrspace(1)* [[OBJ:%.*]], i32 0, i32 0) [ "gc-live"(i64 addrspace(1)* [[OBJ]]) ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call coldcc token (i64, i32, i64 addrspace(1)* (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i64p1i64f(i64 2882400000, i32 0, i64 addrspace(1)* (i64 addrspace(1)*)* elementtype(i64 addrspace(1)* (i64 addrspace(1)*)) @callee, i32 1, i32 0, i64 addrspace(1)* [[OBJ:%.*]], i32 0, i32 0) [ "gc-live"(i64 addrspace(1)* [[OBJ]]) ]
 ; CHECK-NEXT:    [[RET_VAL1:%.*]] = call i64 addrspace(1)* @llvm.experimental.gc.result.p1i64(token [[STATEPOINT_TOKEN]])
 ; CHECK-NEXT:    [[OBJ_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    [[OBJ_RELOCATED_CASTED:%.*]] = bitcast i8 addrspace(1)* [[OBJ_RELOCATED]] to i64 addrspace(1)*
