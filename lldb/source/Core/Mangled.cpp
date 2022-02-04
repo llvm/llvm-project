@@ -217,8 +217,7 @@ bool Mangled::DemangleWithRichManglingInfo(
     if (context.FromItaniumName(m_mangled)) {
       // If we got an info, we have a name. Copy to string pool and connect the
       // counterparts to accelerate later access in GetDemangledName().
-      context.ParseFullName();
-      m_demangled.SetStringWithMangledCounterpart(context.GetBufferRef(),
+      m_demangled.SetStringWithMangledCounterpart(context.ParseFullName(),
                                                   m_mangled);
       return true;
     } else {

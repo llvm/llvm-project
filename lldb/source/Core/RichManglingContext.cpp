@@ -83,15 +83,15 @@ bool RichManglingContext::IsCtorOrDtor() const {
   llvm_unreachable("Fully covered switch above!");
 }
 
-void RichManglingContext::processIPDStrResult(char *ipd_res, size_t res_size) {
+llvm::StringRef RichManglingContext::processIPDStrResult(char *ipd_res,
+                                                         size_t res_size) {
   // Error case: Clear the buffer.
   if (LLVM_UNLIKELY(ipd_res == nullptr)) {
     assert(res_size == m_ipd_buf_size &&
            "Failed IPD queries keep the original size in the N parameter");
 
     m_ipd_buf[0] = '\0';
-    m_buffer = llvm::StringRef(m_ipd_buf, 0);
-    return;
+    return llvm::StringRef(m_ipd_buf, 0);
   }
 
   // IPD's res_size includes null terminator.
@@ -109,60 +109,54 @@ void RichManglingContext::processIPDStrResult(char *ipd_res, size_t res_size) {
   }
 
   // 99% case: Just remember the string length.
-  m_buffer = llvm::StringRef(m_ipd_buf, res_size - 1);
+  return llvm::StringRef(m_ipd_buf, res_size - 1);
 }
 
-void RichManglingContext::ParseFunctionBaseName() {
+llvm::StringRef RichManglingContext::ParseFunctionBaseName() {
   assert(m_provider != None && "Initialize a provider first");
   switch (m_provider) {
   case ItaniumPartialDemangler: {
     auto n = m_ipd_buf_size;
     auto buf = m_ipd.getFunctionBaseName(m_ipd_buf, &n);
-    processIPDStrResult(buf, n);
-    return;
+    return processIPDStrResult(buf, n);
   }
   case PluginCxxLanguage:
-    m_buffer =
-        get<CPlusPlusLanguage::MethodName>(m_cxx_method_parser)->GetBasename();
-    return;
+    return get<CPlusPlusLanguage::MethodName>(m_cxx_method_parser)
+        ->GetBasename();
   case None:
-    return;
+    return {};
   }
 }
 
-void RichManglingContext::ParseFunctionDeclContextName() {
+llvm::StringRef RichManglingContext::ParseFunctionDeclContextName() {
   assert(m_provider != None && "Initialize a provider first");
   switch (m_provider) {
   case ItaniumPartialDemangler: {
     auto n = m_ipd_buf_size;
     auto buf = m_ipd.getFunctionDeclContextName(m_ipd_buf, &n);
-    processIPDStrResult(buf, n);
-    return;
+    return processIPDStrResult(buf, n);
   }
   case PluginCxxLanguage:
-    m_buffer =
-        get<CPlusPlusLanguage::MethodName>(m_cxx_method_parser)->GetContext();
-    return;
+    return get<CPlusPlusLanguage::MethodName>(m_cxx_method_parser)
+        ->GetContext();
   case None:
-    return;
+    return {};
   }
 }
 
-void RichManglingContext::ParseFullName() {
+llvm::StringRef RichManglingContext::ParseFullName() {
   assert(m_provider != None && "Initialize a provider first");
   switch (m_provider) {
   case ItaniumPartialDemangler: {
     auto n = m_ipd_buf_size;
     auto buf = m_ipd.finishDemangle(m_ipd_buf, &n);
-    processIPDStrResult(buf, n);
-    return;
+    return processIPDStrResult(buf, n);
   }
   case PluginCxxLanguage:
-    m_buffer = get<CPlusPlusLanguage::MethodName>(m_cxx_method_parser)
-                   ->GetFullName()
-                   .GetStringRef();
-    return;
+    return get<CPlusPlusLanguage::MethodName>(m_cxx_method_parser)
+        ->GetFullName()
+        .GetStringRef();
   case None:
-    return;
+    return {};
   }
 }
