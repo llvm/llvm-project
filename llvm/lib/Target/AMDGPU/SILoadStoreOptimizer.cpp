@@ -900,6 +900,10 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
     return false;
   assert(CI.InstClass == Paired.InstClass);
 
+  if (getInstSubclass(CI.I->getOpcode(), *TII) !=
+      getInstSubclass(Paired.I->getOpcode(), *TII))
+    return false;
+
   // Check both offsets (or masks for MIMG) can be combined and fit in the
   // reduced range.
   if (CI.InstClass == MIMG) {
@@ -910,18 +914,12 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
       return false;
   }
 
-  const unsigned Opc = CI.I->getOpcode();
-  const unsigned InstSubclass = getInstSubclass(Opc, *TII);
-
   DenseSet<Register> RegDefsToMove;
   DenseSet<Register> PhysRegUsesToMove;
   addDefsUsesToList(*CI.I, RegDefsToMove, PhysRegUsesToMove);
 
-  MachineBasicBlock::iterator E = std::next(Paired.I);
-  MachineBasicBlock::iterator MBBI = std::next(CI.I);
   MachineBasicBlock::iterator MBBE = CI.I->getParent()->end();
-  for (; MBBI != E; ++MBBI) {
-
+  for (MachineBasicBlock::iterator MBBI = CI.I; ++MBBI != Paired.I;) {
     if (MBBI == MBBE) {
       // CombineInfo::Order is a hint on the instruction ordering within the
       // basic block. This hint suggests that CI precedes Paired, which is
@@ -932,70 +930,46 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
       return false;
     }
 
-    if ((getInstClass(MBBI->getOpcode(), *TII) != CI.InstClass) ||
-        (getInstSubclass(MBBI->getOpcode(), *TII) != InstSubclass)) {
-      // This is not a matching instruction, but we can keep looking as
-      // long as one of these conditions are met:
-      // 1. It is safe to move I down past MBBI.
-      // 2. It is safe to move MBBI down past the instruction that I will
-      //    be merged into.
+    // Keep going as long as one of these conditions are met:
+    // 1. It is safe to move I down past MBBI.
+    // 2. It is safe to move MBBI down past the instruction that I will
+    //    be merged into.
 
-      if (MBBI->mayLoadOrStore() &&
-          (!memAccessesCanBeReordered(*CI.I, *MBBI, AA) ||
-           !canMoveInstsAcrossMemOp(*MBBI, InstsToMove, AA))) {
-        // We fail condition #1, but we may still be able to satisfy condition
-        // #2.  Add this instruction to the move list and then we will check
-        // if condition #2 holds once we have selected the matching instruction.
-        InstsToMove.push_back(&*MBBI);
-        addDefsUsesToList(*MBBI, RegDefsToMove, PhysRegUsesToMove);
-        continue;
-      }
-
-      // When we match I with another DS instruction we will be moving I down
-      // to the location of the matched instruction any uses of I will need to
-      // be moved down as well.
-      addToListsIfDependent(*MBBI, RegDefsToMove, PhysRegUsesToMove,
-                            InstsToMove);
+    if (MBBI->mayLoadOrStore() &&
+        (!memAccessesCanBeReordered(*CI.I, *MBBI, AA) ||
+         !canMoveInstsAcrossMemOp(*MBBI, InstsToMove, AA))) {
+      // We fail condition #1, but we may still be able to satisfy condition
+      // #2.  Add this instruction to the move list and then we will check
+      // if condition #2 holds once we have selected the matching instruction.
+      InstsToMove.push_back(&*MBBI);
+      addDefsUsesToList(*MBBI, RegDefsToMove, PhysRegUsesToMove);
       continue;
     }
 
-    // Handle a case like
-    //   DS_WRITE_B32 addr, v, idx0
-    //   w = DS_READ_B32 addr, idx0
-    //   DS_WRITE_B32 addr, f(w), idx1
-    // where the DS_READ_B32 ends up in InstsToMove and therefore prevents
-    // merging of the two writes.
-    if (addToListsIfDependent(*MBBI, RegDefsToMove, PhysRegUsesToMove,
-                              InstsToMove))
-      continue;
-
-    if (&*MBBI == &*Paired.I) {
-      // We need to go through the list of instructions that we plan to
-      // move and make sure they are all safe to move down past the merged
-      // instruction.
-      if (canMoveInstsAcrossMemOp(*MBBI, InstsToMove, AA)) {
-
-        // Call offsetsCanBeCombined with modify = true so that the offsets are
-        // correct for the new instruction.  This should return true, because
-        // this function should only be called on CombineInfo objects that
-        // have already been confirmed to be mergeable.
-        if (CI.InstClass == DS_READ || CI.InstClass == DS_WRITE)
-          offsetsCanBeCombined(CI, *STM, Paired, true);
-        return true;
-      }
-      return false;
-    }
-
-    // We've found a load/store that we couldn't merge for some reason.
-    // We could potentially keep looking, but we'd need to make sure that
-    // it was safe to move I and also all the instruction in InstsToMove
-    // down past this instruction.
-    // check if we can move I across MBBI and if we can move all I's users
-    if (!memAccessesCanBeReordered(*CI.I, *MBBI, AA) ||
-        !canMoveInstsAcrossMemOp(*MBBI, InstsToMove, AA))
-      break;
+    // When we match I with another load/store instruction we will be moving I
+    // down to the location of the matched instruction any uses of I will need
+    // to be moved down as well.
+    addToListsIfDependent(*MBBI, RegDefsToMove, PhysRegUsesToMove, InstsToMove);
   }
-  return false;
+
+  // If Paired depends on any of the instructions we plan to move, give up.
+  if (addToListsIfDependent(*Paired.I, RegDefsToMove, PhysRegUsesToMove,
+                            InstsToMove))
+    return false;
+
+  // We need to go through the list of instructions that we plan to
+  // move and make sure they are all safe to move down past the merged
+  // instruction.
+  if (!canMoveInstsAcrossMemOp(*Paired.I, InstsToMove, AA))
+    return false;
+
+  // Call offsetsCanBeCombined with modify = true so that the offsets are
+  // correct for the new instruction.  This should return true, because
+  // this function should only be called on CombineInfo objects that
+  // have already been confirmed to be mergeable.
+  if (CI.InstClass == DS_READ || CI.InstClass == DS_WRITE)
+    offsetsCanBeCombined(CI, *STM, Paired, true);
+  return true;
 }
 
 unsigned SILoadStoreOptimizer::read2Opcode(unsigned EltSize) const {
