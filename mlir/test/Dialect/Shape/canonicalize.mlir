@@ -464,6 +464,26 @@ func @cstr_require_no_fold(%arg0: i1) {
 }
 
 // -----
+
+// merge assuming_all operations
+// CHECK-LABEL: func @f
+func @f() {
+  // CHECK-NEXT: %[[W0:.*]] = "test.source"
+  // CHECK-NEXT: %[[W1:.*]] = "test.source"
+  // CHECK-NEXT: %[[W2:.*]] = "test.source"
+  // CHECK-NEXT: shape.assuming_all %[[W0]], %[[W1]], %[[W2]]
+  // CHECK-NEXT: consume.witness
+  // CHECK-NEXT: return
+  %0 = "test.source"() : () -> !shape.witness
+  %1 = "test.source"() : () -> !shape.witness
+  %2 = "test.source"() : () -> !shape.witness
+  %3 = shape.assuming_all %0, %1
+  %4 = shape.assuming_all %3, %2
+  "consume.witness"(%4) : (!shape.witness) -> ()
+  return
+}
+
+// -----
 // `assuming_all` with all `cstr_eq` and shared operands can be collapsed.
 // CHECK-LABEL: func @assuming_all_to_cstr_eq
 // CHECK-SAME: (%[[A:.*]]: !shape.shape, %[[B:.*]]: tensor<?xindex>, %[[C:.*]]: tensor<3xindex>)
