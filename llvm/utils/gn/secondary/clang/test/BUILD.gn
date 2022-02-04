@@ -148,6 +148,7 @@ group("test") {
     "//clang/tools/clang-format",
     "//clang/tools/clang-import-test",
     "//clang/tools/clang-offload-bundler",
+    "//clang/tools/clang-pseudo",
     "//clang/tools/clang-refactor",
     "//clang/tools/clang-rename",
     "//clang/tools/clang-repl",
