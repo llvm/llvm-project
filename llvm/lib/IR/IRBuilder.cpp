@@ -672,34 +672,29 @@ getStatepointBundles(Optional<ArrayRef<T1>> TransitionArgs,
 template <typename T0, typename T1, typename T2, typename T3>
 static CallInst *CreateGCStatepointCallCommon(
     IRBuilderBase *Builder, uint64_t ID, uint32_t NumPatchBytes,
-    Value *ActualCallee, uint32_t Flags, ArrayRef<T0> CallArgs,
-    Optional<ArrayRef<T1>> TransitionArgs,
-    Optional<ArrayRef<T2>> DeoptArgs, ArrayRef<T3> GCArgs,
-    const Twine &Name) {
-  // Extract out the type of the callee.
-  auto *FuncPtrType = cast<PointerType>(ActualCallee->getType());
-  assert(isa<FunctionType>(FuncPtrType->getPointerElementType()) &&
-         "actual callee must be a callable value");
-
+    FunctionCallee ActualCallee, uint32_t Flags, ArrayRef<T0> CallArgs,
+    Optional<ArrayRef<T1>> TransitionArgs, Optional<ArrayRef<T2>> DeoptArgs,
+    ArrayRef<T3> GCArgs, const Twine &Name) {
   Module *M = Builder->GetInsertBlock()->getParent()->getParent();
   // Fill in the one generic type'd argument (the function is also vararg)
-  Type *ArgTypes[] = { FuncPtrType };
   Function *FnStatepoint =
-    Intrinsic::getDeclaration(M, Intrinsic::experimental_gc_statepoint,
-                              ArgTypes);
+      Intrinsic::getDeclaration(M, Intrinsic::experimental_gc_statepoint,
+                                {ActualCallee.getCallee()->getType()});
 
-  std::vector<Value *> Args =
-      getStatepointArgs(*Builder, ID, NumPatchBytes, ActualCallee, Flags,
-                        CallArgs);
+  std::vector<Value *> Args = getStatepointArgs(
+      *Builder, ID, NumPatchBytes, ActualCallee.getCallee(), Flags, CallArgs);
 
-  return Builder->CreateCall(FnStatepoint, Args,
-                             getStatepointBundles(TransitionArgs, DeoptArgs,
-                                                  GCArgs),
-                             Name);
+  CallInst *CI = Builder->CreateCall(
+      FnStatepoint, Args,
+      getStatepointBundles(TransitionArgs, DeoptArgs, GCArgs), Name);
+  CI->addParamAttr(2,
+                   Attribute::get(Builder->getContext(), Attribute::ElementType,
+                                  ActualCallee.getFunctionType()));
+  return CI;
 }
 
 CallInst *IRBuilderBase::CreateGCStatepointCall(
-    uint64_t ID, uint32_t NumPatchBytes, Value *ActualCallee,
+    uint64_t ID, uint32_t NumPatchBytes, FunctionCallee ActualCallee,
     ArrayRef<Value *> CallArgs, Optional<ArrayRef<Value *>> DeoptArgs,
     ArrayRef<Value *> GCArgs, const Twine &Name) {
   return CreateGCStatepointCallCommon<Value *, Value *, Value *, Value *>(
@@ -708,17 +703,17 @@ CallInst *IRBuilderBase::CreateGCStatepointCall(
 }
 
 CallInst *IRBuilderBase::CreateGCStatepointCall(
-    uint64_t ID, uint32_t NumPatchBytes, Value *ActualCallee, uint32_t Flags,
-    ArrayRef<Value *> CallArgs, Optional<ArrayRef<Use>> TransitionArgs,
-    Optional<ArrayRef<Use>> DeoptArgs, ArrayRef<Value *> GCArgs,
-    const Twine &Name) {
+    uint64_t ID, uint32_t NumPatchBytes, FunctionCallee ActualCallee,
+    uint32_t Flags, ArrayRef<Value *> CallArgs,
+    Optional<ArrayRef<Use>> TransitionArgs, Optional<ArrayRef<Use>> DeoptArgs,
+    ArrayRef<Value *> GCArgs, const Twine &Name) {
   return CreateGCStatepointCallCommon<Value *, Use, Use, Value *>(
       this, ID, NumPatchBytes, ActualCallee, Flags, CallArgs, TransitionArgs,
       DeoptArgs, GCArgs, Name);
 }
 
 CallInst *IRBuilderBase::CreateGCStatepointCall(
-    uint64_t ID, uint32_t NumPatchBytes, Value *ActualCallee,
+    uint64_t ID, uint32_t NumPatchBytes, FunctionCallee ActualCallee,
     ArrayRef<Use> CallArgs, Optional<ArrayRef<Value *>> DeoptArgs,
     ArrayRef<Value *> GCArgs, const Twine &Name) {
   return CreateGCStatepointCallCommon<Use, Value *, Value *, Value *>(
@@ -729,32 +724,31 @@ CallInst *IRBuilderBase::CreateGCStatepointCall(
 template <typename T0, typename T1, typename T2, typename T3>
 static InvokeInst *CreateGCStatepointInvokeCommon(
     IRBuilderBase *Builder, uint64_t ID, uint32_t NumPatchBytes,
-    Value *ActualInvokee, BasicBlock *NormalDest, BasicBlock *UnwindDest,
-    uint32_t Flags, ArrayRef<T0> InvokeArgs,
+    FunctionCallee ActualInvokee, BasicBlock *NormalDest,
+    BasicBlock *UnwindDest, uint32_t Flags, ArrayRef<T0> InvokeArgs,
     Optional<ArrayRef<T1>> TransitionArgs, Optional<ArrayRef<T2>> DeoptArgs,
     ArrayRef<T3> GCArgs, const Twine &Name) {
-  // Extract out the type of the callee.
-  auto *FuncPtrType = cast<PointerType>(ActualInvokee->getType());
-  assert(isa<FunctionType>(FuncPtrType->getPointerElementType()) &&
-         "actual callee must be a callable value");
-
   Module *M = Builder->GetInsertBlock()->getParent()->getParent();
   // Fill in the one generic type'd argument (the function is also vararg)
-  Function *FnStatepoint = Intrinsic::getDeclaration(
-      M, Intrinsic::experimental_gc_statepoint, {FuncPtrType});
+  Function *FnStatepoint =
+      Intrinsic::getDeclaration(M, Intrinsic::experimental_gc_statepoint,
+                                {ActualInvokee.getCallee()->getType()});
 
   std::vector<Value *> Args =
-      getStatepointArgs(*Builder, ID, NumPatchBytes, ActualInvokee, Flags,
-                        InvokeArgs);
+      getStatepointArgs(*Builder, ID, NumPatchBytes, ActualInvokee.getCallee(),
+                        Flags, InvokeArgs);
 
-  return Builder->CreateInvoke(FnStatepoint, NormalDest, UnwindDest, Args,
-                               getStatepointBundles(TransitionArgs, DeoptArgs,
-                                                    GCArgs),
-                               Name);
+  InvokeInst *II = Builder->CreateInvoke(
+      FnStatepoint, NormalDest, UnwindDest, Args,
+      getStatepointBundles(TransitionArgs, DeoptArgs, GCArgs), Name);
+  II->addParamAttr(2,
+                   Attribute::get(Builder->getContext(), Attribute::ElementType,
+                                  ActualInvokee.getFunctionType()));
+  return II;
 }
 
 InvokeInst *IRBuilderBase::CreateGCStatepointInvoke(
-    uint64_t ID, uint32_t NumPatchBytes, Value *ActualInvokee,
+    uint64_t ID, uint32_t NumPatchBytes, FunctionCallee ActualInvokee,
     BasicBlock *NormalDest, BasicBlock *UnwindDest,
     ArrayRef<Value *> InvokeArgs, Optional<ArrayRef<Value *>> DeoptArgs,
     ArrayRef<Value *> GCArgs, const Twine &Name) {
@@ -765,19 +759,21 @@ InvokeInst *IRBuilderBase::CreateGCStatepointInvoke(
 }
 
 InvokeInst *IRBuilderBase::CreateGCStatepointInvoke(
-    uint64_t ID, uint32_t NumPatchBytes, Value *ActualInvokee,
+    uint64_t ID, uint32_t NumPatchBytes, FunctionCallee ActualInvokee,
     BasicBlock *NormalDest, BasicBlock *UnwindDest, uint32_t Flags,
     ArrayRef<Value *> InvokeArgs, Optional<ArrayRef<Use>> TransitionArgs,
-    Optional<ArrayRef<Use>> DeoptArgs, ArrayRef<Value *> GCArgs, const Twine &Name) {
+    Optional<ArrayRef<Use>> DeoptArgs, ArrayRef<Value *> GCArgs,
+    const Twine &Name) {
   return CreateGCStatepointInvokeCommon<Value *, Use, Use, Value *>(
       this, ID, NumPatchBytes, ActualInvokee, NormalDest, UnwindDest, Flags,
       InvokeArgs, TransitionArgs, DeoptArgs, GCArgs, Name);
 }
 
 InvokeInst *IRBuilderBase::CreateGCStatepointInvoke(
-    uint64_t ID, uint32_t NumPatchBytes, Value *ActualInvokee,
+    uint64_t ID, uint32_t NumPatchBytes, FunctionCallee ActualInvokee,
     BasicBlock *NormalDest, BasicBlock *UnwindDest, ArrayRef<Use> InvokeArgs,
-    Optional<ArrayRef<Value *>> DeoptArgs, ArrayRef<Value *> GCArgs, const Twine &Name) {
+    Optional<ArrayRef<Value *>> DeoptArgs, ArrayRef<Value *> GCArgs,
+    const Twine &Name) {
   return CreateGCStatepointInvokeCommon<Use, Value *, Value *, Value *>(
       this, ID, NumPatchBytes, ActualInvokee, NormalDest, UnwindDest,
       uint32_t(StatepointFlags::None), InvokeArgs, None, DeoptArgs, GCArgs,

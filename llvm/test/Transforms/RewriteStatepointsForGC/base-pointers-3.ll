@@ -15,7 +15,7 @@ define void @test(i64 addrspace(1)* %base_obj) gc "statepoint-example" {
 ; CHECK-NEXT:    [[CURRENT_I32:%.*]] = bitcast i64 addrspace(1)* [[CURRENT]] to i32 addrspace(1)*
 ; CHECK-NEXT:    [[NEXT_I32:%.*]] = getelementptr i32, i32 addrspace(1)* [[CURRENT_I32]], i32 1
 ; CHECK-NEXT:    [[NEXT_I64:%.*]] = bitcast i32 addrspace(1)* [[NEXT_I32]] to i64 addrspace(1)*
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0), "gc-live"(i64 addrspace(1)* [[NEXT_I64]], i64 addrspace(1)* [[DOT0]]) ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0), "gc-live"(i64 addrspace(1)* [[NEXT_I64]], i64 addrspace(1)* [[DOT0]]) ]
 ; CHECK-NEXT:    [[NEXT_I64_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
 ; CHECK-NEXT:    [[NEXT_I64_RELOCATED_CASTED]] = bitcast i8 addrspace(1)* [[NEXT_I64_RELOCATED]] to i64 addrspace(1)*
 ; CHECK-NEXT:    [[BASE_OBJ_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 1, i32 1)

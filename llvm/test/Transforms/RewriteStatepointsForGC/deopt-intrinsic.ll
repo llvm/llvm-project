@@ -11,7 +11,7 @@ declare void @llvm.experimental.deoptimize.isVoid(...)
 define i32 @caller_0(i32 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: @caller_0(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @__llvm_deoptimize, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 addrspace(1)* [[PTR:%.*]]), "gc-live"(i32 addrspace(1)* [[PTR]]) ]
+; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* elementtype(void ()) @__llvm_deoptimize, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 addrspace(1)* [[PTR:%.*]]), "gc-live"(i32 addrspace(1)* [[PTR]]) ]
 ; CHECK-NEXT:    [[PTR_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    [[PTR_RELOCATED_CASTED:%.*]] = bitcast i8 addrspace(1)* [[PTR_RELOCATED]] to i32 addrspace(1)*
 ; CHECK-NEXT:    unreachable
@@ -25,7 +25,7 @@ entry:
 define i32 @caller_1(i32 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: @caller_1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i32, i32 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32p1i32f(i64 2882400000, i32 0, void (i32, i32 addrspace(1)*)* bitcast (void ()* @__llvm_deoptimize to void (i32, i32 addrspace(1)*)*), i32 2, i32 0, i32 50, i32 addrspace(1)* [[PTR:%.*]], i32 0, i32 0) [ "deopt"(i32 0), "gc-live"(i32 addrspace(1)* [[PTR]]) ]
+; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i32, i32 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32p1i32f(i64 2882400000, i32 0, void (i32, i32 addrspace(1)*)* elementtype(void (i32, i32 addrspace(1)*)) bitcast (void ()* @__llvm_deoptimize to void (i32, i32 addrspace(1)*)*), i32 2, i32 0, i32 50, i32 addrspace(1)* [[PTR:%.*]], i32 0, i32 0) [ "deopt"(i32 0), "gc-live"(i32 addrspace(1)* [[PTR]]) ]
 ; CHECK-NEXT:    [[PTR_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    [[PTR_RELOCATED_CASTED:%.*]] = bitcast i8 addrspace(1)* [[PTR_RELOCATED]] to i32 addrspace(1)*
 ; CHECK-NEXT:    unreachable
@@ -38,7 +38,7 @@ entry:
 define void @caller_2(i32 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: @caller_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @__llvm_deoptimize, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 addrspace(1)* [[PTR:%.*]]), "gc-live"(i32 addrspace(1)* [[PTR]]) ]
+; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* elementtype(void ()) @__llvm_deoptimize, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 addrspace(1)* [[PTR:%.*]]), "gc-live"(i32 addrspace(1)* [[PTR]]) ]
 ; CHECK-NEXT:    [[PTR_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    [[PTR_RELOCATED_CASTED:%.*]] = bitcast i8 addrspace(1)* [[PTR_RELOCATED]] to i32 addrspace(1)*
 ; CHECK-NEXT:    unreachable
