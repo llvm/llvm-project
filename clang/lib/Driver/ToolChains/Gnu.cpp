@@ -451,11 +451,6 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("--fix-cortex-a53-843419");
   }
 
-  // Android does not allow shared text relocations. Emit a warning if the
-  // user's code contains any.
-  if (isAndroid)
-      CmdArgs.push_back("--warn-shared-textrel");
-
   ToolChain.addExtraOpts(CmdArgs);
 
   CmdArgs.push_back("--eh-frame-hdr");
