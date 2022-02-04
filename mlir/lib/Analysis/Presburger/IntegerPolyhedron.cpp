@@ -829,24 +829,23 @@ bool IntegerPolyhedron::containsPoint(ArrayRef<int64_t> point) const {
   return true;
 }
 
-void IntegerPolyhedron::getLocalReprs(
-    SmallVectorImpl<MaybeLocalRepr> &repr) const {
-  SmallVector<SmallVector<int64_t, 8>> dividends(getNumLocalIds());
+void IntegerPolyhedron::getLocalReprs(std::vector<MaybeLocalRepr> &repr) const {
+  std::vector<SmallVector<int64_t, 8>> dividends(getNumLocalIds());
   SmallVector<unsigned, 4> denominators(getNumLocalIds());
   getLocalReprs(dividends, denominators, repr);
 }
 
 void IntegerPolyhedron::getLocalReprs(
-    SmallVectorImpl<SmallVector<int64_t, 8>> &dividends,
-    SmallVectorImpl<unsigned> &denominators) const {
-  SmallVector<MaybeLocalRepr> repr(getNumLocalIds());
+    std::vector<SmallVector<int64_t, 8>> &dividends,
+    SmallVector<unsigned, 4> &denominators) const {
+  std::vector<MaybeLocalRepr> repr(getNumLocalIds());
   getLocalReprs(dividends, denominators, repr);
 }
 
 void IntegerPolyhedron::getLocalReprs(
-    SmallVectorImpl<SmallVector<int64_t, 8>> &dividends,
-    SmallVectorImpl<unsigned> &denominators,
-    SmallVectorImpl<MaybeLocalRepr> &repr) const {
+    std::vector<SmallVector<int64_t, 8>> &dividends,
+    SmallVector<unsigned, 4> &denominators,
+    std::vector<MaybeLocalRepr> &repr) const {
 
   repr.resize(getNumLocalIds());
   dividends.resize(getNumLocalIds());
@@ -1104,7 +1103,7 @@ void IntegerPolyhedron::mergeLocalIds(IntegerPolyhedron &other) {
   polyB.insertLocalId(0, initLocals);
 
   // Get division representations from each poly.
-  SmallVector<SmallVector<int64_t, 8>> divsA, divsB;
+  std::vector<SmallVector<int64_t, 8>> divsA, divsB;
   SmallVector<unsigned, 4> denomsA, denomsB;
   polyA.getLocalReprs(divsA, denomsA);
   polyB.getLocalReprs(divsB, denomsB);
