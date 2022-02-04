@@ -486,7 +486,7 @@ public:
     return (Ones > 0) && ((Ones + countLeadingZerosSlowCase()) == BitWidth);
   }
 
-  /// Return true if this APInt value contains a sequence of ones with
+  /// Return true if this APInt value contains a non-empty sequence of ones with
   /// the remainder zero.
   bool isShiftedMask() const {
     if (isSingleWord())
