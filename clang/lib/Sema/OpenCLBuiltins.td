@@ -1040,6 +1040,8 @@ let Extension = FuncExtOpenCLCxx in {
   }
 }
 
+// OpenCL v2.0 s6.13.11 - Atomic Functions.
+
 // An atomic builtin with 2 additional _explicit variants.
 multiclass BuiltinAtomicExplicit<string Name, list<Type> Types> {
   // Without explicit MemoryOrder or MemoryScope.
@@ -1052,31 +1054,29 @@ multiclass BuiltinAtomicExplicit<string Name, list<Type> Types> {
   def : Builtin<Name # "_explicit", !listconcat(Types, [MemoryOrder, MemoryScope])>;
 }
 
-// OpenCL v2.0 s6.13.11 - Atomic Functions.
-let MinVersion = CL20 in {
-  def : Builtin<"atomic_work_item_fence", [Void, MemFenceFlags, MemoryOrder, MemoryScope]>;
-
+// OpenCL 2.0 atomic functions that have a pointer argument in a given address space.
+multiclass OpenCL2Atomics<AddressSpace addrspace> {
   foreach TypePair = [[AtomicInt, Int], [AtomicUInt, UInt],
                       [AtomicLong, Long], [AtomicULong, ULong],
                       [AtomicFloat, Float], [AtomicDouble, Double]] in {
     def : Builtin<"atomic_init",
-        [Void, PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[1]]>;
+        [Void, PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[1]]>;
     defm : BuiltinAtomicExplicit<"atomic_store",
-        [Void, PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[1]]>;
+        [Void, PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[1]]>;
     defm : BuiltinAtomicExplicit<"atomic_load",
-        [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>]>;
+        [TypePair[1], PointerType<VolatileType<TypePair[0]>, addrspace>]>;
     defm : BuiltinAtomicExplicit<"atomic_exchange",
-        [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[1]]>;
+        [TypePair[1], PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[1]]>;
     foreach Variant = ["weak", "strong"] in {
       def : Builtin<"atomic_compare_exchange_" # Variant,
-          [Bool, PointerType<VolatileType<TypePair[0]>, GenericAS>,
-           PointerType<TypePair[1], GenericAS>, TypePair[1]]>;
+          [Bool, PointerType<VolatileType<TypePair[0]>, addrspace>,
+           PointerType<TypePair[1], addrspace>, TypePair[1]]>;
       def : Builtin<"atomic_compare_exchange_" # Variant # "_explicit",
-          [Bool, PointerType<VolatileType<TypePair[0]>, GenericAS>,
-           PointerType<TypePair[1], GenericAS>, TypePair[1], MemoryOrder, MemoryOrder]>;
+          [Bool, PointerType<VolatileType<TypePair[0]>, addrspace>,
+           PointerType<TypePair[1], addrspace>, TypePair[1], MemoryOrder, MemoryOrder]>;
       def : Builtin<"atomic_compare_exchange_" # Variant # "_explicit",
-          [Bool, PointerType<VolatileType<TypePair[0]>, GenericAS>,
-           PointerType<TypePair[1], GenericAS>, TypePair[1], MemoryOrder, MemoryOrder, MemoryScope]>;
+          [Bool, PointerType<VolatileType<TypePair[0]>, addrspace>,
+           PointerType<TypePair[1], addrspace>, TypePair[1], MemoryOrder, MemoryOrder, MemoryScope]>;
     }
   }
 
@@ -1085,22 +1085,28 @@ let MinVersion = CL20 in {
                       [AtomicUIntPtr, UIntPtr, PtrDiff]] in {
     foreach ModOp = ["add", "sub"] in {
       defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
-          [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[2]]>;
+          [TypePair[1], PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[2]]>;
     }
   }
   foreach TypePair = [[AtomicInt, Int, Int], [AtomicUInt, UInt, UInt],
                       [AtomicLong, Long, Long], [AtomicULong, ULong, ULong]] in {
     foreach ModOp = ["or", "xor", "and", "min", "max"] in {
       defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
-          [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[2]]>;
+          [TypePair[1], PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[2]]>;
     }
   }
 
   defm : BuiltinAtomicExplicit<"atomic_flag_clear",
-      [Void, PointerType<VolatileType<AtomicFlag>, GenericAS>]>;
+      [Void, PointerType<VolatileType<AtomicFlag>, addrspace>]>;
 
   defm : BuiltinAtomicExplicit<"atomic_flag_test_and_set",
-      [Bool, PointerType<VolatileType<AtomicFlag>, GenericAS>]>;
+      [Bool, PointerType<VolatileType<AtomicFlag>, addrspace>]>;
+}
+
+let MinVersion = CL20 in {
+  def : Builtin<"atomic_work_item_fence", [Void, MemFenceFlags, MemoryOrder, MemoryScope]>;
+
+  defm : OpenCL2Atomics<GenericAS>;
 }
 
 // The functionality added by cl_ext_float_atomics extension
