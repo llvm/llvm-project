@@ -838,6 +838,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
         SharedRuntimes.push_back("hwasan_aliases");
       else
         SharedRuntimes.push_back("hwasan");
+      if (!Args.hasArg(options::OPT_shared))
+        HelperStaticRuntimes.push_back("hwasan-preinit");
     }
   }
 
