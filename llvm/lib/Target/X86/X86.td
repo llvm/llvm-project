@@ -1169,6 +1169,8 @@ def ProcessorFeatures {
                                      TuningFastBEXTR,
                                      TuningFast15ByteNOP,
                                      TuningBranchFusion,
+                                     TuningFastScalarFSQRT,
+                                     TuningFastVectorFSQRT,
                                      TuningFastScalarShiftMasks,
                                      TuningFastMOVBE,
                                      TuningSlowSHLD,
