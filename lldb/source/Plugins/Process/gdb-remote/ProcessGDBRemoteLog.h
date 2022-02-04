@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_PROCESSGDBREMOTELOG_H
 
 #include "lldb/Utility/Log.h"
+#include "llvm/ADT/BitmaskEnum.h"
 
 namespace lldb_private {
 namespace process_gdb_remote {
@@ -28,6 +29,7 @@ enum class GDBRLog : Log::MaskType {
   Watchpoints = Log::ChannelFlag<10>,
   LLVM_MARK_AS_BITMASK_ENUM(Watchpoints)
 };
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 class ProcessGDBRemoteLog {
 public:

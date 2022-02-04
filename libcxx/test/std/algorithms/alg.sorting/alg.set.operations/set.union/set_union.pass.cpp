@@ -52,7 +52,7 @@ TEST_CONSTEXPR_CXX20 void test4()
 template<class T, class Iter1, class Iter2>
 TEST_CONSTEXPR_CXX20 void test3()
 {
-    test4<T, Iter1, Iter2, output_iterator<T*> >();
+    test4<T, Iter1, Iter2, cpp17_output_iterator<T*> >();
     test4<T, Iter1, Iter2, forward_iterator<T*> >();
     test4<T, Iter1, Iter2, bidirectional_iterator<T*> >();
     test4<T, Iter1, Iter2, random_access_iterator<T*> >();

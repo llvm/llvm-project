@@ -8,7 +8,7 @@
 #define AS3 __attribute__((AS(3)))
 #define AS5 __attribute__((address_space(5))) char
 
-void normal_case() {
+void normal_case(void) {
   int *p = 0;
   __attribute__((address_space(1))) int *q = p; // expected-error{{initializing '__attribute__((address_space(1))) int *' with an expression of type 'int *' changes address space of pointer}}
 }
@@ -29,7 +29,7 @@ void test4(void) {
   test3_helper(test4_array);         // expected-error{{passing 'AS2 char *' to parameter of type 'char *' changes address space of pointer}}
 }
 
-void func() {
+void func(void) {
   char AS1 *x;
   char AS3 *x2;
   AS5 *x3;
@@ -43,7 +43,7 @@ void multiple_attrs(AS_ND int *x) {
   __attribute__((address_space(2))) int *y = x; // expected-warning{{casting to dereferenceable pointer removes 'noderef' attribute}}
 }
 
-void override_macro_name() {
+void override_macro_name(void) {
 #define ATTRS __attribute__((noderef)) // expected-note{{previous definition is here}}
   ATTRS
 #define ATTRS __attribute__((address_space(1))) // expected-warning{{'ATTRS' macro redefined}}
@@ -53,7 +53,7 @@ void override_macro_name() {
   int AS_ND *y = x; // expected-error{{initializing 'AS_ND int *' with an expression of type 'ATTRS int *' changes address space of pointer}}
 }
 
-void partial_macro_declaration() {
+void partial_macro_declaration(void) {
 #define ATTRS2 __attribute__((noderef))
   ATTRS2 __attribute__((address_space(1))) int *x;
 

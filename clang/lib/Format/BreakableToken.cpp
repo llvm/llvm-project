@@ -771,6 +771,20 @@ BreakableLineCommentSection::BreakableLineCommentSection(
       OriginalPrefix[i] = IndentPrefix;
       const unsigned SpacesInPrefix = llvm::count(IndentPrefix, ' ');
 
+      // This lambda also considers multibyte character that is not handled in
+      // functions like isPunctuation provided by CharInfo.
+      const auto NoSpaceBeforeFirstCommentChar = [&]() {
+        assert(Lines[i].size() > IndentPrefix.size());
+        const char FirstCommentChar = Lines[i][IndentPrefix.size()];
+        const unsigned FirstCharByteSize =
+            encoding::getCodePointNumBytes(FirstCommentChar, Encoding);
+        return encoding::columnWidth(
+                   Lines[i].substr(IndentPrefix.size(), FirstCharByteSize),
+                   Encoding) == 1 &&
+               (FirstCommentChar == '\\' || isPunctuation(FirstCommentChar) ||
+                isHorizontalWhitespace(FirstCommentChar));
+      };
+
       // On the first line of the comment section we calculate how many spaces
       // are to be added or removed, all lines after that just get only the
       // change and we will not look at the maximum anymore. Additionally to the
@@ -780,7 +794,7 @@ BreakableLineCommentSection::BreakableLineCommentSection(
                         OriginalPrefix[i - 1].rtrim(Blanks)) {
         if (SpacesInPrefix < Style.SpacesInLineCommentPrefix.Minimum &&
             Lines[i].size() > IndentPrefix.size() &&
-            isAlphanumeric(Lines[i][IndentPrefix.size()])) {
+            !NoSpaceBeforeFirstCommentChar()) {
           FirstLineSpaceChange =
               Style.SpacesInLineCommentPrefix.Minimum - SpacesInPrefix;
         } else if (SpacesInPrefix > Style.SpacesInLineCommentPrefix.Maximum) {
@@ -804,7 +818,7 @@ BreakableLineCommentSection::BreakableLineCommentSection(
         const auto FirstNonSpace = Lines[i][IndentPrefix.size()];
         const auto AllowsSpaceChange =
             SpacesInPrefix != 0 ||
-            (isAlphanumeric(FirstNonSpace) ||
+            (!NoSpaceBeforeFirstCommentChar() ||
              (FirstNonSpace == '}' && FirstLineSpaceChange != 0));
 
         if (PrefixSpaceChange[i] > 0 && AllowsSpaceChange) {

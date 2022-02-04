@@ -12,6 +12,7 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"

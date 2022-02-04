@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SymbolizableObjectFile.h"
+#include "llvm/DebugInfo/Symbolize/SymbolizableObjectFile.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/COFF.h"

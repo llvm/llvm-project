@@ -249,7 +249,7 @@ std::string SymbolInfoMap::SymbolInfo::getVarTypeStr(StringRef name) const {
           ->attr.getStorageType()
           .str();
     // TODO(suderman): Use a more exact type when available.
-    return "Attribute";
+    return "::mlir::Attribute";
   }
   case Kind::Operand: {
     // Use operand range for captured operands (to support potential variadic
@@ -324,7 +324,7 @@ std::string SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
     // means we want to capture the op itself.
     if (op->getNumResults() == 0) {
       LLVM_DEBUG(llvm::dbgs() << name << " (Op)\n");
-      return std::string(name);
+      return formatv(fmt, name);
     }
 
     // We are referencing all results of the multi-result op. A specific result

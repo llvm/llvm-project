@@ -6,6 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "llvm/Support/Signposts.h"
 
 #include <cstdio>

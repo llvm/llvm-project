@@ -11,6 +11,7 @@ add_mlir_library(MLIRTransforms
   SCCP.cpp
   StripDebugInfo.cpp
   SymbolDCE.cpp
+  SymbolPrivatize.cpp
   ViewOpGraph.cpp
 
   ADDITIONAL_HEADER_DIRS

@@ -14,7 +14,6 @@
 
 #include "UnwrappedLineParser.h"
 #include "FormatToken.h"
-#include "TokenAnnotator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -438,34 +437,8 @@ bool UnwrappedLineParser::precededByCommentOrPPDirective() const {
          (Previous->IsMultiline || Previous->NewlinesBefore > 0);
 }
 
-bool UnwrappedLineParser::mightFitOnOneLine() const {
-  const auto ColumnLimit = Style.ColumnLimit;
-  if (ColumnLimit == 0)
-    return true;
-
-  if (Lines.empty())
-    return true;
-
-  const auto &PreviousLine = Lines.back();
-  const auto &Tokens = PreviousLine.Tokens;
-  assert(!Tokens.empty());
-  const auto *LastToken = Tokens.back().Tok;
-  assert(LastToken);
-  if (!LastToken->isOneOf(tok::semi, tok::comment))
-    return true;
-
-  AnnotatedLine Line(PreviousLine);
-  assert(Line.Last == LastToken);
-
-  TokenAnnotator Annotator(Style, Keywords);
-  Annotator.annotate(Line);
-  Annotator.calculateFormattingInformation(Line);
-
-  return Line.Level * Style.IndentWidth + LastToken->TotalLength <= ColumnLimit;
-}
-
 // Returns true if a simple block, or false otherwise. (A simple block has a
-// single statement that fits on a single line.)
+// single statement.)
 bool UnwrappedLineParser::parseLevel(bool HasOpeningBrace, IfStmtKind *IfKind) {
   const bool IsPrecededByCommentOrPPDirective =
       !Style.RemoveBracesLLVM || precededByCommentOrPPDirective();
@@ -502,9 +475,7 @@ bool UnwrappedLineParser::parseLevel(bool HasOpeningBrace, IfStmtKind *IfKind) {
             precededByCommentOrPPDirective())
           return false;
         const FormatToken *Next = Tokens->peekNextToken();
-        if (Next->is(tok::comment) && Next->NewlinesBefore == 0)
-          return false;
-        return mightFitOnOneLine();
+        return Next->isNot(tok::comment) || Next->NewlinesBefore > 0;
       }
       nextToken();
       addUnwrappedLine();
@@ -514,9 +485,10 @@ bool UnwrappedLineParser::parseLevel(bool HasOpeningBrace, IfStmtKind *IfKind) {
       FormatToken *Next;
       do {
         Next = Tokens->getNextToken();
+        assert(Next);
       } while (Next->is(tok::comment));
       FormatTok = Tokens->setPosition(StoredPosition);
-      if (Next && Next->isNot(tok::colon)) {
+      if (Next->isNot(tok::colon)) {
         // default not followed by ':' is not a case label; treat it like
         // an identifier.
         parseStructuralElement();
@@ -1035,6 +1007,12 @@ void UnwrappedLineParser::parsePPDefine() {
     }
   }
 
+  // In the context of a define, even keywords should be treated as normal
+  // identifiers. Setting the kind to identifier is not enough, because we need
+  // to treat additional keywords like __except as well, which are already
+  // identifiers.
+  FormatTok->Tok.setKind(tok::identifier);
+  FormatTok->Tok.setIdentifierInfo(nullptr);
   nextToken();
   if (FormatTok->Tok.getKind() == tok::l_paren &&
       !FormatTok->hasWhitespaceBefore())
@@ -3079,7 +3057,8 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       }
       if (FormatTok->is(tok::l_square)) {
         FormatToken *Previous = FormatTok->Previous;
-        if (!Previous || Previous->isNot(tok::r_paren)) {
+        if (!Previous ||
+            !(Previous->is(tok::r_paren) || Previous->isTypeOrIdentifier())) {
           // Don't try parsing a lambda if we had a closing parenthesis before,
           // it was probably a pointer to an array: int (*)[].
           if (!tryToParseLambda())

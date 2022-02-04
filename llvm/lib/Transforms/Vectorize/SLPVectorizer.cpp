@@ -164,14 +164,6 @@ static cl::opt<int> LookAheadMaxDepth(
     "slp-max-look-ahead-depth", cl::init(2), cl::Hidden,
     cl::desc("The maximum look-ahead depth for operand reordering scores"));
 
-// The Look-ahead heuristic goes through the users of the bundle to calculate
-// the users cost in getExternalUsesCost(). To avoid compilation time increase
-// we limit the number of users visited to this value.
-static cl::opt<unsigned> LookAheadUsersBudget(
-    "slp-look-ahead-users-budget", cl::init(2), cl::Hidden,
-    cl::desc("The maximum number of users to visit while visiting the "
-             "predecessors. This prevents compilation time increase."));
-
 static cl::opt<bool>
     ViewSLPTree("view-slp-tree", cl::Hidden,
                 cl::desc("Display the SLP trees with Graphviz"));
@@ -471,17 +463,36 @@ static bool isValidForAlternation(unsigned Opcode) {
   return true;
 }
 
+static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
+                                       unsigned BaseIndex = 0);
+
+/// Checks if the provided operands of 2 cmp instructions are compatible, i.e.
+/// compatible instructions or constants, or just some other regular values.
+static bool areCompatibleCmpOps(Value *BaseOp0, Value *BaseOp1, Value *Op0,
+                                Value *Op1) {
+  return (isConstant(BaseOp0) && isConstant(Op0)) ||
+         (isConstant(BaseOp1) && isConstant(Op1)) ||
+         (!isa<Instruction>(BaseOp0) && !isa<Instruction>(Op0) &&
+          !isa<Instruction>(BaseOp1) && !isa<Instruction>(Op1)) ||
+         getSameOpcode({BaseOp0, Op0}).getOpcode() ||
+         getSameOpcode({BaseOp1, Op1}).getOpcode();
+}
+
 /// \returns analysis of the Instructions in \p VL described in
 /// InstructionsState, the Opcode that we suppose the whole list
 /// could be vectorized even if its structure is diverse.
 static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
-                                       unsigned BaseIndex = 0) {
+                                       unsigned BaseIndex) {
   // Make sure these are all Instructions.
   if (llvm::any_of(VL, [](Value *V) { return !isa<Instruction>(V); }))
     return InstructionsState(VL[BaseIndex], nullptr, nullptr);
 
   bool IsCastOp = isa<CastInst>(VL[BaseIndex]);
   bool IsBinOp = isa<BinaryOperator>(VL[BaseIndex]);
+  bool IsCmpOp = isa<CmpInst>(VL[BaseIndex]);
+  CmpInst::Predicate BasePred =
+      IsCmpOp ? cast<CmpInst>(VL[BaseIndex])->getPredicate()
+              : CmpInst::BAD_ICMP_PREDICATE;
   unsigned Opcode = cast<Instruction>(VL[BaseIndex])->getOpcode();
   unsigned AltOpcode = Opcode;
   unsigned AltIndex = BaseIndex;
@@ -513,6 +524,57 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
           AltIndex = Cnt;
           continue;
         }
+      }
+    } else if (IsCmpOp && isa<CmpInst>(VL[Cnt])) {
+      auto *BaseInst = cast<Instruction>(VL[BaseIndex]);
+      auto *Inst = cast<Instruction>(VL[Cnt]);
+      Type *Ty0 = BaseInst->getOperand(0)->getType();
+      Type *Ty1 = Inst->getOperand(0)->getType();
+      if (Ty0 == Ty1) {
+        Value *BaseOp0 = BaseInst->getOperand(0);
+        Value *BaseOp1 = BaseInst->getOperand(1);
+        Value *Op0 = Inst->getOperand(0);
+        Value *Op1 = Inst->getOperand(1);
+        CmpInst::Predicate CurrentPred =
+            cast<CmpInst>(VL[Cnt])->getPredicate();
+        CmpInst::Predicate SwappedCurrentPred =
+            CmpInst::getSwappedPredicate(CurrentPred);
+        // Check for compatible operands. If the corresponding operands are not
+        // compatible - need to perform alternate vectorization.
+        if (InstOpcode == Opcode) {
+          if (BasePred == CurrentPred &&
+              areCompatibleCmpOps(BaseOp0, BaseOp1, Op0, Op1))
+            continue;
+          if (BasePred == SwappedCurrentPred &&
+              areCompatibleCmpOps(BaseOp0, BaseOp1, Op1, Op0))
+            continue;
+          if (E == 2 &&
+              (BasePred == CurrentPred || BasePred == SwappedCurrentPred))
+            continue;
+          auto *AltInst = cast<CmpInst>(VL[AltIndex]);
+          CmpInst::Predicate AltPred = AltInst->getPredicate();
+          Value *AltOp0 = AltInst->getOperand(0);
+          Value *AltOp1 = AltInst->getOperand(1);
+          // Check if operands are compatible with alternate operands.
+          if (AltPred == CurrentPred &&
+              areCompatibleCmpOps(AltOp0, AltOp1, Op0, Op1))
+            continue;
+          if (AltPred == SwappedCurrentPred &&
+              areCompatibleCmpOps(AltOp0, AltOp1, Op1, Op0))
+            continue;
+        }
+        if (BaseIndex == AltIndex && BasePred != CurrentPred) {
+          assert(isValidForAlternation(Opcode) &&
+                 isValidForAlternation(InstOpcode) &&
+                 "Cast isn't safe for alternation, logic needs to be updated!");
+          AltIndex = Cnt;
+          continue;
+        }
+        auto *AltInst = cast<CmpInst>(VL[AltIndex]);
+        CmpInst::Predicate AltPred = AltInst->getPredicate();
+        if (BasePred == CurrentPred || BasePred == SwappedCurrentPred ||
+            AltPred == CurrentPred || AltPred == SwappedCurrentPred)
+          continue;
       }
     } else if (InstOpcode == Opcode || InstOpcode == AltOpcode)
       continue;
@@ -1047,14 +1109,15 @@ public:
     static const int ScoreUndef = 1;
     /// Score for failing to find a decent match.
     static const int ScoreFail = 0;
-    /// User exteranl to the vectorized code.
-    static const int ExternalUseCost = 1;
-    /// The user is internal but in a different lane.
-    static const int UserInDiffLaneCost = ExternalUseCost;
+    /// Score if all users are vectorized.
+    static const int ScoreAllUserVectorized = 1;
 
     /// \returns the score of placing \p V1 and \p V2 in consecutive lanes.
+    /// Also, checks if \p V1 and \p V2 are compatible with instructions in \p
+    /// MainAltOps.
     static int getShallowScore(Value *V1, Value *V2, const DataLayout &DL,
-                               ScalarEvolution &SE, int NumLanes) {
+                               ScalarEvolution &SE, int NumLanes,
+                               ArrayRef<Value *> MainAltOps) {
       if (V1 == V2)
         return VLOperands::ScoreSplat;
 
@@ -1067,7 +1130,7 @@ public:
         Optional<int> Dist = getPointersDiff(
             LI1->getType(), LI1->getPointerOperand(), LI2->getType(),
             LI2->getPointerOperand(), DL, SE, /*StrictCheck=*/true);
-        if (!Dist)
+        if (!Dist || *Dist == 0)
           return VLOperands::ScoreFail;
         // The distance is too large - still may be profitable to use masked
         // loads/gathers.
@@ -1109,12 +1172,16 @@ public:
             int Dist = Idx2 - Idx1;
             // The distance is too large - still may be profitable to use
             // shuffles.
+            if (std::abs(Dist) == 0)
+              return VLOperands::ScoreSplat;
             if (std::abs(Dist) > NumLanes / 2)
-              return VLOperands::ScoreAltOpcodes;
+              return VLOperands::ScoreSameOpcode;
             return (Dist > 0) ? VLOperands::ScoreConsecutiveExtracts
                               : VLOperands::ScoreReversedExtracts;
           }
+          return VLOperands::ScoreAltOpcodes;
         }
+        return VLOperands::ScoreFail;
       }
 
       auto *I1 = dyn_cast<Instruction>(V1);
@@ -1122,10 +1189,19 @@ public:
       if (I1 && I2) {
         if (I1->getParent() != I2->getParent())
           return VLOperands::ScoreFail;
-        InstructionsState S = getSameOpcode({I1, I2});
+        SmallVector<Value *, 4> Ops(MainAltOps.begin(), MainAltOps.end());
+        Ops.push_back(I1);
+        Ops.push_back(I2);
+        InstructionsState S = getSameOpcode(Ops);
         // Note: Only consider instructions with <= 2 operands to avoid
         // complexity explosion.
-        if (S.getOpcode() && S.MainOp->getNumOperands() <= 2)
+        if (S.getOpcode() &&
+            (S.MainOp->getNumOperands() <= 2 || !MainAltOps.empty() ||
+             !S.isAltShuffle()) &&
+            all_of(Ops, [&S](Value *V) {
+              return cast<Instruction>(V)->getNumOperands() ==
+                     S.MainOp->getNumOperands();
+            }))
           return S.isAltShuffle() ? VLOperands::ScoreAltOpcodes
                                   : VLOperands::ScoreSameOpcode;
       }
@@ -1136,68 +1212,64 @@ public:
       return VLOperands::ScoreFail;
     }
 
-    /// Holds the values and their lanes that are taking part in the look-ahead
-    /// score calculation. This is used in the external uses cost calculation.
-    /// Need to hold all the lanes in case of splat/broadcast at least to
-    /// correctly check for the use in the different lane.
-    SmallDenseMap<Value *, SmallSet<int, 4>> InLookAheadValues;
-
-    /// \returns the additional cost due to uses of \p LHS and \p RHS that are
-    /// either external to the vectorized code, or require shuffling.
-    int getExternalUsesCost(const std::pair<Value *, int> &LHS,
-                            const std::pair<Value *, int> &RHS) {
-      int Cost = 0;
-      std::array<std::pair<Value *, int>, 2> Values = {{LHS, RHS}};
-      for (int Idx = 0, IdxE = Values.size(); Idx != IdxE; ++Idx) {
-        Value *V = Values[Idx].first;
-        if (isa<Constant>(V)) {
-          // Since this is a function pass, it doesn't make semantic sense to
-          // walk the users of a subclass of Constant. The users could be in
-          // another function, or even another module that happens to be in
-          // the same LLVMContext.
+    /// \param Lane lane of the operands under analysis.
+    /// \param OpIdx operand index in \p Lane lane we're looking the best
+    /// candidate for.
+    /// \param Idx operand index of the current candidate value.
+    /// \returns The additional score due to possible broadcasting of the
+    /// elements in the lane. It is more profitable to have power-of-2 unique
+    /// elements in the lane, it will be vectorized with higher probability
+    /// after removing duplicates. Currently the SLP vectorizer supports only
+    /// vectorization of the power-of-2 number of unique scalars.
+    int getSplatScore(unsigned Lane, unsigned OpIdx, unsigned Idx) const {
+      Value *IdxLaneV = getData(Idx, Lane).V;
+      if (!isa<Instruction>(IdxLaneV) || IdxLaneV == getData(OpIdx, Lane).V)
+        return 0;
+      SmallPtrSet<Value *, 4> Uniques;
+      for (unsigned Ln = 0, E = getNumLanes(); Ln < E; ++Ln) {
+        if (Ln == Lane)
           continue;
-        }
-
-        // Calculate the absolute lane, using the minimum relative lane of LHS
-        // and RHS as base and Idx as the offset.
-        int Ln = std::min(LHS.second, RHS.second) + Idx;
-        assert(Ln >= 0 && "Bad lane calculation");
-        unsigned UsersBudget = LookAheadUsersBudget;
-        for (User *U : V->users()) {
-          if (const TreeEntry *UserTE = R.getTreeEntry(U)) {
-            // The user is in the VectorizableTree. Check if we need to insert.
-            int UserLn = UserTE->findLaneForValue(U);
-            assert(UserLn >= 0 && "Bad lane");
-            // If the values are different, check just the line of the current
-            // value. If the values are the same, need to add UserInDiffLaneCost
-            // only if UserLn does not match both line numbers.
-            if ((LHS.first != RHS.first && UserLn != Ln) ||
-                (LHS.first == RHS.first && UserLn != LHS.second &&
-                 UserLn != RHS.second)) {
-              Cost += UserInDiffLaneCost;
-              break;
-            }
-          } else {
-            // Check if the user is in the look-ahead code.
-            auto It2 = InLookAheadValues.find(U);
-            if (It2 != InLookAheadValues.end()) {
-              // The user is in the look-ahead code. Check the lane.
-              if (!It2->getSecond().contains(Ln)) {
-                Cost += UserInDiffLaneCost;
-                break;
-              }
-            } else {
-              // The user is neither in SLP tree nor in the look-ahead code.
-              Cost += ExternalUseCost;
-              break;
-            }
-          }
-          // Limit the number of visited uses to cap compilation time.
-          if (--UsersBudget == 0)
-            break;
-        }
+        Value *OpIdxLnV = getData(OpIdx, Ln).V;
+        if (!isa<Instruction>(OpIdxLnV))
+          return 0;
+        Uniques.insert(OpIdxLnV);
       }
-      return Cost;
+      int UniquesCount = Uniques.size();
+      int UniquesCntWithIdxLaneV =
+          Uniques.contains(IdxLaneV) ? UniquesCount : UniquesCount + 1;
+      Value *OpIdxLaneV = getData(OpIdx, Lane).V;
+      int UniquesCntWithOpIdxLaneV =
+          Uniques.contains(OpIdxLaneV) ? UniquesCount : UniquesCount + 1;
+      if (UniquesCntWithIdxLaneV == UniquesCntWithOpIdxLaneV)
+        return 0;
+      return (PowerOf2Ceil(UniquesCntWithOpIdxLaneV) -
+              UniquesCntWithOpIdxLaneV) -
+             (PowerOf2Ceil(UniquesCntWithIdxLaneV) - UniquesCntWithIdxLaneV);
+    }
+
+    /// \param Lane lane of the operands under analysis.
+    /// \param OpIdx operand index in \p Lane lane we're looking the best
+    /// candidate for.
+    /// \param Idx operand index of the current candidate value.
+    /// \returns The additional score for the scalar which users are all
+    /// vectorized.
+    int getExternalUseScore(unsigned Lane, unsigned OpIdx, unsigned Idx) const {
+      Value *IdxLaneV = getData(Idx, Lane).V;
+      Value *OpIdxLaneV = getData(OpIdx, Lane).V;
+      // Do not care about number of uses for vector-like instructions
+      // (extractelement/extractvalue with constant indices), they are extracts
+      // themselves and already externally used. Vectorization of such
+      // instructions does not add extra extractelement instruction, just may
+      // remove it.
+      if (isVectorLikeInstWithConstOps(IdxLaneV) &&
+          isVectorLikeInstWithConstOps(OpIdxLaneV))
+        return VLOperands::ScoreAllUserVectorized;
+      auto *IdxLaneI = dyn_cast<Instruction>(IdxLaneV);
+      if (!IdxLaneI || !isa<Instruction>(OpIdxLaneV))
+        return 0;
+      return R.areAllUsersVectorized(IdxLaneI, None)
+                 ? VLOperands::ScoreAllUserVectorized
+                 : 0;
     }
 
     /// Go through the operands of \p LHS and \p RHS recursively until \p
@@ -1221,18 +1293,12 @@ public:
     ///   Look-ahead SLP: Auto-vectorization in the presence of commutative
     ///   operations, CGO 2018 by Vasileios Porpodas, Rodrigo C. O. Rocha,
     ///   Luís F. W. Góes
-    int getScoreAtLevelRec(const std::pair<Value *, int> &LHS,
-                           const std::pair<Value *, int> &RHS, int CurrLevel,
-                           int MaxLevel) {
+    int getScoreAtLevelRec(Value *LHS, Value *RHS, int CurrLevel, int MaxLevel,
+                           ArrayRef<Value *> MainAltOps) {
 
-      Value *V1 = LHS.first;
-      Value *V2 = RHS.first;
       // Get the shallow score of V1 and V2.
-      int ShallowScoreAtThisLevel = std::max(
-          (int)ScoreFail, getShallowScore(V1, V2, DL, SE, getNumLanes()) -
-                              getExternalUsesCost(LHS, RHS));
-      int Lane1 = LHS.second;
-      int Lane2 = RHS.second;
+      int ShallowScoreAtThisLevel =
+          getShallowScore(LHS, RHS, DL, SE, getNumLanes(), MainAltOps);
 
       // If reached MaxLevel,
       //  or if V1 and V2 are not instructions,
@@ -1240,19 +1306,16 @@ public:
       //  or if they are not consecutive,
       //  or if profitable to vectorize loads or extractelements, early return
       //  the current cost.
-      auto *I1 = dyn_cast<Instruction>(V1);
-      auto *I2 = dyn_cast<Instruction>(V2);
+      auto *I1 = dyn_cast<Instruction>(LHS);
+      auto *I2 = dyn_cast<Instruction>(RHS);
       if (CurrLevel == MaxLevel || !(I1 && I2) || I1 == I2 ||
           ShallowScoreAtThisLevel == VLOperands::ScoreFail ||
           (((isa<LoadInst>(I1) && isa<LoadInst>(I2)) ||
+            (I1->getNumOperands() > 2 && I2->getNumOperands() > 2) ||
             (isa<ExtractElementInst>(I1) && isa<ExtractElementInst>(I2))) &&
            ShallowScoreAtThisLevel))
         return ShallowScoreAtThisLevel;
       assert(I1 && I2 && "Should have early exited.");
-
-      // Keep track of in-tree values for determining the external-use cost.
-      InLookAheadValues[V1].insert(Lane1);
-      InLookAheadValues[V2].insert(Lane2);
 
       // Contains the I2 operand indexes that got matched with I1 operands.
       SmallSet<unsigned, 4> Op2Used;
@@ -1276,9 +1339,9 @@ public:
           if (Op2Used.count(OpIdx2))
             continue;
           // Recursively calculate the cost at each level
-          int TmpScore = getScoreAtLevelRec({I1->getOperand(OpIdx1), Lane1},
-                                            {I2->getOperand(OpIdx2), Lane2},
-                                            CurrLevel + 1, MaxLevel);
+          int TmpScore =
+              getScoreAtLevelRec(I1->getOperand(OpIdx1), I2->getOperand(OpIdx2),
+                                 CurrLevel + 1, MaxLevel, None);
           // Look for the best score.
           if (TmpScore > VLOperands::ScoreFail && TmpScore > MaxTmpScore) {
             MaxTmpScore = TmpScore;
@@ -1295,23 +1358,56 @@ public:
       return ShallowScoreAtThisLevel;
     }
 
+    /// Score scaling factor for fully compatible instructions but with
+    /// different number of external uses. Allows better selection of the
+    /// instructions with less external uses.
+    static const int ScoreScaleFactor = 10;
+
     /// \Returns the look-ahead score, which tells us how much the sub-trees
     /// rooted at \p LHS and \p RHS match, the more they match the higher the
     /// score. This helps break ties in an informed way when we cannot decide on
     /// the order of the operands by just considering the immediate
     /// predecessors.
-    int getLookAheadScore(const std::pair<Value *, int> &LHS,
-                          const std::pair<Value *, int> &RHS) {
-      InLookAheadValues.clear();
-      return getScoreAtLevelRec(LHS, RHS, 1, LookAheadMaxDepth);
+    int getLookAheadScore(Value *LHS, Value *RHS, ArrayRef<Value *> MainAltOps,
+                          int Lane, unsigned OpIdx, unsigned Idx,
+                          bool &IsUsed) {
+      int Score =
+          getScoreAtLevelRec(LHS, RHS, 1, LookAheadMaxDepth, MainAltOps);
+      if (Score) {
+        int SplatScore = getSplatScore(Lane, OpIdx, Idx);
+        if (Score <= -SplatScore) {
+          // Set the minimum score for splat-like sequence to avoid setting
+          // failed state.
+          Score = 1;
+        } else {
+          Score += SplatScore;
+          // Scale score to see the difference between different operands
+          // and similar operands but all vectorized/not all vectorized
+          // uses. It does not affect actual selection of the best
+          // compatible operand in general, just allows to select the
+          // operand with all vectorized uses.
+          Score *= ScoreScaleFactor;
+          Score += getExternalUseScore(Lane, OpIdx, Idx);
+          IsUsed = true;
+        }
+      }
+      return Score;
     }
+
+    /// Best defined scores per lanes between the passes. Used to choose the
+    /// best operand (with the highest score) between the passes.
+    /// The key - {Operand Index, Lane}.
+    /// The value - the best score between the passes for the lane and the
+    /// operand.
+    SmallDenseMap<std::pair<unsigned, unsigned>, unsigned, 8>
+        BestScoresPerLanes;
 
     // Search all operands in Ops[*][Lane] for the one that matches best
     // Ops[OpIdx][LastLane] and return its opreand index.
     // If no good match can be found, return None.
-    Optional<unsigned>
-    getBestOperand(unsigned OpIdx, int Lane, int LastLane,
-                   ArrayRef<ReorderingMode> ReorderingModes) {
+    Optional<unsigned> getBestOperand(unsigned OpIdx, int Lane, int LastLane,
+                                      ArrayRef<ReorderingMode> ReorderingModes,
+                                      ArrayRef<Value *> MainAltOps) {
       unsigned NumOperands = getNumOperands();
 
       // The operand of the previous lane at OpIdx.
@@ -1319,6 +1415,8 @@ public:
 
       // Our strategy mode for OpIdx.
       ReorderingMode RMode = ReorderingModes[OpIdx];
+      if (RMode == ReorderingMode::Failed)
+        return None;
 
       // The linearized opcode of the operand at OpIdx, Lane.
       bool OpIdxAPO = getData(OpIdx, Lane).APO;
@@ -1330,7 +1428,15 @@ public:
         Optional<unsigned> Idx = None;
         unsigned Score = 0;
       } BestOp;
+      BestOp.Score =
+          BestScoresPerLanes.try_emplace(std::make_pair(OpIdx, Lane), 0)
+              .first->second;
 
+      // Track if the operand must be marked as used. If the operand is set to
+      // Score 1 explicitly (because of non power-of-2 unique scalars, we may
+      // want to reestimate the operands again on the following iterations).
+      bool IsUsed =
+          RMode == ReorderingMode::Splat || RMode == ReorderingMode::Constant;
       // Iterate through all unused operands and look for the best.
       for (unsigned Idx = 0; Idx != NumOperands; ++Idx) {
         // Get the operand at Idx and Lane.
@@ -1356,11 +1462,12 @@ public:
           bool LeftToRight = Lane > LastLane;
           Value *OpLeft = (LeftToRight) ? OpLastLane : Op;
           Value *OpRight = (LeftToRight) ? Op : OpLastLane;
-          unsigned Score =
-              getLookAheadScore({OpLeft, LastLane}, {OpRight, Lane});
-          if (Score > BestOp.Score) {
+          int Score = getLookAheadScore(OpLeft, OpRight, MainAltOps, Lane,
+                                        OpIdx, Idx, IsUsed);
+          if (Score > static_cast<int>(BestOp.Score)) {
             BestOp.Idx = Idx;
             BestOp.Score = Score;
+            BestScoresPerLanes[std::make_pair(OpIdx, Lane)] = Score;
           }
           break;
         }
@@ -1369,12 +1476,12 @@ public:
             BestOp.Idx = Idx;
           break;
         case ReorderingMode::Failed:
-          return None;
+          llvm_unreachable("Not expected Failed reordering mode.");
         }
       }
 
       if (BestOp.Idx) {
-        getData(BestOp.Idx.getValue(), Lane).IsUsed = true;
+        getData(BestOp.Idx.getValue(), Lane).IsUsed = IsUsed;
         return BestOp.Idx;
       }
       // If we could not find a good match return None.
@@ -1691,6 +1798,10 @@ public:
         // rest of the lanes. We are visiting the nodes in a circular fashion,
         // using FirstLane as the center point and increasing the radius
         // distance.
+        SmallVector<SmallVector<Value *, 2>> MainAltOps(NumOperands);
+        for (unsigned I = 0; I < NumOperands; ++I)
+          MainAltOps[I].push_back(getData(I, FirstLane).V);
+
         for (unsigned Distance = 1; Distance != NumLanes; ++Distance) {
           // Visit the lane on the right and then the lane on the left.
           for (int Direction : {+1, -1}) {
@@ -1703,8 +1814,8 @@ public:
             // Look for a good match for each operand.
             for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
               // Search for the operand that matches SortedOps[OpIdx][Lane-1].
-              Optional<unsigned> BestIdx =
-                  getBestOperand(OpIdx, Lane, LastLane, ReorderingModes);
+              Optional<unsigned> BestIdx = getBestOperand(
+                  OpIdx, Lane, LastLane, ReorderingModes, MainAltOps[OpIdx]);
               // By not selecting a value, we allow the operands that follow to
               // select a better matching value. We will get a non-null value in
               // the next run of getBestOperand().
@@ -1717,6 +1828,14 @@ public:
                 ReorderingModes[OpIdx] = ReorderingMode::Failed;
                 // Enable the second pass.
                 StrategyFailed = true;
+              }
+              // Try to get the alternate opcode and follow it during analysis.
+              if (MainAltOps[OpIdx].size() != 2) {
+                OperandData &AltOp = getData(OpIdx, Lane);
+                InstructionsState OpS =
+                    getSameOpcode({MainAltOps[OpIdx].front(), AltOp.V});
+                if (OpS.getOpcode() && OpS.isAltShuffle())
+                  MainAltOps[OpIdx].push_back(AltOp.V);
               }
             }
           }
@@ -2344,6 +2463,21 @@ private:
       Lane = -1;
     }
 
+    /// Verify basic self consistency properties
+    void verify() {
+      if (hasValidDependencies()) {
+        assert(UnscheduledDeps <= Dependencies && "invariant");
+        assert(UnscheduledDeps <= FirstInBundle->UnscheduledDepsInBundle &&
+               "bundle must have at least as many dependencies as member");
+      }
+
+      if (IsScheduled) {
+        assert(isSchedulingEntity() && hasValidDependencies() &&
+               UnscheduledDeps == 0 &&
+               "unexpected scheduled state");
+      }
+    }
+
     /// Returns true if the dependency information has been calculated.
     bool hasValidDependencies() const { return Dependencies != InvalidDeps; }
 
@@ -2547,7 +2681,7 @@ private:
         };
 
         // If BundleMember is a vector bundle, its operands may have been
-        // reordered duiring buildTree(). We therefore need to get its operands
+        // reordered during buildTree(). We therefore need to get its operands
         // through the TreeEntry.
         if (TreeEntry *TE = BundleMember->TE) {
           int Lane = BundleMember->Lane;
@@ -2593,6 +2727,29 @@ private:
       }
     }
 
+    /// Verify basic self consistency properties of the data structure.
+    void verify() {
+      if (!ScheduleStart)
+        return;
+
+      assert(ScheduleStart->getParent() == ScheduleEnd->getParent() &&
+             ScheduleStart->comesBefore(ScheduleEnd) &&
+             "Not a valid scheduling region?");
+
+      for (auto *I = ScheduleStart; I != ScheduleEnd; I = I->getNextNode()) {
+        auto *SD = getScheduleData(I);
+        assert(SD && "primary scheduledata must exist in window");
+        assert(isInSchedulingRegion(SD) &&
+               "primary schedule data not in window?");
+        doForAllOpcodes(I, [](ScheduleData *SD) { SD->verify(); });
+      }
+
+      for (auto *SD : ReadyInsts) {
+        assert(SD->isSchedulingEntity() && SD->isReady() &&
+               "item in ready list not ready?");
+      }
+    }
+
     void doForAllOpcodes(Value *V,
                          function_ref<void(ScheduleData *SD)> Action) {
       if (ScheduleData *SD = getScheduleData(V))
@@ -2612,7 +2769,7 @@ private:
           if (SD->isSchedulingEntity() && SD->isReady()) {
             ReadyList.insert(SD);
             LLVM_DEBUG(dbgs()
-                       << "SLP:    initially in ready list: " << *I << "\n");
+                       << "SLP:    initially in ready list: " << *SD << "\n");
           }
         });
       }
@@ -2676,12 +2833,8 @@ private:
     DenseMap<Value *, SmallDenseMap<Value *, ScheduleData *>>
         ExtraScheduleDataMap;
 
-    struct ReadyList : SmallVector<ScheduleData *, 8> {
-      void insert(ScheduleData *SD) { push_back(SD); }
-    };
-
     /// The ready-list for scheduling (only used for the dry-run).
-    ReadyList ReadyInsts;
+    SetVector<ScheduleData *> ReadyInsts;
 
     /// The first instruction of the scheduling region.
     Instruction *ScheduleStart = nullptr;
@@ -3743,6 +3896,10 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   BlockScheduling &BS = *BSRef.get();
 
   Optional<ScheduleData *> Bundle = BS.tryScheduleBundle(VL, this, S);
+#ifdef EXPENSIVE_CHECKS
+  // Make sure we didn't break any internal invariants
+  BS.verify();
+#endif
   if (!Bundle) {
     LLVM_DEBUG(dbgs() << "SLP: We are not able to schedule this bundle!\n");
     assert((!BS.getScheduleData(VL0) ||
@@ -4354,9 +4511,41 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       LLVM_DEBUG(dbgs() << "SLP: added a ShuffleVector op.\n");
 
       // Reorder operands if reordering would enable vectorization.
-      if (isa<BinaryOperator>(VL0)) {
+      auto *CI = dyn_cast<CmpInst>(VL0);
+      if (isa<BinaryOperator>(VL0) || CI) {
         ValueList Left, Right;
-        reorderInputsAccordingToOpcode(VL, Left, Right, *DL, *SE, *this);
+        if (!CI || all_of(VL, [](Value *V) {
+              return cast<CmpInst>(V)->isCommutative();
+            })) {
+          reorderInputsAccordingToOpcode(VL, Left, Right, *DL, *SE, *this);
+        } else {
+          CmpInst::Predicate P0 = CI->getPredicate();
+          CmpInst::Predicate AltP0 = cast<CmpInst>(S.AltOp)->getPredicate();
+          assert(P0 != AltP0 &&
+                 "Expected different main/alternate predicates.");
+          CmpInst::Predicate AltP0Swapped = CmpInst::getSwappedPredicate(AltP0);
+          Value *BaseOp0 = VL0->getOperand(0);
+          Value *BaseOp1 = VL0->getOperand(1);
+          // Collect operands - commute if it uses the swapped predicate or
+          // alternate operation.
+          for (Value *V : VL) {
+            auto *Cmp = cast<CmpInst>(V);
+            Value *LHS = Cmp->getOperand(0);
+            Value *RHS = Cmp->getOperand(1);
+            CmpInst::Predicate CurrentPred = Cmp->getPredicate();
+            if (P0 == AltP0Swapped) {
+              if ((P0 == CurrentPred &&
+                   !areCompatibleCmpOps(BaseOp0, BaseOp1, LHS, RHS)) ||
+                  (AltP0 == CurrentPred &&
+                   areCompatibleCmpOps(BaseOp0, BaseOp1, LHS, RHS)))
+                std::swap(LHS, RHS);
+            } else if (P0 != CurrentPred && AltP0 != CurrentPred) {
+              std::swap(LHS, RHS);
+            }
+            Left.push_back(LHS);
+            Right.push_back(RHS);
+          }
+        }
         TE->setOperand(0, Left);
         TE->setOperand(1, Right);
         buildTree_rec(Left, Depth + 1, {TE, 0});
@@ -4500,7 +4689,9 @@ bool BoUpSLP::areAllUsersVectorized(Instruction *I,
                                     ArrayRef<Value *> VectorizedVals) const {
   return (I->hasOneUse() && is_contained(VectorizedVals, I)) ||
          all_of(I->users(), [this](User *U) {
-           return ScalarToTreeEntry.count(U) > 0 || MustGather.contains(U);
+           return ScalarToTreeEntry.count(U) > 0 ||
+                  isVectorLikeInstWithConstOps(U) ||
+                  (isa<ExtractElementInst>(U) && MustGather.contains(U));
          });
 }
 
@@ -5288,7 +5479,8 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
              ((Instruction::isBinaryOp(E->getOpcode()) &&
                Instruction::isBinaryOp(E->getAltOpcode())) ||
               (Instruction::isCast(E->getOpcode()) &&
-               Instruction::isCast(E->getAltOpcode()))) &&
+               Instruction::isCast(E->getAltOpcode())) ||
+              (isa<CmpInst>(VL0) && isa<CmpInst>(E->getAltOp()))) &&
              "Invalid Shuffle Vector Operand");
       InstructionCost ScalarCost = 0;
       if (NeedToShuffleReuses) {
@@ -5336,6 +5528,14 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
         VecCost = TTI->getArithmeticInstrCost(E->getOpcode(), VecTy, CostKind);
         VecCost += TTI->getArithmeticInstrCost(E->getAltOpcode(), VecTy,
                                                CostKind);
+      } else if (auto *CI0 = dyn_cast<CmpInst>(VL0)) {
+        VecCost = TTI->getCmpSelInstrCost(E->getOpcode(), ScalarTy,
+                                          Builder.getInt1Ty(),
+                                          CI0->getPredicate(), CostKind, VL0);
+        VecCost += TTI->getCmpSelInstrCost(
+            E->getOpcode(), ScalarTy, Builder.getInt1Ty(),
+            cast<CmpInst>(E->getAltOp())->getPredicate(), CostKind,
+            E->getAltOp());
       } else {
         Type *Src0SclTy = E->getMainOp()->getOperand(0)->getType();
         Type *Src1SclTy = E->getAltOp()->getOperand(0)->getType();
@@ -5352,6 +5552,27 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
           E->Scalars, E->ReorderIndices, E->ReuseShuffleIndices,
           [E](Instruction *I) {
             assert(E->isOpcodeOrAlt(I) && "Unexpected main/alternate opcode");
+            if (auto *CI0 = dyn_cast<CmpInst>(E->getMainOp())) {
+              auto *AltCI0 = cast<CmpInst>(E->getAltOp());
+              auto *CI = cast<CmpInst>(I);
+              CmpInst::Predicate P0 = CI0->getPredicate();
+              CmpInst::Predicate AltP0 = AltCI0->getPredicate();
+              assert(P0 != AltP0 &&
+                     "Expected different main/alternate predicates.");
+              CmpInst::Predicate AltP0Swapped =
+                  CmpInst::getSwappedPredicate(AltP0);
+              CmpInst::Predicate CurrentPred = CI->getPredicate();
+              if (P0 == AltP0Swapped)
+                return (P0 == CurrentPred &&
+                        !areCompatibleCmpOps(
+                            CI0->getOperand(0), CI0->getOperand(1),
+                            CI->getOperand(0), CI->getOperand(1))) ||
+                       (AltP0 == CurrentPred &&
+                        !areCompatibleCmpOps(
+                            CI0->getOperand(0), CI0->getOperand(1),
+                            CI->getOperand(1), CI->getOperand(0)));
+              return AltP0 == CurrentPred || AltP0Swapped == CurrentPred;
+            }
             return I->getOpcode() == E->getAltOpcode();
           },
           Mask);
@@ -6834,11 +7055,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
              ((Instruction::isBinaryOp(E->getOpcode()) &&
                Instruction::isBinaryOp(E->getAltOpcode())) ||
               (Instruction::isCast(E->getOpcode()) &&
-               Instruction::isCast(E->getAltOpcode()))) &&
+               Instruction::isCast(E->getAltOpcode())) ||
+              (isa<CmpInst>(VL0) && isa<CmpInst>(E->getAltOp()))) &&
              "Invalid Shuffle Vector Operand");
 
       Value *LHS = nullptr, *RHS = nullptr;
-      if (Instruction::isBinaryOp(E->getOpcode())) {
+      if (Instruction::isBinaryOp(E->getOpcode()) || isa<CmpInst>(VL0)) {
         setInsertPointAfterBundle(E);
         LHS = vectorizeTree(E->getOperand(0));
         RHS = vectorizeTree(E->getOperand(1));
@@ -6858,6 +7080,15 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS, RHS);
         V1 = Builder.CreateBinOp(
             static_cast<Instruction::BinaryOps>(E->getAltOpcode()), LHS, RHS);
+      } else if (auto *CI0 = dyn_cast<CmpInst>(VL0)) {
+        V0 = Builder.CreateCmp(CI0->getPredicate(), LHS, RHS);
+        auto *AltCI = cast<CmpInst>(E->getAltOp());
+        CmpInst::Predicate AltPred = AltCI->getPredicate();
+        unsigned AltIdx =
+            std::distance(E->Scalars.begin(), find(E->Scalars, AltCI));
+        if (AltCI->getOperand(0) != E->getOperand(0)[AltIdx])
+          AltPred = CmpInst::getSwappedPredicate(AltPred);
+        V1 = Builder.CreateCmp(AltPred, LHS, RHS);
       } else {
         V0 = Builder.CreateCast(
             static_cast<Instruction::CastOps>(E->getOpcode()), LHS, VecTy);
@@ -6882,6 +7113,27 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           E->Scalars, E->ReorderIndices, E->ReuseShuffleIndices,
           [E](Instruction *I) {
             assert(E->isOpcodeOrAlt(I) && "Unexpected main/alternate opcode");
+            if (auto *CI0 = dyn_cast<CmpInst>(E->getMainOp())) {
+              auto *AltCI0 = cast<CmpInst>(E->getAltOp());
+              auto *CI = cast<CmpInst>(I);
+              CmpInst::Predicate P0 = CI0->getPredicate();
+              CmpInst::Predicate AltP0 = AltCI0->getPredicate();
+              assert(P0 != AltP0 &&
+                     "Expected different main/alternate predicates.");
+              CmpInst::Predicate AltP0Swapped =
+                  CmpInst::getSwappedPredicate(AltP0);
+              CmpInst::Predicate CurrentPred = CI->getPredicate();
+              if (P0 == AltP0Swapped)
+                return (P0 == CurrentPred &&
+                        !areCompatibleCmpOps(
+                            CI0->getOperand(0), CI0->getOperand(1),
+                            CI->getOperand(0), CI->getOperand(1))) ||
+                       (AltP0 == CurrentPred &&
+                        !areCompatibleCmpOps(
+                            CI0->getOperand(0), CI0->getOperand(1),
+                            CI->getOperand(1), CI->getOperand(0)));
+              return AltP0 == CurrentPred || AltP0Swapped == CurrentPred;
+            }
             return I->getOpcode() == E->getAltOpcode();
           },
           Mask, &OpScalars, &AltScalars);
@@ -7288,14 +7540,15 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         doForAllOpcodes(I, [](ScheduleData *SD) { SD->clearDependencies(); });
       ReSchedule = true;
     }
-    if (ReSchedule) {
-      resetSchedule();
-      initialFillReadyList(ReadyInsts);
-    }
     if (Bundle) {
       LLVM_DEBUG(dbgs() << "SLP: try schedule bundle " << *Bundle
                         << " in block " << BB->getName() << "\n");
       calculateDependencies(Bundle, /*InsertInReadyList=*/true, SLP);
+    }
+
+    if (ReSchedule) {
+      resetSchedule();
+      initialFillReadyList(ReadyInsts);
     }
 
     // Now try to schedule the new bundle or (if no bundle) just calculate
@@ -7305,8 +7558,9 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     while (((!Bundle && ReSchedule) || (Bundle && !Bundle->isReady())) &&
            !ReadyInsts.empty()) {
       ScheduleData *Picked = ReadyInsts.pop_back_val();
-      if (Picked->isSchedulingEntity() && Picked->isReady())
-        schedule(Picked, ReadyInsts);
+      assert(Picked->isSchedulingEntity() && Picked->isReady() &&
+             "must be ready to schedule");
+      schedule(Picked, ReadyInsts);
     }
   };
 
@@ -7330,6 +7584,11 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     ScheduleData *BundleMember = getScheduleData(V);
     assert(BundleMember &&
            "no ScheduleData for bundle member (maybe not in same basic block)");
+
+    // Make sure we don't leave the pieces of the bundle in the ready list when
+    // whole bundle might not be ready.
+    ReadyInsts.remove(BundleMember);
+
     if (!BundleMember->IsScheduled)
       continue;
     // A bundle member was scheduled as single instruction before and now
@@ -7360,6 +7619,10 @@ void BoUpSLP::BlockScheduling::cancelScheduling(ArrayRef<Value *> VL,
          "Can't cancel bundle which is already scheduled");
   assert(Bundle->isSchedulingEntity() && Bundle->isPartOfBundle() &&
          "tried to unbundle something which is not a bundle");
+
+  // Remove the bundle from the ready list.
+  if (Bundle->isReady())
+    ReadyInsts.remove(Bundle);
 
   // Un-bundle: make single instructions out of the bundle.
   ScheduleData *BundleMember = Bundle;
@@ -7610,7 +7873,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
       }
     }
     if (InsertInReadyList && SD->isReady()) {
-      ReadyInsts.push_back(SD);
+      ReadyInsts.insert(SD);
       LLVM_DEBUG(dbgs() << "SLP:     gets ready on update: " << *SD->Inst
                         << "\n");
     }
@@ -7689,6 +7952,11 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
     NumToSchedule--;
   }
   assert(NumToSchedule == 0 && "could not schedule all instructions");
+
+  // Check that we didn't break any of our invariants.
+#ifdef EXPENSIVE_CHECKS
+  BS->verify();
+#endif
 
   // Avoid duplicate scheduling of the block.
   BS->ScheduleStart = nullptr;

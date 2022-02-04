@@ -1,0 +1,16 @@
+--- !Analysis
+Pass:            prologepilog
+Name:            StackSize
+Function:        func0
+Args:
+  - NumStackBytes:   '1'
+  - String:          ' stack bytes in function'
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionCount
+Function:        func0
+Args:
+  - Wrong: '1'
+  - String:          ' instructions in function'
+...

@@ -34,9 +34,11 @@ RUN: llvm-profdata show --memory %p/Inputs/basic.memprofraw -o - | FileCheck %s
 We expect 3 MIB entries, 1 each for the malloc calls in the program and one
 additional entry from a realloc in glibc/libio/vasprintf.c.
 
-CHECK: MemProf Profile 1
-CHECK:   Version: 1
-CHECK:   TotalSizeBytes: 1016
-CHECK:   NumSegments: 9
-CHECK:   NumMIBInfo: 3
-CHECK:   NumStackOffsets: 3
+CHECK: MemprofProfile:
+CHECK-NEXT:   -
+CHECK-NEXT:   Header:
+CHECK-NEXT:     Version: 1
+CHECK-NEXT:     TotalSizeBytes: 1016
+CHECK-NEXT:     NumSegments: 9
+CHECK-NEXT:     NumMibInfo: 3
+CHECK-NEXT:     NumStackOffsets: 3

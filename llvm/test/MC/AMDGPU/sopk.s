@@ -180,7 +180,6 @@ s_getreg_b32 s2, hwreg(15)
 // GFX10: s_getreg_b32 s2, hwreg(HW_REG_SH_MEM_BASES) ; encoding: [0x0f,0xf8,0x02,0xb9]
 // GFX11: s_getreg_b32 s2, hwreg(HW_REG_SH_MEM_BASES) ; encoding: [0x0f,0xf8,0x82,0xb8]
 
-// GFX10+ registers
 s_getreg_b32 s2, hwreg(16)
 // SICI:  s_getreg_b32 s2, hwreg(16) ; encoding: [0x10,0xf8,0x02,0xb9]
 // GFX10: s_getreg_b32 s2, hwreg(HW_REG_TBA_LO) ; encoding: [0x10,0xf8,0x02,0xb9]
@@ -209,6 +208,7 @@ s_getreg_b32 s2, hwreg(19)
 // GFX9: s_getreg_b32 s2, hwreg(HW_REG_TMA_HI) ; encoding: [0x13,0xf8,0x82,0xb8]
 // VI: s_getreg_b32 s2, hwreg(19) ; encoding: [0x13,0xf8,0x82,0xb8]
 
+// GFX10+ registers
 s_getreg_b32 s2, hwreg(20)
 // SICI:  s_getreg_b32 s2, hwreg(20) ; encoding: [0x14,0xf8,0x02,0xb9]
 // VI9:   s_getreg_b32 s2, hwreg(20) ; encoding: [0x14,0xf8,0x82,0xb8]
@@ -307,7 +307,6 @@ s_setreg_b32 hwreg(15), s2
 // GFX10: s_setreg_b32 hwreg(HW_REG_SH_MEM_BASES), s2 ; encoding: [0x0f,0xf8,0x82,0xb9]
 // GFX11: s_setreg_b32 hwreg(HW_REG_SH_MEM_BASES), s2 ; encoding: [0x0f,0xf8,0x02,0xb9]
 
-// GFX10+ registers
 s_setreg_b32 hwreg(16), s2
 // SICI:  s_setreg_b32 hwreg(16), s2      ; encoding: [0x10,0xf8,0x82,0xb9]
 // GFX10: s_setreg_b32 hwreg(HW_REG_TBA_LO), s2 ; encoding: [0x10,0xf8,0x82,0xb9]
@@ -336,6 +335,7 @@ s_setreg_b32 hwreg(19), s2
 // GFX9: s_setreg_b32 hwreg(HW_REG_TMA_HI), s2 ; encoding: [0x13,0xf8,0x02,0xb9]
 // VI: s_setreg_b32 hwreg(19), s2 ; encoding: [0x13,0xf8,0x02,0xb9]
 
+// GFX10+ registers
 s_setreg_b32 hwreg(20), s2
 // SICI:  s_setreg_b32 hwreg(20), s2      ; encoding: [0x14,0xf8,0x82,0xb9]
 // VI9:   s_setreg_b32 hwreg(20), s2      ; encoding: [0x14,0xf8,0x02,0xb9]

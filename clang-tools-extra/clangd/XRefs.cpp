@@ -1928,9 +1928,9 @@ static QualType unwrapFindType(QualType T) {
   // FIXME: use HeuristicResolver to unwrap smart pointers?
 
   // Function type => return type.
-  if (auto FT = T->getAs<FunctionType>())
+  if (auto *FT = T->getAs<FunctionType>())
     return unwrapFindType(FT->getReturnType());
-  if (auto CRD = T->getAsCXXRecordDecl()) {
+  if (auto *CRD = T->getAsCXXRecordDecl()) {
     if (CRD->isLambda())
       return unwrapFindType(CRD->getLambdaCallOperator()->getReturnType());
     // FIXME: more cases we'd prefer the return type of the call operator?

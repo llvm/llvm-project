@@ -21,7 +21,7 @@ define i8 addrspace(1)* addrspace(1)* @test_simple(i8 addrspace(1)* %obj1, i8 ad
 ; CHECK-NEXT:    [[OBJ2_16:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[OBJ2]], i64 16
 ; CHECK-NEXT:    [[OBJ_X_BASE1:%.*]] = select i1 [[C]], i8 addrspace(1)* [[OBJ1]], i8 addrspace(1)* [[OBJ2]], !is_base_value !0
 ; CHECK-NEXT:    [[OBJ_X:%.*]] = select i1 [[C]], i8 addrspace(1)* [[OBJ1_12]], i8 addrspace(1)* [[OBJ2_16]]
-; CHECK-NEXT:    [[OBJ_Y_BASE:%.*]] = select i1 [[C]], i8 addrspace(1)* [[OBJ2]], i8 addrspace(1)* [[OBJ1]]
+; CHECK-NEXT:    [[OBJ_Y_BASE:%.*]] = select i1 [[C]], i8 addrspace(1)* [[OBJ2]], i8 addrspace(1)* [[OBJ1]], !is_base_value !0
 ; CHECK-NEXT:    [[OBJ_Y:%.*]] = select i1 [[C]], i8 addrspace(1)* [[OBJ2_16]], i8 addrspace(1)* [[OBJ1_12]]
 ; CHECK-NEXT:    [[OBJ_YA:%.*]] = bitcast i8 addrspace(1)* [[OBJ_Y]] to i8 addrspace(1)* addrspace(1)*
 ; CHECK-NEXT:    [[OBJ_X_BASE1_INT:%.*]] = ptrtoint i8 addrspace(1)* [[OBJ_X_BASE1]] to i64
@@ -31,7 +31,7 @@ define i8 addrspace(1)* addrspace(1)* @test_simple(i8 addrspace(1)* %obj1, i8 ad
 ; CHECK-NEXT:    [[OBJ_Y_BASE_INT:%.*]] = ptrtoint i8 addrspace(1)* [[OBJ_Y_BASE]] to i64
 ; CHECK-NEXT:    [[OBJ_YA_INT:%.*]] = ptrtoint i8 addrspace(1)* [[OBJ_Y]] to i64
 ; CHECK-NEXT:    [[OBJ_YA_OFFSET:%.*]] = sub i64 [[OBJ_YA_INT]], [[OBJ_Y_BASE_INT]]
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* nonnull @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i8 addrspace(1)* [[OBJ_X_BASE1]], i64 [[OBJ_X_OFFSET]], i8 addrspace(1)* [[OBJ_X_BASE1]], i64 [[OBJ_X_OFFSET]], i8 addrspace(1)* addrspace(1)* [[OBJ_Y_BASE_CAST]], i64 [[OBJ_YA_OFFSET]]), "gc-live"(i8 addrspace(1)* addrspace(1)* [[OBJ_YA]], i8 addrspace(1)* [[OBJ_Y_BASE]]) ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* nonnull elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i8 addrspace(1)* [[OBJ_X_BASE1]], i64 [[OBJ_X_OFFSET]], i8 addrspace(1)* [[OBJ_X_BASE1]], i64 [[OBJ_X_OFFSET]], i8 addrspace(1)* addrspace(1)* [[OBJ_Y_BASE_CAST]], i64 [[OBJ_YA_OFFSET]]), "gc-live"(i8 addrspace(1)* addrspace(1)* [[OBJ_YA]], i8 addrspace(1)* [[OBJ_Y_BASE]]) ]
 ; CHECK-NEXT:    [[OBJ_YA_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
 ; CHECK-NEXT:    [[OBJ_YA_RELOCATED_CASTED:%.*]] = bitcast i8 addrspace(1)* [[OBJ_YA_RELOCATED]] to i8 addrspace(1)* addrspace(1)*
 ; CHECK-NEXT:    ret i8 addrspace(1)* addrspace(1)* [[OBJ_YA_RELOCATED_CASTED]]
@@ -78,7 +78,7 @@ define i8 addrspace(1)* @test_chained(i8 addrspace(1)* %obj1, i8 addrspace(1)* %
 ; CHECK-NEXT:    [[OBJ_X_BASE_GEP:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[OBJ_X_BASE1]], i64 8
 ; CHECK-NEXT:    [[OBJ_X_BASE_OF_BASE_GEP:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[OBJ_X_BASE1]], i64 20
 ; CHECK-NEXT:    [[OBJ_X_BASE_OF_BASE_OF_BASE_GEP:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[OBJ_X_BASE1]], i64 24
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* nonnull @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i8 addrspace(1)* [[OBJ_X_BASE1]], i8 addrspace(1)* [[OBJ_X_BASE1]], i8 addrspace(1)* [[OBJ_X_BASE1]], i8 addrspace(1)* [[OBJ_X_BASE_GEP]], i8 addrspace(1)* [[OBJ_X_BASE_OF_BASE_GEP]], i8 addrspace(1)* [[OBJ_X_BASE_OF_BASE_OF_BASE_GEP]], i8 addrspace(1)* [[OBJ_X_BASE1]], i8 addrspace(1)* [[OBJ_X_BASE1]], i8 addrspace(1)* [[OBJ_X_BASE1]], i64 0, i64 0, i64 0, i64 8, i64 20, i64 24, i64 0, i64 0, i64 0), "gc-live"(i8 addrspace(1)* [[OBJ_X_BASE1]]) ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* nonnull elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i8 addrspace(1)* [[OBJ_X_BASE1]], i8 addrspace(1)* [[OBJ_X_BASE1]], i8 addrspace(1)* [[OBJ_X_BASE1]], i8 addrspace(1)* [[OBJ_X_BASE_GEP]], i8 addrspace(1)* [[OBJ_X_BASE_OF_BASE_GEP]], i8 addrspace(1)* [[OBJ_X_BASE_OF_BASE_OF_BASE_GEP]], i8 addrspace(1)* [[OBJ_X_BASE1]], i8 addrspace(1)* [[OBJ_X_BASE1]], i8 addrspace(1)* [[OBJ_X_BASE1]], i64 0, i64 0, i64 0, i64 8, i64 20, i64 24, i64 0, i64 0, i64 0), "gc-live"(i8 addrspace(1)* [[OBJ_X_BASE1]]) ]
 ; CHECK-NEXT:    [[OBJ_X_BASE1_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    ret i8 addrspace(1)* [[OBJ_X_BASE1_RELOCATED]]
 ;
@@ -111,24 +111,24 @@ entry:
 
   call void @foo() readonly [
   "deopt"(
-      i8 addrspace(1)* %obj.x.base,
-      i8 addrspace(1)* %obj.x.base_of_base_of_base,
-      i8 addrspace(1)* %obj.x.base_of_base,
-      i8 addrspace(1)* %obj.x.base_gep,
-      i8 addrspace(1)* %obj.x.base_of_base_gep,
-      i8 addrspace(1)* %obj.x.base_of_base_of_base_gep,
-      i8 addrspace(1)* %obj.x.base_gep_base,
-      i8 addrspace(1)* %obj.x.base_of_base_gep_base,
-      i8 addrspace(1)* %obj.x.base_of_base_of_base_gep_base,
-      i64 %obj.x.base_offset,
-      i64 %obj.x.base_of_base_offset,
-      i64 %obj.x.base_of_base_of_base_offset,
-      i64 %obj.x.base_gep_offset,
-      i64 %obj.x.base_of_base_gep_offset,
-      i64 %obj.x.base_of_base_of_base_gep_offset,
-      i64 %obj.x.base_gep_base_offset,
-      i64 %obj.x.base_of_base_gep_base_offset,
-      i64 %obj.x.base_of_base_of_base_gep_base_offset) ]
+  i8 addrspace(1)* %obj.x.base,
+  i8 addrspace(1)* %obj.x.base_of_base_of_base,
+  i8 addrspace(1)* %obj.x.base_of_base,
+  i8 addrspace(1)* %obj.x.base_gep,
+  i8 addrspace(1)* %obj.x.base_of_base_gep,
+  i8 addrspace(1)* %obj.x.base_of_base_of_base_gep,
+  i8 addrspace(1)* %obj.x.base_gep_base,
+  i8 addrspace(1)* %obj.x.base_of_base_gep_base,
+  i8 addrspace(1)* %obj.x.base_of_base_of_base_gep_base,
+  i64 %obj.x.base_offset,
+  i64 %obj.x.base_of_base_offset,
+  i64 %obj.x.base_of_base_of_base_offset,
+  i64 %obj.x.base_gep_offset,
+  i64 %obj.x.base_of_base_gep_offset,
+  i64 %obj.x.base_of_base_of_base_gep_offset,
+  i64 %obj.x.base_gep_base_offset,
+  i64 %obj.x.base_of_base_gep_base_offset,
+  i64 %obj.x.base_of_base_of_base_gep_base_offset) ]
 
   ret i8 addrspace(1)* %obj.x.base_of_base
 }

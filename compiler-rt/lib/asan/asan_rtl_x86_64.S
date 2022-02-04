@@ -42,7 +42,7 @@ CLABEL(reg, op, 1, i): ;\
         pop    %rcx ;\
         jl     RLABEL(reg, op, 1, i);\
         mov    %##reg,%rdi ;\
-        jmp    __asan_report_##op##1@PLT ;\
+        jmp    __asan_report_##op##1_asm ;\
 
 #define ASAN_MEMORY_ACCESS_EXTRA_CHECK_2(reg, op, i) \
 CLABEL(reg, op, 2, i): ;\
@@ -54,7 +54,7 @@ CLABEL(reg, op, 2, i): ;\
         pop    %rcx ;\
         jl     RLABEL(reg, op, 2, i);\
         mov    %##reg,%rdi ;\
-        jmp    __asan_report_##op##2@PLT ;\
+        jmp    __asan_report_##op##2_asm ;\
 
 #define ASAN_MEMORY_ACCESS_EXTRA_CHECK_4(reg, op, i) \
 CLABEL(reg, op, 4, i): ;\
@@ -66,7 +66,7 @@ CLABEL(reg, op, 4, i): ;\
         pop    %rcx ;\
         jl     RLABEL(reg, op, 4, i);\
         mov    %##reg,%rdi ;\
-        jmp    __asan_report_##op##4@PLT ;\
+        jmp    __asan_report_##op##4_asm ;\
 
 #define ASAN_MEMORY_ACCESS_CALLBACK_ADD_1(reg, op) \
 BEGINF(reg, op, 1, add) ;\
@@ -97,7 +97,7 @@ ENDF
 #define ASAN_MEMORY_ACCESS_FAIL(reg, op, s, i) \
 FLABEL(reg, op, s, i): ;\
         mov    %##reg,%rdi ;\
-        jmp    __asan_report_##op##s@PLT;\
+        jmp    __asan_report_##op##s##_asm;\
 
 #define ASAN_MEMORY_ACCESS_CALLBACK_ADD_8(reg, op) \
 BEGINF(reg, op, 8, add) ;\

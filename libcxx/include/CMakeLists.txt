@@ -28,6 +28,7 @@ set(files
   __algorithm/half_positive.h
   __algorithm/in_in_out_result.h
   __algorithm/in_in_result.h
+  __algorithm/in_out_out_result.h
   __algorithm/in_out_result.h
   __algorithm/includes.h
   __algorithm/inplace_merge.h

@@ -853,6 +853,9 @@ void PatternEmitter::emitMatchLogic(DagNode tree, StringRef opName) {
 
     auto condition = constraint.getConditionTemplate();
     if (isa<TypeConstraint>(constraint)) {
+      if (entities.size() != 1)
+        PrintFatalError(loc, "type constraint requires exactly one argument");
+
       auto self = formatv("({0}.getType())",
                           symbolInfoMap.getValueAndRangeUse(entities.front()));
       emitMatchCheck(
@@ -1145,8 +1148,8 @@ StringRef PatternEmitter::handleReplaceWithValue(DagNode tree) {
 std::string PatternEmitter::handleLocationDirective(DagNode tree) {
   assert(tree.isLocationDirective());
   auto lookUpArgLoc = [this, &tree](int idx) {
-    const auto *const lookupFmt = "(*{0}.begin()).getLoc()";
-    return symbolInfoMap.getAllRangeUse(tree.getArgName(idx), lookupFmt);
+    const auto *const lookupFmt = "{0}.getLoc()";
+    return symbolInfoMap.getValueAndRangeUse(tree.getArgName(idx), lookupFmt);
   };
 
   if (tree.getNumArgs() == 0)

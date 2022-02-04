@@ -313,7 +313,7 @@ void ConcatOutputSection::finalize() {
         fatal(Twine(__FUNCTION__) + ": FIXME: thunk range overrun");
       }
       thunkInfo.isec =
-          make<ConcatInputSection>(isec->getSegName(), isec->getName());
+          makeSyntheticInputSection(isec->getSegName(), isec->getName());
       thunkInfo.isec->parent = this;
 
       // This code runs after dead code removal. Need to set the `live` bit

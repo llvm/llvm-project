@@ -39,25 +39,36 @@ namespace llvm {
 class InstrProfReader;
 
 /// A file format agnostic iterator over profiling data.
+template <class record_type = NamedInstrProfRecord,
+          class reader_type = InstrProfReader>
 class InstrProfIterator {
 public:
   using iterator_category = std::input_iterator_tag;
-  using value_type = NamedInstrProfRecord;
+  using value_type = record_type;
   using difference_type = std::ptrdiff_t;
   using pointer = value_type *;
   using reference = value_type &;
 
 private:
-  InstrProfReader *Reader = nullptr;
+  reader_type *Reader = nullptr;
   value_type Record;
 
-  void Increment();
+  void increment() {
+    if (Error E = Reader->readNextRecord(Record)) {
+      // Handle errors in the reader.
+      InstrProfError::take(std::move(E));
+      *this = InstrProfIterator();
+    }
+  }
 
 public:
   InstrProfIterator() = default;
-  InstrProfIterator(InstrProfReader *Reader) : Reader(Reader) { Increment(); }
+  InstrProfIterator(reader_type *Reader) : Reader(Reader) { increment(); }
 
-  InstrProfIterator &operator++() { Increment(); return *this; }
+  InstrProfIterator &operator++() {
+    increment();
+    return *this;
+  }
   bool operator==(const InstrProfIterator &RHS) const {
     return Reader == RHS.Reader;
   }
@@ -88,8 +99,8 @@ public:
   virtual Error printBinaryIds(raw_ostream &OS) { return success(); };
 
   /// Iterator over profile data.
-  InstrProfIterator begin() { return InstrProfIterator(this); }
-  InstrProfIterator end() { return InstrProfIterator(); }
+  InstrProfIterator<> begin() { return InstrProfIterator<>(this); }
+  InstrProfIterator<> end() { return InstrProfIterator<>(); }
 
   virtual bool isIRLevelProfile() const = 0;
 

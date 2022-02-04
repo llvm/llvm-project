@@ -8,7 +8,7 @@ declare i32 @h()
 define i32 addrspace(1)* @f0(i32 addrspace(1)* %arg) gc "statepoint-example" {
 ; CHECK-LABEL: @f0(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @g, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 100), "gc-live"(i32 addrspace(1)* [[ARG:%.*]]) ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* elementtype(void ()) @g, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 100), "gc-live"(i32 addrspace(1)* [[ARG:%.*]]) ]
 ; CHECK-NEXT:    [[ARG_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    [[ARG_RELOCATED_CASTED:%.*]] = bitcast i8 addrspace(1)* [[ARG_RELOCATED]] to i32 addrspace(1)*
 ; CHECK-NEXT:    ret i32 addrspace(1)* [[ARG_RELOCATED_CASTED]]
@@ -22,7 +22,7 @@ define i32 addrspace(1)* @f0(i32 addrspace(1)* %arg) gc "statepoint-example" {
 define i32 addrspace(1)* @f1(i32 addrspace(1)* %arg) gc "statepoint-example"  personality i32 8  {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @g, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 100), "gc-live"(i32 addrspace(1)* [[ARG:%.*]]) ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* elementtype(void ()) @g, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 100), "gc-live"(i32 addrspace(1)* [[ARG:%.*]]) ]
 ; CHECK-NEXT:    to label [[NORMAL_DEST:%.*]] unwind label [[UNWIND_DEST:%.*]]
 ; CHECK:       normal_dest:
 ; CHECK-NEXT:    [[ARG_RELOCATED1:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
@@ -49,7 +49,7 @@ define i32 addrspace(1)* @f1(i32 addrspace(1)* %arg) gc "statepoint-example"  pe
 define i32 addrspace(1)* @f2(i32 addrspace(1)* %arg) gc "statepoint-example" {
 ; CHECK-LABEL: @f2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, i32 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32f(i64 2882400000, i32 0, i32 ()* @h, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 100), "gc-live"(i32 addrspace(1)* [[ARG:%.*]]) ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, i32 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32f(i64 2882400000, i32 0, i32 ()* elementtype(i32 ()) @h, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 100), "gc-live"(i32 addrspace(1)* [[ARG:%.*]]) ]
 ; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.experimental.gc.result.i32(token [[STATEPOINT_TOKEN]])
 ; CHECK-NEXT:    [[ARG_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    [[ARG_RELOCATED_CASTED:%.*]] = bitcast i8 addrspace(1)* [[ARG_RELOCATED]] to i32 addrspace(1)*
@@ -67,7 +67,7 @@ define i32 addrspace(1)* @f2(i32 addrspace(1)* %arg) gc "statepoint-example" {
 define i32 addrspace(1)* @f3(i32 addrspace(1)* %arg) gc "statepoint-example"  personality i32 8  {
 ; CHECK-LABEL: @f3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = invoke token (i64, i32, i32 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32f(i64 2882400000, i32 0, i32 ()* @h, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 100), "gc-live"(i32 addrspace(1)* [[ARG:%.*]]) ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = invoke token (i64, i32, i32 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32f(i64 2882400000, i32 0, i32 ()* elementtype(i32 ()) @h, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 100), "gc-live"(i32 addrspace(1)* [[ARG:%.*]]) ]
 ; CHECK-NEXT:    to label [[NORMAL_DEST:%.*]] unwind label [[UNWIND_DEST:%.*]]
 ; CHECK:       normal_dest:
 ; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.experimental.gc.result.i32(token [[STATEPOINT_TOKEN]])
@@ -99,7 +99,7 @@ define i32 addrspace(1)* @f3(i32 addrspace(1)* %arg) gc "statepoint-example"  pe
 define i32 addrspace(1)* @f4(i32 addrspace(1)* %arg) gc "statepoint-example" {
 ; CHECK-LABEL: @f4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @g, i32 0, i32 1, i32 0, i32 0) [ "gc-transition"(i32 400, i8 90), "gc-live"(i32 addrspace(1)* [[ARG:%.*]]) ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* elementtype(void ()) @g, i32 0, i32 1, i32 0, i32 0) [ "gc-transition"(i32 400, i8 90), "gc-live"(i32 addrspace(1)* [[ARG:%.*]]) ]
 ; CHECK-NEXT:    [[ARG_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    [[ARG_RELOCATED_CASTED:%.*]] = bitcast i8 addrspace(1)* [[ARG_RELOCATED]] to i32 addrspace(1)*
 ; CHECK-NEXT:    ret i32 addrspace(1)* [[ARG_RELOCATED_CASTED]]

@@ -8,11 +8,11 @@
 define i32 @test_ifcvt(i32 %a, i32 %b) #0 {
 ; CHECK-LABEL: test_ifcvt:
 ; CHECK:       @ %bb.0: @ %common.ret
-; CHECK-NEXT:    adds r2, r1, #1
+; CHECK-NEXT:    movs r2, #1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    it eq
-; CHECK-NEXT:    subeq r2, r1, #1
-; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    moveq.w r2, #-1
+; CHECK-NEXT:    adds r0, r1, r2
 ; CHECK-NEXT:    bx lr
   %tmp2 = icmp eq i32 %a, 0
   br i1 %tmp2, label %cond_false, label %cond_true

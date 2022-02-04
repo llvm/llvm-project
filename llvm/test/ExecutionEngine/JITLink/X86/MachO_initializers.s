@@ -1,5 +1,9 @@
 # RUN: llvm-mc -triple=x86_64-apple-macosx10.9 -filetype=obj -o %t.o %s
 # RUN: llvm-jitlink -noexec %t.o
+#
+# Check that the mere presence of initializers doesn't cause failures.
+# (Initializers would not be run, even if -noexec were absent, since we're
+# not loading the ORC runtime in this test)
 
         .section	__TEXT,__text,regular,pure_instructions
 	.macosx_version_min 10, 14	sdk_version 10, 15

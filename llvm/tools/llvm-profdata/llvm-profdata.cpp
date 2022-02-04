@@ -2487,7 +2487,8 @@ static int showMemProfProfile(const std::string &Filename, raw_fd_ostream &OS) {
 
   std::unique_ptr<llvm::memprof::RawMemProfReader> Reader(
       ReaderOr.get().release());
-  Reader->printSummaries(OS);
+
+  Reader->printYAML(OS);
   return 0;
 }
 

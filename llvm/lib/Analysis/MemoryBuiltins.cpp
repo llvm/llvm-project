@@ -43,6 +43,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <type_traits>
 #include <utility>
 
 using namespace llvm;
@@ -395,43 +396,60 @@ Constant *llvm::getInitialValueOfAllocation(const CallBase *Alloc,
   return nullptr;
 }
 
+struct FreeFnsTy {
+  unsigned NumParams;
+};
+
+// clang-format off
+static const std::pair<LibFunc, FreeFnsTy> FreeFnData[] = {
+    {LibFunc_free,                               {1}},
+    {LibFunc_ZdlPv,                              {1}}, // operator delete(void*)
+    {LibFunc_ZdaPv,                              {1}}, // operator delete[](void*)
+    {LibFunc_msvc_delete_ptr32,                  {1}}, // operator delete(void*)
+    {LibFunc_msvc_delete_ptr64,                  {1}}, // operator delete(void*)
+    {LibFunc_msvc_delete_array_ptr32,            {1}}, // operator delete[](void*)
+    {LibFunc_msvc_delete_array_ptr64,            {1}}, // operator delete[](void*)
+    {LibFunc_ZdlPvj,                             {2}}, // delete(void*, uint)
+    {LibFunc_ZdlPvm,                             {2}}, // delete(void*, ulong)
+    {LibFunc_ZdlPvRKSt9nothrow_t,                {2}}, // delete(void*, nothrow)
+    {LibFunc_ZdlPvSt11align_val_t,               {2}}, // delete(void*, align_val_t)
+    {LibFunc_ZdaPvj,                             {2}}, // delete[](void*, uint)
+    {LibFunc_ZdaPvm,                             {2}}, // delete[](void*, ulong)
+    {LibFunc_ZdaPvRKSt9nothrow_t,                {2}}, // delete[](void*, nothrow)
+    {LibFunc_ZdaPvSt11align_val_t,               {2}}, // delete[](void*, align_val_t)
+    {LibFunc_msvc_delete_ptr32_int,              {2}}, // delete(void*, uint)
+    {LibFunc_msvc_delete_ptr64_longlong,         {2}}, // delete(void*, ulonglong)
+    {LibFunc_msvc_delete_ptr32_nothrow,          {2}}, // delete(void*, nothrow)
+    {LibFunc_msvc_delete_ptr64_nothrow,          {2}}, // delete(void*, nothrow)
+    {LibFunc_msvc_delete_array_ptr32_int,        {2}}, // delete[](void*, uint)
+    {LibFunc_msvc_delete_array_ptr64_longlong,   {2}}, // delete[](void*, ulonglong)
+    {LibFunc_msvc_delete_array_ptr32_nothrow,    {2}}, // delete[](void*, nothrow)
+    {LibFunc_msvc_delete_array_ptr64_nothrow,    {2}}, // delete[](void*, nothrow)
+    {LibFunc___kmpc_free_shared,                 {2}}, // OpenMP Offloading RTL free
+    {LibFunc_ZdlPvSt11align_val_tRKSt9nothrow_t, {3}}, // delete(void*, align_val_t, nothrow)
+    {LibFunc_ZdaPvSt11align_val_tRKSt9nothrow_t, {3}}, // delete[](void*, align_val_t, nothrow)
+    {LibFunc_ZdlPvjSt11align_val_t,              {3}}, // delete(void*, unsigned int, align_val_t)
+    {LibFunc_ZdlPvmSt11align_val_t,              {3}}, // delete(void*, unsigned long, align_val_t)
+    {LibFunc_ZdaPvjSt11align_val_t,              {3}}, // delete[](void*, unsigned int, align_val_t)
+    {LibFunc_ZdaPvmSt11align_val_t,              {3}}, // delete[](void*, unsigned long, align_val_t)
+};
+// clang-format on
+
+Optional<FreeFnsTy> getFreeFunctionDataForFunction(const Function *Callee,
+                                                   const LibFunc TLIFn) {
+  const auto *Iter =
+      find_if(FreeFnData, [TLIFn](const std::pair<LibFunc, FreeFnsTy> &P) {
+        return P.first == TLIFn;
+      });
+  if (Iter == std::end(FreeFnData))
+    return None;
+  return Iter->second;
+}
+
 /// isLibFreeFunction - Returns true if the function is a builtin free()
 bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
-  unsigned ExpectedNumParams;
-  if (TLIFn == LibFunc_free ||
-      TLIFn == LibFunc_ZdlPv || // operator delete(void*)
-      TLIFn == LibFunc_ZdaPv || // operator delete[](void*)
-      TLIFn == LibFunc_msvc_delete_ptr32 || // operator delete(void*)
-      TLIFn == LibFunc_msvc_delete_ptr64 || // operator delete(void*)
-      TLIFn == LibFunc_msvc_delete_array_ptr32 || // operator delete[](void*)
-      TLIFn == LibFunc_msvc_delete_array_ptr64)   // operator delete[](void*)
-    ExpectedNumParams = 1;
-  else if (TLIFn == LibFunc_ZdlPvj ||              // delete(void*, uint)
-           TLIFn == LibFunc_ZdlPvm ||              // delete(void*, ulong)
-           TLIFn == LibFunc_ZdlPvRKSt9nothrow_t || // delete(void*, nothrow)
-           TLIFn == LibFunc_ZdlPvSt11align_val_t || // delete(void*, align_val_t)
-           TLIFn == LibFunc_ZdaPvj ||              // delete[](void*, uint)
-           TLIFn == LibFunc_ZdaPvm ||              // delete[](void*, ulong)
-           TLIFn == LibFunc_ZdaPvRKSt9nothrow_t || // delete[](void*, nothrow)
-           TLIFn == LibFunc_ZdaPvSt11align_val_t || // delete[](void*, align_val_t)
-           TLIFn == LibFunc_msvc_delete_ptr32_int ||      // delete(void*, uint)
-           TLIFn == LibFunc_msvc_delete_ptr64_longlong || // delete(void*, ulonglong)
-           TLIFn == LibFunc_msvc_delete_ptr32_nothrow || // delete(void*, nothrow)
-           TLIFn == LibFunc_msvc_delete_ptr64_nothrow || // delete(void*, nothrow)
-           TLIFn == LibFunc_msvc_delete_array_ptr32_int ||      // delete[](void*, uint)
-           TLIFn == LibFunc_msvc_delete_array_ptr64_longlong || // delete[](void*, ulonglong)
-           TLIFn == LibFunc_msvc_delete_array_ptr32_nothrow || // delete[](void*, nothrow)
-           TLIFn == LibFunc_msvc_delete_array_ptr64_nothrow || // delete[](void*, nothrow)
-           TLIFn == LibFunc___kmpc_free_shared) // OpenMP Offloading RTL free
-    ExpectedNumParams = 2;
-  else if (TLIFn == LibFunc_ZdaPvSt11align_val_tRKSt9nothrow_t || // delete(void*, align_val_t, nothrow)
-           TLIFn == LibFunc_ZdlPvSt11align_val_tRKSt9nothrow_t || // delete[](void*, align_val_t, nothrow)
-           TLIFn == LibFunc_ZdlPvjSt11align_val_t || // delete(void*, unsigned long, align_val_t)
-           TLIFn == LibFunc_ZdlPvmSt11align_val_t || // delete(void*, unsigned long, align_val_t)
-           TLIFn == LibFunc_ZdaPvjSt11align_val_t || // delete[](void*, unsigned int, align_val_t)
-           TLIFn == LibFunc_ZdaPvmSt11align_val_t) // delete[](void*, unsigned long, align_val_t)
-    ExpectedNumParams = 3;
-  else
+  Optional<FreeFnsTy> FnData = getFreeFunctionDataForFunction(F, TLIFn);
+  if (!FnData.hasValue())
     return false;
 
   // Check free prototype.
@@ -440,7 +458,7 @@ bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
   FunctionType *FTy = F->getFunctionType();
   if (!FTy->getReturnType()->isVoidTy())
     return false;
-  if (FTy->getNumParams() != ExpectedNumParams)
+  if (FTy->getNumParams() != FnData->NumParams)
     return false;
   if (FTy->getParamType(0) != Type::getInt8PtrTy(F->getContext()))
     return false;

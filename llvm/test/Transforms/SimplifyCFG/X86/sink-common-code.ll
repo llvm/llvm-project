@@ -1261,9 +1261,8 @@ merge:
 define i32 @test_insertvalue(i1 zeroext %flag, %TP %P) {
 ; CHECK-LABEL: @test_insertvalue(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[I1:%.*]] = insertvalue [[TP:%.*]] [[P:%.*]], i32 0, 0
-; CHECK-NEXT:    [[I2:%.*]] = insertvalue [[TP]] [[P]], i32 1, 0
-; CHECK-NEXT:    [[I:%.*]] = select i1 [[FLAG:%.*]], [[TP]] [[I1]], [[TP]] [[I2]]
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[FLAG:%.*]], i32 0, i32 1
+; CHECK-NEXT:    [[I2:%.*]] = insertvalue [[TP:%.*]] [[P:%.*]], i32 [[DOT]], 0
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
