@@ -3414,11 +3414,13 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ConversionPassIncGen",
+        ":IR",
         ":Pass",
         ":SPIRVConversion",
         ":SPIRVDialect",
         ":Transforms",
         ":VectorOps",
+        "//llvm:Support",
     ],
 )
 
