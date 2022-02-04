@@ -1,4 +1,4 @@
-; RUN: opt < %s -instsimplify -S | FileCheck %s
+; RUN: opt < %s -passes=instsimplify -S | FileCheck %s
 
 define <2 x i32> @sdiv(<2 x i32> %x) {
 ; CHECK-LABEL: @sdiv(

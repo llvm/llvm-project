@@ -1,6 +1,6 @@
 ; bswap should be constant folded when it is passed a constant argument
 
-; RUN: opt < %s -instsimplify -S | FileCheck %s
+; RUN: opt < %s -passes=instsimplify -S | FileCheck %s
 
 declare i16 @llvm.bswap.i16(i16)
 

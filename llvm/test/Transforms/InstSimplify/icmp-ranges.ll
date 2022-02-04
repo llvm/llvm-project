@@ -1,4 +1,4 @@
-; RUN: opt < %s -instsimplify -S | FileCheck %s
+; RUN: opt < %s -passes=instsimplify -S | FileCheck %s
 
 ; Cycle through all pairs of predicates to test
 ; simplification of range-intersection or range-union.

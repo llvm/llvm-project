@@ -1,4 +1,4 @@
-; RUN: opt < %s -instsimplify
+; RUN: opt < %s -passes=instsimplify
 
 ; instsimplify pass should explicitly require DominatorTreeAnalysis
 ; This test will segfault if DominatorTree is not available

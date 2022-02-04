@@ -1,5 +1,5 @@
-; RUN: opt < %s -instsimplify -S | FileCheck %s
-; RUN: opt < %s -instsimplify -disable-simplify-libcalls -S | FileCheck %s --check-prefix=FNOBUILTIN
+; RUN: opt < %s -passes=instsimplify -S | FileCheck %s
+; RUN: opt < %s -passes=instsimplify -disable-simplify-libcalls -S | FileCheck %s --check-prefix=FNOBUILTIN
 
 declare double @acos(double) readnone nounwind willreturn
 declare double @asin(double) readnone nounwind willreturn

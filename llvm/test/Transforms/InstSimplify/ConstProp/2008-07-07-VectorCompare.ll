@@ -1,4 +1,4 @@
-; RUN: opt < %s -instsimplify -disable-output
+; RUN: opt < %s -passes=instsimplify -disable-output
 ; PR2529
 define <4 x i1> @test1(i32 %argc, i8** %argv) {
 entry:  

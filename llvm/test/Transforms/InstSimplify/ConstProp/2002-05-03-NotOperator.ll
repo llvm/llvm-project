@@ -4,7 +4,7 @@
 
 ; Fix #2: The unary not instruction now no longer exists. Change to xor.
 
-; RUN: opt < %s -instsimplify -S | \
+; RUN: opt < %s -passes=instsimplify -S | \
 ; RUN:   not grep "i32 0"
 
 define i32 @test1() {
