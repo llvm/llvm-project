@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -ferror-limit 150 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -ferror-limit 150 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50,omp51 -fopenmp -fopenmp-version=51 -ferror-limit 150 %s -Wuninitialized
+// RUN: %clang_cc1 -DOMP51 -verify=expected,omp50,omp51 -fopenmp -fopenmp-version=51 -ferror-limit 150 %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 150 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -ferror-limit 150 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50,omp51 -fopenmp-simd -fopenmp-version=51 -ferror-limit 150 %s -Wuninitialized
+// RUN: %clang_cc1 -DOMP51 -verify=expected,omp50,omp51 -fopenmp-simd -fopenmp-version=51 -ferror-limit 150 %s -Wuninitialized
 
 int foo() {
 L1:
@@ -914,6 +914,16 @@ T mixed() {
 // expected-note@+1 2 {{'capture' clause used here}}
 #pragma omp atomic capture read
   a = ++b;
+#ifdef OMP51
+// expected-error@+2 2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
+// expected-note@+1 2 {{'write' clause used here}}
+#pragma omp atomic write compare
+  a = b;
+// expected-error@+2 2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
+// expected-note@+1 2 {{'read' clause used here}}
+#pragma omp atomic read compare
+  a = b;
+#endif
   return T();
 }
 
@@ -935,18 +945,16 @@ int mixed() {
 // expected-note@+1 {{'write' clause used here}}
 #pragma omp atomic write capture
   a = b;
+#ifdef OMP51
+// expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
+// expected-note@+1 {{'write' clause used here}}
+#pragma omp atomic write compare
+  a = b;
+// expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
+// expected-note@+1 {{'read' clause used here}}
+#pragma omp atomic read compare
+  a = b;
+#endif
   // expected-note@+1 {{in instantiation of function template specialization 'mixed<int>' requested here}}
   return mixed<int>();
 }
-
-#if _OPENMP >= 202011
-int compare() {
-  int a, b, c;
-// omp51-error@+1 {{atomic compare is not supported for now}}
-#pragma omp atomic compare
-  {
-    if (a == b)
-      a = c;
-  }
-}
-#endif
