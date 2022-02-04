@@ -1,6 +1,7 @@
 // RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
-// REQUIRES: x86_64-target-arch
+// musl does not define FP_XSTATE_MAGIC1.
+// REQUIRES: x86_64-target-arch && glibc-2.27
 
 #include <pthread.h>
 #include <signal.h>
