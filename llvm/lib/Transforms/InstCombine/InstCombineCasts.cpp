@@ -2150,13 +2150,9 @@ optimizeVectorResizeWithIntegerBitCasts(Value *InVal, VectorType *DestTy,
   // Now that the element types match, get the shuffle mask and RHS of the
   // shuffle to use, which depends on whether we're increasing or decreasing the
   // size of the input.
-  SmallVector<int, 16> ShuffleMaskStorage;
+  auto ShuffleMaskStorage = llvm::to_vector<16>(llvm::seq<int>(0, SrcElts));
   ArrayRef<int> ShuffleMask;
   Value *V2;
-
-  // Produce an identify shuffle mask for the src vector.
-  ShuffleMaskStorage.resize(SrcElts);
-  std::iota(ShuffleMaskStorage.begin(), ShuffleMaskStorage.end(), 0);
 
   if (SrcElts > DestElts) {
     // If we're shrinking the number of elements (rewriting an integer
