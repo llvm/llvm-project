@@ -10,7 +10,6 @@ add_llvm_unittest(ProfileDataTests
   InstrProfDataTest.cpp
   InstrProfTest.cpp
   SampleProfTest.cpp
-  MemProfTest.cpp
   )
 
 target_link_libraries(ProfileDataTests PRIVATE LLVMTestingSupport)
