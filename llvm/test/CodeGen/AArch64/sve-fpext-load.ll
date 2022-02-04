@@ -23,7 +23,9 @@ define <vscale x 4 x double> @ext4_f16_f64(<vscale x 4 x half> *%ptr, i64 %index
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
 ; CHECK-NEXT:    uunpkhi z2.d, z0.s
+; CHECK-NEXT:    movprfx z0, z1
 ; CHECK-NEXT:    fcvt z0.d, p0/m, z1.h
+; CHECK-NEXT:    movprfx z1, z2
 ; CHECK-NEXT:    fcvt z1.d, p0/m, z2.h
 ; CHECK-NEXT:    ret
   %load = load <vscale x 4 x half>, <vscale x 4 x half>* %ptr, align 4
@@ -43,10 +45,13 @@ define <vscale x 8 x double> @ext8_f16_f64(<vscale x 8 x half> *%ptr, i64 %index
 ; CHECK-NEXT:    uunpklo z2.d, z1.s
 ; CHECK-NEXT:    uunpkhi z1.d, z1.s
 ; CHECK-NEXT:    uunpklo z3.d, z0.s
-; CHECK-NEXT:    uunpkhi z4.d, z0.s
-; CHECK-NEXT:    fcvt z0.d, p0/m, z2.h
 ; CHECK-NEXT:    fcvt z1.d, p0/m, z1.h
+; CHECK-NEXT:    uunpkhi z4.d, z0.s
+; CHECK-NEXT:    movprfx z0, z2
+; CHECK-NEXT:    fcvt z0.d, p0/m, z2.h
+; CHECK-NEXT:    movprfx z2, z3
 ; CHECK-NEXT:    fcvt z2.d, p0/m, z3.h
+; CHECK-NEXT:    movprfx z3, z4
 ; CHECK-NEXT:    fcvt z3.d, p0/m, z4.h
 ; CHECK-NEXT:    ret
   %load = load <vscale x 8 x half>, <vscale x 8 x half>* %ptr, align 4
@@ -76,7 +81,9 @@ define <vscale x 4 x double> @ext4_f32_f64(<vscale x 4 x float> *%ptr, i64 %inde
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
 ; CHECK-NEXT:    uunpkhi z2.d, z0.s
+; CHECK-NEXT:    movprfx z0, z1
 ; CHECK-NEXT:    fcvt z0.d, p0/m, z1.s
+; CHECK-NEXT:    movprfx z1, z2
 ; CHECK-NEXT:    fcvt z1.d, p0/m, z2.s
 ; CHECK-NEXT:    ret
   %load = load <vscale x 4 x float>, <vscale x 4 x float>* %ptr, align 4
