@@ -1351,14 +1351,9 @@ define void @t23_phi_in_landingpad_compatible_incoming_values() personality i8* 
 ; CHECK-LABEL: @t23_phi_in_landingpad_compatible_incoming_values(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE0:%.*]]
-; CHECK:       if.then0:
-; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
-; CHECK:       invoke.cont0:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE0:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[IF_THEN0]] ], [ 0, [[IF_THEN1:%.*]] ], [ -1, [[IF_THEN2:%.*]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ -1, [[IF_THEN2:%.*]] ], [ 0, [[IF_THEN1_INVOKE]] ]
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @consume(i32 [[PHI]])
@@ -1366,11 +1361,11 @@ define void @t23_phi_in_landingpad_compatible_incoming_values() personality i8* 
 ; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
 ; CHECK:       if.else0:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1]], label [[IF_ELSE1:%.*]]
-; CHECK:       if.then1:
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_ELSE1:%.*]]
+; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
-; CHECK:       invoke.cont2:
+; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.else1:
 ; CHECK-NEXT:    [[C2:%.*]] = call i1 @cond()
