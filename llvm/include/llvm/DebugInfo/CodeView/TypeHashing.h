@@ -9,10 +9,12 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_TYPEHASHING_H
 #define LLVM_DEBUGINFO_CODEVIEW_TYPEHASHING_H
 
-#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/StringRef.h"
 
-#include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 
@@ -21,6 +23,7 @@
 #include <type_traits>
 
 namespace llvm {
+class raw_ostream;
 namespace codeview {
 
 /// A locally hashed type represents a straightforward hash code of a serialized

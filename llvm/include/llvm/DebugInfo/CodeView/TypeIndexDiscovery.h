@@ -9,7 +9,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_TYPEINDEXDISCOVERY_H
 #define LLVM_DEBUGINFO_CODEVIEW_TYPEINDEXDISCOVERY_H
 
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/Error.h"

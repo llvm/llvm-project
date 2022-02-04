@@ -10,15 +10,17 @@
 #define LLVM_DEBUGINFO_CODEVIEW_SYMBOLSERIALIZER_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
-#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecordMapping.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamWriter.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include <array>
 #include <cstdint>
 
 namespace llvm {

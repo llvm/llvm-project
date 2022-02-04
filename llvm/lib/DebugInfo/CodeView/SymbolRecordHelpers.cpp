@@ -8,7 +8,7 @@
 
 #include "llvm/DebugInfo/CodeView/SymbolRecordHelpers.h"
 
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 
 using namespace llvm;
