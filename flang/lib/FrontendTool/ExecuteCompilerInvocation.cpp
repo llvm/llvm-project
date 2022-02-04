@@ -35,6 +35,8 @@ static std::unique_ptr<FrontendAction> CreateFrontendBaseAction(
     return std::make_unique<ParseSyntaxOnlyAction>();
   case EmitMLIR:
     return std::make_unique<EmitMLIRAction>();
+  case EmitLLVM:
+    return std::make_unique<EmitLLVMAction>();
   case EmitObj:
     return std::make_unique<EmitObjAction>();
   case DebugUnparse:

@@ -34,6 +34,9 @@ enum ActionKind {
   /// Emit a .mlir file
   EmitMLIR,
 
+  /// Emit an .ll file
+  EmitLLVM,
+
   /// Emit a .o file.
   EmitObj,
 
@@ -84,9 +87,6 @@ enum ActionKind {
 
   /// Run a plugin action
   PluginAction
-
-  /// TODO: RunPreprocessor, EmitLLVM, EmitLLVMOnly,
-  /// EmitCodeGenOnly, EmitAssembly, (...)
 };
 
 /// \param suffix The file extension

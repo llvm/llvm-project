@@ -1071,7 +1071,7 @@ def d_Flag : Flag<["-"], "d">, Group<d_Group>;
 def d_Joined : Joined<["-"], "d">, Group<d_Group>;
 def emit_ast : Flag<["-"], "emit-ast">,
   HelpText<"Emit Clang AST files for source inputs">;
-def emit_llvm : Flag<["-"], "emit-llvm">, Flags<[CC1Option]>, Group<Action_Group>,
+def emit_llvm : Flag<["-"], "emit-llvm">, Flags<[CC1Option, FC1Option]>, Group<Action_Group>,
   HelpText<"Use the LLVM representation for assembler and object files">;
 def emit_interface_stubs : Flag<["-"], "emit-interface-stubs">, Flags<[CC1Option]>, Group<Action_Group>,
   HelpText<"Generate Interface Stub Files.">;

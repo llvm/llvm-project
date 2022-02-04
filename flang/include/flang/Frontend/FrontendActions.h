@@ -13,6 +13,7 @@
 #include "flang/Semantics/semantics.h"
 
 #include "mlir/IR/BuiltinOps.h"
+#include "llvm/IR/Module.h"
 #include <memory>
 
 namespace Fortran::frontend {
@@ -163,9 +164,22 @@ protected:
   std::unique_ptr<mlir::ModuleOp> mlirModule;
   std::unique_ptr<mlir::MLIRContext> mlirCtx;
   /// }
+
+  /// @name LLVM IR
+  std::unique_ptr<llvm::LLVMContext> llvmCtx;
+  std::unique_ptr<llvm::Module> llvmModule;
+
+  /// Generates an LLVM IR module from CodeGenAction::mlirModule and saves it
+  /// in CodeGenAction::llvmModule.
+  void GenerateLLVMIR();
+  /// }
 };
 
 class EmitMLIRAction : public CodeGenAction {
+  void ExecuteAction() override;
+};
+
+class EmitLLVMAction : public CodeGenAction {
   void ExecuteAction() override;
 };
 
