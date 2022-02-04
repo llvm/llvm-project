@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -disable-output
+; RUN: opt < %s -passes=instcombine -disable-output
 ; Checks that bitcasts are not converted into GEP when
 ; when the size of an aggregate cannot be determined.
 %swift.opaque = type opaque

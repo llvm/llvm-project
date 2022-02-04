@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep load
+; RUN: opt < %s -passes=instcombine -S | grep load
 
 define void @test(i32* %P) {
         ; Dead but not deletable!

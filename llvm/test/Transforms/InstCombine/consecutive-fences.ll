@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S %s | FileCheck %s
+; RUN: opt -passes=instcombine -S %s | FileCheck %s
 
 ; Make sure we collapse the fences in this case
 

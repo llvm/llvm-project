@@ -1,5 +1,5 @@
 ; The cast in this testcase is not eliminable on a 32-bit target!
-; RUN: opt < %s -instcombine -S | grep inttoptr
+; RUN: opt < %s -passes=instcombine -S | grep inttoptr
 
 target datalayout = "e-p:32:32"
 

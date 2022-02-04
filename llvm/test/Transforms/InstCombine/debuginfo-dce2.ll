@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S %s -o - | FileCheck %s
+; RUN: opt -passes=instcombine -S %s -o - | FileCheck %s
 
 ; In this example, the cast from i8* to i32* becomes trivially dead. We should
 ; salvage its debug info.

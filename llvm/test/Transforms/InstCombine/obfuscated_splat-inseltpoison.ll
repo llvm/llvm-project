@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S < %s | FileCheck %s
+; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 define void @test(<4 x float> *%in_ptr, <4 x float> *%out_ptr) {
   %A = load <4 x float>, <4 x float>* %in_ptr, align 16

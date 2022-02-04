@@ -1,19 +1,19 @@
 ; Test that the pow library call simplifier works correctly.
 ;
-; RUN: opt -instcombine -S < %s                                   | FileCheck %s --check-prefixes=CHECK,LIB,ANY
-; RUN: opt -instcombine -S < %s -mtriple=x86_64-apple-macosx10.9  | FileCheck %s --check-prefixes=CHECK,LIB,ANY,CHECK-EXP10
-; RUN: opt -instcombine -S < %s -mtriple=arm-apple-ios7.0         | FileCheck %s --check-prefixes=CHECK,LIB,ANY,CHECK-EXP10
-; RUN: opt -instcombine -S < %s -mtriple=x86_64-apple-macosx10.8  | FileCheck %s --check-prefixes=CHECK,LIB,ANY,CHECK-NO-EXP10
-; RUN: opt -instcombine -S < %s -mtriple=arm-apple-ios6.0         | FileCheck %s --check-prefixes=CHECK,LIB,ANY,CHECK-NO-EXP10
-; RUN: opt -instcombine -S < %s -mtriple=x86_64-netbsd            | FileCheck %s --check-prefixes=CHECK,LIB,ANY,CHECK-NO-EXP10
-; RUN: opt -instcombine -S < %s -mtriple=arm-apple-tvos9.0        | FileCheck %s --check-prefixes=CHECK,LIB,ANY,CHECK-EXP10
-; RUN: opt -instcombine -S < %s -mtriple=arm-apple-watchos2.0     | FileCheck %s --check-prefixes=CHECK,LIB,ANY,CHECK-EXP10
+; RUN: opt -passes=instcombine -S < %s                                   | FileCheck %s --check-prefixes=CHECK,LIB,ANY
+; RUN: opt -passes=instcombine -S < %s -mtriple=x86_64-apple-macosx10.9  | FileCheck %s --check-prefixes=CHECK,LIB,ANY,CHECK-EXP10
+; RUN: opt -passes=instcombine -S < %s -mtriple=arm-apple-ios7.0         | FileCheck %s --check-prefixes=CHECK,LIB,ANY,CHECK-EXP10
+; RUN: opt -passes=instcombine -S < %s -mtriple=x86_64-apple-macosx10.8  | FileCheck %s --check-prefixes=CHECK,LIB,ANY,CHECK-NO-EXP10
+; RUN: opt -passes=instcombine -S < %s -mtriple=arm-apple-ios6.0         | FileCheck %s --check-prefixes=CHECK,LIB,ANY,CHECK-NO-EXP10
+; RUN: opt -passes=instcombine -S < %s -mtriple=x86_64-netbsd            | FileCheck %s --check-prefixes=CHECK,LIB,ANY,CHECK-NO-EXP10
+; RUN: opt -passes=instcombine -S < %s -mtriple=arm-apple-tvos9.0        | FileCheck %s --check-prefixes=CHECK,LIB,ANY,CHECK-EXP10
+; RUN: opt -passes=instcombine -S < %s -mtriple=arm-apple-watchos2.0     | FileCheck %s --check-prefixes=CHECK,LIB,ANY,CHECK-EXP10
 ; rdar://7251832
-; RUN: opt -instcombine -S < %s -mtriple=i386-pc-windows-msvc18   | FileCheck %s --check-prefixes=CHECK,LIB,MSVC,VC32,CHECK-NO-EXP10
-; RUN: opt -instcombine -S < %s -mtriple=i386-pc-windows-msvc     | FileCheck %s --check-prefixes=CHECK,LIB,MSVC,VC51,VC19,CHECK-NO-EXP10
-; RUN: opt -instcombine -S < %s -mtriple=x86_64-pc-windows-msvc18 | FileCheck %s --check-prefixes=CHECK,LIB,MSVC,VC64,CHECK-NO-EXP10
-; RUN: opt -instcombine -S < %s -mtriple=x86_64-pc-windows-msvc   | FileCheck %s --check-prefixes=CHECK,LIB,MSVC,VC83,VC19,CHECK-NO-EXP10
-; RUN: opt -instcombine -S < %s -mtriple=amdgcn--                 | FileCheck %s --check-prefixes=CHECK,NOLIB,CHECK-NO-EXP10
+; RUN: opt -passes=instcombine -S < %s -mtriple=i386-pc-windows-msvc18   | FileCheck %s --check-prefixes=CHECK,LIB,MSVC,VC32,CHECK-NO-EXP10
+; RUN: opt -passes=instcombine -S < %s -mtriple=i386-pc-windows-msvc     | FileCheck %s --check-prefixes=CHECK,LIB,MSVC,VC51,VC19,CHECK-NO-EXP10
+; RUN: opt -passes=instcombine -S < %s -mtriple=x86_64-pc-windows-msvc18 | FileCheck %s --check-prefixes=CHECK,LIB,MSVC,VC64,CHECK-NO-EXP10
+; RUN: opt -passes=instcombine -S < %s -mtriple=x86_64-pc-windows-msvc   | FileCheck %s --check-prefixes=CHECK,LIB,MSVC,VC83,VC19,CHECK-NO-EXP10
+; RUN: opt -passes=instcombine -S < %s -mtriple=amdgcn--                 | FileCheck %s --check-prefixes=CHECK,NOLIB,CHECK-NO-EXP10
 
 ; NOTE: The readonly attribute on the pow call should be preserved
 ; in the cases below where pow is transformed into another function call.

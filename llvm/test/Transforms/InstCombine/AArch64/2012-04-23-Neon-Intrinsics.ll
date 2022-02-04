@@ -1,4 +1,4 @@
-; RUN: opt --mtriple=aarch64-unknown-linux -S -instcombine < %s | FileCheck %s
+; RUN: opt --mtriple=aarch64-unknown-linux -S -passes=instcombine < %s | FileCheck %s
 ; ARM64 neon intrinsic variants - <rdar://problem/12349617>
 
 define <4 x i32> @mulByZeroARM64(<4 x i16> %x) nounwind readnone ssp {

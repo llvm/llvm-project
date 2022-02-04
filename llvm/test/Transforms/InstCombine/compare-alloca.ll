@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S %s | FileCheck %s
+; RUN: opt -passes=instcombine -S %s | FileCheck %s
 target datalayout = "p:32:32"
 
 

@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 ; These should be InstSimplify checks, but most of the code
 ; is currently only in InstCombine.  TODO: move supporting code
 

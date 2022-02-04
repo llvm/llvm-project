@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -disable-output
+; RUN: opt < %s -passes=instcombine -disable-output
 ; PR1594
 
 define i64 @test(i16 %tmp510, i16 %tmp512) {

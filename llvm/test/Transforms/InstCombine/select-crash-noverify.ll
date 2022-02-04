@@ -1,4 +1,4 @@
-; RUN: opt < %s -disable-verify -instcombine -S | opt -S | FileCheck %s
+; RUN: opt < %s -disable-verify -passes=instcombine -S | opt -S | FileCheck %s
 ; Formerly crashed, PR8490.
 
 ; CHECK-LABEL: @test3(

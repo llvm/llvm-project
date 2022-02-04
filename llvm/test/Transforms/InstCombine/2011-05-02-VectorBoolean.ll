@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine
+; RUN: opt < %s -passes=instcombine
 ; PR9579
 
 define <2 x i16> @entry(<2 x i16> %a) nounwind {

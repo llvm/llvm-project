@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine | llvm-dis
+; RUN: opt < %s -passes=instcombine | llvm-dis
 ; PR3452
 define i128 @test(i64 %A, i64 %B, i1 %C, i128 %Z, i128 %Y, i64* %P, i64* %Q) {
 entry:

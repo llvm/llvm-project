@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -instcombine-infinite-loop-threshold=3 -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -instcombine-infinite-loop-threshold=3 -S | FileCheck %s
 
 %struct.__va_list = type { i8*, i8*, i8*, i32, i32 }
 

@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | not grep and
+; RUN: opt < %s -passes=instcombine -S | not grep and
 
 define i8 @test21(i8 %A) {
         ;; sign extend

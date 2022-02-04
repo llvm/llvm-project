@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S < %s | FileCheck -enable-var-scope %s
+; RUN: opt -passes=instcombine -S < %s | FileCheck -enable-var-scope %s
 
 declare i32 @k() convergent
 declare i32 @f()

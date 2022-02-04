@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -instcombine | FileCheck %s
+; RUN: opt < %s -S -passes=instcombine | FileCheck %s
 ; rdar://problem/9267970
 ; ideally this test will run on a 32-bit host
 ; must not discard GEPs that might overflow at runtime (aren't inbounds)

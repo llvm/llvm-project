@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep "store i32" | count 2
+; RUN: opt < %s -passes=instcombine -S | grep "store i32" | count 2
 
 @g_139 = global i32 0           ; <i32*> [#uses=2]
 

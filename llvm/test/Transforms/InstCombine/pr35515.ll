@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine < %s | FileCheck %s
+; RUN: opt -S -passes=instcombine < %s | FileCheck %s
 
 @g_40 = external global i8, align 2
 @g_461 = external global [6 x i8], align 2

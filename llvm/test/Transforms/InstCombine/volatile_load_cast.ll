@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 ; Ensure that volatile loads followed by a bitcast don't get transformed into a
 ; volatile load of the bitcast-target type. This is unlikely to provide much in

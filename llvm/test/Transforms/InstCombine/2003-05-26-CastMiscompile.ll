@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep 4294967295
+; RUN: opt < %s -passes=instcombine -S | grep 4294967295
 
 define i64 @test(i64 %Val) {
         %tmp.3 = trunc i64 %Val to i32          ; <i32> [#uses=1]

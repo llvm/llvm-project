@@ -1,5 +1,5 @@
 ; Test to make sure unused llvm.invariant.start calls are not trivially eliminated
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare void @g(i8*)
 declare void @g_addr1(i8 addrspace(1)*)
