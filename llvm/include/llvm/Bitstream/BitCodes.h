@@ -106,6 +106,10 @@ public:
     Blob  = 5   // 32-bit aligned array of 8-bit characters.
   };
 
+  static bool isValidEncoding(uint64_t E) {
+    return E >= 1 && E <= 5;
+  }
+
   explicit BitCodeAbbrevOp(uint64_t V) :  Val(V), IsLiteral(true) {}
   explicit BitCodeAbbrevOp(Encoding E, uint64_t Data = 0)
     : Val(Data), IsLiteral(false), Enc(E) {}
