@@ -19,6 +19,7 @@ namespace {
 using testing::AllOf;
 using testing::ElementsAre;
 using testing::IsEmpty;
+using testing::Pair;
 using testing::UnorderedElementsAre;
 
 MATCHER_P(TargetID, SID, "") { return arg.Target == SID; }
@@ -33,7 +34,7 @@ public:
     G = Grammar::parseBNF(BNF, Diags);
   }
 
-  SymbolID lookup(llvm::StringRef Name) const {
+  SymbolID id(llvm::StringRef Name) const {
     for (unsigned I = 0; I < NumTerminals; ++I)
       if (G->table().Terminals[I] == Name)
         return tokenSymbol(static_cast<tok::TokenKind>(I));
@@ -50,31 +51,28 @@ protected:
 };
 
 TEST_F(GrammarTest, Basic) {
-  build("expression := IDENTIFIER + expression # comment");
+  build("_ := IDENTIFIER + _ # comment");
   EXPECT_THAT(Diags, IsEmpty());
 
   auto ExpectedRule =
-      AllOf(TargetID(lookup("expression")),
-            Sequence(lookup("IDENTIFIER"), lookup("+"), lookup("expression")));
-  auto ExpressionID = lookup("expression");
-  EXPECT_EQ(G->symbolName(ExpressionID), "expression");
-  EXPECT_THAT(G->rulesFor(ExpressionID), UnorderedElementsAre(ExpectedRule));
+      AllOf(TargetID(id("_")), Sequence(id("IDENTIFIER"), id("+"), id("_")));
+  EXPECT_EQ(G->symbolName(id("_")), "_");
+  EXPECT_THAT(G->rulesFor(id("_")), UnorderedElementsAre(ExpectedRule));
   const auto &Rule = G->lookupRule(/*RID=*/0);
   EXPECT_THAT(Rule, ExpectedRule);
   EXPECT_THAT(G->symbolName(Rule.seq()[0]), "IDENTIFIER");
   EXPECT_THAT(G->symbolName(Rule.seq()[1]), "+");
-  EXPECT_THAT(G->symbolName(Rule.seq()[2]), "expression");
+  EXPECT_THAT(G->symbolName(Rule.seq()[2]), "_");
 }
 
 TEST_F(GrammarTest, EliminatedOptional) {
   build("_ := CONST_opt INT ;_opt");
   EXPECT_THAT(Diags, IsEmpty());
   EXPECT_THAT(G->table().Rules,
-              UnorderedElementsAre(
-                  Sequence(lookup("INT")),
-                  Sequence(lookup("CONST"), lookup("INT")),
-                  Sequence(lookup("CONST"), lookup("INT"), lookup(";")),
-                  Sequence(lookup("INT"), lookup(";"))));
+              UnorderedElementsAre(Sequence(id("INT")),
+                                   Sequence(id("CONST"), id("INT")),
+                                   Sequence(id("CONST"), id("INT"), id(";")),
+                                   Sequence(id("INT"), id(";"))));
 }
 
 TEST_F(GrammarTest, Diagnostics) {
@@ -87,6 +85,7 @@ TEST_F(GrammarTest, Diagnostics) {
     invalid
   )cpp");
 
+  EXPECT_EQ(G->startSymbol(), id("_"));
   EXPECT_THAT(Diags, UnorderedElementsAre(
                          "Rule '_ := ,_opt' has a nullable RHS",
                          "Rule 'null := ' has a nullable RHS",
@@ -94,6 +93,66 @@ TEST_F(GrammarTest, Diagnostics) {
                          "Failed to parse 'invalid': no separator :=",
                          "Token-like name IDENFIFIE is used as a nonterminal",
                          "No rules for nonterminal: IDENFIFIE"));
+}
+
+TEST_F(GrammarTest, FirstAndFollowSets) {
+  build(
+      R"bnf(
+_ := expr
+expr := expr - term
+expr := term
+term := IDENTIFIER
+term := ( expr )
+)bnf");
+  ASSERT_TRUE(Diags.empty());
+  auto ToPairs = [](std::vector<llvm::DenseSet<SymbolID>> Input) {
+    std::vector<std::pair<SymbolID, llvm::DenseSet<SymbolID>>> Sets;
+    for (SymbolID ID = 0; ID < Input.size(); ++ID)
+      Sets.emplace_back(ID, std::move(Input[ID]));
+    return Sets;
+  };
+
+  EXPECT_THAT(
+      ToPairs(firstSets(*G)),
+      UnorderedElementsAre(
+          Pair(id("_"), UnorderedElementsAre(id("IDENTIFIER"), id("("))),
+          Pair(id("expr"), UnorderedElementsAre(id("IDENTIFIER"), id("("))),
+          Pair(id("term"), UnorderedElementsAre(id("IDENTIFIER"), id("(")))));
+  EXPECT_THAT(
+      ToPairs(followSets(*G)),
+      UnorderedElementsAre(
+          Pair(id("_"), UnorderedElementsAre(id("EOF"))),
+          Pair(id("expr"), UnorderedElementsAre(id("-"), id("EOF"), id(")"))),
+          Pair(id("term"), UnorderedElementsAre(id("-"), id("EOF"), id(")")))));
+
+  build(R"bnf(
+# A simplfied C++ decl-specifier-seq.
+_ := decl-specifier-seq
+decl-specifier-seq := decl-specifier decl-specifier-seq
+decl-specifier-seq := decl-specifier
+decl-specifier := simple-type-specifier
+decl-specifier := INLINE
+simple-type-specifier := INT
+   )bnf");
+  ASSERT_TRUE(Diags.empty());
+  EXPECT_THAT(
+      ToPairs(firstSets(*G)),
+      UnorderedElementsAre(
+          Pair(id("_"), UnorderedElementsAre(id("INLINE"), id("INT"))),
+          Pair(id("decl-specifier-seq"),
+               UnorderedElementsAre(id("INLINE"), id("INT"))),
+          Pair(id("simple-type-specifier"), UnorderedElementsAre(id("INT"))),
+          Pair(id("decl-specifier"),
+               UnorderedElementsAre(id("INLINE"), id("INT")))));
+  EXPECT_THAT(
+      ToPairs(followSets(*G)),
+      UnorderedElementsAre(
+          Pair(id("_"), UnorderedElementsAre(id("EOF"))),
+          Pair(id("decl-specifier-seq"), UnorderedElementsAre(id("EOF"))),
+          Pair(id("decl-specifier"),
+               UnorderedElementsAre(id("INLINE"), id("INT"), id("EOF"))),
+          Pair(id("simple-type-specifier"),
+               UnorderedElementsAre(id("INLINE"), id("INT"), id("EOF")))));
 }
 
 } // namespace
