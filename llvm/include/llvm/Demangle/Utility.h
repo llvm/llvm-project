@@ -86,6 +86,21 @@ public:
   unsigned CurrentPackIndex = std::numeric_limits<unsigned>::max();
   unsigned CurrentPackMax = std::numeric_limits<unsigned>::max();
 
+  /// When zero, we're printing template args and '>' needs to be parenthesized.
+  /// Use a counter so we can simply increment inside parentheses.
+  unsigned GtIsGt = 1;
+
+  bool isGtInsideTemplateArgs() const { return GtIsGt == 0; }
+
+  void printOpen(char Open = '(') {
+    GtIsGt++;
+    *this += Open;
+  }
+  void printClose(char Close = ')') {
+    GtIsGt--;
+    *this += Close;
+  }
+
   OutputBuffer &operator+=(StringView R) {
     if (size_t Size = R.size()) {
       grow(Size);
