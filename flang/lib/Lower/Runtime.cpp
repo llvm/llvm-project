@@ -77,8 +77,13 @@ void Fortran::lower::genStopStatement(
       loc, calleeType.getInput(operands.size()), isError));
 
   // Third operand indicates QUIET (default to false).
-  if (std::get<std::optional<Fortran::parser::ScalarLogicalExpr>>(stmt.t)) {
-    TODO(loc, "STOP third operand not lowered yet");
+  if (const auto &quiet =
+          std::get<std::optional<Fortran::parser::ScalarLogicalExpr>>(stmt.t)) {
+    const SomeExpr *expr = Fortran::semantics::GetExpr(*quiet);
+    assert(expr && "failed getting typed expression");
+    mlir::Value q = fir::getBase(converter.genExprValue(*expr));
+    operands.push_back(
+        builder.createConvert(loc, calleeType.getInput(operands.size()), q));
   } else {
     operands.push_back(builder.createIntegerConstant(
         loc, calleeType.getInput(operands.size()), 0));

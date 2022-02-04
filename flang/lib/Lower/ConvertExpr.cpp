@@ -59,6 +59,11 @@ public:
     return builder.createIntegerConstant(getLoc(), type, value);
   }
 
+  /// Generate a logical/boolean constant of `value`
+  mlir::Value genBoolConstant(bool value) {
+    return builder.createBool(getLoc(), value);
+  }
+
   ExtValue genval(Fortran::semantics::SymbolRef sym) {
     TODO(getLoc(), "genval SymbolRef");
   }
@@ -231,7 +236,7 @@ public:
     if constexpr (TC == Fortran::common::TypeCategory::Integer) {
       return genIntegerConstant<KIND>(builder.getContext(), value.ToInt64());
     } else if constexpr (TC == Fortran::common::TypeCategory::Logical) {
-      TODO(getLoc(), "genval bool constant");
+      return genBoolConstant(value.IsTrue());
     } else if constexpr (TC == Fortran::common::TypeCategory::Real) {
       TODO(getLoc(), "genval real constant");
     } else if constexpr (TC == Fortran::common::TypeCategory::Complex) {
