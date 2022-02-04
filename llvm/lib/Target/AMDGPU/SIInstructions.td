@@ -2270,7 +2270,7 @@ def : GCNPat <
 >;
 
 def IMMBitSelConst : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(1 << N->getZExtValue(), SDLoc(N),
+  return CurDAG->getTargetConstant(1ULL << N->getZExtValue(), SDLoc(N),
                                    MVT::i32);
 }]>;
 
