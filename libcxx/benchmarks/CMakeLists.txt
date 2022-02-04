@@ -166,6 +166,11 @@ endfunction()
 # Register Benchmark tests
 #==============================================================================
 file(GLOB BENCHMARK_TESTS "*.bench.cpp")
+
+if (NOT LIBCXX_ENABLE_INCOMPLETE_FEATURES)
+  list(FILTER BENCHMARK_TESTS EXCLUDE REGEX "(format_to_n|format_to|format|formatted_size|formatter_float|std_format_spec_string_unicode).bench.cpp")
+endif()
+
 foreach(test_path ${BENCHMARK_TESTS})
   get_filename_component(test_file "${test_path}" NAME)
   string(REPLACE ".bench.cpp" "" test_name "${test_file}")

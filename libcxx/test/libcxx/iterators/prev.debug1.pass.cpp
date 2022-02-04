@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03
 // UNSUPPORTED: windows
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=0
+// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_DEBUG=0
 // UNSUPPORTED: libcxx-no-debug-mode
 
 // <list>
@@ -26,8 +26,8 @@ int main(int, char**)
     int a[] = {1, 2, 3};
 
     bidirectional_iterator<int *> bidi(a+1);
-	std::prev(bidi, -1);  // should work fine
-	std::prev(bidi,  0);  // should work fine
+    std::prev(bidi, -1);  // should work fine
+    std::prev(bidi,  0);  // should work fine
     std::prev(bidi,  1);  // should work fine
 
     forward_iterator<int *> it(a+1);
