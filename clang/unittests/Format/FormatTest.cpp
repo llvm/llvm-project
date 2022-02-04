@@ -9719,9 +9719,9 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
                        "void b() &;\n";
   verifyFormat(Prefix + "int* x;", DerivePointerAlignment);
   verifyFormat(Prefix + "int *x;", DerivePointerAlignment);
-  // Same if the function is an overloaded operator instead.
-  Prefix = "void operator()() &;\n"
-           "void operator()() &;\n";
+  // Same if the function is an overloaded operator, and with &&.
+  Prefix = "void operator()() &&;\n"
+           "void operator()() &&;\n";
   verifyFormat(Prefix + "int* x;", DerivePointerAlignment);
   verifyFormat(Prefix + "int *x;", DerivePointerAlignment);
   // However a space between cv-qualifiers and ref-qualifiers *is* evidence.
