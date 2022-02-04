@@ -97,6 +97,23 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  log1pf_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    log1pf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.include.math
+    libc.src.math.log1pf
+    libc.src.__support.FPUtil.fputil
+  LINK_OPTIONS
+    -lpthread
+)
+
+add_fp_unittest(
   log2f_test
   NO_RUN_POSTBUILD
   NEED_MPFR

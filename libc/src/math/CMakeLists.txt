@@ -118,6 +118,8 @@ add_math_entrypoint_object(ldexpl)
 
 add_math_entrypoint_object(log10f)
 
+add_math_entrypoint_object(log1pf)
+
 add_math_entrypoint_object(log2f)
 
 add_math_entrypoint_object(logf)

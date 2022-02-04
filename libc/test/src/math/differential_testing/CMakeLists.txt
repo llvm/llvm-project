@@ -253,6 +253,17 @@ add_diff_binary(
 )
 
 add_diff_binary(
+  log1pf_perf
+  SRCS
+    log1pf_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.log1pf
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_diff_binary(
   log2f_diff
   SRCS
     log2f_diff.cpp
