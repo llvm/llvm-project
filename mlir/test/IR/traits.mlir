@@ -529,9 +529,9 @@ func @illegalCDFGInsideDominanceFreeScope() -> () {
     ^bb1:
       // expected-error @+1 {{operand #0 does not dominate this use}}
       %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
-      br ^bb4
+      cf.br ^bb4
     ^bb2:
-      br ^bb2
+      cf.br ^bb2
     ^bb4:
       %1 = "foo"() : ()->i64   // expected-note {{operand defined here}}
 		return %2#1 : i1
@@ -559,7 +559,7 @@ func @graph_region_cant_have_blocks() {
   test.graph_region {
     // expected-error@-1 {{'test.graph_region' op expects graph region #0 to have 0 or 1 blocks}}
   ^bb42:
-    br ^bb43
+    cf.br ^bb43
   ^bb43:
     "terminator"() : () -> ()
   }

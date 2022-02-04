@@ -14,7 +14,7 @@
 #ifndef MLIR_DIALECT_STANDARDOPS_IR_OPS_H
 #define MLIR_DIALECT_STANDARDOPS_IR_OPS_H
 
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
@@ -24,7 +24,6 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Interfaces/VectorInterfaces.h"
 
 // Pull in all enum type definitions and utility function declarations.
 #include "mlir/Dialect/StandardOps/IR/OpsEnums.h.inc"

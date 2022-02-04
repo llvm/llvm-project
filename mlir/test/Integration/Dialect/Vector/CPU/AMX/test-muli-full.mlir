@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-std \
+// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-cf \
 // RUN:  -arith-bufferize -convert-vector-to-llvm="enable-amx" \
 // RUN:  -convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-translate -mlir-to-llvmir | \

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-scf-to-std \
+// RUN: mlir-opt %s -convert-scf-to-cf \
 // RUN:             -convert-vector-to-llvm='reassociate-fp-reductions' \
 // RUN:             -convert-std-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \

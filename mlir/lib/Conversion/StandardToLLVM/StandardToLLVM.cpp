@@ -14,6 +14,7 @@
 #include "../PassDetail.h"
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
+#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
@@ -387,48 +388,6 @@ struct BarePtrFuncOpConversion : public FuncOpConversionBase {
   }
 };
 
-/// Lower `std.assert`. The default lowering calls the `abort` function if the
-/// assertion is violated and has no effect otherwise. The failure message is
-/// ignored by the default lowering but should be propagated by any custom
-/// lowering.
-struct AssertOpLowering : public ConvertOpToLLVMPattern<AssertOp> {
-  using ConvertOpToLLVMPattern<AssertOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(AssertOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto loc = op.getLoc();
-
-    // Insert the `abort` declaration if necessary.
-    auto module = op->getParentOfType<ModuleOp>();
-    auto abortFunc = module.lookupSymbol<LLVM::LLVMFuncOp>("abort");
-    if (!abortFunc) {
-      OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPointToStart(module.getBody());
-      auto abortFuncTy = LLVM::LLVMFunctionType::get(getVoidType(), {});
-      abortFunc = rewriter.create<LLVM::LLVMFuncOp>(rewriter.getUnknownLoc(),
-                                                    "abort", abortFuncTy);
-    }
-
-    // Split block at `assert` operation.
-    Block *opBlock = rewriter.getInsertionBlock();
-    auto opPosition = rewriter.getInsertionPoint();
-    Block *continuationBlock = rewriter.splitBlock(opBlock, opPosition);
-
-    // Generate IR to call `abort`.
-    Block *failureBlock = rewriter.createBlock(opBlock->getParent());
-    rewriter.create<LLVM::CallOp>(loc, abortFunc, llvm::None);
-    rewriter.create<LLVM::UnreachableOp>(loc);
-
-    // Generate assertion test.
-    rewriter.setInsertionPointToEnd(opBlock);
-    rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
-        op, adaptor.getArg(), continuationBlock, failureBlock);
-
-    return success();
-  }
-};
-
 struct ConstantOpLowering : public ConvertOpToLLVMPattern<ConstantOp> {
   using ConvertOpToLLVMPattern<ConstantOp>::ConvertOpToLLVMPattern;
 
@@ -550,22 +509,6 @@ struct UnrealizedConversionCastOpLowering
   }
 };
 
-// Base class for LLVM IR lowering terminator operations with successors.
-template <typename SourceOp, typename TargetOp>
-struct OneToOneLLVMTerminatorLowering
-    : public ConvertOpToLLVMPattern<SourceOp> {
-  using ConvertOpToLLVMPattern<SourceOp>::ConvertOpToLLVMPattern;
-  using Super = OneToOneLLVMTerminatorLowering<SourceOp, TargetOp>;
-
-  LogicalResult
-  matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<TargetOp>(op, adaptor.getOperands(),
-                                          op->getSuccessors(), op->getAttrs());
-    return success();
-  }
-};
-
 // Special lowering pattern for `ReturnOps`.  Unlike all other operations,
 // `ReturnOp` interacts with the function signature and must have as many
 // operands as the function has return values.  Because in LLVM IR, functions
@@ -633,21 +576,6 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<ReturnOp> {
     return success();
   }
 };
-
-// FIXME: this should be tablegen'ed as well.
-struct BranchOpLowering
-    : public OneToOneLLVMTerminatorLowering<BranchOp, LLVM::BrOp> {
-  using Super::Super;
-};
-struct CondBranchOpLowering
-    : public OneToOneLLVMTerminatorLowering<CondBranchOp, LLVM::CondBrOp> {
-  using Super::Super;
-};
-struct SwitchOpLowering
-    : public OneToOneLLVMTerminatorLowering<SwitchOp, LLVM::SwitchOp> {
-  using Super::Super;
-};
-
 } // namespace
 
 void mlir::populateStdToLLVMFuncOpConversionPattern(
@@ -663,14 +591,10 @@ void mlir::populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
   populateStdToLLVMFuncOpConversionPattern(converter, patterns);
   // clang-format off
   patterns.add<
-      AssertOpLowering,
-      BranchOpLowering,
       CallIndirectOpLowering,
       CallOpLowering,
-      CondBranchOpLowering,
       ConstantOpLowering,
-      ReturnOpLowering,
-      SwitchOpLowering>(converter);
+      ReturnOpLowering>(converter);
   // clang-format on
 }
 
@@ -721,6 +645,7 @@ struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
     RewritePatternSet patterns(&getContext());
     populateStdToLLVMConversionPatterns(typeConverter, patterns);
     arith::populateArithmeticToLLVMConversionPatterns(typeConverter, patterns);
+    cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
 
     LLVMConversionTarget target(getContext());
     if (failed(applyPartialConversion(m, target, std::move(patterns))))

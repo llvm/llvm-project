@@ -117,7 +117,7 @@ func @test_subgraph_sink(%arg0: i1, %arg1: i32, %arg2: i32) -> i32 {
 // CHECK-NEXT: %[[V1:.*]] = "test.any_cond"() ({
 // CHECK-NEXT:   %[[V3:.*]] = arith.addi %[[V0]], %[[ARG2]]
 // CHECK-NEXT:   %[[V4:.*]] = arith.addi %[[V3]], %[[ARG1]]
-// CHECK-NEXT:   br ^bb1(%[[V4]] : i32)
+// CHECK-NEXT:   cf.br ^bb1(%[[V4]] : i32)
 // CHECK-NEXT: ^bb1(%[[V5:.*]]: i32):
 // CHECK-NEXT:   %[[V6:.*]] = arith.addi %[[V5]], %[[V4]]
 // CHECK-NEXT:   "test.yield"(%[[V6]])
@@ -129,7 +129,7 @@ func @test_multiblock_region_sink(%arg0: i1, %arg1: i32, %arg2: i32) -> i32 {
   %1 = arith.addi %0, %arg2 : i32
   %2 = arith.addi %1, %arg1 : i32
   %3 = "test.any_cond"() ({
-    br ^bb1(%2 : i32)
+    cf.br ^bb1(%2 : i32)
   ^bb1(%5: i32):
     %6 = arith.addi %5, %2 : i32
     "test.yield"(%6) : (i32) -> ()
@@ -184,7 +184,7 @@ func @test_nested_region_sink(%arg0: i1, %arg1: i32) -> i32 {
 // CHECK-SAME:  (%[[ARG0:.*]]: i32) -> i32 {
 // CHECK-NEXT: %[[V0:.*]] = "test.any_cond"() ({
 // CHECK-NEXT:   %[[V1:.*]] = arith.addi %[[ARG0]], %[[ARG0]]
-// CHECK-NEXT:   br ^bb1
+// CHECK-NEXT:   cf.br ^bb1
 // CHECK-NEXT: ^bb1:
 // CHECK-NEXT:   "test.yield"(%[[V1]]) : (i32) -> ()
 // CHECK-NEXT: })
@@ -192,7 +192,7 @@ func @test_nested_region_sink(%arg0: i1, %arg1: i32) -> i32 {
 func @test_not_sunk_deeply(%arg0: i32) -> i32 {
   %0 = arith.addi %arg0, %arg0 : i32
   %1 = "test.any_cond"() ({
-    br ^bb1
+    cf.br ^bb1
   ^bb1:
     "test.yield"(%0) : (i32) -> ()
   }) : () -> i32

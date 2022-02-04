@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-linalg-to-loops -convert-vector-to-scf='full-unroll=true' -lower-affine -convert-scf-to-std -convert-vector-to-llvm -convert-memref-to-llvm  -convert-std-to-llvm='use-bare-ptr-memref-call-conv=1' -convert-arith-to-llvm -reconcile-unrealized-casts |\
+// RUN: mlir-opt %s -convert-linalg-to-loops -convert-vector-to-scf='full-unroll=true' -lower-affine -convert-scf-to-cf -convert-vector-to-llvm -convert-memref-to-llvm  -convert-std-to-llvm='use-bare-ptr-memref-call-conv=1' -convert-arith-to-llvm -reconcile-unrealized-casts |\
 // RUN: mlir-translate --mlir-to-llvmir |\
 // RUN: %lli --entry-function=entry --mattr="avx512f" --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext |\
 // RUN: FileCheck %s

@@ -54,13 +54,13 @@ func @token_value_to_func() {
 // CHECK-LABEL: @token_arg_cond_br_await_with_fallthough
 // CHECK: %[[TOKEN:.*]]: !async.token
 func @token_arg_cond_br_await_with_fallthough(%arg0: !async.token, %arg1: i1) {
-  // CHECK: cond_br
+  // CHECK: cf.cond_br
   // CHECK-SAME: ^[[BB1:.*]], ^[[BB2:.*]]
-  cond_br %arg1, ^bb1, ^bb2
+  cf.cond_br %arg1, ^bb1, ^bb2
 ^bb1:
   // CHECK: ^[[BB1]]:
-  // CHECK:   br ^[[BB2]]
-  br ^bb2
+  // CHECK:   cf.br ^[[BB2]]
+  cf.br ^bb2
 ^bb2:
   // CHECK: ^[[BB2]]:
   // CHECK:   async.runtime.await %[[TOKEN]]
@@ -88,10 +88,10 @@ func @token_coro_return() -> !async.token {
   async.runtime.resume %hdl
   async.coro.suspend %saved, ^suspend, ^resume, ^cleanup
 ^resume:
-  br ^cleanup
+  cf.br ^cleanup
 ^cleanup:
   async.coro.free %id, %hdl
-  br ^suspend
+  cf.br ^suspend
 ^suspend:
   async.coro.end %hdl
   return %token : !async.token
@@ -109,10 +109,10 @@ func @token_coro_await_and_resume(%arg0: !async.token) -> !async.token {
   // CHECK-NEXT: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i64}
   async.coro.suspend %saved, ^suspend, ^resume, ^cleanup
 ^resume:
-  br ^cleanup
+  cf.br ^cleanup
 ^cleanup:
   async.coro.free %id, %hdl
-  br ^suspend
+  cf.br ^suspend
 ^suspend:
   async.coro.end %hdl
   return %token : !async.token
@@ -137,10 +137,10 @@ func @value_coro_await_and_resume(%arg0: !async.value<f32>) -> !async.token {
   %0 = async.runtime.load %arg0 : !async.value<f32>
   // CHECK:  arith.addf %[[LOADED]], %[[LOADED]]
   %1 = arith.addf %0, %0 : f32
-  br ^cleanup
+  cf.br ^cleanup
 ^cleanup:
   async.coro.free %id, %hdl
-  br ^suspend
+  cf.br ^suspend
 ^suspend:
   async.coro.end %hdl
   return %token : !async.token
@@ -167,12 +167,12 @@ func private @outlined_async_execute(%arg0: !async.token) -> !async.token {
   // CHECK: ^[[RESUME_1:.*]]:
   // CHECK:   async.runtime.set_available
   async.runtime.set_available %0 : !async.token
-  br ^cleanup
+  cf.br ^cleanup
 ^cleanup:
   // CHECK: ^[[CLEANUP:.*]]:
   // CHECK:   async.coro.free
   async.coro.free %1, %2
-  br ^suspend
+  cf.br ^suspend
 ^suspend:
   // CHECK: ^[[SUSPEND:.*]]:
   // CHECK:   async.coro.end
@@ -198,7 +198,7 @@ func @token_await_inside_nested_region(%arg0: i1) {
 
 // CHECK-LABEL: @token_defined_in_the_loop
 func @token_defined_in_the_loop() {
-  br ^bb1
+  cf.br ^bb1
 ^bb1:
   // CHECK: ^[[BB1:.*]]:
   // CHECK:   %[[TOKEN:.*]] = call @token()
@@ -207,7 +207,7 @@ func @token_defined_in_the_loop() {
   // CHECK:   async.runtime.drop_ref %[[TOKEN]] {count = 1 : i64}
   async.runtime.await %token : !async.token
   %0 = call @cond(): () -> (i1)
-  cond_br %0, ^bb1, ^bb2
+  cf.cond_br %0, ^bb1, ^bb2
 ^bb2:
   // CHECK: ^[[BB2:.*]]:
   // CHECK:   return
@@ -218,18 +218,18 @@ func @token_defined_in_the_loop() {
 func @divergent_liveness_one_token(%arg0 : i1) {
   // CHECK: %[[TOKEN:.*]] = call @token()
   %token = call @token() : () -> !async.token
-  // CHECK: cond_br %arg0, ^[[LIVE_IN:.*]], ^[[REF_COUNTING:.*]]
-  cond_br %arg0, ^bb1, ^bb2
+  // CHECK: cf.cond_br %arg0, ^[[LIVE_IN:.*]], ^[[REF_COUNTING:.*]]
+  cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
   // CHECK: ^[[LIVE_IN]]:
   // CHECK:   async.runtime.await %[[TOKEN]]
   // CHECK:   async.runtime.drop_ref %[[TOKEN]] {count = 1 : i64}
-  // CHECK:   br ^[[RETURN:.*]]
+  // CHECK:   cf.br ^[[RETURN:.*]]
   async.runtime.await %token : !async.token
-  br ^bb2
+  cf.br ^bb2
   // CHECK: ^[[REF_COUNTING:.*]]:
   // CHECK:   async.runtime.drop_ref %[[TOKEN]] {count = 1 : i64}
-  // CHECK:   br ^[[RETURN:.*]]
+  // CHECK:   cf.br ^[[RETURN:.*]]
 ^bb2:
   // CHECK: ^[[RETURN]]:
   // CHECK:   return
@@ -240,20 +240,20 @@ func @divergent_liveness_one_token(%arg0 : i1) {
 func @divergent_liveness_unique_predecessor(%arg0 : i1) {
   // CHECK: %[[TOKEN:.*]] = call @token()
   %token = call @token() : () -> !async.token
-  // CHECK: cond_br %arg0, ^[[LIVE_IN:.*]], ^[[NO_LIVE_IN:.*]]
-  cond_br %arg0, ^bb2, ^bb1
+  // CHECK: cf.cond_br %arg0, ^[[LIVE_IN:.*]], ^[[NO_LIVE_IN:.*]]
+  cf.cond_br %arg0, ^bb2, ^bb1
 ^bb1:
   // CHECK: ^[[NO_LIVE_IN]]:
   // CHECK:   async.runtime.drop_ref %[[TOKEN]] {count = 1 : i64}
-  // CHECK:   br ^[[RETURN:.*]]
-  br ^bb3
+  // CHECK:   cf.br ^[[RETURN:.*]]
+  cf.br ^bb3
 ^bb2:
   // CHECK: ^[[LIVE_IN]]:
   // CHECK:   async.runtime.await %[[TOKEN]]
   // CHECK:   async.runtime.drop_ref %[[TOKEN]] {count = 1 : i64}
-  // CHECK:   br ^[[RETURN]]
+  // CHECK:   cf.br ^[[RETURN]]
   async.runtime.await %token : !async.token
-  br ^bb3
+  cf.br ^bb3
 ^bb3:
   // CHECK: ^[[RETURN]]:
   // CHECK:  return
@@ -266,24 +266,24 @@ func @divergent_liveness_two_tokens(%arg0 : i1) {
   // CHECK: %[[TOKEN1:.*]] = call @token()
   %token0 = call @token() : () -> !async.token
   %token1 = call @token() : () -> !async.token
-  // CHECK: cond_br %arg0, ^[[AWAIT0:.*]], ^[[AWAIT1:.*]]
-  cond_br %arg0, ^await0, ^await1
+  // CHECK: cf.cond_br %arg0, ^[[AWAIT0:.*]], ^[[AWAIT1:.*]]
+  cf.cond_br %arg0, ^await0, ^await1
 ^await0:
   // CHECK: ^[[AWAIT0]]:
   // CHECK:   async.runtime.drop_ref %[[TOKEN1]] {count = 1 : i64}
   // CHECK:   async.runtime.await %[[TOKEN0]]
   // CHECK:   async.runtime.drop_ref %[[TOKEN0]] {count = 1 : i64}
-  // CHECK:   br ^[[RETURN:.*]]
+  // CHECK:   cf.br ^[[RETURN:.*]]
   async.runtime.await %token0 : !async.token
-  br ^ret
+  cf.br ^ret
 ^await1:
   // CHECK: ^[[AWAIT1]]:
   // CHECK:   async.runtime.drop_ref %[[TOKEN0]] {count = 1 : i64}
   // CHECK:   async.runtime.await %[[TOKEN1]]
   // CHECK:   async.runtime.drop_ref %[[TOKEN1]] {count = 1 : i64}
-  // CHECK:   br ^[[RETURN]]
+  // CHECK:   cf.br ^[[RETURN]]
   async.runtime.await %token1 : !async.token
-  br ^ret
+  cf.br ^ret
 ^ret:
   // CHECK: ^[[RETURN]]:
   // CHECK:   return

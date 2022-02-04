@@ -4,14 +4,14 @@
 // simple(10, false) -> 30
 func @simple(i64, i1) -> i64 {
 ^bb0(%a: i64, %cond: i1):
-  cond_br %cond, ^bb1, ^bb2
+  cf.cond_br %cond, ^bb1, ^bb2
 ^bb1:
-  br ^bb3(%a: i64)
+  cf.br ^bb3(%a: i64)
 ^bb2:
   %b = emitc.call "add"(%a, %a) : (i64, i64) -> i64
-  br ^bb3(%b: i64)
+  cf.br ^bb3(%b: i64)
 ^bb3(%c: i64):
-  br ^bb4(%c, %a : i64, i64)
+  cf.br ^bb4(%c, %a : i64, i64)
 ^bb4(%d : i64, %e : i64):
   %0 = emitc.call "add"(%d, %e) : (i64, i64) -> i64
   return %0 : i64
@@ -45,7 +45,7 @@ func @simple(i64, i1) -> i64 {
 
 func @block_labels0() {
 ^bb1:
-    br ^bb2
+    cf.br ^bb2
 ^bb2:
     return
 }
@@ -59,7 +59,7 @@ func @block_labels0() {
 // Repeat the same function to make sure the names of the block labels get reset.
 func @block_labels1() {
 ^bb1:
-    br ^bb2
+    cf.br ^bb2
 ^bb2:
     return
 }

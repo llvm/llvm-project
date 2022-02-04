@@ -12,10 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
@@ -44,14 +44,14 @@ struct GpuAllReduceRewriter {
   /// workgroup memory.
   ///
   ///     %subgroup_reduce = `createSubgroupReduce(%operand)`
-  ///     cond_br %is_first_lane, ^then1, ^continue1
+  ///     cf.cond_br %is_first_lane, ^then1, ^continue1
   ///   ^then1:
   ///     store %subgroup_reduce, %workgroup_buffer[%subgroup_id]
-  ///     br ^continue1
+  ///     cf.br ^continue1
   ///   ^continue1:
   ///     gpu.barrier
   ///     %is_valid_subgroup = arith.cmpi "slt" %invocation_idx, %num_subgroups
-  ///     cond_br %is_valid_subgroup, ^then2, ^continue2
+  ///     cf.cond_br %is_valid_subgroup, ^then2, ^continue2
   ///   ^then2:
   ///     %partial_reduce = load %workgroup_buffer[%invocation_idx]
   ///     %all_reduce = `createSubgroupReduce(%partial_reduce)`
@@ -194,7 +194,7 @@ private:
 
       // Add branch before inserted body, into body.
       block = block->getNextNode();
-      create<BranchOp>(block, ValueRange());
+      create<cf::BranchOp>(block, ValueRange());
 
       // Replace all gpu.yield ops with branch out of body.
       for (; block != split; block = block->getNextNode()) {
@@ -202,7 +202,7 @@ private:
         if (!isa<gpu::YieldOp>(terminator))
           continue;
         rewriter.setInsertionPointToEnd(block);
-        rewriter.replaceOpWithNewOp<BranchOp>(
+        rewriter.replaceOpWithNewOp<cf::BranchOp>(
             terminator, split, ValueRange(terminator->getOperand(0)));
       }
 
@@ -285,17 +285,17 @@ private:
     Block *continueBlock = rewriter.splitBlock(elseBlock, elseBlock->begin());
 
     rewriter.setInsertionPointToEnd(currentBlock);
-    create<CondBranchOp>(condition, thenBlock,
-                         /*trueOperands=*/ArrayRef<Value>(), elseBlock,
-                         /*falseOperands=*/ArrayRef<Value>());
+    create<cf::CondBranchOp>(condition, thenBlock,
+                             /*trueOperands=*/ArrayRef<Value>(), elseBlock,
+                             /*falseOperands=*/ArrayRef<Value>());
 
     rewriter.setInsertionPointToStart(thenBlock);
     auto thenOperands = thenOpsFactory();
-    create<BranchOp>(continueBlock, thenOperands);
+    create<cf::BranchOp>(continueBlock, thenOperands);
 
     rewriter.setInsertionPointToStart(elseBlock);
     auto elseOperands = elseOpsFactory();
-    create<BranchOp>(continueBlock, elseOperands);
+    create<cf::BranchOp>(continueBlock, elseOperands);
 
     assert(thenOperands.size() == elseOperands.size());
     rewriter.setInsertionPointToStart(continueBlock);

@@ -9,6 +9,7 @@
 // CHECK-NEXT: async
 // CHECK-NEXT: bufferization
 // CHECK-NEXT: builtin
+// CHECK-NEXT: cf
 // CHECK-NEXT: complex
 // CHECK-NEXT: dlti
 // CHECK-NEXT: emitc

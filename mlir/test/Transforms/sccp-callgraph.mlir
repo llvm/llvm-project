@@ -185,11 +185,11 @@ func @conflicting_constant(%arg0 : i32) -> (i32, i32) {
 func private @complex_inner_if(%arg0 : i32) -> i32 {
   // CHECK-DAG: %[[TRUE:.*]] = arith.constant true
   // CHECK-DAG: %[[CST:.*]] = arith.constant 1 : i32
-  // CHECK: cond_br %[[TRUE]], ^bb1
+  // CHECK: cf.cond_br %[[TRUE]], ^bb1
 
   %cst_20 = arith.constant 20 : i32
   %cond = arith.cmpi ult, %arg0, %cst_20 : i32
-  cond_br %cond, ^bb1, ^bb2
+  cf.cond_br %cond, ^bb1, ^bb2
 
 ^bb1:
   // CHECK: ^bb1:
@@ -211,7 +211,7 @@ func private @complex_callee(%arg0 : i32) -> i32 {
   // CHECK: %[[CST:.*]] = arith.constant 1 : i32
 
   %loop_cond = call @complex_cond() : () -> i1
-  cond_br %loop_cond, ^bb1, ^bb2
+  cf.cond_br %loop_cond, ^bb1, ^bb2
 
 ^bb1:
   // CHECK: ^bb1:

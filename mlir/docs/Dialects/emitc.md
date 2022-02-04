@@ -23,10 +23,11 @@ argument `-declare-variables-at-top`.
 Besides operations part of the EmitC dialect, the Cpp targets supports
 translating the following operations:
 
+*   'cf' Dialect
+    *   `cf.br`
+    *   `cf.cond_br`
 *   'std' Dialect
-    *   `std.br`
     *   `std.call`
-    *   `std.cond_br`
     *   `std.constant`
     *   `std.return`
 *   'scf' Dialect

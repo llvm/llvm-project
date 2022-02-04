@@ -17,26 +17,26 @@
 
 // CHECK-LABEL: func @condBranch
 func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
-  cond_br %arg0, ^bb1, ^bb2
+  cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
-  br ^bb3(%arg1 : memref<2xf32>)
+  cf.br ^bb3(%arg1 : memref<2xf32>)
 ^bb2:
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
-  br ^bb3(%0 : memref<2xf32>)
+  cf.br ^bb3(%0 : memref<2xf32>)
 ^bb3(%1: memref<2xf32>):
   test.copy(%1, %arg2) : (memref<2xf32>, memref<2xf32>)
   return
 }
 
-// CHECK-NEXT: cond_br
+// CHECK-NEXT: cf.cond_br
 //      CHECK: %[[ALLOC0:.*]] = bufferization.clone
-// CHECK-NEXT: br ^bb3(%[[ALLOC0]]
+// CHECK-NEXT: cf.br ^bb3(%[[ALLOC0]]
 //      CHECK: %[[ALLOC1:.*]] = memref.alloc
 // CHECK-NEXT: test.buffer_based
 // CHECK-NEXT: %[[ALLOC2:.*]] = bufferization.clone %[[ALLOC1]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC1]]
-// CHECK-NEXT: br ^bb3(%[[ALLOC2]]
+// CHECK-NEXT: cf.br ^bb3(%[[ALLOC2]]
 //      CHECK: test.copy
 // CHECK-NEXT: memref.dealloc
 // CHECK-NEXT: return
@@ -62,27 +62,27 @@ func @condBranchDynamicType(
   %arg1: memref<?xf32>,
   %arg2: memref<?xf32>,
   %arg3: index) {
-  cond_br %arg0, ^bb1, ^bb2(%arg3: index)
+  cf.cond_br %arg0, ^bb1, ^bb2(%arg3: index)
 ^bb1:
-  br ^bb3(%arg1 : memref<?xf32>)
+  cf.br ^bb3(%arg1 : memref<?xf32>)
 ^bb2(%0: index):
   %1 = memref.alloc(%0) : memref<?xf32>
   test.buffer_based in(%arg1: memref<?xf32>) out(%1: memref<?xf32>)
-  br ^bb3(%1 : memref<?xf32>)
+  cf.br ^bb3(%1 : memref<?xf32>)
 ^bb3(%2: memref<?xf32>):
   test.copy(%2, %arg2) : (memref<?xf32>, memref<?xf32>)
   return
 }
 
-// CHECK-NEXT: cond_br
+// CHECK-NEXT: cf.cond_br
 //      CHECK: %[[ALLOC0:.*]] = bufferization.clone
-// CHECK-NEXT: br ^bb3(%[[ALLOC0]]
+// CHECK-NEXT: cf.br ^bb3(%[[ALLOC0]]
 //      CHECK: ^bb2(%[[IDX:.*]]:{{.*}})
 // CHECK-NEXT: %[[ALLOC1:.*]] = memref.alloc(%[[IDX]])
 // CHECK-NEXT: test.buffer_based
 // CHECK-NEXT: %[[ALLOC2:.*]] = bufferization.clone
 // CHECK-NEXT: memref.dealloc %[[ALLOC1]]
-// CHECK-NEXT: br ^bb3
+// CHECK-NEXT: cf.br ^bb3
 // CHECK-NEXT: ^bb3(%[[ALLOC3:.*]]:{{.*}})
 //      CHECK: test.copy(%[[ALLOC3]],
 // CHECK-NEXT: memref.dealloc %[[ALLOC3]]
@@ -98,28 +98,28 @@ func @condBranchUnrankedType(
   %arg1: memref<*xf32>,
   %arg2: memref<*xf32>,
   %arg3: index) {
-  cond_br %arg0, ^bb1, ^bb2(%arg3: index)
+  cf.cond_br %arg0, ^bb1, ^bb2(%arg3: index)
 ^bb1:
-  br ^bb3(%arg1 : memref<*xf32>)
+  cf.br ^bb3(%arg1 : memref<*xf32>)
 ^bb2(%0: index):
   %1 = memref.alloc(%0) : memref<?xf32>
   %2 = memref.cast %1 : memref<?xf32> to memref<*xf32>
   test.buffer_based in(%arg1: memref<*xf32>) out(%2: memref<*xf32>)
-  br ^bb3(%2 : memref<*xf32>)
+  cf.br ^bb3(%2 : memref<*xf32>)
 ^bb3(%3: memref<*xf32>):
   test.copy(%3, %arg2) : (memref<*xf32>, memref<*xf32>)
   return
 }
 
-// CHECK-NEXT: cond_br
+// CHECK-NEXT: cf.cond_br
 //      CHECK: %[[ALLOC0:.*]] = bufferization.clone
-// CHECK-NEXT: br ^bb3(%[[ALLOC0]]
+// CHECK-NEXT: cf.br ^bb3(%[[ALLOC0]]
 //      CHECK: ^bb2(%[[IDX:.*]]:{{.*}})
 // CHECK-NEXT: %[[ALLOC1:.*]] = memref.alloc(%[[IDX]])
 //      CHECK: test.buffer_based
 // CHECK-NEXT: %[[ALLOC2:.*]] = bufferization.clone
 // CHECK-NEXT: memref.dealloc %[[ALLOC1]]
-// CHECK-NEXT: br ^bb3
+// CHECK-NEXT: cf.br ^bb3
 // CHECK-NEXT: ^bb3(%[[ALLOC3:.*]]:{{.*}})
 //      CHECK: test.copy(%[[ALLOC3]],
 // CHECK-NEXT: memref.dealloc %[[ALLOC3]]
@@ -153,44 +153,44 @@ func @condBranchDynamicTypeNested(
   %arg1: memref<?xf32>,
   %arg2: memref<?xf32>,
   %arg3: index) {
-  cond_br %arg0, ^bb1, ^bb2(%arg3: index)
+  cf.cond_br %arg0, ^bb1, ^bb2(%arg3: index)
 ^bb1:
-  br ^bb6(%arg1 : memref<?xf32>)
+  cf.br ^bb6(%arg1 : memref<?xf32>)
 ^bb2(%0: index):
   %1 = memref.alloc(%0) : memref<?xf32>
   test.buffer_based in(%arg1: memref<?xf32>) out(%1: memref<?xf32>)
-  cond_br %arg0, ^bb3, ^bb4
+  cf.cond_br %arg0, ^bb3, ^bb4
 ^bb3:
-  br ^bb5(%1 : memref<?xf32>)
+  cf.br ^bb5(%1 : memref<?xf32>)
 ^bb4:
-  br ^bb5(%1 : memref<?xf32>)
+  cf.br ^bb5(%1 : memref<?xf32>)
 ^bb5(%2: memref<?xf32>):
-  br ^bb6(%2 : memref<?xf32>)
+  cf.br ^bb6(%2 : memref<?xf32>)
 ^bb6(%3: memref<?xf32>):
-  br ^bb7(%3 : memref<?xf32>)
+  cf.br ^bb7(%3 : memref<?xf32>)
 ^bb7(%4: memref<?xf32>):
   test.copy(%4, %arg2) : (memref<?xf32>, memref<?xf32>)
   return
 }
 
-// CHECK-NEXT: cond_br{{.*}}
+// CHECK-NEXT: cf.cond_br{{.*}}
 // CHECK-NEXT: ^bb1
 // CHECK-NEXT: %[[ALLOC0:.*]] = bufferization.clone
-// CHECK-NEXT: br ^bb6(%[[ALLOC0]]
+// CHECK-NEXT: cf.br ^bb6(%[[ALLOC0]]
 //      CHECK: ^bb2(%[[IDX:.*]]:{{.*}})
 // CHECK-NEXT: %[[ALLOC1:.*]] = memref.alloc(%[[IDX]])
 // CHECK-NEXT: test.buffer_based
-//      CHECK: cond_br
+//      CHECK: cf.cond_br
 //      CHECK: ^bb3:
-// CHECK-NEXT: br ^bb5(%[[ALLOC1]]{{.*}})
+// CHECK-NEXT: cf.br ^bb5(%[[ALLOC1]]{{.*}})
 //      CHECK: ^bb4:
-// CHECK-NEXT: br ^bb5(%[[ALLOC1]]{{.*}})
+// CHECK-NEXT: cf.br ^bb5(%[[ALLOC1]]{{.*}})
 // CHECK-NEXT: ^bb5(%[[ALLOC2:.*]]:{{.*}})
 // CHECK-NEXT: %[[ALLOC3:.*]] = bufferization.clone %[[ALLOC2]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC1]]
-// CHECK-NEXT: br ^bb6(%[[ALLOC3]]{{.*}})
+// CHECK-NEXT: cf.br ^bb6(%[[ALLOC3]]{{.*}})
 // CHECK-NEXT: ^bb6(%[[ALLOC4:.*]]:{{.*}})
-// CHECK-NEXT: br ^bb7(%[[ALLOC4]]{{.*}})
+// CHECK-NEXT: cf.br ^bb7(%[[ALLOC4]]{{.*}})
 // CHECK-NEXT: ^bb7(%[[ALLOC5:.*]]:{{.*}})
 //      CHECK: test.copy(%[[ALLOC5]],
 // CHECK-NEXT: memref.dealloc %[[ALLOC4]]
@@ -225,18 +225,18 @@ func @emptyUsesValue(%arg0: memref<4xf32>) {
 
 // CHECK-LABEL: func @criticalEdge
 func @criticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
-  cond_br %arg0, ^bb1, ^bb2(%arg1 : memref<2xf32>)
+  cf.cond_br %arg0, ^bb1, ^bb2(%arg1 : memref<2xf32>)
 ^bb1:
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
-  br ^bb2(%0 : memref<2xf32>)
+  cf.br ^bb2(%0 : memref<2xf32>)
 ^bb2(%1: memref<2xf32>):
   test.copy(%1, %arg2) : (memref<2xf32>, memref<2xf32>)
   return
 }
 
 // CHECK-NEXT: %[[ALLOC0:.*]] = bufferization.clone
-// CHECK-NEXT: cond_br
+// CHECK-NEXT: cf.cond_br
 //      CHECK: %[[ALLOC1:.*]] = memref.alloc()
 // CHECK-NEXT: test.buffer_based
 // CHECK-NEXT: %[[ALLOC2:.*]] = bufferization.clone %[[ALLOC1]]
@@ -260,9 +260,9 @@ func @criticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 func @invCriticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
-  cond_br %arg0, ^bb1, ^bb2(%arg1 : memref<2xf32>)
+  cf.cond_br %arg0, ^bb1, ^bb2(%arg1 : memref<2xf32>)
 ^bb1:
-  br ^bb2(%0 : memref<2xf32>)
+  cf.br ^bb2(%0 : memref<2xf32>)
 ^bb2(%1: memref<2xf32>):
   test.copy(%1, %arg2) : (memref<2xf32>, memref<2xf32>)
   return
@@ -288,13 +288,13 @@ func @invCriticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 func @ifElse(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
-  cond_br %arg0,
+  cf.cond_br %arg0,
     ^bb1(%arg1, %0 : memref<2xf32>, memref<2xf32>),
     ^bb2(%0, %arg1 : memref<2xf32>, memref<2xf32>)
 ^bb1(%1: memref<2xf32>, %2: memref<2xf32>):
-  br ^bb3(%1, %2 : memref<2xf32>, memref<2xf32>)
+  cf.br ^bb3(%1, %2 : memref<2xf32>, memref<2xf32>)
 ^bb2(%3: memref<2xf32>, %4: memref<2xf32>):
-  br ^bb3(%3, %4 : memref<2xf32>, memref<2xf32>)
+  cf.br ^bb3(%3, %4 : memref<2xf32>, memref<2xf32>)
 ^bb3(%5: memref<2xf32>, %6: memref<2xf32>):
   %7 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%5: memref<2xf32>) out(%7: memref<2xf32>)
@@ -326,13 +326,13 @@ func @ifElse(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 func @ifElseNoUsers(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
-  cond_br %arg0,
+  cf.cond_br %arg0,
     ^bb1(%arg1, %0 : memref<2xf32>, memref<2xf32>),
     ^bb2(%0, %arg1 : memref<2xf32>, memref<2xf32>)
 ^bb1(%1: memref<2xf32>, %2: memref<2xf32>):
-  br ^bb3(%1, %2 : memref<2xf32>, memref<2xf32>)
+  cf.br ^bb3(%1, %2 : memref<2xf32>, memref<2xf32>)
 ^bb2(%3: memref<2xf32>, %4: memref<2xf32>):
-  br ^bb3(%3, %4 : memref<2xf32>, memref<2xf32>)
+  cf.br ^bb3(%3, %4 : memref<2xf32>, memref<2xf32>)
 ^bb3(%5: memref<2xf32>, %6: memref<2xf32>):
   test.copy(%arg1, %arg2) : (memref<2xf32>, memref<2xf32>)
   return
@@ -361,17 +361,17 @@ func @ifElseNoUsers(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 func @ifElseNested(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
-  cond_br %arg0,
+  cf.cond_br %arg0,
     ^bb1(%arg1, %0 : memref<2xf32>, memref<2xf32>),
     ^bb2(%0, %arg1 : memref<2xf32>, memref<2xf32>)
 ^bb1(%1: memref<2xf32>, %2: memref<2xf32>):
-  br ^bb5(%1, %2 : memref<2xf32>, memref<2xf32>)
+  cf.br ^bb5(%1, %2 : memref<2xf32>, memref<2xf32>)
 ^bb2(%3: memref<2xf32>, %4: memref<2xf32>):
-  cond_br %arg0, ^bb3(%3 : memref<2xf32>), ^bb4(%4 : memref<2xf32>)
+  cf.cond_br %arg0, ^bb3(%3 : memref<2xf32>), ^bb4(%4 : memref<2xf32>)
 ^bb3(%5: memref<2xf32>):
-  br ^bb5(%5, %3 : memref<2xf32>, memref<2xf32>)
+  cf.br ^bb5(%5, %3 : memref<2xf32>, memref<2xf32>)
 ^bb4(%6: memref<2xf32>):
-  br ^bb5(%3, %6 : memref<2xf32>, memref<2xf32>)
+  cf.br ^bb5(%3, %6 : memref<2xf32>, memref<2xf32>)
 ^bb5(%7: memref<2xf32>, %8: memref<2xf32>):
   %9 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%7: memref<2xf32>) out(%9: memref<2xf32>)
@@ -430,33 +430,33 @@ func @moving_alloc_and_inserting_missing_dealloc(
   %cond: i1,
     %arg0: memref<2xf32>,
     %arg1: memref<2xf32>) {
-  cond_br %cond, ^bb1, ^bb2
+  cf.cond_br %cond, ^bb1, ^bb2
 ^bb1:
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg0: memref<2xf32>) out(%0: memref<2xf32>)
-  br ^exit(%0 : memref<2xf32>)
+  cf.br ^exit(%0 : memref<2xf32>)
 ^bb2:
   %1 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg0: memref<2xf32>) out(%1: memref<2xf32>)
-  br ^exit(%1 : memref<2xf32>)
+  cf.br ^exit(%1 : memref<2xf32>)
 ^exit(%arg2: memref<2xf32>):
   test.copy(%arg2, %arg1) : (memref<2xf32>, memref<2xf32>)
   return
 }
 
-// CHECK-NEXT: cond_br{{.*}}
+// CHECK-NEXT: cf.cond_br{{.*}}
 // CHECK-NEXT: ^bb1
 //      CHECK: %[[ALLOC0:.*]] = memref.alloc()
 // CHECK-NEXT: test.buffer_based
 // CHECK-NEXT: %[[ALLOC1:.*]] = bufferization.clone %[[ALLOC0]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC0]]
-// CHECK-NEXT: br ^bb3(%[[ALLOC1]]
+// CHECK-NEXT: cf.br ^bb3(%[[ALLOC1]]
 // CHECK-NEXT: ^bb2
 // CHECK-NEXT: %[[ALLOC2:.*]] = memref.alloc()
 // CHECK-NEXT: test.buffer_based
 // CHECK-NEXT: %[[ALLOC3:.*]] = bufferization.clone %[[ALLOC2]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC2]]
-// CHECK-NEXT: br ^bb3(%[[ALLOC3]]
+// CHECK-NEXT: cf.br ^bb3(%[[ALLOC3]]
 // CHECK-NEXT: ^bb3(%[[ALLOC4:.*]]:{{.*}})
 //      CHECK: test.copy
 // CHECK-NEXT: memref.dealloc %[[ALLOC4]]
@@ -480,20 +480,20 @@ func @moving_invalid_dealloc_op_complex(
     %arg0: memref<2xf32>,
     %arg1: memref<2xf32>) {
   %1 = memref.alloc() : memref<2xf32>
-  cond_br %cond, ^bb1, ^bb2
+  cf.cond_br %cond, ^bb1, ^bb2
 ^bb1:
-  br ^exit(%arg0 : memref<2xf32>)
+  cf.br ^exit(%arg0 : memref<2xf32>)
 ^bb2:
   test.buffer_based in(%arg0: memref<2xf32>) out(%1: memref<2xf32>)
   memref.dealloc %1 : memref<2xf32>
-  br ^exit(%1 : memref<2xf32>)
+  cf.br ^exit(%1 : memref<2xf32>)
 ^exit(%arg2: memref<2xf32>):
   test.copy(%arg2, %arg1) : (memref<2xf32>, memref<2xf32>)
   return
 }
 
 // CHECK-NEXT: %[[ALLOC0:.*]] = memref.alloc()
-// CHECK-NEXT: cond_br
+// CHECK-NEXT: cf.cond_br
 //      CHECK: test.copy
 // CHECK-NEXT: memref.dealloc %[[ALLOC0]]
 // CHECK-NEXT: return
@@ -548,9 +548,9 @@ func @nested_regions_and_cond_branch(
   %arg0: i1,
   %arg1: memref<2xf32>,
   %arg2: memref<2xf32>) {
-  cond_br %arg0, ^bb1, ^bb2
+  cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
-  br ^bb3(%arg1 : memref<2xf32>)
+  cf.br ^bb3(%arg1 : memref<2xf32>)
 ^bb2:
   %0 = memref.alloc() : memref<2xf32>
   test.region_buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>) {
@@ -560,13 +560,13 @@ func @nested_regions_and_cond_branch(
     %tmp1 = math.exp %gen1_arg0 : f32
     test.region_yield %tmp1 : f32
   }
-  br ^bb3(%0 : memref<2xf32>)
+  cf.br ^bb3(%0 : memref<2xf32>)
 ^bb3(%1: memref<2xf32>):
   test.copy(%1, %arg2) : (memref<2xf32>, memref<2xf32>)
   return
 }
 //      CHECK: (%[[cond:.*]]: {{.*}}, %[[ARG1:.*]]: {{.*}}, %{{.*}}: {{.*}})
-// CHECK-NEXT:   cond_br %[[cond]], ^[[BB1:.*]], ^[[BB2:.*]]
+// CHECK-NEXT:   cf.cond_br %[[cond]], ^[[BB1:.*]], ^[[BB2:.*]]
 //      CHECK:   %[[ALLOC0:.*]] = bufferization.clone %[[ARG1]]
 //      CHECK: ^[[BB2]]:
 //      CHECK:   %[[ALLOC1:.*]] = memref.alloc()
@@ -728,21 +728,21 @@ func @subview(%arg0 : index, %arg1 : index, %arg2 : memref<?x?xf32>) {
 
 // CHECK-LABEL: func @condBranchAlloca
 func @condBranchAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
-  cond_br %arg0, ^bb1, ^bb2
+  cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
-  br ^bb3(%arg1 : memref<2xf32>)
+  cf.br ^bb3(%arg1 : memref<2xf32>)
 ^bb2:
   %0 = memref.alloca() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
-  br ^bb3(%0 : memref<2xf32>)
+  cf.br ^bb3(%0 : memref<2xf32>)
 ^bb3(%1: memref<2xf32>):
   test.copy(%1, %arg2) : (memref<2xf32>, memref<2xf32>)
   return
 }
 
-// CHECK-NEXT: cond_br
+// CHECK-NEXT: cf.cond_br
 //      CHECK: %[[ALLOCA:.*]] = memref.alloca()
-//      CHECK: br ^bb3(%[[ALLOCA:.*]])
+//      CHECK: cf.br ^bb3(%[[ALLOCA:.*]])
 // CHECK-NEXT: ^bb3
 // CHECK-NEXT: test.copy
 // CHECK-NEXT: return
@@ -757,13 +757,13 @@ func @condBranchAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 func @ifElseAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
-  cond_br %arg0,
+  cf.cond_br %arg0,
     ^bb1(%arg1, %0 : memref<2xf32>, memref<2xf32>),
     ^bb2(%0, %arg1 : memref<2xf32>, memref<2xf32>)
 ^bb1(%1: memref<2xf32>, %2: memref<2xf32>):
-  br ^bb3(%1, %2 : memref<2xf32>, memref<2xf32>)
+  cf.br ^bb3(%1, %2 : memref<2xf32>, memref<2xf32>)
 ^bb2(%3: memref<2xf32>, %4: memref<2xf32>):
-  br ^bb3(%3, %4 : memref<2xf32>, memref<2xf32>)
+  cf.br ^bb3(%3, %4 : memref<2xf32>, memref<2xf32>)
 ^bb3(%5: memref<2xf32>, %6: memref<2xf32>):
   %7 = memref.alloca() : memref<2xf32>
   test.buffer_based in(%5: memref<2xf32>) out(%7: memref<2xf32>)
@@ -788,17 +788,17 @@ func @ifElseNestedAlloca(
   %arg2: memref<2xf32>) {
   %0 = memref.alloca() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
-  cond_br %arg0,
+  cf.cond_br %arg0,
     ^bb1(%arg1, %0 : memref<2xf32>, memref<2xf32>),
     ^bb2(%0, %arg1 : memref<2xf32>, memref<2xf32>)
 ^bb1(%1: memref<2xf32>, %2: memref<2xf32>):
-  br ^bb5(%1, %2 : memref<2xf32>, memref<2xf32>)
+  cf.br ^bb5(%1, %2 : memref<2xf32>, memref<2xf32>)
 ^bb2(%3: memref<2xf32>, %4: memref<2xf32>):
-  cond_br %arg0, ^bb3(%3 : memref<2xf32>), ^bb4(%4 : memref<2xf32>)
+  cf.cond_br %arg0, ^bb3(%3 : memref<2xf32>), ^bb4(%4 : memref<2xf32>)
 ^bb3(%5: memref<2xf32>):
-  br ^bb5(%5, %3 : memref<2xf32>, memref<2xf32>)
+  cf.br ^bb5(%5, %3 : memref<2xf32>, memref<2xf32>)
 ^bb4(%6: memref<2xf32>):
-  br ^bb5(%3, %6 : memref<2xf32>, memref<2xf32>)
+  cf.br ^bb5(%3, %6 : memref<2xf32>, memref<2xf32>)
 ^bb5(%7: memref<2xf32>, %8: memref<2xf32>):
   %9 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%7: memref<2xf32>) out(%9: memref<2xf32>)
@@ -821,9 +821,9 @@ func @nestedRegionsAndCondBranchAlloca(
   %arg0: i1,
   %arg1: memref<2xf32>,
   %arg2: memref<2xf32>) {
-  cond_br %arg0, ^bb1, ^bb2
+  cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
-  br ^bb3(%arg1 : memref<2xf32>)
+  cf.br ^bb3(%arg1 : memref<2xf32>)
 ^bb2:
   %0 = memref.alloc() : memref<2xf32>
   test.region_buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>) {
@@ -833,13 +833,13 @@ func @nestedRegionsAndCondBranchAlloca(
     %tmp1 = math.exp %gen1_arg0 : f32
     test.region_yield %tmp1 : f32
   }
-  br ^bb3(%0 : memref<2xf32>)
+  cf.br ^bb3(%0 : memref<2xf32>)
 ^bb3(%1: memref<2xf32>):
   test.copy(%1, %arg2) : (memref<2xf32>, memref<2xf32>)
   return
 }
 //      CHECK: (%[[cond:.*]]: {{.*}}, %[[ARG1:.*]]: {{.*}}, %{{.*}}: {{.*}})
-// CHECK-NEXT:   cond_br %[[cond]], ^[[BB1:.*]], ^[[BB2:.*]]
+// CHECK-NEXT:   cf.cond_br %[[cond]], ^[[BB1:.*]], ^[[BB2:.*]]
 //      CHECK: ^[[BB1]]:
 //      CHECK: %[[ALLOC0:.*]] = bufferization.clone
 //      CHECK: ^[[BB2]]:
@@ -1103,11 +1103,11 @@ func @loop_dynalloc(
   %arg2: memref<?xf32>,
   %arg3: memref<?xf32>) {
   %const0 = arith.constant 0 : i32
-  br ^loopHeader(%const0, %arg2 : i32, memref<?xf32>)
+  cf.br ^loopHeader(%const0, %arg2 : i32, memref<?xf32>)
 
 ^loopHeader(%i : i32, %buff : memref<?xf32>):
   %lessThan = arith.cmpi slt, %i, %arg1 : i32
-  cond_br %lessThan,
+  cf.cond_br %lessThan,
     ^loopBody(%i, %buff : i32, memref<?xf32>),
     ^exit(%buff : memref<?xf32>)
 
@@ -1116,7 +1116,7 @@ func @loop_dynalloc(
   %inc = arith.addi %val, %const1 : i32
   %size = arith.index_cast %inc : i32 to index
   %alloc1 = memref.alloc(%size) : memref<?xf32>
-  br ^loopHeader(%inc, %alloc1 : i32, memref<?xf32>)
+  cf.br ^loopHeader(%inc, %alloc1 : i32, memref<?xf32>)
 
 ^exit(%buff3 : memref<?xf32>):
   test.copy(%buff3, %arg3) : (memref<?xf32>, memref<?xf32>)
@@ -1136,17 +1136,17 @@ func @do_loop_alloc(
   %arg2: memref<2xf32>,
   %arg3: memref<2xf32>) {
   %const0 = arith.constant 0 : i32
-  br ^loopBody(%const0, %arg2 : i32, memref<2xf32>)
+  cf.br ^loopBody(%const0, %arg2 : i32, memref<2xf32>)
 
 ^loopBody(%val : i32, %buff2: memref<2xf32>):
   %const1 = arith.constant 1 : i32
   %inc = arith.addi %val, %const1 : i32
   %alloc1 = memref.alloc() : memref<2xf32>
-  br ^loopHeader(%inc, %alloc1 : i32, memref<2xf32>)
+  cf.br ^loopHeader(%inc, %alloc1 : i32, memref<2xf32>)
 
 ^loopHeader(%i : i32, %buff : memref<2xf32>):
   %lessThan = arith.cmpi slt, %i, %arg1 : i32
-  cond_br %lessThan,
+  cf.cond_br %lessThan,
     ^loopBody(%i, %buff : i32, memref<2xf32>),
     ^exit(%buff : memref<2xf32>)
 

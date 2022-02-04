@@ -9,7 +9,7 @@
 /// This file defines some shared command-line options that can be used when
 /// debugging the test tools. This file must be included into the tool.
 
-#include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
@@ -139,7 +139,7 @@ inline void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm) {
 
   // convert control flow to CFG form
   fir::addCfgConversionPass(pm);
-  pm.addPass(mlir::createLowerToCFGPass());
+  pm.addPass(mlir::createConvertSCFToCFPass());
 
   pm.addPass(mlir::createCanonicalizerPass(config));
 }

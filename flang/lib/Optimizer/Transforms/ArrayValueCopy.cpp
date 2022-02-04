@@ -13,6 +13,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/Debug.h"
@@ -332,9 +333,9 @@ ArrayCopyAnalysis::arrayAccesses(ArrayLoadOp load) {
                  << "add modify {" << *owner << "} to array value set\n");
       accesses.push_back(owner);
       appendToQueue(update.getResult(1));
-    } else if (auto br = mlir::dyn_cast<mlir::BranchOp>(owner)) {
+    } else if (auto br = mlir::dyn_cast<mlir::cf::BranchOp>(owner)) {
       branchOp(br.getDest(), br.getDestOperands());
-    } else if (auto br = mlir::dyn_cast<mlir::CondBranchOp>(owner)) {
+    } else if (auto br = mlir::dyn_cast<mlir::cf::CondBranchOp>(owner)) {
       branchOp(br.getTrueDest(), br.getTrueOperands());
       branchOp(br.getFalseDest(), br.getFalseOperands());
     } else if (mlir::isa<ArrayMergeStoreOp>(owner)) {
@@ -789,9 +790,9 @@ public:
     patterns1.insert<ArrayUpdateConversion>(context, analysis, useMap);
     patterns1.insert<ArrayModifyConversion>(context, analysis, useMap);
     mlir::ConversionTarget target(*context);
-    target.addLegalDialect<FIROpsDialect, mlir::scf::SCFDialect,
-                           mlir::arith::ArithmeticDialect,
-                           mlir::StandardOpsDialect>();
+    target.addLegalDialect<
+        FIROpsDialect, mlir::scf::SCFDialect, mlir::arith::ArithmeticDialect,
+        mlir::cf::ControlFlowDialect, mlir::StandardOpsDialect>();
     target.addIllegalOp<ArrayFetchOp, ArrayUpdateOp, ArrayModifyOp>();
     // Rewrite the array fetch and array update ops.
     if (mlir::failed(

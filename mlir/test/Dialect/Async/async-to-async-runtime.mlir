@@ -63,7 +63,7 @@ func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
   // CHECK: %[[IS_ERROR:.*]] = async.runtime.is_error %[[TOKEN]]
   // CHECK: %[[TRUE:.*]] = arith.constant true
   // CHECK: %[[NOT_ERROR:.*]] = arith.xori %[[IS_ERROR]], %[[TRUE]] : i1
-  // CHECK: assert %[[NOT_ERROR]]
+  // CHECK: cf.assert %[[NOT_ERROR]]
   // CHECK-NEXT: return
   async.await %token0 : !async.token
   return
@@ -109,7 +109,7 @@ func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
 // Check the error of the awaited token after resumption.
 // CHECK: ^[[RESUME_1]]:
 // CHECK:   %[[ERR:.*]] = async.runtime.is_error %[[INNER_TOKEN]]
-// CHECK:   cond_br %[[ERR]], ^[[SET_ERROR:.*]], ^[[CONTINUATION:.*]]
+// CHECK:   cf.cond_br %[[ERR]], ^[[SET_ERROR:.*]], ^[[CONTINUATION:.*]]
 
 // Set token available if the token is not in the error state.
 // CHECK: ^[[CONTINUATION:.*]]:
@@ -169,7 +169,7 @@ func @async_execute_token_dependency(%arg0: f32, %arg1: memref<1xf32>) {
 // Check the error of the awaited token after resumption.
 // CHECK: ^[[RESUME_1]]:
 // CHECK:   %[[ERR:.*]] = async.runtime.is_error %[[ARG0]]
-// CHECK:   cond_br %[[ERR]], ^[[SET_ERROR:.*]], ^[[CONTINUATION:.*]]
+// CHECK:   cf.cond_br %[[ERR]], ^[[SET_ERROR:.*]], ^[[CONTINUATION:.*]]
 
 // Emplace result token after second resumption and error checking.
 // CHECK: ^[[CONTINUATION:.*]]:
@@ -225,7 +225,7 @@ func @async_group_await_all(%arg0: f32, %arg1: memref<1xf32>) {
 // Check the error of the awaited token after resumption.
 // CHECK: ^[[RESUME_1]]:
 // CHECK:   %[[ERR:.*]] = async.runtime.is_error %[[ARG]]
-// CHECK:   cond_br %[[ERR]], ^[[SET_ERROR:.*]], ^[[CONTINUATION:.*]]
+// CHECK:   cf.cond_br %[[ERR]], ^[[SET_ERROR:.*]], ^[[CONTINUATION:.*]]
 
 // Emplace result token after error checking.
 // CHECK: ^[[CONTINUATION:.*]]:
@@ -319,7 +319,7 @@ func @async_value_operands() {
 // Check the error of the awaited token after resumption.
 // CHECK: ^[[RESUME_1]]:
 // CHECK:   %[[ERR:.*]] = async.runtime.is_error %[[ARG]]
-// CHECK:   cond_br %[[ERR]], ^[[SET_ERROR:.*]], ^[[CONTINUATION:.*]]
+// CHECK:   cf.cond_br %[[ERR]], ^[[SET_ERROR:.*]], ^[[CONTINUATION:.*]]
 
 // // Load from the async.value argument after error checking.
 // CHECK: ^[[CONTINUATION:.*]]:
@@ -335,7 +335,7 @@ func @async_value_operands() {
 // CHECK-LABEL: @execute_assertion
 func @execute_assertion(%arg0: i1) {
   %token = async.execute {
-    assert %arg0, "error"
+    cf.assert %arg0, "error"
     async.yield
   }
   async.await %token : !async.token
@@ -358,17 +358,17 @@ func @execute_assertion(%arg0: i1) {
 
 // Resume coroutine after suspension.
 // CHECK: ^[[RESUME]]:
-// CHECK:   cond_br %[[ARG0]], ^[[SET_AVAILABLE:.*]], ^[[SET_ERROR:.*]]
+// CHECK:   cf.cond_br %[[ARG0]], ^[[SET_AVAILABLE:.*]], ^[[SET_ERROR:.*]]
 
 // Set coroutine completion token to available state.
 // CHECK: ^[[SET_AVAILABLE]]:
 // CHECK:   async.runtime.set_available %[[TOKEN]]
-// CHECK:   br ^[[CLEANUP]]
+// CHECK:   cf.br ^[[CLEANUP]]
 
 // Set coroutine completion token to error state.
 // CHECK: ^[[SET_ERROR]]:
 // CHECK:   async.runtime.set_error %[[TOKEN]]
-// CHECK:   br ^[[CLEANUP]]
+// CHECK:   cf.br ^[[CLEANUP]]
 
 // Delete coroutine.
 // CHECK: ^[[CLEANUP]]:
@@ -409,7 +409,7 @@ func @lower_scf_to_cfg(%arg0: f32, %arg1: memref<1xf32>, %arg2: i1) {
 
 // Check that structured control flow lowered to CFG.
 // CHECK-NOT: scf.if
-// CHECK: cond_br %[[FLAG]]
+// CHECK: cf.cond_br %[[FLAG]]
 
 // -----
 // Constants captured by the async.execute region should be cloned into the

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-linalg-to-loops -convert-scf-to-std -convert-linalg-to-llvm -convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | \
+// RUN: mlir-opt %s -convert-linalg-to-loops -convert-scf-to-cf -convert-linalg-to-llvm -convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -O3 -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
@@ -56,7 +56,7 @@ func @main() {
       %e1 = memref.load %C1[%i, %j] : memref<?x?xf32>
       %e2 = memref.load %C2[%i, %j] : memref<?x?xf32>
       %c = arith.cmpf oeq, %e1, %e2 : f32
-      assert %c, "Matmul does not produce same output as matvec"
+      cf.assert %c, "Matmul does not produce same output as matvec"
     }
   }
   %C2_ = memref.cast %C2 : memref<?x?xf32> to memref<*xf32>

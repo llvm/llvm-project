@@ -3,7 +3,7 @@
 
 // Compile the MLIR file to LLVM:
 // RUN: mlir-opt %t/input.mlir \
-// RUN:  -lower-affine  -convert-scf-to-std  -convert-memref-to-llvm \
+// RUN:  -lower-affine  -convert-scf-to-cf  -convert-memref-to-llvm \
 // RUN:  -convert-std-to-llvm -reconcile-unrealized-casts \
 // RUN: | mlir-translate --mlir-to-llvmir -o %t.ll
 

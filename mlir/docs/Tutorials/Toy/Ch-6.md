@@ -94,10 +94,11 @@ multiple stages by relying on
 ```c++
   mlir::RewritePatternSet patterns(&getContext());
   mlir::populateAffineToStdConversionPatterns(patterns, &getContext());
-  mlir::populateLoopToStdConversionPatterns(patterns, &getContext());
+  mlir::cf::populateSCFToControlFlowConversionPatterns(patterns, &getContext());
   mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                           patterns);
   mlir::populateStdToLLVMConversionPatterns(typeConverter, patterns);
+  mlir::cf::populateControlFlowToLLVMConversionPatterns(patterns, &getContext());
 
   // The only remaining operation, to lower from the `toy` dialect, is the
   // PrintOp.
@@ -207,7 +208,7 @@ define void @main() {
   %109 = memref.load double, double* %108
   %110 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @frmt_spec, i64 0, i64 0), double %109)
   %111 = add i64 %100, 1
-  br label %99
+  cf.br label %99
 
   ...
 

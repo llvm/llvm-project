@@ -20,7 +20,7 @@ func private @foo() -> tensor<?xf32>
 func @swappy(%cond1 : i1, %cond2 : i1, %t1 : tensor<f32>, %t2 : tensor<f32>)
     -> (tensor<f32>, tensor<f32>)
 {
-  cond_br %cond1, ^bb1, ^bb2
+  cf.cond_br %cond1, ^bb1, ^bb2
 
   ^bb1:
     %T:2 = scf.if %cond2 -> (tensor<f32>, tensor<f32>) {

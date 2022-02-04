@@ -1,4 +1,4 @@
-//===- SCFToStandard.cpp - ControlFlow to CFG conversion ------------------===//
+//===- SCFToControlFlow.cpp - SCF to CF conversion ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,11 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "../PassDetail.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -29,7 +29,8 @@ using namespace mlir::scf;
 
 namespace {
 
-struct SCFToStandardPass : public SCFToStandardBase<SCFToStandardPass> {
+struct SCFToControlFlowPass
+    : public SCFToControlFlowBase<SCFToControlFlowPass> {
   void runOnOperation() override;
 };
 
@@ -57,7 +58,7 @@ struct SCFToStandardPass : public SCFToStandardBase<SCFToStandardPass> {
 //      |   <code before the ForOp>       |
 //      |   <definitions of %init...>     |
 //      |   <compute initial %iv value>   |
-//      |   br cond(%iv, %init...)        |
+//      |   cf.br cond(%iv, %init...)        |
 //      +---------------------------------+
 //             |
 //  -------|   |
@@ -65,7 +66,7 @@ struct SCFToStandardPass : public SCFToStandardBase<SCFToStandardPass> {
 //  |   +--------------------------------+
 //  |   | cond(%iv, %init...):           |
 //  |   |   <compare %iv to upper bound> |
-//  |   |   cond_br %r, body, end        |
+//  |   |   cf.cond_br %r, body, end        |
 //  |   +--------------------------------+
 //  |          |               |
 //  |          |               -------------|
@@ -83,7 +84,7 @@ struct SCFToStandardPass : public SCFToStandardBase<SCFToStandardPass> {
 //  |   |   <body contents>              |  |
 //  |   |   <operands of yield = %yields>|  |
 //  |   |   %new_iv =<add step to %iv>   |  |
-//  |   |   br cond(%new_iv, %yields)    |  |
+//  |   |   cf.br cond(%new_iv, %yields)    |  |
 //  |   +--------------------------------+  |
 //  |          |                            |
 //  |-----------        |--------------------
@@ -125,7 +126,7 @@ struct ForLowering : public OpRewritePattern<ForOp> {
 //
 //      +--------------------------------+
 //      | <code before the IfOp>         |
-//      | cond_br %cond, %then, %else    |
+//      | cf.cond_br %cond, %then, %else    |
 //      +--------------------------------+
 //             |              |
 //             |              --------------|
@@ -133,7 +134,7 @@ struct ForLowering : public OpRewritePattern<ForOp> {
 //      +--------------------------------+  |
 //      | then:                          |  |
 //      |   <then contents>              |  |
-//      |   br continue                  |  |
+//      |   cf.br continue                  |  |
 //      +--------------------------------+  |
 //             |                            |
 //   |----------               |-------------
@@ -141,7 +142,7 @@ struct ForLowering : public OpRewritePattern<ForOp> {
 //   |  +--------------------------------+
 //   |  | else:                          |
 //   |  |   <else contents>              |
-//   |  |   br continue                  |
+//   |  |   cf.br continue                  |
 //   |  +--------------------------------+
 //   |         |
 //   ------|   |
@@ -155,7 +156,7 @@ struct ForLowering : public OpRewritePattern<ForOp> {
 //
 //      +--------------------------------+
 //      | <code before the IfOp>         |
-//      | cond_br %cond, %then, %else    |
+//      | cf.cond_br %cond, %then, %else    |
 //      +--------------------------------+
 //             |              |
 //             |              --------------|
@@ -163,7 +164,7 @@ struct ForLowering : public OpRewritePattern<ForOp> {
 //      +--------------------------------+  |
 //      | then:                          |  |
 //      |   <then contents>              |  |
-//      |   br dom(%args...)             |  |
+//      |   cf.br dom(%args...)             |  |
 //      +--------------------------------+  |
 //             |                            |
 //   |----------               |-------------
@@ -171,14 +172,14 @@ struct ForLowering : public OpRewritePattern<ForOp> {
 //   |  +--------------------------------+
 //   |  | else:                          |
 //   |  |   <else contents>              |
-//   |  |   br dom(%args...)             |
+//   |  |   cf.br dom(%args...)             |
 //   |  +--------------------------------+
 //   |         |
 //   ------|   |
 //         v   v
 //      +--------------------------------+
 //      | dom(%args...):                 |
-//      |   br continue                  |
+//      |   cf.br continue                  |
 //      +--------------------------------+
 //             |
 //             v
@@ -218,7 +219,7 @@ struct ParallelLowering : public OpRewritePattern<mlir::scf::ParallelOp> {
 ///
 ///      +---------------------------------+
 ///      |   <code before the WhileOp>     |
-///      |   br ^before(%operands...)      |
+///      |   cf.br ^before(%operands...)      |
 ///      +---------------------------------+
 ///             |
 ///  -------|   |
@@ -233,7 +234,7 @@ struct ParallelLowering : public OpRewritePattern<mlir::scf::ParallelOp> {
 ///  |   +--------------------------------+
 ///  |   | ^before-last:
 ///  |   |   %cond = <compute condition>  |
-///  |   |   cond_br %cond,               |
+///  |   |   cf.cond_br %cond,               |
 ///  |   |        ^after(%vals...), ^cont |
 ///  |   +--------------------------------+
 ///  |          |               |
@@ -249,7 +250,7 @@ struct ParallelLowering : public OpRewritePattern<mlir::scf::ParallelOp> {
 ///  |   +--------------------------------+  |
 ///  |   | ^after-last:                   |  |
 ///  |   |   %yields... = <some payload>  |  |
-///  |   |   br ^before(%yields...)       |  |
+///  |   |   cf.br ^before(%yields...)       |  |
 ///  |   +--------------------------------+  |
 ///  |          |                            |
 ///  |-----------        |--------------------
@@ -321,7 +322,7 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
   SmallVector<Value, 8> loopCarried;
   loopCarried.push_back(stepped);
   loopCarried.append(terminator->operand_begin(), terminator->operand_end());
-  rewriter.create<BranchOp>(loc, conditionBlock, loopCarried);
+  rewriter.create<cf::BranchOp>(loc, conditionBlock, loopCarried);
   rewriter.eraseOp(terminator);
 
   // Compute loop bounds before branching to the condition.
@@ -337,15 +338,16 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
   destOperands.push_back(lowerBound);
   auto iterOperands = forOp.getIterOperands();
   destOperands.append(iterOperands.begin(), iterOperands.end());
-  rewriter.create<BranchOp>(loc, conditionBlock, destOperands);
+  rewriter.create<cf::BranchOp>(loc, conditionBlock, destOperands);
 
   // With the body block done, we can fill in the condition block.
   rewriter.setInsertionPointToEnd(conditionBlock);
   auto comparison = rewriter.create<arith::CmpIOp>(
       loc, arith::CmpIPredicate::slt, iv, upperBound);
 
-  rewriter.create<CondBranchOp>(loc, comparison, firstBodyBlock,
-                                ArrayRef<Value>(), endBlock, ArrayRef<Value>());
+  rewriter.create<cf::CondBranchOp>(loc, comparison, firstBodyBlock,
+                                    ArrayRef<Value>(), endBlock,
+                                    ArrayRef<Value>());
   // The result of the loop operation is the values of the condition block
   // arguments except the induction variable on the last iteration.
   rewriter.replaceOp(forOp, conditionBlock->getArguments().drop_front());
@@ -369,7 +371,7 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
     continueBlock =
         rewriter.createBlock(remainingOpsBlock, ifOp.getResultTypes(),
                              SmallVector<Location>(ifOp.getNumResults(), loc));
-    rewriter.create<BranchOp>(loc, remainingOpsBlock);
+    rewriter.create<cf::BranchOp>(loc, remainingOpsBlock);
   }
 
   // Move blocks from the "then" region to the region containing 'scf.if',
@@ -379,7 +381,7 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
   Operation *thenTerminator = thenRegion.back().getTerminator();
   ValueRange thenTerminatorOperands = thenTerminator->getOperands();
   rewriter.setInsertionPointToEnd(&thenRegion.back());
-  rewriter.create<BranchOp>(loc, continueBlock, thenTerminatorOperands);
+  rewriter.create<cf::BranchOp>(loc, continueBlock, thenTerminatorOperands);
   rewriter.eraseOp(thenTerminator);
   rewriter.inlineRegionBefore(thenRegion, continueBlock);
 
@@ -393,15 +395,15 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
     Operation *elseTerminator = elseRegion.back().getTerminator();
     ValueRange elseTerminatorOperands = elseTerminator->getOperands();
     rewriter.setInsertionPointToEnd(&elseRegion.back());
-    rewriter.create<BranchOp>(loc, continueBlock, elseTerminatorOperands);
+    rewriter.create<cf::BranchOp>(loc, continueBlock, elseTerminatorOperands);
     rewriter.eraseOp(elseTerminator);
     rewriter.inlineRegionBefore(elseRegion, continueBlock);
   }
 
   rewriter.setInsertionPointToEnd(condBlock);
-  rewriter.create<CondBranchOp>(loc, ifOp.getCondition(), thenBlock,
-                                /*trueArgs=*/ArrayRef<Value>(), elseBlock,
-                                /*falseArgs=*/ArrayRef<Value>());
+  rewriter.create<cf::CondBranchOp>(loc, ifOp.getCondition(), thenBlock,
+                                    /*trueArgs=*/ArrayRef<Value>(), elseBlock,
+                                    /*falseArgs=*/ArrayRef<Value>());
 
   // Ok, we're done!
   rewriter.replaceOp(ifOp, continueBlock->getArguments());
@@ -419,13 +421,13 @@ ExecuteRegionLowering::matchAndRewrite(ExecuteRegionOp op,
 
   auto &region = op.getRegion();
   rewriter.setInsertionPointToEnd(condBlock);
-  rewriter.create<BranchOp>(loc, &region.front());
+  rewriter.create<cf::BranchOp>(loc, &region.front());
 
   for (Block &block : region) {
     if (auto terminator = dyn_cast<scf::YieldOp>(block.getTerminator())) {
       ValueRange terminatorOperands = terminator->getOperands();
       rewriter.setInsertionPointToEnd(&block);
-      rewriter.create<BranchOp>(loc, remainingOpsBlock, terminatorOperands);
+      rewriter.create<cf::BranchOp>(loc, remainingOpsBlock, terminatorOperands);
       rewriter.eraseOp(terminator);
     }
   }
@@ -538,20 +540,21 @@ LogicalResult WhileLowering::matchAndRewrite(WhileOp whileOp,
 
   // Branch to the "before" region.
   rewriter.setInsertionPointToEnd(currentBlock);
-  rewriter.create<BranchOp>(loc, before, whileOp.getInits());
+  rewriter.create<cf::BranchOp>(loc, before, whileOp.getInits());
 
   // Replace terminators with branches. Assuming bodies are SESE, which holds
   // given only the patterns from this file, we only need to look at the last
   // block. This should be reconsidered if we allow break/continue in SCF.
   rewriter.setInsertionPointToEnd(beforeLast);
   auto condOp = cast<ConditionOp>(beforeLast->getTerminator());
-  rewriter.replaceOpWithNewOp<CondBranchOp>(condOp, condOp.getCondition(),
-                                            after, condOp.getArgs(),
-                                            continuation, ValueRange());
+  rewriter.replaceOpWithNewOp<cf::CondBranchOp>(condOp, condOp.getCondition(),
+                                                after, condOp.getArgs(),
+                                                continuation, ValueRange());
 
   rewriter.setInsertionPointToEnd(afterLast);
   auto yieldOp = cast<scf::YieldOp>(afterLast->getTerminator());
-  rewriter.replaceOpWithNewOp<BranchOp>(yieldOp, before, yieldOp.getResults());
+  rewriter.replaceOpWithNewOp<cf::BranchOp>(yieldOp, before,
+                                            yieldOp.getResults());
 
   // Replace the op with values "yielded" from the "before" region, which are
   // visible by dominance.
@@ -593,14 +596,14 @@ DoWhileLowering::matchAndRewrite(WhileOp whileOp,
 
   // Branch to the "before" region.
   rewriter.setInsertionPointToEnd(currentBlock);
-  rewriter.create<BranchOp>(whileOp.getLoc(), before, whileOp.getInits());
+  rewriter.create<cf::BranchOp>(whileOp.getLoc(), before, whileOp.getInits());
 
   // Loop around the "before" region based on condition.
   rewriter.setInsertionPointToEnd(beforeLast);
   auto condOp = cast<ConditionOp>(beforeLast->getTerminator());
-  rewriter.replaceOpWithNewOp<CondBranchOp>(condOp, condOp.getCondition(),
-                                            before, condOp.getArgs(),
-                                            continuation, ValueRange());
+  rewriter.replaceOpWithNewOp<cf::CondBranchOp>(condOp, condOp.getCondition(),
+                                                before, condOp.getArgs(),
+                                                continuation, ValueRange());
 
   // Replace the op with values "yielded" from the "before" region, which are
   // visible by dominance.
@@ -609,17 +612,18 @@ DoWhileLowering::matchAndRewrite(WhileOp whileOp,
   return success();
 }
 
-void mlir::populateLoopToStdConversionPatterns(RewritePatternSet &patterns) {
+void mlir::populateSCFToControlFlowConversionPatterns(
+    RewritePatternSet &patterns) {
   patterns.add<ForLowering, IfLowering, ParallelLowering, WhileLowering,
                ExecuteRegionLowering>(patterns.getContext());
   patterns.add<DoWhileLowering>(patterns.getContext(), /*benefit=*/2);
 }
 
-void SCFToStandardPass::runOnOperation() {
+void SCFToControlFlowPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
-  populateLoopToStdConversionPatterns(patterns);
-  // Configure conversion to lower out scf.for, scf.if, scf.parallel and
-  // scf.while. Anything else is fine.
+  populateSCFToControlFlowConversionPatterns(patterns);
+
+  // Configure conversion to lower out SCF operations.
   ConversionTarget target(getContext());
   target.addIllegalOp<scf::ForOp, scf::IfOp, scf::ParallelOp, scf::WhileOp,
                       scf::ExecuteRegionOp>();
@@ -629,6 +633,6 @@ void SCFToStandardPass::runOnOperation() {
     signalPassFailure();
 }
 
-std::unique_ptr<Pass> mlir::createLowerToCFGPass() {
-  return std::make_unique<SCFToStandardPass>();
+std::unique_ptr<Pass> mlir::createConvertSCFToCFPass() {
+  return std::make_unique<SCFToControlFlowPass>();
 }

@@ -109,17 +109,17 @@ func @loop_carried(%arg0 : index, %arg1 : index, %arg2 : index, %base0 : !base_t
   // This test checks that in the BAREPTR case, the branch arguments only forward the descriptor.
   // This test was lowered from a simple scf.for that swaps 2 memref iter_args.
   //      BAREPTR: llvm.br ^bb1(%{{.*}}, %{{.*}}, %{{.*}} : i64, !llvm.struct<(ptr<i32, 201>, ptr<i32, 201>, i64, array<1 x i64>, array<1 x i64>)>, !llvm.struct<(ptr<i32, 201>, ptr<i32, 201>, i64, array<1 x i64>, array<1 x i64>)>)
-  br ^bb1(%arg0, %base0, %base1 : index, memref<64xi32, 201>, memref<64xi32, 201>)
+  cf.br ^bb1(%arg0, %base0, %base1 : index, memref<64xi32, 201>, memref<64xi32, 201>)
 
   // BAREPTR-NEXT: ^bb1
   // BAREPTR-NEXT:   llvm.icmp
   // BAREPTR-NEXT:   llvm.cond_br %{{.*}}, ^bb2, ^bb3
   ^bb1(%0: index, %1: memref<64xi32, 201>, %2: memref<64xi32, 201>):  // 2 preds: ^bb0, ^bb2
     %3 = arith.cmpi slt, %0, %arg1 : index
-    cond_br %3, ^bb2, ^bb3
+    cf.cond_br %3, ^bb2, ^bb3
   ^bb2:  // pred: ^bb1
     %4 = arith.addi %0, %arg2 : index
-    br ^bb1(%4, %2, %1 : index, memref<64xi32, 201>, memref<64xi32, 201>)
+    cf.br ^bb1(%4, %2, %1 : index, memref<64xi32, 201>, memref<64xi32, 201>)
   ^bb3:  // pred: ^bb1
     return %1, %2 : memref<64xi32, 201>, memref<64xi32, 201>
 }

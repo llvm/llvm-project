@@ -208,7 +208,7 @@ func @keep_not_noop(%arg0 : tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
   %2 = linalg.init_tensor [%0, %1] : tensor<?x?xf32>
-  br ^bb1(%cst : f32)
+  cf.br ^bb1(%cst : f32)
 
 ^bb1(%arg1 : f32):
   %3 = linalg.generic
@@ -234,7 +234,7 @@ func @keep_not_noop(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>)
   %0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
   %2 = linalg.init_tensor [%0, %1] : tensor<?x?xf32>
-  br ^bb1(%cst : f32)
+  cf.br ^bb1(%cst : f32)
 
 ^bb1(%arg2 : f32):
   %3:2 = linalg.generic

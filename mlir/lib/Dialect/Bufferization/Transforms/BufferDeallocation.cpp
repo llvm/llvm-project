@@ -18,12 +18,12 @@
 // (using the BufferViewFlowAnalysis class). Consider the following example:
 //
 // ^bb0(%arg0):
-//   cond_br %cond, ^bb1, ^bb2
+//   cf.cond_br %cond, ^bb1, ^bb2
 // ^bb1:
-//   br ^exit(%arg0)
+//   cf.br ^exit(%arg0)
 // ^bb2:
 //   %new_value = ...
-//   br ^exit(%new_value)
+//   cf.br ^exit(%new_value)
 // ^exit(%arg1):
 //   return %arg1;
 //

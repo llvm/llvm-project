@@ -33,7 +33,7 @@ void mlir::sparse_tensor::buildSparseCompiler(
   pm.addNestedPass<FuncOp>(createLinalgBufferizePass());
   pm.addNestedPass<FuncOp>(createConvertLinalgToLoopsPass());
   pm.addNestedPass<FuncOp>(createConvertVectorToSCFPass());
-  pm.addPass(createLowerToCFGPass()); // --convert-scf-to-std
+  pm.addNestedPass<FuncOp>(createConvertSCFToCFPass());
   pm.addPass(createFuncBufferizePass());
   pm.addPass(arith::createConstantBufferizePass());
   pm.addNestedPass<FuncOp>(createTensorBufferizePass());

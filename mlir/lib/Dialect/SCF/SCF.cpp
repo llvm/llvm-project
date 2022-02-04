@@ -9,6 +9,7 @@
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Matchers.h"
@@ -165,13 +166,13 @@ struct SingleBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
 //     "test.foo"() : () -> ()
 //     %v = scf.execute_region -> i64 {
 //       %c = "test.cmp"() : () -> i1
-//       cond_br %c, ^bb2, ^bb3
+//       cf.cond_br %c, ^bb2, ^bb3
 //     ^bb2:
 //       %x = "test.val1"() : () -> i64
-//       br ^bb4(%x : i64)
+//       cf.br ^bb4(%x : i64)
 //     ^bb3:
 //       %y = "test.val2"() : () -> i64
-//       br ^bb4(%y : i64)
+//       cf.br ^bb4(%y : i64)
 //     ^bb4(%z : i64):
 //       scf.yield %z : i64
 //     }
@@ -184,13 +185,13 @@ struct SingleBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
 // func @func_execute_region_elim() {
 //    "test.foo"() : () -> ()
 //    %c = "test.cmp"() : () -> i1
-//    cond_br %c, ^bb1, ^bb2
+//    cf.cond_br %c, ^bb1, ^bb2
 //  ^bb1:  // pred: ^bb0
 //    %x = "test.val1"() : () -> i64
-//    br ^bb3(%x : i64)
+//    cf.br ^bb3(%x : i64)
 //  ^bb2:  // pred: ^bb0
 //    %y = "test.val2"() : () -> i64
-//    br ^bb3(%y : i64)
+//    cf.br ^bb3(%y : i64)
 //  ^bb3(%z: i64):  // 2 preds: ^bb1, ^bb2
 //    "test.bar"(%z) : (i64) -> ()
 //    return
@@ -208,13 +209,13 @@ struct MultiBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
     Block *postBlock = rewriter.splitBlock(prevBlock, op->getIterator());
     rewriter.setInsertionPointToEnd(prevBlock);
 
-    rewriter.create<BranchOp>(op.getLoc(), &op.getRegion().front());
+    rewriter.create<cf::BranchOp>(op.getLoc(), &op.getRegion().front());
 
     for (Block &blk : op.getRegion()) {
       if (YieldOp yieldOp = dyn_cast<YieldOp>(blk.getTerminator())) {
         rewriter.setInsertionPoint(yieldOp);
-        rewriter.create<BranchOp>(yieldOp.getLoc(), postBlock,
-                                  yieldOp.getResults());
+        rewriter.create<cf::BranchOp>(yieldOp.getLoc(), postBlock,
+                                      yieldOp.getResults());
         rewriter.eraseOp(yieldOp);
       }
     }

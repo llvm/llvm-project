@@ -9,6 +9,7 @@
 #include "mlir/Conversion/ShapeToStandard/ShapeToStandard.h"
 
 #include "../PassDetail.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -29,7 +30,7 @@ public:
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(shape::CstrRequireOp op,
                                 PatternRewriter &rewriter) const override {
-    rewriter.create<AssertOp>(op.getLoc(), op.getPred(), op.getMsgAttr());
+    rewriter.create<cf::AssertOp>(op.getLoc(), op.getPred(), op.getMsgAttr());
     rewriter.replaceOpWithNewOp<shape::ConstWitnessOp>(op, true);
     return success();
   }

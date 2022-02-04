@@ -41,12 +41,12 @@ Example for breaking the invariant:
 ```mlir
 func @condBranch(%arg0: i1, %arg1: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
-  cond_br %arg0, ^bb1, ^bb2
+  cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
-  br ^bb3()
+  cf.br ^bb3()
 ^bb2:
   partial_write(%0, %0)
-  br ^bb3()
+  cf.br ^bb3()
 ^bb3():
   test.copy(%0, %arg1) : (memref<2xf32>, memref<2xf32>) -> ()
   return
@@ -74,13 +74,13 @@ untracked allocations are mixed:
 func @mixedAllocation(%arg0: i1) {
    %0 = memref.alloca() : memref<2xf32>  // aliases: %2
    %1 = memref.alloc() : memref<2xf32>  // aliases: %2
-   cond_br %arg0, ^bb1, ^bb2
+   cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
   use(%0)
-  br ^bb3(%0 : memref<2xf32>)
+  cf.br ^bb3(%0 : memref<2xf32>)
 ^bb2:
   use(%1)
-  br ^bb3(%1 : memref<2xf32>)
+  cf.br ^bb3(%1 : memref<2xf32>)
 ^bb3(%2: memref<2xf32>):
   ...
 }
@@ -129,13 +129,13 @@ BufferHoisting pass:
 
 ```mlir
 func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
-  cond_br %arg0, ^bb1, ^bb2
+  cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
-  br ^bb3(%arg1 : memref<2xf32>)
+  cf.br ^bb3(%arg1 : memref<2xf32>)
 ^bb2:
   %0 = memref.alloc() : memref<2xf32>  // aliases: %1
   use(%0)
-  br ^bb3(%0 : memref<2xf32>)
+  cf.br ^bb3(%0 : memref<2xf32>)
 ^bb3(%1: memref<2xf32>):  // %1 could be %0 or %arg1
   test.copy(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
   return
@@ -150,12 +150,12 @@ of code:
 ```mlir
 func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>  // moved to bb0
-  cond_br %arg0, ^bb1, ^bb2
+  cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
-  br ^bb3(%arg1 : memref<2xf32>)
+  cf.br ^bb3(%arg1 : memref<2xf32>)
 ^bb2:
    use(%0)
-   br ^bb3(%0 : memref<2xf32>)
+   cf.br ^bb3(%0 : memref<2xf32>)
 ^bb3(%1: memref<2xf32>):
   test.copy(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
   return
@@ -175,14 +175,14 @@ func @condBranchDynamicType(
   %arg1: memref<?xf32>,
   %arg2: memref<?xf32>,
   %arg3: index) {
-  cond_br %arg0, ^bb1, ^bb2(%arg3: index)
+  cf.cond_br %arg0, ^bb1, ^bb2(%arg3: index)
 ^bb1:
-  br ^bb3(%arg1 : memref<?xf32>)
+  cf.br ^bb3(%arg1 : memref<?xf32>)
 ^bb2(%0: index):
   %1 = memref.alloc(%0) : memref<?xf32>   // cannot be moved upwards to the data
                                    // dependency to %0
   use(%1)
-  br ^bb3(%1 : memref<?xf32>)
+  cf.br ^bb3(%1 : memref<?xf32>)
 ^bb3(%2: memref<?xf32>):
   test.copy(%2, %arg2) : (memref<?xf32>, memref<?xf32>) -> ()
   return
@@ -201,14 +201,14 @@ allocations have already been placed:
 ```mlir
 func @branch(%arg0: i1) {
   %0 = memref.alloc() : memref<2xf32>  // aliases: %2
-  cond_br %arg0, ^bb1, ^bb2
+  cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
   %1 = memref.alloc() : memref<2xf32>  // resides here for demonstration purposes
                                 // aliases: %2
-  br ^bb3(%1 : memref<2xf32>)
+  cf.br ^bb3(%1 : memref<2xf32>)
 ^bb2:
   use(%0)
-  br ^bb3(%0 : memref<2xf32>)
+  cf.br ^bb3(%0 : memref<2xf32>)
 ^bb3(%2: memref<2xf32>):
   …
   return
@@ -233,16 +233,16 @@ result:
 ```mlir
 func @branch(%arg0: i1) {
   %0 = memref.alloc() : memref<2xf32>
-  cond_br %arg0, ^bb1, ^bb2
+  cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
   %1 = memref.alloc() : memref<2xf32>
   %3 = bufferization.clone %1 : (memref<2xf32>) -> (memref<2xf32>)
   memref.dealloc %1 : memref<2xf32> // %1 can be safely freed here
-  br ^bb3(%3 : memref<2xf32>)
+  cf.br ^bb3(%3 : memref<2xf32>)
 ^bb2:
   use(%0)
   %4 = bufferization.clone %0 : (memref<2xf32>) -> (memref<2xf32>)
-  br ^bb3(%4 : memref<2xf32>)
+  cf.br ^bb3(%4 : memref<2xf32>)
 ^bb3(%2: memref<2xf32>):
   …
   memref.dealloc %2 : memref<2xf32> // free temp buffer %2
@@ -273,23 +273,23 @@ func @condBranchDynamicTypeNested(
   %arg1: memref<?xf32>,  // aliases: %3, %4
   %arg2: memref<?xf32>,
   %arg3: index) {
-  cond_br %arg0, ^bb1, ^bb2(%arg3: index)
+  cf.cond_br %arg0, ^bb1, ^bb2(%arg3: index)
 ^bb1:
-  br ^bb6(%arg1 : memref<?xf32>)
+  cf.br ^bb6(%arg1 : memref<?xf32>)
 ^bb2(%0: index):
   %1 = memref.alloc(%0) : memref<?xf32>   // cannot be moved upwards due to the data
                                    // dependency to %0
                                    // aliases: %2, %3, %4
   use(%1)
-  cond_br %arg0, ^bb3, ^bb4
+  cf.cond_br %arg0, ^bb3, ^bb4
 ^bb3:
-  br ^bb5(%1 : memref<?xf32>)
+  cf.br ^bb5(%1 : memref<?xf32>)
 ^bb4:
-  br ^bb5(%1 : memref<?xf32>)
+  cf.br ^bb5(%1 : memref<?xf32>)
 ^bb5(%2: memref<?xf32>):  // non-crit. alias of %1, since %1 dominates %2
-  br ^bb6(%2 : memref<?xf32>)
+  cf.br ^bb6(%2 : memref<?xf32>)
 ^bb6(%3: memref<?xf32>):  // crit. alias of %arg1 and %2 (in other words %1)
-  br ^bb7(%3 : memref<?xf32>)
+  cf.br ^bb7(%3 : memref<?xf32>)
 ^bb7(%4: memref<?xf32>):  // non-crit. alias of %3, since %3 dominates %4
   test.copy(%4, %arg2) : (memref<?xf32>, memref<?xf32>) -> ()
   return
@@ -306,25 +306,25 @@ func @condBranchDynamicTypeNested(
   %arg1: memref<?xf32>,
   %arg2: memref<?xf32>,
   %arg3: index) {
-  cond_br %arg0, ^bb1, ^bb2(%arg3 : index)
+  cf.cond_br %arg0, ^bb1, ^bb2(%arg3 : index)
 ^bb1:
   // temp buffer required due to alias %3
   %5 = bufferization.clone %arg1 : (memref<?xf32>) -> (memref<?xf32>)
-  br ^bb6(%5 : memref<?xf32>)
+  cf.br ^bb6(%5 : memref<?xf32>)
 ^bb2(%0: index):
   %1 = memref.alloc(%0) : memref<?xf32>
   use(%1)
-  cond_br %arg0, ^bb3, ^bb4
+  cf.cond_br %arg0, ^bb3, ^bb4
 ^bb3:
-  br ^bb5(%1 : memref<?xf32>)
+  cf.br ^bb5(%1 : memref<?xf32>)
 ^bb4:
-  br ^bb5(%1 : memref<?xf32>)
+  cf.br ^bb5(%1 : memref<?xf32>)
 ^bb5(%2: memref<?xf32>):
   %6 = bufferization.clone %1 : (memref<?xf32>) -> (memref<?xf32>)
   memref.dealloc %1 : memref<?xf32>
-  br ^bb6(%6 : memref<?xf32>)
+  cf.br ^bb6(%6 : memref<?xf32>)
 ^bb6(%3: memref<?xf32>):
-  br ^bb7(%3 : memref<?xf32>)
+  cf.br ^bb7(%3 : memref<?xf32>)
 ^bb7(%4: memref<?xf32>):
   test.copy(%4, %arg2) : (memref<?xf32>, memref<?xf32>) -> ()
   memref.dealloc %3 : memref<?xf32>  // free %3, since %4 is a non-crit. alias of %3

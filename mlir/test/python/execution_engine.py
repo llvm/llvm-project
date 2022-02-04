@@ -276,28 +276,28 @@ def testDynamicMemrefAdd2D():
           %c0 = arith.constant 0 : index
           %c2 = arith.constant 2 : index
           %c1 = arith.constant 1 : index
-          br ^bb1(%c0 : index)
+          cf.br ^bb1(%c0 : index)
         ^bb1(%0: index):  // 2 preds: ^bb0, ^bb5
           %1 = arith.cmpi slt, %0, %c2 : index
-          cond_br %1, ^bb2, ^bb6
+          cf.cond_br %1, ^bb2, ^bb6
         ^bb2:  // pred: ^bb1
           %c0_0 = arith.constant 0 : index
           %c2_1 = arith.constant 2 : index
           %c1_2 = arith.constant 1 : index
-          br ^bb3(%c0_0 : index)
+          cf.br ^bb3(%c0_0 : index)
         ^bb3(%2: index):  // 2 preds: ^bb2, ^bb4
           %3 = arith.cmpi slt, %2, %c2_1 : index
-          cond_br %3, ^bb4, ^bb5
+          cf.cond_br %3, ^bb4, ^bb5
         ^bb4:  // pred: ^bb3
           %4 = memref.load %arg0[%0, %2] : memref<2x2xf32>
           %5 = memref.load %arg1[%0, %2] : memref<?x?xf32>
           %6 = arith.addf %4, %5 : f32
           memref.store %6, %arg2[%0, %2] : memref<2x2xf32>
           %7 = arith.addi %2, %c1_2 : index
-          br ^bb3(%7 : index)
+          cf.br ^bb3(%7 : index)
         ^bb5:  // pred: ^bb3
           %8 = arith.addi %0, %c1 : index
-          br ^bb1(%8 : index)
+          cf.br ^bb1(%8 : index)
         ^bb6:  // pred: ^bb1
           return
         }

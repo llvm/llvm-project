@@ -5,7 +5,7 @@
 // RUN:               -async-runtime-ref-counting-opt                          \
 // RUN:               -convert-async-to-llvm                                   \
 // RUN:               -convert-linalg-to-loops                                 \
-// RUN:               -convert-scf-to-std                                      \
+// RUN:               -convert-scf-to-cf                                      \
 // RUN:               -arith-expand                                            \
 // RUN:               -memref-expand                                              \
 // RUN:               -convert-vector-to-llvm                                  \
@@ -26,7 +26,7 @@
 // RUN:               -async-runtime-ref-counting-opt                          \
 // RUN:               -convert-async-to-llvm                                   \
 // RUN:               -convert-linalg-to-loops                                 \
-// RUN:               -convert-scf-to-std                                      \
+// RUN:               -convert-scf-to-cf                                      \
 // RUN:               -arith-expand                                            \
 // RUN:               -memref-expand                                              \
 // RUN:               -convert-vector-to-llvm                                  \
@@ -42,7 +42,7 @@
 
 // RUN:   mlir-opt %s                                                          \
 // RUN:               -convert-linalg-to-loops                                 \
-// RUN:               -convert-scf-to-std                                      \
+// RUN:               -convert-scf-to-cf                                      \
 // RUN:               -convert-vector-to-llvm                                  \
 // RUN:               -convert-memref-to-llvm                                  \
 // RUN:               -convert-std-to-llvm                                     \

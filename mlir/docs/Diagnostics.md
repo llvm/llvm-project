@@ -295,7 +295,7 @@ A few examples are shown below:
 ```mlir
 // Expect an error on the same line.
 func @bad_branch() {
-  br ^missing  // expected-error {{reference to an undefined block}}
+  cf.br ^missing  // expected-error {{reference to an undefined block}}
 }
 
 // Expect an error on an adjacent line.

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-std \
+// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-cf \
 // RUN:   -memref-expand -arith-expand -convert-vector-to-llvm \
 // RUN:   -convert-memref-to-llvm -convert-std-to-llvm \
 // RUN:   -reconcile-unrealized-casts | \

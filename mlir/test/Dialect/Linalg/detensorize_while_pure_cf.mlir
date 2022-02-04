@@ -14,7 +14,7 @@ func @main() -> () attributes {} {
   %c10 = arith.constant 10 : i32
   %1 = tensor.from_elements %c10 : tensor<1xi32>
   %reshaped1 = tensor.collapse_shape %1 [] : tensor<1xi32> into tensor<i32>
-  br ^bb1(%reshaped0 : tensor<i32>)
+  cf.br ^bb1(%reshaped0 : tensor<i32>)
 
 ^bb1(%2: tensor<i32>):  // 2 preds: ^bb0, ^bb2
   %3 = linalg.init_tensor [] : tensor<i1>
@@ -26,7 +26,7 @@ func @main() -> () attributes {} {
       linalg.yield %8 : i1
   } -> tensor<i1>
   %5 = tensor.extract %4[] : tensor<i1>
-  cond_br %5, ^bb2(%2 : tensor<i32>), ^bb3
+  cf.cond_br %5, ^bb2(%2 : tensor<i32>), ^bb3
 
 ^bb2(%6: tensor<i32>):  // pred: ^bb1
   %7 = linalg.init_tensor [] : tensor<i32>
@@ -37,7 +37,7 @@ func @main() -> () attributes {} {
       %9 = arith.addi %arg0, %arg1 : i32
       linalg.yield %9 : i32
   } -> tensor<i32>
-  br ^bb1(%8 : tensor<i32>)
+  cf.br ^bb1(%8 : tensor<i32>)
 
 ^bb3:  // pred: ^bb1
   return
@@ -46,13 +46,13 @@ func @main() -> () attributes {} {
 // CHECK-LABEL: func @main
 // CHECK-NEXT:    arith.constant 0 : i32
 // CHECK-NEXT:    arith.constant 10
-// CHECK-NEXT:    br ^[[bb1:.*]](%{{.*}} : i32)
+// CHECK-NEXT:    cf.br ^[[bb1:.*]](%{{.*}} : i32)
 // CHECK-NEXT:  ^[[bb1]](%{{.*}}: i32)
 // CHECK-NEXT:    %{{.*}} = arith.cmpi slt, %{{.*}}, %{{.*}}
-// CHECK-NEXT:    cond_br %{{.*}}, ^[[bb2:.*]](%{{.*}} : i32), ^[[bb3:.*]]
+// CHECK-NEXT:    cf.cond_br %{{.*}}, ^[[bb2:.*]](%{{.*}} : i32), ^[[bb3:.*]]
 // CHECK-NEXT:  ^[[bb2]](%{{.*}}: i32)
 // CHECK-NEXT:    %{{.*}} = arith.addi %{{.*}}, %{{.*}}
-// CHECK-NEXT:    br ^[[bb1]](%{{.*}} : i32)
+// CHECK-NEXT:    cf.br ^[[bb1]](%{{.*}} : i32)
 // CHECK-NEXT:  ^[[bb3]]:
 // CHECK-NEXT:    return
 // CHECK-NEXT:  }

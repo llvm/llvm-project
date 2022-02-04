@@ -17,7 +17,7 @@ add_mlir_dialect_library(MLIRAsyncTransforms
   MLIRIR
   MLIRPass
   MLIRSCF
-  MLIRSCFToStandard
+  MLIRSCFToControlFlow
   MLIRStandard
   MLIRTransforms
   MLIRTransformUtils

@@ -1,8 +1,8 @@
-add_mlir_conversion_library(MLIRSCFToStandard
-  SCFToStandard.cpp
+add_mlir_conversion_library(MLIRSCFToControlFlow
+  SCFToControlFlow.cpp
 
   ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/SCFToStandard
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/SCFToControlFlow
 
   DEPENDS
   MLIRConversionPassIncGen
@@ -12,6 +12,7 @@ add_mlir_conversion_library(MLIRSCFToStandard
 
   LINK_LIBS PUBLIC
   MLIRArithmetic
+  MLIRControlFlow
   MLIRSCF
   MLIRTransforms
   )

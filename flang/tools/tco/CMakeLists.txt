@@ -17,7 +17,7 @@ target_link_libraries(tco PRIVATE
   MLIRTransforms
   MLIRAffineToStandard
   MLIRAnalysis
-  MLIRSCFToStandard
+  MLIRSCFToControlFlow
   MLIRParser
   MLIRStandardToLLVM
   MLIRSupport

@@ -29,7 +29,7 @@ func private @memref_call_conv_nested(%arg0: (memref<?xf32>) -> ())
 //CHECK-LABEL: llvm.func @pass_through(%arg0: !llvm.ptr<func<void ()>>) -> !llvm.ptr<func<void ()>> {
 func @pass_through(%arg0: () -> ()) -> (() -> ()) {
 // CHECK-NEXT:  llvm.br ^bb1(%arg0 : !llvm.ptr<func<void ()>>)
-  br ^bb1(%arg0 : () -> ())
+  cf.br ^bb1(%arg0 : () -> ())
 
 //CHECK-NEXT: ^bb1(%0: !llvm.ptr<func<void ()>>):
 ^bb1(%bbarg: () -> ()):

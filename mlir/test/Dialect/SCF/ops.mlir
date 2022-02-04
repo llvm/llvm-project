@@ -298,13 +298,13 @@ func @execute_region() -> i64 {
   }
 
   // CHECK:       scf.execute_region {
-  // CHECK-NEXT:    br ^bb1
+  // CHECK-NEXT:    cf.br ^bb1
   // CHECK-NEXT:  ^bb1:
   // CHECK-NEXT:    scf.yield
   // CHECK-NEXT:  }
   "scf.execute_region"() ({
   ^bb0:
-    br ^bb1
+    cf.br ^bb1
   ^bb1:
     scf.yield
   }) : () -> ()

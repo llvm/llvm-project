@@ -3,7 +3,7 @@
 // expected-error@+1 {{'builtin.func' op with multiple blocks needs variables declared at top}}
 func @multiple_blocks() {
 ^bb1:
-    br ^bb2
+    cf.br ^bb2
 ^bb2:
     return
 }

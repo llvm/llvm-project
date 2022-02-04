@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -convert-linalg-to-loops             \
-// RUN:             -convert-scf-to-std                  \
+// RUN:             -convert-scf-to-cf                  \
 // RUN:             -convert-arith-to-llvm               \
 // RUN:             -convert-linalg-to-llvm              \
 // RUN:             -convert-memref-to-llvm              \

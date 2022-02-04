@@ -17,7 +17,7 @@ func @if_true_test(%arg0: i1, %arg1: i32) -> tensor<i32> attributes {} {
   } -> tensor<i8>
   %4 = tensor.extract %3[] : tensor<i8>
   %5 = arith.trunci %4 : i8 to i1
-  cond_br %5, ^bb1, ^bb2(%arg1_t : tensor<i32>)
+  cf.cond_br %5, ^bb1, ^bb2(%arg1_t : tensor<i32>)
 ^bb1:
   %6 = linalg.init_tensor [] : tensor<i32>
   %7 = linalg.generic
@@ -28,7 +28,7 @@ func @if_true_test(%arg0: i1, %arg1: i32) -> tensor<i32> attributes {} {
     %10 = arith.addi %arg2, %arg3 : i32
     linalg.yield %10 : i32
   } -> tensor<i32>
-  br ^bb2(%7 : tensor<i32>)
+  cf.br ^bb2(%7 : tensor<i32>)
 ^bb2(%8: tensor<i32>):
   return %8 : tensor<i32>
 }
@@ -36,10 +36,10 @@ func @if_true_test(%arg0: i1, %arg1: i32) -> tensor<i32> attributes {} {
 // CHECK-LABEL:  func @if_true_test
 // CHECK-SAME:     (%[[arg0:.*]]: i1, %[[arg1:.*]]: i32)
 // CHECK-NEXT:     arith.constant 10 : i32
-// CHECK-NEXT:     cond_br %[[arg0]], ^[[bb1:.*]], ^[[bb2:.*]](%[[arg1]] : i32)
+// CHECK-NEXT:     cf.cond_br %[[arg0]], ^[[bb1:.*]], ^[[bb2:.*]](%[[arg1]] : i32)
 // CHECK-NEXT:   ^[[bb1]]:
 // CHECK-NEXT:     %[[add_res:.*]] = arith.addi
-// CHECK-NEXT:     br ^[[bb2]](%[[add_res]] : i32)
+// CHECK-NEXT:     cf.br ^[[bb2]](%[[add_res]] : i32)
 // CHECK-NEXT:   ^[[bb2]]
 // CHECK-NEXT:     %[[func_res:.*]] = tensor.from_elements
 // CHECK-NEXT:     return %[[func_res]]
