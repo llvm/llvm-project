@@ -206,7 +206,7 @@ void test_sfinae() {
     static_assert(has_assign<It>(), "");
   }
   {
-    using It = output_iterator<const char*>;
+    using It = cpp17_output_iterator<const char*>;
     static_assert(!std::is_assignable<path, It>::value, "");
     static_assert(!has_assign<It>(), "");
 

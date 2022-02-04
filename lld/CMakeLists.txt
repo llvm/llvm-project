@@ -15,6 +15,10 @@ if(LLD_BUILT_STANDALONE)
 
   # Rely on llvm-config.
   set(LLVM_CONFIG_OUTPUT)
+  if(NOT LLVM_CONFIG)
+   # back compat
+   set(LLVM_CONFIG "${LLVM_CONFIG_PATH}")
+  endif()
   if(LLVM_CONFIG)
     set (LLVM_CONFIG_FOUND 1)
     message(STATUS "Found LLVM_CONFIG as ${LLVM_CONFIG}")
@@ -55,20 +59,22 @@ if(LLD_BUILT_STANDALONE)
   endif()
 
   find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_DIR}")
-  list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
+  list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}")
 
   # We can't check LLVM_CONFIG here, because find_package(LLVM ...) also sets
   # LLVM_CONFIG.
   if (NOT LLVM_CONFIG_FOUND)
     # Pull values from LLVMConfig.cmake.  We can drop this once the llvm-config
     # path is removed.
-    set(MAIN_INCLUDE_DIR ${LLVM_INCLUDE_DIR})
-    set(LLVM_OBJ_DIR ${LLVM_BINARY_DIR})
+    set(MAIN_INCLUDE_DIR "${LLVM_INCLUDE_DIR}")
+    set(LLVM_OBJ_DIR "${LLVM_BINARY_DIR}")
+    # N.B. this is just a default value, the CACHE PATHs below can be overriden.
+    set(MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../llvm")
   endif()
 
-  set(LLVM_MAIN_INCLUDE_DIR ${MAIN_INCLUDE_DIR} CACHE PATH "Path to llvm/include")
-  set(LLVM_BINARY_DIR ${LLVM_OBJ_ROOT} CACHE PATH "Path to LLVM build tree")
-  set(LLVM_MAIN_SRC_DIR ${MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
+  set(LLVM_MAIN_INCLUDE_DIR "${MAIN_INCLUDE_DIR}" CACHE PATH "Path to llvm/include")
+  set(LLVM_BINARY_DIR "${LLVM_OBJ_ROOT}" CACHE PATH "Path to LLVM build tree")
+  set(LLVM_MAIN_SRC_DIR "${MAIN_SRC_DIR}" CACHE PATH "Path to LLVM source tree")
 
   find_program(LLVM_TABLEGEN_EXE "llvm-tblgen" ${LLVM_TOOLS_BINARY_DIR}
     NO_DEFAULT_PATH)

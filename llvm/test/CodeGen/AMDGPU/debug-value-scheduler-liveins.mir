@@ -1,0 +1,67 @@
+# RUN: llc -march=amdgcn -mcpu=gfx908 -run-pass=machine-scheduler %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# CHECK: ********** MI Scheduling **********
+# CHECK-NEXT: test_get_liveins:%bb.1
+# CHECK: Region live-in pressure:  VGPRs: 1 AGPRs: 0, SGPRs: 0, LVGPR WT: 0, LSGPR WT: 0
+# CHECK: ScheduleDAGMILive::schedule starting
+
+---
+name:            test_get_liveins
+tracksRegLiveness: true
+frameInfo:
+  hasCalls:        true
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
+
+  bb.1:
+    successors: %bb.2
+
+    DBG_VALUE %0:vgpr_32, 0, 0
+    %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode, implicit-def $m0
+    %2:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode, implicit-def $m0
+    %3:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode, implicit-def $m0
+    %4:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 4, implicit $exec, implicit $mode, implicit-def $m0
+    %5:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 5, implicit $exec, implicit $mode, implicit-def $m0
+    %6:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 6, implicit $exec, implicit $mode, implicit-def $m0
+    %7:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 7, implicit $exec, implicit $mode, implicit-def $m0
+    %8:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 8, implicit $exec, implicit $mode, implicit-def $m0
+    %9:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 9, implicit $exec, implicit $mode, implicit-def $m0
+    %10:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 10, implicit $exec, implicit $mode, implicit-def $m0
+    %11:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 11, implicit $exec, implicit $mode, implicit-def $m0
+    %12:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 12, implicit $exec, implicit $mode, implicit-def $m0
+    %13:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 13, implicit $exec, implicit $mode, implicit-def $m0
+    %14:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 14, implicit $exec, implicit $mode, implicit-def $m0
+    %15:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 15, implicit $exec, implicit $mode, implicit-def $m0
+    %16:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 16, implicit $exec, implicit $mode, implicit-def $m0
+    %17:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 17, implicit $exec, implicit $mode, implicit-def $m0
+    %18:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 18, implicit $exec, implicit $mode, implicit-def $m0
+    %19:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 19, implicit $exec, implicit $mode, implicit-def $m0
+    %20:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 20, implicit $exec, implicit $mode, implicit-def $m0
+    %21:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 21, implicit $exec, implicit $mode, implicit-def $m0
+    %22:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 22, implicit $exec, implicit $mode, implicit-def $m0
+    %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode, implicit-def $m0
+    %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
+
+  bb.2:
+    DBG_VALUE %24:vgpr_32, 0, 0
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1, implicit %2
+    S_NOP 0, implicit %3, implicit %4
+    S_NOP 0, implicit %5, implicit %6
+    S_NOP 0, implicit %7, implicit %8
+    S_NOP 0, implicit %9, implicit %10
+    S_NOP 0, implicit %11, implicit %12
+    S_NOP 0, implicit %13, implicit %14
+    S_NOP 0, implicit %15, implicit %16
+    S_NOP 0, implicit %17, implicit %18
+    S_NOP 0, implicit %19, implicit %20
+    S_NOP 0, implicit %21, implicit %22
+    S_NOP 0, implicit %23, implicit %23
+    S_NOP 0, implicit %24
+    S_ENDPGM 0
+...
+

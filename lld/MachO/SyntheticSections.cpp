@@ -49,7 +49,7 @@ std::vector<SyntheticSection *> macho::syntheticSections;
 SyntheticSection::SyntheticSection(const char *segname, const char *name)
     : OutputSection(SyntheticKind, name) {
   std::tie(this->segname, this->name) = maybeRenameSection({segname, name});
-  isec = make<ConcatInputSection>(segname, name);
+  isec = makeSyntheticInputSection(segname, name);
   isec->parent = this;
   syntheticSections.push_back(this);
 }
@@ -748,14 +748,14 @@ static std::vector<MachO::data_in_code_entry> collectDataInCodeEntries() {
     // For each code subsection find 'data in code' entries residing in it.
     // Compute the new offset values as
     // <offset within subsection> + <subsection address> - <__TEXT address>.
-    for (const Section &section : objFile->sections) {
-      for (const Subsection &subsec : section.subsections) {
+    for (const Section *section : objFile->sections) {
+      for (const Subsection &subsec : section->subsections) {
         const InputSection *isec = subsec.isec;
         if (!isCodeSection(isec))
           continue;
         if (cast<ConcatInputSection>(isec)->shouldOmitFromOutput())
           continue;
-        const uint64_t beginAddr = section.address + subsec.offset;
+        const uint64_t beginAddr = section->addr + subsec.offset;
         auto it = llvm::lower_bound(
             entries, beginAddr,
             [](const MachO::data_in_code_entry &entry, uint64_t addr) {

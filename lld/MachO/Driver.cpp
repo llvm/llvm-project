@@ -267,8 +267,9 @@ static InputFile *addFile(StringRef path, ForceLoad forceLoadArchive,
     // We don't take a reference to cachedFile here because the
     // loadArchiveMember() call below may recursively call addFile() and
     // invalidate this reference.
-    if (ArchiveFile *cachedFile = loadedArchives[path])
-      return cachedFile;
+    auto entry = loadedArchives.find(path);
+    if (entry != loadedArchives.end())
+      return entry->second;
 
     std::unique_ptr<object::Archive> archive = CHECK(
         object::Archive::create(mbref), path + ": failed to parse archive");
@@ -388,12 +389,17 @@ static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
   error("library not found for -l" + name);
 }
 
+static DenseSet<StringRef> loadedObjectFrameworks;
 static void addFramework(StringRef name, bool isNeeded, bool isWeak,
                          bool isReexport, bool isExplicit,
                          ForceLoad forceLoadArchive) {
   if (Optional<StringRef> path = findFramework(name)) {
-    if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-            addFile(*path, forceLoadArchive, /*isLazy=*/false, isExplicit))) {
+    if (loadedObjectFrameworks.contains(*path))
+      return;
+
+    InputFile *file =
+        addFile(*path, forceLoadArchive, /*isLazy=*/false, isExplicit);
+    if (auto *dylibFile = dyn_cast_or_null<DylibFile>(file)) {
       if (isNeeded)
         dylibFile->forceNeeded = true;
       if (isWeak)
@@ -402,6 +408,13 @@ static void addFramework(StringRef name, bool isNeeded, bool isWeak,
         config->hasReexports = true;
         dylibFile->reexport = true;
       }
+    } else if (isa<ObjFile>(file) || isa<BitcodeFile>(file)) {
+      // Cache frameworks containing object or bitcode files to avoid duplicate
+      // symbols. Frameworks containing static archives are cached separately
+      // in addFile() to share caching with libraries, and frameworks
+      // containing dylibs should allow overwriting of attributes such as
+      // forceNeeded by subsequent loads
+      loadedObjectFrameworks.insert(*path);
     }
     return;
   }
@@ -527,9 +540,11 @@ static void replaceCommonSymbols() {
     // but it's not really worth supporting the linking of 64-bit programs on
     // 32-bit archs.
     ArrayRef<uint8_t> data = {nullptr, static_cast<size_t>(common->size)};
-    auto *isec = make<ConcatInputSection>(
-        segment_names::data, section_names::common, common->getFile(), data,
-        common->align, S_ZEROFILL);
+    // FIXME avoid creating one Section per symbol?
+    auto *section =
+        make<Section>(common->getFile(), segment_names::data,
+                      section_names::common, S_ZEROFILL, /*addr=*/0);
+    auto *isec = make<ConcatInputSection>(*section, data, common->align);
     if (!osec)
       osec = ConcatOutputSection::getOrCreateForInput(isec);
     isec->parent = osec;
@@ -537,7 +552,7 @@ static void replaceCommonSymbols() {
 
     // FIXME: CommonSymbol should store isReferencedDynamically, noDeadStrip
     // and pass them on here.
-    replaceSymbol<Defined>(sym, sym->getName(), isec->getFile(), isec,
+    replaceSymbol<Defined>(sym, sym->getName(), common->getFile(), isec,
                            /*value=*/0,
                            /*size=*/0,
                            /*isWeakDef=*/false,
@@ -992,8 +1007,8 @@ static void gatherInputSections() {
   TimeTraceScope timeScope("Gathering input sections");
   int inputOrder = 0;
   for (const InputFile *file : inputFiles) {
-    for (const Section &section : file->sections) {
-      const Subsections &subsections = section.subsections;
+    for (const Section *section : file->sections) {
+      const Subsections &subsections = section->subsections;
       if (subsections.empty())
         continue;
       if (subsections[0].isec->getName() == section_names::compactUnwind)
@@ -1069,6 +1084,7 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     inputFiles.clear();
     inputSections.clear();
     loadedArchives.clear();
+    loadedObjectFrameworks.clear();
     syntheticSections.clear();
     thunkMap.clear();
 

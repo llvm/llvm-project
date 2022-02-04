@@ -532,6 +532,24 @@ class _Stats:
     return tuple(self._get_element(idx).dst_format.format_pack.formats)
 
 
+class _SparseValueInfo(enum.Enum):
+  """Describes how a sparse tensor value is stored.
+  _UNPACKED: The sparse tensor value is stored as (coordnates, values) in
+    Python.
+  _PACKED: The sparse tensor value is stored as a C pointer to a packed MLIR
+    sparse tensor.
+  """
+  _UNPACKED = 0
+  _PACKED = 1
+
+
+@dataclasses.dataclass(frozen=True)
+class _Assignment:
+  """Records an assignment to a tensor T as T[indices] = expression."""
+  indices: Tuple["IndexVar", ...]
+  expression: "IndexExpr"
+
+
 class Tensor:
   """The tensor class.
 
@@ -622,12 +640,14 @@ class Tensor:
     self._name = name or self._get_unique_name()
 
     self._dtype = dtype
+    self._assignment = None
     # We currently use _coords and _values to host the sparse tensor value with
     # COO format, and _dense_storage to host the dense tensor value. We haven't
     # implement the conversion between the two storages yet. This will be
     # improved in a follow up CL.
     self._coords = []
     self._values = []
+    self._sparse_value_location = _SparseValueInfo._UNPACKED
     self._dense_storage = None
     self._stats = _Stats()
     if value_or_shape is None or isinstance(value_or_shape, int) or isinstance(
@@ -647,7 +667,29 @@ class Tensor:
                        "Must be a tuple or list for a shape or a single value"
                        f"if initializing a scalar tensor: {value_or_shape}.")
 
+  def is_unpacked(self) -> bool:
+    """Returns true if the tensor value is not packed as MLIR sparse tensor."""
+    return (self._sparse_value_location == _SparseValueInfo._UNPACKED)
+
+  def unpack(self) -> None:
+    """Unpacks the MLIR sparse tensor representation."""
+    if self.is_dense() or self.is_unpacked():
+      return
+
+    # Use the output MLIR sparse tensor pointer to retrieve the COO-flavored
+    # values and verify the values.
+    rank, nse, shape, values, indices = utils.sparse_tensor_to_coo_tensor(
+        self._packed_sparse_value, np.float64)
+    assert rank == self.order
+    assert np.allclose(self.shape, shape)
+    assert nse == len(values)
+    self._coords = indices
+    self._values = values
+    self._sparse_value_location = _SparseValueInfo._UNPACKED
+
   def __repr__(self) -> str:
+    self._sync_value()
+    self._unpack()
     value_str = (f"{repr(self._dense_storage)})" if self.is_dense() else
                  f"{repr(self._coords)} {repr(self._values)})")
     return (f"Tensor(_name={repr(self._name)} "
@@ -665,6 +707,11 @@ class Tensor:
     Raises:
       ValueError: When there is any problem in the parameters.
     """
+    if self.is_dense():
+      raise ValueError("Insert method is not supported for dense tensors.")
+    if self._assignment != None or not self.is_unpacked():
+      raise ValueError(
+          "Can't use Insert method for a tensor constructed from a file.")
     if not isinstance(coords, list):
       raise ValueError(f"Non list coordinate detected: {coords}.")
     if not _all_instance_of(coords, int):
@@ -692,6 +739,9 @@ class Tensor:
     if not self.is_dense():
       raise ValueError("Conversion from non-dense Tensor "
                        "to numpy array not supported yet.")
+
+    self._sync_value()
+
     return self._dense_storage
 
   @staticmethod
@@ -752,6 +802,32 @@ class Tensor:
     tensor = Tensor(shape, fmt)
     tensor._coords = coordinates
     tensor._values = values
+
+    return tensor
+
+  @staticmethod
+  def from_file(
+      filename: str,
+      fmt: Format,
+      dtype: DType,
+  ) -> "Tensor":
+    """Constructs a sparse tensor using the COO-flavored values from a file.
+
+    Args:
+      filename: A string for the name of the file that contains the sparse
+        tensor data.
+      fmt: The tensor storage format.
+      dtype: The tensor element data type.
+
+    Returns:
+      A tensor with the given non-zero values and storage format. The tensor
+      value is stored as an MLIR sparse tensor.
+    """
+    sparse_tensor, shape = utils.create_sparse_tensor(filename,
+                                                      fmt.format_pack.formats)
+    tensor = Tensor(shape.tolist(), fmt)
+    tensor._sparse_value_location = _SparseValueInfo._PACKED
+    tensor._packed_sparse_value = sparse_tensor
 
     return tensor
 
@@ -827,7 +903,13 @@ class Tensor:
       raise ValueError("Mismatch between indices and tensor rank: "
                        f"len({indices}) != {self.order}.")
 
-    result = value.evaluate(self, indices)
+    self._assignment = _Assignment(indices, value)
+
+  def evaluate(self) -> None:
+    """Evaluates the assignment to the tensor."""
+    result = self._assignment.expression.evaluate(self,
+                                                  self._assignment.indices)
+    self._assignment = None
     if self.is_dense():
       assert isinstance(result, np.ndarray)
       self._dense_storage = result
@@ -835,6 +917,11 @@ class Tensor:
       assert _all_instance_of(result, np.ndarray) and len(result) == 2
       assert (result[0].ndim, result[1].ndim) == (1, 2)
       (self._values, self._coords) = result
+
+  def _sync_value(self) -> None:
+    """Updates the tensor value by evaluating the pending assignment."""
+    if self._assignment is not None:
+      self.evaluate()
 
   def mlir_tensor_type(self) -> ir.RankedTensorType:
     """Returns the MLIR type for the tensor."""
@@ -860,16 +947,21 @@ class Tensor:
         self._dense_storage = np.zeros(self._shape, self._dtype.value)
       return _ctype_pointer_from_array(self._dense_storage)
 
-    shape = np.array(self._shape, np.int64)
-    indices = np.array(self._coords, np.int64)
-    values = np.array(self._values, self._dtype.value)
-    ptr = utils.coo_tensor_to_sparse_tensor(shape, values, indices)
+    if self.is_unpacked():
+      shape = np.array(self._shape, np.int64)
+      indices = np.array(self._coords, np.int64)
+      values = np.array(self._values, self._dtype.value)
+      ptr = utils.coo_tensor_to_sparse_tensor(shape, values, indices)
+    else:
+      ptr = self._packed_sparse_value
+
     return ctypes.pointer(ctypes.cast(ptr, ctypes.c_void_p))
 
   def get_coordinates_and_values(
       self) -> Tuple[List[Tuple[int, ...]], List[_AnyRuntimeType]]:
     """Returns the coordinates and values for the non-zero elements."""
     if not self.is_dense():
+      assert (self.is_unpacked())
       return (self._coords, self._values)
 
     # Coordinates for non-zero elements, grouped by dimensions.

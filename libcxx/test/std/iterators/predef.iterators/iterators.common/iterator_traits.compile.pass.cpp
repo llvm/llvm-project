@@ -59,7 +59,7 @@ void test() {
   }
   // Test with an output_iterator that has a void value_type
   {
-    using Iter = output_iterator<int*>;
+    using Iter = cpp17_output_iterator<int*>;
     using CommonIter = std::common_iterator<Iter, sentinel_type<int*>>;
     using IterTraits = std::iterator_traits<CommonIter>;
 

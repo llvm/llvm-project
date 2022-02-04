@@ -753,6 +753,18 @@ def mulo_by_2: GICombineRule<
          [{ return Helper.matchMulOBy2(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
 
+def mulo_by_0: GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_UMULO, G_SMULO):$root,
+         [{ return Helper.matchMulOBy0(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+def addo_by_0: GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_UADDO, G_SADDO):$root,
+         [{ return Helper.matchAddOBy0(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
 def mulh_to_lshr : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_UMULH):$root,
@@ -862,7 +874,8 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         fneg_fneg_fold, right_identity_one]>;
 
 def const_combines : GICombineGroup<[constant_fp_op, const_ptradd_to_i2p,
-                                     overlapping_and, mulo_by_2]>;
+                                     overlapping_and, mulo_by_2, mulo_by_0,
+                                     addo_by_0]>;
 
 def known_bits_simplifications : GICombineGroup<[
   redundant_and, redundant_sext_inreg, redundant_or, urem_pow2_to_mask,

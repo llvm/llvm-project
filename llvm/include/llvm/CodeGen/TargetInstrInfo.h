@@ -130,7 +130,7 @@ public:
   }
 
   /// Given \p MO is a PhysReg use return if it can be ignored for the purpose
-  /// of instruction rematerialization or sinking.
+  /// of instruction rematerialization.
   virtual bool isIgnorableUse(const MachineOperand &MO) const {
     return false;
   }

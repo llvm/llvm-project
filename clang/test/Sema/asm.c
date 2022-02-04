@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -Wno-private-extern -triple i386-pc-linux-gnu -verify -fsyntax-only
 
 
-void f() {
+void f(void) {
   int i;
 
   asm ("foo\n" : : "a" (i + 2));
@@ -19,7 +19,7 @@ void f() {
   asm ("foo\n" : "=a" (i) : "" (i)); // expected-error {{invalid input constraint '' in asm}}
 }
 
-void clobbers() {
+void clobbers(void) {
   asm ("nop" : : : "ax", "#ax", "%ax");
   asm ("nop" : : : "eax", "rax", "ah", "al");
   asm ("nop" : : : "0", "%0", "#0");
@@ -41,7 +41,7 @@ void clobbers() {
 }
 
 // rdar://6094010
-void test3() {
+void test3(void) {
   int x;
   asm(L"foo" : "=r"(x)); // expected-error {{wide string}}
   asm("foo" : L"=r"(x)); // expected-error {{wide string}}
@@ -60,7 +60,7 @@ void test4(const volatile void *addr)
 }
 
 // <rdar://problem/6512595>
-void test5() {
+void test5(void) {
   asm("nop" : : "X" (8));
 }
 
@@ -142,7 +142,7 @@ void test14(struct S *s) {
 }
 
 // PR15759.
-double test15() {
+double test15(void) {
   double ret = 0;
   __asm("0.0":"="(ret)); // expected-error {{invalid output constraint '=' in asm}}
   __asm("0.0":"=&"(ret)); // expected-error {{invalid output constraint '=&' in asm}}
@@ -209,40 +209,40 @@ double f_output_constraint(void) {
   return result;
 }
 
-void fn1() {
+void fn1(void) {
   int l;
   __asm__(""
           : [l] "=r"(l)
           : "[l],m"(l)); // expected-error {{asm constraint has an unexpected number of alternatives: 1 vs 2}}
 }
 
-void fn2() {
+void fn2(void) {
   int l;
  __asm__(""
           : "+&m"(l)); // expected-error {{invalid output constraint '+&m' in asm}}
 }
 
-void fn3() {
+void fn3(void) {
   int l;
  __asm__(""
           : "+#r"(l)); // expected-error {{invalid output constraint '+#r' in asm}}
 }
 
-void fn4() {
+void fn4(void) {
   int l;
  __asm__(""
           : "=r"(l)
           : "m#"(l));
 }
 
-void fn5() {
+void fn5(void) {
   int l;
     __asm__(""
           : [g] "+r"(l)
           : "[g]"(l)); // expected-error {{invalid input constraint '[g]' in asm}}
 }
 
-void fn6() {
+void fn6(void) {
     int a;
   __asm__(""
             : "=rm"(a), "=rm"(a)
@@ -258,7 +258,7 @@ typedef struct test16_foo {
 typedef __attribute__((vector_size(16))) int test16_bar;
 register int test16_baz asm("esp");
 
-void test16()
+void test16(void)
 {
   test16_foo a;
   test16_bar b;
@@ -292,7 +292,7 @@ int test17(int t0)
   return r0 + r1;
 }
 
-void test18()
+void test18(void)
 {
   // expected-error@+2 {{duplicate use of asm operand name "lab"}}
   // expected-note@+1 {{asm operand name "lab" first referenced here}}

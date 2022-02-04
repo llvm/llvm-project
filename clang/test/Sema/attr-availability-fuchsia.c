@@ -18,7 +18,7 @@ void f6(int) __attribute__((availability(fuchsia, introduced = 16.0)));         
 void f7(int) __attribute__((availability(fuchsia, introduced = 16.1))); // expected-warning {{Fuchsia API Level prohibits specifying a minor or sub-minor version}}
 void f8(int) __attribute__((availability(fuchsia, introduced = 19))); // nothing will happen as 'strict' is not specified.
 
-void test() {
+void test(void) {
   f0(0);
   f1(0);
   f2(0); // expected-warning{{'f2' is deprecated: first deprecated in Fuchsia 16}}

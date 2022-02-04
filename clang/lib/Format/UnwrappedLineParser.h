@@ -92,7 +92,6 @@ private:
   void reset();
   void parseFile();
   bool precededByCommentOrPPDirective() const;
-  bool mightFitOnOneLine() const;
   bool parseLevel(bool HasOpeningBrace, IfStmtKind *IfKind = nullptr);
   IfStmtKind parseBlock(bool MustBeDeclaration = false, unsigned AddLevels = 1u,
                         bool MunchSemi = true,

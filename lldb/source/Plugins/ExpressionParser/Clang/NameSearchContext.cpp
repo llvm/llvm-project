@@ -8,6 +8,7 @@
 
 #include "NameSearchContext.h"
 #include "ClangUtil.h"
+#include "lldb/Utility/LLDBLog.h"
 
 using namespace clang;
 using namespace lldb_private;

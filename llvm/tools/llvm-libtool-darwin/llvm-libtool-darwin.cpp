@@ -370,7 +370,9 @@ private:
       }
 
       if (!NoWarningForNoSymbols && O->symbols().empty())
-        WithColor::warning() << Member.MemberName + " has no symbols\n";
+        WithColor::warning() << "'" + Member.MemberName +
+                                    "': has no symbols for architecture " +
+                                    O->getArchTriple().getArchName() + "\n";
 
       uint64_t FileCPUID = getCPUID(FileCPUType, FileCPUSubtype);
       Builder.Data.MembersPerArchitecture[FileCPUID].push_back(

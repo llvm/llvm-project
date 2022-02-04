@@ -53,7 +53,7 @@ void test() {
       std::make_format_args<std::basic_format_context<
           std::back_insert_iterator<std::basic_string<char8_t>>, char8_t>>()));
 #endif
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
+#ifndef TEST_HAS_NO_UNICODE_CHARS
   test(std::basic_format_args(
       std::make_format_args<std::basic_format_context<
           std::back_insert_iterator<std::basic_string<char16_t>>,

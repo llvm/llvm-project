@@ -37,9 +37,8 @@ long long test_longlong(OneLongLong input, va_list *mylist) {
   // CHECK: [[NEXT:%.*]] = getelementptr inbounds i8, i8* [[ALIGNED_ADDR]], i32 8
   // CHECK: store i8* [[NEXT]], i8** %mylist
 
-  // CHECK: [[ADDR_STRUCT:%.*]] = inttoptr i32 [[ALIGNED]] to %struct.OneLongLong*
-  // CHECK: [[ADDR_I64:%.*]] = getelementptr inbounds %struct.OneLongLong, %struct.OneLongLong* [[ADDR_STRUCT]], i32 0, i32 0
-  // CHECK: [[RES:%.*]] = load i64, i64* [[ADDR_I64]]
+  // CHECK: [[ADDR_STRUCT:%.*]] = bitcast i8* [[ALIGNED_ADDR]] to i64*
+  // CHECK: [[RES:%.*]] = load i64, i64* [[ADDR_STRUCT]]
   // CHECK: ret i64 [[RES]]
 
   return va_arg(*mylist, OneLongLong).a;

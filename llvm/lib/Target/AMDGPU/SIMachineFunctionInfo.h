@@ -555,7 +555,11 @@ public:
                                  unsigned NumLane) const;
   bool allocateSGPRSpillToVGPR(MachineFunction &MF, int FI);
   bool allocateVGPRSpillToAGPR(MachineFunction &MF, int FI, bool isAGPRtoVGPR);
-  void removeDeadFrameIndices(MachineFrameInfo &MFI);
+
+  /// If \p ResetSGPRSpillStackIDs is true, reset the stack ID from sgpr-spill
+  /// to the default stack.
+  bool removeDeadFrameIndices(MachineFrameInfo &MFI,
+                              bool ResetSGPRSpillStackIDs);
 
   int getScavengeFI(MachineFrameInfo &MFI, const SIRegisterInfo &TRI);
   Optional<int> getOptionalScavengeFI() const { return ScavengeFI; }

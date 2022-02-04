@@ -277,28 +277,24 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
     ArrayRef<uint8_t> data = {isZeroFill(sec.flags) ? nullptr
                                                     : buf + sec.offset,
                               static_cast<size_t>(sec.size)};
-    sections.push_back(sec.addr);
+    sections.push_back(make<Section>(this, segname, name, sec.flags, sec.addr));
     if (sec.align >= 32) {
       error("alignment " + std::to_string(sec.align) + " of section " + name +
             " is too large");
       continue;
     }
+    const Section &section = *sections.back();
     uint32_t align = 1 << sec.align;
-    uint32_t flags = sec.flags;
 
     auto splitRecords = [&](int recordSize) -> void {
       if (data.empty())
         return;
-      Subsections &subsections = sections.back().subsections;
+      Subsections &subsections = sections.back()->subsections;
       subsections.reserve(data.size() / recordSize);
-      auto *isec = make<ConcatInputSection>(
-          segname, name, this, data.slice(0, recordSize), align, flags);
-      subsections.push_back({0, isec});
-      for (uint64_t off = recordSize; off < data.size(); off += recordSize) {
-        // Copying requires less memory than constructing a fresh InputSection.
-        auto *copy = make<ConcatInputSection>(*isec);
-        copy->data = data.slice(off, recordSize);
-        subsections.push_back({off, copy});
+      for (uint64_t off = 0; off < data.size(); off += recordSize) {
+        auto *isec = make<ConcatInputSection>(
+            section, data.slice(off, recordSize), align);
+        subsections.push_back({off, isec});
       }
     };
 
@@ -312,19 +308,17 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
 
       InputSection *isec;
       if (sectionType(sec.flags) == S_CSTRING_LITERALS) {
-        isec =
-            make<CStringInputSection>(segname, name, this, data, align, flags);
+        isec = make<CStringInputSection>(section, data, align);
         // FIXME: parallelize this?
         cast<CStringInputSection>(isec)->splitIntoPieces();
       } else {
-        isec = make<WordLiteralInputSection>(segname, name, this, data, align,
-                                             flags);
+        isec = make<WordLiteralInputSection>(section, data, align);
       }
-      sections.back().subsections.push_back({0, isec});
+      sections.back()->subsections.push_back({0, isec});
     } else if (auto recordSize = getRecordSize(segname, name)) {
       splitRecords(*recordSize);
       if (name == section_names::compactUnwind)
-        compactUnwindSection = &sections.back();
+        compactUnwindSection = sections.back();
     } else if (segname == segment_names::llvm) {
       if (name == "__cg_profile" && config->callGraphProfileSort) {
         TimeTraceScope timeScope("Parsing call graph section");
@@ -352,8 +346,7 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
       // spurious duplicate symbol errors, we do not parse these sections.
       // TODO: Evaluate whether the bitcode metadata is needed.
     } else {
-      auto *isec =
-          make<ConcatInputSection>(segname, name, this, data, align, flags);
+      auto *isec = make<ConcatInputSection>(section, data, align);
       if (isDebugSection(isec->getFlags()) &&
           isec->getSegName() == segment_names::dwarf) {
         // Instead of emitting DWARF sections, we emit STABS symbols to the
@@ -361,7 +354,7 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
         // parsing their relocations unnecessarily.
         debugSections.push_back(isec);
       } else {
-        sections.back().subsections.push_back({0, isec});
+        sections.back()->subsections.push_back({0, isec});
       }
     }
   }
@@ -506,7 +499,7 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
         referentOffset = totalAddend - referentSecHead.addr;
       }
       Subsections &referentSubsections =
-          sections[relInfo.r_symbolnum - 1].subsections;
+          sections[relInfo.r_symbolnum - 1]->subsections;
       r.referent =
           findContainingSubsection(referentSubsections, &referentOffset);
       r.addend = referentOffset;
@@ -547,7 +540,7 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
         uint64_t referentOffset =
             totalAddend - sectionHeaders[minuendInfo.r_symbolnum - 1].addr;
         Subsections &referentSubsectVec =
-            sections[minuendInfo.r_symbolnum - 1].subsections;
+            sections[minuendInfo.r_symbolnum - 1]->subsections;
         p.referent =
             findContainingSubsection(referentSubsectVec, &referentOffset);
         p.addend = referentOffset;
@@ -699,7 +692,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
 
     StringRef name = strtab + sym.n_strx;
     if ((sym.n_type & N_TYPE) == N_SECT) {
-      Subsections &subsections = sections[sym.n_sect - 1].subsections;
+      Subsections &subsections = sections[sym.n_sect - 1]->subsections;
       // parseSections() may have chosen not to parse this section.
       if (subsections.empty())
         continue;
@@ -712,7 +705,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
   }
 
   for (size_t i = 0; i < sections.size(); ++i) {
-    Subsections &subsections = sections[i].subsections;
+    Subsections &subsections = sections[i]->subsections;
     if (subsections.empty())
       continue;
     InputSection *lastIsec = subsections.back().isec;
@@ -823,12 +816,13 @@ OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,
     : InputFile(OpaqueKind, mb) {
   const auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   ArrayRef<uint8_t> data = {buf, mb.getBufferSize()};
-  ConcatInputSection *isec =
-      make<ConcatInputSection>(segName.take_front(16), sectName.take_front(16),
-                               /*file=*/this, data);
+  sections.push_back(make<Section>(/*file=*/this, segName.take_front(16),
+                                   sectName.take_front(16),
+                                   /*flags=*/0, /*addr=*/0));
+  Section &section = *sections.back();
+  ConcatInputSection *isec = make<ConcatInputSection>(section, data);
   isec->live = true;
-  sections.push_back(0);
-  sections.back().subsections.push_back({0, isec});
+  section.subsections.push_back({0, isec});
 }
 
 ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
@@ -898,9 +892,9 @@ template <class LP> void ObjFile::parse() {
   // The relocations may refer to the symbols, so we parse them after we have
   // parsed all the symbols.
   for (size_t i = 0, n = sections.size(); i < n; ++i)
-    if (!sections[i].subsections.empty())
+    if (!sections[i]->subsections.empty())
       parseRelocations(sectionHeaders, sectionHeaders[i],
-                       sections[i].subsections);
+                       sections[i]->subsections);
 
   parseDebugInfo();
   if (compactUnwindSection)

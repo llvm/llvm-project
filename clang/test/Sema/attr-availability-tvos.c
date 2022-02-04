@@ -11,7 +11,7 @@ void f5(int) __attribute__((availability(tvos,introduced=12.0))) __attribute__((
 void f6(int) __attribute__((availability(tvos,deprecated=13.0))); // expected-note {{'f6' has been explicitly marked deprecated here}}
 void f6(int) __attribute__((availability(tvos,introduced=12.0)));
 
-void test() {
+void test(void) {
   f0(0); // expected-warning{{'f0' is deprecated: first deprecated in tvOS 12.1}}
   f1(0);
   f2(0); // expected-warning{{'f2' is deprecated: first deprecated in tvOS 13.0}}
@@ -24,7 +24,7 @@ void test() {
 // Anything iOS later than 13 does not apply to tvOS.
 void f9(int) __attribute__((availability(ios,introduced=12.0,deprecated=19.0)));
 
-void test_transcribed_availability() {
+void test_transcribed_availability(void) {
   f9(0);
 }
 
@@ -45,7 +45,7 @@ void f5c_tvos(int) __attribute__((availability(ios,introduced=12.0))) __attribut
 void f6_tvos(int) __attribute__((availability(tvos,deprecated=13.0))); // expected-note {{'f6_tvos' has been explicitly marked deprecated here}}
 void f6_tvos(int) __attribute__((availability(tvOS,introduced=12.0)));
 
-void test_tvos() {
+void test_tvos(void) {
   f0_tvos(0); // expected-warning{{'f0_tvos' is deprecated: first deprecated in tvOS 12.1}}
   f1_tvos(0);
   f2_tvos(0); // expected-warning{{'f2_tvos' is deprecated: first deprecated in tvOS 13.0}}
@@ -67,14 +67,14 @@ void test_tvos() {
 // iOS 9.3 corresponds to tvOS 9.2, as indicated in 'SDKSettings.json'.
 void f11(int) __attribute__((availability(ios,deprecated=9.3))); // expected-note {{'f11' has been explicitly marked deprecated here}}
 
-void testWithVersionMap() {
+void testWithVersionMap(void) {
   f11(0); // expected-warning {{'f11' is deprecated: first deprecated in tvOS 9.2}}
 }
 #else
 // Without VersionMap, tvOS version is inferred incorrectly as 9.3.
 void f11(int) __attribute__((availability(ios,deprecated=9.3))); // expected-note {{'f11' has been explicitly marked deprecated here}}
 
-void testWithoutVersionMap() {
+void testWithoutVersionMap(void) {
   f11(0); // expected-warning {{'f11' is deprecated: first deprecated in tvOS 9.3}}
 }
 #endif

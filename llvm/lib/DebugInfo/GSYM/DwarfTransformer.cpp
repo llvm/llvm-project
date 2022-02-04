@@ -427,11 +427,28 @@ void DwarfTransformer::handleDie(raw_ostream &OS, CUInfo &CUI, DWARFDie Die) {
 
 Error DwarfTransformer::convert(uint32_t NumThreads) {
   size_t NumBefore = Gsym.getNumFunctionInfos();
+  auto getDie = [&](DWARFUnit &DwarfUnit) -> DWARFDie {
+    DWARFDie ReturnDie = DwarfUnit.getUnitDIE(false);
+    if (llvm::Optional<uint64_t> DWOId = DwarfUnit.getDWOId()) {
+      DWARFUnit *DWOCU = DwarfUnit.getNonSkeletonUnitDIE(false).getDwarfUnit();
+      if (!DWOCU->isDWOUnit()) {
+        std::string DWOName = dwarf::toString(
+            DwarfUnit.getUnitDIE().find(
+                {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
+            "");
+        Log << "warning: Unable to retrieve DWO .debug_info section for "
+            << DWOName << "\n";
+      } else {
+        ReturnDie = DWOCU->getUnitDIE(false);
+      }
+    }
+    return ReturnDie;
+  };
   if (NumThreads == 1) {
     // Parse all DWARF data from this thread, use the same string/file table
     // for everything
     for (const auto &CU : DICtx.compile_units()) {
-      DWARFDie Die = CU->getUnitDIE(false);
+      DWARFDie Die = getDie(*CU.get());
       CUInfo CUI(DICtx, dyn_cast<DWARFCompileUnit>(CU.get()));
       handleDie(Log, CUI, Die);
     }
@@ -456,7 +473,7 @@ Error DwarfTransformer::convert(uint32_t NumThreads) {
     // Now convert all DWARF to GSYM in a thread pool.
     std::mutex LogMutex;
     for (const auto &CU : DICtx.compile_units()) {
-      DWARFDie Die = CU->getUnitDIE(false /*CUDieOnly*/);
+      DWARFDie Die = getDie(*CU.get());
       if (Die) {
         CUInfo CUI(DICtx, dyn_cast<DWARFCompileUnit>(CU.get()));
         pool.async([this, CUI, &LogMutex, Die]() mutable {

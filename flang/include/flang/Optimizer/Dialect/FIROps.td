@@ -1533,6 +1533,102 @@ def fir_ArrayModifyOp : fir_Op<"array_modify", [AttrSizedOperandSegments,
   let verifier = "return ::verify(*this);";
 }
 
+def fir_ArrayAccessOp : fir_Op<"array_access", [AttrSizedOperandSegments,
+    NoSideEffect]> {
+  let summary = "Fetch the reference of an element of an array value";
+
+  let description = [{
+    The `array_access` provides a reference to a single element from an array
+    value. This is *not* a view in the immutable array, otherwise it couldn't
+    be stored to. It can be see as a logical copy of the element and its
+    position in the array. This reference can be written to and modified without
+    changing the original array.
+
+    The `array_access` operation is used to fetch the memory reference of an
+    element in an array value.
+
+    ```fortran
+      real :: a(n,m)
+      ...
+      ... a ...
+      ... a(r,s+1) ...
+    ```
+
+    One can use `fir.array_access` to recover the implied memory reference to
+    the element `a(i,j)` in an array expression `a` as shown above. It can also
+    be used to recover the reference element `a(r,s+1)` in the second
+    expression.
+
+    ```mlir
+      %s = fir.shape %n, %m : (index, index) -> !fir.shape<2>
+      // load the entire array 'a'
+      %v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.array<?x?xf32>
+      // fetch the value of one of the array value's elements
+      %1 = fir.array_access %v, %i, %j : (!fir.array<?x?xf32>, index, index) -> !fir.ref<f32>
+    ```
+
+    It is only possible to use `array_access` on an `array_load` result value or
+    a value that can be trace back transitively to an `array_load` as the
+    dominating source. Other array operation such as `array_amend` can be in
+    between.
+
+    TODO: The above restriction is not enforced. The design of the operation
+    might need to be revisited to avoid such restructions.
+
+    More information about `array_access` and other array operations can be
+    found in flang/docs/FIRArrayOperations.md.
+  }];
+
+  let arguments = (ins
+    fir_SequenceType:$sequence,
+    Variadic<AnyCoordinateType>:$indices,
+    Variadic<AnyIntegerType>:$typeparams
+  );
+
+  let results = (outs fir_ReferenceType:$element);
+
+  let assemblyFormat = [{
+    $sequence `,` $indices (`typeparams` $typeparams^)? attr-dict `:`
+      functional-type(operands, results)
+  }];
+
+  let verifier = "return ::verify(*this);";
+}
+
+def fir_ArrayAmendOp : fir_Op<"array_amend", [NoSideEffect]> {
+  let summary = "Mark an array value as having been changed by reference.";
+
+  let description = [{
+    The `array_amend` operation marks an array value as having been changed via
+    a reference obtained by an `array_access`. It acts as a logical transaction
+    log that is used to merge the final result back with an `array_merge_store`
+    operation.
+
+    ```mlir
+      // fetch the value of one of the array value's elements
+      %1 = fir.array_access %v, %i, %j : (!fir.array<?x?xT>, index, index) -> !fir.ref<T>
+      // modify the element by storing data using %1 as a reference
+      %2 = ... %1 ...
+      // mark the array value
+      %new_v = fir.array_amend %v, %2 : (!fir.array<?x?xT>, !fir.ref<T>) -> !fir.array<?x?xT>
+    ```
+
+    More information about `array_amend` and other array operations can be
+    found in flang/docs/FIRArrayOperations.md.
+  }];
+
+  let arguments = (ins
+    fir_SequenceType:$sequence,
+    fir_ReferenceType:$memref
+  );
+
+  let results = (outs fir_SequenceType);
+
+  let assemblyFormat = [{
+    $sequence `,` $memref attr-dict `:` functional-type(operands, results)
+  }];
+}
+
 def fir_ArrayMergeStoreOp : fir_Op<"array_merge_store",
     [AttrSizedOperandSegments]> {
 

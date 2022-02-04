@@ -22,8 +22,8 @@ class RawMemProfReader {
 public:
   RawMemProfReader(std::unique_ptr<MemoryBuffer> DataBuffer)
       : DataBuffer(std::move(DataBuffer)) {}
-  // Prints aggregate counts for each raw profile parsed from the DataBuffer.
-  void printSummaries(raw_ostream &OS) const;
+  // Prints the contents of the profile in YAML format.
+  void printYAML(raw_ostream &OS);
 
   // Return true if the \p DataBuffer starts with magic bytes indicating it is
   // a raw binary memprof profile.
@@ -34,6 +34,10 @@ public:
   static Expected<std::unique_ptr<RawMemProfReader>> create(const Twine &Path);
 
 private:
+  // Prints aggregate counts for each raw profile parsed from the DataBuffer in
+  // YAML format.
+  void printSummaries(raw_ostream &OS) const;
+
   std::unique_ptr<MemoryBuffer> DataBuffer;
 };
 

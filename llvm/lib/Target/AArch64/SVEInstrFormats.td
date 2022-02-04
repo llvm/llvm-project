@@ -513,6 +513,17 @@ class SVE_2_Op_Fp_Imm_Pat_Zero<ValueType vt, SDPatternOperator op,
                       (vt (AArch64dup (it immL))))),
       (inst $Pg, $Zs1, imm)>;
 
+//===----------------------------------------------------------------------===//
+// SVE pattern match helpers.
+//===----------------------------------------------------------------------===//
+
+// Matches either an intrinsic, or a predicated operation with an all active predicate
+class EitherVSelectOrPassthruPatFrags<SDPatternOperator intrinsic, SDPatternOperator sdnode>
+: PatFrags<(ops node:$Pg, node:$Op1, node:$Op2), [
+    (intrinsic node:$Pg, node:$Op1, node:$Op2),
+    (vselect node:$Pg, (sdnode (SVEAllActive), node:$Op1, node:$Op2), node:$Op1),
+  ]>;
+
 //
 // Pseudo -> Instruction mappings
 //

@@ -113,6 +113,7 @@ set(LLVM_TEST_DEPENDS
           llvm-readobj
           llvm-readelf
           llvm-reduce
+          llvm-remark-size-diff
           llvm-rtdyld
           llvm-sim
           llvm-size

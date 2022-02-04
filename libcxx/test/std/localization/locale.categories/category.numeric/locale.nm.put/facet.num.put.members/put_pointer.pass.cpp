@@ -19,7 +19,7 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
-typedef std::num_put<char, output_iterator<char*> > F;
+typedef std::num_put<char, cpp17_output_iterator<char*> > F;
 
 class my_facet
     : public F
@@ -36,7 +36,7 @@ int main(int, char**)
         std::ios ios(0);
         void* v = 0;
         char str[50];
-        output_iterator<char*> iter = f.put(output_iterator<char*>(str), ios, '*', v);
+        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
         std::string ex(str, iter.base());
         char expected_str[32] = {};
         // num_put::put uses %p for pointer types, but the exact format of %p is

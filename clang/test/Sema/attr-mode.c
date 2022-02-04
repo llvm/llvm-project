@@ -34,7 +34,7 @@ typedef unsigned unwind_word __attribute((mode(unwind_word)));
 
 int **__attribute((mode(QI)))* i32;  // expected-error{{mode attribute}}
 
-__attribute__((mode(QI))) int invalid_func() { return 1; } // expected-error{{'mode' attribute only applies to variables, enums, typedefs, and non-static data members}}
+__attribute__((mode(QI))) int invalid_func(void) { return 1; } // expected-error{{'mode' attribute only applies to variables, enums, typedefs, and non-static data members}}
 enum invalid_enum { A1 __attribute__((mode(QI))) }; // expected-error{{'mode' attribute only applies to}}
 
 typedef _Complex double c32 __attribute((mode(SC)));

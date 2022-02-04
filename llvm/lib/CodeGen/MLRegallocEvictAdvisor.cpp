@@ -242,8 +242,8 @@ using FeaturesListNormalizer = std::array<float, FeatureIDs::FeatureCount>;
 /// The ML evictor (commonalities between release and development mode)
 class MLEvictAdvisor : public RegAllocEvictionAdvisor {
 public:
-  MLEvictAdvisor(MachineFunction &MF, const RAGreedy &RA, MLModelRunner *Runner,
-                 const MachineBlockFrequencyInfo &MBFI,
+  MLEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+                 MLModelRunner *Runner, const MachineBlockFrequencyInfo &MBFI,
                  const MachineLoopInfo &Loops);
 
 protected:
@@ -259,14 +259,16 @@ protected:
   /// if we're just capturing the log of the default advisor, it needs to call
   /// the latter instead, so we need to pass all the necessary parameters for
   /// it. In the development case, it will also log.
-  virtual int64_t tryFindEvictionCandidatePosition(
-      LiveInterval &VirtReg, const AllocationOrder &Order, unsigned OrderLimit,
-      uint8_t CostPerUseLimit, const SmallVirtRegSet &FixedRegisters) const;
+  virtual int64_t
+  tryFindEvictionCandidatePosition(const LiveInterval &VirtReg,
+                                   const AllocationOrder &Order,
+                                   unsigned OrderLimit, uint8_t CostPerUseLimit,
+                                   const SmallVirtRegSet &FixedRegisters) const;
 
   /// Load the features of the given VirtReg (allocated or not) at column Pos,
   /// but if  that can't be evicted, return false instead.
   bool
-  loadInterferenceFeatures(LiveInterval &VirtReg, MCRegister PhysReg,
+  loadInterferenceFeatures(const LiveInterval &VirtReg, MCRegister PhysReg,
                            bool IsHint, const SmallVirtRegSet &FixedRegisters,
                            std::array<float, FeatureIDs::FeatureCount> &Largest,
                            size_t Pos) const;
@@ -275,24 +277,24 @@ private:
   static float getInitialQueueSize(const MachineFunction &MF);
 
   MCRegister tryFindEvictionCandidate(
-      LiveInterval &VirtReg, const AllocationOrder &Order,
+      const LiveInterval &VirtReg, const AllocationOrder &Order,
       uint8_t CostPerUseLimit,
       const SmallVirtRegSet &FixedRegisters) const override;
 
-  void extractFeatures(const SmallVectorImpl<LiveInterval *> &Intervals,
+  void extractFeatures(const SmallVectorImpl<const LiveInterval *> &Intervals,
                        std::array<float, FeatureIDs::FeatureCount> &Largest,
                        size_t Pos, int64_t IsHint, int64_t LocalIntfsCount,
                        float NrUrgent) const;
 
   // Point-in-time: we didn't learn this, so we always delegate to the default.
   bool canEvictHintInterference(
-      LiveInterval &VirtReg, MCRegister PhysReg,
+      const LiveInterval &VirtReg, MCRegister PhysReg,
       const SmallVirtRegSet &FixedRegisters) const override {
     return getDefaultAdvisor().canEvictHintInterference(VirtReg, PhysReg,
                                                         FixedRegisters);
   }
 
-  const LIFeatureComponents
+  const LIFeatureComponents &
   getLIFeatureComponents(const LiveInterval &LI) const;
 
   // Hold on to a default advisor for:
@@ -308,6 +310,9 @@ private:
   // This could be static and shared, but its initialization is non-trivial.
   std::bitset<FeatureIDs::FeatureCount> DoNotNormalize;
   const float InitialQSize;
+
+  using RegID = unsigned;
+  mutable DenseMap<RegID, LIFeatureComponents> CachedFeatures;
 };
 
 // ===================================
@@ -337,7 +342,7 @@ private:
   }
 
   std::unique_ptr<RegAllocEvictionAdvisor>
-  getAdvisor(MachineFunction &MF, const RAGreedy &RA) override {
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
     if (!Runner)
       Runner = std::make_unique<ReleaseModeModelRunner<RegallocEvictModel>>(
           MF.getFunction().getContext(), FeatureNames, DecisionName);
@@ -382,7 +387,7 @@ static const std::vector<TensorSpec> TrainingInputFeatures{
 
 class DevelopmentModeEvictAdvisor : public MLEvictAdvisor {
 public:
-  DevelopmentModeEvictAdvisor(MachineFunction &MF, const RAGreedy &RA,
+  DevelopmentModeEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
                               MLModelRunner *Runner,
                               const MachineBlockFrequencyInfo &MBFI,
                               const MachineLoopInfo &Loops, Logger *Log)
@@ -390,8 +395,8 @@ public:
 
 private:
   int64_t tryFindEvictionCandidatePosition(
-      LiveInterval &VirtReg, const AllocationOrder &Order, unsigned OrderLimit,
-      uint8_t CostPerUseLimit,
+      const LiveInterval &VirtReg, const AllocationOrder &Order,
+      unsigned OrderLimit, uint8_t CostPerUseLimit,
       const SmallVirtRegSet &FixedRegisters) const override;
 
   Logger *const Log;
@@ -438,7 +443,7 @@ private:
   }
 
   std::unique_ptr<RegAllocEvictionAdvisor>
-  getAdvisor(MachineFunction &MF, const RAGreedy &RA) override {
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
     LLVMContext &Ctx = MF.getFunction().getContext();
     if (ModelUnderTraining.empty() && TrainingLog.empty()) {
       Ctx.emitError("Regalloc development mode should be requested with at "
@@ -498,7 +503,7 @@ float MLEvictAdvisor::getInitialQueueSize(const MachineFunction &MF) {
   return Ret;
 }
 
-MLEvictAdvisor::MLEvictAdvisor(MachineFunction &MF, const RAGreedy &RA,
+MLEvictAdvisor::MLEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
                                MLModelRunner *Runner,
                                const MachineBlockFrequencyInfo &MBFI,
                                const MachineLoopInfo &Loops)
@@ -516,7 +521,7 @@ MLEvictAdvisor::MLEvictAdvisor(MachineFunction &MF, const RAGreedy &RA,
 }
 
 int64_t MLEvictAdvisor::tryFindEvictionCandidatePosition(
-    LiveInterval &, const AllocationOrder &, unsigned, uint8_t,
+    const LiveInterval &, const AllocationOrder &, unsigned, uint8_t,
     const SmallVirtRegSet &) const {
   int64_t Ret = Runner->evaluate<int64_t>();
   assert(Ret >= 0);
@@ -525,7 +530,7 @@ int64_t MLEvictAdvisor::tryFindEvictionCandidatePosition(
 }
 
 bool MLEvictAdvisor::loadInterferenceFeatures(
-    LiveInterval &VirtReg, MCRegister PhysReg, bool IsHint,
+    const LiveInterval &VirtReg, MCRegister PhysReg, bool IsHint,
     const SmallVirtRegSet &FixedRegisters, FeaturesListNormalizer &Largest,
     size_t Pos) const {
   // It is only possible to evict virtual register interference.
@@ -541,7 +546,7 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
   // The cascade tracking is the same as in the default advisor
   unsigned Cascade = RA.getExtraInfo().getCascadeOrCurrentNext(VirtReg.reg());
 
-  SmallVector<LiveInterval *, MaxInterferences> InterferingIntervals;
+  SmallVector<const LiveInterval *, MaxInterferences> InterferingIntervals;
   for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
     LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, *Units);
     // Different from the default heuristic, we don't make any assumptions about
@@ -552,7 +557,7 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
     if (IFIntervals.size() >= EvictInterferenceCutoff)
       return false;
     InterferingIntervals.append(IFIntervals.begin(), IFIntervals.end());
-    for (LiveInterval *Intf : reverse(IFIntervals)) {
+    for (const LiveInterval *Intf : reverse(IFIntervals)) {
       assert(Register::isVirtualRegister(Intf->reg()) &&
              "Only expecting virtual register interference from query");
       // This is the same set of legality checks as in the default case: don't
@@ -591,7 +596,7 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
 }
 
 MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
-    LiveInterval &VirtReg, const AllocationOrder &Order,
+    const LiveInterval &VirtReg, const AllocationOrder &Order,
     uint8_t CostPerUseLimit, const SmallVirtRegSet &FixedRegisters) const {
   auto MaybeOrderLimit = getOrderLimit(VirtReg, Order, CostPerUseLimit);
   if (!MaybeOrderLimit)
@@ -656,7 +661,7 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   // decision making process.
   Regs[CandidateVirtRegPos].second = !MustFindEviction;
   if (!MustFindEviction)
-    extractFeatures(SmallVector<LiveInterval *, 1>(1, &VirtReg), Largest,
+    extractFeatures(SmallVector<const LiveInterval *, 1>(1, &VirtReg), Largest,
                     CandidateVirtRegPos, /*IsHint*/ 0, /*LocalIntfsCount*/ 0,
                     /*NrUrgent*/ 0.0);
   assert(InitialQSize > 0.0 && "We couldn't have gotten here if we had "
@@ -690,9 +695,15 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   return Regs[CandidatePos].first;
 }
 
-const LIFeatureComponents
+const LIFeatureComponents &
 MLEvictAdvisor::getLIFeatureComponents(const LiveInterval &LI) const {
-  LIFeatureComponents Ret;
+  RegID ID = LI.reg().id();
+  LIFeatureComponents Empty;
+  auto I = CachedFeatures.insert(std::make_pair(ID, Empty));
+  LIFeatureComponents &Ret = I.first->getSecond();
+  if (!I.second)
+    return Ret;
+
   SmallPtrSet<MachineInstr *, 8> Visited;
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
 
@@ -737,7 +748,7 @@ MLEvictAdvisor::getLIFeatureComponents(const LiveInterval &LI) const {
 // Overall, this currently mimics what we do for weight calculation, but instead
 // of accummulating the various features, we keep them separate.
 void MLEvictAdvisor::extractFeatures(
-    const SmallVectorImpl<LiveInterval *> &Intervals,
+    const SmallVectorImpl<const LiveInterval *> &Intervals,
     std::array<float, FeatureIDs::FeatureCount> &Largest, size_t Pos,
     int64_t IsHint, int64_t LocalIntfsCount, float NrUrgent) const {
   int64_t NrDefsAndUses = 0;
@@ -773,7 +784,7 @@ void MLEvictAdvisor::extractFeatures(
 
     if (LI.endIndex() > EndSI)
       EndSI = LI.endIndex();
-    const LIFeatureComponents LIFC = getLIFeatureComponents(LI);
+    const LIFeatureComponents &LIFC = getLIFeatureComponents(LI);
     NrBrokenHints += VRM->hasPreferredPhys(LI.reg());
 
     NrDefsAndUses += LIFC.NrDefsAndUses;
@@ -835,8 +846,9 @@ RegAllocEvictionAdvisorAnalysis *llvm::createDevelopmentModeAdvisor() {
 }
 
 int64_t DevelopmentModeEvictAdvisor::tryFindEvictionCandidatePosition(
-    LiveInterval &VirtReg, const AllocationOrder &Order, unsigned OrderLimit,
-    uint8_t CostPerUseLimit, const SmallVirtRegSet &FixedRegisters) const {
+    const LiveInterval &VirtReg, const AllocationOrder &Order,
+    unsigned OrderLimit, uint8_t CostPerUseLimit,
+    const SmallVirtRegSet &FixedRegisters) const {
   int64_t Ret = 0;
   if (isa<ModelUnderTrainingRunner>(getRunner())) {
     Ret = MLEvictAdvisor::tryFindEvictionCandidatePosition(

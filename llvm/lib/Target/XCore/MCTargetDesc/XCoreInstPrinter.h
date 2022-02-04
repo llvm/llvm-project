@@ -15,10 +15,10 @@
 #ifndef LLVM_LIB_TARGET_XCORE_MCTARGETDESC_XCOREINSTPRINTER_H
 #define LLVM_LIB_TARGET_XCORE_MCTARGETDESC_XCOREINSTPRINTER_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
+class StringRef;
 
 class XCoreInstPrinter : public MCInstPrinter {
 public:
@@ -39,7 +39,6 @@ private:
   void printInlineJT(const MCInst *MI, int opNum, raw_ostream &O);
   void printInlineJT32(const MCInst *MI, int opNum, raw_ostream &O);
   void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printMemOperand(const MCInst *MI, int opNum, raw_ostream &O);
 };
 
 } // end namespace llvm

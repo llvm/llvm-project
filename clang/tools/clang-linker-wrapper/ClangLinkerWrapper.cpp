@@ -99,8 +99,8 @@ static cl::opt<std::string>
 
 static cl::list<std::string>
     PtxasArgs("ptxas-args", cl::ZeroOrMore,
-                cl::desc("Argument to pass to the ptxas invocation"),
-                cl::cat(ClangLinkerWrapperCategory));
+              cl::desc("Argument to pass to the ptxas invocation"),
+              cl::cat(ClangLinkerWrapperCategory));
 
 static cl::opt<bool> Verbose("v", cl::ZeroOrMore,
                              cl::desc("Verbose output from tools"),
@@ -118,6 +118,10 @@ static cl::opt<bool> SaveTemps("save-temps", cl::ZeroOrMore,
                                cl::desc("Save intermediary results."),
                                cl::cat(ClangLinkerWrapperCategory));
 
+static cl::opt<std::string> CudaPath("cuda-path", cl::ZeroOrMore,
+                                     cl::desc("Save intermediary results."),
+                                     cl::cat(ClangLinkerWrapperCategory));
+
 // Do not parse linker options.
 static cl::list<std::string>
     HostLinkerArgs(cl::Positional,
@@ -128,6 +132,9 @@ static const char *LinkerExecutable;
 
 /// Filename of the executable being created.
 static StringRef ExecutableName;
+
+/// Binary path for the CUDA installation.
+static std::string CudaBinaryPath;
 
 /// Temporary files created by the linker wrapper.
 static SmallVector<std::string, 16> TempFiles;
@@ -507,9 +514,9 @@ extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
 namespace nvptx {
 Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
                                StringRef Arch) {
-  // NVPTX uses the nvlink binary to link device object files.
+  // NVPTX uses the ptxas binary to create device object files.
   ErrorOr<std::string> PtxasPath =
-      sys::findProgramByName("ptxas", sys::path::parent_path(LinkerExecutable));
+      sys::findProgramByName("ptxas", {CudaBinaryPath});
   if (!PtxasPath)
     PtxasPath = sys::findProgramByName("ptxas");
   if (!PtxasPath)
@@ -554,7 +561,10 @@ Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
 Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
                            StringRef Arch) {
   // NVPTX uses the nvlink binary to link device object files.
-  ErrorOr<std::string> NvlinkPath = sys::findProgramByName("nvlink");
+  ErrorOr<std::string> NvlinkPath =
+      sys::findProgramByName("nvlink", {CudaBinaryPath});
+  if (!NvlinkPath)
+    NvlinkPath = sys::findProgramByName("nvlink");
   if (!NvlinkPath)
     return createStringError(NvlinkPath.getError(),
                              "Unable to find 'nvlink' in path");
@@ -1096,6 +1106,9 @@ int main(int argc, const char **argv) {
     logAllUnhandledErrors(std::move(E), WithColor::error(errs(), argv[0]));
     return EXIT_FAILURE;
   };
+
+  if (!CudaPath.empty())
+    CudaBinaryPath = CudaPath + "/bin";
 
   ExecutableName = *(llvm::find(HostLinkerArgs, "-o") + 1);
   SmallVector<std::string, 16> LinkerArgs;

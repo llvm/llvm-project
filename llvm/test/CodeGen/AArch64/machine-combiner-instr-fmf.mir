@@ -6,7 +6,7 @@
 # CHECK:        [[C:%.*]]:fpr32 = COPY $s2
 # CHECK-NEXT:   [[B:%.*]]:fpr32 = COPY $s1
 # CHECK-NEXT:   [[A:%.*]]:fpr32 = COPY $s0
-# CHECK-NEXT:   :fpr32 = FMADDSrrr [[B]], [[A]], [[C]]
+# CHECK-NEXT:   :fpr32 = nnan ninf nsz arcp contract afn reassoc FMADDSrrr [[B]], [[A]], [[C]]
 ---
 name:            scalar_fmadd_fast
 alignment:       4
@@ -45,7 +45,7 @@ body:             |
 # CHECK:        [[C:%.*]]:fpr32 = COPY $s2
 # CHECK-NEXT:   [[B:%.*]]:fpr32 = COPY $s1
 # CHECK-NEXT:   [[A:%.*]]:fpr32 = COPY $s0
-# CHECK-NEXT:   :fpr32 = FMADDSrrr [[B]], [[A]], [[C]]
+# CHECK-NEXT:   :fpr32 = contract FMADDSrrr [[B]], [[A]], [[C]]
 
 ---
 name:            scalar_fmadd_contract
@@ -125,7 +125,7 @@ body:             |
 # CHECK:        [[C:%.*]]:fpr32 = COPY $s2
 # CHECK-NEXT:   [[B:%.*]]:fpr32 = COPY $s1
 # CHECK-NEXT:   [[A:%.*]]:fpr32 = COPY $s0
-# CHECK-NEXT:   :fpr32 = FMADDSrrr [[B]], [[A]], [[C]]
+# CHECK-NEXT:   :fpr32 = contract FMADDSrrr [[B]], [[A]], [[C]]
 
 ---
 name:            scalar_fmadd_contract_op1
@@ -206,7 +206,7 @@ body:             |
 # CHECK:       [[C:%.*]]:fpr128 = COPY $q2
 # CHECK-NEXT:  [[B:%.*]]:fpr128 = COPY $q1
 # CHECK-NEXT:  [[A:%.*]]:fpr128 = COPY $q0
-# CHECK-NEXT:  fpr128 = FMLAv2f64 [[C]], [[B]], [[A]]
+# CHECK-NEXT:  fpr128 = nnan ninf nsz arcp contract afn reassoc FMLAv2f64 [[C]], [[B]], [[A]]
 ---
 name:            vector_fmadd_fast
 alignment:       4
@@ -245,7 +245,7 @@ body:             |
 # CHECK:       [[C:%.*]]:fpr128 = COPY $q2
 # CHECK-NEXT:  [[B:%.*]]:fpr128 = COPY $q1
 # CHECK-NEXT:  [[A:%.*]]:fpr128 = COPY $q0
-# CHECK-NEXT:  fpr128 = FMLAv2f64 [[C]], [[B]], [[A]]
+# CHECK-NEXT:  fpr128 = contract FMLAv2f64 [[C]], [[B]], [[A]]
 ---
 name:            vector_fmadd_contract
 alignment:       4
@@ -324,7 +324,7 @@ body:             |
 # CHECK:       [[C:%.*]]:fpr128 = COPY $q2
 # CHECK-NEXT:  [[B:%.*]]:fpr128 = COPY $q1
 # CHECK-NEXT:  [[A:%.*]]:fpr128 = COPY $q0
-# CHECK-NEXT:  fpr128 = FMLAv2f64 [[C]], [[B]], [[A]]
+# CHECK-NEXT:  fpr128 = contract FMLAv2f64 [[C]], [[B]], [[A]]
 
 ---
 name:            vector_fmadd_contract_op1

@@ -5,11 +5,11 @@
 # RUN:     -o %t/elf_riscv32_non_pc_indirect_reloc.o %s
 # RUN: llvm-jitlink -noexec \
 # RUN:     -slab-allocate 100Kb -slab-address 0x1ff00000 -slab-page-size 4096 \
-# RUN:     -define-abs external_data=0x1ff10000 \
+# RUN:     -abs external_data=0x1ff10000 \
 # RUN:     -check %s %t/elf_riscv64_non_pc_indirect_reloc.o
 # RUN: llvm-jitlink -noexec \
 # RUN:     -slab-allocate 100Kb -slab-address 0x1ff00000 -slab-page-size 4096 \
-# RUN:     -define-abs external_data=0x1ff10000 \
+# RUN:     -abs external_data=0x1ff10000 \
 # RUN:     -check %s %t/elf_riscv32_non_pc_indirect_reloc.o
 #
 

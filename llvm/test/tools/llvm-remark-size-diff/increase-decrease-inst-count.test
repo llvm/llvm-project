@@ -1,0 +1,12 @@
+RUN: llvm-remark-size-diff %p/Inputs/1-func-1-instr-1-stack.yaml %p/Inputs/1-func-2-instr-2-stack.yaml --parser=yaml | FileCheck -strict-whitespace %s --check-prefix=INCREASE
+RUN: llvm-remark-size-diff %p/Inputs/1-func-2-instr-2-stack.yaml %p/Inputs/1-func-1-instr-1-stack.yaml --parser=yaml | FileCheck -strict-whitespace %s --check-prefix=DECREASE
+
+; Test a size increase/decrease of one instruction + 1 stack byte.
+
+; INCREASE: == > func0, 1 instrs, 1 stack B
+; INCREASE-DAG: instruction count: 1 (100.00%)
+; INCREASE-NEXT: stack byte usage: 1 (100.00%)
+
+; DECREASE: == < func0, -1 instrs, -1 stack B
+; DECREASE-DAG: instruction count: -1 (-50.00%)
+; DECREASE-NEXT: stack byte usage: -1 (-50.00%)

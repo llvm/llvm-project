@@ -19,6 +19,7 @@
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 

@@ -42,8 +42,27 @@ void Fortran::lower::genStopStatement(
   mlir::FuncOp callee;
   mlir::FunctionType calleeType;
   // First operand is stop code (zero if absent)
-  if (std::get<std::optional<Fortran::parser::StopCode>>(stmt.t)) {
-    TODO(loc, "STOP first operand not lowered yet");
+  if (const auto &code =
+          std::get<std::optional<Fortran::parser::StopCode>>(stmt.t)) {
+    auto expr = converter.genExprValue(*Fortran::semantics::GetExpr(*code));
+    LLVM_DEBUG(llvm::dbgs() << "stop expression: "; expr.dump();
+               llvm::dbgs() << '\n');
+    expr.match(
+        [&](const fir::CharBoxValue &x) {
+          TODO(loc, "STOP CharBoxValue first operand not lowered yet");
+        },
+        [&](fir::UnboxedValue x) {
+          callee = fir::runtime::getRuntimeFunc<mkRTKey(StopStatement)>(
+              loc, builder);
+          calleeType = callee.getType();
+          mlir::Value cast =
+              builder.createConvert(loc, calleeType.getInput(0), x);
+          operands.push_back(cast);
+        },
+        [&](auto) {
+          mlir::emitError(loc, "unhandled expression in STOP");
+          std::exit(1);
+        });
   } else {
     callee = fir::runtime::getRuntimeFunc<mkRTKey(StopStatement)>(loc, builder);
     calleeType = callee.getType();

@@ -21,6 +21,7 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/StreamString.h"
