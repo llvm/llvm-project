@@ -192,6 +192,8 @@ STATISTIC(NumSinkCommonInstrs,
 STATISTIC(NumSpeculations, "Number of speculative executed instructions");
 STATISTIC(NumInvokes,
           "Number of invokes with empty resume blocks simplified into calls");
+STATISTIC(NumInvokesMerged, "Number of invokes that were merged together");
+STATISTIC(NumInvokeSetsFormed, "Number of invoke sets that were formed");
 
 namespace {
 
@@ -2209,6 +2211,266 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
   }
   if (SinkIdx != 0)
     ++NumSinkCommonCode;
+  return Changed;
+}
+
+namespace {
+
+struct CompatibleSets {
+  using SetTy = SmallVector<InvokeInst *, 2>;
+
+  SmallVector<SetTy, 1> Sets;
+
+  static bool shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes);
+
+  SetTy &getCompatibleSet(InvokeInst *II);
+
+  void insert(InvokeInst *II);
+};
+
+CompatibleSets::SetTy &CompatibleSets::getCompatibleSet(InvokeInst *II) {
+  // Perform a linear scan over all the existing sets, see if the new `invoke`
+  // is compatible with any particular set. Since we know that all the `invokes`
+  // within a set are compatible, only check the first `invoke` in each set.
+  // WARNING: at worst, this has quadratic complexity.
+  for (CompatibleSets::SetTy &Set : Sets) {
+    if (CompatibleSets::shouldBelongToSameSet({Set.front(), II}))
+      return Set;
+  }
+
+  // Otherwise, we either had no sets yet, or this invoke forms a new set.
+  return Sets.emplace_back();
+}
+
+void CompatibleSets::insert(InvokeInst *II) {
+  getCompatibleSet(II).emplace_back(II);
+}
+
+bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
+  assert(Invokes.size() == 2 && "Always called with exactly two candidates.");
+
+  // Can we theoretically merge these `invoke`s?
+  auto IsIllegalToMerge = [](InvokeInst *II) {
+    return II->cannotMerge() || II->isInlineAsm();
+  };
+  if (any_of(Invokes, IsIllegalToMerge))
+    return false;
+
+  // All callees must be identical.
+  // FIXME: support indirect callees?
+  Value *Callee = nullptr;
+  for (InvokeInst *II : Invokes) {
+    Value *CurrCallee = II->getCalledOperand();
+    assert(CurrCallee && "There is always a called operand.");
+    if (!Callee)
+      Callee = CurrCallee;
+    else if (Callee != CurrCallee)
+      return false;
+  }
+
+  // Both `invoke`s must not have a normal destination.
+  // FIXME: them sharing the normal destination should be fine?
+  auto HasNormalDest = [](InvokeInst *II) {
+    return !isa<UnreachableInst>(II->getNormalDest()->getFirstNonPHIOrDbg());
+  };
+  if (any_of(Invokes, HasNormalDest))
+    return false;
+
+#ifndef NDEBUG
+  // All unwind destinations must be identical.
+  // We know that because we have started from said unwind destination.
+  BasicBlock *UnwindBB = nullptr;
+  for (InvokeInst *II : Invokes) {
+    BasicBlock *CurrUnwindBB = II->getUnwindDest();
+    assert(CurrUnwindBB && "There is always an 'unwind to' basic block.");
+    if (!UnwindBB)
+      UnwindBB = CurrUnwindBB;
+    else
+      assert(UnwindBB == CurrUnwindBB && "Unexpected unwind destination.");
+  }
+#endif
+
+  // The successor blocks must not have any PHI nodes.
+  // We know we don't have the normal destination, so we don't check it.
+  // FIXME: instead check that the incoming values are compatible?
+  auto HasPHIsInUnwindDest = [](InvokeInst *II) {
+    return !empty(II->getUnwindDest()->phis());
+  };
+  if (any_of(Invokes, HasPHIsInUnwindDest))
+    return false;
+
+  // Ignoring arguments, these `invoke`s must be identical,
+  // including operand bundles.
+  const InvokeInst *II0 = Invokes.front();
+  for (auto *II : Invokes.drop_front())
+    if (!II->isSameOperationAs(II0))
+      return false;
+
+  // Can we theoretically form the data operands for the merged `invoke`?
+  auto IsIllegalToMergeArguments = [](auto Ops) {
+    Type *Ty = std::get<0>(Ops)->getType();
+    assert(Ty == std::get<1>(Ops)->getType() && "Incompatible types?");
+    return Ty->isTokenTy() && std::get<0>(Ops) != std::get<1>(Ops);
+  };
+  assert(Invokes.size() == 2 && "Always called with exactly two candidates.");
+  if (any_of(zip(Invokes[0]->data_ops(), Invokes[1]->data_ops()),
+             IsIllegalToMergeArguments))
+    return false;
+
+  return true;
+}
+
+} // namespace
+
+// Merge all invokes in the provided set, all of which are compatible
+// as per the `CompatibleSets::shouldBelongToSameSet()`.
+static void MergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
+                                       DomTreeUpdater *DTU) {
+  assert(Invokes.size() >= 2 && "Must have at least two invokes to merge.");
+
+  SmallVector<DominatorTree::UpdateType, 8> Updates;
+  if (DTU)
+    Updates.reserve(2 + 3 * Invokes.size());
+
+  // Clone one of the invokes into a new basic block.
+  // Since they are all compatible, it doesn't matter which invoke is cloned.
+  InvokeInst *MergedInvoke = [&Invokes]() {
+    InvokeInst *II0 = Invokes.front();
+    BasicBlock *II0BB = II0->getParent();
+    BasicBlock *InsertBeforeBlock =
+        II0->getParent()->getIterator()->getNextNode();
+    Function *Func = II0BB->getParent();
+    LLVMContext &Ctx = II0->getContext();
+
+    BasicBlock *MergedInvokeBB = BasicBlock::Create(
+        Ctx, II0BB->getName() + ".invoke", Func, InsertBeforeBlock);
+
+    auto *MergedInvoke = cast<InvokeInst>(II0->clone());
+    // NOTE: all invokes have the same attributes, so no handling needed.
+    MergedInvokeBB->getInstList().push_back(MergedInvoke);
+
+    // For now, we've required that the normal destination is unreachable,
+    // so just form a new block with unreachable terminator.
+    BasicBlock *MergedNormalDest = BasicBlock::Create(
+        Ctx, II0BB->getName() + ".cont", Func, InsertBeforeBlock);
+    new UnreachableInst(Ctx, MergedNormalDest);
+    MergedInvoke->setNormalDest(MergedNormalDest);
+
+    // The unwind destination, however, remainds identical for all invokes here.
+
+    return MergedInvoke;
+  }();
+
+  if (DTU) {
+    // Predecessor blocks that contained these invokes will now branch to
+    // the new block that contains the merged invoke, ...
+    for (InvokeInst *II : Invokes)
+      Updates.push_back(
+          {DominatorTree::Insert, II->getParent(), MergedInvoke->getParent()});
+
+    // ... which has the new `unreachable` block as normal destination,
+    // or unwinds to the (same for all `invoke`s in this set) `landingpad`,
+    for (BasicBlock *SuccBBOfMergedInvoke : successors(MergedInvoke))
+      Updates.push_back({DominatorTree::Insert, MergedInvoke->getParent(),
+                         SuccBBOfMergedInvoke});
+
+    // Since predecessor blocks now unconditionally branch to a new block,
+    // they no longer branch to their original successors.
+    for (InvokeInst *II : Invokes)
+      for (BasicBlock *SuccOfPredBB : successors(II->getParent()))
+        Updates.push_back(
+            {DominatorTree::Delete, II->getParent(), SuccOfPredBB});
+  }
+
+  // Form the merged data operands for the merged invoke.
+  for (Use &U : MergedInvoke->data_ops()) {
+    Type *Ty = U->getType();
+    if (Ty->isTokenTy())
+      continue; // Keep this arg as-is, we've checked that all the invokes
+                // recieve the *same* token value.
+
+    // Otherwise, simply form a PHI out of all the data ops under this index.
+    PHINode *PN = PHINode::Create(Ty, /*NumReservedValues=*/Invokes.size(), "",
+                                  MergedInvoke);
+    for (InvokeInst *II : Invokes) {
+      Use *IVU = II->data_operands_begin() + MergedInvoke->getDataOperandNo(&U);
+      PN->addIncoming(IVU->get(), II->getParent());
+    }
+
+    U.set(PN);
+  }
+
+  // And finally, replace the original `invoke`s with an unconditional branch
+  // to the block with the merged `invoke`. Also, give that merged `invoke`
+  // the merged debugloc of all the original `invoke`s.
+  const DILocation *MergedDebugLoc = nullptr;
+  for (InvokeInst *II : Invokes) {
+    // Compute the debug location common to all the original `invoke`s.
+    if (!MergedDebugLoc)
+      MergedDebugLoc = II->getDebugLoc();
+    else
+      MergedDebugLoc =
+          DILocation::getMergedLocation(MergedDebugLoc, II->getDebugLoc());
+
+    // And replace the old `invoke` with an unconditionally branch
+    // to the block with the merged `invoke`.
+    II->getNormalDest()->removePredecessor(II->getParent());
+    BranchInst::Create(MergedInvoke->getParent(), II->getParent());
+    // Since the normal destination was unreachable, there are no live uses.
+    II->replaceAllUsesWith(UndefValue::get(II->getType()));
+    II->eraseFromParent();
+    ++NumInvokesMerged;
+  }
+  MergedInvoke->setDebugLoc(MergedDebugLoc);
+  ++NumInvokeSetsFormed;
+
+  if (DTU)
+    DTU->applyUpdates(Updates);
+}
+
+/// If this block is a `landingpad` exception handling block, categorize all
+/// the predecessor `invoke`s into sets, with all `invoke`s in each set
+/// being "mergeable" together, and then merge invokes in each set together.
+///
+/// This is a weird mix of hoisting and sinking. Visually, it goes from:
+///          [...]        [...]
+///            |            |
+///        [invoke0]    [invoke1]
+///           / \          / \
+///     [cont0] [landingpad] [cont1]
+/// to:
+///      [...] [...]
+///          \ /
+///       [invoke]
+///          / \
+///     [cont] [landingpad]
+///
+/// But of course we can only do that if the invokes share the `landingpad`,
+/// edges invoke0->cont0 and invoke1->cont1 are "compatible",
+/// and the invoked functions are "compatible".
+static bool MergeCompatibleInvokes(BasicBlock *BB, DomTreeUpdater *DTU) {
+  bool Changed = false;
+
+  // FIXME: generalize to all exception handling blocks?
+  if (!BB->isLandingPad())
+    return Changed;
+
+  CompatibleSets Grouper;
+
+  // Record all the predecessors of this `landingpad`. As per verifier,
+  // the only allowed predecessor is the unwind edge of an `invoke`.
+  // We want to group "compatible" `invokes` into the same set to be merged.
+  for (BasicBlock *PredBB : predecessors(BB))
+    Grouper.insert(cast<InvokeInst>(PredBB->getTerminator()));
+
+  // And now, merge `invoke`s that were grouped togeter.
+  for (ArrayRef<InvokeInst *> Invokes : Grouper.Sets) {
+    if (Invokes.size() < 2)
+      continue;
+    Changed = true;
+    MergeCompatibleInvokesImpl(Invokes, DTU);
+  }
+
   return Changed;
 }
 
@@ -6725,7 +6987,8 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
     return true;
 
   if (SinkCommon && Options.SinkCommonInsts)
-    if (SinkCommonCodeFromPredecessors(BB, DTU)) {
+    if (SinkCommonCodeFromPredecessors(BB, DTU) ||
+        MergeCompatibleInvokes(BB, DTU)) {
       // SinkCommonCodeFromPredecessors() does not automatically CSE PHI's,
       // so we may now how duplicate PHI's.
       // Let's rerun EliminateDuplicatePHINodes() first,
