@@ -5,4 +5,4 @@ struct a test __attribute__((signal)); // expected-warning {{'signal' attribute 
 
 __attribute__((signal(12))) void foo(void) { } // expected-error {{'signal' attribute takes no arguments}}
 
-__attribute__((signal)) void food() {}
+__attribute__((signal)) void food(void) {}

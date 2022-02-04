@@ -2,7 +2,7 @@
 
 #include <stdarg.h>
 
-int main() {
+int main(void) {
   void (^b) (int arg, const char * format, ...) __attribute__ ((__format__ (__printf__, 1, 3))) =   // expected-error {{format argument not a string type}}
     ^ __attribute__ ((__format__ (__printf__, 1, 3))) (int arg, const char * format, ...) {}; // expected-error {{format argument not a string type}}
  

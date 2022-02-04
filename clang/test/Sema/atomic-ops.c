@@ -290,7 +290,7 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
 }
 
 _Atomic(int*) PR12527_a;
-void PR12527() { int *b = PR12527_a; }
+void PR12527(void) { int *b = PR12527_a; }
 
 void PR16931(int* x) { // expected-note {{passing argument to parameter 'x' here}}
   typedef struct { _Atomic(_Bool) flag; } flag;
@@ -573,7 +573,7 @@ void memory_checks(_Atomic(int) *Ap, int *p, int val) {
   (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_seq_cst, memory_order_relaxed);
 }
 
-void nullPointerWarning() {
+void nullPointerWarning(void) {
   volatile _Atomic(int) vai;
   _Atomic(int) ai;
   volatile int vi = 42;
