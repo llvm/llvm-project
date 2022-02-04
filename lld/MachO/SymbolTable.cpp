@@ -266,7 +266,7 @@ static void handleSectionBoundarySymbol(const Undefined &sym, StringRef segSect,
     }
 
   if (!osec) {
-    ConcatInputSection *isec = make<ConcatInputSection>(segName, sectName);
+    ConcatInputSection *isec = makeSyntheticInputSection(segName, sectName);
 
     // This runs after markLive() and is only called for Undefineds that are
     // live. Marking the isec live ensures an OutputSection is created that the
