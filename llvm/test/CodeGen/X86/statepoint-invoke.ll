@@ -12,7 +12,7 @@ define i64 addrspace(1)* @test_basic(i64 addrspace(1)* %obj,
                                      i64 addrspace(1)* %obj1)
 gc "statepoint-example" personality i32 ()* @"personality_function" {
 entry:
-  %0 = invoke token (i64, i32, void (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 0, i32 0, void (i64 addrspace(1)*)* @some_call, i32 1, i32 0, i64 addrspace(1)* %obj, i32 0, i32 0) ["gc-live" (i64 addrspace(1)* %obj, i64 addrspace(1)* %obj1), "deopt" (i32 0, i32 -1, i32 0, i32 0, i32 0)]
+  %0 = invoke token (i64, i32, void (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 0, i32 0, void (i64 addrspace(1)*)* elementtype(void (i64 addrspace(1)*)) @some_call, i32 1, i32 0, i64 addrspace(1)* %obj, i32 0, i32 0) ["gc-live" (i64 addrspace(1)* %obj, i64 addrspace(1)* %obj1), "deopt" (i32 0, i32 -1, i32 0, i32 0, i32 0)]
           to label %invoke_safepoint_normal_dest unwind label %exceptional_return
 
 invoke_safepoint_normal_dest:
@@ -40,7 +40,7 @@ define i64 addrspace(1)* @test_result(i64 addrspace(1)* %obj,
                                       i64 addrspace(1)* %obj1)
   gc "statepoint-example" personality i32 ()* @personality_function {
 entry:
-  %0 = invoke token (i64, i32, i64 addrspace(1)* (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i64p1i64f(i64 0, i32 0, i64 addrspace(1)* (i64 addrspace(1)*)* @some_other_call, i32 1, i32 0, i64 addrspace(1)* %obj, i32 0, i32 0) ["gc-live"(i64 addrspace(1)* %obj, i64 addrspace(1)* %obj1)]
+  %0 = invoke token (i64, i32, i64 addrspace(1)* (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i64p1i64f(i64 0, i32 0, i64 addrspace(1)* (i64 addrspace(1)*)* elementtype(i64 addrspace(1)* (i64 addrspace(1)*)) @some_other_call, i32 1, i32 0, i64 addrspace(1)* %obj, i32 0, i32 0) ["gc-live"(i64 addrspace(1)* %obj, i64 addrspace(1)* %obj1)]
           to label %normal_return unwind label %exceptional_return
 
 normal_return:
@@ -65,7 +65,7 @@ entry:
   br i1 %cond, label %left, label %right
 
 left:
-  %sp1 = invoke token (i64, i32, void (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 0, i32 0, void (i64 addrspace(1)*)* @some_call, i32 1, i32 0, i64 addrspace(1)* %val1, i32 0, i32 0) ["gc-live"(i64 addrspace(1)* %val1, i64 addrspace(1)* %val2)]
+  %sp1 = invoke token (i64, i32, void (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 0, i32 0, void (i64 addrspace(1)*)* elementtype(void (i64 addrspace(1)*)) @some_call, i32 1, i32 0, i64 addrspace(1)* %val1, i32 0, i32 0) ["gc-live"(i64 addrspace(1)* %val1, i64 addrspace(1)* %val2)]
            to label %left.relocs unwind label %exceptional_return.left
 
 left.relocs:
@@ -74,7 +74,7 @@ left.relocs:
   br label %normal_return
 
 right:
-  %sp2 = invoke token (i64, i32, void (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 0, i32 0, void (i64 addrspace(1)*)* @some_call, i32 1, i32 0, i64 addrspace(1)* %val1, i32 0, i32 0) ["gc-live"(i64 addrspace(1)* %val2, i64 addrspace(1)* %val3)]
+  %sp2 = invoke token (i64, i32, void (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 0, i32 0, void (i64 addrspace(1)*)* elementtype(void (i64 addrspace(1)*)) @some_call, i32 1, i32 0, i64 addrspace(1)* %val1, i32 0, i32 0) ["gc-live"(i64 addrspace(1)* %val2, i64 addrspace(1)* %val3)]
            to label %right.relocs unwind label %exceptional_return.right
 
 right.relocs:
@@ -104,7 +104,7 @@ exceptional_return.right:
 define i64 addrspace(1)* @test_null_undef(i64 addrspace(1)* %val1)
        gc "statepoint-example" personality i32 ()* @"personality_function" {
 entry:
-  %sp1 = invoke token (i64, i32, void (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 0, i32 0, void (i64 addrspace(1)*)* @some_call, i32 1, i32 0, i64 addrspace(1)* %val1, i32 0, i32 0) ["gc-live"(i64 addrspace(1)* null, i64 addrspace(1)* undef)]
+  %sp1 = invoke token (i64, i32, void (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 0, i32 0, void (i64 addrspace(1)*)* elementtype(void (i64 addrspace(1)*)) @some_call, i32 1, i32 0, i64 addrspace(1)* %val1, i32 0, i32 0) ["gc-live"(i64 addrspace(1)* null, i64 addrspace(1)* undef)]
            to label %normal_return unwind label %exceptional_return
 
 normal_return:
@@ -126,7 +126,7 @@ entry:
   %a = alloca i32
   %aa = addrspacecast i32* %a to i32 addrspace(1)*
   %c = inttoptr i64 15 to i64 addrspace(1)*
-  %sp = invoke token (i64, i32, void (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 0, i32 0, void (i64 addrspace(1)*)* @some_call, i32 1, i32 0, i64 addrspace(1)* %val1, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %aa, i64 addrspace(1)* %c)]
+  %sp = invoke token (i64, i32, void (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 0, i32 0, void (i64 addrspace(1)*)* elementtype(void (i64 addrspace(1)*)) @some_call, i32 1, i32 0, i64 addrspace(1)* %val1, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %aa, i64 addrspace(1)* %c)]
            to label %normal_return unwind label %exceptional_return
 
 normal_return:
