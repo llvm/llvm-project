@@ -142,7 +142,6 @@ enum RegisterIndex {
   eRegisterIndexR13l,
   eRegisterIndexR14l,
   eRegisterIndexR15l,
-  eRegisterIndexR16l,
 
   eRegisterIndexXmm0,
   eRegisterIndexXmm1,
@@ -291,7 +290,7 @@ uint32_t g_gpr_reg_indices[] = {
     eRegisterIndexBpl,  eRegisterIndexSpl,  eRegisterIndexR8l,
     eRegisterIndexR9l,  eRegisterIndexR10l, eRegisterIndexR11l,
     eRegisterIndexR12l, eRegisterIndexR13l, eRegisterIndexR14l,
-    eRegisterIndexR15l, eRegisterIndexR16l,
+    eRegisterIndexR15l
 };
 
 uint32_t g_fpu_reg_indices[] = {
