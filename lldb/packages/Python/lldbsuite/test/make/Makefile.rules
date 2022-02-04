@@ -599,21 +599,26 @@ VPATHSOURCES=$(patsubst %,$(VPATH)/%,$(SWIFT_SOURCES)) $(patsubst %,$(VPATH)/%,$
 	  -o $(BUILDDIR)/$@
 
 ifeq "$(OS)" "Darwin"
-$(EXE): $(MODULENAME).swiftmodule $(OBJECTS)
+ifeq "$(HIDE_SWIFTMODULE)" ""
+SWIFTMODULE = $(MODULENAME).swiftmodule
+LD_SWIFTFLAGS = -Xlinker -add_ast_path -Xlinker $(SWIFTMODULE)
+else
+SWIFTMODULE =
+LD_SWIFTFLAGS =
+endif
+$(EXE): $(SWIFTMODULE) $(OBJECTS)
 	@echo "### Linking" $(EXE)
-	$(SWIFTC) $(LD_EXTRAS) $(OBJECTS) \
-	  -Xlinker -add_ast_path -Xlinker $(MODULENAME).swiftmodule \
-	  $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
+	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $(OBJECTS) $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$(EXE)"
 endif
 else # OS = Linux
 $(EXE): $(MODULENAME).swiftmodule.o $(OBJECTS)
 	@echo "### Linking" $(EXE)
-ifneq "$(EXCLUDE_WRAPPED_SWIFTMODULE)" ""
-	$(SWIFTC) $(LD_EXTRAS) $(patsubst %.swiftmodule.o,,$^) $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
+ifneq "$(HIDE_SWIFTMODULE)" ""
+	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $(patsubst %.swiftmodule.o,,$^) $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
 else
-	$(SWIFTC) $(LD_EXTRAS) $^ $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
+	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $^ $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
 endif
 
 $(MODULENAME).swiftmodule.o: $(MODULENAME).swiftmodule
@@ -694,7 +699,7 @@ ifeq "$(OS)" "Darwin"
 DYLIB_SWIFT_FLAGS=  \
 	 -Xlinker -dylib \
 	 -Xlinker -install_name -Xlinker @executable_path/$(shell basename $@) \
-	 $(LD_EXTRAS)
+	 $(LD_EXTRAS) $(LD_SWIFTFLAGS)
 ifeq "$(DYLIB_HIDE_SWIFTMODULE)" ""
 DYLIB_SWIFT_FLAGS+= -Xlinker -add_ast_path -Xlinker $(DYLIB_NAME).swiftmodule
 endif
