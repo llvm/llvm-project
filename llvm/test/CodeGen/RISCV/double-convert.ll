@@ -108,23 +108,19 @@ define i32 @fcvt_w_d_sat(double %a) nounwind {
 ; RV32IFD-LABEL: fcvt_w_d_sat:
 ; RV32IFD:       # %bb.0: # %start
 ; RV32IFD-NEXT:    feq.d a0, fa0, fa0
-; RV32IFD-NEXT:    bnez a0, .LBB3_2
-; RV32IFD-NEXT:  # %bb.1: # %start
-; RV32IFD-NEXT:    li a0, 0
-; RV32IFD-NEXT:    ret
-; RV32IFD-NEXT:  .LBB3_2:
+; RV32IFD-NEXT:    beqz a0, .LBB3_2
+; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    fcvt.w.d a0, fa0, rtz
+; RV32IFD-NEXT:  .LBB3_2: # %start
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fcvt_w_d_sat:
 ; RV64IFD:       # %bb.0: # %start
 ; RV64IFD-NEXT:    feq.d a0, fa0, fa0
-; RV64IFD-NEXT:    bnez a0, .LBB3_2
-; RV64IFD-NEXT:  # %bb.1: # %start
-; RV64IFD-NEXT:    li a0, 0
-; RV64IFD-NEXT:    ret
-; RV64IFD-NEXT:  .LBB3_2:
+; RV64IFD-NEXT:    beqz a0, .LBB3_2
+; RV64IFD-NEXT:  # %bb.1:
 ; RV64IFD-NEXT:    fcvt.w.d a0, fa0, rtz
+; RV64IFD-NEXT:  .LBB3_2: # %start
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_w_d_sat:
@@ -335,23 +331,19 @@ define i32 @fcvt_wu_d_sat(double %a) nounwind {
 ; RV32IFD-LABEL: fcvt_wu_d_sat:
 ; RV32IFD:       # %bb.0: # %start
 ; RV32IFD-NEXT:    feq.d a0, fa0, fa0
-; RV32IFD-NEXT:    bnez a0, .LBB6_2
-; RV32IFD-NEXT:  # %bb.1: # %start
-; RV32IFD-NEXT:    li a0, 0
-; RV32IFD-NEXT:    ret
-; RV32IFD-NEXT:  .LBB6_2:
+; RV32IFD-NEXT:    beqz a0, .LBB6_2
+; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    fcvt.wu.d a0, fa0, rtz
+; RV32IFD-NEXT:  .LBB6_2: # %start
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fcvt_wu_d_sat:
 ; RV64IFD:       # %bb.0: # %start
 ; RV64IFD-NEXT:    feq.d a0, fa0, fa0
-; RV64IFD-NEXT:    bnez a0, .LBB6_2
-; RV64IFD-NEXT:  # %bb.1: # %start
-; RV64IFD-NEXT:    li a0, 0
-; RV64IFD-NEXT:    ret
-; RV64IFD-NEXT:  .LBB6_2:
+; RV64IFD-NEXT:    beqz a0, .LBB6_2
+; RV64IFD-NEXT:  # %bb.1:
 ; RV64IFD-NEXT:    fcvt.wu.d a0, fa0, rtz
+; RV64IFD-NEXT:  .LBB6_2: # %start
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_wu_d_sat:
@@ -674,12 +666,10 @@ define i64 @fcvt_l_d_sat(double %a) nounwind {
 ; RV64IFD-LABEL: fcvt_l_d_sat:
 ; RV64IFD:       # %bb.0: # %start
 ; RV64IFD-NEXT:    feq.d a0, fa0, fa0
-; RV64IFD-NEXT:    bnez a0, .LBB12_2
-; RV64IFD-NEXT:  # %bb.1: # %start
-; RV64IFD-NEXT:    li a0, 0
-; RV64IFD-NEXT:    ret
-; RV64IFD-NEXT:  .LBB12_2:
+; RV64IFD-NEXT:    beqz a0, .LBB12_2
+; RV64IFD-NEXT:  # %bb.1:
 ; RV64IFD-NEXT:    fcvt.l.d a0, fa0, rtz
+; RV64IFD-NEXT:  .LBB12_2: # %start
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_l_d_sat:
@@ -916,12 +906,10 @@ define i64 @fcvt_lu_d_sat(double %a) nounwind {
 ; RV64IFD-LABEL: fcvt_lu_d_sat:
 ; RV64IFD:       # %bb.0: # %start
 ; RV64IFD-NEXT:    feq.d a0, fa0, fa0
-; RV64IFD-NEXT:    bnez a0, .LBB14_2
-; RV64IFD-NEXT:  # %bb.1: # %start
-; RV64IFD-NEXT:    li a0, 0
-; RV64IFD-NEXT:    ret
-; RV64IFD-NEXT:  .LBB14_2:
+; RV64IFD-NEXT:    beqz a0, .LBB14_2
+; RV64IFD-NEXT:  # %bb.1:
 ; RV64IFD-NEXT:    fcvt.lu.d a0, fa0, rtz
+; RV64IFD-NEXT:  .LBB14_2: # %start
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_lu_d_sat:
@@ -1475,11 +1463,8 @@ define signext i16 @fcvt_w_s_sat_i16(double %a) nounwind {
 ; RV32IFD-LABEL: fcvt_w_s_sat_i16:
 ; RV32IFD:       # %bb.0: # %start
 ; RV32IFD-NEXT:    feq.d a0, fa0, fa0
-; RV32IFD-NEXT:    bnez a0, .LBB26_2
-; RV32IFD-NEXT:  # %bb.1: # %start
-; RV32IFD-NEXT:    li a0, 0
-; RV32IFD-NEXT:    ret
-; RV32IFD-NEXT:  .LBB26_2:
+; RV32IFD-NEXT:    beqz a0, .LBB26_2
+; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI26_0)
 ; RV32IFD-NEXT:    fld ft0, %lo(.LCPI26_0)(a0)
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI26_1)
@@ -1487,16 +1472,14 @@ define signext i16 @fcvt_w_s_sat_i16(double %a) nounwind {
 ; RV32IFD-NEXT:    fmax.d ft0, fa0, ft0
 ; RV32IFD-NEXT:    fmin.d ft0, ft0, ft1
 ; RV32IFD-NEXT:    fcvt.w.d a0, ft0, rtz
+; RV32IFD-NEXT:  .LBB26_2: # %start
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fcvt_w_s_sat_i16:
 ; RV64IFD:       # %bb.0: # %start
 ; RV64IFD-NEXT:    feq.d a0, fa0, fa0
-; RV64IFD-NEXT:    bnez a0, .LBB26_2
-; RV64IFD-NEXT:  # %bb.1: # %start
-; RV64IFD-NEXT:    li a0, 0
-; RV64IFD-NEXT:    ret
-; RV64IFD-NEXT:  .LBB26_2:
+; RV64IFD-NEXT:    beqz a0, .LBB26_2
+; RV64IFD-NEXT:  # %bb.1:
 ; RV64IFD-NEXT:    lui a0, %hi(.LCPI26_0)
 ; RV64IFD-NEXT:    fld ft0, %lo(.LCPI26_0)(a0)
 ; RV64IFD-NEXT:    lui a0, %hi(.LCPI26_1)
@@ -1504,6 +1487,7 @@ define signext i16 @fcvt_w_s_sat_i16(double %a) nounwind {
 ; RV64IFD-NEXT:    fmax.d ft0, fa0, ft0
 ; RV64IFD-NEXT:    fmin.d ft0, ft0, ft1
 ; RV64IFD-NEXT:    fcvt.l.d a0, ft0, rtz
+; RV64IFD-NEXT:  .LBB26_2: # %start
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_w_s_sat_i16:
@@ -1793,11 +1777,8 @@ define signext i8 @fcvt_w_s_sat_i8(double %a) nounwind {
 ; RV32IFD-LABEL: fcvt_w_s_sat_i8:
 ; RV32IFD:       # %bb.0: # %start
 ; RV32IFD-NEXT:    feq.d a0, fa0, fa0
-; RV32IFD-NEXT:    bnez a0, .LBB30_2
-; RV32IFD-NEXT:  # %bb.1: # %start
-; RV32IFD-NEXT:    li a0, 0
-; RV32IFD-NEXT:    ret
-; RV32IFD-NEXT:  .LBB30_2:
+; RV32IFD-NEXT:    beqz a0, .LBB30_2
+; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI30_0)
 ; RV32IFD-NEXT:    fld ft0, %lo(.LCPI30_0)(a0)
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI30_1)
@@ -1805,16 +1786,14 @@ define signext i8 @fcvt_w_s_sat_i8(double %a) nounwind {
 ; RV32IFD-NEXT:    fmax.d ft0, fa0, ft0
 ; RV32IFD-NEXT:    fmin.d ft0, ft0, ft1
 ; RV32IFD-NEXT:    fcvt.w.d a0, ft0, rtz
+; RV32IFD-NEXT:  .LBB30_2: # %start
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fcvt_w_s_sat_i8:
 ; RV64IFD:       # %bb.0: # %start
 ; RV64IFD-NEXT:    feq.d a0, fa0, fa0
-; RV64IFD-NEXT:    bnez a0, .LBB30_2
-; RV64IFD-NEXT:  # %bb.1: # %start
-; RV64IFD-NEXT:    li a0, 0
-; RV64IFD-NEXT:    ret
-; RV64IFD-NEXT:  .LBB30_2:
+; RV64IFD-NEXT:    beqz a0, .LBB30_2
+; RV64IFD-NEXT:  # %bb.1:
 ; RV64IFD-NEXT:    lui a0, %hi(.LCPI30_0)
 ; RV64IFD-NEXT:    fld ft0, %lo(.LCPI30_0)(a0)
 ; RV64IFD-NEXT:    lui a0, %hi(.LCPI30_1)
@@ -1822,6 +1801,7 @@ define signext i8 @fcvt_w_s_sat_i8(double %a) nounwind {
 ; RV64IFD-NEXT:    fmax.d ft0, fa0, ft0
 ; RV64IFD-NEXT:    fmin.d ft0, ft0, ft1
 ; RV64IFD-NEXT:    fcvt.l.d a0, ft0, rtz
+; RV64IFD-NEXT:  .LBB30_2: # %start
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_w_s_sat_i8:
