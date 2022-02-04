@@ -93,7 +93,7 @@ define internal void @bar() {
 ;
 entry:
   %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !13
-  call void @share(i8* %0)
+  call void @share(i8* %0), !dbg !13
   call void @__kmpc_free_shared(i8* %0, i64 4)
   ret void
 }
