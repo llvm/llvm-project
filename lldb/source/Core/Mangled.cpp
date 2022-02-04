@@ -195,8 +195,8 @@ static char *GetDLangDemangledStr(const char *M) {
 
 // Explicit demangling for scheduled requests during batch processing. This
 // makes use of ItaniumPartialDemangler's rich demangle info
-bool Mangled::DemangleWithRichManglingInfo(
-    RichManglingContext &context, SkipMangledNameFn *skip_mangled_name) {
+bool Mangled::GetRichManglingInfo(RichManglingContext &context,
+                                  SkipMangledNameFn *skip_mangled_name) {
   // Others are not meant to arrive here. ObjC names or C's main() for example
   // have their names stored in m_demangled, while m_mangled is empty.
   assert(m_mangled);

@@ -328,7 +328,7 @@ void Symtab::InitNameIndexes() {
 
         const SymbolType type = symbol->GetType();
         if (type == eSymbolTypeCode || type == eSymbolTypeResolver) {
-          if (mangled.DemangleWithRichManglingInfo(rmc, lldb_skip_name)) {
+          if (mangled.GetRichManglingInfo(rmc, lldb_skip_name)) {
             RegisterMangledNameEntry(value, class_contexts, backlog, rmc);
             continue;
           }
