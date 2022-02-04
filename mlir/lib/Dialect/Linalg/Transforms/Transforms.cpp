@@ -592,16 +592,17 @@ LogicalResult mlir::linalg::LinalgTileAndFuseTensorOpsPattern::matchAndRewrite(
   SmallVector<int64_t> rootTileSizes(options.tileSizes.begin(),
                                      options.tileSizes.begin() +
                                          rootOp.getNumLoops());
-  if (llvm::all_of(rootTileSizes, [](int64_t ts) { return ts == 0; })) {
-    return rewriter.notifyMatchFailure(
-        op, "all tile sizes are zero, nothing to do");
-  }
   SmallVector<int64_t> rootInterchange =
       options.tileInterchange.empty()
           ? llvm::to_vector<6>(llvm::seq<int64_t>(0, rootOp.getNumLoops()))
           : SmallVector<int64_t>(options.tileInterchange.begin(),
                                  options.tileInterchange.begin() +
                                      rootOp.getNumLoops());
+
+  // Check `rootTileSizes` contains non-zero tile sizes.
+  if (llvm::count(rootTileSizes, 0) == static_cast<long>(rootTileSizes.size()))
+    return rewriter.notifyMatchFailure(
+        op, "expect at least one non-zero tile size");
 
   // Check `rootInterchange` is a permutation of the `rootOp` loop dimensions.
   // It has to be a permutation since the tiling cannot tile the same loop
@@ -623,7 +624,7 @@ LogicalResult mlir::linalg::LinalgTileAndFuseTensorOpsPattern::matchAndRewrite(
   // Apply the filter if specified.
   for (LinalgOp linalgOp : tileLoopNest->getAllTiledAndFusedOps())
     filter.replaceLinalgTransformationFilter(rewriter, linalgOp);
-  return failure();
+  return success();
 }
 
 /// Linalg generic interchange pattern.
