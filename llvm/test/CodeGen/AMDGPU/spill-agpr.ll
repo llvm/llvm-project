@@ -74,14 +74,14 @@ use:
 ; GCN: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
 ; GCN: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
 
-; GFX908-DAG:  v_accvgpr_read_b32 v1, a0 ; Reload Reuse
-; GFX908-DAG:  buffer_store_dword v1, off, s[{{[0-9:]+}}], 0 offset:4 ; 4-byte Folded Spill
-; GFX908-DAG:  v_accvgpr_read_b32 v1, a1 ; Reload Reuse
-; GFX908-DAG:  buffer_store_dword v1, off, s[{{[0-9:]+}}], 0 offset:8 ; 4-byte Folded Spill
-; GFX908-DAG:  v_accvgpr_read_b32 v1, a2 ; Reload Reuse
-; GFX908-DAG:  buffer_store_dword v1, off, s[{{[0-9:]+}}], 0 offset:12 ; 4-byte Folded Spill
-; GFX908-DAG:  v_accvgpr_read_b32 v1, a3 ; Reload Reuse
-; GFX908-DAG:  buffer_store_dword v1, off, s[{{[0-9:]+}}], 0 offset:16 ; 4-byte Folded Spill
+; GFX908-DAG:  v_accvgpr_read_b32 v32, a0 ; Reload Reuse
+; GFX908-DAG:  buffer_store_dword v32, off, s[{{[0-9:]+}}], 0 offset:4 ; 4-byte Folded Spill
+; GFX908-DAG:  v_accvgpr_read_b32 v32, a1 ; Reload Reuse
+; GFX908-DAG:  buffer_store_dword v32, off, s[{{[0-9:]+}}], 0 offset:8 ; 4-byte Folded Spill
+; GFX908-DAG:  v_accvgpr_read_b32 v32, a2 ; Reload Reuse
+; GFX908-DAG:  buffer_store_dword v32, off, s[{{[0-9:]+}}], 0 offset:12 ; 4-byte Folded Spill
+; GFX908-DAG:  v_accvgpr_read_b32 v32, a3 ; Reload Reuse
+; GFX908-DAG:  buffer_store_dword v32, off, s[{{[0-9:]+}}], 0 offset:16 ; 4-byte Folded Spill
 
 ; GFX90A-DAG:  buffer_store_dword a0, off, s[{{[0-9:]+}}], 0 offset:4 ; 4-byte Folded Spill
 ; GFX90A-DAG:  buffer_store_dword a1, off, s[{{[0-9:]+}}], 0 offset:8 ; 4-byte Folded Spill

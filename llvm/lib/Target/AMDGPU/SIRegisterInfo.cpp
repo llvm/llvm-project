@@ -1557,16 +1557,8 @@ void SIRegisterInfo::buildSpillLoadStore(
       assert(EltSize == 4);
 
       if (!TmpIntermediateVGPR) {
-        bool AllowSpill = !UseVGPROffset;
-
-        assert(RS && "Needs to have RegScavenger to spill an AGPR!");
-        // FIXME: change to scavengeRegisterBackwards()
-        TmpIntermediateVGPR = RS->scavengeRegister(&AMDGPU::VGPR_32RegClass,
-                                                   MI, 0, AllowSpill);
-        if (!TmpIntermediateVGPR)
-          TmpIntermediateVGPR = TmpOffsetVGPR;
-        else
-          RS->setRegUsed(TmpIntermediateVGPR);
+        assert(MF->getRegInfo().isReserved(AMDGPU::VGPR32));
+        TmpIntermediateVGPR = AMDGPU::VGPR32;
       }
       if (IsStore) {
         auto AccRead = BuildMI(MBB, MI, DL,
