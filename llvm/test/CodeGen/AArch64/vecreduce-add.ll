@@ -28,8 +28,7 @@ entry:
 define i64 @add_v4i32_v4i64_sext(<4 x i32> %x) {
 ; CHECK-LABEL: add_v4i32_v4i64_sext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddlp v0.2d, v0.4s
-; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    saddlv d0, v0.4s
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 entry:
@@ -79,8 +78,7 @@ entry:
 define i32 @add_v8i16_v8i32_sext(<8 x i16> %x) {
 ; CHECK-LABEL: add_v8i16_v8i32_sext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddlp v0.4s, v0.8h
-; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    saddlv s0, v0.8h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -177,8 +175,7 @@ define i64 @add_v4i16_v4i64_sext(<4 x i16> %x) {
 ; CHECK-LABEL: add_v4i16_v4i64_sext:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    saddlp v0.2d, v0.4s
-; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    saddlv d0, v0.4s
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 entry:
@@ -295,8 +292,7 @@ define i32 @add_v8i8_v8i32_sext(<8 x i8> %x) {
 ; CHECK-BASE-LABEL: add_v8i8_v8i32_sext:
 ; CHECK-BASE:       // %bb.0: // %entry
 ; CHECK-BASE-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-BASE-NEXT:    saddlp v0.4s, v0.8h
-; CHECK-BASE-NEXT:    addv s0, v0.4s
+; CHECK-BASE-NEXT:    saddlv s0, v0.8h
 ; CHECK-BASE-NEXT:    fmov w0, s0
 ; CHECK-BASE-NEXT:    ret
 ;
@@ -596,8 +592,7 @@ entry:
 define i64 @add_v4i32_v4i64_acc_sext(<4 x i32> %x, i64 %a) {
 ; CHECK-LABEL: add_v4i32_v4i64_acc_sext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddlp v0.2d, v0.4s
-; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    saddlv d0, v0.4s
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    add x0, x8, x0
 ; CHECK-NEXT:    ret
@@ -655,8 +650,7 @@ entry:
 define i32 @add_v8i16_v8i32_acc_sext(<8 x i16> %x, i32 %a) {
 ; CHECK-LABEL: add_v8i16_v8i32_acc_sext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddlp v0.4s, v0.8h
-; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    saddlv s0, v0.8h
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    add w0, w8, w0
 ; CHECK-NEXT:    ret
@@ -768,8 +762,7 @@ define i64 @add_v4i16_v4i64_acc_sext(<4 x i16> %x, i64 %a) {
 ; CHECK-LABEL: add_v4i16_v4i64_acc_sext:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    saddlp v0.2d, v0.4s
-; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    saddlv d0, v0.4s
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    add x0, x8, x0
 ; CHECK-NEXT:    ret
@@ -901,8 +894,7 @@ define i32 @add_v8i8_v8i32_acc_sext(<8 x i8> %x, i32 %a) {
 ; CHECK-BASE-LABEL: add_v8i8_v8i32_acc_sext:
 ; CHECK-BASE:       // %bb.0: // %entry
 ; CHECK-BASE-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-BASE-NEXT:    saddlp v0.4s, v0.8h
-; CHECK-BASE-NEXT:    addv s0, v0.4s
+; CHECK-BASE-NEXT:    saddlv s0, v0.8h
 ; CHECK-BASE-NEXT:    fmov w8, s0
 ; CHECK-BASE-NEXT:    add w0, w8, w0
 ; CHECK-BASE-NEXT:    ret
@@ -974,8 +966,7 @@ entry:
 define signext i16 @add_v16i8_v16i16_acc_sext(<16 x i8> %x, i16 %a) {
 ; CHECK-LABEL: add_v16i8_v16i16_acc_sext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddlp v0.8h, v0.16b
-; CHECK-NEXT:    addv h0, v0.8h
+; CHECK-NEXT:    saddlv h0, v0.16b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    add w8, w8, w0
 ; CHECK-NEXT:    sxth w0, w8
@@ -1695,10 +1686,8 @@ entry:
 define signext i16 @add_pair_v16i8_v16i16_sext(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: add_pair_v16i8_v16i16_sext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddlp v0.8h, v0.16b
-; CHECK-NEXT:    saddlp v1.8h, v1.16b
-; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    addv h1, v1.8h
+; CHECK-NEXT:    saddlv h0, v0.16b
+; CHECK-NEXT:    saddlv h1, v1.16b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    fmov w9, s1
 ; CHECK-NEXT:    add w8, w8, w9

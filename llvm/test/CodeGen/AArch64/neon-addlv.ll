@@ -90,8 +90,7 @@ define i16 @saddlv4h_from_v8i8(<8 x i8>* %A) nounwind {
 ; CHECK-LABEL: saddlv4h_from_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    saddlp v0.4h, v0.8b
-; CHECK-NEXT:    addv h0, v0.4h
+; CHECK-NEXT:    saddlv h0, v0.8b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x i8>, <8 x i8>* %A
@@ -104,8 +103,7 @@ define i16 @saddlv16b_from_v16i8(<16 x i8>* %A) nounwind {
 ; CHECK-LABEL: saddlv16b_from_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    saddlp v0.8h, v0.16b
-; CHECK-NEXT:    addv h0, v0.8h
+; CHECK-NEXT:    saddlv h0, v0.16b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %tmp1 = load <16 x i8>, <16 x i8>* %A
@@ -118,8 +116,7 @@ define i32 @saddlv8h_from_v8i16(<8 x i16>* %A) nounwind {
 ; CHECK-LABEL: saddlv8h_from_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    saddlp v0.4s, v0.8h
-; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    saddlv s0, v0.8h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x i16>, <8 x i16>* %A
@@ -132,8 +129,7 @@ define i64 @saddlv4s_from_v4i32(<4 x i32>* %A) nounwind {
 ; CHECK-LABEL: saddlv4s_from_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    saddlp v0.2d, v0.4s
-; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    saddlv d0, v0.4s
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i32>, <4 x i32>* %A
@@ -146,8 +142,7 @@ define i32 @saddlv4h_from_v4i16(<4 x i16>* %A) nounwind {
 ; CHECK-LABEL: saddlv4h_from_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    saddlp v0.2s, v0.4h
-; CHECK-NEXT:    addp v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    saddlv s0, v0.4h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i16>, <4 x i16>* %A
