@@ -2108,65 +2108,43 @@ SILoadStoreOptimizer::optimizeInstsWithSameBaseAddr(
 
     LLVM_DEBUG(dbgs() << "Merging: " << *CI.I << "   with: " << *Paired.I);
 
+    MachineBasicBlock::iterator NewMI;
     switch (CI.InstClass) {
     default:
       llvm_unreachable("unknown InstClass");
       break;
-    case DS_READ: {
-      MachineBasicBlock::iterator NewMI =
-          mergeRead2Pair(CI, Paired, InstsToMove);
-      CI.setMI(NewMI, *this);
+    case DS_READ:
+      NewMI = mergeRead2Pair(CI, Paired, InstsToMove);
+      break;
+    case DS_WRITE:
+      NewMI = mergeWrite2Pair(CI, Paired, InstsToMove);
+      break;
+    case S_BUFFER_LOAD_IMM:
+      NewMI = mergeSBufferLoadImmPair(CI, Paired, InstsToMove);
+      OptimizeListAgain |= CI.Width + Paired.Width < 8;
+      break;
+    case BUFFER_LOAD:
+      NewMI = mergeBufferLoadPair(CI, Paired, InstsToMove);
+      OptimizeListAgain |= CI.Width + Paired.Width < 4;
+      break;
+    case BUFFER_STORE:
+      NewMI = mergeBufferStorePair(CI, Paired, InstsToMove);
+      OptimizeListAgain |= CI.Width + Paired.Width < 4;
+      break;
+    case MIMG:
+      NewMI = mergeImagePair(CI, Paired, InstsToMove);
+      OptimizeListAgain |= CI.Width + Paired.Width < 4;
+      break;
+    case TBUFFER_LOAD:
+      NewMI = mergeTBufferLoadPair(CI, Paired, InstsToMove);
+      OptimizeListAgain |= CI.Width + Paired.Width < 4;
+      break;
+    case TBUFFER_STORE:
+      NewMI = mergeTBufferStorePair(CI, Paired, InstsToMove);
+      OptimizeListAgain |= CI.Width + Paired.Width < 4;
       break;
     }
-    case DS_WRITE: {
-      MachineBasicBlock::iterator NewMI =
-          mergeWrite2Pair(CI, Paired, InstsToMove);
-      CI.setMI(NewMI, *this);
-      break;
-    }
-    case S_BUFFER_LOAD_IMM: {
-      MachineBasicBlock::iterator NewMI =
-          mergeSBufferLoadImmPair(CI, Paired, InstsToMove);
-      CI.setMI(NewMI, *this);
-      OptimizeListAgain |= CI.Width < 8;
-      break;
-    }
-    case BUFFER_LOAD: {
-      MachineBasicBlock::iterator NewMI =
-          mergeBufferLoadPair(CI, Paired, InstsToMove);
-      CI.setMI(NewMI, *this);
-      OptimizeListAgain |= CI.Width < 4;
-      break;
-    }
-    case BUFFER_STORE: {
-      MachineBasicBlock::iterator NewMI =
-          mergeBufferStorePair(CI, Paired, InstsToMove);
-      CI.setMI(NewMI, *this);
-      OptimizeListAgain |= CI.Width < 4;
-      break;
-    }
-    case MIMG: {
-      MachineBasicBlock::iterator NewMI =
-          mergeImagePair(CI, Paired, InstsToMove);
-      CI.setMI(NewMI, *this);
-      OptimizeListAgain |= CI.Width < 4;
-      break;
-    }
-    case TBUFFER_LOAD: {
-      MachineBasicBlock::iterator NewMI =
-          mergeTBufferLoadPair(CI, Paired, InstsToMove);
-      CI.setMI(NewMI, *this);
-      OptimizeListAgain |= CI.Width < 4;
-      break;
-    }
-    case TBUFFER_STORE: {
-      MachineBasicBlock::iterator NewMI =
-          mergeTBufferStorePair(CI, Paired, InstsToMove);
-      CI.setMI(NewMI, *this);
-      OptimizeListAgain |= CI.Width < 4;
-      break;
-    }
-    }
+    CI.setMI(NewMI, *this);
     CI.Order = Paired.Order;
     if (I == Second)
       I = Next;
