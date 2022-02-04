@@ -101,7 +101,7 @@ Expected<unsigned> BitstreamCursor::skipRecord(unsigned AbbrevID) {
     unsigned Code = MaybeCode.get();
     Expected<uint32_t> MaybeVBR = ReadVBR(6);
     if (!MaybeVBR)
-      return MaybeVBR.get();
+      return MaybeVBR.takeError();
     unsigned NumElts = MaybeVBR.get();
     for (unsigned i = 0; i != NumElts; ++i)
       if (Expected<uint64_t> Res = ReadVBR64(6))
