@@ -2192,12 +2192,12 @@ void Verifier::verifyStatepoint(const CallBase &Call) {
          "positive",
          Call);
 
-  const Value *Target = Call.getArgOperand(2);
-  auto *PT = dyn_cast<PointerType>(Target->getType());
-  Assert(PT && PT->getPointerElementType()->isFunctionTy(),
-         "gc.statepoint callee must be of function pointer type", Call, Target);
-  FunctionType *TargetFuncType =
-      cast<FunctionType>(PT->getPointerElementType());
+  Type *TargetElemType = Call.getAttributes().getParamElementType(2);
+  Assert(TargetElemType,
+         "gc.statepoint callee argument must have elementtype attribute", Call);
+  FunctionType *TargetFuncType = dyn_cast<FunctionType>(TargetElemType);
+  Assert(TargetFuncType,
+         "gc.statepoint callee elementtype must be function type", Call);
 
   const int NumCallArgs = cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue();
   Assert(NumCallArgs >= 0,
@@ -5003,9 +5003,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
            Call.getArgOperand(0));
 
     // Assert that result type matches wrapped callee.
-    const Value *Target = StatepointCall->getArgOperand(2);
-    auto *PT = cast<PointerType>(Target->getType());
-    auto *TargetFuncType = cast<FunctionType>(PT->getPointerElementType());
+    auto *TargetFuncType = cast<FunctionType>(
+        StatepointCall->getAttributes().getParamElementType(2));
     Assert(Call.getType() == TargetFuncType->getReturnType(),
            "gc.result result type does not match wrapped callee", Call);
     break;
