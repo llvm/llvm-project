@@ -180,26 +180,26 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   MCSymbolWasm *Sym = cast<MCSymbolWasm>(getSymbol(GV));
 
   if (!Sym->getType()) {
-    const WebAssemblyTargetLowering &TLI = *Subtarget->getTargetLowering();
     SmallVector<MVT, 1> VTs;
     Type *GlobalVT = GV->getValueType();
-    computeLegalValueVTs(TLI, GV->getParent()->getContext(),
-                         GV->getParent()->getDataLayout(), GlobalVT, VTs);
+    if (Subtarget) {
+      // Subtarget is only set when a function is defined, because
+      // each function can declare a different subtarget. For example,
+      // on ARM a compilation unit might have a function on ARM and
+      // another on Thumb. Therefore only if Subtarget is non-null we
+      // can actually calculate the legal VTs.
+      const WebAssemblyTargetLowering &TLI = *Subtarget->getTargetLowering();
+      computeLegalValueVTs(TLI, GV->getParent()->getContext(),
+                           GV->getParent()->getDataLayout(), GlobalVT, VTs);
+    }
     WebAssembly::wasmSymbolSetType(Sym, GlobalVT, VTs);
   }
 
-  // If the GlobalVariable refers to a table, we handle it here instead of
-  // in emitExternalDecls
-  if (Sym->isTable()) {
-    getTargetStreamer()->emitTableType(Sym);
-    return;
-  }
-
   emitVisibility(Sym, GV->getVisibility(), !GV->isDeclaration());
+  emitSymbolType(Sym);
   if (GV->hasInitializer()) {
     assert(getSymbolPreferLocal(*GV) == Sym);
     emitLinkage(GV, Sym);
-    getTargetStreamer()->emitGlobalType(Sym);
     OutStreamer->emitLabel(Sym);
     // TODO: Actually emit the initializer value.  Otherwise the global has the
     // default value for its type (0, ref.null, etc).
@@ -271,31 +271,47 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
   return WasmSym;
 }
 
+void WebAssemblyAsmPrinter::emitSymbolType(const MCSymbolWasm *Sym) {
+  Optional<wasm::WasmSymbolType> WasmTy = Sym->getType();
+  if (!WasmTy)
+    return;
+
+  switch (WasmTy.getValue()) {
+  case wasm::WASM_SYMBOL_TYPE_GLOBAL:
+    getTargetStreamer()->emitGlobalType(Sym);
+    break;
+  case wasm::WASM_SYMBOL_TYPE_TAG:
+    getTargetStreamer()->emitTagType(Sym);
+    break;
+  case wasm::WASM_SYMBOL_TYPE_TABLE:
+    getTargetStreamer()->emitTableType(Sym);
+    break;
+  default:
+    break; // We only handle globals, tags and tables here
+  }
+}
+
 void WebAssemblyAsmPrinter::emitExternalDecls(const Module &M) {
   if (signaturesEmitted)
     return;
   signaturesEmitted = true;
 
   // Normally symbols for globals get discovered as the MI gets lowered,
-  // but we need to know about them ahead of time.
+  // but we need to know about them ahead of time. This will however,
+  // only find symbols that have been used. Unused symbols from globals will
+  // not be found here.
   MachineModuleInfoWasm &MMIW = MMI->getObjFileInfo<MachineModuleInfoWasm>();
   for (const auto &Name : MMIW.MachineSymbolsUsed) {
     getOrCreateWasmSymbol(Name.getKey());
   }
 
   for (auto &It : OutContext.getSymbols()) {
-    // Emit .globaltype, .tagtype, or .tabletype declarations.
+    // Emit .globaltype, .tagtype, or .tabletype declarations for extern
+    // declarations, i.e. those that have only been declared (but not defined)
+    // in the current module
     auto Sym = cast<MCSymbolWasm>(It.getValue());
-    if (Sym->getType() == wasm::WASM_SYMBOL_TYPE_GLOBAL) {
-      // .globaltype already handled by emitGlobalVariable for defined
-      // variables; here we make sure the types of external wasm globals get
-      // written to the file.
-      if (Sym->isUndefined())
-        getTargetStreamer()->emitGlobalType(Sym);
-    } else if (Sym->getType() == wasm::WASM_SYMBOL_TYPE_TAG)
-      getTargetStreamer()->emitTagType(Sym);
-    else if (Sym->getType() == wasm::WASM_SYMBOL_TYPE_TABLE)
-      getTargetStreamer()->emitTableType(Sym);
+    if (!Sym->isDefined())
+      emitSymbolType(Sym);
   }
 
   DenseSet<MCSymbol *> InvokeSymbols;
@@ -362,8 +378,11 @@ void WebAssemblyAsmPrinter::emitExternalDecls(const Module &M) {
     }
   }
 }
-  
+
 void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
+  // This is required to emit external declarations (like .functypes) when
+  // no functions are defined in the compilation unit and therefore,
+  // emitExternalDecls() is not called until now.
   emitExternalDecls(M);
 
   // When a function's address is taken, a TABLE_INDEX relocation is emitted
@@ -532,6 +551,7 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
 }
 
 void WebAssemblyAsmPrinter::emitConstantPool() {
+  emitExternalDecls(*MMI->getModule());
   assert(MF->getConstantPool()->getConstants().empty() &&
          "WebAssembly disables constant pools");
 }
@@ -539,17 +559,6 @@ void WebAssemblyAsmPrinter::emitConstantPool() {
 void WebAssemblyAsmPrinter::emitJumpTableInfo() {
   // Nothing to do; jump tables are incorporated into the instruction stream.
 }
-
-void WebAssemblyAsmPrinter::emitLinkage(const GlobalValue *GV, MCSymbol *Sym)
-  const {
-  AsmPrinter::emitLinkage(GV, Sym);
-  // This gets called before the function label and type are emitted.
-  // We use it to emit signatures of external functions.
-  // FIXME casts!
-  const_cast<WebAssemblyAsmPrinter *>(this)
-    ->emitExternalDecls(*MMI->getModule());
-}
-
 
 void WebAssemblyAsmPrinter::emitFunctionBodyStart() {
   const Function &F = MF->getFunction();
