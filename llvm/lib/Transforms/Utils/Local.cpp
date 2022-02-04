@@ -2349,19 +2349,32 @@ static bool markAliveBlocks(Function &F,
           isa<UndefValue>(Callee)) {
         changeToUnreachable(II, false, DTU);
         Changed = true;
-      } else if (II->doesNotThrow() && canSimplifyInvokeNoUnwind(&F)) {
-        if (II->use_empty() && II->onlyReadsMemory()) {
-          // jump to the normal destination branch.
-          BasicBlock *NormalDestBB = II->getNormalDest();
-          BasicBlock *UnwindDestBB = II->getUnwindDest();
-          BranchInst::Create(NormalDestBB, II);
-          UnwindDestBB->removePredecessor(II->getParent());
-          II->eraseFromParent();
-          if (DTU)
-            DTU->applyUpdates({{DominatorTree::Delete, BB, UnwindDestBB}});
-        } else
-          changeToCall(II, DTU);
-        Changed = true;
+      } else {
+        if (II->doesNotReturn()) {
+          // If we found an invoke of a no-return function,
+          // insert an unreachable instruction after it (on the normal dest).
+          // Make sure there isn't *already* one there though.
+          Instruction *FirstNormalInst = &II->getNormalDest()->front();
+          if (!isa<UnreachableInst>(FirstNormalInst)) {
+            // Don't insert a call to llvm.trap right before the unreachable.
+            changeToUnreachable(FirstNormalInst, false, DTU);
+            Changed = true;
+          }
+        }
+        if (II->doesNotThrow() && canSimplifyInvokeNoUnwind(&F)) {
+          if (II->use_empty() && II->onlyReadsMemory()) {
+            // jump to the normal destination branch.
+            BasicBlock *NormalDestBB = II->getNormalDest();
+            BasicBlock *UnwindDestBB = II->getUnwindDest();
+            BranchInst::Create(NormalDestBB, II);
+            UnwindDestBB->removePredecessor(II->getParent());
+            II->eraseFromParent();
+            if (DTU)
+              DTU->applyUpdates({{DominatorTree::Delete, BB, UnwindDestBB}});
+          } else
+            changeToCall(II, DTU);
+          Changed = true;
+        }
       }
     } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Terminator)) {
       // Remove catchpads which cannot be reached.
