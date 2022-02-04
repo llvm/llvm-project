@@ -44,6 +44,17 @@ DEBUG_COUNTER(EliminatedCounter, "conds-eliminated",
 static int64_t MaxConstraintValue = std::numeric_limits<int64_t>::max();
 
 namespace {
+
+/// Struct to express a pre-condition of the form %Op0 Pred %Op1.
+struct PreconditionTy {
+  CmpInst::Predicate Pred;
+  Value *Op0;
+  Value *Op1;
+
+  PreconditionTy(CmpInst::Predicate Pred, Value *Op0, Value *Op1)
+      : Pred(Pred), Op0(Op0), Op1(Op1) {}
+};
+
 struct ConstraintTy {
   SmallVector<int64_t, 8> Coefficients;
 
@@ -53,17 +64,23 @@ struct ConstraintTy {
   unsigned size() const { return Coefficients.size(); }
 };
 
-/// Struct to manage a list of constraints.
+/// Struct to manage a list of constraints with pre-conditions that must be
+/// satisfied before using the constraints.
 struct ConstraintListTy {
   SmallVector<ConstraintTy, 4> Constraints;
+  SmallVector<PreconditionTy, 4> Preconditions;
 
   ConstraintListTy() {}
 
-  ConstraintListTy(const SmallVector<ConstraintTy, 4> &Constraints)
-      : Constraints(Constraints) {}
+  ConstraintListTy(ArrayRef<ConstraintTy> Constraints,
+                   ArrayRef<PreconditionTy> Preconditions)
+      : Constraints(Constraints.begin(), Constraints.end()),
+        Preconditions(Preconditions.begin(), Preconditions.end()) {}
 
   void mergeIn(const ConstraintListTy &Other) {
     append_range(Constraints, Other.Constraints);
+    // TODO: Do smarter merges here, e.g. exclude duplicates.
+    append_range(Preconditions, Other.Preconditions);
   }
 
   unsigned size() const { return Constraints.size(); }
@@ -84,6 +101,17 @@ struct ConstraintListTy {
   }
 
   ConstraintTy &get(unsigned I) { return Constraints[I]; }
+
+  /// Returns true if all preconditions for this list of constraints are
+  /// satisfied given \p CS and the corresponding \p Value2Index mapping.
+  bool isValid(const ConstraintSystem &CS,
+               DenseMap<Value *, unsigned> &Value2Index) const;
+  /// Returns true if there is exactly one constraint in the list and isValid is
+  /// also true.
+  bool isValidSingle(const ConstraintSystem &CS,
+                     DenseMap<Value *, unsigned> &Value2Index) const {
+    return size() == 1 && isValid(CS, Value2Index);
+  }
 };
 
 } // namespace
@@ -92,7 +120,8 @@ struct ConstraintListTy {
 // sum of the pairs equals \p V.  The first pair is the constant-factor and X
 // must be nullptr. If the expression cannot be decomposed, returns an empty
 // vector.
-static SmallVector<std::pair<int64_t, Value *>, 4> decompose(Value *V) {
+static SmallVector<std::pair<int64_t, Value *>, 4>
+decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions) {
   if (auto *CI = dyn_cast<ConstantInt>(V)) {
     if (CI->isNegative() || CI->uge(MaxConstraintValue))
       return {};
@@ -136,6 +165,10 @@ static SmallVector<std::pair<int64_t, Value *>, 4> decompose(Value *V) {
       Op0 = GEP->getOperand(GEP->getNumOperands() - 1);
       Result = {{0, nullptr}, {1, GEP->getPointerOperand()}, {1, Op0}};
     }
+    // If Op0 is signed non-negative, the GEP is increasing monotonically and
+    // can be de-composed.
+    Preconditions.emplace_back(CmpInst::ICMP_SGE, Op0,
+                               ConstantInt::get(Op0->getType(), 0));
     return Result;
   }
 
@@ -168,6 +201,7 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   int64_t Offset1 = 0;
   int64_t Offset2 = 0;
 
+  SmallVector<PreconditionTy, 4> Preconditions;
   // First try to look up \p V in Value2Index and NewIndices. Otherwise add a
   // new entry to NewIndices.
   auto GetOrAddIndex = [&Value2Index, &NewIndices](Value *V) -> unsigned {
@@ -207,8 +241,10 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   if (Pred != CmpInst::ICMP_ULE && Pred != CmpInst::ICMP_ULT)
     return {};
 
-  auto ADec = decompose(Op0->stripPointerCastsSameRepresentation());
-  auto BDec = decompose(Op1->stripPointerCastsSameRepresentation());
+  auto ADec =
+      decompose(Op0->stripPointerCastsSameRepresentation(), Preconditions);
+  auto BDec =
+      decompose(Op1->stripPointerCastsSameRepresentation(), Preconditions);
   // Skip if decomposing either of the values failed.
   if (ADec.empty() || BDec.empty())
     return {};
@@ -240,14 +276,25 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     R[GetOrAddIndex(KV.second)] -= KV.first;
 
   R[0] = Offset1 + Offset2 + (Pred == CmpInst::ICMP_ULT ? -1 : 0);
-  return {{R}};
+  return {{R}, Preconditions};
 }
 
-static ConstraintListTy
-getConstraint(CmpInst *Cmp, const DenseMap<Value *, unsigned> &Value2Index,
-              DenseMap<Value *, unsigned> &NewIndices) {
+static ConstraintListTy getConstraint(CmpInst *Cmp,
+                                      DenseMap<Value *, unsigned> &Value2Index,
+                                      DenseMap<Value *, unsigned> &NewIndices) {
   return getConstraint(Cmp->getPredicate(), Cmp->getOperand(0),
                        Cmp->getOperand(1), Value2Index, NewIndices);
+}
+
+bool ConstraintListTy::isValid(const ConstraintSystem &CS,
+                               DenseMap<Value *, unsigned> &Value2Index) const {
+  return all_of(Preconditions, [&CS, &Value2Index](const PreconditionTy &C) {
+    DenseMap<Value *, unsigned> NewIndices;
+    auto R = getConstraint(C.Pred, C.Op0, C.Op1, Value2Index, NewIndices);
+    // TODO: properly check NewIndices.
+    return NewIndices.empty() && R.Preconditions.empty() && R.size() == 1 &&
+           CS.isConditionImplied(R.get(0).Coefficients);
+  });
 }
 
 namespace {
@@ -437,10 +484,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
 
         DenseMap<Value *, unsigned> NewIndices;
         auto R = getConstraint(Cmp, Value2Index, NewIndices);
-        if (R.size() != 1)
-          continue;
 
-        if (R.needsNewIndices(NewIndices))
+        if (!R.isValidSingle(CS, Value2Index) || R.needsNewIndices(NewIndices))
           continue;
 
         if (CS.isConditionImplied(R.get(0).Coefficients)) {
@@ -503,7 +548,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     // it into a constraint.
     DenseMap<Value *, unsigned> NewIndices;
     auto R = getConstraint(CB.Condition, Value2Index, NewIndices);
-    if (R.empty())
+    if (!R.isValid(CS, Value2Index))
       continue;
 
     for (auto &KV : NewIndices)
