@@ -3,6 +3,8 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=sandybridge | FileCheck %s --check-prefixes=FAST-SCALAR,SNB
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=broadwell   | FileCheck %s --check-prefixes=FAST-SCALAR,BDW
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=skylake     | FileCheck %s --check-prefixes=FAST-SCALAR,SKL
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver1      | FileCheck %s --check-prefixes=SLOW-SCALAR,ZN1
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver3      | FileCheck %s --check-prefixes=SLOW-SCALAR,ZN3
 
 define float @f32_no_daz(float %f) #0 {
 ; NHM-LABEL: f32_no_daz:
@@ -24,6 +26,19 @@ define float @f32_no_daz(float %f) #0 {
 ; FAST-SCALAR:       # %bb.0:
 ; FAST-SCALAR-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; FAST-SCALAR-NEXT:    retq
+;
+; SLOW-SCALAR-LABEL: f32_no_daz:
+; SLOW-SCALAR:       # %bb.0:
+; SLOW-SCALAR-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
+; SLOW-SCALAR-NEXT:    vbroadcastss {{.*#+}} xmm3 = [NaN,NaN,NaN,NaN]
+; SLOW-SCALAR-NEXT:    vmulss %xmm1, %xmm0, %xmm2
+; SLOW-SCALAR-NEXT:    vfmadd213ss {{.*#+}} xmm1 = (xmm2 * xmm1) + mem
+; SLOW-SCALAR-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; SLOW-SCALAR-NEXT:    vandps %xmm3, %xmm0, %xmm0
+; SLOW-SCALAR-NEXT:    vcmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; SLOW-SCALAR-NEXT:    vmulss %xmm1, %xmm2, %xmm1
+; SLOW-SCALAR-NEXT:    vandnps %xmm1, %xmm0, %xmm0
+; SLOW-SCALAR-NEXT:    retq
   %call = tail call fast float @llvm.sqrt.f32(float %f) #2
   ret float %call
 }
@@ -80,6 +95,38 @@ define <4 x float> @v4f32_no_daz(<4 x float> %f) #0 {
 ; SKL:       # %bb.0:
 ; SKL-NEXT:    vsqrtps %xmm0, %xmm0
 ; SKL-NEXT:    retq
+;
+; ZN1-LABEL: v4f32_no_daz:
+; ZN1:       # %bb.0:
+; ZN1-NEXT:    vrsqrtps %xmm0, %xmm1
+; ZN1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; ZN1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [NaN,NaN,NaN,NaN]
+; ZN1-NEXT:    vmulps %xmm1, %xmm0, %xmm2
+; ZN1-NEXT:    vfmadd231ps {{.*#+}} xmm3 = (xmm2 * xmm1) + xmm3
+; ZN1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; ZN1-NEXT:    vandps %xmm4, %xmm0, %xmm0
+; ZN1-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; ZN1-NEXT:    vmulps %xmm3, %xmm1, %xmm1
+; ZN1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; ZN1-NEXT:    vcmpleps %xmm0, %xmm3, %xmm0
+; ZN1-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; ZN1-NEXT:    retq
+;
+; ZN3-LABEL: v4f32_no_daz:
+; ZN3:       # %bb.0:
+; ZN3-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; ZN3-NEXT:    vrsqrtps %xmm0, %xmm1
+; ZN3-NEXT:    vbroadcastss {{.*#+}} xmm4 = [NaN,NaN,NaN,NaN]
+; ZN3-NEXT:    vmulps %xmm1, %xmm0, %xmm2
+; ZN3-NEXT:    vfmadd231ps {{.*#+}} xmm3 = (xmm2 * xmm1) + xmm3
+; ZN3-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; ZN3-NEXT:    vandps %xmm4, %xmm0, %xmm0
+; ZN3-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; ZN3-NEXT:    vmulps %xmm3, %xmm1, %xmm1
+; ZN3-NEXT:    vbroadcastss {{.*#+}} xmm3 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; ZN3-NEXT:    vcmpleps %xmm0, %xmm3, %xmm0
+; ZN3-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; ZN3-NEXT:    retq
   %call = tail call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> %f) #2
   ret <4 x float> %call
 }
@@ -151,6 +198,38 @@ define <8 x float> @v8f32_no_daz(<8 x float> %f) #0 {
 ; SKL:       # %bb.0:
 ; SKL-NEXT:    vsqrtps %ymm0, %ymm0
 ; SKL-NEXT:    retq
+;
+; ZN1-LABEL: v8f32_no_daz:
+; ZN1:       # %bb.0:
+; ZN1-NEXT:    vrsqrtps %ymm0, %ymm1
+; ZN1-NEXT:    vbroadcastss {{.*#+}} ymm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; ZN1-NEXT:    vbroadcastss {{.*#+}} ymm4 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; ZN1-NEXT:    vmulps %ymm1, %ymm0, %ymm2
+; ZN1-NEXT:    vandps %ymm4, %ymm0, %ymm0
+; ZN1-NEXT:    vfmadd231ps {{.*#+}} ymm3 = (ymm2 * ymm1) + ymm3
+; ZN1-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; ZN1-NEXT:    vmulps %ymm1, %ymm2, %ymm1
+; ZN1-NEXT:    vmulps %ymm3, %ymm1, %ymm1
+; ZN1-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; ZN1-NEXT:    vcmpleps %ymm0, %ymm3, %ymm0
+; ZN1-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; ZN1-NEXT:    retq
+;
+; ZN3-LABEL: v8f32_no_daz:
+; ZN3:       # %bb.0:
+; ZN3-NEXT:    vbroadcastss {{.*#+}} ymm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; ZN3-NEXT:    vrsqrtps %ymm0, %ymm1
+; ZN3-NEXT:    vbroadcastss {{.*#+}} ymm4 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; ZN3-NEXT:    vmulps %ymm1, %ymm0, %ymm2
+; ZN3-NEXT:    vfmadd231ps {{.*#+}} ymm3 = (ymm2 * ymm1) + ymm3
+; ZN3-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; ZN3-NEXT:    vandps %ymm4, %ymm0, %ymm0
+; ZN3-NEXT:    vmulps %ymm1, %ymm2, %ymm1
+; ZN3-NEXT:    vmulps %ymm3, %ymm1, %ymm1
+; ZN3-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; ZN3-NEXT:    vcmpleps %ymm0, %ymm3, %ymm0
+; ZN3-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; ZN3-NEXT:    retq
   %call = tail call fast <8 x float> @llvm.sqrt.v8f32(<8 x float> %f) #2
   ret <8 x float> %call
 }
@@ -177,6 +256,18 @@ define float @f32_daz(float %f) #1 {
 ; FAST-SCALAR:       # %bb.0:
 ; FAST-SCALAR-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; FAST-SCALAR-NEXT:    retq
+;
+; SLOW-SCALAR-LABEL: f32_daz:
+; SLOW-SCALAR:       # %bb.0:
+; SLOW-SCALAR-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
+; SLOW-SCALAR-NEXT:    vmulss %xmm1, %xmm0, %xmm2
+; SLOW-SCALAR-NEXT:    vfmadd213ss {{.*#+}} xmm1 = (xmm2 * xmm1) + mem
+; SLOW-SCALAR-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; SLOW-SCALAR-NEXT:    vmulss %xmm1, %xmm2, %xmm1
+; SLOW-SCALAR-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; SLOW-SCALAR-NEXT:    vcmpeqss %xmm2, %xmm0, %xmm0
+; SLOW-SCALAR-NEXT:    vandnps %xmm1, %xmm0, %xmm0
+; SLOW-SCALAR-NEXT:    retq
   %call = tail call fast float @llvm.sqrt.f32(float %f) #2
   ret float %call
 }
@@ -228,6 +319,34 @@ define <4 x float> @v4f32_daz(<4 x float> %f) #1 {
 ; SKL:       # %bb.0:
 ; SKL-NEXT:    vsqrtps %xmm0, %xmm0
 ; SKL-NEXT:    retq
+;
+; ZN1-LABEL: v4f32_daz:
+; ZN1:       # %bb.0:
+; ZN1-NEXT:    vrsqrtps %xmm0, %xmm1
+; ZN1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; ZN1-NEXT:    vmulps %xmm1, %xmm0, %xmm2
+; ZN1-NEXT:    vfmadd231ps {{.*#+}} xmm3 = (xmm2 * xmm1) + xmm3
+; ZN1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; ZN1-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; ZN1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; ZN1-NEXT:    vcmpneqps %xmm2, %xmm0, %xmm0
+; ZN1-NEXT:    vmulps %xmm3, %xmm1, %xmm1
+; ZN1-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; ZN1-NEXT:    retq
+;
+; ZN3-LABEL: v4f32_daz:
+; ZN3:       # %bb.0:
+; ZN3-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; ZN3-NEXT:    vrsqrtps %xmm0, %xmm1
+; ZN3-NEXT:    vmulps %xmm1, %xmm0, %xmm2
+; ZN3-NEXT:    vfmadd231ps {{.*#+}} xmm3 = (xmm2 * xmm1) + xmm3
+; ZN3-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; ZN3-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; ZN3-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; ZN3-NEXT:    vcmpneqps %xmm2, %xmm0, %xmm0
+; ZN3-NEXT:    vmulps %xmm3, %xmm1, %xmm1
+; ZN3-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; ZN3-NEXT:    retq
   %call = tail call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> %f) #2
   ret <4 x float> %call
 }
@@ -290,6 +409,34 @@ define <8 x float> @v8f32_daz(<8 x float> %f) #1 {
 ; SKL:       # %bb.0:
 ; SKL-NEXT:    vsqrtps %ymm0, %ymm0
 ; SKL-NEXT:    retq
+;
+; ZN1-LABEL: v8f32_daz:
+; ZN1:       # %bb.0:
+; ZN1-NEXT:    vrsqrtps %ymm0, %ymm1
+; ZN1-NEXT:    vbroadcastss {{.*#+}} ymm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; ZN1-NEXT:    vmulps %ymm1, %ymm0, %ymm2
+; ZN1-NEXT:    vfmadd231ps {{.*#+}} ymm3 = (ymm2 * ymm1) + ymm3
+; ZN1-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; ZN1-NEXT:    vmulps %ymm1, %ymm2, %ymm1
+; ZN1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; ZN1-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm0
+; ZN1-NEXT:    vmulps %ymm3, %ymm1, %ymm1
+; ZN1-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; ZN1-NEXT:    retq
+;
+; ZN3-LABEL: v8f32_daz:
+; ZN3:       # %bb.0:
+; ZN3-NEXT:    vbroadcastss {{.*#+}} ymm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; ZN3-NEXT:    vrsqrtps %ymm0, %ymm1
+; ZN3-NEXT:    vmulps %ymm1, %ymm0, %ymm2
+; ZN3-NEXT:    vfmadd231ps {{.*#+}} ymm3 = (ymm2 * ymm1) + ymm3
+; ZN3-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; ZN3-NEXT:    vmulps %ymm1, %ymm2, %ymm1
+; ZN3-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; ZN3-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm0
+; ZN3-NEXT:    vmulps %ymm3, %ymm1, %ymm1
+; ZN3-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; ZN3-NEXT:    retq
   %call = tail call fast <8 x float> @llvm.sqrt.v8f32(<8 x float> %f) #2
   ret <8 x float> %call
 }
