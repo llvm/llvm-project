@@ -2368,6 +2368,19 @@ bool CombinerHelper::matchEqualDefs(const MachineOperand &MOP1,
   if (I1->mayLoadOrStore() && !I1->isDereferenceableInvariantLoad(nullptr))
     return false;
 
+  // If both instructions are loads or stores, they are equal only if both
+  // are dereferenceable invariant loads with the same number of bits.
+  if (I1->mayLoadOrStore() && I2->mayLoadOrStore()) {
+    GLoadStore *LS1 = dyn_cast<GLoadStore>(I1);
+    GLoadStore *LS2 = dyn_cast<GLoadStore>(I2);
+    if (!LS1 || !LS2)
+      return false;
+
+    if (!I2->isDereferenceableInvariantLoad(nullptr) ||
+        (LS1->getMemSizeInBits() != LS2->getMemSizeInBits()))
+      return false;
+  }
+
   // Check for physical registers on the instructions first to avoid cases
   // like this:
   //
