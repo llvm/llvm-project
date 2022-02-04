@@ -78,6 +78,18 @@ public:
   /// \brief If enabled, allow AMDGPU unsafe floating point atomics.
   bool AllowAMDGPUUnsafeFPAtomics = false;
 
+  /// \brief Enumeration value for AMDGPU code object version, which is the
+  /// code object version times 100.
+  enum CodeObjectVersionKind {
+    COV_None,
+    COV_2 = 200,
+    COV_3 = 300,
+    COV_4 = 400,
+    COV_5 = 500,
+  };
+  /// \brief Code object version for AMDGPU.
+  CodeObjectVersionKind CodeObjectVersion;
+
   // The code model to be used as specified by the user. Corresponds to
   // CodeModel::Model enum defined in include/llvm/Support/CodeGen.h, plus
   // "default" for the case when the user has not explicitly specified a
