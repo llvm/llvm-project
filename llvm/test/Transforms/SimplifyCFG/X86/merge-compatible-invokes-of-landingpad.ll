@@ -622,9 +622,9 @@ if.end:
   ret void
 }
 
-; More interesting test, here we can merge the invokes.
-define void @t11_phi_in_landingpad() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
-; CHECK-LABEL: @t11_phi_in_landingpad(
+; landingpad has PHI nodes, and the incoming values are incompatible.
+define void @t11_phi_in_landingpad_incompatible_incoming_values() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @t11_phi_in_landingpad_incompatible_incoming_values(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
@@ -793,8 +793,8 @@ if.end:
 }
 
 ; There can be more than two invokes in a set
-define void @t14_three_invokes_only_two_compatible() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
-; CHECK-LABEL: @t14_three_invokes_only_two_compatible(
+define void @t14_three_invokes() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @t14_three_invokes(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN2_INVOKE:%.*]], label [[IF_ELSE0:%.*]]
@@ -1339,6 +1339,171 @@ invoke.cont0:
 
 invoke.cont2:
   %deadphi2 = phi i32 [ 0, %if.then1 ]
+  unreachable
+
+if.end:
+  call void @sideeffect()
+  ret void
+}
+
+; landingpad has PHI nodes, and out of three invokes, only two have compatible incoming values.
+define void @t23_phi_in_landingpad_compatible_incoming_values() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @t23_phi_in_landingpad_compatible_incoming_values(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE0:%.*]]
+; CHECK:       if.then0:
+; CHECK-NEXT:    invoke void @simple_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       invoke.cont0:
+; CHECK-NEXT:    unreachable
+; CHECK:       lpad:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[IF_THEN0]] ], [ 0, [[IF_THEN1:%.*]] ], [ -1, [[IF_THEN2:%.*]] ]
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    call void @consume(i32 [[PHI]])
+; CHECK-NEXT:    call void @destructor()
+; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK:       if.else0:
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1]], label [[IF_ELSE1:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    invoke void @simple_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
+; CHECK:       invoke.cont2:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.else1:
+; CHECK-NEXT:    [[C2:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C2]], label [[IF_THEN2]], label [[IF_END:%.*]]
+; CHECK:       if.then2:
+; CHECK-NEXT:    invoke void @simple_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
+; CHECK:       invoke.cont3:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c0 = call i1 @cond()
+  br i1 %c0, label %if.then0, label %if.else0
+
+if.then0:
+  invoke void @simple_throw() to label %invoke.cont0 unwind label %lpad
+
+invoke.cont0:
+  unreachable
+
+lpad:
+  %phi = phi i32 [ 0, %if.then0 ], [ 0, %if.then1 ], [ -1, %if.then2 ]
+  %eh = landingpad { i8*, i32 } cleanup
+  call void @consume(i32 %phi)
+  call void @destructor()
+  resume { i8*, i32 } %eh
+
+if.else0:
+  %c1 = call i1 @cond()
+  br i1 %c1, label %if.then1, label %if.else1
+
+if.then1:
+  invoke void @simple_throw() to label %invoke.cont2 unwind label %lpad
+
+invoke.cont2:
+  unreachable
+
+if.else1:
+  %c2 = call i1 @cond()
+  br i1 %c2, label %if.then2, label %if.end
+
+if.then2:
+  invoke void @simple_throw() to label %invoke.cont3 unwind label %lpad
+
+invoke.cont3:
+  unreachable
+
+if.end:
+  call void @sideeffect()
+  ret void
+}
+
+; landingpad has two PHI nodes, but depending on which PHI you look,
+; the invoke sets would be different, so we can't merge invokes here.
+define void @t24_phi_in_landingpad_semi_compatible_incoming_values() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @t24_phi_in_landingpad_semi_compatible_incoming_values(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE0:%.*]]
+; CHECK:       if.then0:
+; CHECK-NEXT:    invoke void @simple_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       invoke.cont0:
+; CHECK-NEXT:    unreachable
+; CHECK:       lpad:
+; CHECK-NEXT:    [[PHI0:%.*]] = phi i32 [ 0, [[IF_THEN0]] ], [ 0, [[IF_THEN1:%.*]] ], [ -1, [[IF_THEN2:%.*]] ]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i32 [ 0, [[IF_THEN0]] ], [ 1, [[IF_THEN1]] ], [ 1, [[IF_THEN2]] ]
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    call void @consume(i32 [[PHI0]])
+; CHECK-NEXT:    call void @consume(i32 [[PHI1]])
+; CHECK-NEXT:    call void @destructor()
+; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK:       if.else0:
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1]], label [[IF_ELSE1:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    invoke void @simple_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
+; CHECK:       invoke.cont2:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.else1:
+; CHECK-NEXT:    [[C2:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C2]], label [[IF_THEN2]], label [[IF_END:%.*]]
+; CHECK:       if.then2:
+; CHECK-NEXT:    invoke void @simple_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
+; CHECK:       invoke.cont3:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c0 = call i1 @cond()
+  br i1 %c0, label %if.then0, label %if.else0
+
+if.then0:
+  invoke void @simple_throw() to label %invoke.cont0 unwind label %lpad
+
+invoke.cont0:
+  unreachable
+
+lpad:
+  %phi0 = phi i32 [ 0, %if.then0 ], [ 0, %if.then1 ], [ -1, %if.then2 ]
+  %phi1= phi i32 [ 0, %if.then0 ], [ 1, %if.then1 ], [ 1, %if.then2 ]
+  %eh = landingpad { i8*, i32 } cleanup
+  call void @consume(i32 %phi0)
+  call void @consume(i32 %phi1)
+  call void @destructor()
+  resume { i8*, i32 } %eh
+
+if.else0:
+  %c1 = call i1 @cond()
+  br i1 %c1, label %if.then1, label %if.else1
+
+if.then1:
+  invoke void @simple_throw() to label %invoke.cont2 unwind label %lpad
+
+invoke.cont2:
+  unreachable
+
+if.else1:
+  %c2 = call i1 @cond()
+  br i1 %c2, label %if.then2, label %if.end
+
+if.then2:
+  invoke void @simple_throw() to label %invoke.cont3 unwind label %lpad
+
+invoke.cont3:
   unreachable
 
 if.end:
