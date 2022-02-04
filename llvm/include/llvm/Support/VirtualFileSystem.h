@@ -902,6 +902,10 @@ public:
 
   StringRef getExternalContentsPrefixDir() const;
 
+  /// Sets the redirection kind to \c Fallthrough if true or \c RedirectOnly
+  /// otherwise. Will removed in the future, use \c setRedirection instead.
+  void setFallthrough(bool Fallthrough);
+
   void setRedirection(RedirectingFileSystem::RedirectKind Kind);
 
   std::vector<llvm::StringRef> getRoots() const;
