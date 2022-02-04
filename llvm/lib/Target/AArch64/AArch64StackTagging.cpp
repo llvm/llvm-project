@@ -605,7 +605,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   }
 
   if (NumInterestingAllocas == 0)
-    return true;
+    return false;
 
   std::unique_ptr<DominatorTree> DeleteDT;
   DominatorTree *DT = nullptr;
