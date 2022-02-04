@@ -22,6 +22,9 @@ __device__ struct foo_t {
   int* pi;
 } foo;
 
+// Check literals are placed in address space 1 (CrossWorkGroup/__global).
+// CHECK: @.str ={{.*}} unnamed_addr addrspace(1) constant
+
 // CHECK: define{{.*}} spir_func noundef i32 addrspace(4)* @_Z3barPi(i32 addrspace(4)*
 __device__ int* bar(int *x) {
   return x;
@@ -43,4 +46,9 @@ __device__ int* baz_c() {
 __device__ int* baz_s() {
   // CHECK: ret i32 addrspace(4)* addrspacecast (i32 addrspace(3)* @s to i32 addrspace(4)*
   return &s;
+}
+
+// CHECK: define{{.*}} spir_func noundef i8 addrspace(4)* @_Z3quzv()
+__device__ const char* quz() {
+  return "abc";
 }
