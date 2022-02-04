@@ -18,11 +18,12 @@ add_llvm_component_library(LLVMProfileData
 
   LINK_COMPONENTS
   Core
-  DebugInfoDWARF
-  Demangle
   Object
   Support
+  Demangle
+  Object
   Symbolize
+  DebugInfoDWARF
   )
 
 add_subdirectory(Coverage)
