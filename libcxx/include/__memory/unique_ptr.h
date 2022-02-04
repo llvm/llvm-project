@@ -17,9 +17,9 @@
 #include <__memory/allocator_traits.h> // __pointer
 #include <__memory/compressed_pair.h>
 #include <__utility/forward.h>
+#include <__utility/move.h>
 #include <cstddef>
 #include <type_traits>
-#include <utility>
 
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
 #   include <__memory/auto_ptr.h>

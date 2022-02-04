@@ -24,13 +24,13 @@
 #include <__memory/pointer_traits.h>
 #include <__memory/unique_ptr.h>
 #include <__utility/forward.h>
+#include <__utility/move.h>
 #include <cstddef>
 #include <cstdlib> // abort
 #include <iosfwd>
 #include <stdexcept>
 #include <type_traits>
 #include <typeinfo>
-#include <utility>
 #if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
 #  include <atomic>
 #endif

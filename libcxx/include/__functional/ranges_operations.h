@@ -11,8 +11,8 @@
 #define _LIBCPP___FUNCTIONAL_RANGES_OPERATIONS_H
 
 #include <__config>
+#include <__utility/forward.h>
 #include <concepts>
-#include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

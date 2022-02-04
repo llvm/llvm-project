@@ -12,8 +12,8 @@
 
 #include <__config>
 #include <__memory/allocator_traits.h>
+#include <__utility/move.h>
 #include <cstddef>
-#include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
