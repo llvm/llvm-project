@@ -645,6 +645,10 @@ public:
   ///   (G_SMULO x, 2) -> (G_SADDO x, x)
   bool matchMulOBy2(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  /// Match:
+  /// (G_*MULO x, 0) -> 0 + no carry out
+  bool matchMulOBy0(MachineInstr &MI, BuildFnTy &MatchInfo);
+
   /// Transform (fadd x, fneg(y)) -> (fsub x, y)
   ///           (fadd fneg(x), y) -> (fsub y, x)
   ///           (fsub x, fneg(y)) -> (fadd x, y)
