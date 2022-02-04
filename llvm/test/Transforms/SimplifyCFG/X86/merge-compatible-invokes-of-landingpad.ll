@@ -98,7 +98,7 @@ if.end:
   ret void
 }
 
-; 'unreachable' block is shared, but it is unreachable, so we are fine.
+; normal block is shared, but it is unreachable, so we are fine.
 define void @t2_shared_normal_dest() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL: @t2_shared_normal_dest(
 ; CHECK-NEXT:  entry:
@@ -155,7 +155,7 @@ define void @t3_bad_shared_normal_dest() personality i8* bitcast (i32 (...)* @__
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then0:
-; CHECK-NEXT:    invoke void @simple_throw()
+; CHECK-NEXT:    invoke void @maybe_throw()
 ; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    call void @sideeffect()
@@ -169,7 +169,7 @@ define void @t3_bad_shared_normal_dest() personality i8* bitcast (i32 (...)* @__
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then1:
-; CHECK-NEXT:    invoke void @simple_throw()
+; CHECK-NEXT:    invoke void @maybe_throw()
 ; CHECK-NEXT:    to label [[INVOKE_CONT]] unwind label [[LPAD]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    call void @sideeffect()
@@ -180,7 +180,7 @@ entry:
   br i1 %c0, label %if.then0, label %if.else
 
 if.then0:
-  invoke void @simple_throw() to label %invoke.cont unwind label %lpad
+  invoke void @maybe_throw() to label %invoke.cont unwind label %lpad
 
 invoke.cont:
   call void @sideeffect()
@@ -196,21 +196,21 @@ if.else:
   br i1 %c1, label %if.then1, label %if.end
 
 if.then1:
-  invoke void @simple_throw() to label %invoke.cont unwind label %lpad
+  invoke void @maybe_throw() to label %invoke.cont unwind label %lpad
 
 if.end:
   call void @sideeffect()
   ret void
 }
 
-; normal destinations are not unreachable.
+; normal destinations are not unreachable and not shared.
 define void @t4_normal_dests() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL: @t4_normal_dests(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then0:
-; CHECK-NEXT:    invoke void @simple_throw()
+; CHECK-NEXT:    invoke void @maybe_throw()
 ; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    call void @sideeffect()
@@ -224,7 +224,7 @@ define void @t4_normal_dests() personality i8* bitcast (i32 (...)* @__gxx_person
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then1:
-; CHECK-NEXT:    invoke void @simple_throw()
+; CHECK-NEXT:    invoke void @maybe_throw()
 ; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 ; CHECK:       invoke.cont2:
 ; CHECK-NEXT:    call void @another_sideeffect()
@@ -238,7 +238,7 @@ entry:
   br i1 %c0, label %if.then0, label %if.else
 
 if.then0:
-  invoke void @simple_throw() to label %invoke.cont0 unwind label %lpad
+  invoke void @maybe_throw() to label %invoke.cont0 unwind label %lpad
 
 invoke.cont0:
   call void @sideeffect()
@@ -254,7 +254,7 @@ if.else:
   br i1 %c1, label %if.then1, label %if.end
 
 if.then1:
-  invoke void @simple_throw() to label %invoke.cont2 unwind label %lpad
+  invoke void @maybe_throw() to label %invoke.cont2 unwind label %lpad
 
 invoke.cont2:
   call void @another_sideeffect()
@@ -1306,7 +1306,7 @@ define void @t22_dead_phi_in_normal_dest() personality i8* bitcast (i32 (...)* @
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
-; CHECK-NEXT:    invoke void @simple_throw()
+; CHECK-NEXT:    invoke void @maybe_throw()
 ; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
@@ -1319,7 +1319,7 @@ entry:
   br i1 %c0, label %if.then0, label %if.else
 
 if.then0:
-  invoke void @simple_throw() to label %invoke.cont0 unwind label %lpad
+  invoke void @maybe_throw() to label %invoke.cont0 unwind label %lpad
 
 lpad:
   %eh = landingpad { i8*, i32 } cleanup
@@ -1331,7 +1331,7 @@ if.else:
   br i1 %c1, label %if.then1, label %if.end
 
 if.then1:
-  invoke void @simple_throw() to label %invoke.cont2 unwind label %lpad
+  invoke void @maybe_throw() to label %invoke.cont2 unwind label %lpad
 
 invoke.cont0:
   %deadphi0 = phi i32 [ 0, %if.then0 ]
@@ -1506,15 +1506,337 @@ if.end:
   ret void
 }
 
+; The normal destinations are shared, but the incoming values are incompatible.
+define void @t25_incompatible_phis_in_normal_destination() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @t25_incompatible_phis_in_normal_destination(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then0:
+; CHECK-NEXT:    invoke void @maybe_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       invoke.cont:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[IF_THEN0]] ], [ -1, [[IF_THEN1:%.*]] ]
+; CHECK-NEXT:    call void @consume(i32 [[PHI]])
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    unreachable
+; CHECK:       lpad:
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    call void @destructor()
+; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1]], label [[IF_END:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    invoke void @maybe_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT]] unwind label [[LPAD]]
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c0 = call i1 @cond()
+  br i1 %c0, label %if.then0, label %if.else
+
+if.then0:
+  invoke void @maybe_throw() to label %invoke.cont unwind label %lpad
+
+invoke.cont:
+  %phi = phi i32 [ 0, %if.then0 ], [ -1, %if.then1 ]
+  call void @consume(i32 %phi)
+  call void @sideeffect()
+  unreachable
+
+lpad:
+  %eh = landingpad { i8*, i32 } cleanup
+  call void @destructor()
+  resume { i8*, i32 } %eh
+
+if.else:
+  %c1 = call i1 @cond()
+  br i1 %c1, label %if.then1, label %if.end
+
+if.then1:
+  invoke void @maybe_throw() to label %invoke.cont unwind label %lpad
+
+if.end:
+  call void @sideeffect()
+  ret void
+}
+
+; shared normal destination has PHI nodes, and out of three invokes, only two have compatible incoming values.
+define void @t26_phi_in_normal_dest_compatible_incoming_values() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @t26_phi_in_normal_dest_compatible_incoming_values(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE0:%.*]]
+; CHECK:       if.then0:
+; CHECK-NEXT:    invoke void @maybe_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       invoke.cont:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[IF_THEN0]] ], [ 0, [[IF_THEN1:%.*]] ], [ -1, [[IF_THEN2:%.*]] ]
+; CHECK-NEXT:    call void @consume(i32 [[PHI]])
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    unreachable
+; CHECK:       lpad:
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    call void @destructor()
+; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK:       if.else0:
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1]], label [[IF_ELSE1:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    invoke void @maybe_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT]] unwind label [[LPAD]]
+; CHECK:       if.else1:
+; CHECK-NEXT:    [[C2:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C2]], label [[IF_THEN2]], label [[IF_END:%.*]]
+; CHECK:       if.then2:
+; CHECK-NEXT:    invoke void @maybe_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT]] unwind label [[LPAD]]
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c0 = call i1 @cond()
+  br i1 %c0, label %if.then0, label %if.else0
+
+if.then0:
+  invoke void @maybe_throw() to label %invoke.cont unwind label %lpad
+
+invoke.cont:
+  %phi = phi i32 [ 0, %if.then0 ], [ 0, %if.then1 ], [ -1, %if.then2 ]
+  call void @consume(i32 %phi)
+  call void @sideeffect()
+  unreachable
+
+lpad:
+  %eh = landingpad { i8*, i32 } cleanup
+  call void @destructor()
+  resume { i8*, i32 } %eh
+
+if.else0:
+  %c1 = call i1 @cond()
+  br i1 %c1, label %if.then1, label %if.else1
+
+if.then1:
+  invoke void @maybe_throw() to label %invoke.cont unwind label %lpad
+
+if.else1:
+  %c2 = call i1 @cond()
+  br i1 %c2, label %if.then2, label %if.end
+
+if.then2:
+  invoke void @maybe_throw() to label %invoke.cont unwind label %lpad
+
+if.end:
+  call void @sideeffect()
+  ret void
+}
+
+; Invokes return values, but they are unused.
+define void @t27_invoke_ret_value_is_used() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @t27_invoke_ret_value_is_used(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then0:
+; CHECK-NEXT:    [[V0:%.*]] = invoke i32 @returning_maybe_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       invoke.cont:
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    unreachable
+; CHECK:       lpad:
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    call void @destructor()
+; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    [[V1:%.*]] = invoke i32 @returning_maybe_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT]] unwind label [[LPAD]]
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c0 = call i1 @cond()
+  br i1 %c0, label %if.then0, label %if.else
+
+if.then0:
+  %v0 = invoke i32 @returning_maybe_throw() to label %invoke.cont unwind label %lpad
+
+invoke.cont:
+  call void @sideeffect()
+  unreachable
+
+lpad:
+  %eh = landingpad { i8*, i32 } cleanup
+  call void @destructor()
+  resume { i8*, i32 } %eh
+
+if.else:
+  %c1 = call i1 @cond()
+  br i1 %c1, label %if.then1, label %if.end
+
+if.then1:
+  %v1 = invoke i32 @returning_maybe_throw() to label %invoke.cont unwind label %lpad
+
+if.end:
+  call void @sideeffect()
+  ret void
+}
+
+; Invokes return values, and they are used in a phi node, making the incoming values incompatible.
+define void @t28_invoke_ret_value_is_used_in_phi_node() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @t28_invoke_ret_value_is_used_in_phi_node(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then0:
+; CHECK-NEXT:    [[V0:%.*]] = invoke i32 @returning_maybe_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       invoke.cont:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[V0]], [[IF_THEN0]] ], [ [[V1:%.*]], [[IF_THEN1:%.*]] ]
+; CHECK-NEXT:    call void @consume(i32 [[PHI]])
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    unreachable
+; CHECK:       lpad:
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    call void @destructor()
+; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1]], label [[IF_END:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    [[V1]] = invoke i32 @returning_maybe_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT]] unwind label [[LPAD]]
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c0 = call i1 @cond()
+  br i1 %c0, label %if.then0, label %if.else
+
+if.then0:
+  %v0 = invoke i32 @returning_maybe_throw() to label %invoke.cont unwind label %lpad
+
+invoke.cont:
+  %phi = phi i32 [ %v0, %if.then0 ], [ %v1, %if.then1 ]
+  call void @consume(i32 %phi)
+  call void @sideeffect()
+  unreachable
+
+lpad:
+  %eh = landingpad { i8*, i32 } cleanup
+  call void @destructor()
+  resume { i8*, i32 } %eh
+
+if.else:
+  %c1 = call i1 @cond()
+  br i1 %c1, label %if.then1, label %if.end
+
+if.then1:
+  %v1 = invoke i32 @returning_maybe_throw() to label %invoke.cont unwind label %lpad
+
+if.end:
+  call void @sideeffect()
+  ret void
+}
+
+; out of three invokes, two share normal destination and another one has unreachable destination
+define void @t29_common_normal_destination_and_unreachable_normal_destination() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @t29_common_normal_destination_and_unreachable_normal_destination(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE0:%.*]]
+; CHECK:       if.then0:
+; CHECK-NEXT:    invoke void @maybe_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       invoke.cont0:
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    unreachable
+; CHECK:       lpad:
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    call void @destructor()
+; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK:       if.else0:
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_ELSE1:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    invoke void @maybe_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT0]] unwind label [[LPAD]]
+; CHECK:       if.else1:
+; CHECK-NEXT:    [[C2:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C2]], label [[IF_THEN2:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then2:
+; CHECK-NEXT:    invoke void @maybe_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
+; CHECK:       invoke.cont2:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c0 = call i1 @cond()
+  br i1 %c0, label %if.then0, label %if.else0
+
+if.then0:
+  invoke void @maybe_throw() to label %invoke.cont0 unwind label %lpad
+
+invoke.cont0:
+  call void @sideeffect()
+  unreachable
+
+lpad:
+  %eh = landingpad { i8*, i32 } cleanup
+  call void @destructor()
+  resume { i8*, i32 } %eh
+
+if.else0:
+  %c1 = call i1 @cond()
+  br i1 %c1, label %if.then1, label %if.else1
+
+if.then1:
+  invoke void @maybe_throw() to label %invoke.cont0 unwind label %lpad
+
+if.else1:
+  %c2 = call i1 @cond()
+  br i1 %c2, label %if.then2, label %if.end
+
+if.then2:
+  invoke void @maybe_throw() to label %invoke.cont2 unwind label %lpad
+
+invoke.cont2:
+  unreachable
+
+if.end:
+  call void @sideeffect()
+  ret void
+}
+
 declare i1 @cond()
 
 declare void @sideeffect()
 declare void @another_sideeffect()
 
+declare void @maybe_throw()
+
 declare void @simple_throw() noreturn
 declare void @another_simple_throw() noreturn
 
 declare void @simple_throw_taking_argument(i32) noreturn
+
+declare i32 @returning_maybe_throw()
 
 declare void @destructor()
 declare void @another_destructor()
