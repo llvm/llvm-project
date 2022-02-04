@@ -839,6 +839,9 @@ void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
   case ELF::EM_CSKY:
 #include "llvm/BinaryFormat/ELFRelocs/CSKY.def"
     break;
+  case ELF::EM_PPC:
+#include "llvm/BinaryFormat/ELFRelocs/PowerPC.def"
+    break;
   case ELF::EM_PPC64:
 #include "llvm/BinaryFormat/ELFRelocs/PowerPC64.def"
     break;
