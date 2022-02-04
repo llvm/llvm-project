@@ -1344,6 +1344,67 @@ if.end:
   ret void
 }
 
+; Even though the normal destinations are unreachable,
+; they may have (dead) PHI nodes, so we must cleanup them.
+define void @t22_dead_phi_in_normal_dest() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @t22_dead_phi_in_normal_dest(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then0:
+; CHECK-NEXT:    invoke void @simple_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       lpad:
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    call void @destructor()
+; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    invoke void @simple_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
+; CHECK:       invoke.cont0:
+; CHECK-NEXT:    unreachable
+; CHECK:       invoke.cont2:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c0 = call i1 @cond()
+  br i1 %c0, label %if.then0, label %if.else
+
+if.then0:
+  invoke void @simple_throw() to label %invoke.cont0 unwind label %lpad
+
+lpad:
+  %eh = landingpad { i8*, i32 } cleanup
+  call void @destructor()
+  resume { i8*, i32 } %eh
+
+if.else:
+  %c1 = call i1 @cond()
+  br i1 %c1, label %if.then1, label %if.end
+
+if.then1:
+  invoke void @simple_throw() to label %invoke.cont2 unwind label %lpad
+
+invoke.cont0:
+  %deadphi0 = phi i32 [ 0, %if.then0 ]
+  unreachable
+
+invoke.cont2:
+  %deadphi2 = phi i32 [ 0, %if.then1 ]
+  unreachable
+
+if.end:
+  call void @sideeffect()
+  ret void
+}
+
 declare i1 @cond()
 
 declare void @sideeffect()
