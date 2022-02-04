@@ -1749,14 +1749,6 @@ bool RISCVTargetLowering::shouldExpandBuildVectorWithShuffles(
   return false;
 }
 
-bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
-  // Only splats are currently supported.
-  if (ShuffleVectorSDNode::isSplatMask(M.data(), VT))
-    return true;
-
-  return false;
-}
-
 static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget) {
   // RISCV FP-to-int conversions saturate to the destination register size, but
@@ -2797,6 +2789,22 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   }
 
   return convertFromScalableVector(VT, Gather, DAG, Subtarget);
+}
+
+bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
+  // Support splats for any type. These should type legalize well.
+  if (ShuffleVectorSDNode::isSplatMask(M.data(), VT))
+    return true;
+
+  // Only support legal VTs for other shuffles for now.
+  if (!isTypeLegal(VT))
+    return false;
+
+  MVT SVT = VT.getSimpleVT();
+
+  bool SwapSources;
+  return (matchShuffleAsSlideDown(M) >= 0) ||
+         isInterleaveShuffle(M, SVT, SwapSources, Subtarget);
 }
 
 static SDValue getRVVFPExtendOrRound(SDValue Op, MVT VT, MVT ContainerVT,
