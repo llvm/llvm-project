@@ -15,6 +15,14 @@
 # RUN: ld.lld -r %t.o -o %t
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
 
+# RUN: yaml2obj -DBITS=32 -DMACHINE=PPC %s -o %t.o
+# RUN: ld.lld -r %t.o -o %t
+# RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
+
+# RUN: yaml2obj -DMACHINE=PPC64 %s -o %t.o
+# RUN: ld.lld -r %t.o -o %t
+# RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
+
 # RUN: yaml2obj -DMACHINE=RISCV %s -o %t.o
 # RUN: ld.lld -r %t.o -o %t
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s

@@ -30,6 +30,7 @@ public:
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
+  int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writeGotHeader(uint8_t *buf) const override;
   void writePltHeader(uint8_t *buf) const override {
     llvm_unreachable("should call writePPC32GlinkSection() instead");
@@ -273,6 +274,17 @@ RelType PPC::getDynRel(RelType type) const {
   if (type == R_PPC_ADDR32)
     return type;
   return R_PPC_NONE;
+}
+
+int64_t PPC::getImplicitAddend(const uint8_t *buf, RelType type) const {
+  switch (type) {
+  case R_PPC_NONE:
+    return 0;
+  default:
+    internalLinkerError(getErrorLocation(buf),
+                        "cannot read addend for relocation " + toString(type));
+    return 0;
+  }
 }
 
 static std::pair<RelType, uint64_t> fromDTPREL(RelType type, uint64_t val) {
