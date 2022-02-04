@@ -1,5 +1,5 @@
-; RUN: llc -O3 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
-; RUN: llc -O3 -mtriple=powerpc-ibm-aix-xcoff < %s | FileCheck %s
+; RUN: llc -enable-ppc-gen-scalar-mass -O3 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -enable-ppc-gen-scalar-mass -O3 -mtriple=powerpc-ibm-aix-xcoff < %s | FileCheck %s
 
 declare float @llvm.cos.f32(float) 
 declare float @llvm.exp.f32(float) 

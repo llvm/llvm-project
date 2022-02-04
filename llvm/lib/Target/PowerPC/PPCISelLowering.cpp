@@ -382,7 +382,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   // MASS transformation for LLVM intrinsics with replicating fast-math flag
   // to be consistent to PPCGenScalarMASSEntries pass
-  if (TM.getOptLevel() == CodeGenOpt::Aggressive){
+  if (TM.getOptLevel() == CodeGenOpt::Aggressive &&
+      TM.Options.PPCGenScalarMASSEntries) {
     setOperationAction(ISD::FSIN , MVT::f64, Custom);
     setOperationAction(ISD::FCOS , MVT::f64, Custom);
     setOperationAction(ISD::FPOW , MVT::f64, Custom);
