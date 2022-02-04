@@ -1,0 +1,80 @@
+# This contains the workflow definitions that allow users to test backports
+# to the release branch using comments on issues.
+#
+# /cherry-pick <commit> <...>
+#
+# This comment will attempt to cherry-pick the given commits to the latest
+# release branch (release/Y.x) and if successful push the result to a branch
+# on github.
+#
+# /branch <owner>/<repo>/<branch>
+#
+# This comment will create a pull request from <branch> to the latest release
+# branch.
+
+name: Issue Release Workflow
+
+on:
+  issue_comment:
+    types:
+      - created
+      - edited
+
+env:
+  COMMENT_BODY: ${{ github.event.comment.body }}
+
+jobs:
+  backport-commits:
+    name: Backport Commits
+    runs-on: ubuntu-20.04
+    if: >-
+        (github.repository == 'llvm/llvm-project') &&
+        !startswith(github.event.comment.body, '<!--IGNORE-->') &&
+        contains(github.event.comment.body, '/cherry-pick')
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@v2
+        with:
+          repository: llvm/llvm-project
+          fetch-depth: 0
+
+      - name: Setup Environment
+        run: |
+          pip install -r ./llvm/utils/git/requirements.txt
+          ./llvm/utils/git/github-automation.py --token ${{ github.token }} setup-llvmbot-git
+
+      - name: Backport Commits
+        run: |
+          printf "$COMMENT_BODY" |
+          ./llvm/utils/git/github-automation.py \
+          --repo $GITHUB_REPOSITORY \
+          --token ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }} \
+          release-workflow \
+          --issue-number ${{ github.event.issue.number }} \
+          auto
+
+  create-pull-request:
+    name: Create Pull Request
+    runs-on: ubuntu-20.04
+    if: >-
+        (github.repository == 'llvm/llvm-project') &&
+        !startswith(github.event.comment.body, '<!--IGNORE-->') &&
+        contains(github.event.comment.body, '/branch')
+
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@v2
+
+      - name: Setup Environment
+        run:  |
+          pip install -r ./llvm/utils/git/requirements.txt
+
+      - name: Create Pull Request
+        run: |
+          printf "$COMMENT_BODY" |
+          ./llvm/utils/git/github-automation.py \
+          --repo $GITHUB_REPOSITORY \
+          --token ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }} \
+          release-workflow \
+          --issue-number ${{ github.event.issue.number }} \
+          auto

@@ -151,10 +151,6 @@ struct DILineInfoSpecifier {
   DILineInfoSpecifier(FileLineInfoKind FLIKind = FileLineInfoKind::RawValue,
                       FunctionNameKind FNKind = FunctionNameKind::None)
       : FLIKind(FLIKind), FNKind(FNKind) {}
-
-  inline bool operator==(const DILineInfoSpecifier &RHS) const {
-    return FLIKind == RHS.FLIKind && FNKind == RHS.FNKind;
-  }
 };
 
 /// This is just a helper to programmatically construct DIDumpType.

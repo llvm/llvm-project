@@ -58,11 +58,24 @@ struct Subsection {
 };
 
 using Subsections = std::vector<Subsection>;
+class InputFile;
 
 struct Section {
-  uint64_t address = 0;
+  InputFile *file;
+  StringRef segname;
+  StringRef name;
+  uint32_t flags;
+  uint64_t addr;
   Subsections subsections;
-  Section(uint64_t addr) : address(addr){};
+
+  Section(InputFile *file, StringRef segname, StringRef name, uint32_t flags,
+          uint64_t addr)
+      : file(file), segname(segname), name(name), flags(flags), addr(addr) {}
+  // Ensure pointers to Sections are never invalidated.
+  Section(const Section &) = delete;
+  Section &operator=(const Section &) = delete;
+  Section(Section &&) = delete;
+  Section &operator=(Section &&) = delete;
 };
 
 // Represents a call graph profile edge.
@@ -93,7 +106,7 @@ public:
   MemoryBufferRef mb;
 
   std::vector<Symbol *> symbols;
-  std::vector<Section> sections;
+  std::vector<Section *> sections;
 
   // If not empty, this stores the name of the archive containing this file.
   // We use this string for creating error messages.

@@ -177,6 +177,18 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
   }
 }
 
+ConcatInputSection *macho::makeSyntheticInputSection(StringRef segName,
+                                                     StringRef sectName,
+                                                     uint32_t flags,
+                                                     ArrayRef<uint8_t> data,
+                                                     uint32_t align) {
+  Section &section =
+      *make<Section>(/*file=*/nullptr, segName, sectName, flags, /*addr=*/0);
+  auto isec = make<ConcatInputSection>(section, data, align);
+  section.subsections.push_back({0, isec});
+  return isec;
+}
+
 void CStringInputSection::splitIntoPieces() {
   size_t off = 0;
   StringRef s = toStringRef(data);
@@ -211,13 +223,11 @@ uint64_t CStringInputSection::getOffset(uint64_t off) const {
   return piece.outSecOff + addend;
 }
 
-WordLiteralInputSection::WordLiteralInputSection(StringRef segname,
-                                                 StringRef name,
-                                                 InputFile *file,
+WordLiteralInputSection::WordLiteralInputSection(const Section &section,
                                                  ArrayRef<uint8_t> data,
-                                                 uint32_t align, uint32_t flags)
-    : InputSection(WordLiteralKind, segname, name, file, data, align, flags) {
-  switch (sectionType(flags)) {
+                                                 uint32_t align)
+    : InputSection(WordLiteralKind, section, data, align) {
+  switch (sectionType(getFlags())) {
   case S_4BYTE_LITERALS:
     power2LiteralSize = 2;
     break;

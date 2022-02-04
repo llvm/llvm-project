@@ -1057,15 +1057,8 @@ bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O) {
 }
 
 static uint64_t getAllocaSizeInBytes(const AllocaInst &AI) {
-  uint64_t ArraySize = 1;
-  if (AI.isArrayAllocation()) {
-    const ConstantInt *CI = dyn_cast<ConstantInt>(AI.getArraySize());
-    assert(CI && "non-constant array size");
-    ArraySize = CI->getZExtValue();
-  }
-  Type *Ty = AI.getAllocatedType();
-  uint64_t SizeInBytes = AI.getModule()->getDataLayout().getTypeAllocSize(Ty);
-  return SizeInBytes * ArraySize;
+  auto DL = AI.getModule()->getDataLayout();
+  return AI.getAllocationSizeInBits(DL).getValue() / 8;
 }
 
 void HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
