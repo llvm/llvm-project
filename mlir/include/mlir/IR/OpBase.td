@@ -2487,34 +2487,6 @@ class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
   code extraClassDefinition = ?;
 }
 
-// Base class for ops with static/dynamic offset, sizes and strides
-// attributes/arguments.
-class BaseOpWithOffsetSizesAndStrides<Dialect dialect, string mnemonic,
-                                      list<Trait> traits = []> :
-  Op<dialect, mnemonic, traits> {
-
-  // For every such op, there needs to be a:
-  //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)
-  //   * ParseResult parse${C++ class of Op}(OpAsmParser &parser,
-  //                                         OperationState &result)
-  // functions.
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-
-  code extraBaseClassDeclaration = [{
-    /// Returns the dynamic sizes for this subview operation if specified.
-    ::mlir::Operation::operand_range getDynamicSizes() { return sizes(); }
-
-    /// Return the list of Range (i.e. offset, size, stride). Each
-    /// Range entry contains either the dynamic value or a ConstantIndexOp
-    /// constructed with `b` at location `loc`.
-    ::mlir::SmallVector<::mlir::Range, 8> getOrCreateRanges(
-        ::mlir::OpBuilder &b, ::mlir::Location loc) {
-      return ::mlir::getOrCreateRanges(*this, b, loc);
-    }
-  }];
-}
-
 // The arguments of an op.
 class Arguments<dag args> {
   dag arguments = args;
