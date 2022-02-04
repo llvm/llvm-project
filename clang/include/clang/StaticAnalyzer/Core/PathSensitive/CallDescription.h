@@ -108,13 +108,56 @@ public:
     return CD1.matches(Call);
   }
 
-  /// \copydoc clang::ento::matchesAny(const CallEvent &, const CallDescription &)
+  /// \copydoc clang::ento::CallDescription::matchesAny(const CallEvent &, const CallDescription &)
   template <typename... Ts>
   friend bool matchesAny(const CallEvent &Call, const CallDescription &CD1,
                          const Ts &...CDs) {
     return CD1.matches(Call) || matchesAny(Call, CDs...);
   }
   /// @}
+
+  /// @name Matching CallDescriptions against a CallExpr
+  /// @{
+
+  /// Returns true if the CallExpr is a call to a function that matches the
+  /// CallDescription.
+  ///
+  /// When available, always prefer matching with a CallEvent! This function
+  /// exists only when that is not available, for example, when _only_
+  /// syntactic check is done on a piece of code.
+  ///
+  /// Also, StdLibraryFunctionsChecker::Signature is likely a better candicade
+  /// for syntactic only matching if you are writing a new checker. This is
+  /// handy if a CallDescriptionMap is already there.
+  ///
+  /// The function is imprecise because CallEvent may know path sensitive
+  /// information, such as the precise argument count (see comments for
+  /// CallEvent::getNumArgs), the called function if it was called through a
+  /// function pointer, and other information not available syntactically.
+  bool matchesAsWritten(const CallExpr &CE) const;
+
+  /// Returns true whether the CallExpr matches on any of the CallDescriptions
+  /// supplied.
+  ///
+  /// \note This function is not intended to be used to match Obj-C method
+  /// calls.
+  friend bool matchesAnyAsWritten(const CallExpr &CE,
+                                  const CallDescription &CD1) {
+    return CD1.matchesAsWritten(CE);
+  }
+
+  /// \copydoc clang::ento::CallDescription::matchesAnyAsWritten(const CallExpr &, const CallDescription &)
+  template <typename... Ts>
+  friend bool matchesAnyAsWritten(const CallExpr &CE,
+                                  const CallDescription &CD1,
+                                  const Ts &...CDs) {
+    return CD1.matchesAsWritten(CE) || matchesAnyAsWritten(CE, CDs...);
+  }
+  /// @}
+
+private:
+  bool matchesImpl(const FunctionDecl *Callee, size_t ArgCount,
+                   size_t ParamCount) const;
 };
 
 /// An immutable map from CallDescriptions to arbitrary data. Provides a unified
@@ -156,6 +199,28 @@ public:
 
     return nullptr;
   }
+
+  /// When available, always prefer lookup with a CallEvent! This function
+  /// exists only when that is not available, for example, when _only_
+  /// syntactic check is done on a piece of code.
+  ///
+  /// Also, StdLibraryFunctionsChecker::Signature is likely a better candicade
+  /// for syntactic only matching if you are writing a new checker. This is
+  /// handy if a CallDescriptionMap is already there.
+  ///
+  /// The function is imprecise because CallEvent may know path sensitive
+  /// information, such as the precise argument count (see comments for
+  /// CallEvent::getNumArgs), the called function if it was called through a
+  /// function pointer, and other information not available syntactically.
+  LLVM_NODISCARD const T *lookupAsWritten(const CallExpr &Call) const {
+    // Slow path: linear lookup.
+    // TODO: Implement some sort of fast path.
+    for (const std::pair<CallDescription, T> &I : LinearMap)
+      if (I.first.matchesAsWritten(Call))
+        return &I.second;
+
+    return nullptr;
+  }
 };
 
 /// An immutable set of CallDescriptions.
@@ -171,6 +236,20 @@ public:
   CallDescriptionSet &operator=(const CallDescription &) = delete;
 
   LLVM_NODISCARD bool contains(const CallEvent &Call) const;
+
+  /// When available, always prefer lookup with a CallEvent! This function
+  /// exists only when that is not available, for example, when _only_
+  /// syntactic check is done on a piece of code.
+  ///
+  /// Also, StdLibraryFunctionsChecker::Signature is likely a better candicade
+  /// for syntactic only matching if you are writing a new checker. This is
+  /// handy if a CallDescriptionMap is already there.
+  ///
+  /// The function is imprecise because CallEvent may know path sensitive
+  /// information, such as the precise argument count (see comments for
+  /// CallEvent::getNumArgs), the called function if it was called through a
+  /// function pointer, and other information not available syntactically.
+  LLVM_NODISCARD bool containsAsWritten(const CallExpr &CE) const;
 };
 
 } // namespace ento
