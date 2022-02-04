@@ -294,7 +294,7 @@ private:
                                                         FixedRegisters);
   }
 
-  const LIFeatureComponents
+  const LIFeatureComponents &
   getLIFeatureComponents(const LiveInterval &LI) const;
 
   // Hold on to a default advisor for:
@@ -310,6 +310,9 @@ private:
   // This could be static and shared, but its initialization is non-trivial.
   std::bitset<FeatureIDs::FeatureCount> DoNotNormalize;
   const float InitialQSize;
+
+  using RegID = unsigned;
+  mutable DenseMap<RegID, LIFeatureComponents> CachedFeatures;
 };
 
 // ===================================
@@ -692,9 +695,15 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   return Regs[CandidatePos].first;
 }
 
-const LIFeatureComponents
+const LIFeatureComponents &
 MLEvictAdvisor::getLIFeatureComponents(const LiveInterval &LI) const {
-  LIFeatureComponents Ret;
+  RegID ID = LI.reg().id();
+  LIFeatureComponents Empty;
+  auto I = CachedFeatures.insert(std::make_pair(ID, Empty));
+  LIFeatureComponents &Ret = I.first->getSecond();
+  if (!I.second)
+    return Ret;
+
   SmallPtrSet<MachineInstr *, 8> Visited;
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
 
@@ -775,7 +784,7 @@ void MLEvictAdvisor::extractFeatures(
 
     if (LI.endIndex() > EndSI)
       EndSI = LI.endIndex();
-    const LIFeatureComponents LIFC = getLIFeatureComponents(LI);
+    const LIFeatureComponents &LIFC = getLIFeatureComponents(LI);
     NrBrokenHints += VRM->hasPreferredPhys(LI.reg());
 
     NrDefsAndUses += LIFC.NrDefsAndUses;
