@@ -31,7 +31,7 @@ void f6(void) {
   }
 }
 
-void f7() {
+void f7(void) {
   int y;
   #pragma unused(undeclared, undefined, y) // expected-warning{{undeclared variable 'undeclared' used as an argument for '#pragma unused'}} expected-warning{{undeclared variable 'undefined' used as an argument for '#pragma unused'}}
 }

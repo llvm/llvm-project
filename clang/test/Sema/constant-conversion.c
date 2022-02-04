@@ -14,7 +14,7 @@ void test_7809123(void) {
   a.i5 = 36; // expected-warning {{implicit truncation from 'int' to bit-field changes value from 36 to 4}}
 }
 
-void test() {
+void test(void) {
   struct { int bit : 1; } a;
   a.bit = 1; // shouldn't warn
 }
@@ -25,7 +25,7 @@ enum Test2 test2(enum Test2 *t) {
   return 10; // shouldn't warn
 }
 
-void test3() {
+void test3(void) {
   struct A {
     unsigned int foo : 2;
     int bar : 2;
@@ -38,7 +38,7 @@ void test3() {
   struct A e = { .foo = 10 };        // expected-warning {{implicit truncation from 'int' to bit-field changes value from 10 to 2}}
 }
 
-void test4() {
+void test4(void) {
   struct A {
     char c : 2;
   } a;
@@ -46,7 +46,7 @@ void test4() {
   a.c = 0x101; // expected-warning {{implicit truncation from 'int' to bit-field changes value from 257 to 1}}
 }
 
-void test5() {
+void test5(void) {
   struct A {
     _Bool b : 1;
   } a;
@@ -56,13 +56,13 @@ void test5() {
   a.b = 100;
 }
 
-void test6() {
+void test6(void) {
   // Test that unreachable code doesn't trigger the truncation warning.
   unsigned char x = 0 ? 65535 : 1; // no-warning
   unsigned char y = 1 ? 65535 : 1; // expected-warning {{changes value}}
 }
 
-void test7() {
+void test7(void) {
 	struct {
 		unsigned int twoBits1:2;
 		unsigned int twoBits2:2;
@@ -76,13 +76,13 @@ void test7() {
 	f.twoBits2 &= ~2; // no-warning
 }
 
-void test8() {
+void test8(void) {
   enum E { A, B, C };
   struct { enum E x : 1; } f;
   f.x = C; // expected-warning {{implicit truncation from 'int' to bit-field changes value from 2 to 0}}
 }
 
-void test9() {
+void test9(void) {
   const char max_char = 0x7F;
   const short max_short = 0x7FFF;
   const int max_int = 0x7FFFFFFF;
@@ -117,7 +117,7 @@ void test9() {
 
 #define A 1
 
-void test10() {
+void test10(void) {
   struct S {
     unsigned a : 4;
   } s;

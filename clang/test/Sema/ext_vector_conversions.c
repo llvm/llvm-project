@@ -4,7 +4,7 @@ typedef __attribute__((ext_vector_type(4))) char char4;
 typedef __attribute__((ext_vector_type(4))) short short4;
 typedef __attribute__((ext_vector_type(1))) float float1;
 
-static void test() {
+static void test(void) {
   char4 vc4;
   float f;
   // Not allowed.  There's no splatting conversion between float and int vector,

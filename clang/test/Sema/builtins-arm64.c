@@ -13,17 +13,17 @@ void test_clear_cache_voids(void *start, void *end) {
   __clear_cache(start, end);
 }
 
-void test_clear_cache_no_args() {
+void test_clear_cache_no_args(void) {
   __clear_cache(); // expected-error {{too few arguments to function call}}
 }
 
-void test_memory_barriers() {
+void test_memory_barriers(void) {
   __builtin_arm_dmb(16); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_arm_dsb(17); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_arm_isb(18); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 
-void test_prefetch() {
+void test_prefetch(void) {
   __builtin_arm_prefetch(0, 2, 0, 0, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_arm_prefetch(0, 0, 3, 0, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_arm_prefetch(0, 0, 0, 2, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}

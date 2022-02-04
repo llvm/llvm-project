@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -target-feature +sse2 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -target-feature +sse2 -fsyntax-only -verify %s -x c++
 
-void f() {
+void f(void) {
   (void)_mm_getcsr(); // expected-warning{{implicitly declaring library function '_mm_getcsr'}} \
   // expected-note{{include the header <xmmintrin.h> or explicitly provide a declaration for '_mm_getcsr'}}
   _mm_setcsr(1); // expected-warning{{implicitly declaring library function '_mm_setcsr'}} \
@@ -19,16 +19,16 @@ void f() {
   // expected-note{{include the header <emmintrin.h> or explicitly provide a declaration for '_mm_pause'}}
 }
 
-unsigned int _mm_getcsr();
+unsigned int _mm_getcsr(void);
 void _mm_setcsr(unsigned int);
-void _mm_sfence();
+void _mm_sfence(void);
 
 void _mm_clflush(void const *);
-void _mm_lfence();
-void _mm_mfence();
-void _mm_pause();
+void _mm_lfence(void);
+void _mm_mfence(void);
+void _mm_pause(void);
 
-void g() {
+void g(void) {
   (void)_mm_getcsr();
   _mm_setcsr(1);
   _mm_sfence();

@@ -3,7 +3,7 @@
 
 #include <intrin.h>
 
-void check__getReg() {
+void check__getReg(void) {
   __getReg(-1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __getReg(32); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }

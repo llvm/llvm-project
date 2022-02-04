@@ -24,7 +24,7 @@ int test6(float a, long double b) {
 
 
 #define CFSTR __builtin___CFStringMakeConstantString
-void test7() {
+void test7(void) {
   const void *X;
   X = CFSTR("\242"); // expected-warning {{input conversion stopped}}
   X = CFSTR("\0"); // no-warning
@@ -101,12 +101,12 @@ void test_unknown_builtin(int a, int b) {
                          // expected-note{{did you mean '__builtin_isless'?}}
 }
 
-int test13() {
+int test13(void) {
   __builtin_eh_return(0, 0); // no warning, eh_return never returns.
 }
 
 // <rdar://problem/8228293>
-void test14() {
+void test14(void) {
   int old;
   old = __sync_fetch_and_min((volatile int *)&old, 1);
 }
@@ -117,7 +117,7 @@ void test15(const char *s) {
 }
 
 // PR7885
-int test16() {
+int test16(void) {
   return __builtin_constant_p() + // expected-error{{too few arguments}}
          __builtin_constant_p(1, 2); // expected-error {{too many arguments}}
 }
@@ -140,7 +140,7 @@ enum Enum { EnumValue1, EnumValue2 };
 typedef __typeof(sizeof(int)) size_t;
 size_t strlen(const char *);
 
-void test17() {
+void test17(void) {
 #define ASSERT(...) { enum { folded = (__VA_ARGS__) }; int arr[folded ? 1 : -1]; }
 #define T(...) ASSERT(__builtin_constant_p(__VA_ARGS__))
 #define F(...) ASSERT(!__builtin_constant_p(__VA_ARGS__))
@@ -191,7 +191,7 @@ void test17() {
 #undef F
 }
 
-void test18() {
+void test18(void) {
   char src[1024];
   char dst[2048];
   size_t result;
@@ -206,13 +206,13 @@ void test18() {
   ptr = __builtin___strlcat_chk(dst, src, sizeof(dst), sizeof(dst)); // expected-warning {{incompatible integer to pointer conversion}}
 }
 
-void no_ms_builtins() {
+void no_ms_builtins(void) {
   __assume(1); // expected-warning {{implicit declaration}}
   __noop(1); // expected-warning {{implicit declaration}}
   __debugbreak(); // expected-warning {{implicit declaration}}
 }
 
-void unavailable() {
+void unavailable(void) {
   __builtin_operator_new(0); // expected-error {{'__builtin_operator_new' is only available in C++}}
   __builtin_operator_delete(0); // expected-error {{'__builtin_operator_delete' is only available in C++}}
 }
@@ -348,7 +348,7 @@ void test22(void) {
 #define memcpy(x,y,z) __builtin___memcpy_chk(x,y,z, __builtin_object_size(x,0))
 #define my_memcpy(x,y,z) __builtin___memcpy_chk(x,y,z, __builtin_object_size(x,0))
 
-void test23() {
+void test23(void) {
   char src[1024];
   char buf[10];
   memcpy(buf, src, 11); // expected-warning{{'memcpy' will always overflow; destination buffer has size 10, but size argument is 11}}
@@ -356,12 +356,12 @@ void test23() {
 }
 
 // Test that __builtin_is_constant_evaluated() is not allowed in C
-int test_cxx_builtin() {
+int test_cxx_builtin(void) {
   // expected-error@+1 {{use of unknown builtin '__builtin_is_constant_evaluated'}}
   return __builtin_is_constant_evaluated();
 }
 
-void test_builtin_complex() {
+void test_builtin_complex(void) {
   __builtin_complex(); // expected-error {{too few}}
   __builtin_complex(1); // expected-error {{too few}}
   __builtin_complex(1, 2, 3); // expected-error {{too many}}

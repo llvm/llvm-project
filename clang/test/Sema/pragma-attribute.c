@@ -9,16 +9,16 @@
 // Ensure we only report any errors once.
 #pragma clang attribute push (__attribute__((annotate)), apply_to = function) // expected-error 4 {{'annotate' attribute takes at least 1 argument}}
 
-void test5_begin(); // expected-note {{when applied to this declaration}}
-void test5_1(); // expected-note {{when applied to this declaration}}
+void test5_begin(void); // expected-note {{when applied to this declaration}}
+void test5_1(void); // expected-note {{when applied to this declaration}}
 
 #pragma clang attribute push (__attribute__((annotate())), apply_to = function) // expected-error 2 {{'annotate' attribute takes at least 1 argument}}
 
-void test5_2(); // expected-note 2 {{when applied to this declaration}}
+void test5_2(void); // expected-note 2 {{when applied to this declaration}}
 
 #pragma clang attribute push (__attribute__((annotate("hello", "world"))), apply_to = function)
 
-void test5_3(); // expected-note 2 {{when applied to this declaration}}
+void test5_3(void); // expected-note 2 {{when applied to this declaration}}
 
 #pragma clang attribute pop
 #pragma clang attribute pop
@@ -28,12 +28,12 @@ void test5_3(); // expected-note 2 {{when applied to this declaration}}
 
 #pragma clang attribute push (__attribute__((optnone)), apply_to = function) // expected-note 2 {{conflicting attribute is here}}
 
-__attribute__((always_inline)) void optnone1() { } // expected-warning {{'always_inline' attribute ignored}}
+__attribute__((always_inline)) void optnone1(void) { } // expected-warning {{'always_inline' attribute ignored}}
 // expected-note@-1 {{when applied to this declaration}}
 
-void optnone2() { }
+void optnone2(void) { }
 
-__attribute__((always_inline)) void optnone3() { } // expected-warning {{'always_inline' attribute ignored}}
+__attribute__((always_inline)) void optnone3(void) { } // expected-warning {{'always_inline' attribute ignored}}
 // expected-note@-1 {{when applied to this declaration}}
 
 #pragma clang attribute pop
@@ -41,7 +41,7 @@ __attribute__((always_inline)) void optnone3() { } // expected-warning {{'always
 #pragma clang attribute push (__attribute__((annotate())), apply_to = function) // expected-error{{'annotate' attribute takes at least 1 argument}}
 #pragma clang attribute (__attribute__((annotate())), apply_to = function) // expected-error{{'annotate' attribute takes at least 1 argument}}
 
-void fun(); // expected-note 2 {{when applied to this declaration}}
+void fun(void); // expected-note 2 {{when applied to this declaration}}
 
 #pragma clang attribute pop
 #pragma clang attribute pop // expected-error{{'#pragma clang attribute pop' with no matching '#pragma clang attribute push'}}
@@ -50,10 +50,10 @@ void fun(); // expected-note 2 {{when applied to this declaration}}
 #pragma clang attribute push
 #pragma clang attribute (__attribute__((annotate())), apply_to = function) // expected-error 2 {{'annotate' attribute takes at least 1 argument}}
 
-void fun2(); // expected-note {{when applied to this declaration}}
+void fun2(void); // expected-note {{when applied to this declaration}}
 
 #pragma clang attribute push (__attribute__((annotate())), apply_to = function) // expected-error{{'annotate' attribute takes at least 1 argument}}
-void fun3(); // expected-note 2 {{when applied to this declaration}}
+void fun3(void); // expected-note 2 {{when applied to this declaration}}
 #pragma clang attribute pop
 
 #pragma clang attribute pop
@@ -67,4 +67,4 @@ void fun3(); // expected-note 2 {{when applied to this declaration}}
 
 #pragma clang attribute push (__attribute__((annotate("func"))), apply_to = function) // expected-error {{unterminated '#pragma clang attribute push' at end of file}}
 
-void function();
+void function(void);

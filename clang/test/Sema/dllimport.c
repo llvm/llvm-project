@@ -15,7 +15,7 @@ typedef __declspec(dllimport) int typedef2;
 // expected-warning@-1{{'dllimport' attribute only applies to}}
 typedef int __declspec(dllimport) typedef3;
 // expected-warning@-1{{'dllimport' attribute only applies to}}
-typedef __declspec(dllimport) void (*FunTy)();
+typedef __declspec(dllimport) void (*FunTy)(void);
 // expected-warning@-1{{'dllimport' attribute only applies to}}
 enum __declspec(dllimport) Enum { EnumVal };
 // expected-warning@-1{{'dllimport' attribute only applies to}}
@@ -108,7 +108,7 @@ __declspec(dllimport) extern int GlobalRedecl3; // expected-note{{previous decla
 
 // Adding an attribute on redeclaration.
                       extern int GlobalRedecl4; // expected-note{{previous declaration is here}}
-int useGlobalRedecl4() { return GlobalRedecl4; }
+int useGlobalRedecl4(void) { return GlobalRedecl4; }
 __declspec(dllimport) extern int GlobalRedecl4; // expected-error{{redeclaration of 'GlobalRedecl4' cannot add 'dllimport' attribute}}
 
 // Allow with a warning if the decl hasn't been used yet.
@@ -127,7 +127,7 @@ __declspec(dllimport) float LocalRedecl1; // expected-note{{previous declaration
 __declspec(dllimport) float LocalRedecl2; // expected-note{{previous declaration is here}}
 __declspec(dllimport) float LocalRedecl3; // expected-note{{previous declaration is here}}
 __declspec(dllimport) float LocalRedecl4;
-void functionScope() {
+void functionScope(void) {
   __declspec(dllimport) int LocalRedecl1; // expected-error{{redeclaration of 'LocalRedecl1' with a different type: 'int' vs 'float'}}
   int *__attribute__((dllimport)) LocalRedecl2; // expected-error{{redeclaration of 'LocalRedecl2' with a different type: 'int *' vs 'float'}}
   int LocalRedecl3 __attribute__((dllimport)); // expected-error{{redeclaration of 'LocalRedecl3' with a different type: 'int' vs 'float'}}
@@ -149,62 +149,62 @@ void functionScope() {
 //===----------------------------------------------------------------------===//
 
 // Import function declaration. Check different placements.
-__attribute__((dllimport)) void decl1A(); // Basic check with __attribute__
-__declspec(dllimport)      void decl1B();
+__attribute__((dllimport)) void decl1A(void); // Basic check with __attribute__
+__declspec(dllimport)      void decl1B(void);
 
-void __attribute__((dllimport)) decl2A();
-void __declspec(dllimport)      decl2B();
+void __attribute__((dllimport)) decl2A(void);
+void __declspec(dllimport)      decl2B(void);
 
 // Address of functions can be used for initialization in C language modes.
 // However, the address of the thunk wrapping the function is used instead of
 // the address in the import address table.
-void (*FunForInit)() = &decl2A;
+void (*FunForInit)(void) = &decl2A;
 
 // Not allowed on function definitions.
-__declspec(dllimport) void def() {} // expected-error{{dllimport cannot be applied to non-inline function definition}}
+__declspec(dllimport) void def(void) {} // expected-error{{dllimport cannot be applied to non-inline function definition}}
 
 // Import inline function.
 #ifdef GNU
 // expected-warning@+3{{'dllimport' attribute ignored on inline function}}
 // expected-warning@+3{{'dllimport' attribute ignored on inline function}}
 #endif
-__declspec(dllimport) inline void inlineFunc1() {}
-inline void __attribute__((dllimport)) inlineFunc2() {}
+__declspec(dllimport) inline void inlineFunc1(void) {}
+inline void __attribute__((dllimport)) inlineFunc2(void) {}
 
 // Redeclarations
-__declspec(dllimport) void redecl1();
-__declspec(dllimport) void redecl1();
+__declspec(dllimport) void redecl1(void);
+__declspec(dllimport) void redecl1(void);
 
-__declspec(dllimport) void redecl2(); // expected-note{{previous declaration is here}} expected-note{{previous attribute is here}}
-                      void redecl2(); // expected-warning{{'redecl2' redeclared without 'dllimport' attribute: previous 'dllimport' ignored}}
+__declspec(dllimport) void redecl2(void); // expected-note{{previous declaration is here}} expected-note{{previous attribute is here}}
+                      void redecl2(void); // expected-warning{{'redecl2' redeclared without 'dllimport' attribute: previous 'dllimport' ignored}}
 
 #ifdef GNU
                       // expected-note@+2{{previous attribute is here}}
 #endif
-                      __declspec(dllimport) void redecl3(); // expected-note{{previous declaration is here}}
+                      __declspec(dllimport) void redecl3(void); // expected-note{{previous declaration is here}}
                       // NB: Both MSVC and Clang issue a warning and make redecl3 dllexport.
 #if defined(MS) || defined(WI)
                       // expected-warning@+4{{'redecl3' redeclared without 'dllimport' attribute: 'dllexport' attribute added}}
 #else
                       // expected-warning@+2{{'redecl3' redeclared without 'dllimport' attribute: previous 'dllimport' ignored}}
 #endif
-                      void redecl3() {}
+                      void redecl3(void) {}
 
-                      void redecl4(); // expected-note{{previous declaration is here}}
-void useRedecl4() { redecl4(); }
-__declspec(dllimport) void redecl4(); // expected-warning{{redeclaration of 'redecl4' should not add 'dllimport' attribute}}
+                      void redecl4(void); // expected-note{{previous declaration is here}}
+void useRedecl4(void) { redecl4(); }
+__declspec(dllimport) void redecl4(void); // expected-warning{{redeclaration of 'redecl4' should not add 'dllimport' attribute}}
 
 // Allow with a warning if the decl hasn't been used yet.
-                      void redecl5(); // expected-note{{previous declaration is here}}
-__declspec(dllimport) void redecl5(); // expected-warning{{redeclaration of 'redecl5' should not add 'dllimport' attribute}}
+                      void redecl5(void); // expected-note{{previous declaration is here}}
+__declspec(dllimport) void redecl5(void); // expected-warning{{redeclaration of 'redecl5' should not add 'dllimport' attribute}}
 
 
 // Inline redeclarations.
 #ifdef GNU
 // expected-warning@+3{{'redecl6' redeclared inline; 'dllimport' attribute ignored}}
 #endif
-__declspec(dllimport) void redecl6();
-                      inline void redecl6() {}
+__declspec(dllimport) void redecl6(void);
+                      inline void redecl6(void) {}
 
 #if defined(MS) || defined (WI)
 // expected-note@+5{{previous declaration is here}}
@@ -212,8 +212,8 @@ __declspec(dllimport) void redecl6();
 #else
 // expected-warning@+3{{'dllimport' attribute ignored on inline function}}
 #endif
-                      void redecl7();
-__declspec(dllimport) inline void redecl7() {}
+                      void redecl7(void);
+__declspec(dllimport) inline void redecl7(void) {}
 
 // PR31069: Don't crash trying to merge attributes for redeclaration of invalid
 // decl.
@@ -225,9 +225,9 @@ void __declspec(dllimport) redecl9(void); // expected-note{{previous declaration
 int redecl9(void) {} // expected-error{{conflicting types for 'redecl9'}}
 
 // External linkage is required.
-__declspec(dllimport) static int staticFunc(); // expected-error{{'staticFunc' must have external linkage when declared 'dllimport'}}
+__declspec(dllimport) static int staticFunc(void); // expected-error{{'staticFunc' must have external linkage when declared 'dllimport'}}
 
 // Static locals don't count as having external linkage.
-void staticLocalFunc() {
+void staticLocalFunc(void) {
   __declspec(dllimport) static int staticLocal; // expected-error{{'staticLocal' must have external linkage when declared 'dllimport'}}
 }

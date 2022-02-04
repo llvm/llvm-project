@@ -18,7 +18,7 @@ void non_iso_warning_test(__int32 i32, __int64 i64, wchar_t c, void *p) {
 
 #else
 
-void signed_test() {
+void signed_test(void) {
   short val = 30;
   printf("val = %I64d\n", val); // expected-warning{{format specifies type '__int64' (aka 'long long') but the argument has type 'short'}}
   long long bigval = 30;
@@ -26,7 +26,7 @@ void signed_test() {
   printf("val = %Id\n", bigval); // expected-warning{{format specifies type '__int32' (aka 'int') but the argument has type 'long long'}}
 }
 
-void unsigned_test() {
+void unsigned_test(void) {
   unsigned short val = 30;
   printf("val = %I64u\n", val); // expected-warning{{format specifies type 'unsigned __int64' (aka 'unsigned long long') but the argument has type 'unsigned short'}}
   unsigned long long bigval = 30;

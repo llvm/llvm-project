@@ -9,7 +9,7 @@ typedef int vec __attribute__((vector_size(4)));
 typedef struct test_struct {
 } test_struct;
 
-void f1() {
+void f1(void) {
   cx4x4 m1;
   ix4x4 m2;
   sx4x4 m3;
@@ -49,7 +49,7 @@ typedef signed int signed_int_12x12 __attribute__((matrix_type(12, 12)));
 typedef unsigned int unsigned_int_12x12 __attribute__((matrix_type(12, 12)));
 typedef unsigned int unsigned_int_10x10 __attribute__((matrix_type(10, 10)));
 
-void f2() {
+void f2(void) {
   float2_8x8 m1;
   double_10x10 m2;
   double_8x8 m3;

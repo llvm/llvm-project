@@ -29,7 +29,7 @@ void WINAPI mismatched_stdcall(int x) {}
 
 void take_opaque_fn(void (*callback)(int));
 
-int main() {
+int main(void) {
   // expected-warning@+1 {{cast between incompatible calling conventions 'cdecl' and 'stdcall'}}
   take_callback((callback_t)mismatched);
 

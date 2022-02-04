@@ -12,7 +12,7 @@ typedef __typeof__(sizeof(int)) size_t;
 typedef unsigned long ulong2 __attribute__ ((ext_vector_type(2)));
 typedef size_t stride4 __attribute__((ext_vector_type(4)));
 
-static void test() {
+static void test(void) {
     float2 vec2;
     float3 vec3;
     float4 vec4, vec4_2;

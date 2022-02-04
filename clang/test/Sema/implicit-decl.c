@@ -8,7 +8,7 @@ typedef unsigned char Boolean;
 
 extern int printf(__const char *__restrict __format, ...); // expected-note{{'printf' declared here}}
 
-void func() {
+void func(void) {
    int32_t *vector[16];
    const char compDesc[16 + 1];
    int32_t compCount = 0;
@@ -27,7 +27,7 @@ Boolean _CFCalendarDecomposeAbsoluteTimeV(const char *componentDesc, int32_t **v
 
 // Test the typo-correction callback in Sema::ImplicitlyDefineFunction
 extern int sformatf(char *str, __const char *__restrict __format, ...); // expected-note{{'sformatf' declared here}}
-void test_implicit() {
+void test_implicit(void) {
   int formats = 0;
   formatd("Hello, World!\n"); // expected-error{{implicit declaration of function 'formatd' is invalid in C99}} \
                               // expected-note{{did you mean 'sformatf'?}}

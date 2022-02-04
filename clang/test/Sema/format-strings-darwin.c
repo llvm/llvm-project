@@ -10,7 +10,7 @@
 int printf(const char *restrict, ...);
 int scanf(const char * restrict, ...) ;
 
-void test() {
+void test(void) {
   int justRight = 1;
   long tooLong = 2;
 

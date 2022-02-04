@@ -128,7 +128,7 @@ void matrix_matrix_divide(sx10x10_t a, sx5x10_t b, ix10x5_t c, ix10x10_t d, floa
   // expected-error@-1 {{invalid operands to binary expression ('sx10x10_t' (aka 'float __attribute__((matrix_type(10, 10)))') and 'sx10x10_t')}}
 }
 
-sx5x10_t get_matrix();
+sx5x10_t get_matrix(void);
 
 void insert(sx5x10_t a, float f) {
   // Non integer indexes.

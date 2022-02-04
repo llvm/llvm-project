@@ -2,10 +2,10 @@
 
 typedef struct { unsigned long bits[(((1) + (64) - 1) / (64))]; } cpumask_t;
 cpumask_t x;
-void foo() {
+void foo(void) {
   (void)x;
 }
-void bar() {
+void bar(void) {
   char* a;
   double b;
   b = (double)a; // expected-error {{pointer cannot be cast to type}}
@@ -183,7 +183,7 @@ void *intToPointerCast2(X x) {
   return (void*)x;
 }
 
-void *intToPointerCast3() {
+void *intToPointerCast3(void) {
   return (void*)(1 + 3);
 }
 

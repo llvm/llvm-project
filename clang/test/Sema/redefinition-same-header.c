@@ -11,4 +11,4 @@
 #include "a.h"
 #include "a.h"
 
-int foo() { return yyy; }
+int foo(void) { return yyy; }

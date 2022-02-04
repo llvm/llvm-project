@@ -208,7 +208,7 @@ char clrsb12[__builtin_clrsb(~0x1f) == BITSIZE(int) - 6 ? 1 : -1];
 
 // GCC misc stuff
 
-extern int f();
+extern int f(void);
 
 int h0 = __builtin_types_compatible_p(int, float);
 //int h1 = __builtin_choose_expr(1, 10, f());
