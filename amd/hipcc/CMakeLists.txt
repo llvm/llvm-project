@@ -7,13 +7,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 set (LINK_LIBS libstdc++fs.so)
 add_executable(hipcc.bin src/hipBin.cpp)
-if (NOT WIN32) # c++17 does not require the std lib linking
+if (NOT WIN32) # C++17 does not require the std lib linking
   target_link_libraries(hipcc.bin ${LINK_LIBS} ) # for hipcc.bin
 endif()
 
 project (hipconfig.bin)
 add_executable(hipconfig.bin src/hipBin.cpp)
-if (NOT WIN32) # c++17 does not require the std lib linking
+if (NOT WIN32) # C++17 does not require the std lib linking
   target_link_libraries(hipconfig.bin ${LINK_LIBS} ) # for hipconfig.bin
 endif()
 
