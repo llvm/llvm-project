@@ -157,7 +157,7 @@ _Z12never_throwsv:
 	ret
 	.cfi_endproc
 .LFE17:
-	.section	.gcc_except_table
+	.section	.gcc_except_table,"a",@progbits
 	.align 4
 .LLSDA17:
 	.byte	0xff
@@ -304,7 +304,7 @@ main:
 	ret
 	.cfi_endproc
 .LFE18:
-	.section	.gcc_except_table
+	.section	.gcc_except_table,"a",@progbits
 	.align 4
 .LLSDA18:
 	.byte	0xff

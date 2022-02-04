@@ -124,7 +124,7 @@ _Z12never_throwsv:
 .LEHE3:
 	.cfi_endproc
 .LFE14:
-	.section	.gcc_except_table
+	.section	.gcc_except_table,"a",@progbits
 	.align 4
 .LLSDA14:
 	.byte	0xff
@@ -317,7 +317,7 @@ main:
 .LEHE14:
 	.cfi_endproc
 .LFE15:
-	.section	.gcc_except_table
+	.section	.gcc_except_table,"a",@progbits
 	.align 4
 .LLSDA15:
 	.byte	0xff
