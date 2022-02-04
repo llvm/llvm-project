@@ -2307,13 +2307,12 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
   }
 #endif
 
-  // The successor blocks must not have any PHI nodes.
+  // In the unwind destination, the incoming values for these two `invoke`s
+  // must be compatible .
   // We know we don't have the normal destination, so we don't check it.
-  // FIXME: instead check that the incoming values are compatible?
-  auto HasPHIsInUnwindDest = [](InvokeInst *II) {
-    return !empty(II->getUnwindDest()->phis());
-  };
-  if (any_of(Invokes, HasPHIsInUnwindDest))
+  if (!IncomingValuesAreCompatible(
+          Invokes.front()->getUnwindDest(),
+          {Invokes[0]->getParent(), Invokes[1]->getParent()}))
     return false;
 
   // Ignoring arguments, these `invoke`s must be identical,
@@ -2417,6 +2416,13 @@ static void MergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
     U.set(PN);
   }
 
+  // We've ensured that each PHI node in the `landingpad` has compatible
+  // (identical) incoming values when coming from each of the `invoke`s
+  // in the current merge set, so update the PHI nodes accordingly.
+  AddPredecessorToBlock(/*Succ=*/MergedInvoke->getUnwindDest(),
+                        /*NewPred=*/MergedInvoke->getParent(),
+                        /*ExistPred=*/Invokes.front()->getParent());
+
   // And finally, replace the original `invoke`s with an unconditional branch
   // to the block with the merged `invoke`. Also, give that merged `invoke`
   // the merged debugloc of all the original `invoke`s.
@@ -2431,7 +2437,8 @@ static void MergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
 
     // And replace the old `invoke` with an unconditionally branch
     // to the block with the merged `invoke`.
-    II->getNormalDest()->removePredecessor(II->getParent());
+    for (BasicBlock *OrigSuccBB : successors(II->getParent()))
+      OrigSuccBB->removePredecessor(II->getParent());
     BranchInst::Create(MergedInvoke->getParent(), II->getParent());
     // Since the normal destination was unreachable, there are no live uses.
     II->replaceAllUsesWith(UndefValue::get(II->getType()));
