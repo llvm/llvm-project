@@ -54,13 +54,12 @@ class TestSwiftReflectionOnly(lldbtest.TestBase):
         check_var(self, s_filepriv, num_children=1)
         check_var(self, s_filepriv.GetChildMemberWithName("i"), value="3")
 
-        # FIXME: scratch context assertion
-        # check_var(self, frame.FindVariable("generic"), use_dynamic=True, value="42")
+        check_var(self, frame.FindVariable("generic"), use_dynamic=True, value="42")
 
-        # gtup = frame.FindVariable("generic_tuple")
-        # check_var(self, gtup, num_children=2)
-        # check_var(self, gtup.GetChildAtIndex(0), use_dynamic=True, value="42")
-        # check_var(self, gtup.GetChildAtIndex(1), use_dynamic=True, value="42")
+        gtup = frame.FindVariable("generic_tuple")
+        check_var(self, gtup, num_children=2)
+        check_var(self, gtup.GetChildAtIndex(0), use_dynamic=True, value="42")
+        check_var(self, gtup.GetChildAtIndex(1), use_dynamic=True, value="42")
 
         check_var(self, frame.FindVariable("word"), value="0")
         check_var(self, frame.FindVariable("enum1"), value="second")
@@ -77,10 +76,12 @@ class TestSwiftReflectionOnly(lldbtest.TestBase):
         found_ast_exe = 0
         found_ast_lib = 0
         for line in logfile:
-            if 'SwiftASTContextForExpressions::RegisterSectionModules("a.out")' in line:
-                found_ast_exe += 1
+            if 'SwiftASTContextForExpressions::RegisterSectionModules("a.out");' in line:
+                if not 'retrieved 0 AST Data blobs' in line:
+                    found_ast_exe += 1
             elif 'SwiftASTContextForExpressions::RegisterSectionModules("dyld")' in line:
-                found_ast_lib += 1
+                if not 'retrieved 0 AST Data blobs' in line:
+                    found_ast_lib += 1
             elif re.search(r'Adding reflection metadata in .*a\.out', line):
                 found_ref_exe += 1
             elif re.search(r'Adding reflection metadata in .*dynamic_lib', line):

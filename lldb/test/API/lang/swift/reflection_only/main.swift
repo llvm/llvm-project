@@ -15,7 +15,6 @@ class C : Base {
     let generic_tuple = (t, t)
     let word = 0._builtinWordValue
     let enum1 = NoPayload.second
-    // FIXME: Fails in swift::reflection::NoPayloadEnumTypeInfo::projectEnumValue: .second
     let enum2 = WithPayload.with(i:42)
     print("Set breakpoint here")
   }

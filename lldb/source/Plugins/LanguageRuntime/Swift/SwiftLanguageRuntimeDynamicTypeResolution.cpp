@@ -1561,9 +1561,8 @@ static bool IsPrivateNSClass(NodePointer node) {
 }
 
 bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
-    ValueObject &in_value, SwiftASTContextForExpressions &scratch_ctx,
-    lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
-    Address &address) {
+    ValueObject &in_value, lldb::DynamicValueType use_dynamic,
+    TypeAndOrName &class_type_or_name, Address &address) {
   AddressType address_type;
   lldb::addr_t instance_ptr = in_value.GetPointerValue(&address_type);
   if (instance_ptr == LLDB_INVALID_ADDRESS || instance_ptr == 0)
@@ -1612,7 +1611,17 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
   class_type_or_name.SetCompilerType(ts.RemangleAsType(dem, node));
 
 #ifndef NDEBUG
-  auto &remote_ast = GetRemoteASTContext(scratch_ctx);
+  // Dynamic type resolution in RemoteAST might pull in other Swift modules, so
+  // use the scratch context where such operations are legal and safe.
+  llvm::Optional<SwiftScratchContextReader> maybe_scratch_ctx =
+      in_value.GetSwiftScratchContext();
+  if (!maybe_scratch_ctx)
+    return false;
+  SwiftASTContextForExpressions *scratch_ctx = maybe_scratch_ctx->get();
+  if (!scratch_ctx)
+    return true;
+
+  auto &remote_ast = GetRemoteASTContext(*scratch_ctx);
   auto remote_ast_metadata_address = remote_ast.getHeapMetadataForObject(
       swift::remote::RemoteAddress(instance_ptr));
   if (remote_ast_metadata_address) {
@@ -1705,14 +1714,24 @@ bool SwiftLanguageRuntimeImpl::IsValidErrorValue(ValueObject &in_value) {
 
 bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Protocol(
     ValueObject &in_value, CompilerType protocol_type,
-    SwiftASTContextForExpressions &scratch_ctx,
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
     Address &address) {
   auto remote_ast_impl = [&](bool use_local_buffer,
                              lldb::addr_t existential_address)
       -> llvm::Optional<std::pair<CompilerType, Address>> {
+    // Dynamic type resolution in RemoteAST might pull in other Swift modules,
+    // so
+    // use the scratch context where such operations are legal and safe.
+    llvm::Optional<SwiftScratchContextReader> maybe_scratch_ctx =
+        in_value.GetSwiftScratchContext();
+    if (!maybe_scratch_ctx)
+      return {};
+    SwiftASTContextForExpressions *scratch_ctx = maybe_scratch_ctx->get();
+    if (!scratch_ctx)
+      return {};
+
     swift::remote::RemoteAddress remote_existential(existential_address);
-    auto &remote_ast = GetRemoteASTContext(scratch_ctx);
+    auto &remote_ast = GetRemoteASTContext(*scratch_ctx);
     auto swift_type = GetSwiftType(protocol_type);
     if (!swift_type)
       return {};
@@ -1737,11 +1756,6 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Protocol(
   };
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
-
-  auto &target = m_process.GetTarget();
-  assert(IsScratchContextLocked(target) &&
-         "Swift scratch context not locked ahead");
-
   auto *tss =
       llvm::dyn_cast_or_null<TypeSystemSwift>(protocol_type.GetTypeSystem());
   if (!tss) {
@@ -2017,9 +2031,6 @@ CompilerType
 SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
                                                     CompilerType base_type) {
   LLDB_SCOPED_TIMER();
-   auto &target = m_process.GetTarget();
-  assert(IsScratchContextLocked(target) &&
-         "Swift scratch context not locked ahead of archetype binding");
 
   // If this is a TypeRef type, bind that.
   auto sc = stack_frame.GetSymbolContext(lldb::eSymbolContextEverything);
@@ -2029,6 +2040,10 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
                                      base_type.GetMangledTypeName());
 
   Status error;
+  auto &target = m_process.GetTarget();
+  assert(IsScratchContextLocked(target) &&
+         "Swift scratch context not locked ahead of archetype binding");
+
   // A failing Clang import in a module context permanently damages
   // that module context.  Binding archetypes can trigger an import of
   // another module, so switch to a scratch context where such an
@@ -2545,37 +2560,6 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
   if (!CouldHaveDynamicValue(in_value))
     return false;
 
-  // Dynamic type resolution in RemoteAST might pull in other Swift modules, so
-  // use the scratch context where such operations are legal and safe.
-  assert(IsScratchContextLocked(in_value.GetTargetSP()) &&
-         "Swift scratch context not locked ahead of dynamic type resolution");
-  llvm::Optional<SwiftScratchContextReader> maybe_scratch_ctx =
-      in_value.GetSwiftScratchContext();
-  if (!maybe_scratch_ctx)
-    return false;
-  SwiftASTContextForExpressions *scratch_ctx = maybe_scratch_ctx->get();
-
-  auto retry_once = [&]() {
-    // Retry exactly once using the per-module fallback scratch context.
-    auto &target = m_process.GetTarget();
-    if (!target.UseScratchTypesystemPerModule()) {
-      Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
-      if (log)
-        log->Printf("Dynamic type resolution detected fatal errors in "
-                    "shared Swift state. Falling back to per-module "
-                    "scratch context.\n");
-      target.SetUseScratchTypesystemPerModule(true);
-      return GetDynamicTypeAndAddress(in_value, use_dynamic, class_type_or_name,
-                                      address, value_type);
-    }
-    return false;
-  };
-
-  if (scratch_ctx->HasFatalErrors())
-    return retry_once();
-
-  // Import the type into the scratch context. Any form of dynamic
-  // type resolution may trigger a cross-module import.
   CompilerType val_type(in_value.GetCompilerType());
   Flags type_info(val_type.GetTypeInfo());
   if (!type_info.AnySet(eTypeIsSwift))
@@ -2583,21 +2567,19 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
 
   bool success = false;
   bool is_indirect_enum_case = IsIndirectEnumCase(in_value);
-  // Type kinds with metadata don't need archetype binding.
+  // Type kinds with instance metadata don't need generic type resolution.
   if (is_indirect_enum_case)
-    // ..._IndirectEnumCase() recurses, no need to bind archetypes.
     success = GetDynamicTypeAndAddress_IndirectEnumCase(
         in_value, use_dynamic, class_type_or_name, address);
   else if (type_info.AnySet(eTypeIsClass) ||
            type_info.AllSet(eTypeIsBuiltIn | eTypeIsPointer | eTypeHasValue))
-    success = GetDynamicTypeAndAddress_Class(
-        in_value, *scratch_ctx, use_dynamic, class_type_or_name, address);
+    success = GetDynamicTypeAndAddress_Class(in_value, use_dynamic,
+                                             class_type_or_name, address);
   else if (type_info.AnySet(eTypeIsProtocol))
-    success = GetDynamicTypeAndAddress_Protocol(in_value, val_type,
-                                                *scratch_ctx, use_dynamic,
+    success = GetDynamicTypeAndAddress_Protocol(in_value, val_type, use_dynamic,
                                                 class_type_or_name, address);
   else {
-    // Perform archetype binding in the scratch context.
+    // Perform generic type resolution.
     StackFrameSP frame = in_value.GetExecutionContextRef().GetFrameSP();
     if (!frame)
       return false;
@@ -2608,12 +2590,11 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
 
     Flags subst_type_info(bound_type.GetTypeInfo());
     if (subst_type_info.AnySet(eTypeIsClass)) {
-      success = GetDynamicTypeAndAddress_Class(
-          in_value, *scratch_ctx, use_dynamic, class_type_or_name, address);
+      success = GetDynamicTypeAndAddress_Class(in_value, use_dynamic,
+                                               class_type_or_name, address);
     } else if (subst_type_info.AnySet(eTypeIsProtocol)) {
-      success = GetDynamicTypeAndAddress_Protocol(in_value, bound_type,
-                                                  *scratch_ctx, use_dynamic,
-                                                  class_type_or_name, address);
+      success = GetDynamicTypeAndAddress_Protocol(
+          in_value, bound_type, use_dynamic, class_type_or_name, address);
     } else {
       success = GetDynamicTypeAndAddress_Value(
           in_value, bound_type, use_dynamic, class_type_or_name, address);
@@ -2623,8 +2604,6 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
   if (success)
     value_type = GetValueType(in_value, class_type_or_name.GetCompilerType(),
                               is_indirect_enum_case);
-  else if (scratch_ctx->HasFatalErrors())
-    return retry_once();
   return success;
 }
 

@@ -49,7 +49,7 @@ class TestSwiftDynamicTypeResolutionImportConflict(TestBase):
         target, _, _, _ = lldbutil.run_to_source_breakpoint(self, "break here",
                                           lldb.SBFileSpec('main.swift'),
                                           extra_images=['Dylib', 'Conflict'])
-        # Destroy the scratch context with a dynamic type lookup.
+        # Destroy the scratch context with a dynamic clang type lookup.
         self.expect("target var -d run-target -- foofoo",
                     substrs=['(Conflict.C) foofoo'])
         self.expect("target var -- foofoo",
@@ -67,6 +67,7 @@ class TestSwiftDynamicTypeResolutionImportConflict(TestBase):
         # expect dynamic type resolution to find a type defined inside
         # the other dylib.
         self.expect("fr v -d run-target -- input",
-                    substrs=['(Dylib.LibraryProtocol) input'])
-        self.expect("expr -d run-target -- input",
-                    substrs=['(a.FromMainModule)'])
+                    substrs=['(a.FromMainModule) input', "i = 1"])
+        # FIXME: The output here is nondeterministic.
+        #self.expect("expr -d run-target -- input",
+        #            substrs=['(a.FromMainModule)'])
