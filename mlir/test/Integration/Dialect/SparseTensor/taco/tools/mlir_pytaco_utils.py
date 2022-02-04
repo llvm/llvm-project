@@ -270,3 +270,67 @@ def create_sparse_tensor(
   engine.invoke(_ENTRY_NAME, *arg_pointers)
   shape = runtime.ranked_memref_to_numpy(ctypes.pointer(c_tensor_desc.shape))
   return c_tensor_desc.storage, shape
+
+
+# TODO: With better support from MLIR, we may improve the current implementation
+# by using Python code to generate the kernel instead of doing MLIR text code
+# stitching.
+def _get_output_sparse_tensor_kernel(
+    sparsity_codes: Sequence[sparse_tensor.DimLevelType]) -> str:
+  """Creates an MLIR text kernel to output a sparse tensor to a file.
+
+  The kernel returns void.
+  """
+  rank = len(sparsity_codes)
+
+  # Use ? to represent a dimension in the dynamic shape string representation.
+  shape = "x".join(map(lambda d: "?", range(rank)))
+
+  # Convert the encoded sparsity values to a string representation.
+  sparsity = ", ".join(
+      map(lambda s: '"compressed"' if s.value else '"dense"', sparsity_codes))
+
+  # Return the MLIR text kernel.
+  return f"""
+!Ptr = type !llvm.ptr<i8>
+#enc = #sparse_tensor.encoding<{{
+  dimLevelType = [ {sparsity} ]
+}}>
+func @{_ENTRY_NAME}(%t: tensor<{shape}xf64, #enc>, %filename: !Ptr)
+attributes {{ llvm.emit_c_interface }} {{
+  sparse_tensor.out %t, %filename : tensor<{shape}xf64, #enc>, !Ptr
+  std.return
+}}"""
+
+
+def output_sparse_tensor(
+    tensor: ctypes.c_void_p, filename: str,
+    sparsity: Sequence[sparse_tensor.DimLevelType]) -> None:
+  """Outputs an MLIR sparse tensor to the given file.
+
+  Args:
+    tensor: A C pointer to the MLIR sparse tensor.
+    filename: A string for the name of the file that contains the tensor data in
+      a COO-flavored format.
+    sparsity: A sequence of DimLevelType values, one for each dimension of the
+      tensor.
+
+  Raises:
+    OSError: If there is any problem in loading the supporting C shared library.
+    ValueError:  If the shared library doesn't contain the needed routine.
+  """
+  with ir.Context() as ctx, ir.Location.unknown():
+    module = _get_output_sparse_tensor_kernel(sparsity)
+    module = ir.Module.parse(module)
+    engine = compile_and_build_engine(module)
+
+  # Convert the filename to a byte stream.
+  c_filename = ctypes.c_char_p(bytes(filename, "utf-8"))
+
+  arg_pointers = [
+      ctypes.byref(ctypes.cast(tensor, ctypes.c_void_p)),
+      ctypes.byref(c_filename)
+  ]
+
+  # Invoke the execution engine to run the module and return the result.
+  engine.invoke(_ENTRY_NAME, *arg_pointers)

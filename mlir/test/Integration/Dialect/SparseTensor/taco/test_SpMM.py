@@ -10,6 +10,7 @@ _SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(_SCRIPT_PATH)
 
 from tools import mlir_pytaco_api as pt
+from tools import testing_utils as utils
 
 # Define the CSR format.
 csr = pt.format([pt.dense, pt.compressed], [0, 1])
@@ -33,6 +34,6 @@ with tempfile.TemporaryDirectory() as test_dir:
   out_file = os.path.join(test_dir, "C.tns")
   pt.write(out_file, C)
   #
-  # CHECK: Compare files True
+  # CHECK: Compare result True
   #
-  print(f"Compare files {filecmp.cmp(golden_file, out_file)}")
+  print(f"Compare result {utils.compare_sparse_tns(golden_file, out_file)}")
