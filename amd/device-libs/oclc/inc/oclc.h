@@ -25,8 +25,14 @@
 //    __constant bool __oclc_correctly_rounded_sqrt32(void)
 //        - the application is expecting sqrt(float) to produce a correctly rounded result
 //
+//    __constant bool __oclc_wavefrontsize64
+//        - the application is being compiled for a wavefront size of 64
+//
 //    __constant int __oclc_ISA_version
 //        - the ISA version of the target device
+//
+//    __constant int __oclc_ABI_version
+//        - the ABI version the application is being compiled for
 //
 // it is expected that the implementation provides these as if declared from the following
 // C code:
@@ -41,5 +47,6 @@ extern const __constant bool __oclc_daz_opt;
 extern const __constant bool __oclc_correctly_rounded_sqrt32;
 extern const __constant bool __oclc_wavefrontsize64;
 extern const __constant int __oclc_ISA_version;
+extern const __constant int __oclc_ABI_version;
 
 #endif // OCLC_H

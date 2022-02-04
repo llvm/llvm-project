@@ -52,8 +52,6 @@ if (NOT DEFINED AMDGPU_TARGET_TRIPLE)
   set(AMDGPU_TARGET_TRIPLE "amdgcn-amd-amdhsa")
 endif()
 
-option(BUILD_HC_LIB "Build Heterogeneous Compute built-in library (hc)" ON)
-
 if (NOT PREPARE_BUILTINS)
   add_subdirectory(utils/prepare-builtins)
   set (PREPARE_BUILTINS $<TARGET_FILE:prepare-builtins>)
@@ -71,10 +69,6 @@ add_subdirectory(opencl)
 add_subdirectory(hip)
 add_subdirectory(asanrtl)
 
-if(BUILD_HC_LIB)
-  add_subdirectory(hc)
-endif()
-
 enable_testing()
 add_subdirectory(test/constant_folding)
 
@@ -90,7 +84,12 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set ( CPACK_PACKAGE_CONTACT "Advanced Micro Devices Inc." )
   set ( CPACK_PACKAGE_DESCRIPTION_SUMMARY "Radeon Open Compute - device libraries" )
   set ( CPACK_PACKAGE_DESCRIPTION "This package includes LLVM bitcode libraries." )
+  set ( CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.TXT" )
   set ( CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/RadeonOpenCompute/ROCm-Device-Libs" )
+
+  # Install License file
+  install ( FILES "${CPACK_RESOURCE_FILE_LICENSE}"
+          DESTINATION ${CMAKE_INSTALL_DOCDIR}/${CPACK_PACKAGE_NAME})
 
   set ( CPACK_GENERATOR "DEB;RPM" CACHE STRING "Default packaging generators." )
 
@@ -113,6 +112,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
   ## get distro for RPM package using dist
   message("device-libs CPACK_RPM_PACKAGE_RELEASE now is ${CPACK_RPM_PACKAGE_RELEASE}")
+  set( CPACK_RPM_PACKAGE_LICENSE "NCSA" )
 
   execute_process( COMMAND rpm --eval %{?dist}
                  RESULT_VARIABLE _result_var
