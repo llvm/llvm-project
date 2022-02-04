@@ -63,9 +63,11 @@ RUN bash /tmp/llvm.sh $(($LLVM_LATEST_VERSION - 1)) # previous release
 RUN bash /tmp/llvm.sh $LLVM_LATEST_VERSION          # latest release
 RUN bash /tmp/llvm.sh $(($LLVM_LATEST_VERSION + 1)) # current ToT
 
-# Make the ToT Clang the "default" compiler on the system
-RUN ln -fs /usr/bin/clang++-$(($LLVM_LATEST_VERSION + 1)) /usr/bin/c++ && [ -e $(readlink /usr/bin/c++) ]
-RUN ln -fs /usr/bin/clang-$(($LLVM_LATEST_VERSION + 1)) /usr/bin/cc && [ -e $(readlink /usr/bin/cc) ]
+# Make the latest version of Clang the "default" compiler on the system
+# TODO: In the future, all jobs should be using an explicitly-versioned version of Clang instead,
+#       and we can get rid of this entirely.
+RUN ln -fs /usr/bin/clang++-$LLVM_LATEST_VERSION /usr/bin/c++ && [ -e $(readlink /usr/bin/c++) ]
+RUN ln -fs /usr/bin/clang-$LLVM_LATEST_VERSION /usr/bin/cc && [ -e $(readlink /usr/bin/cc) ]
 
 # Install clang-format
 RUN apt-get install -y clang-format-$LLVM_LATEST_VERSION
