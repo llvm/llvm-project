@@ -398,6 +398,9 @@ private:
   };
 
   bool isFreeingCall(const CallEvent &Call) const;
+  static bool isFreeingOwnershipAttrCall(const FunctionDecl *Func);
+
+  friend class NoOwnershipChangeVisitor;
 
   CallDescriptionMap<CheckFn> AllocatingMemFnMap{
       {{"alloca", 1}, &MallocChecker::checkAlloca},
@@ -742,7 +745,9 @@ private:
 
 namespace {
 class NoOwnershipChangeVisitor final : public NoStateChangeFuncVisitor {
+  // The symbol whose (lack of) ownership change we are interested in.
   SymbolRef Sym;
+  const MallocChecker &Checker;
   using OwnerSet = llvm::SmallPtrSet<const MemRegion *, 8>;
 
   // Collect which entities point to the allocated memory, and could be
@@ -794,6 +799,29 @@ protected:
     return "";
   }
 
+  /// Syntactically checks whether the callee is a deallocating function. Since
+  /// we have no path-sensitive information on this call (we would need a
+  /// CallEvent instead of a CallExpr for that), its possible that a
+  /// deallocation function was called indirectly through a function pointer,
+  /// but we are not able to tell, so this is a best effort analysis.
+  /// See namespace `memory_passed_to_fn_call_free_through_fn_ptr` in
+  /// clang/test/Analysis/NewDeleteLeaks.cpp.
+  bool isFreeingCallAsWritten(const CallExpr &Call) const {
+    if (Checker.FreeingMemFnMap.lookupAsWritten(Call) ||
+        Checker.ReallocatingMemFnMap.lookupAsWritten(Call))
+      return true;
+
+    if (const auto *Func =
+            llvm::dyn_cast_or_null<FunctionDecl>(Call.getCalleeDecl()))
+      return MallocChecker::isFreeingOwnershipAttrCall(Func);
+
+    return false;
+  }
+
+  /// Heuristically guess whether the callee intended to free memory. This is
+  /// done syntactically, because we are trying to argue about alternative
+  /// paths of execution, and as a consequence we don't have path-sensitive
+  /// information.
   bool doesFnIntendToHandleOwnership(const Decl *Callee, ASTContext &ACtx) {
     using namespace clang::ast_matchers;
     const FunctionDecl *FD = dyn_cast<FunctionDecl>(Callee);
@@ -807,13 +835,21 @@ protected:
     if (!FD || !FD->hasBody())
       return false;
 
-    // TODO: Operator delete is hardly the only deallocator -- Can we reuse
-    // isFreeingCall() or something thats already here?
-    auto Deallocations = match(
-        stmt(hasDescendant(cxxDeleteExpr().bind("delete"))
-             ), *FD->getBody(), ACtx);
-    // TODO: Ownership my change with an attempt to store the allocated memory.
-    return !Deallocations.empty();
+    auto Matches = match(findAll(stmt(anyOf(cxxDeleteExpr().bind("delete"),
+                                            callExpr().bind("call")))),
+                         *FD->getBody(), ACtx);
+    for (BoundNodes Match : Matches) {
+      if (Match.getNodeAs<CXXDeleteExpr>("delete"))
+        return true;
+
+      if (const auto *Call = Match.getNodeAs<CallExpr>("call"))
+        if (isFreeingCallAsWritten(*Call))
+          return true;
+    }
+    // TODO: Ownership might change with an attempt to store the allocated
+    // memory, not only through deallocation. Check for attempted stores as
+    // well.
+    return false;
   }
 
   virtual bool
@@ -882,9 +918,9 @@ protected:
   }
 
 public:
-  NoOwnershipChangeVisitor(SymbolRef Sym)
-      : NoStateChangeFuncVisitor(bugreporter::TrackingKind::Thorough),
-        Sym(Sym) {}
+  NoOwnershipChangeVisitor(SymbolRef Sym, const MallocChecker *Checker)
+      : NoStateChangeFuncVisitor(bugreporter::TrackingKind::Thorough), Sym(Sym),
+        Checker(*Checker) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     static int Tag = 0;
@@ -1069,18 +1105,24 @@ static bool isStandardNewDelete(const FunctionDecl *FD) {
 // Methods of MallocChecker and MallocBugVisitor.
 //===----------------------------------------------------------------------===//
 
-bool MallocChecker::isFreeingCall(const CallEvent &Call) const {
-  if (FreeingMemFnMap.lookup(Call) || ReallocatingMemFnMap.lookup(Call))
-    return true;
-
-  const auto *Func = dyn_cast<FunctionDecl>(Call.getDecl());
-  if (Func && Func->hasAttrs()) {
+bool MallocChecker::isFreeingOwnershipAttrCall(const FunctionDecl *Func) {
+  if (Func->hasAttrs()) {
     for (const auto *I : Func->specific_attrs<OwnershipAttr>()) {
       OwnershipAttr::OwnershipKind OwnKind = I->getOwnKind();
       if (OwnKind == OwnershipAttr::Takes || OwnKind == OwnershipAttr::Holds)
         return true;
     }
   }
+  return false;
+}
+
+bool MallocChecker::isFreeingCall(const CallEvent &Call) const {
+  if (FreeingMemFnMap.lookup(Call) || ReallocatingMemFnMap.lookup(Call))
+    return true;
+
+  if (const auto *Func = dyn_cast_or_null<FunctionDecl>(Call.getDecl()))
+    return isFreeingOwnershipAttrCall(Func);
+
   return false;
 }
 
@@ -2756,7 +2798,7 @@ void MallocChecker::HandleLeak(SymbolRef Sym, ExplodedNode *N,
   R->markInteresting(Sym);
   R->addVisitor<MallocBugVisitor>(Sym, true);
   if (ShouldRegisterNoOwnershipChangeVisitor)
-    R->addVisitor<NoOwnershipChangeVisitor>(Sym);
+    R->addVisitor<NoOwnershipChangeVisitor>(Sym, this);
   C.emitReport(std::move(R));
 }
 
