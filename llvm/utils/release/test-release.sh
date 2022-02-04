@@ -455,7 +455,8 @@ function test_llvmCore() {
     if [ $do_test_suite = 'yes' ]; then
       cd $TestSuiteBuildDir
       env CC="$c_compiler" CXX="$cxx_compiler" \
-          cmake $TestSuiteSrcDir -G "$generator" -DTEST_SUITE_LIT=$Lit
+          cmake $TestSuiteSrcDir -G "$generator" -DTEST_SUITE_LIT=$Lit \
+                -DTEST_SUITE_HOST_CC=$build_compiler
 
       if ! ( ${MAKE} -j $NumJobs $KeepGoing check \
           2>&1 | tee $LogDir/llvm.check-Phase$Phase-$Flavor.log ) ; then
@@ -551,6 +552,8 @@ for Flavor in $Flavors ; do
 
     c_compiler="$CC"
     cxx_compiler="$CXX"
+    build_compiler="$CC"
+    [[ -z "$build_compiler" ]] && build_compiler="cc"
     llvmCore_phase1_objdir=$BuildDir/Phase1/$Flavor/llvmCore-$Release-$RC.obj
     llvmCore_phase1_destdir=$BuildDir/Phase1/$Flavor/llvmCore-$Release-$RC.install
 
