@@ -490,16 +490,12 @@ struct RemoveDuplicateOperandsPattern : public OpRewritePattern<OpTy> {
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
     // Find unique operands.
-    SmallVector<Value, 2> unique;
-    for (Value v : op.getOperands()) {
-      if (!llvm::is_contained(unique, v))
-        unique.push_back(v);
-    }
+    SetVector<Value> unique(op.operand_begin(), op.operand_end());
 
     // Reduce op to equivalent with unique operands.
     if (unique.size() < op.getNumOperands()) {
-      rewriter.replaceOpWithNewOp<OpTy>(op, op->getResultTypes(), unique,
-                                        op->getAttrs());
+      rewriter.replaceOpWithNewOp<OpTy>(op, op->getResultTypes(),
+                                        unique.takeVector(), op->getAttrs());
       return success();
     }
 
@@ -919,7 +915,7 @@ OpFoldResult CstrBroadcastableOp::fold(ArrayRef<Attribute> operands) {
 }
 
 LogicalResult CstrBroadcastableOp::verify() {
-  // Ensure that AssumingAllOp contains at least one operand
+  // Ensure that CstrBroadcastableOp contains at least two operands
   if (getNumOperands() < 2)
     return emitOpError("required at least 2 input shapes");
   return success();
