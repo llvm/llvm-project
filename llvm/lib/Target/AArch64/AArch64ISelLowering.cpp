@@ -3950,7 +3950,9 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   // If SVE is available then i64 vector multiplications can also be made legal.
   bool OverrideNEON = VT == MVT::v2i64 || VT == MVT::v1i64;
 
-  if (VT.isScalableVector() || useSVEForFixedLengthVectorVT(VT, OverrideNEON))
+  if (VT.isScalableVector() ||
+      useSVEForFixedLengthVectorVT(
+          VT, OverrideNEON && Subtarget->useSVEForFixedLengthVectors()))
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::MUL_PRED);
 
   // Multiplications are only custom-lowered for 128-bit vectors so that
@@ -4429,8 +4431,9 @@ bool AArch64TargetLowering::shouldRemoveExtendFromGSIndex(EVT VT) const {
 
 bool AArch64TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
   return ExtVal.getValueType().isScalableVector() ||
-         useSVEForFixedLengthVectorVT(ExtVal.getValueType(),
-                                      /*OverrideNEON=*/true);
+         useSVEForFixedLengthVectorVT(
+             ExtVal.getValueType(),
+             /*OverrideNEON=*/Subtarget->useSVEForFixedLengthVectors());
 }
 
 unsigned getGatherVecOpcode(bool IsScaled, bool IsSigned, bool NeedsExtend) {
@@ -4770,7 +4773,9 @@ SDValue AArch64TargetLowering::LowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
   assert(LoadNode && "Expected custom lowering of a masked load node");
   EVT VT = Op->getValueType(0);
 
-  if (useSVEForFixedLengthVectorVT(VT, true))
+  if (useSVEForFixedLengthVectorVT(
+          VT,
+          /*OverrideNEON=*/Subtarget->useSVEForFixedLengthVectors()))
     return LowerFixedLengthVectorMLoadToSVE(Op, DAG);
 
   SDValue PassThru = LoadNode->getPassThru();
@@ -4837,7 +4842,9 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   EVT MemVT = StoreNode->getMemoryVT();
 
   if (VT.isVector()) {
-    if (useSVEForFixedLengthVectorVT(VT, true))
+    if (useSVEForFixedLengthVectorVT(
+            VT,
+            /*OverrideNEON=*/Subtarget->useSVEForFixedLengthVectors()))
       return LowerFixedLengthVectorStoreToSVE(Op, DAG);
 
     unsigned AS = StoreNode->getAddressSpace();
@@ -5262,9 +5269,6 @@ bool AArch64TargetLowering::mergeStoresAfterLegalization(EVT VT) const {
 
 bool AArch64TargetLowering::useSVEForFixedLengthVectorVT(
     EVT VT, bool OverrideNEON) const {
-  if (!Subtarget->useSVEForFixedLengthVectors())
-    return false;
-
   if (!VT.isFixedLengthVector())
     return false;
 
@@ -5287,10 +5291,14 @@ bool AArch64TargetLowering::useSVEForFixedLengthVectorVT(
 
   // All SVE implementations support NEON sized vectors.
   if (OverrideNEON && (VT.is128BitVector() || VT.is64BitVector()))
-    return true;
+    return Subtarget->hasSVE();
 
   // Ensure NEON MVTs only belong to a single register class.
   if (VT.getFixedSizeInBits() <= 128)
+    return false;
+
+  // Ensure wider than NEON code generation is enabled.
+  if (!Subtarget->useSVEForFixedLengthVectors())
     return false;
 
   // Don't use SVE for types that don't fit.
@@ -7472,7 +7480,8 @@ SDValue AArch64TargetLowering::LowerCTPOP(SDValue Op, SelectionDAG &DAG) const {
 SDValue AArch64TargetLowering::LowerCTTZ(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   assert(VT.isScalableVector() ||
-         useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true));
+         useSVEForFixedLengthVectorVT(
+             VT, /*OverrideNEON=*/Subtarget->useSVEForFixedLengthVectors()));
 
   SDLoc DL(Op);
   SDValue RBIT = DAG.getNode(ISD::BITREVERSE, DL, VT, Op.getOperand(0));
@@ -7504,7 +7513,8 @@ SDValue AArch64TargetLowering::LowerMinMax(SDValue Op,
   }
 
   if (VT.isScalableVector() ||
-      useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true)) {
+      useSVEForFixedLengthVectorVT(
+          VT, /*OverrideNEON=*/Subtarget->useSVEForFixedLengthVectors())) {
     switch (Opcode) {
     default:
       llvm_unreachable("Wrong instruction");
@@ -7530,7 +7540,8 @@ SDValue AArch64TargetLowering::LowerBitreverse(SDValue Op,
   EVT VT = Op.getValueType();
 
   if (VT.isScalableVector() ||
-      useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true))
+      useSVEForFixedLengthVectorVT(
+          VT, /*OverrideNEON=*/Subtarget->useSVEForFixedLengthVectors()))
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::BITREVERSE_MERGE_PASSTHRU);
 
   SDLoc DL(Op);
@@ -11179,7 +11190,7 @@ SDValue AArch64TargetLowering::LowerDIV(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
 
-  if (VT.isFixedLengthVector() && Subtarget->hasSVE())
+  if (useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true))
     return LowerFixedLengthVectorIntDivideToSVE(Op, DAG);
 
   assert(VT.isScalableVector() && "Expected a scalable vector.");
@@ -11576,7 +11587,8 @@ SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
                       (Op.getOpcode() != ISD::VECREDUCE_ADD &&
                        SrcVT.getVectorElementType() == MVT::i64);
   if (SrcVT.isScalableVector() ||
-      useSVEForFixedLengthVectorVT(SrcVT, OverrideNEON)) {
+      useSVEForFixedLengthVectorVT(
+          SrcVT, OverrideNEON && Subtarget->useSVEForFixedLengthVectors())) {
 
     if (SrcVT.getVectorElementType() == MVT::i1)
       return LowerPredReductionToSVE(Op, DAG);
@@ -19754,7 +19766,9 @@ SDValue AArch64TargetLowering::LowerReductionToSVE(unsigned Opcode,
   SDValue VecOp = ScalarOp.getOperand(0);
   EVT SrcVT = VecOp.getValueType();
 
-  if (useSVEForFixedLengthVectorVT(SrcVT, true)) {
+  if (useSVEForFixedLengthVectorVT(
+          SrcVT,
+          /*OverrideNEON=*/Subtarget->useSVEForFixedLengthVectors())) {
     EVT ContainerVT = getContainerForFixedLengthVector(DAG, SrcVT);
     VecOp = convertToScalableVector(DAG, ContainerVT, VecOp);
   }
