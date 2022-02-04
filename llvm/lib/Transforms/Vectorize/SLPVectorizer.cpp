@@ -2743,6 +2743,11 @@ private:
                "primary schedule data not in window?");
         doForAllOpcodes(I, [](ScheduleData *SD) { SD->verify(); });
       }
+
+      for (auto *SD : ReadyInsts) {
+        assert(SD->isSchedulingEntity() && SD->isReady() &&
+               "item in ready list not ready?");
+      }
     }
 
     void doForAllOpcodes(Value *V,
@@ -2764,7 +2769,7 @@ private:
           if (SD->isSchedulingEntity() && SD->isReady()) {
             ReadyList.insert(SD);
             LLVM_DEBUG(dbgs()
-                       << "SLP:    initially in ready list: " << *I << "\n");
+                       << "SLP:    initially in ready list: " << *SD << "\n");
           }
         });
       }
@@ -2828,12 +2833,8 @@ private:
     DenseMap<Value *, SmallDenseMap<Value *, ScheduleData *>>
         ExtraScheduleDataMap;
 
-    struct ReadyList : SmallVector<ScheduleData *, 8> {
-      void insert(ScheduleData *SD) { push_back(SD); }
-    };
-
     /// The ready-list for scheduling (only used for the dry-run).
-    ReadyList ReadyInsts;
+    SetVector<ScheduleData *> ReadyInsts;
 
     /// The first instruction of the scheduling region.
     Instruction *ScheduleStart = nullptr;
@@ -7539,14 +7540,15 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         doForAllOpcodes(I, [](ScheduleData *SD) { SD->clearDependencies(); });
       ReSchedule = true;
     }
-    if (ReSchedule) {
-      resetSchedule();
-      initialFillReadyList(ReadyInsts);
-    }
     if (Bundle) {
       LLVM_DEBUG(dbgs() << "SLP: try schedule bundle " << *Bundle
                         << " in block " << BB->getName() << "\n");
       calculateDependencies(Bundle, /*InsertInReadyList=*/true, SLP);
+    }
+
+    if (ReSchedule) {
+      resetSchedule();
+      initialFillReadyList(ReadyInsts);
     }
 
     // Now try to schedule the new bundle or (if no bundle) just calculate
@@ -7556,8 +7558,9 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     while (((!Bundle && ReSchedule) || (Bundle && !Bundle->isReady())) &&
            !ReadyInsts.empty()) {
       ScheduleData *Picked = ReadyInsts.pop_back_val();
-      if (Picked->isSchedulingEntity() && Picked->isReady())
-        schedule(Picked, ReadyInsts);
+      assert(Picked->isSchedulingEntity() && Picked->isReady() &&
+             "must be ready to schedule");
+      schedule(Picked, ReadyInsts);
     }
   };
 
@@ -7581,6 +7584,11 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     ScheduleData *BundleMember = getScheduleData(V);
     assert(BundleMember &&
            "no ScheduleData for bundle member (maybe not in same basic block)");
+
+    // Make sure we don't leave the pieces of the bundle in the ready list when
+    // whole bundle might not be ready.
+    ReadyInsts.remove(BundleMember);
+
     if (!BundleMember->IsScheduled)
       continue;
     // A bundle member was scheduled as single instruction before and now
@@ -7611,6 +7619,10 @@ void BoUpSLP::BlockScheduling::cancelScheduling(ArrayRef<Value *> VL,
          "Can't cancel bundle which is already scheduled");
   assert(Bundle->isSchedulingEntity() && Bundle->isPartOfBundle() &&
          "tried to unbundle something which is not a bundle");
+
+  // Remove the bundle from the ready list.
+  if (Bundle->isReady())
+    ReadyInsts.remove(Bundle);
 
   // Un-bundle: make single instructions out of the bundle.
   ScheduleData *BundleMember = Bundle;
@@ -7861,7 +7873,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
       }
     }
     if (InsertInReadyList && SD->isReady()) {
-      ReadyInsts.push_back(SD);
+      ReadyInsts.insert(SD);
       LLVM_DEBUG(dbgs() << "SLP:     gets ready on update: " << *SD->Inst
                         << "\n");
     }
