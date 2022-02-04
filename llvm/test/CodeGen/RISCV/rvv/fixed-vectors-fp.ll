@@ -2191,3 +2191,78 @@ define void @floor_v2f64(<2 x double>* %x) {
   ret void
 }
 declare <2 x double> @llvm.floor.v2f64(<2 x double>)
+
+define void @round_v8f16(<8 x half>* %x) {
+; CHECK-LABEL: round_v8f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    lui a1, %hi(.LCPI100_0)
+; CHECK-NEXT:    flh ft0, %lo(.LCPI100_0)(a1)
+; CHECK-NEXT:    lui a1, %hi(.LCPI100_1)
+; CHECK-NEXT:    flh ft1, %lo(.LCPI100_1)(a1)
+; CHECK-NEXT:    vfsgnjx.vv v9, v8, v8
+; CHECK-NEXT:    vmflt.vf v0, v9, ft0
+; CHECK-NEXT:    vfadd.vf v9, v9, ft1
+; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v9
+; CHECK-NEXT:    vfcvt.f.x.v v9, v9
+; CHECK-NEXT:    vfsgnj.vv v9, v9, v8
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
+  %a = load <8 x half>, <8 x half>* %x
+  %b = call <8 x half> @llvm.round.v8f16(<8 x half> %a)
+  store <8 x half> %b, <8 x half>* %x
+  ret void
+}
+declare <8 x half> @llvm.round.v8f16(<8 x half>)
+
+define void @round_v4f32(<4 x float>* %x) {
+; CHECK-LABEL: round_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    lui a1, %hi(.LCPI101_0)
+; CHECK-NEXT:    flw ft0, %lo(.LCPI101_0)(a1)
+; CHECK-NEXT:    lui a1, %hi(.LCPI101_1)
+; CHECK-NEXT:    flw ft1, %lo(.LCPI101_1)(a1)
+; CHECK-NEXT:    vfsgnjx.vv v9, v8, v8
+; CHECK-NEXT:    vmflt.vf v0, v9, ft0
+; CHECK-NEXT:    vfadd.vf v9, v9, ft1
+; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v9
+; CHECK-NEXT:    vfcvt.f.x.v v9, v9
+; CHECK-NEXT:    vfsgnj.vv v9, v9, v8
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x float>, <4 x float>* %x
+  %b = call <4 x float> @llvm.round.v4f32(<4 x float> %a)
+  store <4 x float> %b, <4 x float>* %x
+  ret void
+}
+declare <4 x float> @llvm.round.v4f32(<4 x float>)
+
+define void @round_v2f64(<2 x double>* %x) {
+; CHECK-LABEL: round_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    lui a1, %hi(.LCPI102_0)
+; CHECK-NEXT:    fld ft0, %lo(.LCPI102_0)(a1)
+; CHECK-NEXT:    lui a1, %hi(.LCPI102_1)
+; CHECK-NEXT:    fld ft1, %lo(.LCPI102_1)(a1)
+; CHECK-NEXT:    vfsgnjx.vv v9, v8, v8
+; CHECK-NEXT:    vmflt.vf v0, v9, ft0
+; CHECK-NEXT:    vfadd.vf v9, v9, ft1
+; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v9
+; CHECK-NEXT:    vfcvt.f.x.v v9, v9
+; CHECK-NEXT:    vfsgnj.vv v9, v9, v8
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vse64.v v8, (a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x double>, <2 x double>* %x
+  %b = call <2 x double> @llvm.round.v2f64(<2 x double> %a)
+  store <2 x double> %b, <2 x double>* %x
+  ret void
+}
+declare <2 x double> @llvm.round.v2f64(<2 x double>)
