@@ -144,8 +144,8 @@ RegAllocEvictionAdvisor::RegAllocEvictionAdvisor(const MachineFunction &MF,
 ///                   register.
 /// @param B          The live range to be evicted.
 /// @param BreaksHint True when B is already assigned to its preferred register.
-bool DefaultEvictionAdvisor::shouldEvict(LiveInterval &A, bool IsHint,
-                                         LiveInterval &B,
+bool DefaultEvictionAdvisor::shouldEvict(const LiveInterval &A, bool IsHint,
+                                         const LiveInterval &B,
                                          bool BreaksHint) const {
   bool CanSplit = RA.getExtraInfo().getStage(B) < RS_Spill;
 
@@ -164,7 +164,7 @@ bool DefaultEvictionAdvisor::shouldEvict(LiveInterval &A, bool IsHint,
 /// canEvictHintInterference - return true if the interference for VirtReg
 /// on the PhysReg, which is VirtReg's hint, can be evicted in favor of VirtReg.
 bool DefaultEvictionAdvisor::canEvictHintInterference(
-    LiveInterval &VirtReg, MCRegister PhysReg,
+    const LiveInterval &VirtReg, MCRegister PhysReg,
     const SmallVirtRegSet &FixedRegisters) const {
   EvictionCost MaxCost;
   MaxCost.setBrokenHints(1);
@@ -182,7 +182,7 @@ bool DefaultEvictionAdvisor::canEvictHintInterference(
 ///                when returning true.
 /// @returns True when interference can be evicted cheaper than MaxCost.
 bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
-    LiveInterval &VirtReg, MCRegister PhysReg, bool IsHint,
+    const LiveInterval &VirtReg, MCRegister PhysReg, bool IsHint,
     EvictionCost &MaxCost, const SmallVirtRegSet &FixedRegisters) const {
   // It is only possible to evict virtual register interference.
   if (Matrix->checkInterference(VirtReg, PhysReg) > LiveRegMatrix::IK_VirtReg)
@@ -208,7 +208,7 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
       return false;
 
     // Check if any interfering live range is heavier than MaxWeight.
-    for (LiveInterval *Intf : reverse(Interferences)) {
+    for (const LiveInterval *Intf : reverse(Interferences)) {
       assert(Register::isVirtualRegister(Intf->reg()) &&
              "Only expecting virtual register interference from query");
 
@@ -269,7 +269,7 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
 }
 
 MCRegister DefaultEvictionAdvisor::tryFindEvictionCandidate(
-    LiveInterval &VirtReg, const AllocationOrder &Order,
+    const LiveInterval &VirtReg, const AllocationOrder &Order,
     uint8_t CostPerUseLimit, const SmallVirtRegSet &FixedRegisters) const {
   // Keep track of the cheapest interference seen so far.
   EvictionCost BestCost;
