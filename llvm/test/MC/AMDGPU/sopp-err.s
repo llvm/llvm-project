@@ -209,9 +209,6 @@ s_waitcnt lgkmcnt(64)
 // GCN: error: too large value for lgkmcnt
 
 s_waitcnt expcnt(8)
-// PREGFX11: error: too large value for expcnt
-
-s_waitcnt expcnt(16)
 // GCN: error: too large value for expcnt
 
 s_waitcnt vmcnt(16)
