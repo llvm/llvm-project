@@ -11,6 +11,12 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "config.h"
+
+#ifdef HAVE_ELF_H
+#include <elf.h>
+#endif
+
 #else
 
 typedef __SIZE_TYPE__ size_t;
@@ -30,12 +36,6 @@ typedef unsigned char uint8_t;
 typedef long long int64_t;
 typedef int int32_t;
 
-#endif
-
-#include "config.h"
-
-#ifdef HAVE_ELF_H
-#include <elf.h>
 #endif
 
 // Save all registers while keeping 16B stack alignment
