@@ -213,7 +213,7 @@ static void subtractRecursively(IntegerPolyhedron &b, Simplex &simplex,
 
   // Find out which inequalities of sI correspond to division inequalities for
   // the local variables of sI.
-  SmallVector<MaybeLocalRepr> repr(sI.getNumLocalIds());
+  std::vector<MaybeLocalRepr> repr(sI.getNumLocalIds());
   sI.getLocalReprs(repr);
 
   // Add sI's locals to b, after b's locals. Also add b's locals to sI, before

@@ -544,6 +544,23 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
                                         NSW, LHSKnown, RHSKnown);
     break;
   }
+  case Instruction::Mul: {
+    // The LSB of X*Y is set only if (X & 1) == 1 and (Y & 1) == 1.
+    // If we demand exactly one bit N and we have "X * (C' << N)" where C' is
+    // odd (has LSB set), then the left-shifted low bit of X is the answer.
+    if (DemandedMask.isPowerOf2()) {
+      unsigned CTZ = DemandedMask.countTrailingZeros();
+      const APInt *C;
+      if (match(I->getOperand(1), m_APInt(C)) &&
+          C->countTrailingZeros() == CTZ) {
+        Constant *ShiftC = ConstantInt::get(I->getType(), CTZ);
+        Instruction *Shl = BinaryOperator::CreateShl(I->getOperand(0), ShiftC);
+        return InsertNewInstWith(Shl, *I);
+      }
+    }
+    computeKnownBits(I, Known, Depth, CxtI);
+    break;
+  }
   case Instruction::Shl: {
     const APInt *SA;
     if (match(I->getOperand(1), m_APInt(SA))) {

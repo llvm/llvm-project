@@ -624,7 +624,7 @@ static void checkDivisionRepresentation(
     const std::vector<SmallVector<int64_t, 8>> &expectedDividends,
     const SmallVectorImpl<unsigned> &expectedDenominators) {
 
-  SmallVector<SmallVector<int64_t, 8>> dividends;
+  std::vector<SmallVector<int64_t, 8>> dividends;
   SmallVector<unsigned, 4> denominators;
 
   poly.getLocalReprs(dividends, denominators);

@@ -173,7 +173,7 @@ template<class T>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 namespace std  // purposefully not using versioning namespace

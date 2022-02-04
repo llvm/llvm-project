@@ -429,7 +429,7 @@ protected:
   std::pair<StringRef, ArrayRef<uint64_t>>
   readNameFromStrtab(ArrayRef<uint64_t> Record);
 
-  bool readBlockInfo();
+  Error readBlockInfo();
 
   // Contains an arbitrary and optional string identifying the bitcode producer
   std::string ProducerIdentification;
@@ -3211,17 +3211,17 @@ Error BitcodeReader::rememberAndSkipFunctionBodies() {
   }
 }
 
-bool BitcodeReaderBase::readBlockInfo() {
+Error BitcodeReaderBase::readBlockInfo() {
   Expected<Optional<BitstreamBlockInfo>> MaybeNewBlockInfo =
       Stream.ReadBlockInfoBlock();
   if (!MaybeNewBlockInfo)
-    return true; // FIXME Handle the error.
+    return MaybeNewBlockInfo.takeError();
   Optional<BitstreamBlockInfo> NewBlockInfo =
       std::move(MaybeNewBlockInfo.get());
   if (!NewBlockInfo)
-    return true;
+    return error("Malformed block");
   BlockInfo = std::move(*NewBlockInfo);
-  return false;
+  return Error::success();
 }
 
 Error BitcodeReader::parseComdatRecord(ArrayRef<uint64_t> Record) {
@@ -3639,8 +3639,8 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
           return Err;
         break;
       case bitc::BLOCKINFO_BLOCK_ID:
-        if (readBlockInfo())
-          return error("Malformed block");
+        if (Error Err = readBlockInfo())
+          return Err;
         break;
       case bitc::PARAMATTR_BLOCK_ID:
         if (Error Err = parseAttributeBlock())
@@ -5913,8 +5913,8 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
         break;
       case bitc::BLOCKINFO_BLOCK_ID:
         // Need to parse these to get abbrev ids (e.g. for VST)
-        if (readBlockInfo())
-          return error("Malformed block");
+        if (Error Err = readBlockInfo())
+          return Err;
         break;
       case bitc::VALUE_SYMTAB_BLOCK_ID:
         // Should have been parsed earlier via VSTOffset, unless there

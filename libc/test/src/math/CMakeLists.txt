@@ -1008,7 +1008,6 @@ add_fp_unittest(
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
     -O3
-    -Wno-c++17-extensions
 )
 
 add_fp_unittest(
@@ -1023,7 +1022,6 @@ add_fp_unittest(
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
     -O3
-    -Wno-c++17-extensions
 )
 
 add_fp_unittest(
@@ -1038,7 +1036,6 @@ add_fp_unittest(
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
     -O3
-    -Wno-c++17-extensions
 )
 
 add_fp_unittest(
@@ -1097,8 +1094,6 @@ add_fp_unittest(
     libc.include.math
     libc.src.math.hypotf
     libc.src.__support.FPUtil.fputil
-  COMPILE_OPTIONS
-    -Wno-c++17-extensions
 )
 
 add_fp_unittest(
@@ -1112,8 +1107,6 @@ add_fp_unittest(
     libc.include.math
     libc.src.math.hypot
     libc.src.__support.FPUtil.fputil
-  COMPILE_OPTIONS
-    -Wno-c++17-extensions
 )
 
 add_fp_unittest(

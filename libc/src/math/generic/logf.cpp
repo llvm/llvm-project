@@ -49,9 +49,6 @@
 
 namespace __llvm_libc {
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wc++17-extensions"
-
 // Lookup table for log(f) = log(1 + n*2^(-7)) where n = 0..127.
 static constexpr double LOG_F[128] = {
     0x0.0000000000000p+0, 0x1.fe02a6b106788p-8, 0x1.fc0a8b0fc03e3p-7,
@@ -177,7 +174,5 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
 
   return static_cast<float>(r);
 }
-
-#pragma clang diagnostic pop
 
 } // namespace __llvm_libc
