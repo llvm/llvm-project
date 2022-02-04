@@ -214,6 +214,20 @@ def SymbolDCE : Pass<"symbol-dce"> {
   let constructor = "mlir::createSymbolDCEPass()";
 }
 
+def SymbolPrivatize : Pass<"symbol-privatize"> {
+  let summary = "Mark symbols private";
+  let description = [{
+    This pass marks all top-level symbols of the operation run as `private`
+    except if listed in `exclude` pass option.
+  }];
+  let options = [
+    ListOption<"exclude", "exclude", "std::string",
+       "Comma separated list of symbols that should not be marked private",
+       "llvm::cl::MiscFlags::CommaSeparated">
+  ];
+  let constructor = "mlir::createSymbolPrivatizePass()";
+}
+
 def ViewOpGraph : Pass<"view-op-graph"> {
   let summary = "Print Graphviz visualization of an operation";
   let description = [{
