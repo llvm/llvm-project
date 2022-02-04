@@ -2,6 +2,7 @@ executable("llvm-libtool-darwin") {
   deps = [
     "//llvm/lib/Object",
     "//llvm/lib/Support",
+    "//llvm/lib/Target:TargetsToBuild",
   ]
   sources = [ "llvm-libtool-darwin.cpp" ]
 }
