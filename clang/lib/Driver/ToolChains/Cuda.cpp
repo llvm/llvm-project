@@ -748,8 +748,7 @@ void CudaToolChain::addClangTargetOptions(
     if (getDriver().isUsingLTO(/* IsOffload */ true))
       return;
 
-    std::string BitcodeSuffix;
-    BitcodeSuffix = "nvptx-" + GpuArch.str();
+    std::string BitcodeSuffix = "nvptx-" + GpuArch.str();
 
     addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, BitcodeSuffix,
                        getTriple());
