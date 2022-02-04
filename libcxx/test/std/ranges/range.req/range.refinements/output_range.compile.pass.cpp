@@ -23,7 +23,7 @@ struct T { };
 
 // Satisfied when it's a range and has the right iterator
 struct GoodRange {
-    output_iterator<T*> begin();
+    cpp17_output_iterator<T*> begin();
     sentinel end();
 };
 static_assert(std::ranges::range<GoodRange>);
@@ -32,7 +32,7 @@ static_assert(std::ranges::output_range<GoodRange, T>);
 
 // Not satisfied when it's not a range
 struct NotRange {
-    output_iterator<T*> begin();
+    cpp17_output_iterator<T*> begin();
 };
 static_assert(!std::ranges::range<NotRange>);
 static_assert( std::output_iterator<std::ranges::iterator_t<NotRange>, T>);
