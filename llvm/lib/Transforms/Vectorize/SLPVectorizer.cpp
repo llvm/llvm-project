@@ -2463,6 +2463,18 @@ private:
       Lane = -1;
     }
 
+    /// Verify basic self consistency properties
+    void verify() {
+      if (hasValidDependencies()) {
+        assert(UnscheduledDeps <= Dependencies && "invariant");
+      }
+
+      if (IsScheduled) {
+        assert(isSchedulingEntity() && UnscheduledDeps == 0 &&
+               "unexpected scheduled state");
+      }
+    }
+
     /// Returns true if the dependency information has been calculated.
     bool hasValidDependencies() const { return Dependencies != InvalidDeps; }
 
@@ -2710,6 +2722,15 @@ private:
           }
         }
       }
+    }
+
+    /// Verify basic self consistency properties of the data structure.
+    void verify() {
+      if (!ScheduleStart)
+        return;
+
+      for (auto *I = ScheduleStart; I != ScheduleEnd; I = I->getNextNode())
+        doForAllOpcodes(I, [](ScheduleData *SD) { SD->verify(); });
     }
 
     void doForAllOpcodes(Value *V,
@@ -7903,6 +7924,11 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
     NumToSchedule--;
   }
   assert(NumToSchedule == 0 && "could not schedule all instructions");
+
+  // Check that we didn't break any of our invariants.
+#ifdef EXPENSIVE_CHECKS
+  BS->verify();
+#endif
 
   // Avoid duplicate scheduling of the block.
   BS->ScheduleStart = nullptr;
