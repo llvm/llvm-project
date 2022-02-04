@@ -85,7 +85,7 @@ entry:
   %a2 = load i64, i64 addrspace(1)* %a2.ptr
   %a1.ptr = getelementptr i64, i64 addrspace(1)* %p.64, i64 6
   %a1 = load i64, i64 addrspace(1)* %a1.ptr
-  %token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0) ["deopt" (i8 addrspace(1)* %p)]
+  %token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) ["deopt" (i8 addrspace(1)* %p)]
   call void @bar(i64 %a1)
   call void @bar(i64 %a2)
   call void @bar(i64 %a3)

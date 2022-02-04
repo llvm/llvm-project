@@ -12,7 +12,7 @@ declare i32 @"personality_function"()
 define i8 addrspace(1)* @test_invoke(i8 addrspace(1)* %a, i8 addrspace(1)* %b, i8 addrspace(1)* %c, i8 addrspace(1)* %d, i8 addrspace(1)* %e, i8 addrspace(1)* %f, i8 addrspace(1)* %g, i8 addrspace(1)* %h, i8 addrspace(1)* %j, i8 addrspace(1)* %k, i8 addrspace(1)* %l, i8 addrspace(1)* %m, i8 addrspace(1)* %n, i8 addrspace(1)* %o, i8 addrspace(1)* %p, i8 addrspace(1)* %q, i8 addrspace(1)* %r, i8 addrspace(1)* %s, i8 addrspace(1)* %t)
 gc "statepoint-example" personality i32 ()* @"personality_function" {
 entry:
-  %0 = invoke token (i64, i32, void (i8 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8f(i64 0, i32 0, void (i8 addrspace(1)*)* @some_call, i32 1, i32 0, i8 addrspace(1)* %t, i32 0, i32 0) ["gc-live" (i8 addrspace(1)* %t)]
+  %0 = invoke token (i64, i32, void (i8 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8f(i64 0, i32 0, void (i8 addrspace(1)*)* elementtype(void (i8 addrspace(1)*)) @some_call, i32 1, i32 0, i8 addrspace(1)* %t, i32 0, i32 0) ["gc-live" (i8 addrspace(1)* %t)]
           to label %invoke_safepoint_normal_dest unwind label %exceptional_return
 
 invoke_safepoint_normal_dest:
@@ -29,7 +29,7 @@ exceptional_return:
 define i8 addrspace(1)* @test_call(i8 addrspace(1)* %a, i8 addrspace(1)* %b, i8 addrspace(1)* %c, i8 addrspace(1)* %d, i8 addrspace(1)* %e, i8 addrspace(1)* %f, i8 addrspace(1)* %g, i8 addrspace(1)* %h, i8 addrspace(1)* %j, i8 addrspace(1)* %k, i8 addrspace(1)* %l, i8 addrspace(1)* %m, i8 addrspace(1)* %n, i8 addrspace(1)* %o, i8 addrspace(1)* %p, i8 addrspace(1)* %q, i8 addrspace(1)* %r, i8 addrspace(1)* %s, i8 addrspace(1)* %t)
 gc "statepoint-example" personality i32 ()* @"personality_function" {
 entry:
-  %0 = call token (i64, i32, void (i8 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8f(i64 0, i32 0, void (i8 addrspace(1)*)* @some_call, i32 1, i32 0, i8 addrspace(1)* %t, i32 0, i32 0) ["gc-live" (i8 addrspace(1)* %t)]
+  %0 = call token (i64, i32, void (i8 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8f(i64 0, i32 0, void (i8 addrspace(1)*)* elementtype(void (i8 addrspace(1)*)) @some_call, i32 1, i32 0, i8 addrspace(1)* %t, i32 0, i32 0) ["gc-live" (i8 addrspace(1)* %t)]
   br label %other_block
 
 other_block:

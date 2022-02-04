@@ -11,7 +11,7 @@ declare i32 @"personality_function"()
 define i64 addrspace(1)* @test1(i8 addrspace(1)* %arg) gc "statepoint-example" {
 entry:
   %cast = bitcast i8 addrspace(1)* %arg to i64 addrspace(1)*
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i8 addrspace(1)* %arg, i64 addrspace(1)* %cast, i8 addrspace(1)* %arg, i8 addrspace(1)* %arg), "deopt" (i32 0, i32 0, i32 0, i32 10, i32 0)]
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i8 addrspace(1)* %arg, i64 addrspace(1)* %cast, i8 addrspace(1)* %arg, i8 addrspace(1)* %arg), "deopt" (i32 0, i32 0, i32 0, i32 10, i32 0)]
   %reloc = call i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(token %safepoint_token, i32 0, i32 1)
   ;; It is perfectly legal to relocate the same value multiple times...
   %reloc2 = call i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(token %safepoint_token, i32 0, i32 1)
@@ -40,7 +40,7 @@ notequal:
   ret void
 
 equal:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i8 addrspace(1)* %arg, i64 addrspace(1)* %cast, i8 addrspace(1)* %arg, i8 addrspace(1)* %arg), "deopt" (i32 0, i32 0, i32 0, i32 10, i32 0)]
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i8 addrspace(1)* %arg, i64 addrspace(1)* %cast, i8 addrspace(1)* %arg, i8 addrspace(1)* %arg), "deopt" (i32 0, i32 0, i32 0, i32 10, i32 0)]
   %reloc = call i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(token %safepoint_token, i32 0, i32 0)
   call void undef(i64 addrspace(1)* %reloc)
   ret void
@@ -58,7 +58,7 @@ define i8 addrspace(1)* @test3(i8 addrspace(1)* %obj, i8 addrspace(1)* %obj1) gc
 entry:
   ; CHECK-LABEL: entry
   ; CHECK: statepoint
-  %0 = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i8 addrspace(1)* %obj, i8 addrspace(1)* %obj1), "deopt" (i32 0, i32 -1, i32 0, i32 0, i32 0)]
+  %0 = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i8 addrspace(1)* %obj, i8 addrspace(1)* %obj1), "deopt" (i32 0, i32 -1, i32 0, i32 0, i32 0)]
           to label %normal_dest unwind label %exceptional_return
 
 normal_dest:
@@ -89,7 +89,7 @@ declare void @fn_sret(%struct* sret(%struct))
 
 define void @test_sret() gc "statepoint-example" {
   %x = alloca %struct
-  %statepoint_token = call token (i64, i32, void (%struct*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp0s_structsf(i64 0, i32 0, void (%struct*)* @fn_sret, i32 1, i32 0, %struct* sret(%struct) %x, i32 0, i32 0)
+  %statepoint_token = call token (i64, i32, void (%struct*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp0s_structsf(i64 0, i32 0, void (%struct*)* elementtype(void (%struct*)) @fn_sret, i32 1, i32 0, %struct* sret(%struct) %x, i32 0, i32 0)
   ret void
   ; CHECK-LABEL: test_sret
   ; CHECK: alloca

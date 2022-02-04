@@ -16,7 +16,7 @@ define void @test_legal_constants() gc "statepoint-example" {
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-  %statepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 2, i32 0, i32 0) #0 [ "deopt" (float 2.0, double 3.0, i8 5, i16 22, i32 8, i64 9, i8 addrspace(1)* null) ]
+  %statepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* elementtype(void ()) @foo, i32 0, i32 2, i32 0, i32 0) #0 [ "deopt" (float 2.0, double 3.0, i8 5, i16 22, i32 8, i64 9, i8 addrspace(1)* null) ]
   ret void
 }
 
@@ -32,7 +32,7 @@ define void @test_registers(float %v1, double %v2, i8 %v3, i16 %v4, i32 %v5, i64
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-  %statepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 2, i32 0, i32 0) #0 [ "deopt" (float %v1, double %v2, i8 %v3, i16 %v4, i32 %v5, i64 %v6, i8 addrspace(1)* %v7) ]
+  %statepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* elementtype(void ()) @foo, i32 0, i32 2, i32 0, i32 0) #0 [ "deopt" (float %v1, double %v2, i8 %v3, i16 %v4, i32 %v5, i64 %v6, i8 addrspace(1)* %v7) ]
   ret void
 }
 
@@ -78,7 +78,7 @@ define void @test_illegal_constants() gc "statepoint-example" {
 ; CHECK-NEXT:    addq $248, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-  %statepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 2, i32 0, i32 0) #0 [ "deopt" (i128 144, i256 144, i512 144, i1024 144) ]
+  %statepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* elementtype(void ()) @foo, i32 0, i32 2, i32 0, i32 0) #0 [ "deopt" (i128 144, i256 144, i512 144, i1024 144) ]
   ret void
 }
 
@@ -148,7 +148,7 @@ define void @test_illegal_values(i128 %v1, i256 %v2, i512 %v3, i1024 %v4) gc "st
 ; CHECK-NEXT:    addq $248, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-  %statepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 2, i32 0, i32 0) #0 [ "deopt" (i128 %v1, i256 %v2, i512 %v3, i1024 %v4) ]
+  %statepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* elementtype(void ()) @foo, i32 0, i32 2, i32 0, i32 0) #0 [ "deopt" (i128 %v1, i256 %v2, i512 %v3, i1024 %v4) ]
   ret void
 }
 
