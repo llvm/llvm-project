@@ -42,8 +42,40 @@ DEBUG_COUNTER(EliminatedCounter, "conds-eliminated",
               "Controls which conditions are eliminated");
 
 static int64_t MaxConstraintValue = std::numeric_limits<int64_t>::max();
+static int64_t MinSignedConstraintValue = std::numeric_limits<int64_t>::min();
 
 namespace {
+
+/// Wrapper encapsulating separate constraint systems and corresponding value
+/// mappings for both unsigned and signed information. Facts are added to and
+/// conditions are checked against the corresponding system depending on the
+/// signed-ness of their predicates. While the information is kept separate
+/// based on signed-ness, certain conditions can be transferred between the two
+/// systems.
+class ConstraintInfo {
+  DenseMap<Value *, unsigned> UnsignedValue2Index;
+  DenseMap<Value *, unsigned> SignedValue2Index;
+
+  ConstraintSystem UnsignedCS;
+  ConstraintSystem SignedCS;
+
+public:
+  DenseMap<Value *, unsigned> &getValue2Index(bool Signed) {
+    return Signed ? SignedValue2Index : UnsignedValue2Index;
+  }
+  const DenseMap<Value *, unsigned> &getValue2Index(bool Signed) const {
+    return Signed ? SignedValue2Index : UnsignedValue2Index;
+  }
+
+  ConstraintSystem &getCS(bool Signed) {
+    return Signed ? SignedCS : UnsignedCS;
+  }
+  const ConstraintSystem &getCS(bool Signed) const {
+    return Signed ? SignedCS : UnsignedCS;
+  }
+
+  void popLastConstraint(bool Signed) { getCS(Signed).popLastConstraint(); }
+};
 
 /// Struct to express a pre-condition of the form %Op0 Pred %Op1.
 struct PreconditionTy {
@@ -58,8 +90,10 @@ struct PreconditionTy {
 struct ConstraintTy {
   SmallVector<int64_t, 8> Coefficients;
 
-  ConstraintTy(SmallVector<int64_t, 8> Coefficients)
-      : Coefficients(Coefficients) {}
+  bool IsSigned;
+
+  ConstraintTy(SmallVector<int64_t, 8> Coefficients, bool IsSigned)
+      : Coefficients(Coefficients), IsSigned(IsSigned) {}
 
   unsigned size() const { return Coefficients.size(); }
 };
@@ -104,13 +138,14 @@ struct ConstraintListTy {
 
   /// Returns true if all preconditions for this list of constraints are
   /// satisfied given \p CS and the corresponding \p Value2Index mapping.
-  bool isValid(const ConstraintSystem &CS,
-               DenseMap<Value *, unsigned> &Value2Index) const;
+  bool isValid(const ConstraintInfo &Info) const;
+
   /// Returns true if there is exactly one constraint in the list and isValid is
   /// also true.
-  bool isValidSingle(const ConstraintSystem &CS,
-                     DenseMap<Value *, unsigned> &Value2Index) const {
-    return size() == 1 && isValid(CS, Value2Index);
+  bool isValidSingle(const ConstraintInfo &Info) const {
+    if (size() != 1)
+      return false;
+    return isValid(Info);
   }
 };
 
@@ -121,7 +156,21 @@ struct ConstraintListTy {
 // must be nullptr. If the expression cannot be decomposed, returns an empty
 // vector.
 static SmallVector<std::pair<int64_t, Value *>, 4>
-decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions) {
+decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
+          bool IsSigned) {
+
+  // Decompose \p V used with a signed predicate.
+  if (IsSigned) {
+    if (auto *CI = dyn_cast<ConstantInt>(V)) {
+      const APInt &Val = CI->getValue();
+      if (Val.sle(MinSignedConstraintValue) || Val.sge(MaxConstraintValue))
+        return {};
+      return {{CI->getSExtValue(), nullptr}};
+    }
+
+    return {{0, nullptr}, {1, V}};
+  }
+
   if (auto *CI = dyn_cast<ConstantInt>(V)) {
     if (CI->isNegative() || CI->uge(MaxConstraintValue))
       return {};
@@ -216,7 +265,8 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     return Insert.first->second;
   };
 
-  if (Pred == CmpInst::ICMP_UGT || Pred == CmpInst::ICMP_UGE)
+  if (Pred == CmpInst::ICMP_UGT || Pred == CmpInst::ICMP_UGE ||
+      Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SGE)
     return getConstraint(CmpInst::getSwappedPredicate(Pred), Op1, Op0,
                          Value2Index, NewIndices);
 
@@ -238,13 +288,15 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   }
 
   // Only ULE and ULT predicates are supported at the moment.
-  if (Pred != CmpInst::ICMP_ULE && Pred != CmpInst::ICMP_ULT)
+  if (Pred != CmpInst::ICMP_ULE && Pred != CmpInst::ICMP_ULT &&
+      Pred != CmpInst::ICMP_SLE && Pred != CmpInst::ICMP_SLT)
     return {};
 
-  auto ADec =
-      decompose(Op0->stripPointerCastsSameRepresentation(), Preconditions);
-  auto BDec =
-      decompose(Op1->stripPointerCastsSameRepresentation(), Preconditions);
+  bool IsSigned = CmpInst::isSigned(Pred);
+  auto ADec = decompose(Op0->stripPointerCastsSameRepresentation(),
+                        Preconditions, IsSigned);
+  auto BDec = decompose(Op1->stripPointerCastsSameRepresentation(),
+                        Preconditions, IsSigned);
   // Skip if decomposing either of the values failed.
   if (ADec.empty() || BDec.empty())
     return {};
@@ -275,25 +327,28 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   for (const auto &KV : VariablesB)
     R[GetOrAddIndex(KV.second)] -= KV.first;
 
-  R[0] = Offset1 + Offset2 + (Pred == CmpInst::ICMP_ULT ? -1 : 0);
-  return {{R}, Preconditions};
+  R[0] = Offset1 + Offset2 +
+         (Pred == (IsSigned ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT) ? -1 : 0);
+  return {{{R, IsSigned}}, Preconditions};
 }
 
-static ConstraintListTy getConstraint(CmpInst *Cmp,
-                                      DenseMap<Value *, unsigned> &Value2Index,
+static ConstraintListTy getConstraint(CmpInst *Cmp, ConstraintInfo &Info,
                                       DenseMap<Value *, unsigned> &NewIndices) {
-  return getConstraint(Cmp->getPredicate(), Cmp->getOperand(0),
-                       Cmp->getOperand(1), Value2Index, NewIndices);
+  return getConstraint(
+      Cmp->getPredicate(), Cmp->getOperand(0), Cmp->getOperand(1),
+      Info.getValue2Index(CmpInst::isSigned(Cmp->getPredicate())), NewIndices);
 }
 
-bool ConstraintListTy::isValid(const ConstraintSystem &CS,
-                               DenseMap<Value *, unsigned> &Value2Index) const {
-  return all_of(Preconditions, [&CS, &Value2Index](const PreconditionTy &C) {
+bool ConstraintListTy::isValid(const ConstraintInfo &Info) const {
+  return all_of(Preconditions, [&Info](const PreconditionTy &C) {
     DenseMap<Value *, unsigned> NewIndices;
-    auto R = getConstraint(C.Pred, C.Op0, C.Op1, Value2Index, NewIndices);
+    auto R = getConstraint(C.Pred, C.Op0, C.Op1,
+                           Info.getValue2Index(CmpInst::isSigned(C.Pred)),
+                           NewIndices);
     // TODO: properly check NewIndices.
     return NewIndices.empty() && R.Preconditions.empty() && R.size() == 1 &&
-           CS.isConditionImplied(R.get(0).Coefficients);
+           Info.getCS(CmpInst::isSigned(C.Pred))
+               .isConditionImplied(R.get(0).Coefficients);
   });
 }
 
@@ -321,11 +376,14 @@ struct ConstraintOrBlock {
 struct StackEntry {
   unsigned NumIn;
   unsigned NumOut;
-  CmpInst *Condition;
+  Instruction *Condition;
   bool IsNot;
+  bool IsSigned = false;
 
-  StackEntry(unsigned NumIn, unsigned NumOut, CmpInst *Condition, bool IsNot)
-      : NumIn(NumIn), NumOut(NumOut), Condition(Condition), IsNot(IsNot) {}
+  StackEntry(unsigned NumIn, unsigned NumOut, Instruction *Condition,
+             bool IsNot, bool IsSigned)
+      : NumIn(NumIn), NumOut(NumOut), Condition(Condition), IsNot(IsNot),
+        IsSigned(IsSigned) {}
 };
 } // namespace
 
@@ -345,7 +403,8 @@ static void dumpWithNames(ConstraintTy &C,
 static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   bool Changed = false;
   DT.updateDFSNumbers();
-  ConstraintSystem CS;
+
+  ConstraintInfo Info;
 
   SmallVector<ConstraintOrBlock, 64> WorkList;
 
@@ -447,7 +506,6 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
 
   // Finally, process ordered worklist and eliminate implied conditions.
   SmallVector<StackEntry, 16> DFSInStack;
-  DenseMap<Value *, unsigned> Value2Index;
   for (ConstraintOrBlock &CB : WorkList) {
     // First, pop entries from the stack that are out-of-scope for CB. Remove
     // the corresponding entry from the constraint system.
@@ -462,7 +520,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
       LLVM_DEBUG(dbgs() << "Removing " << *E.Condition << " " << E.IsNot
                         << "\n");
       DFSInStack.pop_back();
-      CS.popLastConstraint();
+      Info.popLastConstraint(E.IsSigned);
     }
 
     LLVM_DEBUG({
@@ -483,12 +541,12 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
           continue;
 
         DenseMap<Value *, unsigned> NewIndices;
-        auto R = getConstraint(Cmp, Value2Index, NewIndices);
-
-        if (!R.isValidSingle(CS, Value2Index) || R.needsNewIndices(NewIndices))
+        auto R = getConstraint(Cmp, Info, NewIndices);
+        if (!R.isValidSingle(Info) || R.needsNewIndices(NewIndices))
           continue;
 
-        if (CS.isConditionImplied(R.get(0).Coefficients)) {
+        auto &CSToUse = Info.getCS(R.get(0).IsSigned);
+        if (CSToUse.isConditionImplied(R.get(0).Coefficients)) {
           if (!DebugCounter::shouldExecute(EliminatedCounter))
             continue;
 
@@ -508,7 +566,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
           NumCondsRemoved++;
           Changed = true;
         }
-        if (CS.isConditionImplied(
+        if (CSToUse.isConditionImplied(
                 ConstraintSystem::negate(R.get(0).Coefficients))) {
           if (!DebugCounter::shouldExecute(EliminatedCounter))
             continue;
@@ -547,31 +605,45 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     // Otherwise, add the condition to the system and stack, if we can transform
     // it into a constraint.
     DenseMap<Value *, unsigned> NewIndices;
-    auto R = getConstraint(CB.Condition, Value2Index, NewIndices);
-    if (!R.isValid(CS, Value2Index))
+    auto R = getConstraint(CB.Condition, Info, NewIndices);
+    if (!R.isValid(Info))
       continue;
 
     for (auto &KV : NewIndices)
-      Value2Index.insert(KV);
+      Info.getValue2Index(CmpInst::isSigned(CB.Condition->getPredicate()))
+          .insert(KV);
 
     LLVM_DEBUG(dbgs() << "Adding " << *CB.Condition << " " << CB.Not << "\n");
     bool Added = false;
-    for (auto &C : R.Constraints) {
-      auto Coeffs = C.Coefficients;
+    for (auto &E : R.Constraints) {
+      auto &CSToUse = Info.getCS(E.IsSigned);
+      if (E.Coefficients.empty())
+        continue;
+
       LLVM_DEBUG({
         dbgs() << "  constraint: ";
-        dumpWithNames(C, Value2Index);
+        dumpWithNames(E, Info.getValue2Index(E.IsSigned));
       });
-      Added |= CS.addVariableRowFill(Coeffs);
+
+      Added |= CSToUse.addVariableRowFill(E.Coefficients);
+
       // If R has been added to the system, queue it for removal once it goes
       // out-of-scope.
       if (Added)
-        DFSInStack.emplace_back(CB.NumIn, CB.NumOut, CB.Condition, CB.Not);
+        DFSInStack.emplace_back(CB.NumIn, CB.NumOut, CB.Condition, CB.Not,
+                                E.IsSigned);
     }
   }
 
-  assert(CS.size() == DFSInStack.size() &&
+#ifndef NDEBUG
+  unsigned SignedEntries =
+      count_if(DFSInStack, [](const StackEntry &E) { return E.IsSigned; });
+  assert(Info.getCS(false).size() == DFSInStack.size() - SignedEntries &&
          "updates to CS and DFSInStack are out of sync");
+  assert(Info.getCS(true).size() == SignedEntries &&
+         "updates to CS and DFSInStack are out of sync");
+#endif
+
   return Changed;
 }
 
