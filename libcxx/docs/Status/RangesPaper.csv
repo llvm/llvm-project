@@ -57,14 +57,14 @@ Section,Description,Dependencies,Assignee,Complete
 | `indirectly_equivalence_relation <https://llvm.org/D101277>`_
 | `indirectly_strict_weak_order <https://llvm.org/D101277>`_",[readable.traits],Louis Dionne,✅
 `[projected] <https://wg21.link/projected>`_,`ranges::projected <https://llvm.org/D101277>`_,[iterator.concepts],Louis Dionne,✅
-`[common.alg.req] <https://wg21.link/common.alg.req>`_: pt. 1,"| `indirectly_movable <https://llvm.org/D102639>`_
+`[alg.req] <https://wg21.link/alg.req>`_: pt. 1,"| `indirectly_movable <https://llvm.org/D102639>`_
 | `indirectly_movable_storable <https://llvm.org/D102639>`_
 | `indirectly_copyable <https://llvm.org/D118432>`_
 | `indirectly_copyable_storable <https://llvm.org/D118432>`_",[iterator.concepts],Zoe Carver and Konstantin Varlamov,✅
-`[common.alg.req] <https://wg21.link/common.alg.req>`_: pt. 2,`indirectly_swappable <https://llvm.org/D105304>`_,"| [iterator.concepts]
+`[alg.req] <https://wg21.link/alg.req>`_: pt. 2,`indirectly_swappable <https://llvm.org/D105304>`_,"| [iterator.concepts]
 | [iterator.cust.swap]",Zoe Carver,✅
-`[common.alg.req] <https://wg21.link/common.alg.req>`_: pt. 3,`indirectly_comparable <https://llvm.org/D116268>`_,[projected],Nikolas Klauser,✅
-`[common.alg.req] <https://wg21.link/common.alg.req>`_: pt. 4,"| permutable
+`[alg.req] <https://wg21.link/alg.req>`_: pt. 3,`indirectly_comparable <https://llvm.org/D116268>`_,[projected],Nikolas Klauser,✅
+`[alg.req] <https://wg21.link/alg.req>`_: pt. 4,"| permutable
 | mergeable
 | sortable",[iterator.concepts],Unassigned,Not started
 `[std.iterator.tags] <https://wg21.link/std.iterator.tags>`_,"| `contiguous_iterator_tag <https://reviews.llvm.org/rG45d048c20440989df2b4e1be1f9343225e7741ab>`_
