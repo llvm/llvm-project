@@ -1411,12 +1411,11 @@ void JITDylib::dump(raw_ostream &OS) {
     for (auto &KV : Symbols) {
       OS << "    \"" << *KV.first << "\": ";
       if (auto Addr = KV.second.getAddress())
-        OS << format("0x%016" PRIx64, Addr) << ", " << KV.second.getFlags()
-           << " ";
+        OS << format("0x%016" PRIx64, Addr);
       else
         OS << "<not resolved> ";
 
-      OS << KV.second.getFlags() << " " << KV.second.getState();
+      OS << " " << KV.second.getFlags() << " " << KV.second.getState();
 
       if (KV.second.hasMaterializerAttached()) {
         OS << " (Materializer ";
