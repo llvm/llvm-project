@@ -38,3 +38,16 @@ subroutine stop_quiet_constant()
  ! CHECK: fir.call @_Fortran{{.*}}StopStatement(%[[c0]], %[[false]], %[[true]])
  ! CHECK-NEXT: fir.unreachable
 end subroutine
+
+! CHECK-LABEL stop_quiet
+subroutine stop_quiet()
+  logical :: b
+  stop, quiet = b
+ ! CHECK-DAG: %[[c0:.*]] = arith.constant 0 : i32
+ ! CHECK-DAG: %[[false:.*]] = arith.constant false
+ ! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.logical<4> {bindc_name = "b", uniq_name = "_QFstop_quietEb"}
+ ! CHECK: %[[b:.*]] = fir.load %[[ALLOCA]]
+ ! CHECK: %[[bi1:.*]] = fir.convert %[[b]] : (!fir.logical<4>) -> i1
+ ! CHECK: fir.call @_Fortran{{.*}}StopStatement(%[[c0]], %[[false]], %[[bi1]])
+ ! CHECK-NEXT: fir.unreachable
+end subroutine
