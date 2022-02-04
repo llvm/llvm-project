@@ -920,12 +920,10 @@ void ScheduleDAGMI::placeDebugValues() {
     MachineBasicBlock::iterator OrigPrevMI = P.second;
     if (&*RegionBegin == DbgValue)
       ++RegionBegin;
-    BB->splice(++OrigPrevMI, BB, DbgValue);
-    if (OrigPrevMI == std::prev(RegionEnd))
+    BB->splice(std::next(OrigPrevMI), BB, DbgValue);
+    if (RegionEnd != BB->end() && OrigPrevMI == &*RegionEnd)
       RegionEnd = DbgValue;
   }
-  DbgValues.clear();
-  FirstDbgValue = nullptr;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
