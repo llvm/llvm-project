@@ -732,6 +732,12 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
   return Result;
 }
 
+bool MCContext::hasXCOFFSection(StringRef Section,
+                                XCOFF::CsectProperties CsectProp) const {
+  return XCOFFUniquingMap.count(
+             XCOFFSectionKey(Section.str(), CsectProp.MappingClass)) != 0;
+}
+
 MCSectionXCOFF *MCContext::getXCOFFSection(
     StringRef Section, SectionKind Kind,
     Optional<XCOFF::CsectProperties> CsectProp, bool MultiSymbolsAllowed,

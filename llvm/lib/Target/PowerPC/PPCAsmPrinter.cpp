@@ -254,6 +254,8 @@ public:
 
   void emitFunctionBodyEnd() override;
 
+  void emitPGORefs();
+
   void emitEndOfAsmFile(Module &) override;
 
   void emitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const override;
@@ -2475,11 +2477,38 @@ void PPCAIXAsmPrinter::emitFunctionEntryLabel() {
       });
 }
 
+void PPCAIXAsmPrinter::emitPGORefs() {
+  if (OutContext.hasXCOFFSection(
+          "__llvm_prf_cnts",
+          XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD))) {
+    MCSection *CntsSection = OutContext.getXCOFFSection(
+        "__llvm_prf_cnts", SectionKind::getData(),
+        XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD),
+        /*MultiSymbolsAllowed*/ true);
+
+    OutStreamer->SwitchSection(CntsSection);
+    if (OutContext.hasXCOFFSection(
+            "__llvm_prf_data",
+            XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD)))
+      OutStreamer->emitXCOFFRefDirective("__llvm_prf_data[RW]");
+    if (OutContext.hasXCOFFSection(
+            "__llvm_prf_names",
+            XCOFF::CsectProperties(XCOFF::XMC_RO, XCOFF::XTY_SD)))
+      OutStreamer->emitXCOFFRefDirective("__llvm_prf_names[RO]");
+    if (OutContext.hasXCOFFSection(
+            "__llvm_prf_vnds",
+            XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD)))
+      OutStreamer->emitXCOFFRefDirective("__llvm_prf_vnds[RW]");
+  }
+}
+
 void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
   // If there are no functions and there are no toc-data definitions in this
   // module, we will never need to reference the TOC base.
   if (M.empty() && TOCDataGlobalVars.empty())
     return;
+
+  emitPGORefs();
 
   // Switch to section to emit TOC base.
   OutStreamer->SwitchSection(getObjFileLowering().getTOCBaseSection());
