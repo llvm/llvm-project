@@ -6316,7 +6316,7 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
 
           if (ValidUsesOnly &&
               AI.LibraryFunctionId == LibFunc___kmpc_alloc_shared)
-            A.emitRemark<OptimizationRemarkMissed>(AI.CB, "OMP113", Remark);
+            A.emitRemark<OptimizationRemarkMissed>(CB, "OMP113", Remark);
 
           LLVM_DEBUG(dbgs() << "[H2S] Bad user: " << *UserI << "\n");
           ValidUsesOnly = false;
