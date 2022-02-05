@@ -38,8 +38,7 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
   );
   let builders = [OpBuilder<(ins "Value":$val)>,
                   OpBuilder<(ins CArg<"int", "0">:$integer)>];
-  let parser = [{ foo }];
-  let printer = [{ bar }];
+  let hasCustomAssemblyFormat = 1;
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;

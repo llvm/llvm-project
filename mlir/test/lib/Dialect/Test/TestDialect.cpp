@@ -577,8 +577,8 @@ static void printCustomDirectiveOptionalOperandRef(OpAsmPrinter &printer,
 // Test IsolatedRegionOp - parse passthrough region arguments.
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseIsolatedRegionOp(OpAsmParser &parser,
-                                         OperationState &result) {
+ParseResult IsolatedRegionOp::parse(OpAsmParser &parser,
+                                    OperationState &result) {
   OpAsmParser::OperandType argInfo;
   Type argType = parser.getBuilder().getIndexType();
 
@@ -593,12 +593,12 @@ static ParseResult parseIsolatedRegionOp(OpAsmParser &parser,
                             /*enableNameShadowing=*/true);
 }
 
-static void print(OpAsmPrinter &p, IsolatedRegionOp op) {
+void IsolatedRegionOp::print(OpAsmPrinter &p) {
   p << "test.isolated_region ";
-  p.printOperand(op.getOperand());
-  p.shadowRegionArgs(op.getRegion(), op.getOperand());
+  p.printOperand(getOperand());
+  p.shadowRegionArgs(getRegion(), getOperand());
   p << ' ';
-  p.printRegion(op.getRegion(), /*printEntryBlockArgs=*/false);
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
 }
 
 //===----------------------------------------------------------------------===//
@@ -613,16 +613,15 @@ RegionKind SSACFGRegionOp::getRegionKind(unsigned index) {
 // Test GraphRegionOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseGraphRegionOp(OpAsmParser &parser,
-                                      OperationState &result) {
+ParseResult GraphRegionOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse the body region, and reuse the operand info as the argument info.
   Region *body = result.addRegion();
   return parser.parseRegion(*body, /*arguments=*/{}, /*argTypes=*/{});
 }
 
-static void print(OpAsmPrinter &p, GraphRegionOp op) {
+void GraphRegionOp::print(OpAsmPrinter &p) {
   p << "test.graph_region ";
-  p.printRegion(op.getRegion(), /*printEntryBlockArgs=*/false);
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
 }
 
 RegionKind GraphRegionOp::getRegionKind(unsigned index) {
@@ -633,24 +632,23 @@ RegionKind GraphRegionOp::getRegionKind(unsigned index) {
 // Test AffineScopeOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseAffineScopeOp(OpAsmParser &parser,
-                                      OperationState &result) {
+ParseResult AffineScopeOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse the body region, and reuse the operand info as the argument info.
   Region *body = result.addRegion();
   return parser.parseRegion(*body, /*arguments=*/{}, /*argTypes=*/{});
 }
 
-static void print(OpAsmPrinter &p, AffineScopeOp op) {
+void AffineScopeOp::print(OpAsmPrinter &p) {
   p << "test.affine_scope ";
-  p.printRegion(op.getRegion(), /*printEntryBlockArgs=*/false);
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
 }
 
 //===----------------------------------------------------------------------===//
 // Test parser.
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseParseIntegerLiteralOp(OpAsmParser &parser,
-                                              OperationState &result) {
+ParseResult ParseIntegerLiteralOp::parse(OpAsmParser &parser,
+                                         OperationState &result) {
   if (parser.parseOptionalColon())
     return success();
   uint64_t numResults;
@@ -663,13 +661,13 @@ static ParseResult parseParseIntegerLiteralOp(OpAsmParser &parser,
   return success();
 }
 
-static void print(OpAsmPrinter &p, ParseIntegerLiteralOp op) {
-  if (unsigned numResults = op->getNumResults())
+void ParseIntegerLiteralOp::print(OpAsmPrinter &p) {
+  if (unsigned numResults = getNumResults())
     p << " : " << numResults;
 }
 
-static ParseResult parseParseWrappedKeywordOp(OpAsmParser &parser,
-                                              OperationState &result) {
+ParseResult ParseWrappedKeywordOp::parse(OpAsmParser &parser,
+                                         OperationState &result) {
   StringRef keyword;
   if (parser.parseKeyword(&keyword))
     return failure();
@@ -677,15 +675,13 @@ static ParseResult parseParseWrappedKeywordOp(OpAsmParser &parser,
   return success();
 }
 
-static void print(OpAsmPrinter &p, ParseWrappedKeywordOp op) {
-  p << " " << op.getKeyword();
-}
+void ParseWrappedKeywordOp::print(OpAsmPrinter &p) { p << " " << getKeyword(); }
 
 //===----------------------------------------------------------------------===//
 // Test WrapRegionOp - wrapping op exercising `parseGenericOperation()`.
 
-static ParseResult parseWrappingRegionOp(OpAsmParser &parser,
-                                         OperationState &result) {
+ParseResult WrappingRegionOp::parse(OpAsmParser &parser,
+                                    OperationState &result) {
   if (parser.parseKeyword("wraps"))
     return failure();
 
@@ -715,9 +711,9 @@ static ParseResult parseWrappingRegionOp(OpAsmParser &parser,
   return success();
 }
 
-static void print(OpAsmPrinter &p, WrappingRegionOp op) {
+void WrappingRegionOp::print(OpAsmPrinter &p) {
   p << " wraps ";
-  p.printGenericOp(&op.getRegion().front().front());
+  p.printGenericOp(&getRegion().front().front());
 }
 
 //===----------------------------------------------------------------------===//
@@ -726,8 +722,8 @@ static void print(OpAsmPrinter &p, WrappingRegionOp op) {
 //   parseCustomOperationName
 //===----------------------------------------------------------------------===//
 
-static ParseResult parsePrettyPrintedRegionOp(OpAsmParser &parser,
-                                              OperationState &result) {
+ParseResult PrettyPrintedRegionOp::parse(OpAsmParser &parser,
+                                         OperationState &result) {
 
   SMLoc loc = parser.getCurrentLocation();
   Location currLocation = parser.getEncodedSourceLoc(loc);
@@ -799,11 +795,11 @@ static ParseResult parsePrettyPrintedRegionOp(OpAsmParser &parser,
   return success();
 }
 
-static void print(OpAsmPrinter &p, PrettyPrintedRegionOp op) {
+void PrettyPrintedRegionOp::print(OpAsmPrinter &p) {
   p << ' ';
-  p.printOperands(op.getOperands());
+  p.printOperands(getOperands());
 
-  Operation &innerOp = op.getRegion().front().front();
+  Operation &innerOp = getRegion().front().front();
   // Assuming that region has a single non-terminator inner-op, if the inner-op
   // meets some criteria (which in this case is a simple one  based on the name
   // of inner-op), then we can print the entire region in a succinct way.
@@ -813,19 +809,19 @@ static void print(OpAsmPrinter &p, PrettyPrintedRegionOp op) {
     p << " start special.op end";
   } else {
     p << " (";
-    p.printRegion(op.getRegion());
+    p.printRegion(getRegion());
     p << ")";
   }
 
   p << " : ";
-  p.printFunctionalType(op);
+  p.printFunctionalType(*this);
 }
 
 //===----------------------------------------------------------------------===//
 // Test PolyForOp - parse list of region arguments.
 //===----------------------------------------------------------------------===//
 
-static ParseResult parsePolyForOp(OpAsmParser &parser, OperationState &result) {
+ParseResult PolyForOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 4> ivsInfo;
   // Parse list of region arguments without a delimiter.
   if (parser.parseRegionArgumentList(ivsInfo))
@@ -837,6 +833,8 @@ static ParseResult parsePolyForOp(OpAsmParser &parser, OperationState &result) {
   SmallVector<Type, 4> argTypes(ivsInfo.size(), builder.getIndexType());
   return parser.parseRegion(*body, ivsInfo, argTypes);
 }
+
+void PolyForOp::print(OpAsmPrinter &p) { p.printGenericOp(*this); }
 
 void PolyForOp::getAsmBlockArgumentNames(Region &region,
                                          OpAsmSetValueNameFn setNameFn) {
@@ -1044,8 +1042,8 @@ void SideEffectOp::getEffects(
 //===----------------------------------------------------------------------===//
 
 // This op has fancy handling of its SSA result name.
-static ParseResult parseStringAttrPrettyNameOp(OpAsmParser &parser,
-                                               OperationState &result) {
+ParseResult StringAttrPrettyNameOp::parse(OpAsmParser &parser,
+                                          OperationState &result) {
   // Add the result types.
   for (size_t i = 0, e = parser.getNumResults(); i != e; ++i)
     result.addTypes(parser.getBuilder().getIntegerType(32));
@@ -1081,19 +1079,19 @@ static ParseResult parseStringAttrPrettyNameOp(OpAsmParser &parser,
   return success();
 }
 
-static void print(OpAsmPrinter &p, StringAttrPrettyNameOp op) {
+void StringAttrPrettyNameOp::print(OpAsmPrinter &p) {
   // Note that we only need to print the "name" attribute if the asmprinter
   // result name disagrees with it.  This can happen in strange cases, e.g.
   // when there are conflicts.
-  bool namesDisagree = op.getNames().size() != op.getNumResults();
+  bool namesDisagree = getNames().size() != getNumResults();
 
   SmallString<32> resultNameStr;
-  for (size_t i = 0, e = op.getNumResults(); i != e && !namesDisagree; ++i) {
+  for (size_t i = 0, e = getNumResults(); i != e && !namesDisagree; ++i) {
     resultNameStr.clear();
     llvm::raw_svector_ostream tmpStream(resultNameStr);
-    p.printOperand(op.getResult(i), tmpStream);
+    p.printOperand(getResult(i), tmpStream);
 
-    auto expectedName = op.getNames()[i].dyn_cast<StringAttr>();
+    auto expectedName = getNames()[i].dyn_cast<StringAttr>();
     if (!expectedName ||
         tmpStream.str().drop_front() != expectedName.getValue()) {
       namesDisagree = true;
@@ -1101,9 +1099,9 @@ static void print(OpAsmPrinter &p, StringAttrPrettyNameOp op) {
   }
 
   if (namesDisagree)
-    p.printOptionalAttrDictWithKeyword(op->getAttrs());
+    p.printOptionalAttrDictWithKeyword((*this)->getAttrs());
   else
-    p.printOptionalAttrDictWithKeyword(op->getAttrs(), {"names"});
+    p.printOptionalAttrDictWithKeyword((*this)->getAttrs(), {"names"});
 }
 
 // We set the SSA name in the asm syntax to the contents of the name
@@ -1142,27 +1140,26 @@ LogicalResult AttrWithTraitOp::verify() {
 // RegionIfOp
 //===----------------------------------------------------------------------===//
 
-static void print(OpAsmPrinter &p, RegionIfOp op) {
+void RegionIfOp::print(OpAsmPrinter &p) {
   p << " ";
-  p.printOperands(op.getOperands());
-  p << ": " << op.getOperandTypes();
-  p.printArrowTypeList(op.getResultTypes());
+  p.printOperands(getOperands());
+  p << ": " << getOperandTypes();
+  p.printArrowTypeList(getResultTypes());
   p << " then ";
-  p.printRegion(op.getThenRegion(),
+  p.printRegion(getThenRegion(),
                 /*printEntryBlockArgs=*/true,
                 /*printBlockTerminators=*/true);
   p << " else ";
-  p.printRegion(op.getElseRegion(),
+  p.printRegion(getElseRegion(),
                 /*printEntryBlockArgs=*/true,
                 /*printBlockTerminators=*/true);
   p << " join ";
-  p.printRegion(op.getJoinRegion(),
+  p.printRegion(getJoinRegion(),
                 /*printEntryBlockArgs=*/true,
                 /*printBlockTerminators=*/true);
 }
 
-static ParseResult parseRegionIfOp(OpAsmParser &parser,
-                                   OperationState &result) {
+ParseResult RegionIfOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 2> operandInfos;
   SmallVector<Type, 2> operandTypes;
 
@@ -1241,17 +1238,17 @@ void AnyCondOp::getRegionInvocationBounds(
 // SingleNoTerminatorCustomAsmOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseSingleNoTerminatorCustomAsmOp(OpAsmParser &parser,
-                                                      OperationState &state) {
+ParseResult SingleNoTerminatorCustomAsmOp::parse(OpAsmParser &parser,
+                                                 OperationState &state) {
   Region *body = state.addRegion();
   if (parser.parseRegion(*body, /*arguments=*/{}, /*argTypes=*/{}))
     return failure();
   return success();
 }
 
-static void print(SingleNoTerminatorCustomAsmOp op, OpAsmPrinter &printer) {
+void SingleNoTerminatorCustomAsmOp::print(OpAsmPrinter &printer) {
   printer.printRegion(
-      op.getRegion(), /*printEntryBlockArgs=*/false,
+      getRegion(), /*printEntryBlockArgs=*/false,
       // This op has a single block without terminators. But explicitly mark
       // as not printing block terminators for testing.
       /*printBlockTerminators=*/false);
