@@ -247,8 +247,8 @@ protected:
         isInIplt(false), gotInIgot(false), folded(false),
         needsTocRestore(false), scriptDefined(false), needsCopy(false),
         needsGot(false), needsPlt(false), needsTlsDesc(false),
-        needsTlsGd(false), needsTlsGdToIe(false), needsTlsLd(false),
-        needsGotDtprel(false), needsTlsIe(false), hasDirectReloc(false) {}
+        needsTlsGd(false), needsTlsGdToIe(false), needsGotDtprel(false),
+        needsTlsIe(false), hasDirectReloc(false) {}
 
 public:
   // True if this symbol is in the Iplt sub-section of the Plt and the Igot
@@ -283,7 +283,6 @@ public:
   uint8_t needsTlsDesc : 1;
   uint8_t needsTlsGd : 1;
   uint8_t needsTlsGdToIe : 1;
-  uint8_t needsTlsLd : 1;
   uint8_t needsGotDtprel : 1;
   uint8_t needsTlsIe : 1;
   uint8_t hasDirectReloc : 1;
@@ -301,7 +300,7 @@ public:
 
   bool needsDynReloc() const {
     return needsCopy || needsGot || needsPlt || needsTlsDesc || needsTlsGd ||
-           needsTlsGdToIe || needsTlsLd || needsGotDtprel || needsTlsIe;
+           needsTlsGdToIe || needsGotDtprel || needsTlsIe;
   }
   void allocateAux() {
     assert(auxIdx == uint32_t(-1));
@@ -514,9 +513,9 @@ union SymbolUnion {
 };
 
 // It is important to keep the size of SymbolUnion small for performance and
-// memory usage reasons. 72 bytes is a soft limit based on the size of Defined
+// memory usage reasons. 64 bytes is a soft limit based on the size of Defined
 // on a 64-bit system.
-static_assert(sizeof(SymbolUnion) <= 72, "SymbolUnion too large");
+static_assert(sizeof(SymbolUnion) <= 64, "SymbolUnion too large");
 
 template <typename T> struct AssertSymbol {
   static_assert(std::is_trivially_destructible<T>(),
