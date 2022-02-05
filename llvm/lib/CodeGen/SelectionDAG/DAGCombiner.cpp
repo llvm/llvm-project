@@ -22519,6 +22519,19 @@ SDValue DAGCombiner::visitVECREDUCE(SDNode *N) {
       return DAG.getNode(NewOpcode, SDLoc(N), N->getValueType(0), N0);
   }
 
+  // vecreduce_or(insert_subvector(zero or undef, val)) -> vecreduce_or(val)
+  // vecreduce_and(insert_subvector(ones or undef, val)) -> vecreduce_and(val)
+  if (N0.getOpcode() == ISD::INSERT_SUBVECTOR &&
+      TLI.isTypeLegal(N0.getOperand(1).getValueType())) {
+    SDValue Vec = N0.getOperand(0);
+    SDValue Subvec = N0.getOperand(1);
+    if ((Opcode == ISD::VECREDUCE_OR &&
+         (N0.getOperand(0).isUndef() || isNullOrNullSplat(Vec))) ||
+        (Opcode == ISD::VECREDUCE_AND &&
+         (N0.getOperand(0).isUndef() || isAllOnesOrAllOnesSplat(Vec))))
+      return DAG.getNode(Opcode, SDLoc(N), N->getValueType(0), Subvec);
+  }
+
   return SDValue();
 }
 
