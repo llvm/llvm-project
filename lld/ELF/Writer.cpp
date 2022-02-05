@@ -619,12 +619,8 @@ template <class ELFT> static void markUsedLocalSymbols() {
   // See MarkLive<ELFT>::resolveReloc().
   if (config->gcSections)
     return;
-  // Without --gc-sections, the field is initialized with "true".
-  // Drop the flag first and then rise for symbols referenced in relocations.
   for (ELFFileBase *file : objectFiles) {
     ObjFile<ELFT> *f = cast<ObjFile<ELFT>>(file);
-    for (Symbol *b : f->getLocalSymbols())
-      b->used = false;
     for (InputSectionBase *s : f->getSections()) {
       InputSection *isec = dyn_cast_or_null<InputSection>(s);
       if (!isec)
@@ -688,7 +684,7 @@ static bool includeInSymtab(const Symbol &b) {
         return false;
     return true;
   }
-  return b.used;
+  return b.used || !config->gcSections;
 }
 
 // Local symbols are not in the linker's symbol table. This function scans
