@@ -575,6 +575,10 @@ module std [system] {
     header "ios"
     export iosfwd
     export *
+
+    module __ios {
+      module fpos { private header "__ios/fpos.h" }
+    }
   }
   module iosfwd {
     header "iosfwd"
