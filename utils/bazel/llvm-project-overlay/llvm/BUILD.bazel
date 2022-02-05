@@ -2990,6 +2990,8 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
+        ":AllTargetsAsmParsers",
+        ":AllTargetsCodeGens",
         ":BinaryFormat",
         ":Object",
         ":Support",
@@ -4241,8 +4243,8 @@ cc_binary(
         ":Option",
         ":Remarks",
         ":Support",
-        ":TextAPI",
         ":TLICheckerOptsTableGen",
+        ":TextAPI",
     ],
 )
 
