@@ -557,6 +557,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         Instruction *Shl = BinaryOperator::CreateShl(I->getOperand(0), ShiftC);
         return InsertNewInstWith(Shl, *I);
       }
+      // 'Quadratic Reciprocity': mul(x,x) -> 0 if we're only demanding bit[1]
+      if (DemandedMask == 2 && I->getOperand(0) == I->getOperand(1))
+        return ConstantInt::getNullValue(VTy);
     }
     computeKnownBits(I, Known, Depth, CxtI);
     break;
