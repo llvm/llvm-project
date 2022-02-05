@@ -734,11 +734,11 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         //
         // This pattern occurs when (i32 (srl (sra 31), c3 - 32)) is type
         // legalized and goes through DAG combine.
-        SDValue Y;
         if (C2 >= 32 && (C3 - C2) == 1 && N0.hasOneUse() &&
-            selectSExti32(X, Y)) {
+            X.getOpcode() == ISD::SIGN_EXTEND_INREG &&
+            cast<VTSDNode>(X.getOperand(1))->getVT() == MVT::i32) {
           SDNode *SRAIW =
-              CurDAG->getMachineNode(RISCV::SRAIW, DL, XLenVT, Y,
+              CurDAG->getMachineNode(RISCV::SRAIW, DL, XLenVT, X.getOperand(0),
                                      CurDAG->getTargetConstant(31, DL, XLenVT));
           SDNode *SRLIW = CurDAG->getMachineNode(
               RISCV::SRLIW, DL, XLenVT, SDValue(SRAIW, 0),
