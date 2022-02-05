@@ -305,7 +305,7 @@ unsigned M88kInstrInfo::insertBranch(
 
 bool M88kInstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
-  assert(Cond.size() == 3 || "wrong number of m88k branch conditions");
+  assert(Cond.size() == 3 && "wrong number of m88k branch conditions");
 
   switch (Cond[0].getImm()) {
   case M88k::BCND:
@@ -319,7 +319,7 @@ bool M88kInstrInfo::reverseBranchCondition(
     // - even bit number: next bit numner
     // - odd bit number: previous bit numner
     unsigned CC = Cond[1].getImm();
-    CC = (CC & ~(-1 << 1) | (1 - (CC & 0x01)));
+    CC = (CC & ~1) | (1 - (CC & 0x01));
     Cond[1].setImm(CC);
     break;
   }
