@@ -675,14 +675,11 @@ TEST_F(SymbolCollectorTest, ObjCFrameworkIncludeHeader) {
       testPath("Frameworks/Foundation.framework/Headers/NSObject.h"), 0,
       llvm::MemoryBuffer::getMemBuffer(FrameworkHeader));
   std::string PrivateFrameworkHeader = R"(
-    #import <Foundation/Foundation.h>
+    #import <Foundation/NSObject.h>
 
     @interface PrivateClass : NSObject
     @end
   )";
-  InMemoryFileSystem->addFile(
-      testPath("Frameworks/Foundation.framework/Headers/NSObject.h"), 0,
-      llvm::MemoryBuffer::getMemBuffer(FrameworkHeader));
   InMemoryFileSystem->addFile(
       testPath(
           "Frameworks/Foundation.framework/PrivateHeaders/NSObject+Private.h"),
