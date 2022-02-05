@@ -1994,6 +1994,7 @@ cc_library(
         ":SparseTensorTransforms",
         ":StandardOpsTransforms",
         ":TensorTransforms",
+        ":VectorToLLVM",
     ],
 )
 
