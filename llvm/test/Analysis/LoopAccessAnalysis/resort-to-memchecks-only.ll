@@ -1,4 +1,4 @@
-; RUN: opt -passes='require<scalar-evolution>,require<aa>,loop(print-access-info)' -disable-output  < %s 2>&1 | FileCheck %s
+; RUN: opt -passes='print-access-info' -disable-output  < %s 2>&1 | FileCheck %s
 
 ; We give up analyzing the dependences in this loop due to non-constant
 ; distance between A[i+offset] and A[i] and add memchecks to prove

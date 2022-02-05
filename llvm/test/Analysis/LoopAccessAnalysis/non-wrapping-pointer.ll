@@ -1,4 +1,4 @@
-; RUN: opt -passes='require<aa>,require<scalar-evolution>,require<aa>,loop(print-access-info)' -aa-pipeline='basic-aa' -disable-output < %s  2>&1 | FileCheck %s
+; RUN: opt -passes='print-access-info' -aa-pipeline='basic-aa' -disable-output < %s  2>&1 | FileCheck %s
 
 ; For this loop:
 ;   for (int i = 0; i < n; i++)

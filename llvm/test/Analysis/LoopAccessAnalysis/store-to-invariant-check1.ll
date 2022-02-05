@@ -1,4 +1,4 @@
-; RUN: opt -passes='require<scalar-evolution>,require<aa>,loop(print-access-info)' -disable-output  < %s 2>&1 | FileCheck %s
+; RUN: opt -passes='print-access-info' -disable-output  < %s 2>&1 | FileCheck %s
 
 ; Test to confirm LAA will find multiple stores to an invariant address in the
 ; inner loop.
