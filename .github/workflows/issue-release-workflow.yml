@@ -36,6 +36,10 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: llvm/llvm-project
+          # GitHub stores the token used for checkout and uses it for pushes
+          # too, but we want to use a different token for pushing, so we need
+          # to disable persist-credentials here.
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Setup Environment
