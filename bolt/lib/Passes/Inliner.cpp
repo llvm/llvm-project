@@ -526,10 +526,6 @@ void Inliner::runOnFunctions(BinaryContext &BC) {
   if (!opts::inliningEnabled())
     return;
 
-  uint64_t TotalSize = 0;
-  for (auto &BFI : BC.getBinaryFunctions())
-    TotalSize += BFI.second.getSize();
-
   bool InlinedOnce;
   unsigned NumIters = 0;
   do {

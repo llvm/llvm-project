@@ -962,7 +962,6 @@ size_t IndirectCallPromotion::canPromoteCallsite(
   }
 
   // Pick the top N targets.
-  uint64_t TotalCallsTopN = 0;
   uint64_t TotalMispredictsTopN = 0;
   size_t N = 0;
 
@@ -1015,7 +1014,6 @@ size_t IndirectCallPromotion::canPromoteCallsite(
       if (N + (Targets[I].JTIndices.empty() ? 1 : Targets[I].JTIndices.size()) >
           TrialN)
         break;
-      TotalCallsTopN += Targets[I].Branches;
       TotalMispredictsTopN += Targets[I].Mispreds;
       NumRemainingCalls -= Targets[I].Branches;
       N += Targets[I].JTIndices.empty() ? 1 : Targets[I].JTIndices.size();
