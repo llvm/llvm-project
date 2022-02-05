@@ -1803,6 +1803,33 @@ static ParseResult parseShuffleOp(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
+OpFoldResult vector::ShuffleOp::fold(ArrayRef<Attribute> operands) {
+  Attribute lhs = operands.front(), rhs = operands.back();
+  if (!lhs || !rhs)
+    return {};
+
+  auto lhsType = lhs.getType().cast<VectorType>();
+  // Only support 1-D for now to avoid complicated n-D DenseElementsAttr
+  // manipulation.
+  if (lhsType.getRank() != 1)
+    return {};
+  int64_t lhsSize = lhsType.getDimSize(0);
+
+  SmallVector<Attribute> results;
+  auto lhsElements = lhs.cast<DenseElementsAttr>().getValues<Attribute>();
+  auto rhsElements = rhs.cast<DenseElementsAttr>().getValues<Attribute>();
+  for (const auto &index : this->mask().getAsValueRange<IntegerAttr>()) {
+    int64_t i = index.getZExtValue();
+    if (i >= lhsSize) {
+      results.push_back(rhsElements[i - lhsSize]);
+    } else {
+      results.push_back(lhsElements[i]);
+    }
+  }
+
+  return DenseElementsAttr::get(getVectorType(), results);
+}
+
 //===----------------------------------------------------------------------===//
 // InsertElementOp
 //===----------------------------------------------------------------------===//

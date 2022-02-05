@@ -465,6 +465,7 @@ def Vector_ShuffleOp :
   let builders = [
     OpBuilder<(ins "Value":$v1, "Value":$v2, "ArrayRef<int64_t>")>
   ];
+  let hasFolder = 1;
   let extraClassDeclaration = [{
     static StringRef getMaskAttrName() { return "mask"; }
     VectorType getV1VectorType() {
