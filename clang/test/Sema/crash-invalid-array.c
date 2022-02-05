@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple=x86_64-apple-darwin -fsyntax-only -verify %s
 // PR6913
 
-int main()
+int main(void)
 {
    int x[10][10];
    int (*p)[] = x;

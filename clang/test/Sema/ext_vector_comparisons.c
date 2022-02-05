@@ -2,7 +2,7 @@
 
 typedef __attribute__(( ext_vector_type(4) )) int int4;
 
-static int4 test1() {
+static int4 test1(void) {
   int4 vec, rv;
 
   // comparisons to self...
@@ -17,7 +17,7 @@ static int4 test1() {
 
 typedef __attribute__(( ext_vector_type(4) )) float float4;
 
-static int4 test2() {
+static int4 test2(void) {
   float4 vec, rv;
 
   // comparisons to self.  no warning, they're floats
@@ -29,14 +29,14 @@ static int4 test2() {
   return vec >= vec; // no-warning
 }
 
-static int4 test3() {
+static int4 test3(void) {
   int4 i0, i1;
 
   return i0 > i1 ? i0 : i1; // no-error
   return i0 ? i0 : i1;      // no-error
 }
 
-static float4 test4() {
+static float4 test4(void) {
   float4 f0, f1;
 
   // This would actually generate implicit casting warning

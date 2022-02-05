@@ -16,7 +16,7 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
 typedef __WCHAR_TYPE__ wchar_t;
 
-void test() {
+void test(void) {
   // Basic types
   printf("%s", (int) 123);
   printf("abc%0f", "testing testing 123");

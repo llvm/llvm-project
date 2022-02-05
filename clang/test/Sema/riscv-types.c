@@ -136,8 +136,8 @@ void bar(void) {
 }
 
 typedef __rvv_bool4_t vbool4_t;
-__rvv_bool4_t get_rvv_bool4();
-vbool4_t get_vbool4_t();
+__rvv_bool4_t get_rvv_bool4(void);
+vbool4_t get_vbool4_t(void);
 
 void func1(int sel) {
   // CHECK: vbool4_t t0 = sel ? get_rvv_bool4() : get_vbool4_t();

@@ -110,6 +110,6 @@ int expect_error(uint64x2_t v) {
 }
 
 typedef __attribute__((__clang_arm_mve_strict_polymorphism)) int i; // expected-error {{'__clang_arm_mve_strict_polymorphism' attribute can only be applied to an MVE/NEON vector type}}
-typedef __attribute__((__clang_arm_mve_strict_polymorphism)) int f(); // expected-error {{'__clang_arm_mve_strict_polymorphism' attribute can only be applied to an MVE/NEON vector type}}
+typedef __attribute__((__clang_arm_mve_strict_polymorphism)) int f(void); // expected-error {{'__clang_arm_mve_strict_polymorphism' attribute can only be applied to an MVE/NEON vector type}}
 typedef __attribute__((__clang_arm_mve_strict_polymorphism)) struct { uint16x8_t v; } s; // expected-error {{'__clang_arm_mve_strict_polymorphism' attribute can only be applied to an MVE/NEON vector type}}
 #endif
