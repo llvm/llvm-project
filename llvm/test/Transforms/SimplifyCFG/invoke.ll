@@ -198,8 +198,7 @@ define void @invoke_of_noreturn() personality i8* bitcast (i32 (...)* @__gxx_per
 ; CHECK-NEXT:    invoke void @simple_throw()
 ; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont:
-; CHECK-NEXT:    call void @sideeffect(i32 0)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
 ; CHECK-NEXT:    cleanup
