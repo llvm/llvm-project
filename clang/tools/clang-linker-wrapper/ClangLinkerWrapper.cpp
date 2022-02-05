@@ -310,7 +310,13 @@ extractFromBinary(const ObjectFile &Obj,
 
   // We will use llvm-strip to remove the now unneeded section containing the
   // offloading code.
-  ErrorOr<std::string> StripPath = sys::findProgramByName("llvm-strip");
+  void *P = (void *)(intptr_t)&Help;
+  StringRef COWDir = "";
+  auto COWPath = sys::fs::getMainExecutable("llvm-strip", P);
+  if (!COWPath.empty())
+    COWDir = sys::path::parent_path(COWPath);
+  ErrorOr<std::string> StripPath =
+      sys::findProgramByName("llvm-strip", {COWDir});
   if (!StripPath)
     return createStringError(StripPath.getError(),
                              "Unable to find 'llvm-strip' in path");
