@@ -2013,7 +2013,7 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
   }
 
   OptSpecifier LibomptargetBCPathOpt =
-      Triple.isAMDGCN() ? options::OPT_libomptarget_amdgcn_bc_path_EQ
+      Triple.isAMDGCN() ? options::OPT_libomptarget_amdgpu_bc_path_EQ
                         : options::OPT_libomptarget_nvptx_bc_path_EQ;
 
   StringRef ArchPrefix = Triple.isAMDGCN() ? "amdgcn" : "nvptx";

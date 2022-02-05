@@ -1232,9 +1232,9 @@ Set directory to include search path with prefix
 
 Add directory to SYSTEM include search path, absolute paths are relative to -isysroot
 
-.. option:: --libomptarget-amdgcn-bc-path=<arg>
+.. option:: --libomptarget-amdgpu-bc-path=<arg>
 
-Path to libomptarget-amdgcn bitcode library
+Path to libomptarget-amdgpu bitcode library
 
 .. option:: --libomptarget-nvptx-bc-path=<arg>
 
