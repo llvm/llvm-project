@@ -15340,6 +15340,26 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
     default:
       break;
     }
+
+    // Add allocsize attribute for allocation functions.
+    switch (BuiltinID) {
+    case Builtin::BIcalloc:
+      FD->addAttr(AllocSizeAttr::CreateImplicit(
+          Context, ParamIdx(1, FD), ParamIdx(2, FD), FD->getLocation()));
+      break;
+    case Builtin::BImemalign:
+    case Builtin::BIaligned_alloc:
+    case Builtin::BIrealloc:
+      FD->addAttr(AllocSizeAttr::CreateImplicit(Context, ParamIdx(2, FD),
+                                                ParamIdx(), FD->getLocation()));
+      break;
+    case Builtin::BImalloc:
+      FD->addAttr(AllocSizeAttr::CreateImplicit(Context, ParamIdx(1, FD),
+                                                ParamIdx(), FD->getLocation()));
+      break;
+    default:
+      break;
+    }
   }
 
   AddKnownFunctionAttributesForReplaceableGlobalAllocationFunction(FD);
