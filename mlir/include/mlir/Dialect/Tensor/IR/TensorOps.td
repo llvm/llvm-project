@@ -23,6 +23,25 @@ class Tensor_Op<string mnemonic, list<Trait> traits = []>
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
+// Base class for ops with static/dynamic offset, sizes and strides
+// attributes/arguments.
+class Tensor_OpWithOffsetSizesAndStrides<string mnemonic,
+                                         list<Trait> traits = []>
+    : Tensor_Op<mnemonic, traits> {
+  code extraBaseClassDeclaration = [{
+    /// Returns the dynamic sizes for this subview operation if specified.
+    ::mlir::Operation::operand_range getDynamicSizes() { return sizes(); }
+
+    /// Return the list of Range (i.e. offset, size, stride). Each
+    /// Range entry contains either the dynamic value or a ConstantIndexOp
+    /// constructed with `b` at location `loc`.
+    ::mlir::SmallVector<::mlir::Range, 8> getOrCreateRanges(
+        ::mlir::OpBuilder &b, ::mlir::Location loc) {
+      return ::mlir::getOrCreateRanges(*this, b, loc);
+    }
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//
@@ -158,11 +177,11 @@ def Tensor_ExtractOp : Tensor_Op<"extract",
 // ExtractSliceOp
 //===----------------------------------------------------------------------===//
 
-def Tensor_ExtractSliceOp : BaseOpWithOffsetSizesAndStrides<
-    Tensor_Dialect, "extract_slice",
-    [NoSideEffect, AttrSizedOperandSegments,
-     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
-     OffsetSizeAndStrideOpInterface]> {
+def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", [
+    NoSideEffect, AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+    OffsetSizeAndStrideOpInterface
+  ]> {
   let summary = "extract slice operation";
   let description = [{
     The "extract_slice" operation extract a tensor from another tensor as
@@ -451,12 +470,12 @@ def Tensor_InsertOp : Tensor_Op<"insert",
 // InsertSliceOp
 //===----------------------------------------------------------------------===//
 
-def Tensor_InsertSliceOp : BaseOpWithOffsetSizesAndStrides<
-    Tensor_Dialect, "insert_slice",
-    [NoSideEffect, AttrSizedOperandSegments, OffsetSizeAndStrideOpInterface,
-     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
-     TypesMatchWith<"expected result type to match dest type",
-                    "dest", "result", "$_self">]> {
+def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
+    NoSideEffect, AttrSizedOperandSegments, OffsetSizeAndStrideOpInterface,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+    TypesMatchWith<"expected result type to match dest type",
+                   "dest", "result", "$_self">
+  ]> {
   let summary = "insert_slice operation";
   let description = [{
     The "insert_slice" operation insert a tensor `source` into another

@@ -31,6 +31,25 @@ class MemRef_Op<string mnemonic, list<Trait> traits = []>
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
+// Base class for ops with static/dynamic offset, sizes and strides
+// attributes/arguments.
+class MemRef_OpWithOffsetSizesAndStrides<string mnemonic,
+                                         list<Trait> traits = []>
+    : MemRef_Op<mnemonic, traits> {
+  code extraBaseClassDeclaration = [{
+    /// Returns the dynamic sizes for this subview operation if specified.
+    ::mlir::Operation::operand_range getDynamicSizes() { return sizes(); }
+
+    /// Return the list of Range (i.e. offset, size, stride). Each
+    /// Range entry contains either the dynamic value or a ConstantIndexOp
+    /// constructed with `b` at location `loc`.
+    ::mlir::SmallVector<::mlir::Range, 8> getOrCreateRanges(
+        ::mlir::OpBuilder &b, ::mlir::Location loc) {
+      return ::mlir::getOrCreateRanges(*this, b, loc);
+    }
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // AllocLikeOp
 //===----------------------------------------------------------------------===//
@@ -991,8 +1010,8 @@ def MemRef_PrefetchOp : MemRef_Op<"prefetch"> {
 // ReinterpretCastOp
 //===----------------------------------------------------------------------===//
 
-def MemRef_ReinterpretCastOp:
-    BaseOpWithOffsetSizesAndStrides<MemRef_Dialect, "reinterpret_cast", [
+def MemRef_ReinterpretCastOp
+  : MemRef_OpWithOffsetSizesAndStrides<"reinterpret_cast", [
       NoSideEffect, AttrSizedOperandSegments, ViewLikeOpInterface,
       OffsetSizeAndStrideOpInterface, MemRefsNormalizable
     ]> {
@@ -1387,10 +1406,10 @@ def MemRef_StoreOp : MemRef_Op<"store",
 // SubViewOp
 //===----------------------------------------------------------------------===//
 
-def SubViewOp : BaseOpWithOffsetSizesAndStrides<
-    MemRef_Dialect, "subview", [DeclareOpInterfaceMethods<ViewLikeOpInterface>,
-                NoSideEffect, AttrSizedOperandSegments,
-		OffsetSizeAndStrideOpInterface] >  {
+def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
+    DeclareOpInterfaceMethods<ViewLikeOpInterface>, NoSideEffect,
+    AttrSizedOperandSegments, OffsetSizeAndStrideOpInterface
+  ]> {
   let summary = "memref subview operation";
   let description = [{
     The "subview" operation converts a memref type to another memref type
