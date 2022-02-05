@@ -1525,9 +1525,8 @@ void SplitEditor::finish(SmallVectorImpl<unsigned> *LRMap) {
 
   // Provide a reverse mapping from original indices to Edit ranges.
   if (LRMap) {
-    LRMap->clear();
-    for (unsigned i = 0, e = Edit->size(); i != e; ++i)
-      LRMap->push_back(i);
+    auto Seq = llvm::seq<unsigned>(0, Edit->size());
+    LRMap->assign(Seq.begin(), Seq.end());
   }
 
   // Now check if any registers were separated into multiple components.
