@@ -872,9 +872,9 @@ void IntegerPolyhedron::getLocalReprs(
     changed = false;
     for (unsigned i = 0, e = getNumLocalIds(); i < e; ++i) {
       if (!foundRepr[i + divOffset]) {
-        auto res = computeSingleVarRepr(*this, foundRepr, divOffset + i,
-                                        dividends[i], denominators[i]);
-        if (res.kind == ReprKind::None)
+        MaybeLocalRepr res = computeSingleVarRepr(
+            *this, foundRepr, divOffset + i, dividends[i], denominators[i]);
+        if (!res)
           continue;
         foundRepr[i + divOffset] = true;
         repr[i] = res;
@@ -886,7 +886,7 @@ void IntegerPolyhedron::getLocalReprs(
   // Set 0 denominator for identifiers for which no division representation
   // could be found.
   for (unsigned i = 0, e = repr.size(); i < e; ++i)
-    if (repr[i].kind == ReprKind::None)
+    if (!repr[i])
       denominators[i] = 0;
 }
 
