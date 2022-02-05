@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -O3 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck --check-prefix=CHECK-LNX %s
-; RUN: llc -verify-machineinstrs -O3 -mtriple=powerpc-ibm-aix-xcoff < %s | FileCheck --check-prefix=CHECK-AIX %s
+; RUN: llc -enable-ppc-gen-scalar-mass -verify-machineinstrs -O3 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck --check-prefix=CHECK-LNX %s
+; RUN: llc -enable-ppc-gen-scalar-mass -verify-machineinstrs -O3 -mtriple=powerpc-ibm-aix-xcoff < %s | FileCheck --check-prefix=CHECK-AIX %s
 
 declare float @llvm.pow.f32 (float, float);
 declare double @llvm.pow.f64 (double, double);
