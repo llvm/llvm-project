@@ -687,7 +687,7 @@ bool Linux::IsAArch64OutlineAtomicsDefault(const ArgList &Args) const {
 }
 
 bool Linux::IsMathErrnoDefault() const {
-  if (getTriple().isAndroid())
+  if (getTriple().isAndroid() || getTriple().isMusl())
     return false;
   return Generic_ELF::IsMathErrnoDefault();
 }
