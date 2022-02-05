@@ -23,9 +23,9 @@
 // RUN: llvm-readelf -s -x .got %t2 | FileCheck --check-prefix=READELF --implicit-check-not=__real_ %s
 
 // CHECK2: <_start>:
-// CHECK2-NEXT: movq {{.*}}(%rip), %rax  # 0x2022e8
-// CHECK2-NEXT: movq {{.*}}(%rip), %rbx  # 0x2022e8
-// CHECK2-NEXT: movq {{.*}}(%rip), %rcx  # 0x2022e0
+// CHECK2-NEXT: movq {{.*}}(%rip), %rax  # 0x2022c0
+// CHECK2-NEXT: movq {{.*}}(%rip), %rbx  # 0x2022c0
+// CHECK2-NEXT: movq {{.*}}(%rip), %rcx  # 0x2022b8
 
 .global _start
 _start:
