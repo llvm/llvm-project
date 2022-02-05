@@ -126,11 +126,6 @@ public:
   // exported into .dynsym.
   uint8_t inDynamicList : 1;
 
-  // False if LTO shouldn't inline whatever this symbol points to. If a symbol
-  // is overwritten after LTO, LTO shouldn't inline the symbol because it
-  // doesn't know the final contents of the symbol.
-  uint8_t canInline : 1;
-
   // Used to track if there has been at least one undefined reference to the
   // symbol. For Undefined and SharedSymbol, the binding may change to STB_WEAK
   // if the first undefined reference from a non-shared object is weak.
@@ -246,11 +241,11 @@ protected:
         binding(binding), type(type), stOther(stOther), symbolKind(k),
         visibility(stOther & 3),
         isUsedInRegularObj(!file || file->kind() == InputFile::ObjKind),
-        exportDynamic(false), inDynamicList(false), canInline(false),
-        referenced(false), traced(false), hasVersionSuffix(false),
-        isInIplt(false), gotInIgot(false), isPreemptible(false), used(false),
-        folded(false), needsTocRestore(false), scriptDefined(false),
-        needsCopy(false), needsGot(false), needsPlt(false), needsTlsDesc(false),
+        exportDynamic(false), inDynamicList(false), referenced(false),
+        traced(false), hasVersionSuffix(false), isInIplt(false),
+        gotInIgot(false), isPreemptible(false), used(false), folded(false),
+        needsTocRestore(false), scriptDefined(false), needsCopy(false),
+        needsGot(false), needsPlt(false), needsTlsDesc(false),
         needsTlsGd(false), needsTlsGdToIe(false), needsTlsLd(false),
         needsGotDtprel(false), needsTlsIe(false), hasDirectReloc(false) {}
 
@@ -279,7 +274,10 @@ public:
   // PPC64 toc pointer.
   uint8_t needsTocRestore : 1;
 
-  // True if this symbol is defined by a linker script.
+  // True if this symbol is defined by a symbol assignment or wrapped by --wrap.
+  //
+  // LTO shouldn't inline the symbol because it doesn't know the final content
+  // of the symbol.
   uint8_t scriptDefined : 1;
 
   // True if this symbol needs a canonical PLT entry, or (during
@@ -588,7 +586,6 @@ void Symbol::replace(const Symbol &newSym) {
   isUsedInRegularObj = old.isUsedInRegularObj;
   exportDynamic = old.exportDynamic;
   inDynamicList = old.inDynamicList;
-  canInline = old.canInline;
   referenced = old.referenced;
   traced = old.traced;
   hasVersionSuffix = old.hasVersionSuffix;
