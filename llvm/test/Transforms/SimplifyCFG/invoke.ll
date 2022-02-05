@@ -196,10 +196,9 @@ define void @invoke_of_noreturn() personality i8* bitcast (i32 (...)* @__gxx_per
 ; CHECK-LABEL: @invoke_of_noreturn(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
-; CHECK:       invoke.cont:
-; CHECK-NEXT:    call void @sideeffect(i32 0)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    to label [[INVOKE_CONT_UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       invoke.cont.unreachable:
+; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
 ; CHECK-NEXT:    cleanup
@@ -225,10 +224,11 @@ define void @invoke_of_noreturn_with_shared_normal_destination(i1 %c) personalit
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[INVOKE:%.*]], label [[INVOKE_CONT:%.*]]
 ; CHECK:       invoke:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:    to label [[INVOKE_CONT_UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       invoke.cont.unreachable:
+; CHECK-NEXT:    unreachable
 ; CHECK:       invoke.cont:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ 0, [[INVOKE]] ], [ -1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    call void @sideeffect(i32 [[R]])
+; CHECK-NEXT:    call void @sideeffect(i32 -1)
 ; CHECK-NEXT:    ret void
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
