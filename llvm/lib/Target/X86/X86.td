@@ -1213,12 +1213,16 @@ class ProcModel<string Name, SchedMachineModel Model,
 // NOTE: 64Bit is here as "generic" is the default llc CPU. The X86Subtarget
 // constructor checks that any CPU used in 64-bit mode has Feature64Bit enabled.
 // It has no effect on code generation.
+// NOTE: As a default tuning, "generic" aims to produce code optimized for the
+// most common X86 processors. The tunings might be changed over time. It is
+// recommended to use "x86-64" in lit tests for consistency.
 def : ProcModel<"generic", SandyBridgeModel,
                 [FeatureX87, FeatureCMPXCHG8B, Feature64Bit],
                 [TuningSlow3OpsLEA,
                  TuningSlowDivide64,
-                 TuningSlowIncDec,
                  TuningMacroFusion,
+                 TuningFastScalarFSQRT,
+                 TuningFast15ByteNOP,
                  TuningInsertVZEROUPPER]>;
 
 def : Proc<"i386",            [FeatureX87],

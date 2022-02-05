@@ -108,7 +108,7 @@ define void @ham() {
 ; CHECK-NEXT:    jne LBB3_9
 ; CHECK-NEXT:  ## %bb.5: ## %bb5
 ; CHECK-NEXT:    ## in Loop: Header=BB3_4 Depth=2
-; CHECK-NEXT:    addq $1, %rdx
+; CHECK-NEXT:    incq %rdx
 ; CHECK-NEXT:    cmpq %rcx, %rdx
 ; CHECK-NEXT:    jl LBB3_4
 ; CHECK-NEXT:    jmp LBB3_3
