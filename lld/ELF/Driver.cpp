@@ -2061,8 +2061,8 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
 
     // We want to tell LTO not to inline symbols to be overwritten
     // because LTO doesn't know the final symbol contents after renaming.
-    real->canInline = false;
-    sym->canInline = false;
+    real->scriptDefined = true;
+    sym->scriptDefined = true;
 
     // Tell LTO not to eliminate these symbols.
     sym->isUsedInRegularObj = true;

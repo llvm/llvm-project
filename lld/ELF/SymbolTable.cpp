@@ -89,7 +89,6 @@ Symbol *SymbolTable::insert(StringRef name) {
   sym->isUsedInRegularObj = false;
   sym->exportDynamic = false;
   sym->inDynamicList = false;
-  sym->canInline = true;
   sym->referenced = false;
   sym->traced = false;
   sym->scriptDefined = false;
