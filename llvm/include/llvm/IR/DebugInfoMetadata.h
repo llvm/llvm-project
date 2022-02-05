@@ -35,7 +35,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
-#include <type_traits>
 #include <vector>
 
 // Helper macros for defining get() overrides.

@@ -552,7 +552,6 @@ private:
   DenseMap<const DIStringType *, unsigned> StringTypeLocMap;
 
   AddressPool AddrPool;
-  bool SeenLocalType = false;
 
   /// Accelerator tables.
   AccelTable<DWARF5AccelTableData> AccelDebugNames;
@@ -795,7 +794,6 @@ public:
     DwarfDebug *DD;
     decltype(DwarfDebug::TypeUnitsUnderConstruction) TypeUnitsUnderConstruction;
     bool AddrPoolUsed;
-    bool SeenLocalType;
     friend class DwarfDebug;
     NonTypeUnitContext(DwarfDebug *DD);
   public:
@@ -804,7 +802,6 @@ public:
   };
 
   NonTypeUnitContext enterNonTypeUnitContext();
-  void seenLocalType() { SeenLocalType = true; }
 
   /// Add a label so that arange data can be generated for it.
   void addArangeLabel(SymbolCU SCU) { ArangeLabels.push_back(SCU); }

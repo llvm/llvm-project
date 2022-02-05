@@ -517,8 +517,8 @@ define void @fcmp_oeq_vf_v8f16(<8 x half>* %x, half %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
-  %b = insertelement <8 x half> undef, half %y, i32 0
-  %c = shufflevector <8 x half> %b, <8 x half> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x half> poison, half %y, i32 0
+  %c = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> zeroinitializer
   %d = fcmp oeq <8 x half> %a, %c
   store <8 x i1> %d, <8 x i1>* %z
   ret void
@@ -533,8 +533,8 @@ define void @fcmp_oeq_vf_v8f16_nonans(<8 x half>* %x, half %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
-  %b = insertelement <8 x half> undef, half %y, i32 0
-  %c = shufflevector <8 x half> %b, <8 x half> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x half> poison, half %y, i32 0
+  %c = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> zeroinitializer
   %d = fcmp nnan oeq <8 x half> %a, %c
   store <8 x i1> %d, <8 x i1>* %z
   ret void
@@ -558,8 +558,8 @@ define void @fcmp_une_vf_v4f32(<4 x float>* %x, float %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
-  %b = insertelement <4 x float> undef, float %y, i32 0
-  %c = shufflevector <4 x float> %b, <4 x float> undef, <4 x i32> zeroinitializer
+  %b = insertelement <4 x float> poison, float %y, i32 0
+  %c = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> zeroinitializer
   %d = fcmp une <4 x float> %a, %c
   store <4 x i1> %d, <4 x i1>* %z
   ret void
@@ -583,8 +583,8 @@ define void @fcmp_une_vf_v4f32_nonans(<4 x float>* %x, float %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
-  %b = insertelement <4 x float> undef, float %y, i32 0
-  %c = shufflevector <4 x float> %b, <4 x float> undef, <4 x i32> zeroinitializer
+  %b = insertelement <4 x float> poison, float %y, i32 0
+  %c = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> zeroinitializer
   %d = fcmp nnan une <4 x float> %a, %c
   store <4 x i1> %d, <4 x i1>* %z
   ret void
@@ -608,8 +608,8 @@ define void @fcmp_ogt_vf_v2f64(<2 x double>* %x, double %y, <2 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
-  %b = insertelement <2 x double> undef, double %y, i32 0
-  %c = shufflevector <2 x double> %b, <2 x double> undef, <2 x i32> zeroinitializer
+  %b = insertelement <2 x double> poison, double %y, i32 0
+  %c = shufflevector <2 x double> %b, <2 x double> poison, <2 x i32> zeroinitializer
   %d = fcmp ogt <2 x double> %a, %c
   store <2 x i1> %d, <2 x i1>* %z
   ret void
@@ -633,8 +633,8 @@ define void @fcmp_ogt_vf_v2f64_nonans(<2 x double>* %x, double %y, <2 x i1>* %z)
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
-  %b = insertelement <2 x double> undef, double %y, i32 0
-  %c = shufflevector <2 x double> %b, <2 x double> undef, <2 x i32> zeroinitializer
+  %b = insertelement <2 x double> poison, double %y, i32 0
+  %c = shufflevector <2 x double> %b, <2 x double> poison, <2 x i32> zeroinitializer
   %d = fcmp nnan ogt <2 x double> %a, %c
   store <2 x i1> %d, <2 x i1>* %z
   ret void
@@ -649,8 +649,8 @@ define void @fcmp_olt_vf_v16f16(<16 x half>* %x, half %y, <16 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v10, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x half>, <16 x half>* %x
-  %b = insertelement <16 x half> undef, half %y, i32 0
-  %c = shufflevector <16 x half> %b, <16 x half> undef, <16 x i32> zeroinitializer
+  %b = insertelement <16 x half> poison, half %y, i32 0
+  %c = shufflevector <16 x half> %b, <16 x half> poison, <16 x i32> zeroinitializer
   %d = fcmp olt <16 x half> %a, %c
   store <16 x i1> %d, <16 x i1>* %z
   ret void
@@ -665,8 +665,8 @@ define void @fcmp_olt_vf_v16f16_nonans(<16 x half>* %x, half %y, <16 x i1>* %z) 
 ; CHECK-NEXT:    vsm.v v10, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x half>, <16 x half>* %x
-  %b = insertelement <16 x half> undef, half %y, i32 0
-  %c = shufflevector <16 x half> %b, <16 x half> undef, <16 x i32> zeroinitializer
+  %b = insertelement <16 x half> poison, half %y, i32 0
+  %c = shufflevector <16 x half> %b, <16 x half> poison, <16 x i32> zeroinitializer
   %d = fcmp nnan olt <16 x half> %a, %c
   store <16 x i1> %d, <16 x i1>* %z
   ret void
@@ -681,8 +681,8 @@ define void @fcmp_oge_vf_v8f32(<8 x float>* %x, float %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v10, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, <8 x float>* %x
-  %b = insertelement <8 x float> undef, float %y, i32 0
-  %c = shufflevector <8 x float> %b, <8 x float> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x float> poison, float %y, i32 0
+  %c = shufflevector <8 x float> %b, <8 x float> poison, <8 x i32> zeroinitializer
   %d = fcmp oge <8 x float> %a, %c
   store <8 x i1> %d, <8 x i1>* %z
   ret void
@@ -697,8 +697,8 @@ define void @fcmp_oge_vf_v8f32_nonans(<8 x float>* %x, float %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v10, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, <8 x float>* %x
-  %b = insertelement <8 x float> undef, float %y, i32 0
-  %c = shufflevector <8 x float> %b, <8 x float> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x float> poison, float %y, i32 0
+  %c = shufflevector <8 x float> %b, <8 x float> poison, <8 x i32> zeroinitializer
   %d = fcmp nnan oge <8 x float> %a, %c
   store <8 x i1> %d, <8 x i1>* %z
   ret void
@@ -722,8 +722,8 @@ define void @fcmp_ole_vf_v4f64(<4 x double>* %x, double %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x double>, <4 x double>* %x
-  %b = insertelement <4 x double> undef, double %y, i32 0
-  %c = shufflevector <4 x double> %b, <4 x double> undef, <4 x i32> zeroinitializer
+  %b = insertelement <4 x double> poison, double %y, i32 0
+  %c = shufflevector <4 x double> %b, <4 x double> poison, <4 x i32> zeroinitializer
   %d = fcmp ole <4 x double> %a, %c
   store <4 x i1> %d, <4 x i1>* %z
   ret void
@@ -747,8 +747,8 @@ define void @fcmp_ole_vf_v4f64_nonans(<4 x double>* %x, double %y, <4 x i1>* %z)
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x double>, <4 x double>* %x
-  %b = insertelement <4 x double> undef, double %y, i32 0
-  %c = shufflevector <4 x double> %b, <4 x double> undef, <4 x i32> zeroinitializer
+  %b = insertelement <4 x double> poison, double %y, i32 0
+  %c = shufflevector <4 x double> %b, <4 x double> poison, <4 x i32> zeroinitializer
   %d = fcmp nnan ole <4 x double> %a, %c
   store <4 x i1> %d, <4 x i1>* %z
   ret void
@@ -765,8 +765,8 @@ define void @fcmp_ule_vf_v32f16(<32 x half>* %x, half %y, <32 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x half>, <32 x half>* %x
-  %b = insertelement <32 x half> undef, half %y, i32 0
-  %c = shufflevector <32 x half> %b, <32 x half> undef, <32 x i32> zeroinitializer
+  %b = insertelement <32 x half> poison, half %y, i32 0
+  %c = shufflevector <32 x half> %b, <32 x half> poison, <32 x i32> zeroinitializer
   %d = fcmp ule <32 x half> %a, %c
   store <32 x i1> %d, <32 x i1>* %z
   ret void
@@ -782,8 +782,8 @@ define void @fcmp_ule_vf_v32f16_nonans(<32 x half>* %x, half %y, <32 x i1>* %z) 
 ; CHECK-NEXT:    vsm.v v12, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x half>, <32 x half>* %x
-  %b = insertelement <32 x half> undef, half %y, i32 0
-  %c = shufflevector <32 x half> %b, <32 x half> undef, <32 x i32> zeroinitializer
+  %b = insertelement <32 x half> poison, half %y, i32 0
+  %c = shufflevector <32 x half> %b, <32 x half> poison, <32 x i32> zeroinitializer
   %d = fcmp nnan ule <32 x half> %a, %c
   store <32 x i1> %d, <32 x i1>* %z
   ret void
@@ -799,8 +799,8 @@ define void @fcmp_uge_vf_v16f32(<16 x float>* %x, float %y, <16 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x float>, <16 x float>* %x
-  %b = insertelement <16 x float> undef, float %y, i32 0
-  %c = shufflevector <16 x float> %b, <16 x float> undef, <16 x i32> zeroinitializer
+  %b = insertelement <16 x float> poison, float %y, i32 0
+  %c = shufflevector <16 x float> %b, <16 x float> poison, <16 x i32> zeroinitializer
   %d = fcmp uge <16 x float> %a, %c
   store <16 x i1> %d, <16 x i1>* %z
   ret void
@@ -815,8 +815,8 @@ define void @fcmp_uge_vf_v16f32_nonans(<16 x float>* %x, float %y, <16 x i1>* %z
 ; CHECK-NEXT:    vsm.v v12, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x float>, <16 x float>* %x
-  %b = insertelement <16 x float> undef, float %y, i32 0
-  %c = shufflevector <16 x float> %b, <16 x float> undef, <16 x i32> zeroinitializer
+  %b = insertelement <16 x float> poison, float %y, i32 0
+  %c = shufflevector <16 x float> %b, <16 x float> poison, <16 x i32> zeroinitializer
   %d = fcmp nnan uge <16 x float> %a, %c
   store <16 x i1> %d, <16 x i1>* %z
   ret void
@@ -832,8 +832,8 @@ define void @fcmp_ult_vf_v8f64(<8 x double>* %x, double %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x double>, <8 x double>* %x
-  %b = insertelement <8 x double> undef, double %y, i32 0
-  %c = shufflevector <8 x double> %b, <8 x double> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x double> poison, double %y, i32 0
+  %c = shufflevector <8 x double> %b, <8 x double> poison, <8 x i32> zeroinitializer
   %d = fcmp ult <8 x double> %a, %c
   store <8 x i1> %d, <8 x i1>* %z
   ret void
@@ -848,8 +848,8 @@ define void @fcmp_ult_vf_v8f64_nonans(<8 x double>* %x, double %y, <8 x i1>* %z)
 ; CHECK-NEXT:    vsm.v v12, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x double>, <8 x double>* %x
-  %b = insertelement <8 x double> undef, double %y, i32 0
-  %c = shufflevector <8 x double> %b, <8 x double> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x double> poison, double %y, i32 0
+  %c = shufflevector <8 x double> %b, <8 x double> poison, <8 x i32> zeroinitializer
   %d = fcmp nnan ult <8 x double> %a, %c
   store <8 x i1> %d, <8 x i1>* %z
   ret void
@@ -866,8 +866,8 @@ define void @fcmp_ugt_vf_v64f16(<64 x half>* %x, half %y, <64 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <64 x half>, <64 x half>* %x
-  %b = insertelement <64 x half> undef, half %y, i32 0
-  %c = shufflevector <64 x half> %b, <64 x half> undef, <64 x i32> zeroinitializer
+  %b = insertelement <64 x half> poison, half %y, i32 0
+  %c = shufflevector <64 x half> %b, <64 x half> poison, <64 x i32> zeroinitializer
   %d = fcmp ugt <64 x half> %a, %c
   store <64 x i1> %d, <64 x i1>* %z
   ret void
@@ -883,8 +883,8 @@ define void @fcmp_ugt_vf_v64f16_nonans(<64 x half>* %x, half %y, <64 x i1>* %z) 
 ; CHECK-NEXT:    vsm.v v16, (a1)
 ; CHECK-NEXT:    ret
   %a = load <64 x half>, <64 x half>* %x
-  %b = insertelement <64 x half> undef, half %y, i32 0
-  %c = shufflevector <64 x half> %b, <64 x half> undef, <64 x i32> zeroinitializer
+  %b = insertelement <64 x half> poison, half %y, i32 0
+  %c = shufflevector <64 x half> %b, <64 x half> poison, <64 x i32> zeroinitializer
   %d = fcmp nnan ugt <64 x half> %a, %c
   store <64 x i1> %d, <64 x i1>* %z
   ret void
@@ -902,8 +902,8 @@ define void @fcmp_ueq_vf_v32f32(<32 x float>* %x, float %y, <32 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x float>, <32 x float>* %x
-  %b = insertelement <32 x float> undef, float %y, i32 0
-  %c = shufflevector <32 x float> %b, <32 x float> undef, <32 x i32> zeroinitializer
+  %b = insertelement <32 x float> poison, float %y, i32 0
+  %c = shufflevector <32 x float> %b, <32 x float> poison, <32 x i32> zeroinitializer
   %d = fcmp ueq <32 x float> %a, %c
   store <32 x i1> %d, <32 x i1>* %z
   ret void
@@ -919,8 +919,8 @@ define void @fcmp_ueq_vf_v32f32_nonans(<32 x float>* %x, float %y, <32 x i1>* %z
 ; CHECK-NEXT:    vsm.v v16, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x float>, <32 x float>* %x
-  %b = insertelement <32 x float> undef, float %y, i32 0
-  %c = shufflevector <32 x float> %b, <32 x float> undef, <32 x i32> zeroinitializer
+  %b = insertelement <32 x float> poison, float %y, i32 0
+  %c = shufflevector <32 x float> %b, <32 x float> poison, <32 x i32> zeroinitializer
   %d = fcmp nnan ueq <32 x float> %a, %c
   store <32 x i1> %d, <32 x i1>* %z
   ret void
@@ -937,8 +937,8 @@ define void @fcmp_one_vf_v8f64(<16 x double>* %x, double %y, <16 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x double>, <16 x double>* %x
-  %b = insertelement <16 x double> undef, double %y, i32 0
-  %c = shufflevector <16 x double> %b, <16 x double> undef, <16 x i32> zeroinitializer
+  %b = insertelement <16 x double> poison, double %y, i32 0
+  %c = shufflevector <16 x double> %b, <16 x double> poison, <16 x i32> zeroinitializer
   %d = fcmp one <16 x double> %a, %c
   store <16 x i1> %d, <16 x i1>* %z
   ret void
@@ -953,8 +953,8 @@ define void @fcmp_one_vf_v8f64_nonans(<16 x double>* %x, double %y, <16 x i1>* %
 ; CHECK-NEXT:    vsm.v v16, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x double>, <16 x double>* %x
-  %b = insertelement <16 x double> undef, double %y, i32 0
-  %c = shufflevector <16 x double> %b, <16 x double> undef, <16 x i32> zeroinitializer
+  %b = insertelement <16 x double> poison, double %y, i32 0
+  %c = shufflevector <16 x double> %b, <16 x double> poison, <16 x i32> zeroinitializer
   %d = fcmp nnan one <16 x double> %a, %c
   store <16 x i1> %d, <16 x i1>* %z
   ret void
@@ -981,8 +981,8 @@ define void @fcmp_ord_vf_v4f16(<4 x half>* %x, half %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x half>, <4 x half>* %x
-  %b = insertelement <4 x half> undef, half %y, i32 0
-  %c = shufflevector <4 x half> %b, <4 x half> undef, <4 x i32> zeroinitializer
+  %b = insertelement <4 x half> poison, half %y, i32 0
+  %c = shufflevector <4 x half> %b, <4 x half> poison, <4 x i32> zeroinitializer
   %d = fcmp ord <4 x half> %a, %c
   store <4 x i1> %d, <4 x i1>* %z
   ret void
@@ -1009,8 +1009,8 @@ define void @fcmp_uno_vf_v4f16(<2 x half>* %x, half %y, <2 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x half>, <2 x half>* %x
-  %b = insertelement <2 x half> undef, half %y, i32 0
-  %c = shufflevector <2 x half> %b, <2 x half> undef, <2 x i32> zeroinitializer
+  %b = insertelement <2 x half> poison, half %y, i32 0
+  %c = shufflevector <2 x half> %b, <2 x half> poison, <2 x i32> zeroinitializer
   %d = fcmp uno <2 x half> %a, %c
   store <2 x i1> %d, <2 x i1>* %z
   ret void
@@ -1025,8 +1025,8 @@ define void @fcmp_oeq_fv_v8f16(<8 x half>* %x, half %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
-  %b = insertelement <8 x half> undef, half %y, i32 0
-  %c = shufflevector <8 x half> %b, <8 x half> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x half> poison, half %y, i32 0
+  %c = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> zeroinitializer
   %d = fcmp oeq <8 x half> %c, %a
   store <8 x i1> %d, <8 x i1>* %z
   ret void
@@ -1041,8 +1041,8 @@ define void @fcmp_oeq_fv_v8f16_nonans(<8 x half>* %x, half %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
-  %b = insertelement <8 x half> undef, half %y, i32 0
-  %c = shufflevector <8 x half> %b, <8 x half> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x half> poison, half %y, i32 0
+  %c = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> zeroinitializer
   %d = fcmp nnan oeq <8 x half> %c, %a
   store <8 x i1> %d, <8 x i1>* %z
   ret void
@@ -1066,8 +1066,8 @@ define void @fcmp_une_fv_v4f32(<4 x float>* %x, float %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
-  %b = insertelement <4 x float> undef, float %y, i32 0
-  %c = shufflevector <4 x float> %b, <4 x float> undef, <4 x i32> zeroinitializer
+  %b = insertelement <4 x float> poison, float %y, i32 0
+  %c = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> zeroinitializer
   %d = fcmp une <4 x float> %c, %a
   store <4 x i1> %d, <4 x i1>* %z
   ret void
@@ -1091,8 +1091,8 @@ define void @fcmp_une_fv_v4f32_nonans(<4 x float>* %x, float %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
-  %b = insertelement <4 x float> undef, float %y, i32 0
-  %c = shufflevector <4 x float> %b, <4 x float> undef, <4 x i32> zeroinitializer
+  %b = insertelement <4 x float> poison, float %y, i32 0
+  %c = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> zeroinitializer
   %d = fcmp nnan une <4 x float> %c, %a
   store <4 x i1> %d, <4 x i1>* %z
   ret void
@@ -1116,8 +1116,8 @@ define void @fcmp_ogt_fv_v2f64(<2 x double>* %x, double %y, <2 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
-  %b = insertelement <2 x double> undef, double %y, i32 0
-  %c = shufflevector <2 x double> %b, <2 x double> undef, <2 x i32> zeroinitializer
+  %b = insertelement <2 x double> poison, double %y, i32 0
+  %c = shufflevector <2 x double> %b, <2 x double> poison, <2 x i32> zeroinitializer
   %d = fcmp ogt <2 x double> %c, %a
   store <2 x i1> %d, <2 x i1>* %z
   ret void
@@ -1141,8 +1141,8 @@ define void @fcmp_ogt_fv_v2f64_nonans(<2 x double>* %x, double %y, <2 x i1>* %z)
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
-  %b = insertelement <2 x double> undef, double %y, i32 0
-  %c = shufflevector <2 x double> %b, <2 x double> undef, <2 x i32> zeroinitializer
+  %b = insertelement <2 x double> poison, double %y, i32 0
+  %c = shufflevector <2 x double> %b, <2 x double> poison, <2 x i32> zeroinitializer
   %d = fcmp nnan ogt <2 x double> %c, %a
   store <2 x i1> %d, <2 x i1>* %z
   ret void
@@ -1157,8 +1157,8 @@ define void @fcmp_olt_fv_v16f16(<16 x half>* %x, half %y, <16 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v10, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x half>, <16 x half>* %x
-  %b = insertelement <16 x half> undef, half %y, i32 0
-  %c = shufflevector <16 x half> %b, <16 x half> undef, <16 x i32> zeroinitializer
+  %b = insertelement <16 x half> poison, half %y, i32 0
+  %c = shufflevector <16 x half> %b, <16 x half> poison, <16 x i32> zeroinitializer
   %d = fcmp olt <16 x half> %c, %a
   store <16 x i1> %d, <16 x i1>* %z
   ret void
@@ -1173,8 +1173,8 @@ define void @fcmp_olt_fv_v16f16_nonans(<16 x half>* %x, half %y, <16 x i1>* %z) 
 ; CHECK-NEXT:    vsm.v v10, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x half>, <16 x half>* %x
-  %b = insertelement <16 x half> undef, half %y, i32 0
-  %c = shufflevector <16 x half> %b, <16 x half> undef, <16 x i32> zeroinitializer
+  %b = insertelement <16 x half> poison, half %y, i32 0
+  %c = shufflevector <16 x half> %b, <16 x half> poison, <16 x i32> zeroinitializer
   %d = fcmp nnan olt <16 x half> %c, %a
   store <16 x i1> %d, <16 x i1>* %z
   ret void
@@ -1189,8 +1189,8 @@ define void @fcmp_oge_fv_v8f32(<8 x float>* %x, float %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v10, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, <8 x float>* %x
-  %b = insertelement <8 x float> undef, float %y, i32 0
-  %c = shufflevector <8 x float> %b, <8 x float> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x float> poison, float %y, i32 0
+  %c = shufflevector <8 x float> %b, <8 x float> poison, <8 x i32> zeroinitializer
   %d = fcmp oge <8 x float> %c, %a
   store <8 x i1> %d, <8 x i1>* %z
   ret void
@@ -1205,8 +1205,8 @@ define void @fcmp_oge_fv_v8f32_nonans(<8 x float>* %x, float %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v10, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, <8 x float>* %x
-  %b = insertelement <8 x float> undef, float %y, i32 0
-  %c = shufflevector <8 x float> %b, <8 x float> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x float> poison, float %y, i32 0
+  %c = shufflevector <8 x float> %b, <8 x float> poison, <8 x i32> zeroinitializer
   %d = fcmp nnan oge <8 x float> %c, %a
   store <8 x i1> %d, <8 x i1>* %z
   ret void
@@ -1230,8 +1230,8 @@ define void @fcmp_ole_fv_v4f64(<4 x double>* %x, double %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x double>, <4 x double>* %x
-  %b = insertelement <4 x double> undef, double %y, i32 0
-  %c = shufflevector <4 x double> %b, <4 x double> undef, <4 x i32> zeroinitializer
+  %b = insertelement <4 x double> poison, double %y, i32 0
+  %c = shufflevector <4 x double> %b, <4 x double> poison, <4 x i32> zeroinitializer
   %d = fcmp ole <4 x double> %c, %a
   store <4 x i1> %d, <4 x i1>* %z
   ret void
@@ -1255,8 +1255,8 @@ define void @fcmp_ole_fv_v4f64_nonans(<4 x double>* %x, double %y, <4 x i1>* %z)
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x double>, <4 x double>* %x
-  %b = insertelement <4 x double> undef, double %y, i32 0
-  %c = shufflevector <4 x double> %b, <4 x double> undef, <4 x i32> zeroinitializer
+  %b = insertelement <4 x double> poison, double %y, i32 0
+  %c = shufflevector <4 x double> %b, <4 x double> poison, <4 x i32> zeroinitializer
   %d = fcmp nnan ole <4 x double> %c, %a
   store <4 x i1> %d, <4 x i1>* %z
   ret void
@@ -1273,8 +1273,8 @@ define void @fcmp_ule_fv_v32f16(<32 x half>* %x, half %y, <32 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x half>, <32 x half>* %x
-  %b = insertelement <32 x half> undef, half %y, i32 0
-  %c = shufflevector <32 x half> %b, <32 x half> undef, <32 x i32> zeroinitializer
+  %b = insertelement <32 x half> poison, half %y, i32 0
+  %c = shufflevector <32 x half> %b, <32 x half> poison, <32 x i32> zeroinitializer
   %d = fcmp ule <32 x half> %c, %a
   store <32 x i1> %d, <32 x i1>* %z
   ret void
@@ -1290,8 +1290,8 @@ define void @fcmp_ule_fv_v32f16_nonans(<32 x half>* %x, half %y, <32 x i1>* %z) 
 ; CHECK-NEXT:    vsm.v v12, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x half>, <32 x half>* %x
-  %b = insertelement <32 x half> undef, half %y, i32 0
-  %c = shufflevector <32 x half> %b, <32 x half> undef, <32 x i32> zeroinitializer
+  %b = insertelement <32 x half> poison, half %y, i32 0
+  %c = shufflevector <32 x half> %b, <32 x half> poison, <32 x i32> zeroinitializer
   %d = fcmp nnan ule <32 x half> %c, %a
   store <32 x i1> %d, <32 x i1>* %z
   ret void
@@ -1307,8 +1307,8 @@ define void @fcmp_uge_fv_v16f32(<16 x float>* %x, float %y, <16 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x float>, <16 x float>* %x
-  %b = insertelement <16 x float> undef, float %y, i32 0
-  %c = shufflevector <16 x float> %b, <16 x float> undef, <16 x i32> zeroinitializer
+  %b = insertelement <16 x float> poison, float %y, i32 0
+  %c = shufflevector <16 x float> %b, <16 x float> poison, <16 x i32> zeroinitializer
   %d = fcmp uge <16 x float> %c, %a
   store <16 x i1> %d, <16 x i1>* %z
   ret void
@@ -1323,8 +1323,8 @@ define void @fcmp_uge_fv_v16f32_nonans(<16 x float>* %x, float %y, <16 x i1>* %z
 ; CHECK-NEXT:    vsm.v v12, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x float>, <16 x float>* %x
-  %b = insertelement <16 x float> undef, float %y, i32 0
-  %c = shufflevector <16 x float> %b, <16 x float> undef, <16 x i32> zeroinitializer
+  %b = insertelement <16 x float> poison, float %y, i32 0
+  %c = shufflevector <16 x float> %b, <16 x float> poison, <16 x i32> zeroinitializer
   %d = fcmp nnan uge <16 x float> %c, %a
   store <16 x i1> %d, <16 x i1>* %z
   ret void
@@ -1340,8 +1340,8 @@ define void @fcmp_ult_fv_v8f64(<8 x double>* %x, double %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x double>, <8 x double>* %x
-  %b = insertelement <8 x double> undef, double %y, i32 0
-  %c = shufflevector <8 x double> %b, <8 x double> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x double> poison, double %y, i32 0
+  %c = shufflevector <8 x double> %b, <8 x double> poison, <8 x i32> zeroinitializer
   %d = fcmp ult <8 x double> %c, %a
   store <8 x i1> %d, <8 x i1>* %z
   ret void
@@ -1356,8 +1356,8 @@ define void @fcmp_ult_fv_v8f64_nonans(<8 x double>* %x, double %y, <8 x i1>* %z)
 ; CHECK-NEXT:    vsm.v v12, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x double>, <8 x double>* %x
-  %b = insertelement <8 x double> undef, double %y, i32 0
-  %c = shufflevector <8 x double> %b, <8 x double> undef, <8 x i32> zeroinitializer
+  %b = insertelement <8 x double> poison, double %y, i32 0
+  %c = shufflevector <8 x double> %b, <8 x double> poison, <8 x i32> zeroinitializer
   %d = fcmp nnan ult <8 x double> %c, %a
   store <8 x i1> %d, <8 x i1>* %z
   ret void
@@ -1374,8 +1374,8 @@ define void @fcmp_ugt_fv_v64f16(<64 x half>* %x, half %y, <64 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <64 x half>, <64 x half>* %x
-  %b = insertelement <64 x half> undef, half %y, i32 0
-  %c = shufflevector <64 x half> %b, <64 x half> undef, <64 x i32> zeroinitializer
+  %b = insertelement <64 x half> poison, half %y, i32 0
+  %c = shufflevector <64 x half> %b, <64 x half> poison, <64 x i32> zeroinitializer
   %d = fcmp ugt <64 x half> %c, %a
   store <64 x i1> %d, <64 x i1>* %z
   ret void
@@ -1391,8 +1391,8 @@ define void @fcmp_ugt_fv_v64f16_nonans(<64 x half>* %x, half %y, <64 x i1>* %z) 
 ; CHECK-NEXT:    vsm.v v16, (a1)
 ; CHECK-NEXT:    ret
   %a = load <64 x half>, <64 x half>* %x
-  %b = insertelement <64 x half> undef, half %y, i32 0
-  %c = shufflevector <64 x half> %b, <64 x half> undef, <64 x i32> zeroinitializer
+  %b = insertelement <64 x half> poison, half %y, i32 0
+  %c = shufflevector <64 x half> %b, <64 x half> poison, <64 x i32> zeroinitializer
   %d = fcmp nnan ugt <64 x half> %c, %a
   store <64 x i1> %d, <64 x i1>* %z
   ret void
@@ -1410,8 +1410,8 @@ define void @fcmp_ueq_fv_v32f32(<32 x float>* %x, float %y, <32 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x float>, <32 x float>* %x
-  %b = insertelement <32 x float> undef, float %y, i32 0
-  %c = shufflevector <32 x float> %b, <32 x float> undef, <32 x i32> zeroinitializer
+  %b = insertelement <32 x float> poison, float %y, i32 0
+  %c = shufflevector <32 x float> %b, <32 x float> poison, <32 x i32> zeroinitializer
   %d = fcmp ueq <32 x float> %c, %a
   store <32 x i1> %d, <32 x i1>* %z
   ret void
@@ -1427,8 +1427,8 @@ define void @fcmp_ueq_fv_v32f32_nonans(<32 x float>* %x, float %y, <32 x i1>* %z
 ; CHECK-NEXT:    vsm.v v16, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x float>, <32 x float>* %x
-  %b = insertelement <32 x float> undef, float %y, i32 0
-  %c = shufflevector <32 x float> %b, <32 x float> undef, <32 x i32> zeroinitializer
+  %b = insertelement <32 x float> poison, float %y, i32 0
+  %c = shufflevector <32 x float> %b, <32 x float> poison, <32 x i32> zeroinitializer
   %d = fcmp nnan ueq <32 x float> %c, %a
   store <32 x i1> %d, <32 x i1>* %z
   ret void
@@ -1445,8 +1445,8 @@ define void @fcmp_one_fv_v8f64(<16 x double>* %x, double %y, <16 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x double>, <16 x double>* %x
-  %b = insertelement <16 x double> undef, double %y, i32 0
-  %c = shufflevector <16 x double> %b, <16 x double> undef, <16 x i32> zeroinitializer
+  %b = insertelement <16 x double> poison, double %y, i32 0
+  %c = shufflevector <16 x double> %b, <16 x double> poison, <16 x i32> zeroinitializer
   %d = fcmp one <16 x double> %c, %a
   store <16 x i1> %d, <16 x i1>* %z
   ret void
@@ -1461,8 +1461,8 @@ define void @fcmp_one_fv_v8f64_nonans(<16 x double>* %x, double %y, <16 x i1>* %
 ; CHECK-NEXT:    vsm.v v16, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x double>, <16 x double>* %x
-  %b = insertelement <16 x double> undef, double %y, i32 0
-  %c = shufflevector <16 x double> %b, <16 x double> undef, <16 x i32> zeroinitializer
+  %b = insertelement <16 x double> poison, double %y, i32 0
+  %c = shufflevector <16 x double> %b, <16 x double> poison, <16 x i32> zeroinitializer
   %d = fcmp nnan one <16 x double> %c, %a
   store <16 x i1> %d, <16 x i1>* %z
   ret void
@@ -1489,8 +1489,8 @@ define void @fcmp_ord_fv_v4f16(<4 x half>* %x, half %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x half>, <4 x half>* %x
-  %b = insertelement <4 x half> undef, half %y, i32 0
-  %c = shufflevector <4 x half> %b, <4 x half> undef, <4 x i32> zeroinitializer
+  %b = insertelement <4 x half> poison, half %y, i32 0
+  %c = shufflevector <4 x half> %b, <4 x half> poison, <4 x i32> zeroinitializer
   %d = fcmp ord <4 x half> %c, %a
   store <4 x i1> %d, <4 x i1>* %z
   ret void
@@ -1517,8 +1517,8 @@ define void @fcmp_uno_fv_v4f16(<2 x half>* %x, half %y, <2 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x half>, <2 x half>* %x
-  %b = insertelement <2 x half> undef, half %y, i32 0
-  %c = shufflevector <2 x half> %b, <2 x half> undef, <2 x i32> zeroinitializer
+  %b = insertelement <2 x half> poison, half %y, i32 0
+  %c = shufflevector <2 x half> %b, <2 x half> poison, <2 x i32> zeroinitializer
   %d = fcmp uno <2 x half> %c, %a
   store <2 x i1> %d, <2 x i1>* %z
   ret void

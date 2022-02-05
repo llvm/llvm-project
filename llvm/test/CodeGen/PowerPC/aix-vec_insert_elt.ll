@@ -306,32 +306,32 @@ define <4 x float> @testFloat2(<4 x float> %a, i8* %b, i32 zeroext %idx1, i32 ze
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    lwz 6, 0(3)
 ; CHECK-64-DAG:     rlwinm 4, 4, 2, 28, 29
-; CHECK-64-DAG:     addi 7, 1, -32
-; CHECK-64-NEXT:    stxv 34, -32(1)
+; CHECK-64-DAG:     addi 7, 1, -16
+; CHECK-64-NEXT:    stxv 34, -16(1)
 ; CHECK-64-NEXT:    stwx 6, 7, 4
 ; CHECK-64-NEXT:    rlwinm 4, 5, 2, 28, 29
-; CHECK-64-NEXT:    addi 5, 1, -16
-; CHECK-64-NEXT:    lxv 0, -32(1)
+; CHECK-64-NEXT:    addi 5, 1, -32
+; CHECK-64-NEXT:    lxv 0, -16(1)
 ; CHECK-64-NEXT:    lwz 3, 1(3)
-; CHECK-64-NEXT:    stxv 0, -16(1)
+; CHECK-64-NEXT:    stxv 0, -32(1)
 ; CHECK-64-NEXT:    stwx 3, 5, 4
-; CHECK-64-NEXT:    lxv 34, -16(1)
+; CHECK-64-NEXT:    lxv 34, -32(1)
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: testFloat2:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lwz 6, 0(3)
-; CHECK-32-NEXT:    addi 7, 1, -32
+; CHECK-32-NEXT:    addi 7, 1, -16
 ; CHECK-32-NEXT:    rlwinm 4, 4, 2, 28, 29
-; CHECK-32-NEXT:    stxv 34, -32(1)
+; CHECK-32-NEXT:    stxv 34, -16(1)
 ; CHECK-32-NEXT:    rlwinm 5, 5, 2, 28, 29
 ; CHECK-32-NEXT:    stwx 6, 7, 4
-; CHECK-32-NEXT:    addi 4, 1, -16
-; CHECK-32-NEXT:    lxv 0, -32(1)
+; CHECK-32-NEXT:    addi 4, 1, -48
+; CHECK-32-NEXT:    lxv 0, -16(1)
 ; CHECK-32-NEXT:    lwz 3, 1(3)
-; CHECK-32-NEXT:    stxv 0, -16(1)
+; CHECK-32-NEXT:    stxv 0, -48(1)
 ; CHECK-32-NEXT:    stwx 3, 4, 5
-; CHECK-32-NEXT:    lxv 34, -16(1)
+; CHECK-32-NEXT:    lxv 34, -48(1)
 ; CHECK-32-NEXT:    blr
 ;
 ; CHECK-64-P10-LABEL: testFloat2:
@@ -371,36 +371,36 @@ define <4 x float> @testFloat3(<4 x float> %a, i8* %b, i32 zeroext %idx1, i32 ze
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    lis 6, 1
 ; CHECK-64-DAG:         rlwinm 4, 4, 2, 28, 29
-; CHECK-64-DAG:    addi 7, 1, -32
+; CHECK-64-DAG:    addi 7, 1, -16
 ; CHECK-64-NEXT:    lwzx 6, 3, 6
-; CHECK-64-NEXT:    stxv 34, -32(1)
+; CHECK-64-NEXT:    stxv 34, -16(1)
 ; CHECK-64-NEXT:    stwx 6, 7, 4
 ; CHECK-64-NEXT:    li 4, 1
-; CHECK-64-NEXT:    lxv 0, -32(1)
+; CHECK-64-NEXT:    lxv 0, -16(1)
 ; CHECK-64-NEXT:    rldic 4, 4, 36, 27
 ; CHECK-64-NEXT:    lwzx 3, 3, 4
 ; CHECK-64-NEXT:    rlwinm 4, 5, 2, 28, 29
-; CHECK-64-NEXT:    addi 5, 1, -16
-; CHECK-64-NEXT:    stxv 0, -16(1)
+; CHECK-64-NEXT:    addi 5, 1, -32
+; CHECK-64-NEXT:    stxv 0, -32(1)
 ; CHECK-64-NEXT:    stwx 3, 5, 4
-; CHECK-64-NEXT:    lxv 34, -16(1)
+; CHECK-64-NEXT:    lxv 34, -32(1)
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: testFloat3:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lis 6, 1
-; CHECK-32-NEXT:    addi 7, 1, -32
+; CHECK-32-NEXT:    addi 7, 1, -16
 ; CHECK-32-NEXT:    rlwinm 4, 4, 2, 28, 29
 ; CHECK-32-NEXT:    rlwinm 5, 5, 2, 28, 29
 ; CHECK-32-NEXT:    lwzx 6, 3, 6
-; CHECK-32-NEXT:    stxv 34, -32(1)
+; CHECK-32-NEXT:    stxv 34, -16(1)
 ; CHECK-32-NEXT:    stwx 6, 7, 4
-; CHECK-32-NEXT:    addi 4, 1, -16
-; CHECK-32-NEXT:    lxv 0, -32(1)
+; CHECK-32-NEXT:    addi 4, 1, -48
+; CHECK-32-NEXT:    lxv 0, -16(1)
 ; CHECK-32-NEXT:    lwz 3, 0(3)
-; CHECK-32-NEXT:    stxv 0, -16(1)
+; CHECK-32-NEXT:    stxv 0, -48(1)
 ; CHECK-32-NEXT:    stwx 3, 4, 5
-; CHECK-32-NEXT:    lxv 34, -16(1)
+; CHECK-32-NEXT:    lxv 34, -48(1)
 ; CHECK-32-NEXT:    blr
 ;
 ; CHECK-64-P10-LABEL: testFloat3:
@@ -419,10 +419,9 @@ define <4 x float> @testFloat3(<4 x float> %a, i8* %b, i32 zeroext %idx1, i32 ze
 ;
 ; CHECK-32-P10-LABEL: testFloat3:
 ; CHECK-32-P10:       # %bb.0: # %entry
-; CHECK-32-P10-NEXT:    lis 6, 1
-; CHECK-32-P10-NEXT:    slwi 4, 4, 2
-; CHECK-32-P10-NEXT:    lwzx 6, 3, 6
+; CHECK-32-P10-NEXT:    plwz 6, 65536(3), 0
 ; CHECK-32-P10-NEXT:    lwz 3, 0(3)
+; CHECK-32-P10-NEXT:    slwi 4, 4, 2
 ; CHECK-32-P10-NEXT:    vinswlx 2, 4, 6
 ; CHECK-32-P10-NEXT:    slwi 4, 5, 2
 ; CHECK-32-P10-NEXT:    vinswlx 2, 4, 3
@@ -478,21 +477,21 @@ entry:
 define <4 x float> @testFloatImm2(<4 x float> %a, i32* %b) {
 ; CHECK-64-LABEL: testFloatImm2:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    lfs 0, 0(3)
-; CHECK-64-NEXT:    xscvdpspn 0, 0
+; CHECK-64-NEXT:    lwz 4, 0(3)
+; CHECK-64-NEXT:    lwz 3, 4(3)
+; CHECK-64-NEXT:    mtfprwz 0, 4
 ; CHECK-64-NEXT:    xxinsertw 34, 0, 0
-; CHECK-64-NEXT:    lfs 0, 4(3)
-; CHECK-64-NEXT:    xscvdpspn 0, 0
+; CHECK-64-NEXT:    mtfprwz 0, 3
 ; CHECK-64-NEXT:    xxinsertw 34, 0, 8
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: testFloatImm2:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    lfs 0, 0(3)
-; CHECK-32-NEXT:    xscvdpspn 0, 0
+; CHECK-32-NEXT:    lwz 4, 0(3)
+; CHECK-32-NEXT:    lwz 3, 4(3)
+; CHECK-32-NEXT:    mtfprwz 0, 4
 ; CHECK-32-NEXT:    xxinsertw 34, 0, 0
-; CHECK-32-NEXT:    lfs 0, 4(3)
-; CHECK-32-NEXT:    xscvdpspn 0, 0
+; CHECK-32-NEXT:    mtfprwz 0, 3
 ; CHECK-32-NEXT:    xxinsertw 34, 0, 8
 ; CHECK-32-NEXT:    blr
 ;
@@ -526,24 +525,24 @@ define <4 x float> @testFloatImm3(<4 x float> %a, i32* %b) {
 ; CHECK-64-LABEL: testFloatImm3:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    lis 4, 4
-; CHECK-64-NEXT:    lfsx 0, 3, 4
+; CHECK-64-NEXT:    lwzx 4, 3, 4
+; CHECK-64-NEXT:    mtfprwz 0, 4
 ; CHECK-64-NEXT:    li 4, 1
 ; CHECK-64-NEXT:    rldic 4, 4, 38, 25
-; CHECK-64-NEXT:    xscvdpspn 0, 0
 ; CHECK-64-NEXT:    xxinsertw 34, 0, 0
-; CHECK-64-NEXT:    lfsx 0, 3, 4
-; CHECK-64-NEXT:    xscvdpspn 0, 0
+; CHECK-64-NEXT:    lwzx 3, 3, 4
+; CHECK-64-NEXT:    mtfprwz 0, 3
 ; CHECK-64-NEXT:    xxinsertw 34, 0, 8
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: testFloatImm3:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lis 4, 4
-; CHECK-32-NEXT:    lfsx 0, 3, 4
-; CHECK-32-NEXT:    xscvdpspn 0, 0
+; CHECK-32-NEXT:    lwzx 4, 3, 4
+; CHECK-32-NEXT:    lwz 3, 0(3)
+; CHECK-32-NEXT:    mtfprwz 0, 4
 ; CHECK-32-NEXT:    xxinsertw 34, 0, 0
-; CHECK-32-NEXT:    lfs 0, 0(3)
-; CHECK-32-NEXT:    xscvdpspn 0, 0
+; CHECK-32-NEXT:    mtfprwz 0, 3
 ; CHECK-32-NEXT:    xxinsertw 34, 0, 8
 ; CHECK-32-NEXT:    blr
 ;
@@ -559,8 +558,7 @@ define <4 x float> @testFloatImm3(<4 x float> %a, i32* %b) {
 ;
 ; CHECK-32-P10-LABEL: testFloatImm3:
 ; CHECK-32-P10:       # %bb.0: # %entry
-; CHECK-32-P10-NEXT:    lis 4, 4
-; CHECK-32-P10-NEXT:    lwzx 4, 3, 4
+; CHECK-32-P10-NEXT:    plwz 4, 262144(3), 0
 ; CHECK-32-P10-NEXT:    lwz 3, 0(3)
 ; CHECK-32-P10-NEXT:    vinsw 2, 4, 0
 ; CHECK-32-P10-NEXT:    vinsw 2, 3, 8

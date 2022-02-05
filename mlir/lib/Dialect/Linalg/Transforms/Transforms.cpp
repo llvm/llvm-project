@@ -592,6 +592,10 @@ LogicalResult mlir::linalg::LinalgTileAndFuseTensorOpsPattern::matchAndRewrite(
   SmallVector<int64_t> rootTileSizes(options.tileSizes.begin(),
                                      options.tileSizes.begin() +
                                          rootOp.getNumLoops());
+  if (llvm::all_of(rootTileSizes, [](int64_t ts) { return ts == 0; })) {
+    return rewriter.notifyMatchFailure(
+        op, "all tile sizes are zero, nothing to do");
+  }
   SmallVector<int64_t> rootInterchange =
       options.tileInterchange.empty()
           ? llvm::to_vector<6>(llvm::seq<int64_t>(0, rootOp.getNumLoops()))
@@ -720,6 +724,11 @@ LogicalResult mlir::linalg::LinalgVectorizationPattern::matchAndRewrite(
   if (failed(filter.checkAndNotify(rewriter, linalgOp)))
     return failure();
   return vectorize(rewriter, linalgOp);
+}
+
+LogicalResult mlir::linalg::CopyVectorizationPattern::matchAndRewrite(
+    memref::CopyOp copyOp, PatternRewriter &rewriter) const {
+  return vectorizeCopy(rewriter, copyOp);
 }
 
 LogicalResult mlir::linalg::applyStagedPatterns(

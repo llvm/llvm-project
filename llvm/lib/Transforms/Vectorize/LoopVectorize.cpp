@@ -4502,7 +4502,7 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
       // Determine the number of scalars we need to generate for each unroll
       // iteration. If the instruction is uniform, we only need to generate the
       // first lane. Otherwise, we generate all VF values.
-      bool IsUniform = Cost->isUniformAfterVectorization(P, State.VF);
+      bool IsUniform = vputils::onlyFirstLaneUsed(PhiR);
       assert((IsUniform || !State.VF.isScalable()) &&
              "Cannot scalarize a scalable VF");
       unsigned Lanes = IsUniform ? 1 : State.VF.getFixedValue();
@@ -5826,7 +5826,9 @@ bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
   // consider interleaving beneficial (eg. MVE).
   if (TTI.getMaxInterleaveFactor(VF.getKnownMinValue()) <= 1)
     return false;
-  if (VF.getFixedValue() >= EpilogueVectorizationMinVF)
+  // FIXME: We should consider changing the threshold for scalable
+  // vectors to take VScaleForTuning into account.
+  if (VF.getKnownMinValue() >= EpilogueVectorizationMinVF)
     return true;
   return false;
 }
@@ -5877,29 +5879,21 @@ LoopVectorizationCostModel::selectEpilogueVectorizationFactor(
     return Result;
   }
 
-  auto FixedMainLoopVF = ElementCount::getFixed(MainLoopVF.getKnownMinValue());
-  if (MainLoopVF.isScalable())
-    LLVM_DEBUG(
-        dbgs() << "LEV: Epilogue vectorization using scalable vectors not "
-                  "yet supported. Converting to fixed-width (VF="
-               << FixedMainLoopVF << ") instead\n");
-
-  if (!isEpilogueVectorizationProfitable(FixedMainLoopVF)) {
+  if (!isEpilogueVectorizationProfitable(MainLoopVF)) {
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization is not profitable for "
                          "this loop\n");
     return Result;
   }
 
   for (auto &NextVF : ProfitableVFs)
-    if (ElementCount::isKnownLT(NextVF.Width, FixedMainLoopVF) &&
-        (Result.Width.getFixedValue() == 1 ||
-         isMoreProfitable(NextVF, Result)) &&
+    if (ElementCount::isKnownLT(NextVF.Width, MainLoopVF) &&
+        (Result.Width.isScalar() || isMoreProfitable(NextVF, Result)) &&
         LVP.hasPlanWithVF(NextVF.Width))
       Result = NextVF;
 
   if (Result != VectorizationFactor::Disabled())
     LLVM_DEBUG(dbgs() << "LEV: Vectorizing epilogue loop with VF = "
-                      << Result.Width.getFixedValue() << "\n";);
+                      << Result.Width << "\n";);
   return Result;
 }
 

@@ -584,7 +584,7 @@ public:
 
   StringRef mapDebugSectionName(StringRef Name) const override;
 
-  llvm::swift::Swift5ReflectionSectionKind
+  llvm::binaryformat::Swift5ReflectionSectionKind
   mapReflectionSectionNameToEnumValue(StringRef SectionName) const override;
 
   bool hasPageZeroSegment() const { return HasPageZeroSegment; }

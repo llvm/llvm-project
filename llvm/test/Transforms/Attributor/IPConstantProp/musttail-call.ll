@@ -101,7 +101,7 @@ define internal i8* @side_effects(i8 %v) {
 ; IS________NPM-LABEL: define {{[^@]+}}@side_effects
 ; IS________NPM-SAME: (i8 [[V:%.*]]) {
 ; IS________NPM-NEXT:    [[I1:%.*]] = call i32 @external()
-; IS________NPM-NEXT:    [[CA:%.*]] = musttail call i8* @start(i8 noundef 0)
+; IS________NPM-NEXT:    [[CA:%.*]] = musttail call i8* @start(i8 0)
 ; IS________NPM-NEXT:    ret i8* [[CA]]
 ;
   %i1 = call i32 @external()

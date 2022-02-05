@@ -58,13 +58,23 @@ public:
   // Unneeded sections are omitted entirely (header and body).
   virtual bool isNeeded() const { return true; }
 
-  virtual void finalize() {
-    // TODO investigate refactoring synthetic section finalization logic into
-    // overrides of this function.
-  }
+  // The implementations of this method can assume that it is only called right
+  // before addresses get assigned to this particular OutputSection. In
+  // particular, this means that it gets called only after addresses have been
+  // assigned to output sections that occur earlier in the output binary.
+  // Naturally, this means different sections' finalize() methods cannot execute
+  // concurrently with each other. As such, avoid using this method for
+  // operations that do not require this strict sequential guarantee.
+  //
+  // Operations that need to occur late in the linking process, but which do not
+  // need the sequential guarantee, should be named `finalizeContents()`. See
+  // e.g. LinkEditSection::finalizeContents() and
+  // CStringSection::finalizeContents().
+  virtual void finalize() {}
 
   virtual void writeTo(uint8_t *buf) const = 0;
 
+  // Handle section$start$ and section$end$ symbols.
   void assignAddressesToStartEndSymbols();
 
   StringRef name;

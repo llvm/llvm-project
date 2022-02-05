@@ -188,10 +188,10 @@ std::pair<tooling::Replacements, unsigned> UsingDeclarationsSorter::analyze(
   AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
   tooling::Replacements Fixes;
   SmallVector<UsingDeclaration, 4> UsingDeclarations;
-  for (size_t I = 0, E = AnnotatedLines.size(); I != E; ++I) {
-    const auto *FirstTok = AnnotatedLines[I]->First;
-    if (AnnotatedLines[I]->InPPDirective ||
-        !AnnotatedLines[I]->startsWith(tok::kw_using) || FirstTok->Finalized) {
+  for (const AnnotatedLine *Line : AnnotatedLines) {
+    const auto *FirstTok = Line->First;
+    if (Line->InPPDirective || !Line->startsWith(tok::kw_using) ||
+        FirstTok->Finalized) {
       endUsingDeclarationBlock(&UsingDeclarations, SourceMgr, &Fixes);
       continue;
     }
@@ -204,7 +204,7 @@ std::pair<tooling::Replacements, unsigned> UsingDeclarationsSorter::analyze(
       endUsingDeclarationBlock(&UsingDeclarations, SourceMgr, &Fixes);
       continue;
     }
-    UsingDeclarations.push_back(UsingDeclaration(AnnotatedLines[I], Label));
+    UsingDeclarations.push_back(UsingDeclaration(Line, Label));
   }
   endUsingDeclarationBlock(&UsingDeclarations, SourceMgr, &Fixes);
   return {Fixes, 0};

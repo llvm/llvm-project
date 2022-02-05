@@ -138,7 +138,7 @@ define void @buildvec_dominant1_v4f32(<4 x float>* %x, float %f) {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vse32.v v9, (a0)
 ; CHECK-NEXT:    ret
-  %v0 = insertelement <4 x float> undef, float %f, i32 0
+  %v0 = insertelement <4 x float> poison, float %f, i32 0
   %v1 = insertelement <4 x float> %v0, float 0.0, i32 1
   %v2 = insertelement <4 x float> %v1, float %f, i32 2
   %v3 = insertelement <4 x float> %v2, float %f, i32 3
@@ -159,7 +159,7 @@ define void @buildvec_dominant2_v4f32(<4 x float>* %x, float %f) {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vse32.v v9, (a0)
 ; CHECK-NEXT:    ret
-  %v0 = insertelement <4 x float> undef, float %f, i32 0
+  %v0 = insertelement <4 x float> poison, float %f, i32 0
   %v1 = insertelement <4 x float> %v0, float 2.0, i32 1
   %v2 = insertelement <4 x float> %v1, float %f, i32 2
   %v3 = insertelement <4 x float> %v2, float %f, i32 3
@@ -193,7 +193,7 @@ define void @buildvec_merge0_v4f32(<4 x float>* %x, float %f) {
 ; RV64-NEXT:    vfmerge.vfm v8, v8, ft0, v0
 ; RV64-NEXT:    vse32.v v8, (a0)
 ; RV64-NEXT:    ret
-  %v0 = insertelement <4 x float> undef, float %f, i32 0
+  %v0 = insertelement <4 x float> poison, float %f, i32 0
   %v1 = insertelement <4 x float> %v0, float 2.0, i32 1
   %v2 = insertelement <4 x float> %v1, float 2.0, i32 2
   %v3 = insertelement <4 x float> %v2, float %f, i32 3

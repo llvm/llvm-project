@@ -838,7 +838,7 @@ define <2 x i64> @v_sdiv_v2i64(<2 x i64> %num, <2 x i64> %den) {
 ; CGP-NEXT:    v_subb_u32_e32 v1, vcc, v1, v3, vcc
 ; CGP-NEXT:    ; implicit-def: $vgpr4
 ; CGP-NEXT:    ; implicit-def: $vgpr10
-; CGP-NEXT:  .LBB2_2: ; %Flow2
+; CGP-NEXT:  .LBB2_2: ; %Flow1
 ; CGP-NEXT:    s_or_saveexec_b64 s[6:7], s[6:7]
 ; CGP-NEXT:    s_xor_b64 exec, exec, s[6:7]
 ; CGP-NEXT:    s_cbranch_execz .LBB2_4
@@ -3118,7 +3118,7 @@ define <2 x i64> @v_sdiv_v2i64_pow2_shl_denom(<2 x i64> %x, <2 x i64> %y) {
 ; CGP-NEXT:    v_subb_u32_e32 v1, vcc, v1, v3, vcc
 ; CGP-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; CGP-NEXT:    ; implicit-def: $vgpr8
-; CGP-NEXT:  .LBB8_2: ; %Flow2
+; CGP-NEXT:  .LBB8_2: ; %Flow1
 ; CGP-NEXT:    s_or_saveexec_b64 s[8:9], s[8:9]
 ; CGP-NEXT:    v_lshl_b64 v[9:10], s[6:7], v6
 ; CGP-NEXT:    s_xor_b64 exec, exec, s[8:9]

@@ -331,7 +331,7 @@ static bool binaryHasSwiftReflectionSections(const DebugMap &Map,
       }
       NameOrErr->consume_back("__TEXT");
       if (Object->mapReflectionSectionNameToEnumValue(*NameOrErr) !=
-          llvm::swift::Swift5ReflectionSectionKind::unknown) {
+          llvm::binaryformat::Swift5ReflectionSectionKind::unknown) {
         return true;
       }
     }

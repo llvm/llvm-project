@@ -83,22 +83,7 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
     if (!zlib::isAvailable())
       error(toString(file) + ": contains a compressed section, " +
             "but zlib is not available");
-    switch (config->ekind) {
-    case ELF32LEKind:
-      parseCompressedHeader<ELF32LE>();
-      break;
-    case ELF32BEKind:
-      parseCompressedHeader<ELF32BE>();
-      break;
-    case ELF64LEKind:
-      parseCompressedHeader<ELF64LE>();
-      break;
-    case ELF64BEKind:
-      parseCompressedHeader<ELF64BE>();
-      break;
-    default:
-      llvm_unreachable("unknown ELFT");
-    }
+    invokeELFT(parseCompressedHeader);
   }
 }
 
@@ -1040,6 +1025,14 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
       }
       target.relocate(bufLoc, rel, targetVA);
       break;
+    case R_AARCH64_PAGE_PC:
+      if (i + 1 < size && aarch64relaxer.tryRelaxAdrpAdd(
+                              rel, relocations[i + 1], secAddr, buf)) {
+        ++i;
+        continue;
+      }
+      target.relocate(bufLoc, rel, targetVA);
+      break;
     case R_PPC64_RELAX_GOT_PC: {
       // The R_PPC64_PCREL_OPT relocation must appear immediately after
       // R_PPC64_GOT_PCREL34 in the relocations table at the same offset.
@@ -1126,7 +1119,8 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
 // For each function-defining prologue, find any calls to __morestack,
 // and replace them with calls to __morestack_non_split.
 static void switchMorestackCallsToMorestackNonSplit(
-    DenseSet<Defined *> &prologues, std::vector<Relocation *> &morestackCalls) {
+    DenseSet<Defined *> &prologues,
+    SmallVector<Relocation *, 0> &morestackCalls) {
 
   // If the target adjusted a function's prologue, all calls to
   // __morestack inside that function should be switched to
@@ -1176,7 +1170,7 @@ template <class ELFT>
 void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *buf,
                                                          uint8_t *end) {
   DenseSet<Defined *> prologues;
-  std::vector<Relocation *> morestackCalls;
+  SmallVector<Relocation *, 0> morestackCalls;
 
   for (Relocation &rel : relocations) {
     // Ignore calls into the split-stack api.

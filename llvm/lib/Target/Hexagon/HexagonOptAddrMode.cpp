@@ -313,12 +313,18 @@ bool HexagonOptAddrMode::isSafeToExtLR(NodeAddr<StmtNode *> SN,
       return false;
     }
 
+    // If the register is undefined (for example if it's a reserved register),
+    // it may still be possible to extend the range, but it's safer to be
+    // conservative and just punt.
+    if (LRExtRegRD == 0)
+      return false;
+
     MachineInstr *UseMI = NodeAddr<StmtNode *>(IA).Addr->getCode();
     NodeAddr<DefNode *> LRExtRegDN = DFG->addr<DefNode *>(LRExtRegRD);
     // Reaching Def to LRExtReg can't be a phi.
     if ((LRExtRegDN.Addr->getFlags() & NodeAttrs::PhiRef) &&
         MI->getParent() != UseMI->getParent())
-    return false;
+      return false;
   }
   return true;
 }

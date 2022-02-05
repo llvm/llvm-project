@@ -856,13 +856,11 @@ void IntegerPolyhedron::getLocalReprs(
       if (!foundRepr[i + divOffset]) {
         auto res = computeSingleVarRepr(*this, foundRepr, divOffset + i,
                                         dividends[i], denominators[i]);
-        if (res.kind == ReprKind::Inequality) {
-          foundRepr[i + divOffset] = true;
-          repr[i].kind = ReprKind::Inequality;
-          repr[i].repr.inEqualityPair = {res.repr.inEqualityPair.lowerBoundIdx,
-                                         res.repr.inEqualityPair.upperBoundIdx};
-          changed = true;
-        }
+        if (res.kind == ReprKind::None)
+          continue;
+        foundRepr[i + divOffset] = true;
+        repr[i] = res;
+        changed = true;
       }
     }
   } while (changed);

@@ -637,7 +637,7 @@ static bool doesTransposeAccess(AffineMap map,
 ///     Fused dimensions : i, j
 ///
 /// Example 3:
-///   linalg.copy(%s, %b)
+///   memref.copy(%s, %b)
 ///   linalg.matmul ins(%a, %b) outs(%c)
 ///
 ///   Number of parallel loops = 2

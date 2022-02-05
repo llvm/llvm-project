@@ -52,6 +52,11 @@ void runChecks(
     "...\n"
     "---\n"
     "name: sizes\n"
+    "jumpTable:\n"
+    "  kind:            block-address\n"
+    "  entries:\n"
+    "    - id:              0\n"
+    "      blocks:          [ '%bb.0' ]\n"
     "body: |\n"
     "  bb.0:\n"
     + InputMIRSnippet.str();
@@ -142,6 +147,34 @@ TEST(InstSizes, PATCHPOINT) {
             });
 }
 
+TEST(InstSizes, STATEPOINT) {
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+
+  runChecks(TM.get(), II.get(), "",
+            "    STATEPOINT 0, 0, 0, @sizes, 2, 0, 2, 0, 2, 0, 2, 1, 1, 8,"
+            " $sp, 24, 2, 0, 2, 1, 0, 0\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(4u, II.getInstSizeInBytes(*I));
+            });
+}
+
+TEST(InstSizes, SPACE) {
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+
+  runChecks(TM.get(), II.get(), "",
+            "    $xzr = SPACE 1024, undef $xzr\n"
+            "    dead $xzr = SPACE 4096, $xzr\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(1024u, II.getInstSizeInBytes(*I));
+              ++I;
+              EXPECT_EQ(4096u, II.getInstSizeInBytes(*I));
+            });
+}
+
 TEST(InstSizes, TLSDESC_CALLSEQ) {
   std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
   std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
@@ -156,16 +189,87 @@ TEST(InstSizes, TLSDESC_CALLSEQ) {
       });
 }
 
-TEST(InstSizes, MOPSMemorySetTaggingPseudo) {
+TEST(InstSizes, StoreSwiftAsyncContext) {
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+
+  runChecks(
+      TM.get(), II.get(), "",
+      "    StoreSwiftAsyncContext $x0, $x1, 12, implicit-def $x16, "
+      "implicit-def $x17\n",
+      [](AArch64InstrInfo &II, MachineFunction &MF) {
+        auto I = MF.begin()->begin();
+        EXPECT_EQ(20u, II.getInstSizeInBytes(*I));
+      });
+}
+
+TEST(InstSizes, SpeculationBarrierISBDSBEndBB) {
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+
+  runChecks(
+      TM.get(), II.get(), "",
+      "    SpeculationBarrierISBDSBEndBB\n"
+      "    BR $x8\n",
+      [](AArch64InstrInfo &II, MachineFunction &MF) {
+        auto I = MF.begin()->begin();
+        EXPECT_EQ(8u, II.getInstSizeInBytes(*I));
+      });
+}
+
+TEST(InstSizes, SpeculationBarrierSBEndBB) {
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+
+  runChecks(
+      TM.get(), II.get(), "",
+      "    SpeculationBarrierSBEndBB\n"
+      "    BR $x8\n",
+      [](AArch64InstrInfo &II, MachineFunction &MF) {
+        auto I = MF.begin()->begin();
+        EXPECT_EQ(4u, II.getInstSizeInBytes(*I));
+      });
+}
+
+TEST(InstSizes, JumpTable) {
   std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
   std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
 
   runChecks(TM.get(), II.get(), "",
-            "  renamable $x0, dead renamable $x1 = MOPSMemorySetTaggingPseudo "
-            "killed renamable $x0, killed renamable $x1, killed renamable $x2, "
-            "implicit-def dead $nzcv\n",
+            "    $x10, $x11 = JumpTableDest32 $x9, $x8, %jump-table.0\n"
+            "    $x10, $x11 = JumpTableDest16 $x9, $x8, %jump-table.0\n"
+            "    $x10, $x11 = JumpTableDest8 $x9, $x8, %jump-table.0\n",
             [](AArch64InstrInfo &II, MachineFunction &MF) {
               auto I = MF.begin()->begin();
+              EXPECT_EQ(12u, II.getInstSizeInBytes(*I));
+              ++I;
+              EXPECT_EQ(12u, II.getInstSizeInBytes(*I));
+              ++I;
+              EXPECT_EQ(12u, II.getInstSizeInBytes(*I));
+            });
+}
+
+TEST(InstSizes, MOPSMemoryPseudos) {
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+
+  runChecks(TM.get(), II.get(), "",
+            "  $x0, $x1, $x2 = MOPSMemoryMovePseudo $x0, $x1, $x2, "
+            "implicit-def $nzcv\n"
+            "  $x0, $x1 = MOPSMemorySetPseudo $x0, $x1, $x2, "
+            "implicit-def $nzcv\n"
+            "  $x0, $x1, $x8 = MOPSMemoryCopyPseudo $x0, $x1, $x8, "
+            "implicit-def $nzcv\n"
+            "  $x0, $x1 = MOPSMemorySetTaggingPseudo $x0, $x1, $x2, "
+            "implicit-def $nzcv\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(12u, II.getInstSizeInBytes(*I));
+              ++I;
+              EXPECT_EQ(12u, II.getInstSizeInBytes(*I));
+              ++I;
+              EXPECT_EQ(12u, II.getInstSizeInBytes(*I));
+              ++I;
               EXPECT_EQ(12u, II.getInstSizeInBytes(*I));
             });
 }

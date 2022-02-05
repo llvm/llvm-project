@@ -229,9 +229,9 @@ func @promote_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK:               %[[v2:.*]] = memref.view %[[a2]]{{.*}} : memref<24000000xi8> to memref<?x?xf32>
 // CHECK:               %[[l2:.*]] = memref.subview %[[v2]][0, 0] [%{{.*}}, %{{.*}}] [1, 1]
 // CHECK-SAME:            memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
-// CHECK:               linalg.copy(%[[s0]], %[[l0]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
-// CHECK:               linalg.copy(%[[s1]], %[[l1]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
-// CHECK:               linalg.copy(%[[s2]], %[[l2]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
+// CHECK:               memref.copy %[[s0]], %[[l0]] : memref<?x?xf32, #map{{.*}}> to memref<?x?xf32, #map{{.*}}>
+// CHECK:               memref.copy %[[s1]], %[[l1]] : memref<?x?xf32, #map{{.*}}> to memref<?x?xf32, #map{{.*}}>
+// CHECK:               memref.copy %[[s2]], %[[l2]] : memref<?x?xf32, #map{{.*}}> to memref<?x?xf32, #map{{.*}}>
 // CHECK:               linalg.matmul
 // CHECK-SAME:                 ins(%[[v0]], %[[v1]] : memref<?x?xf32>, memref<?x?xf32>)
 // CHECK-SAME:                outs(%[[v2]] : memref<?x?xf32>)
@@ -282,8 +282,8 @@ func @promote_first_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?
 // CHECK-NOT:     memref.alloc
 // CHECK-NOT:     memref.view
 // CHECK-NOT:     memref.subview
-// CHECK:         linalg.copy(%[[s0]], %[[l0]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
-// CHECK-NOT:     linalg.copy
+// CHECK:         memref.copy %[[s0]], %[[l0]] : memref<?x?xf32, #map{{.*}}> to memref<?x?xf32, #map{{.*}}>
+// CHECK-NOT:     memref.copy
 // CHECK:         linalg.matmul
 // CHECK-SAME:           ins(%[[v0]], %[[s1]] : memref<?x?xf32>, memref<?x?xf32, #[[$STRIDED_2D]]>)
 // CHECK-SAME:          outs(%[[s2]] : memref<?x?xf32, #[[$STRIDED_2D]]>)
@@ -307,7 +307,7 @@ func @aligned_promote_fill(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
 // CHECK:         %[[v0:.*]] = memref.view %[[a0]]{{.*}} : memref<32000000xi8> to memref<?x?xf32>
 // CHECK:         %[[l0:.*]] = memref.subview %[[v0]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
 // CHECK:         linalg.fill({{.*}}, %[[v0]]) : f32, memref<?x?xf32>
-// CHECK:         linalg.copy(%[[s0]], %[[l0]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
+// CHECK:         memref.copy %[[s0]], %[[l0]] : memref<?x?xf32, #map{{.*}}> to memref<?x?xf32, #map{{.*}}>
 // CHECK:         linalg.fill(%[[cf]], %[[v0]]) : f32, memref<?x?xf32>
 
 func @aligned_promote_fill_complex(%arg0: memref<?x?xcomplex<f32>, offset: ?, strides: [?, 1]>) {
@@ -330,7 +330,7 @@ func @aligned_promote_fill_complex(%arg0: memref<?x?xcomplex<f32>, offset: ?, st
 // CHECK:         %[[v0:.*]] = memref.view %[[a0]]{{.*}} : memref<64000000xi8> to memref<?x?xcomplex<f32>>
 // CHECK:         %[[l0:.*]] = memref.subview %[[v0]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<?x?xcomplex<f32>> to memref<?x?xcomplex<f32>, #[[$STRIDED_2D_u_1]]>
 // CHECK:         linalg.fill({{.*}}, %[[v0]]) : complex<f32>, memref<?x?xcomplex<f32>>
-// CHECK:         linalg.copy(%[[s0]], %[[l0]]) : memref<?x?xcomplex<f32>, #map{{.*}}>, memref<?x?xcomplex<f32>, #map{{.*}}>
+// CHECK:         memref.copy %[[s0]], %[[l0]] : memref<?x?xcomplex<f32>, #map{{.*}}> to memref<?x?xcomplex<f32>, #map{{.*}}>
 // CHECK:         linalg.fill(%[[cc]], %[[v0]]) : complex<f32>, memref<?x?xcomplex<f32>>
 
 func @tile_permute_parallel_loop(%arg0: memref<?x?xf32>,

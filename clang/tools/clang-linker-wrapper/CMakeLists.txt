@@ -1,4 +1,18 @@
-set(LLVM_LINK_COMPONENTS BitWriter Core Object Support)
+set(LLVM_LINK_COMPONENTS 
+  ${LLVM_TARGETS_TO_BUILD}
+  BitWriter
+  Core
+  BinaryFormat
+  MC
+  Target
+  TransformUtils
+  Analysis
+  Passes
+  IRReader
+  Object
+  Support
+  CodeGen
+  LTO)
 
 if(NOT CLANG_BUILT_STANDALONE)
   set(tablegen_deps intrinsics_gen)
@@ -6,6 +20,7 @@ endif()
 
 add_clang_executable(clang-linker-wrapper
   ClangLinkerWrapper.cpp
+  OffloadWrapper.cpp
 
   DEPENDS
   ${tablegen_deps}

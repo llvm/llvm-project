@@ -8,8 +8,8 @@ define <8 x i8> @vnsra_v8i16_v8i8_scalar(<8 x i16> %x, i16 %y) {
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vnsra.wx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %insert = insertelement <8 x i16> undef, i16 %y, i16 0
-  %splat = shufflevector <8 x i16> %insert, <8 x i16> undef, <8 x i32> zeroinitializer
+  %insert = insertelement <8 x i16> poison, i16 %y, i16 0
+  %splat = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
   %a = ashr <8 x i16> %x, %splat
   %b = trunc <8 x i16> %a to <8 x i8>
   ret <8 x i8> %b
@@ -21,8 +21,8 @@ define <4 x i16> @vnsra_v4i32_v4i16_scalar(<4 x i32> %x, i32 %y) {
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; CHECK-NEXT:    vnsra.wx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %insert = insertelement <4 x i32> undef, i32 %y, i32 0
-  %splat = shufflevector <4 x i32> %insert, <4 x i32> undef, <4 x i32> zeroinitializer
+  %insert = insertelement <4 x i32> poison, i32 %y, i32 0
+  %splat = shufflevector <4 x i32> %insert, <4 x i32> poison, <4 x i32> zeroinitializer
   %a = ashr <4 x i32> %x, %splat
   %b = trunc <4 x i32> %a to <4 x i16>
   ret <4 x i16> %b
@@ -54,8 +54,8 @@ define <2 x i32> @vnsra_v2i64_v2i32_scalar(<2 x i64> %x, i64 %y) {
 ; RV64-NEXT:    vnsra.wx v25, v8, a0
 ; RV64-NEXT:    vmv1r.v v8, v25
 ; RV64-NEXT:    ret
-  %insert = insertelement <2 x i64> undef, i64 %y, i32 0
-  %splat = shufflevector <2 x i64> %insert, <2 x i64> undef, <2 x i32> zeroinitializer
+  %insert = insertelement <2 x i64> poison, i64 %y, i32 0
+  %splat = shufflevector <2 x i64> %insert, <2 x i64> poison, <2 x i32> zeroinitializer
   %a = ashr <2 x i64> %x, %splat
   %b = trunc <2 x i64> %a to <2 x i32>
   ret <2 x i32> %b
@@ -100,8 +100,8 @@ define <8 x i8> @vnsrl_v8i16_v8i8_scalar(<8 x i16> %x, i16 %y) {
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vnsrl.wx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %insert = insertelement <8 x i16> undef, i16 %y, i16 0
-  %splat = shufflevector <8 x i16> %insert, <8 x i16> undef, <8 x i32> zeroinitializer
+  %insert = insertelement <8 x i16> poison, i16 %y, i16 0
+  %splat = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
   %a = lshr <8 x i16> %x, %splat
   %b = trunc <8 x i16> %a to <8 x i8>
   ret <8 x i8> %b
@@ -113,8 +113,8 @@ define <4 x i16> @vnsrl_v4i32_v4i16_scalar(<4 x i32> %x, i32 %y) {
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; CHECK-NEXT:    vnsrl.wx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %insert = insertelement <4 x i32> undef, i32 %y, i32 0
-  %splat = shufflevector <4 x i32> %insert, <4 x i32> undef, <4 x i32> zeroinitializer
+  %insert = insertelement <4 x i32> poison, i32 %y, i32 0
+  %splat = shufflevector <4 x i32> %insert, <4 x i32> poison, <4 x i32> zeroinitializer
   %a = lshr <4 x i32> %x, %splat
   %b = trunc <4 x i32> %a to <4 x i16>
   ret <4 x i16> %b
@@ -146,8 +146,8 @@ define <2 x i32> @vnsrl_v2i64_v2i32_scalar(<2 x i64> %x, i64 %y) {
 ; RV64-NEXT:    vnsrl.wx v25, v8, a0
 ; RV64-NEXT:    vmv1r.v v8, v25
 ; RV64-NEXT:    ret
-  %insert = insertelement <2 x i64> undef, i64 %y, i32 0
-  %splat = shufflevector <2 x i64> %insert, <2 x i64> undef, <2 x i32> zeroinitializer
+  %insert = insertelement <2 x i64> poison, i64 %y, i32 0
+  %splat = shufflevector <2 x i64> %insert, <2 x i64> poison, <2 x i32> zeroinitializer
   %a = lshr <2 x i64> %x, %splat
   %b = trunc <2 x i64> %a to <2 x i32>
   ret <2 x i32> %b

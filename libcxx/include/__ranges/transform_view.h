@@ -424,11 +424,11 @@ namespace __transform {
       noexcept(is_nothrow_constructible_v<decay_t<_Fn>, _Fn>)
     { return __range_adaptor_closure_t(_VSTD::__bind_back(*this, _VSTD::forward<_Fn>(__f))); }
   };
-}
+} // namespace __transform
 
 inline namespace __cpo {
   inline constexpr auto transform = __transform::__fn{};
-}
+} // namespace __cpo
 } // namespace views
 
 } // namespace ranges

@@ -13,8 +13,8 @@ define void @splat_v16i8(<16 x i8>* %x, i8 %y) {
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <16 x i8> undef, i8 %y, i32 0
-  %b = shufflevector <16 x i8> %a, <16 x i8> undef, <16 x i32> zeroinitializer
+  %a = insertelement <16 x i8> poison, i8 %y, i32 0
+  %b = shufflevector <16 x i8> %a, <16 x i8> poison, <16 x i32> zeroinitializer
   store <16 x i8> %b, <16 x i8>* %x
   ret void
 }
@@ -26,8 +26,8 @@ define void @splat_v8i16(<8 x i16>* %x, i16 %y) {
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <8 x i16> undef, i16 %y, i32 0
-  %b = shufflevector <8 x i16> %a, <8 x i16> undef, <8 x i32> zeroinitializer
+  %a = insertelement <8 x i16> poison, i16 %y, i32 0
+  %b = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> zeroinitializer
   store <8 x i16> %b, <8 x i16>* %x
   ret void
 }
@@ -39,8 +39,8 @@ define void @splat_v4i32(<4 x i32>* %x, i32 %y) {
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <4 x i32> undef, i32 %y, i32 0
-  %b = shufflevector <4 x i32> %a, <4 x i32> undef, <4 x i32> zeroinitializer
+  %a = insertelement <4 x i32> poison, i32 %y, i32 0
+  %b = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> zeroinitializer
   store <4 x i32> %b, <4 x i32>* %x
   ret void
 }
@@ -105,8 +105,8 @@ define void @splat_v2i64(<2 x i64>* %x, i64 %y) {
 ; LMULMAX1-RV64-NEXT:    vmv.v.x v8, a1
 ; LMULMAX1-RV64-NEXT:    vse64.v v8, (a0)
 ; LMULMAX1-RV64-NEXT:    ret
-  %a = insertelement <2 x i64> undef, i64 %y, i32 0
-  %b = shufflevector <2 x i64> %a, <2 x i64> undef, <2 x i32> zeroinitializer
+  %a = insertelement <2 x i64> poison, i64 %y, i32 0
+  %b = shufflevector <2 x i64> %a, <2 x i64> poison, <2 x i32> zeroinitializer
   store <2 x i64> %b, <2 x i64>* %x
   ret void
 }
@@ -136,8 +136,8 @@ define void @splat_v32i8(<32 x i8>* %x, i8 %y) {
 ; LMULMAX1-NEXT:    vse8.v v8, (a1)
 ; LMULMAX1-NEXT:    vse8.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
-  %a = insertelement <32 x i8> undef, i8 %y, i32 0
-  %b = shufflevector <32 x i8> %a, <32 x i8> undef, <32 x i32> zeroinitializer
+  %a = insertelement <32 x i8> poison, i8 %y, i32 0
+  %b = shufflevector <32 x i8> %a, <32 x i8> poison, <32 x i32> zeroinitializer
   store <32 x i8> %b, <32 x i8>* %x
   ret void
 }
@@ -165,8 +165,8 @@ define void @splat_v16i16(<16 x i16>* %x, i16 %y) {
 ; LMULMAX1-NEXT:    vse16.v v8, (a1)
 ; LMULMAX1-NEXT:    vse16.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
-  %a = insertelement <16 x i16> undef, i16 %y, i32 0
-  %b = shufflevector <16 x i16> %a, <16 x i16> undef, <16 x i32> zeroinitializer
+  %a = insertelement <16 x i16> poison, i16 %y, i32 0
+  %b = shufflevector <16 x i16> %a, <16 x i16> poison, <16 x i32> zeroinitializer
   store <16 x i16> %b, <16 x i16>* %x
   ret void
 }
@@ -194,8 +194,8 @@ define void @splat_v8i32(<8 x i32>* %x, i32 %y) {
 ; LMULMAX1-NEXT:    vse32.v v8, (a1)
 ; LMULMAX1-NEXT:    vse32.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
-  %a = insertelement <8 x i32> undef, i32 %y, i32 0
-  %b = shufflevector <8 x i32> %a, <8 x i32> undef, <8 x i32> zeroinitializer
+  %a = insertelement <8 x i32> poison, i32 %y, i32 0
+  %b = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> zeroinitializer
   store <8 x i32> %b, <8 x i32>* %x
   ret void
 }
@@ -262,8 +262,8 @@ define void @splat_v4i64(<4 x i64>* %x, i64 %y) {
 ; LMULMAX1-RV64-NEXT:    vse64.v v8, (a1)
 ; LMULMAX1-RV64-NEXT:    vse64.v v8, (a0)
 ; LMULMAX1-RV64-NEXT:    ret
-  %a = insertelement <4 x i64> undef, i64 %y, i32 0
-  %b = shufflevector <4 x i64> %a, <4 x i64> undef, <4 x i32> zeroinitializer
+  %a = insertelement <4 x i64> poison, i64 %y, i32 0
+  %b = shufflevector <4 x i64> %a, <4 x i64> poison, <4 x i32> zeroinitializer
   store <4 x i64> %b, <4 x i64>* %x
   ret void
 }
@@ -275,8 +275,8 @@ define void @splat_zero_v16i8(<16 x i8>* %x) {
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <16 x i8> undef, i8 0, i32 0
-  %b = shufflevector <16 x i8> %a, <16 x i8> undef, <16 x i32> zeroinitializer
+  %a = insertelement <16 x i8> poison, i8 0, i32 0
+  %b = shufflevector <16 x i8> %a, <16 x i8> poison, <16 x i32> zeroinitializer
   store <16 x i8> %b, <16 x i8>* %x
   ret void
 }
@@ -288,8 +288,8 @@ define void @splat_zero_v8i16(<8 x i16>* %x) {
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <8 x i16> undef, i16 0, i32 0
-  %b = shufflevector <8 x i16> %a, <8 x i16> undef, <8 x i32> zeroinitializer
+  %a = insertelement <8 x i16> poison, i16 0, i32 0
+  %b = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> zeroinitializer
   store <8 x i16> %b, <8 x i16>* %x
   ret void
 }
@@ -301,8 +301,8 @@ define void @splat_zero_v4i32(<4 x i32>* %x) {
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <4 x i32> undef, i32 0, i32 0
-  %b = shufflevector <4 x i32> %a, <4 x i32> undef, <4 x i32> zeroinitializer
+  %a = insertelement <4 x i32> poison, i32 0, i32 0
+  %b = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> zeroinitializer
   store <4 x i32> %b, <4 x i32>* %x
   ret void
 }
@@ -314,8 +314,8 @@ define void @splat_zero_v2i64(<2 x i64>* %x) {
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <2 x i64> undef, i64 0, i32 0
-  %b = shufflevector <2 x i64> %a, <2 x i64> undef, <2 x i32> zeroinitializer
+  %a = insertelement <2 x i64> poison, i64 0, i32 0
+  %b = shufflevector <2 x i64> %a, <2 x i64> poison, <2 x i32> zeroinitializer
   store <2 x i64> %b, <2 x i64>* %x
   ret void
 }
@@ -345,8 +345,8 @@ define void @splat_zero_v32i8(<32 x i8>* %x) {
 ; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vse8.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
-  %a = insertelement <32 x i8> undef, i8 0, i32 0
-  %b = shufflevector <32 x i8> %a, <32 x i8> undef, <32 x i32> zeroinitializer
+  %a = insertelement <32 x i8> poison, i8 0, i32 0
+  %b = shufflevector <32 x i8> %a, <32 x i8> poison, <32 x i32> zeroinitializer
   store <32 x i8> %b, <32 x i8>* %x
   ret void
 }
@@ -374,8 +374,8 @@ define void @splat_zero_v16i16(<16 x i16>* %x) {
 ; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vse16.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
-  %a = insertelement <16 x i16> undef, i16 0, i32 0
-  %b = shufflevector <16 x i16> %a, <16 x i16> undef, <16 x i32> zeroinitializer
+  %a = insertelement <16 x i16> poison, i16 0, i32 0
+  %b = shufflevector <16 x i16> %a, <16 x i16> poison, <16 x i32> zeroinitializer
   store <16 x i16> %b, <16 x i16>* %x
   ret void
 }
@@ -403,8 +403,8 @@ define void @splat_zero_v8i32(<8 x i32>* %x) {
 ; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vse32.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
-  %a = insertelement <8 x i32> undef, i32 0, i32 0
-  %b = shufflevector <8 x i32> %a, <8 x i32> undef, <8 x i32> zeroinitializer
+  %a = insertelement <8 x i32> poison, i32 0, i32 0
+  %b = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> zeroinitializer
   store <8 x i32> %b, <8 x i32>* %x
   ret void
 }
@@ -441,8 +441,8 @@ define void @splat_zero_v4i64(<4 x i64>* %x) {
 ; LMULMAX1-RV64-NEXT:    addi a0, a0, 16
 ; LMULMAX1-RV64-NEXT:    vse64.v v8, (a0)
 ; LMULMAX1-RV64-NEXT:    ret
-  %a = insertelement <4 x i64> undef, i64 0, i32 0
-  %b = shufflevector <4 x i64> %a, <4 x i64> undef, <4 x i32> zeroinitializer
+  %a = insertelement <4 x i64> poison, i64 0, i32 0
+  %b = shufflevector <4 x i64> %a, <4 x i64> poison, <4 x i32> zeroinitializer
   store <4 x i64> %b, <4 x i64>* %x
   ret void
 }
@@ -454,8 +454,8 @@ define void @splat_allones_v16i8(<16 x i8>* %x) {
 ; CHECK-NEXT:    vmv.v.i v8, -1
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <16 x i8> undef, i8 -1, i32 0
-  %b = shufflevector <16 x i8> %a, <16 x i8> undef, <16 x i32> zeroinitializer
+  %a = insertelement <16 x i8> poison, i8 -1, i32 0
+  %b = shufflevector <16 x i8> %a, <16 x i8> poison, <16 x i32> zeroinitializer
   store <16 x i8> %b, <16 x i8>* %x
   ret void
 }
@@ -467,8 +467,8 @@ define void @splat_allones_v8i16(<8 x i16>* %x) {
 ; CHECK-NEXT:    vmv.v.i v8, -1
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <8 x i16> undef, i16 -1, i32 0
-  %b = shufflevector <8 x i16> %a, <8 x i16> undef, <8 x i32> zeroinitializer
+  %a = insertelement <8 x i16> poison, i16 -1, i32 0
+  %b = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> zeroinitializer
   store <8 x i16> %b, <8 x i16>* %x
   ret void
 }
@@ -480,8 +480,8 @@ define void @splat_allones_v4i32(<4 x i32>* %x) {
 ; CHECK-NEXT:    vmv.v.i v8, -1
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <4 x i32> undef, i32 -1, i32 0
-  %b = shufflevector <4 x i32> %a, <4 x i32> undef, <4 x i32> zeroinitializer
+  %a = insertelement <4 x i32> poison, i32 -1, i32 0
+  %b = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> zeroinitializer
   store <4 x i32> %b, <4 x i32>* %x
   ret void
 }
@@ -493,8 +493,8 @@ define void @splat_allones_v2i64(<2 x i64>* %x) {
 ; CHECK-NEXT:    vmv.v.i v8, -1
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <2 x i64> undef, i64 -1, i32 0
-  %b = shufflevector <2 x i64> %a, <2 x i64> undef, <2 x i32> zeroinitializer
+  %a = insertelement <2 x i64> poison, i64 -1, i32 0
+  %b = shufflevector <2 x i64> %a, <2 x i64> poison, <2 x i32> zeroinitializer
   store <2 x i64> %b, <2 x i64>* %x
   ret void
 }
@@ -524,8 +524,8 @@ define void @splat_allones_v32i8(<32 x i8>* %x) {
 ; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vse8.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
-  %a = insertelement <32 x i8> undef, i8 -1, i32 0
-  %b = shufflevector <32 x i8> %a, <32 x i8> undef, <32 x i32> zeroinitializer
+  %a = insertelement <32 x i8> poison, i8 -1, i32 0
+  %b = shufflevector <32 x i8> %a, <32 x i8> poison, <32 x i32> zeroinitializer
   store <32 x i8> %b, <32 x i8>* %x
   ret void
 }
@@ -553,8 +553,8 @@ define void @splat_allones_v16i16(<16 x i16>* %x) {
 ; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vse16.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
-  %a = insertelement <16 x i16> undef, i16 -1, i32 0
-  %b = shufflevector <16 x i16> %a, <16 x i16> undef, <16 x i32> zeroinitializer
+  %a = insertelement <16 x i16> poison, i16 -1, i32 0
+  %b = shufflevector <16 x i16> %a, <16 x i16> poison, <16 x i32> zeroinitializer
   store <16 x i16> %b, <16 x i16>* %x
   ret void
 }
@@ -582,8 +582,8 @@ define void @splat_allones_v8i32(<8 x i32>* %x) {
 ; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vse32.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
-  %a = insertelement <8 x i32> undef, i32 -1, i32 0
-  %b = shufflevector <8 x i32> %a, <8 x i32> undef, <8 x i32> zeroinitializer
+  %a = insertelement <8 x i32> poison, i32 -1, i32 0
+  %b = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> zeroinitializer
   store <8 x i32> %b, <8 x i32>* %x
   ret void
 }
@@ -620,8 +620,8 @@ define void @splat_allones_v4i64(<4 x i64>* %x) {
 ; LMULMAX1-RV64-NEXT:    addi a0, a0, 16
 ; LMULMAX1-RV64-NEXT:    vse64.v v8, (a0)
 ; LMULMAX1-RV64-NEXT:    ret
-  %a = insertelement <4 x i64> undef, i64 -1, i32 0
-  %b = shufflevector <4 x i64> %a, <4 x i64> undef, <4 x i32> zeroinitializer
+  %a = insertelement <4 x i64> poison, i64 -1, i32 0
+  %b = shufflevector <4 x i64> %a, <4 x i64> poison, <4 x i32> zeroinitializer
   store <4 x i64> %b, <4 x i64>* %x
   ret void
 }
@@ -853,8 +853,8 @@ define void @vadd_vx_v16i64(<16 x i64>* %a, i64 %b, <16 x i64>* %c) {
 ; LMULMAX1-RV64-NEXT:    vse64.v v13, (a0)
 ; LMULMAX1-RV64-NEXT:    ret
   %va = load <16 x i64>, <16 x i64>* %a
-  %head = insertelement <16 x i64> undef, i64 %b, i32 0
-  %splat = shufflevector <16 x i64> %head, <16 x i64> undef, <16 x i32> zeroinitializer
+  %head = insertelement <16 x i64> poison, i64 %b, i32 0
+  %splat = shufflevector <16 x i64> %head, <16 x i64> poison, <16 x i32> zeroinitializer
   %vc = add <16 x i64> %va, %splat
   store <16 x i64> %vc, <16 x i64>* %c
   ret void

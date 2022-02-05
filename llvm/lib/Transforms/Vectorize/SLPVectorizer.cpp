@@ -545,14 +545,19 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
         Value *Op1 = Inst->getOperand(1);
         CmpInst::Predicate CurrentPred =
             cast<CmpInst>(VL[Cnt])->getPredicate();
+        CmpInst::Predicate SwappedCurrentPred =
+            CmpInst::getSwappedPredicate(CurrentPred);
         // Check for compatible operands. If the corresponding operands are not
         // compatible - need to perform alternate vectorization.
         if (InstOpcode == Opcode) {
           if (BasePred == CurrentPred &&
               areCompatibleCmpOps(BaseOp0, BaseOp1, Op0, Op1))
             continue;
-          if (BasePred == CmpInst::getSwappedPredicate(CurrentPred) &&
+          if (BasePred == SwappedCurrentPred &&
               areCompatibleCmpOps(BaseOp0, BaseOp1, Op1, Op0))
+            continue;
+          if (E == 2 &&
+              (BasePred == CurrentPred || BasePred == SwappedCurrentPred))
             continue;
           auto *AltInst = cast<CmpInst>(VL[AltIndex]);
           CmpInst::Predicate AltPred = AltInst->getPredicate();
@@ -562,7 +567,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
           if (AltPred == CurrentPred &&
               areCompatibleCmpOps(AltOp0, AltOp1, Op0, Op1))
             continue;
-          if (AltPred == CmpInst::getSwappedPredicate(CurrentPred) &&
+          if (AltPred == SwappedCurrentPred &&
               areCompatibleCmpOps(AltOp0, AltOp1, Op1, Op0))
             continue;
         }
@@ -573,6 +578,11 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
           AltIndex = Cnt;
           continue;
         }
+        auto *AltInst = cast<CmpInst>(VL[AltIndex]);
+        CmpInst::Predicate AltPred = AltInst->getPredicate();
+        if (BasePred == CurrentPred || BasePred == SwappedCurrentPred ||
+            AltPred == CurrentPred || AltPred == SwappedCurrentPred)
+          continue;
       }
     } else if (InstOpcode == Opcode || InstOpcode == AltOpcode)
       continue;
@@ -5464,14 +5474,15 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
               CmpInst::Predicate CurrentPredSwapped =
                   CmpInst::getSwappedPredicate(CurrentPred);
               if (P0 == AltP0 || P0 == AltP0Swapped) {
-                unsigned Idx =
-                    std::distance(E->Scalars.begin(), find(E->Scalars, I));
                 // Alternate cmps have same/swapped predicate as main cmps but
                 // different order of compatible operands.
-                ArrayRef<Value *> VLOp0 = E->getOperand(0);
-                return (P0 == CurrentPred && CI->getOperand(0) != VLOp0[Idx]) ||
-                       (P0 == CurrentPredSwapped &&
-                        CI->getOperand(1) != VLOp0[Idx]);
+                return !(
+                    (P0 == CurrentPred &&
+                     areCompatibleCmpOps(CI0->getOperand(0), CI0->getOperand(1),
+                                         I->getOperand(0), I->getOperand(1))) ||
+                    (P0 == CurrentPredSwapped &&
+                     areCompatibleCmpOps(CI0->getOperand(0), CI0->getOperand(1),
+                                         I->getOperand(1), I->getOperand(0))));
               }
               return CurrentPred != P0 && CurrentPredSwapped != P0;
             }
@@ -7026,14 +7037,15 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
               CmpInst::Predicate CurrentPredSwapped =
                   CmpInst::getSwappedPredicate(CurrentPred);
               if (P0 == AltP0 || P0 == AltP0Swapped) {
-                unsigned Idx =
-                    std::distance(E->Scalars.begin(), find(E->Scalars, I));
                 // Alternate cmps have same/swapped predicate as main cmps but
                 // different order of compatible operands.
-                ArrayRef<Value *> VLOp0 = E->getOperand(0);
-                return (P0 == CurrentPred && CI->getOperand(0) != VLOp0[Idx]) ||
-                       (P0 == CurrentPredSwapped &&
-                        CI->getOperand(1) != VLOp0[Idx]);
+                return !(
+                    (P0 == CurrentPred &&
+                     areCompatibleCmpOps(CI0->getOperand(0), CI0->getOperand(1),
+                                         I->getOperand(0), I->getOperand(1))) ||
+                    (P0 == CurrentPredSwapped &&
+                     areCompatibleCmpOps(CI0->getOperand(0), CI0->getOperand(1),
+                                         I->getOperand(1), I->getOperand(0))));
               }
               return CurrentPred != P0 && CurrentPredSwapped != P0;
             }

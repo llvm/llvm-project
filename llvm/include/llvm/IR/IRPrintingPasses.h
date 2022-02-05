@@ -24,6 +24,11 @@
 namespace llvm {
 class raw_ostream;
 class StringRef;
+class Function;
+class FunctionPass;
+class Module;
+class ModulePass;
+class Pass;
 
 /// Create and return a pass that writes the module to the specified
 /// \c raw_ostream.

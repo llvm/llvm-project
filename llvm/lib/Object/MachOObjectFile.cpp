@@ -4767,13 +4767,14 @@ MachOObjectFile::findDsymObjectMembers(StringRef Path) {
   return ObjectPaths;
 }
 
-llvm::swift::Swift5ReflectionSectionKind
+llvm::binaryformat::Swift5ReflectionSectionKind
 MachOObjectFile::mapReflectionSectionNameToEnumValue(
     StringRef SectionName) const {
 #define HANDLE_SWIFT_SECTION(KIND, MACHO, ELF, COFF)                           \
-  .Case(MACHO, llvm::swift::Swift5ReflectionSectionKind::KIND)
-  return StringSwitch<llvm::swift::Swift5ReflectionSectionKind>(SectionName)
+  .Case(MACHO, llvm::binaryformat::Swift5ReflectionSectionKind::KIND)
+  return StringSwitch<llvm::binaryformat::Swift5ReflectionSectionKind>(
+             SectionName)
 #include "llvm/BinaryFormat/Swift.def"
-      .Default(llvm::swift::Swift5ReflectionSectionKind::unknown);
+      .Default(llvm::binaryformat::Swift5ReflectionSectionKind::unknown);
 #undef HANDLE_SWIFT_SECTION
 }

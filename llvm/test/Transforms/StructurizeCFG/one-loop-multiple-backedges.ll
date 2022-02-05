@@ -16,14 +16,14 @@ bb3:                                              ; preds = %bb7, %bb
   br i1 %tmp4, label %bb7, label %bb5
 
 ; CHECK: bb5:
-; CHECK:   %tmp6.inv = xor i1 %tmp6, true
+; CHECK:   %tmp6 = fcmp uge float 0.000000e+00, %arg2
 ; CHECK:   br label %Flow
 bb5:                                              ; preds = %bb3
   %tmp6 = fcmp olt float 0.000000e+00, %arg2
   br i1 %tmp6, label %bb10, label %bb7
 
 ; CHECK: Flow:
-; CHECK:   %0 = phi i1 [ %tmp6.inv, %bb5 ], [ %tmp4, %bb3 ]
+; CHECK:   %0 = phi i1 [ %tmp6, %bb5 ], [ %tmp4, %bb3 ]
 ; CHECK:   br i1 %0, label %bb7, label %Flow1
 
 ; CHECK: bb7:
@@ -34,7 +34,7 @@ bb7:                                              ; preds = %bb5, %bb3
   br i1 %tmp9, label %bb3, label %bb10
 
 ; CHECK: Flow1:
-; CHECK:   %3 = phi i1 [ %tmp9.inv, %bb7 ], [ true, %Flow ]
+; CHECK:   %3 = phi i1 [ %tmp9, %bb7 ], [ true, %Flow ]
 ; CHECK:   br i1 %3, label %bb10, label %bb3
 
 ; CHECK: bb10:

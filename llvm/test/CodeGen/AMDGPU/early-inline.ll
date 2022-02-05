@@ -1,8 +1,8 @@
 ; RUN: opt -mtriple=amdgcn-- -O1 -S -inline-threshold=1 -amdgpu-early-inline-all %s | FileCheck %s
 
-@c_alias = alias i32 (i32), i32 (i32)* @callee
+@c_alias = dso_local alias i32 (i32), i32 (i32)* @callee
 
-define i32 @callee(i32 %x) {
+define dso_local i32 @callee(i32 %x) {
 entry:
   %mul1 = mul i32 %x, %x
   %mul2 = mul i32 %mul1, %x

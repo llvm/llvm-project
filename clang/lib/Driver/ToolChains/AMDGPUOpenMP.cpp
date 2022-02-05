@@ -531,6 +531,18 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
   for (auto Path :
        RocmInstallation.getRocmDeviceLibPathArg())
     LibraryPaths.push_back(DriverArgs.MakeArgString(Path));
+#if 0 //upstream fixme
+  // Link the bitcode library late if we're using device LTO.
+  if (getDriver().isUsingLTO(/* IsOffload */ true))
+    return;
+
+  std::string BitcodeSuffix;
+  if (DriverArgs.hasFlag(options::OPT_fopenmp_target_new_runtime,
+                         options::OPT_fno_openmp_target_new_runtime, true))
+    BitcodeSuffix = "new-amdgpu-" + GPUArch;
+  else
+    BitcodeSuffix = "amdgcn-" + GPUArch;
+#endif
 
   addDirectoryList(DriverArgs, LibraryPaths, "", "HIP_DEVICE_LIB_PATH");
 
