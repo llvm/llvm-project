@@ -77,9 +77,8 @@ def ConstantOp : Toy_Op<"constant",
   // The constant operation returns a single value of TensorType.
   let results = (outs F64Tensor);
 
-  // Specify a parser and printer method.
-  let parser = [{ return ::parseConstantOp(parser, result); }];
-  let printer = [{ return ::print(p, *this); }];
+  // Indicate that the operation has a custom parser and printer method.
+  let hasCustomAssemblyFormat = 1;
 
   // Add custom build methods for the constant operation. These method populates
   // the `state` that MLIR uses to create operations, i.e. these are used when
@@ -112,9 +111,8 @@ def AddOp : Toy_Op<"add",
   let arguments = (ins F64Tensor:$lhs, F64Tensor:$rhs);
   let results = (outs F64Tensor);
 
-  // Specify a parser and printer method.
-  let parser = [{ return ::parseBinaryOp(parser, result); }];
-  let printer = [{ return ::printBinaryOp(p, *this); }];
+  // Indicate that the operation has a custom parser and printer method.
+  let hasCustomAssemblyFormat = 1;
 
   // Allow building an AddOp with from the two input operands.
   let builders = [
@@ -191,9 +189,8 @@ def MulOp : Toy_Op<"mul",
   let arguments = (ins F64Tensor:$lhs, F64Tensor:$rhs);
   let results = (outs F64Tensor);
 
-  // Specify a parser and printer method.
-  let parser = [{ return ::parseBinaryOp(parser, result); }];
-  let printer = [{ return ::printBinaryOp(p, *this); }];
+  // Indicate that the operation has a custom parser and printer method.
+  let hasCustomAssemblyFormat = 1;
 
   // Allow building a MulOp with from the two input operands.
   let builders = [
