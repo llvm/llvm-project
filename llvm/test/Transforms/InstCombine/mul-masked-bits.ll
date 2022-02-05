@@ -22,10 +22,7 @@ define i32 @foo(i32 %x, i32 %y) {
 
 define i1 @PR48683(i32 %x) {
 ; CHECK-LABEL: @PR48683(
-; CHECK-NEXT:    [[A:%.*]] = mul i32 [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[B:%.*]] = and i32 [[A]], 2
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[B]], 0
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 false
 ;
   %a = mul i32 %x, %x
   %b = and i32 %a, 2
@@ -35,10 +32,7 @@ define i1 @PR48683(i32 %x) {
 
 define <4 x i1> @PR48683_vec(<4 x i32> %x) {
 ; CHECK-LABEL: @PR48683_vec(
-; CHECK-NEXT:    [[A:%.*]] = mul <4 x i32> [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[B:%.*]] = and <4 x i32> [[A]], <i32 2, i32 2, i32 2, i32 2>
-; CHECK-NEXT:    [[C:%.*]] = icmp ne <4 x i32> [[B]], zeroinitializer
-; CHECK-NEXT:    ret <4 x i1> [[C]]
+; CHECK-NEXT:    ret <4 x i1> zeroinitializer
 ;
   %a = mul <4 x i32> %x, %x
   %b = and <4 x i32> %a, <i32 2, i32 2, i32 2, i32 2>
