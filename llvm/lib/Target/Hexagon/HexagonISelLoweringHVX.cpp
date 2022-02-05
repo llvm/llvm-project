@@ -118,9 +118,10 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::SPLAT_VECTOR,      MVT::v32f32, Legal);
     // Vector shuffle is always promoted to ByteV and a bitcast to f16 is
     // generated.
-    setPromoteTo(ISD::VECTOR_SHUFFLE, MVT::v64f16, ByteV);
-    setPromoteTo(ISD::VECTOR_SHUFFLE, MVT::v64f32, ByteW);
-    setPromoteTo(ISD::VECTOR_SHUFFLE, MVT::v32f32, ByteV);
+    setPromoteTo(ISD::VECTOR_SHUFFLE, MVT::v128f16, ByteW);
+    setPromoteTo(ISD::VECTOR_SHUFFLE, MVT::v64f16,  ByteV);
+    setPromoteTo(ISD::VECTOR_SHUFFLE, MVT::v64f32,  ByteW);
+    setPromoteTo(ISD::VECTOR_SHUFFLE, MVT::v32f32,  ByteV);
 
     // Custom-lower BUILD_VECTOR for vector pairs. The standard (target-
     // independent) handling of it would convert it to a load, which is
@@ -780,7 +781,6 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
   SDValue N = HalfV0;
   SDValue M = HalfV1;
   for (unsigned i = 0; i != NumWords/2; ++i) {
-
     // Rotate by element count since last insertion.
     if (Words[i] != Words[n] || VecHist[n] <= 1) {
       Sn = DAG.getConstant(Rn, dl, MVT::i32);
