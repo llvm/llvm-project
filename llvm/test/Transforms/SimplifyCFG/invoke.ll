@@ -219,6 +219,40 @@ lpad:
   resume { i8*, i32 } %eh
 }
 
+define void @invoke_of_noreturn_with_shared_normal_destination(i1 %c) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @invoke_of_noreturn_with_shared_normal_destination(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[INVOKE:%.*]], label [[INVOKE_CONT:%.*]]
+; CHECK:       invoke:
+; CHECK-NEXT:    invoke void @simple_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT]] unwind label [[LPAD:%.*]]
+; CHECK:       invoke.cont:
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ 0, [[INVOKE]] ], [ -1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    call void @sideeffect(i32 [[R]])
+; CHECK-NEXT:    ret void
+; CHECK:       lpad:
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    call void @sideeffect(i32 1)
+; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+;
+entry:
+  br i1 %c, label %invoke, label %invoke.cont
+
+invoke:
+  invoke void @simple_throw() to label %invoke.cont unwind label %lpad
+
+invoke.cont:
+  %r = phi i32 [ 0, %invoke ], [ -1, %entry ]
+  call void @sideeffect(i32 %r)
+  ret void
+
+lpad:
+  %eh = landingpad { i8*, i32 } cleanup
+  call void @sideeffect(i32 1)
+  resume { i8*, i32 } %eh
+}
+
 define void @invoke_of_nounwind() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL: @invoke_of_nounwind(
 ; CHECK-NEXT:  entry:
