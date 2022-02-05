@@ -6903,17 +6903,8 @@ llvm::StringRef ObjectFileMachO::GetReflectionSectionIdentifier(
 #ifdef LLDB_ENABLE_SWIFT
 bool ObjectFileMachO::CanContainSwiftReflectionData(const Section &section) {
   swift::SwiftObjectFileFormatMachO file_format;
-  if (file_format.sectionContainsReflectionData(
-          section.GetName().GetStringRef()))
-    return true;
-  // Some section names are not unique, such as `__const`, which could be in
-  // `__TEXT` or `__DATA`. For these, also check the segment,section name.
-  if (auto segment = section.GetParent()) {
-    std::string segmentSectionName =
-        llvm::formatv("{0},{1}", segment->GetName(), section.GetName()).str();
-    return file_format.sectionContainsReflectionData(segmentSectionName);
-  }
-  return false;
+  return file_format.sectionContainsReflectionData(
+      section.GetName().GetStringRef());
 }
 #endif // LLDB_ENABLE_SWIFT
 
