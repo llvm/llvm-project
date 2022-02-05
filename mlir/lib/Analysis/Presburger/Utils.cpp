@@ -160,14 +160,14 @@ static LogicalResult getDivRepr(const IntegerPolyhedron &cst, unsigned pos,
 
   // Extract divisor, the divisor can be negative and hence its sign information
   // is stored in `signDiv` to reverse the sign of dividend's coefficients.
-  // Equality must involve the pos-th variable and hence `temp_div` != 0.
-  int64_t temp_div = cst.atEq(eqInd, pos);
-  if (temp_div == 0)
+  // Equality must involve the pos-th variable and hence `tempDiv` != 0.
+  int64_t tempDiv = cst.atEq(eqInd, pos);
+  if (tempDiv == 0)
     return failure();
-  int64_t signDiv = temp_div < 0 ? -1 : 1;
+  int64_t signDiv = tempDiv < 0 ? -1 : 1;
 
   // The divisor is always a positive integer.
-  divisor = temp_div * signDiv;
+  divisor = tempDiv * signDiv;
 
   expr.resize(cst.getNumCols(), 0);
   for (unsigned i = 0, e = cst.getNumIds(); i < e; ++i)
