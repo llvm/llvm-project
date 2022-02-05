@@ -40,6 +40,41 @@ LLVM 12.x.
 This repository mirrors the LLVM `main` and `release/*` branches. I keep my
 files on top of `main`, which means that I often rebase. Sorry!
 
+## Status
+
+It is already possible to cross-compile small applications. For example, save the
+following C source on your development machine as `hello.c`:
+
+```
+int printf(const char * __restrict, ...);
+
+int gcd_sub(int a, int b) {
+  while (a != b) {
+    if (a > b)
+      a -= b;
+    else
+      b -= a;
+  }
+  return a;
+}
+
+int main(int argc, char *argv[]) {
+  int gcd = gcd_sub(123, 99);
+  printf("gcd(123, 99) = %d\n", gcd);
+  return 0;
+}
+```
+
+Compile the file with clang using `clang -target m88k-openbsd -c hello.c`
+and copy the resulting object file `hello.o` to your OpenBSD m88k system.
+
+On the m88k system, you can link the program and run it:
+
+```
+gcc hello.o && ./a.out
+gcd(123, 99) = 3
+```
+
 ## Support
 
 If you like this work, then there are several ways you can support me:
