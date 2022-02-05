@@ -556,9 +556,9 @@ attributes #512 = { nounwind "amdgpu-flat-work-group-size"="512,512" }
 
 ; GCN-LABEL: {{^}}f1024:
 ; GFX9: NumVgprs: 64
-; GFX90A: NumVgprs: 64
-; GFX90A: NumAgprs: 64
-; GFX90A: TotalNumVgprs: 128
+; GFX90A: NumVgprs: 128
+; GFX90A: NumAgprs: 128
+; GFX90A: TotalNumVgprs: 256
 ; GFX10WGP-WAVE32: NumVgprs: 128
 ; GFX10WGP-WAVE64: NumVgprs: 128
 ; GFX10CU-WAVE32: NumVgprs: 64

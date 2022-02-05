@@ -20,6 +20,7 @@
 
 namespace llvm {
 
+class GCNTargetMachine;
 class GCNSubtarget;
 class MachineFunction;
 class TargetMachine;
@@ -71,12 +72,16 @@ public:
     return Info->getSecond();
   }
 
-private:
-  SIFunctionResourceInfo analyzeResourceUsage(const MachineFunction &MF,
-                                              const TargetMachine &TM) const;
-  void propagateIndirectCallRegisterUsage();
+  const SIFunctionResourceInfo &getWorstCaseResourceInfo(const Module &M);
 
+private:
+  void computeWorstCaseModuleRegisterUsage(const Module &M);
+
+  SIFunctionResourceInfo analyzeResourceUsage(const MachineFunction &MF);
+
+  const GCNTargetMachine *TM = nullptr;
   DenseMap<const Function *, SIFunctionResourceInfo> CallGraphResourceInfo;
+  Optional<SIFunctionResourceInfo> ModuleWorstCaseInfo;
 };
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_AMDGPU_AMDGPURESOURCEUSAGEANALYSIS_H
