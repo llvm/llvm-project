@@ -639,7 +639,7 @@ static bool shouldKeepInSymtab(const Defined &sym) {
 
   // If --emit-reloc or -r is given, preserve symbols referenced by relocations
   // from live sections.
-  if (config->copyRelocs && sym.used)
+  if (sym.used)
     return true;
 
   // Exclude local symbols pointing to .ARM.exidx sections.
