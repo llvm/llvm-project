@@ -498,8 +498,16 @@ protected:
   /// Return the index at which the specified kind of id starts.
   unsigned getIdKindOffset(IdKind kind) const;
 
+  /// Return the index at which the specified kind of id ends.
+  unsigned getIdKindEnd(IdKind kind) const;
+
   /// Get the number of ids of the specified kind.
   unsigned getNumIdKind(IdKind kind) const;
+
+  /// Get the number of elements of the specified kind in the range
+  /// [idStart, idLimit).
+  unsigned getIdKindOverlap(IdKind kind, unsigned idStart,
+                            unsigned idLimit) const;
 
   /// Removes identifiers in the column range [idStart, idLimit), and copies any
   /// remaining valid data into place, updates member variables, and resizes
