@@ -11,9 +11,9 @@
 #define _LIBCPP___MEMORY_TEMPORARY_BUFFER_H
 
 #include <__config>
+#include <__utility/pair.h>
 #include <cstddef>
 #include <new>
-#include <utility> // pair
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
