@@ -51,12 +51,13 @@
 
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
 
 namespace llvm {
+class Module;
+
 namespace IRSimilarity {
 
 struct IRInstructionDataList;

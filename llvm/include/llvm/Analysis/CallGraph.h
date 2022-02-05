@@ -46,8 +46,6 @@
 #define LLVM_ANALYSIS_CALLGRAPH_H
 
 #include "llvm/ADT/GraphTraits.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PassManager.h"
@@ -62,6 +60,7 @@
 namespace llvm {
 
 class CallGraphNode;
+class Function;
 class Module;
 class raw_ostream;
 

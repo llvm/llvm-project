@@ -21,7 +21,6 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Casting.h"
 #include <forward_list>
 #include <memory>
 

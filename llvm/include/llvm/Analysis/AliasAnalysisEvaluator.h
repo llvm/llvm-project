@@ -24,12 +24,12 @@
 #ifndef LLVM_ANALYSIS_ALIASANALYSISEVALUATOR_H
 #define LLVM_ANALYSIS_ALIASANALYSISEVALUATOR_H
 
-#include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Pass.h"
 
 namespace llvm {
 class AAResults;
+class Function;
+class FunctionPass;
 
 class AAEvaluator : public PassInfoMixin<AAEvaluator> {
   int64_t FunctionCount = 0;

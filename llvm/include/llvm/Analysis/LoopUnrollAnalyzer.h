@@ -36,6 +36,8 @@
 // And finally:
 //   v = b[1]
 namespace llvm {
+class Instruction;
+
 class UnrolledInstAnalyzer : private InstVisitor<UnrolledInstAnalyzer, bool> {
   typedef InstVisitor<UnrolledInstAnalyzer, bool> Base;
   friend class InstVisitor<UnrolledInstAnalyzer, bool>;

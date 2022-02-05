@@ -10,10 +10,10 @@
 #ifndef LLVM_ANALYSIS_MLMODELRUNNER_H
 #define LLVM_ANALYSIS_MLMODELRUNNER_H
 
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+class LLVMContext;
 
 /// MLModelRunner interface: abstraction of a mechanism for evaluating a
 /// tensorflow "saved model".
