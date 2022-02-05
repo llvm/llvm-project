@@ -615,6 +615,12 @@ public:
   /// changed at the end of assembly.
   virtual void emitXCOFFRenameDirective(const MCSymbol *Name, StringRef Rename);
 
+  /// Emit a XCOFF .ref directive which creates R_REF type entry in the
+  /// relocation table for one or more symbols.
+  ///
+  /// \param Sym - The symbol on the .ref directive.
+  virtual void emitXCOFFRefDirective(StringRef Sym);
+
   /// Emit an ELF .size directive.
   ///
   /// This corresponds to an assembler statement such as:

@@ -1180,6 +1180,10 @@ void MCStreamer::emitXCOFFRenameDirective(const MCSymbol *Name,
                    "XCOFF targets");
 }
 
+void MCStreamer::emitXCOFFRefDirective(StringRef Name) {
+  llvm_unreachable("emitXCOFFRefDirective is only supported on XCOFF targets");
+}
+
 void MCStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {}
 void MCStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
                                         StringRef Name, bool KeepOriginalSym) {}

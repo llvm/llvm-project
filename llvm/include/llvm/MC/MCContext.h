@@ -650,6 +650,9 @@ namespace llvm {
                                   unsigned Flags, const MCSymbolWasm *Group,
                                   unsigned UniqueID, const char *BeginSymName);
 
+    bool hasXCOFFSection(StringRef Section,
+                         XCOFF::CsectProperties CsectProp) const;
+
     MCSectionXCOFF *getXCOFFSection(
         StringRef Section, SectionKind K,
         Optional<XCOFF::CsectProperties> CsectProp = None,
