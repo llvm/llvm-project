@@ -4331,7 +4331,7 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
                                               type);
       // This unreachable is a temporary marker which will be removed later.
       llvm::Instruction *IsActive = Builder.CreateUnreachable();
-      args.addArgCleanupDeactivation(EHStack.getInnermostEHScope(), IsActive);
+      args.addArgCleanupDeactivation(EHStack.stable_begin(), IsActive);
     }
     return;
   }
