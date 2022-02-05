@@ -1206,9 +1206,7 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
           ->getNumElements();
   FixedVectorType *ILTy = FixedVectorType::get(ETy, Factor * ElementsPerSVI);
 
-  SmallVector<unsigned, 4> Indices;
-  for (unsigned i = 0; i < Factor; i++)
-    Indices.push_back(i);
+  auto Indices = llvm::to_vector<4>(llvm::seq<unsigned>(0, Factor));
   InterleavedCost = TTI.getInterleavedMemoryOpCost(
       Instruction::Load, ILTy, Factor, Indices, InsertionPoint->getAlign(),
       InsertionPoint->getPointerAddressSpace(), CostKind);
