@@ -2,7 +2,6 @@
 
 // Currently hangs on amdgpu
 // UNSUPPORTED: amdgcn-amd-amdhsa
-// UNSUPPORTED: amdgcn-amd-amdhsa-newRTL
 // UNSUPPORTED: x86_64-pc-linux-gnu
 
 #include <cassert>

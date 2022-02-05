@@ -5959,13 +5959,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        options::OPT_fno_openmp_cuda_mode, /*Default=*/false))
         CmdArgs.push_back("-fopenmp-cuda-mode");
 
-      // When in OpenMP offloading mode, enable or disable the new device
-      // runtime.
-      if (Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
-                       options::OPT_fno_openmp_target_new_runtime,
-                       /*Default=*/true))
-        CmdArgs.push_back("-fopenmp-target-new-runtime");
-
       // When in OpenMP offloading mode, enable debugging on the device.
       Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_target_debug_EQ);
       if (Args.hasFlag(options::OPT_fopenmp_target_debug,
@@ -8247,9 +8240,6 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       StringRef Arch = TCArgs.getLastArgValue(options::OPT_march_EQ);
 
       std::string BitcodeSuffix;
-      if (TCArgs.hasFlag(options::OPT_fopenmp_target_new_runtime,
-                         options::OPT_fno_openmp_target_new_runtime, true))
-        BitcodeSuffix += "new-";
       if (TC->getTriple().isNVPTX())
         BitcodeSuffix += "nvptx-";
       else if (TC->getTriple().isAMDGPU())
