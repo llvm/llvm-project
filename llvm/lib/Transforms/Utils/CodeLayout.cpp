@@ -45,6 +45,11 @@
 using namespace llvm;
 #define DEBUG_TYPE "code-layout"
 
+cl::opt<bool> EnableExtTspBlockPlacement(
+    "enable-ext-tsp-block-placement", cl::Hidden, cl::init(false),
+    cl::desc("Enable machine block placement based on the ext-tsp model, "
+             "optimizing I-cache utilization."));
+
 // Algorithm-specific constants. The values are tuned for the best performance
 // of large-scale front-end bound binaries.
 static cl::opt<double>

@@ -295,6 +295,8 @@ static cl::opt<bool> OverwriteExistingWeights(
     "overwrite-existing-weights", cl::Hidden, cl::init(false),
     cl::desc("Ignore existing branch weights on IR and always overwrite."));
 
+extern cl::opt<bool> EnableExtTspBlockPlacement;
+
 namespace {
 
 using BlockWeightMap = DenseMap<const BasicBlock *, uint64_t>;
@@ -1999,6 +2001,10 @@ bool SampleProfileLoader::doInitialization(Module &M,
     // Enable Profi by default for CSSPGO.
     if (!SampleProfileUseProfi.getNumOccurrences())
       SampleProfileUseProfi = true;
+
+    // Enable EXT-TSP block layout for CSSPGO.
+    if (!EnableExtTspBlockPlacement.getNumOccurrences())
+      EnableExtTspBlockPlacement = true;
 
     if (FunctionSamples::ProfileIsCSFlat) {
       // Tracker for profiles under different context
