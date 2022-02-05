@@ -84,7 +84,7 @@ Symbol *SymbolTable::insert(StringRef name) {
   // when it is a placeholder must be initialized here.
   sym->setName(name);
   sym->symbolKind = Symbol::PlaceholderKind;
-  sym->versionId = VER_NDX_GLOBAL;
+  sym->partition = 1;
   sym->visibility = STV_DEFAULT;
   sym->isUsedInRegularObj = false;
   sym->exportDynamic = false;
@@ -92,9 +92,9 @@ Symbol *SymbolTable::insert(StringRef name) {
   sym->referenced = false;
   sym->traced = false;
   sym->scriptDefined = false;
+  sym->versionId = VER_NDX_GLOBAL;
   if (pos != StringRef::npos)
     sym->hasVersionSuffix = true;
-  sym->partition = 1;
   return sym;
 }
 
