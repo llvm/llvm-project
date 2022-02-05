@@ -675,14 +675,9 @@ static bool includeInSymtab(const Symbol &b) {
     if (!sec)
       return true;
 
-    // Exclude symbols pointing to garbage-collected sections.
-    if (isa<InputSectionBase>(sec) && !sec->isLive())
-      return false;
-
     if (auto *s = dyn_cast<MergeInputSection>(sec))
-      if (!s->getSectionPiece(d->value)->live)
-        return false;
-    return true;
+      return s->getSectionPiece(d->value)->live;
+    return sec->isLive();
   }
   return b.used || !config->gcSections;
 }
