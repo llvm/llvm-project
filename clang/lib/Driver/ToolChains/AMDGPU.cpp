@@ -910,17 +910,20 @@ RocmInstallationDetector::getCommonBitcodeLibs(
   auto AddBCLib = [&](StringRef BCFile) { BCLibs.push_back(BCFile.str()); };
 
   AddBCLib(getOCMLPath());
+  // FIXME: OpenMP has ockl and ocml contained in libomptarget.bc. However,
+  // we cannot exclude ocml here because of the crazy always-compile clang
+  // headers for cuda, hip, and openmp. A more sane approach is to use libm
+  // offload-arch-specific bitcode files as is done for FORTRAN. Currently,
+  // libomptarget-<offload-arch>.bc files is built by compiling headers with
+  // __BUILD_MATH_BUILTINS_LIB__ turning static libm functions to extern.
   if (!isOpenMP)
-    // OpenMP has some of these libs contained in libomptarget.bc
     AddBCLib(getOCKLPath());
   AddBCLib(getDenormalsAreZeroPath(DAZ));
   AddBCLib(getUnsafeMathPath(UnsafeMathOpt || FastRelaxedMath));
   AddBCLib(getFiniteOnlyPath(FiniteOnly || FastRelaxedMath));
   AddBCLib(getCorrectlyRoundedSqrtPath(CorrectSqrt));
-  if (!isOpenMP) {
-    AddBCLib(getWavefrontSize64Path(Wave64));
-    AddBCLib(LibDeviceFile);
-  }
+  AddBCLib(getWavefrontSize64Path(Wave64));
+  AddBCLib(LibDeviceFile);
   auto ABIVerPath = getABIVersionPath(ABIVer);
   if (!ABIVerPath.empty())
     AddBCLib(ABIVerPath);
