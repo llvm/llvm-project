@@ -281,7 +281,7 @@ void InstrumentationRuntimeASan::Activate() {
   if (!process_sp)
     return;
 
-  ConstString symbol_name("__asan::AsanDie()");
+  ConstString symbol_name("_ZN6__asanL7AsanDieEv");
   const Symbol *symbol = GetRuntimeModuleSP()->FindFirstSymbolWithNameAndType(
       symbol_name, eSymbolTypeCode);
 
