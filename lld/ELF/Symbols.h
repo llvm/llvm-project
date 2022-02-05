@@ -228,10 +228,6 @@ public:
   // non-lazy object causes a runtime error.
   void extract() const;
 
-  static bool isExportDynamic(Kind k) {
-    return k == SharedKind || config->shared || config->exportDynamic;
-  }
-
 private:
   void resolveUndefined(const Undefined &other);
   void resolveCommon(const CommonSymbol &other);
@@ -250,14 +246,14 @@ protected:
         binding(binding), type(type), stOther(stOther), symbolKind(k),
         visibility(stOther & 3),
         isUsedInRegularObj(!file || file->kind() == InputFile::ObjKind),
-        exportDynamic(isExportDynamic(k)), inDynamicList(false),
-        canInline(false), referenced(false), traced(false),
-        hasVersionSuffix(false), isInIplt(false), gotInIgot(false),
-        isPreemptible(false), used(!config->gcSections), folded(false),
-        needsTocRestore(false), scriptDefined(false), needsCopy(false),
-        needsGot(false), needsPlt(false), needsTlsDesc(false),
-        needsTlsGd(false), needsTlsGdToIe(false), needsTlsLd(false),
-        needsGotDtprel(false), needsTlsIe(false), hasDirectReloc(false) {}
+        exportDynamic(false), inDynamicList(false), canInline(false),
+        referenced(false), traced(false), hasVersionSuffix(false),
+        isInIplt(false), gotInIgot(false), isPreemptible(false),
+        used(!config->gcSections), folded(false), needsTocRestore(false),
+        scriptDefined(false), needsCopy(false), needsGot(false),
+        needsPlt(false), needsTlsDesc(false), needsTlsGd(false),
+        needsTlsGdToIe(false), needsTlsLd(false), needsGotDtprel(false),
+        needsTlsIe(false), hasDirectReloc(false) {}
 
 public:
   // True if this symbol is in the Iplt sub-section of the Plt and the Igot
@@ -330,7 +326,9 @@ public:
   Defined(InputFile *file, StringRef name, uint8_t binding, uint8_t stOther,
           uint8_t type, uint64_t value, uint64_t size, SectionBase *section)
       : Symbol(DefinedKind, file, name, binding, stOther, type), value(value),
-        size(size), section(section) {}
+        size(size), section(section) {
+    exportDynamic = config->shared || config->exportDynamic;
+  }
 
   static bool classof(const Symbol *s) { return s->isDefined(); }
 
@@ -365,7 +363,9 @@ public:
   CommonSymbol(InputFile *file, StringRef name, uint8_t binding,
                uint8_t stOther, uint8_t type, uint64_t alignment, uint64_t size)
       : Symbol(CommonKind, file, name, binding, stOther, type),
-        alignment(alignment), size(size) {}
+        alignment(alignment), size(size) {
+    exportDynamic = config->shared || config->exportDynamic;
+  }
 
   static bool classof(const Symbol *s) { return s->isCommon(); }
 
@@ -396,6 +396,7 @@ public:
       : Symbol(SharedKind, &file, name, binding, stOther, type), value(value),
         size(size), alignment(alignment) {
     this->verdefIndex = verdefIndex;
+    exportDynamic = true;
     // GNU ifunc is a mechanism to allow user-supplied functions to
     // resolve PLT slot values at load-time. This is contrary to the
     // regular symbol resolution scheme in which symbols are resolved just

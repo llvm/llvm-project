@@ -1669,7 +1669,6 @@ createBitcodeSymbol(Symbol *&sym, const std::vector<bool> &keptComdats,
   uint8_t binding = objSym.isWeak() ? STB_WEAK : STB_GLOBAL;
   uint8_t type = objSym.isTLS() ? STT_TLS : STT_NOTYPE;
   uint8_t visibility = mapVisibility(objSym.getVisibility());
-  bool canOmitFromDynSym = objSym.canBeOmittedFromSymbolTable();
 
   StringRef name;
   if (sym) {
@@ -1682,8 +1681,6 @@ createBitcodeSymbol(Symbol *&sym, const std::vector<bool> &keptComdats,
   int c = objSym.getComdatIndex();
   if (objSym.isUndefined() || (c != -1 && !keptComdats[c])) {
     Undefined newSym(&f, name, binding, visibility, type);
-    if (canOmitFromDynSym)
-      newSym.exportDynamic = false;
     sym->resolve(newSym);
     sym->referenced = true;
     return;
@@ -1695,7 +1692,7 @@ createBitcodeSymbol(Symbol *&sym, const std::vector<bool> &keptComdats,
                               objSym.getCommonSize()});
   } else {
     Defined newSym(&f, name, binding, visibility, type, 0, 0, nullptr);
-    if (canOmitFromDynSym)
+    if (objSym.canBeOmittedFromSymbolTable())
       newSym.exportDynamic = false;
     sym->resolve(newSym);
   }
