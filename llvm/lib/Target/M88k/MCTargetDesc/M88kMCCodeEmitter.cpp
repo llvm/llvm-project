@@ -113,8 +113,12 @@ M88kMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
   const MCExpr *Expr = MO.getExpr();
 
   assert(isa<M88kMCExpr>(Expr) && "Expected M88kMCExpr");
+
+  // All instructions follow the pattern that the expr has an offset of 2 from
+  // the begin of the instruction.
+  const uint32_t Offset = 2;
   // Push fixup (all info is contained within)
-  Fixups.push_back(MCFixup::create(0, Expr, MCFixupKind(FixupKind(Expr))));
+  Fixups.push_back(MCFixup::create(Offset, Expr, MCFixupKind(FixupKind(Expr))));
   return 0;
 }
 
