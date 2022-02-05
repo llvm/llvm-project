@@ -7,8 +7,8 @@
 @alias2 = hidden alias void (), void()* @aliasee_vgpr64_sgpr102
 
 ; CHECK-LABEL: {{^}}kernel2:
-; CHECK: .amdhsa_next_free_vgpr 64
-; CHECK-NEXT: .amdhsa_next_free_sgpr 102
+; CHECK: .amdhsa_next_free_vgpr 53
+; CHECK-NEXT: .amdhsa_next_free_sgpr 33
 define amdgpu_kernel void @kernel2() #0 {
 bb:
   call void @alias2() #2

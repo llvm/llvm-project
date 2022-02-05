@@ -20,12 +20,11 @@
 
 namespace llvm {
 
-class GCNTargetMachine;
 class GCNSubtarget;
 class MachineFunction;
 class TargetMachine;
 
-struct AMDGPUResourceUsageAnalysis : public CallGraphSCCPass {
+struct AMDGPUResourceUsageAnalysis : public ModulePass {
   static char ID;
 
 public:
@@ -51,14 +50,14 @@ public:
     int32_t getTotalNumVGPRs(const GCNSubtarget &ST) const;
   };
 
-  AMDGPUResourceUsageAnalysis() : CallGraphSCCPass(ID) {}
+  AMDGPUResourceUsageAnalysis() : ModulePass(ID) {}
 
-  bool runOnSCC(CallGraphSCC &SCC) override;
-
-  bool doInitialization(CallGraph &CG) override {
+  bool doInitialization(Module &M) override {
     CallGraphResourceInfo.clear();
-    return CallGraphSCCPass::doInitialization(CG);
+    return ModulePass::doInitialization(M);
   }
+
+  bool runOnModule(Module &M) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineModuleInfoWrapperPass>();
@@ -72,16 +71,12 @@ public:
     return Info->getSecond();
   }
 
-  const SIFunctionResourceInfo &getWorstCaseResourceInfo(const Module &M);
-
 private:
-  void computeWorstCaseModuleRegisterUsage(const Module &M);
+  SIFunctionResourceInfo analyzeResourceUsage(const MachineFunction &MF,
+                                              const TargetMachine &TM) const;
+  void propagateIndirectCallRegisterUsage();
 
-  SIFunctionResourceInfo analyzeResourceUsage(const MachineFunction &MF);
-
-  const GCNTargetMachine *TM = nullptr;
   DenseMap<const Function *, SIFunctionResourceInfo> CallGraphResourceInfo;
-  Optional<SIFunctionResourceInfo> ModuleWorstCaseInfo;
 };
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_AMDGPU_AMDGPURESOURCEUSAGEANALYSIS_H
