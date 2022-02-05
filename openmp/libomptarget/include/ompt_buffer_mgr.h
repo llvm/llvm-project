@@ -30,7 +30,7 @@
 // TODO Start with 1 helper thread and add dynamically if required
 // Number of helper threads must not execeed 32 since the
 // thread-wait-tracker is 32 bits in length.
-#define OMPT_NUM_HELPER_THREADS 4
+#define OMPT_NUM_HELPER_THREADS 1
 
 #ifdef OMPT_SUPPORT
 #define OMPT_TRACING_IF_ENABLED(stmts)                                         \
