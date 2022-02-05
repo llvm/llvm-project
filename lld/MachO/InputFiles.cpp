@@ -1259,10 +1259,11 @@ void DylibFile::parseLoadCommands(MemoryBufferRef mb) {
 
 // Some versions of XCode ship with .tbd files that don't have the right
 // platform settings.
-static constexpr std::array<StringRef, 3> skipPlatformChecks{
+constexpr std::array<StringRef, 4> skipPlatformChecks{
     "/usr/lib/system/libsystem_kernel.dylib",
     "/usr/lib/system/libsystem_platform.dylib",
-    "/usr/lib/system/libsystem_pthread.dylib"};
+    "/usr/lib/system/libsystem_pthread.dylib",
+    "/usr/lib/system/libcompiler_rt.dylib"};
 
 DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
                      bool isBundleLoader)
