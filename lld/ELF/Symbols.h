@@ -228,10 +228,8 @@ public:
   // non-lazy object causes a runtime error.
   void extract() const;
 
-  static bool isExportDynamic(Kind k, uint8_t visibility) {
-    if (k == SharedKind)
-      return visibility == llvm::ELF::STV_DEFAULT;
-    return config->shared || config->exportDynamic;
+  static bool isExportDynamic(Kind k) {
+    return k == SharedKind || config->shared || config->exportDynamic;
   }
 
 private:
@@ -252,7 +250,7 @@ protected:
         binding(binding), type(type), stOther(stOther), symbolKind(k),
         visibility(stOther & 3),
         isUsedInRegularObj(!file || file->kind() == InputFile::ObjKind),
-        exportDynamic(isExportDynamic(k, visibility)), inDynamicList(false),
+        exportDynamic(isExportDynamic(k)), inDynamicList(false),
         canInline(false), referenced(false), traced(false),
         hasVersionSuffix(false), isInIplt(false), gotInIgot(false),
         isPreemptible(false), used(!config->gcSections), folded(false),
