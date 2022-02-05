@@ -465,6 +465,19 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
+  - label: "Unstable ABI"
+    command: "libcxx/utils/ci/run-buildbot generic-abi-unstable"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
   - label: "No experimental features"
     command: "libcxx/utils/ci/run-buildbot generic-no-experimental"
     artifact_paths:
