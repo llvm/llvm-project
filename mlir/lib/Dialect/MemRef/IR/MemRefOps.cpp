@@ -165,7 +165,7 @@ struct SimplifyAllocConst : public OpRewritePattern<AllocLikeOp> {
         alloc.alignmentAttr());
     // Insert a cast so we have the same type as the old alloc.
     auto resultCast =
-        rewriter.create<CastOp>(alloc.getLoc(), newAlloc, alloc.getType());
+        rewriter.create<CastOp>(alloc.getLoc(), alloc.getType(), newAlloc);
 
     rewriter.replaceOp(alloc, {resultCast});
     return success();
@@ -2156,8 +2156,8 @@ public:
       rewriter.replaceOp(subViewOp, subViewOp.source());
       return success();
     }
-    rewriter.replaceOpWithNewOp<CastOp>(subViewOp, subViewOp.source(),
-                                        subViewOp.getType());
+    rewriter.replaceOpWithNewOp<CastOp>(subViewOp, subViewOp.getType(),
+                                        subViewOp.source());
     return success();
   }
 };
@@ -2177,7 +2177,7 @@ struct SubViewReturnTypeCanonicalizer {
 /// A canonicalizer wrapper to replace SubViewOps.
 struct SubViewCanonicalizer {
   void operator()(PatternRewriter &rewriter, SubViewOp op, SubViewOp newOp) {
-    rewriter.replaceOpWithNewOp<CastOp>(op, newOp, op.getType());
+    rewriter.replaceOpWithNewOp<CastOp>(op, op.getType(), newOp);
   }
 };
 
@@ -2422,7 +2422,7 @@ struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
                                              viewOp.getOperand(0),
                                              viewOp.byte_shift(), newOperands);
     // Insert a cast so we have the same type as the old memref type.
-    rewriter.replaceOpWithNewOp<CastOp>(viewOp, newViewOp, viewOp.getType());
+    rewriter.replaceOpWithNewOp<CastOp>(viewOp, viewOp.getType(), newViewOp);
     return success();
   }
 };

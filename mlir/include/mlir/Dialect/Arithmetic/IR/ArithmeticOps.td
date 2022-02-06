@@ -73,12 +73,6 @@ class Arith_CastOp<string mnemonic, TypeConstraint From, TypeConstraint To,
     DeclareOpInterfaceMethods<CastOpInterface>]>,
     Arguments<(ins From:$in)>,
     Results<(outs To:$out)> {
-  let builders = [
-    OpBuilder<(ins "Value":$source, "Type":$destType), [{
-      impl::buildCastOp($_builder, $_state, source, destType);
-    }]>
-  ];
-
   let assemblyFormat = "$in attr-dict `:` type($in) `to` type($out)";
 }
 

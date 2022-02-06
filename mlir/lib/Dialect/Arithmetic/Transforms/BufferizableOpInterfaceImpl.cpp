@@ -94,8 +94,8 @@ struct IndexCastOpInterface
         getMemRefType(castOp.getType().cast<TensorType>(), state.getOptions(),
                       layout, sourceType.getMemorySpace());
 
-    replaceOpWithNewBufferizedOp<arith::IndexCastOp>(rewriter, op, source,
-                                                     resultType);
+    replaceOpWithNewBufferizedOp<arith::IndexCastOp>(rewriter, op, resultType,
+                                                     source);
     return success();
   }
 };

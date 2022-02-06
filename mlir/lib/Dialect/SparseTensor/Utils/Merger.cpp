@@ -671,25 +671,25 @@ Value Merger::buildExp(PatternRewriter &rewriter, Location loc, unsigned e,
                                            rewriter.getZeroAttr(v0.getType())),
         v0);
   case kTruncF:
-    return rewriter.create<arith::TruncFOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::TruncFOp>(loc, inferType(e, v0), v0);
   case kExtF:
-    return rewriter.create<arith::ExtFOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::ExtFOp>(loc, inferType(e, v0), v0);
   case kCastFS:
-    return rewriter.create<arith::FPToSIOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::FPToSIOp>(loc, inferType(e, v0), v0);
   case kCastFU:
-    return rewriter.create<arith::FPToUIOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::FPToUIOp>(loc, inferType(e, v0), v0);
   case kCastSF:
-    return rewriter.create<arith::SIToFPOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::SIToFPOp>(loc, inferType(e, v0), v0);
   case kCastUF:
-    return rewriter.create<arith::UIToFPOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::UIToFPOp>(loc, inferType(e, v0), v0);
   case kCastS:
-    return rewriter.create<arith::ExtSIOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::ExtSIOp>(loc, inferType(e, v0), v0);
   case kCastU:
-    return rewriter.create<arith::ExtUIOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::ExtUIOp>(loc, inferType(e, v0), v0);
   case kTruncI:
-    return rewriter.create<arith::TruncIOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::TruncIOp>(loc, inferType(e, v0), v0);
   case kBitCast:
-    return rewriter.create<arith::BitcastOp>(loc, v0, inferType(e, v0));
+    return rewriter.create<arith::BitcastOp>(loc, inferType(e, v0), v0);
   // Binary ops.
   case kMulF:
     return rewriter.create<arith::MulFOp>(loc, v0, v1);

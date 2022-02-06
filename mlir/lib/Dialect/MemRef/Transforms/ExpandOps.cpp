@@ -101,8 +101,8 @@ public:
         Value index = rewriter.create<arith::ConstantIndexOp>(loc, i);
         size = rewriter.create<memref::LoadOp>(loc, op.shape(), index);
         if (!size.getType().isa<IndexType>())
-          size = rewriter.create<arith::IndexCastOp>(loc, size,
-                                                     rewriter.getIndexType());
+          size = rewriter.create<arith::IndexCastOp>(
+              loc, rewriter.getIndexType(), size);
         sizes[i] = size;
       } else {
         sizes[i] = rewriter.getIndexAttr(op.getType().getDimSize(i));
