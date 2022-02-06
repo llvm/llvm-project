@@ -413,12 +413,13 @@ KnownBits KnownBits::abs(bool IntMinIsPoison) const {
 }
 
 KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
-                         bool SelfMultiply) {
+                         bool NoUndefSelfMultiply) {
   unsigned BitWidth = LHS.getBitWidth();
   assert(BitWidth == RHS.getBitWidth() && !LHS.hasConflict() &&
          !RHS.hasConflict() && "Operand mismatch");
-  assert((!SelfMultiply || (LHS.One == RHS.One && LHS.Zero == RHS.Zero)) &&
-         "Self multiplication knownbits mismatch");
+  assert(
+      (!NoUndefSelfMultiply || (LHS.One == RHS.One && LHS.Zero == RHS.Zero)) &&
+      "Self multiplication knownbits mismatch");
 
   // Compute the high known-0 bits by multiplying the unsigned max of each side.
   // Conservatively, M active bits * N active bits results in M + N bits in the
@@ -501,7 +502,7 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
   Res.One = BottomKnown.getLoBits(ResultBitsKnown);
 
   // If we're self-multiplying then bit[1] is guaranteed to be zero.
-  if (SelfMultiply && BitWidth > 1) {
+  if (NoUndefSelfMultiply && BitWidth > 1) {
     assert(Res.One[1] == 0 &&
            "Self-multiplication failed Quadratic Reciprocity!");
     Res.Zero.setBit(1);
