@@ -227,3 +227,83 @@ for1.loopexit:                                 ; preds = %for1.inc
   %il.res.lcssa2 = phi i64 [ %sum.inc.amend, %for1.inc ]
   ret i64 %il.res.lcssa2
 }
+
+; Floating point reductions are interchanged if all the fp instructions
+; involved allow reassociation.
+; REMARKS: --- !Passed
+; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            Interchanged
+; REMARKS-NEXT: Function:        test5
+
+define float @test5([100 x [100 x float]]* %Arr, [100 x [100 x float]]* %Arr2) {
+entry:
+  br label %outer.header
+
+outer.header:                                     ; preds = %outer.inc, %entry
+  %iv.outer = phi i64 [ 1, %entry ], [ %iv.outer.next, %outer.inc ]
+  %float.outer = phi float [ 1.000000e+00, %entry ], [ %float.inner.lcssa, %outer.inc ]
+  br label %for.body3
+
+for.body3:                                        ; preds = %for.body3, %outer.header
+  %float.inner = phi float [ %float.outer , %outer.header ], [ %float.inner.inc.inc, %for.body3 ]
+  %iv.inner = phi i64 [ %iv.inner.next, %for.body3 ], [ 1, %outer.header ]
+  %arrayidx5 = getelementptr inbounds [100 x [100 x float]], [100 x [100 x float]]* %Arr, i64 0, i64 %iv.inner, i64 %iv.outer
+  %vA = load float, float* %arrayidx5
+  %float.inner.inc = fadd fast float %float.inner, %vA
+  %arrayidx6 = getelementptr inbounds [100 x [100 x float]], [100 x [100 x float]]* %Arr2, i64 0, i64 %iv.inner, i64 %iv.outer
+  %vB = load float, float* %arrayidx6
+  %float.inner.inc.inc = fadd fast float %float.inner.inc, %vB
+  %iv.inner.next = add nuw nsw i64 %iv.inner, 1
+  %exitcond = icmp eq i64 %iv.inner.next, 100
+  br i1 %exitcond, label %outer.inc, label %for.body3
+
+outer.inc:                                        ; preds = %for.body3
+  %float.inner.lcssa = phi float [ %float.inner.inc.inc, %for.body3 ]
+  %iv.outer.next = add nsw i64 %iv.outer, 1
+  %cmp = icmp eq i64 %iv.outer.next, 100
+  br i1 %cmp, label %outer.header, label %for.exit
+
+for.exit:                                         ; preds = %outer.inc
+  %float.outer.lcssa = phi float [ %float.inner.lcssa, %outer.inc ]
+  ret float %float.outer.lcssa
+}
+
+; Floating point reductions are not interchanged if not all the fp instructions
+; involved allow reassociation.
+; REMARKS: --- !Missed
+; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            UnsupportedPHIOuter
+; REMARKS-NEXT: Function:        test6
+
+define float @test6([100 x [100 x float]]* %Arr, [100 x [100 x float]]* %Arr2) {
+entry:
+  br label %outer.header
+
+outer.header:                                     ; preds = %outer.inc, %entry
+  %iv.outer = phi i64 [ 1, %entry ], [ %iv.outer.next, %outer.inc ]
+  %float.outer = phi float [ 1.000000e+00, %entry ], [ %float.inner.lcssa, %outer.inc ]
+  br label %for.body3
+
+for.body3:                                        ; preds = %for.body3, %outer.header
+  %float.inner = phi float [ %float.outer , %outer.header ], [ %float.inner.inc.inc, %for.body3 ]
+  %iv.inner = phi i64 [ %iv.inner.next, %for.body3 ], [ 1, %outer.header ]
+  %arrayidx5 = getelementptr inbounds [100 x [100 x float]], [100 x [100 x float]]* %Arr, i64 0, i64 %iv.inner, i64 %iv.outer
+  %vA = load float, float* %arrayidx5
+  %float.inner.inc = fadd float %float.inner, %vA ; do not allow reassociation
+  %arrayidx6 = getelementptr inbounds [100 x [100 x float]], [100 x [100 x float]]* %Arr2, i64 0, i64 %iv.inner, i64 %iv.outer
+  %vB = load float, float* %arrayidx6
+  %float.inner.inc.inc = fadd fast float %float.inner.inc, %vB
+  %iv.inner.next = add nuw nsw i64 %iv.inner, 1
+  %exitcond = icmp eq i64 %iv.inner.next, 100
+  br i1 %exitcond, label %outer.inc, label %for.body3
+
+outer.inc:                                        ; preds = %for.body3
+  %float.inner.lcssa = phi float [ %float.inner.inc.inc, %for.body3 ]
+  %iv.outer.next = add nsw i64 %iv.outer, 1
+  %cmp = icmp eq i64 %iv.outer.next, 100
+  br i1 %cmp, label %outer.header, label %for.exit
+
+for.exit:                                         ; preds = %outer.inc
+  %float.outer.lcssa = phi float [ %float.inner.lcssa, %outer.inc ]
+  ret float %float.outer.lcssa
+}

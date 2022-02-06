@@ -733,8 +733,12 @@ static PHINode *findInnerReductionPhi(Loop *L, Value *V) {
       if (PHI->getNumIncomingValues() == 1)
         continue;
       RecurrenceDescriptor RD;
-      if (RecurrenceDescriptor::isReductionPHI(PHI, L, RD))
+      if (RecurrenceDescriptor::isReductionPHI(PHI, L, RD)) {
+        // Detect floating point reduction only when it can be reordered.
+        if (RD.getExactFPMathInst() != nullptr)
+          return nullptr;
         return PHI;
+      }
       return nullptr;
     }
   }
@@ -893,28 +897,23 @@ areInnerLoopExitPHIsSupported(Loop *InnerL, Loop *OuterL,
 static bool areOuterLoopExitPHIsSupported(Loop *OuterLoop, Loop *InnerLoop) {
   BasicBlock *LoopNestExit = OuterLoop->getUniqueExitBlock();
   for (PHINode &PHI : LoopNestExit->phis()) {
-    //  FIXME: We currently are not able to detect floating point reductions
-    //         and have to use floating point PHIs as a proxy to prevent
-    //         interchanging in the presence of floating point reductions.
-    if (PHI.getType()->isFloatingPointTy())
-      return false;
     for (unsigned i = 0; i < PHI.getNumIncomingValues(); i++) {
-     Instruction *IncomingI = dyn_cast<Instruction>(PHI.getIncomingValue(i));
-     if (!IncomingI || IncomingI->getParent() != OuterLoop->getLoopLatch())
-       continue;
+      Instruction *IncomingI = dyn_cast<Instruction>(PHI.getIncomingValue(i));
+      if (!IncomingI || IncomingI->getParent() != OuterLoop->getLoopLatch())
+        continue;
 
-     // The incoming value is defined in the outer loop latch. Currently we
-     // only support that in case the outer loop latch has a single predecessor.
-     // This guarantees that the outer loop latch is executed if and only if
-     // the inner loop is executed (because tightlyNested() guarantees that the
-     // outer loop header only branches to the inner loop or the outer loop
-     // latch).
-     // FIXME: We could weaken this logic and allow multiple predecessors,
-     //        if the values are produced outside the loop latch. We would need
-     //        additional logic to update the PHI nodes in the exit block as
-     //        well.
-     if (OuterLoop->getLoopLatch()->getUniquePredecessor() == nullptr)
-       return false;
+      // The incoming value is defined in the outer loop latch. Currently we
+      // only support that in case the outer loop latch has a single predecessor.
+      // This guarantees that the outer loop latch is executed if and only if
+      // the inner loop is executed (because tightlyNested() guarantees that the
+      // outer loop header only branches to the inner loop or the outer loop
+      // latch).
+      // FIXME: We could weaken this logic and allow multiple predecessors,
+      //        if the values are produced outside the loop latch. We would need
+      //        additional logic to update the PHI nodes in the exit block as
+      //        well.
+      if (OuterLoop->getLoopLatch()->getUniquePredecessor() == nullptr)
+        return false;
     }
   }
   return true;
