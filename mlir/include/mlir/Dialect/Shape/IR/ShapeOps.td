@@ -14,6 +14,7 @@
 #define SHAPE_OPS
 
 include "mlir/Dialect/Shape/IR/ShapeBase.td"
+include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -331,7 +332,9 @@ def Shape_RankOp : Shape_Op<"rank",
   }];
 }
 
-def Shape_ToExtentTensorOp : Shape_Op<"to_extent_tensor", [NoSideEffect]> {
+def Shape_ToExtentTensorOp : Shape_Op<"to_extent_tensor", [
+    DeclareOpInterfaceMethods<CastOpInterface>, NoSideEffect
+  ]> {
   let summary = "Creates a dimension tensor from a shape";
   let description = [{
     Converts a shape to a 1D integral tensor of extents. The number of elements
@@ -624,7 +627,9 @@ def Shape_ShapeOfOp : Shape_Op<"shape_of",
   }];
 }
 
-def Shape_SizeToIndexOp : Shape_Op<"size_to_index", [NoSideEffect]> {
+def Shape_SizeToIndexOp : Shape_Op<"size_to_index", [
+    DeclareOpInterfaceMethods<CastOpInterface>, NoSideEffect
+  ]> {
   let summary = "Casts between index types of the shape and standard dialect";
   let description = [{
     Converts a `shape.size` to a standard index. This operation and its

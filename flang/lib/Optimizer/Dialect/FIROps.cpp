@@ -3211,26 +3211,6 @@ mlir::ParseResult fir::parseSelector(mlir::OpAsmParser &parser,
   return mlir::success();
 }
 
-/// Generic pretty-printer of a binary operation
-static void printBinaryOp(Operation *op, OpAsmPrinter &p) {
-  assert(op->getNumOperands() == 2 && "binary op must have two operands");
-  assert(op->getNumResults() == 1 && "binary op must have one result");
-
-  p << ' ' << op->getOperand(0) << ", " << op->getOperand(1);
-  p.printOptionalAttrDict(op->getAttrs());
-  p << " : " << op->getResult(0).getType();
-}
-
-/// Generic pretty-printer of an unary operation
-static void printUnaryOp(Operation *op, OpAsmPrinter &p) {
-  assert(op->getNumOperands() == 1 && "unary op must have one operand");
-  assert(op->getNumResults() == 1 && "unary op must have one result");
-
-  p << ' ' << op->getOperand(0);
-  p.printOptionalAttrDict(op->getAttrs());
-  p << " : " << op->getResult(0).getType();
-}
-
 bool fir::isReferenceLike(mlir::Type type) {
   return type.isa<fir::ReferenceType>() || type.isa<fir::HeapType>() ||
          type.isa<fir::PointerType>();

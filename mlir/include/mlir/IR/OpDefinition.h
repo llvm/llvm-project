@@ -1897,25 +1897,8 @@ protected:
 };
 
 //===----------------------------------------------------------------------===//
-// Common Operation Folders/Parsers/Printers
+// CastOpInterface utilities
 //===----------------------------------------------------------------------===//
-
-// These functions are out-of-line implementations of the methods in UnaryOp and
-// BinaryOp, which avoids them being template instantiated/duplicated.
-namespace impl {
-ParseResult parseOneResultOneOperandTypeOp(OpAsmParser &parser,
-                                           OperationState &result);
-
-void buildBinaryOp(OpBuilder &builder, OperationState &result, Value lhs,
-                   Value rhs);
-ParseResult parseOneResultSameOperandTypeOp(OpAsmParser &parser,
-                                            OperationState &result);
-
-// Prints the given binary `op` in custom assembly form if both the two operands
-// and the result have the same time. Otherwise, prints the generic assembly
-// form.
-void printOneResultOp(Operation *op, OpAsmPrinter &p);
-} // namespace impl
 
 // These functions are out-of-line implementations of the methods in
 // CastOpInterface, which avoids them being template instantiated/duplicated.
@@ -1927,20 +1910,6 @@ LogicalResult foldCastInterfaceOp(Operation *op,
 /// Attempt to verify the given cast operation.
 LogicalResult verifyCastInterfaceOp(
     Operation *op, function_ref<bool(TypeRange, TypeRange)> areCastCompatible);
-
-// TODO: Remove the parse/print/build here (new ODS functionality obsoletes the
-// need for them, but some older ODS code in `std` still depends on them).
-void buildCastOp(OpBuilder &builder, OperationState &result, Value source,
-                 Type destType);
-ParseResult parseCastOp(OpAsmParser &parser, OperationState &result);
-void printCastOp(Operation *op, OpAsmPrinter &p);
-// TODO: These methods are deprecated in favor of CastOpInterface. Remove them
-// when all uses have been updated. Also, consider adding functionality to
-// CastOpInterface to be able to perform the ChainedTensorCast canonicalization
-// generically.
-Value foldCastOp(Operation *op);
-LogicalResult verifyCastOp(Operation *op,
-                           function_ref<bool(Type, Type)> areCastCompatible);
 } // namespace impl
 } // namespace mlir
 

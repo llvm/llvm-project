@@ -29,9 +29,9 @@ class SPV_CastOp<string mnemonic, Type resultType, Type operandType,
   let results = (outs
     SPV_ScalarOrVectorOrCoopMatrixOf<resultType>:$result
   );
-
-  let parser = [{ return mlir::impl::parseCastOp(parser, result); }];
-  let printer = [{ mlir::impl::printCastOp(this->getOperation(), p); }];
+  let assemblyFormat = [{
+    $operand attr-dict `:` type($operand) `to` type($result)
+  }];
 }
 
 // -----
@@ -85,9 +85,9 @@ def SPV_BitcastOp : SPV_Op<"Bitcast", [NoSideEffect]> {
     SPV_ScalarOrVectorOrPtr:$result
   );
 
-  let parser = [{ return mlir::impl::parseCastOp(parser, result); }];
-  let printer = [{ mlir::impl::printCastOp(this->getOperation(), p); }];
-
+  let assemblyFormat = [{
+    $operand attr-dict `:` type($operand) `to` type($result)
+  }];
   let hasCanonicalizer = 1;
 }
 

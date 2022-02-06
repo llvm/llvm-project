@@ -2534,19 +2534,15 @@ def fir_StringLitOp : fir_Op<"string_lit", [NoSideEffect]> {
 class fir_ArithmeticOp<string mnemonic, list<Trait> traits = []> :
     fir_Op<mnemonic,
            !listconcat(traits, [NoSideEffect, SameOperandsAndResultType])>,
-    Results<(outs AnyType)> {
-  let parser = "return impl::parseOneResultSameOperandTypeOp(parser, result);";
-
-  let printer = "return printBinaryOp(this->getOperation(), p);";
+    Results<(outs AnyType:$result)> {
+  let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
 class fir_UnaryArithmeticOp<string mnemonic, list<Trait> traits = []> :
       fir_Op<mnemonic,
              !listconcat(traits, [NoSideEffect, SameOperandsAndResultType])>,
-      Results<(outs AnyType)> {
-  let parser = "return impl::parseOneResultSameOperandTypeOp(parser, result);";
-
-  let printer = "return printUnaryOp(this->getOperation(), p);";
+      Results<(outs AnyType:$result)> {
+  let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
 def fir_ConstcOp : fir_Op<"constc", [NoSideEffect]> {

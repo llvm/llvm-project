@@ -34,6 +34,7 @@ class SPV_ArithmeticBinaryOp<string mnemonic, Type type,
   let results = (outs
     SPV_ScalarOrVectorOrCoopMatrixOf<type>:$result
   );
+  let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
 class SPV_ArithmeticUnaryOp<string mnemonic, Type type,

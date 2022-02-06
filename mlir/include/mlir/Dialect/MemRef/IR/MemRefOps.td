@@ -383,7 +383,6 @@ def MemRef_CastOp : MemRef_Op<"cast", [
   }];
 
   let hasFolder = 1;
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
