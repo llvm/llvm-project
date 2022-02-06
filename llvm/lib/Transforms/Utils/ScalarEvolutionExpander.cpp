@@ -2710,10 +2710,10 @@ namespace {
 struct SCEVFindUnsafe {
   ScalarEvolution &SE;
   bool CanonicalMode;
-  bool IsUnsafe;
+  bool IsUnsafe = false;
 
   SCEVFindUnsafe(ScalarEvolution &SE, bool CanonicalMode)
-      : SE(SE), CanonicalMode(CanonicalMode), IsUnsafe(false) {}
+      : SE(SE), CanonicalMode(CanonicalMode) {}
 
   bool follow(const SCEV *S) {
     if (const SCEVUDivExpr *D = dyn_cast<SCEVUDivExpr>(S)) {
