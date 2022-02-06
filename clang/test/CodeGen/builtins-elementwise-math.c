@@ -10,7 +10,8 @@ bar b;
 
 void test_builtin_elementwise_abs(float f1, float f2, double d1, double d2,
                                   float4 vf1, float4 vf2, si8 vi1, si8 vi2,
-                                  long long int i1, long long int i2, short si) {
+                                  long long int i1, long long int i2, short si,
+                                  _BitInt(31) bi1, _BitInt(31) bi2) {
   // CHECK-LABEL: define void @test_builtin_elementwise_abs(
   // CHECK:      [[F1:%.+]] = load float, float* %f1.addr, align 4
   // CHECK-NEXT:  call float @llvm.fabs.f32(float [[F1]])
@@ -37,6 +38,10 @@ void test_builtin_elementwise_abs(float f1, float f2, double d1, double d2,
   const si8 cvi2 = vi2;
   vi2 = __builtin_elementwise_abs(cvi2);
 
+  // CHECK:      [[BI1:%.+]] = load i31, i31* %bi1.addr, align 4
+  // CHECK-NEXT: call i31 @llvm.abs.i31(i31 [[BI1]], i1 false)
+  bi2 = __builtin_elementwise_abs(bi1);
+
   // CHECK:      [[IA1:%.+]] = load i32, i32 addrspace(1)* @int_as_one, align 4
   // CHECK-NEXT: call i32 @llvm.abs.i32(i32 [[IA1]], i1 false)
   b = __builtin_elementwise_abs(int_as_one);
@@ -54,7 +59,9 @@ void test_builtin_elementwise_abs(float f1, float f2, double d1, double d2,
 void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
                                   float4 vf1, float4 vf2, long long int i1,
                                   long long int i2, si8 vi1, si8 vi2,
-                                  unsigned u1, unsigned u2, u4 vu1, u4 vu2) {
+                                  unsigned u1, unsigned u2, u4 vu1, u4 vu2,
+                                  _BitInt(31) bi1, _BitInt(31) bi2,
+                                  unsigned _BitInt(55) bu1, unsigned _BitInt(55) bu2) {
   // CHECK-LABEL: define void @test_builtin_elementwise_max(
   // CHECK:      [[F1:%.+]] = load float, float* %f1.addr, align 4
   // CHECK-NEXT: [[F2:%.+]] = load float, float* %f2.addr, align 4
@@ -99,6 +106,16 @@ void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
   // CHECK-NEXT: call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[VU1]], <4 x i32> [[VU2]])
   vu1 = __builtin_elementwise_max(vu1, vu2);
 
+  // CHECK:      [[BI1:%.+]] = load i31, i31* %bi1.addr, align 4
+  // CHECK-NEXT: [[BI2:%.+]] = load i31, i31* %bi2.addr, align 4
+  // CHECK-NEXT: call i31 @llvm.smax.i31(i31 [[BI1]], i31 [[BI2]])
+  bi1 = __builtin_elementwise_max(bi1, bi2);
+
+  // CHECK:      [[BU1:%.+]] = load i55, i55* %bu1.addr, align 8
+  // CHECK-NEXT: [[BU2:%.+]] = load i55, i55* %bu2.addr, align 8
+  // CHECK-NEXT: call i55 @llvm.umax.i55(i55 [[BU1]], i55 [[BU2]])
+  bu1 = __builtin_elementwise_max(bu1, bu2);
+
   // CHECK:      [[CVF1:%.+]] = load <4 x float>, <4 x float>* %cvf1, align 16
   // CHECK-NEXT: [[VF2:%.+]] = load <4 x float>, <4 x float>* %vf2.addr, align 16
   // CHECK-NEXT: call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[CVF1]], <4 x float> [[VF2]])
@@ -122,7 +139,9 @@ void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
 void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
                                   float4 vf1, float4 vf2, long long int i1,
                                   long long int i2, si8 vi1, si8 vi2,
-                                  unsigned u1, unsigned u2, u4 vu1, u4 vu2) {
+                                  unsigned u1, unsigned u2, u4 vu1, u4 vu2,
+                                  _BitInt(31) bi1, _BitInt(31) bi2,
+                                  unsigned _BitInt(55) bu1, unsigned _BitInt(55) bu2) {
   // CHECK-LABEL: define void @test_builtin_elementwise_min(
   // CHECK:      [[F1:%.+]] = load float, float* %f1.addr, align 4
   // CHECK-NEXT: [[F2:%.+]] = load float, float* %f2.addr, align 4
@@ -172,6 +191,16 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
   // CHECK-NEXT: [[VU2:%.+]] = load <4 x i32>, <4 x i32>* %vu2.addr, align 16
   // CHECK-NEXT: call <4 x i32> @llvm.umin.v4i32(<4 x i32> [[VU1]], <4 x i32> [[VU2]])
   vu1 = __builtin_elementwise_min(vu1, vu2);
+
+  // CHECK:      [[BI1:%.+]] = load i31, i31* %bi1.addr, align 4
+  // CHECK-NEXT: [[BI2:%.+]] = load i31, i31* %bi2.addr, align 4
+  // CHECK-NEXT: call i31 @llvm.smin.i31(i31 [[BI1]], i31 [[BI2]])
+  bi1 = __builtin_elementwise_min(bi1, bi2);
+
+  // CHECK:      [[BU1:%.+]] = load i55, i55* %bu1.addr, align 8
+  // CHECK-NEXT: [[BU2:%.+]] = load i55, i55* %bu2.addr, align 8
+  // CHECK-NEXT: call i55 @llvm.umin.i55(i55 [[BU1]], i55 [[BU2]])
+  bu1 = __builtin_elementwise_min(bu1, bu2);
 
   // CHECK:      [[CVF1:%.+]] = load <4 x float>, <4 x float>* %cvf1, align 16
   // CHECK-NEXT: [[VF2:%.+]] = load <4 x float>, <4 x float>* %vf2.addr, align 16
