@@ -62,12 +62,12 @@ class OptionalStorage {
     char empty;
     T value;
   };
-  bool hasVal;
+  bool hasVal = false;
 
 public:
   ~OptionalStorage() { reset(); }
 
-  constexpr OptionalStorage() noexcept : empty(), hasVal(false) {}
+  constexpr OptionalStorage() noexcept : empty() {}
 
   constexpr OptionalStorage(OptionalStorage const &other) : OptionalStorage() {
     if (other.hasValue()) {
