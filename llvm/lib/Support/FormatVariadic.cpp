@@ -18,8 +18,10 @@ static Optional<AlignStyle> translateLocChar(char C) {
     return AlignStyle::Center;
   case '+':
     return AlignStyle::Right;
+  default:
+    return None;
   }
-  return None;
+  LLVM_BUILTIN_UNREACHABLE;
 }
 
 bool formatv_object_base::consumeFieldLayout(StringRef &Spec, AlignStyle &Where,
