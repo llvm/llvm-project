@@ -7,7 +7,7 @@ func @br_folding() -> i32 {
   // CHECK-NEXT: %[[CST:.*]] = arith.constant 0 : i32
   // CHECK-NEXT: return %[[CST]] : i32
   %c0_i32 = arith.constant 0 : i32
-  br ^bb1(%c0_i32 : i32)
+  cf.br ^bb1(%c0_i32 : i32)
 ^bb1(%x : i32):
   return %x : i32
 }
@@ -21,12 +21,12 @@ func @br_passthrough(%arg0 : i32, %arg1 : i32) -> (i32, i32) {
 
 ^bb1:
   // CHECK: ^bb1:
-  // CHECK-NEXT: br ^bb3(%[[ARG0]], %[[ARG1]] : i32, i32)
+  // CHECK-NEXT: cf.br ^bb3(%[[ARG0]], %[[ARG1]] : i32, i32)
 
-  br ^bb2(%arg0 : i32)
+  cf.br ^bb2(%arg0 : i32)
 
 ^bb2(%arg2 : i32):
-  br ^bb3(%arg2, %arg1 : i32, i32)
+  cf.br ^bb3(%arg2, %arg1 : i32, i32)
 
 ^bb3(%arg4 : i32, %arg5 : i32):
   return %arg4, %arg5 : i32, i32
@@ -40,13 +40,13 @@ func @cond_br_folding(%cond : i1, %a : i32) {
 
   %false_cond = arith.constant false
   %true_cond = arith.constant true
-  cond_br %cond, ^bb1, ^bb2(%a : i32)
+  cf.cond_br %cond, ^bb1, ^bb2(%a : i32)
 
 ^bb1:
-  cond_br %true_cond, ^bb3, ^bb2(%a : i32)
+  cf.cond_br %true_cond, ^bb3, ^bb2(%a : i32)
 
 ^bb2(%x : i32):
-  cond_br %false_cond, ^bb2(%x : i32), ^bb3
+  cf.cond_br %false_cond, ^bb2(%x : i32), ^bb3
 
 ^bb3:
   return
@@ -58,7 +58,7 @@ func @cond_br_folding(%cond : i1, %a : i32) {
 func @cond_br_same_successor(%cond : i1, %a : i32) {
   // CHECK-NEXT: return
 
-  cond_br %cond, ^bb1(%a : i32), ^bb1(%a : i32)
+  cf.cond_br %cond, ^bb1(%a : i32), ^bb1(%a : i32)
 
 ^bb1(%result : i32):
   return
@@ -77,7 +77,7 @@ func @cond_br_same_successor_insert_select(
   // CHECK: %[[RES2:.*]] = arith.select %[[COND]], %[[ARG2]], %[[ARG3]]
   // CHECK: return %[[RES]], %[[RES2]]
 
-  cond_br %cond, ^bb1(%a, %c : i32, tensor<2xi32>), ^bb1(%b, %d : i32, tensor<2xi32>)
+  cf.cond_br %cond, ^bb1(%a, %c : i32, tensor<2xi32>), ^bb1(%b, %d : i32, tensor<2xi32>)
 
 ^bb1(%result : i32, %result2 : tensor<2xi32>):
   return %result, %result2 : i32, tensor<2xi32>
@@ -91,10 +91,10 @@ func @cond_br_and_br_folding(%a : i32) {
 
   %false_cond = arith.constant false
   %true_cond = arith.constant true
-  cond_br %true_cond, ^bb2, ^bb1(%a : i32)
+  cf.cond_br %true_cond, ^bb2, ^bb1(%a : i32)
 
 ^bb1(%x : i32):
-  cond_br %false_cond, ^bb1(%x : i32), ^bb2
+  cf.cond_br %false_cond, ^bb1(%x : i32), ^bb2
 
 ^bb2:
   return
@@ -109,10 +109,10 @@ func @cond_br_passthrough(%arg0 : i32, %arg1 : i32, %arg2 : i32, %cond : i1) -> 
   // CHECK: %[[RES2:.*]] = arith.select %[[COND]], %[[ARG1]], %[[ARG2]]
   // CHECK: return %[[RES]], %[[RES2]]
 
-  cond_br %cond, ^bb1(%arg0 : i32), ^bb2(%arg2, %arg2 : i32, i32)
+  cf.cond_br %cond, ^bb1(%arg0 : i32), ^bb2(%arg2, %arg2 : i32, i32)
 
 ^bb1(%arg3: i32):
-  br ^bb2(%arg3, %arg1 : i32, i32)
+  cf.br ^bb2(%arg3, %arg1 : i32, i32)
 
 ^bb2(%arg4: i32, %arg5: i32):
   return %arg4, %arg5 : i32, i32
@@ -122,18 +122,18 @@ func @cond_br_passthrough(%arg0 : i32, %arg1 : i32, %arg2 : i32, %cond : i1) -> 
 
 // CHECK-LABEL: func @cond_br_pass_through_fail(
 func @cond_br_pass_through_fail(%cond : i1) {
-  // CHECK: cond_br %{{.*}}, ^bb1, ^bb2
+  // CHECK: cf.cond_br %{{.*}}, ^bb1, ^bb2
 
-  cond_br %cond, ^bb1, ^bb2
+  cf.cond_br %cond, ^bb1, ^bb2
 
 ^bb1:
   // CHECK: ^bb1:
   // CHECK: "foo.op"
-  // CHECK: br ^bb2
+  // CHECK: cf.br ^bb2
 
   // Successors can't be collapsed if they contain other operations.
   "foo.op"() : () -> ()
-  br ^bb2
+  cf.br ^bb2
 
 ^bb2:
   return
@@ -149,9 +149,9 @@ func @switch_only_default(%flag : i32, %caseOperand0 : f32) {
   // add predecessors for all blocks to avoid other canonicalizations.
   "foo.pred"() [^bb1, ^bb2] : () -> ()
   ^bb1:
-    // CHECK-NOT: switch
-    // CHECK: br ^[[BB2:[a-zA-Z0-9_]+]](%[[CASE_OPERAND_0]]
-    switch %flag : i32, [
+    // CHECK-NOT: cf.switch
+    // CHECK: cf.br ^[[BB2:[a-zA-Z0-9_]+]](%[[CASE_OPERAND_0]]
+    cf.switch %flag : i32, [
       default: ^bb2(%caseOperand0 : f32)
     ]
   // CHECK: ^[[BB2]]({{.*}}):
@@ -169,11 +169,11 @@ func @switch_case_matching_default(%flag : i32, %caseOperand0 : f32, %caseOperan
   // add predecessors for all blocks to avoid other canonicalizations.
   "foo.pred"() [^bb1, ^bb2, ^bb3] : () -> ()
   ^bb1:
-    // CHECK: switch %[[FLAG]]
+    // CHECK: cf.switch %[[FLAG]]
     // CHECK-NEXT:   default: ^[[BB1:.+]](%[[CASE_OPERAND_0]] : f32)
     // CHECK-NEXT:   10: ^[[BB2:.+]](%[[CASE_OPERAND_1]] : f32)
     // CHECK-NEXT: ]
-    switch %flag : i32, [
+    cf.switch %flag : i32, [
       default: ^bb2(%caseOperand0 : f32),
       42: ^bb2(%caseOperand0 : f32),
       10: ^bb3(%caseOperand1 : f32),
@@ -194,10 +194,10 @@ func @switch_on_const_no_match(%caseOperand0 : f32, %caseOperand1 : f32, %caseOp
   // add predecessors for all blocks to avoid other canonicalizations.
   "foo.pred"() [^bb1, ^bb2, ^bb3, ^bb4] : () -> ()
   ^bb1:
-    // CHECK-NOT: switch
-    // CHECK: br ^[[BB2:[a-zA-Z0-9_]+]](%[[CASE_OPERAND_0]]
+    // CHECK-NOT: cf.switch
+    // CHECK: cf.br ^[[BB2:[a-zA-Z0-9_]+]](%[[CASE_OPERAND_0]]
     %c0_i32 = arith.constant 0 : i32
-    switch %c0_i32 : i32, [
+    cf.switch %c0_i32 : i32, [
       default: ^bb2(%caseOperand0 : f32),
       -1: ^bb3(%caseOperand1 : f32),
       1: ^bb4(%caseOperand2 : f32)
@@ -220,10 +220,10 @@ func @switch_on_const_with_match(%caseOperand0 : f32, %caseOperand1 : f32, %case
   // add predecessors for all blocks to avoid other canonicalizations.
   "foo.pred"() [^bb1, ^bb2, ^bb3, ^bb4] : () -> ()
   ^bb1:
-    // CHECK-NOT: switch
-    // CHECK: br ^[[BB4:[a-zA-Z0-9_]+]](%[[CASE_OPERAND_2]]
+    // CHECK-NOT: cf.switch
+    // CHECK: cf.br ^[[BB4:[a-zA-Z0-9_]+]](%[[CASE_OPERAND_2]]
     %c0_i32 = arith.constant 1 : i32
-    switch %c0_i32 : i32, [
+    cf.switch %c0_i32 : i32, [
       default: ^bb2(%caseOperand0 : f32),
       -1: ^bb3(%caseOperand1 : f32),
       1: ^bb4(%caseOperand2 : f32)
@@ -253,20 +253,20 @@ func @switch_passthrough(%flag : i32,
   "foo.pred"() [^bb1, ^bb2, ^bb3, ^bb4, ^bb5, ^bb6] : () -> ()
 
   ^bb1:
-  //      CHECK: switch %[[FLAG]]
+  //      CHECK: cf.switch %[[FLAG]]
   // CHECK-NEXT:   default: ^[[BB5:[a-zA-Z0-9_]+]](%[[CASE_OPERAND_0]]
   // CHECK-NEXT:   43: ^[[BB6:[a-zA-Z0-9_]+]](%[[CASE_OPERAND_1]]
   // CHECK-NEXT:   44: ^[[BB4:[a-zA-Z0-9_]+]](%[[CASE_OPERAND_2]]
   // CHECK-NEXT: ]
-    switch %flag : i32, [
+    cf.switch %flag : i32, [
       default: ^bb2(%caseOperand0 : f32),
       43: ^bb3(%caseOperand1 : f32),
       44: ^bb4(%caseOperand2 : f32)
     ]
   ^bb2(%bb2Arg : f32):
-    br ^bb5(%bb2Arg : f32)
+    cf.br ^bb5(%bb2Arg : f32)
   ^bb3(%bb3Arg : f32):
-    br ^bb6(%bb3Arg : f32)
+    cf.br ^bb6(%bb3Arg : f32)
   ^bb4(%bb4Arg : f32):
     "foo.bb4Terminator"(%bb4Arg) : (f32) -> ()
 
@@ -290,8 +290,8 @@ func @switch_from_switch_with_same_value_with_match(%flag : i32, %caseOperand0 :
   "foo.pred"() [^bb1, ^bb2, ^bb4, ^bb5] : () -> ()
 
   ^bb1:
-    // CHECK: switch %[[FLAG]]
-    switch %flag : i32, [
+    // CHECK: cf.switch %[[FLAG]]
+    cf.switch %flag : i32, [
       default: ^bb2,
       42: ^bb3
     ]
@@ -301,9 +301,9 @@ func @switch_from_switch_with_same_value_with_match(%flag : i32, %caseOperand0 :
   ^bb3:
     // prevent this block from being simplified away
     "foo.op"() : () -> ()
-    // CHECK-NOT: switch %[[FLAG]]
-    // CHECK: br ^[[BB5:[a-zA-Z0-9_]+]](%[[CASE_OPERAND_1]]
-    switch %flag : i32, [
+    // CHECK-NOT: cf.switch %[[FLAG]]
+    // CHECK: cf.br ^[[BB5:[a-zA-Z0-9_]+]](%[[CASE_OPERAND_1]]
+    cf.switch %flag : i32, [
       default: ^bb4(%caseOperand0 : f32),
       42: ^bb5(%caseOperand1 : f32)
     ]
@@ -327,8 +327,8 @@ func @switch_from_switch_with_same_value_no_match(%flag : i32, %caseOperand0 : f
   "foo.pred"() [^bb1, ^bb2, ^bb4, ^bb5, ^bb6] : () -> ()
 
   ^bb1:
-    // CHECK: switch %[[FLAG]]
-    switch %flag : i32, [
+    // CHECK: cf.switch %[[FLAG]]
+    cf.switch %flag : i32, [
       default: ^bb2,
       42: ^bb3
     ]
@@ -337,9 +337,9 @@ func @switch_from_switch_with_same_value_no_match(%flag : i32, %caseOperand0 : f
     "foo.bb2Terminator"() : () -> ()
   ^bb3:
     "foo.op"() : () -> ()
-    // CHECK-NOT: switch %[[FLAG]]
-    // CHECK: br ^[[BB4:[a-zA-Z0-9_]+]](%[[CASE_OPERAND_0]]
-    switch %flag : i32, [
+    // CHECK-NOT: cf.switch %[[FLAG]]
+    // CHECK: cf.br ^[[BB4:[a-zA-Z0-9_]+]](%[[CASE_OPERAND_0]]
+    cf.switch %flag : i32, [
       default: ^bb4(%caseOperand0 : f32),
       0: ^bb5(%caseOperand1 : f32),
       43: ^bb6(%caseOperand2 : f32)
@@ -367,8 +367,8 @@ func @switch_from_switch_default_with_same_value(%flag : i32, %caseOperand0 : f3
   "foo.pred"() [^bb1, ^bb2, ^bb4, ^bb5, ^bb6] : () -> ()
 
   ^bb1:
-    // CHECK: switch %[[FLAG]]
-    switch %flag : i32, [
+    // CHECK: cf.switch %[[FLAG]]
+    cf.switch %flag : i32, [
       default: ^bb3,
       42: ^bb2
     ]
@@ -377,11 +377,11 @@ func @switch_from_switch_default_with_same_value(%flag : i32, %caseOperand0 : f3
     "foo.bb2Terminator"() : () -> ()
   ^bb3:
     "foo.op"() : () -> ()
-    // CHECK: switch %[[FLAG]]
+    // CHECK: cf.switch %[[FLAG]]
     // CHECK-NEXT: default: ^[[BB4:[a-zA-Z0-9_]+]](%[[CASE_OPERAND_0]]
     // CHECK-NEXT: 43: ^[[BB6:[a-zA-Z0-9_]+]](%[[CASE_OPERAND_2]]
     // CHECK-NOT: 42
-    switch %flag : i32, [
+    cf.switch %flag : i32, [
       default: ^bb4(%caseOperand0 : f32),
       42: ^bb5(%caseOperand1 : f32),
       43: ^bb6(%caseOperand2 : f32)
@@ -406,14 +406,14 @@ func @switch_from_switch_default_with_same_value(%flag : i32, %caseOperand0 : f3
 
 // CHECK-LABEL: func @cond_br_from_cond_br_with_same_condition
 func @cond_br_from_cond_br_with_same_condition(%cond : i1) {
-  // CHECK:   cond_br %{{.*}}, ^bb1, ^bb2
+  // CHECK:   cf.cond_br %{{.*}}, ^bb1, ^bb2
   // CHECK: ^bb1:
   // CHECK:   return
 
-  cond_br %cond, ^bb1, ^bb2
+  cf.cond_br %cond, ^bb1, ^bb2
 
 ^bb1:
-  cond_br %cond, ^bb3, ^bb2
+  cf.cond_br %cond, ^bb3, ^bb2
 
 ^bb2:
   "foo.terminator"() : () -> ()
@@ -427,19 +427,41 @@ func @cond_br_from_cond_br_with_same_condition(%cond : i1) {
 // Erase assertion if condition is known to be true at compile time.
 // CHECK-LABEL: @assert_true
 func @assert_true() {
-  // CHECK-NOT: assert
+  // CHECK-NOT: cf.assert
   %true = arith.constant true
-  assert %true, "Computer says no"
+  cf.assert %true, "Computer says no"
   return
 }
 
 // -----
 
 // Keep assertion if condition unknown at compile time.
-// CHECK-LABEL: @assert
+// CHECK-LABEL: @cf.assert
 // CHECK-SAME:  (%[[ARG:.*]]: i1)
-func @assert(%arg : i1) {
-  // CHECK: assert %[[ARG]], "Computer says no"
-  assert %arg, "Computer says no"
+func @cf.assert(%arg : i1) {
+  // CHECK: cf.assert %[[ARG]], "Computer says no"
+  cf.assert %arg, "Computer says no"
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @branchCondProp
+//       CHECK:       %[[trueval:.+]] = arith.constant true
+//       CHECK:       %[[falseval:.+]] = arith.constant false
+//       CHECK:       "test.consumer1"(%[[trueval]]) : (i1) -> ()
+//       CHECK:       "test.consumer2"(%[[falseval]]) : (i1) -> ()
+func @branchCondProp(%arg0: i1) {
+  cf.cond_br %arg0, ^trueB, ^falseB
+
+^trueB:
+  "test.consumer1"(%arg0) : (i1) -> ()
+  cf.br ^exit
+
+^falseB:
+  "test.consumer2"(%arg0) : (i1) -> ()
+  cf.br ^exit
+
+^exit:
   return
 }

@@ -53,7 +53,7 @@ func @launch() {
 // CHECK-NEXT: %[[BDIM:.*]] = gpu.block_dim x
 // CHECK-NEXT: = gpu.block_dim y
 // CHECK-NEXT: = gpu.block_dim z
-// CHECK-NEXT: br ^[[BLOCK:.*]]
+// CHECK-NEXT: cf.br ^[[BLOCK:.*]]
 // CHECK-NEXT: ^[[BLOCK]]:
 // CHECK-NEXT: "use"(%[[KERNEL_ARG0]]) : (f32) -> ()
 // CHECK-NEXT: "some_op"(%[[BID]], %[[BDIM]]) : (index, index) -> ()

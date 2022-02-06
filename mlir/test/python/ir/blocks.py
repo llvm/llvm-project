@@ -19,9 +19,9 @@ def run(f):
 
 # CHECK-LABEL: TEST: testBlockCreation
 # CHECK: func @test(%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i16)
-# CHECK:   br ^bb1(%[[ARG1]] : i16)
+# CHECK:   cf.br ^bb1(%[[ARG1]] : i16)
 # CHECK: ^bb1(%[[PHI0:.*]]: i16):
-# CHECK:   br ^bb2(%[[ARG0]] : i32)
+# CHECK:   cf.br ^bb2(%[[ARG0]] : i32)
 # CHECK: ^bb2(%[[PHI1:.*]]: i32):
 # CHECK:   return
 @run

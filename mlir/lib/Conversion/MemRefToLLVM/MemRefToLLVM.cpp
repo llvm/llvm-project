@@ -433,7 +433,7 @@ struct LoadStoreOpLowering : public ConvertOpToLLVMPattern<Derived> {
 ///      +---------------------------------+
 ///      |   <code before the AtomicRMWOp> |
 ///      |   <compute initial %loaded>     |
-///      |   br loop(%loaded)              |
+///      |   cf.br loop(%loaded)              |
 ///      +---------------------------------+
 ///             |
 ///  -------|   |
@@ -444,7 +444,7 @@ struct LoadStoreOpLowering : public ConvertOpToLLVMPattern<Derived> {
 ///  |   |   %pair = cmpxchg              |
 ///  |   |   %ok = %pair[0]               |
 ///  |   |   %new = %pair[1]              |
-///  |   |   cond_br %ok, end, loop(%new) |
+///  |   |   cf.cond_br %ok, end, loop(%new) |
 ///  |   +--------------------------------+
 ///  |          |        |
 ///  |-----------        |

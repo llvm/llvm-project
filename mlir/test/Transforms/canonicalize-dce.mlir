@@ -30,15 +30,15 @@ func @f(%arg0: f32) {
 // Test case: Deleting recursively dead block arguments.
 
 // CHECK:      func @f(%arg0: f32)
-// CHECK-NEXT:   br ^bb1
+// CHECK-NEXT:   cf.br ^bb1
 // CHECK-NEXT: ^bb1:
-// CHECK-NEXT:   br ^bb1
+// CHECK-NEXT:   cf.br ^bb1
 
 
 func @f(%arg0: f32) {
-  br ^loop(%arg0: f32)
+  cf.br ^loop(%arg0: f32)
 ^loop(%loop: f32):
-  br ^loop(%loop: f32)
+  cf.br ^loop(%loop: f32)
 }
 
 // -----
@@ -46,27 +46,27 @@ func @f(%arg0: f32) {
 // Test case: Deleting recursively dead block arguments with pure ops in between.
 
 // CHECK:      func @f(%arg0: f32)
-// CHECK-NEXT:   br ^bb1
+// CHECK-NEXT:   cf.br ^bb1
 // CHECK-NEXT: ^bb1:
-// CHECK-NEXT:   br ^bb1
+// CHECK-NEXT:   cf.br ^bb1
 
 func @f(%arg0: f32) {
-  br ^loop(%arg0: f32)
+  cf.br ^loop(%arg0: f32)
 ^loop(%0: f32):
   %1 = "math.exp"(%0) : (f32) -> f32
-  br ^loop(%1: f32)
+  cf.br ^loop(%1: f32)
 }
 
 // -----
 
-// Test case: Delete block arguments for cond_br.
+// Test case: Delete block arguments for cf.cond_br.
 
 // CHECK:      func @f(%arg0: f32, %arg1: i1)
 // CHECK-NEXT:   return
 
 func @f(%arg0: f32, %pred: i1) {
   %exp = "math.exp"(%arg0) : (f32) -> f32
-  cond_br %pred, ^true(%exp: f32), ^false(%exp: f32)
+  cf.cond_br %pred, ^true(%exp: f32), ^false(%exp: f32)
 ^true(%0: f32):
   return
 ^false(%1: f32):

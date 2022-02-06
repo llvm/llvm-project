@@ -168,16 +168,16 @@ gpu.module @test_module {
       %c128 = arith.constant 128 : index
       %c32 = arith.constant 32 : index
       %0 = gpu.subgroup_mma_load_matrix %arg2[%c0, %c0] {leadDimension = 128 : index} : memref<128x128xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
-      br ^bb1(%c0, %0 : index, !gpu.mma_matrix<16x16xf16, "COp">)
+      cf.br ^bb1(%c0, %0 : index, !gpu.mma_matrix<16x16xf16, "COp">)
     ^bb1(%1: index, %2: !gpu.mma_matrix<16x16xf16, "COp">):  // 2 preds: ^bb0, ^bb2
       %3 = arith.cmpi slt, %1, %c128 : index
-      cond_br %3, ^bb2, ^bb3
+      cf.cond_br %3, ^bb2, ^bb3
     ^bb2:  // pred: ^bb1
       %4 = gpu.subgroup_mma_load_matrix %arg0[%c0, %1] {leadDimension = 128 : index} : memref<128x128xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
       %5 = gpu.subgroup_mma_load_matrix %arg1[%1, %c0] {leadDimension = 128 : index} : memref<128x128xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
       %6 = gpu.subgroup_mma_compute %4, %5, %2 : !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp"> -> !gpu.mma_matrix<16x16xf16, "COp">
       %7 = arith.addi %1, %c32 : index
-      br ^bb1(%7, %6 : index, !gpu.mma_matrix<16x16xf16, "COp">)
+      cf.br ^bb1(%7, %6 : index, !gpu.mma_matrix<16x16xf16, "COp">)
     ^bb3:  // pred: ^bb1
       gpu.subgroup_mma_store_matrix %2, %arg2[%c0, %c0] {leadDimension = 128 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<128x128xf16>
       return
