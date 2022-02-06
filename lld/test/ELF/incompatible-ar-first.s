@@ -10,3 +10,6 @@
 // * -m was not used.
 // CHECK: .a({{.*}}a.o) is incompatible with {{.*}}b.o
 
+// RUN: not ld.lld --start-lib %ta.o --end-lib %tb.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK2
+
+// CHECK2: {{.*}}b.o is incompatible{{$}}
