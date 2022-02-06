@@ -40,11 +40,7 @@ define i32 @rotl_32(i32 %x, i32 %y) nounwind {
 ;
 ; RV64ZBB-LABEL: rotl_32:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    li a2, 32
-; RV64ZBB-NEXT:    subw a2, a2, a1
-; RV64ZBB-NEXT:    sllw a1, a0, a1
-; RV64ZBB-NEXT:    srlw a0, a0, a2
-; RV64ZBB-NEXT:    or a0, a1, a0
+; RV64ZBB-NEXT:    rolw a0, a0, a1
 ; RV64ZBB-NEXT:    ret
   %z = sub i32 32, %y
   %b = shl i32 %x, %y
@@ -79,11 +75,7 @@ define i32 @rotr_32(i32 %x, i32 %y) nounwind {
 ;
 ; RV64ZBB-LABEL: rotr_32:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    li a2, 32
-; RV64ZBB-NEXT:    subw a2, a2, a1
-; RV64ZBB-NEXT:    srlw a1, a0, a1
-; RV64ZBB-NEXT:    sllw a0, a0, a2
-; RV64ZBB-NEXT:    or a0, a1, a0
+; RV64ZBB-NEXT:    rorw a0, a0, a1
 ; RV64ZBB-NEXT:    ret
   %z = sub i32 32, %y
   %b = lshr i32 %x, %y
@@ -322,10 +314,7 @@ define i32 @rotl_32_mask(i32 %x, i32 %y) nounwind {
 ;
 ; RV64ZBB-LABEL: rotl_32_mask:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    negw a2, a1
-; RV64ZBB-NEXT:    sllw a1, a0, a1
-; RV64ZBB-NEXT:    srlw a0, a0, a2
-; RV64ZBB-NEXT:    or a0, a1, a0
+; RV64ZBB-NEXT:    rolw a0, a0, a1
 ; RV64ZBB-NEXT:    ret
   %z = sub i32 0, %y
   %and = and i32 %z, 31
@@ -359,10 +348,7 @@ define i32 @rotr_32_mask(i32 %x, i32 %y) nounwind {
 ;
 ; RV64ZBB-LABEL: rotr_32_mask:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    negw a2, a1
-; RV64ZBB-NEXT:    srlw a1, a0, a1
-; RV64ZBB-NEXT:    sllw a0, a0, a2
-; RV64ZBB-NEXT:    or a0, a1, a0
+; RV64ZBB-NEXT:    rorw a0, a0, a1
 ; RV64ZBB-NEXT:    ret
   %z = sub i32 0, %y
   %and = and i32 %z, 31
