@@ -444,7 +444,6 @@ def no_pie : Flag<["-"], "no_pie">,
 def pagezero_size : Separate<["-"], "pagezero_size">,
     MetaVarName<"<size>">,
     HelpText<"Size of unreadable segment at address zero is hex <size> (default is 4KB on 32-bit and 4GB on 64-bit)">,
-    Flags<[HelpHidden]>,
     Group<grp_main>;
 def stack_size : Separate<["-"], "stack_size">,
     MetaVarName<"<size>">,

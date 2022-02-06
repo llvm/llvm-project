@@ -105,6 +105,7 @@ class PageZeroSection final : public SyntheticSection {
 public:
   PageZeroSection();
   bool isHidden() const override { return true; }
+  bool isNeeded() const override { return target->pageZeroSize != 0; }
   uint64_t getSize() const override { return target->pageZeroSize; }
   uint64_t getFileSize() const override { return 0; }
   void writeTo(uint8_t *buf) const override {}
