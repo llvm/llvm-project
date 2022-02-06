@@ -2945,7 +2945,8 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
   for (auto &I : enumerate(RepRecipe->operands())) {
     auto InputInstance = Instance;
     VPValue *Operand = I.value();
-    if (State.Plan->isUniformAfterVectorization(Operand))
+    VPReplicateRecipe *OperandR = dyn_cast<VPReplicateRecipe>(Operand);
+    if (OperandR && OperandR->isUniform())
       InputInstance.Lane = VPLane::getFirstLane();
     Cloned->setOperand(I.index(), State.get(Operand, InputInstance));
   }
