@@ -34,10 +34,10 @@ namespace llvm {
 /// is still valid.
 ///
 class DebugEpochBase {
-  uint64_t Epoch;
+  uint64_t Epoch = 0;
 
 public:
-  DebugEpochBase() : Epoch(0) {}
+  DebugEpochBase() = default;
 
   /// Calling incrementEpoch invalidates all handles pointing into the
   /// calling instance.
