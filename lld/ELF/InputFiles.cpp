@@ -1530,9 +1530,11 @@ template <class ELFT> void SharedFile::parse() {
 
     uint32_t alignment = getAlignment<ELFT>(sections, sym);
     if (!(versyms[i] & VERSYM_HIDDEN)) {
-      symtab.addSymbol(SharedSymbol{*this, name, sym.getBinding(), sym.st_other,
-                                    sym.getType(), sym.st_value, sym.st_size,
-                                    alignment, idx});
+      auto *s = symtab.addSymbol(
+          SharedSymbol{*this, name, sym.getBinding(), sym.st_other,
+                       sym.getType(), sym.st_value, sym.st_size, alignment});
+      if (s->file == this)
+        s->verdefIndex = idx;
     }
 
     // Also add the symbol with the versioned name to handle undefined symbols
@@ -1552,9 +1554,11 @@ template <class ELFT> void SharedFile::parse() {
         reinterpret_cast<const Elf_Verdef *>(verdefs[idx])->getAux()->vda_name;
     versionedNameBuffer.clear();
     name = (name + "@" + verName).toStringRef(versionedNameBuffer);
-    symtab.addSymbol(SharedSymbol{*this, saver().save(name), sym.getBinding(),
-                                  sym.st_other, sym.getType(), sym.st_value,
-                                  sym.st_size, alignment, idx});
+    auto *s = symtab.addSymbol(
+        SharedSymbol{*this, saver().save(name), sym.getBinding(), sym.st_other,
+                     sym.getType(), sym.st_value, sym.st_size, alignment});
+    if (s->file == this)
+      s->verdefIndex = idx;
   }
 }
 
