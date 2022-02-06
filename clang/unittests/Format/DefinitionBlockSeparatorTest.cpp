@@ -109,6 +109,15 @@ TEST_F(DefinitionBlockSeparatorTest, Basic) {
                "};",
                Style);
 
+  verifyFormat("union foo {\n"
+               "  int i, j;\n"
+               "};\n"
+               "\n"
+               "union bar {\n"
+               "  int j, k;\n"
+               "};",
+               Style);
+
   verifyFormat("class foo {\n"
                "  int i, j;\n"
                "};\n"
@@ -311,6 +320,9 @@ TEST_F(DefinitionBlockSeparatorTest, Always) {
                       "int bar3(int j, int k, const enum Bar b) {\n"
                       "  // A comment\n"
                       "  int r = j % k;\n"
+                      "  if (struct S = getS()) {\n"
+                      "    // if condition\n"
+                      "  }\n"
                       "  return r;\n"
                       "}\n";
   std::string Postfix = "\n"
@@ -364,6 +376,9 @@ TEST_F(DefinitionBlockSeparatorTest, Never) {
                         "int bar3(int j, int k, const enum Bar b) {\n"
                         "  // A comment\n"
                         "  int r = j % k;\n"
+                        "  if (struct S = getS()) {\n"
+                        "    // if condition\n"
+                        "  }\n"
                         "  return r;\n"
                         "}\n"
                         "} // namespace";
@@ -425,6 +440,10 @@ TEST_F(DefinitionBlockSeparatorTest, OpeningBracketOwnsLine) {
                "{\n"
                "  // A comment\n"
                "  int r = j % k;\n"
+               "  if (struct S = getS())\n"
+               "  {\n"
+               "    // if condition\n"
+               "  }\n"
                "  return r;\n"
                "}\n"
                "} // namespace NS",
@@ -473,6 +492,9 @@ TEST_F(DefinitionBlockSeparatorTest, Leave) {
                         "int bar3(int j, int k, const enum Bar b) {\n"
                         "  // A comment\n"
                         "  int r = j % k;\n"
+                        "  if (struct S = getS()) {\n"
+                        "    // if condition\n"
+                        "  }\n"
                         "  return r;\n"
                         "}\n"
                         "} // namespace";
