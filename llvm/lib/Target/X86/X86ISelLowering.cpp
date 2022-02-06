@@ -53526,6 +53526,7 @@ static SDValue combineEXTEND_VECTOR_INREG(SDNode *N, SelectionDAG &DAG,
   unsigned Opcode = N->getOpcode();
   unsigned InOpcode = In.getOpcode();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDLoc DL(N);
 
   // Try to merge vector loads and extend_inreg to an extload.
   if (!DCI.isBeforeLegalizeOps() && ISD::isNormalLoad(In.getNode()) &&
@@ -53538,10 +53539,9 @@ static SDValue combineEXTEND_VECTOR_INREG(SDNode *N, SelectionDAG &DAG,
                                  : ISD::ZEXTLOAD;
       EVT MemVT = VT.changeVectorElementType(SVT);
       if (TLI.isLoadExtLegal(Ext, VT, MemVT)) {
-        SDValue Load =
-            DAG.getExtLoad(Ext, SDLoc(N), VT, Ld->getChain(), Ld->getBasePtr(),
-                           Ld->getPointerInfo(), MemVT, Ld->getOriginalAlign(),
-                           Ld->getMemOperand()->getFlags());
+        SDValue Load = DAG.getExtLoad(
+            Ext, DL, VT, Ld->getChain(), Ld->getBasePtr(), Ld->getPointerInfo(),
+            MemVT, Ld->getOriginalAlign(), Ld->getMemOperand()->getFlags());
         DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1), Load.getValue(1));
         return Load;
       }
@@ -53550,7 +53550,7 @@ static SDValue combineEXTEND_VECTOR_INREG(SDNode *N, SelectionDAG &DAG,
 
   // Fold EXTEND_VECTOR_INREG(EXTEND_VECTOR_INREG(X)) -> EXTEND_VECTOR_INREG(X).
   if (Opcode == InOpcode)
-    return DAG.getNode(Opcode, SDLoc(N), VT, In.getOperand(0));
+    return DAG.getNode(Opcode, DL, VT, In.getOperand(0));
 
   // Fold EXTEND_VECTOR_INREG(EXTRACT_SUBVECTOR(EXTEND(X),0))
   // -> EXTEND_VECTOR_INREG(X).
@@ -53559,7 +53559,21 @@ static SDValue combineEXTEND_VECTOR_INREG(SDNode *N, SelectionDAG &DAG,
       In.getOperand(0).getOpcode() == getOpcode_EXTEND(Opcode) &&
       In.getOperand(0).getOperand(0).getValueSizeInBits() ==
           In.getValueSizeInBits())
-    return DAG.getNode(Opcode, SDLoc(N), VT, In.getOperand(0).getOperand(0));
+    return DAG.getNode(Opcode, DL, VT, In.getOperand(0).getOperand(0));
+
+  // Fold EXTEND_VECTOR_INREG(BUILD_VECTOR(X,Y,?,?)) -> BUILD_VECTOR(X,0,Y,0).
+  // TODO: Move to DAGCombine?
+  if (!DCI.isBeforeLegalizeOps() && Opcode == ISD::ZERO_EXTEND_VECTOR_INREG &&
+      In.getOpcode() == ISD::BUILD_VECTOR && In.hasOneUse() &&
+      In.getValueSizeInBits() == VT.getSizeInBits()) {
+    unsigned NumElts = VT.getVectorNumElements();
+    unsigned Scale = VT.getScalarSizeInBits() / In.getScalarValueSizeInBits();
+    EVT EltVT = In.getOperand(0).getValueType();
+    SmallVector<SDValue> Elts(Scale * NumElts, DAG.getConstant(0, DL, EltVT));
+    for (unsigned I = 0; I != NumElts; ++I)
+      Elts[I * Scale] = In.getOperand(I);
+    return DAG.getBitcast(VT, DAG.getBuildVector(In.getValueType(), DL, Elts));
+  }
 
   // Attempt to combine as a shuffle.
   // TODO: General ZERO_EXTEND_VECTOR_INREG support.

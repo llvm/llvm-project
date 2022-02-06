@@ -2148,8 +2148,6 @@ define <4 x i64> @PR52719(<4 x i64> %a0, i32 %a1) {
 ; AVX2-LABEL: PR52719:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm1
-; AVX2-NEXT:    vpbroadcastd %xmm1, %xmm1
-; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
 ; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpsrlq %xmm1, %ymm2, %ymm2
 ; AVX2-NEXT:    vpsrlq %xmm1, %ymm0, %ymm0
@@ -2175,8 +2173,6 @@ define <4 x i64> @PR52719(<4 x i64> %a0, i32 %a1) {
 ; XOPAVX2-LABEL: PR52719:
 ; XOPAVX2:       # %bb.0:
 ; XOPAVX2-NEXT:    vmovd %edi, %xmm1
-; XOPAVX2-NEXT:    vpbroadcastd %xmm1, %xmm1
-; XOPAVX2-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
 ; XOPAVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
 ; XOPAVX2-NEXT:    vpsrlq %xmm1, %ymm2, %ymm2
 ; XOPAVX2-NEXT:    vpsrlq %xmm1, %ymm0, %ymm0
@@ -2188,16 +2184,13 @@ define <4 x i64> @PR52719(<4 x i64> %a0, i32 %a1) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512-NEXT:    vmovd %edi, %xmm1
-; AVX512-NEXT:    vpbroadcastd %xmm1, %xmm1
-; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
 ; AVX512-NEXT:    vpsraq %xmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NEXT:    retq
 ;
 ; AVX512VL-LABEL: PR52719:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpbroadcastd %edi, %xmm1
-; AVX512VL-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; AVX512VL-NEXT:    vmovd %edi, %xmm1
 ; AVX512VL-NEXT:    vpsraq %xmm1, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
 ;

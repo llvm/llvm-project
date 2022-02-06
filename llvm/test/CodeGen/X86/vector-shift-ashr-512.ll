@@ -501,8 +501,6 @@ define <8 x i64> @PR52719(<8 x i64> %a0, i32 %a1) {
 ; ALL-LABEL: PR52719:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovd %edi, %xmm1
-; ALL-NEXT:    vpbroadcastd %xmm1, %xmm1
-; ALL-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
 ; ALL-NEXT:    vpsraq %xmm1, %zmm0, %zmm0
 ; ALL-NEXT:    retq
   %vec = insertelement <8 x i32> poison, i32 %a1, i64 0
