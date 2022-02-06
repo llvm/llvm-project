@@ -1083,6 +1083,11 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
       continue;
     }
     uint32_t secIdx = eSym.st_shndx;
+    if (secIdx == SHN_UNDEF) {
+      undefineds.push_back(i);
+      continue;
+    }
+
     if (LLVM_UNLIKELY(secIdx == SHN_XINDEX))
       secIdx = check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
     else if (secIdx >= SHN_LORESERVE)
@@ -1094,11 +1099,6 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
     uint8_t type = eSym.getType();
     uint64_t value = eSym.st_value;
     uint64_t size = eSym.st_size;
-
-    if (eSym.st_shndx == SHN_UNDEF) {
-      undefineds.push_back(i);
-      continue;
-    }
 
     Symbol *sym = symbols[i];
     const StringRef name = sym->getName();
