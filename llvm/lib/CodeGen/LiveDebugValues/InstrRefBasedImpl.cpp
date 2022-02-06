@@ -899,7 +899,7 @@ MachineInstrBuilder MLocTracker::emitLoc(Optional<LocIdx> MLoc,
 }
 
 /// Default construct and initialize the pass.
-InstrRefBasedLDV::InstrRefBasedLDV() {}
+InstrRefBasedLDV::InstrRefBasedLDV() = default;
 
 bool InstrRefBasedLDV::isCalleeSaved(LocIdx L) const {
   unsigned Reg = MTracker->LocIdxToLocID[L];

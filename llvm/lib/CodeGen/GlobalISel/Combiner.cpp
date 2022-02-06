@@ -57,8 +57,7 @@ class WorkListMaintainer : public GISelChangeObserver {
 
 public:
   WorkListMaintainer(WorkListTy &WorkList) : WorkList(WorkList) {}
-  virtual ~WorkListMaintainer() {
-  }
+  virtual ~WorkListMaintainer() = default;
 
   void erasingInstr(MachineInstr &MI) override {
     LLVM_DEBUG(dbgs() << "Erasing: " << MI << "\n");

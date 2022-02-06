@@ -29,8 +29,7 @@ PseudoSourceValue::PseudoSourceValue(unsigned Kind, const TargetInstrInfo &TII)
   AddressSpace = TII.getAddressSpaceForPseudoSourceKind(Kind);
 }
 
-
-PseudoSourceValue::~PseudoSourceValue() {}
+PseudoSourceValue::~PseudoSourceValue() = default;
 
 void PseudoSourceValue::printCustom(raw_ostream &O) const {
   if (Kind < TargetCustom)

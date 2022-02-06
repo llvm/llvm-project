@@ -28,7 +28,7 @@ public:
   virtual bool ExtendRanges(MachineFunction &MF, MachineDominatorTree *DomTree,
                             TargetPassConfig *TPC, unsigned InputBBLimit,
                             unsigned InputDbgValLimit) = 0;
-  virtual ~LDVImpl() {}
+  virtual ~LDVImpl() = default;
 };
 
 } // namespace SharedLiveDebugValues

@@ -53,7 +53,7 @@ void DwarfCFIExceptionBase::endFragment() {
 DwarfCFIException::DwarfCFIException(AsmPrinter *A)
     : DwarfCFIExceptionBase(A) {}
 
-DwarfCFIException::~DwarfCFIException() {}
+DwarfCFIException::~DwarfCFIException() = default;
 
 /// endModule - Emit all exception information that should come after the
 /// content.

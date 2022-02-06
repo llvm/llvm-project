@@ -72,7 +72,7 @@ DebugMod("postra-sched-debugmod",
                       cl::desc("Debug control MBBs that are scheduled"),
                       cl::init(0), cl::Hidden);
 
-AntiDepBreaker::~AntiDepBreaker() { }
+AntiDepBreaker::~AntiDepBreaker() = default;
 
 namespace {
   class PostRAScheduler : public MachineFunctionPass {

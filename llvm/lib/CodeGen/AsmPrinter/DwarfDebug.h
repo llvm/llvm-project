@@ -80,7 +80,7 @@ private:
 public:
   DbgEntity(const DINode *N, const DILocation *IA, DbgEntityKind ID)
       : Entity(N), InlinedAt(IA), SubclassID(ID) {}
-  virtual ~DbgEntity() {}
+  virtual ~DbgEntity() = default;
 
   /// Accessors.
   /// @{
