@@ -17,8 +17,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 // BreakpointLocationCollection constructor
-BreakpointLocationCollection::BreakpointLocationCollection()
-    : m_break_loc_collection(), m_collection_mutex() {}
+BreakpointLocationCollection::BreakpointLocationCollection() = default;
 
 // Destructor
 BreakpointLocationCollection::~BreakpointLocationCollection() = default;

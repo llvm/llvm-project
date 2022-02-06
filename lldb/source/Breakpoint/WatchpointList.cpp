@@ -12,7 +12,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-WatchpointList::WatchpointList() : m_watchpoints(), m_mutex() {}
+WatchpointList::WatchpointList() = default;
 
 WatchpointList::~WatchpointList() = default;
 
