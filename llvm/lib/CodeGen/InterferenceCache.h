@@ -37,7 +37,7 @@ class LLVM_LIBRARY_VISIBILITY InterferenceCache {
     SlotIndex First;
     SlotIndex Last;
 
-    BlockInterference() {}
+    BlockInterference() = default;
   };
 
   /// Entry - A cache entry containing interference information for all aliases
