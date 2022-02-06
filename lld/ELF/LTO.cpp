@@ -267,8 +267,8 @@ void BitcodeCompiler::add(BitcodeFile &f) {
         !(dr->section == nullptr && (!sym->file || sym->file->isElf()));
 
     if (r.Prevailing)
-      sym->replace(Undefined{nullptr, sym->getName(), STB_GLOBAL, STV_DEFAULT,
-                             sym->type});
+      sym->replace(
+          Undefined{nullptr, StringRef(), STB_GLOBAL, STV_DEFAULT, sym->type});
 
     // We tell LTO to not apply interprocedural optimization for wrapped
     // (with --wrap) symbols because otherwise LTO would inline them while

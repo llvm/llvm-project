@@ -299,7 +299,7 @@ static void replaceWithDefined(Symbol &sym, SectionBase &sec, uint64_t value,
                                uint64_t size) {
   Symbol old = sym;
 
-  sym.replace(Defined{sym.file, sym.getName(), sym.binding, sym.stOther,
+  sym.replace(Defined{sym.file, StringRef(), sym.binding, sym.stOther,
                       sym.type, value, size, &sec});
 
   sym.auxIdx = old.auxIdx;
