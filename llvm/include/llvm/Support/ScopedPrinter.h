@@ -107,7 +107,7 @@ public:
 
   ScopedPrinter(raw_ostream &OS,
                 ScopedPrinterKind Kind = ScopedPrinterKind::Base)
-      : OS(OS), IndentLevel(0), Kind(Kind) {}
+      : OS(OS), Kind(Kind) {}
 
   ScopedPrinterKind getKind() const { return Kind; }
 
@@ -498,7 +498,7 @@ private:
   }
 
   raw_ostream &OS;
-  int IndentLevel;
+  int IndentLevel = 0;
   StringRef Prefix;
   ScopedPrinterKind Kind;
 };
