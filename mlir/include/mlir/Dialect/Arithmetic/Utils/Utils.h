@@ -31,8 +31,8 @@ detail::op_matcher<arith::ConstantIndexOp> matchConstantIndex();
 void canonicalizeSubViewPart(SmallVectorImpl<OpFoldResult> &values,
                              function_ref<bool(int64_t)> isDynamic);
 
-void getPositionsOfShapeOne(unsigned rank, ArrayRef<int64_t> shape,
-                            llvm::SmallDenseSet<unsigned> &dimsToProject);
+llvm::SmallBitVector getPositionsOfShapeOne(unsigned rank,
+                                            ArrayRef<int64_t> shape);
 
 /// Pattern to rewrite a subview op with constant arguments.
 template <typename OpType, typename ResultTypeFunc, typename CastOpFunc>

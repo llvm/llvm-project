@@ -187,7 +187,7 @@ static LogicalResult padOperandToSmallestStaticBoundingBox(
     return failure(hasDynamicShape);
 
   // Compute the dropped dimensions if `sliceOp` is ranke-reducing.
-  llvm::SmallDenseSet<unsigned> droppedDims = sliceOp.getDroppedDims();
+  llvm::SmallBitVector droppedDims = sliceOp.getDroppedDims();
 
   // Upper bound the `sliceOp` sizes to obtain a static bounding box.
   SmallVector<int64_t> staticSizes;
@@ -195,7 +195,7 @@ static LogicalResult padOperandToSmallestStaticBoundingBox(
   auto shapedOp = cast<OffsetSizeAndStrideOpInterface>(sliceOp.getOperation());
   for (const auto &en : enumerate(shapedOp.getMixedSizes())) {
     // Skip dropped dimensions.
-    if (droppedDims.contains(en.index()))
+    if (droppedDims.test(en.index()))
       continue;
     // If the size is an attribute add it directly to `staticSizes`.
     if (en.value().is<Attribute>()) {

@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "llvm/ADT/SmallBitVector.h"
 
 using namespace mlir;
 
@@ -37,16 +38,16 @@ void mlir::canonicalizeSubViewPart(
   }
 }
 
-void mlir::getPositionsOfShapeOne(
-    unsigned rank, ArrayRef<int64_t> shape,
-    llvm::SmallDenseSet<unsigned> &dimsToProject) {
-  dimsToProject.reserve(rank);
+llvm::SmallBitVector mlir::getPositionsOfShapeOne(unsigned rank,
+                                                  ArrayRef<int64_t> shape) {
+  llvm::SmallBitVector dimsToProject(shape.size());
   for (unsigned pos = 0, e = shape.size(); pos < e && rank > 0; ++pos) {
     if (shape[pos] == 1) {
-      dimsToProject.insert(pos);
+      dimsToProject.set(pos);
       --rank;
     }
   }
+  return dimsToProject;
 }
 
 Value mlir::getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,

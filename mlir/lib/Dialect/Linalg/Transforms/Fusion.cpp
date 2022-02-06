@@ -520,10 +520,10 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
 /// Prune all dimensions that are of reduction iterator type from `map`.
 static AffineMap pruneReductionDimsFromMap(ArrayRef<Attribute> iteratorTypes,
                                            AffineMap map) {
-  llvm::SmallDenseSet<unsigned> projectedDims;
+  llvm::SmallBitVector projectedDims(iteratorTypes.size());
   for (const auto &attr : llvm::enumerate(iteratorTypes)) {
     if (!isParallelIterator(attr.value()))
-      projectedDims.insert(attr.index());
+      projectedDims.set(attr.index());
   }
   return getProjectedMap(map, projectedDims);
 }
