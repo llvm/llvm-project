@@ -519,6 +519,55 @@ bool Sema::CheckConstraintSatisfaction(const Expr *ConstraintExpr,
       .isInvalid();
 }
 
+bool Sema::addInstantiatedCapturesToScope(
+    FunctionDecl *Function, const FunctionDecl *PatternDecl,
+    LocalInstantiationScope &Scope,
+    const MultiLevelTemplateArgumentList &TemplateArgs) {
+  const auto *LambdaClass = cast<CXXMethodDecl>(Function)->getParent();
+  const auto *LambdaPattern = cast<CXXMethodDecl>(PatternDecl)->getParent();
+
+  unsigned Instantiated = 0;
+  for (const LambdaCapture &CapturePattern : LambdaPattern->captures()) {
+    if (!CapturePattern.capturesVariable()) {
+      Instantiated++;
+      continue;
+    }
+    const ValueDecl *CapturedPattern = CapturePattern.getCapturedVar();
+    if (!CapturedPattern->isParameterPack()) {
+      ValueDecl *CapturedVar =
+          LambdaClass->getCapture(Instantiated)->getCapturedVar();
+      if (cast<CXXMethodDecl>(Function)->isConst()) {
+        QualType T = CapturedVar->getType();
+        T.addConst();
+        CapturedVar->setType(T);
+      }
+      if (CapturedVar->isInitCapture())
+        Scope.InstantiatedLocal(CapturedPattern, CapturedVar);
+      Instantiated++;
+    } else {
+      Scope.MakeInstantiatedLocalArgPack(CapturedPattern);
+      std::optional<unsigned> NumArgumentsInExpansion =
+          getNumArgumentsInExpansion(CapturedPattern->getType(), TemplateArgs);
+      if (!NumArgumentsInExpansion)
+        continue;
+      for (unsigned Arg = 0; Arg < *NumArgumentsInExpansion; ++Arg) {
+        ValueDecl *CapturedVar =
+            LambdaClass->getCapture(Instantiated)->getCapturedVar();
+        if (cast<CXXMethodDecl>(Function)->isConst()) {
+          QualType T = CapturedVar->getType();
+          T.addConst();
+          CapturedVar->setType(T);
+        }
+        if (CapturedVar->isInitCapture())
+          Scope.InstantiatedLocalPackArg(CapturedPattern,
+                                         cast<VarDecl>(CapturedVar));
+        Instantiated++;
+      }
+    }
+  }
+  return false;
+}
+
 bool Sema::SetupConstraintScope(
     FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
     MultiLevelTemplateArgumentList MLTAL, LocalInstantiationScope &Scope) {
@@ -552,6 +601,11 @@ bool Sema::SetupConstraintScope(
       if (addInstantiatedParametersToScope(FD, FromMemTempl->getTemplatedDecl(),
                                            Scope, MLTAL))
         return true;
+      // Make sure the captures are also added to the instantiation scope.
+      if (isLambdaCallOperator(FD) &&
+          addInstantiatedCapturesToScope(FD, FromMemTempl->getTemplatedDecl(),
+                                         Scope, MLTAL))
+        return true;
     }
 
     return false;
@@ -575,6 +629,11 @@ bool Sema::SetupConstraintScope(
     // Case where this was not a template, but instantiated as a
     // child-function.
     if (addInstantiatedParametersToScope(FD, InstantiatedFrom, Scope, MLTAL))
+      return true;
+
+    // Make sure the captures are also added to the instantiation scope.
+    if (isLambdaCallOperator(FD) &&
+        addInstantiatedCapturesToScope(FD, InstantiatedFrom, Scope, MLTAL))
       return true;
   }
 
