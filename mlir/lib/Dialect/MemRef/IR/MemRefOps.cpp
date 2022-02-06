@@ -20,6 +20,7 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 
 using namespace mlir;
 using namespace mlir::memref;
@@ -590,17 +591,17 @@ static std::map<int64_t, unsigned> getNumOccurences(ArrayRef<int64_t> vals) {
 /// This accounts for cases where there are multiple unit-dims, but only a
 /// subset of those are dropped. For MemRefTypes these can be disambiguated
 /// using the strides. If a dimension is dropped the stride must be dropped too.
-static llvm::Optional<llvm::SmallDenseSet<unsigned>>
+static llvm::Optional<llvm::SmallBitVector>
 computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
                                ArrayRef<OpFoldResult> sizes) {
-  llvm::SmallDenseSet<unsigned> unusedDims;
+  llvm::SmallBitVector unusedDims(originalType.getRank());
   if (originalType.getRank() == reducedType.getRank())
     return unusedDims;
 
   for (const auto &dim : llvm::enumerate(sizes))
     if (auto attr = dim.value().dyn_cast<Attribute>())
       if (attr.cast<IntegerAttr>().getInt() == 1)
-        unusedDims.insert(dim.index());
+        unusedDims.set(dim.index());
 
   SmallVector<int64_t> originalStrides, candidateStrides;
   int64_t originalOffset, candidateOffset;
@@ -623,8 +624,9 @@ computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
       getNumOccurences(originalStrides);
   std::map<int64_t, unsigned> candidateStridesNumOccurences =
       getNumOccurences(candidateStrides);
-  llvm::SmallDenseSet<unsigned> prunedUnusedDims;
-  for (unsigned dim : unusedDims) {
+  for (size_t dim = 0, e = unusedDims.size(); dim != e; ++dim) {
+    if (!unusedDims.test(dim))
+      continue;
     int64_t originalStride = originalStrides[dim];
     if (currUnaccountedStrides[originalStride] >
         candidateStridesNumOccurences[originalStride]) {
@@ -635,7 +637,7 @@ computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
     if (currUnaccountedStrides[originalStride] ==
         candidateStridesNumOccurences[originalStride]) {
       // The stride for this is not dropped. Keep as is.
-      prunedUnusedDims.insert(dim);
+      unusedDims.reset(dim);
       continue;
     }
     if (currUnaccountedStrides[originalStride] <
@@ -646,17 +648,16 @@ computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
     }
   }
 
-  for (auto prunedDim : prunedUnusedDims)
-    unusedDims.erase(prunedDim);
-  if (unusedDims.size() + reducedType.getRank() != originalType.getRank())
+  if ((int64_t)unusedDims.count() + reducedType.getRank() !=
+      originalType.getRank())
     return llvm::None;
   return unusedDims;
 }
 
-llvm::SmallDenseSet<unsigned> SubViewOp::getDroppedDims() {
+llvm::SmallBitVector SubViewOp::getDroppedDims() {
   MemRefType sourceType = getSourceType();
   MemRefType resultType = getType();
-  llvm::Optional<llvm::SmallDenseSet<unsigned>> unusedDims =
+  llvm::Optional<llvm::SmallBitVector> unusedDims =
       computeMemRefRankReductionMask(sourceType, resultType, getMixedSizes());
   assert(unusedDims && "unable to find unused dims of subview");
   return *unusedDims;
@@ -698,12 +699,12 @@ OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
              memrefType.getDynamicDimIndex(unsignedIndex));
 
   if (auto subview = dyn_cast_or_null<SubViewOp>(definingOp)) {
-    llvm::SmallDenseSet<unsigned> unusedDims = subview.getDroppedDims();
+    llvm::SmallBitVector unusedDims = subview.getDroppedDims();
     unsigned resultIndex = 0;
     unsigned sourceRank = subview.getSourceType().getRank();
     unsigned sourceIndex = 0;
     for (auto i : llvm::seq<unsigned>(0, sourceRank)) {
-      if (unusedDims.count(i))
+      if (unusedDims.test(i))
         continue;
       if (resultIndex == unsignedIndex) {
         sourceIndex = i;
@@ -1734,11 +1735,11 @@ Type SubViewOp::inferRankReducedResultType(unsigned resultRank,
   int rankDiff = inferredType.getRank() - resultRank;
   if (rankDiff > 0) {
     auto shape = inferredType.getShape();
-    llvm::SmallDenseSet<unsigned> dimsToProject;
-    mlir::getPositionsOfShapeOne(rankDiff, shape, dimsToProject);
+    llvm::SmallBitVector dimsToProject =
+        getPositionsOfShapeOne(rankDiff, shape);
     SmallVector<int64_t> projectedShape;
     for (unsigned pos = 0, e = shape.size(); pos < e; ++pos)
-      if (!dimsToProject.contains(pos))
+      if (!dimsToProject.test(pos))
         projectedShape.push_back(shape[pos]);
 
     AffineMap map = inferredType.getLayout().getAffineMap();
@@ -2015,7 +2016,7 @@ static MemRefType getCanonicalSubViewResultType(
   auto nonRankReducedType = SubViewOp::inferResultType(sourceType, mixedOffsets,
                                                        mixedSizes, mixedStrides)
                                 .cast<MemRefType>();
-  llvm::Optional<llvm::SmallDenseSet<unsigned>> unusedDims =
+  llvm::Optional<llvm::SmallBitVector> unusedDims =
       computeMemRefRankReductionMask(currentSourceType, currentResultType,
                                      mixedSizes);
   // Return nullptr as failure mode.
@@ -2023,7 +2024,7 @@ static MemRefType getCanonicalSubViewResultType(
     return nullptr;
   SmallVector<int64_t> shape;
   for (const auto &sizes : llvm::enumerate(nonRankReducedType.getShape())) {
-    if (unusedDims->count(sizes.index()))
+    if (unusedDims->test(sizes.index()))
       continue;
     shape.push_back(sizes.value());
   }

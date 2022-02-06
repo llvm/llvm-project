@@ -1639,7 +1639,7 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
 
     /// Return the dimensions of the source type that are dropped when
     /// the result is rank-reduced.
-    llvm::SmallDenseSet<unsigned> getDroppedDims();
+    llvm::SmallBitVector getDroppedDims();
   }];
 
   let hasCanonicalizer = 1;

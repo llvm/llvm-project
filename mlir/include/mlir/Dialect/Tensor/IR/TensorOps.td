@@ -316,8 +316,7 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
 
     /// Return the dimensions of the source that are dropped in the
     /// result when the result is rank-reduced.
-    llvm::SmallDenseSet<unsigned> getDroppedDims();
-
+    llvm::SmallBitVector getDroppedDims();
   }];
 
   let hasCanonicalizer = 1;
