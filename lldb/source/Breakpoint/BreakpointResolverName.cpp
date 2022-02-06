@@ -29,8 +29,7 @@ BreakpointResolverName::BreakpointResolverName(const BreakpointSP &bkpt,
     LanguageType language, Breakpoint::MatchType type, lldb::addr_t offset,
     bool skip_prologue)
     : BreakpointResolver(bkpt, BreakpointResolver::NameResolver, offset),
-      m_class_name(), m_regex(), m_match_type(type), m_language(language),
-      m_skip_prologue(skip_prologue) {
+      m_match_type(type), m_language(language), m_skip_prologue(skip_prologue) {
   if (m_match_type == Breakpoint::Regexp) {
     m_regex = RegularExpression(name_cstr);
     if (!m_regex.IsValid()) {

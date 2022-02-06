@@ -14,7 +14,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-BreakpointSiteList::BreakpointSiteList() : m_mutex(), m_bp_site_list() {}
+BreakpointSiteList::BreakpointSiteList() = default;
 
 BreakpointSiteList::~BreakpointSiteList() = default;
 

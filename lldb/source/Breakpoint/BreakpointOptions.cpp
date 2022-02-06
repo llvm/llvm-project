@@ -121,11 +121,10 @@ bool BreakpointOptions::NullCallback(void *baton,
 
 // BreakpointOptions constructor
 BreakpointOptions::BreakpointOptions(bool all_flags_set)
-    : m_callback(BreakpointOptions::NullCallback), m_callback_baton_sp(),
+    : m_callback(BreakpointOptions::NullCallback),
       m_baton_is_command_baton(false), m_callback_is_synchronous(false),
-      m_enabled(true), m_one_shot(false), m_ignore_count(0), m_thread_spec_up(),
-      m_condition_text(), m_condition_text_hash(0), m_auto_continue(false),
-      m_set_flags(0) {
+      m_enabled(true), m_one_shot(false), m_ignore_count(0),
+      m_condition_text_hash(0), m_auto_continue(false), m_set_flags(0) {
   if (all_flags_set)
     m_set_flags.Set(~((Flags::ValueType)0));
 }
@@ -151,8 +150,8 @@ BreakpointOptions::BreakpointOptions(const BreakpointOptions &rhs)
       m_baton_is_command_baton(rhs.m_baton_is_command_baton),
       m_callback_is_synchronous(rhs.m_callback_is_synchronous),
       m_enabled(rhs.m_enabled), m_one_shot(rhs.m_one_shot),
-      m_ignore_count(rhs.m_ignore_count), m_thread_spec_up(),
-      m_auto_continue(rhs.m_auto_continue), m_set_flags(rhs.m_set_flags) {
+      m_ignore_count(rhs.m_ignore_count), m_auto_continue(rhs.m_auto_continue),
+      m_set_flags(rhs.m_set_flags) {
   if (rhs.m_thread_spec_up != nullptr)
     m_thread_spec_up = std::make_unique<ThreadSpec>(*rhs.m_thread_spec_up);
   m_condition_text = rhs.m_condition_text;

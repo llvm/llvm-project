@@ -1012,8 +1012,7 @@ void Breakpoint::SendBreakpointChangedEvent(BreakpointEventData *data) {
 
 Breakpoint::BreakpointEventData::BreakpointEventData(
     BreakpointEventType sub_type, const BreakpointSP &new_breakpoint_sp)
-    : EventData(), m_breakpoint_event(sub_type),
-      m_new_breakpoint_sp(new_breakpoint_sp) {}
+    : m_breakpoint_event(sub_type), m_new_breakpoint_sp(new_breakpoint_sp) {}
 
 Breakpoint::BreakpointEventData::~BreakpointEventData() = default;
 

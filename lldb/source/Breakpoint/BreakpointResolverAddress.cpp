@@ -28,8 +28,7 @@ BreakpointResolverAddress::BreakpointResolverAddress(
 BreakpointResolverAddress::BreakpointResolverAddress(const BreakpointSP &bkpt,
                                                      const Address &addr)
     : BreakpointResolver(bkpt, BreakpointResolver::AddressResolver),
-      m_addr(addr), m_resolved_addr(LLDB_INVALID_ADDRESS), m_module_filespec() {
-}
+      m_addr(addr), m_resolved_addr(LLDB_INVALID_ADDRESS) {}
 
 BreakpointResolver *BreakpointResolverAddress::CreateFromStructuredData(
     const BreakpointSP &bkpt, const StructuredData::Dictionary &options_dict,
