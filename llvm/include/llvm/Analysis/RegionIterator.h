@@ -14,6 +14,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/Analysis/RegionInfo.h"
 #include <cassert>
 #include <iterator>
 #include <type_traits>
