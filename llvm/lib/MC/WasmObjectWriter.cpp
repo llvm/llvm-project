@@ -125,12 +125,11 @@ struct WasmCustomSection {
   StringRef Name;
   MCSectionWasm *Section;
 
-  uint32_t OutputContentsOffset;
-  uint32_t OutputIndex;
+  uint32_t OutputContentsOffset = 0;
+  uint32_t OutputIndex = InvalidIndex;
 
   WasmCustomSection(StringRef Name, MCSectionWasm *Section)
-      : Name(Name), Section(Section), OutputContentsOffset(0),
-        OutputIndex(InvalidIndex) {}
+      : Name(Name), Section(Section) {}
 };
 
 #if !defined(NDEBUG)
