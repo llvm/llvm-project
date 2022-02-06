@@ -1101,14 +1101,13 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
     uint64_t size = eSym.st_size;
 
     Symbol *sym = symbols[i];
-    const StringRef name = sym->getName();
     if (LLVM_UNLIKELY(eSym.st_shndx == SHN_COMMON)) {
       if (value == 0 || value >= UINT32_MAX)
-        fatal(toString(this) + ": common symbol '" + name +
+        fatal(toString(this) + ": common symbol '" + sym->getName() +
               "' has invalid alignment: " + Twine(value));
       hasCommonSyms = true;
       sym->resolve(
-          CommonSymbol{this, name, binding, stOther, type, value, size});
+          CommonSymbol{this, StringRef(), binding, stOther, type, value, size});
       continue;
     }
 
@@ -1118,7 +1117,7 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
     // COMDAT member sections, and if a comdat group is discarded, some
     // defined symbol in a .eh_frame becomes dangling symbols.
     if (sec == &InputSection::discarded) {
-      Undefined und{this, name, binding, stOther, type, secIdx};
+      Undefined und{this, StringRef(), binding, stOther, type, secIdx};
       // !ArchiveFile::parsed or !LazyObjFile::lazy means that the file
       // containing this object has not finished processing, i.e. this symbol is
       // a result of a lazy symbol extract. We should demote the lazy symbol to
@@ -1140,7 +1139,7 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
     if (binding == STB_GLOBAL || binding == STB_WEAK ||
         binding == STB_GNU_UNIQUE) {
       sym->resolve(
-          Defined{this, name, binding, stOther, type, value, size, sec});
+          Defined{this, StringRef(), binding, stOther, type, value, size, sec});
       continue;
     }
 
@@ -1156,8 +1155,8 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
   for (unsigned i : undefineds) {
     const Elf_Sym &eSym = eSyms[i];
     Symbol *sym = symbols[i];
-    sym->resolve(Undefined{this, sym->getName(), eSym.getBinding(),
-                           eSym.st_other, eSym.getType()});
+    sym->resolve(Undefined{this, StringRef(), eSym.getBinding(), eSym.st_other,
+                           eSym.getType()});
     sym->referenced = true;
   }
 }
@@ -1670,28 +1669,23 @@ createBitcodeSymbol(Symbol *&sym, const std::vector<bool> &keptComdats,
   uint8_t type = objSym.isTLS() ? STT_TLS : STT_NOTYPE;
   uint8_t visibility = mapVisibility(objSym.getVisibility());
 
-  StringRef name;
-  if (sym) {
-    name = sym->getName();
-  } else {
-    name = saver().save(objSym.getName());
-    sym = symtab->insert(name);
-  }
+  if (!sym)
+    sym = symtab->insert(saver().save(objSym.getName()));
 
   int c = objSym.getComdatIndex();
   if (objSym.isUndefined() || (c != -1 && !keptComdats[c])) {
-    Undefined newSym(&f, name, binding, visibility, type);
+    Undefined newSym(&f, StringRef(), binding, visibility, type);
     sym->resolve(newSym);
     sym->referenced = true;
     return;
   }
 
   if (objSym.isCommon()) {
-    sym->resolve(CommonSymbol{&f, name, binding, visibility, STT_OBJECT,
+    sym->resolve(CommonSymbol{&f, StringRef(), binding, visibility, STT_OBJECT,
                               objSym.getCommonAlignment(),
                               objSym.getCommonSize()});
   } else {
-    Defined newSym(&f, name, binding, visibility, type, 0, 0, nullptr);
+    Defined newSym(&f, StringRef(), binding, visibility, type, 0, 0, nullptr);
     if (objSym.canBeOmittedFromSymbolTable())
       newSym.exportDynamic = false;
     sym->resolve(newSym);
@@ -1721,9 +1715,11 @@ void BitcodeFile::parseLazy() {
   SymbolTable &symtab = *elf::symtab;
   symbols.resize(obj->symbols().size());
   for (auto it : llvm::enumerate(obj->symbols()))
-    if (!it.value().isUndefined())
-      symbols[it.index()] = symtab.addSymbol(
-          LazyObject{*this, saver().save(it.value().getName())});
+    if (!it.value().isUndefined()) {
+      auto *sym = symtab.insert(saver().save(it.value().getName()));
+      sym->resolve(LazyObject{*this});
+      symbols[it.index()] = sym;
+    }
 }
 
 void BinaryFile::parse() {
@@ -1797,7 +1793,7 @@ template <class ELFT> void ObjFile<ELFT>::parseLazy() {
   // exit from the loop early.
   for (Symbol *sym : makeArrayRef(symbols).slice(firstGlobal))
     if (sym) {
-      sym->resolve(LazyObject{*this, sym->getName()});
+      sym->resolve(LazyObject{*this});
       if (!lazy)
         return;
     }
