@@ -565,6 +565,46 @@ func @f() {
 
 // -----
 
+// merge cstr_broadcastable operations
+//
+// CHECK-LABEL: func @f
+// CHECK:         %[[ARG0:[a-z0-9]*]]: !shape.shape
+// CHECK-SAME:    %[[ARG1:[a-z0-9]*]]: !shape.shape
+// CHECK-SAME:    %[[ARG2:[a-z0-9]*]]: !shape.shape
+func @f(%arg0 : !shape.shape, %arg1 : !shape.shape, %arg2 : !shape.shape) {
+  // CHECK-NEXT: %[[W:.*]] = shape.cstr_broadcastable %[[ARG0]], %[[ARG1]], %[[ARG2]]
+  // CHECK-NEXT: "consume.witness"(%[[W]])
+  // CHECK-NEXT: return
+  %0 = shape.cstr_broadcastable %arg0, %arg1 : !shape.shape, !shape.shape
+  %1 = shape.cstr_broadcastable %arg0, %arg1, %arg2 : !shape.shape, !shape.shape, !shape.shape
+  %2 = shape.assuming_all %0, %1
+  "consume.witness"(%2) : (!shape.witness) -> ()
+  return
+}
+
+// -----
+
+// do not merge cstr_broadcastable operations
+//
+// CHECK-LABEL: func @f
+// CHECK:         %[[ARG0:[a-z0-9]*]]: !shape.shape
+// CHECK-SAME:    %[[ARG1:[a-z0-9]*]]: !shape.shape
+// CHECK-SAME:    %[[ARG2:[a-z0-9]*]]: !shape.shape
+func @f(%arg0 : !shape.shape, %arg1 : !shape.shape, %arg2 : !shape.shape) {
+  // CHECK-NEXT: %[[W0:.*]] = shape.cstr_broadcastable %[[ARG0]], %[[ARG1]]
+  // CHECK-NEXT: %[[W1:.*]] = shape.cstr_broadcastable %[[ARG1]], %[[ARG2]]
+  // CHECK-NEXT: %[[W2:.*]] = shape.assuming_all %[[W0]], %[[W1]]
+  // CHECK-NEXT: "consume.witness"(%[[W2]])
+  // CHECK-NEXT: return
+  %0 = shape.cstr_broadcastable %arg0, %arg1 : !shape.shape, !shape.shape
+  %1 = shape.cstr_broadcastable %arg1, %arg2 : !shape.shape, !shape.shape
+  %2 = shape.assuming_all %0, %1
+  "consume.witness"(%2) : (!shape.witness) -> ()
+  return
+}
+
+// -----
+
 // any can be replaced with a constant input if it has one.
 // CHECK-LABEL: func @f
 func @f(%arg : !shape.shape) -> !shape.shape {
