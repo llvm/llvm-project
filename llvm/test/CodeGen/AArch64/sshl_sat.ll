@@ -131,15 +131,7 @@ define void @combine_shlsat_vector() nounwind {
 define i16 @combine_shlsat_to_shl(i16 %x) nounwind {
 ; CHECK-LABEL: combine_shlsat_to_shl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sxth w8, w0
-; CHECK-NEXT:    mov w9, #-65536
-; CHECK-NEXT:    mov w10, #-2147483648
-; CHECK-NEXT:    ands w8, w9, w8, lsl #14
-; CHECK-NEXT:    lsl w9, w8, #2
-; CHECK-NEXT:    cinv w10, w10, ge
-; CHECK-NEXT:    cmp w8, w9, asr #2
-; CHECK-NEXT:    csel w8, w10, w9, ne
-; CHECK-NEXT:    asr w0, w8, #16
+; CHECK-NEXT:    and w0, w0, #0xfffffffc
 ; CHECK-NEXT:    ret
   %x2 = ashr i16 %x, 2
   %tmp = call i16 @llvm.sshl.sat.i16(i16 %x2, i16 2)
@@ -170,45 +162,8 @@ define <4 x i16> @combine_shlsat_to_shl_vec(<4 x i8> %a) nounwind {
 ; CHECK-LABEL: combine_shlsat_to_shl_vec:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #8
-; CHECK-NEXT:    mov w8, #-2147483648
-; CHECK-NEXT:    sshr v1.4h, v0.4h, #8
-; CHECK-NEXT:    umov w9, v1.h[0]
-; CHECK-NEXT:    umov w10, v1.h[1]
-; CHECK-NEXT:    umov w12, v1.h[2]
-; CHECK-NEXT:    lsl w11, w9, #16
-; CHECK-NEXT:    lsl w9, w9, #23
-; CHECK-NEXT:    cmp w11, #0
-; CHECK-NEXT:    cinv w13, w8, ge
-; CHECK-NEXT:    cmp w11, w9, asr #7
-; CHECK-NEXT:    lsl w11, w10, #16
-; CHECK-NEXT:    lsl w10, w10, #23
-; CHECK-NEXT:    csel w9, w13, w9, ne
-; CHECK-NEXT:    cmp w11, #0
-; CHECK-NEXT:    asr w9, w9, #16
-; CHECK-NEXT:    cinv w13, w8, ge
-; CHECK-NEXT:    cmp w11, w10, asr #7
-; CHECK-NEXT:    lsl w11, w12, #16
-; CHECK-NEXT:    csel w10, w13, w10, ne
-; CHECK-NEXT:    lsl w12, w12, #23
-; CHECK-NEXT:    asr w10, w10, #16
-; CHECK-NEXT:    fmov s0, w9
-; CHECK-NEXT:    umov w9, v1.h[3]
-; CHECK-NEXT:    cmp w11, #0
-; CHECK-NEXT:    cinv w13, w8, ge
-; CHECK-NEXT:    cmp w11, w12, asr #7
-; CHECK-NEXT:    csel w11, w13, w12, ne
-; CHECK-NEXT:    mov v0.h[1], w10
-; CHECK-NEXT:    asr w10, w11, #16
-; CHECK-NEXT:    lsl w11, w9, #16
-; CHECK-NEXT:    lsl w9, w9, #23
-; CHECK-NEXT:    cmp w11, #0
-; CHECK-NEXT:    cinv w8, w8, ge
-; CHECK-NEXT:    cmp w11, w9, asr #7
-; CHECK-NEXT:    mov v0.h[2], w10
-; CHECK-NEXT:    csel w8, w8, w9, ne
-; CHECK-NEXT:    asr w8, w8, #16
-; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    sshr v0.4h, v0.4h, #8
+; CHECK-NEXT:    shl v0.4h, v0.4h, #7
 ; CHECK-NEXT:    ret
   %sext = sext <4 x i8> %a to <4 x i16>
   %tmp = call <4 x i16> @llvm.sshl.sat.v4i16(

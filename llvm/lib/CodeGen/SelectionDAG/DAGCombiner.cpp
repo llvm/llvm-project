@@ -9345,6 +9345,21 @@ SDValue DAGCombiner::visitSHLSAT(SDNode *N) {
           DAG.FoldConstantArithmetic(N->getOpcode(), SDLoc(N), VT, {N0, N1}))
     return C;
 
+  ConstantSDNode *N1C = isConstOrConstSplat(N1);
+
+  if (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::SHL, VT)) {
+    // fold (sshlsat x, c) -> (shl x, c)
+    if (N->getOpcode() == ISD::SSHLSAT && N1C &&
+        N1C->getAPIntValue().ult(DAG.ComputeNumSignBits(N0)))
+      return DAG.getNode(ISD::SHL, SDLoc(N), VT, N0, N1);
+
+    // fold (ushlsat x, c) -> (shl x, c)
+    if (N->getOpcode() == ISD::USHLSAT && N1C &&
+        N1C->getAPIntValue().ule(
+            DAG.computeKnownBits(N0).countMinLeadingZeros()))
+      return DAG.getNode(ISD::SHL, SDLoc(N), VT, N0, N1);
+  }
+
   return SDValue();
 }
 
