@@ -140,7 +140,7 @@ public:
   // True if the name contains '@'.
   uint8_t hasVersionSuffix : 1;
 
-  inline void replace(const Symbol &newSym);
+  inline void replace(const Symbol &other);
 
   bool includeInDynsym() const;
   uint8_t computeBinding() const;
@@ -388,10 +388,9 @@ public:
 
   SharedSymbol(InputFile &file, StringRef name, uint8_t binding,
                uint8_t stOther, uint8_t type, uint64_t value, uint64_t size,
-               uint32_t alignment, uint16_t verdefIndex)
+               uint32_t alignment)
       : Symbol(SharedKind, &file, name, binding, stOther, type), value(value),
         size(size), alignment(alignment) {
-    this->verdefIndex = verdefIndex;
     exportDynamic = true;
     // GNU ifunc is a mechanism to allow user-supplied functions to
     // resolve PLT slot values at load-time. This is contrary to the
@@ -559,7 +558,7 @@ size_t Symbol::getSymbolSize() const {
 // replace() replaces "this" object with a given symbol by memcpy'ing
 // it over to "this". This function is called as a result of name
 // resolution, e.g. to replace an undefind symbol with a defined symbol.
-void Symbol::replace(const Symbol &newSym) {
+void Symbol::replace(const Symbol &other) {
   using llvm::ELF::STT_TLS;
 
   // st_value of STT_TLS represents the assigned offset, not the actual address
@@ -569,14 +568,14 @@ void Symbol::replace(const Symbol &newSym) {
   // exceptions: (a) a STT_NOTYPE lazy/undefined symbol can be replaced by a
   // STT_TLS symbol, (b) a STT_TLS undefined symbol can be replaced by a
   // STT_NOTYPE lazy symbol.
-  if (symbolKind != PlaceholderKind && !newSym.isLazy() &&
-      (type == STT_TLS) != (newSym.type == STT_TLS) &&
+  if (symbolKind != PlaceholderKind && !other.isLazy() &&
+      (type == STT_TLS) != (other.type == STT_TLS) &&
       type != llvm::ELF::STT_NOTYPE)
     error("TLS attribute mismatch: " + toString(*this) + "\n>>> defined in " +
-          toString(newSym.file) + "\n>>> defined in " + toString(file));
+          toString(other.file) + "\n>>> defined in " + toString(file));
 
   Symbol old = *this;
-  memcpy(this, &newSym, newSym.getSymbolSize());
+  memcpy(this, &other, other.getSymbolSize());
 
   // old may be a placeholder. The referenced fields must be initialized in
   // SymbolTable::insert.
