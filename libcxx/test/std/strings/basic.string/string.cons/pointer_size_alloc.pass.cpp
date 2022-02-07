@@ -20,7 +20,7 @@
 #include "min_allocator.h"
 
 template <class charT>
-void
+TEST_CONSTEXPR_CXX20 void
 test(const charT* s, unsigned n)
 {
     typedef std::basic_string<charT, std::char_traits<charT>, test_allocator<charT> > S;
@@ -35,7 +35,7 @@ test(const charT* s, unsigned n)
 }
 
 template <class charT, class A>
-void
+TEST_CONSTEXPR_CXX20 void
 test(const charT* s, unsigned n, const A& a)
 {
     typedef std::basic_string<charT, std::char_traits<charT>, A> S;
@@ -48,9 +48,8 @@ test(const charT* s, unsigned n, const A& a)
     assert(s2.capacity() >= s2.size());
 }
 
-int main(int, char**)
-{
-    {
+bool test() {
+  {
     typedef test_allocator<char> A;
 
     test("", 0);
@@ -64,9 +63,9 @@ int main(int, char**)
 
     test("123456798012345679801234567980123456798012345679801234567980", 60);
     test("123456798012345679801234567980123456798012345679801234567980", 60, A(2));
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef min_allocator<char> A;
 
     test("", 0);
@@ -80,15 +79,25 @@ int main(int, char**)
 
     test("123456798012345679801234567980123456798012345679801234567980", 60);
     test("123456798012345679801234567980123456798012345679801234567980", 60, A());
-    }
+  }
 #endif
 
 #if TEST_STD_VER > 3
-    {   // LWG 2946
+  {   // LWG 2946
     std::string s({"abc", 1});
     assert(s.size() == 1);
     assert(s == "a");
-    }
+  }
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
 #endif
 
   return 0;

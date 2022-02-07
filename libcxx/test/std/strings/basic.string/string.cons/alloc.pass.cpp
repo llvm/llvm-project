@@ -18,7 +18,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test()
 {
     {
@@ -52,7 +52,7 @@ test()
 #if TEST_STD_VER >= 11
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test2()
 {
     {
@@ -85,12 +85,21 @@ test2()
 
 #endif
 
+bool test() {
+  test<std::basic_string<char, std::char_traits<char>, test_allocator<char> > >();
+#if TEST_STD_VER >= 11
+  test2<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
+  test2<std::basic_string<char, std::char_traits<char>, explicit_allocator<char> > >();
+#endif
+
+  return true;
+}
+
 int main(int, char**)
 {
-    test<std::basic_string<char, std::char_traits<char>, test_allocator<char> > >();
-#if TEST_STD_VER >= 11
-    test2<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
-    test2<std::basic_string<char, std::char_traits<char>, explicit_allocator<char> > >();
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
 #endif
 
   return 0;

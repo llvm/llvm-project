@@ -29,8 +29,7 @@ test(S s)
     assert(s.capacity() >= s.size());
 }
 
-int main(int, char**)
-{
+bool test() {
     {
     typedef std::string S;
     S s;
@@ -58,6 +57,16 @@ int main(int, char**)
     s.erase(50);
     test(s);
     }
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
 #endif
 
   return 0;
