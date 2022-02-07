@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine < %s | FileCheck %s
+; RUN: opt -S -passes=instcombine < %s | FileCheck %s
 @b = internal global [1 x i32] zeroinitializer, align 4
 @c = internal global i32 0, align 4
 

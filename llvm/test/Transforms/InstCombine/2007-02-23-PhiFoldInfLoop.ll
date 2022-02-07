@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep ret
+; RUN: opt < %s -passes=instcombine -S | grep ret
 ; PR1217
 
 target datalayout = "e-p:32:32"

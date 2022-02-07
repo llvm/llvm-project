@@ -1,4 +1,4 @@
-; RUN: opt -mtriple msp430 -instcombine -S < %s | FileCheck %s
+; RUN: opt -mtriple msp430 -passes=instcombine -S < %s | FileCheck %s
 
 ; Test case was copied from pow_fp_int.ll but adjusted for 16-bit int.
 ; Assuming that we can't generate test checks for the same reason (PR42740).

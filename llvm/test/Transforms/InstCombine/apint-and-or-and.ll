@@ -11,7 +11,7 @@
 ; 
 ; This tests arbitrary precision integers.
 
-; RUN: opt < %s -instcombine -S | not grep "or "
+; RUN: opt < %s -passes=instcombine -S | not grep "or "
 ; END.
 
 define i17 @test1(i17 %X, i17 %Y) {

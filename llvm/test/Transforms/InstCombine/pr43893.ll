@@ -1,5 +1,5 @@
 ; Check for setting dbg.value as undef which depends on trivially dead instructions.
-; RUN: opt -instcombine -S -o - %s | FileCheck %s
+; RUN: opt -passes=instcombine -S -o - %s | FileCheck %s
 
 @a = common dso_local global i8 0, align 1, !dbg !0
 @b = common dso_local global i8 0, align 1, !dbg !6

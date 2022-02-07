@@ -1,6 +1,6 @@
 ; Verify that we can create unaligned loads and stores from VSX intrinsics.
 
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 target triple = "powerpc64-unknown-linux-gnu"
 

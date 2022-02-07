@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare void @bar({i32, i32} %a)
 declare i32 @baz(i32 %a)
