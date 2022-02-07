@@ -623,6 +623,7 @@ function(cxx_add_warning_flags target)
     endif()
   elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
     target_add_compile_flags_if_supported(${target} PRIVATE
+      -Wno-attributes
       -Wno-literal-suffix
       -Wno-c++14-compat
       -Wno-noexcept-type
