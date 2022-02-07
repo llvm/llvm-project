@@ -33,12 +33,14 @@ class OutputBuffer {
   size_t CurrentPosition = 0;
   size_t BufferCapacity = 0;
 
-  // Ensure there is at least n more positions in buffer.
+  // Ensure there are at least N more positions in the buffer.
   void grow(size_t N) {
-    if (N + CurrentPosition >= BufferCapacity) {
-      BufferCapacity *= 2;
-      if (BufferCapacity < N + CurrentPosition)
-        BufferCapacity = N + CurrentPosition;
+    size_t Need = N + CurrentPosition;
+    if (Need > BufferCapacity) {
+      // Avoid many reallocations during startup, with a bit of hysteresis.
+      constexpr size_t MinInitAlloc = 1024;
+      Need = std::max(Need, MinInitAlloc);
+      BufferCapacity = std::max(Need, BufferCapacity * 2);
       Buffer = static_cast<char *>(std::realloc(Buffer, BufferCapacity));
       if (Buffer == nullptr)
         std::terminate();
