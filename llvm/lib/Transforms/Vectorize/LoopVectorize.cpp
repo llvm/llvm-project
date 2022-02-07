@@ -307,11 +307,6 @@ static cl::opt<bool> InterleaveSmallLoopScalarReduction(
     cl::desc("Enable interleaving for loops with small iteration counts that "
              "contain scalar reductions to expose ILP."));
 
-/// The number of stores in a loop that are allowed to need predication.
-static cl::opt<unsigned> NumberOfStoresToPredicate(
-    "vectorize-num-stores-pred", cl::init(1), cl::Hidden,
-    cl::desc("Max number of stores to be predicated behind an if."));
-
 static cl::opt<bool> EnableIndVarRegisterHeur(
     "enable-ind-var-reg-heur", cl::init(true), cl::Hidden,
     cl::desc("Count the induction variable only once when interleaving"));
@@ -1796,10 +1791,6 @@ private:
   /// Returns whether the instruction is a load or store and will be a emitted
   /// as a vector operation.
   bool isConsecutiveLoadOrStore(Instruction *I);
-
-  /// Returns true if an artificially high cost for emulated masked memrefs
-  /// should be used.
-  bool useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF);
 
   /// Map of scalar integer values to the smallest bitwidth they can be legally
   /// represented as. The vector equivalents of these values should be truncated
@@ -6437,22 +6428,6 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<ElementCount> VFs) {
   return RUs;
 }
 
-bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(Instruction *I,
-                                                           ElementCount VF) {
-  // TODO: Cost model for emulated masked load/store is completely
-  // broken. This hack guides the cost model to use an artificially
-  // high enough value to practically disable vectorization with such
-  // operations, except where previously deployed legality hack allowed
-  // using very low cost values. This is to avoid regressions coming simply
-  // from moving "masked load/store" check from legality to cost model.
-  // Masked Load/Gather emulation was previously never allowed.
-  // Limited number of Masked Store/Scatter emulation was allowed.
-  assert(isPredicatedInst(I, VF) && "Expecting a scalar emulated instruction");
-  return isa<LoadInst>(I) ||
-         (isa<StoreInst>(I) &&
-          NumPredStores > NumberOfStoresToPredicate);
-}
-
 void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
   // If we aren't vectorizing the loop, or if we've already collected the
   // instructions to scalarize, there's nothing to do. Collection may already
@@ -6478,9 +6453,7 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
         ScalarCostsTy ScalarCosts;
         // Do not apply discount if scalable, because that would lead to
         // invalid scalarization costs.
-        // Do not apply discount logic if hacked cost is needed
-        // for emulated masked memrefs.
-        if (!VF.isScalable() && !useEmulatedMaskMemRefHack(&I, VF) &&
+        if (!VF.isScalable() &&
             computePredInstDiscount(&I, ScalarCosts, VF) >= 0)
           ScalarCostsVF.insert(ScalarCosts.begin(), ScalarCosts.end());
         // Remember that BB will remain after vectorization.
@@ -6736,11 +6709,6 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
         Vec_i1Ty, APInt::getAllOnes(VF.getKnownMinValue()),
         /*Insert=*/false, /*Extract=*/true);
     Cost += TTI.getCFInstrCost(Instruction::Br, TTI::TCK_RecipThroughput);
-
-    if (useEmulatedMaskMemRefHack(I, VF))
-      // Artificially setting to a high enough value to practically disable
-      // vectorization with such operations.
-      Cost = 3000000;
   }
 
   return Cost;
