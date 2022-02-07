@@ -222,6 +222,10 @@ function(add_entrypoint_object target_name)
   )
 
   if(LLVM_LIBC_ENABLE_LINTING)
+    if(NOT LLVM_LIBC_CLANG_TIDY)
+      message(FATAL_ERROR "Something is wrong!  LLVM_LIBC_ENABLE_LINTING is "
+              "ON but LLVM_LIBC_CLANG_TIDY is not set.")
+    endif()
 
     # We only want a second invocation of clang-tidy to run
     # restrict-system-libc-headers if the compiler-resource-dir was set in
@@ -231,7 +235,7 @@ function(add_entrypoint_object target_name)
       # We run restrict-system-libc-headers with --system-headers to prevent
       # transitive inclusion through compler provided headers.
       set(restrict_system_headers_check_invocation
-        COMMAND $<TARGET_FILE:clang-tidy> --system-headers
+        COMMAND ${LLVM_LIBC_CLANG_TIDY} --system-headers
         --checks="-*,llvmlibc-restrict-system-libc-headers"
         # We explicitly set the resource dir here to match the
         # resource dir of the host compiler.
@@ -255,7 +259,7 @@ function(add_entrypoint_object target_name)
       #     X warnings generated.
       # Until this is fixed upstream, we use -fno-caret-diagnostics to surpress
       # these.
-      COMMAND $<TARGET_FILE:clang-tidy>
+      COMMAND ${LLVM_LIBC_CLANG_TIDY}
               "--extra-arg=-fno-caret-diagnostics" --quiet
               # Path to directory containing compile_commands.json
               -p ${PROJECT_BINARY_DIR}
@@ -274,11 +278,6 @@ function(add_entrypoint_object target_name)
       DEPENDS clang-tidy ${internal_target_name} ${ADD_ENTRYPOINT_OBJ_SRCS}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
-
-    add_custom_target(${fq_target_name}.__lint__
-      DEPENDS ${lint_timestamp})
-    add_dependencies(lint-libc ${fq_target_name}.__lint__)
-    add_dependencies(${fq_target_name} ${fq_target_name}.__lint__)
   endif()
 
 endfunction(add_entrypoint_object)
