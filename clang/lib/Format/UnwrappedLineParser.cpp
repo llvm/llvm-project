@@ -3551,6 +3551,8 @@ void UnwrappedLineParser::distributeComments(
 
 void UnwrappedLineParser::readToken(int LevelDifference) {
   SmallVector<FormatToken *, 1> Comments;
+  bool PreviousWasComment = false;
+  bool FirstNonCommentOnLine = false;
   do {
     FormatTok = Tokens->getNextToken();
     assert(FormatTok);
@@ -3567,8 +3569,26 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       FormatTok->MustBreakBefore = true;
     }
 
+    auto IsFirstNonCommentOnLine = [](bool FirstNonCommentOnLine,
+                                      const FormatToken &Tok,
+                                      bool PreviousWasComment) {
+      auto IsFirstOnLine = [](const FormatToken &Tok) {
+        return Tok.HasUnescapedNewline || Tok.IsFirst;
+      };
+
+      // Consider preprocessor directives preceded by block comments as first
+      // on line.
+      if (PreviousWasComment)
+        return FirstNonCommentOnLine || IsFirstOnLine(Tok);
+      return IsFirstOnLine(Tok);
+    };
+
+    FirstNonCommentOnLine = IsFirstNonCommentOnLine(
+        FirstNonCommentOnLine, *FormatTok, PreviousWasComment);
+    PreviousWasComment = FormatTok->Tok.is(tok::comment);
+
     while (!Line->InPPDirective && FormatTok->Tok.is(tok::hash) &&
-           (FormatTok->HasUnescapedNewline || FormatTok->IsFirst)) {
+           FirstNonCommentOnLine) {
       distributeComments(Comments, FormatTok);
       Comments.clear();
       // If there is an unfinished unwrapped line, we flush the preprocessor
@@ -3587,6 +3607,9 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
         Line->Level += PPBranchLevel;
       flushComments(isOnNewLine(*FormatTok));
       parsePPDirective();
+      PreviousWasComment = FormatTok->Tok.is(tok::comment);
+      FirstNonCommentOnLine = IsFirstNonCommentOnLine(
+          FirstNonCommentOnLine, *FormatTok, PreviousWasComment);
     }
 
     if (!PPStack.empty() && (PPStack.back().Kind == PP_Unreachable) &&
