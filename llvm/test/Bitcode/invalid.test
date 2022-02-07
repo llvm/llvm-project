@@ -261,3 +261,8 @@ RUN: not llvm-dis -disable-output %p/Inputs/invalid-attribute-group-entry.bc 2>&
 RUN:   FileCheck --check-prefix=INVALID-ATTRIBUTE-GROUP-ENTRY %s
 
 INVALID-ATTRIBUTE-GROUP-ENTRY: Invalid attribute group entry
+
+RUN: not llvm-dis -disable-output %p/Inputs/unterminated-blob.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=UNTERMINATED-BLOB %s
+
+UNTERMINATED-BLOB: Blob ends too soon
