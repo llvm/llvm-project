@@ -113,7 +113,8 @@ public:
   // whether it is required to be exported into .dynsym. This is set when any of
   // the following conditions hold:
   //
-  // - If there is an interposable symbol from a DSO.
+  // - If there is an interposable symbol from a DSO. Note: We also do this for
+  //   STV_PROTECTED symbols which can't be interposed (to match BFD behavior).
   // - If -shared or --export-dynamic is specified, any symbol in an object
   //   file/bitcode sets this property, unless suppressed by LTO
   //   canBeOmittedFromSymbolTable().
