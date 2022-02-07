@@ -62,6 +62,36 @@ def OpAsmOpInterface : OpInterface<"OpAsmOpInterface"> {
       ),
       "", "return;"
     >,
+    InterfaceMethod<[{
+        Get the name to use for a given block inside a region attached to this
+        operation.
+
+        For example if this operation has multiple blocks:
+
+        ```mlir
+          some.op() ({
+            ^bb0:
+              ...
+            ^bb1:
+              ...
+          })
+        ```
+
+        the method will be invoked on each of the blocks allowing the op to
+        print:
+
+        ```mlir
+          some.op() ({
+            ^custom_foo_name:
+              ...
+            ^custom_bar_name:
+              ...
+          })
+        ```
+      }],
+      "void", "getAsmBlockNames",
+      (ins "::mlir::OpAsmSetBlockNameFn":$setNameFn), "", ";"
+    >,
     StaticInterfaceMethod<[{
       Return the default dialect used when printing/parsing operations in
       regions nested under this operation. This allows for eliding the dialect

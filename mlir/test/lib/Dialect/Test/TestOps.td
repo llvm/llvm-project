@@ -660,6 +660,24 @@ def DefaultDialectOp : TEST_Op<"default_dialect", [OpAsmOpInterface]> {
   let assemblyFormat = "regions attr-dict-with-keyword";
 }
 
+// This is used to test the OpAsmOpInterface::getAsmBlockName() feature:
+// blocks nested in a region under this op will have a name defined by the
+// interface.
+def AsmBlockNameOp : TEST_Op<"block_names", [OpAsmOpInterface]> {
+ let regions = (region AnyRegion:$body);
+  let extraClassDeclaration = [{
+    void getAsmBlockNames(mlir::OpAsmSetBlockNameFn setNameFn) {
+      std::string name;
+      int count = 0;
+      for (::mlir::Block &block : getRegion().getBlocks()) {
+        name = "foo" + std::to_string(count++);
+        setNameFn(&block, name);
+      }
+    }
+  }];
+  let assemblyFormat = "regions attr-dict-with-keyword";
+}
+
 // This operation requires its return type to have the trait 'TestTypeTrait'.
 def ResultTypeWithTraitOp : TEST_Op<"result_type_with_trait", []> {
   let results = (outs AnyType);
