@@ -190,7 +190,7 @@ E: listmail@philipreames.com
 D: IndVar Simplify, Scalar Evolution
 
 N: Paul Robinson
-E: paul_robinson@playstation.sony.com
+E: paul.robinson@sony.com
 D: Sony PlayStation®4 support
 
 N: Chad Rosier
