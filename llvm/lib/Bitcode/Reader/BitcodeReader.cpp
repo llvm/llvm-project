@@ -2107,10 +2107,14 @@ Error BitcodeReader::parseGlobalValueSymbolTable() {
     if (!MaybeRecord)
       return MaybeRecord.takeError();
     switch (MaybeRecord.get()) {
-    case bitc::VST_CODE_FNENTRY: // [valueid, offset]
+    case bitc::VST_CODE_FNENTRY: { // [valueid, offset]
+      unsigned ValueID = Record[0];
+      if (ValueID >= ValueList.size() || !ValueList[ValueID])
+        return error("Invalid value reference in symbol table");
       setDeferredFunctionInfo(FuncBitcodeOffsetDelta,
-                              cast<Function>(ValueList[Record[0]]), Record);
+                              cast<Function>(ValueList[ValueID]), Record);
       break;
+    }
     }
   }
 }
