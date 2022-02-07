@@ -292,6 +292,16 @@ public:
     }
   }
 
+  /// Convert a ascii scalar literal CHARACTER to IR. (specialization)
+  ExtValue
+  genAsciiScalarLit(const Fortran::evaluate::Scalar<Fortran::evaluate::Type<
+                        Fortran::common::TypeCategory::Character, 1>> &value,
+                    int64_t len) {
+    assert(value.size() == static_cast<std::uint64_t>(len) &&
+           "value.size() doesn't match with len");
+    return fir::factory::createStringLiteral(builder, getLoc(), value);
+  }
+
   template <Fortran::common::TypeCategory TC, int KIND>
   ExtValue
   genval(const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>>
@@ -302,7 +312,9 @@ public:
         opt = con.GetScalarValue();
     assert(opt.has_value() && "constant has no value");
     if constexpr (TC == Fortran::common::TypeCategory::Character) {
-      TODO(getLoc(), "genval char constant");
+      if constexpr (KIND == 1)
+        return genAsciiScalarLit(opt.value(), con.LEN());
+      TODO(getLoc(), "genval for Character with KIND != 1");
     } else {
       return genScalarLit<TC, KIND>(opt.value());
     }
