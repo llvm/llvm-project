@@ -45588,12 +45588,11 @@ static SDValue combineShiftRightArithmetic(SDNode *N, SelectionDAG &DAG,
     SarConst = SarConst - (Size - ShiftSize);
     if (SarConst == 0)
       return NN;
-    else if (SarConst.isNegative())
+    if (SarConst.isNegative())
       return DAG.getNode(ISD::SHL, DL, VT, NN,
                          DAG.getConstant(-SarConst, DL, CVT));
-    else
-      return DAG.getNode(ISD::SRA, DL, VT, NN,
-                         DAG.getConstant(SarConst, DL, CVT));
+    return DAG.getNode(ISD::SRA, DL, VT, NN,
+                       DAG.getConstant(SarConst, DL, CVT));
   }
   return SDValue();
 }
