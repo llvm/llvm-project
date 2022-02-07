@@ -525,7 +525,7 @@ public:
   /// Set the debug location in the builder \p Ptr using the debug location in
   /// \p V. If \p Ptr is None then it uses the class member's Builder.
   void setDebugLocFromInst(const Value *V,
-                           Optional<IRBuilder<> *> CustomBuilder = None);
+                           Optional<IRBuilderBase *> CustomBuilder = None);
 
   /// Fix the non-induction PHIs in the OrigPHIsToFix vector.
   void fixNonInductionPHIs(VPTransformState &State);
@@ -658,8 +658,8 @@ protected:
   /// For pointer induction, returns StartValue[Index * StepValue].
   /// FIXME: The newly created binary instructions should contain nsw/nuw
   /// flags, which can be found from the original scalar operations.
-  Value *emitTransformedIndex(IRBuilder<> &B, Value *Index, ScalarEvolution *SE,
-                              const DataLayout &DL,
+  Value *emitTransformedIndex(IRBuilderBase &B, Value *Index,
+                              ScalarEvolution *SE, const DataLayout &DL,
                               const InductionDescriptor &ID,
                               BasicBlock *VectorHeader) const;
 
@@ -989,8 +989,8 @@ static Instruction *getDebugLocFromInstOrOperands(Instruction *I) {
 }
 
 void InnerLoopVectorizer::setDebugLocFromInst(
-    const Value *V, Optional<IRBuilder<> *> CustomBuilder) {
-  IRBuilder<> *B = (CustomBuilder == None) ? &Builder : *CustomBuilder;
+    const Value *V, Optional<IRBuilderBase *> CustomBuilder) {
+  IRBuilderBase *B = (CustomBuilder == None) ? &Builder : *CustomBuilder;
   if (const Instruction *Inst = dyn_cast_or_null<Instruction>(V)) {
     const DILocation *DIL = Inst->getDebugLoc();
 
@@ -1054,7 +1054,7 @@ static OptimizationRemarkAnalysis createLVAnalysis(const char *PassName,
 namespace llvm {
 
 /// Return a value for Step multiplied by VF.
-Value *createStepForVF(IRBuilder<> &B, Type *Ty, ElementCount VF,
+Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
                        int64_t Step) {
   assert(Ty->isIntegerTy() && "Expected an integer step");
   Constant *StepVal = ConstantInt::get(Ty, Step * VF.getKnownMinValue());
@@ -1062,12 +1062,13 @@ Value *createStepForVF(IRBuilder<> &B, Type *Ty, ElementCount VF,
 }
 
 /// Return the runtime value for VF.
-Value *getRuntimeVF(IRBuilder<> &B, Type *Ty, ElementCount VF) {
+Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF) {
   Constant *EC = ConstantInt::get(Ty, VF.getKnownMinValue());
   return VF.isScalable() ? B.CreateVScale(EC) : EC;
 }
 
-static Value *getRuntimeVFAsFloat(IRBuilder<> &B, Type *FTy, ElementCount VF) {
+static Value *getRuntimeVFAsFloat(IRBuilderBase &B, Type *FTy,
+                                  ElementCount VF) {
   assert(FTy->isFloatingPointTy() && "Expected floating point type!");
   Type *IntTy = IntegerType::get(FTy->getContext(), FTy->getScalarSizeInBits());
   Value *RuntimeVF = getRuntimeVF(B, IntTy, VF);
@@ -2337,7 +2338,7 @@ Value *InnerLoopVectorizer::getBroadcastInstrs(Value *V) {
 /// \p Opcode is relevant for FP induction variable.
 static Value *getStepVector(Value *Val, Value *StartIdx, Value *Step,
                             Instruction::BinaryOps BinOp, ElementCount VF,
-                            IRBuilder<> &Builder) {
+                            IRBuilderBase &Builder) {
   assert(VF.isVector() && "only vector VFs are supported");
 
   // Create and check the types.
@@ -2388,7 +2389,7 @@ static Value *getStepVector(Value *Val, Value *StartIdx, Value *Step,
 void InnerLoopVectorizer::createVectorIntOrFpInductionPHI(
     const InductionDescriptor &II, Value *Step, Value *Start,
     Instruction *EntryVal, VPValue *Def, VPTransformState &State) {
-  IRBuilder<> &Builder = State.Builder;
+  IRBuilderBase &Builder = State.Builder;
   assert((isa<PHINode>(EntryVal) || isa<TruncInst>(EntryVal)) &&
          "Expected either an induction phi-node or a truncate of it!");
 
@@ -2474,7 +2475,7 @@ void InnerLoopVectorizer::widenIntOrFpInduction(
   Value *Start = Def->getStartValue()->getLiveInIRValue();
   const InductionDescriptor &ID = Def->getInductionDescriptor();
   TruncInst *Trunc = Def->getTruncInst();
-  IRBuilder<> &Builder = State.Builder;
+  IRBuilderBase &Builder = State.Builder;
   assert(IV->getType() == ID.getStartValue()->getType() && "Types must match");
   assert(!State.VF.isZero() && "VF must be non-zero");
 
@@ -2577,7 +2578,7 @@ void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
                                            const InductionDescriptor &ID,
                                            VPValue *Def,
                                            VPTransformState &State) {
-  IRBuilder<> &Builder = State.Builder;
+  IRBuilderBase &Builder = State.Builder;
   // We shouldn't have to build scalar steps if we aren't vectorizing.
   assert(State.VF.isVector() && "VF should be greater than one");
   // Get the value type and ensure it and the step have the same integer type.
@@ -3217,7 +3218,7 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L,
 }
 
 Value *InnerLoopVectorizer::emitTransformedIndex(
-    IRBuilder<> &B, Value *Index, ScalarEvolution *SE, const DataLayout &DL,
+    IRBuilderBase &B, Value *Index, ScalarEvolution *SE, const DataLayout &DL,
     const InductionDescriptor &ID, BasicBlock *VectorHeader) const {
 
   SCEVExpander Exp(*SE, DL, "induction");
