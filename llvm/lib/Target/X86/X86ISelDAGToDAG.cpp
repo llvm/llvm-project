@@ -464,8 +464,13 @@ namespace {
       }
 
       // Copy flags to the EFLAGS register and glue it to next node.
-      SDValue EFLAGS = CurDAG->getCopyToReg(
-          CurDAG->getEntryNode(), dl, X86::EFLAGS, N->getOperand(2), SDValue());
+      unsigned Opcode = N->getOpcode();
+      assert(Opcode == X86ISD::SBB || Opcode == X86ISD::SETCC_CARRY &&
+             "Unexpected opcode for SBB materialization");
+      unsigned FlagOpIndex = Opcode == X86ISD::SBB ? 2 : 1;
+      SDValue EFLAGS =
+          CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, X86::EFLAGS,
+                               N->getOperand(FlagOpIndex), SDValue());
 
       // Create a 64-bit instruction if the result is 64-bits otherwise use the
       // 32-bit version.
@@ -5801,21 +5806,28 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     break;
 
   case X86ISD::SETCC_CARRY: {
-    // We have to do this manually because tblgen will put the eflags copy in
-    // the wrong place if we use an extract_subreg in the pattern.
     MVT VT = Node->getSimpleValueType(0);
+    SDValue Result;
+    if (Subtarget->hasSBBDepBreaking()) {
+      // We have to do this manually because tblgen will put the eflags copy in
+      // the wrong place if we use an extract_subreg in the pattern.
+      // Copy flags to the EFLAGS register and glue it to next node.
+      SDValue EFLAGS =
+          CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, X86::EFLAGS,
+                               Node->getOperand(1), SDValue());
 
-    // Copy flags to the EFLAGS register and glue it to next node.
-    SDValue EFLAGS =
-        CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, X86::EFLAGS,
-                             Node->getOperand(1), SDValue());
-
-    // Create a 64-bit instruction if the result is 64-bits otherwise use the
-    // 32-bit version.
-    unsigned Opc = VT == MVT::i64 ? X86::SETB_C64r : X86::SETB_C32r;
-    MVT SetVT = VT == MVT::i64 ? MVT::i64 : MVT::i32;
-    SDValue Result = SDValue(
-        CurDAG->getMachineNode(Opc, dl, SetVT, EFLAGS, EFLAGS.getValue(1)), 0);
+      // Create a 64-bit instruction if the result is 64-bits otherwise use the
+      // 32-bit version.
+      unsigned Opc = VT == MVT::i64 ? X86::SETB_C64r : X86::SETB_C32r;
+      MVT SetVT = VT == MVT::i64 ? MVT::i64 : MVT::i32;
+      Result = SDValue(
+          CurDAG->getMachineNode(Opc, dl, SetVT, EFLAGS, EFLAGS.getValue(1)),
+          0);
+    } else {
+      // The target does not recognize sbb with the same reg operand as a
+      // no-source idiom, so we explicitly zero the input values.
+      Result = getSBBZero(Node);
+    }
 
     // For less than 32-bits we need to extract from the 32-bit node.
     if (VT == MVT::i8 || VT == MVT::i16) {
