@@ -1215,6 +1215,7 @@ cc_library(
     hdrs = glob(["include/mlir/Target/Cpp/*.h"]),
     deps = [
         ":ArithmeticDialect",
+        ":ControlFlowOps",
         ":EmitC",
         ":IR",
         ":MathDialect",
@@ -2166,6 +2167,7 @@ cc_library(
         ":ArithmeticDialect",
         ":Async",
         ":AsyncPassIncGen",
+        ":ControlFlowOps",
         ":IR",
         ":Pass",
         ":SCFDialect",
@@ -2173,7 +2175,7 @@ cc_library(
         ":StandardOps",
         ":Support",
         ":TransformUtils",
-        ":Transforms",
+       ":Transforms",
         ":TransformsPassIncGen",
         "//llvm:Core",
         "//llvm:Support",
@@ -2317,6 +2319,8 @@ cc_library(
         ":BufferizationToMemRef",
         ":ComplexToLLVM",
         ":ComplexToStandard",
+        ":ControlFlowToLLVM",
+        ":ControlFlowToSPIRV",
         ":ConversionPassIncGen",
         ":GPUToGPURuntimeTransforms",
         ":GPUToNVVMTransforms",
@@ -2450,6 +2454,7 @@ cc_library(
         ":ArithmeticDialect",
         ":BufferizationDialect",
         ":ControlFlowInterfaces",
+        ":ControlFlowOps",
         ":IR",
         ":LoopLikeInterface",
         ":Pass",
@@ -2668,6 +2673,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithmeticDialect",
+        ":ControlFlowOps",
         ":ConversionPassIncGen",
         ":IR",
         ":MemRefDialect",
@@ -2720,6 +2726,83 @@ cc_library(
     ],
 )
 
+td_library(
+    name = "ControlFlowOpsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/ControlFlow/IR/ControlFlowOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":CallInterfacesTdFiles",
+        ":CastInterfacesTdFiles",
+        ":ControlFlowInterfacesTdFiles",
+        ":InferTypeOpInterfaceTdFiles",
+        ":OpBaseTdFiles",
+        ":SideEffectInterfacesTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "ControlFlowOpsIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/ControlFlow/IR/ControlFlowOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/ControlFlow/IR/ControlFlowOps.cpp.inc",
+        ),
+        (
+            ["-gen-dialect-decls"],
+            "include/mlir/Dialect/ControlFlow/IR/ControlFlowOpsDialect.h.inc",
+        ),
+        (
+            ["-gen-dialect-defs"],
+            "include/mlir/Dialect/ControlFlow/IR/ControlFlowOpsDialect.cpp.inc",
+        ),
+        (
+            ["-gen-enum-decls"],
+            "include/mlir/Dialect/ControlFlow/IR/ControlFlowOpsEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir/Dialect/ControlFlow/IR/ControlFlowOpsEnums.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/ControlFlow/IR/ControlFlowOps.td",
+    deps = [":ControlFlowOpsTdFiles"],
+)
+
+cc_library(
+    name = "ControlFlowOps",
+    srcs = glob(
+        [
+            "lib/Dialect/ControlFlow/IR/*.cpp",
+            "lib/Dialect/ControlFlow/IR/*.h",
+        ],
+    ),
+    hdrs = glob([
+        "include/mlir/Dialect/ControlFlow/IR/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ArithmeticDialect",
+        ":CallOpInterfaces",
+        ":CastOpInterfaces",
+        ":CommonFolders",
+        ":ControlFlowInterfaces",
+        ":ControlFlowOpsIncGen",
+        ":IR",
+        ":InferTypeOpInterface",
+        ":SideEffectInterfaces",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
 cc_library(
     name = "StandardOps",
     srcs = glob(
@@ -2741,6 +2824,7 @@ cc_library(
         ":CastOpInterfaces",
         ":CommonFolders",
         ":ControlFlowInterfaces",
+        ":ControlFlowOps",
         ":IR",
         ":InferTypeOpInterface",
         ":SideEffectInterfaces",
@@ -3263,6 +3347,7 @@ cc_library(
     deps = [
         ":ArithmeticDialect",
         ":Async",
+        ":ControlFlowOps",
         ":DLTIDialect",
         ":AffineUtils",
         ":GPUDialect",
@@ -3360,6 +3445,7 @@ cc_library(
     deps = [
         ":ArithmeticDialect",
         ":ArithmeticToLLVM",
+        ":ControlFlowToLLVM",
         ":ConversionPassIncGen",
         ":GPUCommonTransforms",
         ":GPUDialect",
@@ -3507,6 +3593,7 @@ cc_library(
         ":Async",
         ":AsyncToLLVM",
         ":ConversionPassIncGen",
+        ":ControlFlowToLLVM",
         ":GPUDialect",
         ":GPUTransforms",
         ":IR",
@@ -4274,6 +4361,7 @@ cc_library(
     ],
     deps = [
         ":ArithmeticToSPIRV",
+        ":ControlFlowToSPIRV",
         ":ConversionPassIncGen",
         ":IR",
         ":MathToSPIRV",
@@ -4927,15 +5015,16 @@ cc_library(
 )
 
 cc_library(
-    name = "SCFToStandard",
+    name = "SCFToControlFlow",
     srcs = [
-        "lib/Conversion/SCFToStandard/SCFToStandard.cpp",
+        "lib/Conversion/SCFToControlFlow/SCFToControlFlow.cpp",
         ":ConversionPassDetail",
     ],
-    hdrs = ["include/mlir/Conversion/SCFToStandard/SCFToStandard.h"],
+    hdrs = ["include/mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"],
     includes = ["include"],
     deps = [
         ":ArithmeticDialect",
+        ":ControlFlowOps",
         ":ConversionPassIncGen",
         ":IR",
         ":LLVMDialect",
@@ -4950,7 +5039,12 @@ cc_library(
 
 alias(
     name = "CFGTransforms",
-    actual = "SCFToStandard",
+    actual = "SCFToControlFlow",
+)
+
+alias(
+    name = "SCFToStandard",
+    actual = "SCFToControlFlow",
 )
 
 cc_library(
@@ -4996,6 +5090,7 @@ cc_library(
     deps = [
         ":Analysis",
         ":ArithmeticToLLVM",
+        ":ControlFlowToLLVM",
         ":ConversionPassIncGen",
         ":DataLayoutInterfaces",
         ":DialectUtils",
@@ -5017,6 +5112,58 @@ cc_library(
 )
 
 cc_library(
+    name = "ControlFlowToLLVM",
+    srcs = [
+        "lib/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.cpp",
+        ":ConversionPassDetail",
+    ],
+    hdrs = [
+        "include/mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":Analysis",
+        ":ArithmeticToLLVM",
+        ":ControlFlowOps",
+        ":ConversionPassIncGen",
+        ":DataLayoutInterfaces",
+        ":DialectUtils",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":MathDialect",
+        ":MemRefDialect",
+        ":Parser",
+        ":Pass",
+        ":Support",
+        ":TransformUtils",
+        ":Transforms",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "ControlFlowToSPIRV",
+    srcs = glob(["lib/Conversion/ControlFlowToSPIRV/*.cpp"]) + [":ConversionPassDetail"],
+    hdrs = glob(["include/mlir/Conversion/ControlFlowToSPIRV/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ControlFlowOps",
+        ":ConversionPassIncGen",
+        ":IR",
+        ":Pass",
+        ":SPIRVCommonConversion",
+        ":SPIRVConversion",
+        ":SPIRVDialect",
+        ":SPIRVUtils",
+        ":Support",
+        ":Transforms",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "MemRefToLLVM",
     srcs = glob(["lib/Conversion/MemRefToLLVM/*.cpp"]) + [":ConversionPassDetail"],
     hdrs = glob(["include/mlir/Conversion/MemRefToLLVM/*.h"]),
@@ -5032,6 +5179,7 @@ cc_library(
         ":Pass",
         ":Support",
         ":Transforms",
+        "//llvm:Support",
     ],
 )
 
@@ -5722,6 +5870,7 @@ cc_library(
         ":BufferizationTransforms",
         ":ComplexDialect",
         ":ComplexToLLVM",
+        ":ControlFlowOps",
         ":ConversionPasses",
         ":DLTIDialect",
         ":EmitC",
@@ -6424,6 +6573,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithmeticToLLVM",
+        ":ControlFlowToLLVM",
         ":ConversionPassIncGen",
         ":IR",
         ":LLVMCommonConversion",
@@ -6927,6 +7077,7 @@ cc_library(
         ":BufferizationDialect",
         ":BufferizationTransforms",
         ":ComplexDialect",
+        ":ControlFlowOps",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
@@ -7647,6 +7798,7 @@ cc_library(
     deps = [
         ":ArithmeticDialect",
         ":IR",
+        "//llvm:Support",
     ],
 )
 
