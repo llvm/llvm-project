@@ -222,6 +222,8 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
     if (!MaybeNumElts)
       return MaybeNumElts.takeError();
     uint32_t NumElts = MaybeNumElts.get();
+    if (!isSizePlausible(NumElts))
+      return error("Size is not plausible");
     Vals.reserve(Vals.size() + NumElts);
 
     for (unsigned i = 0; i != NumElts; ++i)
@@ -275,6 +277,8 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
       if (!MaybeNumElts)
         return MaybeNumElts.takeError();
       uint32_t NumElts = MaybeNumElts.get();
+      if (!isSizePlausible(NumElts))
+        return error("Size is not plausible");
       Vals.reserve(Vals.size() + NumElts);
 
       // Get the element encoding.
