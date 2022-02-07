@@ -35,7 +35,7 @@ to gradually fix their tests while updating to new faster algorithms.
 Design
 ======
 
-* Introduce new macro `_LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY` which should
+* Introduce new macro ``_LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY`` which should
   be a part of the libcxx config.
 * This macro randomizes the unspecified behavior of algorithms and containers.
   For example, for sorting algorithm the input range is shuffled and then
@@ -43,14 +43,14 @@ Design
 * This macro is off by default because users should enable it only for testing
   purposes and/or migrations if they happen to libcxx.
 * This feature is only available for C++11 and further because of
-  `std::shuffle` availability.
+  ``std::shuffle`` availability.
 * We may use `ASLR <https://en.wikipedia.org/wiki/Address_space_layout_randomization>`_ or
-  static `std::random_device` for seeding the random number generator. This
+  static ``std::random_device`` for seeding the random number generator. This
   guarantees the same stability guarantee within a run but not through different
   runs, for example, for tests become flaky and eventually be seen as broken.
   For platforms which do not support ASLR, the seed is fixed during build.
 * The users can fix the seed of the random number generator by providing
-  `_LIBCPP_RANDOMIZE_UNSPECIFIED_STABILITY_SEED=seed` definition.
+  ``_LIBCPP_RANDOMIZE_UNSPECIFIED_STABILITY_SEED=seed`` definition.
 
 This comes with some side effects if any of the flags is on:
 
@@ -77,10 +77,10 @@ results, for example, for caching.
 Currently supported randomization
 ---------------------------------
 
-* `std::sort`, there is no guarantee on the order of equal elements
-* `std::partial_sort`, there is no guarantee on the order of equal elements and
+* ``std::sort``, there is no guarantee on the order of equal elements
+* ``std::partial_sort``, there is no guarantee on the order of equal elements and
    on the order of the remaining part
-* `std::nth_element`, there is no guarantee on the order from both sides of the
+* ``std::nth_element``, there is no guarantee on the order from both sides of the
    partition
 
 Patches welcome.
