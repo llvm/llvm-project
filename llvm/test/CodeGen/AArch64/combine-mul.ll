@@ -66,7 +66,7 @@ define <4 x i32> @combine_mul_self_demandedbits_vector(<4 x i32> %x) {
 define i8 @one_demanded_bit(i8 %x) {
 ; CHECK-LABEL: one_demanded_bit:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg w8, w0, lsl #6
+; CHECK-NEXT:    lsl w8, w0, #6
 ; CHECK-NEXT:    orr w0, w8, #0xffffffbf
 ; CHECK-NEXT:    ret
   %m = mul i8 %x, 192  ; 0b1100_0000
@@ -77,16 +77,9 @@ define i8 @one_demanded_bit(i8 %x) {
 define <2 x i64> @one_demanded_bit_splat(<2 x i64> %x) {
 ; CHECK-LABEL: one_demanded_bit_splat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    mov x9, v0.d[1]
-; CHECK-NEXT:    add x8, x8, x8, lsl #2
-; CHECK-NEXT:    lsl x8, x8, #5
-; CHECK-NEXT:    add x9, x9, x9, lsl #2
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    lsl x8, x9, #5
-; CHECK-NEXT:    mov w9, #32
-; CHECK-NEXT:    mov v0.d[1], x8
-; CHECK-NEXT:    dup v1.2d, x9
+; CHECK-NEXT:    mov w8, #32
+; CHECK-NEXT:    shl v0.2d, v0.2d, #5
+; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %m = mul <2 x i64> %x, <i64 160, i64 160> ; 0b1010_0000
@@ -97,8 +90,7 @@ define <2 x i64> @one_demanded_bit_splat(<2 x i64> %x) {
 define i32 @one_demanded_low_bit(i32 %x) {
 ; CHECK-LABEL: one_demanded_low_bit:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    and w0, w0, #0x1
 ; CHECK-NEXT:    ret
   %m = mul i32 %x, -63 ; any odd number will do
   %r = and i32 %m, 1
