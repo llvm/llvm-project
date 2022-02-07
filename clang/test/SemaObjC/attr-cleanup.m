@@ -5,7 +5,7 @@
 
 void c1(id *a);
 
-void t1()
+void t1(void)
 {
   NSString *s __attribute((cleanup(c1)));
 }

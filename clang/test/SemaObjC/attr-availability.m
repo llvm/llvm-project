@@ -219,7 +219,7 @@ enum MyEnum : int { // expected-note {{'MyEnum' has been explicitly marked unava
   MyEnum_Blah UNAVAILABLE, // expected-note {{'MyEnum_Blah' has been explicitly marked unavailable here}}
 } UNAVAILABLE;
 
-void use_myEnum() {
+void use_myEnum(void) {
   // expected-error@+2 {{'MyEnum' is unavailable: not available}}
   // expected-error@+1 {{MyEnum_Blah' is unavailable: not available}}
   MyEnum e = MyEnum_Blah;
@@ -312,9 +312,9 @@ __attribute__((objc_root_class))
 
 #if defined(WARN_PARTIAL)
 
-int fn_10_5() __attribute__((availability(macosx, introduced=10.5)));
-int fn_10_7() __attribute__((availability(macosx, introduced=10.7))); // expected-note{{'fn_10_7' has been marked as being introduced in macOS 10.7 here, but the deployment target is macOS 10.5}}
-int fn_10_8() __attribute__((availability(macosx, introduced=10.8))) { // expected-note{{'fn_10_8' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5}}
+int fn_10_5(void) __attribute__((availability(macosx, introduced=10.5)));
+int fn_10_7(void) __attribute__((availability(macosx, introduced=10.7))); // expected-note{{'fn_10_7' has been marked as being introduced in macOS 10.7 here, but the deployment target is macOS 10.5}}
+int fn_10_8(void) __attribute__((availability(macosx, introduced=10.8))) { // expected-note{{'fn_10_8' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5}}
   return fn_10_7();
 }
 
@@ -340,7 +340,7 @@ __attribute__((availability(macosx, introduced=10.7)))
 -(void)method4 { fn_10_8(); }
 @end
 
-int old_func() __attribute__((availability(macos, introduced=10.4))) {
+int old_func(void) __attribute__((availability(macos, introduced=10.4))) {
   fn_10_5();
 }
 

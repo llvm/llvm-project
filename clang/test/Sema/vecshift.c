@@ -50,7 +50,7 @@ vector_uchar4 vuc4;
 vector_ushort4 vus4;
 vector_uint4 vui4;
 
-void foo() {
+void foo(void) {
   vc8 = 1 << vc8;
   vuc8 = 1 << vuc8;
   vi8 = 1 << vi8;

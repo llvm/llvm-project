@@ -92,7 +92,7 @@ void enums(enum Choices c) {
 }
 
 // Don't generate a warning here.
-void array_out_of_bounds() {
+void array_out_of_bounds(void) {
   int x;
   int buffer[4];
   x = (-7 > 0) ? (buffer[-7]) : 0;

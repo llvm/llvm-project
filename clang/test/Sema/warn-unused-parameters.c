@@ -15,7 +15,7 @@ void f1(void) {
 
 // Used when testing '-Wunused' to see that we only emit one diagnostic, and no
 // warnings for the above cases.
-static void achor() {};
+static void achor(void) {};
 
 // Do not warn on naked functions.
 __attribute__((naked)) static void nakedFunction(int a, int b) { }
