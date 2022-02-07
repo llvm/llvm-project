@@ -16,71 +16,21 @@ class TestGdbRemoteThreadsInStopReply(
         "send packet: $OK#00",
     ]
 
-    def gather_stop_reply_fields(self, post_startup_log_lines, thread_count,
-            field_names):
-        # Set up the inferior args.
-        inferior_args = []
-        for i in range(thread_count - 1):
-            inferior_args.append("thread:new")
-        inferior_args.append("sleep:10")
-        procs = self.prep_debug_monitor_and_inferior(
-            inferior_args=inferior_args)
+    def gather_stop_reply_fields(self, thread_count, field_names):
+        context, threads = self.launch_with_threads(thread_count)
+        key_vals_text = context.get("stop_reply_kv")
+        self.assertIsNotNone(key_vals_text)
 
+        self.reset_test_sequence()
         self.add_register_info_collection_packets()
         self.add_process_info_collection_packets()
 
-        # Assumes test_sequence has anything added needed to setup the initial state.
-        # (Like optionally enabling QThreadsInStopReply.)
-        if post_startup_log_lines:
-            self.test_sequence.add_log_lines(post_startup_log_lines, True)
-        self.test_sequence.add_log_lines([
-            "read packet: $c#63"
-        ], True)
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
         hw_info = self.parse_hw_info(context)
 
-        # Give threads time to start up, then break.
-        time.sleep(self.DEFAULT_SLEEP)
-        self.reset_test_sequence()
-        self.test_sequence.add_log_lines(
-            [
-                "read packet: {}".format(
-                    chr(3)),
-                {
-                    "direction": "send",
-                    "regex": r"^\$T([0-9a-fA-F]+)([^#]+)#[0-9a-fA-F]{2}$",
-                    "capture": {
-                        1: "stop_result",
-                        2: "key_vals_text"}},
-            ],
-            True)
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-
-        # Wait until all threads have started.
-        threads = self.wait_for_thread_count(thread_count)
-        self.assertIsNotNone(threads)
-        self.assertEqual(len(threads), thread_count)
-
-        # Run, then stop the process, grab the stop reply content.
-        self.reset_test_sequence()
-        self.test_sequence.add_log_lines(["read packet: $c#63",
-                                          "read packet: {}".format(chr(3)),
-                                          {"direction": "send",
-                                           "regex": r"^\$T([0-9a-fA-F]+)([^#]+)#[0-9a-fA-F]{2}$",
-                                           "capture": {1: "stop_result",
-                                                       2: "key_vals_text"}},
-                                          ],
-                                         True)
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-
         # Parse the stop reply contents.
-        key_vals_text = context.get("key_vals_text")
-        self.assertIsNotNone(key_vals_text)
         kv_dict = self.parse_key_val_dict(key_vals_text)
-        self.assertIsNotNone(kv_dict)
 
         result = dict();
         result["pc_register"] = hw_info["pc_register"]
@@ -90,19 +40,18 @@ class TestGdbRemoteThreadsInStopReply(
 
         return result
 
-    def gather_stop_reply_threads(self, post_startup_log_lines, thread_count):
+    def gather_stop_reply_threads(self, thread_count):
         # Pull out threads from stop response.
         stop_reply_threads_text = self.gather_stop_reply_fields(
-                post_startup_log_lines, thread_count, ["threads"])["threads"]
+                thread_count, ["threads"])["threads"]
         if stop_reply_threads_text:
             return [int(thread_id, 16)
                     for thread_id in stop_reply_threads_text.split(",")]
         else:
             return []
 
-    def gather_stop_reply_pcs(self, post_startup_log_lines, thread_count):
-        results = self.gather_stop_reply_fields( post_startup_log_lines,
-                thread_count, ["threads", "thread-pcs"])
+    def gather_stop_reply_pcs(self, thread_count):
+        results = self.gather_stop_reply_fields(thread_count, ["threads", "thread-pcs"])
         if not results:
             return []
 
@@ -187,8 +136,9 @@ class TestGdbRemoteThreadsInStopReply(
         self.set_inferior_startup_launch()
         # Gather threads from stop notification when QThreadsInStopReply is
         # enabled.
-        stop_reply_threads = self.gather_stop_reply_threads(
-            self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, 5)
+        self.test_sequence.add_log_lines(
+            self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, True)
+        stop_reply_threads = self.gather_stop_reply_threads(5)
         self.assertEqual(len(stop_reply_threads), 5)
 
     @expectedFailureAll(oslist=["windows"])
@@ -198,7 +148,7 @@ class TestGdbRemoteThreadsInStopReply(
         self.set_inferior_startup_launch()
         # Gather threads from stop notification when QThreadsInStopReply is not
         # enabled.
-        stop_reply_threads = self.gather_stop_reply_threads(None, 5)
+        stop_reply_threads = self.gather_stop_reply_threads(5)
         self.assertEqual(len(stop_reply_threads), 0)
 
     @expectedFailureAll(oslist=["windows"])
@@ -209,9 +159,9 @@ class TestGdbRemoteThreadsInStopReply(
         # Gather threads from stop notification when QThreadsInStopReply is
         # enabled.
         thread_count = 5
-        stop_reply_threads = self.gather_stop_reply_threads(
-            self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, thread_count)
-        self.assertEqual(len(stop_reply_threads), thread_count)
+        self.test_sequence.add_log_lines(
+            self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, True)
+        stop_reply_threads = self.gather_stop_reply_threads(thread_count)
 
         # Gather threads from q{f,s}ThreadInfo.
         self.reset_test_sequence()
@@ -234,8 +184,9 @@ class TestGdbRemoteThreadsInStopReply(
         self.build()
         self.set_inferior_startup_launch()
         thread_count = 5
-        results = self.gather_stop_reply_pcs(
-                self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, thread_count)
+        self.test_sequence.add_log_lines(
+            self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, True)
+        results = self.gather_stop_reply_pcs(thread_count)
         stop_reply_pcs = results["thread_pcs"]
         pc_register = results["pc_register"]
         little_endian = results["little_endian"]
