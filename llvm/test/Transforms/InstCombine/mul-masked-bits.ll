@@ -113,8 +113,8 @@ define i67 @one_demanded_low_bit(i67 %x) {
 
 define i33 @squared_one_demanded_low_bit(i33 %x) {
 ; CHECK-LABEL: @squared_one_demanded_low_bit(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i33 [[X:%.*]], 1
-; CHECK-NEXT:    ret i33 [[TMP1]]
+; CHECK-NEXT:    [[AND:%.*]] = and i33 [[X:%.*]], 1
+; CHECK-NEXT:    ret i33 [[AND]]
 ;
   %mul = mul i33 %x, %x
   %and = and i33 %mul, 1
@@ -128,5 +128,27 @@ define <2 x i8> @squared_one_demanded_low_bit_splat(<2 x i8> %x) {
 ;
   %mul = mul <2 x i8> %x, %x
   %and = or <2 x i8> %mul, <i8 254, i8 254>
+  ret <2 x i8> %and
+}
+
+define i33 @squared_demanded_2_low_bits(i33 %x) {
+; CHECK-LABEL: @squared_demanded_2_low_bits(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i33 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = and i33 [[MUL]], 3
+; CHECK-NEXT:    ret i33 [[AND]]
+;
+  %mul = mul i33 %x, %x
+  %and = and i33 %mul, 3
+  ret i33 %and
+}
+
+define <2 x i8> @squared_demanded_2_low_bits_splat(<2 x i8> %x) {
+; CHECK-LABEL: @squared_demanded_2_low_bits_splat(
+; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i8> [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = or <2 x i8> [[MUL]], <i8 -4, i8 -4>
+; CHECK-NEXT:    ret <2 x i8> [[AND]]
+;
+  %mul = mul <2 x i8> %x, %x
+  %and = or <2 x i8> %mul, <i8 252, i8 252>
   ret <2 x i8> %and
 }
