@@ -246,3 +246,8 @@ RUN: not llvm-dis -disable-output %p/Inputs/invalid-cmpxchg-ordering-4.bc 2>&1 |
 RUN:   FileCheck --check-prefix=CMPXCHG-ORDERING %s
 
 CMPXCHG-ORDERING: Invalid cmpxchg {{failure|success}} ordering
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev-number.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-ABBREV-NUMBER %s
+
+INVALID-ABBREV-NUMBER: Invalid abbrev number
