@@ -1611,7 +1611,7 @@ def LLVM_MatrixColumnMajorLoadOp : LLVM_Op<"intr.matrix.column.major.load"> {
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
   string llvmBuilder = [{
-    llvm::MatrixBuilder<decltype(builder)> mb(builder);
+    llvm::MatrixBuilder mb(builder);
     const llvm::DataLayout &dl =
       builder.GetInsertBlock()->getModule()->getDataLayout();
     llvm::Align align = dl.getABITypeAlign(
@@ -1637,7 +1637,7 @@ def LLVM_MatrixColumnMajorStoreOp : LLVM_Op<"intr.matrix.column.major.store"> {
                    I1Attr:$isVolatile, I32Attr:$rows, I32Attr:$columns);
   let builders = [LLVM_VoidResultTypeOpBuilder, LLVM_ZeroResultOpBuilder];
   string llvmBuilder = [{
-    llvm::MatrixBuilder<decltype(builder)> mb(builder);
+    llvm::MatrixBuilder mb(builder);
     const llvm::DataLayout &dl =
       builder.GetInsertBlock()->getModule()->getDataLayout();
     llvm::Align align = dl.getABITypeAlign(
@@ -1658,7 +1658,7 @@ def LLVM_MatrixMultiplyOp : LLVM_Op<"intr.matrix.multiply"> {
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
   string llvmBuilder = [{
-    llvm::MatrixBuilder<decltype(builder)> mb(builder);
+    llvm::MatrixBuilder mb(builder);
     $res = mb.CreateMatrixMultiply(
       $lhs, $rhs, $lhs_rows, $lhs_columns,
       $rhs_columns);
@@ -1674,7 +1674,7 @@ def LLVM_MatrixTransposeOp : LLVM_Op<"intr.matrix.transpose"> {
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
   string llvmBuilder = [{
-    llvm::MatrixBuilder<decltype(builder)> mb(builder);
+    llvm::MatrixBuilder mb(builder);
     $res = mb.CreateMatrixTranspose(
       $matrix, $rows, $columns);
   }];
