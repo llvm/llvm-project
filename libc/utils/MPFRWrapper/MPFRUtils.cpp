@@ -392,16 +392,6 @@ public:
   // These functions are useful for debugging.
   template <typename T> T as() const;
 
-  template <> float as<float>() const {
-    return mpfr_get_flt(value, mpfr_rounding);
-  }
-  template <> double as<double>() const {
-    return mpfr_get_d(value, mpfr_rounding);
-  }
-  template <> long double as<long double>() const {
-    return mpfr_get_ld(value, mpfr_rounding);
-  }
-
   void dump(const char *msg) const { mpfr_printf("%s%.128Rf\n", msg, value); }
 
   // Return the ULP (units-in-the-last-place) difference between the
@@ -487,6 +477,18 @@ public:
     return minMPFR.as<double>();
   }
 };
+
+template <> float MPFRNumber::as<float>() const {
+  return mpfr_get_flt(value, mpfr_rounding);
+}
+
+template <> double MPFRNumber::as<double>() const {
+  return mpfr_get_d(value, mpfr_rounding);
+}
+
+template <> long double MPFRNumber::as<long double>() const {
+  return mpfr_get_ld(value, mpfr_rounding);
+}
 
 namespace internal {
 
