@@ -558,10 +558,13 @@ bool HasDeclarationInitializer(const Symbol &symbol) {
   }
 }
 
-bool IsInitialized(const Symbol &symbol, bool ignoreDataStatements) {
-  if (IsAllocatable(symbol) ||
-      (!ignoreDataStatements && symbol.test(Symbol::Flag::InDataStmt)) ||
-      HasDeclarationInitializer(symbol)) {
+bool IsInitialized(
+    const Symbol &symbol, bool ignoreDataStatements, bool ignoreAllocatable) {
+  if (!ignoreAllocatable && IsAllocatable(symbol)) {
+    return true;
+  } else if (!ignoreDataStatements && symbol.test(Symbol::Flag::InDataStmt)) {
+    return true;
+  } else if (HasDeclarationInitializer(symbol)) {
     return true;
   } else if (IsNamedConstant(symbol) || IsFunctionResult(symbol) ||
       IsPointer(symbol)) {
@@ -569,12 +572,7 @@ bool IsInitialized(const Symbol &symbol, bool ignoreDataStatements) {
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
     if (!object->isDummy() && object->type()) {
       if (const auto *derived{object->type()->AsDerived()}) {
-        DirectComponentIterator directs{*derived};
-        return bool{std::find_if(
-            directs.begin(), directs.end(), [](const Symbol &component) {
-              return IsAllocatable(component) ||
-                  HasDeclarationInitializer(component);
-            })};
+        return derived->HasDefaultInitialization(ignoreAllocatable);
       }
     }
   }

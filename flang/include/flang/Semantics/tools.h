@@ -107,7 +107,8 @@ bool CanBeTypeBoundProc(const Symbol *);
 // attribute, or a derived type component default value.)
 bool HasDeclarationInitializer(const Symbol &);
 // Is the symbol explicitly or implicitly initialized in any way?
-bool IsInitialized(const Symbol &, bool ignoreDATAstatements = false);
+bool IsInitialized(const Symbol &, bool ignoreDATAstatements = false,
+    bool ignoreAllocatable = false);
 // Is the symbol a component subject to deallocation or finalization?
 bool IsDestructible(const Symbol &, const Symbol *derivedType = nullptr);
 bool HasIntrinsicTypeName(const Symbol &);
