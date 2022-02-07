@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 %s -fblocks -verify -pedantic -fsyntax-only -ferror-limit 100
+// RUN: %clang_cc1 %s -fblocks -verify -pedantic -fsyntax-only -ferror-limit 100 -cl-std=CL1.2
+// RUN: %clang_cc1 %s -fblocks -verify -pedantic -fsyntax-only -ferror-limit 100 -cl-std=CL3.0 -cl-ext=-__opencl_c_device_enqueue,-__opencl_c_generic_address_space,-__opencl_c_pipes
 
-// Confirm CL2.0 Clang builtins are not available in earlier versions
+// Confirm CL2.0 Clang builtins are not available in earlier versions and in OpenCL C 3.0 without required features.
 
 kernel void dse_builtins() {
   int tmp;
@@ -13,6 +15,11 @@ kernel void dse_builtins() {
   size = get_kernel_preferred_work_group_size_multiple(^(void) { // expected-error{{implicit declaration of function 'get_kernel_preferred_work_group_size_multiple' is invalid in OpenCL}}
     return;
   });
+#if (__OPENCL_C_VERSION__ >= CL_VERSION_3_0) && !defined(__opencl_c_device_enqueue)
+// expected-error@-10{{support disabled - compile with -fblocks or for OpenCL C 2.0 or OpenCL C 3.0 with __opencl_c_device_enqueue feature}}
+// expected-error@-8{{support disabled - compile with -fblocks or for OpenCL C 2.0 or OpenCL C 3.0 with __opencl_c_device_enqueue feature}}
+// expected-error@-6{{support disabled - compile with -fblocks or for OpenCL C 2.0 or OpenCL C 3.0 with __opencl_c_device_enqueue feature}}
+#endif
 }
 
 void pipe_builtins() {
