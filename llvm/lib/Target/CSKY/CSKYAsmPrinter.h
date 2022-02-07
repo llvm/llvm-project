@@ -52,6 +52,12 @@ public:
 
   // we emit constant pools customly!
   void emitConstantPool() override{};
+
+  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                       const char *ExtraCode, raw_ostream &OS) override;
+
+  bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
+                             const char *ExtraCode, raw_ostream &OS) override;
 };
 } // end namespace llvm
 

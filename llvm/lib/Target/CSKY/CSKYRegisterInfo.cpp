@@ -29,6 +29,10 @@ const uint32_t *
 CSKYRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID Id) const {
   const CSKYSubtarget &STI = MF.getSubtarget<CSKYSubtarget>();
+  if (STI.hasFPUv2DoubleFloat() || STI.hasFPUv3DoubleFloat())
+    return CSR_GPR_FPR64_RegMask;
+  if (STI.hasFPUv2SingleFloat() || STI.hasFPUv3SingleFloat())
+    return CSR_GPR_FPR32_RegMask;
   return CSR_I32_RegMask;
 }
 
@@ -82,9 +86,21 @@ const MCPhysReg *
 CSKYRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const CSKYSubtarget &STI = MF->getSubtarget<CSKYSubtarget>();
   if (MF->getFunction().hasFnAttribute("interrupt")) {
+    if (STI.hasFPUv3DoubleFloat())
+      return CSR_GPR_FPR64v3_ISR_SaveList;
+    if (STI.hasFPUv3SingleFloat())
+      return CSR_GPR_FPR32v3_ISR_SaveList;
+    if (STI.hasFPUv2DoubleFloat())
+      return CSR_GPR_FPR64_ISR_SaveList;
+    if (STI.hasFPUv2SingleFloat())
+      return CSR_GPR_FPR32_ISR_SaveList;
     return CSR_GPR_ISR_SaveList;
   }
 
+  if (STI.hasFPUv2DoubleFloat() || STI.hasFPUv3DoubleFloat())
+    return CSR_GPR_FPR64_SaveList;
+  if (STI.hasFPUv2SingleFloat() || STI.hasFPUv3SingleFloat())
+    return CSR_GPR_FPR32_SaveList;
   return CSR_I32_SaveList;
 }
 

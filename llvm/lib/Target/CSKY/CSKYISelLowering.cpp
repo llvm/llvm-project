@@ -784,6 +784,175 @@ SDValue CSKYTargetLowering::getTargetConstantPoolValue(GlobalAddressSDNode *N,
   return DAG.getTargetConstantPool(CPV, Ty);
 }
 
+CSKYTargetLowering::ConstraintType
+CSKYTargetLowering::getConstraintType(StringRef Constraint) const {
+  if (Constraint.size() == 1) {
+    switch (Constraint[0]) {
+    default:
+      break;
+    case 'a':
+    case 'b':
+    case 'v':
+    case 'w':
+    case 'y':
+      return C_RegisterClass;
+    case 'c':
+    case 'l':
+    case 'h':
+    case 'z':
+      return C_Register;
+    }
+  }
+  return TargetLowering::getConstraintType(Constraint);
+}
+
+std::pair<unsigned, const TargetRegisterClass *>
+CSKYTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+                                                 StringRef Constraint,
+                                                 MVT VT) const {
+  if (Constraint.size() == 1) {
+    switch (Constraint[0]) {
+    case 'r':
+      return std::make_pair(0U, &CSKY::GPRRegClass);
+    case 'a':
+      return std::make_pair(0U, &CSKY::mGPRRegClass);
+    case 'b':
+      return std::make_pair(0U, &CSKY::sGPRRegClass);
+    case 'z':
+      return std::make_pair(CSKY::R14, &CSKY::GPRRegClass);
+    case 'c':
+      return std::make_pair(CSKY::C, &CSKY::CARRYRegClass);
+    case 'w':
+      if ((Subtarget.hasFPUv2SingleFloat() ||
+           Subtarget.hasFPUv3SingleFloat()) &&
+          VT == MVT::f32)
+        return std::make_pair(0U, &CSKY::sFPR32RegClass);
+      if ((Subtarget.hasFPUv2DoubleFloat() ||
+           Subtarget.hasFPUv3DoubleFloat()) &&
+          VT == MVT::f64)
+        return std::make_pair(0U, &CSKY::sFPR64RegClass);
+      break;
+    case 'v':
+      if (Subtarget.hasFPUv2SingleFloat() && VT == MVT::f32)
+        return std::make_pair(0U, &CSKY::sFPR32RegClass);
+      if (Subtarget.hasFPUv3SingleFloat() && VT == MVT::f32)
+        return std::make_pair(0U, &CSKY::FPR32RegClass);
+      if (Subtarget.hasFPUv2DoubleFloat() && VT == MVT::f64)
+        return std::make_pair(0U, &CSKY::sFPR64RegClass);
+      if (Subtarget.hasFPUv3DoubleFloat() && VT == MVT::f64)
+        return std::make_pair(0U, &CSKY::FPR64RegClass);
+      break;
+    default:
+      break;
+    }
+  }
+
+  if (Constraint == "{c}")
+    return std::make_pair(CSKY::C, &CSKY::CARRYRegClass);
+
+  // Clang will correctly decode the usage of register name aliases into their
+  // official names. However, other frontends like `rustc` do not. This allows
+  // users of these frontends to use the ABI names for registers in LLVM-style
+  // register constraints.
+  unsigned XRegFromAlias = StringSwitch<unsigned>(Constraint.lower())
+                               .Case("{a0}", CSKY::R0)
+                               .Case("{a1}", CSKY::R1)
+                               .Case("{a2}", CSKY::R2)
+                               .Case("{a3}", CSKY::R3)
+                               .Case("{l0}", CSKY::R4)
+                               .Case("{l1}", CSKY::R5)
+                               .Case("{l2}", CSKY::R6)
+                               .Case("{l3}", CSKY::R7)
+                               .Case("{l4}", CSKY::R8)
+                               .Case("{l5}", CSKY::R9)
+                               .Case("{l6}", CSKY::R10)
+                               .Case("{l7}", CSKY::R11)
+                               .Case("{t0}", CSKY::R12)
+                               .Case("{t1}", CSKY::R13)
+                               .Case("{sp}", CSKY::R14)
+                               .Case("{lr}", CSKY::R15)
+                               .Case("{l8}", CSKY::R16)
+                               .Case("{l9}", CSKY::R17)
+                               .Case("{t2}", CSKY::R18)
+                               .Case("{t3}", CSKY::R19)
+                               .Case("{t4}", CSKY::R20)
+                               .Case("{t5}", CSKY::R21)
+                               .Case("{t6}", CSKY::R22)
+                               .Cases("{t7}", "{fp}", CSKY::R23)
+                               .Cases("{t8}", "{top}", CSKY::R24)
+                               .Cases("{t9}", "{bsp}", CSKY::R25)
+                               .Case("{r26}", CSKY::R26)
+                               .Case("{r27}", CSKY::R27)
+                               .Cases("{gb}", "{rgb}", "{rdb}", CSKY::R28)
+                               .Cases("{tb}", "{rtb}", CSKY::R29)
+                               .Case("{svbr}", CSKY::R30)
+                               .Case("{tls}", CSKY::R31)
+                               .Default(CSKY::NoRegister);
+
+  if (XRegFromAlias != CSKY::NoRegister)
+    return std::make_pair(XRegFromAlias, &CSKY::GPRRegClass);
+
+  // Since TargetLowering::getRegForInlineAsmConstraint uses the name of the
+  // TableGen record rather than the AsmName to choose registers for InlineAsm
+  // constraints, plus we want to match those names to the widest floating point
+  // register type available, manually select floating point registers here.
+  //
+  // The second case is the ABI name of the register, so that frontends can also
+  // use the ABI names in register constraint lists.
+  if (Subtarget.useHardFloat()) {
+    unsigned FReg = StringSwitch<unsigned>(Constraint.lower())
+                        .Cases("{fr0}", "{vr0}", CSKY::F0_32)
+                        .Cases("{fr1}", "{vr1}", CSKY::F1_32)
+                        .Cases("{fr2}", "{vr2}", CSKY::F2_32)
+                        .Cases("{fr3}", "{vr3}", CSKY::F3_32)
+                        .Cases("{fr4}", "{vr4}", CSKY::F4_32)
+                        .Cases("{fr5}", "{vr5}", CSKY::F5_32)
+                        .Cases("{fr6}", "{vr6}", CSKY::F6_32)
+                        .Cases("{fr7}", "{vr7}", CSKY::F7_32)
+                        .Cases("{fr8}", "{vr8}", CSKY::F8_32)
+                        .Cases("{fr9}", "{vr9}", CSKY::F9_32)
+                        .Cases("{fr10}", "{vr10}", CSKY::F10_32)
+                        .Cases("{fr11}", "{vr11}", CSKY::F11_32)
+                        .Cases("{fr12}", "{vr12}", CSKY::F12_32)
+                        .Cases("{fr13}", "{vr13}", CSKY::F13_32)
+                        .Cases("{fr14}", "{vr14}", CSKY::F14_32)
+                        .Cases("{fr15}", "{vr15}", CSKY::F15_32)
+                        .Cases("{fr16}", "{vr16}", CSKY::F16_32)
+                        .Cases("{fr17}", "{vr17}", CSKY::F17_32)
+                        .Cases("{fr18}", "{vr18}", CSKY::F18_32)
+                        .Cases("{fr19}", "{vr19}", CSKY::F19_32)
+                        .Cases("{fr20}", "{vr20}", CSKY::F20_32)
+                        .Cases("{fr21}", "{vr21}", CSKY::F21_32)
+                        .Cases("{fr22}", "{vr22}", CSKY::F22_32)
+                        .Cases("{fr23}", "{vr23}", CSKY::F23_32)
+                        .Cases("{fr24}", "{vr24}", CSKY::F24_32)
+                        .Cases("{fr25}", "{vr25}", CSKY::F25_32)
+                        .Cases("{fr26}", "{vr26}", CSKY::F26_32)
+                        .Cases("{fr27}", "{vr27}", CSKY::F27_32)
+                        .Cases("{fr28}", "{vr28}", CSKY::F28_32)
+                        .Cases("{fr29}", "{vr29}", CSKY::F29_32)
+                        .Cases("{fr30}", "{vr30}", CSKY::F30_32)
+                        .Cases("{fr31}", "{vr31}", CSKY::F31_32)
+                        .Default(CSKY::NoRegister);
+    if (FReg != CSKY::NoRegister) {
+      assert(CSKY::F0_32 <= FReg && FReg <= CSKY::F31_32 && "Unknown fp-reg");
+      unsigned RegNo = FReg - CSKY::F0_32;
+      unsigned DReg = CSKY::F0_64 + RegNo;
+
+      if (Subtarget.hasFPUv2DoubleFloat())
+        return std::make_pair(DReg, &CSKY::sFPR64RegClass);
+      else if (Subtarget.hasFPUv3DoubleFloat())
+        return std::make_pair(DReg, &CSKY::FPR64RegClass);
+      else if (Subtarget.hasFPUv2SingleFloat())
+        return std::make_pair(FReg, &CSKY::sFPR32RegClass);
+      else if (Subtarget.hasFPUv3SingleFloat())
+        return std::make_pair(FReg, &CSKY::FPR32RegClass);
+    }
+  }
+
+  return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+}
+
 static MachineBasicBlock *
 emitSelectPseudo(MachineInstr &MI, MachineBasicBlock *BB, unsigned Opcode) {
 
