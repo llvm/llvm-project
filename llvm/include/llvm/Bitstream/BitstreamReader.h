@@ -521,10 +521,11 @@ private:
 
 public:
   /// Return the abbreviation for the specified AbbrevId.
-  const BitCodeAbbrev *getAbbrev(unsigned AbbrevID) {
+  Expected<const BitCodeAbbrev *> getAbbrev(unsigned AbbrevID) {
     unsigned AbbrevNo = AbbrevID - bitc::FIRST_APPLICATION_ABBREV;
     if (AbbrevNo >= CurAbbrevs.size())
-      report_fatal_error("Invalid abbrev number");
+      return createStringError(
+          std::errc::illegal_byte_sequence, "Invalid abbrev number");
     return CurAbbrevs[AbbrevNo].get();
   }
 

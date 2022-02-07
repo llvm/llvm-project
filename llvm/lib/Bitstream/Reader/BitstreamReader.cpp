@@ -111,7 +111,11 @@ Expected<unsigned> BitstreamCursor::skipRecord(unsigned AbbrevID) {
     return Code;
   }
 
-  const BitCodeAbbrev *Abbv = getAbbrev(AbbrevID);
+  Expected<const BitCodeAbbrev *> MaybeAbbv = getAbbrev(AbbrevID);
+  if (!MaybeAbbv)
+    return MaybeAbbv.takeError();
+
+  const BitCodeAbbrev *Abbv = MaybeAbbv.get();
   const BitCodeAbbrevOp &CodeOp = Abbv->getOperandInfo(0);
   unsigned Code;
   if (CodeOp.isLiteral())
@@ -228,7 +232,10 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
     return Code;
   }
 
-  const BitCodeAbbrev *Abbv = getAbbrev(AbbrevID);
+  Expected<const BitCodeAbbrev *> MaybeAbbv = getAbbrev(AbbrevID);
+  if (!MaybeAbbv)
+    return MaybeAbbv.takeError();
+  const BitCodeAbbrev *Abbv = MaybeAbbv.get();
 
   // Read the record code first.
   assert(Abbv->getNumOperandInfos() != 0 && "no record code in abbreviation?");
