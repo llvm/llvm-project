@@ -1518,11 +1518,21 @@ IntegerPolyhedron::computeConstantLowerOrUpperBound(unsigned pos) {
 
 Optional<int64_t> IntegerPolyhedron::getConstantBound(BoundType type,
                                                       unsigned pos) const {
-  assert(type != BoundType::EQ && "EQ not implemented");
-  IntegerPolyhedron tmpCst(*this);
   if (type == BoundType::LB)
-    return tmpCst.computeConstantLowerOrUpperBound</*isLower=*/true>(pos);
-  return tmpCst.computeConstantLowerOrUpperBound</*isLower=*/false>(pos);
+    return IntegerPolyhedron(*this)
+        .computeConstantLowerOrUpperBound</*isLower=*/true>(pos);
+  if (type == BoundType::UB)
+    return IntegerPolyhedron(*this)
+        .computeConstantLowerOrUpperBound</*isLower=*/false>(pos);
+
+  assert(type == BoundType::EQ && "expected EQ");
+  Optional<int64_t> lb =
+      IntegerPolyhedron(*this)
+          .computeConstantLowerOrUpperBound</*isLower=*/true>(pos);
+  Optional<int64_t> ub =
+      IntegerPolyhedron(*this)
+          .computeConstantLowerOrUpperBound</*isLower=*/false>(pos);
+  return (lb && ub && *lb == *ub) ? Optional<int64_t>(*ub) : None;
 }
 
 // A simple (naive and conservative) check for hyper-rectangularity.
