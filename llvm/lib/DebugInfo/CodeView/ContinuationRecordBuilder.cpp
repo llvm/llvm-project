@@ -46,7 +46,7 @@ static inline TypeLeafKind getTypeLeafKind(ContinuationRecordKind CK) {
 ContinuationRecordBuilder::ContinuationRecordBuilder()
     : SegmentWriter(Buffer), Mapping(SegmentWriter) {}
 
-ContinuationRecordBuilder::~ContinuationRecordBuilder() {}
+ContinuationRecordBuilder::~ContinuationRecordBuilder() = default;
 
 void ContinuationRecordBuilder::begin(ContinuationRecordKind RecordKind) {
   assert(!Kind.hasValue());

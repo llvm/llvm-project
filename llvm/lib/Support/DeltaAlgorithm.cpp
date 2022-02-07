@@ -11,8 +11,7 @@
 #include <set>
 using namespace llvm;
 
-DeltaAlgorithm::~DeltaAlgorithm() {
-}
+DeltaAlgorithm::~DeltaAlgorithm() = default;
 
 bool DeltaAlgorithm::GetTestResult(const changeset_ty &Changes) {
   if (FailedTestsCache.count(Changes))

@@ -44,7 +44,7 @@ DbiModuleDescriptorBuilder::DbiModuleDescriptorBuilder(StringRef ModuleName,
   Layout.Mod = ModIndex;
 }
 
-DbiModuleDescriptorBuilder::~DbiModuleDescriptorBuilder() {}
+DbiModuleDescriptorBuilder::~DbiModuleDescriptorBuilder() = default;
 
 uint16_t DbiModuleDescriptorBuilder::getStreamIndex() const {
   return Layout.ModDiStream;

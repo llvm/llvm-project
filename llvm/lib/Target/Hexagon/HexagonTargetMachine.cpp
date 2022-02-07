@@ -297,8 +297,7 @@ HexagonTargetMachine::getTargetTransformInfo(const Function &F) {
   return TargetTransformInfo(HexagonTTIImpl(this, F));
 }
 
-
-HexagonTargetMachine::~HexagonTargetMachine() {}
+HexagonTargetMachine::~HexagonTargetMachine() = default;
 
 namespace {
 /// Hexagon Code Generator Pass Configuration Options.

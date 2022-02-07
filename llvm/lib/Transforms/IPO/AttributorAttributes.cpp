@@ -916,7 +916,7 @@ struct AA::PointerInfo::State : public AbstractState {
     return R;
   }
 
-  State() {}
+  State() = default;
   State(const State &SIS) : AccessBins(SIS.AccessBins) {}
   State(State &&SIS) : AccessBins(std::move(SIS.AccessBins)) {}
 

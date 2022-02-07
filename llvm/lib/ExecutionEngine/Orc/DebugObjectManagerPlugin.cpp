@@ -42,7 +42,7 @@ class DebugObjectSection {
 public:
   virtual void setTargetMemoryRange(SectionRange Range) = 0;
   virtual void dump(raw_ostream &OS, StringRef Name) {}
-  virtual ~DebugObjectSection() {}
+  virtual ~DebugObjectSection() = default;
 };
 
 template <typename ELFT>

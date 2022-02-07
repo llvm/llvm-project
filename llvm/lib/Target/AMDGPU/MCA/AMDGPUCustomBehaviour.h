@@ -31,7 +31,7 @@ public:
   AMDGPUInstrPostProcess(const MCSubtargetInfo &STI, const MCInstrInfo &MCII)
       : InstrPostProcess(STI, MCII) {}
 
-  ~AMDGPUInstrPostProcess() {}
+  ~AMDGPUInstrPostProcess() = default;
 
   void postProcessInstruction(std::unique_ptr<Instruction> &Inst,
                               const MCInst &MCI) override;
@@ -86,7 +86,7 @@ public:
   AMDGPUCustomBehaviour(const MCSubtargetInfo &STI,
                         const mca::SourceMgr &SrcMgr, const MCInstrInfo &MCII);
 
-  ~AMDGPUCustomBehaviour() {}
+  ~AMDGPUCustomBehaviour() = default;
   /// This method is used to determine if an instruction
   /// should be allowed to be dispatched. The return value is
   /// how many cycles until the instruction can be dispatched.

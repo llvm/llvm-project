@@ -21,7 +21,7 @@ NativeTypeArray::NativeTypeArray(NativeSession &Session, SymIndexId Id,
                                  codeview::ArrayRecord Record)
     : NativeRawSymbol(Session, PDB_SymType::ArrayType, Id), Record(Record),
       Index(TI) {}
-NativeTypeArray::~NativeTypeArray() {}
+NativeTypeArray::~NativeTypeArray() = default;
 
 void NativeTypeArray::dump(raw_ostream &OS, int Indent,
                            PdbSymbolIdField ShowIdFields,

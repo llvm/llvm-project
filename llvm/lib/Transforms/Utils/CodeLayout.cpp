@@ -120,7 +120,7 @@ enum class MergeTypeTy : int { X_Y, X1_Y_X2, Y_X2_X1, X2_X1_Y };
 /// together with the corresponfiding merge 'type' and 'offset'.
 class MergeGainTy {
 public:
-  explicit MergeGainTy() {}
+  explicit MergeGainTy() = default;
   explicit MergeGainTy(double Score, size_t MergeOffset, MergeTypeTy MergeType)
       : Score(Score), MergeOffset(MergeOffset), MergeType(MergeType) {}
 

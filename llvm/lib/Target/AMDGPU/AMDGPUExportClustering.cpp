@@ -22,7 +22,7 @@ namespace {
 
 class ExportClustering : public ScheduleDAGMutation {
 public:
-  ExportClustering() {}
+  ExportClustering() = default;
   void apply(ScheduleDAGInstrs *DAG) override;
 };
 

@@ -756,7 +756,7 @@ Error EHFrameNullTerminator::operator()(LinkGraph &G) {
   return Error::success();
 }
 
-EHFrameRegistrar::~EHFrameRegistrar() {}
+EHFrameRegistrar::~EHFrameRegistrar() = default;
 
 Error InProcessEHFrameRegistrar::registerEHFrames(
     orc::ExecutorAddrRange EHFrameSection) {

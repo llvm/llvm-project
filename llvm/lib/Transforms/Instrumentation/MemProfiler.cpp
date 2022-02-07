@@ -255,7 +255,7 @@ public:
 
 } // end anonymous namespace
 
-MemProfilerPass::MemProfilerPass() {}
+MemProfilerPass::MemProfilerPass() = default;
 
 PreservedAnalyses MemProfilerPass::run(Function &F,
                                        AnalysisManager<Function> &AM) {
@@ -266,7 +266,7 @@ PreservedAnalyses MemProfilerPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
-ModuleMemProfilerPass::ModuleMemProfilerPass() {}
+ModuleMemProfilerPass::ModuleMemProfilerPass() = default;
 
 PreservedAnalyses ModuleMemProfilerPass::run(Module &M,
                                              AnalysisManager<Module> &AM) {

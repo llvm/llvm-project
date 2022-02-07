@@ -35,7 +35,7 @@ class XCOFFAsmParser : public MCAsmParserExtension {
   }
 
 public:
-  XCOFFAsmParser() {}
+  XCOFFAsmParser() = default;
 
   void Initialize(MCAsmParser &P) override {
     Parser = &P;

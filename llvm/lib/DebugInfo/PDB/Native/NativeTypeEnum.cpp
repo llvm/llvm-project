@@ -123,7 +123,7 @@ NativeTypeEnum::NativeTypeEnum(NativeSession &Session, SymIndexId Id,
     : NativeRawSymbol(Session, PDB_SymType::Enum, Id),
       UnmodifiedType(&UnmodifiedType), Modifiers(std::move(Modifier)) {}
 
-NativeTypeEnum::~NativeTypeEnum() {}
+NativeTypeEnum::~NativeTypeEnum() = default;
 
 void NativeTypeEnum::dump(raw_ostream &OS, int Indent,
                           PdbSymbolIdField ShowIdFields,

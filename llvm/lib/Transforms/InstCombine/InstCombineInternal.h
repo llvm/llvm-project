@@ -71,7 +71,7 @@ public:
       : InstCombiner(Worklist, Builder, MinimizeSize, AA, AC, TLI, TTI, DT, ORE,
                      BFI, PSI, DL, LI) {}
 
-  virtual ~InstCombinerImpl() {}
+  virtual ~InstCombinerImpl() = default;
 
   /// Run the combiner over the entire worklist until it is empty.
   ///

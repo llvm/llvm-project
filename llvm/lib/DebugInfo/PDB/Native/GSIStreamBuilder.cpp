@@ -286,7 +286,7 @@ GSIStreamBuilder::GSIStreamBuilder(msf::MSFBuilder &Msf)
     : Msf(Msf), PSH(std::make_unique<GSIHashStreamBuilder>()),
       GSH(std::make_unique<GSIHashStreamBuilder>()) {}
 
-GSIStreamBuilder::~GSIStreamBuilder() {}
+GSIStreamBuilder::~GSIStreamBuilder() = default;
 
 uint32_t GSIStreamBuilder::calculatePublicsHashStreamSize() const {
   uint32_t Size = 0;

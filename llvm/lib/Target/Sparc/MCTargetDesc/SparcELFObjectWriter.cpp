@@ -26,7 +26,7 @@ namespace {
                                 Is64Bit ?  ELF::EM_SPARCV9 : ELF::EM_SPARC,
                                 /*HasRelocationAddend*/ true) {}
 
-    ~SparcELFObjectWriter() override {}
+    ~SparcELFObjectWriter() override = default;
 
   protected:
     unsigned getRelocType(MCContext &Ctx, const MCValue &Target,

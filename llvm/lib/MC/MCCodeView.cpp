@@ -25,7 +25,7 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
-CodeViewContext::CodeViewContext() {}
+CodeViewContext::CodeViewContext() = default;
 
 CodeViewContext::~CodeViewContext() {
   // If someone inserted strings into the string table but never actually

@@ -892,7 +892,7 @@ RuntimeDyldChecker::RuntimeDyldChecker(
           std::move(GetGOTInfo), Endianness, Disassembler, InstPrinter,
           ErrStream)) {}
 
-RuntimeDyldChecker::~RuntimeDyldChecker() {}
+RuntimeDyldChecker::~RuntimeDyldChecker() = default;
 
 bool RuntimeDyldChecker::check(StringRef CheckExpr) const {
   return Impl->check(CheckExpr);

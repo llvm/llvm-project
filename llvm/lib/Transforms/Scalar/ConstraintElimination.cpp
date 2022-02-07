@@ -104,7 +104,7 @@ struct ConstraintListTy {
   SmallVector<ConstraintTy, 4> Constraints;
   SmallVector<PreconditionTy, 4> Preconditions;
 
-  ConstraintListTy() {}
+  ConstraintListTy() = default;
 
   ConstraintListTy(ArrayRef<ConstraintTy> Constraints,
                    ArrayRef<PreconditionTy> Preconditions)

@@ -259,7 +259,7 @@ SyncDependenceAnalysis::SyncDependenceAnalysis(const DominatorTree &DT,
                     [&](const BasicBlock &BB) { LoopPO.appendBlock(BB); });
 }
 
-SyncDependenceAnalysis::~SyncDependenceAnalysis() {}
+SyncDependenceAnalysis::~SyncDependenceAnalysis() = default;
 
 // divergence propagator for reducible CFGs
 struct DivergencePropagator {

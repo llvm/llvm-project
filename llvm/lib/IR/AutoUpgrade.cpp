@@ -4470,7 +4470,7 @@ namespace {
 // folding and other libcall simplification. The nobuiltin attribute on the
 // callsite has the same effect.
 struct StrictFPUpgradeVisitor : public InstVisitor<StrictFPUpgradeVisitor> {
-  StrictFPUpgradeVisitor() {}
+  StrictFPUpgradeVisitor() = default;
 
   void visitCallBase(CallBase &Call) {
     if (!Call.isStrictFP())

@@ -641,7 +641,7 @@ void TypePrinting::printStructBody(StructType *STy, raw_ostream &OS) {
     OS << '>';
 }
 
-AbstractSlotTrackerStorage::~AbstractSlotTrackerStorage() {}
+AbstractSlotTrackerStorage::~AbstractSlotTrackerStorage() = default;
 
 namespace llvm {
 
@@ -1290,7 +1290,7 @@ struct AsmWriterContext {
   /// prints a Metadata as operand.
   virtual void onWriteMetadataAsOperand(const Metadata *) {}
 
-  virtual ~AsmWriterContext() {}
+  virtual ~AsmWriterContext() = default;
 };
 } // end anonymous namespace
 

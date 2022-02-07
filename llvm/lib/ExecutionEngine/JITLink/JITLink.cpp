@@ -336,7 +336,7 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupFlags &LF) {
 
 void JITLinkAsyncLookupContinuation::anchor() {}
 
-JITLinkContext::~JITLinkContext() {}
+JITLinkContext::~JITLinkContext() = default;
 
 bool JITLinkContext::shouldAddDefaultTargetPasses(const Triple &TT) const {
   return true;
