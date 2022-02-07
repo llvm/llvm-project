@@ -37,8 +37,8 @@ class DyldTrieSymbolsTestCase(TestBase):
         unstripped_foo_symbols = unstripped_target.FindSymbols("foo")
         self.assertEqual(unstripped_foo_symbols.GetSize(), 1)
 
-        # make sure we can look up the mangled name, demangled base name,
-        # demangled name with argument.
+        # Make sure we can look up the mangled name and the demangled base
+        # name.
         unstripped_Z3pat_symbols = unstripped_target.FindSymbols("_Z3pati")
         self.assertEqual(unstripped_Z3pat_symbols.GetSize(), 1)
         unstripped_pat_symbols = unstripped_target.FindSymbols("pat")
