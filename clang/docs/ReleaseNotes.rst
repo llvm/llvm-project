@@ -158,6 +158,8 @@ Windows Support
   along with tools such as Live++ or Recode. Microsoft Edit and Continue isn't
   currently supported.
 
+- Support for on-demand initialization of TLS variables was added.
+
 C Language Changes in Clang
 ---------------------------
 
