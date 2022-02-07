@@ -21,16 +21,16 @@
 // expected-warning@+14 {{'__device_builtin_texture_type__' attribute only applies to classes}}
 #endif
 
-__declspec(__device__) void f_device();
-__declspec(__global__) void f_global();
+__declspec(__device__) void f_device(void);
+__declspec(__global__) void f_global(void);
 __declspec(__constant__) int* g_constant;
 __declspec(__shared__) float *g_shared;
-__declspec(__host__) void f_host();
-__declspec(__device_builtin__) void f_device_builtin();
+__declspec(__host__) void f_host(void);
+__declspec(__device_builtin__) void f_device_builtin(void);
 typedef __declspec(__device_builtin__) const void *t_device_builtin;
 enum __declspec(__device_builtin__) e_device_builtin {E};
 __declspec(__device_builtin__) int v_device_builtin;
-__declspec(__cudart_builtin__) void f_cudart_builtin();
+__declspec(__cudart_builtin__) void f_cudart_builtin(void);
 __declspec(__device_builtin_surface_type__) unsigned long long surface_var;
 __declspec(__device_builtin_texture_type__) unsigned long long texture_var;
 

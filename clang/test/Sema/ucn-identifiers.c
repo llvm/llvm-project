@@ -12,7 +12,7 @@ extern void \U000000FCber(int); // redeclaration, no warning
 // expected-note@-4 + {{declared here}}
 #endif
 
-void goodCalls() {
+void goodCalls(void) {
   \u00FCber(0);
   \u00fcber(1);
   über(2);
@@ -20,7 +20,7 @@ void goodCalls() {
   \u{FC}ber(4); // expected-warning {{Clang extension}}
 }
 
-void badCalls() {
+void badCalls(void) {
   \u00FCber(0.5); // expected-warning{{implicit conversion from 'double' to 'int'}}
   \u00fcber = 0; // expected-error{{non-object type 'void (int)' is not assignable}}
 

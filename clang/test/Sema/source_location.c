@@ -26,7 +26,7 @@ _Static_assert(IsEqual(__builtin_FILE(), "my_file.c"), "");
 
 _Static_assert(__builtin_COLUMN() == __builtin_strlen("_Static_assert(_"), "");
 
-void foo() {
+void foo(void) {
   _Static_assert(IsEqual(__builtin_FUNCTION(), "foo"), "");
 }
 #endif // CONST_STRINGS

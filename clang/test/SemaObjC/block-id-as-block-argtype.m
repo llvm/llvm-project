@@ -11,7 +11,7 @@ void fn(block4_t arg); // expected-note {{passing argument to parameter 'arg' he
 
 void another_fn(block2_t arg);
 
-int main() {
+int main(void) {
     block1_t b1;
     block2_t b2;
     block3_t b3;

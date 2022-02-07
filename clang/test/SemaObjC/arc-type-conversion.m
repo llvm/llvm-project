@@ -61,9 +61,9 @@ void from_void(void *vp) {
   uip = vp; // expected-error{{implicit conversion of a non-Objective-C pointer type 'void *' to '__unsafe_unretained id *' is disallowed with ARC}}
 }
 
-typedef void (^Block)();
-typedef void (^Block_strong)() __strong;
-typedef void (^Block_autoreleasing)() __autoreleasing;
+typedef void (^Block)(void);
+typedef void (^Block_strong)(void) __strong;
+typedef void (^Block_autoreleasing)(void) __autoreleasing;
 
 @class NSString;
 

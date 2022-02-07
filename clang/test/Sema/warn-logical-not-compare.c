@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -Wlogical-not-parentheses -verify %s
 // RUN: %clang_cc1 -fsyntax-only -Wlogical-not-parentheses -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
-int getInt();
+int getInt(void);
 
 int test1(int i1, int i2) {
   int ret;
@@ -110,7 +110,7 @@ int test1(int i1, int i2) {
 }
 
 enum E {e1, e2};
-enum E getE();
+enum E getE(void);
 
 int test2 (enum E e) {
   int ret;
