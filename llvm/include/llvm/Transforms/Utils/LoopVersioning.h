@@ -113,7 +113,7 @@ private:
   Loop *VersionedLoop;
   /// The fall-back loop.  I.e. control flows here if pointers in the
   /// loop may alias (memchecks failed).
-  Loop *NonVersionedLoop;
+  Loop *NonVersionedLoop = nullptr;
 
   /// This maps the instructions from VersionedLoop to their counterpart
   /// in NonVersionedLoop.
