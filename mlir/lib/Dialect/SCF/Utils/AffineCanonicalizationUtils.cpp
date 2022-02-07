@@ -183,6 +183,16 @@ canonicalizeMinMaxOp(RewriterBase &rewriter, Operation *op, AffineMap map,
   AffineMap newMap = alignedBoundMap;
   SmallVector<Value> newOperands;
   unpackOptionalValues(constraints.getMaybeDimAndSymbolValues(), newOperands);
+  // If dims/symbols have known constant values, use those in order to simplify
+  // the affine map further.
+  for (int64_t i = 0, e = constraints.getNumIds(); i < e; ++i) {
+    // Skip unused operands and operands that are already constants.
+    if (!newOperands[i] || getConstantIntValue(newOperands[i]))
+      continue;
+    if (auto bound = constraints.getConstantBound(FlatAffineConstraints::EQ, i))
+      newOperands[i] =
+          rewriter.create<arith::ConstantIndexOp>(op->getLoc(), *bound);
+  }
   mlir::canonicalizeMapAndOperands(&newMap, &newOperands);
   rewriter.setInsertionPoint(op);
   rewriter.replaceOpWithNewOp<AffineApplyOp>(op, newMap, newOperands);
@@ -211,19 +221,29 @@ addLoopRangeConstraints(FlatAffineValueConstraints &constraints, Value iv,
   if (ubInt)
     constraints.addBound(FlatAffineConstraints::EQ, dimUb, *ubInt);
 
-  // iv >= lb (equiv.: iv - lb >= 0)
+  // Lower bound: iv >= lb (equiv.: iv - lb >= 0)
   SmallVector<int64_t> ineqLb(constraints.getNumCols(), 0);
   ineqLb[dimIv] = 1;
   ineqLb[dimLb] = -1;
   constraints.addInequality(ineqLb);
 
-  // iv < lb + step * ((ub - lb - 1) floorDiv step) + 1
-  AffineExpr exprLb = lbInt ? rewriter.getAffineConstantExpr(*lbInt)
-                            : rewriter.getAffineDimExpr(dimLb);
-  AffineExpr exprUb = ubInt ? rewriter.getAffineConstantExpr(*ubInt)
-                            : rewriter.getAffineDimExpr(dimUb);
-  AffineExpr ivUb =
-      exprLb + 1 + (*stepInt * ((exprUb - exprLb - 1).floorDiv(*stepInt)));
+  // Upper bound
+  AffineExpr ivUb;
+  if (lbInt && ubInt && (*lbInt + *stepInt >= *ubInt)) {
+    // The loop has at most one iteration.
+    // iv < lb + 1
+    // TODO: Try to derive this constraint by simplifying the expression in
+    // the else-branch.
+    ivUb = rewriter.getAffineDimExpr(dimLb) + 1;
+  } else {
+    // The loop may have more than one iteration.
+    // iv < lb + step * ((ub - lb - 1) floorDiv step) + 1
+    AffineExpr exprLb = lbInt ? rewriter.getAffineConstantExpr(*lbInt)
+                              : rewriter.getAffineDimExpr(dimLb);
+    AffineExpr exprUb = ubInt ? rewriter.getAffineConstantExpr(*ubInt)
+                              : rewriter.getAffineDimExpr(dimUb);
+    ivUb = exprLb + 1 + (*stepInt * ((exprUb - exprLb - 1).floorDiv(*stepInt)));
+  }
   auto map = AffineMap::get(
       /*dimCount=*/constraints.getNumDimIds(),
       /*symbolCount=*/constraints.getNumSymbolIds(), /*result=*/ivUb);

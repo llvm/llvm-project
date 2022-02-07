@@ -349,3 +349,22 @@ func @tensor_dim_of_loop_result_no_canonicalize(%t : tensor<?x?xf32>,
   %dim = tensor.dim %1, %c0 : tensor<?x?xf32>
   return %dim : index
 }
+
+// -----
+
+// CHECK-LABEL: func @one_trip_scf_for_canonicalize_min
+//       CHECK:   %[[C4:.*]] = arith.constant 4 : i64
+//       CHECK:   scf.for
+//       CHECK:     memref.store %[[C4]], %{{.*}}[] : memref<i64>
+func @one_trip_scf_for_canonicalize_min(%A : memref<i64>) {
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %c4 = arith.constant 4 : index
+
+  scf.for %i = %c0 to %c4 step %c4 {
+    %1 = affine.min affine_map<(d0, d1)[] -> (4, d1 - d0)> (%i, %c4)
+    %2 = arith.index_cast %1: index to i64
+    memref.store %2, %A[]: memref<i64>
+  }
+  return
+}
