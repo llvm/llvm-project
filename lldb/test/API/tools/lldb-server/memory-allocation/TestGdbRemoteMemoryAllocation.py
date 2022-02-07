@@ -44,6 +44,7 @@ class TestGdbRemoteMemoryAllocation(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIf(oslist=no_match(supported_oses))
     @skipIf(oslist=["linux"], archs=no_match(supported_linux_archs))
+    @expectedFailureDarwin(archs=["arm64", "arm64e"]) # Memory cannot be writable and executable
     @expectedFailureAll(oslist=["windows"]) # Memory allocated with incorrect permissions
     def test_supported(self):
         """Make sure (de)allocation works on platforms where it's supposed to

@@ -374,7 +374,6 @@ public:
 
   /// Returns the constant bound for the pos^th identifier if there is one;
   /// None otherwise.
-  // TODO: Support EQ bounds.
   Optional<int64_t> getConstantBound(BoundType type, unsigned pos) const;
 
   /// Removes constraints that are independent of (i.e., do not have a
