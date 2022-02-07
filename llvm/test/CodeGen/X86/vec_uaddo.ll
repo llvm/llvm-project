@@ -26,6 +26,7 @@ declare {<2 x i128>, <2 x i1>} @llvm.uadd.with.overflow.v2i128(<2 x i128>, <2 x 
 define <1 x i32> @uaddo_v1i32(<1 x i32> %a0, <1 x i32> %a1, <1 x i32>* %p2) nounwind {
 ; CHECK-LABEL: uaddo_v1i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addl %esi, %edi
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    movl %edi, (%rdx)
@@ -1139,14 +1140,16 @@ define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; SSE2-LABEL: uaddo_v2i128:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; SSE2-NEXT:    xorl %r11d, %r11d
 ; SSE2-NEXT:    addq {{[0-9]+}}(%rsp), %rdx
 ; SSE2-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
+; SSE2-NEXT:    movl $0, %eax
 ; SSE2-NEXT:    sbbl %eax, %eax
 ; SSE2-NEXT:    addq %r8, %rdi
 ; SSE2-NEXT:    adcq %r9, %rsi
 ; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    sbbl %eax, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    sbbl %r11d, %r11d
+; SSE2-NEXT:    movd %r11d, %xmm0
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE2-NEXT:    movq %rdx, 16(%r10)
 ; SSE2-NEXT:    movq %rdi, (%r10)
@@ -1157,14 +1160,16 @@ define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; SSSE3-LABEL: uaddo_v2i128:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; SSSE3-NEXT:    xorl %r11d, %r11d
 ; SSSE3-NEXT:    addq {{[0-9]+}}(%rsp), %rdx
 ; SSSE3-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
+; SSSE3-NEXT:    movl $0, %eax
 ; SSSE3-NEXT:    sbbl %eax, %eax
 ; SSSE3-NEXT:    addq %r8, %rdi
 ; SSSE3-NEXT:    adcq %r9, %rsi
 ; SSSE3-NEXT:    movd %eax, %xmm1
-; SSSE3-NEXT:    sbbl %eax, %eax
-; SSSE3-NEXT:    movd %eax, %xmm0
+; SSSE3-NEXT:    sbbl %r11d, %r11d
+; SSSE3-NEXT:    movd %r11d, %xmm0
 ; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSSE3-NEXT:    movq %rdx, 16(%r10)
 ; SSSE3-NEXT:    movq %rdi, (%r10)
@@ -1175,14 +1180,16 @@ define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; SSE41-LABEL: uaddo_v2i128:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; SSE41-NEXT:    xorl %r11d, %r11d
 ; SSE41-NEXT:    addq {{[0-9]+}}(%rsp), %rdx
 ; SSE41-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
-; SSE41-NEXT:    sbbl %r11d, %r11d
+; SSE41-NEXT:    movl $0, %eax
+; SSE41-NEXT:    sbbl %eax, %eax
 ; SSE41-NEXT:    addq %r8, %rdi
 ; SSE41-NEXT:    adcq %r9, %rsi
-; SSE41-NEXT:    sbbl %eax, %eax
-; SSE41-NEXT:    movd %eax, %xmm0
-; SSE41-NEXT:    pinsrd $1, %r11d, %xmm0
+; SSE41-NEXT:    sbbl %r11d, %r11d
+; SSE41-NEXT:    movd %r11d, %xmm0
+; SSE41-NEXT:    pinsrd $1, %eax, %xmm0
 ; SSE41-NEXT:    movq %rdx, 16(%r10)
 ; SSE41-NEXT:    movq %rdi, (%r10)
 ; SSE41-NEXT:    movq %rcx, 24(%r10)
@@ -1192,14 +1199,16 @@ define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; AVX-LABEL: uaddo_v2i128:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; AVX-NEXT:    xorl %r11d, %r11d
 ; AVX-NEXT:    addq {{[0-9]+}}(%rsp), %rdx
 ; AVX-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
-; AVX-NEXT:    sbbl %r11d, %r11d
+; AVX-NEXT:    movl $0, %eax
+; AVX-NEXT:    sbbl %eax, %eax
 ; AVX-NEXT:    addq %r8, %rdi
 ; AVX-NEXT:    adcq %r9, %rsi
-; AVX-NEXT:    sbbl %eax, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vpinsrd $1, %r11d, %xmm0, %xmm0
+; AVX-NEXT:    sbbl %r11d, %r11d
+; AVX-NEXT:    vmovd %r11d, %xmm0
+; AVX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
 ; AVX-NEXT:    movq %rdx, 16(%r10)
 ; AVX-NEXT:    movq %rdi, (%r10)
 ; AVX-NEXT:    movq %rcx, 24(%r10)

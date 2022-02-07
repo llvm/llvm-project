@@ -246,6 +246,10 @@ class X86Subtarget final : public X86GenSubtargetInfo {
   /// True if LZCNT/TZCNT instructions have a false dependency on the destination register.
   bool HasLZCNTFalseDeps = false;
 
+  /// True if an SBB instruction with same source register is recognized as
+  /// having no dependency on that register.
+  bool HasSBBDepBreaking = false;
+
   /// True if its preferable to combine to a single cross-lane shuffle
   /// using a variable mask over multiple fixed shuffles.
   bool HasFastVariableCrossLaneShuffle = false;
@@ -719,6 +723,7 @@ public:
   bool useLeaForSP() const { return UseLeaForSP; }
   bool hasPOPCNTFalseDeps() const { return HasPOPCNTFalseDeps; }
   bool hasLZCNTFalseDeps() const { return HasLZCNTFalseDeps; }
+  bool hasSBBDepBreaking() const { return HasSBBDepBreaking; }
   bool hasFastVariableCrossLaneShuffle() const {
     return HasFastVariableCrossLaneShuffle;
   }
