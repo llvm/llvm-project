@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep and
+; RUN: opt < %s -passes=instcombine -S | grep and
 ; PR913
 
 define i32 @test(i32* %tmp1) {

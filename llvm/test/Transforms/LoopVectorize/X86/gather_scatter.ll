@@ -25,22 +25,22 @@ define void @foo1(float* noalias %in, float* noalias %out, i32* noalias %trigger
 ; AVX512-NEXT:  iter.check:
 ; AVX512-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX512:       vector.body:
-; AVX512-NEXT:    [[INDEX8:%.*]] = phi i64 [ 0, [[ITER_CHECK:%.*]] ], [ [[INDEX_NEXT_3:%.*]], [[VECTOR_BODY]] ]
-; AVX512-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER:%.*]], i64 [[INDEX8]]
+; AVX512-NEXT:    [[INDEX7:%.*]] = phi i64 [ 0, [[ITER_CHECK:%.*]] ], [ [[INDEX_NEXT_3:%.*]], [[VECTOR_BODY]] ]
+; AVX512-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER:%.*]], i64 [[INDEX7]]
 ; AVX512-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to <16 x i32>*
 ; AVX512-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i32>, <16 x i32>* [[TMP1]], align 4
 ; AVX512-NEXT:    [[TMP2:%.*]] = icmp sgt <16 x i32> [[WIDE_LOAD]], zeroinitializer
-; AVX512-NEXT:    [[TMP3:%.*]] = getelementptr i32, i32* [[INDEX:%.*]], i64 [[INDEX8]]
+; AVX512-NEXT:    [[TMP3:%.*]] = getelementptr i32, i32* [[INDEX:%.*]], i64 [[INDEX7]]
 ; AVX512-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP3]] to <16 x i32>*
 ; AVX512-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0v16i32(<16 x i32>* [[TMP4]], i32 4, <16 x i1> [[TMP2]], <16 x i32> poison)
 ; AVX512-NEXT:    [[TMP5:%.*]] = sext <16 x i32> [[WIDE_MASKED_LOAD]] to <16 x i64>
 ; AVX512-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, float* [[IN:%.*]], <16 x i64> [[TMP5]]
 ; AVX512-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> [[TMP6]], i32 4, <16 x i1> [[TMP2]], <16 x float> undef)
 ; AVX512-NEXT:    [[TMP7:%.*]] = fadd <16 x float> [[WIDE_MASKED_GATHER]], <float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01>
-; AVX512-NEXT:    [[TMP8:%.*]] = getelementptr float, float* [[OUT:%.*]], i64 [[INDEX8]]
+; AVX512-NEXT:    [[TMP8:%.*]] = getelementptr float, float* [[OUT:%.*]], i64 [[INDEX7]]
 ; AVX512-NEXT:    [[TMP9:%.*]] = bitcast float* [[TMP8]] to <16 x float>*
 ; AVX512-NEXT:    call void @llvm.masked.store.v16f32.p0v16f32(<16 x float> [[TMP7]], <16 x float>* [[TMP9]], i32 4, <16 x i1> [[TMP2]])
-; AVX512-NEXT:    [[INDEX_NEXT:%.*]] = or i64 [[INDEX8]], 16
+; AVX512-NEXT:    [[INDEX_NEXT:%.*]] = or i64 [[INDEX7]], 16
 ; AVX512-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[INDEX_NEXT]]
 ; AVX512-NEXT:    [[TMP11:%.*]] = bitcast i32* [[TMP10]] to <16 x i32>*
 ; AVX512-NEXT:    [[WIDE_LOAD_1:%.*]] = load <16 x i32>, <16 x i32>* [[TMP11]], align 4
@@ -55,7 +55,7 @@ define void @foo1(float* noalias %in, float* noalias %out, i32* noalias %trigger
 ; AVX512-NEXT:    [[TMP18:%.*]] = getelementptr float, float* [[OUT]], i64 [[INDEX_NEXT]]
 ; AVX512-NEXT:    [[TMP19:%.*]] = bitcast float* [[TMP18]] to <16 x float>*
 ; AVX512-NEXT:    call void @llvm.masked.store.v16f32.p0v16f32(<16 x float> [[TMP17]], <16 x float>* [[TMP19]], i32 4, <16 x i1> [[TMP12]])
-; AVX512-NEXT:    [[INDEX_NEXT_1:%.*]] = or i64 [[INDEX8]], 32
+; AVX512-NEXT:    [[INDEX_NEXT_1:%.*]] = or i64 [[INDEX7]], 32
 ; AVX512-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[INDEX_NEXT_1]]
 ; AVX512-NEXT:    [[TMP21:%.*]] = bitcast i32* [[TMP20]] to <16 x i32>*
 ; AVX512-NEXT:    [[WIDE_LOAD_2:%.*]] = load <16 x i32>, <16 x i32>* [[TMP21]], align 4
@@ -70,7 +70,7 @@ define void @foo1(float* noalias %in, float* noalias %out, i32* noalias %trigger
 ; AVX512-NEXT:    [[TMP28:%.*]] = getelementptr float, float* [[OUT]], i64 [[INDEX_NEXT_1]]
 ; AVX512-NEXT:    [[TMP29:%.*]] = bitcast float* [[TMP28]] to <16 x float>*
 ; AVX512-NEXT:    call void @llvm.masked.store.v16f32.p0v16f32(<16 x float> [[TMP27]], <16 x float>* [[TMP29]], i32 4, <16 x i1> [[TMP22]])
-; AVX512-NEXT:    [[INDEX_NEXT_2:%.*]] = or i64 [[INDEX8]], 48
+; AVX512-NEXT:    [[INDEX_NEXT_2:%.*]] = or i64 [[INDEX7]], 48
 ; AVX512-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[INDEX_NEXT_2]]
 ; AVX512-NEXT:    [[TMP31:%.*]] = bitcast i32* [[TMP30]] to <16 x i32>*
 ; AVX512-NEXT:    [[WIDE_LOAD_3:%.*]] = load <16 x i32>, <16 x i32>* [[TMP31]], align 4
@@ -85,7 +85,7 @@ define void @foo1(float* noalias %in, float* noalias %out, i32* noalias %trigger
 ; AVX512-NEXT:    [[TMP38:%.*]] = getelementptr float, float* [[OUT]], i64 [[INDEX_NEXT_2]]
 ; AVX512-NEXT:    [[TMP39:%.*]] = bitcast float* [[TMP38]] to <16 x float>*
 ; AVX512-NEXT:    call void @llvm.masked.store.v16f32.p0v16f32(<16 x float> [[TMP37]], <16 x float>* [[TMP39]], i32 4, <16 x i1> [[TMP32]])
-; AVX512-NEXT:    [[INDEX_NEXT_3]] = add nuw nsw i64 [[INDEX8]], 64
+; AVX512-NEXT:    [[INDEX_NEXT_3]] = add nuw nsw i64 [[INDEX7]], 64
 ; AVX512-NEXT:    [[TMP40:%.*]] = icmp eq i64 [[INDEX_NEXT_3]], 4096
 ; AVX512-NEXT:    br i1 [[TMP40]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AVX512:       for.end:
@@ -95,8 +95,8 @@ define void @foo1(float* noalias %in, float* noalias %out, i32* noalias %trigger
 ; FVW2-NEXT:  entry:
 ; FVW2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FVW2:       vector.body:
-; FVW2-NEXT:    [[INDEX17:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; FVW2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER:%.*]], i64 [[INDEX17]]
+; FVW2-NEXT:    [[INDEX7:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE27:%.*]] ]
+; FVW2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER:%.*]], i64 [[INDEX7]]
 ; FVW2-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to <2 x i32>*
 ; FVW2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, <2 x i32>* [[TMP1]], align 4
 ; FVW2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 2
@@ -112,7 +112,7 @@ define void @foo1(float* noalias %in, float* noalias %out, i32* noalias %trigger
 ; FVW2-NEXT:    [[TMP9:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD8]], zeroinitializer
 ; FVW2-NEXT:    [[TMP10:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD9]], zeroinitializer
 ; FVW2-NEXT:    [[TMP11:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD10]], zeroinitializer
-; FVW2-NEXT:    [[TMP12:%.*]] = getelementptr i32, i32* [[INDEX:%.*]], i64 [[INDEX17]]
+; FVW2-NEXT:    [[TMP12:%.*]] = getelementptr i32, i32* [[INDEX:%.*]], i64 [[INDEX7]]
 ; FVW2-NEXT:    [[TMP13:%.*]] = bitcast i32* [[TMP12]] to <2 x i32>*
 ; FVW2-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* [[TMP13]], i32 4, <2 x i1> [[TMP8]], <2 x i32> poison)
 ; FVW2-NEXT:    [[TMP14:%.*]] = getelementptr i32, i32* [[TMP12]], i64 2
@@ -128,33 +128,105 @@ define void @foo1(float* noalias %in, float* noalias %out, i32* noalias %trigger
 ; FVW2-NEXT:    [[TMP21:%.*]] = sext <2 x i32> [[WIDE_MASKED_LOAD11]] to <2 x i64>
 ; FVW2-NEXT:    [[TMP22:%.*]] = sext <2 x i32> [[WIDE_MASKED_LOAD12]] to <2 x i64>
 ; FVW2-NEXT:    [[TMP23:%.*]] = sext <2 x i32> [[WIDE_MASKED_LOAD13]] to <2 x i64>
-; FVW2-NEXT:    [[TMP24:%.*]] = getelementptr inbounds float, float* [[IN:%.*]], <2 x i64> [[TMP20]]
-; FVW2-NEXT:    [[TMP25:%.*]] = getelementptr inbounds float, float* [[IN]], <2 x i64> [[TMP21]]
-; FVW2-NEXT:    [[TMP26:%.*]] = getelementptr inbounds float, float* [[IN]], <2 x i64> [[TMP22]]
-; FVW2-NEXT:    [[TMP27:%.*]] = getelementptr inbounds float, float* [[IN]], <2 x i64> [[TMP23]]
-; FVW2-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*> [[TMP24]], i32 4, <2 x i1> [[TMP8]], <2 x float> undef)
-; FVW2-NEXT:    [[WIDE_MASKED_GATHER14:%.*]] = call <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*> [[TMP25]], i32 4, <2 x i1> [[TMP9]], <2 x float> undef)
-; FVW2-NEXT:    [[WIDE_MASKED_GATHER15:%.*]] = call <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*> [[TMP26]], i32 4, <2 x i1> [[TMP10]], <2 x float> undef)
-; FVW2-NEXT:    [[WIDE_MASKED_GATHER16:%.*]] = call <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*> [[TMP27]], i32 4, <2 x i1> [[TMP11]], <2 x float> undef)
-; FVW2-NEXT:    [[TMP28:%.*]] = fadd <2 x float> [[WIDE_MASKED_GATHER]], <float 5.000000e-01, float 5.000000e-01>
-; FVW2-NEXT:    [[TMP29:%.*]] = fadd <2 x float> [[WIDE_MASKED_GATHER14]], <float 5.000000e-01, float 5.000000e-01>
-; FVW2-NEXT:    [[TMP30:%.*]] = fadd <2 x float> [[WIDE_MASKED_GATHER15]], <float 5.000000e-01, float 5.000000e-01>
-; FVW2-NEXT:    [[TMP31:%.*]] = fadd <2 x float> [[WIDE_MASKED_GATHER16]], <float 5.000000e-01, float 5.000000e-01>
-; FVW2-NEXT:    [[TMP32:%.*]] = getelementptr float, float* [[OUT:%.*]], i64 [[INDEX17]]
-; FVW2-NEXT:    [[TMP33:%.*]] = bitcast float* [[TMP32]] to <2 x float>*
-; FVW2-NEXT:    call void @llvm.masked.store.v2f32.p0v2f32(<2 x float> [[TMP28]], <2 x float>* [[TMP33]], i32 4, <2 x i1> [[TMP8]])
-; FVW2-NEXT:    [[TMP34:%.*]] = getelementptr float, float* [[TMP32]], i64 2
-; FVW2-NEXT:    [[TMP35:%.*]] = bitcast float* [[TMP34]] to <2 x float>*
-; FVW2-NEXT:    call void @llvm.masked.store.v2f32.p0v2f32(<2 x float> [[TMP29]], <2 x float>* [[TMP35]], i32 4, <2 x i1> [[TMP9]])
-; FVW2-NEXT:    [[TMP36:%.*]] = getelementptr float, float* [[TMP32]], i64 4
-; FVW2-NEXT:    [[TMP37:%.*]] = bitcast float* [[TMP36]] to <2 x float>*
-; FVW2-NEXT:    call void @llvm.masked.store.v2f32.p0v2f32(<2 x float> [[TMP30]], <2 x float>* [[TMP37]], i32 4, <2 x i1> [[TMP10]])
-; FVW2-NEXT:    [[TMP38:%.*]] = getelementptr float, float* [[TMP32]], i64 6
-; FVW2-NEXT:    [[TMP39:%.*]] = bitcast float* [[TMP38]] to <2 x float>*
-; FVW2-NEXT:    call void @llvm.masked.store.v2f32.p0v2f32(<2 x float> [[TMP31]], <2 x float>* [[TMP39]], i32 4, <2 x i1> [[TMP11]])
-; FVW2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX17]], 8
-; FVW2-NEXT:    [[TMP40:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
-; FVW2-NEXT:    br i1 [[TMP40]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; FVW2-NEXT:    [[TMP24:%.*]] = extractelement <2 x i1> [[TMP8]], i64 0
+; FVW2-NEXT:    br i1 [[TMP24]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
+; FVW2:       pred.load.if:
+; FVW2-NEXT:    [[TMP25:%.*]] = extractelement <2 x i64> [[TMP20]], i64 0
+; FVW2-NEXT:    [[TMP26:%.*]] = getelementptr inbounds float, float* [[IN:%.*]], i64 [[TMP25]]
+; FVW2-NEXT:    [[TMP27:%.*]] = load float, float* [[TMP26]], align 4
+; FVW2-NEXT:    [[TMP28:%.*]] = insertelement <2 x float> poison, float [[TMP27]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE]]
+; FVW2:       pred.load.continue:
+; FVW2-NEXT:    [[TMP29:%.*]] = phi <2 x float> [ poison, [[VECTOR_BODY]] ], [ [[TMP28]], [[PRED_LOAD_IF]] ]
+; FVW2-NEXT:    [[TMP30:%.*]] = extractelement <2 x i1> [[TMP8]], i64 1
+; FVW2-NEXT:    br i1 [[TMP30]], label [[PRED_LOAD_IF14:%.*]], label [[PRED_LOAD_CONTINUE15:%.*]]
+; FVW2:       pred.load.if14:
+; FVW2-NEXT:    [[TMP31:%.*]] = extractelement <2 x i64> [[TMP20]], i64 1
+; FVW2-NEXT:    [[TMP32:%.*]] = getelementptr inbounds float, float* [[IN]], i64 [[TMP31]]
+; FVW2-NEXT:    [[TMP33:%.*]] = load float, float* [[TMP32]], align 4
+; FVW2-NEXT:    [[TMP34:%.*]] = insertelement <2 x float> [[TMP29]], float [[TMP33]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE15]]
+; FVW2:       pred.load.continue15:
+; FVW2-NEXT:    [[TMP35:%.*]] = phi <2 x float> [ [[TMP29]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP34]], [[PRED_LOAD_IF14]] ]
+; FVW2-NEXT:    [[TMP36:%.*]] = extractelement <2 x i1> [[TMP9]], i64 0
+; FVW2-NEXT:    br i1 [[TMP36]], label [[PRED_LOAD_IF16:%.*]], label [[PRED_LOAD_CONTINUE17:%.*]]
+; FVW2:       pred.load.if16:
+; FVW2-NEXT:    [[TMP37:%.*]] = extractelement <2 x i64> [[TMP21]], i64 0
+; FVW2-NEXT:    [[TMP38:%.*]] = getelementptr inbounds float, float* [[IN]], i64 [[TMP37]]
+; FVW2-NEXT:    [[TMP39:%.*]] = load float, float* [[TMP38]], align 4
+; FVW2-NEXT:    [[TMP40:%.*]] = insertelement <2 x float> poison, float [[TMP39]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE17]]
+; FVW2:       pred.load.continue17:
+; FVW2-NEXT:    [[TMP41:%.*]] = phi <2 x float> [ poison, [[PRED_LOAD_CONTINUE15]] ], [ [[TMP40]], [[PRED_LOAD_IF16]] ]
+; FVW2-NEXT:    [[TMP42:%.*]] = extractelement <2 x i1> [[TMP9]], i64 1
+; FVW2-NEXT:    br i1 [[TMP42]], label [[PRED_LOAD_IF18:%.*]], label [[PRED_LOAD_CONTINUE19:%.*]]
+; FVW2:       pred.load.if18:
+; FVW2-NEXT:    [[TMP43:%.*]] = extractelement <2 x i64> [[TMP21]], i64 1
+; FVW2-NEXT:    [[TMP44:%.*]] = getelementptr inbounds float, float* [[IN]], i64 [[TMP43]]
+; FVW2-NEXT:    [[TMP45:%.*]] = load float, float* [[TMP44]], align 4
+; FVW2-NEXT:    [[TMP46:%.*]] = insertelement <2 x float> [[TMP41]], float [[TMP45]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE19]]
+; FVW2:       pred.load.continue19:
+; FVW2-NEXT:    [[TMP47:%.*]] = phi <2 x float> [ [[TMP41]], [[PRED_LOAD_CONTINUE17]] ], [ [[TMP46]], [[PRED_LOAD_IF18]] ]
+; FVW2-NEXT:    [[TMP48:%.*]] = extractelement <2 x i1> [[TMP10]], i64 0
+; FVW2-NEXT:    br i1 [[TMP48]], label [[PRED_LOAD_IF20:%.*]], label [[PRED_LOAD_CONTINUE21:%.*]]
+; FVW2:       pred.load.if20:
+; FVW2-NEXT:    [[TMP49:%.*]] = extractelement <2 x i64> [[TMP22]], i64 0
+; FVW2-NEXT:    [[TMP50:%.*]] = getelementptr inbounds float, float* [[IN]], i64 [[TMP49]]
+; FVW2-NEXT:    [[TMP51:%.*]] = load float, float* [[TMP50]], align 4
+; FVW2-NEXT:    [[TMP52:%.*]] = insertelement <2 x float> poison, float [[TMP51]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE21]]
+; FVW2:       pred.load.continue21:
+; FVW2-NEXT:    [[TMP53:%.*]] = phi <2 x float> [ poison, [[PRED_LOAD_CONTINUE19]] ], [ [[TMP52]], [[PRED_LOAD_IF20]] ]
+; FVW2-NEXT:    [[TMP54:%.*]] = extractelement <2 x i1> [[TMP10]], i64 1
+; FVW2-NEXT:    br i1 [[TMP54]], label [[PRED_LOAD_IF22:%.*]], label [[PRED_LOAD_CONTINUE23:%.*]]
+; FVW2:       pred.load.if22:
+; FVW2-NEXT:    [[TMP55:%.*]] = extractelement <2 x i64> [[TMP22]], i64 1
+; FVW2-NEXT:    [[TMP56:%.*]] = getelementptr inbounds float, float* [[IN]], i64 [[TMP55]]
+; FVW2-NEXT:    [[TMP57:%.*]] = load float, float* [[TMP56]], align 4
+; FVW2-NEXT:    [[TMP58:%.*]] = insertelement <2 x float> [[TMP53]], float [[TMP57]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE23]]
+; FVW2:       pred.load.continue23:
+; FVW2-NEXT:    [[TMP59:%.*]] = phi <2 x float> [ [[TMP53]], [[PRED_LOAD_CONTINUE21]] ], [ [[TMP58]], [[PRED_LOAD_IF22]] ]
+; FVW2-NEXT:    [[TMP60:%.*]] = extractelement <2 x i1> [[TMP11]], i64 0
+; FVW2-NEXT:    br i1 [[TMP60]], label [[PRED_LOAD_IF24:%.*]], label [[PRED_LOAD_CONTINUE25:%.*]]
+; FVW2:       pred.load.if24:
+; FVW2-NEXT:    [[TMP61:%.*]] = extractelement <2 x i64> [[TMP23]], i64 0
+; FVW2-NEXT:    [[TMP62:%.*]] = getelementptr inbounds float, float* [[IN]], i64 [[TMP61]]
+; FVW2-NEXT:    [[TMP63:%.*]] = load float, float* [[TMP62]], align 4
+; FVW2-NEXT:    [[TMP64:%.*]] = insertelement <2 x float> poison, float [[TMP63]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE25]]
+; FVW2:       pred.load.continue25:
+; FVW2-NEXT:    [[TMP65:%.*]] = phi <2 x float> [ poison, [[PRED_LOAD_CONTINUE23]] ], [ [[TMP64]], [[PRED_LOAD_IF24]] ]
+; FVW2-NEXT:    [[TMP66:%.*]] = extractelement <2 x i1> [[TMP11]], i64 1
+; FVW2-NEXT:    br i1 [[TMP66]], label [[PRED_LOAD_IF26:%.*]], label [[PRED_LOAD_CONTINUE27]]
+; FVW2:       pred.load.if26:
+; FVW2-NEXT:    [[TMP67:%.*]] = extractelement <2 x i64> [[TMP23]], i64 1
+; FVW2-NEXT:    [[TMP68:%.*]] = getelementptr inbounds float, float* [[IN]], i64 [[TMP67]]
+; FVW2-NEXT:    [[TMP69:%.*]] = load float, float* [[TMP68]], align 4
+; FVW2-NEXT:    [[TMP70:%.*]] = insertelement <2 x float> [[TMP65]], float [[TMP69]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE27]]
+; FVW2:       pred.load.continue27:
+; FVW2-NEXT:    [[TMP71:%.*]] = phi <2 x float> [ [[TMP65]], [[PRED_LOAD_CONTINUE25]] ], [ [[TMP70]], [[PRED_LOAD_IF26]] ]
+; FVW2-NEXT:    [[TMP72:%.*]] = fadd <2 x float> [[TMP35]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP73:%.*]] = fadd <2 x float> [[TMP47]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP74:%.*]] = fadd <2 x float> [[TMP59]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP75:%.*]] = fadd <2 x float> [[TMP71]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP76:%.*]] = getelementptr float, float* [[OUT:%.*]], i64 [[INDEX7]]
+; FVW2-NEXT:    [[TMP77:%.*]] = bitcast float* [[TMP76]] to <2 x float>*
+; FVW2-NEXT:    call void @llvm.masked.store.v2f32.p0v2f32(<2 x float> [[TMP72]], <2 x float>* [[TMP77]], i32 4, <2 x i1> [[TMP8]])
+; FVW2-NEXT:    [[TMP78:%.*]] = getelementptr float, float* [[TMP76]], i64 2
+; FVW2-NEXT:    [[TMP79:%.*]] = bitcast float* [[TMP78]] to <2 x float>*
+; FVW2-NEXT:    call void @llvm.masked.store.v2f32.p0v2f32(<2 x float> [[TMP73]], <2 x float>* [[TMP79]], i32 4, <2 x i1> [[TMP9]])
+; FVW2-NEXT:    [[TMP80:%.*]] = getelementptr float, float* [[TMP76]], i64 4
+; FVW2-NEXT:    [[TMP81:%.*]] = bitcast float* [[TMP80]] to <2 x float>*
+; FVW2-NEXT:    call void @llvm.masked.store.v2f32.p0v2f32(<2 x float> [[TMP74]], <2 x float>* [[TMP81]], i32 4, <2 x i1> [[TMP10]])
+; FVW2-NEXT:    [[TMP82:%.*]] = getelementptr float, float* [[TMP76]], i64 6
+; FVW2-NEXT:    [[TMP83:%.*]] = bitcast float* [[TMP82]] to <2 x float>*
+; FVW2-NEXT:    call void @llvm.masked.store.v2f32.p0v2f32(<2 x float> [[TMP75]], <2 x float>* [[TMP83]], i32 4, <2 x i1> [[TMP11]])
+; FVW2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX7]], 8
+; FVW2-NEXT:    [[TMP84:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
+; FVW2-NEXT:    br i1 [[TMP84]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; FVW2:       for.end:
 ; FVW2-NEXT:    ret void
 ;
@@ -365,40 +437,186 @@ define void @foo2(%struct.In* noalias %in, float* noalias %out, i32* noalias %tr
 ; FVW2-NEXT:  entry:
 ; FVW2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FVW2:       vector.body:
-; FVW2-NEXT:    [[INDEX10:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE9:%.*]] ]
-; FVW2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 16>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE9]] ]
-; FVW2-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX10]], 4
+; FVW2-NEXT:    [[INDEX7:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE35:%.*]] ]
+; FVW2-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX7]], 4
 ; FVW2-NEXT:    [[TMP0:%.*]] = or i64 [[OFFSET_IDX]], 16
-; FVW2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER:%.*]], i64 [[OFFSET_IDX]]
-; FVW2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP0]]
-; FVW2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]], align 4
-; FVW2-NEXT:    [[TMP4:%.*]] = load i32, i32* [[TMP2]], align 4
-; FVW2-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i64 0
-; FVW2-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP4]], i64 1
-; FVW2-NEXT:    [[TMP7:%.*]] = icmp sgt <2 x i32> [[TMP6]], zeroinitializer
-; FVW2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_IN:%.*]], %struct.In* [[IN:%.*]], <2 x i64> [[VEC_IND]], i32 1
-; FVW2-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*> [[TMP8]], i32 4, <2 x i1> [[TMP7]], <2 x float> undef)
-; FVW2-NEXT:    [[TMP9:%.*]] = fadd <2 x float> [[WIDE_MASKED_GATHER]], <float 5.000000e-01, float 5.000000e-01>
-; FVW2-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP7]], i64 0
-; FVW2-NEXT:    br i1 [[TMP10]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; FVW2-NEXT:    [[TMP1:%.*]] = or i64 [[OFFSET_IDX]], 32
+; FVW2-NEXT:    [[TMP2:%.*]] = or i64 [[OFFSET_IDX]], 48
+; FVW2-NEXT:    [[TMP3:%.*]] = or i64 [[OFFSET_IDX]], 64
+; FVW2-NEXT:    [[TMP4:%.*]] = or i64 [[OFFSET_IDX]], 80
+; FVW2-NEXT:    [[TMP5:%.*]] = or i64 [[OFFSET_IDX]], 96
+; FVW2-NEXT:    [[TMP6:%.*]] = or i64 [[OFFSET_IDX]], 112
+; FVW2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER:%.*]], i64 [[OFFSET_IDX]]
+; FVW2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP0]]
+; FVW2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP1]]
+; FVW2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP2]]
+; FVW2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP3]]
+; FVW2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP4]]
+; FVW2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP5]]
+; FVW2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP6]]
+; FVW2-NEXT:    [[TMP15:%.*]] = load i32, i32* [[TMP7]], align 4
+; FVW2-NEXT:    [[TMP16:%.*]] = load i32, i32* [[TMP8]], align 4
+; FVW2-NEXT:    [[TMP17:%.*]] = insertelement <2 x i32> poison, i32 [[TMP15]], i64 0
+; FVW2-NEXT:    [[TMP18:%.*]] = insertelement <2 x i32> [[TMP17]], i32 [[TMP16]], i64 1
+; FVW2-NEXT:    [[TMP19:%.*]] = load i32, i32* [[TMP9]], align 4
+; FVW2-NEXT:    [[TMP20:%.*]] = load i32, i32* [[TMP10]], align 4
+; FVW2-NEXT:    [[TMP21:%.*]] = insertelement <2 x i32> poison, i32 [[TMP19]], i64 0
+; FVW2-NEXT:    [[TMP22:%.*]] = insertelement <2 x i32> [[TMP21]], i32 [[TMP20]], i64 1
+; FVW2-NEXT:    [[TMP23:%.*]] = load i32, i32* [[TMP11]], align 4
+; FVW2-NEXT:    [[TMP24:%.*]] = load i32, i32* [[TMP12]], align 4
+; FVW2-NEXT:    [[TMP25:%.*]] = insertelement <2 x i32> poison, i32 [[TMP23]], i64 0
+; FVW2-NEXT:    [[TMP26:%.*]] = insertelement <2 x i32> [[TMP25]], i32 [[TMP24]], i64 1
+; FVW2-NEXT:    [[TMP27:%.*]] = load i32, i32* [[TMP13]], align 4
+; FVW2-NEXT:    [[TMP28:%.*]] = load i32, i32* [[TMP14]], align 4
+; FVW2-NEXT:    [[TMP29:%.*]] = insertelement <2 x i32> poison, i32 [[TMP27]], i64 0
+; FVW2-NEXT:    [[TMP30:%.*]] = insertelement <2 x i32> [[TMP29]], i32 [[TMP28]], i64 1
+; FVW2-NEXT:    [[TMP31:%.*]] = icmp sgt <2 x i32> [[TMP18]], zeroinitializer
+; FVW2-NEXT:    [[TMP32:%.*]] = icmp sgt <2 x i32> [[TMP22]], zeroinitializer
+; FVW2-NEXT:    [[TMP33:%.*]] = icmp sgt <2 x i32> [[TMP26]], zeroinitializer
+; FVW2-NEXT:    [[TMP34:%.*]] = icmp sgt <2 x i32> [[TMP30]], zeroinitializer
+; FVW2-NEXT:    [[TMP35:%.*]] = extractelement <2 x i1> [[TMP31]], i64 0
+; FVW2-NEXT:    br i1 [[TMP35]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
+; FVW2:       pred.load.if:
+; FVW2-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_IN:%.*]], %struct.In* [[IN:%.*]], i64 [[OFFSET_IDX]], i32 1
+; FVW2-NEXT:    [[TMP37:%.*]] = load float, float* [[TMP36]], align 4
+; FVW2-NEXT:    [[TMP38:%.*]] = insertelement <2 x float> poison, float [[TMP37]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE]]
+; FVW2:       pred.load.continue:
+; FVW2-NEXT:    [[TMP39:%.*]] = phi <2 x float> [ poison, [[VECTOR_BODY]] ], [ [[TMP38]], [[PRED_LOAD_IF]] ]
+; FVW2-NEXT:    [[TMP40:%.*]] = extractelement <2 x i1> [[TMP31]], i64 1
+; FVW2-NEXT:    br i1 [[TMP40]], label [[PRED_LOAD_IF8:%.*]], label [[PRED_LOAD_CONTINUE9:%.*]]
+; FVW2:       pred.load.if8:
+; FVW2-NEXT:    [[TMP41:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP0]], i32 1
+; FVW2-NEXT:    [[TMP42:%.*]] = load float, float* [[TMP41]], align 4
+; FVW2-NEXT:    [[TMP43:%.*]] = insertelement <2 x float> [[TMP39]], float [[TMP42]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE9]]
+; FVW2:       pred.load.continue9:
+; FVW2-NEXT:    [[TMP44:%.*]] = phi <2 x float> [ [[TMP39]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP43]], [[PRED_LOAD_IF8]] ]
+; FVW2-NEXT:    [[TMP45:%.*]] = extractelement <2 x i1> [[TMP32]], i64 0
+; FVW2-NEXT:    br i1 [[TMP45]], label [[PRED_LOAD_IF10:%.*]], label [[PRED_LOAD_CONTINUE11:%.*]]
+; FVW2:       pred.load.if10:
+; FVW2-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP1]], i32 1
+; FVW2-NEXT:    [[TMP47:%.*]] = load float, float* [[TMP46]], align 4
+; FVW2-NEXT:    [[TMP48:%.*]] = insertelement <2 x float> poison, float [[TMP47]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE11]]
+; FVW2:       pred.load.continue11:
+; FVW2-NEXT:    [[TMP49:%.*]] = phi <2 x float> [ poison, [[PRED_LOAD_CONTINUE9]] ], [ [[TMP48]], [[PRED_LOAD_IF10]] ]
+; FVW2-NEXT:    [[TMP50:%.*]] = extractelement <2 x i1> [[TMP32]], i64 1
+; FVW2-NEXT:    br i1 [[TMP50]], label [[PRED_LOAD_IF12:%.*]], label [[PRED_LOAD_CONTINUE13:%.*]]
+; FVW2:       pred.load.if12:
+; FVW2-NEXT:    [[TMP51:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP2]], i32 1
+; FVW2-NEXT:    [[TMP52:%.*]] = load float, float* [[TMP51]], align 4
+; FVW2-NEXT:    [[TMP53:%.*]] = insertelement <2 x float> [[TMP49]], float [[TMP52]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE13]]
+; FVW2:       pred.load.continue13:
+; FVW2-NEXT:    [[TMP54:%.*]] = phi <2 x float> [ [[TMP49]], [[PRED_LOAD_CONTINUE11]] ], [ [[TMP53]], [[PRED_LOAD_IF12]] ]
+; FVW2-NEXT:    [[TMP55:%.*]] = extractelement <2 x i1> [[TMP33]], i64 0
+; FVW2-NEXT:    br i1 [[TMP55]], label [[PRED_LOAD_IF14:%.*]], label [[PRED_LOAD_CONTINUE15:%.*]]
+; FVW2:       pred.load.if14:
+; FVW2-NEXT:    [[TMP56:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP3]], i32 1
+; FVW2-NEXT:    [[TMP57:%.*]] = load float, float* [[TMP56]], align 4
+; FVW2-NEXT:    [[TMP58:%.*]] = insertelement <2 x float> poison, float [[TMP57]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE15]]
+; FVW2:       pred.load.continue15:
+; FVW2-NEXT:    [[TMP59:%.*]] = phi <2 x float> [ poison, [[PRED_LOAD_CONTINUE13]] ], [ [[TMP58]], [[PRED_LOAD_IF14]] ]
+; FVW2-NEXT:    [[TMP60:%.*]] = extractelement <2 x i1> [[TMP33]], i64 1
+; FVW2-NEXT:    br i1 [[TMP60]], label [[PRED_LOAD_IF16:%.*]], label [[PRED_LOAD_CONTINUE17:%.*]]
+; FVW2:       pred.load.if16:
+; FVW2-NEXT:    [[TMP61:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP4]], i32 1
+; FVW2-NEXT:    [[TMP62:%.*]] = load float, float* [[TMP61]], align 4
+; FVW2-NEXT:    [[TMP63:%.*]] = insertelement <2 x float> [[TMP59]], float [[TMP62]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE17]]
+; FVW2:       pred.load.continue17:
+; FVW2-NEXT:    [[TMP64:%.*]] = phi <2 x float> [ [[TMP59]], [[PRED_LOAD_CONTINUE15]] ], [ [[TMP63]], [[PRED_LOAD_IF16]] ]
+; FVW2-NEXT:    [[TMP65:%.*]] = extractelement <2 x i1> [[TMP34]], i64 0
+; FVW2-NEXT:    br i1 [[TMP65]], label [[PRED_LOAD_IF18:%.*]], label [[PRED_LOAD_CONTINUE19:%.*]]
+; FVW2:       pred.load.if18:
+; FVW2-NEXT:    [[TMP66:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP5]], i32 1
+; FVW2-NEXT:    [[TMP67:%.*]] = load float, float* [[TMP66]], align 4
+; FVW2-NEXT:    [[TMP68:%.*]] = insertelement <2 x float> poison, float [[TMP67]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE19]]
+; FVW2:       pred.load.continue19:
+; FVW2-NEXT:    [[TMP69:%.*]] = phi <2 x float> [ poison, [[PRED_LOAD_CONTINUE17]] ], [ [[TMP68]], [[PRED_LOAD_IF18]] ]
+; FVW2-NEXT:    [[TMP70:%.*]] = extractelement <2 x i1> [[TMP34]], i64 1
+; FVW2-NEXT:    br i1 [[TMP70]], label [[PRED_LOAD_IF20:%.*]], label [[PRED_LOAD_CONTINUE21:%.*]]
+; FVW2:       pred.load.if20:
+; FVW2-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP6]], i32 1
+; FVW2-NEXT:    [[TMP72:%.*]] = load float, float* [[TMP71]], align 4
+; FVW2-NEXT:    [[TMP73:%.*]] = insertelement <2 x float> [[TMP69]], float [[TMP72]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE21]]
+; FVW2:       pred.load.continue21:
+; FVW2-NEXT:    [[TMP74:%.*]] = phi <2 x float> [ [[TMP69]], [[PRED_LOAD_CONTINUE19]] ], [ [[TMP73]], [[PRED_LOAD_IF20]] ]
+; FVW2-NEXT:    [[TMP75:%.*]] = fadd <2 x float> [[TMP44]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP76:%.*]] = fadd <2 x float> [[TMP54]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP77:%.*]] = fadd <2 x float> [[TMP64]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP78:%.*]] = fadd <2 x float> [[TMP74]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP79:%.*]] = extractelement <2 x i1> [[TMP31]], i64 0
+; FVW2-NEXT:    br i1 [[TMP79]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; FVW2:       pred.store.if:
-; FVW2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, float* [[OUT:%.*]], i64 [[OFFSET_IDX]]
-; FVW2-NEXT:    [[TMP12:%.*]] = extractelement <2 x float> [[TMP9]], i64 0
-; FVW2-NEXT:    store float [[TMP12]], float* [[TMP11]], align 4
+; FVW2-NEXT:    [[TMP80:%.*]] = getelementptr inbounds float, float* [[OUT:%.*]], i64 [[OFFSET_IDX]]
+; FVW2-NEXT:    [[TMP81:%.*]] = extractelement <2 x float> [[TMP75]], i64 0
+; FVW2-NEXT:    store float [[TMP81]], float* [[TMP80]], align 4
 ; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; FVW2:       pred.store.continue:
-; FVW2-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP7]], i64 1
-; FVW2-NEXT:    br i1 [[TMP13]], label [[PRED_STORE_IF8:%.*]], label [[PRED_STORE_CONTINUE9]]
-; FVW2:       pred.store.if8:
-; FVW2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, float* [[OUT]], i64 [[TMP0]]
-; FVW2-NEXT:    [[TMP15:%.*]] = extractelement <2 x float> [[TMP9]], i64 1
-; FVW2-NEXT:    store float [[TMP15]], float* [[TMP14]], align 4
-; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE9]]
-; FVW2:       pred.store.continue9:
-; FVW2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX10]], 2
-; FVW2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 32, i64 32>
-; FVW2-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; FVW2-NEXT:    br i1 [[TMP16]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; FVW2-NEXT:    [[TMP82:%.*]] = extractelement <2 x i1> [[TMP31]], i64 1
+; FVW2-NEXT:    br i1 [[TMP82]], label [[PRED_STORE_IF22:%.*]], label [[PRED_STORE_CONTINUE23:%.*]]
+; FVW2:       pred.store.if22:
+; FVW2-NEXT:    [[TMP83:%.*]] = getelementptr inbounds float, float* [[OUT]], i64 [[TMP0]]
+; FVW2-NEXT:    [[TMP84:%.*]] = extractelement <2 x float> [[TMP75]], i64 1
+; FVW2-NEXT:    store float [[TMP84]], float* [[TMP83]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE23]]
+; FVW2:       pred.store.continue23:
+; FVW2-NEXT:    [[TMP85:%.*]] = extractelement <2 x i1> [[TMP32]], i64 0
+; FVW2-NEXT:    br i1 [[TMP85]], label [[PRED_STORE_IF24:%.*]], label [[PRED_STORE_CONTINUE25:%.*]]
+; FVW2:       pred.store.if24:
+; FVW2-NEXT:    [[TMP86:%.*]] = getelementptr inbounds float, float* [[OUT]], i64 [[TMP1]]
+; FVW2-NEXT:    [[TMP87:%.*]] = extractelement <2 x float> [[TMP76]], i64 0
+; FVW2-NEXT:    store float [[TMP87]], float* [[TMP86]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE25]]
+; FVW2:       pred.store.continue25:
+; FVW2-NEXT:    [[TMP88:%.*]] = extractelement <2 x i1> [[TMP32]], i64 1
+; FVW2-NEXT:    br i1 [[TMP88]], label [[PRED_STORE_IF26:%.*]], label [[PRED_STORE_CONTINUE27:%.*]]
+; FVW2:       pred.store.if26:
+; FVW2-NEXT:    [[TMP89:%.*]] = getelementptr inbounds float, float* [[OUT]], i64 [[TMP2]]
+; FVW2-NEXT:    [[TMP90:%.*]] = extractelement <2 x float> [[TMP76]], i64 1
+; FVW2-NEXT:    store float [[TMP90]], float* [[TMP89]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE27]]
+; FVW2:       pred.store.continue27:
+; FVW2-NEXT:    [[TMP91:%.*]] = extractelement <2 x i1> [[TMP33]], i64 0
+; FVW2-NEXT:    br i1 [[TMP91]], label [[PRED_STORE_IF28:%.*]], label [[PRED_STORE_CONTINUE29:%.*]]
+; FVW2:       pred.store.if28:
+; FVW2-NEXT:    [[TMP92:%.*]] = getelementptr inbounds float, float* [[OUT]], i64 [[TMP3]]
+; FVW2-NEXT:    [[TMP93:%.*]] = extractelement <2 x float> [[TMP77]], i64 0
+; FVW2-NEXT:    store float [[TMP93]], float* [[TMP92]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE29]]
+; FVW2:       pred.store.continue29:
+; FVW2-NEXT:    [[TMP94:%.*]] = extractelement <2 x i1> [[TMP33]], i64 1
+; FVW2-NEXT:    br i1 [[TMP94]], label [[PRED_STORE_IF30:%.*]], label [[PRED_STORE_CONTINUE31:%.*]]
+; FVW2:       pred.store.if30:
+; FVW2-NEXT:    [[TMP95:%.*]] = getelementptr inbounds float, float* [[OUT]], i64 [[TMP4]]
+; FVW2-NEXT:    [[TMP96:%.*]] = extractelement <2 x float> [[TMP77]], i64 1
+; FVW2-NEXT:    store float [[TMP96]], float* [[TMP95]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE31]]
+; FVW2:       pred.store.continue31:
+; FVW2-NEXT:    [[TMP97:%.*]] = extractelement <2 x i1> [[TMP34]], i64 0
+; FVW2-NEXT:    br i1 [[TMP97]], label [[PRED_STORE_IF32:%.*]], label [[PRED_STORE_CONTINUE33:%.*]]
+; FVW2:       pred.store.if32:
+; FVW2-NEXT:    [[TMP98:%.*]] = getelementptr inbounds float, float* [[OUT]], i64 [[TMP5]]
+; FVW2-NEXT:    [[TMP99:%.*]] = extractelement <2 x float> [[TMP78]], i64 0
+; FVW2-NEXT:    store float [[TMP99]], float* [[TMP98]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE33]]
+; FVW2:       pred.store.continue33:
+; FVW2-NEXT:    [[TMP100:%.*]] = extractelement <2 x i1> [[TMP34]], i64 1
+; FVW2-NEXT:    br i1 [[TMP100]], label [[PRED_STORE_IF34:%.*]], label [[PRED_STORE_CONTINUE35]]
+; FVW2:       pred.store.if34:
+; FVW2-NEXT:    [[TMP101:%.*]] = getelementptr inbounds float, float* [[OUT]], i64 [[TMP6]]
+; FVW2-NEXT:    [[TMP102:%.*]] = extractelement <2 x float> [[TMP78]], i64 1
+; FVW2-NEXT:    store float [[TMP102]], float* [[TMP101]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE35]]
+; FVW2:       pred.store.continue35:
+; FVW2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX7]], 8
+; FVW2-NEXT:    [[TMP103:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
+; FVW2-NEXT:    br i1 [[TMP103]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; FVW2:       for.end:
 ; FVW2-NEXT:    ret void
 ;
@@ -610,40 +828,186 @@ define void @foo3(%struct.In* noalias %in, %struct.Out* noalias %out, i32* noali
 ; FVW2-NEXT:  entry:
 ; FVW2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FVW2:       vector.body:
-; FVW2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE8:%.*]] ]
-; FVW2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 16>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE8]] ]
+; FVW2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE34:%.*]] ]
 ; FVW2-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 4
 ; FVW2-NEXT:    [[TMP0:%.*]] = or i64 [[OFFSET_IDX]], 16
-; FVW2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER:%.*]], i64 [[OFFSET_IDX]]
-; FVW2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP0]]
-; FVW2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]], align 4
-; FVW2-NEXT:    [[TMP4:%.*]] = load i32, i32* [[TMP2]], align 4
-; FVW2-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i64 0
-; FVW2-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP4]], i64 1
-; FVW2-NEXT:    [[TMP7:%.*]] = icmp sgt <2 x i32> [[TMP6]], zeroinitializer
-; FVW2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_IN:%.*]], %struct.In* [[IN:%.*]], <2 x i64> [[VEC_IND]], i32 1
-; FVW2-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*> [[TMP8]], i32 4, <2 x i1> [[TMP7]], <2 x float> undef)
-; FVW2-NEXT:    [[TMP9:%.*]] = fadd <2 x float> [[WIDE_MASKED_GATHER]], <float 5.000000e-01, float 5.000000e-01>
-; FVW2-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP7]], i64 0
-; FVW2-NEXT:    br i1 [[TMP10]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; FVW2-NEXT:    [[TMP1:%.*]] = or i64 [[OFFSET_IDX]], 32
+; FVW2-NEXT:    [[TMP2:%.*]] = or i64 [[OFFSET_IDX]], 48
+; FVW2-NEXT:    [[TMP3:%.*]] = or i64 [[OFFSET_IDX]], 64
+; FVW2-NEXT:    [[TMP4:%.*]] = or i64 [[OFFSET_IDX]], 80
+; FVW2-NEXT:    [[TMP5:%.*]] = or i64 [[OFFSET_IDX]], 96
+; FVW2-NEXT:    [[TMP6:%.*]] = or i64 [[OFFSET_IDX]], 112
+; FVW2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER:%.*]], i64 [[OFFSET_IDX]]
+; FVW2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP0]]
+; FVW2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP1]]
+; FVW2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP2]]
+; FVW2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP3]]
+; FVW2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP4]]
+; FVW2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP5]]
+; FVW2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP6]]
+; FVW2-NEXT:    [[TMP15:%.*]] = load i32, i32* [[TMP7]], align 4
+; FVW2-NEXT:    [[TMP16:%.*]] = load i32, i32* [[TMP8]], align 4
+; FVW2-NEXT:    [[TMP17:%.*]] = insertelement <2 x i32> poison, i32 [[TMP15]], i64 0
+; FVW2-NEXT:    [[TMP18:%.*]] = insertelement <2 x i32> [[TMP17]], i32 [[TMP16]], i64 1
+; FVW2-NEXT:    [[TMP19:%.*]] = load i32, i32* [[TMP9]], align 4
+; FVW2-NEXT:    [[TMP20:%.*]] = load i32, i32* [[TMP10]], align 4
+; FVW2-NEXT:    [[TMP21:%.*]] = insertelement <2 x i32> poison, i32 [[TMP19]], i64 0
+; FVW2-NEXT:    [[TMP22:%.*]] = insertelement <2 x i32> [[TMP21]], i32 [[TMP20]], i64 1
+; FVW2-NEXT:    [[TMP23:%.*]] = load i32, i32* [[TMP11]], align 4
+; FVW2-NEXT:    [[TMP24:%.*]] = load i32, i32* [[TMP12]], align 4
+; FVW2-NEXT:    [[TMP25:%.*]] = insertelement <2 x i32> poison, i32 [[TMP23]], i64 0
+; FVW2-NEXT:    [[TMP26:%.*]] = insertelement <2 x i32> [[TMP25]], i32 [[TMP24]], i64 1
+; FVW2-NEXT:    [[TMP27:%.*]] = load i32, i32* [[TMP13]], align 4
+; FVW2-NEXT:    [[TMP28:%.*]] = load i32, i32* [[TMP14]], align 4
+; FVW2-NEXT:    [[TMP29:%.*]] = insertelement <2 x i32> poison, i32 [[TMP27]], i64 0
+; FVW2-NEXT:    [[TMP30:%.*]] = insertelement <2 x i32> [[TMP29]], i32 [[TMP28]], i64 1
+; FVW2-NEXT:    [[TMP31:%.*]] = icmp sgt <2 x i32> [[TMP18]], zeroinitializer
+; FVW2-NEXT:    [[TMP32:%.*]] = icmp sgt <2 x i32> [[TMP22]], zeroinitializer
+; FVW2-NEXT:    [[TMP33:%.*]] = icmp sgt <2 x i32> [[TMP26]], zeroinitializer
+; FVW2-NEXT:    [[TMP34:%.*]] = icmp sgt <2 x i32> [[TMP30]], zeroinitializer
+; FVW2-NEXT:    [[TMP35:%.*]] = extractelement <2 x i1> [[TMP31]], i64 0
+; FVW2-NEXT:    br i1 [[TMP35]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
+; FVW2:       pred.load.if:
+; FVW2-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_IN:%.*]], %struct.In* [[IN:%.*]], i64 [[OFFSET_IDX]], i32 1
+; FVW2-NEXT:    [[TMP37:%.*]] = load float, float* [[TMP36]], align 4
+; FVW2-NEXT:    [[TMP38:%.*]] = insertelement <2 x float> poison, float [[TMP37]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE]]
+; FVW2:       pred.load.continue:
+; FVW2-NEXT:    [[TMP39:%.*]] = phi <2 x float> [ poison, [[VECTOR_BODY]] ], [ [[TMP38]], [[PRED_LOAD_IF]] ]
+; FVW2-NEXT:    [[TMP40:%.*]] = extractelement <2 x i1> [[TMP31]], i64 1
+; FVW2-NEXT:    br i1 [[TMP40]], label [[PRED_LOAD_IF7:%.*]], label [[PRED_LOAD_CONTINUE8:%.*]]
+; FVW2:       pred.load.if7:
+; FVW2-NEXT:    [[TMP41:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP0]], i32 1
+; FVW2-NEXT:    [[TMP42:%.*]] = load float, float* [[TMP41]], align 4
+; FVW2-NEXT:    [[TMP43:%.*]] = insertelement <2 x float> [[TMP39]], float [[TMP42]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE8]]
+; FVW2:       pred.load.continue8:
+; FVW2-NEXT:    [[TMP44:%.*]] = phi <2 x float> [ [[TMP39]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP43]], [[PRED_LOAD_IF7]] ]
+; FVW2-NEXT:    [[TMP45:%.*]] = extractelement <2 x i1> [[TMP32]], i64 0
+; FVW2-NEXT:    br i1 [[TMP45]], label [[PRED_LOAD_IF9:%.*]], label [[PRED_LOAD_CONTINUE10:%.*]]
+; FVW2:       pred.load.if9:
+; FVW2-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP1]], i32 1
+; FVW2-NEXT:    [[TMP47:%.*]] = load float, float* [[TMP46]], align 4
+; FVW2-NEXT:    [[TMP48:%.*]] = insertelement <2 x float> poison, float [[TMP47]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE10]]
+; FVW2:       pred.load.continue10:
+; FVW2-NEXT:    [[TMP49:%.*]] = phi <2 x float> [ poison, [[PRED_LOAD_CONTINUE8]] ], [ [[TMP48]], [[PRED_LOAD_IF9]] ]
+; FVW2-NEXT:    [[TMP50:%.*]] = extractelement <2 x i1> [[TMP32]], i64 1
+; FVW2-NEXT:    br i1 [[TMP50]], label [[PRED_LOAD_IF11:%.*]], label [[PRED_LOAD_CONTINUE12:%.*]]
+; FVW2:       pred.load.if11:
+; FVW2-NEXT:    [[TMP51:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP2]], i32 1
+; FVW2-NEXT:    [[TMP52:%.*]] = load float, float* [[TMP51]], align 4
+; FVW2-NEXT:    [[TMP53:%.*]] = insertelement <2 x float> [[TMP49]], float [[TMP52]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE12]]
+; FVW2:       pred.load.continue12:
+; FVW2-NEXT:    [[TMP54:%.*]] = phi <2 x float> [ [[TMP49]], [[PRED_LOAD_CONTINUE10]] ], [ [[TMP53]], [[PRED_LOAD_IF11]] ]
+; FVW2-NEXT:    [[TMP55:%.*]] = extractelement <2 x i1> [[TMP33]], i64 0
+; FVW2-NEXT:    br i1 [[TMP55]], label [[PRED_LOAD_IF13:%.*]], label [[PRED_LOAD_CONTINUE14:%.*]]
+; FVW2:       pred.load.if13:
+; FVW2-NEXT:    [[TMP56:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP3]], i32 1
+; FVW2-NEXT:    [[TMP57:%.*]] = load float, float* [[TMP56]], align 4
+; FVW2-NEXT:    [[TMP58:%.*]] = insertelement <2 x float> poison, float [[TMP57]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE14]]
+; FVW2:       pred.load.continue14:
+; FVW2-NEXT:    [[TMP59:%.*]] = phi <2 x float> [ poison, [[PRED_LOAD_CONTINUE12]] ], [ [[TMP58]], [[PRED_LOAD_IF13]] ]
+; FVW2-NEXT:    [[TMP60:%.*]] = extractelement <2 x i1> [[TMP33]], i64 1
+; FVW2-NEXT:    br i1 [[TMP60]], label [[PRED_LOAD_IF15:%.*]], label [[PRED_LOAD_CONTINUE16:%.*]]
+; FVW2:       pred.load.if15:
+; FVW2-NEXT:    [[TMP61:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP4]], i32 1
+; FVW2-NEXT:    [[TMP62:%.*]] = load float, float* [[TMP61]], align 4
+; FVW2-NEXT:    [[TMP63:%.*]] = insertelement <2 x float> [[TMP59]], float [[TMP62]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE16]]
+; FVW2:       pred.load.continue16:
+; FVW2-NEXT:    [[TMP64:%.*]] = phi <2 x float> [ [[TMP59]], [[PRED_LOAD_CONTINUE14]] ], [ [[TMP63]], [[PRED_LOAD_IF15]] ]
+; FVW2-NEXT:    [[TMP65:%.*]] = extractelement <2 x i1> [[TMP34]], i64 0
+; FVW2-NEXT:    br i1 [[TMP65]], label [[PRED_LOAD_IF17:%.*]], label [[PRED_LOAD_CONTINUE18:%.*]]
+; FVW2:       pred.load.if17:
+; FVW2-NEXT:    [[TMP66:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP5]], i32 1
+; FVW2-NEXT:    [[TMP67:%.*]] = load float, float* [[TMP66]], align 4
+; FVW2-NEXT:    [[TMP68:%.*]] = insertelement <2 x float> poison, float [[TMP67]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE18]]
+; FVW2:       pred.load.continue18:
+; FVW2-NEXT:    [[TMP69:%.*]] = phi <2 x float> [ poison, [[PRED_LOAD_CONTINUE16]] ], [ [[TMP68]], [[PRED_LOAD_IF17]] ]
+; FVW2-NEXT:    [[TMP70:%.*]] = extractelement <2 x i1> [[TMP34]], i64 1
+; FVW2-NEXT:    br i1 [[TMP70]], label [[PRED_LOAD_IF19:%.*]], label [[PRED_LOAD_CONTINUE20:%.*]]
+; FVW2:       pred.load.if19:
+; FVW2-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP6]], i32 1
+; FVW2-NEXT:    [[TMP72:%.*]] = load float, float* [[TMP71]], align 4
+; FVW2-NEXT:    [[TMP73:%.*]] = insertelement <2 x float> [[TMP69]], float [[TMP72]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE20]]
+; FVW2:       pred.load.continue20:
+; FVW2-NEXT:    [[TMP74:%.*]] = phi <2 x float> [ [[TMP69]], [[PRED_LOAD_CONTINUE18]] ], [ [[TMP73]], [[PRED_LOAD_IF19]] ]
+; FVW2-NEXT:    [[TMP75:%.*]] = fadd <2 x float> [[TMP44]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP76:%.*]] = fadd <2 x float> [[TMP54]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP77:%.*]] = fadd <2 x float> [[TMP64]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP78:%.*]] = fadd <2 x float> [[TMP74]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP79:%.*]] = extractelement <2 x i1> [[TMP31]], i64 0
+; FVW2-NEXT:    br i1 [[TMP79]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; FVW2:       pred.store.if:
-; FVW2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_OUT:%.*]], %struct.Out* [[OUT:%.*]], i64 [[OFFSET_IDX]], i32 1
-; FVW2-NEXT:    [[TMP12:%.*]] = extractelement <2 x float> [[TMP9]], i64 0
-; FVW2-NEXT:    store float [[TMP12]], float* [[TMP11]], align 4
+; FVW2-NEXT:    [[TMP80:%.*]] = getelementptr inbounds [[STRUCT_OUT:%.*]], %struct.Out* [[OUT:%.*]], i64 [[OFFSET_IDX]], i32 1
+; FVW2-NEXT:    [[TMP81:%.*]] = extractelement <2 x float> [[TMP75]], i64 0
+; FVW2-NEXT:    store float [[TMP81]], float* [[TMP80]], align 4
 ; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; FVW2:       pred.store.continue:
-; FVW2-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP7]], i64 1
-; FVW2-NEXT:    br i1 [[TMP13]], label [[PRED_STORE_IF7:%.*]], label [[PRED_STORE_CONTINUE8]]
-; FVW2:       pred.store.if7:
-; FVW2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT_OUT]], %struct.Out* [[OUT]], i64 [[TMP0]], i32 1
-; FVW2-NEXT:    [[TMP15:%.*]] = extractelement <2 x float> [[TMP9]], i64 1
-; FVW2-NEXT:    store float [[TMP15]], float* [[TMP14]], align 4
-; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE8]]
-; FVW2:       pred.store.continue8:
-; FVW2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; FVW2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 32, i64 32>
-; FVW2-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; FVW2-NEXT:    br i1 [[TMP16]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; FVW2-NEXT:    [[TMP82:%.*]] = extractelement <2 x i1> [[TMP31]], i64 1
+; FVW2-NEXT:    br i1 [[TMP82]], label [[PRED_STORE_IF21:%.*]], label [[PRED_STORE_CONTINUE22:%.*]]
+; FVW2:       pred.store.if21:
+; FVW2-NEXT:    [[TMP83:%.*]] = getelementptr inbounds [[STRUCT_OUT]], %struct.Out* [[OUT]], i64 [[TMP0]], i32 1
+; FVW2-NEXT:    [[TMP84:%.*]] = extractelement <2 x float> [[TMP75]], i64 1
+; FVW2-NEXT:    store float [[TMP84]], float* [[TMP83]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE22]]
+; FVW2:       pred.store.continue22:
+; FVW2-NEXT:    [[TMP85:%.*]] = extractelement <2 x i1> [[TMP32]], i64 0
+; FVW2-NEXT:    br i1 [[TMP85]], label [[PRED_STORE_IF23:%.*]], label [[PRED_STORE_CONTINUE24:%.*]]
+; FVW2:       pred.store.if23:
+; FVW2-NEXT:    [[TMP86:%.*]] = getelementptr inbounds [[STRUCT_OUT]], %struct.Out* [[OUT]], i64 [[TMP1]], i32 1
+; FVW2-NEXT:    [[TMP87:%.*]] = extractelement <2 x float> [[TMP76]], i64 0
+; FVW2-NEXT:    store float [[TMP87]], float* [[TMP86]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE24]]
+; FVW2:       pred.store.continue24:
+; FVW2-NEXT:    [[TMP88:%.*]] = extractelement <2 x i1> [[TMP32]], i64 1
+; FVW2-NEXT:    br i1 [[TMP88]], label [[PRED_STORE_IF25:%.*]], label [[PRED_STORE_CONTINUE26:%.*]]
+; FVW2:       pred.store.if25:
+; FVW2-NEXT:    [[TMP89:%.*]] = getelementptr inbounds [[STRUCT_OUT]], %struct.Out* [[OUT]], i64 [[TMP2]], i32 1
+; FVW2-NEXT:    [[TMP90:%.*]] = extractelement <2 x float> [[TMP76]], i64 1
+; FVW2-NEXT:    store float [[TMP90]], float* [[TMP89]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE26]]
+; FVW2:       pred.store.continue26:
+; FVW2-NEXT:    [[TMP91:%.*]] = extractelement <2 x i1> [[TMP33]], i64 0
+; FVW2-NEXT:    br i1 [[TMP91]], label [[PRED_STORE_IF27:%.*]], label [[PRED_STORE_CONTINUE28:%.*]]
+; FVW2:       pred.store.if27:
+; FVW2-NEXT:    [[TMP92:%.*]] = getelementptr inbounds [[STRUCT_OUT]], %struct.Out* [[OUT]], i64 [[TMP3]], i32 1
+; FVW2-NEXT:    [[TMP93:%.*]] = extractelement <2 x float> [[TMP77]], i64 0
+; FVW2-NEXT:    store float [[TMP93]], float* [[TMP92]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE28]]
+; FVW2:       pred.store.continue28:
+; FVW2-NEXT:    [[TMP94:%.*]] = extractelement <2 x i1> [[TMP33]], i64 1
+; FVW2-NEXT:    br i1 [[TMP94]], label [[PRED_STORE_IF29:%.*]], label [[PRED_STORE_CONTINUE30:%.*]]
+; FVW2:       pred.store.if29:
+; FVW2-NEXT:    [[TMP95:%.*]] = getelementptr inbounds [[STRUCT_OUT]], %struct.Out* [[OUT]], i64 [[TMP4]], i32 1
+; FVW2-NEXT:    [[TMP96:%.*]] = extractelement <2 x float> [[TMP77]], i64 1
+; FVW2-NEXT:    store float [[TMP96]], float* [[TMP95]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE30]]
+; FVW2:       pred.store.continue30:
+; FVW2-NEXT:    [[TMP97:%.*]] = extractelement <2 x i1> [[TMP34]], i64 0
+; FVW2-NEXT:    br i1 [[TMP97]], label [[PRED_STORE_IF31:%.*]], label [[PRED_STORE_CONTINUE32:%.*]]
+; FVW2:       pred.store.if31:
+; FVW2-NEXT:    [[TMP98:%.*]] = getelementptr inbounds [[STRUCT_OUT]], %struct.Out* [[OUT]], i64 [[TMP5]], i32 1
+; FVW2-NEXT:    [[TMP99:%.*]] = extractelement <2 x float> [[TMP78]], i64 0
+; FVW2-NEXT:    store float [[TMP99]], float* [[TMP98]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE32]]
+; FVW2:       pred.store.continue32:
+; FVW2-NEXT:    [[TMP100:%.*]] = extractelement <2 x i1> [[TMP34]], i64 1
+; FVW2-NEXT:    br i1 [[TMP100]], label [[PRED_STORE_IF33:%.*]], label [[PRED_STORE_CONTINUE34]]
+; FVW2:       pred.store.if33:
+; FVW2-NEXT:    [[TMP101:%.*]] = getelementptr inbounds [[STRUCT_OUT]], %struct.Out* [[OUT]], i64 [[TMP6]], i32 1
+; FVW2-NEXT:    [[TMP102:%.*]] = extractelement <2 x float> [[TMP78]], i64 1
+; FVW2-NEXT:    store float [[TMP102]], float* [[TMP101]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE34]]
+; FVW2:       pred.store.continue34:
+; FVW2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; FVW2-NEXT:    [[TMP103:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
+; FVW2-NEXT:    br i1 [[TMP103]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; FVW2:       for.end:
 ; FVW2-NEXT:    ret void
 ;
@@ -841,40 +1205,186 @@ define void @foo2_addrspace(%struct.In addrspace(1)* noalias %in, float addrspac
 ; FVW2-NEXT:  entry:
 ; FVW2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FVW2:       vector.body:
-; FVW2-NEXT:    [[INDEX10:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE9:%.*]] ]
-; FVW2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 16>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE9]] ]
-; FVW2-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX10]], 4
+; FVW2-NEXT:    [[INDEX7:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE35:%.*]] ]
+; FVW2-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX7]], 4
 ; FVW2-NEXT:    [[TMP0:%.*]] = or i64 [[OFFSET_IDX]], 16
-; FVW2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER:%.*]], i64 [[OFFSET_IDX]]
-; FVW2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP0]]
-; FVW2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]], align 4
-; FVW2-NEXT:    [[TMP4:%.*]] = load i32, i32* [[TMP2]], align 4
-; FVW2-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i64 0
-; FVW2-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP4]], i64 1
-; FVW2-NEXT:    [[TMP7:%.*]] = icmp sgt <2 x i32> [[TMP6]], zeroinitializer
-; FVW2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_IN:%.*]], [[STRUCT_IN]] addrspace(1)* [[IN:%.*]], <2 x i64> [[VEC_IND]], i32 1
-; FVW2-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <2 x float> @llvm.masked.gather.v2f32.v2p1f32(<2 x float addrspace(1)*> [[TMP8]], i32 4, <2 x i1> [[TMP7]], <2 x float> undef)
-; FVW2-NEXT:    [[TMP9:%.*]] = fadd <2 x float> [[WIDE_MASKED_GATHER]], <float 5.000000e-01, float 5.000000e-01>
-; FVW2-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP7]], i64 0
-; FVW2-NEXT:    br i1 [[TMP10]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; FVW2-NEXT:    [[TMP1:%.*]] = or i64 [[OFFSET_IDX]], 32
+; FVW2-NEXT:    [[TMP2:%.*]] = or i64 [[OFFSET_IDX]], 48
+; FVW2-NEXT:    [[TMP3:%.*]] = or i64 [[OFFSET_IDX]], 64
+; FVW2-NEXT:    [[TMP4:%.*]] = or i64 [[OFFSET_IDX]], 80
+; FVW2-NEXT:    [[TMP5:%.*]] = or i64 [[OFFSET_IDX]], 96
+; FVW2-NEXT:    [[TMP6:%.*]] = or i64 [[OFFSET_IDX]], 112
+; FVW2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER:%.*]], i64 [[OFFSET_IDX]]
+; FVW2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP0]]
+; FVW2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP1]]
+; FVW2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP2]]
+; FVW2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP3]]
+; FVW2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP4]]
+; FVW2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP5]]
+; FVW2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP6]]
+; FVW2-NEXT:    [[TMP15:%.*]] = load i32, i32* [[TMP7]], align 4
+; FVW2-NEXT:    [[TMP16:%.*]] = load i32, i32* [[TMP8]], align 4
+; FVW2-NEXT:    [[TMP17:%.*]] = insertelement <2 x i32> poison, i32 [[TMP15]], i64 0
+; FVW2-NEXT:    [[TMP18:%.*]] = insertelement <2 x i32> [[TMP17]], i32 [[TMP16]], i64 1
+; FVW2-NEXT:    [[TMP19:%.*]] = load i32, i32* [[TMP9]], align 4
+; FVW2-NEXT:    [[TMP20:%.*]] = load i32, i32* [[TMP10]], align 4
+; FVW2-NEXT:    [[TMP21:%.*]] = insertelement <2 x i32> poison, i32 [[TMP19]], i64 0
+; FVW2-NEXT:    [[TMP22:%.*]] = insertelement <2 x i32> [[TMP21]], i32 [[TMP20]], i64 1
+; FVW2-NEXT:    [[TMP23:%.*]] = load i32, i32* [[TMP11]], align 4
+; FVW2-NEXT:    [[TMP24:%.*]] = load i32, i32* [[TMP12]], align 4
+; FVW2-NEXT:    [[TMP25:%.*]] = insertelement <2 x i32> poison, i32 [[TMP23]], i64 0
+; FVW2-NEXT:    [[TMP26:%.*]] = insertelement <2 x i32> [[TMP25]], i32 [[TMP24]], i64 1
+; FVW2-NEXT:    [[TMP27:%.*]] = load i32, i32* [[TMP13]], align 4
+; FVW2-NEXT:    [[TMP28:%.*]] = load i32, i32* [[TMP14]], align 4
+; FVW2-NEXT:    [[TMP29:%.*]] = insertelement <2 x i32> poison, i32 [[TMP27]], i64 0
+; FVW2-NEXT:    [[TMP30:%.*]] = insertelement <2 x i32> [[TMP29]], i32 [[TMP28]], i64 1
+; FVW2-NEXT:    [[TMP31:%.*]] = icmp sgt <2 x i32> [[TMP18]], zeroinitializer
+; FVW2-NEXT:    [[TMP32:%.*]] = icmp sgt <2 x i32> [[TMP22]], zeroinitializer
+; FVW2-NEXT:    [[TMP33:%.*]] = icmp sgt <2 x i32> [[TMP26]], zeroinitializer
+; FVW2-NEXT:    [[TMP34:%.*]] = icmp sgt <2 x i32> [[TMP30]], zeroinitializer
+; FVW2-NEXT:    [[TMP35:%.*]] = extractelement <2 x i1> [[TMP31]], i64 0
+; FVW2-NEXT:    br i1 [[TMP35]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
+; FVW2:       pred.load.if:
+; FVW2-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_IN:%.*]], [[STRUCT_IN]] addrspace(1)* [[IN:%.*]], i64 [[OFFSET_IDX]], i32 1
+; FVW2-NEXT:    [[TMP37:%.*]] = load float, float addrspace(1)* [[TMP36]], align 4
+; FVW2-NEXT:    [[TMP38:%.*]] = insertelement <2 x float> poison, float [[TMP37]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE]]
+; FVW2:       pred.load.continue:
+; FVW2-NEXT:    [[TMP39:%.*]] = phi <2 x float> [ poison, [[VECTOR_BODY]] ], [ [[TMP38]], [[PRED_LOAD_IF]] ]
+; FVW2-NEXT:    [[TMP40:%.*]] = extractelement <2 x i1> [[TMP31]], i64 1
+; FVW2-NEXT:    br i1 [[TMP40]], label [[PRED_LOAD_IF8:%.*]], label [[PRED_LOAD_CONTINUE9:%.*]]
+; FVW2:       pred.load.if8:
+; FVW2-NEXT:    [[TMP41:%.*]] = getelementptr inbounds [[STRUCT_IN]], [[STRUCT_IN]] addrspace(1)* [[IN]], i64 [[TMP0]], i32 1
+; FVW2-NEXT:    [[TMP42:%.*]] = load float, float addrspace(1)* [[TMP41]], align 4
+; FVW2-NEXT:    [[TMP43:%.*]] = insertelement <2 x float> [[TMP39]], float [[TMP42]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE9]]
+; FVW2:       pred.load.continue9:
+; FVW2-NEXT:    [[TMP44:%.*]] = phi <2 x float> [ [[TMP39]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP43]], [[PRED_LOAD_IF8]] ]
+; FVW2-NEXT:    [[TMP45:%.*]] = extractelement <2 x i1> [[TMP32]], i64 0
+; FVW2-NEXT:    br i1 [[TMP45]], label [[PRED_LOAD_IF10:%.*]], label [[PRED_LOAD_CONTINUE11:%.*]]
+; FVW2:       pred.load.if10:
+; FVW2-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT_IN]], [[STRUCT_IN]] addrspace(1)* [[IN]], i64 [[TMP1]], i32 1
+; FVW2-NEXT:    [[TMP47:%.*]] = load float, float addrspace(1)* [[TMP46]], align 4
+; FVW2-NEXT:    [[TMP48:%.*]] = insertelement <2 x float> poison, float [[TMP47]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE11]]
+; FVW2:       pred.load.continue11:
+; FVW2-NEXT:    [[TMP49:%.*]] = phi <2 x float> [ poison, [[PRED_LOAD_CONTINUE9]] ], [ [[TMP48]], [[PRED_LOAD_IF10]] ]
+; FVW2-NEXT:    [[TMP50:%.*]] = extractelement <2 x i1> [[TMP32]], i64 1
+; FVW2-NEXT:    br i1 [[TMP50]], label [[PRED_LOAD_IF12:%.*]], label [[PRED_LOAD_CONTINUE13:%.*]]
+; FVW2:       pred.load.if12:
+; FVW2-NEXT:    [[TMP51:%.*]] = getelementptr inbounds [[STRUCT_IN]], [[STRUCT_IN]] addrspace(1)* [[IN]], i64 [[TMP2]], i32 1
+; FVW2-NEXT:    [[TMP52:%.*]] = load float, float addrspace(1)* [[TMP51]], align 4
+; FVW2-NEXT:    [[TMP53:%.*]] = insertelement <2 x float> [[TMP49]], float [[TMP52]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE13]]
+; FVW2:       pred.load.continue13:
+; FVW2-NEXT:    [[TMP54:%.*]] = phi <2 x float> [ [[TMP49]], [[PRED_LOAD_CONTINUE11]] ], [ [[TMP53]], [[PRED_LOAD_IF12]] ]
+; FVW2-NEXT:    [[TMP55:%.*]] = extractelement <2 x i1> [[TMP33]], i64 0
+; FVW2-NEXT:    br i1 [[TMP55]], label [[PRED_LOAD_IF14:%.*]], label [[PRED_LOAD_CONTINUE15:%.*]]
+; FVW2:       pred.load.if14:
+; FVW2-NEXT:    [[TMP56:%.*]] = getelementptr inbounds [[STRUCT_IN]], [[STRUCT_IN]] addrspace(1)* [[IN]], i64 [[TMP3]], i32 1
+; FVW2-NEXT:    [[TMP57:%.*]] = load float, float addrspace(1)* [[TMP56]], align 4
+; FVW2-NEXT:    [[TMP58:%.*]] = insertelement <2 x float> poison, float [[TMP57]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE15]]
+; FVW2:       pred.load.continue15:
+; FVW2-NEXT:    [[TMP59:%.*]] = phi <2 x float> [ poison, [[PRED_LOAD_CONTINUE13]] ], [ [[TMP58]], [[PRED_LOAD_IF14]] ]
+; FVW2-NEXT:    [[TMP60:%.*]] = extractelement <2 x i1> [[TMP33]], i64 1
+; FVW2-NEXT:    br i1 [[TMP60]], label [[PRED_LOAD_IF16:%.*]], label [[PRED_LOAD_CONTINUE17:%.*]]
+; FVW2:       pred.load.if16:
+; FVW2-NEXT:    [[TMP61:%.*]] = getelementptr inbounds [[STRUCT_IN]], [[STRUCT_IN]] addrspace(1)* [[IN]], i64 [[TMP4]], i32 1
+; FVW2-NEXT:    [[TMP62:%.*]] = load float, float addrspace(1)* [[TMP61]], align 4
+; FVW2-NEXT:    [[TMP63:%.*]] = insertelement <2 x float> [[TMP59]], float [[TMP62]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE17]]
+; FVW2:       pred.load.continue17:
+; FVW2-NEXT:    [[TMP64:%.*]] = phi <2 x float> [ [[TMP59]], [[PRED_LOAD_CONTINUE15]] ], [ [[TMP63]], [[PRED_LOAD_IF16]] ]
+; FVW2-NEXT:    [[TMP65:%.*]] = extractelement <2 x i1> [[TMP34]], i64 0
+; FVW2-NEXT:    br i1 [[TMP65]], label [[PRED_LOAD_IF18:%.*]], label [[PRED_LOAD_CONTINUE19:%.*]]
+; FVW2:       pred.load.if18:
+; FVW2-NEXT:    [[TMP66:%.*]] = getelementptr inbounds [[STRUCT_IN]], [[STRUCT_IN]] addrspace(1)* [[IN]], i64 [[TMP5]], i32 1
+; FVW2-NEXT:    [[TMP67:%.*]] = load float, float addrspace(1)* [[TMP66]], align 4
+; FVW2-NEXT:    [[TMP68:%.*]] = insertelement <2 x float> poison, float [[TMP67]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE19]]
+; FVW2:       pred.load.continue19:
+; FVW2-NEXT:    [[TMP69:%.*]] = phi <2 x float> [ poison, [[PRED_LOAD_CONTINUE17]] ], [ [[TMP68]], [[PRED_LOAD_IF18]] ]
+; FVW2-NEXT:    [[TMP70:%.*]] = extractelement <2 x i1> [[TMP34]], i64 1
+; FVW2-NEXT:    br i1 [[TMP70]], label [[PRED_LOAD_IF20:%.*]], label [[PRED_LOAD_CONTINUE21:%.*]]
+; FVW2:       pred.load.if20:
+; FVW2-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT_IN]], [[STRUCT_IN]] addrspace(1)* [[IN]], i64 [[TMP6]], i32 1
+; FVW2-NEXT:    [[TMP72:%.*]] = load float, float addrspace(1)* [[TMP71]], align 4
+; FVW2-NEXT:    [[TMP73:%.*]] = insertelement <2 x float> [[TMP69]], float [[TMP72]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE21]]
+; FVW2:       pred.load.continue21:
+; FVW2-NEXT:    [[TMP74:%.*]] = phi <2 x float> [ [[TMP69]], [[PRED_LOAD_CONTINUE19]] ], [ [[TMP73]], [[PRED_LOAD_IF20]] ]
+; FVW2-NEXT:    [[TMP75:%.*]] = fadd <2 x float> [[TMP44]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP76:%.*]] = fadd <2 x float> [[TMP54]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP77:%.*]] = fadd <2 x float> [[TMP64]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP78:%.*]] = fadd <2 x float> [[TMP74]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP79:%.*]] = extractelement <2 x i1> [[TMP31]], i64 0
+; FVW2-NEXT:    br i1 [[TMP79]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; FVW2:       pred.store.if:
-; FVW2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, float addrspace(1)* [[OUT:%.*]], i64 [[OFFSET_IDX]]
-; FVW2-NEXT:    [[TMP12:%.*]] = extractelement <2 x float> [[TMP9]], i64 0
-; FVW2-NEXT:    store float [[TMP12]], float addrspace(1)* [[TMP11]], align 4
+; FVW2-NEXT:    [[TMP80:%.*]] = getelementptr inbounds float, float addrspace(1)* [[OUT:%.*]], i64 [[OFFSET_IDX]]
+; FVW2-NEXT:    [[TMP81:%.*]] = extractelement <2 x float> [[TMP75]], i64 0
+; FVW2-NEXT:    store float [[TMP81]], float addrspace(1)* [[TMP80]], align 4
 ; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; FVW2:       pred.store.continue:
-; FVW2-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP7]], i64 1
-; FVW2-NEXT:    br i1 [[TMP13]], label [[PRED_STORE_IF8:%.*]], label [[PRED_STORE_CONTINUE9]]
-; FVW2:       pred.store.if8:
-; FVW2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, float addrspace(1)* [[OUT]], i64 [[TMP0]]
-; FVW2-NEXT:    [[TMP15:%.*]] = extractelement <2 x float> [[TMP9]], i64 1
-; FVW2-NEXT:    store float [[TMP15]], float addrspace(1)* [[TMP14]], align 4
-; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE9]]
-; FVW2:       pred.store.continue9:
-; FVW2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX10]], 2
-; FVW2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 32, i64 32>
-; FVW2-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; FVW2-NEXT:    br i1 [[TMP16]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; FVW2-NEXT:    [[TMP82:%.*]] = extractelement <2 x i1> [[TMP31]], i64 1
+; FVW2-NEXT:    br i1 [[TMP82]], label [[PRED_STORE_IF22:%.*]], label [[PRED_STORE_CONTINUE23:%.*]]
+; FVW2:       pred.store.if22:
+; FVW2-NEXT:    [[TMP83:%.*]] = getelementptr inbounds float, float addrspace(1)* [[OUT]], i64 [[TMP0]]
+; FVW2-NEXT:    [[TMP84:%.*]] = extractelement <2 x float> [[TMP75]], i64 1
+; FVW2-NEXT:    store float [[TMP84]], float addrspace(1)* [[TMP83]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE23]]
+; FVW2:       pred.store.continue23:
+; FVW2-NEXT:    [[TMP85:%.*]] = extractelement <2 x i1> [[TMP32]], i64 0
+; FVW2-NEXT:    br i1 [[TMP85]], label [[PRED_STORE_IF24:%.*]], label [[PRED_STORE_CONTINUE25:%.*]]
+; FVW2:       pred.store.if24:
+; FVW2-NEXT:    [[TMP86:%.*]] = getelementptr inbounds float, float addrspace(1)* [[OUT]], i64 [[TMP1]]
+; FVW2-NEXT:    [[TMP87:%.*]] = extractelement <2 x float> [[TMP76]], i64 0
+; FVW2-NEXT:    store float [[TMP87]], float addrspace(1)* [[TMP86]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE25]]
+; FVW2:       pred.store.continue25:
+; FVW2-NEXT:    [[TMP88:%.*]] = extractelement <2 x i1> [[TMP32]], i64 1
+; FVW2-NEXT:    br i1 [[TMP88]], label [[PRED_STORE_IF26:%.*]], label [[PRED_STORE_CONTINUE27:%.*]]
+; FVW2:       pred.store.if26:
+; FVW2-NEXT:    [[TMP89:%.*]] = getelementptr inbounds float, float addrspace(1)* [[OUT]], i64 [[TMP2]]
+; FVW2-NEXT:    [[TMP90:%.*]] = extractelement <2 x float> [[TMP76]], i64 1
+; FVW2-NEXT:    store float [[TMP90]], float addrspace(1)* [[TMP89]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE27]]
+; FVW2:       pred.store.continue27:
+; FVW2-NEXT:    [[TMP91:%.*]] = extractelement <2 x i1> [[TMP33]], i64 0
+; FVW2-NEXT:    br i1 [[TMP91]], label [[PRED_STORE_IF28:%.*]], label [[PRED_STORE_CONTINUE29:%.*]]
+; FVW2:       pred.store.if28:
+; FVW2-NEXT:    [[TMP92:%.*]] = getelementptr inbounds float, float addrspace(1)* [[OUT]], i64 [[TMP3]]
+; FVW2-NEXT:    [[TMP93:%.*]] = extractelement <2 x float> [[TMP77]], i64 0
+; FVW2-NEXT:    store float [[TMP93]], float addrspace(1)* [[TMP92]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE29]]
+; FVW2:       pred.store.continue29:
+; FVW2-NEXT:    [[TMP94:%.*]] = extractelement <2 x i1> [[TMP33]], i64 1
+; FVW2-NEXT:    br i1 [[TMP94]], label [[PRED_STORE_IF30:%.*]], label [[PRED_STORE_CONTINUE31:%.*]]
+; FVW2:       pred.store.if30:
+; FVW2-NEXT:    [[TMP95:%.*]] = getelementptr inbounds float, float addrspace(1)* [[OUT]], i64 [[TMP4]]
+; FVW2-NEXT:    [[TMP96:%.*]] = extractelement <2 x float> [[TMP77]], i64 1
+; FVW2-NEXT:    store float [[TMP96]], float addrspace(1)* [[TMP95]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE31]]
+; FVW2:       pred.store.continue31:
+; FVW2-NEXT:    [[TMP97:%.*]] = extractelement <2 x i1> [[TMP34]], i64 0
+; FVW2-NEXT:    br i1 [[TMP97]], label [[PRED_STORE_IF32:%.*]], label [[PRED_STORE_CONTINUE33:%.*]]
+; FVW2:       pred.store.if32:
+; FVW2-NEXT:    [[TMP98:%.*]] = getelementptr inbounds float, float addrspace(1)* [[OUT]], i64 [[TMP5]]
+; FVW2-NEXT:    [[TMP99:%.*]] = extractelement <2 x float> [[TMP78]], i64 0
+; FVW2-NEXT:    store float [[TMP99]], float addrspace(1)* [[TMP98]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE33]]
+; FVW2:       pred.store.continue33:
+; FVW2-NEXT:    [[TMP100:%.*]] = extractelement <2 x i1> [[TMP34]], i64 1
+; FVW2-NEXT:    br i1 [[TMP100]], label [[PRED_STORE_IF34:%.*]], label [[PRED_STORE_CONTINUE35]]
+; FVW2:       pred.store.if34:
+; FVW2-NEXT:    [[TMP101:%.*]] = getelementptr inbounds float, float addrspace(1)* [[OUT]], i64 [[TMP6]]
+; FVW2-NEXT:    [[TMP102:%.*]] = extractelement <2 x float> [[TMP78]], i64 1
+; FVW2-NEXT:    store float [[TMP102]], float addrspace(1)* [[TMP101]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE35]]
+; FVW2:       pred.store.continue35:
+; FVW2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX7]], 8
+; FVW2-NEXT:    [[TMP103:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
+; FVW2-NEXT:    br i1 [[TMP103]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; FVW2:       for.end:
 ; FVW2-NEXT:    ret void
 ;
@@ -1072,40 +1582,186 @@ define void @foo2_addrspace2(%struct.In addrspace(1)* noalias %in, float addrspa
 ; FVW2-NEXT:  entry:
 ; FVW2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FVW2:       vector.body:
-; FVW2-NEXT:    [[INDEX10:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE9:%.*]] ]
-; FVW2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 16>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE9]] ]
-; FVW2-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX10]], 4
+; FVW2-NEXT:    [[INDEX7:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE35:%.*]] ]
+; FVW2-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX7]], 4
 ; FVW2-NEXT:    [[TMP0:%.*]] = or i64 [[OFFSET_IDX]], 16
-; FVW2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER:%.*]], i64 [[OFFSET_IDX]]
-; FVW2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP0]]
-; FVW2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]], align 4
-; FVW2-NEXT:    [[TMP4:%.*]] = load i32, i32* [[TMP2]], align 4
-; FVW2-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i64 0
-; FVW2-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP4]], i64 1
-; FVW2-NEXT:    [[TMP7:%.*]] = icmp sgt <2 x i32> [[TMP6]], zeroinitializer
-; FVW2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_IN:%.*]], [[STRUCT_IN]] addrspace(1)* [[IN:%.*]], <2 x i64> [[VEC_IND]], i32 1
-; FVW2-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <2 x float> @llvm.masked.gather.v2f32.v2p1f32(<2 x float addrspace(1)*> [[TMP8]], i32 4, <2 x i1> [[TMP7]], <2 x float> undef)
-; FVW2-NEXT:    [[TMP9:%.*]] = fadd <2 x float> [[WIDE_MASKED_GATHER]], <float 5.000000e-01, float 5.000000e-01>
-; FVW2-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP7]], i64 0
-; FVW2-NEXT:    br i1 [[TMP10]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; FVW2-NEXT:    [[TMP1:%.*]] = or i64 [[OFFSET_IDX]], 32
+; FVW2-NEXT:    [[TMP2:%.*]] = or i64 [[OFFSET_IDX]], 48
+; FVW2-NEXT:    [[TMP3:%.*]] = or i64 [[OFFSET_IDX]], 64
+; FVW2-NEXT:    [[TMP4:%.*]] = or i64 [[OFFSET_IDX]], 80
+; FVW2-NEXT:    [[TMP5:%.*]] = or i64 [[OFFSET_IDX]], 96
+; FVW2-NEXT:    [[TMP6:%.*]] = or i64 [[OFFSET_IDX]], 112
+; FVW2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER:%.*]], i64 [[OFFSET_IDX]]
+; FVW2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP0]]
+; FVW2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP1]]
+; FVW2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP2]]
+; FVW2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP3]]
+; FVW2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP4]]
+; FVW2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP5]]
+; FVW2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP6]]
+; FVW2-NEXT:    [[TMP15:%.*]] = load i32, i32* [[TMP7]], align 4
+; FVW2-NEXT:    [[TMP16:%.*]] = load i32, i32* [[TMP8]], align 4
+; FVW2-NEXT:    [[TMP17:%.*]] = insertelement <2 x i32> poison, i32 [[TMP15]], i64 0
+; FVW2-NEXT:    [[TMP18:%.*]] = insertelement <2 x i32> [[TMP17]], i32 [[TMP16]], i64 1
+; FVW2-NEXT:    [[TMP19:%.*]] = load i32, i32* [[TMP9]], align 4
+; FVW2-NEXT:    [[TMP20:%.*]] = load i32, i32* [[TMP10]], align 4
+; FVW2-NEXT:    [[TMP21:%.*]] = insertelement <2 x i32> poison, i32 [[TMP19]], i64 0
+; FVW2-NEXT:    [[TMP22:%.*]] = insertelement <2 x i32> [[TMP21]], i32 [[TMP20]], i64 1
+; FVW2-NEXT:    [[TMP23:%.*]] = load i32, i32* [[TMP11]], align 4
+; FVW2-NEXT:    [[TMP24:%.*]] = load i32, i32* [[TMP12]], align 4
+; FVW2-NEXT:    [[TMP25:%.*]] = insertelement <2 x i32> poison, i32 [[TMP23]], i64 0
+; FVW2-NEXT:    [[TMP26:%.*]] = insertelement <2 x i32> [[TMP25]], i32 [[TMP24]], i64 1
+; FVW2-NEXT:    [[TMP27:%.*]] = load i32, i32* [[TMP13]], align 4
+; FVW2-NEXT:    [[TMP28:%.*]] = load i32, i32* [[TMP14]], align 4
+; FVW2-NEXT:    [[TMP29:%.*]] = insertelement <2 x i32> poison, i32 [[TMP27]], i64 0
+; FVW2-NEXT:    [[TMP30:%.*]] = insertelement <2 x i32> [[TMP29]], i32 [[TMP28]], i64 1
+; FVW2-NEXT:    [[TMP31:%.*]] = icmp sgt <2 x i32> [[TMP18]], zeroinitializer
+; FVW2-NEXT:    [[TMP32:%.*]] = icmp sgt <2 x i32> [[TMP22]], zeroinitializer
+; FVW2-NEXT:    [[TMP33:%.*]] = icmp sgt <2 x i32> [[TMP26]], zeroinitializer
+; FVW2-NEXT:    [[TMP34:%.*]] = icmp sgt <2 x i32> [[TMP30]], zeroinitializer
+; FVW2-NEXT:    [[TMP35:%.*]] = extractelement <2 x i1> [[TMP31]], i64 0
+; FVW2-NEXT:    br i1 [[TMP35]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
+; FVW2:       pred.load.if:
+; FVW2-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_IN:%.*]], [[STRUCT_IN]] addrspace(1)* [[IN:%.*]], i64 [[OFFSET_IDX]], i32 1
+; FVW2-NEXT:    [[TMP37:%.*]] = load float, float addrspace(1)* [[TMP36]], align 4
+; FVW2-NEXT:    [[TMP38:%.*]] = insertelement <2 x float> poison, float [[TMP37]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE]]
+; FVW2:       pred.load.continue:
+; FVW2-NEXT:    [[TMP39:%.*]] = phi <2 x float> [ poison, [[VECTOR_BODY]] ], [ [[TMP38]], [[PRED_LOAD_IF]] ]
+; FVW2-NEXT:    [[TMP40:%.*]] = extractelement <2 x i1> [[TMP31]], i64 1
+; FVW2-NEXT:    br i1 [[TMP40]], label [[PRED_LOAD_IF8:%.*]], label [[PRED_LOAD_CONTINUE9:%.*]]
+; FVW2:       pred.load.if8:
+; FVW2-NEXT:    [[TMP41:%.*]] = getelementptr inbounds [[STRUCT_IN]], [[STRUCT_IN]] addrspace(1)* [[IN]], i64 [[TMP0]], i32 1
+; FVW2-NEXT:    [[TMP42:%.*]] = load float, float addrspace(1)* [[TMP41]], align 4
+; FVW2-NEXT:    [[TMP43:%.*]] = insertelement <2 x float> [[TMP39]], float [[TMP42]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE9]]
+; FVW2:       pred.load.continue9:
+; FVW2-NEXT:    [[TMP44:%.*]] = phi <2 x float> [ [[TMP39]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP43]], [[PRED_LOAD_IF8]] ]
+; FVW2-NEXT:    [[TMP45:%.*]] = extractelement <2 x i1> [[TMP32]], i64 0
+; FVW2-NEXT:    br i1 [[TMP45]], label [[PRED_LOAD_IF10:%.*]], label [[PRED_LOAD_CONTINUE11:%.*]]
+; FVW2:       pred.load.if10:
+; FVW2-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT_IN]], [[STRUCT_IN]] addrspace(1)* [[IN]], i64 [[TMP1]], i32 1
+; FVW2-NEXT:    [[TMP47:%.*]] = load float, float addrspace(1)* [[TMP46]], align 4
+; FVW2-NEXT:    [[TMP48:%.*]] = insertelement <2 x float> poison, float [[TMP47]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE11]]
+; FVW2:       pred.load.continue11:
+; FVW2-NEXT:    [[TMP49:%.*]] = phi <2 x float> [ poison, [[PRED_LOAD_CONTINUE9]] ], [ [[TMP48]], [[PRED_LOAD_IF10]] ]
+; FVW2-NEXT:    [[TMP50:%.*]] = extractelement <2 x i1> [[TMP32]], i64 1
+; FVW2-NEXT:    br i1 [[TMP50]], label [[PRED_LOAD_IF12:%.*]], label [[PRED_LOAD_CONTINUE13:%.*]]
+; FVW2:       pred.load.if12:
+; FVW2-NEXT:    [[TMP51:%.*]] = getelementptr inbounds [[STRUCT_IN]], [[STRUCT_IN]] addrspace(1)* [[IN]], i64 [[TMP2]], i32 1
+; FVW2-NEXT:    [[TMP52:%.*]] = load float, float addrspace(1)* [[TMP51]], align 4
+; FVW2-NEXT:    [[TMP53:%.*]] = insertelement <2 x float> [[TMP49]], float [[TMP52]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE13]]
+; FVW2:       pred.load.continue13:
+; FVW2-NEXT:    [[TMP54:%.*]] = phi <2 x float> [ [[TMP49]], [[PRED_LOAD_CONTINUE11]] ], [ [[TMP53]], [[PRED_LOAD_IF12]] ]
+; FVW2-NEXT:    [[TMP55:%.*]] = extractelement <2 x i1> [[TMP33]], i64 0
+; FVW2-NEXT:    br i1 [[TMP55]], label [[PRED_LOAD_IF14:%.*]], label [[PRED_LOAD_CONTINUE15:%.*]]
+; FVW2:       pred.load.if14:
+; FVW2-NEXT:    [[TMP56:%.*]] = getelementptr inbounds [[STRUCT_IN]], [[STRUCT_IN]] addrspace(1)* [[IN]], i64 [[TMP3]], i32 1
+; FVW2-NEXT:    [[TMP57:%.*]] = load float, float addrspace(1)* [[TMP56]], align 4
+; FVW2-NEXT:    [[TMP58:%.*]] = insertelement <2 x float> poison, float [[TMP57]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE15]]
+; FVW2:       pred.load.continue15:
+; FVW2-NEXT:    [[TMP59:%.*]] = phi <2 x float> [ poison, [[PRED_LOAD_CONTINUE13]] ], [ [[TMP58]], [[PRED_LOAD_IF14]] ]
+; FVW2-NEXT:    [[TMP60:%.*]] = extractelement <2 x i1> [[TMP33]], i64 1
+; FVW2-NEXT:    br i1 [[TMP60]], label [[PRED_LOAD_IF16:%.*]], label [[PRED_LOAD_CONTINUE17:%.*]]
+; FVW2:       pred.load.if16:
+; FVW2-NEXT:    [[TMP61:%.*]] = getelementptr inbounds [[STRUCT_IN]], [[STRUCT_IN]] addrspace(1)* [[IN]], i64 [[TMP4]], i32 1
+; FVW2-NEXT:    [[TMP62:%.*]] = load float, float addrspace(1)* [[TMP61]], align 4
+; FVW2-NEXT:    [[TMP63:%.*]] = insertelement <2 x float> [[TMP59]], float [[TMP62]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE17]]
+; FVW2:       pred.load.continue17:
+; FVW2-NEXT:    [[TMP64:%.*]] = phi <2 x float> [ [[TMP59]], [[PRED_LOAD_CONTINUE15]] ], [ [[TMP63]], [[PRED_LOAD_IF16]] ]
+; FVW2-NEXT:    [[TMP65:%.*]] = extractelement <2 x i1> [[TMP34]], i64 0
+; FVW2-NEXT:    br i1 [[TMP65]], label [[PRED_LOAD_IF18:%.*]], label [[PRED_LOAD_CONTINUE19:%.*]]
+; FVW2:       pred.load.if18:
+; FVW2-NEXT:    [[TMP66:%.*]] = getelementptr inbounds [[STRUCT_IN]], [[STRUCT_IN]] addrspace(1)* [[IN]], i64 [[TMP5]], i32 1
+; FVW2-NEXT:    [[TMP67:%.*]] = load float, float addrspace(1)* [[TMP66]], align 4
+; FVW2-NEXT:    [[TMP68:%.*]] = insertelement <2 x float> poison, float [[TMP67]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE19]]
+; FVW2:       pred.load.continue19:
+; FVW2-NEXT:    [[TMP69:%.*]] = phi <2 x float> [ poison, [[PRED_LOAD_CONTINUE17]] ], [ [[TMP68]], [[PRED_LOAD_IF18]] ]
+; FVW2-NEXT:    [[TMP70:%.*]] = extractelement <2 x i1> [[TMP34]], i64 1
+; FVW2-NEXT:    br i1 [[TMP70]], label [[PRED_LOAD_IF20:%.*]], label [[PRED_LOAD_CONTINUE21:%.*]]
+; FVW2:       pred.load.if20:
+; FVW2-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT_IN]], [[STRUCT_IN]] addrspace(1)* [[IN]], i64 [[TMP6]], i32 1
+; FVW2-NEXT:    [[TMP72:%.*]] = load float, float addrspace(1)* [[TMP71]], align 4
+; FVW2-NEXT:    [[TMP73:%.*]] = insertelement <2 x float> [[TMP69]], float [[TMP72]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE21]]
+; FVW2:       pred.load.continue21:
+; FVW2-NEXT:    [[TMP74:%.*]] = phi <2 x float> [ [[TMP69]], [[PRED_LOAD_CONTINUE19]] ], [ [[TMP73]], [[PRED_LOAD_IF20]] ]
+; FVW2-NEXT:    [[TMP75:%.*]] = fadd <2 x float> [[TMP44]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP76:%.*]] = fadd <2 x float> [[TMP54]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP77:%.*]] = fadd <2 x float> [[TMP64]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP78:%.*]] = fadd <2 x float> [[TMP74]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP79:%.*]] = extractelement <2 x i1> [[TMP31]], i64 0
+; FVW2-NEXT:    br i1 [[TMP79]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; FVW2:       pred.store.if:
-; FVW2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, float* [[OUT:%.*]], i64 [[OFFSET_IDX]]
-; FVW2-NEXT:    [[TMP12:%.*]] = extractelement <2 x float> [[TMP9]], i64 0
-; FVW2-NEXT:    store float [[TMP12]], float* [[TMP11]], align 4
+; FVW2-NEXT:    [[TMP80:%.*]] = getelementptr inbounds float, float* [[OUT:%.*]], i64 [[OFFSET_IDX]]
+; FVW2-NEXT:    [[TMP81:%.*]] = extractelement <2 x float> [[TMP75]], i64 0
+; FVW2-NEXT:    store float [[TMP81]], float* [[TMP80]], align 4
 ; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; FVW2:       pred.store.continue:
-; FVW2-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP7]], i64 1
-; FVW2-NEXT:    br i1 [[TMP13]], label [[PRED_STORE_IF8:%.*]], label [[PRED_STORE_CONTINUE9]]
-; FVW2:       pred.store.if8:
-; FVW2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, float* [[OUT]], i64 [[TMP0]]
-; FVW2-NEXT:    [[TMP15:%.*]] = extractelement <2 x float> [[TMP9]], i64 1
-; FVW2-NEXT:    store float [[TMP15]], float* [[TMP14]], align 4
-; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE9]]
-; FVW2:       pred.store.continue9:
-; FVW2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX10]], 2
-; FVW2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 32, i64 32>
-; FVW2-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; FVW2-NEXT:    br i1 [[TMP16]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; FVW2-NEXT:    [[TMP82:%.*]] = extractelement <2 x i1> [[TMP31]], i64 1
+; FVW2-NEXT:    br i1 [[TMP82]], label [[PRED_STORE_IF22:%.*]], label [[PRED_STORE_CONTINUE23:%.*]]
+; FVW2:       pred.store.if22:
+; FVW2-NEXT:    [[TMP83:%.*]] = getelementptr inbounds float, float* [[OUT]], i64 [[TMP0]]
+; FVW2-NEXT:    [[TMP84:%.*]] = extractelement <2 x float> [[TMP75]], i64 1
+; FVW2-NEXT:    store float [[TMP84]], float* [[TMP83]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE23]]
+; FVW2:       pred.store.continue23:
+; FVW2-NEXT:    [[TMP85:%.*]] = extractelement <2 x i1> [[TMP32]], i64 0
+; FVW2-NEXT:    br i1 [[TMP85]], label [[PRED_STORE_IF24:%.*]], label [[PRED_STORE_CONTINUE25:%.*]]
+; FVW2:       pred.store.if24:
+; FVW2-NEXT:    [[TMP86:%.*]] = getelementptr inbounds float, float* [[OUT]], i64 [[TMP1]]
+; FVW2-NEXT:    [[TMP87:%.*]] = extractelement <2 x float> [[TMP76]], i64 0
+; FVW2-NEXT:    store float [[TMP87]], float* [[TMP86]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE25]]
+; FVW2:       pred.store.continue25:
+; FVW2-NEXT:    [[TMP88:%.*]] = extractelement <2 x i1> [[TMP32]], i64 1
+; FVW2-NEXT:    br i1 [[TMP88]], label [[PRED_STORE_IF26:%.*]], label [[PRED_STORE_CONTINUE27:%.*]]
+; FVW2:       pred.store.if26:
+; FVW2-NEXT:    [[TMP89:%.*]] = getelementptr inbounds float, float* [[OUT]], i64 [[TMP2]]
+; FVW2-NEXT:    [[TMP90:%.*]] = extractelement <2 x float> [[TMP76]], i64 1
+; FVW2-NEXT:    store float [[TMP90]], float* [[TMP89]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE27]]
+; FVW2:       pred.store.continue27:
+; FVW2-NEXT:    [[TMP91:%.*]] = extractelement <2 x i1> [[TMP33]], i64 0
+; FVW2-NEXT:    br i1 [[TMP91]], label [[PRED_STORE_IF28:%.*]], label [[PRED_STORE_CONTINUE29:%.*]]
+; FVW2:       pred.store.if28:
+; FVW2-NEXT:    [[TMP92:%.*]] = getelementptr inbounds float, float* [[OUT]], i64 [[TMP3]]
+; FVW2-NEXT:    [[TMP93:%.*]] = extractelement <2 x float> [[TMP77]], i64 0
+; FVW2-NEXT:    store float [[TMP93]], float* [[TMP92]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE29]]
+; FVW2:       pred.store.continue29:
+; FVW2-NEXT:    [[TMP94:%.*]] = extractelement <2 x i1> [[TMP33]], i64 1
+; FVW2-NEXT:    br i1 [[TMP94]], label [[PRED_STORE_IF30:%.*]], label [[PRED_STORE_CONTINUE31:%.*]]
+; FVW2:       pred.store.if30:
+; FVW2-NEXT:    [[TMP95:%.*]] = getelementptr inbounds float, float* [[OUT]], i64 [[TMP4]]
+; FVW2-NEXT:    [[TMP96:%.*]] = extractelement <2 x float> [[TMP77]], i64 1
+; FVW2-NEXT:    store float [[TMP96]], float* [[TMP95]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE31]]
+; FVW2:       pred.store.continue31:
+; FVW2-NEXT:    [[TMP97:%.*]] = extractelement <2 x i1> [[TMP34]], i64 0
+; FVW2-NEXT:    br i1 [[TMP97]], label [[PRED_STORE_IF32:%.*]], label [[PRED_STORE_CONTINUE33:%.*]]
+; FVW2:       pred.store.if32:
+; FVW2-NEXT:    [[TMP98:%.*]] = getelementptr inbounds float, float* [[OUT]], i64 [[TMP5]]
+; FVW2-NEXT:    [[TMP99:%.*]] = extractelement <2 x float> [[TMP78]], i64 0
+; FVW2-NEXT:    store float [[TMP99]], float* [[TMP98]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE33]]
+; FVW2:       pred.store.continue33:
+; FVW2-NEXT:    [[TMP100:%.*]] = extractelement <2 x i1> [[TMP34]], i64 1
+; FVW2-NEXT:    br i1 [[TMP100]], label [[PRED_STORE_IF34:%.*]], label [[PRED_STORE_CONTINUE35]]
+; FVW2:       pred.store.if34:
+; FVW2-NEXT:    [[TMP101:%.*]] = getelementptr inbounds float, float* [[OUT]], i64 [[TMP6]]
+; FVW2-NEXT:    [[TMP102:%.*]] = extractelement <2 x float> [[TMP78]], i64 1
+; FVW2-NEXT:    store float [[TMP102]], float* [[TMP101]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE35]]
+; FVW2:       pred.store.continue35:
+; FVW2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX7]], 8
+; FVW2-NEXT:    [[TMP103:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
+; FVW2-NEXT:    br i1 [[TMP103]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; FVW2:       for.end:
 ; FVW2-NEXT:    ret void
 ;
@@ -1303,40 +1959,186 @@ define void @foo2_addrspace3(%struct.In addrspace(0)* noalias %in, float addrspa
 ; FVW2-NEXT:  entry:
 ; FVW2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FVW2:       vector.body:
-; FVW2-NEXT:    [[INDEX10:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE9:%.*]] ]
-; FVW2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 16>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE9]] ]
-; FVW2-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX10]], 4
+; FVW2-NEXT:    [[INDEX7:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE35:%.*]] ]
+; FVW2-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX7]], 4
 ; FVW2-NEXT:    [[TMP0:%.*]] = or i64 [[OFFSET_IDX]], 16
-; FVW2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER:%.*]], i64 [[OFFSET_IDX]]
-; FVW2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP0]]
-; FVW2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]], align 4
-; FVW2-NEXT:    [[TMP4:%.*]] = load i32, i32* [[TMP2]], align 4
-; FVW2-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i64 0
-; FVW2-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP4]], i64 1
-; FVW2-NEXT:    [[TMP7:%.*]] = icmp sgt <2 x i32> [[TMP6]], zeroinitializer
-; FVW2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_IN:%.*]], %struct.In* [[IN:%.*]], <2 x i64> [[VEC_IND]], i32 1
-; FVW2-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*> [[TMP8]], i32 4, <2 x i1> [[TMP7]], <2 x float> undef)
-; FVW2-NEXT:    [[TMP9:%.*]] = fadd <2 x float> [[WIDE_MASKED_GATHER]], <float 5.000000e-01, float 5.000000e-01>
-; FVW2-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP7]], i64 0
-; FVW2-NEXT:    br i1 [[TMP10]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; FVW2-NEXT:    [[TMP1:%.*]] = or i64 [[OFFSET_IDX]], 32
+; FVW2-NEXT:    [[TMP2:%.*]] = or i64 [[OFFSET_IDX]], 48
+; FVW2-NEXT:    [[TMP3:%.*]] = or i64 [[OFFSET_IDX]], 64
+; FVW2-NEXT:    [[TMP4:%.*]] = or i64 [[OFFSET_IDX]], 80
+; FVW2-NEXT:    [[TMP5:%.*]] = or i64 [[OFFSET_IDX]], 96
+; FVW2-NEXT:    [[TMP6:%.*]] = or i64 [[OFFSET_IDX]], 112
+; FVW2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER:%.*]], i64 [[OFFSET_IDX]]
+; FVW2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP0]]
+; FVW2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP1]]
+; FVW2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP2]]
+; FVW2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP3]]
+; FVW2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP4]]
+; FVW2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP5]]
+; FVW2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], i64 [[TMP6]]
+; FVW2-NEXT:    [[TMP15:%.*]] = load i32, i32* [[TMP7]], align 4
+; FVW2-NEXT:    [[TMP16:%.*]] = load i32, i32* [[TMP8]], align 4
+; FVW2-NEXT:    [[TMP17:%.*]] = insertelement <2 x i32> poison, i32 [[TMP15]], i64 0
+; FVW2-NEXT:    [[TMP18:%.*]] = insertelement <2 x i32> [[TMP17]], i32 [[TMP16]], i64 1
+; FVW2-NEXT:    [[TMP19:%.*]] = load i32, i32* [[TMP9]], align 4
+; FVW2-NEXT:    [[TMP20:%.*]] = load i32, i32* [[TMP10]], align 4
+; FVW2-NEXT:    [[TMP21:%.*]] = insertelement <2 x i32> poison, i32 [[TMP19]], i64 0
+; FVW2-NEXT:    [[TMP22:%.*]] = insertelement <2 x i32> [[TMP21]], i32 [[TMP20]], i64 1
+; FVW2-NEXT:    [[TMP23:%.*]] = load i32, i32* [[TMP11]], align 4
+; FVW2-NEXT:    [[TMP24:%.*]] = load i32, i32* [[TMP12]], align 4
+; FVW2-NEXT:    [[TMP25:%.*]] = insertelement <2 x i32> poison, i32 [[TMP23]], i64 0
+; FVW2-NEXT:    [[TMP26:%.*]] = insertelement <2 x i32> [[TMP25]], i32 [[TMP24]], i64 1
+; FVW2-NEXT:    [[TMP27:%.*]] = load i32, i32* [[TMP13]], align 4
+; FVW2-NEXT:    [[TMP28:%.*]] = load i32, i32* [[TMP14]], align 4
+; FVW2-NEXT:    [[TMP29:%.*]] = insertelement <2 x i32> poison, i32 [[TMP27]], i64 0
+; FVW2-NEXT:    [[TMP30:%.*]] = insertelement <2 x i32> [[TMP29]], i32 [[TMP28]], i64 1
+; FVW2-NEXT:    [[TMP31:%.*]] = icmp sgt <2 x i32> [[TMP18]], zeroinitializer
+; FVW2-NEXT:    [[TMP32:%.*]] = icmp sgt <2 x i32> [[TMP22]], zeroinitializer
+; FVW2-NEXT:    [[TMP33:%.*]] = icmp sgt <2 x i32> [[TMP26]], zeroinitializer
+; FVW2-NEXT:    [[TMP34:%.*]] = icmp sgt <2 x i32> [[TMP30]], zeroinitializer
+; FVW2-NEXT:    [[TMP35:%.*]] = extractelement <2 x i1> [[TMP31]], i64 0
+; FVW2-NEXT:    br i1 [[TMP35]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
+; FVW2:       pred.load.if:
+; FVW2-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_IN:%.*]], %struct.In* [[IN:%.*]], i64 [[OFFSET_IDX]], i32 1
+; FVW2-NEXT:    [[TMP37:%.*]] = load float, float* [[TMP36]], align 4
+; FVW2-NEXT:    [[TMP38:%.*]] = insertelement <2 x float> poison, float [[TMP37]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE]]
+; FVW2:       pred.load.continue:
+; FVW2-NEXT:    [[TMP39:%.*]] = phi <2 x float> [ poison, [[VECTOR_BODY]] ], [ [[TMP38]], [[PRED_LOAD_IF]] ]
+; FVW2-NEXT:    [[TMP40:%.*]] = extractelement <2 x i1> [[TMP31]], i64 1
+; FVW2-NEXT:    br i1 [[TMP40]], label [[PRED_LOAD_IF8:%.*]], label [[PRED_LOAD_CONTINUE9:%.*]]
+; FVW2:       pred.load.if8:
+; FVW2-NEXT:    [[TMP41:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP0]], i32 1
+; FVW2-NEXT:    [[TMP42:%.*]] = load float, float* [[TMP41]], align 4
+; FVW2-NEXT:    [[TMP43:%.*]] = insertelement <2 x float> [[TMP39]], float [[TMP42]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE9]]
+; FVW2:       pred.load.continue9:
+; FVW2-NEXT:    [[TMP44:%.*]] = phi <2 x float> [ [[TMP39]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP43]], [[PRED_LOAD_IF8]] ]
+; FVW2-NEXT:    [[TMP45:%.*]] = extractelement <2 x i1> [[TMP32]], i64 0
+; FVW2-NEXT:    br i1 [[TMP45]], label [[PRED_LOAD_IF10:%.*]], label [[PRED_LOAD_CONTINUE11:%.*]]
+; FVW2:       pred.load.if10:
+; FVW2-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP1]], i32 1
+; FVW2-NEXT:    [[TMP47:%.*]] = load float, float* [[TMP46]], align 4
+; FVW2-NEXT:    [[TMP48:%.*]] = insertelement <2 x float> poison, float [[TMP47]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE11]]
+; FVW2:       pred.load.continue11:
+; FVW2-NEXT:    [[TMP49:%.*]] = phi <2 x float> [ poison, [[PRED_LOAD_CONTINUE9]] ], [ [[TMP48]], [[PRED_LOAD_IF10]] ]
+; FVW2-NEXT:    [[TMP50:%.*]] = extractelement <2 x i1> [[TMP32]], i64 1
+; FVW2-NEXT:    br i1 [[TMP50]], label [[PRED_LOAD_IF12:%.*]], label [[PRED_LOAD_CONTINUE13:%.*]]
+; FVW2:       pred.load.if12:
+; FVW2-NEXT:    [[TMP51:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP2]], i32 1
+; FVW2-NEXT:    [[TMP52:%.*]] = load float, float* [[TMP51]], align 4
+; FVW2-NEXT:    [[TMP53:%.*]] = insertelement <2 x float> [[TMP49]], float [[TMP52]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE13]]
+; FVW2:       pred.load.continue13:
+; FVW2-NEXT:    [[TMP54:%.*]] = phi <2 x float> [ [[TMP49]], [[PRED_LOAD_CONTINUE11]] ], [ [[TMP53]], [[PRED_LOAD_IF12]] ]
+; FVW2-NEXT:    [[TMP55:%.*]] = extractelement <2 x i1> [[TMP33]], i64 0
+; FVW2-NEXT:    br i1 [[TMP55]], label [[PRED_LOAD_IF14:%.*]], label [[PRED_LOAD_CONTINUE15:%.*]]
+; FVW2:       pred.load.if14:
+; FVW2-NEXT:    [[TMP56:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP3]], i32 1
+; FVW2-NEXT:    [[TMP57:%.*]] = load float, float* [[TMP56]], align 4
+; FVW2-NEXT:    [[TMP58:%.*]] = insertelement <2 x float> poison, float [[TMP57]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE15]]
+; FVW2:       pred.load.continue15:
+; FVW2-NEXT:    [[TMP59:%.*]] = phi <2 x float> [ poison, [[PRED_LOAD_CONTINUE13]] ], [ [[TMP58]], [[PRED_LOAD_IF14]] ]
+; FVW2-NEXT:    [[TMP60:%.*]] = extractelement <2 x i1> [[TMP33]], i64 1
+; FVW2-NEXT:    br i1 [[TMP60]], label [[PRED_LOAD_IF16:%.*]], label [[PRED_LOAD_CONTINUE17:%.*]]
+; FVW2:       pred.load.if16:
+; FVW2-NEXT:    [[TMP61:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP4]], i32 1
+; FVW2-NEXT:    [[TMP62:%.*]] = load float, float* [[TMP61]], align 4
+; FVW2-NEXT:    [[TMP63:%.*]] = insertelement <2 x float> [[TMP59]], float [[TMP62]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE17]]
+; FVW2:       pred.load.continue17:
+; FVW2-NEXT:    [[TMP64:%.*]] = phi <2 x float> [ [[TMP59]], [[PRED_LOAD_CONTINUE15]] ], [ [[TMP63]], [[PRED_LOAD_IF16]] ]
+; FVW2-NEXT:    [[TMP65:%.*]] = extractelement <2 x i1> [[TMP34]], i64 0
+; FVW2-NEXT:    br i1 [[TMP65]], label [[PRED_LOAD_IF18:%.*]], label [[PRED_LOAD_CONTINUE19:%.*]]
+; FVW2:       pred.load.if18:
+; FVW2-NEXT:    [[TMP66:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP5]], i32 1
+; FVW2-NEXT:    [[TMP67:%.*]] = load float, float* [[TMP66]], align 4
+; FVW2-NEXT:    [[TMP68:%.*]] = insertelement <2 x float> poison, float [[TMP67]], i64 0
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE19]]
+; FVW2:       pred.load.continue19:
+; FVW2-NEXT:    [[TMP69:%.*]] = phi <2 x float> [ poison, [[PRED_LOAD_CONTINUE17]] ], [ [[TMP68]], [[PRED_LOAD_IF18]] ]
+; FVW2-NEXT:    [[TMP70:%.*]] = extractelement <2 x i1> [[TMP34]], i64 1
+; FVW2-NEXT:    br i1 [[TMP70]], label [[PRED_LOAD_IF20:%.*]], label [[PRED_LOAD_CONTINUE21:%.*]]
+; FVW2:       pred.load.if20:
+; FVW2-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT_IN]], %struct.In* [[IN]], i64 [[TMP6]], i32 1
+; FVW2-NEXT:    [[TMP72:%.*]] = load float, float* [[TMP71]], align 4
+; FVW2-NEXT:    [[TMP73:%.*]] = insertelement <2 x float> [[TMP69]], float [[TMP72]], i64 1
+; FVW2-NEXT:    br label [[PRED_LOAD_CONTINUE21]]
+; FVW2:       pred.load.continue21:
+; FVW2-NEXT:    [[TMP74:%.*]] = phi <2 x float> [ [[TMP69]], [[PRED_LOAD_CONTINUE19]] ], [ [[TMP73]], [[PRED_LOAD_IF20]] ]
+; FVW2-NEXT:    [[TMP75:%.*]] = fadd <2 x float> [[TMP44]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP76:%.*]] = fadd <2 x float> [[TMP54]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP77:%.*]] = fadd <2 x float> [[TMP64]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP78:%.*]] = fadd <2 x float> [[TMP74]], <float 5.000000e-01, float 5.000000e-01>
+; FVW2-NEXT:    [[TMP79:%.*]] = extractelement <2 x i1> [[TMP31]], i64 0
+; FVW2-NEXT:    br i1 [[TMP79]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; FVW2:       pred.store.if:
-; FVW2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, float addrspace(1)* [[OUT:%.*]], i64 [[OFFSET_IDX]]
-; FVW2-NEXT:    [[TMP12:%.*]] = extractelement <2 x float> [[TMP9]], i64 0
-; FVW2-NEXT:    store float [[TMP12]], float addrspace(1)* [[TMP11]], align 4
+; FVW2-NEXT:    [[TMP80:%.*]] = getelementptr inbounds float, float addrspace(1)* [[OUT:%.*]], i64 [[OFFSET_IDX]]
+; FVW2-NEXT:    [[TMP81:%.*]] = extractelement <2 x float> [[TMP75]], i64 0
+; FVW2-NEXT:    store float [[TMP81]], float addrspace(1)* [[TMP80]], align 4
 ; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; FVW2:       pred.store.continue:
-; FVW2-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP7]], i64 1
-; FVW2-NEXT:    br i1 [[TMP13]], label [[PRED_STORE_IF8:%.*]], label [[PRED_STORE_CONTINUE9]]
-; FVW2:       pred.store.if8:
-; FVW2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, float addrspace(1)* [[OUT]], i64 [[TMP0]]
-; FVW2-NEXT:    [[TMP15:%.*]] = extractelement <2 x float> [[TMP9]], i64 1
-; FVW2-NEXT:    store float [[TMP15]], float addrspace(1)* [[TMP14]], align 4
-; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE9]]
-; FVW2:       pred.store.continue9:
-; FVW2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX10]], 2
-; FVW2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 32, i64 32>
-; FVW2-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; FVW2-NEXT:    br i1 [[TMP16]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; FVW2-NEXT:    [[TMP82:%.*]] = extractelement <2 x i1> [[TMP31]], i64 1
+; FVW2-NEXT:    br i1 [[TMP82]], label [[PRED_STORE_IF22:%.*]], label [[PRED_STORE_CONTINUE23:%.*]]
+; FVW2:       pred.store.if22:
+; FVW2-NEXT:    [[TMP83:%.*]] = getelementptr inbounds float, float addrspace(1)* [[OUT]], i64 [[TMP0]]
+; FVW2-NEXT:    [[TMP84:%.*]] = extractelement <2 x float> [[TMP75]], i64 1
+; FVW2-NEXT:    store float [[TMP84]], float addrspace(1)* [[TMP83]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE23]]
+; FVW2:       pred.store.continue23:
+; FVW2-NEXT:    [[TMP85:%.*]] = extractelement <2 x i1> [[TMP32]], i64 0
+; FVW2-NEXT:    br i1 [[TMP85]], label [[PRED_STORE_IF24:%.*]], label [[PRED_STORE_CONTINUE25:%.*]]
+; FVW2:       pred.store.if24:
+; FVW2-NEXT:    [[TMP86:%.*]] = getelementptr inbounds float, float addrspace(1)* [[OUT]], i64 [[TMP1]]
+; FVW2-NEXT:    [[TMP87:%.*]] = extractelement <2 x float> [[TMP76]], i64 0
+; FVW2-NEXT:    store float [[TMP87]], float addrspace(1)* [[TMP86]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE25]]
+; FVW2:       pred.store.continue25:
+; FVW2-NEXT:    [[TMP88:%.*]] = extractelement <2 x i1> [[TMP32]], i64 1
+; FVW2-NEXT:    br i1 [[TMP88]], label [[PRED_STORE_IF26:%.*]], label [[PRED_STORE_CONTINUE27:%.*]]
+; FVW2:       pred.store.if26:
+; FVW2-NEXT:    [[TMP89:%.*]] = getelementptr inbounds float, float addrspace(1)* [[OUT]], i64 [[TMP2]]
+; FVW2-NEXT:    [[TMP90:%.*]] = extractelement <2 x float> [[TMP76]], i64 1
+; FVW2-NEXT:    store float [[TMP90]], float addrspace(1)* [[TMP89]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE27]]
+; FVW2:       pred.store.continue27:
+; FVW2-NEXT:    [[TMP91:%.*]] = extractelement <2 x i1> [[TMP33]], i64 0
+; FVW2-NEXT:    br i1 [[TMP91]], label [[PRED_STORE_IF28:%.*]], label [[PRED_STORE_CONTINUE29:%.*]]
+; FVW2:       pred.store.if28:
+; FVW2-NEXT:    [[TMP92:%.*]] = getelementptr inbounds float, float addrspace(1)* [[OUT]], i64 [[TMP3]]
+; FVW2-NEXT:    [[TMP93:%.*]] = extractelement <2 x float> [[TMP77]], i64 0
+; FVW2-NEXT:    store float [[TMP93]], float addrspace(1)* [[TMP92]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE29]]
+; FVW2:       pred.store.continue29:
+; FVW2-NEXT:    [[TMP94:%.*]] = extractelement <2 x i1> [[TMP33]], i64 1
+; FVW2-NEXT:    br i1 [[TMP94]], label [[PRED_STORE_IF30:%.*]], label [[PRED_STORE_CONTINUE31:%.*]]
+; FVW2:       pred.store.if30:
+; FVW2-NEXT:    [[TMP95:%.*]] = getelementptr inbounds float, float addrspace(1)* [[OUT]], i64 [[TMP4]]
+; FVW2-NEXT:    [[TMP96:%.*]] = extractelement <2 x float> [[TMP77]], i64 1
+; FVW2-NEXT:    store float [[TMP96]], float addrspace(1)* [[TMP95]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE31]]
+; FVW2:       pred.store.continue31:
+; FVW2-NEXT:    [[TMP97:%.*]] = extractelement <2 x i1> [[TMP34]], i64 0
+; FVW2-NEXT:    br i1 [[TMP97]], label [[PRED_STORE_IF32:%.*]], label [[PRED_STORE_CONTINUE33:%.*]]
+; FVW2:       pred.store.if32:
+; FVW2-NEXT:    [[TMP98:%.*]] = getelementptr inbounds float, float addrspace(1)* [[OUT]], i64 [[TMP5]]
+; FVW2-NEXT:    [[TMP99:%.*]] = extractelement <2 x float> [[TMP78]], i64 0
+; FVW2-NEXT:    store float [[TMP99]], float addrspace(1)* [[TMP98]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE33]]
+; FVW2:       pred.store.continue33:
+; FVW2-NEXT:    [[TMP100:%.*]] = extractelement <2 x i1> [[TMP34]], i64 1
+; FVW2-NEXT:    br i1 [[TMP100]], label [[PRED_STORE_IF34:%.*]], label [[PRED_STORE_CONTINUE35]]
+; FVW2:       pred.store.if34:
+; FVW2-NEXT:    [[TMP101:%.*]] = getelementptr inbounds float, float addrspace(1)* [[OUT]], i64 [[TMP6]]
+; FVW2-NEXT:    [[TMP102:%.*]] = extractelement <2 x float> [[TMP78]], i64 1
+; FVW2-NEXT:    store float [[TMP102]], float addrspace(1)* [[TMP101]], align 4
+; FVW2-NEXT:    br label [[PRED_STORE_CONTINUE35]]
+; FVW2:       pred.store.continue35:
+; FVW2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX7]], 8
+; FVW2-NEXT:    [[TMP103:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
+; FVW2-NEXT:    br i1 [[TMP103]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; FVW2:       for.end:
 ; FVW2-NEXT:    ret void
 ;

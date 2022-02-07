@@ -639,6 +639,7 @@ TEST_F(LexerTest, RawAndNormalLexSameForLineComments) {
   const llvm::StringLiteral Source = R"cpp(
   // First line comment.
   //* Second line comment which is ambigious.
+  ; // Have a non-comment token to make sure something is lexed.
   )cpp";
   LangOpts.LineComment = false;
   auto Toks = Lex(Source);
@@ -650,6 +651,7 @@ TEST_F(LexerTest, RawAndNormalLexSameForLineComments) {
 
   auto ToksView = llvm::makeArrayRef(Toks);
   clang::Token T;
+  EXPECT_FALSE(ToksView.empty());
   while (!L.LexFromRawLexer(T)) {
     ASSERT_TRUE(!ToksView.empty());
     EXPECT_EQ(T.getKind(), ToksView.front().getKind());

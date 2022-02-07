@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine < %s | FileCheck -enable-var-scope %s
+; RUN: opt -S -passes=instcombine < %s | FileCheck -enable-var-scope %s
 
 ; Check that instcombine preserves !prof metadata when removing function
 ; prototype casts.

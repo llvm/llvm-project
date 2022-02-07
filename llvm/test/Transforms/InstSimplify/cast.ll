@@ -1,4 +1,4 @@
-; RUN: opt -S -instsimplify < %s | FileCheck %s
+; RUN: opt -S -passes=instsimplify < %s | FileCheck %s
 target datalayout = "p:32:32"
 
 define i1 @test1(i1 %V) {

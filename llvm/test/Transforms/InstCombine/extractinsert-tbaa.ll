@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine %s -o - | FileCheck %s
+; RUN: opt -S -passes=instcombine %s -o - | FileCheck %s
 
 %Complex = type { double, double }
 

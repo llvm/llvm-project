@@ -1,12 +1,12 @@
 ; Test that the ffs* library call simplifier works correctly.
 ;
-; RUN: opt < %s -instcombine -S                                    | FileCheck %s --check-prefix=ALL --check-prefix=GENERIC
-; RUN: opt < %s -instcombine -mtriple i386-pc-linux -S             | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
-; RUN: opt < %s -instcombine -mtriple=arm64-apple-ios9.0 -S        | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
-; RUN: opt < %s -instcombine -mtriple=arm64-apple-tvos9.0 -S       | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
-; RUN: opt < %s -instcombine -mtriple=thumbv7k-apple-watchos2.0 -S | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
-; RUN: opt < %s -instcombine -mtriple=x86_64-apple-macosx10.11 -S  | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
-; RUN: opt < %s -instcombine -mtriple=x86_64-freebsd-gnu -S        | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
+; RUN: opt < %s -passes=instcombine -S                                    | FileCheck %s --check-prefix=ALL --check-prefix=GENERIC
+; RUN: opt < %s -passes=instcombine -mtriple i386-pc-linux -S             | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
+; RUN: opt < %s -passes=instcombine -mtriple=arm64-apple-ios9.0 -S        | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
+; RUN: opt < %s -passes=instcombine -mtriple=arm64-apple-tvos9.0 -S       | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
+; RUN: opt < %s -passes=instcombine -mtriple=thumbv7k-apple-watchos2.0 -S | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
+; RUN: opt < %s -passes=instcombine -mtriple=x86_64-apple-macosx10.11 -S  | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
+; RUN: opt < %s -passes=instcombine -mtriple=x86_64-freebsd-gnu -S        | FileCheck %s --check-prefix=ALL --check-prefix=TARGET
 
 declare i32 @ffs(i32)
 declare i32 @ffsl(i32)

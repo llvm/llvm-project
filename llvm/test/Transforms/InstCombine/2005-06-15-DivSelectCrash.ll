@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -disable-output
+; RUN: opt < %s -passes=instcombine -disable-output
 
 define i32 @_Z13func_31585107li(i32 %l_39521025, i32 %l_59244666) {
         %shortcirc_val = select i1 false, i32 1, i32 0          ; <i32> [#uses=1]

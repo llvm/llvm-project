@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep "align 1"
+; RUN: opt < %s -passes=instcombine -S | grep "align 1"
 ; END.
 
 	%struct.p = type <{ i8, i32 }>

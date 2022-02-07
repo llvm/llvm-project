@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S -o - < %s | FileCheck %s
+; RUN: opt -passes=instcombine -S -o - < %s | FileCheck %s
 
 define <vscale x 2 x float> @shrink_splat_scalable_extend(<vscale x 2 x float> %a) {
   ; CHECK-LABEL: @shrink_splat_scalable_extend

@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck --match-full-lines %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck --match-full-lines %s
 
 ; Test cases to make sure !annotation metadata is preserved, if possible.
 ; Currently we fail to preserve !annotation metadata in many cases.

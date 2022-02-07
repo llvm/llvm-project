@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep "ret double .sy"
+; RUN: opt < %s -passes=instcombine -S | grep "ret double .sy"
 
 define internal double @ScaleObjectAdd(double %sx, double %sy, double %sz) nounwind {
 entry:

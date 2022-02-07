@@ -1,6 +1,6 @@
-; RUN: opt < %s -instsimplify -S | \
+; RUN: opt < %s -passes=instsimplify -S | \
 ; RUN:    grep "ret i32 -1"
-; RUN: opt < %s -instsimplify -S | \
+; RUN: opt < %s -passes=instsimplify -S | \
 ; RUN:    grep "ret i32 1"
 
 define i32 @test1() {

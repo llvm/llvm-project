@@ -1,4 +1,4 @@
-; RUN: opt -mtriple unknown -instcombine -S < %s | FileCheck %s
+; RUN: opt -mtriple unknown -passes=instcombine -S < %s | FileCheck %s
 
 ; PR42190
 ; Can't generate test checks due to PR42740.

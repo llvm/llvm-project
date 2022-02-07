@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S -o - %s | FileCheck %s
+; RUN: opt -passes=instcombine -S -o - %s | FileCheck %s
 ; Check that we can replace `atomicrmw <op> LHS, 0` with `load atomic LHS`.
 ; This is possible when:
 ; - <op> LHS, 0 == LHS
