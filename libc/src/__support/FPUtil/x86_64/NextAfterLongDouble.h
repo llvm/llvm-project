@@ -15,6 +15,7 @@
 #error "Invalid include"
 #endif
 
+#include "src/__support/CPP/Bit.h"
 #include "src/__support/FPUtil/FPBits.h"
 
 #include <stdint.h>
@@ -111,7 +112,7 @@ static inline long double nextafter(long double from, long double to) {
     }
   }
 
-  return *reinterpret_cast<long double *>(&int_val);
+  return __llvm_libc::bit_cast<long double>(int_val);
   // TODO: Raise floating point exceptions as required by the standard.
 }
 

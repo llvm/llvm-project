@@ -59,7 +59,7 @@ INLINE_FMA static inline float log(double x) {
   int f_index =
       xbits.get_mantissa() >> 45; // fputil::MantissaWidth<double>::VALUE - 7
 
-  FPBits f(xbits.val);
+  FPBits f = xbits;
   // Clear the lowest 45 bits.
   f.bits &= ~0x0000'1FFF'FFFF'FFFFULL;
 

@@ -39,6 +39,7 @@ cc_library(
     hdrs = [
         "src/__support/CPP/Array.h",
         "src/__support/CPP/ArrayRef.h",
+        "src/__support/CPP/Bit.h",
         "src/__support/CPP/Bitset.h",
         "src/__support/CPP/Functional.h",
         "src/__support/CPP/Limits.h",
@@ -661,6 +662,7 @@ cc_library(
     ],
     deps = [
         ":__support_common",
+        ":__support_standalone_cpp",
         ":libc_root",
     ],
 )

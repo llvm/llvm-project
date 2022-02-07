@@ -11,6 +11,7 @@
 
 #include "PlatformDefs.h"
 
+#include "src/__support/CPP/Bit.h"
 #include "src/__support/CPP/TypeTraits.h"
 
 #include "FloatProperties.h"
@@ -35,7 +36,7 @@ template <typename T> struct ExponentWidth {
 // floating numbers. On x86 platforms however, the 'long double' type maps to
 // an x87 floating point format. This format is an IEEE 754 extension format.
 // It is handled as an explicit specialization of this class.
-template <typename T> union FPBits {
+template <typename T> struct FPBits {
   static_assert(cpp::IsFloatingPointType<T>::Value,
                 "FPBits instantiated with invalid type.");
 
@@ -76,7 +77,6 @@ template <typename T> union FPBits {
   bool get_sign() const {
     return ((bits & FloatProp::SIGN_MASK) >> (FloatProp::BIT_WIDTH - 1));
   }
-  T val;
 
   static_assert(sizeof(T) == sizeof(UIntType),
                 "Data type and integral representation have different sizes.");
@@ -96,15 +96,20 @@ template <typename T> union FPBits {
   // type match.
   template <typename XType,
             cpp::EnableIfType<cpp::IsSame<T, XType>::Value, int> = 0>
-  explicit FPBits(XType x) : val(x) {}
+  constexpr explicit FPBits(XType x)
+      : bits(__llvm_libc::bit_cast<UIntType>(x)) {}
 
   template <typename XType,
             cpp::EnableIfType<cpp::IsSame<XType, UIntType>::Value, int> = 0>
-  explicit FPBits(XType x) : bits(x) {}
+  constexpr explicit FPBits(XType x) : bits(x) {}
 
   FPBits() : bits(0) {}
 
-  explicit operator T() { return val; }
+  T get_val() const { return __llvm_libc::bit_cast<T>(bits); }
+
+  void set_val(T value) { bits = __llvm_libc::bit_cast<UIntType>(value); }
+
+  explicit operator T() const { return get_val(); }
 
   UIntType uintval() const { return bits; }
 

@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_NEXTAFTERTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_NEXTAFTERTEST_H
 
+#include "src/__support/CPP/Bit.h"
 #include "src/__support/CPP/TypeTraits.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -51,54 +52,54 @@ public:
     T x = zero;
     T result = func(x, T(1));
     UIntType expected_bits = 1;
-    T expected = *reinterpret_cast<T *>(&expected_bits);
+    T expected = __llvm_libc::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     result = func(x, T(-1));
     expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + 1;
-    expected = *reinterpret_cast<T *>(&expected_bits);
+    expected = __llvm_libc::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     x = neg_zero;
     result = func(x, 1);
     expected_bits = 1;
-    expected = *reinterpret_cast<T *>(&expected_bits);
+    expected = __llvm_libc::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     result = func(x, -1);
     expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + 1;
-    expected = *reinterpret_cast<T *>(&expected_bits);
+    expected = __llvm_libc::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     // 'from' is max subnormal value.
-    x = *reinterpret_cast<const T *>(&max_subnormal);
+    x = __llvm_libc::bit_cast<T>(max_subnormal);
     result = func(x, 1);
-    expected = *reinterpret_cast<const T *>(&min_normal);
+    expected = __llvm_libc::bit_cast<T>(min_normal);
     ASSERT_FP_EQ(result, expected);
 
     result = func(x, 0);
     expected_bits = max_subnormal - 1;
-    expected = *reinterpret_cast<T *>(&expected_bits);
+    expected = __llvm_libc::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     x = -x;
 
     result = func(x, -1);
     expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + min_normal;
-    expected = *reinterpret_cast<T *>(&expected_bits);
+    expected = __llvm_libc::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     result = func(x, 0);
     expected_bits =
         (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + max_subnormal - 1;
-    expected = *reinterpret_cast<T *>(&expected_bits);
+    expected = __llvm_libc::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     // 'from' is min subnormal value.
-    x = *reinterpret_cast<const T *>(&min_subnormal);
+    x = __llvm_libc::bit_cast<T>(min_subnormal);
     result = func(x, 1);
     expected_bits = min_subnormal + 1;
-    expected = *reinterpret_cast<T *>(&expected_bits);
+    expected = __llvm_libc::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
     ASSERT_FP_EQ(func(x, 0), 0);
 
@@ -106,35 +107,35 @@ public:
     result = func(x, -1);
     expected_bits =
         (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + min_subnormal + 1;
-    expected = *reinterpret_cast<T *>(&expected_bits);
+    expected = __llvm_libc::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
     ASSERT_FP_EQ(func(x, 0), T(-0.0));
 
     // 'from' is min normal.
-    x = *reinterpret_cast<const T *>(&min_normal);
+    x = __llvm_libc::bit_cast<T>(min_normal);
     result = func(x, 0);
     expected_bits = max_subnormal;
-    expected = *reinterpret_cast<T *>(&expected_bits);
+    expected = __llvm_libc::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     result = func(x, inf);
     expected_bits = min_normal + 1;
-    expected = *reinterpret_cast<T *>(&expected_bits);
+    expected = __llvm_libc::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     x = -x;
     result = func(x, 0);
     expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + max_subnormal;
-    expected = *reinterpret_cast<T *>(&expected_bits);
+    expected = __llvm_libc::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     result = func(x, -inf);
     expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + min_normal + 1;
-    expected = *reinterpret_cast<T *>(&expected_bits);
+    expected = __llvm_libc::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     // 'from' is max normal and 'to' is infinity.
-    x = *reinterpret_cast<const T *>(&max_normal);
+    x = __llvm_libc::bit_cast<T>(max_normal);
     result = func(x, inf);
     ASSERT_FP_EQ(result, inf);
 
@@ -145,14 +146,14 @@ public:
     x = inf;
     result = func(x, 0);
     expected_bits = max_normal;
-    expected = *reinterpret_cast<T *>(&expected_bits);
+    expected = __llvm_libc::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
     ASSERT_FP_EQ(func(x, inf), inf);
 
     x = neg_inf;
     result = func(x, 0);
     expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + max_normal;
-    expected = *reinterpret_cast<T *>(&expected_bits);
+    expected = __llvm_libc::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
     ASSERT_FP_EQ(func(x, neg_inf), neg_inf);
 

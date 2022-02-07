@@ -3,9 +3,10 @@ add_header_library(
   HDRS
     Array.h
     ArrayRef.h
+    Bit.h
     Bitset.h
     Functional.h
+    Limits.h
     StringView.h
     TypeTraits.h
-    Limits.h
 )

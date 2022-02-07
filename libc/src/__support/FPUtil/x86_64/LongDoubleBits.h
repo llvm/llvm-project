@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_LONG_DOUBLE_BITS_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_LONG_DOUBLE_BITS_H
 
+#include "src/__support/CPP/Bit.h"
 #include "src/__support/architectures.h"
 
 #if !defined(LLVM_LIBC_ARCH_X86)
@@ -30,7 +31,7 @@ template <> struct Padding<4> { static constexpr unsigned VALUE = 16; };
 // x86_64 padding.
 template <> struct Padding<8> { static constexpr unsigned VALUE = 48; };
 
-template <> union FPBits<long double> {
+template <> struct FPBits<long double> {
   using UIntType = __uint128_t;
 
   static constexpr int EXPONENT_BIAS = 0x3FFF;
@@ -91,13 +92,11 @@ template <> union FPBits<long double> {
     return ((bits & FloatProp::SIGN_MASK) >> (FloatProp::BIT_WIDTH - 1));
   }
 
-  long double val;
-
   FPBits() : bits(0) {}
 
   template <typename XType,
             cpp::EnableIfType<cpp::IsSame<long double, XType>::Value, int> = 0>
-  explicit FPBits(XType x) : val(x) {
+  explicit FPBits(XType x) : bits(__llvm_libc::bit_cast<UIntType>(x)) {
     // bits starts uninitialized, and setting it to a long double only
     // overwrites the first 80 bits. This clears those upper bits.
     bits = bits & ((UIntType(1) << 80) - 1);
@@ -107,7 +106,7 @@ template <> union FPBits<long double> {
             cpp::EnableIfType<cpp::IsSame<XType, UIntType>::Value, int> = 0>
   explicit FPBits(XType x) : bits(x) {}
 
-  operator long double() { return val; }
+  operator long double() { return __llvm_libc::bit_cast<long double>(bits); }
 
   UIntType uintval() {
     // We zero the padding bits as they can contain garbage.

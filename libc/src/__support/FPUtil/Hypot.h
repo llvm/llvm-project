@@ -12,6 +12,7 @@
 #include "BasicOperations.h"
 #include "FEnvImpl.h"
 #include "FPBits.h"
+#include "src/__support/CPP/Bit.h"
 #include "src/__support/CPP/TypeTraits.h"
 
 namespace __llvm_libc {
@@ -285,7 +286,7 @@ static inline T hypot(T x, T y) {
   }
 
   y_new |= static_cast<UIntType>(out_exp) << MantissaWidth<T>::VALUE;
-  return *reinterpret_cast<T *>(&y_new);
+  return __llvm_libc::bit_cast<T>(y_new);
 }
 
 } // namespace fputil
