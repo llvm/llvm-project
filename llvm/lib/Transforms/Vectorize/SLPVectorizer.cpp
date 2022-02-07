@@ -2760,12 +2760,14 @@ private:
         assert(SD && "primary scheduledata must exist in window");
         assert(isInSchedulingRegion(SD) &&
                "primary schedule data not in window?");
+        (void)SD;
         doForAllOpcodes(I, [](ScheduleData *SD) { SD->verify(); });
       }
 
       for (auto *SD : ReadyInsts) {
         assert(SD->isSchedulingEntity() && SD->isReady() &&
                "item in ready list not ready?");
+        (void)SD;
       }
     }
 
