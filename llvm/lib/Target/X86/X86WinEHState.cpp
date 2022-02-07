@@ -669,7 +669,18 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
       if (!Call || !isStateStoreNeeded(Personality, *Call))
         continue;
 
+      //[SEH] _asm{int 3} is not a real function
+      if (Call->getCalledFunction() == nullptr) {
+        continue;
+      }
+
       int State = getStateForCall(BlockColors, FuncInfo, *Call);
+      if (State == -1) {
+        // [SEH] _asm{int 3} or __debugbreak() is not a real function
+        // IntrinsicInst is CallBase 
+        continue;
+      }
+
       if (InitialState == OverdefinedState)
         InitialState = State;
       FinalState = State;
@@ -736,7 +747,18 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
       if (!Call || !isStateStoreNeeded(Personality, *Call))
         continue;
 
+      //[SEH] _asm{int 3} is not a real function
+      if (Call->getCalledFunction() == nullptr) {
+        continue;
+      }
+
       int State = getStateForCall(BlockColors, FuncInfo, *Call);
+      if (State == -1) {
+        // [SEH] _asm{int 3} or __debugbreak() is not a real function
+        // IntrinsicInst is CallBase
+        continue;
+      }
+
       if (State != PrevState)
         insertStateNumberStore(&I, State);
       PrevState = State;

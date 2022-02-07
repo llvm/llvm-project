@@ -1381,7 +1381,7 @@ defm cxx_exceptions: BoolFOption<"cxx-exceptions",
   LangOpts<"CXXExceptions">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Enable C++ exceptions">, NegFlag<SetFalse>>;
 defm async_exceptions: BoolFOption<"async-exceptions",
-  LangOpts<"EHAsynch">, DefaultFalse,
+  LangOpts<"EHAsynch">, DefaultTrue,
   PosFlag<SetTrue, [CC1Option], "Enable EH Asynchronous exceptions">, NegFlag<SetFalse>>;
 defm cxx_modules : BoolFOption<"cxx-modules",
   LangOpts<"CPlusPlusModules">, Default<cpp20.KeyPath>,
@@ -1852,7 +1852,7 @@ defm rewrite_includes : BoolFOption<"rewrite-includes",
   PosFlag<SetTrue, [CC1Option]>, NegFlag<SetFalse>>;
 
 defm delete_null_pointer_checks : BoolFOption<"delete-null-pointer-checks",
-  CodeGenOpts<"NullPointerIsValid">, DefaultFalse,
+  CodeGenOpts<"NullPointerIsValid">, DefaultTrue,
   NegFlag<SetTrue, [CC1Option], "Do not treat usage of null pointers as undefined behavior">,
   PosFlag<SetFalse, [], "Treat usage of null pointers as undefined behavior (default)">,
   BothFlags<[CoreOption]>>;

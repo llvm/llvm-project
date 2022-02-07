@@ -1425,8 +1425,9 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     pe->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_FORCE_INTEGRITY;
   if (setNoSEHCharacteristic || config->noSEH)
     pe->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_NO_SEH;
-  if (config->terminalServerAware)
-    pe->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE;
+  // [MSVC Compatibility] unused DLLCharacteristics
+  /*if (config->terminalServerAware)
+    pe->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE;*/
   pe->NumberOfRvaAndSize = numberOfDataDirectory;
   if (textSec->getVirtualSize()) {
     pe->BaseOfCode = textSec->getRVA();
@@ -1500,6 +1501,12 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
 
   // Write section table
   for (OutputSection *sec : ctx.outputSections) {
+    // Fix the characteristics of some sections like ".voltbl".
+    // Or the program will be crash sometimes.
+    if (sec->header.Characteristics == 0 && sec->name.contains(".voltbl")) {
+      sec->header.Characteristics |= IMAGE_SCN_CNT_INITIALIZED_DATA |
+                                     IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE;
+    }
     sec->writeHeaderTo(buf);
     buf += sizeof(coff_section);
   }

@@ -34,11 +34,11 @@ HEADER-NEXT:   BaseOfData: 0x0
 HEADER-NEXT:   ImageBase: 0x400000
 HEADER-NEXT:   SectionAlignment: 4096
 HEADER-NEXT:   FileAlignment: 512
-HEADER-NEXT:   MajorOperatingSystemVersion: 6
+HEADER-NEXT:   MajorOperatingSystemVersion: 4
 HEADER-NEXT:   MinorOperatingSystemVersion: 0
 HEADER-NEXT:   MajorImageVersion: 0
 HEADER-NEXT:   MinorImageVersion: 0
-HEADER-NEXT:   MajorSubsystemVersion: 6
+HEADER-NEXT:   MajorSubsystemVersion: 4
 HEADER-NEXT:   MinorSubsystemVersion: 0
 HEADER-NEXT:   SizeOfImage: 20480
 HEADER-NEXT:   SizeOfHeaders: 1024
