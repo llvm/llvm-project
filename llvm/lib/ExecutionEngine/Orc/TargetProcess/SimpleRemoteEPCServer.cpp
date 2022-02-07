@@ -22,9 +22,9 @@ using namespace llvm::orc::shared;
 namespace llvm {
 namespace orc {
 
-ExecutorBootstrapService::~ExecutorBootstrapService() {}
+ExecutorBootstrapService::~ExecutorBootstrapService() = default;
 
-SimpleRemoteEPCServer::Dispatcher::~Dispatcher() {}
+SimpleRemoteEPCServer::Dispatcher::~Dispatcher() = default;
 
 #if LLVM_ENABLE_THREADS
 void SimpleRemoteEPCServer::ThreadDispatcher::dispatch(

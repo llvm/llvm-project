@@ -127,7 +127,7 @@ class Loop;
 /// Hexagon Vector Loop Carried Reuse Pass
 struct HexagonVectorLoopCarriedReusePass
     : public PassInfoMixin<HexagonVectorLoopCarriedReusePass> {
-  HexagonVectorLoopCarriedReusePass() {}
+  HexagonVectorLoopCarriedReusePass() = default;
 
   /// Run pass over the Loop.
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &LAM,

@@ -74,7 +74,7 @@ public:
 
   /// Destroys the object. Bogus destructor allowing derived classes
   /// to override it.
-  virtual ~SystemZCallingConventionRegisters(){};
+  virtual ~SystemZCallingConventionRegisters() = default;
 };
 
 /// XPLINK64 calling convention specific use registers
@@ -102,7 +102,8 @@ public:
   int getStackPointerBias() override final { return 2048; }
 
   /// Destroys the object. Bogus destructor overriding base class destructor
-  ~SystemZXPLINK64Registers(){};
+  ~SystemZXPLINK64Registers() = default;
+  ;
 };
 
 /// ELF calling convention specific use registers
@@ -128,7 +129,7 @@ public:
   int getStackPointerBias() override final { return 0; }
 
   /// Destroys the object. Bogus destructor overriding base class destructor
-  ~SystemZELFRegisters(){};
+  ~SystemZELFRegisters() = default;
 };
 
 struct SystemZRegisterInfo : public SystemZGenRegisterInfo {

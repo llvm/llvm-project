@@ -25,7 +25,7 @@ public:
       : MCELFObjectTargetWriter(/* Is64Bit */ true, OSABI, ELF::EM_VE,
                                 /* HasRelocationAddend */ true) {}
 
-  ~VEELFObjectWriter() override {}
+  ~VEELFObjectWriter() override = default;
 
 protected:
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,

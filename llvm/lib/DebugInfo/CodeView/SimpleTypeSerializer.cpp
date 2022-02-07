@@ -29,7 +29,7 @@ static void addPadding(BinaryStreamWriter &Writer) {
 
 SimpleTypeSerializer::SimpleTypeSerializer() : ScratchBuffer(MaxRecordLength) {}
 
-SimpleTypeSerializer::~SimpleTypeSerializer() {}
+SimpleTypeSerializer::~SimpleTypeSerializer() = default;
 
 template <typename T>
 ArrayRef<uint8_t> SimpleTypeSerializer::serialize(T &Record) {

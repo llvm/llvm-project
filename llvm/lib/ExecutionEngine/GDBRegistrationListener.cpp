@@ -70,7 +70,7 @@ LLVM_ATTRIBUTE_USED void requiredSymbolDefinitionsFromOrcTargetProcess() {
 }
 
 struct RegisteredObjectInfo {
-  RegisteredObjectInfo() {}
+  RegisteredObjectInfo() = default;
 
   RegisteredObjectInfo(std::size_t Size, jit_code_entry *Entry,
                        OwningBinary<ObjectFile> Obj)
@@ -96,7 +96,7 @@ class GDBJITRegistrationListener : public JITEventListener {
 
 public:
   /// Instantiates the JIT service.
-  GDBJITRegistrationListener() {}
+  GDBJITRegistrationListener() = default;
 
   /// Unregisters each object that was previously registered and releases all
   /// internal resources.

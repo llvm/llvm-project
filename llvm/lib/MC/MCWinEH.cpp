@@ -18,7 +18,7 @@
 namespace llvm {
 namespace WinEH {
 
-UnwindEmitter::~UnwindEmitter() {}
+UnwindEmitter::~UnwindEmitter() = default;
 
 }
 }

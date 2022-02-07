@@ -51,7 +51,7 @@ MSP430TargetMachine::MSP430TargetMachine(const Target &T, const Triple &TT,
   initAsmInfo();
 }
 
-MSP430TargetMachine::~MSP430TargetMachine() {}
+MSP430TargetMachine::~MSP430TargetMachine() = default;
 
 namespace {
 /// MSP430 Code Generator Pass Configuration Options.

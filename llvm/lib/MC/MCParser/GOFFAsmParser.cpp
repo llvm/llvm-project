@@ -31,7 +31,7 @@ class GOFFAsmParser : public MCAsmParserExtension {
   }
 
 public:
-  GOFFAsmParser() {}
+  GOFFAsmParser() = default;
 
   void Initialize(MCAsmParser &Parser) override {
     // Call the base implementation.

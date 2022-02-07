@@ -5131,7 +5131,7 @@ void NVPTXTargetLowering::ReplaceNodeResults(
 }
 
 // Pin NVPTXTargetObjectFile's vtables to this file.
-NVPTXTargetObjectFile::~NVPTXTargetObjectFile() {}
+NVPTXTargetObjectFile::~NVPTXTargetObjectFile() = default;
 
 MCSection *NVPTXTargetObjectFile::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {

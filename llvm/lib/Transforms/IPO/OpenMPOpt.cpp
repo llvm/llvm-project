@@ -591,7 +591,7 @@ struct KernelInfoState : AbstractState {
   /// Abstract State interface
   ///{
 
-  KernelInfoState() {}
+  KernelInfoState() = default;
   KernelInfoState(bool BestState) {
     if (!BestState)
       indicatePessimisticFixpoint();
