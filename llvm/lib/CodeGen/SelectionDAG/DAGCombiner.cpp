@@ -18933,10 +18933,9 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
     if (InVec.isUndef() && TLI.shouldSplatInsEltVarIndex(VT)) {
       if (VT.isScalableVector())
         return DAG.getSplatVector(VT, DL, InVal);
-      else {
-        SmallVector<SDValue, 8> Ops(VT.getVectorNumElements(), InVal);
-        return DAG.getBuildVector(VT, DL, Ops);
-      }
+
+      SmallVector<SDValue, 8> Ops(VT.getVectorNumElements(), InVal);
+      return DAG.getBuildVector(VT, DL, Ops);
     }
     return SDValue();
   }
