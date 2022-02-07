@@ -1042,14 +1042,6 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
       if (hasHIP) {
         HIPCXXFLAGS += GPU_ARCH_ARG;
       }
-      for (unsigned int j= 0; j < knownTargets.size(); j++) {
-        // If the specified target is not
-        // in the list of known target names, emit a warning.
-        if (procName == knownTargets.at(j)) {
-          cout << "Warning: The specified HIP target: "<< val <<
-          " is unknown. Correct compilation is not guaranteed.\n";
-        }
-      }
     }  // end of val != "gfx000"
   }  // end of targets for loop
   string HCC_EXTRA_LIBRARIES;
