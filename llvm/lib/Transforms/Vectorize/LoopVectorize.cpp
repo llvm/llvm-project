@@ -6136,9 +6136,15 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
     return IC;
   }
 
-  // Note that if we've already vectorized the loop we will have done the
-  // runtime check and so interleaving won't require further checks.
-  bool InterleavingRequiresRuntimePointerCheck =
+  // For any scalar loop that either requires runtime checks or predication we
+  // are better off leaving this to the unroller. Note that if we've already
+  // vectorized the loop we will have done the runtime check and so interleaving
+  // won't require further checks.
+  bool ScalarInterleavingRequiresPredication =
+      (VF.isScalar() && any_of(TheLoop->blocks(), [this](BasicBlock *BB) {
+         return Legal->blockNeedsPredication(BB);
+       }));
+  bool ScalarInterleavingRequiresRuntimePointerCheck =
       (VF.isScalar() && Legal->getRuntimePointerChecking()->Need);
 
   // We want to interleave small loops in order to reduce the loop overhead and
@@ -6148,7 +6154,8 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
                     << "LV: VF is " << VF << '\n');
   const bool AggressivelyInterleaveReductions =
       TTI.enableAggressiveInterleaving(HasReductions);
-  if (!InterleavingRequiresRuntimePointerCheck && LoopCost < SmallLoopCost) {
+  if (!ScalarInterleavingRequiresRuntimePointerCheck &&
+      !ScalarInterleavingRequiresPredication && LoopCost < SmallLoopCost) {
     // We assume that the cost overhead is 1 and we use the cost model
     // to estimate the cost of the loop and interleave until the cost of the
     // loop overhead is about 5% of the cost of the loop.
