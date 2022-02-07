@@ -144,7 +144,6 @@ template<class _Key, class _Value, class _Hash, class _BinaryPredicate, bool /*u
 //  General case for BM data searching; use a map
 template<class _Key, typename _Value, class _Hash, class _BinaryPredicate>
 class _BMSkipTable<_Key, _Value, _Hash, _BinaryPredicate, false> {
-public: // TODO private:
     typedef _Value value_type;
     typedef _Key   key_type;
 
@@ -253,7 +252,7 @@ public:
         return this->__search(__f, __l);
     }
 
-public: // TODO private:
+private:
     _RandomAccessIterator1               __first_;
     _RandomAccessIterator1               __last_;
     _BinaryPredicate                     __pred_;
