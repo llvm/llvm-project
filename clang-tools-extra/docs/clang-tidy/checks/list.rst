@@ -84,6 +84,7 @@ Clang-Tidy Checks
    `bugprone-posix-return <bugprone-posix-return.html>`_, "Yes"
    `bugprone-redundant-branch-condition <bugprone-redundant-branch-condition.html>`_, "Yes"
    `bugprone-reserved-identifier <bugprone-reserved-identifier.html>`_, "Yes"
+   `bugprone-shared-ptr-array-mismatch <bugprone-shared-ptr-array-mismatch.html>`_, "Yes"
    `bugprone-signal-handler <bugprone-signal-handler.html>`_,
    `bugprone-signed-char-misuse <bugprone-signed-char-misuse.html>`_,
    `bugprone-sizeof-container <bugprone-sizeof-container.html>`_,
