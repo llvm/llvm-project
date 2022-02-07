@@ -443,10 +443,10 @@ The following options allow building libc++ for a different ABI version.
   with other libc++ versions.
 
   .. warning::
-    When providing a custom namespace, it's the users responsibility to ensure the name won't cause
+    When providing a custom namespace, it's the user's responsibility to ensure the name won't cause
     conflicts with other names defined by libc++, both now and in the future. In particular, inline
-    namespaces of the form ``__[0-9]+`` are strictly reserved by libc++ and may not be used by users.
-    Doing otherwise could cause conflicts and hinder libc++ ABI evolution.
+    namespaces of the form ``__[0-9]+`` could cause conflicts with future versions of the library,
+    and so should be avoided.
 
 .. option:: LIBCXX_ABI_DEFINES:STRING
 

@@ -26,14 +26,6 @@
 
 #define _LIBCPP_VERSION 15000
 
-#ifdef _LIBCPP_ABI_UNSTABLE
-#  define _LIBCPP_ABI_VERSION 2
-#endif
-
-#ifndef _LIBCPP_ABI_VERSION
-#  define _LIBCPP_ABI_VERSION 1
-#endif
-
 #if __STDC_HOSTED__ == 0
 #  define _LIBCPP_FREESTANDING
 #endif
@@ -148,13 +140,6 @@
 // its vtable and typeinfo to libc++ rather than having all other libraries
 // using that class define their own copies.
 #  define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
-#endif
-
-#define _LIBCPP_CONCAT1(_LIBCPP_X,_LIBCPP_Y) _LIBCPP_X##_LIBCPP_Y
-#define _LIBCPP_CONCAT(_LIBCPP_X,_LIBCPP_Y) _LIBCPP_CONCAT1(_LIBCPP_X,_LIBCPP_Y)
-
-#ifndef _LIBCPP_ABI_NAMESPACE
-# define _LIBCPP_ABI_NAMESPACE _LIBCPP_CONCAT(__,_LIBCPP_ABI_VERSION)
 #endif
 
 #if __cplusplus < 201103L
