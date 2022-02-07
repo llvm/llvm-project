@@ -64,7 +64,10 @@ public:
   //===--------------------------------------------------------------------===//
 
   mlir::MLIRContext &getMLIRContext() { return context; }
-  mlir::ModuleOp &getModule() { return *module.get(); }
+  mlir::ModuleOp &getModule() {
+    assert(module && "This bridge is missing an MLIR module");
+    return *module.get();
+  }
   const Fortran::common::IntrinsicTypeDefaultKinds &getDefaultKinds() const {
     return defaultKinds;
   }
