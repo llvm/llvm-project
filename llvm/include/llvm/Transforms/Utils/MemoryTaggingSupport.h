@@ -47,8 +47,7 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
     // TODO(fmayer): We don't support diamond shapes, where multiple lifetime
     // ends together dominate the RI, but none of them does by itself.
     // Check how often this happens and decide whether to support this here.
-    if (std::any_of(Ends.begin(), Ends.end(),
-                    [&](Instruction *End) { return DT.dominates(End, RI); }))
+    if (llvm::any_of(Ends, [&](auto *End) { return DT.dominates(End, RI); }))
       ++NumCoveredExits;
   }
   // If there's a mix of covered and non-covered exits, just put the untag
