@@ -300,9 +300,6 @@
 /* Doesn't use `cmakedefine` because it is allowed to be empty. */
 #define LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}"
 
-/* Define if zlib compression is available */
-#cmakedefine01 LLVM_ENABLE_ZLIB
-
 /* Define if overriding target triple is enabled */
 #cmakedefine LLVM_TARGET_TRIPLE_ENV "${LLVM_TARGET_TRIPLE_ENV}"
 
