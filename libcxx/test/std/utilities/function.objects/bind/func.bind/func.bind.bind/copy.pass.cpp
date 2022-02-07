@@ -19,8 +19,6 @@
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=68016
 // UNSUPPORTED: c++03, asan
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <functional>
 
 // template<CopyConstructible Fn, CopyConstructible... Types>
