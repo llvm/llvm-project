@@ -30,8 +30,8 @@ class Function;
 class Twine;
 class Module;
 
-template <class IRBuilderTy> class MatrixBuilder {
-  IRBuilderTy &B;
+class MatrixBuilder {
+  IRBuilderBase &B;
   Module *getModule() { return B.GetInsertBlock()->getParent()->getParent(); }
 
   std::pair<Value *, Value *> splatScalarOperandIfNeeded(Value *LHS,
@@ -55,7 +55,7 @@ template <class IRBuilderTy> class MatrixBuilder {
   }
 
 public:
-  MatrixBuilder(IRBuilderTy &Builder) : B(Builder) {}
+  MatrixBuilder(IRBuilderBase &Builder) : B(Builder) {}
 
   /// Create a column major, strided matrix load.
   /// \p DataPtr - Start address of the matrix read
