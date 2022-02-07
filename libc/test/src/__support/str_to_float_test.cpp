@@ -232,6 +232,11 @@ TEST_F(LlvmLibcStrToFloatTest, SimpleDecimalConversion32SpecificFailures) {
   simple_decimal_conversion_test<float>(
       "1.4012984643248170709237295832899161312802619418765e-45", 0x1, 0,
       ERANGE);
+  simple_decimal_conversion_test<float>(
+      "7."
+      "006492321624085354618647916449580656401309709382578858785341419448955413"
+      "42930300743319094181060791015625e-46",
+      0x0, 0, ERANGE);
 }
 
 TEST(LlvmLibcStrToFloatTest, SimpleDecimalConversionExtraTypes) {

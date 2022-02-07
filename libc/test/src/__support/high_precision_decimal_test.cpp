@@ -36,6 +36,17 @@ TEST(LlvmLibcHighPrecisionDecimalTest, BasicShift) {
   EXPECT_EQ(hpd.get_decimal_point(), 1);
 }
 
+TEST(LlvmLibcHighPrecisionDecimalTest, ShouldRoundup) {
+  __llvm_libc::internal::HighPrecisionDecimal hpd =
+      __llvm_libc::internal::HighPrecisionDecimal(".5");
+  uint8_t *digits = hpd.get_digits();
+
+  EXPECT_EQ(digits[0], uint8_t(5));
+  EXPECT_EQ(hpd.get_num_digits(), 1u);
+  EXPECT_EQ(hpd.get_decimal_point(), 0);
+  EXPECT_EQ(hpd.round_to_integer_type<int>(), 0);
+}
+
 TEST(LlvmLibcHighPrecisionDecimalTest, SmallShift) {
   __llvm_libc::internal::HighPrecisionDecimal hpd =
       __llvm_libc::internal::HighPrecisionDecimal("1.2345");
