@@ -266,3 +266,8 @@ RUN: not llvm-dis -disable-output %p/Inputs/unterminated-blob.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=UNTERMINATED-BLOB %s
 
 UNTERMINATED-BLOB: Blob ends too soon
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-value-symbol-table.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-VALUE-SYMBOL-TABLE %s
+
+INVALID-VALUE-SYMBOL-TABLE: Invalid value reference in symbol table
