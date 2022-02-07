@@ -3800,7 +3800,10 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       std::string S;
       if (convertToString(Record, 0, S))
         return error("Invalid record");
-      TheModule->setDataLayout(S);
+      Expected<DataLayout> MaybeDL = DataLayout::parse(S);
+      if (!MaybeDL)
+        return MaybeDL.takeError();
+      TheModule->setDataLayout(MaybeDL.get());
       break;
     }
     case bitc::MODULE_CODE_ASM: {  // ASM: [strchr x N]
