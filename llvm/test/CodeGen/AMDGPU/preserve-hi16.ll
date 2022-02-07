@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9,GFX900 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9,GFX906 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS %s
 
 ; GCN-LABEL: {{^}}shl_i16:
 ; GCN: v_lshlrev_b16{{(_e32)?(_e64)?}} [[OP:v[0-9]+]],

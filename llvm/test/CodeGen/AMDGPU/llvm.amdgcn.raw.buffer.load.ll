@@ -1,7 +1,7 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,PREGFX10
 ;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,VI,PREGFX10
 ;RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,GFX10PLUS
-;RUN: llc < %s -march=amdgcn -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,GFX10PLUS
+;RUN: llc < %s -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,GFX10PLUS
 
 ;CHECK-LABEL: {{^}}buffer_load:
 ;CHECK: buffer_load_{{dwordx4|b128}} v[0:3], off, s[0:3], 0{{$}}

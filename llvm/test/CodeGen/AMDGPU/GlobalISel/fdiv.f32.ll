@@ -11,8 +11,8 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10,GFX10-IEEE %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10,GFX10-FLUSH %s
 
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX11-IEEE %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX11-FLUSH %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX11-IEEE %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX11-FLUSH %s
 
 define float @v_fdiv_f32(float %a, float %b) {
 ; GFX6-IEEE-LABEL: v_fdiv_f32:

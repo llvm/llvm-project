@@ -4,7 +4,7 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false -enable-misched=0 -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefix=VI %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false -enable-misched=0 -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX9 %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false -enable-misched=0 -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX10 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false -enable-misched=0 -march=amdgcn -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false -enable-misched=0 -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
 
 define amdgpu_kernel void @frem_f16(half addrspace(1)* %out, half addrspace(1)* %in1,
 ; SI-LABEL: frem_f16:

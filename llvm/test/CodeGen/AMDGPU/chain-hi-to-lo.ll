@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs -mattr=-unaligned-access-mode -amdgpu-enable-flat-scratch < %s | FileCheck -check-prefixes=GCN,FLATSCR %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs -mattr=-unaligned-access-mode < %s | FileCheck -check-prefixes=GFX10,GFX10_DEFAULT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs -mattr=-unaligned-access-mode -amdgpu-enable-flat-scratch < %s | FileCheck -check-prefixes=GFX10,FLATSCR_GFX10 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -verify-machineinstrs -mattr=-unaligned-access-mode < %s | FileCheck -check-prefixes=GFX11 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -verify-machineinstrs -mattr=-unaligned-access-mode -amdgpu-enable-flat-scratch < %s | FileCheck -check-prefixes=GFX11 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs -mattr=-unaligned-access-mode < %s | FileCheck -check-prefixes=GFX11 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs -mattr=-unaligned-access-mode -amdgpu-enable-flat-scratch < %s | FileCheck -check-prefixes=GFX11 %s
 
 define <2 x half> @chain_hi_to_lo_private() {
 ; GFX900-LABEL: chain_hi_to_lo_private:

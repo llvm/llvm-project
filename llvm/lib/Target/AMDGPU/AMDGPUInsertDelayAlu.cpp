@@ -19,7 +19,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "si-insert-delay-alu"
+#define DEBUG_TYPE "amdgpu-insert-delay-alu"
 
 namespace {
 
@@ -437,5 +437,5 @@ char AMDGPUInsertDelayAlu::ID = 0;
 
 char &llvm::AMDGPUInsertDelayAluID = AMDGPUInsertDelayAlu::ID;
 
-INITIALIZE_PASS(AMDGPUInsertDelayAlu, DEBUG_TYPE, "SI Insert Delay ALU", false,
-                false)
+INITIALIZE_PASS(AMDGPUInsertDelayAlu, DEBUG_TYPE, "AMDGPU Insert Delay ALU",
+                false, false)

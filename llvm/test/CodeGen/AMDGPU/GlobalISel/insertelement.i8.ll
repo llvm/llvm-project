@@ -3,7 +3,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -verify-machineinstrs < %s | FileCheck --check-prefix=GFX8 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -verify-machineinstrs < %s | FileCheck --check-prefix=GFX7 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX10 %s
-; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
+; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
 
 define amdgpu_ps void @insertelement_s_v2i8_s_s(<2 x i8> addrspace(4)* inreg %ptr, i8 inreg %val, i32 inreg %idx) {
 ; GFX9-LABEL: insertelement_s_v2i8_s_s:

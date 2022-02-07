@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefix=SI %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX9 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
 
 define { i64, i1 } @umulo_i64_v_v(i64 %x, i64 %y) {
 ; SI-LABEL: umulo_i64_v_v:

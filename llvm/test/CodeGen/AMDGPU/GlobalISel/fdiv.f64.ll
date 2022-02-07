@@ -11,8 +11,8 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10 %s
 
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
 
 define double @v_fdiv_f64(double %a, double %b) {
 ; GFX6-LABEL: v_fdiv_f64:

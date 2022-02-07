@@ -3,7 +3,7 @@
 ; RUN: llc < %s -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s --check-prefix=VI
 ; RUN: llc < %s -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck %s --check-prefix=GFX9
 ; RUN: llc < %s -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s --check-prefix=GFX10
-; RUN: llc < %s -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -verify-machineinstrs | FileCheck %s --check-prefix=GFX11
+; RUN: llc < %s -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck %s --check-prefix=GFX11
 
 
 declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32) nounwind readnone

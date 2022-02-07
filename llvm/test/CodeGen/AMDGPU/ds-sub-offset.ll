@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=CI %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX10 %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX11 %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX11 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 

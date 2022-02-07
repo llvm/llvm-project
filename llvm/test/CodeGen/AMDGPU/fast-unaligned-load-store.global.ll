@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -mattr=+unaligned-access-mode < %s | FileCheck --check-prefix=GFX7-UNALIGNED %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+unaligned-access-mode < %s | FileCheck --check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+unaligned-access-mode < %s | FileCheck --check-prefix=GFX10 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -mattr=+unaligned-access-mode < %s | FileCheck --check-prefix=GFX11 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=+unaligned-access-mode < %s | FileCheck --check-prefix=GFX11 %s
 
 ; Should not merge this to a dword load
 define i32 @global_load_2xi16_align2(i16 addrspace(1)* %p) #0 {

@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX9 %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX10 %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
 
 declare half @llvm.minnum.f16(half %a, half %b)
 declare <2 x half> @llvm.minnum.v2f16(<2 x half> %a, <2 x half> %b)
