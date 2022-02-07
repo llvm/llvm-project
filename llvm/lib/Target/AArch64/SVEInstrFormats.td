@@ -521,6 +521,13 @@ class SVE_2_Op_Fp_Imm_Pat_Zero<ValueType vt, SDPatternOperator op,
                       (vt (AArch64dup (it immL))))),
       (inst $Pg, $Zs1, imm)>;
 
+// Used to re-order the operands of BSP when lowering to BSL. BSP has the order:
+// mask, in1, in2 whereas BSL for SVE2 has them ordered in1, in2, mask
+class SVE_3_Op_BSP_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
+                   ValueType vt2, ValueType vt3, Instruction inst>
+: Pat<(vtd (op vt1:$Op1, vt2:$Op2, vt3:$Op3)),
+      (inst $Op2, $Op3, $Op1)>;
+
 //===----------------------------------------------------------------------===//
 // SVE pattern match helpers.
 //===----------------------------------------------------------------------===//
@@ -4484,7 +4491,8 @@ class sve2_int_bitwise_ternary_op_d<bits<3> opc, string asm>
   let ElementSize = ElementSizeNone;
 }
 
-multiclass sve2_int_bitwise_ternary_op<bits<3> opc, string asm, SDPatternOperator op> {
+multiclass sve2_int_bitwise_ternary_op<bits<3> opc, string asm, SDPatternOperator op,
+                                       SDPatternOperator ir_op = null_frag> {
   def NAME : sve2_int_bitwise_ternary_op_d<opc, asm>;
 
   def : InstAlias<asm # "\t$Zdn, $Zdn, $Zm, $Zk",
@@ -4498,6 +4506,12 @@ multiclass sve2_int_bitwise_ternary_op<bits<3> opc, string asm, SDPatternOperato
   def : SVE_3_Op_Pat<nxv8i16, op, nxv8i16, nxv8i16, nxv8i16, !cast<Instruction>(NAME)>;
   def : SVE_3_Op_Pat<nxv4i32, op, nxv4i32, nxv4i32, nxv4i32, !cast<Instruction>(NAME)>;
   def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64, nxv2i64, nxv2i64, !cast<Instruction>(NAME)>;
+
+
+  def : SVE_3_Op_BSP_Pat<nxv16i8, ir_op, nxv16i8, nxv16i8, nxv16i8, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_BSP_Pat<nxv8i16, ir_op, nxv8i16, nxv8i16, nxv8i16, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_BSP_Pat<nxv4i32, ir_op, nxv4i32, nxv4i32, nxv4i32, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_BSP_Pat<nxv2i64, ir_op, nxv2i64, nxv2i64, nxv2i64, !cast<Instruction>(NAME)>;
 }
 
 class sve2_int_rotate_right_imm<bits<4> tsz8_64, string asm,
