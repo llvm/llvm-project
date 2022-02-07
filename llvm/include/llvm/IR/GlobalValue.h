@@ -79,8 +79,7 @@ protected:
         ValueType(Ty), Visibility(DefaultVisibility),
         UnnamedAddrVal(unsigned(UnnamedAddr::None)),
         DllStorageClass(DefaultStorageClass), ThreadLocal(NotThreadLocal),
-        HasLLVMReservedName(false), IsDSOLocal(false), HasPartition(false),
-        IntID((Intrinsic::ID)0U), Parent(nullptr) {
+        HasLLVMReservedName(false), IsDSOLocal(false), HasPartition(false) {
     setLinkage(Linkage);
     setName(Name);
   }
@@ -153,7 +152,7 @@ protected:
   /// Subclasses can use it to store their intrinsic ID, if they have one.
   ///
   /// This is stored here to save space in Function on 64-bit hosts.
-  Intrinsic::ID IntID;
+  Intrinsic::ID IntID = (Intrinsic::ID)0U;
 
   unsigned getGlobalValueSubClassData() const {
     return SubClassData;
@@ -163,7 +162,7 @@ protected:
     SubClassData = V;
   }
 
-  Module *Parent;             // The containing module.
+  Module *Parent = nullptr; // The containing module.
 
   // Used by SymbolTableListTraits.
   void setParent(Module *parent) {
