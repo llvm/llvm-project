@@ -41,8 +41,7 @@ LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI,
                                ArrayRef<RuntimePointerCheck> Checks, Loop *L,
                                LoopInfo *LI, DominatorTree *DT,
                                ScalarEvolution *SE)
-    : VersionedLoop(L), NonVersionedLoop(nullptr),
-      AliasChecks(Checks.begin(), Checks.end()),
+    : VersionedLoop(L), AliasChecks(Checks.begin(), Checks.end()),
       Preds(LAI.getPSE().getUnionPredicate()), LAI(LAI), LI(LI), DT(DT),
       SE(SE) {
 }
