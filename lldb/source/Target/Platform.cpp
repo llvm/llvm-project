@@ -385,10 +385,9 @@ ArchSpec Platform::GetAugmentedArchSpec(Platform *platform, llvm::StringRef trip
 /// Default Constructor
 Platform::Platform(bool is_host)
     : m_is_host(is_host), m_os_version_set_while_connected(false),
-      m_system_arch_set_while_connected(false), m_sdk_sysroot(), m_sdk_build(),
-      m_working_dir(), m_remote_url(), m_name(), m_system_arch(), m_mutex(),
-      m_max_uid_name_len(0), m_max_gid_name_len(0), m_supports_rsync(false),
-      m_rsync_opts(), m_rsync_prefix(), m_supports_ssh(false), m_ssh_opts(),
+      m_system_arch_set_while_connected(false), m_max_uid_name_len(0),
+      m_max_gid_name_len(0), m_supports_rsync(false), m_rsync_opts(),
+      m_rsync_prefix(), m_supports_ssh(false), m_ssh_opts(),
       m_ignores_remote_hostname(false), m_trap_handlers(),
       m_calculated_trap_handlers(false),
       m_module_cache(std::make_unique<ModuleCache>()) {
@@ -793,9 +792,9 @@ const char *Platform::GetHostname() {
   if (IsHost())
     return "127.0.0.1";
 
-  if (m_name.empty())
+  if (m_hostname.empty())
     return nullptr;
-  return m_name.c_str();
+  return m_hostname.c_str();
 }
 
 ConstString Platform::GetFullNameForDylib(ConstString basename) {
