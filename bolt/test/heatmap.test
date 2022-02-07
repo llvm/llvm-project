@@ -1,12 +1,6 @@
 # Verifies basic functioning of heatmap mode
 
 REQUIRES: system-linux
-XFAIL: *
 
-RUN: llvm-bolt heatmap --help | FileCheck %s --check-prefix=CHECK-SUBCOMMAND
-CHECK-SUBCOMMAND: SUBCOMMAND 'heatmap': generate heatmap
-CHECK-SUBCOMMAND: USAGE: llvm-bolt heatmap [options] <executable>
-
-RUN: llvm-bolt-heatmap --help | FileCheck %s --check-prefix=CHECK-STANDALONE
-CHECK-STANDALONE: SUBCOMMAND 'heatmap': generate heatmap
-CHECK-STANDALONE: USAGE: llvm-bolt-heatmap heatmap [options] <executable>
+RUN: llvm-bolt-heatmap --help | FileCheck %s
+CHECK: USAGE: llvm-bolt-heatmap [options] <executable>

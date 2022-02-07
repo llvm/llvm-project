@@ -1348,11 +1348,11 @@ std::error_code DataAggregator::printLBRHeatMap() {
     exit(1);
   }
 
-  HM.print(opts::HeatmapFile);
-  if (opts::HeatmapFile == "-")
-    HM.printCDF(opts::HeatmapFile);
+  HM.print(opts::OutputFilename);
+  if (opts::OutputFilename == "-")
+    HM.printCDF(opts::OutputFilename);
   else
-    HM.printCDF(opts::HeatmapFile + ".csv");
+    HM.printCDF(opts::OutputFilename + ".csv");
 
   return std::error_code();
 }
