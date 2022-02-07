@@ -24,7 +24,7 @@
 
 class PlatformDarwin : public PlatformPOSIX {
 public:
-  PlatformDarwin(bool is_host);
+  using PlatformPOSIX::PlatformPOSIX;
 
   ~PlatformDarwin() override;
 

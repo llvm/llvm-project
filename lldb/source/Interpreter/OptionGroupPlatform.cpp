@@ -25,9 +25,9 @@ PlatformSP OptionGroupPlatform::CreatePlatformWithOptions(
     if (platform_sp) {
       if (platform_arch.IsValid() &&
           !platform_sp->IsCompatibleArchitecture(arch, false, &platform_arch)) {
-        error.SetErrorStringWithFormat("platform '%s' doesn't support '%s'",
-                                       platform_sp->GetName().GetCString(),
-                                       arch.GetTriple().getTriple().c_str());
+        error.SetErrorStringWithFormatv("platform '{0}' doesn't support '{1}'",
+                                        platform_sp->GetPluginName(),
+                                        arch.GetTriple().getTriple());
         platform_sp.reset();
         return platform_sp;
       }
@@ -122,7 +122,7 @@ bool OptionGroupPlatform::PlatformMatches(
     const lldb::PlatformSP &platform_sp) const {
   if (platform_sp) {
     if (!m_platform_name.empty()) {
-      if (platform_sp->GetName() != ConstString(m_platform_name.c_str()))
+      if (platform_sp->GetName() != m_platform_name)
         return false;
     }
 

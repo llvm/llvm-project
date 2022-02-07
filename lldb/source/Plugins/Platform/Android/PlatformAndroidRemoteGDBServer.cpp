@@ -74,8 +74,6 @@ static Status FindUnusedPort(uint16_t &port) {
   return error;
 }
 
-PlatformAndroidRemoteGDBServer::PlatformAndroidRemoteGDBServer() = default;
-
 PlatformAndroidRemoteGDBServer::~PlatformAndroidRemoteGDBServer() {
   for (const auto &it : m_port_forwards)
     DeleteForwardPortWithAdb(it.second, m_device_id);

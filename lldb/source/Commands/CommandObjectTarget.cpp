@@ -84,8 +84,8 @@ static void DumpTargetInfo(uint32_t target_idx, Target *target,
   }
   PlatformSP platform_sp(target->GetPlatform());
   if (platform_sp)
-    strm.Printf("%splatform=%s", properties++ > 0 ? ", " : " ( ",
-                platform_sp->GetName().GetCString());
+    strm.Format("{0}platform={1}", properties++ > 0 ? ", " : " ( ",
+                platform_sp->GetName());
 
   ProcessSP process_sp(target->GetProcessSP());
   bool show_process_status = false;
