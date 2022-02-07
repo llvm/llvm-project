@@ -702,7 +702,6 @@ define void @merge_3_replicate_region(i32 %k, i32 %j) {
 ; CHECK-NEXT: Successor(s): then.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.0:
-; CHECK-NEXT:   WIDEN ir<%mul> = mul vp<[[PRED1]]>, vp<[[PRED2]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = select vp<[[MASK]]> ir<%c.0> ir<false>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
@@ -713,6 +712,7 @@ define void @merge_3_replicate_region(i32 %k, i32 %j) {
 ; CHECK-NEXT:   CondBit: vp<[[MASK2]]> (then.0)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
+; CHECK-NEXT:     REPLICATE ir<%mul> = mul vp<[[PRED1]]>, vp<[[PRED2]]>
 ; CHECK-NEXT:     REPLICATE ir<%gep.c.1> = getelementptr ir<@c>, ir<0>, ir<%iv>
 ; CHECK-NEXT:     REPLICATE store ir<%mul>, ir<%gep.c.1>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
@@ -730,6 +730,8 @@ define void @merge_3_replicate_region(i32 %k, i32 %j) {
 ; CHECK-NEXT:   CLONE ir<%exitcond> = icmp ir<%iv>, ir<%k>
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;

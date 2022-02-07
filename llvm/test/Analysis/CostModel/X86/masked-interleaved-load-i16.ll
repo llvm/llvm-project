@@ -89,30 +89,30 @@ for.end:
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   %i2 = load i16, i16* %arrayidx2, align 2
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   %i4 = load i16, i16* %arrayidx7, align 2
 ;
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 2 For instruction:   %i2 = load i16, i16* %arrayidx2, align 2
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 2 For instruction:   %i4 = load i16, i16* %arrayidx7, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 2 for VF 2 For instruction:   %i2 = load i16, i16* %arrayidx2, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 2 for VF 2 For instruction:   %i4 = load i16, i16* %arrayidx7, align 2
 ;
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 4 For instruction:   %i2 = load i16, i16* %arrayidx2, align 2
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 4 For instruction:   %i4 = load i16, i16* %arrayidx7, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 4 for VF 4 For instruction:   %i2 = load i16, i16* %arrayidx2, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 4 for VF 4 For instruction:   %i4 = load i16, i16* %arrayidx7, align 2
 ;
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 8 For instruction:   %i2 = load i16, i16* %arrayidx2, align 2
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 8 For instruction:   %i4 = load i16, i16* %arrayidx7, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 8 for VF 8 For instruction:   %i2 = load i16, i16* %arrayidx2, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 8 for VF 8 For instruction:   %i4 = load i16, i16* %arrayidx7, align 2
 ;
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 16 For instruction:   %i2 = load i16, i16* %arrayidx2, align 2
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 16 For instruction:   %i4 = load i16, i16* %arrayidx7, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 17 for VF 16 For instruction:   %i2 = load i16, i16* %arrayidx2, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 17 for VF 16 For instruction:   %i4 = load i16, i16* %arrayidx7, align 2
 
 ; ENABLED_MASKED_STRIDED: LV: Checking a loop in "test2"
 ;
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   %i2 = load i16, i16* %arrayidx2, align 2
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   %i4 = load i16, i16* %arrayidx7, align 2
 ;
-; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 8 for VF 2 For instruction:   %i2 = load i16, i16* %arrayidx2, align 2
+; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 2 for VF 2 For instruction:   %i2 = load i16, i16* %arrayidx2, align 2
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 0 for VF 2 For instruction:   %i4 = load i16, i16* %arrayidx7, align 2
 ;
-; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 11 for VF 4 For instruction:   %i2 = load i16, i16* %arrayidx2, align 2
+; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 4 for VF 4 For instruction:   %i2 = load i16, i16* %arrayidx2, align 2
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 0 for VF 4 For instruction:   %i4 = load i16, i16* %arrayidx7, align 2
 ;
-; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 11 for VF 8 For instruction:   %i2 = load i16, i16* %arrayidx2, align 2
+; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 8 for VF 8 For instruction:   %i2 = load i16, i16* %arrayidx2, align 2
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 0 for VF 8 For instruction:   %i4 = load i16, i16* %arrayidx7, align 2
 ;
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 17 for VF 16 For instruction:   %i2 = load i16, i16* %arrayidx2, align 2
@@ -164,17 +164,17 @@ for.end:
 ; DISABLED_MASKED_STRIDED: LV: Checking a loop in "test"
 ;
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   %i4 = load i16, i16* %arrayidx6, align 2
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 2 For instruction:   %i4 = load i16, i16* %arrayidx6, align 2
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 4 For instruction:   %i4 = load i16, i16* %arrayidx6, align 2
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 8 For instruction:   %i4 = load i16, i16* %arrayidx6, align 2
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 16 For instruction:   %i4 = load i16, i16* %arrayidx6, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 2 for VF 2 For instruction:   %i4 = load i16, i16* %arrayidx6, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 4 for VF 4 For instruction:   %i4 = load i16, i16* %arrayidx6, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 8 for VF 8 For instruction:   %i4 = load i16, i16* %arrayidx6, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 17 for VF 16 For instruction:   %i4 = load i16, i16* %arrayidx6, align 2
 
 ; ENABLED_MASKED_STRIDED: LV: Checking a loop in "test"
 ;
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   %i4 = load i16, i16* %arrayidx6, align 2
-; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 7 for VF 2 For instruction:   %i4 = load i16, i16* %arrayidx6, align 2
-; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 9 for VF 4 For instruction:   %i4 = load i16, i16* %arrayidx6, align 2
-; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 9 for VF 8 For instruction:   %i4 = load i16, i16* %arrayidx6, align 2
+; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 2 for VF 2 For instruction:   %i4 = load i16, i16* %arrayidx6, align 2
+; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 4 for VF 4 For instruction:   %i4 = load i16, i16* %arrayidx6, align 2
+; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 8 for VF 8 For instruction:   %i4 = load i16, i16* %arrayidx6, align 2
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 14 for VF 16 For instruction:   %i4 = load i16, i16* %arrayidx6, align 2
 
 define void @test(i16* noalias nocapture %points, i16* noalias nocapture readonly %x, i16* noalias nocapture readnone %y) {

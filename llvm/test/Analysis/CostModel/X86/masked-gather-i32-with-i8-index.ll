@@ -17,30 +17,30 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: LV: Checking a loop in "test"
 ;
 ; SSE2: LV: Found an estimated cost of 1 for VF 1 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; SSE2: LV: Found an estimated cost of 3000000 for VF 2 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; SSE2: LV: Found an estimated cost of 3000000 for VF 4 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; SSE2: LV: Found an estimated cost of 3000000 for VF 8 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; SSE2: LV: Found an estimated cost of 3000000 for VF 16 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; SSE2: LV: Found an estimated cost of 2 for VF 2 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; SSE2: LV: Found an estimated cost of 5 for VF 4 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; SSE2: LV: Found an estimated cost of 11 for VF 8 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; SSE2: LV: Found an estimated cost of 22 for VF 16 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
 ;
 ; SSE42: LV: Found an estimated cost of 1 for VF 1 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; SSE42: LV: Found an estimated cost of 3000000 for VF 2 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; SSE42: LV: Found an estimated cost of 3000000 for VF 4 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; SSE42: LV: Found an estimated cost of 3000000 for VF 8 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; SSE42: LV: Found an estimated cost of 3000000 for VF 16 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; SSE42: LV: Found an estimated cost of 2 for VF 2 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; SSE42: LV: Found an estimated cost of 5 for VF 4 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; SSE42: LV: Found an estimated cost of 11 for VF 8 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; SSE42: LV: Found an estimated cost of 22 for VF 16 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
 ;
 ; AVX1: LV: Found an estimated cost of 1 for VF 1 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; AVX1: LV: Found an estimated cost of 3000000 for VF 2 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; AVX1: LV: Found an estimated cost of 3000000 for VF 4 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; AVX1: LV: Found an estimated cost of 3000000 for VF 8 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; AVX1: LV: Found an estimated cost of 3000000 for VF 16 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; AVX1: LV: Found an estimated cost of 3000000 for VF 32 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; AVX1: LV: Found an estimated cost of 2 for VF 2 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; AVX1: LV: Found an estimated cost of 4 for VF 4 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; AVX1: LV: Found an estimated cost of 9 for VF 8 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; AVX1: LV: Found an estimated cost of 18 for VF 16 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; AVX1: LV: Found an estimated cost of 36 for VF 32 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
 ;
 ; AVX2-SLOWGATHER: LV: Found an estimated cost of 1 for VF 1 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 3000000 for VF 2 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 3000000 for VF 4 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 3000000 for VF 8 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 3000000 for VF 16 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; AVX2-SLOWGATHER: LV: Found an estimated cost of 3000000 for VF 32 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 2 for VF 2 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 4 for VF 4 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 9 for VF 8 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 18 for VF 16 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; AVX2-SLOWGATHER: LV: Found an estimated cost of 36 for VF 32 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
 ;
 ; AVX2-FASTGATHER: LV: Found an estimated cost of 1 for VF 1 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
 ; AVX2-FASTGATHER: LV: Found an estimated cost of 4 for VF 2 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
@@ -50,8 +50,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; AVX2-FASTGATHER: LV: Found an estimated cost of 48 for VF 32 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
 ;
 ; AVX512: LV: Found an estimated cost of 1 for VF 1 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; AVX512: LV: Found an estimated cost of 10 for VF 2 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
-; AVX512: LV: Found an estimated cost of 22 for VF 4 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; AVX512: LV: Found an estimated cost of 5 for VF 2 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
+; AVX512: LV: Found an estimated cost of 11 for VF 4 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
 ; AVX512: LV: Found an estimated cost of 10 for VF 8 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
 ; AVX512: LV: Found an estimated cost of 18 for VF 16 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
 ; AVX512: LV: Found an estimated cost of 36 for VF 32 For instruction:   %valB.loaded = load i32, i32* %inB, align 4
