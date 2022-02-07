@@ -2260,22 +2260,18 @@ static bool CheckAssociated(SpecificCall &call, FoldingContext &context) {
                         "procedure designator"_err_en_US,
                         pointerSymbol->name(), targetName),
                     *pointerSymbol);
-              } else {
+              } else if (targetSymbol) {
                 // object pointer and target
-                if (const Symbol * targetSymbol{GetLastSymbol(*targetExpr)}) {
-                  if (!(targetSymbol->attrs().test(semantics::Attr::POINTER) ||
-                          targetSymbol->attrs().test(
-                              semantics::Attr::TARGET))) {
-                    AttachDeclaration(
-                        context.messages().Say(
-                            "TARGET= argument '%s' must have either "
-                            "the POINTER or the TARGET "
-                            "attribute"_err_en_US,
-                            targetName),
-                        *targetSymbol);
+                SymbolVector symbols{GetSymbolVector(*targetExpr)};
+                CHECK(!symbols.empty());
+                if (!GetLastTarget(symbols)) {
+                  parser::Message *msg{context.messages().Say(
+                      "TARGET= argument '%s' must have either the POINTER or the TARGET attribute"_err_en_US,
+                      targetExpr->AsFortran())};
+                  for (SymbolRef ref : symbols) {
+                    msg = AttachDeclaration(msg, *ref);
                   }
                 }
-
                 if (const auto pointerType{pointerArg->GetType()}) {
                   if (const auto targetType{targetArg->GetType()}) {
                     ok = pointerType->IsTkCompatibleWith(*targetType);
