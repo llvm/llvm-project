@@ -27,8 +27,7 @@ extern llvm::cl::OptionCategory BoltRelocCategory;
 extern llvm::cl::OptionCategory BoltOutputCategory;
 extern llvm::cl::OptionCategory AggregatorCategory;
 extern llvm::cl::OptionCategory BoltInstrCategory;
-
-extern llvm::cl::SubCommand HeatmapCommand;
+extern llvm::cl::OptionCategory HeatmapCategory;
 
 extern llvm::cl::opt<unsigned> AlignText;
 extern llvm::cl::opt<bool> AggregateOnly;
@@ -38,7 +37,6 @@ extern llvm::cl::opt<bool> EnableBAT;
 extern llvm::cl::opt<bool> RemoveSymtab;
 extern llvm::cl::opt<unsigned> ExecutionCountThreshold;
 extern llvm::cl::opt<unsigned> HeatmapBlock;
-extern llvm::cl::opt<std::string> HeatmapFile;
 extern llvm::cl::opt<unsigned long long> HeatmapMaxAddress;
 extern llvm::cl::opt<unsigned long long> HeatmapMinAddress;
 extern llvm::cl::opt<bool> HotData;

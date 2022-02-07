@@ -33,8 +33,7 @@ cl::OptionCategory BoltRelocCategory("BOLT options in relocation mode");
 cl::OptionCategory BoltOutputCategory("Output options");
 cl::OptionCategory AggregatorCategory("Data aggregation options");
 cl::OptionCategory BoltInstrCategory("BOLT instrumentation options");
-
-cl::SubCommand HeatmapCommand("heatmap", "generate heatmap");
+cl::OptionCategory HeatmapCategory("Heatmap options");
 
 cl::opt<unsigned>
 AlignText("align-text",
@@ -50,11 +49,9 @@ AggregateOnly("aggregate-only",
   cl::cat(AggregatorCategory));
 
 cl::opt<unsigned>
-BucketsPerLine("line-size",
-  cl::desc("number of entries per line (default 256)"),
-  cl::init(256),
-  cl::Optional,
-  cl::sub(HeatmapCommand));
+    BucketsPerLine("line-size",
+                   cl::desc("number of entries per line (default 256)"),
+                   cl::init(256), cl::Optional, cl::cat(HeatmapCategory));
 
 cl::opt<bool>
 DiffOnly("diff-only",
@@ -83,31 +80,19 @@ ExecutionCountThreshold("execution-count-threshold",
   cl::cat(BoltOptCategory));
 
 cl::opt<unsigned>
-HeatmapBlock("block-size",
-  cl::desc("size of a heat map block in bytes (default 64)"),
-  cl::init(64),
-  cl::sub(HeatmapCommand));
+    HeatmapBlock("block-size",
+                 cl::desc("size of a heat map block in bytes (default 64)"),
+                 cl::init(64), cl::cat(HeatmapCategory));
 
-cl::opt<std::string>
-HeatmapFile("o",
-  cl::init("-"),
-  cl::desc("heatmap output file (default stdout)"),
-  cl::Optional,
-  cl::sub(HeatmapCommand));
+cl::opt<unsigned long long> HeatmapMaxAddress(
+    "max-address", cl::init(0xffffffff),
+    cl::desc("maximum address considered valid for heatmap (default 4GB)"),
+    cl::Optional, cl::cat(HeatmapCategory));
 
-cl::opt<unsigned long long>
-HeatmapMaxAddress("max-address",
-  cl::init(0xffffffff),
-  cl::desc("maximum address considered valid for heatmap (default 4GB)"),
-  cl::Optional,
-  cl::sub(HeatmapCommand));
-
-cl::opt<unsigned long long>
-HeatmapMinAddress("min-address",
-  cl::init(0x0),
-  cl::desc("minimum address considered valid for heatmap (default 0)"),
-  cl::Optional,
-  cl::sub(HeatmapCommand));
+cl::opt<unsigned long long> HeatmapMinAddress(
+    "min-address", cl::init(0x0),
+    cl::desc("minimum address considered valid for heatmap (default 0)"),
+    cl::Optional, cl::cat(HeatmapCategory));
 
 cl::opt<bool>
 HotData("hot-data",
