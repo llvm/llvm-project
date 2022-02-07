@@ -12,6 +12,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Signals.h"
 #include "gtest/gtest.h"
 #include <stdlib.h>
 #include <thread>
@@ -424,6 +425,30 @@ TEST_F(ProgramEnvTest, TestLockFile) {
   ASSERT_EQ(0, WaitResult.ReturnCode);
   ASSERT_EQ(WaitResult.Pid, PI2.Pid);
   sys::fs::remove(LockedFile);
+}
+
+TEST_F(ProgramEnvTest, TestExecuteWithNoStacktraceHandler) {
+  using namespace llvm::sys;
+
+  if (getenv("LLVM_PROGRAM_TEST_NO_STACKTRACE_HANDLER")) {
+    sys::PrintStackTrace(errs());
+    exit(0);
+  }
+
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &ProgramTestStringArg1);
+  StringRef argv[] = {
+      Executable,
+      "--gtest_filter=ProgramEnvTest.TestExecuteWithNoStacktraceHandler"};
+
+  addEnvVar("LLVM_PROGRAM_TEST_NO_STACKTRACE_HANDLER=1");
+
+  std::string Error;
+  bool ExecutionFailed;
+  int RetCode = ExecuteAndWait(Executable, argv, getEnviron(), {}, 0, 0, &Error,
+                               &ExecutionFailed);
+  EXPECT_FALSE(ExecutionFailed) << Error;
+  ASSERT_EQ(0, RetCode);
 }
 
 } // end anonymous namespace
