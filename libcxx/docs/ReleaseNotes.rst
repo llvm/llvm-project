@@ -47,6 +47,12 @@ New Features
   header by using ``-DLIBCXX_ENABLE_INCOMPLETE_FEATURES=ON`` when
   configuring their build.
 
+- More parts of ``<ranges>`` have been implemented. Since we still expect to make
+  some API and ABI breaking changes, those are disabled by default. However,
+  vendors that wish to enable ``<ranges>`` in their distribution may do so
+  by defining ``-DLIBCXX_ENABLE_INCOMPLETE_FEATURES=ON`` when configuring
+  their build.
+
 - There's a new CMake option ``LIBCXX_ENABLE_UNICODE`` to disable Unicode
   support in the ``<format>`` header. This only affects the estimation of the
   output width of the format functions.
