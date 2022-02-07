@@ -141,6 +141,9 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
                     "  { t.foo() };\n"
                     "} && Bar<T> && Baz<T>;");
   ASSERT_EQ(Tokens.size(), 35u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::kw_requires, TT_RequiresExpression);
+  EXPECT_TOKEN(Tokens[9], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_RequiresExpressionLBrace);
   EXPECT_TOKEN(Tokens[23], tok::ampamp, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[28], tok::ampamp, TT_BinaryOperator);
 
@@ -148,6 +151,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
                     "requires C1<T> && (C21<T> || C22<T> && C2e<T>) && C3<T>\n"
                     "struct Foo;");
   ASSERT_EQ(Tokens.size(), 36u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresClause);
   EXPECT_TOKEN(Tokens[6], tok::identifier, TT_Unknown);
   EXPECT_EQ(Tokens[6]->FakeLParens.size(), 1u);
   EXPECT_TOKEN(Tokens[10], tok::ampamp, TT_BinaryOperator);
@@ -163,6 +167,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
                "requires (C1<T> && (C21<T> || C22<T> && C2e<T>) && C3<T>)\n"
                "struct Foo;");
   ASSERT_EQ(Tokens.size(), 38u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresClause);
   EXPECT_TOKEN(Tokens[7], tok::identifier, TT_Unknown);
   EXPECT_EQ(Tokens[7]->FakeLParens.size(), 1u);
   EXPECT_TOKEN(Tokens[11], tok::ampamp, TT_BinaryOperator);
@@ -173,6 +178,127 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   EXPECT_EQ(Tokens[32]->FakeRParens, 1u);
   EXPECT_TOKEN(Tokens[33], tok::r_paren, TT_Unknown);
   EXPECT_TRUE(Tokens[33]->ClosesRequiresClause);
+
+  Tokens = annotate("template <typename T>\n"
+                    "void foo(T) noexcept requires Bar<T>;");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[11], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("template <typename T>\n"
+                    "struct S {\n"
+                    "  void foo() const requires Bar<T>;\n"
+                    "  void bar() const & requires Baz<T>;\n"
+                    "  void bar() && requires Baz2<T>;\n"
+                    "  void baz() const & noexcept requires Baz<T>;\n"
+                    "  void baz() && noexcept requires Baz2<T>;\n"
+                    "};\n"
+                    "\n"
+                    "void S::bar() const & requires Baz<T> { }");
+  ASSERT_EQ(Tokens.size(), 85u) << Tokens;
+  EXPECT_TOKEN(Tokens[13], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TOKEN(Tokens[25], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TOKEN(Tokens[36], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TOKEN(Tokens[49], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TOKEN(Tokens[61], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TOKEN(Tokens[77], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("void Class::member() && requires(Constant) {}");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("void Class::member() && requires(Constant<T>) {}");
+  ASSERT_EQ(Tokens.size(), 17u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::kw_requires, TT_RequiresClause);
+
+  Tokens =
+      annotate("void Class::member() && requires(Namespace::Constant<T>) {}");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("void Class::member() && requires(typename "
+                    "Namespace::Outer<T>::Inner::Constant) {}");
+  ASSERT_EQ(Tokens.size(), 24u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::kw_requires, TT_RequiresClause);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
+  auto Tokens = annotate("bool b = requires(int i) { i + 5; };");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::kw_requires, TT_RequiresExpression);
+  EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_RequiresExpressionLBrace);
+
+  Tokens = annotate("if (requires(int i) { i + 5; }) return;");
+  ASSERT_EQ(Tokens.size(), 17u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::kw_requires, TT_RequiresExpression);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[7], tok::l_brace, TT_RequiresExpressionLBrace);
+
+  Tokens = annotate("if (func() && requires(int i) { i + 5; }) return;");
+  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresExpression);
+  EXPECT_TOKEN(Tokens[7], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[11], tok::l_brace, TT_RequiresExpressionLBrace);
+
+  Tokens = annotate("foo(requires(const T t) {});");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::kw_requires, TT_RequiresExpression);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_RequiresExpressionLBrace);
+
+  Tokens = annotate("foo(requires(const int t) {});");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::kw_requires, TT_RequiresExpression);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_RequiresExpressionLBrace);
+
+  Tokens = annotate("foo(requires(const T t) {});");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::kw_requires, TT_RequiresExpression);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_RequiresExpressionLBrace);
+
+  Tokens = annotate("foo(requires(int const* volatile t) {});");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::kw_requires, TT_RequiresExpression);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[10], tok::l_brace, TT_RequiresExpressionLBrace);
+
+  Tokens = annotate("foo(requires(T const* volatile t) {});");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::kw_requires, TT_RequiresExpression);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[10], tok::l_brace, TT_RequiresExpressionLBrace);
+
+  Tokens =
+      annotate("foo(requires(const typename Outer<T>::Inner * const t) {});");
+  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::kw_requires, TT_RequiresExpression);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[16], tok::l_brace, TT_RequiresExpressionLBrace);
+
+  Tokens = annotate("template <typename T>\n"
+                    "concept C = requires(T T) {\n"
+                    "  requires Bar<T> && Foo<T>;\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 28u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::kw_requires, TT_RequiresExpression);
+  EXPECT_TOKEN(Tokens[9], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_RequiresExpressionLBrace);
+  EXPECT_TOKEN(Tokens[14], tok::kw_requires,
+               TT_RequiresClauseInARequiresExpression);
+
+  Tokens = annotate("template <typename T>\n"
+                    "concept C = requires(T T) {\n"
+                    "  { t.func() } -> std::same_as<int>;"
+                    "  requires Bar<T> && Foo<T>;\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 43u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::kw_requires, TT_RequiresExpression);
+  EXPECT_TOKEN(Tokens[9], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_RequiresExpressionLBrace);
+  EXPECT_TOKEN(Tokens[29], tok::kw_requires,
+               TT_RequiresClauseInARequiresExpression);
 }
 
 TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
