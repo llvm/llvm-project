@@ -3313,7 +3313,7 @@ Disallow use of CRC instructions (ARM only)
 
 .. option:: -mrestrict-it, -mno-restrict-it
 
-Disallow generation of deprecated IT blocks for ARMv8. It is on by default for ARMv8 Thumb mode.
+Disallow generation of complex IT blocks. It is off by default.
 
 .. option:: -mtp=<arg>
 
