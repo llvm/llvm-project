@@ -8,6 +8,8 @@
 # RUN: %python %S/patch-crashlog.py --binary %t.out --crashlog %t.nometadata.crash --offsets '{"main":20, "bar":9, "foo":16}' --json --no-metadata
 # RUN: %lldb %t.out -o 'command script import lldb.macosx.crashlog' -o 'crashlog %t.nometadata.crash' 2>&1 | FileCheck %s
 
+# CHECK: "crashlog" {{.*}} commands have been installed, use the "--help" options on these commands
+
 # CHECK: Thread[0] Crashing Thread Name EXC_BAD_ACCESS (SIGSEGV) (KERN_INVALID_ADDRESS at 0x0000000000000000)
 # CHECK: [  0] {{.*}}out`foo + 16 at test.c
 # CHECK: [  1] {{.*}}out`bar + 8 at test.c
