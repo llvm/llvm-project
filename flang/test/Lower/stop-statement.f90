@@ -51,3 +51,15 @@ subroutine stop_quiet()
  ! CHECK: fir.call @_Fortran{{.*}}StopStatement(%[[c0]], %[[false]], %[[bi1]])
  ! CHECK-NEXT: fir.unreachable
 end subroutine
+
+! CHECK-LABEL stop_char_lit
+subroutine stop_char_lit
+  ! CHECK-DAG: %[[false:.*]] = arith.constant false
+  ! CHECK-DAG: %[[five:.*]] = arith.constant 5 : index
+  ! CHECK-DAG: %[[lit:.*]] = fir.address_of(@_QQ{{.*}}) : !fir.ref<!fir.char<1,5>>
+  ! CHECK-DAG: %[[buff:.*]] = fir.convert %[[lit]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
+  ! CHECK-DAG: %[[len:.*]] = fir.convert %[[five]] : (index) -> i64
+  ! CHECK: fir.call @{{.*}}StopStatementText(%[[buff]], %[[len]], %[[false]], %[[false]]) :
+  ! CHECK-NEXT: fir.unreachable
+  stop 'crash'
+end subroutine stop_char_lit

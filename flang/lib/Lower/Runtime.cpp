@@ -49,7 +49,14 @@ void Fortran::lower::genStopStatement(
                llvm::dbgs() << '\n');
     expr.match(
         [&](const fir::CharBoxValue &x) {
-          TODO(loc, "STOP CharBoxValue first operand not lowered yet");
+          callee = fir::runtime::getRuntimeFunc<mkRTKey(StopStatementText)>(
+              loc, builder);
+          calleeType = callee.getType();
+          // Creates a pair of operands for the CHARACTER and its LEN.
+          operands.push_back(
+              builder.createConvert(loc, calleeType.getInput(0), x.getAddr()));
+          operands.push_back(
+              builder.createConvert(loc, calleeType.getInput(1), x.getLen()));
         },
         [&](fir::UnboxedValue x) {
           callee = fir::runtime::getRuntimeFunc<mkRTKey(StopStatement)>(
