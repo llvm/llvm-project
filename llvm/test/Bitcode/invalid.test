@@ -251,3 +251,8 @@ RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev-number.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-ABBREV-NUMBER %s
 
 INVALID-ABBREV-NUMBER: Invalid abbrev number
+
+RUN: not llvm-dis -disable-output %p/Inputs/size-not-plausible.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=SIZE-NOT-PLAUSIBLE %s
+
+SIZE-NOT-PLAUSIBLE: Size is not plausible

@@ -299,6 +299,13 @@ public:
 
   /// Skip to the end of the file.
   void skipToEnd() { NextChar = BitcodeBytes.size(); }
+
+  /// Check whether a reservation of Size elements is plausible.
+  bool isSizePlausible(size_t Size) const {
+    // Don't allow reserving more elements than the number of bits, assuming
+    // at least one bit is needed to encode an element.
+    return Size < BitcodeBytes.size() * 8;
+  }
 };
 
 /// When advancing through a bitstream cursor, each advance can discover a few
