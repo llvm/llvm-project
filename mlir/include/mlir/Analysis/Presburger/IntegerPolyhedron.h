@@ -56,6 +56,7 @@ public:
   enum class Kind {
     FlatAffineConstraints,
     FlatAffineValueConstraints,
+    MultiAffineFunction,
     IntegerPolyhedron
   };
 
@@ -194,6 +195,11 @@ public:
   /// Adds an equality from the coefficients specified in `eq`.
   void addEquality(ArrayRef<int64_t> eq);
 
+  /// Eliminate the `posB^th` local identifier, replacing every instance of it
+  /// with the `posA^th` local identifier. This should be used when the two
+  /// local variables are known to always take the same values.
+  virtual void eliminateRedundantLocalId(unsigned posA, unsigned posB);
+
   /// Removes identifiers of the specified kind with the specified pos (or
   /// within the specified range) from the system. The specified location is
   /// relative to the first identifier of the specified kind.
@@ -273,6 +279,9 @@ public:
 
   /// Returns true if the given point satisfies the constraints, or false
   /// otherwise.
+  ///
+  /// Note: currently, if the polyhedron contains local ids, the values of
+  /// the local ids must also be provided.
   bool containsPoint(ArrayRef<int64_t> point) const;
 
   /// Find equality and pairs of inequality contraints identified by their
