@@ -27,6 +27,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
@@ -1662,6 +1663,12 @@ static Instruction *insertSpills(const FrameDataInfo &FrameData,
         }
       }
 
+      // Salvage debug info on any dbg.addr that we see. We do not insert them
+      // into each block where we have a use though.
+      if (auto *DI = dyn_cast<DbgAddrIntrinsic>(U)) {
+        coro::salvageDebugInfo(DbgPtrAllocaCache, DI, Shape.OptimizeFrame);
+      }
+
       // If we have a single edge PHINode, remove it and replace it with a
       // reload from the coroutine frame. (We already took care of multi edge
       // PHINodes by rewriting them in the rewritePHIs function).
@@ -2579,8 +2586,10 @@ void coro::salvageDebugInfo(
 
   DVI->replaceVariableLocationOp(OriginalStorage, Storage);
   DVI->setExpression(Expr);
-  /// It makes no sense to move the dbg.value intrinsic.
-  if (!isa<DbgValueInst>(DVI)) {
+  // We only hoist dbg.declare today since it doesn't make sense to hoist
+  // dbg.value or dbg.addr since they do not have the same function wide
+  // guarantees that dbg.declare does.
+  if (!isa<DbgValueInst>(DVI) && !isa<DbgAddrIntrinsic>(DVI)) {
     if (auto *II = dyn_cast<InvokeInst>(Storage))
       DVI->moveBefore(II->getNormalDest()->getFirstNonPHI());
     else if (auto *CBI = dyn_cast<CallBrInst>(Storage))
