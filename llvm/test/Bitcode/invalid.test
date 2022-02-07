@@ -271,3 +271,8 @@ RUN: not llvm-dis -disable-output %p/Inputs/invalid-value-symbol-table.bc 2>&1 |
 RUN:   FileCheck --check-prefix=INVALID-VALUE-SYMBOL-TABLE %s
 
 INVALID-VALUE-SYMBOL-TABLE: Invalid value reference in symbol table
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-value-symbol-table-2.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-VALUE-SYMBOL-TABLE-2 %s
+
+INVALID-VALUE-SYMBOL-TABLE-2: Expected value symbol table subblock
