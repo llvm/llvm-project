@@ -2265,9 +2265,14 @@ bool TargetLowering::SimplifyDemandedBits(
     break;
   }
   case ISD::MUL:
-    // 'Quadratic Reciprocity': mul(x,x) -> 0 if we're only demanding bit[1]
-    if (DemandedBits == 2 && Op.getOperand(0) == Op.getOperand(1))
-      return TLO.CombineTo(Op, TLO.DAG.getConstant(0, dl, VT));
+    // For a squared value "X * X", the bottom 2 bits are 0 and X[0] because:
+    // X * X is odd iff X is odd.
+    // 'Quadratic Reciprocity': X * X -> 0 for bit[1]
+    if (Op.getOperand(0) == Op.getOperand(1) && DemandedBits.ult(4)) {
+      SDValue One = TLO.DAG.getConstant(1, dl, VT);
+      SDValue And1 = TLO.DAG.getNode(ISD::AND, dl, VT, Op.getOperand(0), One);
+      return TLO.CombineTo(Op, And1);
+    }
     LLVM_FALLTHROUGH;
   case ISD::ADD:
   case ISD::SUB: {

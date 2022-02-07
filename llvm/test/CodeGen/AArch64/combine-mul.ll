@@ -108,8 +108,7 @@ define i32 @one_demanded_low_bit(i32 %x) {
 define i16 @squared_one_demanded_low_bit(i16 %x) {
 ; CHECK-LABEL: squared_one_demanded_low_bit:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul w8, w0, w0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    and w0, w0, #0x1
 ; CHECK-NEXT:    ret
   %mul = mul i16 %x, %x
   %and = and i16 %mul, 1
@@ -120,7 +119,6 @@ define <4 x i32> @squared_one_demanded_low_bit_splat(<4 x i32> %x) {
 ; CHECK-LABEL: squared_one_demanded_low_bit_splat:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvni v1.4s, #1
-; CHECK-NEXT:    mul v0.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %mul = mul <4 x i32> %x, %x
@@ -131,8 +129,7 @@ define <4 x i32> @squared_one_demanded_low_bit_splat(<4 x i32> %x) {
 define i32 @squared_demanded_2_low_bits(i32 %x) {
 ; CHECK-LABEL: squared_demanded_2_low_bits:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul w8, w0, w0
-; CHECK-NEXT:    and w0, w8, #0x3
+; CHECK-NEXT:    and w0, w0, #0x1
 ; CHECK-NEXT:    ret
   %mul = mul i32 %x, %x
   %and = and i32 %mul, 3
@@ -142,13 +139,7 @@ define i32 @squared_demanded_2_low_bits(i32 %x) {
 define <2 x i64> @squared_demanded_2_low_bits_splat(<2 x i64> %x) {
 ; CHECK-LABEL: squared_demanded_2_low_bits_splat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    mov x9, v0.d[1]
-; CHECK-NEXT:    mul x8, x8, x8
-; CHECK-NEXT:    mul x9, x9, x9
-; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    mov x8, #-2
-; CHECK-NEXT:    mov v0.d[1], x9
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
