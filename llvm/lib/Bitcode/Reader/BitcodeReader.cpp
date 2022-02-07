@@ -2056,8 +2056,9 @@ static Expected<uint64_t> jumpToValueSymbolTable(uint64_t Offset,
   Expected<BitstreamEntry> MaybeEntry = Stream.advance();
   if (!MaybeEntry)
     return MaybeEntry.takeError();
-  assert(MaybeEntry.get().Kind == BitstreamEntry::SubBlock);
-  assert(MaybeEntry.get().ID == bitc::VALUE_SYMTAB_BLOCK_ID);
+  if (MaybeEntry.get().Kind != BitstreamEntry::SubBlock ||
+      MaybeEntry.get().ID != bitc::VALUE_SYMTAB_BLOCK_ID)
+    return error("Expected value symbol table subblock");
   return CurrentBit;
 }
 
