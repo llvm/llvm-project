@@ -1065,24 +1065,17 @@ void IntegerPolyhedron::removeRedundantConstraints() {
   equalities.resizeVertically(pos);
 }
 
-/// Eliminate `pos2^th` local identifier, replacing its every instance with
-/// `pos1^th` local identifier. This function is intended to be used to remove
-/// redundancy when local variables at position `pos1` and `pos2` are restricted
-/// to have the same value.
-static void eliminateRedundantLocalId(IntegerPolyhedron &poly, unsigned pos1,
-                                      unsigned pos2) {
+void IntegerPolyhedron::eliminateRedundantLocalId(unsigned posA,
+                                                  unsigned posB) {
+  assert(posA < getNumLocalIds() && "Invalid local id position");
+  assert(posB < getNumLocalIds() && "Invalid local id position");
 
-  assert(pos1 < poly.getNumLocalIds() && "Invalid local id position");
-  assert(pos2 < poly.getNumLocalIds() && "Invalid local id position");
-
-  unsigned localOffset = poly.getNumDimAndSymbolIds();
-  pos1 += localOffset;
-  pos2 += localOffset;
-  for (unsigned i = 0, e = poly.getNumInequalities(); i < e; ++i)
-    poly.atIneq(i, pos1) += poly.atIneq(i, pos2);
-  for (unsigned i = 0, e = poly.getNumEqualities(); i < e; ++i)
-    poly.atEq(i, pos1) += poly.atEq(i, pos2);
-  poly.removeId(pos2);
+  unsigned localOffset = getIdKindOffset(IdKind::Local);
+  posA += localOffset;
+  posB += localOffset;
+  inequalities.addToColumn(posB, posA, 1);
+  equalities.addToColumn(posB, posA, 1);
+  removeId(posB);
 }
 
 /// Adds additional local ids to the sets such that they both have the union
@@ -1129,8 +1122,8 @@ void IntegerPolyhedron::mergeLocalIds(IntegerPolyhedron &other) {
   // Merge function that merges the local variables in both sets by treating
   // them as the same identifier.
   auto merge = [&polyA, &polyB](unsigned i, unsigned j) -> bool {
-    eliminateRedundantLocalId(polyA, i, j);
-    eliminateRedundantLocalId(polyB, i, j);
+    polyA.eliminateRedundantLocalId(i, j);
+    polyB.eliminateRedundantLocalId(i, j);
     return true;
   };
 
