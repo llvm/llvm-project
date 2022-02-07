@@ -546,16 +546,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
   }
   case Instruction::Mul: {
     if (DemandedMask.isPowerOf2()) {
-      if (I->getOperand(0) == I->getOperand(1)) {
-        // X * X is odd iff X is odd.
-        if (DemandedMask == 1)
-          return I->getOperand(0);
-
-        // 'Quadratic Reciprocity': mul(x,x) -> 0 if we're only demanding bit[1]
-        if (DemandedMask == 2)
-          return ConstantInt::getNullValue(VTy);
-      }
-
       // The LSB of X*Y is set only if (X & 1) == 1 and (Y & 1) == 1.
       // If we demand exactly one bit N and we have "X * (C' << N)" where C' is
       // odd (has LSB set), then the left-shifted low bit of X is the answer.
@@ -568,6 +558,15 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         return InsertNewInstWith(Shl, *I);
       }
     }
+    // For a squared value "X * X", the bottom 2 bits are 0 and X[0] because:
+    // X * X is odd iff X is odd.
+    // 'Quadratic Reciprocity': X * X -> 0 for bit[1]
+    if (I->getOperand(0) == I->getOperand(1) && DemandedMask.ult(4)) {
+      Constant *One = ConstantInt::get(VTy, 1);
+      Instruction *And1 = BinaryOperator::CreateAnd(I->getOperand(0), One);
+      return InsertNewInstWith(And1, *I);
+    }
+
     computeKnownBits(I, Known, Depth, CxtI);
     break;
   }
