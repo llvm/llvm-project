@@ -179,7 +179,7 @@ namespace {
 class TypeBuilder {
 public:
   TypeBuilder(Fortran::lower::AbstractConverter &converter)
-      : converter{converter}, context{&converter.getMLIRContext()} {}
+      : context{&converter.getMLIRContext()} {}
 
   //===--------------------------------------------------------------------===//
   // Generate type entry points
@@ -465,7 +465,6 @@ private:
 
   //===--------------------------------------------------------------------===//
 
-  Fortran::lower::AbstractConverter &converter;
   mlir::MLIRContext *context;
 };
 
