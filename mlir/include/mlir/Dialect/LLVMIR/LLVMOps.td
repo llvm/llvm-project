@@ -1614,10 +1614,10 @@ def LLVM_MatrixColumnMajorLoadOp : LLVM_Op<"intr.matrix.column.major.load"> {
     llvm::MatrixBuilder mb(builder);
     const llvm::DataLayout &dl =
       builder.GetInsertBlock()->getModule()->getDataLayout();
-    llvm::Align align = dl.getABITypeAlign(
-      $data->getType()->getPointerElementType());
+    llvm::Type *ElemTy = $data->getType()->getPointerElementType();
+    llvm::Align align = dl.getABITypeAlign(ElemTy);
     $res = mb.CreateColumnMajorLoad(
-      $data, align, $stride, $isVolatile, $rows,
+      ElemTy, $data, align, $stride, $isVolatile, $rows,
       $columns);
   }];
   let assemblyFormat = "$data `,` `<` `stride` `=` $stride `>` attr-dict"

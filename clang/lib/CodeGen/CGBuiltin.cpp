@@ -3250,8 +3250,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     EmitNonNullArgCheck(RValue::get(Src.getPointer()), E->getArg(0)->getType(),
                         E->getArg(0)->getExprLoc(), FD, 0);
     Value *Result = MB.CreateColumnMajorLoad(
-        Src.getPointer(), Align(Src.getAlignment().getQuantity()), Stride,
-        IsVolatile, ResultTy->getNumRows(), ResultTy->getNumColumns(),
+        Src.getElementType(), Src.getPointer(),
+        Align(Src.getAlignment().getQuantity()), Stride, IsVolatile,
+        ResultTy->getNumRows(), ResultTy->getNumColumns(),
         "matrix");
     return RValue::get(Result);
   }
