@@ -331,13 +331,9 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
     size_t CurBitPos = GetCurrentBitNo();
     const size_t NewEnd = CurBitPos + alignTo(NumElts, 4) * 8;
 
-    // If this would read off the end of the bitcode file, just set the
-    // record to empty and return.
-    if (!canSkipToPos(NewEnd/8)) {
-      Vals.append(NumElts, 0);
-      skipToEnd();
-      break;
-    }
+    // Make sure the bitstream is large enough to contain the blob.
+    if (!canSkipToPos(NewEnd/8))
+      return error("Blob ends too soon");
 
     // Otherwise, inform the streamer that we need these bytes in memory.  Skip
     // over tail padding first, in case jumping to NewEnd invalidates the Blob
