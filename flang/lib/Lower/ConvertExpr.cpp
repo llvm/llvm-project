@@ -15,6 +15,7 @@
 #include "flang/Evaluate/real.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/SymbolMap.h"
 #include "flang/Lower/Todo.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
@@ -36,6 +37,32 @@
 // to the correct FIR representation in SSA form.
 //===----------------------------------------------------------------------===//
 
+/// Generate a load of a value from an address. Beware that this will lose
+/// any dynamic type information for polymorphic entities (note that unlimited
+/// polymorphic cannot be loaded and must not be provided here).
+static fir::ExtendedValue genLoad(fir::FirOpBuilder &builder,
+                                  mlir::Location loc,
+                                  const fir::ExtendedValue &addr) {
+  return addr.match(
+      [](const fir::CharBoxValue &box) -> fir::ExtendedValue { return box; },
+      [&](const fir::UnboxedValue &v) -> fir::ExtendedValue {
+        if (fir::unwrapRefType(fir::getBase(v).getType())
+                .isa<fir::RecordType>())
+          return v;
+        return builder.create<fir::LoadOp>(loc, fir::getBase(v));
+      },
+      [&](const fir::MutableBoxValue &box) -> fir::ExtendedValue {
+        TODO(loc, "genLoad for MutableBoxValue");
+      },
+      [&](const fir::BoxValue &box) -> fir::ExtendedValue {
+        TODO(loc, "genLoad for BoxValue");
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        fir::emitFatalError(
+            loc, "attempting to load whole array or procedure address");
+      });
+}
+
 namespace {
 
 /// Lowering of Fortran::evaluate::Expr<T> expressions
@@ -44,9 +71,10 @@ public:
   using ExtValue = fir::ExtendedValue;
 
   explicit ScalarExprLowering(mlir::Location loc,
-                              Fortran::lower::AbstractConverter &converter)
+                              Fortran::lower::AbstractConverter &converter,
+                              Fortran::lower::SymMap &symMap)
       : location{loc}, converter{converter},
-        builder{converter.getFirOpBuilder()} {}
+        builder{converter.getFirOpBuilder()}, symMap{symMap} {}
 
   mlir::Location getLoc() { return location; }
 
@@ -64,8 +92,26 @@ public:
     return builder.createBool(getLoc(), value);
   }
 
+  /// Returns a reference to a symbol or its box/boxChar descriptor if it has
+  /// one.
+  ExtValue gen(Fortran::semantics::SymbolRef sym) {
+    if (Fortran::lower::SymbolBox val = symMap.lookupSymbol(sym))
+      return val.match([&val](auto &) { return val.toExtendedValue(); });
+    LLVM_DEBUG(llvm::dbgs()
+               << "unknown symbol: " << sym << "\nmap: " << symMap << '\n');
+    fir::emitFatalError(getLoc(), "symbol is not mapped to any IR value");
+  }
+
+  ExtValue genLoad(const ExtValue &exv) {
+    return ::genLoad(builder, getLoc(), exv);
+  }
+
   ExtValue genval(Fortran::semantics::SymbolRef sym) {
-    TODO(getLoc(), "genval SymbolRef");
+    ExtValue var = gen(sym);
+    if (const fir::UnboxedValue *s = var.getUnboxed())
+      if (fir::isReferenceLike(s->getType()))
+        return genLoad(*s);
+    return var;
   }
 
   ExtValue genval(const Fortran::evaluate::BOZLiteralConstant &) {
@@ -306,7 +352,7 @@ public:
 
   template <typename A>
   ExtValue genval(const Fortran::evaluate::Designator<A> &des) {
-    TODO(getLoc(), "genval Designator<A>");
+    return std::visit([&](const auto &x) { return genval(x); }, des.u);
   }
 
   template <typename A>
@@ -340,12 +386,13 @@ private:
   mlir::Location location;
   Fortran::lower::AbstractConverter &converter;
   fir::FirOpBuilder &builder;
+  Fortran::lower::SymMap &symMap;
 };
 } // namespace
 
 fir::ExtendedValue Fortran::lower::createSomeExtendedExpression(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
-    const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &) {
+    const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &symMap) {
   LLVM_DEBUG(expr.AsFortran(llvm::dbgs() << "expr: ") << '\n');
-  return ScalarExprLowering{loc, converter}.genval(expr);
+  return ScalarExprLowering{loc, converter, symMap}.genval(expr);
 }

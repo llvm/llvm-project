@@ -6,6 +6,7 @@ add_flang_library(FortranLower
   Coarray.cpp
   ConvertExpr.cpp
   ConvertType.cpp
+  ConvertVariable.cpp
   Mangler.cpp
   OpenACC.cpp
   OpenMP.cpp
