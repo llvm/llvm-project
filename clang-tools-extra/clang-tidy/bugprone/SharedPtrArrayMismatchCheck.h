@@ -28,7 +28,7 @@ public:
   SharedPtrArrayMismatchCheck(StringRef Name, ClangTidyContext *Context);
 
 protected:
-  virtual SmartPtrClassMatcher getSmartPointerClassMatcher() const;
+  virtual SmartPtrClassMatcher getSmartPointerClassMatcher() const override;
 };
 
 } // namespace bugprone
