@@ -58,18 +58,14 @@ public:
   MatrixBuilder(IRBuilderBase &Builder) : B(Builder) {}
 
   /// Create a column major, strided matrix load.
+  /// \p EltTy   - Matrix element type
   /// \p DataPtr - Start address of the matrix read
   /// \p Rows    - Number of rows in matrix (must be a constant)
   /// \p Columns - Number of columns in matrix (must be a constant)
   /// \p Stride  - Space between columns
-  CallInst *CreateColumnMajorLoad(Value *DataPtr, Align Alignment,
+  CallInst *CreateColumnMajorLoad(Type *EltTy, Value *DataPtr, Align Alignment,
                                   Value *Stride, bool IsVolatile, unsigned Rows,
                                   unsigned Columns, const Twine &Name = "") {
-
-    // Deal with the pointer
-    PointerType *PtrTy = cast<PointerType>(DataPtr->getType());
-    Type *EltTy = PtrTy->getPointerElementType();
-
     auto *RetType = FixedVectorType::get(EltTy, Rows * Columns);
 
     Value *Ops[] = {DataPtr, Stride, B.getInt1(IsVolatile), B.getInt32(Rows),
