@@ -1472,36 +1472,43 @@ static bool checkForAllInstructionsImpl(
 }
 
 bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
+                                         const Function *Fn,
                                          const AbstractAttribute &QueryingAA,
                                          const ArrayRef<unsigned> &Opcodes,
                                          bool &UsedAssumedInformation,
                                          bool CheckBBLivenessOnly,
                                          bool CheckPotentiallyDead) {
-
-  const IRPosition &IRP = QueryingAA.getIRPosition();
   // Since we need to provide instructions we have to have an exact definition.
-  const Function *AssociatedFunction = IRP.getAssociatedFunction();
-  if (!AssociatedFunction)
-    return false;
-
-  if (AssociatedFunction->isDeclaration())
+  if (!Fn || Fn->isDeclaration())
     return false;
 
   // TODO: use the function scope once we have call site AAReturnedValues.
-  const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
+  const IRPosition &QueryIRP = IRPosition::function(*Fn);
   const auto *LivenessAA =
       (CheckBBLivenessOnly || CheckPotentiallyDead)
           ? nullptr
           : &(getAAFor<AAIsDead>(QueryingAA, QueryIRP, DepClassTy::NONE));
 
-  auto &OpcodeInstMap =
-      InfoCache.getOpcodeInstMapForFunction(*AssociatedFunction);
+  auto &OpcodeInstMap = InfoCache.getOpcodeInstMapForFunction(*Fn);
   if (!checkForAllInstructionsImpl(this, OpcodeInstMap, Pred, &QueryingAA,
                                    LivenessAA, Opcodes, UsedAssumedInformation,
                                    CheckBBLivenessOnly, CheckPotentiallyDead))
     return false;
 
   return true;
+}
+
+bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
+                                         const AbstractAttribute &QueryingAA,
+                                         const ArrayRef<unsigned> &Opcodes,
+                                         bool &UsedAssumedInformation,
+                                         bool CheckBBLivenessOnly,
+                                         bool CheckPotentiallyDead) {
+  const IRPosition &IRP = QueryingAA.getIRPosition();
+  const Function *AssociatedFunction = IRP.getAssociatedFunction();
+  return checkForAllInstructions(Pred, AssociatedFunction, QueryingAA, Opcodes,
+                                 UsedAssumedInformation, CheckBBLivenessOnly,
+                                 CheckPotentiallyDead);
 }
 
 bool Attributor::checkForAllReadWriteInstructions(
