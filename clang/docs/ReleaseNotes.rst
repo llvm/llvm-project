@@ -67,9 +67,6 @@ Modified Compiler Flags
 Removed Compiler Flags
 -------------------------
 
-- -Wweak-template-vtables, which was deprecated in the previous release and no
-  longer had any effect, has been removed.
-
 New Pragmas in Clang
 --------------------
 
