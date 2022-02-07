@@ -6,7 +6,7 @@ SEL s;
 
 SEL sel_registerName(const char *);
 
-int main() {
+int main(void) {
 (char *)s;  // expected-warning {{cast of type 'SEL' to 'char *' is deprecated; use sel_getName instead}}
 (void *)s;  // ok
 (const char *)sel_registerName("foo");  // expected-warning {{cast of type 'SEL' to 'const char *' is deprecated; use sel_getName instead}}

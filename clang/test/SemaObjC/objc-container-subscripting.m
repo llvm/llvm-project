@@ -10,7 +10,7 @@ typedef unsigned int size_t;
 @end
 @interface I @end
 
-int main() {
+int main(void) {
   NSMutableArray<P> * array;
   id  oldObject = array[10]; // expected-error {{method index parameter type 'double' is not integral type}}
   array[3] = 0; // expected-error {{method index parameter type 'void *' is not integral type}} \
@@ -32,7 +32,7 @@ int main() {
 @end
 @class NSString;
 
-void testDict() {
+void testDict(void) {
   NSMutableDictionary *dictionary;
   NSString *key;
   id newObject, oldObject;

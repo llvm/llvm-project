@@ -42,7 +42,7 @@ __attribute ((unavailable)) __attribute ((deprecated)) @protocol XProto; // expe
 
 id <XProto> idX = 0; // expected-error {{'XProto' is unavailable}}
 
-int main ()
+int main (void)
 {
 	MyClass1 <MyProto1> *p1;  // expected-warning {{'MyProto1' is deprecated}}
 }

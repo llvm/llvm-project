@@ -66,15 +66,15 @@
 #define AVAILABLE_NEXT __attribute__((availability(watchos, introduced = 5)))
 #endif
 
-void previouslyAvailable() AVAILABLE_PREV;
+void previouslyAvailable(void) AVAILABLE_PREV;
 #ifdef WARN_PREV
 // expected-note@-2 {{'previouslyAvailable' has been marked as being introduced}}
 #endif
-void currentlyAvailable() AVAILABLE_CURRENT;
+void currentlyAvailable(void) AVAILABLE_CURRENT;
 #ifdef WARN_CURRENT
 // expected-note@-2 {{'currentlyAvailable' has been marked as being introduced}}
 #endif
-void willBeAvailabile() AVAILABLE_NEXT;
+void willBeAvailabile(void) AVAILABLE_NEXT;
 #ifndef NO_WARNING
 // expected-note@-2 {{'willBeAvailabile' has been marked as being introduced in}}
 #endif
@@ -109,7 +109,7 @@ FUNC_AVAILABLE new_int x;
 #endif
 #endif
 
-void test() FUNC_AVAILABLE {
+void test(void) FUNC_AVAILABLE {
   previouslyAvailable();
 #ifdef WARN_PREV
 #ifdef MAC

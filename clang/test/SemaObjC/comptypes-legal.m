@@ -11,7 +11,7 @@ void __setRetained(id *ivar, id value, NSObject **o) {
     *ivar = value;
 }
 static NSString *_logProcessPrefix = 0;
-void func() {
+void func(void) {
   __setRetained(&_logProcessPrefix, _logProcessPrefix, &_logProcessPrefix);
 }
 @implementation NSObject (ScopeAdditions)

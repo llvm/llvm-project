@@ -25,7 +25,7 @@ __vector __bool short vv___bs;
 __vector __bool int vv___bi;
 __vector __pixel vv_p;
 __vector pixel vv__p;
-__vector int vf__r();
+__vector int vf__r(void);
 void vf__a(__vector int a);
 void vf__a2(int b, __vector int a);
 
@@ -50,7 +50,7 @@ vector __bool short v___bs;
 vector __bool int v___bi;
 vector __pixel v_p;
 vector pixel v__p;
-vector int f__r();
+vector int f__r(void);
 void f_a(vector int a);
 void f_a2(int b, vector int a);
 
@@ -146,7 +146,7 @@ struct S {
   vector short i32;
 };
 
-void f() {
+void f(void) {
   __vector unsigned int v = {0,0,0,0};
   __vector int v__cast = (__vector int)v;
   __vector int v_cast = (vector int)v;

@@ -15,7 +15,7 @@ void call(SomeClass *sc) {
   [sc async_get:^(X *_Nullable rptr, NSError *err) {}];
 }
 
-void test_conversion() {
+void test_conversion(void) {
   X *_Nullable_result nr;
   X *_Nonnull l = nr; // expected-warning{{implicit conversion from nullable pointer 'X * _Nullable_result' to non-nullable pointer type 'X * _Nonnull'}}
 
@@ -24,7 +24,7 @@ void test_conversion() {
   };
 }
 
-void test_dup() {
+void test_dup(void) {
   id _Nullable_result _Nullable_result a; // expected-warning {{duplicate nullability specifier _Nullable_result}}
   id _Nullable _Nullable_result b; // expected-error{{nullability specifier _Nullable_result conflicts with existing specifier '_Nullable'}}
   id _Nullable_result _Nonnull c; // expected-error{{nullability specifier '_Nonnull' conflicts with existing specifier _Nullable_result}}

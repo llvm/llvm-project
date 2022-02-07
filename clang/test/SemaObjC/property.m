@@ -39,7 +39,7 @@
 @property double bar;
 @end
 
-int func1() {
+int func1(void) {
    id foo;
    double bar = [foo bar];
    return 0;
@@ -66,7 +66,7 @@ typedef id BYObjectIdentifier;
 @synthesize window; // expected-error {{missing context for property implementation declaration}}
 
 // rdar://10408414
-Class test6_getClass();
+Class test6_getClass(void);
 @interface Test6
 @end
 @implementation Test6

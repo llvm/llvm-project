@@ -30,7 +30,7 @@ __attribute__((objc_root_class)) @interface MyObject {
 - (void) dealloc { _myLeader = 0; }
 @end
 
-MyObject * foo ()
+MyObject * foo (void)
 {
 	MyObject* p=0;
         p.isTickledPink = p.myLeader;	// ok

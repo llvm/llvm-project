@@ -12,7 +12,7 @@ void takeId(id test) {}
 
 void takeCopyableId(id<NSCopying> test) {}
 
-id<NSCopying> Test () {
+id<NSCopying> Test (void) {
   NSString const *constantString = @"Test";
   takeId(constantString);
   takeCopyableId(constantString);

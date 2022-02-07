@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
 struct S; // expected-note{{forward declaration of 'struct S'}}
-typedef int FOO();
+typedef int FOO(void);
 
 @interface INTF
 {

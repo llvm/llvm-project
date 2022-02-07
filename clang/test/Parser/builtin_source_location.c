@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-int main() {
+int main(void) {
   int line = __builtin_LINE();
   __builtin_LINE(42); // expected-error {{expected ')'}}
   __builtin_LINE(double); // expected-error {{expected ')'}}

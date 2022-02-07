@@ -11,9 +11,9 @@
 #define AVAILABLE_CURRENT __attribute__((availability(macCatalyst, introduced = 14)))
 #define AVAILABLE_NEXT __attribute__((availability(macCatalyst, introduced = 14.1)))
 
-void previouslyAvailable() AVAILABLE_PREV;
-void currentlyAvailable() AVAILABLE_CURRENT;
-void willBeAvailabile() AVAILABLE_NEXT;
+void previouslyAvailable(void) AVAILABLE_PREV;
+void currentlyAvailable(void) AVAILABLE_CURRENT;
+void willBeAvailabile(void) AVAILABLE_NEXT;
 #ifndef NO_WARNING
 // expected-note@-2 {{'willBeAvailabile' has been marked as being introduced in macCatalyst 14.1 here, but the deployment target is macCatalyst 14}}
 #endif
@@ -36,7 +36,7 @@ Record var;
 AVAILABLE_NEXT
 Record var2;
 
-void test() {
+void test(void) {
   previouslyAvailable();
   currentlyAvailable();
   willBeAvailabile();
@@ -52,14 +52,14 @@ void test() {
     willBeAvailabile(); // OK
 }
 
-void previouslyAvailableIOS() __attribute__((availability(ios, introduced = 10)));
-void currentlyAvailableIOS() __attribute__((availability(ios, introduced = 14)));
-void willBeAvailabileIOS() __attribute__((availability(ios, introduced = 14.1)));
+void previouslyAvailableIOS(void) __attribute__((availability(ios, introduced = 10)));
+void currentlyAvailableIOS(void) __attribute__((availability(ios, introduced = 14)));
+void willBeAvailabileIOS(void) __attribute__((availability(ios, introduced = 14.1)));
 #ifndef NO_WARNING
 // expected-note@-2 {{'willBeAvailabileIOS' has been marked as being introduced in macCatalyst 14.1 here, but the deployment target is macCatalyst 14}}
 #endif
 
-void testIOSAvailabilityAlsoWorks() {
+void testIOSAvailabilityAlsoWorks(void) {
   previouslyAvailableIOS();
   currentlyAvailableIOS();
   willBeAvailabileIOS();

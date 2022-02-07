@@ -6,12 +6,12 @@
 @interface ObjCTy
 @end
 
-void test1() {
+void test1(void) {
   EXT_RET int a; // expected-warning{{'objc_externally_retained' can only be applied to}}
   EXT_RET __weak ObjCTy *b; // expected-warning{{'objc_externally_retained' can only be applied to}}
-  EXT_RET __weak int (^c)(); // expected-warning{{'objc_externally_retained' can only be applied to}}
+  EXT_RET __weak int (^c)(void); // expected-warning{{'objc_externally_retained' can only be applied to}}
 
-  EXT_RET int (^d)() = ^{return 0;};
+  EXT_RET int (^d)(void) = ^{return 0;};
   EXT_RET ObjCTy *e = 0;
   EXT_RET __strong ObjCTy *f = 0;
 
@@ -37,7 +37,7 @@ EXT_RET ObjCTy *test3; // expected-warning{{'objc_externally_retained' can only 
 }
 @end
 
-void test4() {
+void test4(void) {
   __attribute__((objc_externally_retained(0))) ObjCTy *a; // expected-error{{'objc_externally_retained' attribute takes no arguments}}
 }
 

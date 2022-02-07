@@ -135,10 +135,10 @@ void Test8(CFMyPersonalErrorRef cf) {
   (void)(id<P1, P2, P3, P4, P5>)cf; // expected-warning {{'CFMyPersonalErrorRef' (aka 'struct __CFMyPersonalErrorRef *') bridges to MyPersonalError, not 'id<P1,P2,P3,P4,P5>'}}
 }
 
-CFDictionaryRef bar() __attribute__((cf_returns_not_retained));
+CFDictionaryRef bar(void) __attribute__((cf_returns_not_retained));
 @class NSNumber;
 
-void Test9() {
+void Test9(void) {
   NSNumber *w2 = (NSNumber*) bar(); // expected-error {{CF object of type 'CFDictionaryRef' (aka 'struct __CFDictionary *') is bridged to 'NSDictionary', which is not an Objective-C class}}
 }
 
