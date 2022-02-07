@@ -55,6 +55,9 @@ void usages() {
   baz(NoAS);                                   // expected-error {{no matching function for call to 'baz'}}
   __attribute__((opencl_local)) int *l = NoAS; // expected-error {{cannot initialize a variable of type '__local int *' with an lvalue of type 'int *'}}
 
+  // Explicit casts between disjoint address spaces are disallowed
+  GLOB = (__attribute__((opencl_global)) int *)PRIV; // expected-error {{C-style cast from '__private int *' to '__global int *' converts between mismatching address spaces}}
+
   (void)static_cast<int *>(GLOB);
   (void)static_cast<void *>(GLOB);
   int *i = GLOB;
