@@ -78,6 +78,19 @@ struct TestLinalgElementwiseFusion
                      "to generic -> expand_shape pattern"),
       llvm::cl::init(false)};
 
+  Option<bool> fuseWithReshapeByCollapsing{
+      *this, "fuse-with-reshape-by-collapsing",
+      llvm::cl::desc("Test linalg expand_shape -> generic fusion patterns that "
+                     "collapse the iteration space of the consumer"),
+      llvm::cl::init(false)};
+
+  Option<bool> fuseWithReshapeByCollapsingWithControlFn{
+      *this, "fuse-with-reshape-by-collapsing-control",
+      llvm::cl::desc("Test controlling the linalg expand_shape -> generic "
+                     "fusion patterns that "
+                     "collapse the iteration space of the consumer"),
+      llvm::cl::init(false)};
+
   void runOnOperation() override {
     MLIRContext *context = &this->getContext();
     FuncOp funcOp = this->getOperation();
@@ -127,6 +140,26 @@ struct TestLinalgElementwiseFusion
     if (pushExpandingReshape) {
       RewritePatternSet patterns(context);
       linalg::populatePushReshapeOpsPatterns(patterns);
+      (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
+    }
+
+    if (fuseWithReshapeByCollapsing) {
+      RewritePatternSet patterns(context);
+      linalg::populateFoldReshapeOpsByCollapsingPatterns(patterns);
+      (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
+    }
+
+    if (fuseWithReshapeByCollapsingWithControlFn) {
+      RewritePatternSet patterns(context);
+      linalg::ControlElementwiseOpsFusionFn controlFn =
+          [](const OpResult &producer, OpOperand &consumer) -> bool {
+        if (isa<tensor::ExpandShapeOp>(producer.getDefiningOp())) {
+          // Skip fusing the first operand.
+          return consumer.getOperandNumber();
+        }
+        return true;
+      };
+      linalg::populateFoldReshapeOpsByCollapsingPatterns(patterns, controlFn);
       (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
     }
   }

@@ -73,10 +73,21 @@ void populateFoldReshapeOpsByExpansionPatterns(
     const ControlElementwiseOpsFusionFn &controlFoldingReshapes =
         skipUnitDimReshape);
 
+/// Patterns to fold an expanding tensor.expand_shape operation with its
+/// producer generic operation by collapsing the dimensions of the generic op.
+void populateFoldReshapeOpsByCollapsingPatterns(
+    RewritePatternSet &patterns,
+    const ControlElementwiseOpsFusionFn &controlFoldingReshapes =
+        [](const OpResult & /*producer*/, OpOperand & /*consumer*/) {
+          return true;
+        });
+
 /// Patterns to fold a collapsing (expanding) tensor_reshape operation with its
 /// producer (consumer) generic operation by linearizing the indexing map used
 /// to access the source (target) of the reshape operation in the generic
 /// operation.
+/// TODO(ravishankarm): These patterns are to be deprecated in favor of using
+/// the `populateFoldReshapeByCollapsingPatterns`.
 void populateFoldReshapeOpsByLinearizationPatterns(RewritePatternSet &patterns);
 
 /// Patterns to fold a collapsing (expanding) tensor_reshape operation with its
@@ -84,6 +95,8 @@ void populateFoldReshapeOpsByLinearizationPatterns(RewritePatternSet &patterns);
 /// to access the source (target) of the reshape operation in the generic
 /// operation. The patterns are applied only when the tensor reshape involved is
 /// collapsing (introducing) unit-extent dimensions.
+/// TODO(ravishankarm): These patterns are to be deprecated in favor of using
+/// the `populateFoldReshapeByCollapsingPatterns`.
 void populateFoldUnitDimsReshapeOpsByLinearizationPatterns(
     RewritePatternSet &patterns);
 
@@ -153,6 +166,8 @@ void populateElementwiseOpsFusionPatterns(
 
 /// Patterns to push reshape op towards the end of the graph in order to expose
 /// more fusion opportunities.
+/// TODO(ravishankarm): These patterns are to be deprecated in favor of using
+/// the `populateFoldReshapeByCollapsingPatterns`.
 void populatePushReshapeOpsPatterns(RewritePatternSet &patterns);
 
 /// Perform standalone tiling of a single LinalgOp by `tileSizes`.
