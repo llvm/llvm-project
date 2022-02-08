@@ -407,7 +407,7 @@ void DWARFUnit::extractDIEsToVector(
     assert((Parents.back() == UINT32_MAX || Parents.back() <= Dies.size()) &&
            "Wrong parent index");
 
-    // Extract die. Stop if any error occured.
+    // Extract die. Stop if any error occurred.
     if (!DIE.extractFast(*this, &DIEOffset, DebugInfoData, NextCUOffset,
                          Parents.back()))
       break;

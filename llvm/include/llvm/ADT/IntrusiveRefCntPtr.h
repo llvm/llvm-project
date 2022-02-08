@@ -84,7 +84,7 @@ protected:
 #ifndef NDEBUG
   ~RefCountedBase() {
     assert(RefCount == 0 &&
-           "Destruction occured when there are still references to this.");
+           "Destruction occurred when there are still references to this.");
   }
 #else
   // Default the destructor in release builds, A trivial destructor may enable
@@ -115,7 +115,7 @@ protected:
 #ifndef NDEBUG
   ~ThreadSafeRefCountedBase() {
     assert(RefCount == 0 &&
-           "Destruction occured when there are still references to this.");
+           "Destruction occurred when there are still references to this.");
   }
 #else
   // Default the destructor in release builds, A trivial destructor may enable

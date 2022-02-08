@@ -991,7 +991,7 @@ Attributor::getAssumedSimplified(const IRPosition &IRP,
   for (auto &CB : SimplificationCallbacks.lookup(IRP))
     return CB(IRP, AA, UsedAssumedInformation);
 
-  // If no high-level/outside simplification occured, use AAValueSimplify.
+  // If no high-level/outside simplification occurred, use AAValueSimplify.
   const auto &ValueSimplifyAA =
       getOrCreateAAFor<AAValueSimplify>(IRP, AA, DepClassTy::NONE);
   Optional<Value *> SimplifiedV =

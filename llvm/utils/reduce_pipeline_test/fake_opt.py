@@ -67,7 +67,7 @@ if len(crash_seq) > 0 and crash_seq[0] == tok:
 if args.output:
     shutil.copy(args.input, args.output)
 
-# Crash if all 'crash_seq' passes occured in right order.
+# Crash if all 'crash_seq' passes occurred in right order.
 if len(crash_seq) == 0:
     print('crash')
     os.kill(os.getpid(), signal.SIGKILL)

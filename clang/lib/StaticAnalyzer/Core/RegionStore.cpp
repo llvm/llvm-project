@@ -1789,7 +1789,7 @@ Optional<SVal> RegionStoreManager::getConstantValFromConstArrayInitializer(
   SmallVector<uint64_t, 2> Extents = getConstantArrayExtents(CAT);
 
   // The number of offsets should equal to the numbers of extents,
-  // otherwise wrong type punning occured. For instance:
+  // otherwise wrong type punning occurred. For instance:
   //  int arr[1][2][3];
   //  auto ptr = (int(*)[42])arr;
   //  auto x = ptr[4][2]; // UB
