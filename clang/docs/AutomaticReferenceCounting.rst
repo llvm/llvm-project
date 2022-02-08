@@ -2380,8 +2380,10 @@ the current pool, and returns an opaque "handle" to it.
 If ``value`` is null, this call has no effect.  Otherwise, it makes a best
 effort to hand off ownership of a retain count on the object to a call to
 :ref:`objc_retainAutoreleasedReturnValue
-<arc.runtime.objc_retainAutoreleasedReturnValue>` for the same object in an
-enclosing call frame.  If this is not possible, the object is autoreleased as
+<arc.runtime.objc_retainAutoreleasedReturnValue>` (or
+:ref:`objc_unsafeClaimAutoreleasedReturnValue
+<arc.runtime.objc_unsafeClaimAutoreleasedReturnValue>`) for the same object in
+an enclosing call frame.  If this is not possible, the object is autoreleased as
 above.
 
 Always returns ``value``.
@@ -2579,8 +2581,8 @@ Always returns ``value``.
 If ``value`` is null, this call has no effect.  Otherwise, it attempts to
 accept a hand off of a retain count from a call to
 :ref:`objc_autoreleaseReturnValue <arc.runtime.objc_autoreleaseReturnValue>` on
-``value`` in a recently-called function or something it calls.  If that fails,
-it performs a retain operation exactly like :ref:`objc_retain
+``value`` in a recently-called function or something it tail-calls.  If that
+fails, it performs a retain operation exactly like :ref:`objc_retain
 <arc.runtime.objc_retain>`.
 
 Always returns ``value``.
@@ -2638,4 +2640,22 @@ object.  Otherwise, ``object`` is registered as a ``__weak`` object or has its
 registration updated to point to ``value``.
 
 Returns the value of ``object`` after the call.
+
+.. _arc.runtime.objc_unsafeClaimAutoreleasedReturnValue:
+
+``id objc_unsafeClaimAutoreleasedReturnValue(id value);``
+---------------------------------------------------------
+
+*Precondition:* ``value`` is null or a pointer to a valid object.
+
+If ``value`` is null, this call has no effect.  Otherwise, it attempts to
+accept a hand off of a retain count from a call to
+:ref:`objc_autoreleaseReturnValue <arc.runtime.objc_autoreleaseReturnValue>` on
+``value`` in a recently-called function or something it tail-calls (in a manner
+similar to :ref:`objc_retainAutoreleasedReturnValue
+<arc.runtime.objc_retainAutoreleasedReturnValue>`).  If that succeeds,
+it performs a release operation exactly like :ref:`objc_release
+<arc.runtime.objc_release>`.  If the handoff fails, this call has no effect.
+
+Always returns ``value``.
 
