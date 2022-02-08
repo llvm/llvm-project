@@ -996,8 +996,8 @@ void ObjFile::registerCompactUnwind() {
             cast<ConcatInputSection>(r.referent.dyn_cast<InputSection *>());
       }
       if (referentIsec->getSegName() != segment_names::text)
-        error("compact unwind references address in " + toString(referentIsec) +
-              " which is not in segment __TEXT");
+        error(isec->getLocation(r.offset) + " references section " +
+              referentIsec->getName() + " which is not in segment __TEXT");
       // The functionAddress relocations are typically section relocations.
       // However, unwind info operates on a per-symbol basis, so we search for
       // the function symbol here.
