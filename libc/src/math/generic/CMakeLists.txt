@@ -671,6 +671,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  log1pf
+  SRCS
+    log1pf.cpp
+  HDRS
+    ../log1pf.h
+  DEPENDS
+    .common_constants
+    libc.src.__support.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   log2f
   SRCS
     log2f.cpp
