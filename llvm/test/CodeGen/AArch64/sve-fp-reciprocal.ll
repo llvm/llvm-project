@@ -95,14 +95,13 @@ define <vscale x 8 x half> @fsqrt_recip_8f16(<vscale x 8 x half> %a) #0 {
 ; CHECK-NEXT:    frsqrte z1.h, z0.h
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    fmul z2.h, z1.h, z1.h
-; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, #0.0
+; CHECK-NEXT:    fcmne p0.h, p0/z, z0.h, #0.0
 ; CHECK-NEXT:    frsqrts z2.h, z0.h, z2.h
 ; CHECK-NEXT:    fmul z1.h, z1.h, z2.h
 ; CHECK-NEXT:    fmul z2.h, z1.h, z1.h
 ; CHECK-NEXT:    frsqrts z2.h, z0.h, z2.h
 ; CHECK-NEXT:    fmul z1.h, z1.h, z2.h
-; CHECK-NEXT:    fmul z1.h, z0.h, z1.h
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    fmul z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %fsqrt = call fast <vscale x 8 x half> @llvm.sqrt.nxv8f16(<vscale x 8 x half> %a)
   ret <vscale x 8 x half> %fsqrt
@@ -124,14 +123,13 @@ define <vscale x 4 x float> @fsqrt_recip_4f32(<vscale x 4 x float> %a) #0 {
 ; CHECK-NEXT:    frsqrte z1.s, z0.s
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fmul z2.s, z1.s, z1.s
-; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    fcmne p0.s, p0/z, z0.s, #0.0
 ; CHECK-NEXT:    frsqrts z2.s, z0.s, z2.s
 ; CHECK-NEXT:    fmul z1.s, z1.s, z2.s
 ; CHECK-NEXT:    fmul z2.s, z1.s, z1.s
 ; CHECK-NEXT:    frsqrts z2.s, z0.s, z2.s
 ; CHECK-NEXT:    fmul z1.s, z1.s, z2.s
-; CHECK-NEXT:    fmul z1.s, z0.s, z1.s
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    fmul z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %fsqrt = call fast <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> %a)
   ret <vscale x 4 x float> %fsqrt
@@ -153,7 +151,7 @@ define <vscale x 2 x double> @fsqrt_recip_2f64(<vscale x 2 x double> %a) #0 {
 ; CHECK-NEXT:    frsqrte z1.d, z0.d
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fmul z2.d, z1.d, z1.d
-; CHECK-NEXT:    fcmeq p0.d, p0/z, z0.d, #0.0
+; CHECK-NEXT:    fcmne p0.d, p0/z, z0.d, #0.0
 ; CHECK-NEXT:    frsqrts z2.d, z0.d, z2.d
 ; CHECK-NEXT:    fmul z1.d, z1.d, z2.d
 ; CHECK-NEXT:    fmul z2.d, z1.d, z1.d
@@ -162,8 +160,7 @@ define <vscale x 2 x double> @fsqrt_recip_2f64(<vscale x 2 x double> %a) #0 {
 ; CHECK-NEXT:    fmul z2.d, z1.d, z1.d
 ; CHECK-NEXT:    frsqrts z2.d, z0.d, z2.d
 ; CHECK-NEXT:    fmul z1.d, z1.d, z2.d
-; CHECK-NEXT:    fmul z1.d, z0.d, z1.d
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    fmul z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %fsqrt = call fast <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> %a)
   ret <vscale x 2 x double> %fsqrt
