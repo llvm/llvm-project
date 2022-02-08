@@ -1617,10 +1617,7 @@ void AsmPrinter::emitGlobalAlias(Module &M, const GlobalAlias &GA) {
   // Treat bitcasts of functions as functions also. This is important at least
   // on WebAssembly where object and function addresses can't alias each other.
   if (!IsFunction)
-    if (auto *CE = dyn_cast<ConstantExpr>(GA.getAliasee()))
-      if (CE->getOpcode() == Instruction::BitCast)
-        IsFunction =
-          CE->getOperand(0)->getType()->getPointerElementType()->isFunctionTy();
+    IsFunction = isa<Function>(GA.getAliasee()->stripPointerCasts());
 
   // AIX's assembly directive `.set` is not usable for aliasing purpose,
   // so AIX has to use the extra-label-at-definition strategy. At this
