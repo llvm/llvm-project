@@ -1152,8 +1152,9 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
   DarwinLibName += getOSLibraryNameSuffix();
   DarwinLibName += IsShared ? "_dynamic.dylib" : ".a";
   SmallString<128> Dir(getDriver().ResourceDir);
-  llvm::sys::path::append(
-      Dir, "lib", (Opts & RLO_IsEmbedded) ? "macho_embedded" : "darwin");
+  llvm::sys::path::append(Dir, "lib", "darwin");
+  if (Opts & RLO_IsEmbedded)
+    llvm::sys::path::append(Dir, "macho_embedded");
 
   SmallString<128> P(Dir);
   llvm::sys::path::append(P, DarwinLibName);
