@@ -166,14 +166,14 @@ public:
   // their remaining probes.
   void trackInlineesOptimizedAway(MCPseudoProbeDecoder &ProbeDecoder);
 
-  void dump() { RootContext.dumpTree(); }
-
-private:
   using ProbeFrameStack = SmallVector<std::pair<StringRef, uint32_t>>;
   void trackInlineesOptimizedAway(MCPseudoProbeDecoder &ProbeDecoder,
                               MCDecodedPseudoProbeInlineTree &ProbeNode,
                               ProbeFrameStack &Context);
 
+  void dump() { RootContext.dumpTree(); }
+
+private:
   // Root node for context trie tree, node that this is a reverse context trie
   // with callee as parent and caller as child. This way we can traverse from
   // root to find the best/longest matching context if an exact match does not
@@ -255,6 +255,9 @@ class ProfiledBinary {
 
   // Pseudo probe decoder
   MCPseudoProbeDecoder ProbeDecoder;
+
+  // Function name to probe frame map for top-level outlined functions.
+  StringMap<MCDecodedPseudoProbeInlineTree *> TopLevelProbeFrameMap;
 
   bool UsePseudoProbes = false;
 
@@ -477,6 +480,8 @@ public:
     return Stack.back();
   }
 
+  void flushSymbolizer() { Symbolizer.reset(); }
+
   // Compare two addresses' inline context
   bool inlineContextEqual(uint64_t Add1, uint64_t Add2);
 
@@ -490,6 +495,8 @@ public:
   // inline context.
   void computeInlinedContextSizeForRange(uint64_t StartOffset,
                                          uint64_t EndOffset);
+
+  void computeInlinedContextSizeForFunc(const BinaryFunction *Func);
 
   const MCDecodedPseudoProbe *getCallProbeForAddr(uint64_t Address) const {
     return ProbeDecoder.getCallProbeForAddr(Address);
