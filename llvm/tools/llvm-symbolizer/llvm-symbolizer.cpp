@@ -191,6 +191,7 @@ void executeCommand(StringRef ModuleName, const T &ModuleSpec, Command Cmd,
         Symbolizer.symbolizeCode(ModuleSpec, Address);
     print({ModuleName, Offset}, ResOrErr, Printer);
   }
+  Symbolizer.pruneCache();
 }
 
 static void symbolizeInput(const opt::InputArgList &Args,
@@ -361,6 +362,8 @@ int main(int argc, char **argv) {
   }
 #endif
   Opts.UseSymbolTable = true;
+  if (Args.hasArg(OPT_cache_size_EQ))
+    parseIntArg(Args, OPT_cache_size_EQ, Opts.MaxCacheSize);
   Config.PrintAddress = Args.hasArg(OPT_addresses);
   Config.PrintFunctions = Opts.PrintFunctions != FunctionNameKind::None;
   Config.Pretty = Args.hasArg(OPT_pretty_print);

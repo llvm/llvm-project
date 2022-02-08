@@ -22,6 +22,7 @@ defm adjust_vma
       MetaVarName<"<offset>">;
 def basenames : Flag<["--"], "basenames">, HelpText<"Strip directory names from paths">;
 defm build_id : Eq<"build-id", "Build ID used to look up the object file">;
+defm cache_size : Eq<"cache-size", "Max size in bytes of the in-memory binary cache.">;
 defm debug_file_directory : Eq<"debug-file-directory", "Path to directory where to look for debug files">, MetaVarName<"<dir>">;
 defm debuginfod : B<"debuginfod", "Use debuginfod to find debug binaries", "Don't use debuginfod to find debug binaries">;
 defm default_arch
