@@ -1767,22 +1767,22 @@ TEST(APIntTest, isShiftedMask) {
       APInt MaskVal = One.shl(I) - 1;
       EXPECT_TRUE(MaskVal.isShiftedMask());
       EXPECT_TRUE(MaskVal.isShiftedMask(MaskIdx, MaskLen));
-      EXPECT_EQ(0, MaskIdx);
-      EXPECT_EQ(I, MaskLen);
+      EXPECT_EQ(0, (int)MaskIdx);
+      EXPECT_EQ(I, (int)MaskLen);
     }
     for (int I = 1; I < N - 1; ++I) {
       APInt MaskVal = One.shl(I);
       EXPECT_TRUE(MaskVal.isShiftedMask());
       EXPECT_TRUE(MaskVal.isShiftedMask(MaskIdx, MaskLen));
-      EXPECT_EQ(I, MaskIdx);
-      EXPECT_EQ(1, MaskLen);
+      EXPECT_EQ(I, (int)MaskIdx);
+      EXPECT_EQ(1, (int)MaskLen);
     }
     for (int I = 1; I < N; ++I) {
       APInt MaskVal = APInt::getHighBitsSet(N, I);
       EXPECT_TRUE(MaskVal.isShiftedMask());
       EXPECT_TRUE(MaskVal.isShiftedMask(MaskIdx, MaskLen));
-      EXPECT_EQ(N - I, MaskIdx);
-      EXPECT_EQ(I, MaskLen);
+      EXPECT_EQ(N - I, (int)MaskIdx);
+      EXPECT_EQ(I, (int)MaskLen);
     }
   }
 }
