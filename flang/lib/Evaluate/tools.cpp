@@ -653,7 +653,9 @@ std::optional<Expr<SomeType>> ConvertToType(
     break;
   case TypeCategory::Derived:
     if (auto fromType{x.GetType()}) {
-      if (type == *fromType) {
+      if (type.IsTkCompatibleWith(*fromType)) {
+        // "x" could be assigned or passed to "type", or appear in a
+        // structure constructor as a value for a component with "type"
         return std::move(x);
       }
     }
