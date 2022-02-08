@@ -36,6 +36,7 @@
     __cpp_lib_atomic_value_initialization          201911L [C++20]
     __cpp_lib_atomic_wait                          201907L [C++20]
     __cpp_lib_barrier                              201907L [C++20]
+    __cpp_lib_bind_back                            202202L [C++2b]
     __cpp_lib_bind_front                           201907L [C++20]
     __cpp_lib_bit_cast                             201806L [C++20]
     __cpp_lib_bitops                               201907L [C++20]
@@ -51,6 +52,7 @@
     __cpp_lib_complex_udls                         201309L [C++14]
     __cpp_lib_concepts                             202002L [C++20]
     __cpp_lib_constexpr_algorithms                 201806L [C++20]
+    __cpp_lib_constexpr_cmath                      202202L [C++2b]
     __cpp_lib_constexpr_complex                    201711L [C++20]
     __cpp_lib_constexpr_dynamic_alloc              201907L [C++20]
     __cpp_lib_constexpr_functional                 201907L [C++20]
@@ -121,9 +123,16 @@
     __cpp_lib_polymorphic_allocator                201902L [C++20]
     __cpp_lib_quoted_string_io                     201304L [C++14]
     __cpp_lib_ranges                               201811L [C++20]
+    __cpp_lib_ranges_chunk                         202202L [C++2b]
+    __cpp_lib_ranges_chunk_by                      202202L [C++2b]
+    __cpp_lib_ranges_iota                          202202L [C++2b]
+    __cpp_lib_ranges_join_with                     202202L [C++2b]
+    __cpp_lib_ranges_slide                         202202L [C++2b]
     __cpp_lib_ranges_starts_ends_with              202106L [C++2b]
+    __cpp_lib_ranges_to_container                  202202L [C++2b]
     __cpp_lib_ranges_zip                           202110L [C++2b]
     __cpp_lib_raw_memory_algorithms                201606L [C++17]
+    __cpp_lib_reference_from_temporary             202202L [C++2b]
     __cpp_lib_remove_cvref                         201711L [C++20]
     __cpp_lib_result_of_sfinae                     201210L [C++14]
     __cpp_lib_robust_nonmodifying_seq_ops          201304L [C++14]
@@ -163,6 +172,7 @@
     __cpp_lib_type_trait_variable_templates        201510L [C++17]
     __cpp_lib_uncaught_exceptions                  201411L [C++17]
     __cpp_lib_unordered_map_try_emplace            201411L [C++17]
+    __cpp_lib_unreachable                          202202L [C++2b]
     __cpp_lib_unwrap_ref                           201811L [C++20]
     __cpp_lib_variant                              202102L [C++17]
     __cpp_lib_void_t                               201411L [C++17]
@@ -249,6 +259,10 @@
 #   error "__cpp_lib_barrier should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_bind_back
+#   error "__cpp_lib_bind_back should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_bind_front
 #   error "__cpp_lib_bind_front should not be defined before c++20"
 # endif
@@ -307,6 +321,10 @@
 
 # ifdef __cpp_lib_constexpr_algorithms
 #   error "__cpp_lib_constexpr_algorithms should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_constexpr_cmath
+#   error "__cpp_lib_constexpr_cmath should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_constexpr_complex
@@ -585,8 +603,32 @@
 #   error "__cpp_lib_ranges should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_ranges_chunk
+#   error "__cpp_lib_ranges_chunk should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_chunk_by
+#   error "__cpp_lib_ranges_chunk_by should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_iota
+#   error "__cpp_lib_ranges_iota should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_join_with
+#   error "__cpp_lib_ranges_join_with should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_slide
+#   error "__cpp_lib_ranges_slide should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_ranges_starts_ends_with
 #   error "__cpp_lib_ranges_starts_ends_with should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_to_container
+#   error "__cpp_lib_ranges_to_container should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_ranges_zip
@@ -595,6 +637,10 @@
 
 # ifdef __cpp_lib_raw_memory_algorithms
 #   error "__cpp_lib_raw_memory_algorithms should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_reference_from_temporary
+#   error "__cpp_lib_reference_from_temporary should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_remove_cvref
@@ -745,6 +791,10 @@
 #   error "__cpp_lib_unordered_map_try_emplace should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_unreachable
+#   error "__cpp_lib_unreachable should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_unwrap_ref
 #   error "__cpp_lib_unwrap_ref should not be defined before c++20"
 # endif
@@ -835,6 +885,10 @@
 #   error "__cpp_lib_barrier should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_bind_back
+#   error "__cpp_lib_bind_back should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_bind_front
 #   error "__cpp_lib_bind_front should not be defined before c++20"
 # endif
@@ -899,6 +953,10 @@
 
 # ifdef __cpp_lib_constexpr_algorithms
 #   error "__cpp_lib_constexpr_algorithms should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_constexpr_cmath
+#   error "__cpp_lib_constexpr_cmath should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_constexpr_complex
@@ -1207,8 +1265,32 @@
 #   error "__cpp_lib_ranges should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_ranges_chunk
+#   error "__cpp_lib_ranges_chunk should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_chunk_by
+#   error "__cpp_lib_ranges_chunk_by should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_iota
+#   error "__cpp_lib_ranges_iota should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_join_with
+#   error "__cpp_lib_ranges_join_with should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_slide
+#   error "__cpp_lib_ranges_slide should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_ranges_starts_ends_with
 #   error "__cpp_lib_ranges_starts_ends_with should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_to_container
+#   error "__cpp_lib_ranges_to_container should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_ranges_zip
@@ -1217,6 +1299,10 @@
 
 # ifdef __cpp_lib_raw_memory_algorithms
 #   error "__cpp_lib_raw_memory_algorithms should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_reference_from_temporary
+#   error "__cpp_lib_reference_from_temporary should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_remove_cvref
@@ -1397,6 +1483,10 @@
 #   error "__cpp_lib_unordered_map_try_emplace should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_unreachable
+#   error "__cpp_lib_unreachable should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_unwrap_ref
 #   error "__cpp_lib_unwrap_ref should not be defined before c++20"
 # endif
@@ -1508,6 +1598,10 @@
 #   error "__cpp_lib_barrier should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_bind_back
+#   error "__cpp_lib_bind_back should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_bind_front
 #   error "__cpp_lib_bind_front should not be defined before c++20"
 # endif
@@ -1593,6 +1687,10 @@
 
 # ifdef __cpp_lib_constexpr_algorithms
 #   error "__cpp_lib_constexpr_algorithms should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_constexpr_cmath
+#   error "__cpp_lib_constexpr_cmath should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_constexpr_complex
@@ -2006,8 +2104,32 @@
 #   error "__cpp_lib_ranges should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_ranges_chunk
+#   error "__cpp_lib_ranges_chunk should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_chunk_by
+#   error "__cpp_lib_ranges_chunk_by should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_iota
+#   error "__cpp_lib_ranges_iota should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_join_with
+#   error "__cpp_lib_ranges_join_with should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_slide
+#   error "__cpp_lib_ranges_slide should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_ranges_starts_ends_with
 #   error "__cpp_lib_ranges_starts_ends_with should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_to_container
+#   error "__cpp_lib_ranges_to_container should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_ranges_zip
@@ -2019,6 +2141,10 @@
 # endif
 # if __cpp_lib_raw_memory_algorithms != 201606L
 #   error "__cpp_lib_raw_memory_algorithms should have the value 201606L in c++17"
+# endif
+
+# ifdef __cpp_lib_reference_from_temporary
+#   error "__cpp_lib_reference_from_temporary should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_remove_cvref
@@ -2241,6 +2367,10 @@
 #   error "__cpp_lib_unordered_map_try_emplace should have the value 201411L in c++17"
 # endif
 
+# ifdef __cpp_lib_unreachable
+#   error "__cpp_lib_unreachable should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_unwrap_ref
 #   error "__cpp_lib_unwrap_ref should not be defined before c++20"
 # endif
@@ -2421,6 +2551,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_bind_back
+#   error "__cpp_lib_bind_back should not be defined before c++2b"
+# endif
+
 # ifndef __cpp_lib_bind_front
 #   error "__cpp_lib_bind_front should be defined in c++20"
 # endif
@@ -2539,6 +2673,10 @@
 # endif
 # if __cpp_lib_constexpr_algorithms != 201806L
 #   error "__cpp_lib_constexpr_algorithms should have the value 201806L in c++20"
+# endif
+
+# ifdef __cpp_lib_constexpr_cmath
+#   error "__cpp_lib_constexpr_cmath should not be defined before c++2b"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -3114,8 +3252,32 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_ranges_chunk
+#   error "__cpp_lib_ranges_chunk should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_chunk_by
+#   error "__cpp_lib_ranges_chunk_by should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_iota
+#   error "__cpp_lib_ranges_iota should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_join_with
+#   error "__cpp_lib_ranges_join_with should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_slide
+#   error "__cpp_lib_ranges_slide should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_ranges_starts_ends_with
 #   error "__cpp_lib_ranges_starts_ends_with should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_to_container
+#   error "__cpp_lib_ranges_to_container should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_ranges_zip
@@ -3127,6 +3289,10 @@
 # endif
 # if __cpp_lib_raw_memory_algorithms != 201606L
 #   error "__cpp_lib_raw_memory_algorithms should have the value 201606L in c++20"
+# endif
+
+# ifdef __cpp_lib_reference_from_temporary
+#   error "__cpp_lib_reference_from_temporary should not be defined before c++2b"
 # endif
 
 # ifndef __cpp_lib_remove_cvref
@@ -3418,6 +3584,10 @@
 #   error "__cpp_lib_unordered_map_try_emplace should have the value 201411L in c++20"
 # endif
 
+# ifdef __cpp_lib_unreachable
+#   error "__cpp_lib_unreachable should not be defined before c++2b"
+# endif
+
 # ifndef __cpp_lib_unwrap_ref
 #   error "__cpp_lib_unwrap_ref should be defined in c++20"
 # endif
@@ -3622,6 +3792,19 @@
 #   endif
 # endif
 
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_bind_back
+#     error "__cpp_lib_bind_back should be defined in c++2b"
+#   endif
+#   if __cpp_lib_bind_back != 202202L
+#     error "__cpp_lib_bind_back should have the value 202202L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_bind_back
+#     error "__cpp_lib_bind_back should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
 # ifndef __cpp_lib_bind_front
 #   error "__cpp_lib_bind_front should be defined in c++2b"
 # endif
@@ -3743,6 +3926,19 @@
 # endif
 # if __cpp_lib_constexpr_algorithms != 201806L
 #   error "__cpp_lib_constexpr_algorithms should have the value 201806L in c++2b"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_constexpr_cmath
+#     error "__cpp_lib_constexpr_cmath should be defined in c++2b"
+#   endif
+#   if __cpp_lib_constexpr_cmath != 202202L
+#     error "__cpp_lib_constexpr_cmath should have the value 202202L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_constexpr_cmath
+#     error "__cpp_lib_constexpr_cmath should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -4361,6 +4557,71 @@
 # endif
 
 # if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_ranges_chunk
+#     error "__cpp_lib_ranges_chunk should be defined in c++2b"
+#   endif
+#   if __cpp_lib_ranges_chunk != 202202L
+#     error "__cpp_lib_ranges_chunk should have the value 202202L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_ranges_chunk
+#     error "__cpp_lib_ranges_chunk should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_ranges_chunk_by
+#     error "__cpp_lib_ranges_chunk_by should be defined in c++2b"
+#   endif
+#   if __cpp_lib_ranges_chunk_by != 202202L
+#     error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_ranges_chunk_by
+#     error "__cpp_lib_ranges_chunk_by should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_ranges_iota
+#     error "__cpp_lib_ranges_iota should be defined in c++2b"
+#   endif
+#   if __cpp_lib_ranges_iota != 202202L
+#     error "__cpp_lib_ranges_iota should have the value 202202L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_ranges_iota
+#     error "__cpp_lib_ranges_iota should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_ranges_join_with
+#     error "__cpp_lib_ranges_join_with should be defined in c++2b"
+#   endif
+#   if __cpp_lib_ranges_join_with != 202202L
+#     error "__cpp_lib_ranges_join_with should have the value 202202L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_ranges_join_with
+#     error "__cpp_lib_ranges_join_with should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_ranges_slide
+#     error "__cpp_lib_ranges_slide should be defined in c++2b"
+#   endif
+#   if __cpp_lib_ranges_slide != 202202L
+#     error "__cpp_lib_ranges_slide should have the value 202202L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_ranges_slide
+#     error "__cpp_lib_ranges_slide should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_ranges_starts_ends_with
 #     error "__cpp_lib_ranges_starts_ends_with should be defined in c++2b"
 #   endif
@@ -4370,6 +4631,19 @@
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_ranges_starts_ends_with
 #     error "__cpp_lib_ranges_starts_ends_with should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_ranges_to_container
+#     error "__cpp_lib_ranges_to_container should be defined in c++2b"
+#   endif
+#   if __cpp_lib_ranges_to_container != 202202L
+#     error "__cpp_lib_ranges_to_container should have the value 202202L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_ranges_to_container
+#     error "__cpp_lib_ranges_to_container should not be defined because it is unimplemented in libc++!"
 #   endif
 # endif
 
@@ -4391,6 +4665,19 @@
 # endif
 # if __cpp_lib_raw_memory_algorithms != 201606L
 #   error "__cpp_lib_raw_memory_algorithms should have the value 201606L in c++2b"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_reference_from_temporary
+#     error "__cpp_lib_reference_from_temporary should be defined in c++2b"
+#   endif
+#   if __cpp_lib_reference_from_temporary != 202202L
+#     error "__cpp_lib_reference_from_temporary should have the value 202202L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_reference_from_temporary
+#     error "__cpp_lib_reference_from_temporary should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_remove_cvref
@@ -4716,6 +5003,19 @@
 # endif
 # if __cpp_lib_unordered_map_try_emplace != 201411L
 #   error "__cpp_lib_unordered_map_try_emplace should have the value 201411L in c++2b"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_unreachable
+#     error "__cpp_lib_unreachable should be defined in c++2b"
+#   endif
+#   if __cpp_lib_unreachable != 202202L
+#     error "__cpp_lib_unreachable should have the value 202202L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_unreachable
+#     error "__cpp_lib_unreachable should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_unwrap_ref
