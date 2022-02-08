@@ -161,4 +161,225 @@ define void @f9(<32 x float>* %a0, <32 x float>* %a1) #0 {
   ret void
 }
 
+define void @f10(<256 x i8>* %a0, <256 x i8>* %a1) #0 {
+; CHECK-LABEL: f10:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v0 = vmem(r0+#2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v1.cur = vmem(r0+#3)
+; CHECK-NEXT:     vmem(r1+#5) = v1
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:     vmem(r1+#4) = v0
+; CHECK-NEXT:    }
+  %v0 = getelementptr <256 x i8>, <256 x i8>* %a0, i32 1
+  %v1 = load <256 x i8>, <256 x i8>* %v0, align 128
+  %v2 = getelementptr <256 x i8>, <256 x i8>* %a1, i32 2
+  store <256 x i8> %v1, <256 x i8>* %v2, align 128
+  ret void
+}
+
+define void @f11(<128 x i16>* %a0, <128 x i16>* %a1) #0 {
+; CHECK-LABEL: f11:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v0 = vmem(r0+#2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v1.cur = vmem(r0+#3)
+; CHECK-NEXT:     vmem(r1+#5) = v1
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:     vmem(r1+#4) = v0
+; CHECK-NEXT:    }
+  %v0 = getelementptr <128 x i16>, <128 x i16>* %a0, i32 1
+  %v1 = load <128 x i16>, <128 x i16>* %v0, align 128
+  %v2 = getelementptr <128 x i16>, <128 x i16>* %a1, i32 2
+  store <128 x i16> %v1, <128 x i16>* %v2, align 128
+  ret void
+}
+
+define void @f12(<64 x i32>* %a0, <64 x i32>* %a1) #0 {
+; CHECK-LABEL: f12:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v0 = vmem(r0+#2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v1.cur = vmem(r0+#3)
+; CHECK-NEXT:     vmem(r1+#5) = v1
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:     vmem(r1+#4) = v0
+; CHECK-NEXT:    }
+  %v0 = getelementptr <64 x i32>, <64 x i32>* %a0, i32 1
+  %v1 = load <64 x i32>, <64 x i32>* %v0, align 128
+  %v2 = getelementptr <64 x i32>, <64 x i32>* %a1, i32 2
+  store <64 x i32> %v1, <64 x i32>* %v2, align 128
+  ret void
+}
+
+define void @f13(<128 x half>* %a0, <128 x half>* %a1) #0 {
+; CHECK-LABEL: f13:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v0 = vmem(r0+#2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v1.cur = vmem(r0+#3)
+; CHECK-NEXT:     vmem(r1+#5) = v1
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:     vmem(r1+#4) = v0
+; CHECK-NEXT:    }
+  %v0 = getelementptr <128 x half>, <128 x half>* %a0, i32 1
+  %v1 = load <128 x half>, <128 x half>* %v0, align 128
+  %v2 = getelementptr <128 x half>, <128 x half>* %a1, i32 2
+  store <128 x half> %v1, <128 x half>* %v2, align 128
+  ret void
+}
+
+define void @f14(<64 x float>* %a0, <64 x float>* %a1) #0 {
+; CHECK-LABEL: f14:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v0 = vmem(r0+#2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v1.cur = vmem(r0+#3)
+; CHECK-NEXT:     vmem(r1+#5) = v1
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:     vmem(r1+#4) = v0
+; CHECK-NEXT:    }
+  %v0 = getelementptr <64 x float>, <64 x float>* %a0, i32 1
+  %v1 = load <64 x float>, <64 x float>* %v0, align 128
+  %v2 = getelementptr <64 x float>, <64 x float>* %a1, i32 2
+  store <64 x float> %v1, <64 x float>* %v2, align 128
+  ret void
+}
+
+define void @f15(<256 x i8>* %a0, <256 x i8>* %a1) #0 {
+; CHECK-LABEL: f15:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v0 = vmemu(r0+#3)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v1 = vmemu(r0+#2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmemu(r1+#5) = v0
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:     vmemu(r1+#4) = v1
+; CHECK-NEXT:    }
+  %v0 = getelementptr <256 x i8>, <256 x i8>* %a0, i32 1
+  %v1 = load <256 x i8>, <256 x i8>* %v0, align 1
+  %v2 = getelementptr <256 x i8>, <256 x i8>* %a1, i32 2
+  store <256 x i8> %v1, <256 x i8>* %v2, align 1
+  ret void
+}
+
+define void @f16(<128 x i16>* %a0, <128 x i16>* %a1) #0 {
+; CHECK-LABEL: f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v0 = vmemu(r0+#3)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v1 = vmemu(r0+#2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmemu(r1+#5) = v0
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:     vmemu(r1+#4) = v1
+; CHECK-NEXT:    }
+  %v0 = getelementptr <128 x i16>, <128 x i16>* %a0, i32 1
+  %v1 = load <128 x i16>, <128 x i16>* %v0, align 1
+  %v2 = getelementptr <128 x i16>, <128 x i16>* %a1, i32 2
+  store <128 x i16> %v1, <128 x i16>* %v2, align 1
+  ret void
+}
+
+define void @f17(<64 x i32>* %a0, <64 x i32>* %a1) #0 {
+; CHECK-LABEL: f17:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v0 = vmemu(r0+#3)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v1 = vmemu(r0+#2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmemu(r1+#5) = v0
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:     vmemu(r1+#4) = v1
+; CHECK-NEXT:    }
+  %v0 = getelementptr <64 x i32>, <64 x i32>* %a0, i32 1
+  %v1 = load <64 x i32>, <64 x i32>* %v0, align 1
+  %v2 = getelementptr <64 x i32>, <64 x i32>* %a1, i32 2
+  store <64 x i32> %v1, <64 x i32>* %v2, align 1
+  ret void
+}
+
+define void @f18(<128 x half>* %a0, <128 x half>* %a1) #0 {
+; CHECK-LABEL: f18:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v0 = vmemu(r0+#3)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v1 = vmemu(r0+#2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmemu(r1+#5) = v0
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:     vmemu(r1+#4) = v1
+; CHECK-NEXT:    }
+  %v0 = getelementptr <128 x half>, <128 x half>* %a0, i32 1
+  %v1 = load <128 x half>, <128 x half>* %v0, align 1
+  %v2 = getelementptr <128 x half>, <128 x half>* %a1, i32 2
+  store <128 x half> %v1, <128 x half>* %v2, align 1
+  ret void
+}
+
+define void @f19(<64 x float>* %a0, <64 x float>* %a1) #0 {
+; CHECK-LABEL: f19:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v0 = vmemu(r0+#3)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v1 = vmemu(r0+#2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmemu(r1+#5) = v0
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:     vmemu(r1+#4) = v1
+; CHECK-NEXT:    }
+  %v0 = getelementptr <64 x float>, <64 x float>* %a0, i32 1
+  %v1 = load <64 x float>, <64 x float>* %v0, align 1
+  %v2 = getelementptr <64 x float>, <64 x float>* %a1, i32 2
+  store <64 x float> %v1, <64 x float>* %v2, align 1
+  ret void
+}
+
+
 attributes #0 = { nounwind "target-cpu"="hexagonv69" "target-features"="+hvxv69,+hvx-length128b,+hvx-qfloat" }
