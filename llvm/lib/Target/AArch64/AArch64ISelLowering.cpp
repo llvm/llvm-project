@@ -9728,6 +9728,10 @@ static SDValue constructDup(SDValue V, int Lane, SDLoc dl, EVT VT,
     if (ExtIdxInBits % CastedEltBitWidth != 0)
       return false;
 
+    // Can't handle cases where vector size is not 128-bit
+    if (!Extract.getOperand(0).getValueType().is128BitVector())
+      return false;
+
     // Update the lane value by offsetting with the scaled extract index.
     LaneC += ExtIdxInBits / CastedEltBitWidth;
 
