@@ -477,18 +477,20 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
 static bool allCallersPassValidPointerForArgument(Argument *Arg, Type *Ty) {
   Function *Callee = Arg->getParent();
   const DataLayout &DL = Callee->getParent()->getDataLayout();
+  Align NeededAlign(1); // TODO: This is incorrect!
+  APInt Bytes(64, DL.getTypeStoreSize(Ty));
 
-  unsigned ArgNo = Arg->getArgNo();
+  // Check if the argument itself is marked dereferenceable and aligned.
+  if (isDereferenceableAndAlignedPointer(Arg, NeededAlign, Bytes, DL))
+    return true;
 
   // Look at all call sites of the function.  At this point we know we only have
   // direct callees.
-  for (User *U : Callee->users()) {
+  return all_of(Callee->users(), [&](User *U) {
     CallBase &CB = cast<CallBase>(*U);
-
-    if (!isDereferenceablePointer(CB.getArgOperand(ArgNo), Ty, DL))
-      return false;
-  }
-  return true;
+    return isDereferenceableAndAlignedPointer(
+        CB.getArgOperand(Arg->getArgNo()), NeededAlign, Bytes, DL);
+  });
 }
 
 /// Returns true if Prefix is a prefix of longer. That means, Longer has a size
