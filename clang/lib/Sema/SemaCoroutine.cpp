@@ -1081,6 +1081,14 @@ void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body) {
     return;
   }
 
+  // The always_inline attribute doesn't reliably apply to a coroutine,
+  // because the coroutine will be split into pieces and some pieces
+  // might be called indirectly, as in a virtual call. Even the ramp
+  // function cannot be inlined at -O0, due to pipeline ordering
+  // problems (see https://llvm.org/PR53413). Tell the user about it.
+  if (FD->hasAttr<AlwaysInlineAttr>())
+    Diag(FD->getLocation(), diag::warn_always_inline_coroutine);
+
   // [stmt.return.coroutine]p1:
   //   A coroutine shall not enclose a return statement ([stmt.return]).
   if (Fn->FirstReturnLoc.isValid()) {
