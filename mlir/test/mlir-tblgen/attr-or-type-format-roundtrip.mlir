@@ -20,4 +20,52 @@ attributes {
 // CHECK-LABEL: @test_roundtrip_default_parsers_struct
 // CHECK: !test.no_parser<255, [1, 2, 3, 4, 5], "foobar", 4>
 // CHECK: !test.struct_capture_all<v0 = 0, v1 = 1, v2 = 2, v3 = 3>
-func private @test_roundtrip_default_parsers_struct(!test.no_parser<255, [1, 2, 3, 4, 5], "foobar", 4>) -> !test.struct_capture_all<v3 = 3, v1 = 1, v2 = 2, v0 = 0>
+// CHECK: !test.optional_param<, 6>
+// CHECK: !test.optional_param<5, 6>
+// CHECK: !test.optional_params<"a">
+// CHECK: !test.optional_params<5, "a">
+// CHECK: !test.optional_struct<b = "a">
+// CHECK: !test.optional_struct<a = 5, b = "a">
+// CHECK: !test.optional_params_after<"a">
+// CHECK: !test.optional_params_after<"a", 5>
+// CHECK: !test.all_optional_params<>
+// CHECK: !test.all_optional_params<5>
+// CHECK: !test.all_optional_params<5, 6>
+// CHECK: !test.all_optional_struct<>
+// CHECK: !test.all_optional_struct<b = 5>
+// CHECK: !test.all_optional_struct<a = 5, b = 10>
+// CHECK: !test.optional_group<(5) 6>
+// CHECK: !test.optional_group<x 6>
+// CHECK: !test.optional_group_params<x>
+// CHECK: !test.optional_group_params<(5)>
+// CHECK: !test.optional_group_params<(5, 6)>
+// CHECK: !test.optional_group_struct<x>
+// CHECK: !test.optional_group_struct<(b = 5)>
+// CHECK: !test.optional_group_struct<(a = 10, b = 5)>
+func private @test_roundtrip_default_parsers_struct(
+  !test.no_parser<255, [1, 2, 3, 4, 5], "foobar", 4>
+) -> (
+  !test.struct_capture_all<v3 = 3, v1 = 1, v2 = 2, v0 = 0>,
+  !test.optional_param<, 6>,
+  !test.optional_param<5, 6>,
+  !test.optional_params<"a">,
+  !test.optional_params<5, "a">,
+  !test.optional_struct<b = "a">,
+  !test.optional_struct<b = "a", a = 5>,
+  !test.optional_params_after<"a">,
+  !test.optional_params_after<"a", 5>,
+  !test.all_optional_params<>,
+  !test.all_optional_params<5>,
+  !test.all_optional_params<5, 6>,
+  !test.all_optional_struct<>,
+  !test.all_optional_struct<b = 5>,
+  !test.all_optional_struct<b = 10, a = 5>,
+  !test.optional_group<(5) 6>,
+  !test.optional_group<x 6>,
+  !test.optional_group_params<x>,
+  !test.optional_group_params<(5)>,
+  !test.optional_group_params<(5, 6)>,
+  !test.optional_group_struct<x>,
+  !test.optional_group_struct<(b = 5)>,
+  !test.optional_group_struct<(b = 5, a = 10)>
+)

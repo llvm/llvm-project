@@ -266,9 +266,9 @@ void DefGen::emitParserPrinter() {
 
   // Declare the parser.
   SmallVector<MethodParameter> parserParams;
-  parserParams.emplace_back("::mlir::AsmParser &", "parser");
+  parserParams.emplace_back("::mlir::AsmParser &", "odsParser");
   if (isa<AttrDef>(&def))
-    parserParams.emplace_back("::mlir::Type", "type");
+    parserParams.emplace_back("::mlir::Type", "odsType");
   auto *parser = defCls.addMethod(
       strfmt("::mlir::{0}", valueType), "parse",
       def.hasGeneratedParser() ? Method::Static : Method::StaticDeclaration,
@@ -278,7 +278,7 @@ void DefGen::emitParserPrinter() {
       def.hasGeneratedPrinter() ? Method::Const : Method::ConstDeclaration;
   Method *printer =
       defCls.addMethod("void", "print", props,
-                       MethodParameter("::mlir::AsmPrinter &", "printer"));
+                       MethodParameter("::mlir::AsmPrinter &", "odsPrinter"));
   // Emit the bodies.
   emitParserPrinterBody(parser->body(), printer->body());
 }
@@ -431,14 +431,15 @@ void DefGen::emitParserPrinterBody(MethodBody &parser, MethodBody &printer) {
   if (asmFormat)
     return generateAttrOrTypeFormat(def, parser, printer);
 
-  FmtContext ctx = FmtContext(
-      {{"_parser", "parser"}, {"_printer", "printer"}, {"_type", "type"}});
+  FmtContext ctx = FmtContext({{"_parser", "odsParser"},
+                               {"_printer", "odsPrinter"},
+                               {"_type", "odsType"}});
   if (parserCode) {
-    ctx.addSubst("_ctxt", "parser.getContext()");
+    ctx.addSubst("_ctxt", "odsParser.getContext()");
     parser.indent().getStream().printReindented(tgfmt(*parserCode, &ctx).str());
   }
   if (printerCode) {
-    ctx.addSubst("_ctxt", "printer.getContext()");
+    ctx.addSubst("_ctxt", "odsPrinter.getContext()");
     printer.indent().getStream().printReindented(
         tgfmt(*printerCode, &ctx).str());
   }
