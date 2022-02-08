@@ -18,10 +18,6 @@
 #  pragma GCC system_header
 #endif
 
-#if defined(_LIBCPP_HAS_NO_NULLPTR)
-# include <cstddef>
-#endif
-
 #if _LIBCPP_DEBUG_LEVEL >= 1 || defined(_LIBCPP_BUILDING_LIBRARY)
 #   include <cstddef>
 #   include <cstdio>

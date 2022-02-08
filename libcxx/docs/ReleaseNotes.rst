@@ -44,5 +44,10 @@ API Changes
 ABI Changes
 -----------
 
+- The ``_LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION`` macro controlling whether we use an
+  emulation for ``std::nullptr_t`` in C++03 mode has been removed. After this change,
+  ``_LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION`` will not be honoured anymore and there
+  will be no way to opt back into the C++03 emulation of ``std::nullptr_t``.
+
 Build System Changes
 --------------------

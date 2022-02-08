@@ -138,23 +138,6 @@
 #  endif
 #endif
 
-// By default, don't use a nullptr_t emulation type in C++03.
-//
-// This is technically an ABI break from previous releases, however it is
-// very unlikely to impact anyone. If a user is impacted by this break,
-// they can return to using the C++03 nullptr emulation by defining
-// _LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION.
-//
-// This switch will be removed entirely in favour of never providing a
-// C++03 emulation after one release.
-//
-// IMPORTANT: IF YOU ARE READING THIS AND YOU TURN THIS MACRO ON, PLEASE LEAVE
-//            A COMMENT ON https://reviews.llvm.org/D109459 OR YOU WILL BE BROKEN
-//            IN THE FUTURE WHEN WE REMOVE THE ABILITY TO USE THE C++03 EMULATION.
-#ifndef _LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION
-# define _LIBCPP_ABI_ALWAYS_USE_CXX11_NULLPTR
-#endif
-
 #if defined(_LIBCPP_BUILDING_LIBRARY) || _LIBCPP_ABI_VERSION >= 2
 // Enable additional explicit instantiations of iostreams components. This
 // reduces the number of weak definitions generated in programs that use
@@ -534,12 +517,8 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_NORETURN __attribute__ ((noreturn))
 #endif
 
-#if !(__has_feature(cxx_nullptr))
-#  if (__has_extension(cxx_nullptr) || __has_keyword(__nullptr)) && defined(_LIBCPP_ABI_ALWAYS_USE_CXX11_NULLPTR)
-#    define nullptr __nullptr
-#  else
-#    define _LIBCPP_HAS_NO_NULLPTR
-#  endif
+#ifdef _LIBCPP_CXX03_LANG
+# define nullptr __nullptr
 #endif
 
 // Objective-C++ features (opt-in)
