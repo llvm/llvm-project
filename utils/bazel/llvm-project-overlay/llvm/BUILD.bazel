@@ -408,6 +408,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Support",
+        ":Symbolize",
     ],
 )
 
@@ -462,7 +463,6 @@ cc_library(
         ":DebugInfo",
         ":DebugInfoDWARF",
         ":DebugInfoPDB",
-        ":Debuginfod",
         ":Demangle",
         ":Object",
         ":Support",
