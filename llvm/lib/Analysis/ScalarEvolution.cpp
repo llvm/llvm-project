@@ -13537,19 +13537,25 @@ void ScalarEvolutionWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 
 const SCEVPredicate *ScalarEvolution::getEqualPredicate(const SCEV *LHS,
                                                         const SCEV *RHS) {
+  return getComparePredicate(ICmpInst::ICMP_EQ, LHS, RHS);
+}
+
+const SCEVPredicate *
+ScalarEvolution::getComparePredicate(const ICmpInst::Predicate Pred,
+                                     const SCEV *LHS, const SCEV *RHS) {
   FoldingSetNodeID ID;
   assert(LHS->getType() == RHS->getType() &&
          "Type mismatch between LHS and RHS");
   // Unique this node based on the arguments
   ID.AddInteger(SCEVPredicate::P_Compare);
-  ID.AddInteger(ICmpInst::ICMP_EQ);
+  ID.AddInteger(Pred);
   ID.AddPointer(LHS);
   ID.AddPointer(RHS);
   void *IP = nullptr;
   if (const auto *S = UniquePreds.FindNodeOrInsertPos(ID, IP))
     return S;
   SCEVComparePredicate *Eq = new (SCEVAllocator)
-    SCEVComparePredicate(ID.Intern(SCEVAllocator), ICmpInst::ICMP_EQ, LHS, RHS);
+    SCEVComparePredicate(ID.Intern(SCEVAllocator), Pred, LHS, RHS);
   UniquePreds.InsertNode(Eq, IP);
   return Eq;
 }
