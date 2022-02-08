@@ -2728,6 +2728,12 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
     auto OnFalse = Op->getOperand(2);
     return CDAG.getNode(VVPOpcode, LegalVecVT, {OnTrue, OnFalse, Mask, AVL});
   }
+  if (VVPOpcode == VEISD::VVP_SETCC) {
+    auto LHS = Op->getOperand(0);
+    auto RHS = Op->getOperand(1);
+    auto Pred = Op->getOperand(2);
+    return CDAG.getNode(VVPOpcode, LegalVecVT, {LHS, RHS, Pred, Mask, AVL});
+  }
   llvm_unreachable("lowerToVVP called for unexpected SDNode.");
 }
 
