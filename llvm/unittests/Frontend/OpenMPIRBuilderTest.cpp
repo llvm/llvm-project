@@ -590,7 +590,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimple) {
 
     // Trivial copy (=firstprivate).
     Builder.restoreIP(AllocaIP);
-    Type *VTy = Inner.getType()->getPointerElementType();
+    Type *VTy = ReplacementValue->getType();
     Value *V = Builder.CreateLoad(VTy, &Inner, Orig.getName() + ".reload");
     ReplacementValue = Builder.CreateAlloca(VTy, 0, Orig.getName() + ".copy");
     Builder.restoreIP(CodeGenIP);
@@ -670,7 +670,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelNested) {
                     Value *&ReplacementValue) -> InsertPointTy {
     // Trivial copy (=firstprivate).
     Builder.restoreIP(AllocaIP);
-    Type *VTy = Inner.getType()->getPointerElementType();
+    Type *VTy = ReplacementValue->getType();
     Value *V = Builder.CreateLoad(VTy, &Inner, Orig.getName() + ".reload");
     ReplacementValue = Builder.CreateAlloca(VTy, 0, Orig.getName() + ".copy");
     Builder.restoreIP(CodeGenIP);
@@ -766,7 +766,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelNested2Inner) {
                     Value *&ReplacementValue) -> InsertPointTy {
     // Trivial copy (=firstprivate).
     Builder.restoreIP(AllocaIP);
-    Type *VTy = Inner.getType()->getPointerElementType();
+    Type *VTy = ReplacementValue->getType();
     Value *V = Builder.CreateLoad(VTy, &Inner, Orig.getName() + ".reload");
     ReplacementValue = Builder.CreateAlloca(VTy, 0, Orig.getName() + ".copy");
     Builder.restoreIP(CodeGenIP);
@@ -907,7 +907,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelIfCond) {
 
     // Trivial copy (=firstprivate).
     Builder.restoreIP(AllocaIP);
-    Type *VTy = Inner.getType()->getPointerElementType();
+    Type *VTy = ReplacementValue->getType();
     Value *V = Builder.CreateLoad(VTy, &Inner, Orig.getName() + ".reload");
     ReplacementValue = Builder.CreateAlloca(VTy, 0, Orig.getName() + ".copy");
     Builder.restoreIP(CodeGenIP);
