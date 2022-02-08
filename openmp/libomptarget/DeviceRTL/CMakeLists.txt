@@ -106,6 +106,16 @@ endif()
 set(LIBOMPTARGET_DEVICE_DEBUG FALSE CACHE BOOL
   "Activate DeviceRTL debug messages.")
 
+set(include_files
+  ${include_directory}/Configuration.h
+  ${include_directory}/Debug.h
+  ${include_directory}/Interface.h
+  ${include_directory}/Mapping.h
+  ${include_directory}/State.h
+  ${include_directory}/Synchronization.h
+  ${include_directory}/Types.h
+  ${include_directory}/Utils.h
+)
 
 set(src_files
   ${source_directory}/Configuration.cpp
@@ -161,7 +171,7 @@ function(compileDeviceRTLLibrary target_cpu target_name)
       -Xclang -target-cpu -Xclang ${target_cpu}
       ${target_bc_flags}
       ${infile} -o ${outfile}
-      DEPENDS ${infile}
+      DEPENDS ${infile} ${include_files}
       IMPLICIT_DEPENDS CXX ${infile}
       COMMENT "Building LLVM bitcode ${outfile}"
       VERBATIM
