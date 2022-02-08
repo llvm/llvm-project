@@ -33,9 +33,8 @@ template <> inline double sqrt<double>(double x) {
 }
 
 template <> inline long double sqrt<long double>(long double x) {
-  long double result;
-  __asm__ __volatile__("fsqrt" : "=t"(result) : "t"(x));
-  return result;
+  __asm__ __volatile__("fsqrt" : "+t"(x));
+  return x;
 }
 
 } // namespace fputil
