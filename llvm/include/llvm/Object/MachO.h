@@ -563,6 +563,7 @@ public:
   ArrayRef<uint8_t> getDyldInfoWeakBindOpcodes() const;
   ArrayRef<uint8_t> getDyldInfoLazyBindOpcodes() const;
   ArrayRef<uint8_t> getDyldInfoExportsTrie() const;
+  SmallVector<uint64_t> getFunctionStarts() const;
   ArrayRef<uint8_t> getUuid() const;
 
   StringRef getStringTableData() const;
@@ -689,6 +690,7 @@ private:
   const char *DataInCodeLoadCmd = nullptr;
   const char *LinkOptHintsLoadCmd = nullptr;
   const char *DyldInfoLoadCmd = nullptr;
+  const char *FuncStartsLoadCmd = nullptr;
   const char *UuidLoadCmd = nullptr;
   bool HasPageZeroSegment = false;
 };

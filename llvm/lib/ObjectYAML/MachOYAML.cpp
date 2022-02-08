@@ -26,10 +26,10 @@ namespace llvm {
 MachOYAML::LoadCommand::~LoadCommand() = default;
 
 bool MachOYAML::LinkEditData::isEmpty() const {
-  return 0 ==
-         RebaseOpcodes.size() + BindOpcodes.size() + WeakBindOpcodes.size() +
-             LazyBindOpcodes.size() + ExportTrie.Children.size() +
-             NameList.size() + StringTable.size();
+  return 0 == RebaseOpcodes.size() + BindOpcodes.size() +
+                  WeakBindOpcodes.size() + LazyBindOpcodes.size() +
+                  ExportTrie.Children.size() + NameList.size() +
+                  StringTable.size() + FunctionStarts.size();
 }
 
 namespace yaml {
@@ -165,6 +165,7 @@ void MappingTraits<MachOYAML::LinkEditData>::mapping(
   IO.mapOptional("NameList", LinkEditData.NameList);
   IO.mapOptional("StringTable", LinkEditData.StringTable);
   IO.mapOptional("IndirectSymbols", LinkEditData.IndirectSymbols);
+  IO.mapOptional("FunctionStarts", LinkEditData.FunctionStarts);
 }
 
 void MappingTraits<MachOYAML::RebaseOpcode>::mapping(
