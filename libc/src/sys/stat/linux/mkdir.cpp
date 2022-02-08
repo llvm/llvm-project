@@ -21,7 +21,7 @@ namespace __llvm_libc {
 LLVM_LIBC_FUNCTION(int, mkdir, (const char *path, mode_t mode)) {
 #ifdef SYS_mkdir
   long ret = __llvm_libc::syscall(SYS_mkdir, path, mode);
-#elif defined(SYS_unlinkat)
+#elif defined(SYS_mkdirat)
   long ret = __llvm_libc::syscall(SYS_mkdirat, AT_FDCWD, path, mode);
 #else
 #error "mkdir and mkdirat syscalls not available."
