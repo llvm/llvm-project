@@ -371,13 +371,13 @@ static std::optional<Procedure> CharacterizeProcedure(
   seenProcs.insert(symbol);
   CopyAttrs<Procedure, Procedure::Attr>(symbol, result,
       {
-          {semantics::Attr::PURE, Procedure::Attr::Pure},
           {semantics::Attr::ELEMENTAL, Procedure::Attr::Elemental},
           {semantics::Attr::BIND_C, Procedure::Attr::BindC},
       });
-  if (result.attrs.test(Procedure::Attr::Elemental) &&
-      !symbol.attrs().test(semantics::Attr::IMPURE)) {
-    result.attrs.set(Procedure::Attr::Pure); // explicitly flag pure procedures
+  if (IsPureProcedure(symbol) || // works for ENTRY too
+      (!symbol.attrs().test(semantics::Attr::IMPURE) &&
+          result.attrs.test(Procedure::Attr::Elemental))) {
+    result.attrs.set(Procedure::Attr::Pure);
   }
   return std::visit(
       common::visitors{
@@ -809,8 +809,8 @@ std::optional<Procedure> Procedure::Characterize(
 std::optional<Procedure> Procedure::Characterize(
     const ProcedureDesignator &proc, FoldingContext &context) {
   if (const auto *symbol{proc.GetSymbol()}) {
-    if (auto result{characteristics::Procedure::Characterize(
-            ResolveAssociations(*symbol), context)}) {
+    if (auto result{
+            characteristics::Procedure::Characterize(*symbol, context)}) {
       return result;
     }
   } else if (const auto *intrinsic{proc.GetSpecificIntrinsic()}) {
