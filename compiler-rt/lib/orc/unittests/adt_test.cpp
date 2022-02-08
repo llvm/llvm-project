@@ -13,6 +13,9 @@
 #include "adt.h"
 #include "gtest/gtest.h"
 
+#include <sstream>
+#include <string>
+
 using namespace __orc_rt;
 
 TEST(ADTTest, SpanDefaultConstruction) {
@@ -79,9 +82,49 @@ TEST(ADTTest, StringViewConstructFromCharPtr) {
     EXPECT_EQ(S[I], Str[I]) << "Unexpected string_view element value";
 }
 
+TEST(ADTTest, StringViewConstructFromStdString) {
+  std::string Str("abcdefg");
+  string_view S(Str);
+
+  EXPECT_FALSE(S.empty()) << "string_view should be non-empty";
+  EXPECT_EQ(S.size(), Str.size()) << "string_view has unexpected size";
+  EXPECT_EQ(static_cast<size_t>(std::distance(S.begin(), S.end())), Str.size())
+      << "Unexpected iterator range size";
+  EXPECT_EQ(S.data(), &Str[0]) << "string_view data has unexpected value";
+  for (unsigned I = 0; I != S.size(); ++I)
+    EXPECT_EQ(S[I], Str[I]) << "Unexpected string_view element value";
+}
+
+TEST(ADTTest, StringViewCopyConstructionAndAssignment) {
+  // Check that string_views are copy-constructible and copy-assignable.
+  std::string Str("abcdefg");
+  string_view Orig(Str);
+  string_view CopyConstructed(Orig);
+  string_view CopyAssigned = Orig;
+
+  EXPECT_EQ(Orig, CopyConstructed);
+  EXPECT_EQ(Orig, CopyAssigned);
+}
+
 TEST(ADTTest, StringViewEquality) {
   EXPECT_EQ("", string_view());
   EXPECT_FALSE(string_view("aab") == string_view("aac"));
   EXPECT_FALSE(string_view("aab") != string_view("aab"));
   EXPECT_NE(string_view("aab"), string_view("aac"));
+}
+
+TEST(ADTTest, StringViewOStreamOperator) {
+  std::string Str("abcdefg");
+  string_view S(Str);
+  std::ostringstream OSS;
+  OSS << S;
+
+  EXPECT_EQ(OSS.str(), Str);
+}
+
+TEST(ADTTest, StringViewHashable) {
+  std::string Str("abcdefg");
+  string_view S(Str);
+
+  EXPECT_EQ(std::hash<std::string>()(Str), std::hash<string_view>()(S));
 }
