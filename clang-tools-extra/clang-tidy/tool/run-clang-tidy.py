@@ -254,12 +254,12 @@ def main():
     build_path = find_compilation_database(db_path)
 
   try:
-    invocation = [args.clang_tidy_binary, '-list-checks']
-    if args.allow_enabling_alpha_checkers:
-      invocation.append('-allow-enabling-analyzer-alpha-checkers')
-    invocation.append('-p=' + build_path)
-    if args.checks:
-      invocation.append('-checks=' + args.checks)
+    invocation = get_tidy_invocation("", args.clang_tidy_binary, args.checks,
+                                     None, build_path, args.header_filter,
+                                     args.allow_enabling_alpha_checkers,
+                                     args.extra_arg, args.extra_arg_before,
+                                     args.quiet, args.config, args.line_filter)
+    invocation.append('-list-checks')
     invocation.append('-')
     if args.quiet:
       # Even with -quiet we still want to check if we can call clang-tidy.
