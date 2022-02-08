@@ -1655,6 +1655,7 @@ class ArrayAttrBase<Pred condition, string summary> : Attr<condition, summary> {
   let returnType = [{ ::mlir::ArrayAttr }];
   let valueType = NoneType;
   let convertFromStorage = "$_self";
+  let constBuilderCall = "$_builder.getArrayAttr($0)";
 }
 
 def ArrayAttr : ArrayAttrBase<CPred<"$_self.isa<::mlir::ArrayAttr>()">,
@@ -1672,7 +1673,6 @@ class TypedArrayAttrBase<Attr element, string summary>: ArrayAttrBase<
                                SubstLeaves<"$_self", "attr", element.predicate>,
                             "; })">]>,
     summary> {
-  let constBuilderCall = "$_builder.getArrayAttr($0)";
 
   Attr elementAttr = element;
 }
