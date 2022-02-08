@@ -75,6 +75,8 @@ New Pragmas in Clang
 Attribute Changes in Clang
 --------------------------
 
+- Added support for parameter pack expansion in `clang::annotate`.
+
 Windows Support
 ---------------
 
@@ -143,6 +145,12 @@ Floating Point Support in Clang
 
 Internal API Changes
 --------------------
+
+- Added a new attribute flag `AcceptsExprPack` that when set allows expression
+  pack expansions in the parsed arguments of the corresponding attribute.
+  Additionally it introduces delaying of attribute arguments, adding common
+  handling for creating attributes that cannot be fully initialized prior to
+  template instantiation.
 
 Build System Changes
 --------------------
