@@ -250,12 +250,7 @@ add_entrypoint_object(
 
 # add_entrypoint_object(
 #   abort
-#   SRCS
-#     abort.cpp
-#   HDRS
-#     abort.h
+#   ALIAS
 #   DEPENDS
-#     libc.include.stdlib
-#     libc.src.signal.raise
-#     ._Exit
+#     .${LIBC_TARGET_OS}.abort
 # )
