@@ -2428,7 +2428,7 @@ NVPTXTargetLowering::getParamSymbol(SelectionDAG &DAG, int idx, EVT v) const {
 
 // Check to see if the kernel argument is image*_t or sampler_t
 
-static bool isImageOrSamplerVal(const Value *arg, const Module *context) {
+static bool isImageOrSamplerVal(const Value *arg) {
   static const char *const specialTypes[] = { "struct._image2d_t",
                                               "struct._image3d_t",
                                               "struct._sampler_t" };
@@ -2437,9 +2437,6 @@ static bool isImageOrSamplerVal(const Value *arg, const Module *context) {
   auto *PTy = dyn_cast<PointerType>(Ty);
 
   if (!PTy)
-    return false;
-
-  if (!context)
     return false;
 
   auto *STy = dyn_cast<StructType>(PTy->getPointerElementType());
@@ -2493,10 +2490,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
     // If the kernel argument is image*_t or sampler_t, convert it to
     // a i32 constant holding the parameter position. This can later
     // matched in the AsmPrinter to output the correct mangled name.
-    if (isImageOrSamplerVal(
-            theArgs[i],
-            (theArgs[i]->getParent() ? theArgs[i]->getParent()->getParent()
-                                     : nullptr))) {
+    if (isImageOrSamplerVal(theArgs[i])) {
       assert(isKernelFunction(*F) &&
              "Only kernels can have image/sampler params");
       InVals.push_back(DAG.getConstant(i + 1, dl, MVT::i32));
