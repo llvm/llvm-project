@@ -7,8 +7,7 @@
 #===----------------------------------------------------------------------===##
 """GDB pretty-printers for libc++.
 
-These should work for objects compiled when _LIBCPP_ABI_UNSTABLE is defined
-and when it is undefined.
+These should work for objects compiled with either the stable ABI or the unstable ABI.
 """
 
 from __future__ import print_function
