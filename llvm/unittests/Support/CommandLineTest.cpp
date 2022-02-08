@@ -1931,20 +1931,27 @@ TEST(CommandLineTest, ConsumeAfterTwoPositionals) {
 TEST(CommandLineTest, ResetAllOptionOccurrences) {
   cl::ResetCommandLineParser();
 
-  // -option [sink] input [args]
+  // -option -enableA -enableC [sink] input [args]
   StackOption<bool> Option("option");
+  enum Vals { ValA, ValB, ValC };
+  StackOption<Vals, cl::bits<Vals>> Bits(
+      cl::values(clEnumValN(ValA, "enableA", "Enable A"),
+                 clEnumValN(ValB, "enableB", "Enable B"),
+                 clEnumValN(ValC, "enableC", "Enable C")));
   StackOption<std::string, cl::list<std::string>> Sink(cl::Sink);
   StackOption<std::string> Input(cl::Positional);
   StackOption<std::string, cl::list<std::string>> ExtraArgs(cl::ConsumeAfter);
 
-  const char *Args[] = {"prog", "-option", "-unknown", "input", "-arg"};
+  const char *Args[] = {"prog",     "-option", "-enableA", "-enableC",
+                        "-unknown", "input",   "-arg"};
 
   std::string Errs;
   raw_string_ostream OS(Errs);
-  EXPECT_TRUE(cl::ParseCommandLineOptions(5, Args, StringRef(), &OS));
+  EXPECT_TRUE(cl::ParseCommandLineOptions(7, Args, StringRef(), &OS));
   EXPECT_TRUE(OS.str().empty());
 
   EXPECT_TRUE(Option);
+  EXPECT_EQ((1u << ValA) | (1u << ValC), Bits.getBits());
   EXPECT_EQ(1u, Sink.size());
   EXPECT_EQ("-unknown", Sink[0]);
   EXPECT_EQ("input", Input);
@@ -1953,6 +1960,7 @@ TEST(CommandLineTest, ResetAllOptionOccurrences) {
 
   cl::ResetAllOptionOccurrences();
   EXPECT_FALSE(Option);
+  EXPECT_EQ(0u, Bits.getBits());
   EXPECT_EQ(0u, Sink.size());
   EXPECT_EQ(0, Input.getNumOccurrences());
   EXPECT_EQ(0u, ExtraArgs.size());
