@@ -236,7 +236,8 @@ static Value *constructPointer(Type *ResTy, Type *PtrElemTy, Value *Ptr,
   }
 
   // Ensure the result has the requested type.
-  Ptr = IRB.CreateBitOrPointerCast(Ptr, ResTy, Ptr->getName() + ".cast");
+  Ptr = IRB.CreatePointerBitCastOrAddrSpaceCast(Ptr, ResTy,
+                                                Ptr->getName() + ".cast");
 
   LLVM_DEBUG(dbgs() << "Constructed pointer: " << *Ptr << "\n");
   return Ptr;
@@ -6748,8 +6749,8 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
 
     Type *PrivPtrType = PrivType->getPointerTo();
     if (Base->getType() != PrivPtrType)
-      Base = BitCastInst::CreateBitOrPointerCast(Base, PrivPtrType, "",
-                                                 ACS.getInstruction());
+      Base = BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
+          Base, PrivPtrType, "", ACS.getInstruction());
 
     // Traverse the type, build GEPs and loads.
     if (auto *PrivStructType = dyn_cast<StructType>(PrivType)) {
@@ -6816,14 +6817,16 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
             Function &ReplacementFn, Function::arg_iterator ArgIt) {
           BasicBlock &EntryBB = ReplacementFn.getEntryBlock();
           Instruction *IP = &*EntryBB.getFirstInsertionPt();
-          Instruction *AI = new AllocaInst(PrivatizableType.getValue(), 0,
+          const DataLayout &DL = IP->getModule()->getDataLayout();
+          unsigned AS = DL.getAllocaAddrSpace();
+          Instruction *AI = new AllocaInst(PrivatizableType.getValue(), AS,
                                            Arg->getName() + ".priv", IP);
           createInitialization(PrivatizableType.getValue(), *AI, ReplacementFn,
                                ArgIt->getArgNo(), *IP);
 
           if (AI->getType() != Arg->getType())
-            AI =
-                BitCastInst::CreateBitOrPointerCast(AI, Arg->getType(), "", IP);
+            AI = BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
+                AI, Arg->getType(), "", IP);
           Arg->replaceAllUsesWith(AI);
 
           for (CallInst *CI : TailCalls)
