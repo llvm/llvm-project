@@ -441,7 +441,7 @@ TEST(SimplexTest, appendVariable) {
   EXPECT_EQ(simplex.getNumVariables(), 2u);
   EXPECT_EQ(simplex.getNumConstraints(), 2u);
   EXPECT_EQ(simplex.computeIntegerBounds({0, 1, 0}),
-            std::make_pair(yMin, yMax));
+            std::make_pair(Optional<int64_t>(yMin), Optional<int64_t>(yMax)));
 
   simplex.rollback(snapshot1);
   EXPECT_EQ(simplex.getNumVariables(), 1u);
