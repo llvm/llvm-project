@@ -479,3 +479,36 @@ gpu.module @test_module {
     gpu.return
   }
 }
+
+// -----
+
+gpu.module @test_module {
+  // CHECK-LABEL: @async_cp(
+  // CHECK-SAME: %[[IDX:[a-zA-Z0-9_]+]]: i64)
+  gpu.func @async_cp(
+    %src: memref<128x128xf32>, %dst: memref<3x16x128xf32, 3>, %i : index) kernel {
+    // CHECK-DAG: %[[BASEDST:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<f32, 3>, ptr<f32, 3>, i64, array<3 x i64>, array<3 x i64>)>
+    // CHECK-DAG: %[[S0:.*]] = llvm.mlir.constant(2048 : index) : i64
+    // CHECK-DAG: %[[LI:.*]] = llvm.mul %[[IDX]], %[[S0]] : i64
+    // CHECK-DAG: %[[S1:.*]] = llvm.mlir.constant(128 : index) : i64
+    // CHECK-DAG: %[[FI0:.*]] = llvm.mul %[[IDX]], %[[S1]] : i64
+    // CHECK-DAG: %[[FI1:.*]] = llvm.add %[[LI]], %[[FI0]] : i64
+    // CHECK-DAG: %[[FI2:.*]] = llvm.add %[[FI1]], %[[IDX]] : i64
+    // CHECK-DAG: %[[ADDRESSDST:.*]] = llvm.getelementptr %[[BASEDST]][%[[FI2]]] : (!llvm.ptr<f32, 3>, i64) -> !llvm.ptr<f32, 3>
+    // CHECK-DAG: %[[CAST0:.*]] = llvm.bitcast %[[ADDRESSDST]] : !llvm.ptr<f32, 3> to !llvm.ptr<i8, 3>
+    // CHECK-DAG: %[[BASESRC:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
+    // CHECK-DAG: %[[S3:.*]] = llvm.mlir.constant(128 : index) : i64
+    // CHECK-DAG: %[[FI3:.*]] = llvm.mul %[[IDX]], %[[S3]]  : i64
+    // CHECK-DAG: %[[FI4:.*]] = llvm.add %[[FI3]], %[[IDX]]  : i64
+    // CHECK-DAG: %[[ADDRESSSRC:.*]] = llvm.getelementptr %[[BASESRC]][%[[FI4]]] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+    // CHECK-DAG: %[[CAST1:.*]] = llvm.bitcast %[[ADDRESSSRC]] : !llvm.ptr<f32> to !llvm.ptr<i8>
+    // CHECK-DAG: %[[CAST2:.*]] = llvm.addrspacecast %[[CAST1]] : !llvm.ptr<i8> to !llvm.ptr<i8, 1>
+    // CHECK-DAG: nvvm.cp.async.shared.global %[[CAST0]], %[[CAST2]], 16
+    %0 = gpu.device_async_copy %src[%i, %i], %dst[%i, %i, %i], 4 : memref<128x128xf32> to memref<3x16x128xf32, 3>
+    // CHECK: nvvm.cp.async.commit.group
+    %1 = gpu.device_async_create_group %0
+    // CHECK: nvvm.cp.async.wait.group 1
+    gpu.device_async_wait %1 { numGroups = 1 : i32 }
+    gpu.return
+  }
+}
