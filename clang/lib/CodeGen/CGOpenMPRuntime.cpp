@@ -4597,7 +4597,8 @@ namespace {
 enum RTLDependenceKindTy {
   DepIn = 0x01,
   DepInOut = 0x3,
-  DepMutexInOutSet = 0x4
+  DepMutexInOutSet = 0x4,
+  DepInOutSet = 0x8
 };
 /// Fields ids in kmp_depend_info record.
 enum RTLDependInfoFieldsTy { BaseAddr, Len, Flags };
@@ -4617,6 +4618,9 @@ static RTLDependenceKindTy translateDependencyKind(OpenMPDependClauseKind K) {
     break;
   case OMPC_DEPEND_mutexinoutset:
     DepKind = DepMutexInOutSet;
+    break;
+  case OMPC_DEPEND_inoutset:
+    DepKind = DepInOutSet;
     break;
   case OMPC_DEPEND_source:
   case OMPC_DEPEND_sink:
