@@ -739,6 +739,10 @@ static void emitAttrGetterWithReturnType(FmtContext &fctx,
     // Returns the default value if not set.
     // TODO: this is inefficient, we are recreating the attribute for every
     // call. This should be set instead.
+    if (!attr.isConstBuildable()) {
+      PrintFatalError("DefaultValuedAttr of type " + attr.getAttrDefName() +
+                      " must have a constBuilder");
+    }
     std::string defaultValue = std::string(
         tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
     body << "    if (!attr)\n      return "
