@@ -2285,13 +2285,38 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
       return false;
   }
 
-  // Both `invoke`s must not have a normal destination.
-  // FIXME: them sharing the normal destination should be fine?
+  // Either both `invoke`s must not have a normal destination,
+  // or     both `invoke`s must     have a normal destination,
   auto HasNormalDest = [](InvokeInst *II) {
     return !isa<UnreachableInst>(II->getNormalDest()->getFirstNonPHIOrDbg());
   };
-  if (any_of(Invokes, HasNormalDest))
-    return false;
+  if (any_of(Invokes, HasNormalDest)) {
+    // Do not merge `invoke` that does not have a normal destination with one
+    // that does have a normal destination, even though doing so would be legal.
+    if (!all_of(Invokes, HasNormalDest))
+      return false;
+
+    // All normal destinations must be identical.
+    BasicBlock *NormalBB = nullptr;
+    for (InvokeInst *II : Invokes) {
+      BasicBlock *CurrNormalBB = II->getNormalDest();
+      assert(CurrNormalBB && "There is always a 'continue to' basic block.");
+      if (!NormalBB)
+        NormalBB = CurrNormalBB;
+      else if (NormalBB != CurrNormalBB)
+        return false;
+    }
+
+    // In the normal destination, there must be no PHI nodes.
+    // FIXME: just check that the incoming values are compatible?
+    if (!empty(NormalBB->phis()))
+      return false;
+
+    // For now, simply don't deal with `invoke`s that have uses.
+    auto Unused = [](InvokeInst *II) { return II->use_empty(); };
+    if (!all_of(Invokes, Unused))
+      return false;
+  }
 
 #ifndef NDEBUG
   // All unwind destinations must be identical.
@@ -2309,7 +2334,6 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
 
   // In the unwind destination, the incoming values for these two `invoke`s
   // must be compatible .
-  // We know we don't have the normal destination, so we don't check it.
   if (!IncomingValuesAreCompatible(
           Invokes.front()->getUnwindDest(),
           {Invokes[0]->getParent(), Invokes[1]->getParent()}))
@@ -2348,9 +2372,12 @@ static void MergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
   if (DTU)
     Updates.reserve(2 + 3 * Invokes.size());
 
+  bool HasNormalDest =
+      !isa<UnreachableInst>(Invokes[0]->getNormalDest()->getFirstNonPHIOrDbg());
+
   // Clone one of the invokes into a new basic block.
   // Since they are all compatible, it doesn't matter which invoke is cloned.
-  InvokeInst *MergedInvoke = [&Invokes]() {
+  InvokeInst *MergedInvoke = [&Invokes, HasNormalDest]() {
     InvokeInst *II0 = Invokes.front();
     BasicBlock *II0BB = II0->getParent();
     BasicBlock *InsertBeforeBlock =
@@ -2365,12 +2392,14 @@ static void MergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
     // NOTE: all invokes have the same attributes, so no handling needed.
     MergedInvokeBB->getInstList().push_back(MergedInvoke);
 
-    // For now, we've required that the normal destination is unreachable,
-    // so just form a new block with unreachable terminator.
-    BasicBlock *MergedNormalDest = BasicBlock::Create(
-        Ctx, II0BB->getName() + ".cont", Func, InsertBeforeBlock);
-    new UnreachableInst(Ctx, MergedNormalDest);
-    MergedInvoke->setNormalDest(MergedNormalDest);
+    if (!HasNormalDest) {
+      // This set does not have a normal destination,
+      // so just form a new block with unreachable terminator.
+      BasicBlock *MergedNormalDest = BasicBlock::Create(
+          Ctx, II0BB->getName() + ".cont", Func, InsertBeforeBlock);
+      new UnreachableInst(Ctx, MergedNormalDest);
+      MergedInvoke->setNormalDest(MergedNormalDest);
+    }
 
     // The unwind destination, however, remainds identical for all invokes here.
 
