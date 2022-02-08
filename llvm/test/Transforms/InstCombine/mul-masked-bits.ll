@@ -70,8 +70,7 @@ define <4 x i32> @combine_mul_self_demandedbits_vector(<4 x i32> %x) {
 ; CHECK-LABEL: @combine_mul_self_demandedbits_vector(
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i32> [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[TMP1]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i32> [[TMP2]], <i32 -3, i32 -3, i32 -3, i32 -3>
-; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %1 = freeze <4 x i32> %x
   %2 = mul <4 x i32> %1, %1
