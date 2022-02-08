@@ -104,3 +104,10 @@ Consult the
 page for detailed information on configuring and compiling LLVM. You can visit
 [Directory Layout](https://llvm.org/docs/GettingStarted.html#directory-layout)
 to learn about the layout of the source code tree.
+
+## Getting in touch
+
+Join [LLVM Discourse forums](https://discourse.llvm.org/), [discord chat](https://discord.gg/xS7Z362) or #llvm IRC channel on [OFTC](https://oftc.net/).
+
+The LLVM project has adopted a [code of conduct](https://llvm.org/docs/CodeOfConduct.html) for
+participants to all modes of communication within the project.
