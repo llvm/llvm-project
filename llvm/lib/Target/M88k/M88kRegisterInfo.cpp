@@ -87,3 +87,9 @@ Register M88kRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
     return M88k::R30;
   return M88k::R31;
 }
+
+const TargetRegisterClass *
+M88kRegisterInfo::getPointerRegClass(const MachineFunction &MF,
+                                     unsigned Kind) const {
+  return &M88k::GPRRCRegClass;
+}
