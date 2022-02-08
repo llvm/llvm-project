@@ -11122,6 +11122,10 @@ def err_coroutine_promise_final_suspend_requires_nothrow : Error<
 def note_coroutine_function_declare_noexcept : Note<
   "must be declared with 'noexcept'"
 >;
+def warn_always_inline_coroutine : Warning<
+  "this coroutine may be split into pieces; not every piece is guaranteed to be inlined"
+  >,
+  InGroup<AlwaysInlineCoroutine>;
 } // end of coroutines issue category
 
 let CategoryName = "Documentation Issue" in {
