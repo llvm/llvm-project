@@ -90,7 +90,7 @@ if [ -n "$release" ]; then
 fi
 
 cmake -G Ninja $srcdir -B $builddir \
-               -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;libcxx;polly;flang" \
+               -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;polly;flang" \
                -DCMAKE_BUILD_TYPE=Release \
                -DLLVM_ENABLE_DOXYGEN=ON \
                -DLLVM_ENABLE_SPHINX=ON \
@@ -102,7 +102,6 @@ ninja -C $builddir \
                docs-clang-html \
                docs-clang-tools-html \
                docs-flang-html \
-               docs-libcxx-html \
                docs-lld-html \
                docs-llvm-html \
                docs-polly-html \
@@ -113,6 +112,13 @@ ninja -C $builddir \
                doxygen-mlir \
                doxygen-polly
 
+cmake -G Ninja $srcdir/../runtimes -B $builddir/runtimes-doc \
+               -DLLVM_ENABLE_RUNTIMES="libcxx" \
+               -DLLVM_ENABLE_SPHINX=ON \
+               -DSPHINX_WARNINGS_AS_ERRORS=OFF
+
+ninja -C $builddir/runtimes-doc \
+               docs-libcxx-html \
 
 package_doxygen llvm .
 package_doxygen clang tools/clang
@@ -121,7 +127,13 @@ package_doxygen flang tools/flang
 
 html_dir=$builddir/html-export/
 
-for d in docs/ tools/clang/docs/ tools/lld/docs/ tools/clang/tools/extra/docs/ projects/libcxx/docs/ tools/polly/docs/ tools/flang/docs/; do
+for d in docs/ tools/clang/docs/ tools/lld/docs/ tools/clang/tools/extra/docs/ tools/polly/docs/ tools/flang/docs/; do
   mkdir -p $html_dir/$d
   mv $builddir/$d/html/* $html_dir/$d/
+done
+
+# Keep the documentation for the runtimes under /projects/ to avoid breaking existing links.
+for d in libcxx/docs/; do
+  mkdir -p $html_dir/projects/$d
+  mv $builddir/runtimes-doc/$d/html/* $html_dir/projects/$d/
 done
