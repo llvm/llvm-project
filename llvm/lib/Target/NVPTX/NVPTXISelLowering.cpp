@@ -1351,12 +1351,9 @@ std::string NVPTXTargetLowering::getPrototype(
       O << "_";
       continue;
     }
-    auto *PTy = dyn_cast<PointerType>(Ty);
-    assert(PTy && "Param with byval attribute should be a pointer type");
-    Type *ETy = PTy->getPointerElementType();
 
     Align align = Outs[OIdx].Flags.getNonZeroByValAlign();
-    unsigned sz = DL.getTypeAllocSize(ETy);
+    unsigned sz = Outs[OIdx].Flags.getByValSize();
     O << ".param .align " << align.value() << " .b8 ";
     O << "_";
     O << "[" << sz << "]";
