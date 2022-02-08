@@ -205,19 +205,13 @@ public:
   }
 
   // Vector codegen related methods.
-  bool hasVInstructions() const { return HasStdExtV || HasStdExtZve32x; }
-  bool hasVInstructionsI64() const { return HasStdExtV || HasStdExtZve64x; }
-  bool hasVInstructionsF16() const {
-    return (HasStdExtV || HasStdExtZve32f) && HasStdExtZfh;
-  }
+  bool hasVInstructions() const { return HasStdExtZve32x; }
+  bool hasVInstructionsI64() const { return HasStdExtZve64x; }
+  bool hasVInstructionsF16() const { return HasStdExtZve32f && HasStdExtZfh; }
   // FIXME: Consider Zfinx in the future
-  bool hasVInstructionsF32() const {
-    return HasStdExtV || (HasStdExtZve32f && HasStdExtF);
-  }
+  bool hasVInstructionsF32() const { return HasStdExtZve32f && HasStdExtF; }
   // FIXME: Consider Zdinx in the future
-  bool hasVInstructionsF64() const {
-    return HasStdExtV || (HasStdExtZve64d && HasStdExtD);
-  }
+  bool hasVInstructionsF64() const { return HasStdExtZve64d && HasStdExtD; }
   // F16 and F64 both require F32.
   bool hasVInstructionsAnyF() const { return hasVInstructionsF32(); }
   unsigned getMaxInterleaveFactor() const {

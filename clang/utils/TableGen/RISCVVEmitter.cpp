@@ -1040,7 +1040,7 @@ void RVVEmitter::createBuiltins(raw_ostream &OS) {
 
   OS << "#if defined(TARGET_BUILTIN) && !defined(RISCVV_BUILTIN)\n";
   OS << "#define RISCVV_BUILTIN(ID, TYPE, ATTRS) TARGET_BUILTIN(ID, TYPE, "
-        "ATTRS, \"zve32x|v\")\n";
+        "ATTRS, \"zve32x\")\n";
   OS << "#endif\n";
   for (auto &Def : Defs) {
     auto P =
