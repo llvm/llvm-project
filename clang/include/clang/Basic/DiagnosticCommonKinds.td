@@ -145,8 +145,8 @@ def warn_conflicting_nullability_attr_overriding_param_types : Warning<
 def err_nullability_conflicting : Error<
   "nullability specifier %0 conflicts with existing specifier %1">;
 
-def warn_target_unsupported_branch_protection_option: Warning <
-  "ignoring '-mbranch-protection=' option because the '%0' architecture does not support it">,
+def warn_incompatible_branch_protection_option: Warning <
+  "'-mbranch-protection=' option is incompatible with the '%0' architecture">,
   InGroup<BranchProtection>;
 
 def warn_target_unsupported_branch_protection_attribute: Warning <
