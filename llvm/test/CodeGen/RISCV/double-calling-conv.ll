@@ -142,3 +142,15 @@ define double @caller_double_stack() nounwind {
   %1 = call double @callee_double_stack(i64 1, i64 2, i64 3, i64 4, double 5.72, double 6.72)
   ret double %1
 }
+
+define double @func_return_double_undef() nounwind {
+; RV32IFD-LABEL: func_return_double_undef:
+; RV32IFD:       # %bb.0:
+; RV32IFD-NEXT:    addi sp, sp, -16
+; RV32IFD-NEXT:    fsd ft0, 8(sp)
+; RV32IFD-NEXT:    lw a0, 8(sp)
+; RV32IFD-NEXT:    lw a1, 12(sp)
+; RV32IFD-NEXT:    addi sp, sp, 16
+; RV32IFD-NEXT:    ret
+  ret double undef
+}
