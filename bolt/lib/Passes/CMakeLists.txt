@@ -5,6 +5,7 @@ add_llvm_library(LLVMBOLTPasses
   AsmDump.cpp
   BinaryPasses.cpp
   BinaryFunctionCallGraph.cpp
+  CMOVConversion.cpp
   CacheMetrics.cpp
   CallGraph.cpp
   CallGraphWalker.cpp

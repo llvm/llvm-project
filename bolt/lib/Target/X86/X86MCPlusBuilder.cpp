@@ -12,12 +12,15 @@
 
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
+#include "bolt/Core/MCPlus.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFixupKindInfo.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Debug.h"
@@ -2131,6 +2134,70 @@ public:
       return false;
 
     Inst.setOpcode(NewOpcode);
+    return true;
+  }
+
+  bool
+  convertMoveToConditionalMove(MCInst &Inst, unsigned CC, bool AllowStackMemOp,
+                               bool AllowBasePtrStackMemOp) const override {
+    // - Register-register moves are OK
+    // - Stores are filtered out by opcode (no store CMOV)
+    // - Non-stack loads are prohibited (generally unsafe)
+    // - Stack loads are OK if AllowStackMemOp is true
+    // - Stack loads with RBP are OK if AllowBasePtrStackMemOp is true
+    if (isLoad(Inst)) {
+      // If stack memory operands are not allowed, no loads are allowed
+      if (!AllowStackMemOp)
+        return false;
+
+      // If stack memory operands are allowed, check if it's a load from stack
+      bool IsLoad, IsStore, IsStoreFromReg, IsSimple, IsIndexed;
+      MCPhysReg Reg;
+      int32_t SrcImm;
+      uint16_t StackPtrReg;
+      int64_t StackOffset;
+      uint8_t Size;
+      bool IsStackAccess =
+          isStackAccess(Inst, IsLoad, IsStore, IsStoreFromReg, Reg, SrcImm,
+                        StackPtrReg, StackOffset, Size, IsSimple, IsIndexed);
+      // Prohibit non-stack-based loads
+      if (!IsStackAccess)
+        return false;
+      // If stack memory operands are allowed, check if it's RBP-based
+      if (!AllowBasePtrStackMemOp &&
+          RegInfo->isSubRegisterEq(X86::RBP, StackPtrReg))
+        return false;
+    }
+
+    unsigned NewOpcode = 0;
+    switch (Inst.getOpcode()) {
+    case X86::MOV16rr:
+      NewOpcode = X86::CMOV16rr;
+      break;
+    case X86::MOV16rm:
+      NewOpcode = X86::CMOV16rm;
+      break;
+    case X86::MOV32rr:
+      NewOpcode = X86::CMOV32rr;
+      break;
+    case X86::MOV32rm:
+      NewOpcode = X86::CMOV32rm;
+      break;
+    case X86::MOV64rr:
+      NewOpcode = X86::CMOV64rr;
+      break;
+    case X86::MOV64rm:
+      NewOpcode = X86::CMOV64rm;
+      break;
+    default:
+      return false;
+    }
+    Inst.setOpcode(NewOpcode);
+    // Insert CC at the end of prime operands, before annotations
+    Inst.insert(Inst.begin() + MCPlus::getNumPrimeOperands(Inst),
+                MCOperand::createImm(CC));
+    // CMOV is a 3-operand MCInst, so duplicate the destination as src1
+    Inst.insert(Inst.begin(), Inst.getOperand(0));
     return true;
   }
 
