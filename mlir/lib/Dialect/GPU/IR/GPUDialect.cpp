@@ -445,21 +445,21 @@ static void printSizeAssignment(OpAsmPrinter &p, KernelDim3 size,
   p << size.z << " = " << operands.z << ')';
 }
 
-static void printLaunchOp(OpAsmPrinter &p, LaunchOp op) {
+void LaunchOp::print(OpAsmPrinter &p) {
   // Print the launch configuration.
-  p << ' ' << op.getBlocksKeyword();
-  printSizeAssignment(p, op.getGridSize(), op.getGridSizeOperandValues(),
-                      op.getBlockIds());
-  p << ' ' << op.getThreadsKeyword();
-  printSizeAssignment(p, op.getBlockSize(), op.getBlockSizeOperandValues(),
-                      op.getThreadIds());
-  if (op.dynamicSharedMemorySize())
-    p << ' ' << op.getDynamicSharedMemorySizeKeyword() << ' '
-      << op.dynamicSharedMemorySize();
+  p << ' ' << getBlocksKeyword();
+  printSizeAssignment(p, getGridSize(), getGridSizeOperandValues(),
+                      getBlockIds());
+  p << ' ' << getThreadsKeyword();
+  printSizeAssignment(p, getBlockSize(), getBlockSizeOperandValues(),
+                      getThreadIds());
+  if (dynamicSharedMemorySize())
+    p << ' ' << getDynamicSharedMemorySizeKeyword() << ' '
+      << dynamicSharedMemorySize();
 
   p << ' ';
-  p.printRegion(op.body(), /*printEntryBlockArgs=*/false);
-  p.printOptionalAttrDict(op->getAttrs());
+  p.printRegion(body(), /*printEntryBlockArgs=*/false);
+  p.printOptionalAttrDict((*this)->getAttrs());
 }
 
 // Parse the size assignment blocks for blocks and threads.  These have the form
@@ -492,12 +492,14 @@ parseSizeAssignment(OpAsmParser &parser,
   return parser.parseRParen();
 }
 
-// Parses a Launch operation.
-// operation ::= `gpu.launch` `blocks` `(` ssa-id-list `)` `in` ssa-reassignment
-//                           `threads` `(` ssa-id-list `)` `in` ssa-reassignment
-//                            region attr-dict?
-// ssa-reassignment ::= `(` ssa-id `=` ssa-use (`,` ssa-id `=` ssa-use)* `)`
-static ParseResult parseLaunchOp(OpAsmParser &parser, OperationState &result) {
+/// Parses a Launch operation.
+/// operation ::= `gpu.launch` `blocks` `(` ssa-id-list `)` `in`
+/// ssa-reassignment
+///                           `threads` `(` ssa-id-list `)` `in`
+///                           ssa-reassignment
+///                            region attr-dict?
+/// ssa-reassignment ::= `(` ssa-id `=` ssa-use (`,` ssa-id `=` ssa-use)* `)`
+ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
   // Sizes of the grid and block.
   SmallVector<OpAsmParser::OperandType, LaunchOp::kNumConfigOperands> sizes(
       LaunchOp::kNumConfigOperands);
@@ -778,7 +780,7 @@ parseAttributions(OpAsmParser &parser, StringRef keyword,
 /// <operation> ::= `gpu.func` symbol-ref-id `(` argument-list `)`
 ///                 (`->` function-result-list)? memory-attribution `kernel`?
 ///                 function-attributes? region
-static ParseResult parseGPUFuncOp(OpAsmParser &parser, OperationState &result) {
+ParseResult GPUFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::OperandType> entryArgs;
   SmallVector<NamedAttrList> argAttrs;
   SmallVector<NamedAttrList> resultAttrs;
@@ -853,27 +855,26 @@ static void printAttributions(OpAsmPrinter &p, StringRef keyword,
   p << ')';
 }
 
-/// Prints a GPU Func op.
-static void printGPUFuncOp(OpAsmPrinter &p, GPUFuncOp op) {
+void GPUFuncOp::print(OpAsmPrinter &p) {
   p << ' ';
-  p.printSymbolName(op.getName());
+  p.printSymbolName(getName());
 
-  FunctionType type = op.getType();
-  function_interface_impl::printFunctionSignature(
-      p, op.getOperation(), type.getInputs(),
-      /*isVariadic=*/false, type.getResults());
+  FunctionType type = getType();
+  function_interface_impl::printFunctionSignature(p, *this, type.getInputs(),
+                                                  /*isVariadic=*/false,
+                                                  type.getResults());
 
-  printAttributions(p, op.getWorkgroupKeyword(), op.getWorkgroupAttributions());
-  printAttributions(p, op.getPrivateKeyword(), op.getPrivateAttributions());
-  if (op.isKernel())
-    p << ' ' << op.getKernelKeyword();
+  printAttributions(p, getWorkgroupKeyword(), getWorkgroupAttributions());
+  printAttributions(p, getPrivateKeyword(), getPrivateAttributions());
+  if (isKernel())
+    p << ' ' << getKernelKeyword();
 
   function_interface_impl::printFunctionAttributes(
-      p, op.getOperation(), type.getNumInputs(), type.getNumResults(),
-      {op.getNumWorkgroupAttributionsAttrName(),
+      p, *this, type.getNumInputs(), type.getNumResults(),
+      {getNumWorkgroupAttributionsAttrName(),
        GPUDialect::getKernelFuncAttrName()});
   p << ' ';
-  p.printRegion(op.getBody(), /*printEntryBlockArgs=*/false);
+  p.printRegion(getBody(), /*printEntryBlockArgs=*/false);
 }
 
 LogicalResult GPUFuncOp::verifyType() {
@@ -970,10 +971,9 @@ void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
       ::mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
 }
 
-static ParseResult parseGPUModuleOp(OpAsmParser &parser,
-                                    OperationState &result) {
+ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
   StringAttr nameAttr;
-  if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(nameAttr, mlir::SymbolTable::getSymbolAttrName(),
                              result.attributes))
     return failure();
 
@@ -991,13 +991,13 @@ static ParseResult parseGPUModuleOp(OpAsmParser &parser,
   return success();
 }
 
-static void print(OpAsmPrinter &p, GPUModuleOp op) {
+void GPUModuleOp::print(OpAsmPrinter &p) {
   p << ' ';
-  p.printSymbolName(op.getName());
-  p.printOptionalAttrDictWithKeyword(op->getAttrs(),
-                                     {SymbolTable::getSymbolAttrName()});
+  p.printSymbolName(getName());
+  p.printOptionalAttrDictWithKeyword((*this)->getAttrs(),
+                                     {mlir::SymbolTable::getSymbolAttrName()});
   p << ' ';
-  p.printRegion(op->getRegion(0), /*printEntryBlockArgs=*/false,
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
 }
 

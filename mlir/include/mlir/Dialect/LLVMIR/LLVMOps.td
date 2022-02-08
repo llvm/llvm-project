@@ -202,8 +202,7 @@ def LLVM_ICmpOp : LLVM_Op<"icmp", [NoSideEffect]> {
       build($_builder, $_state, IntegerType::get(lhs.getType().getContext(), 1),
             predicate, lhs, rhs);
     }]>];
-  let parser = [{ return parseCmpOp<ICmpPredicate>(parser, result); }];
-  let printer = [{ printICmpOp(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 // Predicate for float comparisons
@@ -246,8 +245,7 @@ def LLVM_FCmpOp : LLVM_Op<"fcmp", [
   let llvmBuilder = [{
     $res = builder.CreateFCmp(getLLVMCmpPredicate($predicate), $lhs, $rhs);
   }];
-  let parser = [{ return parseCmpOp<FCmpPredicate>(parser, result); }];
-  let printer = [{ printFCmpOp(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 // Floating point binary operations.
@@ -312,8 +310,7 @@ def LLVM_AllocaOp : LLVM_Op<"alloca">, MemoryOpWithAlignmentBase {
       build($_builder, $_state, resultType, arraySize,
         $_builder.getI64IntegerAttr(alignment));
   }]>];
-  let parser = [{ return parseAllocaOp(parser, result); }];
-  let printer = [{ printAllocaOp(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 def LLVM_GEPOp : LLVM_Op<"getelementptr", [NoSideEffect]> {
@@ -382,8 +379,7 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpWithAlignmentAndAttributes {
     OpBuilder<(ins "Type":$t, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
       CArg<"bool", "false">:$isNonTemporal)>];
-  let parser = [{ return parseLoadOp(parser, result); }];
-  let printer = [{ printLoadOp(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 
@@ -406,8 +402,7 @@ def LLVM_StoreOp : LLVM_Op<"store">, MemoryOpWithAlignmentAndAttributes {
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
       CArg<"bool", "false">:$isNonTemporal)>
     ];
-  let parser = [{ return parseStoreOp(parser, result); }];
-  let printer = [{ printStoreOp(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 
@@ -491,8 +486,7 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
       build($_builder, $_state, tys, /*callee=*/FlatSymbolRefAttr(), ops, normalOps,
             unwindOps, normal, unwind);
     }]>];
-  let parser = [{ return parseInvokeOp(parser, result); }];
-  let printer = [{ printInvokeOp(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 
@@ -500,8 +494,7 @@ def LLVM_LandingpadOp : LLVM_Op<"landingpad"> {
   let arguments = (ins UnitAttr:$cleanup, Variadic<LLVM_Type>);
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
-  let parser = [{ return parseLandingpadOp(parser, result); }];
-  let printer = [{ printLandingpadOp(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 
@@ -559,8 +552,7 @@ def LLVM_CallOp : LLVM_Op<"call",
       build($_builder, $_state, results,
             StringAttr::get($_builder.getContext(), callee), operands);
     }]>];
-  let parser = [{ return parseCallOp(parser, result); }];
-  let printer = [{ printCallOp(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 def LLVM_ExtractElementOp : LLVM_Op<"extractelement", [NoSideEffect]> {
@@ -572,8 +564,7 @@ def LLVM_ExtractElementOp : LLVM_Op<"extractelement", [NoSideEffect]> {
   let builders = [
     OpBuilder<(ins "Value":$vector, "Value":$position,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>];
-  let parser = [{ return parseExtractElementOp(parser, result); }];
-  let printer = [{ printExtractElementOp(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 def LLVM_ExtractValueOp : LLVM_Op<"extractvalue", [NoSideEffect]> {
@@ -583,8 +574,7 @@ def LLVM_ExtractValueOp : LLVM_Op<"extractvalue", [NoSideEffect]> {
     $res = builder.CreateExtractValue($container, extractPosition($position));
   }];
   let builders = [LLVM_OneResultOpBuilder];
-  let parser = [{ return parseExtractValueOp(parser, result); }];
-  let printer = [{ printExtractValueOp(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
 }
@@ -596,8 +586,7 @@ def LLVM_InsertElementOp : LLVM_Op<"insertelement", [NoSideEffect]> {
     $res = builder.CreateInsertElement($vector, $value, $position);
   }];
   let builders = [LLVM_OneResultOpBuilder];
-  let parser = [{ return parseInsertElementOp(parser, result); }];
-  let printer = [{ printInsertElementOp(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 def LLVM_InsertValueOp : LLVM_Op<"insertvalue", [NoSideEffect]> {
@@ -613,8 +602,7 @@ def LLVM_InsertValueOp : LLVM_Op<"insertvalue", [NoSideEffect]> {
     [{
       build($_builder, $_state, container.getType(), container, value, position);
     }]>];
-  let parser = [{ return parseInsertValueOp(parser, result); }];
-  let printer = [{ printInsertValueOp(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 def LLVM_ShuffleVectorOp : LLVM_Op<"shufflevector", [NoSideEffect]> {
@@ -628,8 +616,7 @@ def LLVM_ShuffleVectorOp : LLVM_Op<"shufflevector", [NoSideEffect]> {
   let builders = [
     OpBuilder<(ins "Value":$v1, "Value":$v2, "ArrayAttr":$mask,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>];
-  let parser = [{ return parseShuffleVectorOp(parser, result); }];
-  let printer = [{ printShuffleVectorOp(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 
@@ -708,8 +695,7 @@ def LLVM_ReturnOp : LLVM_TerminatorOp<"return", [NoSideEffect]> {
       builder.CreateRetVoid();
   }];
 
-  let parser = [{ return parseReturnOp(parser, result); }];
-  let printer = [{ printReturnOp(p, *this); }];
+  let assemblyFormat = "attr-dict ($args^ `:` type($args))?";
   let hasVerifier = 1;
 }
 def LLVM_ResumeOp : LLVM_TerminatorOp<"resume", []> {
@@ -1151,8 +1137,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     }
   }];
 
-  let printer = "printGlobalOp(p, *this);";
-  let parser = "return parseGlobalOp(parser, result);";
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 
@@ -1288,8 +1273,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     LogicalResult verifyType();
   }];
 
-  let printer = [{ printLLVMFuncOp(p, *this); }];
-  let parser = [{ return parseLLVMFuncOp(parser, result); }];
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 
@@ -1824,8 +1808,7 @@ def LLVM_AtomicRMWOp : LLVM_Op<"atomicrmw"> {
                                    llvm::MaybeAlign(),
                                    getLLVMAtomicOrdering($ordering));
   }];
-  let parser = [{ return parseAtomicRMWOp(parser, result); }];
-  let printer = [{ printAtomicRMWOp(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 
@@ -1854,8 +1837,7 @@ def LLVM_AtomicCmpXchgOp : LLVM_Op<"cmpxchg"> {
                    getLLVMAtomicOrdering($success_ordering),
                    getLLVMAtomicOrdering($failure_ordering));
   }];
-  let parser = [{ return parseAtomicCmpXchgOp(parser, result); }];
-  let printer = [{ printAtomicCmpXchgOp(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 
@@ -1877,8 +1859,7 @@ def LLVM_FenceOp : LLVM_Op<"fence"> {
     builder.CreateFence(getLLVMAtomicOrdering($ordering),
       llvmContext.getOrInsertSyncScopeID($syncscope));
   }];
-  let parser = [{ return parseFenceOp(parser, result); }];
-  let printer = [{ printFenceOp(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 

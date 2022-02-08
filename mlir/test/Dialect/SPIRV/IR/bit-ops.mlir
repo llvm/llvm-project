@@ -181,7 +181,7 @@ func @shift_left_logical(%arg0: i32, %arg1 : i16) -> i32 {
 // -----
 
 func @shift_left_logical_invalid_result_type(%arg0: i32, %arg1 : i16) -> i16 {
-  // expected-error @+1 {{expected the same type for the first operand and result, but provided 'i32' and 'i16'}}
+  // expected-error @+1 {{op inferred type(s) 'i32' are incompatible with return type(s) of operation 'i16'}}
   %0 = "spv.ShiftLeftLogical" (%arg0, %arg1) : (i32, i16) -> (i16)
   spv.ReturnValue %0 : i16
 }

@@ -26,10 +26,7 @@ def MemRefTypeAttr
 }
 
 class MemRef_Op<string mnemonic, list<Trait> traits = []>
-    : Op<MemRef_Dialect, mnemonic, traits> {
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-}
+    : Op<MemRef_Dialect, mnemonic, traits>;
 
 // Base class for ops with static/dynamic offset, sizes and strides
 // attributes/arguments.
@@ -275,6 +272,7 @@ def MemRef_AllocaScopeOp : MemRef_Op<"alloca_scope",
 
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$bodyRegion);
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 
@@ -657,6 +655,7 @@ def MemRef_DmaStartOp : MemRef_Op<"dma_start"> {
       return getOperand(getNumOperands() - 1);
     }
   }];
+  let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
 }
@@ -771,6 +770,7 @@ def GenericAtomicRMWOp : MemRef_Op<"generic_atomic_rmw", [
       return memref().getType().cast<MemRefType>();
     }
   }];
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 
@@ -996,6 +996,7 @@ def MemRef_PrefetchOp : MemRef_Op<"prefetch"> {
     static StringRef getIsDataCacheAttrName() { return "isDataCache"; }
   }];
 
+  let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
 }
@@ -1048,8 +1049,6 @@ def MemRef_ReinterpretCastOp
     attr-dict `:` type($source) `to` type($result)
   }];
 
-  let parser = ?;
-  let printer = ?;
   let hasVerifier = 1;
 
   let builders = [
@@ -1243,9 +1242,8 @@ class MemRef_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parseReshapeLikeOp(parser, result); }];
 }
 
 def MemRef_ExpandShapeOp : MemRef_ReassociativeReshapeOp<"expand_shape"> {
@@ -1700,6 +1698,7 @@ def MemRef_TransposeOp : MemRef_Op<"transpose", [NoSideEffect]>,
     ShapedType getShapedType() { return in().getType().cast<ShapedType>(); }
   }];
 
+  let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
 }
@@ -1770,6 +1769,7 @@ def MemRef_ViewOp : MemRef_Op<"view", [
   }];
 
   let hasCanonicalizer = 1;
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 
