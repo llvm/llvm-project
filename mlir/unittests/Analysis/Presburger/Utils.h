@@ -24,7 +24,7 @@ namespace mlir {
 /// Parses a IntegerPolyhedron from a StringRef. It is expected that the
 /// string represents a valid IntegerSet, otherwise it will violate a gtest
 /// assertion.
-static IntegerPolyhedron parsePoly(StringRef str, MLIRContext *context) {
+inline IntegerPolyhedron parsePoly(StringRef str, MLIRContext *context) {
   FailureOr<IntegerPolyhedron> poly = parseIntegerSetToFAC(str, context);
   EXPECT_TRUE(succeeded(poly));
   return *poly;
@@ -32,7 +32,7 @@ static IntegerPolyhedron parsePoly(StringRef str, MLIRContext *context) {
 
 /// lhs and rhs represent non-negative integers or positive infinity. The
 /// infinity case corresponds to when the Optional is empty.
-static bool infinityOrUInt64LE(Optional<uint64_t> lhs, Optional<uint64_t> rhs) {
+inline bool infinityOrUInt64LE(Optional<uint64_t> lhs, Optional<uint64_t> rhs) {
   // No constraint.
   if (!rhs)
     return true;
@@ -45,7 +45,7 @@ static bool infinityOrUInt64LE(Optional<uint64_t> lhs, Optional<uint64_t> rhs) {
 /// Expect that the computed volume is a valid overapproximation of
 /// the true volume `trueVolume`, while also being at least as good an
 /// approximation as `resultBound`.
-static void
+inline void
 expectComputedVolumeIsValidOverapprox(Optional<uint64_t> computedVolume,
                                       Optional<uint64_t> trueVolume,
                                       Optional<uint64_t> resultBound) {
