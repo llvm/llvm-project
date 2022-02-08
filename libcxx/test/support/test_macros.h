@@ -206,10 +206,12 @@
 #define TEST_HAS_NO_ALIGNED_ALLOCATION
 #endif
 
-#if defined(_LIBCPP_SAFE_STATIC)
-#define TEST_SAFE_STATIC _LIBCPP_SAFE_STATIC
+#if TEST_STD_VER > 17
+#define TEST_CONSTINIT constinit
+#elif defined(_LIBCPP_CONSTINIT)
+#define TEST_CONSTINIT _LIBCPP_CONSTINIT
 #else
-#define TEST_SAFE_STATIC
+#define TEST_CONSTINIT
 #endif
 
 #if !defined(__cpp_impl_three_way_comparison) \

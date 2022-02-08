@@ -35,8 +35,7 @@ _LIBCPP_NORETURN void __libcpp_abort_debug_function(__libcpp_debug_info const& i
     std::abort();
 }
 
-_LIBCPP_SAFE_STATIC __libcpp_debug_function_type
-    __libcpp_debug_function = __libcpp_abort_debug_function;
+constinit __libcpp_debug_function_type __libcpp_debug_function = __libcpp_abort_debug_function;
 
 bool __libcpp_set_debug_function(__libcpp_debug_function_type __func) {
   __libcpp_debug_function = __func;

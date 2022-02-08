@@ -1239,10 +1239,12 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #   define _LIBCPP_THREAD_SAFETY_ANNOTATION(x)
 #endif
 
-#if __has_attribute(require_constant_initialization)
-#  define _LIBCPP_SAFE_STATIC __attribute__((__require_constant_initialization__))
+#if _LIBCPP_STD_VER > 17
+#  define _LIBCPP_CONSTINIT constinit
+#elif __has_attribute(require_constant_initialization)
+#  define _LIBCPP_CONSTINIT __attribute__((__require_constant_initialization__))
 #else
-#  define _LIBCPP_SAFE_STATIC
+#  define _LIBCPP_CONSTINIT
 #endif
 
 #if __has_attribute(diagnose_if) && !defined(_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS)
