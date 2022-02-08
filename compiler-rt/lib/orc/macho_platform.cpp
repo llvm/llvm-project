@@ -16,6 +16,7 @@
 #include "error.h"
 #include "wrapper_function_utils.h"
 
+#include <algorithm>
 #include <ios>
 #include <map>
 #include <mutex>
