@@ -599,6 +599,7 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
     }
   } else {
     Tmp = RS.scavengeRegister(&AMDGPU::VGPR_32RegClass, 0);
+    RS.setRegUsed(Tmp);
   }
 
   // Insert copy to temporary VGPR.
