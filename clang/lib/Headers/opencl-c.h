@@ -18517,23 +18517,23 @@ uint16 __ovld amd_sadw(uint16 src0, uint16 src1, uint16 src2);
 #endif // cl_amd_media_ops2
 
 #if defined(cl_arm_integer_dot_product_int8)
-uint __ovld arm_dot(uchar4 a, uchar4 b);
-int __ovld arm_dot(char4 a, char4 b);
+uint __ovld arm_dot(uchar4, uchar4);
+int __ovld arm_dot(char4, char4);
 #endif // defined(cl_arm_integer_dot_product_int8)
 
 #if defined(cl_arm_integer_dot_product_accumulate_int8)
-uint __ovld arm_dot_acc(uchar4 a, uchar4 b, uint c);
-int __ovld arm_dot_acc(char4 a, char4 b, int c);
+uint __ovld arm_dot_acc(uchar4, uchar4, uint);
+int __ovld arm_dot_acc(char4, char4, int);
 #endif // defined(cl_arm_integer_dot_product_accumulate_int8)
 
 #if defined(cl_arm_integer_dot_product_accumulate_int16)
-uint __ovld arm_dot_acc(ushort2 a, ushort2 b, uint c);
-int __ovld arm_dot_acc(short2 a, short2 b, int c);
+uint __ovld arm_dot_acc(ushort2, ushort2, uint);
+int __ovld arm_dot_acc(short2, short2, int);
 #endif // defined(cl_arm_integer_dot_product_accumulate_int16)
 
 #if defined(cl_arm_integer_dot_product_accumulate_saturate_int8)
-uint __ovld arm_dot_acc_sat(uchar4 a, uchar4 b, uint c);
-int __ovld arm_dot_acc_sat(char4 a, char4 b, int c);
+uint __ovld arm_dot_acc_sat(uchar4, uchar4, uint);
+int __ovld arm_dot_acc_sat(char4, char4, int);
 #endif // defined(cl_arm_integer_dot_product_accumulate_saturate_int8)
 
 // Disable any extensions we may have enabled previously.
