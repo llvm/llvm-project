@@ -47,7 +47,7 @@ body:             |
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 1, 2, implicit $exec
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, 1, implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GCN-NEXT:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
@@ -58,7 +58,39 @@ body:             |
 
   bb.1:
     %0:sreg_64 = V_CMP_EQ_U32_e64 1, 2, implicit $exec
-    $exec = S_OR_B64 $exec, 1, implicit-def $scc
+    $exec = S_OR_B64 $exec, %0:sreg_64, implicit-def $scc
+    S_CBRANCH_EXECNZ %bb.1, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+---
+name: allowable_hoist_cmp
+tracksRegLiveness: true
+body:             |
+  ; GCN-LABEL: name: allowable_hoist_cmp
+  ; GCN: bb.0:
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 1, 2, implicit $exec
+  ; GCN-NEXT:   S_BRANCH %bb.1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   $exec = S_AND_B64 $exec, [[V_CMP_EQ_U32_e64_]], implicit-def $scc
+  ; GCN-NEXT:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
+  ; GCN-NEXT:   S_BRANCH %bb.2
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   S_ENDPGM 0
+  bb.0:
+    S_BRANCH %bb.1
+
+  bb.1:
+    %0:sreg_64 = V_CMP_EQ_U32_e64 1, 2, implicit $exec
+    $exec = S_AND_B64 $exec, %0:sreg_64, implicit-def $scc
     S_CBRANCH_EXECNZ %bb.1, implicit $exec
     S_BRANCH %bb.2
 
