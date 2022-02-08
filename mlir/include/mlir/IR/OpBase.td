@@ -3130,15 +3130,19 @@ class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   string summary = desc;
   // The format string for the asm syntax (documentation only).
   string syntax = ?;
-  // The default parameter parser is `::mlir::parseField<T>($_parser)`, which
-  // returns `FailureOr<T>`. Overload `parseField` to support parsing for your
-  // type. Or you can provide a customer printer. For attributes, "$_type" will
-  // be replaced with the required attribute type.
+  // The default parameter parser is `::mlir::FieldParser<T>::parse($_parser)`,
+  // which returns `FailureOr<T>`. Specialize `FieldParser` to support parsing
+  // for your type. Or you can provide a customer printer. For attributes,
+  // "$_type" will be replaced with the required attribute type.
   string parser = ?;
   // The default parameter printer is `$_printer << $_self`. Overload the stream
   // operator of `AsmPrinter` as necessary to print your type. Or you can
   // provide a custom printer.
   string printer = ?;
+  // Mark a parameter as optional. The C++ type of parameters marked as optional
+  // must be default constructible and be contextually convertible to `bool`.
+  // Any `Optional<T>` and any attribute type satisfies these requirements.
+  bit isOptional = 0;
 }
 class AttrParameter<string type, string desc, string accessorType = "">
  : AttrOrTypeParameter<type, desc, accessorType>;
@@ -3181,6 +3185,12 @@ class ArrayRefOfSelfAllocationParameter<string arrayOf, string desc> :
       tmpFields.push_back($_self[i].allocateInto($_allocator));
     $_dst = $_allocator.copyInto(ArrayRef<}] # arrayOf # [{>(tmpFields));
   }];
+}
+
+// An optional parameter.
+class OptionalParameter<string type, string desc = ""> :
+    AttrOrTypeParameter<type, desc> {
+  let isOptional = 1;
 }
 
 // This is a special parameter used for AttrDefs that represents a `mlir::Type`

@@ -22,7 +22,7 @@ include "mlir/Interfaces/DataLayoutInterfaces.td"
 
 // All of the types will extend this class.
 class Test_Type<string name, list<Trait> traits = []>
-  : TypeDef<Test_Dialect, name, traits>;
+    : TypeDef<Test_Dialect, name, traits>;
 
 def SimpleTypeA : Test_Type<"SimpleA"> {
   let mnemonic = "smpla";
@@ -42,7 +42,7 @@ def CompoundTypeA : Test_Type<"CompoundA"> {
     ArrayRefParameter<
       "int", // The parameter C++ type.
       "An example of an array of ints" // Parameter description.
-      >: $arrayOfInts
+    >:$arrayOfInts
   );
 
   let extraClassDeclaration = [{
@@ -110,14 +110,14 @@ def IntegerType : Test_Type<"TestInteger"> {
 
   // The parser is defined here also.
   let parser = [{
-    if (parser.parseLess()) return Type();
+    if ($_parser.parseLess()) return Type();
     SignednessSemantics signedness;
-    if (parseSignedness($_parser, signedness)) return mlir::Type();
+    if (parseSignedness($_parser, signedness)) return Type();
     if ($_parser.parseComma()) return Type();
     int width;
     if ($_parser.parseInteger(width)) return Type();
     if ($_parser.parseGreater()) return Type();
-    ::mlir::Location loc = $_parser.getEncodedSourceLoc($_parser.getNameLoc());
+    Location loc = $_parser.getEncodedSourceLoc($_parser.getNameLoc());
     return getChecked(loc, loc.getContext(), width, signedness);
   }];
 
@@ -260,6 +260,68 @@ def TestTypeStructCaptureAll : Test_Type<"TestStructTypeCaptureAll"> {
 
   let mnemonic = "struct_capture_all";
   let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def TestTypeOptionalParam : Test_Type<"TestTypeOptionalParam"> {
+  let parameters = (ins OptionalParameter<"mlir::Optional<int>">:$a, "int":$b);
+  let mnemonic = "optional_param";
+  let assemblyFormat = "`<` $a `,` $b `>`";
+}
+
+def TestTypeOptionalParams : Test_Type<"TestTypeOptionalParams"> {
+  let parameters = (ins OptionalParameter<"mlir::Optional<int>">:$a,
+                        StringRefParameter<>:$b);
+  let mnemonic = "optional_params";
+  let assemblyFormat = "`<` params `>`";
+}
+
+def TestTypeOptionalParamsAfterRequired
+    : Test_Type<"TestTypeOptionalParamsAfterRequired"> {
+  let parameters = (ins StringRefParameter<>:$a,
+                        OptionalParameter<"mlir::Optional<int>">:$b);
+  let mnemonic = "optional_params_after";
+  let assemblyFormat = "`<` params `>`";
+}
+
+def TestTypeOptionalStruct : Test_Type<"TestTypeOptionalStruct"> {
+  let parameters = (ins OptionalParameter<"mlir::Optional<int>">:$a,
+                        StringRefParameter<>:$b);
+  let mnemonic = "optional_struct";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def TestTypeAllOptionalParams : Test_Type<"TestTypeAllOptionalParams"> {
+  let parameters = (ins OptionalParameter<"mlir::Optional<int>">:$a,
+                        OptionalParameter<"mlir::Optional<int>">:$b);
+  let mnemonic = "all_optional_params";
+  let assemblyFormat = "`<` params `>`";
+}
+
+def TestTypeAllOptionalStruct : Test_Type<"TestTypeAllOptionalStruct"> {
+  let parameters = (ins OptionalParameter<"mlir::Optional<int>">:$a,
+                        OptionalParameter<"mlir::Optional<int>">:$b);
+  let mnemonic = "all_optional_struct";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def TestTypeOptionalGroup : Test_Type<"TestTypeOptionalGroup"> {
+  let parameters = (ins "int":$a, OptionalParameter<"mlir::Optional<int>">:$b);
+  let mnemonic = "optional_group";
+  let assemblyFormat = "`<` (`(` $b^ `)`) : (`x`)? $a `>`";
+}
+
+def TestTypeOptionalGroupParams : Test_Type<"TestTypeOptionalGroupParams"> {
+  let parameters = (ins OptionalParameter<"mlir::Optional<int>">:$a,
+                        OptionalParameter<"mlir::Optional<int>">:$b);
+  let mnemonic = "optional_group_params";
+  let assemblyFormat = "`<` (`(` params^ `)`) : (`x`)? `>`";
+}
+
+def TestTypeOptionalGroupStruct : Test_Type<"TestTypeOptionalGroupStruct"> {
+  let parameters = (ins OptionalParameter<"mlir::Optional<int>">:$a,
+                        OptionalParameter<"mlir::Optional<int>">:$b);
+  let mnemonic = "optional_group_struct";
+  let assemblyFormat = "`<` (`(` struct(params)^ `)`) : (`x`)? `>`";
 }
 
 #endif // TEST_TYPEDEFS
