@@ -14,10 +14,8 @@
 #define LLD_ELF_SYMBOLS_H
 
 #include "InputFiles.h"
-#include "InputSection.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
-#include "lld/Common/Strings.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELF.h"
@@ -35,9 +33,8 @@ std::string toELFString(const llvm::object::Archive::Symbol &);
 namespace elf {
 class CommonSymbol;
 class Defined;
-class InputFile;
-class LazyArchive;
-class LazyObject;
+class OutputSection;
+class SectionBase;
 class SharedSymbol;
 class Symbol;
 class Undefined;

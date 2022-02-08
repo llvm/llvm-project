@@ -9,9 +9,7 @@
 #ifndef LLD_ELF_INPUT_SECTION_H
 #define LLD_ELF_INPUT_SECTION_H
 
-#include "Config.h"
 #include "Relocations.h"
-#include "Thunks.h"
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
@@ -21,13 +19,12 @@
 namespace lld {
 namespace elf {
 
+class InputFile;
 class Symbol;
-struct SectionPiece;
 
 class Defined;
 struct Partition;
 class SyntheticSection;
-class MergeSyntheticSection;
 template <class ELFT> class ObjFile;
 class OutputSection;
 

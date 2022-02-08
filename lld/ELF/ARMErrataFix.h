@@ -11,7 +11,6 @@
 
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
-#include <map>
 #include <vector>
 
 namespace lld {

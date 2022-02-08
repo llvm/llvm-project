@@ -15,12 +15,15 @@
 
 #include "SyntheticSections.h"
 #include "Config.h"
+#include "DWARF.h"
+#include "EhFrame.h"
 #include "InputFiles.h"
 #include "LinkerScript.h"
 #include "OutputSections.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Target.h"
+#include "Thunks.h"
 #include "Writer.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/DWARF.h"
@@ -30,15 +33,11 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
-#include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/MD5.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <cstdlib>
-#include <thread>
 
 using namespace llvm;
 using namespace llvm::dwarf;
