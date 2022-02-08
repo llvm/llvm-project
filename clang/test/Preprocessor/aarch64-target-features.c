@@ -510,9 +510,21 @@
 // CHECK-NO-SVE-VECTOR-BITS-NOT: __ARM_FEATURE_SVE_BITS
 // CHECK-NO-SVE-VECTOR-BITS-NOT: __ARM_FEATURE_SVE_VECTOR_OPERATORS
 
-// ================== Check Largse System Extensions (LSE)
+// ================== Check Large System Extensions (LSE)
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+lse -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+lse -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s
 // CHECK-LSE: __ARM_FEATURE_ATOMICS 1
+
+// ================== Check Armv8.8-A/Armv9.3-A memcpy and memset acceleration instructions (MOPS)
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.7-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.7-a+mops -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.8-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.8-a+mops -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.2-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.2-a+mops -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.3-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.3-a+mops -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS %s
+// CHECK-MOPS: __ARM_FEATURE_MOPS 1
+// CHECK-NOMOPS-NOT: __ARM_FEATURE_MOPS 1
