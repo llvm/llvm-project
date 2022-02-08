@@ -1069,7 +1069,6 @@ static Optional<Instruction *> instCombineLD1GatherIndex(InstCombiner &IC,
   Value *BasePtr = II.getOperand(1);
   Value *Index = II.getOperand(2);
   Type *Ty = II.getType();
-  Type *BasePtrTy = BasePtr->getType();
   Value *PassThru = ConstantAggregateZero::get(Ty);
 
   // Contiguous gather => masked load.
@@ -1085,8 +1084,8 @@ static Optional<Instruction *> instCombineLD1GatherIndex(InstCombiner &IC,
         BasePtr->getPointerAlignment(II.getModule()->getDataLayout());
 
     Type *VecPtrTy = PointerType::getUnqual(Ty);
-    Value *Ptr = Builder.CreateGEP(BasePtrTy->getPointerElementType(), BasePtr,
-                                   IndexBase);
+    Value *Ptr = Builder.CreateGEP(
+        cast<VectorType>(Ty)->getElementType(), BasePtr, IndexBase);
     Ptr = Builder.CreateBitCast(Ptr, VecPtrTy);
     CallInst *MaskedLoad =
         Builder.CreateMaskedLoad(Ty, Ptr, Alignment, Mask, PassThru);
@@ -1104,10 +1103,9 @@ static Optional<Instruction *> instCombineST1ScatterIndex(InstCombiner &IC,
   Value *BasePtr = II.getOperand(2);
   Value *Index = II.getOperand(3);
   Type *Ty = Val->getType();
-  Type *BasePtrTy = BasePtr->getType();
 
   // Contiguous scatter => masked store.
-  // (sve.ld1.scatter.index Value Mask BasePtr (sve.index IndexBase 1))
+  // (sve.st1.scatter.index Value Mask BasePtr (sve.index IndexBase 1))
   // => (masked.store Value (gep BasePtr IndexBase) Align Mask)
   Value *IndexBase;
   if (match(Index, m_Intrinsic<Intrinsic::aarch64_sve_index>(
@@ -1118,8 +1116,8 @@ static Optional<Instruction *> instCombineST1ScatterIndex(InstCombiner &IC,
     Align Alignment =
         BasePtr->getPointerAlignment(II.getModule()->getDataLayout());
 
-    Value *Ptr = Builder.CreateGEP(BasePtrTy->getPointerElementType(), BasePtr,
-                                   IndexBase);
+    Value *Ptr = Builder.CreateGEP(
+        cast<VectorType>(Ty)->getElementType(), BasePtr, IndexBase);
     Type *VecPtrTy = PointerType::getUnqual(Ty);
     Ptr = Builder.CreateBitCast(Ptr, VecPtrTy);
 
