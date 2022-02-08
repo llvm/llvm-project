@@ -19,33 +19,23 @@
 # RUN:   --update-debug-sections \
 # RUN:   --dwarf-output-path=%T \
 # RUN:   -o %t.bolt.1.exe 2>&1 | FileCheck %s
-# RUN: llvm-dwarfdump --show-form --verbose \
-# RUN:   --debug-info \
-# RUN:   %T/debug-fission-simple.dwo0.dwo \
-# RUN:   | grep DW_FORM_GNU_addr_index \
-# RUN:   | FileCheck %s --check-prefix=CHECK-ADDR-INDEX
-# RUN: llvm-dwarfdump --show-form --verbose \
-# RUN:   --debug-addr \
-# RUN:   %t.bolt.1.exe \
-# RUN:   | FileCheck %s --check-prefix=CHECK-ADDR-SEC
+# RUN: not llvm-dwarfdump --show-form --verbose --debug-info %T/debug-fission-simple.dwo0.dwo -o %tAddrIndexTest 2> /dev/null
+# RUN: cat %tAddrIndexTest | grep DW_FORM_GNU_addr_index | FileCheck %s --check-prefix=CHECK-ADDR-INDEX
+# RUN: llvm-dwarfdump --show-form --verbose   --debug-addr  %t.bolt.1.exe | FileCheck %s --check-prefix=CHECK-ADDR-SEC
 
 # CHECK-NOT: warning: DWARF unit from offset {{.*}} incl. to offset {{.*}} excl. tries to read DIEs at offset {{.*}}
 
-# CHECK-ADDR-INDEX: DW_AT_low_pc [DW_FORM_GNU_addr_index]	(indexed (00000001)
-# CHECK-ADDR-INDEX: DW_AT_low_pc [DW_FORM_GNU_addr_index]	(indexed (00000002)
-# CHECK-ADDR-INDEX: DW_AT_low_pc [DW_FORM_GNU_addr_index]	(indexed (00000003)
+# CHECK-ADDR-INDEX: DW_AT_low_pc [DW_FORM_GNU_addr_index]	(indexed (00000000)
+# CHECK-ADDR-INDEX: DW_AT_low_pc [DW_FORM_GNU_addr_index]	(indexed (00000000)
+# CHECK-ADDR-INDEX: DW_AT_low_pc [DW_FORM_GNU_addr_index]	(indexed (00000000)
 
 # CHECK-ADDR-SEC: .debug_addr contents:
 # CHECK-ADDR-SEC: 0x00000000: Addrs: [
 # CHECK-ADDR-SEC: 0x0000000000601000
-# CHECK-ADDR-SEC: 0x0000000000a00000
-# CHECK-ADDR-SEC: 0x0000000000000000
-# CHECK-ADDR-SEC: 0x0000000000a00040
 
-# RUN: llvm-bolt %t.exe --reorder-blocks=reverse -update-debug-sections \
-# RUN:   -dwarf-output-path=%T -o %t.bolt.2.exe --write-dwp=true
-# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt.2.exe.dwp \
-# RUN:   | FileCheck %s --check-prefix=CHECK-DWP-DEBUG
+# RUN: llvm-bolt %t.exe --reorder-blocks=reverse -update-debug-sections -dwarf-output-path=%T -o %t.bolt.2.exe --write-dwp=true
+# RUN: not llvm-dwarfdump --show-form --verbose --debug-info %t.bolt.2.exe.dwp -o %tAddrIndexTestDwp 2> /dev/null
+# RUN: cat %tAddrIndexTestDwp | FileCheck %s --check-prefix=CHECK-DWP-DEBUG
 
 # CHECK-DWP-DEBUG: DW_TAG_compile_unit [1] *
 # CHECK-DWP-DEBUG:  DW_AT_producer [DW_FORM_GNU_str_index]  (indexed (0000000a) string = "clang version 13.0.0")
