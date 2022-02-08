@@ -1,0 +1,19 @@
+# These tests cover invalid inputs.
+# When running under UBSan these tests hit UBSan issues before the validity
+# checks that the test is intending to exercise.
+# Under UBSan these tests fail because UBSan error is not the expected error.
+#
+# TODO: This code should be fixed to not exhibit UB, and these tests should be
+# incorporated back into invalid.test and run under UBSan again.
+
+UNSUPPORTED: ubsan
+
+RUN: not llvm-dis -disable-output %p/Inputs/size-not-plausible.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=SIZE-NOT-PLAUSIBLE %s
+
+SIZE-NOT-PLAUSIBLE: Size is not plausible
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-value-symbol-table-2.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-VALUE-SYMBOL-TABLE-2 %s
+
+INVALID-VALUE-SYMBOL-TABLE-2: Expected value symbol table subbloc
