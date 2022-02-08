@@ -628,6 +628,10 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       } else
         MaxNumAGPRs = 0;
     }
+  } else if (ST.hasMAIInsts() && MFI->usesAGPRs(MF)) {
+    // In order to guarantee copying between AGPRs, we need a scratch VGPR
+    // available at all times.
+    reserveRegisterTuples(Reserved, AMDGPU::VGPR32);
   }
 
   for (unsigned i = MaxNumVGPRs; i < TotalNumVGPRs; ++i) {
