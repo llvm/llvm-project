@@ -9,6 +9,7 @@
 
 // amdgpu does not have a working printf definition
 // XFAIL: amdgcn-amd-amdhsa
+// XFAIL: amdgcn-amd-amdhsa-newDriver
 
 #include <stdio.h>
 #include <omp.h>
