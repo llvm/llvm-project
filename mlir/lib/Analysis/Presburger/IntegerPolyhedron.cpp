@@ -1065,6 +1065,60 @@ void IntegerPolyhedron::removeRedundantConstraints() {
   equalities.resizeVertically(pos);
 }
 
+Optional<uint64_t> IntegerPolyhedron::computeVolume() const {
+  assert(getNumSymbolIds() == 0 && "Symbols are not yet supported!");
+
+  Simplex simplex(*this);
+  // If the polytope is rationally empty, there are certainly no integer
+  // points.
+  if (simplex.isEmpty())
+    return 0;
+
+  // Just find the maximum and minimum integer value of each non-local id
+  // separately, thus finding the number of integer values each such id can
+  // take. Multiplying these together gives a valid overapproximation of the
+  // number of integer points in the polyhedron. The result this gives is
+  // equivalent to projecting (rationally) the polyhedron onto its non-local ids
+  // and returning the number of integer points in a minimal axis-parallel
+  // hyperrectangular overapproximation of that.
+  //
+  // We also handle the special case where one dimension is unbounded and
+  // another dimension can take no integer values. In this case, the volume is
+  // zero.
+  //
+  // If there is no such empty dimension, if any dimension is unbounded we
+  // just return the result as unbounded.
+  uint64_t count = 1;
+  SmallVector<int64_t, 8> dim(getNumIds() + 1);
+  bool hasUnboundedId = false;
+  for (unsigned i = 0, e = getNumDimAndSymbolIds(); i < e; ++i) {
+    dim[i] = 1;
+    Optional<int64_t> min, max;
+    std::tie(min, max) = simplex.computeIntegerBounds(dim);
+    dim[i] = 0;
+
+    // One of the dimensions is unbounded. Note this fact. We will return
+    // unbounded if none of the other dimensions makes the volume zero.
+    if (!min || !max) {
+      hasUnboundedId = true;
+      continue;
+    }
+
+    // In this case there are no valid integer points and the volume is
+    // definitely zero.
+    if (*min > *max)
+      return 0;
+
+    count *= (*max - *min + 1);
+  }
+
+  if (count == 0)
+    return 0;
+  if (hasUnboundedId)
+    return {};
+  return count;
+}
+
 void IntegerPolyhedron::eliminateRedundantLocalId(unsigned posA,
                                                   unsigned posB) {
   assert(posA < getNumLocalIds() && "Invalid local id position");

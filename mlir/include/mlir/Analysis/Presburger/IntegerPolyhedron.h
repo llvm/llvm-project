@@ -277,6 +277,11 @@ public:
   /// otherwise.
   Optional<SmallVector<int64_t, 8>> findIntegerSample() const;
 
+  /// Compute an overapproximation of the number of integer points in the
+  /// polyhedron. Symbol ids are currently not supported. If the computed
+  /// overapproximation is infinite, an empty optional is returned.
+  Optional<uint64_t> computeVolume() const;
+
   /// Returns true if the given point satisfies the constraints, or false
   /// otherwise.
   ///

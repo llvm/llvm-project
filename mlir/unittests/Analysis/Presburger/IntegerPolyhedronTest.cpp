@@ -1118,4 +1118,66 @@ TEST(IntegerPolyhedronTest, getRationalLexMin) {
   expectNoRationalLexMin(parsePoly("(x) : (2*x >= 0, -x - 1 >= 0)", &context));
 }
 
+static void
+expectComputedVolumeIsValidOverapprox(const IntegerPolyhedron &poly,
+                                      Optional<uint64_t> trueVolume,
+                                      Optional<uint64_t> resultBound) {
+  expectComputedVolumeIsValidOverapprox(poly.computeVolume(), trueVolume,
+                                        resultBound);
+}
+
+TEST(IntegerPolyhedronTest, computeVolume) {
+  MLIRContext context;
+
+  // 0 <= x <= 3 + 1/3, -5.5 <= y <= 2 + 3/5, 3 <= z <= 1.75.
+  // i.e. 0 <= x <= 3, -5 <= y <= 2, 3 <= z <= 3 + 1/4.
+  // So volume is 4 * 8 * 1 = 32.
+  expectComputedVolumeIsValidOverapprox(
+      parsePoly("(x, y, z) : (x >= 0, -3*x + 10 >= 0, 2*y + 11 >= 0,"
+                "-5*y + 13 >= 0, z - 3 >= 0, -4*z + 13 >= 0)",
+                &context),
+      /*trueVolume=*/32ull, /*resultBound=*/32ull);
+
+  // Same as above but y has bounds 2 + 1/5 <= y <= 2 + 3/5. So the volume is
+  // zero.
+  expectComputedVolumeIsValidOverapprox(
+      parsePoly("(x, y, z) : (x >= 0, -3*x + 10 >= 0, 5*y - 11 >= 0,"
+                "-5*y + 13 >= 0, z - 3 >= 0, -4*z + 13 >= 0)",
+                &context),
+      /*trueVolume=*/0ull, /*resultBound=*/0ull);
+
+  // Now x is unbounded below but y still has no integer values.
+  expectComputedVolumeIsValidOverapprox(
+      parsePoly("(x, y, z) : (-3*x + 10 >= 0, 5*y - 11 >= 0,"
+                "-5*y + 13 >= 0, z - 3 >= 0, -4*z + 13 >= 0)",
+                &context),
+      /*trueVolume=*/0ull, /*resultBound=*/0ull);
+
+  // A diamond shape, 0 <= x + y <= 10, 0 <= x - y <= 10,
+  // with vertices at (0, 0), (5, 5), (5, 5), (10, 0).
+  // x and y can take 11 possible values so result computed is 11*11 = 121.
+  expectComputedVolumeIsValidOverapprox(
+      parsePoly("(x, y) : (x + y >= 0, -x - y + 10 >= 0, x - y >= 0,"
+                "-x + y + 10 >= 0)",
+                &context),
+      /*trueVolume=*/61ull, /*resultBound=*/121ull);
+
+  // Effectively the same diamond as above; constrain the variables to be even
+  // and double the constant terms of the constraints. The algorithm can't
+  // eliminate locals exactly, so the result is an overapproximation by
+  // computing that x and y can take 21 possible values so result is 21*21 =
+  // 441.
+  expectComputedVolumeIsValidOverapprox(
+      parsePoly("(x, y) : (x + y >= 0, -x - y + 20 >= 0, x - y >= 0,"
+                " -x + y + 20 >= 0, x - 2*(x floordiv 2) == 0,"
+                "y - 2*(y floordiv 2) == 0)",
+                &context),
+      /*trueVolume=*/61ull, /*resultBound=*/441ull);
+
+  // Unbounded polytope.
+  expectComputedVolumeIsValidOverapprox(
+      parsePoly("(x, y) : (2*x - y >= 0, y - 3*x >= 0)", &context),
+      /*trueVolume=*/{}, /*resultBound=*/{});
+}
+
 } // namespace mlir

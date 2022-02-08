@@ -14,6 +14,8 @@
 #define MLIR_UNITTESTS_ANALYSIS_PRESBURGER_UTILS_H
 
 #include "../../Dialect/Affine/Analysis/AffineStructuresParser.h"
+#include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
+#include "mlir/Analysis/Presburger/PresburgerSet.h"
 #include "mlir/IR/MLIRContext.h"
 
 #include <gtest/gtest.h>
@@ -26,6 +28,31 @@ static IntegerPolyhedron parsePoly(StringRef str, MLIRContext *context) {
   FailureOr<IntegerPolyhedron> poly = parseIntegerSetToFAC(str, context);
   EXPECT_TRUE(succeeded(poly));
   return *poly;
+}
+
+/// lhs and rhs represent non-negative integers or positive infinity. The
+/// infinity case corresponds to when the Optional is empty.
+static bool infinityOrUInt64LE(Optional<uint64_t> lhs, Optional<uint64_t> rhs) {
+  // No constraint.
+  if (!rhs)
+    return true;
+  // Finite rhs provided so lhs has to be finite too.
+  if (!lhs)
+    return false;
+  return *lhs <= *rhs;
+}
+
+/// Expect that the computed volume is a valid overapproximation of
+/// the true volume `trueVolume`, while also being at least as good an
+/// approximation as `resultBound`.
+static void
+expectComputedVolumeIsValidOverapprox(Optional<uint64_t> computedVolume,
+                                      Optional<uint64_t> trueVolume,
+                                      Optional<uint64_t> resultBound) {
+  assert(infinityOrUInt64LE(trueVolume, resultBound) &&
+         "can't expect result to be less than the true volume");
+  EXPECT_TRUE(infinityOrUInt64LE(trueVolume, computedVolume));
+  EXPECT_TRUE(infinityOrUInt64LE(computedVolume, resultBound));
 }
 } // namespace mlir
 
