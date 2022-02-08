@@ -2110,6 +2110,362 @@ if.end:
   ret void
 }
 
+; Two mergeable indirect calls, with identical callees.
+define void @t35_identical_indirect_callees(void()* %callee) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @t35_identical_indirect_callees(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       lpad:
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    call void @destructor()
+; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
+; CHECK:       if.then1.invoke:
+; CHECK-NEXT:    invoke void [[CALLEE:%.*]]()
+; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       if.then1.cont:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c0 = call i1 @cond()
+  br i1 %c0, label %if.then0, label %if.else
+
+if.then0:
+  invoke void %callee() to label %invoke.cont0 unwind label %lpad
+
+invoke.cont0:
+  unreachable
+
+lpad:
+  %eh = landingpad { i8*, i32 } cleanup
+  call void @destructor()
+  resume { i8*, i32 } %eh
+
+if.else:
+  %c1 = call i1 @cond()
+  br i1 %c1, label %if.then1, label %if.end
+
+if.then1:
+  invoke void %callee() to label %invoke.cont2 unwind label %lpad
+
+invoke.cont2:
+  unreachable
+
+if.end:
+  call void @sideeffect()
+  ret void
+}
+
+; Two mergeable indirect calls, with different callees.
+define void @t36_different_indirect_callees(void()* %callee0, void()* %callee1) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @t36_different_indirect_callees(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then0:
+; CHECK-NEXT:    invoke void [[CALLEE0:%.*]]()
+; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       invoke.cont0:
+; CHECK-NEXT:    unreachable
+; CHECK:       lpad:
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    call void @destructor()
+; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    invoke void [[CALLEE1:%.*]]()
+; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
+; CHECK:       invoke.cont2:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c0 = call i1 @cond()
+  br i1 %c0, label %if.then0, label %if.else
+
+if.then0:
+  invoke void %callee0() to label %invoke.cont0 unwind label %lpad
+
+invoke.cont0:
+  unreachable
+
+lpad:
+  %eh = landingpad { i8*, i32 } cleanup
+  call void @destructor()
+  resume { i8*, i32 } %eh
+
+if.else:
+  %c1 = call i1 @cond()
+  br i1 %c1, label %if.then1, label %if.end
+
+if.then1:
+  invoke void %callee1() to label %invoke.cont2 unwind label %lpad
+
+invoke.cont2:
+  unreachable
+
+if.end:
+  call void @sideeffect()
+  ret void
+}
+
+; Don't merge direct invoke with indirect ones.
+define void @t37_three_invokes_two_indirect_one_direct(void()* %callee) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @t37_three_invokes_two_indirect_one_direct(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE0:%.*]]
+; CHECK:       lpad:
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    call void @destructor()
+; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK:       if.else0:
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_ELSE1:%.*]]
+; CHECK:       if.then1.invoke:
+; CHECK-NEXT:    invoke void [[CALLEE:%.*]]()
+; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       if.then1.cont:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.else1:
+; CHECK-NEXT:    [[C2:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C2]], label [[IF_THEN2:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then2:
+; CHECK-NEXT:    invoke void @simple_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
+; CHECK:       invoke.cont3:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c0 = call i1 @cond()
+  br i1 %c0, label %if.then0, label %if.else0
+
+if.then0:
+  invoke void %callee() to label %invoke.cont0 unwind label %lpad
+
+invoke.cont0:
+  unreachable
+
+lpad:
+  %eh = landingpad { i8*, i32 } cleanup
+  call void @destructor()
+  resume { i8*, i32 } %eh
+
+if.else0:
+  %c1 = call i1 @cond()
+  br i1 %c1, label %if.then1, label %if.else1
+
+if.then1:
+  invoke void %callee() to label %invoke.cont2 unwind label %lpad
+
+invoke.cont2:
+  unreachable
+
+if.else1:
+  %c2 = call i1 @cond()
+  br i1 %c2, label %if.then2, label %if.end
+
+if.then2:
+  invoke void @simple_throw() to label %invoke.cont3 unwind label %lpad
+
+invoke.cont3:
+  unreachable
+
+if.end:
+  call void @sideeffect()
+  ret void
+}
+
+; For indirect invokes, different arguments are fine.
+define void @t38_different_arguments_and_operand_bundes_are_fine(void(i32)* %callee0, void(i32)* %callee1) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @t38_different_arguments_and_operand_bundes_are_fine(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then0:
+; CHECK-NEXT:    invoke void [[CALLEE0:%.*]](i32 0)
+; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       invoke.cont0:
+; CHECK-NEXT:    unreachable
+; CHECK:       lpad:
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    call void @destructor()
+; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    invoke void [[CALLEE1:%.*]](i32 42)
+; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
+; CHECK:       invoke.cont2:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c0 = call i1 @cond()
+  br i1 %c0, label %if.then0, label %if.else
+
+if.then0:
+  invoke void %callee0(i32 0) to label %invoke.cont0 unwind label %lpad
+
+invoke.cont0:
+  unreachable
+
+lpad:
+  %eh = landingpad { i8*, i32 } cleanup
+  call void @destructor()
+  resume { i8*, i32 } %eh
+
+if.else:
+  %c1 = call i1 @cond()
+  br i1 %c1, label %if.then1, label %if.end
+
+if.then1:
+  invoke void %callee1(i32 42) to label %invoke.cont2 unwind label %lpad
+
+invoke.cont2:
+  unreachable
+
+if.end:
+  call void @sideeffect()
+  ret void
+}
+
+; For indirect invokes, different operand bundle arguments are fine.
+define void @t39_different_arguments_and_operand_bundes_are_fine(void()* %callee0, void()* %callee1) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @t39_different_arguments_and_operand_bundes_are_fine(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then0:
+; CHECK-NEXT:    invoke void [[CALLEE0:%.*]]() [ "abc"(i32 42) ]
+; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       invoke.cont0:
+; CHECK-NEXT:    unreachable
+; CHECK:       lpad:
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    call void @destructor()
+; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    invoke void [[CALLEE1:%.*]]() [ "abc"(i32 0) ]
+; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
+; CHECK:       invoke.cont2:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c0 = call i1 @cond()
+  br i1 %c0, label %if.then0, label %if.else
+
+if.then0:
+  invoke void %callee0() [ "abc"(i32 42) ] to label %invoke.cont0 unwind label %lpad
+
+invoke.cont0:
+  unreachable
+
+lpad:
+  %eh = landingpad { i8*, i32 } cleanup
+  call void @destructor()
+  resume { i8*, i32 } %eh
+
+if.else:
+  %c1 = call i1 @cond()
+  br i1 %c1, label %if.then1, label %if.end
+
+if.then1:
+  invoke void %callee1() [ "abc"(i32 0) ] to label %invoke.cont2 unwind label %lpad
+
+invoke.cont2:
+  unreachable
+
+if.end:
+  call void @sideeffect()
+  ret void
+}
+
+; For indirect invokes, both different arguments and operand bundle arguments are fine.
+define void @t40_different_arguments_and_operand_bundes_are_fine(void(i32)* %callee0, void(i32)* %callee1) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @t40_different_arguments_and_operand_bundes_are_fine(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then0:
+; CHECK-NEXT:    invoke void [[CALLEE0:%.*]](i32 0) [ "abc"(i32 42) ]
+; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       invoke.cont0:
+; CHECK-NEXT:    unreachable
+; CHECK:       lpad:
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    call void @destructor()
+; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    invoke void [[CALLEE1:%.*]](i32 42) [ "abc"(i32 0) ]
+; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
+; CHECK:       invoke.cont2:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c0 = call i1 @cond()
+  br i1 %c0, label %if.then0, label %if.else
+
+if.then0:
+  invoke void %callee0(i32 0) [ "abc"(i32 42) ] to label %invoke.cont0 unwind label %lpad
+
+invoke.cont0:
+  unreachable
+
+lpad:
+  %eh = landingpad { i8*, i32 } cleanup
+  call void @destructor()
+  resume { i8*, i32 } %eh
+
+if.else:
+  %c1 = call i1 @cond()
+  br i1 %c1, label %if.then1, label %if.end
+
+if.then1:
+  invoke void %callee1(i32 42) [ "abc"(i32 0) ] to label %invoke.cont2 unwind label %lpad
+
+invoke.cont2:
+  unreachable
+
+if.end:
+  call void @sideeffect()
+  ret void
+}
+
 declare i1 @cond()
 
 declare void @sideeffect()
