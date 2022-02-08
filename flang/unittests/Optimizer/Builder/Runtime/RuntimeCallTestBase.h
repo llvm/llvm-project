@@ -33,6 +33,7 @@ public:
     kindMap = std::make_unique<fir::KindMapping>(&context);
     firBuilder = std::make_unique<fir::FirOpBuilder>(mod, *kindMap);
 
+    i1Ty = firBuilder->getI1Type();
     i8Ty = firBuilder->getI8Type();
     i16Ty = firBuilder->getIntegerType(16);
     i32Ty = firBuilder->getI32Type();
@@ -58,6 +59,7 @@ public:
   std::unique_ptr<fir::FirOpBuilder> firBuilder;
 
   // Commonly used types
+  mlir::Type i1Ty;
   mlir::Type i8Ty;
   mlir::Type i16Ty;
   mlir::Type i32Ty;
