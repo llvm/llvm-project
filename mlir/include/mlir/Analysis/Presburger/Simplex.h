@@ -537,8 +537,11 @@ public:
   void detectRedundant();
 
   /// Returns a (min, max) pair denoting the minimum and maximum integer values
-  /// of the given expression.
-  std::pair<int64_t, int64_t> computeIntegerBounds(ArrayRef<int64_t> coeffs);
+  /// of the given expression. If either of the values is unbounded, an empty
+  /// optional is returned in its place. If the result has min > max then no
+  /// integer value exists.
+  std::pair<Optional<int64_t>, Optional<int64_t>>
+  computeIntegerBounds(ArrayRef<int64_t> coeffs);
 
   /// Returns true if the polytope is unbounded, i.e., extends to infinity in
   /// some direction. Otherwise, returns false.

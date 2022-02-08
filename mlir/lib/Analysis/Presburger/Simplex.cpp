@@ -1456,7 +1456,7 @@ Optional<SmallVector<int64_t, 8>> Simplex::findIntegerSample() {
           llvm::to_vector<8>(basis.getRow(level));
       basisCoeffs.push_back(0);
 
-      int64_t minRoundedUp, maxRoundedDown;
+      Optional<int64_t> minRoundedUp, maxRoundedDown;
       std::tie(minRoundedUp, maxRoundedDown) =
           computeIntegerBounds(basisCoeffs);
 
@@ -1475,8 +1475,10 @@ Optional<SmallVector<int64_t, 8>> Simplex::findIntegerSample() {
 
       snapshotStack.push_back(getSnapshot());
       // The smallest value in the range is the next value to try.
-      nextValueStack.push_back(minRoundedUp);
-      upperBoundStack.push_back(maxRoundedDown);
+      // The values in the optionals are guaranteed to exist since we know the
+      // polytope is bounded.
+      nextValueStack.push_back(*minRoundedUp);
+      upperBoundStack.push_back(*maxRoundedDown);
     }
 
     assert((snapshotStack.size() - 1 == level &&
@@ -1513,21 +1515,17 @@ Optional<SmallVector<int64_t, 8>> Simplex::findIntegerSample() {
 
 /// Compute the minimum and maximum integer values the expression can take. We
 /// compute each separately.
-std::pair<int64_t, int64_t>
+std::pair<Optional<int64_t>, Optional<int64_t>>
 Simplex::computeIntegerBounds(ArrayRef<int64_t> coeffs) {
-  int64_t minRoundedUp;
+  Optional<int64_t> minRoundedUp;
   if (Optional<Fraction> maybeMin =
           computeOptimum(Simplex::Direction::Down, coeffs))
     minRoundedUp = ceil(*maybeMin);
-  else
-    llvm_unreachable("Tableau should not be unbounded");
 
-  int64_t maxRoundedDown;
+  Optional<int64_t> maxRoundedDown;
   if (Optional<Fraction> maybeMax =
           computeOptimum(Simplex::Direction::Up, coeffs))
     maxRoundedDown = floor(*maybeMax);
-  else
-    llvm_unreachable("Tableau should not be unbounded");
 
   return {minRoundedUp, maxRoundedDown};
 }
