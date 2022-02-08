@@ -96,7 +96,7 @@ class CodeGenTypes {
   /// corresponding llvm::Type.
   llvm::DenseMap<const Type *, llvm::Type *> TypeCache;
 
-  llvm::SmallSet<const Type *, 8> RecordsWithOpaqueMemberPointers;
+  llvm::DenseMap<const Type *, llvm::Type *> RecordsWithOpaqueMemberPointers;
 
   static constexpr unsigned FunctionInfosLog2InitSize = 9;
   /// Helper for ConvertType.
