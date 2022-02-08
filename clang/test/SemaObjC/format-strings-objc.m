@@ -64,7 +64,7 @@ extern void NSLog2(int format, ...) __attribute__((format(__NSString__, 1, 2)));
 extern void CFStringCreateWithFormat2(int *format, ...) __attribute__((format(CFString, 1, 2))); // expected-error {{format argument not a CFString}}
 
 // <rdar://problem/7068334> - Catch use of long long with int arguments.
-void rdar_7068334() {
+void rdar_7068334(void) {
   long long test = 500;  
   printf("%i ",test); // expected-warning{{format specifies type 'int' but the argument has type 'long long'}}
   NSLog(@"%i ",test); // expected-warning{{format specifies type 'int' but the argument has type 'long long'}}
@@ -72,7 +72,7 @@ void rdar_7068334() {
 }
 
 // <rdar://problem/7697748>
-void rdar_7697748() {
+void rdar_7697748(void) {
   NSLog(@"%@!"); // expected-warning{{more '%' conversions than data arguments}}
 }
 
@@ -87,7 +87,7 @@ void test_p_conversion_with_objc_pointer(id x, id<Foo> y) {
 extern void MyNSLog(NSString *format, ...) __attribute__((format(__NSString__, 1, 2)));
 extern void MyCFStringCreateWithFormat(CFStringRef format, ...) __attribute__((format(__CFString__, 1, 2)));
 
-void check_mylog() {
+void check_mylog(void) {
   MyNSLog(@"%@"); // expected-warning {{more '%' conversions than data arguments}}
   MyCFStringCreateWithFormat(CFSTR("%@")); // expected-warning {{more '%' conversions than data arguments}}
 }
@@ -98,7 +98,7 @@ void check_mylog() {
 + (id)fooWithCStringFormat:(const char *)format, ... __attribute__((format(__printf__, 1, 2)));
 @end
 
-void check_method() {
+void check_method(void) {
   [Foo fooWithFormat:@"%@"]; // expected-warning {{more '%' conversions than data arguments}}
   [Foo fooWithCStringFormat:"%@"]; // expected-warning {{invalid conversion specifier '@'}}
 }
@@ -138,12 +138,12 @@ NSString *test_literal_propagation(void) {
 #define MyNSLocalizedString(key) GetLocalizedString(key)
 #define MyNSAssert(fmt, arg) NSLog(fmt, arg, 0, 0)
 
-void check_NSLocalizedString() {
+void check_NSLocalizedString(void) {
   [Foo fooWithFormat:NSLocalizedString(@"format"), @"arg"]; // no-warning
   [Foo fooWithFormat:MyNSLocalizedString(@"format"), @"arg"]; // expected-warning {{format string is not a string literal}}}
 }
 
-void check_NSAssert() {
+void check_NSAssert(void) {
   NSAssert(@"Hello %@", @"World"); // no-warning
   MyNSAssert(@"Hello %@", @"World"); // expected-warning  {{data argument not used by format string}}
 }
@@ -153,7 +153,7 @@ typedef __WCHAR_TYPE__ wchar_t;
 // Test that %S, %C, %ls check for 16 bit types in ObjC strings, as described at
 // http://developer.apple.com/library/mac/#documentation/Cocoa/Conceptual/Strings/Articles/formatSpecifiers.html#//apple_ref/doc/uid/TP40004265
 
-void test_percent_S() {
+void test_percent_S(void) {
   const unsigned short data[] = { 'a', 'b', 0 };
   const unsigned short* ptr = data;
   NSLog(@"%S", ptr);  // no-warning
@@ -162,7 +162,7 @@ void test_percent_S() {
   NSLog(@"%S", wchar_ptr);  // expected-warning{{format specifies type 'const unichar *' (aka 'const unsigned short *') but the argument has type 'const wchar_t *'}}
 }
 
-void test_percent_ls() {
+void test_percent_ls(void) {
   const unsigned short data[] = { 'a', 'b', 0 };
   const unsigned short* ptr = data;
   NSLog(@"%ls", ptr);  // no-warning
@@ -171,7 +171,7 @@ void test_percent_ls() {
   NSLog(@"%ls", wchar_ptr);  // expected-warning{{format specifies type 'const unichar *' (aka 'const unsigned short *') but the argument has type 'const wchar_t *'}}
 }
 
-void test_percent_C() {
+void test_percent_C(void) {
   const unsigned short data = 'a';
   NSLog(@"%C", data);  // no-warning
 
@@ -213,14 +213,14 @@ void test_toll_free_bridging(CFStringRef x, id y) {
 
 
 // Test that it is okay to use %p with the address of a block.
-void rdar11049844_aux();
-int rdar11049844() {
+void rdar11049844_aux(void);
+int rdar11049844(void) {
   typedef void (^MyBlock)(void);
-  MyBlock x = ^void() { rdar11049844_aux(); };
+  MyBlock x = ^void(void) { rdar11049844_aux(); };
   printf("%p", x);  // no-warning
 }
 
-void test_nonBuiltinCFStrings() {
+void test_nonBuiltinCFStrings(void) {
   CFStringCreateWithFormat(__CFStringMakeConstantString("%@"), 1); // expected-warning{{format specifies type 'id' but the argument has type 'int'}}
 }
 
@@ -256,13 +256,13 @@ void testTypeOf(NSInteger dW, NSInteger dH) {
   NSLog(@"dW %d  dH %d",({ __typeof__(dW) __a = (dW); __a < 0 ? -__a : __a; }),({ __typeof__(dH) __a = (dH); __a < 0 ? -__a : __a; })); // expected-warning 2 {{format specifies type 'int' but the argument has type 'long'}}
 }
 
-void testUnicode() {
+void testUnicode(void) {
   NSLog(@"%C", 0x2022); // no-warning
   NSLog(@"%C", 0x202200); // expected-warning{{format specifies type 'unichar' (aka 'unsigned short') but the argument has type 'int'}}
 }
 
 // Test Objective-C modifier flags.
-void testObjCModifierFlags() {
+void testObjCModifierFlags(void) {
   NSLog(@"%[]@", @"Foo"); // expected-warning {{missing object format flag}}
   NSLog(@"%[", @"Foo"); // expected-warning {{incomplete format specifier}}
   NSLog(@"%[tt", @"Foo");  // expected-warning {{incomplete format specifier}}

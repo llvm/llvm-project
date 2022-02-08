@@ -316,7 +316,7 @@ void test(__kindof Bar *kBar) {
 @interface B : NSObject
 @property (getter=isActive, readonly) BOOL active;
 @end
-void foo() {
+void foo(void) {
   __kindof B *NSApp;
   if ([NSApp isActive]) {
   }
@@ -365,9 +365,9 @@ void implicit_convert_array(NSArray<__kindof NSString *> *kindofStringsArray,
 // __kindof + nullability
 // ---------------------------------------------------------------------------
 
-void testNullability() {
+void testNullability(void) {
   // The base type being a pointer type tickles the bug.
-  extern __kindof id <NSCopying> _Nonnull getSomeCopyable();
+  extern __kindof id <NSCopying> _Nonnull getSomeCopyable(void);
   NSString *string = getSomeCopyable(); // no-warning
 
   void processCopyable(__typeof(getSomeCopyable()) string);
@@ -408,7 +408,7 @@ void testNullability() {
 @property (copy) __kindof ObjectType kindof_object;
 @end
 
-void testGenericAssignment() {
+void testGenericAssignment(void) {
   NSMutableString *NSMutableString_str;
   NSNumber *NSNumber_obj;
 
@@ -435,7 +435,7 @@ void testGenericAssignment() {
   NSMutableString_str = typedef_generic.kindof_object;
 }
 
-void testKindofNonObjectType() {
+void testKindofNonObjectType(void) {
   typedef void (^BlockType)(int);
   NSGeneric<BlockType> *generic;
 }

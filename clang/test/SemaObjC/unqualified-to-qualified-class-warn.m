@@ -22,7 +22,7 @@
 void functionTakingAClassConformingToAProtocol(AClass <Fooable> *instance) { // expected-note {{passing argument to parameter 'instance' here}}
 }
 
-int main () {
+int main (void) {
     AClass *aobject = 0;
     BClass *bobject = 0;
     functionTakingAClassConformingToAProtocol(aobject);  // expected-warning {{incompatible pointer types passing 'AClass *' to parameter of type 'AClass<Fooable> *'}}

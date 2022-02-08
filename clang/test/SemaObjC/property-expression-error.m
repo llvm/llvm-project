@@ -11,13 +11,13 @@
 @synthesize index;
 @end
 
-int main() {
+int main(void) {
 	AddressMyProperties *object;
 	&object.index; // expected-error {{address of property expression requested}}
 	return 0;
 }
 
 typedef int Foo;
-void test() {
+void test(void) {
   Foo.x;	// expected-error {{expected identifier or '('}}
 }

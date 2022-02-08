@@ -23,7 +23,7 @@
 - (id) foo16 : (id**)firstObj, ... __attribute__((sentinel(0,1)));
 @end
 
-int main ()
+int main (void)
 {
   INTF *p;
 
