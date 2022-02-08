@@ -12254,10 +12254,7 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
     unsigned ActiveBits = 0;
     if (Mask.isMask()) {
       ActiveBits = Mask.countTrailingOnes();
-    } else if (Mask.isShiftedMask()) {
-      ShAmt = Mask.countTrailingZeros();
-      APInt ShiftedMask = Mask.lshr(ShAmt);
-      ActiveBits = ShiftedMask.countTrailingOnes();
+    } else if (Mask.isShiftedMask(ShAmt, ActiveBits)) {
       HasShiftedOffset = true;
     } else
       return SDValue();
