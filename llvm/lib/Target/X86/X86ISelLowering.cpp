@@ -33418,6 +33418,20 @@ bool X86TargetLowering::isNarrowingProfitable(EVT VT1, EVT VT2) const {
   return !(VT1 == MVT::i32 && VT2 == MVT::i16);
 }
 
+bool X86TargetLowering::shouldFoldSelectWithIdentityConstant(unsigned Opcode,
+                                                             EVT VT) const {
+  // TODO: This is too general. There are cases where pre-AVX512 codegen would
+  //       benefit. The transform may also be profitable for scalar code.
+  if (!Subtarget.hasAVX512())
+    return false;
+  if (!Subtarget.hasVLX() && !VT.is512BitVector())
+    return false;
+  if (!VT.isVector())
+    return false;
+
+  return true;
+}
+
 /// Targets can use this to indicate that they only support *some*
 /// VECTOR_SHUFFLE operations, those with specific masks.
 /// By default, if a target supports the VECTOR_SHUFFLE node, all mask values
@@ -48909,83 +48923,6 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
   return DAG.getBitcast(VT, CFmul);
 }
 
-/// This inverts a canonicalization in IR that replaces a variable select arm
-/// with an identity constant. Codegen improves if we re-use the variable
-/// operand rather than load a constant. This can also be converted into a
-/// masked vector operation if the target supports it.
-static SDValue foldSelectWithIdentityConstant(SDNode *N, SelectionDAG &DAG,
-                                              bool ShouldCommuteOperands) {
-  // Match a select as operand 1. The identity constant that we are looking for
-  // is only valid as operand 1 of a non-commutative binop.
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-  if (ShouldCommuteOperands)
-    std::swap(N0, N1);
-
-  // TODO: Should this apply to scalar select too?
-  if (!N1.hasOneUse() || N1.getOpcode() != ISD::VSELECT)
-    return SDValue();
-
-  unsigned Opcode = N->getOpcode();
-  EVT VT = N->getValueType(0);
-  SDValue Cond = N1.getOperand(0);
-  SDValue TVal = N1.getOperand(1);
-  SDValue FVal = N1.getOperand(2);
-
-  // TODO: This (and possibly the entire function) belongs in a
-  //       target-independent location with target hooks.
-  // TODO: The cases should match with IR's ConstantExpr::getBinOpIdentity().
-  // TODO: With fast-math (NSZ), allow the opposite-sign form of zero?
-  auto isIdentityConstantForOpcode = [](unsigned Opcode, SDValue V) {
-    if (ConstantFPSDNode *C = isConstOrConstSplatFP(V)) {
-      switch (Opcode) {
-      case ISD::FADD: // X + -0.0 --> X
-        return C->isZero() && C->isNegative();
-      case ISD::FSUB: // X - 0.0 --> X
-        return C->isZero() && !C->isNegative();
-      }
-    }
-    return false;
-  };
-
-  // This transform increases uses of N0, so freeze it to be safe.
-  // binop N0, (vselect Cond, IDC, FVal) --> vselect Cond, N0, (binop N0, FVal)
-  if (isIdentityConstantForOpcode(Opcode, TVal)) {
-    SDValue F0 = DAG.getFreeze(N0);
-    SDValue NewBO = DAG.getNode(Opcode, SDLoc(N), VT, F0, FVal, N->getFlags());
-    return DAG.getSelect(SDLoc(N), VT, Cond, F0, NewBO);
-  }
-  // binop N0, (vselect Cond, TVal, IDC) --> vselect Cond, (binop N0, TVal), N0
-  if (isIdentityConstantForOpcode(Opcode, FVal)) {
-    SDValue F0 = DAG.getFreeze(N0);
-    SDValue NewBO = DAG.getNode(Opcode, SDLoc(N), VT, F0, TVal, N->getFlags());
-    return DAG.getSelect(SDLoc(N), VT, Cond, NewBO, F0);
-  }
-
-  return SDValue();
-}
-
-static SDValue combineBinopWithSelect(SDNode *N, SelectionDAG &DAG,
-                                      const X86Subtarget &Subtarget) {
-  // TODO: This is too general. There are cases where pre-AVX512 codegen would
-  //       benefit. The transform may also be profitable for scalar code.
-  if (!Subtarget.hasAVX512())
-    return SDValue();
-
-  if (!Subtarget.hasVLX() && !N->getValueType(0).is512BitVector())
-    return SDValue();
-
-  if (SDValue Sel = foldSelectWithIdentityConstant(N, DAG, false))
-    return Sel;
-
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (TLI.isCommutativeBinOp(N->getOpcode()))
-    if (SDValue Sel = foldSelectWithIdentityConstant(N, DAG, true))
-      return Sel;
-
-  return SDValue();
-}
-
 /// Do target-specific dag combines on floating-point adds/subs.
 static SDValue combineFaddFsub(SDNode *N, SelectionDAG &DAG,
                                const X86Subtarget &Subtarget) {
@@ -48994,9 +48931,6 @@ static SDValue combineFaddFsub(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue COp = combineFaddCFmul(N, DAG, Subtarget))
     return COp;
-
-  if (SDValue Sel = combineBinopWithSelect(N, DAG, Subtarget))
-    return Sel;
 
   return SDValue();
 }
