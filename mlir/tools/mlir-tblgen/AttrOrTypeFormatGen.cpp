@@ -812,6 +812,8 @@ LogicalResult DefFormatParser::verify(SMLoc loc,
                                 it.value().getName());
     }
   }
+  if (elements.empty())
+    return success();
   // A `struct` directive that contains optional parameters cannot be followed
   // by a comma literal, which is ambiguous.
   for (auto it : llvm::zip(elements.drop_back(), elements.drop_front())) {
