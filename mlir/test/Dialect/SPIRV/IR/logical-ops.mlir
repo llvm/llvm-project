@@ -108,7 +108,7 @@ func @logicalBinary(%arg0 : i1, %arg1 : i1)
 
 func @logicalBinary(%arg0 : i1, %arg1 : i1)
 {
-  // expected-error @+1 {{custom op 'spv.LogicalAnd' expected 2 operands}}
+  // expected-error @+1 {{expected ','}}
   %0 = spv.LogicalAnd %arg0 : i1
   return
 }
@@ -166,7 +166,7 @@ func @logicalUnary(%arg0 : i1)
 
 func @logicalUnary(%arg0 : i32)
 {
-  // expected-error @+1 {{operand #0 must be bool or vector of bool values of length 2/3/4/8/16, but got 'i32'}}
+  // expected-error @+1 {{'operand' must be bool or vector of bool values of length 2/3/4/8/16, but got 'i32'}}
   %0 = spv.LogicalNot %arg0 : i32
   return
 }

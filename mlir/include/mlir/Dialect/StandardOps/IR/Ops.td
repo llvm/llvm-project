@@ -31,15 +31,7 @@ def StandardOps_Dialect : Dialect {
 
 // Base class for Standard dialect ops.
 class Std_Op<string mnemonic, list<Trait> traits = []> :
-    Op<StandardOps_Dialect, mnemonic, traits> {
-  // For every standard op, there needs to be a:
-  //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)
-  //   * ParseResult parse${C++ class of Op}(OpAsmParser &parser,
-  //                                         OperationState &result)
-  // functions.
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-}
+    Op<StandardOps_Dialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
 // CallOp

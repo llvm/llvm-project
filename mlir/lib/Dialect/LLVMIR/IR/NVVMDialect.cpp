@@ -46,8 +46,7 @@ static void printNVVMIntrinsicOp(OpAsmPrinter &p, Operation *op) {
 }
 
 // <operation> ::= `llvm.nvvm.vote.ballot.sync %mask, %pred` : result_type
-static ParseResult parseNVVMVoteBallotOp(OpAsmParser &parser,
-                                         OperationState &result) {
+ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
   MLIRContext *context = parser.getContext();
   auto int32Ty = IntegerType::get(context, 32);
   auto int1Ty = IntegerType::get(context, 1);
@@ -61,6 +60,8 @@ static ParseResult parseNVVMVoteBallotOp(OpAsmParser &parser,
                  parser.resolveOperands(ops, {int32Ty, int1Ty},
                                         parser.getNameLoc(), result.operands));
 }
+
+void VoteBallotOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
 
 LogicalResult CpAsyncOp::verify() {
   if (size() != 4 && size() != 8 && size() != 16)

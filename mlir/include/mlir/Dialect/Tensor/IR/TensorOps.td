@@ -18,10 +18,7 @@ include "mlir/Interfaces/TilingInterface.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 
 class Tensor_Op<string mnemonic, list<Trait> traits = []>
-    : Op<Tensor_Dialect, mnemonic, traits> {
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-}
+    : Op<Tensor_Dialect, mnemonic, traits>;
 
 // Base class for ops with static/dynamic offset, sizes and strides
 // attributes/arguments.
@@ -737,9 +734,8 @@ class Tensor_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parseReshapeLikeOp(parser, result); }];
 }
 
 def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {

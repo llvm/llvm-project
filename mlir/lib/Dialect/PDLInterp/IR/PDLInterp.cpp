@@ -97,7 +97,7 @@ void ForEachOp::build(::mlir::OpBuilder &builder, ::mlir::OperationState &state,
   }
 }
 
-static ParseResult parseForEachOp(OpAsmParser &parser, OperationState &result) {
+ParseResult ForEachOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse the loop variable followed by type.
   OpAsmParser::OperandType loopVariable;
   Type loopVariableType;
@@ -137,13 +137,13 @@ static ParseResult parseForEachOp(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-static void print(OpAsmPrinter &p, ForEachOp op) {
-  BlockArgument arg = op.getLoopVariable();
-  p << ' ' << arg << " : " << arg.getType() << " in " << op.values() << ' ';
-  p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
-  p.printOptionalAttrDict(op->getAttrs());
+void ForEachOp::print(OpAsmPrinter &p) {
+  BlockArgument arg = getLoopVariable();
+  p << ' ' << arg << " : " << arg.getType() << " in " << values() << ' ';
+  p.printRegion(region(), /*printEntryBlockArgs=*/false);
+  p.printOptionalAttrDict((*this)->getAttrs());
   p << " -> ";
-  p.printSuccessor(op.successor());
+  p.printSuccessor(successor());
 }
 
 LogicalResult ForEachOp::verify() {

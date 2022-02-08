@@ -44,9 +44,7 @@ class SPV_OCLUnaryOp<string mnemonic, int opcode, Type resultType,
     SPV_ScalarOrVectorOf<resultType>:$result
   );
 
-  let parser = [{ return parseUnaryOp(parser, result); }];
-
-  let printer = [{ return printUnaryOp(getOperation(), p); }];
+  let assemblyFormat = "$operand `:` type($operand) attr-dict";
 
   let hasVerifier = 0;
 }
@@ -55,7 +53,8 @@ class SPV_OCLUnaryOp<string mnemonic, int opcode, Type resultType,
 // the operand type.
 class SPV_OCLUnaryArithmeticOp<string mnemonic, int opcode, Type type,
                                list<Trait> traits = []> :
-  SPV_OCLUnaryOp<mnemonic, opcode, type, type, traits>;
+  SPV_OCLUnaryOp<mnemonic, opcode, type, type,
+                 traits # [SameOperandsAndResultType]>;
 
 // Base class for OpenCL binary ops.
 class SPV_OCLBinaryOp<string mnemonic, int opcode, Type resultType,

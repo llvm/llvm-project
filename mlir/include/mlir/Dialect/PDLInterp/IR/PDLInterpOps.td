@@ -623,8 +623,7 @@ def PDLInterp_ForEachOp
     /// Returns the loop variable.
     BlockArgument getLoopVariable() { return region().getArgument(0); }
   }];
-  let parser = [{ return ::parseForEachOp(parser, result); }];
-  let printer = [{ return ::print(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 

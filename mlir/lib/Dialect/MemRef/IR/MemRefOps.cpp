@@ -206,23 +206,22 @@ void AllocaOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // AllocaScopeOp
 //===----------------------------------------------------------------------===//
 
-static void print(OpAsmPrinter &p, AllocaScopeOp &op) {
+void AllocaScopeOp::print(OpAsmPrinter &p) {
   bool printBlockTerminators = false;
 
   p << ' ';
-  if (!op.results().empty()) {
-    p << " -> (" << op.getResultTypes() << ")";
+  if (!results().empty()) {
+    p << " -> (" << getResultTypes() << ")";
     printBlockTerminators = true;
   }
   p << ' ';
-  p.printRegion(op.bodyRegion(),
+  p.printRegion(bodyRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/printBlockTerminators);
-  p.printOptionalAttrDict(op->getAttrs());
+  p.printOptionalAttrDict((*this)->getAttrs());
 }
 
-static ParseResult parseAllocaScopeOp(OpAsmParser &parser,
-                                      OperationState &result) {
+ParseResult AllocaScopeOp::parse(OpAsmParser &parser, OperationState &result) {
   // Create a region for the body.
   result.regions.reserve(1);
   Region *bodyRegion = result.addRegion();
@@ -778,17 +777,16 @@ void DmaStartOp::build(OpBuilder &builder, OperationState &result,
     result.addOperands({stride, elementsPerStride});
 }
 
-static void print(OpAsmPrinter &p, DmaStartOp op) {
-  p << " " << op.getSrcMemRef() << '[' << op.getSrcIndices() << "], "
-    << op.getDstMemRef() << '[' << op.getDstIndices() << "], "
-    << op.getNumElements() << ", " << op.getTagMemRef() << '['
-    << op.getTagIndices() << ']';
-  if (op.isStrided())
-    p << ", " << op.getStride() << ", " << op.getNumElementsPerStride();
+void DmaStartOp::print(OpAsmPrinter &p) {
+  p << " " << getSrcMemRef() << '[' << getSrcIndices() << "], "
+    << getDstMemRef() << '[' << getDstIndices() << "], " << getNumElements()
+    << ", " << getTagMemRef() << '[' << getTagIndices() << ']';
+  if (isStrided())
+    p << ", " << getStride() << ", " << getNumElementsPerStride();
 
-  p.printOptionalAttrDict(op->getAttrs());
-  p << " : " << op.getSrcMemRef().getType() << ", "
-    << op.getDstMemRef().getType() << ", " << op.getTagMemRef().getType();
+  p.printOptionalAttrDict((*this)->getAttrs());
+  p << " : " << getSrcMemRef().getType() << ", " << getDstMemRef().getType()
+    << ", " << getTagMemRef().getType();
 }
 
 // Parse DmaStartOp.
@@ -799,8 +797,7 @@ static void print(OpAsmPrinter &p, DmaStartOp op) {
 //                       memref<1024 x f32, 2>,
 //                       memref<1 x i32>
 //
-static ParseResult parseDmaStartOp(OpAsmParser &parser,
-                                   OperationState &result) {
+ParseResult DmaStartOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::OperandType srcMemRefInfo;
   SmallVector<OpAsmParser::OperandType, 4> srcIndexInfos;
   OpAsmParser::OperandType dstMemRefInfo;
@@ -993,8 +990,8 @@ LogicalResult GenericAtomicRMWOp::verify() {
   return hasSideEffects ? failure() : success();
 }
 
-static ParseResult parseGenericAtomicRMWOp(OpAsmParser &parser,
-                                           OperationState &result) {
+ParseResult GenericAtomicRMWOp::parse(OpAsmParser &parser,
+                                      OperationState &result) {
   OpAsmParser::OperandType memref;
   Type memrefType;
   SmallVector<OpAsmParser::OperandType, 4> ivs;
@@ -1015,11 +1012,11 @@ static ParseResult parseGenericAtomicRMWOp(OpAsmParser &parser,
   return success();
 }
 
-static void print(OpAsmPrinter &p, GenericAtomicRMWOp op) {
-  p << ' ' << op.memref() << "[" << op.indices()
-    << "] : " << op.memref().getType() << ' ';
-  p.printRegion(op.getRegion());
-  p.printOptionalAttrDict(op->getAttrs());
+void GenericAtomicRMWOp::print(OpAsmPrinter &p) {
+  p << ' ' << memref() << "[" << indices() << "] : " << memref().getType()
+    << ' ';
+  p.printRegion(getRegion());
+  p.printOptionalAttrDict((*this)->getAttrs());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1163,20 +1160,19 @@ OpFoldResult LoadOp::fold(ArrayRef<Attribute> cstOperands) {
 // PrefetchOp
 //===----------------------------------------------------------------------===//
 
-static void print(OpAsmPrinter &p, PrefetchOp op) {
-  p << " " << op.memref() << '[';
-  p.printOperands(op.indices());
-  p << ']' << ", " << (op.isWrite() ? "write" : "read");
-  p << ", locality<" << op.localityHint();
-  p << ">, " << (op.isDataCache() ? "data" : "instr");
+void PrefetchOp::print(OpAsmPrinter &p) {
+  p << " " << memref() << '[';
+  p.printOperands(indices());
+  p << ']' << ", " << (isWrite() ? "write" : "read");
+  p << ", locality<" << localityHint();
+  p << ">, " << (isDataCache() ? "data" : "instr");
   p.printOptionalAttrDict(
-      op->getAttrs(),
+      (*this)->getAttrs(),
       /*elidedAttrs=*/{"localityHint", "isWrite", "isDataCache"});
-  p << " : " << op.getMemRefType();
+  p << " : " << getMemRefType();
 }
 
-static ParseResult parsePrefetchOp(OpAsmParser &parser,
-                                   OperationState &result) {
+ParseResult PrefetchOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::OperandType memrefInfo;
   SmallVector<OpAsmParser::OperandType, 4> indexInfo;
   IntegerAttr localityHint;
@@ -1374,12 +1370,19 @@ SmallVector<ReassociationExprs, 4> ExpandShapeOp::getReassociationExprs() {
                                             getReassociationIndices());
 }
 
-static void print(OpAsmPrinter &p, ExpandShapeOp op) {
-  ::mlir::printReshapeOp<ExpandShapeOp>(p, op);
+ParseResult ExpandShapeOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseReshapeLikeOp(parser, result);
+}
+void ExpandShapeOp::print(OpAsmPrinter &p) {
+  ::mlir::printReshapeOp<ExpandShapeOp>(p, *this);
 }
 
-static void print(OpAsmPrinter &p, CollapseShapeOp op) {
-  ::mlir::printReshapeOp<CollapseShapeOp>(p, op);
+ParseResult CollapseShapeOp::parse(OpAsmParser &parser,
+                                   OperationState &result) {
+  return parseReshapeLikeOp(parser, result);
+}
+void CollapseShapeOp::print(OpAsmPrinter &p) {
+  ::mlir::printReshapeOp<CollapseShapeOp>(p, *this);
 }
 
 /// Detect whether memref dims [dim, dim + extent) can be reshaped without
@@ -2241,15 +2244,13 @@ void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,
 }
 
 // transpose $in $permutation attr-dict : type($in) `to` type(results)
-static void print(OpAsmPrinter &p, TransposeOp op) {
-  p << " " << op.in() << " " << op.permutation();
-  p.printOptionalAttrDict(op->getAttrs(),
-                          {TransposeOp::getPermutationAttrName()});
-  p << " : " << op.in().getType() << " to " << op.getType();
+void TransposeOp::print(OpAsmPrinter &p) {
+  p << " " << in() << " " << permutation();
+  p.printOptionalAttrDict((*this)->getAttrs(), {getPermutationAttrName()});
+  p << " : " << in().getType() << " to " << getType();
 }
 
-static ParseResult parseTransposeOp(OpAsmParser &parser,
-                                    OperationState &result) {
+ParseResult TransposeOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::OperandType in;
   AffineMap permutation;
   MemRefType srcType, dstType;
@@ -2292,7 +2293,7 @@ OpFoldResult TransposeOp::fold(ArrayRef<Attribute>) {
 // ViewOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseViewOp(OpAsmParser &parser, OperationState &result) {
+ParseResult ViewOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::OperandType srcInfo;
   SmallVector<OpAsmParser::OperandType, 1> offsetInfo;
   SmallVector<OpAsmParser::OperandType, 4> sizesInfo;
@@ -2317,12 +2318,12 @@ static ParseResult parseViewOp(OpAsmParser &parser, OperationState &result) {
       parser.addTypeToList(dstType, result.types));
 }
 
-static void print(OpAsmPrinter &p, ViewOp op) {
-  p << ' ' << op.getOperand(0) << '[';
-  p.printOperand(op.byte_shift());
-  p << "][" << op.sizes() << ']';
-  p.printOptionalAttrDict(op->getAttrs());
-  p << " : " << op.getOperand(0).getType() << " to " << op.getType();
+void ViewOp::print(OpAsmPrinter &p) {
+  p << ' ' << getOperand(0) << '[';
+  p.printOperand(byte_shift());
+  p << "][" << sizes() << ']';
+  p.printOptionalAttrDict((*this)->getAttrs());
+  p << " : " << getOperand(0).getType() << " to " << getType();
 }
 
 LogicalResult ViewOp::verify() {

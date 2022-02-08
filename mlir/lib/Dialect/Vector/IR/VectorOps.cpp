@@ -404,8 +404,7 @@ LogicalResult ReductionOp::verify() {
   return success();
 }
 
-static ParseResult parseReductionOp(OpAsmParser &parser,
-                                    OperationState &result) {
+ParseResult ReductionOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 2> operandsInfo;
   Type redType;
   Type resType;
@@ -426,11 +425,11 @@ static ParseResult parseReductionOp(OpAsmParser &parser,
   return success();
 }
 
-static void print(OpAsmPrinter &p, ReductionOp op) {
-  p << " \"" << op.kind() << "\", " << op.vector();
-  if (!op.acc().empty())
-    p << ", " << op.acc();
-  p << " : " << op.vector().getType() << " into " << op.dest().getType();
+void ReductionOp::print(OpAsmPrinter &p) {
+  p << " \"" << kind() << "\", " << vector();
+  if (!acc().empty())
+    p << ", " << acc();
+  p << " : " << vector().getType() << " into " << dest().getType();
 }
 
 Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
@@ -510,8 +509,7 @@ void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
                                              builder.getContext()));
 }
 
-static ParseResult parseContractionOp(OpAsmParser &parser,
-                                      OperationState &result) {
+ParseResult ContractionOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::OperandType lhsInfo;
   OpAsmParser::OperandType rhsInfo;
   OpAsmParser::OperandType accInfo;
@@ -557,25 +555,25 @@ static ParseResult parseContractionOp(OpAsmParser &parser,
   return success();
 }
 
-static void print(OpAsmPrinter &p, ContractionOp op) {
+void ContractionOp::print(OpAsmPrinter &p) {
   // TODO: Unify printing code with linalg ops.
-  auto attrNames = op.getTraitAttrNames();
+  auto attrNames = getTraitAttrNames();
   llvm::StringSet<> traitAttrsSet;
   traitAttrsSet.insert(attrNames.begin(), attrNames.end());
   SmallVector<NamedAttribute, 8> attrs;
-  for (auto attr : op->getAttrs())
+  for (auto attr : (*this)->getAttrs())
     if (traitAttrsSet.count(attr.getName().strref()) > 0)
       attrs.push_back(attr);
 
-  auto dictAttr = DictionaryAttr::get(op.getContext(), attrs);
-  p << " " << dictAttr << " " << op.lhs() << ", ";
-  p << op.rhs() << ", " << op.acc();
-  if (op.masks().size() == 2)
-    p << ", " << op.masks();
+  auto dictAttr = DictionaryAttr::get(getContext(), attrs);
+  p << " " << dictAttr << " " << lhs() << ", ";
+  p << rhs() << ", " << acc();
+  if (masks().size() == 2)
+    p << ", " << masks();
 
-  p.printOptionalAttrDict(op->getAttrs(), attrNames);
-  p << " : " << op.lhs().getType() << ", " << op.rhs().getType() << " into "
-    << op.getResultType();
+  p.printOptionalAttrDict((*this)->getAttrs(), attrNames);
+  p << " : " << lhs().getType() << ", " << rhs().getType() << " into "
+    << getResultType();
 }
 
 static bool verifyDimMap(VectorType lhsType, VectorType rhsType,
@@ -967,13 +965,14 @@ void vector::ExtractOp::build(OpBuilder &builder, OperationState &result,
   build(builder, result, source, positionConstants);
 }
 
-static void print(OpAsmPrinter &p, vector::ExtractOp op) {
-  p << " " << op.vector() << op.position();
-  p.printOptionalAttrDict(op->getAttrs(), {"position"});
-  p << " : " << op.vector().getType();
+void vector::ExtractOp::print(OpAsmPrinter &p) {
+  p << " " << vector() << position();
+  p.printOptionalAttrDict((*this)->getAttrs(), {"position"});
+  p << " : " << vector().getType();
 }
 
-static ParseResult parseExtractOp(OpAsmParser &parser, OperationState &result) {
+ParseResult vector::ExtractOp::parse(OpAsmParser &parser,
+                                     OperationState &result) {
   SMLoc attributeLoc, typeLoc;
   NamedAttrList attrs;
   OpAsmParser::OperandType vector;
@@ -1731,10 +1730,10 @@ void ShuffleOp::build(OpBuilder &builder, OperationState &result, Value v1,
   result.addAttribute(getMaskAttrName(), maskAttr);
 }
 
-static void print(OpAsmPrinter &p, ShuffleOp op) {
-  p << " " << op.v1() << ", " << op.v2() << " " << op.mask();
-  p.printOptionalAttrDict(op->getAttrs(), {ShuffleOp::getMaskAttrName()});
-  p << " : " << op.v1().getType() << ", " << op.v2().getType();
+void ShuffleOp::print(OpAsmPrinter &p) {
+  p << " " << v1() << ", " << v2() << " " << mask();
+  p.printOptionalAttrDict((*this)->getAttrs(), {ShuffleOp::getMaskAttrName()});
+  p << " : " << v1().getType() << ", " << v2().getType();
 }
 
 LogicalResult ShuffleOp::verify() {
@@ -1770,7 +1769,7 @@ LogicalResult ShuffleOp::verify() {
   return success();
 }
 
-static ParseResult parseShuffleOp(OpAsmParser &parser, OperationState &result) {
+ParseResult ShuffleOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::OperandType v1, v2;
   Attribute attr;
   VectorType v1Type, v2Type;
@@ -2134,17 +2133,16 @@ void OuterProductOp::build(OpBuilder &builder, OperationState &result,
   result.addTypes(acc.getType());
 }
 
-static void print(OpAsmPrinter &p, OuterProductOp op) {
-  p << " " << op.lhs() << ", " << op.rhs();
-  if (!op.acc().empty()) {
-    p << ", " << op.acc();
-    p.printOptionalAttrDict(op->getAttrs());
+void OuterProductOp::print(OpAsmPrinter &p) {
+  p << " " << lhs() << ", " << rhs();
+  if (!acc().empty()) {
+    p << ", " << acc();
+    p.printOptionalAttrDict((*this)->getAttrs());
   }
-  p << " : " << op.lhs().getType() << ", " << op.rhs().getType();
+  p << " : " << lhs().getType() << ", " << rhs().getType();
 }
 
-static ParseResult parseOuterProductOp(OpAsmParser &parser,
-                                       OperationState &result) {
+ParseResult OuterProductOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 3> operandsInfo;
   Type tLHS, tRHS;
   if (parser.parseOperandList(operandsInfo) ||
@@ -2773,16 +2771,15 @@ static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
   p.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
 }
 
-static void print(OpAsmPrinter &p, TransferReadOp op) {
-  p << " " << op.source() << "[" << op.indices() << "], " << op.padding();
-  if (op.mask())
-    p << ", " << op.mask();
-  printTransferAttrs(p, cast<VectorTransferOpInterface>(op.getOperation()));
-  p << " : " << op.getShapedType() << ", " << op.getVectorType();
+void TransferReadOp::print(OpAsmPrinter &p) {
+  p << " " << source() << "[" << indices() << "], " << padding();
+  if (mask())
+    p << ", " << mask();
+  printTransferAttrs(p, *this);
+  p << " : " << getShapedType() << ", " << getVectorType();
 }
 
-static ParseResult parseTransferReadOp(OpAsmParser &parser,
-                                       OperationState &result) {
+ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
   auto &builder = parser.getBuilder();
   SMLoc typesLoc;
   OpAsmParser::OperandType sourceInfo;
@@ -3160,8 +3157,8 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
   build(builder, result, vector, dest, indices, permutationMap, inBounds);
 }
 
-static ParseResult parseTransferWriteOp(OpAsmParser &parser,
-                                        OperationState &result) {
+ParseResult TransferWriteOp::parse(OpAsmParser &parser,
+                                   OperationState &result) {
   auto &builder = parser.getBuilder();
   SMLoc typesLoc;
   OpAsmParser::OperandType vectorInfo, sourceInfo;
@@ -3213,12 +3210,12 @@ static ParseResult parseTransferWriteOp(OpAsmParser &parser,
                  parser.addTypeToList(shapedType, result.types));
 }
 
-static void print(OpAsmPrinter &p, TransferWriteOp op) {
-  p << " " << op.vector() << ", " << op.source() << "[" << op.indices() << "]";
-  if (op.mask())
-    p << ", " << op.mask();
-  printTransferAttrs(p, cast<VectorTransferOpInterface>(op.getOperation()));
-  p << " : " << op.getVectorType() << ", " << op.getShapedType();
+void TransferWriteOp::print(OpAsmPrinter &p) {
+  p << " " << vector() << ", " << source() << "[" << indices() << "]";
+  if (mask())
+    p << ", " << mask();
+  printTransferAttrs(p, *this);
+  p << " : " << getVectorType() << ", " << getShapedType();
 }
 
 LogicalResult TransferWriteOp::verify() {

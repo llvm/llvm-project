@@ -45,10 +45,6 @@ class SPV_GLSLUnaryOp<string mnemonic, int opcode, Type resultType,
     SPV_ScalarOrVectorOf<resultType>:$result
   );
 
-  let parser = [{ return parseUnaryOp(parser, result); }];
-
-  let printer = [{ return printUnaryOp(getOperation(), p); }];
-
   let hasVerifier = 0;
 }
 
@@ -56,7 +52,10 @@ class SPV_GLSLUnaryOp<string mnemonic, int opcode, Type resultType,
 // the operand type.
 class SPV_GLSLUnaryArithmeticOp<string mnemonic, int opcode, Type type,
                                 list<Trait> traits = []> :
-  SPV_GLSLUnaryOp<mnemonic, opcode, type, type, traits>;
+  SPV_GLSLUnaryOp<mnemonic, opcode, type, type,
+                  traits # [SameOperandsAndResultType]> {
+  let assemblyFormat = "$operand `:` type($operand) attr-dict";
+}
 
 // Base class for GLSL binary ops.
 class SPV_GLSLBinaryOp<string mnemonic, int opcode, Type resultType,
@@ -99,9 +98,7 @@ class SPV_GLSLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
     SPV_ScalarOrVectorOf<type>:$result
   );
 
-  let parser = [{ return parseOneResultSameOperandTypeOp(parser, result); }];
-  let printer = [{ return printOneResultOp(getOperation(), p); }];
-
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 0;
 }
 

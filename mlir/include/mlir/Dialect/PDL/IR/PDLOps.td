@@ -23,10 +23,7 @@ include "mlir/IR/SymbolInterfaces.td"
 //===----------------------------------------------------------------------===//
 
 class PDL_Op<string mnemonic, list<Trait> traits = []>
-    : Op<PDL_Dialect, mnemonic, traits> {
-  let printer = [{ ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-}
+    : Op<PDL_Dialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
 // pdl::ApplyNativeConstraintOp

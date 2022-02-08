@@ -1202,8 +1202,7 @@ def SelectOp : Arith_Op<"select", [
   let hasVerifier = 1;
   
   // FIXME: Switch this to use the declarative assembly format.
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 #endif // ARITHMETIC_OPS

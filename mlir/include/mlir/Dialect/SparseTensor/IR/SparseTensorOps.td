@@ -19,10 +19,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 //===----------------------------------------------------------------------===//
 
 class SparseTensor_Op<string mnemonic, list<Trait> traits = []>
-  : Op<SparseTensor_Dialect, mnemonic, traits> {
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-}
+  : Op<SparseTensor_Dialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
 // Sparse Tensor Operations.

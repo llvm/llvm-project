@@ -121,18 +121,18 @@ OpFoldResult emitc::ConstantOp::fold(ArrayRef<Attribute> operands) {
 // IncludeOp
 //===----------------------------------------------------------------------===//
 
-static void print(OpAsmPrinter &p, IncludeOp &op) {
-  bool standardInclude = op.is_standard_include();
+void IncludeOp::print(OpAsmPrinter &p) {
+  bool standardInclude = is_standard_include();
 
   p << " ";
   if (standardInclude)
     p << "<";
-  p << "\"" << op.include() << "\"";
+  p << "\"" << include() << "\"";
   if (standardInclude)
     p << ">";
 }
 
-static ParseResult parseIncludeOp(OpAsmParser &parser, OperationState &result) {
+ParseResult IncludeOp::parse(OpAsmParser &parser, OperationState &result) {
   bool standardInclude = !parser.parseOptionalLess();
 
   StringAttr include;

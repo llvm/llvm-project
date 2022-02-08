@@ -27,9 +27,6 @@ class SPV_GroupNonUniformArithmeticOp<string mnemonic, Type type,
   let results = (outs
     SPV_ScalarOrVectorOf<type>:$result
   );
-
-  let parser = [{ return parseGroupNonUniformArithmeticOp(parser, result); }];
-  let printer = [{ printGroupNonUniformArithmeticOp(getOperation(), p); }];
 }
 
 // -----
