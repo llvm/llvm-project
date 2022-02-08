@@ -180,6 +180,18 @@ TEST(MathExtras, isShiftedMask_32) {
   EXPECT_TRUE(isShiftedMask_32(0xf0000000));
   EXPECT_TRUE(isShiftedMask_32(0xffff0000));
   EXPECT_TRUE(isShiftedMask_32(0xff << 1));
+
+  unsigned MaskIdx, MaskLen;
+  EXPECT_FALSE(isShiftedMask_32(0x01010101, MaskIdx, MaskLen));
+  EXPECT_TRUE(isShiftedMask_32(0xf0000000, MaskIdx, MaskLen));
+  EXPECT_EQ(28, MaskIdx);
+  EXPECT_EQ(4, MaskLen);
+  EXPECT_TRUE(isShiftedMask_32(0xffff0000, MaskIdx, MaskLen));
+  EXPECT_EQ(16, MaskIdx);
+  EXPECT_EQ(16, MaskLen);
+  EXPECT_TRUE(isShiftedMask_32(0xff << 1, MaskIdx, MaskLen));
+  EXPECT_EQ(1, MaskIdx);
+  EXPECT_EQ(8, MaskLen);
 }
 
 TEST(MathExtras, isShiftedMask_64) {
@@ -187,6 +199,18 @@ TEST(MathExtras, isShiftedMask_64) {
   EXPECT_TRUE(isShiftedMask_64(0xf000000000000000ull));
   EXPECT_TRUE(isShiftedMask_64(0xffff000000000000ull));
   EXPECT_TRUE(isShiftedMask_64(0xffull << 55));
+
+  unsigned MaskIdx, MaskLen;
+  EXPECT_FALSE(isShiftedMask_64(0x0101010101010101ull, MaskIdx, MaskLen));
+  EXPECT_TRUE(isShiftedMask_64(0xf000000000000000ull, MaskIdx, MaskLen));
+  EXPECT_EQ(60, MaskIdx);
+  EXPECT_EQ(4, MaskLen);
+  EXPECT_TRUE(isShiftedMask_64(0xffff000000000000ull, MaskIdx, MaskLen));
+  EXPECT_EQ(48, MaskIdx);
+  EXPECT_EQ(16, MaskLen);
+  EXPECT_TRUE(isShiftedMask_64(0xffull << 55, MaskIdx, MaskLen));
+  EXPECT_EQ(55, MaskIdx);
+  EXPECT_EQ(8, MaskLen);
 }
 
 TEST(MathExtras, isPowerOf2_32) {
