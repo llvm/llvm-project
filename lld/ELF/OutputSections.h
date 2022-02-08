@@ -9,21 +9,16 @@
 #ifndef LLD_ELF_OUTPUT_SECTIONS_H
 #define LLD_ELF_OUTPUT_SECTIONS_H
 
-#include "Config.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
-#include "Relocations.h"
 #include "lld/Common/LLVM.h"
-#include "llvm/MC/StringTableBuilder.h"
-#include "llvm/Object/ELF.h"
+
 #include <array>
 
 namespace lld {
 namespace elf {
 
 struct PhdrEntry;
-class InputSection;
-class InputSectionBase;
 
 struct CompressedData {
   std::unique_ptr<SmallVector<uint8_t, 0>[]> shards;

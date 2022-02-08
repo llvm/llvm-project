@@ -14,8 +14,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "DWARF.h"
+#include "InputSection.h"
 #include "Symbols.h"
-#include "Target.h"
 #include "lld/Common/Memory.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
 #include "llvm/Object/ELFObjectFile.h"

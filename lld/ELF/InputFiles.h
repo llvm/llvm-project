@@ -13,15 +13,11 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Reproduce.h"
-#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/Comdat.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELF.h"
-#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/Threading.h"
-#include <map>
 
 namespace llvm {
 struct DILineInfo;

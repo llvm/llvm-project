@@ -26,7 +26,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64ErrataFix.h"
-#include "Config.h"
 #include "LinkerScript.h"
 #include "OutputSections.h"
 #include "Relocations.h"
@@ -36,7 +35,6 @@
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Strings.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
 using namespace llvm;
