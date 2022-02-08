@@ -381,11 +381,12 @@ declare {i32, i1} @llvm.sadd.with.overflow.i32(i32 %a, i32 %b)
 define i1 @sadd_add(i32 %a, i32 %b, i32* %p) {
 ; CHECK-LABEL: sadd_add:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    notl %edi
 ; CHECK-NEXT:    addl %esi, %edi
 ; CHECK-NEXT:    seto %al
-; CHECK-NEXT:    incl %edi
-; CHECK-NEXT:    movl %edi, (%rdx)
+; CHECK-NEXT:    leal 1(%rdi), %ecx
+; CHECK-NEXT:    movl %ecx, (%rdx)
 ; CHECK-NEXT:    retq
   %nota = xor i32 %a, -1
   %a0 = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %nota, i32 %b)

@@ -10,24 +10,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "./Utils.h"
+
 #include "mlir/Analysis/Presburger/PWMAFunction.h"
-#include "../../Dialect/Affine/Analysis/AffineStructuresParser.h"
 #include "mlir/Analysis/Presburger/PresburgerSet.h"
+#include "mlir/IR/MLIRContext.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 namespace mlir {
 using testing::ElementsAre;
-
-/// Parses an IntegerPolyhedron from a StringRef. It is expected that the
-/// string represents a valid IntegerSet, otherwise it will violate a gtest
-/// assertion.
-static IntegerPolyhedron parsePoly(StringRef str, MLIRContext *context) {
-  FailureOr<IntegerPolyhedron> poly = parseIntegerSetToFAC(str, context);
-  EXPECT_TRUE(succeeded(poly));
-  return *poly;
-}
 
 static Matrix makeMatrix(unsigned numRow, unsigned numColumns,
                          ArrayRef<SmallVector<int64_t, 8>> matrix) {

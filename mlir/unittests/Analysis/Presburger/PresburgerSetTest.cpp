@@ -15,23 +15,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/PresburgerSet.h"
-#include "../../Dialect/Affine/Analysis/AffineStructuresParser.h"
+#include "./Utils.h"
+#include "mlir/IR/MLIRContext.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 namespace mlir {
-
-/// Parses an IntegerPolyhedron from a StringRef. It is expected that the
-/// string represents a valid IntegerSet, otherwise it will violate a gtest
-/// assertion.
-static IntegerPolyhedron parsePoly(StringRef str, MLIRContext *context) {
-  FailureOr<IntegerPolyhedron> poly = parseIntegerSetToFAC(str, context);
-
-  EXPECT_TRUE(succeeded(poly));
-
-  return *poly;
-}
 
 /// Parse a list of StringRefs to IntegerPolyhedron and combine them into a
 /// PresburgerSet be using the union operation. It is expected that the strings

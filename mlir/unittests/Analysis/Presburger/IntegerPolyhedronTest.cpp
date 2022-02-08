@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
-#include "../../Dialect/Affine/Analysis/AffineStructuresParser.h"
+#include "./Utils.h"
 #include "mlir/IR/MLIRContext.h"
 
 #include <gmock/gmock.h>
@@ -96,17 +96,6 @@ static void checkPermutationsSample(bool hasSample, unsigned nDim,
     checkSample(hasSample,
                 makeSetFromConstraints(nDim, permutedIneqs, permutedEqs), fn);
   } while (std::next_permutation(perm.begin(), perm.end()));
-}
-
-/// Parses a IntegerPolyhedron from a StringRef. It is expected that the
-/// string represents a valid IntegerSet, otherwise it will violate a gtest
-/// assertion.
-static IntegerPolyhedron parsePoly(StringRef str, MLIRContext *context) {
-  FailureOr<IntegerPolyhedron> poly = parseIntegerSetToFAC(str, context);
-
-  EXPECT_TRUE(succeeded(poly));
-
-  return *poly;
 }
 
 TEST(IntegerPolyhedronTest, removeInequality) {

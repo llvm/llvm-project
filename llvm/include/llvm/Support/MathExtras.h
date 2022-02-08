@@ -571,6 +571,33 @@ inline unsigned countPopulation(T Value) {
   return detail::PopulationCounter<T, sizeof(T)>::count(Value);
 }
 
+/// Return true if the argument contains a non-empty sequence of ones with the
+/// remainder zero (32 bit version.) Ex. isShiftedMask_32(0x0000FF00U) == true.
+/// If true, \p MaskIdx will specify the index of the lowest set bit and \p
+/// MaskLen is updated to specify the length of the mask, else neither are
+/// updated.
+inline bool isShiftedMask_32(uint32_t Value, unsigned &MaskIdx,
+                             unsigned &MaskLen) {
+  if (!isShiftedMask_32(Value))
+    return false;
+  MaskIdx = countTrailingZeros(Value);
+  MaskLen = countPopulation(Value);
+  return true;
+}
+
+/// Return true if the argument contains a non-empty sequence of ones with the
+/// remainder zero (64 bit version.) If true, \p MaskIdx will specify the index
+/// of the lowest set bit and \p MaskLen is updated to specify the length of the
+/// mask, else neither are updated.
+inline bool isShiftedMask_64(uint64_t Value, unsigned &MaskIdx,
+                             unsigned &MaskLen) {
+  if (!isShiftedMask_64(Value))
+    return false;
+  MaskIdx = countTrailingZeros(Value);
+  MaskLen = countPopulation(Value);
+  return true;
+}
+
 /// Compile time Log2.
 /// Valid only for positive powers of two.
 template <size_t kValue> constexpr inline size_t CTLog2() {

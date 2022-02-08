@@ -496,6 +496,23 @@ public:
     return (Ones + LeadZ + countTrailingZeros()) == BitWidth;
   }
 
+  /// Return true if this APInt value contains a non-empty sequence of ones with
+  /// the remainder zero. If true, \p MaskIdx will specify the index of the
+  /// lowest set bit and \p MaskLen is updated to specify the length of the
+  /// mask, else neither are updated.
+  bool isShiftedMask(unsigned &MaskIdx, unsigned &MaskLen) const {
+    if (isSingleWord())
+      return isShiftedMask_64(U.VAL, MaskIdx, MaskLen);
+    unsigned Ones = countPopulationSlowCase();
+    unsigned LeadZ = countLeadingZerosSlowCase();
+    unsigned TrailZ = countTrailingZerosSlowCase();
+    if ((Ones + LeadZ + TrailZ) != BitWidth)
+      return false;
+    MaskLen = Ones;
+    MaskIdx = TrailZ;
+    return true;
+  }
+
   /// Compute an APInt containing numBits highbits from this APInt.
   ///
   /// Get an APInt with the same BitWidth as this APInt, just zero mask the low

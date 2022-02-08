@@ -25,6 +25,7 @@
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <algorithm>
 #include <cstdint>

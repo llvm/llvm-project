@@ -296,17 +296,28 @@ public:
 /// Return true if all the PHI nodes in the basic block \p BB
 /// receive compatible (identical) incoming values when coming from
 /// all of the predecessor blocks that are specified in \p IncomingBlocks.
-static bool IncomingValuesAreCompatible(BasicBlock *BB,
-                                        ArrayRef<BasicBlock *> IncomingBlocks) {
+///
+/// Note that if the values aren't exactly identical, but \p EquivalenceSet
+/// is provided, and *both* of the values are present in the set,
+/// then they are considered equal.
+static bool IncomingValuesAreCompatible(
+    BasicBlock *BB, ArrayRef<BasicBlock *> IncomingBlocks,
+    SmallPtrSetImpl<Value *> *EquivalenceSet = nullptr) {
   assert(IncomingBlocks.size() == 2 &&
          "Only for a pair of incoming blocks at the time!");
 
   // FIXME: it is okay if one of the incoming values is an `undef` value,
   //        iff the other incoming value is guaranteed to be a non-poison value.
   // FIXME: it is okay if one of the incoming values is a `poison` value.
-  return all_of(BB->phis(), [IncomingBlocks](PHINode &PN) {
-    return PN.getIncomingValueForBlock(IncomingBlocks[0]) ==
-           PN.getIncomingValueForBlock(IncomingBlocks[1]);
+  return all_of(BB->phis(), [IncomingBlocks, EquivalenceSet](PHINode &PN) {
+    Value *IV0 = PN.getIncomingValueForBlock(IncomingBlocks[0]);
+    Value *IV1 = PN.getIncomingValueForBlock(IncomingBlocks[1]);
+    if (IV0 == IV1)
+      return true;
+    if (EquivalenceSet && EquivalenceSet->contains(IV0) &&
+        EquivalenceSet->contains(IV1))
+      return true;
+    return false;
   });
 }
 
@@ -2285,13 +2296,36 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
       return false;
   }
 
-  // Both `invoke`s must not have a normal destination.
-  // FIXME: them sharing the normal destination should be fine?
+  // Either both `invoke`s must not have a normal destination,
+  // or     both `invoke`s must     have a normal destination,
   auto HasNormalDest = [](InvokeInst *II) {
     return !isa<UnreachableInst>(II->getNormalDest()->getFirstNonPHIOrDbg());
   };
-  if (any_of(Invokes, HasNormalDest))
-    return false;
+  if (any_of(Invokes, HasNormalDest)) {
+    // Do not merge `invoke` that does not have a normal destination with one
+    // that does have a normal destination, even though doing so would be legal.
+    if (!all_of(Invokes, HasNormalDest))
+      return false;
+
+    // All normal destinations must be identical.
+    BasicBlock *NormalBB = nullptr;
+    for (InvokeInst *II : Invokes) {
+      BasicBlock *CurrNormalBB = II->getNormalDest();
+      assert(CurrNormalBB && "There is always a 'continue to' basic block.");
+      if (!NormalBB)
+        NormalBB = CurrNormalBB;
+      else if (NormalBB != CurrNormalBB)
+        return false;
+    }
+
+    // In the normal destination, the incoming values for these two `invoke`s
+    // must be compatible.
+    SmallPtrSet<Value *, 16> EquivalenceSet(Invokes.begin(), Invokes.end());
+    if (!IncomingValuesAreCompatible(
+            NormalBB, {Invokes[0]->getParent(), Invokes[1]->getParent()},
+            &EquivalenceSet))
+      return false;
+  }
 
 #ifndef NDEBUG
   // All unwind destinations must be identical.
@@ -2308,8 +2342,7 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
 #endif
 
   // In the unwind destination, the incoming values for these two `invoke`s
-  // must be compatible .
-  // We know we don't have the normal destination, so we don't check it.
+  // must be compatible.
   if (!IncomingValuesAreCompatible(
           Invokes.front()->getUnwindDest(),
           {Invokes[0]->getParent(), Invokes[1]->getParent()}))
@@ -2348,9 +2381,12 @@ static void MergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
   if (DTU)
     Updates.reserve(2 + 3 * Invokes.size());
 
+  bool HasNormalDest =
+      !isa<UnreachableInst>(Invokes[0]->getNormalDest()->getFirstNonPHIOrDbg());
+
   // Clone one of the invokes into a new basic block.
   // Since they are all compatible, it doesn't matter which invoke is cloned.
-  InvokeInst *MergedInvoke = [&Invokes]() {
+  InvokeInst *MergedInvoke = [&Invokes, HasNormalDest]() {
     InvokeInst *II0 = Invokes.front();
     BasicBlock *II0BB = II0->getParent();
     BasicBlock *InsertBeforeBlock =
@@ -2365,12 +2401,14 @@ static void MergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
     // NOTE: all invokes have the same attributes, so no handling needed.
     MergedInvokeBB->getInstList().push_back(MergedInvoke);
 
-    // For now, we've required that the normal destination is unreachable,
-    // so just form a new block with unreachable terminator.
-    BasicBlock *MergedNormalDest = BasicBlock::Create(
-        Ctx, II0BB->getName() + ".cont", Func, InsertBeforeBlock);
-    new UnreachableInst(Ctx, MergedNormalDest);
-    MergedInvoke->setNormalDest(MergedNormalDest);
+    if (!HasNormalDest) {
+      // This set does not have a normal destination,
+      // so just form a new block with unreachable terminator.
+      BasicBlock *MergedNormalDest = BasicBlock::Create(
+          Ctx, II0BB->getName() + ".cont", Func, InsertBeforeBlock);
+      new UnreachableInst(Ctx, MergedNormalDest);
+      MergedInvoke->setNormalDest(MergedNormalDest);
+    }
 
     // The unwind destination, however, remainds identical for all invokes here.
 
@@ -2416,12 +2454,12 @@ static void MergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
     U.set(PN);
   }
 
-  // We've ensured that each PHI node in the `landingpad` has compatible
-  // (identical) incoming values when coming from each of the `invoke`s
-  // in the current merge set, so update the PHI nodes accordingly.
-  AddPredecessorToBlock(/*Succ=*/MergedInvoke->getUnwindDest(),
-                        /*NewPred=*/MergedInvoke->getParent(),
-                        /*ExistPred=*/Invokes.front()->getParent());
+  // We've ensured that each PHI node has compatible (identical) incoming values
+  // when coming from each of the `invoke`s in the current merge set,
+  // so update the PHI nodes accordingly.
+  for (BasicBlock *Succ : successors(MergedInvoke))
+    AddPredecessorToBlock(Succ, /*NewPred=*/MergedInvoke->getParent(),
+                          /*ExistPred=*/Invokes.front()->getParent());
 
   // And finally, replace the original `invoke`s with an unconditional branch
   // to the block with the merged `invoke`. Also, give that merged `invoke`
@@ -2440,8 +2478,7 @@ static void MergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
     for (BasicBlock *OrigSuccBB : successors(II->getParent()))
       OrigSuccBB->removePredecessor(II->getParent());
     BranchInst::Create(MergedInvoke->getParent(), II->getParent());
-    // Since the normal destination was unreachable, there are no live uses.
-    II->replaceAllUsesWith(UndefValue::get(II->getType()));
+    II->replaceAllUsesWith(MergedInvoke);
     II->eraseFromParent();
     ++NumInvokesMerged;
   }
