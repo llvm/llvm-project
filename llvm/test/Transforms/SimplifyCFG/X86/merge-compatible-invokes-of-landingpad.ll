@@ -1688,13 +1688,9 @@ define void @t28_invoke_ret_value_is_used_in_phi_node() personality i8* bitcast 
 ; CHECK-LABEL: @t28_invoke_ret_value_is_used_in_phi_node(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then0:
-; CHECK-NEXT:    [[V0:%.*]] = invoke i32 @returning_maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       invoke.cont:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[V0]], [[IF_THEN0]] ], [ [[V1:%.*]], [[IF_THEN1:%.*]] ]
-; CHECK-NEXT:    call void @consume(i32 [[PHI]])
+; CHECK-NEXT:    call void @consume(i32 [[TMP0:%.*]])
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
@@ -1704,10 +1700,10 @@ define void @t28_invoke_ret_value_is_used_in_phi_node() personality i8* bitcast 
 ; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1]], label [[IF_END:%.*]]
-; CHECK:       if.then1:
-; CHECK-NEXT:    [[V1]] = invoke i32 @returning_maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT]] unwind label [[LPAD]]
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
+; CHECK:       if.then1.invoke:
+; CHECK-NEXT:    [[TMP0]] = invoke i32 @returning_maybe_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    ret void
@@ -1933,15 +1929,10 @@ define void @t32_invoke_ret_value_is_used_in_phi_node_other_phi_is_fine() person
 ; CHECK-LABEL: @t32_invoke_ret_value_is_used_in_phi_node_other_phi_is_fine(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then0:
-; CHECK-NEXT:    [[V0:%.*]] = invoke i32 @returning_maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       invoke.cont:
-; CHECK-NEXT:    [[PHI0:%.*]] = phi i32 [ [[V0]], [[IF_THEN0]] ], [ [[V1:%.*]], [[IF_THEN1:%.*]] ]
-; CHECK-NEXT:    [[PHI1:%.*]] = phi i32 [ 0, [[IF_THEN0]] ], [ 0, [[IF_THEN1]] ]
-; CHECK-NEXT:    call void @consume(i32 [[PHI0]])
-; CHECK-NEXT:    call void @consume(i32 [[PHI1]])
+; CHECK-NEXT:    call void @consume(i32 [[TMP0:%.*]])
+; CHECK-NEXT:    call void @consume(i32 0)
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
@@ -1951,10 +1942,10 @@ define void @t32_invoke_ret_value_is_used_in_phi_node_other_phi_is_fine() person
 ; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1]], label [[IF_END:%.*]]
-; CHECK:       if.then1:
-; CHECK-NEXT:    [[V1]] = invoke i32 @returning_maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT]] unwind label [[LPAD]]
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
+; CHECK:       if.then1.invoke:
+; CHECK-NEXT:    [[TMP0]] = invoke i32 @returning_maybe_throw()
+; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    ret void

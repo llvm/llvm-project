@@ -296,17 +296,28 @@ public:
 /// Return true if all the PHI nodes in the basic block \p BB
 /// receive compatible (identical) incoming values when coming from
 /// all of the predecessor blocks that are specified in \p IncomingBlocks.
-static bool IncomingValuesAreCompatible(BasicBlock *BB,
-                                        ArrayRef<BasicBlock *> IncomingBlocks) {
+///
+/// Note that if the values aren't exactly identical, but \p EquivalenceSet
+/// is provided, and *both* of the values are present in the set,
+/// then they are considered equal.
+static bool IncomingValuesAreCompatible(
+    BasicBlock *BB, ArrayRef<BasicBlock *> IncomingBlocks,
+    SmallPtrSetImpl<Value *> *EquivalenceSet = nullptr) {
   assert(IncomingBlocks.size() == 2 &&
          "Only for a pair of incoming blocks at the time!");
 
   // FIXME: it is okay if one of the incoming values is an `undef` value,
   //        iff the other incoming value is guaranteed to be a non-poison value.
   // FIXME: it is okay if one of the incoming values is a `poison` value.
-  return all_of(BB->phis(), [IncomingBlocks](PHINode &PN) {
-    return PN.getIncomingValueForBlock(IncomingBlocks[0]) ==
-           PN.getIncomingValueForBlock(IncomingBlocks[1]);
+  return all_of(BB->phis(), [IncomingBlocks, EquivalenceSet](PHINode &PN) {
+    Value *IV0 = PN.getIncomingValueForBlock(IncomingBlocks[0]);
+    Value *IV1 = PN.getIncomingValueForBlock(IncomingBlocks[1]);
+    if (IV0 == IV1)
+      return true;
+    if (EquivalenceSet && EquivalenceSet->contains(IV0) &&
+        EquivalenceSet->contains(IV1))
+      return true;
+    return false;
   });
 }
 
@@ -2309,13 +2320,10 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
 
     // In the normal destination, the incoming values for these two `invoke`s
     // must be compatible.
+    SmallPtrSet<Value *, 16> EquivalenceSet(Invokes.begin(), Invokes.end());
     if (!IncomingValuesAreCompatible(
-            NormalBB, {Invokes[0]->getParent(), Invokes[1]->getParent()}))
-      return false;
-
-    // For now, simply don't deal with `invoke`s that have uses.
-    auto Unused = [](InvokeInst *II) { return II->use_empty(); };
-    if (!all_of(Invokes, Unused))
+            NormalBB, {Invokes[0]->getParent(), Invokes[1]->getParent()},
+            &EquivalenceSet))
       return false;
   }
 
@@ -2470,8 +2478,7 @@ static void MergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
     for (BasicBlock *OrigSuccBB : successors(II->getParent()))
       OrigSuccBB->removePredecessor(II->getParent());
     BranchInst::Create(MergedInvoke->getParent(), II->getParent());
-    // Since the normal destination was unreachable, there are no live uses.
-    II->replaceAllUsesWith(UndefValue::get(II->getType()));
+    II->replaceAllUsesWith(MergedInvoke);
     II->eraseFromParent();
     ++NumInvokesMerged;
   }
