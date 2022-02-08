@@ -27,21 +27,17 @@ THE SOFTWARE.
 #include "hipBin_util.h"
 #include <vector>
 #include <string>
+#include <unordered_set>
+#include <cassert>
 
 
-// Known HIP target names.
-vector<string> knownTargets = { "gfx700", "gfx701", "gfx702", "gfx703",
-                                "gfx704", "gfx705", "gfx801", "gfx802",
-                                "gfx803", "gfx805", "gfx810", "gfx900",
-                                "gfx902", "gfx904", "gfx906", "gfx908",
-                                "gfx909", "gfx90a", "gfx1010", "gfx1011",
-                                "gfx1012", "gfx1030", "gfx1031", "gfx1032" };
-
+// Use (void) to silent unused warnings.
+#define assertm(exp, msg) assert(((void)msg, exp))
 
 // Known Features
-vector<string> knownFeatures = { "sramecc - " , "sramecc + ",
-                                 "xnack - ", "xnack + " };
-
+ std::unordered_set
+ <std::string> knownFeatures =  { "sramecc-" , "sramecc+",
+                                  "xnack-", "xnack+" };
 
 class HipBinAmd : public HipBinBase {
  private:
@@ -1015,25 +1011,21 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
   vector<string> targets = hipBinUtilPtr_->splitStr(targetsStr, ',');
   string GPU_ARCH_OPT = " --offload-arch=";
 
-  for (unsigned int count = 0; count < targets.size(); count++) {
-    string val = targets.at(count);
+  for (auto &val : targets) {
     // Ignore 'gfx000' target reported by rocm_agent_enumerator.
     if (val != "gfx000") {
       vector<string> procAndFeatures = hipBinUtilPtr_->splitStr(val, ':');
-      int len = static_cast<int>(procAndFeatures.size());
-      string procName;
-      if (len >= 1 && len <= 3) {  //# proc and features
-        procName = procAndFeatures.at(0);
-        for (int i = 1; i< len; i++) {
-          for (unsigned int j = 0; j <knownFeatures.size(); j++) {
-            if (procAndFeatures.at(i) == knownFeatures.at(j)) {
+      size_t len = procAndFeatures.size();
+      // proc and features
+      assertm(procAndFeatures.size() >= 1, "Pass the correct device/feature");
+      for (size_t i = 1; i < len; i++) {
+          // fixme: currently it checks only for validity of the feature string.
+          // does not check if the device supports the feature or not
+          // e.g. vega10 does not support sramecc
+          if (knownFeatures.find(procAndFeatures.at(i)) == knownFeatures.end()) {
             cout <<  "Warning: The Feature: "<< procAndFeatures.at(i) <<
-                     "is unknown. Correct compilation is not guaranteed.\n";
-            }
+                     " is unknown. Correct compilation is not guaranteed.\n";
           }
-        }
-      } else {
-        procName = val;
       }
       string GPU_ARCH_ARG;
       GPU_ARCH_ARG = GPU_ARCH_OPT + val;
@@ -1041,14 +1033,6 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
       HIPLDARCHFLAGS += GPU_ARCH_ARG;
       if (hasHIP) {
         HIPCXXFLAGS += GPU_ARCH_ARG;
-      }
-      for (unsigned int j= 0; j < knownTargets.size(); j++) {
-        // If the specified target is not
-        // in the list of known target names, emit a warning.
-        if (procName == knownTargets.at(j)) {
-          cout << "Warning: The specified HIP target: "<< val <<
-          " is unknown. Correct compilation is not guaranteed.\n";
-        }
       }
     }  // end of val != "gfx000"
   }  // end of targets for loop
