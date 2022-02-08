@@ -1749,14 +1749,14 @@ TEST(APIntTest, isShiftedMask) {
   unsigned MaskIdx, MaskLen;
   EXPECT_FALSE(APInt(32, 0x01010101).isShiftedMask(MaskIdx, MaskLen));
   EXPECT_TRUE(APInt(32, 0xf0000000).isShiftedMask(MaskIdx, MaskLen));
-  EXPECT_EQ(28, MaskIdx);
-  EXPECT_EQ(4, MaskLen);
+  EXPECT_EQ(28, (int)MaskIdx);
+  EXPECT_EQ(4, (int)MaskLen);
   EXPECT_TRUE(APInt(32, 0xffff0000).isShiftedMask(MaskIdx, MaskLen));
-  EXPECT_EQ(16, MaskIdx);
-  EXPECT_EQ(16, MaskLen);
+  EXPECT_EQ(16, (int)MaskIdx);
+  EXPECT_EQ(16, (int)MaskLen);
   EXPECT_TRUE(APInt(32, 0xff << 1).isShiftedMask(MaskIdx, MaskLen));
-  EXPECT_EQ(1, MaskIdx);
-  EXPECT_EQ(8, MaskLen);
+  EXPECT_EQ(1, (int)MaskIdx);
+  EXPECT_EQ(8, (int)MaskLen);
 
   for (int N : { 1, 2, 3, 4, 7, 8, 16, 32, 64, 127, 128, 129, 256 }) {
     EXPECT_FALSE(APInt(N, 0).isShiftedMask());
