@@ -516,48 +516,6 @@ legacy-project-build)
           -DLIBCXX_CXX_ABI=libcxxabi
     check-runtimes
 ;;
-legacy-standalone)
-    clean
-
-    echo "--- Generating CMake"
-    ${CMAKE} \
-          -S "${MONOREPO_ROOT}/libcxx" \
-          -B "${BUILD_DIR}/libcxx" \
-          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-          -DLLVM_PATH="${MONOREPO_ROOT}/llvm" \
-          -DLIBCXX_CXX_ABI=libcxxabi \
-          -DLIBCXX_INCLUDE_BENCHMARKS=OFF \
-          -DLIBCXX_CXX_ABI_INCLUDE_PATHS="${MONOREPO_ROOT}/libcxxabi/include" \
-          -DLIBCXX_CXX_ABI_LIBRARY_PATH="${BUILD_DIR}/libcxxabi/lib"
-
-    ${CMAKE} \
-          -S "${MONOREPO_ROOT}/libcxxabi" \
-          -B "${BUILD_DIR}/libcxxabi" \
-          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-          -DLLVM_PATH="${MONOREPO_ROOT}/llvm" \
-          -DLIBCXXABI_LIBCXX_PATH="${MONOREPO_ROOT}/libcxx" \
-          -DLIBCXXABI_LIBCXX_INCLUDES="${BUILD_DIR}/libcxx/include/c++/v1" \
-          -DLIBCXXABI_LIBCXX_LIBRARY_PATH="${BUILD_DIR}/libcxx/lib"
-
-    echo "+++ Generating libc++ headers"
-    ${NINJA} -vC "${BUILD_DIR}/libcxx" generate-cxx-headers
-
-    echo "+++ Building libc++abi"
-    ${NINJA} -vC "${BUILD_DIR}/libcxxabi" cxxabi
-
-    echo "+++ Building libc++"
-    ${NINJA} -vC "${BUILD_DIR}/libcxx" cxx
-
-    echo "+++ Running the libc++ tests"
-    ${NINJA} -vC "${BUILD_DIR}/libcxx" check-cxx
-
-    echo "+++ Running the libc++abi tests"
-    ${NINJA} -vC "${BUILD_DIR}/libcxxabi" check-cxxabi
-;;
 aarch64)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AArch64.cmake" \
