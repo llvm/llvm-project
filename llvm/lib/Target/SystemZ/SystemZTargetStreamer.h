@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZTARGETSTREAMER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
 
 namespace llvm {

@@ -17,11 +17,10 @@
 #ifndef LLVM_MC_SUBTARGETFEATURE_H
 #define LLVM_MC_SUBTARGETFEATURE_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MathExtras.h"
 #include <array>
-#include <bitset>
 #include <initializer_list>
 #include <string>
 #include <vector>

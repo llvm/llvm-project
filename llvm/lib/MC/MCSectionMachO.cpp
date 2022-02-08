@@ -7,9 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCSectionMachO.h"
-#include "llvm/MC/MCContext.h"
+#include "llvm/MC/SectionKind.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cctype>
+
+namespace llvm {
+class MCAsmInfo;
+class MCExpr;
+class MCSymbol;
+class Triple;
+} // namespace llvm
+
 using namespace llvm;
 
 /// SectionTypeDescriptors - These are strings that describe the various section
