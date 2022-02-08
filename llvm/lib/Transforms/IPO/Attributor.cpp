@@ -1639,13 +1639,13 @@ void Attributor::runTillFixpoint() {
   } while (!Worklist.empty() && (IterationCounter++ < MaxFixedPointIterations ||
                                  VerifyMaxFixpointIterations));
 
-  if (IterationCounter > MaxFixedPointIterations && !Worklist.empty()) {
+  if (IterationCounter > MaxFixedPointIterations && !Functions.empty()) {
     auto Remark = [&](OptimizationRemarkMissed ORM) {
       return ORM << "Attributor did not reach a fixpoint after "
                  << ore::NV("Iterations", MaxFixedPointIterations)
                  << " iterations.";
     };
-    Function *F = Worklist.front()->getIRPosition().getAssociatedFunction();
+    Function *F = Functions.front();
     emitRemark<OptimizationRemarkMissed>(F, "FixedPoint", Remark);
   }
 
