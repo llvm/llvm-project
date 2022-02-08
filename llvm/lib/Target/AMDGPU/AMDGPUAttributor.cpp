@@ -22,37 +22,25 @@
 
 using namespace llvm;
 
-enum ImplicitArgumentMask {
-  NOT_IMPLICIT_INPUT = 0,
+#define AMDGPU_ATTRIBUTE(Name, Str) Name##_POS,
 
-  // SGPRs
-  DISPATCH_PTR = 1 << 0,
-  QUEUE_PTR = 1 << 1,
-  DISPATCH_ID = 1 << 2,
-  IMPLICIT_ARG_PTR = 1 << 3,
-  WORKGROUP_ID_X = 1 << 4,
-  WORKGROUP_ID_Y = 1 << 5,
-  WORKGROUP_ID_Z = 1 << 6,
-
-  // VGPRS:
-  WORKITEM_ID_X = 1 << 7,
-  WORKITEM_ID_Y = 1 << 8,
-  WORKITEM_ID_Z = 1 << 9,
-  ALL_ARGUMENT_MASK = (1 << 10) - 1
+enum ImplicitArgumentPositions {
+  #include "AMDGPUAttributes.def"
+  LAST_ARG_POS
 };
 
+#define AMDGPU_ATTRIBUTE(Name, Str) Name = 1 << Name##_POS,
+
+enum ImplicitArgumentMask {
+  NOT_IMPLICIT_INPUT = 0,
+  #include "AMDGPUAttributes.def"
+  ALL_ARGUMENT_MASK = (1 << LAST_ARG_POS) - 1
+};
+
+#define AMDGPU_ATTRIBUTE(Name, Str) {Name, Str},
 static constexpr std::pair<ImplicitArgumentMask,
                            StringLiteral> ImplicitAttrs[] = {
-  {DISPATCH_PTR, "amdgpu-no-dispatch-ptr"},
-  {QUEUE_PTR, "amdgpu-no-queue-ptr"},
-  {DISPATCH_ID, "amdgpu-no-dispatch-id"},
-  {IMPLICIT_ARG_PTR, "amdgpu-no-implicitarg-ptr"},
-  {WORKGROUP_ID_X, "amdgpu-no-workgroup-id-x"},
-  {WORKGROUP_ID_Y, "amdgpu-no-workgroup-id-y"},
-  {WORKGROUP_ID_Z, "amdgpu-no-workgroup-id-z"},
-  {WORKITEM_ID_X, "amdgpu-no-workitem-id-x"},
-  {WORKITEM_ID_Y, "amdgpu-no-workitem-id-y"},
-  {WORKITEM_ID_Z, "amdgpu-no-workitem-id-z"}
+ #include "AMDGPUAttributes.def"
 };
 
 // We do not need to note the x workitem or workgroup id because they are always
@@ -90,7 +78,7 @@ intrinsicToAttrMask(Intrinsic::ID ID, bool &NonKernelOnly, bool &IsQueuePtr) {
   case Intrinsic::amdgcn_queue_ptr:
   case Intrinsic::amdgcn_is_shared:
   case Intrinsic::amdgcn_is_private:
-    // TODO: Does not require queue ptr on gfx9+
+    // TODO: Does not require the queue pointer on gfx9+
   case Intrinsic::trap:
   case Intrinsic::debugtrap:
     IsQueuePtr = true;
@@ -152,7 +140,7 @@ public:
   }
 
 private:
-  /// Check if the ConstantExpr \p CE requires queue ptr attribute.
+  /// Check if the ConstantExpr \p CE requires the queue pointer.
   static bool visitConstExpr(const ConstantExpr *CE) {
     if (CE->getOpcode() == Instruction::AddrSpaceCast) {
       unsigned SrcAS = CE->getOperand(0)->getType()->getPointerAddressSpace();
@@ -186,7 +174,7 @@ private:
   }
 
 public:
-  /// Returns true if \p Fn needs a queue ptr attribute because of \p C.
+  /// Returns true if \p Fn needs the queue pointer because of \p C.
   bool needsQueuePtr(const Constant *C, Function &Fn) {
     bool IsNonEntryFunc = !AMDGPU::isEntryFunctionCC(Fn.getCallingConv());
     bool HasAperture = hasApertureRegs(Fn);
@@ -205,7 +193,7 @@ public:
   }
 
 private:
-  /// Used to determine if the Constant needs a queue ptr attribute.
+  /// Used to determine if the Constant needs the queue pointer.
   DenseMap<const Constant *, uint8_t> ConstantStatus;
 };
 
@@ -388,7 +376,6 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
       return indicatePessimisticFixpoint();
 
     bool IsNonEntryFunc = !AMDGPU::isEntryFunctionCC(F->getCallingConv());
-    auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
 
     bool NeedsQueuePtr = false;
 
@@ -410,63 +397,13 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
       }
     }
 
-    // If we found that we need amdgpu-queue-ptr, nothing else to do.
+    NeedsQueuePtr |= checkForQueuePtr(A);
     if (NeedsQueuePtr) {
       removeAssumedBits(QUEUE_PTR);
-      return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED :
-                                           ChangeStatus::UNCHANGED;
     }
 
-    auto CheckAddrSpaceCasts = [&](Instruction &I) {
-      unsigned SrcAS = static_cast<AddrSpaceCastInst &>(I).getSrcAddressSpace();
-      if (castRequiresQueuePtr(SrcAS)) {
-        NeedsQueuePtr = true;
-        return false;
-      }
-      return true;
-    };
-
-    bool HasApertureRegs = InfoCache.hasApertureRegs(*F);
-
-    // `checkForAllInstructions` is much more cheaper than going through all
-    // instructions, try it first.
-
-    // amdgpu-queue-ptr is not needed if aperture regs is present.
-    if (!HasApertureRegs) {
-      bool UsedAssumedInformation = false;
-      A.checkForAllInstructions(CheckAddrSpaceCasts, *this,
-                                {Instruction::AddrSpaceCast},
-                                UsedAssumedInformation);
-    }
-
-    // If we found  that we need amdgpu-queue-ptr, nothing else to do.
-    if (NeedsQueuePtr) {
-      removeAssumedBits(QUEUE_PTR);
-      return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED :
-                                           ChangeStatus::UNCHANGED;
-    }
-
-    if (!IsNonEntryFunc && HasApertureRegs) {
-      return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED :
-                                           ChangeStatus::UNCHANGED;
-    }
-
-    for (BasicBlock &BB : *F) {
-      for (Instruction &I : BB) {
-        for (const Use &U : I.operands()) {
-          if (const auto *C = dyn_cast<Constant>(U)) {
-            if (InfoCache.needsQueuePtr(C, *F)) {
-              removeAssumedBits(QUEUE_PTR);
-              return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED :
-                                                   ChangeStatus::UNCHANGED;
-            }
-          }
-        }
-      }
-    }
-
-    return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED :
-                                         ChangeStatus::UNCHANGED;
+    return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED
+                                       : ChangeStatus::UNCHANGED;
   }
 
   ChangeStatus manifest(Attributor &A) override {
@@ -494,6 +431,58 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
+
+private:
+  bool checkForQueuePtr(Attributor &A) {
+    Function *F = getAssociatedFunction();
+    bool IsNonEntryFunc = !AMDGPU::isEntryFunctionCC(F->getCallingConv());
+
+    auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
+
+    bool NeedsQueuePtr = false;
+
+    auto CheckAddrSpaceCasts = [&](Instruction &I) {
+      unsigned SrcAS = static_cast<AddrSpaceCastInst &>(I).getSrcAddressSpace();
+      if (castRequiresQueuePtr(SrcAS)) {
+        NeedsQueuePtr = true;
+        return false;
+      }
+      return true;
+    };
+
+    bool HasApertureRegs = InfoCache.hasApertureRegs(*F);
+
+    // `checkForAllInstructions` is much more cheaper than going through all
+    // instructions, try it first.
+
+    // The queue pointer is not needed if aperture regs is present.
+    if (!HasApertureRegs) {
+      bool UsedAssumedInformation = false;
+      A.checkForAllInstructions(CheckAddrSpaceCasts, *this,
+                                {Instruction::AddrSpaceCast},
+                                UsedAssumedInformation);
+    }
+
+    // If we found  that we need the queue pointer, nothing else to do.
+    if (NeedsQueuePtr)
+      return true;
+
+    if (!IsNonEntryFunc && HasApertureRegs)
+      return false;
+
+    for (BasicBlock &BB : *F) {
+      for (Instruction &I : BB) {
+        for (const Use &U : I.operands()) {
+          if (const auto *C = dyn_cast<Constant>(U)) {
+            if (InfoCache.needsQueuePtr(C, *F))
+              return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  }
 };
 
 AAAMDAttributes &AAAMDAttributes::createForPosition(const IRPosition &IRP,
