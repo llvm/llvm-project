@@ -188,6 +188,9 @@ clang-format
 
 - Changed ``BreakBeforeConceptDeclarations`` from ``Boolean`` to an enum.
 
+- Option ``InsertBraces`` has been added to insert optional braces after control
+  statements.
+
 libclang
 --------
 

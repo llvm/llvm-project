@@ -2756,6 +2756,39 @@ the configuration (without a prefix: ``Auto``).
      LoooooooooooooooooooooooooooooooooooooooongReturnType
      LoooooooooooooooooooooooooooooooongFunctionDeclaration();
 
+**InsertBraces** (``Boolean``) :versionbadge:`clang-format 15`
+  Insert braces after control statements (``if``, ``else``, ``for``, ``do``,
+  and ``while``) in C++ unless the control statements are inside macro
+  definitions or the braces would enclose preprocessor directives.
+
+  .. warning:: 
+
+   Setting this option to `true` could lead to incorrect code formatting due
+   to clang-format's lack of complete semantic information. As such, extra
+   care should be taken to review code changes made by this option.
+
+  .. code-block:: c++
+
+    false:                                    true:
+
+    if (isa<FunctionDecl>(D))        vs.      if (isa<FunctionDecl>(D)) {
+      handleFunctionDecl(D);                    handleFunctionDecl(D);
+    else if (isa<VarDecl>(D))                 } else if (isa<VarDecl>(D)) {
+      handleVarDecl(D);                         handleVarDecl(D);
+    else                                      } else {
+      return;                                   return;
+                                              }
+
+    while (i--)                      vs.      while (i--) {
+      for (auto *A : D.attrs())                 for (auto *A : D.attrs()) {
+        handleAttr(A);                            handleAttr(A);
+                                                }
+                                              }
+
+    do                               vs.      do {
+      --i;                                      --i;
+    while (i);                                } while (i);
+
 **InsertTrailingCommas** (``TrailingCommaStyle``) :versionbadge:`clang-format 12`
   If set to ``TCS_Wrapped`` will insert trailing commas in container
   literals (arrays and objects) that wrap across multiple lines.

@@ -2300,6 +2300,53 @@ void UnwrappedLineParser::keepAncestorBraces() {
   NestedTooDeep.push_back(false);
 }
 
+static FormatToken *getLastNonComment(const UnwrappedLine &Line) {
+  for (const auto &Token : llvm::reverse(Line.Tokens))
+    if (Token.Tok->isNot(tok::comment))
+      return Token.Tok;
+
+  return nullptr;
+}
+
+void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
+  FormatToken *Tok = nullptr;
+
+  if (Style.InsertBraces && !Line->InPPDirective && !Line->Tokens.empty() &&
+      PreprocessorDirectives.empty()) {
+    Tok = getLastNonComment(*Line);
+    assert(Tok);
+    if (Tok->BraceCount < 0) {
+      assert(Tok->BraceCount == -1);
+      Tok = nullptr;
+    } else {
+      Tok->BraceCount = -1;
+    }
+  }
+
+  addUnwrappedLine();
+  ++Line->Level;
+  parseStructuralElement();
+
+  if (Tok) {
+    assert(!Line->InPPDirective);
+    Tok = nullptr;
+    for (const auto &L : llvm::reverse(*CurrentLines)) {
+      if (!L.InPPDirective) {
+        Tok = getLastNonComment(L);
+        if (Tok)
+          break;
+      }
+    }
+    assert(Tok);
+    ++Tok->BraceCount;
+  }
+
+  if (CheckEOF && FormatTok->is(tok::eof))
+    addUnwrappedLine();
+
+  --Line->Level;
+}
+
 static void markOptionalBraces(FormatToken *LeftBrace) {
   if (!LeftBrace)
     return;
@@ -2354,10 +2401,7 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
     else
       NeedsUnwrappedLine = true;
   } else {
-    addUnwrappedLine();
-    ++Line->Level;
-    parseStructuralElement();
-    --Line->Level;
+    parseUnbracedBody();
   }
 
   bool KeepIfBraces = false;
@@ -2403,12 +2447,7 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
       if (IsPrecededByComment)
         --Line->Level;
     } else {
-      addUnwrappedLine();
-      ++Line->Level;
-      parseStructuralElement();
-      if (FormatTok->is(tok::eof))
-        addUnwrappedLine();
-      --Line->Level;
+      parseUnbracedBody(/*CheckEOF=*/true);
     }
   } else {
     if (Style.RemoveBracesLLVM)
@@ -2654,10 +2693,7 @@ void UnwrappedLineParser::parseForOrWhileLoop() {
     }
     addUnwrappedLine();
   } else {
-    addUnwrappedLine();
-    ++Line->Level;
-    parseStructuralElement();
-    --Line->Level;
+    parseUnbracedBody();
   }
 
   if (Style.RemoveBracesLLVM)
@@ -2676,10 +2712,7 @@ void UnwrappedLineParser::parseDoWhile() {
     if (Style.BraceWrapping.BeforeWhile)
       addUnwrappedLine();
   } else {
-    addUnwrappedLine();
-    ++Line->Level;
-    parseStructuralElement();
-    --Line->Level;
+    parseUnbracedBody();
   }
 
   if (Style.RemoveBracesLLVM)
