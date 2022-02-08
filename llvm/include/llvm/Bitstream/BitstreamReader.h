@@ -247,6 +247,10 @@ public:
         return Result;
 
       NextBit += NumBits-1;
+      if (NextBit >= 32)
+        return createStringError(std::errc::illegal_byte_sequence,
+                                 "Unterminated VBR");
+
       MaybeRead = Read(NumBits);
       if (!MaybeRead)
         return MaybeRead;
@@ -274,6 +278,10 @@ public:
         return Result;
 
       NextBit += NumBits-1;
+      if (NextBit >= 64)
+        return createStringError(std::errc::illegal_byte_sequence,
+                                 "Unterminated VBR");
+
       MaybeRead = Read(NumBits);
       if (!MaybeRead)
         return MaybeRead;
