@@ -545,6 +545,10 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
                                            magnitude than x
  T __builtin_elementwise_max(T x, T y)     return x or y, whichever is larger                               integer and floating point types
  T __builtin_elementwise_min(T x, T y)     return x or y, whichever is smaller                              integer and floating point types
+ T __builtin_elementwise_add_sat(T x, T y) return the sum of x and y, clamped to the range of               integer types
+                                           representable values for the signed/unsigned integer type.
+ T __builtin_elementwise_sub_sat(T x, T y) return the difference of x and y, clamped to the range of        integer types
+                                           representable values for the signed/unsigned integer type..
 ========================================= ================================================================ =========================================
 
 
