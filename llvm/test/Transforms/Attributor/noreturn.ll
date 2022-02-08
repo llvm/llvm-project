@@ -17,7 +17,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; }
 ;
 define void @srec0() #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; CHECK-LABEL: define {{[^@]+}}@srec0
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -36,7 +36,7 @@ entry:
 ; }
 ;
 define i32 @srec16(i32 %a) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline noreturn nosync nounwind readnone uwtable willreturn
 ; CHECK-LABEL: define {{[^@]+}}@srec16
 ; CHECK-SAME: (i32 [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -130,7 +130,7 @@ return:                                           ; No predecessors!
 define i32 @multiple_noreturn_calls(i32 %a) #0 {
 ; CHECK: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable willreturn
 ; CHECK-LABEL: define {{[^@]+}}@multiple_noreturn_calls
-; CHECK-SAME: (i32 [[A:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (i32 [[A:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -165,7 +165,7 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 define i32 @endless_loop_but_willreturn() willreturn {
 ; CHECK: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
 ; CHECK-LABEL: define {{[^@]+}}@endless_loop_but_willreturn
-; CHECK-SAME: () #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
@@ -182,7 +182,7 @@ while.body:                                       ; preds = %entry, %while.body
 define i32 @UB_and_willreturn() willreturn {
 ; CHECK: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
 ; CHECK-LABEL: define {{[^@]+}}@UB_and_willreturn
-; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    unreachable
 ;
@@ -192,8 +192,9 @@ entry:
 
 attributes #0 = { noinline nounwind uwtable }
 ;.
-; CHECK: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone uwtable willreturn }
-; CHECK: attributes #[[ATTR1]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree noinline nosync nounwind readnone uwtable willreturn }
+; CHECK: attributes #[[ATTR1]] = { nofree noinline noreturn nosync nounwind readnone uwtable willreturn }
 ; CHECK: attributes #[[ATTR2]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable }
-; CHECK: attributes #[[ATTR3]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR3]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable willreturn }
+; CHECK: attributes #[[ATTR4]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
 ;.

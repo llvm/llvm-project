@@ -26,16 +26,16 @@ define internal i1 @recursive_inst_comparator(i1* %a, i1* %b) {
 }
 
 define internal i1 @recursive_inst_generator(i1 %c, i1* %p) {
-; IS________OPM-LABEL: define {{[^@]+}}@recursive_inst_generator
-; IS________OPM-SAME: (i1 [[C:%.*]], i1* nofree [[P:%.*]]) {
-; IS________OPM-NEXT:    [[A:%.*]] = call i1* @geti1Ptr()
-; IS________OPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
-; IS________OPM:       t:
-; IS________OPM-NEXT:    [[R1:%.*]] = call i1 @recursive_inst_comparator(i1* noalias nofree readnone [[A]], i1* noalias nofree readnone [[P]]) #[[ATTR6:[0-9]+]]
-; IS________OPM-NEXT:    ret i1 [[R1]]
-; IS________OPM:       f:
-; IS________OPM-NEXT:    [[R2:%.*]] = call i1 @recursive_inst_generator(i1 noundef true, i1* nofree [[A]])
-; IS________OPM-NEXT:    ret i1 [[R2]]
+; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@recursive_inst_generator
+; IS__TUNIT_OPM-SAME: (i1 [[C:%.*]], i1* nofree [[P:%.*]]) {
+; IS__TUNIT_OPM-NEXT:    [[A:%.*]] = call i1* @geti1Ptr()
+; IS__TUNIT_OPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; IS__TUNIT_OPM:       t:
+; IS__TUNIT_OPM-NEXT:    [[R1:%.*]] = call i1 @recursive_inst_comparator(i1* noalias nofree readnone [[A]], i1* noalias nofree readnone [[P]]) #[[ATTR6:[0-9]+]]
+; IS__TUNIT_OPM-NEXT:    ret i1 [[R1]]
+; IS__TUNIT_OPM:       f:
+; IS__TUNIT_OPM-NEXT:    [[R2:%.*]] = call i1 @recursive_inst_generator(i1 noundef true, i1* nofree [[A]])
+; IS__TUNIT_OPM-NEXT:    ret i1 [[R2]]
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@recursive_inst_generator
 ; IS__TUNIT_NPM-SAME: (i1 [[C:%.*]], i1* nofree [[P:%.*]]) {
@@ -48,12 +48,23 @@ define internal i1 @recursive_inst_generator(i1 %c, i1* %p) {
 ; IS__TUNIT_NPM-NEXT:    [[R2:%.*]] = call i1 @recursive_inst_generator(i1 noundef true, i1* nofree [[A]])
 ; IS__TUNIT_NPM-NEXT:    ret i1 [[R2]]
 ;
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@recursive_inst_generator
+; IS__CGSCC_OPM-SAME: (i1 [[C:%.*]], i1* nofree [[P:%.*]]) {
+; IS__CGSCC_OPM-NEXT:    [[A:%.*]] = call i1* @geti1Ptr()
+; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; IS__CGSCC_OPM:       t:
+; IS__CGSCC_OPM-NEXT:    [[R1:%.*]] = call i1 @recursive_inst_comparator(i1* noalias nofree readnone [[A]], i1* noalias nofree readnone [[P]])
+; IS__CGSCC_OPM-NEXT:    ret i1 [[R1]]
+; IS__CGSCC_OPM:       f:
+; IS__CGSCC_OPM-NEXT:    [[R2:%.*]] = call i1 @recursive_inst_generator(i1 noundef true, i1* nofree [[A]])
+; IS__CGSCC_OPM-NEXT:    ret i1 [[R2]]
+;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@recursive_inst_generator
 ; IS__CGSCC_NPM-SAME: (i1 [[C:%.*]]) {
 ; IS__CGSCC_NPM-NEXT:    [[A:%.*]] = call i1* @geti1Ptr()
 ; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__CGSCC_NPM:       t:
-; IS__CGSCC_NPM-NEXT:    [[R1:%.*]] = call i1 @recursive_inst_comparator(i1* noalias nofree readnone [[A]], i1* noalias nofree readnone [[A]]) #[[ATTR6:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    [[R1:%.*]] = call i1 @recursive_inst_comparator(i1* noalias nofree readnone [[A]], i1* noalias nofree readnone [[A]])
 ; IS__CGSCC_NPM-NEXT:    ret i1 [[R1]]
 ; IS__CGSCC_NPM:       f:
 ; IS__CGSCC_NPM-NEXT:    [[R2:%.*]] = call i1 @recursive_inst_generator(i1 noundef true)
