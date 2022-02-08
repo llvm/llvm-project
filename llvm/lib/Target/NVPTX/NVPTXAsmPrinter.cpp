@@ -1335,34 +1335,6 @@ void NVPTXAsmPrinter::emitPTXGlobalVariable(const GlobalVariable *GVar,
   }
 }
 
-static unsigned int getOpenCLAlignment(const DataLayout &DL, Type *Ty) {
-  if (Ty->isSingleValueType())
-    return DL.getPrefTypeAlignment(Ty);
-
-  auto *ATy = dyn_cast<ArrayType>(Ty);
-  if (ATy)
-    return getOpenCLAlignment(DL, ATy->getElementType());
-
-  auto *STy = dyn_cast<StructType>(Ty);
-  if (STy) {
-    unsigned int alignStruct = 1;
-    // Go through each element of the struct and find the
-    // largest alignment.
-    for (unsigned i = 0, e = STy->getNumElements(); i != e; i++) {
-      Type *ETy = STy->getElementType(i);
-      unsigned int align = getOpenCLAlignment(DL, ETy);
-      if (align > alignStruct)
-        alignStruct = align;
-    }
-    return alignStruct;
-  }
-
-  auto *FTy = dyn_cast<FunctionType>(Ty);
-  if (FTy)
-    return DL.getPointerPrefAlignment().value();
-  return DL.getPrefTypeAlignment(Ty);
-}
-
 void NVPTXAsmPrinter::printParamName(Function::const_arg_iterator I,
                                      int paramIndex, raw_ostream &O) {
   getSymbol(I->getParent())->print(O, MAI);
@@ -1454,7 +1426,6 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
           if (static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() !=
               NVPTX::CUDA) {
-            Type *ETy = PTy->getPointerElementType();
             int addrSpace = PTy->getAddressSpace();
             switch (addrSpace) {
             default:
@@ -1470,7 +1441,8 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
               O << ".ptr .global ";
               break;
             }
-            O << ".align " << (int)getOpenCLAlignment(DL, ETy) << " ";
+            Align ParamAlign = I->getParamAlign().valueOrOne();
+            O << ".align " << ParamAlign.value() << " ";
           }
           printParamName(I, paramIndex, O);
           continue;
