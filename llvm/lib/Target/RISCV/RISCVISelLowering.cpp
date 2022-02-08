@@ -1086,6 +1086,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::SRL);
     setTargetDAGCombine(ISD::SHL);
     setTargetDAGCombine(ISD::STORE);
+    setTargetDAGCombine(ISD::SPLAT_VECTOR);
   }
 
   setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
@@ -2000,6 +2001,40 @@ static Optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
   return VIDSequence{*SeqStepNum, *SeqStepDenom, *SeqAddend};
 }
 
+// Match a splatted value (SPLAT_VECTOR/BUILD_VECTOR) of an EXTRACT_VECTOR_ELT
+// and lower it as a VRGATHER_VX_VL from the source vector.
+static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
+                                  SelectionDAG &DAG,
+                                  const RISCVSubtarget &Subtarget) {
+  if (SplatVal.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+    return SDValue();
+  SDValue Vec = SplatVal.getOperand(0);
+  // Only perform this optimization on vectors of the same size for simplicity.
+  if (Vec.getValueType() != VT)
+    return SDValue();
+  SDValue Idx = SplatVal.getOperand(1);
+  // The index must be a legal type.
+  if (Idx.getValueType() != Subtarget.getXLenVT())
+    return SDValue();
+
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+    Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
+  }
+
+  SDValue Mask, VL;
+  std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+
+  SDValue Gather = DAG.getNode(RISCVISD::VRGATHER_VX_VL, DL, ContainerVT, Vec,
+                               Idx, Mask, VL);
+
+  if (!VT.isFixedLengthVector())
+    return Gather;
+
+  return convertFromScalableVector(VT, Gather, DAG, Subtarget);
+}
+
 static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
@@ -2123,6 +2158,8 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   }
 
   if (SDValue Splat = cast<BuildVectorSDNode>(Op)->getSplatValue()) {
+    if (auto Gather = matchSplatAsGather(Splat, VT, DL, DAG, Subtarget))
+      return Gather;
     unsigned Opc = VT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL
                                         : RISCVISD::VMV_V_X_VL;
     Splat = DAG.getNode(Opc, DL, ContainerVT, Splat, VL);
@@ -8258,6 +8295,16 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       }
     }
 
+    break;
+  }
+  case ISD::SPLAT_VECTOR: {
+    EVT VT = N->getValueType(0);
+    // Only perform this combine on legal MVT types.
+    if (!isTypeLegal(VT))
+      break;
+    if (auto Gather = matchSplatAsGather(N->getOperand(0), VT.getSimpleVT(), N,
+                                         DAG, Subtarget))
+      return Gather;
     break;
   }
   }
