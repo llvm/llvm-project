@@ -31,28 +31,6 @@ ORC_RT_INTERFACE void *__orc_rt_macho_jit_dlsym(void *dso_handle,
 namespace __orc_rt {
 namespace macho {
 
-struct MachOJITDylibInitializers {
-  using SectionList = std::vector<ExecutorAddrRange>;
-
-  MachOJITDylibInitializers() = default;
-  MachOJITDylibInitializers(std::string Name, ExecutorAddr MachOHeaderAddress)
-      : Name(std::move(Name)),
-        MachOHeaderAddress(std::move(MachOHeaderAddress)) {}
-
-  std::string Name;
-  ExecutorAddr MachOHeaderAddress;
-  ExecutorAddr ObjCImageInfoAddress;
-
-  std::unordered_map<std::string, SectionList> InitSections;
-};
-
-class MachOJITDylibDeinitializers {};
-
-using MachOJITDylibInitializerSequence = std::vector<MachOJITDylibInitializers>;
-
-using MachOJITDylibDeinitializerSequence =
-    std::vector<MachOJITDylibDeinitializers>;
-
 enum dlopen_mode : int {
   ORC_RT_RTLD_LAZY = 0x1,
   ORC_RT_RTLD_NOW = 0x2,
@@ -61,43 +39,6 @@ enum dlopen_mode : int {
 };
 
 } // end namespace macho
-
-using SPSNamedExecutorAddrRangeSequenceMap =
-    SPSSequence<SPSTuple<SPSString, SPSExecutorAddrRangeSequence>>;
-
-using SPSMachOJITDylibInitializers =
-    SPSTuple<SPSString, SPSExecutorAddr, SPSExecutorAddr,
-             SPSNamedExecutorAddrRangeSequenceMap>;
-
-using SPSMachOJITDylibInitializerSequence =
-    SPSSequence<SPSMachOJITDylibInitializers>;
-
-/// Serialization traits for MachOJITDylibInitializers.
-template <>
-class SPSSerializationTraits<SPSMachOJITDylibInitializers,
-                             macho::MachOJITDylibInitializers> {
-public:
-  static size_t size(const macho::MachOJITDylibInitializers &MOJDIs) {
-    return SPSMachOJITDylibInitializers::AsArgList::size(
-        MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.ObjCImageInfoAddress,
-        MOJDIs.InitSections);
-  }
-
-  static bool serialize(SPSOutputBuffer &OB,
-                        const macho::MachOJITDylibInitializers &MOJDIs) {
-    return SPSMachOJITDylibInitializers::AsArgList::serialize(
-        OB, MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.ObjCImageInfoAddress,
-        MOJDIs.InitSections);
-  }
-
-  static bool deserialize(SPSInputBuffer &IB,
-                          macho::MachOJITDylibInitializers &MOJDIs) {
-    return SPSMachOJITDylibInitializers::AsArgList::deserialize(
-        IB, MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.ObjCImageInfoAddress,
-        MOJDIs.InitSections);
-  }
-};
-
 } // end namespace __orc_rt
 
 #endif // ORC_RT_MACHO_PLATFORM_H

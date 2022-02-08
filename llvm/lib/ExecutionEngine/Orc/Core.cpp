@@ -1868,7 +1868,7 @@ Error ExecutionSession::endSession() {
   // TODO: notifiy platform? run static deinits?
 
   Error Err = Error::success();
-  for (auto &JD : JITDylibsToClose)
+  for (auto &JD : reverse(JITDylibsToClose))
     Err = joinErrors(std::move(Err), JD->clear());
 
   Err = joinErrors(std::move(Err), EPC->disconnect());
