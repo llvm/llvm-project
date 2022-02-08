@@ -1767,7 +1767,7 @@ bool ToExtentTensorOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
     return false;
   if (auto inputTensor = inputs[0].dyn_cast<RankedTensorType>()) {
     if (!inputTensor.getElementType().isa<IndexType>() ||
-        inputTensor.getRank() != 1 || !inputTensor.isDynamicDim(0))
+        inputTensor.getRank() != 1)
       return false;
   } else if (!inputs[0].isa<ShapeType>()) {
     return false;
