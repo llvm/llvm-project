@@ -16,6 +16,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -106,13 +107,17 @@ void validate(const Triple &TT, const FeatureBitset &FeatureBits) {
     report_fatal_error("RV32E can't be enabled for an RV64 target");
 }
 
-void toFeatureVector(std::vector<std::string> &FeatureVector,
-                     const FeatureBitset &FeatureBits) {
+llvm::Expected<std::unique_ptr<RISCVISAInfo>>
+parseFeatureBits(bool IsRV64, const FeatureBitset &FeatureBits) {
+  unsigned XLen = IsRV64 ? 64 : 32;
+  std::vector<std::string> FeatureVector;
+  // Convert FeatureBitset to FeatureVector.
   for (auto Feature : RISCVFeatureKV) {
     if (FeatureBits[Feature.Value] &&
         llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.Key))
       FeatureVector.push_back(std::string("+") + Feature.Key);
   }
+  return llvm::RISCVISAInfo::parseFeatures(XLen, FeatureVector);
 }
 
 } // namespace RISCVFeatures

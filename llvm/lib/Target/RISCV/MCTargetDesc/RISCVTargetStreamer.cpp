@@ -45,11 +45,8 @@ void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
   else
     emitAttribute(RISCVAttrs::STACK_ALIGN, RISCVAttrs::ALIGN_16);
 
-  unsigned XLen = STI.hasFeature(RISCV::Feature64Bit) ? 64 : 32;
-  std::vector<std::string> FeatureVector;
-  RISCVFeatures::toFeatureVector(FeatureVector, STI.getFeatureBits());
-
-  auto ParseResult = llvm::RISCVISAInfo::parseFeatures(XLen, FeatureVector);
+  auto ParseResult = RISCVFeatures::parseFeatureBits(
+      STI.hasFeature(RISCV::Feature64Bit), STI.getFeatureBits());
   if (!ParseResult) {
     /* Assume any error about features should handled earlier.  */
     consumeError(ParseResult.takeError());
