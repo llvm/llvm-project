@@ -44,7 +44,8 @@ INLINE_FMA static inline float log(double x) {
 
   if (xbits.uintval() > FPBits::MAX_NORMAL) {
     if (xbits.get_sign() && !xbits.is_nan()) {
-      return FPBits::build_nan(1 << (fputil::MantissaWidth<float>::VALUE - 1));
+      return fputil::FPBits<float>::build_nan(
+          1 << (fputil::MantissaWidth<float>::VALUE - 1));
     }
     return static_cast<float>(x);
   }
