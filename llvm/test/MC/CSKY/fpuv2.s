@@ -1,5 +1,8 @@
 # RUN: llvm-mc %s -triple=csky -show-encoding -csky-no-aliases -mattr=+fpuv2_sf -mattr=+fpuv2_df \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc -filetype=obj -triple=csky -mattr=+fpuv2_sf -mattr=+fpuv2_df < %s \
+# RUN:     | llvm-objdump --mattr=+fpuv2_sf --mattr=+fpuv2_df -M no-aliases -M abi-names -d -r - \
+# RUN:     | FileCheck -check-prefixes=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: fldms  vr1-vr2, (a1)
 # CHECK-ASM: encoding: [0x21,0xf4,0x01,0x30]
