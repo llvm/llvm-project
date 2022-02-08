@@ -112,13 +112,14 @@ class HighPrecisionDecimal {
 
 private:
   bool should_round_up(int32_t roundToDigit) {
-    if (roundToDigit < 0 || roundToDigit >= this->num_digits) {
+    if (roundToDigit < 0 ||
+        static_cast<uint32_t>(roundToDigit) >= this->num_digits) {
       return false;
     }
 
     // If we're right in the middle and there are no extra digits
     if (this->digits[roundToDigit] == 5 &&
-        roundToDigit + 1 == this->num_digits) {
+        static_cast<uint32_t>(roundToDigit + 1) == this->num_digits) {
 
       // Round up if we've truncated (since that means the result is slightly
       // higher than what's represented.)
@@ -127,6 +128,9 @@ private:
       }
 
       // If this exactly halfway, round to even.
+      if (roundToDigit == 0)
+        // When the input is ".5".
+        return false;
       return this->digits[roundToDigit - 1] % 2 != 0;
     }
     // If there are digits after roundToDigit, they must be non-zero since we
