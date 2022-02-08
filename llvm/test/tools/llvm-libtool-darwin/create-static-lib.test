@@ -58,6 +58,14 @@
 # DUPLICATE-INPUT-DAG: [[INPUTA]]
 # DUPLICATE-INPUT-DAG: [[INPUTB]]
 
+# RUN: not llvm-libtool-darwin -warnings_as_errors -static -o %t.lib %t-input1.o %t-input2.o %t-input1.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERROR-DUPLICATE-INPUT -DFILE=%basename_t.tmp-input1.o \
+# RUN:     -DINPUTA=%t-input1.o -DINPUTB=%t-input1.o
+
+# ERROR-DUPLICATE-INPUT:     error: file '[[FILE]]' was specified multiple times.
+# ERROR-DUPLICATE-INPUT-DAG: [[INPUTA]]
+# ERROR-DUPLICATE-INPUT-DAG: [[INPUTB]]
+
 ## Make sure we can combine object files with the same name if
 ## they are for different architectures.
 # RUN: mkdir -p %t/arm64 %t/armv7
