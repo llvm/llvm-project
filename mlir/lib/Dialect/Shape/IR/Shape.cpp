@@ -1692,12 +1692,18 @@ OpFoldResult SizeToIndexOp::fold(ArrayRef<Attribute> operands) {
   // `IntegerAttr`s which makes constant folding simple.
   if (Attribute arg = operands[0])
     return arg;
-  return impl::foldCastOp(*this);
+  return OpFoldResult();
 }
 
 void SizeToIndexOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                 MLIRContext *context) {
   patterns.add<IndexToSizeToIndexCanonicalization>(context);
+}
+
+bool SizeToIndexOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  if (inputs.size() != 1 || outputs.size() != 1)
+    return false;
+  return inputs[0].isa<IndexType, SizeType>() && outputs[0].isa<IndexType>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1750,13 +1756,28 @@ LogicalResult SplitAtOp::fold(ArrayRef<Attribute> operands,
 
 OpFoldResult ToExtentTensorOp::fold(ArrayRef<Attribute> operands) {
   if (!operands[0])
-    return impl::foldCastOp(*this);
+    return OpFoldResult();
   Builder builder(getContext());
   auto shape = llvm::to_vector<6>(
       operands[0].cast<DenseIntElementsAttr>().getValues<int64_t>());
   auto type = RankedTensorType::get({static_cast<int64_t>(shape.size())},
                                     builder.getIndexType());
   return DenseIntElementsAttr::get(type, shape);
+}
+
+bool ToExtentTensorOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  if (inputs.size() != 1 || outputs.size() != 1)
+    return false;
+  if (auto inputTensor = inputs[0].dyn_cast<RankedTensorType>()) {
+    if (!inputTensor.getElementType().isa<IndexType>() ||
+        inputTensor.getRank() != 1 || !inputTensor.isDynamicDim(0))
+      return false;
+  } else if (!inputs[0].isa<ShapeType>()) {
+    return false;
+  }
+
+  TensorType outputTensor = outputs[0].dyn_cast<TensorType>();
+  return outputTensor && outputTensor.getElementType().isa<IndexType>();
 }
 
 //===----------------------------------------------------------------------===//

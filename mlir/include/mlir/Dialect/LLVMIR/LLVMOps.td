@@ -419,8 +419,7 @@ class LLVM_CastOp<string mnemonic, string builderFunc, Type type,
   let arguments = (ins type:$arg);
   let results = (outs resultType:$res);
   let builders = [LLVM_OneResultOpBuilder];
-  let parser = [{ return mlir::impl::parseCastOp(parser, result); }];
-  let printer = [{ mlir::impl::printCastOp(this->getOperation(), p); }];
+  let assemblyFormat = "$arg attr-dict `:` type($arg) `to` type($res)";
 }
 def LLVM_BitcastOp : LLVM_CastOp<"bitcast", "CreateBitCast",
                                  LLVM_AnyNonAggregate, LLVM_AnyNonAggregate> {

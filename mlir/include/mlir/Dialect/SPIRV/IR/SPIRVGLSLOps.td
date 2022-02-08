@@ -72,10 +72,6 @@ class SPV_GLSLBinaryOp<string mnemonic, int opcode, Type resultType,
     SPV_ScalarOrVectorOf<resultType>:$result
   );
 
-  let parser = [{ return impl::parseOneResultSameOperandTypeOp(parser, result); }];
-
-  let printer = [{ return impl::printOneResultOp(getOperation(), p); }];
-
   let hasVerifier = 0;
 }
 
@@ -83,7 +79,10 @@ class SPV_GLSLBinaryOp<string mnemonic, int opcode, Type resultType,
 // return type matches.
 class SPV_GLSLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
                                  list<Trait> traits = []> :
-  SPV_GLSLBinaryOp<mnemonic, opcode, type, type, traits>;
+  SPV_GLSLBinaryOp<mnemonic, opcode, type, type,
+                   traits # [SameOperandsAndResultType]> {
+  let assemblyFormat = "operands attr-dict `:` type($result)";
+}
 
 // Base class for GLSL ternary ops.
 class SPV_GLSLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
@@ -100,9 +99,8 @@ class SPV_GLSLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
     SPV_ScalarOrVectorOf<type>:$result
   );
 
-  let parser = [{ return impl::parseOneResultSameOperandTypeOp(parser, result); }];
-
-  let printer = [{ return impl::printOneResultOp(getOperation(), p); }];
+  let parser = [{ return parseOneResultSameOperandTypeOp(parser, result); }];
+  let printer = [{ return printOneResultOp(getOperation(), p); }];
 
   let hasVerifier = 0;
 }

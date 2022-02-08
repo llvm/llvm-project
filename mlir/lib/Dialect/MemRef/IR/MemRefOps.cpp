@@ -65,10 +65,6 @@ Type mlir::memref::getTensorTypeFromMemRefType(Type type) {
   return NoneType::get(type.getContext());
 }
 
-LogicalResult memref::CastOp::verify() {
-  return impl::verifyCastOp(*this, areCastCompatible);
-}
-
 //===----------------------------------------------------------------------===//
 // AllocOp / AllocaOp
 //===----------------------------------------------------------------------===//
