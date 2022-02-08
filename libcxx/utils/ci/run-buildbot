@@ -447,6 +447,7 @@ apple-system-backdeployment-*)
     PARAMS+=";use_system_cxx_lib=True"
 
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
+                   -DLIBCXX_TEST_CONFIG="apple-libc++-backdeployment.cfg.in" \
                    -DLIBCXX_TEST_PARAMS="${PARAMS}" \
                    -DLIBCXXABI_TEST_PARAMS="${PARAMS}"
 
