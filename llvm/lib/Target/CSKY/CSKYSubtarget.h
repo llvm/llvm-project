@@ -36,18 +36,65 @@ class CSKYSubtarget : public CSKYGenSubtargetInfo {
   CSKYTargetLowering TLInfo;
   SelectionDAGTargetInfo TSInfo;
 
+  enum CSKYProcFamilyEnum {
+    Others,
+
+    CK801,
+    CK802,
+    CK803,
+    CK803S,
+    CK804,
+    CK805,
+    CK807,
+    CK810,
+    CK810V,
+    CK860,
+    CK860V
+  };
+
+  /// CSKYProcFamily - CSKY processor family: CK801, CK802, and others.
+  CSKYProcFamilyEnum CSKYProcFamily = Others;
+
   bool UseHardFloat;
   bool UseHardFloatABI;
   bool HasFPUv2SingleFloat;
   bool HasFPUv2DoubleFloat;
+  bool HasFPUv3HalfWord;
+  bool HasFPUv3HalfFloat;
   bool HasFPUv3SingleFloat;
   bool HasFPUv3DoubleFloat;
-
+  bool HasFdivdu;
+  bool HasFLOATE1;
+  bool HasFLOAT1E2;
+  bool HasFLOAT1E3;
+  bool HasFLOAT3E4;
+  bool HasFLOAT7E60;
   bool HasBTST16;
-  bool HasJAVA;
   bool HasExtendLrw;
+  bool HasTrust;
+  bool HasJAVA;
+  bool HasCache;
+  bool HasNVIC;
+  bool HasDSP;
+  bool HasDSP1E2;
+  bool HasDSPE60;
+  bool HasDSPV2;
+  bool HasDSP_Silan;
   bool HasDoloop;
+  bool HasHardwareDivide;
   bool HasHighRegisters;
+  bool HasVDSPV2;
+  bool HasVDSP2E3;
+  bool HasVDSP2E60F;
+  bool ReadTPHard;
+  bool HasVDSPV1_128;
+  bool UseCCRT;
+  bool DumpConstPool;
+  bool EnableInterruptAttribute;
+  bool HasPushPop;
+  bool HasSTM;
+  bool SmartMode;
+  bool EnableStackSize;
 
   bool HasE1;
   bool HasE2;
@@ -92,16 +139,49 @@ public:
   bool hasFPUv2SingleFloat() const { return HasFPUv2SingleFloat; }
   bool hasFPUv2DoubleFloat() const { return HasFPUv2DoubleFloat; }
   bool hasFPUv2() const { return HasFPUv2SingleFloat || HasFPUv2DoubleFloat; }
+  bool hasFPUv3HalfWord() const { return HasFPUv3HalfWord; }
+  bool hasFPUv3HalfFloat() const { return HasFPUv3HalfFloat; }
   bool hasFPUv3SingleFloat() const { return HasFPUv3SingleFloat; }
   bool hasFPUv3DoubleFloat() const { return HasFPUv3DoubleFloat; }
-  bool hasFPUv3() const { return HasFPUv3SingleFloat || HasFPUv3DoubleFloat; }
+  bool hasFPUv3() const {
+    return HasFPUv3HalfFloat || HasFPUv3SingleFloat || HasFPUv3DoubleFloat;
+  }
   bool hasAnyFloatExt() const { return hasFPUv2() || hasFPUv3(); };
-
-  bool hasBTST16() const { return HasBTST16; }
-  bool hasJAVA() const { return HasJAVA; }
+  bool hasFdivdu() const { return HasFdivdu; }
+  bool hasFLOATE1() const { return HasFLOATE1; }
+  bool hasFLOAT1E2() const { return HasFLOAT1E2; }
+  bool hasFLOAT1E3() const { return HasFLOAT1E3; }
+  bool hasFLOAT3E4() const { return HasFLOAT3E4; }
+  bool hasFLOAT7E60() const { return HasFLOAT7E60; }
   bool hasExtendLrw() const { return HasExtendLrw; }
+  bool hasBTST16() const { return HasBTST16; }
+  bool hasTrust() const { return HasTrust; }
+  bool hasJAVA() const { return HasJAVA; }
+  bool hasCache() const { return HasCache; }
+  bool hasNVIC() const { return HasNVIC; }
+  bool hasDSP() const { return HasDSP; }
+  bool hasDSP1E2() const { return HasDSP1E2; }
+  bool hasDSPE60() const { return HasDSPE60; }
+  bool hasDSPV2() const { return HasDSPV2; }
+  bool hasDSP_Silan() const { return HasDSP_Silan; }
   bool hasDoloop() const { return HasDoloop; }
   bool hasHighRegisters() const { return HasHighRegisters; }
+  bool hasVDSPV2() const { return HasVDSPV2; }
+  bool hasVDSPV2_FLOAT() const { return HasVDSPV2 && UseHardFloat; }
+  bool hasVDSPV2_HALF() const {
+    return HasVDSPV2 && UseHardFloat && HasFPUv3HalfFloat;
+  }
+  bool hasVDSP2E3() const { return HasVDSP2E3; }
+  bool hasVDSP2E60F() const { return HasVDSP2E60F; }
+  bool readTPHard() const { return ReadTPHard; }
+  bool hasVDSPV1_128() const { return HasVDSPV1_128; }
+  bool useCCRT() const { return UseCCRT; }
+  bool dumpConstPool() const { return DumpConstPool; }
+  bool enableInterruptAttribute() const { return EnableInterruptAttribute; }
+  bool hasPushPop() const { return HasPushPop; }
+  bool hasSTM() const { return HasSTM; }
+  bool smartMode() const { return SmartMode; }
+  bool enableStackSize() const { return EnableStackSize; }
 
   bool hasE1() const { return HasE1; }
   bool hasE2() const { return HasE2; }
@@ -114,6 +194,18 @@ public:
   bool hasMP1E2() const { return HasMP1E2; }
   bool has7E10() const { return Has7E10; }
   bool has10E60() const { return Has10E60; }
+
+  bool isCK801() const { return CSKYProcFamily == CK801; }
+  bool isCK802() const { return CSKYProcFamily == CK802; }
+  bool isCK803() const { return CSKYProcFamily == CK803; }
+  bool isCK803S() const { return CSKYProcFamily == CK803S; }
+  bool isCK804() const { return CSKYProcFamily == CK804; }
+  bool isCK805() const { return CSKYProcFamily == CK805; }
+  bool isCK807() const { return CSKYProcFamily == CK807; }
+  bool isCK810() const { return CSKYProcFamily == CK810; }
+  bool isCK810V() const { return CSKYProcFamily == CK810V; }
+  bool isCK860() const { return CSKYProcFamily == CK860; }
+  bool isCK860V() const { return CSKYProcFamily == CK860V; }
 };
 } // namespace llvm
 
