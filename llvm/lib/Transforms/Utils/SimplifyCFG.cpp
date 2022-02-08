@@ -2284,16 +2284,25 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
   if (any_of(Invokes, IsIllegalToMerge))
     return false;
 
-  // All callees must be identical.
-  // FIXME: support indirect callees?
-  Value *Callee = nullptr;
-  for (InvokeInst *II : Invokes) {
-    Value *CurrCallee = II->getCalledOperand();
-    assert(CurrCallee && "There is always a called operand.");
-    if (!Callee)
-      Callee = CurrCallee;
-    else if (Callee != CurrCallee)
+  // Either both `invoke`s must be   direct,
+  // or     both `invoke`s must be indirect.
+  auto IsIndirectCall = [](InvokeInst *II) { return II->isIndirectCall(); };
+  bool HaveIndirectCalls = any_of(Invokes, IsIndirectCall);
+  bool AllCallsAreIndirect = all_of(Invokes, IsIndirectCall);
+  if (HaveIndirectCalls) {
+    if (!AllCallsAreIndirect)
       return false;
+  } else {
+    // All callees must be identical.
+    Value *Callee = nullptr;
+    for (InvokeInst *II : Invokes) {
+      Value *CurrCallee = II->getCalledOperand();
+      assert(CurrCallee && "There is always a called operand.");
+      if (!Callee)
+        Callee = CurrCallee;
+      else if (Callee != CurrCallee)
+        return false;
+    }
   }
 
   // Either both `invoke`s must not have a normal destination,
@@ -2436,8 +2445,17 @@ static void MergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
             {DominatorTree::Delete, II->getParent(), SuccOfPredBB});
   }
 
-  // Form the merged data operands for the merged invoke.
-  for (Use &U : MergedInvoke->data_ops()) {
+  bool IsIndirectCall = Invokes[0]->isIndirectCall();
+
+  // Form the merged operands for the merged invoke.
+  for (Use &U : MergedInvoke->operands()) {
+    // Only PHI together the indirect callees and data operands.
+    if (MergedInvoke->isCallee(&U)) {
+      if (!IsIndirectCall)
+        continue;
+    } else if (!MergedInvoke->isDataOperand(&U))
+      continue;
+
     // Don't create trivial PHI's with all-identical incoming values.
     bool NeedPHI = any_of(Invokes, [&U](InvokeInst *II) {
       return II->getOperand(U.getOperandNo()) != U.get();
@@ -2448,10 +2466,8 @@ static void MergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
     // Form a PHI out of all the data ops under this index.
     PHINode *PN = PHINode::Create(
         U->getType(), /*NumReservedValues=*/Invokes.size(), "", MergedInvoke);
-    for (InvokeInst *II : Invokes) {
-      Use *IVU = II->data_operands_begin() + MergedInvoke->getDataOperandNo(&U);
-      PN->addIncoming(IVU->get(), II->getParent());
-    }
+    for (InvokeInst *II : Invokes)
+      PN->addIncoming(II->getOperand(U.getOperandNo()), II->getParent());
 
     U.set(PN);
   }
