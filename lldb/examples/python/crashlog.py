@@ -520,17 +520,21 @@ class JSONCrashLogParser:
             self.crashlog.threads.append(thread)
             idx += 1
 
-    def parse_thread_registers(self, json_thread_state):
+    def parse_thread_registers(self, json_thread_state, prefix=None):
         registers = dict()
         for key, state in json_thread_state.items():
             if key == "rosetta":
-               registers.update(self.parse_thread_registers(state))
-               continue
+                registers.update(self.parse_thread_registers(state))
+                continue
+            if key == "x":
+                gpr_dict = { str(idx) : reg for idx,reg in enumerate(state) }
+                registers.update(self.parse_thread_registers(gpr_dict, key))
+                continue
             try:
-               value = int(state['value'])
-               registers[key] = value
+                value = int(state['value'])
+                registers["{}{}".format(prefix,key)] = value
             except (KeyError, ValueError, TypeError):
-               pass
+                pass
         return registers
 
     def parse_errors(self, json_data):
