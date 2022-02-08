@@ -50,7 +50,7 @@ define <vscale x 4 x i8> @gather_i8_index_offset_8(i8* %base, i64 %offset, <vsca
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add x8, x0, x1
 ; CHECK-NEXT:    index z0.s, #0, #1
-; CHECK-NEXT:    ld1sb { z0.s }, p0/z, [x8, z0.s, sxtw]
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x8, z0.s, sxtw]
 ; CHECK-NEXT:    ret
   %splat.insert0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %splat0 = shufflevector <vscale x 4 x i64> %splat.insert0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
@@ -209,7 +209,7 @@ define <vscale x 4 x i8> @gather_8i8_index_offset_8([8 x i8]* %base, i64 %offset
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add x8, x0, x1, lsl #3
 ; CHECK-NEXT:    index z0.s, #0, #8
-; CHECK-NEXT:    ld1sb { z0.s }, p0/z, [x8, z0.s, sxtw]
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x8, z0.s, sxtw]
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %t1 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer

@@ -9,7 +9,7 @@ target triple = "aarch64-linux-gnu"
 define <vscale x 2 x i64> @masked_sgather_sext(i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %mask, <vscale x 2 x i8> %vals) #0 {
 ; CHECK-LABEL: masked_sgather_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0, z0.d]
+; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0, z0.d]
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    sxtb z2.d, p0/m, z0.d
@@ -29,7 +29,7 @@ define <vscale x 2 x i64> @masked_sgather_sext(i8* %base, <vscale x 2 x i64> %of
 define <vscale x 2 x i64> @masked_sgather_zext(i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %mask, <vscale x 2 x i8> %vals) #0 {
 ; CHECK-LABEL: masked_sgather_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0, z0.d]
+; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0, z0.d]
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    add z1.d, z0.d, z1.d
 ; CHECK-NEXT:    and z0.d, z0.d, #0xff
@@ -51,7 +51,7 @@ define <vscale x 2 x i64> @masked_sgather_zext(i8* %base, <vscale x 2 x i64> %of
 define <vscale x 2 x i8> @masked_gather_nxv2i8(<vscale x 2 x i8*> %ptrs, <vscale x 2 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv2i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [z0.d]
+; CHECK-NEXT:    ld1b { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    ret
   %data = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x i8*> %ptrs, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> undef)
   ret <vscale x 2 x i8> %data
@@ -61,7 +61,7 @@ define <vscale x 2 x i8> @masked_gather_nxv2i8(<vscale x 2 x i8*> %ptrs, <vscale
 define <vscale x 2 x i16> @masked_gather_nxv2i16(<vscale x 2 x i16*> %ptrs, <vscale x 2 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1sh { z0.d }, p0/z, [z0.d]
+; CHECK-NEXT:    ld1h { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    ret
   %data = call <vscale x 2 x i16> @llvm.masked.gather.nxv2i16(<vscale x 2 x i16*> %ptrs, i32 2, <vscale x 2 x i1> %mask, <vscale x 2 x i16> undef)
   ret <vscale x 2 x i16> %data
@@ -71,7 +71,7 @@ define <vscale x 2 x i16> @masked_gather_nxv2i16(<vscale x 2 x i16*> %ptrs, <vsc
 define <vscale x 2 x i32> @masked_gather_nxv2i32(<vscale x 2 x i32*> %ptrs, <vscale x 2 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1sw { z0.d }, p0/z, [z0.d]
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    ret
   %data = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x i32*> %ptrs, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x i32> undef)
   ret <vscale x 2 x i32> %data
@@ -181,8 +181,8 @@ define <vscale x 16 x i8> @masked_gather_nxv16i8(i8* %base, <vscale x 16 x i8> %
 ; CHECK-NEXT:    punpkhi p2.h, p1.b
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    punpklo p1.h, p1.b
-; CHECK-NEXT:    ld1sb { z2.s }, p2/z, [x0, z2.s, sxtw]
-; CHECK-NEXT:    ld1sb { z1.s }, p1/z, [x0, z1.s, sxtw]
+; CHECK-NEXT:    ld1b { z2.s }, p2/z, [x0, z2.s, sxtw]
+; CHECK-NEXT:    ld1b { z1.s }, p1/z, [x0, z1.s, sxtw]
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpkhi p1.h, p0.b
@@ -190,8 +190,8 @@ define <vscale x 16 x i8> @masked_gather_nxv16i8(i8* %base, <vscale x 16 x i8> %
 ; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
 ; CHECK-NEXT:    sunpkhi z2.s, z0.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    ld1sb { z2.s }, p1/z, [x0, z2.s, sxtw]
-; CHECK-NEXT:    ld1sb { z0.s }, p0/z, [x0, z0.s, sxtw]
+; CHECK-NEXT:    ld1b { z2.s }, p1/z, [x0, z2.s, sxtw]
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0, z0.s, sxtw]
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
@@ -239,8 +239,8 @@ define <vscale x 4 x i32> @masked_sgather_nxv4i8(<vscale x 4 x i8*> %ptrs, <vsca
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    punpkhi p1.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
-; CHECK-NEXT:    ld1sb { z1.d }, p1/z, [z1.d]
-; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [z0.d]
+; CHECK-NEXT:    ld1b { z1.d }, p1/z, [z1.d]
+; CHECK-NEXT:    ld1b { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    sxtb z0.s, p0/m, z0.s
