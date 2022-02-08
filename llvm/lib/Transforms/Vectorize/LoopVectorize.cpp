@@ -608,15 +608,6 @@ protected:
   /// represented as.
   void truncateToMinimalBitwidths(VPTransformState &State);
 
-  /// Compute scalar induction steps. \p ScalarIV is the scalar induction
-  /// variable on which to base the steps, \p Step is the size of the step, and
-  /// \p EntryVal is the value from the original loop that maps to the steps.
-  /// Note that \p EntryVal doesn't have to be an induction variable - it
-  /// can also be a truncate instruction.
-  void buildScalarSteps(Value *ScalarIV, Value *Step, Instruction *EntryVal,
-                        const InductionDescriptor &ID, VPValue *Def,
-                        VPTransformState &State);
-
   /// Create a vector induction phi node based on an existing scalar one. \p
   /// EntryVal is the value from the original loop that maps to the vector phi
   /// node, and \p Step is the loop-invariant step. If \p EntryVal is a
@@ -651,17 +642,6 @@ protected:
   /// Returns the block containing the checks or nullptr if no checks have been
   /// added.
   BasicBlock *emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass);
-
-  /// Compute the transformed value of Index at offset StartValue using step
-  /// StepValue.
-  /// For integer induction, returns StartValue + Index * StepValue.
-  /// For pointer induction, returns StartValue[Index * StepValue].
-  /// FIXME: The newly created binary instructions should contain nsw/nuw
-  /// flags, which can be found from the original scalar operations.
-  Value *emitTransformedIndex(IRBuilderBase &B, Value *Index,
-                              ScalarEvolution *SE, const DataLayout &DL,
-                              const InductionDescriptor &ID,
-                              BasicBlock *VectorHeader) const;
 
   /// Emit basic blocks (prefixed with \p Prefix) for the iteration check,
   /// vector loop preheader, middle block and scalar preheader. Also
@@ -2469,115 +2449,15 @@ void InnerLoopVectorizer::createVectorIntOrFpInductionPHI(
   VecInd->addIncoming(LastInduction, LoopVectorLatch);
 }
 
-void InnerLoopVectorizer::widenIntOrFpInduction(
-    PHINode *IV, VPWidenIntOrFpInductionRecipe *Def, VPTransformState &State,
-    Value *CanonicalIV) {
-  Value *Start = Def->getStartValue()->getLiveInIRValue();
-  const InductionDescriptor &ID = Def->getInductionDescriptor();
-  TruncInst *Trunc = Def->getTruncInst();
-  IRBuilderBase &Builder = State.Builder;
-  assert(IV->getType() == ID.getStartValue()->getType() && "Types must match");
-  assert(!State.VF.isZero() && "VF must be non-zero");
-
-  // The value from the original loop to which we are mapping the new induction
-  // variable.
-  Instruction *EntryVal = Trunc ? cast<Instruction>(Trunc) : IV;
-
-  auto &DL = EntryVal->getModule()->getDataLayout();
-
-  // Generate code for the induction step. Note that induction steps are
-  // required to be loop-invariant
-  auto CreateStepValue = [&](const SCEV *Step) -> Value * {
-    assert(PSE.getSE()->isLoopInvariant(Step, OrigLoop) &&
-           "Induction step should be loop invariant");
-    if (PSE.getSE()->isSCEVable(IV->getType())) {
-      SCEVExpander Exp(*PSE.getSE(), DL, "induction");
-      return Exp.expandCodeFor(Step, Step->getType(),
-                               State.CFG.VectorPreHeader->getTerminator());
-    }
-    return cast<SCEVUnknown>(Step)->getValue();
-  };
-
-  // The scalar value to broadcast. This is derived from the canonical
-  // induction variable. If a truncation type is given, truncate the canonical
-  // induction variable and step. Otherwise, derive these values from the
-  // induction descriptor.
-  auto CreateScalarIV = [&](Value *&Step) -> Value * {
-    Value *ScalarIV = CanonicalIV;
-    Type *NeededType = IV->getType();
-    if (!Def->isCanonical() || ScalarIV->getType() != NeededType) {
-      ScalarIV =
-          NeededType->isIntegerTy()
-              ? Builder.CreateSExtOrTrunc(ScalarIV, NeededType)
-              : Builder.CreateCast(Instruction::SIToFP, ScalarIV, NeededType);
-      ScalarIV = emitTransformedIndex(Builder, ScalarIV, PSE.getSE(), DL, ID,
-                                      State.CFG.PrevBB);
-      ScalarIV->setName("offset.idx");
-    }
-    if (Trunc) {
-      auto *TruncType = cast<IntegerType>(Trunc->getType());
-      assert(Step->getType()->isIntegerTy() &&
-             "Truncation requires an integer step");
-      ScalarIV = Builder.CreateTrunc(ScalarIV, TruncType);
-      Step = Builder.CreateTrunc(Step, TruncType);
-    }
-    return ScalarIV;
-  };
-
-  // Fast-math-flags propagate from the original induction instruction.
-  IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-  if (ID.getInductionBinOp() && isa<FPMathOperator>(ID.getInductionBinOp()))
-    Builder.setFastMathFlags(ID.getInductionBinOp()->getFastMathFlags());
-
-  // Now do the actual transformations, and start with creating the step value.
-  Value *Step = CreateStepValue(ID.getStep());
-  if (State.VF.isScalar()) {
-    Value *ScalarIV = CreateScalarIV(Step);
-    Type *ScalarTy = IntegerType::get(ScalarIV->getContext(),
-                                      Step->getType()->getScalarSizeInBits());
-
-    Instruction::BinaryOps IncOp = ID.getInductionOpcode();
-    if (IncOp == Instruction::BinaryOpsEnd)
-      IncOp = Instruction::Add;
-    for (unsigned Part = 0; Part < UF; ++Part) {
-      Value *StartIdx = ConstantInt::get(ScalarTy, Part);
-      Instruction::BinaryOps MulOp = Instruction::Mul;
-      if (Step->getType()->isFloatingPointTy()) {
-        StartIdx = Builder.CreateUIToFP(StartIdx, Step->getType());
-        MulOp = Instruction::FMul;
-      }
-
-      Value *Mul = Builder.CreateBinOp(MulOp, StartIdx, Step);
-      Value *EntryPart = Builder.CreateBinOp(IncOp, ScalarIV, Mul, "induction");
-      State.set(Def, EntryPart, Part);
-      if (Trunc) {
-        assert(!Step->getType()->isFloatingPointTy() &&
-               "fp inductions shouldn't be truncated");
-        addMetadata(EntryPart, Trunc);
-      }
-    }
-    return;
-  }
-
-  // Create a new independent vector induction variable, if one is needed.
-  if (Def->needsVectorIV())
-    createVectorIntOrFpInductionPHI(ID, Step, Start, EntryVal, Def, State);
-
-  if (Def->needsScalarIV()) {
-    // Create scalar steps that can be used by instructions we will later
-    // scalarize. Note that the addition of the scalar steps will not increase
-    // the number of instructions in the loop in the common case prior to
-    // InstCombine. We will be trading one vector extract for each scalar step.
-    Value *ScalarIV = CreateScalarIV(Step);
-    buildScalarSteps(ScalarIV, Step, EntryVal, ID, Def, State);
-  }
-}
-
-void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
-                                           Instruction *EntryVal,
-                                           const InductionDescriptor &ID,
-                                           VPValue *Def,
-                                           VPTransformState &State) {
+/// Compute scalar induction steps. \p ScalarIV is the scalar induction
+/// variable on which to base the steps, \p Step is the size of the step, and
+/// \p EntryVal is the value from the original loop that maps to the steps.
+/// Note that \p EntryVal doesn't have to be an induction variable - it
+/// can also be a truncate instruction.
+static void buildScalarSteps(Value *ScalarIV, Value *Step,
+                             Instruction *EntryVal,
+                             const InductionDescriptor &ID, VPValue *Def,
+                             VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
   // We shouldn't have to build scalar steps if we aren't vectorizing.
   assert(State.VF.isVector() && "VF should be greater than one");
@@ -2646,6 +2526,216 @@ void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
       auto *Add = Builder.CreateBinOp(AddOp, ScalarIV, Mul);
       State.set(Def, Add, VPIteration(Part, Lane));
     }
+  }
+}
+
+/// Compute the transformed value of Index at offset StartValue using step
+/// StepValue.
+/// For integer induction, returns StartValue + Index * StepValue.
+/// For pointer induction, returns StartValue[Index * StepValue].
+/// FIXME: The newly created binary instructions should contain nsw/nuw
+/// flags, which can be found from the original scalar operations.
+static Value *emitTransformedIndex(IRBuilderBase &B, Value *Index,
+                                   ScalarEvolution *SE, const DataLayout &DL,
+                                   const InductionDescriptor &ID, LoopInfo &LI,
+                                   BasicBlock *VectorHeader) {
+
+  SCEVExpander Exp(*SE, DL, "induction");
+  auto Step = ID.getStep();
+  auto StartValue = ID.getStartValue();
+  assert(Index->getType()->getScalarType() == Step->getType() &&
+         "Index scalar type does not match StepValue type");
+
+  // Note: the IR at this point is broken. We cannot use SE to create any new
+  // SCEV and then expand it, hoping that SCEV's simplification will give us
+  // a more optimal code. Unfortunately, attempt of doing so on invalid IR may
+  // lead to various SCEV crashes. So all we can do is to use builder and rely
+  // on InstCombine for future simplifications. Here we handle some trivial
+  // cases only.
+  auto CreateAdd = [&B](Value *X, Value *Y) {
+    assert(X->getType() == Y->getType() && "Types don't match!");
+    if (auto *CX = dyn_cast<ConstantInt>(X))
+      if (CX->isZero())
+        return Y;
+    if (auto *CY = dyn_cast<ConstantInt>(Y))
+      if (CY->isZero())
+        return X;
+    return B.CreateAdd(X, Y);
+  };
+
+  // We allow X to be a vector type, in which case Y will potentially be
+  // splatted into a vector with the same element count.
+  auto CreateMul = [&B](Value *X, Value *Y) {
+    assert(X->getType()->getScalarType() == Y->getType() &&
+           "Types don't match!");
+    if (auto *CX = dyn_cast<ConstantInt>(X))
+      if (CX->isOne())
+        return Y;
+    if (auto *CY = dyn_cast<ConstantInt>(Y))
+      if (CY->isOne())
+        return X;
+    VectorType *XVTy = dyn_cast<VectorType>(X->getType());
+    if (XVTy && !isa<VectorType>(Y->getType()))
+      Y = B.CreateVectorSplat(XVTy->getElementCount(), Y);
+    return B.CreateMul(X, Y);
+  };
+
+  // Get a suitable insert point for SCEV expansion. For blocks in the vector
+  // loop, choose the end of the vector loop header (=VectorHeader), because
+  // the DomTree is not kept up-to-date for additional blocks generated in the
+  // vector loop. By using the header as insertion point, we guarantee that the
+  // expanded instructions dominate all their uses.
+  auto GetInsertPoint = [&B, &LI, VectorHeader]() {
+    BasicBlock *InsertBB = B.GetInsertPoint()->getParent();
+    if (InsertBB != VectorHeader &&
+        LI.getLoopFor(VectorHeader) == LI.getLoopFor(InsertBB))
+      return VectorHeader->getTerminator();
+    return &*B.GetInsertPoint();
+  };
+
+  switch (ID.getKind()) {
+  case InductionDescriptor::IK_IntInduction: {
+    assert(!isa<VectorType>(Index->getType()) &&
+           "Vector indices not supported for integer inductions yet");
+    assert(Index->getType() == StartValue->getType() &&
+           "Index type does not match StartValue type");
+    if (ID.getConstIntStepValue() && ID.getConstIntStepValue()->isMinusOne())
+      return B.CreateSub(StartValue, Index);
+    auto *Offset = CreateMul(
+        Index, Exp.expandCodeFor(Step, Index->getType(), GetInsertPoint()));
+    return CreateAdd(StartValue, Offset);
+  }
+  case InductionDescriptor::IK_PtrInduction: {
+    assert(isa<SCEVConstant>(Step) &&
+           "Expected constant step for pointer induction");
+    return B.CreateGEP(
+        ID.getElementType(), StartValue,
+        CreateMul(Index,
+                  Exp.expandCodeFor(Step, Index->getType()->getScalarType(),
+                                    GetInsertPoint())));
+  }
+  case InductionDescriptor::IK_FpInduction: {
+    assert(!isa<VectorType>(Index->getType()) &&
+           "Vector indices not supported for FP inductions yet");
+    assert(Step->getType()->isFloatingPointTy() && "Expected FP Step value");
+    auto InductionBinOp = ID.getInductionBinOp();
+    assert(InductionBinOp &&
+           (InductionBinOp->getOpcode() == Instruction::FAdd ||
+            InductionBinOp->getOpcode() == Instruction::FSub) &&
+           "Original bin op should be defined for FP induction");
+
+    Value *StepValue = cast<SCEVUnknown>(Step)->getValue();
+    Value *MulExp = B.CreateFMul(StepValue, Index);
+    return B.CreateBinOp(InductionBinOp->getOpcode(), StartValue, MulExp,
+                         "induction");
+  }
+  case InductionDescriptor::IK_NoInduction:
+    return nullptr;
+  }
+  llvm_unreachable("invalid enum");
+}
+
+void InnerLoopVectorizer::widenIntOrFpInduction(
+    PHINode *IV, VPWidenIntOrFpInductionRecipe *Def, VPTransformState &State,
+    Value *CanonicalIV) {
+  Value *Start = Def->getStartValue()->getLiveInIRValue();
+  const InductionDescriptor &ID = Def->getInductionDescriptor();
+  TruncInst *Trunc = Def->getTruncInst();
+  IRBuilderBase &Builder = State.Builder;
+  assert(IV->getType() == ID.getStartValue()->getType() && "Types must match");
+  assert(!State.VF.isZero() && "VF must be non-zero");
+
+  // The value from the original loop to which we are mapping the new induction
+  // variable.
+  Instruction *EntryVal = Trunc ? cast<Instruction>(Trunc) : IV;
+
+  auto &DL = EntryVal->getModule()->getDataLayout();
+
+  // Generate code for the induction step. Note that induction steps are
+  // required to be loop-invariant
+  auto CreateStepValue = [&](const SCEV *Step) -> Value * {
+    assert(PSE.getSE()->isLoopInvariant(Step, OrigLoop) &&
+           "Induction step should be loop invariant");
+    if (PSE.getSE()->isSCEVable(IV->getType())) {
+      SCEVExpander Exp(*PSE.getSE(), DL, "induction");
+      return Exp.expandCodeFor(Step, Step->getType(),
+                               State.CFG.VectorPreHeader->getTerminator());
+    }
+    return cast<SCEVUnknown>(Step)->getValue();
+  };
+
+  // The scalar value to broadcast. This is derived from the canonical
+  // induction variable. If a truncation type is given, truncate the canonical
+  // induction variable and step. Otherwise, derive these values from the
+  // induction descriptor.
+  auto CreateScalarIV = [&](Value *&Step) -> Value * {
+    Value *ScalarIV = CanonicalIV;
+    Type *NeededType = IV->getType();
+    if (!Def->isCanonical() || ScalarIV->getType() != NeededType) {
+      ScalarIV =
+          NeededType->isIntegerTy()
+              ? Builder.CreateSExtOrTrunc(ScalarIV, NeededType)
+              : Builder.CreateCast(Instruction::SIToFP, ScalarIV, NeededType);
+      ScalarIV = emitTransformedIndex(Builder, ScalarIV, PSE.getSE(), DL, ID,
+                                      *State.LI, State.CFG.PrevBB);
+      ScalarIV->setName("offset.idx");
+    }
+    if (Trunc) {
+      auto *TruncType = cast<IntegerType>(Trunc->getType());
+      assert(Step->getType()->isIntegerTy() &&
+             "Truncation requires an integer step");
+      ScalarIV = Builder.CreateTrunc(ScalarIV, TruncType);
+      Step = Builder.CreateTrunc(Step, TruncType);
+    }
+    return ScalarIV;
+  };
+
+  // Fast-math-flags propagate from the original induction instruction.
+  IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+  if (ID.getInductionBinOp() && isa<FPMathOperator>(ID.getInductionBinOp()))
+    Builder.setFastMathFlags(ID.getInductionBinOp()->getFastMathFlags());
+
+  // Now do the actual transformations, and start with creating the step value.
+  Value *Step = CreateStepValue(ID.getStep());
+  if (State.VF.isScalar()) {
+    Value *ScalarIV = CreateScalarIV(Step);
+    Type *ScalarTy = IntegerType::get(ScalarIV->getContext(),
+                                      Step->getType()->getScalarSizeInBits());
+
+    Instruction::BinaryOps IncOp = ID.getInductionOpcode();
+    if (IncOp == Instruction::BinaryOpsEnd)
+      IncOp = Instruction::Add;
+    for (unsigned Part = 0; Part < UF; ++Part) {
+      Value *StartIdx = ConstantInt::get(ScalarTy, Part);
+      Instruction::BinaryOps MulOp = Instruction::Mul;
+      if (Step->getType()->isFloatingPointTy()) {
+        StartIdx = Builder.CreateUIToFP(StartIdx, Step->getType());
+        MulOp = Instruction::FMul;
+      }
+
+      Value *Mul = Builder.CreateBinOp(MulOp, StartIdx, Step);
+      Value *EntryPart = Builder.CreateBinOp(IncOp, ScalarIV, Mul, "induction");
+      State.set(Def, EntryPart, Part);
+      if (Trunc) {
+        assert(!Step->getType()->isFloatingPointTy() &&
+               "fp inductions shouldn't be truncated");
+        addMetadata(EntryPart, Trunc);
+      }
+    }
+    return;
+  }
+
+  // Create a new independent vector induction variable, if one is needed.
+  if (Def->needsVectorIV())
+    createVectorIntOrFpInductionPHI(ID, Step, Start, EntryVal, Def, State);
+
+  if (Def->needsScalarIV()) {
+    // Create scalar steps that can be used by instructions we will later
+    // scalarize. Note that the addition of the scalar steps will not increase
+    // the number of instructions in the loop in the common case prior to
+    // InstCombine. We will be trading one vector extract for each scalar step.
+    Value *ScalarIV = CreateScalarIV(Step);
+    buildScalarSteps(ScalarIV, Step, EntryVal, ID, Def, State);
   }
 }
 
@@ -3217,105 +3307,6 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L,
   return MemCheckBlock;
 }
 
-Value *InnerLoopVectorizer::emitTransformedIndex(
-    IRBuilderBase &B, Value *Index, ScalarEvolution *SE, const DataLayout &DL,
-    const InductionDescriptor &ID, BasicBlock *VectorHeader) const {
-
-  SCEVExpander Exp(*SE, DL, "induction");
-  auto Step = ID.getStep();
-  auto StartValue = ID.getStartValue();
-  assert(Index->getType()->getScalarType() == Step->getType() &&
-         "Index scalar type does not match StepValue type");
-
-  // Note: the IR at this point is broken. We cannot use SE to create any new
-  // SCEV and then expand it, hoping that SCEV's simplification will give us
-  // a more optimal code. Unfortunately, attempt of doing so on invalid IR may
-  // lead to various SCEV crashes. So all we can do is to use builder and rely
-  // on InstCombine for future simplifications. Here we handle some trivial
-  // cases only.
-  auto CreateAdd = [&B](Value *X, Value *Y) {
-    assert(X->getType() == Y->getType() && "Types don't match!");
-    if (auto *CX = dyn_cast<ConstantInt>(X))
-      if (CX->isZero())
-        return Y;
-    if (auto *CY = dyn_cast<ConstantInt>(Y))
-      if (CY->isZero())
-        return X;
-    return B.CreateAdd(X, Y);
-  };
-
-  // We allow X to be a vector type, in which case Y will potentially be
-  // splatted into a vector with the same element count.
-  auto CreateMul = [&B](Value *X, Value *Y) {
-    assert(X->getType()->getScalarType() == Y->getType() &&
-           "Types don't match!");
-    if (auto *CX = dyn_cast<ConstantInt>(X))
-      if (CX->isOne())
-        return Y;
-    if (auto *CY = dyn_cast<ConstantInt>(Y))
-      if (CY->isOne())
-        return X;
-    VectorType *XVTy = dyn_cast<VectorType>(X->getType());
-    if (XVTy && !isa<VectorType>(Y->getType()))
-      Y = B.CreateVectorSplat(XVTy->getElementCount(), Y);
-    return B.CreateMul(X, Y);
-  };
-
-  // Get a suitable insert point for SCEV expansion. For blocks in the vector
-  // loop, choose the end of the vector loop header (=VectorHeader), because
-  // the DomTree is not kept up-to-date for additional blocks generated in the
-  // vector loop. By using the header as insertion point, we guarantee that the
-  // expanded instructions dominate all their uses.
-  auto GetInsertPoint = [this, &B, VectorHeader]() {
-    BasicBlock *InsertBB = B.GetInsertPoint()->getParent();
-    if (InsertBB != LoopVectorBody &&
-        LI->getLoopFor(VectorHeader) == LI->getLoopFor(InsertBB))
-      return VectorHeader->getTerminator();
-    return &*B.GetInsertPoint();
-  };
-
-  switch (ID.getKind()) {
-  case InductionDescriptor::IK_IntInduction: {
-    assert(!isa<VectorType>(Index->getType()) &&
-           "Vector indices not supported for integer inductions yet");
-    assert(Index->getType() == StartValue->getType() &&
-           "Index type does not match StartValue type");
-    if (ID.getConstIntStepValue() && ID.getConstIntStepValue()->isMinusOne())
-      return B.CreateSub(StartValue, Index);
-    auto *Offset = CreateMul(
-        Index, Exp.expandCodeFor(Step, Index->getType(), GetInsertPoint()));
-    return CreateAdd(StartValue, Offset);
-  }
-  case InductionDescriptor::IK_PtrInduction: {
-    assert(isa<SCEVConstant>(Step) &&
-           "Expected constant step for pointer induction");
-    return B.CreateGEP(
-        ID.getElementType(), StartValue,
-        CreateMul(Index,
-                  Exp.expandCodeFor(Step, Index->getType()->getScalarType(),
-                                    GetInsertPoint())));
-  }
-  case InductionDescriptor::IK_FpInduction: {
-    assert(!isa<VectorType>(Index->getType()) &&
-           "Vector indices not supported for FP inductions yet");
-    assert(Step->getType()->isFloatingPointTy() && "Expected FP Step value");
-    auto InductionBinOp = ID.getInductionBinOp();
-    assert(InductionBinOp &&
-           (InductionBinOp->getOpcode() == Instruction::FAdd ||
-            InductionBinOp->getOpcode() == Instruction::FSub) &&
-           "Original bin op should be defined for FP induction");
-
-    Value *StepValue = cast<SCEVUnknown>(Step)->getValue();
-    Value *MulExp = B.CreateFMul(StepValue, Index);
-    return B.CreateBinOp(InductionBinOp->getOpcode(), StartValue, MulExp,
-                         "induction");
-  }
-  case InductionDescriptor::IK_NoInduction:
-    return nullptr;
-  }
-  llvm_unreachable("invalid enum");
-}
-
 Loop *InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   LoopScalarBody = OrigLoop->getHeader();
   LoopVectorPreHeader = OrigLoop->getLoopPreheader();
@@ -3420,8 +3411,8 @@ void InnerLoopVectorizer::createInductionResumeValues(
           CastInst::getCastOpcode(VectorTripCount, true, StepType, true);
       Value *CRD = B.CreateCast(CastOp, VectorTripCount, StepType, "cast.crd");
       const DataLayout &DL = LoopScalarBody->getModule()->getDataLayout();
-      EndValue =
-          emitTransformedIndex(B, CRD, PSE.getSE(), DL, II, LoopVectorBody);
+      EndValue = emitTransformedIndex(B, CRD, PSE.getSE(), DL, II, *LI,
+                                      LoopVectorBody);
       EndValue->setName("ind.end");
 
       // Compute the end value for the additional bypass (if applicable).
@@ -3431,8 +3422,8 @@ void InnerLoopVectorizer::createInductionResumeValues(
                                          StepType, true);
         CRD =
             B.CreateCast(CastOp, AdditionalBypass.second, StepType, "cast.crd");
-        EndValueFromAdditionalBypass =
-            emitTransformedIndex(B, CRD, PSE.getSE(), DL, II, LoopVectorBody);
+        EndValueFromAdditionalBypass = emitTransformedIndex(
+            B, CRD, PSE.getSE(), DL, II, *LI, LoopVectorBody);
         EndValueFromAdditionalBypass->setName("ind.end");
       }
     }
@@ -3624,8 +3615,8 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
                              II.getStep()->getType())
               : B.CreateSExtOrTrunc(CountMinusOne, II.getStep()->getType());
       CMO->setName("cast.cmo");
-      Value *Escape =
-          emitTransformedIndex(B, CMO, PSE.getSE(), DL, II, LoopVectorBody);
+      Value *Escape = emitTransformedIndex(B, CMO, PSE.getSE(), DL, II, *LI,
+                                           LoopVectorBody);
       Escape->setName("ind.escape");
       MissingVals[UI] = Escape;
     }
@@ -4513,8 +4504,9 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
           Value *Idx = Builder.CreateAdd(
               PartStart, ConstantInt::get(PtrInd->getType(), Lane));
           Value *GlobalIdx = Builder.CreateAdd(PtrInd, Idx);
-          Value *SclrGep = emitTransformedIndex(Builder, GlobalIdx, PSE.getSE(),
-                                                DL, II, State.CFG.PrevBB);
+          Value *SclrGep =
+              emitTransformedIndex(Builder, GlobalIdx, PSE.getSE(), DL, II,
+                                   *State.LI, State.CFG.PrevBB);
           SclrGep->setName("next.gep");
           State.set(PhiR, SclrGep, VPIteration(Part, Lane));
         }
