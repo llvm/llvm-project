@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "./Utils.h"
+
 #include "mlir/Analysis/Presburger/Simplex.h"
-#include "../../Dialect/Affine/Analysis/AffineStructuresParser.h"
+#include "mlir/IR/MLIRContext.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -476,18 +478,8 @@ TEST(SimplexTest, isRedundantEquality) {
   EXPECT_TRUE(simplex.isRedundantEquality({-1, 0, 2})); // x = 2.
 }
 
-static IntegerPolyhedron parsePoly(StringRef str, MLIRContext *context) {
-  FailureOr<IntegerPolyhedron> poly = parseIntegerSetToFAC(str, context);
-
-  EXPECT_TRUE(succeeded(poly));
-
-  return *poly;
-}
-
 TEST(SimplexTest, IsRationalSubsetOf) {
-
   MLIRContext context;
-
   IntegerPolyhedron univ = parsePoly("(x) : ()", &context);
   IntegerPolyhedron empty =
       parsePoly("(x) : (x + 0 >= 0, -x - 1 >= 0)", &context);
