@@ -1718,21 +1718,6 @@ static Error addLibraries(Session &S,
   return Error::success();
 }
 
-static Error addProcessSymbols(Session &S,
-                               const std::map<unsigned, JITDylib *> &IdxToJD) {
-
-  if (NoProcessSymbols)
-    return Error::success();
-
-  for (auto &KV : IdxToJD) {
-    auto &JD = *KV.second;
-    JD.addGenerator(ExitOnErr(
-        orc::EPCDynamicLibrarySearchGenerator::GetForTargetProcess(S.ES)));
-  }
-
-  return Error::success();
-}
-
 static Error addSessionInputs(Session &S) {
   std::map<unsigned, JITDylib *> IdxToJD;
 
@@ -1753,9 +1738,6 @@ static Error addSessionInputs(Session &S) {
     return Err;
 
   if (auto Err = addLibraries(S, IdxToJD))
-    return Err;
-
-  if (auto Err = addProcessSymbols(S, IdxToJD))
     return Err;
 
   return Error::success();
