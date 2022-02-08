@@ -101,6 +101,10 @@ Modified Compiler Flags
   - RISC-V SiFive S51 (``sifive-s51``).
   - RISC-V SiFive S54 (``sifive-s54``).
   - RISC-V SiFive S76 (``sifive-s76``).
+  - Arm Cortex-X1C (``cortex-x1c``)
+  - Arm Cortex-X2 (``cortex-x2``)
+  - Arm Cortex-A510 (``cortex-a510``)
+  - Arm Cortex-A710 (``cortex-a710``)
 
 - Support has been added for the following architectures (``-march`` identifiers in parentheses):
 
@@ -282,11 +286,6 @@ DWARF Support in Clang
 
 Arm and AArch64 Support in Clang
 --------------------------------
-
-- Support has been added for the following processors (command-line identifiers in parentheses):
-  - Arm Cortex-A510 (``cortex-a510``)
-  - Arm Cortex-X2 (``cortex-x2``)
-  - Arm Cortex-A710 (``cortex-A710``)
 
 - The -mtune flag is no longer ignored for AArch64. It is now possible to
   tune code generation for a particular CPU with -mtune without setting any
