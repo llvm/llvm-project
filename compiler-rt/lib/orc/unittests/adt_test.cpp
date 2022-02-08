@@ -56,13 +56,13 @@ TEST(ADTTest, StringViewDefaultConstruction) {
 TEST(ADTTest, StringViewConstructFromCharPtrAndSize) {
   const char *Str = "abcdefg";
   string_view S(Str, 5);
-  EXPECT_FALSE(S.empty()) << "Span should be non-empty";
-  EXPECT_EQ(S.size(), 5U) << "Span has unexpected size";
+  EXPECT_FALSE(S.empty()) << "string_view should be non-empty";
+  EXPECT_EQ(S.size(), 5U) << "string_view has unexpected size";
   EXPECT_EQ(std::distance(S.begin(), S.end()), 5U)
       << "Unexpected iterator range size";
-  EXPECT_EQ(S.data(), &Str[0]) << "Span data has unexpected value";
+  EXPECT_EQ(S.data(), &Str[0]) << "string_view data has unexpected value";
   for (unsigned I = 0; I != S.size(); ++I)
-    EXPECT_EQ(S[I], Str[I]) << "Unexpected span element value";
+    EXPECT_EQ(S[I], Str[I]) << "Unexpected string_view element value";
 }
 
 TEST(ADTTest, StringViewConstructFromCharPtr) {
@@ -70,13 +70,13 @@ TEST(ADTTest, StringViewConstructFromCharPtr) {
   size_t StrLen = strlen(Str);
   string_view S(Str);
 
-  EXPECT_FALSE(S.empty()) << "Span should be non-empty";
-  EXPECT_EQ(S.size(), StrLen) << "Span has unexpected size";
+  EXPECT_FALSE(S.empty()) << "string_view should be non-empty";
+  EXPECT_EQ(S.size(), StrLen) << "string_view has unexpected size";
   EXPECT_EQ(static_cast<size_t>(std::distance(S.begin(), S.end())), StrLen)
       << "Unexpected iterator range size";
-  EXPECT_EQ(S.data(), &Str[0]) << "Span data has unexpected value";
+  EXPECT_EQ(S.data(), &Str[0]) << "string_view data has unexpected value";
   for (unsigned I = 0; I != S.size(); ++I)
-    EXPECT_EQ(S[I], Str[I]) << "Unexpected span element value";
+    EXPECT_EQ(S[I], Str[I]) << "Unexpected string_view element value";
 }
 
 TEST(ADTTest, StringViewEquality) {
