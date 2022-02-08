@@ -697,10 +697,7 @@ define <1 x i64> @srem_v1i64(<1 x i64> %op1, <1 x i64> %op2) #0 {
 ; VBITS_EQ_128:         ptrue p0.d, vl1
 ; VBITS_EQ_128-NEXT:    movprfx z2, z0
 ; VBITS_EQ_128-NEXT:    sdiv z2.d, p0/m, z2.d, z1.d
-; VBITS_EQ_128-NEXT:    fmov x8, d2
-; VBITS_EQ_128-NEXT:    fmov x9, d1
-; VBITS_EQ_128-NEXT:    mul x8, x8, x9
-; VBITS_EQ_128-NEXT:    fmov d1, x8
+; VBITS_EQ_128-NEXT:    mul z1.d, p0/m, z1.d, z2.d
 ; VBITS_EQ_128-NEXT:    sub d0, d0, d1
 ; VBITS_EQ_128-NEXT:    ret
 
@@ -723,14 +720,7 @@ define <2 x i64> @srem_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
 ; VBITS_EQ_128:         ptrue p0.d, vl2
 ; VBITS_EQ_128-NEXT:    movprfx z2, z0
 ; VBITS_EQ_128-NEXT:    sdiv z2.d, p0/m, z2.d, z1.d
-; VBITS_EQ_128-NEXT:    fmov x9, d2
-; VBITS_EQ_128-NEXT:    fmov x10, d1
-; VBITS_EQ_128-NEXT:    mov x8, v2.d[1]
-; VBITS_EQ_128-NEXT:    mov x11, v1.d[1]
-; VBITS_EQ_128-NEXT:    mul x9, x9, x10
-; VBITS_EQ_128-NEXT:    mul x8, x8, x11
-; VBITS_EQ_128-NEXT:    fmov d1, x9
-; VBITS_EQ_128-NEXT:    mov v1.d[1], x8
+; VBITS_EQ_128-NEXT:    mul z1.d, p0/m, z1.d, z2.d
 ; VBITS_EQ_128-NEXT:    sub v0.2d, v0.2d, v1.2d
 ; VBITS_EQ_128-NEXT:    ret
 
@@ -1487,10 +1477,7 @@ define <1 x i64> @urem_v1i64(<1 x i64> %op1, <1 x i64> %op2) #0 {
 ; VBITS_EQ_128:         ptrue p0.d, vl1
 ; VBITS_EQ_128-NEXT:    movprfx z2, z0
 ; VBITS_EQ_128-NEXT:    udiv z2.d, p0/m, z2.d, z1.d
-; VBITS_EQ_128-NEXT:    fmov x8, d2
-; VBITS_EQ_128-NEXT:    fmov x9, d1
-; VBITS_EQ_128-NEXT:    mul x8, x8, x9
-; VBITS_EQ_128-NEXT:    fmov d1, x8
+; VBITS_EQ_128-NEXT:    mul z1.d, p0/m, z1.d, z2.d
 ; VBITS_EQ_128-NEXT:    sub d0, d0, d1
 ; VBITS_EQ_128-NEXT:    ret
 
@@ -1513,14 +1500,7 @@ define <2 x i64> @urem_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
 ; VBITS_EQ_128:         ptrue p0.d, vl2
 ; VBITS_EQ_128-NEXT:    movprfx z2, z0
 ; VBITS_EQ_128-NEXT:    udiv z2.d, p0/m, z2.d, z1.d
-; VBITS_EQ_128-NEXT:    fmov x9, d2
-; VBITS_EQ_128-NEXT:    fmov x10, d1
-; VBITS_EQ_128-NEXT:    mov x8, v2.d[1]
-; VBITS_EQ_128-NEXT:    mov x11, v1.d[1]
-; VBITS_EQ_128-NEXT:    mul x9, x9, x10
-; VBITS_EQ_128-NEXT:    mul x8, x8, x11
-; VBITS_EQ_128-NEXT:    fmov d1, x9
-; VBITS_EQ_128-NEXT:    mov v1.d[1], x8
+; VBITS_EQ_128-NEXT:    mul z1.d, p0/m, z1.d, z2.d
 ; VBITS_EQ_128-NEXT:    sub v0.2d, v0.2d, v1.2d
 ; VBITS_EQ_128-NEXT:    ret
 
