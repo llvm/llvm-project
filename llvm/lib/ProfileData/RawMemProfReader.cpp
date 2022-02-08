@@ -28,6 +28,8 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MD5.h"
 
+#define DEBUG_TYPE "memprof"
+
 namespace llvm {
 namespace memprof {
 namespace {
@@ -326,6 +328,7 @@ Error RawMemProfReader::readRawProfile() {
 
 object::SectionedAddress
 RawMemProfReader::getModuleOffset(const uint64_t VirtualAddress) {
+  LLVM_DEBUG({
   SegmentEntry *ContainingSegment = nullptr;
   for (auto &SE : SegmentInfo) {
     if (VirtualAddress > SE.Start && VirtualAddress <= SE.End) {
@@ -335,6 +338,7 @@ RawMemProfReader::getModuleOffset(const uint64_t VirtualAddress) {
 
   // Ensure that the virtual address is valid.
   assert(ContainingSegment && "Could not find a segment entry");
+  });
 
   // TODO: Compute the file offset based on the maps and program headers. For
   // now this only works for non PIE binaries.
