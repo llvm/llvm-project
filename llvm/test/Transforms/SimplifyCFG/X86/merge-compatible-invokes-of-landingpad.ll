@@ -2166,12 +2166,7 @@ define void @t36_different_indirect_callees(void()* %callee0, void()* %callee1) 
 ; CHECK-LABEL: @t36_different_indirect_callees(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then0:
-; CHECK-NEXT:    invoke void [[CALLEE0:%.*]]()
-; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
-; CHECK:       invoke.cont0:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
 ; CHECK-NEXT:    cleanup
@@ -2179,11 +2174,12 @@ define void @t36_different_indirect_callees(void()* %callee0, void()* %callee1) 
 ; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
-; CHECK:       if.then1:
-; CHECK-NEXT:    invoke void [[CALLEE1:%.*]]()
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
-; CHECK:       invoke.cont2:
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
+; CHECK:       if.then1.invoke:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi void ()* [ [[CALLEE1:%.*]], [[IF_ELSE]] ], [ [[CALLEE0:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    invoke void [[TMP0]]()
+; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
 ; CHECK-NEXT:    call void @sideeffect()
@@ -2295,12 +2291,7 @@ define void @t38_different_arguments_and_operand_bundes_are_fine(void(i32)* %cal
 ; CHECK-LABEL: @t38_different_arguments_and_operand_bundes_are_fine(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then0:
-; CHECK-NEXT:    invoke void [[CALLEE0:%.*]](i32 0)
-; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
-; CHECK:       invoke.cont0:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
 ; CHECK-NEXT:    cleanup
@@ -2308,11 +2299,13 @@ define void @t38_different_arguments_and_operand_bundes_are_fine(void(i32)* %cal
 ; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
-; CHECK:       if.then1:
-; CHECK-NEXT:    invoke void [[CALLEE1:%.*]](i32 42)
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
-; CHECK:       invoke.cont2:
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
+; CHECK:       if.then1.invoke:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 42, [[IF_ELSE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi void (i32)* [ [[CALLEE1:%.*]], [[IF_ELSE]] ], [ [[CALLEE0:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    invoke void [[TMP1]](i32 [[TMP0]])
+; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
 ; CHECK-NEXT:    call void @sideeffect()
@@ -2353,12 +2346,7 @@ define void @t39_different_arguments_and_operand_bundes_are_fine(void()* %callee
 ; CHECK-LABEL: @t39_different_arguments_and_operand_bundes_are_fine(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then0:
-; CHECK-NEXT:    invoke void [[CALLEE0:%.*]]() [ "abc"(i32 42) ]
-; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
-; CHECK:       invoke.cont0:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
 ; CHECK-NEXT:    cleanup
@@ -2366,11 +2354,13 @@ define void @t39_different_arguments_and_operand_bundes_are_fine(void()* %callee
 ; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
-; CHECK:       if.then1:
-; CHECK-NEXT:    invoke void [[CALLEE1:%.*]]() [ "abc"(i32 0) ]
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
-; CHECK:       invoke.cont2:
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
+; CHECK:       if.then1.invoke:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, [[IF_ELSE]] ], [ 42, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi void ()* [ [[CALLEE1:%.*]], [[IF_ELSE]] ], [ [[CALLEE0:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    invoke void [[TMP1]]() [ "abc"(i32 [[TMP0]]) ]
+; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
 ; CHECK-NEXT:    call void @sideeffect()
@@ -2411,12 +2401,7 @@ define void @t40_different_arguments_and_operand_bundes_are_fine(void(i32)* %cal
 ; CHECK-LABEL: @t40_different_arguments_and_operand_bundes_are_fine(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then0:
-; CHECK-NEXT:    invoke void [[CALLEE0:%.*]](i32 0) [ "abc"(i32 42) ]
-; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
-; CHECK:       invoke.cont0:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
 ; CHECK-NEXT:    cleanup
@@ -2424,11 +2409,14 @@ define void @t40_different_arguments_and_operand_bundes_are_fine(void(i32)* %cal
 ; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
-; CHECK:       if.then1:
-; CHECK-NEXT:    invoke void [[CALLEE1:%.*]](i32 42) [ "abc"(i32 0) ]
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
-; CHECK:       invoke.cont2:
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
+; CHECK:       if.then1.invoke:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 42, [[IF_ELSE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ 0, [[IF_ELSE]] ], [ 42, [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi void (i32)* [ [[CALLEE1:%.*]], [[IF_ELSE]] ], [ [[CALLEE0:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    invoke void [[TMP2]](i32 [[TMP0]]) [ "abc"(i32 [[TMP1]]) ]
+; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
 ; CHECK-NEXT:    call void @sideeffect()
