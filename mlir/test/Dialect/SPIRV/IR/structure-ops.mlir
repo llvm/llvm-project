@@ -72,6 +72,7 @@ func @const() -> () {
   %6 = spv.Constant dense<1.0> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
   %7 = spv.Constant dense<[[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
   %8 = spv.Constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
+  %9 = spv.Constant [[dense<3.0> : vector<2xf32>]] : !spv.array<1 x !spv.array<1xvector<2xf32>>>
   return
 }
 
@@ -86,7 +87,7 @@ func @unaccepted_std_attr() -> () {
 // -----
 
 func @array_constant() -> () {
-  // expected-error @+1 {{has array element whose type ('vector<2xi32>') does not match the result element type ('vector<2xf32>')}}
+  // expected-error @+1 {{result or element type ('vector<2xf32>') does not match value type ('vector<2xi32>')}}
   %0 = spv.Constant [dense<3.0> : vector<2xf32>, dense<4> : vector<2xi32>] : !spv.array<2xvector<2xf32>>
   return
 }
@@ -110,7 +111,7 @@ func @non_nested_array_constant() -> () {
 // -----
 
 func @value_result_type_mismatch() -> () {
-  // expected-error @+1 {{must have spv.array result type for array value}}
+  // expected-error @+1 {{result or element type ('vector<4xi32>') does not match value type ('tensor<4xi32>')}}
   %0 = "spv.Constant"() {value = dense<0> : tensor<4xi32>} : () -> (vector<4xi32>)
 }
 

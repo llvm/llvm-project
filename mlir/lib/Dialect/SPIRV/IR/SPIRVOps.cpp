@@ -1737,17 +1737,13 @@ static void print(spirv::ConstantOp constOp, OpAsmPrinter &printer) {
     printer << " : " << constOp.getType();
 }
 
-LogicalResult spirv::ConstantOp::verify() {
-  auto opType = getType();
-  auto value = valueAttr();
+static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
+                                        Type opType) {
   auto valueType = value.getType();
 
-  // ODS already generates checks to make sure the result type is valid. We just
-  // need to additionally check that the value's attribute type is consistent
-  // with the result type.
   if (value.isa<IntegerAttr, FloatAttr>()) {
     if (valueType != opType)
-      return emitOpError("result type (")
+      return op.emitOpError("result type (")
              << opType << ") does not match value type (" << valueType << ")";
     return success();
   }
@@ -1757,7 +1753,9 @@ LogicalResult spirv::ConstantOp::verify() {
     auto arrayType = opType.dyn_cast<spirv::ArrayType>();
     auto shapedType = valueType.dyn_cast<ShapedType>();
     if (!arrayType)
-      return emitOpError("must have spv.array result type for array value");
+      return op.emitOpError("result or element type (")
+             << opType << ") does not match value type (" << valueType
+             << "), must be the same or spv.array";
 
     int numElements = arrayType.getNumElements();
     auto opElemType = arrayType.getElementType();
@@ -1766,37 +1764,42 @@ LogicalResult spirv::ConstantOp::verify() {
       opElemType = t.getElementType();
     }
     if (!opElemType.isIntOrFloat())
-      return emitOpError("only support nested array result type");
+      return op.emitOpError("only support nested array result type");
 
     auto valueElemType = shapedType.getElementType();
     if (valueElemType != opElemType) {
-      return emitOpError("result element type (")
+      return op.emitOpError("result element type (")
              << opElemType << ") does not match value element type ("
              << valueElemType << ")";
     }
 
     if (numElements != shapedType.getNumElements()) {
-      return emitOpError("result number of elements (")
+      return op.emitOpError("result number of elements (")
              << numElements << ") does not match value number of elements ("
              << shapedType.getNumElements() << ")";
     }
     return success();
   }
-  if (auto attayAttr = value.dyn_cast<ArrayAttr>()) {
+  if (auto arrayAttr = value.dyn_cast<ArrayAttr>()) {
     auto arrayType = opType.dyn_cast<spirv::ArrayType>();
     if (!arrayType)
-      return emitOpError("must have spv.array result type for array value");
+      return op.emitOpError("must have spv.array result type for array value");
     Type elemType = arrayType.getElementType();
-    for (Attribute element : attayAttr.getValue()) {
-      if (element.getType() != elemType)
-        return emitOpError("has array element whose type (")
-               << element.getType()
-               << ") does not match the result element type (" << elemType
-               << ')';
+    for (Attribute element : arrayAttr.getValue()) {
+      // Verify array elements recursively.
+      if (failed(verifyConstantType(op, element, elemType)))
+        return failure();
     }
     return success();
   }
-  return emitOpError("cannot have value of type ") << valueType;
+  return op.emitOpError("cannot have value of type ") << valueType;
+}
+
+LogicalResult spirv::ConstantOp::verify() {
+  // ODS already generates checks to make sure the result type is valid. We just
+  // need to additionally check that the value's attribute type is consistent
+  // with the result type.
+  return verifyConstantType(*this, valueAttr(), getType());
 }
 
 bool spirv::ConstantOp::isBuildableWith(Type type) {
