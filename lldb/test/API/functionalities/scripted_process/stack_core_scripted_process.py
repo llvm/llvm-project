@@ -30,6 +30,9 @@ class StackCoreScriptedProcess(ScriptedProcess):
 
                 self.threads[corefile_thread.GetThreadID()] = StackCoreScriptedThread(self, structured_data)
 
+        if len(self.threads) == 3:
+            self.threads[len(self.threads) - 1].is_stopped = True
+
     def get_memory_region_containing_address(self, addr: int) -> lldb.SBMemoryRegionInfo:
         mem_region = lldb.SBMemoryRegionInfo()
         error = self.corefile_process.GetMemoryRegionInfo(addr, mem_region)
@@ -80,6 +83,7 @@ class StackCoreScriptedThread(ScriptedThread):
         super().__init__(process, args)
         backing_target_idx = args.GetValueForKey("backing_target_idx")
         thread_idx = args.GetValueForKey("thread_idx")
+        self.is_stopped = False
 
         def extract_value_from_structured_data(data, default_val):
             if data and data.IsValid():
@@ -119,17 +123,19 @@ class StackCoreScriptedThread(ScriptedThread):
     def get_stop_reason(self) -> Dict[str, Any]:
         stop_reason = { "type": lldb.eStopReasonInvalid, "data": {  }}
 
-        if self.corefile_thread and self.corefile_thread.IsValid:
-            stop_reason["type"] = self.corefile_thread.GetStopReason()
+        if self.corefile_thread and self.corefile_thread.IsValid() \
+            and self.get_thread_id() == self.corefile_thread.GetThreadID():
+            stop_reason["type"] = lldb.eStopReasonNone
 
-            if self.corefile_thread.GetStopReasonDataCount() > 0:
-                if stop_reason["type"] == lldb.eStopReasonBreakpoint:
-                    stop_reason["data"]["break_id"] = self.corefile_thread.GetStopReasonDataAtIndex(0)
-                    stop_reason["data"]["break_loc_id"] = self.corefile_thread.GetStopReasonDataAtIndex(1)
-                elif stop_reason["type"] == lldb.eStopReasonSignal:
-                    stop_reason["data"]["signal"] = signal.SIGINT
-                elif stop_reason["type"] == lldb.eStopReasonException:
+            if self.is_stopped:
+                if 'arm64' in self.scripted_process.arch:
+                    stop_reason["type"] = lldb.eStopReasonException
                     stop_reason["data"]["desc"] = self.corefile_thread.GetStopDescription(100)
+                elif self.scripted_process.arch == 'x86_64':
+                    stop_reason["type"] = lldb.eStopReasonSignal
+                    stop_reason["data"]["signal"] = signal.SIGTRAP
+                else:
+                    stop_reason["type"] = self.corefile_thread.GetStopReason()
 
         return stop_reason
 

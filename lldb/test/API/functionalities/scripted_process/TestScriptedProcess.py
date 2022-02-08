@@ -196,6 +196,22 @@ class ScriptedProcesTestCase(TestBase):
         self.assertTrue(thread, "Invalid thread.")
         self.assertEqual(thread.GetName(), "StackCoreScriptedThread.thread-2")
 
+        self.assertTrue(target.triple, "Invalid target triple")
+        arch = target.triple.split('-')[0]
+        supported_arch = ['x86_64', 'arm64', 'arm64e']
+        self.assertIn(arch, supported_arch)
+        # When creating a corefile of a arm process, lldb saves the exception
+        # that triggers the breakpoint in the LC_NOTES of the corefile, so they
+        # can be reloaded with the corefile on the next debug session.
+        if arch in 'arm64e':
+            self.assertTrue(thread.GetStopReason(), lldb.eStopReasonException)
+        # However, it's architecture specific, and corefiles made from intel
+        # process don't save any metadata to retrieve to stop reason.
+        # To mitigate this, the StackCoreScriptedProcess will report a
+        # eStopReasonSignal with a SIGTRAP, mimicking what debugserver does.
+        else:
+            self.assertTrue(thread.GetStopReason(), lldb.eStopReasonSignal)
+
         self.assertEqual(thread.GetNumFrames(), 6)
         frame = thread.GetSelectedFrame()
         self.assertTrue(frame, "Invalid frame.")
