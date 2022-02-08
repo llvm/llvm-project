@@ -2438,14 +2438,16 @@ static void MergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
 
   // Form the merged data operands for the merged invoke.
   for (Use &U : MergedInvoke->data_ops()) {
-    Type *Ty = U->getType();
-    if (Ty->isTokenTy())
-      continue; // Keep this arg as-is, we've checked that all the invokes
-                // recieve the *same* token value.
+    // Don't create trivial PHI's with all-identical incoming values.
+    bool NeedPHI = any_of(Invokes, [&U](InvokeInst *II) {
+      return II->getOperand(U.getOperandNo()) != U.get();
+    });
+    if (!NeedPHI)
+      continue;
 
-    // Otherwise, simply form a PHI out of all the data ops under this index.
-    PHINode *PN = PHINode::Create(Ty, /*NumReservedValues=*/Invokes.size(), "",
-                                  MergedInvoke);
+    // Form a PHI out of all the data ops under this index.
+    PHINode *PN = PHINode::Create(
+        U->getType(), /*NumReservedValues=*/Invokes.size(), "", MergedInvoke);
     for (InvokeInst *II : Invokes) {
       Use *IVU = II->data_operands_begin() + MergedInvoke->getDataOperandNo(&U);
       PN->addIncoming(IVU->get(), II->getParent());

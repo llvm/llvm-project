@@ -696,8 +696,7 @@ define void @t12_arguments_are_fine() personality i8* bitcast (i32 (...)* @__gxx
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 42, [[IF_ELSE]] ], [ 42, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    invoke void @simple_throw_taking_argument(i32 [[TMP0]])
+; CHECK-NEXT:    invoke void @simple_throw_taking_argument(i32 42)
 ; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
@@ -1136,8 +1135,7 @@ define void @t19_compatible_operand_bundle() personality i8* bitcast (i32 (...)*
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 42, [[IF_ELSE]] ], [ 42, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    invoke void @simple_throw() [ "abc"(i32 [[TMP0]]) ]
+; CHECK-NEXT:    invoke void @simple_throw() [ "abc"(i32 42) ]
 ; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
