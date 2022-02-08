@@ -2307,9 +2307,10 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
         return false;
     }
 
-    // In the normal destination, there must be no PHI nodes.
-    // FIXME: just check that the incoming values are compatible?
-    if (!empty(NormalBB->phis()))
+    // In the normal destination, the incoming values for these two `invoke`s
+    // must be compatible.
+    if (!IncomingValuesAreCompatible(
+            NormalBB, {Invokes[0]->getParent(), Invokes[1]->getParent()}))
       return false;
 
     // For now, simply don't deal with `invoke`s that have uses.
@@ -2333,7 +2334,7 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
 #endif
 
   // In the unwind destination, the incoming values for these two `invoke`s
-  // must be compatible .
+  // must be compatible.
   if (!IncomingValuesAreCompatible(
           Invokes.front()->getUnwindDest(),
           {Invokes[0]->getParent(), Invokes[1]->getParent()}))
@@ -2445,12 +2446,12 @@ static void MergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
     U.set(PN);
   }
 
-  // We've ensured that each PHI node in the `landingpad` has compatible
-  // (identical) incoming values when coming from each of the `invoke`s
-  // in the current merge set, so update the PHI nodes accordingly.
-  AddPredecessorToBlock(/*Succ=*/MergedInvoke->getUnwindDest(),
-                        /*NewPred=*/MergedInvoke->getParent(),
-                        /*ExistPred=*/Invokes.front()->getParent());
+  // We've ensured that each PHI node has compatible (identical) incoming values
+  // when coming from each of the `invoke`s in the current merge set,
+  // so update the PHI nodes accordingly.
+  for (BasicBlock *Succ : successors(MergedInvoke))
+    AddPredecessorToBlock(Succ, /*NewPred=*/MergedInvoke->getParent(),
+                          /*ExistPred=*/Invokes.front()->getParent());
 
   // And finally, replace the original `invoke`s with an unconditional branch
   // to the block with the merged `invoke`. Also, give that merged `invoke`

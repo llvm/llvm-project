@@ -1567,12 +1567,9 @@ define void @t26_phi_in_normal_dest_compatible_incoming_values() personality i8*
 ; CHECK-LABEL: @t26_phi_in_normal_dest_compatible_incoming_values(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE0:%.*]]
-; CHECK:       if.then0:
-; CHECK-NEXT:    invoke void @maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE0:%.*]]
 ; CHECK:       invoke.cont:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[IF_THEN0]] ], [ 0, [[IF_THEN1:%.*]] ], [ -1, [[IF_THEN2:%.*]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ -1, [[IF_THEN2:%.*]] ], [ 0, [[IF_THEN1_INVOKE]] ]
 ; CHECK-NEXT:    call void @consume(i32 [[PHI]])
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    unreachable
@@ -1583,10 +1580,10 @@ define void @t26_phi_in_normal_dest_compatible_incoming_values() personality i8*
 ; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
 ; CHECK:       if.else0:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1]], label [[IF_ELSE1:%.*]]
-; CHECK:       if.then1:
+; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_ELSE1:%.*]]
+; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    invoke void @maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT]] unwind label [[LPAD]]
+; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.else1:
 ; CHECK-NEXT:    [[C2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C2]], label [[IF_THEN2]], label [[IF_END:%.*]]
