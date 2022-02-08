@@ -202,9 +202,9 @@ namespace {
     bool Fake;
 
   public:
-    Argument(const Record &Arg, StringRef Attr)
-        : lowerName(std::string(Arg.getValueAsString("Name"))),
-          upperName(lowerName), attrName(Attr), isOpt(false), Fake(false) {
+    Argument(StringRef Arg, StringRef Attr)
+        : lowerName(std::string(Arg)), upperName(lowerName), attrName(Attr),
+          isOpt(false), Fake(false) {
       if (!lowerName.empty()) {
         lowerName[0] = std::tolower(lowerName[0]);
         upperName[0] = std::toupper(upperName[0]);
@@ -215,6 +215,8 @@ namespace {
       if (lowerName == "interface")
         lowerName = "interface_";
     }
+    Argument(const Record &Arg, StringRef Attr)
+        : Argument(Arg.getValueAsString("Name"), Attr) {}
     virtual ~Argument() = default;
 
     StringRef getLowerName() const { return lowerName; }
@@ -666,6 +668,11 @@ namespace {
           ArgName(getLowerName().str() + "_"), ArgSizeName(ArgName + "Size"),
           RangeName(std::string(getLowerName())) {}
 
+    VariadicArgument(StringRef Arg, StringRef Attr, std::string T)
+        : Argument(Arg, Attr), Type(std::move(T)),
+          ArgName(getLowerName().str() + "_"), ArgSizeName(ArgName + "Size"),
+          RangeName(std::string(getLowerName())) {}
+
     const std::string &getType() const { return Type; }
     const std::string &getArgName() const { return ArgName; }
     const std::string &getArgSizeName() const { return ArgSizeName; }
@@ -686,6 +693,18 @@ namespace {
       OS << "  llvm::iterator_range<" << IteratorType << "> " << RangeName
          << "() const { return llvm::make_range(" << BeginFn << ", " << EndFn
          << "); }\n";
+    }
+
+    void writeSetter(raw_ostream &OS) const {
+      OS << "  void set" << getUpperName() << "(ASTContext &Ctx, ";
+      writeCtorParameters(OS);
+      OS << ") {\n";
+      OS << "    " << ArgSizeName << " = " << getUpperName() << "Size;\n";
+      OS << "    " << ArgName << " = new (Ctx, 16) " << getType() << "["
+         << ArgSizeName << "];\n";
+      OS << "  ";
+      writeCtorBody(OS);
+      OS << "  }\n";
     }
 
     void writeCloneArgs(raw_ostream &OS) const override {
@@ -1168,6 +1187,9 @@ namespace {
     VariadicExprArgument(const Record &Arg, StringRef Attr)
       : VariadicArgument(Arg, Attr, "Expr *")
     {}
+
+    VariadicExprArgument(StringRef ArgName, StringRef Attr)
+        : VariadicArgument(ArgName, Attr, "Expr *") {}
 
     void writeASTVisitorTraversal(raw_ostream &OS) const override {
       OS << "  {\n";
@@ -2138,6 +2160,11 @@ static void forEachUniqueSpelling(const Record &Attr, Fn &&F) {
   }
 }
 
+static bool isTypeArgument(const Record *Arg) {
+  return !Arg->getSuperClasses().empty() &&
+         Arg->getSuperClasses().back().first->getName() == "TypeArgument";
+}
+
 /// Emits the first-argument-is-type property for attributes.
 static void emitClangAttrTypeArgList(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#if defined(CLANG_ATTR_TYPE_ARG_LIST)\n";
@@ -2149,7 +2176,7 @@ static void emitClangAttrTypeArgList(RecordKeeper &Records, raw_ostream &OS) {
     if (Args.empty())
       continue;
 
-    if (Args[0]->getSuperClasses().back().first->getName() != "TypeArgument")
+    if (!isTypeArgument(Args[0]))
       continue;
 
     // All these spellings take a single type argument.
@@ -2179,7 +2206,7 @@ static void emitClangAttrArgContextList(RecordKeeper &Records, raw_ostream &OS) 
   OS << "#endif // CLANG_ATTR_ARG_CONTEXT_LIST\n\n";
 }
 
-static bool isIdentifierArgument(Record *Arg) {
+static bool isIdentifierArgument(const Record *Arg) {
   return !Arg->getSuperClasses().empty() &&
     llvm::StringSwitch<bool>(Arg->getSuperClasses().back().first->getName())
     .Case("IdentifierArgument", true)
@@ -2188,12 +2215,20 @@ static bool isIdentifierArgument(Record *Arg) {
     .Default(false);
 }
 
-static bool isVariadicIdentifierArgument(Record *Arg) {
+static bool isVariadicIdentifierArgument(const Record *Arg) {
   return !Arg->getSuperClasses().empty() &&
          llvm::StringSwitch<bool>(
              Arg->getSuperClasses().back().first->getName())
              .Case("VariadicIdentifierArgument", true)
              .Case("VariadicParamOrParamIdxArgument", true)
+             .Default(false);
+}
+
+static bool isVariadicExprArgument(const Record *Arg) {
+  return !Arg->getSuperClasses().empty() &&
+         llvm::StringSwitch<bool>(
+             Arg->getSuperClasses().back().first->getName())
+             .Case("VariadicExprArgument", true)
              .Default(false);
 }
 
@@ -2264,6 +2299,23 @@ static void emitClangAttrThisIsaIdentifierArgList(RecordKeeper &Records,
   OS << "#endif // CLANG_ATTR_THIS_ISA_IDENTIFIER_ARG_LIST\n\n";
 }
 
+static void emitClangAttrAcceptsExprPack(RecordKeeper &Records,
+                                         raw_ostream &OS) {
+  OS << "#if defined(CLANG_ATTR_ACCEPTS_EXPR_PACK)\n";
+  ParsedAttrMap Attrs = getParsedAttrList(Records);
+  for (const auto &I : Attrs) {
+    const Record &Attr = *I.second;
+
+    if (!Attr.getValueAsBit("AcceptsExprPack"))
+      continue;
+
+    forEachUniqueSpelling(Attr, [&](const FlattenedSpelling &S) {
+      OS << ".Case(\"" << S.name() << "\", true)\n";
+    });
+  }
+  OS << "#endif // CLANG_ATTR_ACCEPTS_EXPR_PACK\n\n";
+}
+
 static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
                            bool Header) {
   std::vector<Record*> Attrs = Records.getAllDerivedDefinitions("Attr");
@@ -2320,6 +2372,25 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
     std::vector<std::unique_ptr<Argument>> Args;
     Args.reserve(ArgRecords.size());
 
+    bool AttrAcceptsExprPack = Attr->getValueAsBit("AcceptsExprPack");
+    if (AttrAcceptsExprPack) {
+      for (size_t I = 0; I < ArgRecords.size(); ++I) {
+        const Record *ArgR = ArgRecords[I];
+        if (isIdentifierArgument(ArgR) || isVariadicIdentifierArgument(ArgR) ||
+            isTypeArgument(ArgR))
+          PrintFatalError(Attr->getLoc(),
+                          "Attributes accepting packs cannot also "
+                          "have identifier or type arguments.");
+        // When trying to determine if value-dependent expressions can populate
+        // the attribute without prior instantiation, the decision is made based
+        // on the assumption that only the last argument is ever variadic.
+        if (I < (ArgRecords.size() - 1) && isVariadicExprArgument(ArgR))
+          PrintFatalError(Attr->getLoc(),
+                          "Attributes accepting packs can only have the last "
+                          "argument be variadic.");
+      }
+    }
+
     bool HasOptArg = false;
     bool HasFakeArg = false;
     for (const auto *ArgRecord : ArgRecords) {
@@ -2334,6 +2405,16 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
         HasFakeArg = true;
       } else if (Args.back()->isOptional()) {
         HasOptArg = true;
+      }
+    }
+
+    std::unique_ptr<VariadicExprArgument> DelayedArgs = nullptr;
+    if (AttrAcceptsExprPack) {
+      DelayedArgs =
+          std::make_unique<VariadicExprArgument>("DelayedArgs", R.getName());
+      if (Header) {
+        DelayedArgs->writeDeclarations(OS);
+        OS << "\n\n";
       }
     }
 
@@ -2363,7 +2444,7 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
         });
 
     // Emit CreateImplicit factory methods.
-    auto emitCreate = [&](bool Implicit, bool emitFake) {
+    auto emitCreate = [&](bool Implicit, bool DelayedArgsOnly, bool emitFake) {
       if (Header)
         OS << "  static ";
       OS << R.getName() << "Attr *";
@@ -2372,12 +2453,20 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
       OS << "Create";
       if (Implicit)
         OS << "Implicit";
+      if (DelayedArgsOnly)
+        OS << "WithDelayedArgs";
       OS << "(";
       OS << "ASTContext &Ctx";
-      for (auto const &ai : Args) {
-        if (ai->isFake() && !emitFake) continue;
+      if (!DelayedArgsOnly) {
+        for (auto const &ai : Args) {
+          if (ai->isFake() && !emitFake)
+            continue;
+          OS << ", ";
+          ai->writeCtorParameters(OS);
+        }
+      } else {
         OS << ", ";
-        ai->writeCtorParameters(OS);
+        DelayedArgs->writeCtorParameters(OS);
       }
       OS << ", const AttributeCommonInfo &CommonInfo";
       if (Header && Implicit)
@@ -2391,10 +2480,13 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
       OS << " {\n";
       OS << "  auto *A = new (Ctx) " << R.getName();
       OS << "Attr(Ctx, CommonInfo";
-      for (auto const &ai : Args) {
-        if (ai->isFake() && !emitFake) continue;
-        OS << ", ";
-        ai->writeImplicitCtorArgs(OS);
+      if (!DelayedArgsOnly) {
+        for (auto const &ai : Args) {
+          if (ai->isFake() && !emitFake)
+            continue;
+          OS << ", ";
+          ai->writeImplicitCtorArgs(OS);
+        }
       }
       OS << ");\n";
       if (Implicit) {
@@ -2405,10 +2497,16 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
               "!A->getAttrName())\n";
         OS << "    A->setAttributeSpellingListIndex(0);\n";
       }
+      if (DelayedArgsOnly) {
+        OS << "  A->setDelayedArgs(Ctx, ";
+        DelayedArgs->writeImplicitCtorArgs(OS);
+        OS << ");\n";
+      }
       OS << "  return A;\n}\n\n";
     };
 
-    auto emitCreateNoCI = [&](bool Implicit, bool emitFake) {
+    auto emitCreateNoCI = [&](bool Implicit, bool DelayedArgsOnly,
+                              bool emitFake) {
       if (Header)
         OS << "  static ";
       OS << R.getName() << "Attr *";
@@ -2417,12 +2515,20 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
       OS << "Create";
       if (Implicit)
         OS << "Implicit";
+      if (DelayedArgsOnly)
+        OS << "WithDelayedArgs";
       OS << "(";
       OS << "ASTContext &Ctx";
-      for (auto const &ai : Args) {
-        if (ai->isFake() && !emitFake) continue;
+      if (!DelayedArgsOnly) {
+        for (auto const &ai : Args) {
+          if (ai->isFake() && !emitFake)
+            continue;
+          OS << ", ";
+          ai->writeCtorParameters(OS);
+        }
+      } else {
         OS << ", ";
-        ai->writeCtorParameters(OS);
+        DelayedArgs->writeCtorParameters(OS);
       }
       OS << ", SourceRange Range, AttributeCommonInfo::Syntax Syntax";
       if (!ElideSpelling) {
@@ -2451,38 +2557,55 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
       OS << "  return Create";
       if (Implicit)
         OS << "Implicit";
+      if (DelayedArgsOnly)
+        OS << "WithDelayedArgs";
       OS << "(Ctx";
-      for (auto const &ai : Args) {
-        if (ai->isFake() && !emitFake) continue;
+      if (!DelayedArgsOnly) {
+        for (auto const &ai : Args) {
+          if (ai->isFake() && !emitFake)
+            continue;
+          OS << ", ";
+          ai->writeImplicitCtorArgs(OS);
+        }
+      } else {
         OS << ", ";
-        ai->writeImplicitCtorArgs(OS);
+        DelayedArgs->writeImplicitCtorArgs(OS);
       }
       OS << ", I);\n";
       OS << "}\n\n";
     };
 
-    auto emitCreates = [&](bool emitFake) {
-      emitCreate(true, emitFake);
-      emitCreate(false, emitFake);
-      emitCreateNoCI(true, emitFake);
-      emitCreateNoCI(false, emitFake);
+    auto emitCreates = [&](bool DelayedArgsOnly, bool emitFake) {
+      emitCreate(true, DelayedArgsOnly, emitFake);
+      emitCreate(false, DelayedArgsOnly, emitFake);
+      emitCreateNoCI(true, DelayedArgsOnly, emitFake);
+      emitCreateNoCI(false, DelayedArgsOnly, emitFake);
     };
 
     if (Header)
       OS << "  // Factory methods\n";
 
     // Emit a CreateImplicit that takes all the arguments.
-    emitCreates(true);
+    emitCreates(false, true);
 
     // Emit a CreateImplicit that takes all the non-fake arguments.
     if (HasFakeArg)
-      emitCreates(false);
+      emitCreates(false, false);
+
+    // Emit a CreateWithDelayedArgs that takes only the dependent argument
+    // expressions.
+    if (DelayedArgs)
+      emitCreates(true, false);
 
     // Emit constructors.
-    auto emitCtor = [&](bool emitOpt, bool emitFake) {
+    auto emitCtor = [&](bool emitOpt, bool emitFake, bool emitNoArgs) {
       auto shouldEmitArg = [=](const std::unique_ptr<Argument> &arg) {
-        if (arg->isFake()) return emitFake;
-        if (arg->isOptional()) return emitOpt;
+        if (emitNoArgs)
+          return false;
+        if (arg->isFake())
+          return emitFake;
+        if (arg->isOptional())
+          return emitOpt;
         return true;
       };
       if (Header)
@@ -2493,7 +2616,8 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
          << "Attr(ASTContext &Ctx, const AttributeCommonInfo &CommonInfo";
       OS << '\n';
       for (auto const &ai : Args) {
-        if (!shouldEmitArg(ai)) continue;
+        if (!shouldEmitArg(ai))
+          continue;
         OS << "              , ";
         ai->writeCtorParameters(OS);
         OS << "\n";
@@ -2523,11 +2647,17 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
         }
         OS << "\n";
       }
+      if (DelayedArgs) {
+        OS << "              , ";
+        DelayedArgs->writeCtorDefaultInitializers(OS);
+        OS << "\n";
+      }
 
       OS << "  {\n";
 
       for (auto const &ai : Args) {
-        if (!shouldEmitArg(ai)) continue;
+        if (!shouldEmitArg(ai))
+          continue;
         ai->writeCtorBody(OS);
       }
       OS << "}\n\n";
@@ -2538,15 +2668,24 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
 
     // Emit a constructor that includes all the arguments.
     // This is necessary for cloning.
-    emitCtor(true, true);
+    emitCtor(true, true, false);
 
     // Emit a constructor that takes all the non-fake arguments.
     if (HasFakeArg)
-      emitCtor(true, false);
+      emitCtor(true, false, false);
 
     // Emit a constructor that takes all the non-fake, non-optional arguments.
     if (HasOptArg)
-      emitCtor(false, false);
+      emitCtor(false, false, false);
+
+    // Emit constructors that takes no arguments if none already exists.
+    // This is used for delaying arguments.
+    bool HasRequiredArgs = std::count_if(
+        Args.begin(), Args.end(), [=](const std::unique_ptr<Argument> &arg) {
+          return !arg->isFake() && !arg->isOptional();
+        });
+    if (DelayedArgs && HasRequiredArgs)
+      emitCtor(false, false, true);
 
     if (Header) {
       OS << '\n';
@@ -2592,6 +2731,11 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
     }
 
     if (Header) {
+      if (DelayedArgs) {
+        DelayedArgs->writeAccessors(OS);
+        DelayedArgs->writeSetter(OS);
+      }
+
       OS << R.getValueAsString("AdditionalMembers");
       OS << "\n\n";
 
@@ -2600,6 +2744,9 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
 
       OS << "};\n\n";
     } else {
+      if (DelayedArgs)
+        DelayedArgs->writeAccessorDefinitions(OS);
+
       OS << R.getName() << "Attr *" << R.getName()
          << "Attr::clone(ASTContext &C) const {\n";
       OS << "  auto *A = new (C) " << R.getName() << "Attr(C, *this";
@@ -2611,6 +2758,11 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
       OS << "  A->Inherited = Inherited;\n";
       OS << "  A->IsPackExpansion = IsPackExpansion;\n";
       OS << "  A->setImplicit(Implicit);\n";
+      if (DelayedArgs) {
+        OS << "  A->setDelayedArgs(C, ";
+        DelayedArgs->writeCloneArgs(OS);
+        OS << ");\n";
+      }
       OS << "  return A;\n}\n\n";
 
       writePrettyPrintFunction(R, Args, OS);
@@ -2924,6 +3076,7 @@ void EmitClangAttrPCHRead(RecordKeeper &Records, raw_ostream &OS) {
   std::vector<Record*> Attrs = Records.getAllDerivedDefinitions("Attr"),
                        ArgRecords;
   std::vector<std::unique_ptr<Argument>> Args;
+  std::unique_ptr<VariadicExprArgument> DelayedArgs;
 
   OS << "  switch (Kind) {\n";
   for (const auto *Attr : Attrs) {
@@ -2936,6 +3089,12 @@ void EmitClangAttrPCHRead(RecordKeeper &Records, raw_ostream &OS) {
       OS << "    bool isInherited = Record.readInt();\n";
     OS << "    bool isImplicit = Record.readInt();\n";
     OS << "    bool isPackExpansion = Record.readInt();\n";
+    DelayedArgs = nullptr;
+    if (Attr->getValueAsBit("AcceptsExprPack")) {
+      DelayedArgs =
+          std::make_unique<VariadicExprArgument>("DelayedArgs", R.getName());
+      DelayedArgs->writePCHReadDecls(OS);
+    }
     ArgRecords = R.getValueAsListOfDefs("Args");
     Args.clear();
     for (const auto *Arg : ArgRecords) {
@@ -2952,6 +3111,12 @@ void EmitClangAttrPCHRead(RecordKeeper &Records, raw_ostream &OS) {
       OS << "    cast<InheritableAttr>(New)->setInherited(isInherited);\n";
     OS << "    New->setImplicit(isImplicit);\n";
     OS << "    New->setPackExpansion(isPackExpansion);\n";
+    if (DelayedArgs) {
+      OS << "    cast<" << R.getName()
+         << "Attr>(New)->setDelayedArgs(Context, ";
+      DelayedArgs->writePCHReadArgs(OS);
+      OS << ");\n";
+    }
     OS << "    break;\n";
     OS << "  }\n";
   }
@@ -2979,6 +3144,8 @@ void EmitClangAttrPCHWrite(RecordKeeper &Records, raw_ostream &OS) {
       OS << "    Record.push_back(SA->isInherited());\n";
     OS << "    Record.push_back(A->isImplicit());\n";
     OS << "    Record.push_back(A->isPackExpansion());\n";
+    if (Attr->getValueAsBit("AcceptsExprPack"))
+      VariadicExprArgument("DelayedArgs", R.getName()).writePCHWrite(OS);
 
     for (const auto *Arg : Args)
       createArgument(*Arg, R.getName())->writePCHWrite(OS);
@@ -3266,6 +3433,10 @@ void EmitClangAttrASTVisitor(RecordKeeper &Records, raw_ostream &OS) {
     for (const auto *Arg : ArgRecords)
       createArgument(*Arg, R.getName())->writeASTVisitorTraversal(OS);
 
+    if (Attr->getValueAsBit("AcceptsExprPack"))
+      VariadicExprArgument("DelayedArgs", R.getName())
+          .writeASTVisitorTraversal(OS);
+
     OS << "  return true;\n";
     OS << "}\n\n";
   }
@@ -3391,7 +3562,7 @@ static void emitArgInfo(const Record &R, raw_ostream &OS) {
   // attribute and emit the number of required arguments followed by the
   // number of optional arguments.
   std::vector<Record *> Args = R.getValueAsListOfDefs("Args");
-  unsigned ArgCount = 0, OptCount = 0;
+  unsigned ArgCount = 0, OptCount = 0, ArgMemberCount = 0;
   bool HasVariadic = false;
   for (const auto *Arg : Args) {
     // If the arg is fake, it's the user's job to supply it: general parsing
@@ -3399,6 +3570,7 @@ static void emitArgInfo(const Record &R, raw_ostream &OS) {
     if (Arg->getValueAsBit("Fake"))
       continue;
     Arg->getValueAsBit("Optional") ? ++OptCount : ++ArgCount;
+    ++ArgMemberCount;
     if (!HasVariadic && isArgVariadic(*Arg, R.getName()))
       HasVariadic = true;
   }
@@ -3407,6 +3579,7 @@ static void emitArgInfo(const Record &R, raw_ostream &OS) {
   // to its largest value. Since it's currently a 4-bit number, we set it to 15.
   OS << "    NumArgs = " << ArgCount << ";\n";
   OS << "    OptArgs = " << (HasVariadic ? 15 : OptCount) << ";\n";
+  OS << "    NumArgMembers = " << ArgMemberCount << ";\n";
 }
 
 static std::string GetDiagnosticSpelling(const Record &R) {
@@ -3890,6 +4063,55 @@ static void GenerateHandleDeclAttribute(const Record &Attr, raw_ostream &OS) {
   OS << "}\n\n";
 }
 
+static bool isParamExpr(const Record *Arg) {
+  return !Arg->getSuperClasses().empty() &&
+         llvm::StringSwitch<bool>(
+             Arg->getSuperClasses().back().first->getName())
+             .Case("ExprArgument", true)
+             .Case("VariadicExprArgument", true)
+             .Default(false);
+}
+
+void GenerateIsParamExpr(const Record &Attr, raw_ostream &OS) {
+  OS << "bool isParamExpr(size_t N) const override {\n";
+  OS << "  return ";
+  auto Args = Attr.getValueAsListOfDefs("Args");
+  for (size_t I = 0; I < Args.size(); ++I)
+    if (isParamExpr(Args[I]))
+      OS << "(N == " << I << ") || ";
+  OS << "false;\n";
+  OS << "}\n\n";
+}
+
+void GenerateHandleAttrWithDelayedArgs(RecordKeeper &Records, raw_ostream &OS) {
+  OS << "static void handleAttrWithDelayedArgs(Sema &S, Decl *D, ";
+  OS << "const ParsedAttr &Attr) {\n";
+  OS << "  SmallVector<Expr *, 4> ArgExprs;\n";
+  OS << "  ArgExprs.reserve(Attr.getNumArgs());\n";
+  OS << "  for (unsigned I = 0; I < Attr.getNumArgs(); ++I) {\n";
+  OS << "    assert(!Attr.isArgIdent(I));\n";
+  OS << "    ArgExprs.push_back(Attr.getArgAsExpr(I));\n";
+  OS << "  }\n";
+  OS << "  clang::Attr *CreatedAttr = nullptr;\n";
+  OS << "  switch (Attr.getKind()) {\n";
+  OS << "  default:\n";
+  OS << "    llvm_unreachable(\"Attribute cannot hold delayed arguments.\");\n";
+  ParsedAttrMap Attrs = getParsedAttrList(Records);
+  for (const auto &I : Attrs) {
+    const Record &R = *I.second;
+    if (!R.getValueAsBit("AcceptsExprPack"))
+      continue;
+    OS << "  case ParsedAttr::AT_" << I.first << ": {\n";
+    OS << "    CreatedAttr = " << R.getName() << "Attr::CreateWithDelayedArgs";
+    OS << "(S.Context, ArgExprs.data(), ArgExprs.size(), Attr);\n";
+    OS << "    break;\n";
+    OS << "  }\n";
+  }
+  OS << "  }\n";
+  OS << "  D->addAttr(CreatedAttr);\n";
+  OS << "}\n\n";
+}
+
 static bool IsKnownToGCC(const Record &Attr) {
   // Look at the spellings for this subject; if there are any spellings which
   // claim to be known to GCC, the attribute is known to GCC.
@@ -3988,6 +4210,8 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     emitArgInfo(Attr, OS);
     OS << "    HasCustomParsing = ";
     OS << Attr.getValueAsBit("HasCustomParsing") << ";\n";
+    OS << "    AcceptsExprPack = ";
+    OS << Attr.getValueAsBit("AcceptsExprPack") << ";\n";
     OS << "    IsTargetSpecific = ";
     OS << Attr.isSubClassOf("TargetSpecificAttr") << ";\n";
     OS << "    IsType = ";
@@ -4012,6 +4236,7 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     GenerateSpellingIndexToSemanticSpelling(Attr, OS);
     PragmaAttributeSupport.generateStrictConformsTo(*I->second, OS);
     GenerateHandleDeclAttribute(Attr, OS);
+    GenerateIsParamExpr(Attr, OS);
     OS << "static const ParsedAttrInfo" << I->first << " Instance;\n";
     OS << "};\n";
     OS << "const ParsedAttrInfo" << I->first << " ParsedAttrInfo" << I->first
@@ -4023,6 +4248,9 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     OS << "&ParsedAttrInfo" << I->first << "::Instance,\n";
   }
   OS << "};\n\n";
+
+  // Generate function for handling attributes with delayed arguments
+  GenerateHandleAttrWithDelayedArgs(Records, OS);
 
   // Generate the attribute match rules.
   emitAttributeMatchRules(PragmaAttributeSupport, OS);
@@ -4173,6 +4401,9 @@ void EmitClangAttrTextNodeDump(RecordKeeper &Records, raw_ostream &OS) {
     for (const auto *Arg : Args)
       createArgument(*Arg, R.getName())->writeDump(SS);
 
+    if (Attr->getValueAsBit("AcceptsExprPack"))
+      VariadicExprArgument("DelayedArgs", R.getName()).writeDump(OS);
+
     if (SS.tell()) {
       OS << "  void Visit" << R.getName() << "Attr(const " << R.getName()
          << "Attr *A) {\n";
@@ -4200,6 +4431,8 @@ void EmitClangAttrNodeTraverse(RecordKeeper &Records, raw_ostream &OS) {
     Args = R.getValueAsListOfDefs("Args");
     for (const auto *Arg : Args)
       createArgument(*Arg, R.getName())->writeDumpChildren(SS);
+    if (Attr->getValueAsBit("AcceptsExprPack"))
+      VariadicExprArgument("DelayedArgs", R.getName()).writeDumpChildren(SS);
     if (SS.tell()) {
       OS << "  void Visit" << R.getName() << "Attr(const " << R.getName()
          << "Attr *A) {\n";
@@ -4219,6 +4452,7 @@ void EmitClangAttrParserStringSwitches(RecordKeeper &Records,
   emitClangAttrIdentifierArgList(Records, OS);
   emitClangAttrVariadicIdentifierArgList(Records, OS);
   emitClangAttrThisIsaIdentifierArgList(Records, OS);
+  emitClangAttrAcceptsExprPack(Records, OS);
   emitClangAttrTypeArgList(Records, OS);
   emitClangAttrLateParsedList(Records, OS);
 }
