@@ -465,7 +465,7 @@ namespace {
 
       // Copy flags to the EFLAGS register and glue it to next node.
       unsigned Opcode = N->getOpcode();
-      assert(Opcode == X86ISD::SBB || Opcode == X86ISD::SETCC_CARRY &&
+      assert((Opcode == X86ISD::SBB || Opcode == X86ISD::SETCC_CARRY) &&
              "Unexpected opcode for SBB materialization");
       unsigned FlagOpIndex = Opcode == X86ISD::SBB ? 2 : 1;
       SDValue EFLAGS =
