@@ -207,6 +207,9 @@ private:
   /// Generate the printer code for an optional group.
   void genOptionalGroupPrinter(OptionalElement *el, FmtContext &ctx,
                                MethodBody &os);
+  /// Generate a printer (or space eraser) for a whitespace element.
+  void genWhitespacePrinter(WhitespaceElement *el, FmtContext &ctx,
+                            MethodBody &os);
 
   /// The ODS definition of the attribute or type whose format is being used to
   /// generate a parser and printer.
@@ -292,6 +295,8 @@ void DefFormat::genElementParser(FormatElement *el, FmtContext &ctx,
     return genStructParser(strct, ctx, os);
   if (auto *optional = dyn_cast<OptionalElement>(el))
     return genOptionalGroupParser(optional, ctx, os);
+  if (isa<WhitespaceElement>(el))
+    return;
 
   llvm_unreachable("unknown format element");
 }
@@ -612,6 +617,8 @@ void DefFormat::genElementPrinter(FormatElement *el, FmtContext &ctx,
     return genVariablePrinter(var, ctx, os);
   if (auto *optional = dyn_cast<OptionalElement>(el))
     return genOptionalGroupPrinter(optional, ctx, os);
+  if (auto *whitespace = dyn_cast<WhitespaceElement>(el))
+    return genWhitespacePrinter(whitespace, ctx, os);
 
   llvm::PrintFatalError("unsupported format element");
 }
@@ -750,6 +757,20 @@ void DefFormat::genOptionalGroupPrinter(OptionalElement *el, FmtContext &ctx,
   for (FormatElement *element : el->getElseElements())
     genElementPrinter(element, ctx, os);
   os.unindent() << "}\n";
+}
+
+void DefFormat::genWhitespacePrinter(WhitespaceElement *el, FmtContext &ctx,
+                                     MethodBody &os) {
+  if (el->getValue() == "\\n") {
+    // FIXME: The newline should be `printer.printNewLine()`, i.e., handled by
+    // the printer.
+    os << tgfmt("$_printer << '\\n';\n", &ctx);
+  } else if (!el->getValue().empty()) {
+    os << tgfmt("$_printer << \"$0\";\n", &ctx, el->getValue());
+  } else {
+    lastWasPunctuation = true;
+  }
+  shouldEmitSpace = false;
 }
 
 //===----------------------------------------------------------------------===//
