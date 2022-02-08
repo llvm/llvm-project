@@ -1835,6 +1835,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
 ///         primary-expression
 ///         postfix-expression '[' expression ']'
 ///         postfix-expression '[' braced-init-list ']'
+///         postfix-expression '[' expression-list [opt] ']'  [C++2b 12.4.5]
 ///         postfix-expression '(' argument-expression-list[opt] ')'
 ///         postfix-expression '.' identifier
 ///         postfix-expression '->' identifier
@@ -1898,30 +1899,58 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         (void)Actions.CorrectDelayedTyposInExpr(LHS);
         return ExprError();
       }
-
       BalancedDelimiterTracker T(*this, tok::l_square);
       T.consumeOpen();
       Loc = T.getOpenLocation();
-      ExprResult Idx, Length, Stride;
+      ExprResult Length, Stride;
       SourceLocation ColonLocFirst, ColonLocSecond;
+      ExprVector ArgExprs;
+      bool HasError = false;
       PreferredType.enterSubscript(Actions, Tok.getLocation(), LHS.get());
-      if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
-        Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
-        Idx = ParseBraceInitializer();
-      } else if (getLangOpts().OpenMP) {
-        ColonProtectionRAIIObject RAII(*this);
-        // Parse [: or [ expr or [ expr :
-        if (!Tok.is(tok::colon)) {
-          // [ expr
-          Idx = ParseExpression();
+
+      // We try to parse a list of indexes in all language mode first
+      // and, in we find 0 or one index, we try to parse an OpenMP array
+      // section. This allow us to support C++2b multi dimensional subscript and
+      // OpenMp sections in the same language mode.
+      if (!getLangOpts().OpenMP || Tok.isNot(tok::colon)) {
+        if (!getLangOpts().CPlusPlus2b) {
+          ExprResult Idx;
+          if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
+            Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
+            Idx = ParseBraceInitializer();
+          } else {
+            Idx = ParseExpression(); // May be a comma expression
+          }
+          LHS = Actions.CorrectDelayedTyposInExpr(LHS);
+          Idx = Actions.CorrectDelayedTyposInExpr(Idx);
+          if (Idx.isInvalid()) {
+            HasError = true;
+          } else {
+            ArgExprs.push_back(Idx.get());
+          }
+        } else if (Tok.isNot(tok::r_square)) {
+          CommaLocsTy CommaLocs;
+          if (ParseExpressionList(ArgExprs, CommaLocs)) {
+            LHS = Actions.CorrectDelayedTyposInExpr(LHS);
+            HasError = true;
+          }
+          assert(
+              (ArgExprs.empty() || ArgExprs.size() == CommaLocs.size() + 1) &&
+              "Unexpected number of commas!");
         }
+      }
+
+      if (ArgExprs.size() <= 1 && getLangOpts().OpenMP) {
+        ColonProtectionRAIIObject RAII(*this);
         if (Tok.is(tok::colon)) {
           // Consume ':'
           ColonLocFirst = ConsumeToken();
           if (Tok.isNot(tok::r_square) &&
               (getLangOpts().OpenMP < 50 ||
-               ((Tok.isNot(tok::colon) && getLangOpts().OpenMP >= 50))))
+               ((Tok.isNot(tok::colon) && getLangOpts().OpenMP >= 50)))) {
             Length = ParseExpression();
+            Length = Actions.CorrectDelayedTyposInExpr(Length);
+          }
         }
         if (getLangOpts().OpenMP >= 50 &&
             (OMPClauseKind == llvm::omp::Clause::OMPC_to ||
@@ -1933,27 +1962,23 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
             Stride = ParseExpression();
           }
         }
-      } else
-        Idx = ParseExpression();
+      }
 
       SourceLocation RLoc = Tok.getLocation();
-
       LHS = Actions.CorrectDelayedTyposInExpr(LHS);
-      Idx = Actions.CorrectDelayedTyposInExpr(Idx);
-      Length = Actions.CorrectDelayedTyposInExpr(Length);
-      if (!LHS.isInvalid() && !Idx.isInvalid() && !Length.isInvalid() &&
+
+      if (!LHS.isInvalid() && !HasError && !Length.isInvalid() &&
           !Stride.isInvalid() && Tok.is(tok::r_square)) {
         if (ColonLocFirst.isValid() || ColonLocSecond.isValid()) {
           LHS = Actions.ActOnOMPArraySectionExpr(
-              LHS.get(), Loc, Idx.get(), ColonLocFirst, ColonLocSecond,
-              Length.get(), Stride.get(), RLoc);
+              LHS.get(), Loc, ArgExprs.empty() ? nullptr : ArgExprs[0],
+              ColonLocFirst, ColonLocSecond, Length.get(), Stride.get(), RLoc);
         } else {
           LHS = Actions.ActOnArraySubscriptExpr(getCurScope(), LHS.get(), Loc,
-                                                Idx.get(), RLoc);
+                                                ArgExprs, RLoc);
         }
       } else {
         LHS = ExprError();
-        Idx = ExprError();
       }
 
       // Match the ']'.

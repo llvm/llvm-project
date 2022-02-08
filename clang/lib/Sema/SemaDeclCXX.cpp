@@ -15865,14 +15865,29 @@ bool Sema::CheckOverloadedOperatorDeclaration(FunctionDecl *FnDecl) {
   //   An operator function cannot have default arguments (8.3.6),
   //   except where explicitly stated below.
   //
-  // Only the function-call operator allows default arguments
-  // (C++ [over.call]p1).
+  // Only the function-call operator (C++ [over.call]p1) and the subscript
+  // operator (CWG2507) allow default arguments.
   if (Op != OO_Call) {
+    ParmVarDecl *FirstDefaultedParam = nullptr;
     for (auto Param : FnDecl->parameters()) {
-      if (Param->hasDefaultArg())
-        return Diag(Param->getLocation(),
+      if (Param->hasDefaultArg()) {
+        FirstDefaultedParam = Param;
+        break;
+      }
+    }
+    if (FirstDefaultedParam) {
+      if (Op == OO_Subscript) {
+        Diag(FnDecl->getLocation(), LangOpts.CPlusPlus2b
+                                        ? diag::ext_subscript_overload
+                                        : diag::error_subscript_overload)
+            << FnDecl->getDeclName() << 1
+            << FirstDefaultedParam->getDefaultArgRange();
+      } else {
+        return Diag(FirstDefaultedParam->getLocation(),
                     diag::err_operator_overload_default_arg)
-          << FnDecl->getDeclName() << Param->getDefaultArgRange();
+               << FnDecl->getDeclName()
+               << FirstDefaultedParam->getDefaultArgRange();
+      }
     }
   }
 
@@ -15893,10 +15908,10 @@ bool Sema::CheckOverloadedOperatorDeclaration(FunctionDecl *FnDecl) {
   //   described in the rest of this subclause.
   unsigned NumParams = FnDecl->getNumParams()
                      + (isa<CXXMethodDecl>(FnDecl)? 1 : 0);
-  if (Op != OO_Call &&
+  if (Op != OO_Call && Op != OO_Subscript &&
       ((NumParams == 1 && !CanBeUnaryOperator) ||
-       (NumParams == 2 && !CanBeBinaryOperator) ||
-       (NumParams < 1) || (NumParams > 2))) {
+       (NumParams == 2 && !CanBeBinaryOperator) || (NumParams < 1) ||
+       (NumParams > 2))) {
     // We have the wrong number of parameters.
     unsigned ErrorKind;
     if (CanBeUnaryOperator && CanBeBinaryOperator) {
@@ -15908,16 +15923,23 @@ bool Sema::CheckOverloadedOperatorDeclaration(FunctionDecl *FnDecl) {
              "All non-call overloaded operators are unary or binary!");
       ErrorKind = 1;  // 1 -> binary
     }
-
     return Diag(FnDecl->getLocation(), diag::err_operator_overload_must_be)
       << FnDecl->getDeclName() << NumParams << ErrorKind;
   }
 
-  // Overloaded operators other than operator() cannot be variadic.
+  if (Op == OO_Subscript && NumParams != 2) {
+    Diag(FnDecl->getLocation(), LangOpts.CPlusPlus2b
+                                    ? diag::ext_subscript_overload
+                                    : diag::error_subscript_overload)
+        << FnDecl->getDeclName() << (NumParams == 1 ? 0 : 2);
+  }
+
+  // Overloaded operators other than operator() and operator[] cannot be
+  // variadic.
   if (Op != OO_Call &&
       FnDecl->getType()->castAs<FunctionProtoType>()->isVariadic()) {
     return Diag(FnDecl->getLocation(), diag::err_operator_overload_variadic)
-      << FnDecl->getDeclName();
+           << FnDecl->getDeclName();
   }
 
   // Some operators must be non-static member functions.

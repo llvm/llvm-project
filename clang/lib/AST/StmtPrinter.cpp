@@ -1736,21 +1736,16 @@ void StmtPrinter::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *Node) {
     }
   } else if (Kind == OO_Arrow) {
     PrintExpr(Node->getArg(0));
-  } else if (Kind == OO_Call) {
+  } else if (Kind == OO_Call || Kind == OO_Subscript) {
     PrintExpr(Node->getArg(0));
-    OS << '(';
+    OS << (Kind == OO_Call ? '(' : '[');
     for (unsigned ArgIdx = 1; ArgIdx < Node->getNumArgs(); ++ArgIdx) {
       if (ArgIdx > 1)
         OS << ", ";
       if (!isa<CXXDefaultArgExpr>(Node->getArg(ArgIdx)))
         PrintExpr(Node->getArg(ArgIdx));
     }
-    OS << ')';
-  } else if (Kind == OO_Subscript) {
-    PrintExpr(Node->getArg(0));
-    OS << '[';
-    PrintExpr(Node->getArg(1));
-    OS << ']';
+    OS << (Kind == OO_Call ? ')' : ']');
   } else if (Node->getNumArgs() == 1) {
     OS << getOperatorSpelling(Kind) << ' ';
     PrintExpr(Node->getArg(0));

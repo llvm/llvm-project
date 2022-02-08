@@ -92,6 +92,8 @@ C++20 Feature Support
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Implemented `P2128R6: Multidimensional subscript operator <https://wg21.link/P2128R6>`_.
+
 CUDA Language Changes in Clang
 ------------------------------
 
