@@ -2665,10 +2665,21 @@ computePointerICmp(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
     // stripAndComputeConstantOffsets left off and accumulate the offsets.
     Constant *LHSNoBound = stripAndComputeConstantOffsets(DL, LHS, true);
     Constant *RHSNoBound = stripAndComputeConstantOffsets(DL, RHS, true);
-    if (LHS == RHS)
+    if (LHS == RHS) {
+      // Ensure all types are same as LHSNoBound
+      if (LHSOffset->getType() != LHSNoBound->getType())
+        LHSOffset = llvm::ConstantExpr::getIntegerCast(
+            LHSOffset, LHSNoBound->getType(), true);
+      if (RHSOffset->getType() != LHSNoBound->getType())
+        RHSOffset = llvm::ConstantExpr::getIntegerCast(
+            RHSOffset, LHSNoBound->getType(), true);
+      if (RHSNoBound->getType() != LHSNoBound->getType())
+        RHSNoBound = llvm::ConstantExpr::getIntegerCast(
+            RHSNoBound, LHSNoBound->getType(), true);
       return ConstantExpr::getICmp(Pred,
                                    ConstantExpr::getAdd(LHSOffset, LHSNoBound),
                                    ConstantExpr::getAdd(RHSOffset, RHSNoBound));
+    }
 
     // If one side of the equality comparison must come from a noalias call
     // (meaning a system memory allocation function), and the other side must
