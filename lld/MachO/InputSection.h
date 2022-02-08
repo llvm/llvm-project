@@ -49,6 +49,8 @@ public:
   virtual uint64_t getOffset(uint64_t off) const = 0;
   // The offset from the beginning of the file.
   uint64_t getVA(uint64_t off) const;
+  // Return a user-friendly string for use in diagnostics.
+  std::string getLocation(uint64_t off) const;
   // Whether the data at \p off in this InputSection is live.
   virtual bool isLive(uint64_t off) const = 0;
   virtual void markLive(uint64_t off) = 0;

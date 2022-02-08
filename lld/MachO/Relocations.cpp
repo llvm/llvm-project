@@ -24,15 +24,15 @@ bool macho::validateSymbolRelocation(const Symbol *sym,
                                      const InputSection *isec, const Reloc &r) {
   const RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);
   bool valid = true;
-  auto message = [relocAttrs, sym, isec, &valid](const Twine &diagnostic) {
+  auto message = [&](const Twine &diagnostic) {
     valid = false;
-    return (relocAttrs.name + " relocation " + diagnostic + " for `" +
-            sym->getName() + "' in " + toString(isec))
+    return (isec->getLocation(r.offset) + ": " + relocAttrs.name +
+            " relocation " + diagnostic)
         .str();
   };
 
   if (relocAttrs.hasAttr(RelocAttrBits::TLV) != sym->isTlv())
-    error(message(Twine("requires that variable ") +
+    error(message(Twine("requires that symbol ") + sym->getName() + " " +
                   (sym->isTlv() ? "not " : "") + "be thread-local"));
 
   return valid;

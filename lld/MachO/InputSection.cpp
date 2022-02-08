@@ -55,6 +55,28 @@ static uint64_t resolveSymbolVA(const Symbol *sym, uint8_t type) {
   return sym->getVA();
 }
 
+std::string InputSection::getLocation(uint64_t off) const {
+  // First, try to find a symbol that's near the offset. Use it as a reference
+  // point.
+  for (size_t i = 0; i < symbols.size(); ++i)
+    if (symbols[i]->value <= off &&
+        (i + 1 == symbols.size() || symbols[i + 1]->value > off))
+      return (toString(getFile()) + ":(symbol " + symbols.front()->getName() +
+              "+0x" + Twine::utohexstr(off - symbols[i]->value) + ")")
+          .str();
+
+  // If that fails, use the section itself as a reference point.
+  for (const Subsection &subsec : section.subsections) {
+    if (subsec.isec == this) {
+      off += subsec.offset;
+      break;
+    }
+  }
+  return (toString(getFile()) + ":(" + getName() + "+0x" +
+          Twine::utohexstr(off) + ")")
+      .str();
+}
+
 // ICF needs to hash any section that might potentially be duplicated so
 // that it can match on content rather than identity.
 bool ConcatInputSection::isHashableForICF() const {
@@ -195,7 +217,7 @@ void CStringInputSection::splitIntoPieces() {
   while (!s.empty()) {
     size_t end = s.find(0);
     if (end == StringRef::npos)
-      fatal(toString(this) + ": string is not null terminated");
+      fatal(getLocation(off) + ": string is not null terminated");
     size_t size = end + 1;
     uint32_t hash = config->dedupLiterals ? xxHash64(s.substr(0, size)) : 0;
     pieces.emplace_back(off, hash);
