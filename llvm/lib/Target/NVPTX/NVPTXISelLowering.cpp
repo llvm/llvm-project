@@ -1571,10 +1571,8 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // ByVal arguments
     SmallVector<EVT, 16> VTs;
     SmallVector<uint64_t, 16> Offsets;
-    auto *PTy = dyn_cast<PointerType>(Args[i].Ty);
-    assert(PTy && "Type of a byval parameter should be pointer");
-    ComputePTXValueVTs(*this, DL, PTy->getPointerElementType(), VTs, &Offsets,
-                       0);
+    assert(Args[i].IndirectType && "byval arg must have indirect type");
+    ComputePTXValueVTs(*this, DL, Args[i].IndirectType, VTs, &Offsets, 0);
 
     // declare .param .align <align> .b8 .param<n>[<size>];
     unsigned sz = Outs[OIdx].Flags.getByValSize();
