@@ -218,6 +218,13 @@ contains
     p(1:5,1:5) => x(:,1:2)
     !OK - rhs has rank 1 and enough elements
     p(1:5,1:5) => y(1:100:2)
+    !OK - same, but from function result
+    p(1:5,1:5) => f()
+   contains
+    function f()
+      real, pointer :: f(:)
+      f => y
+    end function
   end
 
   subroutine s10
