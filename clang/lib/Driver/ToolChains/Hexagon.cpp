@@ -72,23 +72,25 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
       (Cpu.back() == 'T' || Cpu.back() == 't' ? Cpu.drop_back(1) : Cpu).str();
   HasHVX = false;
 
-  // Handle -mhvx, -mhvx=, -mno-hvx. If both present, -mhvx= wins over -mhvx.
-  auto argOrNull = [&Args](auto FlagOn, auto FlagOff) -> Arg* {
-    if (Arg *A = Args.getLastArg(FlagOn, FlagOff)) {
-      if (A->getOption().matches(FlagOn))
-        return A;
+  // Handle -mhvx, -mhvx=, -mno-hvx. If versioned and versionless flags
+  // are both present, the last one wins.
+  Arg *HvxEnablingArg =
+      Args.getLastArg(options::OPT_mhexagon_hvx, options::OPT_mhexagon_hvx_EQ,
+                      options::OPT_mno_hexagon_hvx);
+  if (HvxEnablingArg) {
+    if (HvxEnablingArg->getOption().matches(options::OPT_mno_hexagon_hvx))
+      HvxEnablingArg = nullptr;
+  }
+
+  if (HvxEnablingArg) {
+    // If -mhvx[=] was given, it takes precedence.
+    if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hvx,
+                                 options::OPT_mhexagon_hvx_EQ)) {
+      // If the version was given, set HvxVer. Otherwise HvxVer
+      // will remain equal to the CPU version.
+      if (A->getOption().matches(options::OPT_mhexagon_hvx_EQ))
+        HvxVer = StringRef(A->getValue()).lower();
     }
-    return nullptr;
-  };
-
-  Arg *HvxBareA =
-      argOrNull(options::OPT_mhexagon_hvx, options::OPT_mno_hexagon_hvx);
-  Arg *HvxVerA =
-      argOrNull(options::OPT_mhexagon_hvx_EQ, options::OPT_mno_hexagon_hvx);
-
-  if (Arg *A = HvxVerA ? HvxVerA : HvxBareA) {
-    if (A->getOption().matches(options::OPT_mhexagon_hvx_EQ))
-      HvxVer = StringRef(A->getValue()).lower(); // lower produces std:string
     HasHVX = true;
     Features.push_back(makeFeature(Twine("hvx") + HvxVer, true));
   } else if (Arg *A = Args.getLastArg(options::OPT_mno_hexagon_hvx)) {
