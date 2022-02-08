@@ -525,10 +525,10 @@ define i32 @i2p(i32* %arg) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readonly willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@i2p
 ; IS__CGSCC____-SAME: (i32* nofree readonly [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
-; IS__CGSCC____-NEXT:    [[C:%.*]] = call i32 @p2i(i32* noalias nofree readnone [[ARG]]) #[[ATTR9:[0-9]+]]
+; IS__CGSCC____-NEXT:    [[C:%.*]] = call i32 @p2i(i32* noalias nofree readnone [[ARG]]) #[[ATTR10:[0-9]+]]
 ; IS__CGSCC____-NEXT:    [[I2P:%.*]] = inttoptr i32 [[C]] to i8*
 ; IS__CGSCC____-NEXT:    [[BC:%.*]] = bitcast i8* [[I2P]] to i32*
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32 @ret(i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[BC]]) #[[ATTR10:[0-9]+]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32 @ret(i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[BC]]) #[[ATTR11:[0-9]+]]
 ; IS__CGSCC____-NEXT:    ret i32 [[CALL]]
 ;
   %c = call i32 @p2i(i32* %arg)
@@ -558,17 +558,29 @@ define internal i32 @ret(i32* %arg) {
 
 ; Function Attrs: nounwind optsize
 define internal fastcc double @strtox(i8* %s, i8** %p, i32 %prec) unnamed_addr {
-; CHECK-LABEL: define {{[^@]+}}@strtox
-; CHECK-SAME: (i8* [[S:%.*]]) unnamed_addr {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[F:%.*]] = alloca [[STRUCT__IO_FILE:%.*]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast %struct._IO_FILE* [[F]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 144, i8* nocapture nofree noundef nonnull align 8 dereferenceable(240) [[TMP0]]) #[[ATTR11:[0-9]+]]
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 bitcast (i32 (...)* @sh_fromstring to i32 (%struct._IO_FILE*, i8*)*)(%struct._IO_FILE* nonnull align 8 dereferenceable(240) [[F]], i8* [[S]])
-; CHECK-NEXT:    call void @__shlim(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i64 noundef 0)
-; CHECK-NEXT:    [[CALL1:%.*]] = call double @__floatscan(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i32 noundef 1, i32 noundef 1)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 144, i8* nocapture nofree noundef nonnull align 8 dereferenceable(240) [[TMP0]])
-; CHECK-NEXT:    ret double [[CALL1]]
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@strtox
+; NOT_CGSCC_NPM-SAME: (i8* [[S:%.*]]) unnamed_addr {
+; NOT_CGSCC_NPM-NEXT:  entry:
+; NOT_CGSCC_NPM-NEXT:    [[F:%.*]] = alloca [[STRUCT__IO_FILE:%.*]], align 8
+; NOT_CGSCC_NPM-NEXT:    [[TMP0:%.*]] = bitcast %struct._IO_FILE* [[F]] to i8*
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 144, i8* nocapture nofree noundef nonnull align 8 dereferenceable(240) [[TMP0]]) #[[ATTR11:[0-9]+]]
+; NOT_CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32 bitcast (i32 (...)* @sh_fromstring to i32 (%struct._IO_FILE*, i8*)*)(%struct._IO_FILE* nonnull align 8 dereferenceable(240) [[F]], i8* [[S]])
+; NOT_CGSCC_NPM-NEXT:    call void @__shlim(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i64 noundef 0)
+; NOT_CGSCC_NPM-NEXT:    [[CALL1:%.*]] = call double @__floatscan(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i32 noundef 1, i32 noundef 1)
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 144, i8* nocapture nofree noundef nonnull align 8 dereferenceable(240) [[TMP0]])
+; NOT_CGSCC_NPM-NEXT:    ret double [[CALL1]]
+;
+; IS__CGSCC____-LABEL: define {{[^@]+}}@strtox
+; IS__CGSCC____-SAME: (i8* [[S:%.*]]) unnamed_addr {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[F:%.*]] = alloca [[STRUCT__IO_FILE:%.*]], align 8
+; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = bitcast %struct._IO_FILE* [[F]] to i8*
+; IS__CGSCC____-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 144, i8* nocapture nofree noundef nonnull align 8 dereferenceable(240) [[TMP0]]) #[[ATTR12:[0-9]+]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32 bitcast (i32 (...)* @sh_fromstring to i32 (%struct._IO_FILE*, i8*)*)(%struct._IO_FILE* nonnull align 8 dereferenceable(240) [[F]], i8* [[S]])
+; IS__CGSCC____-NEXT:    call void @__shlim(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i64 noundef 0)
+; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call double @__floatscan(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i32 noundef 1, i32 noundef 1)
+; IS__CGSCC____-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 144, i8* nocapture nofree noundef nonnull align 8 dereferenceable(240) [[TMP0]])
+; IS__CGSCC____-NEXT:    ret double [[CALL1]]
 ;
 entry:
   %f = alloca %struct._IO_FILE, align 8
@@ -656,10 +668,10 @@ define void @test15_caller(i32* noalias %p, i32 %c) {
 ; IS__CGSCC____-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C]], 0
 ; IS__CGSCC____-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; IS__CGSCC____:       if.then:
-; IS__CGSCC____-NEXT:    tail call void @only_store(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR12:[0-9]+]]
+; IS__CGSCC____-NEXT:    tail call void @only_store(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR13:[0-9]+]]
 ; IS__CGSCC____-NEXT:    br label [[IF_END]]
 ; IS__CGSCC____:       if.end:
-; IS__CGSCC____-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]]) #[[ATTR12]]
+; IS__CGSCC____-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]]) #[[ATTR13]]
 ; IS__CGSCC____-NEXT:    ret void
 ;
   %tobool = icmp eq i32 %c, 0
@@ -719,14 +731,14 @@ define internal void @test16_sub(i32* noalias %p, i32 %c1, i32 %c2) {
 ; IS__CGSCC____-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C1]], 0
 ; IS__CGSCC____-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; IS__CGSCC____:       if.then:
-; IS__CGSCC____-NEXT:    tail call void @only_store(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR12]]
-; IS__CGSCC____-NEXT:    tail call void @make_alias(i32* nofree nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR12]]
+; IS__CGSCC____-NEXT:    tail call void @only_store(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR13]]
+; IS__CGSCC____-NEXT:    tail call void @make_alias(i32* nofree nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR13]]
 ; IS__CGSCC____-NEXT:    br label [[IF_END]]
 ; IS__CGSCC____:       if.end:
 ; IS__CGSCC____-NEXT:    [[TOBOOL1:%.*]] = icmp eq i32 [[C2]], 0
 ; IS__CGSCC____-NEXT:    br i1 [[TOBOOL1]], label [[IF_THEN2:%.*]], label [[IF_END3:%.*]]
 ; IS__CGSCC____:       if.then2:
-; IS__CGSCC____-NEXT:    tail call void @only_store(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR12]]
+; IS__CGSCC____-NEXT:    tail call void @only_store(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR13]]
 ; IS__CGSCC____-NEXT:    br label [[IF_END3]]
 ; IS__CGSCC____:       if.end3:
 ; IS__CGSCC____-NEXT:    ret void
@@ -752,11 +764,17 @@ if.end3:
 }
 
 define void @test16_caller(i32* %p, i32 %c) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
-; CHECK-LABEL: define {{[^@]+}}@test16_caller
-; CHECK-SAME: (i32* nofree writeonly [[P:%.*]], i32 [[C:%.*]]) #[[ATTR7]] {
-; CHECK-NEXT:    tail call void @test16_sub(i32* noalias nofree writeonly [[P]], i32 [[C]], i32 [[C]]) #[[ATTR12:[0-9]+]]
-; CHECK-NEXT:    ret void
+; NOT_CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test16_caller
+; NOT_CGSCC_NPM-SAME: (i32* nofree writeonly [[P:%.*]], i32 [[C:%.*]]) #[[ATTR7]] {
+; NOT_CGSCC_NPM-NEXT:    tail call void @test16_sub(i32* noalias nofree writeonly [[P]], i32 [[C]], i32 [[C]]) #[[ATTR12]]
+; NOT_CGSCC_NPM-NEXT:    ret void
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; IS__CGSCC____-LABEL: define {{[^@]+}}@test16_caller
+; IS__CGSCC____-SAME: (i32* nofree writeonly [[P:%.*]], i32 [[C:%.*]]) #[[ATTR7]] {
+; IS__CGSCC____-NEXT:    tail call void @test16_sub(i32* noalias nofree writeonly [[P]], i32 [[C]], i32 [[C]]) #[[ATTR13]]
+; IS__CGSCC____-NEXT:    ret void
 ;
   tail call void @test16_sub(i32* %p, i32 %c, i32 %c)
   ret void
@@ -804,10 +822,10 @@ define void @test17_caller(i32* noalias %p, i32 %c) {
 ; IS__CGSCC____-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C]], 0
 ; IS__CGSCC____-NEXT:    br i1 [[TOBOOL]], label [[L1:%.*]], label [[L2:%.*]]
 ; IS__CGSCC____:       l1:
-; IS__CGSCC____-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]]) #[[ATTR12]]
+; IS__CGSCC____-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]]) #[[ATTR13]]
 ; IS__CGSCC____-NEXT:    br label [[L3:%.*]]
 ; IS__CGSCC____:       l2:
-; IS__CGSCC____-NEXT:    tail call void @only_store(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR12]]
+; IS__CGSCC____-NEXT:    tail call void @only_store(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR13]]
 ; IS__CGSCC____-NEXT:    br label [[L3]]
 ; IS__CGSCC____:       l3:
 ; IS__CGSCC____-NEXT:    ret void
@@ -840,9 +858,9 @@ l3:
 ; }
 
 define void @noreturn() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree nosync nounwind readnone willreturn
 ; CHECK-LABEL: define {{[^@]+}}@noreturn
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR9:[0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
   call void @noreturn()
@@ -870,10 +888,10 @@ define void @test18_caller(i32* noalias %p, i32 %c) {
 ; IS__CGSCC____-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C]], 0
 ; IS__CGSCC____-NEXT:    br i1 [[TOBOOL]], label [[L1:%.*]], label [[L2:%.*]]
 ; IS__CGSCC____:       l1:
-; IS__CGSCC____-NEXT:    tail call void @make_alias(i32* nofree nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR12]]
+; IS__CGSCC____-NEXT:    tail call void @make_alias(i32* nofree nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR13]]
 ; IS__CGSCC____-NEXT:    br label [[L2]]
 ; IS__CGSCC____:       l2:
-; IS__CGSCC____-NEXT:    tail call void @only_store(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR12]]
+; IS__CGSCC____-NEXT:    tail call void @only_store(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR13]]
 ; IS__CGSCC____-NEXT:    ret void
 ;
 entry:
@@ -913,8 +931,9 @@ l2:
 ; IS__CGSCC____: attributes #[[ATTR6:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn }
 ; IS__CGSCC____: attributes #[[ATTR7]] = { nofree norecurse nosync nounwind willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR8]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
-; IS__CGSCC____: attributes #[[ATTR9]] = { nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR10]] = { nounwind readonly willreturn }
-; IS__CGSCC____: attributes #[[ATTR11]] = { willreturn }
-; IS__CGSCC____: attributes #[[ATTR12]] = { nounwind willreturn writeonly }
+; IS__CGSCC____: attributes #[[ATTR9]] = { nofree nosync nounwind readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR10]] = { readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR11]] = { readonly willreturn }
+; IS__CGSCC____: attributes #[[ATTR12]] = { willreturn }
+; IS__CGSCC____: attributes #[[ATTR13]] = { nounwind willreturn writeonly }
 ;.

@@ -32,8 +32,6 @@ define internal i64 @f2(%"a"* %this) align 2 {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@f2
 ; IS__CGSCC____-SAME: () #[[ATTR0]] align 2 {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[THIS_ADDR:%.*]] = alloca %a*, align 8
-; IS__CGSCC____-NEXT:    [[THIS1:%.*]] = load %a*, %a** [[THIS_ADDR]], align 8
 ; IS__CGSCC____-NEXT:    ret i64 undef
 ;
 entry:

@@ -101,9 +101,9 @@ return:                                           ; preds = %if.end3, %if.then2,
 ; }
 ;
 define double* @srec0(double* %a) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; CHECK-LABEL: define {{[^@]+}}@srec0
-; CHECK-SAME: (double* nocapture nofree readnone [[A:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (double* nocapture nofree readnone [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret double* null
 ;
@@ -126,9 +126,9 @@ entry:
 ; Other arguments are possible here due to the no-return behavior.
 ;
 define i32* @srec16(i32* %a) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; CHECK-LABEL: define {{[^@]+}}@srec16
-; CHECK-SAME: (i32* nocapture nofree readnone [[A:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* nocapture nofree readnone [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i32* undef
 ;
@@ -168,17 +168,17 @@ entry:
 define float* @scc_A(i32* dereferenceable_or_null(4) %a) {
 ; CHECK: Function Attrs: nofree nosync nounwind readnone
 ; CHECK-LABEL: define {{[^@]+}}@scc_A
-; CHECK-SAME: (i32* nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (i32* nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32* [[A]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[A]] to i16*
-; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(4) i8* @scc_C(i16* noalias nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[TMP0]]) #[[ATTR1]]
+; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(4) i8* @scc_C(i16* noalias nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[TMP0]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[CALL]] to double*
-; CHECK-NEXT:    [[CALL1:%.*]] = call dereferenceable_or_null(4) i64* @scc_B(double* noalias nofree readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[TMP1]]) #[[ATTR1]]
+; CHECK-NEXT:    [[CALL1:%.*]] = call dereferenceable_or_null(4) i64* @scc_B(double* noalias nofree readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[TMP1]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[CALL1]] to i32*
-; CHECK-NEXT:    [[CALL2:%.*]] = call dereferenceable_or_null(4) float* @scc_A(i32* noalias nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[TMP2]]) #[[ATTR1]]
+; CHECK-NEXT:    [[CALL2:%.*]] = call dereferenceable_or_null(4) float* @scc_A(i32* noalias nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[TMP2]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[CALL2]] to i32*
 ; CHECK-NEXT:    br label [[COND_END:%.*]]
 ; CHECK:       cond.false:
@@ -215,17 +215,17 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 define i64* @scc_B(double* dereferenceable_or_null(8) %a) {
 ; CHECK: Function Attrs: nofree nosync nounwind readnone
 ; CHECK-LABEL: define {{[^@]+}}@scc_B
-; CHECK-SAME: (double* nofree readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (double* nofree readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne double* [[A]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[A]] to i32*
-; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(4) float* @scc_A(i32* noalias nofree readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[TMP0]]) #[[ATTR1]]
+; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(4) float* @scc_A(i32* noalias nofree readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[TMP0]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[CALL]] to double*
-; CHECK-NEXT:    [[CALL1:%.*]] = call dereferenceable_or_null(4) i64* @scc_B(double* noalias nofree readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[TMP1]]) #[[ATTR1]]
+; CHECK-NEXT:    [[CALL1:%.*]] = call dereferenceable_or_null(4) i64* @scc_B(double* noalias nofree readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[TMP1]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[CALL1]] to i16*
-; CHECK-NEXT:    [[CALL2:%.*]] = call dereferenceable_or_null(4) i8* @scc_C(i16* noalias nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[TMP2]]) #[[ATTR1]]
+; CHECK-NEXT:    [[CALL2:%.*]] = call dereferenceable_or_null(4) i8* @scc_C(i16* noalias nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[TMP2]]) #[[ATTR2]]
 ; CHECK-NEXT:    br label [[COND_END:%.*]]
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double* [[A]] to i8*
@@ -261,25 +261,25 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 define i8* @scc_C(i16* dereferenceable_or_null(2) %a) {
 ; CHECK: Function Attrs: nofree nosync nounwind readnone
 ; CHECK-LABEL: define {{[^@]+}}@scc_C
-; CHECK-SAME: (i16* nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (i16* nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast i16* [[A]] to i32*
-; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(4) float* @scc_A(i32* noalias nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[BC]]) #[[ATTR1]]
+; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(4) float* @scc_A(i32* noalias nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[BC]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[BC2:%.*]] = bitcast float* [[CALL]] to i8*
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i8* [[BC2]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i16* [[A]] to double*
-; CHECK-NEXT:    [[CALL1:%.*]] = call dereferenceable_or_null(4) i64* @scc_B(double* noalias nofree readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[TMP0]]) #[[ATTR1]]
+; CHECK-NEXT:    [[CALL1:%.*]] = call dereferenceable_or_null(4) i64* @scc_B(double* noalias nofree readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[TMP0]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64* [[CALL1]] to i8*
 ; CHECK-NEXT:    br label [[COND_END:%.*]]
 ; CHECK:       cond.false:
-; CHECK-NEXT:    [[CALL2:%.*]] = call dereferenceable_or_null(4) i8* @scc_C(i16* noalias nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[A]]) #[[ATTR1]]
+; CHECK-NEXT:    [[CALL2:%.*]] = call dereferenceable_or_null(4) i8* @scc_C(i16* noalias nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[A]]) #[[ATTR2]]
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    [[COND:%.*]] = phi i8* [ [[TMP1]], [[COND_TRUE]] ], [ [[CALL2]], [[COND_FALSE]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[COND]] to i32*
-; CHECK-NEXT:    [[CALL3:%.*]] = call dereferenceable_or_null(4) float* @scc_A(i32* noalias nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[TMP2]]) #[[ATTR1]]
+; CHECK-NEXT:    [[CALL3:%.*]] = call dereferenceable_or_null(4) float* @scc_A(i32* noalias nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[TMP2]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[CALL3]] to i8*
 ; CHECK-NEXT:    ret i8* [[TMP3]]
 ;
@@ -321,7 +321,7 @@ declare void @external_no_capture(i32* nocapture)
 define void @test_external_no_capture(i32* %p) #0 {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: define {{[^@]+}}@test_external_no_capture
-; CHECK-SAME: (i32* nocapture [[P:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: (i32* nocapture [[P:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @external_no_capture(i32* nocapture [[P]])
 ; CHECK-NEXT:    ret void
@@ -340,7 +340,7 @@ entry:
 define void @test_var_arg_call(i8* %p, i32 %a) #0 {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: define {{[^@]+}}@test_var_arg_call
-; CHECK-SAME: (i8* nocapture [[P:%.*]], i32 [[A:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (i8* nocapture [[P:%.*]], i32 [[A:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 (i8*, ...) @printf(i8* nocapture [[P]], i32 [[A]])
 ; CHECK-NEXT:    ret void
@@ -364,7 +364,7 @@ declare i32 @printf(i8* nocapture, ...)
 define i64* @not_captured_but_returned_0(i64* %a) #0 {
 ; CHECK: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
 ; CHECK-LABEL: define {{[^@]+}}@not_captured_but_returned_0
-; CHECK-SAME: (i64* nofree noundef nonnull returned writeonly align 8 dereferenceable(8) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: (i64* nofree noundef nonnull returned writeonly align 8 dereferenceable(8) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i64 0, i64* [[A]], align 8
 ; CHECK-NEXT:    ret i64* [[A]]
@@ -385,7 +385,7 @@ entry:
 define i64* @not_captured_but_returned_1(i64* %a) #0 {
 ; CHECK: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
 ; CHECK-LABEL: define {{[^@]+}}@not_captured_but_returned_1
-; CHECK-SAME: (i64* nofree nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: (i64* nofree nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 1
 ; CHECK-NEXT:    store i64 1, i64* [[ADD_PTR]], align 8
@@ -407,18 +407,18 @@ entry:
 define void @test_not_captured_but_returned_calls(i64* %a) #0 {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_not_captured_but_returned_calls
-; IS__TUNIT____-SAME: (i64* nocapture nofree writeonly align 8 [[A:%.*]]) #[[ATTR3]] {
+; IS__TUNIT____-SAME: (i64* nocapture nofree writeonly align 8 [[A:%.*]]) #[[ATTR4]] {
 ; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR8:[0-9]+]]
-; IS__TUNIT____-NEXT:    [[CALL1:%.*]] = call i64* @not_captured_but_returned_1(i64* nofree writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR8]]
+; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR9:[0-9]+]]
+; IS__TUNIT____-NEXT:    [[CALL1:%.*]] = call i64* @not_captured_but_returned_1(i64* nofree writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_not_captured_but_returned_calls
-; IS__CGSCC____-SAME: (i64* nocapture nofree noundef nonnull writeonly align 8 dereferenceable(16) [[A:%.*]]) #[[ATTR3]] {
+; IS__CGSCC____-SAME: (i64* nocapture nofree noundef nonnull writeonly align 8 dereferenceable(16) [[A:%.*]]) #[[ATTR4]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A]]) #[[ATTR8:[0-9]+]]
-; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i64* @not_captured_but_returned_1(i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A]]) #[[ATTR8]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A]]) #[[ATTR9:[0-9]+]]
+; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i64* @not_captured_but_returned_1(i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; IS__CGSCC____-NEXT:    ret void
 ;
 entry:
@@ -437,16 +437,16 @@ entry:
 define i64* @negative_test_not_captured_but_returned_call_0a(i64* %a) #0 {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@negative_test_not_captured_but_returned_call_0a
-; IS__TUNIT____-SAME: (i64* nofree returned writeonly align 8 "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR3]] {
+; IS__TUNIT____-SAME: (i64* nofree returned writeonly align 8 "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR4]] {
 ; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR8]]
+; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; IS__TUNIT____-NEXT:    ret i64* [[A]]
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@negative_test_not_captured_but_returned_call_0a
-; IS__CGSCC____-SAME: (i64* nofree noundef nonnull returned writeonly align 8 dereferenceable(8) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR3]] {
+; IS__CGSCC____-SAME: (i64* nofree noundef nonnull returned writeonly align 8 dereferenceable(8) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR4]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree noundef nonnull writeonly align 8 dereferenceable(8) "no-capture-maybe-returned" [[A]]) #[[ATTR8]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree noundef nonnull writeonly align 8 dereferenceable(8) "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; IS__CGSCC____-NEXT:    ret i64* [[A]]
 ;
 entry:
@@ -464,18 +464,18 @@ entry:
 define void @negative_test_not_captured_but_returned_call_0b(i64* %a) #0 {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@negative_test_not_captured_but_returned_call_0b
-; IS__TUNIT____-SAME: (i64* nofree writeonly align 8 [[A:%.*]]) #[[ATTR3]] {
+; IS__TUNIT____-SAME: (i64* nofree writeonly align 8 [[A:%.*]]) #[[ATTR4]] {
 ; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR8]]
+; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; IS__TUNIT____-NEXT:    [[TMP0:%.*]] = ptrtoint i64* [[A]] to i64
 ; IS__TUNIT____-NEXT:    store i64 [[TMP0]], i64* [[A]], align 8
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@negative_test_not_captured_but_returned_call_0b
-; IS__CGSCC____-SAME: (i64* nofree noundef nonnull writeonly align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR3]] {
+; IS__CGSCC____-SAME: (i64* nofree noundef nonnull writeonly align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR4]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree noundef nonnull writeonly align 8 dereferenceable(8) "no-capture-maybe-returned" [[A]]) #[[ATTR8]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree noundef nonnull writeonly align 8 dereferenceable(8) "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = ptrtoint i64* [[A]] to i64
 ; IS__CGSCC____-NEXT:    store i64 [[TMP0]], i64* [[A]], align 8
 ; IS__CGSCC____-NEXT:    ret void
@@ -497,16 +497,16 @@ entry:
 define i64* @negative_test_not_captured_but_returned_call_1a(i64* %a) #0 {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@negative_test_not_captured_but_returned_call_1a
-; IS__TUNIT____-SAME: (i64* nofree writeonly align 8 "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR3]] {
+; IS__TUNIT____-SAME: (i64* nofree writeonly align 8 "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR4]] {
 ; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call noundef nonnull align 8 dereferenceable(8) i64* @not_captured_but_returned_1(i64* nofree writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR8]]
+; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call noundef nonnull align 8 dereferenceable(8) i64* @not_captured_but_returned_1(i64* nofree writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; IS__TUNIT____-NEXT:    ret i64* [[CALL]]
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@negative_test_not_captured_but_returned_call_1a
-; IS__CGSCC____-SAME: (i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR3]] {
+; IS__CGSCC____-SAME: (i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR4]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call noundef nonnull align 8 dereferenceable(8) i64* @not_captured_but_returned_1(i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A]]) #[[ATTR8]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call noundef nonnull align 8 dereferenceable(8) i64* @not_captured_but_returned_1(i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; IS__CGSCC____-NEXT:    ret i64* [[CALL]]
 ;
 entry:
@@ -524,18 +524,18 @@ entry:
 define void @negative_test_not_captured_but_returned_call_1b(i64* %a) #0 {
 ; IS__TUNIT____: Function Attrs: nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@negative_test_not_captured_but_returned_call_1b
-; IS__TUNIT____-SAME: (i64* nofree writeonly align 8 [[A:%.*]]) #[[ATTR4:[0-9]+]] {
+; IS__TUNIT____-SAME: (i64* nofree writeonly align 8 [[A:%.*]]) #[[ATTR5:[0-9]+]] {
 ; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call align 8 i64* @not_captured_but_returned_1(i64* nofree writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR8]]
+; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call align 8 i64* @not_captured_but_returned_1(i64* nofree writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; IS__TUNIT____-NEXT:    [[TMP0:%.*]] = ptrtoint i64* [[CALL]] to i64
 ; IS__TUNIT____-NEXT:    store i64 [[TMP0]], i64* [[CALL]], align 8
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@negative_test_not_captured_but_returned_call_1b
-; IS__CGSCC____-SAME: (i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) [[A:%.*]]) #[[ATTR4:[0-9]+]] {
+; IS__CGSCC____-SAME: (i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) [[A:%.*]]) #[[ATTR5:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call align 8 i64* @not_captured_but_returned_1(i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A]]) #[[ATTR8]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call align 8 i64* @not_captured_but_returned_1(i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = ptrtoint i64* [[CALL]] to i64
 ; IS__CGSCC____-NEXT:    store i64 [[TMP0]], i64* [[CALL]], align 8
 ; IS__CGSCC____-NEXT:    ret void
@@ -561,7 +561,7 @@ entry:
 define i32* @ret_arg_or_unknown(i32* %b) #0 {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: define {{[^@]+}}@ret_arg_or_unknown
-; CHECK-SAME: (i32* [[B:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (i32* [[B:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32* [[B]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[RET_ARG:%.*]], label [[RET_UNKNOWN:%.*]]
@@ -586,7 +586,7 @@ ret_unknown:
 define i32* @ret_arg_or_unknown_through_phi(i32* %b) #0 {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: define {{[^@]+}}@ret_arg_or_unknown_through_phi
-; CHECK-SAME: (i32* [[B:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (i32* [[B:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32* [[B]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[RET_ARG:%.*]], label [[RET_UNKNOWN:%.*]]
@@ -623,9 +623,9 @@ declare i32* @readonly_unknown(i32*, i32*) readonly
 define void @not_captured_by_readonly_call(i32* %b) #0 {
 ; CHECK: Function Attrs: noinline nounwind readonly uwtable
 ; CHECK-LABEL: define {{[^@]+}}@not_captured_by_readonly_call
-; CHECK-SAME: (i32* nocapture readonly [[B:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-SAME: (i32* nocapture readonly [[B:%.*]]) #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown(i32* readonly [[B]], i32* readonly [[B]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown(i32* readonly [[B]], i32* readonly [[B]]) #[[ATTR6:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -641,9 +641,9 @@ entry:
 define i32* @not_captured_by_readonly_call_not_returned_either1(i32* %b, i32* returned %r) {
 ; CHECK: Function Attrs: nounwind readonly
 ; CHECK-LABEL: define {{[^@]+}}@not_captured_by_readonly_call_not_returned_either1
-; CHECK-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR7:[0-9]+]] {
+; CHECK-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR8:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown(i32* readonly [[B]], i32* readonly [[R]]) #[[ATTR7]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown(i32* readonly [[B]], i32* readonly [[R]]) #[[ATTR8]]
 ; CHECK-NEXT:    ret i32* [[R]]
 ;
 entry:
@@ -655,9 +655,9 @@ declare i32* @readonly_unknown_r1a(i32*, i32* returned) readonly
 define i32* @not_captured_by_readonly_call_not_returned_either2(i32* %b, i32* %r) {
 ; CHECK: Function Attrs: nounwind readonly
 ; CHECK-LABEL: define {{[^@]+}}@not_captured_by_readonly_call_not_returned_either2
-; CHECK-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR7]] {
+; CHECK-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR8]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1a(i32* readonly [[B]], i32* readonly [[R]]) #[[ATTR7]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1a(i32* readonly [[B]], i32* readonly [[R]]) #[[ATTR8]]
 ; CHECK-NEXT:    ret i32* [[R]]
 ;
 entry:
@@ -669,9 +669,9 @@ declare i32* @readonly_unknown_r1b(i32*, i32* returned) readonly nounwind
 define i32* @not_captured_by_readonly_call_not_returned_either3(i32* %b, i32* %r) {
 ; CHECK: Function Attrs: nounwind readonly
 ; CHECK-LABEL: define {{[^@]+}}@not_captured_by_readonly_call_not_returned_either3
-; CHECK-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR7]] {
+; CHECK-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR8]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1b(i32* nocapture readonly [[B]], i32* readonly [[R]]) #[[ATTR7]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1b(i32* nocapture readonly [[B]], i32* readonly [[R]]) #[[ATTR8]]
 ; CHECK-NEXT:    ret i32* [[R]]
 ;
 entry:
@@ -682,9 +682,9 @@ entry:
 define i32* @not_captured_by_readonly_call_not_returned_either4(i32* %b, i32* %r) nounwind {
 ; CHECK: Function Attrs: nounwind readonly
 ; CHECK-LABEL: define {{[^@]+}}@not_captured_by_readonly_call_not_returned_either4
-; CHECK-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR7]] {
+; CHECK-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR8]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1a(i32* readonly [[B]], i32* readonly [[R]]) #[[ATTR5]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1a(i32* readonly [[B]], i32* readonly [[R]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret i32* [[R]]
 ;
 entry:
@@ -713,7 +713,7 @@ define void @nocapture_is_not_subsumed_2(i32* nocapture %b) {
 ; CHECK-LABEL: define {{[^@]+}}@nocapture_is_not_subsumed_2
 ; CHECK-SAME: (i32* nocapture [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_i32p(i32* readonly [[B]]) #[[ATTR5]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_i32p(i32* readonly [[B]]) #[[ATTR6]]
 ; CHECK-NEXT:    store i32 0, i32* [[CALL]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -726,22 +726,24 @@ entry:
 attributes #0 = { noinline nounwind uwtable }
 ;.
 ; IS__TUNIT____: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone uwtable willreturn }
-; IS__TUNIT____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone }
-; IS__TUNIT____: attributes #[[ATTR2]] = { noinline nounwind uwtable }
-; IS__TUNIT____: attributes #[[ATTR3]] = { argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly }
-; IS__TUNIT____: attributes #[[ATTR4]] = { nofree noinline norecurse nosync nounwind uwtable willreturn writeonly }
-; IS__TUNIT____: attributes #[[ATTR5]] = { readonly }
-; IS__TUNIT____: attributes #[[ATTR6]] = { noinline nounwind readonly uwtable }
-; IS__TUNIT____: attributes #[[ATTR7]] = { nounwind readonly }
-; IS__TUNIT____: attributes #[[ATTR8]] = { nofree nosync nounwind willreturn writeonly }
+; IS__TUNIT____: attributes #[[ATTR1]] = { nofree noinline nosync nounwind readnone uwtable willreturn }
+; IS__TUNIT____: attributes #[[ATTR2]] = { nofree nosync nounwind readnone }
+; IS__TUNIT____: attributes #[[ATTR3]] = { noinline nounwind uwtable }
+; IS__TUNIT____: attributes #[[ATTR4]] = { argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly }
+; IS__TUNIT____: attributes #[[ATTR5]] = { nofree noinline norecurse nosync nounwind uwtable willreturn writeonly }
+; IS__TUNIT____: attributes #[[ATTR6]] = { readonly }
+; IS__TUNIT____: attributes #[[ATTR7]] = { noinline nounwind readonly uwtable }
+; IS__TUNIT____: attributes #[[ATTR8]] = { nounwind readonly }
+; IS__TUNIT____: attributes #[[ATTR9]] = { nofree nosync nounwind willreturn writeonly }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone uwtable willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone }
-; IS__CGSCC____: attributes #[[ATTR2]] = { noinline nounwind uwtable }
-; IS__CGSCC____: attributes #[[ATTR3]] = { argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly }
-; IS__CGSCC____: attributes #[[ATTR4]] = { nofree noinline norecurse nosync nounwind uwtable willreturn writeonly }
-; IS__CGSCC____: attributes #[[ATTR5]] = { readonly }
-; IS__CGSCC____: attributes #[[ATTR6]] = { noinline nounwind readonly uwtable }
-; IS__CGSCC____: attributes #[[ATTR7]] = { nounwind readonly }
-; IS__CGSCC____: attributes #[[ATTR8]] = { nounwind willreturn writeonly }
+; IS__CGSCC____: attributes #[[ATTR1]] = { nofree noinline nosync nounwind readnone uwtable willreturn }
+; IS__CGSCC____: attributes #[[ATTR2]] = { nofree nosync nounwind readnone }
+; IS__CGSCC____: attributes #[[ATTR3]] = { noinline nounwind uwtable }
+; IS__CGSCC____: attributes #[[ATTR4]] = { argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly }
+; IS__CGSCC____: attributes #[[ATTR5]] = { nofree noinline norecurse nosync nounwind uwtable willreturn writeonly }
+; IS__CGSCC____: attributes #[[ATTR6]] = { readonly }
+; IS__CGSCC____: attributes #[[ATTR7]] = { noinline nounwind readonly uwtable }
+; IS__CGSCC____: attributes #[[ATTR8]] = { nounwind readonly }
+; IS__CGSCC____: attributes #[[ATTR9]] = { nounwind willreturn writeonly }
 ;.

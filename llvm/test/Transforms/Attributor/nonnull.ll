@@ -31,16 +31,27 @@ define i8* @test2(i8* nonnull %p) {
 }
 
 define i8* @test2A(i1 %c, i8* %ret) {
-; CHECK: Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
-; CHECK-LABEL: define {{[^@]+}}@test2A
-; CHECK-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
-; CHECK:       A:
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR11:[0-9]+]] [ "nonnull"(i8* [[RET]]) ]
-; CHECK-NEXT:    ret i8* [[RET]]
-; CHECK:       B:
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR11]] [ "nonnull"(i8* [[RET]]) ]
-; CHECK-NEXT:    ret i8* [[RET]]
+; NOT_CGSCC_NPM: Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test2A
+; NOT_CGSCC_NPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR0:[0-9]+]] {
+; NOT_CGSCC_NPM-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
+; NOT_CGSCC_NPM:       A:
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR12:[0-9]+]] [ "nonnull"(i8* [[RET]]) ]
+; NOT_CGSCC_NPM-NEXT:    ret i8* [[RET]]
+; NOT_CGSCC_NPM:       B:
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR12]] [ "nonnull"(i8* [[RET]]) ]
+; NOT_CGSCC_NPM-NEXT:    ret i8* [[RET]]
+;
+; IS__CGSCC_NPM: Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test2A
+; IS__CGSCC_NPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR0:[0-9]+]] {
+; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
+; IS__CGSCC_NPM:       A:
+; IS__CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR11:[0-9]+]] [ "nonnull"(i8* [[RET]]) ]
+; IS__CGSCC_NPM-NEXT:    ret i8* [[RET]]
+; IS__CGSCC_NPM:       B:
+; IS__CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR11]] [ "nonnull"(i8* [[RET]]) ]
+; IS__CGSCC_NPM-NEXT:    ret i8* [[RET]]
 ;
   br i1 %c, label %A, label %B
 A:
@@ -52,16 +63,27 @@ B:
 }
 
 define i8* @test2B(i1 %c, i8* %ret) {
-; CHECK: Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
-; CHECK-LABEL: define {{[^@]+}}@test2B
-; CHECK-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
-; CHECK:       A:
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR11]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
-; CHECK-NEXT:    ret i8* [[RET]]
-; CHECK:       B:
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR11]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
-; CHECK-NEXT:    ret i8* [[RET]]
+; NOT_CGSCC_NPM: Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test2B
+; NOT_CGSCC_NPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR0]] {
+; NOT_CGSCC_NPM-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
+; NOT_CGSCC_NPM:       A:
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR12]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
+; NOT_CGSCC_NPM-NEXT:    ret i8* [[RET]]
+; NOT_CGSCC_NPM:       B:
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR12]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
+; NOT_CGSCC_NPM-NEXT:    ret i8* [[RET]]
+;
+; IS__CGSCC_NPM: Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test2B
+; IS__CGSCC_NPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR0]] {
+; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
+; IS__CGSCC_NPM:       A:
+; IS__CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR11]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
+; IS__CGSCC_NPM-NEXT:    ret i8* [[RET]]
+; IS__CGSCC_NPM:       B:
+; IS__CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR11]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
+; IS__CGSCC_NPM-NEXT:    ret i8* [[RET]]
 ;
   br i1 %c, label %A, label %B
 A:
@@ -117,20 +139,30 @@ define i8* @test3(i1 %c) {
 ; nonnull if neither can ever return null.  (In this case, they
 ; just never return period.)
 define i8* @test4_helper() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; CHECK-LABEL: define {{[^@]+}}@test4_helper
-; CHECK-SAME: () #[[ATTR1]] {
-; CHECK-NEXT:    ret i8* undef
+; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test4_helper
+; NOT_CGSCC_NPM-SAME: () #[[ATTR2:[0-9]+]] {
+; NOT_CGSCC_NPM-NEXT:    ret i8* undef
+;
+; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test4_helper
+; IS__CGSCC_NPM-SAME: () #[[ATTR1]] {
+; IS__CGSCC_NPM-NEXT:    ret i8* undef
 ;
   %ret = call i8* @test4()
   ret i8* %ret
 }
 
 define i8* @test4() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; CHECK-LABEL: define {{[^@]+}}@test4
-; CHECK-SAME: () #[[ATTR1]] {
-; CHECK-NEXT:    ret i8* undef
+; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test4
+; NOT_CGSCC_NPM-SAME: () #[[ATTR2]] {
+; NOT_CGSCC_NPM-NEXT:    ret i8* undef
+;
+; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test4
+; IS__CGSCC_NPM-SAME: () #[[ATTR1]] {
+; IS__CGSCC_NPM-NEXT:    ret i8* undef
 ;
   %ret = call i8* @test4_helper()
   ret i8* %ret
@@ -139,14 +171,23 @@ define i8* @test4() {
 ; Given a mutual recursive set of functions which *can* return null
 ; make sure we haven't marked them as nonnull.
 define i8* @test5_helper(i1 %c) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; CHECK-LABEL: define {{[^@]+}}@test5_helper
-; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
-; CHECK:       rec:
-; CHECK-NEXT:    br label [[END]]
-; CHECK:       end:
-; CHECK-NEXT:    ret i8* null
+; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test5_helper
+; NOT_CGSCC_NPM-SAME: (i1 [[C:%.*]]) #[[ATTR2]] {
+; NOT_CGSCC_NPM-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
+; NOT_CGSCC_NPM:       rec:
+; NOT_CGSCC_NPM-NEXT:    br label [[END]]
+; NOT_CGSCC_NPM:       end:
+; NOT_CGSCC_NPM-NEXT:    ret i8* null
+;
+; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test5_helper
+; IS__CGSCC_NPM-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
+; IS__CGSCC_NPM:       rec:
+; IS__CGSCC_NPM-NEXT:    br label [[END]]
+; IS__CGSCC_NPM:       end:
+; IS__CGSCC_NPM-NEXT:    ret i8* null
 ;
   br i1 %c, label %rec, label %end
 rec:
@@ -157,10 +198,15 @@ end:
 }
 
 define i8* @test5(i1 %c) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; CHECK-LABEL: define {{[^@]+}}@test5
-; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret i8* null
+; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test5
+; NOT_CGSCC_NPM-SAME: (i1 [[C:%.*]]) #[[ATTR2]] {
+; NOT_CGSCC_NPM-NEXT:    ret i8* null
+;
+; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test5
+; IS__CGSCC_NPM-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; IS__CGSCC_NPM-NEXT:    ret i8* null
 ;
   %ret = call i8* @test5_helper(i1 %c)
   ret i8* %ret
@@ -169,16 +215,27 @@ define i8* @test5(i1 %c) {
 ; Local analysis, but going through a self recursive phi
 define i8* @test6a() {
 ;
-; CHECK: Function Attrs: noreturn
-; CHECK-LABEL: define {{[^@]+}}@test6a
-; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @ret_nonnull()
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    unreachable
-; CHECK:       exit:
-; CHECK-NEXT:    unreachable
+; NOT_CGSCC_NPM: Function Attrs: noreturn
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test6a
+; NOT_CGSCC_NPM-SAME: () #[[ATTR3:[0-9]+]] {
+; NOT_CGSCC_NPM-NEXT:  entry:
+; NOT_CGSCC_NPM-NEXT:    [[RET:%.*]] = call i8* @ret_nonnull()
+; NOT_CGSCC_NPM-NEXT:    br label [[LOOP:%.*]]
+; NOT_CGSCC_NPM:       loop:
+; NOT_CGSCC_NPM-NEXT:    unreachable
+; NOT_CGSCC_NPM:       exit:
+; NOT_CGSCC_NPM-NEXT:    unreachable
+;
+; IS__CGSCC_NPM: Function Attrs: noreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test6a
+; IS__CGSCC_NPM-SAME: () #[[ATTR2:[0-9]+]] {
+; IS__CGSCC_NPM-NEXT:  entry:
+; IS__CGSCC_NPM-NEXT:    [[RET:%.*]] = call i8* @ret_nonnull()
+; IS__CGSCC_NPM-NEXT:    br label [[LOOP:%.*]]
+; IS__CGSCC_NPM:       loop:
+; IS__CGSCC_NPM-NEXT:    unreachable
+; IS__CGSCC_NPM:       exit:
+; IS__CGSCC_NPM-NEXT:    unreachable
 ;
 entry:
   %ret = call i8* @ret_nonnull()
@@ -247,12 +304,19 @@ define i8* @test9(i8* %a, i64 %n) {
 ; ATTRIBUTOR_OPM: define i8* @test10
 ; ATTRIBUTOR_NPM: define nonnull i8* @test10
 define i8* @test10(i8* %a, i64 %n) {
-; CHECK: Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
-; CHECK-LABEL: define {{[^@]+}}@test10
-; CHECK-SAME: (i8* nofree readnone "no-capture-maybe-returned" [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR11]]
-; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 [[N]]
-; CHECK-NEXT:    ret i8* [[B]]
+; NOT_CGSCC_NPM: Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test10
+; NOT_CGSCC_NPM-SAME: (i8* nofree readnone "no-capture-maybe-returned" [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR12]]
+; NOT_CGSCC_NPM-NEXT:    [[B:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 [[N]]
+; NOT_CGSCC_NPM-NEXT:    ret i8* [[B]]
+;
+; IS__CGSCC_NPM: Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test10
+; IS__CGSCC_NPM-SAME: (i8* nofree readnone "no-capture-maybe-returned" [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; IS__CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR11]]
+; IS__CGSCC_NPM-NEXT:    [[B:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 [[N]]
+; IS__CGSCC_NPM-NEXT:    ret i8* [[B]]
 ;
   %cmp = icmp ne i64 %n, 0
   call void @llvm.assume(i1 %cmp)
@@ -306,12 +370,19 @@ define void @test12(i8* nonnull %a) {
 ; Simple Argument Tests
 declare i8* @unknown()
 define void @test13_helper() {
-; CHECK-LABEL: define {{[^@]+}}@test13_helper() {
-; CHECK-NEXT:    [[NONNULLPTR:%.*]] = tail call nonnull i8* @ret_nonnull()
-; CHECK-NEXT:    [[MAYBENULLPTR:%.*]] = tail call i8* @unknown()
-; CHECK-NEXT:    tail call void @test13(i8* noalias nocapture nofree nonnull readnone [[NONNULLPTR]], i8* noalias nocapture nofree nonnull readnone [[NONNULLPTR]], i8* noalias nocapture nofree readnone [[MAYBENULLPTR]]) #[[ATTR3:[0-9]+]]
-; CHECK-NEXT:    tail call void @test13(i8* noalias nocapture nofree nonnull readnone [[NONNULLPTR]], i8* noalias nocapture nofree readnone [[MAYBENULLPTR]], i8* noalias nocapture nofree nonnull readnone [[NONNULLPTR]]) #[[ATTR3]]
-; CHECK-NEXT:    ret void
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test13_helper() {
+; NOT_CGSCC_NPM-NEXT:    [[NONNULLPTR:%.*]] = tail call nonnull i8* @ret_nonnull()
+; NOT_CGSCC_NPM-NEXT:    [[MAYBENULLPTR:%.*]] = tail call i8* @unknown()
+; NOT_CGSCC_NPM-NEXT:    tail call void @test13(i8* noalias nocapture nofree nonnull readnone [[NONNULLPTR]], i8* noalias nocapture nofree nonnull readnone [[NONNULLPTR]], i8* noalias nocapture nofree readnone [[MAYBENULLPTR]]) #[[ATTR4:[0-9]+]]
+; NOT_CGSCC_NPM-NEXT:    tail call void @test13(i8* noalias nocapture nofree nonnull readnone [[NONNULLPTR]], i8* noalias nocapture nofree readnone [[MAYBENULLPTR]], i8* noalias nocapture nofree nonnull readnone [[NONNULLPTR]]) #[[ATTR4]]
+; NOT_CGSCC_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test13_helper() {
+; IS__CGSCC_NPM-NEXT:    [[NONNULLPTR:%.*]] = tail call nonnull i8* @ret_nonnull()
+; IS__CGSCC_NPM-NEXT:    [[MAYBENULLPTR:%.*]] = tail call i8* @unknown()
+; IS__CGSCC_NPM-NEXT:    tail call void @test13(i8* noalias nocapture nofree nonnull readnone [[NONNULLPTR]], i8* noalias nocapture nofree nonnull readnone [[NONNULLPTR]], i8* noalias nocapture nofree readnone [[MAYBENULLPTR]]) #[[ATTR3:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    tail call void @test13(i8* noalias nocapture nofree nonnull readnone [[NONNULLPTR]], i8* noalias nocapture nofree readnone [[MAYBENULLPTR]], i8* noalias nocapture nofree nonnull readnone [[NONNULLPTR]]) #[[ATTR3]]
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   %nonnullptr = tail call i8* @ret_nonnull()
   %maybenullptr = tail call i8* @unknown()
@@ -321,13 +392,21 @@ define void @test13_helper() {
 }
 define internal void @test13(i8* %a, i8* %b, i8* %c) {
 ;
-; CHECK: Function Attrs: nounwind
-; CHECK-LABEL: define {{[^@]+}}@test13
-; CHECK-SAME: (i8* noalias nocapture nofree nonnull readnone [[A:%.*]], i8* noalias nocapture nofree readnone [[B:%.*]], i8* noalias nocapture nofree readnone [[C:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree nonnull readnone [[A]]) #[[ATTR3]]
-; CHECK-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[B]]) #[[ATTR3]]
-; CHECK-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[C]]) #[[ATTR3]]
-; CHECK-NEXT:    ret void
+; NOT_CGSCC_NPM: Function Attrs: nounwind
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test13
+; NOT_CGSCC_NPM-SAME: (i8* noalias nocapture nofree nonnull readnone [[A:%.*]], i8* noalias nocapture nofree readnone [[B:%.*]], i8* noalias nocapture nofree readnone [[C:%.*]]) #[[ATTR4]] {
+; NOT_CGSCC_NPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree nonnull readnone [[A]]) #[[ATTR4]]
+; NOT_CGSCC_NPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[B]]) #[[ATTR4]]
+; NOT_CGSCC_NPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[C]]) #[[ATTR4]]
+; NOT_CGSCC_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM: Function Attrs: nounwind
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test13
+; IS__CGSCC_NPM-SAME: (i8* noalias nocapture nofree nonnull readnone [[A:%.*]], i8* noalias nocapture nofree readnone [[B:%.*]], i8* noalias nocapture nofree readnone [[C:%.*]]) #[[ATTR3]] {
+; IS__CGSCC_NPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree nonnull readnone [[A]]) #[[ATTR3]]
+; IS__CGSCC_NPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[B]]) #[[ATTR3]]
+; IS__CGSCC_NPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[C]]) #[[ATTR3]]
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   call void @use_i8_ptr(i8* %a)
   call void @use_i8_ptr(i8* %b)
@@ -351,27 +430,49 @@ declare nonnull i8* @nonnull()
 
 define internal i32* @f1(i32* %arg) {
 ; FIXME: missing nonnull It should be nonnull @f1(i32* nonnull readonly %arg)
-; CHECK: Function Attrs: argmemonly nofree nosync nounwind readonly
-; CHECK-LABEL: define {{[^@]+}}@f1
-; CHECK-SAME: (i32* nofree readonly [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = icmp eq i32* [[ARG]], null
-; CHECK-NEXT:    br i1 [[TMP]], label [[BB9:%.*]], label [[BB1:%.*]]
-; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARG]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[TMP3]], label [[BB6:%.*]], label [[BB4:%.*]]
-; CHECK:       bb4:
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 1
-; CHECK-NEXT:    [[TMP5B:%.*]] = tail call i32* @f3(i32* nofree nonnull readonly [[TMP5]]) #[[ATTR12:[0-9]+]]
-; CHECK-NEXT:    [[TMP5C:%.*]] = getelementptr inbounds i32, i32* [[TMP5B]], i64 -1
-; CHECK-NEXT:    br label [[BB9]]
-; CHECK:       bb6:
-; CHECK-NEXT:    [[TMP7:%.*]] = tail call i32* @f2(i32* nofree nonnull readonly align 4 dereferenceable(4) [[ARG]]) #[[ATTR12]]
-; CHECK-NEXT:    ret i32* [[TMP7]]
-; CHECK:       bb9:
-; CHECK-NEXT:    [[TMP10:%.*]] = phi i32* [ [[TMP5C]], [[BB4]] ], [ inttoptr (i64 4 to i32*), [[BB:%.*]] ]
-; CHECK-NEXT:    ret i32* [[TMP10]]
+; NOT_CGSCC_NPM: Function Attrs: argmemonly nofree nosync nounwind readonly
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@f1
+; NOT_CGSCC_NPM-SAME: (i32* nofree readonly [[ARG:%.*]]) #[[ATTR5:[0-9]+]] {
+; NOT_CGSCC_NPM-NEXT:  bb:
+; NOT_CGSCC_NPM-NEXT:    [[TMP:%.*]] = icmp eq i32* [[ARG]], null
+; NOT_CGSCC_NPM-NEXT:    br i1 [[TMP]], label [[BB9:%.*]], label [[BB1:%.*]]
+; NOT_CGSCC_NPM:       bb1:
+; NOT_CGSCC_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARG]], align 4
+; NOT_CGSCC_NPM-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 0
+; NOT_CGSCC_NPM-NEXT:    br i1 [[TMP3]], label [[BB6:%.*]], label [[BB4:%.*]]
+; NOT_CGSCC_NPM:       bb4:
+; NOT_CGSCC_NPM-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 1
+; NOT_CGSCC_NPM-NEXT:    [[TMP5B:%.*]] = tail call i32* @f3(i32* nofree nonnull readonly [[TMP5]]) #[[ATTR13:[0-9]+]]
+; NOT_CGSCC_NPM-NEXT:    [[TMP5C:%.*]] = getelementptr inbounds i32, i32* [[TMP5B]], i64 -1
+; NOT_CGSCC_NPM-NEXT:    br label [[BB9]]
+; NOT_CGSCC_NPM:       bb6:
+; NOT_CGSCC_NPM-NEXT:    [[TMP7:%.*]] = tail call i32* @f2(i32* nofree nonnull readonly align 4 dereferenceable(4) [[ARG]]) #[[ATTR13]]
+; NOT_CGSCC_NPM-NEXT:    ret i32* [[TMP7]]
+; NOT_CGSCC_NPM:       bb9:
+; NOT_CGSCC_NPM-NEXT:    [[TMP10:%.*]] = phi i32* [ [[TMP5C]], [[BB4]] ], [ inttoptr (i64 4 to i32*), [[BB:%.*]] ]
+; NOT_CGSCC_NPM-NEXT:    ret i32* [[TMP10]]
+;
+; IS__CGSCC_NPM: Function Attrs: argmemonly nofree nosync nounwind readonly
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@f1
+; IS__CGSCC_NPM-SAME: (i32* nofree readonly [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
+; IS__CGSCC_NPM-NEXT:  bb:
+; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = icmp eq i32* [[ARG]], null
+; IS__CGSCC_NPM-NEXT:    br i1 [[TMP]], label [[BB9:%.*]], label [[BB1:%.*]]
+; IS__CGSCC_NPM:       bb1:
+; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARG]], align 4
+; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 0
+; IS__CGSCC_NPM-NEXT:    br i1 [[TMP3]], label [[BB6:%.*]], label [[BB4:%.*]]
+; IS__CGSCC_NPM:       bb4:
+; IS__CGSCC_NPM-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 1
+; IS__CGSCC_NPM-NEXT:    [[TMP5B:%.*]] = tail call i32* @f3(i32* nofree nonnull readonly [[TMP5]]) #[[ATTR12:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    [[TMP5C:%.*]] = getelementptr inbounds i32, i32* [[TMP5B]], i64 -1
+; IS__CGSCC_NPM-NEXT:    br label [[BB9]]
+; IS__CGSCC_NPM:       bb6:
+; IS__CGSCC_NPM-NEXT:    [[TMP7:%.*]] = tail call i32* @f2(i32* nofree nonnull readonly align 4 dereferenceable(4) [[ARG]]) #[[ATTR12]]
+; IS__CGSCC_NPM-NEXT:    ret i32* [[TMP7]]
+; IS__CGSCC_NPM:       bb9:
+; IS__CGSCC_NPM-NEXT:    [[TMP10:%.*]] = phi i32* [ [[TMP5C]], [[BB4]] ], [ inttoptr (i64 4 to i32*), [[BB:%.*]] ]
+; IS__CGSCC_NPM-NEXT:    ret i32* [[TMP10]]
 ;
 
 bb:
@@ -399,12 +500,19 @@ bb9:                                              ; preds = %bb4, %bb
 }
 
 define internal i32* @f2(i32* %arg) {
-; CHECK: Function Attrs: argmemonly nofree nosync nounwind readonly
-; CHECK-LABEL: define {{[^@]+}}@f2
-; CHECK-SAME: (i32* nofree nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = tail call i32* @f1(i32* nofree readonly [[ARG]]) #[[ATTR12]]
-; CHECK-NEXT:    ret i32* [[TMP]]
+; NOT_CGSCC_NPM: Function Attrs: argmemonly nofree nosync nounwind readonly
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@f2
+; NOT_CGSCC_NPM-SAME: (i32* nofree nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR5]] {
+; NOT_CGSCC_NPM-NEXT:  bb:
+; NOT_CGSCC_NPM-NEXT:    [[TMP:%.*]] = tail call i32* @f1(i32* nofree readonly [[ARG]]) #[[ATTR13]]
+; NOT_CGSCC_NPM-NEXT:    ret i32* [[TMP]]
+;
+; IS__CGSCC_NPM: Function Attrs: argmemonly nofree nosync nounwind readonly
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@f2
+; IS__CGSCC_NPM-SAME: (i32* nofree nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR4]] {
+; IS__CGSCC_NPM-NEXT:  bb:
+; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = tail call i32* @f1(i32* nofree readonly [[ARG]]) #[[ATTR12]]
+; IS__CGSCC_NPM-NEXT:    ret i32* [[TMP]]
 ;
 bb:
   %tmp = tail call i32* @f1(i32* %arg)
@@ -413,12 +521,19 @@ bb:
 
 define dso_local noalias i32* @f3(i32* %arg) {
 ; FIXME: missing nonnull. It should be nonnull @f3(i32* nonnull readonly %arg)
-; CHECK: Function Attrs: argmemonly nofree nosync nounwind readonly
-; CHECK-LABEL: define {{[^@]+}}@f3
-; CHECK-SAME: (i32* nofree readonly [[ARG:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = call i32* @f1(i32* nofree readonly [[ARG]]) #[[ATTR12]]
-; CHECK-NEXT:    ret i32* [[TMP]]
+; NOT_CGSCC_NPM: Function Attrs: argmemonly nofree nosync nounwind readonly
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@f3
+; NOT_CGSCC_NPM-SAME: (i32* nofree readonly [[ARG:%.*]]) #[[ATTR5]] {
+; NOT_CGSCC_NPM-NEXT:  bb:
+; NOT_CGSCC_NPM-NEXT:    [[TMP:%.*]] = call i32* @f1(i32* nofree readonly [[ARG]]) #[[ATTR13]]
+; NOT_CGSCC_NPM-NEXT:    ret i32* [[TMP]]
+;
+; IS__CGSCC_NPM: Function Attrs: argmemonly nofree nosync nounwind readonly
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@f3
+; IS__CGSCC_NPM-SAME: (i32* nofree readonly [[ARG:%.*]]) #[[ATTR4]] {
+; IS__CGSCC_NPM-NEXT:  bb:
+; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = call i32* @f1(i32* nofree readonly [[ARG]]) #[[ATTR12]]
+; IS__CGSCC_NPM-NEXT:    ret i32* [[TMP]]
 ;
 bb:
 ; FIXME: missing nonnull. It should be @f1(i32* nonnull readonly %arg)
@@ -449,17 +564,29 @@ declare void @fun3(i8*, i8*, i8*) #1
 ;   fun2(nonnull %a, %b)
 ; We can say that %a is nonnull but %b is not.
 define void @f16(i8* %a, i8 * %b, i8 %c) {
-; CHECK: Function Attrs: nounwind willreturn
-; CHECK-LABEL: define {{[^@]+}}@f16
-; CHECK-SAME: (i8* nonnull [[A:%.*]], i8* [[B:%.*]], i8 [[C:%.*]]) #[[ATTR5:[0-9]+]] {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @fun2(i8* nonnull [[A]], i8* nonnull [[B]]) #[[ATTR5]]
-; CHECK-NEXT:    ret void
-; CHECK:       if.else:
-; CHECK-NEXT:    tail call void @fun2(i8* nonnull [[A]], i8* [[B]]) #[[ATTR5]]
-; CHECK-NEXT:    ret void
+; NOT_CGSCC_NPM: Function Attrs: nounwind willreturn
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@f16
+; NOT_CGSCC_NPM-SAME: (i8* nonnull [[A:%.*]], i8* [[B:%.*]], i8 [[C:%.*]]) #[[ATTR6:[0-9]+]] {
+; NOT_CGSCC_NPM-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C]], 0
+; NOT_CGSCC_NPM-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; NOT_CGSCC_NPM:       if.then:
+; NOT_CGSCC_NPM-NEXT:    tail call void @fun2(i8* nonnull [[A]], i8* nonnull [[B]]) #[[ATTR6]]
+; NOT_CGSCC_NPM-NEXT:    ret void
+; NOT_CGSCC_NPM:       if.else:
+; NOT_CGSCC_NPM-NEXT:    tail call void @fun2(i8* nonnull [[A]], i8* [[B]]) #[[ATTR6]]
+; NOT_CGSCC_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM: Function Attrs: nounwind willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@f16
+; IS__CGSCC_NPM-SAME: (i8* nonnull [[A:%.*]], i8* [[B:%.*]], i8 [[C:%.*]]) #[[ATTR5:[0-9]+]] {
+; IS__CGSCC_NPM-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C]], 0
+; IS__CGSCC_NPM-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; IS__CGSCC_NPM:       if.then:
+; IS__CGSCC_NPM-NEXT:    tail call void @fun2(i8* nonnull [[A]], i8* nonnull [[B]]) #[[ATTR5]]
+; IS__CGSCC_NPM-NEXT:    ret void
+; IS__CGSCC_NPM:       if.else:
+; IS__CGSCC_NPM-NEXT:    tail call void @fun2(i8* nonnull [[A]], i8* [[B]]) #[[ATTR5]]
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   %cmp = icmp eq i8 %c, 0
   br i1 %cmp, label %if.then, label %if.else
@@ -479,20 +606,35 @@ if.else:
 ; We can say that %a is nonnull
 define void @f17(i8* %a, i8 %c) {
 ;
-; CHECK: Function Attrs: nounwind willreturn
-; CHECK-LABEL: define {{[^@]+}}@f17
-; CHECK-SAME: (i8* nonnull [[A:%.*]], i8 [[C:%.*]]) #[[ATTR5]] {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @fun0() #[[ATTR5]]
-; CHECK-NEXT:    br label [[CONT:%.*]]
-; CHECK:       if.else:
-; CHECK-NEXT:    tail call void @fun0() #[[ATTR5]]
-; CHECK-NEXT:    br label [[CONT]]
-; CHECK:       cont:
-; CHECK-NEXT:    tail call void @fun1(i8* nonnull [[A]]) #[[ATTR5]]
-; CHECK-NEXT:    ret void
+; NOT_CGSCC_NPM: Function Attrs: nounwind willreturn
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@f17
+; NOT_CGSCC_NPM-SAME: (i8* nonnull [[A:%.*]], i8 [[C:%.*]]) #[[ATTR6]] {
+; NOT_CGSCC_NPM-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C]], 0
+; NOT_CGSCC_NPM-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; NOT_CGSCC_NPM:       if.then:
+; NOT_CGSCC_NPM-NEXT:    tail call void @fun0() #[[ATTR6]]
+; NOT_CGSCC_NPM-NEXT:    br label [[CONT:%.*]]
+; NOT_CGSCC_NPM:       if.else:
+; NOT_CGSCC_NPM-NEXT:    tail call void @fun0() #[[ATTR6]]
+; NOT_CGSCC_NPM-NEXT:    br label [[CONT]]
+; NOT_CGSCC_NPM:       cont:
+; NOT_CGSCC_NPM-NEXT:    tail call void @fun1(i8* nonnull [[A]]) #[[ATTR6]]
+; NOT_CGSCC_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM: Function Attrs: nounwind willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@f17
+; IS__CGSCC_NPM-SAME: (i8* nonnull [[A:%.*]], i8 [[C:%.*]]) #[[ATTR5]] {
+; IS__CGSCC_NPM-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C]], 0
+; IS__CGSCC_NPM-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; IS__CGSCC_NPM:       if.then:
+; IS__CGSCC_NPM-NEXT:    tail call void @fun0() #[[ATTR5]]
+; IS__CGSCC_NPM-NEXT:    br label [[CONT:%.*]]
+; IS__CGSCC_NPM:       if.else:
+; IS__CGSCC_NPM-NEXT:    tail call void @fun0() #[[ATTR5]]
+; IS__CGSCC_NPM-NEXT:    br label [[CONT]]
+; IS__CGSCC_NPM:       cont:
+; IS__CGSCC_NPM-NEXT:    tail call void @fun1(i8* nonnull [[A]]) #[[ATTR5]]
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   %cmp = icmp eq i8 %c, 0
   br i1 %cmp, label %if.then, label %if.else
@@ -518,29 +660,53 @@ cont:
 ; fun1(nonnull %a)
 
 define void @f18(i8* %a, i8* %b, i8 %c) {
-; CHECK: Function Attrs: nounwind willreturn
-; CHECK-LABEL: define {{[^@]+}}@f18
-; CHECK-SAME: (i8* nonnull [[A:%.*]], i8* [[B:%.*]], i8 [[C:%.*]]) #[[ATTR5]] {
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[C]], 0
-; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @fun0() #[[ATTR5]]
-; CHECK-NEXT:    br label [[CONT:%.*]]
-; CHECK:       if.else:
-; CHECK-NEXT:    tail call void @fun0() #[[ATTR5]]
-; CHECK-NEXT:    br label [[CONT]]
-; CHECK:       cont:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[C]], 1
-; CHECK-NEXT:    br i1 [[CMP2]], label [[CONT_THEN:%.*]], label [[CONT_ELSE:%.*]]
-; CHECK:       cont.then:
-; CHECK-NEXT:    tail call void @fun1(i8* nonnull [[B]]) #[[ATTR5]]
-; CHECK-NEXT:    br label [[CONT2:%.*]]
-; CHECK:       cont.else:
-; CHECK-NEXT:    tail call void @fun0() #[[ATTR5]]
-; CHECK-NEXT:    br label [[CONT2]]
-; CHECK:       cont2:
-; CHECK-NEXT:    tail call void @fun1(i8* nonnull [[A]]) #[[ATTR5]]
-; CHECK-NEXT:    ret void
+; NOT_CGSCC_NPM: Function Attrs: nounwind willreturn
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@f18
+; NOT_CGSCC_NPM-SAME: (i8* nonnull [[A:%.*]], i8* [[B:%.*]], i8 [[C:%.*]]) #[[ATTR6]] {
+; NOT_CGSCC_NPM-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[C]], 0
+; NOT_CGSCC_NPM-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; NOT_CGSCC_NPM:       if.then:
+; NOT_CGSCC_NPM-NEXT:    tail call void @fun0() #[[ATTR6]]
+; NOT_CGSCC_NPM-NEXT:    br label [[CONT:%.*]]
+; NOT_CGSCC_NPM:       if.else:
+; NOT_CGSCC_NPM-NEXT:    tail call void @fun0() #[[ATTR6]]
+; NOT_CGSCC_NPM-NEXT:    br label [[CONT]]
+; NOT_CGSCC_NPM:       cont:
+; NOT_CGSCC_NPM-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[C]], 1
+; NOT_CGSCC_NPM-NEXT:    br i1 [[CMP2]], label [[CONT_THEN:%.*]], label [[CONT_ELSE:%.*]]
+; NOT_CGSCC_NPM:       cont.then:
+; NOT_CGSCC_NPM-NEXT:    tail call void @fun1(i8* nonnull [[B]]) #[[ATTR6]]
+; NOT_CGSCC_NPM-NEXT:    br label [[CONT2:%.*]]
+; NOT_CGSCC_NPM:       cont.else:
+; NOT_CGSCC_NPM-NEXT:    tail call void @fun0() #[[ATTR6]]
+; NOT_CGSCC_NPM-NEXT:    br label [[CONT2]]
+; NOT_CGSCC_NPM:       cont2:
+; NOT_CGSCC_NPM-NEXT:    tail call void @fun1(i8* nonnull [[A]]) #[[ATTR6]]
+; NOT_CGSCC_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM: Function Attrs: nounwind willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@f18
+; IS__CGSCC_NPM-SAME: (i8* nonnull [[A:%.*]], i8* [[B:%.*]], i8 [[C:%.*]]) #[[ATTR5]] {
+; IS__CGSCC_NPM-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[C]], 0
+; IS__CGSCC_NPM-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; IS__CGSCC_NPM:       if.then:
+; IS__CGSCC_NPM-NEXT:    tail call void @fun0() #[[ATTR5]]
+; IS__CGSCC_NPM-NEXT:    br label [[CONT:%.*]]
+; IS__CGSCC_NPM:       if.else:
+; IS__CGSCC_NPM-NEXT:    tail call void @fun0() #[[ATTR5]]
+; IS__CGSCC_NPM-NEXT:    br label [[CONT]]
+; IS__CGSCC_NPM:       cont:
+; IS__CGSCC_NPM-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[C]], 1
+; IS__CGSCC_NPM-NEXT:    br i1 [[CMP2]], label [[CONT_THEN:%.*]], label [[CONT_ELSE:%.*]]
+; IS__CGSCC_NPM:       cont.then:
+; IS__CGSCC_NPM-NEXT:    tail call void @fun1(i8* nonnull [[B]]) #[[ATTR5]]
+; IS__CGSCC_NPM-NEXT:    br label [[CONT2:%.*]]
+; IS__CGSCC_NPM:       cont.else:
+; IS__CGSCC_NPM-NEXT:    tail call void @fun0() #[[ATTR5]]
+; IS__CGSCC_NPM-NEXT:    br label [[CONT2]]
+; IS__CGSCC_NPM:       cont2:
+; IS__CGSCC_NPM-NEXT:    tail call void @fun1(i8* nonnull [[A]]) #[[ATTR5]]
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   %cmp1 = icmp eq i8 %c, 0
   br i1 %cmp1, label %if.then, label %if.else
@@ -567,20 +733,35 @@ cont2:
 ; TEST 19: Loop
 
 define void @f19(i8* %a, i8* %b, i8 %c) {
-; CHECK: Function Attrs: nounwind
-; CHECK-LABEL: define {{[^@]+}}@f19
-; CHECK-SAME: (i8* [[A:%.*]], i8* nonnull [[B:%.*]], i8 [[C:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
-; CHECK:       loop.header:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[C]], 0
-; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP_BODY:%.*]], label [[LOOP_EXIT:%.*]]
-; CHECK:       loop.body:
-; CHECK-NEXT:    tail call void @fun1(i8* nonnull [[B]]) #[[ATTR3]]
-; CHECK-NEXT:    tail call void @fun1(i8* nonnull [[A]]) #[[ATTR3]]
-; CHECK-NEXT:    br label [[LOOP_HEADER]]
-; CHECK:       loop.exit:
-; CHECK-NEXT:    tail call void @fun1(i8* nonnull [[B]]) #[[ATTR3]]
-; CHECK-NEXT:    ret void
+; NOT_CGSCC_NPM: Function Attrs: nounwind
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@f19
+; NOT_CGSCC_NPM-SAME: (i8* [[A:%.*]], i8* nonnull [[B:%.*]], i8 [[C:%.*]]) #[[ATTR4]] {
+; NOT_CGSCC_NPM-NEXT:    br label [[LOOP_HEADER:%.*]]
+; NOT_CGSCC_NPM:       loop.header:
+; NOT_CGSCC_NPM-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[C]], 0
+; NOT_CGSCC_NPM-NEXT:    br i1 [[CMP2]], label [[LOOP_BODY:%.*]], label [[LOOP_EXIT:%.*]]
+; NOT_CGSCC_NPM:       loop.body:
+; NOT_CGSCC_NPM-NEXT:    tail call void @fun1(i8* nonnull [[B]]) #[[ATTR4]]
+; NOT_CGSCC_NPM-NEXT:    tail call void @fun1(i8* nonnull [[A]]) #[[ATTR4]]
+; NOT_CGSCC_NPM-NEXT:    br label [[LOOP_HEADER]]
+; NOT_CGSCC_NPM:       loop.exit:
+; NOT_CGSCC_NPM-NEXT:    tail call void @fun1(i8* nonnull [[B]]) #[[ATTR4]]
+; NOT_CGSCC_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM: Function Attrs: nounwind
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@f19
+; IS__CGSCC_NPM-SAME: (i8* [[A:%.*]], i8* nonnull [[B:%.*]], i8 [[C:%.*]]) #[[ATTR3]] {
+; IS__CGSCC_NPM-NEXT:    br label [[LOOP_HEADER:%.*]]
+; IS__CGSCC_NPM:       loop.header:
+; IS__CGSCC_NPM-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[C]], 0
+; IS__CGSCC_NPM-NEXT:    br i1 [[CMP2]], label [[LOOP_BODY:%.*]], label [[LOOP_EXIT:%.*]]
+; IS__CGSCC_NPM:       loop.body:
+; IS__CGSCC_NPM-NEXT:    tail call void @fun1(i8* nonnull [[B]]) #[[ATTR3]]
+; IS__CGSCC_NPM-NEXT:    tail call void @fun1(i8* nonnull [[A]]) #[[ATTR3]]
+; IS__CGSCC_NPM-NEXT:    br label [[LOOP_HEADER]]
+; IS__CGSCC_NPM:       loop.exit:
+; IS__CGSCC_NPM-NEXT:    tail call void @fun1(i8* nonnull [[B]]) #[[ATTR3]]
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   br label %loop.header
 loop.header:
@@ -713,11 +894,17 @@ define i8 @parent6(i8* %a, i8* %b) {
 ; The nonnull callsite is guaranteed to execute, so the argument must be nonnull throughout the parent.
 
 define i8 @parent7(i8* %a) {
-; CHECK-LABEL: define {{[^@]+}}@parent7
-; CHECK-SAME: (i8* nonnull [[A:%.*]]) {
-; CHECK-NEXT:    [[RET:%.*]] = call i8 @use1safecall(i8* nonnull readonly [[A]]) #[[ATTR13:[0-9]+]]
-; CHECK-NEXT:    call void @use1nonnull(i8* nonnull [[A]])
-; CHECK-NEXT:    ret i8 [[RET]]
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@parent7
+; NOT_CGSCC_NPM-SAME: (i8* nonnull [[A:%.*]]) {
+; NOT_CGSCC_NPM-NEXT:    [[RET:%.*]] = call i8 @use1safecall(i8* nonnull readonly [[A]]) #[[ATTR14:[0-9]+]]
+; NOT_CGSCC_NPM-NEXT:    call void @use1nonnull(i8* nonnull [[A]])
+; NOT_CGSCC_NPM-NEXT:    ret i8 [[RET]]
+;
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@parent7
+; IS__CGSCC_NPM-SAME: (i8* nonnull [[A:%.*]]) {
+; IS__CGSCC_NPM-NEXT:    [[RET:%.*]] = call i8 @use1safecall(i8* nonnull readonly [[A]]) #[[ATTR13:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    call void @use1nonnull(i8* nonnull [[A]])
+; IS__CGSCC_NPM-NEXT:    ret i8 [[RET]]
 ;
 
 
@@ -731,18 +918,31 @@ define i8 @parent7(i8* %a) {
 declare i32 @esfp(...)
 
 define i1 @parent8(i8* %a, i8* %bogus1, i8* %b) personality i8* bitcast (i32 (...)* @esfp to i8*){
-; CHECK: Function Attrs: nounwind
-; CHECK-LABEL: define {{[^@]+}}@parent8
-; CHECK-SAME: (i8* nonnull [[A:%.*]], i8* nocapture nofree readnone [[BOGUS1:%.*]], i8* nonnull [[B:%.*]]) #[[ATTR3]] personality i8* bitcast (i32 (...)* @esfp to i8*) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    invoke void @use2nonnull(i8* nonnull [[A]], i8* nonnull [[B]])
-; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[EXC:%.*]]
-; CHECK:       cont:
-; CHECK-NEXT:    ret i1 false
-; CHECK:       exc:
-; CHECK-NEXT:    [[LP:%.*]] = landingpad { i8*, i32 }
-; CHECK-NEXT:    filter [0 x i8*] zeroinitializer
-; CHECK-NEXT:    unreachable
+; NOT_CGSCC_NPM: Function Attrs: nounwind
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@parent8
+; NOT_CGSCC_NPM-SAME: (i8* nonnull [[A:%.*]], i8* nocapture nofree readnone [[BOGUS1:%.*]], i8* nonnull [[B:%.*]]) #[[ATTR4]] personality i8* bitcast (i32 (...)* @esfp to i8*) {
+; NOT_CGSCC_NPM-NEXT:  entry:
+; NOT_CGSCC_NPM-NEXT:    invoke void @use2nonnull(i8* nonnull [[A]], i8* nonnull [[B]])
+; NOT_CGSCC_NPM-NEXT:    to label [[CONT:%.*]] unwind label [[EXC:%.*]]
+; NOT_CGSCC_NPM:       cont:
+; NOT_CGSCC_NPM-NEXT:    ret i1 false
+; NOT_CGSCC_NPM:       exc:
+; NOT_CGSCC_NPM-NEXT:    [[LP:%.*]] = landingpad { i8*, i32 }
+; NOT_CGSCC_NPM-NEXT:    filter [0 x i8*] zeroinitializer
+; NOT_CGSCC_NPM-NEXT:    unreachable
+;
+; IS__CGSCC_NPM: Function Attrs: nounwind
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@parent8
+; IS__CGSCC_NPM-SAME: (i8* nonnull [[A:%.*]], i8* nocapture nofree readnone [[BOGUS1:%.*]], i8* nonnull [[B:%.*]]) #[[ATTR3]] personality i8* bitcast (i32 (...)* @esfp to i8*) {
+; IS__CGSCC_NPM-NEXT:  entry:
+; IS__CGSCC_NPM-NEXT:    invoke void @use2nonnull(i8* nonnull [[A]], i8* nonnull [[B]])
+; IS__CGSCC_NPM-NEXT:    to label [[CONT:%.*]] unwind label [[EXC:%.*]]
+; IS__CGSCC_NPM:       cont:
+; IS__CGSCC_NPM-NEXT:    ret i1 false
+; IS__CGSCC_NPM:       exc:
+; IS__CGSCC_NPM-NEXT:    [[LP:%.*]] = landingpad { i8*, i32 }
+; IS__CGSCC_NPM-NEXT:    filter [0 x i8*] zeroinitializer
+; IS__CGSCC_NPM-NEXT:    unreachable
 ;
 
 entry:
@@ -772,11 +972,17 @@ define i32* @gep1(i32* %p) {
 
 define i32* @gep1_no_null_opt(i32* %p) #0 {
 ; Should't be able to derive nonnull based on gep.
-; CHECK: Function Attrs: nofree norecurse nosync nounwind null_pointer_is_valid readnone willreturn
-; CHECK-LABEL: define {{[^@]+}}@gep1_no_null_opt
-; CHECK-SAME: (i32* nofree readnone "no-capture-maybe-returned" [[P:%.*]]) #[[ATTR7:[0-9]+]] {
-; CHECK-NEXT:    [[Q:%.*]] = getelementptr inbounds i32, i32* [[P]], i32 1
-; CHECK-NEXT:    ret i32* [[Q]]
+; NOT_CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind null_pointer_is_valid readnone willreturn
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@gep1_no_null_opt
+; NOT_CGSCC_NPM-SAME: (i32* nofree readnone "no-capture-maybe-returned" [[P:%.*]]) #[[ATTR8:[0-9]+]] {
+; NOT_CGSCC_NPM-NEXT:    [[Q:%.*]] = getelementptr inbounds i32, i32* [[P]], i32 1
+; NOT_CGSCC_NPM-NEXT:    ret i32* [[Q]]
+;
+; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind null_pointer_is_valid readnone willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@gep1_no_null_opt
+; IS__CGSCC_NPM-SAME: (i32* nofree readnone "no-capture-maybe-returned" [[P:%.*]]) #[[ATTR7:[0-9]+]] {
+; IS__CGSCC_NPM-NEXT:    [[Q:%.*]] = getelementptr inbounds i32, i32* [[P]], i32 1
+; IS__CGSCC_NPM-NEXT:    ret i32* [[Q]]
 ;
   %q = getelementptr inbounds i32, i32* %p, i32 1
   ret i32* %q
@@ -825,11 +1031,17 @@ define i32* @g1() {
 
 declare void @use_i32_ptr(i32* readnone nocapture) nounwind
 define internal void @called_by_weak(i32* %a) {
-; CHECK: Function Attrs: nounwind
-; CHECK-LABEL: define {{[^@]+}}@called_by_weak
-; CHECK-SAME: (i32* noalias nocapture nonnull readnone [[A:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    call void @use_i32_ptr(i32* noalias nocapture nonnull readnone [[A]]) #[[ATTR3]]
-; CHECK-NEXT:    ret void
+; NOT_CGSCC_NPM: Function Attrs: nounwind
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@called_by_weak
+; NOT_CGSCC_NPM-SAME: (i32* noalias nocapture nonnull readnone [[A:%.*]]) #[[ATTR4]] {
+; NOT_CGSCC_NPM-NEXT:    call void @use_i32_ptr(i32* noalias nocapture nonnull readnone [[A]]) #[[ATTR4]]
+; NOT_CGSCC_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM: Function Attrs: nounwind
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@called_by_weak
+; IS__CGSCC_NPM-SAME: (i32* noalias nocapture nonnull readnone [[A:%.*]]) #[[ATTR3]] {
+; IS__CGSCC_NPM-NEXT:    call void @use_i32_ptr(i32* noalias nocapture nonnull readnone [[A]]) #[[ATTR3]]
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   call void @use_i32_ptr(i32* %a)
   ret void
@@ -838,10 +1050,15 @@ define internal void @called_by_weak(i32* %a) {
 ; Check we do not annotate the function interface of this weak function.
 define weak_odr void @weak_caller(i32* nonnull %a) {
 ;
-; CHECK-LABEL: define {{[^@]+}}@weak_caller
-; CHECK-SAME: (i32* nonnull [[A:%.*]]) {
-; CHECK-NEXT:    call void @called_by_weak(i32* noalias nocapture nonnull readnone [[A]]) #[[ATTR3]]
-; CHECK-NEXT:    ret void
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@weak_caller
+; NOT_CGSCC_NPM-SAME: (i32* nonnull [[A:%.*]]) {
+; NOT_CGSCC_NPM-NEXT:    call void @called_by_weak(i32* noalias nocapture nonnull readnone [[A]]) #[[ATTR4]]
+; NOT_CGSCC_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@weak_caller
+; IS__CGSCC_NPM-SAME: (i32* nonnull [[A:%.*]]) {
+; IS__CGSCC_NPM-NEXT:    call void @called_by_weak(i32* noalias nocapture nonnull readnone [[A]]) #[[ATTR3]]
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   call void @called_by_weak(i32* %a)
   ret void
@@ -849,22 +1066,34 @@ define weak_odr void @weak_caller(i32* nonnull %a) {
 
 ; Expect nonnull
 define internal void @control(i32* dereferenceable(4) %a) {
-; CHECK: Function Attrs: nounwind
-; CHECK-LABEL: define {{[^@]+}}@control
-; CHECK-SAME: (i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    call void @use_i32_ptr(i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR3]]
-; CHECK-NEXT:    ret void
+; NOT_CGSCC_NPM: Function Attrs: nounwind
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@control
+; NOT_CGSCC_NPM-SAME: (i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A:%.*]]) #[[ATTR4]] {
+; NOT_CGSCC_NPM-NEXT:    call void @use_i32_ptr(i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR4]]
+; NOT_CGSCC_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM: Function Attrs: nounwind
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@control
+; IS__CGSCC_NPM-SAME: (i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A:%.*]]) #[[ATTR3]] {
+; IS__CGSCC_NPM-NEXT:    call void @use_i32_ptr(i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR3]]
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   call void @use_i32_ptr(i32* %a)
   ret void
 }
 ; Avoid nonnull as we do not touch naked functions
 define internal void @naked(i32* dereferenceable(4) %a) naked {
-; CHECK: Function Attrs: naked
-; CHECK-LABEL: define {{[^@]+}}@naked
-; CHECK-SAME: (i32* dereferenceable(4) [[A:%.*]]) #[[ATTR8:[0-9]+]] {
-; CHECK-NEXT:    call void @use_i32_ptr(i32* [[A]])
-; CHECK-NEXT:    ret void
+; NOT_CGSCC_NPM: Function Attrs: naked
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@naked
+; NOT_CGSCC_NPM-SAME: (i32* dereferenceable(4) [[A:%.*]]) #[[ATTR9:[0-9]+]] {
+; NOT_CGSCC_NPM-NEXT:    call void @use_i32_ptr(i32* [[A]])
+; NOT_CGSCC_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM: Function Attrs: naked
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@naked
+; IS__CGSCC_NPM-SAME: (i32* dereferenceable(4) [[A:%.*]]) #[[ATTR8:[0-9]+]] {
+; IS__CGSCC_NPM-NEXT:    call void @use_i32_ptr(i32* [[A]])
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   call void @use_i32_ptr(i32* %a)
   ret void
@@ -872,22 +1101,35 @@ define internal void @naked(i32* dereferenceable(4) %a) naked {
 ; Avoid nonnull as we do not touch optnone
 define internal void @optnone(i32* dereferenceable(4) %a) optnone noinline {
 ;
-; CHECK: Function Attrs: noinline optnone
-; CHECK-LABEL: define {{[^@]+}}@optnone
-; CHECK-SAME: (i32* dereferenceable(4) [[A:%.*]]) #[[ATTR9:[0-9]+]] {
-; CHECK-NEXT:    call void @use_i32_ptr(i32* [[A]])
-; CHECK-NEXT:    ret void
+; NOT_CGSCC_NPM: Function Attrs: noinline optnone
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@optnone
+; NOT_CGSCC_NPM-SAME: (i32* dereferenceable(4) [[A:%.*]]) #[[ATTR10:[0-9]+]] {
+; NOT_CGSCC_NPM-NEXT:    call void @use_i32_ptr(i32* [[A]])
+; NOT_CGSCC_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM: Function Attrs: noinline optnone
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@optnone
+; IS__CGSCC_NPM-SAME: (i32* dereferenceable(4) [[A:%.*]]) #[[ATTR9:[0-9]+]] {
+; IS__CGSCC_NPM-NEXT:    call void @use_i32_ptr(i32* [[A]])
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   call void @use_i32_ptr(i32* %a)
   ret void
 }
 define void @make_live(i32* nonnull dereferenceable(8) %a) {
-; CHECK-LABEL: define {{[^@]+}}@make_live
-; CHECK-SAME: (i32* noundef nonnull align 16 dereferenceable(8) [[A:%.*]]) {
-; CHECK-NEXT:    call void @naked(i32* noundef nonnull align 16 dereferenceable(8) [[A]])
-; CHECK-NEXT:    call void @control(i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR3]]
-; CHECK-NEXT:    call void @optnone(i32* noundef nonnull align 16 dereferenceable(8) [[A]])
-; CHECK-NEXT:    ret void
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@make_live
+; NOT_CGSCC_NPM-SAME: (i32* noundef nonnull align 16 dereferenceable(8) [[A:%.*]]) {
+; NOT_CGSCC_NPM-NEXT:    call void @naked(i32* noundef nonnull align 16 dereferenceable(8) [[A]])
+; NOT_CGSCC_NPM-NEXT:    call void @control(i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR4]]
+; NOT_CGSCC_NPM-NEXT:    call void @optnone(i32* noundef nonnull align 16 dereferenceable(8) [[A]])
+; NOT_CGSCC_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@make_live
+; IS__CGSCC_NPM-SAME: (i32* noundef nonnull align 16 dereferenceable(8) [[A:%.*]]) {
+; IS__CGSCC_NPM-NEXT:    call void @naked(i32* noundef nonnull align 16 dereferenceable(8) [[A]])
+; IS__CGSCC_NPM-NEXT:    call void @control(i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR3]]
+; IS__CGSCC_NPM-NEXT:    call void @optnone(i32* noundef nonnull align 16 dereferenceable(8) [[A]])
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   call void @naked(i32* nonnull dereferenceable(8) align 16 %a)
   call void @control(i32* nonnull dereferenceable(8) align 16 %a)
@@ -908,35 +1150,51 @@ define i32 @nonnull_exec_ctx_1(i32* %a, i32 %b) {
 ;
 ; IS________OPM: Function Attrs: nounwind
 ; IS________OPM-LABEL: define {{[^@]+}}@nonnull_exec_ctx_1
-; IS________OPM-SAME: (i32* [[A:%.*]], i32 [[B:%.*]]) #[[ATTR3]] {
+; IS________OPM-SAME: (i32* [[A:%.*]], i32 [[B:%.*]]) #[[ATTR4]] {
 ; IS________OPM-NEXT:  en:
 ; IS________OPM-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
 ; IS________OPM-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; IS________OPM:       ex:
-; IS________OPM-NEXT:    [[TMP5:%.*]] = tail call i32 @g(i32* nonnull [[A]]) #[[ATTR3]]
+; IS________OPM-NEXT:    [[TMP5:%.*]] = tail call i32 @g(i32* nonnull [[A]]) #[[ATTR4]]
 ; IS________OPM-NEXT:    ret i32 [[TMP5]]
 ; IS________OPM:       hd:
 ; IS________OPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
-; IS________OPM-NEXT:    tail call void @h(i32* [[A]]) #[[ATTR3]]
+; IS________OPM-NEXT:    tail call void @h(i32* [[A]]) #[[ATTR4]]
 ; IS________OPM-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
 ; IS________OPM-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
 ; IS________OPM-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
 ;
-; IS________NPM: Function Attrs: nounwind willreturn
-; IS________NPM-LABEL: define {{[^@]+}}@nonnull_exec_ctx_1
-; IS________NPM-SAME: (i32* [[A:%.*]], i32 [[B:%.*]]) #[[ATTR5]] {
-; IS________NPM-NEXT:  en:
-; IS________NPM-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
-; IS________NPM-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
-; IS________NPM:       ex:
-; IS________NPM-NEXT:    [[TMP5:%.*]] = tail call i32 @g(i32* nonnull [[A]]) #[[ATTR5]]
-; IS________NPM-NEXT:    ret i32 [[TMP5]]
-; IS________NPM:       hd:
-; IS________NPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
-; IS________NPM-NEXT:    tail call void @h(i32* [[A]]) #[[ATTR5]]
-; IS________NPM-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
-; IS________NPM-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
-; IS________NPM-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
+; IS__TUNIT_NPM: Function Attrs: nounwind willreturn
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@nonnull_exec_ctx_1
+; IS__TUNIT_NPM-SAME: (i32* [[A:%.*]], i32 [[B:%.*]]) #[[ATTR6]] {
+; IS__TUNIT_NPM-NEXT:  en:
+; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
+; IS__TUNIT_NPM-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
+; IS__TUNIT_NPM:       ex:
+; IS__TUNIT_NPM-NEXT:    [[TMP5:%.*]] = tail call i32 @g(i32* nonnull [[A]]) #[[ATTR6]]
+; IS__TUNIT_NPM-NEXT:    ret i32 [[TMP5]]
+; IS__TUNIT_NPM:       hd:
+; IS__TUNIT_NPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
+; IS__TUNIT_NPM-NEXT:    tail call void @h(i32* [[A]]) #[[ATTR6]]
+; IS__TUNIT_NPM-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
+; IS__TUNIT_NPM-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
+; IS__TUNIT_NPM-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
+;
+; IS__CGSCC_NPM: Function Attrs: nounwind willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@nonnull_exec_ctx_1
+; IS__CGSCC_NPM-SAME: (i32* [[A:%.*]], i32 [[B:%.*]]) #[[ATTR5]] {
+; IS__CGSCC_NPM-NEXT:  en:
+; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
+; IS__CGSCC_NPM-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
+; IS__CGSCC_NPM:       ex:
+; IS__CGSCC_NPM-NEXT:    [[TMP5:%.*]] = tail call i32 @g(i32* nonnull [[A]]) #[[ATTR5]]
+; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP5]]
+; IS__CGSCC_NPM:       hd:
+; IS__CGSCC_NPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
+; IS__CGSCC_NPM-NEXT:    tail call void @h(i32* [[A]]) #[[ATTR5]]
+; IS__CGSCC_NPM-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
+; IS__CGSCC_NPM-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
+; IS__CGSCC_NPM-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
 ;
 en:
   %tmp3 = icmp eq i32 %b, 0
@@ -958,39 +1216,57 @@ define i32 @nonnull_exec_ctx_1b(i32* %a, i32 %b) {
 ;
 ; IS________OPM: Function Attrs: nounwind
 ; IS________OPM-LABEL: define {{[^@]+}}@nonnull_exec_ctx_1b
-; IS________OPM-SAME: (i32* [[A:%.*]], i32 [[B:%.*]]) #[[ATTR3]] {
+; IS________OPM-SAME: (i32* [[A:%.*]], i32 [[B:%.*]]) #[[ATTR4]] {
 ; IS________OPM-NEXT:  en:
 ; IS________OPM-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
 ; IS________OPM-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; IS________OPM:       ex:
-; IS________OPM-NEXT:    [[TMP5:%.*]] = tail call i32 @g(i32* nonnull [[A]]) #[[ATTR3]]
+; IS________OPM-NEXT:    [[TMP5:%.*]] = tail call i32 @g(i32* nonnull [[A]]) #[[ATTR4]]
 ; IS________OPM-NEXT:    ret i32 [[TMP5]]
 ; IS________OPM:       hd:
 ; IS________OPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
-; IS________OPM-NEXT:    tail call void @h(i32* [[A]]) #[[ATTR3]]
+; IS________OPM-NEXT:    tail call void @h(i32* [[A]]) #[[ATTR4]]
 ; IS________OPM-NEXT:    br label [[HD2]]
 ; IS________OPM:       hd2:
 ; IS________OPM-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
 ; IS________OPM-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
 ; IS________OPM-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
 ;
-; IS________NPM: Function Attrs: nounwind willreturn
-; IS________NPM-LABEL: define {{[^@]+}}@nonnull_exec_ctx_1b
-; IS________NPM-SAME: (i32* [[A:%.*]], i32 [[B:%.*]]) #[[ATTR5]] {
-; IS________NPM-NEXT:  en:
-; IS________NPM-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
-; IS________NPM-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
-; IS________NPM:       ex:
-; IS________NPM-NEXT:    [[TMP5:%.*]] = tail call i32 @g(i32* nonnull [[A]]) #[[ATTR5]]
-; IS________NPM-NEXT:    ret i32 [[TMP5]]
-; IS________NPM:       hd:
-; IS________NPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
-; IS________NPM-NEXT:    tail call void @h(i32* [[A]]) #[[ATTR5]]
-; IS________NPM-NEXT:    br label [[HD2]]
-; IS________NPM:       hd2:
-; IS________NPM-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
-; IS________NPM-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
-; IS________NPM-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
+; IS__TUNIT_NPM: Function Attrs: nounwind willreturn
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@nonnull_exec_ctx_1b
+; IS__TUNIT_NPM-SAME: (i32* [[A:%.*]], i32 [[B:%.*]]) #[[ATTR6]] {
+; IS__TUNIT_NPM-NEXT:  en:
+; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
+; IS__TUNIT_NPM-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
+; IS__TUNIT_NPM:       ex:
+; IS__TUNIT_NPM-NEXT:    [[TMP5:%.*]] = tail call i32 @g(i32* nonnull [[A]]) #[[ATTR6]]
+; IS__TUNIT_NPM-NEXT:    ret i32 [[TMP5]]
+; IS__TUNIT_NPM:       hd:
+; IS__TUNIT_NPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
+; IS__TUNIT_NPM-NEXT:    tail call void @h(i32* [[A]]) #[[ATTR6]]
+; IS__TUNIT_NPM-NEXT:    br label [[HD2]]
+; IS__TUNIT_NPM:       hd2:
+; IS__TUNIT_NPM-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
+; IS__TUNIT_NPM-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
+; IS__TUNIT_NPM-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
+;
+; IS__CGSCC_NPM: Function Attrs: nounwind willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@nonnull_exec_ctx_1b
+; IS__CGSCC_NPM-SAME: (i32* [[A:%.*]], i32 [[B:%.*]]) #[[ATTR5]] {
+; IS__CGSCC_NPM-NEXT:  en:
+; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
+; IS__CGSCC_NPM-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
+; IS__CGSCC_NPM:       ex:
+; IS__CGSCC_NPM-NEXT:    [[TMP5:%.*]] = tail call i32 @g(i32* nonnull [[A]]) #[[ATTR5]]
+; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP5]]
+; IS__CGSCC_NPM:       hd:
+; IS__CGSCC_NPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
+; IS__CGSCC_NPM-NEXT:    tail call void @h(i32* [[A]]) #[[ATTR5]]
+; IS__CGSCC_NPM-NEXT:    br label [[HD2]]
+; IS__CGSCC_NPM:       hd2:
+; IS__CGSCC_NPM-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
+; IS__CGSCC_NPM-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
+; IS__CGSCC_NPM-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
 ;
 en:
   %tmp3 = icmp eq i32 %b, 0
@@ -1013,21 +1289,37 @@ hd2:
 
 define i32 @nonnull_exec_ctx_2(i32* %a, i32 %b) willreturn nounwind {
 ;
-; CHECK: Function Attrs: nounwind willreturn
-; CHECK-LABEL: define {{[^@]+}}@nonnull_exec_ctx_2
-; CHECK-SAME: (i32* nonnull [[A:%.*]], i32 [[B:%.*]]) #[[ATTR5]] {
-; CHECK-NEXT:  en:
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
-; CHECK-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
-; CHECK:       ex:
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @g(i32* nonnull [[A]]) #[[ATTR3]]
-; CHECK-NEXT:    ret i32 [[TMP5]]
-; CHECK:       hd:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
-; CHECK-NEXT:    tail call void @h(i32* nonnull [[A]]) #[[ATTR3]]
-; CHECK-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
-; CHECK-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
+; NOT_CGSCC_NPM: Function Attrs: nounwind willreturn
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@nonnull_exec_ctx_2
+; NOT_CGSCC_NPM-SAME: (i32* nonnull [[A:%.*]], i32 [[B:%.*]]) #[[ATTR6]] {
+; NOT_CGSCC_NPM-NEXT:  en:
+; NOT_CGSCC_NPM-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
+; NOT_CGSCC_NPM-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
+; NOT_CGSCC_NPM:       ex:
+; NOT_CGSCC_NPM-NEXT:    [[TMP5:%.*]] = tail call i32 @g(i32* nonnull [[A]]) #[[ATTR4]]
+; NOT_CGSCC_NPM-NEXT:    ret i32 [[TMP5]]
+; NOT_CGSCC_NPM:       hd:
+; NOT_CGSCC_NPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
+; NOT_CGSCC_NPM-NEXT:    tail call void @h(i32* nonnull [[A]]) #[[ATTR4]]
+; NOT_CGSCC_NPM-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
+; NOT_CGSCC_NPM-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
+; NOT_CGSCC_NPM-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
+;
+; IS__CGSCC_NPM: Function Attrs: nounwind willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@nonnull_exec_ctx_2
+; IS__CGSCC_NPM-SAME: (i32* nonnull [[A:%.*]], i32 [[B:%.*]]) #[[ATTR5]] {
+; IS__CGSCC_NPM-NEXT:  en:
+; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
+; IS__CGSCC_NPM-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
+; IS__CGSCC_NPM:       ex:
+; IS__CGSCC_NPM-NEXT:    [[TMP5:%.*]] = tail call i32 @g(i32* nonnull [[A]]) #[[ATTR3]]
+; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP5]]
+; IS__CGSCC_NPM:       hd:
+; IS__CGSCC_NPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
+; IS__CGSCC_NPM-NEXT:    tail call void @h(i32* nonnull [[A]]) #[[ATTR3]]
+; IS__CGSCC_NPM-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
+; IS__CGSCC_NPM-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
+; IS__CGSCC_NPM-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
 ;
 en:
   %tmp3 = icmp eq i32 %b, 0
@@ -1047,23 +1339,41 @@ hd:
 
 define i32 @nonnull_exec_ctx_2b(i32* %a, i32 %b) willreturn nounwind {
 ;
-; CHECK: Function Attrs: nounwind willreturn
-; CHECK-LABEL: define {{[^@]+}}@nonnull_exec_ctx_2b
-; CHECK-SAME: (i32* nonnull [[A:%.*]], i32 [[B:%.*]]) #[[ATTR5]] {
-; CHECK-NEXT:  en:
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
-; CHECK-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
-; CHECK:       ex:
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @g(i32* nonnull [[A]]) #[[ATTR3]]
-; CHECK-NEXT:    ret i32 [[TMP5]]
-; CHECK:       hd:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
-; CHECK-NEXT:    tail call void @h(i32* nonnull [[A]]) #[[ATTR3]]
-; CHECK-NEXT:    br label [[HD2]]
-; CHECK:       hd2:
-; CHECK-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
-; CHECK-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
+; NOT_CGSCC_NPM: Function Attrs: nounwind willreturn
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@nonnull_exec_ctx_2b
+; NOT_CGSCC_NPM-SAME: (i32* nonnull [[A:%.*]], i32 [[B:%.*]]) #[[ATTR6]] {
+; NOT_CGSCC_NPM-NEXT:  en:
+; NOT_CGSCC_NPM-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
+; NOT_CGSCC_NPM-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
+; NOT_CGSCC_NPM:       ex:
+; NOT_CGSCC_NPM-NEXT:    [[TMP5:%.*]] = tail call i32 @g(i32* nonnull [[A]]) #[[ATTR4]]
+; NOT_CGSCC_NPM-NEXT:    ret i32 [[TMP5]]
+; NOT_CGSCC_NPM:       hd:
+; NOT_CGSCC_NPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
+; NOT_CGSCC_NPM-NEXT:    tail call void @h(i32* nonnull [[A]]) #[[ATTR4]]
+; NOT_CGSCC_NPM-NEXT:    br label [[HD2]]
+; NOT_CGSCC_NPM:       hd2:
+; NOT_CGSCC_NPM-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
+; NOT_CGSCC_NPM-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
+; NOT_CGSCC_NPM-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
+;
+; IS__CGSCC_NPM: Function Attrs: nounwind willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@nonnull_exec_ctx_2b
+; IS__CGSCC_NPM-SAME: (i32* nonnull [[A:%.*]], i32 [[B:%.*]]) #[[ATTR5]] {
+; IS__CGSCC_NPM-NEXT:  en:
+; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
+; IS__CGSCC_NPM-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
+; IS__CGSCC_NPM:       ex:
+; IS__CGSCC_NPM-NEXT:    [[TMP5:%.*]] = tail call i32 @g(i32* nonnull [[A]]) #[[ATTR3]]
+; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP5]]
+; IS__CGSCC_NPM:       hd:
+; IS__CGSCC_NPM-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
+; IS__CGSCC_NPM-NEXT:    tail call void @h(i32* nonnull [[A]]) #[[ATTR3]]
+; IS__CGSCC_NPM-NEXT:    br label [[HD2]]
+; IS__CGSCC_NPM:       hd2:
+; IS__CGSCC_NPM-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
+; IS__CGSCC_NPM-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
+; IS__CGSCC_NPM-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
 ;
 en:
   %tmp3 = icmp eq i32 %b, 0
@@ -1200,14 +1510,23 @@ declare i8* @strrchr(i8* %0, i32 %1) nofree nounwind readonly willreturn
 
 ; We should not mark the return of @strrchr as `nonnull`, it may well be NULL!
 define i8* @mybasename(i8* nofree readonly %str) {
-; CHECK: Function Attrs: nofree nounwind readonly willreturn
-; CHECK-LABEL: define {{[^@]+}}@mybasename
-; CHECK-SAME: (i8* nofree readonly [[STR:%.*]]) #[[ATTR10:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @strrchr(i8* nofree readonly [[STR]], i32 noundef 47) #[[ATTR13]]
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i8* [[CALL]], null
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[CALL]], i64 1
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i8* [[ADD_PTR]], i8* [[STR]]
-; CHECK-NEXT:    ret i8* [[COND]]
+; NOT_CGSCC_NPM: Function Attrs: nofree nounwind readonly willreturn
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@mybasename
+; NOT_CGSCC_NPM-SAME: (i8* nofree readonly [[STR:%.*]]) #[[ATTR11:[0-9]+]] {
+; NOT_CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i8* @strrchr(i8* nofree readonly [[STR]], i32 noundef 47) #[[ATTR14]]
+; NOT_CGSCC_NPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i8* [[CALL]], null
+; NOT_CGSCC_NPM-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[CALL]], i64 1
+; NOT_CGSCC_NPM-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i8* [[ADD_PTR]], i8* [[STR]]
+; NOT_CGSCC_NPM-NEXT:    ret i8* [[COND]]
+;
+; IS__CGSCC_NPM: Function Attrs: nofree nounwind readonly willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@mybasename
+; IS__CGSCC_NPM-SAME: (i8* nofree readonly [[STR:%.*]]) #[[ATTR10:[0-9]+]] {
+; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i8* @strrchr(i8* nofree readonly [[STR]], i32 noundef 47) #[[ATTR13]]
+; IS__CGSCC_NPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i8* [[CALL]], null
+; IS__CGSCC_NPM-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[CALL]], i64 1
+; IS__CGSCC_NPM-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i8* [[ADD_PTR]], i8* [[STR]]
+; IS__CGSCC_NPM-NEXT:    ret i8* [[COND]]
 ;
   %call = call i8* @strrchr(i8* %str, i32 47)
   %tobool = icmp ne i8* %call, null
@@ -1224,12 +1543,19 @@ define void @nonnull_assume_pos(i8* %arg) {
 ; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = call i8* @unknown()
 ; ATTRIBUTOR-NEXT:    ret void
 ;
-; CHECK-LABEL: define {{[^@]+}}@nonnull_assume_pos
-; CHECK-SAME: (i8* nocapture nofree nonnull readnone [[ARG:%.*]]) {
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR11]] [ "nonnull"(i8* [[ARG]]) ]
-; CHECK-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR3]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @unknown()
-; CHECK-NEXT:    ret void
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@nonnull_assume_pos
+; NOT_CGSCC_NPM-SAME: (i8* nocapture nofree nonnull readnone [[ARG:%.*]]) {
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR12]] [ "nonnull"(i8* [[ARG]]) ]
+; NOT_CGSCC_NPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR4]]
+; NOT_CGSCC_NPM-NEXT:    [[TMP1:%.*]] = call i8* @unknown()
+; NOT_CGSCC_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@nonnull_assume_pos
+; IS__CGSCC_NPM-SAME: (i8* nocapture nofree nonnull readnone [[ARG:%.*]]) {
+; IS__CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR11]] [ "nonnull"(i8* [[ARG]]) ]
+; IS__CGSCC_NPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR3]]
+; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = call i8* @unknown()
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) ["nonnull"(i8* %arg)]
   call void @use_i8_ptr(i8* %arg)
@@ -1250,17 +1576,29 @@ define void @nonnull_assume_neg(i8* %arg) {
 ; ATTRIBUTOR-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define {{[^@]+}}@nonnull_assume_neg
-; CHECK-SAME: (i8* nocapture nofree readnone [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @unknown()
-; CHECK-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[ARG]]) #[[ATTR3]]
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) [ "nonnull"(i8* [[ARG]]) ]
-; CHECK-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR3]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i8* @unknown()
-; CHECK-NEXT:    call void @use_i8_ptr_ret(i8* noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR3]]
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) [ "nonnull"(i8* [[ARG]]) ]
-; CHECK-NEXT:    call void @use_i8_ptr_ret(i8* noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR3]]
-; CHECK-NEXT:    ret void
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@nonnull_assume_neg
+; NOT_CGSCC_NPM-SAME: (i8* nocapture nofree readnone [[ARG:%.*]]) {
+; NOT_CGSCC_NPM-NEXT:    [[TMP1:%.*]] = call i8* @unknown()
+; NOT_CGSCC_NPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[ARG]]) #[[ATTR4]]
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) [ "nonnull"(i8* [[ARG]]) ]
+; NOT_CGSCC_NPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR4]]
+; NOT_CGSCC_NPM-NEXT:    [[TMP2:%.*]] = call i8* @unknown()
+; NOT_CGSCC_NPM-NEXT:    call void @use_i8_ptr_ret(i8* noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR4]]
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) [ "nonnull"(i8* [[ARG]]) ]
+; NOT_CGSCC_NPM-NEXT:    call void @use_i8_ptr_ret(i8* noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR4]]
+; NOT_CGSCC_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@nonnull_assume_neg
+; IS__CGSCC_NPM-SAME: (i8* nocapture nofree readnone [[ARG:%.*]]) {
+; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = call i8* @unknown()
+; IS__CGSCC_NPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[ARG]]) #[[ATTR3]]
+; IS__CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) [ "nonnull"(i8* [[ARG]]) ]
+; IS__CGSCC_NPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR3]]
+; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = call i8* @unknown()
+; IS__CGSCC_NPM-NEXT:    call void @use_i8_ptr_ret(i8* noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR3]]
+; IS__CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) [ "nonnull"(i8* [[ARG]]) ]
+; IS__CGSCC_NPM-NEXT:    call void @use_i8_ptr_ret(i8* noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR3]]
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   call i8* @unknown()
   call void @use_i8_ptr(i8* %arg)
@@ -1312,18 +1650,34 @@ declare void @nonnull_callee(i8* nonnull %p)
 attributes #0 = { null_pointer_is_valid }
 attributes #1 = { nounwind willreturn}
 ;.
-; CHECK: attributes #[[ATTR0]] = { inaccessiblememonly nofree nosync nounwind willreturn }
-; CHECK: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; CHECK: attributes #[[ATTR2]] = { noreturn }
-; CHECK: attributes #[[ATTR3]] = { nounwind }
-; CHECK: attributes #[[ATTR4]] = { argmemonly nofree nosync nounwind readonly }
-; CHECK: attributes #[[ATTR5]] = { nounwind willreturn }
-; CHECK: attributes #[[ATTR6:[0-9]+]] = { nounwind readonly willreturn }
-; CHECK: attributes #[[ATTR7]] = { nofree norecurse nosync nounwind null_pointer_is_valid readnone willreturn }
-; CHECK: attributes #[[ATTR8]] = { naked }
-; CHECK: attributes #[[ATTR9]] = { noinline optnone }
-; CHECK: attributes #[[ATTR10]] = { nofree nounwind readonly willreturn }
-; CHECK: attributes #[[ATTR11]] = { willreturn }
-; CHECK: attributes #[[ATTR12]] = { nofree nosync nounwind readonly }
-; CHECK: attributes #[[ATTR13]] = { readonly willreturn }
+; NOT_CGSCC_NPM: attributes #[[ATTR0]] = { inaccessiblememonly nofree nosync nounwind willreturn }
+; NOT_CGSCC_NPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
+; NOT_CGSCC_NPM: attributes #[[ATTR2]] = { nofree nosync nounwind readnone willreturn }
+; NOT_CGSCC_NPM: attributes #[[ATTR3]] = { noreturn }
+; NOT_CGSCC_NPM: attributes #[[ATTR4]] = { nounwind }
+; NOT_CGSCC_NPM: attributes #[[ATTR5]] = { argmemonly nofree nosync nounwind readonly }
+; NOT_CGSCC_NPM: attributes #[[ATTR6]] = { nounwind willreturn }
+; NOT_CGSCC_NPM: attributes #[[ATTR7:[0-9]+]] = { nounwind readonly willreturn }
+; NOT_CGSCC_NPM: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind null_pointer_is_valid readnone willreturn }
+; NOT_CGSCC_NPM: attributes #[[ATTR9]] = { naked }
+; NOT_CGSCC_NPM: attributes #[[ATTR10]] = { noinline optnone }
+; NOT_CGSCC_NPM: attributes #[[ATTR11]] = { nofree nounwind readonly willreturn }
+; NOT_CGSCC_NPM: attributes #[[ATTR12]] = { willreturn }
+; NOT_CGSCC_NPM: attributes #[[ATTR13]] = { nofree nosync nounwind readonly }
+; NOT_CGSCC_NPM: attributes #[[ATTR14]] = { readonly willreturn }
+;.
+; IS__CGSCC_NPM: attributes #[[ATTR0]] = { inaccessiblememonly nofree nosync nounwind willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR2]] = { noreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR3]] = { nounwind }
+; IS__CGSCC_NPM: attributes #[[ATTR4]] = { argmemonly nofree nosync nounwind readonly }
+; IS__CGSCC_NPM: attributes #[[ATTR5]] = { nounwind willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR6:[0-9]+]] = { nounwind readonly willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR7]] = { nofree norecurse nosync nounwind null_pointer_is_valid readnone willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR8]] = { naked }
+; IS__CGSCC_NPM: attributes #[[ATTR9]] = { noinline optnone }
+; IS__CGSCC_NPM: attributes #[[ATTR10]] = { nofree nounwind readonly willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR11]] = { willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR12]] = { nofree nosync nounwind readonly }
+; IS__CGSCC_NPM: attributes #[[ATTR13]] = { readonly willreturn }
 ;.

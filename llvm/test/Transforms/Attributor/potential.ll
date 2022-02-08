@@ -55,7 +55,6 @@ define internal i32 @call_with_two_values(i32 %c) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@call_with_two_values
 ; IS__CGSCC____-SAME: () #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    [[RET:%.*]] = add i32 0, 0
 ; IS__CGSCC____-NEXT:    ret i32 undef
 ;
   %csret1 = call i32 @iszero2(i32 %c)
@@ -104,7 +103,9 @@ define internal i32 @iszero3(i32 %c) {
 define internal i32 @less_than_two(i32 %c) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@less_than_two
-; IS__CGSCC____-SAME: () #[[ATTR0]] {
+; IS__CGSCC____-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp slt i32 undef, 2
+; IS__CGSCC____-NEXT:    [[RET:%.*]] = zext i1 true to i32
 ; IS__CGSCC____-NEXT:    ret i32 undef
 ;
   %cmp = icmp slt i32 %c, 2
@@ -183,37 +184,21 @@ define i1 @potential_test6(i32 %c) {
 }
 
 define i1 @potential_test7(i32 %c) {
-; IS__TUNIT_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@potential_test7
-; IS__TUNIT_OPM-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
-; IS__TUNIT_OPM-NEXT:    [[CSRET1:%.*]] = call i32 @return1or3(i32 [[C]]) #[[ATTR2]], !range [[RNG0]]
-; IS__TUNIT_OPM-NEXT:    [[CSRET2:%.*]] = call i32 @return3or4(i32 [[C]]) #[[ATTR2]], !range [[RNG1:![0-9]+]]
-; IS__TUNIT_OPM-NEXT:    [[RET:%.*]] = icmp eq i32 [[CSRET1]], [[CSRET2]]
-; IS__TUNIT_OPM-NEXT:    ret i1 [[RET]]
+; IS________OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS________OPM-LABEL: define {{[^@]+}}@potential_test7
+; IS________OPM-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
+; IS________OPM-NEXT:    [[CSRET1:%.*]] = call i32 @return1or3(i32 [[C]]) #[[ATTR2]], !range [[RNG0]]
+; IS________OPM-NEXT:    [[CSRET2:%.*]] = call i32 @return3or4(i32 [[C]]) #[[ATTR2]], !range [[RNG1:![0-9]+]]
+; IS________OPM-NEXT:    [[RET:%.*]] = icmp eq i32 [[CSRET1]], [[CSRET2]]
+; IS________OPM-NEXT:    ret i1 [[RET]]
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@potential_test7
-; IS__TUNIT_NPM-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
-; IS__TUNIT_NPM-NEXT:    [[CSRET1:%.*]] = call i32 @return1or3(i32 [[C]]) #[[ATTR1]], !range [[RNG0]]
-; IS__TUNIT_NPM-NEXT:    [[CSRET2:%.*]] = call i32 @return3or4(i32 [[C]]) #[[ATTR1]], !range [[RNG1:![0-9]+]]
-; IS__TUNIT_NPM-NEXT:    [[RET:%.*]] = icmp eq i32 [[CSRET1]], [[CSRET2]]
-; IS__TUNIT_NPM-NEXT:    ret i1 [[RET]]
-;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@potential_test7
-; IS__CGSCC_OPM-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
-; IS__CGSCC_OPM-NEXT:    [[CSRET1:%.*]] = call i32 @return1or3(i32 [[C]]) #[[ATTR2]], !range [[RNG0]]
-; IS__CGSCC_OPM-NEXT:    [[CSRET2:%.*]] = call i32 @return3or4(i32 [[C]]) #[[ATTR3:[0-9]+]], !range [[RNG1:![0-9]+]]
-; IS__CGSCC_OPM-NEXT:    [[RET:%.*]] = icmp eq i32 [[CSRET1]], [[CSRET2]]
-; IS__CGSCC_OPM-NEXT:    ret i1 [[RET]]
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@potential_test7
-; IS__CGSCC_NPM-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
-; IS__CGSCC_NPM-NEXT:    [[CSRET1:%.*]] = call i32 @return1or3(i32 [[C]]) #[[ATTR1]], !range [[RNG0]]
-; IS__CGSCC_NPM-NEXT:    [[CSRET2:%.*]] = call i32 @return3or4(i32 [[C]]) #[[ATTR2:[0-9]+]], !range [[RNG1:![0-9]+]]
-; IS__CGSCC_NPM-NEXT:    [[RET:%.*]] = icmp eq i32 [[CSRET1]], [[CSRET2]]
-; IS__CGSCC_NPM-NEXT:    ret i1 [[RET]]
+; IS________NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS________NPM-LABEL: define {{[^@]+}}@potential_test7
+; IS________NPM-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
+; IS________NPM-NEXT:    [[CSRET1:%.*]] = call i32 @return1or3(i32 [[C]]) #[[ATTR1]], !range [[RNG0]]
+; IS________NPM-NEXT:    [[CSRET2:%.*]] = call i32 @return3or4(i32 [[C]]) #[[ATTR1]], !range [[RNG1:![0-9]+]]
+; IS________NPM-NEXT:    [[RET:%.*]] = icmp eq i32 [[CSRET1]], [[CSRET2]]
+; IS________NPM-NEXT:    ret i1 [[RET]]
 ;
   %csret1 = call i32 @return1or3(i32 %c)
   %csret2 = call i32 @return3or4(i32 %c)
@@ -582,29 +567,17 @@ define i32 @potential_test13_caller2() {
 }
 
 define i32 @potential_test13_caller3() {
-; IS__TUNIT_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@potential_test13_caller3
-; IS__TUNIT_OPM-SAME: () #[[ATTR0]] {
-; IS__TUNIT_OPM-NEXT:    [[RET:%.*]] = call i32 @potential_test13_callee(i32 undef) #[[ATTR2]], !range [[RNG2]]
-; IS__TUNIT_OPM-NEXT:    ret i32 [[RET]]
+; IS________OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS________OPM-LABEL: define {{[^@]+}}@potential_test13_caller3
+; IS________OPM-SAME: () #[[ATTR0]] {
+; IS________OPM-NEXT:    [[RET:%.*]] = call i32 @potential_test13_callee(i32 undef) #[[ATTR2]], !range [[RNG2]]
+; IS________OPM-NEXT:    ret i32 [[RET]]
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@potential_test13_caller3
-; IS__TUNIT_NPM-SAME: () #[[ATTR0]] {
-; IS__TUNIT_NPM-NEXT:    [[RET:%.*]] = call i32 @potential_test13_callee(i32 undef) #[[ATTR1]], !range [[RNG2]]
-; IS__TUNIT_NPM-NEXT:    ret i32 [[RET]]
-;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@potential_test13_caller3
-; IS__CGSCC_OPM-SAME: () #[[ATTR0]] {
-; IS__CGSCC_OPM-NEXT:    [[RET:%.*]] = call i32 @potential_test13_callee(i32 undef) #[[ATTR3]], !range [[RNG2]]
-; IS__CGSCC_OPM-NEXT:    ret i32 [[RET]]
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@potential_test13_caller3
-; IS__CGSCC_NPM-SAME: () #[[ATTR0]] {
-; IS__CGSCC_NPM-NEXT:    [[RET:%.*]] = call i32 @potential_test13_callee(i32 undef) #[[ATTR2]], !range [[RNG2]]
-; IS__CGSCC_NPM-NEXT:    ret i32 [[RET]]
+; IS________NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS________NPM-LABEL: define {{[^@]+}}@potential_test13_caller3
+; IS________NPM-SAME: () #[[ATTR0]] {
+; IS________NPM-NEXT:    [[RET:%.*]] = call i32 @potential_test13_callee(i32 undef) #[[ATTR1]], !range [[RNG2]]
+; IS________NPM-NEXT:    ret i32 [[RET]]
 ;
   %ret = call i32 @potential_test13_callee(i32 undef)
   ret i32 %ret
@@ -664,11 +637,9 @@ define i1 @potential_test16(i1 %c0, i1 %c1) {
 ; IS__CGSCC_OPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone }
 ; IS__CGSCC_OPM: attributes #[[ATTR2]] = { readnone willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR3]] = { nounwind readnone willreturn }
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR1]] = { readnone willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR2]] = { nounwind readnone willreturn }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 1, i32 4}
 ; CHECK: [[META1:![0-9]+]] = !{i32 3, i32 5}
