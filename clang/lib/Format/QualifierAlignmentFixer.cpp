@@ -37,7 +37,7 @@ QualifierAlignmentFixer::QualifierAlignmentFixer(
   PrepareLeftRightOrdering(Style.QualifierOrder, LeftOrder, RightOrder,
                            ConfiguredQualifierTokens);
 
-  // Handle the left and right Alignment Seperately
+  // Handle the left and right alignment separately.
   for (const auto &Qualifier : LeftOrder) {
     Passes.emplace_back(
         [&, Qualifier, ConfiguredQualifierTokens](const Environment &Env) {
