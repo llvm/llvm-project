@@ -25,8 +25,19 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
+
 using namespace clang;
 using namespace CodeGen;
+
+#ifndef NDEBUG
+#include "llvm/Support/CommandLine.h"
+// TODO: turn on by default when defined(EXPENSIVE_CHECKS) once check-clang is
+// -verify-type-cache clean.
+static llvm::cl::opt<bool> VerifyTypeCache(
+    "verify-type-cache",
+    llvm::cl::desc("Verify that the type cache matches the computed type"),
+    llvm::cl::init(false), llvm::cl::Hidden);
+#endif
 
 CodeGenTypes::CodeGenTypes(CodeGenModule &cgm)
   : CGM(cgm), Context(cgm.getContext()), TheModule(cgm.getModule()),
@@ -382,9 +393,6 @@ llvm::Type *CodeGenTypes::ConvertFunctionTypeInternal(QualType QFT) {
 
   RecordsBeingLaidOut.erase(Ty);
 
-  if (SkippedLayout)
-    TypeCache.clear();
-
   if (RecordsBeingLaidOut.empty())
     while (!DeferredRecords.empty())
       ConvertRecordDeclType(DeferredRecords.pop_back_val());
@@ -415,11 +423,29 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   if (const RecordType *RT = dyn_cast<RecordType>(Ty))
     return ConvertRecordDeclType(RT->getDecl());
 
-  // See if type is already cached.
-  llvm::DenseMap<const Type *, llvm::Type *>::iterator TCI = TypeCache.find(Ty);
-  // If type is found in map then use it. Otherwise, convert type T.
-  if (TCI != TypeCache.end())
-    return TCI->second;
+  // The LLVM type we return for a given Clang type may not always be the same,
+  // most notably when dealing with recursive structs. We mark these potential
+  // cases with ShouldUseCache below. Builtin types cannot be recursive.
+  // TODO: when clang uses LLVM opaque pointers we won't be able to represent
+  // recursive types with LLVM types, making this logic much simpler.
+  llvm::Type *CachedType = nullptr;
+  bool ShouldUseCache =
+      Ty->isBuiltinType() ||
+      (noRecordsBeingLaidOut() && FunctionsBeingProcessed.empty());
+  if (ShouldUseCache) {
+    llvm::DenseMap<const Type *, llvm::Type *>::iterator TCI =
+        TypeCache.find(Ty);
+    if (TCI != TypeCache.end())
+      CachedType = TCI->second;
+    if (CachedType) {
+#ifndef NDEBUG
+      if (!VerifyTypeCache)
+        return CachedType;
+#else
+      return CachedType;
+#endif
+    }
+  }
 
   // If we don't have it in the cache, convert it now.
   llvm::Type *ResultType = nullptr;
@@ -797,7 +823,15 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
 
   assert(ResultType && "Didn't convert a type?");
 
-  TypeCache[Ty] = ResultType;
+#ifndef NDEBUG
+  if (CachedType) {
+    assert(CachedType == ResultType &&
+           "Cached type doesn't match computed type");
+  }
+#endif
+
+  if (ShouldUseCache)
+    TypeCache[Ty] = ResultType;
   return ResultType;
 }
 
