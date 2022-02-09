@@ -21,11 +21,15 @@ class SPV_LogicalBinaryOp<string mnemonic, Type operandsType,
                     list<Trait> traits = []> :
       // Result type is SPV_Bool.
       SPV_BinaryOp<mnemonic, SPV_Bool, operandsType,
-                   !listconcat(traits,
-                               [NoSideEffect, SameTypeOperands,
-                                SameOperandsAndResultShape])> {
-  let parser = [{ return ::parseLogicalBinaryOp(parser, result); }];
-  let printer = [{ return ::printLogicalOp(getOperation(), p); }];
+                   !listconcat(traits, [
+                     NoSideEffect, SameTypeOperands,
+                     SameOperandsAndResultShape,
+                     TypesMatchWith<"type of result to correspond to the `i1` "
+                                    "equivalent of the operand",
+                                    "operand1", "result",
+                                    "getUnaryOpResultType($_self)"
+                     >])> {
+  let assemblyFormat = "$operand1 `,` $operand2 `:` type($operand1) attr-dict";
 
   let builders = [
     OpBuilder<(ins "Value":$lhs, "Value":$rhs),
@@ -37,10 +41,14 @@ class SPV_LogicalUnaryOp<string mnemonic, Type operandType,
                          list<Trait> traits = []> :
       // Result type is SPV_Bool.
       SPV_UnaryOp<mnemonic, SPV_Bool, operandType,
-                  !listconcat(traits, [NoSideEffect, SameTypeOperands,
-                                       SameOperandsAndResultShape])> {
-  let parser = [{ return ::parseLogicalUnaryOp(parser, result); }];
-  let printer = [{ return ::printLogicalOp(getOperation(), p); }];
+                  !listconcat(traits, [
+                     NoSideEffect, SameTypeOperands, SameOperandsAndResultShape,
+                     TypesMatchWith<"type of result to correspond to the `i1` "
+                                    "equivalent of the operand",
+                                    "operand", "result",
+                                    "getUnaryOpResultType($_self)"
+                     >])> {
+  let assemblyFormat = "$operand `:` type($operand) attr-dict";
 
   let builders = [
     OpBuilder<(ins "Value":$value),

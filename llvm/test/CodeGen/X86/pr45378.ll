@@ -76,23 +76,28 @@ define i1 @parseHeaders2_scalar_and(i64 * %ptr) nounwind {
 ; SSE2-LABEL: parseHeaders2_scalar_and:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, %rax
-; SSE2-NEXT:    testq %rax, (%rdi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; SSE2-NEXT:    movq %xmm0, %rcx
+; SSE2-NEXT:    testq %rcx, %rax
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: parseHeaders2_scalar_and:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movq (%rdi), %rax
-; SSE41-NEXT:    testq %rax, 8(%rdi)
+; SSE41-NEXT:    movdqu (%rdi), %xmm0
+; SSE41-NEXT:    movq %xmm0, %rax
+; SSE41-NEXT:    pextrq $1, %xmm0, %rcx
+; SSE41-NEXT:    testq %rcx, %rax
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: parseHeaders2_scalar_and:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movq (%rdi), %rax
-; AVX-NEXT:    testq %rax, 8(%rdi)
+; AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    vpextrq $1, %xmm0, %rcx
+; AVX-NEXT:    testq %rcx, %rax
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
   %vptr = bitcast i64 * %ptr to <2 x i64> *

@@ -11,6 +11,11 @@
 
 # WARNING: warning: '[[PREFIX]]-x86_64-empty.o': has no symbols for architecture x86_64
 
+# RUN: not llvm-libtool-darwin -static -warnings_as_errors -o %t-error.lib %t-x86_64-empty.o 2>&1 | \
+# RUN:   FileCheck --check-prefix=ERROR %s -DPREFIX=%basename_t.tmp
+
+# ERROR: error: '[[PREFIX]]-x86_64-empty.o': has no symbols for architecture x86_64
+
 # RUN: llvm-libtool-darwin -no_warning_for_no_symbols -static -o %t.lib \
 # RUN:   %t-x86_64-empty.o 2>&1 | \
 # RUN:   FileCheck %s --allow-empty --implicit-check-not='warning:'

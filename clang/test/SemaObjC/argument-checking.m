@@ -13,7 +13,7 @@ extern int charFunc(char); // expected-note{{passing argument to parameter here}
    :(struct S)s2; // expected-note{{passing argument to parameter 's2' here}}
 @end
 
-void test() {
+void test(void) {
   id obj = [Test alloc];
   struct S sInst;
 

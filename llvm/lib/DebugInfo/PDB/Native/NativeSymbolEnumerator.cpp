@@ -22,7 +22,7 @@ NativeSymbolEnumerator::NativeSymbolEnumerator(
     : NativeRawSymbol(Session, PDB_SymType::Data, Id), Parent(Parent),
       Record(std::move(Record)) {}
 
-NativeSymbolEnumerator::~NativeSymbolEnumerator() {}
+NativeSymbolEnumerator::~NativeSymbolEnumerator() = default;
 
 void NativeSymbolEnumerator::dump(raw_ostream &OS, int Indent,
                                   PdbSymbolIdField ShowIdFields,

@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | \
+; RUN: opt < %s -passes=instcombine -S | \
 ; RUN:   not grep undef
 
 define i32 @test(i8 %A) {

@@ -86,7 +86,7 @@ protected:
 public:
   InstrConverterBase(unsigned SrcOpcode) : SrcOpcode(SrcOpcode) {}
 
-  virtual ~InstrConverterBase() {}
+  virtual ~InstrConverterBase() = default;
 
   /// \returns true if \p MI is legal to convert.
   virtual bool isLegal(const MachineInstr *MI,

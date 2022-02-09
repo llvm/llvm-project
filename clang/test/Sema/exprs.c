@@ -14,13 +14,13 @@
 
 // Test that we don't report divide-by-zero errors in unreachable code.
 // This test should be left as is, as it also tests CFG functionality.
-void radar9171946() {
+void radar9171946(void) {
   if (0) {
     0 / (0 ? 1 : 0); // no-warning
   }
 }
 
-int test_pr8876() {
+int test_pr8876(void) {
   PR8876(0); // no-warning
   PR8876_pos(0); // expected-warning{{indirection of non-volatile null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap() or qualifying pointer with 'volatile'}}
   return 0;
@@ -35,22 +35,22 @@ void pr8183(unsigned long long test)
 }
 
 // PR1966
-_Complex double test1() {
+_Complex double test1(void) {
   return __extension__ 1.0if;
 }
 
-_Complex double test2() {
+_Complex double test2(void) {
   return 1.0if;    // expected-warning {{imaginary constants are a GNU extension}}
 }
 
 // rdar://6097308
-void test3() {
+void test3(void) {
   int x;
   (__extension__ x) = 10;
 }
 
 // rdar://6162726
-void test4() {
+void test4(void) {
       static int var;
       var =+ 5;  // expected-warning {{use of unary operator that may be intended as compound assignment (+=)}}
       var =- 5;  // expected-warning {{use of unary operator that may be intended as compound assignment (-=)}}
@@ -72,7 +72,7 @@ void test5(int *X, float *P) {
   FOO = P;   // expected-error {{assignment to cast is illegal, lvalue casts are not supported}}
 }
 
-void test6() {
+void test6(void) {
   int X;
   X();  // expected-error {{called object type 'int' is not a function or function pointer}}
 }
@@ -128,12 +128,12 @@ int test12b(const char *X) {
 
 // rdar://6719156
 void test13(
-            void (^P)()) { // expected-error {{blocks support disabled - compile with -fblocks}}
+            void (^P)(void)) { // expected-error {{blocks support disabled - compile with -fblocks}}
   P();
-  P = ^(){}; // expected-error {{blocks support disabled - compile with -fblocks}}
+  P = ^(void){}; // expected-error {{blocks support disabled - compile with -fblocks}}
 }
 
-void test14() {
+void test14(void) {
   typedef long long __m64 __attribute__((__vector_size__(8)));
   typedef short __v4hi __attribute__((__vector_size__(8)));
 
@@ -186,7 +186,7 @@ void test18(int b) {
 
 typedef int __attribute__((address_space(256))) int_AS256;
 // PR7569
-void test19() {
+void test19(void) {
   *(int *)0 = 0;                                     // expected-warning {{indirection of non-volatile null pointer}} \
                   // expected-note {{consider using __builtin_trap}}
   *(volatile int *)0 = 0;                            // Ok.
@@ -256,7 +256,7 @@ void test21(volatile struct Test21 *ptr) {
 }
 
 // Make sure we do function/array decay.
-void test22() {
+void test22(void) {
   if ("help")
     (void) 0;
 

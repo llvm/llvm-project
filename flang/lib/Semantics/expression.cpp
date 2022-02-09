@@ -2483,7 +2483,7 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
     bool treatExternalAsImplicit{IsExternalCalledImplicitly(callSite, proc)};
     if (treatExternalAsImplicit && !chars->CanBeCalledViaImplicitInterface()) {
       Say(callSite,
-          "References to the procedure '%s' require an explicit interface"_en_US,
+          "References to the procedure '%s' require an explicit interface"_err_en_US,
           DEREF(proc.GetSymbol()).name());
     }
     // Checks for ASSOCIATED() are done in intrinsic table processing

@@ -9,9 +9,8 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "Thunks.h"
 #include "lld/Common/ErrorHandler.h"
-#include "llvm/Object/ELF.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
@@ -197,6 +196,8 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   case R_AARCH64_TLSDESC:
     return read64(buf + 8);
+  case R_AARCH64_NONE:
+    return 0;
   default:
     internalLinkerError(getErrorLocation(buf),
                         "cannot read addend for relocation " + toString(type));

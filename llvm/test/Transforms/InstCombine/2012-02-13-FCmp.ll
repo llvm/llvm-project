@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S < %s | FileCheck %s
+; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 ; Radar 10803727
 @.str = private unnamed_addr constant [35 x i8] c"\0Ain_range input (should be 0): %f\0A\00", align 1
 @.str1 = external hidden unnamed_addr constant [35 x i8], align 1

@@ -96,7 +96,7 @@ void NativeTypeFunctionSig::initialize() {
   }
 }
 
-NativeTypeFunctionSig::~NativeTypeFunctionSig() {}
+NativeTypeFunctionSig::~NativeTypeFunctionSig() = default;
 
 void NativeTypeFunctionSig::initializeArgList(codeview::TypeIndex ArgListTI) {
   TpiStream &Tpi = cantFail(Session.getPDBFile().getPDBTpiStream());

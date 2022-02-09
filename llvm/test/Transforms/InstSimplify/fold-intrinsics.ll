@@ -1,4 +1,4 @@
-; RUN: opt < %s -instsimplify -S | FileCheck %s
+; RUN: opt < %s -passes=instsimplify -S | FileCheck %s
 
 declare float @llvm.powi.f32.i16(float, i16) nounwind readonly
 declare double @llvm.powi.f64.i32(double, i32) nounwind readonly

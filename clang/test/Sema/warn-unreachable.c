@@ -3,11 +3,11 @@
 
 #include "warn-unreachable.h"
 
-int halt() __attribute__((noreturn));
-int live();
-int dead();
+int halt(void) __attribute__((noreturn));
+int live(void);
+int dead(void);
 
-void test1() {
+void test1(void) {
   goto c;
   d:
   goto e;       // expected-warning {{will never be executed}}
@@ -26,7 +26,7 @@ void test1() {
   f: ;
 }
 
-void test2() {
+void test2(void) {
   int i;
   switch (live()) {
   case 1:
@@ -123,7 +123,7 @@ void __myassert_rtn(const char *, const char *, int, const char *) __attribute__
 #define myassert(e) \
     (__builtin_expect(!(e), 0) ? __myassert_rtn(__func__, __FILE__, __LINE__, #e) : (void)0)
 
-void test_assert() {
+void test_assert(void) {
   myassert(0 && "unreachable");
   return; // no-warning
 }
@@ -137,7 +137,7 @@ void PR9774(int *s) {
 
 // Test case for <rdar://problem/11005770>.  We should treat code guarded
 // by 'x & 0' and 'x * 0' as unreachable.
-int calledFun();
+int calledFun(void);
 void test_mul_and_zero(int x) {
   if (x & 0) calledFun(); // expected-warning {{will never be executed}}
   if (0 & x) calledFun(); // expected-warning {{will never be executed}}
@@ -145,8 +145,8 @@ void test_mul_and_zero(int x) {
   if (0 * x) calledFun(); // expected-warning {{will never be executed}}
 }
 
-void raze() __attribute__((noreturn));
-void warn_here();
+void raze(void) __attribute__((noreturn));
+void warn_here(void);
 
 int test_break_preceded_by_noreturn(int i) {
   switch (i) {
@@ -193,17 +193,17 @@ void unreachable_in_default(MyEnum e) {
 }
 
 // Don't warn about trivial dead returns.
-int trivial_dead_return() {
+int trivial_dead_return(void) {
   raze();
   return ((0)); // expected-warning {{'return' will never be executed}}
 }
 
-void trivial_dead_return_void() {
+void trivial_dead_return_void(void) {
   raze();
   return; // expected-warning {{'return' will never be executed}}
 }
 
-MyEnum trivial_dead_return_enum() {
+MyEnum trivial_dead_return_enum(void) {
   raze();
   return Value1; // expected-warning {{'return' will never be executed}}
 }
@@ -219,12 +219,12 @@ MyEnum trivial_dead_return_enum_2(int x) {
   return 2; // expected-warning {{will never be executed}}
 }
 
-const char *trivial_dead_return_cstr() {
+const char *trivial_dead_return_cstr(void) {
   raze();
   return ""; // expected-warning {{return' will never be executed}}
 }
 
-char trivial_dead_return_char() {
+char trivial_dead_return_char(void) {
   raze();
   return ' '; // expected-warning {{return' will never be executed}}
 }
@@ -289,7 +289,7 @@ enum MyEnum2 {
   ME_B = 1
 };
 
-int test_MyEnum() {
+int test_MyEnum(void) {
   if (!ME_A)
     return 1; // no-warning
   if (ME_A)
@@ -329,12 +329,12 @@ int test_do_while_nontrivial_cond(int x) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunreachable-code-return"
 
-void trivial_dead_return_void_SUPPRESSED() {
+void trivial_dead_return_void_SUPPRESSED(void) {
   raze();
   return; // no-warning
 }
 
-MyEnum trivial_dead_return_enum_SUPPRESSED() {
+MyEnum trivial_dead_return_enum_SUPPRESSED(void) {
   raze();
   return Value1; // no-warning
 }
@@ -432,7 +432,7 @@ void wrapOneInFixit(struct StructWithPointer *s) {
   wrapOneInFixit(s); // expected-warning {{code will never be executed}}
 }
 
-void unaryOpNoFixit() {
+void unaryOpNoFixit(void) {
   if (~ 1)
     return; // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
   unaryOpNoFixit(); // expected-warning {{code will never be executed}}
@@ -455,7 +455,7 @@ void unaryOpFixitCastSubExpr(int x) {
 #define false 0
 #define true 1
 
-void testTrueFalseMacros() {
+void testTrueFalseMacros(void) {
   if (false) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
     testTrueFalseMacros(); // expected-warning {{code will never be executed}}
   if (!true) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
@@ -490,13 +490,13 @@ int pr13910_bar2(int x) {
   pr13910_foo(x);          // expected-warning {{code will never be executed}}
 }
 
-void pr13910_noreturn() {
+void pr13910_noreturn(void) {
   raze();
   __builtin_unreachable(); // expected no warning
   __builtin_assume(0); // expected no warning
 }
 
-void pr13910_assert() {
+void pr13910_assert(void) {
   myassert(0 && "unreachable");
   return;
   __builtin_unreachable(); // expected no warning

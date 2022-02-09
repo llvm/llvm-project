@@ -638,3 +638,14 @@ def VK64WM  : RegisterClass<"X86", [v64i1], 64, (add VK32WM)> {let Size = 64;}
 let CopyCost = -1 in // Don't allow copying of tile registers
 def TILE : RegisterClass<"X86", [x86amx], 8192,
                          (sequence "TMM%u", 0, 7)> {let Size = 8192;}
+
+//===----------------------------------------------------------------------===//
+// Register categories.
+//
+
+// The TILE and VK*PAIR registers may not be "fixed", but we don't want them
+// anyway.
+def FixedRegisters : RegisterCategory<[DEBUG_REG, CONTROL_REG, CCR, FPCCR,
+                                       DFCCR, TILE, VK1PAIR, VK2PAIR, VK4PAIR,
+                                       VK8PAIR, VK16PAIR]>;
+def GeneralPurposeRegisters : RegisterCategory<[GR64, GR32, GR16, GR8]>;

@@ -143,8 +143,7 @@ def EmitC_IncludeOp
     Arg<StrAttr, "source file to include">:$include,
     UnitAttr:$is_standard_include
   );
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITC

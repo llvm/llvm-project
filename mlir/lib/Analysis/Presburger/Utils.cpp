@@ -254,7 +254,7 @@ MaybeLocalRepr presburger_utils::computeSingleVarRepr(
 }
 
 void presburger_utils::removeDuplicateDivs(
-    SmallVectorImpl<SmallVector<int64_t, 8>> &divs,
+    std::vector<SmallVector<int64_t, 8>> &divs,
     SmallVectorImpl<unsigned> &denoms, unsigned localOffset,
     llvm::function_ref<bool(unsigned i, unsigned j)> merge) {
 

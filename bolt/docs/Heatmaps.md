@@ -23,11 +23,10 @@ $ perf record -e cycles:u -j any,u [-p PID|-a] -- sleep <interval>
 Note that at the moment running with LBR (`-j any,u` or `-b`) is
 a requirement.
 
-Once the run is complete, and `perf.data` is generated, run BOLT in
-a heatmap mode:
+Once the run is complete, and `perf.data` is generated, run llvm-bolt-heatmap:
 
 ```bash
-$ llvm-bolt heatmap -p perf.data <executable>
+$ llvm-bolt-heatmap -p perf.data <executable>
 ```
 
 By default the heatmap will be dumped to *stdout*. You can change it

@@ -10,43 +10,7 @@ class TestGdbRemote_qThreadStopInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
     THREAD_COUNT = 5
 
     def gather_stop_replies_via_qThreadStopInfo(self, thread_count):
-        # Set up the inferior args.
-        inferior_args = []
-        for i in range(thread_count - 1):
-            inferior_args.append("thread:new")
-        inferior_args.append("sleep:10")
-        procs = self.prep_debug_monitor_and_inferior(
-            inferior_args=inferior_args)
-
-        # Assumes test_sequence has anything added needed to setup the initial state.
-        # (Like optionally enabling QThreadsInStopReply.)
-        self.test_sequence.add_log_lines([
-            "read packet: $c#63"
-        ], True)
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-
-        # Give threads time to start up, then break.
-        time.sleep(self.DEFAULT_SLEEP)
-        self.reset_test_sequence()
-        self.test_sequence.add_log_lines(
-            [
-                "read packet: {}".format(
-                    chr(3)),
-                {
-                    "direction": "send",
-                    "regex": r"^\$T([0-9a-fA-F]+)([^#]+)#[0-9a-fA-F]{2}$",
-                    "capture": {
-                        1: "stop_result",
-                        2: "key_vals_text"}},
-            ],
-            True)
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-
-        # Wait until all threads have started.
-        threads = self.wait_for_thread_count(thread_count)
-        self.assertIsNotNone(threads)
+        context, threads = self.launch_with_threads(thread_count)
 
         # On Windows, there could be more threads spawned. For example, DebugBreakProcess will
         # create a new thread from the debugged process to handle an exception event. So here we

@@ -155,8 +155,7 @@ def FuncOp : Builtin_Op<"func", [
 
     bool isDeclaration() { return isExternal(); }
   }];
-  let parser = [{ return ::parseFuncOp(parser, result); }];
-  let printer = [{ return ::print(*this, p); }];
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 

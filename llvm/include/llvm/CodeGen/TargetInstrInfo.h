@@ -382,6 +382,17 @@ public:
   /// to which instructions should be sunk.
   virtual bool shouldSink(const MachineInstr &MI) const { return true; }
 
+  /// Return false if the instruction should not be hoisted by MachineLICM.
+  ///
+  /// MachineLICM determines on its own whether the instruction is safe to
+  /// hoist; this gives the target a hook to extend this assessment and prevent
+  /// an instruction being hoisted from a given loop for target specific
+  /// reasons.
+  virtual bool shouldHoist(const MachineInstr &MI,
+                           const MachineLoop *FromLoop) const {
+    return true;
+  }
+
   /// Re-issue the specified 'original' instruction at the
   /// specific location targeting a new destination register.
   /// The register in Orig->getOperand(0).getReg() will be substituted by

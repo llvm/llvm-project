@@ -16,7 +16,9 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -48,10 +50,20 @@ public:
     shouldBeQualifiedFlag = qualified;
   }
 
+  /// Returns true if the element contains an optional parameter.
+  bool isOptional() const { return param.isOptional(); }
+
+  /// Returns the name of the parameter.
+  StringRef getName() const { return param.getName(); }
+
 private:
   bool shouldBeQualifiedFlag = false;
   AttrOrTypeParameter param;
 };
+
+/// Shorthand functions that can be used with ranged-based conditions.
+static bool paramIsOptional(ParameterElement *el) { return el->isOptional(); }
+static bool paramNotOptional(ParameterElement *el) { return !el->isOptional(); }
 
 /// Base class for a directive that contains references to multiple variables.
 template <DirectiveElement::Kind DirectiveKind>
@@ -59,25 +71,26 @@ class ParamsDirectiveBase : public DirectiveElementBase<DirectiveKind> {
 public:
   using Base = ParamsDirectiveBase<DirectiveKind>;
 
-  ParamsDirectiveBase(std::vector<FormatElement *> &&params)
+  ParamsDirectiveBase(std::vector<ParameterElement *> &&params)
       : params(std::move(params)) {}
 
   /// Get the parameters contained in this directive.
-  auto getParams() const {
-    return llvm::map_range(params, [](FormatElement *el) {
-      return cast<ParameterElement>(el)->getParam();
-    });
-  }
+  ArrayRef<ParameterElement *> getParams() const { return params; }
 
   /// Get the number of parameters.
   unsigned getNumParams() const { return params.size(); }
 
   /// Take all of the parameters from this directive.
-  std::vector<FormatElement *> takeParams() { return std::move(params); }
+  std::vector<ParameterElement *> takeParams() { return std::move(params); }
+
+  /// Returns true if there are optional parameters present.
+  bool hasOptionalParams() const {
+    return llvm::any_of(getParams(), paramIsOptional);
+  }
 
 private:
   /// The parameters captured by this directive.
-  std::vector<FormatElement *> params;
+  std::vector<ParameterElement *> params;
 };
 
 /// This class represents a `params` directive that refers to all parameters
@@ -125,35 +138,8 @@ static const char *const qualifiedParameterPrinter = "$_printer << $_self";
 /// Print an error when failing to parse an element.
 ///
 /// $0: The parameter C++ class name.
-static const char *const parseErrorStr =
+static const char *const parserErrorStr =
     "$_parser.emitError($_parser.getCurrentLocation(), ";
-
-/// Loop declaration for struct parser.
-///
-/// $0: Number of expected parameters.
-static const char *const structParseLoopStart = R"(
-  for (unsigned _index = 0; _index < $0; ++_index) {
-    StringRef _paramKey;
-    if ($_parser.parseKeyword(&_paramKey)) {
-      $_parser.emitError($_parser.getCurrentLocation(),
-                         "expected a parameter name in struct");
-      return {};
-    }
-)";
-
-/// Terminator code segment for the struct parser loop. Check for duplicate or
-/// unknown parameters. Parse a comma except on the last element.
-///
-/// {0}: Code template for printing an error.
-/// {1}: Number of elements in the struct.
-static const char *const structParseLoopEnd = R"({{
-    {0}"duplicate or unknown struct parameter name: ") << _paramKey;
-    return {{};
-  }
-  if ((_index != {1} - 1) && parser.parseComma())
-    return {{};
-}
-)";
 
 /// Code format to parse a variable. Separate by lines because variable parsers
 /// may be generated inside other directives, which requires indentation.
@@ -166,21 +152,20 @@ static const char *const structParseLoopEnd = R"({{
 static const char *const variableParser = R"(
 // Parse variable '{0}'
 _result_{0} = {1};
-if (failed(_result_{0})) {{
+if (::mlir::failed(_result_{0})) {{
   {2}"failed to parse {3} parameter '{0}' which is to be a `{4}`");
   return {{};
 }
 )";
 
 //===----------------------------------------------------------------------===//
-// AttrOrTypeFormat
+// DefFormat
 //===----------------------------------------------------------------------===//
 
 namespace {
-class AttrOrTypeFormat {
+class DefFormat {
 public:
-  AttrOrTypeFormat(const AttrOrTypeDef &def,
-                   std::vector<FormatElement *> &&elements)
+  DefFormat(const AttrOrTypeDef &def, std::vector<FormatElement *> &&elements)
       : def(def), elements(std::move(elements)) {}
 
   /// Generate the attribute or type parser.
@@ -192,26 +177,39 @@ private:
   /// Generate the parser code for a specific format element.
   void genElementParser(FormatElement *el, FmtContext &ctx, MethodBody &os);
   /// Generate the parser code for a literal.
-  void genLiteralParser(StringRef value, FmtContext &ctx, MethodBody &os);
+  void genLiteralParser(StringRef value, FmtContext &ctx, MethodBody &os,
+                        bool isOptional = false);
   /// Generate the parser code for a variable.
-  void genVariableParser(const AttrOrTypeParameter &param, FmtContext &ctx,
-                         MethodBody &os);
+  void genVariableParser(ParameterElement *el, FmtContext &ctx, MethodBody &os);
   /// Generate the parser code for a `params` directive.
   void genParamsParser(ParamsDirective *el, FmtContext &ctx, MethodBody &os);
   /// Generate the parser code for a `struct` directive.
   void genStructParser(StructDirective *el, FmtContext &ctx, MethodBody &os);
+  /// Generate the parser code for an optional group.
+  void genOptionalGroupParser(OptionalElement *el, FmtContext &ctx,
+                              MethodBody &os);
 
   /// Generate the printer code for a specific format element.
   void genElementPrinter(FormatElement *el, FmtContext &ctx, MethodBody &os);
   /// Generate the printer code for a literal.
   void genLiteralPrinter(StringRef value, FmtContext &ctx, MethodBody &os);
   /// Generate the printer code for a variable.
-  void genVariablePrinter(const AttrOrTypeParameter &param, FmtContext &ctx,
-                          MethodBody &os, bool printQualified = false);
+  void genVariablePrinter(ParameterElement *el, FmtContext &ctx, MethodBody &os,
+                          bool skipGuard = false);
+  /// Generate a printer for comma-separated parameters.
+  void genCommaSeparatedPrinter(ArrayRef<ParameterElement *> params,
+                                FmtContext &ctx, MethodBody &os,
+                                function_ref<void(ParameterElement *)> extra);
   /// Generate the printer code for a `params` directive.
   void genParamsPrinter(ParamsDirective *el, FmtContext &ctx, MethodBody &os);
   /// Generate the printer code for a `struct` directive.
   void genStructPrinter(StructDirective *el, FmtContext &ctx, MethodBody &os);
+  /// Generate the printer code for an optional group.
+  void genOptionalGroupPrinter(OptionalElement *el, FmtContext &ctx,
+                               MethodBody &os);
+  /// Generate a printer (or space eraser) for a whitespace element.
+  void genWhitespacePrinter(WhitespaceElement *el, FmtContext &ctx,
+                            MethodBody &os);
 
   /// The ODS definition of the attribute or type whose format is being used to
   /// generate a parser and printer.
@@ -230,35 +228,44 @@ private:
 // ParserGen
 //===----------------------------------------------------------------------===//
 
-void AttrOrTypeFormat::genParser(MethodBody &os) {
+void DefFormat::genParser(MethodBody &os) {
   FmtContext ctx;
-  ctx.addSubst("_parser", "parser");
+  ctx.addSubst("_parser", "odsParser");
   if (isa<AttrDef>(def))
-    ctx.addSubst("_type", "type");
+    ctx.addSubst("_type", "odsType");
   os.indent();
 
-  /// Declare variables to store all of the parameters. Allocated parameters
-  /// such as `ArrayRef` and `StringRef` must provide a `storageType`. Store
-  /// FailureOr<T> to defer type construction for parameters that are parsed in
-  /// a loop (parsers return FailureOr anyways).
+  // Declare variables to store all of the parameters. Allocated parameters
+  // such as `ArrayRef` and `StringRef` must provide a `storageType`. Store
+  // FailureOr<T> to defer type construction for parameters that are parsed in
+  // a loop (parsers return FailureOr anyways).
   ArrayRef<AttrOrTypeParameter> params = def.getParameters();
   for (const AttrOrTypeParameter &param : params) {
-    os << formatv("  ::mlir::FailureOr<{0}> _result_{1};\n",
+    os << formatv("::mlir::FailureOr<{0}> _result_{1};\n",
                   param.getCppStorageType(), param.getName());
   }
 
-  /// Store the initial location of the parser.
-  ctx.addSubst("_loc", "loc");
+  // Store the initial location of the parser.
+  ctx.addSubst("_loc", "odsLoc");
   os << tgfmt("::llvm::SMLoc $_loc = $_parser.getCurrentLocation();\n"
               "(void) $_loc;\n",
               &ctx);
 
-  /// Generate call to each parameter parser.
+  // Generate call to each parameter parser.
   for (FormatElement *el : elements)
     genElementParser(el, ctx, os);
 
-  /// Generate call to the attribute or type builder. Use the checked getter
-  /// if one was generated.
+  // Emit an assert for each mandatory parameter. Triggering an assert means
+  // the generated parser is incorrect (i.e. there is a bug in this code).
+  for (const AttrOrTypeParameter &param : params) {
+    if (!param.isOptional()) {
+      os << formatv("assert(::mlir::succeeded(_result_{0}));\n",
+                    param.getName());
+    }
+  }
+
+  // Generate call to the attribute or type builder. Use the checked getter
+  // if one was generated.
   if (def.genVerifyDecl()) {
     os << tgfmt("return $_parser.getChecked<$0>($_loc, $_parser.getContext()",
                 &ctx, def.getCppClassName());
@@ -266,29 +273,40 @@ void AttrOrTypeFormat::genParser(MethodBody &os) {
     os << tgfmt("return $0::get($_parser.getContext()", &ctx,
                 def.getCppClassName());
   }
-  for (const AttrOrTypeParameter &param : params)
-    os << formatv(",\n    _result_{0}.getValue()", param.getName());
+  for (const AttrOrTypeParameter &param : params) {
+    if (param.isOptional())
+      os << formatv(",\n    _result_{0}.getValueOr({1}())", param.getName(),
+                    param.getCppStorageType());
+    else
+      os << formatv(",\n    *_result_{0}", param.getName());
+  }
   os << ");";
 }
 
-void AttrOrTypeFormat::genElementParser(FormatElement *el, FmtContext &ctx,
-                                        MethodBody &os) {
+void DefFormat::genElementParser(FormatElement *el, FmtContext &ctx,
+                                 MethodBody &os) {
   if (auto *literal = dyn_cast<LiteralElement>(el))
     return genLiteralParser(literal->getSpelling(), ctx, os);
   if (auto *var = dyn_cast<ParameterElement>(el))
-    return genVariableParser(var->getParam(), ctx, os);
+    return genVariableParser(var, ctx, os);
   if (auto *params = dyn_cast<ParamsDirective>(el))
     return genParamsParser(params, ctx, os);
   if (auto *strct = dyn_cast<StructDirective>(el))
     return genStructParser(strct, ctx, os);
+  if (auto *optional = dyn_cast<OptionalElement>(el))
+    return genOptionalGroupParser(optional, ctx, os);
+  if (isa<WhitespaceElement>(el))
+    return;
 
   llvm_unreachable("unknown format element");
 }
 
-void AttrOrTypeFormat::genLiteralParser(StringRef value, FmtContext &ctx,
-                                        MethodBody &os) {
+void DefFormat::genLiteralParser(StringRef value, FmtContext &ctx,
+                                 MethodBody &os, bool isOptional) {
   os << "// Parse literal '" << value << "'\n";
   os << tgfmt("if ($_parser.parse", &ctx);
+  if (isOptional)
+    os << "Optional";
   if (value.front() == '_' || isalpha(value.front())) {
     os << "Keyword(\"" << value << "\")";
   } else {
@@ -310,70 +328,275 @@ void AttrOrTypeFormat::genLiteralParser(StringRef value, FmtContext &ctx,
               .Case("*", "Star")
        << "()";
   }
-  os << ")\n";
+  if (isOptional) {
+    // Leave the `if` unclosed to guard optional groups.
+    return;
+  }
   // Parser will emit an error
-  os << "  return {};\n";
+  os << ") return {};\n";
 }
 
-void AttrOrTypeFormat::genVariableParser(const AttrOrTypeParameter &param,
-                                         FmtContext &ctx, MethodBody &os) {
-  /// Check for a custom parser. Use the default attribute parser otherwise.
+void DefFormat::genVariableParser(ParameterElement *el, FmtContext &ctx,
+                                  MethodBody &os) {
+  // Check for a custom parser. Use the default attribute parser otherwise.
+  const AttrOrTypeParameter &param = el->getParam();
   auto customParser = param.getParser();
   auto parser =
       customParser ? *customParser : StringRef(defaultParameterParser);
   os << formatv(variableParser, param.getName(),
                 tgfmt(parser, &ctx, param.getCppStorageType()),
-                tgfmt(parseErrorStr, &ctx), def.getName(), param.getCppType());
+                tgfmt(parserErrorStr, &ctx), def.getName(), param.getCppType());
 }
 
-void AttrOrTypeFormat::genParamsParser(ParamsDirective *el, FmtContext &ctx,
-                                       MethodBody &os) {
+void DefFormat::genParamsParser(ParamsDirective *el, FmtContext &ctx,
+                                MethodBody &os) {
   os << "// Parse parameter list\n";
-  llvm::interleave(
-      el->getParams(),
-      [&](auto param) { this->genVariableParser(param, ctx, os); },
-      [&]() { this->genLiteralParser(",", ctx, os); });
+
+  // If there are optional parameters, we need to switch to `parseOptionalComma`
+  // if there are no more required parameters after a certain point.
+  bool hasOptional = el->hasOptionalParams();
+  if (hasOptional) {
+    // Wrap everything in a do-while so that we can `break`.
+    os << "do {\n";
+    os.indent();
+  }
+
+  ArrayRef<ParameterElement *> params = el->getParams();
+  using IteratorT = ParameterElement *const *;
+  IteratorT it = params.begin();
+
+  // Find the last required parameter. Commas become optional aftewards.
+  // Note: IteratorT's copy assignment is deleted.
+  ParameterElement *lastReq = nullptr;
+  for (ParameterElement *param : params)
+    if (!param->isOptional())
+      lastReq = param;
+  IteratorT lastReqIt = lastReq ? llvm::find(params, lastReq) : params.begin();
+
+  auto eachFn = [&](ParameterElement *el) { genVariableParser(el, ctx, os); };
+  auto betweenFn = [&](IteratorT it) {
+    ParameterElement *el = *std::prev(it);
+    // Parse a comma if the last optional parameter had a value.
+    if (el->isOptional()) {
+      os << formatv("if (::mlir::succeeded(_result_{0}) && *_result_{0}) {{\n",
+                    el->getName());
+      os.indent();
+    }
+    if (it <= lastReqIt) {
+      genLiteralParser(",", ctx, os);
+    } else {
+      genLiteralParser(",", ctx, os, /*isOptional=*/true);
+      os << ") break;\n";
+    }
+    if (el->isOptional())
+      os.unindent() << "}\n";
+  };
+
+  // llvm::interleave
+  if (it != params.end()) {
+    eachFn(*it++);
+    for (IteratorT e = params.end(); it != e; ++it) {
+      betweenFn(it);
+      eachFn(*it);
+    }
+  }
+
+  if (hasOptional)
+    os.unindent() << "} while(false);\n";
 }
 
-void AttrOrTypeFormat::genStructParser(StructDirective *el, FmtContext &ctx,
-                                       MethodBody &os) {
+void DefFormat::genStructParser(StructDirective *el, FmtContext &ctx,
+                                MethodBody &os) {
+  // Loop declaration for struct parser with only required parameters.
+  //
+  // $0: Number of expected parameters.
+  const char *const loopHeader = R"(
+  for (unsigned odsStructIndex = 0; odsStructIndex < $0; ++odsStructIndex) {
+)";
+
+  // Loop body start for struct parser.
+  const char *const loopStart = R"(
+    ::llvm::StringRef _paramKey;
+    if ($_parser.parseKeyword(&_paramKey)) {
+      $_parser.emitError($_parser.getCurrentLocation(),
+                         "expected a parameter name in struct");
+      return {};
+    }
+    if (!_loop_body(_paramKey)) return {};
+)";
+
+  // Struct parser loop end. Check for duplicate or unknown struct parameters.
+  //
+  // {0}: Code template for printing an error.
+  const char *const loopEnd = R"({{
+  {0}"duplicate or unknown struct parameter name: ") << _paramKey;
+  return {{};
+}
+)";
+
+  // Struct parser loop terminator. Parse a comma except on the last element.
+  //
+  // {0}: Number of elements in the struct.
+  const char *const loopTerminator = R"(
+  if ((odsStructIndex != {0} - 1) && odsParser.parseComma())
+    return {{};
+}
+)";
+
+  // Check that a mandatory parameter was parse.
+  //
+  // {0}: Name of the parameter.
+  const char *const checkParam = R"(
+    if (!_seen_{0}) {
+      {1}"struct is missing required parameter: ") << "{0}";
+      return {{};
+    }
+)";
+
+  // Optional parameters in a struct must be parsed successfully if the
+  // keyword is present.
+  //
+  // {0}: Name of the parameter.
+  // {1}: Emit error string
+  const char *const checkOptionalParam = R"(
+    if (::mlir::succeeded(_result_{0}) && !*_result_{0}) {{
+      {1}"expected a value for parameter '{0}'");
+      return {{};
+    }
+)";
+
+  // First iteration of the loop parsing an optional struct.
+  const char *const optionalStructFirst = R"(
+  ::llvm::StringRef _paramKey;
+  if (!$_parser.parseOptionalKeyword(&_paramKey)) {
+    if (!_loop_body(_paramKey)) return {};
+    while (!$_parser.parseOptionalComma()) {
+)";
+
   os << "// Parse parameter struct\n";
 
-  /// Declare a "seen" variable for each key.
-  for (const AttrOrTypeParameter &param : el->getParams())
-    os << formatv("bool _seen_{0} = false;\n", param.getName());
+  // Declare a "seen" variable for each key.
+  for (ParameterElement *param : el->getParams())
+    os << formatv("bool _seen_{0} = false;\n", param->getName());
 
-  /// Generate the parsing loop.
-  os.getStream().printReindented(
-      tgfmt(structParseLoopStart, &ctx, el->getNumParams()).str());
-  os.indent();
-  genLiteralParser("=", ctx, os);
-  for (const AttrOrTypeParameter &param : el->getParams()) {
+  // Generate the body of the parsing loop inside a lambda.
+  os << "{\n";
+  os.indent()
+      << "const auto _loop_body = [&](::llvm::StringRef _paramKey) -> bool {\n";
+  genLiteralParser("=", ctx, os.indent());
+  for (ParameterElement *param : el->getParams()) {
     os << formatv("if (!_seen_{0} && _paramKey == \"{0}\") {\n"
                   "  _seen_{0} = true;\n",
-                  param.getName());
+                  param->getName());
     genVariableParser(param, ctx, os.indent());
+    if (param->isOptional()) {
+      os.getStream().printReindented(strfmt(checkOptionalParam,
+                                            param->getName(),
+                                            tgfmt(parserErrorStr, &ctx).str()));
+    }
     os.unindent() << "} else ";
+    // Print the check for duplicate or unknown parameter.
   }
+  os.getStream().printReindented(strfmt(loopEnd, tgfmt(parserErrorStr, &ctx)));
+  os << "return true;\n";
+  os.unindent() << "};\n";
+
+  // Generate the parsing loop. If optional parameters are present, then the
+  // parse loop is guarded by commas.
+  unsigned numOptional = llvm::count_if(el->getParams(), paramIsOptional);
+  if (numOptional) {
+    // If the struct itself is optional, pull out the first iteration.
+    if (numOptional == el->getNumParams()) {
+      os.getStream().printReindented(tgfmt(optionalStructFirst, &ctx).str());
+      os.indent();
+    } else {
+      os << "do {\n";
+    }
+  } else {
+    os.getStream().printReindented(
+        tgfmt(loopHeader, &ctx, el->getNumParams()).str());
+  }
+  os.indent();
+  os.getStream().printReindented(tgfmt(loopStart, &ctx).str());
   os.unindent();
 
-  /// Duplicate or unknown parameter.
-  os.getStream().printReindented(strfmt(
-      structParseLoopEnd, tgfmt(parseErrorStr, &ctx), el->getNumParams()));
+  // Print the loop terminator. For optional parameters, we have to check that
+  // all mandatory parameters have been parsed.
+  // The whole struct is optional if all its parameters are optional.
+  if (numOptional) {
+    if (numOptional == el->getNumParams()) {
+      os << "}\n";
+      os.unindent() << "}\n";
+    } else {
+      os << tgfmt("} while(!$_parser.parseOptionalComma());\n", &ctx);
+      for (ParameterElement *param : el->getParams()) {
+        if (param->isOptional())
+          continue;
+        os.getStream().printReindented(
+            strfmt(checkParam, param->getName(), tgfmt(parserErrorStr, &ctx)));
+      }
+    }
+  } else {
+    // Because the loop loops N times and each non-failing iteration sets 1 of
+    // N flags, successfully exiting the loop means that all parameters have
+    // been seen. `parseOptionalComma` would cause issues with any formats that
+    // use "struct(...) `,`" beacuse structs aren't sounded by braces.
+    os.getStream().printReindented(strfmt(loopTerminator, el->getNumParams()));
+  }
+  os.unindent() << "}\n";
+}
 
-  /// Because the loop loops N times and each non-failing iteration sets 1 of
-  /// N flags, successfully exiting the loop means that all parameters have been
-  /// seen. `parseOptionalComma` would cause issues with any formats that use
-  /// "struct(...) `,`" beacuse structs aren't sounded by braces.
+void DefFormat::genOptionalGroupParser(OptionalElement *el, FmtContext &ctx,
+                                       MethodBody &os) {
+  ArrayRef<FormatElement *> elements =
+      el->getThenElements().drop_front(el->getParseStart());
+
+  FormatElement *first = elements.front();
+  const auto guardOn = [&](auto params) {
+    os << "if (!(";
+    llvm::interleave(
+        params, os,
+        [&](ParameterElement *el) {
+          os << formatv("(::mlir::succeeded(_result_{0}) && *_result_{0})",
+                        el->getName());
+        },
+        " || ");
+    os << ")) {\n";
+  };
+  if (auto *literal = dyn_cast<LiteralElement>(first)) {
+    genLiteralParser(literal->getSpelling(), ctx, os, /*isOptional=*/true);
+    os << ") {\n";
+  } else if (auto *param = dyn_cast<ParameterElement>(first)) {
+    genVariableParser(param, ctx, os);
+    guardOn(llvm::makeArrayRef(param));
+  } else if (auto *params = dyn_cast<ParamsDirective>(first)) {
+    genParamsParser(params, ctx, os);
+    guardOn(params->getParams());
+  } else {
+    auto *strct = cast<StructDirective>(first);
+    genStructParser(strct, ctx, os);
+    guardOn(params->getParams());
+  }
+  os.indent();
+
+  // Generate the parsers for the rest of the elements.
+  for (FormatElement *element : el->getElseElements())
+    genElementParser(element, ctx, os);
+  os.unindent() << "} else {\n";
+  os.indent();
+  for (FormatElement *element : elements.drop_front())
+    genElementParser(element, ctx, os);
+  os.unindent() << "}\n";
 }
 
 //===----------------------------------------------------------------------===//
 // PrinterGen
 //===----------------------------------------------------------------------===//
 
-void AttrOrTypeFormat::genPrinter(MethodBody &os) {
+void DefFormat::genPrinter(MethodBody &os) {
   FmtContext ctx;
-  ctx.addSubst("_printer", "printer");
+  ctx.addSubst("_printer", "odsPrinter");
+  os.indent();
 
   /// Generate printers.
   shouldEmitSpace = true;
@@ -382,8 +605,8 @@ void AttrOrTypeFormat::genPrinter(MethodBody &os) {
     genElementPrinter(el, ctx, os);
 }
 
-void AttrOrTypeFormat::genElementPrinter(FormatElement *el, FmtContext &ctx,
-                                         MethodBody &os) {
+void DefFormat::genElementPrinter(FormatElement *el, FmtContext &ctx,
+                                  MethodBody &os) {
   if (auto *literal = dyn_cast<LiteralElement>(el))
     return genLiteralPrinter(literal->getSpelling(), ctx, os);
   if (auto *params = dyn_cast<ParamsDirective>(el))
@@ -391,63 +614,163 @@ void AttrOrTypeFormat::genElementPrinter(FormatElement *el, FmtContext &ctx,
   if (auto *strct = dyn_cast<StructDirective>(el))
     return genStructPrinter(strct, ctx, os);
   if (auto *var = dyn_cast<ParameterElement>(el))
-    return genVariablePrinter(var->getParam(), ctx, os,
-                              var->shouldBeQualified());
+    return genVariablePrinter(var, ctx, os);
+  if (auto *optional = dyn_cast<OptionalElement>(el))
+    return genOptionalGroupPrinter(optional, ctx, os);
+  if (auto *whitespace = dyn_cast<WhitespaceElement>(el))
+    return genWhitespacePrinter(whitespace, ctx, os);
 
-  llvm_unreachable("unknown format element");
+  llvm::PrintFatalError("unsupported format element");
 }
 
-void AttrOrTypeFormat::genLiteralPrinter(StringRef value, FmtContext &ctx,
-                                         MethodBody &os) {
-  /// Don't insert a space before certain punctuation.
+void DefFormat::genLiteralPrinter(StringRef value, FmtContext &ctx,
+                                  MethodBody &os) {
+  // Don't insert a space before certain punctuation.
   bool needSpace =
       shouldEmitSpace && shouldEmitSpaceBefore(value, lastWasPunctuation);
-  os << tgfmt("  $_printer$0 << \"$1\";\n", &ctx, needSpace ? " << ' '" : "",
+  os << tgfmt("$_printer$0 << \"$1\";\n", &ctx, needSpace ? " << ' '" : "",
               value);
 
-  /// Update the flags.
+  // Update the flags.
   shouldEmitSpace =
       value.size() != 1 || !StringRef("<({[").contains(value.front());
   lastWasPunctuation = !(value.front() == '_' || isalpha(value.front()));
 }
 
-void AttrOrTypeFormat::genVariablePrinter(const AttrOrTypeParameter &param,
-                                          FmtContext &ctx, MethodBody &os,
-                                          bool printQualified) {
-  /// Insert a space before the next parameter, if necessary.
+void DefFormat::genVariablePrinter(ParameterElement *el, FmtContext &ctx,
+                                   MethodBody &os, bool skipGuard) {
+  const AttrOrTypeParameter &param = el->getParam();
+  ctx.withSelf(getParameterAccessorName(param.getName()) + "()");
+
+  // Guard the printer on the presence of optional parameters.
+  if (el->isOptional() && !skipGuard) {
+    os << tgfmt("if ($_self) {\n", &ctx);
+    os.indent();
+  }
+
+  // Insert a space before the next parameter, if necessary.
   if (shouldEmitSpace || !lastWasPunctuation)
-    os << tgfmt("  $_printer << ' ';\n", &ctx);
+    os << tgfmt("$_printer << ' ';\n", &ctx);
   shouldEmitSpace = true;
   lastWasPunctuation = false;
 
-  ctx.withSelf(getParameterAccessorName(param.getName()) + "()");
-  os << "  ";
-  if (printQualified)
+  if (el->shouldBeQualified())
     os << tgfmt(qualifiedParameterPrinter, &ctx) << ";\n";
   else if (auto printer = param.getPrinter())
     os << tgfmt(*printer, &ctx) << ";\n";
   else
     os << tgfmt(defaultParameterPrinter, &ctx) << ";\n";
+
+  if (el->isOptional() && !skipGuard)
+    os.unindent() << "}\n";
 }
 
-void AttrOrTypeFormat::genParamsPrinter(ParamsDirective *el, FmtContext &ctx,
-                                        MethodBody &os) {
-  llvm::interleave(
-      el->getParams(),
-      [&](auto param) { this->genVariablePrinter(param, ctx, os); },
-      [&] { this->genLiteralPrinter(",", ctx, os); });
+void DefFormat::genCommaSeparatedPrinter(
+    ArrayRef<ParameterElement *> params, FmtContext &ctx, MethodBody &os,
+    function_ref<void(ParameterElement *)> extra) {
+  // Emit a space if necessary, but only if the struct is present.
+  if (shouldEmitSpace || !lastWasPunctuation) {
+    bool allOptional = llvm::all_of(params, paramIsOptional);
+    if (allOptional) {
+      os << "if (";
+      llvm::interleave(
+          params, os,
+          [&](ParameterElement *param) {
+            os << getParameterAccessorName(param->getName()) << "()";
+          },
+          " || ");
+      os << ") {\n";
+      os.indent();
+    }
+    os << tgfmt("$_printer << ' ';\n", &ctx);
+    if (allOptional)
+      os.unindent() << "}\n";
+  }
+
+  // The first printed element does not need to emit a comma.
+  os << "{\n";
+  os.indent() << "bool _firstPrinted = true;\n";
+  for (ParameterElement *param : params) {
+    if (param->isOptional()) {
+      os << tgfmt("if ($_self()) {\n",
+                  &ctx.withSelf(getParameterAccessorName(param->getName())));
+      os.indent();
+    }
+    os << tgfmt("if (!_firstPrinted) $_printer << \", \";\n", &ctx);
+    os << "_firstPrinted = false;\n";
+    extra(param);
+    shouldEmitSpace = false;
+    lastWasPunctuation = true;
+    genVariablePrinter(param, ctx, os);
+    if (param->isOptional())
+      os.unindent() << "}\n";
+  }
+  os.unindent() << "}\n";
 }
 
-void AttrOrTypeFormat::genStructPrinter(StructDirective *el, FmtContext &ctx,
+void DefFormat::genParamsPrinter(ParamsDirective *el, FmtContext &ctx,
+                                 MethodBody &os) {
+  genCommaSeparatedPrinter(llvm::to_vector(el->getParams()), ctx, os,
+                           [&](ParameterElement *param) {});
+}
+
+void DefFormat::genStructPrinter(StructDirective *el, FmtContext &ctx,
+                                 MethodBody &os) {
+  genCommaSeparatedPrinter(
+      llvm::to_vector(el->getParams()), ctx, os, [&](ParameterElement *param) {
+        os << tgfmt("$_printer << \"$0 = \";\n", &ctx, param->getName());
+      });
+}
+
+void DefFormat::genOptionalGroupPrinter(OptionalElement *el, FmtContext &ctx,
                                         MethodBody &os) {
-  llvm::interleave(
-      el->getParams(),
-      [&](auto param) {
-        this->genLiteralPrinter(param.getName(), ctx, os);
-        this->genLiteralPrinter("=", ctx, os);
-        this->genVariablePrinter(param, ctx, os);
-      },
-      [&] { this->genLiteralPrinter(",", ctx, os); });
+  // Emit the check on whether the group should be printed.
+  const auto guardOn = [&](auto params) {
+    os << "if (";
+    llvm::interleave(
+        params, os,
+        [&](ParameterElement *el) {
+          os << getParameterAccessorName(el->getName()) << "()";
+        },
+        " || ");
+    os << ") {\n";
+    os.indent();
+  };
+  FormatElement *anchor = el->getAnchor();
+  if (auto *param = dyn_cast<ParameterElement>(anchor)) {
+    guardOn(llvm::makeArrayRef(param));
+  } else if (auto *params = dyn_cast<ParamsDirective>(anchor)) {
+    guardOn(params->getParams());
+  } else {
+    auto *strct = dyn_cast<StructDirective>(anchor);
+    guardOn(strct->getParams());
+  }
+  // Generate the printer for the contained elements.
+  {
+    llvm::SaveAndRestore<bool> shouldEmitSpaceFlag(shouldEmitSpace);
+    llvm::SaveAndRestore<bool> lastWasPunctuationFlag(lastWasPunctuation);
+    for (FormatElement *element : el->getThenElements())
+      genElementPrinter(element, ctx, os);
+  }
+  os.unindent() << "} else {\n";
+  os.indent();
+  for (FormatElement *element : el->getElseElements())
+    genElementPrinter(element, ctx, os);
+  os.unindent() << "}\n";
+}
+
+void DefFormat::genWhitespacePrinter(WhitespaceElement *el, FmtContext &ctx,
+                                     MethodBody &os) {
+  if (el->getValue() == "\\n") {
+    // FIXME: The newline should be `printer.printNewLine()`, i.e., handled by
+    // the printer.
+    os << tgfmt("$_printer << '\\n';\n", &ctx);
+  } else if (!el->getValue().empty()) {
+    os << tgfmt("$_printer << \"$0\";\n", &ctx, el->getValue());
+  } else {
+    lastWasPunctuation = true;
+  }
+  shouldEmitSpace = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -462,7 +785,7 @@ public:
         seenParams(def.getNumParameters()) {}
 
   /// Parse the attribute or type format and create the format elements.
-  FailureOr<AttrOrTypeFormat> parse();
+  FailureOr<DefFormat> parse();
 
 protected:
   /// Verify the parsed elements.
@@ -476,9 +799,7 @@ protected:
   /// Verify the elements of an optional group.
   LogicalResult
   verifyOptionalGroupElements(SMLoc loc, ArrayRef<FormatElement *> elements,
-                              Optional<unsigned> anchorIndex) override {
-    return emitError(loc, "optional groups not (yet) supported");
-  }
+                              Optional<unsigned> anchorIndex) override;
 
   /// Parse an attribute or type variable.
   FailureOr<FormatElement *> parseVariableImpl(SMLoc loc, StringRef name,
@@ -505,30 +826,78 @@ private:
 
 LogicalResult DefFormatParser::verify(SMLoc loc,
                                       ArrayRef<FormatElement *> elements) {
+  // Check that all parameters are referenced in the format.
   for (auto &it : llvm::enumerate(def.getParameters())) {
-    if (!seenParams.test(it.index())) {
+    if (!it.value().isOptional() && !seenParams.test(it.index())) {
       return emitError(loc, "format is missing reference to parameter: " +
                                 it.value().getName());
+    }
+  }
+  if (elements.empty())
+    return success();
+  // A `struct` directive that contains optional parameters cannot be followed
+  // by a comma literal, which is ambiguous.
+  for (auto it : llvm::zip(elements.drop_back(), elements.drop_front())) {
+    auto *structEl = dyn_cast<StructDirective>(std::get<0>(it));
+    auto *literalEl = dyn_cast<LiteralElement>(std::get<1>(it));
+    if (!structEl || !literalEl)
+      continue;
+    if (literalEl->getSpelling() == "," && structEl->hasOptionalParams()) {
+      return emitError(loc, "`struct` directive with optional parameters "
+                            "cannot be followed by a comma literal");
     }
   }
   return success();
 }
 
-FailureOr<AttrOrTypeFormat> DefFormatParser::parse() {
+LogicalResult
+DefFormatParser::verifyOptionalGroupElements(llvm::SMLoc loc,
+                                             ArrayRef<FormatElement *> elements,
+                                             Optional<unsigned> anchorIndex) {
+  // `params` and `struct` directives are allowed only if all the contained
+  // parameters are optional.
+  for (FormatElement *el : elements) {
+    if (auto *param = dyn_cast<ParameterElement>(el)) {
+      if (!param->isOptional()) {
+        return emitError(loc,
+                         "parameters in an optional group must be optional");
+      }
+    } else if (auto *params = dyn_cast<ParamsDirective>(el)) {
+      if (llvm::any_of(params->getParams(), paramNotOptional)) {
+        return emitError(loc, "`params` directive allowed in optional group "
+                              "only if all parameters are optional");
+      }
+    } else if (auto *strct = dyn_cast<StructDirective>(el)) {
+      if (llvm::any_of(strct->getParams(), paramNotOptional)) {
+        return emitError(loc, "`struct` is only allowed in an optional group "
+                              "if all captured parameters are optional");
+      }
+    }
+  }
+  // The anchor must be a parameter or one of the aforementioned directives.
+  if (anchorIndex && !isa<ParameterElement, ParamsDirective, StructDirective>(
+                         elements[*anchorIndex])) {
+    return emitError(loc,
+                     "optional group anchor must be a parameter or directive");
+  }
+  return success();
+}
+
+FailureOr<DefFormat> DefFormatParser::parse() {
   FailureOr<std::vector<FormatElement *>> elements = FormatParser::parse();
   if (failed(elements))
     return failure();
-  return AttrOrTypeFormat(def, std::move(*elements));
+  return DefFormat(def, std::move(*elements));
 }
 
 FailureOr<FormatElement *>
 DefFormatParser::parseVariableImpl(SMLoc loc, StringRef name, Context ctx) {
-  /// Lookup the parameter.
+  // Lookup the parameter.
   ArrayRef<AttrOrTypeParameter> params = def.getParameters();
   auto *it = llvm::find_if(
       params, [&](auto &param) { return param.getName() == name; });
 
-  /// Check that the parameter reference is valid.
+  // Check that the parameter reference is valid.
   if (it == params.end()) {
     return emitError(loc,
                      def.getName() + " has no parameter named '" + name + "'");
@@ -581,9 +950,9 @@ DefFormatParser::parseQualifiedDirective(SMLoc loc, Context ctx) {
 }
 
 FailureOr<FormatElement *> DefFormatParser::parseParamsDirective(SMLoc loc) {
-  /// Collect all of the attribute's or type's parameters.
-  std::vector<FormatElement *> vars;
-  /// Ensure that none of the parameters have already been captured.
+  // Collect all of the attribute's or type's parameters.
+  std::vector<ParameterElement *> vars;
+  // Ensure that none of the parameters have already been captured.
   for (const auto &it : llvm::enumerate(def.getParameters())) {
     if (seenParams.test(it.index())) {
       return emitError(loc, "`params` captures duplicate parameter: " +
@@ -600,27 +969,27 @@ FailureOr<FormatElement *> DefFormatParser::parseStructDirective(SMLoc loc) {
                         "expected '(' before `struct` argument list")))
     return failure();
 
-  /// Parse variables captured by `struct`.
-  std::vector<FormatElement *> vars;
+  // Parse variables captured by `struct`.
+  std::vector<ParameterElement *> vars;
 
-  /// Parse first captured parameter or a `params` directive.
+  // Parse first captured parameter or a `params` directive.
   FailureOr<FormatElement *> var = parseElement(StructDirectiveContext);
   if (failed(var) || !isa<VariableElement, ParamsDirective>(*var)) {
     return emitError(loc,
                      "`struct` argument list expected a variable or directive");
   }
   if (isa<VariableElement>(*var)) {
-    /// Parse any other parameters.
-    vars.push_back(std::move(*var));
+    // Parse any other parameters.
+    vars.push_back(cast<ParameterElement>(*var));
     while (peekToken().is(FormatToken::comma)) {
       consumeToken();
       var = parseElement(StructDirectiveContext);
       if (failed(var) || !isa<VariableElement>(*var))
         return emitError(loc, "expected a variable in `struct` argument list");
-      vars.push_back(std::move(*var));
+      vars.push_back(cast<ParameterElement>(*var));
     }
   } else {
-    /// `struct(params)` captures all parameters in the attribute or type.
+    // `struct(params)` captures all parameters in the attribute or type.
     vars = cast<ParamsDirective>(*var)->takeParams();
   }
 
@@ -642,16 +1011,16 @@ void mlir::tblgen::generateAttrOrTypeFormat(const AttrOrTypeDef &def,
   mgr.AddNewSourceBuffer(
       llvm::MemoryBuffer::getMemBuffer(*def.getAssemblyFormat()), SMLoc());
 
-  /// Parse the custom assembly format>
+  // Parse the custom assembly format>
   DefFormatParser fmtParser(mgr, def);
-  FailureOr<AttrOrTypeFormat> format = fmtParser.parse();
+  FailureOr<DefFormat> format = fmtParser.parse();
   if (failed(format)) {
     if (formatErrorIsFatal)
       PrintFatalError(def.getLoc(), "failed to parse assembly format");
     return;
   }
 
-  /// Generate the parser and printer.
+  // Generate the parser and printer.
   format->genParser(parser);
   format->genPrinter(printer);
 }

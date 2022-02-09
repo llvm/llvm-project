@@ -4,7 +4,7 @@
 ; powerpc64 (and on x86_64 at at least -O2). Presumably this is a SelectionDAG
 ; issue.
 ; FIXME: arm64 is an alias for aarch64 on macs, apparently?
-; XFAIL: powerpc64, aarch64, arm64, hexagon, riscv
+; XFAIL: powerpc64, aarch64, arm64, hexagon, riscv, sparc
 
 ; Build from the following source with clang -O2.
 

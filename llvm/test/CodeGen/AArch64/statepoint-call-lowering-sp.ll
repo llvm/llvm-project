@@ -8,7 +8,7 @@ declare void @consume(i32 addrspace(1)* %obj)
 
 define i1 @test(i32 addrspace(1)* %a) "frame-pointer"="all" gc "statepoint-example" {
 entry:
-  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %a)]
+  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %a)]
 ; CHECK: STATEPOINT 0, 0, 0, @return_i1, 2, 0, 2, 0, 2, 0, 2, 1, 1, 8, $sp, 24, 2, 0, 2, 1, 0, 0
   %call1 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
   %call2 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)

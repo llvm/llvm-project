@@ -1872,31 +1872,9 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     return true;
   }
 
-  if (DestAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
-    // Truncate.
-    B.buildExtract(Dst, Src, 0);
-    MI.eraseFromParent();
-    return true;
-  }
-
-  if (SrcAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
-    const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-    uint32_t AddrHiVal = Info->get32BitAddressHighBits();
-
-    // FIXME: This is a bit ugly due to creating a merge of 2 pointers to
-    // another. Merge operands are required to be the same type, but creating an
-    // extra ptrtoint would be kind of pointless.
-    auto HighAddr = B.buildConstant(
-      LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS_32BIT, 32), AddrHiVal);
-    B.buildMerge(Dst, {Src, HighAddr});
-    MI.eraseFromParent();
-    return true;
-  }
-
-  if (SrcAS == AMDGPUAS::FLAT_ADDRESS) {
-    assert(DestAS == AMDGPUAS::LOCAL_ADDRESS ||
-           DestAS == AMDGPUAS::PRIVATE_ADDRESS);
-
+  if (SrcAS == AMDGPUAS::FLAT_ADDRESS &&
+      (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
+       DestAS == AMDGPUAS::PRIVATE_ADDRESS)) {
     if (isKnownNonNull(Src, MRI, TM, SrcAS)) {
       // Extract low 32-bits of the pointer.
       B.buildExtract(Dst, Src, 0);
@@ -1920,37 +1898,70 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     return true;
   }
 
-  if (SrcAS != AMDGPUAS::LOCAL_ADDRESS && SrcAS != AMDGPUAS::PRIVATE_ADDRESS)
-    return false;
+  if (DestAS == AMDGPUAS::FLAT_ADDRESS &&
+      (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
+       SrcAS == AMDGPUAS::PRIVATE_ADDRESS)) {
+    if (!ST.hasFlatAddressSpace())
+      return false;
 
-  if (!ST.hasFlatAddressSpace())
-    return false;
+    Register ApertureReg = getSegmentAperture(SrcAS, MRI, B);
+    if (!ApertureReg.isValid())
+      return false;
 
-  Register ApertureReg = getSegmentAperture(SrcAS, MRI, B);
-  if (!ApertureReg.isValid())
-    return false;
+    // Coerce the type of the low half of the result so we can use merge_values.
+    Register SrcAsInt = B.buildPtrToInt(S32, Src).getReg(0);
 
-  // Coerce the type of the low half of the result so we can use merge_values.
-  Register SrcAsInt = B.buildPtrToInt(S32, Src).getReg(0);
+    // TODO: Should we allow mismatched types but matching sizes in merges to
+    // avoid the ptrtoint?
+    auto BuildPtr = B.buildMerge(DstTy, {SrcAsInt, ApertureReg});
 
-  // TODO: Should we allow mismatched types but matching sizes in merges to
-  // avoid the ptrtoint?
-  auto BuildPtr = B.buildMerge(DstTy, {SrcAsInt, ApertureReg});
+    if (isKnownNonNull(Src, MRI, TM, SrcAS)) {
+      B.buildCopy(Dst, BuildPtr);
+      MI.eraseFromParent();
+      return true;
+    }
 
-  if (isKnownNonNull(Src, MRI, TM, SrcAS)) {
-    B.buildCopy(Dst, BuildPtr);
+    auto SegmentNull = B.buildConstant(SrcTy, TM.getNullPointerValue(SrcAS));
+    auto FlatNull = B.buildConstant(DstTy, TM.getNullPointerValue(DestAS));
+
+    auto CmpRes = B.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Src,
+                              SegmentNull.getReg(0));
+
+    B.buildSelect(Dst, CmpRes, BuildPtr, FlatNull);
+
     MI.eraseFromParent();
     return true;
   }
 
-  auto SegmentNull = B.buildConstant(SrcTy, TM.getNullPointerValue(SrcAS));
-  auto FlatNull = B.buildConstant(DstTy, TM.getNullPointerValue(DestAS));
+  if (DestAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT &&
+      SrcTy.getSizeInBits() == 64) {
+    // Truncate.
+    B.buildExtract(Dst, Src, 0);
+    MI.eraseFromParent();
+    return true;
+  }
 
-  auto CmpRes =
-      B.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Src, SegmentNull.getReg(0));
+  if (SrcAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT &&
+      DstTy.getSizeInBits() == 64) {
+    const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+    uint32_t AddrHiVal = Info->get32BitAddressHighBits();
 
-  B.buildSelect(Dst, CmpRes, BuildPtr, FlatNull);
+    // FIXME: This is a bit ugly due to creating a merge of 2 pointers to
+    // another. Merge operands are required to be the same type, but creating an
+    // extra ptrtoint would be kind of pointless.
+    auto HighAddr = B.buildConstant(
+        LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS_32BIT, 32), AddrHiVal);
+    B.buildMerge(Dst, {Src, HighAddr});
+    MI.eraseFromParent();
+    return true;
+  }
 
+  DiagnosticInfoUnsupported InvalidAddrSpaceCast(
+      MF.getFunction(), "invalid addrspacecast", B.getDebugLoc());
+
+  LLVMContext &Ctx = MF.getFunction().getContext();
+  Ctx.diagnose(InvalidAddrSpaceCast);
+  B.buildUndef(Dst);
   MI.eraseFromParent();
   return true;
 }

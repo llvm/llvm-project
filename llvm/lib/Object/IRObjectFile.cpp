@@ -32,7 +32,7 @@ IRObjectFile::IRObjectFile(MemoryBufferRef Object,
     SymTab.addModule(M.get());
 }
 
-IRObjectFile::~IRObjectFile() {}
+IRObjectFile::~IRObjectFile() = default;
 
 static ModuleSymbolTable::Symbol getSym(DataRefImpl &Symb) {
   return *reinterpret_cast<ModuleSymbolTable::Symbol *>(Symb.p);

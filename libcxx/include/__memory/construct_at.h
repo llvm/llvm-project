@@ -16,11 +16,11 @@
 #include <__memory/addressof.h>
 #include <__memory/voidify.h>
 #include <__utility/forward.h>
+#include <__utility/move.h>
 #include <type_traits>
-#include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD

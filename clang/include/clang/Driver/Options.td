@@ -1033,8 +1033,10 @@ def fuse_cuid_EQ : Joined<["-"], "fuse-cuid=">,
            "file path and command line options) | 'random' (ID's generated as "
            "random numbers) | 'none' (disabled). Default is 'hash'. This option "
            "will be overridden by option '-cuid=[ID]' if it is specified." >;
-def libomptarget_amdgcn_bc_path_EQ : Joined<["--"], "libomptarget-amdgcn-bc-path=">, Group<i_Group>,
+def libomptarget_amdgpu_bc_path_EQ : Joined<["--"], "libomptarget-amdgpu-bc-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-amdgcn bitcode library">;
+def libomptarget_amdgcn_bc_path_EQ : Joined<["--"], "libomptarget-amdgcn-bc-path=">, Group<i_Group>,
+  HelpText<"Path to libomptarget-amdgcn bitcode library">, Alias<libomptarget_amdgpu_bc_path_EQ>;
 def libomptarget_nvptx_bc_path_EQ : Joined<["--"], "libomptarget-nvptx-bc-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-nvptx bitcode library">;
 def dD : Flag<["-"], "dD">, Group<d_Group>, Flags<[CC1Option]>,
@@ -2905,6 +2907,14 @@ def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
     HelpText<"Enable matrix data type and related builtin functions">,
     MarshallingInfoFlag<LangOpts<"MatrixTypes">>;
 
+def fzero_call_used_regs_EQ
+    : Joined<["-"], "fzero-call-used-regs=">, Group<f_Group>, Flags<[CC1Option]>,
+      HelpText<"Clear call-used registers upon function return.">,
+      Values<"skip,used-gpr-arg,used-gpr,used-arg,used,all-gpr-arg,all-gpr,all-arg,all">,
+      NormalizedValues<["Skip", "UsedGPRArg", "UsedGPR", "UsedArg", "Used",
+                        "AllGPRArg", "AllGPR", "AllArg", "All"]>,
+      NormalizedValuesScope<"llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind">,
+      MarshallingInfoEnum<CodeGenOpts<"ZeroCallUsedRegs">, "Skip">;
 
 def fdebug_types_section: Flag <["-"], "fdebug-types-section">, Group<f_Group>,
   HelpText<"Place debug types in their own section (ELF Only)">;
@@ -3323,9 +3333,9 @@ def mstrict_align : Flag<["-"], "mstrict-align">, Alias<mno_unaligned_access>, F
   HelpText<"Force all memory accesses to be aligned (same as mno-unaligned-access)">;
 def mno_thumb : Flag<["-"], "mno-thumb">, Group<m_arm_Features_Group>;
 def mrestrict_it: Flag<["-"], "mrestrict-it">, Group<m_arm_Features_Group>,
-  HelpText<"Disallow generation of deprecated IT blocks for ARMv8. It is on by default for ARMv8 Thumb mode.">;
+  HelpText<"Disallow generation of complex IT blocks.">;
 def mno_restrict_it: Flag<["-"], "mno-restrict-it">, Group<m_arm_Features_Group>,
-  HelpText<"Allow generation of deprecated IT blocks for ARMv8. It is off by default for ARMv8 Thumb mode">;
+  HelpText<"Allow generation of complex IT blocks.">;
 def marm : Flag<["-"], "marm">, Alias<mno_thumb>;
 def ffixed_r9 : Flag<["-"], "ffixed-r9">, Group<m_arm_Features_Group>,
   HelpText<"Reserve the r9 register (ARM only)">;
@@ -3440,8 +3450,12 @@ defm amdgpu_ieee : BoolOption<"m", "amdgpu-ieee",
   NegFlag<SetFalse, [CC1Option]>>, Group<m_Group>;
 
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
-  HelpText<"Specify code object ABI version. Defaults to 3. (AMDGPU only)">,
-  MetaVarName<"<version>">, Values<"2,3,4">;
+  HelpText<"Specify code object ABI version. Allowed values are 2, 3, 4, and 5. Defaults to 4. (AMDGPU only)">,
+  Flags<[CC1Option]>,
+  Values<"none,2,3,4,5">,
+  NormalizedValuesScope<"TargetOptions">,
+  NormalizedValues<["COV_None", "COV_2", "COV_3", "COV_4", "COV_5"]>,
+  MarshallingInfoEnum<TargetOpts<"CodeObjectVersion">, "COV_4">;
 
 defm code_object_v3_legacy : SimpleMFlag<"code-object-v3",
   "Legacy option to specify code object ABI V3",
@@ -4744,6 +4758,10 @@ def module_suffix : Separate<["-"], "module-suffix">,  Group<f_Group>, MetaVarNa
 def fno_reformat : Flag<["-"], "fno-reformat">, Group<Preprocessor_Group>,
   HelpText<"Dump the cooked character stream in -E mode">;
 defm analyzed_objects_for_unparse : OptOutFC1FFlag<"analyzed-objects-for-unparse", "", "Do not use the analyzed objects when unparsing">;
+
+def emit_mlir : Flag<["-"], "emit-mlir">, Group<Action_Group>,
+  HelpText<"Build the parse tree, then lower it to MLIR">;
+def emit_fir : Flag<["-"], "emit-fir">, Alias<emit_mlir>;
 
 }
 

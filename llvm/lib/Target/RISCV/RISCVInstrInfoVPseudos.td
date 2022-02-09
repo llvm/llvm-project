@@ -424,6 +424,20 @@ def RISCVVIntrinsicsTable : GenericTable {
   let PrimaryKeyName = "getRISCVVIntrinsicInfo";
 }
 
+class RISCVMaskedPseudo<bits<4> MaskIdx> {
+  Pseudo MaskedPseudo = !cast<Pseudo>(NAME);
+  Pseudo UnmaskedPseudo = !cast<Pseudo>(!subst("_MASK", "", NAME));
+  bits<4> MaskOpIdx = MaskIdx;
+}
+
+def RISCVMaskedPseudosTable : GenericTable {
+  let FilterClass = "RISCVMaskedPseudo";
+  let CppTypeName = "RISCVMaskedPseudoInfo";
+  let Fields = ["MaskedPseudo", "UnmaskedPseudo", "MaskOpIdx"];
+  let PrimaryKey = ["MaskedPseudo"];
+  let PrimaryKeyName = "getMaskedPseudoInfo";
+}
+
 class RISCVVLE<bit M, bit TU, bit Str, bit F, bits<3> S, bits<3> L> {
   bits<1> Masked = M;
   bits<1> IsTU = TU;
@@ -1639,7 +1653,8 @@ multiclass VPseudoBinary<VReg RetClass,
     def "_" # MInfo.MX : VPseudoBinaryNoMask<RetClass, Op1Class, Op2Class,
                                              Constraint>;
     def "_" # MInfo.MX # "_MASK" : VPseudoBinaryMaskTA<RetClass, Op1Class, Op2Class,
-                                                       Constraint>;
+                                                       Constraint>,
+                                   RISCVMaskedPseudo</*MaskOpIdx*/ 3>;
   }
 }
 

@@ -52,6 +52,10 @@ Defined register *names* include:
     HW_REG_LDS_ALLOC    Per-wave LDS allocation.
     HW_REG_IB_STS       Counters of outstanding instructions.
     HW_REG_SH_MEM_BASES Memory aperture.
+    HW_REG_TBA_LO       tba_lo register.
+    HW_REG_TBA_HI       tba_hi register.
+    HW_REG_TMA_LO       tma_lo register.
+    HW_REG_TMA_HI       tma_hi register.
     =================== ==========================================
 
 Examples:

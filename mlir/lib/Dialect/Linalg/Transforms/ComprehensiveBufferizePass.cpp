@@ -125,12 +125,12 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
 
   // Enable InitTensorOp elimination.
   if (initTensorElimination) {
-    options->addPostAnalysisStep<
-        linalg_ext::InsertSliceAnchoredInitTensorEliminationStep>();
+    options->addPostAnalysisStep(
+        linalg_ext::insertSliceAnchoredInitTensorEliminationStep);
   }
 
   // Only certain scf.for ops are supported by the analysis.
-  options->addPostAnalysisStep<scf::AssertScfForAliasingProperties>();
+  options->addPostAnalysisStep(scf::assertScfForAliasingProperties);
 
   ModuleOp moduleOp = getOperation();
   applyEnablingTransformations(moduleOp);

@@ -11,6 +11,7 @@ add_mlir_dialect_library(MLIRStandard
   MLIRArithmetic
   MLIRCallInterfaces
   MLIRCastInterfaces
+  MLIRControlFlow
   MLIRControlFlowInterfaces
   MLIRInferTypeOpInterface
   MLIRIR

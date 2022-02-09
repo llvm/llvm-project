@@ -23,8 +23,7 @@ static void NotifyChange(const BreakpointSP &bp, BreakpointEventType event) {
 }
 
 BreakpointList::BreakpointList(bool is_internal)
-    : m_mutex(), m_breakpoints(), m_next_break_id(0),
-      m_is_internal(is_internal) {}
+    : m_next_break_id(0), m_is_internal(is_internal) {}
 
 BreakpointList::~BreakpointList() = default;
 

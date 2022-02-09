@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep zeroext
+; RUN: opt < %s -passes=instcombine -S | grep zeroext
 
 	%struct.FRAME.nest = type { i32, i32 (...)* }
 	%struct.__builtin_trampoline = type { [10 x i8] }

@@ -21,7 +21,7 @@
 #include "min_allocator.h"
 
 template <class charT>
-void
+TEST_CONSTEXPR_CXX20 void
 test(unsigned n, charT c)
 {
     typedef std::basic_string<charT, std::char_traits<charT>, test_allocator<charT> > S;
@@ -36,7 +36,7 @@ test(unsigned n, charT c)
 }
 
 template <class charT, class A>
-void
+TEST_CONSTEXPR_CXX20 void
 test(unsigned n, charT c, const A& a)
 {
     typedef std::basic_string<charT, std::char_traits<charT>, A> S;
@@ -66,7 +66,7 @@ test(Tp n, Tp c)
 }
 
 template <class Tp, class A>
-void
+TEST_CONSTEXPR_CXX20 void
 test(Tp n, Tp c, const A& a)
 {
     typedef char charT;
@@ -80,9 +80,8 @@ test(Tp n, Tp c, const A& a)
     assert(s2.capacity() >= s2.size());
 }
 
-int main(int, char**)
-{
-    {
+bool test() {
+  {
     typedef test_allocator<char> A;
 
     test(0, 'a');
@@ -99,9 +98,9 @@ int main(int, char**)
 
     test(static_cast<char>(100), static_cast<char>(65));
     test(static_cast<char>(100), static_cast<char>(65), A(3));
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef min_allocator<char> A;
 
     test(0, 'a');
@@ -118,7 +117,17 @@ int main(int, char**)
 
     test(static_cast<char>(100), static_cast<char>(65));
     test(static_cast<char>(100), static_cast<char>(65), A());
-    }
+  }
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
 #endif
 
   return 0;

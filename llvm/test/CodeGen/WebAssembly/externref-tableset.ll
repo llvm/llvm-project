@@ -94,4 +94,5 @@ define void @set_externref_table_with_id_from_call(%externref %g) {
   ret void
 }
 
-; CHECK: .tabletype externref_table, externref
+;       CHECK: .tabletype externref_table, externref
+; CHECK-LABEL: externref_table:

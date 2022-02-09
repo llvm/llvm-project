@@ -89,17 +89,17 @@ for.end:
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %0, i16* %arrayidx2, align 2
 ; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 5 for VF 2 For instruction:   store i16 %0, i16* %arrayidx2, align 2
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 2 For instruction:   store i16 %2, i16* %arrayidx7, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 2 for VF 2 For instruction:   store i16 %0, i16* %arrayidx2, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 2 for VF 2 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 11 for VF 4 For instruction:   store i16 %0, i16* %arrayidx2, align 2
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 4 For instruction:   store i16 %2, i16* %arrayidx7, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 4 for VF 4 For instruction:   store i16 %0, i16* %arrayidx2, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 4 for VF 4 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 23 for VF 8 For instruction:   store i16 %0, i16* %arrayidx2, align 2
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 8 For instruction:   store i16 %2, i16* %arrayidx7, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 8 for VF 8 For instruction:   store i16 %0, i16* %arrayidx2, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 8 for VF 8 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 50 for VF 16 For instruction:   store i16 %0, i16* %arrayidx2, align 2
-; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 3000000 for VF 16 For instruction:   store i16 %2, i16* %arrayidx7, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 20 for VF 16 For instruction:   store i16 %0, i16* %arrayidx2, align 2
+; DISABLED_MASKED_STRIDED: LV: Found an estimated cost of 20 for VF 16 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 
 ; ENABLED_MASKED_STRIDED: LV: Checking a loop in "test2"
 ;
@@ -107,16 +107,16 @@ for.end:
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 0 for VF 2 For instruction:   store i16 %0, i16* %arrayidx2, align 2
-; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 10 for VF 2 For instruction:   store i16 %2, i16* %arrayidx7, align 2
+; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 2 for VF 2 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 0 for VF 4 For instruction:   store i16 %0, i16* %arrayidx2, align 2
-; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 14 for VF 4 For instruction:   store i16 %2, i16* %arrayidx7, align 2
+; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 4 for VF 4 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 0 for VF 8 For instruction:   store i16 %0, i16* %arrayidx2, align 2
-; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 14 for VF 8 For instruction:   store i16 %2, i16* %arrayidx7, align 2
+; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 8 for VF 8 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 ;
 ; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 0 for VF 16 For instruction:   store i16 %0, i16* %arrayidx2, align 2
-; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 27 for VF 16 For instruction:   store i16 %2, i16* %arrayidx7, align 2
+; ENABLED_MASKED_STRIDED: LV: Found an estimated cost of 20 for VF 16 For instruction:   store i16 %2, i16* %arrayidx7, align 2
 
 define void @test2(i16* noalias nocapture %points, i32 %numPoints, i16* noalias nocapture readonly %x, i16* noalias nocapture readonly %y) {
 entry:

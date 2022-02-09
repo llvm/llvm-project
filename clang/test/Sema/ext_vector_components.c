@@ -7,7 +7,7 @@ typedef __attribute__(( ext_vector_type(16) )) float float16;
 
 static float4 vec4_0 = (float4)0.5f;
 
-static void test() {
+static void test(void) {
     float2 vec2, vec2_2;
     float3 vec3;
     float4 vec4, vec4_2, *vec4p;

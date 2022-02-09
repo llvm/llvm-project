@@ -260,10 +260,8 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [AttrSizedOperandSegments]> {
     }
   }];
 
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parseGenericOp(parser, result); }];
-
   let hasCanonicalizer = 1;
+  let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
 }

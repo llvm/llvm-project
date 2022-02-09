@@ -25,7 +25,7 @@ class AVRELFObjectWriter : public MCELFObjectTargetWriter {
 public:
   AVRELFObjectWriter(uint8_t OSABI);
 
-  virtual ~AVRELFObjectWriter() {}
+  virtual ~AVRELFObjectWriter() = default;
 
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;

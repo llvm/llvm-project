@@ -250,6 +250,13 @@ public:
   void WriteOutputStream(const std::string &message) {
     *outputStream_ << message;
   }
+
+  /// Get the user specified output stream.
+  llvm::raw_pwrite_stream &GetOutputStream() {
+    assert(outputStream_ &&
+        "Compiler instance has no user-specified output stream!");
+    return *outputStream_;
+  }
 };
 
 } // end namespace Fortran::frontend

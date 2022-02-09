@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 define void @test (float %b, <8 x float> * %p)  {
 ; CHECK: extractelement

@@ -25,7 +25,7 @@ struct PerFunctionMIParsingState;
 
 class AMDGPUMIRFormatter final : public MIRFormatter {
 public:
-  AMDGPUMIRFormatter() {}
+  AMDGPUMIRFormatter() = default;
   virtual ~AMDGPUMIRFormatter() = default;
 
   /// Implement target specific parsing of target custom pseudo source value.

@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine < %s | FileCheck %s
+; RUN: opt -S -passes=instcombine < %s | FileCheck %s
 
 declare float @llvm.fma.f32(float, float, float) #0
 declare float @llvm.fmuladd.f32(float, float, float) #0

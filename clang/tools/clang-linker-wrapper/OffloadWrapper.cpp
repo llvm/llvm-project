@@ -14,6 +14,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;

@@ -7,16 +7,16 @@
 
 typedef int AVAILABLE_10_12 new_int; // expected-note + {{'new_int' has been marked as being introduced in macOS 10.12 here, but the deployment target is macOS 10.9}}
 
-int func_10_11() AVAILABLE_10_11; // expected-note 8 {{'func_10_11' has been marked as being introduced in macOS 10.11 here, but the deployment target is macOS 10.9}}
+int func_10_11(void) AVAILABLE_10_11; // expected-note 8 {{'func_10_11' has been marked as being introduced in macOS 10.11 here, but the deployment target is macOS 10.9}}
 
 #ifdef OBJCPP
 // expected-note@+2 6 {{'func_10_12' has been marked as being introduced in macOS 10.12 here, but the deployment target is macOS 10.9}}
 #endif
-int func_10_12() AVAILABLE_10_12; // expected-note 7 {{'func_10_12' has been marked as being introduced in macOS 10.12 here, but the deployment target is macOS 10.9}}
+int func_10_12(void) AVAILABLE_10_12; // expected-note 7 {{'func_10_12' has been marked as being introduced in macOS 10.12 here, but the deployment target is macOS 10.9}}
 
-int func_10_0() AVAILABLE_10_0;
+int func_10_0(void) AVAILABLE_10_0;
 
-void use_func() {
+void use_func(void) {
   func_10_11(); // expected-warning{{'func_10_11' is only available on macOS 10.11 or newer}} expected-note{{enclose 'func_10_11' in an @available check to silence this warning}}
 
   if (@available(macos 10.11, *))
@@ -25,13 +25,13 @@ void use_func() {
     func_10_11(); // expected-warning{{'func_10_11' is only available on macOS 10.11 or newer}} expected-note{{enclose 'func_10_11' in an @available check to silence this warning}}
 }
 
-void defn_10_11() AVAILABLE_10_11;
+void defn_10_11(void) AVAILABLE_10_11;
 
-void defn_10_11() {
+void defn_10_11(void) {
   func_10_11();
 }
 
-void nested_ifs() {
+void nested_ifs(void) {
   if (@available(macos 10.12, *)) {
     if (@available(macos 10.10, *)) {
       func_10_12();
@@ -43,7 +43,7 @@ void nested_ifs() {
   }
 }
 
-void star_case() {
+void star_case(void) {
   if (@available(ios 9, *)) {
     func_10_11(); // expected-warning{{'func_10_11' is only available on macOS 10.11 or newer}} expected-note{{enclose 'func_10_11' in an @available check to silence this warning}}
     func_10_0();
@@ -67,7 +67,7 @@ typedef int int_10_11 AVAILABLE_10_11; // expected-note {{'int_10_11' has been m
 #endif
 typedef int int_10_12 AVAILABLE_10_12; // expected-note 2 {{'int_10_12' has been marked as being introduced in macOS 10.12 here, but the deployment target is macOS 10.9}}
 
-void use_typedef() {
+void use_typedef(void) {
   int_10_11 x; // expected-warning{{'int_10_11' is only available on macOS 10.11 or newer}} expected-note{{enclose 'int_10_11' in an @available check to silence this warning}}
 }
 
@@ -92,7 +92,7 @@ AVAILABLE_10_11 @interface Class_10_11 { // expected-note{{annotate 'Class_10_11
 
 @end
 
-int protected_scope() {
+int protected_scope(void) {
   if (@available(macos 10.20, *)) { // expected-note 2 {{jump enters controlled statement of if available}}
   label1:
     return 0;
@@ -113,7 +113,7 @@ struct S {
   } n;
 };
 
-int test_members() {
+int test_members(void) {
   struct S s;
   (void)s.m1;
   (void)s.m2; // expected-warning{{'m2' is only available on macOS 10.12 or newer}} expected-note{{@available}}
@@ -121,7 +121,7 @@ int test_members() {
   (void)s.n.nested_member; // expected-warning{{'nested_member' is only available on macOS 10.12 or newer}} expected-note{{@available}}
 }
 
-void test_blocks() {
+void test_blocks(void) {
   (void) ^{
     func_10_12(); // expected-warning{{'func_10_12' is only available on macOS 10.12 or newer}} expected-note{{@available}}
   };
@@ -139,7 +139,7 @@ void test_params(int_10_12 x); // expected-warning {{'int_10_12' is only availab
 
 void test_params2(int_10_12 x) AVAILABLE_10_12; // no warn
 
-void (^topLevelBlockDecl)() = ^ {
+void (^topLevelBlockDecl)(void) = ^ {
   func_10_12(); // expected-warning{{'func_10_12' is only available on macOS 10.12 or newer}} expected-note{{@available}}
   if (@available(macos 10.12, *))
     func_10_12();
@@ -165,13 +165,13 @@ void test_at(Subscriptable *x) {
   id y = x[42]; // expected-warning{{'objectAtIndexedSubscript:' is only available on macOS 10.12 or newer}} expected-note{{@available}}
 }
 
-void uncheckAtAvailable() {
+void uncheckAtAvailable(void) {
   if (@available(macOS 10.12, *) || 0) // expected-warning {{@available does not guard availability here; use if (@available) instead}}
     func_10_12(); // expected-warning {{'func_10_12' is only available on macOS 10.12 or newer}}
   // expected-note@-1 {{enclose 'func_10_12' in an @available check to silence this warning}}
 }
 
-void justAtAvailable() {
+void justAtAvailable(void) {
   int availability = @available(macOS 10.12, *); // expected-warning {{@available does not guard availability here; use if (@available) instead}}
 }
 
@@ -296,7 +296,7 @@ typedef enum { // expected-note{{annotate anonymous enum with an availability at
 @property (class) new_int x; // expected-warning{{'new_int' is only available}}
 @end
 
-void with_local_struct() {
+void with_local_struct(void) {
   struct local {
     new_int x; // expected-warning{{'new_int' is only available}} expected-note{{enclose 'new_int' in an @available check}}
   };
@@ -384,15 +384,15 @@ AVAILABLE_10_11
 @end
 
 __attribute__((constructor))
-void is_constructor();
+void is_constructor(void);
 
 AVAILABLE_10_11 // expected-warning{{ignoring availability attribute with constructor attribute}}
-void is_constructor() {
+void is_constructor(void) {
   func_10_11(); // expected-warning{{'func_10_11' is only available on macOS 10.11 or newer}} expected-note{{enclose 'func_10_11' in an @available check to silence this warning}}
 }
 
 AVAILABLE_10_11 // expected-warning{{ignoring availability attribute with destructor attribute}}
 __attribute__((destructor))
-void is_destructor() {
+void is_destructor(void) {
   func_10_11(); // expected-warning{{'func_10_11' is only available on macOS 10.11 or newer}} expected-note{{enclose 'func_10_11' in an @available check to silence this warning}}
 }

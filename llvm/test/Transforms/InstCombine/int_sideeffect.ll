@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -instcombine | FileCheck %s
+; RUN: opt -S < %s -passes=instcombine | FileCheck %s
 
 declare void @llvm.sideeffect()
 

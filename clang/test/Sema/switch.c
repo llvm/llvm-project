@@ -29,9 +29,9 @@ void test3(void) {
               // expected-note{{put the semicolon on a separate line to silence this warning}}
 }
 
-extern int g();
+extern int g(void);
 
-void test4()
+void test4(void)
 {
   int cond;
   switch (cond) {
@@ -73,7 +73,7 @@ void test5(int z) {
   }
 } 
 
-void test6() {
+void test6(void) {
   char ch = 'a';
   switch(ch) {
     case 1234:  // expected-warning {{overflow converting case value}}
@@ -92,7 +92,7 @@ int f0(int var) {
   return 2;
 }
 
-void test7() {
+void test7(void) {
   enum {
     A = 1,
     B
@@ -139,7 +139,7 @@ void test7() {
 
 }
 
-void test8() {
+void test8(void) {
   enum {
     A,
     B,
@@ -161,7 +161,7 @@ void test8() {
   }
 }
 
-void test9() {
+void test9(void) {
   enum {
     A = 3,
     C = 1
@@ -176,7 +176,7 @@ void test9() {
   }
 }
 
-void test10() {
+void test10(void) {
   enum {
     A = 10,
     C = 2,
@@ -196,7 +196,7 @@ void test10() {
   }
 }
 
-void test11() {
+void test11(void) {
   enum {
     A = -1,
     B,
@@ -218,7 +218,7 @@ void test11() {
   }
 }
 
-void test12() {
+void test12(void) {
   enum {
     A = -1,
     B = 4294967286
@@ -268,7 +268,7 @@ void f1(unsigned x) {
   }
 }
 
-void test15() {
+void test15(void) {
   int i = 0;
   switch (1) { // expected-warning {{no case matching constant switch condition '1'}}
   case 0: i = 0; break;
@@ -276,7 +276,7 @@ void test15() {
   }
 }
 
-void test16() {
+void test16(void) {
   const char c = '5';
   switch (c) { // expected-warning {{no case matching constant switch condition '53'}}
   case '6': return;
@@ -305,7 +305,7 @@ void test17(int x) {
   }
 }
 
-int test18() {
+int test18(void) {
   enum { A, B } a;
   switch (a) {
   case A: return 0;

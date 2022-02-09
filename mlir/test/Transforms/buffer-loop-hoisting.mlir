@@ -13,19 +13,19 @@
 
 // CHECK-LABEL: func @condBranch
 func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
-  cond_br %arg0, ^bb1, ^bb2
+  cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
-  br ^bb3(%arg1 : memref<2xf32>)
+  cf.br ^bb3(%arg1 : memref<2xf32>)
 ^bb2:
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
-  br ^bb3(%0 : memref<2xf32>)
+  cf.br ^bb3(%0 : memref<2xf32>)
 ^bb3(%1: memref<2xf32>):
   test.copy(%1, %arg2) : (memref<2xf32>, memref<2xf32>)
   return
 }
 
-// CHECK-NEXT: cond_br
+// CHECK-NEXT: cf.cond_br
 //      CHECK: %[[ALLOC:.*]] = memref.alloc()
 
 // -----
@@ -46,19 +46,19 @@ func @condBranchDynamicType(
   %arg1: memref<?xf32>,
   %arg2: memref<?xf32>,
   %arg3: index) {
-  cond_br %arg0, ^bb1, ^bb2(%arg3: index)
+  cf.cond_br %arg0, ^bb1, ^bb2(%arg3: index)
 ^bb1:
-  br ^bb3(%arg1 : memref<?xf32>)
+  cf.br ^bb3(%arg1 : memref<?xf32>)
 ^bb2(%0: index):
   %1 = memref.alloc(%0) : memref<?xf32>
   test.buffer_based in(%arg1: memref<?xf32>) out(%1: memref<?xf32>)
-  br ^bb3(%1 : memref<?xf32>)
+  cf.br ^bb3(%1 : memref<?xf32>)
 ^bb3(%2: memref<?xf32>):
   test.copy(%2, %arg2) : (memref<?xf32>, memref<?xf32>)
   return
 }
 
-// CHECK-NEXT: cond_br
+// CHECK-NEXT: cf.cond_br
 //      CHECK: ^bb2
 //      CHECK: ^bb2(%[[IDX:.*]]:{{.*}})
 // CHECK-NEXT: %[[ALLOC0:.*]] = memref.alloc(%[[IDX]])
@@ -77,9 +77,9 @@ func @nested_regions_and_cond_branch(
   %arg0: i1,
   %arg1: memref<2xf32>,
   %arg2: memref<2xf32>) {
-  cond_br %arg0, ^bb1, ^bb2
+  cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
-  br ^bb3(%arg1 : memref<2xf32>)
+  cf.br ^bb3(%arg1 : memref<2xf32>)
 ^bb2:
   %0 = memref.alloc() : memref<2xf32>
   test.region_buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>) {
@@ -89,12 +89,12 @@ func @nested_regions_and_cond_branch(
     %tmp1 = math.exp %gen1_arg0 : f32
     test.region_yield %tmp1 : f32
   }
-  br ^bb3(%0 : memref<2xf32>)
+  cf.br ^bb3(%0 : memref<2xf32>)
 ^bb3(%1: memref<2xf32>):
   test.copy(%1, %arg2) : (memref<2xf32>, memref<2xf32>)
   return
 }
-// CHECK-NEXT:   cond_br
+// CHECK-NEXT:   cf.cond_br
 //      CHECK:   %[[ALLOC0:.*]] = memref.alloc()
 //      CHECK:   test.region_buffer_based
 //      CHECK:     %[[ALLOC1:.*]] = memref.alloc()

@@ -735,7 +735,7 @@ void PatternEmitter::emitEitherOperandMatch(DagNode tree, DagNode eitherArgTree,
   }
 
   os << tblgenOps.str();
-  os << "return success();\n";
+  os << "return ::mlir::success();\n";
   os.unindent() << "};\n";
 
   os << "{\n";

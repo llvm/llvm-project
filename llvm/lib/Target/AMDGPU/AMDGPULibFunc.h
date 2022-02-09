@@ -324,8 +324,8 @@ public:
 
 class AMDGPULibFuncImpl : public AMDGPULibFuncBase {
 public:
-  AMDGPULibFuncImpl() {}
-  virtual ~AMDGPULibFuncImpl() {}
+  AMDGPULibFuncImpl() = default;
+  virtual ~AMDGPULibFuncImpl() = default;
 
   /// Get unmangled name for mangled library function and name for unmangled
   /// library function.

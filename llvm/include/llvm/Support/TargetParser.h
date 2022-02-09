@@ -170,7 +170,6 @@ void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
 void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
 bool getCPUFeaturesExceptStdExt(CPUKind Kind, std::vector<StringRef> &Features);
 StringRef resolveTuneCPUAlias(StringRef TuneCPU, bool IsRV64);
-StringRef computeDefaultABIFromArch(const llvm::RISCVISAInfo &ISAInfo);
 
 } // namespace RISCV
 

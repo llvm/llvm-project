@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -instcombine | FileCheck %s
+; RUN: opt -S < %s -passes=instcombine | FileCheck %s
 
 target datalayout = "e-p1:16:16-p2:32:32-p3:64:64"
 

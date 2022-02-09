@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine %s | FileCheck %s -check-prefix=RUN-ONCE
+; RUN: opt -S -passes=instcombine %s | FileCheck %s -check-prefix=RUN-ONCE
 
 ; This example was reduced from a test case in which InstCombine ran at least
 ; twice:

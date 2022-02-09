@@ -64,28 +64,6 @@ func @select_extui_i1(%arg0: i1) -> i1 {
 
 // -----
 
-// CHECK-LABEL: @branchCondProp
-//       CHECK:       %[[trueval:.+]] = arith.constant true
-//       CHECK:       %[[falseval:.+]] = arith.constant false
-//       CHECK:       "test.consumer1"(%[[trueval]]) : (i1) -> ()
-//       CHECK:       "test.consumer2"(%[[falseval]]) : (i1) -> ()
-func @branchCondProp(%arg0: i1) {
-  cond_br %arg0, ^trueB, ^falseB
-
-^trueB:
-  "test.consumer1"(%arg0) : (i1) -> ()
-  br ^exit
-
-^falseB:
-  "test.consumer2"(%arg0) : (i1) -> ()
-  br ^exit
-
-^exit:
-  return
-}
-
-// -----
-
 // CHECK-LABEL: @selToNot
 //       CHECK:       %[[trueval:.+]] = arith.constant true
 //       CHECK:       %[[res:.+]] = arith.xori %arg0, %[[trueval]] : i1

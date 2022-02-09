@@ -269,10 +269,10 @@ public:
   /// Returns the loop ops generated from tiling.
   ArrayRef<scf::ForOp> getLoopOps() { return tileLoopOps; }
 
-private:
   /// Returns true if the tile loop nest has no tile loops.
   bool isEmpty();
 
+private:
   /// Returns true if the tile loop nest invariants are satisfied:
   /// - The `rootOp` has been tiled at least once.
   /// - The number of tile loop operations and dimensions match.

@@ -3,7 +3,7 @@
 // RUN:               -async-runtime-ref-counting-opt                          \
 // RUN:               -convert-async-to-llvm                                   \
 // RUN:               -convert-linalg-to-loops                                 \
-// RUN:               -convert-scf-to-std                                      \
+// RUN:               -convert-scf-to-cf                                      \
 // RUN:               -convert-linalg-to-llvm                                  \
 // RUN:               -convert-vector-to-llvm                                  \
 // RUN:               -convert-arith-to-llvm                                   \
@@ -35,7 +35,7 @@ func @main() {
   // Check that assertion in the async region converted to async error.
   // ------------------------------------------------------------------------ //
   %token1 = async.execute {
-    assert %false, "error"
+    cf.assert %false, "error"
     async.yield
   }
   async.runtime.await %token1 : !async.token
@@ -49,7 +49,7 @@ func @main() {
   // ------------------------------------------------------------------------ //
   %token2 = async.execute {
     %token = async.execute {
-      assert %false, "error"
+      cf.assert %false, "error"
       async.yield
     }
     async.await %token : !async.token
@@ -66,7 +66,7 @@ func @main() {
   // ------------------------------------------------------------------------ //
   %token3, %value3 = async.execute -> !async.value<f32> {
     %token, %value = async.execute -> !async.value<f32> {
-      assert %false, "error"
+      cf.assert %false, "error"
       %0 = arith.constant 123.45 : f32
       async.yield %0 : f32
     }
@@ -95,7 +95,7 @@ func @main() {
   }
 
   %token5 = async.execute {
-    assert %false, "error"
+    cf.assert %false, "error"
     async.yield
   }
 

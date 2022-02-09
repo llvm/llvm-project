@@ -26,7 +26,7 @@ def setup_passes(mlir_module):
         f"sparse-tensor-conversion,"
         f"builtin.func"
         f"(linalg-bufferize,convert-linalg-to-loops,convert-vector-to-scf),"
-        f"convert-scf-to-std,"
+        f"convert-scf-to-cf,"
         f"func-bufferize,"
         f"arith-bufferize,"
         f"builtin.func(tensor-bufferize,finalizing-bufferize),"

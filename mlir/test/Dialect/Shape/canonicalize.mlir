@@ -464,6 +464,26 @@ func @cstr_require_no_fold(%arg0: i1) {
 }
 
 // -----
+
+// merge assuming_all operations
+// CHECK-LABEL: func @f
+func @f() {
+  // CHECK-NEXT: %[[W0:.*]] = "test.source"
+  // CHECK-NEXT: %[[W1:.*]] = "test.source"
+  // CHECK-NEXT: %[[W2:.*]] = "test.source"
+  // CHECK-NEXT: shape.assuming_all %[[W0]], %[[W1]], %[[W2]]
+  // CHECK-NEXT: consume.witness
+  // CHECK-NEXT: return
+  %0 = "test.source"() : () -> !shape.witness
+  %1 = "test.source"() : () -> !shape.witness
+  %2 = "test.source"() : () -> !shape.witness
+  %3 = shape.assuming_all %0, %1
+  %4 = shape.assuming_all %3, %2
+  "consume.witness"(%4) : (!shape.witness) -> ()
+  return
+}
+
+// -----
 // `assuming_all` with all `cstr_eq` and shared operands can be collapsed.
 // CHECK-LABEL: func @assuming_all_to_cstr_eq
 // CHECK-SAME: (%[[A:.*]]: !shape.shape, %[[B:.*]]: tensor<?xindex>, %[[C:.*]]: tensor<3xindex>)
@@ -540,6 +560,46 @@ func @f() {
   %2 = "test.source"() : () -> !shape.witness
   %3 = shape.assuming_all %0, %1, %2
   "consume.witness"(%3) : (!shape.witness) -> ()
+  return
+}
+
+// -----
+
+// merge cstr_broadcastable operations
+//
+// CHECK-LABEL: func @f
+// CHECK:         %[[ARG0:[a-z0-9]*]]: !shape.shape
+// CHECK-SAME:    %[[ARG1:[a-z0-9]*]]: !shape.shape
+// CHECK-SAME:    %[[ARG2:[a-z0-9]*]]: !shape.shape
+func @f(%arg0 : !shape.shape, %arg1 : !shape.shape, %arg2 : !shape.shape) {
+  // CHECK-NEXT: %[[W:.*]] = shape.cstr_broadcastable %[[ARG0]], %[[ARG1]], %[[ARG2]]
+  // CHECK-NEXT: "consume.witness"(%[[W]])
+  // CHECK-NEXT: return
+  %0 = shape.cstr_broadcastable %arg0, %arg1 : !shape.shape, !shape.shape
+  %1 = shape.cstr_broadcastable %arg0, %arg1, %arg2 : !shape.shape, !shape.shape, !shape.shape
+  %2 = shape.assuming_all %0, %1
+  "consume.witness"(%2) : (!shape.witness) -> ()
+  return
+}
+
+// -----
+
+// do not merge cstr_broadcastable operations
+//
+// CHECK-LABEL: func @f
+// CHECK:         %[[ARG0:[a-z0-9]*]]: !shape.shape
+// CHECK-SAME:    %[[ARG1:[a-z0-9]*]]: !shape.shape
+// CHECK-SAME:    %[[ARG2:[a-z0-9]*]]: !shape.shape
+func @f(%arg0 : !shape.shape, %arg1 : !shape.shape, %arg2 : !shape.shape) {
+  // CHECK-NEXT: %[[W0:.*]] = shape.cstr_broadcastable %[[ARG0]], %[[ARG1]]
+  // CHECK-NEXT: %[[W1:.*]] = shape.cstr_broadcastable %[[ARG1]], %[[ARG2]]
+  // CHECK-NEXT: %[[W2:.*]] = shape.assuming_all %[[W0]], %[[W1]]
+  // CHECK-NEXT: "consume.witness"(%[[W2]])
+  // CHECK-NEXT: return
+  %0 = shape.cstr_broadcastable %arg0, %arg1 : !shape.shape, !shape.shape
+  %1 = shape.cstr_broadcastable %arg1, %arg2 : !shape.shape, !shape.shape
+  %2 = shape.assuming_all %0, %1
+  "consume.witness"(%2) : (!shape.witness) -> ()
   return
 }
 

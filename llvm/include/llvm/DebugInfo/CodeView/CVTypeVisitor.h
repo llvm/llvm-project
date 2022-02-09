@@ -9,14 +9,17 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_CVTYPEVISITOR_H
 #define LLVM_DEBUGINFO_CODEVIEW_CVTYPEVISITOR_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
-#include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace codeview {
+class TypeIndex;
 class TypeCollection;
 class TypeVisitorCallbacks;
+struct CVMemberRecord;
 
 enum VisitorDataSource {
   VDS_BytesPresent, // The record bytes are passed into the visitation

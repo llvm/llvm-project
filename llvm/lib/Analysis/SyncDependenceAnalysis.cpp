@@ -116,9 +116,11 @@
 //   around from the latch.
 //
 //===----------------------------------------------------------------------===//
+
 #include "llvm/Analysis/SyncDependenceAnalysis.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -257,7 +259,7 @@ SyncDependenceAnalysis::SyncDependenceAnalysis(const DominatorTree &DT,
                     [&](const BasicBlock &BB) { LoopPO.appendBlock(BB); });
 }
 
-SyncDependenceAnalysis::~SyncDependenceAnalysis() {}
+SyncDependenceAnalysis::~SyncDependenceAnalysis() = default;
 
 // divergence propagator for reducible CFGs
 struct DivergencePropagator {

@@ -63,7 +63,7 @@ scf::ForOp cloneWithNewYields(OpBuilder &b, scf::ForOp loop,
 /// single block. This constraint makes it easy to determine the result.
 /// This method also clones the `arith::ConstantIndexOp` at the start of
 /// `outlinedFuncBody` to alloc simple canonicalizations.
-/// Creates a new FuncOp and thus cannot be used in a FunctionPass.
+/// Creates a new FuncOp and thus cannot be used in a FuncOp pass.
 /// The client is responsible for providing a unique `funcName` that will not
 /// collide with another FuncOp name.
 // TODO: support more than single-block regions.
@@ -76,7 +76,7 @@ FailureOr<FuncOp> outlineSingleBlockRegion(RewriterBase &rewriter, Location loc,
 ///    region is inlined into a new FuncOp that is captured by the pointer.
 ///  - if `elseFn` is not null, `elseFnName` must be specified and the `else`
 ///    region is inlined into a new FuncOp that is captured by the pointer.
-/// Creates new FuncOps and thus cannot be used in a FunctionPass.
+/// Creates new FuncOps and thus cannot be used in a FuncOp pass.
 /// The client is responsible for providing a unique `thenFnName`/`elseFnName`
 /// that will not collide with another FuncOp name.
 LogicalResult outlineIfOp(RewriterBase &b, scf::IfOp ifOp, FuncOp *thenFn,

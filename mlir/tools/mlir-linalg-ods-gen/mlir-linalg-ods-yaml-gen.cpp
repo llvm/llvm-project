@@ -509,10 +509,7 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
       }]>
       {5}
     ];
-    let printer = [{{ return ::printNamedStructuredOp(p, *this); }];
-    let parser = [{{
-      return ::parseNamedStructuredOp<{0}>(parser, result);
-    }];
+    let hasCustomAssemblyFormat = 1;
     let hasFolder = 1;
 
     let extraClassDeclaration = structuredOpsBaseDecls # [{{
@@ -585,6 +582,18 @@ void {0}::getEffects(SmallVectorImpl<
       SmallVector<Value> outputBuffers = getOutputBufferOperands();
       getGenericEffectsImpl(effects,
         getOperation()->getResults(), inputBuffers, outputBuffers);
+}
+)FMT";
+
+// Implementation of parse/print.
+// Parameters:
+// {0}: Class name
+static const char structuredOpParserFormat[] = R"FMT(
+ParseResult {0}::parse(OpAsmParser &parser, OperationState &result) {{
+  return ::parseNamedStructuredOp<{0}>(parser, result);
+}
+void {0}::print(OpAsmPrinter &p) {{
+  ::printNamedStructuredOp(p, *this);
 }
 )FMT";
 
@@ -1007,6 +1016,9 @@ void {0}::regionBuilder(ImplicitLocOpBuilder &b, Block &block) {{
     os << llvm::formatv(structuredOpRegionBuilderFormat, className, numOfArgs,
                         interleaveToString(stmts, "\n  "));
   }
+
+  // Parser and printer.
+  os << llvm::formatv(structuredOpParserFormat, className);
 
   // Canonicalizers and folders.
   os << llvm::formatv(structuredOpFoldersFormat, className);

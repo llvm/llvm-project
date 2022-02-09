@@ -231,7 +231,7 @@ void testMultiProp(MultiProp *foo) {
   ip = foo.e; // expected-error{{incompatible type 'MultiProp *(^ _Nullable)(int)'}}
 }
 
-void testBlockLiterals() {
+void testBlockLiterals(void) {
   (void)(^id(void) { return 0; });
   (void)(^id _Nullable (void) { return 0; });
   (void)(^ _Nullable id(void) { return 0; });

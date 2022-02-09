@@ -35,3 +35,37 @@ bb1:
 bb2:
   ret void
 }
+
+
+define void @test_signed_too_large(i128 %x) {
+; CHECK-LABEL: @test_signed_too_large(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sle i128 [[X:%.*]], 12345678901234123123123
+; CHECK-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp slt i128 [[X]], -12345678901234123123123
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    [[C_3:%.*]] = icmp sge i128 [[X]], -12345678901234123123123
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    [[C_4:%.*]] = icmp sge i128 [[X]], -12345678901234123123123
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    ret void
+; CHECK:       bb2:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c.1 = icmp sle i128 %x, 12345678901234123123123
+  br i1 %c.1, label %bb1, label %bb2
+
+bb1:
+  %c.2 = icmp slt i128 %x, -12345678901234123123123
+  call void @use(i1 %c.2)
+  %c.3 = icmp sge i128 %x, -12345678901234123123123
+  call void @use(i1 %c.3)
+  %c.4 = icmp sge i128 %x, -12345678901234123123123
+  call void @use(i1 %c.4)
+  ret void
+
+bb2:
+  ret void
+}

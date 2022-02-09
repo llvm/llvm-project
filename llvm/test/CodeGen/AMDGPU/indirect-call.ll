@@ -16,8 +16,8 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(i8) {
 ; GCN-NEXT:     amd_machine_version_stepping = 0
 ; GCN-NEXT:     kernel_code_entry_byte_offset = 256
 ; GCN-NEXT:     kernel_code_prefetch_byte_size = 0
-; GCN-NEXT:     granulated_workitem_vgpr_count = 7
-; GCN-NEXT:     granulated_wavefront_sgpr_count = 4
+; GCN-NEXT:     granulated_workitem_vgpr_count = 10
+; GCN-NEXT:     granulated_wavefront_sgpr_count = 8
 ; GCN-NEXT:     priority = 0
 ; GCN-NEXT:     float_mode = 240
 ; GCN-NEXT:     priv = 0
@@ -60,8 +60,8 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(i8) {
 ; GCN-NEXT:     gds_segment_byte_size = 0
 ; GCN-NEXT:     kernarg_segment_byte_size = 64
 ; GCN-NEXT:     workgroup_fbarrier_count = 0
-; GCN-NEXT:     wavefront_sgpr_count = 37
-; GCN-NEXT:     workitem_vgpr_count = 32
+; GCN-NEXT:     wavefront_sgpr_count = 68
+; GCN-NEXT:     workitem_vgpr_count = 42
 ; GCN-NEXT:     reserved_vgpr_first = 0
 ; GCN-NEXT:     reserved_vgpr_count = 0
 ; GCN-NEXT:     reserved_sgpr_first = 0
@@ -109,8 +109,8 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(i8) {
 ; GISEL-NEXT:     amd_machine_version_stepping = 0
 ; GISEL-NEXT:     kernel_code_entry_byte_offset = 256
 ; GISEL-NEXT:     kernel_code_prefetch_byte_size = 0
-; GISEL-NEXT:     granulated_workitem_vgpr_count = 7
-; GISEL-NEXT:     granulated_wavefront_sgpr_count = 4
+; GISEL-NEXT:     granulated_workitem_vgpr_count = 10
+; GISEL-NEXT:     granulated_wavefront_sgpr_count = 8
 ; GISEL-NEXT:     priority = 0
 ; GISEL-NEXT:     float_mode = 240
 ; GISEL-NEXT:     priv = 0
@@ -153,8 +153,8 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(i8) {
 ; GISEL-NEXT:     gds_segment_byte_size = 0
 ; GISEL-NEXT:     kernarg_segment_byte_size = 64
 ; GISEL-NEXT:     workgroup_fbarrier_count = 0
-; GISEL-NEXT:     wavefront_sgpr_count = 37
-; GISEL-NEXT:     workitem_vgpr_count = 32
+; GISEL-NEXT:     wavefront_sgpr_count = 68
+; GISEL-NEXT:     workitem_vgpr_count = 42
 ; GISEL-NEXT:     reserved_vgpr_first = 0
 ; GISEL-NEXT:     reserved_vgpr_count = 0
 ; GISEL-NEXT:     reserved_sgpr_first = 0
@@ -207,8 +207,8 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg(i8) {
 ; GCN-NEXT:     amd_machine_version_stepping = 0
 ; GCN-NEXT:     kernel_code_entry_byte_offset = 256
 ; GCN-NEXT:     kernel_code_prefetch_byte_size = 0
-; GCN-NEXT:     granulated_workitem_vgpr_count = 7
-; GCN-NEXT:     granulated_wavefront_sgpr_count = 4
+; GCN-NEXT:     granulated_workitem_vgpr_count = 10
+; GCN-NEXT:     granulated_wavefront_sgpr_count = 8
 ; GCN-NEXT:     priority = 0
 ; GCN-NEXT:     float_mode = 240
 ; GCN-NEXT:     priv = 0
@@ -251,8 +251,8 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg(i8) {
 ; GCN-NEXT:     gds_segment_byte_size = 0
 ; GCN-NEXT:     kernarg_segment_byte_size = 64
 ; GCN-NEXT:     workgroup_fbarrier_count = 0
-; GCN-NEXT:     wavefront_sgpr_count = 37
-; GCN-NEXT:     workitem_vgpr_count = 32
+; GCN-NEXT:     wavefront_sgpr_count = 68
+; GCN-NEXT:     workitem_vgpr_count = 42
 ; GCN-NEXT:     reserved_vgpr_first = 0
 ; GCN-NEXT:     reserved_vgpr_count = 0
 ; GCN-NEXT:     reserved_sgpr_first = 0
@@ -301,8 +301,8 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg(i8) {
 ; GISEL-NEXT:     amd_machine_version_stepping = 0
 ; GISEL-NEXT:     kernel_code_entry_byte_offset = 256
 ; GISEL-NEXT:     kernel_code_prefetch_byte_size = 0
-; GISEL-NEXT:     granulated_workitem_vgpr_count = 7
-; GISEL-NEXT:     granulated_wavefront_sgpr_count = 4
+; GISEL-NEXT:     granulated_workitem_vgpr_count = 10
+; GISEL-NEXT:     granulated_wavefront_sgpr_count = 8
 ; GISEL-NEXT:     priority = 0
 ; GISEL-NEXT:     float_mode = 240
 ; GISEL-NEXT:     priv = 0
@@ -345,8 +345,8 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg(i8) {
 ; GISEL-NEXT:     gds_segment_byte_size = 0
 ; GISEL-NEXT:     kernarg_segment_byte_size = 64
 ; GISEL-NEXT:     workgroup_fbarrier_count = 0
-; GISEL-NEXT:     wavefront_sgpr_count = 37
-; GISEL-NEXT:     workitem_vgpr_count = 32
+; GISEL-NEXT:     wavefront_sgpr_count = 68
+; GISEL-NEXT:     workitem_vgpr_count = 42
 ; GISEL-NEXT:     reserved_vgpr_first = 0
 ; GISEL-NEXT:     reserved_vgpr_count = 0
 ; GISEL-NEXT:     reserved_sgpr_first = 0

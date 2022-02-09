@@ -19,16 +19,12 @@
 #endif
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 #ifdef __cplusplus
 
 #define _LIBCPP_VERSION 15000
-
-#ifndef _LIBCPP_ABI_VERSION
-#  define _LIBCPP_ABI_VERSION 1
-#endif
 
 #if __STDC_HOSTED__ == 0
 #  define _LIBCPP_FREESTANDING
@@ -44,7 +40,7 @@
 #  elif __cplusplus <= 202002L
 #    define _LIBCPP_STD_VER 20
 #  else
-#    define _LIBCPP_STD_VER 21  // current year, or date of c++2b ratification
+#    define _LIBCPP_STD_VER 22  // current year, or date of c++2b ratification
 #  endif
 #endif // _LIBCPP_STD_VER
 
@@ -60,7 +56,7 @@
    // ... add new file formats here ...
 #endif
 
-#if defined(_LIBCPP_ABI_UNSTABLE) || _LIBCPP_ABI_VERSION >= 2
+#if _LIBCPP_ABI_VERSION >= 2
 // Change short string representation so that string data starts at offset 0,
 // improving its alignment in some cases.
 #  define _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
@@ -116,6 +112,8 @@
 #  define _LIBCPP_ABI_NO_RANDOM_DEVICE_COMPATIBILITY_LAYOUT
 // Remove basic_string common base
 #  define _LIBCPP_ABI_DO_NOT_EXPORT_BASIC_STRING_COMMON
+// Remove vector base class
+#  define _LIBCPP_ABI_DO_NOT_EXPORT_VECTOR_BASE_COMMON
 #elif _LIBCPP_ABI_VERSION == 1
 #  if !defined(_LIBCPP_OBJECT_FORMAT_COFF)
 // Enable compiling copies of now inline methods into the dylib to support
@@ -132,24 +130,7 @@
 #  endif
 #endif
 
-// By default, don't use a nullptr_t emulation type in C++03.
-//
-// This is technically an ABI break from previous releases, however it is
-// very unlikely to impact anyone. If a user is impacted by this break,
-// they can return to using the C++03 nullptr emulation by defining
-// _LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION.
-//
-// This switch will be removed entirely in favour of never providing a
-// C++03 emulation after one release.
-//
-// IMPORTANT: IF YOU ARE READING THIS AND YOU TURN THIS MACRO ON, PLEASE LEAVE
-//            A COMMENT ON https://reviews.llvm.org/D109459 OR YOU WILL BE BROKEN
-//            IN THE FUTURE WHEN WE REMOVE THE ABILITY TO USE THE C++03 EMULATION.
-#ifndef _LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION
-# define _LIBCPP_ABI_ALWAYS_USE_CXX11_NULLPTR
-#endif
-
-#if defined(_LIBCPP_BUILDING_LIBRARY) || defined(_LIBCPP_ABI_UNSTABLE) || _LIBCPP_ABI_VERSION >= 2
+#if defined(_LIBCPP_BUILDING_LIBRARY) || _LIBCPP_ABI_VERSION >= 2
 // Enable additional explicit instantiations of iostreams components. This
 // reduces the number of weak definitions generated in programs that use
 // iostreams by providing a single strong definition in the shared library.
@@ -159,13 +140,6 @@
 // its vtable and typeinfo to libc++ rather than having all other libraries
 // using that class define their own copies.
 #  define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
-#endif
-
-#define _LIBCPP_CONCAT1(_LIBCPP_X,_LIBCPP_Y) _LIBCPP_X##_LIBCPP_Y
-#define _LIBCPP_CONCAT(_LIBCPP_X,_LIBCPP_Y) _LIBCPP_CONCAT1(_LIBCPP_X,_LIBCPP_Y)
-
-#ifndef _LIBCPP_ABI_NAMESPACE
-# define _LIBCPP_ABI_NAMESPACE _LIBCPP_CONCAT(__,_LIBCPP_ABI_VERSION)
 #endif
 
 #if __cplusplus < 201103L
@@ -528,12 +502,8 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_NORETURN __attribute__ ((noreturn))
 #endif
 
-#if !(__has_feature(cxx_nullptr))
-#  if (__has_extension(cxx_nullptr) || __has_keyword(__nullptr)) && defined(_LIBCPP_ABI_ALWAYS_USE_CXX11_NULLPTR)
-#    define nullptr __nullptr
-#  else
-#    define _LIBCPP_HAS_NO_NULLPTR
-#  endif
+#ifdef _LIBCPP_CXX03_LANG
+# define nullptr __nullptr
 #endif
 
 // Objective-C++ features (opt-in)
@@ -835,7 +805,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #define _LIBCPP_END_NAMESPACE_FILESYSTEM \
   _LIBCPP_END_NAMESPACE_STD } }
 
-#define _VSTD_FS _VSTD::__fs::filesystem
+#define _VSTD_FS std::__fs::filesystem
 
 #if __has_attribute(__enable_if__)
 #   define _LIBCPP_PREFERRED_OVERLOAD __attribute__ ((__enable_if__(true, "")))
@@ -1018,13 +988,13 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_DEPRECATED_IN_CXX11
 #endif
 
-#if _LIBCPP_STD_VER >= 14
+#if _LIBCPP_STD_VER > 11
 #  define _LIBCPP_DEPRECATED_IN_CXX14 _LIBCPP_DEPRECATED
 #else
 #  define _LIBCPP_DEPRECATED_IN_CXX14
 #endif
 
-#if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER > 14
 #  define _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_DEPRECATED
 #else
 #  define _LIBCPP_DEPRECATED_IN_CXX17
@@ -1285,7 +1255,7 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #endif
 
 // Use a function like macro to imply that it must be followed by a semicolon
-#if __cplusplus > 201402L && __has_cpp_attribute(fallthrough)
+#if _LIBCPP_STD_VER > 14 && __has_cpp_attribute(fallthrough)
 #  define _LIBCPP_FALLTHROUGH() [[fallthrough]]
 #elif __has_cpp_attribute(clang::fallthrough)
 #  define _LIBCPP_FALLTHROUGH() [[clang::fallthrough]]

@@ -32,7 +32,6 @@ public:
     typedef It                                                 pointer;
     typedef typename std::iterator_traits<It>::reference       reference;
 
-    TEST_CONSTEXPR cpp17_output_iterator() : it_() {}
     TEST_CONSTEXPR explicit cpp17_output_iterator(It it) : it_(std::move(it)) {}
     template <class U>
         TEST_CONSTEXPR cpp17_output_iterator(const cpp17_output_iterator<U>& u) :it_(u.it_) {}

@@ -26,16 +26,16 @@
 
 @property id p4; // expected-warning {{no 'assign', 'retain', or 'copy' attribute is specified - 'assign' is assumed}}, expected-warning {{default property attribute 'assign' not appropriate for object}}
 
-@property(nonatomic,copy) int (^includeMailboxCondition)(); 
-@property(nonatomic,copy) int (*includeMailboxCondition2)(); // expected-error {{property with 'copy' attribute must be of object type}}
+@property(nonatomic,copy) int (^includeMailboxCondition)(void); 
+@property(nonatomic,copy) int (*includeMailboxCondition2)(void); // expected-error {{property with 'copy' attribute must be of object type}}
 
 @end
 
 @interface I0()
 @property (retain) int PROP;	// expected-error {{property with 'retain (or strong)' attribute must be of object type}}
 @property (strong) int SPROP;	// expected-error {{property with 'retain (or strong)' attribute must be of object type}}
-@property(nonatomic,copy) int (*PROP1)(); // expected-error {{property with 'copy' attribute must be of object type}}
-@property(nonatomic,weak) int (*PROP2)(); // expected-error {{property with 'weak' attribute must be of object type}}
+@property(nonatomic,copy) int (*PROP1)(void); // expected-error {{property with 'copy' attribute must be of object type}}
+@property(nonatomic,weak) int (*PROP2)(void); // expected-error {{property with 'weak' attribute must be of object type}}
 @end
 
 // rdar://10357768

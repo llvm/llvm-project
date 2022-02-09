@@ -13541,14 +13541,15 @@ const SCEVPredicate *ScalarEvolution::getEqualPredicate(const SCEV *LHS,
   assert(LHS->getType() == RHS->getType() &&
          "Type mismatch between LHS and RHS");
   // Unique this node based on the arguments
-  ID.AddInteger(SCEVPredicate::P_Equal);
+  ID.AddInteger(SCEVPredicate::P_Compare);
+  ID.AddInteger(ICmpInst::ICMP_EQ);
   ID.AddPointer(LHS);
   ID.AddPointer(RHS);
   void *IP = nullptr;
   if (const auto *S = UniquePreds.FindNodeOrInsertPos(ID, IP))
     return S;
-  SCEVEqualPredicate *Eq = new (SCEVAllocator)
-      SCEVEqualPredicate(ID.Intern(SCEVAllocator), LHS, RHS);
+  SCEVComparePredicate *Eq = new (SCEVAllocator)
+    SCEVComparePredicate(ID.Intern(SCEVAllocator), ICmpInst::ICMP_EQ, LHS, RHS);
   UniquePreds.InsertNode(Eq, IP);
   return Eq;
 }
@@ -13594,8 +13595,9 @@ public:
     if (Pred) {
       auto ExprPreds = Pred->getPredicatesForExpr(Expr);
       for (auto *Pred : ExprPreds)
-        if (const auto *IPred = dyn_cast<SCEVEqualPredicate>(Pred))
-          if (IPred->getLHS() == Expr)
+        if (const auto *IPred = dyn_cast<SCEVComparePredicate>(Pred))
+          if (IPred->getLHS() == Expr &&
+              IPred->getPredicate() == ICmpInst::ICMP_EQ)
             return IPred->getRHS();
     }
     return convertToAddRecWithPreds(Expr);
@@ -13715,28 +13717,38 @@ SCEVPredicate::SCEVPredicate(const FoldingSetNodeIDRef ID,
                              SCEVPredicateKind Kind)
     : FastID(ID), Kind(Kind) {}
 
-SCEVEqualPredicate::SCEVEqualPredicate(const FoldingSetNodeIDRef ID,
-                                       const SCEV *LHS, const SCEV *RHS)
-    : SCEVPredicate(ID, P_Equal), LHS(LHS), RHS(RHS) {
+SCEVComparePredicate::SCEVComparePredicate(const FoldingSetNodeIDRef ID,
+                                   const ICmpInst::Predicate Pred,
+                                   const SCEV *LHS, const SCEV *RHS)
+  : SCEVPredicate(ID, P_Compare), Pred(Pred), LHS(LHS), RHS(RHS) {
   assert(LHS->getType() == RHS->getType() && "LHS and RHS types don't match");
   assert(LHS != RHS && "LHS and RHS are the same SCEV");
 }
 
-bool SCEVEqualPredicate::implies(const SCEVPredicate *N) const {
-  const auto *Op = dyn_cast<SCEVEqualPredicate>(N);
+bool SCEVComparePredicate::implies(const SCEVPredicate *N) const {
+  const auto *Op = dyn_cast<SCEVComparePredicate>(N);
 
   if (!Op)
+    return false;
+
+  if (Pred != ICmpInst::ICMP_EQ)
     return false;
 
   return Op->LHS == LHS && Op->RHS == RHS;
 }
 
-bool SCEVEqualPredicate::isAlwaysTrue() const { return false; }
+bool SCEVComparePredicate::isAlwaysTrue() const { return false; }
 
-const SCEV *SCEVEqualPredicate::getExpr() const { return LHS; }
+const SCEV *SCEVComparePredicate::getExpr() const { return LHS; }
 
-void SCEVEqualPredicate::print(raw_ostream &OS, unsigned Depth) const {
-  OS.indent(Depth) << "Equal predicate: " << *LHS << " == " << *RHS << "\n";
+void SCEVComparePredicate::print(raw_ostream &OS, unsigned Depth) const {
+  if (Pred == ICmpInst::ICMP_EQ)
+    OS.indent(Depth) << "Equal predicate: " << *LHS << " == " << *RHS << "\n";
+  else
+    OS.indent(Depth) << "Compare predicate: " << *LHS
+                     << " " << CmpInst::getPredicateName(Pred) << ") "
+                     << *RHS << "\n";
+
 }
 
 SCEVWrapPredicate::SCEVWrapPredicate(const FoldingSetNodeIDRef ID,

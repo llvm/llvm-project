@@ -835,15 +835,15 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
                                                 scalingFactor);
     }
     Value numWorkersIndex =
-        b.create<arith::IndexCastOp>(numWorkerThreadsVal, b.getI32Type());
+        b.create<arith::IndexCastOp>(b.getI32Type(), numWorkerThreadsVal);
     Value numWorkersFloat =
-        b.create<arith::SIToFPOp>(numWorkersIndex, b.getF32Type());
+        b.create<arith::SIToFPOp>(b.getF32Type(), numWorkersIndex);
     Value scaledNumWorkers =
         b.create<arith::MulFOp>(scalingFactor, numWorkersFloat);
     Value scaledNumInt =
-        b.create<arith::FPToSIOp>(scaledNumWorkers, b.getI32Type());
+        b.create<arith::FPToSIOp>(b.getI32Type(), scaledNumWorkers);
     Value scaledWorkers =
-        b.create<arith::IndexCastOp>(scaledNumInt, b.getIndexType());
+        b.create<arith::IndexCastOp>(b.getIndexType(), scaledNumInt);
 
     Value maxComputeBlocks = b.create<arith::MaxSIOp>(
         b.create<arith::ConstantIndexOp>(1), scaledWorkers);

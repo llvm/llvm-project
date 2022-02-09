@@ -293,8 +293,9 @@ public:
   Value *expandCodeForPredicate(const SCEVPredicate *Pred, Instruction *Loc);
 
   /// A specialized variant of expandCodeForPredicate, handling the case when
-  /// we are expanding code for a SCEVEqualPredicate.
-  Value *expandEqualPredicate(const SCEVEqualPredicate *Pred, Instruction *Loc);
+  /// we are expanding code for a SCEVComparePredicate.
+  Value *expandComparePredicate(const SCEVComparePredicate *Pred,
+                                Instruction *Loc);
 
   /// Generates code that evaluates if the \p AR expression will overflow.
   Value *generateOverflowCheck(const SCEVAddRecExpr *AR, Instruction *Loc,

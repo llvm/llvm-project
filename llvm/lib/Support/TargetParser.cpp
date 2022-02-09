@@ -329,21 +329,6 @@ bool getCPUFeaturesExceptStdExt(CPUKind Kind,
   return true;
 }
 
-StringRef computeDefaultABIFromArch(const llvm::RISCVISAInfo &ISAInfo) {
-  if (ISAInfo.getXLen() == 32) {
-    if (ISAInfo.hasExtension("d"))
-      return "ilp32d";
-    if (ISAInfo.hasExtension("e"))
-      return "ilp32e";
-    return "ilp32";
-  } else if (ISAInfo.getXLen() == 64) {
-    if (ISAInfo.hasExtension("d"))
-      return "lp64d";
-    return "lp64";
-  }
-  llvm_unreachable("Invalid XLEN");
-}
-
 } // namespace RISCV
 } // namespace llvm
 

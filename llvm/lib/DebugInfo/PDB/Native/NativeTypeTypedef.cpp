@@ -9,7 +9,7 @@ NativeTypeTypedef::NativeTypeTypedef(NativeSession &Session, SymIndexId Id,
     : NativeRawSymbol(Session, PDB_SymType::Typedef, Id),
       Record(std::move(Typedef)) {}
 
-NativeTypeTypedef::~NativeTypeTypedef() {}
+NativeTypeTypedef::~NativeTypeTypedef() = default;
 
 void NativeTypeTypedef::dump(raw_ostream &OS, int Indent,
                              PdbSymbolIdField ShowIdFields,

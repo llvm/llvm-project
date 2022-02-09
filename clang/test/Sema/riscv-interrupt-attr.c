@@ -36,8 +36,8 @@ __attribute__((interrupt("user", 1))) void foo2(void) {} // expected-error {{'in
 
 __attribute__((interrupt)) int foo3(void) {return 0;} // expected-warning {{RISC-V 'interrupt' attribute only applies to functions that have a 'void' return type}}
 
-__attribute__((interrupt())) void foo4();
-__attribute__((interrupt())) void foo4() {};
+__attribute__((interrupt())) void foo4(void);
+__attribute__((interrupt())) void foo4(void) {}
 
 __attribute__((interrupt())) void foo5(int a) {} // expected-warning {{RISC-V 'interrupt' attribute only applies to functions that have no parameters}}
 

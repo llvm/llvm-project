@@ -56,6 +56,7 @@ public:
   enum class Kind {
     FlatAffineConstraints,
     FlatAffineValueConstraints,
+    MultiAffineFunction,
     IntegerPolyhedron
   };
 
@@ -194,6 +195,11 @@ public:
   /// Adds an equality from the coefficients specified in `eq`.
   void addEquality(ArrayRef<int64_t> eq);
 
+  /// Eliminate the `posB^th` local identifier, replacing every instance of it
+  /// with the `posA^th` local identifier. This should be used when the two
+  /// local variables are known to always take the same values.
+  virtual void eliminateRedundantLocalId(unsigned posA, unsigned posB);
+
   /// Removes identifiers of the specified kind with the specified pos (or
   /// within the specified range) from the system. The specified location is
   /// relative to the first identifier of the specified kind.
@@ -271,8 +277,16 @@ public:
   /// otherwise.
   Optional<SmallVector<int64_t, 8>> findIntegerSample() const;
 
+  /// Compute an overapproximation of the number of integer points in the
+  /// polyhedron. Symbol ids are currently not supported. If the computed
+  /// overapproximation is infinite, an empty optional is returned.
+  Optional<uint64_t> computeVolume() const;
+
   /// Returns true if the given point satisfies the constraints, or false
   /// otherwise.
+  ///
+  /// Note: currently, if the polyhedron contains local ids, the values of
+  /// the local ids must also be provided.
   bool containsPoint(ArrayRef<int64_t> point) const;
 
   /// Find equality and pairs of inequality contraints identified by their
@@ -285,14 +299,12 @@ public:
   /// and the denominators in `denominators`. If no explicit representation
   /// could be found for the `i^th` local identifier, `denominators[i]` is set
   /// to 0.
-  void
-  getLocalReprs(SmallVectorImpl<SmallVector<int64_t, 8>> &dividends,
-                SmallVectorImpl<unsigned> &denominators,
-                SmallVectorImpl<presburger_utils::MaybeLocalRepr> &repr) const;
-  void
-  getLocalReprs(SmallVectorImpl<presburger_utils::MaybeLocalRepr> &repr) const;
-  void getLocalReprs(SmallVectorImpl<SmallVector<int64_t, 8>> &dividends,
-                     SmallVectorImpl<unsigned> &denominators) const;
+  void getLocalReprs(std::vector<SmallVector<int64_t, 8>> &dividends,
+                     SmallVector<unsigned, 4> &denominators,
+                     std::vector<presburger_utils::MaybeLocalRepr> &repr) const;
+  void getLocalReprs(std::vector<presburger_utils::MaybeLocalRepr> &repr) const;
+  void getLocalReprs(std::vector<SmallVector<int64_t, 8>> &dividends,
+                     SmallVector<unsigned, 4> &denominators) const;
 
   /// The type of bound: equal, lower bound or upper bound.
   enum BoundType { EQ, LB, UB };
@@ -376,7 +388,6 @@ public:
 
   /// Returns the constant bound for the pos^th identifier if there is one;
   /// None otherwise.
-  // TODO: Support EQ bounds.
   Optional<int64_t> getConstantBound(BoundType type, unsigned pos) const;
 
   /// Removes constraints that are independent of (i.e., do not have a
@@ -500,8 +511,16 @@ protected:
   /// Return the index at which the specified kind of id starts.
   unsigned getIdKindOffset(IdKind kind) const;
 
+  /// Return the index at which the specified kind of id ends.
+  unsigned getIdKindEnd(IdKind kind) const;
+
   /// Get the number of ids of the specified kind.
   unsigned getNumIdKind(IdKind kind) const;
+
+  /// Get the number of elements of the specified kind in the range
+  /// [idStart, idLimit).
+  unsigned getIdKindOverlap(IdKind kind, unsigned idStart,
+                            unsigned idLimit) const;
 
   /// Removes identifiers in the column range [idStart, idLimit), and copies any
   /// remaining valid data into place, updates member variables, and resizes

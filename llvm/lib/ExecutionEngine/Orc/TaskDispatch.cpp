@@ -16,7 +16,7 @@ char GenericNamedTask::ID = 0;
 const char *GenericNamedTask::DefaultDescription = "Generic Task";
 
 void Task::anchor() {}
-TaskDispatcher::~TaskDispatcher() {}
+TaskDispatcher::~TaskDispatcher() = default;
 
 void InPlaceTaskDispatcher::dispatch(std::unique_ptr<Task> T) { T->run(); }
 

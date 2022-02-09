@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | not grep cmp
+; RUN: opt < %s -passes=instcombine -S | not grep cmp
 ; rdar://6903175
 
 define i1 @f0(i32 *%a) nounwind {

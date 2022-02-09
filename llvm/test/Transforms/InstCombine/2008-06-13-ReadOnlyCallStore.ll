@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep "store i8" | count 2
+; RUN: opt < %s -passes=instcombine -S | grep "store i8" | count 2
 
 define i32 @a(i8* %s) nounwind  {
 entry:

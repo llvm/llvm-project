@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/Support/RISCVISAInfo.h"
 
 namespace llvm {
 
@@ -344,9 +345,8 @@ namespace RISCVFeatures {
 // triple. Exits with report_fatal_error if not.
 void validate(const Triple &TT, const FeatureBitset &FeatureBits);
 
-// Convert FeatureBitset to FeatureVector.
-void toFeatureVector(std::vector<std::string> &FeatureVector,
-                     const FeatureBitset &FeatureBits);
+llvm::Expected<std::unique_ptr<RISCVISAInfo>>
+parseFeatureBits(bool IsRV64, const FeatureBitset &FeatureBits);
 
 } // namespace RISCVFeatures
 

@@ -47,7 +47,7 @@ struct s4_1 {
 extern int a4_0[offsetof(struct s4_0, f1) == 1 ? 1 : -1];
 extern int a4_1[offsetof(struct s4_1, f1) == 4 ? 1 : -1];
 
-void f() {
+void f(void) {
   #pragma pack(push, 2)
   struct s5_0 {
     char f0;

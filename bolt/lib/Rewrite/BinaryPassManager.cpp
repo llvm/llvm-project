@@ -408,7 +408,7 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   Manager.registerPass(
       std::make_unique<DynoStatsPrintPass>(
           InitialDynoStats, "after all optimizations before SCTC and FOP"),
-      opts::PrintDynoStats | opts::DynoStatsAll);
+      opts::PrintDynoStats || opts::DynoStatsAll);
 
   // Add the StokeInfo pass, which extract functions for stoke optimization and
   // get the liveness information for them

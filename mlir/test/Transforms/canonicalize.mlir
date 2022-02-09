@@ -389,7 +389,7 @@ func @dead_dealloc_fold() {
 func @dead_dealloc_fold_multi_use(%cond : i1) {
   // CHECK-NEXT: return
   %a = memref.alloc() : memref<4xf32>
-  cond_br %cond, ^bb1, ^bb2
+  cf.cond_br %cond, ^bb1, ^bb2
 
 ^bb1:
   memref.dealloc %a: memref<4xf32>

@@ -279,6 +279,12 @@ public:
     return result;
   }
 
+  MPFRNumber log1p() const {
+    MPFRNumber result(*this);
+    mpfr_log1p(result.value, value, mpfr_rounding);
+    return result;
+  }
+
   MPFRNumber remquo(const MPFRNumber &divisor, int &quotient) {
     MPFRNumber remainder(*this);
     long q;
@@ -386,16 +392,6 @@ public:
   // These functions are useful for debugging.
   template <typename T> T as() const;
 
-  template <> float as<float>() const {
-    return mpfr_get_flt(value, mpfr_rounding);
-  }
-  template <> double as<double>() const {
-    return mpfr_get_d(value, mpfr_rounding);
-  }
-  template <> long double as<long double>() const {
-    return mpfr_get_ld(value, mpfr_rounding);
-  }
-
   void dump(const char *msg) const { mpfr_printf("%s%.128Rf\n", msg, value); }
 
   // Return the ULP (units-in-the-last-place) difference between the
@@ -482,6 +478,18 @@ public:
   }
 };
 
+template <> float MPFRNumber::as<float>() const {
+  return mpfr_get_flt(value, mpfr_rounding);
+}
+
+template <> double MPFRNumber::as<double>() const {
+  return mpfr_get_d(value, mpfr_rounding);
+}
+
+template <> long double MPFRNumber::as<long double>() const {
+  return mpfr_get_ld(value, mpfr_rounding);
+}
+
 namespace internal {
 
 template <typename InputType>
@@ -510,6 +518,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.log2();
   case Operation::Log10:
     return mpfrInput.log10();
+  case Operation::Log1p:
+    return mpfrInput.log1p();
   case Operation::Mod2PI:
     return mpfrInput.mod_2pi();
   case Operation::ModPIOver2:

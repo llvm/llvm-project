@@ -136,7 +136,7 @@ struct SectionEntry {
     Index = UninitializedIndex;
   }
 
-  virtual ~SectionEntry() {}
+  virtual ~SectionEntry() = default;
 };
 
 // Represents the data related to a section excluding the csects that make up
@@ -165,7 +165,7 @@ struct CsectSectionEntry : public SectionEntry {
       Group->clear();
   }
 
-  virtual ~CsectSectionEntry() {}
+  virtual ~CsectSectionEntry() = default;
 };
 
 struct DwarfSectionEntry : public SectionEntry {
@@ -183,7 +183,7 @@ struct DwarfSectionEntry : public SectionEntry {
 
   DwarfSectionEntry(DwarfSectionEntry &&s) = default;
 
-  virtual ~DwarfSectionEntry() {}
+  virtual ~DwarfSectionEntry() = default;
 };
 
 class XCOFFObjectWriter : public MCObjectWriter {

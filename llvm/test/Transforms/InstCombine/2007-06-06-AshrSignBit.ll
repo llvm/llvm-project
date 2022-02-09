@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep "ashr"
+; RUN: opt < %s -passes=instcombine -S | grep "ashr"
 ; PR1499
 
 define void @av_cmp_q_cond_true(i32* %retval, i32* %tmp9, i64* %tmp10) {

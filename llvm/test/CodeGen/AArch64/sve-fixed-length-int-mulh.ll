@@ -1,4 +1,4 @@
-; RUN: llc -aarch64-sve-vector-bits-min=128  < %s | FileCheck %s -D#VBYTES=16  -check-prefix=NO_SVE
+; RUN: llc -aarch64-sve-vector-bits-min=128  < %s | FileCheck %s -D#VBYTES=16  -check-prefix=VBITS_EQ_128
 ; RUN: llc -aarch64-sve-vector-bits-min=256  < %s | FileCheck %s -D#VBYTES=32  -check-prefixes=CHECK
 ; RUN: llc -aarch64-sve-vector-bits-min=384  < %s | FileCheck %s -D#VBYTES=32  -check-prefixes=CHECK
 ; RUN: llc -aarch64-sve-vector-bits-min=512  < %s | FileCheck %s -D#VBYTES=64  -check-prefixes=CHECK,VBITS_GE_512
@@ -25,14 +25,12 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-; Don't use SVE when its registers are no bigger than NEON.
-; NO_SVE-NOT: ptrue
-
 ;
 ; SMULH
 ;
 
 ; Don't use SVE for 64-bit vectors.
+; FIXME: The codegen for the >=256 bits case can be improved.
 define <8 x i8> @smulh_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; CHECK-LABEL: smulh_v8i8:
 ; CHECK:       // %bb.0:
@@ -166,6 +164,7 @@ define void @smulh_v256i8(<256 x i8>* %a, <256 x i8>* %b) #0 {
 }
 
 ; Don't use SVE for 64-bit vectors.
+; FIXME: The codegen for the >=256 bits case can be improved.
 define <4 x i16> @smulh_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 ; CHECK-LABEL: smulh_v4i16:
 ; CHECK:       // %bb.0:
@@ -294,6 +293,15 @@ define <2 x i32> @smulh_v2i32(<2 x i32> %op1, <2 x i32> %op2) #0 {
 ; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    shrn v0.2s, v0.2d, #32
 ; CHECK-NEXT:    ret
+
+; VBITS_EQ_128-LABEL: smulh_v2i32:
+; VBITS_EQ_128:         sshll v0.2d, v0.2s, #0
+; VBITS_EQ_128-NEXT:    sshll v1.2d, v1.2s, #0
+; VBITS_EQ_128-NEXT:    ptrue p0.d, vl2
+; VBITS_EQ_128-NEXT:    mul z0.d, p0/m, z0.d, z1.d
+; VBITS_EQ_128-NEXT:    shrn v0.2s, v0.2d, #32
+; VBITS_EQ_128-NEXT:    ret
+
   %1 = sext <2 x i32> %op1 to <2 x i64>
   %2 = sext <2 x i32> %op2 to <2 x i64>
   %mul = mul <2 x i64> %1, %2
@@ -521,6 +529,7 @@ define void @smulh_v32i64(<32 x i64>* %a, <32 x i64>* %b) #0 {
 ;
 
 ; Don't use SVE for 64-bit vectors.
+; FIXME: The codegen for the >=256 bits case can be improved.
 define <8 x i8> @umulh_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; CHECK-LABEL: umulh_v8i8:
 ; CHECK:       // %bb.0:
@@ -652,6 +661,7 @@ define void @umulh_v256i8(<256 x i8>* %a, <256 x i8>* %b) #0 {
 }
 
 ; Don't use SVE for 64-bit vectors.
+; FIXME: The codegen for the >=256 bits case can be improved.
 define <4 x i16> @umulh_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 ; CHECK-LABEL: umulh_v4i16:
 ; CHECK:       // %bb.0:
@@ -780,6 +790,15 @@ define <2 x i32> @umulh_v2i32(<2 x i32> %op1, <2 x i32> %op2) #0 {
 ; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    shrn v0.2s, v0.2d, #32
 ; CHECK-NEXT:    ret
+
+; VBITS_EQ_128-LABEL: umulh_v2i32:
+; VBITS_EQ_128:         ushll   v0.2d, v0.2s, #0
+; VBITS_EQ_128-NEXT:    ushll   v1.2d, v1.2s, #0
+; VBITS_EQ_128-NEXT:    ptrue   p0.d, vl2
+; VBITS_EQ_128-NEXT:    mul     z0.d, p0/m, z0.d, z1.d
+; VBITS_EQ_128-NEXT:    shrn    v0.2s, v0.2d, #32
+; VBITS_EQ_128-NEXT:    ret
+
   %1 = zext <2 x i32> %op1 to <2 x i64>
   %2 = zext <2 x i32> %op2 to <2 x i64>
   %mul = mul <2 x i64> %1, %2

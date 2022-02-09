@@ -37,7 +37,7 @@ QualifierAlignmentFixer::QualifierAlignmentFixer(
   PrepareLeftRightOrdering(Style.QualifierOrder, LeftOrder, RightOrder,
                            ConfiguredQualifierTokens);
 
-  // Handle the left and right Alignment Seperately
+  // Handle the left and right alignment separately.
   for (const auto &Qualifier : LeftOrder) {
     Passes.emplace_back(
         [&, Qualifier, ConfiguredQualifierTokens](const Environment &Env) {
@@ -59,8 +59,9 @@ QualifierAlignmentFixer::QualifierAlignmentFixer(
 }
 
 std::pair<tooling::Replacements, unsigned> QualifierAlignmentFixer::analyze(
-    TokenAnnotator &Annotator, SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
-    FormatTokenLexer &Tokens) {
+    TokenAnnotator & /*Annotator*/,
+    SmallVectorImpl<AnnotatedLine *> & /*AnnotatedLines*/,
+    FormatTokenLexer & /*Tokens*/) {
   auto Env = Environment::make(Code, FileName, Ranges, FirstStartColumn,
                                NextStartColumn, LastStartColumn);
   if (!Env)
@@ -376,7 +377,8 @@ LeftRightQualifierAlignmentFixer::LeftRightQualifierAlignmentFixer(
 
 std::pair<tooling::Replacements, unsigned>
 LeftRightQualifierAlignmentFixer::analyze(
-    TokenAnnotator &Annotator, SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
+    TokenAnnotator & /*Annotator*/,
+    SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
     FormatTokenLexer &Tokens) {
   tooling::Replacements Fixes;
   const AdditionalKeywords &Keywords = Tokens.getKeywords();

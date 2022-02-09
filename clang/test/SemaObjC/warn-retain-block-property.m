@@ -4,7 +4,7 @@
 // RUN: not %clang_cc1 -fsyntax-only -fblocks -Wno-objc-root-class %s 2>&1 | FileCheck %s
 // rdar://11761511
 
-extern void doSomething();
+extern void doSomething(void);
 
 @interface Test
 {
@@ -24,7 +24,7 @@ extern void doSomething();
 @dynamic aBlockW, aBlockS, aBlockR, aBlockC, aBlockA;
 @end
 
-int main() {
+int main(void) {
   Test *t;
   t.aBlock = ^{ doSomething(); };
   t.aBlockW = ^{ doSomething(); };

@@ -174,6 +174,12 @@ static StringRef getDeviceFileExtension(StringRef DeviceTriple,
   return "o";
 }
 
+std::string getMainExecutable(const char *Name) {
+  void *Ptr = (void *)(intptr_t)&getMainExecutable;
+  auto COWPath = sys::fs::getMainExecutable(Name, Ptr);
+  return sys::path::parent_path(COWPath).str();
+}
+
 /// Extract the device file from the string '<triple>-<arch>=<library>.bc'.
 DeviceFile getBitcodeLibrary(StringRef LibraryStr) {
   auto DeviceAndPath = StringRef(LibraryStr).split('=');
@@ -310,10 +316,12 @@ extractFromBinary(const ObjectFile &Obj,
 
   // We will use llvm-strip to remove the now unneeded section containing the
   // offloading code.
-  ErrorOr<std::string> StripPath = sys::findProgramByName("llvm-strip");
+  ErrorOr<std::string> StripPath =
+      sys::findProgramByName("llvm-strip", {getMainExecutable("llvm-strip")});
   if (!StripPath)
-    return createStringError(StripPath.getError(),
-                             "Unable to find 'llvm-strip' in path");
+    StripPath = sys::findProgramByName("llvm-strip");
+  if (!StripPath)
+    return None;
 
   SmallString<128> TempFile;
   if (Error Err = createOutputFile(Prefix + "-host", Extension, TempFile))
@@ -602,9 +610,9 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
 namespace amdgcn {
 Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
                            StringRef Arch) {
-  // AMDGPU uses the lld binary to link device object files.
+  // AMDGPU uses lld to link device object files.
   ErrorOr<std::string> LLDPath =
-      sys::findProgramByName("lld", sys::path::parent_path(LinkerExecutable));
+      sys::findProgramByName("lld", {getMainExecutable("lld")});
   if (!LLDPath)
     LLDPath = sys::findProgramByName("lld");
   if (!LLDPath)

@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S < %s | FileCheck %s
+; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 define double @test1() {
   %sin = call double @__sinpi(double 1.0)

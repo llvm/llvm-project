@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:   -convert-scf-to-std \
+// RUN:   -convert-scf-to-cf \
 // RUN:   -gpu-kernel-outlining \
 // RUN:   -pass-pipeline='gpu.module(strip-debuginfo,convert-gpu-to-rocdl,gpu-to-hsaco{chip=%chip})' \
 // RUN:   -gpu-to-llvm \

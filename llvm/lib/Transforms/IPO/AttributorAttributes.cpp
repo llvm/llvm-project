@@ -916,7 +916,7 @@ struct AA::PointerInfo::State : public AbstractState {
     return R;
   }
 
-  State() {}
+  State() = default;
   State(const State &SIS) : AccessBins(SIS.AccessBins) {}
   State(State &&SIS) : AccessBins(std::move(SIS.AccessBins)) {}
 
@@ -2691,40 +2691,38 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
       return true;
     };
 
-    auto InspectReturnInstForUB =
-        [&](Value &V, const SmallSetVector<ReturnInst *, 4> RetInsts) {
-          // Check if a return instruction always cause UB or not
-          // Note: It is guaranteed that the returned position of the anchor
-          //       scope has noundef attribute when this is called.
-          //       We also ensure the return position is not "assumed dead"
-          //       because the returned value was then potentially simplified to
-          //       `undef` in AAReturnedValues without removing the `noundef`
-          //       attribute yet.
+    auto InspectReturnInstForUB = [&](Instruction &I) {
+      auto &RI = cast<ReturnInst>(I);
+      // Either we stopped and the appropriate action was taken,
+      // or we got back a simplified return value to continue.
+      Optional<Value *> SimplifiedRetValue =
+          stopOnUndefOrAssumed(A, RI.getReturnValue(), &I);
+      if (!SimplifiedRetValue.hasValue() || !SimplifiedRetValue.getValue())
+        return true;
 
-          // When the returned position has noundef attriubte, UB occur in the
-          // following cases.
-          //   (1) Returned value is known to be undef.
-          //   (2) The value is known to be a null pointer and the returned
-          //       position has nonnull attribute (because the returned value is
-          //       poison).
-          bool FoundUB = false;
-          if (isa<UndefValue>(V)) {
-            FoundUB = true;
-          } else {
-            if (isa<ConstantPointerNull>(V)) {
-              auto &NonNullAA = A.getAAFor<AANonNull>(
-                  *this, IRPosition::returned(*getAnchorScope()),
-                  DepClassTy::NONE);
-              if (NonNullAA.isKnownNonNull())
-                FoundUB = true;
-            }
-          }
+      // Check if a return instruction always cause UB or not
+      // Note: It is guaranteed that the returned position of the anchor
+      //       scope has noundef attribute when this is called.
+      //       We also ensure the return position is not "assumed dead"
+      //       because the returned value was then potentially simplified to
+      //       `undef` in AAReturnedValues without removing the `noundef`
+      //       attribute yet.
 
-          if (FoundUB)
-            for (ReturnInst *RI : RetInsts)
-              KnownUBInsts.insert(RI);
-          return true;
-        };
+      // When the returned position has noundef attriubte, UB occurs in the
+      // following cases.
+      //   (1) Returned value is known to be undef.
+      //   (2) The value is known to be a null pointer and the returned
+      //       position has nonnull attribute (because the returned value is
+      //       poison).
+      if (isa<ConstantPointerNull>(*SimplifiedRetValue)) {
+        auto &NonNullAA = A.getAAFor<AANonNull>(
+            *this, IRPosition::returned(*getAnchorScope()), DepClassTy::NONE);
+        if (NonNullAA.isKnownNonNull())
+          KnownUBInsts.insert(&I);
+      }
+
+      return true;
+    };
 
     bool UsedAssumedInformation = false;
     A.checkForAllInstructions(InspectMemAccessInstForUB, *this,
@@ -2747,8 +2745,9 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
         auto &RetPosNoUndefAA =
             A.getAAFor<AANoUndef>(*this, ReturnIRP, DepClassTy::NONE);
         if (RetPosNoUndefAA.isKnownNoUndef())
-          A.checkForAllReturnedValuesAndReturnInsts(InspectReturnInstForUB,
-                                                    *this);
+          A.checkForAllInstructions(InspectReturnInstForUB, *this,
+                                    {Instruction::Ret}, UsedAssumedInformation,
+                                    /* CheckBBLivenessOnly */ true);
       }
     }
 
@@ -3661,7 +3660,7 @@ struct AAIsDeadCallSiteArgument : public AAIsDeadValueImpl {
 
 struct AAIsDeadCallSiteReturned : public AAIsDeadFloating {
   AAIsDeadCallSiteReturned(const IRPosition &IRP, Attributor &A)
-      : AAIsDeadFloating(IRP, A), IsAssumedSideEffectFree(true) {}
+      : AAIsDeadFloating(IRP, A) {}
 
   /// See AAIsDead::isAssumedDead().
   bool isAssumedDead() const override {
@@ -3707,7 +3706,7 @@ struct AAIsDeadCallSiteReturned : public AAIsDeadFloating {
   }
 
 private:
-  bool IsAssumedSideEffectFree;
+  bool IsAssumedSideEffectFree = true;
 };
 
 struct AAIsDeadReturned : public AAIsDeadValueImpl {
@@ -6316,7 +6315,7 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
 
           if (ValidUsesOnly &&
               AI.LibraryFunctionId == LibFunc___kmpc_alloc_shared)
-            A.emitRemark<OptimizationRemarkMissed>(AI.CB, "OMP113", Remark);
+            A.emitRemark<OptimizationRemarkMissed>(CB, "OMP113", Remark);
 
           LLVM_DEBUG(dbgs() << "[H2S] Bad user: " << *UserI << "\n");
           ValidUsesOnly = false;

@@ -125,9 +125,9 @@ struct X {
 };
 
 int counter = 0;
-int get8() { ++counter; return 8; }
+int get8(void) { ++counter; return 8; }
 
-void test() {
+void test(void) {
   struct X xs[] = { 
     [0] = (struct X){1, 2}, // expected-note 2 {{previous initialization is here}}
     [0].c = 3,  // expected-warning{{initializer partially overrides prior initialization of this subobject}}

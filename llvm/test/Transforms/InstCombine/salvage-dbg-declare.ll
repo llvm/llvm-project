@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S -o - %s | FileCheck %s
+; RUN: opt -passes=instcombine -S -o - %s | FileCheck %s
 
 declare dso_local i32 @bar(i8*)
 

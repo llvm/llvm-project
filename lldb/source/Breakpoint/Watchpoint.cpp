@@ -30,8 +30,7 @@ Watchpoint::Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
       m_enabled(false), m_is_hardware(hardware), m_is_watch_variable(false),
       m_is_ephemeral(false), m_disabled_count(0), m_watch_read(0),
       m_watch_write(0), m_watch_was_read(0), m_watch_was_written(0),
-      m_ignore_count(0), m_false_alarms(0), m_decl_str(), m_watch_spec_str(),
-      m_type(), m_error(), m_options(), m_being_created(true) {
+      m_ignore_count(0), m_false_alarms(0), m_being_created(true) {
 
   if (type && type->IsValid())
     m_type = *type;
@@ -330,8 +329,7 @@ void Watchpoint::SendWatchpointChangedEvent(WatchpointEventData *data) {
 
 Watchpoint::WatchpointEventData::WatchpointEventData(
     WatchpointEventType sub_type, const WatchpointSP &new_watchpoint_sp)
-    : EventData(), m_watchpoint_event(sub_type),
-      m_new_watchpoint_sp(new_watchpoint_sp) {}
+    : m_watchpoint_event(sub_type), m_new_watchpoint_sp(new_watchpoint_sp) {}
 
 Watchpoint::WatchpointEventData::~WatchpointEventData() = default;
 

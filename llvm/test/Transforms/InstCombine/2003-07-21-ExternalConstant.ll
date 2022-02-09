@@ -10,7 +10,7 @@
 ;	should pass through the optimizer without failure.
 ;
 ; Extra code:
-; RUN: opt < %s -instcombine
+; RUN: opt < %s -passes=instcombine
 ; END.
 
 target datalayout = "e-p:32:32"

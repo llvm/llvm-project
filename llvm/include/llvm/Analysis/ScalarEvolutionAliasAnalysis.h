@@ -15,11 +15,11 @@
 
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
+
+class Function;
 
 /// A simple alias analysis implementation that uses ScalarEvolution to answer
 /// queries.

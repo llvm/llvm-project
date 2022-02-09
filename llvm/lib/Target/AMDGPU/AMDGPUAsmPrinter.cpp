@@ -111,6 +111,12 @@ AMDGPUTargetStreamer* AMDGPUAsmPrinter::getTargetStreamer() const {
 }
 
 void AMDGPUAsmPrinter::emitStartOfAsmFile(Module &M) {
+  IsTargetStreamerInitialized = false;
+}
+
+void AMDGPUAsmPrinter::initTargetStreamer(Module &M) {
+  IsTargetStreamerInitialized = true;
+
   // TODO: Which one is called first, emitStartOfAsmFile or
   // emitFunctionBodyStart?
   if (getTargetStreamer() && !getTargetStreamer()->getTargetID())
@@ -143,6 +149,10 @@ void AMDGPUAsmPrinter::emitStartOfAsmFile(Module &M) {
 }
 
 void AMDGPUAsmPrinter::emitEndOfAsmFile(Module &M) {
+  // Init target streamer if it has not yet happened
+  if (!IsTargetStreamerInitialized)
+    initTargetStreamer(M);
+
   // Following code requires TargetStreamer to be present.
   if (!getTargetStreamer())
     return;
@@ -437,6 +447,11 @@ amdhsa::kernel_descriptor_t AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(
 }
 
 bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
+  // Init target streamer lazily on the first function so that previous passes
+  // can set metadata.
+  if (!IsTargetStreamerInitialized)
+    initTargetStreamer(*MF.getFunction().getParent());
+
   ResourceUsage = &getAnalysis<AMDGPUResourceUsageAnalysis>();
   CurrentProgramInfo = SIProgramInfo();
 

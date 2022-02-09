@@ -73,7 +73,6 @@
     X(ForwardTemplateReference) \
     X(NameWithTemplateArgs) \
     X(GlobalQualifiedName) \
-    X(StdQualifiedName) \
     X(ExpandedSpecialSubstitution) \
     X(SpecialSubstitution) \
     X(CtorDtorName) \
@@ -1473,21 +1472,6 @@ public:
   }
 };
 
-struct StdQualifiedName : Node {
-  Node *Child;
-
-  StdQualifiedName(Node *Child_) : Node(KStdQualifiedName), Child(Child_) {}
-
-  template<typename Fn> void match(Fn F) const { F(Child); }
-
-  StringView getBaseName() const override { return Child->getBaseName(); }
-
-  void printLeft(OutputBuffer &OB) const override {
-    OB += "std::";
-    Child->print(OB);
-  }
-};
-
 enum class SpecialSubKind {
   allocator,
   basic_string,
@@ -1803,7 +1787,13 @@ public:
   void printLeft(OutputBuffer &OB) const override {
     LHS->print(OB);
     OB += Kind;
+    // Parenthesize pointer-to-member deference argument.
+    bool IsPtr = Kind.back() == '*';
+    if (IsPtr)
+      OB += '(';
     RHS->print(OB);
+    if (IsPtr)
+      OB += ')';
   }
 };
 
@@ -2567,7 +2557,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
   Node *parseAbiTags(Node *N);
 
   /// Parse the <unresolved-name> production.
-  Node *parseUnresolvedName();
+  Node *parseUnresolvedName(bool Global);
   Node *parseSimpleId();
   Node *parseBaseUnresolvedName();
   Node *parseUnresolvedType();
@@ -2588,8 +2578,6 @@ const char* parse_discriminator(const char* first, const char* last);
 //                          ::= <substitution>
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseName(NameState *State) {
-  consumeIf('L'); // extension
-
   if (look() == 'N')
     return getDerived().parseNestedName(State);
   if (look() == 'Z')
@@ -2665,21 +2653,24 @@ Node *AbstractManglingParser<Derived, Alloc>::parseLocalName(NameState *State) {
   return make<LocalName>(Encoding, Entity);
 }
 
-// <unscoped-name> ::= <unqualified-name>
-//                 ::= St <unqualified-name>   # ::std::
-// extension       ::= StL<unqualified-name>
+// <unscoped-name> ::= [L]* <unqualified-name>
+//                 ::= St [L]* <unqualified-name>   # ::std::
+// [*] extension
 template <typename Derived, typename Alloc>
 Node *
 AbstractManglingParser<Derived, Alloc>::parseUnscopedName(NameState *State) {
   bool IsStd = consumeIf("St");
-  if (IsStd)
-    consumeIf('L');
+  consumeIf('L');
 
   Node *Result = getDerived().parseUnqualifiedName(State);
   if (Result == nullptr)
     return nullptr;
-  if (IsStd)
-    Result = make<StdQualifiedName>(Result);
+  if (IsStd) {
+    if (auto *Std = make<NameType>("std"))
+      Result = make<NestedName>(Std, Result);
+    else
+      return nullptr;
+  }
 
   return Result;
 }
@@ -3160,14 +3151,14 @@ AbstractManglingParser<Derived, Alloc>::parseCtorDtorName(Node *&SoFar,
 // <nested-name> ::= N [<CV-Qualifiers>] [<ref-qualifier>] <prefix> <unqualified-name> E
 //               ::= N [<CV-Qualifiers>] [<ref-qualifier>] <template-prefix> <template-args> E
 //
-// <prefix> ::= <prefix> <unqualified-name>
+// <prefix> ::= <prefix> [L]* <unqualified-name>
 //          ::= <template-prefix> <template-args>
 //          ::= <template-param>
 //          ::= <decltype>
 //          ::= # empty
 //          ::= <substitution>
 //          ::= <prefix> <data-member-prefix>
-//  extension ::= L
+// [*] extension
 //
 // <data-member-prefix> := <member source-name> [<template-args>] M
 //
@@ -3187,88 +3178,85 @@ AbstractManglingParser<Derived, Alloc>::parseNestedName(NameState *State) {
     if (State) State->ReferenceQualifier = FrefQualRValue;
   } else if (consumeIf('R')) {
     if (State) State->ReferenceQualifier = FrefQualLValue;
-  } else
+  } else {
     if (State) State->ReferenceQualifier = FrefQualNone;
-
-  Node *SoFar = nullptr;
-  auto PushComponent = [&](Node *Comp) {
-    if (!Comp) return false;
-    if (SoFar) SoFar = make<NestedName>(SoFar, Comp);
-    else       SoFar = Comp;
-    if (State) State->EndsWithTemplateArgs = false;
-    return SoFar != nullptr;
-  };
-
-  if (consumeIf("St")) {
-    SoFar = make<NameType>("std");
-    if (!SoFar)
-      return nullptr;
   }
 
+  Node *SoFar = nullptr;
   while (!consumeIf('E')) {
     consumeIf('L'); // extension
 
-    // <data-member-prefix> := <member source-name> [<template-args>] M
     if (consumeIf('M')) {
+      // <data-member-prefix> := <member source-name> [<template-args>] M
       if (SoFar == nullptr)
         return nullptr;
       continue;
     }
 
-    //          ::= <template-param>
+    if (State)
+      // Only set end-with-template on the case that does that.
+      State->EndsWithTemplateArgs = false;
+
     if (look() == 'T') {
-      if (!PushComponent(getDerived().parseTemplateParam()))
-        return nullptr;
-      Subs.push_back(SoFar);
-      continue;
-    }
-
-    //          ::= <template-prefix> <template-args>
-    if (look() == 'I') {
+      //          ::= <template-param>
+      if (SoFar != nullptr)
+        return nullptr; // Cannot have a prefix.
+      SoFar = getDerived().parseTemplateParam();
+    } else if (look() == 'I') {
+      //          ::= <template-prefix> <template-args>
+      if (SoFar == nullptr)
+        return nullptr; // Must have a prefix.
       Node *TA = getDerived().parseTemplateArgs(State != nullptr);
-      if (TA == nullptr || SoFar == nullptr)
+      if (TA == nullptr)
         return nullptr;
+      if (SoFar->getKind() == Node::KNameWithTemplateArgs)
+        // Semantically <template-args> <template-args> cannot be generated by a
+        // C++ entity.  There will always be [something like] a name between
+        // them.
+        return nullptr;
+      if (State)
+        State->EndsWithTemplateArgs = true;
       SoFar = make<NameWithTemplateArgs>(SoFar, TA);
-      if (!SoFar)
-        return nullptr;
-      if (State) State->EndsWithTemplateArgs = true;
-      Subs.push_back(SoFar);
-      continue;
-    }
-
-    //          ::= <decltype>
-    if (look() == 'D' && (look(1) == 't' || look(1) == 'T')) {
-      if (!PushComponent(getDerived().parseDecltype()))
-        return nullptr;
-      Subs.push_back(SoFar);
-      continue;
-    }
-
-    //          ::= <substitution>
-    if (look() == 'S' && look(1) != 't') {
-      Node *S = getDerived().parseSubstitution();
-      if (!PushComponent(S))
-        return nullptr;
-      if (SoFar != S)
-        Subs.push_back(S);
-      continue;
-    }
-
-    // Parse an <unqualified-name> thats actually a <ctor-dtor-name>.
-    if (look() == 'C' || (look() == 'D' && look(1) != 'C')) {
+    } else if (look() == 'D' && (look(1) == 't' || look(1) == 'T')) {
+      //          ::= <decltype>
+      if (SoFar != nullptr)
+        return nullptr; // Cannot have a prefix.
+      SoFar = getDerived().parseDecltype();
+    } else if (look() == 'S') {
+      //          ::= <substitution>
+      if (SoFar != nullptr)
+        return nullptr; // Cannot have a prefix.
+      if (look(1) == 't') {
+        // parseSubstition does not handle 'St'.
+        First += 2;
+        SoFar = make<NameType>("std");
+      } else {
+        SoFar = getDerived().parseSubstitution();
+      }
       if (SoFar == nullptr)
         return nullptr;
-      if (!PushComponent(getDerived().parseCtorDtorName(SoFar, State)))
+      continue; // Do not push a new substitution.
+    } else {
+      Node *N = nullptr;
+      if (look() == 'C' || (look() == 'D' && look(1) != 'C')) {
+        // An <unqualified-name> that's actually a <ctor-dtor-name>.
+        if (SoFar == nullptr)
+          return nullptr;
+        N = getDerived().parseCtorDtorName(SoFar, State);
+        if (N != nullptr)
+          N = getDerived().parseAbiTags(N);
+      } else {
+        //          ::= <prefix> <unqualified-name>
+        N = getDerived().parseUnqualifiedName(State);
+      }
+      if (N == nullptr)
         return nullptr;
-      SoFar = getDerived().parseAbiTags(SoFar);
-      if (SoFar == nullptr)
-        return nullptr;
-      Subs.push_back(SoFar);
-      continue;
+      if (SoFar)
+        SoFar = make<NestedName>(SoFar, N);
+      else
+        SoFar = N;
     }
-
-    //          ::= <prefix> <unqualified-name>
-    if (!PushComponent(getDerived().parseUnqualifiedName(State)))
+    if (SoFar == nullptr)
       return nullptr;
     Subs.push_back(SoFar);
   }
@@ -3365,6 +3353,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseBaseUnresolvedName() {
 //                   ::= [gs] <base-unresolved-name>                     # x or (with "gs") ::x
 //                   ::= [gs] sr <unresolved-qualifier-level>+ E <base-unresolved-name>
 //                                                                       # A::x, N::y, A<T>::z; "gs" means leading "::"
+// [gs] has been parsed by caller.
 //                   ::= sr <unresolved-type> <base-unresolved-name>     # T::x / decltype(p)::x
 //  extension        ::= sr <unresolved-type> <template-args> <base-unresolved-name>
 //                                                                       # T::N::x /decltype(p)::N::x
@@ -3372,7 +3361,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseBaseUnresolvedName() {
 //
 // <unresolved-qualifier-level> ::= <simple-id>
 template <typename Derived, typename Alloc>
-Node *AbstractManglingParser<Derived, Alloc>::parseUnresolvedName() {
+Node *AbstractManglingParser<Derived, Alloc>::parseUnresolvedName(bool Global) {
   Node *SoFar = nullptr;
 
   // srN <unresolved-type> [<template-args>] <unresolved-qualifier-level>* E <base-unresolved-name>
@@ -3405,8 +3394,6 @@ Node *AbstractManglingParser<Derived, Alloc>::parseUnresolvedName() {
       return nullptr;
     return make<QualifiedName>(SoFar, Base);
   }
-
-  bool Global = consumeIf("gs");
 
   // [gs] <base-unresolved-name>                     # x or (with "gs") ::x
   if (!consumeIf("sr")) {
@@ -4707,7 +4694,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
       return make<DeleteExpr>(E, Global, /*is_array=*/false);
     }
     case 'n':
-      return getDerived().parseUnresolvedName();
+      return getDerived().parseUnresolvedName(Global);
     case 's': {
       First += 2;
       Node *LHS = getDerived().parseExpr();
@@ -4852,7 +4839,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
   case 'o':
     switch (First[1]) {
     case 'n':
-      return getDerived().parseUnresolvedName();
+      return getDerived().parseUnresolvedName(Global);
     case 'o':
       First += 2;
       return getDerived().parseBinaryExpr("||");
@@ -4866,9 +4853,16 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
     return nullptr;
   case 'p':
     switch (First[1]) {
-    case 'm':
+    case 'm': {
       First += 2;
-      return getDerived().parseBinaryExpr("->*");
+      Node *LHS = getDerived().parseExpr();
+      if (LHS == nullptr)
+        return LHS;
+      Node *RHS = getDerived().parseExpr();
+      if (RHS == nullptr)
+        return nullptr;
+      return make<MemberExpr>(LHS, "->*", RHS);
+    }
     case 'l':
       First += 2;
       return getDerived().parseBinaryExpr("+");
@@ -4963,7 +4957,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
       return make<ParameterPackExpansion>(Child);
     }
     case 'r':
-      return getDerived().parseUnresolvedName();
+      return getDerived().parseUnresolvedName(Global);
     case 't': {
       First += 2;
       Node *Ty = getDerived().parseType();
@@ -5096,7 +5090,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
   case '7':
   case '8':
   case '9':
-    return getDerived().parseUnresolvedName();
+    return getDerived().parseUnresolvedName(Global);
   }
   return nullptr;
 }
@@ -5444,6 +5438,7 @@ bool AbstractManglingParser<Alloc, Derived>::parseSeqId(size_t *Out) {
 // <substitution> ::= Si # ::std::basic_istream<char,  std::char_traits<char> >
 // <substitution> ::= So # ::std::basic_ostream<char,  std::char_traits<char> >
 // <substitution> ::= Sd # ::std::basic_iostream<char, std::char_traits<char> >
+// The St case is handled specially in parseNestedName.
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseSubstitution() {
   if (!consumeIf('S'))

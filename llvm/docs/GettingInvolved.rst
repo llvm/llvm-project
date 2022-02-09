@@ -217,6 +217,11 @@ writing, the following sync-ups are organized:
      - `ics <https://calendar.google.com/calendar/ical/c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com/public/basic.ics>`__
        `gcal <https://calendar.google.com/calendar/embed?src=c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com>`__
      - `Minutes/docs <https://docs.google.com/document/d/1-uEEZfmRdPThZlctOq9eXlmUaSSAAi8oKxhrPY_lpjk/edit#>`__
+   * - LLVM Embedded Toolchains
+     - Every 4 weeks on Thursdays
+     - `ics <https://drive.google.com/file/d/1uNa-PFYkhAfT83kR2Nc4Fi706TAQFBEL/view?usp=sharing>`__
+       `gcal <https://calendar.google.com/calendar/u/0?cid=ZDQyc3ZlajJmbjIzNG1jaTUybjFsdjA2dWNAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ>`__
+     - `Minutes/docs <https://docs.google.com/document/d/1GahxppHJ7o1O_fn1Mbidu1DHEg7V2aOr92LXCtNV1_o/edit?usp=sharing>`__
 
 IRC
 ---

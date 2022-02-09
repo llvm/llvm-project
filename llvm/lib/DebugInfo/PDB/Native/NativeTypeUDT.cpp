@@ -32,7 +32,7 @@ NativeTypeUDT::NativeTypeUDT(NativeSession &Session, SymIndexId Id,
     : NativeRawSymbol(Session, PDB_SymType::UDT, Id),
       UnmodifiedType(&UnmodifiedType), Modifiers(std::move(Modifier)) {}
 
-NativeTypeUDT::~NativeTypeUDT() {}
+NativeTypeUDT::~NativeTypeUDT() = default;
 
 void NativeTypeUDT::dump(raw_ostream &OS, int Indent,
                          PdbSymbolIdField ShowIdFields,

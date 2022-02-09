@@ -1577,7 +1577,8 @@ void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
         } else if (Style.BraceWrapping.AfterFunction) {
           addUnwrappedLine();
         }
-        FormatTok->setType(TT_FunctionLBrace);
+        if (!Line->InPPDirective)
+          FormatTok->setType(TT_FunctionLBrace);
         parseBlock();
         addUnwrappedLine();
         return;

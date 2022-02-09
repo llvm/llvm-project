@@ -1,9 +1,9 @@
 # Defining Dialect Attributes and Types
 
 This document is a quickstart to defining dialect specific extensions to the
-[attribute](../LangRef.md/#attributes) and [type](../LangRef.md/#type-system) systems in
-MLIR. The main part of this tutorial focuses on defining types, but the
-instructions are nearly identical for defining attributes.
+[attribute](../LangRef.md/#attributes) and [type](../LangRef.md/#type-system)
+systems in MLIR. The main part of this tutorial focuses on defining types, but
+the instructions are nearly identical for defining attributes.
 
 See [MLIR specification](../LangRef.md) for more information about MLIR, the
 structure of the IR, operations, etc.
@@ -24,18 +24,19 @@ defining a new `Type` it isn't always necessary to define a new storage class.
 So before defining the derived `Type`, it's important to know which of the two
 classes of `Type` we are defining:
 
-Some types are _singleton_ in nature, meaning they have no parameters and only
-ever have one instance, like the [`index` type](../Dialects/Builtin.md/#indextype).
+Some types are *singleton* in nature, meaning they have no parameters and only
+ever have one instance, like the
+[`index` type](../Dialects/Builtin.md/#indextype).
 
-Other types are _parametric_, and contain additional information that
+Other types are *parametric*, and contain additional information that
 differentiates different instances of the same `Type`. For example the
-[`integer` type](../Dialects/Builtin.md/#integertype) contains a bitwidth, with `i8` and
-`i16` representing different instances of
-[`integer` type](../Dialects/Builtin.md/#integertype). _Parametric_ may also contain a
-mutable component, which can be used, for example, to construct self-referring
-recursive types. The mutable component _cannot_ be used to differentiate
-instances of a type class, so usually such types contain other parametric
-components that serve to identify them.
+[`integer` type](../Dialects/Builtin.md/#integertype) contains a bitwidth, with
+`i8` and `i16` representing different instances of
+[`integer` type](../Dialects/Builtin.md/#integertype). *Parametric* may also
+contain a mutable component, which can be used, for example, to construct
+self-referring recursive types. The mutable component *cannot* be used to
+differentiate instances of a type class, so usually such types contain other
+parametric components that serve to identify them.
 
 #### Singleton types
 
@@ -389,12 +390,12 @@ Attributes and types defined in ODS with a mnemonic can define an
 `assemblyFormat` to declaratively describe custom parsers and printers. The
 assembly format consists of literals, variables, and directives.
 
-* A literal is a keyword or valid punctuation enclosed in backticks, e.g.
-  `` `keyword` `` or `` `<` ``.
-* A variable is a parameter name preceeded by a dollar sign, e.g. `$param0`,
-  which captures one attribute or type parameter.
-* A directive is a keyword followed by an optional argument list that defines
-  special parser and printer behaviour.
+*   A literal is a keyword or valid punctuation enclosed in backticks, e.g. ``
+    `keyword` `` or `` `<` ``.
+*   A variable is a parameter name preceeded by a dollar sign, e.g. `$param0`,
+    which captures one attribute or type parameter.
+*   A directive is a keyword followed by an optional argument list that defines
+    special parser and printer behaviour.
 
 ```tablegen
 // An example type with an assembly format.
@@ -412,8 +413,8 @@ def MyType : TypeDef<My_Dialect, "MyType"> {
 }
 ```
 
-The declarative assembly format for `MyType` results in the following format
-in the IR:
+The declarative assembly format for `MyType` results in the following format in
+the IR:
 
 ```mlir
 !my_dialect.my_type<42, map = affine_map<(i, j) -> (j, i)>
@@ -421,15 +422,15 @@ in the IR:
 
 ### Parameter Parsing and Printing
 
-For many basic parameter types, no additional work is needed to define how
-these parameters are parsed or printed.
+For many basic parameter types, no additional work is needed to define how these
+parameters are parsed or printed.
 
-* The default printer for any parameter is `$_printer << $_self`,
-  where `$_self` is the C++ value of the parameter and `$_printer` is an
-  `AsmPrinter`.
-* The default parser for a parameter is
-  `FieldParser<$cppClass>::parse($_parser)`, where `$cppClass` is the C++ type
-  of the parameter and `$_parser` is an `AsmParser`.
+*   The default printer for any parameter is `$_printer << $_self`, where
+    `$_self` is the C++ value of the parameter and `$_printer` is an
+    `AsmPrinter`.
+*   The default parser for a parameter is
+    `FieldParser<$cppClass>::parse($_parser)`, where `$cppClass` is the C++ type
+    of the parameter and `$_parser` is an `AsmParser`.
 
 Printing and parsing behaviour can be added to additional C++ types by
 overloading these functions or by defining a `parser` and `printer` in an ODS
@@ -470,8 +471,8 @@ def MyParameter : TypeParameter<"std::pair<int, int>", "pair of ints"> {
 }
 ```
 
-A type using this parameter with the assembly format `` `<` $myParam `>` ``
-will look as follows in the IR:
+A type using this parameter with the assembly format `` `<` $myParam `>` `` will
+look as follows in the IR:
 
 ```mlir
 !my_dialect.my_type<42 * 24>
@@ -480,10 +481,42 @@ will look as follows in the IR:
 #### Non-POD Parameters
 
 Parameters that aren't plain-old-data (e.g. references) may need to define a
-`cppStorageType` to contain the data until it is copied into the allocator.
-For example, `StringRefParameter` uses `std::string` as its storage type,
-whereas `ArrayRefParameter` uses `SmallVector` as its storage type. The parsers
-for these parameters are expected to return `FailureOr<$cppStorageType>`.
+`cppStorageType` to contain the data until it is copied into the allocator. For
+example, `StringRefParameter` uses `std::string` as its storage type, whereas
+`ArrayRefParameter` uses `SmallVector` as its storage type. The parsers for
+these parameters are expected to return `FailureOr<$cppStorageType>`.
+
+#### Optional Parameters
+
+Optional parameters in the assembly format can be indicated by setting
+`isOptional`. The C++ type of an optional parameter is required to satisfy the
+following requirements:
+
+*   is default-constructible
+*   is contextually convertible to `bool`
+*   only the default-constructed value is `false`
+
+The parameter parser should return the default-constructed value to indicate "no
+value present". The printer will guard on the presence of a value to print the
+parameter.
+
+If a value was not parsed for an optional parameter, then the parameter will be
+set to its default-constructed C++ value. For example, `Optional<int>` will be
+set to `llvm::None` and `Attribute` will be set to `nullptr`.
+
+Only optional parameters or directives that only capture optional parameters can
+be used in optional groups. An optional group is a set of elements optionally
+printed based on the presence of an anchor. Suppose parameter `a` is an
+`IntegerAttr`.
+
+```
+( `(` $a^ `)` ) : (`x`)?
+```
+
+In the above assembly format, if `a` is present (non-null), then it will be
+printed as `(5 : i32)`. If it is not present, it will be `x`. Directives that
+are used inside optional groups are allowed only if all captured parameters are
+also optional.
 
 ### Assembly Format Directives
 
@@ -497,9 +530,9 @@ Attribute and type assembly formats have the following directives:
 
 #### `params` Directive
 
-This directive is used to refer to all parameters of an attribute or type.
-When used as a top-level directive, `params` generates a parser and printer for
-a comma-separated list of the parameters. For example:
+This directive is used to refer to all parameters of an attribute or type. When
+used as a top-level directive, `params` generates a parser and printer for a
+comma-separated list of the parameters. For example:
 
 ```tablegen
 def MyPairType : TypeDef<My_Dialect, "MyPairType"> {
@@ -547,12 +580,16 @@ In the IR, the types will appear as:
 !my_dialect.outer_qual<pair : !mydialect.pair<42, 24>>
 ```
 
+If optional parameters are present, they are not printed in the parameter list
+if they are not present.
+
 #### `struct` Directive
 
 The `struct` directive accepts a list of variables to capture and will generate
-a parser and printer for a comma-separated list of key-value pairs. The
-variables are printed in the order they are specified in the argument list **but
-can be parsed in any order**. For example:
+a parser and printer for a comma-separated list of key-value pairs. If an
+optional parameter is included in the `struct`, it can be elided. The variables
+are printed in the order they are specified in the argument list **but can be
+parsed in any order**. For example:
 
 ```tablegen
 def MyStructType : TypeDef<My_Dialect, "MyStructType"> {

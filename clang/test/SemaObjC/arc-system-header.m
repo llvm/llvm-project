@@ -26,14 +26,14 @@ void test5(struct Test5 *p) {
   p->field = 0;
 }
 
-id test6() {
+id test6(void) {
   // This is actually okay to use if declared in a system header.
   id x;
   x = (id) kMagicConstant;
   x = (id) (x ? kMagicConstant : kMagicConstant);
   x = (id) (x ? kMagicConstant : (void*) 0);
 
-  extern void test6_helper();
+  extern void test6_helper(void);
   x = (id) (test6_helper(), kMagicConstant);
 }
 
@@ -47,7 +47,7 @@ void test7(Test7 *p) {
 }
 
 extern void doSomething(Test9 arg);
-void test9() {
+void test9(void) {
     Test9 foo2 = {0, 0};
     doSomething(foo2);
 }

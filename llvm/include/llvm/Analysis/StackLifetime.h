@@ -14,7 +14,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -26,6 +25,7 @@ class AllocaInst;
 class BasicBlock;
 class Function;
 class Instruction;
+class IntrinsicInst;
 
 /// Compute live ranges of allocas.
 /// Live ranges are represented as sets of "interesting" instructions, which are

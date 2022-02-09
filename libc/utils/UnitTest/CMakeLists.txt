@@ -32,3 +32,16 @@ add_dependencies(
   libc.src.__support.CPP.standalone_cpp
   libc.src.__support.FPUtil.fputil
 )
+
+add_library(
+  LibcMemoryHelpers
+    MemoryMatcher.h
+    MemoryMatcher.cpp
+)
+target_include_directories(LibcMemoryHelpers PUBLIC ${LIBC_SOURCE_DIR})
+target_link_libraries(LibcMemoryHelpers LibcUnitTest)
+add_dependencies(
+  LibcMemoryHelpers
+  LibcUnitTest
+  libc.src.__support.CPP.standalone_cpp
+)
