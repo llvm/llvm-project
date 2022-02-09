@@ -723,25 +723,24 @@ struct CallOpInterface
         funcOp.getArgument(opOperand.getOperandNumber()));
   }
 
-  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
+  SmallVector<OpResult>
+  getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                      const BufferizationState &state) const {
     CallOp callOp = cast<CallOp>(op);
     FuncOp funcOp = getCalledFunction(callOp);
     assert(funcOp && "expected CallOp to a FuncOp");
     const ModuleBufferizationState &moduleState =
         getModuleBufferizationState(state);
 
+    SmallVector<OpResult> result;
     for (int64_t resultIdx = 0; resultIdx < callOp->getNumResults();
          ++resultIdx)
       if (Optional<int64_t> maybeArgNumber =
               getEquivalentFuncArgIdx(funcOp, moduleState, resultIdx))
         if (*maybeArgNumber == opOperand.getOperandNumber())
-          return callOp->getOpResult(resultIdx);
+          result.push_back(callOp->getOpResult(resultIdx));
 
-    // Note: Returning a non-equivalent tensor from a FuncOp is currently not
-    // supported an will fail bufferization. (Even if allow-return-memref, it
-    // will fail when the function is called.)
-    return OpResult();
+    return result;
   }
 
   SmallVector<OpOperand *>
@@ -916,9 +915,10 @@ struct ReturnOpInterface
     return false;
   }
 
-  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
-    return OpResult();
+  SmallVector<OpResult>
+  getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                      const BufferizationState &state) const {
+    return {};
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,

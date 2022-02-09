@@ -168,8 +168,7 @@ struct LinalgOpInterface
     // Operand is written to if it has an aliasing OpResult. For more details,
     // see `computeAliasingPairs`.
     auto bufferizableOp = cast<BufferizableOpInterface>(op);
-    return static_cast<bool>(
-        bufferizableOp.getAliasingOpResult(opOperand, state));
+    return !bufferizableOp.getAliasingOpResult(opOperand, state).empty();
   }
 
   SmallVector<OpOperand *>
@@ -185,13 +184,16 @@ struct LinalgOpInterface
     return {};
   }
 
-  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
+  SmallVector<OpResult>
+  getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                      const BufferizationState &state) const {
     auto genericOp = cast<linalg::LinalgOp>(op);
 
     // Aliasing OpOperand/OpResult pairs are computed by `computeAliasingPairs`.
     DenseMap<OpOperand *, OpResult> pairs = computeAliasingPairs(genericOp);
-    return pairs[&opOperand];
+    if (!pairs.count(&opOperand))
+      return {};
+    return {pairs[&opOperand]};
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
@@ -252,16 +254,19 @@ struct TiledLoopOpInterface
 
     // Only operands with an aliasing OpResult (i.e., output operands) bufferize
     // to a memory write.
-    return static_cast<bool>(
-        bufferizableOp.getAliasingOpResult(opOperand, state));
+    return !bufferizableOp.getAliasingOpResult(opOperand, state).empty();
   }
 
-  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
+  SmallVector<OpResult>
+  getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                      const BufferizationState &state) const {
     auto tiledLoopOp = cast<linalg::TiledLoopOp>(op);
 
     // Output operands are tied to their corresponding OpResults.
-    return tiledLoopOp.getTiedOpResult(opOperand);
+    OpResult opResult = tiledLoopOp.getTiedOpResult(opOperand);
+    if (!opResult)
+      return {};
+    return {opResult};
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
@@ -397,9 +402,10 @@ struct YieldOpInterface
     return false;
   }
 
-  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
-    return OpResult();
+  SmallVector<OpResult>
+  getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                      const BufferizationState &state) const {
+    return {};
   }
 
   bool mustBufferizeInPlace(Operation *op, OpOperand &opOperand,
