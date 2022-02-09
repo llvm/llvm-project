@@ -252,7 +252,7 @@ public:
   }
 
   void SourceInitFileCwd(CommandReturnObject &result);
-  void SourceInitFileHome(CommandReturnObject &result, bool is_repl = false);
+  void SourceInitFileHome(CommandReturnObject &result, bool is_repl);
 
   bool AddCommand(llvm::StringRef name, const lldb::CommandObjectSP &cmd_sp,
                   bool can_replace);
