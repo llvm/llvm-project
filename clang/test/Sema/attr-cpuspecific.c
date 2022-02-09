@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -Wno-strict-prototypes -fsyntax-only -verify %s -Wnonnull
-// XFAIL: asserts
 
 void __attribute__((cpu_specific(ivybridge))) no_default(void);
 void __attribute__((cpu_specific(sandybridge)))  no_default(void);
@@ -120,13 +119,9 @@ int __attribute__((cpu_dispatch(pentium_iii, pentium_iii_no_xmm_regs))) dupe_p3(
 
 void __attribute__((cpu_specific(atom), nothrow, nonnull(1))) addtl_attrs(int*);
 
-// FIXME: Declaration of a non-overloadable function when more than one
-// FIXME: multiversion function declarations are present results in an
-// FIXME: assertion failure.
 int __attribute__((cpu_specific(atom))) bad_overload1(void);
 int __attribute__((cpu_specific(ivybridge))) bad_overload1(void);
-// expected-error@+2 {{at most one overload for a given name may lack the 'overloadable' attribute}}
-// expected-note@-2 {{previous unmarked overload of function is here}}
+// expected-error@+1 {{function declaration is missing 'cpu_specific' or 'cpu_dispatch' attribute in a multiversioned function}}
 int bad_overload1(int);
 
 int bad_overload2(int);
@@ -135,13 +130,9 @@ int bad_overload2(int);
 int __attribute__((cpu_specific(atom))) bad_overload2(void);
 int __attribute__((cpu_specific(ivybridge))) bad_overload2(void);
 
-// FIXME: Declaration of a non-overloadable function when more than one
-// FIXME: multiversion function declarations are present results in an
-// FIXME: assertion failure.
 int __attribute__((cpu_dispatch(generic))) bad_overload3(void);
 int __attribute__((cpu_specific(ivybridge))) bad_overload3(void);
-// expected-error@+2 {{at most one overload for a given name may lack the 'overloadable' attribute}}
-// expected-note@-2 {{previous unmarked overload of function is here}}
+// expected-error@+1 {{function declaration is missing 'cpu_specific' or 'cpu_dispatch' attribute in a multiversioned function}}
 int bad_overload3(int);
 
 int bad_overload4(int);
