@@ -6279,7 +6279,7 @@ subset of all call-used registers before the function returns. It's used to
 increase program security by either mitigating `Return-Oriented Programming`_
 (ROP) attacks or preventing information leakage through registers.
 
-The term "`call-used" means registers which are not guaranteed to be preserved
+The term "call-used" means registers which are not guaranteed to be preserved
 unchanged for the caller by the current calling convention. This could also be
 described as "caller-saved" or "not callee-saved".
 
