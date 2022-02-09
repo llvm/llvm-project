@@ -247,23 +247,6 @@ static ConstraintListTy
 getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
               const DenseMap<Value *, unsigned> &Value2Index,
               DenseMap<Value *, unsigned> &NewIndices) {
-  int64_t Offset1 = 0;
-  int64_t Offset2 = 0;
-
-  SmallVector<PreconditionTy, 4> Preconditions;
-  // First try to look up \p V in Value2Index and NewIndices. Otherwise add a
-  // new entry to NewIndices.
-  auto GetOrAddIndex = [&Value2Index, &NewIndices](Value *V) -> unsigned {
-    auto V2I = Value2Index.find(V);
-    if (V2I != Value2Index.end())
-      return V2I->second;
-    auto NewI = NewIndices.find(V);
-    if (NewI != NewIndices.end())
-      return NewI->second;
-    auto Insert =
-        NewIndices.insert({V, Value2Index.size() + NewIndices.size() + 1});
-    return Insert.first->second;
-  };
 
   if (Pred == CmpInst::ICMP_UGT || Pred == CmpInst::ICMP_UGE ||
       Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SGE)
@@ -292,6 +275,7 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
       Pred != CmpInst::ICMP_SLE && Pred != CmpInst::ICMP_SLT)
     return {};
 
+  SmallVector<PreconditionTy, 4> Preconditions;
   bool IsSigned = CmpInst::isSigned(Pred);
   auto ADec = decompose(Op0->stripPointerCastsSameRepresentation(),
                         Preconditions, IsSigned);
@@ -305,13 +289,27 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   if (ADec.size() == 1 && BDec.size() == 1)
     return {};
 
-  Offset1 = ADec[0].first;
-  Offset2 = BDec[0].first;
+  int64_t Offset1 = ADec[0].first;
+  int64_t Offset2 = BDec[0].first;
   Offset1 *= -1;
 
   // Create iterator ranges that skip the constant-factor.
   auto VariablesA = llvm::drop_begin(ADec);
   auto VariablesB = llvm::drop_begin(BDec);
+
+  // First try to look up \p V in Value2Index and NewIndices. Otherwise add a
+  // new entry to NewIndices.
+  auto GetOrAddIndex = [&Value2Index, &NewIndices](Value *V) -> unsigned {
+    auto V2I = Value2Index.find(V);
+    if (V2I != Value2Index.end())
+      return V2I->second;
+    auto NewI = NewIndices.find(V);
+    if (NewI != NewIndices.end())
+      return NewI->second;
+    auto Insert =
+        NewIndices.insert({V, Value2Index.size() + NewIndices.size() + 1});
+    return Insert.first->second;
+  };
 
   // Make sure all variables have entries in Value2Index or NewIndices.
   for (const auto &KV :
