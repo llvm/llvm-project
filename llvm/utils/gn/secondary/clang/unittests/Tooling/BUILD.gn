@@ -73,6 +73,7 @@ unittest("ToolingTests") {
     "RewriterTest.cpp",
     "SourceCodeBuildersTest.cpp",
     "SourceCodeTest.cpp",
+    "StandardLibraryTest.cpp",
     "StencilTest.cpp",
     "ToolingTest.cpp",
     "TransformerTest.cpp",
