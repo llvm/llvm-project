@@ -6946,6 +6946,9 @@ def  VCVTh2f  : N2VLInt<0b11, 0b11, 0b01, 0b10, 0b01110, 0, 0,
                         v4f32, v4i16, int_arm_neon_vcvthf2fp>,
                 Requires<[HasNEON, HasFP16]>;
 
+def : Pat<(v4f16 (fpround (v4f32 QPR:$src))), (VCVTf2h QPR:$src)>;
+def : Pat<(v4f32 (fpextend (v4f16 DPR:$src))), (VCVTh2f DPR:$src)>;
+
 // Vector Reverse.
 
 //   VREV64   : Vector Reverse elements within 64-bit doublewords
