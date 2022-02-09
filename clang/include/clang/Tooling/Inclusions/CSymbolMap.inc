@@ -3,7 +3,8 @@
 // Used to build a lookup table (qualified names => include headers) for C
 // Standard Library symbols.
 //
-// Automatically generated file, DO NOT EDIT!
+// This file was generated automatically by
+// clang/tools/include-mapping/gen_std.py, DO NOT EDIT!
 //
 // Generated from cppreference offline HTML book (modified on 2018-10-28).
 //===----------------------------------------------------------------------===//

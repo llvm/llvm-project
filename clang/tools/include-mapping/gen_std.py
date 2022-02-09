@@ -11,6 +11,8 @@
 include headers) for C/C++ Standard Library symbols by parsing archieved HTML
 files from cppreference.
 
+The generated files are located in clang/include/Tooling/Inclusions.
+
 Caveats and FIXMEs:
   - only symbols directly in "std" namespace are added, we should also add std's
     subnamespace symbols (e.g. chrono).
@@ -44,7 +46,8 @@ CODE_PREFIX = """\
 // Used to build a lookup table (qualified names => include headers) for %s
 // Standard Library symbols.
 //
-// Automatically generated file, DO NOT EDIT!
+// This file was generated automatically by
+// clang/tools/include-mapping/gen_std.py, DO NOT EDIT!
 //
 // Generated from cppreference offline HTML book (modified on %s).
 //===----------------------------------------------------------------------===//

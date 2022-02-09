@@ -22,6 +22,7 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
+#include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
@@ -32,78 +33,7 @@
 #include <string>
 
 namespace clang {
-class Decl;
-class NamespaceDecl;
 namespace clangd {
-
-// clangd has a built-in database of standard library symbols.
-namespace stdlib {
-class Symbol;
-
-// A standard library header, such as <iostream>
-// Lightweight class, in fact just an index into a table.
-class Header {
-public:
-  static llvm::Optional<Header> named(llvm::StringRef Name);
-
-  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Header &H) {
-    return OS << H.name();
-  }
-  llvm::StringRef name() const;
-
-private:
-  Header(unsigned ID) : ID(ID) {}
-  unsigned ID;
-  friend Symbol;
-  friend llvm::DenseMapInfo<Header>;
-  friend bool operator==(const Header &L, const Header &R) {
-    return L.ID == R.ID;
-  }
-};
-
-// A top-level standard library symbol, such as std::vector
-// Lightweight class, in fact just an index into a table.
-class Symbol {
-public:
-  static llvm::Optional<Symbol> named(llvm::StringRef Scope,
-                                      llvm::StringRef Name);
-
-  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Symbol &S) {
-    return OS << S.scope() << S.name();
-  }
-  llvm::StringRef scope() const;
-  llvm::StringRef name() const;
-  // The preferred header for this symbol (e.g. the suggested insertion).
-  Header header() const;
-  // Some symbols may be provided my multiple headers.
-  llvm::SmallVector<Header> headers() const;
-
-private:
-  Symbol(unsigned ID) : ID(ID) {}
-  unsigned ID;
-  friend class Recognizer;
-  friend llvm::DenseMapInfo<Symbol>;
-  friend bool operator==(const Symbol &L, const Symbol &R) {
-    return L.ID == R.ID;
-  }
-};
-
-// A functor to find the stdlib::Symbol associated with a decl.
-//
-// For non-top-level decls (std::vector<int>::iterator), returns the top-level
-// symbol (std::vector).
-class Recognizer {
-public:
-  Recognizer();
-  llvm::Optional<Symbol> operator()(const Decl *D);
-
-private:
-  using NSSymbolMap = llvm::DenseMap<llvm::StringRef, unsigned>;
-  NSSymbolMap *namespaceSymbols(const NamespaceDecl *D);
-  llvm::DenseMap<const DeclContext *, NSSymbolMap *> NamespaceCache;
-};
-
-} // namespace stdlib
 
 /// Returns true if \p Include is literal include like "path" or <path>.
 bool isLiteralInclude(llvm::StringRef Include);
@@ -231,7 +161,8 @@ public:
   // Maps HeaderID to the ids of the files included from it.
   llvm::DenseMap<HeaderID, SmallVector<HeaderID>> IncludeChildren;
 
-  llvm::DenseMap<stdlib::Header, llvm::SmallVector<HeaderID>> StdlibHeaders;
+  llvm::DenseMap<tooling::stdlib::Header, llvm::SmallVector<HeaderID>>
+      StdlibHeaders;
 
   std::vector<Inclusion> MainFileIncludes;
 
@@ -337,38 +268,6 @@ template <> struct DenseMapInfo<clang::clangd::IncludeStructure::HeaderID> {
 
   static bool isEqual(const clang::clangd::IncludeStructure::HeaderID &LHS,
                       const clang::clangd::IncludeStructure::HeaderID &RHS) {
-    return LHS == RHS;
-  }
-};
-
-template <> struct DenseMapInfo<clang::clangd::stdlib::Header> {
-  static inline clang::clangd::stdlib::Header getEmptyKey() {
-    return clang::clangd::stdlib::Header(-1);
-  }
-  static inline clang::clangd::stdlib::Header getTombstoneKey() {
-    return clang::clangd::stdlib::Header(-2);
-  }
-  static unsigned getHashValue(const clang::clangd::stdlib::Header &H) {
-    return hash_value(H.ID);
-  }
-  static bool isEqual(const clang::clangd::stdlib::Header &LHS,
-                      const clang::clangd::stdlib::Header &RHS) {
-    return LHS == RHS;
-  }
-};
-
-template <> struct DenseMapInfo<clang::clangd::stdlib::Symbol> {
-  static inline clang::clangd::stdlib::Symbol getEmptyKey() {
-    return clang::clangd::stdlib::Symbol(-1);
-  }
-  static inline clang::clangd::stdlib::Symbol getTombstoneKey() {
-    return clang::clangd::stdlib::Symbol(-2);
-  }
-  static unsigned getHashValue(const clang::clangd::stdlib::Symbol &S) {
-    return hash_value(S.ID);
-  }
-  static bool isEqual(const clang::clangd::stdlib::Symbol &LHS,
-                      const clang::clangd::stdlib::Symbol &RHS) {
     return LHS == RHS;
   }
 };
