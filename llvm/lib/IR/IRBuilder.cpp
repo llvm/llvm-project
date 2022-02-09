@@ -16,6 +16,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -66,6 +67,21 @@ Value *IRBuilderBase::getCastedInt8PtrValue(Value *Ptr) {
 
   // Otherwise, we need to insert a bitcast.
   return CreateBitCast(Ptr, getInt8PtrTy(PT->getAddressSpace()));
+}
+
+DebugLoc IRBuilderBase::getCurrentDebugLocation() const {
+  for (auto &KV : MetadataToCopy)
+    if (KV.first == LLVMContext::MD_dbg)
+      return {cast<DILocation>(KV.second)};
+
+  return {};
+}
+void IRBuilderBase::SetInstDebugLocation(Instruction *I) const {
+  for (const auto &KV : MetadataToCopy)
+    if (KV.first == LLVMContext::MD_dbg) {
+      I->setDebugLoc(DebugLoc(KV.second));
+      return;
+    }
 }
 
 static CallInst *createCallHelper(Function *Callee, ArrayRef<Value *> Ops,
