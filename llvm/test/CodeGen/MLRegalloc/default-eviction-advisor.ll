@@ -2,7 +2,7 @@
 ; trying to use ML-driven advisor.
 ; REQUIRES: !have_tf_aot
 ; REQUIRES: !have_tf_api
-; REQUIRES: default_target
+; REQUIRES: default_triple
 ; RUN: not llc -O2 -regalloc-enable-advisor=development < %s 2>&1 | FileCheck %s
 ; RUN: not llc -O2 -regalloc-enable-advisor=release < %s 2>&1 | FileCheck %s
 ; RUN: llc -O2 -regalloc-enable-advisor=default < %s 2>&1 | FileCheck %s --check-prefix=DEFAULT
