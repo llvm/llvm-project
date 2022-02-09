@@ -115,6 +115,15 @@ public:
   /// register scavenger to determine what registers are free.
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
+  /// isArgumentReg - Returns true if Reg can be used as an argument to a
+  /// function.
+  bool isArgumentRegister(const MachineFunction &MF,
+                          MCRegister Reg) const override;
+
+  /// Returns true if PhysReg is a fixed register.
+  bool isFixedRegister(const MachineFunction &MF,
+                       MCRegister PhysReg) const override;
+
   void adjustStackMapLiveOutMask(uint32_t *Mask) const override;
 
   bool hasBasePointer(const MachineFunction &MF) const;

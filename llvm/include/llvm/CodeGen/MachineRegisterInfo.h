@@ -229,6 +229,16 @@ public:
   /// Returns true if the updated CSR list was initialized and false otherwise.
   bool isUpdatedCSRsInitialized() const { return IsUpdatedCSRsInitialized; }
 
+  /// Returns true if a register can be used as an argument to a function.
+  bool isArgumentRegister(const MachineFunction &MF, MCRegister Reg) const;
+
+  /// Returns true if a register is a fixed register.
+  bool isFixedRegister(const MachineFunction &MF, MCRegister Reg) const;
+
+  /// Returns true if a register is a general purpose register.
+  bool isGeneralPurposeRegister(const MachineFunction &MF,
+                                MCRegister Reg) const;
+
   /// Disables the register from the list of CSRs.
   /// I.e. the register will not appear as part of the CSR mask.
   /// \see UpdatedCalleeSavedRegs.
