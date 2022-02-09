@@ -313,3 +313,16 @@ Using this module requires at least CMake version 3.13.4. Supported languages
 are C and C++ with Fortran support planned in the future. Compiler support is
 best for Clang but this module should work for other compiler vendors such as
 IBM, GNU.
+
+Q: What does 'Stack size for entry function cannot be statically determined' mean?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This is a warning that the Nvidia tools will sometimes emit if the offloading
+region is too complex. Normally, the CUDA tools attempt to statically determine
+how much stack memory each thread. This way when the kernel is launched each
+thread will have as much memory as it needs. If the control flow of the kernel
+is too complex, containing recursive calls or nested parallelism, this analysis
+can fail. If this warning is triggered it means that the kernel may run out of
+stack memory during execution and crash. The environment variable
+``LIBOMPTARGET_STACK_SIZE`` can be used to increase the stack size if this
+occurs.
