@@ -291,7 +291,7 @@ private:
     /// \param DisplayCTUProgress Display a message about loading new ASTs.
     ///
     /// \return An Expected instance which contains the ASTUnit pointer or the
-    /// error occured during the load.
+    /// error occurred during the load.
     llvm::Expected<ASTUnit *> getASTUnitForFunction(StringRef FunctionName,
                                                     StringRef CrossTUDir,
                                                     StringRef IndexName,

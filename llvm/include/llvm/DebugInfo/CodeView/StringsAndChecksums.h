@@ -10,13 +10,15 @@
 #define LLVM_DEBUGINFO_CODEVIEW_STRINGSANDCHECKSUMS_H
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
-#include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include <memory>
 
 namespace llvm {
 namespace codeview {
+class DebugChecksumsSubsection;
+class DebugChecksumsSubsectionRef;
+class DebugStringTableSubsection;
+class DebugStringTableSubsectionRef;
 
 class StringsAndChecksumsRef {
 public:

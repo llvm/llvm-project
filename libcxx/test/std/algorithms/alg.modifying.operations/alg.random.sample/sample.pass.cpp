@@ -66,10 +66,9 @@ void test() {
   const int *oa2 = Expectations::oa2;
   ((void)oa2); // Prevent unused warning
   std::minstd_rand g;
-  SampleIterator end;
-  end = std::sample(PopulationIterator(ia),
-                                  PopulationIterator(ia + is),
-                                  SampleIterator(oa), os, g);
+  SampleIterator end = std::sample(PopulationIterator(ia),
+                                   PopulationIterator(ia + is),
+                                   SampleIterator(oa), os, g);
   assert(static_cast<std::size_t>(end.base() - oa) == std::min(os, is));
   // sample() is deterministic but non-reproducible;
   // its results can vary between implementations.
@@ -123,10 +122,9 @@ void test_small_population() {
   SampleItem oa[os];
   const SampleItem oa1[] = {1, 2, 3, 4, 5};
   std::minstd_rand g;
-  SampleIterator end;
-  end = std::sample(PopulationIterator(ia),
-                                  PopulationIterator(ia + is),
-                                  SampleIterator(oa), os, g);
+  SampleIterator end = std::sample(PopulationIterator(ia),
+                                   PopulationIterator(ia + is),
+                                   SampleIterator(oa), os, g);
   assert(static_cast<std::size_t>(end.base() - oa) == std::min(os, is));
   typedef typename std::iterator_traits<PopulationIterator>::iterator_category PopulationCategory;
   if (std::is_base_of<std::forward_iterator_tag, PopulationCategory>::value) {

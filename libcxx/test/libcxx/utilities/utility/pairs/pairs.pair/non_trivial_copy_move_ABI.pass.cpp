@@ -14,14 +14,9 @@
 
 // template <class T1, class T2> struct pair
 
-// Test that we properly provide the trivial copy operations by default.
-
-// FreeBSD provides the old ABI. This test checks the new ABI so we need
-// to manually turn it on.
-#undef _LIBCPP_ABI_UNSTABLE
-#undef _LIBCPP_ABI_VERSION
-#define _LIBCPP_ABI_VERSION 1
-#define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
+// Test that we provide the non-trivial copy operations when _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
+// is specified.
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
 
 #include <utility>
 #include <type_traits>
@@ -30,10 +25,6 @@
 #include <cassert>
 
 #include "test_macros.h"
-
-#if !defined(_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR)
-#error trivial ctor ABI macro defined
-#endif
 
 template <class T>
 struct HasNonTrivialABI : std::integral_constant<bool,

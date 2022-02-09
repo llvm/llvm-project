@@ -18,10 +18,6 @@
 #  pragma GCC system_header
 #endif
 
-#if defined(_LIBCPP_HAS_NO_NULLPTR)
-# include <cstddef>
-#endif
-
 #if _LIBCPP_DEBUG_LEVEL >= 1 || defined(_LIBCPP_BUILDING_LIBRARY)
 #   include <cstddef>
 #   include <cstdio>
@@ -33,10 +29,10 @@
 #   define _LIBCPP_ASSERT_IMPL(x, m) ((void)0)
 #elif _LIBCPP_DEBUG_LEVEL == 1
 #   define _LIBCPP_DEBUG_ASSERT(x, m) ((void)0)
-#   define _LIBCPP_ASSERT_IMPL(x, m) ((x) ? (void)0 : _VSTD::__libcpp_debug_function(_VSTD::__libcpp_debug_info(__FILE__, __LINE__, #x, m)))
+#   define _LIBCPP_ASSERT_IMPL(x, m) ((x) ? (void)0 : ::std::__libcpp_debug_function(::std::__libcpp_debug_info(__FILE__, __LINE__, #x, m)))
 #elif _LIBCPP_DEBUG_LEVEL == 2
-#   define _LIBCPP_DEBUG_ASSERT(x, m) _LIBCPP_ASSERT(__libcpp_is_constant_evaluated() || (x), m)
-#   define _LIBCPP_ASSERT_IMPL(x, m) ((x) ? (void)0 : _VSTD::__libcpp_debug_function(_VSTD::__libcpp_debug_info(__FILE__, __LINE__, #x, m)))
+#   define _LIBCPP_DEBUG_ASSERT(x, m) _LIBCPP_ASSERT(::std::__libcpp_is_constant_evaluated() || (x), m)
+#   define _LIBCPP_ASSERT_IMPL(x, m) ((x) ? (void)0 : ::std::__libcpp_debug_function(::std::__libcpp_debug_info(__FILE__, __LINE__, #x, m)))
 #else
 #   error _LIBCPP_DEBUG_LEVEL must be one of 0, 1, 2
 #endif

@@ -76,7 +76,7 @@ class CodeGenTypes {
   llvm::DenseMap<const Type*, llvm::StructType *> RecordDeclTypes;
 
   /// Hold memoized CGFunctionInfo results.
-  llvm::FoldingSet<CGFunctionInfo> FunctionInfos;
+  llvm::FoldingSet<CGFunctionInfo> FunctionInfos{FunctionInfosLog2InitSize};
 
   /// This set keeps track of records that we're currently converting
   /// to an IR type.  For example, when converting:
@@ -96,8 +96,9 @@ class CodeGenTypes {
   /// corresponding llvm::Type.
   llvm::DenseMap<const Type *, llvm::Type *> TypeCache;
 
-  llvm::SmallSet<const Type *, 8> RecordsWithOpaqueMemberPointers;
+  llvm::DenseMap<const Type *, llvm::Type *> RecordsWithOpaqueMemberPointers;
 
+  static constexpr unsigned FunctionInfosLog2InitSize = 9;
   /// Helper for ConvertType.
   llvm::Type *ConvertFunctionTypeInternal(QualType FT);
 

@@ -127,4 +127,10 @@ constexpr int foldable_but_invalid() {
 
 [[clang::annotate("", foldable_but_invalid())]] void f1() {}
 // expected-error@-1 {{'annotate' attribute requires parameter 1 to be a constant expression}}
+
+[[clang::annotate()]] void f2() {}
+// expected-error@-1 {{'annotate' attribute takes at least 1 argument}}
+
+template <typename T> [[clang::annotate()]] void f2() {}
+// expected-error@-1 {{'annotate' attribute takes at least 1 argument}}
 }

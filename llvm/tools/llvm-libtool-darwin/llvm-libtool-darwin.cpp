@@ -98,6 +98,11 @@ static cl::opt<bool> NoWarningForNoSymbols(
     cl::desc("Do not warn about files that have no symbols"),
     cl::cat(LibtoolCategory), cl::init(false));
 
+static cl::opt<bool> WarningsAsErrors("warnings_as_errors",
+                                      cl::desc("Treat warnings as errors"),
+                                      cl::cat(LibtoolCategory),
+                                      cl::init(false));
+
 static const std::array<std::string, 3> StandardSearchDirs{
     "/lib",
     "/usr/lib",
@@ -370,10 +375,17 @@ private:
         return Error::success();
       }
 
-      if (!NoWarningForNoSymbols && O->symbols().empty())
-        WithColor::warning() << "'" + Member.MemberName +
-                                    "': has no symbols for architecture " +
-                                    O->getArchTriple().getArchName() + "\n";
+      if (!NoWarningForNoSymbols && O->symbols().empty()) {
+        Error E = createFileError(
+            Member.MemberName,
+            createStringError(std::errc::invalid_argument,
+                              "has no symbols for architecture %s",
+                              O->getArchTriple().getArchName().str().c_str()));
+
+        if (WarningsAsErrors)
+          return E;
+        WithColor::defaultWarningHandler(std::move(E));
+      }
 
       uint64_t FileCPUID = getCPUID(FileCPUType, FileCPUSubtype);
       Builder.Data.MembersPerArchitecture[FileCPUID].push_back(
@@ -581,8 +593,11 @@ static Error createStaticLibrary(const Config &C) {
 
   const auto &NewMembers = DataOrError->MembersPerArchitecture;
 
-  if (Error E = checkForDuplicates(NewMembers))
+  if (Error E = checkForDuplicates(NewMembers)) {
+    if (WarningsAsErrors)
+      return E;
     WithColor::defaultWarningHandler(std::move(E));
+  }
 
   if (NewMembers.size() == 1)
     return writeArchive(OutputFile, NewMembers.begin()->second.getMembers(),

@@ -222,39 +222,29 @@ struct NMSymbol {
   uint8_t NSect;
   uint16_t NDesc;
   std::string IndirectName;
+
+  bool isDefined() const {
+    if (Sym.getRawDataRefImpl().p) {
+      uint32_t Flags = cantFail(Sym.getFlags());
+      return !(Flags & SymbolRef::SF_Undefined);
+    }
+    return TypeChar != 'U';
+  }
 };
-} // anonymous namespace
 
-static bool compareSymbolAddress(const NMSymbol &A, const NMSymbol &B) {
-  bool ADefined;
-  // Symbol flags have been checked in the caller.
-  if (A.Sym.getRawDataRefImpl().p) {
-    uint32_t AFlags = cantFail(A.Sym.getFlags());
-    ADefined = !(AFlags & SymbolRef::SF_Undefined);
-  } else {
-    ADefined = A.TypeChar != 'U';
-  }
-  bool BDefined;
-  // Symbol flags have been checked in the caller.
-  if (B.Sym.getRawDataRefImpl().p) {
-    uint32_t BFlags = cantFail(B.Sym.getFlags());
-    BDefined = !(BFlags & SymbolRef::SF_Undefined);
-  } else {
-    BDefined = B.TypeChar != 'U';
-  }
-  return std::make_tuple(ADefined, A.Address, A.Name, A.Size) <
-         std::make_tuple(BDefined, B.Address, B.Name, B.Size);
-}
-
-static bool compareSymbolSize(const NMSymbol &A, const NMSymbol &B) {
-  return std::make_tuple(A.Size, A.Name, A.Address) <
-         std::make_tuple(B.Size, B.Name, B.Address);
-}
-
-static bool compareSymbolName(const NMSymbol &A, const NMSymbol &B) {
+bool operator<(const NMSymbol &A, const NMSymbol &B) {
+  if (NumericSort)
+    return std::make_tuple(A.isDefined(), A.Address, A.Name, A.Size) <
+           std::make_tuple(B.isDefined(), B.Address, B.Name, B.Size);
+  if (SizeSort)
+    return std::make_tuple(A.Size, A.Name, A.Address) <
+           std::make_tuple(B.Size, B.Name, B.Address);
   return std::make_tuple(A.Name, A.Size, A.Address) <
          std::make_tuple(B.Name, B.Size, B.Address);
 }
+
+bool operator>(const NMSymbol &A, const NMSymbol &B) { return B < A; }
+} // anonymous namespace
 
 static char isSymbolList64Bit(SymbolicFile &Obj) {
   if (auto *IRObj = dyn_cast<IRObjectFile>(&Obj))
@@ -263,7 +253,6 @@ static char isSymbolList64Bit(SymbolicFile &Obj) {
     return false;
   if (XCOFFObjectFile *XCOFFObj = dyn_cast<XCOFFObjectFile>(&Obj))
     return XCOFFObj->is64Bit();
-
   if (isa<WasmObjectFile>(Obj))
     return false;
   if (TapiFile *Tapi = dyn_cast<TapiFile>(&Obj))
@@ -658,27 +647,18 @@ static void writeFileName(raw_ostream &S, StringRef ArchiveName,
   }
 }
 
-static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
-                                   StringRef ArchiveName,
-                                   StringRef ArchitectureName) {
-  if (!NoSort) {
-    using Comparator = bool (*)(const NMSymbol &, const NMSymbol &);
-    Comparator Cmp;
-    if (NumericSort)
-      Cmp = &compareSymbolAddress;
-    else if (SizeSort)
-      Cmp = &compareSymbolSize;
-    else
-      Cmp = &compareSymbolName;
+static void sortSymbolList() {
+  if (NoSort)
+    return;
 
-    if (ReverseSort)
-      llvm::sort(SymbolList, [=](const NMSymbol &A, const NMSymbol &B) -> bool {
-        return Cmp(B, A);
-      });
-    else
-      llvm::sort(SymbolList, Cmp);
-  }
+  if (ReverseSort)
+    llvm::sort(SymbolList, std::greater<>());
+  else
+    llvm::sort(SymbolList);
+}
 
+static void printSymbolList(SymbolicFile &Obj, bool printName,
+                            StringRef ArchiveName, StringRef ArchitectureName) {
   if (!PrintFileName) {
     if ((OutputFormat == bsd || OutputFormat == posix ||
          OutputFormat == just_symbols) &&
@@ -726,17 +706,6 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
 
   for (const NMSymbol &S : SymbolList) {
     uint32_t SymFlags;
-    std::string Name = S.Name;
-    MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj);
-    if (Demangle) {
-      function_ref<Optional<std::string>(StringRef)> Fn = ::demangle;
-      if (Obj.isXCOFF())
-        Fn = demangleXCOFF;
-      if (Obj.isMachO())
-        Fn = demangleMachO;
-      if (Optional<std::string> Opt = Fn(S.Name))
-        Name = *Opt;
-    }
     if (S.Sym.getRawDataRefImpl().p) {
       Expected<uint32_t> SymFlagsOrErr = S.Sym.getFlags();
       if (!SymFlagsOrErr) {
@@ -756,6 +725,19 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
         (!Global && ExternalOnly) || (Weak && NoWeakSymbols) ||
         (FormatSpecific && !(SpecialSyms || DebugSyms)))
       continue;
+
+    std::string Name = S.Name;
+    MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj);
+    if (Demangle) {
+      function_ref<Optional<std::string>(StringRef)> Fn = ::demangle;
+      if (Obj.isXCOFF())
+        Fn = demangleXCOFF;
+      if (Obj.isMachO())
+        Fn = demangleMachO;
+      if (Optional<std::string> Opt = Fn(S.Name))
+        Name = *Opt;
+    }
+
     if (PrintFileName)
       writeFileName(outs(), ArchiveName, ArchitectureName);
     if ((OutputFormat == just_symbols ||
@@ -1754,7 +1736,8 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
     errs() << "no symbols\n";
   }
 
-  sortAndPrintSymbolList(Obj, printName, ArchiveName, ArchitectureName);
+  sortSymbolList();
+  printSymbolList(Obj, printName, ArchiveName, ArchitectureName);
 }
 
 // checkMachOAndArchFlags() checks to see if the SymbolicFile is a Mach-O file

@@ -50,11 +50,6 @@ if (current_toolchain == default_toolchain) {
     } else {
       values += [ "_LIBCPP_ABI_NAMESPACE=" ]
     }
-    if (libcxx_abi_unstable) {
-      values += [ "_LIBCPP_ABI_UNSTABLE=1" ]
-    } else {
-      values += [ "_LIBCPP_ABI_UNSTABLE=" ]
-    }
   }
 
   copy("copy_headers") {
@@ -336,7 +331,6 @@ if (current_toolchain == default_toolchain) {
       "__memory/voidify.h",
       "__mutex_base",
       "__node_handle",
-      "__nullptr",
       "__numeric/accumulate.h",
       "__numeric/adjacent_difference.h",
       "__numeric/exclusive_scan.h",

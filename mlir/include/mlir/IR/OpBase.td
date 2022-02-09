@@ -1655,6 +1655,7 @@ class ArrayAttrBase<Pred condition, string summary> : Attr<condition, summary> {
   let returnType = [{ ::mlir::ArrayAttr }];
   let valueType = NoneType;
   let convertFromStorage = "$_self";
+  let constBuilderCall = "$_builder.getArrayAttr($0)";
 }
 
 def ArrayAttr : ArrayAttrBase<CPred<"$_self.isa<::mlir::ArrayAttr>()">,
@@ -1672,7 +1673,6 @@ class TypedArrayAttrBase<Attr element, string summary>: ArrayAttrBase<
                                SubstLeaves<"$_self", "attr", element.predicate>,
                             "; })">]>,
     summary> {
-  let constBuilderCall = "$_builder.getArrayAttr($0)";
 
   Attr elementAttr = element;
 }
@@ -2442,14 +2442,24 @@ class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
   // provided.
   bit skipDefaultBuilders = 0;
 
-  // Custom parser.
+  // Custom parser and printer.
+  // NOTE: These fields are deprecated in favor of `assemblyFormat` or
+  // `hasCustomAssemblyFormat`, and are slated for deletion.
   code parser = ?;
-
-  // Custom printer.
   code printer = ?;
 
   // Custom assembly format.
+  /// This field corresponds to a declarative description of the assembly format
+  /// for this operation. If populated, the `hasCustomAssemblyFormat` field is
+  /// ignored.
   string assemblyFormat = ?;
+  /// This field indicates that the operation has a custom assembly format
+  /// implemented in C++. When set to `1` a `parse` and `print` method are generated
+  /// on the operation class. The operation should implement these methods to
+  /// support the custom format of the operation. The methods have the form:
+  ///   * ParseResult parse(OpAsmParser &parser, OperationState &result)
+  ///   * void print(OpAsmPrinter &p)
+  bit hasCustomAssemblyFormat = 0;
 
   // A bit indicating if the operation has additional invariants that need to
   // verified (aside from those verified by other ODS constructs). If set to `1`,
@@ -3120,15 +3130,19 @@ class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   string summary = desc;
   // The format string for the asm syntax (documentation only).
   string syntax = ?;
-  // The default parameter parser is `::mlir::parseField<T>($_parser)`, which
-  // returns `FailureOr<T>`. Overload `parseField` to support parsing for your
-  // type. Or you can provide a customer printer. For attributes, "$_type" will
-  // be replaced with the required attribute type.
+  // The default parameter parser is `::mlir::FieldParser<T>::parse($_parser)`,
+  // which returns `FailureOr<T>`. Specialize `FieldParser` to support parsing
+  // for your type. Or you can provide a customer printer. For attributes,
+  // "$_type" will be replaced with the required attribute type.
   string parser = ?;
   // The default parameter printer is `$_printer << $_self`. Overload the stream
   // operator of `AsmPrinter` as necessary to print your type. Or you can
   // provide a custom printer.
   string printer = ?;
+  // Mark a parameter as optional. The C++ type of parameters marked as optional
+  // must be default constructible and be contextually convertible to `bool`.
+  // Any `Optional<T>` and any attribute type satisfies these requirements.
+  bit isOptional = 0;
 }
 class AttrParameter<string type, string desc, string accessorType = "">
  : AttrOrTypeParameter<type, desc, accessorType>;
@@ -3171,6 +3185,12 @@ class ArrayRefOfSelfAllocationParameter<string arrayOf, string desc> :
       tmpFields.push_back($_self[i].allocateInto($_allocator));
     $_dst = $_allocator.copyInto(ArrayRef<}] # arrayOf # [{>(tmpFields));
   }];
+}
+
+// An optional parameter.
+class OptionalParameter<string type, string desc = ""> :
+    AttrOrTypeParameter<type, desc> {
+  let isOptional = 1;
 }
 
 // This is a special parameter used for AttrDefs that represents a `mlir::Type`

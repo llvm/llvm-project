@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -fobjc-exceptions -Wno-objc-root-class %s
 
 // rdar://6124613
-void test1() {
+void test1(void) {
   void *xyzzy = 0;
   void *p = @xyzzy; // expected-error {{unexpected '@' in program}}
 }
@@ -16,7 +16,7 @@ void test1() {
 
 // <rdar://problem/7881045>
 // This previously triggered a crash because a ';' was expected after the @throw statement.
-void foo() {
+void foo(void) {
   @throw (id)0 // expected-error{{expected ';' after @throw}}
 }
 

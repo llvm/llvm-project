@@ -13,13 +13,13 @@
 
 // Duplicated from uninit-variables.c.
 // Test just to ensure the analysis is working.
-int test1() {
+int test1(void) {
   int x; // expected-note{{initialize the variable 'x' to silence this warning}}
   return x; // expected-warning{{variable 'x' is uninitialized when used here}}
 }
 
 // Test ObjC fast enumeration.
-void test2() {
+void test2(void) {
   id collection = 0;
   for (id obj in collection) {
     if (0 == obj) // no-warning
@@ -27,7 +27,7 @@ void test2() {
   }
 }
 
-void test3() {
+void test3(void) {
   id collection = 0;
   id obj;
   for (obj in collection) { // no-warning

@@ -465,7 +465,7 @@ namespace {
 
       // Copy flags to the EFLAGS register and glue it to next node.
       unsigned Opcode = N->getOpcode();
-      assert(Opcode == X86ISD::SBB || Opcode == X86ISD::SETCC_CARRY &&
+      assert((Opcode == X86ISD::SBB || Opcode == X86ISD::SETCC_CARRY) &&
              "Unexpected opcode for SBB materialization");
       unsigned FlagOpIndex = Opcode == X86ISD::SBB ? 2 : 1;
       SDValue EFLAGS =
@@ -2796,10 +2796,9 @@ bool X86DAGToDAGISel::selectLEAAddr(SDValue N,
         return false;
       }
     };
-    // TODO: This could be an 'or' rather than 'and' to make the transform more
-    //       likely to happen. We might want to factor in whether there's a
-    //       load folding opportunity for the math op that disappears with LEA.
-    if (isMathWithFlags(N.getOperand(0)) && isMathWithFlags(N.getOperand(1)))
+    // TODO: We might want to factor in whether there's a load folding
+    // opportunity for the math op that disappears with LEA.
+    if (isMathWithFlags(N.getOperand(0)) || isMathWithFlags(N.getOperand(1)))
       Complexity++;
   }
 

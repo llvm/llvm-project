@@ -45,12 +45,7 @@ Types:
 #include_next <stddef.h>
 
 #ifdef __cplusplus
-
-extern "C++" {
-#include <__nullptr>
-using std::nullptr_t;
-}
-
+    typedef decltype(nullptr) nullptr_t;
 #endif
 
 #endif // _LIBCPP_STDDEF_H

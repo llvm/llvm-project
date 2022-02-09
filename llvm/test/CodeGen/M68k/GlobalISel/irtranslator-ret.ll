@@ -206,8 +206,8 @@ define i64 @test_ret3(i64 %a) {
   ; CHECK:   [[G_LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[G_F_I2]](p0)
   ; CHECK:   [[G_MERGE_VAL:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[G_LOAD1]](s32), [[G_LOAD2]](s32)
   ; CHECK:   [[G_UNMERGE_VAL1:%[0-9]+]]:_(s32), [[G_UNMERGE_VAL2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[G_MERGE_VAL]](s64)
-  ; CHECK:   $d0 = COPY [[G_UNMERGE_VAL1]](s32)
-  ; CHECK:   $d1 = COPY [[G_UNMERGE_VAL2]](s32)
-  ; CHECK:   RTS implicit $d0, implicit $d1
+  ; CHECK:   $d1 = COPY [[G_UNMERGE_VAL1]](s32)
+  ; CHECK:   $d0 = COPY [[G_UNMERGE_VAL2]](s32)
+  ; CHECK:   RTS implicit $d1, implicit $d0
   ret i64 %a
 }

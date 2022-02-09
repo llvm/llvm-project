@@ -171,11 +171,12 @@ public:
     } else {
       assert(m.size() == 2);
       // COMPLEX is split into 2 separate arguments
+      auto iTy = rewriter->getIntegerType(32);
       for (auto e : llvm::enumerate(m)) {
         auto &tup = e.value();
         auto ty = std::get<mlir::Type>(tup);
         auto index = e.index();
-        auto idx = rewriter->getIntegerAttr(rewriter->getIndexType(), index);
+        auto idx = rewriter->getIntegerAttr(iTy, index);
         auto val = rewriter->create<ExtractValueOp>(
             loc, ty, oper, rewriter->getArrayAttr(idx));
         newInTys.push_back(ty);
@@ -633,8 +634,9 @@ public:
             rewriter->setInsertionPointToStart(&func.front());
             auto cplxTy = oldArgTys[fixup.index - offset - fixup.second];
             auto undef = rewriter->create<UndefOp>(loc, cplxTy);
-            auto zero = rewriter->getIntegerAttr(rewriter->getIndexType(), 0);
-            auto one = rewriter->getIntegerAttr(rewriter->getIndexType(), 1);
+            auto iTy = rewriter->getIntegerType(32);
+            auto zero = rewriter->getIntegerAttr(iTy, 0);
+            auto one = rewriter->getIntegerAttr(iTy, 1);
             auto cplx1 = rewriter->create<InsertValueOp>(
                 loc, cplxTy, undef, func.front().getArgument(fixup.index - 1),
                 rewriter->getArrayAttr(zero));

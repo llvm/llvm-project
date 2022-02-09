@@ -628,6 +628,10 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       } else
         MaxNumAGPRs = 0;
     }
+  } else if (ST.hasMAIInsts() && MFI->usesAGPRs(MF)) {
+    // In order to guarantee copying between AGPRs, we need a scratch VGPR
+    // available at all times.
+    reserveRegisterTuples(Reserved, AMDGPU::VGPR32);
   }
 
   for (unsigned i = MaxNumVGPRs; i < TotalNumVGPRs; ++i) {
@@ -1553,16 +1557,8 @@ void SIRegisterInfo::buildSpillLoadStore(
       assert(EltSize == 4);
 
       if (!TmpIntermediateVGPR) {
-        bool AllowSpill = !UseVGPROffset;
-
-        assert(RS && "Needs to have RegScavenger to spill an AGPR!");
-        // FIXME: change to scavengeRegisterBackwards()
-        TmpIntermediateVGPR = RS->scavengeRegister(&AMDGPU::VGPR_32RegClass,
-                                                   MI, 0, AllowSpill);
-        if (!TmpIntermediateVGPR)
-          TmpIntermediateVGPR = TmpOffsetVGPR;
-        else
-          RS->setRegUsed(TmpIntermediateVGPR);
+        assert(MF->getRegInfo().isReserved(AMDGPU::VGPR32));
+        TmpIntermediateVGPR = AMDGPU::VGPR32;
       }
       if (IsStore) {
         auto AccRead = BuildMI(MBB, MI, DL,

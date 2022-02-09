@@ -3617,9 +3617,9 @@ CPU host program, or from an HSA kernel executing on a GPU.
    executed is obtained.
 2. A pointer to the kernel descriptor (see
    :ref:`amdgpu-amdhsa-kernel-descriptor`) of the kernel to execute is obtained.
-   It must be for a kernel that is contained in a code object that that was
-   loaded by an HSA compatible runtime on the kernel agent with which the AQL
-   queue is associated.
+   It must be for a kernel that is contained in a code object that was loaded
+   by an HSA compatible runtime on the kernel agent with which the AQL queue is
+   associated.
 3. Space is allocated for the kernel arguments using the HSA compatible runtime
    allocator for a memory region with the kernarg property for the kernel agent
    that will execute the kernel. It must be at least 16-byte aligned.

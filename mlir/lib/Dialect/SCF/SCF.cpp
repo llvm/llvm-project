@@ -101,8 +101,8 @@ static void replaceOpWithRegion(PatternRewriter &rewriter, Operation *op,
 ///     return %idx : i32
 ///   }
 ///
-static ParseResult parseExecuteRegionOp(OpAsmParser &parser,
-                                        OperationState &result) {
+ParseResult ExecuteRegionOp::parse(OpAsmParser &parser,
+                                   OperationState &result) {
   if (parser.parseOptionalArrowTypeList(result.types))
     return failure();
 
@@ -115,15 +115,15 @@ static ParseResult parseExecuteRegionOp(OpAsmParser &parser,
   return success();
 }
 
-static void print(OpAsmPrinter &p, ExecuteRegionOp op) {
-  p.printOptionalArrowTypeList(op.getResultTypes());
+void ExecuteRegionOp::print(OpAsmPrinter &p) {
+  p.printOptionalArrowTypeList(getResultTypes());
 
   p << ' ';
-  p.printRegion(op.getRegion(),
+  p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/true);
 
-  p.printOptionalAttrDict(op->getAttrs());
+  p.printOptionalAttrDict((*this)->getAttrs());
 }
 
 LogicalResult ExecuteRegionOp::verify() {
@@ -340,22 +340,22 @@ static void printInitializationList(OpAsmPrinter &p,
   p << ")";
 }
 
-static void print(OpAsmPrinter &p, ForOp op) {
-  p << " " << op.getInductionVar() << " = " << op.getLowerBound() << " to "
-    << op.getUpperBound() << " step " << op.getStep();
+void ForOp::print(OpAsmPrinter &p) {
+  p << " " << getInductionVar() << " = " << getLowerBound() << " to "
+    << getUpperBound() << " step " << getStep();
 
-  printInitializationList(p, op.getRegionIterArgs(), op.getIterOperands(),
+  printInitializationList(p, getRegionIterArgs(), getIterOperands(),
                           " iter_args");
-  if (!op.getIterOperands().empty())
-    p << " -> (" << op.getIterOperands().getTypes() << ')';
+  if (!getIterOperands().empty())
+    p << " -> (" << getIterOperands().getTypes() << ')';
   p << ' ';
-  p.printRegion(op.getRegion(),
+  p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/op.hasIterOperands());
-  p.printOptionalAttrDict(op->getAttrs());
+                /*printBlockTerminators=*/hasIterOperands());
+  p.printOptionalAttrDict((*this)->getAttrs());
 }
 
-static ParseResult parseForOp(OpAsmParser &parser, OperationState &result) {
+ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
   auto &builder = parser.getBuilder();
   OpAsmParser::OperandType inductionVariable, lb, ub, step;
   // Parse the induction variable followed by '='.
@@ -1070,7 +1070,7 @@ LogicalResult IfOp::verify() {
   return RegionBranchOpInterface::verifyTypes(*this);
 }
 
-static ParseResult parseIfOp(OpAsmParser &parser, OperationState &result) {
+ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
   // Create the regions for 'then'.
   result.regions.reserve(2);
   Region *thenRegion = result.addRegion();
@@ -1103,22 +1103,22 @@ static ParseResult parseIfOp(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-static void print(OpAsmPrinter &p, IfOp op) {
+void IfOp::print(OpAsmPrinter &p) {
   bool printBlockTerminators = false;
 
-  p << " " << op.getCondition();
-  if (!op.getResults().empty()) {
-    p << " -> (" << op.getResultTypes() << ")";
+  p << " " << getCondition();
+  if (!getResults().empty()) {
+    p << " -> (" << getResultTypes() << ")";
     // Print yield explicitly if the op defines values.
     printBlockTerminators = true;
   }
   p << ' ';
-  p.printRegion(op.getThenRegion(),
+  p.printRegion(getThenRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/printBlockTerminators);
 
   // Print the 'else' regions if it exists and has a block.
-  auto &elseRegion = op.getElseRegion();
+  auto &elseRegion = getElseRegion();
   if (!elseRegion.empty()) {
     p << " else ";
     p.printRegion(elseRegion,
@@ -1126,7 +1126,7 @@ static void print(OpAsmPrinter &p, IfOp op) {
                   /*printBlockTerminators=*/printBlockTerminators);
   }
 
-  p.printOptionalAttrDict(op->getAttrs());
+  p.printOptionalAttrDict((*this)->getAttrs());
 }
 
 /// Given the region at `index`, or the parent operation if `index` is None,
@@ -1784,8 +1784,7 @@ LogicalResult ParallelOp::verify() {
   return success();
 }
 
-static ParseResult parseParallelOp(OpAsmParser &parser,
-                                   OperationState &result) {
+ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
   auto &builder = parser.getBuilder();
   // Parse an opening `(` followed by induction variables followed by `)`
   SmallVector<OpAsmParser::OperandType, 4> ivs;
@@ -1855,16 +1854,17 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
   return success();
 }
 
-static void print(OpAsmPrinter &p, ParallelOp op) {
-  p << " (" << op.getBody()->getArguments() << ") = (" << op.getLowerBound()
-    << ") to (" << op.getUpperBound() << ") step (" << op.getStep() << ")";
-  if (!op.getInitVals().empty())
-    p << " init (" << op.getInitVals() << ")";
-  p.printOptionalArrowTypeList(op.getResultTypes());
+void ParallelOp::print(OpAsmPrinter &p) {
+  p << " (" << getBody()->getArguments() << ") = (" << getLowerBound()
+    << ") to (" << getUpperBound() << ") step (" << getStep() << ")";
+  if (!getInitVals().empty())
+    p << " init (" << getInitVals() << ")";
+  p.printOptionalArrowTypeList(getResultTypes());
   p << ' ';
-  p.printRegion(op.getRegion(), /*printEntryBlockArgs=*/false);
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict(
-      op->getAttrs(), /*elidedAttrs=*/ParallelOp::getOperandSegmentSizeAttr());
+      (*this)->getAttrs(),
+      /*elidedAttrs=*/ParallelOp::getOperandSegmentSizeAttr());
 }
 
 Region &ParallelOp::getLoopBody() { return getRegion(); }
@@ -2096,7 +2096,7 @@ LogicalResult ReduceOp::verify() {
   return success();
 }
 
-static ParseResult parseReduceOp(OpAsmParser &parser, OperationState &result) {
+ParseResult ReduceOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse an opening `(` followed by the reduced value followed by `)`
   OpAsmParser::OperandType operand;
   if (parser.parseLParen() || parser.parseOperand(operand) ||
@@ -2117,10 +2117,10 @@ static ParseResult parseReduceOp(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-static void print(OpAsmPrinter &p, ReduceOp op) {
-  p << "(" << op.getOperand() << ") ";
-  p << " : " << op.getOperand().getType() << ' ';
-  p.printRegion(op.getReductionOperator());
+void ReduceOp::print(OpAsmPrinter &p) {
+  p << "(" << getOperand() << ") ";
+  p << " : " << getOperand().getType() << ' ';
+  p.printRegion(getReductionOperator());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2192,7 +2192,7 @@ void WhileOp::getSuccessorRegions(Optional<unsigned> index,
 /// initializer ::= /* empty */ | `(` assignment-list `)`
 /// assignment-list ::= assignment | assignment `,` assignment-list
 /// assignment ::= ssa-value `=` ssa-value
-static ParseResult parseWhileOp(OpAsmParser &parser, OperationState &result) {
+ParseResult scf::WhileOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 4> regionArgs, operands;
   Region *before = result.addRegion();
   Region *after = result.addRegion();
@@ -2229,16 +2229,16 @@ static ParseResult parseWhileOp(OpAsmParser &parser, OperationState &result) {
 }
 
 /// Prints a `while` op.
-static void print(OpAsmPrinter &p, scf::WhileOp op) {
-  printInitializationList(p, op.getBefore().front().getArguments(),
-                          op.getInits(), " ");
+void scf::WhileOp::print(OpAsmPrinter &p) {
+  printInitializationList(p, getBefore().front().getArguments(), getInits(),
+                          " ");
   p << " : ";
-  p.printFunctionalType(op.getInits().getTypes(), op.getResults().getTypes());
+  p.printFunctionalType(getInits().getTypes(), getResults().getTypes());
   p << ' ';
-  p.printRegion(op.getBefore(), /*printEntryBlockArgs=*/false);
+  p.printRegion(getBefore(), /*printEntryBlockArgs=*/false);
   p << " do ";
-  p.printRegion(op.getAfter());
-  p.printOptionalAttrDictWithKeyword(op->getAttrs());
+  p.printRegion(getAfter());
+  p.printOptionalAttrDictWithKeyword((*this)->getAttrs());
 }
 
 /// Verifies that two ranges of types match, i.e. have the same number of

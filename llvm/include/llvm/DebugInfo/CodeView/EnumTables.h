@@ -12,10 +12,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include <cstdint>
 
 namespace llvm {
+template <typename T> struct EnumEntry;
 namespace codeview {
 
 ArrayRef<EnumEntry<SymbolKind>> getSymbolTypeNames();

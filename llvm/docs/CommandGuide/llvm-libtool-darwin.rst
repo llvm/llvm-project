@@ -68,6 +68,10 @@ OPTIONS
 
    Do not warn about files that have no symbols.
 
+.. option:: -warnings_as_errors
+
+  Produce a non-zero exit status if any warnings are emitted.
+
 .. option:: -o <filename>
 
   Specify the output file name. Must be specified exactly once.

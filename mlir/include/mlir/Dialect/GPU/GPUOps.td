@@ -294,9 +294,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     /// Verifies the body of the function.
     LogicalResult verifyBody();
   }];
-
-  let printer = [{ printGPUFuncOp(p, *this); }];
-  let parser = [{ return parseGPUFuncOp(parser, result); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 def GPU_LaunchFuncOp : GPU_Op<"launch_func",
@@ -556,9 +554,8 @@ def GPU_LaunchOp : GPU_Op<"launch">,
     static constexpr unsigned kNumConfigRegionAttributes = 12;
   }];
 
-  let parser = [{ return parseLaunchOp(parser, result); }];
-  let printer = [{ printLaunchOp(p, *this); }];
   let hasCanonicalizer = 1;
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 
@@ -783,9 +780,8 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
     ```
   }];
   let builders = [OpBuilder<(ins "StringRef":$name)>];
-  let parser = [{ return ::parseGPUModuleOp(parser, result); }];
-  let printer = [{ return ::print(p, *this); }];
   let regions = (region SizedRegion<1>:$body);
+  let hasCustomAssemblyFormat = 1;
 
   // We need to ensure the block inside the region is properly terminated;
   // the auto-generated builders do not guarantee that.

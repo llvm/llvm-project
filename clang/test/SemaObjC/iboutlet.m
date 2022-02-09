@@ -45,7 +45,7 @@ IBInspectable @property (readonly) IBOutlet NSView *myView1; // expected-warning
 @property IBOutlet __weak WeakOutlet* WeakProp;
 @end
 
-WeakOutlet* func() {
+WeakOutlet* func(void) {
   __weak WeakOutlet* pwi;
   pwi.WeakProp = (WeakOutlet*)0;
   pwi.WeakProp = pwi.WeakProp;

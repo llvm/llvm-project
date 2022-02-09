@@ -437,6 +437,20 @@ class MFMATable <bit is_mac, string Name> {
   string FMAOp = Name;
 }
 
+class MAIFrag<SDPatternOperator Op, code pred> : PatFrag <
+  (ops node:$src0, node:$src1, node:$src2, node:$cbsz, node:$abid, node:$blgp),
+  (Op $src0, $src1, $src2, $cbsz, $abid, $blgp),
+  pred
+>;
+
+let GISelPredicateCode = [{ return MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs(); }] in
+class AgprMAIFrag<SDPatternOperator Op> :
+  MAIFrag<Op, [{ return MF->getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs(); }]>;
+
+let GISelPredicateCode = [{ return !MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs(); }] in
+class VgprMAIFrag<SDPatternOperator Op> :
+  MAIFrag<Op, [{ return !MF->getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs(); }]>;
+
 let Predicates = [HasMAIInsts] in {
 
 let isAsCheapAsAMove = 1, isReMaterializable = 1 in {
@@ -451,11 +465,13 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node,
   let isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1 in {
     // FP32 denorm mode is respected, rounding mode is not. Exceptions are not supported.
     let Constraints = !if(NoDstOverlap, "@earlyclobber $vdst", "") in {
-      defm "" : VOP3Inst<OpName, !cast<VOPProfileMAI>("VOPProfileMAI_" # P), !if(NoDstOverlap, null_frag, node)>,
+      defm "" : VOP3Inst<OpName, !cast<VOPProfileMAI>("VOPProfileMAI_" # P),
+                         !if(NoDstOverlap, null_frag, AgprMAIFrag<node>)>,
                 MFMATable<0, NAME # "_e64">;
 
       let SubtargetPredicate = isGFX90APlus, Mnemonic = OpName in
-      defm _vgprcd : VOP3Inst<OpName # "_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD")>,
+      defm _vgprcd : VOP3Inst<OpName # "_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
+                              !if(NoDstOverlap, null_frag, VgprMAIFrag<node>)>,
                      MFMATable<0, NAME # "_vgprcd_e64">;
     }
 
@@ -463,11 +479,12 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node,
       let Constraints = !if(NoDstOverlap, "$vdst = $src2", ""),
           isConvertibleToThreeAddress = NoDstOverlap,
           Mnemonic = OpName in {
-        defm "_mac" : VOP3Inst<OpName # "_mac", !cast<VOPProfileMAI>("VOPProfileMAI_" # P), node>,
+        defm "_mac" : VOP3Inst<OpName # "_mac", !cast<VOPProfileMAI>("VOPProfileMAI_" # P), AgprMAIFrag<node>>,
                       MFMATable<1, NAME # "_e64">;
 
         let SubtargetPredicate = isGFX90APlus in
-        defm _mac_vgprcd : VOP3Inst<OpName # "_mac_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD")>,
+        defm _mac_vgprcd : VOP3Inst<OpName # "_mac_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
+                                    VgprMAIFrag<node>>,
                            MFMATable<1, NAME # "_vgprcd_e64">;
       }
     }

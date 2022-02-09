@@ -103,7 +103,6 @@ public:
 
   /// Destroys the object. Bogus destructor overriding base class destructor
   ~SystemZXPLINK64Registers() = default;
-  ;
 };
 
 /// ELF calling convention specific use registers

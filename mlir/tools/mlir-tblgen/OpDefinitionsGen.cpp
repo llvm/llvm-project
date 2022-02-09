@@ -739,6 +739,10 @@ static void emitAttrGetterWithReturnType(FmtContext &fctx,
     // Returns the default value if not set.
     // TODO: this is inefficient, we are recreating the attribute for every
     // call. This should be set instead.
+    if (!attr.isConstBuildable()) {
+      PrintFatalError("DefaultValuedAttr of type " + attr.getAttrDefName() +
+                      " must have a constBuilder");
+    }
     std::string defaultValue = std::string(
         tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
     body << "    if (!attr)\n      return "
@@ -2125,13 +2129,29 @@ void OpEmitter::genTypeInterfaceMethods() {
 }
 
 void OpEmitter::genParser() {
-  if (!hasStringAttribute(def, "parser") ||
-      hasStringAttribute(def, "assemblyFormat"))
+  if (hasStringAttribute(def, "assemblyFormat"))
+    return;
+
+  bool hasCppFormat = def.getValueAsBit("hasCustomAssemblyFormat");
+  if (!hasStringAttribute(def, "parser") && !hasCppFormat)
     return;
 
   SmallVector<MethodParameter> paramList;
   paramList.emplace_back("::mlir::OpAsmParser &", "parser");
   paramList.emplace_back("::mlir::OperationState &", "result");
+
+  // If this uses the cpp format, only generate a declaration.
+  if (hasCppFormat) {
+    auto *method = opClass.declareStaticMethod("::mlir::ParseResult", "parse",
+                                               std::move(paramList));
+    ERROR_IF_PRUNED(method, "parse", op);
+    return;
+  }
+
+  PrintNote(op.getLoc(),
+            "`parser` and `printer` fields are deprecated and will be removed, "
+            "please use the `hasCustomAssemblyFormat` field instead");
+
   auto *method = opClass.addStaticMethod("::mlir::ParseResult", "parse",
                                          std::move(paramList));
   ERROR_IF_PRUNED(method, "parse", op);
@@ -2145,6 +2165,14 @@ void OpEmitter::genParser() {
 void OpEmitter::genPrinter() {
   if (hasStringAttribute(def, "assemblyFormat"))
     return;
+
+  // If this uses the cpp format, only generate a declaration.
+  if (def.getValueAsBit("hasCustomAssemblyFormat")) {
+    auto *method = opClass.declareMethod(
+        "void", "print", MethodParameter("::mlir::OpAsmPrinter &", "p"));
+    ERROR_IF_PRUNED(method, "print", op);
+    return;
+  }
 
   auto *valueInit = def.getValueInit("printer");
   StringInit *stringInit = dyn_cast<StringInit>(valueInit);

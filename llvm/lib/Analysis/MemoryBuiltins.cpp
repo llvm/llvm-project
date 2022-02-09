@@ -591,18 +591,48 @@ ObjectSizeOffsetVisitor::ObjectSizeOffsetVisitor(const DataLayout &DL,
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::compute(Value *V) {
+  unsigned InitialIntTyBits = DL.getIndexTypeSizeInBits(V->getType());
+
+  // Stripping pointer casts can strip address space casts which can change the
+  // index type size. The invariant is that we use the value type to determine
+  // the index type size and if we stripped address space casts we have to
+  // readjust the APInt as we pass it upwards in order for the APInt to match
+  // the type the caller passed in.
+  APInt Offset(InitialIntTyBits, 0);
+  V = V->stripAndAccumulateConstantOffsets(
+      DL, Offset, /* AllowNonInbounds */ true, /* AllowInvariantGroup */ true);
+
+  // Later we use the index type size and zero but it will match the type of the
+  // value that is passed to computeImpl.
   IntTyBits = DL.getIndexTypeSizeInBits(V->getType());
   Zero = APInt::getZero(IntTyBits);
 
-  V = V->stripPointerCasts();
+  bool IndexTypeSizeChanged = InitialIntTyBits != IntTyBits;
+  if (!IndexTypeSizeChanged && Offset.isZero())
+    return computeImpl(V);
+
+  // We stripped an address space cast that changed the index type size or we
+  // accumulated some constant offset (or both). Readjust the bit width to match
+  // the argument index type size and apply the offset, as required.
+  SizeOffsetType SOT = computeImpl(V);
+  if (IndexTypeSizeChanged) {
+    if (knownSize(SOT) && !::CheckedZextOrTrunc(SOT.first, InitialIntTyBits))
+      SOT.first = APInt();
+    if (knownOffset(SOT) && !::CheckedZextOrTrunc(SOT.second, InitialIntTyBits))
+      SOT.second = APInt();
+  }
+  // If the computed offset is "unknown" we cannot add the stripped offset.
+  return {SOT.first,
+          SOT.second.getBitWidth() > 1 ? SOT.second + Offset : SOT.second};
+}
+
+SizeOffsetType ObjectSizeOffsetVisitor::computeImpl(Value *V) {
   if (Instruction *I = dyn_cast<Instruction>(V)) {
     // If we have already seen this instruction, bail out. Cycles can happen in
     // unreachable code after constant propagation.
     if (!SeenInsts.insert(I).second)
       return unknown();
 
-    if (GEPOperator *GEP = dyn_cast<GEPOperator>(V))
-      return visitGEPOperator(*GEP);
     return visit(*I);
   }
   if (Argument *A = dyn_cast<Argument>(V))
@@ -615,12 +645,6 @@ SizeOffsetType ObjectSizeOffsetVisitor::compute(Value *V) {
     return visitGlobalVariable(*GV);
   if (UndefValue *UV = dyn_cast<UndefValue>(V))
     return visitUndefValue(*UV);
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(V)) {
-    if (CE->getOpcode() == Instruction::IntToPtr)
-      return unknown(); // clueless
-    if (CE->getOpcode() == Instruction::GetElementPtr)
-      return visitGEPOperator(cast<GEPOperator>(*CE));
-  }
 
   LLVM_DEBUG(dbgs() << "ObjectSizeOffsetVisitor::compute() unhandled value: "
                     << *V << '\n');
@@ -698,15 +722,6 @@ SizeOffsetType
 ObjectSizeOffsetVisitor::visitExtractValueInst(ExtractValueInst&) {
   // Easy cases were already folded by previous passes.
   return unknown();
-}
-
-SizeOffsetType ObjectSizeOffsetVisitor::visitGEPOperator(GEPOperator &GEP) {
-  SizeOffsetType PtrData = compute(GEP.getPointerOperand());
-  APInt Offset(DL.getIndexTypeSizeInBits(GEP.getPointerOperand()->getType()), 0);
-  if (!bothKnown(PtrData) || !GEP.accumulateConstantOffset(DL, Offset))
-    return unknown();
-
-  return std::make_pair(PtrData.first, PtrData.second + Offset);
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitGlobalAlias(GlobalAlias &GA) {

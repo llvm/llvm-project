@@ -252,11 +252,6 @@ RUN:   FileCheck --check-prefix=INVALID-ABBREV-NUMBER %s
 
 INVALID-ABBREV-NUMBER: Invalid abbrev number
 
-RUN: not llvm-dis -disable-output %p/Inputs/size-not-plausible.bc 2>&1 | \
-RUN:   FileCheck --check-prefix=SIZE-NOT-PLAUSIBLE %s
-
-SIZE-NOT-PLAUSIBLE: Size is not plausible
-
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-attribute-group-entry.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-ATTRIBUTE-GROUP-ENTRY %s
 
@@ -272,7 +267,17 @@ RUN:   FileCheck --check-prefix=INVALID-VALUE-SYMBOL-TABLE %s
 
 INVALID-VALUE-SYMBOL-TABLE: Invalid value reference in symbol table
 
-RUN: not llvm-dis -disable-output %p/Inputs/invalid-value-symbol-table-2.bc 2>&1 | \
-RUN:   FileCheck --check-prefix=INVALID-VALUE-SYMBOL-TABLE-2 %s
+RUN: not llvm-dis -disable-output %p/Inputs/unterminated-vbr.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=UNTERMINATED-VBR %s
 
-INVALID-VALUE-SYMBOL-TABLE-2: Expected value symbol table subblock
+UNTERMINATED-VBR: Unterminated VBR
+
+RUN: not llvm-dis -disable-output %p/Inputs/comdat-name-too-large.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=COMDAT-NAME-TOO-LARGE %s
+
+COMDAT-NAME-TOO-LARGE: Comdat name size too large
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-chunk-size.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-CHUNK-SIZE %s
+
+INVALID-CHUNK-SIZE: Fixed or VBR abbrev record with size > MaxChunkData

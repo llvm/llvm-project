@@ -276,7 +276,6 @@ set(files
   __memory/voidify.h
   __mutex_base
   __node_handle
-  __nullptr
   __numeric/accumulate.h
   __numeric/adjacent_difference.h
   __numeric/exclusive_scan.h

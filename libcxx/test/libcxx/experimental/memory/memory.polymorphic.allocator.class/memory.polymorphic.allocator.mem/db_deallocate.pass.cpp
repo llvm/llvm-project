@@ -16,6 +16,7 @@
 
 int AssertCount = 0;
 
+// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : (void)::AssertCount++)
 #define _LIBCPP_DEBUG 0
 #include <experimental/memory_resource>

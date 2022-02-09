@@ -665,11 +665,9 @@ define <4 x i32> @splat_c3_v4i32(<4 x i32> %v) {
 define <4 x i32> @splat_idx_v4i32(<4 x i32> %v, i64 %idx) {
 ; CHECK-LABEL: splat_idx_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
-; CHECK-NEXT:    vslidedown.vx v8, v8, a0
-; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vrgather.vx v9, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %x = extractelement <4 x i32> %v, i64 %idx
   %ins = insertelement <4 x i32> poison, i32 %x, i32 0
@@ -693,11 +691,9 @@ define <8 x i16> @splat_c4_v8i16(<8 x i16> %v) {
 define <8 x i16> @splat_idx_v8i16(<8 x i16> %v, i64 %idx) {
 ; CHECK-LABEL: splat_idx_v8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
-; CHECK-NEXT:    vslidedown.vx v8, v8, a0
-; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vrgather.vx v9, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %x = extractelement <8 x i16> %v, i64 %idx
   %ins = insertelement <8 x i16> poison, i16 %x, i32 0

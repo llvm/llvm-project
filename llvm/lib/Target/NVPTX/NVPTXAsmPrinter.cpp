@@ -1511,10 +1511,9 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       continue;
     }
 
-    // param has byVal attribute. So should be a pointer
-    auto *PTy = dyn_cast<PointerType>(Ty);
-    assert(PTy && "Param with byval attribute should be a pointer type");
-    Type *ETy = PTy->getPointerElementType();
+    // param has byVal attribute.
+    Type *ETy = PAL.getParamByValType(paramIndex);
+    assert(ETy && "Param should have byval type");
 
     if (isABI || isKernelFunc) {
       // Just print .param .align <a> .b8 .param[size];

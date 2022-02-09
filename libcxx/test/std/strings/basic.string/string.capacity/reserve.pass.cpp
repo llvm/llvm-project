@@ -20,7 +20,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(typename S::size_type min_cap, typename S::size_type erased_index)
 {
     S s(min_cap, 'a');
@@ -37,8 +37,7 @@ test(typename S::size_type min_cap, typename S::size_type erased_index)
     assert(s.capacity() >= s.size());
 }
 
-int main(int, char**)
-{
+bool test() {
     {
     typedef std::string S;
     {
@@ -56,6 +55,16 @@ int main(int, char**)
     test<S>(100, 50);
     }
     }
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
 #endif
 
   return 0;

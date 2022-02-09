@@ -256,8 +256,7 @@ OpFoldResult AnyOp::fold(ArrayRef<Attribute> operands) {
 // AssumingOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseAssumingOp(OpAsmParser &parser,
-                                   OperationState &result) {
+ParseResult AssumingOp::parse(OpAsmParser &parser, OperationState &result) {
   result.regions.reserve(1);
   Region *doRegion = result.addRegion();
 
@@ -283,17 +282,17 @@ static ParseResult parseAssumingOp(OpAsmParser &parser,
   return success();
 }
 
-static void print(OpAsmPrinter &p, AssumingOp op) {
-  bool yieldsResults = !op.getResults().empty();
+void AssumingOp::print(OpAsmPrinter &p) {
+  bool yieldsResults = !getResults().empty();
 
-  p << " " << op.getWitness();
+  p << " " << getWitness();
   if (yieldsResults)
-    p << " -> (" << op.getResultTypes() << ")";
+    p << " -> (" << getResultTypes() << ")";
   p << ' ';
-  p.printRegion(op.getDoRegion(),
+  p.printRegion(getDoRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/yieldsResults);
-  p.printOptionalAttrDict(op->getAttrs());
+  p.printOptionalAttrDict((*this)->getAttrs());
 }
 
 namespace {
@@ -905,18 +904,16 @@ OpFoldResult ConcatOp::fold(ArrayRef<Attribute> operands) {
 // ConstShapeOp
 //===----------------------------------------------------------------------===//
 
-static void print(OpAsmPrinter &p, ConstShapeOp &op) {
+void ConstShapeOp::print(OpAsmPrinter &p) {
   p << " ";
-  p.printOptionalAttrDict(op->getAttrs(), /*elidedAttrs=*/{"shape"});
+  p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{"shape"});
   p << "[";
-  interleaveComma(op.getShape().getValues<int64_t>(), p,
-                  [&](int64_t i) { p << i; });
+  interleaveComma(getShape().getValues<int64_t>(), p);
   p << "] : ";
-  p.printType(op.getType());
+  p.printType(getType());
 }
 
-static ParseResult parseConstShapeOp(OpAsmParser &parser,
-                                     OperationState &result) {
+ParseResult ConstShapeOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parser.parseOptionalAttrDict(result.attributes))
     return failure();
   // We piggy-back on ArrayAttr parsing, though we don't internally store the
@@ -1215,8 +1212,8 @@ FuncOp FunctionLibraryOp::getShapeFunction(Operation *op) {
   return lookupSymbol<FuncOp>(attr);
 }
 
-ParseResult parseFunctionLibraryOp(OpAsmParser &parser,
-                                   OperationState &result) {
+ParseResult FunctionLibraryOp::parse(OpAsmParser &parser,
+                                     OperationState &result) {
   // Parse the op name.
   StringAttr nameAttr;
   if (parser.parseSymbolName(nameAttr, ::mlir::SymbolTable::getSymbolAttrName(),
@@ -1241,16 +1238,16 @@ ParseResult parseFunctionLibraryOp(OpAsmParser &parser,
   return success();
 }
 
-void print(OpAsmPrinter &p, FunctionLibraryOp op) {
+void FunctionLibraryOp::print(OpAsmPrinter &p) {
   p << ' ';
-  p.printSymbolName(op.getName());
+  p.printSymbolName(getName());
   p.printOptionalAttrDictWithKeyword(
-      op->getAttrs(), {SymbolTable::getSymbolAttrName(), "mapping"});
+      (*this)->getAttrs(), {mlir::SymbolTable::getSymbolAttrName(), "mapping"});
   p << ' ';
-  p.printRegion(op.getOperation()->getRegion(0), /*printEntryBlockArgs=*/false,
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
   p << " mapping ";
-  p.printAttributeWithoutType(op.getMappingAttr());
+  p.printAttributeWithoutType(getMappingAttr());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1692,12 +1689,18 @@ OpFoldResult SizeToIndexOp::fold(ArrayRef<Attribute> operands) {
   // `IntegerAttr`s which makes constant folding simple.
   if (Attribute arg = operands[0])
     return arg;
-  return impl::foldCastOp(*this);
+  return OpFoldResult();
 }
 
 void SizeToIndexOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                 MLIRContext *context) {
   patterns.add<IndexToSizeToIndexCanonicalization>(context);
+}
+
+bool SizeToIndexOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  if (inputs.size() != 1 || outputs.size() != 1)
+    return false;
+  return inputs[0].isa<IndexType, SizeType>() && outputs[0].isa<IndexType>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1750,13 +1753,28 @@ LogicalResult SplitAtOp::fold(ArrayRef<Attribute> operands,
 
 OpFoldResult ToExtentTensorOp::fold(ArrayRef<Attribute> operands) {
   if (!operands[0])
-    return impl::foldCastOp(*this);
+    return OpFoldResult();
   Builder builder(getContext());
   auto shape = llvm::to_vector<6>(
       operands[0].cast<DenseIntElementsAttr>().getValues<int64_t>());
   auto type = RankedTensorType::get({static_cast<int64_t>(shape.size())},
                                     builder.getIndexType());
   return DenseIntElementsAttr::get(type, shape);
+}
+
+bool ToExtentTensorOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  if (inputs.size() != 1 || outputs.size() != 1)
+    return false;
+  if (auto inputTensor = inputs[0].dyn_cast<RankedTensorType>()) {
+    if (!inputTensor.getElementType().isa<IndexType>() ||
+        inputTensor.getRank() != 1)
+      return false;
+  } else if (!inputs[0].isa<ShapeType>()) {
+    return false;
+  }
+
+  TensorType outputTensor = outputs[0].dyn_cast<TensorType>();
+  return outputTensor && outputTensor.getElementType().isa<IndexType>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1825,7 +1843,7 @@ LogicalResult ReduceOp::verify() {
   return success();
 }
 
-static ParseResult parseReduceOp(OpAsmParser &parser, OperationState &result) {
+ParseResult ReduceOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse operands.
   SmallVector<OpAsmParser::OperandType, 3> operands;
   Type shapeOrExtentTensorType;
@@ -1855,13 +1873,13 @@ static ParseResult parseReduceOp(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-static void print(OpAsmPrinter &p, ReduceOp op) {
-  p << '(' << op.getShape() << ", " << op.getInitVals()
-    << ") : " << op.getShape().getType();
-  p.printOptionalArrowTypeList(op.getResultTypes());
+void ReduceOp::print(OpAsmPrinter &p) {
+  p << '(' << getShape() << ", " << getInitVals()
+    << ") : " << getShape().getType();
+  p.printOptionalArrowTypeList(getResultTypes());
   p << ' ';
-  p.printRegion(op.getRegion());
-  p.printOptionalAttrDict(op->getAttrs());
+  p.printRegion(getRegion());
+  p.printOptionalAttrDict((*this)->getAttrs());
 }
 
 #define GET_OP_CLASSES

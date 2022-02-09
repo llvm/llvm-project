@@ -229,11 +229,8 @@ static void convertToParamAS(Value *OldUser, Value *Param) {
 void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
   Function *Func = Arg->getParent();
   Instruction *FirstInst = &(Func->getEntryBlock().front());
-  PointerType *PType = dyn_cast<PointerType>(Arg->getType());
-
-  assert(PType && "Expecting pointer type in handleByValParam");
-
-  Type *StructType = PType->getPointerElementType();
+  Type *StructType = Arg->getParamByValType();
+  assert(StructType && "Missing byval type");
 
   auto IsALoadChain = [&](Value *Start) {
     SmallVector<Value *, 16> ValuesToCheck = {Start};

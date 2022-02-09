@@ -7,7 +7,7 @@ Class test1(Class X) {
 
 
 // rdar://6079877
-void test2() {
+void test2(void) {
   id str = @"foo" 
           "bar\0"    // no-warning
           @"baz"  " blarg";
@@ -36,7 +36,7 @@ void test3(Object *o) {
 @class Incomplete_ObjC_class; // expected-note{{forward declaration of class here}}
 struct Incomplete_struct; // expected-note {{forward declaration}}
 
-void test_encode() {
+void test_encode(void) {
   (void)@encode(Incomplete_ObjC_class); // expected-error {{incomplete type}}
   (void)@encode(struct Incomplete_struct); // expected-error {{incomplete type}}
   (void)@encode(Incomplete_ObjC_class*);

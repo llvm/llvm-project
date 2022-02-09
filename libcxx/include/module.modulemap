@@ -2,7 +2,8 @@
 // since __config may be included from C headers which may create an
 // include cycle.
 module std_config [system] [extern_c] {
-    header "__config"
+  textual header "__config"
+  textual header "__config_site"
 }
 
 module std [system] {
@@ -990,7 +991,6 @@ module std [system] {
   module __mbstate_t         { private header "__mbstate_t.h"       export * }
   module __mutex_base        { private header "__mutex_base"        export * }
   module __node_handle       { private header "__node_handle"       export * }
-  module __nullptr           {         header "__nullptr"           export * }
   module __split_buffer      { private header "__split_buffer"      export * }
   module __std_stream        { private header "__std_stream"        export * }
   module __string            { private header "__string"            export * }
