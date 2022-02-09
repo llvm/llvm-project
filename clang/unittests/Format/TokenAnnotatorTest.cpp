@@ -97,6 +97,28 @@ TEST_F(TokenAnnotatorTest, UnderstandsLBracesInMacroDefinition) {
   EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_Unknown);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsDelete) {
+  auto Tokens = annotate("delete (void *)p;");
+  EXPECT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::r_paren, TT_CastRParen);
+
+  Tokens = annotate("delete[] (void *)p;");
+  EXPECT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::r_paren, TT_CastRParen);
+
+  Tokens = annotate("delete[] /*comment*/ (void *)p;");
+  EXPECT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_CastRParen);
+
+  Tokens = annotate("delete[/*comment*/] (void *)p;");
+  EXPECT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_CastRParen);
+
+  Tokens = annotate("delete/*comment*/[] (void *)p;");
+  EXPECT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_CastRParen);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
