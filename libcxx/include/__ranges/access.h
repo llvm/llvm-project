@@ -20,7 +20,7 @@
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -59,10 +59,17 @@ namespace __begin {
 
   struct __fn {
     template <class _Tp>
-      requires is_array_v<remove_cv_t<_Tp>>
-    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp& __t) const noexcept
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp (&__t)[]) const noexcept
+      requires (sizeof(_Tp) != 0)  // Disallow incomplete element types.
     {
-      return __t;
+      return __t + 0;
+    }
+
+    template <class _Tp, size_t _Np>
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp (&__t)[_Np]) const noexcept
+      requires (sizeof(_Tp) != 0)  // Disallow incomplete element types.
+    {
+      return __t + 0;
     }
 
     template <class _Tp>
@@ -127,7 +134,7 @@ namespace __end {
   public:
     template <class _Tp, size_t _Np>
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp (&__t)[_Np]) const noexcept
-      requires (sizeof(*__t) != 0)  // Disallow incomplete element types.
+      requires (sizeof(_Tp) != 0)  // Disallow incomplete element types.
     {
       return __t + _Np;
     }

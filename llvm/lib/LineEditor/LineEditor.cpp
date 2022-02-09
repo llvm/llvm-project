@@ -29,8 +29,8 @@ std::string LineEditor::getDefaultHistoryPath(StringRef ProgName) {
   return std::string();
 }
 
-LineEditor::CompleterConcept::~CompleterConcept() {}
-LineEditor::ListCompleterConcept::~ListCompleterConcept() {}
+LineEditor::CompleterConcept::~CompleterConcept() = default;
+LineEditor::ListCompleterConcept::~ListCompleterConcept() = default;
 
 std::string LineEditor::ListCompleterConcept::getCommonPrefix(
     const std::vector<Completion> &Comps) {

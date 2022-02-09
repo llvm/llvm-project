@@ -77,6 +77,8 @@ private:
       const MachineFunction &MF,
       const SIProgramInfo &PI) const;
 
+  void initTargetStreamer(Module &M);
+
 public:
   explicit AMDGPUAsmPrinter(TargetMachine &TM,
                             std::unique_ptr<MCStreamer> Streamer);
@@ -132,6 +134,7 @@ protected:
 
   std::vector<std::string> DisasmLines, HexLines;
   size_t DisasmLineMaxLen;
+  bool IsTargetStreamerInitialized;
 };
 
 } // end namespace llvm

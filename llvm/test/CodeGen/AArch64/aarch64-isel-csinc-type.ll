@@ -11,9 +11,8 @@ define dso_local i8 @csinc1(i8 %a, i8 %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: csinc1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    tst w0, #0xff
-; CHECK-NEXT:    mov w8, #3
-; CHECK-NEXT:    csinc w8, w8, wzr, ne
-; CHECK-NEXT:    add w0, w8, w1
+; CHECK-NEXT:    add w8, w1, #3
+; CHECK-NEXT:    csinc w0, w8, w1, ne
 ; CHECK-NEXT:    ret
 entry:
   %tobool.not = icmp eq i8 %a, 0
@@ -27,9 +26,8 @@ define dso_local i16 @csinc2(i16 %a, i16 %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: csinc2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    tst w0, #0xffff
-; CHECK-NEXT:    mov w8, #3
-; CHECK-NEXT:    csinc w8, w8, wzr, ne
-; CHECK-NEXT:    add w0, w8, w1
+; CHECK-NEXT:    add w8, w1, #3
+; CHECK-NEXT:    csinc w0, w8, w1, ne
 ; CHECK-NEXT:    ret
 entry:
   %tobool.not = icmp eq i16 %a, 0
@@ -43,9 +41,8 @@ define dso_local i32 @csinc3(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: csinc3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    mov w8, #3
-; CHECK-NEXT:    csinc w8, w8, wzr, ne
-; CHECK-NEXT:    add w0, w8, w1
+; CHECK-NEXT:    add w8, w1, #3
+; CHECK-NEXT:    csinc w0, w8, w1, ne
 ; CHECK-NEXT:    ret
 entry:
   %tobool.not = icmp eq i32 %a, 0
@@ -59,9 +56,8 @@ define dso_local i64 @csinc4(i64 %a, i64 %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: csinc4:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    mov w8, #3
-; CHECK-NEXT:    csinc x8, x8, xzr, ne
-; CHECK-NEXT:    add x0, x8, x1
+; CHECK-NEXT:    add x8, x1, #3
+; CHECK-NEXT:    csinc x0, x8, x1, ne
 ; CHECK-NEXT:    ret
 entry:
   %tobool.not = icmp eq i64 %a, 0

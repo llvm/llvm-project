@@ -45,25 +45,21 @@ class OutputBuffer {
     }
   }
 
-  void writeUnsigned(uint64_t N, bool isNeg = false) {
-    // Handle special case...
-    if (N == 0) {
-      *this << '0';
-      return;
-    }
-
+  OutputBuffer &writeUnsigned(uint64_t N, bool isNeg = false) {
     std::array<char, 21> Temp;
     char *TempPtr = Temp.data() + Temp.size();
 
-    while (N) {
+    // Output at least one character.
+    do {
       *--TempPtr = char('0' + N % 10);
       N /= 10;
-    }
+    } while (N);
 
-    // Add negative sign...
+    // Add negative sign.
     if (isNeg)
       *--TempPtr = '-';
-    this->operator<<(StringView(TempPtr, Temp.data() + Temp.size()));
+
+    return operator+=(StringView(TempPtr, Temp.data() + Temp.size()));
   }
 
 public:
@@ -82,12 +78,11 @@ public:
   unsigned CurrentPackMax = std::numeric_limits<unsigned>::max();
 
   OutputBuffer &operator+=(StringView R) {
-    size_t Size = R.size();
-    if (Size == 0)
-      return *this;
-    grow(Size);
-    std::memmove(Buffer + CurrentPosition, R.begin(), Size);
-    CurrentPosition += Size;
+    if (size_t Size = R.size()) {
+      grow(Size);
+      std::memcpy(Buffer + CurrentPosition, R.begin(), Size);
+      CurrentPosition += Size;
+    }
     return *this;
   }
 
@@ -96,8 +91,6 @@ public:
     Buffer[CurrentPosition++] = C;
     return *this;
   }
-
-  OutputBuffer &operator<<(StringView R) { return (*this += R); }
 
   OutputBuffer prepend(StringView R) {
     size_t Size = R.size();
@@ -110,19 +103,16 @@ public:
     return *this;
   }
 
+  OutputBuffer &operator<<(StringView R) { return (*this += R); }
+
   OutputBuffer &operator<<(char C) { return (*this += C); }
 
   OutputBuffer &operator<<(long long N) {
-    if (N < 0)
-      writeUnsigned(static_cast<unsigned long long>(-N), true);
-    else
-      writeUnsigned(static_cast<unsigned long long>(N));
-    return *this;
+    return writeUnsigned(static_cast<unsigned long long>(std::abs(N)), N < 0);
   }
 
   OutputBuffer &operator<<(unsigned long long N) {
-    writeUnsigned(N, false);
-    return *this;
+    return writeUnsigned(N, false);
   }
 
   OutputBuffer &operator<<(long N) {

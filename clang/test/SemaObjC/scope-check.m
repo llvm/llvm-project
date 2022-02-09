@@ -2,7 +2,7 @@
 
 @class A, B, C;
 
-void test1() {
+void test1(void) {
   goto L; // expected-error{{cannot jump}}
   goto L2; // expected-error{{cannot jump}}
   goto L3; // expected-error{{cannot jump}}
@@ -64,7 +64,7 @@ void test2(int a) {
 }
 
 // rdar://6803963
-void test3() {
+void test3(void) {
   @try {
     goto blargh;
   blargh: ;

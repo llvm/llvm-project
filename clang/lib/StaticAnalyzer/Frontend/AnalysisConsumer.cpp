@@ -383,14 +383,14 @@ void AnalysisConsumer::HandleTopLevelDeclInObjCContainer(DeclGroupRef DG) {
 }
 
 void AnalysisConsumer::storeTopLevelDecls(DeclGroupRef DG) {
-  for (DeclGroupRef::iterator I = DG.begin(), E = DG.end(); I != E; ++I) {
+  for (auto &I : DG) {
 
     // Skip ObjCMethodDecl, wait for the objc container to avoid
     // analyzing twice.
-    if (isa<ObjCMethodDecl>(*I))
+    if (isa<ObjCMethodDecl>(I))
       continue;
 
-    LocalTUDecls.push_back(*I);
+    LocalTUDecls.push_back(I);
   }
 }
 
@@ -462,11 +462,9 @@ void AnalysisConsumer::HandleDeclsCallGraph(const unsigned LocalTUDeclsSize) {
   SetOfConstDecls Visited;
   SetOfConstDecls VisitedAsTopLevel;
   llvm::ReversePostOrderTraversal<clang::CallGraph*> RPOT(&CG);
-  for (llvm::ReversePostOrderTraversal<clang::CallGraph*>::rpo_iterator
-         I = RPOT.begin(), E = RPOT.end(); I != E; ++I) {
+  for (auto &N : RPOT) {
     NumFunctionTopLevel++;
 
-    CallGraphNode *N = *I;
     Decl *D = N->getDecl();
 
     // Skip the abstract root node.

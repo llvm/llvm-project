@@ -73,7 +73,7 @@ function(add_libc_unittest target_name)
   cmake_parse_arguments(
     "LIBC_UNITTEST"
     "NO_RUN_POSTBUILD" # Optional arguments
-    "SUITE" # Single value arguments
+    "SUITE;CXX_STANDARD" # Single value arguments
     "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;LINK_OPTIONS" # Multi-value arguments
     "NO_LIBC_UNITTEST_TEST_MAIN"
     ${ARGN}
@@ -137,6 +137,13 @@ function(add_libc_unittest target_name)
     target_compile_options(
       ${fq_target_name}
       PRIVATE ${LIBC_UNITTEST_COMPILE_OPTIONS}
+    )
+  endif()
+  if(LIBC_UNITTEST_CXX_STANDARD)
+    set_target_properties(
+      ${fq_target_name}
+      PROPERTIES
+        CXX_STANDARD ${LIBC_UNITTEST_CXX_STANDARD}
     )
   endif()
 

@@ -9,74 +9,60 @@
 #include "MetadataLoader.h"
 #include "ValueList.h"
 
-#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/None.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/ADT/ilist_iterator.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
 #include "llvm/Bitstream/BitstreamReader.h"
-#include "llvm/IR/Argument.h"
-#include "llvm/IR/Attributes.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallingConv.h"
-#include "llvm/IR/Comdat.h"
-#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/DebugLoc.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GVMaterializer.h"
-#include "llvm/IR/GlobalAlias.h"
-#include "llvm/IR/GlobalIFunc.h"
 #include "llvm/IR/GlobalObject.h"
-#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/InlineAsm.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/ModuleSummaryIndex.h"
-#include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/TrackingMDRef.h"
 #include "llvm/IR/Type.h"
-#include "llvm/IR/ValueHandle.h"
-#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/type_traits.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <iterator>
 #include <limits>
-#include <map>
 #include <string>
-#include <system_error>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
+namespace llvm {
+class Argument;
+}
 
 using namespace llvm;
 
@@ -678,8 +664,8 @@ public:
 
   bool hasSeenOldLoopTags() const { return HasSeenOldLoopTags; }
 
-  Error parseMetadataAttachment(
-      Function &F, const SmallVectorImpl<Instruction *> &InstructionList);
+  Error parseMetadataAttachment(Function &F,
+                                ArrayRef<Instruction *> InstructionList);
 
   Error parseMetadataKinds();
 
@@ -2047,8 +2033,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_IMPORTED_ENTITY: {
-    if (Record.size() < 6 && Record.size() > 8)
-      return error("Invalid record");
+    if (Record.size() < 6 || Record.size() > 8)
+      return error("Invalid DIImportedEntity record");
 
     IsDistinct = Record[0];
     bool HasFile = (Record.size() >= 7);
@@ -2181,7 +2167,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseGlobalObjectAttachment(
 
 /// Parse metadata attachments.
 Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
-    Function &F, const SmallVectorImpl<Instruction *> &InstructionList) {
+    Function &F, ArrayRef<Instruction *> InstructionList) {
   if (Error Err = Stream.EnterSubBlock(bitc::METADATA_ATTACHMENT_ID))
     return Err;
 
@@ -2357,7 +2343,7 @@ DISubprogram *MetadataLoader::lookupSubprogramForFunction(Function *F) {
 }
 
 Error MetadataLoader::parseMetadataAttachment(
-    Function &F, const SmallVectorImpl<Instruction *> &InstructionList) {
+    Function &F, ArrayRef<Instruction *> InstructionList) {
   return Pimpl->parseMetadataAttachment(F, InstructionList);
 }
 

@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
@@ -78,6 +79,7 @@ struct LowerGpuOpsToROCDLOpsPass
                                                             llvmPatterns);
     populateVectorToLLVMConversionPatterns(converter, llvmPatterns);
     populateVectorToROCDLConversionPatterns(converter, llvmPatterns);
+    cf::populateControlFlowToLLVMConversionPatterns(converter, llvmPatterns);
     populateStdToLLVMConversionPatterns(converter, llvmPatterns);
     populateMemRefToLLVMConversionPatterns(converter, llvmPatterns);
     populateGpuToROCDLConversionPatterns(converter, llvmPatterns, runtime);

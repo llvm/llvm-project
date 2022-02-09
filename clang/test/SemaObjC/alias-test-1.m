@@ -19,7 +19,7 @@ typedef int alias2;	// expected-note {{previous declaration is here}}
 alias *p;
 class2 *p2;
 
-int foo ()
+int foo (void)
 {
 
 	if (p == p2) {

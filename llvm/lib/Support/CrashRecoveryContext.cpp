@@ -97,7 +97,7 @@ static ManagedStatic<sys::ThreadLocal<const CrashRecoveryContext>>
 static void installExceptionOrSignalHandlers();
 static void uninstallExceptionOrSignalHandlers();
 
-CrashRecoveryContextCleanup::~CrashRecoveryContextCleanup() {}
+CrashRecoveryContextCleanup::~CrashRecoveryContextCleanup() = default;
 
 CrashRecoveryContext::CrashRecoveryContext() {
   // On Windows, if abort() was previously triggered (and caught by a previous

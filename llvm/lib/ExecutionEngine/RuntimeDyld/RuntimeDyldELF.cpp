@@ -216,7 +216,7 @@ namespace llvm {
 RuntimeDyldELF::RuntimeDyldELF(RuntimeDyld::MemoryManager &MemMgr,
                                JITSymbolResolver &Resolver)
     : RuntimeDyldImpl(MemMgr, Resolver), GOTSectionID(0), CurrentGOTIndex(0) {}
-RuntimeDyldELF::~RuntimeDyldELF() {}
+RuntimeDyldELF::~RuntimeDyldELF() = default;
 
 void RuntimeDyldELF::registerEHFrames() {
   for (int i = 0, e = UnregisteredEHFrameSections.size(); i != e; ++i) {

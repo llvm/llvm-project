@@ -706,7 +706,7 @@ bool windows_manifest::isAvailable() { return false; }
 WindowsManifestMerger::WindowsManifestMerger()
     : Impl(std::make_unique<WindowsManifestMergerImpl>()) {}
 
-WindowsManifestMerger::~WindowsManifestMerger() {}
+WindowsManifestMerger::~WindowsManifestMerger() = default;
 
 Error WindowsManifestMerger::merge(MemoryBufferRef Manifest) {
   return Impl->merge(Manifest);

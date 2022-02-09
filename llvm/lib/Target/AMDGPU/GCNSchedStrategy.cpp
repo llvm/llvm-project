@@ -429,9 +429,12 @@ void GCNScheduleDAGMILive::schedule() {
   RescheduleRegions[RegionIdx] = RegionsWithClusters[RegionIdx] ||
                                  (Stage + 1) != UnclusteredReschedule;
   RegionEnd = RegionBegin;
+  int SkippedDebugInstr = 0;
   for (MachineInstr *MI : Unsched) {
-    if (MI->isDebugInstr())
+    if (MI->isDebugInstr()) {
+      ++SkippedDebugInstr;
       continue;
+    }
 
     if (MI->getIterator() != RegionEnd) {
       BB->remove(MI);
@@ -459,10 +462,31 @@ void GCNScheduleDAGMILive::schedule() {
     ++RegionEnd;
     LLVM_DEBUG(dbgs() << "Scheduling " << *MI);
   }
-  RegionBegin = Unsched.front()->getIterator();
-  Regions[RegionIdx] = std::make_pair(RegionBegin, RegionEnd);
 
+  // After reverting schedule, debug instrs will now be at the end of the block
+  // and RegionEnd will point to the first debug instr. Increment RegionEnd
+  // pass debug instrs to the actual end of the scheduling region.
+  while (SkippedDebugInstr-- > 0)
+    ++RegionEnd;
+
+  // If Unsched.front() instruction is a debug instruction, this will actually
+  // shrink the region since we moved all debug instructions to the end of the
+  // block. Find the first instruction that is not a debug instruction.
+  RegionBegin = Unsched.front()->getIterator();
+  if (RegionBegin->isDebugInstr()) {
+    for (MachineInstr *MI : Unsched) {
+      if (MI->isDebugInstr())
+        continue;
+      RegionBegin = MI->getIterator();
+      break;
+    }
+  }
+
+  // Then move the debug instructions back into their correct place and set
+  // RegionBegin and RegionEnd if needed.
   placeDebugValues();
+
+  Regions[RegionIdx] = std::make_pair(RegionBegin, RegionEnd);
 }
 
 GCNRegPressure GCNScheduleDAGMILive::getRealRegPressure() const {

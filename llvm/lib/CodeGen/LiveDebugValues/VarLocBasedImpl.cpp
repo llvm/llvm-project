@@ -1035,9 +1035,9 @@ public:
 //            Implementation
 //===----------------------------------------------------------------------===//
 
-VarLocBasedLDV::VarLocBasedLDV() { }
+VarLocBasedLDV::VarLocBasedLDV() = default;
 
-VarLocBasedLDV::~VarLocBasedLDV() { }
+VarLocBasedLDV::~VarLocBasedLDV() = default;
 
 /// Erase a variable from the set of open ranges, and additionally erase any
 /// fragments that may overlap it. If the VarLoc is a backup location, erase

@@ -19,9 +19,8 @@ while.cond38:                                     ; preds = %if.end111, %entry
 ; CHECK: %cond.true77
 ; CHECK-NEXT: @ in Loop
 ; CHECK-NEXT: cmp.w {{r[0-9]+}}, #0
-; CHECK-NEXT: it eq
+; CHECK-NEXT: ite eq
 ; CHECK-NEXT: ldreq
-; CHECK-NEXT: it ne
   ; N.b. 16-bit mov instruction in IT block does not set flags.
 ; CHECK-NEXT: movne
 ; CHECK-NEXT: mvns

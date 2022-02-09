@@ -309,7 +309,7 @@ static Value genIndexAndValueForSparse(ConversionPatternRewriter &rewriter,
     Value val = rewriter.create<tensor::ExtractOp>(loc, indices,
                                                    ValueRange{ivs[0], idx});
     val =
-        rewriter.create<arith::IndexCastOp>(loc, val, rewriter.getIndexType());
+        rewriter.create<arith::IndexCastOp>(loc, rewriter.getIndexType(), val);
     rewriter.create<memref::StoreOp>(loc, val, ind, idx);
   }
   return rewriter.create<tensor::ExtractOp>(loc, values, ivs[0]);

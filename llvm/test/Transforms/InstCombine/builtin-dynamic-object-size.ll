@@ -1,6 +1,6 @@
-; RUN: opt -instcombine -S < %s | FileCheck %s
+; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
-target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
+target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128-p7:32:32"
 target triple = "x86_64-apple-macosx10.14.0"
 
 ; Function Attrs: nounwind ssp uwtable
@@ -151,6 +151,43 @@ if.end:                                           ; preds = %if.else, %if.then
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP]])
 ; CHECK-NEXT:    br i1 false, label %if.else, label %if.then
 ; CHECK:    call void @fortified_chk(i8* %obj, i64 [[SZ]])
+
+@p7 = internal addrspace(7) global i8 0
+
+; Gracefully handle AS cast when the address spaces have different pointer widths.
+define i64 @as_cast(i1 %c) {
+; CHECK:  [[TMP0:%.*]] = select i1 %c, i64 64, i64 1
+; CHECK:  [[NOT:%.*]] = xor i1 %c, true
+; CHECK:  [[NEG:%.*]] = sext i1 [[NOT]] to i64
+; CHECK:  [[TMP1:%.*]] = add nsw i64 [[TMP0]], [[NEG]]
+; CHECK:  [[TMP2:%.*]] = icmp ne i64 [[TMP1]], -1
+; CHECK:  call void @llvm.assume(i1 [[TMP2]])
+; CHECK:  ret i64 [[TMP1]]
+;
+entry:
+  %p0 = tail call i8* @malloc(i64 64)
+  %gep = getelementptr i8, i8 addrspace(7)* @p7, i32 1
+  %as = addrspacecast i8 addrspace(7)* %gep to i8*
+  %select = select i1 %c, i8* %p0, i8* %as
+  %calc_size = tail call i64 @llvm.objectsize.i64.p0i8(i8* %select, i1 false, i1 true, i1 true)
+  ret i64 %calc_size
+}
+
+define i64 @constexpr_as_cast(i1 %c) {
+; CHECK:  [[TMP0:%.*]] = select i1 %c, i64 64, i64 1
+; CHECK:  [[NOT:%.*]] = xor i1 %c, true
+; CHECK:  [[NEG:%.*]] = sext i1 [[NOT]] to i64
+; CHECK:  [[TMP1:%.*]] = add nsw i64 [[TMP0]], [[NEG]]
+; CHECK:  [[TMP2:%.*]] = icmp ne i64 [[TMP1]], -1
+; CHECK:  call void @llvm.assume(i1 [[TMP2]])
+; CHECK:  ret i64 [[TMP1]]
+;
+entry:
+  %p0 = tail call i8* @malloc(i64 64)
+  %select = select i1 %c, i8* %p0, i8* addrspacecast (i8 addrspace(7)* getelementptr (i8, i8 addrspace(7)* @p7, i32 1) to i8*)
+  %calc_size = tail call i64 @llvm.objectsize.i64.p0i8(i8* %select, i1 false, i1 true, i1 true)
+  ret i64 %calc_size
+}
 
 declare void @bury(i32) local_unnamed_addr #2
 

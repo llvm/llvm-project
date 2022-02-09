@@ -191,8 +191,8 @@ constexpr bool testEmpty() {
 
   BoolConvertibleComparison<true> boolConv;
   BoolConvertibleComparison<false> boolConv2;
-  static_assert(noexcept(boolConv.empty()));
-  static_assert(!noexcept(boolConv2.empty()));
+  LIBCPP_ASSERT_NOEXCEPT(boolConv.empty());
+  ASSERT_NOT_NOEXCEPT(boolConv2.empty());
 
   assert(!boolConv.empty());
   assert(!static_cast<BoolConvertibleComparison<true> const&>(boolConv).empty());

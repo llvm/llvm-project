@@ -20,7 +20,7 @@ GCC-compatible ``clang`` and ``clang++`` drivers.
 .. program:: clang
 .. option:: -B<prefix>, --prefix <arg>, --prefix=<arg>
 
-Search $prefix/$triple-$file and $prefix$file for executables, libraries, includes, and data files used by the compiler. $prefix may or may not be a directory
+Search $prefix$file for executables, libraries, and data files. If $prefix is a directory, search $prefix/$file
 
 .. option:: -F<arg>
 
@@ -513,7 +513,7 @@ CUDA offloading device architecture (e.g. sm\_35), or HIP offloading target ID i
 
 .. option:: --offload=<arg1>,<arg2>...
 
-Specify comma-separated list of offloading target triples (HIP only)
+Specify comma-separated list of offloading target triples (CUDA and HIP only)
 
 .. option:: -p, --profile
 
@@ -797,6 +797,14 @@ Use the LLVM representation for assembler and object files
 
 Generate Interface Stub Files, emit merged text not binary.
 
+.. option:: -extract-api
+
+Extract API information
+
+.. option:: -fopenmp-new-driver
+
+Use the new driver for OpenMP offloading.
+
 .. option:: -fsyntax-only
 
 .. option:: -module-file-info
@@ -899,7 +907,7 @@ Inline suitable functions
 
 Inline functions which are (explicitly or implicitly) marked inline
 
-.. option:: -flegacy-pass-manager, -fno-experimental-new-pass-manager, -fno-legacy-pass-manager
+.. option:: -flegacy-pass-manager, -fno-legacy-pass-manager
 
 Use the legacy pass manager in LLVM (deprecated, to be removed in a future release)
 
@@ -1232,7 +1240,7 @@ Set directory to include search path with prefix
 
 Add directory to SYSTEM include search path, absolute paths are relative to -isysroot
 
-.. option:: --libomptarget-amdgcn-bc-path=<arg>
+.. option:: --libomptarget-amdgpu-bc-path=<arg>, --libomptarget-amdgcn-bc-path=<arg>
 
 Path to libomptarget-amdgcn bitcode library
 
@@ -1673,6 +1681,10 @@ Do not emit  debug info for defined but unused types
 
 Embed LLVM bitcode (option: off, all, bitcode, marker)
 
+.. option:: -fembed-offload-object=<arg>
+
+Embed Offloading device-side binary into host object file as a section.
+
 .. option:: -femit-all-decls
 
 Emit all declarations, even if unused
@@ -1957,6 +1969,10 @@ Dot-separated value representing the Microsoft compiler version number to report
 
 Accept some non-standard constructs supported by the Microsoft compiler
 
+.. option:: -fms-hotpatch
+
+Ensure that all functions can be hotpatched at runtime
+
 .. option:: -fms-memptr-rep=<arg>
 
 .. option:: -fms-volatile
@@ -2065,6 +2081,10 @@ Parse OpenMP pragmas and generate parallel code.
 
 Enable all Clang extensions for OpenMP directives and clauses
 
+.. option:: -fopenmp-implicit-rpath, -fno-openmp-implicit-rpath
+
+Set rpath on OpenMP executables
+
 .. option:: -fopenmp-simd, -fno-openmp-simd
 
 Emit OpenMP code only for SIMD-based constructs.
@@ -2076,10 +2096,6 @@ Enable debugging in the OpenMP offloading device RTL
 .. option:: -fopenmp-target-new-runtime, -fno-openmp-target-new-runtime
 
 Use the new bitcode library for OpenMP offloading
-
-.. option:: -fopenmp-new-driver
-
-Use the new scheme for creating and linking OpenMP offloading code
 
 .. option:: -fopenmp-version=<arg>
 
@@ -2299,6 +2315,10 @@ Generate read-only position independent code (ARM only)
 .. option:: -frwpi, -fno-rwpi
 
 Generate read-write position independent code (ARM only)
+
+.. option:: -fsanitize-memory-param-retval, -fno-sanitize-memory-param-retval
+
+Enable detection of uninitialized parameters and return values
 
 .. option:: -fsave-optimization-record, -fno-save-optimization-record
 
@@ -2671,6 +2691,10 @@ DEPRECATED: Filename defining the whitelist for imbuing the 'never instrument' X
 
 When using -fxray-function-groups, select which group of functions to instrument. Valid range is 0 to fxray-function-groups - 1
 
+.. option:: -fzero-call-used-regs=<arg>
+
+Clear call-used registers upon function return.
+
 .. option:: -fzero-initialized-in-bss, -fno-zero-initialized-in-bss
 
 .. option:: -fzvector, -fno-zvector, -mzvector
@@ -2949,9 +2973,9 @@ Align selected branches (fused, jcc, jmp) within 32-byte boundary
 
 Legacy option to specify code object ABI V3 (AMDGPU only)
 
-.. option:: -mcode-object-version=<version>
+.. option:: -mcode-object-version=<arg>
 
-Specify code object ABI version. Defaults to 3. (AMDGPU only)
+Specify code object ABI version. Allowed values are 2, 3, 4, and 5. Defaults to 4. (AMDGPU only)
 
 .. option:: -mconsole<arg>
 
@@ -3008,6 +3032,10 @@ Enable merging of globals
 .. option:: -miamcu, -mno-iamcu
 
 Use Intel MCU ABI
+
+.. option:: -mibt-seal
+
+Optimize fcf-protection=branch/full (requires LTO).
 
 .. option:: -mignore-xcoff-visibility
 
@@ -3313,7 +3341,7 @@ Disallow use of CRC instructions (ARM only)
 
 .. option:: -mrestrict-it, -mno-restrict-it
 
-Disallow generation of deprecated IT blocks for ARMv8. It is on by default for ARMv8 Thumb mode.
+Disallow generation of complex IT blocks.
 
 .. option:: -mtp=<arg>
 

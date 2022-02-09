@@ -23,13 +23,11 @@ add_llvm_tool(llvm-bolt
 
 add_llvm_tool_symlink(perf2bolt llvm-bolt)
 add_llvm_tool_symlink(llvm-boltdiff llvm-bolt)
-add_llvm_tool_symlink(llvm-bolt-heatmap llvm-bolt)
 
 set(BOLT_DEPENDS
   llvm-bolt
   perf2bolt
   llvm-boltdiff
-  llvm-bolt-heatmap
   )
 
 add_custom_target(bolt DEPENDS ${BOLT_DEPENDS})
@@ -37,7 +35,6 @@ install(PROGRAMS
   ${CMAKE_BINARY_DIR}/bin/llvm-bolt
   ${CMAKE_BINARY_DIR}/bin/perf2bolt
   ${CMAKE_BINARY_DIR}/bin/llvm-boltdiff
-  ${CMAKE_BINARY_DIR}/bin/llvm-bolt-heatmap
   TYPE BIN
   COMPONENT bolt
   )

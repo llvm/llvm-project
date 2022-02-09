@@ -35,8 +35,8 @@ public:
   bool mayPosition() const { return mayPosition_; }
   bool mayAsynchronous() const { return mayAsynchronous_; }
   void set_mayAsynchronous(bool yes) { mayAsynchronous_ = yes; }
-  FileOffset position() const { return position_; }
   bool isTerminal() const { return isTerminal_; }
+  bool isWindowsTextFile() const { return isWindowsTextFile_; }
   std::optional<FileOffset> knownSize() const { return knownSize_; }
 
   bool IsConnected() const { return fd_ >= 0; }
@@ -98,6 +98,7 @@ private:
   FileOffset position_{0};
   std::optional<FileOffset> knownSize_;
   bool isTerminal_{false};
+  bool isWindowsTextFile_{false}; // expands LF to CR+LF on write
 
   int nextId_;
   OwningPtr<Pending> pending_;

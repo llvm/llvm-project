@@ -27,7 +27,7 @@ define void @test_gcrelocate_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-ex
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %tok = tail call token (i64, i32, void ()*, i32, i32, ...)
-      @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @f, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %ptr, i32 addrspace(1)* %ptr), "deopt" (i32 addrspace(1)* %ptr, i32 undef)]
+      @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @f, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %ptr, i32 addrspace(1)* %ptr), "deopt" (i32 addrspace(1)* %ptr, i32 undef)]
   %a = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 0)
   %b = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 1, i32 1)
   call void (...) @use(i32 addrspace(1)* %a, i32 addrspace(1)* %b)
@@ -52,7 +52,7 @@ define void @test_gcptr_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-example
 ; CHECK-NEXT:    retq
   %ptr2 = bitcast i32 addrspace(1)* %ptr to i8 addrspace(1)*
   %tok = tail call token (i64, i32, void ()*, i32, i32, ...)
-      @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @f, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %ptr, i8 addrspace(1)* %ptr2), "deopt" (i32 addrspace(1)* %ptr, i32 undef)]
+      @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @f, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %ptr, i8 addrspace(1)* %ptr2), "deopt" (i32 addrspace(1)* %ptr, i32 undef)]
   %a = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 0)
   %b = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tok, i32 1, i32 1)
   call void (...) @use(i32 addrspace(1)* %a, i8 addrspace(1)* %b)
@@ -73,7 +73,7 @@ define void @test_deopt_use(i32 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   tail call token (i64, i32, void ()*, i32, i32, ...)
-      @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @f, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %ptr), "deopt" (i32 addrspace(1)* %ptr, i32 undef)]
+      @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @f, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %ptr), "deopt" (i32 addrspace(1)* %ptr, i32 undef)]
   ret void
 }
 
@@ -89,6 +89,6 @@ define void @test_dse(i32 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   tail call token (i64, i32, void ()*, i32, i32, ...)
-      @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @f, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %ptr)]
+      @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @f, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %ptr)]
   ret void
 }

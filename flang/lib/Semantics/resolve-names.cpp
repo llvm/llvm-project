@@ -6462,6 +6462,18 @@ void ResolveNamesVisitor::NoteExecutablePartCall(
   }
 }
 
+static bool IsLocallyImplicitGlobalSymbol(
+    const Symbol &symbol, const parser::Name &localName) {
+  return symbol.owner().IsGlobal() &&
+      (!symbol.scope() ||
+          !symbol.scope()->sourceRange().Contains(localName.source));
+}
+
+static bool TypesMismatchIfNonNull(
+    const DeclTypeSpec *type1, const DeclTypeSpec *type2) {
+  return type1 && type2 && *type1 != *type2;
+}
+
 // Check and set the Function or Subroutine flag on symbol; false on error.
 bool ResolveNamesVisitor::SetProcFlag(
     const parser::Name &name, Symbol &symbol, Symbol::Flag flag) {
@@ -6473,6 +6485,12 @@ bool ResolveNamesVisitor::SetProcFlag(
       flag == Symbol::Flag::Function) {
     SayWithDecl(
         name, symbol, "Cannot call subroutine '%s' like a function"_err_en_US);
+    return false;
+  } else if (flag == Symbol::Flag::Function &&
+      IsLocallyImplicitGlobalSymbol(symbol, name) &&
+      TypesMismatchIfNonNull(symbol.GetType(), GetImplicitType(symbol))) {
+    SayWithDecl(name, symbol,
+        "Implicit declaration of function '%s' has a different result type than in previous declaration"_err_en_US);
     return false;
   } else if (symbol.has<ProcEntityDetails>()) {
     symbol.set(flag); // in case it hasn't been set yet

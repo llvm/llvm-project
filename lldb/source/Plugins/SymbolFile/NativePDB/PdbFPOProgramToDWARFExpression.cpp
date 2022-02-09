@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 using namespace lldb;
 using namespace lldb_private;

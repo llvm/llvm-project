@@ -521,6 +521,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <__config>
 #include <__debug>
 #include <__functional_base>
+#include <__ios/fpos.h>
 #include <__iterator/wrap_iter.h>
 #include <algorithm>
 #include <compare>
@@ -538,15 +539,15 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <version>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-#   include <cwchar>
+#  include <cwchar>
 #endif
 
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
-# include <cstdint>
+#  include <cstdint>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
@@ -554,43 +555,6 @@ _LIBCPP_PUSH_MACROS
 
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-// fpos
-
-template <class _StateT>
-class _LIBCPP_TEMPLATE_VIS fpos
-{
-private:
-    _StateT __st_;
-    streamoff __off_;
-public:
-    _LIBCPP_INLINE_VISIBILITY fpos(streamoff __off = streamoff()) : __st_(), __off_(__off) {}
-
-    _LIBCPP_INLINE_VISIBILITY operator streamoff() const {return __off_;}
-
-    _LIBCPP_INLINE_VISIBILITY _StateT state() const {return __st_;}
-    _LIBCPP_INLINE_VISIBILITY void state(_StateT __st) {__st_ = __st;}
-
-    _LIBCPP_INLINE_VISIBILITY fpos& operator+=(streamoff __off) {__off_ += __off; return *this;}
-    _LIBCPP_INLINE_VISIBILITY fpos  operator+ (streamoff __off) const {fpos __t(*this); __t += __off; return __t;}
-    _LIBCPP_INLINE_VISIBILITY fpos& operator-=(streamoff __off) {__off_ -= __off; return *this;}
-    _LIBCPP_INLINE_VISIBILITY fpos  operator- (streamoff __off) const {fpos __t(*this); __t -= __off; return __t;}
-};
-
-template <class _StateT>
-inline _LIBCPP_INLINE_VISIBILITY
-streamoff operator-(const fpos<_StateT>& __x, const fpos<_StateT>& __y)
-    {return streamoff(__x) - streamoff(__y);}
-
-template <class _StateT>
-inline _LIBCPP_INLINE_VISIBILITY
-bool operator==(const fpos<_StateT>& __x, const fpos<_StateT>& __y)
-    {return streamoff(__x) == streamoff(__y);}
-
-template <class _StateT>
-inline _LIBCPP_INLINE_VISIBILITY
-bool operator!=(const fpos<_StateT>& __x, const fpos<_StateT>& __y)
-    {return streamoff(__x) != streamoff(__y);}
 
 // basic_string
 

@@ -159,12 +159,7 @@ def ROCDL_MubufLoadOp :
           llvm::Intrinsic::amdgcn_buffer_load, {$rsrc, $vindex, $offset, $glc,
           $slc}, {$_resultType});
   }];
-  let parser = [{ return parseROCDLMubufLoadOp(parser, result); }];
-  let printer = [{
-    Operation *op = this->getOperation();
-    p << " " << op->getOperands()
-      << " : " << op->getResultTypes();
-  }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 def ROCDL_MubufStoreOp :
@@ -181,12 +176,7 @@ def ROCDL_MubufStoreOp :
           llvm::Intrinsic::amdgcn_buffer_store, {$vdata, $rsrc, $vindex,
           $offset, $glc, $slc}, {vdataType});
   }];
-  let parser = [{ return parseROCDLMubufStoreOp(parser, result); }];
-  let printer = [{
-    Operation *op = this->getOperation();
-    p << " " << op->getOperands()
-      << " : " << vdata().getType();
-  }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 #endif // ROCDLIR_OPS

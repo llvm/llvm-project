@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "./Utils.h"
+
 #include "mlir/Analysis/Presburger/Simplex.h"
-#include "../../Dialect/Affine/Analysis/AffineStructuresParser.h"
+#include "mlir/IR/MLIRContext.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -439,7 +441,7 @@ TEST(SimplexTest, appendVariable) {
   EXPECT_EQ(simplex.getNumVariables(), 2u);
   EXPECT_EQ(simplex.getNumConstraints(), 2u);
   EXPECT_EQ(simplex.computeIntegerBounds({0, 1, 0}),
-            std::make_pair(yMin, yMax));
+            std::make_pair(Optional<int64_t>(yMin), Optional<int64_t>(yMax)));
 
   simplex.rollback(snapshot1);
   EXPECT_EQ(simplex.getNumVariables(), 1u);
@@ -476,18 +478,8 @@ TEST(SimplexTest, isRedundantEquality) {
   EXPECT_TRUE(simplex.isRedundantEquality({-1, 0, 2})); // x = 2.
 }
 
-static IntegerPolyhedron parsePoly(StringRef str, MLIRContext *context) {
-  FailureOr<IntegerPolyhedron> poly = parseIntegerSetToFAC(str, context);
-
-  EXPECT_TRUE(succeeded(poly));
-
-  return *poly;
-}
-
 TEST(SimplexTest, IsRationalSubsetOf) {
-
   MLIRContext context;
-
   IntegerPolyhedron univ = parsePoly("(x) : ()", &context);
   IntegerPolyhedron empty =
       parsePoly("(x) : (x + 0 >= 0, -x - 1 >= 0)", &context);

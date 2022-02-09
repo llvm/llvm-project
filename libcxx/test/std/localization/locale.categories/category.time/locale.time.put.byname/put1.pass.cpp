@@ -48,7 +48,6 @@ public:
 int main(int, char**)
 {
     char str[200];
-    cpp17_output_iterator<char*> iter;
     tm t;
     t.tm_sec = 6;
     t.tm_min = 3;
@@ -63,15 +62,16 @@ int main(int, char**)
     {
         const my_facet f(LOCALE_en_US_UTF_8, 1);
         std::string pat("Today is %A which is abbreviated %a.");
-        iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', &t, pat.data(), pat.data() + pat.size());
+        cpp17_output_iterator<char*> iter =
+            f.put(cpp17_output_iterator<char*>(str), ios, '*', &t, pat.data(), pat.data() + pat.size());
         std::string ex(str, iter.base());
         assert(ex == "Today is Saturday which is abbreviated Sat.");
     }
     {
         const my_facet f(LOCALE_fr_FR_UTF_8, 1);
         std::string pat("Today is %A which is abbreviated '%a'.");
-        iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', &t,
-                     pat.data(), pat.data() + pat.size());
+        cpp17_output_iterator<char*> iter =
+            f.put(cpp17_output_iterator<char*>(str), ios, '*', &t, pat.data(), pat.data() + pat.size());
         std::string ex(str, iter.base());
         assert((ex == "Today is Samedi which is abbreviated 'Sam'.")||
                (ex == "Today is samedi which is abbreviated 'sam'." )||

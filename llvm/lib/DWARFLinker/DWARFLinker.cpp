@@ -132,9 +132,9 @@ static bool isTypeTag(uint16_t Tag) {
   return false;
 }
 
-AddressesMap::~AddressesMap() {}
+AddressesMap::~AddressesMap() = default;
 
-DwarfEmitter::~DwarfEmitter() {}
+DwarfEmitter::~DwarfEmitter() = default;
 
 static Optional<StringRef> StripTemplateParameters(StringRef Name) {
   // We are looking for template parameters to strip from Name. e.g.

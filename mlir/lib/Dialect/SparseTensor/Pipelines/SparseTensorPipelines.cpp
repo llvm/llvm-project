@@ -27,20 +27,22 @@ using namespace mlir::sparse_tensor;
 
 void mlir::sparse_tensor::buildSparseCompiler(
     OpPassManager &pm, const SparseCompilerOptions &options) {
+  // TODO(wrengr): ensure the original `pm` is for ModuleOp
   pm.addPass(createSparsificationPass(options.sparsificationOptions()));
   pm.addPass(createSparseTensorConversionPass());
-  pm.addPass(createLinalgBufferizePass());
-  pm.addPass(createConvertLinalgToLoopsPass());
-  pm.addPass(createConvertVectorToSCFPass());
-  pm.addPass(createLowerToCFGPass()); // --convert-scf-to-std
+  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());
+  pm.addNestedPass<FuncOp>(createConvertLinalgToLoopsPass());
+  pm.addNestedPass<FuncOp>(createConvertVectorToSCFPass());
+  pm.addNestedPass<FuncOp>(createConvertSCFToCFPass());
   pm.addPass(createFuncBufferizePass());
   pm.addPass(arith::createConstantBufferizePass());
-  pm.addPass(createTensorBufferizePass());
-  pm.addPass(mlir::bufferization::createFinalizingBufferizePass());
+  pm.addNestedPass<FuncOp>(createTensorBufferizePass());
+  pm.addNestedPass<FuncOp>(
+      mlir::bufferization::createFinalizingBufferizePass());
   pm.addPass(createLowerAffinePass());
-  pm.addPass(createConvertVectorToLLVMPass());
+  pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
   pm.addPass(createMemRefToLLVMPass());
-  pm.addPass(createConvertMathToLLVMPass());
+  pm.addNestedPass<FuncOp>(createConvertMathToLLVMPass());
   pm.addPass(createLowerToLLVMPass()); // --convert-std-to-llvm
   pm.addPass(createReconcileUnrealizedCastsPass());
 }

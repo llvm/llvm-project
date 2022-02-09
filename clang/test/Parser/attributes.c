@@ -55,7 +55,7 @@ void d2(void) __attribute__((noreturn)), d3(void) __attribute__((noreturn));
 
 
 // PR6287
-void __attribute__((returns_twice)) returns_twice_test();
+void __attribute__((returns_twice)) returns_twice_test(void);
 
 int aligned(int);
 int __attribute__((vec_type_hint(char, aligned(16) )) missing_rparen_1; // expected-error 2{{expected ')'}} expected-note {{to match}} expected-warning {{does not declare anything}}
@@ -70,7 +70,7 @@ int testFundef1(int *a) __attribute__((nonnull(1))) { // \
 }
 
 // noreturn is lifted to type qualifier
-void testFundef2() __attribute__((noreturn)) { // \
+void testFundef2(void) __attribute__((noreturn)) { // \
     // expected-warning {{GCC does not allow 'noreturn' attribute in this position on a function definition}}
   testFundef2();
 }
@@ -90,7 +90,7 @@ int testFundef4(int *a) __attribute__((nonnull(1))) // \
 }
 
 // GCC allows these
-void testFundef5() __attribute__(()) { }
+void testFundef5(void) __attribute__(()) { }
 
 __attribute__((pure)) int testFundef6(int a) { return a; }
 

@@ -2349,19 +2349,42 @@ static bool markAliveBlocks(Function &F,
           isa<UndefValue>(Callee)) {
         changeToUnreachable(II, false, DTU);
         Changed = true;
-      } else if (II->doesNotThrow() && canSimplifyInvokeNoUnwind(&F)) {
-        if (II->use_empty() && II->onlyReadsMemory()) {
-          // jump to the normal destination branch.
-          BasicBlock *NormalDestBB = II->getNormalDest();
-          BasicBlock *UnwindDestBB = II->getUnwindDest();
-          BranchInst::Create(NormalDestBB, II);
-          UnwindDestBB->removePredecessor(II->getParent());
-          II->eraseFromParent();
+      } else {
+        if (II->doesNotReturn() &&
+            !isa<UnreachableInst>(II->getNormalDest()->front())) {
+          // If we found an invoke of a no-return function,
+          // create a new empty basic block with an `unreachable` terminator,
+          // and set it as the normal destination for the invoke,
+          // unless that is already the case.
+          // Note that the original normal destination could have other uses.
+          BasicBlock *OrigNormalDest = II->getNormalDest();
+          OrigNormalDest->removePredecessor(II->getParent());
+          LLVMContext &Ctx = II->getContext();
+          BasicBlock *UnreachableNormalDest = BasicBlock::Create(
+              Ctx, OrigNormalDest->getName() + ".unreachable",
+              II->getFunction(), OrigNormalDest);
+          new UnreachableInst(Ctx, UnreachableNormalDest);
+          II->setNormalDest(UnreachableNormalDest);
           if (DTU)
-            DTU->applyUpdates({{DominatorTree::Delete, BB, UnwindDestBB}});
-        } else
-          changeToCall(II, DTU);
-        Changed = true;
+            DTU->applyUpdates(
+                {{DominatorTree::Delete, BB, OrigNormalDest},
+                 {DominatorTree::Insert, BB, UnreachableNormalDest}});
+          Changed = true;
+        }
+        if (II->doesNotThrow() && canSimplifyInvokeNoUnwind(&F)) {
+          if (II->use_empty() && II->onlyReadsMemory()) {
+            // jump to the normal destination branch.
+            BasicBlock *NormalDestBB = II->getNormalDest();
+            BasicBlock *UnwindDestBB = II->getUnwindDest();
+            BranchInst::Create(NormalDestBB, II);
+            UnwindDestBB->removePredecessor(II->getParent());
+            II->eraseFromParent();
+            if (DTU)
+              DTU->applyUpdates({{DominatorTree::Delete, BB, UnwindDestBB}});
+          } else
+            changeToCall(II, DTU);
+          Changed = true;
+        }
       }
     } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Terminator)) {
       // Remove catchpads which cannot be reached.

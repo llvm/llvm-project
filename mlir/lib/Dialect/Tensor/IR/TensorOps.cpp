@@ -19,6 +19,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 
 using namespace mlir;
 using namespace mlir::tensor;
@@ -732,13 +733,16 @@ SmallVector<ReassociationExprs, 4> ExpandShapeOp::getReassociationExprs() {
                                             getReassociationIndices());
 }
 
-static void print(OpAsmPrinter &p, ExpandShapeOp op) {
-  ::mlir::printReshapeOp<ExpandShapeOp>(p, op);
+ParseResult ExpandShapeOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseReshapeLikeOp(parser, result);
 }
+void ExpandShapeOp::print(OpAsmPrinter &p) { printReshapeOp(p, *this); }
 
-static void print(OpAsmPrinter &p, CollapseShapeOp op) {
-  ::mlir::printReshapeOp<CollapseShapeOp>(p, op);
+ParseResult CollapseShapeOp::parse(OpAsmParser &parser,
+                                   OperationState &result) {
+  return parseReshapeLikeOp(parser, result);
 }
+void CollapseShapeOp::print(OpAsmPrinter &p) { printReshapeOp(p, *this); }
 
 /// Compute the RankedTensorType obtained by applying `reassociation` to `type`.
 static RankedTensorType
@@ -935,11 +939,11 @@ RankedTensorType ExtractSliceOp::inferRankReducedResultType(
   int rankDiff = inferredType.getRank() - resultRank;
   if (rankDiff > 0) {
     auto shape = inferredType.getShape();
-    llvm::SmallDenseSet<unsigned> dimsToProject;
-    mlir::getPositionsOfShapeOne(rankDiff, shape, dimsToProject);
+    llvm::SmallBitVector dimsToProject =
+        getPositionsOfShapeOne(rankDiff, shape);
     SmallVector<int64_t> projectedShape;
     for (unsigned pos = 0, e = shape.size(); pos < e; ++pos)
-      if (!dimsToProject.contains(pos))
+      if (!dimsToProject.test(pos))
         projectedShape.push_back(shape[pos]);
     inferredType =
         RankedTensorType::get(projectedShape, inferredType.getElementType());
@@ -1076,10 +1080,10 @@ getCanonicalSliceResultType(unsigned resultRank, RankedTensorType sourceType,
   return resultType;
 }
 
-llvm::SmallDenseSet<unsigned> ExtractSliceOp::getDroppedDims() {
-  llvm::SmallDenseSet<unsigned> droppedDims;
+llvm::SmallBitVector ExtractSliceOp::getDroppedDims() {
   ArrayRef<int64_t> resultShape = getType().getShape();
   SmallVector<OpFoldResult> mixedSizes = getMixedSizes();
+  llvm::SmallBitVector droppedDims(mixedSizes.size());
   unsigned shapePos = 0;
   for (const auto &size : enumerate(mixedSizes)) {
     Optional<int64_t> sizeVal = getConstantIntValue(size.value());
@@ -1091,7 +1095,7 @@ llvm::SmallDenseSet<unsigned> ExtractSliceOp::getDroppedDims() {
       shapePos++;
       continue;
     }
-    droppedDims.insert(size.index());
+    droppedDims.set(size.index());
   }
   return droppedDims;
 }
@@ -1101,10 +1105,10 @@ LogicalResult ExtractSliceOp::reifyResultShapes(
   reifiedReturnShapes.resize(1);
   reifiedReturnShapes[0].reserve(getType().getRank());
   SmallVector<OpFoldResult> mixedSizes = getMixedSizes();
-  llvm::SmallDenseSet<unsigned> droppedDims = getDroppedDims();
+  llvm::SmallBitVector droppedDims = getDroppedDims();
   Location loc = getLoc();
   for (const auto &size : enumerate(mixedSizes)) {
-    if (droppedDims.count(size.index()))
+    if (droppedDims.test(size.index()))
       continue;
     if (auto attr = size.value().dyn_cast<Attribute>()) {
       reifiedReturnShapes[0].push_back(builder.create<arith::ConstantIndexOp>(

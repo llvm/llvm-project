@@ -1106,6 +1106,17 @@ void CodeGenRegisterClass::buildRegUnitSet(const CodeGenRegBank &RegBank,
 }
 
 //===----------------------------------------------------------------------===//
+//                           CodeGenRegisterCategory
+//===----------------------------------------------------------------------===//
+
+CodeGenRegisterCategory::CodeGenRegisterCategory(CodeGenRegBank &RegBank,
+                                                 Record *R)
+    : TheDef(R), Name(std::string(R->getName())) {
+  for (Record *RegClass : R->getValueAsListOfDefs("Classes"))
+    Classes.push_back(RegBank.getRegClass(RegClass));
+}
+
+//===----------------------------------------------------------------------===//
 //                               CodeGenRegBank
 //===----------------------------------------------------------------------===//
 
@@ -1222,6 +1233,12 @@ CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records,
   for (auto &RC : RegClasses)
     RC.EnumValue = i++;
   CodeGenRegisterClass::computeSubClasses(*this);
+
+  // Read in the register category definitions.
+  std::vector<Record *> RCats =
+      Records.getAllDerivedDefinitions("RegisterCategory");
+  for (auto *R : RCats)
+    RegCategories.emplace_back(*this, R);
 }
 
 // Create a synthetic CodeGenSubRegIndex without a corresponding Record.

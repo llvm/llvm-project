@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep "16" | count 1
+; RUN: opt < %s -passes=instcombine -S | grep "16" | count 1
 
 define i8* @bork(i8** %qux) {
   %tmp275 = load i8*, i8** %qux, align 1

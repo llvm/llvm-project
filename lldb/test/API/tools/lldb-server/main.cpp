@@ -137,6 +137,22 @@ static void swap_chars() {
 #endif
 }
 
+static void trap() {
+#if defined(__x86_64__) || defined(__i386__)
+  asm volatile("int3");
+#elif defined(__aarch64__)
+  asm volatile("brk #0xf000");
+#elif defined(__arm__)
+  asm volatile("udf #254");
+#elif defined(__powerpc__)
+  asm volatile("trap");
+#elif __has_builtin(__builtin_debugtrap())
+  __builtin_debugtrap();
+#else
+#warning Don't know how to generate a trap. Some tests may fail.
+#endif
+}
+
 static void hello() {
   std::lock_guard<std::mutex> lock(g_print_mutex);
   printf("hello, world\n");
@@ -330,6 +346,8 @@ int main(int argc, char **argv) {
       // Print the value of specified envvar to stdout.
       const char *value = getenv(arg.c_str());
       printf("%s\n", value ? value : "__unset__");
+    } else if (consume_front(arg, "trap")) {
+      trap();
     } else {
       // Treat the argument as text for stdout.
       printf("%s\n", argv[i]);

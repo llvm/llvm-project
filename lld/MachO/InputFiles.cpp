@@ -996,8 +996,8 @@ void ObjFile::registerCompactUnwind() {
             cast<ConcatInputSection>(r.referent.dyn_cast<InputSection *>());
       }
       if (referentIsec->getSegName() != segment_names::text)
-        error("compact unwind references address in " + toString(referentIsec) +
-              " which is not in segment __TEXT");
+        error(isec->getLocation(r.offset) + " references section " +
+              referentIsec->getName() + " which is not in segment __TEXT");
       // The functionAddress relocations are typically section relocations.
       // However, unwind info operates on a per-symbol basis, so we search for
       // the function symbol here.
@@ -1259,10 +1259,11 @@ void DylibFile::parseLoadCommands(MemoryBufferRef mb) {
 
 // Some versions of XCode ship with .tbd files that don't have the right
 // platform settings.
-static constexpr std::array<StringRef, 3> skipPlatformChecks{
+constexpr std::array<StringRef, 4> skipPlatformChecks{
     "/usr/lib/system/libsystem_kernel.dylib",
     "/usr/lib/system/libsystem_platform.dylib",
-    "/usr/lib/system/libsystem_pthread.dylib"};
+    "/usr/lib/system/libsystem_pthread.dylib",
+    "/usr/lib/system/libcompiler_rt.dylib"};
 
 DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
                      bool isBundleLoader)

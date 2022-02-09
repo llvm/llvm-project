@@ -15,12 +15,14 @@
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertType.h"
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Support/FIRContext.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/CommandLine.h"
@@ -109,9 +111,8 @@ public:
                      int kind) override final {
     return Fortran::lower::getFIRType(&getMLIRContext(), tc, kind);
   }
-  mlir::Type genType(const Fortran::lower::pft::Variable &) override final {
-    TODO_NOLOC("Not implemented genType Variable. Needed for more complex "
-               "expression lowering");
+  mlir::Type genType(const Fortran::lower::pft::Variable &var) override final {
+    return Fortran::lower::translateVariableToFIRType(*this, var);
   }
 
   void setCurrentPosition(const Fortran::parser::CharBlock &position) {
@@ -131,6 +132,10 @@ public:
   mlir::Location toLocation() { return toLocation(currentPosition); }
   void setCurrentEval(Fortran::lower::pft::Evaluation &eval) {
     evalPtr = &eval;
+  }
+  Fortran::lower::pft::Evaluation &getEval() {
+    assert(evalPtr && "current evaluation not set");
+    return *evalPtr;
   }
 
   mlir::Location getCurrentLocation() override final { return toLocation(); }
@@ -181,6 +186,29 @@ public:
            !currentBlock->back().hasTrait<mlir::OpTrait::IsTerminator>();
   }
 
+  /// Unconditionally switch code insertion to a new block.
+  void startBlock(mlir::Block *newBlock) {
+    assert(newBlock && "missing block");
+    // Default termination for the current block is a fallthrough branch to
+    // the new block.
+    if (blockIsUnterminated())
+      genFIRBranch(newBlock);
+    // Some blocks may be re/started more than once, and might not be empty.
+    // If the new block already has (only) a terminator, set the insertion
+    // point to the start of the block.  Otherwise set it to the end.
+    // Note that setting the insertion point causes the subsequent function
+    // call to check the existence of terminator in the newBlock.
+    builder->setInsertionPointToStart(newBlock);
+    if (blockIsUnterminated())
+      builder->setInsertionPointToEnd(newBlock);
+  }
+
+  /// Conditionally switch code insertion to a new block.
+  void maybeStartBlock(mlir::Block *newBlock) {
+    if (newBlock)
+      startBlock(newBlock);
+  }
+
   /// Emit return and cleanup after the function has been translated.
   void endNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     setCurrentPosition(Fortran::lower::pft::stmtSourceLoc(funit.endStmt));
@@ -191,9 +219,19 @@ public:
     funit.finalBlock = nullptr;
     LLVM_DEBUG(llvm::dbgs() << "*** Lowering result:\n\n"
                             << *builder->getFunction() << '\n');
+    // FIXME: Simplification should happen in a normal pass, not here.
+    mlir::IRRewriter rewriter(*builder);
+    (void)mlir::simplifyRegions(rewriter,
+                                {builder->getRegion()}); // remove dead code
     delete builder;
     builder = nullptr;
     localSymbols.clear();
+  }
+
+  /// Instantiate variable \p var and add it to the symbol map.
+  /// See ConvertVariable.cpp.
+  void instantiateVar(const Fortran::lower::pft::Variable &var) {
+    Fortran::lower::instantiateVariable(*this, var, localSymbols);
   }
 
   /// Prepare to translate a new function
@@ -205,6 +243,45 @@ public:
     builder = new fir::FirOpBuilder(func, bridge.getKindMap());
     assert(builder && "FirOpBuilder did not instantiate");
     builder->setInsertionPointToStart(&func.front());
+
+    for (const Fortran::lower::pft::Variable &var :
+         funit.getOrderedSymbolTable()) {
+      const Fortran::semantics::Symbol &sym = var.getSymbol();
+      if (!sym.IsFuncResult() || !funit.primaryResult)
+        instantiateVar(var);
+    }
+
+    // Create most function blocks in advance.
+    createEmptyGlobalBlocks(funit.evaluationList);
+
+    // Reinstate entry block as the current insertion point.
+    builder->setInsertionPointToEnd(&func.front());
+  }
+
+  /// Create global blocks for the current function.  This eliminates the
+  /// distinction between forward and backward targets when generating
+  /// branches.  A block is "global" if it can be the target of a GOTO or
+  /// other source code branch.  A block that can only be targeted by a
+  /// compiler generated branch is "local".  For example, a DO loop preheader
+  /// block containing loop initialization code is global.  A loop header
+  /// block, which is the target of the loop back edge, is local.  Blocks
+  /// belong to a region.  Any block within a nested region must be replaced
+  /// with a block belonging to that region.  Branches may not cross region
+  /// boundaries.
+  void createEmptyGlobalBlocks(
+      std::list<Fortran::lower::pft::Evaluation> &evaluationList) {
+    mlir::Region *region = &builder->getRegion();
+    for (Fortran::lower::pft::Evaluation &eval : evaluationList) {
+      if (eval.isNewBlock)
+        eval.block = builder->createBlock(region);
+      if (eval.isConstruct() || eval.isDirective()) {
+        if (eval.lowerAsUnstructured()) {
+          createEmptyGlobalBlocks(eval.getNestedEvaluations());
+        } else if (eval.hasNestedEvaluations()) {
+          TODO(toLocation(), "Constructs with nested evaluations");
+        }
+      }
+    }
   }
 
   /// Lower a procedure (nest).
@@ -238,6 +315,11 @@ private:
     if (Fortran::lower::SymbolBox v = localSymbols.lookupSymbol(sym))
       return v;
     return {};
+  }
+
+  void genFIRBranch(mlir::Block *targetBlock) {
+    assert(targetBlock && "missing unconditional target block");
+    builder->create<cf::BranchOp>(toLocation(), targetBlock);
   }
 
   //===--------------------------------------------------------------------===//
@@ -582,7 +664,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::GotoStmt &) {
-    TODO(toLocation(), "GotoStmt lowering");
+    genFIRBranch(getEval().controlSuccessor->block);
   }
 
   void genFIR(const Fortran::parser::AssociateStmt &) {
@@ -658,6 +740,14 @@ private:
 
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               bool unstructuredContext = true) {
+    if (unstructuredContext) {
+      // When transitioning from unstructured to structured code,
+      // the structured code could be a target that starts a new block.
+      maybeStartBlock(eval.isConstruct() && eval.lowerAsStructured()
+                          ? eval.getFirstNestedEvaluation().block
+                          : eval.block);
+    }
+
     setCurrentEval(eval);
     setCurrentPosition(eval.position);
     eval.visit([&](const auto &stmt) { genFIR(stmt); });

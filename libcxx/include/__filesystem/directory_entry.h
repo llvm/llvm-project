@@ -26,6 +26,10 @@
 #include <iosfwd>
 #include <system_error>
 
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 

@@ -19,6 +19,7 @@
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/InstrProfWriter.h"
+#include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/RawMemProfReader.h"
 #include "llvm/ProfileData/SampleProfReader.h"
@@ -2480,10 +2481,16 @@ static int showSampleProfile(const std::string &Filename, bool ShowCounts,
   return 0;
 }
 
-static int showMemProfProfile(const std::string &Filename, raw_fd_ostream &OS) {
-  auto ReaderOr = llvm::memprof::RawMemProfReader::create(Filename);
+static int showMemProfProfile(const std::string &Filename,
+                              const std::string &ProfiledBinary,
+                              raw_fd_ostream &OS) {
+  auto ReaderOr =
+      llvm::memprof::RawMemProfReader::create(Filename, ProfiledBinary);
   if (Error E = ReaderOr.takeError())
-    exitWithError(std::move(E), Filename);
+    // Since the error can be related to the profile or the binary we do not
+    // pass whence. Instead additional context is provided where necessary in
+    // the error message.
+    exitWithError(std::move(E), /*Whence*/ "");
 
   std::unique_ptr<llvm::memprof::RawMemProfReader> Reader(
       ReaderOr.get().release());
@@ -2588,6 +2595,9 @@ static int show_main(int argc, const char *argv[]) {
   cl::opt<bool> ShowCovered(
       "covered", cl::init(false),
       cl::desc("Show only the functions that have been executed."));
+  cl::opt<std::string> ProfiledBinary(
+      "profiled-binary", cl::init(""),
+      cl::desc("Path to binary from which the profile was collected."));
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data summary\n");
 
@@ -2625,7 +2635,7 @@ static int show_main(int argc, const char *argv[]) {
                              ShowAllFunctions, ShowDetailedSummary,
                              ShowFunction, ShowProfileSymbolList,
                              ShowSectionInfoOnly, ShowHotFuncList, OS);
-  return showMemProfProfile(Filename, OS);
+  return showMemProfProfile(Filename, ProfiledBinary, OS);
 }
 
 int main(int argc, const char *argv[]) {

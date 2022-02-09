@@ -5,7 +5,7 @@ void t1(void) {
  __asm __asm // expected-error {{__asm used with no assembly instructions}}
 }
 
-void f() {
+void f(void) {
   int foo;
   __asm { 
     mov eax, eax
@@ -74,7 +74,7 @@ typedef struct {
   int b;
 } A;
 
-void t3() {
+void t3(void) {
   __asm { mov eax, [eax] UndeclaredId } // expected-error {{unknown token in expression}} expected-error {{use of undeclared label 'UndeclaredId'}}
 
   // FIXME: Only emit one diagnostic here.
@@ -84,7 +84,7 @@ void t3() {
   __asm { mov eax, [eax] A }
 }
 
-void t4() {
+void t4(void) {
   // The dot in the "intel dot operator" is optional in MSVC.  MSVC also does
   // global field lookup, but we don't.
   __asm { mov eax, [0] A.a }
@@ -96,7 +96,7 @@ void t4() {
   __asm { mov eax, fs:[0]. A.a } // expected-error {{unexpected token in argument list}}
 }
 
-void test_operand_size() {
+void test_operand_size(void) {
   __asm { call word t4 } // expected-error {{Expected 'PTR' or 'ptr' token!}}
 }
 
@@ -111,7 +111,7 @@ __declspec(naked) int t6(int x) {
   asm { ret }
 }
 
-void t7() {
+void t7(void) {
   __asm {
     foo: // expected-note {{inline assembly label 'foo' declared here}}
     mov eax, 0
@@ -119,13 +119,13 @@ void t7() {
   goto foo; // expected-error {{cannot jump from this goto statement to label 'foo' inside an inline assembly block}}
 }
 
-void t8() {
+void t8(void) {
   __asm foo: // expected-note {{inline assembly label 'foo' declared here}}
   __asm mov eax, 0
   goto foo; // expected-error {{cannot jump from this goto statement to label 'foo' inside an inline assembly block}}
 }
 
-void t9() {
+void t9(void) {
   goto foo; // expected-error {{cannot jump from this goto statement to label 'foo' inside an inline assembly block}}
   __asm {
     foo: // expected-note {{inline assembly label 'foo' declared here}}
@@ -133,18 +133,18 @@ void t9() {
   }
 }
 
-void t10() {
+void t10(void) {
   goto foo; // expected-error {{cannot jump from this goto statement to label 'foo' inside an inline assembly block}}
   __asm foo: // expected-note {{inline assembly label 'foo' declared here}}
   __asm mov eax, 0
 }
 
-void t11() {
+void t11(void) {
 foo:
   __asm mov eax, foo // expected-error {{use of undeclared label 'foo'}} expected-warning {{unused label 'foo'}}
 }
 
-void t12() {
+void t12(void) {
   __asm foo:
   __asm bar: // expected-warning {{unused label 'bar'}}
   __asm jmp foo

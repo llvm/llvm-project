@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine %s -o - | FileCheck %s
+; RUN: opt -S -passes=instcombine %s -o - | FileCheck %s
 
 ; Regression test of PR31990. A memcpy of one byte, copying 0xff, was
 ; replaced with a single store of an i4 0xf.

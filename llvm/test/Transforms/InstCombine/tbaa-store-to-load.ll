@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=instcombine < %s 2>&1 | FileCheck %s
 
 define i64 @f(i64* %p1, i64* %p2) {
 top:

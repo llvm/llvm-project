@@ -258,24 +258,15 @@ namespace std {
 #include <__ranges/take_view.h>
 #include <__ranges/transform_view.h>
 #include <__ranges/view_interface.h>
+#include <__ranges/views.h>
 #include <compare>          // Required by the standard.
 #include <initializer_list> // Required by the standard.
 #include <iterator>         // Required by the standard.
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
-
-_LIBCPP_BEGIN_NAMESPACE_STD
-
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
-
-namespace views = ranges::views;
-
-#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
-
-_LIBCPP_END_NAMESPACE_STD
 
 #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 

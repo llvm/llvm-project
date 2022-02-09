@@ -8,7 +8,7 @@ int outer5;
 int outer6(float); // expected-note{{previous definition is here}}
 int outer7(float);
 
-void outer_test() {
+void outer_test(void) {
   extern float outer1; // expected-error{{redeclaration of 'outer1' with a different type}}
   extern float outer2; // expected-error{{redeclaration of 'outer2' with a different type}}
   extern float outer3; // expected-note{{previous declaration is here}}
@@ -30,7 +30,7 @@ int outer8(int); // expected-error{{redefinition of 'outer8' as different kind o
 float outer9; // expected-error{{redefinition of 'outer9' with a different type}}
 
 extern int outer13; // expected-note{{previous declaration is here}}
-void outer_shadowing_test() {
+void outer_shadowing_test(void) {
   extern int outer10;
   extern int outer11; // expected-note{{previous declaration is here}}
   extern int outer12; // expected-note{{previous declaration is here}}
@@ -66,5 +66,5 @@ void f(int x) { // expected-note {{previous definition is here}}
 }
 
 extern int b[];
-void g20() { extern int b[3]; } // expected-note{{previous declaration is here}}
-void g21() { extern int b[4]; } // expected-error{{redeclaration of 'b' with a different type: 'int[4]' vs 'int[3]'}}
+void g20(void) { extern int b[3]; } // expected-note{{previous declaration is here}}
+void g21(void) { extern int b[4]; } // expected-error{{redeclaration of 'b' with a different type: 'int[4]' vs 'int[3]'}}

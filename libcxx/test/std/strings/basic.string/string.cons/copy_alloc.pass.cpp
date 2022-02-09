@@ -88,26 +88,25 @@ test(S s1, const typename S::allocator_type& a)
     assert(s2.get_allocator() == a);
 }
 
-int main(int, char**)
-{
-    {
+bool test() {
+  {
     typedef test_allocator<char> A;
     typedef std::basic_string<char, std::char_traits<char>, A> S;
     test(S(), A(3));
     test(S("1"), A(5));
     test(S("1234567890123456789012345678901234567890123456789012345678901234567890"), A(7));
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef min_allocator<char> A;
     typedef std::basic_string<char, std::char_traits<char>, A> S;
     test(S(), A());
     test(S("1"), A());
     test(S("1234567890123456789012345678901234567890123456789012345678901234567890"), A());
-    }
+  }
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    {
+  {
     typedef poca_alloc<char> A;
     typedef std::basic_string<char, std::char_traits<char>, A> S;
     const char * p1 = "This is my first string";
@@ -125,8 +124,18 @@ int main(int, char**)
     test_assign(s1, s2);
     assert(s1 == p1);
     assert(s2 == p2);
-    }
+  }
 #endif
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
 #endif
 
   return 0;

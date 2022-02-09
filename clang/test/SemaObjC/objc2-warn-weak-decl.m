@@ -4,7 +4,7 @@ struct S {
 	__weak id  p;  // expected-warning {{__weak attribute cannot be specified on a field declaration}}
 };
 
-int main ()
+int main (void)
 {
   __weak id  local;  // expected-warning {{Objective-C GC does not allow weak variables on the stack}}
 }

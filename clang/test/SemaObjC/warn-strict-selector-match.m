@@ -8,7 +8,7 @@
 -(float) method;	// expected-note {{also found}}
 @end
 
-int main() { [(id)0 method]; } // expected-warning {{multiple methods named 'method' found}}
+int main(void) { [(id)0 method]; } // expected-warning {{multiple methods named 'method' found}}
 
 @interface Object @end
 

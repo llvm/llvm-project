@@ -19,7 +19,7 @@ typedef void (^completion_block_t)(void);
 typedef double (^myblock)(int);
 double test(myblock I);
 
-int main() {
+int main(void) {
   __block int x = 1;
   __block int y = 2;
 
@@ -51,7 +51,7 @@ int main() {
   double res = test(^(int z){x = y+z; return (double)z; });
 }
 
-void func() {
+void func(void) {
   completion_block_t X;
 
   completion_block_t (^blockx)(dispatch_item_t) = ^completion_block_t (dispatch_item_t item) {
@@ -69,7 +69,7 @@ void func() {
 // intent: block taking int returning block that takes char,int and returns int
 int (^(^block)(double x))(char, short);
 
-void foo() {
+void foo(void) {
    int one = 1;
    block = ^(double x){ return ^(char c, short y) { return one + c + y; };};  // expected-error {{returning block that lives on the local stack}}
    // or:

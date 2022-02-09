@@ -88,19 +88,13 @@
 #ifndef LLVM_ANALYSIS_CGSCCPASSMANAGER_H
 #define LLVM_ANALYSIS_CGSCCPASSMANAGER_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PriorityWorklist.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>

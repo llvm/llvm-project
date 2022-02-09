@@ -14,6 +14,7 @@
 #define SHAPE_OPS
 
 include "mlir/Dialect/Shape/IR/ShapeBase.td"
+include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -121,9 +122,7 @@ def Shape_ConstShapeOp : Shape_Op<"const_shape",
   let arguments = (ins IndexElementsAttr:$shape);
   let results = (outs Shape_ShapeOrExtentTensorType:$result);
 
-  // TODO: Move this to main so that all shape ops implement these.
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
   let hasCanonicalizer = 1;
 
@@ -331,7 +330,9 @@ def Shape_RankOp : Shape_Op<"rank",
   }];
 }
 
-def Shape_ToExtentTensorOp : Shape_Op<"to_extent_tensor", [NoSideEffect]> {
+def Shape_ToExtentTensorOp : Shape_Op<"to_extent_tensor", [
+    DeclareOpInterfaceMethods<CastOpInterface>, NoSideEffect
+  ]> {
   let summary = "Creates a dimension tensor from a shape";
   let description = [{
     Converts a shape to a 1D integral tensor of extents. The number of elements
@@ -594,9 +595,8 @@ def Shape_ReduceOp : Shape_Op<"reduce",
 
   let builders = [OpBuilder<(ins "Value":$shape, "ValueRange":$initVals)>];
 
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
 def Shape_ShapeOfOp : Shape_Op<"shape_of",
@@ -624,7 +624,9 @@ def Shape_ShapeOfOp : Shape_Op<"shape_of",
   }];
 }
 
-def Shape_SizeToIndexOp : Shape_Op<"size_to_index", [NoSideEffect]> {
+def Shape_SizeToIndexOp : Shape_Op<"size_to_index", [
+    DeclareOpInterfaceMethods<CastOpInterface>, NoSideEffect
+  ]> {
   let summary = "Casts between index types of the shape and standard dialect";
   let description = [{
     Converts a `shape.size` to a standard index. This operation and its
@@ -878,9 +880,6 @@ def Shape_AssumingOp : Shape_Op<"assuming", [
   let regions = (region SizedRegion<1>:$doRegion);
   let results = (outs Variadic<AnyType>:$results);
 
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-
   let extraClassDeclaration = [{
     // Inline the region into the region containing the AssumingOp and delete
     // the AssumingOp.
@@ -895,6 +894,7 @@ def Shape_AssumingOp : Shape_Op<"assuming", [
   ];
 
   let hasCanonicalizer = 1;
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 
@@ -1081,9 +1081,7 @@ def Shape_FunctionLibraryOp : Shape_Op<"function_library",
 
   let builders = [OpBuilder<(ins "StringRef":$name)>];
   let skipDefaultBuilders = 1;
-
-  let printer = [{ ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 #endif // SHAPE_OPS

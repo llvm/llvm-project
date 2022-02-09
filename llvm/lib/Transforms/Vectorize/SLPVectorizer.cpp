@@ -1940,7 +1940,7 @@ private:
   /// NeedToShuffle is true, need to add a cost of reshuffling some of the
   /// vector elements.
   InstructionCost getGatherCost(FixedVectorType *Ty,
-                                const DenseSet<unsigned> &ShuffledIndices,
+                                const APInt &ShuffledIndices,
                                 bool NeedToShuffle) const;
 
   /// Checks if the gathered \p VL can be represented as shuffle(s) of previous
@@ -2456,7 +2456,6 @@ private:
       NextLoadStore = nullptr;
       IsScheduled = false;
       SchedulingRegionID = BlockSchedulingRegionID;
-      UnscheduledDepsInBundle = UnscheduledDeps;
       clearDependencies();
       OpValue = OpVal;
       TE = nullptr;
@@ -2467,18 +2466,27 @@ private:
     void verify() {
       if (hasValidDependencies()) {
         assert(UnscheduledDeps <= Dependencies && "invariant");
-        assert(UnscheduledDeps <= FirstInBundle->UnscheduledDepsInBundle &&
-               "bundle must have at least as many dependencies as member");
+      } else {
+        assert(UnscheduledDeps == Dependencies && "invariant");
       }
 
       if (IsScheduled) {
-        assert(isSchedulingEntity() && hasValidDependencies() &&
-               UnscheduledDeps == 0 &&
-               "unexpected scheduled state");
+        assert(isSchedulingEntity() &&
+                "unexpected scheduled state");
+        for (const ScheduleData *BundleMember = this; BundleMember;
+             BundleMember = BundleMember->NextInBundle) {
+          assert(BundleMember->hasValidDependencies() &&
+                 BundleMember->UnscheduledDeps == 0 &&
+                 "unexpected scheduled state");
+          assert((BundleMember == this || !BundleMember->IsScheduled) &&
+                 "only bundle is marked scheduled");
+        }
       }
     }
 
     /// Returns true if the dependency information has been calculated.
+    /// Note that depenendency validity can vary between instructions within
+    /// a single bundle.
     bool hasValidDependencies() const { return Dependencies != InvalidDeps; }
 
     /// Returns true for single instructions and for bundle representatives
@@ -2496,20 +2504,23 @@ private:
     bool isReady() const {
       assert(isSchedulingEntity() &&
              "can't consider non-scheduling entity for ready list");
-      return UnscheduledDepsInBundle == 0 && !IsScheduled;
+      return unscheduledDepsInBundle() == 0 && !IsScheduled;
     }
 
-    /// Modifies the number of unscheduled dependencies, also updating it for
-    /// the whole bundle.
+    /// Modifies the number of unscheduled dependencies for this instruction,
+    /// and returns the number of remaining dependencies for the containing
+    /// bundle.
     int incrementUnscheduledDeps(int Incr) {
+      assert(hasValidDependencies() &&
+             "increment of unscheduled deps would be meaningless");
       UnscheduledDeps += Incr;
-      return FirstInBundle->UnscheduledDepsInBundle += Incr;
+      return FirstInBundle->unscheduledDepsInBundle();
     }
 
     /// Sets the number of unscheduled dependencies to the number of
     /// dependencies.
     void resetUnscheduledDeps() {
-      incrementUnscheduledDeps(Dependencies - UnscheduledDeps);
+      UnscheduledDeps = Dependencies;
     }
 
     /// Clears all dependency information.
@@ -2517,6 +2528,18 @@ private:
       Dependencies = InvalidDeps;
       resetUnscheduledDeps();
       MemoryDependencies.clear();
+    }
+
+    int unscheduledDepsInBundle() const {
+      assert(isSchedulingEntity() && "only meaningful on the bundle");
+      int Sum = 0;
+      for (const ScheduleData *BundleMember = this; BundleMember;
+           BundleMember = BundleMember->NextInBundle) {
+        if (BundleMember->UnscheduledDeps == InvalidDeps)
+          return InvalidDeps;
+        Sum += BundleMember->UnscheduledDeps;
+      }
+      return Sum;
     }
 
     void dump(raw_ostream &os) const {
@@ -2571,10 +2594,6 @@ private:
     /// for scheduling.
     /// Note that this is negative as long as Dependencies is not calculated.
     int UnscheduledDeps = InvalidDeps;
-
-    /// The sum of UnscheduledDeps in a bundle. Equals to UnscheduledDeps for
-    /// single instructions.
-    int UnscheduledDepsInBundle = InvalidDeps;
 
     /// True if this instruction is scheduled (or considered as scheduled in the
     /// dry-run).
@@ -2741,12 +2760,14 @@ private:
         assert(SD && "primary scheduledata must exist in window");
         assert(isInSchedulingRegion(SD) &&
                "primary schedule data not in window?");
+        (void)SD;
         doForAllOpcodes(I, [](ScheduleData *SD) { SD->verify(); });
       }
 
       for (auto *SD : ReadyInsts) {
         assert(SD->isSchedulingEntity() && SD->isReady() &&
                "item in ready list not ready?");
+        (void)SD;
       }
     }
 
@@ -6196,17 +6217,11 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, SmallVectorImpl<int> &Mask,
   return None;
 }
 
-InstructionCost
-BoUpSLP::getGatherCost(FixedVectorType *Ty,
-                       const DenseSet<unsigned> &ShuffledIndices,
-                       bool NeedToShuffle) const {
-  unsigned NumElts = Ty->getNumElements();
-  APInt DemandedElts = APInt::getZero(NumElts);
-  for (unsigned I = 0; I < NumElts; ++I)
-    if (!ShuffledIndices.count(I))
-      DemandedElts.setBit(I);
+InstructionCost BoUpSLP::getGatherCost(FixedVectorType *Ty,
+                                       const APInt &ShuffledIndices,
+                                       bool NeedToShuffle) const {
   InstructionCost Cost =
-      TTI->getScalarizationOverhead(Ty, DemandedElts, /*Insert*/ true,
+      TTI->getScalarizationOverhead(Ty, ~ShuffledIndices, /*Insert*/ true,
                                     /*Extract*/ false);
   if (NeedToShuffle)
     Cost += TTI->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, Ty);
@@ -6223,19 +6238,19 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL) const {
   // Find the cost of inserting/extracting values from the vector.
   // Check if the same elements are inserted several times and count them as
   // shuffle candidates.
-  DenseSet<unsigned> ShuffledElements;
+  APInt ShuffledElements = APInt::getZero(VL.size());
   DenseSet<Value *> UniqueElements;
   // Iterate in reverse order to consider insert elements with the high cost.
   for (unsigned I = VL.size(); I > 0; --I) {
     unsigned Idx = I - 1;
     // No need to shuffle duplicates for constants.
     if (isConstant(VL[Idx])) {
-      ShuffledElements.insert(Idx);
+      ShuffledElements.setBit(Idx);
       continue;
     }
     if (!UniqueElements.insert(VL[Idx]).second) {
       DuplicateNonConst = true;
-      ShuffledElements.insert(Idx);
+      ShuffledElements.setBit(Idx);
     }
   }
   return getGatherCost(VecTy, ShuffledElements, DuplicateNonConst);
@@ -7503,8 +7518,6 @@ BoUpSLP::BlockScheduling::buildBundle(ArrayRef<Value *> VL) {
     } else {
       Bundle = BundleMember;
     }
-    BundleMember->UnscheduledDepsInBundle = 0;
-    Bundle->UnscheduledDepsInBundle += BundleMember->UnscheduledDeps;
 
     // Group the instructions to a bundle.
     BundleMember->FirstInBundle = Bundle;
@@ -7631,8 +7644,7 @@ void BoUpSLP::BlockScheduling::cancelScheduling(ArrayRef<Value *> VL,
     BundleMember->FirstInBundle = BundleMember;
     ScheduleData *Next = BundleMember->NextInBundle;
     BundleMember->NextInBundle = nullptr;
-    BundleMember->UnscheduledDepsInBundle = BundleMember->UnscheduledDeps;
-    if (BundleMember->UnscheduledDepsInBundle == 0) {
+    if (BundleMember->unscheduledDepsInBundle() == 0) {
       ReadyInsts.insert(BundleMember);
     }
     BundleMember = Next;

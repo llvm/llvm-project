@@ -973,7 +973,8 @@ static bool isAddrSpaceMapManglingEnabled(const TargetInfo &TI,
 ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
                        IdentifierTable &idents, SelectorTable &sels,
                        Builtin::Context &builtins, TranslationUnitKind TUKind)
-    : ConstantArrayTypes(this_()), FunctionProtoTypes(this_()),
+    : ConstantArrayTypes(this_(), ConstantArrayTypesLog2InitSize),
+      FunctionProtoTypes(this_(), FunctionProtoTypesLog2InitSize),
       TemplateSpecializationTypes(this_()),
       DependentTemplateSpecializationTypes(this_()), AutoTypes(this_()),
       SubstTemplateTemplateParmPacks(this_()),
@@ -11959,8 +11960,13 @@ uint64_t ASTContext::getTargetNullPointerValue(QualType QT) const {
 }
 
 unsigned ASTContext::getTargetAddressSpace(QualType T) const {
-  return T->isFunctionType() ? getTargetInfo().getProgramAddressSpace()
-                             : getTargetAddressSpace(T.getQualifiers());
+  // Return the address space for the type. If the type is a
+  // function type without an address space qualifier, the
+  // program address space is used. Otherwise, the target picks
+  // the best address space based on the type information
+  return T->isFunctionType() && !T.hasAddressSpace()
+             ? getTargetInfo().getProgramAddressSpace()
+             : getTargetAddressSpace(T.getQualifiers());
 }
 
 unsigned ASTContext::getTargetAddressSpace(Qualifiers Q) const {

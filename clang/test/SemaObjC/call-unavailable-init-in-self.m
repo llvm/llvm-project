@@ -69,7 +69,7 @@
 
 @end
 
-void unrelatedContext() {
+void unrelatedContext(void) {
   (void)[[Sub alloc] init]; // expected-error {{'init' is unavailable}}
   (void)[Sub new]; // expected-error {{'new' is unavailable}}
 }

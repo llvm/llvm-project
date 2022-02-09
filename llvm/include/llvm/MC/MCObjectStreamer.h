@@ -11,11 +11,17 @@
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 
 namespace llvm {
+class MCContext;
+class MCInst;
+class MCObjectWriter;
+class MCSymbol;
+struct MCDwarfFrameInfo;
 class MCAssembler;
 class MCCodeEmitter;
 class MCSubtargetInfo;

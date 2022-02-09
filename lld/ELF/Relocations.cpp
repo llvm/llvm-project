@@ -51,11 +51,9 @@
 #include "Thunks.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
-#include "lld/Common/Strings.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -299,7 +297,7 @@ static void replaceWithDefined(Symbol &sym, SectionBase &sec, uint64_t value,
                                uint64_t size) {
   Symbol old = sym;
 
-  sym.replace(Defined{sym.file, sym.getName(), sym.binding, sym.stOther,
+  sym.replace(Defined{sym.file, StringRef(), sym.binding, sym.stOther,
                       sym.type, value, size, &sec});
 
   sym.auxIdx = old.auxIdx;
@@ -719,7 +717,6 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
   return nullptr;
 }
 
-template <class ELFT>
 static void reportUndefinedSymbol(const UndefinedDiag &undef,
                                   bool correctSpelling) {
   Undefined &sym = *undef.sym;
@@ -737,7 +734,23 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
     }
   };
 
-  std::string msg = maybeReportDiscarded<ELFT>(sym);
+  std::string msg;
+  switch (config->ekind) {
+  case ELF32LEKind:
+    msg = maybeReportDiscarded<ELF32LE>(sym);
+    break;
+  case ELF32BEKind:
+    msg = maybeReportDiscarded<ELF32BE>(sym);
+    break;
+  case ELF64LEKind:
+    msg = maybeReportDiscarded<ELF64LE>(sym);
+    break;
+  case ELF64BEKind:
+    msg = maybeReportDiscarded<ELF64BE>(sym);
+    break;
+  default:
+    llvm_unreachable("");
+  }
   if (msg.empty())
     msg = "undefined " + visibility() + "symbol: " + toString(sym);
 
@@ -788,7 +801,7 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
     error(msg, ErrorTag::SymbolNotFound, {sym.getName()});
 }
 
-template <class ELFT> void elf::reportUndefinedSymbols() {
+void elf::reportUndefinedSymbols() {
   // Find the first "undefined symbol" diagnostic for each diagnostic, and
   // collect all "referenced from" lines at the first diagnostic.
   DenseMap<Symbol *, UndefinedDiag *> firstRef;
@@ -804,7 +817,7 @@ template <class ELFT> void elf::reportUndefinedSymbols() {
   // Enable spell corrector for the first 2 diagnostics.
   for (auto it : enumerate(undefs))
     if (!it.value().locs.empty())
-      reportUndefinedSymbol<ELFT>(it.value(), it.index() < 2);
+      reportUndefinedSymbol(it.value(), it.index() < 2);
   undefs.clear();
 }
 
@@ -1223,7 +1236,7 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
     }
     if (expr == R_TLSLD_HINT)
       return 1;
-    sym.needsTlsLd = true;
+    config->needsTlsLd = true;
     c.relocations.push_back({expr, type, offset, addend, &sym});
     return 1;
   }
@@ -1666,15 +1679,6 @@ void elf::postScanRelocations() {
       mainPart->relaDyn->addSymbolReloc(target->tlsGotRel, *in.got,
                                         sym.getGotOffset(), sym);
     }
-
-    if (sym.needsTlsLd && in.got->addTlsIndex()) {
-      if (isLocalInExecutable)
-        in.got->relocations.push_back(
-            {R_ADDEND, target->symbolicRel, in.got->getTlsIndexOff(), 1, &sym});
-      else
-        mainPart->relaDyn->addReloc({target->tlsModuleIndexRel, in.got.get(),
-                                     in.got->getTlsIndexOff()});
-    }
     if (sym.needsGotDtprel) {
       in.got->addEntry(sym);
       in.got->relocations.push_back(
@@ -1684,6 +1688,16 @@ void elf::postScanRelocations() {
     if (sym.needsTlsIe && !sym.needsTlsGdToIe)
       addTpOffsetGotEntry(sym);
   };
+
+  if (config->needsTlsLd && in.got->addTlsIndex()) {
+    static Undefined dummy(nullptr, "", STB_LOCAL, 0, 0);
+    if (config->shared)
+      mainPart->relaDyn->addReloc(
+          {target->tlsModuleIndexRel, in.got.get(), in.got->getTlsIndexOff()});
+    else
+      in.got->relocations.push_back(
+          {R_ADDEND, target->symbolicRel, in.got->getTlsIndexOff(), 1, &dummy});
+  }
 
   assert(symAux.empty());
   for (Symbol *sym : symtab->symbols())
@@ -2221,7 +2235,3 @@ template void elf::scanRelocations<ELF32LE>(InputSectionBase &);
 template void elf::scanRelocations<ELF32BE>(InputSectionBase &);
 template void elf::scanRelocations<ELF64LE>(InputSectionBase &);
 template void elf::scanRelocations<ELF64BE>(InputSectionBase &);
-template void elf::reportUndefinedSymbols<ELF32LE>();
-template void elf::reportUndefinedSymbols<ELF32BE>();
-template void elf::reportUndefinedSymbols<ELF64LE>();
-template void elf::reportUndefinedSymbols<ELF64BE>();

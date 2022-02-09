@@ -12,4 +12,4 @@
 // RUN: %clang -target armv8a-none-gnueabi -mno-restrict-it -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-NO-RESTRICTED < %t %s
 
-// CHECK-NO-RESTRICTED: "-mllvm" "-arm-no-restrict-it"
+// CHECK-NO-RESTRICTED: "-mllvm" "-arm-default-it"

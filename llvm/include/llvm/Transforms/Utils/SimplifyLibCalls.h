@@ -105,7 +105,7 @@ private:
   OptimizationRemarkEmitter &ORE;
   BlockFrequencyInfo *BFI;
   ProfileSummaryInfo *PSI;
-  bool UnsafeFPShrink;
+  bool UnsafeFPShrink = false;
   function_ref<void(Instruction *, Value *)> Replacer;
   function_ref<void(Instruction *)> Eraser;
 

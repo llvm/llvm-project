@@ -278,12 +278,13 @@ struct ForOpInterface
     return true;
   }
 
-  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
+  SmallVector<OpResult>
+  getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                      const BufferizationState &state) const {
     auto forOp = cast<scf::ForOp>(op);
     if (!opOperand.get().getType().isa<RankedTensorType>())
-      return OpResult();
-    return forOp.getResultForOpOperand(opOperand);
+      return {};
+    return {forOp.getResultForOpOperand(opOperand)};
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
@@ -401,13 +402,14 @@ struct YieldOpInterface
     return false;
   }
 
-  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
+  SmallVector<OpResult>
+  getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                      const BufferizationState &state) const {
     if (isa<scf::IfOp>(op->getParentOp()))
-      return op->getParentOp()->getResult(opOperand.getOperandNumber());
+      return {op->getParentOp()->getResult(opOperand.getOperandNumber())};
     if (isa<scf::ExecuteRegionOp>(op->getParentOp()))
-      return op->getParentOp()->getResult(opOperand.getOperandNumber());
-    return OpResult();
+      return {op->getParentOp()->getResult(opOperand.getOperandNumber())};
+    return {};
   }
 
   bool mustBufferizeInPlace(Operation *op, OpOperand &opOperand,
@@ -432,7 +434,7 @@ struct YieldOpInterface
 } // namespace scf
 } // namespace mlir
 
-LogicalResult mlir::scf::AssertScfForAliasingProperties::run(
+LogicalResult mlir::scf::assertScfForAliasingProperties(
     Operation *op, BufferizationState &state, BufferizationAliasInfo &aliasInfo,
     SmallVector<Operation *> &newOps) {
   LogicalResult status = success();

@@ -28,7 +28,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S str, unsigned pos)
 {
     typedef typename S::traits_type T;
@@ -61,7 +61,7 @@ test(S str, unsigned pos)
 }
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S str, unsigned pos, unsigned n)
 {
     typedef typename S::traits_type T;
@@ -93,7 +93,7 @@ test(S str, unsigned pos, unsigned n)
 }
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S str, unsigned pos, unsigned n, const typename S::allocator_type& a)
 {
     typedef typename S::traits_type T;
@@ -140,9 +140,8 @@ void test2583()
 #endif
 #endif
 
-int main(int, char**)
-{
-    {
+bool test() {
+  {
     typedef test_allocator<char> A;
     typedef std::basic_string<char, std::char_traits<char>, A> S;
 
@@ -179,9 +178,9 @@ int main(int, char**)
     test(S("1234567890123456789012345678901234567890123456789012345678901234567890", A(7)), 50, 1, A(8));
     test(S("1234567890123456789012345678901234567890123456789012345678901234567890", A(7)), 50, 10, A(8));
     test(S("1234567890123456789012345678901234567890123456789012345678901234567890", A(7)), 50, 100, A(8));
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef min_allocator<char> A;
     typedef std::basic_string<char, std::char_traits<char>, A> S;
 
@@ -218,11 +217,21 @@ int main(int, char**)
     test(S("1234567890123456789012345678901234567890123456789012345678901234567890", A()), 50, 1, A());
     test(S("1234567890123456789012345678901234567890123456789012345678901234567890", A()), 50, 10, A());
     test(S("1234567890123456789012345678901234567890123456789012345678901234567890", A()), 50, 100, A());
-    }
+  }
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    test2583();
+  test2583();
 #endif
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
 #endif
 
   return 0;

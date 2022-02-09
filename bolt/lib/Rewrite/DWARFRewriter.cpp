@@ -321,8 +321,6 @@ void DWARFRewriter::updateDebugInfo() {
   }
 
   DebugInfoPatcher->clearDestinationLabels();
-  flushPendingRanges(*DebugInfoPatcher);
-
   CUOffsetMap OffsetMap = finalizeDebugSections(*DebugInfoPatcher);
 
   if (opts::WriteDWP)
@@ -384,7 +382,6 @@ void DWARFRewriter::updateUnitDebugInfo(
     }
     case dwarf::DW_TAG_subprogram: {
       // Get function address either from ranges or [LowPC, HighPC) pair.
-      bool UsesRanges = false;
       uint64_t Address;
       uint64_t SectionIndex, HighPC;
       if (!DIE.getLowAndHighPC(Address, HighPC, SectionIndex)) {
@@ -400,7 +397,6 @@ void DWARFRewriter::updateUnitDebugInfo(
           break;
 
         Address = Ranges.front().LowPC;
-        UsesRanges = true;
       }
 
       // Clear cached ranges as the new function will have its own set.
@@ -410,37 +406,14 @@ void DWARFRewriter::updateUnitDebugInfo(
       if (const BinaryFunction *Function =
               BC.getBinaryFunctionAtAddress(Address))
         FunctionRanges = Function->getOutputAddressRanges();
-      // Update ranges.
-      if (UsesRanges) {
-        updateDWARFObjectAddressRanges(
-            DIE, RangesSectionWriter->addRanges(FunctionRanges),
-            DebugInfoPatcher, AbbrevWriter);
-      } else {
-        // Delay conversion of [LowPC, HighPC) into DW_AT_ranges if possible.
-        const DWARFAbbreviationDeclaration *Abbrev =
-            DIE.getAbbreviationDeclarationPtr();
-        assert(Abbrev && "abbrev expected");
 
-        // Create a critical section.
-        static std::shared_timed_mutex CriticalSectionMutex;
-        std::unique_lock<std::shared_timed_mutex> Lock(CriticalSectionMutex);
+      if (FunctionRanges.empty())
+        FunctionRanges.push_back({0, 0});
 
-        if (FunctionRanges.size() > 1) {
-          convertPending(Unit, Abbrev, DebugInfoPatcher, AbbrevWriter);
-          // Exit critical section early.
-          Lock.unlock();
-          convertToRanges(DIE, FunctionRanges, DebugInfoPatcher);
-        } else if (ConvertedRangesAbbrevs.find(Abbrev) !=
-                   ConvertedRangesAbbrevs.end()) {
-          // Exit critical section early.
-          Lock.unlock();
-          convertToRanges(DIE, FunctionRanges, DebugInfoPatcher);
-        } else {
-          if (FunctionRanges.empty())
-            FunctionRanges.emplace_back(DebugAddressRange());
-          addToPendingRanges(Abbrev, DIE, FunctionRanges, Unit.getDWOId());
-        }
-      }
+      updateDWARFObjectAddressRanges(
+          DIE, RangesSectionWriter->addRanges(FunctionRanges), DebugInfoPatcher,
+          AbbrevWriter);
+
       break;
     }
     case dwarf::DW_TAG_lexical_block:
@@ -1358,67 +1331,6 @@ void DWARFRewriter::updateGdbIndexSection(CUOffsetMap &CUMap) {
                                  NewGdbIndexSize);
 }
 
-void DWARFRewriter::convertToRanges(DWARFDie DIE,
-                                    const DebugAddressRangesVector &Ranges,
-                                    SimpleBinaryPatcher &DebugInfoPatcher) {
-  uint64_t RangesSectionOffset;
-  if (Ranges.empty())
-    RangesSectionOffset = RangesSectionWriter->getEmptyRangesOffset();
-  else
-    RangesSectionOffset = RangesSectionWriter->addRanges(Ranges);
-
-  convertToRangesPatchDebugInfo(DIE, RangesSectionOffset, DebugInfoPatcher);
-}
-
-void DWARFRewriter::convertPending(const DWARFUnit &Unit,
-                                   const DWARFAbbreviationDeclaration *Abbrev,
-                                   SimpleBinaryPatcher &DebugInfoPatcher,
-                                   DebugAbbrevWriter &AbbrevWriter) {
-  if (ConvertedRangesAbbrevs.count(Abbrev))
-    return;
-
-  convertToRangesPatchAbbrev(Unit, Abbrev, AbbrevWriter);
-
-  auto I = PendingRanges.find(Abbrev);
-  if (I != PendingRanges.end()) {
-    for (std::pair<DWARFDieWrapper, DebugAddressRange> &Pair : I->second)
-      convertToRanges(Pair.first, {Pair.second}, DebugInfoPatcher);
-    PendingRanges.erase(I);
-  }
-
-  ConvertedRangesAbbrevs.emplace(Abbrev);
-}
-
-void DWARFRewriter::addToPendingRanges(
-    const DWARFAbbreviationDeclaration *Abbrev, DWARFDie DIE,
-    DebugAddressRangesVector &FunctionRanges, Optional<uint64_t> DWOId) {
-  Optional<DWARFFormValue> LowPcValue = DIE.find(dwarf::DW_AT_low_pc);
-  Optional<DWARFFormValue> HighPcValue = DIE.find(dwarf::DW_AT_high_pc);
-  if (LowPcValue &&
-      LowPcValue->getForm() == dwarf::Form::DW_FORM_GNU_addr_index) {
-    assert(DWOId && "Invalid DWO ID.");
-    (void)DWOId;
-    assert(HighPcValue && "Low PC exists, but not High PC.");
-    (void)HighPcValue;
-    uint64_t IndexL = LowPcValue->getRawUValue();
-    uint64_t IndexH = HighPcValue->getRawUValue();
-    for (auto Address : FunctionRanges) {
-      AddrWriter->addIndexAddress(Address.LowPC, IndexL, *DWOId);
-      // 2.17.2
-      // If the value of the DW_AT_high_pc is of class address, it is the
-      // relocated address of the first location past the last instruction
-      // associated with the entity; if it is of class constant, the value is
-      // an unsigned integer offset which when added to the low PC gives the
-      // address of the first location past the last instruction associated
-      // with the entity.
-      if (!HighPcValue->isFormClass(DWARFFormValue::FC_Constant))
-        AddrWriter->addIndexAddress(Address.HighPC, IndexH, *DWOId);
-    }
-  }
-  PendingRanges[Abbrev].emplace_back(
-      std::make_pair(DWARFDieWrapper(DIE), FunctionRanges.front()));
-}
-
 std::unique_ptr<DebugBufferVector>
 DWARFRewriter::makeFinalLocListsSection(SimpleBinaryPatcher &DebugInfoPatcher) {
   auto LocBuffer = std::make_unique<DebugBufferVector>();
@@ -1450,15 +1362,6 @@ DWARFRewriter::makeFinalLocListsSection(SimpleBinaryPatcher &DebugInfoPatcher) {
   }
 
   return LocBuffer;
-}
-
-void DWARFRewriter::flushPendingRanges(SimpleBinaryPatcher &DebugInfoPatcher) {
-  for (std::pair<const DWARFAbbreviationDeclaration *const,
-                 std::vector<std::pair<DWARFDieWrapper, DebugAddressRange>>>
-           &I : PendingRanges)
-    for (std::pair<DWARFDieWrapper, DebugAddressRange> &RangePair : I.second)
-      patchLowHigh(RangePair.first, RangePair.second, DebugInfoPatcher);
-  clearList(PendingRanges);
 }
 
 namespace {
@@ -1499,7 +1402,8 @@ void getRangeAttrData(DWARFDie DIE, Optional<AttrInfo> &LowPCVal,
 } // namespace
 
 void DWARFRewriter::patchLowHigh(DWARFDie DIE, DebugAddressRange Range,
-                                 SimpleBinaryPatcher &DebugInfoPatcher) {
+                                 SimpleBinaryPatcher &DebugInfoPatcher,
+                                 Optional<uint64_t> DWOId) {
   Optional<AttrInfo> LowPCVal = None;
   Optional<AttrInfo> HighPCVal = None;
   getRangeAttrData(DIE, LowPCVal, HighPCVal);
@@ -1507,14 +1411,22 @@ void DWARFRewriter::patchLowHigh(DWARFDie DIE, DebugAddressRange Range,
   uint64_t HighPCOffset = HighPCVal->Offset;
   auto *TempDebugPatcher = &DebugInfoPatcher;
   if (LowPCVal->V.getForm() == dwarf::DW_FORM_GNU_addr_index) {
-    DWARFUnit *Unit = DIE.getDwarfUnit();
-    assert(Unit->isDWOUnit() && "DW_FORM_GNU_addr_index not part of DWO.");
     uint32_t AddressIndex =
-        AddrWriter->getIndexFromAddress(Range.LowPC, *Unit->getDWOId());
-    TempDebugPatcher = getBinaryDWODebugInfoPatcher(*Unit->getDWOId());
-    TempDebugPatcher->addUDataPatch(LowPCOffset, AddressIndex,
-                                    std::abs(int(HighPCOffset - LowPCOffset)));
-    // TODO: In DWARF5 support ULEB128 for high_pc
+        AddrWriter->getIndexFromAddress(Range.LowPC, *DWOId);
+    TempDebugPatcher = getBinaryDWODebugInfoPatcher(*DWOId);
+    TempDebugPatcher->addUDataPatch(LowPCOffset, AddressIndex, LowPCVal->Size);
+    // 2.17.2
+    // If the value of the DW_AT_high_pc is of class address, it is the
+    // relocated address of the first location past the last instruction
+    // associated with the entity; if it is of class constant, the value is
+    // an unsigned integer offset which when added to the low PC gives the
+    // address of the first location past the last instruction associated
+    // with the entity.
+    if (!HighPCVal->V.isFormClass(DWARFFormValue::FC_Constant)) {
+      AddressIndex = AddrWriter->getIndexFromAddress(Range.HighPC, *DWOId);
+      TempDebugPatcher->addUDataPatch(HighPCOffset, AddressIndex,
+                                      HighPCVal->Size);
+    }
   } else {
     TempDebugPatcher->addLE64Patch(LowPCOffset, Range.LowPC);
   }

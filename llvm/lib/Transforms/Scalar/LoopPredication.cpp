@@ -244,7 +244,7 @@ struct LoopICmp {
   LoopICmp(ICmpInst::Predicate Pred, const SCEVAddRecExpr *IV,
            const SCEV *Limit)
     : Pred(Pred), IV(IV), Limit(Limit) {}
-  LoopICmp() {}
+  LoopICmp() = default;
   void dump() {
     dbgs() << "LoopICmp Pred = " << Pred << ", IV = " << *IV
            << ", Limit = " << *Limit << "\n";

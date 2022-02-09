@@ -22,7 +22,7 @@
 }
 @end
 
-void f0() {
+void f0(void) {
   // FIXME: not implemented yet.
   //int l1 = A.classGetter;
   int l2 = [A classGetter2];

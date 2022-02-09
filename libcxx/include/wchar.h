@@ -10,7 +10,7 @@
 #if defined(__need_wint_t) || defined(__need_mbstate_t)
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 #include_next <wchar.h>
@@ -113,7 +113,7 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 #ifdef __cplusplus

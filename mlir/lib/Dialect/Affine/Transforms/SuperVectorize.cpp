@@ -380,9 +380,9 @@ using namespace vector;
 /// }
 /// ```
 ///
-/// The -affine-vectorize pass with the following arguments:
+/// The -affine-super-vectorize pass with the following arguments:
 /// ```
-/// -affine-vectorize="virtual-vector-size=256 test-fastest-varying=0"
+/// -affine-super-vectorize="virtual-vector-size=256 test-fastest-varying=0"
 /// ```
 ///
 /// produces this standard innermost-loop vectorized code:
@@ -434,9 +434,10 @@ using namespace vector;
 /// }
 /// ```
 ///
-/// The -affine-vectorize pass with the following arguments:
+/// The -affine-super-vectorize pass with the following arguments:
 /// ```
-/// -affine-vectorize="virtual-vector-size=32,256 test-fastest-varying=1,0"
+/// -affine-super-vectorize="virtual-vector-size=32,256 \
+///                          test-fastest-varying=1,0"
 /// ```
 ///
 /// produces this more interesting mixed outer-innermost-loop vectorized code:
@@ -523,10 +524,10 @@ using namespace vector;
 /// }
 /// ```
 ///
-/// The -affine-vectorize pass with the following arguments:
+/// The -affine-super-vectorize pass with the following arguments:
 /// ```
-/// -affine-vectorize="virtual-vector-size=128 test-fastest-varying=0 \
-///                    vectorize-reductions=true"
+/// -affine-super-vectorize="virtual-vector-size=128 test-fastest-varying=0 \
+///                          vectorize-reductions=true"
 /// ```
 /// produces the following output:
 /// ```mlir

@@ -24,6 +24,7 @@
 #include "Headers.h"
 #include "ParsedAST.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include <vector>
@@ -33,7 +34,7 @@ namespace clangd {
 
 struct ReferencedLocations {
   llvm::DenseSet<SourceLocation> User;
-  llvm::DenseSet<stdlib::Symbol> Stdlib;
+  llvm::DenseSet<tooling::stdlib::Symbol> Stdlib;
 };
 
 /// Finds locations of all symbols used in the main file.
@@ -57,7 +58,7 @@ ReferencedLocations findReferencedLocations(ParsedAST &AST);
 
 struct ReferencedFiles {
   llvm::DenseSet<FileID> User;
-  llvm::DenseSet<stdlib::Header> Stdlib;
+  llvm::DenseSet<tooling::stdlib::Header> Stdlib;
 };
 
 /// Retrieves IDs of all files containing SourceLocations from \p Locs.

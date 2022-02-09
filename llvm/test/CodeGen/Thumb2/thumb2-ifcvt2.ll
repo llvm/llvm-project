@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=thumbv7-apple-ios -arm-atomic-cfg-tidy=0 | FileCheck %s
 ; RUN: llc < %s -mtriple=thumbv7-apple-ios -arm-atomic-cfg-tidy=0 -arm-default-it | FileCheck %s
-; RUN: llc < %s -mtriple=thumbv8-apple-ios -arm-atomic-cfg-tidy=0 -arm-no-restrict-it | FileCheck %s
+; RUN: llc < %s -mtriple=thumbv8-apple-ios -arm-atomic-cfg-tidy=0 | FileCheck %s
 
 define void @foo(i32 %X, i32 %Y) {
 entry:

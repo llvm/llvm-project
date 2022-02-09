@@ -7,6 +7,8 @@ add_header_library(
     memcmp_implementations.h
     memcpy_implementations.h
     memset_implementations.h
+  DEPS
+    standalone_cpp
 )
 
 add_header_library(

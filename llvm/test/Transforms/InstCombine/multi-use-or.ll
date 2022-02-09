@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep "fadd double .sx, .sy"
+; RUN: opt < %s -passes=instcombine -S | grep "fadd double .sx, .sy"
 ; The 'or' has multiple uses, make sure that this doesn't prevent instcombine
 ; from propagating the extends to the truncs.
 

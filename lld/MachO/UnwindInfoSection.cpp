@@ -279,11 +279,12 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
 // finalization of __DATA. Moreover, the finalization of unwind info depends on
 // the exact addresses that it references. So it is safe for compact unwind to
 // reference addresses in __TEXT, but not addresses in any other segment.
-static ConcatInputSection *checkTextSegment(InputSection *isec) {
+static ConcatInputSection *
+checkTextSegment(InputSection *isec, InputSection *cuIsec, uint64_t off) {
   if (isec->getSegName() != segment_names::text)
-    error("compact unwind references address in " + toString(isec) +
+    error(cuIsec->getLocation(off) + " references section " + isec->getName() +
           " which is not in segment __TEXT");
-  // __text should always be a ConcatInputSection.
+  // __TEXT should always contain ConcatInputSections.
   return cast<ConcatInputSection>(isec);
 }
 
@@ -311,7 +312,7 @@ void UnwindInfoSectionImpl<Ptr>::relocateCompactUnwind(
       if (auto *referentSym = r.referent.dyn_cast<Symbol *>()) {
         if (!isa<Undefined>(referentSym)) {
           if (auto *defined = dyn_cast<Defined>(referentSym))
-            checkTextSegment(defined->isec);
+            checkTextSegment(defined->isec, d->unwindEntry, r.offset);
           // At this point in the link, we may not yet know the final address of
           // the GOT, so we just encode the index. We make it a 1-based index so
           // that we can distinguish the null pointer case.
@@ -319,7 +320,7 @@ void UnwindInfoSectionImpl<Ptr>::relocateCompactUnwind(
         }
       } else {
         auto *referentIsec = r.referent.get<InputSection *>();
-        checkTextSegment(referentIsec);
+        checkTextSegment(referentIsec, d->unwindEntry, r.offset);
         referentVA = referentIsec->getVA(r.addend);
       }
       writeAddress(buf + r.offset, referentVA, r.length);

@@ -328,11 +328,11 @@ define i64 @foo23(i64 %x) {
 define i16 @foo24(i8* nocapture readonly %A, i8* nocapture readonly %B) {
 ; CHECK-LABEL: foo24:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrb w8, [x1]
-; CHECK-NEXT:    ldrb w9, [x0]
-; CHECK-NEXT:    cmp w8, #33
+; CHECK-NEXT:    ldrb w8, [x0]
+; CHECK-NEXT:    ldrb w9, [x1]
+; CHECK-NEXT:    cmp w8, #3
 ; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    cmp w9, #3
+; CHECK-NEXT:    cmp w9, #33
 ; CHECK-NEXT:    cinc w0, w8, hi
 ; CHECK-NEXT:    ret
 entry:

@@ -66,7 +66,7 @@ std::error_code RuntimeDyldError::convertToErrorCode() const {
 }
 
 // Empty out-of-line virtual destructor as the key function.
-RuntimeDyldImpl::~RuntimeDyldImpl() {}
+RuntimeDyldImpl::~RuntimeDyldImpl() = default;
 
 // Pin LoadedObjectInfo's vtables to this file.
 void RuntimeDyld::LoadedObjectInfo::anchor() {}
@@ -1311,7 +1311,7 @@ RuntimeDyld::RuntimeDyld(RuntimeDyld::MemoryManager &MemMgr,
   ProcessAllSections = false;
 }
 
-RuntimeDyld::~RuntimeDyld() {}
+RuntimeDyld::~RuntimeDyld() = default;
 
 static std::unique_ptr<RuntimeDyldCOFF>
 createRuntimeDyldCOFF(

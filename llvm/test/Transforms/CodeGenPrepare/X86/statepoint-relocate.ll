@@ -10,7 +10,7 @@ define i32 @test_sor_basic(i32 addrspace(1)* %base) gc "statepoint-example" {
 ; CHECK: getelementptr i32, i32 addrspace(1)* %base-new, i32 15
 entry:
        %ptr = getelementptr i32, i32 addrspace(1)* %base, i32 15
-       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %base, i32 addrspace(1)* %ptr)]
+       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %base, i32 addrspace(1)* %ptr)]
        %base-new = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 0)
        %ptr-new = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 1)
        %ret = load i32, i32 addrspace(1)* %ptr-new
@@ -25,7 +25,7 @@ define i32 @test_sor_two_derived(i32 addrspace(1)* %base) gc "statepoint-example
 entry:
        %ptr = getelementptr i32, i32 addrspace(1)* %base, i32 15
        %ptr2 = getelementptr i32, i32 addrspace(1)* %base, i32 12
-       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %base, i32 addrspace(1)* %ptr, i32 addrspace(1)* %ptr2)]
+       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %base, i32 addrspace(1)* %ptr, i32 addrspace(1)* %ptr2)]
        %base-new = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 0)
        %ptr-new = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 1)
        %ptr2-new = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 2)
@@ -38,7 +38,7 @@ define i32 @test_sor_ooo(i32 addrspace(1)* %base) gc "statepoint-example" {
 ; CHECK: getelementptr i32, i32 addrspace(1)* %base-new, i32 15
 entry:
        %ptr = getelementptr i32, i32 addrspace(1)* %base, i32 15
-       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %base, i32 addrspace(1)* %ptr)]
+       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %base, i32 addrspace(1)* %ptr)]
        %ptr-new = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 1)
        %base-new = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 0)
        %ret = load i32, i32 addrspace(1)* %ptr-new
@@ -50,7 +50,7 @@ define i32 @test_sor_gep_smallint([3 x i32] addrspace(1)* %base) gc "statepoint-
 ; CHECK: getelementptr [3 x i32], [3 x i32] addrspace(1)* %base-new, i32 0, i32 2
 entry:
        %ptr = getelementptr [3 x i32], [3 x i32] addrspace(1)* %base, i32 0, i32 2
-       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"([3 x i32] addrspace(1)* %base, i32 addrspace(1)* %ptr)]
+       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"([3 x i32] addrspace(1)* %base, i32 addrspace(1)* %ptr)]
        %base-new = call [3 x i32] addrspace(1)* @llvm.experimental.gc.relocate.p1a3i32(token %tok, i32 0, i32 0)
        %ptr-new = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 1)
        %ret = load i32, i32 addrspace(1)* %ptr-new
@@ -62,7 +62,7 @@ define i32 @test_sor_gep_largeint([3 x i32] addrspace(1)* %base) gc "statepoint-
 ; CHECK-NOT: getelementptr [3 x i32], [3 x i32] addrspace(1)* %base-new, i32 0, i32 21
 entry:
        %ptr = getelementptr [3 x i32], [3 x i32] addrspace(1)* %base, i32 0, i32 21
-       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"([3 x i32] addrspace(1)* %base, i32 addrspace(1)* %ptr)]
+       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"([3 x i32] addrspace(1)* %base, i32 addrspace(1)* %ptr)]
        %base-new = call [3 x i32] addrspace(1)* @llvm.experimental.gc.relocate.p1a3i32(token %tok, i32 0, i32 0)
        %ptr-new = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 1)
        %ret = load i32, i32 addrspace(1)* %ptr-new
@@ -76,7 +76,7 @@ define i32 @test_sor_noop(i32 addrspace(1)* %base) gc "statepoint-example" {
 entry:
        %ptr = getelementptr i32, i32 addrspace(1)* %base, i32 15
        %ptr2 = getelementptr i32, i32 addrspace(1)* %base, i32 12
-       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %base, i32 addrspace(1)* %ptr, i32 addrspace(1)* %ptr2)]
+       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %base, i32 addrspace(1)* %ptr, i32 addrspace(1)* %ptr2)]
        %ptr-new = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 1)
        %ptr2-new = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 2)
        %ret = load i32, i32 addrspace(1)* %ptr-new
@@ -90,7 +90,7 @@ define i32 @test_sor_basic_wrong_order(i32 addrspace(1)* %base) gc "statepoint-e
 entry:
        %ptr = getelementptr i32, i32 addrspace(1)* %base, i32 15
        ; CHECK: getelementptr i32, i32 addrspace(1)* %base, i32 15
-       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %base, i32 addrspace(1)* %ptr)]
+       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %base, i32 addrspace(1)* %ptr)]
        %ptr-new = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 1)
        %base-new = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 0)
        ; CHECK: %base-new = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 0)
@@ -106,7 +106,7 @@ define i32 @test_sor_noop_cross_bb(i1 %external-cond, i32 addrspace(1)* %base) g
 entry:
        %ptr = getelementptr i32, i32 addrspace(1)* %base, i32 15
        ; CHECK: getelementptr i32, i32 addrspace(1)* %base, i32 15
-       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %base, i32 addrspace(1)* %ptr)]
+       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %base, i32 addrspace(1)* %ptr)]
        br i1 %external-cond, label %left, label %right
 
 left:
@@ -131,7 +131,7 @@ entry:
        ; CHECK: getelementptr i32, i32 addrspace(1)* %base, i32 15
        %ptr2 = getelementptr i32, i32 addrspace(1)* %base, i32 5
        ; CHECK: getelementptr i32, i32 addrspace(1)* %base, i32 5
-       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %base, i32 addrspace(1)* %ptr1, i32 addrspace(1)* %ptr2)]
+       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %base, i32 addrspace(1)* %ptr1, i32 addrspace(1)* %ptr2)]
        ; CHECK: call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 0)
        %ptr2-new = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 2)
        %ret2-new = load i32, i32 addrspace(1)* %ptr2-new

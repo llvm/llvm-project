@@ -54,6 +54,7 @@ namespace PR9049 {
   inline void WBCFRelease(__attribute__((cf_consumed)) T aValue) { if(aValue) CFRelease(aValue); }
 }
 
+namespace attribute_annotate {
 // CHECK: FunctionTemplateDecl {{.*}} HasAnnotations
 // CHECK:   AnnotateAttr {{.*}} "ANNOTATE_FOO"
 // CHECK:   AnnotateAttr {{.*}} "ANNOTATE_BAR"
@@ -63,6 +64,495 @@ namespace PR9049 {
 // CHECK:   AnnotateAttr {{.*}} "ANNOTATE_BAR"
 template<typename T> [[clang::annotate("ANNOTATE_FOO"), clang::annotate("ANNOTATE_BAR")]] void HasAnnotations();
 void UseAnnotations() { HasAnnotations<int>(); }
+
+// CHECK:      FunctionTemplateDecl {{.*}} HasPackAnnotations
+// CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:   FunctionDecl {{.*}} HasPackAnnotations 'void ()'
+// CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_BAZ"
+// CHECK-NEXT:       PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
+// CHECK-NEXT:   FunctionDecl {{.*}} used HasPackAnnotations 'void ()'
+// CHECK-NEXT:     TemplateArgument{{.*}} pack
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 1
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 2
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 3
+// CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_BAZ"
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 1
+// CHECK-NEXT:         SubstNonTypeTemplateParmExpr {{.*}} 'int'
+// CHECK-NEXT:           NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:           IntegerLiteral {{.*}} 'int' 1
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 2
+// CHECK-NEXT:         SubstNonTypeTemplateParmExpr {{.*}} 'int'
+// CHECK-NEXT:           NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:           IntegerLiteral {{.*}} 'int' 2
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 3
+// CHECK-NEXT:         SubstNonTypeTemplateParmExpr {{.*}} 'int'
+// CHECK-NEXT:           NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:           IntegerLiteral {{.*}} 'int' 3
+template <int... Is> [[clang::annotate("ANNOTATE_BAZ", Is...)]] void HasPackAnnotations();
+void UsePackAnnotations() { HasPackAnnotations<1, 2, 3>(); }
+
+template <int... Is> [[clang::annotate(Is...)]] void HasOnlyPackAnnotation() {} // expected-error {{'annotate' attribute takes at least 1 argument}} expected-error {{'annotate' attribute requires a string}}
+
+void UseOnlyPackAnnotations() {
+  HasOnlyPackAnnotation<>();  // expected-note {{in instantiation of function template specialization 'attribute_annotate::HasOnlyPackAnnotation<>' requested here}}
+  HasOnlyPackAnnotation<1>(); // expected-note {{in instantiation of function template specialization 'attribute_annotate::HasOnlyPackAnnotation<1>' requested here}}
+}
+
+// CHECK:      ClassTemplateDecl {{.*}} AnnotatedPackTemplateStruct
+// CHECK-NEXT:   TemplateTypeParmDecl {{.*}} typename depth 0 index 0 T
+// CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 1 ... Is
+// CHECK-NEXT:   CXXRecordDecl {{.*}} struct AnnotatedPackTemplateStruct definition
+// CHECK-NEXT:     DefinitionData
+// CHECK-NEXT:       DefaultConstructor
+// CHECK-NEXT:       CopyConstructor
+// CHECK-NEXT:       MoveConstructor
+// CHECK-NEXT:       CopyAssignment
+// CHECK-NEXT:       MoveAssignment
+// CHECK-NEXT:       Destructor
+// CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_FOZ"
+// CHECK-NEXT:       PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
+// CHECK-NEXT:     CXXRecordDecl {{.*}} implicit struct AnnotatedPackTemplateStruct
+// CHECK-NEXT:   ClassTemplateSpecializationDecl {{.*}} struct AnnotatedPackTemplateStruct definition
+// CHECK-NEXT:     DefinitionData
+// CHECK-NEXT:       DefaultConstructor
+// CHECK-NEXT:       CopyConstructor
+// CHECK-NEXT:       MoveConstructor
+// CHECK-NEXT:       CopyAssignment
+// CHECK-NEXT:       MoveAssignment
+// CHECK-NEXT:       Destructor
+// CHECK-NEXT:     TemplateArgument{{.*}} type 'int'
+// CHECK-NEXT:       BuiltinType {{.*}} 'int'
+// CHECK-NEXT:     TemplateArgument{{.*}} pack
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 1
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 2
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 3
+// CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_BOO"
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 1
+// CHECK-NEXT:         SubstNonTypeTemplateParmExpr {{.*}} 'int'
+// CHECK-NEXT:           NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:           IntegerLiteral {{.*}} 'int' 1
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 2
+// CHECK-NEXT:         SubstNonTypeTemplateParmExpr {{.*}} 'int'
+// CHECK-NEXT:           NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:           IntegerLiteral {{.*}} 'int' 2
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 3
+// CHECK-NEXT:         SubstNonTypeTemplateParmExpr {{.*}} 'int'
+// CHECK-NEXT:           NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:           IntegerLiteral {{.*}} 'int' 3
+// CHECK-NEXT:     CXXRecordDecl {{.*}} implicit struct AnnotatedPackTemplateStruct
+// CHECK-NEXT:   ClassTemplateSpecializationDecl {{.*}} struct AnnotatedPackTemplateStruct definition
+// CHECK-NEXT:     DefinitionData
+// CHECK-NEXT:       DefaultConstructor
+// CHECK-NEXT:       CopyConstructor
+// CHECK-NEXT:       MoveConstructor
+// CHECK-NEXT:       CopyAssignment
+// CHECK-NEXT:       MoveAssignment
+// CHECK-NEXT:       Destructor
+// CHECK-NEXT:     TemplateArgument type 'float'
+// CHECK-NEXT:       BuiltinType {{.*}} 'float'
+// CHECK-NEXT:     TemplateArgument{{.*}} pack
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 3
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 2
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 1
+// CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_FOZ"
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 4
+// CHECK-NEXT:         IntegerLiteral {{.*}} 'int' 4
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 5
+// CHECK-NEXT:         IntegerLiteral {{.*}} 'int' 5
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 6
+// CHECK-NEXT:         IntegerLiteral {{.*}} 'int' 6
+// CHECK-NEXT:     CXXRecordDecl {{.*}} implicit struct AnnotatedPackTemplateStruct
+// CHECK-NEXT:   ClassTemplateSpecializationDecl {{.*}} struct AnnotatedPackTemplateStruct definition
+// CHECK-NEXT:     DefinitionData
+// CHECK-NEXT:       DefaultConstructor
+// CHECK-NEXT:       CopyConstructor
+// CHECK-NEXT:       MoveConstructor
+// CHECK-NEXT:       CopyAssignment
+// CHECK-NEXT:       MoveAssignment
+// CHECK-NEXT:       Destructor
+// CHECK-NEXT:     TemplateArgument type 'bool'
+// CHECK-NEXT:       BuiltinType {{.*}} 'bool'
+// CHECK-NEXT:     TemplateArgument{{.*}} pack
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 7
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 8
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 9
+// CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_FOZ"
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 7
+// CHECK-NEXT:         SubstNonTypeTemplateParmExpr {{.*}} 'int'
+// CHECK-NEXT:           NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 1 ... Is
+// CHECK-NEXT:           IntegerLiteral {{.*}} 'int' 7
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 8
+// CHECK-NEXT:         SubstNonTypeTemplateParmExpr {{.*}} 'int'
+// CHECK-NEXT:           NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 1 ... Is
+// CHECK-NEXT:           IntegerLiteral {{.*}} 'int' 8
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 9
+// CHECK-NEXT:         SubstNonTypeTemplateParmExpr {{.*}} 'int'
+// CHECK-NEXT:           NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 1 ... Is
+// CHECK-NEXT:           IntegerLiteral {{.*}} 'int' 9
+// CHECK-NEXT:     CXXRecordDecl {{.*}} implicit struct AnnotatedPackTemplateStruct
+// CHECK-NEXT:   ClassTemplateSpecializationDecl {{.*}} struct AnnotatedPackTemplateStruct definition
+// CHECK-NEXT:     DefinitionData
+// CHECK-NEXT:       DefaultConstructor
+// CHECK-NEXT:       CopyConstructor
+// CHECK-NEXT:       MoveConstructor
+// CHECK-NEXT:       CopyAssignment
+// CHECK-NEXT:       MoveAssignment
+// CHECK-NEXT:       Destructor
+// CHECK-NEXT:     TemplateArgument type 'char'
+// CHECK-NEXT:       BuiltinType {{.*}} 'char'
+// CHECK-NEXT:     TemplateArgument{{.*}} pack
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 1
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 2
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 3
+// CHECK-NEXT:     CXXRecordDecl {{.*}} implicit struct AnnotatedPackTemplateStruct
+// CHECK-NEXT:   ClassTemplateSpecializationDecl {{.*}} struct AnnotatedPackTemplateStruct definition
+// CHECK-NEXT:     DefinitionData
+// CHECK-NEXT:       DefaultConstructor
+// CHECK-NEXT:       CopyConstructor
+// CHECK-NEXT:       MoveConstructor
+// CHECK-NEXT:       CopyAssignment
+// CHECK-NEXT:       MoveAssignment
+// CHECK-NEXT:       Destructor
+// CHECK-NEXT:     TemplateArgument{{.*}} type 'char'
+// CHECK-NEXT:       BuiltinType {{.*}} 'char'
+// CHECK-NEXT:     TemplateArgument{{.*}} pack
+// CHECK-NEXT:     CXXRecordDecl {{.*}} implicit struct AnnotatedPackTemplateStruct
+// CHECK-NEXT: ClassTemplatePartialSpecializationDecl {{.*}} struct AnnotatedPackTemplateStruct definition
+// CHECK-NEXT:   DefinitionData
+// CHECK-NEXT:     DefaultConstructor
+// CHECK-NEXT:     CopyConstructor
+// CHECK-NEXT:     MoveConstructor
+// CHECK-NEXT:     CopyAssignment
+// CHECK-NEXT:     MoveAssignment
+// CHECK-NEXT:     Destructor
+// CHECK-NEXT:   TemplateArgument{{.*}} type 'int'
+// CHECK-NEXT:     BuiltinType {{.*}} 'int'
+// CHECK-NEXT:   TemplateArgument{{.*}} pack
+// CHECK-NEXT:     TemplateArgument{{.*}} expr
+// CHECK-NEXT:       PackExpansionExpr {{.*}} 'int'
+// CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
+// CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:   AnnotateAttr {{.*}} "ANNOTATE_BOO"
+// CHECK-NEXT:     PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:       DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
+// CHECK-NEXT:   CXXRecordDecl {{.*}} implicit struct AnnotatedPackTemplateStruct
+// CHECK-NEXT: ClassTemplatePartialSpecializationDecl {{.*}} struct AnnotatedPackTemplateStruct definition
+// CHECK-NEXT:   DefinitionData
+// CHECK-NEXT:     DefaultConstructor
+// CHECK-NEXT:     CopyConstructor
+// CHECK-NEXT:     MoveConstructor
+// CHECK-NEXT:     CopyAssignment
+// CHECK-NEXT:     MoveAssignment
+// CHECK-NEXT:     Destructor
+// CHECK-NEXT:   TemplateArgument{{.*}} type 'float'
+// CHECK-NEXT:     BuiltinType {{.*}} 'float'
+// CHECK-NEXT:   TemplateArgument{{.*}} pack
+// CHECK-NEXT:     TemplateArgument{{.*}} expr
+// CHECK-NEXT:       PackExpansionExpr {{.*}} 'int'
+// CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
+// CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:   AnnotateAttr {{.*}} "ANNOTATE_FOZ"
+// CHECK-NEXT:     ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:       value: Int 4
+// CHECK-NEXT:       IntegerLiteral {{.*}} 'int' 4
+// CHECK-NEXT:     ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:       value: Int 5
+// CHECK-NEXT:       IntegerLiteral {{.*}} 'int' 5
+// CHECK-NEXT:     ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:       value: Int 6
+// CHECK-NEXT:       IntegerLiteral {{.*}} 'int' 6
+// CHECK-NEXT:   CXXRecordDecl {{.*}} implicit struct AnnotatedPackTemplateStruct
+// CHECK-NEXT: ClassTemplatePartialSpecializationDecl {{.*}} struct AnnotatedPackTemplateStruct definition
+// CHECK-NEXT:   DefinitionData
+// CHECK-NEXT:     DefaultConstructor
+// CHECK-NEXT:     CopyConstructor
+// CHECK-NEXT:     MoveConstructor
+// CHECK-NEXT:     CopyAssignment
+// CHECK-NEXT:     MoveAssignment
+// CHECK-NEXT:     Destructor
+// CHECK-NEXT:   TemplateArgument{{.*}} type 'char'
+// CHECK-NEXT:     BuiltinType {{.*}} 'char'
+// CHECK-NEXT:   TemplateArgument{{.*}} pack
+// CHECK-NEXT:     TemplateArgument{{.*}} expr
+// CHECK-NEXT:       PackExpansionExpr {{.*}} 'int'
+// CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
+// CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:   AnnotateAttr {{.*}} ""
+// CHECK-NEXT:     PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:       DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
+// CHECK-NEXT:   CXXRecordDecl {{.*}} implicit struct AnnotatedPackTemplateStruct
+template <typename T, int... Is> struct [[clang::annotate("ANNOTATE_FOZ", Is...)]] AnnotatedPackTemplateStruct{};
+template <int... Is> struct [[clang::annotate("ANNOTATE_BOO", Is...)]] AnnotatedPackTemplateStruct<int, Is...>{};
+template <int... Is> struct [[clang::annotate("ANNOTATE_FOZ", 4, 5, 6)]] AnnotatedPackTemplateStruct<float, Is...>{};
+template <int... Is> struct [[clang::annotate(Is...)]] AnnotatedPackTemplateStruct<char, Is...>{}; // expected-error {{'annotate' attribute requires a string}} expected-error {{'annotate' attribute takes at least 1 argument}}
+void UseAnnotatedPackTemplateStructSpecializations() {
+  AnnotatedPackTemplateStruct<int, 1, 2, 3> Instance1{};
+  AnnotatedPackTemplateStruct<float, 3, 2, 1> Instance2{};
+  AnnotatedPackTemplateStruct<bool, 7, 8, 9> Instance3{};
+  AnnotatedPackTemplateStruct<char, 1, 2, 3> Instance4{}; // expected-note {{in instantiation of template class 'attribute_annotate::AnnotatedPackTemplateStruct<char, 1, 2, 3>' requested here}}
+  AnnotatedPackTemplateStruct<char> Instance5{};          // expected-note {{in instantiation of template class 'attribute_annotate::AnnotatedPackTemplateStruct<char>' requested here}}
+}
+
+// CHECK:      ClassTemplateDecl {{.*}} InvalidAnnotatedPackTemplateStruct
+// CHECK-NEXT:   TemplateTypeParmDecl {{.*}} typename depth 0 index 0 T
+// CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 1 ... Is
+// CHECK-NEXT:   CXXRecordDecl {{.*}} struct InvalidAnnotatedPackTemplateStruct definition
+// CHECK-NEXT:     DefinitionData
+// CHECK-NEXT:       DefaultConstructor
+// CHECK-NEXT:       CopyConstructor
+// CHECK-NEXT:       MoveConstructor
+// CHECK-NEXT:       CopyAssignment
+// CHECK-NEXT:       MoveAssignment
+// CHECK-NEXT:       Destructor
+// CHECK-NEXT:     AnnotateAttr {{.*}} ""
+// CHECK-NEXT:       PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
+// CHECK-NEXT:     CXXRecordDecl {{.*}} implicit struct InvalidAnnotatedPackTemplateStruct
+// CHECK-NEXT:   ClassTemplateSpecialization {{.*}} 'InvalidAnnotatedPackTemplateStruct'
+// CHECK-NEXT:   ClassTemplateSpecializationDecl {{.*}} struct InvalidAnnotatedPackTemplateStruct definition
+// CHECK-NEXT:     DefinitionData
+// CHECK-NEXT:       DefaultConstructor
+// CHECK-NEXT:       CopyConstructor
+// CHECK-NEXT:       MoveConstructor
+// CHECK-NEXT:       CopyAssignment
+// CHECK-NEXT:       MoveAssignment
+// CHECK-NEXT:       Destructor
+// CHECK-NEXT:     TemplateArgument{{.*}} type 'int'
+// CHECK-NEXT:       BuiltinType {{.*}} 'int'
+// CHECK-NEXT:     TemplateArgument{{.*}} pack
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 1
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 2
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 3
+// CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_BIR"
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 1
+// CHECK-NEXT:         SubstNonTypeTemplateParmExpr {{.*}} 'int'
+// CHECK-NEXT:           NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:           IntegerLiteral {{.*}} 'int' 1
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 2
+// CHECK-NEXT:         SubstNonTypeTemplateParmExpr {{.*}} 'int'
+// CHECK-NEXT:           NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:           IntegerLiteral {{.*}} 'int' 2
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 3
+// CHECK-NEXT:         SubstNonTypeTemplateParmExpr {{.*}} 'int'
+// CHECK-NEXT:           NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:           IntegerLiteral {{.*}} 'int' 3
+// CHECK-NEXT:     CXXRecordDecl {{.*}} implicit struct InvalidAnnotatedPackTemplateStruct
+// CHECK-NEXT:   ClassTemplateSpecializationDecl {{.*}} struct InvalidAnnotatedPackTemplateStruct definition
+// CHECK-NEXT:     DefinitionData
+// CHECK-NEXT:       DefaultConstructor
+// CHECK-NEXT:       CopyConstructor
+// CHECK-NEXT:       MoveConstructor
+// CHECK-NEXT:       CopyAssignment
+// CHECK-NEXT:       MoveAssignment
+// CHECK-NEXT:       Destructor
+// CHECK-NEXT:     TemplateArgument{{.*}} type 'float'
+// CHECK-NEXT:       BuiltinType {{.*}} 'float'
+// CHECK-NEXT:     TemplateArgument{{.*}} pack
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 3
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 2
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 1
+// CHECK-NEXT:     CXXRecordDecl {{.*}} implicit struct InvalidAnnotatedPackTemplateStruct
+// CHECK-NEXT:   ClassTemplateSpecializationDecl {{.*}} struct InvalidAnnotatedPackTemplateStruct definition
+// CHECK-NEXT:     DefinitionData
+// CHECK-NEXT:       DefaultConstructor
+// CHECK-NEXT:       CopyConstructor
+// CHECK-NEXT:       MoveConstructor
+// CHECK-NEXT:       CopyAssignment
+// CHECK-NEXT:       MoveAssignment
+// CHECK-NEXT:       Destructor
+// CHECK-NEXT:     TemplateArgument{{.*}} type 'bool'
+// CHECK-NEXT:       BuiltinType {{.*}} 'bool'
+// CHECK-NEXT:     TemplateArgument{{.*}} pack
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 7
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 8
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 9
+// CHECK-NEXT:     CXXRecordDecl {{.*}} implicit struct InvalidAnnotatedPackTemplateStruct
+// CHECK-NEXT:   ClassTemplateSpecializationDecl {{.*}} struct InvalidAnnotatedPackTemplateStruct definition
+// CHECK-NEXT:     DefinitionData
+// CHECK-NEXT:       DefaultConstructor
+// CHECK-NEXT:       CopyConstructor
+// CHECK-NEXT:       MoveConstructor
+// CHECK-NEXT:       CopyAssignment
+// CHECK-NEXT:       MoveAssignment
+// CHECK-NEXT:       Destructor
+// CHECK-NEXT:     TemplateArgument{{.*}} type 'bool'
+// CHECK-NEXT:       BuiltinType {{.*}} 'bool'
+// CHECK-NEXT:     TemplateArgument{{.*}} pack
+// CHECK-NEXT:     CXXRecordDecl {{.*}} implicit struct InvalidAnnotatedPackTemplateStruct
+// CHECK-NEXT: ClassTemplatePartialSpecializationDecl {{.*}} struct InvalidAnnotatedPackTemplateStruct definition
+// CHECK-NEXT:   DefinitionData
+// CHECK-NEXT:     DefaultConstructor
+// CHECK-NEXT:     CopyConstructor
+// CHECK-NEXT:     MoveConstructor
+// CHECK-NEXT:     CopyAssignment
+// CHECK-NEXT:     MoveAssignment
+// CHECK-NEXT:     Destructor
+// CHECK-NEXT:   TemplateArgument{{.*}} type 'int'
+// CHECK-NEXT:     BuiltinType {{.*}} 'int'
+// CHECK-NEXT:   TemplateArgument{{.*}} pack
+// CHECK-NEXT:     TemplateArgument{{.*}} expr
+// CHECK-NEXT:       PackExpansionExpr {{.*}} 'int'
+// CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
+// CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:   AnnotateAttr {{.*}} "ANNOTATE_BIR"
+// CHECK-NEXT:     PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:       DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
+// CHECK-NEXT:   CXXRecordDecl {{.*}} implicit struct InvalidAnnotatedPackTemplateStruct
+// CHECK-NEXT: ClassTemplatePartialSpecializationDecl {{.*}} struct InvalidAnnotatedPackTemplateStruct definition
+// CHECK-NEXT:   DefinitionData
+// CHECK-NEXT:     DefaultConstructor
+// CHECK-NEXT:     CopyConstructor
+// CHECK-NEXT:     MoveConstructor
+// CHECK-NEXT:     CopyAssignment
+// CHECK-NEXT:     MoveAssignment
+// CHECK-NEXT:     Destructor
+// CHECK-NEXT:   TemplateArgument{{.*}} type 'float'
+// CHECK-NEXT:     BuiltinType {{.*}} 'float'
+// CHECK-NEXT:   TemplateArgument{{.*}} pack
+// CHECK-NEXT:     TemplateArgument{{.*}} expr
+// CHECK-NEXT:       PackExpansionExpr {{.*}} 'int'
+// CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
+// CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:   CXXRecordDecl {{.*}} implicit struct InvalidAnnotatedPackTemplateStruct
+// CHECK-NEXT: ClassTemplateSpecializationDecl {{.*}} struct InvalidAnnotatedPackTemplateStruct definition
+// CHECK-NEXT:   DefinitionData
+// CHECK-NEXT:     DefaultConstructor
+// CHECK-NEXT:     CopyConstructor
+// CHECK-NEXT:     MoveConstructor
+// CHECK-NEXT:     CopyAssignment
+// CHECK-NEXT:     MoveAssignment
+// CHECK-NEXT:     Destructor
+// CHECK-NEXT:   TemplateArgument{{.*}} type 'char'
+// CHECK-NEXT:     BuiltinType {{.*}} 'char'
+// CHECK-NEXT:   TemplateArgument{{.*}} pack
+// CHECK-NEXT:     TemplateArgument{{.*}} integral 5
+// CHECK-NEXT:     TemplateArgument{{.*}} integral 6
+// CHECK-NEXT:     TemplateArgument{{.*}} integral 7
+// CHECK-NEXT:   CXXRecordDecl {{.*}} implicit struct InvalidAnnotatedPackTemplateStruct
+template <typename T, int... Is> struct [[clang::annotate(Is...)]] InvalidAnnotatedPackTemplateStruct{}; // expected-error {{'annotate' attribute requires a string}} expected-error {{'annotate' attribute takes at least 1 argument}}
+template <int... Is> struct [[clang::annotate("ANNOTATE_BIR", Is...)]] InvalidAnnotatedPackTemplateStruct<int, Is...>{};
+template <int... Is> struct InvalidAnnotatedPackTemplateStruct<float, Is...> {};
+template <> struct InvalidAnnotatedPackTemplateStruct<char, 5, 6, 7> {};
+void UseInvalidAnnotatedPackTemplateStruct() {
+  InvalidAnnotatedPackTemplateStruct<int, 1, 2, 3> Instance1{};
+  InvalidAnnotatedPackTemplateStruct<float, 3, 2, 1> Instance2{};
+  InvalidAnnotatedPackTemplateStruct<char, 5, 6, 7> Instance3{};
+  InvalidAnnotatedPackTemplateStruct<bool, 7, 8, 9> Instance4{}; // expected-note {{in instantiation of template class 'attribute_annotate::InvalidAnnotatedPackTemplateStruct<bool, 7, 8, 9>' requested here}}
+  InvalidAnnotatedPackTemplateStruct<bool> Instance5{};          // expected-note {{in instantiation of template class 'attribute_annotate::InvalidAnnotatedPackTemplateStruct<bool>' requested here}}
+}
+
+// CHECK:      FunctionTemplateDecl {{.*}} RedeclaredAnnotatedFunc
+// CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:   FunctionDecl {{.*}} RedeclaredAnnotatedFunc 'void ()'
+// CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_FAR"
+// CHECK-NEXT:       PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
+// CHECK-NEXT:   FunctionDecl {{.*}} used RedeclaredAnnotatedFunc 'void ()'
+// CHECK-NEXT:     TemplateArgument{{.*}} pack
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 1
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 2
+// CHECK-NEXT:       TemplateArgument{{.*}} integral 3
+// CHECK-NEXT:     CompoundStmt
+// CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_FAR"
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 1
+// CHECK-NEXT:         SubstNonTypeTemplateParmExpr {{.*}} 'int'
+// CHECK-NEXT:           NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:           IntegerLiteral {{.*}} 'int' 1
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 2
+// CHECK-NEXT:         SubstNonTypeTemplateParmExpr {{.*}} 'int'
+// CHECK-NEXT:           NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:           IntegerLiteral {{.*}} 'int' 2
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 3
+// CHECK-NEXT:         SubstNonTypeTemplateParmExpr {{.*}} 'int'
+// CHECK-NEXT:           NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:           IntegerLiteral {{.*}} 'int' 3
+// CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_FIZ"
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 4
+// CHECK-NEXT:         IntegerLiteral {{.*}} 'int' 4
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 5
+// CHECK-NEXT:         IntegerLiteral {{.*}} 'int' 5
+// CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_BOZ"
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 6
+// CHECK-NEXT:         IntegerLiteral {{.*}} 'int' 6
+// CHECK-NEXT: FunctionTemplateDecl {{.*}} prev {{.*}} RedeclaredAnnotatedFunc
+// CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:   FunctionDecl {{.*}} prev {{.*}} RedeclaredAnnotatedFunc 'void ()'
+// CHECK-NEXT:     AnnotateAttr {{.*}} Inherited "ANNOTATE_FAR"
+// CHECK-NEXT:       PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
+// CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_BOZ"
+// CHECK-NEXT:       PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
+// CHECK-NEXT:   Function {{.*}} 'RedeclaredAnnotatedFunc' 'void ()'
+// CHECK-NEXT: FunctionTemplateDecl {{.*}} prev {{.*}} RedeclaredAnnotatedFunc
+// CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:   FunctionDecl {{.*}} prev {{.*}} RedeclaredAnnotatedFunc 'void ()'
+// CHECK-NEXT:     AnnotateAttr {{.*}} Inherited "ANNOTATE_FAR"
+// CHECK-NEXT:       PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
+// CHECK-NEXT:     AnnotateAttr {{.*}} Inherited "ANNOTATE_BOZ"
+// CHECK-NEXT:       PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
+// CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_FIZ"
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 4
+// CHECK-NEXT:         IntegerLiteral {{.*}} 'int' 4
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 5
+// CHECK-NEXT:         IntegerLiteral {{.*}} 'int' 5
+// CHECK-NEXT:   Function {{.*}} 'RedeclaredAnnotatedFunc' 'void ()'
+// CHECK-NEXT: FunctionTemplateDecl {{.*}} prev {{.*}} RedeclaredAnnotatedFunc
+// CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:   FunctionDecl {{.*}} prev {{.*}} RedeclaredAnnotatedFunc 'void ()'
+// CHECK-NEXT:     CompoundStmt
+// CHECK-NEXT:     AnnotateAttr {{.*}} Inherited "ANNOTATE_FAR"
+// CHECK-NEXT:       PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
+// CHECK-NEXT:     AnnotateAttr {{.*}} Inherited "ANNOTATE_FIZ"
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 4
+// CHECK-NEXT:         IntegerLiteral {{.*}} 'int' 4
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 5
+// CHECK-NEXT:         IntegerLiteral {{.*}} 'int' 5
+// CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_BOZ"
+// CHECK-NEXT:       ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:         value: Int 6
+// CHECK-NEXT:         IntegerLiteral {{.*}} 'int' 6
+// CHECK-NEXT:   Function {{.*}} 'RedeclaredAnnotatedFunc' 'void ()'
+// CHECK-NEXT: EmptyDecl
+template <int... Is> [[clang::annotate("ANNOTATE_FAR", Is...)]] void RedeclaredAnnotatedFunc();
+template <int... Is> [[clang::annotate("ANNOTATE_BOZ", Is...)]] void RedeclaredAnnotatedFunc();
+template <int... Is> [[clang::annotate("ANNOTATE_FIZ", 4, 5)]] void RedeclaredAnnotatedFunc();
+template <int... Is> [[clang::annotate("ANNOTATE_BOZ", 6)]] void RedeclaredAnnotatedFunc(){};
+void UseRedeclaredAnnotatedFunc() {
+  RedeclaredAnnotatedFunc<1, 2, 3>();
+}
+
+} // namespace attribute_annotate
 
 namespace preferred_name {
   int x [[clang::preferred_name("frank")]]; // expected-error {{expected a type}}

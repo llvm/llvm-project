@@ -261,7 +261,7 @@ define i1 @test_and_ule_sge(i32 %x, i32 %y, i32 %z, i32 %a) {
 ; CHECK-NEXT:    [[SC_2:%.*]] = icmp sle i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], [[SC_2]]
 ; CHECK-NEXT:    [[SC_3:%.*]] = icmp sle i32 [[Y]], [[Z]]
-; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], [[SC_3]]
+; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], true
 ; CHECK-NEXT:    [[SC_4:%.*]] = icmp sle i32 [[X]], [[A]]
 ; CHECK-NEXT:    [[RES_8:%.*]] = xor i1 [[RES_7]], [[SC_4]]
 ; CHECK-NEXT:    ret i1 [[RES_8]]

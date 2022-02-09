@@ -2,23 +2,23 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wunused %s
 // RUN: %clang_cc1 -fsyntax-only -verify -Wall -Wno-infinite-recursion %s
 
-void foo() {}
-static void f2() {} 
-static void f1() {f2();} // expected-warning{{unused}}
+void foo(void) {}
+static void f2(void) {} 
+static void f1(void) {f2();} // expected-warning{{unused}}
 
-static int f0() { return 17; } // expected-warning{{not needed and will not be emitted}}
+static int f0(void) { return 17; } // expected-warning{{not needed and will not be emitted}}
 int x = sizeof(f0());
 
-static void f3();
-extern void f3() { } // expected-warning{{unused}}
+static void f3(void);
+extern void f3(void) { } // expected-warning{{unused}}
 
-inline static void f4();
-void f4() { } // expected-warning{{unused}}
+inline static void f4(void);
+void f4(void) { } // expected-warning{{unused}}
 
-static void __attribute__((used)) f5() {}
-static void f6();
-static void __attribute__((used)) f6();
-static void f6() {};
+static void __attribute__((used)) f5(void) {}
+static void f6(void);
+static void __attribute__((used)) f6(void);
+static void f6(void) {};
 
 static void f7(void);
 void f8(void(*a0)(void));

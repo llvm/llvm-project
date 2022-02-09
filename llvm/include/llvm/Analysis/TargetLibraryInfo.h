@@ -12,14 +12,15 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
+
 template <typename T> class ArrayRef;
+class Function;
+class Module;
 class Triple;
 
 /// Describes a possible vectorization of a function.
@@ -49,7 +50,7 @@ class TargetLibraryInfoImpl {
   friend class TargetLibraryInfo;
 
   unsigned char AvailableArray[(NumLibFuncs+3)/4];
-  llvm::DenseMap<unsigned, std::string> CustomNames;
+  DenseMap<unsigned, std::string> CustomNames;
   static StringLiteral const StandardNames[NumLibFuncs];
   bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param;
   unsigned SizeOfInt;

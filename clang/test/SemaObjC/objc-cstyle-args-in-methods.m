@@ -11,7 +11,7 @@
 @end
 
 
-int main() {
+int main(void) {
 	Foo *foo;
 	[foo test:@"One", @"Two"];
 	[foo bad:@"One", @"Two"]; // expected-error {{too few arguments to method call}}

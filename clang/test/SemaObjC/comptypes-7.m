@@ -2,7 +2,7 @@
 
 #define nil (void *)0;
 
-extern void foo();
+extern void foo(void);
 
 @protocol MyProtocol
 - (void) method;
@@ -11,7 +11,7 @@ extern void foo();
 @interface MyClass
 @end
 
-int main()
+int main(void)
 {
   id obj = nil;
   id <MyProtocol> obj_p = nil;

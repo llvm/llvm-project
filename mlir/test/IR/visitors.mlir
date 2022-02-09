@@ -116,10 +116,10 @@ func @unstructured_cfg() {
   "regionOp0"() ({
     ^bb0:
       "op0"() : () -> ()
-      br ^bb2
+      cf.br ^bb2
     ^bb1:
       "op1"() : () -> ()
-      br ^bb2
+      cf.br ^bb2
     ^bb2:
       "op2"() : () -> ()
   }) : () -> ()
@@ -131,9 +131,9 @@ func @unstructured_cfg() {
 // CHECK:       Visiting op 'builtin.func'
 // CHECK:       Visiting op 'regionOp0'
 // CHECK:       Visiting op 'op0'
-// CHECK:       Visiting op 'std.br'
+// CHECK:       Visiting op 'cf.br'
 // CHECK:       Visiting op 'op1'
-// CHECK:       Visiting op 'std.br'
+// CHECK:       Visiting op 'cf.br'
 // CHECK:       Visiting op 'op2'
 // CHECK:       Visiting op 'std.return'
 
@@ -151,9 +151,9 @@ func @unstructured_cfg() {
 
 // CHECK-LABEL: Op post-order visits
 // CHECK:       Visiting op 'op0'
-// CHECK:       Visiting op 'std.br'
+// CHECK:       Visiting op 'cf.br'
 // CHECK:       Visiting op 'op1'
-// CHECK:       Visiting op 'std.br'
+// CHECK:       Visiting op 'cf.br'
 // CHECK:       Visiting op 'op2'
 // CHECK:       Visiting op 'regionOp0'
 // CHECK:       Visiting op 'std.return'
@@ -183,9 +183,9 @@ func @unstructured_cfg() {
 
 // CHECK-LABEL: Op post-order erasures (skip)
 // CHECK:       Erasing op 'op0'
-// CHECK:       Erasing op 'std.br'
+// CHECK:       Erasing op 'cf.br'
 // CHECK:       Erasing op 'op1'
-// CHECK:       Erasing op 'std.br'
+// CHECK:       Erasing op 'cf.br'
 // CHECK:       Erasing op 'op2'
 // CHECK:       Erasing op 'regionOp0'
 // CHECK:       Erasing op 'std.return'
@@ -197,9 +197,9 @@ func @unstructured_cfg() {
 
 // CHECK-LABEL: Op post-order erasures (no skip)
 // CHECK:       Erasing op 'op0'
-// CHECK:       Erasing op 'std.br'
+// CHECK:       Erasing op 'cf.br'
 // CHECK:       Erasing op 'op1'
-// CHECK:       Erasing op 'std.br'
+// CHECK:       Erasing op 'cf.br'
 // CHECK:       Erasing op 'op2'
 // CHECK:       Erasing op 'regionOp0'
 // CHECK:       Erasing op 'std.return'

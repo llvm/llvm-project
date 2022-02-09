@@ -662,7 +662,7 @@ template<class InputIterator, class OutputIterator>
 
 */
 
-#include <__bits> // __libcpp_clz
+#include <__bits>
 #include <__config>
 #include <__debug>
 #include <cstddef>
@@ -672,7 +672,7 @@ template<class InputIterator, class OutputIterator>
 #include <iterator>
 #include <memory>
 #include <type_traits>
-#include <utility> // swap_ranges
+#include <utility>
 #include <version>
 
 #include <__algorithm/adjacent_find.h>
@@ -774,7 +774,7 @@ template<class InputIterator, class OutputIterator>
 #include <__algorithm/upper_bound.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 #if defined(_LIBCPP_HAS_PARALLEL_ALGORITHMS) && _LIBCPP_STD_VER >= 17

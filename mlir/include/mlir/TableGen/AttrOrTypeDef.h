@@ -45,47 +45,50 @@ public:
 // AttrOrTypeParameter
 //===----------------------------------------------------------------------===//
 
-// A wrapper class for tblgen AttrOrTypeParameter, arrays of which belong to
-// AttrOrTypeDefs to parameterize them.
+/// A wrapper class for tblgen AttrOrTypeParameter, arrays of which belong to
+/// AttrOrTypeDefs to parameterize them.
 class AttrOrTypeParameter {
 public:
   explicit AttrOrTypeParameter(const llvm::DagInit *def, unsigned index)
       : def(def), index(index) {}
 
-  // Get the parameter name.
+  /// Get the parameter name.
   StringRef getName() const;
 
-  // If specified, get the custom allocator code for this parameter.
+  /// If specified, get the custom allocator code for this parameter.
   Optional<StringRef> getAllocator() const;
 
-  // If specified, get the custom comparator code for this parameter.
+  /// If specified, get the custom comparator code for this parameter.
   Optional<StringRef> getComparator() const;
 
-  // Get the C++ type of this parameter.
+  /// Get the C++ type of this parameter.
   StringRef getCppType() const;
 
-  // Get the C++ accessor type of this parameter.
+  /// Get the C++ accessor type of this parameter.
   StringRef getCppAccessorType() const;
 
-  // Get the C++ storage type of this parameter.
+  /// Get the C++ storage type of this parameter.
   StringRef getCppStorageType() const;
 
-  // Get an optional C++ parameter parser.
+  /// Get an optional C++ parameter parser.
   Optional<StringRef> getParser() const;
 
-  // Get an optional C++ parameter printer.
+  /// Get an optional C++ parameter printer.
   Optional<StringRef> getPrinter() const;
 
-  // Get a description of this parameter for documentation purposes.
+  /// Get a description of this parameter for documentation purposes.
   Optional<StringRef> getSummary() const;
 
-  // Get the assembly syntax documentation.
+  /// Get the assembly syntax documentation.
   StringRef getSyntax() const;
 
-  // Return the underlying def of this parameter.
-  const llvm::Init *getDef() const;
+  /// Returns true if the parameter is optional.
+  bool isOptional() const;
 
-  // The parameter is pointer-comparable.
+  /// Return the underlying def of this parameter.
+  llvm::Init *getDef() const;
+
+  /// The parameter is pointer-comparable.
   bool operator==(const AttrOrTypeParameter &other) const {
     return def == other.def && index == other.index;
   }
@@ -94,6 +97,11 @@ public:
   }
 
 private:
+  /// A parameter can be either a string or a def. Get a potentially null value
+  /// from the def.
+  template <typename InitT>
+  auto getDefValue(StringRef name) const;
+
   /// The underlying tablegen parameter list this parameter is a part of.
   const llvm::DagInit *def;
   /// The index of the parameter within the parameter list (`def`).
@@ -121,113 +129,113 @@ class AttrOrTypeDef {
 public:
   explicit AttrOrTypeDef(const llvm::Record *def);
 
-  // Get the dialect for which this def belongs.
+  /// Get the dialect for which this def belongs.
   Dialect getDialect() const;
 
-  // Returns the name of this AttrOrTypeDef record.
+  /// Returns the name of this AttrOrTypeDef record.
   StringRef getName() const;
 
-  // Query functions for the documentation of the def.
+  /// Query functions for the documentation of the def.
   bool hasDescription() const;
   StringRef getDescription() const;
   bool hasSummary() const;
   StringRef getSummary() const;
 
-  // Returns the name of the C++ class to generate.
+  /// Returns the name of the C++ class to generate.
   StringRef getCppClassName() const;
 
-  // Returns the name of the C++ base class to use when generating this def.
+  /// Returns the name of the C++ base class to use when generating this def.
   StringRef getCppBaseClassName() const;
 
-  // Returns the name of the storage class for this def.
+  /// Returns the name of the storage class for this def.
   StringRef getStorageClassName() const;
 
-  // Returns the C++ namespace for this def's storage class.
+  /// Returns the C++ namespace for this def's storage class.
   StringRef getStorageNamespace() const;
 
-  // Returns true if we should generate the storage class.
+  /// Returns true if we should generate the storage class.
   bool genStorageClass() const;
 
-  // Indicates whether or not to generate the storage class constructor.
+  /// Indicates whether or not to generate the storage class constructor.
   bool hasStorageCustomConstructor() const;
 
   /// Get the parameters of this attribute or type.
   ArrayRef<AttrOrTypeParameter> getParameters() const { return parameters; }
 
-  // Return the number of parameters
+  /// Return the number of parameters
   unsigned getNumParameters() const;
 
-  // Return the keyword/mnemonic to use in the printer/parser methods if we are
-  // supposed to auto-generate them.
+  /// Return the keyword/mnemonic to use in the printer/parser methods if we are
+  /// supposed to auto-generate them.
   Optional<StringRef> getMnemonic() const;
 
-  // Returns the code to use as the types printer method. If not specified,
-  // return a non-value. Otherwise, return the contents of that code block.
+  /// Returns the code to use as the types printer method. If not specified,
+  /// return a non-value. Otherwise, return the contents of that code block.
   Optional<StringRef> getPrinterCode() const;
 
-  // Returns the code to use as the parser method. If not specified, returns
-  // None. Otherwise, returns the contents of that code block.
+  /// Returns the code to use as the parser method. If not specified, returns
+  /// None. Otherwise, returns the contents of that code block.
   Optional<StringRef> getParserCode() const;
 
-  // Returns the custom assembly format, if one was specified.
+  /// Returns the custom assembly format, if one was specified.
   Optional<StringRef> getAssemblyFormat() const;
 
-  // An attribute or type with parameters needs a parser.
+  /// An attribute or type with parameters needs a parser.
   bool needsParserPrinter() const { return getNumParameters() != 0; }
 
-  // Returns true if this attribute or type has a generated parser.
+  /// Returns true if this attribute or type has a generated parser.
   bool hasGeneratedParser() const {
     return getParserCode() || getAssemblyFormat();
   }
 
-  // Returns true if this attribute or type has a generated printer.
+  /// Returns true if this attribute or type has a generated printer.
   bool hasGeneratedPrinter() const {
     return getPrinterCode() || getAssemblyFormat();
   }
 
-  // Returns true if the accessors based on the parameters should be generated.
+  /// Returns true if the accessors based on the parameters should be generated.
   bool genAccessors() const;
 
-  // Return true if we need to generate the verify declaration and getChecked
-  // method.
+  /// Return true if we need to generate the verify declaration and getChecked
+  /// method.
   bool genVerifyDecl() const;
 
-  // Returns the def's extra class declaration code.
+  /// Returns the def's extra class declaration code.
   Optional<StringRef> getExtraDecls() const;
 
-  // Get the code location (for error printing).
+  /// Get the code location (for error printing).
   ArrayRef<SMLoc> getLoc() const;
 
-  // Returns true if the default get/getChecked methods should be skipped during
-  // generation.
+  /// Returns true if the default get/getChecked methods should be skipped
+  /// during generation.
   bool skipDefaultBuilders() const;
 
-  // Returns the builders of this def.
+  /// Returns the builders of this def.
   ArrayRef<AttrOrTypeBuilder> getBuilders() const { return builders; }
 
-  // Returns the traits of this def.
+  /// Returns the traits of this def.
   ArrayRef<Trait> getTraits() const { return traits; }
 
-  // Returns whether two AttrOrTypeDefs are equal by checking the equality of
-  // the underlying record.
+  /// Returns whether two AttrOrTypeDefs are equal by checking the equality of
+  /// the underlying record.
   bool operator==(const AttrOrTypeDef &other) const;
 
-  // Compares two AttrOrTypeDefs by comparing the names of the dialects.
+  /// Compares two AttrOrTypeDefs by comparing the names of the dialects.
   bool operator<(const AttrOrTypeDef &other) const;
 
-  // Returns whether the AttrOrTypeDef is defined.
+  /// Returns whether the AttrOrTypeDef is defined.
   operator bool() const { return def != nullptr; }
 
-  // Return the underlying def.
+  /// Return the underlying def.
   const llvm::Record *getDef() const { return def; }
 
 protected:
   const llvm::Record *def;
 
-  // The builders of this definition.
+  /// The builders of this definition.
   SmallVector<AttrOrTypeBuilder> builders;
 
-  // The traits of this definition.
+  /// The traits of this definition.
   SmallVector<Trait> traits;
 
   /// The parameters of this attribute or type.
@@ -243,8 +251,8 @@ class AttrDef : public AttrOrTypeDef {
 public:
   using AttrOrTypeDef::AttrOrTypeDef;
 
-  // Returns the attributes value type builder code block, or None if it doesn't
-  // have one.
+  /// Returns the attributes value type builder code block, or None if it
+  /// doesn't have one.
   Optional<StringRef> getTypeBuilder() const;
 
   static bool classof(const AttrOrTypeDef *def);

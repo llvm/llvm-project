@@ -983,7 +983,7 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
 
   // The write flag is only available for access violation exceptions.
   if (exception_record->ExceptionCode != EXCEPTION_ACCESS_VIOLATION)
-    return SignalContext::UNKNOWN;
+    return SignalContext::Unknown;
 
   // The contents of this array are documented at
   // https://docs.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-exception_record
@@ -991,13 +991,13 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
   // second element is the faulting address.
   switch (exception_record->ExceptionInformation[0]) {
     case 0:
-      return SignalContext::READ;
+      return SignalContext::Read;
     case 1:
-      return SignalContext::WRITE;
+      return SignalContext::Write;
     case 8:
-      return SignalContext::UNKNOWN;
+      return SignalContext::Unknown;
   }
-  return SignalContext::UNKNOWN;
+  return SignalContext::Unknown;
 }
 
 void SignalContext::DumpAllRegisters(void *context) {

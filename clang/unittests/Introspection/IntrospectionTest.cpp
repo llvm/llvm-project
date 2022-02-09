@@ -134,7 +134,7 @@ TEST(Introspection, SourceLocations_Formatter) {
 
 TEST(Introspection, SourceLocations_Stmt) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST = buildASTFromCode("void foo() {} void bar() { foo(); }", "foo.cpp",
                               std::make_shared<PCHContainerOperations>());
   auto &Ctx = AST->getASTContext();
@@ -169,7 +169,7 @@ TEST(Introspection, SourceLocations_Stmt) {
 
 TEST(Introspection, SourceLocations_Decl) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 namespace ns1 {
@@ -354,7 +354,7 @@ STRING_LOCATION_STDPAIR(MethodDecl, getTypeSourceInfo()->getTypeLoc().getSourceR
 
 TEST(Introspection, SourceLocations_NNS) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 namespace ns
@@ -414,7 +414,7 @@ void ns::A::foo() {}
 
 TEST(Introspection, SourceLocations_TA_Type) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 template<typename T>
@@ -472,7 +472,7 @@ STRING_LOCATION_PAIR(
 
 TEST(Introspection, SourceLocations_TA_Decl) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 template<void(*Ty)()>
@@ -509,7 +509,7 @@ void test() {
 
 TEST(Introspection, SourceLocations_TA_Nullptr) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 template<void(*Ty)()>
@@ -546,7 +546,7 @@ void test() {
 
 TEST(Introspection, SourceLocations_TA_Integral) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 template<int>
@@ -582,7 +582,7 @@ void test() {
 
 TEST(Introspection, SourceLocations_TA_Template) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 template<typename T> class A;
@@ -621,7 +621,7 @@ void bar()
 
 TEST(Introspection, SourceLocations_TA_TemplateExpansion) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST = buildASTFromCodeWithArgs(
       R"cpp(
 template<template<typename> class ...> class B { };
@@ -660,7 +660,7 @@ template<template<typename> class ...> class B { };
 
 TEST(Introspection, SourceLocations_TA_Expression) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 template<int, int = 0> class testExpr;
@@ -693,7 +693,7 @@ template<int I> class testExpr<I> { };
 
 TEST(Introspection, SourceLocations_TA_Pack) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST = buildASTFromCodeWithArgs(
       R"cpp(
 template<typename... T> class A {};
@@ -748,7 +748,7 @@ STRING_LOCATION_PAIR(
 
 TEST(Introspection, SourceLocations_CXXCtorInitializer_base) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 struct A {
@@ -808,7 +808,7 @@ STRING_LOCATION_PAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getEndLoc())
 
 TEST(Introspection, SourceLocations_CXXCtorInitializer_member) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 struct A {
@@ -849,7 +849,7 @@ struct A {
 
 TEST(Introspection, SourceLocations_CXXCtorInitializer_ctor) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 struct C {
@@ -906,7 +906,7 @@ STRING_LOCATION_PAIR(CtorInit,
 
 TEST(Introspection, SourceLocations_CXXCtorInitializer_pack) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST = buildASTFromCodeWithArgs(
       R"cpp(
 template<typename... T>
@@ -979,7 +979,7 @@ STRING_LOCATION_STDPAIR(CtorInit, getTypeSourceInfo()->getTypeLoc().getEndLoc())
 
 TEST(Introspection, SourceLocations_CXXBaseSpecifier_plain) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 class A {};
@@ -1028,7 +1028,7 @@ STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getLocalSourceRange
 
 TEST(Introspection, SourceLocations_CXXBaseSpecifier_accessspec) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 class A {};
@@ -1077,7 +1077,7 @@ STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getSourceRange())
 
 TEST(Introspection, SourceLocations_CXXBaseSpecifier_virtual) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 class A {};
@@ -1127,7 +1127,7 @@ STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getLocalSourceRange
 
 TEST(Introspection, SourceLocations_CXXBaseSpecifier_template_base) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 template<typename T, typename U>
@@ -1179,7 +1179,7 @@ STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getLocalSourceRange
 
 TEST(Introspection, SourceLocations_CXXBaseSpecifier_pack) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST = buildASTFromCodeWithArgs(
       R"cpp(
 template<typename... T>
@@ -1231,7 +1231,7 @@ STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getLocalSourceRange
 
 TEST(Introspection, SourceLocations_FunctionProtoTypeLoc) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 int foo();
@@ -1293,7 +1293,7 @@ STRING_LOCATION_PAIR(TL, getSourceRange())
 
 TEST(Introspection, SourceLocations_PointerTypeLoc) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 int* i;
@@ -1356,7 +1356,7 @@ STRING_LOCATION_PAIR(TL, getSourceRange())
 // This test doesn't work on windows due to use of the typeof extension.
 TEST(Introspection, SourceLocations_TypeOfTypeLoc) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 typeof (static_cast<void *>(0)) i;
@@ -1402,7 +1402,7 @@ typeof (static_cast<void *>(0)) i;
 
 TEST(Introspection, SourceLocations_DeclarationNameInfo_Dtor) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 class Foo
@@ -1458,7 +1458,7 @@ getNamedTypeInfo()->getTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc()),
 
 TEST(Introspection, SourceLocations_DeclarationNameInfo_CRef) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
 
   auto AST = buildASTFromCodeWithArgs(
       R"cpp(
@@ -1524,7 +1524,7 @@ void foo()
 
 TEST(Introspection, SourceLocations_DeclarationNameInfo_ConvOp) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 class Foo
@@ -1566,7 +1566,7 @@ class Foo
 
 TEST(Introspection, SourceLocations_DeclarationNameInfo_LitOp) {
   if (!NodeIntrospection::hasIntrospectionSupport())
-    return;
+    GTEST_SKIP();
   auto AST =
       buildASTFromCode(R"cpp(
 long double operator"" _identity ( long double val )

@@ -9,18 +9,15 @@
 #include "OutputSections.h"
 #include "Config.h"
 #include "LinkerScript.h"
-#include "SymbolTable.h"
+#include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "lld/Common/Arrays.h"
 #include "lld/Common/Memory.h"
-#include "lld/Common/Strings.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/Config/config.h" // LLVM_ENABLE_ZLIB
-#include "llvm/Support/MD5.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvm/Config/llvm-config.h" // LLVM_ENABLE_ZLIB
 #include "llvm/Support/Parallel.h"
-#include "llvm/Support/SHA1.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
 #if LLVM_ENABLE_ZLIB
 #include <zlib.h>

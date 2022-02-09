@@ -293,3 +293,30 @@ defm : Merge_mvv_ShortLong<vvp_select,
 defm : Merge_mvv_ShortLong<vvp_select,
                            v256i64,
                            v256i32, "VMRG">;
+
+multiclass Set_CC<ValueType DataVT, string FmkBaseName, string CmpBaseName, SDPatternOperator CCMatcher, SDNodeXForm CCConv> {
+  // Unmasked.
+  def : Pat<(v256i1 (vvp_setcc
+              DataVT:$LHS, DataVT:$RHS, CCMatcher:$cond, (v256i1 true_mask), i32:$vl)),
+              (!cast<Instruction>(FmkBaseName#"vl")
+                (CCConv $cond),
+                (!cast<Instruction>(CmpBaseName#"vvl")
+                  $LHS, $RHS, $vl),
+                $vl)>;
+  // Masked.
+  def : Pat<(v256i1 (vvp_setcc
+              DataVT:$LHS, DataVT:$RHS, CCMatcher:$cond, v256i1:$vm, i32:$vl)),
+              (!cast<Instruction>(FmkBaseName#"vml")
+                (CCConv $cond),
+                (!cast<Instruction>(CmpBaseName#"vvl")
+                  $LHS, $RHS, $vl),
+                $vm, $vl)>;
+}
+
+defm : Set_CC<v256i64,"VFMKL","VCMPUL",CCUIOp,icond2cc>;
+defm : Set_CC<v256i64,"VFMKL","VCMPSL",CCSIOp,icond2cc>;
+defm : Set_CC<v256f64,"VFMKL","VFCMPD",cond,fcond2cc>;
+
+defm : Set_CC<v256i32,"VFMKW","VCMPUW",CCUIOp,icond2cc>;
+defm : Set_CC<v256i32,"VFMKW","VCMPSWZX",CCSIOp,icond2cc>;
+defm : Set_CC<v256f32,"VFMKS","VFCMPS",cond,fcond2cc>;
