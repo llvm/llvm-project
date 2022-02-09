@@ -1725,6 +1725,8 @@ Assume all loops are finite.
 
 .. option:: -ffinite-math-only, -fno-finite-math-only
 
+Allow floating-point optimizations that assume arguments and results are not NaNs or +-inf. This defines the \_\_FINITE\_MATH\_ONLY\_\_ preprocessor macro.
+
 .. option:: -ffixed-point, -fno-fixed-point
 
 Enable fixed point types
@@ -1805,9 +1807,13 @@ Specify that single precision floating-point divide and sqrt used in the program
 
 Use new kernel launching API for HIP
 
-.. option:: -fhonor-infinities, -fhonor-infinites, -fno-honor-infinities
+.. option:: -fhonor-infinities, -fhonor-infinites, -fno-honor-infinities, -fno-honor-infinites
+
+Specify that floating-point optimizations are not allowed that assume arguments and results are not +-inf.
 
 .. option:: -fhonor-nans, -fno-honor-nans
+
+Specify that floating-point optimizations are not allowed that assume arguments and results are not NANs.
 
 .. option:: -fhosted
 
