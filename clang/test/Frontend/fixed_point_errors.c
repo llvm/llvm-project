@@ -149,7 +149,7 @@ _Accum dec_with_hex_exp2 = 0.1P10k;    // expected-error{{invalid suffix 'P10k' 
 _Accum hex_with_dex_exp1 = 0x0.1e10k;  // expected-error{{hexadecimal floating constant requires an exponent}}
 _Accum hex_with_dex_exp2 = 0x0.1E10k;  // expected-error{{hexadecimal floating constant requires an exponent}}
 
-void CheckSuffixOnIntegerLiterals() {
+void CheckSuffixOnIntegerLiterals(void) {
   _Accum short_acc_int;
   _Accum acc_int;
   _Accum long_acc_int;

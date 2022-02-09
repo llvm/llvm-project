@@ -31,7 +31,7 @@ float fl;
 // CHECK-NEXT:    store i8 [[RESIZE1]], i8* @shf, align 1
 // CHECK-NEXT:    ret void
 //
-void add_shfa() {
+void add_shfa(void) {
   shf += a;
 }
 
@@ -57,7 +57,7 @@ void add_shfa() {
 // UNSIGNED-NEXT:    store i32 [[TMP2]], i32* @a, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void add_auf() {
+void add_auf(void) {
   a += uf;
 }
 
@@ -73,7 +73,7 @@ void add_auf() {
 // CHECK-NEXT:    store i16 [[RESIZE1]], i16* @uf, align 2
 // CHECK-NEXT:    ret void
 //
-void add_ufula() {
+void add_ufula(void) {
   uf += ula;
 }
 
@@ -101,7 +101,7 @@ void add_ufula() {
 // UNSIGNED-NEXT:    store i64 [[TMP2]], i64* @ula, align 8
 // UNSIGNED-NEXT:    ret void
 //
-void add_ulashf() {
+void add_ulashf(void) {
   ula += shf;
 }
 
@@ -129,7 +129,7 @@ void add_ulashf() {
 // UNSIGNED-NEXT:    store i16 [[TMP2]], i16* @uf, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void add_ufshf() {
+void add_ufshf(void) {
   uf += shf;
 }
 
@@ -143,7 +143,7 @@ void add_ufshf() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void add_ashf() {
+void add_ashf(void) {
   a += shf;
 }
 
@@ -159,7 +159,7 @@ void add_ashf() {
 // CHECK-NEXT:    store i32 [[RESIZE2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void add_ai() {
+void add_ai(void) {
   a += i;
 }
 
@@ -175,7 +175,7 @@ void add_ai() {
 // CHECK-NEXT:    store i32 [[RESIZE2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void add_au() {
+void add_au(void) {
   a += u;
 }
 
@@ -201,7 +201,7 @@ void add_au() {
 // UNSIGNED-NEXT:    store i64 [[TMP2]], i64* @ula, align 8
 // UNSIGNED-NEXT:    ret void
 //
-void add_ulai() {
+void add_ulai(void) {
   ula += i;
 }
 
@@ -231,7 +231,7 @@ void add_ulai() {
 // UNSIGNED-NEXT:    store i32 [[RESIZE1]], i32* @i, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void add_iula() {
+void add_iula(void) {
   i += ula;
 }
 
@@ -253,7 +253,7 @@ void add_iula() {
 // CHECK-NEXT:    store i8 [[RESIZE3]], i8* @c, align 1
 // CHECK-NEXT:    ret void
 //
-void add_ca() {
+void add_ca(void) {
   c += a;
 }
 
@@ -273,7 +273,7 @@ void add_ca() {
 // CHECK-NEXT:    store i32 [[RESIZE2]], i32* @sa, align 4
 // CHECK-NEXT:    ret void
 //
-void add_sai() {
+void add_sai(void) {
   sa += i;
 }
 
@@ -299,7 +299,7 @@ void add_sai() {
 // CHECK-NEXT:    store i8 [[RESIZE3]], i8* @c, align 1
 // CHECK-NEXT:    ret void
 //
-void add_csa() {
+void add_csa(void) {
   c += sa;
 }
 
@@ -325,7 +325,7 @@ void add_csa() {
 // UNSIGNED-NEXT:    store i64 [[RESIZE2]], i64* @sula, align 8
 // UNSIGNED-NEXT:    ret void
 //
-void add_sulau() {
+void add_sulau(void) {
   sula += u;
 }
 
@@ -356,7 +356,7 @@ void add_sulau() {
 // UNSIGNED-NEXT:    store i8 [[RESIZE1]], i8* @sshf, align 1
 // UNSIGNED-NEXT:    ret void
 //
-void add_sshsuf() {
+void add_sshsuf(void) {
   sshf += suf;
 }
 
@@ -372,7 +372,7 @@ void add_sshsuf() {
 // CHECK-NEXT:    store i32 [[TMP5]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void add_afl() {
+void add_afl(void) {
   a += fl;
 }
 
@@ -386,7 +386,7 @@ void add_afl() {
 // CHECK-NEXT:    store float [[ADD]], float* @fl, align 4
 // CHECK-NEXT:    ret void
 //
-void add_fla() {
+void add_fla(void) {
   fl += a;
 }
 
@@ -402,7 +402,7 @@ void add_fla() {
 // CHECK-NEXT:    store i32 [[TMP5]], i32* @sa, align 4
 // CHECK-NEXT:    ret void
 //
-void add_safl() {
+void add_safl(void) {
   sa += fl;
 }
 
@@ -416,7 +416,7 @@ void add_safl() {
 // CHECK-NEXT:    store float [[ADD]], float* @fl, align 4
 // CHECK-NEXT:    ret void
 //
-void add_flsa() {
+void add_flsa(void) {
   fl += sa;
 }
 
@@ -445,7 +445,7 @@ void add_flsa() {
 // UNSIGNED-NEXT:    store i32 [[TMP2]], i32* @a, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void sub_auf() {
+void sub_auf(void) {
   a -= uf;
 }
 
@@ -461,7 +461,7 @@ void sub_auf() {
 // CHECK-NEXT:    store i32 [[RESIZE2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void sub_ai() {
+void sub_ai(void) {
   a -= i;
 }
 
@@ -487,7 +487,7 @@ void sub_ai() {
 // CHECK-NEXT:    store i8 [[RESIZE3]], i8* @c, align 1
 // CHECK-NEXT:    ret void
 //
-void sub_csa() {
+void sub_csa(void) {
   c -= sa;
 }
 
@@ -503,7 +503,7 @@ void sub_csa() {
 // CHECK-NEXT:    store i32 [[TMP5]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void sub_afl() {
+void sub_afl(void) {
   a -= fl;
 }
 
@@ -530,7 +530,7 @@ void sub_afl() {
 // UNSIGNED-NEXT:    store i32 [[TMP2]], i32* @a, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void mul_auf() {
+void mul_auf(void) {
   a *= uf;
 }
 
@@ -546,7 +546,7 @@ void mul_auf() {
 // CHECK-NEXT:    store i32 [[RESIZE2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void mul_ai() {
+void mul_ai(void) {
   a *= i;
 }
 
@@ -572,7 +572,7 @@ void mul_ai() {
 // CHECK-NEXT:    store i8 [[RESIZE3]], i8* @c, align 1
 // CHECK-NEXT:    ret void
 //
-void mul_csa() {
+void mul_csa(void) {
   c *= sa;
 }
 
@@ -588,7 +588,7 @@ void mul_csa() {
 // CHECK-NEXT:    store i32 [[TMP5]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void mul_afl() {
+void mul_afl(void) {
   a *= fl;
 }
 
@@ -615,7 +615,7 @@ void mul_afl() {
 // UNSIGNED-NEXT:    store i32 [[TMP2]], i32* @a, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void div_auf() {
+void div_auf(void) {
   a /= uf;
 }
 
@@ -631,7 +631,7 @@ void div_auf() {
 // CHECK-NEXT:    store i32 [[RESIZE2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void div_ai() {
+void div_ai(void) {
   a /= i;
 }
 
@@ -657,7 +657,7 @@ void div_ai() {
 // CHECK-NEXT:    store i8 [[RESIZE3]], i8* @c, align 1
 // CHECK-NEXT:    ret void
 //
-void div_csa() {
+void div_csa(void) {
   c /= sa;
 }
 
@@ -673,7 +673,7 @@ void div_csa() {
 // CHECK-NEXT:    store i32 [[TMP5]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void div_afl() {
+void div_afl(void) {
   a /= fl;
 }
 
@@ -686,7 +686,7 @@ void div_afl() {
 // CHECK-NEXT:    store i32 [[TMP2]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void shft_ai() {
+void shft_ai(void) {
   a <<= i;
 }
 
@@ -708,7 +708,7 @@ void shft_ai() {
 // UNSIGNED-NEXT:    store i16 [[TMP3]], i16* @suf, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void shft_sufi() {
+void shft_sufi(void) {
   suf <<= i;
 }
 
@@ -721,6 +721,6 @@ void shft_sufi() {
 // CHECK-NEXT:    store i64 [[TMP3]], i64* @ula, align 8
 // CHECK-NEXT:    ret void
 //
-void shft_ulai() {
+void shft_ulai(void) {
   ula >>= i;
 }

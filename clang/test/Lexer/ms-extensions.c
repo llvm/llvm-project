@@ -23,14 +23,14 @@ __complex float c3 = 1.0if;
 #define USHORT 0xffffui16
 #define UCHAR 0xffui8
 
-void a() {
+void a(void) {
 	unsigned long long m = ULLONG_MAX;
 	unsigned int n = UINT;
         unsigned short s = USHORT;
         unsigned char c = UCHAR;
 }
 
-void pr_7968()
+void pr_7968(void)
 {
   int var1 = 0x1111111e+1;
   int var2 = 0X1111111e+1;

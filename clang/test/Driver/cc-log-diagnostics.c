@@ -4,7 +4,7 @@
 // RUN: %clang -Wfoobar -no-canonical-prefixes -target x86_64-apple-darwin10 -fsyntax-only %s
 // RUN: FileCheck %s < %t.log
 
-int f0() {}
+int f0(void) {}
 
 // CHECK: <dict>
 // CHECK:   <key>main-file</key>
@@ -27,7 +27,7 @@ int f0() {}
 // CHECK:       <key>line</key>
 // CHECK:       <integer>7</integer>
 // CHECK:       <key>column</key>
-// CHECK:       <integer>11</integer>
+// CHECK:       <integer>15</integer>
 // CHECK:       <key>message</key>
 // CHECK:       <string>non-void function does not return a value</string>
 // CHECK:     </dict>

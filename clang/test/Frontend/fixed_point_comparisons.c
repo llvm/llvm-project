@@ -53,7 +53,7 @@ _Bool b_sne_true = 2.6hk != 2.6uhk;
 _Bool b_seq_true = 2.0hk == 2u;  // CHECK-DAG: @b_seq_true  = {{.*}}global i8 1, align 1
 _Bool b_seq_true2 = 2.0uhk == 2; // CHECK-DAG: @b_seq_true2 = {{.*}}global i8 1, align 1
 
-void TestComparisons() {
+void TestComparisons(void) {
   short _Accum sa;
   _Accum a;
   unsigned short _Accum usa;
@@ -132,7 +132,7 @@ void TestComparisons() {
   // CHECK-NEXT: {{.*}} = icmp ule i32 [[UPSCALE_A]], [[A2]]
 }
 
-void TestIntComparisons() {
+void TestIntComparisons(void) {
   short _Accum sa;
   unsigned short _Accum usa;
 
@@ -288,7 +288,7 @@ void TestIntComparisons() {
   // PADDED-NEXT: {{.*}} = icmp eq i39 [[RESIZE_A]], [[UPSCALE_I]]
 }
 
-void TestComparisonSignage() {
+void TestComparisonSignage(void) {
   short _Accum sa;
   unsigned short _Accum usa;
   int i;
@@ -327,7 +327,7 @@ void TestComparisonSignage() {
   // PADDED-NEXT: {{.*}} = icmp eq i39 [[RESIZE_A]], [[UPSCALE_I]]
 }
 
-void TestSaturationComparisons() {
+void TestSaturationComparisons(void) {
   short _Accum sa;
   _Accum a;
   _Sat short _Accum sat_sa;
@@ -361,7 +361,7 @@ void TestSaturationComparisons() {
   // PADDED-NEXT: {{.*}} = icmp eq i16 [[A]], [[A2]]
 }
 
-void StoreBooleanResult() {
+void StoreBooleanResult(void) {
   short _Accum sa;
   _Accum a;
   int res;

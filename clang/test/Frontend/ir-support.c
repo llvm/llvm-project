@@ -16,4 +16,4 @@
 // RUN: %clang_cc1 -S -o - %t.ll | grep -v '\.file' > %t.ll.s
 // RUN: diff %t.s %t.ll.s
 
-int f() { return 0; }
+int f(void) { return 0; }

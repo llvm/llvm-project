@@ -20,7 +20,7 @@
 // CMD: "-target-feature" "-sse"
 // CMD-AFTER: "-target-feature" "+avx2"
 
-void foo() { }
+void foo(void) { }
 
 // IR-GPR: attributes {{.*}} = { {{.*}} "target-features"="{{.*}}-avx{{.*}}-avx2{{.*}}-avx512f{{.*}}-sse{{.*}}-sse2{{.*}}-ssse3{{.*}}-x87{{.*}}"
 // IR-AVX2: attributes {{.*}} = { {{.*}} "target-features"="{{.*}}+avx{{.*}}+avx2{{.*}}+sse{{.*}}+sse2{{.*}}+ssse3{{.*}}-avx512f{{.*}}-x87{{.*}}"

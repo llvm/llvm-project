@@ -4,7 +4,7 @@
 _Bool global_b = 1.0k;  // @global_b = {{*.}}global i8 1, align 1
 _Bool global_b2 = 0.0k; // @global_b2 = {{*.}}global i8 0, align 1
 
-void func() {
+void func(void) {
   _Accum a = 0.5k;
   unsigned _Accum ua = 0.5uk;
   _Bool b;

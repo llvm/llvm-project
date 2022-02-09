@@ -1,4 +1,4 @@
-int foo() { }
+int foo(void) { }
 int *bar(float *f) { return f; }
 
 // RUN: c-index-test -test-load-source all %s 2>&1|FileCheck -check-prefix=CHECK-BOTH-WARNINGS %s

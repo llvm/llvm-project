@@ -6,7 +6,7 @@
 void object_setClass(id, id);
 Class object_getClass(id);
 
-id rhs();
+id rhs(void);
 
 Class pr6302(id x123) {
   x123->isa  = 0;

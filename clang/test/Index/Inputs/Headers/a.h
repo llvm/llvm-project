@@ -1,2 +1,2 @@
-int *getA();
+int *getA(void);
 

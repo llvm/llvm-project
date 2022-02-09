@@ -29,11 +29,11 @@
 // CHECK-ERROR: error: invalid integral value '16.0.0' in '-ffuchsia-api-level=16.0.0'
 
 #if __Fuchsia_API_level__ >= 16
-void f16() {
+void f16(void) {
 
 }
 #else
-void f15() {
+void f15(void) {
 
 }
 #endif

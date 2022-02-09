@@ -13,7 +13,7 @@
 - (id) compare: (id) arg1;
 @end
 
-SEL func()
+SEL func(void)
 {
         (void)@selector( compare: );
         (void)@selector (compare:);

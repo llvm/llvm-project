@@ -133,5 +133,5 @@
 // tune: "-target-cpu" "sandybridge"
 // tune-SAME: "-tune-cpu" "haswell"
 
-void f() {
+void f(void) {
 }
