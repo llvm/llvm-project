@@ -47,9 +47,6 @@ struct BufferizationOptions {
 
   BufferizationOptions();
 
-  // BufferizationOptions cannot be copied.
-  BufferizationOptions(const BufferizationOptions &other) = delete;
-
   /// Return `true` if the op is allowed to be bufferized.
   bool isOpAllowed(Operation *op) const {
     if (!hasFilter)

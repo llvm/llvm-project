@@ -29,16 +29,15 @@ struct ArithmeticBufferizePass
   }
 
   void runOnOperation() override {
-    std::unique_ptr<BufferizationOptions> options =
-        getPartialBufferizationOptions();
+    BufferizationOptions options = getPartialBufferizationOptions();
     if (constantOpOnly) {
-      options->addToOperationFilter<arith::ConstantOp>();
+      options.addToOperationFilter<arith::ConstantOp>();
     } else {
-      options->addToDialectFilter<arith::ArithmeticDialect>();
+      options.addToDialectFilter<arith::ArithmeticDialect>();
     }
-    options->bufferAlignment = alignment;
+    options.bufferAlignment = alignment;
 
-    if (failed(bufferizeOp(getOperation(), *options)))
+    if (failed(bufferizeOp(getOperation(), options)))
       signalPassFailure();
   }
 

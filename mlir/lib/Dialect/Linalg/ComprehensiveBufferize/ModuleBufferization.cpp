@@ -16,11 +16,12 @@
 // their respective callers.
 //
 // After analyzing a FuncOp, additional information about its bbArgs is
-// gathered through PostAnalysisSteps and stored in `ModuleBufferizationState`.
+// gathered through PostAnalysisStepFns and stored in
+// `ModuleBufferizationState`.
 //
-// * `EquivalentFuncOpBBArgsAnalysis` determines the equivalent bbArg for each
+// * `equivalentFuncOpBBArgsAnalysis` determines the equivalent bbArg for each
 //   tensor return value (if any).
-// * `FuncOpBbArgReadWriteAnalysis` determines whether or not a tensor bbArg is
+// * `funcOpBbArgReadWriteAnalysis` determines whether or not a tensor bbArg is
 //   read/written.
 //
 // Only tensors that are equivalent to some FuncOp bbArg may be returned.
@@ -47,7 +48,7 @@
 // modify the buffer of `%t1` directly. The CallOp in `caller` must bufferize
 // out-of-place because `%t0` is modified by the callee but read by the
 // tensor.extract op. The analysis of CallOps decides whether an OpOperand must
-// bufferize out-of-place based on results of `FuncOpBbArgReadWriteAnalysis`.
+// bufferize out-of-place based on results of `funcOpBbArgReadWriteAnalysis`.
 // ```
 // func @callee(%t1 : tensor<?xf32>) -> tensor<?xf32> {
 //   %f = ... : f32
@@ -62,7 +63,7 @@
 // }
 // ```
 //
-// Note: If a function is external, `FuncOpBbArgReadWriteAnalysis` cannot
+// Note: If a function is external, `funcOpBbArgReadWriteAnalysis` cannot
 // analyze the function body. In such a case, the CallOp analysis conservatively
 // assumes that each tensor OpOperand is both read and written.
 //
@@ -159,55 +160,55 @@ static ReturnOp getAssumedUniqueReturnOp(FuncOp funcOp) {
 }
 
 namespace {
+
+/// Annotate IR with the results of the analysis. For testing purposes only.
+static void annotateEquivalentReturnBbArg(OpOperand &returnVal,
+                                          BlockArgument bbArg) {
+  const char *kEquivalentArgsAttr = "__equivalent_func_args__";
+  Operation *op = returnVal.getOwner();
+
+  SmallVector<int64_t> equivBbArgs;
+  if (op->hasAttr(kEquivalentArgsAttr)) {
+    auto attr = op->getAttr(kEquivalentArgsAttr).cast<ArrayAttr>();
+    equivBbArgs = llvm::to_vector<4>(llvm::map_range(attr, [](Attribute a) {
+      return a.cast<IntegerAttr>().getValue().getSExtValue();
+    }));
+  } else {
+    equivBbArgs.append(op->getNumOperands(), -1);
+  }
+  equivBbArgs[returnVal.getOperandNumber()] = bbArg.getArgNumber();
+
+  OpBuilder b(op->getContext());
+  op->setAttr(kEquivalentArgsAttr, b.getI64ArrayAttr(equivBbArgs));
+}
+
 /// Store function BlockArguments that are equivalent to a returned value in
 /// ModuleBufferizationState.
-struct EquivalentFuncOpBBArgsAnalysis : public PostAnalysisStep {
-  /// Annotate IR with the results of the analysis. For testing purposes only.
-  static void annotateReturnOp(OpOperand &returnVal, BlockArgument bbArg) {
-    const char *kEquivalentArgsAttr = "__equivalent_func_args__";
-    Operation *op = returnVal.getOwner();
+static LogicalResult
+equivalentFuncOpBBArgsAnalysis(Operation *op, BufferizationState &state,
+                               BufferizationAliasInfo &aliasInfo,
+                               SmallVector<Operation *> &newOps) {
+  ModuleBufferizationState &moduleState = getModuleBufferizationState(state);
 
-    SmallVector<int64_t> equivBbArgs;
-    if (op->hasAttr(kEquivalentArgsAttr)) {
-      auto attr = op->getAttr(kEquivalentArgsAttr).cast<ArrayAttr>();
-      equivBbArgs = llvm::to_vector<4>(llvm::map_range(attr, [](Attribute a) {
-        return a.cast<IntegerAttr>().getValue().getSExtValue();
-      }));
-    } else {
-      equivBbArgs.append(op->getNumOperands(), -1);
-    }
-    equivBbArgs[returnVal.getOperandNumber()] = bbArg.getArgNumber();
+  // Support only single return-terminated block in the function.
+  auto funcOp = cast<FuncOp>(op);
+  ReturnOp returnOp = getAssumedUniqueReturnOp(funcOp);
+  assert(returnOp && "expected func with single return op");
 
-    OpBuilder b(op->getContext());
-    op->setAttr(kEquivalentArgsAttr, b.getI64ArrayAttr(equivBbArgs));
-  }
+  for (OpOperand &returnVal : returnOp->getOpOperands())
+    if (returnVal.get().getType().isa<RankedTensorType>())
+      for (BlockArgument bbArg : funcOp.getArguments())
+        if (bbArg.getType().isa<RankedTensorType>())
+          if (aliasInfo.areEquivalentBufferizedValues(returnVal.get(), bbArg)) {
+            moduleState
+                .equivalentFuncArgs[funcOp][returnVal.getOperandNumber()] =
+                bbArg.getArgNumber();
+            if (state.getOptions().testAnalysisOnly)
+              annotateEquivalentReturnBbArg(returnVal, bbArg);
+          }
 
-  LogicalResult run(Operation *op, BufferizationState &state,
-                    BufferizationAliasInfo &aliasInfo,
-                    SmallVector<Operation *> &newOps) override {
-    ModuleBufferizationState &moduleState = getModuleBufferizationState(state);
-
-    // Support only single return-terminated block in the function.
-    auto funcOp = cast<FuncOp>(op);
-    ReturnOp returnOp = getAssumedUniqueReturnOp(funcOp);
-    assert(returnOp && "expected func with single return op");
-
-    for (OpOperand &returnVal : returnOp->getOpOperands())
-      if (returnVal.get().getType().isa<RankedTensorType>())
-        for (BlockArgument bbArg : funcOp.getArguments())
-          if (bbArg.getType().isa<RankedTensorType>())
-            if (aliasInfo.areEquivalentBufferizedValues(returnVal.get(),
-                                                        bbArg)) {
-              moduleState
-                  .equivalentFuncArgs[funcOp][returnVal.getOperandNumber()] =
-                  bbArg.getArgNumber();
-              if (state.getOptions().testAnalysisOnly)
-                annotateReturnOp(returnVal, bbArg);
-            }
-
-    return success();
-  }
-};
+  return success();
+}
 
 /// Return true if the buffer of the given tensor value is written to. Must not
 /// be called for values inside not yet analyzed functions. (Post-analysis
@@ -239,38 +240,37 @@ static bool isValueWritten(Value value, const BufferizationState &state,
 }
 
 /// Determine which FuncOp bbArgs are read and which are written. If this
-/// PostAnalysisStep is run on a function with unknown ops, it will
+/// PostAnalysisStepFn is run on a function with unknown ops, it will
 /// conservatively assume that such ops bufferize to a read + write.
-struct FuncOpBbArgReadWriteAnalysis : public PostAnalysisStep {
-  LogicalResult run(Operation *op, BufferizationState &state,
-                    BufferizationAliasInfo &aliasInfo,
-                    SmallVector<Operation *> &newOps) override {
-    ModuleBufferizationState &moduleState = getModuleBufferizationState(state);
-    auto funcOp = cast<FuncOp>(op);
+static LogicalResult
+funcOpBbArgReadWriteAnalysis(Operation *op, BufferizationState &state,
+                             BufferizationAliasInfo &aliasInfo,
+                             SmallVector<Operation *> &newOps) {
+  ModuleBufferizationState &moduleState = getModuleBufferizationState(state);
+  auto funcOp = cast<FuncOp>(op);
 
-    // If the function has no body, conservatively assume that all args are
-    // read + written.
-    if (funcOp.getBody().empty()) {
-      for (BlockArgument bbArg : funcOp.getArguments()) {
-        moduleState.readBbArgs.insert(bbArg);
-        moduleState.writtenBbArgs.insert(bbArg);
-      }
-
-      return success();
-    }
-
+  // If the function has no body, conservatively assume that all args are
+  // read + written.
+  if (funcOp.getBody().empty()) {
     for (BlockArgument bbArg : funcOp.getArguments()) {
-      if (!bbArg.getType().isa<TensorType>())
-        continue;
-      if (state.isValueRead(bbArg))
-        moduleState.readBbArgs.insert(bbArg);
-      if (isValueWritten(bbArg, state, aliasInfo))
-        moduleState.writtenBbArgs.insert(bbArg);
+      moduleState.readBbArgs.insert(bbArg);
+      moduleState.writtenBbArgs.insert(bbArg);
     }
 
     return success();
   }
-};
+
+  for (BlockArgument bbArg : funcOp.getArguments()) {
+    if (!bbArg.getType().isa<TensorType>())
+      continue;
+    if (state.isValueRead(bbArg))
+      moduleState.readBbArgs.insert(bbArg);
+    if (isValueWritten(bbArg, state, aliasInfo))
+      moduleState.writtenBbArgs.insert(bbArg);
+  }
+
+  return success();
+}
 } // namespace
 
 static bool isaTensor(Type t) { return t.isa<TensorType>(); }
@@ -983,10 +983,8 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     return failure();
 
   // Collect bbArg/return value information after the analysis.
-  options->postAnalysisSteps.emplace_back(
-      std::make_unique<EquivalentFuncOpBBArgsAnalysis>());
-  options->postAnalysisSteps.emplace_back(
-      std::make_unique<FuncOpBbArgReadWriteAnalysis>());
+  options->postAnalysisSteps.push_back(equivalentFuncOpBBArgsAnalysis);
+  options->postAnalysisSteps.push_back(funcOpBbArgReadWriteAnalysis);
 
   // Analyze ops.
   for (FuncOp funcOp : moduleState.orderedFuncOps) {
