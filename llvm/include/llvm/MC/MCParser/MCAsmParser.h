@@ -10,20 +10,20 @@
 #define LLVM_MC_MCPARSER_MCASMPARSER_H
 
 #include "llvm/ADT/None.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCAsmMacro.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
-#include <ctime>
 #include <string>
 #include <utility>
 
 namespace llvm {
 
+class MCAsmLexer;
 class MCAsmInfo;
 class MCAsmParserExtension;
 class MCContext;
