@@ -500,6 +500,7 @@ Optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode, const Register Op1,
   default:
     break;
   case TargetOpcode::G_ADD:
+  case TargetOpcode::G_PTR_ADD:
     return C1 + C2;
   case TargetOpcode::G_AND:
     return C1 & C2;
