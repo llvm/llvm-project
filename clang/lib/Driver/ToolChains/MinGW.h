@@ -90,6 +90,8 @@ public:
 
   void printVerboseInfo(raw_ostream &OS) const override;
 
+  unsigned GetDefaultDwarfVersion() const override { return 4; }
+
 protected:
   Tool *getTool(Action::ActionClass AC) const override;
   Tool *buildLinker() const override;
