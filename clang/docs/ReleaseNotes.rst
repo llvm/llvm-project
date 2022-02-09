@@ -81,6 +81,10 @@ New Compiler Flags
 - The ``-mno-bti-at-return-twice`` flag will make sure a BTI instruction won't
   be added after a setjmp or possible other return-twice construct (ARM backend
   only).
+- The ``--start-no-unused-arguments`` and ``--end-no-unused-arguments`` flags
+  allow silencing warnings about unused arguments for only a subset of
+  the command line arguments, keeping potential warnings for other arguments
+  outside of such a region.
 
 Deprecated Compiler Flags
 -------------------------
@@ -163,6 +167,16 @@ Windows Support
   currently supported.
 
 - Support for on-demand initialization of TLS variables was added.
+
+- Improved code generation for ARM, by assuming less strict alignment
+  requirements for instructions (just like other OSes do).
+
+- Fixed using the ``-m32`` flag in x86_64 MinGW setups, by e.g. making ``-m32``
+  pick i686 instead of i386, if there is no i386 sysroot, but only one for
+  i686.
+
+- Fixed passing the ``--no-demangle`` option through to the linker for MinGW
+  targets.
 
 C Language Changes in Clang
 ---------------------------

@@ -80,12 +80,17 @@ Changes to the AArch64 Backend
   the use of the -mtune frontend flag. This allows certain scheduling features
   and optimisations to be enabled independently of the architecture. If the
   "tune-cpu" attribute is absent it tunes according to the "target-cpu".
+* Fixed relocations against temporary symbols (e.g. in jump tables and
+  constant pools) in large COFF object files.
 
 Changes to the ARM Backend
 --------------------------
 
 * Added support for the Armv9-A, Armv9.1-A and Armv9.2-A architectures.
 * Added support for the Armv8.1-M PACBTI-M extension.
+* Changed the assembly comment string for MSVC targets to ``@`` (consistent
+  with the MinGW and ELF targets), freeing up ``;`` to be used as
+  statement separator.
 
 Changes to the MIPS Target
 --------------------------
@@ -124,6 +129,24 @@ Changes to the WebAssembly Target
 
 During this release ...
 
+Changes to the Windows Target
+-----------------------------
+
+* Changed how the ``.pdata`` sections refer to the code they're describing,
+  to avoid conflicting unwind info if weak symbols are overridden.
+
+* Fixed code generation for calling support routines for converting 128 bit
+  integers from/to floats on x86_64.
+
+* The preferred path separator form (backslashes or forward slashes) can be
+  configured in Windows builds of LLVM now, with the
+  ``LLVM_WINDOWS_PREFER_FORWARD_SLASH`` CMake option. This defaults to
+  true in MinGW builds of LLVM.
+
+* Set proper COFF symbol types for function aliases (e.g. for Itanium C++
+  constructors), making sure that GNU ld exports all of them correctly as
+  functions, not data, when linking a DLL.
+
 Changes to the OCaml bindings
 -----------------------------
 
@@ -133,6 +156,9 @@ Changes to the C API
 
 * ``LLVMSetInstDebugLocation`` has been deprecated in favor of the more general
   ``LLVMAddMetadataToInst``.
+
+* Fixed building LLVM-C.dll for i386 targets with MSVC, which had been broken
+  since the LLVM 8.0.0 release.
 
 Changes to the Go bindings
 --------------------------
@@ -159,6 +185,8 @@ Changes to the LLVM tools
   `-name-whitelist` is marked as deprecated and to be removed in future
   releases.
 
+* llvm-readobj: Improved printing of symbols in Windows unwind data.
+
 Changes to LLDB
 ---------------------------------
 
@@ -176,6 +204,8 @@ Changes to LLDB
 
 * The ``memory read`` command has a new option ``--show-tags``. Use this option
   to show memory tags beside the contents of tagged memory ranges.
+
+* Fixed continuing from breakpoints and singlestepping on Windows on ARM/ARM64.
 
 Changes to Sanitizers
 ---------------------

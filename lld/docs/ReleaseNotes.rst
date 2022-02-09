@@ -58,12 +58,17 @@ Breaking changes
 COFF Improvements
 -----------------
 
-* ...
+* Correctly handle a signed immediate offset in ARM64 adr/adrp relocations.
+  (`D114347 <https://reviews.llvm.org/D114347>`_)
+
+* Omit section and label symbols from the symbol table.
+  (`D113866 <https://reviews.llvm.org/D113866>`_)
 
 MinGW Improvements
 ------------------
 
-* ...
+* ``--heap`` is now handled.
+  (`D118405 <https://reviews.llvm.org/D118405>`_)
 
 MachO Improvements
 ------------------
