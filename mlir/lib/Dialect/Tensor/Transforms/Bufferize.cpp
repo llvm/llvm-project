@@ -30,11 +30,10 @@ using namespace bufferization;
 namespace {
 struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
   void runOnOperation() override {
-    std::unique_ptr<BufferizationOptions> options =
-        getPartialBufferizationOptions();
-    options->addToDialectFilter<tensor::TensorDialect>();
+    BufferizationOptions options = getPartialBufferizationOptions();
+    options.addToDialectFilter<tensor::TensorDialect>();
 
-    if (failed(bufferizeOp(getOperation(), *options)))
+    if (failed(bufferizeOp(getOperation(), options)))
       signalPassFailure();
   }
 

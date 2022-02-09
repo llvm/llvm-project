@@ -524,11 +524,10 @@ findValidInsertionPoint(Operation *initTensorOp,
 /// chain, starting from the OpOperand and always following the aliasing
 /// OpOperand, that eventually ends at a single InitTensorOp.
 LogicalResult
-mlir::linalg::comprehensive_bufferize::linalg_ext::InitTensorEliminationStep::
-    eliminateInitTensors(Operation *op, BufferizationState &state,
-                         BufferizationAliasInfo &aliasInfo,
-                         AnchorMatchFn anchorMatchFunc, RewriteFn rewriteFunc,
-                         SmallVector<Operation *> &newOps) {
+mlir::linalg::comprehensive_bufferize::linalg_ext::eliminateInitTensors(
+    Operation *op, BufferizationState &state, BufferizationAliasInfo &aliasInfo,
+    AnchorMatchFn anchorMatchFunc, RewriteFn rewriteFunc,
+    SmallVector<Operation *> &newOps) {
   OpBuilder b(op->getContext());
 
   WalkResult status = op->walk([&](Operation *op) {
@@ -628,7 +627,7 @@ mlir::linalg::comprehensive_bufferize::linalg_ext::InitTensorEliminationStep::
 /// Note that the newly inserted ExtractSliceOp may have to bufferize
 /// out-of-place due to RaW conflicts.
 LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
-    InsertSliceAnchoredInitTensorEliminationStep::run(
+    insertSliceAnchoredInitTensorEliminationStep(
         Operation *op, BufferizationState &state,
         BufferizationAliasInfo &aliasInfo, SmallVector<Operation *> &newOps) {
   return eliminateInitTensors(

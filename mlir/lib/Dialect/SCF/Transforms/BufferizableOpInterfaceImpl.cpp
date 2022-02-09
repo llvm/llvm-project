@@ -432,7 +432,7 @@ struct YieldOpInterface
 } // namespace scf
 } // namespace mlir
 
-LogicalResult mlir::scf::AssertScfForAliasingProperties::run(
+LogicalResult mlir::scf::assertScfForAliasingProperties(
     Operation *op, BufferizationState &state, BufferizationAliasInfo &aliasInfo,
     SmallVector<Operation *> &newOps) {
   LogicalResult status = success();

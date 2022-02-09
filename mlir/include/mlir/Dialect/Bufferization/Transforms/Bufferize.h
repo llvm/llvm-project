@@ -82,7 +82,7 @@ LogicalResult bufferizeOp(Operation *op, const BufferizationOptions &options);
 void populateBufferizationPattern(const BufferizationState &state,
                                   RewritePatternSet &patterns);
 
-std::unique_ptr<BufferizationOptions> getPartialBufferizationOptions();
+BufferizationOptions getPartialBufferizationOptions();
 
 } // namespace bufferization
 } // namespace mlir

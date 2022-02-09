@@ -253,12 +253,11 @@ void bufferization::populateBufferizationPattern(
   patterns.add<BufferizationPattern>(patterns.getContext(), state);
 }
 
-std::unique_ptr<BufferizationOptions>
-bufferization::getPartialBufferizationOptions() {
-  auto options = std::make_unique<BufferizationOptions>();
-  options->allowReturnMemref = true;
-  options->allowUnknownOps = true;
-  options->createDeallocs = false;
-  options->fullyDynamicLayoutMaps = false;
+BufferizationOptions bufferization::getPartialBufferizationOptions() {
+  BufferizationOptions options;
+  options.allowReturnMemref = true;
+  options.allowUnknownOps = true;
+  options.createDeallocs = false;
+  options.fullyDynamicLayoutMaps = false;
   return options;
 }
