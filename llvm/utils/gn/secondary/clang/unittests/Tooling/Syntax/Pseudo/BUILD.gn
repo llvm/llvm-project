@@ -10,5 +10,8 @@ unittest("ClangPseudoTests") {
     "//llvm/lib/Support",
     "//llvm/lib/Testing/Support",
   ]
-  sources = [ "GrammarTest.cpp" ]
+  sources = [
+    "GrammarTest.cpp",
+    "LRGraphTest.cpp",
+  ]
 }
