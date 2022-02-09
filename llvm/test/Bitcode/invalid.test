@@ -286,3 +286,8 @@ RUN: not llvm-dis -disable-output %p/Inputs/invalid-chunk-size.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-CHUNK-SIZE %s
 
 INVALID-CHUNK-SIZE: Fixed or VBR abbrev record with size > MaxChunkData
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-diimportedentity-record.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-DIIMPORTEDENTITY-RECORD %s
+
+INVALID-DIIMPORTEDENTITY-RECORD: Invalid DIImportedEntity record

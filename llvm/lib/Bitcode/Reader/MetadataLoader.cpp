@@ -2033,8 +2033,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_IMPORTED_ENTITY: {
-    if (Record.size() < 6 && Record.size() > 8)
-      return error("Invalid record");
+    if (Record.size() < 6 || Record.size() > 8)
+      return error("Invalid DIImportedEntity record");
 
     IsDistinct = Record[0];
     bool HasFile = (Record.size() >= 7);
