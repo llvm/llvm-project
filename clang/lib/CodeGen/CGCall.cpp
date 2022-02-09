@@ -1878,6 +1878,37 @@ void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
 
     if (CodeGenOpts.SpeculativeLoadHardening)
       FuncAttrs.addAttribute(llvm::Attribute::SpeculativeLoadHardening);
+
+    // Add zero-call-used-regs attribute.
+    switch (CodeGenOpts.getZeroCallUsedRegs()) {
+    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Skip:
+      FuncAttrs.removeAttribute("zero-call-used-regs");
+      break;
+    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedGPRArg:
+      FuncAttrs.addAttribute("zero-call-used-regs", "used-gpr-arg");
+      break;
+    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedGPR:
+      FuncAttrs.addAttribute("zero-call-used-regs", "used-gpr");
+      break;
+    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedArg:
+      FuncAttrs.addAttribute("zero-call-used-regs", "used-arg");
+      break;
+    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Used:
+      FuncAttrs.addAttribute("zero-call-used-regs", "used");
+      break;
+    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllGPRArg:
+      FuncAttrs.addAttribute("zero-call-used-regs", "all-gpr-arg");
+      break;
+    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllGPR:
+      FuncAttrs.addAttribute("zero-call-used-regs", "all-gpr");
+      break;
+    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllArg:
+      FuncAttrs.addAttribute("zero-call-used-regs", "all-arg");
+      break;
+    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::All:
+      FuncAttrs.addAttribute("zero-call-used-regs", "all");
+      break;
+    }
   }
 
   if (getLangOpts().assumeFunctionsAreConvergent()) {
@@ -2166,6 +2197,15 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       FuncAttrs.addAttribute(llvm::Attribute::SpeculativeLoadHardening);
     if (TargetDecl->hasAttr<NoSplitStackAttr>())
       FuncAttrs.removeAttribute("split-stack");
+    if (TargetDecl->hasAttr<ZeroCallUsedRegsAttr>()) {
+      // A function "__attribute__((...))" overrides the command-line flag.
+      auto Kind =
+          TargetDecl->getAttr<ZeroCallUsedRegsAttr>()->getZeroCallUsedRegs();
+      FuncAttrs.removeAttribute("zero-call-used-regs");
+      FuncAttrs.addAttribute(
+          "zero-call-used-regs",
+          ZeroCallUsedRegsAttr::ConvertZeroCallUsedRegsKindToStr(Kind));
+    }
 
     // Add NonLazyBind attribute to function declarations when -fno-plt
     // is used.

@@ -2564,6 +2564,19 @@ def VectorCall : DeclOrTypeAttr {
   let Documentation = [VectorCallDocs];
 }
 
+def ZeroCallUsedRegs : InheritableAttr {
+  let Spellings = [GCC<"zero_call_used_regs">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Args = [
+    EnumArgument<"ZeroCallUsedRegs", "ZeroCallUsedRegsKind",
+                 ["skip", "used-gpr-arg", "used-gpr", "used-arg", "used",
+                  "all-gpr-arg", "all-gpr", "all-arg", "all"],
+                 ["Skip", "UsedGPRArg", "UsedGPR", "UsedArg", "Used",
+                  "AllGPRArg", "AllGPR", "AllArg", "All"]>
+  ];
+  let Documentation = [ZeroCallUsedRegsDocs];
+}
+
 def Pascal : DeclOrTypeAttr {
   let Spellings = [Clang<"pascal">, Keyword<"__pascal">, Keyword<"_pascal">];
 //  let Subjects = [Function, ObjCMethod];

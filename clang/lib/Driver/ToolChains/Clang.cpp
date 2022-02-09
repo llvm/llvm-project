@@ -5888,6 +5888,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fdigraphs, options::OPT_fno_digraphs);
   Args.AddLastArg(CmdArgs, options::OPT_femulated_tls,
                   options::OPT_fno_emulated_tls);
+  Args.AddLastArg(CmdArgs, options::OPT_fzero_call_used_regs_EQ);
+
+  if (Arg *A = Args.getLastArg(options::OPT_fzero_call_used_regs_EQ)) {
+    // FIXME: There's no reason for this to be restricted to X86. The backend
+    // code needs to be changed to include the appropriate function calls
+    // automatically.
+    if (!Triple.isX86())
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << TripleStr;
+  }
 
   // AltiVec-like language extensions aren't relevant for assembling.
   if (!isa<PreprocessJobAction>(JA) || Output.getType() != types::TY_PP_Asm)

@@ -567,6 +567,24 @@ public:
   virtual bool isCalleeSavedPhysReg(MCRegister PhysReg,
                                     const MachineFunction &MF) const;
 
+  /// Returns true if PhysReg can be used as an argument to a function.
+  virtual bool isArgumentRegister(const MachineFunction &MF,
+                                  MCRegister PhysReg) const {
+    return false;
+  }
+
+  /// Returns true if PhysReg is a fixed register.
+  virtual bool isFixedRegister(const MachineFunction &MF,
+                               MCRegister PhysReg) const {
+    return false;
+  }
+
+  /// Returns true if PhysReg is a general purpose register.
+  virtual bool isGeneralPurposeRegister(const MachineFunction &MF,
+                                        MCRegister PhysReg) const {
+    return false;
+  }
+
   /// Prior to adding the live-out mask to a stackmap or patchpoint
   /// instruction, provide the target the opportunity to adjust it (mainly to
   /// remove pseudo-registers that should be ignored).

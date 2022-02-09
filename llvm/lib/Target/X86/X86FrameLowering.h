@@ -233,6 +233,10 @@ private:
                                        const DebugLoc &DL, uint64_t Offset,
                                        uint64_t Align) const;
 
+  /// Emit target zero call-used regs.
+  void emitZeroCallUsedRegs(BitVector RegsToZero,
+                            MachineBasicBlock &MBB) const override;
+
   void adjustFrameForMsvcCxxEh(MachineFunction &MF) const;
 
   /// Aligns the stack pointer by ANDing it with -MaxAlign.

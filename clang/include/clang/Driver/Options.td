@@ -2907,6 +2907,14 @@ def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
     HelpText<"Enable matrix data type and related builtin functions">,
     MarshallingInfoFlag<LangOpts<"MatrixTypes">>;
 
+def fzero_call_used_regs_EQ
+    : Joined<["-"], "fzero-call-used-regs=">, Group<f_Group>, Flags<[CC1Option]>,
+      HelpText<"Clear call-used registers upon function return.">,
+      Values<"skip,used-gpr-arg,used-gpr,used-arg,used,all-gpr-arg,all-gpr,all-arg,all">,
+      NormalizedValues<["Skip", "UsedGPRArg", "UsedGPR", "UsedArg", "Used",
+                        "AllGPRArg", "AllGPR", "AllArg", "All"]>,
+      NormalizedValuesScope<"llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind">,
+      MarshallingInfoEnum<CodeGenOpts<"ZeroCallUsedRegs">, "Skip">;
 
 def fdebug_types_section: Flag <["-"], "fdebug-types-section">, Group<f_Group>,
   HelpText<"Place debug types in their own section (ELF Only)">;

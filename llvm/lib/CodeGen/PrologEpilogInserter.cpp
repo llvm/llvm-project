@@ -130,6 +130,7 @@ private:
   void replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
                            int &SPAdj);
   void insertPrologEpilogCode(MachineFunction &MF);
+  void insertZeroCallUsedRegs(MachineFunction &MF);
 };
 
 } // end anonymous namespace
@@ -1145,6 +1146,9 @@ void PEI::insertPrologEpilogCode(MachineFunction &MF) {
   for (MachineBasicBlock *RestoreBlock : RestoreBlocks)
     TFI.emitEpilogue(MF, *RestoreBlock);
 
+  // Zero call used registers before restoring callee-saved registers.
+  insertZeroCallUsedRegs(MF);
+
   for (MachineBasicBlock *SaveBlock : SaveBlocks)
     TFI.inlineStackProbe(MF, *SaveBlock);
 
@@ -1169,6 +1173,95 @@ void PEI::insertPrologEpilogCode(MachineFunction &MF) {
   if (MF.getFunction().getCallingConv() == CallingConv::HiPE)
     for (MachineBasicBlock *SaveBlock : SaveBlocks)
       TFI.adjustForHiPEPrologue(MF, *SaveBlock);
+}
+
+/// insertZeroCallUsedRegs - Zero out call used registers.
+void PEI::insertZeroCallUsedRegs(MachineFunction &MF) {
+  const Function &F = MF.getFunction();
+
+  if (!F.hasFnAttribute("zero-call-used-regs"))
+    return;
+
+  using namespace ZeroCallUsedRegs;
+
+  ZeroCallUsedRegsKind ZeroRegsKind =
+      StringSwitch<ZeroCallUsedRegsKind>(
+          F.getFnAttribute("zero-call-used-regs").getValueAsString())
+          .Case("skip", ZeroCallUsedRegsKind::Skip)
+          .Case("used-gpr-arg", ZeroCallUsedRegsKind::UsedGPRArg)
+          .Case("used-gpr", ZeroCallUsedRegsKind::UsedGPR)
+          .Case("used-arg", ZeroCallUsedRegsKind::UsedArg)
+          .Case("used", ZeroCallUsedRegsKind::Used)
+          .Case("all-gpr-arg", ZeroCallUsedRegsKind::AllGPRArg)
+          .Case("all-gpr", ZeroCallUsedRegsKind::AllGPR)
+          .Case("all-arg", ZeroCallUsedRegsKind::AllArg)
+          .Case("all", ZeroCallUsedRegsKind::All);
+
+  if (ZeroRegsKind == ZeroCallUsedRegsKind::Skip)
+    return;
+
+  const bool OnlyGPR = static_cast<unsigned>(ZeroRegsKind) & ONLY_GPR;
+  const bool OnlyUsed = static_cast<unsigned>(ZeroRegsKind) & ONLY_USED;
+  const bool OnlyArg = static_cast<unsigned>(ZeroRegsKind) & ONLY_ARG;
+
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  const BitVector AllocatableSet(TRI.getAllocatableSet(MF));
+
+  // Mark all used registers.
+  BitVector UsedRegs(TRI.getNumRegs());
+  if (OnlyUsed)
+    for (const MachineBasicBlock &MBB : MF)
+      for (const MachineInstr &MI : MBB)
+        for (const MachineOperand &MO : MI.operands()) {
+          if (!MO.isReg())
+            continue;
+
+          MCRegister Reg = MO.getReg();
+          if (AllocatableSet[Reg] && !MO.isImplicit() &&
+              (MO.isDef() || MO.isUse()))
+            UsedRegs.set(Reg);
+        }
+
+  BitVector RegsToZero(TRI.getNumRegs());
+  for (MCRegister Reg : AllocatableSet.set_bits()) {
+    // Skip over fixed registers.
+    if (TRI.isFixedRegister(MF, Reg))
+      continue;
+
+    // Want only general purpose registers.
+    if (OnlyGPR && !TRI.isGeneralPurposeRegister(MF, Reg))
+      continue;
+
+    // Want only used registers.
+    if (OnlyUsed && !UsedRegs[Reg])
+      continue;
+
+    // Want only registers used for arguments.
+    if (OnlyArg && !TRI.isArgumentRegister(MF, Reg))
+      continue;
+
+    RegsToZero.set(Reg);
+  }
+
+  // Remove registers that are live when leaving the function.
+  for (const MachineBasicBlock &MBB : MF)
+    for (const MachineInstr &MI : MBB.terminators()) {
+      if (!MI.isReturn())
+        continue;
+
+      for (const auto &MO : MI.operands()) {
+        if (!MO.isReg())
+          continue;
+
+        for (MCPhysReg SReg : TRI.sub_and_superregs_inclusive(MO.getReg()))
+          RegsToZero.reset(SReg);
+      }
+    }
+
+  const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
+  for (MachineBasicBlock &MBB : MF)
+    if (MBB.isReturnBlock())
+      TFI.emitZeroCallUsedRegs(RegsToZero, MBB);
 }
 
 /// replaceFrameIndices - Replace all MO_FrameIndex operands with physical

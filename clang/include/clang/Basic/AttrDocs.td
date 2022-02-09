@@ -6270,3 +6270,41 @@ pointing to precise locations of the call site in the source.
   }
   }];
 }
+
+def ZeroCallUsedRegsDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+This attribute, when attached to a function, causes the compiler to zero a
+subset of all call-used registers before the function returns. It's used to
+increase program security by either mitigating `Return-Oriented Programming`_
+(ROP) attacks or preventing information leakage through registers.
+
+The term "`call-used" means registers which are not guaranteed to be preserved
+unchanged for the caller by the current calling convention. This could also be
+described as "caller-saved" or "not callee-saved".
+
+The `choice` parameters gives the programmer flexibility to choose the subset
+of the call-used registers to be zeroed:
+
+- ``skip`` doesn't zero any call-used registers. This choice overrides any
+  command-line arguments.
+- ``used`` only zeros call-used registers used in the function. By ``used``, we
+  mean a register whose contents have been set or referenced in the function.
+- ``used-gpr`` only zeros call-used GPR registers used in the funciton.
+- ``used-arg`` only zeros call-used registers used to pass arguments to the
+  function.
+- ``used-gpr-arg`` only zeros call-used GPR registers used to pass arguments to
+  the function.
+- ``all`` zeros all call-used registers.
+- ``all-gpr`` zeros all call-used GPR registers.
+- ``all-arg`` zeros all call-used registers used to pass arguments to the
+  function.
+- ``all-gpr-arg`` zeros all call-used GPR registers used to pass arguments to
+  the function.
+
+The default for the attribute is contolled by the ``-fzero-call-used-regs``
+flag.
+
+.. _Return-Oriented Programming: https://en.wikipedia.org/wiki/Return-oriented_programming
+  }];
+}

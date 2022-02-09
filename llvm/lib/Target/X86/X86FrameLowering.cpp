@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86FrameLowering.h"
+#include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
@@ -489,6 +490,99 @@ void X86FrameLowering::emitCalleeSavedFrameMoves(
       BuildCFI(MBB, MBBI, DL,
                MCCFIInstruction::createRestore(nullptr, DwarfReg));
     }
+  }
+}
+
+void X86FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
+                                            MachineBasicBlock &MBB) const {
+  const MachineFunction &MF = *MBB.getParent();
+
+  // Don't clear registers that will just be reset before exiting.
+  for (const CalleeSavedInfo &CSI : MF.getFrameInfo().getCalleeSavedInfo())
+    for (MCRegister Reg : TRI->sub_and_superregs_inclusive(CSI.getReg()))
+      RegsToZero.reset(Reg);
+
+  // Insertion point.
+  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
+
+  // We don't need to zero out registers that are clobbered by "pop"
+  // instructions.
+  for (MachineBasicBlock::iterator I = MBBI, E = MBB.end(); I != E; ++I)
+    for (const MachineOperand &MO : I->operands()) {
+      if (!MO.isReg())
+        continue;
+
+      for (const MCPhysReg &Reg : TRI->sub_and_superregs_inclusive(MO.getReg()))
+        RegsToZero.reset(Reg);
+    }
+
+  // Fake a debug loc.
+  DebugLoc DL;
+  if (MBBI != MBB.end())
+    DL = MBBI->getDebugLoc();
+
+  // Zero out FP stack if referenced. Do this outside of the loop below so that
+  // it's done only once.
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  for (MCRegister Reg : RegsToZero.set_bits()) {
+    if (!X86::RFP80RegClass.contains(Reg))
+      continue;
+
+    unsigned NumFPRegs = ST.is64Bit() ? 8 : 7;
+    for (unsigned i = 0; i != NumFPRegs; ++i)
+      BuildMI(MBB, MBBI, DL, TII.get(X86::LD_F0));
+
+    for (unsigned i = 0; i != NumFPRegs; ++i)
+      BuildMI(MBB, MBBI, DL, TII.get(X86::ST_FPrr)).addReg(X86::ST0);
+    break;
+  }
+
+  // For GPRs, we only care to clear out the 32-bit register.
+  for (MCRegister Reg : RegsToZero.set_bits())
+    if (TRI->isGeneralPurposeRegister(MF, Reg)) {
+      Reg = getX86SubSuperRegisterOrZero(Reg, 32);
+      for (const MCPhysReg &Reg : TRI->sub_and_superregs_inclusive(Reg))
+        RegsToZero.reset(Reg);
+      RegsToZero.set(Reg);
+    }
+
+  // Zero out registers.
+  for (MCRegister Reg : RegsToZero.set_bits()) {
+    if (ST.hasMMX() && X86::VR64RegClass.contains(Reg))
+      // FIXME: Ignore MMX registers?
+      continue;
+
+    unsigned XorOp;
+    if (TRI->isGeneralPurposeRegister(MF, Reg)) {
+      XorOp = X86::XOR32rr;
+    } else if (X86::VR128RegClass.contains(Reg)) {
+      // XMM#
+      if (!ST.hasSSE1())
+        continue;
+      XorOp = X86::PXORrr;
+    } else if (X86::VR256RegClass.contains(Reg)) {
+      // YMM#
+      if (!ST.hasAVX())
+        continue;
+      XorOp = X86::VPXORrr;
+    } else if (X86::VR512RegClass.contains(Reg)) {
+      // ZMM#
+      if (!ST.hasAVX512())
+        continue;
+      XorOp = X86::VPXORYrr;
+    } else if (X86::VK1RegClass.contains(Reg) ||
+               X86::VK2RegClass.contains(Reg) ||
+               X86::VK4RegClass.contains(Reg) ||
+               X86::VK8RegClass.contains(Reg) ||
+               X86::VK16RegClass.contains(Reg)) {
+      if (!ST.hasVLX())
+        continue;
+      XorOp = ST.hasBWI() ? X86::KXORQrr : X86::KXORWrr;
+    } else {
+      continue;
+    }
+
+    BuildMI(MBB, MBBI, DL, TII.get(XorOp), Reg).addReg(Reg).addReg(Reg);
   }
 }
 

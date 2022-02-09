@@ -651,3 +651,18 @@ bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
   }
   return false;
 }
+
+bool MachineRegisterInfo::isArgumentRegister(const MachineFunction &MF,
+                                             MCRegister Reg) const {
+  return getTargetRegisterInfo()->isArgumentRegister(MF, Reg);
+}
+
+bool MachineRegisterInfo::isFixedRegister(const MachineFunction &MF,
+                                          MCRegister Reg) const {
+  return getTargetRegisterInfo()->isFixedRegister(MF, Reg);
+}
+
+bool MachineRegisterInfo::isGeneralPurposeRegister(const MachineFunction &MF,
+                                                   MCRegister Reg) const {
+  return getTargetRegisterInfo()->isGeneralPurposeRegister(MF, Reg);
+}

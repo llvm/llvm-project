@@ -476,6 +476,26 @@ namespace llvm {
     static void computeSubClasses(CodeGenRegBank&);
   };
 
+  // Register categories are used when we need to deterine the category a
+  // register falls into (GPR, vector, fixed, etc.) without having to know
+  // specific information about the target architecture.
+  class CodeGenRegisterCategory {
+    Record *TheDef;
+    std::string Name;
+    std::list<CodeGenRegisterClass *> Classes;
+
+  public:
+    CodeGenRegisterCategory(CodeGenRegBank &, Record *R);
+    CodeGenRegisterCategory(CodeGenRegisterCategory &) = delete;
+
+    // Return the Record that defined this class, or NULL if the class was
+    // created by TableGen.
+    Record *getDef() const { return TheDef; }
+
+    std::string getName() const { return Name; }
+    std::list<CodeGenRegisterClass *> getClasses() const { return Classes; }
+  };
+
   // Register units are used to model interference and register pressure.
   // Every register is assigned one or more register units such that two
   // registers overlap if and only if they have a register unit in common.
@@ -558,6 +578,13 @@ namespace llvm {
     DenseMap<Record*, CodeGenRegisterClass*> Def2RC;
     typedef std::map<CodeGenRegisterClass::Key, CodeGenRegisterClass*> RCKeyMap;
     RCKeyMap Key2RC;
+
+    // Register categories.
+    std::list<CodeGenRegisterCategory> RegCategories;
+    DenseMap<Record *, CodeGenRegisterCategory *> Def2RCat;
+    using RCatKeyMap =
+        std::map<CodeGenRegisterClass::Key, CodeGenRegisterCategory *>;
+    RCatKeyMap Key2RCat;
 
     // Remember each unique set of register units. Initially, this contains a
     // unique set for each register class. Simliar sets are coalesced with
@@ -717,6 +744,14 @@ namespace llvm {
 
     const std::list<CodeGenRegisterClass> &getRegClasses() const {
       return RegClasses;
+    }
+
+    std::list<CodeGenRegisterCategory> &getRegCategories() {
+      return RegCategories;
+    }
+
+    const std::list<CodeGenRegisterCategory> &getRegCategories() const {
+      return RegCategories;
     }
 
     // Find a register class from its def.
