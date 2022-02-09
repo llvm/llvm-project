@@ -126,6 +126,7 @@ class TestGdbRemoteThreadsInStopReply(
         self.assertIsNotNone(context)
 
     @skipIfNetBSD
+    @expectedFailureAll(oslist=["windows"]) # Extra threads present
     def test_stop_reply_reports_multiple_threads(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -165,7 +166,7 @@ class TestGdbRemoteThreadsInStopReply(
 
         threads = self.parse_threadinfo_packets(context)
         self.assertIsNotNone(threads)
-        self.assertEqual(len(threads), thread_count)
+        self.assertGreaterEqual(len(threads), thread_count)
 
         # Ensure each thread in q{f,s}ThreadInfo appears in stop reply threads
         for tid in threads:
@@ -182,12 +183,12 @@ class TestGdbRemoteThreadsInStopReply(
         stop_reply_pcs = results["thread_pcs"]
         pc_register = results["pc_register"]
         little_endian = results["little_endian"]
-        self.assertEqual(len(stop_reply_pcs), thread_count)
+        self.assertGreaterEqual(len(stop_reply_pcs), thread_count)
 
         threads_info_pcs = self.gather_threads_info_pcs(pc_register,
                 little_endian)
 
-        self.assertEqual(len(threads_info_pcs), thread_count)
+        self.assertEqual(len(threads_info_pcs), len(stop_reply_pcs))
         for thread_id in stop_reply_pcs:
             self.assertIn(thread_id, threads_info_pcs)
             self.assertEqual(int(stop_reply_pcs[thread_id], 16),
