@@ -655,10 +655,13 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
   case Instruction::IntToPtr: {
     assert(isNoopPtrIntCastPair(cast<Operator>(I), *DL, TTI));
     Value *Src = cast<Operator>(I->getOperand(0))->getOperand(0);
-    assert(Src->getType()->getPointerAddressSpace() == NewAddrSpace);
-    if (Src->getType() != NewPtrType)
-      return new BitCastInst(Src, NewPtrType);
-    return Src;
+    if (Src->getType() == NewPtrType)
+      return Src;
+
+    // If we had a no-op inttoptr/ptrtoint pair, we may still have inferred a
+    // source address space from a generic pointer source need to insert a cast
+    // back.
+    return CastInst::CreatePointerBitCastOrAddrSpaceCast(Src, NewPtrType);
   }
   default:
     llvm_unreachable("Unexpected opcode");
