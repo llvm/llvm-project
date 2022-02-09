@@ -18,7 +18,7 @@ extern void doIt(char *);
 // REGULAR: warning: stack frame size ([[#]]) exceeds limit ([[#]]) in 'stackSizeWarning'
 // PROMOTE: error: stack frame size ([[#]]) exceeds limit ([[#]]) in 'stackSizeWarning'
 // IGNORE-NOT: stack frame size ([[#]]) exceeds limit ([[#]]) in 'stackSizeWarning'
-void stackSizeWarning() {
+void stackSizeWarning(void) {
   char buffer[80];
   doIt(buffer);
 }

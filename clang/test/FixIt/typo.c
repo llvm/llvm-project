@@ -29,7 +29,7 @@ struct Window window = {
   2.71818, 5.0, 6.0, Red
 };
 
-void test() {
+void test(void) {
   Rectangle r1; // expected-error{{must use 'struct' tag to refer to type 'Rectangle'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:3}:"struct "
   r1.top_left.x = 0;

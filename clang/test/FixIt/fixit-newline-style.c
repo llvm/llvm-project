@@ -5,7 +5,7 @@
 // CHECK: warning: unused label 'ddd'
 // CHECK-NEXT: {{^  ddd:}}
 // CHECK-NEXT: {{^  \^~~~$}}
-void f() {
+void f(void) {
   ddd:
   ;
 }

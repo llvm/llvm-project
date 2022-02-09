@@ -22,8 +22,8 @@ typedef __typeof__(*L"") wchar_t;
 
 extern void foo(wchar_t x);
 extern void bar(size_t x);
-void *baz() { return NULL; }
-void quz() {
+void *baz(void) { return NULL; }
+void quz(void) {
   va_list y;
 }
 

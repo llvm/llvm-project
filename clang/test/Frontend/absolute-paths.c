@@ -12,6 +12,6 @@
 
 // For files which don't exist, just print the filename.
 #line 123 "non-existant.c"
-int g() {}
-// NORMAL: non-existant.c:123:10: warning: non-void function does not return a value
-// ABSOLUTE: non-existant.c:123:10: warning: non-void function does not return a value
+int g(void) {}
+// NORMAL: non-existant.c:123:14: warning: non-void function does not return a value
+// ABSOLUTE: non-existant.c:123:14: warning: non-void function does not return a value

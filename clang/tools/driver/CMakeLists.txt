@@ -17,8 +17,6 @@ set( LLVM_LINK_COMPONENTS
   Vectorize
   )
 
-option(CLANG_PLUGIN_SUPPORT "Build clang with plugin support" ON)
-
 # Support plugins.
 if(CLANG_PLUGIN_SUPPORT)
   set(support_plugins SUPPORT_PLUGINS)

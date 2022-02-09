@@ -15,7 +15,7 @@ const char *errors =
     "\o{8}" //expected-error {{invalid digit '8' in escape sequence}}
     ;
 
-void ucn() {
+void ucn(void) {
   char a = '\u{1234}'; // expected-error {{character too large for enclosing character literal type}}
                        // expected-warning@-1 {{delimited escape sequences are a Clang extension}}
 
@@ -31,7 +31,7 @@ void ucn() {
   unsigned d = U'\u{111111111}';       //expected-error {{hex escape sequence out of range}}
 }
 
-void hex() {
+void hex(void) {
   char a = '\x{1}';             // expected-warning {{extension}}
   char b = '\x{abcdegggggabc}'; // expected-error 5{{invalid digit 'g' in escape sequence}}
   char c = '\x{ff1}';           // expected-error {{hex escape sequence out of range}}
@@ -47,7 +47,7 @@ void hex() {
   unsigned i = U'\x{100000000}'; // expected-error {{hex escape sequence out of range}}
 }
 
-void octal() {
+void octal(void) {
   char a = '\o{1}';              // expected-warning {{extension}}
   char b = '\o{12345678881238}'; // expected-error 4{{invalid digit '8' in escape sequence}}
   char c = '\o{777}';            // //expected-error {{octal escape sequence out of range}}
@@ -60,7 +60,7 @@ void octal() {
 #endif
 }
 
-void concat() {
+void concat(void) {
   (void)"\x{" "12}"; // expected-error {{expected '}'}}
   (void)"\u{" "12}"; // expected-error {{expected '}'}}
   (void)"\o{" "12}"; // expected-error {{expected '}'}}
@@ -70,7 +70,7 @@ void concat() {
   (void)"\o{12" "}"; // expected-error {{expected '}'}}
 }
 
-void separators() {
+void separators(void) {
   (void)"\x{12'3}"; // expected-error {{invalid digit ''' in escape sequence}}
   (void)"\u{12'3}"; // expected-error {{invalid digit ''' in escape sequence}}
   (void)"\o{12'3}"; // expected-error {{invalid digit ''' in escape sequence}}

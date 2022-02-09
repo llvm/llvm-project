@@ -2,7 +2,7 @@
 
 #define M1(x) x
 #define M2 1;
-void foo() {
+void foo(void) {
   M1(
     M2);
   // CHECK: {{.*}}:7:{{[0-9]+}}: warning: expression result unused
@@ -13,7 +13,7 @@ void foo() {
 #define A(x) x
 #define B(x) A(x)
 #define C(x) B(x)
-void bar() {
+void bar(void) {
   C(1);
   // CHECK: {{.*}}:17:5: warning: expression result unused
 }
@@ -36,7 +36,7 @@ void baz(char *Msg) {
 #define macro_many_args2(x, y, z) macro_many_args1(x, y, z)
 #define macro_many_args3(x, y, z) macro_many_args2(x, y, z)
 
-void test() {
+void test(void) {
   macro_args3(11);
   // CHECK: {{.*}}:40:15: warning: expression result unused
   // Also check that the 'caret' printing agrees with the location here where
@@ -83,7 +83,7 @@ void test() {
 #define variadic_args2(x, ...) variadic_args1(x, __VA_ARGS__)
 #define variadic_args3(x, y, ...) variadic_args2(x, y, __VA_ARGS__)
 
-void test2() {
+void test2(void) {
   variadic_args3(1, 22, 3, 4);
   // CHECK: {{.*}}:87:21: warning: expression result unused
   // CHECK-NEXT:      variadic_args3(1, 22, 3, 4);
@@ -99,7 +99,7 @@ void test2() {
 #define variadic_pasting_args3(x, y, ...) variadic_pasting_args2(x, y, __VA_ARGS__)
 #define variadic_pasting_args3a(x, y, ...) variadic_pasting_args2a(x, y, __VA_ARGS__)
 
-void test3() {
+void test3(void) {
   variadic_pasting_args3(1, 2, 3, 4);
   // CHECK: {{.*}}:103:32: warning: expression result unused
   // CHECK: {{.*}}:99:72: note: expanded from macro 'variadic_pasting_args3'
