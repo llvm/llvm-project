@@ -1,4 +1,4 @@
-; RUN: opt  -cost-model -analyze -mtriple=aarch64--linux-gnu -mattr=+sve < %s | FileCheck %s
+; RUN: opt  -passes='print<cost-model>' 2>&1 -disable-output -mtriple=aarch64--linux-gnu -mattr=+sve < %s | FileCheck %s
 
 define void @scalable_loads() {
 ; CHECK-LABEL: 'scalable_loads'

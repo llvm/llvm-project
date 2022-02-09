@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin -mattr=+sse2 < %s | FileCheck --check-prefix=SSE2-CODEGEN %s
-; RUN: opt -mtriple=x86_64-apple-darwin -mattr=+sse2 -cost-model -analyze < %s | FileCheck --check-prefix=SSE2 %s
+; RUN: opt -mtriple=x86_64-apple-darwin -mattr=+sse2 -passes='print<cost-model>' 2>&1 -disable-output < %s | FileCheck --check-prefix=SSE2 %s
 
 define <4 x i32> @shl(<4 x i32> %vector, i32 %scalar) {
 entry:

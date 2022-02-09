@@ -1,4 +1,4 @@
-; RUN: opt -cost-model -analyze -mtriple=aarch64--linux-gnu -mattr=+sve  < %s | FileCheck %s
+; RUN: opt -passes='print<cost-model>' 2>&1 -disable-output -mtriple=aarch64--linux-gnu -mattr=+sve  < %s | FileCheck %s
 
 define void @load_store(<vscale x 1 x i128>* %ptrs) {
 ; CHECK-LABEL: 'load_store'

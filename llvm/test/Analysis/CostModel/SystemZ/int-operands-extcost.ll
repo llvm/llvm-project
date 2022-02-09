@@ -1,4 +1,4 @@
-; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=z13 \
+; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 \
 ; RUN:  | FileCheck %s
 ;
 ; Test that i8/i16 operands get extra costs for extensions to i32 only in
@@ -26,7 +26,7 @@ define void @icmp() {
   icmp slt i16 %a2, 123
 
   ret void;
-; CHECK: Printing analysis 'Cost Model Analysis' for function 'icmp':
+; CHECK: function 'icmp'
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li8_0 = load i8, i8* undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li8_1 = load i8, i8* undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %1 = icmp slt i8 %li8_0, %li8_1

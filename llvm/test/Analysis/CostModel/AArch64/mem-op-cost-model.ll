@@ -2,13 +2,13 @@
 ; Vector bits size lower than 256 bits end up assuming Neon cost model
 ; CHECK-NEON has same performance as CHECK-SVE-128
 
-; RUN: opt -cost-model -analyze -mtriple=aarch64--linux-gnu -mattr=+neon  < %s | FileCheck %s --check-prefix=CHECK-NEON
-; RUN: opt -cost-model -analyze -mtriple=aarch64--linux-gnu -mattr=+sve -aarch64-sve-vector-bits-min=128 < %s | FileCheck %s --check-prefix=CHECK-SVE-128
-; RUN: opt -cost-model -analyze -mtriple=aarch64--linux-gnu -mattr=+sve -aarch64-sve-vector-bits-min=256 < %s | FileCheck %s --check-prefix=CHECK-SVE-256
-; RUN: opt -cost-model -analyze -mtriple=aarch64--linux-gnu -mattr=+sve -aarch64-sve-vector-bits-min=512 < %s | FileCheck %s --check-prefix=CHECK-SVE-512
+; RUN: opt -passes='print<cost-model>' 2>&1 -disable-output -mtriple=aarch64--linux-gnu -mattr=+neon  < %s | FileCheck %s --check-prefix=CHECK-NEON
+; RUN: opt -passes='print<cost-model>' 2>&1 -disable-output -mtriple=aarch64--linux-gnu -mattr=+sve -aarch64-sve-vector-bits-min=128 < %s | FileCheck %s --check-prefix=CHECK-SVE-128
+; RUN: opt -passes='print<cost-model>' 2>&1 -disable-output -mtriple=aarch64--linux-gnu -mattr=+sve -aarch64-sve-vector-bits-min=256 < %s | FileCheck %s --check-prefix=CHECK-SVE-256
+; RUN: opt -passes='print<cost-model>' 2>&1 -disable-output -mtriple=aarch64--linux-gnu -mattr=+sve -aarch64-sve-vector-bits-min=512 < %s | FileCheck %s --check-prefix=CHECK-SVE-512
 
 define <16 x i8> @load16(<16 x i8>* %ptr) {
-; CHECK: 'Cost Model Analysis' for function 'load16':
+; CHECK: function 'load16'
 ; CHECK-NEON: Cost Model: Found an estimated cost of 1 for instruction:
 ; CHECK-SVE-128: Cost Model: Found an estimated cost of 1 for instruction:
 ; CHECK-SVE-256: Cost Model: Found an estimated cost of 1 for instruction:
@@ -18,7 +18,7 @@ define <16 x i8> @load16(<16 x i8>* %ptr) {
 }
 
 define void @store16(<16 x i8>* %ptr, <16 x i8> %val) {
-; CHECK: 'Cost Model Analysis' for function 'store16':
+; CHECK: function 'store16'
 ; CHECK-NEON: Cost Model: Found an estimated cost of 1 for instruction:
 ; CHECK-SVE-128: Cost Model: Found an estimated cost of 1 for instruction:
 ; CHECK-SVE-256: Cost Model: Found an estimated cost of 1 for instruction:
@@ -28,7 +28,7 @@ define void @store16(<16 x i8>* %ptr, <16 x i8> %val) {
 }
 
 define <8 x i8> @load8(<8 x i8>* %ptr) {
-; CHECK: 'Cost Model Analysis' for function 'load8':
+; CHECK: function 'load8'
 ; CHECK-NEON: Cost Model: Found an estimated cost of 1 for instruction:
 ; CHECK-SVE-128: Cost Model: Found an estimated cost of 1 for instruction:
 ; CHECK-SVE-256: Cost Model: Found an estimated cost of 1 for instruction:
@@ -38,7 +38,7 @@ define <8 x i8> @load8(<8 x i8>* %ptr) {
 }
 
 define void @store8(<8 x i8>* %ptr, <8 x i8> %val) {
-; CHECK: 'Cost Model Analysis' for function 'store8':
+; CHECK: function 'store8'
 ; CHECK-NEON: Cost Model: Found an estimated cost of 1 for instruction:
 ; CHECK-SVE-128: Cost Model: Found an estimated cost of 1 for instruction:
 ; CHECK-SVE-256: Cost Model: Found an estimated cost of 1 for instruction:
@@ -48,7 +48,7 @@ define void @store8(<8 x i8>* %ptr, <8 x i8> %val) {
 }
 
 define <4 x i8> @load4(<4 x i8>* %ptr) {
-; CHECK: 'Cost Model Analysis' for function 'load4':
+; CHECK: function 'load4'
 ; CHECK-NEON: Cost Model: Found an estimated cost of 2 for instruction:
 ; CHECK-SVE-128: Cost Model: Found an estimated cost of 2 for instruction:
 ; CHECK-SVE-256: Cost Model: Found an estimated cost of 1 for instruction:
@@ -58,7 +58,7 @@ define <4 x i8> @load4(<4 x i8>* %ptr) {
 }
 
 define void @store4(<4 x i8>* %ptr, <4 x i8> %val) {
-; CHECK: 'Cost Model Analysis' for function 'store4':
+; CHECK: function 'store4'
 ; CHECK-NEON: Cost Model: Found an estimated cost of 2 for instruction:
 ; CHECK-SVE-128: Cost Model: Found an estimated cost of 2 for instruction:
 ; CHECK-SVE-256: Cost Model: Found an estimated cost of 1 for instruction:
@@ -68,7 +68,7 @@ define void @store4(<4 x i8>* %ptr, <4 x i8> %val) {
 }
 
 define <16 x i16> @load_256(<16 x i16>* %ptr) {
-; CHECK: 'Cost Model Analysis' for function 'load_256':
+; CHECK: function 'load_256'
 ; CHECK-NEON: Cost Model: Found an estimated cost of 2 for instruction:
 ; CHECK-SVE-128: Cost Model: Found an estimated cost of 2 for instruction:
 ; CHECK-SVE-256: Cost Model: Found an estimated cost of 1 for instruction:
@@ -78,7 +78,7 @@ define <16 x i16> @load_256(<16 x i16>* %ptr) {
 }
 
 define <8 x i64> @load_512(<8 x i64>* %ptr) {
-; CHECK: 'Cost Model Analysis' for function 'load_512':
+; CHECK: function 'load_512'
 ; CHECK-NEON: Cost Model: Found an estimated cost of 4 for instruction:
 ; CHECK-SVE-128: Cost Model: Found an estimated cost of 4 for instruction:
 ; CHECK-SVE-256: Cost Model: Found an estimated cost of 2 for instruction:
