@@ -53,9 +53,9 @@ struct ErrorDeadlySignal : ErrorBase {
       scariness.Scare(10, "null-deref");
     } else if (signal.addr == signal.pc) {
       scariness.Scare(60, "wild-jump");
-    } else if (signal.write_flag == SignalContext::Write) {
+    } else if (signal.write_flag == SignalContext::WRITE) {
       scariness.Scare(30, "wild-addr-write");
-    } else if (signal.write_flag == SignalContext::Read) {
+    } else if (signal.write_flag == SignalContext::READ) {
       scariness.Scare(20, "wild-addr-read");
     } else {
       scariness.Scare(25, "wild-addr");
