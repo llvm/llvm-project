@@ -129,7 +129,7 @@ class BuilderDarwin(Builder):
         vendor, os, version, env = get_triple()
         if vendor is None or os is None or version is None or env is None:
             return ""
-        flags = 'TARGET_SWIFTFLAGS="-target {}-{}-{}{}{}"'.format(
+        flags = 'TARGET_SWIFTFLAGS=-target {}-{}-{}{}{}'.format(
             arch, vendor, os, version, (("-"+env) if env else ""))
         return flags
 
