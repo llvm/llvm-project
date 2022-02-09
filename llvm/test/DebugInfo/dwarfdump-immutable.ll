@@ -1,6 +1,6 @@
 ;; This test checks whether DWARF tag DW_TAG_immutable_type
 ;; is accepted and processed.
-; REQUIRES: default_target
+; REQUIRES: default_triple
 ; RUN: %llc_dwarf %s -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
 
 ;; Test whether DW_TAG_immutable_type is accepted.
