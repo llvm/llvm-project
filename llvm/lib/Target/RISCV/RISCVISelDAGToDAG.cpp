@@ -1737,6 +1737,22 @@ bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
       ShAmt = N.getOperand(0);
       return true;
     }
+  } else if (N.getOpcode() == ISD::SUB &&
+             isa<ConstantSDNode>(N.getOperand(0))) {
+    uint64_t Imm = N.getConstantOperandVal(0);
+    // If we are shifting by N-X where N == 0 mod Size, then just shift by -X to
+    // generate a NEG instead of a SUB of a constant.
+    if (Imm != 0 && Imm % ShiftWidth == 0) {
+      SDLoc DL(N);
+      EVT VT = N.getValueType();
+      SDValue Zero =
+          CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, RISCV::X0, VT);
+      unsigned NegOpc = VT == MVT::i64 ? RISCV::SUBW : RISCV::SUB;
+      MachineSDNode *Neg = CurDAG->getMachineNode(NegOpc, DL, VT, Zero,
+                                                  N.getOperand(1));
+      ShAmt = SDValue(Neg, 0);
+      return true;
+    }
   }
 
   ShAmt = N;
