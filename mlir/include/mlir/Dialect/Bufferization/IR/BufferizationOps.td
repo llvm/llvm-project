@@ -211,9 +211,9 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
       return true;
     }
 
-    OpResult getAliasingOpResult(OpOperand &opOperand,
-                                 const BufferizationState &state) const {
-      return OpResult();
+    SmallVector<OpResult> getAliasingOpResult(
+        OpOperand &opOperand, const BufferizationState &state) const {
+      return {};
     }
 
     LogicalResult bufferize(RewriterBase &rewriter,
