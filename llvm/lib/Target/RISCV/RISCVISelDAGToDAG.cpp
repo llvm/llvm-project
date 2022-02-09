@@ -48,6 +48,23 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
        I != E;) {
     SDNode *N = &*I++; // Preincrement iterator to avoid invalidation issues.
 
+    // Convert integer SPLAT_VECTOR to VMV_V_X_VL to reduce isel burden.
+    if (N->getOpcode() == ISD::SPLAT_VECTOR &&
+        N->getSimpleValueType(0).isInteger()) {
+      MVT VT = N->getSimpleValueType(0);
+      SDLoc DL(N);
+      SDValue VL = CurDAG->getTargetConstant(RISCV::VLMaxSentinel, DL,
+                                             Subtarget->getXLenVT());
+      SDValue Result =
+          CurDAG->getNode(RISCVISD::VMV_V_X_VL, DL, VT, N->getOperand(0), VL);
+
+      --I;
+      CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Result);
+      ++I;
+      CurDAG->DeleteNode(N);
+      continue;
+    }
+
     // Lower SPLAT_VECTOR_SPLIT_I64 to two scalar stores and a stride 0 vector
     // load. Done after lowering and combining so that we have a chance to
     // optimize this to VMV_V_X_VL when the upper bits aren't needed.
@@ -1881,8 +1898,7 @@ bool RISCVDAGToDAGISel::selectVLOp(SDValue N, SDValue &VL) {
 }
 
 bool RISCVDAGToDAGISel::selectVSplat(SDValue N, SDValue &SplatVal) {
-  if (N.getOpcode() != ISD::SPLAT_VECTOR &&
-      N.getOpcode() != RISCVISD::VMV_V_X_VL)
+  if (N.getOpcode() != RISCVISD::VMV_V_X_VL)
     return false;
   SplatVal = N.getOperand(0);
   return true;
@@ -1894,14 +1910,13 @@ static bool selectVSplatSimmHelper(SDValue N, SDValue &SplatVal,
                                    SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget,
                                    ValidateFn ValidateImm) {
-  if ((N.getOpcode() != ISD::SPLAT_VECTOR &&
-       N.getOpcode() != RISCVISD::VMV_V_X_VL) ||
+  if (N.getOpcode() != RISCVISD::VMV_V_X_VL ||
       !isa<ConstantSDNode>(N.getOperand(0)))
     return false;
 
   int64_t SplatImm = cast<ConstantSDNode>(N.getOperand(0))->getSExtValue();
 
-  // ISD::SPLAT_VECTOR, RISCVISD::VMV_V_X_VL share semantics when the operand
+  // The semantics of RISCVISD::VMV_V_X_VL is that when the operand
   // type is wider than the resulting vector element type: an implicit
   // truncation first takes place. Therefore, perform a manual
   // truncation/sign-extension in order to ignore any truncated bits and catch
@@ -1942,8 +1957,7 @@ bool RISCVDAGToDAGISel::selectVSplatSimm5Plus1NonZero(SDValue N,
 }
 
 bool RISCVDAGToDAGISel::selectVSplatUimm5(SDValue N, SDValue &SplatVal) {
-  if ((N.getOpcode() != ISD::SPLAT_VECTOR &&
-       N.getOpcode() != RISCVISD::VMV_V_X_VL) ||
+  if (N.getOpcode() != RISCVISD::VMV_V_X_VL ||
       !isa<ConstantSDNode>(N.getOperand(0)))
     return false;
 
