@@ -78,6 +78,9 @@ if not hasattr(config, 'lld_src_dir'):
     config.lld_src_dir = ""
 llvm_config.use_lld(required=('lld' in config.llvm_enabled_projects))
 
+if 'compiler-rt' in config.llvm_enabled_projects:
+  config.available_features.add('compiler-rt')
+
 if config.llvm_use_sanitizer:
     # Propagate path to symbolizer for ASan/MSan.
     llvm_config.with_system_environment(

@@ -1,7 +1,7 @@
 // RUN: %clang -fblocks %target_itanium_abi_host_triple -arch x86_64 %s -o %t.out -g -fsanitize=address
 // RUN: %test_debuginfo %s %t.out
 // FIXME: Remove system-darwin when we build BlocksRuntime everywhere.
-// REQUIRES: !asan, system-darwin
+// REQUIRES: !asan, compiler-rt, system-darwin
 //           Zorg configures the ASAN stage2 bots to not build the asan
 //           compiler-rt. Only run this test on non-asanified configurations.
 // XFAIL: !system-darwin && gdb-clang-incompatibility
