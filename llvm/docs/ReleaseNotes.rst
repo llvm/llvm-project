@@ -147,6 +147,10 @@ Changes to the Windows Target
   constructors), making sure that GNU ld exports all of them correctly as
   functions, not data, when linking a DLL.
 
+* Handling of temporary files on more uncommon file systems (network
+  mounts, ramdisks) on Windows is fixed now (which previously either
+  errored out or left stray files behind).
+
 Changes to the OCaml bindings
 -----------------------------
 
