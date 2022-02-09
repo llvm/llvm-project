@@ -50,11 +50,6 @@ if (current_toolchain == default_toolchain) {
     } else {
       values += [ "_LIBCPP_ABI_NAMESPACE=" ]
     }
-    if (libcxx_abi_unstable) {
-      values += [ "_LIBCPP_ABI_UNSTABLE=1" ]
-    } else {
-      values += [ "_LIBCPP_ABI_UNSTABLE=" ]
-    }
   }
 
   copy("copy_headers") {
