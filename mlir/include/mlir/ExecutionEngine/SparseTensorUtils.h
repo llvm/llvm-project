@@ -23,7 +23,7 @@ extern "C" {
 /// type is 64-bit, but targets with different "index" bit widths should link
 /// with an alternatively built runtime support library.
 // TODO: support such targets?
-using index_t = uint64_t;
+using index_type = uint64_t;
 
 /// Encoding of overhead types (both pointer overhead and indices
 /// overhead), for "overloading" @newSparseTensor.

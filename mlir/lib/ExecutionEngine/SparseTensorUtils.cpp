@@ -796,7 +796,7 @@ extern "C" {
 
 #define IMPL_GETOVERHEAD(NAME, TYPE, LIB)                                      \
   void _mlir_ciface_##NAME(StridedMemRefType<TYPE, 1> *ref, void *tensor,      \
-                           index_t d) {                                        \
+                           index_type d) {                                     \
     assert(ref &&tensor);                                                      \
     std::vector<TYPE> *v;                                                      \
     static_cast<SparseTensorStorageBase *>(tensor)->LIB(&v, d);                \
@@ -808,15 +808,15 @@ extern "C" {
 
 #define IMPL_ADDELT(NAME, TYPE)                                                \
   void *_mlir_ciface_##NAME(void *tensor, TYPE value,                          \
-                            StridedMemRefType<index_t, 1> *iref,               \
-                            StridedMemRefType<index_t, 1> *pref) {             \
+                            StridedMemRefType<index_type, 1> *iref,            \
+                            StridedMemRefType<index_type, 1> *pref) {          \
     assert(tensor &&iref &&pref);                                              \
     assert(iref->strides[0] == 1 && pref->strides[0] == 1);                    \
     assert(iref->sizes[0] == pref->sizes[0]);                                  \
-    const index_t *indx = iref->data + iref->offset;                           \
-    const index_t *perm = pref->data + pref->offset;                           \
+    const index_type *indx = iref->data + iref->offset;                        \
+    const index_type *perm = pref->data + pref->offset;                        \
     uint64_t isize = iref->sizes[0];                                           \
-    std::vector<index_t> indices(isize);                                       \
+    std::vector<index_type> indices(isize);                                    \
     for (uint64_t r = 0; r < isize; r++)                                       \
       indices[perm[r]] = indx[r];                                              \
     static_cast<SparseTensorCOO<TYPE> *>(tensor)->add(indices, value);         \
@@ -824,11 +824,12 @@ extern "C" {
   }
 
 #define IMPL_GETNEXT(NAME, V)                                                  \
-  bool _mlir_ciface_##NAME(void *tensor, StridedMemRefType<index_t, 1> *iref,  \
+  bool _mlir_ciface_##NAME(void *tensor,                                       \
+                           StridedMemRefType<index_type, 1> *iref,             \
                            StridedMemRefType<V, 0> *vref) {                    \
     assert(tensor &&iref &&vref);                                              \
     assert(iref->strides[0] == 1);                                             \
-    index_t *indx = iref->data + iref->offset;                                 \
+    index_type *indx = iref->data + iref->offset;                              \
     V *value = vref->data + vref->offset;                                      \
     const uint64_t isize = iref->sizes[0];                                     \
     auto iter = static_cast<SparseTensorCOO<V> *>(tensor);                     \
@@ -844,30 +845,30 @@ extern "C" {
   }
 
 #define IMPL_LEXINSERT(NAME, V)                                                \
-  void _mlir_ciface_##NAME(void *tensor, StridedMemRefType<index_t, 1> *cref,  \
-                           V val) {                                            \
+  void _mlir_ciface_##NAME(void *tensor,                                       \
+                           StridedMemRefType<index_type, 1> *cref, V val) {    \
     assert(tensor &&cref);                                                     \
     assert(cref->strides[0] == 1);                                             \
-    index_t *cursor = cref->data + cref->offset;                               \
+    index_type *cursor = cref->data + cref->offset;                            \
     assert(cursor);                                                            \
     static_cast<SparseTensorStorageBase *>(tensor)->lexInsert(cursor, val);    \
   }
 
 #define IMPL_EXPINSERT(NAME, V)                                                \
   void _mlir_ciface_##NAME(                                                    \
-      void *tensor, StridedMemRefType<index_t, 1> *cref,                       \
+      void *tensor, StridedMemRefType<index_type, 1> *cref,                    \
       StridedMemRefType<V, 1> *vref, StridedMemRefType<bool, 1> *fref,         \
-      StridedMemRefType<index_t, 1> *aref, index_t count) {                    \
+      StridedMemRefType<index_type, 1> *aref, index_type count) {              \
     assert(tensor &&cref &&vref &&fref &&aref);                                \
     assert(cref->strides[0] == 1);                                             \
     assert(vref->strides[0] == 1);                                             \
     assert(fref->strides[0] == 1);                                             \
     assert(aref->strides[0] == 1);                                             \
     assert(vref->sizes[0] == fref->sizes[0]);                                  \
-    index_t *cursor = cref->data + cref->offset;                               \
+    index_type *cursor = cref->data + cref->offset;                            \
     V *values = vref->data + vref->offset;                                     \
     bool *filled = fref->data + fref->offset;                                  \
-    index_t *added = aref->data + aref->offset;                                \
+    index_type *added = aref->data + aref->offset;                             \
     static_cast<SparseTensorStorageBase *>(tensor)->expInsert(                 \
         cursor, values, filled, added, count);                                 \
   }
@@ -883,11 +884,11 @@ extern "C" {
     delete coo;                                                                \
   }
 
-// Assume index_t is in fact uint64_t, so that _mlir_ciface_newSparseTensor
+// Assume index_type is in fact uint64_t, so that _mlir_ciface_newSparseTensor
 // can safely rewrite kIndex to kU64.  We make this assertion to guarantee
 // that this file cannot get out of sync with its header.
-static_assert(std::is_same<index_t, uint64_t>::value,
-              "Expected index_t == uint64_t");
+static_assert(std::is_same<index_type, uint64_t>::value,
+              "Expected index_type == uint64_t");
 
 /// Constructs a new sparse tensor. This is the "swiss army knife"
 /// method for materializing sparse tensors into the computation.
@@ -901,8 +902,8 @@ static_assert(std::is_same<index_t, uint64_t>::value,
 /// kToIterator = returns iterator from storage in ptr (call getNext() to use)
 void *
 _mlir_ciface_newSparseTensor(StridedMemRefType<DimLevelType, 1> *aref, // NOLINT
-                             StridedMemRefType<index_t, 1> *sref,
-                             StridedMemRefType<index_t, 1> *pref,
+                             StridedMemRefType<index_type, 1> *sref,
+                             StridedMemRefType<index_type, 1> *pref,
                              OverheadType ptrTp, OverheadType indTp,
                              PrimaryType valTp, Action action, void *ptr) {
   assert(aref && sref && pref);
@@ -910,8 +911,8 @@ _mlir_ciface_newSparseTensor(StridedMemRefType<DimLevelType, 1> *aref, // NOLINT
          pref->strides[0] == 1);
   assert(aref->sizes[0] == sref->sizes[0] && sref->sizes[0] == pref->sizes[0]);
   const DimLevelType *sparsity = aref->data + aref->offset;
-  const index_t *sizes = sref->data + sref->offset;
-  const index_t *perm = pref->data + pref->offset;
+  const index_type *sizes = sref->data + sref->offset;
+  const index_type *perm = pref->data + pref->offset;
   uint64_t rank = aref->sizes[0];
 
   // Rewrite kIndex to kU64, to avoid introducing a bunch of new cases.
@@ -1010,14 +1011,14 @@ _mlir_ciface_newSparseTensor(StridedMemRefType<DimLevelType, 1> *aref, // NOLINT
 }
 
 /// Methods that provide direct access to pointers.
-IMPL_GETOVERHEAD(sparsePointers, index_t, getPointers)
+IMPL_GETOVERHEAD(sparsePointers, index_type, getPointers)
 IMPL_GETOVERHEAD(sparsePointers64, uint64_t, getPointers)
 IMPL_GETOVERHEAD(sparsePointers32, uint32_t, getPointers)
 IMPL_GETOVERHEAD(sparsePointers16, uint16_t, getPointers)
 IMPL_GETOVERHEAD(sparsePointers8, uint8_t, getPointers)
 
 /// Methods that provide direct access to indices.
-IMPL_GETOVERHEAD(sparseIndices, index_t, getIndices)
+IMPL_GETOVERHEAD(sparseIndices, index_type, getIndices)
 IMPL_GETOVERHEAD(sparseIndices64, uint64_t, getIndices)
 IMPL_GETOVERHEAD(sparseIndices32, uint32_t, getIndices)
 IMPL_GETOVERHEAD(sparseIndices16, uint16_t, getIndices)
@@ -1092,7 +1093,7 @@ IMPL_OUT(outSparseTensorI8, int8_t)
 
 /// Helper method to read a sparse tensor filename from the environment,
 /// defined with the naming convention ${TENSOR0}, ${TENSOR1}, etc.
-char *getTensorFilename(index_t id) {
+char *getTensorFilename(index_type id) {
   char var[80];
   sprintf(var, "TENSOR%" PRIu64, id);
   char *env = getenv(var);
@@ -1100,7 +1101,7 @@ char *getTensorFilename(index_t id) {
 }
 
 /// Returns size of sparse tensor in given dimension.
-index_t sparseDimSize(void *tensor, index_t d) {
+index_type sparseDimSize(void *tensor, index_type d) {
   return static_cast<SparseTensorStorageBase *>(tensor)->getDimSize(d);
 }
 
