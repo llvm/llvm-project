@@ -4,6 +4,8 @@
 //           Zorg configures the ASAN stage2 bots to not build the asan
 //           compiler-rt. Only run this test on non-asanified configurations.
 // UNSUPPORTED: apple-lldb-pre-1000
+// XFAIL: !system-darwin && gdb-clang-incompatibility
+
 #include <deque>
 
 struct A {
@@ -23,24 +25,24 @@ int main() {
   log.push_back(1234);
   log.push_back(56789);
   escape(log);
-  // DEBUGGER: break 25
+  // DEBUGGER: break 27
   while (!log.empty()) {
     auto record = log.front();
     log.pop_front();
     escape(log);
-    // DEBUGGER: break 30
+    // DEBUGGER: break 32
   }
 }
 
 // DEBUGGER: r
 
-// (at line 25)
+// (at line 27)
 // DEBUGGER: p log
 // CHECK: 1234
 // CHECK: 56789
 
 // DEBUGGER: c
 
-// (at line 30)
+// (at line 32)
 // DEBUGGER: p log
 // CHECK: 56789

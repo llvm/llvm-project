@@ -4,13 +4,15 @@
 // REQUIRES: !asan, system-darwin
 //           Zorg configures the ASAN stage2 bots to not build the asan
 //           compiler-rt. Only run this test on non-asanified configurations.
+// XFAIL: !system-darwin && gdb-clang-incompatibility
+
 void b();
 struct S {
   int a[8];
 };
 
 int f(struct S s, unsigned i) {
-  // DEBUGGER: break 17
+  // DEBUGGER: break 19
   // DEBUGGER: r
   // DEBUGGER: p s
   // CHECK: a = ([0] = 0, [1] = 1, [2] = 2, [3] = 3, [4] = 4, [5] = 5, [6] = 6, [7] = 7)
@@ -20,7 +22,7 @@ int f(struct S s, unsigned i) {
 int main(int argc, const char **argv) {
   struct S s = {{0, 1, 2, 3, 4, 5, 6, 7}};
   if (f(s, 4) == 4) {
-    // DEBUGGER: break 27
+    // DEBUGGER: break 29
     // DEBUGGER: c
     // DEBUGGER: p s
     // CHECK: a = ([0] = 0, [1] = 1, [2] = 2, [3] = 3, [4] = 4, [5] = 5, [6] = 6, [7] = 7)
@@ -32,7 +34,7 @@ int main(int argc, const char **argv) {
 void c() {}
 
 void b() {
-  // DEBUGGER: break 40
+  // DEBUGGER: break 42
   // DEBUGGER: c
   // DEBUGGER: p x
   // CHECK: 42
