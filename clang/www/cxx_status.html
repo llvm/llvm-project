@@ -946,7 +946,7 @@ code. This issue is expected to be rectified soon.
       <tr> <!-- from Prague -->
         <td><a href="https://wg21.link/p2103r0">P2103R0</a></td>
       </tr>
-      <tr> <!-- 22 telecon bug fix -->
+      <tr> <!-- from February 2022 -->
         <td><a href="https://wg21.link/p2493r0">P2493R0</a></td>
       </tr>
       <tr>
@@ -1205,7 +1205,7 @@ code. This issue is expected to be rectified soon.
       <td class="partial" align="center">
         <details><summary>Partial</summary>
           The optimizer does not yet handle TLS with
-  `__attribute__((const))` attribute correctly. There can be issues where the
+  <tt>__attribute__((const))</tt> attribute correctly. There can be issues where the
   coroutine may resume on a different thread. <br \>This feature requires further
   analysis of the C++ Standard to determine what work is necessary for conformance.
         </details></td>
@@ -1388,10 +1388,30 @@ C++20, informally referred to as C++2b.</p>
       <td><a href="https://wg21.link/P2360R0">P2360R0</a></td>
       <td class="unreleased" align="center">Clang 14</td>
     </tr>
+    <!-- February 2022 papers -->
     <tr>
       <td>Attributes on Lambda-Expressions</td>
       <td><a href="https://wg21.link/P2173R1">P2173R1</a></td>
       <td class="full" align="center">Clang 13</td>
+    </tr>
+    <tr>
+      <td><tt>constexpr</tt> for <tt><cmath</tt> and <tt>cstdlib</tt></td>
+      <td><a href="https://wg21.link/P0533R9">P0533R9</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Type trait to determine if a reference binds to a temporary</td>
+      <td><a href="https://wg21.link/P2255R2">P2255R2</a></td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          Clang provides a <tt>__reference_binds_to_temporary</tt> type trait
+          builtin, with which the library facility can be partially implemented.
+          Both <tt>__reference_constructs_from_temporary</tt> and
+          <tt>__reference_converts_from_temporary</tt> builtins should be
+          provided, following the normal cross-vendor convention to implement
+          traits requiring compiler support directly.
+        </details></td>
+      </td>
     </tr>
 
 </table>
