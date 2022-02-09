@@ -325,6 +325,11 @@ const char *AMDGCN::OpenMPLinker::constructLlcCommand(
     LlcArgs.push_back(A->getValue(0));
   }
 
+  if (Arg *A = Args.getLastArgNoClaim(options::OPT_g_Group))
+    if (!A->getOption().matches(options::OPT_g0) &&
+        !A->getOption().matches(options::OPT_ggdb0))
+      LlcArgs.push_back("-amdgpu-spill-cfi-saved-regs");
+
   // Add output filename
   LlcArgs.push_back("-o");
   const char *LlcOutputFile =
@@ -362,6 +367,11 @@ void AMDGCN::OpenMPLinker::constructLldCommand(
 
   StringRef GPUArch = getProcessorFromTargetID(TC.getTriple(), TargetID);
   LldArgs.push_back(Args.MakeArgString("-plugin-opt=mcpu=" + GPUArch));
+
+  if (Arg *A = Args.getLastArgNoClaim(options::OPT_g_Group))
+    if (!A->getOption().matches(options::OPT_g0) &&
+        !A->getOption().matches(options::OPT_ggdb0))
+      LldArgs.push_back("-plugin-opt=-amdgpu-spill-cfi-saved-regs");
 
   // Extract all the -m options
   std::vector<llvm::StringRef> Features;
