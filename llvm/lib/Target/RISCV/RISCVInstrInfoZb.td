@@ -521,9 +521,6 @@ def MAXU : ALU_rr<0b0000101, 0b111, "maxu">,
            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 } // Predicates = [HasStdExtZbb]
 
-let Predicates = [HasStdExtZbp] in {
-} // Predicates = [HasStdExtZbp]
-
 let Predicates = [HasStdExtZbe] in {
 // NOTE: These mnemonics are from the 0.94 spec. There is a name conflict with
 // bext in the 0.93 spec.
@@ -606,7 +603,7 @@ def BREV8 : RVBUnary<0b0110100, 0b00111, 0b101, OPC_OP_IMM, "brev8">;
 let Predicates = [HasStdExtZbpOrZbkb, IsRV32] in {
 def ZIP_RV32   : RVBUnary<0b0000100, 0b01111, 0b001, OPC_OP_IMM, "zip">;
 def UNZIP_RV32 : RVBUnary<0b0000100, 0b01111, 0b101, OPC_OP_IMM, "unzip">;
-} // Predicates = [HasStdExtZbkb, IsRV32]
+} // Predicates = [HasStdExtZbpOrZbkb, IsRV32]
 
 
 //===----------------------------------------------------------------------===//
