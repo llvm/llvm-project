@@ -16,11 +16,11 @@ impure function impureFunc()
   impureFunc = 3
 end function impureFunc
 
-pure function pureFunc()
-  integer :: pureFunc
+pure function iPureFunc()
+  integer :: iPureFunc
 
-  pureFunc = 3
-end function pureFunc
+  iPureFunc = 3
+end function iPureFunc
 
 module m
   real, allocatable :: mVar
@@ -49,7 +49,7 @@ subroutine s(iArg, allocArg, pointerArg, arrayArg, ioArg, optionalArg)
   ! statement functions referenced below
   iVolatileStmtFunc() = 3 * volatileVar
   iImpureStmtFunc() = 3 * impureFunc()
-  iPureStmtFunc() = 3 * pureFunc()
+  iPureStmtFunc() = 3 * iPureFunc()
 
   ! This is OK
   real, dimension(merge(1, 2, allocated(mVar))) :: rVar
