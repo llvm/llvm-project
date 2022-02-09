@@ -24,6 +24,9 @@ set(LIBUNWIND_LIBCXX_PATH "${CMAKE_CURRENT_LIST_DIR}/../libcxx" CACHE PATH
         "Specify path to libc++ source.")
 
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBUNWIND_STANDALONE_BUILD)
+  message(WARNING "The Standalone build is deprecated in this release. Please use one of the ways "
+                  "described at https://libcxx.llvm.org/BuildingLibcxx.html for building libunwind.")
+
   # We may have an incomplete toolchain - do language support tests without
   # linking.
   include(EnableLanguageNolink)

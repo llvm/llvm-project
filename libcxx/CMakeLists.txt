@@ -27,6 +27,8 @@ set(LIBCXX_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 set(LIBCXX_BINARY_INCLUDE_DIR "${LIBCXX_BINARY_DIR}/include/c++build")
 
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXX_STANDALONE_BUILD)
+  message(WARNING "The Standalone build is deprecated in this release. Please use one of the ways "
+                  "described at https://libcxx.llvm.org/BuildingLibcxx.html for building libc++.")
   project(libcxx CXX C)
 
   set(PACKAGE_NAME libcxx)

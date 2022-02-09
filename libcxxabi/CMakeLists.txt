@@ -28,6 +28,9 @@ set(LIBCXXABI_LIBCXX_PATH "${CMAKE_CURRENT_LIST_DIR}/../libcxx" CACHE PATH
         "Specify path to libc++ source.")
 
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXXABI_STANDALONE_BUILD)
+  message(WARNING "The Standalone build is deprecated in this release. Please use one of the ways "
+                  "described at https://libcxx.llvm.org/BuildingLibcxx.html for building libc++abi.")
+
   project(libcxxabi CXX C)
 
   set(PACKAGE_NAME libcxxabi)

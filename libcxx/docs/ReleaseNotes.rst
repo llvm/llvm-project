@@ -189,14 +189,14 @@ Build System Changes
   Consider using a Bootstrapping build to build libc++ with a fresh Clang if you
   can't use the system compiler to build libc++ anymore.
 
-- Historically, there have been numerous ways of building libc++ and libc++abi. This has
-  led to at least 5 different ways to build the runtimes, which was impossible to
-  maintain with a good level of support. Starting with this release, libc++ and libc++abi support
-  exactly two ways of being built, which should cater to all use-cases. Furthermore,
-  these builds are as lightweight as possible and will work consistently even when targeting
-  embedded platforms, which used not to be the case. :doc:`BuildingLibcxx` describes
-  those two ways of building. Please migrate over to the appropriate build instructions
-  as soon as possible.
+- Historically, there have been numerous ways of building libc++, libc++abi, and libunwind.
+  This has led to at least 5 different ways to build the runtimes, which was impossible to
+  maintain with a good level of support. Starting with this release, libc++, libc++abi, and
+  libunwind support exactly two ways of being built, which should cater to all use-cases.
+  Furthermore, these builds are as lightweight as possible and will work consistently even
+  when targeting embedded platforms, which used not to be the case. :doc:`BuildingLibcxx`
+  describes those two ways of building. Please migrate over to the appropriate build
+  instructions as soon as possible.
 
   All other ways to build are deprecated and will not be supported in the next release.
   We understand that making these changes can be daunting. For that reason, here's a
@@ -206,8 +206,8 @@ Build System Changes
     (which was the previously advertised way to build the runtimes), please simply root your CMake invocation at
     ``<monorepo>/runtimes`` and pass ``-DLLVM_ENABLE_RUNTIMES=<...>``.
 
-  - If you were doing two CMake invocations, one rooted at ``<monorepo>/libcxx`` and one rooted at
-    ``<monorepo>/libcxxabi`` (this used to be called a "Standalone build"), please move them to a
+  - If you were doing multiple CMake invocations, e.g. one rooted at ``<monorepo>/libcxx`` and one rooted
+    at ``<monorepo>/libcxxabi`` (this used to be called a "Standalone build"), please move them to a
     single invocation like so:
 
     .. code-block:: bash
