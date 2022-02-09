@@ -37,6 +37,7 @@ namespace RISCV {
 #define GET_RISCVVSETable_IMPL
 #define GET_RISCVVLXTable_IMPL
 #define GET_RISCVVSXTable_IMPL
+#define GET_RISCVMaskedPseudosTable_IMPL
 #include "RISCVGenSearchableTables.inc"
 } // namespace RISCV
 } // namespace llvm
@@ -123,6 +124,7 @@ void RISCVDAGToDAGISel::PostprocessISelDAG() {
 
     MadeChange |= doPeepholeSExtW(N);
     MadeChange |= doPeepholeLoadStoreADDI(N);
+    MadeChange |= doPeepholeMaskedRVV(N);
   }
 
   if (MadeChange)
@@ -2131,6 +2133,102 @@ bool RISCVDAGToDAGISel::doPeepholeSExtW(SDNode *N) {
   }
 
   return false;
+}
+
+// Optimize masked RVV pseudo instructions with a known all-ones mask to their
+// corresponding "unmasked" pseudo versions. The mask we're interested in will
+// take the form of a V0 physical register operand, with a glued
+// register-setting instruction.
+bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
+  const RISCV::RISCVMaskedPseudoInfo *I =
+      RISCV::getMaskedPseudoInfo(N->getMachineOpcode());
+  if (!I)
+    return false;
+
+  unsigned MaskOpIdx = I->MaskOpIdx;
+
+  // Check that we're using V0 as a mask register.
+  if (!isa<RegisterSDNode>(N->getOperand(MaskOpIdx)) ||
+      cast<RegisterSDNode>(N->getOperand(MaskOpIdx))->getReg() != RISCV::V0)
+    return false;
+
+  // The glued user defines V0.
+  const auto *Glued = N->getGluedNode();
+
+  if (!Glued || Glued->getOpcode() != ISD::CopyToReg)
+    return false;
+
+  // Check that we're defining V0 as a mask register.
+  if (!isa<RegisterSDNode>(Glued->getOperand(1)) ||
+      cast<RegisterSDNode>(Glued->getOperand(1))->getReg() != RISCV::V0)
+    return false;
+
+  // Check the instruction defining V0; it needs to be a VMSET pseudo.
+  SDValue MaskSetter = Glued->getOperand(2);
+
+  const auto IsVMSet = [](unsigned Opc) {
+    return Opc == RISCV::PseudoVMSET_M_B1 || Opc == RISCV::PseudoVMSET_M_B16 ||
+           Opc == RISCV::PseudoVMSET_M_B2 || Opc == RISCV::PseudoVMSET_M_B32 ||
+           Opc == RISCV::PseudoVMSET_M_B4 || Opc == RISCV::PseudoVMSET_M_B64 ||
+           Opc == RISCV::PseudoVMSET_M_B8;
+  };
+
+  // TODO: Check that the VMSET is the expected bitwidth? The pseudo has
+  // undefined behaviour if it's the wrong bitwidth, so we could choose to
+  // assume that it's all-ones? Same applies to its VL.
+  if (!MaskSetter->isMachineOpcode() || !IsVMSet(MaskSetter.getMachineOpcode()))
+    return false;
+
+  // Retrieve the tail policy operand index, if any.
+  Optional<unsigned> TailPolicyOpIdx;
+  const RISCVInstrInfo *TII = static_cast<const RISCVInstrInfo *>(
+      CurDAG->getSubtarget().getInstrInfo());
+
+  const MCInstrDesc &MaskedMCID = TII->get(N->getMachineOpcode());
+
+  if (RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags)) {
+    // The last operand of the pseudo is the policy op, but we're expecting a
+    // Glue operand last. We may also have a chain.
+    TailPolicyOpIdx = N->getNumOperands() - 1;
+    if (N->getOperand(*TailPolicyOpIdx).getValueType() == MVT::Glue)
+      (*TailPolicyOpIdx)--;
+    if (N->getOperand(*TailPolicyOpIdx).getValueType() == MVT::Other)
+      (*TailPolicyOpIdx)--;
+
+    // If the policy isn't TAIL_AGNOSTIC we can't perform this optimization.
+    if (N->getConstantOperandVal(*TailPolicyOpIdx) != RISCVII::TAIL_AGNOSTIC)
+      return false;
+  }
+
+  const MCInstrDesc &UnmaskedMCID = TII->get(I->UnmaskedPseudo);
+
+  // Check that we're dropping the merge operand, the mask operand, and any
+  // policy operand when we transform to this unmasked pseudo.
+  assert(!RISCVII::hasMergeOp(UnmaskedMCID.TSFlags) &&
+         RISCVII::hasDummyMaskOp(UnmaskedMCID.TSFlags) &&
+         !RISCVII::hasVecPolicyOp(UnmaskedMCID.TSFlags) &&
+         "Unexpected pseudo to transform to");
+
+  SmallVector<SDValue, 8> Ops;
+  // Skip the merge operand at index 0.
+  for (unsigned I = 1, E = N->getNumOperands(); I != E; I++) {
+    // Skip the mask, the policy, and the Glue.
+    SDValue Op = N->getOperand(I);
+    if (I == MaskOpIdx || I == TailPolicyOpIdx ||
+        Op.getValueType() == MVT::Glue)
+      continue;
+    Ops.push_back(Op);
+  }
+
+  // Transitively apply any node glued to our new node.
+  if (auto *TGlued = Glued->getGluedNode())
+    Ops.push_back(SDValue(TGlued, TGlued->getNumValues() - 1));
+
+  SDNode *Result =
+      CurDAG->getMachineNode(I->UnmaskedPseudo, SDLoc(N), N->getVTList(), Ops);
+  ReplaceUses(N, Result);
+
+  return true;
 }
 
 // This pass converts a legalized DAG into a RISCV-specific DAG, ready
