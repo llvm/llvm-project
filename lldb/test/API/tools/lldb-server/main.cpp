@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <errno.h>
+#include <future>
 #include <inttypes.h>
 #include <memory>
 #include <mutex>
@@ -158,7 +159,8 @@ static void hello() {
   printf("hello, world\n");
 }
 
-static void *thread_func(void *arg) {
+static void *thread_func(std::promise<void> ready) {
+  ready.set_value();
   static std::atomic<int> s_thread_index(1);
   const int this_thread_index = s_thread_index++;
   if (g_print_thread_ids) {
@@ -328,7 +330,10 @@ int main(int argc, char **argv) {
         _exit(0);
 #endif
     } else if (consume_front(arg, "thread:new")) {
-        threads.push_back(std::thread(thread_func, nullptr));
+      std::promise<void> promise;
+      std::future<void> ready = promise.get_future();
+      threads.push_back(std::thread(thread_func, std::move(promise)));
+      ready.wait();
     } else if (consume_front(arg, "thread:print-ids")) {
       // Turn on thread id announcing.
       g_print_thread_ids = true;
