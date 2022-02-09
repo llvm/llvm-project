@@ -1240,6 +1240,9 @@ static void readConfigs(opt::InputArgList &args) {
       error(errPrefix + toString(pat.takeError()));
   }
 
+  if (args.hasArg(OPT_define_common, OPT_no_define_common))
+    warn("-d, -dc, -dp, and --[no-]define-common will be removed. See https://github.com/llvm/llvm-project/issues/53660");
+
   cl::ResetAllOptionOccurrences();
 
   // Parse LTO options.

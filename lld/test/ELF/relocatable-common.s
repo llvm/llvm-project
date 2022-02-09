@@ -2,16 +2,18 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1.o
 # RUN: ld.lld -r %t1.o -o %t
 # RUN: llvm-readobj --symbols -r %t | FileCheck %s
-# RUN: ld.lld -r --no-define-common %t1.o -o %t
+# RUN: ld.lld -r --no-define-common %t1.o -o %t 2>&1 | FileCheck %s --check-prefix=WARN
 # RUN: llvm-readobj --symbols -r %t | FileCheck %s
-# RUN: ld.lld -r --define-common %t1.o -o %t
+# RUN: ld.lld -r --define-common %t1.o -o %t 2>&1 | FileCheck %s --check-prefix=WARN
 # RUN: llvm-readobj --symbols -r %t | FileCheck -check-prefix=DEFCOMM %s
-# RUN: ld.lld -r -d %t1.o -o %t
+# RUN: ld.lld -r -d %t1.o -o %t 2>&1 | FileCheck %s --check-prefix=WARN
 # RUN: llvm-readobj --symbols -r %t | FileCheck -check-prefix=DEFCOMM %s
-# RUN: ld.lld -r -dc %t1.o -o %t
+# RUN: ld.lld -r -dc %t1.o -o %t 2>&1 | FileCheck %s --check-prefix=WARN
 # RUN: llvm-readobj --symbols -r %t | FileCheck -check-prefix=DEFCOMM %s
-# RUN: ld.lld -r -dp %t1.o -o %t
+# RUN: ld.lld -r -dp %t1.o -o %t 2>&1 | FileCheck %s --check-prefix=WARN
 # RUN: llvm-readobj --symbols -r %t | FileCheck -check-prefix=DEFCOMM %s
+
+# WARN: warning: -d, -dc, -dp, and --[no-]define-common will be removed. See https://github.com/llvm/llvm-project/issues/53660
 
 # CHECK:        Symbol {
 # CHECK:          Name: common
