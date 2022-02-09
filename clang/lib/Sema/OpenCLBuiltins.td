@@ -1138,7 +1138,7 @@ let MinVersion = CL20 in {
   foreach ModOp = ["add", "sub"] in {
     let Extension = FuncExtFloatAtomicsFp16GlobalAdd in {
       defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
-          [Half, PointerType<VolatileType<AtomicFloat>, GlobalAS>, Half]>;
+          [Half, PointerType<VolatileType<AtomicHalf>, GlobalAS>, Half]>;
     }
     let Extension = FuncExtFloatAtomicsFp32GlobalAdd in {
       defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
@@ -1150,7 +1150,7 @@ let MinVersion = CL20 in {
     }
     let Extension = FuncExtFloatAtomicsFp16LocalAdd in {
       defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
-          [Half, PointerType<VolatileType<AtomicFloat>, LocalAS>, Half]>;
+          [Half, PointerType<VolatileType<AtomicHalf>, LocalAS>, Half]>;
     }
     let Extension = FuncExtFloatAtomicsFp32LocalAdd in {
       defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
@@ -1162,7 +1162,7 @@ let MinVersion = CL20 in {
     }
     let Extension = FuncExtFloatAtomicsFp16GenericAdd in {
       defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
-          [Half, PointerType<VolatileType<AtomicFloat>, GenericAS>, Half]>;
+          [Half, PointerType<VolatileType<AtomicHalf>, GenericAS>, Half]>;
     }
     let Extension = FuncExtFloatAtomicsFp32GenericAdd in {
       defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
