@@ -32,7 +32,7 @@ The basic steps needed to build libc++ are:
    * ``cd where you want to build llvm``
    * ``mkdir build``
    * ``cd build``
-   * ``cmake -G <generator> -DLLVM_ENABLE_PROJECTS=libunwind [options] <path to llvm sources>``
+   * ``cmake -G <generator> -DLLVM_ENABLE_RUNTIMES=libunwind [options] <llvm-monorepo>/runtimes``
 
    For more information about configuring libunwind see :ref:`CMake Options`.
 

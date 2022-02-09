@@ -32,15 +32,15 @@ libc++ and the libc++ ABI with data flow sanitizer instrumentation.
 
 .. code-block:: console
 
+  mkdir libcxx-build
   cd libcxx-build
 
   # An example using ninja
-  cmake -GNinja path/to/llvm-project/llvm \
+  cmake -GNinja -S <monorepo-root>/runtimes \
     -DCMAKE_C_COMPILER=clang \
     -DCMAKE_CXX_COMPILER=clang++ \
     -DLLVM_USE_SANITIZER="DataFlow" \
-    -DLLVM_ENABLE_LIBCXX=ON \
-    -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi"
+    -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"
 
   ninja cxx cxxabi
 

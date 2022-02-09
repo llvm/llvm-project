@@ -221,6 +221,10 @@ description is in `LLVM-related variables`_ below.
   Control which projects are enabled. For example you may want to work on clang
   or lldb by specifying ``-DLLVM_ENABLE_PROJECTS="clang;lldb"``.
 
+**LLVM_ENABLE_RUNTIMES**:STRING
+  Control which runtimes are enabled. For example you may want to work on
+  libc++ or libc++abi by specifying ``-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"``.
+
 **LLVM_LIBDIR_SUFFIX**:STRING
   Extra suffix to append to the directory where libraries are to be
   installed. On a 64-bit architecture, one could use ``-DLLVM_LIBDIR_SUFFIX=64``
@@ -505,17 +509,17 @@ enabled sub-projects. Nearly all of these variable names begin with
 
 **LLVM_ENABLE_PROJECTS**:STRING
   Semicolon-separated list of projects to build, or *all* for building all
-  (clang, lldb, compiler-rt, lld, polly, etc) projects. This flag assumes
-  that projects are checked out side-by-side and not nested, i.e. clang
-  needs to be in parallel of llvm instead of nested in `llvm/tools`.
-  This feature allows to have one build for only LLVM and another for clang+llvm
-  using the same source checkout.
+  (clang, lldb, lld, polly, etc) projects. This flag assumes that projects
+  are checked out side-by-side and not nested, i.e. clang needs to be in
+  parallel of llvm instead of nested in `llvm/tools`. This feature allows
+  to have one build for only LLVM and another for clang+llvm using the same
+  source checkout.
   The full list is:
-  ``clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;openmp;polly;pstl``
+  ``clang;clang-tools-extra;cross-project-tests;libc;libclc;lld;lldb;openmp;polly;pstl``
 
 **LLVM_ENABLE_RUNTIMES**:STRING
-  Build libc++, libc++abi or other projects using that a just-built compiler.
-  This is the correct way to build libc++ when putting together a toolchain.
+  Build libc++, libc++abi, libunwind or compiler-rt using the just-built compiler.
+  This is the correct way to build runtimes when putting together a toolchain.
   It will build the builtins separately from the other runtimes to preserve
   correct dependency ordering. If you want to build the runtimes using a system
   compiler, see the `libc++ documentation <https://libcxx.llvm.org/BuildingLibcxx.html>`_.
