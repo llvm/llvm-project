@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-use-profi -sample-profile-file=%S/Inputs/profile-inference-islands.prof -S -o %t
 ; RUN: FileCheck %s < %t -check-prefix=CHECK-ENTRY-COUNT
-; RUN: opt < %t -analyze -block-freq -enable-new-pm=0 | FileCheck %s
+; RUN: opt < %t -passes='print<block-freq>' -disable-output 2>&1 | FileCheck %s
 
 
 ; The test contains an isolated flow component ("island") that needs to be
