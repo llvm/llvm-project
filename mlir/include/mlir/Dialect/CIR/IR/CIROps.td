@@ -511,4 +511,32 @@ def CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
   let hasVerifier = 0;
 }
 
+//===----------------------------------------------------------------------===//
+// BrOp
+//===----------------------------------------------------------------------===//
+
+def BrOp : CIR_Op<"br",
+      [DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
+     Pure, Terminator]> {
+  let summary = "branch operation";
+  let description = [{
+    The `cir.br` branches unconditionally to a block.
+
+    Example:
+
+    ```mlir
+      ...
+        cir.br ^bb3
+      ^bb3:  // pred: ^bb2
+        cir.return
+    ```
+  }];
+
+  let successors = (successor AnySuccessor:$dest);
+  let assemblyFormat = [{
+    $dest attr-dict
+  }];
+}
+
+
 #endif // MLIR_CIR_DIALECT_CIR_OPS

@@ -420,6 +420,20 @@ void printBinOpKind(OpAsmPrinter &p, BinOp binOp, BinOpKindAttr kindAttr) {
 }
 
 //===----------------------------------------------------------------------===//
+// BrOp
+//===----------------------------------------------------------------------===//
+
+mlir::SuccessorOperands BrOp::getSuccessorOperands(unsigned index) {
+  assert(index == 0 && "invalid successor index");
+  // Current block targets do not have operands.
+  // TODO(CIR): This is a hacky avoidance of actually implementing this since
+  // MLIR moved it "because nobody used the llvm::Optional::None case.........."
+  return mlir::SuccessorOperands(MutableOperandRange(getOperation(), 0, 0));
+}
+
+Block *BrOp::getSuccessorForOperands(ArrayRef<Attribute>) { return getDest(); }
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
