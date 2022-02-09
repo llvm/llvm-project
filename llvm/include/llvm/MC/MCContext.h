@@ -13,18 +13,15 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCPseudoProbe.h"
-#include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
@@ -46,6 +43,7 @@ namespace llvm {
 
   class CodeViewContext;
   class MCAsmInfo;
+  class MCInst;
   class MCLabel;
   class MCObjectFileInfo;
   class MCRegisterInfo;
@@ -57,11 +55,14 @@ namespace llvm {
   class MCSectionWasm;
   class MCSectionXCOFF;
   class MCStreamer;
+  class MCSubtargetInfo;
   class MCSymbol;
   class MCSymbolELF;
   class MCSymbolWasm;
   class MCSymbolXCOFF;
+  class MCTargetOptions;
   class MDNode;
+  template <typename T> class SmallVectorImpl;
   class SMDiagnostic;
   class SMLoc;
   class SourceMgr;

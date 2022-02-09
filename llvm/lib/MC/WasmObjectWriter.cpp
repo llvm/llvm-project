@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/BinaryFormat/WasmTraits.h"
 #include "llvm/Config/llvm-config.h"
@@ -31,7 +30,6 @@
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/StringSaver.h"
 #include <vector>
 
 using namespace llvm;
