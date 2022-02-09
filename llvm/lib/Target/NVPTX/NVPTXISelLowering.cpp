@@ -2426,26 +2426,6 @@ NVPTXTargetLowering::getParamSymbol(SelectionDAG &DAG, int idx, EVT v) const {
   return DAG.getTargetExternalSymbol(SavedStr->c_str(), v);
 }
 
-// Check to see if the kernel argument is image*_t or sampler_t
-
-static bool isImageOrSamplerVal(const Value *arg) {
-  static const char *const specialTypes[] = { "struct._image2d_t",
-                                              "struct._image3d_t",
-                                              "struct._sampler_t" };
-
-  Type *Ty = arg->getType();
-  auto *PTy = dyn_cast<PointerType>(Ty);
-
-  if (!PTy)
-    return false;
-
-  auto *STy = dyn_cast<StructType>(PTy->getPointerElementType());
-  if (!STy || STy->isLiteral())
-    return false;
-
-  return llvm::is_contained(specialTypes, STy->getName());
-}
-
 SDValue NVPTXTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
@@ -2486,16 +2466,6 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
   int idx = 0;
   for (unsigned i = 0, e = theArgs.size(); i != e; ++i, ++idx, ++InsIdx) {
     Type *Ty = argTypes[i];
-
-    // If the kernel argument is image*_t or sampler_t, convert it to
-    // a i32 constant holding the parameter position. This can later
-    // matched in the AsmPrinter to output the correct mangled name.
-    if (isImageOrSamplerVal(theArgs[i])) {
-      assert(isKernelFunction(*F) &&
-             "Only kernels can have image/sampler params");
-      InVals.push_back(DAG.getConstant(i + 1, dl, MVT::i32));
-      continue;
-    }
 
     if (theArgs[i]->use_empty()) {
       // argument is dead
