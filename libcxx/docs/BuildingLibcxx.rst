@@ -523,8 +523,8 @@ We can now run CMake:
 
 .. code-block:: bash
 
-  $ cmake -G Ninja -S llvm -B build           \
-    -DLLVM_ENABLE_PROJECTS="libcxx"           \
+  $ cmake -G Ninja -S runtimes -B build       \
+    -DLLVM_ENABLE_RUNTIMES="libcxx"           \
     -DLIBCXX_CXX_ABI=libstdc++                \
     -DLIBCXX_CXX_ABI_INCLUDE_PATHS="/usr/include/c++/4.7/;/usr/include/c++/4.7/x86_64-linux-gnu/"
   $ ninja -C build install-cxx
@@ -549,8 +549,8 @@ We can now run CMake like:
 
 .. code-block:: bash
 
-  $ cmake -G Ninja -S llvm -B build                                   \
-          -DLLVM_ENABLE_PROJECTS="libcxx"                             \
+  $ cmake -G Ninja -S runtimes -B build                               \
+          -DLLVM_ENABLE_RUNTIMES="libcxx"                             \
           -DLIBCXX_CXX_ABI=libcxxrt                                   \
           -DLIBCXX_CXX_ABI_INCLUDE_PATHS=path/to/libcxxrt-sources/src
   $ ninja -C build install-cxx
