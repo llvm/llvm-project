@@ -279,15 +279,13 @@ foreach kind = ["ADD", "UMAX", "SMAX", "UMIN", "SMIN", "AND", "OR", "XOR",
   def rvv_vecreduce_#kind#_vl : SDNode<"RISCVISD::VECREDUCE_"#kind#"_VL", SDTRVVVecReduce>;
 
 // Give explicit Complexity to prefer simm5/uimm5.
-def SplatPat       : ComplexPattern<vAny, 1, "selectVSplat",      [splat_vector], [], 1>;
-def SplatPat_simm5 : ComplexPattern<vAny, 1, "selectVSplatSimm5", [splat_vector], [], 2>;
-def SplatPat_uimm5 : ComplexPattern<vAny, 1, "selectVSplatUimm5", [splat_vector], [], 2>;
+def SplatPat       : ComplexPattern<vAny, 1, "selectVSplat",      [], [], 1>;
+def SplatPat_simm5 : ComplexPattern<vAny, 1, "selectVSplatSimm5", [], [], 2>;
+def SplatPat_uimm5 : ComplexPattern<vAny, 1, "selectVSplatUimm5", [], [], 2>;
 def SplatPat_simm5_plus1
-    : ComplexPattern<vAny, 1, "selectVSplatSimm5Plus1",
-                     [splat_vector], [], 2>;
+    : ComplexPattern<vAny, 1, "selectVSplatSimm5Plus1", [], [], 2>;
 def SplatPat_simm5_plus1_nonzero
-    : ComplexPattern<vAny, 1, "selectVSplatSimm5Plus1NonZero",
-                     [splat_vector], [], 2>;
+    : ComplexPattern<vAny, 1, "selectVSplatSimm5Plus1NonZero", [], [], 2>;
 
 // Ignore the vl operand.
 def SplatFPOp : PatFrag<(ops node:$op),
