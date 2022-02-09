@@ -13,6 +13,7 @@
 #ifndef LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZE_H
 #define LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZE_H
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/DebugInfo/Symbolize/DIFetcher.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Object/Binary.h"
@@ -62,21 +63,31 @@ public:
                                      object::SectionedAddress ModuleOffset);
   Expected<DILineInfo> symbolizeCode(const std::string &ModuleName,
                                      object::SectionedAddress ModuleOffset);
+  Expected<DILineInfo> symbolizeCode(ArrayRef<uint8_t> BuildID,
+                                     object::SectionedAddress ModuleOffset);
   Expected<DIInliningInfo>
   symbolizeInlinedCode(const ObjectFile &Obj,
                        object::SectionedAddress ModuleOffset);
   Expected<DIInliningInfo>
   symbolizeInlinedCode(const std::string &ModuleName,
                        object::SectionedAddress ModuleOffset);
+  Expected<DIInliningInfo>
+  symbolizeInlinedCode(ArrayRef<uint8_t> BuildID,
+                       object::SectionedAddress ModuleOffset);
 
   Expected<DIGlobal> symbolizeData(const ObjectFile &Obj,
                                    object::SectionedAddress ModuleOffset);
   Expected<DIGlobal> symbolizeData(const std::string &ModuleName,
                                    object::SectionedAddress ModuleOffset);
+  Expected<DIGlobal> symbolizeData(ArrayRef<uint8_t> BuildID,
+                                   object::SectionedAddress ModuleOffset);
   Expected<std::vector<DILocal>>
   symbolizeFrame(const ObjectFile &Obj, object::SectionedAddress ModuleOffset);
   Expected<std::vector<DILocal>>
   symbolizeFrame(const std::string &ModuleName,
+                 object::SectionedAddress ModuleOffset);
+  Expected<std::vector<DILocal>>
+  symbolizeFrame(ArrayRef<uint8_t> BuildID,
                  object::SectionedAddress ModuleOffset);
   void flush();
 
@@ -117,6 +128,12 @@ private:
   getOrCreateModuleInfo(const std::string &ModuleName);
   Expected<SymbolizableModule *> getOrCreateModuleInfo(const ObjectFile &Obj);
 
+  /// Returns a SymbolizableModule or an error if loading debug info failed.
+  /// Unlike the above, errors are reported each time, since they are more
+  /// likely to be transient.
+  Expected<SymbolizableModule *>
+  getOrCreateModuleInfo(ArrayRef<uint8_t> BuildID);
+
   Expected<SymbolizableModule *>
   createModuleInfo(const ObjectFile *Obj, std::unique_ptr<DIContext> Context,
                    StringRef ModuleName);
@@ -135,7 +152,8 @@ private:
                        const std::string &DebuglinkName, uint32_t CRCHash,
                        std::string &Result);
 
-  bool findDebugBinary(const ArrayRef<uint8_t> BuildID, std::string &Result);
+  bool getOrFindDebugBinary(const ArrayRef<uint8_t> BuildID,
+                            std::string &Result);
 
   /// Returns pair of pointers to object and debug object.
   Expected<ObjectPair> getOrCreateObjectPair(const std::string &Path,
@@ -149,6 +167,7 @@ private:
 
   std::map<std::string, std::unique_ptr<SymbolizableModule>, std::less<>>
       Modules;
+  StringMap<std::string> BuildIDPaths;
 
   /// Contains cached results of getOrCreateObjectPair().
   std::map<std::pair<std::string, std::string>, ObjectPair>
