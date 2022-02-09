@@ -691,6 +691,22 @@ static void printLaunchFuncOperands(OpAsmPrinter &printer, Operation *,
   printer << ")";
 }
 
+//
+
+//===----------------------------------------------------------------------===//
+// ShuffleOp
+//===----------------------------------------------------------------------===//
+
+void ShuffleOp::build(OpBuilder &builder, OperationState &result, Value value,
+                      int32_t offset, int32_t width, ShuffleMode mode) {
+  build(builder, result, value,
+        builder.create<arith::ConstantOp>(result.location,
+                                          builder.getI32IntegerAttr(offset)),
+        builder.create<arith::ConstantOp>(result.location,
+                                          builder.getI32IntegerAttr(width)),
+        mode);
+}
+
 //===----------------------------------------------------------------------===//
 // GPUFuncOp
 //===----------------------------------------------------------------------===//
