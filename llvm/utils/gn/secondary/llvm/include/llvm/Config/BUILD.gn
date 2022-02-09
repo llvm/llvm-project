@@ -337,6 +337,7 @@ write_cmake_config("llvm-config") {
     "LLVM_ENABLE_DUMP=",
     "LLVM_ENABLE_NEW_PASS_MANAGER=1",
     "LLVM_FORCE_ENABLE_STATS=",
+    "LLVM_FORCE_USE_OLD_TOOLCHAIN=",
     "LLVM_HAS_ATOMICS=1",
     "LLVM_HAVE_TF_API=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",

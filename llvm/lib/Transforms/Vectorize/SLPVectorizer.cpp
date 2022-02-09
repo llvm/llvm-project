@@ -761,11 +761,7 @@ static Optional<int> getInsertIndex(Value *InsertInst, unsigned Offset) {
   return Index;
 }
 
-/// Reorders the list of scalars in accordance with the given \p Order and then
-/// the \p Mask. \p Order - is the original order of the scalars, need to
-/// reorder scalars into an unordered state at first according to the given
-/// order. Then the ordered scalars are shuffled once again in accordance with
-/// the provided mask.
+/// Reorders the list of scalars in accordance with the given \p Mask.
 static void reorderScalars(SmallVectorImpl<Value *> &Scalars,
                            ArrayRef<int> Mask) {
   assert(!Mask.empty() && "Expected non-empty mask.");

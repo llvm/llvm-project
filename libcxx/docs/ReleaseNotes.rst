@@ -57,3 +57,7 @@ ABI Changes
 
 Build System Changes
 --------------------
+
+- Support for standalone builds have been entirely removed from libc++, libc++abi and
+  libunwind. Please use :ref:`these instructions <build instructions>` for building
+  libc++, libc++abi and/or libunwind.

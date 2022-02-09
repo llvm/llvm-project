@@ -71,9 +71,9 @@ void foo(int i) {
   __attribute__((carries_dependency)) return; // expected-error {{'carries_dependency' attribute cannot be applied to a statement}}
 }
 
-void bar();
+void bar(void);
 
-void foobar() {
+void foobar(void) {
   __attribute__((nomerge)) bar();
   __attribute__(()) bar();                // expected-error {{expected identifier or '('}}
   __attribute__((unused, nomerge)) bar(); // expected-error {{expected identifier or '('}}
@@ -85,6 +85,6 @@ void foobar() {
   __attribute__((nomerge)) label : bar(); // expected-error {{'nomerge' attribute only applies to functions and statements}}
 }
 
-int f();
+int f(void);
 
 __attribute__((nomerge)) static int i; // expected-error {{'nomerge' attribute only applies to functions and statements}}

@@ -124,6 +124,10 @@ public:
       return mlir::LLVM::LLVMStructType::getLiteral(&getContext(), members,
                                                     /*isPacked=*/false);
     });
+    addConversion([&](mlir::NoneType none) {
+      return mlir::LLVM::LLVMStructType::getLiteral(
+          none.getContext(), llvm::None, /*isPacked=*/false);
+    });
   }
 
   // i32 is used here because LLVM wants i32 constants when indexing into struct
