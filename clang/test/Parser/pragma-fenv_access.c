@@ -19,7 +19,7 @@ float func_04(int x, float y) {
 }
 
 #pragma STDC FENV_ACCESS ON
-int main() {
+int main(void) {
   CONST float one = 1.0F ;
   CONST float three = 3.0F ;
   CONST float four = 4.0F ;

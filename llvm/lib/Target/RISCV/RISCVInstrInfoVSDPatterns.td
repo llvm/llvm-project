@@ -584,12 +584,6 @@ defm : VPatBinarySDNode_VV_VX_VI<sra, "PseudoVSRA", uimm5>;
 foreach vti = AllIntegerVectors in {
   // Emit shift by 1 as an add since it might be faster.
   def : Pat<(shl (vti.Vector vti.RegClass:$rs1),
-                 (vti.Vector (splat_vector (XLenVT 1)))),
-            (!cast<Instruction>("PseudoVADD_VV_"# vti.LMul.MX)
-                 vti.RegClass:$rs1, vti.RegClass:$rs1, vti.AVL, vti.Log2SEW)>;
-}
-foreach vti = [VI64M1, VI64M2, VI64M4, VI64M8] in {
-  def : Pat<(shl (vti.Vector vti.RegClass:$rs1),
                  (vti.Vector (riscv_vmv_v_x_vl 1, (XLenVT srcvalue)))),
             (!cast<Instruction>("PseudoVADD_VV_"# vti.LMul.MX)
                  vti.RegClass:$rs1, vti.RegClass:$rs1, vti.AVL, vti.Log2SEW)>;
@@ -942,17 +936,6 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
 //===----------------------------------------------------------------------===//
 // Vector Splats
 //===----------------------------------------------------------------------===//
-
-let Predicates = [HasVInstructions] in {
-foreach vti = AllIntegerVectors in {
-  def : Pat<(vti.Vector (SplatPat GPR:$rs1)),
-            (!cast<Instruction>("PseudoVMV_V_X_" # vti.LMul.MX)
-              GPR:$rs1, vti.AVL, vti.Log2SEW)>;
-  def : Pat<(vti.Vector (SplatPat_simm5 simm5:$rs1)),
-            (!cast<Instruction>("PseudoVMV_V_I_" # vti.LMul.MX)
-              simm5:$rs1, vti.AVL, vti.Log2SEW)>;
-}
-} // Predicates = [HasVInstructions]
 
 let Predicates = [HasVInstructionsAnyF] in {
 foreach fvti = AllFloatVectors in {

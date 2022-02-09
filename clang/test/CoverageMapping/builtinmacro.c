@@ -8,7 +8,7 @@ const char *filename (const char *name) { // CHECK-NEXT: File 0, [[@LINE]]:41 ->
   return this_file;
 }
 
-int main() { // CHECK-NEXT: main
+int main(void) { // CHECK-NEXT: main
   filename(__FILE__ "test.c");
   return 0;
 }

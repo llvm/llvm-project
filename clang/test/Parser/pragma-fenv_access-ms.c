@@ -10,7 +10,7 @@
 #pragma fenv_access (on // expected-warning{{missing ')' after '#pragma fenv_access'}}
 #pragma fenv_access (on) foo // expected-warning{{extra tokens at end of '#pragma fenv_access'}}
 
-void f() {
+void f(void) {
   (void)0;
   #pragma fenv_access (on) // expected-error{{'#pragma fenv_access' can only appear at file scope or at the start of a compound statement}}
 }
