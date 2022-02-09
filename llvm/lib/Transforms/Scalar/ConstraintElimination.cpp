@@ -421,15 +421,16 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
       Value *Cond;
       // For now, just handle assumes with a single compare as condition.
       if (match(&I, m_Intrinsic<Intrinsic::assume>(m_Value(Cond))) &&
-          isa<CmpInst>(Cond)) {
+          isa<ICmpInst>(Cond)) {
         if (GuaranteedToExecute) {
           // The assume is guaranteed to execute when BB is entered, hence Cond
           // holds on entry to BB.
-          WorkList.emplace_back(DT.getNode(&BB), cast<CmpInst>(Cond), false);
+          WorkList.emplace_back(DT.getNode(&BB), cast<ICmpInst>(Cond), false);
         } else {
           // Otherwise the condition only holds in the successors.
           for (BasicBlock *Succ : successors(&BB))
-            WorkList.emplace_back(DT.getNode(Succ), cast<CmpInst>(Cond), false);
+            WorkList.emplace_back(DT.getNode(Succ), cast<ICmpInst>(Cond),
+                                  false);
         }
       }
       GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
@@ -456,12 +457,12 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     // false successor.
     Value *Op0, *Op1;
     if (match(Br->getCondition(), m_LogicalOr(m_Value(Op0), m_Value(Op1))) &&
-        match(Op0, m_Cmp()) && match(Op1, m_Cmp())) {
+        isa<ICmpInst>(Op0) && isa<ICmpInst>(Op1)) {
       BasicBlock *FalseSuccessor = Br->getSuccessor(1);
       if (CanAdd(FalseSuccessor)) {
-        WorkList.emplace_back(DT.getNode(FalseSuccessor), cast<CmpInst>(Op0),
+        WorkList.emplace_back(DT.getNode(FalseSuccessor), cast<ICmpInst>(Op0),
                               true);
-        WorkList.emplace_back(DT.getNode(FalseSuccessor), cast<CmpInst>(Op1),
+        WorkList.emplace_back(DT.getNode(FalseSuccessor), cast<ICmpInst>(Op1),
                               true);
       }
       continue;
@@ -471,18 +472,18 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     // the current block as predecessor, queue both conditions for the true
     // successor.
     if (match(Br->getCondition(), m_LogicalAnd(m_Value(Op0), m_Value(Op1))) &&
-        match(Op0, m_Cmp()) && match(Op1, m_Cmp())) {
+        isa<ICmpInst>(Op0) && isa<ICmpInst>(Op1)) {
       BasicBlock *TrueSuccessor = Br->getSuccessor(0);
       if (CanAdd(TrueSuccessor)) {
-        WorkList.emplace_back(DT.getNode(TrueSuccessor), cast<CmpInst>(Op0),
+        WorkList.emplace_back(DT.getNode(TrueSuccessor), cast<ICmpInst>(Op0),
                               false);
-        WorkList.emplace_back(DT.getNode(TrueSuccessor), cast<CmpInst>(Op1),
+        WorkList.emplace_back(DT.getNode(TrueSuccessor), cast<ICmpInst>(Op1),
                               false);
       }
       continue;
     }
 
-    auto *CmpI = dyn_cast<CmpInst>(Br->getCondition());
+    auto *CmpI = dyn_cast<ICmpInst>(Br->getCondition());
     if (!CmpI)
       continue;
     if (CanAdd(Br->getSuccessor(0)))
@@ -531,7 +532,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     // of constraints.
     if (CB.IsBlock) {
       for (Instruction &I : *CB.BB) {
-        auto *Cmp = dyn_cast<CmpInst>(&I);
+        auto *Cmp = dyn_cast<ICmpInst>(&I);
         if (!Cmp)
           continue;
 
@@ -583,7 +584,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
 
     // Set up a function to restore the predicate at the end of the scope if it
     // has been negated. Negate the predicate in-place, if required.
-    auto *CI = dyn_cast<CmpInst>(CB.Condition);
+    auto *CI = dyn_cast<ICmpInst>(CB.Condition);
     auto PredicateRestorer = make_scope_exit([CI, &CB]() {
       if (CB.Not && CI)
         CI->setPredicate(CI->getInversePredicate());
