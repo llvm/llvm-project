@@ -324,4 +324,10 @@ def TestTypeOptionalGroupStruct : Test_Type<"TestTypeOptionalGroupStruct"> {
   let assemblyFormat = "`<` (`(` struct(params)^ `)`) : (`x`)? `>`";
 }
 
+def TestTypeSpaces : Test_Type<"TestTypeSpaceS"> {
+  let parameters = (ins "int":$a, "int":$b);
+  let mnemonic = "spaces";
+  let assemblyFormat = "`<` ` ` $a `\\n` `(` `)` `` `(` `)` $b `>`";
+}
+
 #endif // TEST_TYPEDEFS
