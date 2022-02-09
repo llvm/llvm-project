@@ -249,11 +249,6 @@ if [ $do_libs = "yes" ]; then
     runtimes="$runtimes libunwind"
   fi
 fi
-case $do_test_suite in
-  yes|export-only)
-    projects="$projects test-suite"
-    ;;
-esac
 if [ $do_openmp = "yes" ]; then
   projects="$projects openmp"
 fi
