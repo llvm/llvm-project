@@ -396,6 +396,10 @@ LeftRightQualifierAlignmentFixer::analyze(
 
   for (AnnotatedLine *Line : AnnotatedLines) {
     FormatToken *First = Line->First;
+    assert(First);
+    if (First->Finalized)
+      continue;
+
     const auto *Last = Line->Last;
 
     for (const auto *Tok = First; Tok && Tok != Last && Tok->Next;
