@@ -2593,8 +2593,8 @@ MallocChecker::ReallocMemAux(CheckerContext &C, const CallEvent &Call,
 
   SValBuilder &svalBuilder = C.getSValBuilder();
 
-  DefinedOrUnknownSVal PtrEQ =
-    svalBuilder.evalEQ(State, arg0Val, svalBuilder.makeNull());
+  DefinedOrUnknownSVal PtrEQ = svalBuilder.evalEQ(
+      State, arg0Val, svalBuilder.makeNullWithType(arg0Expr->getType()));
 
   // Get the size argument.
   const Expr *Arg1 = CE->getArg(1);

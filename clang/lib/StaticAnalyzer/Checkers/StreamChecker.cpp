@@ -549,8 +549,9 @@ void StreamChecker::evalFreopen(const FnDescription *Desc,
       State->BindExpr(CE, C.getLocationContext(), *StreamVal);
   // Generate state for NULL return value.
   // Stream switches to OpenFailed state.
-  ProgramStateRef StateRetNull = State->BindExpr(CE, C.getLocationContext(),
-                                                 C.getSValBuilder().makeNull());
+  ProgramStateRef StateRetNull =
+      State->BindExpr(CE, C.getLocationContext(),
+                      C.getSValBuilder().makeNullWithType(CE->getType()));
 
   StateRetNotNull =
       StateRetNotNull->set<StreamMap>(StreamSym, StreamState::getOpened(Desc));

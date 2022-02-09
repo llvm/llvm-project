@@ -1,8 +1,21 @@
 // RUN: %clang_analyze_cc1 -std=c++14 \
 // RUN:  -analyzer-checker=core,apiModeling.llvm.CastValue,debug.ExprInspection\
-// RUN:  -analyzer-output=text -verify %s
+// RUN:  -analyzer-output=text -verify -DDEFAULT_TRIPLE %s 2>&1 | FileCheck %s -check-prefix=DEFAULT-CHECK
+//
+// RUN: %clang_analyze_cc1 -std=c++14 -triple amdgcn-unknown-unknown \
+// RUN: -analyzer-checker=core,apiModeling.llvm.CastValue,debug.ExprInspection\
+// RUN: -analyzer-output=text -verify -DAMDGCN_TRIPLE %s 2>&1 | FileCheck %s -check-prefix=AMDGCN-CHECK
 
 #include "Inputs/llvm.h"
+
+// The amggcn triple case uses an intentionally different address space.
+// The core.NullDereference checker intentionally ignores checks
+// that use address spaces, so the case is differentiated here.
+//
+// From https://llvm.org/docs/AMDGPUUsage.html#address-spaces,
+// select address space 3 (local), since the pointer size is
+// different than Generic.
+#define DEVICE __attribute__((address_space(3)))
 
 namespace clang {
 struct Shape {
@@ -21,12 +34,30 @@ class Circle : public Shape {};
 using namespace llvm;
 using namespace clang;
 
+void clang_analyzer_printState();
+
+#if defined(DEFAULT_TRIPLE)
 void evalReferences(const Shape &S) {
   const auto &C = dyn_cast<Circle>(S);
   // expected-note@-1 {{Assuming 'S' is not a 'Circle'}}
   // expected-note@-2 {{Dereference of null pointer}}
   // expected-warning@-3 {{Dereference of null pointer}}
+  clang_analyzer_printState();
+  // DEFAULT-CHECK: "dynamic_types": [
+  // DEFAULT-CHECK-NEXT: { "region": "SymRegion{reg_$0<const struct clang::Shape & S>}", "dyn_type": "const class clang::Circle &", "sub_classable": true }
+  (void)C;
 }
+#elif defined(AMDGCN_TRIPLE)
+void evalReferences(const Shape &S) {
+  const auto &C = dyn_cast<DEVICE Circle>(S);
+  clang_analyzer_printState();
+  // AMDGCN-CHECK: "dynamic_types": [
+  // AMDGCN-CHECK-NEXT: { "region": "SymRegion{reg_$0<const struct clang::Shape & S>}", "dyn_type": "const __attribute__((address_space(3))) class clang::Circle &", "sub_classable": true }
+  (void)C;
+}
+#else
+#error Target must be specified, and must be pinned
+#endif
 
 void evalNonNullParamNonNullReturnReference(const Shape &S) {
   const auto *C = dyn_cast_or_null<Circle>(S);
