@@ -54,10 +54,6 @@ public:
       this->__handle_bool();
       break;
 
-    case _Flags::_Type::__char:
-      this->__handle_char();
-      break;
-
     case _Flags::_Type::__binary_lower_case:
     case _Flags::_Type::__binary_upper_case:
     case _Flags::_Type::__octal:
