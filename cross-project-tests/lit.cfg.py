@@ -216,11 +216,11 @@ def get_gdb_version_string():
   if len(gdb_vers_lines) < 1:
     print("Unkown GDB version format (too few lines)", file=sys.stderr)
     return None
-  string = gdb_vers_lines[0].strip().partition('GNU gdb (GDB) ')[2]
-  if len(string) == 0:
-    print("Unkown GDB version format", file=sys.stderr)
+  match = re.search('GNU gdb \(.*?\) ((\d|\.)+)', gdb_vers_lines[0].strip())
+  if match is None:
+    print(f"Unkown GDB version format: {gdb_vers_lines[0]}", file=sys.stderr)
     return None
-  return string
+  return match.group(1)
 
 def get_clang_default_dwarf_version_string(triple):
   """Return the default dwarf version string for clang on this (host) platform
