@@ -82,6 +82,7 @@ __attribute__((convergent)) void
 __ockl_grid_sync(void)
 {
     __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "agent");
+    __builtin_amdgcn_s_barrier();
     if (choose_one_workgroup_workitem()) {
         uint nwm1 = (uint)__ockl_get_num_groups(0) * (uint)__ockl_get_num_groups(1) * (uint)__ockl_get_num_groups(2) - 1;
         __ockl_gws_barrier(nwm1, 0);
@@ -125,14 +126,15 @@ __ockl_multi_grid_is_valid(void)
 __attribute__((convergent)) void
 __ockl_multi_grid_sync(void)
 {
-    __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "agent");
+    __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "");
+    __builtin_amdgcn_s_barrier();
     uint nwm1 = (uint)__ockl_get_num_groups(0) * (uint)__ockl_get_num_groups(1) * (uint)__ockl_get_num_groups(2) - 1;
     bool cwwi = choose_one_workgroup_workitem();
 
     if (cwwi)
         __ockl_gws_barrier(nwm1, 0);
 
-    __builtin_amdgcn_s_barrier();
+    // Need another barrier here if the following choose doesn't see cwwi set
 
     if (choose_one_grid_workitem()) {
         __constant struct mg_info *m = (__constant struct mg_info *)get_mg_info_arg();
