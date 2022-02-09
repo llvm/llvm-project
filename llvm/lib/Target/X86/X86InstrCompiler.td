@@ -1235,6 +1235,22 @@ def X86tcret_6regs : PatFrag<(ops node:$ptr, node:$off),
   return true;
 }]>;
 
+def X86tcret_1reg : PatFrag<(ops node:$ptr, node:$off),
+                             (X86tcret node:$ptr, node:$off), [{
+  // X86tcret args: (*chain, ptr, imm, regs..., glue)
+  unsigned NumRegs = 1;
+  LoadSDNode* ld = dyn_cast<LoadSDNode>(N->getOperand(1));
+  const SDValue& BasePtr = ld->getBasePtr();
+  if (isa<FrameIndexSDNode>(BasePtr))
+    NumRegs = 3;
+  else if (BasePtr->getNumOperands() && isa<GlobalAddressSDNode>(BasePtr->getOperand(0)))
+    NumRegs = 3;
+  for (unsigned i = 3, e = N->getNumOperands(); i != e; ++i)
+    if (isa<RegisterSDNode>(N->getOperand(i)) && ( NumRegs-- == 0))
+      return false;
+  return true;
+}]>;
+
 def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
           (TCRETURNri ptr_rc_tailcall:$dst, timm:$off)>,
           Requires<[Not64BitMode, NotUseIndirectThunkCalls]>;
@@ -1242,7 +1258,8 @@ def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
 // FIXME: This is disabled for 32-bit PIC mode because the global base
 // register which is part of the address mode may be assigned a
 // callee-saved register.
-def : Pat<(X86tcret (load addr:$dst), timm:$off),
+// Similar to X86tcret_6regs, here we only have 1 register left
+def : Pat<(X86tcret_1reg (load addr:$dst), timm:$off),
           (TCRETURNmi addr:$dst, timm:$off)>,
           Requires<[Not64BitMode, IsNotPIC, NotUseIndirectThunkCalls]>;
 
