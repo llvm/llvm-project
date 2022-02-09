@@ -490,7 +490,8 @@ def CMP_SWAP_64 : Pseudo<(outs GPR64:$Rd, GPR32:$scratch),
 
 let Constraints = "@earlyclobber $RdLo,@earlyclobber $RdHi,@earlyclobber $scratch",
     mayLoad = 1, mayStore = 1 in {
-class cmp_swap_128 : Pseudo<(outs GPR64:$RdLo, GPR64:$RdHi, GPR32common:$scratch),
+class cmp_swap_128 : Pseudo<(outs GPR64common:$RdLo, GPR64common:$RdHi,
+                                  GPR32common:$scratch),
                            (ins GPR64:$addr, GPR64:$desiredLo, GPR64:$desiredHi,
                                 GPR64:$newLo, GPR64:$newHi), []>,
                      Sched<[WriteAtomic]>;
