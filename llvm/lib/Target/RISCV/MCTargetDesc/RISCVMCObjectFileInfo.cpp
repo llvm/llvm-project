@@ -13,6 +13,7 @@
 #include "RISCVMCObjectFileInfo.h"
 #include "RISCVMCTargetDesc.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 
 using namespace llvm;
 

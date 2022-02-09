@@ -379,7 +379,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             self.assertIsNotNone(context.get("thread_id"))
             self.assertEqual(int(context.get("thread_id"), 16), thread)
 
-    @expectedFailureAll(oslist=["windows"]) # expect 4 threads
     @skipIf(compiler="clang", compiler_version=['<', '11.0'])
     def test_Hg_switches_to_3_threads_launch(self):
         self.build()
@@ -402,21 +401,18 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
         self.expect_gdbremote_sequence()
 
-    @expectedFailureAll(oslist=["windows"])
     @add_test_categories(["llgs"])
     def test_Hg_fails_on_another_pid(self):
         self.build()
         self.set_inferior_startup_launch()
         self.Hg_fails_on_pid(1)
 
-    @expectedFailureAll(oslist=["windows"])
     @add_test_categories(["llgs"])
     def test_Hg_fails_on_zero_pid(self):
         self.build()
         self.set_inferior_startup_launch()
         self.Hg_fails_on_pid(0)
 
-    @expectedFailureAll(oslist=["windows"])
     @add_test_categories(["llgs"])
     def test_Hg_fails_on_minus_one_pid(self):
         self.build()

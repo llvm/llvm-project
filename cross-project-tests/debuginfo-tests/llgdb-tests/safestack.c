@@ -5,7 +5,7 @@
 //           Zorg configures the ASAN stage2 bots to not build the
 //           safestack compiler-rt.  Only run this test on
 //           non-asanified configurations.
-
+// XFAIL: !system-darwin && gdb-clang-incompatibility
 struct S {
   int a[8];
 };

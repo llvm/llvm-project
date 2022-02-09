@@ -140,7 +140,7 @@ bool BufferizationAliasInfo::isInPlace(OpOperand &operand) const {
 void BufferizationAliasInfo::bufferizeInPlace(OpOperand &operand,
                                               BufferizationState &state) {
   markInPlace(operand);
-  if (OpResult result = state.getAliasingOpResult(operand))
+  for (OpResult result : state.getAliasingOpResult(operand))
     aliasInfo.unionSets(result, operand.get());
 }
 
@@ -196,8 +196,8 @@ AnalysisBufferizationState::AnalysisBufferizationState(
     for (OpOperand &opOperand : bufferizableOp->getOpOperands()) {
       if (opOperand.get().getType().isa<TensorType>())
         if (bufferizableOp.mustBufferizeInPlace(opOperand, *this)) {
-          if (OpResult opResult =
-                  bufferizableOp.getAliasingOpResult(opOperand, *this))
+          for (OpResult opResult :
+               bufferizableOp.getAliasingOpResult(opOperand, *this))
             aliasInfo.unionAliasSets(opOperand.get(), opResult);
           aliasInfo.markInPlace(opOperand);
         }
@@ -404,7 +404,9 @@ static bool hasReadAfterWriteInterference(
 
         // No conflict if the conflicting write and the last write are the same
         // use.
-        if (state.getAliasingOpResult(*uConflictingWrite) == lastWrite)
+        SmallVector<OpResult> aliasingOpResult =
+            state.getAliasingOpResult(*uConflictingWrite);
+        if (aliasingOpResult.size() == 1 && aliasingOpResult[0] == lastWrite)
           continue;
 
         // All requirements are met. Conflict found!
@@ -477,7 +479,7 @@ static bool wouldCreateReadAfterWriteInterference(
   DenseSet<OpOperand *> usesRead, usesWrite;
   getAliasingReads(usesRead, operand.get());
   getAliasingInplaceWrites(usesWrite, operand.get());
-  if (OpResult result = state.getAliasingOpResult(operand)) {
+  for (OpResult result : state.getAliasingOpResult(operand)) {
     getAliasingReads(usesRead, result);
     getAliasingInplaceWrites(usesWrite, result);
   }
@@ -506,7 +508,7 @@ wouldCreateWriteToNonWritableBuffer(OpOperand &opOperand,
   bool hasWrite = aliasesInPlaceWrite(opOperand.get(), aliasInfo, state) ||
                   state.bufferizesToMemoryWrite(opOperand);
 
-  if (OpResult opResult = state.getAliasingOpResult(opOperand))
+  for (OpResult opResult : state.getAliasingOpResult(opOperand))
     hasWrite |= aliasesInPlaceWrite(opResult, aliasInfo, state);
 
   return hasWrite;
