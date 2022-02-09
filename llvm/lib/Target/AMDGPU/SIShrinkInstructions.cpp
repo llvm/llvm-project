@@ -354,12 +354,6 @@ static bool shrinkScalarLogicOp(const GCNSubtarget &ST,
     llvm_unreachable("unexpected opcode");
   }
 
-  if ((Opc == AMDGPU::S_ANDN2_B32 || Opc == AMDGPU::S_ORN2_B32) &&
-      SrcImm == Src0) {
-    if (!TII->commuteInstruction(MI, false, 1, 2))
-      NewImm = 0;
-  }
-
   if (NewImm != 0) {
     if (Dest->getReg().isVirtual() && SrcReg->isReg()) {
       MRI.setRegAllocationHint(Dest->getReg(), 0, SrcReg->getReg());
