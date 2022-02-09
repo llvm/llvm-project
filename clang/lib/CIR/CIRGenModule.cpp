@@ -593,14 +593,21 @@ mlir::LogicalResult CIRGenModule::buildReturnStmt(const ReturnStmt &S) {
     return mlir::failure();
   }
 
+  // FIXME: there might be multiple return values in a function, fix this
+  // once we add support for arbitraty returns.
   CurCGF->RetValue = V;
+  CurCGF->RetLoc = getLoc(S.getSourceRange());
+
   // Otherwise, this return operation has zero operands.
   if (!V || (RV && RV->getType()->isVoidType())) {
     // FIXME: evaluate for side effects.
   }
 
-  builder.create<ReturnOp>(getLoc(S.getSourceRange()),
-                           V ? ArrayRef(V) : ArrayRef<mlir::Value>());
+  // FIXME: this currently assumes only a return stmt as the last
+  // on in a function, make this generic.
+  if (!builder.getInsertionBlock()->isEntryBlock())
+    builder.create<BrOp>(getLoc(S.getSourceRange()),
+                         currLexScope->CleanupBlock);
   return mlir::success();
 }
 
@@ -618,16 +625,110 @@ mlir::LogicalResult CIRGenModule::buildDeclStmt(const DeclStmt &S) {
   return mlir::success();
 }
 
+/// Build a unconditional branch to the lexical scope cleanup block
+/// or with the labeled blocked if already solved.
+///
+/// Track on scope basis, goto's we need to fix later.
+mlir::LogicalResult
+CIRGenModule::buildBranchThroughCleanup(JumpDest &Dest, LabelDecl *L,
+                                        mlir::Location Loc) {
+  // Remove this once we go for making sure unreachable code is
+  // well modeled (or not).
+  assert(builder.getInsertionBlock() && "not yet implemented");
+
+  // Insert a branch: to the cleanup block (unsolved) or to the already
+  // materialized label. Keep track of unsolved goto's.
+  mlir::Block *DstBlock = Dest.getBlock();
+  auto G = builder.create<BrOp>(
+      Loc, Dest.isValid() ? DstBlock : currLexScope->CleanupBlock);
+  if (!Dest.isValid())
+    currLexScope->PendingGotos.push_back(std::make_pair(G, L));
+
+  return mlir::success();
+}
+
+/// All scope related cleanup needed:
+/// - Patching up unsolved goto's.
+void CIRGenModule::LexicalScopeRAIIContext::cleanup() {
+  while (!PendingGotos.empty()) {
+    auto gotoInfo = PendingGotos.back();
+    // FIXME: Currently only support resolving goto labels inside the
+    // same lexical ecope.
+    assert(SolvedLabels.count(gotoInfo.second) &&
+           "goto across scopes not yet supported");
+
+    // The goto in this lexical context actually maps to a basic
+    // block.
+    auto g = cast<mlir::cir::BrOp>(gotoInfo.first);
+    g.setSuccessor(P.LabelMap[gotoInfo.second].getBlock());
+    PendingGotos.pop_back();
+  }
+
+  SolvedLabels.clear();
+}
+
 mlir::LogicalResult CIRGenModule::buildGotoStmt(const GotoStmt &S) {
   // FIXME: LLVM codegen inserts emit stop point here for debug info
   // sake when the insertion point is available, but doesn't do
   // anything special when there isn't. We haven't implemented debug
   // info support just yet, look at this again once we have it.
   assert(builder.getInsertionBlock() && "not yet implemented");
-  assert(0 && "not implemented");
-  // FIXME: add something like
-  // EmitBranchThroughCleanup(getJumpDestForLabel(S.getLabel()));
+
+  // A goto marks the end of a block, create a new one for codegen after
+  // buildGotoStmt can resume building in that block.
+
+  // Build a cir.br to the target label.
+  auto &JD = LabelMap[S.getLabel()];
+  if (buildBranchThroughCleanup(JD, S.getLabel(), getLoc(S.getSourceRange()))
+          .failed())
+    return mlir::failure();
+
+  // Insert the new block to continue codegen after goto.
+  builder.createBlock(currLexScope->CleanupBlock);
+
+  // What here...
   return mlir::success();
+}
+
+mlir::LogicalResult CIRGenModule::buildLabel(const LabelDecl *D) {
+  JumpDest &Dest = LabelMap[D];
+
+  // Create a new block to tag with a label and add a branch from
+  // the current one to it.
+  mlir::Block *currBlock = builder.getBlock();
+  if (!currBlock->empty()) {
+    mlir::Operation *lastOp = nullptr;
+    if (!currBlock->back().hasTrait<mlir::OpTrait::IsTerminator>())
+      lastOp = builder.create<BrOp>(getLoc(D->getSourceRange()),
+                                    currLexScope->CleanupBlock);
+
+    currBlock = builder.createBlock(currLexScope->CleanupBlock);
+    if (lastOp) {
+      auto g = cast<mlir::cir::BrOp>(lastOp);
+      g.setSuccessor(currBlock);
+    }
+  }
+
+  if (!Dest.isValid()) {
+    Dest.Block = currBlock;
+    currLexScope->SolvedLabels.insert(D);
+    // FIXME: add a label attribute to block...
+  } else {
+    assert(0 && "unimplemented");
+  }
+
+  //  FIXME: emit debug info for labels, incrementProfileCounter
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRGenModule::buildLabelStmt(const clang::LabelStmt &S) {
+  if (buildLabel(S.getDecl()).failed())
+    return mlir::failure();
+
+  // IsEHa: not implemented.
+  assert(!(astCtx.getLangOpts().EHAsynch && S.isSideEntry()));
+
+  return buildStmt(S.getSubStmt(), /* useCurrentScope */ true);
 }
 
 mlir::LogicalResult CIRGenModule::buildSimpleStmt(const Stmt *S,
@@ -650,6 +751,8 @@ mlir::LogicalResult CIRGenModule::buildSimpleStmt(const Stmt *S,
     break;
 
   case Stmt::LabelStmtClass:
+    return buildLabelStmt(cast<LabelStmt>(*S));
+
   case Stmt::AttributedStmtClass:
   case Stmt::BreakStmtClass:
   case Stmt::ContinueStmtClass:
@@ -1378,16 +1481,30 @@ mlir::FuncOp CIRGenModule::buildFunction(const FunctionDecl *FD) {
 
   // In MLIR the entry block of the function is special: it must have the
   // same argument list as the function itself.
-  auto &entryBlock = *function.addEntryBlock();
+  mlir::Block *entryBlock = function.addEntryBlock();
 
   // Set the insertion point in the builder to the beginning of the
   // function body, it will be used throughout the codegen to create
   // operations in this function.
-  builder.setInsertionPointToStart(&entryBlock);
+  builder.setInsertionPointToStart(entryBlock);
+  auto FnEndLoc = getLoc(FD->getBody()->getEndLoc());
+
+  // Initialize lexical scope information.
+  LexicalScopeRAIIContext lexScope{*this, nullptr};
+  currLexScope = &lexScope;
+
+  {
+    // Create the cleanup block but dont hook it up around just
+    // yet.
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    mlir::Block *entryBlock = builder.getBlock();
+    currLexScope->CleanupBlock = builder.createBlock(entryBlock->getParent());
+  }
+  assert(builder.getInsertionBlock() && "Should be valid");
 
   // Declare all the function arguments in the symbol table.
   for (const auto nameValue :
-       llvm::zip(FD->parameters(), entryBlock.getArguments())) {
+       llvm::zip(FD->parameters(), entryBlock->getArguments())) {
     auto *paramVar = std::get<0>(nameValue);
     auto paramVal = std::get<1>(nameValue);
     auto alignment = astCtx.getDeclAlign(paramVar);
@@ -1403,22 +1520,48 @@ mlir::FuncOp CIRGenModule::buildFunction(const FunctionDecl *FD) {
     auto fnBodyBegin = getLoc(FD->getBody()->getBeginLoc());
     builder.create<mlir::cir::StoreOp>(fnBodyBegin, paramVal, addr);
   }
+  assert(builder.getInsertionBlock() && "Should be valid");
 
   // Emit the body of the function.
   if (mlir::failed(buildFunctionBody(FD->getBody()))) {
     function.erase();
     return nullptr;
   }
+  assert(builder.getInsertionBlock() && "Should be valid");
 
-  ReturnOp returnOp;
-  if (!entryBlock.empty())
-    returnOp = dyn_cast<ReturnOp>(entryBlock.back());
-  if (!returnOp)
-    builder.create<ReturnOp>(getLoc(FD->getBody()->getEndLoc()));
+  // Do not insert the cleanup block unecessarily, this doesn't really need
+  // to be here (should be a separate pass), but it helps keeping small
+  // testcases minimal for now.
+  if (!builder.getInsertionBlock()->isEntryBlock()) {
+    // If the current block doesn't have a terminator, add a branch to the
+    // cleanup block, where the actual cir.return happens (cleanup block).
+    if (!builder.getBlock()->back().hasTrait<mlir::OpTrait::IsTerminator>())
+      builder.create<BrOp>(FnEndLoc, currLexScope->CleanupBlock);
+
+    // Set the insertion point to the end of the cleanup block and insert
+    // the return instruction.
+    // FIXME: this currently assumes only one cir.return in the function.
+    builder.setInsertionPointToEnd(currLexScope->CleanupBlock);
+  } else {
+    // Do not even emit cleanup block
+    assert(currLexScope->CleanupBlock->empty() && "not empty");
+    assert(
+        (builder.getBlock()->empty() ||
+         !builder.getBlock()->back().hasTrait<mlir::OpTrait::IsTerminator>()) &&
+        "entry basic block already has a terminator?");
+    currLexScope->CleanupBlock->erase();
+  }
+
+  builder.create<ReturnOp>(CurCGF->RetLoc ? *(CurCGF->RetLoc) : FnEndLoc,
+                           CurCGF->RetValue ? ArrayRef(CurCGF->RetValue)
+                                            : ArrayRef<mlir::Value>());
 
   if (mlir::failed(function.verifyBody()))
     return nullptr;
   theModule.push_back(function);
+
+  CurCGF = nullptr;
+  currLexScope = nullptr;
   return function;
 }
 

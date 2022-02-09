@@ -22,6 +22,7 @@
 #include "clang/Basic/SourceManager.h"
 
 #include "llvm/ADT/ScopedHashTable.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 #include "mlir/Dialect/CIR/IR/CIRAttrs.h"
 #include "mlir/Dialect/CIR/IR/CIRDialect.h"
@@ -75,6 +76,72 @@ private:
   /// Per-module type mapping from clang AST to CIR.
   std::unique_ptr<CIRGenTypes> genTypes;
 
+  /// -------
+  /// Goto
+  /// -------
+
+  /// A jump destination is an abstract label, branching to which may
+  /// require a jump out through normal cleanups.
+  struct JumpDest {
+    JumpDest() = default;
+    JumpDest(mlir::Block *Block) : Block(Block) {}
+
+    bool isValid() const { return Block != nullptr; }
+    mlir::Block *getBlock() const { return Block; }
+    mlir::Block *Block = nullptr;
+  };
+
+  /// Track mlir Blocks for each C/C++ label.
+  llvm::DenseMap<const clang::LabelDecl *, JumpDest> LabelMap;
+  JumpDest &getJumpDestForLabel(const clang::LabelDecl *D);
+
+  /// -------
+  /// Lexical Scope: to be read as in the meaning in CIR, a scope is always
+  /// related with initialization and destruction of objects.
+  /// -------
+
+  // Represents a cir.scope, cir.if, and then/else regions. I.e. lexical
+  // scopes that require cleanups.
+  struct LexicalScopeRAIIContext {
+    CIRGenModule &P;
+    LexicalScopeRAIIContext *OldVal = nullptr;
+    unsigned Depth = 0;
+
+  public:
+    LexicalScopeRAIIContext(CIRGenModule &p, LexicalScopeRAIIContext *Value)
+        : P(p) {
+      if (P.currLexScope)
+        OldVal = P.currLexScope;
+      P.currLexScope = Value;
+      if (Value)
+        Depth++;
+    }
+
+    // Block containing cleanup code for things initialized in this
+    // lexical context (scope).
+    mlir::Block *CleanupBlock = nullptr;
+
+    // Goto's introduced in this scope but didn't get fixed.
+    llvm::SmallVector<std::pair<mlir::Operation *, const clang::LabelDecl *>, 4>
+        PendingGotos;
+
+    // Labels solved inside this scope.
+    llvm::SmallPtrSet<const clang::LabelDecl *, 4> SolvedLabels;
+
+    void restore() { P.currLexScope = OldVal; }
+    void cleanup();
+    ~LexicalScopeRAIIContext() {
+      cleanup();
+      restore();
+    }
+  };
+
+  LexicalScopeRAIIContext *currLexScope = nullptr;
+
+  /// -------
+  /// Source Location tracking
+  /// -------
+
   /// Use to track source locations across nested visitor traversals.
   /// Always use a `SourceLocRAIIObject` to change currSrcLoc.
   std::optional<mlir::Location> currSrcLoc;
@@ -94,6 +161,10 @@ private:
     void restore() { P.currSrcLoc = OldVal; }
     ~SourceLocRAIIObject() { restore(); }
   };
+
+  /// -------
+  /// Declaring variables
+  /// -------
 
   /// Declare a variable in the current scope, return success if the variable
   /// wasn't declared yet.
@@ -215,7 +286,15 @@ public:
                                     clang::QualType DstTy,
                                     clang::SourceLocation Loc);
 
+  mlir::LogicalResult buildBranchThroughCleanup(JumpDest &Dest,
+                                                clang::LabelDecl *L,
+                                                mlir::Location Loc);
+
   mlir::LogicalResult buildReturnStmt(const clang::ReturnStmt &S);
+
+  mlir::LogicalResult buildLabel(const clang::LabelDecl *D);
+  mlir::LogicalResult buildLabelStmt(const clang::LabelStmt &S);
+
   mlir::LogicalResult buildGotoStmt(const clang::GotoStmt &S);
 
   mlir::LogicalResult buildDeclStmt(const clang::DeclStmt &S);

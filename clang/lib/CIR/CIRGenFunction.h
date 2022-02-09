@@ -34,6 +34,8 @@ public:
   const clang::Expr *RetExpr = nullptr;
 
   mlir::Value RetValue = nullptr;
+  std::optional<mlir::Location> RetLoc;
+
   mlir::Type FnRetTy;
   clang::QualType FnRetQualTy;
 
