@@ -206,6 +206,26 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
       return buildConstant(DstOps[0], *Cst);
     break;
   }
+  case TargetOpcode::G_FADD:
+  case TargetOpcode::G_FSUB:
+  case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FREM:
+  case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMINNUM_IEEE:
+  case TargetOpcode::G_FMAXNUM_IEEE:
+  case TargetOpcode::G_FMINIMUM:
+  case TargetOpcode::G_FMAXIMUM:
+  case TargetOpcode::G_FCOPYSIGN: {
+    // Try to constant fold these.
+    assert(SrcOps.size() == 2 && "Invalid sources");
+    assert(DstOps.size() == 1 && "Invalid dsts");
+    if (Optional<APFloat> Cst = ConstantFoldFPBinOp(
+            Opc, SrcOps[0].getReg(), SrcOps[1].getReg(), *getMRI()))
+      return buildFConstant(DstOps[0], *Cst);
+    break;
+  }
   case TargetOpcode::G_SEXT_INREG: {
     assert(DstOps.size() == 1 && "Invalid dst ops");
     assert(SrcOps.size() == 2 && "Invalid src ops");
