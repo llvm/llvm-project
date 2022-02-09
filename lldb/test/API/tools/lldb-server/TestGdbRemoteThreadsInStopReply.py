@@ -125,11 +125,6 @@ class TestGdbRemoteThreadsInStopReply(
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
 
-    # In current implementation of llgs on Windows, as a response to '\x03' packet, the debugger
-    # of the native process will trigger a call to DebugBreakProcess that will create a new thread
-    # to handle the exception debug event. So one more stop thread will be notified to the
-    # delegate, e.g. llgs.  So tests below to assert the stop threads number will all fail.
-    @expectedFailureAll(oslist=["windows"])
     @skipIfNetBSD
     def test_stop_reply_reports_multiple_threads(self):
         self.build()
@@ -141,7 +136,6 @@ class TestGdbRemoteThreadsInStopReply(
         stop_reply_threads = self.gather_stop_reply_threads(5)
         self.assertEqual(len(stop_reply_threads), 5)
 
-    @expectedFailureAll(oslist=["windows"])
     @skipIfNetBSD
     def test_no_QListThreadsInStopReply_supplies_no_threads(self):
         self.build()
@@ -151,7 +145,6 @@ class TestGdbRemoteThreadsInStopReply(
         stop_reply_threads = self.gather_stop_reply_threads(5)
         self.assertEqual(len(stop_reply_threads), 0)
 
-    @expectedFailureAll(oslist=["windows"])
     @skipIfNetBSD
     def test_stop_reply_reports_correct_threads(self):
         self.build()
@@ -178,7 +171,6 @@ class TestGdbRemoteThreadsInStopReply(
         for tid in threads:
             self.assertIn(tid, stop_reply_threads)
 
-    @expectedFailureAll(oslist=["windows"])
     @skipIfNetBSD
     def test_stop_reply_contains_thread_pcs(self):
         self.build()

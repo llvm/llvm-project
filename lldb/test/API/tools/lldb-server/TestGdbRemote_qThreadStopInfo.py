@@ -78,6 +78,7 @@ class TestGdbRemote_qThreadStopInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48418")
     @expectedFailureNetBSD
+    @expectedFailureAll(oslist=["windows"])
     def test_qThreadStopInfo_only_reports_one_thread_stop_reason_during_interrupt(self):
         self.build()
         self.set_inferior_startup_launch()
