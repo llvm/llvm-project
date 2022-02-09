@@ -582,7 +582,9 @@ void X86FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
       continue;
     }
 
-    BuildMI(MBB, MBBI, DL, TII.get(XorOp), Reg).addReg(Reg).addReg(Reg);
+    BuildMI(MBB, MBBI, DL, TII.get(XorOp), Reg)
+      .addReg(Reg, RegState::Undef)
+      .addReg(Reg, RegState::Undef);
   }
 }
 
