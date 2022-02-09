@@ -63,6 +63,8 @@
 # RUN: echo '.globl bar; bar:' | llvm-mc -filetype=obj -triple=x86_64 - -o %t3.o
 # RUN: echo '.globl foo; foo: call bar' | llvm-mc -filetype=obj -triple=x86_64 - -o %t4.o
 # RUN: ld.lld --fatal-warnings --warn-backrefs %t1.o --start-lib %t3.o %t4.o --end-lib -o /dev/null
+# RUN: rm -f %t34.a && llvm-ar rcS %t34.a %t3.o %t4.o
+# RUN: ld.lld --fatal-warnings --warn-backrefs %t1.o %t34.a -o /dev/null
 
 ## We don't report backward references to weak symbols as they can be overridden later.
 # RUN: echo '.weak foo; foo:' | llvm-mc -filetype=obj -triple=x86_64 - -o %tweak.o
