@@ -86,7 +86,10 @@ void test()
 
 int main(int, char**)
 {
-    test();
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
+#endif
 
-    return 0;
+  return 0;
 }
