@@ -554,10 +554,7 @@ define <vscale x 16 x i1> @insert_nxv16i1_nxv4i1_into_zero(<vscale x 4 x i1> %sv
 ; CHECK-LABEL: insert_nxv16i1_nxv4i1_into_zero:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    punpklo p2.h, p1.b
-; CHECK-NEXT:    punpkhi p1.h, p1.b
-; CHECK-NEXT:    punpkhi p2.h, p2.b
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p2.h
+; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %v0 = call <vscale x 16 x i1> @llvm.experimental.vector.insert.nx16i1.nxv4i1(<vscale x 16 x i1> zeroinitializer, <vscale x 4 x i1> %sv, i64 0)
