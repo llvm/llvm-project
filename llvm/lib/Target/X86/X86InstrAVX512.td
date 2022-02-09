@@ -4100,15 +4100,13 @@ def : Pat<(f64 (bitconvert VK64:$src)),
 
 multiclass avx512_move_scalar<string asm, SDNode OpNode, PatFrag vzload_frag,
                               X86VectorVTInfo _,
-                              list<Predicate> prd = [HasAVX512],
-                              list<Predicate> prdsize = [HasAVX512, OptForSize]> {
-  let Predicates = prdsize in
+                              list<Predicate> prd = [HasAVX512, OptForSize]> {
+  let Predicates = prd in
   def rr : AVX512PI<0x10, MRMSrcReg, (outs _.RC:$dst),
              (ins _.RC:$src1, _.RC:$src2),
              !strconcat(asm, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set _.RC:$dst, (_.VT (OpNode _.RC:$src1, _.RC:$src2)))],
              _.ExeDomain>, EVEX_4V, Sched<[SchedWriteFShuffle.XMM]>;
-  let Predicates = prd in {
   def rrkz : AVX512PI<0x10, MRMSrcReg, (outs _.RC:$dst),
               (ins _.KRCWM:$mask, _.RC:$src1, _.RC:$src2),
               !strconcat(asm, "\t{$src2, $src1, $dst {${mask}} {z}|",
@@ -4161,7 +4159,6 @@ multiclass avx512_move_scalar<string asm, SDNode OpNode, PatFrag vzload_frag,
               !strconcat(asm, "\t{$src, $dst {${mask}}|$dst {${mask}}, $src}"),
               [], _.ExeDomain>, EVEX, EVEX_K, Sched<[WriteFStore]>,
               NotMemoryFoldable;
-  } // Predicates
 }
 
 defm VMOVSSZ : avx512_move_scalar<"vmovss", X86Movss, X86vzload32, f32x_info>,
@@ -4171,7 +4168,7 @@ defm VMOVSDZ : avx512_move_scalar<"vmovsd", X86Movsd, X86vzload64, f64x_info>,
                                   VEX_LIG, XD, VEX_W, EVEX_CD8<64, CD8VT1>;
 
 defm VMOVSHZ : avx512_move_scalar<"vmovsh", X86Movsh, X86vzload16, f16x_info,
-                                  [HasFP16], [HasFP16]>,
+                                  [HasFP16]>,
                                   VEX_LIG, T_MAP5XS, EVEX_CD8<16, CD8VT1>;
 
 multiclass avx512_move_scalar_lowering<string InstrStr, SDNode OpNode,
