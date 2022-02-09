@@ -19,24 +19,7 @@ def setup_passes(mlir_module):
         "parallelization-strategy=0"
         " vectorization-strategy=0 vl=1 enable-simd-index32=False"
     )
-    pipeline = (
-        f"builtin.func"
-        f"(linalg-generalize-named-ops,linalg-fuse-elementwise-ops),"
-        f"sparsification{{{opt}}},"
-        f"sparse-tensor-conversion,"
-        f"builtin.func"
-        f"(linalg-bufferize,convert-linalg-to-loops,convert-vector-to-scf),"
-        f"convert-scf-to-cf,"
-        f"func-bufferize,"
-        f"arith-bufferize,"
-        f"builtin.func(tensor-bufferize,finalizing-bufferize),"
-        f"convert-vector-to-llvm"
-        f"{{reassociate-fp-reductions=1 enable-index-optimizations=1}},"
-        f"lower-affine,"
-        f"convert-memref-to-llvm,"
-        f"convert-std-to-llvm,"
-        f"reconcile-unrealized-casts"
-    )
+    pipeline = f"sparse-compiler{{{opt}}}"
     PassManager.parse(pipeline).run(mlir_module)
 
 
