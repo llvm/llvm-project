@@ -79,16 +79,18 @@ private:
 /// its `TGen` parameter. Useful to avoid conditional compilation complexity, as
 /// a compile-time replacement for a real AOT-ed model.
 class NoopSavedModelImpl final {
-  const char *ErrMsg = "The mock AOT-ed saved model is a compile-time stub and "
-                       "should not be called.";
+#define NOOP_MODEL_ERRMSG                                                      \
+  "The mock AOT-ed saved model is a compile-time stub and should not be "      \
+  "called."
 
 public:
   NoopSavedModelImpl() = default;
-  int LookupArgIndex(const std::string &) { llvm_unreachable(ErrMsg); }
-  int LookupResultIndex(const std::string &) { llvm_unreachable(ErrMsg); }
-  void Run() { llvm_unreachable(ErrMsg); }
-  void *result_data(int) { llvm_unreachable(ErrMsg); }
-  void *arg_data(int) { llvm_unreachable(ErrMsg); }
+  int LookupArgIndex(const std::string &) { llvm_unreachable(NOOP_MODEL_ERRMSG); }
+  int LookupResultIndex(const std::string &) { llvm_unreachable(NOOP_MODEL_ERRMSG); }
+  void Run() { llvm_unreachable(NOOP_MODEL_ERRMSG); }
+  void *result_data(int) { llvm_unreachable(NOOP_MODEL_ERRMSG); }
+  void *arg_data(int) { llvm_unreachable(NOOP_MODEL_ERRMSG); }
+#undef NOOP_MODEL_ERRMSG
 };
 } // namespace llvm
 
