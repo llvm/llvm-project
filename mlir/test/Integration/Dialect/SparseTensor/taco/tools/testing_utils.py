@@ -23,8 +23,8 @@ def compare_sparse_tns(expected: str, actual: str, rtol: float = 0.0001) -> bool
       _ = expected_f.readline()
 
       # Compare the two lines of meta data
-      if actual_f.readline() != expected_f.readline() or actual_f.readline(
-      ) != expected_f.readline():
+      if (actual_f.readline() != expected_f.readline() or
+          actual_f.readline() != expected_f.readline()):
         return FALSE
 
   actual_data = np.loadtxt(actual, np.float64, skiprows=3)
