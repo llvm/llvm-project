@@ -944,10 +944,7 @@ body: |
     ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
     ; CHECK-NEXT: %ten:_(s32) = G_CONSTANT i32 10
     ; CHECK-NEXT: %twenty:_(s32) = G_CONSTANT i32 20
-    ; CHECK-NEXT: %thirty:_(s32) = G_CONSTANT i32 30
-    ; CHECK-NEXT: [[SMIN:%[0-9]+]]:_(s32) = G_SMIN %ten, %thirty
-    ; CHECK-NEXT: [[SMIN1:%[0-9]+]]:_(s32) = G_SMIN %twenty, %thirty
-    ; CHECK-NEXT: %smin:_(s32) = G_SELECT %cond(s1), [[SMIN]], [[SMIN1]]
+    ; CHECK-NEXT: %smin:_(s32) = G_SELECT %cond(s1), %ten, %twenty
     ; CHECK-NEXT: S_ENDPGM 0, implicit %smin(s32)
     %reg:_(s32) = COPY $vgpr0
     %zero:_(s32) = G_CONSTANT i32 0
@@ -969,16 +966,8 @@ body: |
     ; CHECK-LABEL: name: fold_smax_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %ten:_(s32) = G_CONSTANT i32 10
-    ; CHECK-NEXT: %twenty:_(s32) = G_CONSTANT i32 20
     ; CHECK-NEXT: %thirty:_(s32) = G_CONSTANT i32 30
-    ; CHECK-NEXT: [[SMAX:%[0-9]+]]:_(s32) = G_SMAX %ten, %thirty
-    ; CHECK-NEXT: [[SMAX1:%[0-9]+]]:_(s32) = G_SMAX %twenty, %thirty
-    ; CHECK-NEXT: %smax:_(s32) = G_SELECT %cond(s1), [[SMAX]], [[SMAX1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %smax(s32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %thirty(s32)
     %reg:_(s32) = COPY $vgpr0
     %zero:_(s32) = G_CONSTANT i32 0
     %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
@@ -1004,10 +993,7 @@ body: |
     ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
     ; CHECK-NEXT: %ten:_(s32) = G_CONSTANT i32 10
     ; CHECK-NEXT: %twenty:_(s32) = G_CONSTANT i32 20
-    ; CHECK-NEXT: %thirty:_(s32) = G_CONSTANT i32 30
-    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN %ten, %thirty
-    ; CHECK-NEXT: [[UMIN1:%[0-9]+]]:_(s32) = G_UMIN %twenty, %thirty
-    ; CHECK-NEXT: %umin:_(s32) = G_SELECT %cond(s1), [[UMIN]], [[UMIN1]]
+    ; CHECK-NEXT: %umin:_(s32) = G_SELECT %cond(s1), %ten, %twenty
     ; CHECK-NEXT: S_ENDPGM 0, implicit %umin(s32)
     %reg:_(s32) = COPY $vgpr0
     %zero:_(s32) = G_CONSTANT i32 0
@@ -1029,16 +1015,8 @@ body: |
     ; CHECK-LABEL: name: fold_umax_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %ten:_(s32) = G_CONSTANT i32 10
-    ; CHECK-NEXT: %twenty:_(s32) = G_CONSTANT i32 20
     ; CHECK-NEXT: %thirty:_(s32) = G_CONSTANT i32 30
-    ; CHECK-NEXT: [[UMAX:%[0-9]+]]:_(s32) = G_UMAX %ten, %thirty
-    ; CHECK-NEXT: [[UMAX1:%[0-9]+]]:_(s32) = G_UMAX %twenty, %thirty
-    ; CHECK-NEXT: %umax:_(s32) = G_SELECT %cond(s1), [[UMAX]], [[UMAX1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %umax(s32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %thirty(s32)
     %reg:_(s32) = COPY $vgpr0
     %zero:_(s32) = G_CONSTANT i32 0
     %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
