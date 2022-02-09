@@ -11,9 +11,9 @@ define <4 x i32> @test(<16 x i32>* %arg1, <16 x i32>* %arg2) {
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0]
 ; CHECK-NEXT:    mov z0.d, z1.d
-; CHECK-NEXT:    add z2.s, p0/m, z2.s, z2.s
+; CHECK-NEXT:    add z2.s, z2.s, z2.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #16
-; CHECK-NEXT:    add z1.s, p0/m, z1.s, z1.s
+; CHECK-NEXT:    add z1.s, z1.s, z1.s
 ; CHECK-NEXT:    dup v0.4s, v0.s[2]
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
 ; CHECK-NEXT:    st1w { z2.s }, p0, [x0]
@@ -35,9 +35,9 @@ define <2 x i32> @test2(<16 x i32>* %arg1, <16 x i32>* %arg2) {
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0]
 ; CHECK-NEXT:    mov z0.d, z1.d
-; CHECK-NEXT:    add z2.s, p0/m, z2.s, z2.s
+; CHECK-NEXT:    add z2.s, z2.s, z2.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #24
-; CHECK-NEXT:    add z1.s, p0/m, z1.s, z1.s
+; CHECK-NEXT:    add z1.s, z1.s, z1.s
 ; CHECK-NEXT:    dup v0.2s, v0.s[0]
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
 ; CHECK-NEXT:    st1w { z2.s }, p0, [x0]

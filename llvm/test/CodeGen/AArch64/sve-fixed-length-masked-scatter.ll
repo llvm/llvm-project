@@ -1065,7 +1065,7 @@ define void @masked_scatter_vec_plus_reg(<32 x float>* %a, <32 x i8*>* %b, i64 %
 ; VBITS_GE_2048-NEXT:    ld1d { z1.d }, p1/z, [x1]
 ; VBITS_GE_2048-NEXT:    mov z2.d, x2
 ; VBITS_GE_2048-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
-; VBITS_GE_2048-NEXT:    add z1.d, p1/m, z1.d, z2.d
+; VBITS_GE_2048-NEXT:    add z1.d, z1.d, z2.d
 ; VBITS_GE_2048-NEXT:    uunpklo z0.d, z0.s
 ; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
 ; VBITS_GE_2048-NEXT:    st1w { z0.d }, p0, [z1.d]
@@ -1087,9 +1087,8 @@ define void @masked_scatter_vec_plus_imm(<32 x float>* %a, <32 x i8*>* %b) #0 {
 ; VBITS_GE_2048-NEXT:    ptrue p1.d, vl32
 ; VBITS_GE_2048-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT:    ld1d { z1.d }, p1/z, [x1]
-; VBITS_GE_2048-NEXT:    mov z2.d, #4 // =0x4
 ; VBITS_GE_2048-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
-; VBITS_GE_2048-NEXT:    add z1.d, p1/m, z1.d, z2.d
+; VBITS_GE_2048-NEXT:    add z1.d, z1.d, #4
 ; VBITS_GE_2048-NEXT:    uunpklo z0.d, z0.s
 ; VBITS_GE_2048-NEXT:    punpklo p0.h, p0.b
 ; VBITS_GE_2048-NEXT:    st1w { z0.d }, p0, [z1.d]

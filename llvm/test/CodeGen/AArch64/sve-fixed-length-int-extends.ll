@@ -80,8 +80,8 @@ define void @sext_v16i8_v16i16(<16 x i8> %a, <16 x i16>* %out) #0 {
 ; NOTE: Extra 'add' is to prevent the extend being combined with the load.
 define void @sext_v32i8_v32i16(<32 x i8>* %in, <32 x i16>* %out) #0 {
 ; CHECK-LABEL: sext_v32i8_v32i16:
-; VBITS_GE_512: add [[A_BYTES:z[0-9]+]].b, {{p[0-9]+}}/m, {{z[0-9]+}}.b, {{z[0-9]+}}.b
-; VBITS_GE_512-NEXT: ptrue [[PG:p[0-9]+]].h, vl32
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].h, vl32
+; VBITS_GE_512-NEXT: add [[A_BYTES:z[0-9]+]].b, {{z[0-9]+}}.b, {{z[0-9]+}}.b
 ; VBITS_GE_512-NEXT: sunpklo [[A_HALFS:z[0-9]+]].h, [[A_BYTES]].b
 ; VBITS_GE_512-NEXT: st1h { [[A_HALFS]].h }, [[PG]], [x1]
 ; VBITS_GE_512-NEXT: ret
@@ -94,8 +94,8 @@ define void @sext_v32i8_v32i16(<32 x i8>* %in, <32 x i16>* %out) #0 {
 
 define void @sext_v64i8_v64i16(<64 x i8>* %in, <64 x i16>* %out) #0 {
 ; CHECK-LABEL: sext_v64i8_v64i16:
-; VBITS_GE_1024: add [[A_BYTES:z[0-9]+]].b, {{p[0-9]+}}/m, {{z[0-9]+}}.b, {{z[0-9]+}}.b
-; VBITS_GE_1024-NEXT: ptrue [[PG:p[0-9]+]].h, vl64
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].h, vl64
+; VBITS_GE_1024-NEXT: add [[A_BYTES:z[0-9]+]].b, {{z[0-9]+}}.b, {{z[0-9]+}}.b
 ; VBITS_GE_1024-NEXT: sunpklo [[A_HALFS:z[0-9]+]].h, [[A_BYTES]].b
 ; VBITS_GE_1024-NEXT: st1h { [[A_HALFS]].h }, [[PG]], [x1]
 ; VBITS_GE_1024-NEXT: ret
@@ -108,8 +108,8 @@ define void @sext_v64i8_v64i16(<64 x i8>* %in, <64 x i16>* %out) #0 {
 
 define void @sext_v128i8_v128i16(<128 x i8>* %in, <128 x i16>* %out) #0 {
 ; CHECK-LABEL: sext_v128i8_v128i16:
-; VBITS_GE_2048: add [[A_BYTES:z[0-9]+]].b, {{p[0-9]+}}/m, {{z[0-9]+}}.b, {{z[0-9]+}}.b
-; VBITS_GE_2048-NEXT: ptrue [[PG:p[0-9]+]].h, vl128
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].h, vl128
+; VBITS_GE_2048-NEXT: add [[A_BYTES:z[0-9]+]].b, {{z[0-9]+}}.b, {{z[0-9]+}}.b
 ; VBITS_GE_2048-NEXT: sunpklo [[A_HALFS:z[0-9]+]].h, [[A_BYTES]].b
 ; VBITS_GE_2048-NEXT: st1h { [[A_HALFS]].h }, [[PG]], [x1]
 ; VBITS_GE_2048-NEXT: ret
@@ -162,8 +162,8 @@ define void @sext_v16i8_v16i32(<16 x i8> %a, <16 x i32>* %out) #0 {
 
 define void @sext_v32i8_v32i32(<32 x i8>* %in, <32 x i32>* %out) #0 {
 ; CHECK-LABEL: sext_v32i8_v32i32:
-; VBITS_GE_1024: add [[A_BYTES:z[0-9]+]].b, {{p[0-9]+}}/m, {{z[0-9]+}}.b, {{z[0-9]+}}.b
-; VBITS_GE_1024-NEXT: ptrue [[PG:p[0-9]+]].s, vl32
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].s, vl32
+; VBITS_GE_1024-NEXT: add [[A_BYTES:z[0-9]+]].b, {{z[0-9]+}}.b, {{z[0-9]+}}.b
 ; VBITS_GE_1024-NEXT: sunpklo [[A_HALFS:z[0-9]+]].h, [[A_BYTES]].b
 ; VBITS_GE_1024-NEXT: sunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_1024-NEXT: st1w { [[A_WORDS]].s }, [[PG]], [x1]
@@ -177,8 +177,8 @@ define void @sext_v32i8_v32i32(<32 x i8>* %in, <32 x i32>* %out) #0 {
 
 define void @sext_v64i8_v64i32(<64 x i8>* %in, <64 x i32>* %out) #0 {
 ; CHECK-LABEL: sext_v64i8_v64i32:
-; VBITS_GE_2048: add [[A_BYTES:z[0-9]+]].b, {{p[0-9]+}}/m, {{z[0-9]+}}.b, {{z[0-9]+}}.b
-; VBITS_GE_2048-NEXT: ptrue [[PG:p[0-9]+]].s, vl64
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].s, vl64
+; VBITS_GE_2048-NEXT: add [[A_BYTES:z[0-9]+]].b, {{z[0-9]+}}.b, {{z[0-9]+}}.b
 ; VBITS_GE_2048-NEXT: sunpklo [[A_HALFS:z[0-9]+]].h, [[A_BYTES]].b
 ; VBITS_GE_2048-NEXT: sunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_2048-NEXT: st1w { [[A_WORDS]].s }, [[PG]], [x1]
@@ -238,8 +238,8 @@ define void @sext_v16i8_v16i64(<16 x i8> %a, <16 x i64>* %out) #0 {
 
 define void @sext_v32i8_v32i64(<32 x i8>* %in, <32 x i64>* %out) #0 {
 ; CHECK-LABEL: sext_v32i8_v32i64:
-; VBITS_GE_2048: add [[A_BYTES:z[0-9]+]].b, {{p[0-9]+}}/m, {{z[0-9]+}}.b, {{z[0-9]+}}.b
-; VBITS_GE_2048-NEXT: ptrue [[PG:p[0-9]+]].d, vl32
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl32
+; VBITS_GE_2048-NEXT: add [[A_BYTES:z[0-9]+]].b, {{z[0-9]+}}.b, {{z[0-9]+}}.b
 ; VBITS_GE_2048-NEXT: sunpklo [[A_HALFS:z[0-9]+]].h, [[A_BYTES]].b
 ; VBITS_GE_2048-NEXT: sunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_2048-NEXT: sunpklo [[A_DWORDS:z[0-9]+]].d, [[A_WORDS]].s
@@ -269,8 +269,8 @@ define void @sext_v8i16_v8i32(<8 x i16> %a, <8 x i32>* %out) #0 {
 
 define void @sext_v16i16_v16i32(<16 x i16>* %in, <16 x i32>* %out) #0 {
 ; CHECK-LABEL: sext_v16i16_v16i32:
-; VBITS_GE_512: add [[A_HALFS:z[0-9]+]].h, {{p[0-9]+}}/m, {{z[0-9]+}}.h, {{z[0-9]+}}.h
-; VBITS_GE_512-NEXT: ptrue [[PG:p[0-9]+]].s, vl16
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl16
+; VBITS_GE_512-NEXT: add [[A_HALFS:z[0-9]+]].h, {{z[0-9]+}}.h, {{z[0-9]+}}.h
 ; VBITS_GE_512-NEXT: sunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_512-NEXT: st1w { [[A_WORDS]].s }, [[PG]], [x1]
 ; VBITS_GE_512-NEXT: ret
@@ -283,8 +283,8 @@ define void @sext_v16i16_v16i32(<16 x i16>* %in, <16 x i32>* %out) #0 {
 
 define void @sext_v32i16_v32i32(<32 x i16>* %in, <32 x i32>* %out) #0 {
 ; CHECK-LABEL: sext_v32i16_v32i32:
-; VBITS_GE_1024: add [[A_HALFS:z[0-9]+]].h, {{p[0-9]+}}/m, {{z[0-9]+}}.h, {{z[0-9]+}}.h
-; VBITS_GE_1024-NEXT: ptrue [[PG:p[0-9]+]].s, vl32
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].s, vl32
+; VBITS_GE_1024-NEXT: add [[A_HALFS:z[0-9]+]].h, {{z[0-9]+}}.h, {{z[0-9]+}}.h
 ; VBITS_GE_1024-NEXT: sunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_1024-NEXT: st1w { [[A_WORDS]].s }, [[PG]], [x1]
 ; VBITS_GE_1024-NEXT: ret
@@ -297,8 +297,8 @@ define void @sext_v32i16_v32i32(<32 x i16>* %in, <32 x i32>* %out) #0 {
 
 define void @sext_v64i16_v64i32(<64 x i16>* %in, <64 x i32>* %out) #0 {
 ; CHECK-LABEL: sext_v64i16_v64i32:
-; VBITS_GE_2048: add [[A_HALFS:z[0-9]+]].h, {{p[0-9]+}}/m, {{z[0-9]+}}.h, {{z[0-9]+}}.h
-; VBITS_GE_2048-NEXT: ptrue [[PG:p[0-9]+]].s, vl64
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].s, vl64
+; VBITS_GE_2048-NEXT: add [[A_HALFS:z[0-9]+]].h, {{z[0-9]+}}.h, {{z[0-9]+}}.h
 ; VBITS_GE_2048-NEXT: sunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_2048-NEXT: st1w { [[A_WORDS]].s }, [[PG]], [x1]
 ; VBITS_GE_2048-NEXT: ret
@@ -339,8 +339,8 @@ define void @sext_v8i16_v8i64(<8 x i16> %a, <8 x i64>* %out) #0 {
 
 define void @sext_v16i16_v16i64(<16 x i16>* %in, <16 x i64>* %out) #0 {
 ; CHECK-LABEL: sext_v16i16_v16i64:
-; VBITS_GE_1024: add [[A_HALFS:z[0-9]+]].h, {{p[0-9]+}}/m, {{z[0-9]+}}.h, {{z[0-9]+}}.h
-; VBITS_GE_1024-NEXT: ptrue [[PG:p[0-9]+]].d, vl16
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].d, vl16
+; VBITS_GE_1024-NEXT: add [[A_HALFS:z[0-9]+]].h, {{z[0-9]+}}.h, {{z[0-9]+}}.h
 ; VBITS_GE_1024-NEXT: sunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_1024-NEXT: sunpklo [[A_DWORDS:z[0-9]+]].d, [[A_WORDS]].s
 ; VBITS_GE_1024-NEXT: st1d { [[A_DWORDS]].d }, [[PG]], [x1]
@@ -354,8 +354,8 @@ define void @sext_v16i16_v16i64(<16 x i16>* %in, <16 x i64>* %out) #0 {
 
 define void @sext_v32i16_v32i64(<32 x i16>* %in, <32 x i64>* %out) #0 {
 ; CHECK-LABEL: sext_v32i16_v32i64:
-; VBITS_GE_2048: add [[A_HALFS:z[0-9]+]].h, {{p[0-9]+}}/m, {{z[0-9]+}}.h, {{z[0-9]+}}.h
-; VBITS_GE_2048-NEXT: ptrue [[PG:p[0-9]+]].d, vl32
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl32
+; VBITS_GE_2048-NEXT: add [[A_HALFS:z[0-9]+]].h, {{z[0-9]+}}.h, {{z[0-9]+}}.h
 ; VBITS_GE_2048-NEXT: sunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_2048-NEXT: sunpklo [[A_DWORDS:z[0-9]+]].d, [[A_WORDS]].s
 ; VBITS_GE_2048-NEXT: st1d { [[A_DWORDS]].d }, [[PG]], [x1]
@@ -384,8 +384,8 @@ define void @sext_v4i32_v4i64(<4 x i32> %a, <4 x i64>* %out) #0 {
 
 define void @sext_v8i32_v8i64(<8 x i32>* %in, <8 x i64>* %out) #0 {
 ; CHECK-LABEL: sext_v8i32_v8i64:
-; VBITS_GE_512: add [[A_WORDS:z[0-9]+]].s, {{p[0-9]+}}/m, {{z[0-9]+}}.s, {{z[0-9]+}}.s
-; VBITS_GE_512-NEXT: ptrue [[PG:p[0-9]+]].d, vl8
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].d, vl8
+; VBITS_GE_512-NEXT: add [[A_WORDS:z[0-9]+]].s, {{z[0-9]+}}.s, {{z[0-9]+}}.s
 ; VBITS_GE_512-NEXT: sunpklo [[A_DWORDS:z[0-9]+]].d, [[A_WORDS]].s
 ; VBITS_GE_512-NEXT: st1d { [[A_DWORDS]].d }, [[PG]], [x1]
 ; VBITS_GE_512-NEXT: ret
@@ -398,8 +398,8 @@ define void @sext_v8i32_v8i64(<8 x i32>* %in, <8 x i64>* %out) #0 {
 
 define void @sext_v16i32_v16i64(<16 x i32>* %in, <16 x i64>* %out) #0 {
 ; CHECK-LABEL: sext_v16i32_v16i64:
-; VBITS_GE_1024: add [[A_WORDS:z[0-9]+]].s, {{p[0-9]+}}/m, {{z[0-9]+}}.s, {{z[0-9]+}}.s
-; VBITS_GE_1024-NEXT: ptrue [[PG:p[0-9]+]].d, vl16
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].d, vl16
+; VBITS_GE_1024-NEXT: add [[A_WORDS:z[0-9]+]].s, {{z[0-9]+}}.s, {{z[0-9]+}}.s
 ; VBITS_GE_1024-NEXT: sunpklo [[A_DWORDS:z[0-9]+]].d, [[A_WORDS]].s
 ; VBITS_GE_1024-NEXT: st1d { [[A_DWORDS]].d }, [[PG]], [x1]
 ; VBITS_GE_1024-NEXT: ret
@@ -412,8 +412,8 @@ define void @sext_v16i32_v16i64(<16 x i32>* %in, <16 x i64>* %out) #0 {
 
 define void @sext_v32i32_v32i64(<32 x i32>* %in, <32 x i64>* %out) #0 {
 ; CHECK-LABEL: sext_v32i32_v32i64:
-; VBITS_GE_2048: add [[A_WORDS:z[0-9]+]].s, {{p[0-9]+}}/m, {{z[0-9]+}}.s, {{z[0-9]+}}.s
-; VBITS_GE_2048-NEXT: ptrue [[PG:p[0-9]+]].d, vl32
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl32
+; VBITS_GE_2048-NEXT: add [[A_WORDS:z[0-9]+]].s, {{z[0-9]+}}.s, {{z[0-9]+}}.s
 ; VBITS_GE_2048-NEXT: sunpklo [[A_DWORDS:z[0-9]+]].d, [[A_WORDS]].s
 ; VBITS_GE_2048-NEXT: st1d { [[A_DWORDS]].d }, [[PG]], [x1]
 ; VBITS_GE_2048-NEXT: ret
@@ -442,8 +442,8 @@ define void @zext_v16i8_v16i16(<16 x i8> %a, <16 x i16>* %out) #0 {
 ; NOTE: Extra 'add' is to prevent the extend being combined with the load.
 define void @zext_v32i8_v32i16(<32 x i8>* %in, <32 x i16>* %out) #0 {
 ; CHECK-LABEL: zext_v32i8_v32i16:
-; VBITS_GE_512: add [[A_BYTES:z[0-9]+]].b, {{p[0-9]+}}/m, {{z[0-9]+}}.b, {{z[0-9]+}}.b
-; VBITS_GE_512-NEXT: ptrue [[PG:p[0-9]+]].h, vl32
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].h, vl32
+; VBITS_GE_512-NEXT: add [[A_BYTES:z[0-9]+]].b, {{z[0-9]+}}.b, {{z[0-9]+}}.b
 ; VBITS_GE_512-NEXT: uunpklo [[A_HALFS:z[0-9]+]].h, [[A_BYTES]].b
 ; VBITS_GE_512-NEXT: st1h { [[A_HALFS]].h }, [[PG]], [x1]
 ; VBITS_GE_512-NEXT: ret
@@ -456,8 +456,8 @@ define void @zext_v32i8_v32i16(<32 x i8>* %in, <32 x i16>* %out) #0 {
 
 define void @zext_v64i8_v64i16(<64 x i8>* %in, <64 x i16>* %out) #0 {
 ; CHECK-LABEL: zext_v64i8_v64i16:
-; VBITS_GE_1024: add [[A_BYTES:z[0-9]+]].b, {{p[0-9]+}}/m, {{z[0-9]+}}.b, {{z[0-9]+}}.b
-; VBITS_GE_1024-NEXT: ptrue [[PG:p[0-9]+]].h, vl64
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].h, vl64
+; VBITS_GE_1024-NEXT: add [[A_BYTES:z[0-9]+]].b, {{z[0-9]+}}.b, {{z[0-9]+}}.b
 ; VBITS_GE_1024-NEXT: uunpklo [[A_HALFS:z[0-9]+]].h, [[A_BYTES]].b
 ; VBITS_GE_1024-NEXT: st1h { [[A_HALFS]].h }, [[PG]], [x1]
 ; VBITS_GE_1024-NEXT: ret
@@ -470,8 +470,8 @@ define void @zext_v64i8_v64i16(<64 x i8>* %in, <64 x i16>* %out) #0 {
 
 define void @zext_v128i8_v128i16(<128 x i8>* %in, <128 x i16>* %out) #0 {
 ; CHECK-LABEL: zext_v128i8_v128i16:
-; VBITS_GE_2048: add [[A_BYTES:z[0-9]+]].b, {{p[0-9]+}}/m, {{z[0-9]+}}.b, {{z[0-9]+}}.b
-; VBITS_GE_2048-NEXT: ptrue [[PG:p[0-9]+]].h, vl128
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].h, vl128
+; VBITS_GE_2048-NEXT: add [[A_BYTES:z[0-9]+]].b, {{z[0-9]+}}.b, {{z[0-9]+}}.b
 ; VBITS_GE_2048-NEXT: uunpklo [[A_HALFS:z[0-9]+]].h, [[A_BYTES]].b
 ; VBITS_GE_2048-NEXT: st1h { [[A_HALFS]].h }, [[PG]], [x1]
 ; VBITS_GE_2048-NEXT: ret
@@ -524,8 +524,8 @@ define void @zext_v16i8_v16i32(<16 x i8> %a, <16 x i32>* %out) #0 {
 
 define void @zext_v32i8_v32i32(<32 x i8>* %in, <32 x i32>* %out) #0 {
 ; CHECK-LABEL: zext_v32i8_v32i32:
-; VBITS_GE_1024: add [[A_BYTES:z[0-9]+]].b, {{p[0-9]+}}/m, {{z[0-9]+}}.b, {{z[0-9]+}}.b
-; VBITS_GE_1024-NEXT: ptrue [[PG:p[0-9]+]].s, vl32
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].s, vl32
+; VBITS_GE_1024-NEXT: add [[A_BYTES:z[0-9]+]].b, {{z[0-9]+}}.b, {{z[0-9]+}}.b
 ; VBITS_GE_1024-NEXT: uunpklo [[A_HALFS:z[0-9]+]].h, [[A_BYTES]].b
 ; VBITS_GE_1024-NEXT: uunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_1024-NEXT: st1w { [[A_WORDS]].s }, [[PG]], [x1]
@@ -539,8 +539,8 @@ define void @zext_v32i8_v32i32(<32 x i8>* %in, <32 x i32>* %out) #0 {
 
 define void @zext_v64i8_v64i32(<64 x i8>* %in, <64 x i32>* %out) #0 {
 ; CHECK-LABEL: zext_v64i8_v64i32:
-; VBITS_GE_2048: add [[A_BYTES:z[0-9]+]].b, {{p[0-9]+}}/m, {{z[0-9]+}}.b, {{z[0-9]+}}.b
-; VBITS_GE_2048-NEXT: ptrue [[PG:p[0-9]+]].s, vl64
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].s, vl64
+; VBITS_GE_2048-NEXT: add [[A_BYTES:z[0-9]+]].b, {{z[0-9]+}}.b, {{z[0-9]+}}.b
 ; VBITS_GE_2048-NEXT: uunpklo [[A_HALFS:z[0-9]+]].h, [[A_BYTES]].b
 ; VBITS_GE_2048-NEXT: uunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_2048-NEXT: st1w { [[A_WORDS]].s }, [[PG]], [x1]
@@ -600,8 +600,8 @@ define void @zext_v16i8_v16i64(<16 x i8> %a, <16 x i64>* %out) #0 {
 
 define void @zext_v32i8_v32i64(<32 x i8>* %in, <32 x i64>* %out) #0 {
 ; CHECK-LABEL: zext_v32i8_v32i64:
-; VBITS_GE_2048: add [[A_BYTES:z[0-9]+]].b, {{p[0-9]+}}/m, {{z[0-9]+}}.b, {{z[0-9]+}}.b
-; VBITS_GE_2048-NEXT: ptrue [[PG:p[0-9]+]].d, vl32
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl32
+; VBITS_GE_2048-NEXT: add [[A_BYTES:z[0-9]+]].b, {{z[0-9]+}}.b, {{z[0-9]+}}.b
 ; VBITS_GE_2048-NEXT: uunpklo [[A_HALFS:z[0-9]+]].h, [[A_BYTES]].b
 ; VBITS_GE_2048-NEXT: uunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_2048-NEXT: uunpklo [[A_DWORDS:z[0-9]+]].d, [[A_WORDS]].s
@@ -631,8 +631,8 @@ define void @zext_v8i16_v8i32(<8 x i16> %a, <8 x i32>* %out) #0 {
 
 define void @zext_v16i16_v16i32(<16 x i16>* %in, <16 x i32>* %out) #0 {
 ; CHECK-LABEL: zext_v16i16_v16i32:
-; VBITS_GE_512: add [[A_HALFS:z[0-9]+]].h, {{p[0-9]+}}/m, {{z[0-9]+}}.h, {{z[0-9]+}}.h
-; VBITS_GE_512-NEXT: ptrue [[PG:p[0-9]+]].s, vl16
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl16
+; VBITS_GE_512-NEXT: add [[A_HALFS:z[0-9]+]].h, {{z[0-9]+}}.h, {{z[0-9]+}}.h
 ; VBITS_GE_512-NEXT: uunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_512-NEXT: st1w { [[A_WORDS]].s }, [[PG]], [x1]
 ; VBITS_GE_512-NEXT: ret
@@ -645,8 +645,8 @@ define void @zext_v16i16_v16i32(<16 x i16>* %in, <16 x i32>* %out) #0 {
 
 define void @zext_v32i16_v32i32(<32 x i16>* %in, <32 x i32>* %out) #0 {
 ; CHECK-LABEL: zext_v32i16_v32i32:
-; VBITS_GE_1024: add [[A_HALFS:z[0-9]+]].h, {{p[0-9]+}}/m, {{z[0-9]+}}.h, {{z[0-9]+}}.h
-; VBITS_GE_1024-NEXT: ptrue [[PG:p[0-9]+]].s, vl32
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].s, vl32
+; VBITS_GE_1024-NEXT: add [[A_HALFS:z[0-9]+]].h, {{z[0-9]+}}.h, {{z[0-9]+}}.h
 ; VBITS_GE_1024-NEXT: uunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_1024-NEXT: st1w { [[A_WORDS]].s }, [[PG]], [x1]
 ; VBITS_GE_1024-NEXT: ret
@@ -659,8 +659,8 @@ define void @zext_v32i16_v32i32(<32 x i16>* %in, <32 x i32>* %out) #0 {
 
 define void @zext_v64i16_v64i32(<64 x i16>* %in, <64 x i32>* %out) #0 {
 ; CHECK-LABEL: zext_v64i16_v64i32:
-; VBITS_GE_2048: add [[A_HALFS:z[0-9]+]].h, {{p[0-9]+}}/m, {{z[0-9]+}}.h, {{z[0-9]+}}.h
-; VBITS_GE_2048-NEXT: ptrue [[PG:p[0-9]+]].s, vl64
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].s, vl64
+; VBITS_GE_2048-NEXT: add [[A_HALFS:z[0-9]+]].h, {{z[0-9]+}}.h, {{z[0-9]+}}.h
 ; VBITS_GE_2048-NEXT: uunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_2048-NEXT: st1w { [[A_WORDS]].s }, [[PG]], [x1]
 ; VBITS_GE_2048-NEXT: ret
@@ -701,8 +701,8 @@ define void @zext_v8i16_v8i64(<8 x i16> %a, <8 x i64>* %out) #0 {
 
 define void @zext_v16i16_v16i64(<16 x i16>* %in, <16 x i64>* %out) #0 {
 ; CHECK-LABEL: zext_v16i16_v16i64:
-; VBITS_GE_1024: add [[A_HALFS:z[0-9]+]].h, {{p[0-9]+}}/m, {{z[0-9]+}}.h, {{z[0-9]+}}.h
-; VBITS_GE_1024-NEXT: ptrue [[PG:p[0-9]+]].d, vl16
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].d, vl16
+; VBITS_GE_1024-NEXT: add [[A_HALFS:z[0-9]+]].h, {{z[0-9]+}}.h, {{z[0-9]+}}.h
 ; VBITS_GE_1024-NEXT: uunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_1024-NEXT: uunpklo [[A_DWORDS:z[0-9]+]].d, [[A_WORDS]].s
 ; VBITS_GE_1024-NEXT: st1d { [[A_DWORDS]].d }, [[PG]], [x1]
@@ -716,8 +716,8 @@ define void @zext_v16i16_v16i64(<16 x i16>* %in, <16 x i64>* %out) #0 {
 
 define void @zext_v32i16_v32i64(<32 x i16>* %in, <32 x i64>* %out) #0 {
 ; CHECK-LABEL: zext_v32i16_v32i64:
-; VBITS_GE_2048: add [[A_HALFS:z[0-9]+]].h, {{p[0-9]+}}/m, {{z[0-9]+}}.h, {{z[0-9]+}}.h
-; VBITS_GE_2048-NEXT: ptrue [[PG:p[0-9]+]].d, vl32
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl32
+; VBITS_GE_2048-NEXT: add [[A_HALFS:z[0-9]+]].h, {{z[0-9]+}}.h, {{z[0-9]+}}.h
 ; VBITS_GE_2048-NEXT: uunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_2048-NEXT: uunpklo [[A_DWORDS:z[0-9]+]].d, [[A_WORDS]].s
 ; VBITS_GE_2048-NEXT: st1d { [[A_DWORDS]].d }, [[PG]], [x1]
@@ -746,8 +746,8 @@ define void @zext_v4i32_v4i64(<4 x i32> %a, <4 x i64>* %out) #0 {
 
 define void @zext_v8i32_v8i64(<8 x i32>* %in, <8 x i64>* %out) #0 {
 ; CHECK-LABEL: zext_v8i32_v8i64:
-; VBITS_GE_512: add [[A_WORDS:z[0-9]+]].s, {{p[0-9]+}}/m, {{z[0-9]+}}.s, {{z[0-9]+}}.s
-; VBITS_GE_512-NEXT: ptrue [[PG:p[0-9]+]].d, vl8
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].d, vl8
+; VBITS_GE_512-NEXT: add [[A_WORDS:z[0-9]+]].s, {{z[0-9]+}}.s, {{z[0-9]+}}.s
 ; VBITS_GE_512-NEXT: uunpklo [[A_DWORDS:z[0-9]+]].d, [[A_WORDS]].s
 ; VBITS_GE_512-NEXT: st1d { [[A_DWORDS]].d }, [[PG]], [x1]
 ; VBITS_GE_512-NEXT: ret
@@ -760,8 +760,8 @@ define void @zext_v8i32_v8i64(<8 x i32>* %in, <8 x i64>* %out) #0 {
 
 define void @zext_v16i32_v16i64(<16 x i32>* %in, <16 x i64>* %out) #0 {
 ; CHECK-LABEL: zext_v16i32_v16i64:
-; VBITS_GE_1024: add [[A_WORDS:z[0-9]+]].s, {{p[0-9]+}}/m, {{z[0-9]+}}.s, {{z[0-9]+}}.s
-; VBITS_GE_1024-NEXT: ptrue [[PG:p[0-9]+]].d, vl16
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].d, vl16
+; VBITS_GE_1024-NEXT: add [[A_WORDS:z[0-9]+]].s, {{z[0-9]+}}.s, {{z[0-9]+}}.s
 ; VBITS_GE_1024-NEXT: uunpklo [[A_DWORDS:z[0-9]+]].d, [[A_WORDS]].s
 ; VBITS_GE_1024-NEXT: st1d { [[A_DWORDS]].d }, [[PG]], [x1]
 ; VBITS_GE_1024-NEXT: ret
@@ -774,8 +774,8 @@ define void @zext_v16i32_v16i64(<16 x i32>* %in, <16 x i64>* %out) #0 {
 
 define void @zext_v32i32_v32i64(<32 x i32>* %in, <32 x i64>* %out) #0 {
 ; CHECK-LABEL: zext_v32i32_v32i64:
-; VBITS_GE_2048: add [[A_WORDS:z[0-9]+]].s, {{p[0-9]+}}/m, {{z[0-9]+}}.s, {{z[0-9]+}}.s
-; VBITS_GE_2048-NEXT: ptrue [[PG:p[0-9]+]].d, vl32
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl32
+; VBITS_GE_2048-NEXT: add [[A_WORDS:z[0-9]+]].s, {{z[0-9]+}}.s, {{z[0-9]+}}.s
 ; VBITS_GE_2048-NEXT: uunpklo [[A_DWORDS:z[0-9]+]].d, [[A_WORDS]].s
 ; VBITS_GE_2048-NEXT: st1d { [[A_DWORDS]].d }, [[PG]], [x1]
 ; VBITS_GE_2048-NEXT: ret
