@@ -482,9 +482,10 @@ CallBase *CallBase::removeOperandBundle(CallBase *CB, uint32_t ID,
 
 bool CallBase::hasReadingOperandBundles() const {
   // Implementation note: this is a conservative implementation of operand
-  // bundle semantics, where *any* non-assume operand bundle forces a callsite
-  // to be at least readonly.
-  return hasOperandBundles() && getIntrinsicID() != Intrinsic::assume;
+  // bundle semantics, where *any* non-assume operand bundle (other than
+  // ptrauth) forces a callsite to be at least readonly.
+  return hasOperandBundlesOtherThan(LLVMContext::OB_ptrauth) &&
+         getIntrinsicID() != Intrinsic::assume;
 }
 
 //===----------------------------------------------------------------------===//

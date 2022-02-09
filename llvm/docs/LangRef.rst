@@ -2510,6 +2510,15 @@ void, in which case the operand bundle is ignored.
 The operand bundle is needed to ensure the call is immediately followed by the
 marker instruction and the ObjC runtime call in the final output.
 
+.. _ob_ptrauth:
+
+Pointer Authentication Operand Bundles
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Pointer Authentication operand bundles are characterized by the
+``"ptrauth"`` operand bundle tag.  They are described in the
+`Pointer Authentication <PointerAuth.html#operand-bundle>`_ document.
+
 .. _moduleasm:
 
 Module-Level Inline Assembly
