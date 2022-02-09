@@ -98,7 +98,7 @@ public:
   basic_format_context& operator=(const basic_format_context&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI basic_format_arg<basic_format_context>
-  arg(size_t __id) const {
+  arg(size_t __id) const noexcept {
     return __args_.get(__id);
   }
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
