@@ -2,9 +2,9 @@
 
 struct A {};
 
-struct A f1() {
-  // CHECK:      FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:{{[^:]*}}:1> line:[[@LINE-1]]:10 f1 'struct A ()'
-  // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:15, line:{{[^:]*}}:1>
+struct A f1(void) {
+  // CHECK:      FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:{{[^:]*}}:1> line:[[@LINE-1]]:10 f1 'struct A (void)'
+  // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:19, line:{{[^:]*}}:1>
   struct A a;
   // CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:13>
   // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:12> col:12 used a 'struct A':'struct A' nrvo
@@ -14,7 +14,7 @@ struct A f1() {
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:10> 'struct A':'struct A' lvalue Var 0x{{[^ ]*}} 'a' 'struct A':'struct A'
 }
 
-void f2() {
+void f2(void) {
   (void)^{
     // CHECK:      BlockDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:9, line:{{[^:]*}}:3> line:[[@LINE-1]]:9
     // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:10, line:{{[^:]*}}:3>

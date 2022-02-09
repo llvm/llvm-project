@@ -15,7 +15,7 @@
 - (void)bar;
 @end
 
-Test *getTest();
+Test *getTest(void);
 
 @implementation Test
 - (void)foo __attribute__((nomerge)) {

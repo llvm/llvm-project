@@ -2,9 +2,9 @@ enum X { x };
 enum Y { y };
 struct Z { };
 
-void X();
+void X(void);
 
-void test() {
+void test(void) {
   enum X { x };
   enum 
   // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:9:8 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s

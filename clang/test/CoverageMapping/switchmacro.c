@@ -30,7 +30,7 @@ int foo(int i) { // CHECK-NEXT: File 0, [[@LINE]]:16 -> {{[0-9]+}}:2 = #0
 // CHECK: bar
 #define START { while (0) { switch (0) {
 #define END   }}}
-void bar() {
+void bar(void) {
   START      // CHECK: File 0, [[@LINE]]:8 -> [[@LINE+2]]:6
 default: ;
   END
@@ -39,7 +39,7 @@ default: ;
 // PR27948 - Crash when handling a switch partially covered by a macro
 // CHECK: baz
 #define START2 switch (0) default:
-void baz() {
+void baz(void) {
   for (;;)
     START2 return; // CHECK: Expansion,File 0, [[@LINE]]:5 -> [[@LINE]]:11 = #1 (Expanded file = 1)
 }

@@ -79,7 +79,7 @@ void TestBlockDecl(int x) {
 + (int) foo;
 @end
 
-void f() {
+void f(void) {
   __typeof__(B.foo) Test;
 }
 
@@ -1965,7 +1965,7 @@ void f() {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 1296,
+// CHECK-NEXT:   "offset": 1300,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 83,
 // CHECK-NEXT:   "col": 21,
@@ -1973,12 +1973,12 @@ void f() {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 1278,
+// CHECK-NEXT:    "offset": 1282,
 // CHECK-NEXT:    "col": 3,
 // CHECK-NEXT:    "tokLen": 10
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 1296,
+// CHECK-NEXT:    "offset": 1300,
 // CHECK-NEXT:    "col": 21,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   }
