@@ -85,7 +85,7 @@ void CanonicalIncludes::addSystemHeadersMapping(const LangOptions &Language) {
   if (Language.CPlusPlus) {
     static const auto *Symbols = new llvm::StringMap<llvm::StringRef>({
 #define SYMBOL(Name, NameSpace, Header) {#NameSpace #Name, #Header},
-#include "StdSymbolMap.inc"
+#include "clang/Tooling/Inclusions/StdSymbolMap.inc"
         // There are two std::move()s, this is by far the most common.
         SYMBOL(move, std::, <utility>)
         // There are multiple headers for size_t, pick one.
@@ -96,7 +96,7 @@ void CanonicalIncludes::addSystemHeadersMapping(const LangOptions &Language) {
   } else if (Language.C11) {
     static const auto *CSymbols = new llvm::StringMap<llvm::StringRef>({
 #define SYMBOL(Name, NameSpace, Header) {#Name, #Header},
-#include "CSymbolMap.inc"
+#include "clang/Tooling/Inclusions/CSymbolMap.inc"
         // There are multiple headers for size_t, pick one.
         SYMBOL(size_t, None, <stddef.h>)
 #undef SYMBOL
