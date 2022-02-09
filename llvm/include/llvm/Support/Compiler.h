@@ -90,8 +90,10 @@
 #define LLVM_MSC_PREREQ(version) (_MSC_VER >= (version))
 
 // We require at least VS 2019.
+#if !defined(LLVM_FORCE_USE_OLD_TOOLCHAIN)
 #if !LLVM_MSC_PREREQ(1920)
 #error LLVM requires at least VS 2019.
+#endif
 #endif
 
 #else
