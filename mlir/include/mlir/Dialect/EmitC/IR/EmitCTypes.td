@@ -35,12 +35,39 @@ def EmitC_OpaqueType : EmitC_Type<"Opaque", "opaque"> {
 
     ```mlir
     !emitc.opaque<"int">
-    !emitc.opaque<"float *">
+    !emitc.opaque<"mytype">
     !emitc.opaque<"std::vector<std::string>">
     ```
   }];
 
   let parameters = (ins StringRefParameter<"the opaque value">:$value);
+}
+
+def EmitC_PointerType : EmitC_Type<"Pointer", "ptr"> {
+  let summary = "EmitC pointer type";
+
+  let description = [{
+    A pointer data type.
+
+    Example:
+
+    ```mlir
+    // Pointer emitted as `int32_t*`
+    !emitc.ptr<i32>
+    // Pointer emitted as `float*`
+    !emitc.ptr<f32>
+    // Pointer emitted as `int*`
+    !emitc.ptr<!emitc.opaque<"int">>
+    ```
+  }];
+
+  let parameters = (ins "Type":$pointee);
+  let builders = [
+    TypeBuilderWithInferredContext<(ins "Type":$pointee), [{
+      return $_get(pointee.getContext(), pointee);
+    }]>
+  ];
+  let assemblyFormat = "`<` qualified($pointee) `>`";
 }
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITCTYPES

@@ -976,6 +976,12 @@ LogicalResult CppEmitter::emitType(Location loc, Type type) {
     os << oType.getValue();
     return success();
   }
+  if (auto pType = type.dyn_cast<emitc::PointerType>()) {
+    if (failed(emitType(loc, pType.getPointee())))
+      return failure();
+    os << "*";
+    return success();
+  }
   return emitError(loc, "cannot emit type ") << type;
 }
 
