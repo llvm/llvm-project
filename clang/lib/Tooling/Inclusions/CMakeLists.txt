@@ -6,6 +6,7 @@ add_clang_library(clangToolingInclusions
   StandardLibrary.cpp
 
   LINK_LIBS
+  clangAST
   clangBasic
   clangLex
   clangRewrite
