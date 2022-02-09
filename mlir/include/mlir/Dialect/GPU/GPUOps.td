@@ -724,6 +724,11 @@ def GPU_ShuffleOp : GPU_Op<
     in the shuffle. Exactly the first `width` invocations of a subgroup need to
     execute this op in convergence.
   }];
+  let builders = [
+    // Helper function that creates a shuffle with constant offset/width.
+    OpBuilder<(ins "Value":$value, "int32_t":$offset, "int32_t":$width,
+                   "ShuffleMode":$mode)>
+  ];
   let assemblyFormat = "$mode $value `,` $offset `,` $width attr-dict `:` type($value)";
 }
 
