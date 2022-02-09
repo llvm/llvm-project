@@ -324,6 +324,12 @@ public:
   /// \returns false if the visitation was terminated early, true otherwise.
   bool TraverseConceptReference(const ConceptReference &C);
 
+  /// Recursively visit an Objective-C protocol reference with location
+  /// information.
+  ///
+  /// \returns false if the visitation was terminated early, true otherwise.
+  bool TraverseObjCProtocolLoc(ObjCProtocolLoc ProtocolLoc);
+
   // ---- Methods on Attrs ----
 
   // Visit an attribute.
@@ -1340,7 +1346,12 @@ DEF_TRAVERSE_TYPELOC(DependentTemplateSpecializationType, {
 DEF_TRAVERSE_TYPELOC(PackExpansionType,
                      { TRY_TO(TraverseTypeLoc(TL.getPatternLoc())); })
 
-DEF_TRAVERSE_TYPELOC(ObjCTypeParamType, {})
+DEF_TRAVERSE_TYPELOC(ObjCTypeParamType, {
+  for (unsigned I = 0, N = TL.getNumProtocols(); I != N; ++I) {
+    ObjCProtocolLoc ProtocolLoc(TL.getProtocol(I), TL.getProtocolLoc(I));
+    TRY_TO(TraverseObjCProtocolLoc(ProtocolLoc));
+  }
+})
 
 DEF_TRAVERSE_TYPELOC(ObjCInterfaceType, {})
 
@@ -1351,6 +1362,10 @@ DEF_TRAVERSE_TYPELOC(ObjCObjectType, {
     TRY_TO(TraverseTypeLoc(TL.getBaseLoc()));
   for (unsigned i = 0, n = TL.getNumTypeArgs(); i != n; ++i)
     TRY_TO(TraverseTypeLoc(TL.getTypeArgTInfo(i)->getTypeLoc()));
+  for (unsigned I = 0, N = TL.getNumProtocols(); I != N; ++I) {
+    ObjCProtocolLoc ProtocolLoc(TL.getProtocol(I), TL.getProtocolLoc(I));
+    TRY_TO(TraverseObjCProtocolLoc(ProtocolLoc));
+  }
 })
 
 DEF_TRAVERSE_TYPELOC(ObjCObjectPointerType,
@@ -1541,11 +1556,15 @@ DEF_TRAVERSE_DECL(
 DEF_TRAVERSE_DECL(ObjCCompatibleAliasDecl, {// FIXME: implement
                                            })
 
-DEF_TRAVERSE_DECL(ObjCCategoryDecl, {// FIXME: implement
+DEF_TRAVERSE_DECL(ObjCCategoryDecl, {
   if (ObjCTypeParamList *typeParamList = D->getTypeParamList()) {
     for (auto typeParam : *typeParamList) {
       TRY_TO(TraverseObjCTypeParamDecl(typeParam));
     }
+  }
+  for (auto It : llvm::zip(D->protocols(), D->protocol_locs())) {
+    ObjCProtocolLoc ProtocolLoc(std::get<0>(It), std::get<1>(It));
+    TRY_TO(TraverseObjCProtocolLoc(ProtocolLoc));
   }
 })
 
@@ -1555,7 +1574,7 @@ DEF_TRAVERSE_DECL(ObjCCategoryImplDecl, {// FIXME: implement
 DEF_TRAVERSE_DECL(ObjCImplementationDecl, {// FIXME: implement
                                           })
 
-DEF_TRAVERSE_DECL(ObjCInterfaceDecl, {// FIXME: implement
+DEF_TRAVERSE_DECL(ObjCInterfaceDecl, {
   if (ObjCTypeParamList *typeParamList = D->getTypeParamListAsWritten()) {
     for (auto typeParam : *typeParamList) {
       TRY_TO(TraverseObjCTypeParamDecl(typeParam));
@@ -1565,10 +1584,22 @@ DEF_TRAVERSE_DECL(ObjCInterfaceDecl, {// FIXME: implement
   if (TypeSourceInfo *superTInfo = D->getSuperClassTInfo()) {
     TRY_TO(TraverseTypeLoc(superTInfo->getTypeLoc()));
   }
+  if (D->isThisDeclarationADefinition()) {
+    for (auto It : llvm::zip(D->protocols(), D->protocol_locs())) {
+      ObjCProtocolLoc ProtocolLoc(std::get<0>(It), std::get<1>(It));
+      TRY_TO(TraverseObjCProtocolLoc(ProtocolLoc));
+    }
+  }
 })
 
-DEF_TRAVERSE_DECL(ObjCProtocolDecl, {// FIXME: implement
-                                    })
+DEF_TRAVERSE_DECL(ObjCProtocolDecl, {
+  if (D->isThisDeclarationADefinition()) {
+    for (auto It : llvm::zip(D->protocols(), D->protocol_locs())) {
+      ObjCProtocolLoc ProtocolLoc(std::get<0>(It), std::get<1>(It));
+      TRY_TO(TraverseObjCProtocolLoc(ProtocolLoc));
+    }
+  }
+})
 
 DEF_TRAVERSE_DECL(ObjCMethodDecl, {
   if (D->getReturnTypeSourceInfo()) {
@@ -2406,6 +2437,12 @@ bool RecursiveASTVisitor<Derived>::TraverseConceptReference(
     TRY_TO(TraverseTemplateArgumentLocsHelper(
         C.getTemplateArgsAsWritten()->getTemplateArgs(),
         C.getTemplateArgsAsWritten()->NumTemplateArgs));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::TraverseObjCProtocolLoc(
+    ObjCProtocolLoc ProtocolLoc) {
   return true;
 }
 

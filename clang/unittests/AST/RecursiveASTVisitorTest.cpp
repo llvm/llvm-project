@@ -60,6 +60,12 @@ enum class VisitEvent {
   EndTraverseEnum,
   StartTraverseTypedefType,
   EndTraverseTypedefType,
+  StartTraverseObjCInterface,
+  EndTraverseObjCInterface,
+  StartTraverseObjCProtocol,
+  EndTraverseObjCProtocol,
+  StartTraverseObjCProtocolLoc,
+  EndTraverseObjCProtocolLoc,
 };
 
 class CollectInterestingEvents
@@ -97,18 +103,43 @@ public:
     return Ret;
   }
 
+  bool TraverseObjCInterfaceDecl(ObjCInterfaceDecl *ID) {
+    Events.push_back(VisitEvent::StartTraverseObjCInterface);
+    bool Ret = RecursiveASTVisitor::TraverseObjCInterfaceDecl(ID);
+    Events.push_back(VisitEvent::EndTraverseObjCInterface);
+
+    return Ret;
+  }
+
+  bool TraverseObjCProtocolDecl(ObjCProtocolDecl *PD) {
+    Events.push_back(VisitEvent::StartTraverseObjCProtocol);
+    bool Ret = RecursiveASTVisitor::TraverseObjCProtocolDecl(PD);
+    Events.push_back(VisitEvent::EndTraverseObjCProtocol);
+
+    return Ret;
+  }
+
+  bool TraverseObjCProtocolLoc(ObjCProtocolLoc ProtocolLoc) {
+    Events.push_back(VisitEvent::StartTraverseObjCProtocolLoc);
+    bool Ret = RecursiveASTVisitor::TraverseObjCProtocolLoc(ProtocolLoc);
+    Events.push_back(VisitEvent::EndTraverseObjCProtocolLoc);
+
+    return Ret;
+  }
+
   std::vector<VisitEvent> takeEvents() && { return std::move(Events); }
 
 private:
   std::vector<VisitEvent> Events;
 };
 
-std::vector<VisitEvent> collectEvents(llvm::StringRef Code) {
+std::vector<VisitEvent> collectEvents(llvm::StringRef Code,
+                                      const Twine &FileName = "input.cc") {
   CollectInterestingEvents Visitor;
   clang::tooling::runToolOnCode(
       std::make_unique<ProcessASTAction>(
           [&](clang::ASTContext &Ctx) { Visitor.TraverseAST(Ctx); }),
-      Code);
+      Code, FileName);
   return std::move(Visitor).takeEvents();
 }
 } // namespace
@@ -138,4 +169,29 @@ TEST(RecursiveASTVisitorTest, EnumDeclWithBase) {
                           VisitEvent::StartTraverseTypedefType,
                           VisitEvent::EndTraverseTypedefType,
                           VisitEvent::EndTraverseEnum));
+}
+
+TEST(RecursiveASTVisitorTest, InterfaceDeclWithProtocols) {
+  // Check interface and its protocols are visited.
+  llvm::StringRef Code = R"cpp(
+  @protocol Foo
+  @end
+  @protocol Bar
+  @end
+
+  @interface SomeObject <Foo, Bar>
+  @end
+  )cpp";
+
+  EXPECT_THAT(collectEvents(Code, "input.m"),
+              ElementsAre(VisitEvent::StartTraverseObjCProtocol,
+                          VisitEvent::EndTraverseObjCProtocol,
+                          VisitEvent::StartTraverseObjCProtocol,
+                          VisitEvent::EndTraverseObjCProtocol,
+                          VisitEvent::StartTraverseObjCInterface,
+                          VisitEvent::StartTraverseObjCProtocolLoc,
+                          VisitEvent::EndTraverseObjCProtocolLoc,
+                          VisitEvent::StartTraverseObjCProtocolLoc,
+                          VisitEvent::EndTraverseObjCProtocolLoc,
+                          VisitEvent::EndTraverseObjCInterface));
 }
