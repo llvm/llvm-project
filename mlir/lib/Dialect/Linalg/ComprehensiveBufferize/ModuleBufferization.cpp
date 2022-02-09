@@ -239,6 +239,22 @@ static bool isValueWritten(Value value, const BufferizationState &state,
   return isWritten;
 }
 
+static void annotateFuncArgAccess(FuncOp funcOp, BlockArgument bbArg,
+                                  bool isRead, bool isWritten) {
+  OpBuilder b(funcOp.getContext());
+  Attribute accessType;
+  if (isRead && isWritten) {
+    accessType = b.getStringAttr("read-write");
+  } else if (isRead) {
+    accessType = b.getStringAttr("read");
+  } else if (isWritten) {
+    accessType = b.getStringAttr("write");
+  } else {
+    accessType = b.getStringAttr("none");
+  }
+  funcOp.setArgAttr(bbArg.getArgNumber(), "bufferization.access", accessType);
+}
+
 /// Determine which FuncOp bbArgs are read and which are written. If this
 /// PostAnalysisStepFn is run on a function with unknown ops, it will
 /// conservatively assume that such ops bufferize to a read + write.
@@ -263,9 +279,13 @@ funcOpBbArgReadWriteAnalysis(Operation *op, BufferizationState &state,
   for (BlockArgument bbArg : funcOp.getArguments()) {
     if (!bbArg.getType().isa<TensorType>())
       continue;
-    if (state.isValueRead(bbArg))
+    bool isRead = state.isValueRead(bbArg);
+    bool isWritten = isValueWritten(bbArg, state, aliasInfo);
+    if (state.getOptions().testAnalysisOnly)
+      annotateFuncArgAccess(funcOp, bbArg, isRead, isWritten);
+    if (isRead)
       moduleState.readBbArgs.insert(bbArg);
-    if (isValueWritten(bbArg, state, aliasInfo))
+    if (isWritten)
       moduleState.writtenBbArgs.insert(bbArg);
   }
 
