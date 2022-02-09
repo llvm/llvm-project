@@ -13967,9 +13967,8 @@ const SCEVAddRecExpr *PredicatedScalarEvolution::getAsAddRec(Value *V) {
     return nullptr;
 
   for (auto *P : NewPreds)
-    Preds.add(P);
+    addPredicate(*P);
 
-  updateGeneration();
   RewriteMap[SE.getSCEV(V)] = {Generation, New};
   return New;
 }
