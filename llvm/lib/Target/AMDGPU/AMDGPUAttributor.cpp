@@ -397,7 +397,10 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
       }
     }
 
-    NeedsQueuePtr |= checkForQueuePtr(A);
+    if (!NeedsQueuePtr) {
+      NeedsQueuePtr = checkForQueuePtr(A);
+    }
+
     if (NeedsQueuePtr) {
       removeAssumedBits(QUEUE_PTR);
     }
