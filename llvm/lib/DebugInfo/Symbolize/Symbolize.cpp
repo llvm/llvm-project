@@ -463,6 +463,7 @@ bool LLVMSymbolizer::getOrFindDebugBinary(const ArrayRef<uint8_t> BuildID,
     Result = Path.str();
     auto InsertResult = BuildIDPaths.insert({BuildIDStr, Result});
     assert(InsertResult.second);
+    (void)InsertResult;
   };
 
   Optional<std::string> Path;
