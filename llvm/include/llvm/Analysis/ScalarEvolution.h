@@ -1167,6 +1167,8 @@ public:
   }
 
   const SCEVPredicate *getEqualPredicate(const SCEV *LHS, const SCEV *RHS);
+  const SCEVPredicate *getComparePredicate(ICmpInst::Predicate Pred,
+                                           const SCEV *LHS, const SCEV *RHS);
 
   const SCEVPredicate *
   getWrapPredicate(const SCEVAddRecExpr *AR,
