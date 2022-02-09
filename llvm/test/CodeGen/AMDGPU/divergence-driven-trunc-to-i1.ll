@@ -41,17 +41,15 @@ define i1 @divergent_trunc_i16_to_i1(i1 addrspace(1)* %out, i16 %x, i1 %z) {
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 1, [[COPY1]], implicit $exec
   ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 killed [[V_AND_B32_e64_]], 1, implicit $exec
-  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[COPY2]]
-  ; GCN-NEXT:   [[S_SEXT_I32_I16_:%[0-9]+]]:sreg_32 = S_SEXT_I32_I16 [[COPY3]]
+  ; GCN-NEXT:   [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[COPY2]], 0, 16, implicit $exec
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY killed [[S_MOV_B32_]]
-  ; GCN-NEXT:   [[V_CMP_LT_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_LT_I32_e64 killed [[S_SEXT_I32_I16_]], [[COPY4]], implicit $exec
+  ; GCN-NEXT:   [[V_CMP_LT_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_LT_I32_e64 killed [[V_BFE_I32_e64_]], killed [[S_MOV_B32_]], implicit $exec
   ; GCN-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64_xexec = S_OR_B64 killed [[V_CMP_LT_I32_e64_]], killed [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
   ; GCN-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed [[S_OR_B64_]], implicit $exec
-  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
   ; GCN-NEXT:   $vgpr0 = COPY [[V_CNDMASK_B32_e64_]]
-  ; GCN-NEXT:   [[COPY6:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY5]]
-  ; GCN-NEXT:   S_SETPC_B64_return [[COPY6]], implicit $vgpr0
+  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY3]]
+  ; GCN-NEXT:   S_SETPC_B64_return [[COPY4]], implicit $vgpr0
   %setcc = icmp slt i16 %x, 0
   %select = select i1 %setcc, i1 true, i1 %z
   ret i1 %select

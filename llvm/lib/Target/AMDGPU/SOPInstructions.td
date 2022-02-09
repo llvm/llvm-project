@@ -276,10 +276,10 @@ def S_FLBIT_I32 : SOP1_32 <"s_flbit_i32",
 >;
 def S_FLBIT_I32_I64 : SOP1_32_64 <"s_flbit_i32_i64">;
 def S_SEXT_I32_I8 : SOP1_32 <"s_sext_i32_i8",
-  [(set i32:$sdst, (sext_inreg i32:$src0, i8))]
+  [(set i32:$sdst, (UniformSextInreg<i8> i32:$src0))]
 >;
 def S_SEXT_I32_I16 : SOP1_32 <"s_sext_i32_i16",
-  [(set i32:$sdst, (sext_inreg i32:$src0, i16))]
+  [(set i32:$sdst, (UniformSextInreg<i16> i32:$src0))]
 >;
 } // End isReMaterializable = 1
 
@@ -1408,7 +1408,7 @@ def : GCNPat <
 // REG_SEQUENCE patterns don't support instructions with multiple
 // outputs.
 def : GCNPat<
-  (i64 (zext i16:$src)),
+  (i64 (UniformUnaryFrag<zext> i16:$src)),
     (REG_SEQUENCE SReg_64,
       (i32 (COPY_TO_REGCLASS (S_AND_B32 $src, (S_MOV_B32 (i32 0xffff))), SGPR_32)), sub0,
       (S_MOV_B32 (i32 0)), sub1)
@@ -1421,7 +1421,7 @@ def : GCNPat <
 >;
 
 def : GCNPat<
-  (i32 (zext i16:$src)),
+  (i32 (UniformUnaryFrag<zext> i16:$src)),
   (S_AND_B32 (S_MOV_B32 (i32 0xffff)), $src)
 >;
 
