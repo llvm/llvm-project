@@ -942,7 +942,6 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstants) {
 
   // Make sure that SCEV doesn't blow up
   ScalarEvolution SE = buildSE(*F);
-  SCEVUnionPredicate Preds;
   const SCEV *Expr = SE.getSCEV(Phi);
   EXPECT_NE(nullptr, Expr);
   EXPECT_TRUE(isa<SCEVUnknown>(Expr));
@@ -1000,7 +999,6 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstantAccum) {
 
   // Make sure that SCEV doesn't blow up
   ScalarEvolution SE = buildSE(*F);
-  SCEVUnionPredicate Preds;
   const SCEV *Expr = SE.getSCEV(Phi);
   EXPECT_NE(nullptr, Expr);
   EXPECT_TRUE(isa<SCEVUnknown>(Expr));

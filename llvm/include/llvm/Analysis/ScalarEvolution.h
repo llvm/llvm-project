@@ -425,15 +425,15 @@ private:
   /// Maps SCEVs to predicates for quick look-ups.
   PredicateMap SCEVToPreds;
 
+  /// Adds a predicate to this union.
+  void add(const SCEVPredicate *N);
+
 public:
-  SCEVUnionPredicate();
+  SCEVUnionPredicate(ArrayRef<const SCEVPredicate *> Preds);
 
   const SmallVectorImpl<const SCEVPredicate *> &getPredicates() const {
     return Preds;
   }
-
-  /// Adds a predicate to this union.
-  void add(const SCEVPredicate *N);
 
   /// Returns a reference to a vector containing all predicates which apply to
   /// \p Expr.
@@ -2254,7 +2254,7 @@ private:
 
   /// The SCEVPredicate that forms our context. We will rewrite all
   /// expressions assuming that this predicate true.
-  SCEVUnionPredicate Preds;
+  std::unique_ptr<SCEVUnionPredicate> Preds;
 
   /// Marks the version of the SCEV predicate used. When rewriting a SCEV
   /// expression we mark it with the version of the predicate. We use this to
