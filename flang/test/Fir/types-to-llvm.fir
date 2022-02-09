@@ -418,3 +418,11 @@ func private @foo0(%arg0: tuple<i64, !fir.box<i32>>)
 func private @foo1(%arg0: !fir.type<derived8{a:i64,b:!fir.box<i32>}>)
 // CHECK-LABEL: foo1
 // CHECK-SAME: !llvm.struct<"derived8", (i64, struct<(ptr<i32>, i{{.*}})>)>
+
+// -----
+
+// Test fir.box<none> translation.
+// `none` is used for polymorphic type.
+func private @foo0(%arg0: !fir.box<none>)
+// CHECK-LABEL: foo0
+// CHECK-SAME: !llvm.ptr<struct<(ptr<struct<()>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>)
