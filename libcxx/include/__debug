@@ -66,7 +66,7 @@ struct _LIBCPP_TYPE_VIS __c_node
     __c_node& operator=(const __c_node&) = delete;
 
     _LIBCPP_INLINE_VISIBILITY
-    __c_node(void* __c, __c_node* __next)
+    explicit __c_node(void* __c, __c_node* __next)
         : __c_(__c), __next_(__next), beg_(nullptr), end_(nullptr), cap_(nullptr) {}
     virtual ~__c_node();
 
@@ -83,7 +83,7 @@ template <class _Cont>
 struct _C_node
     : public __c_node
 {
-    _C_node(void* __c, __c_node* __n)
+    explicit _C_node(void* __c, __c_node* __n)
         : __c_node(__c, __n) {}
 
     virtual bool __dereferenceable(const void*) const;
@@ -141,7 +141,7 @@ class _LIBCPP_TYPE_VIS __libcpp_db
     __i_node** __iend_;
     size_t   __isz_;
 
-    __libcpp_db();
+    explicit __libcpp_db();
 public:
     __libcpp_db(const __libcpp_db&) = delete;
     __libcpp_db& operator=(const __libcpp_db&) = delete;

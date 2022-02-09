@@ -50,7 +50,8 @@ private:
     {
         char_type __keep_;
         streambuf_type* __sbuf_;
-        _LIBCPP_INLINE_VISIBILITY __proxy(char_type __c, streambuf_type* __s)
+        _LIBCPP_INLINE_VISIBILITY
+        explicit __proxy(char_type __c, streambuf_type* __s)
             : __keep_(__c), __sbuf_(__s) {}
         friend class istreambuf_iterator;
     public:

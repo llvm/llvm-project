@@ -32,17 +32,17 @@ struct __compressed_pair_elem {
   using reference = _Tp&;
   using const_reference = const _Tp&;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __compressed_pair_elem(__default_init_tag) {}
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __compressed_pair_elem(__value_init_tag) : __value_() {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __compressed_pair_elem(__default_init_tag) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __compressed_pair_elem(__value_init_tag) : __value_() {}
 
   template <class _Up, class = __enable_if_t<!is_same<__compressed_pair_elem, typename decay<_Up>::type>::value> >
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit
-  __compressed_pair_elem(_Up&& __u) : __value_(std::forward<_Up>(__u)) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
+  explicit __compressed_pair_elem(_Up&& __u) : __value_(std::forward<_Up>(__u)) {}
 
 #ifndef _LIBCPP_CXX03_LANG
   template <class... _Args, size_t... _Indices>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
-  __compressed_pair_elem(piecewise_construct_t, tuple<_Args...> __args, __tuple_indices<_Indices...>)
+  explicit __compressed_pair_elem(piecewise_construct_t, tuple<_Args...> __args, __tuple_indices<_Indices...>)
       : __value_(std::forward<_Args>(std::get<_Indices>(__args))...) {}
 #endif
 
@@ -60,9 +60,9 @@ struct __compressed_pair_elem<_Tp, _Idx, true> : private _Tp {
   using const_reference = const _Tp&;
   using __value_type = _Tp;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __compressed_pair_elem() = default;
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __compressed_pair_elem(__default_init_tag) {}
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __compressed_pair_elem(__value_init_tag) : __value_type() {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __compressed_pair_elem() = default;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __compressed_pair_elem(__default_init_tag) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __compressed_pair_elem(__value_init_tag) : __value_type() {}
 
   template <class _Up, class = __enable_if_t<!is_same<__compressed_pair_elem, typename decay<_Up>::type>::value> >
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
@@ -101,17 +101,17 @@ public:
     >
   >
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
-  __compressed_pair() : _Base1(__value_init_tag()), _Base2(__value_init_tag()) {}
+  explicit __compressed_pair() : _Base1(__value_init_tag()), _Base2(__value_init_tag()) {}
 
   template <class _U1, class _U2>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
-  __compressed_pair(_U1&& __t1, _U2&& __t2) : _Base1(std::forward<_U1>(__t1)), _Base2(std::forward<_U2>(__t2)) {}
+  explicit __compressed_pair(_U1&& __t1, _U2&& __t2) : _Base1(std::forward<_U1>(__t1)), _Base2(std::forward<_U2>(__t2)) {}
 
 #ifndef _LIBCPP_CXX03_LANG
   template <class... _Args1, class... _Args2>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
-  __compressed_pair(piecewise_construct_t __pc, tuple<_Args1...> __first_args,
-                    tuple<_Args2...> __second_args)
+  explicit __compressed_pair(piecewise_construct_t __pc, tuple<_Args1...> __first_args,
+                             tuple<_Args2...> __second_args)
       : _Base1(__pc, std::move(__first_args), typename __make_tuple_indices<sizeof...(_Args1)>::type()),
         _Base2(__pc, std::move(__second_args), typename __make_tuple_indices<sizeof...(_Args2)>::type()) {}
 #endif

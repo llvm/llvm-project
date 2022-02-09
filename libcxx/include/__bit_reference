@@ -88,7 +88,7 @@ public:
         {return __bit_iterator<_Cp, false>(__seg_, static_cast<unsigned>(__libcpp_ctz(__mask_)));}
 private:
     _LIBCPP_INLINE_VISIBILITY
-    __bit_reference(__storage_pointer __s, __storage_type __m) _NOEXCEPT
+    explicit __bit_reference(__storage_pointer __s, __storage_type __m) _NOEXCEPT
         : __seg_(__s), __mask_(__m) {}
 };
 
@@ -164,7 +164,7 @@ public:
 private:
     _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR
-    __bit_const_reference(__storage_pointer __s, __storage_type __m) _NOEXCEPT
+    explicit __bit_const_reference(__storage_pointer __s, __storage_type __m) _NOEXCEPT
         : __seg_(__s), __mask_(__m) {}
 
     __bit_const_reference& operator=(const __bit_const_reference&) = delete;
@@ -1250,7 +1250,7 @@ public:
 
 private:
     _LIBCPP_INLINE_VISIBILITY
-    __bit_iterator(__storage_pointer __s, unsigned __ctz) _NOEXCEPT
+    explicit __bit_iterator(__storage_pointer __s, unsigned __ctz) _NOEXCEPT
         : __seg_(__s), __ctz_(__ctz) {}
 
     friend typename _Cp::__self;
