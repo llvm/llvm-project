@@ -195,69 +195,70 @@ int Test::runTests(const char *TestFilter) {
   return FailCount > 0 || TestCount == 0 ? 1 : 0;
 }
 
-template bool Test::test<char, 0>(TestCondition Cond, char LHS, char RHS,
-                                  const char *LHSStr, const char *RHSStr,
-                                  const char *File, unsigned long Line);
+namespace internal {
 
-template bool Test::test<short, 0>(TestCondition Cond, short LHS, short RHS,
-                                   const char *LHSStr, const char *RHSStr,
-                                   const char *File, unsigned long Line);
+template bool test<char>(RunContext *Ctx, TestCondition Cond, char LHS,
+                         char RHS, const char *LHSStr, const char *RHSStr,
+                         const char *File, unsigned long Line);
 
-template bool Test::test<int, 0>(TestCondition Cond, int LHS, int RHS,
-                                 const char *LHSStr, const char *RHSStr,
-                                 const char *File, unsigned long Line);
+template bool test<short>(RunContext *Ctx, TestCondition Cond, short LHS,
+                          short RHS, const char *LHSStr, const char *RHSStr,
+                          const char *File, unsigned long Line);
 
-template bool Test::test<long, 0>(TestCondition Cond, long LHS, long RHS,
-                                  const char *LHSStr, const char *RHSStr,
-                                  const char *File, unsigned long Line);
+template bool test<int>(RunContext *Ctx, TestCondition Cond, int LHS, int RHS,
+                        const char *LHSStr, const char *RHSStr,
+                        const char *File, unsigned long Line);
 
-template bool Test::test<long long, 0>(TestCondition Cond, long long LHS,
-                                       long long RHS, const char *LHSStr,
-                                       const char *RHSStr, const char *File,
-                                       unsigned long Line);
+template bool test<long>(RunContext *Ctx, TestCondition Cond, long LHS,
+                         long RHS, const char *LHSStr, const char *RHSStr,
+                         const char *File, unsigned long Line);
 
-template bool Test::test<__int128_t, 0>(TestCondition Cond, __int128_t LHS,
-                                        __int128_t RHS, const char *LHSStr,
-                                        const char *RHSStr, const char *File,
-                                        unsigned long Line);
-
-template bool Test::test<unsigned char, 0>(TestCondition Cond,
-                                           unsigned char LHS, unsigned char RHS,
-                                           const char *LHSStr,
-                                           const char *RHSStr, const char *File,
-                                           unsigned long Line);
-
-template bool
-Test::test<unsigned short, 0>(TestCondition Cond, unsigned short LHS,
-                              unsigned short RHS, const char *LHSStr,
+template bool test<long long>(RunContext *Ctx, TestCondition Cond,
+                              long long LHS, long long RHS, const char *LHSStr,
                               const char *RHSStr, const char *File,
                               unsigned long Line);
 
-template bool Test::test<unsigned int, 0>(TestCondition Cond, unsigned int LHS,
-                                          unsigned int RHS, const char *LHSStr,
-                                          const char *RHSStr, const char *File,
-                                          unsigned long Line);
+template bool test<__int128_t>(RunContext *Ctx, TestCondition Cond,
+                               __int128_t LHS, __int128_t RHS,
+                               const char *LHSStr, const char *RHSStr,
+                               const char *File, unsigned long Line);
 
-template bool Test::test<unsigned long, 0>(TestCondition Cond,
-                                           unsigned long LHS, unsigned long RHS,
-                                           const char *LHSStr,
-                                           const char *RHSStr, const char *File,
-                                           unsigned long Line);
-
-template bool Test::test<bool, 0>(TestCondition Cond, bool LHS, bool RHS,
+template bool test<unsigned char>(RunContext *Ctx, TestCondition Cond,
+                                  unsigned char LHS, unsigned char RHS,
                                   const char *LHSStr, const char *RHSStr,
                                   const char *File, unsigned long Line);
 
-template bool
-Test::test<unsigned long long, 0>(TestCondition Cond, unsigned long long LHS,
-                                  unsigned long long RHS, const char *LHSStr,
-                                  const char *RHSStr, const char *File,
-                                  unsigned long Line);
+template bool test<unsigned short>(RunContext *Ctx, TestCondition Cond,
+                                   unsigned short LHS, unsigned short RHS,
+                                   const char *LHSStr, const char *RHSStr,
+                                   const char *File, unsigned long Line);
 
-template bool Test::test<__uint128_t, 0>(TestCondition Cond, __uint128_t LHS,
-                                         __uint128_t RHS, const char *LHSStr,
-                                         const char *RHSStr, const char *File,
-                                         unsigned long Line);
+template bool test<unsigned int>(RunContext *Ctx, TestCondition Cond,
+                                 unsigned int LHS, unsigned int RHS,
+                                 const char *LHSStr, const char *RHSStr,
+                                 const char *File, unsigned long Line);
+
+template bool test<unsigned long>(RunContext *Ctx, TestCondition Cond,
+                                  unsigned long LHS, unsigned long RHS,
+                                  const char *LHSStr, const char *RHSStr,
+                                  const char *File, unsigned long Line);
+
+template bool test<bool>(RunContext *Ctx, TestCondition Cond, bool LHS,
+                         bool RHS, const char *LHSStr, const char *RHSStr,
+                         const char *File, unsigned long Line);
+
+template bool test<unsigned long long>(RunContext *Ctx, TestCondition Cond,
+                                       unsigned long long LHS,
+                                       unsigned long long RHS,
+                                       const char *LHSStr, const char *RHSStr,
+                                       const char *File, unsigned long Line);
+
+template bool test<__uint128_t>(RunContext *Ctx, TestCondition Cond,
+                                __uint128_t LHS, __uint128_t RHS,
+                                const char *LHSStr, const char *RHSStr,
+                                const char *File, unsigned long Line);
+
+} // namespace internal
 
 bool Test::testStrEq(const char *LHS, const char *RHS, const char *LHSStr,
                      const char *RHSStr, const char *File, unsigned long Line) {
