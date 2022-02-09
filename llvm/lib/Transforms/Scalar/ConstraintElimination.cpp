@@ -303,9 +303,6 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     auto V2I = Value2Index.find(V);
     if (V2I != Value2Index.end())
       return V2I->second;
-    auto NewI = NewIndices.find(V);
-    if (NewI != NewIndices.end())
-      return NewI->second;
     auto Insert =
         NewIndices.insert({V, Value2Index.size() + NewIndices.size() + 1});
     return Insert.first->second;
