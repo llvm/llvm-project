@@ -19,3 +19,4 @@ Modified as follows:
 * Added support for NetBSD, Minix and Haiku.
 * Added raw_os_ostream support to include/gtest/internal/custom/gtest-printers.h.
 * Added StringRef support to include/gtest/internal/custom/gtest-printers.h.
+* Added IWYU pragmas from https://github.com/google/googletest/commit/100f6fbf5f81a82d163c1e29735e8a2936eacd4f
