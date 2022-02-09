@@ -13,6 +13,7 @@
 #include "bolt/Passes/RegAnalysis.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Passes/CallGraphWalker.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 
 #define DEBUG_TYPE "ra"

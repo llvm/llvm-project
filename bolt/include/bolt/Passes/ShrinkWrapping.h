@@ -10,6 +10,7 @@
 #define BOLT_PASSES_SHRINKWRAPPING_H
 
 #include "bolt/Passes/FrameAnalysis.h"
+#include "llvm/MC/MCRegisterInfo.h"
 
 namespace llvm {
 namespace bolt {

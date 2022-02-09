@@ -12,6 +12,7 @@
 #include "bolt/Passes/DataflowAnalysis.h"
 #include "bolt/Passes/RegAnalysis.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Timer.h"
 
