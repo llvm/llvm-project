@@ -31,6 +31,9 @@ enum ActionKind {
   /// -fsyntax-only
   ParseSyntaxOnly,
 
+  /// Emit a .mlir file
+  EmitMLIR,
+
   /// Emit a .o file.
   EmitObj,
 
