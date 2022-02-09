@@ -24,7 +24,7 @@ constexpr bool test() {
   {
     std::ranges::transform_view transformView(MoveOnlyView{buff}, PlusOneMutable{});
     auto iter = transformView.begin();
-    static_assert(!noexcept(std::ranges::iter_move(iter)));
+    ASSERT_NOT_NOEXCEPT(std::ranges::iter_move(iter));
 
     assert(std::ranges::iter_move(iter) == 1);
     assert(std::ranges::iter_move(iter + 2) == 3);
@@ -34,10 +34,10 @@ constexpr bool test() {
   }
 
   {
-    static_assert( noexcept(std::ranges::iter_move(
-      std::declval<std::ranges::iterator_t<std::ranges::transform_view<MoveOnlyView, PlusOneNoexcept>>&>())));
-    static_assert(!noexcept(std::ranges::iter_move(
-      std::declval<std::ranges::iterator_t<std::ranges::transform_view<MoveOnlyView, PlusOneMutable>>&>())));
+    LIBCPP_ASSERT_NOEXCEPT(std::ranges::iter_move(
+      std::declval<std::ranges::iterator_t<std::ranges::transform_view<MoveOnlyView, PlusOneNoexcept>>&>()));
+    ASSERT_NOT_NOEXCEPT(std::ranges::iter_move(
+      std::declval<std::ranges::iterator_t<std::ranges::transform_view<MoveOnlyView, PlusOneMutable>>&>()));
   }
 
   return true;
