@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Coverage
   ProfileData
   Support
+  Object
   )
 
 add_llvm_unittest(ProfileDataTests
