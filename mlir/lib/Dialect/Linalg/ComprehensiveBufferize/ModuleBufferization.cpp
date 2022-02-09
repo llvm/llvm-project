@@ -10,10 +10,10 @@
 // bufferizes function boundaries. It provides `BufferizableOpInterface`
 // implementations for FuncOp, CallOp and ReturnOp.
 //
-// Module Bufferization is run via `runComprehensiveBufferize(ModuleOp, ...)`.
-// This function analyzed the given module and determines the order of
-// analysis and bufferization: Functions that are called are processed before
-// their respective callers.
+// Module Bufferization is run via `runModuleBufferize(ModuleOp, ...)`. This
+// function analyzes the given module and determines the order of analysis and
+// bufferization: Functions that are called are processed before their
+// respective callers.
 //
 // After analyzing a FuncOp, additional information about its bbArgs is
 // gathered through PostAnalysisStepFns and stored in
@@ -971,10 +971,10 @@ annotateOpsWithBufferizationMarkers(FuncOp funcOp,
       setInPlaceFuncArgument(bbArg, bufferizableOp.isWritable(bbArg, state));
 }
 
-LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
-    ModuleOp moduleOp, std::unique_ptr<AnalysisBufferizationOptions> options) {
+LogicalResult mlir::linalg::comprehensive_bufferize::runModuleBufferize(
+    ModuleOp moduleOp, AnalysisBufferizationOptions options) {
   IRRewriter rewriter(moduleOp.getContext());
-  AnalysisBufferizationState state(moduleOp, *options);
+  AnalysisBufferizationState state(moduleOp, options);
   ModuleBufferizationState &moduleState = getModuleBufferizationState(state);
   BufferizationAliasInfo &aliasInfo = state.getAliasInfo();
 
@@ -983,8 +983,8 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     return failure();
 
   // Collect bbArg/return value information after the analysis.
-  options->postAnalysisSteps.push_back(equivalentFuncOpBBArgsAnalysis);
-  options->postAnalysisSteps.push_back(funcOpBbArgReadWriteAnalysis);
+  options.addPostAnalysisStep(equivalentFuncOpBBArgsAnalysis);
+  options.addPostAnalysisStep(funcOpBbArgReadWriteAnalysis);
 
   // Analyze ops.
   for (FuncOp funcOp : moduleState.orderedFuncOps) {
@@ -1007,11 +1007,11 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     moduleState.analyzedFuncOps[funcOp] = FuncOpAnalysisState::Analyzed;
 
     // Add annotations to function arguments.
-    if (options->testAnalysisOnly)
+    if (options.testAnalysisOnly)
       annotateOpsWithBufferizationMarkers(funcOp, state);
   }
 
-  if (options->testAnalysisOnly)
+  if (options.testAnalysisOnly)
     return success();
 
   // Bufferize function bodies.
@@ -1031,7 +1031,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     if (failed(bufferizeFuncOpBoundary(funcOp, rewriter, state)))
       return failure();
 
-    if (!options->allowReturnMemref &&
+    if (!options.allowReturnMemref &&
         llvm::any_of(funcOp.getType().getResults(), [](Type t) {
           return t.isa<MemRefType, UnrankedMemRefType>();
         })) {

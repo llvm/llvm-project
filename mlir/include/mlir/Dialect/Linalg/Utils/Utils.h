@@ -135,6 +135,11 @@ GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,
                           Value outputTensor,
                           ArrayRef<int64_t> transposeVector);
 
+/// Returns GenericOp that copies an n-D memref. Unlike the current
+/// implementation of memref::CopyOp, this op can further tile, lower to loops
+/// or vectorize.
+GenericOp makeMemRefCopyOp(OpBuilder &b, Location loc, Value from, Value to);
+
 //===----------------------------------------------------------------------===//
 // Fusion / Tiling utilities
 //===----------------------------------------------------------------------===//
