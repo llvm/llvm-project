@@ -4618,10 +4618,6 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
   EVT MemVT = MGT->getMemoryVT();
   SDValue InputVT = DAG.getValueType(MemVT);
 
-  if (VT.getVectorElementType() == MVT::bf16 &&
-      !static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasBF16())
-    return SDValue();
-
   if (IsFixedLength) {
     assert(Subtarget->useSVEForFixedLengthVectors() &&
            "Cannot lower when not using SVE for fixed vectors");
@@ -4722,10 +4718,6 @@ SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,
   SDVTList VTs = DAG.getVTList(MVT::Other);
   EVT MemVT = MSC->getMemoryVT();
   SDValue InputVT = DAG.getValueType(MemVT);
-
-  if (VT.getVectorElementType() == MVT::bf16 &&
-      !static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasBF16())
-    return SDValue();
 
   if (IsFixedLength) {
     assert(Subtarget->useSVEForFixedLengthVectors() &&
@@ -15999,10 +15991,6 @@ static SDValue performLDNT1Combine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   EVT PtrTy = N->getOperand(3).getValueType();
 
-  if (VT == MVT::nxv8bf16 &&
-      !static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasBF16())
-    return SDValue();
-
   EVT LoadVT = VT;
   if (VT.isFloatingPoint())
     LoadVT = VT.changeTypeToInteger();
@@ -16030,9 +16018,6 @@ static SDValue performLD1ReplicateCombine(SDNode *N, SelectionDAG &DAG) {
                 "Unsupported opcode.");
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
-  if (VT == MVT::nxv8bf16 &&
-      !static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasBF16())
-    return SDValue();
 
   EVT LoadVT = VT;
   if (VT.isFloatingPoint())
@@ -16054,10 +16039,6 @@ static SDValue performST1Combine(SDNode *N, SelectionDAG &DAG) {
   EVT DataVT = Data.getValueType();
   EVT HwSrcVt = getSVEContainerType(DataVT);
   SDValue InputVT = DAG.getValueType(DataVT);
-
-  if (DataVT == MVT::nxv8bf16 &&
-      !static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasBF16())
-    return SDValue();
 
   if (DataVT.isFloatingPoint())
     InputVT = DAG.getValueType(HwSrcVt);
@@ -16084,10 +16065,6 @@ static SDValue performSTNT1Combine(SDNode *N, SelectionDAG &DAG) {
   SDValue Data = N->getOperand(2);
   EVT DataVT = Data.getValueType();
   EVT PtrTy = N->getOperand(4).getValueType();
-
-  if (DataVT == MVT::nxv8bf16 &&
-      !static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasBF16())
-    return SDValue();
 
   if (DataVT.isFloatingPoint())
     Data = DAG.getNode(ISD::BITCAST, DL, DataVT.changeTypeToInteger(), Data);
