@@ -158,7 +158,7 @@ define i1 @select_false_or_x(i1 %c, i1 %x) {
 ; CHECK-LABEL: 'select_false_or_x'
 ; CHECK-NEXT:  Classifying expressions for: @select_false_or_x
 ; CHECK-NEXT:    %r = select i1 %c, i1 false, i1 %x
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> ((true + %c) umin_seq %x) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @select_false_or_x
 ;
   %r = select i1 %c, i1 false, i1 %x
