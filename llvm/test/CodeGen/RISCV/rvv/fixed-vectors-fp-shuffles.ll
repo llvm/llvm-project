@@ -255,3 +255,54 @@ define <8 x float> @slidedown_v8f32(<8 x float> %x) {
   %s = shufflevector <8 x float> %x, <8 x float> poison, <8 x i32> <i32 3, i32 undef, i32 5, i32 6, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x float> %s
 }
+
+define <8 x float> @splice_unary(<8 x float> %x) {
+; CHECK-LABEL: splice_unary:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 7, e32, m2, ta, mu
+; CHECK-NEXT:    vslidedown.vi v10, v8, 1
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, tu, mu
+; CHECK-NEXT:    vslideup.vi v10, v8, 7
+; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    ret
+  %s = shufflevector <8 x float> %x, <8 x float> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0>
+  ret <8 x float> %s
+}
+
+define <8 x double> @splice_unary2(<8 x double> %x) {
+; CHECK-LABEL: splice_unary2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m4, ta, mu
+; CHECK-NEXT:    vslidedown.vi v12, v8, 6
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, tu, mu
+; CHECK-NEXT:    vslideup.vi v12, v8, 2
+; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    ret
+  %s = shufflevector <8 x double> %x, <8 x double> poison, <8 x i32> <i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+  ret <8 x double> %s
+}
+
+define <8 x float> @splice_binary(<8 x float> %x, <8 x float> %y) {
+; CHECK-LABEL: splice_binary:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, mu
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, tu, mu
+; CHECK-NEXT:    vslideup.vi v8, v10, 6
+; CHECK-NEXT:    ret
+  %s = shufflevector <8 x float> %x, <8 x float> %y, <8 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 9>
+  ret <8 x float> %s
+}
+
+define <8 x double> @splice_binary2(<8 x double> %x, <8 x double> %y) {
+; CHECK-LABEL: splice_binary2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 3, e64, m4, ta, mu
+; CHECK-NEXT:    vslidedown.vi v12, v12, 5
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, tu, mu
+; CHECK-NEXT:    vslideup.vi v12, v8, 3
+; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    ret
+  %s = shufflevector <8 x double> %x, <8 x double> %y, <8 x i32> <i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4>
+  ret <8 x double> %s
+}

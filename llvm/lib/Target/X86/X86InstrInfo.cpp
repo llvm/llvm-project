@@ -1957,14 +1957,13 @@ unsigned X86InstrInfo::getFMA3OpcodeToCommuteOperands(
   FMAForms[0] = FMA3Group.get132Opcode();
   FMAForms[1] = FMA3Group.get213Opcode();
   FMAForms[2] = FMA3Group.get231Opcode();
-  unsigned FormIndex;
-  for (FormIndex = 0; FormIndex < 3; FormIndex++)
-    if (Opc == FMAForms[FormIndex])
-      break;
 
   // Everything is ready, just adjust the FMA opcode and return it.
-  FormIndex = FormMapping[Case][FormIndex];
-  return FMAForms[FormIndex];
+  for (unsigned FormIndex = 0; FormIndex < 3; FormIndex++)
+    if (Opc == FMAForms[FormIndex])
+      return FMAForms[FormMapping[Case][FormIndex]];
+
+  llvm_unreachable("Illegal FMA3 format");
 }
 
 static void commuteVPTERNLOG(MachineInstr &MI, unsigned SrcOpIdx1,

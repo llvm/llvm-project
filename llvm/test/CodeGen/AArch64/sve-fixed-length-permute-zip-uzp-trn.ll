@@ -42,9 +42,8 @@ define void @zip_v32i16(<32 x i16>* %a, <32 x i16>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    zip1 z1.h, z1.h, z3.h
 ; VBITS_EQ_256-NEXT:    zip2 z3.h, z0.h, z2.h
 ; VBITS_EQ_256-NEXT:    zip1 z0.h, z0.h, z2.h
-; VBITS_EQ_256-NEXT:    add z0.h, p0/m, z0.h, z1.h
-; VBITS_EQ_256-NEXT:    movprfx z1, z4
-; VBITS_EQ_256-NEXT:    add z1.h, p0/m, z1.h, z3.h
+; VBITS_EQ_256-NEXT:    add z0.h, z1.h, z0.h
+; VBITS_EQ_256-NEXT:    add z1.h, z4.h, z3.h
 ; VBITS_EQ_256-NEXT:    st1h { z1.h }, p0, [x0, x8, lsl #1]
 ; VBITS_EQ_256-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_EQ_256-NEXT:    ret
@@ -56,7 +55,7 @@ define void @zip_v32i16(<32 x i16>* %a, <32 x i16>* %b) #0 {
 ; VBITS_EQ_512-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; VBITS_EQ_512-NEXT:    zip1 z2.h, z0.h, z1.h
 ; VBITS_EQ_512-NEXT:    zip2 z0.h, z0.h, z1.h
-; VBITS_EQ_512-NEXT:    add z0.h, p0/m, z0.h, z2.h
+; VBITS_EQ_512-NEXT:    add z0.h, z2.h, z0.h
 ; VBITS_EQ_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_EQ_512-NEXT:    ret
   %tmp1 = load <32 x i16>, <32 x i16>* %a
@@ -214,7 +213,7 @@ define void @trn_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1b { z1.b }, p0/z, [x1]
 ; VBITS_EQ_256-NEXT:    trn1 z2.b, z0.b, z1.b
 ; VBITS_EQ_256-NEXT:    trn2 z0.b, z0.b, z1.b
-; VBITS_EQ_256-NEXT:    add z0.b, p0/m, z0.b, z2.b
+; VBITS_EQ_256-NEXT:    add z0.b, z2.b, z0.b
 ; VBITS_EQ_256-NEXT:    st1b { z0.b }, p0, [x0]
 ; VBITS_EQ_256-NEXT:    ret
 ;
@@ -225,7 +224,7 @@ define void @trn_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; VBITS_EQ_512-NEXT:    ld1b { z1.b }, p0/z, [x1]
 ; VBITS_EQ_512-NEXT:    trn1 z2.b, z0.b, z1.b
 ; VBITS_EQ_512-NEXT:    trn2 z0.b, z0.b, z1.b
-; VBITS_EQ_512-NEXT:    add z0.b, p0/m, z0.b, z2.b
+; VBITS_EQ_512-NEXT:    add z0.b, z2.b, z0.b
 ; VBITS_EQ_512-NEXT:    st1b { z0.b }, p0, [x0]
 ; VBITS_EQ_512-NEXT:    ret
   %tmp1 = load <32 x i8>, <32 x i8>* %a
@@ -250,8 +249,8 @@ define void @trn_v32i16(<32 x i16>* %a, <32 x i16>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    trn1 z5.h, z1.h, z3.h
 ; VBITS_EQ_256-NEXT:    trn2 z0.h, z0.h, z2.h
 ; VBITS_EQ_256-NEXT:    trn2 z1.h, z1.h, z3.h
-; VBITS_EQ_256-NEXT:    add z0.h, p0/m, z0.h, z4.h
-; VBITS_EQ_256-NEXT:    add z1.h, p0/m, z1.h, z5.h
+; VBITS_EQ_256-NEXT:    add z0.h, z4.h, z0.h
+; VBITS_EQ_256-NEXT:    add z1.h, z5.h, z1.h
 ; VBITS_EQ_256-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
 ; VBITS_EQ_256-NEXT:    st1h { z1.h }, p0, [x0]
 ; VBITS_EQ_256-NEXT:    ret
@@ -263,7 +262,7 @@ define void @trn_v32i16(<32 x i16>* %a, <32 x i16>* %b) #0 {
 ; VBITS_EQ_512-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; VBITS_EQ_512-NEXT:    trn1 z2.h, z0.h, z1.h
 ; VBITS_EQ_512-NEXT:    trn2 z0.h, z0.h, z1.h
-; VBITS_EQ_512-NEXT:    add z0.h, p0/m, z0.h, z2.h
+; VBITS_EQ_512-NEXT:    add z0.h, z2.h, z0.h
 ; VBITS_EQ_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_EQ_512-NEXT:    ret
   %tmp1 = load <32 x i16>, <32 x i16>* %a
@@ -283,7 +282,7 @@ define void @trn_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; VBITS_EQ_256-NEXT:    trn1 z2.h, z0.h, z1.h
 ; VBITS_EQ_256-NEXT:    trn2 z0.h, z0.h, z1.h
-; VBITS_EQ_256-NEXT:    add z0.h, p0/m, z0.h, z2.h
+; VBITS_EQ_256-NEXT:    add z0.h, z2.h, z0.h
 ; VBITS_EQ_256-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_EQ_256-NEXT:    ret
 ;
@@ -294,7 +293,7 @@ define void @trn_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; VBITS_EQ_512-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; VBITS_EQ_512-NEXT:    trn1 z2.h, z0.h, z1.h
 ; VBITS_EQ_512-NEXT:    trn2 z0.h, z0.h, z1.h
-; VBITS_EQ_512-NEXT:    add z0.h, p0/m, z0.h, z2.h
+; VBITS_EQ_512-NEXT:    add z0.h, z2.h, z0.h
 ; VBITS_EQ_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_EQ_512-NEXT:    ret
   %tmp1 = load <16 x i16>, <16 x i16>* %a
@@ -314,7 +313,7 @@ define void @trn_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1w { z1.s }, p0/z, [x1]
 ; VBITS_EQ_256-NEXT:    trn1 z2.s, z0.s, z1.s
 ; VBITS_EQ_256-NEXT:    trn2 z0.s, z0.s, z1.s
-; VBITS_EQ_256-NEXT:    add z0.s, p0/m, z0.s, z2.s
+; VBITS_EQ_256-NEXT:    add z0.s, z2.s, z0.s
 ; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_EQ_256-NEXT:    ret
 ;
@@ -325,7 +324,7 @@ define void @trn_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 ; VBITS_EQ_512-NEXT:    ld1w { z1.s }, p0/z, [x1]
 ; VBITS_EQ_512-NEXT:    trn1 z2.s, z0.s, z1.s
 ; VBITS_EQ_512-NEXT:    trn2 z0.s, z0.s, z1.s
-; VBITS_EQ_512-NEXT:    add z0.s, p0/m, z0.s, z2.s
+; VBITS_EQ_512-NEXT:    add z0.s, z2.s, z0.s
 ; VBITS_EQ_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_EQ_512-NEXT:    ret
   %tmp1 = load <8 x i32>, <8 x i32>* %a
@@ -395,7 +394,7 @@ define void @trn_v8i32_undef(<8 x i32>* %a) #0 {
 ; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    trn1 z1.s, z0.s, z0.s
 ; VBITS_EQ_256-NEXT:    trn2 z0.s, z0.s, z0.s
-; VBITS_EQ_256-NEXT:    add z0.s, p0/m, z0.s, z1.s
+; VBITS_EQ_256-NEXT:    add z0.s, z1.s, z0.s
 ; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_EQ_256-NEXT:    ret
 ;
@@ -405,7 +404,7 @@ define void @trn_v8i32_undef(<8 x i32>* %a) #0 {
 ; VBITS_EQ_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_EQ_512-NEXT:    trn1 z1.s, z0.s, z0.s
 ; VBITS_EQ_512-NEXT:    trn2 z0.s, z0.s, z0.s
-; VBITS_EQ_512-NEXT:    add z0.s, p0/m, z0.s, z1.s
+; VBITS_EQ_512-NEXT:    add z0.s, z1.s, z0.s
 ; VBITS_EQ_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_EQ_512-NEXT:    ret
   %tmp1 = load <8 x i32>, <8 x i32>* %a
@@ -495,7 +494,7 @@ define void @uzp_v32i8(<32 x i8>* %a, <32 x i8>* %b) #1 {
 ; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x1]
 ; CHECK-NEXT:    uzp1 z2.b, z0.b, z1.b
 ; CHECK-NEXT:    uzp2 z0.b, z0.b, z1.b
-; CHECK-NEXT:    add z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    add z0.b, z2.b, z0.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <32 x i8>, <32 x i8>* %a
@@ -521,11 +520,10 @@ define void @uzp_v32i16(<32 x i16>* %a, <32 x i16>* %b) #1 {
 ; CHECK-NEXT:    ld1h { z3.h }, p0/z, [x1]
 ; CHECK-NEXT:    uzp1 z5.h, z1.h, z0.h
 ; CHECK-NEXT:    uzp2 z0.h, z1.h, z0.h
-; CHECK-NEXT:    add z0.h, p0/m, z0.h, z5.h
 ; CHECK-NEXT:    uzp1 z4.h, z3.h, z2.h
 ; CHECK-NEXT:    uzp2 z2.h, z3.h, z2.h
-; CHECK-NEXT:    movprfx z1, z4
-; CHECK-NEXT:    add z1.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    add z0.h, z5.h, z0.h
+; CHECK-NEXT:    add z1.h, z4.h, z2.h
 ; CHECK-NEXT:    st1h { z1.h }, p0, [x0, x8, lsl #1]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -548,7 +546,7 @@ define void @uzp_v16i16(<16 x i16>* %a, <16 x i16>* %b) #1 {
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; CHECK-NEXT:    uzp1 z2.h, z0.h, z1.h
 ; CHECK-NEXT:    uzp2 z0.h, z0.h, z1.h
-; CHECK-NEXT:    add z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    add z0.h, z2.h, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <16 x i16>, <16 x i16>* %a
@@ -592,7 +590,7 @@ define void @uzp_v4i64(<4 x i64>* %a, <4 x i64>* %b) #1 {
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; CHECK-NEXT:    uzp1 z2.d, z0.d, z1.d
 ; CHECK-NEXT:    uzp2 z0.d, z0.d, z1.d
-; CHECK-NEXT:    add z0.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    add z0.d, z2.d, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i64>, <4 x i64>* %a
@@ -632,7 +630,7 @@ define void @uzp_v8i32_undef(<8 x i32>* %a) #1 {
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    uzp1 z1.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp2 z0.s, z0.s, z0.s
-; CHECK-NEXT:    add z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    add z0.s, z1.s, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x i32>, <8 x i32>* %a

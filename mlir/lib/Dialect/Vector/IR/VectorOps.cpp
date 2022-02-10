@@ -502,13 +502,20 @@ void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
                                   Value lhs, Value rhs, Value acc,
                                   ArrayAttr indexingMaps,
                                   ArrayAttr iteratorTypes) {
+  build(builder, result, lhs, rhs, acc, indexingMaps, iteratorTypes,
+        ContractionOp::getDefaultKind());
+}
+
+void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
+                                  Value lhs, Value rhs, Value acc,
+                                  ArrayAttr indexingMaps,
+                                  ArrayAttr iteratorTypes, CombiningKind kind) {
   result.addOperands({lhs, rhs, acc});
   result.addTypes(acc.getType());
   result.addAttribute(getIndexingMapsAttrName(), indexingMaps);
   result.addAttribute(getIteratorTypesAttrName(), iteratorTypes);
   result.addAttribute(ContractionOp::getKindAttrName(),
-                      CombiningKindAttr::get(ContractionOp::getDefaultKind(),
-                                             builder.getContext()));
+                      CombiningKindAttr::get(kind, builder.getContext()));
 }
 
 ParseResult ContractionOp::parse(OpAsmParser &parser, OperationState &result) {
