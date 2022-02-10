@@ -1,4 +1,4 @@
-; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=z13 | FileCheck %s
+; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 | FileCheck %s
 
 define void @and() {
   %res0 = and i8 undef, undef
