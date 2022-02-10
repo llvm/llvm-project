@@ -5887,19 +5887,10 @@ const SCEV *ScalarEvolution::createNodeForPHI(PHINode *PN) {
   return getUnknown(PN);
 }
 
-const SCEV *ScalarEvolution::createNodeForSelectOrPHI(Instruction *I,
-                                                      Value *Cond,
-                                                      Value *TrueVal,
-                                                      Value *FalseVal) {
-  // Handle "constant" branch or select. This can occur for instance when a
-  // loop pass transforms an inner loop and moves on to process the outer loop.
-  if (auto *CI = dyn_cast<ConstantInt>(Cond))
-    return getSCEV(CI->isOne() ? TrueVal : FalseVal);
-
+const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
+    Instruction *I, ICmpInst *Cond, Value *TrueVal, Value *FalseVal) {
   // Try to match some simple smax or umax patterns.
-  auto *ICI = dyn_cast<ICmpInst>(Cond);
-  if (!ICI)
-    return getUnknown(I);
+  auto *ICI = Cond;
 
   Value *LHS = ICI->getOperand(0);
   Value *RHS = ICI->getOperand(1);
@@ -5993,6 +5984,26 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHI(Instruction *I,
   }
 
   return getUnknown(I);
+}
+
+const SCEV *ScalarEvolution::createNodeForSelectOrPHI(Value *V, Value *Cond,
+                                                      Value *TrueVal,
+                                                      Value *FalseVal) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return getUnknown(V);
+
+  // Handle "constant" branch or select. This can occur for instance when a
+  // loop pass transforms an inner loop and moves on to process the outer loop.
+  if (auto *CI = dyn_cast<ConstantInt>(Cond))
+    return getSCEV(CI->isOne() ? TrueVal : FalseVal);
+
+  // Try to match some simple smax or umax patterns.
+  if (auto *ICI = dyn_cast<ICmpInst>(Cond))
+    return createNodeForSelectOrPHIInstWithICmpInstCond(I, ICI, TrueVal,
+                                                        FalseVal);
+
+  return getUnknown(V);
 }
 
 /// Expand GEP instructions into add and multiply operations. This allows them
@@ -7403,14 +7414,8 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
     return createNodeForPHI(cast<PHINode>(U));
 
   case Instruction::Select:
-    // U can also be a select constant expr, which let fall through.  Since
-    // createNodeForSelect only works for a condition that is an `ICmpInst`, and
-    // constant expressions cannot have instructions as operands, we'd have
-    // returned getUnknown for a select constant expressions anyway.
-    if (isa<Instruction>(U))
-      return createNodeForSelectOrPHI(cast<Instruction>(U), U->getOperand(0),
-                                      U->getOperand(1), U->getOperand(2));
-    break;
+    return createNodeForSelectOrPHI(U, U->getOperand(0), U->getOperand(1),
+                                    U->getOperand(2));
 
   case Instruction::Call:
   case Instruction::Invoke:
