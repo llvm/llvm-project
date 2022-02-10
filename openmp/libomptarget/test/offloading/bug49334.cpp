@@ -5,7 +5,9 @@
 // UNSUPPORTED: x86_64-pc-linux-gnu
 
 #include <cassert>
+#include <cmath>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <vector>
 
@@ -57,7 +59,8 @@ public:
             int currj = j * rowsPerBlock + jj;
             float m_value = matrix[curri + currj * nCols];
             float bm_value = CurrBlock[ii + jj * colsPerBlock];
-            if (bm_value != m_value) {
+            if (std::fabs(bm_value - m_value) >
+                std::numeric_limits<float>::epsilon()) {
               fail++;
             }
           }
