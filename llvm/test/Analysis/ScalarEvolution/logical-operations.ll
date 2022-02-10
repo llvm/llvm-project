@@ -169,7 +169,7 @@ define i1 @select_x_or_true(i1 %c, i1 %x) {
 ; CHECK-LABEL: 'select_x_or_true'
 ; CHECK-NEXT:  Classifying expressions for: @select_x_or_true
 ; CHECK-NEXT:    %r = select i1 %c, i1 %x, i1 true
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> (true + (%c umin_seq (true + %x))) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @select_x_or_true
 ;
   %r = select i1 %c, i1 %x, i1 true
