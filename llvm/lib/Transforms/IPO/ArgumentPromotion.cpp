@@ -454,7 +454,7 @@ static bool allCallersPassValidPointerForArgument(Argument *Arg,
 /// Determine that this argument is safe to promote, and find the argument
 /// parts it can be promoted into.
 static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
-                         unsigned MaxElements, bool IsSelfRecursive,
+                         unsigned MaxElements, bool IsRecursive,
                          SmallVectorImpl<OffsetAndArgPart> &ArgPartsVec) {
   // Quick exit for unused arguments
   if (Arg->use_empty())
@@ -501,9 +501,9 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
     if (Size.isScalable())
       return false;
 
-    // If this is a self-recursive function and one of the types is a pointer,
+    // If this is a recursive function and one of the types is a pointer,
     // then promoting it might lead to recursive promotion.
-    if (IsSelfRecursive && Ty->isPointerTy())
+    if (IsRecursive && Ty->isPointerTy())
       return false;
 
     int64_t Off = Offset.getSExtValue();
@@ -760,7 +760,7 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
                  unsigned MaxElements,
                  Optional<function_ref<void(CallBase &OldCS, CallBase &NewCS)>>
                      ReplaceCallSite,
-                 const TargetTransformInfo &TTI) {
+                 const TargetTransformInfo &TTI, bool IsRecursive) {
   // Don't perform argument promotion for naked functions; otherwise we can end
   // up removing parameters that are seemingly 'not used' as they are referred
   // to in the assembly.
@@ -794,8 +794,7 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
 
   // Second check: make sure that all callers are direct callers.  We can't
   // transform functions that have indirect callers.  Also see if the function
-  // is self-recursive and check that target features are compatible.
-  bool isSelfRecursive = false;
+  // is self-recursive.
   for (Use &U : F->uses()) {
     CallBase *CB = dyn_cast<CallBase>(U.getUser());
     // Must be a direct call.
@@ -807,7 +806,7 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
       return nullptr;
 
     if (CB->getParent()->getParent() == F)
-      isSelfRecursive = true;
+      IsRecursive = true;
   }
 
   // Can't change signature of musttail caller
@@ -879,7 +878,7 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
 
     // Otherwise, see if we can promote the pointer to its value.
     SmallVector<OffsetAndArgPart, 4> ArgParts;
-    if (findArgParts(PtrArg, DL, AAR, MaxElements, isSelfRecursive, ArgParts)) {
+    if (findArgParts(PtrArg, DL, AAR, MaxElements, IsRecursive, ArgParts)) {
       SmallVector<Type *, 4> Types;
       for (const auto &Pair : ArgParts)
         Types.push_back(Pair.second.Ty);
@@ -909,6 +908,7 @@ PreservedAnalyses ArgumentPromotionPass::run(LazyCallGraph::SCC &C,
     FunctionAnalysisManager &FAM =
         AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
 
+    bool IsRecursive = C.size() > 1;
     for (LazyCallGraph::Node &N : C) {
       Function &OldF = N.getFunction();
 
@@ -920,8 +920,8 @@ PreservedAnalyses ArgumentPromotionPass::run(LazyCallGraph::SCC &C,
       };
 
       const TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(OldF);
-      Function *NewF =
-          promoteArguments(&OldF, AARGetter, MaxElements, None, TTI);
+      Function *NewF = promoteArguments(&OldF, AARGetter, MaxElements, None,
+                                        TTI, IsRecursive);
       if (!NewF)
         continue;
       LocalChange = true;
@@ -1022,6 +1022,7 @@ bool ArgPromotion::runOnSCC(CallGraphSCC &SCC) {
   do {
     LocalChange = false;
     // Attempt to promote arguments from all functions in this SCC.
+    bool IsRecursive = SCC.size() > 1;
     for (CallGraphNode *OldNode : SCC) {
       Function *OldF = OldNode->getFunction();
       if (!OldF)
@@ -1038,8 +1039,9 @@ bool ArgPromotion::runOnSCC(CallGraphSCC &SCC) {
 
       const TargetTransformInfo &TTI =
           getAnalysis<TargetTransformInfoWrapperPass>().getTTI(*OldF);
-      if (Function *NewF = promoteArguments(OldF, AARGetter, MaxElements,
-                                            {ReplaceCallSite}, TTI)) {
+      if (Function *NewF =
+              promoteArguments(OldF, AARGetter, MaxElements, {ReplaceCallSite},
+                               TTI, IsRecursive)) {
         LocalChange = true;
 
         // Update the call graph for the newly promoted function.
