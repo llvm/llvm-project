@@ -1,6 +1,6 @@
-# RUN: llc -run-pass x86-fixup-LEAs -mtriple=x86_64-gnu-unknown -verify-machineinstrs -mcpu=corei7-avx -o - %s | FileCheck %s --check-prefix=COREI7
-# RUN: llc -run-pass x86-fixup-LEAs -mtriple=x86_64-gnu-unknown -verify-machineinstrs -mcpu=haswell -o - %s | FileCheck %s --check-prefix=HASWELL
-# RUN: llc -run-pass x86-fixup-LEAs -mtriple=x86_64-unknown-unknown -verify-machineinstrs -mcpu=atom -o - %s | FileCheck %s --check-prefix=ATOM
+# RUN: llc -run-pass x86-fixup-LEAs -mtriple=x86_64-gnu-unknown -verify-machineinstrs -mcpu=corei7-avx -o - %s | FileCheck %s --check-prefixes=COREI7,CHECK
+# RUN: llc -run-pass x86-fixup-LEAs -mtriple=x86_64-gnu-unknown -verify-machineinstrs -mcpu=haswell -o - %s | FileCheck %s --check-prefixes=HASWELL,CHECK
+# RUN: llc -run-pass x86-fixup-LEAs -mtriple=x86_64-unknown-unknown -verify-machineinstrs -mcpu=atom -o - %s | FileCheck %s --check-prefixes=ATOM,CHECK
 #
 # Test several LEA <=> ADD transformations that the fixup-leas pass performs,
 # and check that any debug-instr-number attached to the original instruction
@@ -9,7 +9,7 @@
 # in this file is only tested by one prefix / CPU mode. Some i386 specific
 # behaviours are in the -2 flavour of this file.
 ---
-# COREI7-LABE: name: pr43758
+# COREI7-LABEL: name: pr43758
 name:            pr43758
 alignment:       16
 tracksRegLiveness: true
@@ -72,6 +72,46 @@ body:             |
     renamable $ecx = nsw ADD32rr renamable $ecx, renamable $eax, implicit-def dead $eflags, implicit killed $rax, implicit killed $rcx, implicit-def $rcx, debug-instr-number 1
     ; ATOM: LEA64_32r {{.*}} debug-instr-number 2
     renamable $eax = MOV32rm killed renamable $rcx, 1, $noreg, 0, $noreg :: (load (s32) from `i32 *undef`)
+    RET64 $eax
+
+...
+---
+# CHECK-LABEL: testfour
+# In this code sequence, an LEA is converted into a subtract that's combined
+# with another subtract. The instruction number on the computed value should
+# only be attached to the last subtract.
+name:            testfour
+alignment:       16
+tracksRegLiveness: true
+tracksDebugUserValues: true
+liveins:
+  - { reg: '$esi' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+# CHECK:      debugValueSubstitutions:
+# CHECK-NEXT:  - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: 0 }
+# CHECK-NEXT: constants:
+body:             |
+  bb.0.entry:
+    liveins: $esi
+
+    $eax = MOV32rr $esi, implicit-def $rax
+
+    renamable $ecx = LEA64_32r renamable $rax, 1, renamable $rax, 0, $noreg
+    renamable $edx = MOV32ri 1
+    renamable $edx = SUB32rr killed renamable $edx, killed renamable $ecx, implicit-def dead $eflags, debug-instr-number 1
+
+    ; CHECK:      MOV32ri 1
+    ; CHECK-NOT:  debug-instr-number
+    ; CHECK-NEXT: SUB32rr
+    ; CHECK-NOT:  debug-instr-number
+    ; CHECK-NEXT: SUB32rr
+    ; CHECK-SAME: debug-instr-number 2
+
+    MOV32mr $noreg, 1, $noreg, 0, $noreg, killed renamable $edx
+    $eax = KILL renamable $eax, implicit killed $rax
     RET64 $eax
 
 ...
