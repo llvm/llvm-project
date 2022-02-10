@@ -67,7 +67,9 @@ public:
 
   unsigned getNumInputs() const { return getNumDimAndSymbolIds(); }
   unsigned getNumOutputs() const { return output.getNumRows(); }
-  bool isConsistent() const { return output.getNumColumns() == numIds + 1; }
+  bool isConsistent() const {
+    return output.getNumColumns() == getNumIds() + 1;
+  }
   const IntegerPolyhedron &getDomain() const { return *this; }
 
   bool hasCompatibleDimensions(const MultiAffineFunction &f) const;
@@ -136,10 +138,10 @@ private:
 /// Support is provided to compare equality of two such functions as well as
 /// finding the value of the function at a point. Note that local ids in the
 /// piece are not supported for the latter.
-class PWMAFunction {
+class PWMAFunction : PresburgerSpace {
 public:
   PWMAFunction(unsigned numDims, unsigned numSymbols, unsigned numOutputs)
-      : numDims(numDims), numSymbols(numSymbols), numOutputs(numOutputs) {
+      : PresburgerSpace(numDims, numSymbols), numOutputs(numOutputs) {
     assert(numOutputs >= 1 && "The function must output something!");
   }
 
@@ -149,9 +151,7 @@ public:
   const MultiAffineFunction &getPiece(unsigned i) const { return pieces[i]; }
   unsigned getNumPieces() const { return pieces.size(); }
   unsigned getNumOutputs() const { return numOutputs; }
-  unsigned getNumInputs() const { return numDims + numSymbols; }
-  unsigned getNumDimIds() const { return numDims; }
-  unsigned getNumSymbolIds() const { return numSymbols; }
+  unsigned getNumInputs() const { return getNumIds(); }
   MultiAffineFunction &getPiece(unsigned i) { return pieces[i]; }
 
   /// Return the domain of this piece-wise MultiAffineFunction. This is the
@@ -182,10 +182,6 @@ private:
   /// The list of pieces in this piece-wise MultiAffineFunction.
   SmallVector<MultiAffineFunction, 4> pieces;
 
-  /// The number of dimensions ids in the domains.
-  unsigned numDims;
-  /// The number of symbol ids in the domains.
-  unsigned numSymbols;
   /// The number of output ids.
   unsigned numOutputs;
 };

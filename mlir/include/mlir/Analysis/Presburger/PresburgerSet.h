@@ -28,18 +28,12 @@ namespace mlir {
 /// Note that there are no invariants guaranteed on the list of Poly other than
 /// that they are all in the same space, i.e., they all have the same number of
 /// dimensions and symbols. For example, the Polys may overlap each other.
-class PresburgerSet {
+class PresburgerSet : public PresburgerSpace {
 public:
   explicit PresburgerSet(const IntegerPolyhedron &poly);
 
   /// Return the number of Polys in the union.
   unsigned getNumPolys() const;
-
-  /// Return the number of real dimensions.
-  unsigned getNumDimIds() const;
-
-  /// Return the number of symbolic dimensions.
-  unsigned getNumSymbolIds() const;
 
   /// Return a reference to the list of IntegerPolyhedrons.
   ArrayRef<IntegerPolyhedron> getAllIntegerPolyhedron() const;
@@ -117,18 +111,11 @@ public:
 private:
   /// Construct an empty PresburgerSet.
   PresburgerSet(unsigned numDims = 0, unsigned numSymbols = 0)
-      : numDims(numDims), numSymbols(numSymbols) {}
+      : PresburgerSpace(numDims, numSymbols) {}
 
   /// Return the set difference poly \ set.
   static PresburgerSet getSetDifference(IntegerPolyhedron poly,
                                         const PresburgerSet &set);
-
-  /// Number of identifiers corresponding to real dimensions.
-  unsigned numDims;
-
-  /// Number of symbolic dimensions, unknown but constant for analysis, as in
-  /// IntegerPolyhedron.
-  unsigned numSymbols;
 
   /// The list of integerPolyhedrons that this set is the union of.
   SmallVector<IntegerPolyhedron, 2> integerPolyhedrons;
