@@ -4475,6 +4475,17 @@ static SDValue PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+static SDValue PerformStoreRetvalCombine(SDNode *N) {
+  // Operands from the 2nd to the last one are the values to be stored
+  for (std::size_t I = 2, OpsCount = N->ops().size(); I != OpsCount; ++I)
+    if (!N->getOperand(I).isUndef())
+      return SDValue();
+
+  // Operand 0 is the previous value in the chain. Cannot return EntryToken
+  // as the previous value will become unused and eliminated later.
+  return N->getOperand(0);
+}
+
 /// PerformADDCombine - Target-specific dag combine xforms for ISD::ADD.
 ///
 static SDValue PerformADDCombine(SDNode *N,
@@ -4803,6 +4814,10 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
       return PerformREMCombine(N, DCI, OptLevel);
     case ISD::SETCC:
       return PerformSETCCCombine(N, DCI);
+    case NVPTXISD::StoreRetval:
+    case NVPTXISD::StoreRetvalV2:
+    case NVPTXISD::StoreRetvalV4:
+      return PerformStoreRetvalCombine(N);
   }
   return SDValue();
 }
