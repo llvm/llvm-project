@@ -17,7 +17,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S s, typename S::difference_type pos, typename S::difference_type n, S expected)
 {
     typename S::const_iterator first = s.cbegin() + pos;
@@ -29,9 +29,8 @@ test(S s, typename S::difference_type pos, typename S::difference_type n, S expe
     assert(i - s.begin() == pos);
 }
 
-int main(int, char**)
-{
-    {
+bool test() {
+  {
     typedef std::string S;
     test(S(""), 0, 0, S(""));
     test(S("abcde"), 0, 0, S("abcde"));
@@ -87,9 +86,9 @@ int main(int, char**)
     test(S("abcdefghijklmnopqrst"), 19, 0, S("abcdefghijklmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 19, 1, S("abcdefghijklmnopqrs"));
     test(S("abcdefghijklmnopqrst"), 20, 0, S("abcdefghijklmnopqrst"));
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     test(S(""), 0, 0, S(""));
     test(S("abcde"), 0, 0, S("abcde"));
@@ -145,7 +144,17 @@ int main(int, char**)
     test(S("abcdefghijklmnopqrst"), 19, 0, S("abcdefghijklmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 19, 1, S("abcdefghijklmnopqrs"));
     test(S("abcdefghijklmnopqrst"), 20, 0, S("abcdefghijklmnopqrst"));
-    }
+  }
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
 #endif
 
   return 0;

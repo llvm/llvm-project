@@ -19,7 +19,7 @@
 #include "min_allocator.h"
 
 template <class S, class It>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S s, It first, It last, S expected)
 {
     s.append(first, last);
@@ -31,7 +31,7 @@ test(S s, It first, It last, S expected)
 struct Widget { operator char() const { throw 42; } };
 
 template <class S, class It>
-void
+TEST_CONSTEXPR_CXX20 void
 test_exceptions(S s, It first, It last)
 {
     S original = s;
@@ -52,9 +52,8 @@ test_exceptions(S s, It first, It last)
 }
 #endif
 
-int main(int, char**)
-{
-    {
+bool test() {
+  {
     typedef std::string S;
     const char* s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     test(S(), s, s, S());
@@ -111,9 +110,9 @@ int main(int, char**)
          S("12345678901234567890""ABCDEFGHIJ"));
     test(S("12345678901234567890"), cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+52),
          S("12345678901234567890""ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     const char* s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     test(S(), s, s, S());
@@ -170,10 +169,10 @@ int main(int, char**)
          S("12345678901234567890""ABCDEFGHIJ"));
     test(S("12345678901234567890"), cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+52),
          S("12345678901234567890""ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
-    }
+  }
 #endif
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    { // test iterator operations that throw
+  { // test iterator operations that throw
     typedef std::string S;
     typedef ThrowingIterator<char> TIter;
     typedef cpp17_input_iterator<TIter> IIter;
@@ -188,10 +187,10 @@ int main(int, char**)
 
     Widget w[100];
     test_exceptions(S(), w, w+100);
-    }
+  }
 #endif
 
-    { // test appending to self
+  { // test appending to self
     typedef std::string S;
     S s_short = "123/";
     S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
@@ -205,18 +204,18 @@ int main(int, char**)
 
     s_long.append(s_long.begin(), s_long.end());
     assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
-    }
+  }
 
-    { // test appending a different type
+  { // test appending a different type
     typedef std::string S;
     const uint8_t p[] = "ABCD";
 
     S s;
     s.append(p, p + 4);
     assert(s == "ABCD");
-    }
+  }
 
-    { // regression-test appending to self in sneaky ways
+  { // regression-test appending to self in sneaky ways
     std::string s_short = "hello";
     std::string s_long = "Lorem ipsum dolor sit amet, consectetur/";
     std::string s_othertype = "hello";
@@ -231,7 +230,7 @@ int main(int, char**)
 
     s_sneaky.reserve(12);
     test(s_sneaky, s_sneaky.data(), s_sneaky.data() + 6, std::string("hellohello\0", 11));
-    }
+  }
 
   { // test with a move iterator that returns char&&
     typedef forward_iterator<const char*> It;
@@ -249,6 +248,16 @@ int main(int, char**)
     s.append(MoveIt(It(std::begin(p))), MoveIt(It(std::end(p) - 1)));
     assert(s == "ABCD");
   }
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
+#endif
 
   return 0;
 }
