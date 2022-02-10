@@ -2514,6 +2514,72 @@ static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, bool &SwapSources,
   return true;
 }
 
+static int isElementRotate(SDValue &V1, SDValue &V2, ArrayRef<int> Mask) {
+  int Size = Mask.size();
+
+  // We need to detect various ways of spelling a rotation:
+  //   [11, 12, 13, 14, 15,  0,  1,  2]
+  //   [-1, 12, 13, 14, -1, -1,  1, -1]
+  //   [-1, -1, -1, -1, -1, -1,  1,  2]
+  //   [ 3,  4,  5,  6,  7,  8,  9, 10]
+  //   [-1,  4,  5,  6, -1, -1,  9, -1]
+  //   [-1,  4,  5,  6, -1, -1, -1, -1]
+  int Rotation = 0;
+  SDValue Lo, Hi;
+  for (int i = 0; i != Size; ++i) {
+    int M = Mask[i];
+    if (M < 0)
+      continue;
+
+    // Determine where a rotate vector would have started.
+    int StartIdx = i - (M % Size);
+    // The identity rotation isn't interesting, stop.
+    if (StartIdx == 0)
+      return -1;
+
+    // If we found the tail of a vector the rotation must be the missing
+    // front. If we found the head of a vector, it must be how much of the
+    // head.
+    int CandidateRotation = StartIdx < 0 ? -StartIdx : Size - StartIdx;
+
+    if (Rotation == 0)
+      Rotation = CandidateRotation;
+    else if (Rotation != CandidateRotation)
+      // The rotations don't match, so we can't match this mask.
+      return -1;
+
+    // Compute which value this mask is pointing at.
+    SDValue MaskV = M < Size ? V1 : V2;
+
+    // Compute which of the two target values this index should be assigned to.
+    // This reflects whether the high elements are remaining or the low elemnts
+    // are remaining.
+    SDValue &TargetV = StartIdx < 0 ? Hi : Lo;
+
+    // Either set up this value if we've not encountered it before, or check
+    // that it remains consistent.
+    if (!TargetV)
+      TargetV = MaskV;
+    else if (TargetV != MaskV)
+      // This may be a rotation, but it pulls from the inputs in some
+      // unsupported interleaving.
+      return -1;
+  }
+
+  // Check that we successfully analyzed the mask, and normalize the results.
+  assert(Rotation != 0 && "Failed to locate a viable rotation!");
+  assert((Lo || Hi) && "Failed to find a rotated input vector!");
+
+  // Make sure we've found a value for both halves.
+  if (!Lo || !Hi)
+    return -1;
+
+  V1 = Lo;
+  V2 = Hi;
+
+  return Rotation;
+}
+
 static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue V1 = Op.getOperand(0);
@@ -2617,6 +2683,33 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                     DAG.getConstant(SlideAmt, DL, XLenVT),
                     TrueMask, VL);
     return convertFromScalableVector(VT, SlideDown, DAG, Subtarget);
+  }
+
+  // Match shuffles that concatenate two vectors, rotate the concatenation,
+  // and then extract the original number of elements from the rotated result.
+  // This is equivalent to vector.splice or X86's PALIGNR instruction. Lower
+  // it to a SLIDEDOWN and a SLIDEUP.
+  // FIXME: We don't really need it to be a concatenation. We just need two
+  // regions with contiguous elements that need to be shifted down and up.
+  int Rotation = isElementRotate(V1, V2, Mask);
+  if (Rotation > 0) {
+    // We found a rotation. We need to slide V1 down by Rotation. Using
+    // (NumElts - Rotation) for VL. Then we need to slide V2 up by
+    // (NumElts - Rotation) using NumElts for VL.
+    V1 = convertToScalableVector(ContainerVT, V1, DAG, Subtarget);
+    V2 = convertToScalableVector(ContainerVT, V2, DAG, Subtarget);
+
+    unsigned InvRotate = NumElts - Rotation;
+    SDValue SlideDown =
+        DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, ContainerVT,
+                    DAG.getUNDEF(ContainerVT), V2,
+                    DAG.getConstant(Rotation, DL, XLenVT),
+                    TrueMask, DAG.getConstant(InvRotate, DL, XLenVT));
+    SDValue SlideUp =
+        DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, ContainerVT, SlideDown, V1,
+                    DAG.getConstant(InvRotate, DL, XLenVT),
+                    TrueMask, VL);
+    return convertFromScalableVector(VT, SlideUp, DAG, Subtarget);
   }
 
   // Detect an interleave shuffle and lower to
