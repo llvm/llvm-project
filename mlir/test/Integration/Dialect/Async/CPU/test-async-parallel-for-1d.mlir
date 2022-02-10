@@ -3,7 +3,7 @@
 // RUN:               -async-runtime-ref-counting                              \
 // RUN:               -async-runtime-ref-counting-opt                          \
 // RUN:               -convert-async-to-llvm                                   \
-// RUN:               -convert-scf-to-std                                      \
+// RUN:               -convert-scf-to-cf                                      \
 // RUN:               -convert-memref-to-llvm                                  \
 // RUN:               -arith-expand                                            \
 // RUN:               -memref-expand                                              \
@@ -19,7 +19,7 @@
 // RUN:               -async-to-async-runtime                                  \
 // RUN:               -async-runtime-policy-based-ref-counting                 \
 // RUN:               -convert-async-to-llvm                                   \
-// RUN:               -convert-scf-to-std                                      \
+// RUN:               -convert-scf-to-cf                                      \
 // RUN:               -convert-memref-to-llvm                                  \
 // RUN:               -arith-expand                                            \
 // RUN:               -memref-expand                                              \
@@ -38,7 +38,7 @@
 // RUN:               -async-runtime-ref-counting                              \
 // RUN:               -async-runtime-ref-counting-opt                          \
 // RUN:               -convert-async-to-llvm                                   \
-// RUN:               -convert-scf-to-std                                      \
+// RUN:               -convert-scf-to-cf                                      \
 // RUN:               -convert-memref-to-llvm                                  \
 // RUN:               -arith-expand                                            \
 // RUN:               -memref-expand                                              \
@@ -125,7 +125,7 @@ func @entry() {
 
   scf.parallel (%i) = (%lb1) to (%ub1) step (%c1) {
     %false = arith.constant 0 : i1
-    assert %false, "should never be executed"
+    cf.assert %false, "should never be executed"
   }
 
   memref.dealloc %A : memref<9xf32>

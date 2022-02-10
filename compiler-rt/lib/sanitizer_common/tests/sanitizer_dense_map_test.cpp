@@ -365,11 +365,10 @@ TEST(DenseMapCustomTest, EqualityComparison) {
   EXPECT_NE(M1, M3);
 }
 
+const int ExpectedInitialBucketCount = GetPageSizeCached() / /* sizeof(KV) */ 8;
+
 // Test for the default minimum size of a DenseMap
 TEST(DenseMapCustomTest, DefaultMinReservedSizeTest) {
-  // IF THIS VALUE CHANGE, please update InitialSizeTest, InitFromIterator, and
-  // ReserveTest as well!
-  const int ExpectedInitialBucketCount = 512;
   // Formula from DenseMap::getMinBucketToReserveForEntries()
   const int ExpectedMaxInitialEntries = ExpectedInitialBucketCount * 3 / 4 - 1;
 
@@ -410,9 +409,8 @@ TEST(DenseMapCustomTest, InitialSizeTest) {
   // Test a few different size, 341 is *not* a random choice: we need a value
   // that is 2/3 of a power of two to stress the grow() condition, and the power
   // of two has to be at least 512 because of minimum size allocation in the
-  // DenseMap (see DefaultMinReservedSizeTest). 513 is a value just above the
-  // 512 default init.
-  for (auto Size : {1, 2, 48, 66, 341, 513}) {
+  // DenseMap (see DefaultMinReservedSizeTest).
+  for (auto Size : {1, 2, 48, 66, 341, ExpectedInitialBucketCount + 1}) {
     DenseMap<int, CountCopyAndMove> Map(Size);
     unsigned MemorySize = Map.getMemorySize();
     CountCopyAndMove::Copy = 0;
@@ -453,9 +451,8 @@ TEST(DenseMapCustomTest, ReserveTest) {
   // Test a few different size, 341 is *not* a random choice: we need a value
   // that is 2/3 of a power of two to stress the grow() condition, and the power
   // of two has to be at least 512 because of minimum size allocation in the
-  // DenseMap (see DefaultMinReservedSizeTest). 513 is a value just above the
-  // 512 default init.
-  for (auto Size : {1, 2, 48, 66, 341, 513}) {
+  // DenseMap (see DefaultMinReservedSizeTest).
+  for (auto Size : {1, 2, 48, 66, 341, ExpectedInitialBucketCount + 1}) {
     DenseMap<int, CountCopyAndMove> Map;
     Map.reserve(Size);
     unsigned MemorySize = Map.getMemorySize();

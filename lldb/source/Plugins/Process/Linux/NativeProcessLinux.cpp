@@ -38,6 +38,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringExtractor.h"
@@ -429,7 +430,7 @@ Status NativeProcessLinux::SetDefaultPtraceOpts(lldb::pid_t pid) {
 // Handles all waitpid events from the inferior process.
 void NativeProcessLinux::MonitorCallback(NativeThreadLinux &thread,
                                          WaitStatus status) {
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
 
   // Certain activities differ based on whether the pid is the tid of the main
   // thread.
@@ -714,8 +715,7 @@ void NativeProcessLinux::MonitorTrace(NativeThreadLinux &thread) {
 }
 
 void NativeProcessLinux::MonitorBreakpoint(NativeThreadLinux &thread) {
-  Log *log(
-      GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Breakpoints);
   LLDB_LOG(log, "received breakpoint event, pid = {0}", thread.GetID());
 
   // Mark the thread as stopped at breakpoint.
@@ -731,8 +731,7 @@ void NativeProcessLinux::MonitorBreakpoint(NativeThreadLinux &thread) {
 
 void NativeProcessLinux::MonitorWatchpoint(NativeThreadLinux &thread,
                                            uint32_t wp_index) {
-  Log *log(
-      GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Watchpoints);
   LLDB_LOG(log, "received watchpoint event, pid = {0}, wp_index = {1}",
            thread.GetID(), wp_index);
 
@@ -1828,8 +1827,7 @@ void NativeProcessLinux::SignalIfAllThreadsStopped() {
   }
 
   // We have a pending notification and all threads have stopped.
-  Log *log(
-      GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Breakpoints);
 
   // Clear any temporary breakpoints we used to implement software single
   // stepping.

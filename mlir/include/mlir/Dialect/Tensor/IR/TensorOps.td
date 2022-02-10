@@ -18,10 +18,25 @@ include "mlir/Interfaces/TilingInterface.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 
 class Tensor_Op<string mnemonic, list<Trait> traits = []>
-    : Op<Tensor_Dialect, mnemonic, traits> {
-  let printer = [{ return ::print(p, *this); }];
-  let verifier = [{ return ::verify(*this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
+    : Op<Tensor_Dialect, mnemonic, traits>;
+
+// Base class for ops with static/dynamic offset, sizes and strides
+// attributes/arguments.
+class Tensor_OpWithOffsetSizesAndStrides<string mnemonic,
+                                         list<Trait> traits = []>
+    : Tensor_Op<mnemonic, traits> {
+  code extraBaseClassDeclaration = [{
+    /// Returns the dynamic sizes for this subview operation if specified.
+    ::mlir::Operation::operand_range getDynamicSizes() { return sizes(); }
+
+    /// Return the list of Range (i.e. offset, size, stride). Each
+    /// Range entry contains either the dynamic value or a ConstantIndexOp
+    /// constructed with `b` at location `loc`.
+    ::mlir::SmallVector<::mlir::Range, 8> getOrCreateRanges(
+        ::mlir::OpBuilder &b, ::mlir::Location loc) {
+      return ::mlir::getOrCreateRanges(*this, b, loc);
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -59,7 +74,6 @@ def Tensor_CastOp : Tensor_Op<"cast", [
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 
   let hasCanonicalizer = 1;
-  let verifier = ?;
 }
 
 //===----------------------------------------------------------------------===//
@@ -111,6 +125,7 @@ def Tensor_DimOp : Tensor_Op<"dim", [NoSideEffect]> {
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -151,6 +166,7 @@ def Tensor_ExtractOp : Tensor_Op<"extract",
     }]>];
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 
@@ -158,11 +174,11 @@ def Tensor_ExtractOp : Tensor_Op<"extract",
 // ExtractSliceOp
 //===----------------------------------------------------------------------===//
 
-def Tensor_ExtractSliceOp : BaseOpWithOffsetSizesAndStrides<
-    Tensor_Dialect, "extract_slice",
-    [NoSideEffect, AttrSizedOperandSegments,
-     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
-     OffsetSizeAndStrideOpInterface]> {
+def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", [
+    NoSideEffect, AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+    OffsetSizeAndStrideOpInterface
+  ]> {
   let summary = "extract slice operation";
   let description = [{
     The "extract_slice" operation extract a tensor from another tensor as
@@ -297,12 +313,12 @@ def Tensor_ExtractSliceOp : BaseOpWithOffsetSizesAndStrides<
 
     /// Return the dimensions of the source that are dropped in the
     /// result when the result is rank-reduced.
-    llvm::SmallDenseSet<unsigned> getDroppedDims();
-
+    llvm::SmallBitVector getDroppedDims();
   }];
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -338,9 +354,6 @@ def Tensor_FromElementsOp : Tensor_Op<"from_elements", [
   let results = (outs AnyStaticShapeTensor:$result);
 
   let assemblyFormat = "$elements attr-dict `:` type($result)";
-
-  // This op is fully verified by its traits.
-  let verifier = ?;
 
   let skipDefaultBuilders = 1;
   let builders = [
@@ -394,6 +407,7 @@ def Tensor_GenerateOp : Tensor_Op<"generate",
   ];
 
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -445,18 +459,19 @@ def Tensor_InsertOp : Tensor_Op<"insert",
     }]>];
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
 // InsertSliceOp
 //===----------------------------------------------------------------------===//
 
-def Tensor_InsertSliceOp : BaseOpWithOffsetSizesAndStrides<
-    Tensor_Dialect, "insert_slice",
-    [NoSideEffect, AttrSizedOperandSegments, OffsetSizeAndStrideOpInterface,
-     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
-     TypesMatchWith<"expected result type to match dest type",
-                    "dest", "result", "$_self">]> {
+def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
+    NoSideEffect, AttrSizedOperandSegments, OffsetSizeAndStrideOpInterface,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+    TypesMatchWith<"expected result type to match dest type",
+                   "dest", "result", "$_self">
+  ]> {
   let summary = "insert_slice operation";
   let description = [{
     The "insert_slice" operation insert a tensor `source` into another
@@ -564,6 +579,7 @@ def Tensor_InsertSliceOp : BaseOpWithOffsetSizesAndStrides<
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -586,7 +602,6 @@ def Tensor_RankOp : Tensor_Op<"rank", [NoSideEffect]> {
   let arguments = (ins AnyTensor:$tensor);
   let results = (outs Index);
 
-  let verifier = ?;
   let hasFolder = 1;
   let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
 }
@@ -650,6 +665,7 @@ def Tensor_ReshapeOp: Tensor_Op<"reshape", [NoSideEffect]>  {
   let assemblyFormat = [{
     $source `(` $shape `)` attr-dict `:` functional-type(operands, results)
   }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -718,8 +734,8 @@ class Tensor_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parseReshapeLikeOp(parser, result); }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
@@ -748,6 +764,7 @@ def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
     ```
   }];
   let extraClassDeclaration = commonExtraClassDeclaration;
+  let hasVerifier = 1;
 }
 
 def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
@@ -776,6 +793,7 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
     ```
   }];
   let extraClassDeclaration = commonExtraClassDeclaration;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -961,8 +979,55 @@ def Tensor_PadOp : Tensor_Op<"pad", [AttrSizedOperandSegments, NoSideEffect,
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// SplatOp
+//===----------------------------------------------------------------------===//
+
+def Tensor_SplatOp : Tensor_Op<"splat", [
+    NoSideEffect,
+    TypesMatchWith<"operand type matches element type of result",
+                   "aggregate", "input",
+                   "$_self.cast<TensorType>().getElementType()">
+  ]> {
+  let summary = "tensor splat or broadcast operation";
+  let description = [{
+    Broadcast the operand to all elements of the result tensor. The operand is
+    required to be of integer/index/float type, and the result tensor must be
+    statically shaped.
+
+    Example:
+
+    ```mlir
+    %s = arith.constant 10.1 : f32
+    %t = tensor.splat %s : tensor<8x16xi32>
+    ```
+
+    TODO: This operation is easy to extend to broadcast to dynamically shaped
+          tensors:
+
+    ```mlir
+    // Broadcasts %s to a 2-d dynamically shaped tensor, with %m, %n binding
+    // to the sizes of the two dynamic dimensions.
+    %m = "foo"() : () -> (index)
+    %n = "bar"() : () -> (index)
+    %t = tensor.splat %s [%m, %n] : tensor<?x?xi32>
+    ```
+  }];
+
+  let arguments = (ins AnyTypeOf<[AnySignlessInteger, Index, AnyFloat],
+                                 "integer/index/float type">:$input);
+  let results = (outs AnyStaticShapeTensor:$aggregate);
+
+  let builders = [
+    OpBuilder<(ins "Value":$element, "Type":$aggregateType),
+    [{ build($_builder, $_state, aggregateType, element); }]>];
+  let assemblyFormat = "$input attr-dict `:` type($aggregate)";
+
+  let hasFolder = 1;
+}
 
 //===----------------------------------------------------------------------===//
 // YieldOp
@@ -984,7 +1049,6 @@ def Tensor_YieldOp : Tensor_Op<"yield",
   // Dummy builder to appease code in templated ensureTerminator that
   // GenerateOp's auto-generated parser calls.
   let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
-  let verifier = ?;
 }
 
 #endif // TENSOR_OPS

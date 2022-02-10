@@ -126,9 +126,8 @@ def ParallelOp : OpenMP_Op<"parallel", [AttrSizedOperandSegments,
   let builders = [
     OpBuilder<(ins CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
   ];
-  let parser = [{ return parseParallelOp(parser, result); }];
-  let printer = [{ return printParallelOp(p, *this); }];
-  let verifier = [{ return ::verifyParallelOp(*this); }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 def TerminatorOp : OpenMP_Op<"terminator", [Terminator]> {
@@ -215,9 +214,8 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments]> {
 
   let regions = (region SizedRegion<1>:$region);
 
-  let parser = [{ return parseSectionsOp(parser, result); }];
-  let printer = [{ return printSectionsOp(p, *this); }];
-  let verifier = [{ return verifySectionsOp(*this); }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -334,9 +332,8 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     /// Returns the number of reduction variables.
     unsigned getNumReductionVars() { return reduction_vars().size(); }
   }];
-  let parser = [{ return parseWsLoopOp(parser, result); }];
-  let printer = [{ return printWsLoopOp(p, *this); }];
-  let verifier = [{ return ::verifyWsLoopOp(*this); }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 def YieldOp : OpenMP_Op<"yield",
@@ -419,8 +416,7 @@ def TargetOp : OpenMP_Op<"target",[AttrSizedOperandSegments]> {
 
   let regions = (region AnyRegion:$region);
 
-  let parser = [{ return parseTargetOp(parser, result); }];
-  let printer = [{ return printTargetOp(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 
@@ -457,8 +453,7 @@ def CriticalDeclareOp : OpenMP_Op<"critical.declare", [Symbol]> {
   let assemblyFormat = [{
     $sym_name custom<SynchronizationHint>($hint) attr-dict
   }];
-
-  let verifier = "return verifyCriticalDeclareOp(*this);";
+  let hasVerifier = 1;
 }
 
 
@@ -476,8 +471,7 @@ def CriticalOp : OpenMP_Op<"critical"> {
   let assemblyFormat = [{
     (`(` $name^ `)`)? $region attr-dict
   }];
-
-  let verifier = "return ::verifyCriticalOp(*this);";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -540,8 +534,7 @@ def OrderedOp : OpenMP_Op<"ordered"> {
     ( `depend_vec` `(` $depend_vec_vars^ `:` type($depend_vec_vars) `)` )?
     attr-dict
   }];
-
-  let verifier = "return ::verifyOrderedOp(*this);";
+  let hasVerifier = 1;
 }
 
 def OrderedRegionOp : OpenMP_Op<"ordered_region"> {
@@ -561,8 +554,7 @@ def OrderedRegionOp : OpenMP_Op<"ordered_region"> {
   let regions = (region AnyRegion:$region);
 
   let assemblyFormat = [{ ( `simd` $simd^ )? $region attr-dict}];
-
-  let verifier = "return ::verifyOrderedRegionOp(*this);";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -612,9 +604,8 @@ def AtomicReadOp : OpenMP_Op<"atomic.read"> {
                        OpenMP_PointerLikeType:$v,
                        DefaultValuedAttr<I64Attr, "0">:$hint,
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order);
-  let parser = [{ return parseAtomicReadOp(parser, result); }];
-  let printer = [{ return printAtomicReadOp(p, *this); }];
-  let verifier = [{ return verifyAtomicReadOp(*this); }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
@@ -641,9 +632,8 @@ def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
                        AnyType:$value,
                        DefaultValuedAttr<I64Attr, "0">:$hint,
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order);
-  let parser = [{ return parseAtomicWriteOp(parser, result); }];
-  let printer = [{ return printAtomicWriteOp(p, *this); }];
-  let verifier = [{ return verifyAtomicWriteOp(*this); }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 // TODO: autogenerate from OMP.td in future if possible.
@@ -706,9 +696,8 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update"> {
                        AtomicBinOpKindAttr:$binop,
                        DefaultValuedAttr<I64Attr, "0">:$hint,
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order);
-  let parser = [{ return parseAtomicUpdateOp(parser, result); }];
-  let printer = [{ return printAtomicUpdateOp(p, *this); }];
-  let verifier = [{ return verifyAtomicUpdateOp(*this); }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
@@ -750,9 +739,8 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
   let arguments = (ins DefaultValuedAttr<I64Attr, "0">:$hint,
                        OptionalAttr<MemoryOrderKind>:$memory_order);
   let regions = (region SizedRegion<1>:$region);
-  let parser = [{ return parseAtomicCaptureOp(parser, result); }];
-  let printer = [{ return printAtomicCaptureOp(p, *this); }];
-  let verifier = [{ return verifyAtomicCaptureOp(*this); }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -789,7 +777,6 @@ def ReductionDeclareOp : OpenMP_Op<"reduction.declare", [Symbol]> {
   let regions = (region AnyRegion:$initializerRegion,
                         AnyRegion:$reductionRegion,
                         AnyRegion:$atomicReductionRegion);
-  let verifier = "return ::verifyReductionDeclareOp(*this);";
 
   let assemblyFormat = "$sym_name `:` $type attr-dict-with-keyword "
                        "`init` $initializerRegion "
@@ -804,6 +791,7 @@ def ReductionDeclareOp : OpenMP_Op<"reduction.declare", [Symbol]> {
       return atomicReductionRegion().front().getArgument(0).getType();
     }
   }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -826,7 +814,7 @@ def ReductionOp : OpenMP_Op<"reduction", [
   let arguments= (ins AnyType:$operand, OpenMP_PointerLikeType:$accumulator);
   let assemblyFormat =
     "$operand `,` $accumulator attr-dict `:` type($accumulator)";
-  let verifier = "return ::verifyReductionOp(*this);";
+  let hasVerifier = 1;
 }
 
 #endif // OPENMP_OPS

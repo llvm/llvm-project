@@ -45,7 +45,7 @@ namespace llvm {
 
     void dump() const;
 
-    RecordsEntry() {}
+    RecordsEntry() = default;
     RecordsEntry(std::unique_ptr<Record> Rec) : Rec(std::move(Rec)) {}
     RecordsEntry(std::unique_ptr<ForeachLoop> Loop)
         : Loop(std::move(Loop)) {}

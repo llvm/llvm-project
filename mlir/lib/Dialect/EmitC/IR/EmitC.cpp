@@ -48,16 +48,16 @@ Operation *EmitCDialect::materializeConstant(OpBuilder &builder,
 // ApplyOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(ApplyOp op) {
-  StringRef applicableOperator = op.applicableOperator();
+LogicalResult ApplyOp::verify() {
+  StringRef applicableOperatorStr = applicableOperator();
 
   // Applicable operator must not be empty.
-  if (applicableOperator.empty())
-    return op.emitOpError("applicable operator must not be empty");
+  if (applicableOperatorStr.empty())
+    return emitOpError("applicable operator must not be empty");
 
   // Only `*` and `&` are supported.
-  if (applicableOperator != "&" && applicableOperator != "*")
-    return op.emitOpError("applicable operator is illegal");
+  if (applicableOperatorStr != "&" && applicableOperatorStr != "*")
+    return emitOpError("applicable operator is illegal");
 
   return success();
 }
@@ -66,32 +66,32 @@ static LogicalResult verify(ApplyOp op) {
 // CallOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(emitc::CallOp op) {
+LogicalResult emitc::CallOp::verify() {
   // Callee must not be empty.
-  if (op.callee().empty())
-    return op.emitOpError("callee must not be empty");
+  if (callee().empty())
+    return emitOpError("callee must not be empty");
 
-  if (Optional<ArrayAttr> argsAttr = op.args()) {
+  if (Optional<ArrayAttr> argsAttr = args()) {
     for (Attribute arg : argsAttr.getValue()) {
       if (arg.getType().isa<IndexType>()) {
         int64_t index = arg.cast<IntegerAttr>().getInt();
         // Args with elements of type index must be in range
         // [0..operands.size).
-        if ((index < 0) || (index >= static_cast<int64_t>(op.getNumOperands())))
-          return op.emitOpError("index argument is out of range");
+        if ((index < 0) || (index >= static_cast<int64_t>(getNumOperands())))
+          return emitOpError("index argument is out of range");
 
         // Args with elements of type ArrayAttr must have a type.
       } else if (arg.isa<ArrayAttr>() && arg.getType().isa<NoneType>()) {
-        return op.emitOpError("array argument has no type");
+        return emitOpError("array argument has no type");
       }
     }
   }
 
-  if (Optional<ArrayAttr> templateArgsAttr = op.template_args()) {
+  if (Optional<ArrayAttr> templateArgsAttr = template_args()) {
     for (Attribute tArg : templateArgsAttr.getValue()) {
       if (!tArg.isa<TypeAttr>() && !tArg.isa<IntegerAttr>() &&
           !tArg.isa<FloatAttr>() && !tArg.isa<emitc::OpaqueAttr>())
-        return op.emitOpError("template argument has invalid type");
+        return emitOpError("template argument has invalid type");
     }
   }
 
@@ -103,12 +103,12 @@ static LogicalResult verify(emitc::CallOp op) {
 //===----------------------------------------------------------------------===//
 
 /// The constant op requires that the attribute's type matches the return type.
-static LogicalResult verify(emitc::ConstantOp &op) {
-  Attribute value = op.value();
-  Type type = op.getType();
+LogicalResult emitc::ConstantOp::verify() {
+  Attribute value = valueAttr();
+  Type type = getType();
   if (!value.getType().isa<NoneType>() && type != value.getType())
-    return op.emitOpError() << "requires attribute's type (" << value.getType()
-                            << ") to match op's return type (" << type << ")";
+    return emitOpError() << "requires attribute's type (" << value.getType()
+                         << ") to match op's return type (" << type << ")";
   return success();
 }
 
@@ -121,18 +121,18 @@ OpFoldResult emitc::ConstantOp::fold(ArrayRef<Attribute> operands) {
 // IncludeOp
 //===----------------------------------------------------------------------===//
 
-static void print(OpAsmPrinter &p, IncludeOp &op) {
-  bool standardInclude = op.is_standard_include();
+void IncludeOp::print(OpAsmPrinter &p) {
+  bool standardInclude = is_standard_include();
 
   p << " ";
   if (standardInclude)
     p << "<";
-  p << "\"" << op.include() << "\"";
+  p << "\"" << include() << "\"";
   if (standardInclude)
     p << ">";
 }
 
-static ParseResult parseIncludeOp(OpAsmParser &parser, OperationState &result) {
+ParseResult IncludeOp::parse(OpAsmParser &parser, OperationState &result) {
   bool standardInclude = !parser.parseOptionalLess();
 
   StringAttr include;

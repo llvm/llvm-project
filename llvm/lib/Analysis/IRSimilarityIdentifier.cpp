@@ -791,7 +791,8 @@ bool IRSimilarityCandidate::compareStructure(
     // We have different paths for commutative instructions and non-commutative
     // instructions since commutative instructions could allow multiple mappings
     // to certain values.
-    if (IA->isCommutative() && !isa<FPMathOperator>(IA)) {
+    if (IA->isCommutative() && !isa<FPMathOperator>(IA) &&
+        !isa<IntrinsicInst>(IA)) {
       if (!compareCommutativeOperandMapping(
               {A, OperValsA, ValueNumberMappingA},
               {B, OperValsB, ValueNumberMappingB}))

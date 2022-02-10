@@ -31,7 +31,7 @@ _Float16 h;
 // CHECK-NEXT:    store i8 [[TMP2]], i8* @sf, align 1
 // CHECK-NEXT:    ret void
 //
-void half_fix1() {
+void half_fix1(void) {
   sf = h;
 }
 
@@ -44,7 +44,7 @@ void half_fix1() {
 // CHECK-NEXT:    store i32 [[TMP3]], i32* @lf, align 4
 // CHECK-NEXT:    ret void
 //
-void half_fix2() {
+void half_fix2(void) {
   lf = h;
 }
 
@@ -56,7 +56,7 @@ void half_fix2() {
 // CHECK-NEXT:    store i16 [[TMP2]], i16* @sa, align 2
 // CHECK-NEXT:    ret void
 //
-void half_fix3() {
+void half_fix3(void) {
   sa = h;
 }
 
@@ -69,7 +69,7 @@ void half_fix3() {
 // CHECK-NEXT:    store i64 [[TMP3]], i64* @la, align 8
 // CHECK-NEXT:    ret void
 //
-void half_fix4() {
+void half_fix4(void) {
   la = h;
 }
 
@@ -90,7 +90,7 @@ void half_fix4() {
 // UNSIGNED-NEXT:    store i16 [[TMP2]], i16* @usa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void half_fix5() {
+void half_fix5(void) {
   usa = h;
 }
 
@@ -112,7 +112,7 @@ void half_fix5() {
 // UNSIGNED-NEXT:    store i64 [[TMP3]], i64* @ula, align 8
 // UNSIGNED-NEXT:    ret void
 //
-void half_fix6() {
+void half_fix6(void) {
   ula = h;
 }
 
@@ -125,7 +125,7 @@ void half_fix6() {
 // CHECK-NEXT:    store i8 [[TMP2]], i8* @sf_sat, align 1
 // CHECK-NEXT:    ret void
 //
-void half_sat1() {
+void half_sat1(void) {
   sf_sat = h;
 }
 
@@ -138,7 +138,7 @@ void half_sat1() {
 // CHECK-NEXT:    store i32 [[TMP3]], i32* @lf_sat, align 4
 // CHECK-NEXT:    ret void
 //
-void half_sat2() {
+void half_sat2(void) {
   lf_sat = h;
 }
 
@@ -150,7 +150,7 @@ void half_sat2() {
 // CHECK-NEXT:    store i16 [[TMP2]], i16* @sa_sat, align 2
 // CHECK-NEXT:    ret void
 //
-void half_sat3() {
+void half_sat3(void) {
   sa_sat = h;
 }
 
@@ -163,7 +163,7 @@ void half_sat3() {
 // CHECK-NEXT:    store i64 [[TMP3]], i64* @la_sat, align 8
 // CHECK-NEXT:    ret void
 //
-void half_sat4() {
+void half_sat4(void) {
   la_sat = h;
 }
 
@@ -186,7 +186,7 @@ void half_sat4() {
 // UNSIGNED-NEXT:    store i16 [[SATMIN]], i16* @usa_sat, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void half_sat5() {
+void half_sat5(void) {
   usa_sat = h;
 }
 
@@ -210,7 +210,7 @@ void half_sat5() {
 // UNSIGNED-NEXT:    store i64 [[SATMIN]], i64* @ula_sat, align 8
 // UNSIGNED-NEXT:    ret void
 //
-void half_sat6() {
+void half_sat6(void) {
   ula_sat = h;
 }
 
@@ -223,7 +223,7 @@ void half_sat6() {
 // CHECK-NEXT:    store half [[TMP2]], half* @h, align 2
 // CHECK-NEXT:    ret void
 //
-void fix_half1() {
+void fix_half1(void) {
   h = sf;
 }
 
@@ -236,7 +236,7 @@ void fix_half1() {
 // CHECK-NEXT:    store half [[TMP3]], half* @h, align 2
 // CHECK-NEXT:    ret void
 //
-void fix_half2() {
+void fix_half2(void) {
   h = lf;
 }
 
@@ -248,7 +248,7 @@ void fix_half2() {
 // CHECK-NEXT:    store half [[TMP2]], half* @h, align 2
 // CHECK-NEXT:    ret void
 //
-void fix_half3() {
+void fix_half3(void) {
   h = sa;
 }
 
@@ -261,7 +261,7 @@ void fix_half3() {
 // CHECK-NEXT:    store half [[TMP3]], half* @h, align 2
 // CHECK-NEXT:    ret void
 //
-void fix_half4() {
+void fix_half4(void) {
   h = la;
 }
 
@@ -282,7 +282,7 @@ void fix_half4() {
 // UNSIGNED-NEXT:    store half [[TMP2]], half* @h, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void fix_half5() {
+void fix_half5(void) {
   h = usa;
 }
 
@@ -304,6 +304,6 @@ void fix_half5() {
 // UNSIGNED-NEXT:    store half [[TMP3]], half* @h, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void fix_half6() {
+void fix_half6(void) {
   h = ula;
 }

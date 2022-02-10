@@ -3,8 +3,8 @@ target datalayout = "A5"
 
 
 ; OPT-LABEL: @amdgpu_noclobber_global(
-; OPT:      %addr = getelementptr i32, i32 addrspace(1)* %in, i64 0, !amdgpu.uniform !0, !amdgpu.noclobber !0
-; OPT-NEXT: %load = load i32, i32 addrspace(1)* %addr, align 4
+; OPT:      %addr = getelementptr i32, i32 addrspace(1)* %in, i64 0, !amdgpu.uniform !0
+; OPT-NEXT: %load = load i32, i32 addrspace(1)* %addr, align 4, !amdgpu.noclobber !0
 define amdgpu_kernel void @amdgpu_noclobber_global( i32 addrspace(1)* %in,  i32 addrspace(1)* %out) {
 entry:
   %addr = getelementptr i32, i32 addrspace(1)* %in, i64 0

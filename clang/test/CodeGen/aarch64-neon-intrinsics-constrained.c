@@ -585,7 +585,7 @@ uint64_t test_vceqzd_f64(float64_t a) {
 
 // COMMON-LABEL: test_vcges_f32
 // UNCONSTRAINED: [[TMP0:%.*]] = fcmp oge float %a, %b
-// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"oge", metadata !"fpexcept.strict")
+// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %b, metadata !"oge", metadata !"fpexcept.strict")
 // CHECK-ASM:     fcmp s{{[0-9]+}}, s{{[0-9]+}}
 // CHECK-ASM-NEXT:cset {{w[0-9]+}}, ge
 // COMMONIR:      [[VCMPD_I:%.*]] = sext i1 [[TMP0]] to i32
@@ -596,7 +596,7 @@ uint32_t test_vcges_f32(float32_t a, float32_t b) {
 
 // COMMON-LABEL: test_vcged_f64
 // UNCONSTRAINED: [[TMP0:%.*]] = fcmp oge double %a, %b
-// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"oge", metadata !"fpexcept.strict")
+// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"oge", metadata !"fpexcept.strict")
 // CHECK-ASM:     fcmp d{{[0-9]+}}, d{{[0-9]+}}
 // CHECK-ASM-NEXT:cset {{w[0-9]+}}, ge
 // COMMONIR:      [[VCMPD_I:%.*]] = sext i1 [[TMP0]] to i64
@@ -607,7 +607,7 @@ uint64_t test_vcged_f64(float64_t a, float64_t b) {
 
 // COMMON-LABEL: test_vcgezs_f32
 // UNCONSTRAINED: [[TMP0:%.*]] = fcmp oge float %a, 0.000000e+00
-// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float 0.000000e+00, metadata !"oge", metadata !"fpexcept.strict")
+// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float 0.000000e+00, metadata !"oge", metadata !"fpexcept.strict")
 // CHECK-ASM:     fcmp s{{[0-9]+}}, #0.0
 // CHECK-ASM-NEXT:cset {{w[0-9]+}}, ge
 // COMMONIR:      [[VCGEZ_I:%.*]] = sext i1 [[TMP0]] to i32
@@ -618,7 +618,7 @@ uint32_t test_vcgezs_f32(float32_t a) {
 
 // COMMON-LABEL: test_vcgezd_f64
 // UNCONSTRAINED: [[TMP0:%.*]] = fcmp oge double %a, 0.000000e+00
-// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double 0.000000e+00, metadata !"oge", metadata !"fpexcept.strict")
+// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double 0.000000e+00, metadata !"oge", metadata !"fpexcept.strict")
 // CHECK-ASM:     fcmp d{{[0-9]+}}, #0.0
 // CHECK-ASM-NEXT:cset {{w[0-9]+}}, ge
 // COMMONIR:      [[VCGEZ_I:%.*]] = sext i1 [[TMP0]] to i64
@@ -629,7 +629,7 @@ uint64_t test_vcgezd_f64(float64_t a) {
 
 // COMMON-LABEL: test_vcgts_f32
 // UNCONSTRAINED: [[TMP0:%.*]] = fcmp ogt float %a, %b
-// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"ogt", metadata !"fpexcept.strict")
+// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %b, metadata !"ogt", metadata !"fpexcept.strict")
 // CHECK-ASM:     fcmp s{{[0-9]+}}, s{{[0-9]+}}
 // CHECK-ASM-NEXT:cset {{w[0-9]+}}, gt
 // COMMONIR:      [[VCMPD_I:%.*]] = sext i1 [[TMP0]] to i32
@@ -640,7 +640,7 @@ uint32_t test_vcgts_f32(float32_t a, float32_t b) {
 
 // COMMON-LABEL: test_vcgtd_f64
 // UNCONSTRAINED: [[TMP0:%.*]] = fcmp ogt double %a, %b
-// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"ogt", metadata !"fpexcept.strict")
+// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"ogt", metadata !"fpexcept.strict")
 // CHECK-ASM:     fcmp d{{[0-9]+}}, d{{[0-9]+}}
 // CHECK-ASM-NEXT:cset {{w[0-9]+}}, gt
 // COMMONIR:      [[VCMPD_I:%.*]] = sext i1 [[TMP0]] to i64
@@ -651,7 +651,7 @@ uint64_t test_vcgtd_f64(float64_t a, float64_t b) {
 
 // COMMON-LABEL: test_vcgtzs_f32
 // UNCONSTRAINED: [[TMP0:%.*]] = fcmp ogt float %a, 0.000000e+00
-// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float 0.000000e+00, metadata !"ogt", metadata !"fpexcept.strict")
+// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float 0.000000e+00, metadata !"ogt", metadata !"fpexcept.strict")
 // CHECK-ASM:     fcmp s{{[0-9]+}}, #0.0
 // CHECK-ASM-NEXT:cset {{w[0-9]+}}, gt
 // COMMONIR:      [[VCGTZ_I:%.*]] = sext i1 [[TMP0]] to i32
@@ -662,7 +662,7 @@ uint32_t test_vcgtzs_f32(float32_t a) {
 
 // COMMON-LABEL: test_vcgtzd_f64
 // UNCONSTRAINED: [[TMP0:%.*]] = fcmp ogt double %a, 0.000000e+00
-// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double 0.000000e+00, metadata !"ogt", metadata !"fpexcept.strict")
+// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double 0.000000e+00, metadata !"ogt", metadata !"fpexcept.strict")
 // CHECK-ASM:     fcmp d{{[0-9]+}}, #0.0
 // CHECK-ASM-NEXT:cset {{w[0-9]+}}, gt
 // COMMONIR:      [[VCGTZ_I:%.*]] = sext i1 [[TMP0]] to i64
@@ -673,7 +673,7 @@ uint64_t test_vcgtzd_f64(float64_t a) {
 
 // COMMON-LABEL: test_vcles_f32
 // UNCONSTRAINED: [[TMP0:%.*]] = fcmp ole float %a, %b
-// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"ole", metadata !"fpexcept.strict")
+// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %b, metadata !"ole", metadata !"fpexcept.strict")
 // CHECK-ASM:     fcmp s{{[0-9]+}}, s{{[0-9]+}}
 // CHECK-ASM-NEXT:cset {{w[0-9]+}}, ls
 // COMMONIR:      [[VCMPD_I:%.*]] = sext i1 [[TMP0]] to i32
@@ -684,7 +684,7 @@ uint32_t test_vcles_f32(float32_t a, float32_t b) {
 
 // COMMON-LABEL: test_vcled_f64
 // UNCONSTRAINED: [[TMP0:%.*]] = fcmp ole double %a, %b
-// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"ole", metadata !"fpexcept.strict")
+// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"ole", metadata !"fpexcept.strict")
 // CHECK-ASM:     fcmp d{{[0-9]+}}, d{{[0-9]+}}
 // CHECK-ASM-NEXT:cset {{w[0-9]+}}, ls
 // COMMONIR:      [[VCMPD_I:%.*]] = sext i1 [[TMP0]] to i64
@@ -695,7 +695,7 @@ uint64_t test_vcled_f64(float64_t a, float64_t b) {
 
 // COMMON-LABEL: test_vclezs_f32
 // UNCONSTRAINED: [[TMP0:%.*]] = fcmp ole float %a, 0.000000e+00
-// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float 0.000000e+00, metadata !"ole", metadata !"fpexcept.strict")
+// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float 0.000000e+00, metadata !"ole", metadata !"fpexcept.strict")
 // CHECK-ASM:     fcmp s{{[0-9]+}}, #0.0
 // CHECK-ASM-NEXT:cset {{w[0-9]+}}, ls
 // COMMONIR:      [[VCLEZ_I:%.*]] = sext i1 [[TMP0]] to i32
@@ -706,7 +706,7 @@ uint32_t test_vclezs_f32(float32_t a) {
 
 // COMMON-LABEL: test_vclezd_f64
 // UNCONSTRAINED: [[TMP0:%.*]] = fcmp ole double %a, 0.000000e+00
-// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double 0.000000e+00, metadata !"ole", metadata !"fpexcept.strict")
+// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double 0.000000e+00, metadata !"ole", metadata !"fpexcept.strict")
 // CHECK-ASM:     fcmp d{{[0-9]+}}, #0.0
 // CHECK-ASM-NEXT:cset {{w[0-9]+}}, ls
 // COMMONIR:      [[VCLEZ_I:%.*]] = sext i1 [[TMP0]] to i64
@@ -717,7 +717,7 @@ uint64_t test_vclezd_f64(float64_t a) {
 
 // COMMON-LABEL: test_vclts_f32
 // UNCONSTRAINED: [[TMP0:%.*]] = fcmp olt float %a, %b
-// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"olt", metadata !"fpexcept.strict")
+// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %b, metadata !"olt", metadata !"fpexcept.strict")
 // CHECK-ASM:     fcmp s{{[0-9]+}}, s{{[0-9]+}}
 // CHECK-ASM-NEXT:cset {{w[0-9]+}}, mi
 // COMMONIR:      [[VCMPD_I:%.*]] = sext i1 [[TMP0]] to i32
@@ -728,7 +728,7 @@ uint32_t test_vclts_f32(float32_t a, float32_t b) {
 
 // COMMON-LABEL: test_vcltd_f64
 // UNCONSTRAINED: [[TMP0:%.*]] = fcmp olt double %a, %b
-// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"olt", metadata !"fpexcept.strict")
+// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"olt", metadata !"fpexcept.strict")
 // CHECK-ASM:     fcmp d{{[0-9]+}}, d{{[0-9]+}}
 // CHECK-ASM-NEXT:cset {{w[0-9]+}}, mi
 // COMMONIR:      [[VCMPD_I:%.*]] = sext i1 [[TMP0]] to i64
@@ -739,7 +739,7 @@ uint64_t test_vcltd_f64(float64_t a, float64_t b) {
 
 // COMMON-LABEL: test_vcltzs_f32
 // UNCONSTRAINED: [[TMP0:%.*]] = fcmp olt float %a, 0.000000e+00
-// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float 0.000000e+00, metadata !"olt", metadata !"fpexcept.strict")
+// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float 0.000000e+00, metadata !"olt", metadata !"fpexcept.strict")
 // CHECK-ASM:     fcmp s{{[0-9]+}}, #0.0
 // CHECK-ASM-NEXT:cset {{w[0-9]+}}, mi
 // COMMONIR:      [[VCLTZ_I:%.*]] = sext i1 [[TMP0]] to i32
@@ -750,7 +750,7 @@ uint32_t test_vcltzs_f32(float32_t a) {
 
 // COMMON-LABEL: test_vcltzd_f64
 // UNCONSTRAINED: [[TMP0:%.*]] = fcmp olt double %a, 0.000000e+00
-// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double 0.000000e+00, metadata !"olt", metadata !"fpexcept.strict")
+// CONSTRAINED:   [[TMP0:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double 0.000000e+00, metadata !"olt", metadata !"fpexcept.strict")
 // CHECK-ASM:     fcmp d{{[0-9]+}}, #0.0
 // CHECK-ASM-NEXT:cset {{w[0-9]+}}, mi
 // COMMONIR:      [[VCLTZ_I:%.*]] = sext i1 [[TMP0]] to i64

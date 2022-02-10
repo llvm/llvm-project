@@ -21,6 +21,7 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/StreamString.h"
@@ -825,8 +826,8 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
 
   auto type_system_or_err = GetTypeSystemForLanguage(GetLanguage(*die.GetCU()));
   if (auto err = type_system_or_err.takeError()) {
-    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
-                   std::move(err), "Unable to parse function");
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                   "Unable to parse function");
     return nullptr;
   }
   DWARFASTParser *dwarf_ast = type_system_or_err->GetDWARFParser();
@@ -2098,8 +2099,7 @@ bool SymbolFileDWARF::DeclContextMatchesThisSymbolFile(
   auto type_system_or_err = GetTypeSystemForLanguage(
       decl_ctx_type_system->GetMinimumLanguage(nullptr));
   if (auto err = type_system_or_err.takeError()) {
-    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
-                   std::move(err),
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
                    "Unable to match namespace decl using TypeSystem");
     return false;
   }
@@ -2868,10 +2868,9 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
       if (language != eLanguageTypeUnknown) {
         auto type_system_or_err = GetTypeSystemForLanguage(language);
         if (auto err = type_system_or_err.takeError()) {
-          LLDB_LOG_ERROR(
-              lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
-              std::move(err), "Cannot get TypeSystem for language {}",
-              Language::GetNameForLanguageType(language));
+          LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                         "Cannot get TypeSystem for language {}",
+                         Language::GetNameForLanguageType(language));
         } else {
           type_system = &type_system_or_err.get();
         }
@@ -2967,8 +2966,8 @@ TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
 
   auto type_system_or_err = GetTypeSystemForLanguage(GetLanguage(*die.GetCU()));
   if (auto err = type_system_or_err.takeError()) {
-    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
-                   std::move(err), "Unable to parse type");
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                   "Unable to parse type");
     return {};
   }
 
@@ -3801,7 +3800,7 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
   if (!has_call_edges)
     return {};
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   LLDB_LOG(log, "CollectCallEdges: Found call site info in {0}",
            function_die.GetPubname());
 
@@ -4025,8 +4024,8 @@ llvm::Expected<TypeSystem &> SymbolFileDWARF::GetTypeSystem(DWARFUnit &unit) {
 DWARFASTParser *SymbolFileDWARF::GetDWARFParser(DWARFUnit &unit) {
   auto type_system_or_err = GetTypeSystem(unit);
   if (auto err = type_system_or_err.takeError()) {
-    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
-                   std::move(err), "Unable to get DWARFASTParser");
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                   "Unable to get DWARFASTParser");
     return nullptr;
   }
   return type_system_or_err->GetDWARFParser();

@@ -53,6 +53,7 @@ add_flang_library(FortranRuntime
   file.cpp
   findloc.cpp
   format.cpp
+  inquiry.cpp
   internal-unit.cpp
   iostat.cpp
   io-api.cpp

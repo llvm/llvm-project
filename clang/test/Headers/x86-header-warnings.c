@@ -7,7 +7,7 @@
 
 #include <x86intrin.h>
 
-void test0() {
+void test0(void) {
   // expected-no-diagnostics
   _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
   _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_OFF);

@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep "ret i32 10"
+; RUN: opt < %s -passes=instcombine -S | grep "ret i32 10"
 
 @g1 = available_externally constant i32 1
 @g2 = linkonce_odr constant i32 2

@@ -31,7 +31,7 @@ __attribute__((unavailable("not available")))
 @implementation MyClass (Cat2) // no error.
 @end
 
-int main() {
+int main(void) {
  [MyClass new]; // expected-error {{'MyClass' is unavailable: not available}}
  [MyClass self]; // expected-error {{'MyClass' is unavailable: not available}}
  [MyClass addObject:((void *)0)]; // expected-error {{'MyClass' is unavailable: not available}}
@@ -64,7 +64,7 @@ Foo *g_foo = 0; // expected-error {{'Foo' is unavailable}}
 @class Foo;
 @class Foo;
 @class Foo;
-Foo * f_func() { // expected-error {{'Foo' is unavailable}}
+Foo * f_func(void) { // expected-error {{'Foo' is unavailable}}
   return 0; 
 }
 

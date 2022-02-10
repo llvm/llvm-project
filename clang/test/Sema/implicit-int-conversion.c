@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 %s -verify -Wconversion -Wno-implicit-float-conversion -DSMALL=float -DBIG=double -DNO_DIAG
 // RUN: %clang_cc1 %s -verify -Wno-conversion -Wimplicit-float-conversion -DSMALL=float -DBIG=double
 
-void f() {
+void f(void) {
   SMALL a;
   BIG b = 0;
   a = b;

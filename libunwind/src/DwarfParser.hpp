@@ -71,6 +71,7 @@ public:
     kRegisterUnused,
     kRegisterUndefined,
     kRegisterInCFA,
+    kRegisterInCFADecrypt, // sparc64 specific
     kRegisterOffsetFromCFA,
     kRegisterInRegister,
     kRegisterAtExpression,
@@ -733,7 +734,8 @@ bool CFI_Parser<A>::parseFDEInstructions(A &addressSpace,
             "DW_CFA_GNU_negative_offset_extended(%" PRId64 ")\n", offset);
         break;
 
-#if defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_SPARC)
+#if defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_SPARC) || \
+    defined(_LIBUNWIND_TARGET_SPARC64)
         // The same constant is used to represent different instructions on
         // AArch64 (negate_ra_state) and SPARC (window_save).
         static_assert(DW_CFA_AARCH64_negate_ra_state == DW_CFA_GNU_window_save,
@@ -767,8 +769,31 @@ bool CFI_Parser<A>::parseFDEInstructions(A &addressSpace,
           }
           break;
 #endif
+
+#if defined(_LIBUNWIND_TARGET_SPARC64)
+        // case DW_CFA_GNU_window_save:
+        case REGISTERS_SPARC64:
+          // Don't save %o0-%o7 on sparc64.
+          // https://reviews.llvm.org/D32450#736405
+
+          for (reg = UNW_SPARC_L0; reg <= UNW_SPARC_I7; reg++) {
+            if (reg == UNW_SPARC_I7)
+              results->setRegister(
+                  reg, kRegisterInCFADecrypt,
+                  static_cast<int64_t>((reg - UNW_SPARC_L0) * sizeof(pint_t)),
+                  initialState);
+            else
+              results->setRegister(
+                  reg, kRegisterInCFA,
+                  static_cast<int64_t>((reg - UNW_SPARC_L0) * sizeof(pint_t)),
+                  initialState);
+          }
+          _LIBUNWIND_TRACE_DWARF("DW_CFA_GNU_window_save\n");
+          break;
+#endif
         }
         break;
+
 #else
         (void)arch;
 #endif

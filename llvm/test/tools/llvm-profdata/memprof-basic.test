@@ -24,19 +24,127 @@ the shared libraries linked in which could change the number of segments
 recorded.
 
 ```
-clang -fmemory-profile -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -m64 -Wl,-build-id source.c -o rawprofile.out
+clang -fuse-ld=lld -Wl,--no-rosegment -gmlt -fdebug-info-for-profiling \
+      -fmemory-profile -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer \
+      -fno-optimize-sibling-calls -m64 -Wl,-build-id source.c -o basic.memprofexe 
 
 env MEMPROF_OPTIONS=log_path=stdout ./rawprofile.out > basic.memprofraw
 ```
 
-RUN: llvm-profdata show --memory %p/Inputs/basic.memprofraw -o - | FileCheck %s
+RUN: llvm-profdata show --memory %p/Inputs/basic.memprofraw --profiled-binary %p/Inputs/basic.memprofexe -o - | FileCheck %s
 
 We expect 3 MIB entries, 1 each for the malloc calls in the program and one
 additional entry from a realloc in glibc/libio/vasprintf.c.
 
-CHECK: MemProf Profile 1
-CHECK:   Version: 1
-CHECK:   TotalSizeBytes: 1016
-CHECK:   NumSegments: 9
-CHECK:   NumMIBInfo: 3
-CHECK:   NumStackOffsets: 3
+CHECK: MemprofProfile:
+CHECK-NEXT:   -
+CHECK-NEXT:   Header:
+CHECK-NEXT:     Version: 1
+CHECK-NEXT:     TotalSizeBytes: 1016
+CHECK-NEXT:     NumSegments: 9
+CHECK-NEXT:     NumMibInfo: 3
+CHECK-NEXT:     NumStackOffsets: 3
+CHECK-NEXT:   Records:
+CHECK-NEXT:   -
+CHECK-NEXT:     Callstack:
+CHECK-NEXT:     -
+CHECK-NEXT:       Function: {{[0-9]+}}
+CHECK-NEXT:       LineOffset: 73
+CHECK-NEXT:       Column: 3
+CHECK-NEXT:       Inline: 0
+CHECK-NEXT:     -
+CHECK-NEXT:       Function: {{[0-9]+}}
+CHECK-NEXT:       LineOffset: 0
+CHECK-NEXT:       Column: 0
+CHECK-NEXT:       Inline: 0
+CHECK-NEXT:     MemInfoBlock:
+CHECK-NEXT:       AllocCount: 1
+CHECK-NEXT:       TotalAccessCount: 0
+CHECK-NEXT:       MinAccessCount: 0
+CHECK-NEXT:       MaxAccessCount: 0
+CHECK-NEXT:       TotalSize: 53
+CHECK-NEXT:       MinSize: 53
+CHECK-NEXT:       MaxSize: 53
+CHECK-NEXT:       AllocTimestamp: 0
+CHECK-NEXT:       DeallocTimestamp: 987
+CHECK-NEXT:       TotalLifetime: 987
+CHECK-NEXT:       MinLifetime: 987
+CHECK-NEXT:       MaxLifetime: 987
+CHECK-NEXT:       AllocCpuId: 4294967295
+CHECK-NEXT:       DeallocCpuId: 56
+CHECK-NEXT:       NumMigratedCpu: 1
+CHECK-NEXT:       NumLifetimeOverlaps: 0
+CHECK-NEXT:       NumSameAllocCpu: 0
+CHECK-NEXT:       NumSameDeallocCpu: 0
+CHECK-NEXT:   -
+CHECK-NEXT:     Callstack:
+CHECK-NEXT:     -
+CHECK-NEXT:       Function: {{[0-9]+}}
+CHECK-NEXT:       LineOffset: 57
+CHECK-NEXT:       Column: 3
+CHECK-NEXT:       Inline: 0
+CHECK-NEXT:     -
+CHECK-NEXT:       Function: {{[0-9]+}}
+CHECK-NEXT:       LineOffset: 1
+CHECK-NEXT:       Column: 21
+CHECK-NEXT:       Inline: 0
+CHECK-NEXT:     -
+CHECK-NEXT:       Function: {{[0-9]+}}
+CHECK-NEXT:       LineOffset: 0
+CHECK-NEXT:       Column: 0
+CHECK-NEXT:       Inline: 0
+CHECK-NEXT:     MemInfoBlock:
+CHECK-NEXT:       AllocCount: 1
+CHECK-NEXT:       TotalAccessCount: 2
+CHECK-NEXT:       MinAccessCount: 2
+CHECK-NEXT:       MaxAccessCount: 2
+CHECK-NEXT:       TotalSize: 10
+CHECK-NEXT:       MinSize: 10
+CHECK-NEXT:       MaxSize: 10
+CHECK-NEXT:       AllocTimestamp: 986
+CHECK-NEXT:       DeallocTimestamp: 986
+CHECK-NEXT:       TotalLifetime: 0
+CHECK-NEXT:       MinLifetime: 0
+CHECK-NEXT:       MaxLifetime: 0
+CHECK-NEXT:       AllocCpuId: 56
+CHECK-NEXT:       DeallocCpuId: 56
+CHECK-NEXT:       NumMigratedCpu: 0
+CHECK-NEXT:       NumLifetimeOverlaps: 0
+CHECK-NEXT:       NumSameAllocCpu: 0
+CHECK-NEXT:       NumSameDeallocCpu: 0
+CHECK-NEXT:   -
+CHECK-NEXT:     Callstack:
+CHECK-NEXT:     -
+CHECK-NEXT:       Function: {{[0-9]+}}
+CHECK-NEXT:       LineOffset: 57
+CHECK-NEXT:       Column: 3
+CHECK-NEXT:       Inline: 0
+CHECK-NEXT:     -
+CHECK-NEXT:       Function: {{[0-9]+}}
+CHECK-NEXT:       LineOffset: 5
+CHECK-NEXT:       Column: 15
+CHECK-NEXT:       Inline: 0
+CHECK-NEXT:     -
+CHECK-NEXT:       Function: {{[0-9]+}}
+CHECK-NEXT:       LineOffset: 0
+CHECK-NEXT:       Column: 0
+CHECK-NEXT:       Inline: 0
+CHECK-NEXT:     MemInfoBlock:
+CHECK-NEXT:       AllocCount: 1
+CHECK-NEXT:       TotalAccessCount: 2
+CHECK-NEXT:       MinAccessCount: 2
+CHECK-NEXT:       MaxAccessCount: 2
+CHECK-NEXT:       TotalSize: 10
+CHECK-NEXT:       MinSize: 10
+CHECK-NEXT:       MaxSize: 10
+CHECK-NEXT:       AllocTimestamp: 987
+CHECK-NEXT:       DeallocTimestamp: 987
+CHECK-NEXT:       TotalLifetime: 0
+CHECK-NEXT:       MinLifetime: 0
+CHECK-NEXT:       MaxLifetime: 0
+CHECK-NEXT:       AllocCpuId: 56
+CHECK-NEXT:       DeallocCpuId: 56
+CHECK-NEXT:       NumMigratedCpu: 0
+CHECK-NEXT:       NumLifetimeOverlaps: 0
+CHECK-NEXT:       NumSameAllocCpu: 0
+CHECK-NEXT:       NumSameDeallocCpu: 0

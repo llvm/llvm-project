@@ -148,41 +148,43 @@ define amdgpu_kernel void @nested_loop_conditions(i64 addrspace(1)* nocapture %a
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
-; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0
+; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, 8, v0
 ; GCN-NEXT:    s_and_b64 vcc, exec, vcc
 ; GCN-NEXT:    s_cbranch_vccnz .LBB1_6
 ; GCN-NEXT:  ; %bb.1: ; %bb14.lr.ph
-; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0
+; GCN-NEXT:    s_load_dword s4, s[0:1], 0x0
 ; GCN-NEXT:    s_branch .LBB1_3
-; GCN-NEXT:  .LBB1_2: ; in Loop: Header=BB1_3 Depth=1
-; GCN-NEXT:    s_mov_b64 s[0:1], -1
-; GCN-NEXT:    ; implicit-def: $vgpr0
-; GCN-NEXT:    s_cbranch_execnz .LBB1_6
+; GCN-NEXT:  .LBB1_2: ; %Flow
+; GCN-NEXT:    ; in Loop: Header=BB1_3 Depth=1
+; GCN-NEXT:    s_and_b64 vcc, exec, s[0:1]
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_mov_b64 vcc, vcc
+; GCN-NEXT:    s_cbranch_vccnz .LBB1_6
 ; GCN-NEXT:  .LBB1_3: ; %bb14
 ; GCN-NEXT:    ; =>This Loop Header: Depth=1
 ; GCN-NEXT:    ; Child Loop BB1_4 Depth 2
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
-; GCN-NEXT:    s_and_b64 vcc, exec, vcc
-; GCN-NEXT:    s_cbranch_vccnz .LBB1_2
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_cmp_lg_u32 s4, 1
+; GCN-NEXT:    s_mov_b64 s[0:1], -1
+; GCN-NEXT:    ; implicit-def: $sgpr4
+; GCN-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GCN-NEXT:  .LBB1_4: ; %bb18
 ; GCN-NEXT:    ; Parent Loop BB1_3 Depth=1
 ; GCN-NEXT:    ; => This Inner Loop Header: Depth=2
-; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0
+; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, 8, v0
 ; GCN-NEXT:    s_and_b64 vcc, exec, vcc
 ; GCN-NEXT:    s_cbranch_vccnz .LBB1_4
 ; GCN-NEXT:  ; %bb.5: ; %bb21
 ; GCN-NEXT:    ; in Loop: Header=BB1_3 Depth=1
-; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0
-; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0
+; GCN-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_cmp_lt_i32_e64 s[0:1], 8, v1
-; GCN-NEXT:    s_and_b64 vcc, exec, s[0:1]
-; GCN-NEXT:    s_cbranch_vccz .LBB1_3
+; GCN-NEXT:    v_cmp_lt_i32_e64 s[0:1], 8, v0
+; GCN-NEXT:    s_branch .LBB1_2
 ; GCN-NEXT:  .LBB1_6: ; %bb31
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0

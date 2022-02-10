@@ -48,6 +48,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
@@ -1466,7 +1467,7 @@ AppleObjCRuntimeV2::GetClassDescriptor(ValueObject &valobj) {
 
   objc_class_sp = GetClassDescriptorFromISA(isa);
   if (isa && !objc_class_sp) {
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_TYPES));
+    Log *log = GetLog(LLDBLog::Process | LLDBLog::Commands);
     LLDB_LOGF(log,
               "0x%" PRIx64 ": AppleObjCRuntimeV2::GetClassDescriptor() ISA was "
               "not in class descriptor cache 0x%" PRIx64,
@@ -1538,7 +1539,7 @@ lldb::addr_t AppleObjCRuntimeV2::GetISAHashTablePointer() {
 std::unique_ptr<UtilityFunction>
 AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoUtilityFunctionImpl(
     ExecutionContext &exe_ctx, std::string code, std::string name) {
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_TYPES));
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Commands);
 
   LLDB_LOG(log, "Creating utility function {0}", name);
 
@@ -1643,7 +1644,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::ComputeHelper() const {
 std::unique_ptr<UtilityFunction>
 AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::
     GetClassInfoUtilityFunctionImpl(ExecutionContext &exe_ctx) {
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_TYPES));
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Commands);
 
   LLDB_LOG(log, "Creating utility function {0}",
            g_get_shared_cache_class_info_name);
@@ -1746,7 +1747,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
 
   uint32_t num_class_infos = 0;
 
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_TYPES));
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Commands);
 
   ExecutionContext exe_ctx;
 
@@ -1822,7 +1823,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
 
   // Only dump the runtime classes from the expression evaluation if the log is
   // verbose:
-  Log *type_log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES);
+  Log *type_log = GetLog(LLDBLog::Commands);
   bool dump_log = type_log && type_log->GetVerbose();
 
   arguments.GetValueAtIndex(3)->GetScalar() = dump_log ? 1 : 0;
@@ -1902,7 +1903,7 @@ uint32_t AppleObjCRuntimeV2::ParseClassInfoArray(const DataExtractor &data,
   //        uint32_t hash;
   //    } __attribute__((__packed__));
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  Log *log = GetLog(LLDBLog::Commands);
   bool should_log = log && log->GetVerbose();
 
   uint32_t num_parsed = 0;
@@ -1975,7 +1976,7 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
   if (process == nullptr)
     return DescriptorMapUpdateResult::Fail();
 
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_TYPES));
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Commands);
 
   ExecutionContext exe_ctx;
 
@@ -2007,7 +2008,8 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
       shared_cache_base_addr == LLDB_INVALID_ADDRESS)
     return DescriptorMapUpdateResult::Fail();
 
-  const uint32_t num_classes = 128 * 1024;
+  // The number of entries to pre-allocate room for.
+  const uint32_t max_num_classes = 256 * 1024;
 
   UtilityFunction *get_class_info_code = GetClassInfoUtilityFunction(exe_ctx);
   if (!get_class_info_code) {
@@ -2029,7 +2031,7 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
   DiagnosticManager diagnostics;
 
   const uint32_t class_info_byte_size = addr_size + 4;
-  const uint32_t class_infos_byte_size = num_classes * class_info_byte_size;
+  const uint32_t class_infos_byte_size = max_num_classes * class_info_byte_size;
   lldb::addr_t class_infos_addr = process->AllocateMemory(
       class_infos_byte_size, ePermissionsReadable | ePermissionsWritable, err);
   const uint32_t relative_selector_offset_addr_size = 64;
@@ -2055,7 +2057,7 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
   arguments.GetValueAtIndex(4)->GetScalar() = class_infos_byte_size;
   // Only dump the runtime classes from the expression evaluation if the log is
   // verbose:
-  Log *type_log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES);
+  Log *type_log = GetLog(LLDBLog::Commands);
   bool dump_log = type_log && type_log->GetVerbose();
 
   arguments.GetValueAtIndex(5)->GetScalar() = dump_log ? 1 : 0;
@@ -2095,10 +2097,12 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
       num_class_infos = return_value.GetScalar().ULong();
       LLDB_LOG(log, "Discovered {0} Objective-C classes in the shared cache",
                num_class_infos);
-      assert(num_class_infos <= num_classes);
+      // Assert if there were more classes than we pre-allocated
+      // room for.
+      assert(num_class_infos <= max_num_classes);
       if (num_class_infos > 0) {
-        if (num_class_infos > num_classes) {
-          num_class_infos = num_classes;
+        if (num_class_infos > max_num_classes) {
+          num_class_infos = max_num_classes;
 
           success = false;
         } else {
@@ -2213,7 +2217,7 @@ lldb::addr_t AppleObjCRuntimeV2::GetSharedCacheBaseAddress() {
 void AppleObjCRuntimeV2::UpdateISAToDescriptorMapIfNeeded() {
   LLDB_SCOPED_TIMER();
 
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_TYPES));
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Commands);
 
   // Else we need to check with our process to see when the map was updated.
   Process *process = GetProcess();
@@ -2300,7 +2304,7 @@ bool AppleObjCRuntimeV2::RealizedClassGenerationCountChanged() {
       objc_debug_realized_class_generation_count)
     return false;
 
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_TYPES));
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Commands);
   LLDB_LOG(log,
            "objc_debug_realized_class_generation_count changed from {0} to {1}",
            m_realized_class_generation_count,
@@ -2454,7 +2458,7 @@ AppleObjCRuntimeV2::NonPointerISACache::CreateInstance(
 
   Status error;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  Log *log = GetLog(LLDBLog::Commands);
 
   auto objc_debug_isa_magic_mask = ExtractRuntimeGlobalSymbol(
       process, ConstString("objc_debug_isa_magic_mask"), objc_module_sp, error);
@@ -2884,7 +2888,7 @@ AppleObjCRuntimeV2::NonPointerISACache::GetClassDescriptor(ObjCISA isa) {
 
 bool AppleObjCRuntimeV2::NonPointerISACache::EvaluateNonPointerISA(
     ObjCISA isa, ObjCISA &ret_isa) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  Log *log = GetLog(LLDBLog::Commands);
 
   LLDB_LOGF(log, "AOCRT::NPI Evaluate(isa = 0x%" PRIx64 ")", (uint64_t)isa);
 

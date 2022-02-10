@@ -31,7 +31,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/ConstantRange.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
@@ -39,9 +38,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Allocator.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -56,6 +52,7 @@ class Constant;
 class ConstantInt;
 class DataLayout;
 class DominatorTree;
+class Function;
 class GEPOperator;
 class Instruction;
 class LLVMContext;
@@ -222,7 +219,7 @@ class SCEVPredicate : public FoldingSetNode {
   FoldingSetNodeIDRef FastID;
 
 public:
-  enum SCEVPredicateKind { P_Union, P_Equal, P_Wrap };
+  enum SCEVPredicateKind { P_Union, P_Compare, P_Wrap };
 
 protected:
   SCEVPredicateKind Kind;
@@ -279,16 +276,18 @@ struct FoldingSetTrait<SCEVPredicate> : DefaultFoldingSetTrait<SCEVPredicate> {
   }
 };
 
-/// This class represents an assumption that two SCEV expressions are equal,
-/// and this can be checked at run-time.
-class SCEVEqualPredicate final : public SCEVPredicate {
-  /// We assume that LHS == RHS.
+/// This class represents an assumption that the expression LHS Pred RHS
+/// evaluates to true, and this can be checked at run-time.
+class SCEVComparePredicate final : public SCEVPredicate {
+  /// We assume that LHS Pred RHS is true.
+  const ICmpInst::Predicate Pred;
   const SCEV *LHS;
   const SCEV *RHS;
 
 public:
-  SCEVEqualPredicate(const FoldingSetNodeIDRef ID, const SCEV *LHS,
-                     const SCEV *RHS);
+  SCEVComparePredicate(const FoldingSetNodeIDRef ID,
+                       const ICmpInst::Predicate Pred,
+                       const SCEV *LHS, const SCEV *RHS);
 
   /// Implementation of the SCEVPredicate interface
   bool implies(const SCEVPredicate *N) const override;
@@ -296,15 +295,17 @@ public:
   bool isAlwaysTrue() const override;
   const SCEV *getExpr() const override;
 
-  /// Returns the left hand side of the equality.
+  ICmpInst::Predicate getPredicate() const { return Pred; }
+
+  /// Returns the left hand side of the predicate.
   const SCEV *getLHS() const { return LHS; }
 
-  /// Returns the right hand side of the equality.
+  /// Returns the right hand side of the predicate.
   const SCEV *getRHS() const { return RHS; }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEVPredicate *P) {
-    return P->getKind() == P_Equal;
+    return P->getKind() == P_Compare;
   }
 };
 
@@ -424,15 +425,15 @@ private:
   /// Maps SCEVs to predicates for quick look-ups.
   PredicateMap SCEVToPreds;
 
+  /// Adds a predicate to this union.
+  void add(const SCEVPredicate *N);
+
 public:
-  SCEVUnionPredicate();
+  SCEVUnionPredicate(ArrayRef<const SCEVPredicate *> Preds);
 
   const SmallVectorImpl<const SCEVPredicate *> &getPredicates() const {
     return Preds;
   }
-
-  /// Adds a predicate to this union.
-  void add(const SCEVPredicate *N);
 
   /// Returns a reference to a vector containing all predicates which apply to
   /// \p Expr.
@@ -885,7 +886,7 @@ public:
   /// the answer to be correct. Predicates can be checked with run-time
   /// checks and can be used to perform loop versioning.
   const SCEV *getPredicatedBackedgeTakenCount(const Loop *L,
-                                              SCEVUnionPredicate &Predicates);
+                                              SmallVector<const SCEVPredicate *, 4> &Predicates);
 
   /// When successful, this returns a SCEVConstant that is greater than or equal
   /// to (i.e. a "conservative over-approximation") of the value returend by
@@ -1166,6 +1167,8 @@ public:
   }
 
   const SCEVPredicate *getEqualPredicate(const SCEV *LHS, const SCEV *RHS);
+  const SCEVPredicate *getComparePredicate(ICmpInst::Predicate Pred,
+                                           const SCEV *LHS, const SCEV *RHS);
 
   const SCEVPredicate *
   getWrapPredicate(const SCEVAddRecExpr *AR,
@@ -1369,17 +1372,17 @@ private:
     PoisoningVH<BasicBlock> ExitingBlock;
     const SCEV *ExactNotTaken;
     const SCEV *MaxNotTaken;
-    std::unique_ptr<SCEVUnionPredicate> Predicate;
+    SmallPtrSet<const SCEVPredicate *, 4> Predicates;
 
     explicit ExitNotTakenInfo(PoisoningVH<BasicBlock> ExitingBlock,
                               const SCEV *ExactNotTaken,
                               const SCEV *MaxNotTaken,
-                              std::unique_ptr<SCEVUnionPredicate> Predicate)
+                              const SmallPtrSet<const SCEVPredicate *, 4> &Predicates)
       : ExitingBlock(ExitingBlock), ExactNotTaken(ExactNotTaken),
-        MaxNotTaken(ExactNotTaken), Predicate(std::move(Predicate)) {}
+        MaxNotTaken(ExactNotTaken), Predicates(Predicates) {}
 
     bool hasAlwaysTruePredicate() const {
-      return !Predicate || Predicate->isAlwaysTrue();
+      return Predicates.empty();
     }
   };
 
@@ -1452,7 +1455,7 @@ private:
     /// vector, this information can contain them and therefore a
     /// SCEVPredicate argument should be added to getExact.
     const SCEV *getExact(const Loop *L, ScalarEvolution *SE,
-                         SCEVUnionPredicate *Predicates = nullptr) const;
+                         SmallVector<const SCEVPredicate *, 4> *Predicates = nullptr) const;
 
     /// Return the number of times this loop exit may fall through to the back
     /// edge, or SCEVCouldNotCompute. The loop is guaranteed not to exit via
@@ -2251,7 +2254,7 @@ private:
 
   /// The SCEVPredicate that forms our context. We will rewrite all
   /// expressions assuming that this predicate true.
-  SCEVUnionPredicate Preds;
+  std::unique_ptr<SCEVUnionPredicate> Preds;
 
   /// Marks the version of the SCEV predicate used. When rewriting a SCEV
   /// expression we mark it with the version of the predicate. We use this to

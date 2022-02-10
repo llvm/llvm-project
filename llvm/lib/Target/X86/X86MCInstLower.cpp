@@ -1347,11 +1347,12 @@ void X86AsmPrinter::LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
                             AccessInfo.CompileKernel, &ShadowBase,
                             &MappingScale, &OrShadowOffset);
 
-  std::string Name = AccessInfo.IsWrite ? "store" : "load";
-  std::string Op = OrShadowOffset ? "or" : "add";
-  std::string SymName = "__asan_check_" + Name + "_" + Op + "_" +
-                        utostr(1ULL << AccessInfo.AccessSizeIndex) + "_" +
-                        TM.getMCRegisterInfo()->getName(Reg.asMCReg());
+  StringRef Name = AccessInfo.IsWrite ? "store" : "load";
+  StringRef Op = OrShadowOffset ? "or" : "add";
+  std::string SymName = ("__asan_check_" + Name + "_" + Op + "_" +
+                         Twine(1ULL << AccessInfo.AccessSizeIndex) + "_" +
+                         TM.getMCRegisterInfo()->getName(Reg.asMCReg()))
+                            .str();
   if (OrShadowOffset)
     report_fatal_error(
         "OrShadowOffset is not supported with optimized callbacks");

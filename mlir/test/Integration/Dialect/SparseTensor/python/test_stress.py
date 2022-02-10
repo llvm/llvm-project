@@ -172,18 +172,7 @@ class SparseCompiler:
     self._support_lib = support_lib
     self._pipeline = (
         f'builtin.func(linalg-generalize-named-ops,linalg-fuse-elementwise-ops),'
-        f'sparsification{{{sparsification_options}}},'
-        f'sparse-tensor-conversion,'
-        f'builtin.func(linalg-bufferize,convert-linalg-to-loops,convert-vector-to-scf),'
-        f'convert-scf-to-std,'
-        f'func-bufferize,'
-        f'arith-bufferize,'
-        f'builtin.func(tensor-bufferize,std-bufferize,finalizing-bufferize),'
-        f'convert-vector-to-llvm{{reassociate-fp-reductions=1 enable-index-optimizations=1}},'
-        f'lower-affine,'
-        f'convert-memref-to-llvm,'
-        f'convert-std-to-llvm,'
-        f'reconcile-unrealized-casts')
+        f'sparse-compiler{{{sparsification_options} reassociate-fp-reductions=1 enable-index-optimizations=1}}')
     # Must be in the scope of a `with ir.Context():`
     self._passmanager = PassManager.parse(self._pipeline)
 

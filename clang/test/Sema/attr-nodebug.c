@@ -6,6 +6,6 @@ void b(int p __attribute__((nodebug))) { // expected-warning {{'nodebug' attribu
   int b __attribute__((nodebug));
 }
 
-void t1() __attribute__((nodebug));
+void t1(void) __attribute__((nodebug));
 
-void t2() __attribute__((nodebug(2))); // expected-error {{'nodebug' attribute takes no arguments}}
+void t2(void) __attribute__((nodebug(2))); // expected-error {{'nodebug' attribute takes no arguments}}

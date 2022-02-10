@@ -1,7 +1,7 @@
 ; This test makes sure that these instructions are properly eliminated.
 ; This test is for Integer BitWidth < 64 && BitWidth % 2 != 0.
 ;
-; RUN: opt < %s -instcombine -S | not grep rem
+; RUN: opt < %s -passes=instcombine -S | not grep rem
 
 
 define i33 @test1(i33 %A) {

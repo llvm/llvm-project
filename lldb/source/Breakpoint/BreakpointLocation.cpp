@@ -22,6 +22,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -33,8 +34,7 @@ BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner,
                                        bool hardware, bool check_for_resolver)
     : m_being_created(true), m_should_resolve_indirect_functions(false),
       m_is_reexported(false), m_is_indirect(false), m_address(addr),
-      m_owner(owner), m_options_up(), m_bp_site_sp(), m_condition_mutex(),
-      m_condition_hash(0), m_loc_id(loc_id), m_hit_counter() {
+      m_owner(owner), m_condition_hash(0), m_loc_id(loc_id), m_hit_counter() {
   if (check_for_resolver) {
     Symbol *symbol = m_address.CalculateSymbolContextSymbol();
     if (symbol && symbol->IsIndirect()) {
@@ -233,7 +233,7 @@ const char *BreakpointLocation::GetConditionText(size_t *hash) const {
 
 bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
                                            Status &error) {
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS);
+  Log *log = GetLog(LLDBLog::Breakpoints);
 
   std::lock_guard<std::mutex> guard(m_condition_mutex);
 
@@ -393,7 +393,7 @@ bool BreakpointLocation::ValidForThisThread(Thread &thread) {
 
 bool BreakpointLocation::ShouldStop(StoppointCallbackContext *context) {
   bool should_stop = true;
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS);
+  Log *log = GetLog(LLDBLog::Breakpoints);
 
   // Do this first, if a location is disabled, it shouldn't increment its hit
   // count.
@@ -450,7 +450,7 @@ bool BreakpointLocation::ResolveBreakpointSite() {
       process->CreateBreakpointSite(shared_from_this(), m_owner.IsHardware());
 
   if (new_id == LLDB_INVALID_BREAK_ID) {
-    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS);
+    Log *log = GetLog(LLDBLog::Breakpoints);
     if (log)
       log->Warning("Failed to add breakpoint site at 0x%" PRIx64,
                    m_address.GetOpcodeLoadAddress(&m_owner.GetTarget()));

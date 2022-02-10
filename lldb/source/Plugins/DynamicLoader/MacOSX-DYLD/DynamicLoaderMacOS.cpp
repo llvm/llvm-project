@@ -17,6 +17,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
@@ -155,7 +156,7 @@ void DynamicLoaderMacOS::ClearNotificationBreakpoint() {
 // (available on SnowLeopard only). If that fails, then check in the default
 // addresses.
 void DynamicLoaderMacOS::DoInitialImageFetch() {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
 
   // Remove any binaries we pre-loaded in the Target before
   // launching/attaching. If the same binaries are present in the process,
@@ -310,7 +311,7 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
 
 void DynamicLoaderMacOS::AddBinaries(
     const std::vector<lldb::addr_t> &load_addresses) {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   ImageInfo::collection image_infos;
 
   LLDB_LOGF(log, "Adding %" PRId64 " modules.",

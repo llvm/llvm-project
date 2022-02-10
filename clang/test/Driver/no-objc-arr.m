@@ -2,7 +2,7 @@
 // expected-no-diagnostics
 // rdar://8949617
 
-void * FOO() {
+void * FOO(void) {
     id string = @"Hello World.\n";
     void *pointer = string; // No error must be issued
     return pointer;

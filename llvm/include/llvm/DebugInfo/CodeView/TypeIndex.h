@@ -13,7 +13,6 @@
 #include "llvm/Support/Endian.h"
 #include <cassert>
 #include <cinttypes>
-#include <functional>
 
 namespace llvm {
 

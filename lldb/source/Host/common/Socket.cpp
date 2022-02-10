@@ -13,6 +13,7 @@
 #include "lldb/Host/SocketAddress.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Host/common/UDPSocket.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -146,7 +147,7 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
 llvm::Expected<std::unique_ptr<Socket>>
 Socket::TcpConnect(llvm::StringRef host_and_port,
                    bool child_processes_inherit) {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
+  Log *log = GetLog(LLDBLog::Connection);
   LLDB_LOG(log, "host_and_port = {0}", host_and_port);
 
   Status error;
@@ -165,7 +166,7 @@ Socket::TcpConnect(llvm::StringRef host_and_port,
 llvm::Expected<std::unique_ptr<TCPSocket>>
 Socket::TcpListen(llvm::StringRef host_and_port, bool child_processes_inherit,
                   int backlog) {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
+  Log *log = GetLog(LLDBLog::Connection);
   LLDB_LOG(log, "host_and_port = {0}", host_and_port);
 
   std::unique_ptr<TCPSocket> listen_socket(
@@ -225,7 +226,7 @@ Status Socket::Read(void *buf, size_t &num_bytes) {
   } else
     num_bytes = bytes_received;
 
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_COMMUNICATION));
+  Log *log = GetLog(LLDBLog::Communication);
   if (log) {
     LLDB_LOGF(log,
               "%p Socket::Read() (socket = %" PRIu64
@@ -253,7 +254,7 @@ Status Socket::Write(const void *buf, size_t &num_bytes) {
   } else
     num_bytes = bytes_sent;
 
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_COMMUNICATION));
+  Log *log = GetLog(LLDBLog::Communication);
   if (log) {
     LLDB_LOGF(log,
               "%p Socket::Write() (socket = %" PRIu64
@@ -277,7 +278,7 @@ Status Socket::Close() {
   if (!IsValid() || !m_should_close_fd)
     return error;
 
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
+  Log *log = GetLog(LLDBLog::Connection);
   LLDB_LOGF(log, "%p Socket::Close (fd = %" PRIu64 ")",
             static_cast<void *>(this), static_cast<uint64_t>(m_socket));
 

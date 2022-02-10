@@ -9,6 +9,7 @@
 #include "Plugins/ExpressionParser/Clang/CxxModuleHandler.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "clang/Sema/Lookup.h"
 #include "llvm/Support/Error.h"
@@ -180,7 +181,7 @@ T *createDecl(ASTImporter &importer, Decl *from_d, Args &&... args) {
 }
 
 llvm::Optional<Decl *> CxxModuleHandler::tryInstantiateStdTemplate(Decl *d) {
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+  Log *log = GetLog(LLDBLog::Expressions);
 
   // If we don't have a template to instiantiate, then there is nothing to do.
   auto td = dyn_cast<ClassTemplateSpecializationDecl>(d);

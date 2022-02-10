@@ -19,7 +19,7 @@
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -184,7 +184,7 @@ operator<=(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& 
     return __x.base() >= __y.base();
 }
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 template <class _Iter1, three_way_comparable_with<_Iter1> _Iter2>
 _LIBCPP_HIDE_FROM_ABI constexpr
 compare_three_way_result_t<_Iter1, _Iter2>

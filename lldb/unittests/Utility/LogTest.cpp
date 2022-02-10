@@ -11,6 +11,7 @@
 
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Threading.h"
 #include <thread>
@@ -157,16 +158,15 @@ TEST_F(LogChannelTest, Enable) {
   EXPECT_TRUE(EnableChannel(stream_sp, 0, "chan", {}, error));
   EXPECT_NE(nullptr, GetLog(TestChannel::FOO));
   EXPECT_EQ(nullptr, GetLog(TestChannel::BAR));
+  EXPECT_NE(nullptr, GetLog(TestChannel::FOO | TestChannel::BAR));
 
   EXPECT_TRUE(EnableChannel(stream_sp, 0, "chan", {"bar"}, error));
-  EXPECT_NE(nullptr, test_channel.GetLogIfAll(
-                         Log::MaskType(TestChannel::FOO | TestChannel::BAR)));
+  EXPECT_NE(nullptr, GetLog(TestChannel::FOO));
+  EXPECT_NE(nullptr, GetLog(TestChannel::BAR));
 
   EXPECT_TRUE(EnableChannel(stream_sp, 0, "chan", {"baz"}, error));
   EXPECT_NE(std::string::npos, error.find("unrecognized log category 'baz'"))
       << "error: " << error;
-  EXPECT_NE(nullptr, test_channel.GetLogIfAll(
-                         Log::MaskType(TestChannel::FOO | TestChannel::BAR)));
 }
 
 TEST_F(LogChannelTest, EnableOptions) {
@@ -190,8 +190,8 @@ TEST_F(LogChannelTest, Disable) {
       new llvm::raw_string_ostream(message));
   std::string error;
   EXPECT_TRUE(EnableChannel(stream_sp, 0, "chan", {"foo", "bar"}, error));
-  EXPECT_NE(nullptr, test_channel.GetLogIfAll(
-                         Log::MaskType(TestChannel::FOO | TestChannel::BAR)));
+  EXPECT_NE(nullptr, GetLog(TestChannel::FOO));
+  EXPECT_NE(nullptr, GetLog(TestChannel::BAR));
 
   EXPECT_TRUE(DisableChannel("chan", {"bar"}, error));
   EXPECT_NE(nullptr, GetLog(TestChannel::FOO));

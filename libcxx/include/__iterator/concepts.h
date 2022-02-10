@@ -21,7 +21,7 @@
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -90,7 +90,7 @@ concept incrementable =
 template<class _Ip>
 concept input_or_output_iterator =
   requires(_Ip __i) {
-    { *__i } -> __referenceable;
+    { *__i } -> __can_reference;
   } &&
   weakly_incrementable<_Ip>;
 
@@ -253,6 +253,22 @@ concept indirectly_movable_storable =
   movable<iter_value_t<_In>> &&
   constructible_from<iter_value_t<_In>, iter_rvalue_reference_t<_In>> &&
   assignable_from<iter_value_t<_In>&, iter_rvalue_reference_t<_In>>;
+
+template<class _In, class _Out>
+concept indirectly_copyable =
+  indirectly_readable<_In> &&
+  indirectly_writable<_Out, iter_reference_t<_In>>;
+
+template<class _In, class _Out>
+concept indirectly_copyable_storable =
+  indirectly_copyable<_In, _Out> &&
+  indirectly_writable<_Out, iter_value_t<_In>&> &&
+  indirectly_writable<_Out, const iter_value_t<_In>&> &&
+  indirectly_writable<_Out, iter_value_t<_In>&&> &&
+  indirectly_writable<_Out, const iter_value_t<_In>&&> &&
+  copyable<iter_value_t<_In>> &&
+  constructible_from<iter_value_t<_In>, iter_reference_t<_In>> &&
+  assignable_from<iter_value_t<_In>&, iter_reference_t<_In>>;
 
 // Note: indirectly_swappable is located in iter_swap.h to prevent a dependency cycle
 // (both iter_swap and indirectly_swappable require indirectly_readable).

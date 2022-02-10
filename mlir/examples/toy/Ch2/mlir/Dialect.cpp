@@ -107,8 +107,8 @@ void ConstantOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 /// or `false` on success. This allows for easily chaining together a set of
 /// parser rules. These rules are used to populate an `mlir::OperationState`
 /// similarly to the `build` methods described above.
-static mlir::ParseResult parseConstantOp(mlir::OpAsmParser &parser,
-                                         mlir::OperationState &result) {
+mlir::ParseResult ConstantOp::parse(mlir::OpAsmParser &parser,
+                                    mlir::OperationState &result) {
   mlir::DenseElementsAttr value;
   if (parser.parseOptionalAttrDict(result.attributes) ||
       parser.parseAttribute(value, "value", result.attributes))
@@ -120,35 +120,34 @@ static mlir::ParseResult parseConstantOp(mlir::OpAsmParser &parser,
 
 /// The 'OpAsmPrinter' class is a stream that allows for formatting
 /// strings, attributes, operands, types, etc.
-static void print(mlir::OpAsmPrinter &printer, ConstantOp op) {
+void ConstantOp::print(mlir::OpAsmPrinter &printer) {
   printer << " ";
-  printer.printOptionalAttrDict(op->getAttrs(), /*elidedAttrs=*/{"value"});
-  printer << op.value();
+  printer.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{"value"});
+  printer << value();
 }
 
-/// Verifier for the constant operation. This corresponds to the `::verify(...)`
-/// in the op definition.
-static mlir::LogicalResult verify(ConstantOp op) {
+/// Verifier for the constant operation. This corresponds to the
+/// `let hasVerifier = 1` in the op definition.
+mlir::LogicalResult ConstantOp::verify() {
   // If the return type of the constant is not an unranked tensor, the shape
   // must match the shape of the attribute holding the data.
-  auto resultType = op.getResult().getType().dyn_cast<mlir::RankedTensorType>();
+  auto resultType = getResult().getType().dyn_cast<mlir::RankedTensorType>();
   if (!resultType)
     return success();
 
   // Check that the rank of the attribute type matches the rank of the constant
   // result type.
-  auto attrType = op.value().getType().cast<mlir::TensorType>();
+  auto attrType = value().getType().cast<mlir::TensorType>();
   if (attrType.getRank() != resultType.getRank()) {
-    return op.emitOpError(
-               "return type must match the one of the attached value "
-               "attribute: ")
+    return emitOpError("return type must match the one of the attached value "
+                       "attribute: ")
            << attrType.getRank() << " != " << resultType.getRank();
   }
 
   // Check that each of the dimensions match between the two types.
   for (int dim = 0, dimE = attrType.getRank(); dim < dimE; ++dim) {
     if (attrType.getShape()[dim] != resultType.getShape()[dim]) {
-      return op.emitOpError(
+      return emitOpError(
                  "return type shape mismatches its attribute at dimension ")
              << dim << ": " << attrType.getShape()[dim]
              << " != " << resultType.getShape()[dim];
@@ -165,6 +164,13 @@ void AddOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   state.addTypes(UnrankedTensorType::get(builder.getF64Type()));
   state.addOperands({lhs, rhs});
 }
+
+mlir::ParseResult AddOp::parse(mlir::OpAsmParser &parser,
+                               mlir::OperationState &result) {
+  return parseBinaryOp(parser, result);
+}
+
+void AddOp::print(mlir::OpAsmPrinter &p) { printBinaryOp(p, *this); }
 
 //===----------------------------------------------------------------------===//
 // GenericCallOp
@@ -187,31 +193,37 @@ void MulOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   state.addOperands({lhs, rhs});
 }
 
+mlir::ParseResult MulOp::parse(mlir::OpAsmParser &parser,
+                               mlir::OperationState &result) {
+  return parseBinaryOp(parser, result);
+}
+
+void MulOp::print(mlir::OpAsmPrinter &p) { printBinaryOp(p, *this); }
+
 //===----------------------------------------------------------------------===//
 // ReturnOp
 
-static mlir::LogicalResult verify(ReturnOp op) {
+mlir::LogicalResult ReturnOp::verify() {
   // We know that the parent operation is a function, because of the 'HasParent'
   // trait attached to the operation definition.
-  auto function = cast<FuncOp>(op->getParentOp());
+  auto function = cast<FuncOp>((*this)->getParentOp());
 
   /// ReturnOps can only have a single optional operand.
-  if (op.getNumOperands() > 1)
-    return op.emitOpError() << "expects at most 1 return operand";
+  if (getNumOperands() > 1)
+    return emitOpError() << "expects at most 1 return operand";
 
   // The operand number and types must match the function signature.
   const auto &results = function.getType().getResults();
-  if (op.getNumOperands() != results.size())
-    return op.emitOpError()
-           << "does not return the same number of values ("
-           << op.getNumOperands() << ") as the enclosing function ("
-           << results.size() << ")";
+  if (getNumOperands() != results.size())
+    return emitOpError() << "does not return the same number of values ("
+                         << getNumOperands() << ") as the enclosing function ("
+                         << results.size() << ")";
 
   // If the operation does not have an input, we are done.
-  if (!op.hasOperand())
+  if (!hasOperand())
     return mlir::success();
 
-  auto inputType = *op.operand_type_begin();
+  auto inputType = *operand_type_begin();
   auto resultType = results.front();
 
   // Check that the result type of the function matches the operand type.
@@ -219,9 +231,9 @@ static mlir::LogicalResult verify(ReturnOp op) {
       resultType.isa<mlir::UnrankedTensorType>())
     return mlir::success();
 
-  return op.emitError() << "type of return operand (" << inputType
-                        << ") doesn't match function result type ("
-                        << resultType << ")";
+  return emitError() << "type of return operand (" << inputType
+                     << ") doesn't match function result type (" << resultType
+                     << ")";
 }
 
 //===----------------------------------------------------------------------===//
@@ -233,16 +245,16 @@ void TransposeOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   state.addOperands(value);
 }
 
-static mlir::LogicalResult verify(TransposeOp op) {
-  auto inputType = op.getOperand().getType().dyn_cast<RankedTensorType>();
-  auto resultType = op.getType().dyn_cast<RankedTensorType>();
+mlir::LogicalResult TransposeOp::verify() {
+  auto inputType = getOperand().getType().dyn_cast<RankedTensorType>();
+  auto resultType = getType().dyn_cast<RankedTensorType>();
   if (!inputType || !resultType)
     return mlir::success();
 
   auto inputShape = inputType.getShape();
   if (!std::equal(inputShape.begin(), inputShape.end(),
                   resultType.getShape().rbegin())) {
-    return op.emitError()
+    return emitError()
            << "expected result shape to be a transpose of the input";
   }
   return mlir::success();

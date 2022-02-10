@@ -5,7 +5,7 @@
 
 #include <pointer-subtraction.h>
 
-void a() {
+void a(void) {
   char *f = (char *)0;
   f = (char *)((char *)0 - f);         // expected-warning {{performing pointer subtraction with a null pointer has undefined behavior}}
   f = (char *)(f - (char *)0);         // expected-warning {{performing pointer subtraction with a null pointer has undefined behavior}}

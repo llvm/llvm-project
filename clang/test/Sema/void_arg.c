@@ -3,7 +3,7 @@
 
 typedef void Void;
 
-void foo() {
+void foo(void) {
   int X;
   
   X = sizeof(int (void a));    // expected-error {{argument may not have 'void' type}}

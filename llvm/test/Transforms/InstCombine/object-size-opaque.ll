@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S %s | FileCheck %s
+; RUN: opt -passes=instcombine -S %s | FileCheck %s
 %opaque = type opaque
 
 ; CHECK: call i64 @llvm.objectsize.i64

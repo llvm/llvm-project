@@ -718,7 +718,7 @@ public:
         Instruction *NewInst = nullptr;
 
         IRBuilder<> IB(&I);
-        MatrixBuilder<IRBuilder<>> Builder(IB);
+        MatrixBuilder Builder(IB);
 
         Value *TA, *TAMA, *TAMB;
         ConstantInt *R, *K, *C;
@@ -779,7 +779,7 @@ public:
             match(A, m_Intrinsic<Intrinsic::matrix_transpose>(m_Value(AT))) &&
             match(B, m_Intrinsic<Intrinsic::matrix_transpose>(m_Value((BT))))) {
           IRBuilder<> IB(&*I);
-          MatrixBuilder<IRBuilder<>> Builder(IB);
+          MatrixBuilder Builder(IB);
           Value *M = Builder.CreateMatrixMultiply(
               BT, AT, C->getZExtValue(), K->getZExtValue(), R->getZExtValue());
           setShapeInfo(M, {C, R});

@@ -10,7 +10,7 @@
 
 void handler(int sig, siginfo_t *info, void *uctx) {
   __msan_check_mem_is_initialized(uctx, sizeof(ucontext_t));
-#if defined(__x86_64__)
+#if defined(__GLIBC__) && defined(__x86_64__)
   auto *mctx = &static_cast<ucontext_t *>(uctx)->uc_mcontext;
   if (auto *fpregs = mctx->fpregs) {
     // The member names differ across header versions, but the actual layout

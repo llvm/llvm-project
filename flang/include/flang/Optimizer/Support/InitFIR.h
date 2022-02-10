@@ -27,8 +27,8 @@ namespace fir::support {
 #define FLANG_NONCODEGEN_DIALECT_LIST                                          \
   mlir::AffineDialect, FIROpsDialect, mlir::acc::OpenACCDialect,               \
       mlir::omp::OpenMPDialect, mlir::scf::SCFDialect,                         \
-      mlir::arith::ArithmeticDialect, mlir::StandardOpsDialect,                \
-      mlir::vector::VectorDialect
+      mlir::arith::ArithmeticDialect, mlir::cf::ControlFlowDialect,            \
+      mlir::StandardOpsDialect, mlir::vector::VectorDialect
 
 // The definitive list of dialects used by flang.
 #define FLANG_DIALECT_LIST                                                     \

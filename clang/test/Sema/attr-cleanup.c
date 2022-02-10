@@ -6,7 +6,7 @@ extern int g1 __attribute((cleanup(c1))); // expected-warning {{'cleanup' attrib
 int g2 __attribute((cleanup(c1))); // expected-warning {{'cleanup' attribute only applies to local variables}}
 static int g3 __attribute((cleanup(c1))); // expected-warning {{'cleanup' attribute only applies to local variables}}
 
-void t1()
+void t1(void)
 {
     int v1 __attribute((cleanup)); // expected-error {{'cleanup' attribute takes one argument}}
     int v2 __attribute((cleanup(1, 2))); // expected-error {{'cleanup' attribute takes one argument}}
@@ -23,10 +23,10 @@ struct s {
     int a, b;
 };
 
-void c2();
+void c2(void);
 void c3(struct s a);
 
-void t2()
+void t2(void)
 {
     int v1 __attribute__((cleanup(c2))); // expected-error {{'cleanup' function 'c2' must take 1 parameter}}
     int v2 __attribute__((cleanup(c3))); // expected-error {{'cleanup' function 'c3' parameter has type 'struct s' which is incompatible with type 'int *'}}
@@ -34,12 +34,12 @@ void t2()
 
 // This is a manufactured testcase, but gcc accepts it...
 void c4(_Bool a);
-void t4() {
+void t4(void) {
   __attribute((cleanup(c4))) void* g;
 }
 
 void c5(void*) __attribute__((deprecated));  // expected-note{{'c5' has been explicitly marked deprecated here}}
-void t5() {
+void t5(void) {
   int i __attribute__((cleanup(c5)));  // expected-warning {{'c5' is deprecated}}
 }
 

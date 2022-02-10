@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S < %s | FileCheck %s
+; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 ; We used to fold this by rewriting the indices to 0, 0, 2, 0.  This is
 ; invalid because there is a 4-byte padding after each <3 x float> field.

@@ -20,6 +20,7 @@
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/State.h"
 
 #include <mutex>
@@ -66,8 +67,7 @@ lldb::ProcessSP ScriptedProcess::CreateInstance(lldb::TargetSP target_sp,
 
   if (error.Fail() || !process_sp || !process_sp->m_script_object_sp ||
       !process_sp->m_script_object_sp->IsValid()) {
-    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS), "%s",
-              error.AsCString());
+    LLDB_LOGF(GetLog(LLDBLog::Process), "%s", error.AsCString());
     return nullptr;
   }
 
@@ -175,7 +175,7 @@ void ScriptedProcess::DidLaunch() {
 Status ScriptedProcess::DoResume() {
   CheckInterpreterAndScriptObject();
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
   // FIXME: Fetch data from thread.
   const StateType thread_resume_state = eStateRunning;
   LLDB_LOGF(log, "ScriptedProcess::%s thread_resume_state = %s", __FUNCTION__,
@@ -199,7 +199,7 @@ Status ScriptedProcess::DoResume() {
 Status ScriptedProcess::DoStop() {
   CheckInterpreterAndScriptObject();
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
 
   if (GetInterface().ShouldStop()) {
     SetPrivateState(eStateStopped);

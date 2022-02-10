@@ -5,7 +5,7 @@
 
 INTF* pi;
 
-INTF* FUNC()
+INTF* FUNC(void)
 {
 	return pi;
 }

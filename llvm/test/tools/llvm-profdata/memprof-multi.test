@@ -26,25 +26,30 @@ the shared libraries linked in which could change the number of segments
 recorded.
 
 ```
-clang -fmemory-profile -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -m64 -Wl,-build-id source.c -o rawprofile.out
+clang -fuse-ld=lld -Wl,--no-rosegment -gmlt -fdebug-info-for-profiling \
+      -fmemory-profile -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer \
+      -fno-optimize-sibling-calls -m64 -Wl,-build-id source.c -o multi.memprofexe
 
 env MEMPROF_OPTIONS=log_path=stdout ./rawprofile.out > multi.memprofraw
 ```
 
-RUN: llvm-profdata show --memory %p/Inputs/multi.memprofraw -o - | FileCheck %s
+RUN: llvm-profdata show --memory %p/Inputs/multi.memprofraw --profiled-binary %p/Inputs/multi.memprofexe -o - | FileCheck %s
 
 We expect 2 MIB entries, 1 each for the malloc calls in the program. Unlike the
 memprof-basic.test we do not see any allocation from glibc.
 
-CHECK: MemProf Profile 1
-CHECK:   Version: 1
-CHECK:   TotalSizeBytes: 864
-CHECK:   NumSegments: 9
-CHECK:   NumMIBInfo: 2
-CHECK:   NumStackOffsets: 2
-CHECK: MemProf Profile 2
-CHECK:   Version: 1
-CHECK:   TotalSizeBytes: 864
-CHECK:   NumSegments: 9
-CHECK:   NumMIBInfo: 2
-CHECK:   NumStackOffsets: 2
+CHECK: MemprofProfile:
+CHECK-NEXT:   -
+CHECK-NEXT:   Header:
+CHECK-NEXT:     Version: 1
+CHECK-NEXT:     TotalSizeBytes: 864
+CHECK-NEXT:     NumSegments: 9
+CHECK-NEXT:     NumMibInfo: 2
+CHECK-NEXT:     NumStackOffsets: 2
+CHECK-NEXT:   -
+CHECK-NEXT:   Header:
+CHECK-NEXT:     Version: 1
+CHECK-NEXT:     TotalSizeBytes: 864
+CHECK-NEXT:     NumSegments: 9
+CHECK-NEXT:     NumMibInfo: 2
+CHECK-NEXT:     NumStackOffsets: 2

@@ -46,6 +46,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; PEI-GFX90A:  $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr4
   ; PEI-GFX90A:  GLOBAL_STORE_DWORDX2 undef renamable ${{.*}}, killed renamable $vgpr0_vgpr1
   ; PEI-GFX90A:  GLOBAL_STORE_DWORDX4 undef renamable ${{.*}}, killed renamable $agpr0_agpr1_agpr2_agpr3
+  call void asm sideeffect "; use $0", "a" (i32 undef)
   %v0 = call <4 x i32> asm sideeffect "; def $0", "=v" ()
   %v1 = call <2 x i32> asm sideeffect "; def $0", "=v" ()
   %mai = tail call <4 x i32> @llvm.amdgcn.mfma.i32.4x4x4i8(i32 1, i32 2, <4 x i32> %arg, i32 0, i32 0, i32 0)

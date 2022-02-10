@@ -497,6 +497,24 @@ static mlir::LogicalResult verify(fir::ArrayFetchOp op) {
 }
 
 //===----------------------------------------------------------------------===//
+// ArrayAccessOp
+//===----------------------------------------------------------------------===//
+
+static mlir::LogicalResult verify(fir::ArrayAccessOp op) {
+  auto arrTy = op.sequence().getType().cast<fir::SequenceType>();
+  std::size_t indSize = op.indices().size();
+  if (indSize < arrTy.getDimension())
+    return op.emitOpError("number of indices != dimension of array");
+  if (indSize == arrTy.getDimension() &&
+      op.element().getType() != fir::ReferenceType::get(arrTy.getEleTy()))
+    return op.emitOpError("return type does not match array");
+  mlir::Type ty = validArraySubobject(op);
+  if (!ty || fir::ReferenceType::get(ty) != op.getType())
+    return op.emitOpError("return type and/or indices do not type check");
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // ArrayUpdateOp
 //===----------------------------------------------------------------------===//
 
@@ -3191,26 +3209,6 @@ mlir::ParseResult fir::parseSelector(mlir::OpAsmParser &parser,
       parser.parseLSquare())
     return mlir::failure();
   return mlir::success();
-}
-
-/// Generic pretty-printer of a binary operation
-static void printBinaryOp(Operation *op, OpAsmPrinter &p) {
-  assert(op->getNumOperands() == 2 && "binary op must have two operands");
-  assert(op->getNumResults() == 1 && "binary op must have one result");
-
-  p << ' ' << op->getOperand(0) << ", " << op->getOperand(1);
-  p.printOptionalAttrDict(op->getAttrs());
-  p << " : " << op->getResult(0).getType();
-}
-
-/// Generic pretty-printer of an unary operation
-static void printUnaryOp(Operation *op, OpAsmPrinter &p) {
-  assert(op->getNumOperands() == 1 && "unary op must have one operand");
-  assert(op->getNumResults() == 1 && "unary op must have one result");
-
-  p << ' ' << op->getOperand(0);
-  p.printOptionalAttrDict(op->getAttrs());
-  p << " : " << op->getResult(0).getType();
 }
 
 bool fir::isReferenceLike(mlir::Type type) {

@@ -354,10 +354,9 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
 
   // If the shift amount is guaranteed to be in-range we can replace it with a
   // generic shift.
-  APInt UpperBits =
-      APInt::getHighBitsSet(BitWidth, BitWidth - Log2_32(BitWidth));
-  if (llvm::MaskedValueIsZero(Amt, UpperBits,
-                              II.getModule()->getDataLayout())) {
+  KnownBits KnownAmt =
+      llvm::computeKnownBits(Amt, II.getModule()->getDataLayout());
+  if (KnownAmt.getMaxValue().ult(BitWidth)) {
     return (LogicalShift ? (ShiftLeft ? Builder.CreateShl(Vec, Amt)
                                       : Builder.CreateLShr(Vec, Amt))
                          : Builder.CreateAShr(Vec, Amt));
@@ -997,19 +996,17 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         return IC.replaceInstUsesWith(II, II.getArgOperand(0));
       }
 
-      if (MaskC->getValue().isShiftedMask()) {
+      unsigned MaskIdx, MaskLen;
+      if (MaskC->getValue().isShiftedMask(MaskIdx, MaskLen)) {
         // any single contingous sequence of 1s anywhere in the mask simply
         // describes a subset of the input bits shifted to the appropriate
         // position.  Replace with the straight forward IR.
-        unsigned ShiftAmount = MaskC->getValue().countTrailingZeros();
         Value *Input = II.getArgOperand(0);
         Value *Masked = IC.Builder.CreateAnd(Input, II.getArgOperand(1));
-        Value *Shifted = IC.Builder.CreateLShr(Masked,
-                                               ConstantInt::get(II.getType(),
-                                                                ShiftAmount));
+        Value *ShiftAmt = ConstantInt::get(II.getType(), MaskIdx);
+        Value *Shifted = IC.Builder.CreateLShr(Masked, ShiftAmt);
         return IC.replaceInstUsesWith(II, Shifted);
       }
-
 
       if (auto *SrcC = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
         uint64_t Src = SrcC->getZExtValue();
@@ -1042,15 +1039,15 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       if (MaskC->isAllOnesValue()) {
         return IC.replaceInstUsesWith(II, II.getArgOperand(0));
       }
-      if (MaskC->getValue().isShiftedMask()) {
+
+      unsigned MaskIdx, MaskLen;
+      if (MaskC->getValue().isShiftedMask(MaskIdx, MaskLen)) {
         // any single contingous sequence of 1s anywhere in the mask simply
         // describes a subset of the input bits shifted to the appropriate
         // position.  Replace with the straight forward IR.
-        unsigned ShiftAmount = MaskC->getValue().countTrailingZeros();
         Value *Input = II.getArgOperand(0);
-        Value *Shifted = IC.Builder.CreateShl(Input,
-                                              ConstantInt::get(II.getType(),
-                                                               ShiftAmount));
+        Value *ShiftAmt = ConstantInt::get(II.getType(), MaskIdx);
+        Value *Shifted = IC.Builder.CreateShl(Input, ShiftAmt);
         Value *Masked = IC.Builder.CreateAnd(Shifted, II.getArgOperand(1));
         return IC.replaceInstUsesWith(II, Masked);
       }

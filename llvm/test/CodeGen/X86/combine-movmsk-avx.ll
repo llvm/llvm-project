@@ -139,8 +139,9 @@ define i32 @movmskps_concat_v4f32(<4 x float> %a0, <4 x float> %a1)  {
 ; CHECK-LABEL: movmskps_concat_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vorps %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vmovmskps %xmm0, %eax
-; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    vmovmskps %xmm0, %ecx
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    negl %ecx
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    retq
   %1 = shufflevector <4 x float> %a0, <4 x float> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -153,9 +154,10 @@ define i32 @movmskps_concat_v4f32(<4 x float> %a0, <4 x float> %a1)  {
 define i32 @movmskps_demanded_concat_v4f32(<4 x float> %a0, <4 x float> %a1)  {
 ; CHECK-LABEL: movmskps_demanded_concat_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovmskps %xmm0, %eax
-; CHECK-NEXT:    andl $3, %eax
-; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    vmovmskps %xmm0, %ecx
+; CHECK-NEXT:    andl $3, %ecx
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    negl %ecx
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    retq
   %1 = shufflevector <4 x float> %a0, <4 x float> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

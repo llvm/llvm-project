@@ -151,7 +151,6 @@ private:
   /// section.
   ///
   /// \param S           The DWARF Section to verify.
-  /// \param SectionKind The object-file section kind that S comes from.
   ///
   /// \returns The number of errors that occurred during verification.
   unsigned verifyUnitSection(const DWARFSection &S);

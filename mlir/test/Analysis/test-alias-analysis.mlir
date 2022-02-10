@@ -52,10 +52,10 @@ func @control_flow(%arg: memref<2xf32>, %cond: i1) attributes {test.ptr = "func"
   %1 = memref.alloca() {test.ptr = "alloca_2"} : memref<8x64xf32>
   %2 = memref.alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
 
-  cond_br %cond, ^bb1(%0 : memref<8x64xf32>), ^bb2(%0 : memref<8x64xf32>)
+  cf.cond_br %cond, ^bb1(%0 : memref<8x64xf32>), ^bb2(%0 : memref<8x64xf32>)
 
 ^bb1(%arg1: memref<8x64xf32>):
-  br ^bb2(%arg1 : memref<8x64xf32>)
+  cf.br ^bb2(%arg1 : memref<8x64xf32>)
 
 ^bb2(%arg2: memref<8x64xf32>):
   return
@@ -85,10 +85,10 @@ func @control_flow_merge(%arg: memref<2xf32>, %cond: i1) attributes {test.ptr = 
   %1 = memref.alloca() {test.ptr = "alloca_2"} : memref<8x64xf32>
   %2 = memref.alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
 
-  cond_br %cond, ^bb1(%0 : memref<8x64xf32>), ^bb2(%2 : memref<8x64xf32>)
+  cf.cond_br %cond, ^bb1(%0 : memref<8x64xf32>), ^bb2(%2 : memref<8x64xf32>)
 
 ^bb1(%arg1: memref<8x64xf32>):
-  br ^bb2(%arg1 : memref<8x64xf32>)
+  cf.br ^bb2(%arg1 : memref<8x64xf32>)
 
 ^bb2(%arg2: memref<8x64xf32>):
   return

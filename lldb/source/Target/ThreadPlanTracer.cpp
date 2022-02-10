@@ -25,6 +25,7 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
@@ -106,10 +107,8 @@ TypeFromUser ThreadPlanAssemblyTracer::GetIntPointerType() {
       auto type_system_or_err =
           target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC);
       if (auto err = type_system_or_err.takeError()) {
-        LLDB_LOG_ERROR(
-            lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES),
-            std::move(err),
-            "Unable to get integer pointer type from TypeSystem");
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Commands), std::move(err),
+                       "Unable to get integer pointer type from TypeSystem");
       } else {
         m_intptr_type = TypeFromUser(
             type_system_or_err->GetBuiltinTypeForEncodingAndBitSize(

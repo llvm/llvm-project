@@ -68,7 +68,7 @@ struct test {
   NESTED6;   // expected-warning {{anonymous unions are a Microsoft extension}}
 };
 
-void foo()
+void foo(void)
 {
   struct test var;
   var.a;
@@ -148,14 +148,14 @@ void ptr_func2(int * __sptr __ptr32 i) {}  // expected-note {{previous definitio
 void ptr_func2(int * __uptr __ptr32 i) {} // expected-error {{redefinition of 'ptr_func2'}}
 
 // Check for warning when return types have the type attribute.
-void *__ptr32 ptr_func3() { return 0; } // expected-note {{previous definition is here}}
-void *__ptr64 ptr_func3() { return 0; } // expected-error {{redefinition of 'ptr_func3'}}
+void *__ptr32 ptr_func3(void) { return 0; } // expected-note {{previous definition is here}}
+void *__ptr64 ptr_func3(void) { return 0; } // expected-error {{redefinition of 'ptr_func3'}}
 
 // Test that __ptr32/__ptr64 can be passed as arguments with other address
 // spaces.
 void ptr_func4(int *i);
 void ptr_func5(int *__ptr32 i);
-void test_ptr_arguments() {
+void test_ptr_arguments(void) {
   int *__ptr64 i64;
   ptr_func4(i64);
   ptr_func5(i64);
@@ -191,7 +191,7 @@ void myprintf(const char *f, ...) {
 }
 
 // __unaligned handling
-void test_unaligned() {
+void test_unaligned(void) {
   __unaligned int *p1 = 0;
   int *p2 = p1; // expected-warning {{initializing 'int *' with an expression of type '__unaligned int *' discards qualifiers}}
   __unaligned int *p3 = p2;

@@ -25,6 +25,9 @@
 // FIXME: log_path is not supported on Windows yet.
 // XFAIL: windows-msvc
 
+// Issue #41838
+// XFAIL: sparc-target-arch && solaris
+
 #include <stdio.h>
 #include <stdlib.h>
 int main(int argc, char *argv[]) {

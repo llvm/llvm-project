@@ -586,7 +586,7 @@ SPSSerializableExpected<T> toSPSSerializable(Expected<T> E) {
   if (E)
     return {true, std::move(*E), {}};
   else
-    return {false, {}, toString(E.takeError())};
+    return {false, T(), toString(E.takeError())};
 }
 
 template <typename T>

@@ -73,7 +73,7 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
         .setMIFlag(MachineInstr::FrameSetup);
 
     BuildMI(MBB, MBBI, DL, TII.get(AVR::INRdA), AVR::R0)
-        .addImm(0x3f)
+        .addImm(STI.getIORegSREG())
         .setMIFlag(MachineInstr::FrameSetup);
     BuildMI(MBB, MBBI, DL, TII.get(AVR::PUSHRr))
         .addReg(AVR::R0, RegState::Kill)
@@ -144,7 +144,7 @@ static void restoreStatusRegister(MachineFunction &MF, MachineBasicBlock &MBB) {
   if (AFI->isInterruptOrSignalHandler()) {
     BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), AVR::R0);
     BuildMI(MBB, MBBI, DL, TII.get(AVR::OUTARr))
-        .addImm(0x3f)
+        .addImm(STI.getIORegSREG())
         .addReg(AVR::R0, RegState::Kill);
     BuildMI(MBB, MBBI, DL, TII.get(AVR::POPWRd), AVR::R1R0);
   }
@@ -298,11 +298,11 @@ bool AVRFrameLowering::restoreCalleeSavedRegisters(
 /// Replace pseudo store instructions that pass arguments through the stack with
 /// real instructions.
 static void fixStackStores(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MI,
+                           MachineBasicBlock::iterator StartMI,
                            const TargetInstrInfo &TII, Register FP) {
   // Iterate through the BB until we hit a call instruction or we reach the end.
   for (MachineInstr &MI :
-       llvm::make_early_inc_range(llvm::make_range(MI, MBB.end()))) {
+       llvm::make_early_inc_range(llvm::make_range(StartMI, MBB.end()))) {
     if (MI.isCall())
       break;
 

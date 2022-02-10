@@ -22,7 +22,7 @@ typedef int Gorf;  // expected-note {{previous definition is here}}
 
 @interface Gorf @end // expected-error {{redefinition of 'Gorf' as different kind of symbol}} expected-note {{previous definition is here}}
 
-void Gorf() // expected-error {{redefinition of 'Gorf' as different kind of symbol}}
+void Gorf(void) // expected-error {{redefinition of 'Gorf' as different kind of symbol}}
 {
   int Bar, Foo, FooBar;
 }

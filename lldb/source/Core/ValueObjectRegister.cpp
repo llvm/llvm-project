@@ -18,6 +18,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
@@ -202,9 +203,8 @@ CompilerType ValueObjectRegister::GetCompilerTypeImpl() {
         auto type_system_or_err =
             exe_module->GetTypeSystemForLanguage(eLanguageTypeC);
         if (auto err = type_system_or_err.takeError()) {
-          LLDB_LOG_ERROR(
-              lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES),
-              std::move(err), "Unable to get CompilerType from TypeSystem");
+          LLDB_LOG_ERROR(GetLog(LLDBLog::Commands), std::move(err),
+                         "Unable to get CompilerType from TypeSystem");
         } else {
           m_compiler_type =
               type_system_or_err->GetBuiltinTypeForEncodingAndBitSize(

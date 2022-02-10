@@ -39,8 +39,7 @@ using namespace ROCDL;
 // <operation> ::=
 //     `llvm.amdgcn.buffer.load.* %rsrc, %vindex, %offset, %glc, %slc :
 //     result_type`
-static ParseResult parseROCDLMubufLoadOp(OpAsmParser &parser,
-                                         OperationState &result) {
+ParseResult MubufLoadOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 8> ops;
   Type type;
   if (parser.parseOperandList(ops, 5) || parser.parseColonType(type) ||
@@ -56,11 +55,14 @@ static ParseResult parseROCDLMubufLoadOp(OpAsmParser &parser,
                                 parser.getNameLoc(), result.operands);
 }
 
+void MubufLoadOp::print(OpAsmPrinter &p) {
+  p << " " << getOperands() << " : " << (*this)->getResultTypes();
+}
+
 // <operation> ::=
 //     `llvm.amdgcn.buffer.store.* %vdata, %rsrc, %vindex, %offset, %glc, %slc :
 //     result_type`
-static ParseResult parseROCDLMubufStoreOp(OpAsmParser &parser,
-                                          OperationState &result) {
+ParseResult MubufStoreOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 8> ops;
   Type type;
   if (parser.parseOperandList(ops, 6) || parser.parseColonType(type))
@@ -76,6 +78,10 @@ static ParseResult parseROCDLMubufStoreOp(OpAsmParser &parser,
                              parser.getNameLoc(), result.operands))
     return failure();
   return success();
+}
+
+void MubufStoreOp::print(OpAsmPrinter &p) {
+  p << " " << getOperands() << " : " << vdata().getType();
 }
 
 //===----------------------------------------------------------------------===//

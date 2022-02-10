@@ -28,7 +28,7 @@ define void @TestvMeth(i32 %0, i64 %1) gc "statepoint-example" !prof !1 {
 bci_0:
    %token418 = call token (i64, i32, i8 * (i64, i32, i32, i32)*, i32,
 i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i8i64i32i32i32f(i64
-2882400000, i32 0, i8 * (i64, i32, i32, i32)* nonnull @newarray, i32 4,
+2882400000, i32 0, i8* (i64, i32, i32, i32)* nonnull elementtype(i8* (i64, i32, i32, i32)) @newarray, i32 4,
 i32 0, i64 undef, i32 10, i32 10, i32 400, i32 0, i32 0) ["deopt"
 (i32 35, i32 0, i32 1, i32 0, i32 43, i32 1, i32 13, i32 0, i32 3,
 i32 400, i32 3, i32 %0, i32 4, i64 %1, i32 7, i8* null, i32 3,

@@ -313,7 +313,7 @@ void test16(void) {
 }
 
 // PR 5938
-void test17() {
+void test17(void) {
   union {
     unsigned long long a : 8;
     unsigned long long b : 32;
@@ -327,7 +327,7 @@ void test17() {
 }
 
 // PR 5939
-void test18() {
+void test18(void) {
   union {
     unsigned long long a : 1;
     unsigned long long b;

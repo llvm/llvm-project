@@ -38,6 +38,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Timer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -131,7 +132,7 @@ public:
 
   ~InitializePythonRAII() {
     if (m_was_already_initialized) {
-      Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT));
+      Log *log = GetLog(LLDBLog::Script);
       LLDB_LOGV(log, "Releasing PyGILState. Returning to state = {0}locked",
                 m_gil_state == PyGILState_UNLOCKED ? "un" : "");
       PyGILState_Release(m_gil_state);
@@ -201,7 +202,7 @@ private:
 #endif
 
     if (PyEval_ThreadsInitialized()) {
-      Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT));
+      Log *log = GetLog(LLDBLog::Script);
 
       m_was_already_initialized = true;
       m_gil_state = PyGILState_Ensure();
@@ -380,7 +381,7 @@ ScriptInterpreterPythonImpl::Locker::Locker(
 }
 
 bool ScriptInterpreterPythonImpl::Locker::DoAcquireLock() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT));
+  Log *log = GetLog(LLDBLog::Script);
   m_GILState = PyGILState_Ensure();
   LLDB_LOGV(log, "Ensured PyGILState. Previous state = {0}locked",
             m_GILState == PyGILState_UNLOCKED ? "un" : "");
@@ -404,7 +405,7 @@ bool ScriptInterpreterPythonImpl::Locker::DoInitSession(uint16_t on_entry_flags,
 }
 
 bool ScriptInterpreterPythonImpl::Locker::DoFreeLock() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT));
+  Log *log = GetLog(LLDBLog::Script);
   LLDB_LOGV(log, "Releasing PyGILState. Returning to state = {0}locked",
             m_GILState == PyGILState_UNLOCKED ? "un" : "");
   PyGILState_Release(m_GILState);
@@ -590,7 +591,7 @@ ScriptInterpreterPythonImpl::CreateInstance(Debugger &debugger) {
 }
 
 void ScriptInterpreterPythonImpl::LeaveSession() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT));
+  Log *log = GetLog(LLDBLog::Script);
   if (log)
     log->PutCString("ScriptInterpreterPythonImpl::LeaveSession()");
 
@@ -660,7 +661,7 @@ bool ScriptInterpreterPythonImpl::EnterSession(uint16_t on_entry_flags,
                                                FileSP err_sp) {
   // If we have already entered the session, without having officially 'left'
   // it, then there is no need to 'enter' it again.
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT));
+  Log *log = GetLog(LLDBLog::Script);
   if (m_session_is_active) {
     LLDB_LOGF(
         log,
@@ -962,7 +963,7 @@ bool ScriptInterpreterPythonImpl::Interrupt() {
   // just our (hardcoded) input signal code SIGINT, so that's not useful at all.
   return true;
 #else
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT));
+  Log *log = GetLog(LLDBLog::Script);
 
   if (IsExecutingPython()) {
     PyThreadState *state = PyThreadState_GET();

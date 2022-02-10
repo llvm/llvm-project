@@ -16,6 +16,7 @@
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
@@ -1050,7 +1051,7 @@ PythonException::PythonException(const char *caller) {
       PyErr_Clear();
     }
   }
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT);
+  Log *log = GetLog(LLDBLog::Script);
   if (caller)
     LLDB_LOGF(log, "%s failed with exception: %s", caller, toCString());
   else

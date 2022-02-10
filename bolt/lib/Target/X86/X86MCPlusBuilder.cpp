@@ -13,6 +13,7 @@
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "bolt/Core/MCPlusBuilder.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -1873,13 +1874,9 @@ public:
       NewOpcode = Check.second;
       if (Check.first == NOCHECK)
         break;
-      if (Check.first == CHECK8 &&
-          ImmVal >= std::numeric_limits<int8_t>::min() &&
-          ImmVal <= std::numeric_limits<int8_t>::max())
+      if (Check.first == CHECK8 && isInt<8>(ImmVal))
         break;
-      if (Check.first == CHECK32 &&
-          ImmVal >= std::numeric_limits<int32_t>::min() &&
-          ImmVal <= std::numeric_limits<int32_t>::max())
+      if (Check.first == CHECK32 && isInt<32>(ImmVal))
         break;
     }
     if (NewOpcode == Inst.getOpcode())
@@ -3012,12 +3009,9 @@ public:
       NewOpcode = Check.second;
       if (Check.first == NOCHECK)
         break;
-      if (Check.first == CHECK8 && Imm >= std::numeric_limits<int8_t>::min() &&
-          Imm <= std::numeric_limits<int8_t>::max())
+      if (Check.first == CHECK8 && isInt<8>(Imm))
         break;
-      if (Check.first == CHECK32 &&
-          Imm >= std::numeric_limits<int32_t>::min() &&
-          Imm <= std::numeric_limits<int32_t>::max())
+      if (Check.first == CHECK32 && isInt<32>(Imm))
         break;
     }
     if (NewOpcode == Inst.getOpcode())

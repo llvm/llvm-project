@@ -161,7 +161,7 @@ define <400 x i8 addrspace(1)*> @f_3(<400 x i8 addrspace(1)*> %obj) gc "statepoi
 ; CHECK-NEXT: .long	0
 ; Padding
 ; CHECK-NEXT: .p2align	3
-  %tok = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 4242, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0) ["gc-live"(<400 x i8 addrspace(1)*> %obj)]
+  %tok = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 4242, i32 0, void ()* elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) ["gc-live"(<400 x i8 addrspace(1)*> %obj)]
   %obj.r = call coldcc <400 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v400p1i8(token %tok, i32 0, i32 0)
   ret <400 x i8 addrspace(1)*> %obj.r
 }

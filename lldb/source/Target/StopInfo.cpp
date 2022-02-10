@@ -21,6 +21,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -145,7 +146,7 @@ public:
           bp_site_sp->BumpHitCounts();
           m_should_stop = bp_site_sp->ShouldStop(&context);
         } else {
-          Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+          Log *log = GetLog(LLDBLog::Process);
 
           LLDB_LOGF(log,
                     "Process::%s could not find breakpoint site id: %" PRId64
@@ -264,8 +265,7 @@ protected:
     ThreadSP thread_sp(m_thread_wp.lock());
 
     if (thread_sp) {
-      Log *log = lldb_private::GetLogIfAnyCategoriesSet(
-          LIBLLDB_LOG_BREAKPOINTS | LIBLLDB_LOG_STEP);
+      Log *log = GetLog(LLDBLog::Breakpoints | LLDBLog::Step);
 
       if (!thread_sp->IsValid()) {
         // This shouldn't ever happen, but just in case, don't do more harm.
@@ -564,8 +564,7 @@ protected:
       } else {
         m_should_stop = true;
         m_should_stop_is_valid = true;
-        Log *log_process(
-            lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+        Log *log_process(GetLog(LLDBLog::Process));
 
         LLDB_LOGF(log_process,
                   "Process::%s could not find breakpoint site id: %" PRId64
@@ -696,7 +695,7 @@ protected:
         StoppointCallbackContext context(event_ptr, exe_ctx, true);
         m_should_stop = wp_sp->ShouldStop(&context);
       } else {
-        Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+        Log *log = GetLog(LLDBLog::Process);
 
         LLDB_LOGF(log,
                   "Process::%s could not find watchpoint location id: %" PRId64
@@ -719,7 +718,7 @@ protected:
   }
 
   void PerformAction(Event *event_ptr) override {
-    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS);
+    Log *log = GetLog(LLDBLog::Watchpoints);
     // We're going to calculate if we should stop or not in some way during the
     // course of this code.  Also by default we're going to stop, so set that
     // here.
@@ -917,8 +916,7 @@ protected:
         }
 
       } else {
-        Log *log_process(
-            lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+        Log *log_process(GetLog(LLDBLog::Process));
 
         LLDB_LOGF(log_process,
                   "Process::%s could not find watchpoint id: %" PRId64 "...",

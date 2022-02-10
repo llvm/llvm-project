@@ -1,4 +1,4 @@
-; RUN: opt -S -disable-output -passes='require<scalar-evolution>,require<aa>,loop(print-access-info)' < %s 2>&1 | FileCheck %s
+; RUN: opt -S -disable-output -passes='print-access-info' < %s 2>&1 | FileCheck %s
 
 
 ; In the function below some of the accesses are done as float types and some
@@ -78,6 +78,7 @@ exit:
 ; CHECK-LABEL: function 'backdep_type_store_size_equivalence':
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop.
+; CHECK-NEXT:      Unknown data dependence.
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        Unknown:
 ; CHECK-NEXT:            %ld.f32 = load float, float* %gep.iv.f32, align 8 ->
@@ -120,6 +121,7 @@ exit:
 ; CHECK-LABEL: function 'neg_dist_dep_type_size_equivalence':
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop.
+; CHECK-NEXT:      Unknown data dependence.
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        Unknown:
 ; CHECK-NEXT:            %ld.i64 = load i64, i64* %gep.iv, align 8 ->

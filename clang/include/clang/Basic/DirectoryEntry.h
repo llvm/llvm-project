@@ -128,20 +128,18 @@ public:
 
   bool hasValue() const { return MaybeRef.hasOptionalValue(); }
 
-  RefTy &getValue() LLVM_LVALUE_FUNCTION {
+  RefTy &getValue() & {
     assert(hasValue());
     return MaybeRef;
   }
-  RefTy const &getValue() const LLVM_LVALUE_FUNCTION {
+  RefTy const &getValue() const & {
     assert(hasValue());
     return MaybeRef;
   }
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
   RefTy &&getValue() && {
     assert(hasValue());
     return std::move(MaybeRef);
   }
-#endif
 
   template <class... Args> void emplace(Args &&...args) {
     MaybeRef = RefTy(std::forward<Args>(args)...);

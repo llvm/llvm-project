@@ -1150,7 +1150,8 @@ static const char *RelocationModelName(llvm::Reloc::Model Model) {
 }
 static void handleAMDGPUCodeObjectVersionOptions(const Driver &D,
                                                  const ArgList &Args,
-                                                 ArgStringList &CmdArgs) {
+                                                 ArgStringList &CmdArgs,
+                                                 bool IsCC1As = false) {
   // If no version was requested by the user, use the default value from the
   // back end. This is consistent with the value returned from
   // getAMDGPUCodeObjectVersion. This lets clang emit IR for amdgpu without
@@ -1162,6 +1163,11 @@ static void handleAMDGPUCodeObjectVersionOptions(const Driver &D,
                    Args.MakeArgString(Twine("--amdhsa-code-object-version=") +
                                       Twine(CodeObjVer)));
     CmdArgs.insert(CmdArgs.begin() + 1, "-mllvm");
+    // -cc1as does not accept -mcode-object-version option.
+    if (!IsCC1As)
+      CmdArgs.insert(CmdArgs.begin() + 1,
+                     Args.MakeArgString(Twine("-mcode-object-version=") +
+                                        Twine(CodeObjVer)));
   }
 }
 
@@ -1646,7 +1652,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
   const Driver &D = TC.getDriver();
   const llvm::Triple &Triple = TC.getEffectiveTriple();
   if (!(isAArch64 || (Triple.isArmT32() && Triple.isArmMClass())))
-    D.Diag(diag::warn_target_unsupported_branch_protection_option)
+    D.Diag(diag::warn_incompatible_branch_protection_option)
         << Triple.getArchName();
 
   StringRef Scope, Key;
@@ -5912,6 +5918,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fdigraphs, options::OPT_fno_digraphs);
   Args.AddLastArg(CmdArgs, options::OPT_femulated_tls,
                   options::OPT_fno_emulated_tls);
+  Args.AddLastArg(CmdArgs, options::OPT_fzero_call_used_regs_EQ);
+
+  if (Arg *A = Args.getLastArg(options::OPT_fzero_call_used_regs_EQ)) {
+    // FIXME: There's no reason for this to be restricted to X86. The backend
+    // code needs to be changed to include the appropriate function calls
+    // automatically.
+    if (!Triple.isX86())
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << TripleStr;
+  }
 
   // AltiVec-like language extensions aren't relevant for assembling.
   if (!isa<PreprocessJobAction>(JA) || Output.getType() != types::TY_PP_Asm)
@@ -6160,14 +6176,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-arm-restrict-it");
     } else {
       CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-arm-no-restrict-it");
+      CmdArgs.push_back("-arm-default-it");
     }
-  } else if (Triple.isOSWindows() &&
-             (Triple.getArch() == llvm::Triple::arm ||
-              Triple.getArch() == llvm::Triple::thumb)) {
-    // Windows on ARM expects restricted IT blocks
-    CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back("-arm-restrict-it");
   }
 
   // Forward -cl options to -cc1
@@ -7958,7 +7968,7 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (Triple.isAMDGPU())
-    handleAMDGPUCodeObjectVersionOptions(D, Args, CmdArgs);
+    handleAMDGPUCodeObjectVersionOptions(D, Args, CmdArgs, /*IsCC1As=*/true);
 
   assert(Input.isFilename() && "Invalid input.");
   CmdArgs.push_back(Input.getFilename());
@@ -8282,11 +8292,25 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
                                  const InputInfoList &Inputs,
                                  const ArgList &Args,
                                  const char *LinkingOutput) const {
+  const Driver &D = getToolChain().getDriver();
+  const llvm::Triple TheTriple = getToolChain().getTriple();
+  auto OpenMPTCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();
   ArgStringList CmdArgs;
 
-  if (getToolChain().getDriver().isUsingLTO(/* IsOffload */ true)) {
+  // Pass the CUDA path to the linker wrapper tool.
+  for (auto &I : llvm::make_range(OpenMPTCRange.first, OpenMPTCRange.second)) {
+    const ToolChain *TC = I.second;
+    if (TC->getTriple().isNVPTX()) {
+      CudaInstallationDetector CudaInstallation(D, TheTriple, Args);
+      if (CudaInstallation.isValid())
+        CmdArgs.push_back(Args.MakeArgString(
+            "--cuda-path=" + CudaInstallation.getInstallPath()));
+      break;
+    }
+  }
+
+  if (D.isUsingLTO(/* IsOffload */ true)) {
     // Pass in target features for each toolchain.
-    auto OpenMPTCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();
     for (auto &I :
          llvm::make_range(OpenMPTCRange.first, OpenMPTCRange.second)) {
       const ToolChain *TC = I.second;
@@ -8299,16 +8323,14 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     }
 
     // Pass in the bitcode library to be linked during LTO.
-    for (auto &I : llvm::make_range(OpenMPTCRange.first, OpenMPTCRange.second)) {
+    for (auto &I :
+         llvm::make_range(OpenMPTCRange.first, OpenMPTCRange.second)) {
       const ToolChain *TC = I.second;
-      const Driver &D = TC->getDriver();
+      const Driver &TCDriver = TC->getDriver();
       const ArgList &TCArgs = C.getArgsForToolChain(TC, "", Action::OFK_OpenMP);
       StringRef Arch = TCArgs.getLastArgValue(options::OPT_march_EQ);
 
       std::string BitcodeSuffix;
-      if (TCArgs.hasFlag(options::OPT_fopenmp_target_new_runtime,
-                         options::OPT_fno_openmp_target_new_runtime, true))
-        BitcodeSuffix += "new-";
       if (TC->getTriple().isNVPTX())
         BitcodeSuffix += "nvptx-";
       else if (TC->getTriple().isAMDGPU())
@@ -8316,7 +8338,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       BitcodeSuffix += Arch;
 
       ArgStringList BitcodeLibrary;
-      addOpenMPDeviceRTL(D, TCArgs, BitcodeLibrary, BitcodeSuffix,
+      addOpenMPDeviceRTL(TCDriver, TCArgs, BitcodeLibrary, BitcodeSuffix,
                          TC->getTriple());
 
       if (!BitcodeLibrary.empty())
@@ -8344,12 +8366,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  // Construct the link job so we can wrap around it.
-  Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
-  const auto &LinkCommand = C.getJobs().getJobs().back();
-
   CmdArgs.push_back("-host-triple");
-  CmdArgs.push_back(Args.MakeArgString(getToolChain().getTripleString()));
+  CmdArgs.push_back(Args.MakeArgString(TheTriple.getTriple()));
   if (Args.hasArg(options::OPT_v))
     CmdArgs.push_back("-v");
 
@@ -8379,6 +8397,10 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         Args.MakeArgString(Twine("-pass-remarks-analysis=") + A->getValue()));
   if (Args.getLastArg(options::OPT_save_temps_EQ))
     CmdArgs.push_back("-save-temps");
+
+  // Construct the link job so we can wrap around it.
+  Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
+  const auto &LinkCommand = C.getJobs().getJobs().back();
 
   // Add the linker arguments to be forwarded by the wrapper.
   CmdArgs.push_back("-linker-path");

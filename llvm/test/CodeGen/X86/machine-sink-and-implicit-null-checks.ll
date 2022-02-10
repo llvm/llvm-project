@@ -38,7 +38,7 @@ declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32) no
 define i1 @g(i8 addrspace(1)* %p0, i8* %p1) gc "statepoint-example" {
  entry:
   %c0 = icmp eq i8 addrspace(1)* %p0, null
-  %tok = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i8 addrspace(1)* %p0)]
+  %tok = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i8 addrspace(1)* %p0)]
   %p0.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tok, i32 0, i32 0) ; (%p0, %p0)
   br i1 %c0, label %throw0, label %continue0, !make.implicit !0
 

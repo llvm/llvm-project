@@ -27,9 +27,9 @@ namespace comprehensive_bufferize {
 /// Run Module Bufferization on the given module. Performs a simple function
 /// call analysis to determine which function arguments are inplaceable. Then
 /// analyzes and bufferizes FuncOps one-by-one with One-Shot Bufferize.
-LogicalResult runComprehensiveBufferize(
-    ModuleOp moduleOp,
-    std::unique_ptr<bufferization::AnalysisBufferizationOptions> options);
+LogicalResult
+runModuleBufferize(ModuleOp moduleOp,
+                   bufferization::AnalysisBufferizationOptions options);
 
 namespace std_ext {
 

@@ -13,6 +13,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/LockFile.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
@@ -80,7 +81,7 @@ FileSpec GetSymbolFileSpec(const FileSpec &module_file_spec) {
 
 void DeleteExistingModule(const FileSpec &root_dir_spec,
                           const FileSpec &sysroot_module_path_spec) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES));
+  Log *log = GetLog(LLDBLog::Modules);
   UUID module_uuid;
   {
     auto module_sp =

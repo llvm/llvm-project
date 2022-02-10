@@ -6,7 +6,7 @@ typedef struct A {
   int x, y;
 } A;
 
-void test() {
+void test(void) {
   int a;
   int xs[10];
   a + ++a; // expected-warning {{unsequenced modification and access to 'a'}}

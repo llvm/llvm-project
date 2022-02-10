@@ -400,3 +400,29 @@ func private @foo2(%arg : !fir.tdesc<f32>)
 func private @foo3(%arg : !fir.tdesc<!fir.type<derived7{f1:f32,f2:f32}>>)
 // CHECK-LABEL: foo3
 // CHECK-SAME:  !llvm.ptr<i8>
+
+// -----
+
+// Test nested tuple types
+func private @foo0(%arg0: tuple<i64, tuple<f32, i64>>)
+// CHECK-LABEL: foo0
+// CHECK-SAME: !llvm.struct<(i64, struct<(f32, i64)>)>
+
+// -----
+
+// Test that fir.box inside tuple and derived type are lowered to struct type.
+func private @foo0(%arg0: tuple<i64, !fir.box<i32>>)
+// CHECK-LABEL: foo0
+// CHECK-SAME: !llvm.struct<(i64, struct<(ptr<i32>, i{{.*}})>)>
+
+func private @foo1(%arg0: !fir.type<derived8{a:i64,b:!fir.box<i32>}>)
+// CHECK-LABEL: foo1
+// CHECK-SAME: !llvm.struct<"derived8", (i64, struct<(ptr<i32>, i{{.*}})>)>
+
+// -----
+
+// Test fir.box<none> translation.
+// `none` is used for polymorphic type.
+func private @foo0(%arg0: !fir.box<none>)
+// CHECK-LABEL: foo0
+// CHECK-SAME: !llvm.ptr<struct<(ptr<struct<()>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>)

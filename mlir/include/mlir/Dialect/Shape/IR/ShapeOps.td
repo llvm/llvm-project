@@ -14,6 +14,7 @@
 #define SHAPE_OPS
 
 include "mlir/Dialect/Shape/IR/ShapeBase.td"
+include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -48,8 +49,6 @@ def Shape_AddOp : Shape_Op<"add",
     $lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs) `->` type($result)
   }];
 
-  let verifier = [{ return verifySizeOrIndexOp(*this); }];
-
   let extraClassDeclaration = [{
     // Returns when two result types are compatible for this op; method used by
     // InferTypeOpInterface
@@ -57,6 +56,7 @@ def Shape_AddOp : Shape_Op<"add",
   }];
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 def Shape_BroadcastOp : Shape_Op<"broadcast", [Commutative, NoSideEffect]> {
@@ -102,7 +102,7 @@ def Shape_BroadcastOp : Shape_Op<"broadcast", [Commutative, NoSideEffect]> {
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 }
 
 def Shape_ConstShapeOp : Shape_Op<"const_shape",
@@ -122,9 +122,7 @@ def Shape_ConstShapeOp : Shape_Op<"const_shape",
   let arguments = (ins IndexElementsAttr:$shape);
   let results = (outs Shape_ShapeOrExtentTensorType:$result);
 
-  // TODO: Move this to main so that all shape ops implement these.
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
   let hasCanonicalizer = 1;
 
@@ -184,8 +182,8 @@ def Shape_DivOp : Shape_Op<"div", [NoSideEffect,
     $lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs) `->` type($result)
   }];
 
-  let verifier = [{ return ::verifySizeOrIndexOp(*this); }];
   let hasFolder = 1;
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     // Returns when two result types are compatible for this op; method used by
@@ -323,7 +321,7 @@ def Shape_RankOp : Shape_Op<"rank",
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
-  let verifier = [{ return ::verifySizeOrIndexOp(*this); }];
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     // Returns when two result types are compatible for this op; method used by
@@ -332,7 +330,9 @@ def Shape_RankOp : Shape_Op<"rank",
   }];
 }
 
-def Shape_ToExtentTensorOp : Shape_Op<"to_extent_tensor", [NoSideEffect]> {
+def Shape_ToExtentTensorOp : Shape_Op<"to_extent_tensor", [
+    DeclareOpInterfaceMethods<CastOpInterface>, NoSideEffect
+  ]> {
   let summary = "Creates a dimension tensor from a shape";
   let description = [{
     Converts a shape to a 1D integral tensor of extents. The number of elements
@@ -377,7 +377,7 @@ def Shape_GetExtentOp : Shape_Op<"get_extent",
   }];
 
   let hasFolder = 1;
-  let verifier = [{ return ::verifySizeOrIndexOp(*this); }];
+  let hasVerifier = 1;
 }
 
 def Shape_IndexToSizeOp : Shape_Op<"index_to_size", [NoSideEffect]> {
@@ -518,8 +518,8 @@ def Shape_MulOp : Shape_Op<"mul",
     $lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs) `->` type($result)
   }];
 
-  let verifier = [{ return ::verifySizeOrIndexOp(*this); }];
   let hasFolder = 1;
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     // Returns when two result types are compatible for this op; method used by
@@ -545,7 +545,7 @@ def Shape_NumElementsOp : Shape_Op<"num_elements",
   let assemblyFormat = "$shape attr-dict `:` type($shape) `->` type($result)";
 
   let hasFolder = 1;
-  let verifier = [{ return ::verifySizeOrIndexOp(*this); }];
+  let hasVerifier = 1;
   let extraClassDeclaration = [{
     // Returns when two result types are compatible for this op; method used by
     // InferTypeOpInterface
@@ -595,9 +595,8 @@ def Shape_ReduceOp : Shape_Op<"reduce",
 
   let builders = [OpBuilder<(ins "Value":$shape, "ValueRange":$initVals)>];
 
-  let verifier = [{ return ::verify(*this); }];
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 def Shape_ShapeOfOp : Shape_Op<"shape_of",
@@ -614,9 +613,9 @@ def Shape_ShapeOfOp : Shape_Op<"shape_of",
 
   let assemblyFormat = "$arg attr-dict `:` type($arg) `->` type($result)";
 
-  let verifier = [{ return ::verifyShapeOrExtentTensorOp(*this); }];
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     // Returns when two result types are compatible for this op; method used by
@@ -625,7 +624,9 @@ def Shape_ShapeOfOp : Shape_Op<"shape_of",
   }];
 }
 
-def Shape_SizeToIndexOp : Shape_Op<"size_to_index", [NoSideEffect]> {
+def Shape_SizeToIndexOp : Shape_Op<"size_to_index", [
+    DeclareOpInterfaceMethods<CastOpInterface>, NoSideEffect
+  ]> {
   let summary = "Casts between index types of the shape and standard dialect";
   let description = [{
     Converts a `shape.size` to a standard index. This operation and its
@@ -724,8 +725,8 @@ def Shape_YieldOp : Shape_Op<"yield",
     [{ build($_builder, $_state, llvm::None); }]>
   ];
 
-  let verifier = [{ return ::verify(*this); }];
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
+  let hasVerifier = 1;
 }
 
 // TODO: Add Ops: if_static, if_ranked
@@ -859,8 +860,7 @@ def Shape_AssumingAllOp : Shape_Op<"assuming_all", [Commutative, NoSideEffect]> 
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
-
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 }
 
 def Shape_AssumingOp : Shape_Op<"assuming", [
@@ -880,10 +880,6 @@ def Shape_AssumingOp : Shape_Op<"assuming", [
   let regions = (region SizedRegion<1>:$doRegion);
   let results = (outs Variadic<AnyType>:$results);
 
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-  let verifier = [{ return RegionBranchOpInterface::verifyTypes(*this); }];
-
   let extraClassDeclaration = [{
     // Inline the region into the region containing the AssumingOp and delete
     // the AssumingOp.
@@ -898,6 +894,8 @@ def Shape_AssumingOp : Shape_Op<"assuming", [
   ];
 
   let hasCanonicalizer = 1;
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 def Shape_AssumingYieldOp : Shape_Op<"assuming_yield",
@@ -959,7 +957,7 @@ def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable",
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 }
 
 def Shape_CstrEqOp : Shape_Op<"cstr_eq", [Commutative, InferTypeOpInterface]> {
@@ -1083,9 +1081,7 @@ def Shape_FunctionLibraryOp : Shape_Op<"function_library",
 
   let builders = [OpBuilder<(ins "StringRef":$name)>];
   let skipDefaultBuilders = 1;
-
-  let printer = [{ ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 #endif // SHAPE_OPS

@@ -1,5 +1,5 @@
 Section,Description,Dependencies,Assignee,Complete
-`[tuple.helper] <https://wg21.link/tuple.helper>`_,Update <tuple> includes.,None,Konstantin Varlamov,Not started
+`[tuple.helper] <https://wg21.link/tuple.helper>`_,`Update <tuple> includes. <https://llvm.org/D118686>`_,None,Konstantin Varlamov,✅
 `[range.cmp] <https://wg21.link/range.cmp>`_,"| `ranges::equal_to <https://llvm.org/D100429>`_
 | `ranges::not_equal_to <https://llvm.org/D100429>`_
 | `ranges::less <https://llvm.org/D100429>`_
@@ -32,8 +32,8 @@ Section,Description,Dependencies,Assignee,Complete
 | `ranges::destroy <https://llvm.org/D116078>`_
 | `ranges::destroy_at <https://llvm.org/D116078>`_
 | `ranges::destroy_n <https://llvm.org/D116078>`_",[special.mem.concepts],Konstantin Varlamov,✅
-`[strings] <https://wg21.link/strings>`_,Adds begin/end and updates const_iterator.,[iterator.concepts],Unassigned,Not started
-`[views.span] <https://wg21.link/views.span>`_,Same as [strings],[iterator.concepts],Unassigned,Not started
+`[strings] <https://wg21.link/strings>`_,`Adds begin/end and updates const_iterator. <https://llvm.org/D118687>`_,[iterator.concepts],Konstantin Varlamov,✅
+`[views.span] <https://wg21.link/views.span>`_,`Same as [strings] <https://llvm.org/D118687>`_,[iterator.concepts],Konstantin Varlamov,✅
 `[iterator.cust.move] <https://wg21.link/iterator.cust.move>`_,`ranges::iter_move <https://llvm.org/D99873>`_,,Zoe Carver,✅
 `[iterator.cust.swap] <https://wg21.link/iterator.cust.swap>`_,`ranges::iter_swap <https://llvm.org/D102809>`_,iter_value_t,Zoe Carver,✅
 `[iterator.concepts] <https://wg21.link/iterator.concepts>`_,"| `indirectly_readable <https://llvm.org/D100073>`_
@@ -57,17 +57,19 @@ Section,Description,Dependencies,Assignee,Complete
 | `indirectly_equivalence_relation <https://llvm.org/D101277>`_
 | `indirectly_strict_weak_order <https://llvm.org/D101277>`_",[readable.traits],Louis Dionne,✅
 `[projected] <https://wg21.link/projected>`_,`ranges::projected <https://llvm.org/D101277>`_,[iterator.concepts],Louis Dionne,✅
-`[common.alg.req] <https://wg21.link/common.alg.req>`_: pt. 1,"| `indirectly_movable <https://llvm.org/D102639>`_
+`[alg.req] <https://wg21.link/alg.req>`_: pt. 1,"| `indirectly_movable <https://llvm.org/D102639>`_
 | `indirectly_movable_storable <https://llvm.org/D102639>`_
-| indirectly_copyable
-| indirectly_copyable_storable",[iterator.concepts],Zoe Carver,In progress
-`[common.alg.req] <https://wg21.link/common.alg.req>`_: pt. 2,`indirectly_swappable <https://llvm.org/D105304>`_,"| [iterator.concepts]
+| `indirectly_copyable <https://llvm.org/D118432>`_
+| `indirectly_copyable_storable <https://llvm.org/D118432>`_",[iterator.concepts],Zoe Carver and Konstantin Varlamov,✅
+`[alg.req] <https://wg21.link/alg.req>`_: pt. 2,`indirectly_swappable <https://llvm.org/D105304>`_,"| [iterator.concepts]
 | [iterator.cust.swap]",Zoe Carver,✅
-`[common.alg.req] <https://wg21.link/common.alg.req>`_: pt. 3,`indirectly_comparable <https://llvm.org/D116268>`_,[projected],Nikolas Klauser,✅
-`[common.alg.req] <https://wg21.link/common.alg.req>`_: pt. 4,"| permutable
+`[alg.req] <https://wg21.link/alg.req>`_: pt. 3,`indirectly_comparable <https://llvm.org/D116268>`_,[projected],Nikolas Klauser,✅
+`[alg.req] <https://wg21.link/alg.req>`_: pt. 4,"| permutable
 | mergeable
 | sortable",[iterator.concepts],Unassigned,Not started
-`[std.iterator.tags] <https://wg21.link/std.iterator.tags>`_,,[iterator.traits],Unassigned,Not started
+`[std.iterator.tags] <https://wg21.link/std.iterator.tags>`_,"| `contiguous_iterator_tag <https://reviews.llvm.org/rG45d048c20440989df2b4e1be1f9343225e7741ab>`_
+| `iterator_concept specialization for pointers <https://reviews.llvm.org/rG45d048c20440989df2b4e1be1f9343225e7741ab>`_
+",[iterator.traits],Eric Fiselier,✅
 `[range.iter.ops] <https://wg21.link/range.iter.ops>`_,"| `ranges::advance <https://llvm.org/D101922>`_
 | `ranges::distance <https://llvm.org/D102789>`_
 | `ranges::next <https://llvm.org/D102563>`_
@@ -79,7 +81,7 @@ Section,Description,Dependencies,Assignee,Complete
 | Updates to move_iterator","| [iterator.concepts]
 | [iterator.cust.swap]
 | [iterator.cust.move]",Unassigned,Not started
-`[move.sentinel] <https://wg21.link/move.sentinel>`_,move_sentinel,[predef.iterators],Unassigned,Not started
+`[move.sentinel] <https://wg21.link/move.sentinel>`_,`move_sentinel <https://reviews.llvm.org/D117656>`_,[predef.iterators],Arthur O'Dwyer,In progress
 `[common.iterator] <https://wg21.link/common.iterator>`_,`common_iterator <https://llvm.org/D103335>`_,"| [iterator.concepts]
 | [iterator.cust.swap]
 | [iterator.cust.move]",Zoe Carver,✅
@@ -153,7 +155,7 @@ Section,Description,Dependencies,Assignee,Complete
 `[range.transform] <https://wg21.link/range.transform>`_,`transform_view <https://llvm.org/D103056>`_,[range.all],Zoe Carver,✅
 `[range.take] <https://wg21.link/range.take>`_,`take_view <https://llvm.org/D106507>`_,[range.all],Zoe Carver,✅
 `[range.join] <https://wg21.link/range.join>`_,`join_view <https://llvm.org/D107671>`_,[range.all],Zoe Carver,✅
-`[range.split] <https://wg21.link/range.split>`_,`split_view <https://llvm.org/D107500>`_,[range.all],Zoe Carver,In progress
+`[range.split] <https://wg21.link/range.split>`_,`split_view (renamed to lazy_split_view by P2210) <https://llvm.org/D107500>`_,[range.all],Zoe Carver,In progress
 `[range.counted] <https://wg21.link/range.counted>`_,`view::counted <https://llvm.org/D106923>`_,[range.subrange],Zoe Carver,✅
 `[range.common] <https://wg21.link/range.common>`_,`common_view <https://llvm.org/D105753>`_,[range.all],Zoe Carver,✅
 `[range.reverse] <https://wg21.link/range.reverse>`_,`reverse_view <https://llvm.org/D107096>`_,[range.all],Zoe Carver,✅

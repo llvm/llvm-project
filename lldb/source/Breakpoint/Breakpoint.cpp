@@ -19,13 +19,14 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Target/SectionLoadList.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
@@ -487,7 +488,7 @@ void Breakpoint::ClearAllBreakpointSites() {
 
 void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
                                 bool delete_locations) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   LLDB_LOGF(log,
             "Breakpoint::ModulesChanged: num_modules: %zu load: %i "
             "delete_locations: %i\n",
@@ -646,7 +647,7 @@ static bool SymbolContextsMightBeEquivalent(SymbolContext &old_sc,
 
 void Breakpoint::ModuleReplaced(ModuleSP old_module_sp,
                                 ModuleSP new_module_sp) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   LLDB_LOGF(log, "Breakpoint::ModulesReplaced for %s\n",
             old_module_sp->GetSpecificationDescription().c_str());
   // First find all the locations that are in the old module
@@ -1011,8 +1012,7 @@ void Breakpoint::SendBreakpointChangedEvent(BreakpointEventData *data) {
 
 Breakpoint::BreakpointEventData::BreakpointEventData(
     BreakpointEventType sub_type, const BreakpointSP &new_breakpoint_sp)
-    : EventData(), m_breakpoint_event(sub_type),
-      m_new_breakpoint_sp(new_breakpoint_sp) {}
+    : m_breakpoint_event(sub_type), m_new_breakpoint_sp(new_breakpoint_sp) {}
 
 Breakpoint::BreakpointEventData::~BreakpointEventData() = default;
 

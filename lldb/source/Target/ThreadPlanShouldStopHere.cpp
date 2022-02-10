@@ -10,6 +10,7 @@
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 using namespace lldb;
@@ -41,7 +42,7 @@ bool ThreadPlanShouldStopHere::InvokeShouldStopHereCallback(
   if (m_callbacks.should_stop_here_callback) {
     should_stop_here = m_callbacks.should_stop_here_callback(
         m_owner, m_flags, operation, status, m_baton);
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+    Log *log = GetLog(LLDBLog::Step);
     if (log) {
       lldb::addr_t current_addr =
           m_owner->GetThread().GetRegisterContext()->GetPC(0);
@@ -62,7 +63,7 @@ bool ThreadPlanShouldStopHere::DefaultShouldStopHereCallback(
   if (!frame)
     return true;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
 
   if ((operation == eFrameCompareOlder && flags.Test(eStepOutAvoidNoDebug)) ||
       (operation == eFrameCompareYounger && flags.Test(eStepInAvoidNoDebug)) ||
@@ -98,7 +99,7 @@ ThreadPlanSP ThreadPlanShouldStopHere::DefaultStepFromHereCallback(
   ThreadPlanSP return_plan_sp;
   // If we are stepping through code at line number 0, then we need to step
   // over this range.  Otherwise we will step out.
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
 
   StackFrame *frame = current_plan->GetThread().GetStackFrameAtIndex(0).get();
   if (!frame)

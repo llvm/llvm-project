@@ -175,10 +175,9 @@ static llvm::Optional<StringRef> getRawStringDelimiter(StringRef TokenText) {
 static StringRef
 getCanonicalRawStringDelimiter(const FormatStyle &Style,
                                FormatStyle::LanguageKind Language) {
-  for (const auto &Format : Style.RawStringFormats) {
+  for (const auto &Format : Style.RawStringFormats)
     if (Format.Language == Language)
       return StringRef(Format.CanonicalDelimiter);
-  }
   return "";
 }
 
@@ -197,12 +196,10 @@ RawStringFormatStyleManager::RawStringFormatStyleManager(
       LanguageStyle = PredefinedStyle;
     }
     LanguageStyle->ColumnLimit = CodeStyle.ColumnLimit;
-    for (StringRef Delimiter : RawStringFormat.Delimiters) {
+    for (StringRef Delimiter : RawStringFormat.Delimiters)
       DelimiterStyle.insert({Delimiter, *LanguageStyle});
-    }
-    for (StringRef EnclosingFunction : RawStringFormat.EnclosingFunctions) {
+    for (StringRef EnclosingFunction : RawStringFormat.EnclosingFunctions)
       EnclosingFunctionStyle.insert({EnclosingFunction, *LanguageStyle});
-    }
   }
 }
 
@@ -348,9 +345,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   if (Style.Language == FormatStyle::LK_ObjC &&
       Style.ObjCBreakBeforeNestedBlockParam &&
       Current.ObjCSelectorNameParts > 1 &&
-      Current.startsSequence(TT_SelectorName, tok::colon, tok::caret)) {
+      Current.startsSequence(TT_SelectorName, tok::colon, tok::caret))
     return true;
-  }
   // Avoid producing inconsistent states by requiring breaks where they are not
   // permitted for C# generic type constraints.
   if (State.Stack.back().IsCSharpGenericTypeConstraint &&
@@ -1089,9 +1085,8 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       //    * always un-indent by the operator when
       //    BreakBeforeTernaryOperators=true
       unsigned Indent = State.Stack.back().Indent;
-      if (Style.AlignOperands != FormatStyle::OAS_DontAlign) {
+      if (Style.AlignOperands != FormatStyle::OAS_DontAlign)
         Indent -= Style.ContinuationIndentWidth;
-      }
       if (Style.BreakBeforeTernaryOperators &&
           State.Stack.back().UnindentOperator)
         Indent -= 2;
@@ -1762,9 +1757,8 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
 
   auto NewCode = applyAllReplacements(RawText, Fixes.first);
   tooling::Replacements NoFixes;
-  if (!NewCode) {
+  if (!NewCode)
     return addMultilineToken(Current, State);
-  }
   if (!DryRun) {
     if (NewDelimiter != OldDelimiter) {
       // In 'R"delimiter(...', the delimiter starts 2 characters after the start
@@ -1957,9 +1951,8 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
       return nullptr;
     // Don't break string literals inside Objective-C array literals (doing so
     // raises the warning -Wobjc-string-concatenation).
-    if (State.Stack.back().IsInsideObjCArrayLiteral) {
+    if (State.Stack.back().IsInsideObjCArrayLiteral)
       return nullptr;
-    }
 
     StringRef Text = Current.TokenText;
     StringRef Prefix;
@@ -1990,9 +1983,8 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
         // If a comment token switches formatting, like
         // /* clang-format on */, we don't want to break it further,
         // but we may still want to adjust its indentation.
-        switchesFormatting(Current)) {
+        switchesFormatting(Current))
       return nullptr;
-    }
     return std::make_unique<BreakableBlockComment>(
         Current, StartColumn, Current.OriginalColumn, !Current.Previous,
         State.Line->InPPDirective, Encoding, Style, Whitespaces.useCRLF());
@@ -2001,10 +1993,9 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
               Current.Previous->isNot(TT_ImplicitStringLiteral))) {
     bool RegularComments = [&]() {
       for (const FormatToken *T = &Current; T && T->is(TT_LineComment);
-           T = T->Next) {
+           T = T->Next)
         if (!(T->TokenText.startswith("//") || T->TokenText.startswith("#")))
           return false;
-      }
       return true;
     }();
     if (!Style.ReflowComments ||
@@ -2305,9 +2296,8 @@ ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
                 unsigned ExcessCharactersPenalty =
                     (ContentStartColumn + ToSplitColumns - ColumnLimit) *
                     Style.PenaltyExcessCharacter;
-                if (NewBreakPenalty < ExcessCharactersPenalty) {
+                if (NewBreakPenalty < ExcessCharactersPenalty)
                   Reflow = false;
-                }
               }
             }
           }
@@ -2379,10 +2369,9 @@ ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
     // If we break the token inside a parameter list, we need to break before
     // the next parameter on all levels, so that the next parameter is clearly
     // visible. Line comments already introduce a break.
-    if (Current.isNot(TT_LineComment)) {
+    if (Current.isNot(TT_LineComment))
       for (ParenState &Paren : State.Stack)
         Paren.BreakBeforeParameter = true;
-    }
 
     if (Current.is(TT_BlockComment))
       State.NoContinuation = true;

@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine
+; RUN: opt < %s -passes=instcombine
 
 ; This testcase should not send the instcombiner into an infinite loop!
 

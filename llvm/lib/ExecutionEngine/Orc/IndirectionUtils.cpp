@@ -59,7 +59,7 @@ private:
 namespace llvm {
 namespace orc {
 
-TrampolinePool::~TrampolinePool() {}
+TrampolinePool::~TrampolinePool() = default;
 void IndirectStubsManager::anchor() {}
 
 Expected<JITTargetAddress>

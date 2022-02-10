@@ -902,6 +902,8 @@ const char *VETargetLowering::getTargetNodeName(unsigned Opcode) const {
     TARGET_NODE_CASE(REPL_I32)
     TARGET_NODE_CASE(REPL_F32)
 
+    TARGET_NODE_CASE(LEGALAVL)
+
     // Register the VVP_* SDNodes.
 #define ADD_VVP_OP(VVP_NAME, ...) TARGET_NODE_CASE(VVP_NAME)
 #include "VVPNodes.def"
@@ -1658,10 +1660,7 @@ SDValue VETargetLowering::lowerBUILD_VECTOR(SDValue Op,
   // Else emit a broadcast.
   if (SDValue ScalarV = getSplatValue(Op.getNode())) {
     unsigned NumEls = ResultVT.getVectorNumElements();
-    // TODO: Legalize packed-mode AVL.
-    //       For now, cap the AVL at 256.
-    auto CappedLength = std::min<unsigned>(256, NumEls);
-    auto AVL = CDAG.getConstant(CappedLength, MVT::i32);
+    auto AVL = CDAG.getConstant(NumEls, MVT::i32);
     return CDAG.getBroadcast(ResultVT, Op.getOperand(0), AVL);
   }
 
@@ -1669,7 +1668,16 @@ SDValue VETargetLowering::lowerBUILD_VECTOR(SDValue Op,
   return SDValue();
 }
 
+TargetLowering::LegalizeAction
+VETargetLowering::getCustomOperationAction(SDNode &Op) const {
+  // Custom lower to legalize AVL for packed mode.
+  if (isVVPOrVEC(Op.getOpcode()))
+    return Custom;
+  return Legal;
+}
+
 SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
+  LLVM_DEBUG(dbgs() << "::LowerOperation"; Op->print(dbgs()););
   unsigned Opcode = Op.getOpcode();
   if (ISD::isVPOpcode(Opcode))
     return lowerToVVP(Op, DAG);
@@ -1721,6 +1729,16 @@ SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::EXTRACT_VECTOR_ELT:
     return lowerEXTRACT_VECTOR_ELT(Op, DAG);
 
+  // Legalize the AVL of this internal node.
+  case VEISD::VEC_BROADCAST:
+#define ADD_VVP_OP(VVP_NAME, ...) case VEISD::VVP_NAME:
+#include "VVPNodes.def"
+    // AVL already legalized.
+    if (getAnnotatedNodeAVL(Op).second)
+      return Op;
+    return legalizeInternalVectorOp(Op, DAG);
+
+    // Translate into a VEC_*/VVP_* layer operation.
 #define ADD_VVP_OP(VVP_NAME, ISD_NAME) case ISD::ISD_NAME:
 #include "VVPNodes.def"
     return lowerToVVP(Op, DAG);
@@ -2709,6 +2727,12 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
     auto OnTrue = Op->getOperand(1);
     auto OnFalse = Op->getOperand(2);
     return CDAG.getNode(VVPOpcode, LegalVecVT, {OnTrue, OnFalse, Mask, AVL});
+  }
+  if (VVPOpcode == VEISD::VVP_SETCC) {
+    auto LHS = Op->getOperand(0);
+    auto RHS = Op->getOperand(1);
+    auto Pred = Op->getOperand(2);
+    return CDAG.getNode(VVPOpcode, LegalVecVT, {LHS, RHS, Pred, Mask, AVL});
   }
   llvm_unreachable("lowerToVVP called for unexpected SDNode.");
 }

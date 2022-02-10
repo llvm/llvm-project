@@ -10,11 +10,12 @@
 #define LLVM_DEBUGINFO_CODEVIEW_TYPESTREAMMERGER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
+template <typename T> class Optional;
+template <typename T> class SmallVectorImpl;
 namespace codeview {
 
 class TypeIndex;

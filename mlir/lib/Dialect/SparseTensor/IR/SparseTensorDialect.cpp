@@ -209,53 +209,51 @@ static LogicalResult isMatchingWidth(Value result, unsigned width) {
   return failure();
 }
 
-static LogicalResult verify(NewOp op) {
-  if (!getSparseTensorEncoding(op.result().getType()))
-    return op.emitError("expected a sparse tensor result");
+LogicalResult NewOp::verify() {
+  if (!getSparseTensorEncoding(result().getType()))
+    return emitError("expected a sparse tensor result");
   return success();
 }
 
-static LogicalResult verify(InitOp op) {
-  if (!getSparseTensorEncoding(op.result().getType()))
-    return op.emitError("expected a sparse tensor result");
-  RankedTensorType ttp = op.getType().cast<RankedTensorType>();
+LogicalResult InitOp::verify() {
+  if (!getSparseTensorEncoding(result().getType()))
+    return emitError("expected a sparse tensor result");
+  RankedTensorType ttp = getType().cast<RankedTensorType>();
   unsigned rank = ttp.getRank();
-  if (rank != op.sizes().size())
-    return op.emitError("unexpected mismatch between tensor rank and sizes: ")
-           << rank << " vs. " << op.sizes().size();
+  if (rank != sizes().size())
+    return emitError("unexpected mismatch between tensor rank and sizes: ")
+           << rank << " vs. " << sizes().size();
   auto shape = ttp.getShape();
   for (unsigned i = 0; i < rank; i++) {
     if (shape[i] == ShapedType::kDynamicSize)
       continue;
     IntegerAttr constantAttr;
-    if (!matchPattern(op.sizes()[i], m_Constant(&constantAttr)) ||
+    if (!matchPattern(sizes()[i], m_Constant(&constantAttr)) ||
         constantAttr.getInt() != shape[i]) {
-      return op.emitError("unexpected mismatch with static dimension size ")
+      return emitError("unexpected mismatch with static dimension size ")
              << shape[i];
     }
   }
   return success();
 }
 
-static LogicalResult verify(ConvertOp op) {
-  if (auto tp1 = op.source().getType().dyn_cast<RankedTensorType>()) {
-    if (auto tp2 = op.dest().getType().dyn_cast<RankedTensorType>()) {
+LogicalResult ConvertOp::verify() {
+  if (auto tp1 = source().getType().dyn_cast<RankedTensorType>()) {
+    if (auto tp2 = dest().getType().dyn_cast<RankedTensorType>()) {
       if (tp1.getRank() != tp2.getRank())
-        return op.emitError("unexpected conversion mismatch in rank");
+        return emitError("unexpected conversion mismatch in rank");
       auto shape1 = tp1.getShape();
       auto shape2 = tp2.getShape();
       // Accept size matches between the source and the destination type
       // (e.g. 10 vs. 10, 10 vs. ?, or ? vs. ?), but reject direct mismatches or
       // matches that would need a runtime assert (e.g. 10 vs. 20 or ? vs. 10).
-      for (unsigned d = 0, rank = tp1.getRank(); d < rank; d++) {
+      for (unsigned d = 0, rank = tp1.getRank(); d < rank; d++)
         if (shape1[d] != shape2[d] && shape2[d] != ShapedType::kDynamicSize)
-          return op.emitError("unexpected conversion mismatch in dimension ")
-                 << d;
-      }
+          return emitError("unexpected conversion mismatch in dimension ") << d;
       return success();
     }
   }
-  return op.emitError("unexpected type in convert");
+  return emitError("unexpected type in convert");
 }
 
 OpFoldResult ConvertOp::fold(ArrayRef<Attribute> operands) {
@@ -264,35 +262,35 @@ OpFoldResult ConvertOp::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
-static LogicalResult verify(ToPointersOp op) {
-  if (auto e = getSparseTensorEncoding(op.tensor().getType())) {
-    if (failed(isInBounds(op.dim(), op.tensor())))
-      return op.emitError("requested pointers dimension out of bounds");
-    if (failed(isMatchingWidth(op.result(), e.getPointerBitWidth())))
-      return op.emitError("unexpected type for pointers");
+LogicalResult ToPointersOp::verify() {
+  if (auto e = getSparseTensorEncoding(tensor().getType())) {
+    if (failed(isInBounds(dim(), tensor())))
+      return emitError("requested pointers dimension out of bounds");
+    if (failed(isMatchingWidth(result(), e.getPointerBitWidth())))
+      return emitError("unexpected type for pointers");
     return success();
   }
-  return op.emitError("expected a sparse tensor to get pointers");
+  return emitError("expected a sparse tensor to get pointers");
 }
 
-static LogicalResult verify(ToIndicesOp op) {
-  if (auto e = getSparseTensorEncoding(op.tensor().getType())) {
-    if (failed(isInBounds(op.dim(), op.tensor())))
-      return op.emitError("requested indices dimension out of bounds");
-    if (failed(isMatchingWidth(op.result(), e.getIndexBitWidth())))
-      return op.emitError("unexpected type for indices");
+LogicalResult ToIndicesOp::verify() {
+  if (auto e = getSparseTensorEncoding(tensor().getType())) {
+    if (failed(isInBounds(dim(), tensor())))
+      return emitError("requested indices dimension out of bounds");
+    if (failed(isMatchingWidth(result(), e.getIndexBitWidth())))
+      return emitError("unexpected type for indices");
     return success();
   }
-  return op.emitError("expected a sparse tensor to get indices");
+  return emitError("expected a sparse tensor to get indices");
 }
 
-static LogicalResult verify(ToValuesOp op) {
-  if (!getSparseTensorEncoding(op.tensor().getType()))
-    return op.emitError("expected a sparse tensor to get values");
-  RankedTensorType ttp = op.tensor().getType().cast<RankedTensorType>();
-  MemRefType mtp = op.result().getType().cast<MemRefType>();
+LogicalResult ToValuesOp::verify() {
+  if (!getSparseTensorEncoding(tensor().getType()))
+    return emitError("expected a sparse tensor to get values");
+  RankedTensorType ttp = tensor().getType().cast<RankedTensorType>();
+  MemRefType mtp = result().getType().cast<MemRefType>();
   if (ttp.getElementType() != mtp.getElementType())
-    return op.emitError("unexpected mismatch in element types");
+    return emitError("unexpected mismatch in element types");
   return success();
 }
 
@@ -300,39 +298,39 @@ static LogicalResult verify(ToValuesOp op) {
 // TensorDialect Management Operations.
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(LexInsertOp op) {
-  if (!getSparseTensorEncoding(op.tensor().getType()))
-    return op.emitError("expected a sparse tensor for insertion");
+LogicalResult LexInsertOp::verify() {
+  if (!getSparseTensorEncoding(tensor().getType()))
+    return emitError("expected a sparse tensor for insertion");
   return success();
 }
 
-static LogicalResult verify(ExpandOp op) {
-  if (!getSparseTensorEncoding(op.tensor().getType()))
-    return op.emitError("expected a sparse tensor for expansion");
+LogicalResult ExpandOp::verify() {
+  if (!getSparseTensorEncoding(tensor().getType()))
+    return emitError("expected a sparse tensor for expansion");
   return success();
 }
 
-static LogicalResult verify(CompressOp op) {
-  if (!getSparseTensorEncoding(op.tensor().getType()))
-    return op.emitError("expected a sparse tensor for compression");
+LogicalResult CompressOp::verify() {
+  if (!getSparseTensorEncoding(tensor().getType()))
+    return emitError("expected a sparse tensor for compression");
   return success();
 }
 
-static LogicalResult verify(LoadOp op) {
-  if (!getSparseTensorEncoding(op.tensor().getType()))
-    return op.emitError("expected a sparse tensor to materialize");
+LogicalResult LoadOp::verify() {
+  if (!getSparseTensorEncoding(tensor().getType()))
+    return emitError("expected a sparse tensor to materialize");
   return success();
 }
 
-static LogicalResult verify(ReleaseOp op) {
-  if (!getSparseTensorEncoding(op.tensor().getType()))
-    return op.emitError("expected a sparse tensor to release");
+LogicalResult ReleaseOp::verify() {
+  if (!getSparseTensorEncoding(tensor().getType()))
+    return emitError("expected a sparse tensor to release");
   return success();
 }
 
-static LogicalResult verify(OutOp op) {
-  if (!getSparseTensorEncoding(op.tensor().getType()))
-    return op.emitError("expected a sparse tensor for output");
+LogicalResult OutOp::verify() {
+  if (!getSparseTensorEncoding(tensor().getType()))
+    return emitError("expected a sparse tensor for output");
   return success();
 }
 

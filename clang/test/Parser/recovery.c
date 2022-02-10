@@ -62,7 +62,7 @@ struct S A = {
 };
 
 // rdar://6248081
-void test6248081() { 
+void test6248081(void) { 
   [10]  // expected-error {{expected expression}}
 }
 
@@ -70,7 +70,7 @@ struct forward; // expected-note{{forward declaration of 'struct forward'}}
 void x(struct forward* x) {switch(x->a) {}} // expected-error {{incomplete definition of type}}
 
 // PR3410
-void foo() {
+void foo(void) {
   int X;
   X = 4 // expected-error{{expected ';' after expression}}
 }

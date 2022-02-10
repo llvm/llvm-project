@@ -643,9 +643,13 @@ def AArch64sabd     : PatFrags<(ops node:$lhs, node:$rhs),
                                 (int_aarch64_neon_sabd node:$lhs, node:$rhs)]>;
 
 def AArch64uaddlp_n : SDNode<"AArch64ISD::UADDLP", SDT_AArch64uaddlp>;
+def AArch64saddlp_n : SDNode<"AArch64ISD::SADDLP", SDT_AArch64uaddlp>;
 def AArch64uaddlp   : PatFrags<(ops node:$src),
                                [(AArch64uaddlp_n node:$src),
                                 (int_aarch64_neon_uaddlp node:$src)]>;
+def AArch64saddlp   : PatFrags<(ops node:$src),
+                               [(AArch64saddlp_n node:$src),
+                                (int_aarch64_neon_saddlp node:$src)]>;
 
 def SDT_AArch64SETTAG : SDTypeProfile<0, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
 def AArch64stg : SDNode<"AArch64ISD::STG", SDT_AArch64SETTAG, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
@@ -4312,8 +4316,8 @@ defm REV16  : SIMDTwoVectorB<0, 0b00, 0b00001, "rev16", AArch64rev16>;
 defm REV32  : SIMDTwoVectorBH<1, 0b00000, "rev32", AArch64rev32>;
 defm REV64  : SIMDTwoVectorBHS<0, 0b00000, "rev64", AArch64rev64>;
 defm SADALP : SIMDLongTwoVectorTied<0, 0b00110, "sadalp",
-       BinOpFrag<(add node:$LHS, (int_aarch64_neon_saddlp node:$RHS))> >;
-defm SADDLP : SIMDLongTwoVector<0, 0b00010, "saddlp", int_aarch64_neon_saddlp>;
+       BinOpFrag<(add node:$LHS, (AArch64saddlp node:$RHS))> >;
+defm SADDLP : SIMDLongTwoVector<0, 0b00010, "saddlp", AArch64saddlp>;
 defm SCVTF  : SIMDTwoVectorIntToFP<0, 0, 0b11101, "scvtf", sint_to_fp>;
 defm SHLL   : SIMDVectorLShiftLongBySizeBHS;
 defm SQABS  : SIMDTwoVectorBHSD<0, 0b00111, "sqabs", int_aarch64_neon_sqabs>;
@@ -5856,24 +5860,28 @@ defm FMAXV   : SIMDFPAcrossLanes<0b01111, 0, "fmaxv", int_aarch64_neon_fmaxv>;
 defm FMINNMV : SIMDFPAcrossLanes<0b01100, 1, "fminnmv", int_aarch64_neon_fminnmv>;
 defm FMINV   : SIMDFPAcrossLanes<0b01111, 1, "fminv", int_aarch64_neon_fminv>;
 
-// Patterns for uaddv(uaddlp(x)) ==> uaddlv
-def : Pat<(i32 (vector_extract (v8i16 (insert_subvector undef,
-            (v4i16 (AArch64uaddv (v4i16 (AArch64uaddlp (v8i8 V64:$op))))),
-            (i64 0))), (i64 0))),
-          (EXTRACT_SUBREG (INSERT_SUBREG (v4i16 (IMPLICIT_DEF)),
-           (UADDLVv8i8v V64:$op), hsub), ssub)>;
-def : Pat<(i32 (vector_extract (v8i16 (AArch64uaddv (v8i16 (AArch64uaddlp
-           (v16i8 V128:$op))))), (i64 0))),
-          (EXTRACT_SUBREG (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)),
-           (UADDLVv16i8v V128:$op), hsub), ssub)>;
-def : Pat<(v4i32 (AArch64uaddv (v4i32 (AArch64uaddlp (v8i16 V128:$op))))),
-          (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), (UADDLVv8i16v V128:$op), ssub)>;
+multiclass SIMDAcrossLaneLongPairIntrinsic<string Opc, SDPatternOperator addlp> {
+  // Patterns for addv(addlp(x)) ==> addlv
+  def : Pat<(i32 (vector_extract (v8i16 (insert_subvector undef,
+              (v4i16 (AArch64uaddv (v4i16 (addlp (v8i8 V64:$op))))),
+              (i64 0))), (i64 0))),
+            (EXTRACT_SUBREG (INSERT_SUBREG (v4i16 (IMPLICIT_DEF)),
+              (!cast<Instruction>(Opc#"v8i8v") V64:$op), hsub), ssub)>;
+  def : Pat<(i32 (vector_extract (v8i16 (AArch64uaddv (v8i16 (addlp (v16i8 V128:$op))))), (i64 0))),
+            (EXTRACT_SUBREG (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)),
+              (!cast<Instruction>(Opc#"v16i8v") V128:$op), hsub), ssub)>;
+  def : Pat<(v4i32 (AArch64uaddv (v4i32 (addlp (v8i16 V128:$op))))),
+            (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), (!cast<Instruction>(Opc#"v8i16v") V128:$op), ssub)>;
 
-// Patterns for addp(uaddlp(x))) ==> uaddlv
-def : Pat<(v2i32 (AArch64uaddv (v2i32 (AArch64uaddlp (v4i16 V64:$op))))),
-          (INSERT_SUBREG (v2i32 (IMPLICIT_DEF)), (UADDLVv4i16v V64:$op), ssub)>;
-def : Pat<(v2i64 (AArch64uaddv (v2i64 (AArch64uaddlp (v4i32 V128:$op))))),
-          (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), (UADDLVv4i32v V128:$op), dsub)>;
+  // Patterns for addp(addlp(x))) ==> addlv
+  def : Pat<(v2i32 (AArch64uaddv (v2i32 (addlp (v4i16 V64:$op))))),
+            (INSERT_SUBREG (v2i32 (IMPLICIT_DEF)), (!cast<Instruction>(Opc#"v4i16v") V64:$op), ssub)>;
+  def : Pat<(v2i64 (AArch64uaddv (v2i64 (addlp (v4i32 V128:$op))))),
+            (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), (!cast<Instruction>(Opc#"v4i32v") V128:$op), dsub)>;
+}
+
+defm : SIMDAcrossLaneLongPairIntrinsic<"UADDLV", AArch64uaddlp>;
+defm : SIMDAcrossLaneLongPairIntrinsic<"SADDLV", AArch64saddlp>;
 
 // Patterns for across-vector intrinsics, that have a node equivalent, that
 // returns a vector (with only the low lane defined) instead of a scalar.

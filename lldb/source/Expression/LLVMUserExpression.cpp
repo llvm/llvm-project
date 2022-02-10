@@ -30,6 +30,7 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanCallUserExpression.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -67,8 +68,7 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
   // The expression log is quite verbose, and if you're just tracking the
   // execution of the expression, it's quite convenient to have these logs come
   // out with the STEP log as well.
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS |
-                                                  LIBLLDB_LOG_STEP));
+  Log *log(GetLog(LLDBLog::Expressions | LLDBLog::Step));
 
   if (m_jit_start_addr == LLDB_INVALID_ADDRESS && !m_can_interpret) {
     diagnostic_manager.PutString(
@@ -254,7 +254,7 @@ bool LLVMUserExpression::FinalizeJITExecution(
     DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
     lldb::ExpressionVariableSP &result, lldb::addr_t function_stack_bottom,
     lldb::addr_t function_stack_top) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   LLDB_LOGF(log, "-- [UserExpression::FinalizeJITExecution] Dematerializing "
                  "after execution --");

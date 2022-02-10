@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_SQRT_H
 
 #include "sqrt_80_bit_long_double.h"
+#include "src/__support/CPP/Bit.h"
 #include "src/__support/CPP/TypeTraits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -203,7 +204,7 @@ sqrt(T x) {
         break;
       }
 
-      return *reinterpret_cast<T *>(&y);
+      return __llvm_libc::bit_cast<T>(y);
     }
   }
 }

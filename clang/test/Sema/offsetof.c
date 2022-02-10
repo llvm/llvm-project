@@ -11,7 +11,7 @@ struct external_sun3_core
   
 };
 
-void swap()
+void swap(void)
 {
   int x;
   x = offsetof(struct external_sun3_core, c_regs);
@@ -25,7 +25,7 @@ void swap()
   int c[__builtin_offsetof(struct external_sun3_core, X[42].f2) == 344 ? 1 : -1];  // expected-error {{no member named 'f2'}}
 }    
 
-extern int f();
+extern int f(void);
 
 struct s1 { int a; }; 
 int v1 = offsetof (struct s1, a) == 0 ? 0 : f();
@@ -66,7 +66,7 @@ int test3 = __builtin_offsetof(struct has_bitfields, j); // expected-error{{cann
 typedef struct Array { int array[1]; } Array;
 int test4 = __builtin_offsetof(Array, array);
 
-int test5() {
+int test5(void) {
   return __builtin_offsetof(Array, array[*(int*)0]); // expected-warning{{indirection of non-volatile null pointer}} expected-note{{__builtin_trap}}
 }
 

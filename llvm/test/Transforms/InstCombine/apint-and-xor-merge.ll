@@ -2,7 +2,7 @@
 ; This test case checks that the merge of and/xor can work on arbitrary
 ; precision integers.
 
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 ; (x &z ) ^ (y & z) -> (x ^ y) & z
 define i57 @test1(i57 %x, i57 %y, i57 %z) {

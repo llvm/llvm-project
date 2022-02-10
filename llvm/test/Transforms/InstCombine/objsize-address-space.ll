@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine -o - %s | FileCheck %s
+; RUN: opt -S -passes=instcombine -o - %s | FileCheck %s
 target datalayout = "e-p:32:32:32-p1:64:64:64-p2:8:8:8-p3:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:32"
 
 declare i32 @llvm.objectsize.i32.p0i8(i8*, i1) nounwind readonly

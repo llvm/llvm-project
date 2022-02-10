@@ -97,18 +97,7 @@ public:
     // after (or concurrently with) this function returning a non-null Log
     // pointer, it is still safe to attempt to write to the Log object -- the
     // output will be discarded.
-    Log *GetLogIfAll(MaskType mask) {
-      Log *log = log_ptr.load(std::memory_order_relaxed);
-      if (log && log->GetMask().AllSet(mask))
-        return log;
-      return nullptr;
-    }
-
-    // This function is safe to call at any time. If the channel is disabled
-    // after (or concurrently with) this function returning a non-null Log
-    // pointer, it is still safe to attempt to write to the Log object -- the
-    // output will be discarded.
-    Log *GetLogIfAny(MaskType mask) {
+    Log *GetLog(MaskType mask) {
       Log *log = log_ptr.load(std::memory_order_relaxed);
       if (log && log->GetMask().AnySet(mask))
         return log;
@@ -116,8 +105,6 @@ public:
     }
   };
 
-
-  static void Initialize();
 
   // Static accessors for logging channels
   static void Register(llvm::StringRef name, Channel &channel);
@@ -248,7 +235,7 @@ template <typename Cat> Log::Channel &LogChannelFor() = delete;
 template <typename Cat> Log *GetLog(Cat mask) {
   static_assert(std::is_same<Log::MaskType, std::underlying_type_t<Cat>>::value,
                 "");
-  return LogChannelFor<Cat>().GetLogIfAny(Log::MaskType(mask));
+  return LogChannelFor<Cat>().GetLog(Log::MaskType(mask));
 }
 
 } // namespace lldb_private
@@ -310,4 +297,3 @@ template <typename Cat> Log *GetLog(Cat mask) {
 #endif // LLDB_UTILITY_LOG_H
 
 // TODO: Remove this and fix includes everywhere.
-#include "lldb/Utility/Logging.h"

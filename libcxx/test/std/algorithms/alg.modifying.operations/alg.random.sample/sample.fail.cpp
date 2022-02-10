@@ -36,7 +36,7 @@ int main(int, char**) {
   // expected-error-re@*:* {{static_assert failed{{( due to requirement '.*')?}} "SampleIterator must meet the requirements of RandomAccessIterator"}}
   // expected-error@*:* 2 {{does not provide a subscript operator}}
   // expected-error@*:* {{invalid operands}}
-  test<cpp17_input_iterator<int *>, output_iterator<int *> >();
+  test<cpp17_input_iterator<int *>, cpp17_output_iterator<int *> >();
 
   return 0;
 }

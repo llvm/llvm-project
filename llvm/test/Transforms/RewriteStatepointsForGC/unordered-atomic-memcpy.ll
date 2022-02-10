@@ -14,11 +14,11 @@ define void @test_memcpy_gc_leaf_function(i8 addrspace(1)* %src, i64 %src_offset
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SRC_DERIVED:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]]
 ; CHECK-NEXT:    [[DEST_DERIVED:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]]
-; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 1) [[ATTR2:#.*]]
-; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 2) [[ATTR2]]
-; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 4) [[ATTR2]]
-; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 8) [[ATTR2]]
-; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 16) [[ATTR2]]
+; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 1) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 2) #[[ATTR2]]
+; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 4) #[[ATTR2]]
+; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 8) #[[ATTR2]]
+; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 16) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -37,7 +37,7 @@ define void @test_memcpy_element_atomic_1(i8 addrspace(1)* %src, i64 %src_offset
 ; CHECK-LABEL: define {{[^@]+}}@test_memcpy_element_atomic_1
 ; CHECK-SAME: (i8 addrspace(1)* [[SRC:%.*]], i64 [[SRC_OFFSET:%.*]], i8 addrspace(1)* [[DEST:%.*]], i64 [[DEST_OFFSET:%.*]], i32 [[LEN:%.*]]) gc "statepoint-example" {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8i64p1i8i64i32f(i64 2882400000, i32 0, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)* nonnull @__llvm_memcpy_element_unordered_atomic_safepoint_1, i32 5, i32 0, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]], i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]], i32 [[LEN]], i32 0, i32 0) [ "gc-live"() ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8i64p1i8i64i32f(i64 2882400000, i32 0, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)* nonnull elementtype(void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)) @__llvm_memcpy_element_unordered_atomic_safepoint_1, i32 5, i32 0, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]], i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]], i32 [[LEN]], i32 0, i32 0) [ "gc-live"() ]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -51,7 +51,7 @@ define void @test_memcpy_element_atomic_2(i8 addrspace(1)* %src, i64 %src_offset
 ; CHECK-LABEL: define {{[^@]+}}@test_memcpy_element_atomic_2
 ; CHECK-SAME: (i8 addrspace(1)* [[SRC:%.*]], i64 [[SRC_OFFSET:%.*]], i8 addrspace(1)* [[DEST:%.*]], i64 [[DEST_OFFSET:%.*]], i32 [[LEN:%.*]]) gc "statepoint-example" {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8i64p1i8i64i32f(i64 2882400000, i32 0, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)* nonnull @__llvm_memcpy_element_unordered_atomic_safepoint_2, i32 5, i32 0, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]], i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]], i32 [[LEN]], i32 0, i32 0) [ "gc-live"() ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8i64p1i8i64i32f(i64 2882400000, i32 0, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)* nonnull elementtype(void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)) @__llvm_memcpy_element_unordered_atomic_safepoint_2, i32 5, i32 0, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]], i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]], i32 [[LEN]], i32 0, i32 0) [ "gc-live"() ]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -65,7 +65,7 @@ define void @test_memcpy_element_atomic_4(i8 addrspace(1)* %src, i64 %src_offset
 ; CHECK-LABEL: define {{[^@]+}}@test_memcpy_element_atomic_4
 ; CHECK-SAME: (i8 addrspace(1)* [[SRC:%.*]], i64 [[SRC_OFFSET:%.*]], i8 addrspace(1)* [[DEST:%.*]], i64 [[DEST_OFFSET:%.*]], i32 [[LEN:%.*]]) gc "statepoint-example" {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8i64p1i8i64i32f(i64 2882400000, i32 0, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)* nonnull @__llvm_memcpy_element_unordered_atomic_safepoint_4, i32 5, i32 0, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]], i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]], i32 [[LEN]], i32 0, i32 0) [ "gc-live"() ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8i64p1i8i64i32f(i64 2882400000, i32 0, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)* nonnull elementtype(void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)) @__llvm_memcpy_element_unordered_atomic_safepoint_4, i32 5, i32 0, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]], i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]], i32 [[LEN]], i32 0, i32 0) [ "gc-live"() ]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -79,7 +79,7 @@ define void @test_memcpy_element_atomic_8(i8 addrspace(1)* %src, i64 %src_offset
 ; CHECK-LABEL: define {{[^@]+}}@test_memcpy_element_atomic_8
 ; CHECK-SAME: (i8 addrspace(1)* [[SRC:%.*]], i64 [[SRC_OFFSET:%.*]], i8 addrspace(1)* [[DEST:%.*]], i64 [[DEST_OFFSET:%.*]], i32 [[LEN:%.*]]) gc "statepoint-example" {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8i64p1i8i64i32f(i64 2882400000, i32 0, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)* nonnull @__llvm_memcpy_element_unordered_atomic_safepoint_8, i32 5, i32 0, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]], i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]], i32 [[LEN]], i32 0, i32 0) [ "gc-live"() ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8i64p1i8i64i32f(i64 2882400000, i32 0, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)* nonnull elementtype(void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)) @__llvm_memcpy_element_unordered_atomic_safepoint_8, i32 5, i32 0, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]], i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]], i32 [[LEN]], i32 0, i32 0) [ "gc-live"() ]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -93,7 +93,7 @@ define void @test_memcpy_element_atomic_16(i8 addrspace(1)* %src, i64 %src_offse
 ; CHECK-LABEL: define {{[^@]+}}@test_memcpy_element_atomic_16
 ; CHECK-SAME: (i8 addrspace(1)* [[SRC:%.*]], i64 [[SRC_OFFSET:%.*]], i8 addrspace(1)* [[DEST:%.*]], i64 [[DEST_OFFSET:%.*]], i32 [[LEN:%.*]]) gc "statepoint-example" {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8i64p1i8i64i32f(i64 2882400000, i32 0, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)* nonnull @__llvm_memcpy_element_unordered_atomic_safepoint_16, i32 5, i32 0, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]], i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]], i32 [[LEN]], i32 0, i32 0) [ "gc-live"() ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8i64p1i8i64i32f(i64 2882400000, i32 0, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)* nonnull elementtype(void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)) @__llvm_memcpy_element_unordered_atomic_safepoint_16, i32 5, i32 0, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]], i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]], i32 [[LEN]], i32 0, i32 0) [ "gc-live"() ]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -109,11 +109,11 @@ define void @test_memmove_gc_leaf_function(i8 addrspace(1)* %src, i64 %src_offse
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SRC_DERIVED:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]]
 ; CHECK-NEXT:    [[DEST_DERIVED:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]]
-; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 1) [[ATTR2]]
-; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 2) [[ATTR2]]
-; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 4) [[ATTR2]]
-; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 8) [[ATTR2]]
-; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 16) [[ATTR2]]
+; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 1) #[[ATTR2]]
+; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 2) #[[ATTR2]]
+; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 4) #[[ATTR2]]
+; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 8) #[[ATTR2]]
+; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1i8.p1i8.i32(i8 addrspace(1)* align 16 [[SRC_DERIVED]], i8 addrspace(1)* align 16 [[DEST_DERIVED]], i32 [[LEN]], i32 16) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -132,7 +132,7 @@ define void @test_memmove_element_atomic_1(i8 addrspace(1)* %src, i64 %src_offse
 ; CHECK-LABEL: define {{[^@]+}}@test_memmove_element_atomic_1
 ; CHECK-SAME: (i8 addrspace(1)* [[SRC:%.*]], i64 [[SRC_OFFSET:%.*]], i8 addrspace(1)* [[DEST:%.*]], i64 [[DEST_OFFSET:%.*]], i32 [[LEN:%.*]]) gc "statepoint-example" {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8i64p1i8i64i32f(i64 2882400000, i32 0, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)* nonnull @__llvm_memmove_element_unordered_atomic_safepoint_1, i32 5, i32 0, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]], i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]], i32 [[LEN]], i32 0, i32 0) [ "gc-live"() ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8i64p1i8i64i32f(i64 2882400000, i32 0, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)* nonnull elementtype(void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)) @__llvm_memmove_element_unordered_atomic_safepoint_1, i32 5, i32 0, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]], i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]], i32 [[LEN]], i32 0, i32 0) [ "gc-live"() ]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -146,7 +146,7 @@ define void @test_memmove_element_atomic_2(i8 addrspace(1)* %src, i64 %src_offse
 ; CHECK-LABEL: define {{[^@]+}}@test_memmove_element_atomic_2
 ; CHECK-SAME: (i8 addrspace(1)* [[SRC:%.*]], i64 [[SRC_OFFSET:%.*]], i8 addrspace(1)* [[DEST:%.*]], i64 [[DEST_OFFSET:%.*]], i32 [[LEN:%.*]]) gc "statepoint-example" {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8i64p1i8i64i32f(i64 2882400000, i32 0, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)* nonnull @__llvm_memmove_element_unordered_atomic_safepoint_2, i32 5, i32 0, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]], i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]], i32 [[LEN]], i32 0, i32 0) [ "gc-live"() ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8i64p1i8i64i32f(i64 2882400000, i32 0, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)* nonnull elementtype(void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)) @__llvm_memmove_element_unordered_atomic_safepoint_2, i32 5, i32 0, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]], i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]], i32 [[LEN]], i32 0, i32 0) [ "gc-live"() ]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -160,7 +160,7 @@ define void @test_memmove_element_atomic_4(i8 addrspace(1)* %src, i64 %src_offse
 ; CHECK-LABEL: define {{[^@]+}}@test_memmove_element_atomic_4
 ; CHECK-SAME: (i8 addrspace(1)* [[SRC:%.*]], i64 [[SRC_OFFSET:%.*]], i8 addrspace(1)* [[DEST:%.*]], i64 [[DEST_OFFSET:%.*]], i32 [[LEN:%.*]]) gc "statepoint-example" {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8i64p1i8i64i32f(i64 2882400000, i32 0, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)* nonnull @__llvm_memmove_element_unordered_atomic_safepoint_4, i32 5, i32 0, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]], i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]], i32 [[LEN]], i32 0, i32 0) [ "gc-live"() ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8i64p1i8i64i32f(i64 2882400000, i32 0, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)* nonnull elementtype(void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)) @__llvm_memmove_element_unordered_atomic_safepoint_4, i32 5, i32 0, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]], i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]], i32 [[LEN]], i32 0, i32 0) [ "gc-live"() ]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -174,7 +174,7 @@ define void @test_memmove_element_atomic_8(i8 addrspace(1)* %src, i64 %src_offse
 ; CHECK-LABEL: define {{[^@]+}}@test_memmove_element_atomic_8
 ; CHECK-SAME: (i8 addrspace(1)* [[SRC:%.*]], i64 [[SRC_OFFSET:%.*]], i8 addrspace(1)* [[DEST:%.*]], i64 [[DEST_OFFSET:%.*]], i32 [[LEN:%.*]]) gc "statepoint-example" {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8i64p1i8i64i32f(i64 2882400000, i32 0, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)* nonnull @__llvm_memmove_element_unordered_atomic_safepoint_8, i32 5, i32 0, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]], i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]], i32 [[LEN]], i32 0, i32 0) [ "gc-live"() ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8i64p1i8i64i32f(i64 2882400000, i32 0, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)* nonnull elementtype(void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)) @__llvm_memmove_element_unordered_atomic_safepoint_8, i32 5, i32 0, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]], i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]], i32 [[LEN]], i32 0, i32 0) [ "gc-live"() ]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -188,7 +188,7 @@ define void @test_memmove_element_atomic_16(i8 addrspace(1)* %src, i64 %src_offs
 ; CHECK-LABEL: define {{[^@]+}}@test_memmove_element_atomic_16
 ; CHECK-SAME: (i8 addrspace(1)* [[SRC:%.*]], i64 [[SRC_OFFSET:%.*]], i8 addrspace(1)* [[DEST:%.*]], i64 [[DEST_OFFSET:%.*]], i32 [[LEN:%.*]]) gc "statepoint-example" {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8i64p1i8i64i32f(i64 2882400000, i32 0, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)* nonnull @__llvm_memmove_element_unordered_atomic_safepoint_16, i32 5, i32 0, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]], i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]], i32 [[LEN]], i32 0, i32 0) [ "gc-live"() ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8i64p1i8i64i32f(i64 2882400000, i32 0, void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)* nonnull elementtype(void (i8 addrspace(1)*, i64, i8 addrspace(1)*, i64, i32)) @__llvm_memmove_element_unordered_atomic_safepoint_16, i32 5, i32 0, i8 addrspace(1)* [[SRC]], i64 [[SRC_OFFSET]], i8 addrspace(1)* [[DEST]], i64 [[DEST_OFFSET]], i32 [[LEN]], i32 0, i32 0) [ "gc-live"() ]
 ; CHECK-NEXT:    ret void
 ;
 entry:

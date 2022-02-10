@@ -16,6 +16,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/Verifier.h"
 #include "mlir/Parser.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Target/SPIRV/Deserialization.h"
@@ -151,6 +152,8 @@ static LogicalResult roundTripModule(ModuleOp srcModule, bool emitDebugInfo,
       FileLineColLoc::get(&deserializationContext,
                           /*filename=*/"", /*line=*/0, /*column=*/0)));
   dstModule->getBody()->push_front(spirvModule.release());
+  if (failed(verify(*dstModule)))
+    return failure();
   dstModule->print(output);
 
   return mlir::success();

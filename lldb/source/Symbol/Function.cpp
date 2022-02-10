@@ -18,6 +18,7 @@
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/Support/Casting.h"
 
@@ -122,7 +123,7 @@ size_t InlineFunctionInfo::MemorySize() const {
 
 lldb::addr_t CallEdge::GetLoadAddress(lldb::addr_t unresolved_pc,
                                       Function &caller, Target &target) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
 
   const Address &caller_start_addr = caller.GetAddressRange().GetBaseAddress();
 
@@ -152,7 +153,7 @@ void DirectCallEdge::ParseSymbolFileAndResolve(ModuleList &images) {
   if (resolved)
     return;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   LLDB_LOG(log, "DirectCallEdge: Lazily parsing the call graph for {0}",
            lazy_callee.symbol_name);
 
@@ -191,7 +192,7 @@ Function *DirectCallEdge::GetCallee(ModuleList &images, ExecutionContext &) {
 
 Function *IndirectCallEdge::GetCallee(ModuleList &images,
                                       ExecutionContext &exe_ctx) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   Status error;
   Value callee_addr_val;
   if (!call_target.Evaluate(&exe_ctx, exe_ctx.GetRegisterContext(),
@@ -295,7 +296,7 @@ llvm::ArrayRef<std::unique_ptr<CallEdge>> Function::GetCallEdges() {
   if (m_call_edges_resolved)
     return m_call_edges;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   LLDB_LOG(log, "GetCallEdges: Attempting to parse call site info for {0}",
            GetDisplayName());
 

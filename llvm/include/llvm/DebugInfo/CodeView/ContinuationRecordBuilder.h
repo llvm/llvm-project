@@ -12,22 +12,16 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/DebugInfo/CodeView/RecordSerialization.h"
-#include "llvm/DebugInfo/CodeView/TypeIndex.h"
-#include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
-#include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamWriter.h"
-#include "llvm/Support/Error.h"
-#include <cassert>
 #include <cstdint>
-#include <memory>
 #include <vector>
 
 namespace llvm {
 namespace codeview {
+class TypeIndex;
 enum class ContinuationRecordKind { FieldList, MethodOverloadList };
 
 class ContinuationRecordBuilder {

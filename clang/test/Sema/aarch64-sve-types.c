@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -triple aarch64-none-linux-gnu -target-feature +sve,+bf16 -fsyntax-only -verify
 
-void f() {
+void f(void) {
   int size_s8[sizeof(__SVInt8_t) == 0 ? 1 : -1];        // expected-error {{invalid application of 'sizeof' to sizeless type '__SVInt8_t'}}
   int align_s8[__alignof__(__SVInt8_t) == 16 ? 1 : -1]; // expected-error {{invalid application of '__alignof' to sizeless type '__SVInt8_t'}}
 

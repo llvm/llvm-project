@@ -280,7 +280,7 @@ class ConstantOp : public mlir::Op<
   /// traits provide.  Here we will ensure that the specific invariants of the
   /// constant operation are upheld, for example the result type must be
   /// of TensorType and matches the type of the constant `value`.
-  LogicalResult verify();
+  LogicalResult verifyInvariants();
 
   /// Provide an interface to build this operation from a set of input values.
   /// This interface is used by the `builder` classes to allow for easily
@@ -495,11 +495,12 @@ def ConstantOp : Toy_Op<"constant"> {
   // F64Tensor corresponds to a 64-bit floating-point TensorType.
   let results = (outs F64Tensor);
 
-  // Add additional verification logic to the constant operation. Here we invoke
-  // a static `verify` method in a C++ source file. This codeblock is executed
-  // inside of ConstantOp::verify, so we can use `this` to refer to the current
-  // operation instance.
-  let verifier = [{ return ::verify(*this); }];
+  // Add additional verification logic to the constant operation. Setting this bit
+  // to `1` will generate a `::mlir::LogicalResult verify()` declaration on the
+  // operation class that is called after ODS constructs have been verified, for
+  // example the types of arguments and results. We implement additional verification
+  // in the definition of this `verify` method in the C++ source file. 
+  let hasVerifier = 1;
 }
 ```
 
@@ -599,7 +600,7 @@ toy.print %5 : tensor<*xf64> loc(...)
 
 Here we have stripped much of the format down to the bare essentials, and it has
 become much more readable. To provide a custom assembly format, an operation can
-either override the `parser` and `printer` fields for a C++ format, or the
+either override the `hasCustomAssemblyFormat` field for a C++ format, or the
 `assemblyFormat` field for the declarative format. Let's look at the C++ variant
 first, as this is what the declarative format maps to internally.
 
@@ -608,12 +609,9 @@ first, as this is what the declarative format maps to internally.
 def PrintOp : Toy_Op<"print"> {
   let arguments = (ins F64Tensor:$input);
 
-  // Divert the printer and parser to static functions in our .cpp
-  // file that correspond to 'print' and 'printPrintOp'. 'printer' and 'parser'
-  // here correspond to an instance of a 'OpAsmParser' and 'OpAsmPrinter'. More
-  // details on these classes is shown below.
-  let printer = [{ return ::print(printer, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
+  // Divert the printer and parser to `parse` and `print` methods on our operation,
+  // to be implemented in the .cpp file. More details on these methods is shown below.
+  let hasCustomAssemblyFormat = 1;
 }
 ```
 
@@ -622,7 +620,7 @@ A C++ implementation for the printer and parser is shown below:
 ```c++
 /// The 'OpAsmPrinter' class is a stream that will allows for formatting
 /// strings, attributes, operands, types, etc.
-static void print(mlir::OpAsmPrinter &printer, PrintOp op) {
+void PrintOp::print(mlir::OpAsmPrinter &printer) {
   printer << "toy.print " << op.input();
   printer.printOptionalAttrDict(op.getAttrs());
   printer << " : " << op.input().getType();
@@ -635,8 +633,8 @@ static void print(mlir::OpAsmPrinter &printer, PrintOp op) {
 /// or `false` on success. This allows for easily chaining together a set of
 /// parser rules. These rules are used to populate an `mlir::OperationState`
 /// similarly to the `build` methods described above.
-static mlir::ParseResult parsePrintOp(mlir::OpAsmParser &parser,
-                                      mlir::OperationState &result) {
+mlir::ParseResult PrintOp::parse(mlir::OpAsmParser &parser,
+                                 mlir::OperationState &result) {
   // Parse the input operand, the attribute dictionary, and the type of the
   // input.
   mlir::OpAsmParser::OperandType inputOperand;

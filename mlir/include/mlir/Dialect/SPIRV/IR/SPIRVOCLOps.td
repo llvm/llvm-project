@@ -44,18 +44,17 @@ class SPV_OCLUnaryOp<string mnemonic, int opcode, Type resultType,
     SPV_ScalarOrVectorOf<resultType>:$result
   );
 
-  let parser = [{ return parseUnaryOp(parser, result); }];
+  let assemblyFormat = "$operand `:` type($operand) attr-dict";
 
-  let printer = [{ return printUnaryOp(getOperation(), p); }];
-
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 }
 
 // Base class for OpenCL Unary arithmetic ops where return type matches
 // the operand type.
 class SPV_OCLUnaryArithmeticOp<string mnemonic, int opcode, Type type,
                                list<Trait> traits = []> :
-  SPV_OCLUnaryOp<mnemonic, opcode, type, type, traits>;
+  SPV_OCLUnaryOp<mnemonic, opcode, type, type,
+                 traits # [SameOperandsAndResultType]>;
 
 // Base class for OpenCL binary ops.
 class SPV_OCLBinaryOp<string mnemonic, int opcode, Type resultType,
@@ -71,18 +70,17 @@ class SPV_OCLBinaryOp<string mnemonic, int opcode, Type resultType,
     SPV_ScalarOrVectorOf<resultType>:$result
   );
 
-  let parser = [{ return impl::parseOneResultSameOperandTypeOp(parser, result); }];
-
-  let printer = [{ return impl::printOneResultOp(getOperation(), p); }];
-
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 }
 
 // Base class for OpenCL Binary arithmetic ops where operand types and
 // return type matches.
 class SPV_OCLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
                                 list<Trait> traits = []> :
-  SPV_OCLBinaryOp<mnemonic, opcode, type, type, traits>;
+  SPV_OCLBinaryOp<mnemonic, opcode, type, type,
+                  traits # [SameOperandsAndResultType]> {                    
+  let assemblyFormat = "operands attr-dict `:` type($result)";
+}
 
 // -----
 

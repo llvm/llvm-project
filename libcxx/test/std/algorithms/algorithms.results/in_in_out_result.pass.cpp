@@ -75,7 +75,7 @@ static_assert(!std::is_copy_constructible_v<std::ranges::in_in_out_result<int, i
 
 constexpr bool test() {
   {
-    std::ranges::in_in_out_result<int, double, float> res{10L, 0., 1.f};
+    std::ranges::in_in_out_result<int, double, float> res{10, 0., 1.f};
     assert(res.in1 == 10);
     assert(res.in2 == 0.);
     assert(res.out == 1.f);

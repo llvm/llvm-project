@@ -7,7 +7,9 @@ import tempfile
 
 _SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(_SCRIPT_PATH)
+
 from tools import mlir_pytaco_api as pt
+from tools import testing_utils as utils
 
 ###### This PyTACO part is taken from the TACO open-source project. ######
 # See http://tensor-compiler.org/docs/data_analytics/index.html.
@@ -42,12 +44,12 @@ A[i, j] = B[i, k, l] * D[l, j] * C[k, j]
 
 ##########################################################################
 
-# CHECK: Compare result True
 # Perform the MTTKRP computation and write the result to file.
 with tempfile.TemporaryDirectory() as test_dir:
-  actual_file = os.path.join(test_dir, "A.tns")
-  pt.write(actual_file, A)
-  actual = np.loadtxt(actual_file, np.float64)
-  expected = np.loadtxt(
-      os.path.join(_SCRIPT_PATH, "data/gold_A.tns"), np.float64)
-  print(f"Compare result {np.allclose(actual, expected, rtol=0.01)}")
+  golden_file = os.path.join(_SCRIPT_PATH, "data/gold_A.tns")
+  out_file = os.path.join(test_dir, "A.tns")
+  pt.write(out_file, A)
+  #
+  # CHECK: Compare result True
+  #
+  print(f"Compare result {utils.compare_sparse_tns(golden_file, out_file)}")

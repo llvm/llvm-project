@@ -19,6 +19,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
@@ -65,7 +66,7 @@ bool ThreadPlanStepRange::ValidatePlan(Stream *error) {
 }
 
 Vote ThreadPlanStepRange::ShouldReportStop(Event *event_ptr) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
 
   const Vote vote = IsPlanComplete() ? eVoteYes : eVoteNo;
   LLDB_LOGF(log, "ThreadPlanStepRange::ShouldReportStop() returning vote %i\n",
@@ -98,7 +99,7 @@ void ThreadPlanStepRange::DumpRanges(Stream *s) {
 }
 
 bool ThreadPlanStepRange::InRange() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   bool ret_value = false;
   Thread &thread = GetThread();
   lldb::addr_t pc_load_addr = thread.GetRegisterContext()->GetPC();
@@ -293,7 +294,7 @@ InstructionList *ThreadPlanStepRange::GetInstructionsForAddress(
 
 void ThreadPlanStepRange::ClearNextBranchBreakpoint() {
   if (m_next_branch_bp_sp) {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+    Log *log = GetLog(LLDBLog::Step);
     LLDB_LOGF(log, "Removing next branch breakpoint: %d.",
               m_next_branch_bp_sp->GetID());
     GetTarget().RemoveBreakpointByID(m_next_branch_bp_sp->GetID());
@@ -307,7 +308,7 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
   if (m_next_branch_bp_sp)
     return true;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   // Stepping through ranges using breakpoints doesn't work yet, but with this
   // off we fall back to instruction single stepping.
   if (!m_use_fast_step)
@@ -386,7 +387,7 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
 
 bool ThreadPlanStepRange::NextRangeBreakpointExplainsStop(
     lldb::StopInfoSP stop_info_sp) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   if (!m_next_branch_bp_sp)
     return false;
 
@@ -453,7 +454,7 @@ bool ThreadPlanStepRange::MischiefManaged() {
   }
 
   if (done) {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+    Log *log = GetLog(LLDBLog::Step);
     LLDB_LOGF(log, "Completed step through range plan.");
     ClearNextBranchBreakpoint();
     ThreadPlan::MischiefManaged();
@@ -464,7 +465,7 @@ bool ThreadPlanStepRange::MischiefManaged() {
 }
 
 bool ThreadPlanStepRange::IsPlanStale() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   FrameComparison frame_order = CompareCurrentFrameToStartFrame();
 
   if (frame_order == eFrameCompareOlder) {

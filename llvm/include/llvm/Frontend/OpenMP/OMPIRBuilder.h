@@ -1198,7 +1198,7 @@ private:
       const function_ref<Value *(Value *XOld, IRBuilder<> &IRB)>;
 
 private:
-  enum AtomicKind { Read, Write, Update, Capture };
+  enum AtomicKind { Read, Write, Update, Capture, Compare };
 
   /// Determine whether to emit flush or not
   ///
@@ -1343,6 +1343,39 @@ public:
                       AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
                       AtomicUpdateCallbackTy &UpdateOp, bool UpdateExpr,
                       bool IsPostfixUpdate, bool IsXBinopExpr);
+
+  /// Emit atomic compare for constructs: --- Only scalar data types
+  /// cond-update-atomic:
+  /// x = x ordop expr ? expr : x;
+  /// x = expr ordop x ? expr : x;
+  /// x = x == e ? d : x;
+  /// x = e == x ? d : x; (this one is not in the spec)
+  /// cond-update-stmt:
+  /// if (x ordop expr) { x = expr; }
+  /// if (expr ordop x) { x = expr; }
+  /// if (x == e) { x = d; }
+  /// if (e == x) { x = d; } (this one is not in the spec)
+  ///
+  /// \param Loc          The insert and source location description.
+  /// \param X            The target atomic pointer to be updated.
+  /// \param E            The expected value ('e') for forms that use an
+  ///                     equality comparison or an expression ('expr') for
+  ///                     forms that use 'ordop' (logically an atomic maximum or
+  ///                     minimum).
+  /// \param D            The desired value for forms that use an equality
+  ///                     comparison. If forms that use 'ordop', it should be
+  ///                     \p nullptr.
+  /// \param AO           Atomic ordering of the generated atomic instructions.
+  /// \param OP           Atomic compare operation. It can only be ==, <, or >.
+  /// \param IsXBinopExpr True if the conditional statement is in the form where
+  ///                     x is on LHS. It only matters for < or >.
+  ///
+  /// \return Insertion point after generated atomic capture IR.
+  InsertPointTy createAtomicCompare(const LocationDescription &Loc,
+                                    AtomicOpValue &X, Value *E, Value *D,
+                                    AtomicOrdering AO,
+                                    omp::OMPAtomicCompareOp Op,
+                                    bool IsXBinopExpr);
 
   /// Create the control flow structure of a canonical OpenMP loop.
   ///

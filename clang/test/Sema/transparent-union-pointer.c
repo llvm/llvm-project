@@ -8,7 +8,7 @@ typedef union   {
 
 extern int wait (__WAIT_STATUS __stat_loc);
 
-void fastcgi_cleanup() {
+void fastcgi_cleanup(void) {
   int status = 0;
   wait(&status);
 }

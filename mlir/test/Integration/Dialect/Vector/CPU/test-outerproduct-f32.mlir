@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | \
+// RUN: mlir-opt %s -convert-scf-to-cf -convert-vector-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
@@ -14,9 +14,9 @@
 !vector_type_R = type vector<7xf32>
 
 func @vector_outerproduct_splat_8x8(%fa: f32, %fb: f32, %fc: f32) -> !vector_type_C {
-  %a = splat %fa: !vector_type_A
-  %b = splat %fb: !vector_type_B
-  %c = splat %fc: !vector_type_C
+  %a = vector.splat %fa: !vector_type_A
+  %b = vector.splat %fb: !vector_type_B
+  %c = vector.splat %fc: !vector_type_C
   %d = vector.outerproduct %a, %b, %c : !vector_type_A, !vector_type_B
   return %d: !vector_type_C
 }

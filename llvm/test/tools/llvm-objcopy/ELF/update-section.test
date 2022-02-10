@@ -170,8 +170,8 @@ ProgramHeaders:
 # ADD-UPDATE:      )
 
 # ERR-NO-SECTION: error: {{.*}}section '.nosection' not found
-# ERR-NOBITS-TYPE: error: {{.*}}section '.nobits_type' can't be updated because it does not have contents
-# ERR-NULL-TYPE: error: {{.*}}section '.null_type' can't be updated because it does not have contents
+# ERR-NOBITS-TYPE: error: {{.*}}section '.nobits_type' cannot be updated because it does not have contents
+# ERR-NULL-TYPE: error: {{.*}}section '.null_type' cannot be updated because it does not have contents
 # ERR-LARGER: error: {{.*}}cannot fit data of size 9 into section '.in_segment' with size 8 that is part of a segment
 
 # MISSING-EQ: error: bad format for --update-section: missing '='

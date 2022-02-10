@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | not grep zeroinitializer
+; RUN: opt < %s -passes=instcombine -S | not grep zeroinitializer
 
 define void @foo(i64 %A, i64 %B) {
 bb8:

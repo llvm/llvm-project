@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 -verify -fsyntax-only %s
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
-// RUN: cp %s %t
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 -fixit %t
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 -Werror %t
+// RUN: cp %s %t.cpp
+// RUN: %clang_cc1 -triple x86_64-apple-darwin9 -fixit %t.cpp
+// RUN: %clang_cc1 -triple x86_64-apple-darwin9 -Werror %t.cpp
 
 #if !__has_feature(attribute_deprecated_with_replacement)
 #error "Missing __has_feature"

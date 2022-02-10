@@ -12,6 +12,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -127,7 +128,7 @@ void BreakpointResolverFileLine::FilterContexts(SymbolContextList &sc_list,
   if (is_relative)
     relative_path = m_location_spec.GetFileSpec().GetDirectory().GetStringRef();
 
-  Log * log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS);
+  Log *log = GetLog(LLDBLog::Breakpoints);
   for(uint32_t i = 0; i < sc_list.GetSize(); ++i) {
     SymbolContext sc;
     sc_list.GetContextAtIndex(i, sc);

@@ -44,8 +44,8 @@
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
@@ -509,7 +509,7 @@ static bool ScanBracketedRange(llvm::StringRef subpath,
                                size_t &close_bracket_index,
                                const char *&var_name_final_if_array_range,
                                int64_t &index_lower, int64_t &index_higher) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+  Log *log = GetLog(LLDBLog::DataFormatters);
   close_bracket_index = llvm::StringRef::npos;
   const size_t open_bracket_index = subpath.find('[');
   if (open_bracket_index == llvm::StringRef::npos) {
@@ -618,7 +618,7 @@ static bool DumpRegister(Stream &s, StackFrame *frame, RegisterKind reg_kind,
 
 static ValueObjectSP ExpandIndexedExpression(ValueObject *valobj, size_t index,
                                              bool deref_pointer) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+  Log *log = GetLog(LLDBLog::DataFormatters);
   const char *ptr_deref_format = "[%d]";
   std::string ptr_deref_buffer(10, 0);
   ::sprintf(&ptr_deref_buffer[0], ptr_deref_format, index);
@@ -676,7 +676,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
   if (valobj == nullptr)
     return false;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+  Log *log = GetLog(LLDBLog::DataFormatters);
   Format custom_format = eFormatInvalid;
   ValueObject::ValueObjectRepresentationStyle val_obj_display =
       entry.string.empty()

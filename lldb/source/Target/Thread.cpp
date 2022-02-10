@@ -44,6 +44,7 @@
 #include "lldb/Target/ThreadPlanStepUntil.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Target/UnwindLLDB.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/State.h"
@@ -229,7 +230,7 @@ Thread::Thread(Process &process, lldb::tid_t tid, bool use_invalid_index_id)
       m_unwinder_up(), m_destroy_called(false),
       m_override_should_notify(eLazyBoolCalculate),
       m_extended_info_fetched(false), m_extended_info() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+  Log *log = GetLog(LLDBLog::Object);
   LLDB_LOGF(log, "%p Thread::Thread(tid = 0x%4.4" PRIx64 ")",
             static_cast<void *>(this), GetID());
 
@@ -237,7 +238,7 @@ Thread::Thread(Process &process, lldb::tid_t tid, bool use_invalid_index_id)
 }
 
 Thread::~Thread() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+  Log *log = GetLog(LLDBLog::Object);
   LLDB_LOGF(log, "%p Thread::~Thread(tid = 0x%4.4" PRIx64 ")",
             static_cast<void *>(this), GetID());
   /// If you hit this assert, it means your derived class forgot to call
@@ -446,7 +447,7 @@ void Thread::SetStopInfo(const lldb::StopInfoSP &stop_info_sp) {
     m_stop_info_stop_id = process_sp->GetStopID();
   else
     m_stop_info_stop_id = UINT32_MAX;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+  Log *log = GetLog(LLDBLog::Thread);
   LLDB_LOGF(log, "%p: tid = 0x%" PRIx64 ": stop info = %s (stop_id = %u)",
             static_cast<void *>(this), GetID(),
             stop_info_sp ? stop_info_sp->GetDescription() : "<NULL>",
@@ -577,7 +578,7 @@ std::string Thread::GetStopDescriptionRaw() {
 }
 
 void Thread::SelectMostRelevantFrame() {
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD);
+  Log *log = GetLog(LLDBLog::Thread);
 
   auto frames_list_sp = GetStackFrameList();
 
@@ -731,7 +732,7 @@ bool Thread::ShouldStop(Event *event_ptr) {
 
   bool should_stop = true;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
 
   if (GetResumeState() == eStateSuspended) {
     LLDB_LOGF(log,
@@ -956,7 +957,7 @@ Vote Thread::ShouldReportStop(Event *event_ptr) {
   StateType thread_state = GetResumeState();
   StateType temp_thread_state = GetTemporaryResumeState();
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
 
   if (thread_state == eStateSuspended || thread_state == eStateInvalid) {
     LLDB_LOGF(log,
@@ -1020,7 +1021,7 @@ Vote Thread::ShouldReportRun(Event *event_ptr) {
     return eVoteNoOpinion;
   }
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   if (GetPlans().AnyCompletedPlans()) {
     // Pass skip_private = false to GetCompletedPlan, since we want to ask 
     // the last plan, regardless of whether it is private or not.
@@ -1067,7 +1068,7 @@ ThreadPlanStack &Thread::GetPlans() const {
 void Thread::PushPlan(ThreadPlanSP thread_plan_sp) {
   assert(thread_plan_sp && "Don't push an empty thread plan.");
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   if (log) {
     StreamString s;
     thread_plan_sp->GetDescription(&s, lldb::eDescriptionLevelFull);
@@ -1080,7 +1081,7 @@ void Thread::PushPlan(ThreadPlanSP thread_plan_sp) {
 }
 
 void Thread::PopPlan() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   ThreadPlanSP popped_plan_sp = GetPlans().PopPlan();
   if (log) {
     LLDB_LOGF(log, "Popping plan: \"%s\", tid = 0x%4.4" PRIx64 ".",
@@ -1089,7 +1090,7 @@ void Thread::PopPlan() {
 }
 
 void Thread::DiscardPlan() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   ThreadPlanSP discarded_plan_sp = GetPlans().PopPlan();
 
   LLDB_LOGF(log, "Discarding plan: \"%s\", tid = 0x%4.4" PRIx64 ".",
@@ -1192,7 +1193,7 @@ void Thread::DiscardThreadPlansUpToPlan(lldb::ThreadPlanSP &up_to_plan_sp) {
 }
 
 void Thread::DiscardThreadPlansUpToPlan(ThreadPlan *up_to_plan_ptr) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   LLDB_LOGF(log,
             "Discarding thread plans for thread tid = 0x%4.4" PRIx64
             ", up to %p",
@@ -1201,7 +1202,7 @@ void Thread::DiscardThreadPlansUpToPlan(ThreadPlan *up_to_plan_ptr) {
 }
 
 void Thread::DiscardThreadPlans(bool force) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   if (log) {
     LLDB_LOGF(log,
               "Discarding thread plans for thread (tid = 0x%4.4" PRIx64

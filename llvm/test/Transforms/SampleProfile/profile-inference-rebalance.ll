@@ -1,5 +1,5 @@
-; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-use-profi -sample-profile-file=%S/Inputs/profile-inference-rebalance.prof | opt -analyze -branch-prob -enable-new-pm=0 | FileCheck %s
-; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-use-profi -sample-profile-file=%S/Inputs/profile-inference-rebalance.prof | opt -analyze -block-freq  -enable-new-pm=0 | FileCheck %s --check-prefix=CHECK2
+; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-use-profi -sample-profile-file=%S/Inputs/profile-inference-rebalance.prof | opt -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-use-profi -sample-profile-file=%S/Inputs/profile-inference-rebalance.prof | opt -passes='print<block-freq>' -disable-output 2>&1 | FileCheck %s --check-prefix=CHECK2
 
 ; The test contains a "diamond" and a "triangle" that needs to be rebalanced
 ; after basic profile inference.

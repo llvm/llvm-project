@@ -130,8 +130,6 @@ def SPV_CopyMemoryOp : SPV_Op<"CopyMemory", []> {
 
   let results = (outs);
 
-  let verifier = [{ return verifyCopyMemory(*this); }];
-
   let autogenSerialization = 0;
 }
 

@@ -9,5 +9,5 @@ __asm__("foo");
 int g0;
 
 // CHECK: define dso_local i32 @f0()
-int f0() {
+int f0(void) {
 }

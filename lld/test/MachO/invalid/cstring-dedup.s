@@ -10,7 +10,7 @@
 # RUN: not %lld -dylib --deduplicate-literals %t/not-terminated.o 2>&1 | FileCheck %s --check-prefix=TERM
 # RUN: not %lld -dylib --deduplicate-literals %t/relocs.o 2>&1 | FileCheck %s --check-prefix=RELOCS
 
-# TERM:   not-terminated.o:(__cstring): string is not null terminated
+# TERM:   not-terminated.o:(__cstring+0x4): string is not null terminated
 # RELOCS: relocs.o contains relocations in __TEXT,__cstring, so LLD cannot deduplicate literals. Try re-running without --deduplicate-literals.
 
 #--- not-terminated.s

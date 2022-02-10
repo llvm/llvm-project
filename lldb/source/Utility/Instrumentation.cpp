@@ -6,6 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "llvm/Support/Signposts.h"
 
 #include <cstdio>
@@ -30,7 +31,7 @@ Instrumenter::Instrumenter(llvm::StringRef pretty_func,
     m_local_boundary = true;
     g_api_signposts->startInterval(this, m_pretty_func);
   }
-  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "[{0}] {1} ({2})",
+  LLDB_LOG(GetLog(LLDBLog::API), "[{0}] {1} ({2})",
            m_local_boundary ? "external" : "internal", m_pretty_func,
            pretty_args);
 }

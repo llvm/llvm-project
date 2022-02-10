@@ -390,6 +390,20 @@ generic-no-wide-characters)
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
     check-runtimes
 ;;
+generic-no-experimental)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-experimental.cmake" \
+                   -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
+                   -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
+    check-runtimes
+;;
+generic-abi-unstable)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-abi-unstable.cmake" \
+                   -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
+                   -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
+    check-runtimes
+;;
 apple-system)
     clean
 
@@ -433,6 +447,7 @@ apple-system-backdeployment-*)
     PARAMS+=";use_system_cxx_lib=True"
 
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
+                   -DLIBCXX_TEST_CONFIG="apple-libc++-backdeployment.cfg.in" \
                    -DLIBCXX_TEST_PARAMS="${PARAMS}" \
                    -DLIBCXXABI_TEST_PARAMS="${PARAMS}"
 
@@ -500,48 +515,6 @@ legacy-project-build)
           -DLLVM_LIT_ARGS="-sv --show-unsupported --xunit-xml-output test-results.xml" \
           -DLIBCXX_CXX_ABI=libcxxabi
     check-runtimes
-;;
-legacy-standalone)
-    clean
-
-    echo "--- Generating CMake"
-    ${CMAKE} \
-          -S "${MONOREPO_ROOT}/libcxx" \
-          -B "${BUILD_DIR}/libcxx" \
-          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-          -DLLVM_PATH="${MONOREPO_ROOT}/llvm" \
-          -DLIBCXX_CXX_ABI=libcxxabi \
-          -DLIBCXX_INCLUDE_BENCHMARKS=OFF \
-          -DLIBCXX_CXX_ABI_INCLUDE_PATHS="${MONOREPO_ROOT}/libcxxabi/include" \
-          -DLIBCXX_CXX_ABI_LIBRARY_PATH="${BUILD_DIR}/libcxxabi/lib"
-
-    ${CMAKE} \
-          -S "${MONOREPO_ROOT}/libcxxabi" \
-          -B "${BUILD_DIR}/libcxxabi" \
-          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-          -DLLVM_PATH="${MONOREPO_ROOT}/llvm" \
-          -DLIBCXXABI_LIBCXX_PATH="${MONOREPO_ROOT}/libcxx" \
-          -DLIBCXXABI_LIBCXX_INCLUDES="${BUILD_DIR}/libcxx/include/c++/v1" \
-          -DLIBCXXABI_LIBCXX_LIBRARY_PATH="${BUILD_DIR}/libcxx/lib"
-
-    echo "+++ Generating libc++ headers"
-    ${NINJA} -vC "${BUILD_DIR}/libcxx" generate-cxx-headers
-
-    echo "+++ Building libc++abi"
-    ${NINJA} -vC "${BUILD_DIR}/libcxxabi" cxxabi
-
-    echo "+++ Building libc++"
-    ${NINJA} -vC "${BUILD_DIR}/libcxx" cxx
-
-    echo "+++ Running the libc++ tests"
-    ${NINJA} -vC "${BUILD_DIR}/libcxx" check-cxx
-
-    echo "+++ Running the libc++abi tests"
-    ${NINJA} -vC "${BUILD_DIR}/libcxxabi" check-cxxabi
 ;;
 aarch64)
     clean

@@ -62,7 +62,7 @@ void ResourceTracker::makeDefunct() {
   JDAndFlag.store(Val);
 }
 
-ResourceManager::~ResourceManager() {}
+ResourceManager::~ResourceManager() = default;
 
 ResourceTrackerDefunct::ResourceTrackerDefunct(ResourceTrackerSP RT)
     : RT(std::move(RT)) {}
@@ -491,7 +491,7 @@ public:
         LookupSet(std::move(LookupSet)), RequiredState(RequiredState) {
     DefGeneratorCandidates = this->LookupSet;
   }
-  virtual ~InProgressLookupState() {}
+  virtual ~InProgressLookupState() = default;
   virtual void complete(std::unique_ptr<InProgressLookupState> IPLS) = 0;
   virtual void fail(Error Err) = 0;
 
@@ -609,7 +609,7 @@ void LookupState::continueLookup(Error Err) {
   ES.OL_applyQueryPhase1(std::move(IPLS), std::move(Err));
 }
 
-DefinitionGenerator::~DefinitionGenerator() {}
+DefinitionGenerator::~DefinitionGenerator() = default;
 
 JITDylib::~JITDylib() {
   LLVM_DEBUG(dbgs() << "Destroying JITDylib " << getName() << "\n");
@@ -1411,12 +1411,11 @@ void JITDylib::dump(raw_ostream &OS) {
     for (auto &KV : Symbols) {
       OS << "    \"" << *KV.first << "\": ";
       if (auto Addr = KV.second.getAddress())
-        OS << format("0x%016" PRIx64, Addr) << ", " << KV.second.getFlags()
-           << " ";
+        OS << format("0x%016" PRIx64, Addr);
       else
         OS << "<not resolved> ";
 
-      OS << KV.second.getFlags() << " " << KV.second.getState();
+      OS << " " << KV.second.getFlags() << " " << KV.second.getState();
 
       if (KV.second.hasMaterializerAttached()) {
         OS << " (Materializer ";
@@ -1751,7 +1750,7 @@ void JITDylib::transferEmittedNodeDependencies(
   }
 }
 
-Platform::~Platform() {}
+Platform::~Platform() = default;
 
 Expected<DenseMap<JITDylib *, SymbolMap>> Platform::lookupInitSymbols(
     ExecutionSession &ES,
@@ -1869,7 +1868,7 @@ Error ExecutionSession::endSession() {
   // TODO: notifiy platform? run static deinits?
 
   Error Err = Error::success();
-  for (auto &JD : JITDylibsToClose)
+  for (auto &JD : reverse(JITDylibsToClose))
     Err = joinErrors(std::move(Err), JD->clear());
 
   Err = joinErrors(std::move(Err), EPC->disconnect());

@@ -24,7 +24,7 @@ void bitfield(struct Bitfield *b) {
   b->n = (int)(6 * (1.0 / 3.0)); // norounding-warning {{changes value from 2 to 0}}
 }
 
-void vlas() {
+void vlas(void) {
   // This is always a VLA due to its syntactic form.
   typedef int vla1[(int)(-3 * (1.0 / 3.0))];
   struct X1 { vla1 v; }; // expected-error {{fields must have a constant size}}

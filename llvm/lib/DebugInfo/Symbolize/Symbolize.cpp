@@ -12,15 +12,14 @@
 
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 
-#include "SymbolizableObjectFile.h"
-
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Config/config.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/DebugInfo/PDB/PDBContext.h"
-#include "llvm/Debuginfod/Debuginfod.h"
+#include "llvm/DebugInfo/Symbolize/DIFetcher.h"
+#include "llvm/DebugInfo/Symbolize/SymbolizableObjectFile.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/MachO.h"
@@ -81,6 +80,12 @@ LLVMSymbolizer::symbolizeCode(const std::string &ModuleName,
   return symbolizeCodeCommon(ModuleName, ModuleOffset);
 }
 
+Expected<DILineInfo>
+LLVMSymbolizer::symbolizeCode(ArrayRef<uint8_t> BuildID,
+                              object::SectionedAddress ModuleOffset) {
+  return symbolizeCodeCommon(BuildID, ModuleOffset);
+}
+
 template <typename T>
 Expected<DIInliningInfo> LLVMSymbolizer::symbolizeInlinedCodeCommon(
     const T &ModuleSpecifier, object::SectionedAddress ModuleOffset) {
@@ -124,6 +129,12 @@ LLVMSymbolizer::symbolizeInlinedCode(const std::string &ModuleName,
   return symbolizeInlinedCodeCommon(ModuleName, ModuleOffset);
 }
 
+Expected<DIInliningInfo>
+LLVMSymbolizer::symbolizeInlinedCode(ArrayRef<uint8_t> BuildID,
+                                     object::SectionedAddress ModuleOffset) {
+  return symbolizeInlinedCodeCommon(BuildID, ModuleOffset);
+}
+
 template <typename T>
 Expected<DIGlobal>
 LLVMSymbolizer::symbolizeDataCommon(const T &ModuleSpecifier,
@@ -163,6 +174,12 @@ LLVMSymbolizer::symbolizeData(const std::string &ModuleName,
   return symbolizeDataCommon(ModuleName, ModuleOffset);
 }
 
+Expected<DIGlobal>
+LLVMSymbolizer::symbolizeData(ArrayRef<uint8_t> BuildID,
+                              object::SectionedAddress ModuleOffset) {
+  return symbolizeDataCommon(BuildID, ModuleOffset);
+}
+
 template <typename T>
 Expected<std::vector<DILocal>>
 LLVMSymbolizer::symbolizeFrameCommon(const T &ModuleSpecifier,
@@ -198,11 +215,18 @@ LLVMSymbolizer::symbolizeFrame(const std::string &ModuleName,
   return symbolizeFrameCommon(ModuleName, ModuleOffset);
 }
 
+Expected<std::vector<DILocal>>
+LLVMSymbolizer::symbolizeFrame(ArrayRef<uint8_t> BuildID,
+                               object::SectionedAddress ModuleOffset) {
+  return symbolizeFrameCommon(BuildID, ModuleOffset);
+}
+
 void LLVMSymbolizer::flush() {
   ObjectForUBPathAndArch.clear();
   BinaryForPath.clear();
   ObjectPairForPathArch.clear();
   Modules.clear();
+  BuildIDPaths.clear();
 }
 
 namespace {
@@ -228,51 +252,6 @@ bool checkFileCRC(StringRef Path, uint32_t CRCHash) {
   if (!MB)
     return false;
   return CRCHash == llvm::crc32(arrayRefFromStringRef(MB.get()->getBuffer()));
-}
-
-bool findDebugBinary(const std::string &OrigPath,
-                     const std::string &DebuglinkName, uint32_t CRCHash,
-                     const std::string &FallbackDebugPath,
-                     std::string &Result) {
-  SmallString<16> OrigDir(OrigPath);
-  llvm::sys::path::remove_filename(OrigDir);
-  SmallString<16> DebugPath = OrigDir;
-  // Try relative/path/to/original_binary/debuglink_name
-  llvm::sys::path::append(DebugPath, DebuglinkName);
-  if (checkFileCRC(DebugPath, CRCHash)) {
-    Result = std::string(DebugPath.str());
-    return true;
-  }
-  // Try relative/path/to/original_binary/.debug/debuglink_name
-  DebugPath = OrigDir;
-  llvm::sys::path::append(DebugPath, ".debug", DebuglinkName);
-  if (checkFileCRC(DebugPath, CRCHash)) {
-    Result = std::string(DebugPath.str());
-    return true;
-  }
-  // Make the path absolute so that lookups will go to
-  // "/usr/lib/debug/full/path/to/debug", not
-  // "/usr/lib/debug/to/debug"
-  llvm::sys::fs::make_absolute(OrigDir);
-  if (!FallbackDebugPath.empty()) {
-    // Try <FallbackDebugPath>/absolute/path/to/original_binary/debuglink_name
-    DebugPath = FallbackDebugPath;
-  } else {
-#if defined(__NetBSD__)
-    // Try /usr/libdata/debug/absolute/path/to/original_binary/debuglink_name
-    DebugPath = "/usr/libdata/debug";
-#else
-    // Try /usr/lib/debug/absolute/path/to/original_binary/debuglink_name
-    DebugPath = "/usr/lib/debug";
-#endif
-  }
-  llvm::sys::path::append(DebugPath, llvm::sys::path::relative_path(OrigDir),
-                          DebuglinkName);
-  if (checkFileCRC(DebugPath, CRCHash)) {
-    Result = std::string(DebugPath.str());
-    return true;
-  }
-  return false;
 }
 
 bool getGNUDebuglinkContents(const ObjectFile *Obj, std::string &DebugName,
@@ -351,50 +330,6 @@ Optional<ArrayRef<uint8_t>> getBuildID(const ELFObjectFileBase *Obj) {
   return BuildID;
 }
 
-bool findDebugBinary(const std::vector<std::string> &DebugFileDirectory,
-                     const ArrayRef<uint8_t> BuildID, std::string &Result) {
-  auto getDebugPath = [&](StringRef Directory) {
-    SmallString<128> Path{Directory};
-    sys::path::append(Path, ".build-id",
-                      llvm::toHex(BuildID[0], /*LowerCase=*/true),
-                      llvm::toHex(BuildID.slice(1), /*LowerCase=*/true));
-    Path += ".debug";
-    return Path;
-  };
-  if (DebugFileDirectory.empty()) {
-    SmallString<128> Path = getDebugPath(
-#if defined(__NetBSD__)
-        // Try /usr/libdata/debug/.build-id/../...
-        "/usr/libdata/debug"
-#else
-        // Try /usr/lib/debug/.build-id/../...
-        "/usr/lib/debug"
-#endif
-    );
-    if (llvm::sys::fs::exists(Path)) {
-      Result = std::string(Path.str());
-      return true;
-    }
-  } else {
-    for (const auto &Directory : DebugFileDirectory) {
-      // Try <debug-file-directory>/.build-id/../...
-      SmallString<128> Path = getDebugPath(Directory);
-      if (llvm::sys::fs::exists(Path)) {
-        Result = std::string(Path.str());
-        return true;
-      }
-    }
-  }
-  // Try debuginfod client cache and known servers.
-  Expected<std::string> PathOrErr = getCachedOrDownloadDebuginfo(BuildID);
-  if (!PathOrErr) {
-    consumeError(PathOrErr.takeError());
-    return false;
-  }
-  Result = *PathOrErr;
-  return true;
-}
-
 } // end anonymous namespace
 
 ObjectFile *LLVMSymbolizer::lookUpDsymFile(const std::string &ExePath,
@@ -437,8 +372,7 @@ ObjectFile *LLVMSymbolizer::lookUpDebuglinkObject(const std::string &Path,
   std::string DebugBinaryPath;
   if (!getGNUDebuglinkContents(Obj, DebuglinkName, CRCHash))
     return nullptr;
-  if (!findDebugBinary(Path, DebuglinkName, CRCHash, Opts.FallbackDebugPath,
-                       DebugBinaryPath))
+  if (!findDebugBinary(Path, DebuglinkName, CRCHash, DebugBinaryPath))
     return nullptr;
   auto DbgObjOrErr = getOrCreateObject(DebugBinaryPath, ArchName);
   if (!DbgObjOrErr) {
@@ -458,7 +392,7 @@ ObjectFile *LLVMSymbolizer::lookUpBuildIDObject(const std::string &Path,
   if (BuildID->size() < 2)
     return nullptr;
   std::string DebugBinaryPath;
-  if (!findDebugBinary(Opts.DebugFileDirectory, *BuildID, DebugBinaryPath))
+  if (!getOrFindDebugBinary(*BuildID, DebugBinaryPath))
     return nullptr;
   auto DbgObjOrErr = getOrCreateObject(DebugBinaryPath, ArchName);
   if (!DbgObjOrErr) {
@@ -466,6 +400,89 @@ ObjectFile *LLVMSymbolizer::lookUpBuildIDObject(const std::string &Path,
     return nullptr;
   }
   return DbgObjOrErr.get();
+}
+
+bool LLVMSymbolizer::findDebugBinary(const std::string &OrigPath,
+                                     const std::string &DebuglinkName,
+                                     uint32_t CRCHash, std::string &Result) {
+  SmallString<16> OrigDir(OrigPath);
+  llvm::sys::path::remove_filename(OrigDir);
+  SmallString<16> DebugPath = OrigDir;
+  // Try relative/path/to/original_binary/debuglink_name
+  llvm::sys::path::append(DebugPath, DebuglinkName);
+  if (checkFileCRC(DebugPath, CRCHash)) {
+    Result = std::string(DebugPath.str());
+    return true;
+  }
+  // Try relative/path/to/original_binary/.debug/debuglink_name
+  DebugPath = OrigDir;
+  llvm::sys::path::append(DebugPath, ".debug", DebuglinkName);
+  if (checkFileCRC(DebugPath, CRCHash)) {
+    Result = std::string(DebugPath.str());
+    return true;
+  }
+  // Make the path absolute so that lookups will go to
+  // "/usr/lib/debug/full/path/to/debug", not
+  // "/usr/lib/debug/to/debug"
+  llvm::sys::fs::make_absolute(OrigDir);
+  if (!Opts.FallbackDebugPath.empty()) {
+    // Try <FallbackDebugPath>/absolute/path/to/original_binary/debuglink_name
+    DebugPath = Opts.FallbackDebugPath;
+  } else {
+#if defined(__NetBSD__)
+    // Try /usr/libdata/debug/absolute/path/to/original_binary/debuglink_name
+    DebugPath = "/usr/libdata/debug";
+#else
+    // Try /usr/lib/debug/absolute/path/to/original_binary/debuglink_name
+    DebugPath = "/usr/lib/debug";
+#endif
+  }
+  llvm::sys::path::append(DebugPath, llvm::sys::path::relative_path(OrigDir),
+                          DebuglinkName);
+  if (checkFileCRC(DebugPath, CRCHash)) {
+    Result = std::string(DebugPath.str());
+    return true;
+  }
+  return false;
+}
+
+static StringRef getBuildIDStr(ArrayRef<uint8_t> BuildID) {
+  return StringRef(reinterpret_cast<const char *>(BuildID.data()),
+                   BuildID.size());
+}
+
+bool LLVMSymbolizer::getOrFindDebugBinary(const ArrayRef<uint8_t> BuildID,
+                                          std::string &Result) {
+  StringRef BuildIDStr = getBuildIDStr(BuildID);
+  auto I = BuildIDPaths.find(BuildIDStr);
+  if (I != BuildIDPaths.end()) {
+    Result = I->second;
+    return true;
+  }
+  auto recordPath = [&](StringRef Path) {
+    Result = Path.str();
+    auto InsertResult = BuildIDPaths.insert({BuildIDStr, Result});
+    assert(InsertResult.second);
+    (void)InsertResult;
+  };
+
+  Optional<std::string> Path;
+  Path = LocalDIFetcher(Opts.DebugFileDirectory).fetchBuildID(BuildID);
+  if (Path) {
+    recordPath(*Path);
+    return true;
+  }
+
+  // Try caller-provided debug info fetchers.
+  for (const std::unique_ptr<DIFetcher> &Fetcher : DIFetchers) {
+    Path = Fetcher->fetchBuildID(BuildID);
+    if (Path) {
+      recordPath(*Path);
+      return true;
+    }
+  }
+
+  return false;
 }
 
 Expected<LLVMSymbolizer::ObjectPair>
@@ -621,6 +638,17 @@ LLVMSymbolizer::getOrCreateModuleInfo(const ObjectFile &Obj) {
   std::unique_ptr<DIContext> Context = DWARFContext::create(Obj);
   // FIXME: handle COFF object with PDB info to use PDBContext
   return createModuleInfo(&Obj, std::move(Context), ObjName);
+}
+
+Expected<SymbolizableModule *>
+LLVMSymbolizer::getOrCreateModuleInfo(ArrayRef<uint8_t> BuildID) {
+  std::string Path;
+  if (!getOrFindDebugBinary(BuildID, Path)) {
+    return createStringError(errc::no_such_file_or_directory,
+                             Twine("could not find build ID '") +
+                                 toHex(BuildID) + "'");
+  }
+  return getOrCreateModuleInfo(Path);
 }
 
 namespace {

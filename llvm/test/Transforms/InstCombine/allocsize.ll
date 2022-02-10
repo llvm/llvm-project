@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 ;
 ; Test that instcombine folds allocsize function calls properly.
 ; Dummy arguments are inserted to verify that allocsize is picking the right

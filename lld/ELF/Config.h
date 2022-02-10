@@ -160,7 +160,6 @@ struct Configuration {
   bool compressDebugSections;
   bool cref;
   std::vector<std::pair<llvm::GlobPattern, uint64_t>> deadRelocInNonAlloc;
-  bool defineCommon;
   bool demangle = true;
   bool dependentLibraries;
   bool disableVerify;
@@ -311,6 +310,9 @@ struct Configuration {
   // little-endian written in the little-endian order, but I don't know
   // if that's true.)
   bool isMips64EL;
+
+  // True if we need to reserve two .got entries for local-dynamic TLS model.
+  bool needsTlsLd = false;
 
   // True if we need to set the DF_STATIC_TLS flag to an output file, which
   // works as a hint to the dynamic loader that the shared object contains code

@@ -31,7 +31,7 @@ extern int setjmp(long); // OK, right type.
 typedef int *jmp_buf;
 #endif
 
-void use() {
+void use(void) {
   setjmp(0);
   #if NO_SETJMP
   // cxx-error@-2 {{undeclared identifier 'setjmp'}}
@@ -60,7 +60,7 @@ int _setjmp(void *, void *);
 // c-warning@-2 {{incompatible redeclaration of library function '_setjmp'}}
 // c-note@-3 {{'_setjmp' is a builtin with type 'int (jmp_buf)'}}
 #endif
-void use_mingw() {
+void use_mingw(void) {
   _setjmp(0, 0);
 }
 

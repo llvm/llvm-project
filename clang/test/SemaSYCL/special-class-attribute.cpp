@@ -30,6 +30,14 @@ class class5 {
   void __init(){}
 };
 
+struct __attribute__((sycl_special_class)) struct6 {
+  struct6();
+  bool operator==(const struct6 &);
+  struct6 &operator()();
+  ~struct6();
+  void __init(){}
+};
+
 // Must have one and only one __init method defined
 class __attribute__((sycl_special_class)) class6 { // expected-error {{types with 'sycl_special_class' attribute must have one and only one '__init' method defined}}
   class6() {}
@@ -46,6 +54,14 @@ class [[clang::sycl_special_class]] class8 { // expected-error {{types with 'syc
 
 struct __attribute__((sycl_special_class)) struct3;
 struct struct3 {}; // expected-error {{types with 'sycl_special_class' attribute must have one and only one '__init' method defined}}
+
+// expected-error@+1{{'sycl_special_class' attribute must have one and only one '__init' method defined}}
+struct __attribute__((sycl_special_class)) struct7 {
+  struct7();
+  bool operator==(const struct7 &);
+  struct7 &operator()();
+  ~struct7();
+};
 
 // Only classes
 [[clang::sycl_special_class]] int var1 = 0;       // expected-warning {{'sycl_special_class' attribute only applies to classes}}

@@ -29,6 +29,7 @@
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
@@ -302,8 +303,8 @@ void SymbolFileNativePDB::InitializeObject() {
   auto ts_or_err = m_objfile_sp->GetModule()->GetTypeSystemForLanguage(
       lldb::eLanguageTypeC_plus_plus);
   if (auto err = ts_or_err.takeError()) {
-    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
-                   std::move(err), "Failed to initialize");
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                   "Failed to initialize");
   } else {
     ts_or_err->SetSymbolFile(this);
     auto *clang = llvm::cast_or_null<TypeSystemClang>(&ts_or_err.get());
@@ -1118,8 +1119,13 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
 
         uint32_t lno = cur_info.getStartLine();
 
-        line_set.emplace(addr, lno, 0, file_index, is_statement, false,
-                         is_prologue, is_epilogue, false);
+        LineTable::Entry new_entry(addr, lno, 0, file_index, is_statement, false,
+                                 is_prologue, is_epilogue, false);
+        // Terminal entry has lower precedence than new entry.
+        auto iter = line_set.find(new_entry);
+        if (iter != line_set.end() && iter->is_terminal_entry)
+          line_set.erase(iter);
+        line_set.insert(new_entry);
 
         if (line_entry.GetRangeBase() != LLDB_INVALID_ADDRESS) {
           line_entry.SetRangeEnd(addr);

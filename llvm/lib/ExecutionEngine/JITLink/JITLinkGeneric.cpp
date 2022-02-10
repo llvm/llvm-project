@@ -20,7 +20,7 @@
 namespace llvm {
 namespace jitlink {
 
-JITLinkerBase::~JITLinkerBase() {}
+JITLinkerBase::~JITLinkerBase() = default;
 
 void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
 

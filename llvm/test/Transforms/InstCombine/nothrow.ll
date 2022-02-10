@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | not grep call
+; RUN: opt < %s -passes=instcombine -S | not grep call
 ; rdar://6880732
 declare double @t1(i32) readonly willreturn
 

@@ -12,8 +12,8 @@
 
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 
+#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExprVisitor.h"
@@ -400,11 +400,11 @@ ParseResult parseFillOpRegion(OpAsmParser &parser, Region &r, Type valueType,
 /// FillOp region is elided when printing.
 void printFillOpRegion(OpAsmPrinter &, Operation *, Region &, Type, Type) {}
 
-static LogicalResult verify(FillOp op) {
-  OpOperand *output = op.getOutputOperand(0);
-  Type fillType = op.value().getType();
+LogicalResult FillOp::verify() {
+  OpOperand *output = getOutputOperand(0);
+  Type fillType = value().getType();
   if (getElementTypeOrSelf(output->get()) != fillType)
-    return op.emitOpError("expects fill type to match view elemental type");
+    return emitOpError("expects fill type to match view elemental type");
   return success();
 }
 
@@ -517,50 +517,51 @@ void GenericOp::build(
         /*libraryCall=*/"", bodyBuild, attributes);
 }
 
-static void print(OpAsmPrinter &p, GenericOp op) {
+void GenericOp::print(OpAsmPrinter &p) {
   p << " ";
 
   // Print extra attributes.
-  auto genericAttrNames = op.linalgTraitAttrNames();
+  auto genericAttrNames = linalgTraitAttrNames();
 
   llvm::StringSet<> genericAttrNamesSet;
   genericAttrNamesSet.insert(genericAttrNames.begin(), genericAttrNames.end());
   SmallVector<NamedAttribute, 8> genericAttrs;
-  for (auto attr : op->getAttrs())
+  for (auto attr : (*this)->getAttrs())
     if (genericAttrNamesSet.count(attr.getName().strref()) > 0)
       genericAttrs.push_back(attr);
   if (!genericAttrs.empty()) {
-    auto genericDictAttr = DictionaryAttr::get(op.getContext(), genericAttrs);
+    auto genericDictAttr = DictionaryAttr::get(getContext(), genericAttrs);
     p << genericDictAttr;
   }
 
   // Printing is shared with named ops, except for the region and attributes
-  printCommonStructuredOpParts(p, op);
+  printCommonStructuredOpParts(p, *this);
 
   genericAttrNames.push_back("operand_segment_sizes");
   genericAttrNamesSet.insert(genericAttrNames.back());
 
   bool hasExtraAttrs = false;
-  for (NamedAttribute n : op->getAttrs()) {
+  for (NamedAttribute n : (*this)->getAttrs()) {
     if ((hasExtraAttrs = !genericAttrNamesSet.contains(n.getName().strref())))
       break;
   }
   if (hasExtraAttrs) {
     p << " attrs = ";
-    p.printOptionalAttrDict(op->getAttrs(), /*elidedAttrs=*/genericAttrNames);
+    p.printOptionalAttrDict((*this)->getAttrs(),
+                            /*elidedAttrs=*/genericAttrNames);
   }
 
   // Print region.
-  if (!op.region().empty()) {
+  if (!region().empty()) {
     p << ' ';
-    p.printRegion(op.region());
+    p.printRegion(region());
   }
 
   // Print results.
-  printNamedStructuredOpResults(p, op.result_tensors().getTypes());
+  printNamedStructuredOpResults(p, result_tensors().getTypes());
 }
 
-static ParseResult parseGenericOp(OpAsmParser &parser, OperationState &result) {
+ParseResult GenericOp::parse(OpAsmParser &parser, OperationState &result) {
   DictionaryAttr dictAttr;
   // Parse the core linalg traits that must check into a dictAttr.
   // The name is unimportant as we will overwrite result.attributes.
@@ -635,7 +636,7 @@ static LogicalResult verifyGenericOp(GenericOpType op) {
   return success();
 }
 
-static LogicalResult verify(GenericOp op) { return verifyGenericOp(op); }
+LogicalResult GenericOp::verify() { return verifyGenericOp(*this); }
 
 namespace {
 // Deduplicate redundant args of a linalg generic op.
@@ -811,25 +812,24 @@ void InitTensorOp::build(OpBuilder &b, OperationState &result,
   result.addAttributes(attrs);
 }
 
-static LogicalResult verify(InitTensorOp op) {
-  RankedTensorType resultType = op.getType();
+LogicalResult InitTensorOp::verify() {
+  RankedTensorType resultType = getType();
   SmallVector<int64_t, 4> staticSizes = llvm::to_vector<4>(llvm::map_range(
-      op.static_sizes().cast<ArrayAttr>(),
+      static_sizes().cast<ArrayAttr>(),
       [](Attribute a) -> int64_t { return a.cast<IntegerAttr>().getInt(); }));
 
-  if (failed(verifyListOfOperandsOrIntegers(op, "sizes", resultType.getRank(),
-                                            op.static_sizes(), op.sizes(),
-                                            ShapedType::isDynamic)))
+  if (failed(verifyListOfOperandsOrIntegers(
+          *this, "sizes", resultType.getRank(), static_sizes(), sizes(),
+          ShapedType::isDynamic)))
     return failure();
 
-  if (op.static_sizes().size() != static_cast<unsigned>(resultType.getRank()))
-    return op->emitError("expected ")
-           << resultType.getRank() << " sizes values";
+  if (static_sizes().size() != static_cast<unsigned>(resultType.getRank()))
+    return emitError("expected ") << resultType.getRank() << " sizes values";
 
   Type expectedType = InitTensorOp::inferResultType(
       staticSizes, resultType.getElementType(), resultType.getEncoding());
   if (resultType != expectedType) {
-    return op.emitError("specified type ")
+    return emitError("specified type ")
            << resultType << " does not match the inferred type "
            << expectedType;
   }
@@ -989,15 +989,15 @@ LogicalResult InitTensorOp::reifyResultShapes(
 // YieldOp
 //===----------------------------------------------------------------------===//
 
-static void print(OpAsmPrinter &p, linalg::YieldOp op) {
-  if (op.getNumOperands() > 0)
-    p << ' ' << op.getOperands();
-  p.printOptionalAttrDict(op->getAttrs());
-  if (op.getNumOperands() > 0)
-    p << " : " << op.getOperandTypes();
+void linalg::YieldOp::print(OpAsmPrinter &p) {
+  if (getNumOperands() > 0)
+    p << ' ' << getOperands();
+  p.printOptionalAttrDict((*this)->getAttrs());
+  if (getNumOperands() > 0)
+    p << " : " << getOperandTypes();
 }
 
-static ParseResult parseYieldOp(OpAsmParser &parser, OperationState &result) {
+ParseResult YieldOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 2> opInfo;
   SmallVector<Type, 2> types;
   SMLoc loc = parser.getCurrentLocation();
@@ -1030,13 +1030,13 @@ static LogicalResult verifyYield(linalg::YieldOp op, LinalgOp linalgOp) {
   return success();
 }
 
-static LogicalResult verify(linalg::YieldOp op) {
-  auto *parentOp = op->getParentOp();
+LogicalResult linalg::YieldOp::verify() {
+  auto *parentOp = (*this)->getParentOp();
   if (parentOp->getNumRegions() != 1 || parentOp->getRegion(0).empty())
-    return op.emitOpError("expected single non-empty parent region");
+    return emitOpError("expected single non-empty parent region");
 
   if (auto linalgOp = dyn_cast<LinalgOp>(parentOp))
-    return verifyYield(op, cast<LinalgOp>(parentOp));
+    return verifyYield(*this, cast<LinalgOp>(parentOp));
 
   if (auto tiledLoopOp = dyn_cast<linalg::TiledLoopOp>(parentOp)) {
     // Check if output args with tensor types match results types.
@@ -1044,25 +1044,25 @@ static LogicalResult verify(linalg::YieldOp op) {
     llvm::copy_if(
         tiledLoopOp.outputs(), std::back_inserter(tensorOuts),
         [&](Value out) { return out.getType().isa<RankedTensorType>(); });
-    if (tensorOuts.size() != op.values().size())
-      return op.emitOpError("expected number of tensor output args = ")
-             << tensorOuts.size() << " to match the number of yield operands = "
-             << op.values().size();
+    if (tensorOuts.size() != values().size())
+      return emitOpError("expected number of tensor output args = ")
+             << tensorOuts.size()
+             << " to match the number of yield operands = " << values().size();
 
     TypeRange tensorTypes(llvm::makeArrayRef(tensorOuts));
     for (auto &item :
-         llvm::enumerate(llvm::zip(tensorTypes, op.getOperandTypes()))) {
+         llvm::enumerate(llvm::zip(tensorTypes, getOperandTypes()))) {
       Type outType, resultType;
       unsigned index = item.index();
       std::tie(outType, resultType) = item.value();
       if (outType != resultType)
-        return op.emitOpError("expected yield operand ")
+        return emitOpError("expected yield operand ")
                << index << " with type = " << resultType
                << " to match output arg type = " << outType;
     }
     return success();
   }
-  return op.emitOpError("expected parent op with LinalgOp interface");
+  return emitOpError("expected parent op with LinalgOp interface");
 }
 
 //===----------------------------------------------------------------------===//
@@ -1138,22 +1138,22 @@ void TiledLoopOp::build(OpBuilder &builder, OperationState &result,
   }
 }
 
-static void print(OpAsmPrinter &p, TiledLoopOp op) {
-  p << " (" << op.getInductionVars() << ") = (" << op.lowerBound() << ") to ("
-    << op.upperBound() << ") step (" << op.step() << ")";
+void TiledLoopOp::print(OpAsmPrinter &p) {
+  p << " (" << getInductionVars() << ") = (" << lowerBound() << ") to ("
+    << upperBound() << ") step (" << step() << ")";
 
-  if (!op.inputs().empty()) {
+  if (!inputs().empty()) {
     p << " ins (";
-    llvm::interleaveComma(llvm::zip(op.getRegionInputArgs(), op.inputs()), p,
+    llvm::interleaveComma(llvm::zip(getRegionInputArgs(), inputs()), p,
                           [&](auto it) {
                             p << std::get<0>(it) << " = " << std::get<1>(it)
                               << ": " << std::get<1>(it).getType();
                           });
     p << ")";
   }
-  if (!op.outputs().empty()) {
+  if (!outputs().empty()) {
     p << " outs (";
-    llvm::interleaveComma(llvm::zip(op.getRegionOutputArgs(), op.outputs()), p,
+    llvm::interleaveComma(llvm::zip(getRegionOutputArgs(), outputs()), p,
                           [&](auto it) {
                             p << std::get<0>(it) << " = " << std::get<1>(it)
                               << ": " << std::get<1>(it).getType();
@@ -1161,25 +1161,24 @@ static void print(OpAsmPrinter &p, TiledLoopOp op) {
     p << ")";
   }
 
-  if (llvm::any_of(op.iterator_types(), [](Attribute attr) {
+  if (llvm::any_of(iterator_types(), [](Attribute attr) {
         return attr.cast<StringAttr>().getValue() !=
                getParallelIteratorTypeName();
       }))
-    p << " iterators" << op.iterator_types();
+    p << " iterators" << iterator_types();
 
-  if (op.distribution_types().hasValue())
-    p << " distribution" << op.distribution_types().getValue();
+  if (distribution_types().hasValue())
+    p << " distribution" << distribution_types().getValue();
 
   p << ' ';
-  p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
-  p.printOptionalAttrDict(
-      op->getAttrs(), /*elidedAttrs=*/{TiledLoopOp::getOperandSegmentSizeAttr(),
-                                       getIteratorTypesAttrName(),
-                                       getDistributionTypesAttrName()});
+  p.printRegion(region(), /*printEntryBlockArgs=*/false);
+  p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{
+                              TiledLoopOp::getOperandSegmentSizeAttr(),
+                              getIteratorTypesAttrName(),
+                              getDistributionTypesAttrName()});
 }
 
-static ParseResult parseTiledLoopOp(OpAsmParser &parser,
-                                    OperationState &result) {
+ParseResult TiledLoopOp::parse(OpAsmParser &parser, OperationState &result) {
   auto &builder = parser.getBuilder();
   // Parse an opening `(` followed by induction variables followed by `)`
   SmallVector<OpAsmParser::OperandType, 4> ivs;
@@ -1316,37 +1315,37 @@ bool TiledLoopOp::isDefinedOutsideOfLoop(Value value) {
   return !region().isAncestor(value.getParentRegion());
 }
 
-static LogicalResult verify(TiledLoopOp op) {
+LogicalResult TiledLoopOp::verify() {
   // Check if iterator types are provided for every loop dimension.
-  if (op.iterator_types().size() != op.getNumLoops())
-    return op.emitOpError("expected iterator types array attribute size = ")
-           << op.iterator_types().size()
-           << " to match the number of loops = " << op.getNumLoops();
+  if (iterator_types().size() != getNumLoops())
+    return emitOpError("expected iterator types array attribute size = ")
+           << iterator_types().size()
+           << " to match the number of loops = " << getNumLoops();
 
   // Check if types of input arguments match region args types.
   for (auto &item :
-       llvm::enumerate(llvm::zip(op.inputs(), op.getRegionInputArgs()))) {
+       llvm::enumerate(llvm::zip(inputs(), getRegionInputArgs()))) {
     Value input, inputRegionArg;
     unsigned index = item.index();
     std::tie(input, inputRegionArg) = item.value();
     if (input.getType() != inputRegionArg.getType())
-      return op.emitOpError("expected input arg ")
+      return emitOpError("expected input arg ")
              << index << " with type = " << input.getType()
-             << " to match region arg " << index + op.getNumLoops()
+             << " to match region arg " << index + getNumLoops()
              << " type = " << inputRegionArg.getType();
   }
 
   // Check if types of input arguments match region args types.
   for (auto &item :
-       llvm::enumerate(llvm::zip(op.outputs(), op.getRegionOutputArgs()))) {
+       llvm::enumerate(llvm::zip(outputs(), getRegionOutputArgs()))) {
     Value output, outputRegionArg;
     unsigned index = item.index();
     std::tie(output, outputRegionArg) = item.value();
     if (output.getType() != outputRegionArg.getType())
-      return op.emitOpError("expected output arg ")
+      return emitOpError("expected output arg ")
              << index << " with type = " << output.getType()
              << " to match region arg "
-             << index + op.getNumLoops() + op.inputs().size()
+             << index + getNumLoops() + inputs().size()
              << " type = " << outputRegionArg.getType();
   }
   return success();
@@ -1667,13 +1666,13 @@ LogicalResult TiledLoopOp::fold(ArrayRef<Attribute>,
 // IndexOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(IndexOp op) {
-  auto linalgOp = dyn_cast<LinalgOp>(op->getParentOp());
+LogicalResult IndexOp::verify() {
+  auto linalgOp = dyn_cast<LinalgOp>((*this)->getParentOp());
   if (!linalgOp)
-    return op.emitOpError("expected parent op with LinalgOp interface");
-  if (linalgOp.getNumLoops() <= op.dim())
-    return op.emitOpError("expected dim (")
-           << op.dim() << ") to be lower than the number of loops ("
+    return emitOpError("expected parent op with LinalgOp interface");
+  if (linalgOp.getNumLoops() <= dim())
+    return emitOpError("expected dim (")
+           << dim() << ") to be lower than the number of loops ("
            << linalgOp.getNumLoops() << ") of the enclosing LinalgOp";
   return success();
 }

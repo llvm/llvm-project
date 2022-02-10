@@ -5,7 +5,7 @@
 
 // rdar://9036633
 
-int main() {
+int main(void) {
   auto int i = 0;
   return i;
 }

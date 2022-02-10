@@ -14,6 +14,7 @@
 #include "SourceCode.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceLocation.h"
@@ -21,6 +22,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Syntax/Tokens.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 
@@ -159,7 +161,7 @@ private:
   ReferencedLocations &Result;
   llvm::DenseSet<const void *> Visited;
   const SourceManager &SM;
-  stdlib::Recognizer StdRecognizer;
+  tooling::stdlib::Recognizer StdRecognizer;
 };
 
 // Given a set of referenced FileIDs, determines all the potentially-referenced
@@ -207,10 +209,10 @@ clangd::Range getDiagnosticRange(llvm::StringRef Code, unsigned HashOffset) {
 
 // Finds locations of macros referenced from within the main file. That includes
 // references that were not yet expanded, e.g `BAR` in `#define FOO BAR`.
-void findReferencedMacros(ParsedAST &AST, ReferencedLocations &Result) {
+void findReferencedMacros(const SourceManager &SM, Preprocessor &PP,
+                          const syntax::TokenBuffer *Tokens,
+                          ReferencedLocations &Result) {
   trace::Span Tracer("IncludeCleaner::findReferencedMacros");
-  auto &SM = AST.getSourceManager();
-  auto &PP = AST.getPreprocessor();
   // FIXME(kirillbobyrev): The macros from the main file are collected in
   // ParsedAST's MainFileMacros. However, we can't use it here because it
   // doesn't handle macro references that were not expanded, e.g. in macro
@@ -220,8 +222,7 @@ void findReferencedMacros(ParsedAST &AST, ReferencedLocations &Result) {
   // this mechanism (as opposed to iterating through all tokens) will improve
   // the performance of findReferencedMacros and also improve other features
   // relying on MainFileMacros.
-  for (const syntax::Token &Tok :
-       AST.getTokens().spelledTokens(SM.getMainFileID())) {
+  for (const syntax::Token &Tok : Tokens->spelledTokens(SM.getMainFileID())) {
     auto Macro = locateMacroAt(Tok, PP);
     if (!Macro)
       continue;
@@ -240,7 +241,7 @@ static bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST) {
   // System headers are likely to be standard library headers.
   // Until we have good support for umbrella headers, don't warn about them.
   if (Inc.Written.front() == '<') {
-    if (AnalyzeStdlib && stdlib::Header::named(Inc.Written))
+    if (AnalyzeStdlib && tooling::stdlib::Header::named(Inc.Written))
       return true;
     return false;
   }
@@ -287,18 +288,26 @@ FileID headerResponsible(FileID ID, const SourceManager &SM,
 
 } // namespace
 
-ReferencedLocations findReferencedLocations(ParsedAST &AST) {
+ReferencedLocations findReferencedLocations(const SourceManager &SM,
+                                            ASTContext &Ctx, Preprocessor &PP,
+                                            const syntax::TokenBuffer *Tokens) {
   trace::Span Tracer("IncludeCleaner::findReferencedLocations");
   ReferencedLocations Result;
-  ReferencedLocationCrawler Crawler(Result, AST.getSourceManager());
-  Crawler.TraverseAST(AST.getASTContext());
-  findReferencedMacros(AST, Result);
+  ReferencedLocationCrawler Crawler(Result, SM);
+  Crawler.TraverseAST(Ctx);
+  if (Tokens)
+    findReferencedMacros(SM, PP, Tokens, Result);
   return Result;
 }
 
-ReferencedFiles findReferencedFiles(const ReferencedLocations &Locs,
-                                    const IncludeStructure &Includes,
-                                    const SourceManager &SM) {
+ReferencedLocations findReferencedLocations(ParsedAST &AST) {
+  return findReferencedLocations(AST.getSourceManager(), AST.getASTContext(),
+                                 AST.getPreprocessor(), &AST.getTokens());
+}
+
+ReferencedFiles
+findReferencedFiles(const ReferencedLocations &Locs, const SourceManager &SM,
+                    llvm::function_ref<FileID(FileID)> HeaderResponsible) {
   std::vector<SourceLocation> Sorted{Locs.User.begin(), Locs.User.end()};
   llvm::sort(Sorted); // Group by FileID.
   ReferencedFilesBuilder Builder(SM);
@@ -318,14 +327,22 @@ ReferencedFiles findReferencedFiles(const ReferencedLocations &Locs,
   // HeaderIDs, as each inclusion of a non-self-contained file is distinct.
   llvm::DenseSet<FileID> UserFiles;
   for (FileID ID : Builder.Files)
-    UserFiles.insert(headerResponsible(ID, SM, Includes));
+    UserFiles.insert(HeaderResponsible(ID));
 
-  llvm::DenseSet<stdlib::Header> StdlibFiles;
+  llvm::DenseSet<tooling::stdlib::Header> StdlibFiles;
   for (const auto &Symbol : Locs.Stdlib)
     for (const auto &Header : Symbol.headers())
       StdlibFiles.insert(Header);
 
   return {std::move(UserFiles), std::move(StdlibFiles)};
+}
+
+ReferencedFiles findReferencedFiles(const ReferencedLocations &Locs,
+                                    const IncludeStructure &Includes,
+                                    const SourceManager &SM) {
+  return findReferencedFiles(Locs, SM, [&SM, &Includes](FileID ID) {
+    return headerResponsible(ID, SM, Includes);
+  });
 }
 
 std::vector<const Inclusion *>
@@ -375,7 +392,7 @@ translateToHeaderIDs(const ReferencedFiles &Files,
     assert(File);
     TranslatedHeaderIDs.insert(*File);
   }
-  for (stdlib::Header StdlibUsed : Files.Stdlib)
+  for (tooling::stdlib::Header StdlibUsed : Files.Stdlib)
     for (auto HID : Includes.StdlibHeaders.lookup(StdlibUsed))
       TranslatedHeaderIDs.insert(HID);
   return TranslatedHeaderIDs;

@@ -20,14 +20,14 @@
 struct T { };
 struct DerivedFromT : T { };
 
-static_assert( std::output_iterator<output_iterator<int*>, int>);
-static_assert( std::output_iterator<output_iterator<int*>, short>);
-static_assert( std::output_iterator<output_iterator<int*>, long>);
-static_assert( std::output_iterator<output_iterator<T*>, T>);
-static_assert(!std::output_iterator<output_iterator<T const*>, T>);
-static_assert( std::output_iterator<output_iterator<T*>, T const>);
-static_assert( std::output_iterator<output_iterator<T*>, DerivedFromT>);
-static_assert(!std::output_iterator<output_iterator<DerivedFromT*>, T>);
+static_assert( std::output_iterator<cpp17_output_iterator<int*>, int>);
+static_assert( std::output_iterator<cpp17_output_iterator<int*>, short>);
+static_assert( std::output_iterator<cpp17_output_iterator<int*>, long>);
+static_assert( std::output_iterator<cpp17_output_iterator<T*>, T>);
+static_assert(!std::output_iterator<cpp17_output_iterator<T const*>, T>);
+static_assert( std::output_iterator<cpp17_output_iterator<T*>, T const>);
+static_assert( std::output_iterator<cpp17_output_iterator<T*>, DerivedFromT>);
+static_assert(!std::output_iterator<cpp17_output_iterator<DerivedFromT*>, T>);
 
 // Not satisfied when the iterator is not an input_or_output_iterator
 static_assert(!std::output_iterator<void, int>);

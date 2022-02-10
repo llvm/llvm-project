@@ -88,7 +88,7 @@ void GISelCSEInfo::setMF(MachineFunction &MF) {
   this->MRI = &MF.getRegInfo();
 }
 
-GISelCSEInfo::~GISelCSEInfo() {}
+GISelCSEInfo::~GISelCSEInfo() = default;
 
 bool GISelCSEInfo::isUniqueMachineInstValid(
     const UniqueMachineInstr &UMI) const {

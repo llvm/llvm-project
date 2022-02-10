@@ -56,9 +56,12 @@ if config.bolt_enable_runtime:
 llvm_config.use_default_substitutions()
 
 llvm_config.config.environment['CLANG'] = config.bolt_clang
-llvm_config.config.environment['LLD'] = config.bolt_lld
 llvm_config.use_clang()
-llvm_config.use_llvm_tool('lld', required=True, search_env='LLD')
+
+llvm_config.config.environment['LD_LLD'] = config.bolt_lld
+ld_lld = llvm_config.use_llvm_tool('ld.lld', required=True, search_env='LD_LLD')
+llvm_config.config.available_features.add('ld.lld')
+llvm_config.add_tool_substitutions([ToolSubst(r'ld\.lld', command=ld_lld)])
 
 config.substitutions.append(('%cflags', '-no-pie -gdwarf-4'))
 config.substitutions.append(('%cxxflags', '-no-pie -gdwarf-4'))
@@ -73,6 +76,7 @@ tools = [
     ToolSubst('llvm-dwarfdump', unresolved='fatal'),
     ToolSubst('llvm-bolt', unresolved='fatal'),
     ToolSubst('llvm-boltdiff', unresolved='fatal'),
+    ToolSubst('llvm-bolt-heatmap', unresolved='fatal'),
     ToolSubst('perf2bolt', unresolved='fatal'),
     ToolSubst('yaml2obj', unresolved='fatal'),
     ToolSubst('llvm-mc', unresolved='fatal'),

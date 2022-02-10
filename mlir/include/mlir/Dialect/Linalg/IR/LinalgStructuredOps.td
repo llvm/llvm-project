@@ -101,10 +101,9 @@ def FillOp : LinalgStructured_Op<"fill", []> {
     OpBuilder<(ins "Value":$value, "Value":$output)>
   ];
 
-  let verifier = [{ return ::verify(*this); }];
-
   let hasFolder = 1;
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -261,13 +260,10 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [AttrSizedOperandSegments]> {
     }
   }];
 
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parseGenericOp(parser, result); }];
-
-  let verifier = [{ return ::verify(*this); }];
-
   let hasCanonicalizer = 1;
+  let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 

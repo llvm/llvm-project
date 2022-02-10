@@ -22,11 +22,11 @@ int func_04 (int x) {
   return x << data2;
 }
 
-int func_05 () {
+int func_05 (void) {
   return data2 << data1;
 }
 
-int func_06 () {
+int func_06 (void) {
   return data1 << data2;
 }
 
@@ -50,7 +50,7 @@ int func_11 (int x) {
   return data1 == x;
 }
 
-int func_12 () {
+int func_12 (void) {
   return data1 < data2;
 }
 
@@ -58,6 +58,6 @@ int func_13 (int x, unsigned y) {
   return x ? data1 : y;
 }
 
-int func_14 () {
+int func_14 (void) {
   return data1 == 0;
 }

@@ -1,4 +1,4 @@
-; RUN: opt < %s -instsimplify -S | FileCheck %s
+; RUN: opt < %s -passes=instsimplify -S | FileCheck %s
 
 ; In the next 16 tests (4 commutes * 2 (and/or) * 2 optional ptrtoint casts),
 ; eliminate the simple (not) null check because that compare is implied by the

@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine < %s | FileCheck %s
+; RUN: opt -S -passes=instcombine < %s | FileCheck %s
 
 define <4 x i32> @mulByZero(<4 x i16> %x) nounwind readnone ssp {
 entry:

@@ -5,7 +5,7 @@ int function(void);
 
 void anotherFunction(int function);
 
-int use() {
+int use(void) {
   function();
 // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:3-[[@LINE-1]]:3}:"if (@available(macCatalyst 13.2, *)) {\n      "
 // CHECK-NEXT: fix-it:{{.*}}:{[[@LINE-2]]:14-[[@LINE-2]]:14}:"\n  } else {\n      // Fallback on earlier versions\n  }"

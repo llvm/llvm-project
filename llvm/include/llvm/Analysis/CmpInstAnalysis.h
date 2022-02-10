@@ -18,6 +18,7 @@
 
 namespace llvm {
   class ICmpInst;
+  class Type;
   class Value;
 
   /// Encode a icmp predicate into a three bit mask. These bits are carefully

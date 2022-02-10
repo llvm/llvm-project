@@ -84,6 +84,7 @@
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/Stream.h"
@@ -189,7 +190,7 @@ public:
       // when we move the expression result ot the ScratchASTContext). Let's at
       // least log these diagnostics until we find a way to properly render
       // them and display them to the user.
-      Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+      Log *log = GetLog(LLDBLog::Expressions);
       if (log) {
         llvm::SmallVector<char, 32> diag_str;
         Info.FormatDiagnostic(diag_str);
@@ -282,7 +283,7 @@ private:
 static void SetupModuleHeaderPaths(CompilerInstance *compiler,
                                    std::vector<std::string> include_directories,
                                    lldb::TargetSP target_sp) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   HeaderSearchOptions &search_opts = compiler->getHeaderSearchOpts();
 
@@ -364,7 +365,7 @@ ClangExpressionParser::ClangExpressionParser(
       m_pp_callbacks(nullptr),
       m_include_directories(std::move(include_directories)),
       m_filename(std::move(filename)) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   // We can't compile expressions without a target.  So if the exe_scope is
   // null or doesn't have a target, then we just need to get out of here.  I'll
@@ -1325,7 +1326,7 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
     bool &can_interpret, ExecutionPolicy execution_policy) {
   func_addr = LLDB_INVALID_ADDRESS;
   func_end = LLDB_INVALID_ADDRESS;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   lldb_private::Status err;
 

@@ -29,5 +29,8 @@ config.substitutions.append(
 # Default test suffixes.
 config.suffixes = ['.c', '.cpp', '.S']
 
+# Exclude Inputs directories.
+config.excludes = ['Inputs']
+
 if config.host_os not in ['Darwin', 'FreeBSD', 'Linux']:
   config.unsupported = True

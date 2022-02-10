@@ -28,6 +28,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlanCallOnFunctionExit.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 
@@ -958,7 +959,7 @@ public:
 };
 
 EnableOptionsSP ParseAutoEnableOptions(Status &error, Debugger &debugger) {
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS);
+  Log *log = GetLog(LLDBLog::Process);
   // We are abusing the options data model here so that we can parse options
   // without requiring the Debugger instance.
 
@@ -1062,7 +1063,7 @@ bool StructuredDataDarwinLog::SupportsStructuredDataType(
 void StructuredDataDarwinLog::HandleArrivalOfStructuredData(
     Process &process, ConstString type_name,
     const StructuredData::ObjectSP &object_sp) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
   if (log) {
     StreamString json_stream;
     if (object_sp)
@@ -1211,7 +1212,7 @@ void StructuredDataDarwinLog::SetEnabled(bool enabled) {
 
 void StructuredDataDarwinLog::ModulesDidLoad(Process &process,
                                              ModuleList &module_list) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
   LLDB_LOGF(log, "StructuredDataDarwinLog::%s called (process uid %u)",
             __FUNCTION__, process.GetUniqueID());
 
@@ -1388,7 +1389,7 @@ Status StructuredDataDarwinLog::FilterLaunchInfo(ProcessLaunchInfo &launch_info,
   // done by adding an environment variable to the process on launch. (This
   // also means it is not possible to suppress this behavior if attaching to an
   // already-running app).
-  // Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  // Log *log = GetLog(LLDBLog::Platform);
 
   // If the target architecture is not one that supports DarwinLog, we have
   // nothing to do here.
@@ -1466,7 +1467,7 @@ bool StructuredDataDarwinLog::InitCompletionHookCallback(
   // finishes and control returns to our new thread plan, that is the time when
   // we can execute our logic to enable the logging support.
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
   LLDB_LOGF(log, "StructuredDataDarwinLog::%s() called", __FUNCTION__);
 
   // Get the current thread.
@@ -1570,7 +1571,7 @@ bool StructuredDataDarwinLog::InitCompletionHookCallback(
 }
 
 void StructuredDataDarwinLog::AddInitCompletionHook(Process &process) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
   LLDB_LOGF(log, "StructuredDataDarwinLog::%s() called (process uid %u)",
             __FUNCTION__, process.GetUniqueID());
 
@@ -1769,7 +1770,7 @@ size_t StructuredDataDarwinLog::HandleDisplayOfEvent(
 }
 
 void StructuredDataDarwinLog::EnableNow() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
   LLDB_LOGF(log, "StructuredDataDarwinLog::%s() called", __FUNCTION__);
 
   // Run the enable command.

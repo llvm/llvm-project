@@ -15,6 +15,7 @@
 
 #include <tuple>
 #include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -195,8 +196,27 @@ struct std::basic_common_reference<A, std::tuple<B>, TQual, UQual> {
   using type = tuple<UQual<B>>;
 };
 
-static_assert(std::is_same_v<std::common_reference_t<A, std::tuple<B>,std::tuple<D>>, std::tuple<B>>);
+static_assert(std::is_same_v<std::common_reference_t<A, std::tuple<B>, std::tuple<D>>, std::tuple<B>>);
 
+
+static_assert(std::is_same_v<std::common_reference_t<std::pair<int, int>>,
+                             std::pair<int, int>>);
+static_assert(std::is_same_v<std::common_reference_t<std::pair<int, long>, std::pair<long, int>>,
+                             std::pair<long, long>>);
+static_assert(std::is_same_v<std::common_reference_t<std::pair<int&, const int&>, std::pair<const int&, int>>,
+                             std::pair<const int&, int>>);
+static_assert(std::is_same_v<std::common_reference_t<std::pair<int&, volatile int&>, std::pair<volatile int&, int>>,
+                             std::pair<volatile int&, int>>);
+static_assert(std::is_same_v<std::common_reference_t<std::pair<int&, const volatile int&>, std::pair<const volatile int&, int>>,
+                             std::pair<const volatile int&, int>>);
+static_assert(!has_type<std::common_reference_t<std::pair<const int&, volatile int&>,
+                        std::pair<volatile int&, const int&>>>);
+
+static_assert(std::is_same_v<std::common_reference_t<std::pair<int, X2>, std::pair<int, Y2>>, std::pair<int, Z2>>);
+static_assert(std::is_same_v<std::common_reference_t<std::pair<int, X2>, std::pair<int, Y2>>, std::pair<int, Z2>>);
+static_assert(!has_type<std::common_reference<std::pair<int, const X2>, std::pair<float, const Z2>>>);
+static_assert(!has_type<std::common_reference<std::pair<int, X2>, std::pair<float, Z2>>>);
+static_assert(!has_type<std::common_reference<std::pair<int, X2>, int, X2>>);
 #endif
 
 int main(int, char**) { return 0; }

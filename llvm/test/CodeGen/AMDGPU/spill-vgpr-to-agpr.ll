@@ -1,6 +1,9 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX908 %s
 ; RUN: not llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefixes=GCN,GFX900 %s
 
+; GFX900:     couldn't allocate input reg for constraint 'a'
+
+
 ; GCN-LABEL: {{^}}max_10_vgprs:
 ; GFX900-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
 ; GFX900-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
@@ -64,8 +67,6 @@ define amdgpu_kernel void @max_10_vgprs(i32 addrspace(1)* %p) #0 {
 ; GFX908:     v_mov_b32_e32 v{{[0-9]}}, [[V_REG:v[0-9]+]]
 ; GFX908:     v_accvgpr_read_b32 [[V_REG]], [[A_REG]]
 ; GFX908-NOT: buffer_
-
-; GFX900:     couldn't allocate input reg for constraint 'a'
 
 ; GFX908: NumVgprs: 10
 ; GFX908: ScratchSize: 0

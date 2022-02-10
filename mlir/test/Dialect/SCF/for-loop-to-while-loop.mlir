@@ -113,7 +113,7 @@ func @for_iter_args(%arg0 : index, %arg1: index, %arg2: index) -> f32 {
 // CHECK:             %[[VAL_11:.*]] = arith.addi %[[VAL_9]], %[[VAL_4]] : index
 // CHECK:             %[[VAL_12:.*]] = scf.execute_region -> i32 {
 // CHECK:               %[[VAL_13:.*]] = arith.cmpi slt, %[[VAL_9]], %[[VAL_4]] : index
-// CHECK:               cond_br %[[VAL_13]], ^bb1, ^bb2
+// CHECK:               cf.cond_br %[[VAL_13]], ^bb1, ^bb2
 // CHECK:             ^bb1:
 // CHECK:               %[[VAL_14:.*]] = arith.subi %[[VAL_10]], %[[VAL_0]] : i32
 // CHECK:               scf.yield %[[VAL_14]] : i32
@@ -134,7 +134,7 @@ func @exec_region_multiple_yields(%arg0: i32, %arg1: index, %arg2: i32) -> i32 {
   %0 = scf.for %i = %c0 to %arg1 step %c1 iter_args(%iarg0 = %arg0) -> i32 {
     %2 = scf.execute_region -> i32 {
       %1 = arith.cmpi slt, %i, %c1 : index
-      cond_br %1, ^bb1, ^bb2
+      cf.cond_br %1, ^bb1, ^bb2
     ^bb1:
       %2 = arith.subi %iarg0, %arg0 : i32
       scf.yield %2 : i32

@@ -10,6 +10,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 #include "llvm/Support/FileSystem.h"
@@ -50,7 +51,7 @@ MonitoringProcessLauncher::LaunchProcess(const ProcessLaunchInfo &launch_info,
       m_delegate_launcher->LaunchProcess(resolved_info, error);
 
   if (process.GetProcessId() != LLDB_INVALID_PROCESS_ID) {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+    Log *log = GetLog(LLDBLog::Process);
 
     assert(launch_info.GetMonitorProcessCallback());
     llvm::Expected<HostThread> maybe_thread =

@@ -178,10 +178,6 @@ void Log::Warning(const char *format, ...) {
   Printf("warning: %s", Content.c_str());
 }
 
-void Log::Initialize() {
-  InitializeLldbChannel();
-}
-
 void Log::Register(llvm::StringRef name, Channel &channel) {
   auto iter = g_channel_map->try_emplace(name, channel);
   assert(iter.second == true);

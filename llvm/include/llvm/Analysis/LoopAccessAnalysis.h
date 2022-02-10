@@ -406,8 +406,8 @@ public:
   /// according to the assumptions that we've made during the analysis.
   /// The method might also version the pointer stride according to \p Strides,
   /// and add new predicates to \p PSE.
-  void insert(Loop *Lp, Value *Ptr, bool WritePtr, unsigned DepSetId,
-              unsigned ASId, const ValueToValueMap &Strides,
+  void insert(Loop *Lp, Value *Ptr, Type *AccessTy, bool WritePtr,
+              unsigned DepSetId, unsigned ASId, const ValueToValueMap &Strides,
               PredicatedScalarEvolution &PSE);
 
   /// No run-time memory checking is necessary.
@@ -604,6 +604,11 @@ private:
   /// Looks for accesses like "a[i * StrideA]" where "StrideA" is loop
   /// invariant.
   void collectStridedAccess(Value *LoadOrStoreInst);
+
+  // Emits the first unsafe memory dependence in a loop.
+  // Emits nothing if there are no unsafe dependences
+  // or if the dependences were not recorded.
+  void emitUnsafeDependenceRemark();
 
   std::unique_ptr<PredicatedScalarEvolution> PSE;
 

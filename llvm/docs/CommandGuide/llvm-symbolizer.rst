@@ -183,6 +183,18 @@ OPTIONS
   Print just the file's name without any directories, instead of the
   absolute path.
 
+.. option:: --build-id
+
+  Look up the object using the given build ID, specified as a hexadecimal
+  string. Mutually exclusive with :option:`--obj`.
+
+.. option:: --debuginfod, --no-debuginfod
+
+  Whether or not to try debuginfod lookups for debug binaries. Unless specified,
+  debuginfod is only enabled if libcurl was compiled in (``LLVM_ENABLE_CURL``)
+  and at least one server URL was provided by the environment variable
+  ``DEBUGINFOD_URLS``.
+
 .. _llvm-symbolizer-opt-C:
 
 .. option:: --demangle, -C
@@ -232,7 +244,8 @@ OPTIONS
 .. option:: --obj <path>, --exe, -e
 
   Path to object file to be symbolized. If ``-`` is specified, read the object
-  directly from the standard input stream.
+  directly from the standard input stream. Mutually exclusive with
+  :option:`--build-id`.
 
 .. _llvm-symbolizer-opt-output-style:
 

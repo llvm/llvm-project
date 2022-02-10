@@ -313,12 +313,6 @@ write_cmake_config("config") {
     values += [ "LLVM_ENABLE_DIA_SDK=" ]
   }
 
-  if (llvm_enable_zlib) {
-    values += [ "LLVM_ENABLE_ZLIB=1" ]
-  } else {
-    values += [ "LLVM_ENABLE_ZLIB=" ]
-  }
-
   if (llvm_enable_libxml2) {
     values += [ "LLVM_ENABLE_LIBXML2=1" ]
   } else {
@@ -343,6 +337,7 @@ write_cmake_config("llvm-config") {
     "LLVM_ENABLE_DUMP=",
     "LLVM_ENABLE_NEW_PASS_MANAGER=1",
     "LLVM_FORCE_ENABLE_STATS=",
+    "LLVM_FORCE_USE_OLD_TOOLCHAIN=",
     "LLVM_HAS_ATOMICS=1",
     "LLVM_HAVE_TF_API=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
@@ -386,6 +381,12 @@ write_cmake_config("llvm-config") {
     values += [ "LLVM_ENABLE_THREADS=1" ]
   } else {
     values += [ "LLVM_ENABLE_THREADS=" ]
+  }
+
+  if (llvm_enable_zlib) {
+    values += [ "LLVM_ENABLE_ZLIB=1" ]
+  } else {
+    values += [ "LLVM_ENABLE_ZLIB=" ]
   }
 }
 

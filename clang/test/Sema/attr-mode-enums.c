@@ -7,7 +7,7 @@
 
 typedef enum { E4 } EnumType;
 
-int main() {
+int main(void) {
   // Vector mode are not allowed with enums.
   typedef enum { E1 } __attribute__((mode(V4QI))) RejectedType1; // expected-error{{mode 'V4QI' is not supported for enumeration types}}
   // expected-warning@-1{{specifying vector types with the 'mode' attribute is deprecated}}

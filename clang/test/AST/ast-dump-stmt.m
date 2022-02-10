@@ -27,7 +27,7 @@ void TestExprWithCleanup(int x) {
 @interface A
 @end
 
-void TestObjCAtCatchStmt() {
+void TestObjCAtCatchStmt(void) {
   @try {
   } @catch(A *a) {
   } @catch(...) {

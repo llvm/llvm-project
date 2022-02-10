@@ -11,11 +11,11 @@ typedef int DWORD;
 
 struct EXCEPTION_INFO{};
 
-unsigned long __exception_code();
+unsigned long __exception_code(void);
 #ifdef BORLAND
-struct EXCEPTION_INFO* __exception_info();
+struct EXCEPTION_INFO* __exception_info(void);
 #endif
-int __abnormal_termination();
+int __abnormal_termination(void);
 
 #define GetExceptionCode __exception_code
 #define GetExceptionInformation __exception_info
@@ -26,9 +26,9 @@ int __abnormal_termination();
 DWORD FilterExpression(int); // expected-note{{declared here}}
 DWORD FilterExceptionInformation(struct EXCEPTION_INFO*);
 
-const char * NotFilterExpression();
+const char * NotFilterExpression(void);
 
-void TEST() {
+void TEST(void) {
   __try {
     __try {
       __try {
@@ -43,24 +43,24 @@ void TEST() {
   }
 }
 
-void TEST() {
+void TEST(void) {
   __try {
 
   }
 }  // expected-error{{expected '__except' or '__finally' block}}
 
-void TEST() {
+void TEST(void) {
   __except (FilterExpression()) { // expected-warning{{implicit declaration of function '__except' is invalid in C99}} \
     // expected-error{{too few arguments to function call, expected 1, have 0}} \
     // expected-error{{expected ';' after expression}}
   }
 }
 
-void TEST() {
+void TEST(void) {
   __finally { } // expected-error{{}}
 }
 
-void TEST() {
+void TEST(void) {
   __try{
     int try_scope = 0;
   } // TODO: expected expression is an extra error
@@ -68,7 +68,7 @@ void TEST() {
   {}
 }
 
-void TEST() {
+void TEST(void) {
   __try {
 
   }
@@ -77,7 +77,7 @@ void TEST() {
   }
 }
 
-void TEST() {
+void TEST(void) {
   __try {
 
   }
@@ -107,7 +107,7 @@ void TEST() {
   }
 }
 
-void TEST() {
+void TEST(void) {
   __try {
 
   }
@@ -116,7 +116,7 @@ void TEST() {
   }
 }
 
-void TEST() {
+void TEST(void) {
   int function_scope = 0;
   __try {
     int try_scope = 0;
@@ -127,7 +127,7 @@ void TEST() {
   }
 }
 
-void TEST() {
+void TEST(void) {
   int function_scope = 0;
   __try {
     int try_scope = 0;
@@ -138,7 +138,7 @@ void TEST() {
   }
 }
 
-void TEST() {
+void TEST(void) {
   int function_scope = 0;
   __try {
 
@@ -147,7 +147,7 @@ void TEST() {
 }
 
 #ifdef BORLAND
-void TEST() {
+void TEST(void) {
   (void)__abnormal_termination(); // expected-error{{only allowed in __finally block}}
   (void)AbnormalTermination();  // expected-error{{only allowed in __finally block}}
 
@@ -169,12 +169,12 @@ void TEST() {
 }
 #endif
 
-void TEST() {
+void TEST(void) {
   (void)__exception_info();       // expected-error{{only allowed in __except filter expression}}
   (void)GetExceptionInformation(); // expected-error{{only allowed in __except filter expression}}
 }
 
-void TEST() {
+void TEST(void) {
 #ifndef BORLAND
   (void)__exception_code;     // expected-error{{builtin functions must be directly called}}
 #endif
@@ -182,7 +182,7 @@ void TEST() {
   (void)GetExceptionCode();     // expected-error{{only allowed in __except block or filter expression}}
 }
 
-void TEST() {
+void TEST(void) {
   __try {
   } __except(1) {
     GetExceptionCode(); // valid
@@ -190,7 +190,7 @@ void TEST() {
   }
 }
 
-void test_seh_leave_stmt() {
+void test_seh_leave_stmt(void) {
   __leave; // expected-error{{'__leave' statement not in __try block}}
 
   __try {
@@ -208,7 +208,7 @@ void test_seh_leave_stmt() {
   __leave; // expected-error{{'__leave' statement not in __try block}}
 }
 
-void test_jump_out_of___finally() {
+void test_jump_out_of___finally(void) {
   while(1) {
     __try {
     } __finally {
@@ -282,7 +282,7 @@ void test_jump_out_of___finally() {
   }
 }
 
-void test_typo_in_except() {
+void test_typo_in_except(void) {
   __try {
   } __except(undeclared_identifier) { // expected-error {{use of undeclared identifier 'undeclared_identifier'}} expected-error {{expected expression}}
   }

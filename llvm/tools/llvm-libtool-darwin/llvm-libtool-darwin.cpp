@@ -21,6 +21,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LineIterator.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -96,6 +97,11 @@ static cl::opt<bool> NoWarningForNoSymbols(
     "no_warning_for_no_symbols",
     cl::desc("Do not warn about files that have no symbols"),
     cl::cat(LibtoolCategory), cl::init(false));
+
+static cl::opt<bool> WarningsAsErrors("warnings_as_errors",
+                                      cl::desc("Treat warnings as errors"),
+                                      cl::cat(LibtoolCategory),
+                                      cl::init(false));
 
 static const std::array<std::string, 3> StandardSearchDirs{
     "/lib",
@@ -369,8 +375,17 @@ private:
         return Error::success();
       }
 
-      if (!NoWarningForNoSymbols && O->symbols().empty())
-        WithColor::warning() << Member.MemberName + " has no symbols\n";
+      if (!NoWarningForNoSymbols && O->symbols().empty()) {
+        Error E = createFileError(
+            Member.MemberName,
+            createStringError(std::errc::invalid_argument,
+                              "has no symbols for architecture %s",
+                              O->getArchTriple().getArchName().str().c_str()));
+
+        if (WarningsAsErrors)
+          return E;
+        WithColor::defaultWarningHandler(std::move(E));
+      }
 
       uint64_t FileCPUID = getCPUID(FileCPUType, FileCPUSubtype);
       Builder.Data.MembersPerArchitecture[FileCPUID].push_back(
@@ -578,8 +593,11 @@ static Error createStaticLibrary(const Config &C) {
 
   const auto &NewMembers = DataOrError->MembersPerArchitecture;
 
-  if (Error E = checkForDuplicates(NewMembers))
+  if (Error E = checkForDuplicates(NewMembers)) {
+    if (WarningsAsErrors)
+      return E;
     WithColor::defaultWarningHandler(std::move(E));
+  }
 
   if (NewMembers.size() == 1)
     return writeArchive(OutputFile, NewMembers.begin()->second.getMembers(),
@@ -679,6 +697,10 @@ int main(int Argc, char **Argv) {
 
   if (VersionOption)
     cl::PrintVersionMessage();
+
+  llvm::InitializeAllTargetInfos();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmParsers();
 
   Config C = *ConfigOrErr;
   switch (LibraryOperation) {

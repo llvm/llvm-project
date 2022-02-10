@@ -1,5 +1,5 @@
-; RUN: opt < %s  -cost-model -analyze -mtriple=i386 -mcpu=corei7-avx | FileCheck %s -check-prefix=CHECK32
-; RUN: opt < %s  -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mcpu=corei7-avx | FileCheck %s -check-prefix=CHECK64
+; RUN: opt < %s  -passes='print<cost-model>' 2>&1 -disable-output -mtriple=i386 -mcpu=corei7-avx | FileCheck %s -check-prefix=CHECK32
+; RUN: opt < %s  -passes='print<cost-model>' 2>&1 -disable-output -mtriple=x86_64-apple-macosx10.8.0 -mcpu=corei7-avx | FileCheck %s -check-prefix=CHECK64
 
 ; Test vector scalarization costs.
 ; RUN: llc < %s -march=x86 -mcpu=i386

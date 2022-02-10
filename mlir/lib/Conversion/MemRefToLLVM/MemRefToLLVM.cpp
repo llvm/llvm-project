@@ -18,6 +18,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"
+#include "llvm/ADT/SmallBitVector.h"
 
 using namespace mlir;
 
@@ -433,7 +434,7 @@ struct LoadStoreOpLowering : public ConvertOpToLLVMPattern<Derived> {
 ///      +---------------------------------+
 ///      |   <code before the AtomicRMWOp> |
 ///      |   <compute initial %loaded>     |
-///      |   br loop(%loaded)              |
+///      |   cf.br loop(%loaded)              |
 ///      +---------------------------------+
 ///             |
 ///  -------|   |
@@ -444,7 +445,7 @@ struct LoadStoreOpLowering : public ConvertOpToLLVMPattern<Derived> {
 ///  |   |   %pair = cmpxchg              |
 ///  |   |   %ok = %pair[0]               |
 ///  |   |   %new = %pair[1]              |
-///  |   |   cond_br %ok, end, loop(%new) |
+///  |   |   cf.cond_br %ok, end, loop(%new) |
 ///  |   +--------------------------------+
 ///  |          |        |
 ///  |-----------        |
@@ -1503,10 +1504,10 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<memref::SubViewOp> {
     SmallVector<OpFoldResult> mixedStrides = subViewOp.getMixedStrides();
     assert(mixedSizes.size() == mixedStrides.size() &&
            "expected sizes and strides of equal length");
-    llvm::SmallDenseSet<unsigned> unusedDims = subViewOp.getDroppedDims();
+    llvm::SmallBitVector unusedDims = subViewOp.getDroppedDims();
     for (int i = inferredShapeRank - 1, j = resultShapeRank - 1;
          i >= 0 && j >= 0; --i) {
-      if (unusedDims.contains(i))
+      if (unusedDims.test(i))
         continue;
 
       // `i` may overflow subViewOp.getMixedSizes because of trailing semantics.

@@ -8,15 +8,17 @@
 
 #include "WebAssembly.h"
 #include "CommonArgs.h"
+#include "Gnu.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
+#include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Option/ArgList.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -371,7 +373,11 @@ ToolChain::CXXStdlibType
 WebAssembly::GetCXXStdlibType(const ArgList &Args) const {
   if (Arg *A = Args.getLastArg(options::OPT_stdlib_EQ)) {
     StringRef Value = A->getValue();
-    if (Value != "libc++")
+    if (Value == "libc++")
+      return ToolChain::CST_Libcxx;
+    else if (Value == "libstdc++")
+      return ToolChain::CST_Libstdcxx;
+    else
       getDriver().Diag(diag::err_drv_invalid_stdlib_name)
           << A->getAsString(Args);
   }
@@ -417,17 +423,18 @@ void WebAssembly::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
 void WebAssembly::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
                                                ArgStringList &CC1Args) const {
-  if (!DriverArgs.hasArg(options::OPT_nostdlibinc) &&
-      !DriverArgs.hasArg(options::OPT_nostdincxx)) {
-    if (getTriple().getOS() != llvm::Triple::UnknownOS) {
-      const std::string MultiarchTriple =
-          getMultiarchTriple(getDriver(), getTriple(), getDriver().SysRoot);
-      addSystemInclude(DriverArgs, CC1Args,
-                       getDriver().SysRoot + "/include/" + MultiarchTriple +
-                           "/c++/v1");
-    }
-    addSystemInclude(DriverArgs, CC1Args,
-                     getDriver().SysRoot + "/include/c++/v1");
+
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
+      DriverArgs.hasArg(options::OPT_nostdincxx))
+    return;
+
+  switch (GetCXXStdlibType(DriverArgs)) {
+  case ToolChain::CST_Libcxx:
+    addLibCxxIncludePaths(DriverArgs, CC1Args);
+    break;
+  case ToolChain::CST_Libstdcxx:
+    addLibStdCXXIncludePaths(DriverArgs, CC1Args);
+    break;
   }
 }
 
@@ -440,7 +447,8 @@ void WebAssembly::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
     CmdArgs.push_back("-lc++abi");
     break;
   case ToolChain::CST_Libstdcxx:
-    llvm_unreachable("invalid stdlib name");
+    CmdArgs.push_back("-lstdc++");
+    break;
   }
 }
 
@@ -454,4 +462,76 @@ SanitizerMask WebAssembly::getSupportedSanitizers() const {
 
 Tool *WebAssembly::buildLinker() const {
   return new tools::wasm::Linker(*this);
+}
+
+void WebAssembly::addLibCxxIncludePaths(
+    const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CC1Args) const {
+  const Driver &D = getDriver();
+  std::string SysRoot = computeSysRoot();
+  std::string LibPath = SysRoot + "/include";
+  const std::string MultiarchTriple =
+      getMultiarchTriple(D, getTriple(), SysRoot);
+  bool IsKnownOs = (getTriple().getOS() != llvm::Triple::UnknownOS);
+
+  std::string Version = detectLibcxxVersion(LibPath);
+  if (Version.empty())
+    return;
+
+  // First add the per-target include path if the OS is known.
+  if (IsKnownOs) {
+    std::string TargetDir = LibPath + "/" + MultiarchTriple + "/c++/" + Version;
+    addSystemInclude(DriverArgs, CC1Args, TargetDir);
+  }
+
+  // Second add the generic one.
+  addSystemInclude(DriverArgs, CC1Args, LibPath + "/c++/" + Version);
+}
+
+void WebAssembly::addLibStdCXXIncludePaths(
+    const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CC1Args) const {
+  // We cannot use GCCInstallationDetector here as the sysroot usually does
+  // not contain a full GCC installation.
+  // Instead, we search the given sysroot for /usr/include/xx, similar
+  // to how we do it for libc++.
+  const Driver &D = getDriver();
+  std::string SysRoot = computeSysRoot();
+  std::string LibPath = SysRoot + "/include";
+  const std::string MultiarchTriple =
+      getMultiarchTriple(D, getTriple(), SysRoot);
+  bool IsKnownOs = (getTriple().getOS() != llvm::Triple::UnknownOS);
+
+  // This is similar to detectLibcxxVersion()
+  std::string Version;
+  {
+    std::error_code EC;
+    Generic_GCC::GCCVersion MaxVersion =
+        Generic_GCC::GCCVersion::Parse("0.0.0");
+    SmallString<128> Path(LibPath);
+    llvm::sys::path::append(Path, "c++");
+    for (llvm::vfs::directory_iterator LI = getVFS().dir_begin(Path, EC), LE;
+         !EC && LI != LE; LI = LI.increment(EC)) {
+      StringRef VersionText = llvm::sys::path::filename(LI->path());
+      if (VersionText[0] != 'v') {
+        auto Version = Generic_GCC::GCCVersion::Parse(VersionText);
+        if (Version > MaxVersion)
+          MaxVersion = Version;
+      }
+    }
+    if (MaxVersion.Major > 0)
+      Version = MaxVersion.Text;
+  }
+
+  if (Version.empty())
+    return;
+
+  // First add the per-target include path if the OS is known.
+  if (IsKnownOs) {
+    std::string TargetDir = LibPath + "/" + MultiarchTriple + "/c++/" + Version;
+    addSystemInclude(DriverArgs, CC1Args, TargetDir);
+  }
+
+  // Second add the generic one.
+  addSystemInclude(DriverArgs, CC1Args, LibPath + "/c++/" + Version);
 }
