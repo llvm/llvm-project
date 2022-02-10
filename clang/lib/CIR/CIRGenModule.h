@@ -104,7 +104,15 @@ private:
   // scopes that require cleanups.
   struct LexicalScopeContext {
     unsigned Depth = 0;
-    LexicalScopeContext() = default;
+    LexicalScopeContext(mlir::OpBuilder &builder) {
+      {
+        // Create the cleanup block but dont hook it up around just
+        // yet.
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        CleanupBlock = builder.createBlock(builder.getBlock()->getParent());
+      }
+      assert(builder.getInsertionBlock() && "Should be valid");
+    }
     ~LexicalScopeContext() = default;
 
     // Block containing cleanup code for things initialized in this
