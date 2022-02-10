@@ -772,4 +772,9 @@
 // FAKEDIR: "-libpath:/foo{{/|\\\\}}Lib{{/|\\\\}}10.0.12345.0{{/|\\\\}}ucrt
 // FAKEDIR: "-libpath:/foo{{/|\\\\}}Lib{{/|\\\\}}10.0.12345.0{{/|\\\\}}um
 
+// Accept both the -target and --target= spellings.
+// RUN: %clang_cl --target=i686-pc-windows-msvc19.14.0 -### -- %s 2>&1 | FileCheck -check-prefix=TARGET %s
+// RUN: %clang_cl -target i686-pc-windows-msvc19.14.0  -### -- %s 2>&1 | FileCheck -check-prefix=TARGET %s
+// TARGET: "-triple" "i686-pc-windows-msvc19.14.0"
+
 void f(void) { }
