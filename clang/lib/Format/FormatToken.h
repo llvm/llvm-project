@@ -696,19 +696,7 @@ public:
 
   /// Returns \c true if this tokens starts a block-type list, i.e. a
   /// list that should be indented with a block indent.
-  bool opensBlockOrBlockTypeList(const FormatStyle &Style) const {
-    // C# Does not indent object initialisers as continuations.
-    if (is(tok::l_brace) && getBlockKind() == BK_BracedInit && Style.isCSharp())
-      return true;
-    if (is(TT_TemplateString) && opensScope())
-      return true;
-    return is(TT_ArrayInitializerLSquare) || is(TT_ProtoExtensionLSquare) ||
-           (is(tok::l_brace) &&
-            (getBlockKind() == BK_Block || is(TT_DictLiteral) ||
-             (!Style.Cpp11BracedListStyle && NestingLevel == 0))) ||
-           (is(tok::less) && (Style.Language == FormatStyle::LK_Proto ||
-                              Style.Language == FormatStyle::LK_TextProto));
-  }
+  LLVM_NODISCARD bool opensBlockOrBlockTypeList(const FormatStyle &Style) const;
 
   /// Returns whether the token is the left square bracket of a C++
   /// structured binding declaration.

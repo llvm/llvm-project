@@ -74,6 +74,20 @@ bool FormatToken::isTypeOrIdentifier() const {
   return isSimpleTypeSpecifier() || Tok.isOneOf(tok::kw_auto, tok::identifier);
 }
 
+bool FormatToken::opensBlockOrBlockTypeList(const FormatStyle &Style) const {
+  // C# Does not indent object initialisers as continuations.
+  if (is(tok::l_brace) && getBlockKind() == BK_BracedInit && Style.isCSharp())
+    return true;
+  if (is(TT_TemplateString) && opensScope())
+    return true;
+  return is(TT_ArrayInitializerLSquare) || is(TT_ProtoExtensionLSquare) ||
+         (is(tok::l_brace) &&
+          (getBlockKind() == BK_Block || is(TT_DictLiteral) ||
+           (!Style.Cpp11BracedListStyle && NestingLevel == 0))) ||
+         (is(tok::less) && (Style.Language == FormatStyle::LK_Proto ||
+                            Style.Language == FormatStyle::LK_TextProto));
+}
+
 TokenRole::~TokenRole() {}
 
 void TokenRole::precomputeFormattingInfos(const FormatToken *Token) {}
