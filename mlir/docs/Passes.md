@@ -123,3 +123,7 @@ This document describes the available MLIR passes and their contracts.
 ## XeGPU Dialect Passes
 
 [include "XeGPUPasses.md"]
+
+## CIR Dialect Passes
+
+[include "CIRPasses.md"]
