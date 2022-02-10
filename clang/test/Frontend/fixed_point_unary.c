@@ -25,7 +25,7 @@ int i;
 // CHECK-NEXT:    store i32 [[TMP1]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void inc_a() {
+void inc_a(void) {
   a++;
 }
 
@@ -36,7 +36,7 @@ void inc_a() {
 // CHECK-NEXT:    store i16 [[TMP1]], i16* @f, align 2
 // CHECK-NEXT:    ret void
 //
-void inc_f() {
+void inc_f(void) {
   f++;
 }
 
@@ -47,7 +47,7 @@ void inc_f() {
 // CHECK-NEXT:    store i32 [[TMP1]], i32* @lf, align 4
 // CHECK-NEXT:    ret void
 //
-void inc_lf() {
+void inc_lf(void) {
   lf++;
 }
 
@@ -65,7 +65,7 @@ void inc_lf() {
 // UNSIGNED-NEXT:    store i32 [[TMP1]], i32* @ua, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void inc_ua() {
+void inc_ua(void) {
   ua++;
 }
 
@@ -83,7 +83,7 @@ void inc_ua() {
 // UNSIGNED-NEXT:    store i16 [[TMP1]], i16* @usa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void inc_usa() {
+void inc_usa(void) {
   usa++;
 }
 
@@ -101,7 +101,7 @@ void inc_usa() {
 // UNSIGNED-NEXT:    store i16 [[TMP1]], i16* @uf, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void inc_uf() {
+void inc_uf(void) {
   uf++;
 }
 
@@ -112,7 +112,7 @@ void inc_uf() {
 // CHECK-NEXT:    store i32 [[TMP1]], i32* @sa, align 4
 // CHECK-NEXT:    ret void
 //
-void inc_sa() {
+void inc_sa(void) {
   sa++;
 }
 
@@ -123,7 +123,7 @@ void inc_sa() {
 // CHECK-NEXT:    store i16 [[TMP1]], i16* @sf, align 2
 // CHECK-NEXT:    ret void
 //
-void inc_sf() {
+void inc_sf(void) {
   sf++;
 }
 
@@ -134,7 +134,7 @@ void inc_sf() {
 // CHECK-NEXT:    store i32 [[TMP1]], i32* @slf, align 4
 // CHECK-NEXT:    ret void
 //
-void inc_slf() {
+void inc_slf(void) {
   slf++;
 }
 
@@ -154,7 +154,7 @@ void inc_slf() {
 // UNSIGNED-NEXT:    store i32 [[RESIZE1]], i32* @sua, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void inc_sua() {
+void inc_sua(void) {
   sua++;
 }
 
@@ -174,7 +174,7 @@ void inc_sua() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE1]], i16* @susa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void inc_susa() {
+void inc_susa(void) {
   susa++;
 }
 
@@ -194,7 +194,7 @@ void inc_susa() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE1]], i16* @suf, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void inc_suf() {
+void inc_suf(void) {
   suf++;
 }
 
@@ -206,7 +206,7 @@ void inc_suf() {
 // CHECK-NEXT:    store i32 [[TMP1]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void dec_a() {
+void dec_a(void) {
   a--;
 }
 
@@ -217,7 +217,7 @@ void dec_a() {
 // CHECK-NEXT:    store i16 [[TMP1]], i16* @f, align 2
 // CHECK-NEXT:    ret void
 //
-void dec_f() {
+void dec_f(void) {
   f--;
 }
 
@@ -228,7 +228,7 @@ void dec_f() {
 // CHECK-NEXT:    store i32 [[TMP1]], i32* @lf, align 4
 // CHECK-NEXT:    ret void
 //
-void dec_lf() {
+void dec_lf(void) {
   lf--;
 }
 
@@ -246,7 +246,7 @@ void dec_lf() {
 // UNSIGNED-NEXT:    store i32 [[TMP1]], i32* @ua, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void dec_ua() {
+void dec_ua(void) {
   ua--;
 }
 
@@ -264,7 +264,7 @@ void dec_ua() {
 // UNSIGNED-NEXT:    store i16 [[TMP1]], i16* @usa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void dec_usa() {
+void dec_usa(void) {
   usa--;
 }
 
@@ -282,7 +282,7 @@ void dec_usa() {
 // UNSIGNED-NEXT:    store i16 [[TMP1]], i16* @uf, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void dec_uf() {
+void dec_uf(void) {
   uf--;
 }
 
@@ -293,7 +293,7 @@ void dec_uf() {
 // CHECK-NEXT:    store i32 [[TMP1]], i32* @sa, align 4
 // CHECK-NEXT:    ret void
 //
-void dec_sa() {
+void dec_sa(void) {
   sa--;
 }
 
@@ -304,7 +304,7 @@ void dec_sa() {
 // CHECK-NEXT:    store i16 [[TMP1]], i16* @sf, align 2
 // CHECK-NEXT:    ret void
 //
-void dec_sf() {
+void dec_sf(void) {
   sf--;
 }
 
@@ -315,7 +315,7 @@ void dec_sf() {
 // CHECK-NEXT:    store i32 [[TMP1]], i32* @slf, align 4
 // CHECK-NEXT:    ret void
 //
-void dec_slf() {
+void dec_slf(void) {
   slf--;
 }
 
@@ -337,7 +337,7 @@ void dec_slf() {
 // UNSIGNED-NEXT:    store i32 [[RESIZE1]], i32* @sua, align 4
 // UNSIGNED-NEXT:    ret void
 //
-void dec_sua() {
+void dec_sua(void) {
   sua--;
 }
 
@@ -359,7 +359,7 @@ void dec_sua() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE1]], i16* @susa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void dec_susa() {
+void dec_susa(void) {
   susa--;
 }
 
@@ -381,7 +381,7 @@ void dec_susa() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE1]], i16* @suf, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void dec_suf() {
+void dec_suf(void) {
   suf--;
 }
 
@@ -393,7 +393,7 @@ void dec_suf() {
 // CHECK-NEXT:    store i32 [[TMP1]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void neg_a() {
+void neg_a(void) {
   a = -a;
 }
 
@@ -404,7 +404,7 @@ void neg_a() {
 // CHECK-NEXT:    store i16 [[TMP1]], i16* @f, align 2
 // CHECK-NEXT:    ret void
 //
-void neg_f() {
+void neg_f(void) {
   f = -f;
 }
 
@@ -415,7 +415,7 @@ void neg_f() {
 // CHECK-NEXT:    store i16 [[TMP1]], i16* @usa, align 2
 // CHECK-NEXT:    ret void
 //
-void neg_usa() {
+void neg_usa(void) {
   usa = -usa;
 }
 
@@ -426,7 +426,7 @@ void neg_usa() {
 // CHECK-NEXT:    store i16 [[TMP1]], i16* @uf, align 2
 // CHECK-NEXT:    ret void
 //
-void neg_uf() {
+void neg_uf(void) {
   uf = -uf;
 }
 
@@ -437,7 +437,7 @@ void neg_uf() {
 // CHECK-NEXT:    store i32 [[TMP1]], i32* @sa, align 4
 // CHECK-NEXT:    ret void
 //
-void neg_sa() {
+void neg_sa(void) {
   sa = -sa;
 }
 
@@ -448,7 +448,7 @@ void neg_sa() {
 // CHECK-NEXT:    store i16 [[TMP1]], i16* @sf, align 2
 // CHECK-NEXT:    ret void
 //
-void neg_sf() {
+void neg_sf(void) {
   sf = -sf;
 }
 
@@ -470,7 +470,7 @@ void neg_sf() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE1]], i16* @susa, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void neg_susa() {
+void neg_susa(void) {
   susa = -susa;
 }
 
@@ -492,7 +492,7 @@ void neg_susa() {
 // UNSIGNED-NEXT:    store i16 [[RESIZE1]], i16* @suf, align 2
 // UNSIGNED-NEXT:    ret void
 //
-void neg_suf() {
+void neg_suf(void) {
   suf = -suf;
 }
 
@@ -503,7 +503,7 @@ void neg_suf() {
 // CHECK-NEXT:    store i32 [[TMP0]], i32* @a, align 4
 // CHECK-NEXT:    ret void
 //
-void plus_a() {
+void plus_a(void) {
   a = +a;
 }
 
@@ -513,7 +513,7 @@ void plus_a() {
 // CHECK-NEXT:    store i16 [[TMP0]], i16* @uf, align 2
 // CHECK-NEXT:    ret void
 //
-void plus_uf() {
+void plus_uf(void) {
   uf = +uf;
 }
 
@@ -523,7 +523,7 @@ void plus_uf() {
 // CHECK-NEXT:    store i32 [[TMP0]], i32* @sa, align 4
 // CHECK-NEXT:    ret void
 //
-void plus_sa() {
+void plus_sa(void) {
   sa = +sa;
 }
 
@@ -537,7 +537,7 @@ void plus_sa() {
 // CHECK-NEXT:    store i32 [[LNOT_EXT]], i32* @i, align 4
 // CHECK-NEXT:    ret void
 //
-void not_a() {
+void not_a(void) {
   i = !a;
 }
 
@@ -550,7 +550,7 @@ void not_a() {
 // CHECK-NEXT:    store i32 [[LNOT_EXT]], i32* @i, align 4
 // CHECK-NEXT:    ret void
 //
-void not_uf() {
+void not_uf(void) {
   i = !uf;
 }
 
@@ -563,6 +563,6 @@ void not_uf() {
 // CHECK-NEXT:    store i32 [[LNOT_EXT]], i32* @i, align 4
 // CHECK-NEXT:    ret void
 //
-void not_susa() {
+void not_susa(void) {
   i = !susa;
 }

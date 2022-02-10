@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-unused-value %s 2>&1 | FileCheck -strict-whitespace %s
 // REQUIRES: asserts
 
-void foo() {
+void foo(void) {
 
   "§Ã"; // ø
 // CHECK: {{^  "<A7><C3>"; // <F8>}}

@@ -74,13 +74,13 @@ void removeUnusedLabels(char c) {
 }
 
 int oopsAComma = 0, // expected-error {{';'}}
-void oopsMoreCommas() {
+void oopsMoreCommas(void) {
   static int a[] = { 0, 1, 2 }, // expected-error {{';'}}
   static int b[] = { 3, 4, 5 }, // expected-error {{';'}}
   &a == &b ? oopsMoreCommas() : removeUnusedLabels(a[0]);
 }
 
-int commaAtEndOfStatement() {
+int commaAtEndOfStatement(void) {
   int a = 1;
   a = 5, // expected-error {{';'}}
   int m = 5, // expected-error {{';'}}

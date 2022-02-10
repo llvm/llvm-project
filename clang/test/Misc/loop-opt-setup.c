@@ -14,7 +14,7 @@ int foo(void) {
 // CHECK-LABEL: foo
 // CHECK-NOT: br i1
 
-void Helper() {
+void Helper(void) {
   const int *nodes[5];
   int num_active = 5;
 
