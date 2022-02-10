@@ -262,7 +262,6 @@ func @fold_vector_transfer_write_with_inner_rank_reduced_subview(
 func @fold_static_stride_subview_with_affine_load_store(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index) -> f32 {
   %0 = memref.subview %arg0[%arg1, %arg2][4, 4][2, 3] : memref<12x32xf32> to memref<4x4xf32, offset:?, strides: [64, 3]>
   %1 = affine.load %0[%arg3, %arg4] : memref<4x4xf32, offset:?, strides: [64, 3]>
-  // CHECK-NEXT: %[[C0:.*]] = arith.constant 0 : index
   // CHECK-NEXT: affine.apply
   // CHECK-NEXT: affine.apply
   // CHECK-NEXT: affine.load
@@ -270,11 +269,6 @@ func @fold_static_stride_subview_with_affine_load_store(%arg0 : memref<12x32xf32
   // CHECK-NEXT: affine.apply
   // CHECK-NEXT: affine.apply
   // CHECK-NEXT: affine.store
-  // Fewer operands than the memref rank.
-  // CHECK-NEXT: affine.apply
-  // CHECK-NEXT: affine.apply #{{.*}}(%[[C0]])[%{{.*}}]
-  // CHECK-NEXT: affine.store
-  affine.store %1, %0[%arg3, 0] : memref<4x4xf32, offset:?, strides: [64, 3]>
   // CHECK-NEXT: return
   return %1 : f32
 }

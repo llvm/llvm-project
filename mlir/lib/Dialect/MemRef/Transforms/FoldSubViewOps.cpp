@@ -10,14 +10,13 @@
 // loading/storing from/to the original memref.
 //
 //===----------------------------------------------------------------------===//
-#include "mlir/Dialect/MemRef/Transforms/Passes.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallBitVector.h"
 
@@ -213,20 +212,9 @@ LoadOpOfSubViewFolder<OpTy>::matchAndRewrite(OpTy loadOp,
   if (!subViewOp)
     return failure();
 
-  ValueRange indices = loadOp.indices();
-  // For affine ops, we need to apply the map to get the operands to get the
-  // "actual" indices.
-  if (auto affineLoadOp = dyn_cast<AffineLoadOp>(loadOp.getOperation())) {
-    auto expandedIndices =
-        expandAffineMap(rewriter, loadOp.getLoc(), affineLoadOp.getAffineMap(),
-                        affineLoadOp.indices());
-    if (!expandedIndices)
-      return failure();
-    indices = expandedIndices.getValue();
-  }
   SmallVector<Value, 4> sourceIndices;
-  if (failed(resolveSourceIndices(loadOp.getLoc(), rewriter, subViewOp, indices,
-                                  sourceIndices)))
+  if (failed(resolveSourceIndices(loadOp.getLoc(), rewriter, subViewOp,
+                                  loadOp.indices(), sourceIndices)))
     return failure();
 
   replaceOp(loadOp, subViewOp, sourceIndices, rewriter);
@@ -242,20 +230,9 @@ StoreOpOfSubViewFolder<OpTy>::matchAndRewrite(OpTy storeOp,
   if (!subViewOp)
     return failure();
 
-  ValueRange indices = storeOp.indices();
-  // For affine ops, we need to apply the map to get the operands to get the
-  // "actual" indices.
-  if (auto affineStoreOp = dyn_cast<AffineStoreOp>(storeOp.getOperation())) {
-    auto expandedIndices =
-        expandAffineMap(rewriter, storeOp.getLoc(),
-                        affineStoreOp.getAffineMap(), affineStoreOp.indices());
-    if (!expandedIndices)
-      return failure();
-    indices = expandedIndices.getValue();
-  }
   SmallVector<Value, 4> sourceIndices;
   if (failed(resolveSourceIndices(storeOp.getLoc(), rewriter, subViewOp,
-                                  indices, sourceIndices)))
+                                  storeOp.indices(), sourceIndices)))
     return failure();
 
   replaceOp(storeOp, subViewOp, sourceIndices, rewriter);
