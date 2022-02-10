@@ -55,8 +55,7 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
       unsigned Opc =
           VT.isInteger() ? RISCVISD::VMV_V_X_VL : RISCVISD::VFMV_V_F_VL;
       SDLoc DL(N);
-      SDValue VL = CurDAG->getTargetConstant(RISCV::VLMaxSentinel, DL,
-                                             Subtarget->getXLenVT());
+      SDValue VL = CurDAG->getRegister(RISCV::X0, Subtarget->getXLenVT());
       SDValue Result = CurDAG->getNode(Opc, DL, VT, N->getOperand(0), VL);
 
       --I;
@@ -1902,14 +1901,24 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
 // allows us to choose betwen VSETIVLI or VSETVLI later.
 bool RISCVDAGToDAGISel::selectVLOp(SDValue N, SDValue &VL) {
   auto *C = dyn_cast<ConstantSDNode>(N);
-  if (C && isUInt<5>(C->getZExtValue()))
+  if (C && isUInt<5>(C->getZExtValue())) {
     VL = CurDAG->getTargetConstant(C->getZExtValue(), SDLoc(N),
                                    N->getValueType(0));
-  else if (C && C->isAllOnesValue() && C->getOpcode() != ISD::TargetConstant)
+  } else if (C && C->isAllOnesValue()) {
+    // Treat all ones as VLMax.
     VL = CurDAG->getTargetConstant(RISCV::VLMaxSentinel, SDLoc(N),
                                    N->getValueType(0));
-  else
+  } else if (isa<RegisterSDNode>(N) &&
+             cast<RegisterSDNode>(N)->getReg() == RISCV::X0) {
+    // All our VL operands use an operand that allows GPRNoX0 or an immediate
+    // as the register class. Convert X0 to a special immediate to pass the
+    // MachineVerifier. This is recognized specially by the vsetvli insertion
+    // pass.
+    VL = CurDAG->getTargetConstant(RISCV::VLMaxSentinel, SDLoc(N),
+                                   N->getValueType(0));
+  } else {
     VL = N;
+  }
 
   return true;
 }

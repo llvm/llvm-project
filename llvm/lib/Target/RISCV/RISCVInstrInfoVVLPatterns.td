@@ -649,8 +649,8 @@ multiclass VPatBinarySDNodeExt_V_WV<SDNode op, PatFrags extop, string instructio
         (riscv_trunc_vector_vl
           (op (vti.Wti.Vector vti.Wti.RegClass:$rs2),
               (vti.Wti.Vector (extop (vti.Vti.Vector vti.Vti.RegClass:$rs1)))),
-          (riscv_vmset_vl VLMax),
-          VLMax)),
+          (riscv_vmset_vl X0),
+          X0)),
       (!cast<Instruction>(instruction_name#"_WV_"#vti.Vti.LMul.MX)
         vti.Wti.RegClass:$rs2, vti.Vti.RegClass:$rs1,
         vti.Vti.AVL, vti.Vti.Log2SEW)>;
@@ -664,8 +664,8 @@ multiclass VPatBinarySDNodeExt_V_WX<SDNode op, PatFrags extop, string instructio
         (riscv_trunc_vector_vl
           (op (vti.Wti.Vector vti.Wti.RegClass:$rs2),
               (vti.Wti.Vector (extop (vti.Vti.Vector (SplatPat GPR:$rs1))))),
-          (riscv_vmset_vl VLMax),
-          VLMax)),
+          (riscv_vmset_vl X0),
+          X0)),
       (!cast<Instruction>(instruction_name#"_WX_"#vti.Vti.LMul.MX)
         vti.Wti.RegClass:$rs2, GPR:$rs1,
         vti.Vti.AVL, vti.Vti.Log2SEW)>;
