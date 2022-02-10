@@ -10134,13 +10134,6 @@ void ASTReader::diagnoseOdrViolations() {
       assert(!FirstTemplate == !SecondTemplate &&
              "Both pointers should be null or non-null");
 
-      enum ODRTemplateDifference {
-        ParamEmptyName,
-        ParamName,
-        ParamSingleDefaultArgument,
-        ParamDifferentDefaultArgument,
-      };
-
       if (FirstTemplate && SecondTemplate) {
         DeclHashes FirstTemplateHashes;
         DeclHashes SecondTemplateHashes;
@@ -10166,155 +10159,60 @@ void ASTReader::diagnoseOdrViolations() {
           if (FirstIt->second == SecondIt->second)
             continue;
 
-          auto ODRDiagTemplateError = [FirstRecord, &FirstModule, this](
-                                          SourceLocation Loc, SourceRange Range,
-                                          ODRTemplateDifference DiffType) {
-            return Diag(Loc, diag::err_module_odr_violation_template_parameter)
-                   << FirstRecord << FirstModule.empty() << FirstModule << Range
-                   << DiffType;
-          };
-          auto ODRDiagTemplateNote = [&SecondModule, this](
-                                         SourceLocation Loc, SourceRange Range,
-                                         ODRTemplateDifference DiffType) {
-            return Diag(Loc, diag::note_module_odr_violation_template_parameter)
-                   << SecondModule << Range << DiffType;
-          };
-
           const NamedDecl* FirstDecl = cast<NamedDecl>(FirstIt->first);
           const NamedDecl* SecondDecl = cast<NamedDecl>(SecondIt->first);
 
           assert(FirstDecl->getKind() == SecondDecl->getKind() &&
                  "Parameter Decl's should be the same kind.");
 
+          enum ODRTemplateDifference {
+            ParamEmptyName,
+            ParamName,
+            ParamSingleDefaultArgument,
+            ParamDifferentDefaultArgument,
+          };
+
+          auto hasDefaultArg = [](const NamedDecl *D) {
+            if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(D))
+              return TTP->hasDefaultArgument() &&
+                      !TTP->defaultArgumentWasInherited();
+            if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(D))
+              return NTTP->hasDefaultArgument() &&
+                      !NTTP->defaultArgumentWasInherited();
+            auto *TTP = cast<TemplateTemplateParmDecl>(D);
+            return TTP->hasDefaultArgument() &&
+                    !TTP->defaultArgumentWasInherited();
+          };
+          bool hasFirstArg = hasDefaultArg(FirstDecl);
+          bool hasSecondArg = hasDefaultArg(SecondDecl);
+
+          ODRTemplateDifference ErrDiffType;
+          ODRTemplateDifference NoteDiffType;
+
           DeclarationName FirstName = FirstDecl->getDeclName();
           DeclarationName SecondName = SecondDecl->getDeclName();
 
           if (FirstName != SecondName) {
-            const bool FirstNameEmpty =
+            bool FirstNameEmpty =
                 FirstName.isIdentifier() && !FirstName.getAsIdentifierInfo();
-            const bool SecondNameEmpty =
-                SecondName.isIdentifier() && !SecondName.getAsIdentifierInfo();
-            assert((!FirstNameEmpty || !SecondNameEmpty) &&
-                   "Both template parameters cannot be unnamed.");
-            ODRDiagTemplateError(FirstDecl->getLocation(),
-                                 FirstDecl->getSourceRange(),
-                                 FirstNameEmpty ? ParamEmptyName : ParamName)
-                << FirstName;
-            ODRDiagTemplateNote(SecondDecl->getLocation(),
-                                SecondDecl->getSourceRange(),
-                                SecondNameEmpty ? ParamEmptyName : ParamName)
-                << SecondName;
-            break;
-          }
+            bool SecondNameEmpty = SecondName.isIdentifier() &&
+                                    !SecondName.getAsIdentifierInfo();
+            ErrDiffType = FirstNameEmpty ? ParamEmptyName : ParamName;
+            NoteDiffType = SecondNameEmpty ? ParamEmptyName : ParamName;
+          } else if (hasFirstArg == hasSecondArg)
+            ErrDiffType = NoteDiffType = ParamDifferentDefaultArgument;
+          else
+            ErrDiffType = NoteDiffType = ParamSingleDefaultArgument;
 
-          switch (FirstDecl->getKind()) {
-          default:
-            llvm_unreachable("Invalid template parameter type.");
-          case Decl::TemplateTypeParm: {
-            const auto *FirstParam = cast<TemplateTypeParmDecl>(FirstDecl);
-            const auto *SecondParam = cast<TemplateTypeParmDecl>(SecondDecl);
-            const bool HasFirstDefaultArgument =
-                FirstParam->hasDefaultArgument() &&
-                !FirstParam->defaultArgumentWasInherited();
-            const bool HasSecondDefaultArgument =
-                SecondParam->hasDefaultArgument() &&
-                !SecondParam->defaultArgumentWasInherited();
-
-            if (HasFirstDefaultArgument != HasSecondDefaultArgument) {
-              ODRDiagTemplateError(FirstDecl->getLocation(),
-                                   FirstDecl->getSourceRange(),
-                                   ParamSingleDefaultArgument)
-                  << HasFirstDefaultArgument;
-              ODRDiagTemplateNote(SecondDecl->getLocation(),
-                                  SecondDecl->getSourceRange(),
-                                  ParamSingleDefaultArgument)
-                  << HasSecondDefaultArgument;
-              break;
-            }
-
-            assert(HasFirstDefaultArgument && HasSecondDefaultArgument &&
-                   "Expecting default arguments.");
-
-            ODRDiagTemplateError(FirstDecl->getLocation(),
-                                 FirstDecl->getSourceRange(),
-                                 ParamDifferentDefaultArgument);
-            ODRDiagTemplateNote(SecondDecl->getLocation(),
-                                SecondDecl->getSourceRange(),
-                                ParamDifferentDefaultArgument);
-
-            break;
-          }
-          case Decl::NonTypeTemplateParm: {
-            const auto *FirstParam = cast<NonTypeTemplateParmDecl>(FirstDecl);
-            const auto *SecondParam = cast<NonTypeTemplateParmDecl>(SecondDecl);
-            const bool HasFirstDefaultArgument =
-                FirstParam->hasDefaultArgument() &&
-                !FirstParam->defaultArgumentWasInherited();
-            const bool HasSecondDefaultArgument =
-                SecondParam->hasDefaultArgument() &&
-                !SecondParam->defaultArgumentWasInherited();
-
-            if (HasFirstDefaultArgument != HasSecondDefaultArgument) {
-              ODRDiagTemplateError(FirstDecl->getLocation(),
-                                   FirstDecl->getSourceRange(),
-                                   ParamSingleDefaultArgument)
-                  << HasFirstDefaultArgument;
-              ODRDiagTemplateNote(SecondDecl->getLocation(),
-                                  SecondDecl->getSourceRange(),
-                                  ParamSingleDefaultArgument)
-                  << HasSecondDefaultArgument;
-              break;
-            }
-
-            assert(HasFirstDefaultArgument && HasSecondDefaultArgument &&
-                   "Expecting default arguments.");
-
-            ODRDiagTemplateError(FirstDecl->getLocation(),
-                                 FirstDecl->getSourceRange(),
-                                 ParamDifferentDefaultArgument);
-            ODRDiagTemplateNote(SecondDecl->getLocation(),
-                                SecondDecl->getSourceRange(),
-                                ParamDifferentDefaultArgument);
-
-            break;
-          }
-          case Decl::TemplateTemplateParm: {
-            const auto *FirstParam = cast<TemplateTemplateParmDecl>(FirstDecl);
-            const auto *SecondParam =
-                cast<TemplateTemplateParmDecl>(SecondDecl);
-            const bool HasFirstDefaultArgument =
-                FirstParam->hasDefaultArgument() &&
-                !FirstParam->defaultArgumentWasInherited();
-            const bool HasSecondDefaultArgument =
-                SecondParam->hasDefaultArgument() &&
-                !SecondParam->defaultArgumentWasInherited();
-
-            if (HasFirstDefaultArgument != HasSecondDefaultArgument) {
-              ODRDiagTemplateError(FirstDecl->getLocation(),
-                                   FirstDecl->getSourceRange(),
-                                   ParamSingleDefaultArgument)
-                  << HasFirstDefaultArgument;
-              ODRDiagTemplateNote(SecondDecl->getLocation(),
-                                  SecondDecl->getSourceRange(),
-                                  ParamSingleDefaultArgument)
-                  << HasSecondDefaultArgument;
-              break;
-            }
-
-            assert(HasFirstDefaultArgument && HasSecondDefaultArgument &&
-                   "Expecting default arguments.");
-
-            ODRDiagTemplateError(FirstDecl->getLocation(),
-                                 FirstDecl->getSourceRange(),
-                                 ParamDifferentDefaultArgument);
-            ODRDiagTemplateNote(SecondDecl->getLocation(),
-                                SecondDecl->getSourceRange(),
-                                ParamDifferentDefaultArgument);
-
-            break;
-          }
-          }
-
+          Diag(FirstDecl->getLocation(),
+                diag::err_module_odr_violation_template_parameter)
+              << FirstRecord << FirstModule.empty() << FirstModule
+              << FirstDecl->getSourceRange() << ErrDiffType << hasFirstArg
+              << FirstName;
+          Diag(SecondDecl->getLocation(),
+                diag::note_module_odr_violation_template_parameter)
+              << SecondModule << SecondDecl->getSourceRange() << NoteDiffType
+              << hasSecondArg << SecondName;
           break;
         }
 
