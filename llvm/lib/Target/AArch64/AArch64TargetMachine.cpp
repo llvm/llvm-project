@@ -574,6 +574,9 @@ void AArch64PassConfig::addIRPasses() {
   // Add Control Flow Guard checks.
   if (TM->getTargetTriple().isOSWindows())
     addPass(createCFGuardCheckPass());
+
+  if (TM->Options.JMCInstrument)
+    addPass(createJMCInstrumenterPass());
 }
 
 // Pass Pipeline Configuration

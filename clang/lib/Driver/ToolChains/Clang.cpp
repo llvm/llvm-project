@@ -7489,6 +7489,16 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
   }
 
   const Driver &D = getToolChain().getDriver();
+
+  // This controls whether or not we perform JustMyCode instrumentation.
+  if (Args.hasFlag(options::OPT__SLASH_JMC, options::OPT__SLASH_JMC_,
+                   /*Default=*/false)) {
+    if (*EmitCodeView && *DebugInfoKind >= codegenoptions::DebugInfoConstructor)
+      CmdArgs.push_back("-fjmc");
+    else
+      D.Diag(clang::diag::warn_drv_jmc_requires_debuginfo);
+  }
+
   EHFlags EH = parseClangCLEHFlags(D, Args);
   if (!isNVPTX && (EH.Synch || EH.Asynch)) {
     if (types::isCXX(InputType))

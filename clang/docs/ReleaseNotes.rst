@@ -80,6 +80,12 @@ Attribute Changes in Clang
 Windows Support
 ---------------
 
+- Add support for MSVC-compatible ``/JMC``/``/JMC-`` flag in clang-cl (supports
+  X86/X64/ARM/ARM64). ``/JMC`` could only be used when ``/Zi`` or ``/Z7`` is
+  turned on. With this addition, clang-cl can be used in Visual Studio for the
+  JustMyCode feature. Note, you may need to manually add ``/JMC`` as additional
+  compile options in the Visual Studio since it currently assumes clang-cl does not support ``/JMC``.
+
 C Language Changes in Clang
 ---------------------------
 
