@@ -231,6 +231,15 @@ static bool setAlignedAllocParam(Function &F, unsigned ArgNo) {
   return true;
 }
 
+static bool setAllocSize(Function &F, unsigned ElemSizeArg,
+                         Optional<unsigned> NumElemsArg) {
+  if (F.hasFnAttribute(Attribute::AllocSize))
+    return false;
+  F.addFnAttr(Attribute::getWithAllocSizeArgs(F.getContext(), ElemSizeArg,
+                                              NumElemsArg));
+  return true;
+}
+
 bool llvm::inferLibFuncAttributes(Module *M, StringRef Name,
                                   const TargetLibraryInfo &TLI) {
   Function *F = M->getFunction(Name);
@@ -424,10 +433,12 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     return Changed;
   case LibFunc_aligned_alloc:
     Changed |= setAlignedAllocParam(F, 0);
+    Changed |= setAllocSize(F, 1, None);
     LLVM_FALLTHROUGH;
   case LibFunc_valloc:
   case LibFunc_malloc:
   case LibFunc_vec_malloc:
+    Changed |= setAllocSize(F, 0, None);
     Changed |= setOnlyAccessesInaccessibleMemory(F);
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
@@ -490,6 +501,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
   case LibFunc_memalign:
+    Changed |= setAllocSize(F, 1, None);
     Changed |= setAlignedAllocParam(F, 0);
     Changed |= setOnlyAccessesInaccessibleMemory(F);
     Changed |= setRetNoUndef(F);
@@ -512,6 +524,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_realloc:
   case LibFunc_vec_realloc:
   case LibFunc_reallocf:
+    Changed |= setAllocSize(F, 1, None);
     Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
     Changed |= setRetNoUndef(F);
     Changed |= setDoesNotThrow(F);
@@ -585,6 +598,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     return Changed;
   case LibFunc_calloc:
   case LibFunc_vec_calloc:
+    Changed |= setAllocSize(F, 0, 1);
     Changed |= setOnlyAccessesInaccessibleMemory(F);
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
