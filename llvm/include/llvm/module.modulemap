@@ -83,6 +83,7 @@ module LLVM_BinaryFormat {
     textual header "BinaryFormat/ELFRelocs/x86_64.def"
     textual header "BinaryFormat/WasmRelocs.def"
     textual header "BinaryFormat/MsgPack.def"
+    textual header "BinaryFormat/ELFRelocs/LoongArch.def"
 }
 
 module LLVM_Config {
