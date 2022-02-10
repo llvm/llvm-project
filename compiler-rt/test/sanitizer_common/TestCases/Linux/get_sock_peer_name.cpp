@@ -17,10 +17,10 @@ int main() {
 
   const sockaddr_in sin = {
       .sin_family = AF_INET,
-      .sin_port = 1234,
+      .sin_port = htons(1234),
       .sin_addr =
           {
-              .s_addr = INADDR_LOOPBACK,
+              .s_addr = htonl(INADDR_LOOPBACK),
           },
   };
   assert(connect(fd, reinterpret_cast<const sockaddr *>(&sin), sizeof(sin)) ==
