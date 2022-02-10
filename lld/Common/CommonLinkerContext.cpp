@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lld/Common/CommonLinkerContext.h"
-#include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 
@@ -43,12 +42,4 @@ void CommonLinkerContext::destroy() {
   if (lctx == nullptr)
     return;
   delete lctx;
-}
-
-// Temporary API that forces global state cleanup between explicit calls to
-// drivers. See discussion in https://reviews.llvm.org/D119049.
-void lld::cleanup() {
-  // Delete the global context and clear the global context pointer, so that it
-  // cannot be accessed anymore.
-  CommonLinkerContext::destroy();
 }

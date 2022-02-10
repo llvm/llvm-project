@@ -52,11 +52,6 @@ namespace wasm {
 bool link(llvm::ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
           llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput);
 }
-
-// Temporary API that forces global state cleanup between explicit calls to
-// drivers above. DO NOT USE - this will be replaced by safeLldMain(). See
-// discussion in https://reviews.llvm.org/D119049.
-void cleanup();
 } // namespace lld
 
 #endif
