@@ -5994,10 +5994,12 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIViaUMinSeq(
       !FalseVal->getType()->isIntegerTy(1))
     return getUnknown(V);
 
-  // i1 cond ? i1 x : i1 0  -->  umin_seq cond, x
-  if (auto *FalseConst = dyn_cast<ConstantInt>(FalseVal)) {
-    if (FalseConst->isZero())
-      return getUMinExpr(getSCEV(Cond), getSCEV(TrueVal), /*Sequential=*/true);
+  // i1 cond ? i1 x : i1 C  -->  C + (umin_seq cond, x + C)
+  if (isa<ConstantInt>(FalseVal)) {
+    const SCEV *C = getSCEV(FalseVal);
+    return getAddExpr(C, getUMinExpr(getSCEV(Cond),
+                                     getAddExpr(C, getSCEV(TrueVal)),
+                                     /*Sequential=*/true));
   }
 
   // i1 cond ? i1 1 : i1 y  -->  ~umin_seq ~cond, ~y
@@ -6005,13 +6007,6 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIViaUMinSeq(
     if (TrueConst->isOne())
       return getNotSCEV(getUMinExpr(getNotSCEV(getSCEV(Cond)),
                                     getNotSCEV(getSCEV(FalseVal)),
-                                    /*Sequential=*/true));
-  }
-
-  // i1 cond ? i1 x : i1 1  -->  ~umin_seq cond, ~x
-  if (auto *FalseConst = dyn_cast<ConstantInt>(FalseVal)) {
-    if (FalseConst->isOne())
-      return getNotSCEV(getUMinExpr(getSCEV(Cond), getNotSCEV(getSCEV(TrueVal)),
                                     /*Sequential=*/true));
   }
 
