@@ -17,17 +17,17 @@ void use_constant_string_builtins1(void) {
 
 #include "builtin.h"
 
-int foo() {
+int foo(void) {
   return __builtin_object_size(p, 0);
 }
 
 #include "builtin_sub.h"
 
-int bar() {
+int bar(void) {
   return __builtin_object_size(p, 0);
 }
 
-int baz() {
+int baz(void) {
   return IS_CONST(0);
 }
 

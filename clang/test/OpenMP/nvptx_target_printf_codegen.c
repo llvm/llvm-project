@@ -9,7 +9,7 @@ extern int printf(const char *, ...);
 
 
 // Check a simple call to printf end-to-end.
-int CheckSimple() {
+int CheckSimple(void) {
 #pragma omp target
   {
     // printf in master-only basic block.
@@ -21,7 +21,7 @@ int CheckSimple() {
   return 0;
 }
 
-void CheckNoArgs() {
+void CheckNoArgs(void) {
 #pragma omp target
   {
     // printf in master-only basic block.
@@ -32,7 +32,7 @@ void CheckNoArgs() {
 // Check that printf's alloca happens in the entry block, not inside the if
 // statement.
 int foo;
-void CheckAllocaIsInEntryBlock() {
+void CheckAllocaIsInEntryBlock(void) {
 #pragma omp target
   {
     if (foo) {

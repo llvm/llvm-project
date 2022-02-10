@@ -112,7 +112,7 @@ void init(struct SSS *priv, struct SSS orig);
 
 // CHECK-LABEL: @main
 // CHECK-LOAD-LABEL: @main
-int main() {
+int main(void) {
 #pragma omp declare reduction(fun : struct SSS : omp_out = omp_in) initializer(init(&omp_priv, omp_orig))
   // CHECK: define internal {{.*}}void @{{[^(]+}}([[SSS_INT]]* noalias noundef %0, [[SSS_INT]]* noalias noundef %1)
   // CHECK: call void @llvm.memcpy
@@ -170,7 +170,7 @@ int main() {
 // CHECK-LABEL: bar
 struct SSS ss;
 int in;
-void bar() {
+void bar(void) {
   // CHECK: [[SS_PRIV:%.+]] = alloca %struct.SSS,
   // CHECK: [[IN_PRIV:%.+]] = alloca i32,
   // CHECK: [[BC:%.+]] = bitcast %struct.SSS* [[SS_PRIV]] to i8*

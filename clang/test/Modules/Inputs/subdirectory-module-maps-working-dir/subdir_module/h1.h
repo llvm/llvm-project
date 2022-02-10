@@ -1,1 +1,1 @@
-int bar();
+int bar(void);

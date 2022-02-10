@@ -3,8 +3,8 @@
 
 #pragma omp begin declare variant match(device={arch(x86_64)})
 
-void bar() {}
+void bar(void) {}
 
-// CHECK: FunctionDecl {{.*}} bar[device={arch(x86_64)}] 'void ()'
+// CHECK: FunctionDecl {{.*}} bar[device={arch(x86_64)}] 'void (void)'
 
 #pragma omp end declare variant

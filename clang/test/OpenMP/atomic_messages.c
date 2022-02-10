@@ -12,7 +12,7 @@ void xxx(int argc) {
   argc = x; // expected-warning {{variable 'x' is uninitialized when used here}}
 }
 
-int foo() {
+int foo(void) {
 L1:
   foo();
 #pragma omp atomic
@@ -39,7 +39,7 @@ struct S {
   int a;
 };
 
-int readint() {
+int readint(void) {
   int a = 0, b = 0;
 // Test for atomic read
 #pragma omp atomic read
@@ -67,7 +67,7 @@ int readint() {
   return 0;
 }
 
-int readS() {
+int readS(void) {
   struct S a, b;
   // expected-error@+1 {{directive '#pragma omp atomic' cannot contain more than one 'read' clause}} expected-error@+1 {{unexpected OpenMP clause 'allocate' in directive '#pragma omp atomic'}}
 #pragma omp atomic read read allocate(a)
@@ -78,7 +78,7 @@ int readS() {
   return a.a;
 }
 
-int writeint() {
+int writeint(void) {
   int a = 0, b = 0;
 // Test for atomic write
 #pragma omp atomic write
@@ -104,7 +104,7 @@ int writeint() {
   return 0;
 }
 
-int writeS() {
+int writeS(void) {
   struct S a, b;
   // expected-error@+1 {{directive '#pragma omp atomic' cannot contain more than one 'write' clause}}
 #pragma omp atomic write write
@@ -115,7 +115,7 @@ int writeS() {
   return a.a;
 }
 
-int updateint() {
+int updateint(void) {
   int a = 0, b = 0;
 // Test for atomic update
 #pragma omp atomic update
@@ -205,7 +205,7 @@ int updateint() {
   return 0;
 }
 
-int captureint() {
+int captureint(void) {
   int a = 0, b = 0, c = 0;
 // Test for atomic capture
 #pragma omp atomic capture
@@ -381,7 +381,7 @@ int captureint() {
   return 0;
 }
 
-void hint() {
+void hint(void) {
   int a = 0;
 #pragma omp atomic hint // omp45-error {{unexpected OpenMP clause 'hint' in directive '#pragma omp atomic'}} expected-error {{expected '(' after 'hint'}}
   a += 1;
@@ -398,10 +398,10 @@ void hint() {
 }
 
 #ifdef OMP51
-extern void bbar();
-extern int ffoo();
+extern void bbar(void);
+extern int ffoo(void);
 
-void compare() {
+void compare(void) {
   int x = 0;
   int d = 0;
   int e = 0;
