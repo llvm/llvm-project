@@ -1446,9 +1446,6 @@ def fno_elide_type : Flag<["-"], "fno-elide-type">, Group<f_Group>,
     HelpText<"Do not elide types when printing diagnostics">,
     MarshallingInfoNegativeFlag<DiagnosticOpts<"ElideType">>;
 def feliminate_unused_debug_symbols : Flag<["-"], "feliminate-unused-debug-symbols">, Group<f_Group>;
-def fjmc : Flag<["-"], "fjmc">, Group<f_Group>,Flags<[CC1Option]>,
-    HelpText<"Enable just-my-code debugging">,
-    MarshallingInfoFlag<CodeGenOpts<"JMCInstrument">>;
 defm eliminate_unused_debug_types : OptOutCC1FFlag<"eliminate-unused-debug-types",
   "Do not emit ", "Emit ", " debug info for defined but unused types">;
 def femit_all_decls : Flag<["-"], "femit-all-decls">, Group<f_Group>, Flags<[CC1Option]>,
@@ -6364,10 +6361,6 @@ def _SLASH_GX_ : CLFlag<"GX-">,
 def _SLASH_imsvc : CLJoinedOrSeparate<"imsvc">,
   HelpText<"Add <dir> to system include search path, as if in %INCLUDE%">,
   MetaVarName<"<dir>">;
-def _SLASH_JMC : CLFlag<"JMC">,
-  HelpText<"Enable just-my-code debugging">;
-def _SLASH_JMC_ : CLFlag<"JMC-">,
-  HelpText<"Disable just-my-code debugging (default)">;
 def _SLASH_LD : CLFlag<"LD">, HelpText<"Create DLL">;
 def _SLASH_LDd : CLFlag<"LDd">, HelpText<"Create debug DLL">;
 def _SLASH_link : CLRemainingArgsJoined<"link">,
@@ -6468,6 +6461,7 @@ def _SLASH_errorReport : CLIgnoredJoined<"errorReport">;
 def _SLASH_FC : CLIgnoredFlag<"FC">;
 def _SLASH_Fd : CLIgnoredJoined<"Fd">;
 def _SLASH_FS : CLIgnoredFlag<"FS">;
+def _SLASH_JMC : CLIgnoredFlag<"JMC">;
 def _SLASH_kernel_ : CLIgnoredFlag<"kernel-">;
 def _SLASH_nologo : CLIgnoredFlag<"nologo">;
 def _SLASH_RTC : CLIgnoredJoined<"RTC">;

@@ -75,7 +75,6 @@ add_llvm_component_library(LLVMCodeGen
   InterleavedAccessPass.cpp
   InterleavedLoadCombinePass.cpp
   IntrinsicLowering.cpp
-  JMCInstrumenter.cpp
   LatencyPriorityQueue.cpp
   LazyMachineBlockFrequencyInfo.cpp
   LexicalScopes.cpp

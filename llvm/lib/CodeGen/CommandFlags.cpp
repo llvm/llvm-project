@@ -95,7 +95,6 @@ CGOPT(bool, ForceDwarfFrameSection)
 CGOPT(bool, XRayOmitFunctionIndex)
 CGOPT(bool, DebugStrictDwarf)
 CGOPT(unsigned, AlignLoops)
-CGOPT(bool, JMCInstrument)
 
 codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
 #define CGBINDOPT(NAME)                                                        \
@@ -465,12 +464,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                                       cl::desc("Default alignment for loops"));
   CGBINDOPT(AlignLoops);
 
-  static cl::opt<bool> JMCInstrument(
-      "enable-jmc-instrument",
-      cl::desc("Instrument functions with a call to __CheckForDebuggerJustMyCode"),
-      cl::init(false));
-  CGBINDOPT(JMCInstrument);
-
 #undef CGBINDOPT
 
   mc::RegisterMCTargetOptionsFlags();
@@ -546,7 +539,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.XRayOmitFunctionIndex = getXRayOmitFunctionIndex();
   Options.DebugStrictDwarf = getDebugStrictDwarf();
   Options.LoopAlignment = getAlignLoops();
-  Options.JMCInstrument = getJMCInstrument();
 
   Options.MCOptions = mc::InitMCTargetOptionsFromFlags();
 
