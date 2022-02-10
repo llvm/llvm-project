@@ -928,27 +928,28 @@ multiclass DSAtomicRetNoRetPat_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
 
 
 
-class DSAtomicCmpXChg<DS_Pseudo inst, ValueType vt, PatFrag frag, bit gds=0> : GCNPat <
+// Caution, the order of src and cmp is the *opposite* of the BUFFER_ATOMIC_CMPSWAP opcode.
+class DSAtomicCmpXChgSwapped<DS_Pseudo inst, ValueType vt, PatFrag frag, bit gds=0> : GCNPat <
   (frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$cmp, vt:$swap),
   (inst $ptr, getVregSrcForVT<vt>.ret:$cmp, getVregSrcForVT<vt>.ret:$swap, offset:$offset, (i1 gds))
 >;
 
-multiclass DSAtomicCmpXChg_mc<DS_Pseudo inst, DS_Pseudo noRetInst, ValueType vt,
-                              string frag> {
+multiclass DSAtomicCmpXChgSwapped_mc<DS_Pseudo inst, DS_Pseudo noRetInst, ValueType vt,
+                                     string frag> {
   let OtherPredicates = [LDSRequiresM0Init] in {
-    def : DSAtomicCmpXChg<inst, vt, !cast<PatFrag>(frag#"_local_m0_ret_"#vt.Size)>;
-    def : DSAtomicCmpXChg<noRetInst, vt, !cast<PatFrag>(frag#"_local_m0_noret_"#vt.Size)>;
+    def : DSAtomicCmpXChgSwapped<inst, vt, !cast<PatFrag>(frag#"_local_m0_ret_"#vt.Size)>;
+    def : DSAtomicCmpXChgSwapped<noRetInst, vt, !cast<PatFrag>(frag#"_local_m0_noret_"#vt.Size)>;
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
-    def : DSAtomicCmpXChg<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
-                          !cast<PatFrag>(frag#"_local_ret_"#vt.Size)>;
-    def : DSAtomicCmpXChg<!cast<DS_Pseudo>(!cast<string>(noRetInst)#"_gfx9"), vt,
-                          !cast<PatFrag>(frag#"_local_noret_"#vt.Size)>;
+    def : DSAtomicCmpXChgSwapped<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
+                                 !cast<PatFrag>(frag#"_local_ret_"#vt.Size)>;
+    def : DSAtomicCmpXChgSwapped<!cast<DS_Pseudo>(!cast<string>(noRetInst)#"_gfx9"), vt,
+                                 !cast<PatFrag>(frag#"_local_noret_"#vt.Size)>;
   }
 
-  def : DSAtomicCmpXChg<inst, vt, !cast<PatFrag>(frag#"_region_m0_ret_"#vt.Size), 1>;
-  def : DSAtomicCmpXChg<noRetInst, vt, !cast<PatFrag>(frag#"_region_m0_noret_"#vt.Size), 1>;
+  def : DSAtomicCmpXChgSwapped<inst, vt, !cast<PatFrag>(frag#"_region_m0_ret_"#vt.Size), 1>;
+  def : DSAtomicCmpXChgSwapped<noRetInst, vt, !cast<PatFrag>(frag#"_region_m0_noret_"#vt.Size), 1>;
 }
 
 
@@ -968,7 +969,7 @@ defm : DSAtomicRetNoRetPat_mc<DS_MIN_RTN_U32, DS_MIN_U32, i32, "atomic_load_umin
 defm : DSAtomicRetNoRetPat_mc<DS_MAX_RTN_U32, DS_MAX_U32, i32, "atomic_load_umax">;
 defm : DSAtomicRetNoRetPat_mc<DS_MIN_RTN_F32, DS_MIN_F32, f32, "atomic_load_fmin">;
 defm : DSAtomicRetNoRetPat_mc<DS_MAX_RTN_F32, DS_MAX_F32, f32, "atomic_load_fmax">;
-defm : DSAtomicCmpXChg_mc<DS_CMPST_RTN_B32, DS_CMPST_B32, i32, "atomic_cmp_swap">;
+defm : DSAtomicCmpXChgSwapped_mc<DS_CMPST_RTN_B32, DS_CMPST_B32, i32, "atomic_cmp_swap">;
 
 let SubtargetPredicate = HasLDSFPAtomicAdd in {
 defm : DSAtomicRetNoRetPat_mc<DS_ADD_RTN_F32, DS_ADD_F32, f32, "atomic_load_fadd">;
@@ -990,7 +991,7 @@ defm : DSAtomicRetNoRetPat_mc<DS_MAX_RTN_U64, DS_MAX_U64, i64, "atomic_load_umax
 defm : DSAtomicRetNoRetPat_mc<DS_MIN_RTN_F64, DS_MIN_F64, f64, "atomic_load_fmin">;
 defm : DSAtomicRetNoRetPat_mc<DS_MAX_RTN_F64, DS_MAX_F64, f64, "atomic_load_fmax">;
 
-defm : DSAtomicCmpXChg_mc<DS_CMPST_RTN_B64, DS_CMPST_B64, i64, "atomic_cmp_swap">;
+defm : DSAtomicCmpXChgSwapped_mc<DS_CMPST_RTN_B64, DS_CMPST_B64, i64, "atomic_cmp_swap">;
 
 let SubtargetPredicate = isGFX90APlus in {
 def : DSAtomicRetPat<DS_ADD_RTN_F64, f64, atomic_load_fadd_local_ret_64>;
