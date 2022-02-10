@@ -4975,6 +4975,52 @@ llvm::DIGlobalVariableExpression *CGDebugInfo::CollectAnonRecordDecls(
   return GVE;
 }
 
+static bool ReferencesAnonymousEntity(ArrayRef<TemplateArgument> Args);
+static bool ReferencesAnonymousEntity(RecordType *RT) {
+  // Unnamed classes/lambdas can't be reconstituted due to a lack of column
+  // info we produce in the DWARF, so we can't get Clang's full name back.
+  // But so long as it's not one of those, it doesn't matter if some sub-type
+  // of the record (a template parameter) can't be reconstituted - because the
+  // un-reconstitutable type itself will carry its own name.
+  const auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
+  if (!RD)
+    return false;
+  if (!RD->getIdentifier())
+    return true;
+  auto *TSpecial = dyn_cast<ClassTemplateSpecializationDecl>(RD);
+  if (!TSpecial)
+    return false;
+  return ReferencesAnonymousEntity(TSpecial->getTemplateArgs().asArray());
+}
+static bool ReferencesAnonymousEntity(ArrayRef<TemplateArgument> Args) {
+  return llvm::any_of(Args, [&](const TemplateArgument &TA) {
+    switch (TA.getKind()) {
+    case TemplateArgument::Pack:
+      return ReferencesAnonymousEntity(TA.getPackAsArray());
+    case TemplateArgument::Type: {
+      struct ReferencesAnonymous
+          : public RecursiveASTVisitor<ReferencesAnonymous> {
+        bool ReferencesAnonymous = false;
+        bool VisitRecordType(RecordType *RT) {
+          if (ReferencesAnonymousEntity(RT)) {
+            ReferencesAnonymous = true;
+            return false;
+          }
+          return true;
+        }
+      };
+      ReferencesAnonymous RT;
+      RT.TraverseType(TA.getAsType());
+      if (RT.ReferencesAnonymous)
+        return true;
+      break;
+    }
+    default:
+      break;
+    }
+    return false;
+  });
+}
 namespace {
 struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
   bool Reconstitutable = true;
@@ -5002,16 +5048,8 @@ struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
     Reconstitutable &= !isNoexceptExceptionSpec(FT->getExceptionSpecType());
     return Reconstitutable;
   }
-  bool TraverseRecordType(RecordType *RT) {
-    // Unnamed classes/lambdas can't be reconstituted due to a lack of column
-    // info we produce in the DWARF, so we can't get Clang's full name back.
-    // But so long as it's not one of those, it doesn't matter if some sub-type
-    // of the record (a template parameter) can't be reconstituted - because the
-    // un-reconstitutable type itself will carry its own name.
-    const auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
-    if (!RD)
-      return true;
-    if (RD->isLambda() || !RD->getIdentifier()) {
+  bool VisitRecordType(RecordType *RT) {
+    if (ReferencesAnonymousEntity(RT)) {
       Reconstitutable = false;
       return false;
     }
