@@ -1285,8 +1285,8 @@ SDValue AVRTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   const Function *F = nullptr;
   if (const GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = G->getGlobal();
-
-    F = cast<Function>(GV);
+    if (isa<Function>(GV))
+      F = cast<Function>(GV);
     Callee =
         DAG.getTargetGlobalAddress(GV, DL, getPointerTy(DAG.getDataLayout()));
   } else if (const ExternalSymbolSDNode *ES =
