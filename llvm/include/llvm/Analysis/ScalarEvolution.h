@@ -1622,8 +1622,22 @@ private:
   /// is either a select instruction or a phi node).  \p I is the instruction
   /// being processed, and it is assumed equivalent to "Cond ? TrueVal :
   /// FalseVal".
-  const SCEV *createNodeForSelectOrPHI(Instruction *I, Value *Cond,
-                                       Value *TrueVal, Value *FalseVal);
+  const SCEV *createNodeForSelectOrPHIInstWithICmpInstCond(Instruction *I,
+                                                           ICmpInst *Cond,
+                                                           Value *TrueVal,
+                                                           Value *FalseVal);
+
+  /// See if we can model this select-like instruction via umin_seq expression.
+  const SCEV *createNodeForSelectOrPHIViaUMinSeq(Value *I, Value *Cond,
+                                                 Value *TrueVal,
+                                                 Value *FalseVal);
+
+  /// Given a value \p V, which is a select-like instruction (currently this is
+  /// either a select instruction or a phi node), which is assumed equivalent to
+  ///   Cond ? TrueVal : FalseVal
+  /// see if we can model it as a SCEV expression.
+  const SCEV *createNodeForSelectOrPHI(Value *V, Value *Cond, Value *TrueVal,
+                                       Value *FalseVal);
 
   /// Provide the special handling we need to analyze GEP SCEVs.
   const SCEV *createNodeForGEP(GEPOperator *GEP);
