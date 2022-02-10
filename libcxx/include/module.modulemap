@@ -284,6 +284,7 @@ module std [system] {
       module pop_heap                 { private header "__algorithm/pop_heap.h" }
       module prev_permutation         { private header "__algorithm/prev_permutation.h" }
       module push_heap                { private header "__algorithm/push_heap.h" }
+      module ranges_swap_ranges       { private header "__algorithm/ranges_swap_ranges.h" }
       module remove                   { private header "__algorithm/remove.h" }
       module remove_copy              { private header "__algorithm/remove_copy.h" }
       module remove_copy_if           { private header "__algorithm/remove_copy_if.h" }
