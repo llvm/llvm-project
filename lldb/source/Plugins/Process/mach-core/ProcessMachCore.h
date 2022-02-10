@@ -68,10 +68,6 @@ public:
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                       lldb_private::Status &error) override;
 
-  lldb_private::Status
-  GetMemoryRegionInfo(lldb::addr_t load_addr,
-                      lldb_private::MemoryRegionInfo &region_info) override;
-
   lldb::addr_t GetImageInfoAddress() override;
 
 protected:
@@ -83,6 +79,10 @@ protected:
                           lldb_private::ThreadList &new_thread_list) override;
 
   lldb_private::ObjectFile *GetCoreObjectFile();
+
+  lldb_private::Status
+  DoGetMemoryRegionInfo(lldb::addr_t load_addr,
+                        lldb_private::MemoryRegionInfo &region_info) override;
 
 private:
   bool GetDynamicLoaderAddress(lldb::addr_t addr);
