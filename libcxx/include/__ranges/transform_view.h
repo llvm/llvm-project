@@ -61,8 +61,8 @@ class transform_view : public view_interface<transform_view<_View, _Fn>> {
   template<bool> class __iterator;
   template<bool> class __sentinel;
 
-  [[no_unique_address]] __copyable_box<_Fn> __func_;
-  [[no_unique_address]] _View __base_ = _View();
+  _LIBCPP_NO_UNIQUE_ADDRESS __copyable_box<_Fn> __func_;
+  _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
 
 public:
   _LIBCPP_HIDE_FROM_ABI

@@ -43,8 +43,8 @@ namespace ranges {
     // amortized O(1) begin() method.
     static constexpr bool _UseCache = !random_access_range<_View> && !common_range<_View>;
     using _Cache = _If<_UseCache, __non_propagating_cache<reverse_iterator<iterator_t<_View>>>, __empty_cache>;
-    [[no_unique_address]] _Cache __cached_begin_ = _Cache();
-    [[no_unique_address]] _View __base_ = _View();
+    _LIBCPP_NO_UNIQUE_ADDRESS _Cache __cached_begin_ = _Cache();
+    _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
 
   public:
     _LIBCPP_HIDE_FROM_ABI
