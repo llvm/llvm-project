@@ -13975,7 +13975,7 @@ void PredicatedScalarEvolution::addPredicate(const SCEVPredicate &Pred) {
   updateGeneration();
 }
 
-const SCEVUnionPredicate &PredicatedScalarEvolution::getUnionPredicate() const {
+const SCEVPredicate &PredicatedScalarEvolution::getPredicate() const {
   return *Preds;
 }
 
