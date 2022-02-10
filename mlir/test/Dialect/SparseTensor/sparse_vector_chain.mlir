@@ -105,7 +105,7 @@
 // CHECK:               %[[VAL_83:.*]] = arith.select %[[VAL_80]], %[[VAL_82]], %[[VAL_77]] : vector<8xi1>, vector<8xf64>
 // CHECK:               scf.yield %[[VAL_83]] : vector<8xf64>
 // CHECK:             }
-// CHECK:             %[[VAL_84:.*]] = vector.reduction "add", %[[VAL_85:.*]] : vector<8xf64> into f64
+// CHECK:             %[[VAL_84:.*]] = vector.reduction <add>, %[[VAL_85:.*]] : vector<8xf64> into f64
 // CHECK:             scf.yield %[[VAL_84]] : f64
 // CHECK:           }
 // CHECK:           memref.store %[[VAL_86:.*]], %[[VAL_15]][] : memref<f64>
