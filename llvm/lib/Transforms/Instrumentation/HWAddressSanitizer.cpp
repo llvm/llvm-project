@@ -1341,7 +1341,7 @@ bool HWAddressSanitizer::instrumentStack(
     AI->replaceUsesWithIf(Replacement,
                           [AILong](Use &U) { return U.getUser() != AILong; });
 
-    for (auto *DDI : SInfo.AllocaDbgMap.lookup(AI)) {
+    for (auto *DDI : Info.DbgVariableIntrinsics) {
       // Prepend "tag_offset, N" to the dwarf expression.
       // Tag offset logically applies to the alloca pointer, and it makes sense
       // to put it at the beginning of the expression.
