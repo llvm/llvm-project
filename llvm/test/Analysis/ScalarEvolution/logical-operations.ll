@@ -8,7 +8,7 @@ define i1 @binary_or.i1(i1 %x, i1 %y) {
 ; CHECK-LABEL: 'binary_or.i1'
 ; CHECK-NEXT:  Classifying expressions for: @binary_or.i1
 ; CHECK-NEXT:    %r = or i1 %x, %y
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> (%x umax %y) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @binary_or.i1
 ;
   %r = or i1 %x, %y
@@ -30,11 +30,11 @@ define i1 @binary_or.4ops.i1(i1 %x, i1 %y, i1 %z, i1 %a) {
 ; CHECK-LABEL: 'binary_or.4ops.i1'
 ; CHECK-NEXT:  Classifying expressions for: @binary_or.4ops.i1
 ; CHECK-NEXT:    %t0 = or i1 %x, %y
-; CHECK-NEXT:    --> %t0 U: full-set S: full-set
+; CHECK-NEXT:    --> (%x umax %y) U: full-set S: full-set
 ; CHECK-NEXT:    %t1 = or i1 %z, %a
-; CHECK-NEXT:    --> %t1 U: full-set S: full-set
+; CHECK-NEXT:    --> (%z umax %a) U: full-set S: full-set
 ; CHECK-NEXT:    %r = or i1 %t0, %t1
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> (%x umax %y umax %z umax %a) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @binary_or.4ops.i1
 ;
   %t0 = or i1 %x, %y

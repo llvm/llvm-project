@@ -51,7 +51,7 @@ define void @test_or() {
 ; CHECK-NEXT:    %B3 = add i32 %1, %2
 ; CHECK-NEXT:    --> {(-2 + undef),+,-1}<%BB> U: full-set S: full-set Exits: -2 LoopDispositions: { %BB: Computable }
 ; CHECK-NEXT:    %B = or i1 %C5, %C11
-; CHECK-NEXT:    --> %B U: full-set S: full-set Exits: false LoopDispositions: { %BB: Variant }
+; CHECK-NEXT:    --> (%C11 umax %C5) U: full-set S: full-set Exits: false LoopDispositions: { %BB: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_or
 ; CHECK-NEXT:  Loop %BB: backedge-taken count is undef
 ; CHECK-NEXT:  Loop %BB: max backedge-taken count is -1
