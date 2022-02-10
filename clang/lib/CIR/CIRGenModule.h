@@ -102,20 +102,10 @@ private:
 
   // Represents a cir.scope, cir.if, and then/else regions. I.e. lexical
   // scopes that require cleanups.
-  struct LexicalScopeRAIIContext {
-    CIRGenModule &P;
-    LexicalScopeRAIIContext *OldVal = nullptr;
+  struct LexicalScopeContext {
     unsigned Depth = 0;
-
-  public:
-    LexicalScopeRAIIContext(CIRGenModule &p, LexicalScopeRAIIContext *Value)
-        : P(p) {
-      if (P.currLexScope)
-        OldVal = P.currLexScope;
-      P.currLexScope = Value;
-      if (Value)
-        Depth++;
-    }
+    LexicalScopeContext() = default;
+    ~LexicalScopeContext() = default;
 
     // Block containing cleanup code for things initialized in this
     // lexical context (scope).
@@ -127,16 +117,32 @@ private:
 
     // Labels solved inside this scope.
     llvm::SmallPtrSet<const clang::LabelDecl *, 4> SolvedLabels;
+  };
 
-    void restore() { P.currLexScope = OldVal; }
+  class LexicalScopeGuard {
+    CIRGenModule &CGM;
+    LexicalScopeContext *OldVal = nullptr;
+
+  public:
+    LexicalScopeGuard(CIRGenModule &c, LexicalScopeContext *L) : CGM(c) {
+      if (CGM.currLexScope)
+        OldVal = CGM.currLexScope;
+      CGM.currLexScope = L;
+    }
+
+    LexicalScopeGuard(const LexicalScopeGuard &) = delete;
+    LexicalScopeGuard &operator=(const LexicalScopeGuard &) = delete;
+    LexicalScopeGuard &operator=(LexicalScopeGuard &&other) = delete;
+
     void cleanup();
-    ~LexicalScopeRAIIContext() {
+    void restore() { CGM.currLexScope = OldVal; }
+    ~LexicalScopeGuard() {
       cleanup();
       restore();
     }
   };
 
-  LexicalScopeRAIIContext *currLexScope = nullptr;
+  LexicalScopeContext *currLexScope = nullptr;
 
   /// -------
   /// Source Location tracking

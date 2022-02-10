@@ -649,22 +649,24 @@ CIRGenModule::buildBranchThroughCleanup(JumpDest &Dest, LabelDecl *L,
 
 /// All scope related cleanup needed:
 /// - Patching up unsolved goto's.
-void CIRGenModule::LexicalScopeRAIIContext::cleanup() {
-  while (!PendingGotos.empty()) {
-    auto gotoInfo = PendingGotos.back();
+void CIRGenModule::LexicalScopeGuard::cleanup() {
+  auto *localScope = CGM.currLexScope;
+
+  while (!localScope->PendingGotos.empty()) {
+    auto gotoInfo = localScope->PendingGotos.back();
     // FIXME: Currently only support resolving goto labels inside the
     // same lexical ecope.
-    assert(SolvedLabels.count(gotoInfo.second) &&
+    assert(localScope->SolvedLabels.count(gotoInfo.second) &&
            "goto across scopes not yet supported");
 
     // The goto in this lexical context actually maps to a basic
     // block.
     auto g = cast<mlir::cir::BrOp>(gotoInfo.first);
-    g.setSuccessor(P.LabelMap[gotoInfo.second].getBlock());
-    PendingGotos.pop_back();
+    g.setSuccessor(CGM.LabelMap[gotoInfo.second].getBlock());
+    localScope->PendingGotos.pop_back();
   }
 
-  SolvedLabels.clear();
+  localScope->SolvedLabels.clear();
 }
 
 mlir::LogicalResult CIRGenModule::buildGotoStmt(const GotoStmt &S) {
@@ -1490,8 +1492,8 @@ mlir::FuncOp CIRGenModule::buildFunction(const FunctionDecl *FD) {
   auto FnEndLoc = getLoc(FD->getBody()->getEndLoc());
 
   // Initialize lexical scope information.
-  LexicalScopeRAIIContext lexScope{*this, nullptr};
-  currLexScope = &lexScope;
+  LexicalScopeContext lexScope;
+  LexicalScopeGuard scopeGuard{*this, &lexScope};
 
   {
     // Create the cleanup block but dont hook it up around just
@@ -1561,7 +1563,6 @@ mlir::FuncOp CIRGenModule::buildFunction(const FunctionDecl *FD) {
   theModule.push_back(function);
 
   CurCGF = nullptr;
-  currLexScope = nullptr;
   return function;
 }
 
