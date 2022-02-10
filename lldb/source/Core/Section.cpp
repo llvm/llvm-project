@@ -423,9 +423,15 @@ bool Section::ContainsOnlyDebugInfo() const {
   case eSectionTypeGoSymtab:
   case eSectionTypeAbsoluteAddress:
   case eSectionTypeOther:
+  // Used for "__dof_cache" in mach-o or ".debug" for COFF which isn't debug
+  // information that we parse at all. This was causing system files with no
+  // debug info to show debug info byte sizes in the "statistics dump" output
+  // for each module. New "eSectionType" enums should be created for dedicated
+  // debug info that has a predefined format if we wish for these sections to
+  // show up as debug info.
+  case eSectionTypeDebug:
     return false;
 
-  case eSectionTypeDebug:
   case eSectionTypeDWARFDebugAbbrev:
   case eSectionTypeDWARFDebugAbbrevDwo:
   case eSectionTypeDWARFDebugAddr:

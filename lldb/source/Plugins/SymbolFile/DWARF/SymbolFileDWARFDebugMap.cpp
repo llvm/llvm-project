@@ -1430,53 +1430,16 @@ SymbolFileDWARFDebugMap::AddOSOARanges(SymbolFileDWARF *dwarf2Data,
   return num_line_entries_added;
 }
 
-uint64_t SymbolFileDWARFDebugMap::GetDebugInfoSize() {
-  uint64_t debug_info_size = 0;
-  ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
-    ObjectFile *oso_objfile = oso_dwarf->GetObjectFile();
-    if (!oso_objfile)
-      return false; // Keep iterating
-    ModuleSP module_sp = oso_objfile->GetModule();
-    if (!module_sp)
-      return false; // Keep iterating
-    SectionList *section_list = module_sp->GetSectionList();
-    if (section_list)
-      debug_info_size += section_list->GetDebugInfoSize();
-    return false; // Keep iterating
-  });
-  return debug_info_size;
-}
-
-StatsDuration::Duration SymbolFileDWARFDebugMap::GetDebugInfoParseTime() {
-  StatsDuration::Duration elapsed(0.0);
+ModuleList SymbolFileDWARFDebugMap::GetDebugInfoModules() {
+  ModuleList oso_modules;
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
     ObjectFile *oso_objfile = oso_dwarf->GetObjectFile();
     if (oso_objfile) {
       ModuleSP module_sp = oso_objfile->GetModule();
-      if (module_sp) {
-        SymbolFile *symfile = module_sp->GetSymbolFile();
-        if (symfile)
-          elapsed += symfile->GetDebugInfoParseTime();
-      }
+      if (module_sp)
+        oso_modules.Append(module_sp);
     }
     return false; // Keep iterating
   });
-  return elapsed;
-}
-
-StatsDuration::Duration SymbolFileDWARFDebugMap::GetDebugInfoIndexTime() {
-  StatsDuration::Duration elapsed(0.0);
-  ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
-    ObjectFile *oso_objfile = oso_dwarf->GetObjectFile();
-    if (oso_objfile) {
-      ModuleSP module_sp = oso_objfile->GetModule();
-      if (module_sp) {
-        SymbolFile *symfile = module_sp->GetSymbolFile();
-        if (symfile)
-          elapsed += symfile->GetDebugInfoIndexTime();
-      }
-    }
-    return false; // Keep iterating
-  });
-  return elapsed;
+  return oso_modules;
 }
