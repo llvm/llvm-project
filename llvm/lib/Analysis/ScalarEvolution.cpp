@@ -6015,6 +6015,13 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIViaUMinSeq(
                                     /*Sequential=*/true));
   }
 
+  // i1 cond ? i1 0 : i1 y  -->  umin_seq ~cond, y
+  if (auto *TrueConst = dyn_cast<ConstantInt>(TrueVal)) {
+    if (TrueConst->isZero())
+      return getUMinExpr(getNotSCEV(getSCEV(Cond)), getSCEV(FalseVal),
+                         /*Sequential=*/true);
+  }
+
   return getUnknown(V);
 }
 
