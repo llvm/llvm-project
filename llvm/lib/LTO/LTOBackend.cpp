@@ -29,6 +29,7 @@
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/Error.h"
@@ -39,6 +40,7 @@
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO.h"
@@ -74,6 +76,13 @@ static cl::opt<bool> ThinLTOAssumeMerged(
     cl::desc("Assume the input has already undergone ThinLTO function "
              "importing and the other pre-optimization pipeline changes."));
 
+static cl::opt<std::string> LtoExternalAsm("lto-external-asm",
+                                           cl::desc("External assembler to "
+                                                    "use for LTO back-end"));
+static cl::list<std::string> LtoExternalAsmArgs("lto-external-asm-arg",
+                                                cl::desc("Args to pass to "
+                                                         "external assembler in LTO backend"));
+  
 LLVM_ATTRIBUTE_NORETURN static void reportOpenError(StringRef Path, Twine Msg) {
   errs() << "failed to open " << Path << ": " << Msg << '\n';
   errs().flush();
@@ -154,6 +163,28 @@ Error Config::addSaveTemps(std::string OutputFileName,
   return Error::success();
 }
 
+Error Config::addSaveAsmTemps(std::string OutputFileName,
+                              std::string SaveTempDir) {
+  SaveAsmTemps = true;
+  GetLTOTaskTempNameHook = [=](unsigned Task, const Module &M, StringRef Ext) {
+    llvm::SmallString<128> TempName(SaveTempDir);
+    if (M.getModuleIdentifier() == "ld-temp.o") {
+      // Use the generated temp name instead of the default combined module id.
+      sys::path::append(TempName, sys::path::stem(OutputFileName));
+      // Append the ".ld-temp" suffix to prevent the name conflict when a
+      // thinlto bc has the same name as output dxe.
+      TempName.append(".ld-temp");
+    } else
+      sys::path::append(TempName, sys::path::stem(M.getModuleIdentifier()));
+
+    TempName.append(Ext);
+
+    return TempName.str().str();
+  };
+
+  return Error::success();
+}
+
 #define HANDLE_EXTENSION(Ext)                                                  \
   llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
 #include "llvm/Support/Extension.def"
@@ -180,10 +211,24 @@ static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
 static std::unique_ptr<TargetMachine>
 createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   StringRef TheTriple = M.getTargetTriple();
-  SubtargetFeatures Features;
-  Features.getDefaultSubtargetFeatures(Triple(TheTriple));
-  for (const std::string &A : Conf.MAttrs)
-    Features.AddFeature(A);
+  std::string FeaturesString;
+
+  // Find SubTarget features from function attributes in module
+  auto Fn = M.begin();
+  if (Fn != M.end()) {
+    Attribute TFA = Fn->getFnAttribute("target-features");
+    if (TFA.isStringAttribute())
+      FeaturesString = TFA.getValueAsString().str();
+  }
+
+  if (FeaturesString.empty()) {
+    SubtargetFeatures Features;
+    Features.getDefaultSubtargetFeatures(Triple(TheTriple));
+    for (const std::string &A : Conf.MAttrs)
+      Features.AddFeature(A);
+
+    FeaturesString = Features.getString();
+  }
 
   Optional<Reloc::Model> RelocModel = None;
   if (Conf.RelocModel)
@@ -199,7 +244,7 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
     CodeModel = M.getCodeModel();
 
   std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
-      TheTriple, Conf.CPU, Features.getString(), Conf.Options, RelocModel,
+      TheTriple, Conf.CPU, FeaturesString, Conf.Options, RelocModel,
       CodeModel, Conf.CGOptLevel));
   assert(TM && "Failed to create target machine");
   return TM;
@@ -370,6 +415,73 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
 
+void assemble(const Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
+              unsigned Task, Module &Mod, StringRef AsmBuffer) {
+  assert(!LtoExternalAsm.empty());
+  // Prepare temporary input and output files for external assembler.
+  std::error_code EC;
+  SmallString<64> AsmFileName;
+  if (Conf.SaveAsmTemps) {
+    assert(Conf.GetLTOTaskTempNameHook);
+    AsmFileName = Conf.GetLTOTaskTempNameHook(Task, Mod, ".opt.s");
+  } else {
+    EC = sys::fs::createTemporaryFile("LTO", "s", AsmFileName);
+    if (EC)
+      report_fatal_error("Failed to create temporary asm file: " +
+                         EC.message());
+  }
+
+  // Write out the asm buffer to the temporary asm file.
+  ToolOutputFile AsmFile(AsmFileName, EC, sys::fs::OF_None);
+  AsmFile.os() << AsmBuffer;
+  AsmFile.os().close();
+
+  // Save the temporary asm file if -save-temps is given.
+  if (Conf.SaveAsmTemps)
+    AsmFile.keep();
+
+  SmallString<64> DojFileName;
+  EC = sys::fs::createTemporaryFile("LTO", "o", DojFileName);
+  if (EC)
+    report_fatal_error("Failed to create temporary doj file: " + EC.message());
+  // The temporary doj file will always be deleted now. Leave it to linker to
+  // handle the -save-temps for doj files.
+  ToolOutputFile DojFile(DojFileName, EC, sys::fs::OF_None);
+  DojFile.os().close();
+
+  // Prepare arguments and invoke assembler.
+  SmallString<128> Assembler;
+  Assembler.append(LtoExternalAsm);
+  std::vector<StringRef> Args;
+  Args.push_back(Assembler);
+  Args.push_back(AsmFileName);
+  Args.push_back("-o");
+  Args.push_back(DojFileName);
+  for ( auto &A : LtoExternalAsmArgs ) {
+    Args.push_back(A);
+  }
+
+  LLVM_DEBUG(dbgs() << "Run assembler on module " << Mod.getModuleIdentifier()
+                    << "\n");
+
+  std::string ErrMsg;
+  int RC = sys::ExecuteAndWait(Assembler, Args, None, {}, /*SecondsToWait*/ 0,
+                               /*MemoryLimit*/ 0, &ErrMsg);
+  if (RC != 0)
+    report_fatal_error("Failed to execute assembler: " + ErrMsg);
+
+  // Write out the assembled doj using the linker-provided AddStream function.
+  // TODO: Remove this extra copy.
+  ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
+      MemoryBuffer::getFile(DojFileName);
+  if (!MBOrErr)
+    report_fatal_error("Failed to open temporary assembled doj " + DojFileName +
+                       ": " + MBOrErr.getError().message());
+
+  auto Stream = AddStream(Task);
+  *Stream->OS << (*MBOrErr)->getBuffer();
+}
+
 static void codegen(const Config &Conf, TargetMachine *TM,
                     AddStreamFn AddStream, unsigned Task, Module &Mod,
                     const ModuleSummaryIndex &CombinedIndex) {
@@ -403,17 +515,43 @@ static void codegen(const Config &Conf, TargetMachine *TM,
       report_fatal_error("Failed to open " + DwoFile + ": " + EC.message());
   }
 
-  auto Stream = AddStream(Task);
-  legacy::PassManager CodeGenPasses;
-  CodeGenPasses.add(
-      createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
-  if (Conf.PreCodeGenPassesHook)
-    Conf.PreCodeGenPassesHook(CodeGenPasses);
-  if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,
-                              DwoOut ? &DwoOut->os() : nullptr,
-                              Conf.CGFileType))
-    report_fatal_error("Failed to setup codegen");
-  CodeGenPasses.run(Mod);
+  if (!LtoExternalAsm.empty()) {
+    // TODO: abstract selection of external assembler from target.
+    LLVM_DEBUG(dbgs() << "Run codegen on module "
+                      << Mod.getModuleIdentifier() << "\n");
+    SmallString<0> AsmBuffer;
+    raw_svector_ostream AsmStream(AsmBuffer);
+    legacy::PassManager CodeGenPasses;
+    CodeGenPasses.add(
+                      createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
+
+    if (Conf.PreCodeGenPassesHook)
+      Conf.PreCodeGenPassesHook(CodeGenPasses);
+    CodeGenFileType CGFileType = Conf.CGFileType;
+    if (CGFileType == CGFT_ObjectFile)
+      CGFileType = CGFT_AssemblyFile;
+    if (TM->addPassesToEmitFile(CodeGenPasses, AsmStream,
+                                DwoOut ? &DwoOut->os() : nullptr,
+                                CGFileType))
+      report_fatal_error("Failed to setup codegen");
+
+    CodeGenPasses.run(Mod);
+
+    if (Conf.CGFileType == CGFT_ObjectFile)
+      assemble(Conf, TM, AddStream, Task, Mod, AsmBuffer);
+  } else {
+    auto Stream = AddStream(Task);
+    legacy::PassManager CodeGenPasses;
+    CodeGenPasses.add(
+                      createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
+    if (Conf.PreCodeGenPassesHook)
+      Conf.PreCodeGenPassesHook(CodeGenPasses);
+    if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,
+                                DwoOut ? &DwoOut->os() : nullptr,
+                                Conf.CGFileType))
+      report_fatal_error("Failed to setup codegen");
+    CodeGenPasses.run(Mod);
+  }
 
   if (DwoOut)
     DwoOut->keep();

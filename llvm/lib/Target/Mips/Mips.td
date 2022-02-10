@@ -148,6 +148,11 @@ def FeatureMips64r6    : SubtargetFeature<"mips64r6", "MipsArchVersion",
                                 "Mips64r6 ISA Support [experimental]",
                                 [FeatureMips32r6, FeatureMips64r5,
                                  FeatureNaN2008, FeatureAbs2008]>;
+
+def FeatureRelax       : SubtargetFeature<"relax", "UseLinkerRelax",
+                                "true",
+                                "Enable linker relaxation">;
+
 def FeatureNanoMips    : SubtargetFeature<"nanomips", "MipsArchVersion",
                                 "NanoMips",
                                           "NanoMips ISA Support [experimental]",
@@ -163,10 +168,6 @@ def FeatureSym32       : SubtargetFeature<"sym32", "HasSym32", "true",
 
 def FeatureMips16  : SubtargetFeature<"mips16", "InMips16Mode", "true",
                                       "Mips16 mode">;
-
-def FeatureRelax       : SubtargetFeature<"relax", "UseLinkerRelax",
-                                "true",
-                                "Enable linker relaxation">;
 
 def FeatureDSP : SubtargetFeature<"dsp", "HasDSP", "true", "Mips DSP ASE">;
 def FeatureDSPR2 : SubtargetFeature<"dspr2", "HasDSPR2", "true",

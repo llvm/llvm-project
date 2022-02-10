@@ -137,6 +137,20 @@ void NanoMipsLinker::ConstructJob(Compilation &C, const JobAction &JA,
     assert(!Inputs.empty() && "Must have at least one input.");
     addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs[0],
                   D.getLTOMode() == LTOK_Thin);
+
+    // No object emitter on NanoMips yet, use external assembler for LTO.
+    CmdArgs.push_back(Args.MakeArgString("--plugin-opt=-lto-external-asm="
+                                         + (getToolChain()
+                                            .GetProgramPath("as"))));
+    StringRef CPUName;
+    StringRef ABIName;
+    mips::getMipsCPUAndABI(Args, getToolChain().getTriple(), CPUName, ABIName);
+
+    CmdArgs.push_back("-plugin-opt=-lto-external-asm-arg=-march");
+    std::string Arg = "-plugin-opt=-lto-external-asm-arg=";
+    Arg += CPUName.data();
+    CmdArgs.push_back(Args.MakeArgString(Arg));
+    CmdArgs.push_back("-plugin-opt=-lto-external-asm-arg=-EL");
   }
 
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))

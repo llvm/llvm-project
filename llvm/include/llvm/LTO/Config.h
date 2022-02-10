@@ -262,6 +262,13 @@ struct Config {
   /// file handle.
   Error addSaveTemps(std::string OutputFileName,
                      bool UseInputModulePath = false);
+
+  typedef std::function<std::string(unsigned Task, const Module &, StringRef)>
+      GetLTOTaskTempNameHookFn;
+  GetLTOTaskTempNameHookFn GetLTOTaskTempNameHook;
+  bool SaveAsmTemps = false;
+
+  Error addSaveAsmTemps(std::string OutputFileName, std::string SaveTempDir);
 };
 
 struct LTOLLVMDiagnosticHandler : public DiagnosticHandler {
