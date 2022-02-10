@@ -7199,6 +7199,9 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
                             (SCEV::NoWrapFlags)(SCEV::FlagNUW | SCEV::FlagNSW));
         }
       }
+      // Binary `or` is a bit-wise `umax`.
+      if (BO->LHS->getType()->isIntegerTy(1))
+        return getUMaxExpr(getSCEV(BO->LHS), getSCEV(BO->RHS));
       break;
 
     case Instruction::Xor:
