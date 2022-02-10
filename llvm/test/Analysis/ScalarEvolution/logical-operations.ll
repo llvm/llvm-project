@@ -86,7 +86,7 @@ define i1 @binary_xor.i1(i1 %x, i1 %y) {
 ; CHECK-LABEL: 'binary_xor.i1'
 ; CHECK-NEXT:  Classifying expressions for: @binary_xor.i1
 ; CHECK-NEXT:    %r = xor i1 %x, %y
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> (%x + %y) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @binary_xor.i1
 ;
   %r = xor i1 %x, %y
@@ -108,11 +108,11 @@ define i1 @binary_xor.4ops.i1(i1 %x, i1 %y, i1 %z, i1 %a) {
 ; CHECK-LABEL: 'binary_xor.4ops.i1'
 ; CHECK-NEXT:  Classifying expressions for: @binary_xor.4ops.i1
 ; CHECK-NEXT:    %t0 = xor i1 %x, %y
-; CHECK-NEXT:    --> %t0 U: full-set S: full-set
+; CHECK-NEXT:    --> (%x + %y) U: full-set S: full-set
 ; CHECK-NEXT:    %t1 = xor i1 %z, %a
-; CHECK-NEXT:    --> %t1 U: full-set S: full-set
+; CHECK-NEXT:    --> (%z + %a) U: full-set S: full-set
 ; CHECK-NEXT:    %r = xor i1 %t0, %t1
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> (%x + %y + %z + %a) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @binary_xor.4ops.i1
 ;
   %t0 = xor i1 %x, %y
