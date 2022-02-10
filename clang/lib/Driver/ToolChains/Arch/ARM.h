@@ -66,7 +66,6 @@ void getARMArchCPUFromArgs(const llvm::opt::ArgList &Args,
                            bool FromAs = false);
 void getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                           const llvm::opt::ArgList &Args,
-                          llvm::opt::ArgStringList &CmdArgs,
                           std::vector<llvm::StringRef> &Features, bool ForAS);
 int getARMSubArchVersionNumber(const llvm::Triple &Triple);
 bool isARMMProfile(const llvm::Triple &Triple);
