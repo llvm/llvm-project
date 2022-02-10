@@ -1106,6 +1106,11 @@ bool AreTypeParamCompatible(
 const Symbol &GetUsedModule(const UseDetails &);
 const Symbol *FindFunctionResult(const Symbol &);
 
+// Type compatibility predicate: are x and y effectively the same type?
+// Uses DynamicType::IsTkCompatible(), which handles the case of distinct
+// but identical derived types.
+bool AreTkCompatibleTypes(const DeclTypeSpec *x, const DeclTypeSpec *y);
+
 } // namespace Fortran::semantics
 
 #endif // FORTRAN_EVALUATE_TOOLS_H_
