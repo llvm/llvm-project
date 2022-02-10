@@ -12,10 +12,12 @@ add_header_library(
     TypeTraits.h
 )
 
-add_header_library(
-  vector
-  HDRS
-    vector.h
-  DEPENDS
-    libc.include.stdlib
-)
+if(LLVM_LIBC_INCLUDE_SCUDO OR NOT LLVM_LIBC_FULL_BUILD)
+  add_header_library(
+    vector
+    HDRS
+      vector.h
+    DEPENDS
+      libc.include.stdlib
+  )
+endif()
