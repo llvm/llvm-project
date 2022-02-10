@@ -37,8 +37,8 @@ define i1 @mul_mask_pow2_ne0_use1(i8 %x) {
 
 define i1 @mul_mask_pow2_ne0_use2(i8 %x) {
 ; CHECK-LABEL: @mul_mask_pow2_ne0_use2(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[TMP1]], 8
+; CHECK-NEXT:    [[MUL:%.*]] = shl i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[MUL]], 8
 ; CHECK-NEXT:    call void @use(i8 [[AND]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -96,7 +96,7 @@ define i1 @mul_mask_pow2_eq4(i8 %x) {
 
 define i1 @mul_mask_notpow2_ne(i8 %x) {
 ; CHECK-LABEL: @mul_mask_notpow2_ne(
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[X:%.*]], 60
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[X:%.*]], 12
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[MUL]], 12
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -121,7 +121,7 @@ define i1 @pr40493(i32 %area) {
 
 define i1 @pr40493_neg1(i32 %area) {
 ; CHECK-LABEL: @pr40493_neg1(
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[AREA:%.*]], 11
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[AREA:%.*]], 3
 ; CHECK-NEXT:    [[REM:%.*]] = and i32 [[MUL]], 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[REM]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -147,8 +147,8 @@ define i1 @pr40493_neg2(i32 %area) {
 
 define i32 @pr40493_neg3(i32 %area) {
 ; CHECK-LABEL: @pr40493_neg3(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[AREA:%.*]], 2
-; CHECK-NEXT:    [[REM:%.*]] = and i32 [[TMP1]], 4
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[AREA:%.*]], 2
+; CHECK-NEXT:    [[REM:%.*]] = and i32 [[MUL]], 4
 ; CHECK-NEXT:    ret i32 [[REM]]
 ;
   %mul = mul i32 %area, 12
@@ -222,10 +222,7 @@ define <4 x i1> @pr40493_vec5(<4 x i32> %area) {
 
 define i1 @pr51551(i32 %x, i32 %y) {
 ; CHECK-LABEL: @pr51551(
-; CHECK-NEXT:    [[T0:%.*]] = and i32 [[Y:%.*]], -8
-; CHECK-NEXT:    [[T1:%.*]] = or i32 [[T0]], 1
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[T1]], [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[MUL]], 3
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 3
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -239,10 +236,7 @@ define i1 @pr51551(i32 %x, i32 %y) {
 
 define i1 @pr51551_2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @pr51551_2(
-; CHECK-NEXT:    [[T0:%.*]] = and i32 [[Y:%.*]], -8
-; CHECK-NEXT:    [[T1:%.*]] = or i32 [[T0]], 1
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[T1]], [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[MUL]], 1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -256,9 +250,9 @@ define i1 @pr51551_2(i32 %x, i32 %y) {
 
 define i1 @pr51551_neg1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @pr51551_neg1(
-; CHECK-NEXT:    [[T0:%.*]] = and i32 [[Y:%.*]], -4
+; CHECK-NEXT:    [[T0:%.*]] = and i32 [[Y:%.*]], 4
 ; CHECK-NEXT:    [[T1:%.*]] = or i32 [[T0]], 1
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[T1]], [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[T1]], [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[MUL]], 7
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -273,8 +267,8 @@ define i1 @pr51551_neg1(i32 %x, i32 %y) {
 
 define i1 @pr51551_neg2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @pr51551_neg2(
-; CHECK-NEXT:    [[T0:%.*]] = and i32 [[Y:%.*]], -7
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[T0]], [[X:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = and i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[T0]], [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[MUL]], 7
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -288,10 +282,7 @@ define i1 @pr51551_neg2(i32 %x, i32 %y) {
 
 define i32 @pr51551_demand3bits(i32 %x, i32 %y) {
 ; CHECK-LABEL: @pr51551_demand3bits(
-; CHECK-NEXT:    [[T0:%.*]] = and i32 [[Y:%.*]], -8
-; CHECK-NEXT:    [[T1:%.*]] = or i32 [[T0]], 1
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[T1]], [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[MUL]], 7
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 7
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %t0 = and i32 %y, -7
