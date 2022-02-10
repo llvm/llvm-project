@@ -1170,13 +1170,15 @@ public:
         DP("Using default number of teams %d\n", DeviceData[DeviceId].NumTeams);
         CudaBlocksPerGrid = DeviceData[DeviceId].NumTeams;
       }
-    } else if (TeamNum > DeviceData[DeviceId].BlocksPerGrid) {
-      DP("Capping number of teams to team limit %d\n",
-         DeviceData[DeviceId].BlocksPerGrid);
-      CudaBlocksPerGrid = DeviceData[DeviceId].BlocksPerGrid;
     } else {
       DP("Using requested number of teams %d\n", TeamNum);
       CudaBlocksPerGrid = TeamNum;
+    }
+
+    if (CudaBlocksPerGrid > DeviceData[DeviceId].BlocksPerGrid) {
+      DP("Capping number of teams to team limit %d\n",
+         DeviceData[DeviceId].BlocksPerGrid);
+      CudaBlocksPerGrid = DeviceData[DeviceId].BlocksPerGrid;
     }
 
     INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
