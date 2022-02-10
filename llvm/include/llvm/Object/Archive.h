@@ -13,7 +13,6 @@
 #ifndef LLVM_OBJECT_ARCHIVE_H
 #define LLVM_OBJECT_ARCHIVE_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/fallible_iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -22,7 +21,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -30,6 +28,9 @@
 #include <vector>
 
 namespace llvm {
+
+template <typename T> class Optional;
+
 namespace object {
 
 const char ArchiveMagic[] = "!<arch>\n";
