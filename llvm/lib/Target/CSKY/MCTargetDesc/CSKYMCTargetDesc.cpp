@@ -16,6 +16,7 @@
 #include "CSKYMCAsmInfo.h"
 #include "CSKYMCCodeEmitter.h"
 #include "TargetInfo/CSKYTargetInfo.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
