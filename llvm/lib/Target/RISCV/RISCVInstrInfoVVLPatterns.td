@@ -274,6 +274,12 @@ def riscv_vwmulu_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D),
   return N->hasOneUse();
 }]>;
 
+def riscv_vwmulsu_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D),
+                                      (riscv_vwmulsu_vl node:$A, node:$B, node:$C,
+                                                        node:$D), [{
+  return N->hasOneUse();
+}]>;
+
 foreach kind = ["ADD", "UMAX", "SMAX", "UMIN", "SMIN", "AND", "OR", "XOR",
                 "FADD", "SEQ_FADD", "FMIN", "FMAX"] in
   def rvv_vecreduce_#kind#_vl : SDNode<"RISCVISD::VECREDUCE_"#kind#"_VL", SDTRVVVecReduce>;
@@ -940,6 +946,15 @@ foreach vtiTowti = AllWidenableIntVectors in {
             (!cast<Instruction>("PseudoVWMACCU_VV_" # vti.LMul.MX)
                  wti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
                  GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+  def : Pat<(wti.Vector
+             (riscv_add_vl wti.RegClass:$rd,
+                           (riscv_vwmulsu_vl_oneuse vti.RegClass:$rs1,
+                                                    (vti.Vector vti.RegClass:$rs2),
+                                                    (vti.Mask true_mask), VLOpFrag),
+                           (vti.Mask true_mask), VLOpFrag)),
+            (!cast<Instruction>("PseudoVWMACCSU_VV_" # vti.LMul.MX)
+                 wti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
+                 GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
 
   def : Pat<(wti.Vector
              (riscv_add_vl wti.RegClass:$rd,
@@ -958,6 +973,24 @@ foreach vtiTowti = AllWidenableIntVectors in {
                            (vti.Mask true_mask), VLOpFrag)),
             (!cast<Instruction>("PseudoVWMACCU_VX_" # vti.LMul.MX)
                  wti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
+                 GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+  def : Pat<(wti.Vector
+             (riscv_add_vl wti.RegClass:$rd,
+                           (riscv_vwmulsu_vl_oneuse (SplatPat XLenVT:$rs1),
+                                                    (vti.Vector vti.RegClass:$rs2),
+                                                    (vti.Mask true_mask), VLOpFrag),
+                           (vti.Mask true_mask), VLOpFrag)),
+            (!cast<Instruction>("PseudoVWMACCSU_VX_" # vti.LMul.MX)
+                 wti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
+                 GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+  def : Pat<(wti.Vector
+             (riscv_add_vl wti.RegClass:$rd,
+                           (riscv_vwmulsu_vl_oneuse (vti.Vector vti.RegClass:$rs1),
+                                                    (SplatPat XLenVT:$rs2),
+                                                    (vti.Mask true_mask), VLOpFrag),
+                           (vti.Mask true_mask), VLOpFrag)),
+            (!cast<Instruction>("PseudoVWMACCUS_VX_" # vti.LMul.MX)
+                 wti.RegClass:$rd, vti.ScalarRegClass:$rs2, vti.RegClass:$rs1,
                  GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
 }
 
