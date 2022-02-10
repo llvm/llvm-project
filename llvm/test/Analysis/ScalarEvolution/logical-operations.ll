@@ -47,7 +47,7 @@ define i1 @binary_and.i1(i1 %x, i1 %y) {
 ; CHECK-LABEL: 'binary_and.i1'
 ; CHECK-NEXT:  Classifying expressions for: @binary_and.i1
 ; CHECK-NEXT:    %r = and i1 %x, %y
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> (%x umin %y) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @binary_and.i1
 ;
   %r = and i1 %x, %y
@@ -69,11 +69,11 @@ define i1 @binary_and.4ops.i1(i1 %x, i1 %y, i1 %z, i1 %a) {
 ; CHECK-LABEL: 'binary_and.4ops.i1'
 ; CHECK-NEXT:  Classifying expressions for: @binary_and.4ops.i1
 ; CHECK-NEXT:    %t0 = and i1 %x, %y
-; CHECK-NEXT:    --> %t0 U: full-set S: full-set
+; CHECK-NEXT:    --> (%x umin %y) U: full-set S: full-set
 ; CHECK-NEXT:    %t1 = and i1 %z, %a
-; CHECK-NEXT:    --> %t1 U: full-set S: full-set
+; CHECK-NEXT:    --> (%z umin %a) U: full-set S: full-set
 ; CHECK-NEXT:    %r = and i1 %t0, %t1
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> (%x umin %y umin %z umin %a) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @binary_and.4ops.i1
 ;
   %t0 = and i1 %x, %y

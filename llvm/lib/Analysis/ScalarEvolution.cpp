@@ -7180,6 +7180,9 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
               MulCount);
         }
       }
+      // Binary `and` is a bit-wise `umin`.
+      if (BO->LHS->getType()->isIntegerTy(1))
+        return getUMinExpr(getSCEV(BO->LHS), getSCEV(BO->RHS));
       break;
 
     case Instruction::Or:
