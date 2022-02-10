@@ -826,6 +826,8 @@ static Version parseVersion(StringRef Name) {
     if (isdigit(C)) {
       V.Part[N] *= 10;
       V.Part[N] += C - '0';
+      V.Part[N] =
+          std::min<int>(V.Part[N], std::numeric_limits<uint16_t>::max());
     } else if (C == '.') {
       ++N;
       if (N >= 4)
@@ -867,7 +869,6 @@ void CodeViewDebug::emitCompilerInformation() {
   Version FrontVer = parseVersion(CompilerVersion);
   OS.AddComment("Frontend version");
   for (int N : FrontVer.Part) {
-    N = std::min<int>(N, std::numeric_limits<uint16_t>::max());
     OS.emitInt16(N);
   }
 
