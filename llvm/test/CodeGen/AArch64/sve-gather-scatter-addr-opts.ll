@@ -105,20 +105,18 @@ define void @scatter_i8_index_offset_maximum_plus_one(i8* %base, i64 %offset, <v
 ; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    mov w9, #67108864
 ; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    mov z1.d, x1
+; CHECK-NEXT:    add x10, x0, x1
 ; CHECK-NEXT:    punpklo p1.h, p0.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    uunpklo z3.d, z0.s
 ; CHECK-NEXT:    mul x8, x8, x9
 ; CHECK-NEXT:    mov w9, #33554432
-; CHECK-NEXT:    index z2.d, #0, x9
-; CHECK-NEXT:    mov z3.d, x8
-; CHECK-NEXT:    add z3.d, z2.d, z3.d
-; CHECK-NEXT:    add z2.d, z2.d, z1.d
-; CHECK-NEXT:    add z1.d, z3.d, z1.d
-; CHECK-NEXT:    uunpklo z3.d, z0.s
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    st1b { z3.d }, p1, [x0, z2.d]
-; CHECK-NEXT:    st1b { z0.d }, p0, [x0, z1.d]
+; CHECK-NEXT:    index z1.d, #0, x9
+; CHECK-NEXT:    mov z2.d, x8
+; CHECK-NEXT:    st1b { z3.d }, p1, [x10, z1.d]
+; CHECK-NEXT:    add z2.d, z1.d, z2.d
+; CHECK-NEXT:    st1b { z0.d }, p0, [x10, z2.d]
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %t1 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
@@ -140,20 +138,18 @@ define void @scatter_i8_index_offset_minimum_minus_one(i8* %base, i64 %offset, <
 ; CHECK-NEXT:    mov x9, #-2
 ; CHECK-NEXT:    lsr x8, x8, #4
 ; CHECK-NEXT:    movk x9, #64511, lsl #16
-; CHECK-NEXT:    mov z1.d, x1
+; CHECK-NEXT:    add x10, x0, x1
 ; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    mul x8, x8, x9
 ; CHECK-NEXT:    mov x9, #-33554433
-; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    index z2.d, #0, x9
-; CHECK-NEXT:    mov z3.d, x8
-; CHECK-NEXT:    add z3.d, z2.d, z3.d
-; CHECK-NEXT:    add z2.d, z2.d, z1.d
-; CHECK-NEXT:    add z1.d, z3.d, z1.d
 ; CHECK-NEXT:    uunpklo z3.d, z0.s
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    st1b { z3.d }, p1, [x0, z2.d]
-; CHECK-NEXT:    st1b { z0.d }, p0, [x0, z1.d]
+; CHECK-NEXT:    index z1.d, #0, x9
+; CHECK-NEXT:    mov z2.d, x8
+; CHECK-NEXT:    st1b { z3.d }, p1, [x10, z1.d]
+; CHECK-NEXT:    add z2.d, z1.d, z2.d
+; CHECK-NEXT:    st1b { z0.d }, p0, [x10, z2.d]
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %t1 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
@@ -174,20 +170,18 @@ define void @scatter_i8_index_stride_too_big(i8* %base, i64 %offset, <vscale x 4
 ; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    mov x9, #-9223372036854775808
 ; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    mov z1.d, x1
+; CHECK-NEXT:    add x10, x0, x1
 ; CHECK-NEXT:    punpklo p1.h, p0.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    uunpklo z3.d, z0.s
 ; CHECK-NEXT:    mul x8, x8, x9
 ; CHECK-NEXT:    mov x9, #4611686018427387904
-; CHECK-NEXT:    index z2.d, #0, x9
-; CHECK-NEXT:    mov z3.d, x8
-; CHECK-NEXT:    add z3.d, z2.d, z3.d
-; CHECK-NEXT:    add z2.d, z2.d, z1.d
-; CHECK-NEXT:    add z1.d, z3.d, z1.d
-; CHECK-NEXT:    uunpklo z3.d, z0.s
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    st1b { z3.d }, p1, [x0, z2.d]
-; CHECK-NEXT:    st1b { z0.d }, p0, [x0, z1.d]
+; CHECK-NEXT:    index z1.d, #0, x9
+; CHECK-NEXT:    mov z2.d, x8
+; CHECK-NEXT:    st1b { z3.d }, p1, [x10, z1.d]
+; CHECK-NEXT:    add z2.d, z1.d, z2.d
+; CHECK-NEXT:    st1b { z0.d }, p0, [x10, z2.d]
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0
   %t1 = shufflevector <vscale x 4 x i64> %t0, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
@@ -346,9 +340,7 @@ define <vscale x 2 x i64> @masked_gather_nxv2i64_const_with_vec_offsets(<vscale 
 define <vscale x 2 x i64> @masked_gather_nxv2i64_null_with_vec_plus_scalar_offsets(<vscale x 2 x i64> %vector_offsets, i64 %scalar_offset, <vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: masked_gather_nxv2i64_null_with_vec_plus_scalar_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    mov z1.d, x0
-; CHECK-NEXT:    add z0.d, z0.d, z1.d
+; CHECK-NEXT:    lsl x8, x0, #3
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8, z0.d, lsl #3]
 ; CHECK-NEXT:    ret
   %scalar_offset.ins = insertelement <vscale x 2 x i64> undef, i64 %scalar_offset, i64 0
@@ -362,8 +354,7 @@ define <vscale x 2 x i64> @masked_gather_nxv2i64_null_with_vec_plus_scalar_offse
 define <vscale x 2 x i64> @masked_gather_nxv2i64_null_with__vec_plus_imm_offsets(<vscale x 2 x i64> %vector_offsets, <vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: masked_gather_nxv2i64_null_with__vec_plus_imm_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    add z0.d, z0.d, #1 // =0x1
+; CHECK-NEXT:    mov w8, #8
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8, z0.d, lsl #3]
 ; CHECK-NEXT:    ret
   %scalar_offset.ins = insertelement <vscale x 2 x i64> undef, i64 1, i64 0
@@ -427,9 +418,7 @@ define void @masked_scatter_nxv2i64_const_with_vec_offsets(<vscale x 2 x i64> %v
 define void @masked_scatter_nxv2i64_null_with_vec_plus_scalar_offsets(<vscale x 2 x i64> %vector_offsets, i64 %scalar_offset, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %data) #0 {
 ; CHECK-LABEL: masked_scatter_nxv2i64_null_with_vec_plus_scalar_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    mov z2.d, x0
-; CHECK-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-NEXT:    lsl x8, x0, #3
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x8, z0.d, lsl #3]
 ; CHECK-NEXT:    ret
   %scalar_offset.ins = insertelement <vscale x 2 x i64> undef, i64 %scalar_offset, i64 0
@@ -443,8 +432,7 @@ define void @masked_scatter_nxv2i64_null_with_vec_plus_scalar_offsets(<vscale x 
 define void @masked_scatter_nxv2i64_null_with__vec_plus_imm_offsets(<vscale x 2 x i64> %vector_offsets, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %data) #0 {
 ; CHECK-LABEL: masked_scatter_nxv2i64_null_with__vec_plus_imm_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    add z0.d, z0.d, #1 // =0x1
+; CHECK-NEXT:    mov w8, #8
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x8, z0.d, lsl #3]
 ; CHECK-NEXT:    ret
   %scalar_offset.ins = insertelement <vscale x 2 x i64> undef, i64 1, i64 0
