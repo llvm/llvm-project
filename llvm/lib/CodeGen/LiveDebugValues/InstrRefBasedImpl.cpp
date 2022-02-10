@@ -1091,15 +1091,25 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
       if (L)
         NewID = ValueIDNum(BlockNo, InstrIt->second.second, *L);
     } else if (OpNo != MachineFunction::DebugOperandMemNumber) {
-      assert(OpNo < TargetInstr.getNumOperands());
-      const MachineOperand &MO = TargetInstr.getOperand(OpNo);
+      // Permit the debug-info to be completely wrong: identifying a nonexistant
+      // operand, or one that is not a register definition, means something
+      // unexpected happened during optimisation. Broken debug-info, however,
+      // shouldn't crash the compiler -- instead leave the variable value as
+      // None, which will make it appear "optimised out".
+      if (OpNo < TargetInstr.getNumOperands()) {
+        const MachineOperand &MO = TargetInstr.getOperand(OpNo);
 
-      // Today, this can only be a register.
-      assert(MO.isReg() && MO.isDef());
+        if (MO.isReg() && MO.isDef() && MO.getReg()) {
+          unsigned LocID = MTracker->getLocID(MO.getReg());
+          LocIdx L = MTracker->LocIDToLocIdx[LocID];
+          NewID = ValueIDNum(BlockNo, InstrIt->second.second, L);
+        }
+      }
 
-      unsigned LocID = MTracker->getLocID(MO.getReg());
-      LocIdx L = MTracker->LocIDToLocIdx[LocID];
-      NewID = ValueIDNum(BlockNo, InstrIt->second.second, L);
+      if (!NewID) {
+        LLVM_DEBUG(
+            { dbgs() << "Seen instruction reference to illegal operand\n"; });
+      }
     }
     // else: NewID is left as None.
   } else if (PHIIt != DebugPHINumToValue.end() && PHIIt->InstrNum == InstNo) {
@@ -1249,7 +1259,16 @@ bool InstrRefBasedLDV::transferDebugPHI(MachineInstr &MI) {
   const MachineOperand &MO = MI.getOperand(0);
   unsigned InstrNum = MI.getOperand(1).getImm();
 
-  if (MO.isReg()) {
+  auto EmitBadPHI = [this, &MI, InstrNum](void) -> bool {
+    // Helper lambda to do any accounting when we fail to find a location for
+    // a DBG_PHI. This can happen if DBG_PHIs are malformed, or refer to a
+    // dead stack slot, for example.
+    // Record a DebugPHIRecord with an empty value + location.
+    DebugPHINumToValue.push_back({InstrNum, MI.getParent(), None, None});
+    return true;
+  };
+
+  if (MO.isReg() && MO.getReg()) {
     // The value is whatever's currently in the register. Read and record it,
     // to be analysed later.
     Register Reg = MO.getReg();
@@ -1261,15 +1280,14 @@ bool InstrRefBasedLDV::transferDebugPHI(MachineInstr &MI) {
     // Ensure this register is tracked.
     for (MCRegAliasIterator RAI(MO.getReg(), TRI, true); RAI.isValid(); ++RAI)
       MTracker->lookupOrTrackRegister(*RAI);
-  } else {
+  } else if (MO.isFI()) {
     // The value is whatever's in this stack slot.
-    assert(MO.isFI());
     unsigned FI = MO.getIndex();
 
     // If the stack slot is dead, then this was optimized away.
     // FIXME: stack slot colouring should account for slots that get merged.
     if (MFI->isDeadObjectIndex(FI))
-      return true;
+      return EmitBadPHI();
 
     // Identify this spill slot, ensure it's tracked.
     Register Base;
@@ -1280,7 +1298,7 @@ bool InstrRefBasedLDV::transferDebugPHI(MachineInstr &MI) {
     // We might be able to find a value, but have chosen not to, to avoid
     // tracking too much stack information.
     if (!SpillNo)
-      return true;
+      return EmitBadPHI();
 
     // Problem: what value should we extract from the stack? LLVM does not
     // record what size the last store to the slot was, and it would become
@@ -1315,8 +1333,17 @@ bool InstrRefBasedLDV::transferDebugPHI(MachineInstr &MI) {
     }
 
     // Record this DBG_PHI for later analysis.
-    auto DbgPHI = DebugPHIRecord({InstrNum, MI.getParent(), *Result, *SpillLoc});
+    auto DbgPHI =
+        DebugPHIRecord({InstrNum, MI.getParent(), *Result, *SpillLoc});
     DebugPHINumToValue.push_back(DbgPHI);
+  } else {
+    // Else: if the operand is neither a legal register or a stack slot, then
+    // we're being fed illegal debug-info. Record an empty PHI, so that any
+    // debug users trying to read this number will be put off trying to
+    // interpret the value.
+    LLVM_DEBUG(
+        { dbgs() << "Seen DBG_PHI with unrecognised operand format\n"; });
+    return EmitBadPHI();
   }
 
   return true;
@@ -3165,7 +3192,10 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   // either live-through machine values, or PHIs.
   for (auto &DBG_PHI : DebugPHINumToValue) {
     // Identify unresolved block-live-ins.
-    ValueIDNum &Num = DBG_PHI.ValueRead;
+    if (!DBG_PHI.ValueRead)
+      continue;
+
+    ValueIDNum &Num = *DBG_PHI.ValueRead;
     if (!Num.isPHI())
       continue;
 
@@ -3566,17 +3596,24 @@ Optional<ValueIDNum> InstrRefBasedLDV::resolveDbgPHIsImpl(
   if (LowerIt == UpperIt)
     return None;
 
+  // If any DBG_PHIs referred to a location we didn't understand, don't try to
+  // compute a value. There might be scenarios where we could recover a value
+  // for some range of DBG_INSTR_REFs, but at this point we can have high
+  // confidence that we've seen a bug.
+  auto DBGPHIRange = make_range(LowerIt, UpperIt);
+  for (const DebugPHIRecord &DBG_PHI : DBGPHIRange)
+    if (!DBG_PHI.ValueRead)
+      return None;
+
   // If there's only one DBG_PHI, then that is our value number.
   if (std::distance(LowerIt, UpperIt) == 1)
-    return LowerIt->ValueRead;
-
-  auto DBGPHIRange = make_range(LowerIt, UpperIt);
+    return *LowerIt->ValueRead;
 
   // Pick out the location (physreg, slot) where any PHIs must occur. It's
   // technically possible for us to merge values in different registers in each
   // block, but highly unlikely that LLVM will generate such code after register
   // allocation.
-  LocIdx Loc = LowerIt->ReadLoc;
+  LocIdx Loc = *LowerIt->ReadLoc;
 
   // We have several DBG_PHIs, and a use position (the Here inst). All each
   // DBG_PHI does is identify a value at a program position. We can treat each
@@ -3595,7 +3632,7 @@ Optional<ValueIDNum> InstrRefBasedLDV::resolveDbgPHIsImpl(
   // for the SSAUpdater.
   for (const auto &DBG_PHI : DBGPHIRange) {
     LDVSSABlock *Block = Updater.getSSALDVBlock(DBG_PHI.MBB);
-    const ValueIDNum &Num = DBG_PHI.ValueRead;
+    const ValueIDNum &Num = *DBG_PHI.ValueRead;
     AvailableValues.insert(std::make_pair(Block, Num.asU64()));
   }
 
@@ -3629,7 +3666,7 @@ Optional<ValueIDNum> InstrRefBasedLDV::resolveDbgPHIsImpl(
   // Define all the input DBG_PHI values in ValidatedValues.
   for (const auto &DBG_PHI : DBGPHIRange) {
     LDVSSABlock *Block = Updater.getSSALDVBlock(DBG_PHI.MBB);
-    const ValueIDNum &Num = DBG_PHI.ValueRead;
+    const ValueIDNum &Num = *DBG_PHI.ValueRead;
     ValidatedValues.insert(std::make_pair(Block, Num));
   }
 
