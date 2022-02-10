@@ -107,6 +107,11 @@ C-SKY
 * `C-SKY Architecture User Guide <https://github.com/c-sky/csky-doc/blob/master/CSKY%20Architecture%20user_guide.pdf>`_
 * `C-SKY V2 ABI <https://github.com/c-sky/csky-doc/blob/master/C-SKY_V2_CPU_Applications_Binary_Interface_Standards_Manual.pdf>`_
 
+LoongArch
+---------
+* `LoongArch Reference Manual - Volume 1: Basic Architecture <https://loongson.github.io/LoongArch-Documentation/LoongArch-Vol1-EN.html>`_
+* `LoongArch ELF ABI specification <https://loongson.github.io/LoongArch-Documentation/LoongArch-ELF-ABI-EN.html>`_
+
 SPARC
 -----
 
