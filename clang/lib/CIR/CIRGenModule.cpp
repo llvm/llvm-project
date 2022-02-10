@@ -652,6 +652,7 @@ CIRGenModule::buildBranchThroughCleanup(JumpDest &Dest, LabelDecl *L,
 void CIRGenModule::LexicalScopeGuard::cleanup() {
   auto *localScope = CGM.currLexScope;
 
+  // Handle pending gotos and the solved labels in this scope.
   while (!localScope->PendingGotos.empty()) {
     auto gotoInfo = localScope->PendingGotos.back();
     // FIXME: Currently only support resolving goto labels inside the
@@ -665,8 +666,42 @@ void CIRGenModule::LexicalScopeGuard::cleanup() {
     g.setSuccessor(CGM.LabelMap[gotoInfo.second].getBlock());
     localScope->PendingGotos.pop_back();
   }
-
   localScope->SolvedLabels.clear();
+
+  // Do not insert the cleanup block unecessarily, this doesn't really need
+  // to be here (should be a separate pass), but it helps keeping small
+  // testcases minimal for now.
+  auto &builder = CGM.builder;
+  if (!builder.getInsertionBlock()->isEntryBlock()) {
+    // If the current block doesn't have a terminator, add a branch to the
+    // cleanup block, where the actual cir.return/yield happens (cleanup block).
+    if (!builder.getBlock()->back().hasTrait<mlir::OpTrait::IsTerminator>())
+      builder.create<BrOp>(builder.getBlock()->back().getLoc(),
+                           localScope->CleanupBlock);
+
+    // Set the insertion point to the end of the cleanup block and insert
+    // the return instruction.
+    builder.setInsertionPointToEnd(localScope->CleanupBlock);
+  } else {
+    assert(localScope->CleanupBlock->empty() && "not empty");
+    assert(
+        (builder.getBlock()->empty() ||
+         !builder.getBlock()->back().hasTrait<mlir::OpTrait::IsTerminator>()) &&
+        "entry basic block already has a terminator?");
+    // Do not even emit cleanup blocks.
+    localScope->CleanupBlock->erase();
+  }
+
+  auto *CurFn = CGM.CurCGF;
+  if (localScope->Depth == 0) { // end of function
+    // FIXME: this currently assumes only one cir.return in the function.
+    builder.create<ReturnOp>(CurFn->RetLoc ? *(CurFn->RetLoc)
+                                           : localScope->EndLoc,
+                             CurFn->RetValue ? ArrayRef(CurFn->RetValue)
+                                             : ArrayRef<mlir::Value>());
+  } else { // end of other local scope
+    builder.create<YieldOp>(localScope->EndLoc);
+  }
 }
 
 mlir::LogicalResult CIRGenModule::buildGotoStmt(const GotoStmt &S) {
@@ -1150,13 +1185,19 @@ mlir::LogicalResult CIRGenModule::buildIfOnBoolExpr(const Expr *cond,
       loc, condV, elseS,
       /*thenBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
+        auto bLoc = getLoc(thenS->getSourceRange().getBegin());
+        auto eLoc = getLoc(thenS->getSourceRange().getEnd());
+        LexicalScopeContext lexScope{builder, bLoc, eLoc};
+        LexicalScopeGuard lexThenGuard{*this, &lexScope};
         resThen = buildStmt(thenS, /*useCurrentScope=*/true);
-        builder.create<YieldOp>(getLoc(thenS->getSourceRange().getEnd()));
       },
       /*elseBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
+        auto bLoc = getLoc(elseS->getSourceRange().getBegin());
+        auto eLoc = getLoc(elseS->getSourceRange().getEnd());
+        LexicalScopeContext lexScope{builder, bLoc, eLoc};
+        LexicalScopeGuard lexElseGuard{*this, &lexScope};
         resElse = buildStmt(elseS, /*useCurrentScope=*/true);
-        builder.create<YieldOp>(getLoc(elseS->getSourceRange().getEnd()));
       });
 
   return mlir::LogicalResult::success(resThen.succeeded() &&
@@ -1201,12 +1242,14 @@ mlir::LogicalResult CIRGenModule::buildIfStmt(const IfStmt &S) {
   // LexicalScope ConditionScope(*this, S.getCond()->getSourceRange());
   // The if scope contains the full source range for IfStmt.
   auto scopeLoc = getLoc(S.getSourceRange());
+  auto scopeLocBegin = getLoc(S.getSourceRange().getBegin());
   auto scopeLocEnd = getLoc(S.getSourceRange().getEnd());
   builder.create<mlir::cir::ScopeOp>(
       scopeLoc, mlir::TypeRange(), /*scopeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
+        LexicalScopeContext lexScope{builder, scopeLocBegin, scopeLocEnd};
+        LexicalScopeGuard lexIfScopeGuard{*this, &lexScope};
         res = ifStmtBuilder();
-        builder.create<YieldOp>(scopeLocEnd);
       });
 
   return res;
@@ -1415,8 +1458,9 @@ mlir::LogicalResult CIRGenModule::buildCompoundStmt(const CompoundStmt &S) {
   builder.create<mlir::cir::ScopeOp>(
       locBegin, mlir::TypeRange(), /*scopeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
+        LexicalScopeContext lexScope{builder, locBegin, locEnd};
+        LexicalScopeGuard lexScopeGuard{*this, &lexScope};
         res = compoundStmtBuilder();
-        builder.create<YieldOp>(locEnd);
       });
 
   return res;
@@ -1489,11 +1533,12 @@ mlir::FuncOp CIRGenModule::buildFunction(const FunctionDecl *FD) {
   // function body, it will be used throughout the codegen to create
   // operations in this function.
   builder.setInsertionPointToStart(entryBlock);
+  auto FnBeginLoc = getLoc(FD->getBody()->getEndLoc());
   auto FnEndLoc = getLoc(FD->getBody()->getEndLoc());
 
   // Initialize lexical scope information.
   {
-    LexicalScopeContext lexScope{builder};
+    LexicalScopeContext lexScope{builder, FnBeginLoc, FnEndLoc};
     LexicalScopeGuard scopeGuard{*this, &lexScope};
 
     // Declare all the function arguments in the symbol table.
@@ -1522,34 +1567,6 @@ mlir::FuncOp CIRGenModule::buildFunction(const FunctionDecl *FD) {
       return nullptr;
     }
     assert(builder.getInsertionBlock() && "Should be valid");
-
-    // Do not insert the cleanup block unecessarily, this doesn't really need
-    // to be here (should be a separate pass), but it helps keeping small
-    // testcases minimal for now.
-    if (!builder.getInsertionBlock()->isEntryBlock()) {
-      // If the current block doesn't have a terminator, add a branch to the
-      // cleanup block, where the actual cir.return happens (cleanup block).
-      if (!builder.getBlock()->back().hasTrait<mlir::OpTrait::IsTerminator>())
-        builder.create<BrOp>(FnEndLoc, currLexScope->CleanupBlock);
-
-      // Set the insertion point to the end of the cleanup block and insert
-      // the return instruction.
-      // FIXME: this currently assumes only one cir.return in the function.
-      builder.setInsertionPointToEnd(currLexScope->CleanupBlock);
-    } else {
-      // Do not even emit cleanup block
-      assert(currLexScope->CleanupBlock->empty() && "not empty");
-      assert((builder.getBlock()->empty() ||
-              !builder.getBlock()
-                   ->back()
-                   .hasTrait<mlir::OpTrait::IsTerminator>()) &&
-             "entry basic block already has a terminator?");
-      currLexScope->CleanupBlock->erase();
-    }
-
-    builder.create<ReturnOp>(CurCGF->RetLoc ? *(CurCGF->RetLoc) : FnEndLoc,
-                             CurCGF->RetValue ? ArrayRef(CurCGF->RetValue)
-                                              : ArrayRef<mlir::Value>());
   }
 
   if (mlir::failed(function.verifyBody()))
