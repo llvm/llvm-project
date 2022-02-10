@@ -176,8 +176,7 @@ contains
     procedure(s), pointer :: p, q
     procedure(), pointer :: r
     external :: s_external
-    !ERROR: Procedure pointer 'p' with explicit interface may not be associated with procedure designator 's_external' with implicit interface
-    p => s_external
+    p => s_external ! OK for a pointer with an explicit interface to be associated with a procedure with an implicit interface
     r => s_module ! OK for a pointer with implicit interface to be associated with a procedure with an explicit interface.  See 10.2.2.4 (3)
   end
 

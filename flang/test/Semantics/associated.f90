@@ -67,6 +67,7 @@ subroutine assoc()
     procedure(subrInt) :: subProc
     procedure(subrInt), pointer :: subProcPointer
     procedure(), pointer :: implicitProcPointer
+    procedure(subrCannotBeCalledfromImplicit), pointer :: cannotBeCalledfromImplicitPointer
     logical :: lVar
     type(t1) :: t1x
     type(t1), target :: t1xtarget
@@ -158,10 +159,8 @@ subroutine assoc()
     realProcPointer1 => intProc
     !ERROR: Procedure pointer 'realprocpointer1' associated with incompatible procedure designator 'intproc'
     lvar = associated(realProcPointer1, intProc)
-    !ERROR: Procedure pointer 'subprocpointer' with explicit interface may not be associated with procedure designator 'externalproc' with implicit interface
-    subProcPointer => externalProc
-    !ERROR: Procedure pointer 'subprocpointer' with explicit interface may not be associated with procedure designator 'externalproc' with implicit interface
-    lvar = associated(subProcPointer, externalProc)
+    subProcPointer => externalProc ! OK to associate a procedure pointer  with an explicit interface to a procedure with an implicit interface
+    lvar = associated(subProcPointer, externalProc) ! OK to associate a procedure pointer with an explicit interface to a procedure with an implicit interface
     !ERROR: Subroutine pointer 'subprocpointer' may not be associated with function designator 'intproc'
     subProcPointer => intProc
     !ERROR: Subroutine pointer 'subprocpointer' may not be associated with function designator 'intproc'
@@ -174,5 +173,9 @@ subroutine assoc()
     lvar = associated(implicitProcPointer, subr) ! OK
     !ERROR: Procedure pointer 'implicitprocpointer' with implicit interface may not be associated with procedure designator 'subrcannotbecalledfromimplicit' with explicit interface that cannot be called via an implicit interface
     lvar = associated(implicitProcPointer, subrCannotBeCalledFromImplicit)
+    !ERROR: Procedure pointer 'cannotbecalledfromimplicitpointer' with explicit interface that cannot be called via an implicit interface cannot be associated with procedure designator with an implicit interface
+    cannotBeCalledfromImplicitPointer => externalProc
+    !ERROR: Procedure pointer 'cannotbecalledfromimplicitpointer' with explicit interface that cannot be called via an implicit interface cannot be associated with procedure designator with an implicit interface
+    lvar = associated(cannotBeCalledfromImplicitPointer, externalProc)
   end subroutine test
 end subroutine assoc
