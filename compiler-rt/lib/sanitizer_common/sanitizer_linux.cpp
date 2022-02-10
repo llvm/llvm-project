@@ -499,7 +499,18 @@ bool FileExists(const char *filename) {
   return S_ISREG(st.st_mode);
 }
 
-#if !SANITIZER_NETBSD
+bool DirExists(const char *path) {
+  struct stat st;
+#  if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
+  if (internal_syscall(SYSCALL(newfstatat), AT_FDCWD, path, &st, 0))
+#  else
+  if (internal_stat(path, &st))
+#  endif
+    return false;
+  return S_ISDIR(st.st_mode);
+}
+
+#  if !SANITIZER_NETBSD
 tid_t GetTid() {
 #if SANITIZER_FREEBSD
   long Tid;

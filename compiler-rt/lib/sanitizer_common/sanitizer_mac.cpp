@@ -393,6 +393,13 @@ bool FileExists(const char *filename) {
   return S_ISREG(st.st_mode);
 }
 
+bool DirExists(const char *path) {
+  struct stat st;
+  if (stat(path, &st))
+    return false;
+  return S_ISDIR(st.st_mode);
+}
+
 tid_t GetTid() {
   tid_t tid;
   pthread_threadid_np(nullptr, &tid);
