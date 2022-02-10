@@ -87,7 +87,7 @@ same node. :ref:`loopinfo` reports this as:
 
 .. code-block:: console
 
-  $ opt input.ll -loops -analyze
+  $ opt input.ll -passes='print<loops>'
   Loop at depth 1 containing: %for.body<header><latch><exiting>
 
 
