@@ -5040,6 +5040,10 @@ struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
         Reconstitutable = false;
         return false;
       }
+      if (!ED->isExternallyVisible()) {
+        Reconstitutable = false;
+        return false;
+      }
     }
     return true;
   }
