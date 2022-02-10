@@ -56,25 +56,25 @@
 # RUN: llvm-objdump --macho --all-headers %t/out| FileCheck --check-prefix=NO-ADHOC %s
 
 
-# RUN: ld64.lld -arch arm64 -platform_version ios-simulator 14.0 15.0 -execute -o %t/out %t/main-arm64-sim.o -syslibroot %S/Inputs/iPhoneSimulator.sdk -lSystem
+# RUN: %no-arg-lld -arch arm64 -platform_version ios-simulator 14.0 15.0 -execute -o %t/out %t/main-arm64-sim.o -syslibroot %S/Inputs/iPhoneSimulator.sdk -lSystem
 # RUN: llvm-objdump --macho --all-headers %t/out | FileCheck --check-prefix=NO-ADHOC %s
-# RUN: ld64.lld -arch arm64 -platform_version ios-simulator 14.0 15.0 -dylib   -o %t/out %t/foo-arm64-sim.o
+# RUN: %no-arg-lld -arch arm64 -platform_version ios-simulator 14.0 15.0 -dylib   -o %t/out %t/foo-arm64-sim.o
 # RUN: llvm-objdump --macho --all-headers  %t/out| FileCheck --check-prefix=NO-ADHOC %s
-# RUN: ld64.lld -arch arm64 -platform_version ios-simulator 14.0 15.0 -bundle  -o %t/out %t/foo-arm64-sim.o
+# RUN: %no-arg-lld -arch arm64 -platform_version ios-simulator 14.0 15.0 -bundle  -o %t/out %t/foo-arm64-sim.o
 # RUN: llvm-objdump --macho --all-headers  %t/out| FileCheck --check-prefix=NO-ADHOC %s
 
-# RUN: ld64.lld -arch arm64 -platform_version ios-simulator 14.0 15.0 -execute -adhoc_codesign -o %t/out %t/main-arm64-sim.o -syslibroot %S/Inputs/iPhoneSimulator.sdk -lSystem
+# RUN: %no-arg-lld -arch arm64 -platform_version ios-simulator 14.0 15.0 -execute -adhoc_codesign -o %t/out %t/main-arm64-sim.o -syslibroot %S/Inputs/iPhoneSimulator.sdk -lSystem
 # RUN: llvm-objdump --macho --all-headers %t/out| FileCheck --check-prefix=ADHOC %s
-# RUN: ld64.lld -arch arm64 -platform_version ios-simulator 14.0 15.0 -dylib   -adhoc_codesign -o %t/out %t/foo-arm64-sim.o
+# RUN: %no-arg-lld -arch arm64 -platform_version ios-simulator 14.0 15.0 -dylib   -adhoc_codesign -o %t/out %t/foo-arm64-sim.o
 # RUN: llvm-objdump --macho --all-headers %t/out| FileCheck --check-prefix=ADHOC %s
-# RUN: ld64.lld -arch arm64 -platform_version ios-simulator 14.0 15.0 -bundle  -adhoc_codesign -o %t/out %t/foo-arm64-sim.o
+# RUN: %no-arg-lld -arch arm64 -platform_version ios-simulator 14.0 15.0 -bundle  -adhoc_codesign -o %t/out %t/foo-arm64-sim.o
 # RUN: llvm-objdump --macho --all-headers %t/out| FileCheck --check-prefix=ADHOC %s
 
-# RUN: ld64.lld -lSystem -arch arm64 -platform_version ios-simulator 14.0 15.0 -execute -no_adhoc_codesign -o %t/out %t/main-arm64-sim.o -syslibroot %S/Inputs/iPhoneSimulator.sdk
+# RUN: %no-arg-lld -lSystem -arch arm64 -platform_version ios-simulator 14.0 15.0 -execute -no_adhoc_codesign -o %t/out %t/main-arm64-sim.o -syslibroot %S/Inputs/iPhoneSimulator.sdk
 # RUN: llvm-objdump --macho --all-headers %t/out| FileCheck --check-prefix=NO-ADHOC %s
-# RUN: ld64.lld -arch arm64 -platform_version ios-simulator 14.0 15.0 -dylib   -no_adhoc_codesign -o %t/out %t/foo-arm64-sim.o
+# RUN: %no-arg-lld -arch arm64 -platform_version ios-simulator 14.0 15.0 -dylib   -no_adhoc_codesign -o %t/out %t/foo-arm64-sim.o
 # RUN: llvm-objdump --macho --all-headers %t/out| FileCheck --check-prefix=NO-ADHOC %s
-# RUN: ld64.lld -arch arm64 -platform_version ios-simulator 14.0 15.0 -bundle  -no_adhoc_codesign -o %t/out %t/foo-arm64-sim.o
+# RUN: %no-arg-lld -arch arm64 -platform_version ios-simulator 14.0 15.0 -bundle  -no_adhoc_codesign -o %t/out %t/foo-arm64-sim.o
 # RUN: llvm-objdump --macho --all-headers %t/out| FileCheck --check-prefix=NO-ADHOC %s
 
 # ADHOC:          cmd LC_CODE_SIGNATURE
