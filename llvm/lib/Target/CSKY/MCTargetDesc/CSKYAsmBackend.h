@@ -11,6 +11,7 @@
 
 #include "MCTargetDesc/CSKYFixupKinds.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 
 namespace llvm {

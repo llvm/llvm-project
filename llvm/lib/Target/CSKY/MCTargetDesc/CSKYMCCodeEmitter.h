@@ -20,6 +20,8 @@
 
 namespace llvm {
 
+class MCInstrInfo;
+
 class CSKYMCCodeEmitter : public MCCodeEmitter {
   MCContext &Ctx;
   const MCInstrInfo &MII;

@@ -13,6 +13,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
