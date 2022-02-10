@@ -32,8 +32,12 @@ class ScriptedProcess:
         """
         self.target = None
         self.args = None
+        self.arch = None
         if isinstance(target, lldb.SBTarget) and target.IsValid():
             self.target = target
+            triple = self.target.triple
+            if triple:
+                self.arch = triple.split('-')[0]
         if isinstance(args, lldb.SBStructuredData) and args.IsValid():
             self.args = args
 
@@ -201,19 +205,21 @@ class ScriptedThread:
     """
 
     @abstractmethod
-    def __init__(self, process, args):
+    def __init__(self, scripted_process, args):
         """ Construct a scripted thread.
 
         Args:
-            process (lldb.SBProcess): The scripted process owning this thread.
+            process (ScriptedProcess): The scripted process owning this thread.
             args (lldb.SBStructuredData): A Dictionary holding arbitrary
                 key/value pairs used by the scripted thread.
         """
         self.target = None
+        self.scripted_process = None
         self.process = None
         self.args = None
-        if isinstance(process, ScriptedProcess):
-            self.target = process.target
+        if isinstance(scripted_process, ScriptedProcess):
+            self.target = scripted_process.target
+            self.scripted_process = scripted_process
             self.process = self.target.GetProcess()
 
         self.id = None
@@ -302,73 +308,13 @@ class ScriptedThread:
     def get_register_info(self):
         if self.register_info is None:
             self.register_info = dict()
-            triple = self.target.triple
-            if triple:
-                arch = triple.split('-')[0]
-                if arch == 'x86_64':
-                    self.register_info['sets'] = ['General Purpose Registers']
-                    self.register_info['registers'] = [
-                        {'name': 'rax', 'bitsize': 64, 'offset': 0, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 0, 'dwarf': 0},
-                        {'name': 'rbx', 'bitsize': 64, 'offset': 8, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 3, 'dwarf': 3},
-                        {'name': 'rcx', 'bitsize': 64, 'offset': 16, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 2, 'dwarf': 2, 'generic': 'arg4', 'alt-name': 'arg4'},
-                        {'name': 'rdx', 'bitsize': 64, 'offset': 24, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 1, 'dwarf': 1, 'generic': 'arg3', 'alt-name': 'arg3'},
-                        {'name': 'rdi', 'bitsize': 64, 'offset': 32, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 5, 'dwarf': 5, 'generic': 'arg1', 'alt-name': 'arg1'},
-                        {'name': 'rsi', 'bitsize': 64, 'offset': 40, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 4, 'dwarf': 4, 'generic': 'arg2', 'alt-name': 'arg2'},
-                        {'name': 'rbp', 'bitsize': 64, 'offset': 48, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 6, 'dwarf': 6, 'generic': 'fp', 'alt-name': 'fp'},
-                        {'name': 'rsp', 'bitsize': 64, 'offset': 56, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 7, 'dwarf': 7, 'generic': 'sp', 'alt-name': 'sp'},
-                        {'name': 'r8', 'bitsize': 64, 'offset': 64, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 8, 'dwarf': 8, 'generic': 'arg5', 'alt-name': 'arg5'},
-                        {'name': 'r9', 'bitsize': 64, 'offset': 72, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 9, 'dwarf': 9, 'generic': 'arg6', 'alt-name': 'arg6'},
-                        {'name': 'r10', 'bitsize': 64, 'offset': 80, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 10, 'dwarf': 10},
-                        {'name': 'r11', 'bitsize': 64, 'offset': 88, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 11, 'dwarf': 11},
-                        {'name': 'r12', 'bitsize': 64, 'offset': 96, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 12, 'dwarf': 12},
-                        {'name': 'r13', 'bitsize': 64, 'offset': 104, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 13, 'dwarf': 13},
-                        {'name': 'r14', 'bitsize': 64, 'offset': 112, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 14, 'dwarf': 14},
-                        {'name': 'r15', 'bitsize': 64, 'offset': 120, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 15, 'dwarf': 15},
-                        {'name': 'rip', 'bitsize': 64, 'offset': 128, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 16, 'dwarf': 16, 'generic': 'pc', 'alt-name': 'pc'},
-                        {'name': 'rflags', 'bitsize': 64, 'offset': 136, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'generic': 'flags', 'alt-name': 'flags'},
-                        {'name': 'cs', 'bitsize': 64, 'offset': 144, 'encoding': 'uint', 'format': 'hex', 'set': 0},
-                        {'name': 'fs', 'bitsize': 64, 'offset': 152, 'encoding': 'uint', 'format': 'hex', 'set': 0},
-                        {'name': 'gs', 'bitsize': 64, 'offset': 160, 'encoding': 'uint', 'format': 'hex', 'set': 0}
-                    ]
-                elif 'arm64' in arch:
-                    self.register_info['sets'] = ['General Purpose Registers']
-                    self.register_info['registers'] = [
-                        {'name': 'x0',   'bitsize': 64, 'offset': 0,   'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 0,  'dwarf': 0,  'generic': 'arg0', 'alt-name': 'arg0'},
-                        {'name': 'x1',   'bitsize': 64, 'offset': 8,   'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 1,  'dwarf': 1,  'generic': 'arg1', 'alt-name': 'arg1'},
-                        {'name': 'x2',   'bitsize': 64, 'offset': 16,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 2,  'dwarf': 2,  'generic': 'arg2', 'alt-name': 'arg2'},
-                        {'name': 'x3',   'bitsize': 64, 'offset': 24,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 3,  'dwarf': 3,  'generic': 'arg3', 'alt-name': 'arg3'},
-                        {'name': 'x4',   'bitsize': 64, 'offset': 32,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 4,  'dwarf': 4,  'generic': 'arg4', 'alt-name': 'arg4'},
-                        {'name': 'x5',   'bitsize': 64, 'offset': 40,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 5,  'dwarf': 5,  'generic': 'arg5', 'alt-name': 'arg5'},
-                        {'name': 'x6',   'bitsize': 64, 'offset': 48,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 6,  'dwarf': 6,  'generic': 'arg6', 'alt-name': 'arg6'},
-                        {'name': 'x7',   'bitsize': 64, 'offset': 56,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 7,  'dwarf': 7,  'generic': 'arg7', 'alt-name': 'arg7'},
-                        {'name': 'x8',   'bitsize': 64, 'offset': 64,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 8,  'dwarf': 8 },
-                        {'name': 'x9',   'bitsize': 64, 'offset': 72,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 9,  'dwarf': 9 },
-                        {'name': 'x10',  'bitsize': 64, 'offset': 80,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 10, 'dwarf': 10},
-                        {'name': 'x11',  'bitsize': 64, 'offset': 88,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 11, 'dwarf': 11},
-                        {'name': 'x12',  'bitsize': 64, 'offset': 96,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 12, 'dwarf': 12},
-                        {'name': 'x13',  'bitsize': 64, 'offset': 104, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 13, 'dwarf': 13},
-                        {'name': 'x14',  'bitsize': 64, 'offset': 112, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 14, 'dwarf': 14},
-                        {'name': 'x15',  'bitsize': 64, 'offset': 120, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 15, 'dwarf': 15},
-                        {'name': 'x16',  'bitsize': 64, 'offset': 128, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 16, 'dwarf': 16},
-                        {'name': 'x17',  'bitsize': 64, 'offset': 136, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 17, 'dwarf': 17},
-                        {'name': 'x18',  'bitsize': 64, 'offset': 144, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 18, 'dwarf': 18},
-                        {'name': 'x19',  'bitsize': 64, 'offset': 152, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 19, 'dwarf': 19},
-                        {'name': 'x20',  'bitsize': 64, 'offset': 160, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 20, 'dwarf': 20},
-                        {'name': 'x21',  'bitsize': 64, 'offset': 168, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 21, 'dwarf': 21},
-                        {'name': 'x22',  'bitsize': 64, 'offset': 176, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 22, 'dwarf': 22},
-                        {'name': 'x23',  'bitsize': 64, 'offset': 184, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 23, 'dwarf': 23},
-                        {'name': 'x24',  'bitsize': 64, 'offset': 192, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 24, 'dwarf': 24},
-                        {'name': 'x25',  'bitsize': 64, 'offset': 200, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 25, 'dwarf': 25},
-                        {'name': 'x26',  'bitsize': 64, 'offset': 208, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 26, 'dwarf': 26},
-                        {'name': 'x27',  'bitsize': 64, 'offset': 216, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 27, 'dwarf': 27},
-                        {'name': 'x28',  'bitsize': 64, 'offset': 224, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 28, 'dwarf': 28},
-                        {'name': 'x29',  'bitsize': 64, 'offset': 232, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 29, 'dwarf': 29, 'generic': 'fp', 'alt-name': 'fp'},
-                        {'name': 'x30',  'bitsize': 64, 'offset': 240, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 30, 'dwarf': 30, 'generic': 'lr', 'alt-name': 'lr'},
-                        {'name': 'sp',   'bitsize': 64, 'offset': 248, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 31, 'dwarf': 31, 'generic': 'sp', 'alt-name': 'sp'},
-                        {'name': 'pc',   'bitsize': 64, 'offset': 256, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 32, 'dwarf': 32, 'generic': 'pc', 'alt-name': 'pc'},
-                        {'name': 'cpsr', 'bitsize': 32, 'offset': 264, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 33, 'dwarf': 33}
-                    ]
-                else: raise ValueError('Unknown architecture', arch)
+            if self.scripted_process.arch == 'x86_64':
+                self.register_info['sets'] = ['General Purpose Registers']
+                self.register_info['registers'] = INTEL64_GPR
+            elif 'arm64' in self.scripted_process.arch:
+                self.register_info['sets'] = ['General Purpose Registers']
+                self.register_info['registers'] = ARM64_GPR
+            else: raise ValueError('Unknown architecture', self.scripted_process.arch)
         return self.register_info
 
     @abstractmethod
@@ -379,3 +325,64 @@ class ScriptedThread:
             str: A byte representing all register's value.
         """
         pass
+
+ARM64_GPR = [ {'name': 'x0',   'bitsize': 64, 'offset': 0,   'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 0,  'dwarf': 0,  'generic': 'arg0', 'alt-name': 'arg0'},
+              {'name': 'x1',   'bitsize': 64, 'offset': 8,   'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 1,  'dwarf': 1,  'generic': 'arg1', 'alt-name': 'arg1'},
+              {'name': 'x2',   'bitsize': 64, 'offset': 16,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 2,  'dwarf': 2,  'generic': 'arg2', 'alt-name': 'arg2'},
+              {'name': 'x3',   'bitsize': 64, 'offset': 24,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 3,  'dwarf': 3,  'generic': 'arg3', 'alt-name': 'arg3'},
+              {'name': 'x4',   'bitsize': 64, 'offset': 32,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 4,  'dwarf': 4,  'generic': 'arg4', 'alt-name': 'arg4'},
+              {'name': 'x5',   'bitsize': 64, 'offset': 40,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 5,  'dwarf': 5,  'generic': 'arg5', 'alt-name': 'arg5'},
+              {'name': 'x6',   'bitsize': 64, 'offset': 48,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 6,  'dwarf': 6,  'generic': 'arg6', 'alt-name': 'arg6'},
+              {'name': 'x7',   'bitsize': 64, 'offset': 56,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 7,  'dwarf': 7,  'generic': 'arg7', 'alt-name': 'arg7'},
+              {'name': 'x8',   'bitsize': 64, 'offset': 64,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 8,  'dwarf': 8 },
+              {'name': 'x9',   'bitsize': 64, 'offset': 72,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 9,  'dwarf': 9 },
+              {'name': 'x10',  'bitsize': 64, 'offset': 80,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 10, 'dwarf': 10},
+              {'name': 'x11',  'bitsize': 64, 'offset': 88,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 11, 'dwarf': 11},
+              {'name': 'x12',  'bitsize': 64, 'offset': 96,  'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 12, 'dwarf': 12},
+              {'name': 'x13',  'bitsize': 64, 'offset': 104, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 13, 'dwarf': 13},
+              {'name': 'x14',  'bitsize': 64, 'offset': 112, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 14, 'dwarf': 14},
+              {'name': 'x15',  'bitsize': 64, 'offset': 120, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 15, 'dwarf': 15},
+              {'name': 'x16',  'bitsize': 64, 'offset': 128, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 16, 'dwarf': 16},
+              {'name': 'x17',  'bitsize': 64, 'offset': 136, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 17, 'dwarf': 17},
+              {'name': 'x18',  'bitsize': 64, 'offset': 144, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 18, 'dwarf': 18},
+              {'name': 'x19',  'bitsize': 64, 'offset': 152, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 19, 'dwarf': 19},
+              {'name': 'x20',  'bitsize': 64, 'offset': 160, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 20, 'dwarf': 20},
+              {'name': 'x21',  'bitsize': 64, 'offset': 168, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 21, 'dwarf': 21},
+              {'name': 'x22',  'bitsize': 64, 'offset': 176, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 22, 'dwarf': 22},
+              {'name': 'x23',  'bitsize': 64, 'offset': 184, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 23, 'dwarf': 23},
+              {'name': 'x24',  'bitsize': 64, 'offset': 192, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 24, 'dwarf': 24},
+              {'name': 'x25',  'bitsize': 64, 'offset': 200, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 25, 'dwarf': 25},
+              {'name': 'x26',  'bitsize': 64, 'offset': 208, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 26, 'dwarf': 26},
+              {'name': 'x27',  'bitsize': 64, 'offset': 216, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 27, 'dwarf': 27},
+              {'name': 'x28',  'bitsize': 64, 'offset': 224, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 28, 'dwarf': 28},
+              {'name': 'x29',  'bitsize': 64, 'offset': 232, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 29, 'dwarf': 29, 'generic': 'fp', 'alt-name': 'fp'},
+              {'name': 'x30',  'bitsize': 64, 'offset': 240, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 30, 'dwarf': 30, 'generic': 'lr', 'alt-name': 'lr'},
+              {'name': 'sp',   'bitsize': 64, 'offset': 248, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 31, 'dwarf': 31, 'generic': 'sp', 'alt-name': 'sp'},
+              {'name': 'pc',   'bitsize': 64, 'offset': 256, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 32, 'dwarf': 32, 'generic': 'pc', 'alt-name': 'pc'},
+              {'name': 'cpsr', 'bitsize': 32, 'offset': 264, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 33, 'dwarf': 33}
+            ]
+
+INTEL64_GPR = [ {'name': 'rax', 'bitsize': 64, 'offset': 0, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 0, 'dwarf': 0},
+                {'name': 'rbx', 'bitsize': 64, 'offset': 8, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 3, 'dwarf': 3},
+                {'name': 'rcx', 'bitsize': 64, 'offset': 16, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 2, 'dwarf': 2, 'generic': 'arg4', 'alt-name': 'arg4'},
+                {'name': 'rdx', 'bitsize': 64, 'offset': 24, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 1, 'dwarf': 1, 'generic': 'arg3', 'alt-name': 'arg3'},
+                {'name': 'rdi', 'bitsize': 64, 'offset': 32, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 5, 'dwarf': 5, 'generic': 'arg1', 'alt-name': 'arg1'},
+                {'name': 'rsi', 'bitsize': 64, 'offset': 40, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 4, 'dwarf': 4, 'generic': 'arg2', 'alt-name': 'arg2'},
+                {'name': 'rbp', 'bitsize': 64, 'offset': 48, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 6, 'dwarf': 6, 'generic': 'fp', 'alt-name': 'fp'},
+                {'name': 'rsp', 'bitsize': 64, 'offset': 56, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 7, 'dwarf': 7, 'generic': 'sp', 'alt-name': 'sp'},
+                {'name': 'r8', 'bitsize': 64, 'offset': 64, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 8, 'dwarf': 8, 'generic': 'arg5', 'alt-name': 'arg5'},
+                {'name': 'r9', 'bitsize': 64, 'offset': 72, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 9, 'dwarf': 9, 'generic': 'arg6', 'alt-name': 'arg6'},
+                {'name': 'r10', 'bitsize': 64, 'offset': 80, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 10, 'dwarf': 10},
+                {'name': 'r11', 'bitsize': 64, 'offset': 88, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 11, 'dwarf': 11},
+                {'name': 'r12', 'bitsize': 64, 'offset': 96, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 12, 'dwarf': 12},
+                {'name': 'r13', 'bitsize': 64, 'offset': 104, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 13, 'dwarf': 13},
+                {'name': 'r14', 'bitsize': 64, 'offset': 112, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 14, 'dwarf': 14},
+                {'name': 'r15', 'bitsize': 64, 'offset': 120, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 15, 'dwarf': 15},
+                {'name': 'rip', 'bitsize': 64, 'offset': 128, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 16, 'dwarf': 16, 'generic': 'pc', 'alt-name': 'pc'},
+                {'name': 'rflags', 'bitsize': 64, 'offset': 136, 'encoding': 'uint', 'format': 'hex', 'set': 0, 'generic': 'flags', 'alt-name': 'flags'},
+                {'name': 'cs', 'bitsize': 64, 'offset': 144, 'encoding': 'uint', 'format': 'hex', 'set': 0},
+                {'name': 'fs', 'bitsize': 64, 'offset': 152, 'encoding': 'uint', 'format': 'hex', 'set': 0},
+                {'name': 'gs', 'bitsize': 64, 'offset': 160, 'encoding': 'uint', 'format': 'hex', 'set': 0}
+              ]
+
+

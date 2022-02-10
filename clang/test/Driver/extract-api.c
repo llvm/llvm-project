@@ -12,5 +12,5 @@
 // FIXME: Check for the dummy output now to verify that the custom action was executed.
 // RUN: %clang -extract-api %s | FileCheck -check-prefix DUMMY-OUTPUT %s
 
-void dummy_function();
+void dummy_function(void);
 // DUMMY-OUTPUT: dummy_function

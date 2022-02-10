@@ -177,7 +177,7 @@ void test_char(char c, signed char s, unsigned char u, uint8_t n) {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:15}:"%d"
 }
 
-void multichar_constants_false_negative() {
+void multichar_constants_false_negative(void) {
   // The value of a multi-character constant is implementation-defined, but
   // almost certainly shouldn't be printed with %c. However, the current
   // type-checker expects %c to correspond to an integer argument, because
@@ -188,7 +188,7 @@ void multichar_constants_false_negative() {
 }
 
 
-void test_percent_C() {
+void test_percent_C(void) {
   const unsigned short data = 'a';
   NSLog(@"%C", data);  // no-warning
 
@@ -233,7 +233,7 @@ void testSignedness(long i, unsigned long u) {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:11-[[@LINE-2]]:14}:"%+ld"
 }
 
-void testSizeTypes() {
+void testSizeTypes(void) {
   printf("%zu", 0.f); // expected-warning-re{{format specifies type 'size_t' (aka '{{.+}}') but the argument has type 'float'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:14}:"%f"
 
@@ -260,7 +260,7 @@ typedef __PTRDIFF_TYPE__ ptrdiff_t;
                       short : (unsigned short)0,                               \
                       signed char : (unsigned char)0))
 
-void testPtrDiffTypes() {
+void testPtrDiffTypes(void) {
   __UNSIGNED_PTRDIFF_TYPE__ p1 = 0;
   printf("%tu", p1);  // No warning.
 
@@ -291,7 +291,7 @@ void testPtrDiffTypes() {
 #endif // !defined(__ANDROID__) && !defined(__Fuchsia__)
 }
 
-void testEnum() {
+void testEnum(void) {
   typedef enum {
     ImplicitA = 1,
     ImplicitB = 2

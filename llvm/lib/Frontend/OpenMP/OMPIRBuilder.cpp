@@ -3291,9 +3291,10 @@ OpenMPIRBuilder::createAtomicWrite(const LocationDescription &Loc,
 }
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicUpdate(
-    const LocationDescription &Loc, Instruction *AllocIP, AtomicOpValue &X,
+    const LocationDescription &Loc, InsertPointTy AllocaIP, AtomicOpValue &X,
     Value *Expr, AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
     AtomicUpdateCallbackTy &UpdateOp, bool IsXBinopExpr) {
+  assert(!isConflictIP(Loc.IP, AllocaIP) && "IPs must not be ambiguous");
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -3310,7 +3311,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicUpdate(
            "OpenMP atomic does not support LT or GT operations");
   });
 
-  emitAtomicUpdate(AllocIP, X.Var, X.ElemTy, Expr, AO, RMWOp, UpdateOp,
+  emitAtomicUpdate(AllocaIP, X.Var, X.ElemTy, Expr, AO, RMWOp, UpdateOp,
                    X.IsVolatile, IsXBinopExpr);
   checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Update);
   return Builder.saveIP();
@@ -3345,13 +3346,13 @@ Value *OpenMPIRBuilder::emitRMWOpAsInstruction(Value *Src1, Value *Src2,
 }
 
 std::pair<Value *, Value *> OpenMPIRBuilder::emitAtomicUpdate(
-    Instruction *AllocIP, Value *X, Type *XElemTy, Value *Expr,
+    InsertPointTy AllocaIP, Value *X, Type *XElemTy, Value *Expr,
     AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
     AtomicUpdateCallbackTy &UpdateOp, bool VolatileX, bool IsXBinopExpr) {
-  bool DoCmpExch =
-      ((RMWOp == AtomicRMWInst::BAD_BINOP) || (RMWOp == AtomicRMWInst::FAdd)) ||
-      (RMWOp == AtomicRMWInst::FSub) ||
-      (RMWOp == AtomicRMWInst::Sub && !IsXBinopExpr);
+  bool DoCmpExch = (RMWOp == AtomicRMWInst::BAD_BINOP) ||
+                   (RMWOp == AtomicRMWInst::FAdd) ||
+                   (RMWOp == AtomicRMWInst::FSub) ||
+                   (RMWOp == AtomicRMWInst::Sub && !IsXBinopExpr) || !XElemTy;
 
   std::pair<Value *, Value *> Res;
   if (XElemTy->isIntegerTy() && !DoCmpExch) {
@@ -3381,12 +3382,12 @@ std::pair<Value *, Value *> OpenMPIRBuilder::emitAtomicUpdate(
     BasicBlock *ContBB = CurBB->splitBasicBlock(CurBB->getTerminator(),
                                                 X->getName() + ".atomic.cont");
     ContBB->getTerminator()->eraseFromParent();
+    Builder.restoreIP(AllocaIP);
+    AllocaInst *NewAtomicAddr = Builder.CreateAlloca(XElemTy);
+    NewAtomicAddr->setName(X->getName() + "x.new.val");
     Builder.SetInsertPoint(ContBB);
     llvm::PHINode *PHI = Builder.CreatePHI(OldVal->getType(), 2);
     PHI->addIncoming(OldVal, CurBB);
-    AllocaInst *NewAtomicAddr = Builder.CreateAlloca(XElemTy);
-    NewAtomicAddr->setName(X->getName() + "x.new.val");
-    NewAtomicAddr->moveBefore(AllocIP);
     IntegerType *NewAtomicCastTy =
         IntegerType::get(M.getContext(), XElemTy->getScalarSizeInBits());
     bool IsIntTy = XElemTy->isIntegerTy();
@@ -3408,7 +3409,7 @@ std::pair<Value *, Value *> OpenMPIRBuilder::emitAtomicUpdate(
 
     Value *Upd = UpdateOp(OldExprVal, Builder);
     Builder.CreateStore(Upd, NewAtomicAddr);
-    LoadInst *DesiredVal = Builder.CreateLoad(XElemTy, NewAtomicIntAddr);
+    LoadInst *DesiredVal = Builder.CreateLoad(IntCastTy, NewAtomicIntAddr);
     Value *XAddr =
         (IsIntTy)
             ? X
@@ -3416,7 +3417,7 @@ std::pair<Value *, Value *> OpenMPIRBuilder::emitAtomicUpdate(
     AtomicOrdering Failure =
         llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
     AtomicCmpXchgInst *Result = Builder.CreateAtomicCmpXchg(
-        XAddr, OldExprVal, DesiredVal, llvm::MaybeAlign(), AO, Failure);
+        XAddr, PHI, DesiredVal, llvm::MaybeAlign(), AO, Failure);
     Result->setVolatile(VolatileX);
     Value *PreviousVal = Builder.CreateExtractValue(Result, /*Idxs=*/0);
     Value *SuccessFailureVal = Builder.CreateExtractValue(Result, /*Idxs=*/1);
@@ -3440,7 +3441,7 @@ std::pair<Value *, Value *> OpenMPIRBuilder::emitAtomicUpdate(
 }
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCapture(
-    const LocationDescription &Loc, Instruction *AllocIP, AtomicOpValue &X,
+    const LocationDescription &Loc, InsertPointTy AllocaIP, AtomicOpValue &X,
     AtomicOpValue &V, Value *Expr, AtomicOrdering AO,
     AtomicRMWInst::BinOp RMWOp, AtomicUpdateCallbackTy &UpdateOp,
     bool UpdateExpr, bool IsPostfixUpdate, bool IsXBinopExpr) {
@@ -3463,7 +3464,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCapture(
   // 'x' is simply atomically rewritten with 'expr'.
   AtomicRMWInst::BinOp AtomicOp = (UpdateExpr ? RMWOp : AtomicRMWInst::Xchg);
   std::pair<Value *, Value *> Result =
-      emitAtomicUpdate(AllocIP, X.Var, X.ElemTy, Expr, AO, AtomicOp, UpdateOp,
+      emitAtomicUpdate(AllocaIP, X.Var, X.ElemTy, Expr, AO, AtomicOp, UpdateOp,
                        X.IsVolatile, IsXBinopExpr);
 
   Value *CapturedVal = (IsPostfixUpdate ? Result.first : Result.second);
@@ -3481,26 +3482,16 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
 
   assert(X.Var->getType()->isPointerTy() &&
          "OMP atomic expects a pointer to target memory");
-  assert((X.ElemTy->isFloatingPointTy() || X.ElemTy->isIntegerTy() ||
-          X.ElemTy->isPointerTy()) &&
-         "OMP atomic compare expected a scalar type");
+  assert((X.ElemTy->isIntegerTy() || X.ElemTy->isPointerTy()) &&
+         "OMP atomic compare expected a integer scalar type");
 
   if (Op == OMPAtomicCompareOp::EQ) {
-    unsigned Addrspace = cast<PointerType>(X.Var->getType())->getAddressSpace();
-    IntegerType *IntCastTy =
-        IntegerType::get(M.getContext(), X.ElemTy->getScalarSizeInBits());
-    Value *XAddr =
-        X.ElemTy->isIntegerTy()
-            ? X.Var
-            : Builder.CreateBitCast(X.Var, IntCastTy->getPointerTo(Addrspace));
     AtomicOrdering Failure = AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
     // We don't need the result for now.
-    (void)Builder.CreateAtomicCmpXchg(XAddr, E, D, MaybeAlign(), AO, Failure);
+    (void)Builder.CreateAtomicCmpXchg(X.Var, E, D, MaybeAlign(), AO, Failure);
   } else {
     assert((Op == OMPAtomicCompareOp::MAX || Op == OMPAtomicCompareOp::MIN) &&
            "Op should be either max or min at this point");
-    assert(X.ElemTy->isIntegerTy() &&
-           "max and min operators only support integer type");
 
     // Reverse the ordop as the OpenMP forms are different from LLVM forms.
     // Let's take max as example.

@@ -21,6 +21,7 @@
 #include "llvm/DebugInfo/Symbolize/DIPrinter.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/Debuginfod/DIFetcher.h"
+#include "llvm/Debuginfod/Debuginfod.h"
 #include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -296,6 +297,27 @@ SmallVector<uint8_t> parseBuildIDArg(const opt::InputArgList &Args, int ID) {
   return {};
 }
 
+ExitOnError ExitOnErr;
+
+static bool shouldUseDebuginfodByDefault(ArrayRef<uint8_t> BuildID) {
+  // If the user explicitly specified a build ID, the usual way to find it is
+  // debuginfod.
+  if (!BuildID.empty())
+    return true;
+
+  // A debuginfod lookup could succeed if a HTTP client is available and at
+  // least one backing URL is configured.
+  if (HTTPClient::isAvailable() &&
+      !ExitOnErr(getDefaultDebuginfodUrls()).empty())
+    return true;
+
+  // A debuginfod lookup could also succeed if something were present in the
+  // cache directory, but it would be surprising to enable debuginfod on this
+  // basis alone. To use existing caches in an "offline" fashion, the debuginfod
+  // flag must be set.
+  return false;
+}
+
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   sys::InitializeCOMRAII COM(sys::COMThreadingMode::MultiThreaded);
@@ -371,10 +393,13 @@ int main(int argc, char **argv) {
 
   LLVMSymbolizer Symbolizer(Opts);
 
-  // Look up symbols using the debuginfod client.
-  Symbolizer.addDIFetcher(std::make_unique<DebuginfodDIFetcher>());
-  // The HTTPClient must be initialized for use by the debuginfod client.
-  HTTPClient::initialize();
+  if (Args.hasFlag(OPT_debuginfod, OPT_no_debuginfod,
+                   shouldUseDebuginfodByDefault(BuildID))) {
+    // Look up symbols using the debuginfod client.
+    Symbolizer.addDIFetcher(std::make_unique<DebuginfodDIFetcher>());
+    // The HTTPClient must be initialized for use by the debuginfod client.
+    HTTPClient::initialize();
+  }
 
   std::unique_ptr<DIPrinter> Printer;
   if (Style == OutputStyle::GNU)

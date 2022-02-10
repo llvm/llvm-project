@@ -23,10 +23,15 @@ RUN:   %t/llvmcache-9800707741016212219
 # The symbolizer should call the debuginfod client library, which finds the
 # debuginfo placed in the cache, enabling symbolization of the address.
 RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
-RUN:   --obj=%t/addr.exe 0x40054d | FileCheck %s --check-prefix=FOUND
+RUN:   --obj=%t/addr.exe 0x40054d --debuginfod | \
+RUN:   FileCheck %s --check-prefix=FOUND
 FOUND: {{[/\]+}}tmp{{[/\]+}}x.c:14:0
 
 # This should also work if the build ID is provided.
 RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
 RUN:   --build-id=127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d | \
 RUN:   FileCheck %s --check-prefix=FOUND
+
+# The symbolizer shouldn't call the debuginfod library by default with no URLs.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer --print-address \
+RUN:   --obj=%t/addr.exe 0x40054d | FileCheck %s --check-prefix=NOTFOUND

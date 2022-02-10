@@ -10,7 +10,7 @@
 
 @protocol X;
 
-void foo() {
+void foo(void) {
   <X> *P;    // expected-warning{{protocol has no object type specified; defaults to qualified 'id'}}
 }
 

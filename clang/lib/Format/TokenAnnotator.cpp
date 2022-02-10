@@ -1883,6 +1883,25 @@ private:
         LeftOfParens = LeftOfParens->MatchingParen->Previous;
       }
 
+      if (LeftOfParens->is(tok::r_square)) {
+        //   delete[] (void *)ptr;
+        auto MayBeArrayDelete = [](FormatToken *Tok) -> FormatToken * {
+          if (Tok->isNot(tok::r_square))
+            return nullptr;
+
+          Tok = Tok->getPreviousNonComment();
+          if (!Tok || Tok->isNot(tok::l_square))
+            return nullptr;
+
+          Tok = Tok->getPreviousNonComment();
+          if (!Tok || Tok->isNot(tok::kw_delete))
+            return nullptr;
+          return Tok;
+        };
+        if (FormatToken *MaybeDelete = MayBeArrayDelete(LeftOfParens))
+          LeftOfParens = MaybeDelete;
+      }
+
       // The Condition directly below this one will see the operator arguments
       // as a (void *foo) cast.
       //   void operator delete(void *foo) ATTRIB;
@@ -3227,7 +3246,10 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       if (Left.isOneOf(tok::kw_try, Keywords.kw___except, tok::kw_catch))
         return Style.SpaceBeforeParensOptions.AfterControlStatements ||
                spaceRequiredBeforeParens(Right);
-      if (Left.isOneOf(tok::kw_new, tok::kw_delete))
+      if (Left.isOneOf(tok::kw_new, tok::kw_delete) ||
+          (Left.is(tok::r_square) && Left.MatchingParen &&
+           Left.MatchingParen->Previous &&
+           Left.MatchingParen->Previous->is(tok::kw_delete)))
         return Style.SpaceBeforeParens != FormatStyle::SBPO_Never ||
                spaceRequiredBeforeParens(Right);
     }

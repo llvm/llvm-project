@@ -35,7 +35,7 @@ typedef unsigned char BOOL;
 @interface NSString : NSObject
 @end
 
-void fixes() {
+void fixes(void) {
   id arr = @[
     17, // expected-error{{numeric literal must be prefixed by '@' in a collection}}
     'a', // expected-error{{character literal must be prefixed by '@'}}

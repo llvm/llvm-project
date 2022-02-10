@@ -471,11 +471,11 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
     struct {
       DriverID ID;
       DriverID AliasID;
-      void *AliasArgs;
+      const void *AliasArgs;
     } AliasTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELP, METAVAR, VALUES)                                          \
-  {DriverID::OPT_##ID, DriverID::OPT_##ALIAS, (void *)ALIASARGS},
+  {DriverID::OPT_##ID, DriverID::OPT_##ALIAS, ALIASARGS},
 #include "clang/Driver/Options.inc"
 #undef OPTION
     };

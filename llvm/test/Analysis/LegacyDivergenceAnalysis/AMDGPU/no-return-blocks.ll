@@ -1,4 +1,4 @@
-; RUN: opt %s -mtriple amdgcn-- -amdgpu-use-legacy-divergence-analysis -enable-new-pm=0 -analyze -divergence | FileCheck %s
+; RUN: opt %s -mtriple amdgcn-- -amdgpu-use-legacy-divergence-analysis -passes='print<divergence>' 2>&1 -disable-output | FileCheck %s
 
 ; CHECK: DIVERGENT:  %tmp5 = getelementptr inbounds float, float addrspace(1)* %arg, i64 %tmp2
 ; CHECK: DIVERGENT:  %tmp10 = load volatile float, float addrspace(1)* %tmp5, align 4
