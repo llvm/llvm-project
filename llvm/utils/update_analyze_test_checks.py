@@ -112,6 +112,7 @@ def main():
       run_list = prefix_list,
       flags = type('', (object,), {
             'verbose': args.verbose,
+            'filters': args.filters,
             'function_signature': False,
             'check_attributes': False,
             'replace_value_regex': []}),
