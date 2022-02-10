@@ -1723,7 +1723,7 @@ getDefaultVLOps(MVT VecVT, MVT ContainerVT, SDLoc DL, SelectionDAG &DAG,
   MVT XLenVT = Subtarget.getXLenVT();
   SDValue VL = VecVT.isFixedLengthVector()
                    ? DAG.getConstant(VecVT.getVectorNumElements(), DL, XLenVT)
-                   : DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, XLenVT);
+                   : DAG.getRegister(RISCV::X0, XLenVT);
   MVT MaskVT = MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
   SDValue Mask = DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VL);
   return {Mask, VL};
@@ -2370,14 +2370,12 @@ static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Lo,
     // If vl is equal to XLEN_MAX and Hi constant is equal to Lo, we could use
     // vmv.v.x whose EEW = 32 to lower it.
     auto *Const = dyn_cast<ConstantSDNode>(VL);
-    if (LoC == HiC && Const && Const->isAllOnesValue() &&
-        Const->getOpcode() != ISD::TargetConstant) {
+    if (LoC == HiC && Const && Const->isAllOnesValue()) {
       MVT InterVT = MVT::getVectorVT(MVT::i32, VT.getVectorElementCount() * 2);
       // TODO: if vl <= min(VLMAX), we can also do this. But we could not
       // access the subtarget here now.
-      auto InterVec = DAG.getNode(
-          RISCVISD::VMV_V_X_VL, DL, InterVT, Lo,
-          DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, MVT::i32));
+      auto InterVec = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, InterVT, Lo,
+                                  DAG.getRegister(RISCV::X0, MVT::i32));
       return DAG.getNode(ISD::BITCAST, DL, VT, InterVec);
     }
   }
@@ -4159,22 +4157,20 @@ SDValue RISCVTargetLowering::lowerSPLAT_VECTOR_PARTS(SDValue Op,
     // If Hi constant is all the same sign bit as Lo, lower this as a custom
     // node in order to try and match RVV vector/scalar instructions.
     if ((LoC >> 31) == HiC)
-      return DAG.getNode(
-          RISCVISD::VMV_V_X_VL, DL, VecVT, Lo,
-          DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, MVT::i32));
+      return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VecVT, Lo,
+                         DAG.getRegister(RISCV::X0, MVT::i32));
   }
 
   // Detect cases where Hi is (SRA Lo, 31) which means Hi is Lo sign extended.
   if (Hi.getOpcode() == ISD::SRA && Hi.getOperand(0) == Lo &&
       isa<ConstantSDNode>(Hi.getOperand(1)) &&
       Hi.getConstantOperandVal(1) == 31)
-    return DAG.getNode(
-        RISCVISD::VMV_V_X_VL, DL, VecVT, Lo,
-        DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, MVT::i32));
+    return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VecVT, Lo,
+                       DAG.getRegister(RISCV::X0, MVT::i32));
 
   // Fall back to use a stack store and stride x0 vector load. Use X0 as VL.
   return DAG.getNode(RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL, DL, VecVT, Lo, Hi,
-                     DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, MVT::i32));
+                     DAG.getRegister(RISCV::X0, MVT::i32));
 }
 
 // Custom-lower extensions from mask vectors by using a vselect either with 1
@@ -4206,12 +4202,10 @@ SDValue RISCVTargetLowering::lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
       SplatZero = DAG.getSplatVector(VecVT, DL, SplatZero);
       SplatTrueVal = DAG.getSplatVector(VecVT, DL, SplatTrueVal);
     } else {
-      SplatZero =
-          DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VecVT, SplatZero,
-                      DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, XLenVT));
-      SplatTrueVal =
-          DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VecVT, SplatTrueVal,
-                      DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, XLenVT));
+      SplatZero = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VecVT, SplatZero,
+                              DAG.getRegister(RISCV::X0, XLenVT));
+      SplatTrueVal = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VecVT, SplatTrueVal,
+                                 DAG.getRegister(RISCV::X0, XLenVT));
     }
 
     return DAG.getNode(ISD::VSELECT, DL, VecVT, Src, SplatTrueVal, SplatZero);
@@ -5528,9 +5522,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
   if (!IsRV32E64)
     SplatVL = DAG.getSplatVector(IntVT, DL, VLMinus1);
   else
-    SplatVL =
-        DAG.getNode(RISCVISD::VMV_V_X_VL, DL, IntVT, VLMinus1,
-                    DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, XLenVT));
+    SplatVL = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, IntVT, VLMinus1,
+                          DAG.getRegister(RISCV::X0, XLenVT));
 
   SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, IntVT, Mask, VL);
   SDValue Indices =
@@ -8255,8 +8248,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       SDLoc DL(N);
       EVT VT = N->getValueType(0);
       ShAmt = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, ShAmt.getOperand(0),
-                          DAG.getTargetConstant(RISCV::VLMaxSentinel, DL,
-                                                Subtarget.getXLenVT()));
+                          DAG.getRegister(RISCV::X0, Subtarget.getXLenVT()));
       return DAG.getNode(N->getOpcode(), DL, VT, N->getOperand(0), ShAmt);
     }
     break;
