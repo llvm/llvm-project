@@ -2,8 +2,9 @@
 // since __config may be included from C headers which may create an
 // include cycle.
 module std_config [system] [extern_c] {
-  textual header "__config"
-  textual header "__config_site"
+  header "__config"
+  header "__config_site"
+  export *
 }
 
 module std [system] {
