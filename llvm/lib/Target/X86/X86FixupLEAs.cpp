@@ -546,7 +546,6 @@ bool FixupLEAPass::optLEAALU(MachineBasicBlock::iterator &I,
   if (KilledIndex)
     KilledIndex->setIsKill(false);
 
-  MBB.getParent()->substituteDebugValuesForInst(*AluI, *NewMI1, 1);
   MBB.getParent()->substituteDebugValuesForInst(*AluI, *NewMI2, 1);
   MBB.erase(I);
   MBB.erase(AluI);
