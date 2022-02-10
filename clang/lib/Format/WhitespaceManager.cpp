@@ -331,6 +331,12 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
       FoundMatchOnLine = true;
       Shift = Column - Changes[i].StartOfTokenColumn;
       Changes[i].Spaces += Shift;
+      // FIXME: This is a workaround that should be removed when we fix
+      // http://llvm.org/PR53699. An assertion later below verifies this.
+      if (Changes[i].NewlinesBefore == 0)
+        Changes[i].Spaces =
+            std::max(Changes[i].Spaces,
+                     static_cast<int>(Changes[i].Tok->SpacesRequiredBefore));
     }
 
     // This is for function parameters that are split across multiple lines,
@@ -398,6 +404,12 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
 
     if (ContinuedStringLiteral)
       Changes[i].Spaces += Shift;
+
+    // We should not remove required spaces unless we break the line before.
+    assert(Changes[i].NewlinesBefore > 0 ||
+           Changes[i].Spaces >=
+               static_cast<int>(Changes[i].Tok->SpacesRequiredBefore) ||
+           Changes[i].Tok->is(tok::eof));
 
     Changes[i].StartOfTokenColumn += Shift;
     if (i + 1 != Changes.size())
