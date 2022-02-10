@@ -1,4 +1,3 @@
-; RUN: opt -analyze -scalar-evolution %s -enable-new-pm=0 | FileCheck %s
 ; RUN: opt -passes='print<scalar-evolution>' -disable-output %s 2>&1 | FileCheck %s
 
 ; Test cases that require rewriting zext SCEV expression with infomration from
