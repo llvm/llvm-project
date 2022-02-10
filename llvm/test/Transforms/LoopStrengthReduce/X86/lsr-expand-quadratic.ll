@@ -19,7 +19,7 @@ target triple = "x86_64-apple-macosx"
 ; loop. This recurrence depends on %sub.us, so can't be expanded.
 ; We cannot fold SCEVUnknown (sub.us) with recurrences since it is
 ; declared after the loop.
-define i32 @test2() {
+define i32 @test2(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[TEST2_LOOP:%.*]]
@@ -34,7 +34,7 @@ define i32 @test2() {
 ; CHECK-NEXT:    br i1 [[CMP_US]], label [[TEST2_LOOP]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[TOBOOL_US:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], 0
-; CHECK-NEXT:    [[SUB_US:%.*]] = select i1 [[TOBOOL_US]], i32 0, i32 0
+; CHECK-NEXT:    [[SUB_US:%.*]] = select i1 [[TOBOOL_US]], i32 [[A:%.*]], i32 [[B:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 0, [[SUB_US]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[LSR_IV_NEXT]]
 ; CHECK-NEXT:    [[SEXT_US:%.*]] = mul i32 [[LSR_IV_NEXT2]], [[TMP1]]
@@ -54,7 +54,7 @@ test2.loop:
 
 for.end:
   %tobool.us = icmp eq i32 %inc1115.us, 0
-  %sub.us = select i1 %tobool.us, i32 0, i32 0
+  %sub.us = select i1 %tobool.us, i32 %a, i32 %b
   %mul.us = shl i32 %inc1115.us, 24
   %sub.cond.us = sub nsw i32 %inc1115.us, %sub.us
   %sext.us = mul i32 %mul.us, %sub.cond.us
