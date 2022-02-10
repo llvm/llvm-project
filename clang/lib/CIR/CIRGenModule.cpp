@@ -1493,17 +1493,8 @@ mlir::FuncOp CIRGenModule::buildFunction(const FunctionDecl *FD) {
 
   // Initialize lexical scope information.
   {
-    LexicalScopeContext lexScope;
+    LexicalScopeContext lexScope{builder};
     LexicalScopeGuard scopeGuard{*this, &lexScope};
-
-    {
-      // Create the cleanup block but dont hook it up around just
-      // yet.
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      mlir::Block *entryBlock = builder.getBlock();
-      currLexScope->CleanupBlock = builder.createBlock(entryBlock->getParent());
-    }
-    assert(builder.getInsertionBlock() && "Should be valid");
 
     // Declare all the function arguments in the symbol table.
     for (const auto nameValue :
