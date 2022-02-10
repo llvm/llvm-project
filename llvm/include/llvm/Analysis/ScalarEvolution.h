@@ -1627,6 +1627,11 @@ private:
                                                            Value *TrueVal,
                                                            Value *FalseVal);
 
+  /// See if we can model this select-like instruction via umin_seq expression.
+  const SCEV *createNodeForSelectOrPHIViaUMinSeq(Value *I, Value *Cond,
+                                                 Value *TrueVal,
+                                                 Value *FalseVal);
+
   /// Given a value \p V, which is a select-like instruction (currently this is
   /// either a select instruction or a phi node), which is assumed equivalent to
   ///   Cond ? TrueVal : FalseVal

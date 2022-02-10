@@ -11,7 +11,7 @@ define void @logical_and_m_const(i32 %n) {
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,4) S: [1,4) Exits: (1 + (2 umin %n))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_i, i1 %cond_i2, i1 false
-; CHECK-NEXT:    --> %cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%cond_i umin_seq %cond_i2) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_m_const
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (2 umin %n)
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 2
@@ -42,7 +42,7 @@ define void @logical_and_nonzero(i32 %m) {
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,4) S: [1,4) Exits: (1 + (2 umin %m))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_i, i1 %cond_i2, i1 false
-; CHECK-NEXT:    --> %cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%cond_i umin_seq %cond_i2) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_nonzero
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (2 umin %m)
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 2
@@ -74,7 +74,7 @@ define void @logical_and_zero(i32 %m) {
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_i, i1 %cond_i2, i1 false
-; CHECK-NEXT:    --> %cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%cond_i umin_seq %cond_i2) U: full-set S: full-set Exits: false LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_zero
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 0
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 0
@@ -107,7 +107,7 @@ define void @logical_and_inversed(i32 %n, i32 %m) {
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_i, i1 %cond_i2, i1 false
-; CHECK-NEXT:    --> %cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%cond_i umin_seq %cond_i2) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_inversed
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.

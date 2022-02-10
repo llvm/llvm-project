@@ -136,7 +136,7 @@ define i1 @logical_and(i1 %x, i1 %y) {
 ; CHECK-LABEL: 'logical_and'
 ; CHECK-NEXT:  Classifying expressions for: @logical_and
 ; CHECK-NEXT:    %r = select i1 %x, i1 %y, i1 false
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> (%x umin_seq %y) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and
 ;
   %r = select i1 %x, i1 %y, i1 false
@@ -147,7 +147,7 @@ define i1 @select_x_or_false(i1 %c, i1 %x) {
 ; CHECK-LABEL: 'select_x_or_false'
 ; CHECK-NEXT:  Classifying expressions for: @select_x_or_false
 ; CHECK-NEXT:    %r = select i1 %c, i1 %x, i1 false
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> (%c umin_seq %x) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @select_x_or_false
 ;
   %r = select i1 %c, i1 %x, i1 false
