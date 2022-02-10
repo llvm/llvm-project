@@ -11,7 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArchTargetMachine.h"
+#include "LoongArch.h"
+#include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "TargetInfo/LoongArchTargetInfo.h"
+#include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
@@ -45,8 +50,70 @@ LoongArchTargetMachine::LoongArchTargetMachine(
     Optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
                         getEffectiveRelocModel(TT, RM),
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL) {
+                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+      TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
   initAsmInfo();
 }
 
 LoongArchTargetMachine::~LoongArchTargetMachine() = default;
+
+const LoongArchSubtarget *
+LoongArchTargetMachine::getSubtargetImpl(const Function &F) const {
+  Attribute CPUAttr = F.getFnAttribute("target-cpu");
+  Attribute TuneAttr = F.getFnAttribute("tune-cpu");
+  Attribute FSAttr = F.getFnAttribute("target-features");
+
+  std::string CPU =
+      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+  std::string TuneCPU =
+      TuneAttr.isValid() ? TuneAttr.getValueAsString().str() : CPU;
+  std::string FS =
+      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+
+  std::string Key = CPU + TuneCPU + FS;
+  auto &I = SubtargetMap[Key];
+  if (!I) {
+    // This needs to be done before we create a new subtarget since any
+    // creation will depend on the TM and the code generation flags on the
+    // function that reside in TargetOptions.
+    resetTargetOptions(F);
+    auto ABIName = Options.MCOptions.getABIName();
+    if (const MDString *ModuleTargetABI = dyn_cast_or_null<MDString>(
+            F.getParent()->getModuleFlag("target-abi"))) {
+      auto TargetABI = LoongArchABI::getTargetABI(ABIName);
+      if (TargetABI != LoongArchABI::ABI_Unknown &&
+          ModuleTargetABI->getString() != ABIName) {
+        report_fatal_error("-target-abi option != target-abi module flag");
+      }
+      ABIName = ModuleTargetABI->getString();
+    }
+    I = std::make_unique<LoongArchSubtarget>(TargetTriple, CPU, TuneCPU, FS,
+                                             ABIName, *this);
+  }
+  return I.get();
+}
+
+namespace {
+class LoongArchPassConfig : public TargetPassConfig {
+public:
+  LoongArchPassConfig(LoongArchTargetMachine &TM, PassManagerBase &PM)
+      : TargetPassConfig(TM, PM) {}
+
+  LoongArchTargetMachine &getLoongArchTargetMachine() const {
+    return getTM<LoongArchTargetMachine>();
+  }
+
+  bool addInstSelector() override;
+};
+} // namespace
+
+TargetPassConfig *
+LoongArchTargetMachine::createPassConfig(PassManagerBase &PM) {
+  return new LoongArchPassConfig(*this, PM);
+}
+
+bool LoongArchPassConfig::addInstSelector() {
+  addPass(createLoongArchISelDag(getLoongArchTargetMachine()));
+
+  return false;
+}

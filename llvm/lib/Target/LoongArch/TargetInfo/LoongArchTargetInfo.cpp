@@ -22,9 +22,9 @@ Target &llvm::getTheLoongArch64Target() {
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTargetInfo() {
   RegisterTarget<Triple::loongarch32, /*HasJIT=*/false> X(
-      getTheLoongArch32Target(), "loongarch32", "LoongArch (32-bit)",
+      getTheLoongArch32Target(), "loongarch32", "32-bit LoongArch",
       "LoongArch");
   RegisterTarget<Triple::loongarch64, /*HasJIT=*/false> Y(
-      getTheLoongArch64Target(), "loongarch64", "LoongArch (64-bit)",
+      getTheLoongArch64Target(), "loongarch64", "64-bit LoongArch",
       "LoongArch");
 }
