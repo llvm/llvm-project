@@ -684,7 +684,6 @@ static LogicalResult forwardStoreToLoad(
 // 3) There is no potential read between writeA and writeB.
 static void findUnusedStore(AffineWriteOpInterface writeA,
                             SmallVectorImpl<Operation *> &opsToErase,
-                            SmallPtrSetImpl<Value> &memrefsToErase,
                             PostDominanceInfo &postDominanceInfo) {
 
   for (Operation *user : writeA.getMemRef().getUsers()) {
@@ -831,7 +830,7 @@ void mlir::affineScalarReplace(FuncOp f, DominanceInfo &domInfo,
 
   // Walk all store's and perform unused store elimination
   f.walk([&](AffineWriteOpInterface storeOp) {
-    findUnusedStore(storeOp, opsToErase, memrefsToErase, postDomInfo);
+    findUnusedStore(storeOp, opsToErase, postDomInfo);
   });
   // Erase all store op's which don't impact the program
   for (auto *op : opsToErase)
