@@ -689,6 +689,13 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
   int Ret;
   std::vector<DeallocTgtPtrInfo> DeallocTgtPtrs;
   void *FromMapperBase = nullptr;
+
+  // save shadow pointers to be restored while issueing data retrieves
+  // for later restore, after synchronization guarantees data retrieves are
+  // complete. The boolean associate with each iterator indicates whether
+  // we need to delete the iterator from the ShadowMapPtr map
+  std::vector<std::pair<ShadowPtrListTy::iterator, bool>> PtrsToRestore;
+
   // process each input.
   for (int32_t I = ArgNum - 1; I >= 0; --I) {
     // Ignore private variables and arrays - there is no mapping for them.
@@ -824,21 +831,13 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
       // shadow pointer entries for this struct.
       auto CB = [&](ShadowPtrListTy::iterator &Itr) {
         // If we copied the struct to the host, we need to restore the pointer.
-        if (ArgTypes[I] & OMP_TGT_MAPTYPE_FROM) {
-          void **ShadowHstPtrAddr = (void **)Itr->first;
-          *ShadowHstPtrAddr = Itr->second.HstPtrVal;
-          DP("Restoring original host pointer value " DPxMOD " for host "
-             "pointer " DPxMOD "\n",
-             DPxPTR(Itr->second.HstPtrVal), DPxPTR(ShadowHstPtrAddr));
-        }
-        // If the struct is to be deallocated, remove the shadow entry.
-        if (DelEntry) {
-          DP("Removing shadow pointer " DPxMOD "\n",
-             DPxPTR((void **)Itr->first));
-          Itr = Device.ShadowPtrMap.erase(Itr);
-        } else {
-          ++Itr;
-        }
+        // Save pointer to restore after data retrive's are completed to
+        // prevent rewriting of device pointer
+        if (ArgTypes[I] & OMP_TGT_MAPTYPE_FROM)
+          PtrsToRestore.emplace_back(
+              std::make_pair<ShadowPtrListTy::iterator, bool>(
+                  std::move(Itr), DelEntry ? true : false));
+        ++Itr;
         return OFFLOAD_SUCCESS;
       };
       applyToShadowMapEntries(Device, CB, HstPtrBegin, DataSize, TPR);
@@ -856,6 +855,22 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
   Ret = AsyncInfo.synchronize();
   if (Ret != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
+
+  // restore host pointers using saved shadow ptr iterators
+  for (auto it : PtrsToRestore) {
+    ShadowPtrListTy::iterator Itr = it.first;
+    void **ShadowHstPtrAddr = (void **)Itr->first;
+    *ShadowHstPtrAddr = Itr->second.HstPtrVal;
+    DP("Restoring original host pointer value " DPxMOD " for host "
+       "pointer " DPxMOD "\n",
+       DPxPTR(Itr->second.HstPtrVal), DPxPTR(ShadowHstPtrAddr));
+
+    // DelEntry?
+    if (it.second) {
+      DP("Removing shadow pointer " DPxMOD "\n", DPxPTR((void **)Itr->first));
+      Device.ShadowPtrMap.erase(Itr);
+    }
+  }
 
   // Deallocate target pointer
   for (DeallocTgtPtrInfo &Info : DeallocTgtPtrs) {
@@ -916,6 +931,15 @@ static int targetDataContiguous(ident_t *loc, DeviceTy &Device, void *ArgsBase,
       ++Itr;
       return OFFLOAD_SUCCESS;
     };
+
+    // dataRetrieve's might be asynchronous and overwrite the
+    // shadow pointer being written in a struct here with device
+    // pointers: wait for all data retrieves called until now to
+    // complete before we write the shadow pointer
+    Ret = AsyncInfo.synchronize();
+    if (Ret != OFFLOAD_SUCCESS)
+      return OFFLOAD_FAIL;
+
     applyToShadowMapEntries(Device, CB, HstPtrBegin, ArgSize, TPR);
   }
 

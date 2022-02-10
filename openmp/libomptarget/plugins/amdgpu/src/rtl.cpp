@@ -980,9 +980,9 @@ static uint64_t acquire_available_packet_id(hsa_queue_t *queue) {
 // and unlocking of host pointers used in the transfer
 class AMDGPUAsyncInfoDataTy {
 public:
-  AMDGPUAsyncInfoDataTy(){};
+  AMDGPUAsyncInfoDataTy() : alreadyCompleted(false){};
   AMDGPUAsyncInfoDataTy(hsa_signal_t signal, void *hostPtr)
-      : signal(signal), hostPtr(hostPtr) {}
+      : signal(signal), hostPtr(hostPtr), alreadyCompleted(false) {}
 
   AMDGPUAsyncInfoDataTy(const AMDGPUAsyncInfoDataTy &) = delete;
   AMDGPUAsyncInfoDataTy(AMDGPUAsyncInfoDataTy &&) = default; // assume noexcept
@@ -990,16 +990,20 @@ public:
   AMDGPUAsyncInfoDataTy &operator=(const AMDGPUAsyncInfoDataTy &&tmp) {
     signal = tmp.signal;
     hostPtr = tmp.hostPtr;
+    alreadyCompleted = tmp.alreadyCompleted;
     return *this;
   }
 
   inline hsa_signal_t getSignal() const { return signal; }
 
   hsa_status_t waitToComplete() {
+    if (alreadyCompleted)
+      return HSA_STATUS_SUCCESS;
     hsa_signal_value_t init = 1;
     hsa_signal_value_t success = 0;
     hsa_status_t err = wait_for_signal(signal, init, success);
     DeviceInfo.FreeSignalPool.push(signal);
+    alreadyCompleted = true;
     return err;
   }
 
@@ -1008,6 +1012,8 @@ public:
 private:
   hsa_signal_t signal;
   void *hostPtr; // for delayed unlocking
+  bool alreadyCompleted; // libomptarget might call synchronize multiple times:
+                         // only serve once
 };
 
 // Enable delaying of kernel launch completion check
