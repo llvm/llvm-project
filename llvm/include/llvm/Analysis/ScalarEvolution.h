@@ -437,7 +437,7 @@ public:
 
   /// Returns a reference to a vector containing all predicates which apply to
   /// \p Expr.
-  ArrayRef<const SCEVPredicate *> getPredicatesForExpr(const SCEV *Expr);
+  ArrayRef<const SCEVPredicate *> getPredicatesForExpr(const SCEV *Expr) const;
 
   /// Implementation of the SCEVPredicate interface
   bool isAlwaysTrue() const override;
@@ -1176,7 +1176,7 @@ public:
 
   /// Re-writes the SCEV according to the Predicates in \p A.
   const SCEV *rewriteUsingPredicate(const SCEV *S, const Loop *L,
-                                    SCEVUnionPredicate &A);
+                                    const SCEVUnionPredicate &A);
   /// Tries to convert the \p S expression to an AddRec expression,
   /// adding additional predicates to \p Preds as required.
   const SCEVAddRecExpr *convertSCEVToAddRecWithPredicates(

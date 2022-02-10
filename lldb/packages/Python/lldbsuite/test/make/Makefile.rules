@@ -266,7 +266,8 @@ MANDATORY_MODULE_BUILD_CFLAGS := $(MODULE_BASE_FLAGS) -gmodules
 MANDATORY_CXXMODULE_BUILD_CFLAGS := $(MODULE_BASE_FLAGS) -fcxx-modules -glldb
 
 ifeq "$(OS)" "Darwin"
-	MANDATORY_MODULE_BUILD_CFLAGS += -fcxx-modules
+	MANDATORY_MODULE_BUILD_CFLAGS += -fcxx-modules -fmodules-local-submodule-visibility
+	MANDATORY_CXXMODULE_BUILD_CFLAGS += -fmodules-local-submodule-visibility
 endif
 
 ifeq "$(MAKE_GMODULES)" "YES"

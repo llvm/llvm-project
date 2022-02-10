@@ -109,6 +109,15 @@ RewriteStmt *RewriteStmt::create(Context &ctx, SMRange loc, Expr *rootOp,
 }
 
 //===----------------------------------------------------------------------===//
+// ReturnStmt
+//===----------------------------------------------------------------------===//
+
+ReturnStmt *ReturnStmt::create(Context &ctx, SMRange loc, Expr *resultExpr) {
+  return new (ctx.getAllocator().Allocate<ReturnStmt>())
+      ReturnStmt(loc, resultExpr);
+}
+
+//===----------------------------------------------------------------------===//
 // AttributeExpr
 //===----------------------------------------------------------------------===//
 
@@ -116,6 +125,22 @@ AttributeExpr *AttributeExpr::create(Context &ctx, SMRange loc,
                                      StringRef value) {
   return new (ctx.getAllocator().Allocate<AttributeExpr>())
       AttributeExpr(ctx, loc, copyStringWithNull(ctx, value));
+}
+
+//===----------------------------------------------------------------------===//
+// CallExpr
+//===----------------------------------------------------------------------===//
+
+CallExpr *CallExpr::create(Context &ctx, SMRange loc, Expr *callable,
+                           ArrayRef<Expr *> arguments, Type resultType) {
+  unsigned allocSize = CallExpr::totalSizeToAlloc<Expr *>(arguments.size());
+  void *rawData = ctx.getAllocator().Allocate(allocSize, alignof(CallExpr));
+
+  CallExpr *expr =
+      new (rawData) CallExpr(loc, resultType, callable, arguments.size());
+  std::uninitialized_copy(arguments.begin(), arguments.end(),
+                          expr->getArguments().begin());
+  return expr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -268,6 +293,30 @@ ValueRangeConstraintDecl *ValueRangeConstraintDecl::create(Context &ctx,
 }
 
 //===----------------------------------------------------------------------===//
+// UserConstraintDecl
+//===----------------------------------------------------------------------===//
+
+UserConstraintDecl *UserConstraintDecl::createImpl(
+    Context &ctx, const Name &name, ArrayRef<VariableDecl *> inputs,
+    ArrayRef<VariableDecl *> results, Optional<StringRef> codeBlock,
+    const CompoundStmt *body, Type resultType) {
+  unsigned allocSize = UserConstraintDecl::totalSizeToAlloc<VariableDecl *>(
+      inputs.size() + results.size());
+  void *rawData =
+      ctx.getAllocator().Allocate(allocSize, alignof(UserConstraintDecl));
+  if (codeBlock)
+    codeBlock = codeBlock->copy(ctx.getAllocator());
+
+  UserConstraintDecl *decl = new (rawData) UserConstraintDecl(
+      name, inputs.size(), results.size(), codeBlock, body, resultType);
+  std::uninitialized_copy(inputs.begin(), inputs.end(),
+                          decl->getInputs().begin());
+  std::uninitialized_copy(results.begin(), results.end(),
+                          decl->getResults().begin());
+  return decl;
+}
+
+//===----------------------------------------------------------------------===//
 // NamedAttributeDecl
 //===----------------------------------------------------------------------===//
 
@@ -298,6 +347,32 @@ PatternDecl *PatternDecl::create(Context &ctx, SMRange loc,
                                  const CompoundStmt *body) {
   return new (ctx.getAllocator().Allocate<PatternDecl>())
       PatternDecl(loc, name, benefit, hasBoundedRecursion, body);
+}
+
+//===----------------------------------------------------------------------===//
+// UserRewriteDecl
+//===----------------------------------------------------------------------===//
+
+UserRewriteDecl *UserRewriteDecl::createImpl(Context &ctx, const Name &name,
+                                             ArrayRef<VariableDecl *> inputs,
+                                             ArrayRef<VariableDecl *> results,
+                                             Optional<StringRef> codeBlock,
+                                             const CompoundStmt *body,
+                                             Type resultType) {
+  unsigned allocSize = UserRewriteDecl::totalSizeToAlloc<VariableDecl *>(
+      inputs.size() + results.size());
+  void *rawData =
+      ctx.getAllocator().Allocate(allocSize, alignof(UserRewriteDecl));
+  if (codeBlock)
+    codeBlock = codeBlock->copy(ctx.getAllocator());
+
+  UserRewriteDecl *decl = new (rawData) UserRewriteDecl(
+      name, inputs.size(), results.size(), codeBlock, body, resultType);
+  std::uninitialized_copy(inputs.begin(), inputs.end(),
+                          decl->getInputs().begin());
+  std::uninitialized_copy(results.begin(), results.end(),
+                          decl->getResults().begin());
+  return decl;
 }
 
 //===----------------------------------------------------------------------===//

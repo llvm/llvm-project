@@ -199,8 +199,8 @@ Relevant CMake Options
 This section provides documentation of the CMake options that are intended to
 help construct distributions. This is not an exhaustive list, and many
 additional options are documented in the :doc:`CMake` page. Some key options
-that are already documented include: *LLVM_TARGETS_TO_BUILD*,
-*LLVM_ENABLE_PROJECTS*, *LLVM_BUILD_LLVM_DYLIB*, and *LLVM_LINK_LLVM_DYLIB*.
+that are already documented include: *LLVM_TARGETS_TO_BUILD*, *LLVM_ENABLE_PROJECTS*,
+*LLVM_ENABLE_RUNTIMES*, *LLVM_BUILD_LLVM_DYLIB*, and *LLVM_LINK_LLVM_DYLIB*.
 
 **LLVM_ENABLE_RUNTIMES**:STRING
   When building a distribution that includes LLVM runtime projects (i.e. libcxx,

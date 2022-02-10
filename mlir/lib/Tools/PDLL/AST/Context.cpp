@@ -15,6 +15,7 @@ using namespace mlir::pdll::ast;
 Context::Context() {
   typeUniquer.registerSingletonStorageType<detail::AttributeTypeStorage>();
   typeUniquer.registerSingletonStorageType<detail::ConstraintTypeStorage>();
+  typeUniquer.registerSingletonStorageType<detail::RewriteTypeStorage>();
   typeUniquer.registerSingletonStorageType<detail::TypeTypeStorage>();
   typeUniquer.registerSingletonStorageType<detail::ValueTypeStorage>();
 

@@ -230,7 +230,7 @@ libunwind (LLVM)
 ^^^^^^^^^^^^^^^^
 
 LLVM's unwinder library is part of the llvm-project git repository. To
-build it, pass ``-DLLVM_ENABLE_PROJECTS=libunwind`` to the cmake invocation.
+build it, pass ``-DLLVM_ENABLE_RUNTIMES=libunwind`` to the cmake invocation.
 
 If using libc++abi, you may need to configure it to use libunwind
 rather than libgcc_s by passing ``-DLIBCXXABI_USE_LLVM_UNWINDER=YES``

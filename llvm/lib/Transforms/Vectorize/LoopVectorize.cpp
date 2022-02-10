@@ -2343,9 +2343,8 @@ static Value *getStepVector(Value *Val, Value *StartIdx, Value *Step,
 
   // Create a vector of consecutive numbers from zero to VF.
   VectorType *InitVecValVTy = ValVTy;
-  Type *InitVecValSTy = STy;
   if (STy->isFloatingPointTy()) {
-    InitVecValSTy =
+    Type *InitVecValSTy =
         IntegerType::get(STy->getContext(), STy->getScalarSizeInBits());
     InitVecValVTy = VectorType::get(InitVecValSTy, VLen);
   }

@@ -103,9 +103,9 @@ define dso_local i16 @vararg_tests(i16 %a) {
 ; NOT_CGSCC_NPM-NEXT:    [[ADD:%.*]] = add i16 7, [[CALL2]]
 ; NOT_CGSCC_NPM-NEXT:    ret i16 [[ADD]]
 ;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone
+; IS__CGSCC_NPM: Function Attrs: nofree nosync nounwind readnone
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@vararg_tests
-; IS__CGSCC_NPM-SAME: (i16 [[A:%.*]]) #[[ATTR0]] {
+; IS__CGSCC_NPM-SAME: (i16 [[A:%.*]]) #[[ATTR2:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:    [[CALL2:%.*]] = call i16 bitcast (i16 (i16, i16, ...)* @vararg_no_prop to i16 (i16)*)(i16 noundef 7)
 ; IS__CGSCC_NPM-NEXT:    [[ADD:%.*]] = add i16 7, [[CALL2]]
 ; IS__CGSCC_NPM-NEXT:    ret i16 [[ADD]]
@@ -140,4 +140,5 @@ define internal i16 @vararg_no_prop(i16 %p1, i16 %p2, ...) {
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone }
 ; IS__CGSCC_NPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR2]] = { nofree nosync nounwind readnone }
 ;.

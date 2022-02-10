@@ -41,7 +41,7 @@ Collecting accurate profile requires running `perf` on a hardware that
 implements taken branch sampling (`-b/-j` flag). For that reason, it may not be possible to
 collect the accurate profile in a virtualized environment, e.g. in the cloud.
 We do support regular sampling profiles, but the performance
-improvements are expected to be more modest. 
+improvements are expected to be more modest.
 
 ```bash
 $ mkdir ${TOPLEV}/stage3
@@ -211,7 +211,8 @@ $ cd ${TOPLEV}/stage1
 $ cmake -G Ninja ${TOPLEV}/llvm-project/llvm -DLLVM_TARGETS_TO_BUILD=X86 \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_ASM_COMPILER=gcc \
-      -DLLVM_ENABLE_PROJECTS="clang;lld;compiler-rt" \
+      -DLLVM_ENABLE_PROJECTS="clang;lld" \
+      -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
       -DCOMPILER_RT_BUILD_SANITIZERS=OFF -DCOMPILER_RT_BUILD_XRAY=OFF \
       -DCOMPILER_RT_BUILD_LIBFUZZER=OFF \
       -DCMAKE_INSTALL_PREFIX=${TOPLEV}/stage1/install

@@ -21,7 +21,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S s, typename S::size_type pos1, S str, typename S::size_type pos2,
      typename S::size_type n, S expected)
 {
@@ -51,7 +51,7 @@ test(S s, typename S::size_type pos1, S str, typename S::size_type pos2,
 }
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test_npos(S s, typename S::size_type pos1, S str, typename S::size_type pos2, S expected)
 {
     const typename S::size_type old_size = s.size();
@@ -81,7 +81,7 @@ test_npos(S s, typename S::size_type pos1, S str, typename S::size_type pos2, S 
 
 
 template <class S>
-void test0()
+TEST_CONSTEXPR_CXX20 bool test0()
 {
     test(S(""), 0, S(""), 0, 0, S(""));
     test(S(""), 0, S(""), 0, 1, S(""));
@@ -133,10 +133,12 @@ void test0()
     test(S(""), 0, S("1234567890"), 10, 0, S(""));
     test(S(""), 0, S("1234567890"), 10, 1, S(""));
     test(S(""), 0, S("1234567890"), 11, 0, S("can't happen"));
+
+    return true;
 }
 
 template <class S>
-void test1()
+TEST_CONSTEXPR_CXX20 bool test1()
 {
     test(S(""), 0, S("12345678901234567890"), 0, 0, S(""));
     test(S(""), 0, S("12345678901234567890"), 0, 1, S("1"));
@@ -188,10 +190,12 @@ void test1()
     test(S(""), 1, S("12345"), 5, 0, S("can't happen"));
     test(S(""), 1, S("12345"), 5, 1, S("can't happen"));
     test(S(""), 1, S("12345"), 6, 0, S("can't happen"));
+
+    return true;
 }
 
 template <class S>
-void test2()
+TEST_CONSTEXPR_CXX20 bool test2()
 {
     test(S(""), 1, S("1234567890"), 0, 0, S("can't happen"));
     test(S(""), 1, S("1234567890"), 0, 1, S("can't happen"));
@@ -243,10 +247,12 @@ void test2()
     test(S(""), 1, S("12345678901234567890"), 21, 0, S("can't happen"));
     test(S("abcde"), 0, S(""), 0, 0, S("abcde"));
     test(S("abcde"), 0, S(""), 0, 1, S("abcde"));
+
+    return true;
 }
 
 template <class S>
-void test3()
+TEST_CONSTEXPR_CXX20 bool test3()
 {
     test(S("abcde"), 0, S(""), 1, 0, S("can't happen"));
     test(S("abcde"), 0, S("12345"), 0, 0, S("abcde"));
@@ -298,10 +304,12 @@ void test3()
     test(S("abcde"), 0, S("1234567890"), 11, 0, S("can't happen"));
     test(S("abcde"), 0, S("12345678901234567890"), 0, 0, S("abcde"));
     test(S("abcde"), 0, S("12345678901234567890"), 0, 1, S("1abcde"));
+
+    return true;
 }
 
 template <class S>
-void test4()
+TEST_CONSTEXPR_CXX20 bool test4()
 {
     test(S("abcde"), 0, S("12345678901234567890"), 0, 10, S("1234567890abcde"));
     test(S("abcde"), 0, S("12345678901234567890"), 0, 19, S("1234567890123456789abcde"));
@@ -353,10 +361,12 @@ void test4()
     test(S("abcde"), 1, S("12345"), 6, 0, S("can't happen"));
     test(S("abcde"), 1, S("1234567890"), 0, 0, S("abcde"));
     test(S("abcde"), 1, S("1234567890"), 0, 1, S("a1bcde"));
+
+    return true;
 }
 
 template <class S>
-void test5()
+TEST_CONSTEXPR_CXX20 bool test5()
 {
     test(S("abcde"), 1, S("1234567890"), 0, 5, S("a12345bcde"));
     test(S("abcde"), 1, S("1234567890"), 0, 9, S("a123456789bcde"));
@@ -408,10 +418,12 @@ void test5()
     test(S("abcde"), 2, S(""), 0, 1, S("abcde"));
     test(S("abcde"), 2, S(""), 1, 0, S("can't happen"));
     test(S("abcde"), 2, S("12345"), 0, 0, S("abcde"));
+
+    return true;
 }
 
 template <class S>
-void test6()
+TEST_CONSTEXPR_CXX20 bool test6()
 {
     test(S("abcde"), 2, S("12345"), 0, 1, S("ab1cde"));
     test(S("abcde"), 2, S("12345"), 0, 2, S("ab12cde"));
@@ -463,10 +475,12 @@ void test6()
     test(S("abcde"), 2, S("12345678901234567890"), 0, 1, S("ab1cde"));
     test(S("abcde"), 2, S("12345678901234567890"), 0, 10, S("ab1234567890cde"));
     test(S("abcde"), 2, S("12345678901234567890"), 0, 19, S("ab1234567890123456789cde"));
+
+    return true;
 }
 
 template <class S>
-void test7()
+TEST_CONSTEXPR_CXX20 bool test7()
 {
     test(S("abcde"), 2, S("12345678901234567890"), 0, 20, S("ab12345678901234567890cde"));
     test(S("abcde"), 2, S("12345678901234567890"), 0, 21, S("ab12345678901234567890cde"));
@@ -518,10 +532,12 @@ void test7()
     test(S("abcde"), 4, S("1234567890"), 0, 1, S("abcd1e"));
     test(S("abcde"), 4, S("1234567890"), 0, 5, S("abcd12345e"));
     test(S("abcde"), 4, S("1234567890"), 0, 9, S("abcd123456789e"));
+
+    return true;
 }
 
 template <class S>
-void test8()
+TEST_CONSTEXPR_CXX20 bool test8()
 {
     test(S("abcde"), 4, S("1234567890"), 0, 10, S("abcd1234567890e"));
     test(S("abcde"), 4, S("1234567890"), 0, 11, S("abcd1234567890e"));
@@ -573,10 +589,12 @@ void test8()
     test(S("abcde"), 5, S("12345"), 0, 0, S("abcde"));
     test(S("abcde"), 5, S("12345"), 0, 1, S("abcde1"));
     test(S("abcde"), 5, S("12345"), 0, 2, S("abcde12"));
+
+    return true;
 }
 
 template <class S>
-void test9()
+TEST_CONSTEXPR_CXX20 bool test9()
 {
     test(S("abcde"), 5, S("12345"), 0, 4, S("abcde1234"));
     test(S("abcde"), 5, S("12345"), 0, 5, S("abcde12345"));
@@ -628,10 +646,12 @@ void test9()
     test(S("abcde"), 5, S("12345678901234567890"), 0, 19, S("abcde1234567890123456789"));
     test(S("abcde"), 5, S("12345678901234567890"), 0, 20, S("abcde12345678901234567890"));
     test(S("abcde"), 5, S("12345678901234567890"), 0, 21, S("abcde12345678901234567890"));
+
+    return true;
 }
 
 template <class S>
-void test10()
+TEST_CONSTEXPR_CXX20 bool test10()
 {
     test(S("abcde"), 5, S("12345678901234567890"), 1, 0, S("abcde"));
     test(S("abcde"), 5, S("12345678901234567890"), 1, 1, S("abcde2"));
@@ -683,10 +703,12 @@ void test10()
     test(S("abcde"), 6, S("1234567890"), 0, 9, S("can't happen"));
     test(S("abcde"), 6, S("1234567890"), 0, 10, S("can't happen"));
     test(S("abcde"), 6, S("1234567890"), 0, 11, S("can't happen"));
+
+    return true;
 }
 
 template <class S>
-void test11()
+TEST_CONSTEXPR_CXX20 bool test11()
 {
     test(S("abcde"), 6, S("1234567890"), 1, 0, S("can't happen"));
     test(S("abcde"), 6, S("1234567890"), 1, 1, S("can't happen"));
@@ -738,10 +760,12 @@ void test11()
     test(S("abcdefghij"), 0, S("12345"), 0, 2, S("12abcdefghij"));
     test(S("abcdefghij"), 0, S("12345"), 0, 4, S("1234abcdefghij"));
     test(S("abcdefghij"), 0, S("12345"), 0, 5, S("12345abcdefghij"));
+
+    return true;
 }
 
 template <class S>
-void test12()
+TEST_CONSTEXPR_CXX20 bool test12()
 {
     test(S("abcdefghij"), 0, S("12345"), 0, 6, S("12345abcdefghij"));
     test(S("abcdefghij"), 0, S("12345"), 1, 0, S("abcdefghij"));
@@ -793,10 +817,12 @@ void test12()
     test(S("abcdefghij"), 0, S("12345678901234567890"), 0, 21, S("12345678901234567890abcdefghij"));
     test(S("abcdefghij"), 0, S("12345678901234567890"), 1, 0, S("abcdefghij"));
     test(S("abcdefghij"), 0, S("12345678901234567890"), 1, 1, S("2abcdefghij"));
+
+    return true;
 }
 
 template <class S>
-void test13()
+TEST_CONSTEXPR_CXX20 bool test13()
 {
     test(S("abcdefghij"), 0, S("12345678901234567890"), 1, 9, S("234567890abcdefghij"));
     test(S("abcdefghij"), 0, S("12345678901234567890"), 1, 18, S("234567890123456789abcdefghij"));
@@ -848,10 +874,12 @@ void test13()
     test(S("abcdefghij"), 1, S("1234567890"), 0, 11, S("a1234567890bcdefghij"));
     test(S("abcdefghij"), 1, S("1234567890"), 1, 0, S("abcdefghij"));
     test(S("abcdefghij"), 1, S("1234567890"), 1, 1, S("a2bcdefghij"));
+
+    return true;
 }
 
 template <class S>
-void test14()
+TEST_CONSTEXPR_CXX20 bool test14()
 {
     test(S("abcdefghij"), 1, S("1234567890"), 1, 4, S("a2345bcdefghij"));
     test(S("abcdefghij"), 1, S("1234567890"), 1, 8, S("a23456789bcdefghij"));
@@ -903,10 +931,12 @@ void test14()
     test(S("abcdefghij"), 5, S("12345"), 0, 5, S("abcde12345fghij"));
     test(S("abcdefghij"), 5, S("12345"), 0, 6, S("abcde12345fghij"));
     test(S("abcdefghij"), 5, S("12345"), 1, 0, S("abcdefghij"));
+
+    return true;
 }
 
 template <class S>
-void test15()
+TEST_CONSTEXPR_CXX20 bool test15()
 {
     test(S("abcdefghij"), 5, S("12345"), 1, 1, S("abcde2fghij"));
     test(S("abcdefghij"), 5, S("12345"), 1, 2, S("abcde23fghij"));
@@ -958,10 +988,12 @@ void test15()
     test(S("abcdefghij"), 5, S("12345678901234567890"), 1, 1, S("abcde2fghij"));
     test(S("abcdefghij"), 5, S("12345678901234567890"), 1, 9, S("abcde234567890fghij"));
     test(S("abcdefghij"), 5, S("12345678901234567890"), 1, 18, S("abcde234567890123456789fghij"));
+
+    return true;
 }
 
 template <class S>
-void test16()
+TEST_CONSTEXPR_CXX20 bool test16()
 {
     test(S("abcdefghij"), 5, S("12345678901234567890"), 1, 19, S("abcde2345678901234567890fghij"));
     test(S("abcdefghij"), 5, S("12345678901234567890"), 1, 20, S("abcde2345678901234567890fghij"));
@@ -1013,10 +1045,12 @@ void test16()
     test(S("abcdefghij"), 9, S("1234567890"), 1, 1, S("abcdefghi2j"));
     test(S("abcdefghij"), 9, S("1234567890"), 1, 4, S("abcdefghi2345j"));
     test(S("abcdefghij"), 9, S("1234567890"), 1, 8, S("abcdefghi23456789j"));
+
+    return true;
 }
 
 template <class S>
-void test17()
+TEST_CONSTEXPR_CXX20 bool test17()
 {
     test(S("abcdefghij"), 9, S("1234567890"), 1, 9, S("abcdefghi234567890j"));
     test(S("abcdefghij"), 9, S("1234567890"), 1, 10, S("abcdefghi234567890j"));
@@ -1068,10 +1102,12 @@ void test17()
     test(S("abcdefghij"), 10, S("12345"), 1, 0, S("abcdefghij"));
     test(S("abcdefghij"), 10, S("12345"), 1, 1, S("abcdefghij2"));
     test(S("abcdefghij"), 10, S("12345"), 1, 2, S("abcdefghij23"));
+
+    return true;
 }
 
 template <class S>
-void test18()
+TEST_CONSTEXPR_CXX20 bool test18()
 {
     test(S("abcdefghij"), 10, S("12345"), 1, 3, S("abcdefghij234"));
     test(S("abcdefghij"), 10, S("12345"), 1, 4, S("abcdefghij2345"));
@@ -1123,10 +1159,12 @@ void test18()
     test(S("abcdefghij"), 10, S("12345678901234567890"), 1, 18, S("abcdefghij234567890123456789"));
     test(S("abcdefghij"), 10, S("12345678901234567890"), 1, 19, S("abcdefghij2345678901234567890"));
     test(S("abcdefghij"), 10, S("12345678901234567890"), 1, 20, S("abcdefghij2345678901234567890"));
+
+    return true;
 }
 
 template <class S>
-void test19()
+TEST_CONSTEXPR_CXX20 bool test19()
 {
     test(S("abcdefghij"), 10, S("12345678901234567890"), 10, 0, S("abcdefghij"));
     test(S("abcdefghij"), 10, S("12345678901234567890"), 10, 1, S("abcdefghij1"));
@@ -1178,10 +1216,12 @@ void test19()
     test(S("abcdefghij"), 11, S("1234567890"), 1, 8, S("can't happen"));
     test(S("abcdefghij"), 11, S("1234567890"), 1, 9, S("can't happen"));
     test(S("abcdefghij"), 11, S("1234567890"), 1, 10, S("can't happen"));
+
+    return true;
 }
 
 template <class S>
-void test20()
+TEST_CONSTEXPR_CXX20 bool test20()
 {
     test(S("abcdefghij"), 11, S("1234567890"), 5, 0, S("can't happen"));
     test(S("abcdefghij"), 11, S("1234567890"), 5, 1, S("can't happen"));
@@ -1233,10 +1273,12 @@ void test20()
     test(S("abcdefghijklmnopqrst"), 0, S("12345"), 1, 2, S("23abcdefghijklmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 0, S("12345"), 1, 3, S("234abcdefghijklmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 0, S("12345"), 1, 4, S("2345abcdefghijklmnopqrst"));
+
+    return true;
 }
 
 template <class S>
-void test21()
+TEST_CONSTEXPR_CXX20 bool test21()
 {
     test(S("abcdefghijklmnopqrst"), 0, S("12345"), 1, 5, S("2345abcdefghijklmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 0, S("12345"), 2, 0, S("abcdefghijklmnopqrst"));
@@ -1288,10 +1330,12 @@ void test21()
     test(S("abcdefghijklmnopqrst"), 0, S("12345678901234567890"), 1, 20, S("2345678901234567890abcdefghijklmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 0, S("12345678901234567890"), 10, 0, S("abcdefghijklmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 0, S("12345678901234567890"), 10, 1, S("1abcdefghijklmnopqrst"));
+
+    return true;
 }
 
 template <class S>
-void test22()
+TEST_CONSTEXPR_CXX20 bool test22()
 {
     test(S("abcdefghijklmnopqrst"), 0, S("12345678901234567890"), 10, 5, S("12345abcdefghijklmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 0, S("12345678901234567890"), 10, 9, S("123456789abcdefghijklmnopqrst"));
@@ -1343,10 +1387,12 @@ void test22()
     test(S("abcdefghijklmnopqrst"), 1, S("1234567890"), 1, 10, S("a234567890bcdefghijklmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 1, S("1234567890"), 5, 0, S("abcdefghijklmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 1, S("1234567890"), 5, 1, S("a6bcdefghijklmnopqrst"));
+
+    return true;
 }
 
 template <class S>
-void test23()
+TEST_CONSTEXPR_CXX20 bool test23()
 {
     test(S("abcdefghijklmnopqrst"), 1, S("1234567890"), 5, 2, S("a67bcdefghijklmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 1, S("1234567890"), 5, 4, S("a6789bcdefghijklmnopqrst"));
@@ -1398,10 +1444,12 @@ void test23()
     test(S("abcdefghijklmnopqrst"), 10, S("12345"), 1, 4, S("abcdefghij2345klmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 10, S("12345"), 1, 5, S("abcdefghij2345klmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 10, S("12345"), 2, 0, S("abcdefghijklmnopqrst"));
+
+    return true;
 }
 
 template <class S>
-void test24()
+TEST_CONSTEXPR_CXX20 bool test24()
 {
     test(S("abcdefghijklmnopqrst"), 10, S("12345"), 2, 1, S("abcdefghij3klmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 10, S("12345"), 2, 2, S("abcdefghij34klmnopqrst"));
@@ -1453,10 +1501,12 @@ void test24()
     test(S("abcdefghijklmnopqrst"), 10, S("12345678901234567890"), 10, 1, S("abcdefghij1klmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 10, S("12345678901234567890"), 10, 5, S("abcdefghij12345klmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 10, S("12345678901234567890"), 10, 9, S("abcdefghij123456789klmnopqrst"));
+
+    return true;
 }
 
 template <class S>
-void test25()
+TEST_CONSTEXPR_CXX20 bool test25()
 {
     test(S("abcdefghijklmnopqrst"), 10, S("12345678901234567890"), 10, 10, S("abcdefghij1234567890klmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 10, S("12345678901234567890"), 10, 11, S("abcdefghij1234567890klmnopqrst"));
@@ -1508,10 +1558,12 @@ void test25()
     test(S("abcdefghijklmnopqrst"), 19, S("1234567890"), 5, 1, S("abcdefghijklmnopqrs6t"));
     test(S("abcdefghijklmnopqrst"), 19, S("1234567890"), 5, 2, S("abcdefghijklmnopqrs67t"));
     test(S("abcdefghijklmnopqrst"), 19, S("1234567890"), 5, 4, S("abcdefghijklmnopqrs6789t"));
+
+    return true;
 }
 
 template <class S>
-void test26()
+TEST_CONSTEXPR_CXX20 bool test26()
 {
     test(S("abcdefghijklmnopqrst"), 19, S("1234567890"), 5, 5, S("abcdefghijklmnopqrs67890t"));
     test(S("abcdefghijklmnopqrst"), 19, S("1234567890"), 5, 6, S("abcdefghijklmnopqrs67890t"));
@@ -1563,10 +1615,12 @@ void test26()
     test(S("abcdefghijklmnopqrst"), 20, S("12345"), 2, 0, S("abcdefghijklmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 20, S("12345"), 2, 1, S("abcdefghijklmnopqrst3"));
     test(S("abcdefghijklmnopqrst"), 20, S("12345"), 2, 2, S("abcdefghijklmnopqrst34"));
+
+    return true;
 }
 
 template <class S>
-void test27()
+TEST_CONSTEXPR_CXX20 bool test27()
 {
     test(S("abcdefghijklmnopqrst"), 20, S("12345"), 2, 3, S("abcdefghijklmnopqrst345"));
     test(S("abcdefghijklmnopqrst"), 20, S("12345"), 2, 4, S("abcdefghijklmnopqrst345"));
@@ -1618,10 +1672,12 @@ void test27()
     test(S("abcdefghijklmnopqrst"), 20, S("12345678901234567890"), 10, 9, S("abcdefghijklmnopqrst123456789"));
     test(S("abcdefghijklmnopqrst"), 20, S("12345678901234567890"), 10, 10, S("abcdefghijklmnopqrst1234567890"));
     test(S("abcdefghijklmnopqrst"), 20, S("12345678901234567890"), 10, 11, S("abcdefghijklmnopqrst1234567890"));
+
+    return true;
 }
 
 template <class S>
-void test28()
+TEST_CONSTEXPR_CXX20 bool test28()
 {
     test(S("abcdefghijklmnopqrst"), 20, S("12345678901234567890"), 19, 0, S("abcdefghijklmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 20, S("12345678901234567890"), 19, 1, S("abcdefghijklmnopqrst0"));
@@ -1673,10 +1729,12 @@ void test28()
     test(S("abcdefghijklmnopqrst"), 21, S("1234567890"), 5, 4, S("can't happen"));
     test(S("abcdefghijklmnopqrst"), 21, S("1234567890"), 5, 5, S("can't happen"));
     test(S("abcdefghijklmnopqrst"), 21, S("1234567890"), 5, 6, S("can't happen"));
+
+    return true;
 }
 
 template <class S>
-void test29()
+TEST_CONSTEXPR_CXX20 bool test29()
 {
     test(S("abcdefghijklmnopqrst"), 21, S("1234567890"), 9, 0, S("can't happen"));
     test(S("abcdefghijklmnopqrst"), 21, S("1234567890"), 9, 1, S("can't happen"));
@@ -1708,10 +1766,12 @@ void test29()
     test(S("abcdefghijklmnopqrst"), 21, S("12345678901234567890"), 20, 0, S("can't happen"));
     test(S("abcdefghijklmnopqrst"), 21, S("12345678901234567890"), 20, 1, S("can't happen"));
     test(S("abcdefghijklmnopqrst"), 21, S("12345678901234567890"), 21, 0, S("can't happen"));
+
+    return true;
 }
 
 template <class S>
-void test30()
+TEST_CONSTEXPR_CXX20 bool test30()
 {
     test_npos(S(""), 0, S("12345678901234567890"),  0, S("12345678901234567890"));
     test_npos(S(""), 0, S("12345678901234567890"),  1, S( "2345678901234567890"));
@@ -1725,79 +1785,84 @@ void test30()
     test_npos(S("abcdefghijklmnopqrst"), 10, S("12345"), 3, S("abcdefghij45klmnopqrst"));
     test_npos(S("abcdefghijklmnopqrst"), 10, S("12345"), 5, S("abcdefghijklmnopqrst"));
     test_npos(S("abcdefghijklmnopqrst"), 10, S("12345"), 6, S("can't happen"));
+
+    return true;
+}
+
+template <class S>
+void test() {
+  test0<S>();
+  test1<S>();
+  test2<S>();
+  test3<S>();
+  test4<S>();
+  test5<S>();
+  test6<S>();
+  test7<S>();
+  test8<S>();
+  test9<S>();
+  test10<S>();
+  test11<S>();
+  test12<S>();
+  test13<S>();
+  test14<S>();
+  test15<S>();
+  test16<S>();
+  test17<S>();
+  test18<S>();
+  test19<S>();
+  test20<S>();
+  test21<S>();
+  test22<S>();
+  test23<S>();
+  test24<S>();
+  test25<S>();
+  test26<S>();
+  test27<S>();
+  test28<S>();
+  test29<S>();
+  test30<S>();
+
+#if TEST_STD_VER > 17
+  // static_assert(test0<S>());
+  // static_assert(test1<S>());
+  // static_assert(test2<S>());
+  // static_assert(test3<S>());
+  // static_assert(test4<S>());
+  // static_assert(test5<S>());
+  // static_assert(test6<S>());
+  // static_assert(test7<S>());
+  // static_assert(test8<S>());
+  // static_assert(test9<S>());
+  // static_assert(test10<S>());
+  // static_assert(test11<S>());
+  // static_assert(test12<S>());
+  // static_assert(test13<S>());
+  // static_assert(test14<S>());
+  // static_assert(test15<S>());
+  // static_assert(test16<S>());
+  // static_assert(test17<S>());
+  // static_assert(test18<S>());
+  // static_assert(test19<S>());
+  // static_assert(test20<S>());
+  // static_assert(test21<S>());
+  // static_assert(test22<S>());
+  // static_assert(test23<S>());
+  // static_assert(test24<S>());
+  // static_assert(test25<S>());
+  // static_assert(test26<S>());
+  // static_assert(test27<S>());
+  // static_assert(test28<S>());
+  // static_assert(test29<S>());
+  // static_assert(test30<S>());
+#endif
 }
 
 int main(int, char**)
 {
-    {
-    typedef std::string S;
-    test0<S>();
-    test1<S>();
-    test2<S>();
-    test3<S>();
-    test4<S>();
-    test5<S>();
-    test6<S>();
-    test7<S>();
-    test8<S>();
-    test9<S>();
-    test10<S>();
-    test11<S>();
-    test12<S>();
-    test13<S>();
-    test14<S>();
-    test15<S>();
-    test16<S>();
-    test17<S>();
-    test18<S>();
-    test19<S>();
-    test20<S>();
-    test21<S>();
-    test22<S>();
-    test23<S>();
-    test24<S>();
-    test25<S>();
-    test26<S>();
-    test27<S>();
-    test28<S>();
-    test29<S>();
-    test30<S>();
-    }
+  test<std::string>();
 #if TEST_STD_VER >= 11
-    {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    test0<S>();
-    test1<S>();
-    test2<S>();
-    test3<S>();
-    test4<S>();
-    test5<S>();
-    test6<S>();
-    test7<S>();
-    test8<S>();
-    test9<S>();
-    test10<S>();
-    test11<S>();
-    test12<S>();
-    test13<S>();
-    test14<S>();
-    test15<S>();
-    test16<S>();
-    test17<S>();
-    test18<S>();
-    test19<S>();
-    test20<S>();
-    test21<S>();
-    test22<S>();
-    test23<S>();
-    test24<S>();
-    test25<S>();
-    test26<S>();
-    test27<S>();
-    test28<S>();
-    test29<S>();
-    test30<S>();
-    }
+  test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
 #endif
 
   return 0;
