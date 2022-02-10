@@ -125,7 +125,7 @@ define i1 @logical_or(i1 %x, i1 %y) {
 ; CHECK-LABEL: 'logical_or'
 ; CHECK-NEXT:  Classifying expressions for: @logical_or
 ; CHECK-NEXT:    %r = select i1 %x, i1 true, i1 %y
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> (true + ((true + %x) umin_seq (true + %y))) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or
 ;
   %r = select i1 %x, i1 true, i1 %y
@@ -180,7 +180,7 @@ define i1 @select_true_or_x(i1 %c, i1 %x) {
 ; CHECK-LABEL: 'select_true_or_x'
 ; CHECK-NEXT:  Classifying expressions for: @select_true_or_x
 ; CHECK-NEXT:    %r = select i1 %c, i1 true, i1 %x
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> (true + ((true + %c) umin_seq (true + %x))) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @select_true_or_x
 ;
   %r = select i1 %c, i1 true, i1 %x
