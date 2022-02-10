@@ -1214,7 +1214,8 @@ private:
   /// For complex Operations: X = UpdateOp(X) => CmpExch X, old_X, UpdateOp(X)
   /// Only Scalar data types.
   ///
-  /// \param AllocIP	  Instruction to create AllocaInst before.
+  /// \param AllocaIP	  The insertion point to be used for alloca
+  ///                   instructions.
   /// \param X			    The target atomic pointer to be updated
   /// \param XElemTy    The element type of the atomic pointer.
   /// \param Expr		    The value to update X with.
@@ -1234,7 +1235,7 @@ private:
   /// \returns A pair of the old value of X before the update, and the value
   ///          used for the update.
   std::pair<Value *, Value *>
-  emitAtomicUpdate(Instruction *AllocIP, Value *X, Type *XElemTy, Value *Expr,
+  emitAtomicUpdate(InsertPointTy AllocaIP, Value *X, Type *XElemTy, Value *Expr,
                    AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
                    AtomicUpdateCallbackTy &UpdateOp, bool VolatileX,
                    bool IsXBinopExpr);
@@ -1286,7 +1287,7 @@ public:
   /// Only Scalar data types.
   ///
   /// \param Loc      The insert and source location description.
-  /// \param AllocIP  Instruction to create AllocaInst before.
+  /// \param AllocaIP The insertion point to be used for alloca instructions.
   /// \param X        The target atomic pointer to be updated
   /// \param Expr     The value to update X with.
   /// \param AO       Atomic ordering of the generated atomic instructions.
@@ -1302,7 +1303,7 @@ public:
   ///
   /// \return Insertion point after generated atomic update IR.
   InsertPointTy createAtomicUpdate(const LocationDescription &Loc,
-                                   Instruction *AllocIP, AtomicOpValue &X,
+                                   InsertPointTy AllocaIP, AtomicOpValue &X,
                                    Value *Expr, AtomicOrdering AO,
                                    AtomicRMWInst::BinOp RMWOp,
                                    AtomicUpdateCallbackTy &UpdateOp,
@@ -1317,7 +1318,7 @@ public:
   /// X = UpdateOp(X); V = X,
   ///
   /// \param Loc        The insert and source location description.
-  /// \param AllocIP    Instruction to create AllocaInst before.
+  /// \param AllocaIP   The insertion point to be used for alloca instructions.
   /// \param X          The target atomic pointer to be updated
   /// \param V          Memory address where to store captured value
   /// \param Expr       The value to update X with.
@@ -1338,7 +1339,7 @@ public:
   ///
   /// \return Insertion point after generated atomic capture IR.
   InsertPointTy
-  createAtomicCapture(const LocationDescription &Loc, Instruction *AllocIP,
+  createAtomicCapture(const LocationDescription &Loc, InsertPointTy AllocaIP,
                       AtomicOpValue &X, AtomicOpValue &V, Value *Expr,
                       AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
                       AtomicUpdateCallbackTy &UpdateOp, bool UpdateExpr,
