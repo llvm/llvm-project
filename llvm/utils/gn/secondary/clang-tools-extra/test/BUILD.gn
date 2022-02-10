@@ -33,7 +33,7 @@ write_lit_config("lit_site_cfg") {
 
   extra_values = [
     "CLANG_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
-    "LLVM_ENABLE_PLUGINS=0",
+    "CLANG_PLUGIN_SUPPORT=0",
     "LLVM_INSTALL_TOOLCHAIN_ONLY=0",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),

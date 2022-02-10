@@ -4,7 +4,7 @@
 ; than the expanded cost.  Currently the x86 code size cost model does not use
 ; the expanded cost and only assigns a cost of 1 to each load.
 
-; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=x86_64--linux-gnu < %s | FileCheck %s --check-prefix=CHECK
+; RUN: opt -passes='print<cost-model>' -cost-kind=code-size 2>&1 -disable-output -mtriple=x86_64--linux-gnu < %s | FileCheck %s --check-prefix=CHECK
 
 ; Check that cost is 1 for unusual load to register sized load.
 define i32 @loadUnusualIntegerWithTrunc(i128* %ptr) {

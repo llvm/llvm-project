@@ -56,7 +56,7 @@ public:
 
   /// Destruct this instance. If a multi-threaded instance, waits for all
   /// compile threads to complete.
-  ~LLJIT();
+  virtual ~LLJIT();
 
   /// Returns the ExecutionSession for this instance.
   ExecutionSession &getExecutionSession() { return *ES; }

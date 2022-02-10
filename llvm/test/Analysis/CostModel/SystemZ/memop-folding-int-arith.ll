@@ -1,6 +1,6 @@
-; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=z13 \
+; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 \
 ; RUN:  | FileCheck %s -check-prefixes=CHECK,Z13
-; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=z14 \
+; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z14 \
 ; RUN:  | FileCheck %s -check-prefixes=CHECK,Z14
 ;
 ; Test that loads into operations that can fold one memory operand get zero
@@ -102,7 +102,7 @@ define void @add_i16_mem16(i16 %Arg, i16* %Src1, i16* %Src2, i16* %Dst, i32* %Sr
   store volatile i16 %S2, i16* %Dst
 
   ret void
-; CHECK: Printing analysis 'Cost Model Analysis' for function 'add_i16_mem16':
+; CHECK: function 'add_i16_mem16'
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %L1 = load i16, i16* %Src1
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %S0 = add i16 %L1, %Arg
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   store volatile i16 %S0, i16* %Dst
@@ -276,7 +276,7 @@ define void @sub_i16_mem16(i16 %Arg, i16* %Src1, i16* %Src2, i16* %Dst, i32* %Sr
   store volatile i16 %D2, i16* %Dst
 
   ret void
-; CHECK: Printing analysis 'Cost Model Analysis' for function 'sub_i16_mem16':
+; CHECK: function 'sub_i16_mem16'
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %L1 = load i16, i16* %Src1
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %D0 = sub i16 %Arg, %L1
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   store volatile i16 %D0, i16* %Dst
@@ -384,7 +384,7 @@ define void @mul_i16_mem16(i16 %Arg, i16* %Src1, i16* %Src2, i16* %Dst, i32* %Sr
   store volatile i16 %P2, i16* %Dst
 
   ret void
-; CHECK: Printing analysis 'Cost Model Analysis' for function 'mul_i16_mem16':
+; CHECK: function 'mul_i16_mem16'
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %L1 = load i16, i16* %Src1
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %P0 = mul i16 %Arg, %L1
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   store volatile i16 %P0, i16* %Dst
