@@ -21,7 +21,6 @@ ELF_RELOC(R_LARCH_TLS_DTPREL64,                9)
 ELF_RELOC(R_LARCH_TLS_TPREL32,                10)
 ELF_RELOC(R_LARCH_TLS_TPREL64,                11)
 ELF_RELOC(R_LARCH_IRELATIVE,                  12)
-
 ELF_RELOC(R_LARCH_MARK_LA,                    20)
 ELF_RELOC(R_LARCH_MARK_PCREL,                 21)
 ELF_RELOC(R_LARCH_SOP_PUSH_PCREL,             22)
