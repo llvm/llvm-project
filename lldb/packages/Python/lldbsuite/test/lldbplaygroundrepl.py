@@ -39,37 +39,16 @@ class PlaygroundREPLTest(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-        self.PlaygroundStub_source = "PlaygroundStub.swift"
-        self.PlaygroundStub_source_spec = lldb.SBFileSpec(
-            self.PlaygroundStub_source)
 
     def repl_set_up(self):
         """
         Playgrounds REPL test specific setup that must happen after class setup
         """
-        exe_name = "PlaygroundStub"
-        exe = self.getBuildArtifact(exe_name)
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, 'Set breakpoint here', lldb.SBFileSpec('PlaygroundStub.swift'),
+            exe_name='PlaygroundStub', extra_images=['libPlaygroundsRuntime.dylib'])
 
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        self.registerSharedLibrariesWithTarget(target, ['libPlaygroundsRuntime.dylib'])
-
-        # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint here', self.PlaygroundStub_source_spec)
-        self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
-
-        process = target.LaunchSimple(None, None, self.getBuildDir())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
+        self.frame = thread.frames[0]
         self.assertTrue(self.frame, "Frame 0 is valid.")
 
         # Configure lldb
@@ -100,9 +79,10 @@ class PlaygroundREPLTest(TestBase):
             contents = contents_file.read()
 
         result = self.frame.EvaluateExpression(contents, self.options)
-        ouput = self.frame.EvaluateExpression("get_output()")
+        output = self.frame.EvaluateExpression("get_output()")
+        self.assertSuccess(output.GetError())
 
-        return result, ouput
+        return result, output
 
     def is_compile_or_runtime_error(self, result):
         """
