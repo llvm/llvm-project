@@ -1492,71 +1492,74 @@ mlir::FuncOp CIRGenModule::buildFunction(const FunctionDecl *FD) {
   auto FnEndLoc = getLoc(FD->getBody()->getEndLoc());
 
   // Initialize lexical scope information.
-  LexicalScopeContext lexScope;
-  LexicalScopeGuard scopeGuard{*this, &lexScope};
-
   {
-    // Create the cleanup block but dont hook it up around just
-    // yet.
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    mlir::Block *entryBlock = builder.getBlock();
-    currLexScope->CleanupBlock = builder.createBlock(entryBlock->getParent());
-  }
-  assert(builder.getInsertionBlock() && "Should be valid");
+    LexicalScopeContext lexScope;
+    LexicalScopeGuard scopeGuard{*this, &lexScope};
 
-  // Declare all the function arguments in the symbol table.
-  for (const auto nameValue :
-       llvm::zip(FD->parameters(), entryBlock->getArguments())) {
-    auto *paramVar = std::get<0>(nameValue);
-    auto paramVal = std::get<1>(nameValue);
-    auto alignment = astCtx.getDeclAlign(paramVar);
-    auto paramLoc = getLoc(paramVar->getSourceRange());
-    paramVal.setLoc(paramLoc);
+    {
+      // Create the cleanup block but dont hook it up around just
+      // yet.
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      mlir::Block *entryBlock = builder.getBlock();
+      currLexScope->CleanupBlock = builder.createBlock(entryBlock->getParent());
+    }
+    assert(builder.getInsertionBlock() && "Should be valid");
 
-    mlir::Value addr;
-    if (failed(declare(paramVar, paramVar->getType(), paramLoc, alignment, addr,
-                       true /*param*/)))
+    // Declare all the function arguments in the symbol table.
+    for (const auto nameValue :
+         llvm::zip(FD->parameters(), entryBlock->getArguments())) {
+      auto *paramVar = std::get<0>(nameValue);
+      auto paramVal = std::get<1>(nameValue);
+      auto alignment = astCtx.getDeclAlign(paramVar);
+      auto paramLoc = getLoc(paramVar->getSourceRange());
+      paramVal.setLoc(paramLoc);
+
+      mlir::Value addr;
+      if (failed(declare(paramVar, paramVar->getType(), paramLoc, alignment,
+                         addr, true /*param*/)))
+        return nullptr;
+      // Location of the store to the param storage tracked as beginning of
+      // the function body.
+      auto fnBodyBegin = getLoc(FD->getBody()->getBeginLoc());
+      builder.create<mlir::cir::StoreOp>(fnBodyBegin, paramVal, addr);
+    }
+    assert(builder.getInsertionBlock() && "Should be valid");
+
+    // Emit the body of the function.
+    if (mlir::failed(buildFunctionBody(FD->getBody()))) {
+      function.erase();
       return nullptr;
-    // Location of the store to the param storage tracked as beginning of
-    // the function body.
-    auto fnBodyBegin = getLoc(FD->getBody()->getBeginLoc());
-    builder.create<mlir::cir::StoreOp>(fnBodyBegin, paramVal, addr);
+    }
+    assert(builder.getInsertionBlock() && "Should be valid");
+
+    // Do not insert the cleanup block unecessarily, this doesn't really need
+    // to be here (should be a separate pass), but it helps keeping small
+    // testcases minimal for now.
+    if (!builder.getInsertionBlock()->isEntryBlock()) {
+      // If the current block doesn't have a terminator, add a branch to the
+      // cleanup block, where the actual cir.return happens (cleanup block).
+      if (!builder.getBlock()->back().hasTrait<mlir::OpTrait::IsTerminator>())
+        builder.create<BrOp>(FnEndLoc, currLexScope->CleanupBlock);
+
+      // Set the insertion point to the end of the cleanup block and insert
+      // the return instruction.
+      // FIXME: this currently assumes only one cir.return in the function.
+      builder.setInsertionPointToEnd(currLexScope->CleanupBlock);
+    } else {
+      // Do not even emit cleanup block
+      assert(currLexScope->CleanupBlock->empty() && "not empty");
+      assert((builder.getBlock()->empty() ||
+              !builder.getBlock()
+                   ->back()
+                   .hasTrait<mlir::OpTrait::IsTerminator>()) &&
+             "entry basic block already has a terminator?");
+      currLexScope->CleanupBlock->erase();
+    }
+
+    builder.create<ReturnOp>(CurCGF->RetLoc ? *(CurCGF->RetLoc) : FnEndLoc,
+                             CurCGF->RetValue ? ArrayRef(CurCGF->RetValue)
+                                              : ArrayRef<mlir::Value>());
   }
-  assert(builder.getInsertionBlock() && "Should be valid");
-
-  // Emit the body of the function.
-  if (mlir::failed(buildFunctionBody(FD->getBody()))) {
-    function.erase();
-    return nullptr;
-  }
-  assert(builder.getInsertionBlock() && "Should be valid");
-
-  // Do not insert the cleanup block unecessarily, this doesn't really need
-  // to be here (should be a separate pass), but it helps keeping small
-  // testcases minimal for now.
-  if (!builder.getInsertionBlock()->isEntryBlock()) {
-    // If the current block doesn't have a terminator, add a branch to the
-    // cleanup block, where the actual cir.return happens (cleanup block).
-    if (!builder.getBlock()->back().hasTrait<mlir::OpTrait::IsTerminator>())
-      builder.create<BrOp>(FnEndLoc, currLexScope->CleanupBlock);
-
-    // Set the insertion point to the end of the cleanup block and insert
-    // the return instruction.
-    // FIXME: this currently assumes only one cir.return in the function.
-    builder.setInsertionPointToEnd(currLexScope->CleanupBlock);
-  } else {
-    // Do not even emit cleanup block
-    assert(currLexScope->CleanupBlock->empty() && "not empty");
-    assert(
-        (builder.getBlock()->empty() ||
-         !builder.getBlock()->back().hasTrait<mlir::OpTrait::IsTerminator>()) &&
-        "entry basic block already has a terminator?");
-    currLexScope->CleanupBlock->erase();
-  }
-
-  builder.create<ReturnOp>(CurCGF->RetLoc ? *(CurCGF->RetLoc) : FnEndLoc,
-                           CurCGF->RetValue ? ArrayRef(CurCGF->RetValue)
-                                            : ArrayRef<mlir::Value>());
 
   if (mlir::failed(function.verifyBody()))
     return nullptr;
