@@ -52,3 +52,49 @@ template <typename T>
 T req2(T t) requires requires { t + t; };
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
   // CHECK-FIXES: {{^}}auto req2(T t) -> T requires requires { t + t; };{{$}}
+
+//
+// Operator c++20 defaulted comparison operators
+//
+// Requires <compare>
+
+namespace std {
+struct strong_ordering {
+  using value_type = signed char;
+  static strong_ordering const less;
+  static strong_ordering const equal;
+  static strong_ordering const equivalent;
+  static strong_ordering const greater;
+
+  constexpr strong_ordering(value_type v) : val(v) {}
+  template <typename T>
+  requires(T{0}) friend constexpr auto
+  operator==(strong_ordering v, T u) noexcept -> bool {
+    return v.val == u;
+  }
+  friend constexpr auto operator==(strong_ordering v, strong_ordering w) noexcept -> bool = default;
+
+  value_type val{};
+};
+inline constexpr strong_ordering strong_ordering::less{-1};
+inline constexpr strong_ordering strong_ordering::equal{0};
+inline constexpr strong_ordering strong_ordering::equivalent{0};
+inline constexpr strong_ordering strong_ordering::greater{1};
+
+} // namespace std
+
+struct TestDefaultOperatorA {
+  int a{};
+  int b{};
+
+  friend auto operator<=>(const TestDefaultOperatorA &, const TestDefaultOperatorA &) noexcept = default;
+};
+
+struct TestDefaultOperatorB {
+  int a{};
+  int b{};
+  friend auto operator==(const TestDefaultOperatorB &, const TestDefaultOperatorB &) noexcept -> bool = default;
+  friend bool operator<(const TestDefaultOperatorB &, const TestDefaultOperatorB &) noexcept = default;
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
+  // CHECK-FIXES: {{^}}  friend auto operator<(const TestDefaultOperatorB &, const TestDefaultOperatorB &) noexcept -> bool = default;{{$}}
+};
