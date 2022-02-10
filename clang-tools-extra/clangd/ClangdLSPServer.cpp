@@ -986,8 +986,8 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
 
   // Now enumerate the semantic code actions.
   auto ConsumeActions =
-      [Reply = std::move(Reply), File, Selection = Params.range,
-       FixIts = std::move(FixIts), this](
+      [Diags = Params.context.diagnostics, Reply = std::move(Reply), File,
+       Selection = Params.range, FixIts = std::move(FixIts), this](
           llvm::Expected<std::vector<ClangdServer::TweakRef>> Tweaks) mutable {
         if (!Tweaks)
           return Reply(Tweaks.takeError());
@@ -1003,12 +1003,16 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
         for (auto &Action : Actions) {
           if (Action.kind && *Action.kind == CodeAction::QUICKFIX_KIND) {
             if (OnlyFix) {
-              OnlyFix->isPreferred = false;
+              OnlyFix = nullptr;
               break;
             }
-            Action.isPreferred = true;
             OnlyFix = &Action;
           }
+        }
+        if (OnlyFix) {
+          OnlyFix->isPreferred = true;
+          if (Diags.size() == 1 && Diags.front().range == Selection)
+            OnlyFix->diagnostics = {Diags.front()};
         }
 
         if (SupportsCodeAction)
