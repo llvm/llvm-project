@@ -337,6 +337,13 @@ private:
 
   void genFIRProcedureExit(Fortran::lower::pft::FunctionLikeUnit &funit,
                            const Fortran::semantics::Symbol &symbol) {
+    if (mlir::Block *finalBlock = funit.finalBlock) {
+      // The current block must end with a terminator.
+      if (blockIsUnterminated())
+        builder->create<mlir::cf::BranchOp>(toLocation(), finalBlock);
+      // Set insertion point to final block.
+      builder->setInsertionPoint(finalBlock, finalBlock->end());
+    }
     if (Fortran::semantics::IsFunction(symbol)) {
       TODO(toLocation(), "Function lowering");
     } else {
@@ -652,7 +659,24 @@ private:
   }
 
   void genFIR(const Fortran::parser::ReturnStmt &stmt) {
-    TODO(toLocation(), "ReturnStmt lowering");
+    Fortran::lower::pft::FunctionLikeUnit *funit =
+        getEval().getOwningProcedure();
+    assert(funit && "not inside main program, function or subroutine");
+    if (funit->isMainProgram()) {
+      genExitRoutine();
+      return;
+    }
+    mlir::Location loc = toLocation();
+    if (stmt.v) {
+      TODO(loc, "Alternate return statement");
+    }
+    // Branch to the last block of the SUBROUTINE, which has the actual return.
+    if (!funit->finalBlock) {
+      mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
+      funit->finalBlock = builder->createBlock(&builder->getRegion());
+      builder->restoreInsertionPoint(insPt);
+    }
+    builder->create<mlir::cf::BranchOp>(loc, funit->finalBlock);
   }
 
   void genFIR(const Fortran::parser::CycleStmt &) {
