@@ -866,13 +866,14 @@ void updateVCallVisibilityInIndex(
   if (!hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO))
     return;
   for (auto &P : Index) {
+    // Don't upgrade the visibility for symbols exported to the dynamic
+    // linker, as we have no information on their eventual use.
+    if (DynamicExportSymbols.count(P.first))
+      continue;
     for (auto &S : P.second.SummaryList) {
       auto *GVar = dyn_cast<GlobalVarSummary>(S.get());
       if (!GVar ||
-          GVar->getVCallVisibility() != GlobalObject::VCallVisibilityPublic ||
-          // Don't upgrade the visibility for symbols exported to the dynamic
-          // linker, as we have no information on their eventual use.
-          DynamicExportSymbols.count(P.first))
+          GVar->getVCallVisibility() != GlobalObject::VCallVisibilityPublic)
         continue;
       GVar->setVCallVisibility(GlobalObject::VCallVisibilityLinkageUnit);
     }
