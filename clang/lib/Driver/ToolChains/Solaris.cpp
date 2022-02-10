@@ -132,6 +132,13 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-lssp_nonshared");
       CmdArgs.push_back("-lssp");
     }
+    // LLVM support for atomics on 32-bit SPARC V8+ is incomplete, so
+    // forcibly link with libatomic as a workaround.
+    if (getToolChain().getTriple().getArch() == llvm::Triple::sparc) {
+      CmdArgs.push_back(getAsNeededOption(getToolChain(), true));
+      CmdArgs.push_back("-latomic");
+      CmdArgs.push_back(getAsNeededOption(getToolChain(), false));
+    }
     CmdArgs.push_back("-lgcc_s");
     CmdArgs.push_back("-lc");
     if (!Args.hasArg(options::OPT_shared)) {
