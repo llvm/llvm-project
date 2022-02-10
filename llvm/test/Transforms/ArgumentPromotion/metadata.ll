@@ -33,12 +33,12 @@ define internal void @callee(i32* %p1, i32** %p2, i32** %p3, i32** %p4, i32** %p
 define void @caller(i32* %p1, i32** %p2, i32** %p3, i32** %p4, i32** %p5, i32** %p6) {
 ; CHECK-LABEL: define {{[^@]+}}@caller
 ; CHECK-SAME: (i32* [[P1:%.*]], i32** [[P2:%.*]], i32** [[P3:%.*]], i32** [[P4:%.*]], i32** [[P5:%.*]], i32** [[P6:%.*]]) {
-; CHECK-NEXT:    [[P1_VAL:%.*]] = load i32, i32* [[P1]], align 4
-; CHECK-NEXT:    [[P2_VAL:%.*]] = load i32*, i32** [[P2]], align 8
-; CHECK-NEXT:    [[P3_VAL:%.*]] = load i32*, i32** [[P3]], align 8
-; CHECK-NEXT:    [[P4_VAL:%.*]] = load i32*, i32** [[P4]], align 8
-; CHECK-NEXT:    [[P5_VAL:%.*]] = load i32*, i32** [[P5]], align 8
-; CHECK-NEXT:    [[P6_VAL:%.*]] = load i32*, i32** [[P6]], align 8
+; CHECK-NEXT:    [[P1_VAL:%.*]] = load i32, i32* [[P1]], align 4, !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[P2_VAL:%.*]] = load i32*, i32** [[P2]], align 8, !nonnull !1
+; CHECK-NEXT:    [[P3_VAL:%.*]] = load i32*, i32** [[P3]], align 8, !dereferenceable !2
+; CHECK-NEXT:    [[P4_VAL:%.*]] = load i32*, i32** [[P4]], align 8, !dereferenceable_or_null !2
+; CHECK-NEXT:    [[P5_VAL:%.*]] = load i32*, i32** [[P5]], align 8, !align !3
+; CHECK-NEXT:    [[P6_VAL:%.*]] = load i32*, i32** [[P6]], align 8, !noundef !1
 ; CHECK-NEXT:    call void @callee(i32 [[P1_VAL]], i32* [[P2_VAL]], i32* [[P3_VAL]], i32* [[P4_VAL]], i32* [[P5_VAL]], i32* [[P6_VAL]])
 ; CHECK-NEXT:    ret void
 ;
@@ -68,7 +68,7 @@ else:
 define void @caller_conditional(i1 %c, i32** %p) {
 ; CHECK-LABEL: define {{[^@]+}}@caller_conditional
 ; CHECK-SAME: (i1 [[C:%.*]], i32** [[P:%.*]]) {
-; CHECK-NEXT:    [[P_VAL:%.*]] = load i32*, i32** [[P]], align 8
+; CHECK-NEXT:    [[P_VAL:%.*]] = load i32*, i32** [[P]], align 8{{$}}
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32* @callee_conditional(i1 [[C]], i32* [[P_VAL]])
 ; CHECK-NEXT:    ret void
 ;
