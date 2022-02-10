@@ -42,7 +42,7 @@ struct emp_9 { // expected-warning {{struct has size 0 in C, non-zero size in C+
 // Checks for pointer subtraction (PR15683)
 struct emp_1 *func_1p(struct emp_1 *x) { return x - 5; }
 
-int func_1() {
+int func_1(void) {
   struct emp_1 v[1];
   return v - v; // expected-warning {{subtraction of pointers to type 'struct emp_1' of zero size has undefined behavior}}
 }
@@ -63,7 +63,7 @@ int func_5(volatile struct emp_1 *x, const struct emp_1 *y) {
   return x - y; // expected-warning {{subtraction of pointers to type 'struct emp_1' of zero size has undefined behavior}}
 }
 
-int func_6() {
+int func_6(void) {
   union emp_2 v[1];
   return v - v; // expected-warning {{subtraction of pointers to type 'union emp_2' of zero size has undefined behavior}}
 }

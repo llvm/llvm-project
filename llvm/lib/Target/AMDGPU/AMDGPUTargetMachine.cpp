@@ -273,7 +273,7 @@ static cl::opt<bool> EnableSIModeRegisterPass(
 
 // Enable GFX11+ s_delay_alu insertion
 static cl::opt<bool> EnableInsertDelayAlu(
-  "amdgpu-insert-delay-alu",
+  "amdgpu-enable-delay-alu",
   cl::desc("Enable s_delay_alu insertion"),
   cl::init(true),
   cl::Hidden);

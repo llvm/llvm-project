@@ -14,6 +14,7 @@ define i32 @PR29058(i8 %x, i32 %y) {
 ; CHECK-NEXT:    testb %dil, %dil
 ; CHECK-NEXT:    movl $2147483646, %eax # imm = 0x7FFFFFFE
 ; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    cmpb $1, %dil
 ; CHECK-NEXT:    sbbl %ecx, %ecx
 ; CHECK-NEXT:    orb %sil, %cl

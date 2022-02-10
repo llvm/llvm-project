@@ -206,7 +206,7 @@ func @ret_multiple_argument_type(%A: memref<16xf64, #tile>, %B: f64, %C: memref<
   %a = affine.load %A[0] : memref<16xf64, #tile>
   %p = arith.mulf %a, %a : f64
   %cond = arith.constant 1 : i1
-  cond_br %cond, ^bb1, ^bb2
+  cf.cond_br %cond, ^bb1, ^bb2
   ^bb1:
     %res1, %res2 = call @ret_single_argument_type(%C) : (memref<8xf64, #tile>) -> (memref<16xf64, #tile>, memref<8xf64, #tile>)
     return %res2, %p: memref<8xf64, #tile>, f64
@@ -217,7 +217,7 @@ func @ret_multiple_argument_type(%A: memref<16xf64, #tile>, %B: f64, %C: memref<
 // CHECK:   %[[a:[0-9]+]] = affine.load %[[A]][0, 0] : memref<4x4xf64>
 // CHECK:   %[[p:[0-9]+]] = arith.mulf %[[a]], %[[a]] : f64
 // CHECK:   %true = arith.constant true
-// CHECK:   cond_br %true, ^bb1, ^bb2
+// CHECK:   cf.cond_br %true, ^bb1, ^bb2
 // CHECK: ^bb1:  // pred: ^bb0
 // CHECK:   %[[res:[0-9]+]]:2 = call @ret_single_argument_type(%[[C]]) : (memref<2x4xf64>) -> (memref<4x4xf64>, memref<2x4xf64>)
 // CHECK:   return %[[res]]#1, %[[p]] : memref<2x4xf64>, f64

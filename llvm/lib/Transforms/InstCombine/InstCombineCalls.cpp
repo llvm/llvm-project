@@ -949,8 +949,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   if (isFreeCall(&CI, &TLI))
     return visitFree(CI);
 
-  // If the caller function is nounwind, mark the call as nounwind, even if the
-  // callee isn't.
+  // If the caller function (i.e. us, the function that contains this CallInst)
+  // is nounwind, mark the call as nounwind, even if the callee isn't.
   if (CI.getFunction()->doesNotThrow() && !CI.doesNotThrow()) {
     CI.setDoesNotThrow();
     return &CI;

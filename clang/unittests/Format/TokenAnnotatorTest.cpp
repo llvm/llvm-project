@@ -91,6 +91,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsEnums) {
   EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_RecordLBrace);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsLBracesInMacroDefinition) {
+  auto Tokens = annotate("#define BEGIN NS {");
+  EXPECT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_Unknown);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang

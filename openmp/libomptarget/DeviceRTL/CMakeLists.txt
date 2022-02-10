@@ -106,6 +106,16 @@ endif()
 set(LIBOMPTARGET_DEVICE_DEBUG FALSE CACHE BOOL
   "Activate DeviceRTL debug messages.")
 
+set(include_files
+  ${include_directory}/Configuration.h
+  ${include_directory}/Debug.h
+  ${include_directory}/Interface.h
+  ${include_directory}/Mapping.h
+  ${include_directory}/State.h
+  ${include_directory}/Synchronization.h
+  ${include_directory}/Types.h
+  ${include_directory}/Utils.h
+)
 
 set(src_files
   ${source_directory}/Configuration.cpp
@@ -161,7 +171,7 @@ function(compileDeviceRTLLibrary target_cpu target_name)
       -Xclang -target-cpu -Xclang ${target_cpu}
       ${target_bc_flags}
       ${infile} -o ${outfile}
-      DEPENDS ${infile}
+      DEPENDS ${infile} ${include_files}
       IMPLICIT_DEPENDS CXX ${infile}
       COMMENT "Building LLVM bitcode ${outfile}"
       VERBATIM
@@ -180,7 +190,7 @@ function(compileDeviceRTLLibrary target_cpu target_name)
     list(APPEND bc_files ${outfile})
   endforeach()
 
-  set(bclib_name "libomptarget-new-${target_name}-${target_cpu}.bc")
+  set(bclib_name "libomptarget-${target_name}-${target_cpu}.bc")
 
   # Link to a bitcode library.
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/linked_${bclib_name}
@@ -212,7 +222,7 @@ function(compileDeviceRTLLibrary target_cpu target_name)
 
   set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${bclib_name})
 
-  set(bclib_target_name "omptarget-new-${target_name}-${target_cpu}-bc")
+  set(bclib_target_name "omptarget-${target_name}-${target_cpu}-bc")
 
   add_custom_target(${bclib_target_name} ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name})
 

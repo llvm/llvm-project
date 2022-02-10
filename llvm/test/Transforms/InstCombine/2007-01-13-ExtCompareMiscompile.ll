@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep "icmp ugt"
+; RUN: opt < %s -passes=instcombine -S | grep "icmp ugt"
 ; PR1107
 ; PR1940
 

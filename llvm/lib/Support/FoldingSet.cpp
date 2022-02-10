@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -24,12 +23,6 @@ using namespace llvm;
 
 //===----------------------------------------------------------------------===//
 // FoldingSetNodeIDRef Implementation
-
-/// ComputeHash - Compute a strong hash value for this FoldingSetNodeIDRef,
-/// used to lookup the node in the FoldingSetBase.
-unsigned FoldingSetNodeIDRef::ComputeHash() const {
-  return static_cast<unsigned>(hash_combine_range(Data, Data+Size));
-}
 
 bool FoldingSetNodeIDRef::operator==(FoldingSetNodeIDRef RHS) const {
   if (Size != RHS.Size) return false;
@@ -108,12 +101,6 @@ void FoldingSetNodeID::AddString(StringRef String) {
 // AddNodeID - Adds the Bit data of another ID to *this.
 void FoldingSetNodeID::AddNodeID(const FoldingSetNodeID &ID) {
   Bits.append(ID.Bits.begin(), ID.Bits.end());
-}
-
-/// ComputeHash - Compute a strong hash value for this FoldingSetNodeID, used to
-/// lookup the node in the FoldingSetBase.
-unsigned FoldingSetNodeID::ComputeHash() const {
-  return FoldingSetNodeIDRef(Bits.data(), Bits.size()).ComputeHash();
 }
 
 /// operator== - Used to compare two nodes to each other.

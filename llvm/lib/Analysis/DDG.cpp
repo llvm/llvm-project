@@ -34,7 +34,7 @@ template class llvm::DirectedGraph<DDGNode, DDGEdge>;
 //===--------------------------------------------------------------------===//
 // DDGNode implementation
 //===--------------------------------------------------------------------===//
-DDGNode::~DDGNode() {}
+DDGNode::~DDGNode() = default;
 
 bool DDGNode::collectInstructions(
     llvm::function_ref<bool(Instruction *)> const &Pred,

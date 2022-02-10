@@ -146,8 +146,7 @@ def NVVM_VoteBallotOp :
       $res = createIntrinsicCall(builder,
             llvm::Intrinsic::nvvm_vote_ballot_sync, {$mask, $pred});
   }];
-  let parser = [{ return parseNVVMVoteBallotOp(parser, result); }];
-  let printer = [{ printNVVMIntrinsicOp(p, this->getOperation()); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 

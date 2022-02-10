@@ -108,3 +108,46 @@ def test_read_tns():
   passed += np.allclose(values, [2.0, 3.0, 4.0])
   # CHECK: 4
   print(passed)
+
+
+# CHECK-LABEL: test_write_unpacked_tns
+@_run
+def test_write_unpacked_tns():
+  a = mlir_pytaco.Tensor([2, 3])
+  a.insert([0, 1], 10)
+  a.insert([1, 2], 40)
+  a.insert([0, 0], 20)
+  with tempfile.TemporaryDirectory() as test_dir:
+    file_name = os.path.join(test_dir, "data.tns")
+    mlir_pytaco_io.write(file_name, a)
+    with open(file_name, "r") as file:
+      lines = file.readlines()
+  passed = 0
+  # Skip the comment line in the output.
+  if lines[1:] == ["2 3\n", "2 3\n", "1 2 10.0\n", "2 3 40.0\n", "1 1 20.0\n"]:
+    passed = 1
+  # CHECK: 1
+  print(passed)
+
+
+# CHECK-LABEL: test_write_packed_tns
+@_run
+def test_write_packed_tns():
+  a = mlir_pytaco.Tensor([2, 3])
+  a.insert([0, 1], 10)
+  a.insert([1, 2], 40)
+  a.insert([0, 0], 20)
+  b = mlir_pytaco.Tensor([2, 3])
+  i, j = mlir_pytaco.get_index_vars(2)
+  b[i, j] = a[i, j] + a[i, j]
+  with tempfile.TemporaryDirectory() as test_dir:
+    file_name = os.path.join(test_dir, "data.tns")
+    mlir_pytaco_io.write(file_name, b)
+    with open(file_name, "r") as file:
+      lines = file.readlines()
+  passed = 0
+  # Skip the comment line in the output.
+  if lines[1:] == ["2 3\n", "2 3\n", "1 1 40\n", "1 2 20\n", "2 3 80\n"]:
+    passed = 1
+  # CHECK: 1
+  print(passed)

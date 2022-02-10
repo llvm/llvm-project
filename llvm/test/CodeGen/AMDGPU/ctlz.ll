@@ -4,7 +4,7 @@
 ; RUN: llc < %s -march=r600 -mcpu=cypress -verify-machineinstrs | FileCheck %s -enable-var-scope --check-prefix=EG
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s -enable-var-scope --check-prefix=GFX10
 ; RUN: llc < %s -global-isel -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s -enable-var-scope --check-prefix=GFX10-GISEL
-; RUN: llc < %s -march=amdgcn -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -verify-machineinstrs | FileCheck %s -enable-var-scope --check-prefix=GFX11
+; RUN: llc < %s -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck %s -enable-var-scope --check-prefix=GFX11
 
 declare i7 @llvm.ctlz.i7(i7, i1) nounwind readnone
 declare i8 @llvm.ctlz.i8(i8, i1) nounwind readnone

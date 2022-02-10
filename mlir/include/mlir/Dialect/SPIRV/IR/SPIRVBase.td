@@ -4269,12 +4269,11 @@ class SPV_Op<string mnemonic, list<Trait> traits = []> :
   // For each SPIR-V op, the following static functions need to be defined
   // in SPVOps.cpp:
   //
-  // * static ParseResult parse<op-c++-class-name>(OpAsmParser &parser,
-  //                                               OperationState &result)
-  // * static void print(OpAsmPrinter &p, <op-c++-class-name> op)
+  // * ParseResult <op-c++-class-name>::parse(OpAsmParser &parser,
+  //                                          OperationState &result)
+  // * void <op-c++-class-name>::print(OpAsmPrinter &p)
   // * LogicalResult <op-c++-class-name>::verify()
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-  let printer = [{ return ::print(*this, p); }];
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 
   // Specifies whether this op has a direct corresponding SPIR-V binary
@@ -4320,8 +4319,7 @@ class SPV_UnaryOp<string mnemonic, Type resultType, Type operandType,
     SPV_ScalarOrVectorOf<resultType>:$result
   );
 
-  let parser = [{ return ::parseUnaryOp(parser, result); }];
-  let printer = [{ return ::printUnaryOp(getOperation(), p); }];
+  let assemblyFormat = "$operand `:` type($operand) attr-dict";
   // No additional verification needed in addition to the ODS-generated ones.
   let hasVerifier = 0;
 }
@@ -4338,8 +4336,6 @@ class SPV_BinaryOp<string mnemonic, Type resultType, Type operandsType,
     SPV_ScalarOrVectorOf<resultType>:$result
   );
 
-  let parser = [{ return impl::parseOneResultSameOperandTypeOp(parser, result); }];
-  let printer = [{ return impl::printOneResultOp(getOperation(), p); }];
   // No additional verification needed in addition to the ODS-generated ones.
   let hasVerifier = 0;
 }

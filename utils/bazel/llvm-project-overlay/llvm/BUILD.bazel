@@ -408,6 +408,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Support",
+        ":Symbolize",
     ],
 )
 
@@ -462,7 +463,6 @@ cc_library(
         ":DebugInfo",
         ":DebugInfoDWARF",
         ":DebugInfoPDB",
-        ":Debuginfod",
         ":Demangle",
         ":Object",
         ":Support",
@@ -841,6 +841,7 @@ cc_library(
         ":Core",
         ":DebugInfoDWARF",
         ":Support",
+        ":Symbolize",
         ":config",
     ],
 )
@@ -2990,6 +2991,8 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
+        ":AllTargetsAsmParsers",
+        ":AllTargetsCodeGens",
         ":BinaryFormat",
         ":Object",
         ":Support",
@@ -4241,8 +4244,8 @@ cc_binary(
         ":Option",
         ":Remarks",
         ":Support",
-        ":TextAPI",
         ":TLICheckerOptsTableGen",
+        ":TextAPI",
     ],
 )
 

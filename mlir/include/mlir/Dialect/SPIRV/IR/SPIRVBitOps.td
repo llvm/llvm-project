@@ -21,7 +21,9 @@ class SPV_BitBinaryOp<string mnemonic, list<Trait> traits = []> :
       // All the operands type used in bit instructions are SPV_Integer.
       SPV_BinaryOp<mnemonic, SPV_Integer, SPV_Integer,
                    !listconcat(traits,
-                               [NoSideEffect, SameOperandsAndResultType])>;
+                               [NoSideEffect, SameOperandsAndResultType])> {                                 
+  let assemblyFormat = "operands attr-dict `:` type($result)";
+}
 
 class SPV_BitFieldExtractOp<string mnemonic, list<Trait> traits = []> :
       SPV_Op<mnemonic, !listconcat(traits,
@@ -51,9 +53,11 @@ class SPV_BitUnaryOp<string mnemonic, list<Trait> traits = []> :
 class SPV_ShiftOp<string mnemonic, list<Trait> traits = []> :
       SPV_BinaryOp<mnemonic, SPV_Integer, SPV_Integer,
                    !listconcat(traits,
-                               [NoSideEffect, SameOperandsAndResultShape])> {
-  let parser = [{ return ::parseShiftOp(parser, result); }];
-  let printer = [{ ::printShiftOp(this->getOperation(), p); }];
+                               [NoSideEffect, SameOperandsAndResultShape,
+                                AllTypesMatch<["operand1", "result"]>])> {
+  let assemblyFormat = [{
+    operands attr-dict `:` type($operand1) `,` type($operand2)
+  }];
   let hasVerifier = 1;
 }
 

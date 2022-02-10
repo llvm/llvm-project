@@ -10,7 +10,7 @@ NativeTypeVTShape::NativeTypeVTShape(NativeSession &Session, SymIndexId Id,
     : NativeRawSymbol(Session, PDB_SymType::VTableShape, Id), TI(TI),
       Record(std::move(SR)) {}
 
-NativeTypeVTShape::~NativeTypeVTShape() {}
+NativeTypeVTShape::~NativeTypeVTShape() = default;
 
 void NativeTypeVTShape::dump(raw_ostream &OS, int Indent,
                              PdbSymbolIdField ShowIdFields,

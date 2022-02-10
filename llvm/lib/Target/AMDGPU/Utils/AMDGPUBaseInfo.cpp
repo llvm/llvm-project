@@ -71,9 +71,7 @@ unsigned getExpcntBitShift(unsigned VersionMajor) {
 }
 
 /// \returns Expcnt bit width.
-unsigned getExpcntBitWidth(unsigned VersionMajor) {
-  return VersionMajor >= 11 ? 4 : 3;
-}
+unsigned getExpcntBitWidth(unsigned VersionMajor) { return 3; }
 
 /// \returns Lgkmcnt bit shift.
 unsigned getLgkmcntBitShift(unsigned VersionMajor) {

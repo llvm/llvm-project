@@ -213,7 +213,7 @@ static void subtractRecursively(IntegerPolyhedron &b, Simplex &simplex,
 
   // Find out which inequalities of sI correspond to division inequalities for
   // the local variables of sI.
-  SmallVector<MaybeLocalRepr> repr(sI.getNumLocalIds());
+  std::vector<MaybeLocalRepr> repr(sI.getNumLocalIds());
   sI.getLocalReprs(repr);
 
   // Add sI's locals to b, after b's locals. Also add b's locals to sI, before
@@ -383,6 +383,20 @@ bool PresburgerSet::findIntegerSample(SmallVectorImpl<int64_t> &sample) {
     }
   }
   return false;
+}
+
+Optional<uint64_t> PresburgerSet::computeVolume() const {
+  assert(getNumSymbolIds() == 0 && "Symbols are not yet supported!");
+  // The sum of the volumes of the disjuncts is a valid overapproximation of the
+  // volume of their union, even if they overlap.
+  uint64_t result = 0;
+  for (const IntegerPolyhedron &poly : integerPolyhedrons) {
+    Optional<uint64_t> volume = poly.computeVolume();
+    if (!volume)
+      return {};
+    result += *volume;
+  }
+  return result;
 }
 
 PresburgerSet PresburgerSet::coalesce() const {

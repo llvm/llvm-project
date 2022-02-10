@@ -1506,16 +1506,7 @@ OpFoldResult arith::SelectOp::fold(ArrayRef<Attribute> operands) {
   return nullptr;
 }
 
-static void print(OpAsmPrinter &p, arith::SelectOp op) {
-  p << " " << op.getOperands();
-  p.printOptionalAttrDict(op->getAttrs());
-  p << " : ";
-  if (ShapedType condType = op.getCondition().getType().dyn_cast<ShapedType>())
-    p << condType << ", ";
-  p << op.getType();
-}
-
-static ParseResult parseSelectOp(OpAsmParser &parser, OperationState &result) {
+ParseResult SelectOp::parse(OpAsmParser &parser, OperationState &result) {
   Type conditionType, resultType;
   SmallVector<OpAsmParser::OperandType, 3> operands;
   if (parser.parseOperandList(operands, /*requiredOperandCount=*/3) ||
@@ -1536,6 +1527,15 @@ static ParseResult parseSelectOp(OpAsmParser &parser, OperationState &result) {
   return parser.resolveOperands(operands,
                                 {conditionType, resultType, resultType},
                                 parser.getNameLoc(), result.operands);
+}
+
+void arith::SelectOp::print(OpAsmPrinter &p) {
+  p << " " << getOperands();
+  p.printOptionalAttrDict((*this)->getAttrs());
+  p << " : ";
+  if (ShapedType condType = getCondition().getType().dyn_cast<ShapedType>())
+    p << condType << ", ";
+  p << getType();
 }
 
 LogicalResult arith::SelectOp::verify() {

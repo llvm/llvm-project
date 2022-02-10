@@ -1,0 +1,2 @@
+// verify clang/lib/Tooling/Syntax/Pseudo/cxx.bnf
+// RUN: clang-pseudo -check-grammar=%cxx-bnf-file

@@ -13,7 +13,7 @@ struct SomeStruct {
   int x, y, z, q;
 };
 
-void test1() {
+void test1(void) {
 	id objects[] = {[NSNumber METH]};
 }
 
@@ -27,7 +27,7 @@ void test3(NSNumber *x) {
 
 
 // rdar://5977581
-void test4() {
+void test4(void) {
   unsigned x[] = {[NSNumber METH2]+2};
 }
 

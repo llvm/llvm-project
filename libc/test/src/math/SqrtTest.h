@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/Bit.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/FPMatcher.h"
 #include "utils/UnitTest/Test.h"
@@ -47,7 +48,7 @@ public:
     constexpr UIntType COUNT = 1'000'001;
     constexpr UIntType STEP = HIDDEN_BIT / COUNT;
     for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-      T x = *reinterpret_cast<T *>(&v);
+      T x = __llvm_libc::bit_cast<T>(v);
       test_all_rounding_modes(func, x);
     }
   }
@@ -56,7 +57,7 @@ public:
     constexpr UIntType COUNT = 10'000'001;
     constexpr UIntType STEP = UIntType(-1) / COUNT;
     for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-      T x = *reinterpret_cast<T *>(&v);
+      T x = __llvm_libc::bit_cast<T>(v);
       if (isnan(x) || (x < 0)) {
         continue;
       }

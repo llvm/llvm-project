@@ -663,6 +663,80 @@ TEST_F(SymbolCollectorTest, ObjCClassExtensions) {
                   qName("Cat::meow"), qName("Cat::pur")));
 }
 
+TEST_F(SymbolCollectorTest, ObjCFrameworkIncludeHeader) {
+  CollectorOpts.CollectIncludePath = true;
+  auto FrameworksPath = testPath("Frameworks/");
+  std::string FrameworkHeader = R"(
+    __attribute((objc_root_class))
+    @interface NSObject
+    @end
+  )";
+  InMemoryFileSystem->addFile(
+      testPath("Frameworks/Foundation.framework/Headers/NSObject.h"), 0,
+      llvm::MemoryBuffer::getMemBuffer(FrameworkHeader));
+  std::string PrivateFrameworkHeader = R"(
+    #import <Foundation/NSObject.h>
+
+    @interface PrivateClass : NSObject
+    @end
+  )";
+  InMemoryFileSystem->addFile(
+      testPath(
+          "Frameworks/Foundation.framework/PrivateHeaders/NSObject+Private.h"),
+      0, llvm::MemoryBuffer::getMemBuffer(PrivateFrameworkHeader));
+
+  std::string Header = R"(
+    #import <Foundation/NSObject+Private.h>
+    #import <Foundation/NSObject.h>
+
+    @interface Container : NSObject
+    @end
+  )";
+  std::string Main = "";
+  TestFileName = testPath("test.m");
+  runSymbolCollector(Header, Main, {"-F", FrameworksPath, "-xobjective-c++"});
+  EXPECT_THAT(
+      Symbols,
+      UnorderedElementsAre(
+          AllOf(qName("NSObject"), includeHeader("\"Foundation/NSObject.h\"")),
+          AllOf(qName("PrivateClass"),
+                includeHeader("\"Foundation/NSObject+Private.h\"")),
+          AllOf(qName("Container"))));
+
+  // After adding the umbrella headers, we should use that spelling instead.
+  std::string UmbrellaHeader = R"(
+    #import <Foundation/NSObject.h>
+  )";
+  InMemoryFileSystem->addFile(
+      testPath("Frameworks/Foundation.framework/Headers/Foundation.h"), 0,
+      llvm::MemoryBuffer::getMemBuffer(UmbrellaHeader));
+  std::string PrivateUmbrellaHeader = R"(
+    #import <Foundation/NSObject+Private.h>
+  )";
+  InMemoryFileSystem->addFile(
+      testPath("Frameworks/Foundation.framework/PrivateHeaders/"
+               "Foundation_Private.h"),
+      0, llvm::MemoryBuffer::getMemBuffer(PrivateUmbrellaHeader));
+  runSymbolCollector(Header, Main, {"-F", FrameworksPath, "-xobjective-c++"});
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(qName("NSObject"),
+                        includeHeader("\"Foundation/Foundation.h\"")),
+                  AllOf(qName("PrivateClass"),
+                        includeHeader("\"Foundation/Foundation_Private.h\"")),
+                  AllOf(qName("Container"))));
+
+  runSymbolCollector(Header, Main,
+                     {"-iframework", FrameworksPath, "-xobjective-c++"});
+  EXPECT_THAT(
+      Symbols,
+      UnorderedElementsAre(
+          AllOf(qName("NSObject"), includeHeader("<Foundation/Foundation.h>")),
+          AllOf(qName("PrivateClass"),
+                includeHeader("<Foundation/Foundation_Private.h>")),
+          AllOf(qName("Container"))));
+}
+
 TEST_F(SymbolCollectorTest, Locations) {
   Annotations Header(R"cpp(
     // Declared in header, defined in main.

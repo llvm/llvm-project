@@ -2,13 +2,13 @@
 # RUN: rm -rf %t
 # RUN: mkdir %t
 # # Query the python server for artifacts
-# RUN: DEBUGINFOD_CACHE_PATH=%t python %s --server-path %S/Inputs \
+# RUN: DEBUGINFOD_CACHE_PATH=%t %python %s --server-path %S/Inputs \
 # RUN:   --tool-cmd 'llvm-debuginfod-find --dump --executable abcdef' | \
 # RUN:   FileCheck %s --check-prefix=EXECUTABLE
-# RUN: DEBUGINFOD_CACHE_PATH=%t python %s --server-path %S/Inputs \
+# RUN: DEBUGINFOD_CACHE_PATH=%t %python %s --server-path %S/Inputs \
 # RUN:   --tool-cmd 'llvm-debuginfod-find --dump --source=/directory/file.c abcdef' | \
 # RUN:   FileCheck %s --check-prefix=SOURCE
-# RUN: DEBUGINFOD_CACHE_PATH=%t python %s --server-path %S/Inputs \
+# RUN: DEBUGINFOD_CACHE_PATH=%t %python %s --server-path %S/Inputs \
 # RUN:   --tool-cmd 'llvm-debuginfod-find --dump --debuginfo abcdef' | \
 # RUN:   FileCheck %s --check-prefix=DEBUGINFO
 

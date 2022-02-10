@@ -100,7 +100,7 @@ def testCustomOpView():
 def testIsRegisteredOperation():
   ctx = Context()
 
-  # CHECK: std.cond_br: True
-  print(f"std.cond_br: {ctx.is_registered_operation('std.cond_br')}")
+  # CHECK: cf.cond_br: True
+  print(f"cf.cond_br: {ctx.is_registered_operation('cf.cond_br')}")
   # CHECK: std.not_existing: False
   print(f"std.not_existing: {ctx.is_registered_operation('std.not_existing')}")

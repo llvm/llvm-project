@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 define i64 @cmpxchg_0(i64* %ptr, i64 %compare, i64 %new_value) {
 ; CHECK-LABEL: @cmpxchg_0(

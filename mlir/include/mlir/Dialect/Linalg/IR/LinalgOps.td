@@ -22,15 +22,7 @@ include "mlir/Interfaces/ViewLikeInterface.td"
 
 // Base class for Linalg dialect ops that do not correspond to library calls.
 class Linalg_Op<string mnemonic, list<Trait> traits = []> :
-    Op<Linalg_Dialect, mnemonic, traits> {
-  // For every linalg op, there needs to be a:
-  //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)
-  //   * ParseResult parse${C++ class of Op}(OpAsmParser &parser,
-  //                                         OperationState &result)
-  // functions.
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-}
+    Op<Linalg_Dialect, mnemonic, traits>;
 
 def Linalg_InitTensorOp : Linalg_Op<"init_tensor",
     [NoSideEffect,
@@ -123,6 +115,7 @@ def Linalg_InitTensorOp : Linalg_Op<"init_tensor",
   ];
 
   let hasCanonicalizer = 1;
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 
@@ -141,6 +134,7 @@ def Linalg_YieldOp : Linalg_Op<"yield", [NoSideEffect, ReturnLike, Terminator]>,
     ```
   }];
   let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 
@@ -423,6 +417,7 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
   }];
 
   let hasCanonicalizer = 1;
+  let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
 }

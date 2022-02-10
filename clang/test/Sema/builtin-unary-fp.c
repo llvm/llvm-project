@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify -pedantic
 void check(int);
-void a() {
+void a(void) {
   check(__builtin_isfinite(1.0f));
   check(__builtin_isinf(1.0));
   check(__builtin_isinf_sign(1.0L));

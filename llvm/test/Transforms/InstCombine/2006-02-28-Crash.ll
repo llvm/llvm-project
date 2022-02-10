@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -disable-output
+; RUN: opt < %s -passes=instcombine -disable-output
 
 define i32 @test() {
         %tmp203 = icmp eq i32 1, 2              ; <i1> [#uses=1]

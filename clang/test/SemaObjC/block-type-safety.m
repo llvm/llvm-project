@@ -16,11 +16,11 @@ void f3(void(^f)(Sub *)) {
     f(o);
 }
 
-void r0(Super* (^f)()) {
+void r0(Super* (^f)(void)) {
      Super *o = f();
 }
 
-void r1(Sub* (^f)()) { // expected-note{{passing argument to parameter 'f' here}}
+void r1(Sub* (^f)(void)) { // expected-note{{passing argument to parameter 'f' here}}
     Sub *o = f();
 }
 
@@ -31,19 +31,19 @@ void r2 (id<NSObject> (^f) (void)) {
   id o = f();
 }
 
-void test1() {
+void test1(void) {
     f2(^(Sub *o) { });    // expected-error {{incompatible block pointer types passing}}
     f3(^(Super *o) { });  // OK, block taking Super* may be called with a Sub*
 
-    r0(^Super* () { return 0; });  // OK
-    r0(^Sub* () { return 0; });    // OK, variable of type Super* gets return value of type Sub*
-    r0(^id () { return 0; });
+    r0(^Super* (void) { return 0; });  // OK
+    r0(^Sub* (void) { return 0; });    // OK, variable of type Super* gets return value of type Sub*
+    r0(^id (void) { return 0; });
 
-    r1(^Super* () { return 0; });  // expected-error {{incompatible block pointer types passing}}
-    r1(^Sub* () { return 0; });    // OK
-    r1(^id () { return 0; }); 
+    r1(^Super* (void) { return 0; });  // expected-error {{incompatible block pointer types passing}}
+    r1(^Sub* (void) { return 0; });    // OK
+    r1(^id (void) { return 0; }); 
      
-    r2(^id<NSObject>() { return 0; });
+    r2(^id<NSObject>(void) { return 0; });
 }
 
 
@@ -103,7 +103,7 @@ void f4(void (^f)(id<P> x)) { // expected-note{{passing argument to parameter 'f
     f(b);	// expected-warning {{passing 'NSArray<P2> *' to parameter of incompatible type 'id<P>'}}
 }
 
-void test3() {
+void test3(void) {
   f4(^(NSArray<P2>* a) { });  // expected-error {{incompatible block pointer types passing 'void (^)(NSArray<P2> *)' to parameter of type 'void (^)(id<P>)'}}
 }
 
@@ -117,8 +117,8 @@ void test3() {
 
 @implementation Baz @end
 
-int test4 () {
-    id <Foo> (^b)() = ^{ // Doesn't work
+int test4 (void) {
+    id <Foo> (^b)(void) = ^{ // Doesn't work
         return (Baz *)0;
     };
     return 0;
@@ -135,7 +135,7 @@ int test4 () {
 @end
 
 #ifndef COMPATIBILITY_QUALIFIED_ID_TYPE_CHECKING
-int test5() {
+int test5(void) {
     // Returned value is used outside of a block, so error on changing
     // a return type to a more general than expected.
     NSAllArray *(^block)(id);
@@ -158,7 +158,7 @@ int test5() {
 // explained in non-compatibility test above, it is not safe in general. But
 // to keep existing code working we support a compatibility mode that uses
 // previous type checking.
-int test5() {
+int test5(void) {
     NSAllArray *(^block)(id);
     id <Foo> (^genericBlock)(id);
     genericBlock = block;
@@ -183,7 +183,7 @@ typedef NSComparisonResult (^NSComparator)(id obj1, id obj2);
 - (void)sortUsingComparator:(NSComparator)c;
 @end
 
-void f() {
+void f(void) {
    radar10798770 *f;
    [f sortUsingComparator:^(id a, id b) {
         return NSOrderedSame;
@@ -194,41 +194,41 @@ void f() {
 @protocol P1 @end
 @protocol P2 @end
 
-void Test() {
-void (^aBlock)();
+void Test(void) {
+void (^aBlock)(void);
 id anId = aBlock;  // OK
 
-id<P1,P2> anQualId = aBlock;  // expected-error {{initializing 'id<P1,P2>' with an expression of incompatible type 'void (^)()'}}
+id<P1,P2> anQualId = aBlock;  // expected-error {{initializing 'id<P1,P2>' with an expression of incompatible type 'void (^)(void)'}}
 
-NSArray* anArray = aBlock; // expected-error {{initializing 'NSArray *' with an expression of incompatible type 'void (^)()'}}
+NSArray* anArray = aBlock; // expected-error {{initializing 'NSArray *' with an expression of incompatible type 'void (^)(void)'}}
 
 aBlock = anId; // OK
 
 id<P1,P2> anQualId1;
-aBlock = anQualId1; // expected-error {{assigning to 'void (^)()' from incompatible type 'id<P1,P2>'}}
+aBlock = anQualId1; // expected-error {{assigning to 'void (^)(void)' from incompatible type 'id<P1,P2>'}}
 
 NSArray* anArray1;
-aBlock = anArray1; // expected-error {{assigning to 'void (^)()' from incompatible type 'NSArray *'}}
+aBlock = anArray1; // expected-error {{assigning to 'void (^)(void)' from incompatible type 'NSArray *'}}
 }
 
-void Test2() {
-  void (^aBlock)();
+void Test2(void) {
+  void (^aBlock)(void);
   id<NSObject> anQualId1 = aBlock; // Ok
   id<NSObject, NSCopying> anQualId2 = aBlock; // Ok
   id<NSObject, NSCopying, NSObject, NSCopying> anQualId3 = aBlock; // Ok
-  id <P1>  anQualId4  = aBlock; // expected-error {{initializing 'id<P1>' with an expression of incompatible type 'void (^)()'}}
-  id<NSObject, P1, NSCopying> anQualId5 = aBlock; // expected-error {{initializing 'id<NSObject,P1,NSCopying>' with an expression of incompatible type 'void (^)()'}}
+  id <P1>  anQualId4  = aBlock; // expected-error {{initializing 'id<P1>' with an expression of incompatible type 'void (^)(void)'}}
+  id<NSObject, P1, NSCopying> anQualId5 = aBlock; // expected-error {{initializing 'id<NSObject,P1,NSCopying>' with an expression of incompatible type 'void (^)(void)'}}
   id<NSCopying> anQualId6 = aBlock; // Ok
 }
 
-void Test3() {
-  void (^aBlock)();
+void Test3(void) {
+  void (^aBlock)(void);
   NSObject *NSO = aBlock; // Ok
   NSObject<NSObject> *NSO1 = aBlock; // Ok
   NSObject<NSObject, NSCopying> *NSO2 = aBlock; // Ok
   NSObject<NSObject, NSCopying, NSObject, NSCopying> *NSO3 = aBlock; // Ok
-  NSObject <P1>  *NSO4  = aBlock; // expected-error {{initializing 'NSObject<P1> *' with an expression of incompatible type 'void (^)()'}}
-  NSObject<NSObject, P1, NSCopying> *NSO5 = aBlock; // expected-error {{initializing 'NSObject<NSObject,P1,NSCopying> *' with an expression of incompatible type 'void (^)()'}}
+  NSObject <P1>  *NSO4  = aBlock; // expected-error {{initializing 'NSObject<P1> *' with an expression of incompatible type 'void (^)(void)'}}
+  NSObject<NSObject, P1, NSCopying> *NSO5 = aBlock; // expected-error {{initializing 'NSObject<NSObject,P1,NSCopying> *' with an expression of incompatible type 'void (^)(void)'}}
   NSObject<NSCopying> *NSO6 = aBlock; // Ok
 }
 

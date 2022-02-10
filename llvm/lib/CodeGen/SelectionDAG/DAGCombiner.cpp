@@ -583,11 +583,11 @@ namespace {
                                bool DemandHighBits = true);
     SDValue MatchBSwapHWord(SDNode *N, SDValue N0, SDValue N1);
     SDValue MatchRotatePosNeg(SDValue Shifted, SDValue Pos, SDValue Neg,
-                              SDValue InnerPos, SDValue InnerNeg,
+                              SDValue InnerPos, SDValue InnerNeg, bool HasPos,
                               unsigned PosOpcode, unsigned NegOpcode,
                               const SDLoc &DL);
     SDValue MatchFunnelPosNeg(SDValue N0, SDValue N1, SDValue Pos, SDValue Neg,
-                              SDValue InnerPos, SDValue InnerNeg,
+                              SDValue InnerPos, SDValue InnerNeg, bool HasPos,
                               unsigned PosOpcode, unsigned NegOpcode,
                               const SDLoc &DL);
     SDValue MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL);
@@ -2101,9 +2101,79 @@ static bool canFoldInAddressingMode(SDNode *N, SDNode *Use, SelectionDAG &DAG,
                                    VT.getTypeForEVT(*DAG.getContext()), AS);
 }
 
+/// This inverts a canonicalization in IR that replaces a variable select arm
+/// with an identity constant. Codegen improves if we re-use the variable
+/// operand rather than load a constant. This can also be converted into a
+/// masked vector operation if the target supports it.
+static SDValue foldSelectWithIdentityConstant(SDNode *N, SelectionDAG &DAG,
+                                              bool ShouldCommuteOperands) {
+  // Match a select as operand 1. The identity constant that we are looking for
+  // is only valid as operand 1 of a non-commutative binop.
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  if (ShouldCommuteOperands)
+    std::swap(N0, N1);
+
+  // TODO: Should this apply to scalar select too?
+  if (!N1.hasOneUse() || N1.getOpcode() != ISD::VSELECT)
+    return SDValue();
+
+  unsigned Opcode = N->getOpcode();
+  EVT VT = N->getValueType(0);
+  SDValue Cond = N1.getOperand(0);
+  SDValue TVal = N1.getOperand(1);
+  SDValue FVal = N1.getOperand(2);
+
+  // TODO: The cases should match with IR's ConstantExpr::getBinOpIdentity().
+  // TODO: Target-specific opcodes could be added. Ex: "isCommutativeBinOp()".
+  // TODO: With fast-math (NSZ), allow the opposite-sign form of zero?
+  auto isIdentityConstantForOpcode = [](unsigned Opcode, SDValue V) {
+    if (ConstantFPSDNode *C = isConstOrConstSplatFP(V)) {
+      switch (Opcode) {
+      case ISD::FADD: // X + -0.0 --> X
+        return C->isZero() && C->isNegative();
+      case ISD::FSUB: // X - 0.0 --> X
+        return C->isZero() && !C->isNegative();
+      case ISD::FMUL: // X * 1.0 --> X
+      case ISD::FDIV: // X / 1.0 --> X
+        return C->isExactlyValue(1.0);
+      }
+    }
+    return false;
+  };
+
+  // This transform increases uses of N0, so freeze it to be safe.
+  // binop N0, (vselect Cond, IDC, FVal) --> vselect Cond, N0, (binop N0, FVal)
+  if (isIdentityConstantForOpcode(Opcode, TVal)) {
+    SDValue F0 = DAG.getFreeze(N0);
+    SDValue NewBO = DAG.getNode(Opcode, SDLoc(N), VT, F0, FVal, N->getFlags());
+    return DAG.getSelect(SDLoc(N), VT, Cond, F0, NewBO);
+  }
+  // binop N0, (vselect Cond, TVal, IDC) --> vselect Cond, (binop N0, TVal), N0
+  if (isIdentityConstantForOpcode(Opcode, FVal)) {
+    SDValue F0 = DAG.getFreeze(N0);
+    SDValue NewBO = DAG.getNode(Opcode, SDLoc(N), VT, F0, TVal, N->getFlags());
+    return DAG.getSelect(SDLoc(N), VT, Cond, NewBO, F0);
+  }
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
   assert(TLI.isBinOp(BO->getOpcode()) && BO->getNumValues() == 1 &&
          "Unexpected binary operator");
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  auto BinOpcode = BO->getOpcode();
+  EVT VT = BO->getValueType(0);
+  if (TLI.shouldFoldSelectWithIdentityConstant(BinOpcode, VT)) {
+    if (SDValue Sel = foldSelectWithIdentityConstant(BO, DAG, false))
+      return Sel;
+
+    if (TLI.isCommutativeBinOp(BO->getOpcode()))
+      if (SDValue Sel = foldSelectWithIdentityConstant(BO, DAG, true))
+        return Sel;
+  }
 
   // Don't do this unless the old select is going away. We want to eliminate the
   // binary operator, not replace a binop with a select.
@@ -2133,7 +2203,6 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
   // propagate non constant operands into select. I.e.:
   // and (select Cond, 0, -1), X --> select Cond, 0, X
   // or X, (select Cond, -1, 0) --> select Cond, -1, X
-  auto BinOpcode = BO->getOpcode();
   bool CanFoldNonConst =
       (BinOpcode == ISD::AND || BinOpcode == ISD::OR) &&
       (isNullOrNullSplat(CT) || isAllOnesOrAllOnesSplat(CT)) &&
@@ -2144,8 +2213,6 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
       !isConstantOrConstantVector(CBO, true) &&
       !DAG.isConstantFPBuildVectorOrConstantFP(CBO))
     return SDValue();
-
-  EVT VT = BO->getValueType(0);
 
   // We have a select-of-constants followed by a binary operator with a
   // constant. Eliminate the binop by pulling the constant math into the select.
@@ -7031,8 +7098,9 @@ static bool matchRotateSub(SDValue Pos, SDValue Neg, unsigned EltSize,
 // Neg with outer conversions stripped away.
 SDValue DAGCombiner::MatchRotatePosNeg(SDValue Shifted, SDValue Pos,
                                        SDValue Neg, SDValue InnerPos,
-                                       SDValue InnerNeg, unsigned PosOpcode,
-                                       unsigned NegOpcode, const SDLoc &DL) {
+                                       SDValue InnerNeg, bool HasPos,
+                                       unsigned PosOpcode, unsigned NegOpcode,
+                                       const SDLoc &DL) {
   // fold (or (shl x, (*ext y)),
   //          (srl x, (*ext (sub 32, y)))) ->
   //   (rotl x, y) or (rotr x, (sub 32, y))
@@ -7043,7 +7111,6 @@ SDValue DAGCombiner::MatchRotatePosNeg(SDValue Shifted, SDValue Pos,
   EVT VT = Shifted.getValueType();
   if (matchRotateSub(InnerPos, InnerNeg, VT.getScalarSizeInBits(), DAG,
                      /*IsRotate*/ true)) {
-    bool HasPos = TLI.isOperationLegalOrCustom(PosOpcode, VT);
     return DAG.getNode(HasPos ? PosOpcode : NegOpcode, DL, VT, Shifted,
                        HasPos ? Pos : Neg);
   }
@@ -7059,8 +7126,9 @@ SDValue DAGCombiner::MatchRotatePosNeg(SDValue Shifted, SDValue Pos,
 // TODO: Merge with MatchRotatePosNeg.
 SDValue DAGCombiner::MatchFunnelPosNeg(SDValue N0, SDValue N1, SDValue Pos,
                                        SDValue Neg, SDValue InnerPos,
-                                       SDValue InnerNeg, unsigned PosOpcode,
-                                       unsigned NegOpcode, const SDLoc &DL) {
+                                       SDValue InnerNeg, bool HasPos,
+                                       unsigned PosOpcode, unsigned NegOpcode,
+                                       const SDLoc &DL) {
   EVT VT = N0.getValueType();
   unsigned EltBits = VT.getScalarSizeInBits();
 
@@ -7072,7 +7140,6 @@ SDValue DAGCombiner::MatchFunnelPosNeg(SDValue N0, SDValue N1, SDValue Pos,
   //          (srl x1, (*ext y))) ->
   //   (fshr x0, x1, y) or (fshl x0, x1, (sub 32, y))
   if (matchRotateSub(InnerPos, InnerNeg, EltBits, DAG, /*IsRotate*/ N0 == N1)) {
-    bool HasPos = TLI.isOperationLegalOrCustom(PosOpcode, VT);
     return DAG.getNode(HasPos ? PosOpcode : NegOpcode, DL, VT, N0, N1,
                        HasPos ? Pos : Neg);
   }
@@ -7134,6 +7201,16 @@ SDValue DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
   bool HasROTR = hasOperation(ISD::ROTR, VT);
   bool HasFSHL = hasOperation(ISD::FSHL, VT);
   bool HasFSHR = hasOperation(ISD::FSHR, VT);
+
+  // If the type is going to be promoted and the target has enabled custom
+  // lowering for rotate, allow matching rotate by non-constants. Only allow
+  // this for scalar types.
+  if (VT.isScalarInteger() && TLI.getTypeAction(*DAG.getContext(), VT) ==
+                                  TargetLowering::TypePromoteInteger) {
+    HasROTL |= TLI.getOperationAction(ISD::ROTL, VT) == TargetLowering::Custom;
+    HasROTR |= TLI.getOperationAction(ISD::ROTR, VT) == TargetLowering::Custom;
+  }
+
   if (LegalOperations && !HasROTL && !HasROTR && !HasFSHL && !HasFSHR)
     return SDValue();
 
@@ -7276,26 +7353,26 @@ SDValue DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
   if (IsRotate && (HasROTL || HasROTR)) {
     SDValue TryL =
         MatchRotatePosNeg(LHSShiftArg, LHSShiftAmt, RHSShiftAmt, LExtOp0,
-                          RExtOp0, ISD::ROTL, ISD::ROTR, DL);
+                          RExtOp0, HasROTL, ISD::ROTL, ISD::ROTR, DL);
     if (TryL)
       return TryL;
 
     SDValue TryR =
         MatchRotatePosNeg(RHSShiftArg, RHSShiftAmt, LHSShiftAmt, RExtOp0,
-                          LExtOp0, ISD::ROTR, ISD::ROTL, DL);
+                          LExtOp0, HasROTR, ISD::ROTR, ISD::ROTL, DL);
     if (TryR)
       return TryR;
   }
 
   SDValue TryL =
       MatchFunnelPosNeg(LHSShiftArg, RHSShiftArg, LHSShiftAmt, RHSShiftAmt,
-                        LExtOp0, RExtOp0, ISD::FSHL, ISD::FSHR, DL);
+                        LExtOp0, RExtOp0, HasFSHL, ISD::FSHL, ISD::FSHR, DL);
   if (TryL)
     return TryL;
 
   SDValue TryR =
       MatchFunnelPosNeg(LHSShiftArg, RHSShiftArg, RHSShiftAmt, LHSShiftAmt,
-                        RExtOp0, LExtOp0, ISD::FSHR, ISD::FSHL, DL);
+                        RExtOp0, LExtOp0, HasFSHR, ISD::FSHR, ISD::FSHL, DL);
   if (TryR)
     return TryR;
 
@@ -9344,6 +9421,21 @@ SDValue DAGCombiner::visitSHLSAT(SDNode *N) {
   if (SDValue C =
           DAG.FoldConstantArithmetic(N->getOpcode(), SDLoc(N), VT, {N0, N1}))
     return C;
+
+  ConstantSDNode *N1C = isConstOrConstSplat(N1);
+
+  if (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::SHL, VT)) {
+    // fold (sshlsat x, c) -> (shl x, c)
+    if (N->getOpcode() == ISD::SSHLSAT && N1C &&
+        N1C->getAPIntValue().ult(DAG.ComputeNumSignBits(N0)))
+      return DAG.getNode(ISD::SHL, SDLoc(N), VT, N0, N1);
+
+    // fold (ushlsat x, c) -> (shl x, c)
+    if (N->getOpcode() == ISD::USHLSAT && N1C &&
+        N1C->getAPIntValue().ule(
+            DAG.computeKnownBits(N0).countMinLeadingZeros()))
+      return DAG.getNode(ISD::SHL, SDLoc(N), VT, N0, N1);
+  }
 
   return SDValue();
 }
@@ -12229,10 +12321,7 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
     unsigned ActiveBits = 0;
     if (Mask.isMask()) {
       ActiveBits = Mask.countTrailingOnes();
-    } else if (Mask.isShiftedMask()) {
-      ShAmt = Mask.countTrailingZeros();
-      APInt ShiftedMask = Mask.lshr(ShAmt);
-      ActiveBits = ShiftedMask.countTrailingOnes();
+    } else if (Mask.isShiftedMask(ShAmt, ActiveBits)) {
       HasShiftedOffset = true;
     } else
       return SDValue();
@@ -18908,10 +18997,9 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
     if (InVec.isUndef() && TLI.shouldSplatInsEltVarIndex(VT)) {
       if (VT.isScalableVector())
         return DAG.getSplatVector(VT, DL, InVal);
-      else {
-        SmallVector<SDValue, 8> Ops(VT.getVectorNumElements(), InVal);
-        return DAG.getBuildVector(VT, DL, Ops);
-      }
+
+      SmallVector<SDValue, 8> Ops(VT.getVectorNumElements(), InVal);
+      return DAG.getBuildVector(VT, DL, Ops);
     }
     return SDValue();
   }
@@ -21021,6 +21109,11 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     }
   }
 
+  // ty1 extract_vector(ty2 splat(V))) -> ty1 splat(V)
+  if (V.getOpcode() == ISD::SPLAT_VECTOR)
+    if (DAG.isConstantValueOfAnyType(V.getOperand(0)) || V.hasOneUse())
+      return DAG.getSplatVector(NVT, SDLoc(N), V.getOperand(0));
+
   // Try to move vector bitcast after extract_subv by scaling extraction index:
   // extract_subv (bitcast X), Index --> bitcast (extract_subv X, Index')
   if (V.getOpcode() == ISD::BITCAST &&
@@ -22517,6 +22610,19 @@ SDValue DAGCombiner::visitVECREDUCE(SDNode *N) {
         TLI.isOperationLegalOrCustom(NewOpcode, VT) &&
         DAG.ComputeNumSignBits(N0) == VT.getScalarSizeInBits())
       return DAG.getNode(NewOpcode, SDLoc(N), N->getValueType(0), N0);
+  }
+
+  // vecreduce_or(insert_subvector(zero or undef, val)) -> vecreduce_or(val)
+  // vecreduce_and(insert_subvector(ones or undef, val)) -> vecreduce_and(val)
+  if (N0.getOpcode() == ISD::INSERT_SUBVECTOR &&
+      TLI.isTypeLegal(N0.getOperand(1).getValueType())) {
+    SDValue Vec = N0.getOperand(0);
+    SDValue Subvec = N0.getOperand(1);
+    if ((Opcode == ISD::VECREDUCE_OR &&
+         (N0.getOperand(0).isUndef() || isNullOrNullSplat(Vec))) ||
+        (Opcode == ISD::VECREDUCE_AND &&
+         (N0.getOperand(0).isUndef() || isAllOnesOrAllOnesSplat(Vec))))
+      return DAG.getNode(Opcode, SDLoc(N), N->getValueType(0), Subvec);
   }
 
   return SDValue();

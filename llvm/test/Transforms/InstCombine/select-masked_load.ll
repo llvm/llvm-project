@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 ; Fold zeroing of inactive lanes into the load's passthrough parameter.
 define <4 x float> @masked_load_and_zero_inactive_1(<4 x float>* %ptr, <4 x i1> %mask) {

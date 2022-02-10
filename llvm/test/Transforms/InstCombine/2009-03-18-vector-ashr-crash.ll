@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine | llvm-dis
+; RUN: opt < %s -passes=instcombine | llvm-dis
 ; PR3826
 
 define void @0(<4 x i16>*, <4 x i16>*) {

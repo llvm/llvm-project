@@ -34,11 +34,7 @@ include "mlir/Dialect/OpenACC/AccCommon.td"
 
 // Base class for OpenACC dialect ops.
 class OpenACC_Op<string mnemonic, list<Trait> traits = []> :
-  Op<OpenACC_Dialect, mnemonic, traits> {
-
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-}
+  Op<OpenACC_Dialect, mnemonic, traits>;
 
 // Reduction operation enumeration.
 def OpenACC_ReductionOpAdd     : I32EnumAttrCase<"redop_add", 0>;
@@ -152,6 +148,7 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
     /// The i-th data operand passed.
     Value getDataOperand(unsigned i);
   }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -404,6 +401,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     static StringRef getPrivateKeyword() { return "private"; }
     static StringRef getReductionKeyword() { return "reduction"; }
   }];
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 

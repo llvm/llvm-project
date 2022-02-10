@@ -3083,8 +3083,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     bool SelfMultiply = Op.getOperand(0) == Op.getOperand(1);
     // TODO: SelfMultiply can be poison, but not undef.
-    SelfMultiply &= isGuaranteedNotToBeUndefOrPoison(
-        Op.getOperand(0), DemandedElts, false, Depth + 1);
+    if (SelfMultiply)
+      SelfMultiply &= isGuaranteedNotToBeUndefOrPoison(
+          Op.getOperand(0), DemandedElts, false, Depth + 1);
     Known = KnownBits::mul(Known, Known2, SelfMultiply);
     break;
   }

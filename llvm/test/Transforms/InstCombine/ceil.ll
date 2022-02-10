@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine < %s | FileCheck %s
+; RUN: opt -S -passes=instcombine < %s | FileCheck %s
 
 declare float @llvm.ceil.f32(float) #0
 declare double @llvm.ceil.f64(double) #0

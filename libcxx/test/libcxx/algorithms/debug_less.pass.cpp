@@ -16,6 +16,7 @@
 
 struct DebugException {};
 
+// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined
 #define _LIBCPP_DEBUG 0
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : throw ::DebugException())
 

@@ -45,7 +45,7 @@
 + (Unrelated *)newUnrelated;
 @end
 
-void test_inference() {
+void test_inference(void) {
   // Inference based on method family
   __typeof__(([[NSString alloc] init])) *str = (NSString**)0;
   __typeof__(([[[[NSString new] self] retain] autorelease])) *str2 = (NSString **)0;

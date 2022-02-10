@@ -28,7 +28,7 @@ struct t5 { __thread int x; }; // thread-local-warning {{'_Thread_local' is a C1
 // expected-error@-5 {{type name does not allow storage class to be specified}}
 #endif
 
-__thread int t6(); // thread-local-warning {{'_Thread_local' is a C11 extension}}
+__thread int t6(void); // thread-local-warning {{'_Thread_local' is a C11 extension}}
 #if defined(GNU)
 // expected-error@-2 {{'__thread' is only allowed on variable declarations}}
 #elif defined(C11) || defined(C99)
@@ -89,14 +89,14 @@ int *thread_int_ptr = &thread_int;
 #ifndef __cplusplus
 // expected-error@-2 {{initializer element is not a compile-time constant}}
 #endif
-void g() {
+void g(void) {
   int *p = &thread_int; // This is perfectly fine, though.
 }
 #if __cplusplus >= 201103L
 constexpr int *thread_int_ptr_2 = &thread_int; // expected-error {{must be initialized by a constant expression}}
 #endif
 
-int non_const();
+int non_const(void);
 __thread int non_const_init = non_const(); // thread-local-warning {{'_Thread_local' is a C11 extension}}
 #if !defined(__cplusplus)
 // expected-error@-2 {{initializer element is not a compile-time constant}}

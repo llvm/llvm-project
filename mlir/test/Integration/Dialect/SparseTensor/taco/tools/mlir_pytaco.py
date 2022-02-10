@@ -667,6 +667,11 @@ class Tensor:
                        "Must be a tuple or list for a shape or a single value"
                        f"if initializing a scalar tensor: {value_or_shape}.")
 
+  def _set_packed_sparse_tensor(self, pointer: ctypes.c_void_p) -> None:
+    """Records the MLIR sparse tensor pointer."""
+    self._sparse_value_location = _SparseValueInfo._PACKED
+    self._packed_sparse_value = pointer
+
   def is_unpacked(self) -> bool:
     """Returns true if the tensor value is not packed as MLIR sparse tensor."""
     return (self._sparse_value_location == _SparseValueInfo._UNPACKED)
@@ -826,10 +831,38 @@ class Tensor:
     sparse_tensor, shape = utils.create_sparse_tensor(filename,
                                                       fmt.format_pack.formats)
     tensor = Tensor(shape.tolist(), fmt)
-    tensor._sparse_value_location = _SparseValueInfo._PACKED
-    tensor._packed_sparse_value = sparse_tensor
+    tensor._set_packed_sparse_tensor(sparse_tensor)
 
     return tensor
+
+  def to_file(self, filename: str) -> None:
+    """Output the tensor value to a file.
+
+    This method evaluates any pending assignment to the tensor and outputs the
+    tensor value.
+
+    Args:
+      filename: A string file name.
+    """
+    self._sync_value()
+    if not self.is_unpacked():
+      utils.output_sparse_tensor(self._packed_sparse_value, filename,
+                                 self._format.format_pack.formats)
+      return
+
+    # TODO: Use MLIR code to output the value.
+    coords, values = self.get_coordinates_and_values()
+    assert len(coords) == len(values)
+    with open(filename, "w") as file:
+      # Output a comment line and the meta data.
+      file.write("; extended FROSTT format\n")
+      file.write(f"{self.order} {len(coords)}\n")
+      file.write(f"{' '.join(map(lambda i: str(i), self.shape))}\n")
+      # Output each (coordinate value) pair in a line.
+      for c, v in zip(coords, values):
+        # The coordinates are 1-based in the text file and 0-based in memory.
+        plus_one_to_str = lambda x: str(x + 1)
+        file.write(f"{' '.join(map(plus_one_to_str,c))} {v}\n")
 
   @property
   def dtype(self) -> DType:
@@ -914,9 +947,7 @@ class Tensor:
       assert isinstance(result, np.ndarray)
       self._dense_storage = result
     else:
-      assert _all_instance_of(result, np.ndarray) and len(result) == 2
-      assert (result[0].ndim, result[1].ndim) == (1, 2)
-      (self._values, self._coords) = result
+      self._set_packed_sparse_tensor(result)
 
   def _sync_value(self) -> None:
     """Updates the tensor value by evaluating the pending assignment."""
@@ -1349,7 +1380,7 @@ class IndexExpr(abc.ABC):
       self,
       dst: Tensor,
       dst_indices: Tuple[IndexVar, ...],
-  ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
+  ) -> Union[np.ndarray, ctypes.c_void_p]:
     """Evaluates tensor assignment dst[dst_indices] = expression.
 
     Args:
@@ -1357,9 +1388,8 @@ class IndexExpr(abc.ABC):
       dst_indices: The tuple of IndexVar used to access the destination tensor.
 
     Returns:
-      The result of the dense tensor represented in numpy ndarray or the sparse
-      tensor represented by two numpy ndarray for its non-zero values and
-      indices.
+      The result of the dense tensor represented in numpy ndarray or the pointer
+      to the MLIR sparse tensor.
 
     Raises:
       ValueError: If the expression is not proper or not supported.
@@ -1397,17 +1427,8 @@ class IndexExpr(abc.ABC):
     if dst.is_dense():
       return runtime.ranked_memref_to_numpy(arg_pointers[0][0])
 
-    # Check and return the sparse tensor output.
-    rank, nse, shape, values, indices = utils.sparse_tensor_to_coo_tensor(
-        ctypes.cast(arg_pointers[-1][0], ctypes.c_void_p),
-        np.float64,
-    )
-    assert (np.equal(rank, dst.order)
-            and np.array_equal(shape, np.array(dst.shape)) and
-            np.equal(values.ndim, 1) and np.equal(values.shape[0], nse) and
-            np.equal(indices.ndim, 2) and np.equal(indices.shape[0], nse) and
-            np.equal(indices.shape[1], rank))
-    return (values, indices)
+    # Return the sparse tensor pointer.
+    return arg_pointers[-1][0]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -1437,6 +1458,13 @@ class Access(IndexExpr):
     if self.tensor.order != len(self.indices):
       raise ValueError("Invalid indices for rank: "
                        f"str{self.tensor.order} != len({str(self.indices)}).")
+
+  def __repr__(self) -> str:
+    # The Tensor __repr__ method evaluates the pending assignment to the tensor.
+    # We want to define the __repr__ method here to avoid such evaluation of the
+    # tensor assignment.
+    indices_str = ", ".join(map(lambda i: i.name, self.indices))
+    return (f"Tensor({self.tensor.name}) " f"Indices({indices_str})")
 
   def _emit_expression(
       self,

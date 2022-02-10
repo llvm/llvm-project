@@ -28,6 +28,6 @@ void test7(int a) {
   __builtin_alloca_with_align(a, 2); // expected-error {{requested alignment must be 8 or greater}}
 }
 
-void test8() {
+void test8(void) {
   __builtin_alloca_with_align(sizeof(__INT64_TYPE__), __alignof__(__INT64_TYPE__)); // expected-warning {{second argument to __builtin_alloca_with_align is supposed to be in bits}}
 }

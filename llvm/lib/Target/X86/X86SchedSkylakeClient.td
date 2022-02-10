@@ -836,12 +836,26 @@ def SKLWriteResGroup41 : SchedWriteRes<[SKLPort237,SKLPort0156]> {
 def: InstRW<[SKLWriteResGroup41], (instrs MFENCE)>;
 
 def SKLWriteResGroup42 : SchedWriteRes<[SKLPort06,SKLPort0156]> {
-  let Latency = 3;
+  let Latency = 2;
   let NumMicroOps = 3;
   let ResourceCycles = [1,2];
 }
-def: InstRW<[SKLWriteResGroup42], (instregex "RCL(8|16|32|64)r(1|i)",
-                                             "RCR(8|16|32|64)r(1|i)")>;
+def: InstRW<[SKLWriteResGroup42], (instrs RCL8r1, RCL16r1, RCL32r1, RCL64r1,
+                                          RCR8r1, RCR16r1, RCR32r1, RCR64r1)>;
+
+def SKLWriteResGroup42b : SchedWriteRes<[SKLPort1,SKLPort06,SKLPort0156]> {
+  let Latency = 5;
+  let NumMicroOps = 8;
+  let ResourceCycles = [2,4,2];
+}
+def: InstRW<[SKLWriteResGroup42b], (instrs RCR8ri, RCR16ri, RCR32ri, RCR64ri)>;
+
+def SKLWriteResGroup42c : SchedWriteRes<[SKLPort1,SKLPort06,SKLPort0156]> {
+  let Latency = 6;
+  let NumMicroOps = 8;
+  let ResourceCycles = [2,4,2];
+}
+def: InstRW<[SKLWriteResGroup42c], (instrs RCL8ri, RCL16ri, RCL32ri, RCL64ri)>;
 
 def SKLWriteResGroup43 : SchedWriteRes<[SKLPort0,SKLPort4,SKLPort237]> {
   let Latency = 3;

@@ -1,4 +1,4 @@
-; RUN: opt < %s  -instcombine -S | FileCheck %s
+; RUN: opt < %s  -passes=instcombine -S | FileCheck %s
 
 define  void @test(float* %a, float* readnone %a_end, i64 %b, float* %bf) unnamed_addr  {
 entry:

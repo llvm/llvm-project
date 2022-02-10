@@ -12,6 +12,6 @@ struct x {int a;} *c = b; // expected-warning {{incompatible pointer types}}
 }
 
 struct x {int a;} r;
-int b() {
+int b(void) {
 struct x {char x;} s = r; // expected-error {{initializing 'struct x' with an expression of incompatible type 'struct x'}}
 }

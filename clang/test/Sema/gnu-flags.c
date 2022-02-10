@@ -78,7 +78,7 @@ struct { int x; } emptyinit = {};
 // expected-warning@+7 {{use of GNU indirect-goto extension}}
 #endif
 
-void labelvalue() {
+void labelvalue(void) {
 	void *ptr;
 	ptr = &&foo;
 foo:
@@ -90,7 +90,7 @@ foo:
 // expected-warning@+5 {{use of GNU statement expression extension}}
 #endif
 
-void statementexp()
+void statementexp(void)
 {
 	int a = ({ 1; });
 }

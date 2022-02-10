@@ -1,6 +1,12 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 \
+// RUN: -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp -fopenmp-version=51 \
+// RUN: -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 \
+// RUN: -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp-simd -fopenmp-version=51 \
+// RUN: -ferror-limit 100 %s -Wuninitialized
 
 struct S1 { // expected-note 2 {{declared here}}
   int a;
@@ -142,10 +148,10 @@ label1 : {
 #pragma omp parallel depobj(argc) // expected-warning {{extra tokens at the end of '#pragma omp parallel' are ignored}}
   ;
 #pragma omp depobj(x) seq_cst // expected-error {{unexpected OpenMP clause 'seq_cst' in directive '#pragma omp depobj'}}
-#pragma omp depobj(x) depend(source: x) // expected-error {{expected depend modifier(iterator) or 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'depend'}}
+#pragma omp depobj(x) depend(source: x) // omp51-error {{expected depend modifier(iterator) or 'in', 'out', 'inout', 'mutexinoutset' or 'inoutset' in OpenMP clause 'depend'}} omp50-error {{expected depend modifier(iterator) or 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'depend'}}
 #pragma omp depobj(x) update // expected-error {{expected '(' after 'update'}}
-#pragma omp depobj(x) update( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'update'}}
-#pragma omp depobj(x) update(sink // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'update'}}
+#pragma omp depobj(x) update( // expected-error {{expected ')'}} expected-note {{to match this '('}} omp51-error {{expected 'in', 'out', 'inout', 'mutexinoutset' or 'inoutset' in OpenMP clause 'update'}} omp50-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'update'}}
+#pragma omp depobj(x) update(sink // expected-error {{expected ')'}} expected-note {{to match this '('}} omp51-error {{expected 'in', 'out', 'inout', 'mutexinoutset' or 'inoutset' in OpenMP clause 'update'}} omp50-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'update'}}
 #pragma omp depobj(x) destroy destroy // expected-error {{directive '#pragma omp depobj' cannot contain more than one 'destroy' clause}}
 #pragma omp depobj(x) update(in) update(in) // expected-error {{directive '#pragma omp depobj' cannot contain more than one 'update' clause}}
 #pragma omp depobj(x) depend(in: argc) destroy // expected-error {{exactly one of 'depend', 'destroy', or 'update' clauses is expected}}

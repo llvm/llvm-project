@@ -33,6 +33,7 @@ enum class Operation : int {
   Log,
   Log2,
   Log10,
+  Log1p,
   Mod2PI,
   ModPIOver2,
   ModPIOver4,

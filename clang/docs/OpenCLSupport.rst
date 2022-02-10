@@ -382,17 +382,17 @@ implementation status.
 +------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
 | Feature optionality          | Generic address space                                             | :good:`done`         | https://reviews.llvm.org/D95778 and https://reviews.llvm.org/D103401                         |
 +------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| Feature optionality          | Builtin function overloads with generic address space             | :good:`done`         | https://reviews.llvm.org/D105526                                                             |
+| Feature optionality          | Builtin function overloads with generic address space             | :good:`done`         | https://reviews.llvm.org/D105526 and https://reviews.llvm.org/D107769                        |
 +------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
 | Feature optionality          | Program scope variables in global memory                          | :good:`done`         | https://reviews.llvm.org/D103191                                                             |
 +------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
 | Feature optionality          | 3D image writes including builtin functions                       | :part:`worked on`    | https://reviews.llvm.org/D106260 (frontend)                                                  |
 +------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| Feature optionality          | read_write images including builtin functions                     | :part:`worked on`    | https://reviews.llvm.org/D104915 (frontend) and https://reviews.llvm.org/D107539 (functions) |
+| Feature optionality          | read_write images including builtin functions                     | :good:`done`         | https://reviews.llvm.org/D104915 (frontend) and https://reviews.llvm.org/D107539 (functions) |
 +------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
 | Feature optionality          | C11 atomics memory scopes, ordering and builtin function          | :good:`done`         | https://reviews.llvm.org/D106111                                                             |
 +------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| Feature optionality          | Blocks and Device-side kernel enqueue including builtin functions | :none:`unclaimed`    |                                                                                              |
+| Feature optionality          | Blocks and Device-side kernel enqueue including builtin functions | :part:`worked on`    | https://reviews.llvm.org/D118605                                                             |
 +------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
 | Feature optionality          | Pipes including builtin functions                                 | :good:`done`         | https://reviews.llvm.org/D107154 (frontend) and https://reviews.llvm.org/D105858 (functions) |
 +------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
@@ -406,7 +406,7 @@ implementation status.
 +------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
 | New functionality            | Subgroup functions                                                | :part:`worked on`    | https://reviews.llvm.org/D105858                                                             |
 +------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
-| New functionality            | Atomic mem scopes: subgroup, all devices including functions      | :part:`worked on`    |  https://reviews.llvm.org/D103241                                                            |
+| New functionality            | Atomic mem scopes: subgroup, all devices including functions      | :part:`worked on`    | https://reviews.llvm.org/D103241                                                             |
 +------------------------------+-------------------------+-----------------------------------------+----------------------+----------------------------------------------------------------------------------------------+
 
 .. _opencl_experimenal:

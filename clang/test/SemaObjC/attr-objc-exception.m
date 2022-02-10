@@ -12,5 +12,5 @@ __attribute__((__objc_exception__)) // expected-error {{'__objc_exception__' att
 int X;
 
 __attribute__((__objc_exception__)) // expected-error {{'__objc_exception__' attribute only applies to Objective-C interfaces}}
-void foo();
+void foo(void);
 

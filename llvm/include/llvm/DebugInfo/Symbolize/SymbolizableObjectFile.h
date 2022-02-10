@@ -9,8 +9,8 @@
 // This file declares the SymbolizableObjectFile class.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIB_DEBUGINFO_SYMBOLIZE_SYMBOLIZABLEOBJECTFILE_H
-#define LLVM_LIB_DEBUGINFO_SYMBOLIZE_SYMBOLIZABLEOBJECTFILE_H
+#ifndef LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZABLEOBJECTFILE_H
+#define LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZABLEOBJECTFILE_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DIContext.h"
@@ -100,4 +100,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_DEBUGINFO_SYMBOLIZE_SYMBOLIZABLEOBJECTFILE_H
+#endif // LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZABLEOBJECTFILE_H

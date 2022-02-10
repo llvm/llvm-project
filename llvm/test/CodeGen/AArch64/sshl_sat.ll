@@ -126,3 +126,48 @@ define void @combine_shlsat_vector() nounwind {
   call void @sink4xi16(i16 %e0, i16 %e1, i16 %e2, i16 %e3)
   ret void
 }
+
+; Fold shlsat -> shl, if known not to saturate.
+define i16 @combine_shlsat_to_shl(i16 %x) nounwind {
+; CHECK-LABEL: combine_shlsat_to_shl:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and w0, w0, #0xfffffffc
+; CHECK-NEXT:    ret
+  %x2 = ashr i16 %x, 2
+  %tmp = call i16 @llvm.sshl.sat.i16(i16 %x2, i16 2)
+  ret i16 %tmp
+}
+
+; Do not fold shlsat -> shl.
+define i16 @combine_shlsat_to_shl_no_fold(i16 %x) nounwind {
+; CHECK-LABEL: combine_shlsat_to_shl_no_fold:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sxth w8, w0
+; CHECK-NEXT:    mov w9, #-65536
+; CHECK-NEXT:    mov w10, #-2147483648
+; CHECK-NEXT:    ands w8, w9, w8, lsl #14
+; CHECK-NEXT:    lsl w9, w8, #3
+; CHECK-NEXT:    cinv w10, w10, ge
+; CHECK-NEXT:    cmp w8, w9, asr #3
+; CHECK-NEXT:    csel w8, w10, w9, ne
+; CHECK-NEXT:    asr w0, w8, #16
+; CHECK-NEXT:    ret
+  %x2 = ashr i16 %x, 2
+  %tmp = call i16 @llvm.sshl.sat.i16(i16 %x2, i16 3)
+  ret i16 %tmp
+}
+
+; Fold shlsat -> shl, if known not to saturate.
+define <4 x i16> @combine_shlsat_to_shl_vec(<4 x i8> %a) nounwind {
+; CHECK-LABEL: combine_shlsat_to_shl_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.4h, v0.4h, #8
+; CHECK-NEXT:    sshr v0.4h, v0.4h, #8
+; CHECK-NEXT:    shl v0.4h, v0.4h, #7
+; CHECK-NEXT:    ret
+  %sext = sext <4 x i8> %a to <4 x i16>
+  %tmp = call <4 x i16> @llvm.sshl.sat.v4i16(
+                          <4 x i16> %sext,
+                          <4 x i16> <i16 7, i16 7, i16 7, i16 7>)
+  ret <4 x i16> %tmp
+}

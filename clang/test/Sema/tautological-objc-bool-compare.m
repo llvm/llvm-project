@@ -6,7 +6,7 @@ typedef signed char BOOL;
 
 BOOL B;
 
-void test() {
+void test(void) {
   int r;
   r = B > 0;
   r = B > 1; // expected-warning {{result of comparison of constant 1 with expression of type 'BOOL' is always false, as the only well defined values for 'BOOL' are YES and NO}}

@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_MATH_MATH_UTILS_H
 #define LLVM_LIBC_SRC_MATH_MATH_UTILS_H
 
+#include "src/__support/CPP/Bit.h"
 #include "src/__support/CPP/TypeTraits.h"
 #include "src/__support/common.h"
 #include <errno.h>
@@ -19,19 +20,19 @@
 namespace __llvm_libc {
 
 static inline uint32_t as_uint32_bits(float x) {
-  return *reinterpret_cast<uint32_t *>(&x);
+  return __llvm_libc::bit_cast<uint32_t>(x);
 }
 
 static inline uint64_t as_uint64_bits(double x) {
-  return *reinterpret_cast<uint64_t *>(&x);
+  return __llvm_libc::bit_cast<uint64_t>(x);
 }
 
 static inline float as_float(uint32_t x) {
-  return *reinterpret_cast<float *>(&x);
+  return __llvm_libc::bit_cast<float>(x);
 }
 
 static inline double as_double(uint64_t x) {
-  return *reinterpret_cast<double *>(&x);
+  return __llvm_libc::bit_cast<double>(x);
 }
 
 static inline uint32_t top12_bits(float x) { return as_uint32_bits(x) >> 20; }

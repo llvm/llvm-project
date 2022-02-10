@@ -27,6 +27,9 @@ set(LIBCXX_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 set(LIBCXX_BINARY_INCLUDE_DIR "${LIBCXX_BINARY_DIR}/include/c++build")
 
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXX_STANDALONE_BUILD)
+  message(FATAL_ERROR "The Standalone build has been deprecated since LLVM 14, and it is not supported anymore. "
+                      "Please use one of the ways described at https://libcxx.llvm.org/BuildingLibcxx.html for "
+                      "building libc++.")
   project(libcxx CXX C)
 
   set(PACKAGE_NAME libcxx)
@@ -179,9 +182,17 @@ cmake_dependent_option(LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY
         "Install libc++experimental.a" ON
         "LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY;LIBCXX_INSTALL_LIBRARY" OFF)
 
-set(LIBCXX_ABI_VERSION "1" CACHE STRING "ABI version of libc++. Can be either 1 or 2, where 2 is currently not stable. Defaults to 1.")
-set(LIBCXX_ABI_NAMESPACE "" CACHE STRING "The inline ABI namespace used by libc++. It defaults to __n where `n` is the current ABI version.")
-option(LIBCXX_ABI_UNSTABLE "Unstable ABI of libc++." OFF)
+option(LIBCXX_ABI_UNSTABLE "Use the unstable ABI of libc++. This is equivalent to specifying LIBCXX_ABI_VERSION=n, where n is the not-yet-stable version." OFF)
+if (LIBCXX_ABI_UNSTABLE)
+  set(abi_version "2")
+else()
+  set(abi_version "1")
+endif()
+set(LIBCXX_ABI_VERSION "${abi_version}" CACHE STRING "ABI version of libc++. Can be either 1 or 2, where 2 is currently the unstable ABI. Defaults to 1 unless LIBCXX_ABI_UNSTABLE is specified, in which case this is 2.")
+set(LIBCXX_ABI_NAMESPACE "__${LIBCXX_ABI_VERSION}" CACHE STRING "The inline ABI namespace used by libc++. It defaults to __n where `n` is the current ABI version.")
+if (NOT LIBCXX_ABI_NAMESPACE MATCHES "__.*")
+  message(FATAL_ERROR "LIBCXX_ABI_NAMESPACE must be a reserved identifier.")
+endif()
 option(LIBCXX_ABI_FORCE_ITANIUM "Ignore auto-detection and force use of the Itanium ABI.")
 option(LIBCXX_ABI_FORCE_MICROSOFT "Ignore auto-detection and force use of the Microsoft ABI.")
 
@@ -623,6 +634,7 @@ function(cxx_add_warning_flags target)
     endif()
   elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
     target_add_compile_flags_if_supported(${target} PRIVATE
+      -Wno-attributes
       -Wno-literal-suffix
       -Wno-c++14-compat
       -Wno-noexcept-type
@@ -857,19 +869,8 @@ function(cxx_add_windows_flags target)
 endfunction()
 
 # Configuration file flags =====================================================
-if (NOT LIBCXX_ABI_VERSION EQUAL 1)
-  config_define(${LIBCXX_ABI_VERSION} _LIBCPP_ABI_VERSION)
-endif()
-if (NOT LIBCXX_ABI_NAMESPACE STREQUAL "")
-  if (NOT LIBCXX_ABI_NAMESPACE MATCHES "__.*")
-    message(FATAL_ERROR "LIBCXX_ABI_NAMESPACE must be a reserved identifier.")
-  endif()
-  if (LIBCXX_ABI_NAMESPACE MATCHES "__[0-9]+$")
-    message(FATAL_ERROR "LIBCXX_ABI_NAMESPACE '${LIBCXX_ABI_NAMESPACE}' is reserved for use by libc++.")
-  endif()
-  config_define(${LIBCXX_ABI_NAMESPACE} _LIBCPP_ABI_NAMESPACE)
-endif()
-config_define_if(LIBCXX_ABI_UNSTABLE _LIBCPP_ABI_UNSTABLE)
+config_define(${LIBCXX_ABI_VERSION} _LIBCPP_ABI_VERSION)
+config_define(${LIBCXX_ABI_NAMESPACE} _LIBCPP_ABI_NAMESPACE)
 config_define_if(LIBCXX_ABI_FORCE_ITANIUM _LIBCPP_ABI_FORCE_ITANIUM)
 config_define_if(LIBCXX_ABI_FORCE_MICROSOFT _LIBCPP_ABI_FORCE_MICROSOFT)
 config_define_if(LIBCXX_HIDE_FROM_ABI_PER_TU_BY_DEFAULT _LIBCPP_HIDE_FROM_ABI_PER_TU_BY_DEFAULT)

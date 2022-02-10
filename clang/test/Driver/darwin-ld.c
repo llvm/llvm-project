@@ -311,7 +311,7 @@
 // LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3'
 // LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3.0'
 // LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3.0.1'
-// LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3.0.1.2'
+// LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1.2'
 // LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1.2.6'
 // LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1.a'
 // LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1a'

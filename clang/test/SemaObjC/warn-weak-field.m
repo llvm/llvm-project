@@ -17,7 +17,7 @@ struct S {
 - (void) foo { w = 0; LHS = w; }
 @end
 
-int main ()
+int main (void)
 {
 	struct I {
         __weak id w1;  // expected-warning {{__weak attribute cannot be specified on a field declaration}}

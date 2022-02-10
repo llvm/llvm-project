@@ -6,7 +6,7 @@
 
 id<MyProtocol> obj_p = 0;
 
-int main()
+int main(void)
 {
   obj_p = 0;
 }

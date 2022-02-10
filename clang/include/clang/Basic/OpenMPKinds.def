@@ -105,6 +105,7 @@ OPENMP_DEPEND_KIND(mutexinoutset)
 OPENMP_DEPEND_KIND(depobj)
 OPENMP_DEPEND_KIND(source)
 OPENMP_DEPEND_KIND(sink)
+OPENMP_DEPEND_KIND(inoutset)
 
 // Modifiers for 'linear' clause.
 OPENMP_LINEAR_KIND(val)

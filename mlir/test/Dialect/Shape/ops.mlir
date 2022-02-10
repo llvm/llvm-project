@@ -168,6 +168,11 @@ func @test_to_extent_tensor(%arg: !shape.shape) -> tensor<3xindex> {
   return %0 : tensor<3xindex>
 }
 
+func @test_identity_to_extent_tensor(%arg: tensor<3xindex>) -> tensor<3xindex> {
+  %0 = shape.to_extent_tensor %arg : tensor<3xindex> -> tensor<3xindex>
+  return %0 : tensor<3xindex>
+}
+
 func @test_from_extent_tensor(%arg: tensor<?xindex>) -> !shape.shape {
   %0 = shape.from_extent_tensor %arg : tensor<?xindex>
   return %0 : !shape.shape

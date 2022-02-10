@@ -2110,7 +2110,7 @@ struct FormatStyle {
   /// Defines when to put an empty line after access modifiers.
   /// ``EmptyLineBeforeAccessModifier`` configuration handles the number of
   /// empty lines between two access modifiers.
-  /// \version 14
+  /// \version 13
   EmptyLineAfterAccessModifierStyle EmptyLineAfterAccessModifier;
 
   /// Different styles for empty line before access modifiers.
@@ -2285,7 +2285,7 @@ struct FormatStyle {
   ///
   /// For example: `KJ_IF_MAYBE
   /// <https://github.com/capnproto/capnproto/blob/master/kjdoc/tour.md#maybes>`_
-  /// \version 14
+  /// \version 13
   std::vector<std::string> IfMacros;
 
   /// \brief A vector of macros that should be interpreted as type declarations
@@ -2956,7 +2956,7 @@ struct FormatStyle {
   ///    # define BAR
   ///    #endif
   /// \endcode
-  /// \version 14
+  /// \version 13
   int PPIndentWidth;
 
   /// See documentation of ``RawStringFormats``.
@@ -3042,7 +3042,7 @@ struct FormatStyle {
 
   /// \brief Reference alignment style (overrides ``PointerAlignment`` for
   /// references).
-  /// \version 14
+  /// \version 13
   ReferenceAlignmentStyle ReferenceAlignment;
 
   // clang-format off
@@ -3193,7 +3193,7 @@ struct FormatStyle {
   ///      int bar;                           int bar;
   ///    } // namespace b                   } // namespace b
   /// \endcode
-  /// \version 14
+  /// \version 13
   unsigned ShortNamespaceLines;
 
   /// Include sorting options.
@@ -3610,7 +3610,7 @@ struct FormatStyle {
     SIAS_Leave
   };
   /// The SpacesInAnglesStyle to use for template argument lists.
-  /// \version 14
+  /// \version 3.4
   SpacesInAnglesStyle SpacesInAngles;
 
   /// If ``true``, spaces will be inserted around if/for/switch/while
@@ -3678,7 +3678,7 @@ struct FormatStyle {
   ///   ///  - Foo                                /// - Foo
   ///   ///    - Bar                              ///   - Bar
   /// \endcode
-  /// \version 14
+  /// \version 13
   SpacesInLineComment SpacesInLineCommentPrefix;
 
   /// If ``true``, spaces will be inserted after ``(`` and before ``)``.
@@ -4062,7 +4062,7 @@ bool getPredefinedStyle(StringRef Name, FormatStyle::LanguageKind Language,
 /// document, are retained in \p Style.
 ///
 /// If AllowUnknownOptions is true, no errors are emitted if unknown
-/// format options are occured.
+/// format options are occurred.
 ///
 /// If set all diagnostics are emitted through the DiagHandler.
 std::error_code

@@ -7,11 +7,11 @@ extern __strong INTF* p2;
 extern __strong id p1;
 extern id p1;
 
-extern id CFRunLoopGetMain();
-extern __strong id CFRunLoopGetMain();
+extern id CFRunLoopGetMain(void);
+extern __strong id CFRunLoopGetMain(void);
 
-extern __weak id WLoopGetMain(); // expected-note {{previous declaration is here}}
-extern id WLoopGetMain();	// expected-error {{conflicting types for 'WLoopGetMain'}}
+extern __weak id WLoopGetMain(void); // expected-note {{previous declaration is here}}
+extern id WLoopGetMain(void);	// expected-error {{conflicting types for 'WLoopGetMain'}}
 
 extern id p3;	// expected-note {{previous declaration is here}}
 extern __weak id p3;	// expected-error {{redeclaration of 'p3' with a different type}}

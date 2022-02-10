@@ -135,13 +135,13 @@ struct DiffsCategorizedByFilesPresent {
 
 static void printFunctionDiff(const FunctionDiff &FD, llvm::raw_ostream &OS) {
   // Describe which files the function had remarks in.
-  auto FilesPresent = FD.getFilesPresent();
-  const auto &FuncName = FD.FuncName;
+  FilesPresent FP = FD.getFilesPresent();
+  const std::string &FuncName = FD.FuncName;
   const int64_t InstDiff = FD.getInstDiff();
   assert(InstDiff && "Shouldn't get functions with no size change?");
   const int64_t StackDiff = FD.getStackDiff();
   // Output an indicator denoting which files the function was present in.
-  switch (FilesPresent) {
+  switch (FP) {
   case FilesPresent::A:
     OS << "-- ";
     break;

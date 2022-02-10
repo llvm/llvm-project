@@ -29,7 +29,9 @@ ELF Improvements
 Breaking changes
 ----------------
 
-* ...
+* The GNU ld incompatible ``--no-define-common`` has been removed.
+* The obscure ``-dc``/``-dp`` options have been removed.
+* ``-d`` is now ignored.
 
 COFF Improvements
 -----------------

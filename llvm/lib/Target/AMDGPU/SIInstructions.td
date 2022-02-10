@@ -182,15 +182,13 @@ def EXIT_STRICT_WQM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
 // restoring it after we're done.
 let Defs = [SCC] in {
 def V_SET_INACTIVE_B32 : VPseudoInstSI <(outs VGPR_32:$vdst),
-  (ins VGPR_32: $src, VSrc_b32:$inactive),
+  (ins VSrc_b32: $src, VSrc_b32:$inactive),
   [(set i32:$vdst, (int_amdgcn_set_inactive i32:$src, i32:$inactive))]> {
-  let Constraints = "$src = $vdst";
 }
 
 def V_SET_INACTIVE_B64 : VPseudoInstSI <(outs VReg_64:$vdst),
-  (ins VReg_64: $src, VSrc_b64:$inactive),
+  (ins VSrc_b64: $src, VSrc_b64:$inactive),
   [(set i64:$vdst, (int_amdgcn_set_inactive i64:$src, i64:$inactive))]> {
-  let Constraints = "$src = $vdst";
 }
 } // End Defs = [SCC]
 
@@ -2094,12 +2092,12 @@ def : GCNPat<(i32 (DivergentSextInreg<i1> i32:$src)),
 
 def : GCNPat <
   (i16 (DivergentSextInreg<i1> i16:$src)),
-  (V_BFE_I32_e64 $src, (i32 0), (i32 1)) // 0 | 1 << 16
+  (V_BFE_I32_e64 $src, (i32 0), (i32 1))
 >;
 
 def : GCNPat <
   (i16 (DivergentSextInreg<i8> i16:$src)),
-  (V_BFE_I32_e64 $src, (i32 0), (i32 8)) // 0 | 8 << 16
+  (V_BFE_I32_e64 $src, (i32 0), (i32 8))
 >;
 
 def : GCNPat <
@@ -2112,14 +2110,14 @@ def : GCNPat <
 def : GCNPat <
   (i64 (DivergentSextInreg<i8> i64:$src)),
   (REG_SEQUENCE VReg_64,
-    (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 8)/* 0 | 8 << 16 */), sub0,
+    (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 8)), sub0,
     (V_ASHRREV_I32_e32 (i32 31), (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 8))), sub1)
 >;
 
 def : GCNPat <
   (i64 (DivergentSextInreg<i16> i64:$src)),
   (REG_SEQUENCE VReg_64,
-    (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 16)/* 0 | 16 << 16 */), sub0,
+    (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 16)), sub0,
     (V_ASHRREV_I32_e32 (i32 31), (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 16))), sub1)
 >;
 

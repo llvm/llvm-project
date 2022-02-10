@@ -35,38 +35,38 @@ def TypeParamB : TypeParameter<"TestParamD", "a type param D"> {
 
 /// Check simple attribute parser and printer are generated correctly.
 
-// ATTR: ::mlir::Attribute TestAAttr::parse(::mlir::AsmParser &parser,
-// ATTR:                                    ::mlir::Type type) {
+// ATTR: ::mlir::Attribute TestAAttr::parse(::mlir::AsmParser &odsParser,
+// ATTR:                                    ::mlir::Type odsType) {
 // ATTR:   FailureOr<IntegerAttr> _result_value;
 // ATTR:   FailureOr<TestParamA> _result_complex;
-// ATTR:   if (parser.parseKeyword("hello"))
+// ATTR:   if (odsParser.parseKeyword("hello"))
 // ATTR:     return {};
-// ATTR:   if (parser.parseEqual())
+// ATTR:   if (odsParser.parseEqual())
 // ATTR:     return {};
-// ATTR:   _result_value = ::mlir::FieldParser<IntegerAttr>::parse(parser);
-// ATTR:   if (failed(_result_value))
+// ATTR:   _result_value = ::mlir::FieldParser<IntegerAttr>::parse(odsParser);
+// ATTR:   if (::mlir::failed(_result_value))
 // ATTR:     return {};
-// ATTR:   if (parser.parseComma())
+// ATTR:   if (odsParser.parseComma())
 // ATTR:     return {};
-// ATTR:   _result_complex = ::parseAttrParamA(parser, type);
-// ATTR:   if (failed(_result_complex))
+// ATTR:   _result_complex = ::parseAttrParamA(odsParser, odsType);
+// ATTR:   if (::mlir::failed(_result_complex))
 // ATTR:     return {};
-// ATTR:   if (parser.parseRParen())
+// ATTR:   if (odsParser.parseRParen())
 // ATTR:     return {};
-// ATTR:   return TestAAttr::get(parser.getContext(),
-// ATTR:                         _result_value.getValue(),
-// ATTR:                         _result_complex.getValue());
+// ATTR:   return TestAAttr::get(odsParser.getContext(),
+// ATTR:                         *_result_value,
+// ATTR:                         *_result_complex);
 // ATTR: }
 
-// ATTR: void TestAAttr::print(::mlir::AsmPrinter &printer) const {
-// ATTR:   printer << ' ' << "hello";
-// ATTR:   printer << ' ' << "=";
-// ATTR:   printer << ' ';
-// ATTR:   printer.printStrippedAttrOrType(getValue());
-// ATTR:   printer << ",";
-// ATTR:   printer << ' ';
-// ATTR:   ::printAttrParamA(printer, getComplex());
-// ATTR:   printer << ")";
+// ATTR: void TestAAttr::print(::mlir::AsmPrinter &odsPrinter) const {
+// ATTR:   odsPrinter << ' ' << "hello";
+// ATTR:   odsPrinter << ' ' << "=";
+// ATTR:   odsPrinter << ' ';
+// ATTR:   odsPrinter.printStrippedAttrOrType(getValue());
+// ATTR:   odsPrinter << ",";
+// ATTR:   odsPrinter << ' ';
+// ATTR:   ::printAttrParamA(odsPrinter, getComplex());
+// ATTR:   odsPrinter << ")";
 // ATTR: }
 
 def AttrA : TestAttr<"TestA"> {
@@ -81,47 +81,48 @@ def AttrA : TestAttr<"TestA"> {
 
 /// Test simple struct parser and printer are generated correctly.
 
-// ATTR: ::mlir::Attribute TestBAttr::parse(::mlir::AsmParser &parser,
-// ATTR:                                    ::mlir::Type type) {
+// ATTR: ::mlir::Attribute TestBAttr::parse(::mlir::AsmParser &odsParser,
+// ATTR:                                    ::mlir::Type odsType) {
 // ATTR:   bool _seen_v0 = false;
 // ATTR:   bool _seen_v1 = false;
-// ATTR:   for (unsigned _index = 0; _index < 2; ++_index) {
-// ATTR:     StringRef _paramKey;
-// ATTR:     if (parser.parseKeyword(&_paramKey))
-// ATTR:       return {};
-// ATTR:     if (parser.parseEqual())
+// ATTR:   const auto _loop_body = [&](::llvm::StringRef _paramKey) -> bool {
+// ATTR:     if (odsParser.parseEqual())
 // ATTR:       return {};
 // ATTR:     if (!_seen_v0 && _paramKey == "v0") {
 // ATTR:       _seen_v0 = true;
-// ATTR:       _result_v0 = ::parseAttrParamA(parser, type);
-// ATTR:       if (failed(_result_v0))
+// ATTR:       _result_v0 = ::parseAttrParamA(odsParser, odsType);
+// ATTR:       if (::mlir::failed(_result_v0))
 // ATTR:         return {};
 // ATTR:     } else if (!_seen_v1 && _paramKey == "v1") {
 // ATTR:       _seen_v1 = true;
-// ATTR:       _result_v1 = type ? ::parseAttrWithType(parser, type) : ::parseAttrWithout(parser);
-// ATTR:       if (failed(_result_v1))
+// ATTR:       _result_v1 = odsType ? ::parseAttrWithType(odsParser, odsType) :
+// ATTR-SAME:                         ::parseAttrWithout(odsParser);
+// ATTR:       if (::mlir::failed(_result_v1))
 // ATTR:         return {};
 // ATTR:     } else {
 // ATTR:       return {};
 // ATTR:     }
-// ATTR:     if ((_index != 2 - 1) && parser.parseComma())
+// ATTR:     return true;
+// ATTR:   }
+// ATTR:   for (unsigned odsStructIndex = 0; odsStructIndex < 2; ++odsStructIndex) {
+// ATTR:     StringRef _paramKey;
+// ATTR:     if (odsParser.parseKeyword(&_paramKey))
+// ATTR:       return {};
+// ATTR:     if (!_loop_body(_paramKey)) return {};
+// ATTR:     if ((odsStructIndex != 2 - 1) && odsParser.parseComma())
 // ATTR:       return {};
 // ATTR:   }
-// ATTR:   return TestBAttr::get(parser.getContext(),
-// ATTR:                         _result_v0.getValue(),
-// ATTR:                         _result_v1.getValue());
+// ATTR:   return TestBAttr::get(odsParser.getContext(),
+// ATTR:                         *_result_v0,
+// ATTR:                         *_result_v1);
 // ATTR: }
 
-// ATTR: void TestBAttr::print(::mlir::AsmPrinter &printer) const {
-// ATTR:   printer << "v0";
-// ATTR:   printer << ' ' << "=";
-// ATTR:   printer << ' ';
-// ATTR:   ::printAttrParamA(printer, getV0());
-// ATTR:   printer << ",";
-// ATTR:   printer << ' ' << "v1";
-// ATTR:   printer << ' ' << "=";
-// ATTR:   printer << ' ';
-// ATTR:   ::printAttrB(printer, getV1());
+// ATTR: void TestBAttr::print(::mlir::AsmPrinter &odsPrinter) const {
+// ATTR:   odsPrinter << "v0 = ";
+// ATTR:   ::printAttrParamA(odsPrinter, getV0());
+// ATTR:   odsPrinter << ", ";
+// ATTR:   odsPrinter << "v1 = ";
+// ATTR:   ::printAttrB(odsPrinter, getV1());
 // ATTR: }
 
 def AttrB : TestAttr<"TestB"> {
@@ -136,29 +137,21 @@ def AttrB : TestAttr<"TestB"> {
 
 /// Test attribute with capture-all params has correct parser and printer.
 
-// ATTR: ::mlir::Attribute TestFAttr::parse(::mlir::AsmParser &parser,
-// ATTR:                                    ::mlir::Type type) {
+// ATTR: ::mlir::Attribute TestFAttr::parse(::mlir::AsmParser &odsParser,
+// ATTR:                                    ::mlir::Type odsType) {
 // ATTR:   ::mlir::FailureOr<int> _result_v0;
 // ATTR:   ::mlir::FailureOr<int> _result_v1;
-// ATTR:   _result_v0 = ::mlir::FieldParser<int>::parse(parser);
-// ATTR:   if (failed(_result_v0))
+// ATTR:   _result_v0 = ::mlir::FieldParser<int>::parse(odsParser);
+// ATTR:   if (::mlir::failed(_result_v0))
 // ATTR:     return {};
-// ATTR:   if (parser.parseComma())
+// ATTR:   if (odsParser.parseComma())
 // ATTR:     return {};
-// ATTR:   _result_v1 = ::mlir::FieldParser<int>::parse(parser);
-// ATTR:   if (failed(_result_v1))
+// ATTR:   _result_v1 = ::mlir::FieldParser<int>::parse(odsParser);
+// ATTR:   if (::mlir::failed(_result_v1))
 // ATTR:     return {};
-// ATTR:   return TestFAttr::get(parser.getContext(),
-// ATTR:     _result_v0.getValue(),
-// ATTR:     _result_v1.getValue());
-// ATTR: }
-
-// ATTR: void TestFAttr::print(::mlir::AsmPrinter &printer) const {
-// ATTR:   printer << ' ';
-// ATTR:   printer.printStrippedAttrOrType(getV0());
-// ATTR:   printer << ",";
-// ATTR:   printer << ' ';
-// ATTR:   printer.printStrippedAttrOrType(getV1());
+// ATTR:   return TestFAttr::get(odsParser.getContext(),
+// ATTR:     *_result_v0,
+// ATTR:     *_result_v1);
 // ATTR: }
 
 def AttrC : TestAttr<"TestF"> {
@@ -171,55 +164,57 @@ def AttrC : TestAttr<"TestF"> {
 /// Test type parser and printer that mix variables and struct are generated
 /// correctly.
 
-// TYPE: ::mlir::Type TestCType::parse(::mlir::AsmParser &parser) {
+// TYPE: ::mlir::Type TestCType::parse(::mlir::AsmParser &odsParser) {
 // TYPE:  FailureOr<IntegerAttr> _result_value;
 // TYPE:  FailureOr<TestParamC> _result_complex;
-// TYPE:  if (parser.parseKeyword("foo"))
+// TYPE:  if (odsParser.parseKeyword("foo"))
 // TYPE:    return {};
-// TYPE:  if (parser.parseComma())
+// TYPE:  if (odsParser.parseComma())
 // TYPE:    return {};
-// TYPE:  if (parser.parseColon())
+// TYPE:  if (odsParser.parseColon())
 // TYPE:    return {};
-// TYPE:  if (parser.parseKeyword("bob"))
+// TYPE:  if (odsParser.parseKeyword("bob"))
 // TYPE:    return {};
-// TYPE:  if (parser.parseKeyword("bar"))
+// TYPE:  if (odsParser.parseKeyword("bar"))
 // TYPE:    return {};
-// TYPE:  _result_value = ::mlir::FieldParser<IntegerAttr>::parse(parser);
-// TYPE:  if (failed(_result_value))
+// TYPE:  _result_value = ::mlir::FieldParser<IntegerAttr>::parse(odsParser);
+// TYPE:  if (::mlir::failed(_result_value))
 // TYPE:    return {};
 // TYPE:  bool _seen_complex = false;
-// TYPE:  for (unsigned _index = 0; _index < 1; ++_index) {
-// TYPE:    StringRef _paramKey;
-// TYPE:    if (parser.parseKeyword(&_paramKey))
-// TYPE:      return {};
+// TYPE:  const auto _loop_body = [&](::llvm::StringRef _paramKey) -> bool {
 // TYPE:    if (!_seen_complex && _paramKey == "complex") {
 // TYPE:      _seen_complex = true;
-// TYPE:      _result_complex = ::parseTypeParamC(parser);
-// TYPE:      if (failed(_result_complex))
+// TYPE:      _result_complex = ::parseTypeParamC(odsParser);
+// TYPE:      if (::mlir::failed(_result_complex))
 // TYPE:        return {};
 // TYPE:    } else {
 // TYPE:      return {};
 // TYPE:    }
-// TYPE:    if ((_index != 1 - 1) && parser.parseComma())
+// TYPE:    return true;
+// TYPE:  }
+// TYPE:  for (unsigned odsStructIndex = 0; odsStructIndex < 1; ++odsStructIndex) {
+// TYPE:    StringRef _paramKey;
+// TYPE:    if (odsParser.parseKeyword(&_paramKey))
+// TYPE:      return {};
+// TYPE:    if (!_loop_body(_paramKey)) return {};
+// TYPE:    if ((odsStructIndex != 1 - 1) && odsParser.parseComma())
 // TYPE:      return {};
 // TYPE:  }
-// TYPE:  if (parser.parseRParen())
+// TYPE:  if (odsParser.parseRParen())
 // TYPE:    return {};
 // TYPE:  }
 
-// TYPE: void TestCType::print(::mlir::AsmPrinter &printer) const {
-// TYPE:   printer << ' ' << "foo";
-// TYPE:   printer << ",";
-// TYPE:   printer << ' ' << ":";
-// TYPE:   printer << ' ' << "bob";
-// TYPE:   printer << ' ' << "bar";
-// TYPE:   printer << ' ';
-// TYPE:   printer.printStrippedAttrOrType(getValue());
-// TYPE:   printer << ' ' << "complex";
-// TYPE:   printer << ' ' << "=";
-// TYPE:   printer << ' ';
-// TYPE:   printer << getComplex();
-// TYPE:   printer << ")";
+// TYPE: void TestCType::print(::mlir::AsmPrinter &odsPrinter) const {
+// TYPE:   odsPrinter << ' ' << "foo";
+// TYPE:   odsPrinter << ",";
+// TYPE:   odsPrinter << ' ' << ":";
+// TYPE:   odsPrinter << ' ' << "bob";
+// TYPE:   odsPrinter << ' ' << "bar";
+// TYPE:   odsPrinter << ' ';
+// TYPE:   odsPrinter.printStrippedAttrOrType(getValue());
+// TYPE:   odsPrinter << "complex = ";
+// TYPE:   odsPrinter << getComplex();
+// TYPE:   odsPrinter << ")";
 // TYPE: }
 
 def TypeA : TestType<"TestC"> {
@@ -235,51 +230,53 @@ def TypeA : TestType<"TestC"> {
 /// Test type parser and printer with mix of variables and struct are generated
 /// correctly.
 
-// TYPE: ::mlir::Type TestDType::parse(::mlir::AsmParser &parser) {
-// TYPE:   _result_v0 = ::parseTypeParamC(parser);
-// TYPE:   if (failed(_result_v0))
+// TYPE: ::mlir::Type TestDType::parse(::mlir::AsmParser &odsParser) {
+// TYPE:   _result_v0 = ::parseTypeParamC(odsParser);
+// TYPE:   if (::mlir::failed(_result_v0))
 // TYPE:     return {};
 // TYPE:   bool _seen_v1 = false;
 // TYPE:   bool _seen_v2 = false;
-// TYPE:   for (unsigned _index = 0; _index < 2; ++_index) {
-// TYPE:     StringRef _paramKey;
-// TYPE:     if (parser.parseKeyword(&_paramKey))
-// TYPE:       return {};
-// TYPE:     if (parser.parseEqual())
+// TYPE:   const auto _loop_body = [&](::llvm::StringRef _paramKey) -> bool {
+// TYPE:     if (odsParser.parseEqual())
 // TYPE:       return {};
 // TYPE:     if (!_seen_v1 && _paramKey == "v1") {
 // TYPE:       _seen_v1 = true;
 // TYPE:       _result_v1 = someFcnCall();
-// TYPE:       if (failed(_result_v1))
+// TYPE:       if (::mlir::failed(_result_v1))
 // TYPE:         return {};
 // TYPE:     } else if (!_seen_v2 && _paramKey == "v2") {
 // TYPE:       _seen_v2 = true;
-// TYPE:       _result_v2 = ::parseTypeParamC(parser);
-// TYPE:       if (failed(_result_v2))
+// TYPE:       _result_v2 = ::parseTypeParamC(odsParser);
+// TYPE:       if (::mlir::failed(_result_v2))
 // TYPE:         return {};
 // TYPE:     } else  {
 // TYPE:       return {};
 // TYPE:     }
-// TYPE:     if ((_index != 2 - 1) && parser.parseComma())
+// TYPE:     return true;
+// TYPE:   }
+// TYPE:   for (unsigned odsStructIndex = 0; odsStructIndex < 2; ++odsStructIndex) {
+// TYPE:     StringRef _paramKey;
+// TYPE:     if (odsParser.parseKeyword(&_paramKey))
+// TYPE:       return {};
+// TYPE:     if (!_loop_body(_paramKey)) return {};
+// TYPE:     if ((odsStructIndex != 2 - 1) && odsParser.parseComma())
 // TYPE:       return {};
 // TYPE:   }
 // TYPE:   _result_v3 = someFcnCall();
-// TYPE:   if (failed(_result_v3))
+// TYPE:   if (::mlir::failed(_result_v3))
 // TYPE:     return {};
-// TYPE:   return TestDType::get(parser.getContext(),
-// TYPE:                         _result_v0.getValue(),
-// TYPE:                         _result_v1.getValue(),
-// TYPE:                         _result_v2.getValue(),
-// TYPE:                         _result_v3.getValue());
+// TYPE:   return TestDType::get(odsParser.getContext(),
+// TYPE:                         *_result_v0,
+// TYPE:                         *_result_v1,
+// TYPE:                         *_result_v2,
+// TYPE:                         *_result_v3);
 // TYPE: }
 
-// TYPE: void TestDType::print(::mlir::AsmPrinter &printer) const {
-// TYPE:   printer << getV0();
+// TYPE: void TestDType::print(::mlir::AsmPrinter &odsPrinter) const {
+// TYPE:   odsPrinter << getV0();
 // TYPE:   myPrinter(getV1());
-// TYPE:   printer << ' ' << "v2";
-// TYPE:   printer << ' ' << "=";
-// TYPE:   printer << ' ';
-// TYPE:   printer << getV2();
+// TYPE:   odsPrinter << "v2 = ";
+// TYPE:   odsPrinter << getV2();
 // TYPE:   myPrinter(getV3());
 // TYPE: }
 
@@ -298,85 +295,86 @@ def TypeB : TestType<"TestD"> {
 /// Type test with two struct directives has correctly generated parser and
 /// printer.
 
-// TYPE: ::mlir::Type TestEType::parse(::mlir::AsmParser &parser) {
+// TYPE: ::mlir::Type TestEType::parse(::mlir::AsmParser &odsParser) {
 // TYPE:   FailureOr<IntegerAttr> _result_v0;
 // TYPE:   FailureOr<IntegerAttr> _result_v1;
 // TYPE:   FailureOr<IntegerAttr> _result_v2;
 // TYPE:   FailureOr<IntegerAttr> _result_v3;
 // TYPE:   bool _seen_v0 = false;
 // TYPE:   bool _seen_v2 = false;
-// TYPE:   for (unsigned _index = 0; _index < 2; ++_index) {
-// TYPE:     StringRef _paramKey;
-// TYPE:     if (parser.parseKeyword(&_paramKey))
-// TYPE:       return {};
-// TYPE:     if (parser.parseEqual())
+// TYPE:   const auto _loop_body = [&](::llvm::StringRef _paramKey) -> bool {
+// TYPE:     if (odsParser.parseEqual())
 // TYPE:       return {};
 // TYPE:     if (!_seen_v0 && _paramKey == "v0") {
 // TYPE:       _seen_v0 = true;
-// TYPE:       _result_v0 = ::mlir::FieldParser<IntegerAttr>::parse(parser);
-// TYPE:       if (failed(_result_v0))
+// TYPE:       _result_v0 = ::mlir::FieldParser<IntegerAttr>::parse(odsParser);
+// TYPE:       if (::mlir::failed(_result_v0))
 // TYPE:         return {};
 // TYPE:     } else if (!_seen_v2 && _paramKey == "v2") {
 // TYPE:       _seen_v2 = true;
-// TYPE:       _result_v2 = ::mlir::FieldParser<IntegerAttr>::parse(parser);
-// TYPE:       if (failed(_result_v2))
+// TYPE:       _result_v2 = ::mlir::FieldParser<IntegerAttr>::parse(odsParser);
+// TYPE:       if (::mlir::failed(_result_v2))
 // TYPE:         return {};
 // TYPE:     } else  {
 // TYPE:       return {};
 // TYPE:     }
-// TYPE:     if ((_index != 2 - 1) && parser.parseComma())
+// TYPE:     return true;
+// TYPE:   }
+// TYPE:   for (unsigned odsStructIndex = 0; odsStructIndex < 2; ++odsStructIndex) {
+// TYPE:     StringRef _paramKey;
+// TYPE:     if (odsParser.parseKeyword(&_paramKey))
+// TYPE:       return {};
+// TYPE:     if (!_loop_body(_paramKey)) return {};
+// TYPE:     if ((odsStructIndex != 2 - 1) && odsParser.parseComma())
 // TYPE:       return {};
 // TYPE:   }
 // TYPE:   bool _seen_v1 = false;
 // TYPE:   bool _seen_v3 = false;
-// TYPE:   for (unsigned _index = 0; _index < 2; ++_index) {
-// TYPE:     StringRef _paramKey;
-// TYPE:     if (parser.parseKeyword(&_paramKey))
-// TYPE:       return {};
-// TYPE:     if (parser.parseEqual())
+// TYPE:   const auto _loop_body = [&](::llvm::StringRef _paramKey) -> bool {
+// TYPE:     if (odsParser.parseEqual())
 // TYPE:       return {};
 // TYPE:     if (!_seen_v1 && _paramKey == "v1") {
 // TYPE:       _seen_v1 = true;
-// TYPE:       _result_v1 = ::mlir::FieldParser<IntegerAttr>::parse(parser);
-// TYPE:       if (failed(_result_v1))
+// TYPE:       _result_v1 = ::mlir::FieldParser<IntegerAttr>::parse(odsParser);
+// TYPE:       if (::mlir::failed(_result_v1))
 // TYPE:         return {};
 // TYPE:     } else if (!_seen_v3 && _paramKey == "v3") {
 // TYPE:       _seen_v3 = true;
-// TYPE:       _result_v3 = ::mlir::FieldParser<IntegerAttr>::parse(parser);
-// TYPE:       if (failed(_result_v3))
+// TYPE:       _result_v3 = ::mlir::FieldParser<IntegerAttr>::parse(odsParser);
+// TYPE:       if (::mlir::failed(_result_v3))
 // TYPE:         return {};
 // TYPE:     } else  {
 // TYPE:       return {};
 // TYPE:     }
-// TYPE:     if ((_index != 2 - 1) && parser.parseComma())
+// TYPE:     return true;
+// TYPE:   }
+// TYPE:   for (unsigned odsStructIndex = 0; odsStructIndex < 2; ++odsStructIndex) {
+// TYPE:     StringRef _paramKey;
+// TYPE:     if (odsParser.parseKeyword(&_paramKey))
+// TYPE:       return {};
+// TYPE:     if (!_loop_body(_paramKey)) return {};
+// TYPE:     if ((odsStructIndex != 2 - 1) && odsParser.parseComma())
 // TYPE:       return {};
 // TYPE:   }
-// TYPE:   return TestEType::get(parser.getContext(),
-// TYPE:     _result_v0.getValue(),
-// TYPE:     _result_v1.getValue(),
-// TYPE:     _result_v2.getValue(),
-// TYPE:     _result_v3.getValue());
+// TYPE:   return TestEType::get(odsParser.getContext(),
+// TYPE:     *_result_v0,
+// TYPE:     *_result_v1,
+// TYPE:     *_result_v2,
+// TYPE:     *_result_v3);
 // TYPE: }
 
-// TYPE: void TestEType::print(::mlir::AsmPrinter &printer) const {
-// TYPE:   printer << "v0";
-// TYPE:   printer << ' ' << "=";
-// TYPE:   printer << ' ';
-// TYPE:   printer.printStrippedAttrOrType(getV0());
-// TYPE:   printer << ",";
-// TYPE:   printer << ' ' << "v2";
-// TYPE:   printer << ' ' << "=";
-// TYPE:   printer << ' ';
-// TYPE:   printer.printStrippedAttrOrType(getV2());
-// TYPE:   printer << "v1";
-// TYPE:   printer << ' ' << "=";
-// TYPE:   printer << ' ';
-// TYPE:   printer.printStrippedAttrOrType(getV1());
-// TYPE:   printer << ",";
-// TYPE:   printer << ' ' << "v3";
-// TYPE:   printer << ' ' << "=";
-// TYPE:   printer << ' ';
-// TYPE:   printer.printStrippedAttrOrType(getV3());
+// TYPE: void TestEType::print(::mlir::AsmPrinter &odsPrinter) const {
+// TYPE:   odsPrinter << "v0 = ";
+// TYPE:   odsPrinter.printStrippedAttrOrType(getV0());
+// TYPE:   odsPrinter << ", ";
+// TYPE:   odsPrinter << "v2 = ";
+// TYPE:   odsPrinter.printStrippedAttrOrType(getV2());
+// TYPE:   odsPrinter << ", ";
+// TYPE:   odsPrinter << "v1 = ";
+// TYPE:   odsPrinter.printStrippedAttrOrType(getV1());
+// TYPE:   odsPrinter << ", ";
+// TYPE:   odsPrinter << "v3 = ";
+// TYPE:   odsPrinter.printStrippedAttrOrType(getV3());
 // TYPE: }
 
 def TypeC : TestType<"TestE"> {
@@ -389,4 +387,100 @@ def TypeC : TestType<"TestE"> {
 
   let mnemonic = "type_e";
   let assemblyFormat = "`{` struct($v0, $v2) `}` `{` struct($v1, $v3) `}`";
+}
+
+// TYPE: void TestFType::print(::mlir::AsmPrinter &odsPrinter) const {
+// TYPE if (getA()) {
+// TYPE   printer << ' ';
+// TYPE   printer.printStrippedAttrOrType(getA());
+def TypeD : TestType<"TestF"> {
+  let parameters = (ins OptionalParameter<"int">:$a);
+  let mnemonic = "type_f";
+  let assemblyFormat = "$a";
+}
+
+// TYPE: ::mlir::Type TestGType::parse(::mlir::AsmParser &odsParser) {
+// TYPE:   if (::mlir::failed(_result_a))
+// TYPE:     return {};
+// TYPE:   if (::mlir::succeeded(_result_a) && *_result_a)
+// TYPE:     if (odsParser.parseComma())
+// TYPE:       return {};
+
+// TYPE: if (getA())
+// TYPE:   odsPrinter.printStrippedAttrOrType(getA());
+// TYPE: odsPrinter << ", ";
+// TYPE: odsPrinter.printStrippedAttrOrType(getB());
+
+def TypeE : TestType<"TestG"> {
+  let parameters = (ins OptionalParameter<"int">:$a, "int":$b);
+  let mnemonic = "type_g";
+  let assemblyFormat = "params";
+}
+
+
+// TYPE: ::mlir::Type TestHType::parse(::mlir::AsmParser &odsParser) {
+// TYPE:   do {
+// TYPE:     if (!_loop_body(_paramKey)) return {};
+// TYPE:   } while(!odsParser.parseOptionalComma());
+// TYPE:   if (!_seen_b)
+// TYPE:     return {};
+
+// TYPE: void TestHType::print(::mlir::AsmPrinter &odsPrinter) const {
+// TYPE:   if (getA()) {
+// TYPE:     odsPrinter << "a = ";
+// TYPE:     odsPrinter.printStrippedAttrOrType(getA());
+// TYPE:     odsPrinter << ", ";
+// TYPE:   }
+
+def TypeF : TestType<"TestH"> {
+  let parameters = (ins OptionalParameter<"int">:$a, "int":$b);
+  let mnemonic = "type_h";
+  let assemblyFormat = "struct(params)";
+}
+
+
+// TYPE: do {
+// TYPE:   _result_a = ::mlir::FieldParser<int>::parse(odsParser);
+// TYPE:   if (::mlir::failed(_result_a))
+// TYPE:     return {};
+// TYPE:   if (odsParser.parseOptionalComma()) break;
+// TYPE:   _result_b = ::mlir::FieldParser<int>::parse(odsParser);
+// TYPE:   if (::mlir::failed(_result_b))
+// TYPE:     return {};
+// TYPE: } while(false);
+
+def TypeG : TestType<"TestI"> {
+  let parameters = (ins "int":$a, OptionalParameter<"int">:$b);
+  let mnemonic = "type_i";
+  let assemblyFormat = "params";
+}
+
+// TYPE: ::mlir::Type TestJType::parse(::mlir::AsmParser &odsParser) {
+// TYPE:   if (odsParser.parseOptionalLParen()) {
+// TYPE:     if (odsParser.parseKeyword("x")) return {};
+// TYPE:   } else {
+// TYPE:     _result_b = ::mlir::FieldParser<int>::parse(odsParser);
+// TYPE:     if (::mlir::failed(_result_b))
+// TYPE:       return {};
+// TYPE:     if (odsParser.parseRParen()) return {};
+// TYPE:   }
+// TYPE:   _result_a = ::mlir::FieldParser<int>::parse(odsParser);
+// TYPE:   if (::mlir::failed(_result_a))
+// TYPE:     return {};
+
+// TYPE: void TestJType::print(::mlir::AsmPrinter &odsPrinter) const {
+// TYPE:   if (getB()) {
+// TYPE:     odsPrinter << "(";
+// TYPE:     if (getB())
+// TYPE:       odsPrinter.printStrippedAttrOrType(getB());
+// TYPE:     odsPrinter << ")";
+// TYPE:   } else {
+// TYPE:     odsPrinter << ' ' << "x";
+// TYPE:   }
+// TYPE:   odsPrinter.printStrippedAttrOrType(getA());
+
+def TypeH : TestType<"TestJ"> {
+  let parameters = (ins "int":$a, OptionalParameter<"int">:$b);
+  let mnemonic = "type_j";
+  let assemblyFormat = "(`(` $b^ `)`) : (`x`)? $a";
 }

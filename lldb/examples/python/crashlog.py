@@ -1247,3 +1247,5 @@ def __lldb_init_module(debugger, internal_dict):
         'command script add -c lldb.macosx.crashlog.Symbolicate crashlog')
     debugger.HandleCommand(
         'command script add -f lldb.macosx.crashlog.save_crashlog save_crashlog')
+    print('"crashlog" and "save_crashlog" commands have been installed, use '
+          'the "--help" options on these commands for detailed help.')

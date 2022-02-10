@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=hawaii -verify-machineinstrs < %s | FileCheck --check-prefix=GFX7 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck --check-prefix=GFX8 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX10 %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
 
 
 define amdgpu_kernel void @test_div_scale_f32_1(float addrspace(1)* %out, float addrspace(1)* %in) {

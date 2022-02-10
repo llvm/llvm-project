@@ -15,10 +15,10 @@
 //   RUN: echo "// expected""-warning@* 10 {{'T' is deprecated}}" >> %t.c
 //   RUN: echo "// expected""-note@* 10 {{'T' has been explicitly marked deprecated here}}" >> %t.c
 //
-//   RUN: %clang -target x86_64-linux -Xclang -verify -S -emit-llvm -o - %t.c \
+//   RUN: %clang -target x86_64-linux -Xclang -verify -Wno-strict-prototypes -S -emit-llvm -o - %t.c \
 //   RUN: | FileCheck --check-prefixes=CHECK,LLVM %s
 //
-//   RUN: %clang_cc1 -verify -ast-print %t.c \
+//   RUN: %clang_cc1 -verify -ast-print -Wno-strict-prototypes %t.c \
 //   RUN: | FileCheck --check-prefixes=CHECK,PRINT -DKW=struct \
 //   RUN:             -DBASES= %s
 
@@ -39,10 +39,10 @@
 //   RUN: echo "// expected""-warning@* 10 {{'T' is deprecated}}" >> %t.c
 //   RUN: echo "// expected""-note@* 10 {{'T' has been explicitly marked deprecated here}}" >> %t.c
 //
-//   RUN: %clang -target x86_64-linux -Xclang -verify -S -emit-llvm -o - %t.c \
+//   RUN: %clang -target x86_64-linux -Xclang -verify -Wno-strict-prototypes -S -emit-llvm -o - %t.c \
 //   RUN: | FileCheck --check-prefixes=CHECK,LLVM %s
 //
-//   RUN: %clang_cc1 -verify -ast-print %t.c \
+//   RUN: %clang_cc1 -verify -ast-print -Wno-strict-prototypes %t.c \
 //   RUN: | FileCheck --check-prefixes=CHECK,PRINT -DKW=union \
 //   RUN:             -DBASES= %s
 
@@ -65,10 +65,10 @@
 //   RUN: echo "// expected""-note@* 10 {{'T' has been explicitly marked deprecated here}}" >> %t.diags
 //   RUN: cat %t.diags >> %t.cpp
 //
-//   RUN: %clang -target x86_64-linux -Xclang -verify -S -emit-llvm -o - %t.cpp \
+//   RUN: %clang -target x86_64-linux -Xclang -verify -S -Wno-strict-prototypes -emit-llvm -o - %t.cpp \
 //   RUN: | FileCheck --check-prefixes=CHECK,LLVM %s
 //
-//   RUN: %clang_cc1 -verify -ast-print %t.cpp \
+//   RUN: %clang_cc1 -verify -ast-print -Wno-strict-prototypes %t.cpp \
 //   RUN: | FileCheck --check-prefixes=CHECK,PRINT,PRINT-CXX -DKW=struct \
 //   RUN:             -DBASES=' : B' %s
 //
@@ -100,7 +100,7 @@
 struct B {};
 
 // CHECK-LABEL: defFirst
-void defFirst() {
+void defFirst(void) {
   // PRINT-NEXT: [[KW]]
   // PRINT-DAG:  __attribute__((aligned(16)))
   // PRINT-DAG:  __attribute__((deprecated("")))
@@ -124,7 +124,7 @@ void defFirst() {
 }
 
 // CHECK-LABEL: defLast
-void defLast() {
+void defLast(void) {
   // PRINT-NEXT: [[KW]] __attribute__((aligned(16))) T *p0;
   KW __attribute__((aligned(16))) T *p0;
 
@@ -142,7 +142,7 @@ void defLast() {
 }
 
 // CHECK-LABEL: defMiddle
-void defMiddle() {
+void defMiddle(void) {
   // PRINT-NEXT: [[KW]] __attribute__((deprecated(""))) T *p0;
   // expected-warning@+2 {{'T' is deprecated}}
   // expected-note@+1 3 {{'T' has been explicitly marked deprecated here}}
@@ -165,7 +165,7 @@ void defMiddle() {
 }
 
 // CHECK-LABEL: defSelfRef
-void defSelfRef() {
+void defSelfRef(void) {
   // PRINT-NEXT: [[KW]] __attribute__((deprecated(""))) T *p0;
   // expected-warning@+2 {{'T' is deprecated}}
   // expected-note@+1 2 {{'T' has been explicitly marked deprecated here}}
@@ -201,7 +201,7 @@ void defSelfRef() {
 }
 
 // CHECK-LABEL: declsOnly
-void declsOnly() {
+void declsOnly(void) {
   // PRINT-NEXT: [[KW]] T *p0;
   KW T *p0;
 
@@ -224,7 +224,7 @@ void declsOnly() {
 // of a tag declaration.  The base class list is checked above.
 
 // CHECK-LABEL: inMembers
-void inMembers() {
+void inMembers(void) {
   // PRINT-NEXT: [[KW]] T1 {
   // PRINT-NEXT:   int i;
   // PRINT-NEXT: };
@@ -236,7 +236,7 @@ void inMembers() {
 }
 
 // CHECK-LABEL: inInit
-void inInit() {
+void inInit(void) {
   // PRINT-NEXT: [[KW]] T1 {
   // PRINT-NEXT:   int i;
   // PRINT-NEXT: };

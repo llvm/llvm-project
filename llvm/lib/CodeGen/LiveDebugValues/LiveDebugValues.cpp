@@ -65,7 +65,7 @@ public:
   static char ID;
 
   LiveDebugValues();
-  ~LiveDebugValues() {}
+  ~LiveDebugValues() = default;
 
   /// Calculate the liveness information for the given machine function.
   bool runOnMachineFunction(MachineFunction &MF) override;

@@ -8,8 +8,11 @@
 
 #include "llvm/DebugInfo/CodeView/CVSymbolVisitor.h"
 
-#include "llvm/DebugInfo/CodeView/CodeViewError.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"
+#include "llvm/Support/BinaryStreamArray.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 using namespace llvm::codeview;

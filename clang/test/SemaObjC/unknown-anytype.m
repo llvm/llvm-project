@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -funknown-anytype -fsyntax-only -fdebugger-support -verify %s
 
 extern __unknown_anytype test0;
-extern __unknown_anytype test1();
+extern __unknown_anytype test1(void);
 
 @interface A
 - (int*)getIntPtr;
@@ -13,7 +13,7 @@ extern __unknown_anytype test1();
 - (short*)getSomePtr;
 @end
 
-void test_unknown_anytype_receiver() {
+void test_unknown_anytype_receiver(void) {
   int *ip = [test0 getIntPtr];
   float *fp = [test1() getFloatPtr];
   double *dp = [test1() getSomePtr]; // okay: picks first method found

@@ -15,6 +15,7 @@
 #define LLVM_ANALYSIS_RELEASEMODEMODELRUNNER_H
 
 #include "llvm/Analysis/MLModelRunner.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #include <memory>
 #include <vector>
@@ -72,6 +73,24 @@ private:
   std::vector<int32_t> FeatureIndices;
   int32_t ResultIndex = -1;
   std::unique_ptr<TGen> CompiledModel;
+};
+
+/// A mock class satisfying the interface expected by ReleaseModeModelRunner for
+/// its `TGen` parameter. Useful to avoid conditional compilation complexity, as
+/// a compile-time replacement for a real AOT-ed model.
+class NoopSavedModelImpl final {
+#define NOOP_MODEL_ERRMSG                                                      \
+  "The mock AOT-ed saved model is a compile-time stub and should not be "      \
+  "called."
+
+public:
+  NoopSavedModelImpl() = default;
+  int LookupArgIndex(const std::string &) { llvm_unreachable(NOOP_MODEL_ERRMSG); }
+  int LookupResultIndex(const std::string &) { llvm_unreachable(NOOP_MODEL_ERRMSG); }
+  void Run() { llvm_unreachable(NOOP_MODEL_ERRMSG); }
+  void *result_data(int) { llvm_unreachable(NOOP_MODEL_ERRMSG); }
+  void *arg_data(int) { llvm_unreachable(NOOP_MODEL_ERRMSG); }
+#undef NOOP_MODEL_ERRMSG
 };
 } // namespace llvm
 

@@ -127,10 +127,7 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                   D.getLTOMode() == LTOK_Thin);
   }
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
-  bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
-  ToolChain.addProfileRTLibs(Args, CmdArgs);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
                    options::OPT_r)) {
@@ -153,11 +150,14 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       }
     }
 
-    if (NeedsSanitizerDeps)
-      linkSanitizerRuntimeDeps(ToolChain, CmdArgs);
+    // Note that Fuchsia never needs to link in sanitizer runtime deps.  Any
+    // sanitizer runtimes with system dependencies use the `.deplibs` feature
+    // instead.
+    addSanitizerRuntimes(ToolChain, Args, CmdArgs);
 
-    if (NeedsXRayDeps)
-      linkXRayRuntimeDeps(ToolChain, CmdArgs);
+    addXRayRuntime(ToolChain, Args, CmdArgs);
+
+    ToolChain.addProfileRTLibs(Args, CmdArgs);
 
     AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
 

@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 target datalayout = "e-p:32:32"
 
 define i32* @test(i32* %P) {

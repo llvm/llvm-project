@@ -45,6 +45,11 @@
 using namespace llvm;
 #define DEBUG_TYPE "code-layout"
 
+cl::opt<bool> EnableExtTspBlockPlacement(
+    "enable-ext-tsp-block-placement", cl::Hidden, cl::init(false),
+    cl::desc("Enable machine block placement based on the ext-tsp model, "
+             "optimizing I-cache utilization."));
+
 // Algorithm-specific constants. The values are tuned for the best performance
 // of large-scale front-end bound binaries.
 static cl::opt<double>
@@ -115,7 +120,7 @@ enum class MergeTypeTy : int { X_Y, X1_Y_X2, Y_X2_X1, X2_X1_Y };
 /// together with the corresponfiding merge 'type' and 'offset'.
 class MergeGainTy {
 public:
-  explicit MergeGainTy() {}
+  explicit MergeGainTy() = default;
   explicit MergeGainTy(double Score, size_t MergeOffset, MergeTypeTy MergeType)
       : Score(Score), MergeOffset(MergeOffset), MergeType(MergeType) {}
 

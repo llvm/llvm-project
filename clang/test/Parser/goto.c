@@ -1,12 +1,12 @@
 /* RUN: %clang_cc1 -fsyntax-only -verify %s
 */
 
-void test1() { 
+void test1(void) { 
   goto ; /* expected-error {{expected identifier}} */
 }
 
 
-void test2() {
+void test2(void) {
   l:  /* expected-note {{previous definition is here}} */
   
   {

@@ -75,3 +75,10 @@ TEST(ExecutorAddrTest, AddrRanges) {
   EXPECT_TRUE(R1.overlaps(R3));
   EXPECT_TRUE(R1.overlaps(R4));
 }
+
+TEST(ExecutorAddrTest, Hashable) {
+  uint64_t RawAddr = 0x1234567890ABCDEF;
+  ExecutorAddr Addr(RawAddr);
+
+  EXPECT_EQ(std::hash<uint64_t>()(RawAddr), std::hash<ExecutorAddr>()(Addr));
+}

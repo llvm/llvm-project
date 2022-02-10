@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck %s -enable-var-scope -check-prefixes=GCN,GFX9
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck %s -enable-var-scope -check-prefixes=GCN,VI
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck %s -enable-var-scope -check-prefixes=GFX10
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck %s -enable-var-scope -check-prefixes=GFX11
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck %s -enable-var-scope -check-prefixes=GFX11
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
 define amdgpu_kernel void @v_test_sub_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0, <2 x i16> addrspace(1)* %in1) #1 {

@@ -310,6 +310,7 @@ define i32 @func_q(i32 %a0, i32 %a1, i32 %a2) {
 ; CHECK-LABEL: func_q:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    sbbl %ecx, %ecx
 ; CHECK-NEXT:    negl %eax

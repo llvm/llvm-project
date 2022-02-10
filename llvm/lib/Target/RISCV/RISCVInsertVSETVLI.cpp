@@ -400,7 +400,7 @@ struct BlockData {
   // Keeps track of whether the block is already in the queue.
   bool InQueue = false;
 
-  BlockData() {}
+  BlockData() = default;
 };
 
 class RISCVInsertVSETVLI : public MachineFunctionPass {

@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCSymbol.h"
+namespace llvm {
+class MCSection;
+}
 
 using namespace llvm;
 

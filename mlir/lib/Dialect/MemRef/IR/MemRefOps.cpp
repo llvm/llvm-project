@@ -20,6 +20,7 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 
 using namespace mlir;
 using namespace mlir::memref;
@@ -62,10 +63,6 @@ Type mlir::memref::getTensorTypeFromMemRefType(Type type) {
   if (auto memref = type.dyn_cast<UnrankedMemRefType>())
     return UnrankedTensorType::get(memref.getElementType());
   return NoneType::get(type.getContext());
-}
-
-LogicalResult memref::CastOp::verify() {
-  return impl::verifyCastOp(*this, areCastCompatible);
 }
 
 //===----------------------------------------------------------------------===//
@@ -164,7 +161,7 @@ struct SimplifyAllocConst : public OpRewritePattern<AllocLikeOp> {
         alloc.alignmentAttr());
     // Insert a cast so we have the same type as the old alloc.
     auto resultCast =
-        rewriter.create<CastOp>(alloc.getLoc(), newAlloc, alloc.getType());
+        rewriter.create<CastOp>(alloc.getLoc(), alloc.getType(), newAlloc);
 
     rewriter.replaceOp(alloc, {resultCast});
     return success();
@@ -209,23 +206,22 @@ void AllocaOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // AllocaScopeOp
 //===----------------------------------------------------------------------===//
 
-static void print(OpAsmPrinter &p, AllocaScopeOp &op) {
+void AllocaScopeOp::print(OpAsmPrinter &p) {
   bool printBlockTerminators = false;
 
   p << ' ';
-  if (!op.results().empty()) {
-    p << " -> (" << op.getResultTypes() << ")";
+  if (!results().empty()) {
+    p << " -> (" << getResultTypes() << ")";
     printBlockTerminators = true;
   }
   p << ' ';
-  p.printRegion(op.bodyRegion(),
+  p.printRegion(bodyRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/printBlockTerminators);
-  p.printOptionalAttrDict(op->getAttrs());
+  p.printOptionalAttrDict((*this)->getAttrs());
 }
 
-static ParseResult parseAllocaScopeOp(OpAsmParser &parser,
-                                      OperationState &result) {
+ParseResult AllocaScopeOp::parse(OpAsmParser &parser, OperationState &result) {
   // Create a region for the body.
   result.regions.reserve(1);
   Region *bodyRegion = result.addRegion();
@@ -590,17 +586,17 @@ static std::map<int64_t, unsigned> getNumOccurences(ArrayRef<int64_t> vals) {
 /// This accounts for cases where there are multiple unit-dims, but only a
 /// subset of those are dropped. For MemRefTypes these can be disambiguated
 /// using the strides. If a dimension is dropped the stride must be dropped too.
-static llvm::Optional<llvm::SmallDenseSet<unsigned>>
+static llvm::Optional<llvm::SmallBitVector>
 computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
                                ArrayRef<OpFoldResult> sizes) {
-  llvm::SmallDenseSet<unsigned> unusedDims;
+  llvm::SmallBitVector unusedDims(originalType.getRank());
   if (originalType.getRank() == reducedType.getRank())
     return unusedDims;
 
   for (const auto &dim : llvm::enumerate(sizes))
     if (auto attr = dim.value().dyn_cast<Attribute>())
       if (attr.cast<IntegerAttr>().getInt() == 1)
-        unusedDims.insert(dim.index());
+        unusedDims.set(dim.index());
 
   SmallVector<int64_t> originalStrides, candidateStrides;
   int64_t originalOffset, candidateOffset;
@@ -623,8 +619,9 @@ computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
       getNumOccurences(originalStrides);
   std::map<int64_t, unsigned> candidateStridesNumOccurences =
       getNumOccurences(candidateStrides);
-  llvm::SmallDenseSet<unsigned> prunedUnusedDims;
-  for (unsigned dim : unusedDims) {
+  for (size_t dim = 0, e = unusedDims.size(); dim != e; ++dim) {
+    if (!unusedDims.test(dim))
+      continue;
     int64_t originalStride = originalStrides[dim];
     if (currUnaccountedStrides[originalStride] >
         candidateStridesNumOccurences[originalStride]) {
@@ -635,7 +632,7 @@ computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
     if (currUnaccountedStrides[originalStride] ==
         candidateStridesNumOccurences[originalStride]) {
       // The stride for this is not dropped. Keep as is.
-      prunedUnusedDims.insert(dim);
+      unusedDims.reset(dim);
       continue;
     }
     if (currUnaccountedStrides[originalStride] <
@@ -646,17 +643,16 @@ computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
     }
   }
 
-  for (auto prunedDim : prunedUnusedDims)
-    unusedDims.erase(prunedDim);
-  if (unusedDims.size() + reducedType.getRank() != originalType.getRank())
+  if ((int64_t)unusedDims.count() + reducedType.getRank() !=
+      originalType.getRank())
     return llvm::None;
   return unusedDims;
 }
 
-llvm::SmallDenseSet<unsigned> SubViewOp::getDroppedDims() {
+llvm::SmallBitVector SubViewOp::getDroppedDims() {
   MemRefType sourceType = getSourceType();
   MemRefType resultType = getType();
-  llvm::Optional<llvm::SmallDenseSet<unsigned>> unusedDims =
+  llvm::Optional<llvm::SmallBitVector> unusedDims =
       computeMemRefRankReductionMask(sourceType, resultType, getMixedSizes());
   assert(unusedDims && "unable to find unused dims of subview");
   return *unusedDims;
@@ -698,12 +694,12 @@ OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
              memrefType.getDynamicDimIndex(unsignedIndex));
 
   if (auto subview = dyn_cast_or_null<SubViewOp>(definingOp)) {
-    llvm::SmallDenseSet<unsigned> unusedDims = subview.getDroppedDims();
+    llvm::SmallBitVector unusedDims = subview.getDroppedDims();
     unsigned resultIndex = 0;
     unsigned sourceRank = subview.getSourceType().getRank();
     unsigned sourceIndex = 0;
     for (auto i : llvm::seq<unsigned>(0, sourceRank)) {
-      if (unusedDims.count(i))
+      if (unusedDims.test(i))
         continue;
       if (resultIndex == unsignedIndex) {
         sourceIndex = i;
@@ -781,17 +777,16 @@ void DmaStartOp::build(OpBuilder &builder, OperationState &result,
     result.addOperands({stride, elementsPerStride});
 }
 
-static void print(OpAsmPrinter &p, DmaStartOp op) {
-  p << " " << op.getSrcMemRef() << '[' << op.getSrcIndices() << "], "
-    << op.getDstMemRef() << '[' << op.getDstIndices() << "], "
-    << op.getNumElements() << ", " << op.getTagMemRef() << '['
-    << op.getTagIndices() << ']';
-  if (op.isStrided())
-    p << ", " << op.getStride() << ", " << op.getNumElementsPerStride();
+void DmaStartOp::print(OpAsmPrinter &p) {
+  p << " " << getSrcMemRef() << '[' << getSrcIndices() << "], "
+    << getDstMemRef() << '[' << getDstIndices() << "], " << getNumElements()
+    << ", " << getTagMemRef() << '[' << getTagIndices() << ']';
+  if (isStrided())
+    p << ", " << getStride() << ", " << getNumElementsPerStride();
 
-  p.printOptionalAttrDict(op->getAttrs());
-  p << " : " << op.getSrcMemRef().getType() << ", "
-    << op.getDstMemRef().getType() << ", " << op.getTagMemRef().getType();
+  p.printOptionalAttrDict((*this)->getAttrs());
+  p << " : " << getSrcMemRef().getType() << ", " << getDstMemRef().getType()
+    << ", " << getTagMemRef().getType();
 }
 
 // Parse DmaStartOp.
@@ -802,8 +797,7 @@ static void print(OpAsmPrinter &p, DmaStartOp op) {
 //                       memref<1024 x f32, 2>,
 //                       memref<1 x i32>
 //
-static ParseResult parseDmaStartOp(OpAsmParser &parser,
-                                   OperationState &result) {
+ParseResult DmaStartOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::OperandType srcMemRefInfo;
   SmallVector<OpAsmParser::OperandType, 4> srcIndexInfos;
   OpAsmParser::OperandType dstMemRefInfo;
@@ -996,8 +990,8 @@ LogicalResult GenericAtomicRMWOp::verify() {
   return hasSideEffects ? failure() : success();
 }
 
-static ParseResult parseGenericAtomicRMWOp(OpAsmParser &parser,
-                                           OperationState &result) {
+ParseResult GenericAtomicRMWOp::parse(OpAsmParser &parser,
+                                      OperationState &result) {
   OpAsmParser::OperandType memref;
   Type memrefType;
   SmallVector<OpAsmParser::OperandType, 4> ivs;
@@ -1018,11 +1012,11 @@ static ParseResult parseGenericAtomicRMWOp(OpAsmParser &parser,
   return success();
 }
 
-static void print(OpAsmPrinter &p, GenericAtomicRMWOp op) {
-  p << ' ' << op.memref() << "[" << op.indices()
-    << "] : " << op.memref().getType() << ' ';
-  p.printRegion(op.getRegion());
-  p.printOptionalAttrDict(op->getAttrs());
+void GenericAtomicRMWOp::print(OpAsmPrinter &p) {
+  p << ' ' << memref() << "[" << indices() << "] : " << memref().getType()
+    << ' ';
+  p.printRegion(getRegion());
+  p.printOptionalAttrDict((*this)->getAttrs());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1166,20 +1160,19 @@ OpFoldResult LoadOp::fold(ArrayRef<Attribute> cstOperands) {
 // PrefetchOp
 //===----------------------------------------------------------------------===//
 
-static void print(OpAsmPrinter &p, PrefetchOp op) {
-  p << " " << op.memref() << '[';
-  p.printOperands(op.indices());
-  p << ']' << ", " << (op.isWrite() ? "write" : "read");
-  p << ", locality<" << op.localityHint();
-  p << ">, " << (op.isDataCache() ? "data" : "instr");
+void PrefetchOp::print(OpAsmPrinter &p) {
+  p << " " << memref() << '[';
+  p.printOperands(indices());
+  p << ']' << ", " << (isWrite() ? "write" : "read");
+  p << ", locality<" << localityHint();
+  p << ">, " << (isDataCache() ? "data" : "instr");
   p.printOptionalAttrDict(
-      op->getAttrs(),
+      (*this)->getAttrs(),
       /*elidedAttrs=*/{"localityHint", "isWrite", "isDataCache"});
-  p << " : " << op.getMemRefType();
+  p << " : " << getMemRefType();
 }
 
-static ParseResult parsePrefetchOp(OpAsmParser &parser,
-                                   OperationState &result) {
+ParseResult PrefetchOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::OperandType memrefInfo;
   SmallVector<OpAsmParser::OperandType, 4> indexInfo;
   IntegerAttr localityHint;
@@ -1377,12 +1370,19 @@ SmallVector<ReassociationExprs, 4> ExpandShapeOp::getReassociationExprs() {
                                             getReassociationIndices());
 }
 
-static void print(OpAsmPrinter &p, ExpandShapeOp op) {
-  ::mlir::printReshapeOp<ExpandShapeOp>(p, op);
+ParseResult ExpandShapeOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseReshapeLikeOp(parser, result);
+}
+void ExpandShapeOp::print(OpAsmPrinter &p) {
+  ::mlir::printReshapeOp<ExpandShapeOp>(p, *this);
 }
 
-static void print(OpAsmPrinter &p, CollapseShapeOp op) {
-  ::mlir::printReshapeOp<CollapseShapeOp>(p, op);
+ParseResult CollapseShapeOp::parse(OpAsmParser &parser,
+                                   OperationState &result) {
+  return parseReshapeLikeOp(parser, result);
+}
+void CollapseShapeOp::print(OpAsmPrinter &p) {
+  ::mlir::printReshapeOp<CollapseShapeOp>(p, *this);
 }
 
 /// Detect whether memref dims [dim, dim + extent) can be reshaped without
@@ -1734,11 +1734,11 @@ Type SubViewOp::inferRankReducedResultType(unsigned resultRank,
   int rankDiff = inferredType.getRank() - resultRank;
   if (rankDiff > 0) {
     auto shape = inferredType.getShape();
-    llvm::SmallDenseSet<unsigned> dimsToProject;
-    mlir::getPositionsOfShapeOne(rankDiff, shape, dimsToProject);
+    llvm::SmallBitVector dimsToProject =
+        getPositionsOfShapeOne(rankDiff, shape);
     SmallVector<int64_t> projectedShape;
     for (unsigned pos = 0, e = shape.size(); pos < e; ++pos)
-      if (!dimsToProject.contains(pos))
+      if (!dimsToProject.test(pos))
         projectedShape.push_back(shape[pos]);
 
     AffineMap map = inferredType.getLayout().getAffineMap();
@@ -2015,7 +2015,7 @@ static MemRefType getCanonicalSubViewResultType(
   auto nonRankReducedType = SubViewOp::inferResultType(sourceType, mixedOffsets,
                                                        mixedSizes, mixedStrides)
                                 .cast<MemRefType>();
-  llvm::Optional<llvm::SmallDenseSet<unsigned>> unusedDims =
+  llvm::Optional<llvm::SmallBitVector> unusedDims =
       computeMemRefRankReductionMask(currentSourceType, currentResultType,
                                      mixedSizes);
   // Return nullptr as failure mode.
@@ -2023,7 +2023,7 @@ static MemRefType getCanonicalSubViewResultType(
     return nullptr;
   SmallVector<int64_t> shape;
   for (const auto &sizes : llvm::enumerate(nonRankReducedType.getShape())) {
-    if (unusedDims->count(sizes.index()))
+    if (unusedDims->test(sizes.index()))
       continue;
     shape.push_back(sizes.value());
   }
@@ -2155,8 +2155,8 @@ public:
       rewriter.replaceOp(subViewOp, subViewOp.source());
       return success();
     }
-    rewriter.replaceOpWithNewOp<CastOp>(subViewOp, subViewOp.source(),
-                                        subViewOp.getType());
+    rewriter.replaceOpWithNewOp<CastOp>(subViewOp, subViewOp.getType(),
+                                        subViewOp.source());
     return success();
   }
 };
@@ -2176,7 +2176,7 @@ struct SubViewReturnTypeCanonicalizer {
 /// A canonicalizer wrapper to replace SubViewOps.
 struct SubViewCanonicalizer {
   void operator()(PatternRewriter &rewriter, SubViewOp op, SubViewOp newOp) {
-    rewriter.replaceOpWithNewOp<CastOp>(op, newOp, op.getType());
+    rewriter.replaceOpWithNewOp<CastOp>(op, op.getType(), newOp);
   }
 };
 
@@ -2244,15 +2244,13 @@ void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,
 }
 
 // transpose $in $permutation attr-dict : type($in) `to` type(results)
-static void print(OpAsmPrinter &p, TransposeOp op) {
-  p << " " << op.in() << " " << op.permutation();
-  p.printOptionalAttrDict(op->getAttrs(),
-                          {TransposeOp::getPermutationAttrName()});
-  p << " : " << op.in().getType() << " to " << op.getType();
+void TransposeOp::print(OpAsmPrinter &p) {
+  p << " " << in() << " " << permutation();
+  p.printOptionalAttrDict((*this)->getAttrs(), {getPermutationAttrName()});
+  p << " : " << in().getType() << " to " << getType();
 }
 
-static ParseResult parseTransposeOp(OpAsmParser &parser,
-                                    OperationState &result) {
+ParseResult TransposeOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::OperandType in;
   AffineMap permutation;
   MemRefType srcType, dstType;
@@ -2295,7 +2293,7 @@ OpFoldResult TransposeOp::fold(ArrayRef<Attribute>) {
 // ViewOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseViewOp(OpAsmParser &parser, OperationState &result) {
+ParseResult ViewOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::OperandType srcInfo;
   SmallVector<OpAsmParser::OperandType, 1> offsetInfo;
   SmallVector<OpAsmParser::OperandType, 4> sizesInfo;
@@ -2320,12 +2318,12 @@ static ParseResult parseViewOp(OpAsmParser &parser, OperationState &result) {
       parser.addTypeToList(dstType, result.types));
 }
 
-static void print(OpAsmPrinter &p, ViewOp op) {
-  p << ' ' << op.getOperand(0) << '[';
-  p.printOperand(op.byte_shift());
-  p << "][" << op.sizes() << ']';
-  p.printOptionalAttrDict(op->getAttrs());
-  p << " : " << op.getOperand(0).getType() << " to " << op.getType();
+void ViewOp::print(OpAsmPrinter &p) {
+  p << ' ' << getOperand(0) << '[';
+  p.printOperand(byte_shift());
+  p << "][" << sizes() << ']';
+  p.printOptionalAttrDict((*this)->getAttrs());
+  p << " : " << getOperand(0).getType() << " to " << getType();
 }
 
 LogicalResult ViewOp::verify() {
@@ -2421,7 +2419,7 @@ struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
                                              viewOp.getOperand(0),
                                              viewOp.byte_shift(), newOperands);
     // Insert a cast so we have the same type as the old memref type.
-    rewriter.replaceOpWithNewOp<CastOp>(viewOp, newViewOp, viewOp.getType());
+    rewriter.replaceOpWithNewOp<CastOp>(viewOp, viewOp.getType(), newViewOp);
     return success();
   }
 };

@@ -29,7 +29,7 @@ NativeTypePointer::NativeTypePointer(NativeSession &Session, SymIndexId Id,
     : NativeRawSymbol(Session, PDB_SymType::PointerType, Id), TI(TI),
       Record(std::move(Record)) {}
 
-NativeTypePointer::~NativeTypePointer() {}
+NativeTypePointer::~NativeTypePointer() = default;
 
 void NativeTypePointer::dump(raw_ostream &OS, int Indent,
                              PdbSymbolIdField ShowIdFields,

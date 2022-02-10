@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -fblocks
 
-void test_gotos() {
+void test_gotos(void) {
   goto L1; // expected-error {{use of undeclared label 'L1'}}
   goto L3; // OK
   #pragma clang __debug captured
@@ -13,7 +13,7 @@ L2:
 L3: ;
 }
 
-void test_break_continue() {
+void test_break_continue(void) {
   while (1) {
     #pragma clang __debug captured
     {
@@ -23,7 +23,7 @@ void test_break_continue() {
   }
 }
 
-void test_return() {
+void test_return(void) {
   while (1) {
     #pragma clang __debug captured
     {
@@ -32,7 +32,7 @@ void test_return() {
   }
 }
 
-void test_nest() {
+void test_nest(void) {
   int x;
   #pragma clang __debug captured
   {
@@ -48,7 +48,7 @@ void test_nest() {
   }
 }
 
-void test_nest_block() {
+void test_nest_block(void) {
   __block int x; // expected-note {{'x' declared here}}
   int y;
   ^{

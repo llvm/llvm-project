@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX906 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1011 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX10PLUS,GFX10 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX10PLUS,GFX10 %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX10PLUS,GFX11 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX10PLUS,GFX11 %s
 
 define i32 @v_udot4(i32 %a, i32 %b, i32 %c) {
 ; GFX906-LABEL: v_udot4:

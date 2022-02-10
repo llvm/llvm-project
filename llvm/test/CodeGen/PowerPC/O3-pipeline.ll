@@ -21,7 +21,6 @@
 ; CHECK-NEXT:       Convert i1 constants to i32/i64 if they are returned
 ; CHECK-NEXT:       Expand Atomic instructions
 ; CHECK-NEXT:     PPC Lower MASS Entries
-; CHECK-NEXT:     PPC Generate Scalar MASS Entries
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Natural Loop Information

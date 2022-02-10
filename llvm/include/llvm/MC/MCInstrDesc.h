@@ -14,10 +14,11 @@
 #ifndef LLVM_MC_MCINSTRDESC_H
 #define LLVM_MC_MCINSTRDESC_H
 
-#include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/MC/MCRegister.h"
 
 namespace llvm {
+class MCRegisterInfo;
 
 class MCInst;
 

@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=thumbv8 -arm-atomic-cfg-tidy=0 | FileCheck %s
+; RUN: llc < %s -mtriple=thumbv8 -arm-atomic-cfg-tidy=0 -arm-restrict-it | FileCheck %s
 ; RUN: llc < %s -mtriple=thumbv7 -arm-atomic-cfg-tidy=0 -arm-restrict-it | FileCheck %s
-; RUN: llc < %s -mtriple=thumbv8 -arm-atomic-cfg-tidy=0 -relocation-model=pic | FileCheck %s --check-prefix=CHECK-PIC
+; RUN: llc < %s -mtriple=thumbv8 -arm-atomic-cfg-tidy=0 -arm-restrict-it -relocation-model=pic | FileCheck %s --check-prefix=CHECK-PIC
 ; RUN: llc < %s -mtriple=thumbv7 -arm-atomic-cfg-tidy=0 -arm-restrict-it -relocation-model=pic | FileCheck %s --check-prefix=CHECK-PIC
 
 %struct.FF = type { i32 (i32*)*, i32 (i32*, i32*, i32, i32, i32, i32)*, i32 (i32, i32, i8*)*, void ()*, i32 (i32, i8*, i32*)*, i32 ()* }
@@ -36,9 +36,9 @@ bb:
 
 bb1:
 ; CHECK: %entry
-; CHECK: it	eq
+; CHECK: it    eq
 ; CHECK-NEXT: ldreq
-; CHECK-NEXT: it	eq
+; CHECK-NEXT: it       eq
 ; CHECK-NEXT: cmpeq
 ; CHECK: %bb1
   %tmp5 = load i32, i32* %block_size, align 4

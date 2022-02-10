@@ -20,10 +20,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <cassert>
-#include <cstddef>
-#include <cstring>
-#include <iterator>
 #include <string>
 #include <vector>
 

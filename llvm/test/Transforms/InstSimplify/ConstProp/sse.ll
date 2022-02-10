@@ -1,4 +1,4 @@
-; RUN: opt < %s -instsimplify -S | FileCheck %s
+; RUN: opt < %s -passes=instsimplify -S | FileCheck %s
 ; REQUIRES: x86-registered-target
 
 define i1 @test_sse_cvts_exact() nounwind readnone {

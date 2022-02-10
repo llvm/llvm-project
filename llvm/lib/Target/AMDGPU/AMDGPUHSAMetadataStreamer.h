@@ -42,7 +42,7 @@ namespace HSAMD {
 
 class MetadataStreamer {
 public:
-  virtual ~MetadataStreamer(){};
+  virtual ~MetadataStreamer() = default;
 
   virtual bool emitTo(AMDGPUTargetStreamer &TargetStreamer) = 0;
 

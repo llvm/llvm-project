@@ -55,7 +55,7 @@ void flexible_arrays(struct S *s) {
 }
 
 // Don't issue FIXIT for destinations of size 1.
-void size_1() {
+void size_1(void) {
   char z[1];
   char str[] = "hi";
 

@@ -464,6 +464,10 @@ ENUM_CODEGENOPT(SwiftAsyncFramePointer, SwiftAsyncFramePointerKind, 2,
 /// Whether to skip RAX setup when passing variable arguments (x86 only).
 CODEGENOPT(SkipRaxSetup, 1, 0)
 
+/// Whether to zero out caller-used registers before returning.
+ENUM_CODEGENOPT(ZeroCallUsedRegs, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind,
+                5, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Skip)
+
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
 #undef VALUE_CODEGENOPT

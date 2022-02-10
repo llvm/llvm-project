@@ -382,7 +382,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   // MASS transformation for LLVM intrinsics with replicating fast-math flag
   // to be consistent to PPCGenScalarMASSEntries pass
-  if (TM.getOptLevel() == CodeGenOpt::Aggressive){
+  if (TM.getOptLevel() == CodeGenOpt::Aggressive &&
+      TM.Options.PPCGenScalarMASSEntries) {
     setOperationAction(ISD::FSIN , MVT::f64, Custom);
     setOperationAction(ISD::FCOS , MVT::f64, Custom);
     setOperationAction(ISD::FPOW , MVT::f64, Custom);
@@ -9819,7 +9820,7 @@ SDValue PPCTargetLowering::LowerROTL(SDValue Op, SelectionDAG &DAG) const {
   SDValue N1 = peekThroughBitcasts(Op.getOperand(1));
   unsigned SHLAmt = N1.getConstantOperandVal(0);
   if (SHLAmt % 8 == 0) {
-    SmallVector<int, 16> Mask(16, 0);
+    std::array<int, 16> Mask;
     std::iota(Mask.begin(), Mask.end(), 0);
     std::rotate(Mask.begin(), Mask.begin() + SHLAmt / 8, Mask.end());
     if (SDValue Shuffle =
@@ -18045,7 +18046,7 @@ Value *PPCTargetLowering::emitMaskedAtomicRMWIntrinsic(
   assert(EnableQuadwordAtomics && Subtarget.hasQuadwordAtomics() &&
          "Only support quadword now");
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
-  Type *ValTy = AlignedAddr->getType()->getPointerElementType();
+  Type *ValTy = Incr->getType();
   assert(ValTy->getPrimitiveSizeInBits() == 128);
   Function *RMW = Intrinsic::getDeclaration(
       M, getIntrinsicForAtomicRMWBinOp128(AI->getOperation()));
@@ -18070,7 +18071,7 @@ Value *PPCTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
   assert(EnableQuadwordAtomics && Subtarget.hasQuadwordAtomics() &&
          "Only support quadword now");
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
-  Type *ValTy = AlignedAddr->getType()->getPointerElementType();
+  Type *ValTy = CmpVal->getType();
   assert(ValTy->getPrimitiveSizeInBits() == 128);
   Function *IntCmpXchg =
       Intrinsic::getDeclaration(M, Intrinsic::ppc_cmpxchg_i128);

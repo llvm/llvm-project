@@ -140,12 +140,12 @@
 ; GCN-O0-NEXT:        Branch relaxation pass
 ; GCN-O0-NEXT:        Register Usage Information Collector Pass
 ; GCN-O0-NEXT:        Live DEBUG_VALUE analysis
-; GCN-O0-NEXT:      Function register usage analysis
-; GCN-O0-NEXT:      FunctionPass Manager
-; GCN-O0-NEXT:        Lazy Machine Block Frequency Analysis
-; GCN-O0-NEXT:        Machine Optimization Remark Emitter
-; GCN-O0-NEXT:        AMDGPU Assembly Printer
-; GCN-O0-NEXT:        Free MachineFunction
+; GCN-O0-NEXT:    Function register usage analysis
+; GCN-O0-NEXT:    FunctionPass Manager
+; GCN-O0-NEXT:      Lazy Machine Block Frequency Analysis
+; GCN-O0-NEXT:      Machine Optimization Remark Emitter
+; GCN-O0-NEXT:      AMDGPU Assembly Printer
+; GCN-O0-NEXT:      Free MachineFunction
 ; GCN-O0-NEXT:Pass Arguments:  -domtree
 ; GCN-O0-NEXT:  FunctionPass Manager
 ; GCN-O0-NEXT:    Dominator Tree Construction
@@ -396,16 +396,16 @@
 ; GCN-O1-NEXT:        SI Final Branch Preparation
 ; GCN-O1-NEXT:        SI peephole optimizations
 ; GCN-O1-NEXT:        Post RA hazard recognizer
-; GCN-O1-NEXT:        SI Insert Delay ALU
+; GCN-O1-NEXT:        AMDGPU Insert Delay ALU
 ; GCN-O1-NEXT:        Branch relaxation pass
 ; GCN-O1-NEXT:        Register Usage Information Collector Pass
 ; GCN-O1-NEXT:        Live DEBUG_VALUE analysis
-; GCN-O1-NEXT:      Function register usage analysis
-; GCN-O1-NEXT:      FunctionPass Manager
-; GCN-O1-NEXT:        Lazy Machine Block Frequency Analysis
-; GCN-O1-NEXT:        Machine Optimization Remark Emitter
-; GCN-O1-NEXT:        AMDGPU Assembly Printer
-; GCN-O1-NEXT:        Free MachineFunction
+; GCN-O1-NEXT:    Function register usage analysis
+; GCN-O1-NEXT:    FunctionPass Manager
+; GCN-O1-NEXT:      Lazy Machine Block Frequency Analysis
+; GCN-O1-NEXT:      Machine Optimization Remark Emitter
+; GCN-O1-NEXT:      AMDGPU Assembly Printer
+; GCN-O1-NEXT:      Free MachineFunction
 ; GCN-O1-NEXT:Pass Arguments:  -domtree
 ; GCN-O1-NEXT:  FunctionPass Manager
 ; GCN-O1-NEXT:    Dominator Tree Construction
@@ -690,16 +690,16 @@
 ; GCN-O1-OPTS-NEXT:        SI Final Branch Preparation
 ; GCN-O1-OPTS-NEXT:        SI peephole optimizations
 ; GCN-O1-OPTS-NEXT:        Post RA hazard recognizer
-; GCN-O1-OPTS-NEXT:        SI Insert Delay ALU
+; GCN-O1-OPTS-NEXT:        AMDGPU Insert Delay ALU
 ; GCN-O1-OPTS-NEXT:        Branch relaxation pass
 ; GCN-O1-OPTS-NEXT:        Register Usage Information Collector Pass
 ; GCN-O1-OPTS-NEXT:        Live DEBUG_VALUE analysis
-; GCN-O1-OPTS-NEXT:      Function register usage analysis
-; GCN-O1-OPTS-NEXT:      FunctionPass Manager
-; GCN-O1-OPTS-NEXT:        Lazy Machine Block Frequency Analysis
-; GCN-O1-OPTS-NEXT:        Machine Optimization Remark Emitter
-; GCN-O1-OPTS-NEXT:        AMDGPU Assembly Printer
-; GCN-O1-OPTS-NEXT:        Free MachineFunction
+; GCN-O1-OPTS-NEXT:    Function register usage analysis
+; GCN-O1-OPTS-NEXT:    FunctionPass Manager
+; GCN-O1-OPTS-NEXT:      Lazy Machine Block Frequency Analysis
+; GCN-O1-OPTS-NEXT:      Machine Optimization Remark Emitter
+; GCN-O1-OPTS-NEXT:      AMDGPU Assembly Printer
+; GCN-O1-OPTS-NEXT:      Free MachineFunction
 ; GCN-O1-OPTS-NEXT:Pass Arguments:  -domtree
 ; GCN-O1-OPTS-NEXT:  FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:    Dominator Tree Construction
@@ -987,16 +987,16 @@
 ; GCN-O2-NEXT:        SI Final Branch Preparation
 ; GCN-O2-NEXT:        SI peephole optimizations
 ; GCN-O2-NEXT:        Post RA hazard recognizer
-; GCN-O2-NEXT:        SI Insert Delay ALU
+; GCN-O2-NEXT:        AMDGPU Insert Delay ALU
 ; GCN-O2-NEXT:        Branch relaxation pass
 ; GCN-O2-NEXT:        Register Usage Information Collector Pass
 ; GCN-O2-NEXT:        Live DEBUG_VALUE analysis
-; GCN-O2-NEXT:      Function register usage analysis
-; GCN-O2-NEXT:      FunctionPass Manager
-; GCN-O2-NEXT:        Lazy Machine Block Frequency Analysis
-; GCN-O2-NEXT:        Machine Optimization Remark Emitter
-; GCN-O2-NEXT:        AMDGPU Assembly Printer
-; GCN-O2-NEXT:        Free MachineFunction
+; GCN-O2-NEXT:    Function register usage analysis
+; GCN-O2-NEXT:    FunctionPass Manager
+; GCN-O2-NEXT:      Lazy Machine Block Frequency Analysis
+; GCN-O2-NEXT:      Machine Optimization Remark Emitter
+; GCN-O2-NEXT:      AMDGPU Assembly Printer
+; GCN-O2-NEXT:      Free MachineFunction
 ; GCN-O2-NEXT:Pass Arguments:  -domtree
 ; GCN-O2-NEXT:  FunctionPass Manager
 ; GCN-O2-NEXT:    Dominator Tree Construction
@@ -1297,16 +1297,16 @@
 ; GCN-O3-NEXT:        SI Final Branch Preparation
 ; GCN-O3-NEXT:        SI peephole optimizations
 ; GCN-O3-NEXT:        Post RA hazard recognizer
-; GCN-O3-NEXT:        SI Insert Delay ALU
+; GCN-O3-NEXT:        AMDGPU Insert Delay ALU
 ; GCN-O3-NEXT:        Branch relaxation pass
 ; GCN-O3-NEXT:        Register Usage Information Collector Pass
 ; GCN-O3-NEXT:        Live DEBUG_VALUE analysis
-; GCN-O3-NEXT:      Function register usage analysis
-; GCN-O3-NEXT:      FunctionPass Manager
-; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
-; GCN-O3-NEXT:        Machine Optimization Remark Emitter
-; GCN-O3-NEXT:        AMDGPU Assembly Printer
-; GCN-O3-NEXT:        Free MachineFunction
+; GCN-O3-NEXT:    Function register usage analysis
+; GCN-O3-NEXT:    FunctionPass Manager
+; GCN-O3-NEXT:      Lazy Machine Block Frequency Analysis
+; GCN-O3-NEXT:      Machine Optimization Remark Emitter
+; GCN-O3-NEXT:      AMDGPU Assembly Printer
+; GCN-O3-NEXT:      Free MachineFunction
 ; GCN-O3-NEXT:Pass Arguments:  -domtree
 ; GCN-O3-NEXT:  FunctionPass Manager
 ; GCN-O3-NEXT:    Dominator Tree Construction

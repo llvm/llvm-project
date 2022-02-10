@@ -217,7 +217,7 @@ namespace __sanitizer {
   unsigned struct_sockaddr_sz = sizeof(struct sockaddr);
 
   unsigned ucontext_t_sz(void *ctx) {
-#    if SANITIZER_LINUX && SANITIZER_X64
+#    if SANITIZER_GLIBC && SANITIZER_X64
     // See kernel arch/x86/kernel/fpu/signal.c for details.
     const auto *fpregs = static_cast<ucontext_t *>(ctx)->uc_mcontext.fpregs;
     // The member names differ across header versions, but the actual layout

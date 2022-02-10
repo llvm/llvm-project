@@ -503,7 +503,7 @@ void WebAssembly::addLibStdCXXIncludePaths(
   bool IsKnownOs = (getTriple().getOS() != llvm::Triple::UnknownOS);
 
   // This is similar to detectLibcxxVersion()
-  std::string Version = "";
+  std::string Version;
   {
     std::error_code EC;
     Generic_GCC::GCCVersion MaxVersion =

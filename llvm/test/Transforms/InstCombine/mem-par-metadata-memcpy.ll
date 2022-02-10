@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 ;
 ; Make sure the llvm.access.group meta-data is preserved
 ; when a memcpy is replaced with a load+store by instcombine

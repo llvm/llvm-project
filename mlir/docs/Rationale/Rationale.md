@@ -560,24 +560,24 @@ func @search(%A: memref<?x?xi32>, %S: <?xi32>, %key : i32) {
 
 func @search_body(%A: memref<?x?xi32>, %S: memref<?xi32>, %key: i32, %i : i32) {
   %nj = memref.dim %A, 1 : memref<?x?xi32>
-  br ^bb1(0)
+  cf.br ^bb1(0)
 
 ^bb1(%j: i32)
   %p1 = arith.cmpi "lt", %j, %nj : i32
-  cond_br %p1, ^bb2, ^bb5
+  cf.cond_br %p1, ^bb2, ^bb5
 
 ^bb2:
   %v = affine.load %A[%i, %j] : memref<?x?xi32>
   %p2 = arith.cmpi "eq", %v, %key : i32
-  cond_br %p2, ^bb3(%j), ^bb4
+  cf.cond_br %p2, ^bb3(%j), ^bb4
 
 ^bb3(%j: i32)
   affine.store %j, %S[%i] : memref<?xi32>
-  br ^bb5
+  cf.br ^bb5
 
 ^bb4:
   %jinc = arith.addi %j, 1 : i32
-  br ^bb1(%jinc)
+  cf.br ^bb1(%jinc)
 
 ^bb5:
   return

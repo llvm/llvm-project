@@ -15,6 +15,10 @@ if(HAVE_LIBCOMPRESSION)
   set(LIBCOMPRESSION compression)
 endif()
 
+if(LLVM_ENABLE_ZLIB)
+  list(APPEND LLDB_SYSTEM_LIBS ZLIB::ZLIB)
+endif()
+
 add_lldb_library(lldbPluginProcessGDBRemote PLUGIN
   GDBRemoteClientBase.cpp
   GDBRemoteCommunication.cpp
@@ -39,6 +43,7 @@ add_lldb_library(lldbPluginProcessGDBRemote PLUGIN
     lldbSymbol
     lldbTarget
     lldbUtility
+    ${LLDB_SYSTEM_LIBS}
     ${LLDB_PLUGINS}
     ${LIBCOMPRESSION}
   LINK_COMPONENTS

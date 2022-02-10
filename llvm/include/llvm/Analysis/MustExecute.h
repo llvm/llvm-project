@@ -28,7 +28,6 @@
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/InstructionPrecedenceTracking.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
@@ -42,6 +41,7 @@ class Instruction;
 class Loop;
 class LoopInfo;
 class PostDominatorTree;
+class raw_ostream;
 
 /// Captures loop safety information.
 /// It keep information for loop blocks may throw exception or otherwise

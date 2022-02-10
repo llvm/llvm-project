@@ -11,6 +11,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -84,7 +85,7 @@ public:
     loopOperands.append(operands.begin(), operands.end());
     loopOperands.push_back(iters);
 
-    rewriter.create<mlir::BranchOp>(loc, conditionalBlock, loopOperands);
+    rewriter.create<mlir::cf::BranchOp>(loc, conditionalBlock, loopOperands);
 
     // Last loop block
     auto *terminator = lastBlock->getTerminator();
@@ -105,7 +106,7 @@ public:
                                    : terminator->operand_begin();
     loopCarried.append(begin, terminator->operand_end());
     loopCarried.push_back(itersMinusOne);
-    rewriter.create<mlir::BranchOp>(loc, conditionalBlock, loopCarried);
+    rewriter.create<mlir::cf::BranchOp>(loc, conditionalBlock, loopCarried);
     rewriter.eraseOp(terminator);
 
     // Conditional block
@@ -114,9 +115,9 @@ public:
     auto comparison = rewriter.create<mlir::arith::CmpIOp>(
         loc, arith::CmpIPredicate::sgt, itersLeft, zero);
 
-    rewriter.create<mlir::CondBranchOp>(loc, comparison, firstBlock,
-                                        llvm::ArrayRef<mlir::Value>(), endBlock,
-                                        llvm::ArrayRef<mlir::Value>());
+    rewriter.create<mlir::cf::CondBranchOp>(
+        loc, comparison, firstBlock, llvm::ArrayRef<mlir::Value>(), endBlock,
+        llvm::ArrayRef<mlir::Value>());
 
     // The result of the loop operation is the values of the condition block
     // arguments except the induction variable on the last iteration.
@@ -155,7 +156,7 @@ public:
     } else {
       continueBlock =
           rewriter.createBlock(remainingOpsBlock, ifOp.getResultTypes());
-      rewriter.create<mlir::BranchOp>(loc, remainingOpsBlock);
+      rewriter.create<mlir::cf::BranchOp>(loc, remainingOpsBlock);
     }
 
     // Move blocks from the "then" region to the region containing 'fir.if',
@@ -165,7 +166,8 @@ public:
     auto *ifOpTerminator = ifOpRegion.back().getTerminator();
     auto ifOpTerminatorOperands = ifOpTerminator->getOperands();
     rewriter.setInsertionPointToEnd(&ifOpRegion.back());
-    rewriter.create<mlir::BranchOp>(loc, continueBlock, ifOpTerminatorOperands);
+    rewriter.create<mlir::cf::BranchOp>(loc, continueBlock,
+                                        ifOpTerminatorOperands);
     rewriter.eraseOp(ifOpTerminator);
     rewriter.inlineRegionBefore(ifOpRegion, continueBlock);
 
@@ -179,14 +181,14 @@ public:
       auto *otherwiseTerm = otherwiseRegion.back().getTerminator();
       auto otherwiseTermOperands = otherwiseTerm->getOperands();
       rewriter.setInsertionPointToEnd(&otherwiseRegion.back());
-      rewriter.create<mlir::BranchOp>(loc, continueBlock,
-                                      otherwiseTermOperands);
+      rewriter.create<mlir::cf::BranchOp>(loc, continueBlock,
+                                          otherwiseTermOperands);
       rewriter.eraseOp(otherwiseTerm);
       rewriter.inlineRegionBefore(otherwiseRegion, continueBlock);
     }
 
     rewriter.setInsertionPointToEnd(condBlock);
-    rewriter.create<mlir::CondBranchOp>(
+    rewriter.create<mlir::cf::CondBranchOp>(
         loc, ifOp.condition(), ifOpBlock, llvm::ArrayRef<mlir::Value>(),
         otherwiseBlock, llvm::ArrayRef<mlir::Value>());
     rewriter.replaceOp(ifOp, continueBlock->getArguments());
@@ -241,7 +243,7 @@ public:
     auto begin = whileOp.finalValue() ? std::next(terminator->operand_begin())
                                       : terminator->operand_begin();
     loopCarried.append(begin, terminator->operand_end());
-    rewriter.create<mlir::BranchOp>(loc, conditionBlock, loopCarried);
+    rewriter.create<mlir::cf::BranchOp>(loc, conditionBlock, loopCarried);
     rewriter.eraseOp(terminator);
 
     // Compute loop bounds before branching to the condition.
@@ -256,7 +258,7 @@ public:
     destOperands.push_back(lowerBound);
     auto iterOperands = whileOp.getIterOperands();
     destOperands.append(iterOperands.begin(), iterOperands.end());
-    rewriter.create<mlir::BranchOp>(loc, conditionBlock, destOperands);
+    rewriter.create<mlir::cf::BranchOp>(loc, conditionBlock, destOperands);
 
     // With the body block done, we can fill in the condition block.
     rewriter.setInsertionPointToEnd(conditionBlock);
@@ -278,9 +280,9 @@ public:
     // Remember to AND in the early-exit bool.
     auto comparison =
         rewriter.create<mlir::arith::AndIOp>(loc, iterateVar, cmp2);
-    rewriter.create<mlir::CondBranchOp>(loc, comparison, firstBodyBlock,
-                                        llvm::ArrayRef<mlir::Value>(), endBlock,
-                                        llvm::ArrayRef<mlir::Value>());
+    rewriter.create<mlir::cf::CondBranchOp>(
+        loc, comparison, firstBodyBlock, llvm::ArrayRef<mlir::Value>(),
+        endBlock, llvm::ArrayRef<mlir::Value>());
     // The result of the loop operation is the values of the condition block
     // arguments except the induction variable on the last iteration.
     auto args = whileOp.finalValue()
@@ -300,8 +302,8 @@ public:
     patterns.insert<CfgLoopConv, CfgIfConv, CfgIterWhileConv>(
         context, forceLoopToExecuteOnce);
     mlir::ConversionTarget target(*context);
-    target.addLegalDialect<mlir::AffineDialect, FIROpsDialect,
-                           mlir::StandardOpsDialect>();
+    target.addLegalDialect<mlir::AffineDialect, mlir::cf::ControlFlowDialect,
+                           FIROpsDialect, mlir::StandardOpsDialect>();
 
     // apply the patterns
     target.addIllegalOp<ResultOp, DoLoopOp, IfOp, IterWhileOp>();

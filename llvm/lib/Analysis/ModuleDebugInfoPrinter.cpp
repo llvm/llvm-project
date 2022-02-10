@@ -17,6 +17,7 @@
 #include "llvm/Analysis/ModuleDebugInfoPrinter.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/Passes.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
