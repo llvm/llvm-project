@@ -144,6 +144,7 @@ VALUE_CODEGENOPT(PatchableFunctionEntryOffset , 32, 0)
 CODEGENOPT(HotPatch, 1, 0) ///< Supports the Microsoft /HOTPATCH flag and
                            ///< generates a 'patchable-function' attribute.
 
+CODEGENOPT(JMCInstrument, 1, 0) ///< Set when -fjmc is enabled.
 CODEGENOPT(InstrumentForProfiling , 1, 0) ///< Set when -pg is enabled.
 CODEGENOPT(CallFEntry , 1, 0) ///< Set when -mfentry is enabled.
 CODEGENOPT(MNopMCount , 1, 0) ///< Set when -mnop-mcount is enabled.

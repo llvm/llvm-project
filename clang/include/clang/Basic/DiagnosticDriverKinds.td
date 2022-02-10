@@ -633,4 +633,8 @@ def err_drv_invalid_or_unsupported_offload_target : Error<
   "invalid or unsupported offload target: '%0'">;
 def err_drv_cuda_offload_only_emit_bc : Error<
   "CUDA offload target is supported only along with --emit-llvm">;
+
+def warn_drv_jmc_requires_debuginfo : Warning<
+  "/JMC requires debug info. Use '/Zi', '/Z7' or other debug options; option ignored">,
+  InGroup<OptionIgnored>;
 }
