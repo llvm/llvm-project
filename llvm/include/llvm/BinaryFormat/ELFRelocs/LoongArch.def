@@ -1,0 +1,63 @@
+#ifndef ELF_RELOC
+#error "ELF_RELOC must be defined"
+#endif
+
+// These types and values are from the LoongArch ELF psABI which can be found at
+// https://github.com/loongson/LoongArch-Documentation
+// and these definitions has been adopted by binutils (include/elf/loongarch.h).
+// The commit hash (main branch) we reference is:
+// 9b3bd9f4a497115913c22f1a2a47863798fbc02a
+
+ELF_RELOC(R_LARCH_NONE,                        0)
+ELF_RELOC(R_LARCH_32,                          1)
+ELF_RELOC(R_LARCH_64,                          2)
+ELF_RELOC(R_LARCH_RELATIVE,                    3)
+ELF_RELOC(R_LARCH_COPY,                        4)
+ELF_RELOC(R_LARCH_JUMP_SLOT,                   5)
+ELF_RELOC(R_LARCH_TLS_DTPMOD32,                6)
+ELF_RELOC(R_LARCH_TLS_DTPMOD64,                7)
+ELF_RELOC(R_LARCH_TLS_DTPREL32,                8)
+ELF_RELOC(R_LARCH_TLS_DTPREL64,                9)
+ELF_RELOC(R_LARCH_TLS_TPREL32,                10)
+ELF_RELOC(R_LARCH_TLS_TPREL64,                11)
+ELF_RELOC(R_LARCH_IRELATIVE,                  12)
+
+ELF_RELOC(R_LARCH_MARK_LA,                    20)
+ELF_RELOC(R_LARCH_MARK_PCREL,                 21)
+ELF_RELOC(R_LARCH_SOP_PUSH_PCREL,             22)
+ELF_RELOC(R_LARCH_SOP_PUSH_ABSOLUTE,          23)
+ELF_RELOC(R_LARCH_SOP_PUSH_DUP,               24)
+ELF_RELOC(R_LARCH_SOP_PUSH_GPREL,             25)
+ELF_RELOC(R_LARCH_SOP_PUSH_TLS_TPREL,         26)
+ELF_RELOC(R_LARCH_SOP_PUSH_TLS_GOT,           27)
+ELF_RELOC(R_LARCH_SOP_PUSH_TLS_GD,            28)
+ELF_RELOC(R_LARCH_SOP_PUSH_PLT_PCREL,         29)
+ELF_RELOC(R_LARCH_SOP_ASSERT,                 30)
+ELF_RELOC(R_LARCH_SOP_NOT,                    31)
+ELF_RELOC(R_LARCH_SOP_SUB,                    32)
+ELF_RELOC(R_LARCH_SOP_SL,                     33)
+ELF_RELOC(R_LARCH_SOP_SR,                     34)
+ELF_RELOC(R_LARCH_SOP_ADD,                    35)
+ELF_RELOC(R_LARCH_SOP_AND,                    36)
+ELF_RELOC(R_LARCH_SOP_IF_ELSE,                37)
+ELF_RELOC(R_LARCH_SOP_POP_32_S_10_5,          38)
+ELF_RELOC(R_LARCH_SOP_POP_32_U_10_12,         39)
+ELF_RELOC(R_LARCH_SOP_POP_32_S_10_12,         40)
+ELF_RELOC(R_LARCH_SOP_POP_32_S_10_16,         41)
+ELF_RELOC(R_LARCH_SOP_POP_32_S_10_16_S2,      42)
+ELF_RELOC(R_LARCH_SOP_POP_32_S_5_20,          43)
+ELF_RELOC(R_LARCH_SOP_POP_32_S_0_5_10_16_S2,  44)
+ELF_RELOC(R_LARCH_SOP_POP_32_S_0_10_10_16_S2, 45)
+ELF_RELOC(R_LARCH_SOP_POP_32_U,               46)
+ELF_RELOC(R_LARCH_ADD8,                       47)
+ELF_RELOC(R_LARCH_ADD16,                      48)
+ELF_RELOC(R_LARCH_ADD24,                      49)
+ELF_RELOC(R_LARCH_ADD32,                      50)
+ELF_RELOC(R_LARCH_ADD64,                      51)
+ELF_RELOC(R_LARCH_SUB8,                       52)
+ELF_RELOC(R_LARCH_SUB16,                      53)
+ELF_RELOC(R_LARCH_SUB24,                      54)
+ELF_RELOC(R_LARCH_SUB32,                      55)
+ELF_RELOC(R_LARCH_SUB64,                      56)
+ELF_RELOC(R_LARCH_GNU_VTINHERIT,              57)
+ELF_RELOC(R_LARCH_GNU_VTENTRY,                58)

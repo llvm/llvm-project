@@ -2394,6 +2394,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineUtils",
         ":ArithmeticDialect",
         ":ConversionPassIncGen",
         ":IR",

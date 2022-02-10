@@ -1427,8 +1427,7 @@ ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
                     : rewriter.create<vector::ExtractOp>(op.getLoc(), rhs, c);
       Value m = createMul(op.getLoc(), a, b, isInt, rewriter);
       Value reduced = rewriter.create<vector::ReductionOp>(
-          op.getLoc(), dstType.getElementType(), rewriter.getStringAttr("add"),
-          m, ValueRange{});
+          op.getLoc(), vector::CombiningKind::ADD, m);
 
       SmallVector<int64_t, 2> pos = rank == 1 ? SmallVector<int64_t, 2>{r}
                                               : SmallVector<int64_t, 2>{r, c};
@@ -1608,9 +1607,8 @@ Value ContractionOpLowering::lowerReduction(vector::ContractionOp op,
   if (lhsType.getRank() == 1) {
     assert(rhsType.getRank() == 1 && "corrupt contraction");
     Value m = createMul(loc, op.lhs(), op.rhs(), isInt, rewriter);
-    StringAttr kind = rewriter.getStringAttr("add");
-    Value res = rewriter.create<vector::ReductionOp>(loc, resType, kind, m,
-                                                     ValueRange{});
+    auto kind = vector::CombiningKind::ADD;
+    Value res = rewriter.create<vector::ReductionOp>(loc, kind, m);
     if (auto acc = op.acc())
       res = createAdd(op.getLoc(), res, acc, isInt, rewriter);
     return res;

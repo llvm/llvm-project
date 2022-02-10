@@ -286,8 +286,8 @@ size_t ProcessElfCore::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
   return DoReadMemory(addr, buf, size, error);
 }
 
-Status ProcessElfCore::GetMemoryRegionInfo(lldb::addr_t load_addr,
-                                           MemoryRegionInfo &region_info) {
+Status ProcessElfCore::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
+                                             MemoryRegionInfo &region_info) {
   region_info.Clear();
   const VMRangeToPermissions::Entry *permission_entry =
       m_core_range_infos.FindEntryThatContainsOrFollows(load_addr);

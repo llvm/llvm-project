@@ -312,43 +312,11 @@ struct TwoDimMultiReductionToReduction
         rewriter.getZeroAttr(multiReductionOp.getDestType()));
     int outerDim = multiReductionOp.getSourceVectorType().getShape()[0];
 
-    // TODO: Add vector::CombiningKind attribute instead of string to
-    // vector.reduction.
-    auto getKindStr = [](vector::CombiningKind kind) {
-      switch (kind) {
-      case vector::CombiningKind::ADD:
-        return "add";
-      case vector::CombiningKind::MUL:
-        return "mul";
-      case vector::CombiningKind::MINUI:
-        return "minui";
-      case vector::CombiningKind::MINSI:
-        return "minsi";
-      case vector::CombiningKind::MINF:
-        return "minf";
-      case vector::CombiningKind::MAXUI:
-        return "maxui";
-      case vector::CombiningKind::MAXSI:
-        return "maxsi";
-      case vector::CombiningKind::MAXF:
-        return "maxf";
-      case vector::CombiningKind::AND:
-        return "and";
-      case vector::CombiningKind::OR:
-        return "or";
-      case vector::CombiningKind::XOR:
-        return "xor";
-      }
-      llvm_unreachable("unknown combining kind");
-    };
-
     for (int i = 0; i < outerDim; ++i) {
       auto v = rewriter.create<vector::ExtractOp>(
           loc, multiReductionOp.source(), ArrayRef<int64_t>{i});
-      auto reducedValue = rewriter.create<vector::ReductionOp>(
-          loc, getElementTypeOrSelf(multiReductionOp.getDestType()),
-          rewriter.getStringAttr(getKindStr(multiReductionOp.kind())), v,
-          ValueRange{});
+      auto reducedValue =
+          rewriter.create<vector::ReductionOp>(loc, multiReductionOp.kind(), v);
       result = rewriter.create<vector::InsertElementOp>(
           loc, reducedValue, result,
           rewriter.create<arith::ConstantIndexOp>(loc, i));

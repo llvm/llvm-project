@@ -52,6 +52,115 @@ TEST(ELFTest, getELFRelocationTypeNameForVE) {
   EXPECT_EQ("R_VE_CALL_LO32", getELFRelocationTypeName(EM_VE, R_VE_CALL_LO32));
 }
 
+TEST(ELFTest, getELFRelocationTypeNameForLoongArch) {
+  EXPECT_EQ("R_LARCH_NONE",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_NONE));
+  EXPECT_EQ("R_LARCH_32", getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_32));
+  EXPECT_EQ("R_LARCH_64", getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_64));
+  EXPECT_EQ("R_LARCH_RELATIVE",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_RELATIVE));
+  EXPECT_EQ("R_LARCH_COPY",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_COPY));
+  EXPECT_EQ("R_LARCH_JUMP_SLOT",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_JUMP_SLOT));
+  EXPECT_EQ("R_LARCH_TLS_DTPMOD32",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_TLS_DTPMOD32));
+  EXPECT_EQ("R_LARCH_TLS_DTPMOD64",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_TLS_DTPMOD64));
+  EXPECT_EQ("R_LARCH_TLS_DTPREL32",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_TLS_DTPREL32));
+  EXPECT_EQ("R_LARCH_TLS_DTPREL64",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_TLS_DTPREL64));
+  EXPECT_EQ("R_LARCH_TLS_TPREL32",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_TLS_TPREL32));
+  EXPECT_EQ("R_LARCH_TLS_TPREL64",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_TLS_TPREL64));
+  EXPECT_EQ("R_LARCH_IRELATIVE",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_IRELATIVE));
+
+  EXPECT_EQ("R_LARCH_MARK_LA",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_MARK_LA));
+  EXPECT_EQ("R_LARCH_MARK_PCREL",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_MARK_PCREL));
+  EXPECT_EQ("R_LARCH_SOP_PUSH_PCREL",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_PUSH_PCREL));
+  EXPECT_EQ("R_LARCH_SOP_PUSH_ABSOLUTE",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_PUSH_ABSOLUTE));
+  EXPECT_EQ("R_LARCH_SOP_PUSH_DUP",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_PUSH_DUP));
+  EXPECT_EQ("R_LARCH_SOP_PUSH_GPREL",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_PUSH_GPREL));
+  EXPECT_EQ("R_LARCH_SOP_PUSH_TLS_TPREL",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_PUSH_TLS_TPREL));
+  EXPECT_EQ("R_LARCH_SOP_PUSH_TLS_GOT",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_PUSH_TLS_GOT));
+  EXPECT_EQ("R_LARCH_SOP_PUSH_TLS_GD",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_PUSH_TLS_GD));
+  EXPECT_EQ("R_LARCH_SOP_PUSH_PLT_PCREL",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_PUSH_PLT_PCREL));
+  EXPECT_EQ("R_LARCH_SOP_ASSERT",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_ASSERT));
+  EXPECT_EQ("R_LARCH_SOP_NOT",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_NOT));
+  EXPECT_EQ("R_LARCH_SOP_SUB",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_SUB));
+  EXPECT_EQ("R_LARCH_SOP_SL",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_SL));
+  EXPECT_EQ("R_LARCH_SOP_SR",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_SR));
+  EXPECT_EQ("R_LARCH_SOP_ADD",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_ADD));
+  EXPECT_EQ("R_LARCH_SOP_AND",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_AND));
+  EXPECT_EQ("R_LARCH_SOP_IF_ELSE",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_IF_ELSE));
+  EXPECT_EQ("R_LARCH_SOP_POP_32_S_10_5",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_POP_32_S_10_5));
+  EXPECT_EQ("R_LARCH_SOP_POP_32_U_10_12",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_POP_32_U_10_12));
+  EXPECT_EQ("R_LARCH_SOP_POP_32_S_10_12",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_POP_32_S_10_12));
+  EXPECT_EQ("R_LARCH_SOP_POP_32_S_10_16",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_POP_32_S_10_16));
+  EXPECT_EQ(
+      "R_LARCH_SOP_POP_32_S_10_16_S2",
+      getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_POP_32_S_10_16_S2));
+  EXPECT_EQ("R_LARCH_SOP_POP_32_S_5_20",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_POP_32_S_5_20));
+  EXPECT_EQ("R_LARCH_SOP_POP_32_S_0_5_10_16_S2",
+            getELFRelocationTypeName(EM_LOONGARCH,
+                                     R_LARCH_SOP_POP_32_S_0_5_10_16_S2));
+  EXPECT_EQ("R_LARCH_SOP_POP_32_S_0_10_10_16_S2",
+            getELFRelocationTypeName(EM_LOONGARCH,
+                                     R_LARCH_SOP_POP_32_S_0_10_10_16_S2));
+  EXPECT_EQ("R_LARCH_SOP_POP_32_U",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SOP_POP_32_U));
+  EXPECT_EQ("R_LARCH_ADD8",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_ADD8));
+  EXPECT_EQ("R_LARCH_ADD16",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_ADD16));
+  EXPECT_EQ("R_LARCH_ADD24",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_ADD24));
+  EXPECT_EQ("R_LARCH_ADD32",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_ADD32));
+  EXPECT_EQ("R_LARCH_ADD64",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_ADD64));
+  EXPECT_EQ("R_LARCH_SUB8",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SUB8));
+  EXPECT_EQ("R_LARCH_SUB16",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SUB16));
+  EXPECT_EQ("R_LARCH_SUB24",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SUB24));
+  EXPECT_EQ("R_LARCH_SUB32",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SUB32));
+  EXPECT_EQ("R_LARCH_SUB64",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SUB64));
+  EXPECT_EQ("R_LARCH_GNU_VTINHERIT",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_GNU_VTINHERIT));
+  EXPECT_EQ("R_LARCH_GNU_VTENTRY",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_GNU_VTENTRY));
+}
+
 TEST(ELFTest, getELFRelativeRelocationType) {
   EXPECT_EQ(ELF::R_VE_RELATIVE, getELFRelativeRelocationType(EM_VE));
 }

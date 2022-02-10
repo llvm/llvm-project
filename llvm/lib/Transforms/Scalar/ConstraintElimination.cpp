@@ -247,27 +247,36 @@ static ConstraintListTy
 getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
               const DenseMap<Value *, unsigned> &Value2Index,
               DenseMap<Value *, unsigned> &NewIndices) {
-
-  if (Pred == CmpInst::ICMP_UGT || Pred == CmpInst::ICMP_UGE ||
-      Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SGE)
-    return getConstraint(CmpInst::getSwappedPredicate(Pred), Op1, Op0,
-                         Value2Index, NewIndices);
-
-  if (Pred == CmpInst::ICMP_EQ) {
-    if (match(Op1, m_Zero()))
-      return getConstraint(CmpInst::ICMP_ULE, Op0, Op1, Value2Index,
-                           NewIndices);
-
-    auto A =
-        getConstraint(CmpInst::ICMP_UGE, Op0, Op1, Value2Index, NewIndices);
-    auto B =
-        getConstraint(CmpInst::ICMP_ULE, Op0, Op1, Value2Index, NewIndices);
-    A.mergeIn(B);
-    return A;
+  // Try to convert Pred to one of ULE/SLT/SLE/SLT.
+  switch (Pred) {
+  case CmpInst::ICMP_UGT:
+  case CmpInst::ICMP_UGE:
+  case CmpInst::ICMP_SGT:
+  case CmpInst::ICMP_SGE: {
+    Pred = CmpInst::getSwappedPredicate(Pred);
+    std::swap(Op0, Op1);
+    break;
   }
-
-  if (Pred == CmpInst::ICMP_NE && match(Op1, m_Zero())) {
-    return getConstraint(CmpInst::ICMP_UGT, Op0, Op1, Value2Index, NewIndices);
+  case CmpInst::ICMP_EQ:
+    if (match(Op1, m_Zero())) {
+      Pred = CmpInst::ICMP_ULE;
+    } else {
+      auto A =
+          getConstraint(CmpInst::ICMP_UGE, Op0, Op1, Value2Index, NewIndices);
+      auto B =
+          getConstraint(CmpInst::ICMP_ULE, Op0, Op1, Value2Index, NewIndices);
+      A.mergeIn(B);
+      return A;
+    }
+    break;
+  case CmpInst::ICMP_NE:
+    if (!match(Op1, m_Zero()))
+      return {};
+    Pred = CmpInst::getSwappedPredicate(CmpInst::ICMP_UGT);
+    std::swap(Op0, Op1);
+    break;
+  default:
+    break;
   }
 
   // Only ULE and ULT predicates are supported at the moment.
