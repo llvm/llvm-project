@@ -537,37 +537,52 @@ defm atomic_store_#as : binary_atomic_op<atomic_store>;
 } // End let AddressSpaces
 } // End foreach as
 
-
+// TODO: Add GISelPredicateCode for the ret and noret PatFrags once
+// GlobalISelEmitter allows pattern matches where src and dst def count
+// mismatch.
 multiclass ret_noret_binary_atomic_op<SDNode atomic_op, bit IsInt = 1> {
+  let PredicateCode = [{ return (SDValue(N, 0).use_empty()); }] in {
+    defm "_noret" : binary_atomic_op<atomic_op, IsInt>;
+  }
+
+  let PredicateCode = [{ return !(SDValue(N, 0).use_empty()); }] in {
+    defm "_ret" : binary_atomic_op<atomic_op, IsInt>;
+  }
+}
+
+multiclass ret_noret_ternary_atomic_op<SDNode atomic_op> {
+  let PredicateCode = [{ return (SDValue(N, 0).use_empty()); }] in {
+    defm "_noret" : ternary_atomic_op<atomic_op>;
+  }
+
+  let PredicateCode = [{ return !(SDValue(N, 0).use_empty()); }] in {
+    defm "_ret" : ternary_atomic_op<atomic_op>;
+  }
+}
+
+multiclass binary_atomic_op_all_as<SDNode atomic_op, bit IsInt = 1> {
   foreach as = [ "global", "flat", "constant", "local", "private", "region" ] in {
     let AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
       defm "_"#as : binary_atomic_op<atomic_op, IsInt>;
-
-      let PredicateCode = [{return (SDValue(N, 0).use_empty());}] in {
-        defm "_"#as#"_noret" : binary_atomic_op<atomic_op, IsInt>;
-      }
-
-      let PredicateCode = [{return !(SDValue(N, 0).use_empty());}] in {
-        defm "_"#as#"_ret" : binary_atomic_op<atomic_op, IsInt>;
-      }
+      defm "_"#as : ret_noret_binary_atomic_op<atomic_op, IsInt>;
     }
   }
 }
 
-defm atomic_swap : ret_noret_binary_atomic_op<atomic_swap>;
-defm atomic_load_add : ret_noret_binary_atomic_op<atomic_load_add>;
-defm atomic_load_and : ret_noret_binary_atomic_op<atomic_load_and>;
-defm atomic_load_max : ret_noret_binary_atomic_op<atomic_load_max>;
-defm atomic_load_min : ret_noret_binary_atomic_op<atomic_load_min>;
-defm atomic_load_or : ret_noret_binary_atomic_op<atomic_load_or>;
-defm atomic_load_sub : ret_noret_binary_atomic_op<atomic_load_sub>;
-defm atomic_load_umax : ret_noret_binary_atomic_op<atomic_load_umax>;
-defm atomic_load_umin : ret_noret_binary_atomic_op<atomic_load_umin>;
-defm atomic_load_xor : ret_noret_binary_atomic_op<atomic_load_xor>;
-defm atomic_load_fadd : ret_noret_binary_atomic_op<atomic_load_fadd, 0>;
+defm atomic_swap : binary_atomic_op_all_as<atomic_swap>;
+defm atomic_load_add : binary_atomic_op_all_as<atomic_load_add>;
+defm atomic_load_and : binary_atomic_op_all_as<atomic_load_and>;
+defm atomic_load_max : binary_atomic_op_all_as<atomic_load_max>;
+defm atomic_load_min : binary_atomic_op_all_as<atomic_load_min>;
+defm atomic_load_or : binary_atomic_op_all_as<atomic_load_or>;
+defm atomic_load_sub : binary_atomic_op_all_as<atomic_load_sub>;
+defm atomic_load_umax : binary_atomic_op_all_as<atomic_load_umax>;
+defm atomic_load_umin : binary_atomic_op_all_as<atomic_load_umin>;
+defm atomic_load_xor : binary_atomic_op_all_as<atomic_load_xor>;
+defm atomic_load_fadd : binary_atomic_op_all_as<atomic_load_fadd, 0>;
 let MemoryVT = v2f16 in
-defm atomic_load_fadd_v2f16 : ret_noret_binary_atomic_op<atomic_load_fadd, 0>;
-defm AMDGPUatomic_cmp_swap : ret_noret_binary_atomic_op<AMDGPUatomic_cmp_swap>;
+defm atomic_load_fadd_v2f16 : binary_atomic_op_all_as<atomic_load_fadd, 0>;
+defm AMDGPUatomic_cmp_swap : binary_atomic_op_all_as<AMDGPUatomic_cmp_swap>;
 
 def load_align8_local : PatFrag<(ops node:$ptr), (load_local node:$ptr)>,
                         Aligned<8> {
@@ -595,12 +610,13 @@ def store_align16_local: PatFrag<(ops node:$val, node:$ptr),
 
 let AddressSpaces = StoreAddress_local.AddrSpaces in {
 defm atomic_cmp_swap_local : ternary_atomic_op<atomic_cmp_swap>;
-defm atomic_cmp_swap_local_m0 : ternary_atomic_op<atomic_cmp_swap_glue>;
+defm atomic_cmp_swap_local : ret_noret_ternary_atomic_op<atomic_cmp_swap>;
+defm atomic_cmp_swap_local_m0 : ret_noret_ternary_atomic_op<atomic_cmp_swap_glue>;
 }
 
 let AddressSpaces = StoreAddress_region.AddrSpaces in {
-defm atomic_cmp_swap_region : ternary_atomic_op<atomic_cmp_swap>;
-defm atomic_cmp_swap_region_m0 : ternary_atomic_op<atomic_cmp_swap_glue>;
+defm atomic_cmp_swap_region : ret_noret_ternary_atomic_op<atomic_cmp_swap>;
+defm atomic_cmp_swap_region_m0 : ret_noret_ternary_atomic_op<atomic_cmp_swap_glue>;
 }
 
 //===----------------------------------------------------------------------===//

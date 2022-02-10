@@ -154,16 +154,15 @@ def err_module_odr_violation_template_parameter : Error <
   "%select{definition in module '%2'|defined here}1 found "
   "%select{"
   "unnamed template parameter|"
-  "template parameter %4|"
+  "template parameter %5|"
   "template parameter with %select{no |}4default argument|"
   "template parameter with default argument}3">;
-
 
 def note_module_odr_violation_template_parameter : Note <
   "but in '%0' found "
   "%select{"
   "unnamed template parameter %2|"
-  "template parameter %2|"
+  "template parameter %3|"
   "template parameter with %select{no |}2default argument|"
   "template parameter with different default argument}1">;
 

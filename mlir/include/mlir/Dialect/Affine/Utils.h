@@ -287,6 +287,18 @@ Operation *createComposedAffineApplyOp(OpBuilder &builder, Location loc,
 void createAffineComputationSlice(Operation *opInst,
                                   SmallVectorImpl<AffineApplyOp> *sliceOps);
 
+/// Emit code that computes the given affine expression using standard
+/// arithmetic operations applied to the provided dimension and symbol values.
+Value expandAffineExpr(OpBuilder &builder, Location loc, AffineExpr expr,
+                       ValueRange dimValues, ValueRange symbolValues);
+
+/// Create a sequence of operations that implement the `affineMap` applied to
+/// the given `operands` (as it it were an AffineApplyOp).
+Optional<SmallVector<Value, 8>> expandAffineMap(OpBuilder &builder,
+                                                Location loc,
+                                                AffineMap affineMap,
+                                                ValueRange operands);
+
 } // namespace mlir
 
 #endif // MLIR_DIALECT_AFFINE_UTILS_H
