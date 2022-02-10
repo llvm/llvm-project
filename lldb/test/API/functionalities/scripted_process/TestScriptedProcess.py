@@ -133,3 +133,6 @@ class ScriptedProcesTestCase(TestBase):
                 break
             self.assertEqual(idx, int(reg.value, 16))
 
+        self.assertTrue(frame.IsArtificial(), "Frame is not artificial")
+        pc = frame.GetPCAddress().GetLoadAddress(target)
+        self.assertEqual(pc, 0x0100001b00)

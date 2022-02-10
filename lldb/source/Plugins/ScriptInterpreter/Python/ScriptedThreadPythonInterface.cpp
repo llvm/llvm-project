@@ -112,7 +112,14 @@ StructuredData::DictionarySP ScriptedThreadPythonInterface::GetStopReason() {
 }
 
 StructuredData::ArraySP ScriptedThreadPythonInterface::GetStackFrames() {
-  return nullptr;
+  Status error;
+  StructuredData::ArraySP arr =
+      Dispatch<StructuredData::ArraySP>("get_stackframes", error);
+
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, arr, error))
+    return {};
+
+  return arr;
 }
 
 StructuredData::DictionarySP ScriptedThreadPythonInterface::GetRegisterInfo() {

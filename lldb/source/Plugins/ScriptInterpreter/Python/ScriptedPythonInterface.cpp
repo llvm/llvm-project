@@ -35,6 +35,14 @@ ScriptedPythonInterface::GetStatusFromMethod(llvm::StringRef method_name) {
 }
 
 template <>
+StructuredData::ArraySP
+ScriptedPythonInterface::ExtractValueFromPythonObject<StructuredData::ArraySP>(
+    python::PythonObject &p, Status &error) {
+  python::PythonList result_list(python::PyRefType::Borrowed, p.get());
+  return result_list.CreateStructuredArray();
+}
+
+template <>
 StructuredData::DictionarySP
 ScriptedPythonInterface::ExtractValueFromPythonObject<
     StructuredData::DictionarySP>(python::PythonObject &p, Status &error) {
