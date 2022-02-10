@@ -5000,10 +5000,10 @@ static bool ReferencesAnonymousEntity(ArrayRef<TemplateArgument> Args) {
     case TemplateArgument::Type: {
       struct ReferencesAnonymous
           : public RecursiveASTVisitor<ReferencesAnonymous> {
-        bool ReferencesAnonymous = false;
+        bool RefAnon = false;
         bool VisitRecordType(RecordType *RT) {
           if (ReferencesAnonymousEntity(RT)) {
-            ReferencesAnonymous = true;
+            RefAnon = true;
             return false;
           }
           return true;
@@ -5011,7 +5011,7 @@ static bool ReferencesAnonymousEntity(ArrayRef<TemplateArgument> Args) {
       };
       ReferencesAnonymous RT;
       RT.TraverseType(TA.getAsType());
-      if (RT.ReferencesAnonymous)
+      if (RT.RefAnon)
         return true;
       break;
     }
