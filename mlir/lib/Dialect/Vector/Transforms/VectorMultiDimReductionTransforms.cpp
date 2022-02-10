@@ -243,47 +243,8 @@ struct TwoDimMultiReductionToElementWise
     for (int64_t i = 1; i < srcShape[0]; i++) {
       auto operand =
           rewriter.create<vector::ExtractOp>(loc, multiReductionOp.source(), i);
-      switch (multiReductionOp.kind()) {
-      case vector::CombiningKind::ADD:
-        if (elementType.isIntOrIndex())
-          result = rewriter.create<arith::AddIOp>(loc, operand, result);
-        else
-          result = rewriter.create<arith::AddFOp>(loc, operand, result);
-        break;
-      case vector::CombiningKind::MUL:
-        if (elementType.isIntOrIndex())
-          result = rewriter.create<arith::MulIOp>(loc, operand, result);
-        else
-          result = rewriter.create<arith::MulFOp>(loc, operand, result);
-        break;
-      case vector::CombiningKind::MINUI:
-        result = rewriter.create<arith::MinUIOp>(loc, operand, result);
-        break;
-      case vector::CombiningKind::MINSI:
-        result = rewriter.create<arith::MinSIOp>(loc, operand, result);
-        break;
-      case vector::CombiningKind::MINF:
-        result = rewriter.create<arith::MinFOp>(loc, operand, result);
-        break;
-      case vector::CombiningKind::MAXUI:
-        result = rewriter.create<arith::MaxUIOp>(loc, operand, result);
-        break;
-      case vector::CombiningKind::MAXSI:
-        result = rewriter.create<arith::MaxSIOp>(loc, operand, result);
-        break;
-      case vector::CombiningKind::MAXF:
-        result = rewriter.create<arith::MaxFOp>(loc, operand, result);
-        break;
-      case vector::CombiningKind::AND:
-        result = rewriter.create<arith::AndIOp>(loc, operand, result);
-        break;
-      case vector::CombiningKind::OR:
-        result = rewriter.create<arith::OrIOp>(loc, operand, result);
-        break;
-      case vector::CombiningKind::XOR:
-        result = rewriter.create<arith::XOrIOp>(loc, operand, result);
-        break;
-      }
+      result = makeArithReduction(rewriter, loc, multiReductionOp.kind(),
+                                  operand, result);
     }
 
     rewriter.replaceOp(multiReductionOp, result);
