@@ -51,9 +51,9 @@ namespace llvm {
     ///
     FSEL,
 
-    /// XSMAXCDP, XSMINCDP - C-type min/max instructions.
-    XSMAXCDP,
-    XSMINCDP,
+    /// XSMAXC[DQ]P, XSMINC[DQ]P - C-type min/max instructions.
+    XSMAXC,
+    XSMINC,
 
     /// FCFID - The FCFID instruction, taking an f64 operand and producing
     /// and f64 value containing the FP representation of the integer that

@@ -2398,8 +2398,10 @@ let Predicates = [IsISA3_1] in {
 let Predicates = [IsISA3_1, HasVSX] in {
   def XVCVSPBF16 : XX2_XT6_XO5_XB6<60, 17, 475, "xvcvspbf16", vsrc, []>;
   def XVCVBF16SPN : XX2_XT6_XO5_XB6<60, 16, 475, "xvcvbf16spn", vsrc, []>;
-  def XSMAXCQP : X_VT5_VA5_VB5<63, 676, "xsmaxcqp", []>;
-  def XSMINCQP : X_VT5_VA5_VB5<63, 740, "xsmincqp", []>;
+  def XSMAXCQP : X_VT5_VA5_VB5<63, 676, "xsmaxcqp",
+                               [(set f128:$vT, (PPCxsmaxc f128:$vA, f128:$vB))]>;
+  def XSMINCQP : X_VT5_VA5_VB5<63, 740, "xsmincqp",
+                               [(set f128:$vT, (PPCxsminc f128:$vA, f128:$vB))]>;
 }
 
 // Multiclass defining patterns for Set Boolean Extension Reverse Instructions.
