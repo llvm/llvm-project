@@ -153,6 +153,10 @@ E: sabre@nondot.org
 W: http://nondot.org/~sabre/
 D: Everything not covered by someone else
 
+N: Weining Lu
+E: luweining@loongson.cn
+D: LoongArch backend (lib/Target/LoongArch/*)
+
 N: David Majnemer
 E: david.majnemer@gmail.com
 D: IR Constant Folder, InstCombine
