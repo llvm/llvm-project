@@ -199,6 +199,16 @@ template <class ForwardIterator1, class ForwardIterator2>
     constexpr ForwardIterator2    // constexpr in C++20
     swap_ranges(ForwardIterator1 first1, ForwardIterator1 last1, ForwardIterator2 first2);
 
+template<input_iterator I1, sentinel_for<I1> S1, input_iterator I2, sentinel_for<I2> S2>
+        requires indirectly_swappable<I1, I2>
+    constexpr ranges::swap_ranges_result<I1, I2>
+        ranges::swap_ranges(I1 first1, S1 last1, I2 first2, S2 last2);
+
+template<input_range R1, input_range R2>
+        requires indirectly_swappable<iterator_t<R1>, iterator_t<R2>>
+    constexpr ranges::swap_ranges_result<borrowed_iterator_t<R1>, borrowed_iterator_t<R2>>
+        ranges::swap_ranges(R1&& r1, R2&& r2);
+
 template <class ForwardIterator1, class ForwardIterator2>
     constexpr void                // constexpr in C++20
     iter_swap(ForwardIterator1 a, ForwardIterator2 b);
@@ -739,6 +749,7 @@ template<class InputIterator, class OutputIterator>
 #include <__algorithm/pop_heap.h>
 #include <__algorithm/prev_permutation.h>
 #include <__algorithm/push_heap.h>
+#include <__algorithm/ranges_swap_ranges.h>
 #include <__algorithm/remove.h>
 #include <__algorithm/remove_copy.h>
 #include <__algorithm/remove_copy_if.h>

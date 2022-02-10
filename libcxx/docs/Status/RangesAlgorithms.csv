@@ -53,7 +53,7 @@ Write,replace,Not assigned,n/a,Not started
 Write,replace_if,Not assigned,n/a,Not started
 Write,replace_copy,Not assigned,n/a,Not started
 Write,replace_copy_if,Not assigned,n/a,Not started
-Write,swap_ranges,Not assigned,n/a,Not started
+Write,swap_ranges,Nikolas Klauser,`D116303 <https://llvm.org/D116303>`_,Complete
 Write,reverse_copy,Not assigned,n/a,Not started
 Write,rotate_copy,Not assigned,n/a,Not started
 Write,sample,Not assigned,n/a,Not started
