@@ -24,18 +24,19 @@
 
 #include <format>
 #include <cassert>
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
-#  include <iostream>
-#endif
 #include <vector>
 
 #include "test_macros.h"
 #include "format_tests.h"
 
+#ifndef TEST_HAS_NO_LOCALIZATION
+#  include <iostream>
+#endif
+
 auto test = []<class CharT, class... Args>(std::basic_string_view<CharT> expected, std::basic_string_view<CharT> fmt,
                                            const Args&... args) {
   std::basic_string<CharT> out = std::format(fmt, args...);
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#ifndef TEST_HAS_NO_LOCALIZATION
   if constexpr (std::same_as<CharT, char>)
     if (out != expected)
       std::cerr << "\nFormat string   " << fmt << "\nExpected output " << expected << "\nActual output   " << out
@@ -49,14 +50,14 @@ auto test_exception = []<class CharT, class... Args>(std::string_view what, std:
 #ifndef TEST_HAS_NO_EXCEPTIONS
   try {
     std::format(fmt, args...);
-#  ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#  ifndef TEST_HAS_NO_LOCALIZATION
     if constexpr (std::same_as<CharT, char>)
       std::cerr << "\nFormat string   " << fmt << "\nDidn't throw an exception.\n";
 #  endif
     assert(false);
   } catch (const std::format_error& e) {
-#  if defined(_LIBCPP_VERSION) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
     if constexpr (std::same_as<CharT, char>)
+#  if defined(_LIBCPP_VERSION) && !defined(TEST_HAS_NO_LOCALIZATION)
       if (e.what() != what)
         std::cerr << "\nFormat string   " << fmt << "\nExpected exception " << what << "\nActual exception   "
                   << e.what() << '\n';

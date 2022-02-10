@@ -33,9 +33,6 @@
 #include <map>
 #include <optional>
 #include <queue>
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
-#  include <regex>
-#endif
 #include <set>
 #include <stack>
 #include <span>
@@ -50,6 +47,10 @@
 #include <variant>
 
 #include "test_macros.h"
+
+#ifndef TEST_HAS_NO_LOCALIZATION
+#  include <regex>
+#endif
 
 // Validate default template argument.
 static_assert(std::same_as<std::formatter<int>, std::formatter<int, char>>);
@@ -213,7 +214,7 @@ void test_P1636() {
   assert_formatter_is_disabled<std::filesystem::path, CharT>();
 #endif
   assert_formatter_is_disabled<std::shared_ptr<int>, CharT>();
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#ifndef TEST_HAS_NO_LOCALIZATION
   assert_formatter_is_disabled<std::sub_match<CharT*>, CharT>();
 #endif
 #ifndef _LIBCPP_HAS_NO_THREADS
