@@ -354,21 +354,21 @@ static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
 // Sparse compiler synthesis methods (reductions).
 //===----------------------------------------------------------------------===//
 
-/// Maps reduction kind to name encoding.
-static StringRef getReductionName(Reduction kind) {
+/// Maps reduction kind to vector::CombiningKind.
+static vector::CombiningKind getCombiningKind(Reduction kind) {
   switch (kind) {
   case kNoReduc:
     break;
   case kSum:
-    return "add";
+    return vector::CombiningKind::ADD;
   case kProduct:
-    return "mul";
+    return vector::CombiningKind::MUL;
   case kAnd:
-    return "and";
+    return vector::CombiningKind::AND;
   case kOr:
-    return "or";
+    return vector::CombiningKind::OR;
   case kXor:
-    return "xor";
+    return vector::CombiningKind::XOR;
   }
   llvm_unreachable("unknown reduction kind");
 }
@@ -427,10 +427,8 @@ static Value genVectorReducInit(CodeGen &codegen, PatternRewriter &rewriter,
 /// Generates final value for a vector reduction.
 static Value genVectorReducEnd(CodeGen &codegen, PatternRewriter &rewriter,
                                Location loc, VectorType vtp) {
-  StringRef name = getReductionName(codegen.redKind);
-  StringAttr kind = rewriter.getStringAttr(name);
-  return rewriter.create<vector::ReductionOp>(loc, vtp.getElementType(), kind,
-                                              codegen.redVal, ValueRange{});
+  vector::CombiningKind kind = getCombiningKind(codegen.redKind);
+  return rewriter.create<vector::ReductionOp>(loc, kind, codegen.redVal);
 }
 
 /// Updates scalarized reduction value.

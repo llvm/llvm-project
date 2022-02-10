@@ -33,25 +33,25 @@ func @entry() {
 
   // Various vector reductions. Not full functional unit tests, but
   // a simple integration test to see if the code runs end-to-end.
-  %0 = vector.reduction "add", %v9 : vector<10xi32> into i32
+  %0 = vector.reduction <add>, %v9 : vector<10xi32> into i32
   vector.print %0 : i32
   // CHECK: -88
-  %1 = vector.reduction "mul", %v9 : vector<10xi32> into i32
+  %1 = vector.reduction <mul>, %v9 : vector<10xi32> into i32
   vector.print %1 : i32
   // CHECK: -1228800
-  %2 = vector.reduction "minsi", %v9 : vector<10xi32> into i32
+  %2 = vector.reduction <minsi>, %v9 : vector<10xi32> into i32
   vector.print %2 : i32
   // CHECK: -80
-  %3 = vector.reduction "maxsi", %v9 : vector<10xi32> into i32
+  %3 = vector.reduction <maxsi>, %v9 : vector<10xi32> into i32
   vector.print %3 : i32
   // CHECK: 5
-  %4 = vector.reduction "and", %v9 : vector<10xi32> into i32
+  %4 = vector.reduction <and>, %v9 : vector<10xi32> into i32
   vector.print %4 : i32
   // CHECK: 0
-  %5 = vector.reduction "or", %v9 : vector<10xi32> into i32
+  %5 = vector.reduction <or>, %v9 : vector<10xi32> into i32
   vector.print %5 : i32
   // CHECK: -1
-  %6 = vector.reduction "xor", %v9 : vector<10xi32> into i32
+  %6 = vector.reduction <xor>, %v9 : vector<10xi32> into i32
   vector.print %6 : i32
   // CHECK: -68
 

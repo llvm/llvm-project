@@ -222,7 +222,7 @@ func @mul_s(%arga: tensor<1024xf32, #SparseVector>, %argb: tensor<1024xf32>, %ar
 // CHECK-VEC1:         %[[a:.*]] = arith.addf %[[red_in]], %[[m]] : vector<16xf32>
 // CHECK-VEC1:         scf.yield %[[a]] : vector<16xf32>
 // CHECK-VEC1:       }
-// CHECK-VEC1:       %{{.*}} = vector.reduction "add", %[[red]] : vector<16xf32> into f32
+// CHECK-VEC1:       %{{.*}} = vector.reduction <add>, %[[red]] : vector<16xf32> into f32
 // CHECK-VEC1:       return
 //
 // CHECK-VEC2-LABEL: func @reduction_d
@@ -239,7 +239,7 @@ func @mul_s(%arga: tensor<1024xf32, #SparseVector>, %argb: tensor<1024xf32>, %ar
 // CHECK-VEC2:         %[[a:.*]] = arith.addf %[[red_in]], %[[m]] : vector<16xf32>
 // CHECK-VEC2:         scf.yield %[[a]] : vector<16xf32>
 // CHECK-VEC2:       }
-// CHECK-VEC2:       %{{.*}} = vector.reduction "add", %[[red]] : vector<16xf32> into f32
+// CHECK-VEC2:       %{{.*}} = vector.reduction <add>, %[[red]] : vector<16xf32> into f32
 // CHECK-VEC2:       return
 //
 func @reduction_d(%arga: tensor<1024xf32, #DenseVector>, %argb: tensor<1024xf32>, %argx: tensor<f32>) -> tensor<f32> {

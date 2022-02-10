@@ -486,42 +486,42 @@ func @vector_fma(%a: vector<8xf32>, %b: vector<8x4xf32>) {
 
 // CHECK-LABEL: @reduce_fp
 func @reduce_fp(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
-  // CHECK:    vector.reduction "add", %{{.*}} : vector<16xf32> into f32
-  vector.reduction "add", %arg0 : vector<16xf32> into f32
-  // CHECK:    vector.reduction "add", %{{.*}}, %{{.*}} : vector<16xf32> into f32
-  vector.reduction "add", %arg0, %arg1 : vector<16xf32> into f32
-  // CHECK:    vector.reduction "mul", %{{.*}} : vector<16xf32> into f32
-  vector.reduction "mul", %arg0 : vector<16xf32> into f32
-  // CHECK:    vector.reduction "mul", %{{.*}}, %{{.*}} : vector<16xf32> into f32
-  vector.reduction "mul", %arg0, %arg1 : vector<16xf32> into f32
-  // CHECK:    vector.reduction "minf", %{{.*}} : vector<16xf32> into f32
-  vector.reduction "minf", %arg0 : vector<16xf32> into f32
-  // CHECK:    %[[X:.*]] = vector.reduction "maxf", %{{.*}} : vector<16xf32> into f32
-  %0 = vector.reduction "maxf", %arg0 : vector<16xf32> into f32
+  // CHECK:    vector.reduction <add>, %{{.*}} : vector<16xf32> into f32
+  vector.reduction <add>, %arg0 : vector<16xf32> into f32
+  // CHECK:    vector.reduction <add>, %{{.*}}, %{{.*}} : vector<16xf32> into f32
+  vector.reduction <add>, %arg0, %arg1 : vector<16xf32> into f32
+  // CHECK:    vector.reduction <mul>, %{{.*}} : vector<16xf32> into f32
+  vector.reduction <mul>, %arg0 : vector<16xf32> into f32
+  // CHECK:    vector.reduction <mul>, %{{.*}}, %{{.*}} : vector<16xf32> into f32
+  vector.reduction <mul>, %arg0, %arg1 : vector<16xf32> into f32
+  // CHECK:    vector.reduction <minf>, %{{.*}} : vector<16xf32> into f32
+  vector.reduction <minf>, %arg0 : vector<16xf32> into f32
+  // CHECK:    %[[X:.*]] = vector.reduction <maxf>, %{{.*}} : vector<16xf32> into f32
+  %0 = vector.reduction <maxf>, %arg0 : vector<16xf32> into f32
   // CHECK:    return %[[X]] : f32
   return %0 : f32
 }
 
 // CHECK-LABEL: @reduce_int
 func @reduce_int(%arg0: vector<16xi32>) -> i32 {
-  // CHECK:    vector.reduction "add", %{{.*}} : vector<16xi32> into i32
-  vector.reduction "add", %arg0 : vector<16xi32> into i32
-  // CHECK:    vector.reduction "mul", %{{.*}} : vector<16xi32> into i32
-  vector.reduction "mul", %arg0 : vector<16xi32> into i32
-  // CHECK:    vector.reduction "minui", %{{.*}} : vector<16xi32> into i32
-  vector.reduction "minui", %arg0 : vector<16xi32> into i32
-  // CHECK:    vector.reduction "minsi", %{{.*}} : vector<16xi32> into i32
-  vector.reduction "minsi", %arg0 : vector<16xi32> into i32
-  // CHECK:    vector.reduction "maxui", %{{.*}} : vector<16xi32> into i32
-  vector.reduction "maxui", %arg0 : vector<16xi32> into i32
-  // CHECK:    vector.reduction "maxsi", %{{.*}} : vector<16xi32> into i32
-  vector.reduction "maxsi", %arg0 : vector<16xi32> into i32
-  // CHECK:    vector.reduction "and", %{{.*}} : vector<16xi32> into i32
-  vector.reduction "and", %arg0 : vector<16xi32> into i32
-  // CHECK:    vector.reduction "or", %{{.*}} : vector<16xi32> into i32
-  vector.reduction "or", %arg0 : vector<16xi32> into i32
-  // CHECK:    %[[X:.*]] = vector.reduction "xor", %{{.*}} : vector<16xi32> into i32
-  %0 = vector.reduction "xor", %arg0 : vector<16xi32> into i32
+  // CHECK:    vector.reduction <add>, %{{.*}} : vector<16xi32> into i32
+  vector.reduction <add>, %arg0 : vector<16xi32> into i32
+  // CHECK:    vector.reduction <mul>, %{{.*}} : vector<16xi32> into i32
+  vector.reduction <mul>, %arg0 : vector<16xi32> into i32
+  // CHECK:    vector.reduction <minui>, %{{.*}} : vector<16xi32> into i32
+  vector.reduction <minui>, %arg0 : vector<16xi32> into i32
+  // CHECK:    vector.reduction <minsi>, %{{.*}} : vector<16xi32> into i32
+  vector.reduction <minsi>, %arg0 : vector<16xi32> into i32
+  // CHECK:    vector.reduction <maxui>, %{{.*}} : vector<16xi32> into i32
+  vector.reduction <maxui>, %arg0 : vector<16xi32> into i32
+  // CHECK:    vector.reduction <maxsi>, %{{.*}} : vector<16xi32> into i32
+  vector.reduction <maxsi>, %arg0 : vector<16xi32> into i32
+  // CHECK:    vector.reduction <and>, %{{.*}} : vector<16xi32> into i32
+  vector.reduction <and>, %arg0 : vector<16xi32> into i32
+  // CHECK:    vector.reduction <or>, %{{.*}} : vector<16xi32> into i32
+  vector.reduction <or>, %arg0 : vector<16xi32> into i32
+  // CHECK:    %[[X:.*]] = vector.reduction <xor>, %{{.*}} : vector<16xi32> into i32
+  %0 = vector.reduction <xor>, %arg0 : vector<16xi32> into i32
   // CHECK:    return %[[X]] : i32
   return %0 : i32
 }

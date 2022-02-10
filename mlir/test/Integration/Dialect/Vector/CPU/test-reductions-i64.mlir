@@ -33,25 +33,25 @@ func @entry() {
 
   // Various vector reductions. Not full functional unit tests, but
   // a simple integration test to see if the code runs end-to-end.
-  %0 = vector.reduction "add", %v9 : vector<10xi64> into i64
+  %0 = vector.reduction <add>, %v9 : vector<10xi64> into i64
   vector.print %0 : i64
   // CHECK: -88
-  %1 = vector.reduction "mul", %v9 : vector<10xi64> into i64
+  %1 = vector.reduction <mul>, %v9 : vector<10xi64> into i64
   vector.print %1 : i64
   // CHECK: -1228800
-  %2 = vector.reduction "minsi", %v9 : vector<10xi64> into i64
+  %2 = vector.reduction <minsi>, %v9 : vector<10xi64> into i64
   vector.print %2 : i64
   // CHECK: -80
-  %3 = vector.reduction "maxsi", %v9 : vector<10xi64> into i64
+  %3 = vector.reduction <maxsi>, %v9 : vector<10xi64> into i64
   vector.print %3 : i64
   // CHECK: 5
-  %4 = vector.reduction "and", %v9 : vector<10xi64> into i64
+  %4 = vector.reduction <and>, %v9 : vector<10xi64> into i64
   vector.print %4 : i64
   // CHECK: 0
-  %5 = vector.reduction "or", %v9 : vector<10xi64> into i64
+  %5 = vector.reduction <or>, %v9 : vector<10xi64> into i64
   vector.print %5 : i64
   // CHECK: -1
-  %6 = vector.reduction "xor", %v9 : vector<10xi64> into i64
+  %6 = vector.reduction <xor>, %v9 : vector<10xi64> into i64
   vector.print %6 : i64
   // CHECK: -68
 

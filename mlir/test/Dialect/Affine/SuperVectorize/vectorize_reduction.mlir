@@ -23,7 +23,7 @@ func @vecdim_reduction(%in: memref<256x512xf32>, %out: memref<256xf32>) {
 // CHECK:           %[[add:.*]] = arith.addf %[[red_iter]], %[[ld]] : vector<128xf32>
 // CHECK:           affine.yield %[[add]] : vector<128xf32>
 // CHECK:         }
-// CHECK:         %[[final_sum:.*]] = vector.reduction "add", %[[vred:.*]] : vector<128xf32> into f32
+// CHECK:         %[[final_sum:.*]] = vector.reduction <add>, %[[vred:.*]] : vector<128xf32> into f32
 // CHECK:         affine.store %[[final_sum]], %{{.*}} : memref<256xf32>
 // CHECK:       }
 
@@ -50,7 +50,7 @@ func @vecdim_reduction_minf(%in: memref<256x512xf32>, %out: memref<256xf32>) {
 // CHECK:           %[[min:.*]] = arith.minf %[[red_iter]], %[[ld]] : vector<128xf32>
 // CHECK:           affine.yield %[[min]] : vector<128xf32>
 // CHECK:         }
-// CHECK:         %[[final_min:.*]] = vector.reduction "minf", %[[vred:.*]] : vector<128xf32> into f32
+// CHECK:         %[[final_min:.*]] = vector.reduction <minf>, %[[vred:.*]] : vector<128xf32> into f32
 // CHECK:         affine.store %[[final_min]], %{{.*}} : memref<256xf32>
 // CHECK:       }
 
@@ -77,7 +77,7 @@ func @vecdim_reduction_maxf(%in: memref<256x512xf32>, %out: memref<256xf32>) {
 // CHECK:           %[[max:.*]] = arith.maxf %[[red_iter]], %[[ld]] : vector<128xf32>
 // CHECK:           affine.yield %[[max]] : vector<128xf32>
 // CHECK:         }
-// CHECK:         %[[final_max:.*]] = vector.reduction "maxf", %[[vred:.*]] : vector<128xf32> into f32
+// CHECK:         %[[final_max:.*]] = vector.reduction <maxf>, %[[vred:.*]] : vector<128xf32> into f32
 // CHECK:         affine.store %[[final_max]], %{{.*}} : memref<256xf32>
 // CHECK:       }
 
@@ -104,7 +104,7 @@ func @vecdim_reduction_minsi(%in: memref<256x512xi32>, %out: memref<256xi32>) {
 // CHECK:           %[[min:.*]] = arith.minsi %[[red_iter]], %[[ld]] : vector<128xi32>
 // CHECK:           affine.yield %[[min]] : vector<128xi32>
 // CHECK:         }
-// CHECK:         %[[final_min:.*]] = vector.reduction "minsi", %[[vred:.*]] : vector<128xi32> into i32
+// CHECK:         %[[final_min:.*]] = vector.reduction <minsi>, %[[vred:.*]] : vector<128xi32> into i32
 // CHECK:         affine.store %[[final_min]], %{{.*}} : memref<256xi32>
 // CHECK:       }
 
@@ -131,7 +131,7 @@ func @vecdim_reduction_maxsi(%in: memref<256x512xi32>, %out: memref<256xi32>) {
 // CHECK:           %[[max:.*]] = arith.maxsi %[[red_iter]], %[[ld]] : vector<128xi32>
 // CHECK:           affine.yield %[[max]] : vector<128xi32>
 // CHECK:         }
-// CHECK:         %[[final_max:.*]] = vector.reduction "maxsi", %[[vred:.*]] : vector<128xi32> into i32
+// CHECK:         %[[final_max:.*]] = vector.reduction <maxsi>, %[[vred:.*]] : vector<128xi32> into i32
 // CHECK:         affine.store %[[final_max]], %{{.*}} : memref<256xi32>
 // CHECK:       }
 
@@ -158,7 +158,7 @@ func @vecdim_reduction_minui(%in: memref<256x512xi32>, %out: memref<256xi32>) {
 // CHECK:           %[[min:.*]] = arith.minui %[[red_iter]], %[[ld]] : vector<128xi32>
 // CHECK:           affine.yield %[[min]] : vector<128xi32>
 // CHECK:         }
-// CHECK:         %[[final_min:.*]] = vector.reduction "minui", %[[vred:.*]] : vector<128xi32> into i32
+// CHECK:         %[[final_min:.*]] = vector.reduction <minui>, %[[vred:.*]] : vector<128xi32> into i32
 // CHECK:         affine.store %[[final_min]], %{{.*}} : memref<256xi32>
 // CHECK:       }
 
@@ -185,7 +185,7 @@ func @vecdim_reduction_maxui(%in: memref<256x512xi32>, %out: memref<256xi32>) {
 // CHECK:           %[[max:.*]] = arith.maxui %[[red_iter]], %[[ld]] : vector<128xi32>
 // CHECK:           affine.yield %[[max]] : vector<128xi32>
 // CHECK:         }
-// CHECK:         %[[final_max:.*]] = vector.reduction "maxui", %[[vred:.*]] : vector<128xi32> into i32
+// CHECK:         %[[final_max:.*]] = vector.reduction <maxui>, %[[vred:.*]] : vector<128xi32> into i32
 // CHECK:         affine.store %[[final_max]], %{{.*}} : memref<256xi32>
 // CHECK:       }
 
@@ -215,7 +215,7 @@ func @vecdim_reduction_comm(%in: memref<256x512xf32>, %out: memref<256xf32>) {
 // CHECK:           %[[add:.*]] = arith.addf %[[ld]], %[[red_iter]] : vector<128xf32>
 // CHECK:           affine.yield %[[add]] : vector<128xf32>
 // CHECK:         }
-// CHECK:         %[[final_sum:.*]] = vector.reduction "add", %[[vred:.*]] : vector<128xf32> into f32
+// CHECK:         %[[final_sum:.*]] = vector.reduction <add>, %[[vred:.*]] : vector<128xf32> into f32
 // CHECK:         affine.store %[[final_sum]], %{{.*}} : memref<256xf32>
 // CHECK:       }
 
@@ -249,7 +249,7 @@ func @vecdim_reduction_expsin(%in: memref<256x512xf32>, %out: memref<256xf32>) {
 // CHECK:           %[[add:.*]] = arith.addf %[[red_iter]], %[[exp]] : vector<128xf32>
 // CHECK:           affine.yield %[[add]] : vector<128xf32>
 // CHECK:         }
-// CHECK:         %[[final_sum:.*]] = vector.reduction "add", %[[vred:.*]] : vector<128xf32> into f32
+// CHECK:         %[[final_sum:.*]] = vector.reduction <add>, %[[vred:.*]] : vector<128xf32> into f32
 // CHECK:         affine.store %[[final_sum]], %{{.*}} : memref<256xf32>
 // CHECK:       }
 
@@ -285,13 +285,13 @@ func @two_vecdim_reductions(%in: memref<256x512xf32>, %out_sum: memref<256xf32>,
 // CHECK:           %[[mul:.*]] = arith.mulf %[[part_prod]], %[[ld]] : vector<128xf32>
 // CHECK:           affine.yield %[[add]], %[[mul]] : vector<128xf32>, vector<128xf32>
 // CHECK:         }
-// CHECK:         %[[nonfinal_sum:.*]] = vector.reduction "add", %[[vred:.*]]#0 : vector<128xf32> into f32
+// CHECK:         %[[nonfinal_sum:.*]] = vector.reduction <add>, %[[vred:.*]]#0 : vector<128xf32> into f32
 // Note that to compute the final sum we need to add the original initial value
 // (%cst) since it is not zero.
 // CHECK:         %[[final_sum:.*]] = arith.addf %[[nonfinal_sum]], %[[cst]] : f32
 // For the final product we don't need to do this additional step because the
 // initial value equals to 1 (the neutral element for multiplication).
-// CHECK:         %[[final_prod:.*]] = vector.reduction "mul", %[[vred:.*]]#1 : vector<128xf32> into f32
+// CHECK:         %[[final_prod:.*]] = vector.reduction <mul>, %[[vred:.*]]#1 : vector<128xf32> into f32
 // CHECK:         affine.store %[[final_sum]], %{{.*}} : memref<256xf32>
 // CHECK:         affine.store %[[final_prod]], %{{.*}} : memref<256xf32>
 // CHECK:       }
@@ -326,8 +326,8 @@ func @two_vecdim_reductions_int(%in: memref<256x512xi64>, %out_sum: memref<256xi
 // CHECK:           %[[mul:.*]] = arith.muli %[[part_prod]], %[[ld]] : vector<128xi64>
 // CHECK:           affine.yield %[[add]], %[[mul]] : vector<128xi64>, vector<128xi64>
 // CHECK:         }
-// CHECK:         %[[final_sum:.*]] = vector.reduction "add", %[[vred:.*]]#0 : vector<128xi64> into i64
-// CHECK:         %[[final_prod:.*]] = vector.reduction "mul", %[[vred:.*]]#1 : vector<128xi64> into i64
+// CHECK:         %[[final_sum:.*]] = vector.reduction <add>, %[[vred:.*]]#0 : vector<128xi64> into i64
+// CHECK:         %[[final_prod:.*]] = vector.reduction <mul>, %[[vred:.*]]#1 : vector<128xi64> into i64
 // CHECK:         affine.store %[[final_sum]], %{{.*}} : memref<256xi64>
 // CHECK:         affine.store %[[final_prod]], %{{.*}} : memref<256xi64>
 // CHECK:       }
@@ -363,7 +363,7 @@ func @vecdim_reduction_nested(%in: memref<256x512xf32>, %out: memref<1xf32>) {
 // CHECK:         %[[outer_add:.*]] = arith.addf %[[outer_iter]], %[[inner_red]] : vector<128xf32>
 // CHECK:         affine.yield %[[outer_add]] : vector<128xf32>
 // CHECK:       }
-// CHECK:       %[[final_sum:.*]] = vector.reduction "add", %[[outer_red:.*]] : vector<128xf32> into f32
+// CHECK:       %[[final_sum:.*]] = vector.reduction <add>, %[[outer_red:.*]] : vector<128xf32> into f32
 // CHECK:       affine.store %[[final_sum]], %{{.*}} : memref<1xf32>
 
 // -----
@@ -479,7 +479,7 @@ func @vecdim_reduction_masked(%in: memref<256x512xf32>, %out: memref<256xf32>) {
 // CHECK:           %[[new_acc:.*]] = arith.select %[[mask]], %[[add]], %[[red_iter]] : vector<128xi1>, vector<128xf32>
 // CHECK:           affine.yield %[[new_acc]] : vector<128xf32>
 // CHECK:         }
-// CHECK:         %[[final_sum:.*]] = vector.reduction "add", %[[vred:.*]] : vector<128xf32> into f32
+// CHECK:         %[[final_sum:.*]] = vector.reduction <add>, %[[vred:.*]] : vector<128xf32> into f32
 // CHECK:         affine.store %[[final_sum]], %{{.*}} : memref<256xf32>
 // CHECK:       }
 
@@ -512,7 +512,7 @@ func @vecdim_reduction_masked_unknown_ub(%in: memref<256x512xf32>, %out: memref<
 // CHECK:           %[[new_acc:.*]] = arith.select %[[mask]], %[[add]], %[[red_iter]] : vector<128xi1>, vector<128xf32>
 // CHECK:           affine.yield %[[new_acc]] : vector<128xf32>
 // CHECK:         }
-// CHECK:         %[[final_sum:.*]] = vector.reduction "add", %[[vred:.*]] : vector<128xf32> into f32
+// CHECK:         %[[final_sum:.*]] = vector.reduction <add>, %[[vred:.*]] : vector<128xf32> into f32
 // CHECK:         affine.store %[[final_sum]], %{{.*}} : memref<256xf32>
 // CHECK:       }
 
