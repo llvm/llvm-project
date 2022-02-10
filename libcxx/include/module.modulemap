@@ -628,6 +628,7 @@ module std [system] {
       module next                  { private header "__iterator/next.h" }
       module ostream_iterator      { private header "__iterator/ostream_iterator.h" }
       module ostreambuf_iterator   { private header "__iterator/ostreambuf_iterator.h" }
+      module permutable            { private header "__iterator/permutable.h" }
       module prev                  { private header "__iterator/prev.h" }
       module projected             { private header "__iterator/projected.h" }
       module readable_traits       { private header "__iterator/readable_traits.h" }
