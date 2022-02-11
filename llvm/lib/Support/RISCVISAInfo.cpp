@@ -837,6 +837,38 @@ void RISCVISAInfo::updateImplication() {
   }
 }
 
+struct CombinedExtsEntry {
+  StringLiteral CombineExt;
+  ArrayRef<const char *> RequiredExts;
+};
+
+static constexpr CombinedExtsEntry CombineIntoExts[] = {
+    {{"zk"}, {ImpliedExtsZk}},
+    {{"zkn"}, {ImpliedExtsZkn}},
+    {{"zks"}, {ImpliedExtsZks}},
+};
+
+void RISCVISAInfo::updateCombination() {
+  bool IsNewCombine = false;
+  do {
+    IsNewCombine = false;
+    for (CombinedExtsEntry CombineIntoExt : CombineIntoExts) {
+      auto CombineExt = CombineIntoExt.CombineExt;
+      auto RequiredExts = CombineIntoExt.RequiredExts;
+      if (hasExtension(CombineExt))
+        continue;
+      bool IsAllRequiredFeatureExist = true;
+      for (const char *Ext : RequiredExts)
+        IsAllRequiredFeatureExist &= hasExtension(Ext);
+      if (IsAllRequiredFeatureExist) {
+        auto Version = findDefaultVersion(CombineExt);
+        addExtension(CombineExt, Version->Major, Version->Minor);
+        IsNewCombine = true;
+      }
+    }
+  } while (IsNewCombine);
+}
+
 void RISCVISAInfo::updateFLen() {
   FLen = 0;
   // TODO: Handle q extension.
@@ -910,6 +942,7 @@ std::vector<std::string> RISCVISAInfo::toFeatureVector() const {
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 RISCVISAInfo::postProcessAndChecking(std::unique_ptr<RISCVISAInfo> &&ISAInfo) {
   ISAInfo->updateImplication();
+  ISAInfo->updateCombination();
   ISAInfo->updateFLen();
   ISAInfo->updateMinVLen();
   ISAInfo->updateMaxELen();

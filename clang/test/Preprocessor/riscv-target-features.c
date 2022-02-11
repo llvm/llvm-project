@@ -409,3 +409,27 @@
 // RUN: -march=rv64izk1p0 -x c -E -dM %s -o - \
 // RUN: | FileCheck --check-prefix=CHECK-ZK-EXT %s
 // CHECK-ZK-EXT: __riscv_zk
+
+// RUN: %clang -target riscv32-unknown-linux-gnu \
+// RUN: -march=rv32i_zkn_zkt_zkr -x c -E -dM %s -o - \
+// RUN: | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZK %s
+// RUN: %clang -target riscv64-unknown-linux-gnu \
+// RUN: -march=rv64i_zkn_zkt_zkr -x c -E -dM %s -o - \
+// RUN: | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZK %s
+// CHECK-COMBINE-INTO-ZK: __riscv_zk 1
+
+// RUN: %clang -target riscv32-unknown-linux-gnu \
+// RUN: -march=rv32i_zbkb_zbkc_zbkx_zkne_zknd_zknh -x c -E -dM %s -o - \
+// RUN: | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZKN %s
+// RUN: %clang -target riscv64-unknown-linux-gnu \
+// RUN: -march=rv64i_zbkb_zbkc_zbkx_zkne_zknd_zknh -x c -E -dM %s -o - \
+// RUN: | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZKN %s
+// CHECK-COMBINE-INTO-ZKN: __riscv_zkn 1
+
+// RUN: %clang -target riscv32-unknown-linux-gnu \
+// RUN: -march=rv32i_zbkb_zbkc_zbkx_zksed_zksh -x c -E -dM %s -o - \
+// RUN: | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZKS %s
+// RUN: %clang -target riscv64-unknown-linux-gnu \
+// RUN: -march=rv64i_zbkb_zbkc_zbkx_zksed_zksh -x c -E -dM %s -o - \
+// RUN: | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZKS %s
+// CHECK-COMBINE-INTO-ZKS: __riscv_zks 1
