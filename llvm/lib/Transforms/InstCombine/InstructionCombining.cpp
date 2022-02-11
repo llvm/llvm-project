@@ -2280,7 +2280,8 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
     for (auto I = PN->op_begin()+1, E = PN->op_end(); I !=E; ++I) {
       auto *Op2 = dyn_cast<GetElementPtrInst>(*I);
-      if (!Op2 || Op1->getNumOperands() != Op2->getNumOperands())
+      if (!Op2 || Op1->getNumOperands() != Op2->getNumOperands() ||
+          Op1->getSourceElementType() != Op2->getSourceElementType())
         return nullptr;
 
       // As for Op1 above, don't try to fold a GEP into itself.
