@@ -664,17 +664,22 @@ SwiftLanguageRuntimeImpl::emplaceClangTypeInfo(
     m_clang_type_info.insert({clang_type.GetOpaqueQualType(), llvm::None});
     return nullptr;
   }
+  assert(*bit_align % 8 == 0 && "Bit alignment no a multiple of 8!");
+  auto byte_align = *bit_align / 8;
+  // The stride is the size rounded up to alignment.
+  size_t byte_stride = llvm::alignTo(*byte_size, byte_align);
   if (fields.empty()) {
     auto it_b = m_clang_type_info.insert(
         {clang_type.GetOpaqueQualType(),
          swift::reflection::TypeInfo(swift::reflection::TypeInfoKind::Builtin,
-                                     *byte_size, *bit_align / 8, 0, 0, true)});
+                                     *byte_size, byte_align, byte_stride, 0,
+                                     true)});
     return &*it_b.first->second;
   }
   auto it_b = m_clang_record_type_info.insert(
       {clang_type.GetOpaqueQualType(),
        swift::reflection::RecordTypeInfo(
-           *byte_size, *bit_align / 8, 0, 0, false,
+           *byte_size, byte_align, byte_stride, 0, false,
            swift::reflection::RecordKind::Struct, fields)});
   return &*it_b.first->second;
 }
