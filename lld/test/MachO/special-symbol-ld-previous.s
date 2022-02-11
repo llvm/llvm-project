@@ -27,7 +27,7 @@
 
 ## Check that we emit a warning for an invalid start, end and compatibility versions.
 
-# RUN: %no_fatal_warnings_lld -o %t/libfoo1.dylib %t/libLDPreviousInvalid.tbd %t/foo.o -dylib \
+# RUN: %no-fatal-warnings-lld -o %t/libfoo1.dylib %t/libLDPreviousInvalid.tbd %t/foo.o -dylib \
 # RUN:  -platform_version macos 11.0.0 11.0.0 2>&1 | FileCheck --check-prefix=INVALID-VERSION %s
 
 # INVALID-VERSION-DAG: failed to parse start version, symbol '$ld$previous$/New$1.2.3$1$3.a$14.0$$' ignored

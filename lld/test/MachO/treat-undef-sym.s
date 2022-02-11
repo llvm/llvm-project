@@ -17,7 +17,7 @@
 # RUN: llvm-objdump --macho --lazy-bind %t/live.out \
 # RUN:     | FileCheck --check-prefix=BIND %s
 
-# RUN: %no_fatal_warnings_lld -lSystem -flat_namespace -undefined warning \
+# RUN: %no-fatal-warnings-lld -lSystem -flat_namespace -undefined warning \
 # RUN:     -o %t/live.out %t/live.o 2>&1 | \
 # RUN:     FileCheck %s -check-prefix=WARNING
 # RUN: llvm-objdump --macho --lazy-bind %t/live.out \
