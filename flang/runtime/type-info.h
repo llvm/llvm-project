@@ -38,7 +38,7 @@ public:
     Explicit = 2,
     LenParameter = 3
   };
-
+  Genre genre() const { return genre_; }
   std::optional<TypeParameterValue> GetValue(const Descriptor *) const;
 
 private:
