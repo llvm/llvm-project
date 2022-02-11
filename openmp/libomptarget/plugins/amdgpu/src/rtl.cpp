@@ -1345,6 +1345,11 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int WarpSize,
                    int DeviceNumTeams) {
 
   threadsPerGroup = RTLDeviceInfoTy::Default_WG_Size;
+  // If ConstWGSize is different from the default WG size, use this
+  // value provided by the frontend as the starting point
+  if (threadsPerGroup != ConstWGSize)
+    threadsPerGroup = ConstWGSize;
+
   num_groups = 0;
 
   int Max_Teams =

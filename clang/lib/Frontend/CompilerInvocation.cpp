@@ -3507,6 +3507,10 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Args, OPT_fopenmp_cuda_teams_reduction_recs_num_EQ,
                 Twine(Opts.OpenMPCUDAReductionBufNum), SA);
 
+  if (Opts.OpenMPGPUThreadsPerTeam != 256)
+    GenerateArg(Args, OPT_fopenmp_gpu_threads_per_team_EQ,
+                Twine(Opts.OpenMPGPUThreadsPerTeam), SA);
+
   if (!Opts.OMPTargetTriples.empty()) {
     std::string Targets;
     llvm::raw_string_ostream OS(Targets);
@@ -3937,6 +3941,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         Args, options::OPT_fopenmp_cuda_teams_reduction_recs_num_EQ,
         Opts.OpenMPCUDAReductionBufNum, Diags);
   }
+
+  Opts.OpenMPGPUThreadsPerTeam =
+      getLastArgIntValue(Args, options::OPT_fopenmp_gpu_threads_per_team_EQ,
+                         Opts.OpenMPGPUThreadsPerTeam, Diags);
 
   // Set the value of the debugging flag used in the new offloading device RTL.
   // Set either by a specific value or to a default if not specified.

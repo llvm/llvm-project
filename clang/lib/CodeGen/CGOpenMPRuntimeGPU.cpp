@@ -1056,13 +1056,21 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
                                             bool IsGeneric) {
   if (!CGM.getTriple().isAMDGCN())
     return;
+
   int FlatAttr = 0;
   bool flatAttrEmitted = false;
-  int DefaultWorkGroupSz =
+  unsigned CmdLineWorkGroupSz = CGM.getLangOpts().OpenMPGPUThreadsPerTeam;
+  // Sanitize the workgroup size received from the command line. This logic
+  // must be kept in sync with the amdgpu plugin
+  if (CmdLineWorkGroupSz < CGM.getTarget().getGridValue().GV_Default_WG_Size ||
+      CmdLineWorkGroupSz > CGM.getTarget().getGridValue().GV_Max_WG_Size)
+    CmdLineWorkGroupSz = CGM.getTarget().getGridValue().GV_Default_WG_Size;
+  unsigned DefaultWorkGroupSz =
       CGM.getTarget().getGridValue().GV_Default_WG_Size;
   // If constant ThreadLimit(), set reqd_work_group_size metadata
   if (isOpenMPTeamsDirective(D.getDirectiveKind()) ||
-      isOpenMPParallelDirective(D.getDirectiveKind())) {
+      isOpenMPParallelDirective(D.getDirectiveKind()) ||
+      CmdLineWorkGroupSz != DefaultWorkGroupSz) {
     const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
     const auto *NumThreadsClause = D.getSingleClause<OMPNumThreadsClause>();
     int compileTimeThreadLimit = 0;
@@ -1077,6 +1085,8 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
       clang::Expr::EvalResult Result;
       if (NumThreadsExpr->EvaluateAsInt(Result, CGM.getContext()))
         compileTimeThreadLimit = Result.Val.getInt().getExtValue();
+    } else if (CmdLineWorkGroupSz != DefaultWorkGroupSz) {
+      compileTimeThreadLimit = CmdLineWorkGroupSz;
     }
     // printf("========= WARNING CONSTANT Compile-Time TL: %d\n",
     //       compileTimeThreadLimit);
@@ -1091,16 +1101,16 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
                             AttrVal + "," + AttrVal);
       flatAttrEmitted = true;
     } // end   > 0
-  } // end of amdgcn teams or parallel directive
+  }   // end of amdgcn teams or parallel directive
 
   // emit amdgpu-flat-work-group-size if not emitted already.
   if (!flatAttrEmitted) {
     // When outermost construct does not have teams or parallel
     // workgroup size is still based on mode
-    int GenericModeWorkgroupSize = DefaultWorkGroupSz;
+    int GenericModeWorkgroupSize = CmdLineWorkGroupSz;
     if (IsGeneric)
       GenericModeWorkgroupSize =
-          ComputeGenericWorkgroupSize(CGM, DefaultWorkGroupSz);
+          ComputeGenericWorkgroupSize(CGM, CmdLineWorkGroupSz);
 
     std::string FlatAttrVal = llvm::utostr(GenericModeWorkgroupSize);
     FlatAttr = GenericModeWorkgroupSize;
