@@ -1458,7 +1458,6 @@ private:
             case Intrinsic::nvvm_barrier0_and:
             case Intrinsic::nvvm_barrier0_or:
             case Intrinsic::nvvm_barrier0_popc:
-            case Intrinsic::amdgcn_s_barrier:
               return true;
             default:
               break;
