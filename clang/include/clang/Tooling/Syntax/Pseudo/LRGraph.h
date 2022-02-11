@@ -18,7 +18,7 @@
 //
 //  LRGraph can be constructed for any context-free grammars.
 //  Even for a LR-ambiguous grammar, we can construct a deterministic FSA, but
-//  interpretation of the FSA is nondeterminsitic -- we might in a state where
+//  interpretation of the FSA is nondeterministic -- we might in a state where
 //  we can continue searching an handle and identify a handle (called
 //  shift/reduce conflicts), or identify more than one handle (callled
 //  reduce/reduce conflicts).
@@ -116,7 +116,7 @@ struct State {
 //
 // Intuitively, an LR automaton is a transition graph. The graph has a
 // collection of nodes, called States. Each state corresponds to a particular
-// item set, which represents a condition that could occur duing the process of
+// item set, which represents a condition that could occur during the process of
 // parsing a production. Edges are directed from one state to another. Each edge
 // is labeled by a grammar symbol (terminal or nonterminal).
 //
