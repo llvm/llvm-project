@@ -21,7 +21,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S s, typename S::size_type pos1, typename S::size_type n1, const typename S::value_type* str, S expected)
 {
     typename S::size_type old_size = s.size();
@@ -36,7 +36,7 @@ test(S s, typename S::size_type pos1, typename S::size_type n1, const typename S
 }
 
 template <class S>
-void test0()
+TEST_CONSTEXPR_CXX20 void test0()
 {
     test(S(""), 0, 0, "", S(""));
     test(S(""), 0, 0, "12345", S("12345"));
@@ -141,7 +141,7 @@ void test0()
 }
 
 template <class S>
-void test1()
+TEST_CONSTEXPR_CXX20 void test1()
 {
     test(S("abcdefghij"), 1, 4, "", S("afghij"));
     test(S("abcdefghij"), 1, 4, "12345", S("a12345fghij"));
@@ -246,7 +246,7 @@ void test1()
 }
 
 template <class S>
-void test2()
+TEST_CONSTEXPR_CXX20 void test2()
 {
     test(S("abcdefghijklmnopqrst"), 10, 10, "", S("abcdefghij"));
     test(S("abcdefghijklmnopqrst"), 10, 10, "12345", S("abcdefghij12345"));
@@ -266,24 +266,23 @@ void test2()
     test(S("abcdefghijklmnopqrst"), 20, 0, "12345678901234567890", S("abcdefghijklmnopqrst12345678901234567890"));
 }
 
-int main(int, char**)
-{
-    {
+bool test() {
+  {
     typedef std::string S;
     test0<S>();
     test1<S>();
     test2<S>();
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     test0<S>();
     test1<S>();
     test2<S>();
-    }
+  }
 #endif
 
-    { // test replacing into self
+  { // test replacing into self
     typedef std::string S;
     S s_short = "123/";
     S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
@@ -297,7 +296,17 @@ int main(int, char**)
 
     s_long.replace(s_long.begin(), s_long.begin(), s_long.c_str());
     assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
-    }
+  }
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
+#endif
 
   return 0;
 }
