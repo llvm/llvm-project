@@ -1378,6 +1378,12 @@ llvm.func @invoke_phis() -> i32 attributes { personality = @__gxx_personality_v0
 
 // -----
 
+// CHECK-LABEL: @hasGCFunction
+// CHECK-SAME: gc "statepoint-example"
+llvm.func @hasGCFunction() attributes { garbageCollector = "statepoint-example" } {
+    llvm.return
+}
+
 // CHECK-LABEL: @callFreezeOp
 llvm.func @callFreezeOp(%x : i32) {
   // CHECK: freeze i32 %{{[0-9]+}}

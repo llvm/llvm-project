@@ -797,6 +797,9 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
       llvmFunc->setPersonalityFn(pfunc);
   }
 
+  if (auto gc = func.getGarbageCollector())
+    llvmFunc->setGC(gc->str());
+
   // First, create all blocks so we can jump to them.
   llvm::LLVMContext &llvmContext = llvmFunc->getContext();
   for (auto &bb : func) {
