@@ -71,6 +71,7 @@ module LLVM_BinaryFormat {
     textual header "BinaryFormat/ELFRelocs/Hexagon.def"
     textual header "BinaryFormat/ELFRelocs/i386.def"
     textual header "BinaryFormat/ELFRelocs/Lanai.def"
+    textual header "BinaryFormat/ELFRelocs/LoongArch.def"
     textual header "BinaryFormat/ELFRelocs/M68k.def"
     textual header "BinaryFormat/ELFRelocs/Mips.def"
     textual header "BinaryFormat/ELFRelocs/MSP430.def"
@@ -83,7 +84,6 @@ module LLVM_BinaryFormat {
     textual header "BinaryFormat/ELFRelocs/x86_64.def"
     textual header "BinaryFormat/WasmRelocs.def"
     textual header "BinaryFormat/MsgPack.def"
-    textual header "BinaryFormat/ELFRelocs/LoongArch.def"
 }
 
 module LLVM_Config {
