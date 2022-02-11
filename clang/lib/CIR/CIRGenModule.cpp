@@ -72,7 +72,8 @@ using llvm::StringRef;
 CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
                            clang::ASTContext &astctx,
                            const clang::CodeGenOptions &CGO)
-    : builder(&context), astCtx(astctx), codeGenOpts(CGO) {
+    : builder(&context), astCtx(astctx), codeGenOpts(CGO),
+      langOpts(astctx.getLangOpts()) {
   theModule = mlir::ModuleOp::create(builder.getUnknownLoc());
   genTypes = std::make_unique<CIRGenTypes>(astCtx, this->getBuilder());
 }
