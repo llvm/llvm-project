@@ -126,15 +126,18 @@ static MCInst lowerSubvectorStore(const MachineInstr *MI, unsigned Opcode) {
 
 void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   SystemZMCInstLower Lower(MF->getContext(), *this);
-  const SystemZSubtarget *Subtarget = &MF->getSubtarget<SystemZSubtarget>();
   MCInst LoweredMI;
   switch (MI->getOpcode()) {
   case SystemZ::Return:
-    if (Subtarget->isTargetXPLINK64())
-      LoweredMI =
-          MCInstBuilder(SystemZ::B).addReg(SystemZ::R7D).addImm(2).addReg(0);
-    else
-      LoweredMI = MCInstBuilder(SystemZ::BR).addReg(SystemZ::R14D);
+    LoweredMI = MCInstBuilder(SystemZ::BR)
+      .addReg(SystemZ::R14D);
+    break;
+
+  case SystemZ::Return_XPLINK:
+    LoweredMI = MCInstBuilder(SystemZ::B)
+      .addReg(SystemZ::R7D)
+      .addImm(2)
+      .addReg(0);
     break;
 
   case SystemZ::CondReturn:
@@ -142,6 +145,15 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addImm(MI->getOperand(0).getImm())
       .addImm(MI->getOperand(1).getImm())
       .addReg(SystemZ::R14D);
+    break;
+
+  case SystemZ::CondReturn_XPLINK:
+    LoweredMI = MCInstBuilder(SystemZ::BC)
+      .addImm(MI->getOperand(0).getImm())
+      .addImm(MI->getOperand(1).getImm())
+      .addReg(SystemZ::R7D)
+      .addImm(2)
+      .addReg(0);
     break;
 
   case SystemZ::CRBReturn:
