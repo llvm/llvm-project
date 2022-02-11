@@ -25,6 +25,7 @@
 #include "sanitizer_common.h"
 #include "sanitizer_file.h"
 #include "sanitizer_flags.h"
+#include "sanitizer_interface_internal.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_libc.h"
 #include "sanitizer_platform_limits_posix.h"
