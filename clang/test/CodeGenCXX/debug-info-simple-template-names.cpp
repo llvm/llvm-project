@@ -16,6 +16,17 @@ struct t2 {
 };
 template <template <typename...> class T>
 void f3() {}
+namespace {
+enum LocalEnum { LocalEnum1 };
+}
+template<typename T, T ... ts>
+struct t3 { };
+struct t4 {
+  t3<LocalEnum, LocalEnum1> m1;
+};
+  
+t4 v1;
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "t3<(anonymous namespace)::LocalEnum, (anonymous namespace)::LocalEnum1>"
 void f() {
   // Basic examples of simplifiable/rebuildable names
   f1<>();
