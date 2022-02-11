@@ -1779,13 +1779,11 @@ public:
     return nullptr;
   }
 
-  /// Extract the elementtype type for a call or parameter.
+  /// Extract the elementtype type for a parameter.
+  /// Note that elementtype() can only be applied to call arguments, not
+  /// function declaration parameters.
   Type *getParamElementType(unsigned ArgNo) const {
-    if (auto *Ty = Attrs.getParamElementType(ArgNo))
-      return Ty;
-    if (const Function *F = getCalledFunction())
-      return F->getAttributes().getParamElementType(ArgNo);
-    return nullptr;
+    return Attrs.getParamElementType(ArgNo);
   }
 
   /// Extract the number of dereferenceable bytes for a call or
