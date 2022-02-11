@@ -1975,9 +1975,8 @@ TEST_F(FormatTest, ElseIf) {
 
 TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
   FormatStyle Style = getLLVMStyle();
-  // Check first the default LLVM style
-  // Style.PointerAlignment = FormatStyle::PAS_Right;
-  // Style.ReferenceAlignment = FormatStyle::RAS_Pointer;
+  EXPECT_EQ(Style.PointerAlignment, FormatStyle::PAS_Right);
+  EXPECT_EQ(Style.ReferenceAlignment, FormatStyle::RAS_Pointer);
   verifyFormat("int *f1(int *a, int &b, int &&c);", Style);
   verifyFormat("int &f2(int &&c, int *a, int &b);", Style);
   verifyFormat("int &&f3(int &b, int &&c, int *a);", Style);
