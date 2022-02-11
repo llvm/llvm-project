@@ -2474,7 +2474,7 @@ SwiftPersistentExpressionState *
 Target::GetSwiftPersistentExpressionState(ExecutionContextScope &exe_scope) {
   Status error;
   auto maybe_swift_ast_context =
-      GetScratchSwiftASTContext(error, exe_scope, true);
+      GetSwiftScratchContext(error, exe_scope, true);
   if (!maybe_swift_ast_context)
     return nullptr;
   return (SwiftPersistentExpressionState *)
@@ -2555,7 +2555,7 @@ Target::CreateUtilityFunction(std::string expression, std::string name,
 }
 
 #ifdef LLDB_ENABLE_SWIFT
-llvm::Optional<SwiftASTContextReader> Target::GetScratchSwiftASTContext(
+llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
     Status &error, ExecutionContextScope &exe_scope, bool create_on_demand) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
   LLDB_SCOPED_TIMER();
@@ -2637,7 +2637,7 @@ llvm::Optional<SwiftASTContextReader> Target::GetScratchSwiftASTContext(
 
   if (!swift_ast_ctx)
     return llvm::None;
-  return SwiftASTContextReader(GetSwiftScratchContextLock(), *swift_ast_ctx);
+  return SwiftScratchContextReader(GetSwiftScratchContextLock(), *swift_ast_ctx);
 }
 
 static SharedMutex *
@@ -2650,7 +2650,8 @@ GetSwiftScratchContextMutex(const ExecutionContext *exe_ctx) {
   return nullptr;
 }
 
-SwiftASTContextLock::SwiftASTContextLock(const ExecutionContext *exe_ctx)
+SwiftScratchContextLock::SwiftScratchContextLock(
+    const ExecutionContext *exe_ctx)
     : ScopedSharedMutexReader(GetSwiftScratchContextMutex(exe_ctx)) {}
 
 static SharedMutex *
@@ -2661,7 +2662,8 @@ GetSwiftScratchContextMutex(const ExecutionContextRef *exe_ctx_ref) {
   return GetSwiftScratchContextMutex(&exe_ctx);
 }
 
-SwiftASTContextLock::SwiftASTContextLock(const ExecutionContextRef *exe_ctx_ref)
+SwiftScratchContextLock::SwiftScratchContextLock(
+    const ExecutionContextRef *exe_ctx_ref)
     : ScopedSharedMutexReader(GetSwiftScratchContextMutex(exe_ctx_ref)) {}
 
 void Target::DisplayFallbackSwiftContextErrors(

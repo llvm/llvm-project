@@ -925,8 +925,8 @@ public:
     if (m_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
 #ifdef LLDB_ENABLE_SWIFT
       Status status;
-      llvm::Optional<SwiftASTContextReader> maybe_type_system =
-          target_sp->GetScratchSwiftASTContext(status, *exe_scope);
+      llvm::Optional<SwiftScratchContextReader> maybe_type_system =
+          target_sp->GetSwiftScratchContext(status, *exe_scope);
       if (!maybe_type_system) {
         err.SetErrorStringWithFormat("Couldn't dematerialize a result variable: "
                                      "couldn't get the corresponding type "

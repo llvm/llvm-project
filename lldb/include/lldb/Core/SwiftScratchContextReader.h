@@ -53,11 +53,11 @@ public:
 /// RAII acquisition of a reader lock.
 struct ScopedSharedMutexReader {
   SharedMutex *m_mutex;
-  ScopedSharedMutexReader(const ScopedSharedMutexReader&) = default;
   explicit ScopedSharedMutexReader(SharedMutex *m) : m_mutex(m) {
     if (m_mutex)
       m_mutex->lock_shared();
   }
+  ScopedSharedMutexReader(const ScopedSharedMutexReader&) = default;
 
   ~ScopedSharedMutexReader() {
     if (m_mutex)
@@ -65,7 +65,7 @@ struct ScopedSharedMutexReader {
   }
 };
 
-/// A scratch Swift AST context pointer and its reader lock.
+/// A scratch Swift context pointer and its reader lock.
 /// The Swift scratch context may need to be replaced when it gets corrupted,
 /// for example due to incompatible ClangImporter options. This locking
 /// mechanism guarantees that this won't happen while a client is using the
@@ -87,20 +87,21 @@ struct ScopedSharedMutexReader {
 /// Because expressions and dynamic type resolution may trigger the
 /// import of another module, the scratch context may become
 /// unusable. When a scratch context is in a fatal error state,
-/// GetScratchSwiftASTContext() will create a fresh global context,
+/// GetSwiftScratchContext() will create a fresh global context,
 /// or even separate scratch contexts for each lldb::Module. But it
 /// will only do this if no client holds on to a read lock on \b
 /// m_scratch_typesystem_lock.
-class SwiftASTContextReader : ScopedSharedMutexReader {
+class SwiftScratchContextReader : ScopedSharedMutexReader {
   SwiftASTContextForExpressions *m_ptr;
 
 public:
-  SwiftASTContextReader(SharedMutex &mutex, SwiftASTContextForExpressions &ctx)
+  SwiftScratchContextReader(SharedMutex &mutex,
+                            SwiftASTContextForExpressions &ctx)
       : ScopedSharedMutexReader(&mutex), m_ptr(&ctx) {
     assert(m_ptr && "invalid context");
   }
 
-  SwiftASTContextReader(const SwiftASTContextReader &copy)
+  SwiftScratchContextReader(const SwiftScratchContextReader &copy)
       : ScopedSharedMutexReader(copy.m_mutex), m_ptr(copy.m_ptr) {}
 
   SwiftASTContextForExpressions *get() {
@@ -109,14 +110,13 @@ public:
   }
 
   SwiftASTContextForExpressions *operator->() { return get(); }
-
   SwiftASTContextForExpressions &operator*() { return *get(); }
 };
 
 /// An RAII object that just acquires the reader lock.
-struct SwiftASTContextLock : ScopedSharedMutexReader {
-  SwiftASTContextLock(const ExecutionContextRef *exe_ctx_ref);
-  SwiftASTContextLock(const ExecutionContext *exe_ctx);
+struct SwiftScratchContextLock : ScopedSharedMutexReader {
+  SwiftScratchContextLock(const ExecutionContextRef *exe_ctx_ref);
+  SwiftScratchContextLock(const ExecutionContext *exe_ctx);
 };
 
 } // namespace lldb_private

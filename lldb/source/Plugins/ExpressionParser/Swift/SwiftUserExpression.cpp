@@ -186,8 +186,8 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
   // Make sure the target's SwiftASTContext has been setup before doing any
   // Swift name lookups.
-  llvm::Optional<SwiftASTContextReader> maybe_swift_ast_ctx =
-      m_target->GetScratchSwiftASTContext(err, *frame);
+  llvm::Optional<SwiftScratchContextReader> maybe_swift_ast_ctx =
+      m_target->GetSwiftScratchContext(err, *frame);
   if (!maybe_swift_ast_ctx) {
     LLDB_LOG(log, "  [SUE::SC] NULL Swift AST Context");
     return;
@@ -299,8 +299,8 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 
   // Make sure the target's SwiftASTContext has been setup before doing any
   // Swift name lookups.
-  llvm::Optional<SwiftASTContextReader> maybe_swift_ast_ctx =
-      target->GetScratchSwiftASTContext(err, *frame);
+  llvm::Optional<SwiftScratchContextReader> maybe_swift_ast_ctx =
+      target->GetSwiftScratchContext(err, *frame);
   if (!maybe_swift_ast_ctx) {
     LLDB_LOG(log, "no Swift AST Context");
     return false;

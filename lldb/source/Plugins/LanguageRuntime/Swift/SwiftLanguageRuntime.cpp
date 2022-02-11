@@ -846,7 +846,7 @@ SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Copy(ValueObject &object,
   auto *swift_ast_ctx =
       llvm::dyn_cast_or_null<TypeSystemSwift>(static_type.GetTypeSystem());
   if (swift_ast_ctx) {
-    SwiftASTContextLock lock(GetSwiftExeCtx(object));
+    SwiftScratchContextLock lock(GetSwiftExeCtx(object));
     static_type = BindGenericTypeParameters(*frame_sp, static_type);
   }
 
@@ -1074,8 +1074,8 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
       Status error;
       Target &target = frame.GetThread()->GetProcess()->GetTarget();
       ExecutionContext exe_ctx(frame);
-      llvm::Optional<SwiftASTContextReader> maybe_swift_ast =
-          target.GetScratchSwiftASTContext(error, frame);
+      llvm::Optional<SwiftScratchContextReader> maybe_swift_ast =
+          target.GetSwiftScratchContext(error, frame);
       if (maybe_swift_ast) {
         SwiftASTContext *swift_ast = maybe_swift_ast->get();
         CompilerType function_type = swift_ast->GetTypeFromMangledTypename(
@@ -1281,8 +1281,8 @@ SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
   if (!exe_scope)
     return error_valobj_sp;
 
-  llvm::Optional<SwiftASTContextReader> maybe_ast_context =
-      target->GetScratchSwiftASTContext(error, *frame_sp);
+  llvm::Optional<SwiftScratchContextReader> maybe_ast_context =
+      target->GetSwiftScratchContext(error, *frame_sp);
   if (!maybe_ast_context || error.Fail())
     return error_valobj_sp;
   SwiftASTContext *ast_context = maybe_ast_context->get();
@@ -1620,7 +1620,7 @@ SwiftLanguageRuntimeImpl::GetBridgedSyntheticChildProvider(
   ProjectionSyntheticChildren::TypeProjectionUP type_projection(
       new ProjectionSyntheticChildren::TypeProjectionUP::element_type());
 
-  if (auto maybe_swift_ast_ctx = valobj.GetScratchSwiftASTContext()) {
+  if (auto maybe_swift_ast_ctx = valobj.GetSwiftScratchContext()) {
     CompilerType swift_type =
         maybe_swift_ast_ctx->get()->GetTypeFromMangledTypename(type_name);
 

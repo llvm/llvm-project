@@ -294,8 +294,8 @@ HashedCollectionConfig::StorageObjectAtAddress(
   // same address.
   Status error;
   ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
-  llvm::Optional<SwiftASTContextReader> reader =
-    process_sp->GetTarget().GetScratchSwiftASTContext(error, *exe_scope);
+  llvm::Optional<SwiftScratchContextReader> reader =
+    process_sp->GetTarget().GetSwiftScratchContext(error, *exe_scope);
   if (!reader)
     return nullptr;
   if (error.Fail())
@@ -456,7 +456,8 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
     m_value_stride = value_type_stride ? *value_type_stride : 0;
     if (TypeSystemSwift *type_system =
             llvm::dyn_cast_or_null<TypeSystemSwift>(key_type.GetTypeSystem())) {
-      llvm::Optional<SwiftASTContextReader> scratch_ctx_reader = nativeStorage_sp->GetScratchSwiftASTContext();
+      llvm::Optional<SwiftScratchContextReader> scratch_ctx_reader =
+          nativeStorage_sp->GetSwiftScratchContext();
       if (!scratch_ctx_reader)
         return;
       auto *runtime = SwiftLanguageRuntime::Get(m_process);

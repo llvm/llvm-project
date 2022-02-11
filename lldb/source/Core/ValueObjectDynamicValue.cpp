@@ -148,7 +148,7 @@ bool ValueObjectDynamicValue::UpdateValue() {
   }
 
 #ifdef LLDB_ENABLE_SWIFT
-  auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
+  auto swift_scratch_ctx_lock = SwiftScratchContextLock(&exe_ctx);
 #endif // LLDB_ENABLE_SWIFT
 
   // First make sure our Type and/or Address haven't changed:
@@ -437,8 +437,8 @@ bool ValueObjectDynamicValue::DynamicValueTypeInfoNeedsUpdate() {
 
 #ifdef LLDB_ENABLE_SWIFT
   auto *cached_ctx = m_value.GetCompilerType().GetTypeSystem();
-  llvm::Optional<SwiftASTContextReader> scratch_ctx =
-      GetScratchSwiftASTContext();
+  llvm::Optional<SwiftScratchContextReader> scratch_ctx =
+      GetSwiftScratchContext();
 
   if (!scratch_ctx || !cached_ctx)
     return true;

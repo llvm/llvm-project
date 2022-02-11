@@ -24,7 +24,7 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/UserSettingsController.h"
-#include "lldb/Core/SwiftASTContextReader.h"
+#include "lldb/Core/SwiftScratchContextReader.h"
 #include "lldb/Expression/Expression.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
@@ -1190,9 +1190,9 @@ public:
     return m_scratch_typesystem_lock;
   }
 
-  llvm::Optional<SwiftASTContextReader>
-  GetScratchSwiftASTContext(Status &error, ExecutionContextScope &exe_scope,
-                            bool create_on_demand = true);
+  llvm::Optional<SwiftScratchContextReader>
+  GetSwiftScratchContext(Status &error, ExecutionContextScope &exe_scope,
+                         bool create_on_demand = true);
 
   /// Return whether this is the Swift REPL.
   bool IsSwiftREPL();

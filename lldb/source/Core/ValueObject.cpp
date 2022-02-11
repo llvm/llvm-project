@@ -1639,14 +1639,14 @@ bool ValueObject::GetDeclaration(Declaration &decl) {
 }
 
 #ifdef LLDB_ENABLE_SWIFT
-llvm::Optional<SwiftASTContextReader> ValueObject::GetScratchSwiftASTContext() {
+llvm::Optional<SwiftScratchContextReader> ValueObject::GetSwiftScratchContext() {
   lldb::TargetSP target_sp(GetTargetSP());
   if (!target_sp)
     return llvm::None;
   Status error;
   ExecutionContext ctx = GetExecutionContextRef().Lock(false);
   auto *exe_scope = ctx.GetBestExecutionContextScope();
-  return target_sp->GetScratchSwiftASTContext(error, *exe_scope);
+  return target_sp->GetSwiftScratchContext(error, *exe_scope);
 }
 #endif // LLDB_ENABLE_SWIFT
 
@@ -2661,7 +2661,7 @@ void ValueObject::Dump(Stream &s) { Dump(s, DumpValueObjectOptions(*this)); }
 
 void ValueObject::Dump(Stream &s, const DumpValueObjectOptions &options) {
 #ifdef LLDB_ENABLE_SWIFT
-  auto swift_scratch_ctx_lock = SwiftASTContextLock(GetSwiftExeCtx(*this));
+  auto swift_scratch_ctx_lock = SwiftScratchContextLock(GetSwiftExeCtx(*this));
 #endif // LLDB_ENABLE_SWIFT
   ValueObjectPrinter printer(this, &s, options);
   printer.PrintValueObject();

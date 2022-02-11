@@ -110,11 +110,11 @@ SwiftExpressionParser::SwiftExpressionParser(
 
   if (target_sp) {
     Status error;
-    llvm::Optional<SwiftASTContextReader> scratch_ctx =
-        target_sp->GetScratchSwiftASTContext(error, *exe_scope, true);
+    llvm::Optional<SwiftScratchContextReader> scratch_ctx =
+        target_sp->GetSwiftScratchContext(error, *exe_scope, true);
     if (scratch_ctx)
       m_swift_ast_context =
-          std::make_unique<SwiftASTContextReader>(scratch_ctx.getValue());
+          std::make_unique<SwiftScratchContextReader>(scratch_ctx.getValue());
   }
 }
 

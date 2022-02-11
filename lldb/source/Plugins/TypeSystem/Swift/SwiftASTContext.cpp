@@ -6084,7 +6084,7 @@ SwiftASTContext::GetBitSize(opaque_compiler_type_t type,
       return {};
     ExecutionContext exe_ctx;
     exe_scope->CalculateExecutionContext(exe_ctx);
-    auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
+    auto swift_scratch_ctx_lock = SwiftScratchContextLock(&exe_ctx);
     CompilerType bound_type = BindGenericTypeParameters({this, type}, exe_scope);
 
     // Check that the type has been bound successfully -- and if not,
@@ -6134,7 +6134,7 @@ SwiftASTContext::GetByteStride(opaque_compiler_type_t type,
       return {};
     ExecutionContext exe_ctx;
     exe_scope->CalculateExecutionContext(exe_ctx);
-    auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
+    auto swift_scratch_ctx_lock = SwiftScratchContextLock(&exe_ctx);
     CompilerType bound_type = BindGenericTypeParameters({this, type}, exe_scope);
 
     // Check that the type has been bound successfully -- and if not,
@@ -6177,7 +6177,7 @@ SwiftASTContext::GetTypeBitAlign(opaque_compiler_type_t type,
       return {};
     ExecutionContext exe_ctx;
     exe_scope->CalculateExecutionContext(exe_ctx);
-    auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
+    auto swift_scratch_ctx_lock = SwiftScratchContextLock(&exe_ctx);
     CompilerType bound_type = BindGenericTypeParameters({this, type}, exe_scope);
 
     // Check that the type has been bound successfully -- and if not,

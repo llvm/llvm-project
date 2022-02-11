@@ -434,8 +434,8 @@ SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(Status *error) {
   if (m_compiler_type.hasValue())
     return m_compiler_type.getValue();
 
-  llvm::Optional<SwiftASTContextReader> maybe_swift_ast_ctx =
-      m_for_object_sp->GetScratchSwiftASTContext();
+  llvm::Optional<SwiftScratchContextReader> maybe_swift_ast_ctx =
+      m_for_object_sp->GetSwiftScratchContext();
   if (!maybe_swift_ast_ctx) {
     error->SetErrorString("couldn't get Swift scratch context");
     return CompilerType();
@@ -466,8 +466,8 @@ SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(Status *error) {
 SwiftLanguageRuntime::MetadataPromiseSP
 SwiftLanguageRuntimeImpl::GetMetadataPromise(lldb::addr_t addr,
                                              ValueObject &for_object) {
-  llvm::Optional<SwiftASTContextReader> maybe_swift_ast_ctx =
-      for_object.GetScratchSwiftASTContext();
+  llvm::Optional<SwiftScratchContextReader> maybe_swift_ast_ctx =
+      for_object.GetSwiftScratchContext();
   if (!maybe_swift_ast_ctx)
     return nullptr;
   SwiftASTContext *swift_ast_ctx = maybe_swift_ast_ctx->get();
@@ -1998,7 +1998,7 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
   // canonicalization in GetCanonicalDemangleTree() must be performed in
   // the original context as to resolve type aliases correctly.
   auto &target = m_process.GetTarget();
-  auto scratch_ctx = target.GetScratchSwiftASTContext(error, stack_frame);
+  auto scratch_ctx = target.GetSwiftScratchContext(error, stack_frame);
   if (!scratch_ctx) {
     LLDB_LOG(
         GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS | LIBLLDB_LOG_TYPES),
@@ -2033,8 +2033,8 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
   // that module context.  Binding archetypes can trigger an import of
   // another module, so switch to a scratch context where such an
   // operation is safe.
-  llvm::Optional<SwiftASTContextReader> maybe_scratch_ctx =
-      target.GetScratchSwiftASTContext(error, stack_frame);
+  llvm::Optional<SwiftScratchContextReader> maybe_scratch_ctx =
+      target.GetSwiftScratchContext(error, stack_frame);
   if (!maybe_scratch_ctx)
     return base_type;
   SwiftASTContext *scratch_ctx = maybe_scratch_ctx->get();
@@ -2489,8 +2489,8 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ClangType(
   // Import the remangled dynamic name into the scratch context.
   assert(IsScratchContextLocked(in_value.GetTargetSP()) &&
          "Swift scratch context not locked ahead of dynamic type resolution");
-  llvm::Optional<SwiftASTContextReader> maybe_scratch_ctx =
-      in_value.GetScratchSwiftASTContext();
+  llvm::Optional<SwiftScratchContextReader> maybe_scratch_ctx =
+      in_value.GetSwiftScratchContext();
   if (!maybe_scratch_ctx)
     return false;
   CompilerType swift_type =
@@ -2549,8 +2549,8 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
   // use the scratch context where such operations are legal and safe.
   assert(IsScratchContextLocked(in_value.GetTargetSP()) &&
          "Swift scratch context not locked ahead of dynamic type resolution");
-  llvm::Optional<SwiftASTContextReader> maybe_scratch_ctx =
-      in_value.GetScratchSwiftASTContext();
+  llvm::Optional<SwiftScratchContextReader> maybe_scratch_ctx =
+      in_value.GetSwiftScratchContext();
   if (!maybe_scratch_ctx)
     return false;
   SwiftASTContextForExpressions *scratch_ctx = maybe_scratch_ctx->get();
@@ -2805,12 +2805,12 @@ SwiftLanguageRuntimeImpl::GetSwiftRuntimeTypeInfo(
   // Resolve all generic type parameters in the type for the current
   // frame. Generic parameter binding has to happen in the scratch
   // context, so we lock it while we are in this function.
-  std::unique_ptr<SwiftASTContextLock> lock;
+  std::unique_ptr<SwiftScratchContextLock> lock;
   if (exe_scope)
     if (StackFrame *frame = exe_scope->CalculateStackFrame().get()) {
       ExecutionContext exe_ctx;
       frame->CalculateExecutionContext(exe_ctx);
-      lock = std::make_unique<SwiftASTContextLock>(&exe_ctx);
+      lock = std::make_unique<SwiftScratchContextLock>(&exe_ctx);
       type = BindGenericTypeParameters(*frame, type);
     }
 
