@@ -101,6 +101,9 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
     setOperationAction(OP, MVT::i32, Expand);
   }
 
+  for (auto OP : {ISD::SHL_PARTS, ISD::SRA_PARTS, ISD::SRL_PARTS})
+    setOperationAction(OP, MVT::i32, Custom);
+
   // Add/Sub overflow ops with MVT::Glues are lowered to CCR dependences.
   for (auto VT : {MVT::i8, MVT::i16, MVT::i32}) {
     setOperationAction(ISD::ADDC, VT, Custom);
@@ -1354,6 +1357,12 @@ SDValue M68kTargetLowering::LowerOperation(SDValue Op,
     return LowerVASTART(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
+  case ISD::SHL_PARTS:
+    return LowerShiftLeftParts(Op, DAG);
+  case ISD::SRA_PARTS:
+    return LowerShiftRightParts(Op, DAG, true);
+  case ISD::SRL_PARTS:
+    return LowerShiftRightParts(Op, DAG, false);
   }
 }
 
@@ -3237,6 +3246,102 @@ SDValue M68kTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
 
   SDValue Ops[2] = {Result, Chain};
   return DAG.getMergeValues(Ops, DL);
+}
+
+SDValue M68kTargetLowering::LowerShiftLeftParts(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Lo = Op.getOperand(0);
+  SDValue Hi = Op.getOperand(1);
+  SDValue Shamt = Op.getOperand(2);
+  EVT VT = Lo.getValueType();
+
+  // if Shamt - register size < 0: // Shamt < register size
+  //   Lo = Lo << Shamt
+  //   Hi = (Hi << Shamt) | ((Lo >>u 1) >>u (register size - 1 ^ Shamt))
+  // else:
+  //   Lo = 0
+  //   Hi = Lo << (Shamt - register size)
+
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  SDValue One = DAG.getConstant(1, DL, VT);
+  SDValue MinusRegisterSize = DAG.getConstant(-32, DL, VT);
+  SDValue RegisterSizeMinus1 = DAG.getConstant(32 - 1, DL, VT);
+  SDValue ShamtMinusRegisterSize =
+      DAG.getNode(ISD::ADD, DL, VT, Shamt, MinusRegisterSize);
+  SDValue RegisterSizeMinus1Shamt =
+      DAG.getNode(ISD::XOR, DL, VT, RegisterSizeMinus1, Shamt);
+
+  SDValue LoTrue = DAG.getNode(ISD::SHL, DL, VT, Lo, Shamt);
+  SDValue ShiftRight1Lo = DAG.getNode(ISD::SRL, DL, VT, Lo, One);
+  SDValue ShiftRightLo =
+      DAG.getNode(ISD::SRL, DL, VT, ShiftRight1Lo, RegisterSizeMinus1Shamt);
+  SDValue ShiftLeftHi = DAG.getNode(ISD::SHL, DL, VT, Hi, Shamt);
+  SDValue HiTrue = DAG.getNode(ISD::OR, DL, VT, ShiftLeftHi, ShiftRightLo);
+  SDValue HiFalse = DAG.getNode(ISD::SHL, DL, VT, Lo, ShamtMinusRegisterSize);
+
+  SDValue CC =
+      DAG.getSetCC(DL, MVT::i8, ShamtMinusRegisterSize, Zero, ISD::SETLT);
+
+  Lo = DAG.getNode(ISD::SELECT, DL, VT, CC, LoTrue, Zero);
+  Hi = DAG.getNode(ISD::SELECT, DL, VT, CC, HiTrue, HiFalse);
+
+  return DAG.getMergeValues({Lo, Hi}, DL);
+}
+
+SDValue M68kTargetLowering::LowerShiftRightParts(SDValue Op, SelectionDAG &DAG,
+                                                 bool IsSRA) const {
+  SDLoc DL(Op);
+  SDValue Lo = Op.getOperand(0);
+  SDValue Hi = Op.getOperand(1);
+  SDValue Shamt = Op.getOperand(2);
+  EVT VT = Lo.getValueType();
+
+  // SRA expansion:
+  //   if Shamt - register size < 0: // Shamt < register size
+  //     Lo = (Lo >>u Shamt) | ((Hi << 1) << (register size - 1 ^ Shamt))
+  //     Hi = Hi >>s Shamt
+  //   else:
+  //     Lo = Hi >>s (Shamt - register size);
+  //     Hi = Hi >>s (register size - 1)
+  //
+  // SRL expansion:
+  //   if Shamt - register size < 0: // Shamt < register size
+  //     Lo = (Lo >>u Shamt) | ((Hi << 1) << (register size - 1 ^ Shamt))
+  //     Hi = Hi >>u Shamt
+  //   else:
+  //     Lo = Hi >>u (Shamt - register size);
+  //     Hi = 0;
+
+  unsigned ShiftRightOp = IsSRA ? ISD::SRA : ISD::SRL;
+
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  SDValue One = DAG.getConstant(1, DL, VT);
+  SDValue MinusRegisterSize = DAG.getConstant(-32, DL, VT);
+  SDValue RegisterSizeMinus1 = DAG.getConstant(32 - 1, DL, VT);
+  SDValue ShamtMinusRegisterSize =
+      DAG.getNode(ISD::ADD, DL, VT, Shamt, MinusRegisterSize);
+  SDValue RegisterSizeMinus1Shamt =
+      DAG.getNode(ISD::XOR, DL, VT, RegisterSizeMinus1, Shamt);
+
+  SDValue ShiftRightLo = DAG.getNode(ISD::SRL, DL, VT, Lo, Shamt);
+  SDValue ShiftLeftHi1 = DAG.getNode(ISD::SHL, DL, VT, Hi, One);
+  SDValue ShiftLeftHi =
+      DAG.getNode(ISD::SHL, DL, VT, ShiftLeftHi1, RegisterSizeMinus1Shamt);
+  SDValue LoTrue = DAG.getNode(ISD::OR, DL, VT, ShiftRightLo, ShiftLeftHi);
+  SDValue HiTrue = DAG.getNode(ShiftRightOp, DL, VT, Hi, Shamt);
+  SDValue LoFalse =
+      DAG.getNode(ShiftRightOp, DL, VT, Hi, ShamtMinusRegisterSize);
+  SDValue HiFalse =
+      IsSRA ? DAG.getNode(ISD::SRA, DL, VT, Hi, RegisterSizeMinus1) : Zero;
+
+  SDValue CC =
+      DAG.getSetCC(DL, MVT::i8, ShamtMinusRegisterSize, Zero, ISD::SETLT);
+
+  Lo = DAG.getNode(ISD::SELECT, DL, VT, CC, LoTrue, LoFalse);
+  Hi = DAG.getNode(ISD::SELECT, DL, VT, CC, HiTrue, HiFalse);
+
+  return DAG.getMergeValues({Lo, Hi}, DL);
 }
 
 //===----------------------------------------------------------------------===//
