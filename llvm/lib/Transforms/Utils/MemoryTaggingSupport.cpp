@@ -65,8 +65,10 @@ void StackInfoBuilder::visit(Instruction &Inst) {
     }
   }
   if (AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
-    if (IsInterestingAlloca(*AI))
-      Info.AllocasToInstrument.insert({AI, {}});
+    if (IsInterestingAlloca(*AI)) {
+      Info.AllocasToInstrument[AI].AI = AI;
+      Info.AllocasToInstrument[AI].OldAI = AI;
+    }
     return;
   }
   auto *II = dyn_cast<IntrinsicInst>(&Inst);
