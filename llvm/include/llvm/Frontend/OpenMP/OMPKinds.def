@@ -475,6 +475,7 @@ __OMP_RTL(__last, false, Void, )
 #define ParamAttrs(...) ArrayRef<AttributeSet>({__VA_ARGS__})
 #define EnumAttr(Kind) Attribute::get(Ctx, Attribute::AttrKind::Kind)
 #define EnumAttrInt(Kind, N) Attribute::get(Ctx, Attribute::AttrKind::Kind, N)
+#define AllocSizeAttr(N, M) Attribute::getWithAllocSizeArgs(Ctx, N, M)
 #define AttributeSet(...)                                                      \
   AttributeSet::get(Ctx, ArrayRef<Attribute>({__VA_ARGS__}))
 
@@ -908,8 +909,10 @@ __OMP_RTL_ATTRS(__kmpc_doacross_wait, BarrierAttrs, AttributeSet(),
 __OMP_RTL_ATTRS(__kmpc_doacross_fini, BarrierAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs))
 
-__OMP_RTL_ATTRS(__kmpc_alloc_shared, DeviceAllocAttrs, ReturnPtrAttrs,
-                ParamAttrs())
+__OMP_RTL_ATTRS(__kmpc_alloc_shared, AttributeSet(
+  EnumAttr(NoUnwind),
+  EnumAttr(NoSync), 
+  AllocSizeAttr(0, None)), ReturnPtrAttrs, ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_free_shared, DeviceAllocAttrs, AttributeSet(),
                 ParamAttrs(NoCaptureAttrs))
 
@@ -962,6 +965,7 @@ __OMP_RTL_ATTRS(__kmpc_parallel_51, AlwaysInlineAttrs, AttributeSet(),
 #undef EnumAttr
 #undef EnumAttrInt
 #undef ParamAttrs
+#undef AllocSizeAttr
 
 ///}
 
