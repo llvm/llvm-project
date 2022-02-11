@@ -171,7 +171,7 @@ entry:
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .offset:         48
 ; CHECK-NEXT:         .size:           8
-; CHECK-NEXT:         .value_kind:     hidden_none
+; CHECK-NEXT:         .value_kind:     hidden_hostcall_buffer
 ; CHECK:          .name:           test32
 ; CHECK:          .symbol:         test32.kd
 define amdgpu_kernel void @test32(
@@ -214,7 +214,7 @@ entry:
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .offset:         48
 ; CHECK-NEXT:         .size:           8
-; CHECK-NEXT:         .value_kind:     hidden_none
+; CHECK-NEXT:         .value_kind:     hidden_hostcall_buffer
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .offset:         56
 ; CHECK-NEXT:         .size:           8
@@ -265,7 +265,7 @@ entry:
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .offset:         48
 ; CHECK-NEXT:         .size:           8
-; CHECK-NEXT:         .value_kind:     hidden_none
+; CHECK-NEXT:         .value_kind:     hidden_hostcall_buffer
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .offset:         56
 ; CHECK-NEXT:         .size:           8

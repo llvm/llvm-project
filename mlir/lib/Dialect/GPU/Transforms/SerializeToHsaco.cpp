@@ -307,11 +307,6 @@ SerializeToHsacoPass::translateToLLVMIR(llvm::LLVMContext &llvmContext) {
     }
   }
 
-  // Set amdgpu_hostcall if host calls have been linked, as needed by newer LLVM
-  // FIXME: Is there a way to set this during printf() lowering that makes sense
-  if (ret->getFunction("__ockl_hostcall_internal"))
-    if (!ret->getModuleFlag("amdgpu_hostcall"))
-      ret->addModuleFlag(llvm::Module::Override, "amdgpu_hostcall", 1);
   return ret;
 }
 
