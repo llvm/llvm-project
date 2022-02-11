@@ -57,6 +57,23 @@ class FunctionExtension<string _Ext> : AbstractExtension<_Ext>;
 // disabled.
 class TypeExtension<string _Ext> : AbstractExtension<_Ext>;
 
+// Concatenate zero or more space-separated extensions in NewExts to Base and
+// return the resulting FunctionExtension in ret.
+class concatExtension<FunctionExtension Base, string NewExts> {
+  FunctionExtension ret = FunctionExtension<
+    !cond(
+      // Return Base extension if NewExts is empty,
+      !empty(NewExts) : Base.ExtName,
+
+      // otherwise, return NewExts if Base extension is empty,
+      !empty(Base.ExtName) : NewExts,
+
+      // otherwise, concatenate NewExts to Base.
+      true : Base.ExtName # " " # NewExts
+    )
+  >;
+}
+
 // TypeExtension definitions.
 def NoTypeExt   : TypeExtension<"">;
 def Fp16TypeExt : TypeExtension<"cl_khr_fp16">;
@@ -1043,40 +1060,57 @@ let Extension = FuncExtOpenCLCxx in {
 // OpenCL v2.0 s6.13.11 - Atomic Functions.
 
 // An atomic builtin with 2 additional _explicit variants.
-multiclass BuiltinAtomicExplicit<string Name, list<Type> Types> {
+multiclass BuiltinAtomicExplicit<string Name, list<Type> Types, FunctionExtension BaseExt> {
   // Without explicit MemoryOrder or MemoryScope.
-  def : Builtin<Name, Types>;
+  let Extension = concatExtension<BaseExt, "__opencl_c_atomic_order_seq_cst __opencl_c_atomic_scope_device">.ret in {
+    def : Builtin<Name, Types>;
+  }
 
   // With an explicit MemoryOrder argument.
-  def : Builtin<Name # "_explicit", !listconcat(Types, [MemoryOrder])>;
+  let Extension = concatExtension<BaseExt, "__opencl_c_atomic_scope_device">.ret in {
+    def : Builtin<Name # "_explicit", !listconcat(Types, [MemoryOrder])>;
+  }
 
   // With explicit MemoryOrder and MemoryScope arguments.
-  def : Builtin<Name # "_explicit", !listconcat(Types, [MemoryOrder, MemoryScope])>;
+  let Extension = BaseExt in {
+    def : Builtin<Name # "_explicit", !listconcat(Types, [MemoryOrder, MemoryScope])>;
+  }
 }
 
 // OpenCL 2.0 atomic functions that have a pointer argument in a given address space.
-multiclass OpenCL2Atomics<AddressSpace addrspace> {
+multiclass OpenCL2Atomics<AddressSpace addrspace, FunctionExtension BaseExt> {
   foreach TypePair = [[AtomicInt, Int], [AtomicUInt, UInt],
                       [AtomicLong, Long], [AtomicULong, ULong],
                       [AtomicFloat, Float], [AtomicDouble, Double]] in {
     def : Builtin<"atomic_init",
         [Void, PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[1]]>;
     defm : BuiltinAtomicExplicit<"atomic_store",
-        [Void, PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[1]]>;
+        [Void, PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[1]], BaseExt>;
     defm : BuiltinAtomicExplicit<"atomic_load",
-        [TypePair[1], PointerType<VolatileType<TypePair[0]>, addrspace>]>;
+        [TypePair[1], PointerType<VolatileType<TypePair[0]>, addrspace>], BaseExt>;
     defm : BuiltinAtomicExplicit<"atomic_exchange",
-        [TypePair[1], PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[1]]>;
+        [TypePair[1], PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[1]], BaseExt>;
     foreach Variant = ["weak", "strong"] in {
-      def : Builtin<"atomic_compare_exchange_" # Variant,
-          [Bool, PointerType<VolatileType<TypePair[0]>, addrspace>,
-           PointerType<TypePair[1], addrspace>, TypePair[1]]>;
-      def : Builtin<"atomic_compare_exchange_" # Variant # "_explicit",
-          [Bool, PointerType<VolatileType<TypePair[0]>, addrspace>,
-           PointerType<TypePair[1], addrspace>, TypePair[1], MemoryOrder, MemoryOrder]>;
-      def : Builtin<"atomic_compare_exchange_" # Variant # "_explicit",
-          [Bool, PointerType<VolatileType<TypePair[0]>, addrspace>,
-           PointerType<TypePair[1], addrspace>, TypePair[1], MemoryOrder, MemoryOrder, MemoryScope]>;
+      foreach exp_ptr_addrspace = !cond(
+            !eq(BaseExt, FuncExtOpenCLCGenericAddressSpace): [GenericAS],
+            !eq(BaseExt, FuncExtOpenCLCNamedAddressSpaceBuiltins): [GlobalAS, LocalAS, PrivateAS])
+          in {
+        let Extension = concatExtension<BaseExt, "__opencl_c_atomic_order_seq_cst __opencl_c_atomic_scope_device">.ret in {
+          def : Builtin<"atomic_compare_exchange_" # Variant,
+              [Bool, PointerType<VolatileType<TypePair[0]>, addrspace>,
+               PointerType<TypePair[1], exp_ptr_addrspace>, TypePair[1]]>;
+        }
+        let Extension = concatExtension<BaseExt, "__opencl_c_atomic_scope_device">.ret in {
+          def : Builtin<"atomic_compare_exchange_" # Variant # "_explicit",
+              [Bool, PointerType<VolatileType<TypePair[0]>, addrspace>,
+               PointerType<TypePair[1], exp_ptr_addrspace>, TypePair[1], MemoryOrder, MemoryOrder]>;
+        }
+        let Extension = BaseExt in {
+          def : Builtin<"atomic_compare_exchange_" # Variant # "_explicit",
+              [Bool, PointerType<VolatileType<TypePair[0]>, addrspace>,
+               PointerType<TypePair[1], exp_ptr_addrspace>, TypePair[1], MemoryOrder, MemoryOrder, MemoryScope]>;
+        }
+      }
     }
   }
 
@@ -1085,68 +1119,68 @@ multiclass OpenCL2Atomics<AddressSpace addrspace> {
                       [AtomicUIntPtr, UIntPtr, PtrDiff]] in {
     foreach ModOp = ["add", "sub"] in {
       defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
-          [TypePair[1], PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[2]]>;
+          [TypePair[1], PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[2]], BaseExt>;
     }
   }
   foreach TypePair = [[AtomicInt, Int, Int], [AtomicUInt, UInt, UInt],
                       [AtomicLong, Long, Long], [AtomicULong, ULong, ULong]] in {
     foreach ModOp = ["or", "xor", "and", "min", "max"] in {
       defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
-          [TypePair[1], PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[2]]>;
+          [TypePair[1], PointerType<VolatileType<TypePair[0]>, addrspace>, TypePair[2]], BaseExt>;
     }
   }
 
   defm : BuiltinAtomicExplicit<"atomic_flag_clear",
-      [Void, PointerType<VolatileType<AtomicFlag>, addrspace>]>;
+      [Void, PointerType<VolatileType<AtomicFlag>, addrspace>], BaseExt>;
 
   defm : BuiltinAtomicExplicit<"atomic_flag_test_and_set",
-      [Bool, PointerType<VolatileType<AtomicFlag>, addrspace>]>;
+      [Bool, PointerType<VolatileType<AtomicFlag>, addrspace>], BaseExt>;
 }
 
 let MinVersion = CL20 in {
   def : Builtin<"atomic_work_item_fence", [Void, MemFenceFlags, MemoryOrder, MemoryScope]>;
 
-  defm : OpenCL2Atomics<GenericAS>;
+  defm : OpenCL2Atomics<GenericAS, FuncExtOpenCLCGenericAddressSpace>;
+  defm : OpenCL2Atomics<GlobalAS, FuncExtOpenCLCNamedAddressSpaceBuiltins>;
+  defm : OpenCL2Atomics<LocalAS, FuncExtOpenCLCNamedAddressSpaceBuiltins>;
 }
 
 // The functionality added by cl_ext_float_atomics extension
 let MinVersion = CL20 in {
   foreach addrspace = [GlobalAS, LocalAS, GenericAS] in {
-    let Extension = !cast<FunctionExtension>("FuncExtFloatAtomicsFp16" # addrspace # "LoadStore") in {
-      defm : BuiltinAtomicExplicit<"atomic_store",
-          [Void, PointerType<VolatileType<AtomicHalf>, addrspace>, AtomicHalf]>;
-      defm : BuiltinAtomicExplicit<"atomic_load",
-          [Half, PointerType<VolatileType<AtomicHalf>, addrspace>]>;
-      defm : BuiltinAtomicExplicit<"atomic_exchange",
-          [Half, PointerType<VolatileType<AtomicHalf>, addrspace>, Half]>;
-    }
+    defvar extension_fp16 = !cast<FunctionExtension>("FuncExtFloatAtomicsFp16" # addrspace # "LoadStore");
+
+    defm : BuiltinAtomicExplicit<"atomic_store",
+        [Void, PointerType<VolatileType<AtomicHalf>, addrspace>, AtomicHalf], extension_fp16>;
+    defm : BuiltinAtomicExplicit<"atomic_load",
+        [Half, PointerType<VolatileType<AtomicHalf>, addrspace>], extension_fp16>;
+    defm : BuiltinAtomicExplicit<"atomic_exchange",
+        [Half, PointerType<VolatileType<AtomicHalf>, addrspace>, Half], extension_fp16>;
+
     foreach ModOp = ["add", "sub"] in {
-      let Extension = !cast<FunctionExtension>("FuncExtFloatAtomicsFp16" # addrspace # "Add") in {
-        defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
-            [Half, PointerType<VolatileType<AtomicHalf>, addrspace>, Half]>;
-      }
-      let Extension = !cast<FunctionExtension>("FuncExtFloatAtomicsFp32" # addrspace # "Add") in {
-        defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
-            [Float, PointerType<VolatileType<AtomicFloat>, addrspace>, Float]>;
-      }
-      let Extension = !cast<FunctionExtension>("FuncExtFloatAtomicsFp64" # addrspace # "Add") in {
-        defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
-            [Double, PointerType<VolatileType<AtomicDouble>, addrspace>, Double]>;
-      }
+      defvar extension_fp16 = !cast<FunctionExtension>("FuncExtFloatAtomicsFp16" # addrspace # "Add");
+      defvar extension_fp32 = !cast<FunctionExtension>("FuncExtFloatAtomicsFp32" # addrspace # "Add");
+      defvar extension_fp64 = !cast<FunctionExtension>("FuncExtFloatAtomicsFp64" # addrspace # "Add");
+
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
+          [Half, PointerType<VolatileType<AtomicFloat>, addrspace>, Half], extension_fp16>;
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
+          [Float, PointerType<VolatileType<AtomicFloat>, addrspace>, Float], extension_fp32>;
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
+          [Double, PointerType<VolatileType<AtomicDouble>, addrspace>, Double], extension_fp64>;
     }
+
     foreach ModOp = ["min", "max"] in {
-      let Extension = !cast<FunctionExtension>("FuncExtFloatAtomicsFp16" # addrspace # "MinMax") in {
-        defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
-            [Half, PointerType<VolatileType<AtomicHalf>, addrspace>, Half]>;
-      }
-      let Extension = !cast<FunctionExtension>("FuncExtFloatAtomicsFp32" # addrspace # "MinMax") in {
-        defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
-            [Float, PointerType<VolatileType<AtomicFloat>, addrspace>, Float]>;
-      }
-      let Extension = !cast<FunctionExtension>("FuncExtFloatAtomicsFp64" # addrspace # "MinMax") in {
-        defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
-            [Double, PointerType<VolatileType<AtomicDouble>, addrspace>, Double]>;
-      }
+      defvar extension_fp16 = !cast<FunctionExtension>("FuncExtFloatAtomicsFp16" # addrspace # "MinMax");
+      defvar extension_fp32 = !cast<FunctionExtension>("FuncExtFloatAtomicsFp32" # addrspace # "MinMax");
+      defvar extension_fp64 = !cast<FunctionExtension>("FuncExtFloatAtomicsFp64" # addrspace # "MinMax");
+
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
+          [Half, PointerType<VolatileType<AtomicHalf>, addrspace>, Half], extension_fp16>;
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
+          [Float, PointerType<VolatileType<AtomicFloat>, addrspace>, Float], extension_fp32>;
+      defm : BuiltinAtomicExplicit<"atomic_fetch_" # ModOp,
+          [Double, PointerType<VolatileType<AtomicDouble>, addrspace>, Double], extension_fp64>;
     }
   }
 }

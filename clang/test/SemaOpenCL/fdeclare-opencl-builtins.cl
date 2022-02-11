@@ -9,6 +9,7 @@
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++ -fdeclare-opencl-builtins -finclude-default-header
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++2021 -fdeclare-opencl-builtins -finclude-default-header
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header -cl-ext=-cl_khr_fp64 -DNO_FP64
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL3.0 -fdeclare-opencl-builtins -finclude-default-header -DNO_ATOMSCOPE
 
 // Test the -fdeclare-opencl-builtins option.  This is not a completeness
 // test, so it should not test for all builtins defined by OpenCL.  Instead
@@ -80,6 +81,11 @@ typedef struct {int a;} ndrange_t;
 #define __opencl_c_read_write_images 1
 #endif
 
+#if (__OPENCL_CPP_VERSION__ == 100 || __OPENCL_C_VERSION__ == 200)
+#define __opencl_c_atomic_order_seq_cst 1
+#define __opencl_c_atomic_scope_device 1
+#endif
+
 #define __opencl_c_named_address_space_builtins 1
 #endif
 
@@ -98,6 +104,7 @@ kernel void test_pointers(volatile global void *global_p, global const int4 *a) 
 #if !defined(NO_HEADER) && (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
 kernel void test_enum_args(volatile global atomic_int *global_p, global int *expected) {
   int desired;
+  atomic_work_item_fence(CLK_GLOBAL_MEM_FENCE, memory_order_acq_rel, memory_scope_device);
   atomic_compare_exchange_strong_explicit(global_p, expected, desired,
                                           memory_order_acq_rel,
                                           memory_order_relaxed,
@@ -155,6 +162,27 @@ void test_atomic_fetch_with_address_space(volatile __generic atomic_float *a_flo
   resd1 = atomic_fetch_add_explicit(a_double_global, d1, memory_order_seq_cst, memory_scope_work_group);
 }
 #endif // !defined(NO_HEADER) && __OPENCL_C_VERSION__ >= 200
+
+#if defined(NO_ATOMSCOPE) && __OPENCL_C_VERSION__ >= 300
+// Disable the feature by undefining the feature macro.
+#undef __opencl_c_atomic_scope_device
+
+// Test that only the overload with explicit order and scope arguments is
+// available when the __opencl_c_atomic_scope_device feature is disabled.
+void test_atomics_without_scope_device(volatile __generic atomic_int *a_int) {
+  int d;
+
+  atomic_exchange(a_int, d);
+  // expected-error@-1{{implicit declaration of function 'atomic_exchange' is invalid in OpenCL}}
+
+  atomic_exchange_explicit(a_int, d, memory_order_seq_cst);
+  // expected-error@-1{{no matching function for call to 'atomic_exchange_explicit'}}
+  // expected-note@-2 + {{candidate function not viable}}
+
+  atomic_exchange_explicit(a_int, d, memory_order_seq_cst, memory_scope_work_group);
+}
+
+#endif
 
 // Test old atomic overloaded with generic address space in C++ for OpenCL.
 #if __OPENCL_C_VERSION__ >= 200
