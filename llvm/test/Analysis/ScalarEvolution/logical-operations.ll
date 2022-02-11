@@ -587,7 +587,7 @@ define i32 @umin_seq_x_x_y_z(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    %r0 = select i1 %x.is.zero, i32 0, i32 %umin
 ; CHECK-NEXT:    --> (%x umin_seq (%y umin %z)) U: full-set S: full-set
 ; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %r0
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> (%x umin_seq (%y umin %z)) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_x_y_z
 ;
   %umin0 = call i32 @llvm.umin(i32 %z, i32 %x)
