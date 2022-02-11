@@ -259,25 +259,29 @@ TEST(DIBuilder, CreateStringType) {
   DIVariable *StringLen = DIB.createAutoVariable(Scope, StrName, F, 0, nullptr,
                                                  false, DINode::FlagZero, 0);
   DIExpression *StringLocationExp = DIB.createExpression();
-  DIExpression *StringLengthExp = DIB.createExpression();
   DIStringType *StringType =
       DIB.createStringType(StrName, StringLen, StringLocationExp);
 
   EXPECT_TRUE(isa_and_nonnull<DIStringType>(StringType));
-  EXPECT_EQ(StringType->getName(), "string");
-  EXPECT_EQ(StringType,
-            DIStringType::get(Ctx, dwarf::DW_TAG_string_type, StrName,
-                              StringLen, StringLocationExp, nullptr, 0, 0, 0));
+  EXPECT_EQ(StringType->getName(), StrName);
+  EXPECT_EQ(StringType->getStringLength(), StringLen);
+  EXPECT_EQ(StringType->getStringLocationExp(), StringLocationExp);
+}
 
+TEST(DIBuilder, CreateStringTypeExp) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M(new Module("MyModule", Ctx));
+  DIBuilder DIB(*M);
+  StringRef StrName = "string";
+  DIExpression *StringLocationExp = DIB.createExpression();
+  DIExpression *StringLengthExp = DIB.createExpression();
   DIStringType *StringTypeExp =
       DIB.createStringTypeExp(StrName, StringLengthExp, StringLocationExp);
 
   EXPECT_TRUE(isa_and_nonnull<DIStringType>(StringTypeExp));
-  EXPECT_EQ(StringTypeExp->getName(), "string");
-  EXPECT_EQ(StringTypeExp,
-            DIStringType::get(Ctx, dwarf::DW_TAG_string_type, StrName,
-                              StringLengthExp, StringLocationExp, nullptr, 0, 0,
-                              0));
+  EXPECT_EQ(StringTypeExp->getName(), StrName);
+  EXPECT_EQ(StringTypeExp->getStringLengthExp(), StringLengthExp);
+  EXPECT_EQ(StringTypeExp->getStringLocationExp(), StringLocationExp);
 }
 
 TEST(DIBuilder, DIEnumerator) {
