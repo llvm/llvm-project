@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -amdgpu-sroa=0 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX900,GFX900-MUBUF %s
 ; RUN: llc -march=amdgcn -mcpu=gfx906 -amdgpu-sroa=0 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX906,NO-D16-HI %s
 ; RUN: llc -march=amdgcn -mcpu=fiji -amdgpu-sroa=0 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX803,NO-D16-HI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -amdgpu-sroa=0 -mattr=-promote-alloca -amdgpu-enable-flat-scratch -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX900,GFX900-FLATSCR %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -amdgpu-sroa=0 -mattr=-promote-alloca -mattr=+enable-flat-scratch -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX900,GFX900-FLATSCR %s
 
 ; GCN-LABEL: {{^}}load_local_lo_hi_v2i16_multi_use_lo:
 ; GFX900: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)

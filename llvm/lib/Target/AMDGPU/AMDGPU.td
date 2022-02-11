@@ -86,6 +86,12 @@ def FeatureScalarFlatScratchInsts : SubtargetFeature<"scalar-flat-scratch-insts"
   "Have s_scratch_* flat memory instructions"
 >;
 
+def FeatureEnableFlatScratch : SubtargetFeature<"enable-flat-scratch",
+  "EnableFlatScratch",
+  "true",
+  "Use scratch_* flat memory instructions to access scratch"
+>;
+
 def FeatureAddNoCarryInsts : SubtargetFeature<"add-no-carry-insts",
   "AddNoCarryInsts",
   "true",

@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-misched=0 -post-RA-scheduler=0 -stress-regalloc=8 < %s | FileCheck -check-prefixes=GCN,MUBUF %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-misched=0 -post-RA-scheduler=0 -stress-regalloc=8 -amdgpu-enable-flat-scratch < %s | FileCheck -check-prefixes=GCN,FLATSCR %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-misched=0 -post-RA-scheduler=0 -stress-regalloc=8 -mattr=+enable-flat-scratch < %s | FileCheck -check-prefixes=GCN,FLATSCR %s
 
 ; Test that the VGPR spiller correctly switches to SGPR offsets when the
 ; instruction offset field would overflow, and that it accounts for memory
