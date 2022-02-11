@@ -12866,8 +12866,8 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
   if (!isa<SCEVCouldNotCompute>(PBT)) {
     OS << "Predicated backedge-taken count is " << *PBT << "\n";
     OS << " Predicates:\n";
-    SCEVUnionPredicate Dedup(Preds);
-    Dedup.print(OS, 4);
+    for (auto *P : Preds)
+      P->print(OS, 4);
   } else {
     OS << "Unpredictable predicated backedge-taken count. ";
   }
@@ -13906,9 +13906,6 @@ void SCEVUnionPredicate::add(const SCEVPredicate *N) {
       add(Pred);
     return;
   }
-
-  if (implies(N))
-    return;
 
   const SCEV *Key = N->getExpr();
   assert(Key && "Only SCEVUnionPredicate doesn't have an "
