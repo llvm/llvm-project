@@ -319,6 +319,12 @@ void IoChecker::Enter(const parser::InputItem &spec) {
     return;
   }
   CheckForDefinableVariable(*var, "Input");
+  if (auto expr{AnalyzeExpr(context_, *var)}) {
+    CheckForBadIoComponent(*expr,
+        flags_.test(Flag::FmtOrNml) ? GenericKind::DefinedIo::ReadFormatted
+                                    : GenericKind::DefinedIo::ReadUnformatted,
+        var->GetSource());
+  }
 }
 
 void IoChecker::Enter(const parser::InquireSpec &spec) {
@@ -580,6 +586,11 @@ void IoChecker::Enter(const parser::OutputItem &item) {
         context_.Say(parser::FindSourceLocation(*x),
             "Output item must not be a procedure pointer"_err_en_US); // C1233
       }
+      CheckForBadIoComponent(*expr,
+          flags_.test(Flag::FmtOrNml)
+              ? GenericKind::DefinedIo::WriteFormatted
+              : GenericKind::DefinedIo::WriteUnformatted,
+          parser::FindSourceLocation(item));
     }
   }
 }
@@ -983,6 +994,22 @@ void IoChecker::CheckForPureSubprogram() const { // C1597
     if (FindPureProcedureContaining(*scope)) {
       context_.Say(
           "External I/O is not allowed in a pure subprogram"_err_en_US);
+    }
+  }
+}
+
+// Fortran 2018, 12.6.3 paragraph 7
+void IoChecker::CheckForBadIoComponent(const SomeExpr &expr,
+    GenericKind::DefinedIo which, parser::CharBlock where) const {
+  if (auto type{expr.GetType()}) {
+    if (type->category() == TypeCategory::Derived &&
+        !type->IsUnlimitedPolymorphic()) {
+      if (const Symbol *
+          bad{FindUnsafeIoDirectComponent(
+              which, type->GetDerivedTypeSpec(), &context_.FindScope(where))}) {
+        context_.SayWithDecl(*bad, where,
+            "Derived type in I/O cannot have an allocatable or pointer direct component unless using defined I/O"_err_en_US);
+      }
     }
   }
 }

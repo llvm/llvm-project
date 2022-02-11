@@ -423,6 +423,7 @@ struct GenericKind {
   bool IsIntrinsicOperator() const;
   bool IsOperator() const;
   std::string ToString() const;
+  static SourceName AsFortran(DefinedIo);
   std::variant<OtherKind, common::NumericOperator, common::LogicalOperator,
       common::RelationalOperator, DefinedIo>
       u;
