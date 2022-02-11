@@ -6,8 +6,12 @@ RUN: llvm-profdata merge --sample --extbinary -output=%t.profbin %S/Inputs/cs-sa
 RUN: llvm-profdata merge --sample --text -output=%t2.proftext %t.profbin
 RUN: FileCheck %s < %t2.proftext --match-full-lines --strict-whitespace
 RUN: llvm-profdata show --sample -show-sec-info-only %t.profbin | FileCheck %s -check-prefix=PREINLINE
-RUN: llvm-profdata merge --sample --text -output=%t.proftext %S/Inputs/cs-sample-preinline.proftext --gen-cs-nested-profile=1 -generate-merged-base-profiles=1
-RUN: FileCheck %s < %t.proftext --match-full-lines --strict-whitespace -check-prefix=RECOUNT
+RUN: llvm-profdata merge --sample --text -output=%t3.proftext %S/Inputs/cs-sample-preinline.proftext --gen-cs-nested-profile=1 -generate-merged-base-profiles=1
+RUN: FileCheck %s < %t3.proftext --match-full-lines --strict-whitespace -check-prefix=RECOUNT
+RUN: llvm-profdata merge --sample --extbinary -output=%t2.profbin %S/Inputs/cs-sample-preinline.proftext --gen-cs-nested-profile=1 -generate-merged-base-profiles=1
+RUN: llvm-profdata show -sample -detailed-summary %S/Inputs/cs-sample-preinline.proftext | FileCheck %s -check-prefix=SUMMARY
+RUN: llvm-profdata show -sample -detailed-summary %t2.profbin | FileCheck %s -check-prefix=SUMMARY
+RUN: llvm-profdata show -sample -detailed-summary %t3.proftext | FileCheck %s -check-prefix=SUMMARY
 
 
 ; CHECK:main:1968679:12
@@ -60,8 +64,8 @@ RUN: FileCheck %s < %t.proftext --match-full-lines --strict-whitespace -check-pr
 ; RECOUNT-NEXT:   3: 287884
 ; RECOUNT-NEXT:   4: 287864 _Z3fibi:315608
 ; RECOUNT-NEXT:   15: 23
-; RECOUNT-NEXT:   !Attributes: 2
-; RECOUNT-NEXT:  !Attributes: 2
+; RECOUNT-NEXT:   !Attributes: 6
+; RECOUNT-NEXT:  !Attributes: 6
 ; RECOUNT-NEXT: 3.1: _Z5funcBi:500973
 ; RECOUNT-NEXT:  0: 19
 ; RECOUNT-NEXT:  1: 19 _Z8funcLeafi:20
@@ -74,8 +78,8 @@ RUN: FileCheck %s < %t.proftext --match-full-lines --strict-whitespace -check-pr
 ; RECOUNT-NEXT:   10: 23324
 ; RECOUNT-NEXT:   11: 23327 _Z3fibi:25228
 ; RECOUNT-NEXT:   15: 11
-; RECOUNT-NEXT:   !Attributes: 2
-; RECOUNT-NEXT:  !Attributes: 2
+; RECOUNT-NEXT:   !Attributes: 6
+; RECOUNT-NEXT:  !Attributes: 6
 ; RECOUNT-NEXT:_Z8funcLeafi:1968152:31
 ; RECOUNT-NEXT: 0: 21
 ; RECOUNT-NEXT: 1: 21
@@ -95,7 +99,7 @@ RUN: FileCheck %s < %t.proftext --match-full-lines --strict-whitespace -check-pr
 ; RECOUNT-NEXT:  3: 287884
 ; RECOUNT-NEXT:  4: 287864 _Z3fibi:315608
 ; RECOUNT-NEXT:  15: 23
-; RECOUNT-NEXT:  !Attributes: 2
+; RECOUNT-NEXT:  !Attributes: 6
 ; RECOUNT-NEXT: !Attributes: 2
 ; RECOUNT-NEXT:_Z5funcBi:501213:32
 ; RECOUNT-NEXT: 0: 32
@@ -109,7 +113,7 @@ RUN: FileCheck %s < %t.proftext --match-full-lines --strict-whitespace -check-pr
 ; RECOUNT-NEXT:  10: 23324
 ; RECOUNT-NEXT:  11: 23327 _Z3fibi:25228
 ; RECOUNT-NEXT:  15: 11
-; RECOUNT-NEXT:  !Attributes: 2
+; RECOUNT-NEXT:  !Attributes: 6
 
 ; PROBE:main:1968679:12
 ; PROBE-NEXT: 2: 24
@@ -153,3 +157,27 @@ RUN: FileCheck %s < %t.proftext --match-full-lines --strict-whitespace -check-pr
 
 
 ; PREINLINE: ProfileSummarySection {{.*}} Flags: {context-nested}
+
+
+; SUMMARY:      Total functions: 4
+; SUMMARY-NEXT: Maximum function count: 32
+; SUMMARY-NEXT: Maximum block count: 362830
+; SUMMARY-NEXT: Total number of blocks: 16
+; SUMMARY-NEXT: Total count: 772562
+; SUMMARY-NEXT: Detailed summary:
+; SUMMARY-NEXT: 1 blocks with count >= 362830 account for 1 percentage of the total counts.
+; SUMMARY-NEXT: 1 blocks with count >= 362830 account for 10 percentage of the total counts.
+; SUMMARY-NEXT: 1 blocks with count >= 362830 account for 20 percentage of the total counts.
+; SUMMARY-NEXT: 1 blocks with count >= 362830 account for 30 percentage of the total counts.
+; SUMMARY-NEXT: 1 blocks with count >= 362830 account for 40 percentage of the total counts.
+; SUMMARY-NEXT: 2 blocks with count >= 362805 account for 50 percentage of the total counts.
+; SUMMARY-NEXT: 2 blocks with count >= 362805 account for 60 percentage of the total counts.
+; SUMMARY-NEXT: 2 blocks with count >= 362805 account for 70 percentage of the total counts.
+; SUMMARY-NEXT: 2 blocks with count >= 362805 account for 80 percentage of the total counts.
+; SUMMARY-NEXT: 2 blocks with count >= 362805 account for 90 percentage of the total counts.
+; SUMMARY-NEXT: 3 blocks with count >= 23327 account for 95 percentage of the total counts.
+; SUMMARY-NEXT: 4 blocks with count >= 23324 account for 99 percentage of the total counts.
+; SUMMARY-NEXT: 4 blocks with count >= 23324 account for 99.9 percentage of the total counts.
+; SUMMARY-NEXT: 11 blocks with count >= 24 account for 99.99 percentage of the total counts.
+; SUMMARY-NEXT: 16 blocks with count >= 10 account for 99.999 percentage of the total counts.
+; SUMMARY-NEXT: 16 blocks with count >= 10 account for 99.9999 percentage of the total counts.
