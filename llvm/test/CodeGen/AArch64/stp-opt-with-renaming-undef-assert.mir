@@ -19,11 +19,11 @@
 # CHECK-NEXT: renamable $q23_q24_q25 = LD3Threev16b undef renamable $x18 :: (load (s384) from `<16 x i8>* undef`, align 64)
 # CHECK-NEXT: $q16 = EXTv16i8 renamable $q23, renamable $q23, 8
 # CHECK-NEXT: renamable $q20 = EXTv16i8 renamable $q14, renamable $q14, 8
-# CHECK-NEXT: STRQui killed renamable $q20, $sp, 4 :: (store (s128) into %stack.3)
+# CHECK-NEXT: STRQui killed renamable $q20, $sp, 4 :: (store (s128))
 # CHECK-NEXT: renamable $d6 = ZIP2v8i8 renamable $d23, undef renamable $d16
-# CHECK-NEXT: STRDui killed renamable $d6, $sp, 11 :: (store (s64) into %stack.2)
+# CHECK-NEXT: STRDui killed renamable $d6, $sp, 11 :: (store (s64))
 # CHECK-NEXT: renamable $q6 = EXTv16i8 renamable $q13, renamable $q13, 8
-# CHECK-NEXT: STPQi killed renamable $q6, killed $q16, $sp, 6 :: (store (s128) into %stack.0), (store (s128) into %stack.1)
+# CHECK-NEXT: STPQi killed renamable $q6, killed $q16, $sp, 6 :: (store (s128))
 # CHECK-NEXT: RET undef $lr
 
 ---
@@ -36,19 +36,6 @@ frameInfo:
   maxAlignment:    16
   maxCallFrameSize: 0
 fixedStack:      []
-stack:
-  - { id: 0, name: '', type: spill-slot, offset: -80, size: 16, alignment: 16,
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
-      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 1, name: '', type: spill-slot, offset: -96, size: 16, alignment: 16,
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
-      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 2, name: '', type: spill-slot, offset: -104, size: 8, alignment: 8,
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
-      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 3, name: '', type: spill-slot, offset: -128, size: 16, alignment: 16,
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
-      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -56,12 +43,12 @@ body:             |
     renamable $q13_q14_q15 = LD3Threev16b undef renamable $x17 :: (load (s384) from `<16 x i8>* undef`, align 64)
     renamable $q23_q24_q25 = LD3Threev16b undef renamable $x18 :: (load (s384) from `<16 x i8>* undef`, align 64)
     renamable $q20 = EXTv16i8 renamable $q23, renamable $q23, 8
-    STRQui killed renamable $q20, $sp, 7 :: (store (s128) into %stack.0)
+    STRQui killed renamable $q20, $sp, 7 :: (store (s128))
     renamable $q20 = EXTv16i8 renamable $q14, renamable $q14, 8
-    STRQui killed renamable $q20, $sp, 4 :: (store (s128) into %stack.3)
+    STRQui killed renamable $q20, $sp, 4 :: (store (s128))
     renamable $d6 = ZIP2v8i8 renamable $d23, undef renamable $d16
-    STRDui killed renamable $d6, $sp, 11 :: (store (s64) into %stack.2)
+    STRDui killed renamable $d6, $sp, 11 :: (store (s64))
     renamable $q6 = EXTv16i8 renamable $q13, renamable $q13, 8
-    STRQui killed renamable $q6, $sp, 6 :: (store (s128) into %stack.1)
+    STRQui killed renamable $q6, $sp, 6 :: (store (s128))
     RET undef $lr
 ...
