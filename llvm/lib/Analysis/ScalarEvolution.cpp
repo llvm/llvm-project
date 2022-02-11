@@ -5967,6 +5967,15 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
       if (isa<SCEVConstant>(C) && cast<SCEVConstant>(C)->getAPInt().ule(1))
         return getAddExpr(getUMaxExpr(X, C), Y);
     }
+    // x == 0 ? 0 : umin(..., x, ...)  ->  umin_seq(x, umin(...))
+    if (getTypeSizeInBits(LHS->getType()) == getTypeSizeInBits(I->getType()) &&
+        isa<ConstantInt>(RHS) && cast<ConstantInt>(RHS)->isZero() &&
+        isa<ConstantInt>(TrueVal) && cast<ConstantInt>(TrueVal)->isZero()) {
+      const SCEV *X = getSCEV(LHS);
+      auto *UMin = dyn_cast<SCEVUMinExpr>(getSCEV(FalseVal));
+      if (UMin && is_contained(UMin->operands(), X))
+        return getUMinExpr(X, UMin, /*Sequential=*/true);
+    }
     break;
   default:
     break;
