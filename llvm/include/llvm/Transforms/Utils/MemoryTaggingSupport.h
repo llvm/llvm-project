@@ -76,12 +76,12 @@ struct AllocaInfo {
   AllocaInst *AI;
   SmallVector<IntrinsicInst *, 2> LifetimeStart;
   SmallVector<IntrinsicInst *, 2> LifetimeEnd;
+  SmallVector<DbgVariableIntrinsic *, 2> DbgVariableIntrinsics;
 };
 
 struct StackInfo {
   MapVector<AllocaInst *, AllocaInfo> AllocasToInstrument;
   SmallVector<Instruction *, 4> UnrecognizedLifetimes;
-  DenseMap<AllocaInst *, std::vector<DbgVariableIntrinsic *>> AllocaDbgMap;
   SmallVector<Instruction *, 8> RetVec;
   bool CallsReturnTwice = false;
 };
