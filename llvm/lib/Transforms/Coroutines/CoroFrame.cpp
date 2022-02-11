@@ -1571,7 +1571,7 @@ static Instruction *insertSpills(const FrameDataInfo &FrameData,
     // Create a store instruction storing the value into the
     // coroutine frame.
     Instruction *InsertPt = nullptr;
-    bool NeedToCopyArgPtrValue = false;
+    Type *ByValTy = nullptr;
     if (auto *Arg = dyn_cast<Argument>(Def)) {
       // For arguments, we will place the store instruction right after
       // the coroutine frame pointer instruction, i.e. bitcast of
@@ -1583,8 +1583,7 @@ static Instruction *insertSpills(const FrameDataInfo &FrameData,
       Arg->getParent()->removeParamAttr(Arg->getArgNo(), Attribute::NoCapture);
 
       if (Arg->hasByValAttr())
-        NeedToCopyArgPtrValue = true;
-
+        ByValTy = Arg->getParamByValType();
     } else if (auto *CSI = dyn_cast<AnyCoroSuspendInst>(Def)) {
       // Don't spill immediately after a suspend; splitting assumes
       // that the suspend will be followed by a branch.
@@ -1619,11 +1618,10 @@ static Instruction *insertSpills(const FrameDataInfo &FrameData,
     Builder.SetInsertPoint(InsertPt);
     auto *G = Builder.CreateConstInBoundsGEP2_32(
         FrameTy, FramePtr, 0, Index, Def->getName() + Twine(".spill.addr"));
-    if (NeedToCopyArgPtrValue) {
+    if (ByValTy) {
       // For byval arguments, we need to store the pointed value in the frame,
       // instead of the pointer itself.
-      auto *Value =
-          Builder.CreateLoad(Def->getType()->getPointerElementType(), Def);
+      auto *Value = Builder.CreateLoad(ByValTy, Def);
       Builder.CreateAlignedStore(Value, G, SpillAlignment);
     } else {
       Builder.CreateAlignedStore(Def, G, SpillAlignment);
@@ -1641,7 +1639,7 @@ static Instruction *insertSpills(const FrameDataInfo &FrameData,
 
         auto *GEP = GetFramePointer(E.first);
         GEP->setName(E.first->getName() + Twine(".reload.addr"));
-        if (NeedToCopyArgPtrValue)
+        if (ByValTy)
           CurrentReload = GEP;
         else
           CurrentReload = Builder.CreateAlignedLoad(
