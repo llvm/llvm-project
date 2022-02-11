@@ -41,11 +41,10 @@
 #  include <istream>
 #endif
 
-#ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY
-# include <filesystem>
+#ifndef TEST_HAS_NO_FILESYSTEM_LIBRARY
+#  include <filesystem>
 #endif
 
-#include "test_macros.h"
 #include "test_iterators.h"
 #include "iterator_traits_cpp17_iterators.h"
 
@@ -210,7 +209,7 @@ static_assert(testConstWithoutConcept<std::cregex_iterator, std::cmatch, std::fo
 static_assert(testConstWithoutConcept<std::cregex_token_iterator, std::csub_match, std::forward_iterator_tag>());
 #endif // !TEST_HAS_NO_LOCALIZATION
 
-#ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY
+#ifndef TEST_HAS_NO_FILESYSTEM_LIBRARY
 static_assert(testWithoutConcept<std::filesystem::directory_iterator, std::filesystem::directory_entry, std::ptrdiff_t,
                                  const std::filesystem::directory_entry&, const std::filesystem::directory_entry*,
                                  std::input_iterator_tag>());
