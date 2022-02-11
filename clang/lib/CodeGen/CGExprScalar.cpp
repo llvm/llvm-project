@@ -2145,7 +2145,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
         if (ScalableDst == PredType &&
             FixedSrc->getElementType() == Builder.getInt8Ty()) {
           DstTy = llvm::ScalableVectorType::get(Builder.getInt8Ty(), 2);
-          ScalableDst = dyn_cast<llvm::ScalableVectorType>(DstTy);
+          ScalableDst = cast<llvm::ScalableVectorType>(DstTy);
           NeedsBitCast = true;
         }
         if (FixedSrc->getElementType() == ScalableDst->getElementType()) {
@@ -2171,7 +2171,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
         if (ScalableSrc == PredType &&
             FixedDst->getElementType() == Builder.getInt8Ty()) {
           SrcTy = llvm::ScalableVectorType::get(Builder.getInt8Ty(), 2);
-          ScalableSrc = dyn_cast<llvm::ScalableVectorType>(SrcTy);
+          ScalableSrc = cast<llvm::ScalableVectorType>(SrcTy);
           Src = Builder.CreateBitCast(Src, SrcTy);
         }
         if (ScalableSrc->getElementType() == FixedDst->getElementType()) {
