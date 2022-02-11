@@ -112,6 +112,11 @@ void scanRelocations(InputChunk *chunk) {
       break;
     case R_WASM_MEMORY_ADDR_TLS_SLEB:
     case R_WASM_MEMORY_ADDR_TLS_SLEB64:
+      if (!sym->isDefined()) {
+        error(toString(file) + ": relocation " + relocTypeToString(reloc.Type) +
+              " cannot be used against an undefined symbol `" + toString(*sym) +
+              "`");
+      }
       // In single-threaded builds TLS is lowered away and TLS data can be
       // merged with normal data and allowing TLS relocation in non-TLS
       // segments.
