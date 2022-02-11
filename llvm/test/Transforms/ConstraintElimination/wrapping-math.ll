@@ -22,7 +22,7 @@ define i1 @wrapping_add_known_1(i8 %a) {
 ; CHECK:       then:
 ; CHECK-NEXT:    [[SUB_1:%.*]] = add i8 [[A]], -1
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8 [[SUB_1]], 0
-; CHECK-NEXT:    ret i1 [[C_1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    [[SUB_2:%.*]] = add i8 [[A]], -1
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i8 [[SUB_2]], 0
@@ -85,7 +85,7 @@ define i1 @test_48253_eq_ne(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[SUB_1]], [[A]]
 ; CHECK-NEXT:    [[SUB_2:%.*]] = add i8 [[B]], -2
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i8 [[SUB_2]], [[A]]
-; CHECK-NEXT:    [[XOR_1:%.*]] = xor i1 [[T_1]], [[C_2]]
+; CHECK-NEXT:    [[XOR_1:%.*]] = xor i1 true, [[C_2]]
 ; CHECK-NEXT:    ret i1 [[XOR_1]]
 ; CHECK:       exit.1:
 ; CHECK-NEXT:    [[SUB_3:%.*]] = add i8 [[B]], -1
@@ -133,9 +133,9 @@ define i1 @test_ult(i8 %a, i8 %b) {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[SUB_1]], [[B]]
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i8 [[SUB_2]], [[B]]
-; CHECK-NEXT:    [[XOR_1:%.*]] = xor i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[XOR_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[T_3:%.*]] = icmp ult i8 [[SUB_3]], [[B]]
-; CHECK-NEXT:    [[XOR_2:%.*]] = xor i1 [[XOR_1]], [[T_3]]
+; CHECK-NEXT:    [[XOR_2:%.*]] = xor i1 [[XOR_1]], true
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[SUB_4]], [[B]]
 ; CHECK-NEXT:    [[XOR_3:%.*]] = xor i1 [[XOR_2]], [[C_1]]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i8 [[ADD_1]], [[B]]
