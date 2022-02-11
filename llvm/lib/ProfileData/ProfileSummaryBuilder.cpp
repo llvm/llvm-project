@@ -110,7 +110,13 @@ void SampleProfileSummaryBuilder::addRecord(
     NumFunctions++;
     if (FS.getHeadSamples() > MaxFunctionCount)
       MaxFunctionCount = FS.getHeadSamples();
+  } else if (FS.getContext().hasAttribute(
+                 sampleprof::ContextDuplicatedIntoBase)) {
+    // Do not recount callee samples if they are already merged into their base
+    // profiles. This can happen to CS nested profile.
+    return;
   }
+
   for (const auto &I : FS.getBodySamples()) {
     uint64_t Count = I.second.getSamples();
       addCount(Count);
