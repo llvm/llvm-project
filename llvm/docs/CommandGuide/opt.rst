@@ -11,23 +11,12 @@ SYNOPSIS
 DESCRIPTION
 -----------
 
-The :program:`opt` command is the modular LLVM optimizer and analyzer.  It
-takes LLVM source files as input, runs the specified optimizations or analyses
-on it, and then outputs the optimized file or the analysis results.  The
-function of :program:`opt` depends on whether the `-analyze` option is
-given.
-
-When `-analyze` is specified, :program:`opt` performs various analyses
-of the input source.  It will usually print the results on standard output, but
-in a few cases, it will print output to standard error or generate a file with
-the analysis output, which is usually done when the output is meant for another
-program.
-
-While `-analyze` is *not* given, :program:`opt` attempts to produce an
-optimized output file.  The optimizations available via :program:`opt` depend
-upon what libraries were linked into it as well as any additional libraries
-that have been loaded with the :option:`-load` option.  Use the :option:`-help`
-option to determine what optimizations you can use.
+The :program:`opt` command is the modular LLVM optimizer and analyzer.  It takes
+LLVM source files as input, runs the specified optimizations or analyses on it,
+and then outputs the optimized file. The optimizations available via
+:program:`opt` depend upon what libraries were linked into it as well as any
+additional libraries that have been loaded with the :option:`-load` option.  Use
+the :option:`-help` option to determine what optimizations you can use.
 
 If ``filename`` is omitted from the command line or is "``-``", :program:`opt`
 reads its input from standard input.  Inputs can be in either the LLVM assembly
