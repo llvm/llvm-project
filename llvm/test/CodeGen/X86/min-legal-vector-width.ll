@@ -72,8 +72,8 @@ define dso_local void @avg_v64i8_256(<64 x i8>* %a, <64 x i8>* %b) "min-legal-ve
 define dso_local void @avg_v64i8_512(<64 x i8>* %a, <64 x i8>* %b) "min-legal-vector-width"="512" {
 ; CHECK-LABEL: avg_v64i8_512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa64 (%rsi), %zmm0
-; CHECK-NEXT:    vpavgb (%rdi), %zmm0, %zmm0
+; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm0
+; CHECK-NEXT:    vpavgb (%rsi), %zmm0, %zmm0
 ; CHECK-NEXT:    vmovdqu64 %zmm0, (%rax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
