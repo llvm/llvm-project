@@ -67,7 +67,9 @@ sema::CIRBasedWarnings::CIRBasedWarnings(Sema &s) : S(s) {
   DefaultPolicy.enableConsumedAnalysis =
       isEnabled(D, warn_use_in_invalid_state);
 
-  CIRGen = std::make_unique<cir::CIRGenerator>();
+  // TODO: figure out a way to get this properly. This isn't actually reasonable
+  // to ask for prior to codegen, so we're just subbing in a blank one.
+  CIRGen = std::make_unique<cir::CIRGenerator>(CodeGenOptions());
   CIRGen->Initialize(S.getASTContext());
 }
 
