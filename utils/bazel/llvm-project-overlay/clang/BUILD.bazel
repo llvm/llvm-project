@@ -1310,9 +1310,6 @@ cc_library(
             "lib/Driver/ToolChains/Arch/*.cpp",
             "lib/Driver/ToolChains/Arch/*.h",
         ],
-        exclude = [
-            "lib/Driver/ToolChains/MSVCSetupApi.h",
-        ],
     ),
     hdrs = glob([
         "include/clang/Driver/*.h",
