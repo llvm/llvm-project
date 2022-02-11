@@ -83,7 +83,7 @@ struct Rule {
 
   // We occupy 4 bits for the sequence, in theory, it can be at most 2^4 tokens
   // long, however, we're stricter in order to reduce the size, we limit the max
-  // lenth to 9 (this is the longest sequence in cxx grammar).
+  // length to 9 (this is the longest sequence in cxx grammar).
   static constexpr unsigned SizeBits = 4;
   static constexpr unsigned MaxElements = 9;
   static_assert(MaxElements <= (1 << SizeBits), "Exceeds the maximum limit");
@@ -167,7 +167,7 @@ struct GrammarTable {
   // The rules are sorted (and thus grouped) by target symbol.
   // RuleID is the index of the vector.
   std::vector<Rule> Rules;
-  // A table of terminals (aka tokens). It correspond to the clang::Token.
+  // A table of terminals (aka tokens). It corresponds to the clang::Token.
   // clang::tok::TokenKind is the index of the table.
   std::vector<std::string> Terminals;
   // A table of nonterminals, sorted by name.
