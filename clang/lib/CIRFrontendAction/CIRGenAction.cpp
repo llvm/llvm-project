@@ -87,7 +87,7 @@ public:
         headerSearchOptions(headerSearchOptions),
         codeGenOptions(codeGenOptions), targetOptions(targetOptions),
         langOptions(langOptions), outputStream(std::move(os)),
-        gen(std::make_unique<CIRGenerator>()) {
+        gen(std::make_unique<CIRGenerator>(codeGenOptions)) {
     // This is required to match the constructors used during
     // CodeGenAction. Ultimately, this is required because we want to use
     // the same utility functions in BackendUtil.h for handling llvm

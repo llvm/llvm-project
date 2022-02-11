@@ -15,6 +15,7 @@
 #define CLANG_CIRGENERATOR_H_
 
 #include "clang/AST/ASTConsumer.h"
+#include "clang/Basic/CodeGenOptions.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include <memory>
 
@@ -36,7 +37,7 @@ class CIRGenTypes;
 
 class CIRGenerator : public clang::ASTConsumer {
 public:
-  CIRGenerator();
+  CIRGenerator(const clang::CodeGenOptions &CGO);
   ~CIRGenerator();
   void Initialize(clang::ASTContext &Context) override;
   bool EmitFunction(const clang::FunctionDecl *FD);
@@ -54,6 +55,8 @@ public:
 private:
   std::unique_ptr<mlir::MLIRContext> mlirCtx;
   std::unique_ptr<CIRGenModule> CGM;
+
+  const clang::CodeGenOptions codeGenOpts; // Intentionally copied in.
 
   clang::ASTContext *astCtx;
 };

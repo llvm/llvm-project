@@ -41,7 +41,8 @@ namespace cir {
 /// accurate analysis and transformation based on these high level semantics.
 class CIRGenModule {
 public:
-  CIRGenModule(mlir::MLIRContext &context, clang::ASTContext &astctx);
+  CIRGenModule(mlir::MLIRContext &context, clang::ASTContext &astctx,
+               const clang::CodeGenOptions &CGO);
   CIRGenModule(CIRGenModule &) = delete;
   CIRGenModule &operator=(CIRGenModule &) = delete;
   ~CIRGenModule() = default;
@@ -72,6 +73,8 @@ private:
   /// Per-function codegen information. Updated everytime buildCIR is called
   /// for FunctionDecls's.
   CIRGenFunction *CurCGF = nullptr;
+
+  const clang::CodeGenOptions &codeGenOpts;
 
   /// Per-module type mapping from clang AST to CIR.
   std::unique_ptr<CIRGenTypes> genTypes;
