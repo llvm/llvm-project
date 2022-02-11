@@ -33,6 +33,7 @@
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/AST/GlobalDecl.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -1477,12 +1478,50 @@ CIRGenModule::buildCompoundStmtWithoutScope(const CompoundStmt &S) {
   return mlir::success();
 }
 
+bool CIRGenModule::MustBeEmitted(const ValueDecl *Global) {
+  // Never defer when EmitAllDecls is specified.
+  assert(!langOpts.EmitAllDecls && "EmitAllDecls NYI");
+  assert(!codeGenOpts.KeepStaticConsts && "KeepStaticConsts NYI");
+
+  return getASTContext().DeclMustBeEmitted(Global);
+}
+
+bool CIRGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
+  assert(!langOpts.OpenMP && "NYI");
+  auto const *FD = dyn_cast<FunctionDecl>(Global);
+  assert(FD && "Only FunctionDecl should hit this path so far.");
+  assert(!FD->isTemplated() && "Templates NYI");
+
+  return true;
+}
+
+void CIRGenModule::buildGlobal(GlobalDecl GD) {
+  const auto *Global = cast<ValueDecl>(GD.getDecl());
+
+  assert(!Global->hasAttr<WeakRefAttr>() && "NYI");
+  assert(!Global->hasAttr<IFuncAttr>() && "NYI");
+  assert(!Global->hasAttr<CPUDispatchAttr>() && "NYI");
+  assert(!langOpts.CUDA && "NYI");
+  assert(!langOpts.OpenMP && "NYI");
+
+  const auto *FD = dyn_cast<FunctionDecl>(Global);
+  assert(FD && "Only FunctionDecl supported as of here");
+  if (!FD->doesThisDeclarationHaveABody()) {
+    assert(!FD->doesDeclarationForceExternallyVisibleDefinition() && "NYI");
+    return;
+  }
+
+  assert(MustBeEmitted(Global) ||
+         MayBeEmittedEagerly(Global) && "Delayed emission NYI");
+
+  buildFunction(cast<FunctionDecl>(GD.getDecl()));
+}
 void CIRGenModule::buildTopLevelDecl(Decl *decl) {
   switch (decl->getKind()) {
   default:
     assert(false && "Not yet implemented");
   case Decl::Function:
-    buildFunction(cast<FunctionDecl>(decl));
+    buildGlobal(cast<FunctionDecl>(decl));
     assert(!codeGenOpts.CoverageMapping && "Coverage Mapping NYI");
     break;
   case Decl::CXXRecord: {

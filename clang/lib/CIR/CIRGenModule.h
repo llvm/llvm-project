@@ -421,10 +421,24 @@ public:
 
   void buildTopLevelDecl(clang::Decl *decl);
 
+  /// Emit code for a single global function or var decl. Forward declarations
+  /// are emitted lazily.
+  void buildGlobal(clang::GlobalDecl D);
+
   // Emit a new function and add it to the MLIR module.
   mlir::FuncOp buildFunction(const clang::FunctionDecl *FD);
 
   mlir::Type getCIRType(const clang::QualType &type);
+
+  /// Determine whether the definition must be emitted; if this returns \c
+  /// false, the definition can be emitted lazily if it's used.
+  bool MustBeEmitted(const clang::ValueDecl *D);
+
+  /// Determine whether the definition can be emitted eagerly, or should be
+  /// delayed until the end of the translation unit. This is relevant for
+  /// definitions whose linkage can change, e.g. implicit function instantions
+  /// which may later be explicitly instantiated.
+  bool MayBeEmittedEagerly(const clang::ValueDecl *D);
 
   void verifyModule();
 };

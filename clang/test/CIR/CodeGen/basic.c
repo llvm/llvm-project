@@ -2,6 +2,8 @@
 // RUN: FileCheck --input-file=%t.cir %s
 // XFAIL: *
 
+int foo(int i);
+
 int foo(int i) {
   return i;
 }
