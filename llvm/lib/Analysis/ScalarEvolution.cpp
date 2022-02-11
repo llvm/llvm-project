@@ -5994,8 +5994,12 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIViaUMinSeq(
       !FalseVal->getType()->isIntegerTy(1))
     return getUnknown(V);
 
-  // i1 cond ? i1 x : i1 C  -->  C + (umin_seq  cond, x + C)
-  // i1 cond ? i1 C : i1 x  -->  C + (umin_seq ~cond, x + C)
+  // i1 cond ? i1 x : i1 C  -->  C + (i1  cond ? (i1 x - i1 C) : i1 0)
+  //                        -->  C + (umin_seq  cond, x - C)
+  //
+  // i1 cond ? i1 C : i1 x  -->  C + (i1  cond ? i1 0 : (i1 x - i1 C))
+  //                        -->  C + (i1 ~cond ? (i1 x - i1 C) : i1 0)
+  //                        -->  C + (umin_seq ~cond, x - C)
   if (isa<ConstantInt>(TrueVal) || isa<ConstantInt>(FalseVal)) {
     const SCEV *CondExpr = getSCEV(Cond);
     const SCEV *TrueExpr = getSCEV(TrueVal);
@@ -6010,7 +6014,7 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIViaUMinSeq(
       C = FalseExpr;
     }
     return getAddExpr(
-        C, getUMinExpr(CondExpr, getAddExpr(C, X), /*Sequential=*/true));
+        C, getUMinExpr(CondExpr, getMinusSCEV(X, C), /*Sequential=*/true));
   }
 
   return getUnknown(V);
