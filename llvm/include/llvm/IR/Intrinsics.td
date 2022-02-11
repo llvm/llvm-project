@@ -909,6 +909,12 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
 }
 // FIXME: Consider maybe adding intrinsics for sitofp, uitofp.
 
+
+// Truncate a floating point number with a specific rounding mode
+def int_fptrunc_round : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
+                                              [ llvm_anyfloat_ty, llvm_metadata_ty ],
+                                              [ IntrNoMem, IntrWillReturn ]>;
+
 //===------------------------- Expect Intrinsics --------------------------===//
 //
 def int_expect : DefaultAttrsIntrinsic<[llvm_anyint_ty],

@@ -4570,6 +4570,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpdsMapping[0] = AMDGPU::getValueMapping(Bank, 1);
     break;
   }
+  case AMDGPU::G_FPTRUNC_ROUND_UPWARD:
+  case AMDGPU::G_FPTRUNC_ROUND_DOWNWARD:
+    return getDefaultMappingVOP(MI);
   }
 
   return getInstructionMapping(/*ID*/1, /*Cost*/1,

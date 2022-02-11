@@ -17,6 +17,7 @@
 #include "AMDGPUTargetMachine.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -602,6 +603,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SINT_TO_FP, MVT::f16, Promote);
     setOperationAction(ISD::UINT_TO_FP, MVT::f16, Promote);
     setOperationAction(ISD::FROUND, MVT::f16, Custom);
+    setOperationAction(ISD::FPTRUNC_ROUND, MVT::f16, Custom);
 
     // F16 - VOP2 Actions.
     setOperationAction(ISD::BR_CC, MVT::f16, Expand);
@@ -4740,6 +4742,24 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerBUILD_VECTOR(Op, DAG);
   case ISD::FP_ROUND:
     return lowerFP_ROUND(Op, DAG);
+  case ISD::FPTRUNC_ROUND: {
+    unsigned Opc;
+    SDLoc DL(Op);
+
+    if (Op.getOperand(0)->getValueType(0) != MVT::f32)
+      return SDValue();
+
+    // Get the rounding mode from the last operand
+    int RoundMode = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+    if (RoundMode == (int)RoundingMode::TowardPositive)
+      Opc = AMDGPUISD::FPTRUNC_ROUND_UPWARD;
+    else if (RoundMode == (int)RoundingMode::TowardNegative)
+      Opc = AMDGPUISD::FPTRUNC_ROUND_DOWNWARD;
+    else
+      return SDValue();
+
+    return DAG.getNode(Opc, DL, Op.getNode()->getVTList(), Op->getOperand(0));
+  }
   case ISD::TRAP:
     return lowerTRAP(Op, DAG);
   case ISD::DEBUGTRAP:

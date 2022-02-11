@@ -462,6 +462,9 @@ enum NodeType {
   STRICT_FSETCC,
   STRICT_FSETCCS,
 
+  // FPTRUNC_ROUND - This corresponds to the fptrunc_round intrinsic.
+  FPTRUNC_ROUND,
+
   /// FMA - Perform a * b + c with no intermediate rounding step.
   FMA,
 

@@ -4772,6 +4772,27 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
            "an array");
     break;
   }
+  case Intrinsic::fptrunc_round: {
+    // Check the rounding mode
+    Metadata *MD = nullptr;
+    auto *MAV = dyn_cast<MetadataAsValue>(Call.getOperand(1));
+    if (MAV)
+      MD = MAV->getMetadata();
+
+    Assert(MD != nullptr, "missing rounding mode argument", Call);
+
+    Assert(isa<MDString>(MD),
+           ("invalid value for llvm.fptrunc.round metadata operand"
+            " (the operand should be a string)"),
+           MD);
+
+    Optional<RoundingMode> RoundMode =
+        convertStrToRoundingMode(cast<MDString>(MD)->getString());
+    Assert(RoundMode.hasValue() &&
+               RoundMode.getValue() != RoundingMode::Dynamic,
+           "unsupported rounding mode argument", Call);
+    break;
+  }
 #define INSTRUCTION(NAME, NARGS, ROUND_MODE, INTRINSIC)                        \
   case Intrinsic::INTRINSIC:
 #include "llvm/IR/ConstrainedOps.def"
