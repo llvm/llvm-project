@@ -5887,6 +5887,44 @@ const SCEV *ScalarEvolution::createNodeForPHI(PHINode *PN) {
   return getUnknown(PN);
 }
 
+bool SCEVMinMaxExprContains(const SCEV *Root, const SCEV *OperandToFind,
+                            SCEVTypes RootKind) {
+  struct FindClosure {
+    const SCEV *OperandToFind;
+    const SCEVTypes RootKind; // Must be a sequential min/max expression.
+    const SCEVTypes NonSequentialRootKind; // Non-seq variant of RootKind.
+
+    bool Found = false;
+
+    bool canRecurseInto(SCEVTypes Kind) const {
+      // We can only recurse into the SCEV expression of the same effective type
+      // as the type of our root SCEV expression.
+      return RootKind == Kind || NonSequentialRootKind == Kind;
+    };
+
+    FindClosure(const SCEV *OperandToFind, SCEVTypes RootKind)
+        : OperandToFind(OperandToFind), RootKind(RootKind),
+          NonSequentialRootKind(
+              SCEVSequentialMinMaxExpr::getEquivalentNonSequentialSCEVType(
+                  RootKind)) {}
+
+    bool follow(const SCEV *S) {
+      if (isDone())
+        return false;
+
+      Found = S == OperandToFind;
+
+      return !isDone() && canRecurseInto(S->getSCEVType());
+    }
+
+    bool isDone() const { return Found; }
+  };
+
+  FindClosure FC(OperandToFind, RootKind);
+  visitAll(Root, FC);
+  return FC.Found;
+}
+
 const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
     Instruction *I, ICmpInst *Cond, Value *TrueVal, Value *FalseVal) {
   // Try to match some simple smax or umax patterns.
@@ -5969,15 +6007,14 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
     }
     // x == 0 ? 0 : umin    (..., x, ...)  ->  umin_seq(x, umin    (...))
     // x == 0 ? 0 : umin_seq(..., x, ...)  ->  umin_seq(x, umin_seq(...))
+    // x == 0 ? 0 : umin    (..., umin_seq(..., x, ...), ...)
+    //                    ->  umin_seq(x, umin (..., umin_seq(...), ...))
     if (getTypeSizeInBits(LHS->getType()) == getTypeSizeInBits(I->getType()) &&
         isa<ConstantInt>(RHS) && cast<ConstantInt>(RHS)->isZero() &&
         isa<ConstantInt>(TrueVal) && cast<ConstantInt>(TrueVal)->isZero()) {
       const SCEV *X = getSCEV(LHS);
-      auto *FalseValExpr = dyn_cast<SCEVNAryExpr>(getSCEV(FalseVal));
-      if (FalseValExpr &&
-          (FalseValExpr->getSCEVType() == scUMinExpr ||
-           FalseValExpr->getSCEVType() == scSequentialUMinExpr) &&
-          is_contained(FalseValExpr->operands(), X))
+      const SCEV *FalseValExpr = getSCEV(FalseVal);
+      if (SCEVMinMaxExprContains(FalseValExpr, X, scSequentialUMinExpr))
         return getUMinExpr(X, FalseValExpr, /*Sequential=*/true);
     }
     break;
