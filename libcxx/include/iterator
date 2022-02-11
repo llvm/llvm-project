@@ -598,7 +598,6 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 
 #include <__config>
 #include <__debug>
-#include <__functional_base>
 #include <__iterator/access.h>
 #include <__iterator/advance.h>
 #include <__iterator/back_insert_iterator.h>
@@ -642,6 +641,19 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <type_traits>
 #include <utility>
 #include <version>
+
+// TODO: remove these headers
+#include <__functional/binary_function.h>
+#include <__functional/invoke.h>
+#include <__functional/operations.h>
+#include <__functional/reference_wrapper.h>
+#include <__functional/unary_function.h>
+#include <__functional/weak_result_type.h>
+#include <__memory/allocator_arg_t.h>
+#include <__memory/uses_allocator.h>
+#include <exception>
+#include <new>
+#include <typeinfo>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

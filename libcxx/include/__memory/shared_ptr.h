@@ -15,7 +15,6 @@
 #include <__functional/binary_function.h>
 #include <__functional/operations.h>
 #include <__functional/reference_wrapper.h>
-#include <__functional_base>
 #include <__memory/addressof.h>
 #include <__memory/allocation_guard.h>
 #include <__memory/allocator.h>
