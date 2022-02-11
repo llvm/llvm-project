@@ -344,3 +344,57 @@ define i1 @cmp_load_gep_global_different_gep_type(i64 %idx) {
   %cmp = icmp eq i16 %load, 3
   ret i1 %cmp
 }
+
+define ptr @phi_of_gep(i1 %c, ptr %p) {
+; CHECK-LABEL: @phi_of_gep(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    ret ptr [[PHI]]
+;
+  br i1 %c, label %if, label %else
+
+if:
+  %gep1 = getelementptr i32, ptr %p, i64 1
+  br label %join
+
+else:
+  %gep2 = getelementptr i32, ptr %p, i64 1
+  br label %join
+
+join:
+  %phi = phi ptr [ %gep1, %if ], [ %gep2, %else ]
+  ret ptr %phi
+}
+
+define ptr @phi_of_gep_different_type(i1 %c, ptr %p) {
+; CHECK-LABEL: @phi_of_gep_different_type(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i64, ptr [[P]], i64 1
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[GEP1]], [[IF]] ], [ [[GEP2]], [[ELSE]] ]
+; CHECK-NEXT:    ret ptr [[PHI]]
+;
+  br i1 %c, label %if, label %else
+
+if:
+  %gep1 = getelementptr i32, ptr %p, i64 1
+  br label %join
+
+else:
+  %gep2 = getelementptr i64, ptr %p, i64 1
+  br label %join
+
+join:
+  %phi = phi ptr [ %gep1, %if ], [ %gep2, %else ]
+  ret ptr %phi
+}
