@@ -756,7 +756,9 @@ Parser::parseUserConstraintDecl(bool isInline) {
   // Constraints and rewrites have very similar formats, dispatch to a shared
   // interface for parsing.
   return parseUserConstraintOrRewriteDecl<ast::UserConstraintDecl>(
-      [&](auto &&...args) { return parseUserPDLLConstraintDecl(args...); },
+      [&](auto &&...args) {
+        return this->parseUserPDLLConstraintDecl(args...);
+      },
       ParserContext::Constraint, "constraint", isInline);
 }
 
@@ -822,7 +824,7 @@ FailureOr<ast::UserRewriteDecl *> Parser::parseUserRewriteDecl(bool isInline) {
   // Constraints and rewrites have very similar formats, dispatch to a shared
   // interface for parsing.
   return parseUserConstraintOrRewriteDecl<ast::UserRewriteDecl>(
-      [&](auto &&...args) { return parseUserPDLLRewriteDecl(args...); },
+      [&](auto &&...args) { return this->parseUserPDLLRewriteDecl(args...); },
       ParserContext::Rewrite, "rewrite", isInline);
 }
 
