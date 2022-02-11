@@ -167,8 +167,8 @@ if(compiler_rt_path)
   endif()
 endif()
 
-# We create a list the names of all the runtime projects in all uppercase and
-# with dashes turned to underscores. This gives us the CMake variable prefixes
+# Create a list with the names of all the runtime projects in all uppercase and
+# with dashes turned to underscores. This gives us the CMake variable `prefixes`
 # for all variables that will apply to runtimes.
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)
