@@ -10,9 +10,6 @@
 // RUN:     -- %s \
 // RUN: | FileCheck %s
 // CHECK: running pass 0
-// CHECK: wrote{{.*}}per_pass_score
-// CHECK: wrote{{.*}}pass-summary
-// CHECK: wrote{{.*}}overall-pass-summary
 
 int main() {
     return 0;
