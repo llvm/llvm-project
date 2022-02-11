@@ -204,12 +204,16 @@ namespace {
 class RegUnitIterator {
   CodeGenRegister::Vec::const_iterator RegI, RegE;
   CodeGenRegister::RegUnitList::iterator UnitI, UnitE;
+  static CodeGenRegister::RegUnitList Sentinel;
 
 public:
   RegUnitIterator(const CodeGenRegister::Vec &Regs):
     RegI(Regs.begin()), RegE(Regs.end()) {
 
-    if (RegI != RegE) {
+    if (RegI == RegE) {
+      UnitI = Sentinel.end();
+      UnitE = Sentinel.end();
+    } else {
       UnitI = (*RegI)->getRegUnits().begin();
       UnitE = (*RegI)->getRegUnits().end();
       advance();
@@ -239,6 +243,8 @@ protected:
     }
   }
 };
+
+CodeGenRegister::RegUnitList RegUnitIterator::Sentinel;
 
 } // end anonymous namespace
 
