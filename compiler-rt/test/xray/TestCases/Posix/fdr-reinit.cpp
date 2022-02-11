@@ -1,3 +1,5 @@
+// This will sometimes segfault on the AArch64 bots
+// UNSUPPORTED: aarch64
 // RUN: %clangxx_xray -g -std=c++11 %s -o %t
 // RUN: rm xray-log.fdr-reinit* || true
 // RUN: XRAY_OPTIONS="verbosity=1" %run %t
