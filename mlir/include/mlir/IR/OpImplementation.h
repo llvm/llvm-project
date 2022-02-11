@@ -1322,6 +1322,10 @@ private:
 /// operation. See 'getAsmResultNames' below for more details.
 using OpAsmSetValueNameFn = function_ref<void(Value, StringRef)>;
 
+/// A functor used to set the name of blocks in regions directly nested under
+/// an operation.
+using OpAsmSetBlockNameFn = function_ref<void(Block *, StringRef)>;
+
 class OpAsmDialectInterface
     : public DialectInterface::Base<OpAsmDialectInterface> {
 public:

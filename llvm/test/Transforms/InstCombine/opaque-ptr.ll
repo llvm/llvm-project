@@ -281,3 +281,120 @@ define ptr addrspace(1) @gep_of_addrspace_cast(ptr %ptr) {
   %gep = getelementptr inbounds i32, ptr addrspace(1) %cast1, i64 1
   ret ptr addrspace(1) %gep
 }
+
+define i1 @cmp_gep_same_base_same_type(ptr %ptr, i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @cmp_gep_same_base_same_type(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IDX1:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr inbounds i32, ptr %ptr, i64 %idx1
+  %gep2 = getelementptr inbounds i32, ptr %ptr, i64 %idx2
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @cmp_gep_same_base_different_type(ptr %ptr, i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @cmp_gep_same_base_different_type(
+; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nsw i64 [[IDX1:%.*]], 2
+; CHECK-NEXT:    [[GEP2_IDX:%.*]] = shl nsw i64 [[IDX2:%.*]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[GEP1_IDX]], [[GEP2_IDX]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr inbounds i32, ptr %ptr, i64 %idx1
+  %gep2 = getelementptr inbounds i64, ptr %ptr, i64 %idx2
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+@ary = constant [4 x i8] [i8 1, i8 2, i8 3, i8 4]
+
+define i1 @cmp_load_gep_global(i64 %idx) {
+; CHECK-LABEL: @cmp_load_gep_global(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IDX:%.*]], 2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep = getelementptr [4 x i8], ptr @ary, i64 0, i64 %idx
+  %load = load i8, ptr %gep
+  %cmp = icmp eq i8 %load, 3
+  ret i1 %cmp
+}
+
+define i1 @cmp_load_gep_global_different_load_type(i64 %idx) {
+; CHECK-LABEL: @cmp_load_gep_global_different_load_type(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr @ary, i64 0, i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep = getelementptr [4 x i8], ptr @ary, i64 0, i64 %idx
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 3
+  ret i1 %cmp
+}
+
+define i1 @cmp_load_gep_global_different_gep_type(i64 %idx) {
+; CHECK-LABEL: @cmp_load_gep_global_different_gep_type(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i16], ptr @ary, i64 0, i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep = getelementptr [4 x i16], ptr @ary, i64 0, i64 %idx
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 3
+  ret i1 %cmp
+}
+
+define ptr @phi_of_gep(i1 %c, ptr %p) {
+; CHECK-LABEL: @phi_of_gep(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    ret ptr [[PHI]]
+;
+  br i1 %c, label %if, label %else
+
+if:
+  %gep1 = getelementptr i32, ptr %p, i64 1
+  br label %join
+
+else:
+  %gep2 = getelementptr i32, ptr %p, i64 1
+  br label %join
+
+join:
+  %phi = phi ptr [ %gep1, %if ], [ %gep2, %else ]
+  ret ptr %phi
+}
+
+define ptr @phi_of_gep_different_type(i1 %c, ptr %p) {
+; CHECK-LABEL: @phi_of_gep_different_type(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i64, ptr [[P]], i64 1
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[GEP1]], [[IF]] ], [ [[GEP2]], [[ELSE]] ]
+; CHECK-NEXT:    ret ptr [[PHI]]
+;
+  br i1 %c, label %if, label %else
+
+if:
+  %gep1 = getelementptr i32, ptr %p, i64 1
+  br label %join
+
+else:
+  %gep2 = getelementptr i64, ptr %p, i64 1
+  br label %join
+
+join:
+  %phi = phi ptr [ %gep1, %if ], [ %gep2, %else ]
+  ret ptr %phi
+}

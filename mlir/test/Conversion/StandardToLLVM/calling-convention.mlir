@@ -148,7 +148,7 @@ func @return_var_memref(%arg0: memref<4x3xf32>) -> memref<*xf32> attributes { ll
   // Match the construction of the unranked descriptor.
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca
   // CHECK: %[[MEMORY:.*]] = llvm.bitcast %[[ALLOCA]]
-  // CHECK: %[[RANK:.*]] = llvm.mlir.constant(2 : i64)
+  // CHECK: %[[RANK:.*]] = llvm.mlir.constant(2 : index)
   // CHECK: %[[DESC_0:.*]] = llvm.mlir.undef : !llvm.struct<(i64, ptr<i8>)>
   // CHECK: %[[DESC_1:.*]] = llvm.insertvalue %[[RANK]], %[[DESC_0]][0]
   // CHECK: %[[DESC_2:.*]] = llvm.insertvalue %[[MEMORY]], %[[DESC_1]][1]

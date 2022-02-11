@@ -29,6 +29,7 @@ do_debug="no"
 do_asserts="no"
 do_compare="yes"
 do_rt="yes"
+do_clang_tools="yes"
 do_libs="yes"
 do_libcxxabi="yes"
 do_libunwind="yes"
@@ -62,6 +63,7 @@ function usage() {
     echo " -configure-flags FLAGS  Extra flags to pass to the configure step."
     echo " -git-ref sha         Use the specified git ref for testing instead of a release."
     echo " -no-rt               Disable check-out & build Compiler-RT"
+    echo " -no-clang-tools      Disable check-out & build clang-tools-extra"
     echo " -no-libs             Disable check-out & build libcxx/libcxxabi/libunwind"
     echo " -no-libcxxabi        Disable check-out & build libcxxabi"
     echo " -no-libunwind        Disable check-out & build libunwind"
@@ -143,6 +145,9 @@ while [ $# -gt 0 ]; do
             ;;
         -no-libs )
             do_libs="no"
+            ;;
+        -no-clang-tools )
+            do_clang_tools="no"
             ;;
         -no-libcxxabi )
             do_libcxxabi="no"
@@ -235,7 +240,10 @@ if [ -z "$NumJobs" ]; then
 fi
 
 # Projects list
-projects="llvm clang clang-tools-extra"
+projects="llvm clang"
+if [ $do_clang_tools = "yes" ]; then
+  projects="$projects clang-tools-extra"
+fi
 runtimes=""
 if [ $do_rt = "yes" ]; then
   runtimes="$runtimes compiler-rt"

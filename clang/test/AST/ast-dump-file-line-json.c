@@ -169,7 +169,7 @@ int e;
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "VarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 105,
+// CHECK-NEXT:     "offset": {{[0-9]+}},
 // CHECK-NEXT:     "file": "{{.*}}",
 // CHECK-NEXT:     "line": 4,
 // CHECK-NEXT:     "presumedFile": "{{.*}}",
@@ -178,12 +178,12 @@ int e;
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 101,
+// CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 105,
+// CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "col": 5,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -198,7 +198,7 @@ int e;
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "VarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 130,
+// CHECK-NEXT:     "offset": {{[0-9]+}},
 // CHECK-NEXT:     "line": 7,
 // CHECK-NEXT:     "presumedFile": "bar.h",
 // CHECK-NEXT:     "presumedLine": 32,
@@ -207,12 +207,12 @@ int e;
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 126,
+// CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 130,
+// CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "col": 5,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -227,7 +227,7 @@ int e;
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "VarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 137,
+// CHECK-NEXT:     "offset": {{[0-9]+}},
 // CHECK-NEXT:     "line": 8,
 // CHECK-NEXT:     "presumedLine": 33,
 // CHECK-NEXT:     "col": 5,
@@ -235,12 +235,12 @@ int e;
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 133,
+// CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 137,
+// CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "col": 5,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -255,7 +255,7 @@ int e;
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "VarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 163,
+// CHECK-NEXT:     "offset": {{[0-9]+}},
 // CHECK-NEXT:     "line": 11,
 // CHECK-NEXT:     "presumedFile": "{{.*}}",
 // CHECK-NEXT:     "col": 5,
@@ -263,12 +263,12 @@ int e;
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 159,
+// CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 163,
+// CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "col": 5,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -283,19 +283,19 @@ int e;
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "VarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 170,
+// CHECK-NEXT:     "offset": {{[0-9]+}},
 // CHECK-NEXT:     "line": 12,
 // CHECK-NEXT:     "col": 5,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 166,
+// CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 170,
+// CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "col": 5,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }

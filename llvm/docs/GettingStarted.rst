@@ -1222,7 +1222,7 @@ following options with cmake:
    compiling more than one project, separate the items with a semicolon. Should
    you run into issues with the semicolon, try surrounding it with single quotes.
 
-* -DLLVM_ENABLE_RUNTIMES
+ * -DLLVM_ENABLE_RUNTIMES
    Set this equal to the runtimes you wish to compile (e.g. libcxx, libcxxabi, etc.)
    If compiling more than one runtime, separate the items with a semicolon. Should
    you run into issues with the semicolon, try surrounding it with single quotes.
