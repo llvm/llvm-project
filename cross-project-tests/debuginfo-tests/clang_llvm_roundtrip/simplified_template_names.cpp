@@ -216,6 +216,7 @@ int main() {
   f1<t3<t3<int>>>();
   f1<decltype(L)>();
   t3<decltype(L)> v1;
+  f1<t3<t3<decltype(L)>>>();
   f1<int(float)>();
   f1<void(...)>();
   f1<void(int, ...)>();
