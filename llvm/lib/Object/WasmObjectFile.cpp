@@ -8,7 +8,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -30,7 +29,6 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
-#include <system_error>
 
 #define DEBUG_TYPE "wasm-object"
 

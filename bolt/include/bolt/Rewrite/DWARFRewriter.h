@@ -10,6 +10,7 @@
 #define BOLT_REWRITE_DWARF_REWRITER_H
 
 #include "bolt/Core/DebugData.h"
+#include "llvm/MC/MCAsmLayout.h"
 #include <cstdint>
 #include <memory>
 #include <mutex>
