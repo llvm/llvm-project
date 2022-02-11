@@ -1,3 +1,4 @@
+# TODO(michaelrj): separate the standalone_cpp library into individual targets.
 add_header_library(
   standalone_cpp
   HDRS
@@ -9,4 +10,12 @@ add_header_library(
     Limits.h
     StringView.h
     TypeTraits.h
+)
+
+add_header_library(
+  vector
+  HDRS
+    vector.h
+  DEPENDS
+    libc.include.stdlib
 )
