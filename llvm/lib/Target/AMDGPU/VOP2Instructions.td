@@ -1346,8 +1346,6 @@ defm V_FMAC_DX9_ZERO_F32 : VOP2_Real_NO_DPP_with_name_gfx11<0x006,
   "V_FMAC_LEGACY_F32", "v_fmac_dx9_zero_f32">;
 defm V_MUL_DX9_ZERO_F32 : VOP2_Real_FULL_with_name_gfx11<0x007,
   "V_MUL_LEGACY_F32", "v_mul_dx9_zero_f32">;
-defm V_DOT4ACC_I32_I8 : VOP2_Real_e32_with_name_gfx11<0x00d,
-  "V_DOT4C_I32_I8", "v_dot4acc_i32_i8">;
 defm V_LSHLREV_B32        : VOP2_Real_FULL_gfx11<0x018>;
 defm V_LSHRREV_B32        : VOP2_Real_FULL_gfx11<0x019>;
 defm V_ASHRREV_I32        : VOP2_Real_FULL_gfx11<0x01a>;

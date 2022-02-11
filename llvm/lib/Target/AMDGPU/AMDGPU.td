@@ -1194,7 +1194,6 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureDLInsts,
    FeatureDot1Insts,
    FeatureDot5Insts,
-   FeatureDot6Insts,
    FeatureDot7Insts,
    FeatureDot8Insts,
    FeatureNSAEncoding,
