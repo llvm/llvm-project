@@ -5967,14 +5967,18 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
       if (isa<SCEVConstant>(C) && cast<SCEVConstant>(C)->getAPInt().ule(1))
         return getAddExpr(getUMaxExpr(X, C), Y);
     }
-    // x == 0 ? 0 : umin(..., x, ...)  ->  umin_seq(x, umin(...))
+    // x == 0 ? 0 : umin    (..., x, ...)  ->  umin_seq(x, umin    (...))
+    // x == 0 ? 0 : umin_seq(..., x, ...)  ->  umin_seq(x, umin_seq(...))
     if (getTypeSizeInBits(LHS->getType()) == getTypeSizeInBits(I->getType()) &&
         isa<ConstantInt>(RHS) && cast<ConstantInt>(RHS)->isZero() &&
         isa<ConstantInt>(TrueVal) && cast<ConstantInt>(TrueVal)->isZero()) {
       const SCEV *X = getSCEV(LHS);
-      auto *UMin = dyn_cast<SCEVUMinExpr>(getSCEV(FalseVal));
-      if (UMin && is_contained(UMin->operands(), X))
-        return getUMinExpr(X, UMin, /*Sequential=*/true);
+      auto *FalseValExpr = dyn_cast<SCEVNAryExpr>(getSCEV(FalseVal));
+      if (FalseValExpr &&
+          (FalseValExpr->getSCEVType() == scUMinExpr ||
+           FalseValExpr->getSCEVType() == scSequentialUMinExpr) &&
+          is_contained(FalseValExpr->operands(), X))
+        return getUMinExpr(X, FalseValExpr, /*Sequential=*/true);
     }
     break;
   default:
