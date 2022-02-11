@@ -200,7 +200,10 @@ def Vector_ContractionOp :
       "ArrayAttr":$indexingMaps, "ArrayAttr":$iteratorTypes)>,
     OpBuilder<(ins "Value":$lhs, "Value":$rhs, "Value":$acc,
       "ArrayRef<ArrayRef<AffineExpr>>":$indexingExprs,
-      "ArrayRef<StringRef>":$iteratorTypes)>
+      "ArrayRef<StringRef>":$iteratorTypes)>,
+    OpBuilder<(ins "Value":$lhs, "Value":$rhs, "Value":$acc,
+      "ArrayAttr":$indexingMaps, "ArrayAttr":$iteratorTypes,
+      "CombiningKind":$kind)>
   ];
   let extraClassDeclaration = [{
     VectorType getLhsType() {
@@ -253,7 +256,8 @@ def Vector_ReductionOp :
   Vector_Op<"reduction", [NoSideEffect,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
-    Arguments<(ins StrAttr:$kind, AnyVector:$vector, Variadic<AnyType>:$acc)>,
+    Arguments<(ins Vector_CombiningKindAttr:$kind, AnyVector:$vector,
+                   Optional<AnyType>:$acc)>,
     Results<(outs AnyType:$dest)> {
   let summary = "reduction operation";
   let description = [{
@@ -270,11 +274,11 @@ def Vector_ReductionOp :
     Example:
 
     ```mlir
-    %1 = vector.reduction "add", %0 : vector<16xf32> into f32
+    %1 = vector.reduction <add>, %0 : vector<16xf32> into f32
 
-    %3 = vector.reduction "xor", %2 : vector<4xi32> into i32
+    %3 = vector.reduction <xor>, %2 : vector<4xi32> into i32
 
-    %4 = vector.reduction "mul", %0, %1 : vector<16xf32> into f32
+    %4 = vector.reduction <mul>, %0, %1 : vector<16xf32> into f32
     ```
   }];
   let extraClassDeclaration = [{
@@ -282,6 +286,15 @@ def Vector_ReductionOp :
       return vector().getType().cast<VectorType>();
     }
   }];
+  let builders = [
+    // Builder that infers the type of `dest`.
+    OpBuilder<(ins "CombiningKind":$kind, "Value":$vector, "Value":$acc)>,
+    // Builder that infers the type of `dest` and has no accumulator.
+    OpBuilder<(ins "CombiningKind":$kind, "Value":$vector)>
+  ];
+
+  // TODO: Migrate to assemblyFormat once `AllTypesMatch` supports optional
+  // operands.
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
@@ -303,9 +316,9 @@ def Vector_MultiDimReductionOp :
     Example:
 
     ```mlir
-    %1 = vector.multi_reduction "add", %0 [1, 3] :
+    %1 = vector.multi_reduction <add>, %0 [1, 3] :
       vector<4x8x16x32xf32> into vector<4x16xf32>
-    %2 = vector.multi_reduction "add", %1 [0, 1] :
+    %2 = vector.multi_reduction <add>, %1 [0, 1] :
       vector<4x16xf32> into f32
     ```
   }];

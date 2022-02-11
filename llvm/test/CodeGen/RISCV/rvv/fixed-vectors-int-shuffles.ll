@@ -554,3 +554,53 @@ define <8 x i32> @slidedown_v8i32(<8 x i32> %x) {
   %s = shufflevector <8 x i32> %x, <8 x i32> poison, <8 x i32> <i32 3, i32 undef, i32 5, i32 6, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x i32> %s
 }
+
+define <8 x i16> @splice_unary(<8 x i16> %x) {
+; CHECK-LABEL: splice_unary:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, mu
+; CHECK-NEXT:    vslidedown.vi v9, v8, 2
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, tu, mu
+; CHECK-NEXT:    vslideup.vi v9, v8, 6
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %s = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1>
+  ret <8 x i16> %s
+}
+
+define <8 x i32> @splice_unary2(<8 x i32> %x) {
+; CHECK-LABEL: splice_unary2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 3, e32, m2, ta, mu
+; CHECK-NEXT:    vslidedown.vi v10, v8, 5
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, tu, mu
+; CHECK-NEXT:    vslideup.vi v10, v8, 3
+; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    ret
+  %s = shufflevector <8 x i32> %x, <8 x i32> poison, <8 x i32> <i32 undef, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4>
+  ret <8 x i32> %s
+}
+
+define <8 x i16> @splice_binary(<8 x i16> %x, <8 x i16> %y) {
+; CHECK-LABEL: splice_binary:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, mu
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, tu, mu
+; CHECK-NEXT:    vslideup.vi v8, v9, 6
+; CHECK-NEXT:    ret
+  %s = shufflevector <8 x i16> %x, <8 x i16> %y, <8 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 9>
+  ret <8 x i16> %s
+}
+
+define <8 x i32> @splice_binary2(<8 x i32> %x, <8 x i32> %y) {
+; CHECK-LABEL: splice_binary2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 3, e32, m2, ta, mu
+; CHECK-NEXT:    vslidedown.vi v8, v8, 5
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, tu, mu
+; CHECK-NEXT:    vslideup.vi v8, v10, 3
+; CHECK-NEXT:    ret
+  %s = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 undef, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12>
+  ret <8 x i32> %s
+}

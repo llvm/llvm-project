@@ -9,7 +9,7 @@
 declare i32 @source() nounwind readonly
 
 define i32 @chain_dead(i32 %arg) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree nosync nounwind readnone willreturn
 ; CHECK-LABEL: define {{[^@]+}}@chain_dead
 ; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    ret i32 0
@@ -60,5 +60,5 @@ define i32 @chain_alive(i32 %arg) {
 }
 ;.
 ; CHECK: attributes #[[ATTR0]] = { nounwind readonly }
-; CHECK: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
 ;.

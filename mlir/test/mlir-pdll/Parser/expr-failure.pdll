@@ -44,6 +44,45 @@ Pattern {
 // -----
 
 //===----------------------------------------------------------------------===//
+// Call Expr
+//===----------------------------------------------------------------------===//
+
+Constraint foo(value: Value);
+
+Pattern {
+  // CHECK: expected `)` after argument list
+  foo(_: Value{};
+}
+
+// -----
+
+Pattern {
+  // CHECK: expected a reference to a callable `Constraint` or `Rewrite`, but got: `Op`
+  let foo: Op;
+  foo();
+}
+
+// -----
+
+Constraint Foo();
+
+Pattern {
+  // CHECK: invalid number of arguments for constraint call; expected 0, but got 1
+  Foo(_: Value);
+}
+
+// -----
+
+Constraint Foo(arg: Value);
+
+Pattern {
+  // CHECK: unable to convert expression of type `Attr` to the expected type of `Value`
+  Foo(attr<"i32">);
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // Member Access Expr
 //===----------------------------------------------------------------------===//
 
@@ -100,6 +139,26 @@ Pattern {
   // CHECK: unable to build a tuple with `Tuple<Value, Value>` element
   let tuple = (_: Value, _: Value);
   let var = (tuple);
+  erase op<>;
+}
+
+// -----
+
+Constraint Foo();
+
+Pattern {
+  // CHECK: unable to build a tuple with `Constraint` element
+  let tuple = (Foo);
+  erase op<>;
+}
+
+// -----
+
+Rewrite Foo();
+
+Pattern {
+  // CHECK: unable to build a tuple with `Rewrite` element
+  let tuple = (Foo);
   erase op<>;
 }
 

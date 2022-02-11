@@ -5631,7 +5631,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine) {
     // types agree.
     auto I = ForwardRefValIDs.find(NumberedVals.size());
     if (I != ForwardRefValIDs.end()) {
-      FwdFn = cast<Function>(I->second.first);
+      FwdFn = I->second.first;
       if (!FwdFn->getType()->isOpaque() && FwdFn->getType() != PFT)
         return error(NameLoc, "type of definition and forward reference of '@" +
                                   Twine(NumberedVals.size()) +

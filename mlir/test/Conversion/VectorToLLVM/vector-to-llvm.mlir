@@ -1123,7 +1123,7 @@ func @vector_fma(%a: vector<8xf32>, %b: vector<2x4xf32>, %c: vector<1x1x1xf32>) 
 // -----
 
 func @reduce_f16(%arg0: vector<16xf16>) -> f16 {
-  %0 = vector.reduction "add", %arg0 : vector<16xf16> into f16
+  %0 = vector.reduction <add>, %arg0 : vector<16xf16> into f16
   return %0 : f16
 }
 // CHECK-LABEL: @reduce_f16(
@@ -1136,7 +1136,7 @@ func @reduce_f16(%arg0: vector<16xf16>) -> f16 {
 // -----
 
 func @reduce_f32(%arg0: vector<16xf32>) -> f32 {
-  %0 = vector.reduction "add", %arg0 : vector<16xf32> into f32
+  %0 = vector.reduction <add>, %arg0 : vector<16xf32> into f32
   return %0 : f32
 }
 // CHECK-LABEL: @reduce_f32(
@@ -1149,7 +1149,7 @@ func @reduce_f32(%arg0: vector<16xf32>) -> f32 {
 // -----
 
 func @reduce_f64(%arg0: vector<16xf64>) -> f64 {
-  %0 = vector.reduction "add", %arg0 : vector<16xf64> into f64
+  %0 = vector.reduction <add>, %arg0 : vector<16xf64> into f64
   return %0 : f64
 }
 // CHECK-LABEL: @reduce_f64(
@@ -1162,7 +1162,7 @@ func @reduce_f64(%arg0: vector<16xf64>) -> f64 {
 // -----
 
 func @reduce_i8(%arg0: vector<16xi8>) -> i8 {
-  %0 = vector.reduction "add", %arg0 : vector<16xi8> into i8
+  %0 = vector.reduction <add>, %arg0 : vector<16xi8> into i8
   return %0 : i8
 }
 // CHECK-LABEL: @reduce_i8(
@@ -1173,7 +1173,7 @@ func @reduce_i8(%arg0: vector<16xi8>) -> i8 {
 // -----
 
 func @reduce_i32(%arg0: vector<16xi32>) -> i32 {
-  %0 = vector.reduction "add", %arg0 : vector<16xi32> into i32
+  %0 = vector.reduction <add>, %arg0 : vector<16xi32> into i32
   return %0 : i32
 }
 // CHECK-LABEL: @reduce_i32(
@@ -1184,7 +1184,7 @@ func @reduce_i32(%arg0: vector<16xi32>) -> i32 {
 // -----
 
 func @reduce_i64(%arg0: vector<16xi64>) -> i64 {
-  %0 = vector.reduction "add", %arg0 : vector<16xi64> into i64
+  %0 = vector.reduction <add>, %arg0 : vector<16xi64> into i64
   return %0 : i64
 }
 // CHECK-LABEL: @reduce_i64(
@@ -1195,7 +1195,7 @@ func @reduce_i64(%arg0: vector<16xi64>) -> i64 {
 // -----
 
 func @reduce_index(%arg0: vector<16xindex>) -> index {
-  %0 = vector.reduction "add", %arg0 : vector<16xindex> into index
+  %0 = vector.reduction <add>, %arg0 : vector<16xindex> into index
   return %0 : index
 }
 // CHECK-LABEL: @reduce_index(

@@ -1376,8 +1376,7 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
   // (icmp sgt smin(PosA, B) 0) -> (icmp sgt B 0)
   if (Pred == ICmpInst::ICMP_SGT) {
     Value *A, *B;
-    SelectPatternResult SPR = matchSelectPattern(Cmp.getOperand(0), A, B);
-    if (SPR.Flavor == SPF_SMIN) {
+    if (match(Cmp.getOperand(0), m_SMin(m_Value(A), m_Value(B)))) {
       if (isKnownPositive(A, DL, 0, &AC, &Cmp, &DT))
         return new ICmpInst(Pred, B, Cmp.getOperand(1));
       if (isKnownPositive(B, DL, 0, &AC, &Cmp, &DT))

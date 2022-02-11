@@ -32,7 +32,7 @@ define void @imm_out_of_range(<vscale x 2 x i64> * %base, <vscale x 2 x i1> %mas
 define void @test_masked_ldst_sv2i8(<vscale x 2 x i8> * %base, <vscale x 2 x i1> %mask) nounwind {
 ; CHECK-LABEL: test_masked_ldst_sv2i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0, #-8, mul vl]
+; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0, #-8, mul vl]
 ; CHECK-NEXT:    st1b { z0.d }, p0, [x0, #-7, mul vl]
 ; CHECK-NEXT:    ret
   %base_load = getelementptr <vscale x 2 x i8>, <vscale x 2 x i8>* %base, i64 -8
@@ -51,7 +51,7 @@ define void @test_masked_ldst_sv2i8(<vscale x 2 x i8> * %base, <vscale x 2 x i1>
 define void @test_masked_ldst_sv2i16(<vscale x 2 x i16> * %base, <vscale x 2 x i1> %mask) nounwind {
 ; CHECK-LABEL: test_masked_ldst_sv2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1sh { z0.d }, p0/z, [x0, #-8, mul vl]
+; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, #-8, mul vl]
 ; CHECK-NEXT:    st1h { z0.d }, p0, [x0, #-7, mul vl]
 ; CHECK-NEXT:    ret
   %base_load = getelementptr <vscale x 2 x i16>, <vscale x 2 x i16>* %base, i64 -8
@@ -71,7 +71,7 @@ define void @test_masked_ldst_sv2i16(<vscale x 2 x i16> * %base, <vscale x 2 x i
 define void @test_masked_ldst_sv2i32(<vscale x 2 x i32> * %base, <vscale x 2 x i1> %mask) nounwind {
 ; CHECK-LABEL: test_masked_ldst_sv2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1sw { z0.d }, p0/z, [x0, #-8, mul vl]
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, #-8, mul vl]
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x0, #-7, mul vl]
 ; CHECK-NEXT:    ret
   %base_load = getelementptr <vscale x 2 x i32>, <vscale x 2 x i32>* %base, i64 -8
@@ -300,7 +300,7 @@ define void @masked_trunc_store_sv2i64_to_sv2i32(<vscale x 2 x i64> %val, <vscal
 define void @test_masked_ldst_sv4i8(<vscale x 4 x i8> * %base, <vscale x 4 x i1> %mask) nounwind {
 ; CHECK-LABEL: test_masked_ldst_sv4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1sb { z0.s }, p0/z, [x0, #-1, mul vl]
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0, #-1, mul vl]
 ; CHECK-NEXT:    st1b { z0.s }, p0, [x0, #2, mul vl]
 ; CHECK-NEXT:    ret
   %base_load = getelementptr <vscale x 4 x i8>, <vscale x 4 x i8>* %base, i64 -1
@@ -319,7 +319,7 @@ define void @test_masked_ldst_sv4i8(<vscale x 4 x i8> * %base, <vscale x 4 x i1>
 define void @test_masked_ldst_sv4i16(<vscale x 4 x i16> * %base, <vscale x 4 x i1> %mask) nounwind {
 ; CHECK-LABEL: test_masked_ldst_sv4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1sh { z0.s }, p0/z, [x0, #-1, mul vl]
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0, #-1, mul vl]
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0, #2, mul vl]
 ; CHECK-NEXT:    ret
   %base_load = getelementptr <vscale x 4 x i16>, <vscale x 4 x i16>* %base, i64 -1
@@ -486,7 +486,7 @@ define void @masked_trunc_store_sv4i32_to_sv4i16(<vscale x 4 x i32> %val, <vscal
 define void @test_masked_ldst_sv8i8(<vscale x 8 x i8> * %base, <vscale x 8 x i1> %mask) nounwind {
 ; CHECK-LABEL: test_masked_ldst_sv8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1sb { z0.h }, p0/z, [x0, #6, mul vl]
+; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0, #6, mul vl]
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x0, #7, mul vl]
 ; CHECK-NEXT:    ret
   %base_load = getelementptr <vscale x 8 x i8>, <vscale x 8 x i8>* %base, i64 6

@@ -6,7 +6,7 @@
 // Note: transitively imports Module.Sub2.
 @import Module.Sub;
 
-int getValue() { 
+int getValue(void) { 
   return *Module_Sub + *Module_Sub2;
 }
 

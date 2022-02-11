@@ -275,8 +275,12 @@ static Function *doPromotion(
               createByteGEP(IRB, DL, V, Pair.second.Ty, Pair.first),
               Pair.second.Alignment, V->getName() + ".val");
           if (Pair.second.MustExecLoad) {
-            // TODO: Transfer other metadata like !nonnull here.
             LI->setAAMetadata(Pair.second.MustExecLoad->getAAMetadata());
+            LI->copyMetadata(*Pair.second.MustExecLoad,
+                             {LLVMContext::MD_range, LLVMContext::MD_nonnull,
+                              LLVMContext::MD_dereferenceable,
+                              LLVMContext::MD_dereferenceable_or_null,
+                              LLVMContext::MD_align, LLVMContext::MD_noundef});
           }
           Args.push_back(LI);
           ArgAttrVec.push_back(AttributeSet());

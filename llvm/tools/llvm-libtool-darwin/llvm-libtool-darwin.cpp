@@ -364,7 +364,7 @@ private:
                                  "'%s': format not supported",
                                  Member.MemberName.data());
 
-      auto *O = dyn_cast<MachOObjectFile>(ObjOrErr->get());
+      auto *O = cast<MachOObjectFile>(ObjOrErr->get());
       uint32_t FileCPUType, FileCPUSubtype;
       std::tie(FileCPUType, FileCPUSubtype) = MachO::getCPUTypeFromArchitecture(
           MachO::getArchitectureFromName(O->getArchTriple().getArchName()));

@@ -24,3 +24,7 @@ HANDLE_SWIFT_SECTION(builtin, "__swift5_builtin", "swift5_builtin", ".sw5bltn")
 HANDLE_SWIFT_SECTION(capture, "__swift5_capture", "swift5_capture", ".sw5cptr")
 HANDLE_SWIFT_SECTION(typeref, "__swift5_typeref", "swift5_typeref", ".sw5tyrf")
 HANDLE_SWIFT_SECTION(reflstr, "__swift5_reflstr", "swift5_reflstr", ".sw5rfst")
+HANDLE_SWIFT_SECTION(conform, "__swift5_proto", "swift5_protocol_confromances",
+                     ".sw5prtc$B")
+HANDLE_SWIFT_SECTION(protocs, "__swift5_protos", "swift5_protocols",
+                     ".sw5prt$B")

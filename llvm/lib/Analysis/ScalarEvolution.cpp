@@ -5067,6 +5067,9 @@ static Optional<BinaryOp> MatchBinaryOp(Value *V, DominatorTree &DT) {
       // Instcombine turns add of signmask into xor as a strength reduction step.
       if (RHSC->getValue().isSignMask())
         return BinaryOp(Instruction::Add, Op->getOperand(0), Op->getOperand(1));
+    // Binary `xor` is a bit-wise `add`.
+    if (V->getType()->isIntegerTy(1))
+      return BinaryOp(Instruction::Add, Op->getOperand(0), Op->getOperand(1));
     return BinaryOp(Op);
 
   case Instruction::LShr:
@@ -5884,19 +5887,10 @@ const SCEV *ScalarEvolution::createNodeForPHI(PHINode *PN) {
   return getUnknown(PN);
 }
 
-const SCEV *ScalarEvolution::createNodeForSelectOrPHI(Instruction *I,
-                                                      Value *Cond,
-                                                      Value *TrueVal,
-                                                      Value *FalseVal) {
-  // Handle "constant" branch or select. This can occur for instance when a
-  // loop pass transforms an inner loop and moves on to process the outer loop.
-  if (auto *CI = dyn_cast<ConstantInt>(Cond))
-    return getSCEV(CI->isOne() ? TrueVal : FalseVal);
-
+const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
+    Instruction *I, ICmpInst *Cond, Value *TrueVal, Value *FalseVal) {
   // Try to match some simple smax or umax patterns.
-  auto *ICI = dyn_cast<ICmpInst>(Cond);
-  if (!ICI)
-    return getUnknown(I);
+  auto *ICI = Cond;
 
   Value *LHS = ICI->getOperand(0);
   Value *RHS = ICI->getOperand(1);
@@ -5990,6 +5984,60 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHI(Instruction *I,
   }
 
   return getUnknown(I);
+}
+
+const SCEV *ScalarEvolution::createNodeForSelectOrPHIViaUMinSeq(
+    Value *V, Value *Cond, Value *TrueVal, Value *FalseVal) {
+  // For now, only deal with i1-typed `select`s.
+  if (!V->getType()->isIntegerTy(1) || !Cond->getType()->isIntegerTy(1) ||
+      !TrueVal->getType()->isIntegerTy(1) ||
+      !FalseVal->getType()->isIntegerTy(1))
+    return getUnknown(V);
+
+  // i1 cond ? i1 x : i1 C  -->  C + (i1  cond ? (i1 x - i1 C) : i1 0)
+  //                        -->  C + (umin_seq  cond, x - C)
+  //
+  // i1 cond ? i1 C : i1 x  -->  C + (i1  cond ? i1 0 : (i1 x - i1 C))
+  //                        -->  C + (i1 ~cond ? (i1 x - i1 C) : i1 0)
+  //                        -->  C + (umin_seq ~cond, x - C)
+  if (isa<ConstantInt>(TrueVal) || isa<ConstantInt>(FalseVal)) {
+    const SCEV *CondExpr = getSCEV(Cond);
+    const SCEV *TrueExpr = getSCEV(TrueVal);
+    const SCEV *FalseExpr = getSCEV(FalseVal);
+    const SCEV *X, *C;
+    if (isa<ConstantInt>(TrueVal)) {
+      CondExpr = getNotSCEV(CondExpr);
+      X = FalseExpr;
+      C = TrueExpr;
+    } else {
+      X = TrueExpr;
+      C = FalseExpr;
+    }
+    return getAddExpr(
+        C, getUMinExpr(CondExpr, getMinusSCEV(X, C), /*Sequential=*/true));
+  }
+
+  return getUnknown(V);
+}
+
+const SCEV *ScalarEvolution::createNodeForSelectOrPHI(Value *V, Value *Cond,
+                                                      Value *TrueVal,
+                                                      Value *FalseVal) {
+  // Handle "constant" branch or select. This can occur for instance when a
+  // loop pass transforms an inner loop and moves on to process the outer loop.
+  if (auto *CI = dyn_cast<ConstantInt>(Cond))
+    return getSCEV(CI->isOne() ? TrueVal : FalseVal);
+
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    if (auto *ICI = dyn_cast<ICmpInst>(Cond)) {
+      const SCEV *S = createNodeForSelectOrPHIInstWithICmpInstCond(
+          I, ICI, TrueVal, FalseVal);
+      if (!isa<SCEVUnknown>(S))
+        return S;
+    }
+  }
+
+  return createNodeForSelectOrPHIViaUMinSeq(V, Cond, TrueVal, FalseVal);
 }
 
 /// Expand GEP instructions into add and multiply operations. This allows them
@@ -7180,6 +7228,9 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
               MulCount);
         }
       }
+      // Binary `and` is a bit-wise `umin`.
+      if (BO->LHS->getType()->isIntegerTy(1))
+        return getUMinExpr(getSCEV(BO->LHS), getSCEV(BO->RHS));
       break;
 
     case Instruction::Or:
@@ -7199,6 +7250,9 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
                             (SCEV::NoWrapFlags)(SCEV::FlagNUW | SCEV::FlagNSW));
         }
       }
+      // Binary `or` is a bit-wise `umax`.
+      if (BO->LHS->getType()->isIntegerTy(1))
+        return getUMaxExpr(getSCEV(BO->LHS), getSCEV(BO->RHS));
       break;
 
     case Instruction::Xor:
@@ -7394,14 +7448,8 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
     return createNodeForPHI(cast<PHINode>(U));
 
   case Instruction::Select:
-    // U can also be a select constant expr, which let fall through.  Since
-    // createNodeForSelect only works for a condition that is an `ICmpInst`, and
-    // constant expressions cannot have instructions as operands, we'd have
-    // returned getUnknown for a select constant expressions anyway.
-    if (isa<Instruction>(U))
-      return createNodeForSelectOrPHI(cast<Instruction>(U), U->getOperand(0),
-                                      U->getOperand(1), U->getOperand(2));
-    break;
+    return createNodeForSelectOrPHI(U, U->getOperand(0), U->getOperand(1),
+                                    U->getOperand(2));
 
   case Instruction::Call:
   case Instruction::Invoke:
@@ -13586,19 +13634,25 @@ public:
   /// \p NewPreds such that the result will be an AddRecExpr.
   static const SCEV *rewrite(const SCEV *S, const Loop *L, ScalarEvolution &SE,
                              SmallPtrSetImpl<const SCEVPredicate *> *NewPreds,
-                             SCEVUnionPredicate *Pred) {
+                             const SCEVPredicate *Pred) {
     SCEVPredicateRewriter Rewriter(L, SE, NewPreds, Pred);
     return Rewriter.visit(S);
   }
 
   const SCEV *visitUnknown(const SCEVUnknown *Expr) {
     if (Pred) {
-      auto ExprPreds = Pred->getPredicatesForExpr(Expr);
-      for (auto *Pred : ExprPreds)
-        if (const auto *IPred = dyn_cast<SCEVComparePredicate>(Pred))
-          if (IPred->getLHS() == Expr &&
-              IPred->getPredicate() == ICmpInst::ICMP_EQ)
-            return IPred->getRHS();
+      if (auto *U = dyn_cast<SCEVUnionPredicate>(Pred)) {
+        auto ExprPreds = U->getPredicatesForExpr(Expr);
+        for (auto *Pred : ExprPreds)
+          if (const auto *IPred = dyn_cast<SCEVComparePredicate>(Pred))
+            if (IPred->getLHS() == Expr &&
+                IPred->getPredicate() == ICmpInst::ICMP_EQ)
+              return IPred->getRHS();
+      } else if (const auto *IPred = dyn_cast<SCEVComparePredicate>(Pred)) {
+        if (IPred->getLHS() == Expr &&
+            IPred->getPredicate() == ICmpInst::ICMP_EQ)
+          return IPred->getRHS();
+      }
     }
     return convertToAddRecWithPreds(Expr);
   }
@@ -13638,7 +13692,7 @@ public:
 private:
   explicit SCEVPredicateRewriter(const Loop *L, ScalarEvolution &SE,
                         SmallPtrSetImpl<const SCEVPredicate *> *NewPreds,
-                        SCEVUnionPredicate *Pred)
+                        const SCEVPredicate *Pred)
       : SCEVRewriteVisitor(SE), NewPreds(NewPreds), Pred(Pred), L(L) {}
 
   bool addOverflowAssumption(const SCEVPredicate *P) {
@@ -13683,14 +13737,15 @@ private:
   }
 
   SmallPtrSetImpl<const SCEVPredicate *> *NewPreds;
-  SCEVUnionPredicate *Pred;
+  const SCEVPredicate *Pred;
   const Loop *L;
 };
 
 } // end anonymous namespace
 
-const SCEV *ScalarEvolution::rewriteUsingPredicate(const SCEV *S, const Loop *L,
-                                                   SCEVUnionPredicate &Preds) {
+const SCEV *
+ScalarEvolution::rewriteUsingPredicate(const SCEV *S, const Loop *L,
+                                       const SCEVPredicate &Preds) {
   return SCEVPredicateRewriter::rewrite(S, L, *this, nullptr, &Preds);
 }
 
@@ -13817,7 +13872,7 @@ bool SCEVUnionPredicate::isAlwaysTrue() const {
 }
 
 ArrayRef<const SCEVPredicate *>
-SCEVUnionPredicate::getPredicatesForExpr(const SCEV *Expr) {
+SCEVUnionPredicate::getPredicatesForExpr(const SCEV *Expr) const {
   auto I = SCEVToPreds.find(Expr);
   if (I == SCEVToPreds.end())
     return ArrayRef<const SCEVPredicate *>();
@@ -13920,7 +13975,7 @@ void PredicatedScalarEvolution::addPredicate(const SCEVPredicate &Pred) {
   updateGeneration();
 }
 
-const SCEVUnionPredicate &PredicatedScalarEvolution::getUnionPredicate() const {
+const SCEVPredicate &PredicatedScalarEvolution::getPredicate() const {
   return *Preds;
 }
 

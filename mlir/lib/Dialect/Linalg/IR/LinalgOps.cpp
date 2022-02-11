@@ -441,12 +441,52 @@ struct FoldFillWithTensorReshape : OpRewritePattern<TensorReshapeOp> {
   }
 };
 
+/// Fold tensor.pad(linalg.fill) into linalg.fill if the padding value and the
+/// filling value are the same.
+struct FoldFillWithPad final : public OpRewritePattern<tensor::PadOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::PadOp padOp,
+                                PatternRewriter &rewriter) const override {
+    auto fillOp = padOp.source().getDefiningOp<linalg::FillOp>();
+    if (!fillOp)
+      return failure();
+
+    // We can only fold if the padding value is the same as the original
+    // filling value.
+    Value padValue = padOp.getConstantPaddingValue();
+    if (!padValue || fillOp.value() != padValue)
+      return failure();
+
+    ReifiedRankedShapedTypeDims reifiedShape;
+    ReifyRankedShapedTypeOpInterface interface =
+        cast<ReifyRankedShapedTypeOpInterface>(padOp.getOperation());
+    if (failed(interface.reifyResultShapes(rewriter, reifiedShape)))
+      return rewriter.notifyMatchFailure(
+          padOp, "failed to reify tensor.pad op result shape");
+
+    auto oldResultType = padOp.getResultType();
+    SmallVector<int64_t, 4> staticShape(oldResultType.getRank(),
+                                        ShapedType::kDynamicSize);
+    auto newInitOp = rewriter.create<InitTensorOp>(
+        padOp.getLoc(), reifiedShape.front(), staticShape,
+        oldResultType.getElementType());
+    auto newFillOp =
+        rewriter.create<FillOp>(fillOp.getLoc(), padValue, newInitOp);
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(padOp, oldResultType,
+                                                newFillOp.result());
+
+    return success();
+  }
+};
+
 } // namespace
 
 void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.add<FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
-              FoldFillWithTensorReshape<tensor::ExpandShapeOp>>(context);
+  results
+      .add<FoldFillWithPad, FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
+           FoldFillWithTensorReshape<tensor::ExpandShapeOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//

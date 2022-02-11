@@ -289,6 +289,19 @@ TEST(ELFObjectFileTest, MachineTestForMSP430) {
     checkFormatAndArch(D, Formats[I++], Triple::msp430);
 }
 
+TEST(ELFObjectFileTest, MachineTestForLoongArch) {
+  std::array<StringRef, 4> Formats = {"elf32-loongarch", "elf32-loongarch",
+                                      "elf64-loongarch", "elf64-loongarch"};
+  std::array<Triple::ArchType, 4> Archs = {
+      Triple::loongarch32, Triple::loongarch32, Triple::loongarch64,
+      Triple::loongarch64};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_LOONGARCH)) {
+    checkFormatAndArch(D, Formats[I], Archs[I]);
+    ++I;
+  }
+}
+
 TEST(ELFObjectFileTest, MachineTestForCSKY) {
   std::array<StringRef, 4> Formats = {"elf32-csky", "elf32-csky",
                                       "elf64-unknown", "elf64-unknown"};

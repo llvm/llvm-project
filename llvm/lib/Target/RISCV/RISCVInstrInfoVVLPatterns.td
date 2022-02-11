@@ -649,8 +649,8 @@ multiclass VPatBinarySDNodeExt_V_WV<SDNode op, PatFrags extop, string instructio
         (riscv_trunc_vector_vl
           (op (vti.Wti.Vector vti.Wti.RegClass:$rs2),
               (vti.Wti.Vector (extop (vti.Vti.Vector vti.Vti.RegClass:$rs1)))),
-          (riscv_vmset_vl VLMax),
-          VLMax)),
+          (riscv_vmset_vl X0),
+          X0)),
       (!cast<Instruction>(instruction_name#"_WV_"#vti.Vti.LMul.MX)
         vti.Wti.RegClass:$rs2, vti.Vti.RegClass:$rs1,
         vti.Vti.AVL, vti.Vti.Log2SEW)>;
@@ -664,8 +664,8 @@ multiclass VPatBinarySDNodeExt_V_WX<SDNode op, PatFrags extop, string instructio
         (riscv_trunc_vector_vl
           (op (vti.Wti.Vector vti.Wti.RegClass:$rs2),
               (vti.Wti.Vector (extop (vti.Vti.Vector (SplatPat GPR:$rs1))))),
-          (riscv_vmset_vl VLMax),
-          VLMax)),
+          (riscv_vmset_vl X0),
+          X0)),
       (!cast<Instruction>(instruction_name#"_WX_"#vti.Vti.LMul.MX)
         vti.Wti.RegClass:$rs2, GPR:$rs1,
         vti.Vti.AVL, vti.Vti.Log2SEW)>;
@@ -1148,7 +1148,6 @@ foreach vti = AllFloatVectors in {
 
   // The choice of VFMADD here is arbitrary, vfmadd.vf and vfmacc.vf are equally
   // commutable.
-  // Fixed length vector splats
   def : Pat<(vti.Vector (riscv_fma_vl (SplatFPOp vti.ScalarRegClass:$rs1),
                                        vti.RegClass:$rd, vti.RegClass:$rs2,
                                        (vti.Mask true_mask),
@@ -1157,21 +1156,6 @@ foreach vti = AllFloatVectors in {
                  vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
                  GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
   def : Pat<(vti.Vector (riscv_fma_vl (SplatFPOp vti.ScalarRegClass:$rs1),
-                                       vti.RegClass:$rd, vti.RegClass:$rs2,
-                                       (vti.Mask V0),
-                                       VLOpFrag)),
-            (!cast<Instruction>("PseudoVFMADD_V" # vti.ScalarSuffix # "_" # suffix # "_MASK")
-                 vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                 (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
-  // Scalable length vector splats
-  def : Pat<(vti.Vector (riscv_fma_vl (splat_vector vti.ScalarRegClass:$rs1),
-                                       vti.RegClass:$rd, vti.RegClass:$rs2,
-                                       (vti.Mask true_mask),
-                                       VLOpFrag)),
-            (!cast<Instruction>("PseudoVFMADD_V" # vti.ScalarSuffix # "_" # suffix)
-                 vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                 GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
-  def : Pat<(vti.Vector (riscv_fma_vl (splat_vector vti.ScalarRegClass:$rs1),
                                        vti.RegClass:$rd, vti.RegClass:$rs2,
                                        (vti.Mask V0),
                                        VLOpFrag)),

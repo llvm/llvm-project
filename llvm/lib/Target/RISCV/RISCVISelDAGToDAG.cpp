@@ -48,15 +48,15 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
        I != E;) {
     SDNode *N = &*I++; // Preincrement iterator to avoid invalidation issues.
 
-    // Convert integer SPLAT_VECTOR to VMV_V_X_VL to reduce isel burden.
-    if (N->getOpcode() == ISD::SPLAT_VECTOR &&
-        N->getSimpleValueType(0).isInteger()) {
+    // Convert integer SPLAT_VECTOR to VMV_V_X_VL and floating-point
+    // SPLAT_VECTOR to VFMV_V_F_VL to reduce isel burden.
+    if (N->getOpcode() == ISD::SPLAT_VECTOR) {
       MVT VT = N->getSimpleValueType(0);
+      unsigned Opc =
+          VT.isInteger() ? RISCVISD::VMV_V_X_VL : RISCVISD::VFMV_V_F_VL;
       SDLoc DL(N);
-      SDValue VL = CurDAG->getTargetConstant(RISCV::VLMaxSentinel, DL,
-                                             Subtarget->getXLenVT());
-      SDValue Result =
-          CurDAG->getNode(RISCVISD::VMV_V_X_VL, DL, VT, N->getOperand(0), VL);
+      SDValue VL = CurDAG->getRegister(RISCV::X0, Subtarget->getXLenVT());
+      SDValue Result = CurDAG->getNode(Opc, DL, VT, N->getOperand(0), VL);
 
       --I;
       CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Result);
@@ -1901,14 +1901,24 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
 // allows us to choose betwen VSETIVLI or VSETVLI later.
 bool RISCVDAGToDAGISel::selectVLOp(SDValue N, SDValue &VL) {
   auto *C = dyn_cast<ConstantSDNode>(N);
-  if (C && isUInt<5>(C->getZExtValue()))
+  if (C && isUInt<5>(C->getZExtValue())) {
     VL = CurDAG->getTargetConstant(C->getZExtValue(), SDLoc(N),
                                    N->getValueType(0));
-  else if (C && C->isAllOnesValue() && C->getOpcode() != ISD::TargetConstant)
+  } else if (C && C->isAllOnesValue()) {
+    // Treat all ones as VLMax.
     VL = CurDAG->getTargetConstant(RISCV::VLMaxSentinel, SDLoc(N),
                                    N->getValueType(0));
-  else
+  } else if (isa<RegisterSDNode>(N) &&
+             cast<RegisterSDNode>(N)->getReg() == RISCV::X0) {
+    // All our VL operands use an operand that allows GPRNoX0 or an immediate
+    // as the register class. Convert X0 to a special immediate to pass the
+    // MachineVerifier. This is recognized specially by the vsetvli insertion
+    // pass.
+    VL = CurDAG->getTargetConstant(RISCV::VLMaxSentinel, SDLoc(N),
+                                   N->getValueType(0));
+  } else {
     VL = N;
+  }
 
   return true;
 }

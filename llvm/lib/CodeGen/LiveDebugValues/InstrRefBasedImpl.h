@@ -851,10 +851,16 @@ private:
   /// Record of where we observed a DBG_PHI instruction.
   class DebugPHIRecord {
   public:
-    uint64_t InstrNum;      ///< Instruction number of this DBG_PHI.
-    MachineBasicBlock *MBB; ///< Block where DBG_PHI occurred.
-    ValueIDNum ValueRead;   ///< The value number read by the DBG_PHI.
-    LocIdx ReadLoc;         ///< Register/Stack location the DBG_PHI reads.
+    /// Instruction number of this DBG_PHI.
+    uint64_t InstrNum;
+    /// Block where DBG_PHI occurred.
+    MachineBasicBlock *MBB;
+    /// The value number read by the DBG_PHI -- or None if it didn't refer to
+    /// a value.
+    Optional<ValueIDNum> ValueRead;
+    /// Register/Stack location the DBG_PHI reads -- or None if it referred to
+    /// something unexpected.
+    Optional<LocIdx> ReadLoc;
 
     operator unsigned() const { return InstrNum; }
   };

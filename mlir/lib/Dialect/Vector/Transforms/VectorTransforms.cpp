@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
+
 #include <type_traits>
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -18,8 +20,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
-
-#include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
@@ -514,40 +515,11 @@ private:
     if (!acc)
       return Optional<Value>(mul);
 
-    Value combinedResult;
-    switch (kind) {
-    case CombiningKind::ADD:
-      combinedResult = rewriter.create<arith::AddIOp>(loc, mul, acc);
-      break;
-    case CombiningKind::MUL:
-      combinedResult = rewriter.create<arith::MulIOp>(loc, mul, acc);
-      break;
-    case CombiningKind::MINUI:
-      combinedResult = rewriter.create<arith::MinUIOp>(loc, mul, acc);
-      break;
-    case CombiningKind::MINSI:
-      combinedResult = rewriter.create<arith::MinSIOp>(loc, mul, acc);
-      break;
-    case CombiningKind::MAXUI:
-      combinedResult = rewriter.create<arith::MaxUIOp>(loc, mul, acc);
-      break;
-    case CombiningKind::MAXSI:
-      combinedResult = rewriter.create<arith::MaxSIOp>(loc, mul, acc);
-      break;
-    case CombiningKind::AND:
-      combinedResult = rewriter.create<arith::AndIOp>(loc, mul, acc);
-      break;
-    case CombiningKind::OR:
-      combinedResult = rewriter.create<arith::OrIOp>(loc, mul, acc);
-      break;
-    case CombiningKind::XOR:
-      combinedResult = rewriter.create<arith::XOrIOp>(loc, mul, acc);
-      break;
-    case CombiningKind::MINF: // Only valid for floating point types.
-    case CombiningKind::MAXF: // Only valid for floating point types.
+    if (kind == CombiningKind::MINF || kind == CombiningKind::MAXF)
+      // Only valid for floating point types.
       return Optional<Value>();
-    }
-    return Optional<Value>(combinedResult);
+
+    return makeArithReduction(rewriter, loc, kind, mul, acc);
   }
 
   static Optional<Value> genMultF(Location loc, Value x, Value y, Value acc,
@@ -565,28 +537,14 @@ private:
     if (!acc)
       return Optional<Value>(mul);
 
-    Value combinedResult;
-    switch (kind) {
-    case CombiningKind::MUL:
-      combinedResult = rewriter.create<arith::MulFOp>(loc, mul, acc);
-      break;
-    case CombiningKind::MINF:
-      combinedResult = rewriter.create<arith::MinFOp>(loc, mul, acc);
-      break;
-    case CombiningKind::MAXF:
-      combinedResult = rewriter.create<arith::MaxFOp>(loc, mul, acc);
-      break;
-    case CombiningKind::ADD:   // Already handled this special case above.
-    case CombiningKind::AND:   // Only valid for integer types.
-    case CombiningKind::MINUI: // Only valid for integer types.
-    case CombiningKind::MINSI: // Only valid for integer types.
-    case CombiningKind::MAXUI: // Only valid for integer types.
-    case CombiningKind::MAXSI: // Only valid for integer types.
-    case CombiningKind::OR:    // Only valid for integer types.
-    case CombiningKind::XOR:   // Only valid for integer types.
+    if (kind == CombiningKind::ADD || kind == CombiningKind::AND ||
+        kind == CombiningKind::MINUI || kind == CombiningKind::MINSI ||
+        kind == CombiningKind::MAXUI || kind == CombiningKind::MAXSI ||
+        kind == CombiningKind::OR || kind == CombiningKind::XOR)
+      // Already handled or only valid for integer types.
       return Optional<Value>();
-    }
-    return Optional<Value>(combinedResult);
+
+    return makeArithReduction(rewriter, loc, kind, mul, acc);
   }
 };
 
@@ -1427,8 +1385,7 @@ ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
                     : rewriter.create<vector::ExtractOp>(op.getLoc(), rhs, c);
       Value m = createMul(op.getLoc(), a, b, isInt, rewriter);
       Value reduced = rewriter.create<vector::ReductionOp>(
-          op.getLoc(), dstType.getElementType(), rewriter.getStringAttr("add"),
-          m, ValueRange{});
+          op.getLoc(), vector::CombiningKind::ADD, m);
 
       SmallVector<int64_t, 2> pos = rank == 1 ? SmallVector<int64_t, 2>{r}
                                               : SmallVector<int64_t, 2>{r, c};
@@ -1608,9 +1565,8 @@ Value ContractionOpLowering::lowerReduction(vector::ContractionOp op,
   if (lhsType.getRank() == 1) {
     assert(rhsType.getRank() == 1 && "corrupt contraction");
     Value m = createMul(loc, op.lhs(), op.rhs(), isInt, rewriter);
-    StringAttr kind = rewriter.getStringAttr("add");
-    Value res = rewriter.create<vector::ReductionOp>(loc, resType, kind, m,
-                                                     ValueRange{});
+    auto kind = vector::CombiningKind::ADD;
+    Value res = rewriter.create<vector::ReductionOp>(loc, kind, m);
     if (auto acc = op.acc())
       res = createAdd(op.getLoc(), res, acc, isInt, rewriter);
     return res;

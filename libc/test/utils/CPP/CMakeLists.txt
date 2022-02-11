@@ -39,3 +39,15 @@ add_libc_unittest(
   DEPENDS
     libc.src.__support.CPP.standalone_cpp
 )
+
+if(LLVM_LIBC_INCLUDE_SCUDO OR NOT LLVM_LIBC_FULL_BUILD)
+  add_libc_unittest(
+    vector_test
+    SUITE
+      libc_cpp_utils_unittests
+    SRCS
+      vector_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.vector
+  )
+endif()

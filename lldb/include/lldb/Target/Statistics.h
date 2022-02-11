@@ -100,6 +100,13 @@ struct ModuleStats {
   std::string path;
   std::string uuid;
   std::string triple;
+  // Path separate debug info file, or empty if none.
+  std::string symfile_path;
+  // If the debug info is contained in multiple files where each one is
+  // represented as a separate lldb_private::Module, then these are the
+  // identifiers of these modules in the global module list. This allows us to
+  // track down all of the stats that contribute to this module.
+  std::vector<intptr_t> symfile_modules;
   double symtab_parse_time = 0.0;
   double symtab_index_time = 0.0;
   double debug_parse_time = 0.0;

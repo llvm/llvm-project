@@ -16,7 +16,7 @@ struct Bar
 
 #else
 
-void foo() {
+void foo(void) {
   struct Bar bar;
 }
 

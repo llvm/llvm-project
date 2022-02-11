@@ -16,15 +16,16 @@
 #include "llvm-c/Types.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include <algorithm>
+#include "llvm/Support/MemoryBufferRef.h"
 #include <memory>
 #include <utility>
 
 namespace llvm {
 
 class LLVMContext;
+class MemoryBuffer;
 class StringRef;
 
 namespace object {

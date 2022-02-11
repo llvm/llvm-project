@@ -15,21 +15,14 @@
 #ifndef LLVM_OBJECT_RELOCATIONRESOLVER_H
 #define LLVM_OBJECT_RELOCATIONRESOLVER_H
 
-#include "llvm/ADT/Triple.h"
-#include "llvm/BinaryFormat/ELF.h"
-#include "llvm/BinaryFormat/MachO.h"
-#include "llvm/Object/COFF.h"
-#include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Object/MachO.h"
-#include "llvm/Object/ObjectFile.h"
-#include "llvm/Object/Wasm.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
-#include <system_error>
+#include <utility>
 
 namespace llvm {
 namespace object {
+
+class ObjectFile;
+class RelocationRef;
 
 using SupportsRelocation = bool (*)(uint64_t);
 using RelocationResolver = uint64_t (*)(uint64_t Type, uint64_t Offset,

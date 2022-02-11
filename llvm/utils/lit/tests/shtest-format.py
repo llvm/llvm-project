@@ -17,7 +17,8 @@
 # CHECK-NEXT: line 2: failed test output on stdout
 # CHECK: Command Output (stderr):
 # CHECK-NEXT: --
-# CHECK-NEXT: cat{{(_64)?(\.exe)?}}: {{cannot open does-not-exist|does-not-exist: No such file or directory}}
+# CHECK-NOT: --
+# CHECK: cat{{(_64)?(\.exe)?}}: {{cannot open does-not-exist|does-not-exist: No such file or directory}}
 # CHECK: --
 
 # CHECK: FAIL: shtest-format :: external_shell/fail_with_bad_encoding.txt

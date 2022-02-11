@@ -72,12 +72,12 @@ void test() {
     assert(output.size() == 1);
     assert(output.front() == CharT('a'));
 
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#ifndef TEST_HAS_NO_LOCALIZATION
     assert(context.locale() == std::locale());
 #endif
   }
 
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#ifndef TEST_HAS_NO_LOCALIZATION
   std::locale en_US{LOCALE_en_US_UTF_8};
   std::locale fr_FR{LOCALE_fr_FR_UTF_8};
   {
