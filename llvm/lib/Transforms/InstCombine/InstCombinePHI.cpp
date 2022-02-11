@@ -511,7 +511,8 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
   // Scan to see if all operands are the same opcode, and all have one user.
   for (Value *V : drop_begin(PN.incoming_values())) {
     GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(V);
-    if (!GEP || !GEP->hasOneUser() || GEP->getType() != FirstInst->getType() ||
+    if (!GEP || !GEP->hasOneUser() ||
+        GEP->getSourceElementType() != FirstInst->getSourceElementType() ||
         GEP->getNumOperands() != FirstInst->getNumOperands())
       return nullptr;
 
