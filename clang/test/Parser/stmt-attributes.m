@@ -29,13 +29,13 @@ Test *getTest(void);
   // expected-error@-3 {{expected identifier or '('}}
   // expected-note@-4 {{to match this '['}}
   __attribute__((nomerge)) [self foo];
-  // expected-warning@-1 {{nomerge attribute is ignored because there exists no call expression inside the statement}}
+  // expected-warning@-1 {{'nomerge' attribute is ignored because there exists no call expression inside the statement}}
   __attribute__((nomerge)) [getTest() foo];
 
   __attribute__(()) ^{};
   // expected-error@-1 {{expected identifier or '('}}
   __attribute__((nomerge)) ^{};
-  // expected-warning@-1 {{nomerge attribute is ignored because there exists no call expression inside the statement}}
+  // expected-warning@-1 {{'nomerge' attribute is ignored because there exists no call expression inside the statement}}
   __attribute__((nomerge)) ^{ [self foo]; }();
 
   __attribute__(()) @try {
@@ -49,9 +49,9 @@ Test *getTest(void);
   }
 
   __attribute__((nomerge)) (__bridge void *)self;
-  // expected-warning@-1 {{nomerge attribute is ignored because there exists no call expression inside the statement}}
+  // expected-warning@-1 {{'nomerge' attribute is ignored because there exists no call expression inside the statement}}
 
   __attribute__((nomerge)) self.hasFoobar;
-  // expected-warning@-1 {{nomerge attribute is ignored because there exists no call expression inside the statement}}
+  // expected-warning@-1 {{'nomerge' attribute is ignored because there exists no call expression inside the statement}}
 }
 @end

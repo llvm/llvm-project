@@ -202,7 +202,7 @@ static Attr *handleNoMergeAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 
   if (!CEF.foundCallExpr()) {
     S.Diag(St->getBeginLoc(), diag::warn_nomerge_attribute_ignored_in_stmt)
-        << NMA.getSpelling();
+        << A;
     return nullptr;
   }
 
