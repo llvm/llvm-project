@@ -805,7 +805,6 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 */
 
 #include <__config>
-#include <__functional_base>
 #include <__memory/addressof.h>
 #include <__memory/allocation_guard.h>
 #include <__memory/allocator.h>
@@ -836,6 +835,14 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 #include <typeinfo>
 #include <utility>
 #include <version>
+
+// TODO: remove these headers
+#include <__functional/binary_function.h>
+#include <__functional/invoke.h>
+#include <__functional/operations.h>
+#include <__functional/reference_wrapper.h>
+#include <__functional/unary_function.h>
+#include <__functional/weak_result_type.h>
 
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
 #   include <__memory/auto_ptr.h>

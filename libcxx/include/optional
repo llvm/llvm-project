@@ -162,7 +162,6 @@ template<class T>
 #include <__concepts/invocable.h>
 #include <__config>
 #include <__debug>
-#include <__functional_base>
 #include <compare>
 #include <functional>
 #include <initializer_list>
@@ -171,6 +170,11 @@ template<class T>
 #include <type_traits>
 #include <utility>
 #include <version>
+
+// TODO: remove these headers
+#include <__memory/allocator_arg_t.h>
+#include <__memory/uses_allocator.h>
+#include <typeinfo>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

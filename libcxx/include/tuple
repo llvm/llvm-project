@@ -169,7 +169,6 @@ template <class... Types>
 #include <__compare/synth_three_way.h>
 #include <__config>
 #include <__functional/unwrap_ref.h>
-#include <__functional_base>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/uses_allocator.h>
 #include <__tuple>
@@ -181,6 +180,17 @@ template <class... Types>
 #include <type_traits>
 #include <utility>
 #include <version>
+
+// TODO: remove these headers
+#include <__functional/binary_function.h>
+#include <__functional/invoke.h>
+#include <__functional/operations.h>
+#include <__functional/reference_wrapper.h>
+#include <__functional/unary_function.h>
+#include <__functional/weak_result_type.h>
+#include <exception>
+#include <new>
+#include <typeinfo>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

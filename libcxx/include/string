@@ -520,7 +520,6 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 
 #include <__config>
 #include <__debug>
-#include <__functional_base>
 #include <__ios/fpos.h>
 #include <__iterator/wrap_iter.h>
 #include <algorithm>
@@ -537,6 +536,16 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <type_traits>
 #include <utility>
 #include <version>
+
+// TODO: remove these headers
+#include <__functional/binary_function.h>
+#include <__functional/invoke.h>
+#include <__functional/operations.h>
+#include <__functional/reference_wrapper.h>
+#include <__functional/unary_function.h>
+#include <__functional/weak_result_type.h>
+#include <new>
+#include <typeinfo>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 #  include <cwchar>
