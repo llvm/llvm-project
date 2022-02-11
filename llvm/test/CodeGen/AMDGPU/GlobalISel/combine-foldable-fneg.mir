@@ -777,3 +777,31 @@ body:             |
     $vgpr2 = COPY %7:_(s32)
 
 ...
+
+# Check if new fneg is inserted at the appropriate place
+---
+name:            fneg_src_has_multiple_uses
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
+
+    ; CHECK-LABEL: name: fneg_src_has_multiple_uses
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY1]]
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[COPY]], [[FNEG]]
+    ; CHECK-NEXT: [[FNEG1:%[0-9]+]]:_(s32) = G_FNEG [[FMUL]]
+    ; CHECK-NEXT: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL [[FNEG1]], [[COPY2]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[FMUL1]](s32)
+    ; CHECK-NEXT: $vgpr1 = COPY [[FMUL]](s32)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = COPY $vgpr1
+    %2:_(s32) = COPY $vgpr2
+    %3:_(s32) = G_FMUL %0:_, %1:_
+    %4:_(s32) = G_FMUL %3:_, %2:_
+    %5:_(s32) = G_FNEG %3:_
+    $vgpr0 = COPY %4:_(s32)
+    $vgpr1 = COPY %5:_(s32)
+
+...
