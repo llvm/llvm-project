@@ -43,6 +43,9 @@ public:
   CIRGenModule &CGM;
   clang::ASTContext &getContext() const;
 
+  /// Sanitizers enabled for this function.
+  clang::SanitizerSet SanOpts;
+
   ///  Return the TypeEvaluationKind of QualType \c T.
   static TypeEvaluationKind getEvaluationKind(clang::QualType T);
 
