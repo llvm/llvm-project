@@ -487,6 +487,60 @@ TEST(CallDescription, MatchBuiltins) {
       "  __builtin___memset_chk(&x, 0, sizeof(x),"
       "                         __builtin_object_size(&x, 0));"
       "}"));
+
+  {
+    SCOPED_TRACE("multiple similar builtins");
+    EXPECT_TRUE(tooling::runToolOnCode(
+        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
+            {{{CDF_MaybeBuiltin, "memcpy", 3}, false},
+             {{CDF_MaybeBuiltin, "wmemcpy", 3}, true}})),
+        R"(void foo(wchar_t *x, wchar_t *y) {
+            __builtin_wmemcpy(x, y, sizeof(wchar_t));
+          })"));
+  }
+  {
+    SCOPED_TRACE("multiple similar builtins reversed order");
+    EXPECT_TRUE(tooling::runToolOnCode(
+        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
+            {{{CDF_MaybeBuiltin, "wmemcpy", 3}, true},
+             {{CDF_MaybeBuiltin, "memcpy", 3}, false}})),
+        R"(void foo(wchar_t *x, wchar_t *y) {
+            __builtin_wmemcpy(x, y, sizeof(wchar_t));
+          })"));
+  }
+  {
+    SCOPED_TRACE("lookbehind and lookahead mismatches");
+    EXPECT_TRUE(tooling::runToolOnCode(
+        std::unique_ptr<FrontendAction>(
+            new CallDescriptionAction<>({{{CDF_MaybeBuiltin, "func"}, false}})),
+        R"(
+          void funcXXX();
+          void XXXfunc();
+          void XXXfuncXXX();
+          void test() {
+            funcXXX();
+            XXXfunc();
+            XXXfuncXXX();
+          })"));
+  }
+  {
+    SCOPED_TRACE("lookbehind and lookahead matches");
+    EXPECT_TRUE(tooling::runToolOnCode(
+        std::unique_ptr<FrontendAction>(
+            new CallDescriptionAction<>({{{CDF_MaybeBuiltin, "func"}, true}})),
+        R"(
+          void func();
+          void func_XXX();
+          void XXX_func();
+          void XXX_func_XXX();
+
+          void test() {
+            func(); // exact match
+            func_XXX();
+            XXX_func();
+            XXX_func_XXX();
+          })"));
+  }
 }
 
 } // namespace
