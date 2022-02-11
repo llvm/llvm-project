@@ -75,7 +75,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
     : builder(&context), astCtx(astctx), target(astCtx.getTargetInfo()),
       codeGenOpts(CGO), langOpts(astctx.getLangOpts()) {
   theModule = mlir::ModuleOp::create(builder.getUnknownLoc());
-  genTypes = std::make_unique<CIRGenTypes>(astCtx, this->getBuilder());
+  genTypes = std::make_unique<CIRGenTypes>(*this);
 }
 
 mlir::Location CIRGenModule::getLoc(SourceLocation SLoc) {

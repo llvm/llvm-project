@@ -1,4 +1,5 @@
 #include "CIRGenTypes.h"
+#include "CIRGenModule.h"
 
 #include "mlir/Dialect/CIR/IR/CIRTypes.h"
 #include "mlir/IR/Builders.h"
@@ -13,8 +14,8 @@
 using namespace clang;
 using namespace cir;
 
-CIRGenTypes::CIRGenTypes(ASTContext &Ctx, mlir::OpBuilder &B)
-    : Context(Ctx), Builder(B) {}
+CIRGenTypes::CIRGenTypes(CIRGenModule &cgm)
+    : Context(cgm.getASTContext()), Builder(cgm.getBuilder()), CGM{cgm} {}
 CIRGenTypes::~CIRGenTypes() = default;
 
 std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,

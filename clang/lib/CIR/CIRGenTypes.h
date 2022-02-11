@@ -60,20 +60,23 @@ class Type;
 class OpBuilder;
 namespace cir {
 class StructType;
-}
+} // namespace cir
 } // namespace mlir
+
+namespace cir {
+class CIRGenModule;
 
 /// This class organizes the cross-module state that is used while lowering
 /// AST types to CIR types.
-namespace cir {
 class CIRGenTypes {
   clang::ASTContext &Context;
   mlir::OpBuilder &Builder;
+  CIRGenModule &CGM;
 
   llvm::DenseMap<const clang::Type *, mlir::cir::StructType> recordDeclTypes;
 
 public:
-  CIRGenTypes(clang::ASTContext &Ctx, mlir::OpBuilder &B);
+  CIRGenTypes(CIRGenModule &cgm);
   ~CIRGenTypes();
 
   /// This map keeps cache of llvm::Types and maps clang::Type to
