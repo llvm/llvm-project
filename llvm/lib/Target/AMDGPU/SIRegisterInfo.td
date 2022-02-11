@@ -856,21 +856,12 @@ defm AReg_1024 : ARegClass<32, [v32i32, v32f32, v16i64, v16f64], (add AGPR_1024)
 
 } // End GeneratePressureSet = 0
 
-// This is not a real register. This is just to have a register to add
-// to VReg_1 that does not alias any real register that would
-// introduce inferred register classes.
-def ARTIFICIAL_VGPR : SIReg <"invalid vgpr", 0> {
-  let isArtificial = 1;
-}
-
 let GeneratePressureSet = 0 in {
-// FIXME: Should specify an empty set for this. No register should
-// ever be allocated using VReg_1. This is a hack for SelectionDAG
-// that should always be lowered by SILowerI1Copies. TableGen crashes
-// on an empty register set, but also sorts register classes based on
-// the number of registerss in them. Add only one register so this is
+// No register should ever be allocated using VReg_1. This is a hack for
+// SelectionDAG that should always be lowered by SILowerI1Copies.  TableGen
+// sorts register classes based on the number of registers in them so this is
 // sorted to the end and not preferred over VGPR_32.
-def VReg_1 : SIRegisterClass<"AMDGPU", [i1], 32, (add ARTIFICIAL_VGPR)> {
+def VReg_1 : SIRegisterClass<"AMDGPU", [i1], 32, (add)> {
   let Size = 1;
   let HasVGPR = 1;
 }
