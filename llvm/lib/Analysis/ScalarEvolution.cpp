@@ -5952,19 +5952,9 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
     }
     break;
   case ICmpInst::ICMP_NE:
-    // n != 0 ? n+x : 1+x  ->  umax(n, 1)+x
-    if (getTypeSizeInBits(LHS->getType()) <= getTypeSizeInBits(I->getType()) &&
-        isa<ConstantInt>(RHS) && cast<ConstantInt>(RHS)->isZero()) {
-      const SCEV *One = getOne(I->getType());
-      const SCEV *LS = getNoopOrZeroExtend(getSCEV(LHS), I->getType());
-      const SCEV *LA = getSCEV(TrueVal);
-      const SCEV *RA = getSCEV(FalseVal);
-      const SCEV *LDiff = getMinusSCEV(LA, LS);
-      const SCEV *RDiff = getMinusSCEV(RA, One);
-      if (LDiff == RDiff)
-        return getAddExpr(getUMaxExpr(One, LS), LDiff);
-    }
-    break;
+    // n != 0 ? n+x : 1+x  ->  n == 0 ? 1+x : n+x
+    std::swap(TrueVal, FalseVal);
+    LLVM_FALLTHROUGH;
   case ICmpInst::ICMP_EQ:
     // n == 0 ? 1+x : n+x  ->  umax(n, 1)+x
     if (getTypeSizeInBits(LHS->getType()) <= getTypeSizeInBits(I->getType()) &&
