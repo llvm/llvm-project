@@ -156,6 +156,8 @@ define dso_local i32 @all_arg(i32 returned %x) local_unnamed_addr #0 "zero-call-
 ; X86-64-NEXT:    xorl %edi, %edi
 ; X86-64-NEXT:    xorl %edx, %edx
 ; X86-64-NEXT:    xorl %esi, %esi
+; X86-64-NEXT:    xorl %r8d, %r8d
+; X86-64-NEXT:    xorl %r9d, %r9d
 ; X86-64-NEXT:    xorps %xmm0, %xmm0
 ; X86-64-NEXT:    xorps %xmm1, %xmm1
 ; X86-64-NEXT:    xorps %xmm2, %xmm2
@@ -164,8 +166,6 @@ define dso_local i32 @all_arg(i32 returned %x) local_unnamed_addr #0 "zero-call-
 ; X86-64-NEXT:    xorps %xmm5, %xmm5
 ; X86-64-NEXT:    xorps %xmm6, %xmm6
 ; X86-64-NEXT:    xorps %xmm7, %xmm7
-; X86-64-NEXT:    xorl %r8d, %r8d
-; X86-64-NEXT:    xorl %r9d, %r9d
 ; X86-64-NEXT:    retq
 
 entry:
@@ -231,6 +231,14 @@ define dso_local i32 @all(i32 returned %x) local_unnamed_addr #0 "zero-call-used
 ; X86-64-NEXT:    xorl %edi, %edi
 ; X86-64-NEXT:    xorl %edx, %edx
 ; X86-64-NEXT:    xorl %esi, %esi
+; X86-64-NEXT:    xorl %r8d, %r8d
+; X86-64-NEXT:    xorl %r9d, %r9d
+; X86-64-NEXT:    xorl %r10d, %r10d
+; X86-64-NEXT:    xorl %r11d, %r11d
+; X86-64-NEXT:    xorl %r12d, %r12d
+; X86-64-NEXT:    xorl %r13d, %r13d
+; X86-64-NEXT:    xorl %r14d, %r14d
+; X86-64-NEXT:    xorl %r15d, %r15d
 ; X86-64-NEXT:    xorps %xmm0, %xmm0
 ; X86-64-NEXT:    xorps %xmm1, %xmm1
 ; X86-64-NEXT:    xorps %xmm2, %xmm2
@@ -247,14 +255,6 @@ define dso_local i32 @all(i32 returned %x) local_unnamed_addr #0 "zero-call-used
 ; X86-64-NEXT:    xorps %xmm13, %xmm13
 ; X86-64-NEXT:    xorps %xmm14, %xmm14
 ; X86-64-NEXT:    xorps %xmm15, %xmm15
-; X86-64-NEXT:    xorl %r8d, %r8d
-; X86-64-NEXT:    xorl %r9d, %r9d
-; X86-64-NEXT:    xorl %r10d, %r10d
-; X86-64-NEXT:    xorl %r11d, %r11d
-; X86-64-NEXT:    xorl %r12d, %r12d
-; X86-64-NEXT:    xorl %r13d, %r13d
-; X86-64-NEXT:    xorl %r14d, %r14d
-; X86-64-NEXT:    xorl %r15d, %r15d
 ; X86-64-NEXT:    retq
 
 entry:
