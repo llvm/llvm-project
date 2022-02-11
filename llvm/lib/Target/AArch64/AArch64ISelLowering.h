@@ -236,14 +236,6 @@ enum NodeType : unsigned {
   SADDV,
   UADDV,
 
-  // Vector halving addition
-  SHADD,
-  UHADD,
-
-  // Vector rounding halving addition
-  SRHADD,
-  URHADD,
-
   // Add Long Pairwise
   SADDLP,
   UADDLP,
