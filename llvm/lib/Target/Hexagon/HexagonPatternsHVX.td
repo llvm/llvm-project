@@ -738,9 +738,14 @@ let Predicates = [UseHVX] in {
 
 def V2Q: OutPatFrag<(ops node:$Vs), (V6_vandvrt $Vs, (A2_tfrsi -1))>;
 
-let Predicates = [UseHVX] in
-  def: Pat<(select I1:$Pu, VecI1:$Qs, VecI1:$Qt),
+let Predicates = [UseHVX] in {
+  def: Pat<(select I1:$Pu, VecQ8:$Qs, VecQ8:$Qt),
            (V2Q (PS_vselect $Pu, (Q2V $Qs), (Q2V $Qt)))>;
+  def: Pat<(select I1:$Pu, VecQ16:$Qs, VecQ16:$Qt),
+           (V2Q (PS_vselect $Pu, (Q2V $Qs), (Q2V $Qt)))>;
+  def: Pat<(select I1:$Pu, VecQ32:$Qs, VecQ32:$Qt),
+           (V2Q (PS_vselect $Pu, (Q2V $Qs), (Q2V $Qt)))>;
+}
 
 let Predicates = [UseHVX] in {
   def: Pat<(VecQ8   (qtrue)), (PS_qtrue)>;
