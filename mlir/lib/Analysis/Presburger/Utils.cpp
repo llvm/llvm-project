@@ -45,7 +45,7 @@ static void normalizeDivisionByGCD(SmallVectorImpl<int64_t> &dividend,
 
   // Normalize the dividend and the denominator.
   std::transform(dividend.begin(), dividend.end(), dividend.begin(),
-                 [gcd](int64_t &n) { return floor((double)(n / gcd)); });
+                 [gcd](int64_t &n) { return floorDiv(n, gcd); });
   divisor /= gcd;
 }
 

@@ -794,6 +794,21 @@ TEST(IntegerPolyhedronTest, computeLocalReprNoRepr) {
   checkDivisionRepresentation(poly, divisions, denoms);
 }
 
+TEST(IntegerPolyhedronTest, computeLocalReprNegConstNormalize) {
+  MLIRContext context;
+  IntegerPolyhedron poly = parsePoly(
+      "(x, q) : (-1 - 3*x - 6 * q >= 0, 6 + 3*x + 6*q >= 0)", &context);
+  // Convert q to a local variable.
+  poly.convertDimToLocal(1, 2);
+
+  // q = floor((-1/3 - x)/2)
+  //   = floor((1/3) + (-1 - x)/2)
+  //   = floor((-1 - x)/2).
+  std::vector<SmallVector<int64_t, 8>> divisions = {{-1, 0, -1}};
+  SmallVector<unsigned, 8> denoms = {2};
+  checkDivisionRepresentation(poly, divisions, denoms);
+}
+
 TEST(IntegerPolyhedronTest, simplifyLocalsTest) {
   // (x) : (exists y: 2x + y = 1 and y = 2).
   IntegerPolyhedron poly(1, 0, 1);
