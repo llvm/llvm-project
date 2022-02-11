@@ -1,0 +1,161 @@
+// RUN: not mlir-pdll %s -split-input-file 2>&1 | FileCheck %s
+
+//===----------------------------------------------------------------------===//
+// Rewrite Structure
+//===----------------------------------------------------------------------===//
+
+// CHECK: expected identifier name
+Rewrite {}
+
+// -----
+
+// CHECK: :6:9: error: `Foo` has already been defined
+// CHECK: :5:9: note: see previous definition here
+Rewrite Foo();
+Rewrite Foo();
+
+// -----
+
+Rewrite Foo() -> Value {
+  // CHECK: `return` terminated the `Rewrite` body, but found trailing statements afterwards
+  return _: Value;
+  return _: Value;
+}
+
+// -----
+
+// CHECK: missing return in a `Rewrite` expected to return `Value`
+Rewrite Foo() -> Value {
+  let value: Value;
+}
+
+// -----
+
+// CHECK: missing return in a `Rewrite` expected to return `Value`
+Rewrite Foo() -> Value => erase op<my_dialect.foo>;
+
+// -----
+
+// CHECK: unable to convert expression of type `Op<my_dialect.foo>` to the expected type of `Attr`
+Rewrite Foo() -> Attr => op<my_dialect.foo>;
+
+// -----
+
+// CHECK: expected `Rewrite` lambda body to contain a single expression or an operation rewrite statement; such as `erase`, `replace`, or `rewrite`
+Rewrite Foo() => let foo = op<my_dialect.foo>;
+
+// -----
+
+Constraint ValueConstraint(value: Value);
+
+// CHECK: unable to invoke `Constraint` within a rewrite section
+Rewrite Foo(value: Value) {
+  ValueConstraint(value);
+}
+
+// -----
+
+Rewrite Bar();
+
+// CHECK: `Bar` has already been defined
+Rewrite Foo() {
+  Rewrite Bar() {};
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Arguments
+//===----------------------------------------------------------------------===//
+
+// CHECK: expected `(` to start argument list
+Rewrite Foo {}
+
+// -----
+
+// CHECK: expected identifier argument name
+Rewrite Foo(10{}
+
+// -----
+
+// CHECK: expected `:` before argument constraint
+Rewrite Foo(arg{}
+
+// -----
+
+// CHECK: inline `Attr`, `Value`, and `ValueRange` type constraints are not permitted on arguments or results
+Rewrite Foo(arg: Value<type>){}
+
+// -----
+
+Constraint ValueConstraint(value: Value);
+
+// CHECK: arguments and results are only permitted to use core constraints, such as `Attr`, `Op`, `Type`, `TypeRange`, `Value`, `ValueRange`
+Rewrite Foo(arg: ValueConstraint);
+
+// -----
+
+// CHECK: expected `)` to end argument list
+Rewrite Foo(arg: Value{}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Results
+//===----------------------------------------------------------------------===//
+
+// CHECK: expected identifier constraint
+Rewrite Foo() -> {}
+
+// -----
+
+// CHECK: cannot create a single-element tuple with an element label
+Rewrite Foo() -> result: Value;
+
+// -----
+
+// CHECK: cannot create a single-element tuple with an element label
+Rewrite Foo() -> (result: Value);
+
+// -----
+
+// CHECK: expected identifier constraint
+Rewrite Foo() -> ();
+
+// -----
+
+// CHECK: expected `:` before result constraint
+Rewrite Foo() -> (result{};
+
+// -----
+
+// CHECK: expected `)` to end result list
+Rewrite Foo() -> (Op{};
+
+// -----
+
+// CHECK: inline `Attr`, `Value`, and `ValueRange` type constraints are not permitted on arguments or results
+Rewrite Foo() -> Value<type>){}
+
+// -----
+
+Constraint ValueConstraint(value: Value);
+
+// CHECK: results are only permitted to use core constraints, such as `Attr`, `Op`, `Type`, `TypeRange`, `Value`, `ValueRange`
+Rewrite Foo() -> ValueConstraint;
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Native Rewrites
+//===----------------------------------------------------------------------===//
+
+Pattern {
+  // CHECK: external declarations must be declared in global scope
+  Rewrite ExternalConstraint();
+}
+
+// -----
+
+// CHECK: expected `;` after native declaration
+Rewrite Foo() [{}]
