@@ -551,21 +551,21 @@ void mlir::normalizeAffineParallel(AffineParallelOp op) {
 /// bound is set to the trip count of the loop. For now, original loops must
 /// have lower bound with a single result only. There is no such restriction on
 /// upper bounds.
-void mlir::normalizeAffineFor(AffineForOp op) {
+LogicalResult mlir::normalizeAffineFor(AffineForOp op) {
   if (succeeded(promoteIfSingleIteration(op)))
-    return;
+    return success();
 
   // Check if the forop is already normalized.
   if (op.hasConstantLowerBound() && (op.getConstantLowerBound() == 0) &&
       (op.getStep() == 1))
-    return;
+    return success();
 
   // Check if the lower bound has a single result only. Loops with a max lower
   // bound can't be normalized without additional support like
   // affine.execute_region's. If the lower bound does not have a single result
   // then skip this op.
   if (op.getLowerBoundMap().getNumResults() != 1)
-    return;
+    return failure();
 
   Location loc = op.getLoc();
   OpBuilder opBuilder(op);
@@ -642,6 +642,7 @@ void mlir::normalizeAffineFor(AffineForOp op) {
                                    origLbMap.getNumSymbols(), newIVExpr);
   Operation *newIV = opBuilder.create<AffineApplyOp>(loc, ivMap, lbOperands);
   op.getInductionVar().replaceAllUsesExcept(newIV->getResult(0), newIV);
+  return success();
 }
 
 /// Ensure that all operations that could be executed after `start`
