@@ -107,11 +107,15 @@ find_path (
     ENV CPATH)
 
 # Don't bother look for the library if the header files were not found.
+
+# DevOps wants to build on ubu18 and expects it to work on ubu20.
+# we need libffi.a linked in so that we dont get missing version 6
+# when running on ubu20
 if (LIBOMPTARGET_DEP_LIBFFI_INCLUDE_DIR)
   find_library (
       LIBOMPTARGET_DEP_LIBFFI_LIBRARIES
     NAMES
-      ffi
+      libffi.a
     HINTS
       ${LIBOMPTARGET_SEARCH_LIBFFI_LIBDIR}
       ${LIBOMPTARGET_SEARCH_LIBFFI_LIBRARY_DIRS}
