@@ -121,7 +121,7 @@ void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
   IsSwiftError = Call->paramHasAttr(ArgIdx, Attribute::SwiftError);
   Alignment = Call->getParamStackAlign(ArgIdx);
   IndirectType = nullptr;
-  assert(IsByVal + IsPreallocated + IsInAlloca <= 1 &&
+  assert(IsByVal + IsPreallocated + IsInAlloca + IsSRet <= 1 &&
          "multiple ABI attributes?");
   if (IsByVal) {
     IndirectType = Call->getParamByValType(ArgIdx);
@@ -132,6 +132,8 @@ void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
     IndirectType = Call->getParamPreallocatedType(ArgIdx);
   if (IsInAlloca)
     IndirectType = Call->getParamInAllocaType(ArgIdx);
+  if (IsSRet)
+    IndirectType = Call->getParamStructRetType(ArgIdx);
 }
 
 /// Generate a libcall taking the given operands as arguments and returning a
