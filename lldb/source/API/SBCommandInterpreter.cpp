@@ -329,6 +329,12 @@ bool SBCommandInterpreter::HasAliasOptions() {
   return (IsValid() ? m_opaque_ptr->HasAliasOptions() : false);
 }
 
+bool SBCommandInterpreter::IsInteractive() {
+  LLDB_INSTRUMENT_VA(this);
+
+  return (IsValid() ? m_opaque_ptr->IsInteractive() : false);
+}
+
 SBProcess SBCommandInterpreter::GetProcess() {
   LLDB_INSTRUMENT_VA(this);
 
