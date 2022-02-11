@@ -183,7 +183,7 @@ template <>
 struct _LIBCPP_TEMPLATE_VIS is_error_condition_enum<errc>
     : true_type { };
 
-#ifdef _LIBCPP_HAS_NO_STRONG_ENUMS
+#ifdef _LIBCPP_CXX03_LANG
 template <>
 struct _LIBCPP_TEMPLATE_VIS is_error_condition_enum<errc::__lx>
     : true_type { };

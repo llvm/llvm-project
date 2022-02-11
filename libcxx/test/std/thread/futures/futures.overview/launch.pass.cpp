@@ -24,7 +24,7 @@
 
 int main(int, char**)
 {
-#ifdef _LIBCPP_HAS_NO_STRONG_ENUMS
+#if TEST_STD_VER < 11
    LIBCPP_STATIC_ASSERT(static_cast<int>(std::launch::any) ==
                  (static_cast<int>(std::launch::async) | static_cast<int>(std::launch::deferred)), "");
 #else

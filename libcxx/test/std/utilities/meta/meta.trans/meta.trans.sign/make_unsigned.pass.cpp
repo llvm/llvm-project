@@ -26,7 +26,7 @@ enum BigEnum
     big = 0xFFFFFFFFFFFFFFFFULL
 };
 
-#if !defined(TEST_HAS_NO_INT128) && !defined(_LIBCPP_HAS_NO_STRONG_ENUMS)
+#if !defined(TEST_HAS_NO_INT128) && TEST_STD_VER >= 11
 enum HugeEnum : __int128_t
 {
     hugezero
@@ -63,7 +63,7 @@ int main(int, char**)
 #ifndef TEST_HAS_NO_INT128
     test_make_unsigned<__int128_t, __uint128_t>();
     test_make_unsigned<__uint128_t, __uint128_t>();
-# ifndef _LIBCPP_HAS_NO_STRONG_ENUMS
+# if TEST_STD_VER >= 11
     test_make_unsigned<HugeEnum, __uint128_t>();
 # endif
 #endif
