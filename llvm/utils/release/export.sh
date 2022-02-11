@@ -131,7 +131,14 @@ export_sources() {
     for proj in $projects; do
         echo "Creating tarball for $proj ..."
         pushd $llvm_src_dir/$proj
-        git archive --prefix=$proj-$release$rc.src/ $tree_id . | xz >$target_dir/$(template_file $proj)
+        target_archive_file=$target_dir/$(template_file $proj)
+        trap "rm -fv $target_archive_file.tmp" EXIT
+        git archive --prefix=$proj-$release$rc.src/ -o $target_archive_file.tmp $tree_id .
+        # Get relative path to top-level cmake directory to be packaged
+        # alongside the project. Append that path to the tarball.
+        cmake_rel_path=$(realpath --relative-to=. $llvm_src_dir/cmake)
+        tar --append -f $target_archive_file.tmp $cmake_rel_path
+        cat $target_archive_file.tmp | xz > $target_archive_file
         popd
     done
 }
