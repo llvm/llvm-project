@@ -186,6 +186,22 @@ def EXIT_STRICT_WQM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
   let mayStore = 0;
 }
 
+// Pseudo instructions used for @llvm.fptrunc.round upward
+// and @llvm.fptrunc.round downward.
+// These intrinsics will be legalized to G_FPTRUNC_ROUND_UPWARD
+// and G_FPTRUNC_ROUND_DOWNWARD before being lowered to
+// FPTRUNC_UPWARD_PSEUDO and FPTRUNC_DOWNWARD_PSEUDO.
+// The final codegen is done in the ModeRegister pass.
+let Uses = [MODE, EXEC] in {
+def FPTRUNC_UPWARD_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
+  (ins VGPR_32:$src0),
+  [(set f16:$vdst, (SIfptrunc_round_upward f32:$src0))]>;
+
+def FPTRUNC_DOWNWARD_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
+  (ins VGPR_32:$src0),
+  [(set f16:$vdst, (SIfptrunc_round_downward f32:$src0))]>;
+} // End Uses = [MODE, EXEC]
+
 // Invert the exec mask and overwrite the inactive lanes of dst with inactive,
 // restoring it after we're done.
 let Defs = [SCC] in {
@@ -3182,4 +3198,16 @@ def G_SI_CALL : AMDGPUGenericInstruction {
   let SchedRW = [WriteBranch];
   // TODO: Should really base this on the call target
   let isConvergent = 1;
+}
+
+def G_FPTRUNC_ROUND_UPWARD : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$vdst);
+  let InOperandList = (ins type1:$src0);
+  let hasSideEffects = 0;
+}
+
+def G_FPTRUNC_ROUND_DOWNWARD : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$vdst);
+  let InOperandList = (ins type1:$src0);
+  let hasSideEffects = 0;
 }
