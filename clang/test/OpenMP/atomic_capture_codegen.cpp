@@ -90,7 +90,7 @@ float2 float2x;
 // register int rix __asm__("0");
 register int rix __asm__("esp");
 
-int main() {
+int main(void) {
 // CHECK: [[PREV:%.+]] = atomicrmw add i8* @{{.+}}, i8 1 monotonic, align 1
 // CHECK: store i8 [[PREV]], i8* @{{.+}},
 #pragma omp atomic capture

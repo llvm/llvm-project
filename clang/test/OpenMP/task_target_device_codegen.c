@@ -11,7 +11,7 @@
 #ifndef HEADER
 #define HEADER
 
-void test_task_affinity() {
+void test_task_affinity(void) {
   int t;
 #pragma omp task
   {

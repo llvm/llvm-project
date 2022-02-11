@@ -1,12 +1,13 @@
+; REQUIRES: system-windows
 ; RUN: opt -jmc-instrument -S < %s | FileCheck %s
 
 ; CHECK: $_JustMyCode_Default = comdat any
 
-; CHECK: @"_A85D9D03_x@c" = internal unnamed_addr global i8 1, section ".msvcjmc", align 1, !dbg !0
+; CHECK: @"_A8764FDD_x@c" = internal unnamed_addr global i8 1, section ".msvcjmc", align 1, !dbg !0
 ; CHECK: @llvm.used = appending global [1 x i8*] [i8* bitcast (void (i8*)* @_JustMyCode_Default to i8*)], section "llvm.metadata"
 
 ; CHECK: define void @w1() #0 !dbg !10 {
-; CHECK:   call x86_fastcallcc void @__CheckForDebuggerJustMyCode(i8* inreg noundef @"_A85D9D03_x@c")
+; CHECK:   call x86_fastcallcc void @__CheckForDebuggerJustMyCode(i8* inreg noundef @"_A8764FDD_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
@@ -17,7 +18,7 @@
 ; CHECK: }
 
 ; CHECK: !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
-; CHECK: !1 = distinct !DIGlobalVariable(name: "_A85D9D03_x@c", scope: !2, file: !3, type: !5, isLocal: true, isDefinition: true)
+; CHECK: !1 = distinct !DIGlobalVariable(name: "_A8764FDD_x@c", scope: !2, file: !3, type: !5, isLocal: true, isDefinition: true)
 ; CHECK: !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: !4, splitDebugInlining: false, nameTableKind: None)
 ; CHECK: !3 = !DIFile(filename: "./b/./../b/x.c", directory: "C:\\\\a\\\\")
 ; CHECK: !4 = !{!0}

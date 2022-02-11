@@ -6,7 +6,7 @@
   -(void)e;
 @end
 
-void foo2() {
+void foo2(void) {
   // FIXME: Can't verify warnings in headers
   //(void)@selector(y);
   //(void)@selector(e);

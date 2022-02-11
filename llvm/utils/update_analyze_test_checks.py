@@ -14,7 +14,7 @@ Workflow:
    in regression test files.
 2. Save the patch and revert it from your local work area.
 3. Update the RUN-lines in the affected regression tests to look canonical.
-   Example: "; RUN: opt < %s -analyze -cost-model -S | FileCheck %s"
+   Example: "; RUN: opt < %s -passes='print<cost-model>' -disable-output 2>&1 | FileCheck %s"
 4. Refresh the FileCheck lines for either the entire file or select functions by
    running this script.
 5. Commit the fresh baseline of checks.

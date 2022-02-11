@@ -11,7 +11,7 @@
 -(void)h: (int)p1 foo: (int)p2 {}
 @end
 
-void bar() {
+void bar(void) {
   id a = 0;
   [a nothing]; // expected-warning {{method '-nothing' not found}}
   [a f];

@@ -314,4 +314,31 @@ entry:
   ret void
 }
 
+; GCN-LABEL: ptr_nest_3_barrier:
+; GCN-COUNT-2: global_load_dwordx2
+; GCN:         global_store_dword
+define amdgpu_kernel void @ptr_nest_3_barrier(float** addrspace(1)* nocapture readonly %Arg) {
+; CHECK-LABEL: @ptr_nest_3_barrier(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[I:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds float**, float** addrspace(1)* [[ARG:%.*]], i32 [[I]]
+; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    [[P2:%.*]] = load float**, float** addrspace(1)* [[P1]], align 8
+; CHECK-NEXT:    [[P2_GLOBAL:%.*]] = addrspacecast float** [[P2]] to float* addrspace(1)*
+; CHECK-NEXT:    [[P3:%.*]] = load float*, float* addrspace(1)* [[P2_GLOBAL]], align 8
+; CHECK-NEXT:    [[P3_GLOBAL:%.*]] = addrspacecast float* [[P3]] to float addrspace(1)*
+; CHECK-NEXT:    store float 0.000000e+00, float addrspace(1)* [[P3_GLOBAL]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %i = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %p1 = getelementptr inbounds float**, float** addrspace(1)* %Arg, i32 %i
+  tail call void @llvm.amdgcn.s.barrier()
+  %p2 = load float**, float** addrspace(1)* %p1, align 8
+  %p3 = load float*, float** %p2, align 8
+  store float 0.000000e+00, float* %p3, align 4
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()
+declare void @llvm.amdgcn.s.barrier()

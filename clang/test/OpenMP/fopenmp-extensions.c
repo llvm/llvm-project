@@ -17,7 +17,7 @@
 // RUN: %clang_cc1 -verify=ompx -fopenmp-simd \
 // RUN:     -fno-openmp-extensions -fopenmp-extensions %s
 
-void foo() {
+void foo(void) {
   int x;
   // ompx-no-diagnostics
   // omp-error@+1 {{incorrect map type modifier}}
