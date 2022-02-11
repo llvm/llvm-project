@@ -14,6 +14,7 @@
 #include "sanitizer_allocator_interface.h"
 #include "sanitizer_common.h"
 #include "sanitizer_flags.h"
+#include "sanitizer_interface_internal.h"
 #include "sanitizer_procmaps.h"
 #include "sanitizer_stackdepot.h"
 

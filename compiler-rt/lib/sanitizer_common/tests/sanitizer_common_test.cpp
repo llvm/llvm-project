@@ -11,16 +11,24 @@
 //===----------------------------------------------------------------------===//
 #include <algorithm>
 
+// This ensures that including both internal sanitizer_common headers
+// and the interface headers does not lead to compilation failures.
+// Both may be included in unit tests, where googletest transitively
+// pulls in sanitizer interface headers.
+// The headers are specifically included using relative paths,
+// because a compiler may use a different mismatching version
+// of sanitizer headers.
+#include "../../../include/sanitizer/asan_interface.h"
+#include "../../../include/sanitizer/msan_interface.h"
+#include "../../../include/sanitizer/tsan_interface.h"
+#include "gtest/gtest.h"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_platform.h"
-
 #include "sanitizer_pthread_wrappers.h"
-
-#include "gtest/gtest.h"
 
 namespace __sanitizer {
 

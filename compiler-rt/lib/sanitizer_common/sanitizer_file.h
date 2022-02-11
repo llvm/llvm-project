@@ -15,7 +15,6 @@
 #ifndef SANITIZER_FILE_H
 #define SANITIZER_FILE_H
 
-#include "sanitizer_interface_internal.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_libc.h"
 #include "sanitizer_mutex.h"

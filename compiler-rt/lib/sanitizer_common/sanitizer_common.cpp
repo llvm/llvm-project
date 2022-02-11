@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common.h"
+
 #include "sanitizer_allocator_interface.h"
 #include "sanitizer_allocator_internal.h"
 #include "sanitizer_atomic.h"
 #include "sanitizer_flags.h"
+#include "sanitizer_interface_internal.h"
 #include "sanitizer_libc.h"
 #include "sanitizer_placement_new.h"
 
