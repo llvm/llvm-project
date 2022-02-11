@@ -426,8 +426,7 @@ define void @modify64_ashr_by_negated_multi_use(i64* %valptr, i64 %shamt, i64* %
 define i32 @reg32_shl_by_complemented(i32 %val, i32 %shamt) nounwind {
 ; CHECK-LABEL: reg32_shl_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #31
-; CHECK-NEXT:    sub w8, w8, w1
+; CHECK-NEXT:    mvn w8, w1
 ; CHECK-NEXT:    lsl w0, w0, w8
 ; CHECK-NEXT:    ret
   %negshamt = sub i32 31, %shamt
@@ -437,9 +436,8 @@ define i32 @reg32_shl_by_complemented(i32 %val, i32 %shamt) nounwind {
 define i32 @load32_shl_by_complemented(i32* %valptr, i32 %shamt) nounwind {
 ; CHECK-LABEL: load32_shl_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    mvn w8, w1
 ; CHECK-NEXT:    ldr w9, [x0]
-; CHECK-NEXT:    sub w8, w8, w1
 ; CHECK-NEXT:    lsl w0, w9, w8
 ; CHECK-NEXT:    ret
   %val = load i32, i32* %valptr
@@ -450,8 +448,7 @@ define i32 @load32_shl_by_complemented(i32* %valptr, i32 %shamt) nounwind {
 define void @store32_shl_by_complemented(i32 %val, i32* %dstptr, i32 %shamt) nounwind {
 ; CHECK-LABEL: store32_shl_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #31
-; CHECK-NEXT:    sub w8, w8, w2
+; CHECK-NEXT:    mvn w8, w2
 ; CHECK-NEXT:    lsl w8, w0, w8
 ; CHECK-NEXT:    str w8, [x1]
 ; CHECK-NEXT:    ret
@@ -463,9 +460,8 @@ define void @store32_shl_by_complemented(i32 %val, i32* %dstptr, i32 %shamt) nou
 define void @modify32_shl_by_complemented(i32* %valptr, i32 %shamt) nounwind {
 ; CHECK-LABEL: modify32_shl_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    mvn w8, w1
 ; CHECK-NEXT:    ldr w9, [x0]
-; CHECK-NEXT:    sub w8, w8, w1
 ; CHECK-NEXT:    lsl w8, w9, w8
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
@@ -478,12 +474,13 @@ define void @modify32_shl_by_complemented(i32* %valptr, i32 %shamt) nounwind {
 define void @modify32_shl_by_complemented_multi_use(i32* %valptr, i32 %shamt, i32* %shamtptr) nounwind {
 ; CHECK-LABEL: modify32_shl_by_complemented_multi_use:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    mvn w8, w1
 ; CHECK-NEXT:    ldr w9, [x0]
-; CHECK-NEXT:    sub w8, w8, w1
-; CHECK-NEXT:    lsl w9, w9, w8
-; CHECK-NEXT:    str w9, [x0]
-; CHECK-NEXT:    str w8, [x2]
+; CHECK-NEXT:    mov w10, #31
+; CHECK-NEXT:    lsl w8, w9, w8
+; CHECK-NEXT:    sub w9, w10, w1
+; CHECK-NEXT:    str w8, [x0]
+; CHECK-NEXT:    str w9, [x2]
 ; CHECK-NEXT:    ret
   %val = load i32, i32* %valptr
   %negshamt = sub i32 31, %shamt
@@ -496,8 +493,7 @@ define void @modify32_shl_by_complemented_multi_use(i32* %valptr, i32 %shamt, i3
 define i64 @reg64_shl_by_complemented(i64 %val, i64 %shamt) nounwind {
 ; CHECK-LABEL: reg64_shl_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #63
-; CHECK-NEXT:    sub x8, x8, x1
+; CHECK-NEXT:    mvn x8, x1
 ; CHECK-NEXT:    lsl x0, x0, x8
 ; CHECK-NEXT:    ret
   %negshamt = sub i64 63, %shamt
@@ -507,9 +503,8 @@ define i64 @reg64_shl_by_complemented(i64 %val, i64 %shamt) nounwind {
 define i64 @load64_shl_by_complemented(i64* %valptr, i64 %shamt) nounwind {
 ; CHECK-LABEL: load64_shl_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    mvn x8, x1
 ; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    sub x8, x8, x1
 ; CHECK-NEXT:    lsl x0, x9, x8
 ; CHECK-NEXT:    ret
   %val = load i64, i64* %valptr
@@ -520,8 +515,7 @@ define i64 @load64_shl_by_complemented(i64* %valptr, i64 %shamt) nounwind {
 define void @store64_shl_by_complemented(i64 %val, i64* %dstptr, i64 %shamt) nounwind {
 ; CHECK-LABEL: store64_shl_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #63
-; CHECK-NEXT:    sub x8, x8, x2
+; CHECK-NEXT:    mvn x8, x2
 ; CHECK-NEXT:    lsl x8, x0, x8
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
@@ -533,9 +527,8 @@ define void @store64_shl_by_complemented(i64 %val, i64* %dstptr, i64 %shamt) nou
 define void @modify64_shl_by_complemented(i64* %valptr, i64 %shamt) nounwind {
 ; CHECK-LABEL: modify64_shl_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    mvn x8, x1
 ; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    sub x8, x8, x1
 ; CHECK-NEXT:    lsl x8, x9, x8
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    ret
@@ -548,12 +541,13 @@ define void @modify64_shl_by_complemented(i64* %valptr, i64 %shamt) nounwind {
 define void @modify64_shl_by_complemented_multi_use(i64* %valptr, i64 %shamt, i64* %shamtptr) nounwind {
 ; CHECK-LABEL: modify64_shl_by_complemented_multi_use:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    mvn x8, x1
 ; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    sub x8, x8, x1
-; CHECK-NEXT:    lsl x9, x9, x8
-; CHECK-NEXT:    str x9, [x0]
-; CHECK-NEXT:    str x8, [x2]
+; CHECK-NEXT:    mov w10, #63
+; CHECK-NEXT:    lsl x8, x9, x8
+; CHECK-NEXT:    sub x9, x10, x1
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    str x9, [x2]
 ; CHECK-NEXT:    ret
   %val = load i64, i64* %valptr
   %negshamt = sub i64 63, %shamt
@@ -569,8 +563,7 @@ define void @modify64_shl_by_complemented_multi_use(i64* %valptr, i64 %shamt, i6
 define i32 @reg32_lshr_by_complemented(i32 %val, i32 %shamt) nounwind {
 ; CHECK-LABEL: reg32_lshr_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #31
-; CHECK-NEXT:    sub w8, w8, w1
+; CHECK-NEXT:    mvn w8, w1
 ; CHECK-NEXT:    lsr w0, w0, w8
 ; CHECK-NEXT:    ret
   %negshamt = sub i32 31, %shamt
@@ -580,9 +573,8 @@ define i32 @reg32_lshr_by_complemented(i32 %val, i32 %shamt) nounwind {
 define i32 @load32_lshr_by_complemented(i32* %valptr, i32 %shamt) nounwind {
 ; CHECK-LABEL: load32_lshr_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    mvn w8, w1
 ; CHECK-NEXT:    ldr w9, [x0]
-; CHECK-NEXT:    sub w8, w8, w1
 ; CHECK-NEXT:    lsr w0, w9, w8
 ; CHECK-NEXT:    ret
   %val = load i32, i32* %valptr
@@ -593,8 +585,7 @@ define i32 @load32_lshr_by_complemented(i32* %valptr, i32 %shamt) nounwind {
 define void @store32_lshr_by_complemented(i32 %val, i32* %dstptr, i32 %shamt) nounwind {
 ; CHECK-LABEL: store32_lshr_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #31
-; CHECK-NEXT:    sub w8, w8, w2
+; CHECK-NEXT:    mvn w8, w2
 ; CHECK-NEXT:    lsr w8, w0, w8
 ; CHECK-NEXT:    str w8, [x1]
 ; CHECK-NEXT:    ret
@@ -606,9 +597,8 @@ define void @store32_lshr_by_complemented(i32 %val, i32* %dstptr, i32 %shamt) no
 define void @modify32_lshr_by_complemented(i32* %valptr, i32 %shamt) nounwind {
 ; CHECK-LABEL: modify32_lshr_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    mvn w8, w1
 ; CHECK-NEXT:    ldr w9, [x0]
-; CHECK-NEXT:    sub w8, w8, w1
 ; CHECK-NEXT:    lsr w8, w9, w8
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
@@ -621,12 +611,13 @@ define void @modify32_lshr_by_complemented(i32* %valptr, i32 %shamt) nounwind {
 define void @modify32_lshr_by_complemented_multi_use(i32* %valptr, i32 %shamt, i32* %shamtptr) nounwind {
 ; CHECK-LABEL: modify32_lshr_by_complemented_multi_use:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    mvn w8, w1
 ; CHECK-NEXT:    ldr w9, [x0]
-; CHECK-NEXT:    sub w8, w8, w1
-; CHECK-NEXT:    lsr w9, w9, w8
-; CHECK-NEXT:    str w9, [x0]
-; CHECK-NEXT:    str w8, [x2]
+; CHECK-NEXT:    mov w10, #31
+; CHECK-NEXT:    lsr w8, w9, w8
+; CHECK-NEXT:    sub w9, w10, w1
+; CHECK-NEXT:    str w8, [x0]
+; CHECK-NEXT:    str w9, [x2]
 ; CHECK-NEXT:    ret
   %val = load i32, i32* %valptr
   %negshamt = sub i32 31, %shamt
@@ -639,8 +630,7 @@ define void @modify32_lshr_by_complemented_multi_use(i32* %valptr, i32 %shamt, i
 define i64 @reg64_lshr_by_complemented(i64 %val, i64 %shamt) nounwind {
 ; CHECK-LABEL: reg64_lshr_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #63
-; CHECK-NEXT:    sub x8, x8, x1
+; CHECK-NEXT:    mvn x8, x1
 ; CHECK-NEXT:    lsr x0, x0, x8
 ; CHECK-NEXT:    ret
   %negshamt = sub i64 63, %shamt
@@ -650,9 +640,8 @@ define i64 @reg64_lshr_by_complemented(i64 %val, i64 %shamt) nounwind {
 define i64 @load64_lshr_by_complemented(i64* %valptr, i64 %shamt) nounwind {
 ; CHECK-LABEL: load64_lshr_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    mvn x8, x1
 ; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    sub x8, x8, x1
 ; CHECK-NEXT:    lsr x0, x9, x8
 ; CHECK-NEXT:    ret
   %val = load i64, i64* %valptr
@@ -663,8 +652,7 @@ define i64 @load64_lshr_by_complemented(i64* %valptr, i64 %shamt) nounwind {
 define void @store64_lshr_by_complemented(i64 %val, i64* %dstptr, i64 %shamt) nounwind {
 ; CHECK-LABEL: store64_lshr_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #63
-; CHECK-NEXT:    sub x8, x8, x2
+; CHECK-NEXT:    mvn x8, x2
 ; CHECK-NEXT:    lsr x8, x0, x8
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
@@ -676,9 +664,8 @@ define void @store64_lshr_by_complemented(i64 %val, i64* %dstptr, i64 %shamt) no
 define void @modify64_lshr_by_complemented(i64* %valptr, i64 %shamt) nounwind {
 ; CHECK-LABEL: modify64_lshr_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    mvn x8, x1
 ; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    sub x8, x8, x1
 ; CHECK-NEXT:    lsr x8, x9, x8
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    ret
@@ -691,12 +678,13 @@ define void @modify64_lshr_by_complemented(i64* %valptr, i64 %shamt) nounwind {
 define void @modify64_lshr_by_complemented_multi_use(i64* %valptr, i64 %shamt, i64* %shamtptr) nounwind {
 ; CHECK-LABEL: modify64_lshr_by_complemented_multi_use:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    mvn x8, x1
 ; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    sub x8, x8, x1
-; CHECK-NEXT:    lsr x9, x9, x8
-; CHECK-NEXT:    str x9, [x0]
-; CHECK-NEXT:    str x8, [x2]
+; CHECK-NEXT:    mov w10, #63
+; CHECK-NEXT:    lsr x8, x9, x8
+; CHECK-NEXT:    sub x9, x10, x1
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    str x9, [x2]
 ; CHECK-NEXT:    ret
   %val = load i64, i64* %valptr
   %negshamt = sub i64 63, %shamt
@@ -712,8 +700,7 @@ define void @modify64_lshr_by_complemented_multi_use(i64* %valptr, i64 %shamt, i
 define i32 @reg32_ashr_by_complemented(i32 %val, i32 %shamt) nounwind {
 ; CHECK-LABEL: reg32_ashr_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #31
-; CHECK-NEXT:    sub w8, w8, w1
+; CHECK-NEXT:    mvn w8, w1
 ; CHECK-NEXT:    asr w0, w0, w8
 ; CHECK-NEXT:    ret
   %negshamt = sub i32 31, %shamt
@@ -723,9 +710,8 @@ define i32 @reg32_ashr_by_complemented(i32 %val, i32 %shamt) nounwind {
 define i32 @load32_ashr_by_complemented(i32* %valptr, i32 %shamt) nounwind {
 ; CHECK-LABEL: load32_ashr_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    mvn w8, w1
 ; CHECK-NEXT:    ldr w9, [x0]
-; CHECK-NEXT:    sub w8, w8, w1
 ; CHECK-NEXT:    asr w0, w9, w8
 ; CHECK-NEXT:    ret
   %val = load i32, i32* %valptr
@@ -736,8 +722,7 @@ define i32 @load32_ashr_by_complemented(i32* %valptr, i32 %shamt) nounwind {
 define void @store32_ashr_by_complemented(i32 %val, i32* %dstptr, i32 %shamt) nounwind {
 ; CHECK-LABEL: store32_ashr_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #31
-; CHECK-NEXT:    sub w8, w8, w2
+; CHECK-NEXT:    mvn w8, w2
 ; CHECK-NEXT:    asr w8, w0, w8
 ; CHECK-NEXT:    str w8, [x1]
 ; CHECK-NEXT:    ret
@@ -749,9 +734,8 @@ define void @store32_ashr_by_complemented(i32 %val, i32* %dstptr, i32 %shamt) no
 define void @modify32_ashr_by_complemented(i32* %valptr, i32 %shamt) nounwind {
 ; CHECK-LABEL: modify32_ashr_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    mvn w8, w1
 ; CHECK-NEXT:    ldr w9, [x0]
-; CHECK-NEXT:    sub w8, w8, w1
 ; CHECK-NEXT:    asr w8, w9, w8
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
@@ -764,12 +748,13 @@ define void @modify32_ashr_by_complemented(i32* %valptr, i32 %shamt) nounwind {
 define void @modify32_ashr_by_complemented_multi_use(i32* %valptr, i32 %shamt, i32* %shamtptr) nounwind {
 ; CHECK-LABEL: modify32_ashr_by_complemented_multi_use:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    mvn w8, w1
 ; CHECK-NEXT:    ldr w9, [x0]
-; CHECK-NEXT:    sub w8, w8, w1
-; CHECK-NEXT:    asr w9, w9, w8
-; CHECK-NEXT:    str w9, [x0]
-; CHECK-NEXT:    str w8, [x2]
+; CHECK-NEXT:    mov w10, #31
+; CHECK-NEXT:    asr w8, w9, w8
+; CHECK-NEXT:    sub w9, w10, w1
+; CHECK-NEXT:    str w8, [x0]
+; CHECK-NEXT:    str w9, [x2]
 ; CHECK-NEXT:    ret
   %val = load i32, i32* %valptr
   %negshamt = sub i32 31, %shamt
@@ -782,8 +767,7 @@ define void @modify32_ashr_by_complemented_multi_use(i32* %valptr, i32 %shamt, i
 define i64 @reg64_ashr_by_complemented(i64 %val, i64 %shamt) nounwind {
 ; CHECK-LABEL: reg64_ashr_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #63
-; CHECK-NEXT:    sub x8, x8, x1
+; CHECK-NEXT:    mvn x8, x1
 ; CHECK-NEXT:    asr x0, x0, x8
 ; CHECK-NEXT:    ret
   %negshamt = sub i64 63, %shamt
@@ -793,9 +777,8 @@ define i64 @reg64_ashr_by_complemented(i64 %val, i64 %shamt) nounwind {
 define i64 @load64_ashr_by_complemented(i64* %valptr, i64 %shamt) nounwind {
 ; CHECK-LABEL: load64_ashr_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    mvn x8, x1
 ; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    sub x8, x8, x1
 ; CHECK-NEXT:    asr x0, x9, x8
 ; CHECK-NEXT:    ret
   %val = load i64, i64* %valptr
@@ -806,8 +789,7 @@ define i64 @load64_ashr_by_complemented(i64* %valptr, i64 %shamt) nounwind {
 define void @store64_ashr_by_complemented(i64 %val, i64* %dstptr, i64 %shamt) nounwind {
 ; CHECK-LABEL: store64_ashr_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #63
-; CHECK-NEXT:    sub x8, x8, x2
+; CHECK-NEXT:    mvn x8, x2
 ; CHECK-NEXT:    asr x8, x0, x8
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
@@ -819,9 +801,8 @@ define void @store64_ashr_by_complemented(i64 %val, i64* %dstptr, i64 %shamt) no
 define void @modify64_ashr_by_complemented(i64* %valptr, i64 %shamt) nounwind {
 ; CHECK-LABEL: modify64_ashr_by_complemented:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    mvn x8, x1
 ; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    sub x8, x8, x1
 ; CHECK-NEXT:    asr x8, x9, x8
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    ret
@@ -834,12 +815,13 @@ define void @modify64_ashr_by_complemented(i64* %valptr, i64 %shamt) nounwind {
 define void @modify64_ashr_by_complemented_multi_use(i64* %valptr, i64 %shamt, i64* %shamtptr) nounwind {
 ; CHECK-LABEL: modify64_ashr_by_complemented_multi_use:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    mvn x8, x1
 ; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    sub x8, x8, x1
-; CHECK-NEXT:    asr x9, x9, x8
-; CHECK-NEXT:    str x9, [x0]
-; CHECK-NEXT:    str x8, [x2]
+; CHECK-NEXT:    mov w10, #63
+; CHECK-NEXT:    asr x8, x9, x8
+; CHECK-NEXT:    sub x9, x10, x1
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    str x9, [x2]
 ; CHECK-NEXT:    ret
   %val = load i64, i64* %valptr
   %negshamt = sub i64 63, %shamt
