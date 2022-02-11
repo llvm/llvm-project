@@ -7,13 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include <__utility/unreachable.h>
-#include "strstream"
-#include "algorithm"
-#include "climits"
-#include "cstring"
-#include "cstdlib"
-#include "__debug"
-#include "__undef_macros"
+#include <__debug>
+#include <algorithm>
+#include <climits>
+#include <cstdlib>
+#include <cstring>
+#include <strstream>
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -334,3 +336,5 @@ strstream::~strstream()
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS

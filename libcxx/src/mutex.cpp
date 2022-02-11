@@ -6,19 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mutex"
-#include "limits"
-#include "system_error"
+#include <limits>
+#include <mutex>
+#include <system_error>
+
 #include "include/atomic_support.h"
-#include "__undef_macros"
 
 #ifndef _LIBCPP_HAS_NO_THREADS
-#if defined(__ELF__) && defined(_LIBCPP_LINK_PTHREAD_LIB)
-#pragma comment(lib, "pthread")
-#endif
+#  if defined(__ELF__) && defined(_LIBCPP_LINK_PTHREAD_LIB)
+#    pragma comment(lib, "pthread")
+#  endif
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
+
 #ifndef _LIBCPP_HAS_NO_THREADS
 
 const defer_lock_t  defer_lock{};
@@ -258,3 +262,5 @@ void __call_once(volatile once_flag::_State_type& flag, void* arg,
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
