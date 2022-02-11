@@ -1,6 +1,6 @@
 // RUN: not mlir-pdll %s -split-input-file 2>&1  | FileCheck %s
 
-// CHECK: expected `{` to start pattern body
+// CHECK: expected `{` or `=>` to start pattern body
 Pattern }
 
 // -----
@@ -24,6 +24,11 @@ Pattern {
   erase root: Op;
   let value: Value;
 }
+
+// -----
+
+// CHECK: expected Pattern lambda body to contain a single operation rewrite statement, such as `erase`, `replace`, or `rewrite`
+Pattern => op<>;
 
 // -----
 
