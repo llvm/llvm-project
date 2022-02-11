@@ -899,3 +899,51 @@ loop:
 exit:
   ret void
 }
+
+define void @test_for_sink_instruction_after_same_incoming_1(double* %ptr) {
+; CHECK-LABEL: @test_for_sink_instruction_after_same_incoming_1
+; CHECK-NOT: vector.body:
+;
+entry:
+  br label %loop
+
+loop:
+  %for.1 = phi double [ 10.0, %entry ], [ %for.1.next, %loop ]
+  %for.2 = phi double [ 20.0, %entry ], [ %for.1.next, %loop ]
+  %iv = phi i64 [ 1, %entry ], [ %iv.next, %loop ]
+  %add.1 = fadd double 10.0, %for.2
+  %add.2 = fadd double %add.1, %for.1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %gep.ptr = getelementptr inbounds double, double* %ptr, i64 %iv
+  %for.1.next  = load double, double* %gep.ptr, align 8
+  store double %add.2, double* %gep.ptr
+  %exitcond.not = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+
+define void @test_for_sink_instruction_after_same_incoming_2(double* %ptr) {
+; CHECK-LABEL: @test_for_sink_instruction_after_same_incoming_2
+; CHECK-NOT: vector.body:
+entry:
+  br label %loop
+
+loop:
+  %for.2 = phi double [ 20.0, %entry ], [ %for.1.next, %loop ]
+  %for.1 = phi double [ 10.0, %entry ], [ %for.1.next, %loop ]
+  %iv = phi i64 [ 1, %entry ], [ %iv.next, %loop ]
+  %add.1 = fadd double 10.0, %for.2
+  %add.2 = fadd double %add.1, %for.1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %gep.ptr = getelementptr inbounds double, double* %ptr, i64 %iv
+  %for.1.next  = load double, double* %gep.ptr, align 8
+  store double %add.2, double* %gep.ptr
+  %exitcond.not = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
