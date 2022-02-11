@@ -1090,6 +1090,7 @@ a Fortran front-end would generate the following descriptors:
 A fortran deferred-length character can also contain the information of raw storage of the characters in addition to the length of the string. This information is encoded in the  stringLocationExpression field. Based on this information, DW_AT_data_location attribute is emitted in a DW_TAG_string_type debug info. 
 
   !DIStringType(name: "character(*)!2", stringLengthExpression: !DIExpression(), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32)
+
 and this will materialize in DWARF tags as:
 
 .. code-block:: text
