@@ -305,3 +305,42 @@ define i1 @cmp_gep_same_base_different_type(ptr %ptr, i64 %idx1, i64 %idx2) {
   %cmp = icmp ult ptr %gep1, %gep2
   ret i1 %cmp
 }
+
+@ary = constant [4 x i8] [i8 1, i8 2, i8 3, i8 4]
+
+define i1 @cmp_load_gep_global(i64 %idx) {
+; CHECK-LABEL: @cmp_load_gep_global(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IDX:%.*]], 2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep = getelementptr [4 x i8], ptr @ary, i64 0, i64 %idx
+  %load = load i8, ptr %gep
+  %cmp = icmp eq i8 %load, 3
+  ret i1 %cmp
+}
+
+define i1 @cmp_load_gep_global_different_load_type(i64 %idx) {
+; CHECK-LABEL: @cmp_load_gep_global_different_load_type(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr @ary, i64 0, i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep = getelementptr [4 x i8], ptr @ary, i64 0, i64 %idx
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 3
+  ret i1 %cmp
+}
+
+define i1 @cmp_load_gep_global_different_gep_type(i64 %idx) {
+; CHECK-LABEL: @cmp_load_gep_global_different_gep_type(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i16], ptr @ary, i64 0, i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep = getelementptr [4 x i16], ptr @ary, i64 0, i64 %idx
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 3
+  ret i1 %cmp
+}
