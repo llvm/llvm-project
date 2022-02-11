@@ -95,8 +95,8 @@ include(CheckCXXCompilerFlag)
 
 check_c_compiler_flag("" LLVM_RUNTIMES_LINKING_WORKS)
 if (NOT LLVM_RUNTIMES_LINKING_WORKS)
-  # The compiler driver may be implicitly trying to link against libunwind, which
-  # might not work if libunwind doesn't exist yet. Try to check if
+  # The compiler driver may be implicitly trying to link against libunwind,
+  # which might not work if libunwind doesn't exist yet. Try to check if
   # --unwindlib=none is supported, and use that if possible.
   # Don't add this if not necessary to fix linking, as it can break using
   # e.g. ASAN/TSAN.
