@@ -5,7 +5,7 @@
 
 @import AutolinkTBD;
 
-int f() {
+int f(void) {
   return foo();
 }
 

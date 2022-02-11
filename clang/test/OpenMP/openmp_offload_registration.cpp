@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c -triple x86_64-unknown-linux-gnu -fopenmp-targets=aarch64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s
 // expected-no-diagnostics
 
-void foo() {
+void foo(void) {
 #pragma omp target
   {}
 }
