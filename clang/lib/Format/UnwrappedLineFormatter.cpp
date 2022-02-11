@@ -700,9 +700,13 @@ private:
 
     if (Line.Last->is(tok::l_brace)) {
       FormatToken *Tok = I[1]->First;
-      if (Tok->is(tok::r_brace) && !Tok->MustBreakBefore &&
-          (Tok->getNextNonComment() == nullptr ||
-           Tok->getNextNonComment()->is(tok::semi))) {
+      auto ShouldMerge = [Tok]() {
+        if (Tok->isNot(tok::r_brace) || Tok->MustBreakBefore)
+          return false;
+        const FormatToken *Next = Tok->getNextNonComment();
+        return !Next || Next->is(tok::semi);
+      };
+      if (ShouldMerge()) {
         // We merge empty blocks even if the line exceeds the column limit.
         Tok->SpacesRequiredBefore = Style.SpaceInEmptyBlock ? 1 : 0;
         Tok->CanBreakBefore = true;

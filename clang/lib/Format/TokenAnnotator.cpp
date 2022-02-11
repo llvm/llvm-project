@@ -3598,7 +3598,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   if (Right.is(tok::colon)) {
     if (Line.First->isOneOf(tok::kw_default, tok::kw_case))
       return Style.SpaceBeforeCaseColon;
-    if (!Right.getNextNonComment() || Right.getNextNonComment()->is(tok::semi))
+    const FormatToken *Next = Right.getNextNonComment();
+    if (!Next || Next->is(tok::semi))
       return false;
     if (Right.is(TT_ObjCMethodExpr))
       return false;
