@@ -2515,6 +2515,10 @@ public:
     case ISD::FMAXNUM_IEEE:
     case ISD::FMINIMUM:
     case ISD::FMAXIMUM:
+    case ISD::AVGFLOORS:
+    case ISD::AVGFLOORU:
+    case ISD::AVGCEILS:
+    case ISD::AVGCEILU:
       return true;
     default: return false;
     }
