@@ -79,6 +79,7 @@ private:
   /// Per-module type mapping from clang AST to CIR.
   std::unique_ptr<CIRGenTypes> genTypes;
 
+  const clang::LangOptions &langOpts;
   /// -------
   /// Goto
   /// -------
@@ -199,6 +200,7 @@ public:
   mlir::ModuleOp getModule() { return theModule; }
   mlir::OpBuilder &getBuilder() { return builder; }
   clang::ASTContext &getASTContext() { return astCtx; }
+  const clang::LangOptions &getLangOpts() const { return langOpts; }
 
   /// Helpers to convert Clang's SourceLocation to a MLIR Location.
   mlir::Location getLoc(clang::SourceLocation SLoc);
