@@ -294,17 +294,19 @@ DIStringType *DIBuilder::createStringType(StringRef Name, uint64_t SizeInBits) {
 }
 
 DIStringType *DIBuilder::createStringType(StringRef Name,
-                                          PointerUnion<Metadata *, DIVariable *>StringLength, Metadata *StrLocationExp) {
+                                          Metadata *StringLength,
+                                          Metadata *StrLocationExp) {
   assert(!Name.empty() && "Unable to create type without name");
   return DIStringType::get(VMContext, dwarf::DW_TAG_string_type, Name,
                            StringLength, nullptr, StrLocationExp, 0, 0, 0);
 }
 
 DIStringType *DIBuilder::createStringTypeExp(StringRef Name,
-                                             DIExpression *StringLengthExp, Metadata *StrLocationExp) {
+                                             DIExpression *StringLengthExp,
+                                             Metadata *StrLocationExp) {
   assert(!Name.empty() && "Unable to create type without name");
   return DIStringType::get(VMContext, dwarf::DW_TAG_string_type, Name, nullptr,
-                           StringLengthExp,StrLocationExp, 0, 0, 0);
+                           StringLengthExp, StrLocationExp, 0, 0, 0);
 }
 
 DIDerivedType *DIBuilder::createQualifiedType(unsigned Tag, DIType *FromTy) {
