@@ -168,6 +168,9 @@ LLDBMemoryReader::resolvePointer(swift::remote::RemoteAddress address,
   // from the file-cache optimization.
   swift::remote::RemoteAbsolutePointer process_pointer("", readValue);
 
+  if (!readMetadataFromFileCacheEnabled())
+    return process_pointer;
+
   auto &target = m_process.GetTarget();
   Address addr;
   if (!target.ResolveLoadAddress(readValue, addr)) {
@@ -393,7 +396,7 @@ llvm::Optional<Address>
 LLDBMemoryReader::resolveRemoteAddress(uint64_t address) const {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
-  if (!m_process.GetTarget().GetSwiftReadMetadataFromFileCache())
+  if (!readMetadataFromFileCacheEnabled())
     return Address(address);
 
   // If the address contains our mask, this is an image we registered.
