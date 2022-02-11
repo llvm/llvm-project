@@ -98,6 +98,7 @@ static_library("Support") {
     "MD5.cpp",
     "MSP430AttributeParser.cpp",
     "MSP430Attributes.cpp",
+    "MSVCPaths.cpp",
     "ManagedStatic.cpp",
     "MathExtras.cpp",
     "MemAlloc.cpp",
