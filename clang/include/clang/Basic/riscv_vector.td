@@ -1700,7 +1700,6 @@ defm vwmulsu : RVVOutOp0Op1BuiltinSet<"vwmulsu", "csi",
 }
 
 // 12.13. Vector Single-Width Integer Multiply-Add Instructions
-let HasPolicy = false in {
 defm vmacc  : RVVIntTerBuiltinSet;
 defm vnmsac : RVVIntTerBuiltinSet;
 defm vmadd  : RVVIntTerBuiltinSet;
@@ -1720,7 +1719,6 @@ defm vwmaccsu : RVVOutOp1Op2BuiltinSet<"vwmaccsu", "csi",
                                         ["vx", "w", "wweUv"]]>;
 defm vwmaccus : RVVOutOp1Op2BuiltinSet<"vwmaccus", "csi",
                                        [["vx", "w", "wwUev"]]>;
-}
 }
 
 // 12.15. Vector Integer Merge Instructions
@@ -1804,7 +1802,6 @@ let Log2LMUL = [-2, -1, 0, 1, 2] in {
 }
 
 // 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
-let HasPolicy = false in {
 defm vfmacc  : RVVFloatingTerBuiltinSet;
 defm vfnmacc : RVVFloatingTerBuiltinSet;
 defm vfmsac  : RVVFloatingTerBuiltinSet;
@@ -1819,7 +1816,6 @@ defm vfwmacc  : RVVFloatingWidenTerBuiltinSet;
 defm vfwnmacc : RVVFloatingWidenTerBuiltinSet;
 defm vfwmsac  : RVVFloatingWidenTerBuiltinSet;
 defm vfwnmsac : RVVFloatingWidenTerBuiltinSet;
-}
 
 // 14.8. Vector Floating-Point Square-Root Instruction
 def vfsqrt : RVVFloatingUnaryVVBuiltin;
@@ -2003,12 +1999,10 @@ let HasMask = false, HasPolicy = false in {
 }
 
 // 17.3. Vector Slide Instructions
-let HasPolicy = false in {
 // 17.3.1. Vector Slideup Instructions
 defm vslideup   : RVVSlideBuiltinSet;
 // 17.3.2. Vector Slidedown Instructions
 defm vslidedown : RVVSlideBuiltinSet;
-}
 
 // 17.3.3. Vector Slide1up Instructions
 defm vslide1up : RVVSlideOneBuiltinSet;

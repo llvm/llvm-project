@@ -1111,7 +1111,7 @@ foreach vti = AllFloatVectors in {
                                       VLOpFrag)),
             (!cast<Instruction>("PseudoVFMADD_VV_"# suffix #"_MASK")
                  vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
-                 (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_UNDISTURBED)>;
 
   def : Pat<(vti.Vector (riscv_fma_vl vti.RegClass:$rs1, vti.RegClass:$rd,
                                       (riscv_fneg_vl vti.RegClass:$rs2,
@@ -1161,7 +1161,7 @@ foreach vti = AllFloatVectors in {
                                        VLOpFrag)),
             (!cast<Instruction>("PseudoVFMADD_V" # vti.ScalarSuffix # "_" # suffix # "_MASK")
                  vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                 (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_UNDISTURBED)>;
 
   def : Pat<(vti.Vector (riscv_fma_vl (SplatFPOp vti.ScalarRegClass:$rs1),
                                        vti.RegClass:$rd,
