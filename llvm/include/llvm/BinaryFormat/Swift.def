@@ -28,3 +28,5 @@ HANDLE_SWIFT_SECTION(conform, "__swift5_proto", "swift5_protocol_confromances",
                      ".sw5prtc$B")
 HANDLE_SWIFT_SECTION(protocs, "__swift5_protos", "swift5_protocols",
                      ".sw5prt$B")
+HANDLE_SWIFT_SECTION(acfuncs, "__swift5_acfuncs", "swift5_accessible_functions",
+                     ".sw5acfn$B")
