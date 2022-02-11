@@ -559,12 +559,12 @@ bool LoopReroll::isLoopControlIV(Loop *L, Instruction *IV) {
           }
           // Must be a CMP or an ext (of a value with nsw) then CMP
           else {
-            Instruction *UUser = dyn_cast<Instruction>(UU);
+            auto *UUser = cast<Instruction>(UU);
             // Skip SExt if we are extending an nsw value
             // TODO: Allow ZExt too
-            if (BO->hasNoSignedWrap() && UUser && UUser->hasOneUse() &&
+            if (BO->hasNoSignedWrap() && UUser->hasOneUse() &&
                 isa<SExtInst>(UUser))
-              UUser = dyn_cast<Instruction>(*(UUser->user_begin()));
+              UUser = cast<Instruction>(*(UUser->user_begin()));
             if (!isCompareUsedByBranch(UUser))
               return false;
           }
