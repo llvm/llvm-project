@@ -175,3 +175,55 @@ structured_op: !LinalgStructuredOpConfig
 #  IMPL-NEXT:    assert(2 > 0 && block.getNumArguments() == 2 &&
 
 #       IMPL:   yields.push_back(block.getArgument(0));
+
+# @linalg_structured_op
+# def test3(value=ScalarDef(T1),
+#           O=TensorDef(U, output=True)):
+#   """Title.
+
+#   Detailed description.
+#   """
+#   O[None] = TypeFn.cast(U, value)
+
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: test3
+  cpp_class_name: Test3Op
+  doc: |-
+    Title.
+
+    Detailed description.
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: value
+    usage: InputOperand
+    type_var: T1
+  - !LinalgOperandDefConfig
+    name: O
+    usage: OutputOperand
+    type_var: U
+    shape_map: affine_map<() -> ()>
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<() -> ()>
+    - affine_map<() -> ()>
+  iterator_types: []
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !ScalarExpression
+      type_fn:
+        fn_name: cast
+        type_var: U
+        operands:
+        - !ScalarExpression
+          scalar_arg: value
+
+#       IMPL:  Test3Op::iterator_types() {
+#  IMPL-NEXT:    int64_t rank = getRank(getOutputOperand(0));
+
+#       IMPL:  Test3Op::indexing_maps() {
+#  IMPL-NEXT:    MLIRContext *context = getContext();
+#  IMPL-NEXT:    AffineMap scalarMap = AffineMap::get(getNumParallelLoops(), 0, context);
+#  IMPL-NEXT:    AffineMap tensorMap = AffineMap::getMultiDimIdentityMap(

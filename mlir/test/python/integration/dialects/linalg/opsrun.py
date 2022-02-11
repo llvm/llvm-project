@@ -43,12 +43,41 @@ func @main() -> f32 attributes {llvm.emit_c_interface} {
 
 fill_boiler = """
 func @main() -> i32 attributes {llvm.emit_c_interface} {
+  %O0 = memref.alloc() : memref<i32>
+  %O1 = memref.alloc() : memref<16xi32>
+  %O2 = memref.alloc() : memref<4x16xi32>
+
+  %val0 = arith.constant 1.0 : f32
+  %val1 = arith.constant 2.0 : f32
+  %val2 = arith.constant 3.0 : f32
+
+  call @fill_0d_on_buffers(%val0, %O0) : (f32, memref<i32>) -> ()
+  call @fill_1d_on_buffers(%val1, %O1) : (f32, memref<16xi32>) -> ()
+  call @fill_2d_on_buffers(%val2, %O2) : (f32, memref<4x16xi32>) -> ()
+
+  %c0 = arith.constant 0 : index
+  %res0 = memref.load %O0[] : memref<i32>
+  %c8 = arith.constant 8 : index
+  %res1 = memref.load %O1[%c8] : memref<16xi32>
+  %c2 = arith.constant 2 : index
+  %res2 = memref.load %O2[%c2, %c8] : memref<4x16xi32>
+
+  %0 = arith.addi %res0, %res1 : i32
+  %1 = arith.addi %0, %res2 : i32
+
+  // TODO: FFI-based solution to allow testing and printing with python code.
+  return %1 : i32
+}
+"""
+
+fill_rng_boiler = """
+func @main() -> i32 attributes {llvm.emit_c_interface} {
   %O = memref.alloc() : memref<4x16xi32>
   %min = arith.constant -1000.0 : f64
   %max = arith.constant 1000.0 : f64
   %seed = arith.constant 42 : i32
 
-  call @fill_on_buffers(%min, %max, %seed, %O) :
+  call @fill_rng_on_buffers(%min, %max, %seed, %O) :
     (f64, f64, i32, memref<4x16xi32>) -> ()
 
   %c0 = arith.constant 0 : index
@@ -123,9 +152,9 @@ def transform(module, boilerplate):
 
   # TODO: Allow cloning functions from one module to another.
   # Atm we have to resort to string concatenation.
-  mod = Module.parse(
-      str(module.operation.regions[0].blocks[0].operations[0].operation) +
-      boilerplate)
+  ops = module.operation.regions[0].blocks[0].operations
+  mod = Module.parse("\n".join([str(op) for op in ops]) + boilerplate)
+
   pm = PassManager.parse(
       "builtin.func(convert-linalg-to-loops, lower-affine, " +
       "convert-scf-to-cf, arith-expand, memref-expand), convert-vector-to-llvm," +
@@ -194,13 +223,21 @@ test_matmul_generic()
 def test_fill_builtin():
   with Context() as ctx, Location.unknown():
     module = Module.create()
-    f64 = F64Type.get()
+    f32 = F32Type.get()
     i32 = IntegerType.get_signless(32)
     with InsertionPoint(module.body):
 
-      @builtin.FuncOp.from_py_func(f64, f64, i32, MemRefType.get((4, 16), i32))
-      def fill_on_buffers(min, max, seed, out):
-        linalg.fill_rng_2d(min, max, seed, outs=[out])
+      @builtin.FuncOp.from_py_func(f32, MemRefType.get([], i32))
+      def fill_0d_on_buffers(value, out):
+        linalg.fill_tensor(value, outs=[out])
+
+      @builtin.FuncOp.from_py_func(f32, MemRefType.get([16], i32))
+      def fill_1d_on_buffers(value, out):
+        linalg.fill_tensor(value, outs=[out])
+
+      @builtin.FuncOp.from_py_func(f32, MemRefType.get([4, 16], i32))
+      def fill_2d_on_buffers(value, out):
+        linalg.fill_tensor(value, outs=[out])
 
     execution_engine = ExecutionEngine(transform(module, fill_boiler))
 
@@ -212,7 +249,7 @@ def test_fill_builtin():
     execution_engine.invoke("main", res)
 
     log("RESULT: ", res[0])
-    # CHECK: RESULT: -480
+    # CHECK: RESULT: 6
 
 
 test_fill_builtin()
@@ -221,15 +258,50 @@ test_fill_builtin()
 def test_fill_generic():
   with Context() as ctx, Location.unknown():
     module = Module.create()
+    f32 = F32Type.get()
+    i32 = IntegerType.get_signless(32)
+    with InsertionPoint(module.body):
+
+      @builtin.FuncOp.from_py_func(f32, MemRefType.get([], i32))
+      def fill_0d_on_buffers(value, out):
+        linalg.fill_tensor(value, outs=[out], emit_generic=True)
+
+      @builtin.FuncOp.from_py_func(f32, MemRefType.get([16], i32))
+      def fill_1d_on_buffers(value, out):
+        linalg.fill_tensor(value, outs=[out], emit_generic=True)
+
+      @builtin.FuncOp.from_py_func(f32, MemRefType.get([4, 16], i32))
+      def fill_2d_on_buffers(value, out):
+        linalg.fill_tensor(value, outs=[out], emit_generic=True)
+
+    execution_engine = ExecutionEngine(transform(module, fill_boiler))
+
+    # TODO: FFI-based solution to allow testing and printing with python code.
+    # Prepare arguments: one result i32.
+    # Arguments must be passed as pointers.
+    c_int_p = ctypes.c_int * 1
+    res = c_int_p(-1)
+    execution_engine.invoke("main", res)
+
+    log("RESULT: ", res[0])
+    # CHECK: RESULT: 6
+
+
+test_fill_generic()
+
+
+def test_fill_rng_builtin():
+  with Context() as ctx, Location.unknown():
+    module = Module.create()
     f64 = F64Type.get()
     i32 = IntegerType.get_signless(32)
     with InsertionPoint(module.body):
 
       @builtin.FuncOp.from_py_func(f64, f64, i32, MemRefType.get((4, 16), i32))
-      def fill_on_buffers(min, max, seed, out):
-        linalg.fill_rng_2d(min, max, seed, outs=[out], emit_generic=True)
+      def fill_rng_on_buffers(min, max, seed, out):
+        linalg.fill_rng_2d(min, max, seed, outs=[out])
 
-    execution_engine = ExecutionEngine(transform(module, fill_boiler))
+    execution_engine = ExecutionEngine(transform(module, fill_rng_boiler))
 
     # TODO: FFI-based solution to allow testing and printing with python code.
     # Prepare arguments: one result i32.
@@ -242,7 +314,34 @@ def test_fill_generic():
     # CHECK: RESULT: -480
 
 
-test_fill_generic()
+test_fill_rng_builtin()
+
+
+def test_fill_rng_generic():
+  with Context() as ctx, Location.unknown():
+    module = Module.create()
+    f64 = F64Type.get()
+    i32 = IntegerType.get_signless(32)
+    with InsertionPoint(module.body):
+
+      @builtin.FuncOp.from_py_func(f64, f64, i32, MemRefType.get((4, 16), i32))
+      def fill_rng_on_buffers(min, max, seed, out):
+        linalg.fill_rng_2d(min, max, seed, outs=[out], emit_generic=True)
+
+    execution_engine = ExecutionEngine(transform(module, fill_rng_boiler))
+
+    # TODO: FFI-based solution to allow testing and printing with python code.
+    # Prepare arguments: one result i32.
+    # Arguments must be passed as pointers.
+    c_int_p = ctypes.c_int * 1
+    res = c_int_p(-1)
+    execution_engine.invoke("main", res)
+
+    log("RESULT: ", res[0])
+    # CHECK: RESULT: -480
+
+
+test_fill_rng_generic()
 
 
 def test_max_pooling_builtin():

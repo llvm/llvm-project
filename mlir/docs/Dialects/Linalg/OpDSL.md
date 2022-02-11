@@ -102,7 +102,7 @@ bound to a `TensorDef` as demonstrated by the matmul example. All parameters
 appear in the parameter list of the operation:
 
 ```python
-fill(val, in_tensor, outs=[out_tensor])
+copy_and_scale(val, in_tensor, outs=[out_tensor])
 ```
 
 ## Attributes
@@ -251,3 +251,31 @@ The following examples illustrate the lowering of signed and unsigned functions:
 
 Not all functions are applicable for all numeric types, and on mismatch, op
 verification will fail.
+
+## Pointwise Computations
+
+Pointwise computations are expressible in a rank polymorphic form that supports
+arbitrary ranked operands - all of them need to have the same rank - with a
+single operation definition.
+
+An example for a rank polymorphic operation is `fill`:
+
+```python
+@linalg_structured_op
+def fill(value=ScalarDef(T1),
+         O=TensorDef(U, output=True)):
+  O[None] = TypeFn.cast(U, value)
+```
+
+The operation sets the elements of the output tensor `O` to `value`. All
+operands are either scalars or rank zero tensors that are accessed using the
+index `None`. The operation thus performs a scalar computation that trivially
+extends to a multi-dimensional pointwise computation. As a result, we may use
+`fill` with arbitrary ranked output tensors:
+
+```python
+tensor_2d = linalg.InitTensorOp([4, 8], f32)
+tensor_3d = linalg.InitTensorOp([4, 8, 16], f32)
+fill(value, outs=[tensor_2d])
+fill(value, outs=[tensor_3d])
+```
