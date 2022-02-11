@@ -1252,12 +1252,18 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
         }
 
         // Otherwise, replaces the use with flat(NewV).
-        if (Instruction *Inst = dyn_cast<Instruction>(V)) {
+        if (Instruction *VInst = dyn_cast<Instruction>(V)) {
           // Don't create a copy of the original addrspacecast.
           if (U == V && isa<AddrSpaceCastInst>(V))
             continue;
 
-          BasicBlock::iterator InsertPos = std::next(Inst->getIterator());
+          // Insert the addrspacecast after NewV.
+          BasicBlock::iterator InsertPos;
+          if (Instruction *NewVInst = dyn_cast<Instruction>(NewV))
+            InsertPos = std::next(NewVInst->getIterator());
+          else
+            InsertPos = std::next(VInst->getIterator());
+
           while (isa<PHINode>(InsertPos))
             ++InsertPos;
           U.set(new AddrSpaceCastInst(NewV, V->getType(), "", &*InsertPos));
