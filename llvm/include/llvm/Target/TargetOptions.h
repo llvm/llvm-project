@@ -142,7 +142,7 @@ namespace llvm {
           SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
           ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
           XRayOmitFunctionIndex(false), DebugStrictDwarf(false),
-          Hotpatch(false), PPCGenScalarMASSEntries(false), JMCInstrument(false),
+          Hotpatch(false), PPCGenScalarMASSEntries(false),
           FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
 
     /// DisableFramePointerElim - This returns true if frame pointer elimination
@@ -347,9 +347,6 @@ namespace llvm {
 
     /// Enables scalar MASS conversions
     unsigned PPCGenScalarMASSEntries : 1;
-
-    /// Enable JustMyCode instrumentation.
-    unsigned JMCInstrument : 1;
 
     /// Name of the stack usage file (i.e., .su file) if user passes
     /// -fstack-usage. If empty, it can be implied that -fstack-usage is not
