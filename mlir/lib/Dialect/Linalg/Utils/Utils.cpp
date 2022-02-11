@@ -423,6 +423,29 @@ GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,
   return transposeOp;
 }
 
+GenericOp makeMemRefCopyOp(OpBuilder &b, Location loc, Value from, Value to) {
+  auto memrefTypeTo = to.getType().cast<MemRefType>();
+#ifndef NDEBUG
+  auto memrefTypeFrom = from.getType().cast<MemRefType>();
+  assert(memrefTypeFrom.getRank() == memrefTypeTo.getRank() &&
+         "`from` and `to` memref must have the same rank");
+#endif // NDEBUG
+
+  AffineMap id =
+      AffineMap::getMultiDimIdentityMap(memrefTypeTo.getRank(), b.getContext());
+  SmallVector<StringRef> iteratorTypes(memrefTypeTo.getRank(),
+                                       getParallelIteratorTypeName());
+  return b.create<linalg::GenericOp>(
+      loc,
+      /*inputs=*/from,
+      /*outputs=*/to,
+      /*indexingMaps=*/llvm::makeArrayRef({id, id}),
+      /*iteratorTypes=*/iteratorTypes,
+      [](OpBuilder &b, Location loc, ValueRange args) {
+        b.create<linalg::YieldOp>(loc, args.front());
+      });
+}
+
 /// Specialization to build an scf "for" nest.
 template <>
 void GenerateLoopNest<scf::ForOp>::doit(

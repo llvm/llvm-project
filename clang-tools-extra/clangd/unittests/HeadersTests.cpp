@@ -409,58 +409,6 @@ void foo();
   EXPECT_FALSE(Includes.isSelfContained(getID("pp_depend.h", Includes)));
 }
 
-TEST(StdlibTest, All) {
-  auto VectorH = stdlib::Header::named("<vector>");
-  EXPECT_TRUE(VectorH);
-  EXPECT_EQ(llvm::to_string(*VectorH), "<vector>");
-  EXPECT_FALSE(stdlib::Header::named("HeadersTests.cpp"));
-
-  auto Vector = stdlib::Symbol::named("std::", "vector");
-  EXPECT_TRUE(Vector);
-  EXPECT_EQ(llvm::to_string(*Vector), "std::vector");
-  EXPECT_FALSE(stdlib::Symbol::named("std::", "dongle"));
-  EXPECT_FALSE(stdlib::Symbol::named("clang::", "ASTContext"));
-
-  EXPECT_EQ(Vector->header(), *VectorH);
-  EXPECT_THAT(Vector->headers(), ElementsAre(*VectorH));
-}
-
-TEST(StdlibTest, Recognizer) {
-  auto TU = TestTU::withCode(R"cpp(
-    namespace std {
-    inline namespace inl {
-
-    template <typename>
-    struct vector { class nested {}; };
-
-    class secret {};
-
-    } // inl
-    } // std
-
-    class vector {};
-    std::vector<int> vec;
-    std::vector<int>::nested nest;
-    std::secret sec;
-  )cpp");
-
-  auto AST = TU.build();
-  auto &VectorNonstd = findDecl(AST, "vector");
-  auto *Vec =
-      cast<VarDecl>(findDecl(AST, "vec")).getType()->getAsCXXRecordDecl();
-  auto *Nest =
-      cast<VarDecl>(findDecl(AST, "nest")).getType()->getAsCXXRecordDecl();
-  auto *Sec =
-      cast<VarDecl>(findDecl(AST, "sec")).getType()->getAsCXXRecordDecl();
-
-  stdlib::Recognizer Recognizer;
-
-  EXPECT_EQ(Recognizer(&VectorNonstd), llvm::None);
-  EXPECT_EQ(Recognizer(Vec), stdlib::Symbol::named("std::", "vector"));
-  EXPECT_EQ(Recognizer(Nest), stdlib::Symbol::named("std::", "vector"));
-  EXPECT_EQ(Recognizer(Sec), llvm::None);
-}
-
 } // namespace
 } // namespace clangd
 } // namespace clang

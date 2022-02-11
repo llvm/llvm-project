@@ -16,9 +16,9 @@ typedef int CFIndex;
 typedef int NSInteger;
 typedef unsigned int NSUInteger;
 #endif
-CFIndex getCFIndex();
-NSInteger getNSInteger();
-NSUInteger getNSUInteger();
+CFIndex getCFIndex(void);
+NSInteger getNSInteger(void);
+NSUInteger getNSUInteger(void);
 
 #define Log1(...) \
 do { \
@@ -37,7 +37,7 @@ do { \
   printf(X, Z); \
 } while (0) \
 
-void test() {
+void test(void) {
   printf("test 1: %s", getNSInteger()); 
   // CHECK: printf("test 1: %ld", (long)getNSInteger());
   printf("test 2: %s %s", getNSInteger(), getNSInteger());
@@ -71,14 +71,14 @@ do { \
   Outer1(__VA_ARGS__); Outer1(__VA_ARGS__); \
 } while (0)
 
-void bug33447() {
+void bug33447(void) {
   Outer2("test 8: %s", getNSInteger());  
   // CHECK: Outer2("test 8: %ld", (long)getNSInteger());
   Outer2("test 9: %s %s", getNSInteger(), getNSInteger());
   // CHECK: Outer2("test 9: %ld %ld", (long)getNSInteger(), (long)getNSInteger());
 }
 
-void testCFIndex() {
+void testCFIndex(void) {
   printf("test 10: %s", getCFIndex()); 
   // CHECK: printf("test 10: %ld", (long)getCFIndex());
   printf("test 11: %s %s", getCFIndex(), getCFIndex());

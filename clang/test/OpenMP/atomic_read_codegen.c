@@ -83,7 +83,7 @@ float2 float2x;
 register int rix __asm__("esp");
 
 // CHECK-LABEL: @main(
-int main() {
+int main(void) {
 // CHECK: load atomic i8, i8* {{.*}} monotonic, align 1
 // CHECK: store i8
 #pragma omp atomic read

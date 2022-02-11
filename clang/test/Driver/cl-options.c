@@ -486,7 +486,6 @@
 // RUN:     /GZ \
 // RUN:     /H \
 // RUN:     /homeparams \
-// RUN:     /JMC \
 // RUN:     /kernel \
 // RUN:     /LN \
 // RUN:     /MP \
@@ -757,7 +756,7 @@
 
 // Validate that the default triple is used when run an empty tools dir is specified
 // RUN: %clang_cl -vctoolsdir "" -### -- %s 2>&1 | FileCheck %s --check-prefix VCTOOLSDIR
-// VCTOOLSDIR: "-triple" "{{[a-zA-Z0-9_-]*}}-pc-windows-msvc19.14.0"
+// VCTOOLSDIR: "-triple" "{{[a-zA-Z0-9_-]*}}-pc-windows-msvc19.20.0"
 
 // Validate that built-in include paths are based on the supplied path
 // RUN: %clang_cl --target=aarch64-pc-windows-msvc -vctoolsdir "/fake" -winsdkdir "/foo" -winsdkversion 10.0.12345.0 -### -- %s 2>&1 | FileCheck %s --check-prefix FAKEDIR
@@ -772,4 +771,19 @@
 // FAKEDIR: "-libpath:/foo{{/|\\\\}}Lib{{/|\\\\}}10.0.12345.0{{/|\\\\}}ucrt
 // FAKEDIR: "-libpath:/foo{{/|\\\\}}Lib{{/|\\\\}}10.0.12345.0{{/|\\\\}}um
 
-void f() { }
+// Accept both the -target and --target= spellings.
+// RUN: %clang_cl --target=i686-pc-windows-msvc19.14.0 -### -- %s 2>&1 | FileCheck -check-prefix=TARGET %s
+// RUN: %clang_cl -target i686-pc-windows-msvc19.14.0  -### -- %s 2>&1 | FileCheck -check-prefix=TARGET %s
+// TARGET: "-triple" "i686-pc-windows-msvc19.14.0"
+
+// RUN: %clang_cl /JMC /c -### -- %s 2>&1 | FileCheck %s --check-prefix JMCWARN
+// JMCWARN: /JMC requires debug info. Use '/Zi', '/Z7' or other debug options; option ignored
+
+// RUN: %clang_cl /JMC /c -### -- %s 2>&1 | FileCheck %s --check-prefix NOJMC
+// RUN: %clang_cl /JMC /Z7 /JMC- /c -### -- %s 2>&1 | FileCheck %s --check-prefix NOJMC
+// NOJMC-NOT: -fjmc
+
+// RUN: %clang_cl /JMC /Z7 /c -### -- %s 2>&1 | FileCheck %s --check-prefix JMC
+// JMC: -fjmc
+
+void f(void) { }

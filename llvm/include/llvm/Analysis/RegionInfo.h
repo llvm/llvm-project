@@ -242,7 +242,7 @@ public:
 ///
 /// You can obtain more examples by either calling
 ///
-/// <tt> "opt -regions -analyze anyprogram.ll" </tt>
+/// <tt> "opt -passes='print<regions>' anyprogram.ll" </tt>
 /// or
 /// <tt> "opt -view-regions-only anyprogram.ll" </tt>
 ///

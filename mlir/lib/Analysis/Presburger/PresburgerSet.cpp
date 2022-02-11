@@ -16,17 +16,13 @@ using namespace mlir;
 using namespace presburger_utils;
 
 PresburgerSet::PresburgerSet(const IntegerPolyhedron &poly)
-    : numDims(poly.getNumDimIds()), numSymbols(poly.getNumSymbolIds()) {
+    : PresburgerSpace(poly) {
   unionPolyInPlace(poly);
 }
 
 unsigned PresburgerSet::getNumPolys() const {
   return integerPolyhedrons.size();
 }
-
-unsigned PresburgerSet::getNumDimIds() const { return numDims; }
-
-unsigned PresburgerSet::getNumSymbolIds() const { return numSymbols; }
 
 ArrayRef<IntegerPolyhedron> PresburgerSet::getAllIntegerPolyhedron() const {
   return integerPolyhedrons;

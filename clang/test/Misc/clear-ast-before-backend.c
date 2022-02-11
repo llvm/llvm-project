@@ -11,4 +11,4 @@
 // STATS: 1 Function decls
 // STATS: Total bytes =
 
-void f() {}
+void f(void) {}

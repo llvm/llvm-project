@@ -4,9 +4,9 @@
 @end
 
 // CHECK-LABEL: doSomething:
-void doSomething() { // CHECK: File 0, [[@LINE]]:20 -> {{[0-9:]+}} = #0
+void doSomething(void) { // CHECK: File 0, [[@LINE]]:24 -> {{[0-9:]+}} = #0
   return;
   __block Foo *f; // CHECK: File 0, [[@LINE]]:3 -> {{[0-9:]+}} = 0
 }
 
-int main() {}
+int main(void) {}

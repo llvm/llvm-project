@@ -1,5 +1,5 @@
-; RUN: opt < %s -mtriple=aarch64--linux-gnu -cost-model -analyze | FileCheck %s --check-prefixes=COST,COST-NOFP16
-; RUN: opt < %s -mtriple=aarch64--linux-gnu -cost-model -analyze -mattr=+fullfp16 | FileCheck %s --check-prefixes=COST,COST-FULLFP16
+; RUN: opt < %s -mtriple=aarch64--linux-gnu -passes='print<cost-model>' 2>&1 -disable-output | FileCheck %s --check-prefixes=COST,COST-NOFP16
+; RUN: opt < %s -mtriple=aarch64--linux-gnu -passes='print<cost-model>' 2>&1 -disable-output -mattr=+fullfp16 | FileCheck %s --check-prefixes=COST,COST-FULLFP16
 ; RUN: llc < %s -mtriple=aarch64--linux-gnu -mattr=+fullfp16 | FileCheck %s --check-prefix=CODE
 
 ; COST-LABEL: v8i8_select_eq

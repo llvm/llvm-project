@@ -1,11 +1,11 @@
 // RUN: %clang %target_itanium_abi_host_triple -arch x86_64 %s -o %t.out -g -fsanitize=safe-stack
 // RUN: %test_debuginfo %s %t.out
 // UNSUPPORTED: system-darwin
-// REQUIRES: !asan
+// REQUIRES: !asan, compiler-rt
 //           Zorg configures the ASAN stage2 bots to not build the
 //           safestack compiler-rt.  Only run this test on
 //           non-asanified configurations.
-
+// XFAIL: !system-darwin && gdb-clang-incompatibility
 struct S {
   int a[8];
 };

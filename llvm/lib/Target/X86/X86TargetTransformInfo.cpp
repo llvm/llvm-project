@@ -3597,15 +3597,16 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       return 0;
 
     // The type may be split. Normalize the index to the new type.
+    unsigned SizeInBits = LT.second.getSizeInBits();
     unsigned NumElts = LT.second.getVectorNumElements();
     unsigned SubNumElts = NumElts;
     Index = Index % NumElts;
 
     // For >128-bit vectors, we need to extract higher 128-bit subvectors.
     // For inserts, we also need to insert the subvector back.
-    if (LT.second.getSizeInBits() > 128) {
-      assert((LT.second.getSizeInBits() % 128) == 0 && "Illegal vector");
-      unsigned NumSubVecs = LT.second.getSizeInBits() / 128;
+    if (SizeInBits > 128) {
+      assert((SizeInBits % 128) == 0 && "Illegal vector");
+      unsigned NumSubVecs = SizeInBits / 128;
       SubNumElts = NumElts / NumSubVecs;
       if (SubNumElts <= Index) {
         RegisterFileMoveCost += (Opcode == Instruction::InsertElement ? 2 : 1);
@@ -3680,13 +3681,14 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(VectorType *Ty,
   if (Insert) {
     std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
     MVT MScalarTy = LT.second.getScalarType();
+    unsigned SizeInBits = LT.second.getSizeInBits();
 
     if ((MScalarTy == MVT::i16 && ST->hasSSE2()) ||
         (MScalarTy.isInteger() && ST->hasSSE41()) ||
         (MScalarTy == MVT::f32 && ST->hasSSE41())) {
       // For types we can insert directly, insertion into 128-bit sub vectors is
       // cheap, followed by a cheap chain of concatenations.
-      if (LT.second.getSizeInBits() <= 128) {
+      if (SizeInBits <= 128) {
         Cost +=
             BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, false);
       } else {
@@ -3704,7 +3706,7 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(VectorType *Ty,
         // Case#3: inserting into 4,5,6,7 index needs 4*vpinsrd + inserti128.
         const int CostValue = *LT.first.getValue();
         assert(CostValue >= 0 && "Negative cost!");
-        unsigned Num128Lanes = LT.second.getSizeInBits() / 128 * CostValue;
+        unsigned Num128Lanes = SizeInBits / 128 * CostValue;
         unsigned NumElts = LT.second.getVectorNumElements() * CostValue;
         APInt WidenedDemandedElts = DemandedElts.zextOrSelf(NumElts);
         unsigned Scale = NumElts / Num128Lanes;

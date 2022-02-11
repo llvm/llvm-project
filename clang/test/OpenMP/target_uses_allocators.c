@@ -21,7 +21,7 @@ enum omp_allocator_handle_t {
 };
 
 // CHECK: define {{.*}}[[FIE:@.+]]()
-void fie() {
+void fie(void) {
   int x;
   #pragma omp target uses_allocators(omp_null_allocator) allocate(omp_null_allocator: x) firstprivate(x)
   {}

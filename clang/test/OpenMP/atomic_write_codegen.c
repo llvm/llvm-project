@@ -82,7 +82,7 @@ float2 float2x;
 // register int rix __asm__("0");
 register int rix __asm__("esp");
 
-int main() {
+int main(void) {
 // CHECK: store atomic i32 1, i32* getelementptr inbounds ({ i32, i32 }, { i32, i32 }* @civ, i32 0, i32 1) monotonic, align 4
 #pragma omp atomic write
  __imag(civ) = 1;

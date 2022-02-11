@@ -1572,33 +1572,26 @@ define <vscale x 32 x i32> @vadd_vi_nxv32i32(<vscale x 32 x i32> %va, <vscale x 
   ret <vscale x 32 x i32> %v
 }
 
-; FIXME: We don't catch this as unmasked.
-
 define <vscale x 32 x i32> @vadd_vi_nxv32i32_unmasked(<vscale x 32 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vi_nxv32i32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a4, a1, 2
-; CHECK-NEXT:    vsetvli a3, zero, e8, m4, ta, mu
-; CHECK-NEXT:    vmset.m v24
-; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, mu
 ; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    sub a3, a0, a1
-; CHECK-NEXT:    vslidedown.vx v0, v24, a4
-; CHECK-NEXT:    bltu a0, a3, .LBB119_2
+; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    bltu a0, a1, .LBB119_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a2, a3
+; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB119_2:
+; CHECK-NEXT:    li a3, 0
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, mu
-; CHECK-NEXT:    vadd.vi v16, v16, -1, v0.t
+; CHECK-NEXT:    sub a1, a0, a1
+; CHECK-NEXT:    vadd.vi v8, v8, -1
 ; CHECK-NEXT:    bltu a0, a1, .LBB119_4
 ; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    mv a3, a1
 ; CHECK-NEXT:  .LBB119_4:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
-; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vadd.vi v8, v8, -1, v0.t
+; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, mu
+; CHECK-NEXT:    vadd.vi v16, v16, -1
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x i32> poison, i32 -1, i32 0
   %vb = shufflevector <vscale x 32 x i32> %elt.head, <vscale x 32 x i32> poison, <vscale x 32 x i32> zeroinitializer

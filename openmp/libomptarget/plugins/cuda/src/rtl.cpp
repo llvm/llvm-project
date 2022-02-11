@@ -327,10 +327,9 @@ class DeviceRTLTy {
   // Number of initial streams for each device.
   int NumInitialStreams = 32;
 
-  static constexpr const int HardTeamLimit = 1U << 16U; // 64k
-  static constexpr const int HardThreadLimit = 1024;
-  static constexpr const int DefaultNumTeams = 128;
-  static constexpr const int DefaultNumThreads = 128;
+  static constexpr const int32_t HardThreadLimit = 1024;
+  static constexpr const int32_t DefaultNumTeams = 128;
+  static constexpr const int32_t DefaultNumThreads = 128;
 
   using StreamPoolTy = ResourcePoolTy<CUstream>;
   std::vector<std::unique_ptr<StreamPoolTy>> StreamPool;
@@ -651,14 +650,9 @@ public:
       DP("Error getting max grid dimension, use default value %d\n",
          DeviceRTLTy::DefaultNumTeams);
       DeviceData[DeviceId].BlocksPerGrid = DeviceRTLTy::DefaultNumTeams;
-    } else if (MaxGridDimX <= DeviceRTLTy::HardTeamLimit) {
+    } else {
       DP("Using %d CUDA blocks per grid\n", MaxGridDimX);
       DeviceData[DeviceId].BlocksPerGrid = MaxGridDimX;
-    } else {
-      DP("Max CUDA blocks per grid %d exceeds the hard team limit %d, capping "
-         "at the hard limit\n",
-         MaxGridDimX, DeviceRTLTy::HardTeamLimit);
-      DeviceData[DeviceId].BlocksPerGrid = DeviceRTLTy::HardTeamLimit;
     }
 
     // We are only exploiting threads along the x axis.
@@ -1170,13 +1164,15 @@ public:
         DP("Using default number of teams %d\n", DeviceData[DeviceId].NumTeams);
         CudaBlocksPerGrid = DeviceData[DeviceId].NumTeams;
       }
-    } else if (TeamNum > DeviceData[DeviceId].BlocksPerGrid) {
-      DP("Capping number of teams to team limit %d\n",
-         DeviceData[DeviceId].BlocksPerGrid);
-      CudaBlocksPerGrid = DeviceData[DeviceId].BlocksPerGrid;
     } else {
       DP("Using requested number of teams %d\n", TeamNum);
       CudaBlocksPerGrid = TeamNum;
+    }
+
+    if (CudaBlocksPerGrid > DeviceData[DeviceId].BlocksPerGrid) {
+      DP("Capping number of teams to team limit %d\n",
+         DeviceData[DeviceId].BlocksPerGrid);
+      CudaBlocksPerGrid = DeviceData[DeviceId].BlocksPerGrid;
     }
 
     INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,

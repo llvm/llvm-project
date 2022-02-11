@@ -10,7 +10,7 @@
 @import Both_F;
 @import Inferred;
 
-void test() {
+void test(void) {
   will_be_found1();
   wont_be_found1(); // expected-warning{{implicit declaration of function 'wont_be_found1' is invalid in C99}}
   will_be_found2();

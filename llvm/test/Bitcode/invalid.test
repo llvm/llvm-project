@@ -219,7 +219,12 @@ VOID-CONSTANT-TYPE: Invalid constant type
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-gep-no-operands.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=GEP-NO-OPERANDS %s
 
-GEP-NO-OPERANDS: Invalid gep with no operands
+GEP-NO-OPERANDS: Constant GEP record must have at least two elements
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-constant-gep.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-CONSTANT-GEP %s
+
+INVALID-CONSTANT-GEP: Constant GEP record must have at least two elements
 
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-nonpointer-storeatomic.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=NONPOINTER-STOREATOMIC %s
@@ -281,3 +286,8 @@ RUN: not llvm-dis -disable-output %p/Inputs/invalid-chunk-size.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-CHUNK-SIZE %s
 
 INVALID-CHUNK-SIZE: Fixed or VBR abbrev record with size > MaxChunkData
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-diimportedentity-record.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-DIIMPORTEDENTITY-RECORD %s
+
+INVALID-DIIMPORTEDENTITY-RECORD: Invalid DIImportedEntity record

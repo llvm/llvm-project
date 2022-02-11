@@ -476,6 +476,10 @@ add_definitions( -D_GNU_SOURCE )
 option(CLANG_BUILD_TOOLS
   "Build the Clang tools. If OFF, just generate build targets." ON)
 
+CMAKE_DEPENDENT_OPTION(CLANG_PLUGIN_SUPPORT
+  "Build clang with plugin support" ON
+  "LLVM_ENABLE_PLUGINS OR LLVM_EXPORT_SYMBOLS_FOR_PLUGINS" OFF)
+
 option(CLANG_ENABLE_ARCMT "Build ARCMT." ON)
 option(CLANG_ENABLE_STATIC_ANALYZER
   "Include static analyzer in clang binary." ON)

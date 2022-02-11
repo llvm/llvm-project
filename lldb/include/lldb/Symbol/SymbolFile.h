@@ -9,6 +9,7 @@
 #ifndef LLDB_SYMBOL_SYMBOLFILE_H
 #define LLDB_SYMBOL_SYMBOLFILE_H
 
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SourceLocationSpec.h"
 #include "lldb/Symbol/CompilerDecl.h"
@@ -324,6 +325,15 @@ public:
   /// \returns 0.0 if the file doesn't need to be indexed or if it
   /// hasn't been indexed yet, or a valid duration if it has.
   virtual StatsDuration::Duration GetDebugInfoIndexTime() { return {}; }
+
+  /// Get the additional modules that this symbol file uses to parse debug info.
+  ///
+  /// Some debug info is stored in stand alone object files that are represented
+  /// by unique modules that will show up in the statistics module list. Return
+  /// a list of modules that are not in the target module list that this symbol
+  /// file is currently using so that they can be tracked and assoicated with
+  /// the module in the statistics.
+  virtual ModuleList GetDebugInfoModules() { return ModuleList(); }
 
   /// Accessors for the bool that indicates if the debug info index was loaded
   /// from, or saved to the module index cache.

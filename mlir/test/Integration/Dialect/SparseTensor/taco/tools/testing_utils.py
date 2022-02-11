@@ -23,10 +23,16 @@ def compare_sparse_tns(expected: str, actual: str, rtol: float = 0.0001) -> bool
       _ = expected_f.readline()
 
       # Compare the two lines of meta data
-      if actual_f.readline() != expected_f.readline() or actual_f.readline(
-      ) != expected_f.readline():
+      if (actual_f.readline() != expected_f.readline() or
+          actual_f.readline() != expected_f.readline()):
         return FALSE
 
   actual_data = np.loadtxt(actual, np.float64, skiprows=3)
   expected_data = np.loadtxt(expected, np.float64, skiprows=3)
   return np.allclose(actual_data, expected_data, rtol=rtol)
+
+
+def file_as_string(file: str) -> str:
+  """Returns contents of file as string."""
+  with open(file, "r") as f:
+    return f.read()

@@ -404,14 +404,17 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Fr = Result.Nodes.getNodeAs<FriendDecl>("Friend");
   assert(F && "Matcher is expected to find only FunctionDecls");
 
-  if (F->getLocation().isInvalid())
+  // Three-way comparison operator<=> is syntactic sugar and generates implicit
+  // nodes for all other operators.
+  if (F->getLocation().isInvalid() || F->isImplicit())
     return;
 
-  // Skip functions which return just 'auto'.
+  // Skip functions which return 'auto' and defaulted operators.
   const auto *AT = F->getDeclaredReturnType()->getAs<AutoType>();
-  if (AT != nullptr && !AT->isConstrained() &&
-      AT->getKeyword() == AutoTypeKeyword::Auto &&
-      !hasAnyNestedLocalQualifiers(F->getDeclaredReturnType()))
+  if (AT != nullptr &&
+      ((!AT->isConstrained() && AT->getKeyword() == AutoTypeKeyword::Auto &&
+        !hasAnyNestedLocalQualifiers(F->getDeclaredReturnType())) ||
+       F->isDefaulted()))
     return;
 
   // TODO: implement those

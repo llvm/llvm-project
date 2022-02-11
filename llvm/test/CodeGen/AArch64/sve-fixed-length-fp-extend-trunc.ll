@@ -56,7 +56,7 @@ define void @fcvt_v8f16_v8f32(<8 x half>* %a, <8 x float>* %b) #0 {
 ; CHECK-LABEL: fcvt_v8f16_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
-; CHECK-NEXT:    ld1sh { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    fcvt z0.s, p0/m, z0.h
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
@@ -72,8 +72,8 @@ define void @fcvt_v16f16_v16f32(<16 x half>* %a, <16 x float>* %b) #0 {
 ; VBITS_EQ_256:       // %bb.0:
 ; VBITS_EQ_256-NEXT:    mov x8, #8
 ; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
-; VBITS_EQ_256-NEXT:    ld1sh { z0.s }, p0/z, [x0, x8, lsl #1]
-; VBITS_EQ_256-NEXT:    ld1sh { z1.s }, p0/z, [x0]
+; VBITS_EQ_256-NEXT:    ld1h { z0.s }, p0/z, [x0, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    ld1h { z1.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    fcvt z0.s, p0/m, z0.h
 ; VBITS_EQ_256-NEXT:    fcvt z1.s, p0/m, z1.h
 ; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
@@ -83,7 +83,7 @@ define void @fcvt_v16f16_v16f32(<16 x half>* %a, <16 x float>* %b) #0 {
 ; VBITS_GE_512-LABEL: fcvt_v16f16_v16f32:
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
-; VBITS_GE_512-NEXT:    ld1sh { z0.s }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1h { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    fcvt z0.s, p0/m, z0.h
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
@@ -98,7 +98,7 @@ define void @fcvt_v32f16_v32f32(<32 x half>* %a, <32 x float>* %b) #0 {
 ; VBITS_GE_1024-LABEL: fcvt_v32f16_v32f32:
 ; VBITS_GE_1024:       // %bb.0:
 ; VBITS_GE_1024-NEXT:    ptrue p0.s, vl32
-; VBITS_GE_1024-NEXT:    ld1sh { z0.s }, p0/z, [x0]
+; VBITS_GE_1024-NEXT:    ld1h { z0.s }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    fcvt z0.s, p0/m, z0.h
 ; VBITS_GE_1024-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_1024-NEXT:    ret
@@ -112,7 +112,7 @@ define void @fcvt_v64f16_v64f32(<64 x half>* %a, <64 x float>* %b) #0 {
 ; VBITS_GE_2048-LABEL: fcvt_v64f16_v64f32:
 ; VBITS_GE_2048:       // %bb.0:
 ; VBITS_GE_2048-NEXT:    ptrue p0.s, vl64
-; VBITS_GE_2048-NEXT:    ld1sh { z0.s }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ld1h { z0.s }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT:    fcvt z0.s, p0/m, z0.h
 ; VBITS_GE_2048-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_2048-NEXT:    ret
@@ -161,7 +161,7 @@ define void @fcvt_v4f16_v4f64(<4 x half>* %a, <4 x double>* %b) #0 {
 ; CHECK-LABEL: fcvt_v4f16_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    ld1sh { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    fcvt z0.d, p0/m, z0.h
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
@@ -176,8 +176,8 @@ define void @fcvt_v8f16_v8f64(<8 x half>* %a, <8 x double>* %b) #0 {
 ; VBITS_EQ_256:       // %bb.0:
 ; VBITS_EQ_256-NEXT:    mov x8, #4
 ; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
-; VBITS_EQ_256-NEXT:    ld1sh { z0.d }, p0/z, [x0, x8, lsl #1]
-; VBITS_EQ_256-NEXT:    ld1sh { z1.d }, p0/z, [x0]
+; VBITS_EQ_256-NEXT:    ld1h { z0.d }, p0/z, [x0, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    ld1h { z1.d }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    fcvt z0.d, p0/m, z0.h
 ; VBITS_EQ_256-NEXT:    fcvt z1.d, p0/m, z1.h
 ; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
@@ -187,7 +187,7 @@ define void @fcvt_v8f16_v8f64(<8 x half>* %a, <8 x double>* %b) #0 {
 ; VBITS_GE_512-LABEL: fcvt_v8f16_v8f64:
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
-; VBITS_GE_512-NEXT:    ld1sh { z0.d }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1h { z0.d }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    fcvt z0.d, p0/m, z0.h
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
@@ -202,7 +202,7 @@ define void @fcvt_v16f16_v16f64(<16 x half>* %a, <16 x double>* %b) #0 {
 ; VBITS_GE_1024-LABEL: fcvt_v16f16_v16f64:
 ; VBITS_GE_1024:       // %bb.0:
 ; VBITS_GE_1024-NEXT:    ptrue p0.d, vl16
-; VBITS_GE_1024-NEXT:    ld1sh { z0.d }, p0/z, [x0]
+; VBITS_GE_1024-NEXT:    ld1h { z0.d }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    fcvt z0.d, p0/m, z0.h
 ; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_1024-NEXT:    ret
@@ -216,7 +216,7 @@ define void @fcvt_v32f16_v32f64(<32 x half>* %a, <32 x double>* %b) #0 {
 ; VBITS_GE_2048-LABEL: fcvt_v32f16_v32f64:
 ; VBITS_GE_2048:       // %bb.0:
 ; VBITS_GE_2048-NEXT:    ptrue p0.d, vl32
-; VBITS_GE_2048-NEXT:    ld1sh { z0.d }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ld1h { z0.d }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT:    fcvt z0.d, p0/m, z0.h
 ; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_2048-NEXT:    ret
@@ -262,7 +262,7 @@ define void @fcvt_v4f32_v4f64(<4 x float>* %a, <4 x double>* %b) #0 {
 ; CHECK-LABEL: fcvt_v4f32_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    ld1sw { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    fcvt z0.d, p0/m, z0.s
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
@@ -278,8 +278,8 @@ define void @fcvt_v8f32_v8f64(<8 x float>* %a, <8 x double>* %b) #0 {
 ; VBITS_EQ_256:       // %bb.0:
 ; VBITS_EQ_256-NEXT:    mov x8, #4
 ; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
-; VBITS_EQ_256-NEXT:    ld1sw { z0.d }, p0/z, [x0, x8, lsl #2]
-; VBITS_EQ_256-NEXT:    ld1sw { z1.d }, p0/z, [x0]
+; VBITS_EQ_256-NEXT:    ld1w { z0.d }, p0/z, [x0, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    ld1w { z1.d }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    fcvt z0.d, p0/m, z0.s
 ; VBITS_EQ_256-NEXT:    fcvt z1.d, p0/m, z1.s
 ; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
@@ -289,7 +289,7 @@ define void @fcvt_v8f32_v8f64(<8 x float>* %a, <8 x double>* %b) #0 {
 ; VBITS_GE_512-LABEL: fcvt_v8f32_v8f64:
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
-; VBITS_GE_512-NEXT:    ld1sw { z0.d }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1w { z0.d }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    fcvt z0.d, p0/m, z0.s
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
@@ -303,7 +303,7 @@ define void @fcvt_v16f32_v16f64(<16 x float>* %a, <16 x double>* %b) #0 {
 ; VBITS_GE_1024-LABEL: fcvt_v16f32_v16f64:
 ; VBITS_GE_1024:       // %bb.0:
 ; VBITS_GE_1024-NEXT:    ptrue p0.d, vl16
-; VBITS_GE_1024-NEXT:    ld1sw { z0.d }, p0/z, [x0]
+; VBITS_GE_1024-NEXT:    ld1w { z0.d }, p0/z, [x0]
 ; VBITS_GE_1024-NEXT:    fcvt z0.d, p0/m, z0.s
 ; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_1024-NEXT:    ret
@@ -317,7 +317,7 @@ define void @fcvt_v32f32_v32f64(<32 x float>* %a, <32 x double>* %b) #0 {
 ; VBITS_GE_2048-LABEL: fcvt_v32f32_v32f64:
 ; VBITS_GE_2048:       // %bb.0:
 ; VBITS_GE_2048-NEXT:    ptrue p0.d, vl32
-; VBITS_GE_2048-NEXT:    ld1sw { z0.d }, p0/z, [x0]
+; VBITS_GE_2048-NEXT:    ld1w { z0.d }, p0/z, [x0]
 ; VBITS_GE_2048-NEXT:    fcvt z0.d, p0/m, z0.s
 ; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_2048-NEXT:    ret

@@ -92,11 +92,11 @@
 
 @end
 
-void (^testBlockVar)();
+void (^testBlockVar)(void);
 // CHECK-BLOCK: VarDecl{{.*}} testBlockVar
 // CHECK-BLOCK-NOT: AnnotateAttr{{.*}} "test"
 
-void testBlock() {
+void testBlock(void) {
   (void)(^ { });
 }
 // CHECK-BLOCK-LABEL: BlockDecl

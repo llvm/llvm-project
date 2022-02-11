@@ -361,6 +361,106 @@ define <16 x i8> @extract_v16i8_nxv2i8_idx16(<vscale x 2 x i8> %vec) nounwind #1
   ret <16 x i8> %retval
 }
 
+
+; Predicates
+
+define <2 x i1> @extract_v2i1_nxv2i1(<vscale x 2 x i1> %inmask) {
+; CHECK-LABEL: extract_v2i1_nxv2i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    mov v0.s[1], w8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+  %mask = call <2 x i1> @llvm.experimental.vector.extract.v2i1.nxv2i1(<vscale x 2 x i1> %inmask, i64 0)
+  ret <2 x i1> %mask
+}
+
+define <4 x i1> @extract_v4i1_nxv4i1(<vscale x 4 x i1> %inmask) {
+; CHECK-LABEL: extract_v4i1_nxv4i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.s, p0/z, #1 // =0x1
+; CHECK-NEXT:    mov w8, v1.s[1]
+; CHECK-NEXT:    mov w9, v1.s[2]
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    mov v0.h[1], w8
+; CHECK-NEXT:    mov w8, v1.s[3]
+; CHECK-NEXT:    mov v0.h[2], w9
+; CHECK-NEXT:    mov v0.h[3], w8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+  %mask = call <4 x i1> @llvm.experimental.vector.extract.v4i1.nxv4i1(<vscale x 4 x i1> %inmask, i64 0)
+  ret <4 x i1> %mask
+}
+
+define <8 x i1> @extract_v8i1_nxv8i1(<vscale x 8 x i1> %inmask) {
+; CHECK-LABEL: extract_v8i1_nxv8i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.h, p0/z, #1 // =0x1
+; CHECK-NEXT:    umov w8, v1.h[1]
+; CHECK-NEXT:    umov w9, v1.h[2]
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    mov v0.b[1], w8
+; CHECK-NEXT:    umov w8, v1.h[3]
+; CHECK-NEXT:    mov v0.b[2], w9
+; CHECK-NEXT:    umov w9, v1.h[4]
+; CHECK-NEXT:    mov v0.b[3], w8
+; CHECK-NEXT:    umov w8, v1.h[5]
+; CHECK-NEXT:    mov v0.b[4], w9
+; CHECK-NEXT:    umov w9, v1.h[6]
+; CHECK-NEXT:    mov v0.b[5], w8
+; CHECK-NEXT:    umov w8, v1.h[7]
+; CHECK-NEXT:    mov v0.b[6], w9
+; CHECK-NEXT:    mov v0.b[7], w8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+  %mask = call <8 x i1> @llvm.experimental.vector.extract.v8i1.nxv8i1(<vscale x 8 x i1> %inmask, i64 0)
+  ret <8 x i1> %mask
+}
+
+define <16 x i1> @extract_v16i1_nxv16i1(<vscale x 16 x i1> %inmask) {
+; CHECK-LABEL: extract_v16i1_nxv16i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    umov w8, v1.b[1]
+; CHECK-NEXT:    umov w9, v1.b[2]
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    mov v0.b[1], w8
+; CHECK-NEXT:    umov w8, v1.b[3]
+; CHECK-NEXT:    mov v0.b[2], w9
+; CHECK-NEXT:    umov w9, v1.b[4]
+; CHECK-NEXT:    mov v0.b[3], w8
+; CHECK-NEXT:    umov w8, v1.b[5]
+; CHECK-NEXT:    mov v0.b[4], w9
+; CHECK-NEXT:    umov w9, v1.b[6]
+; CHECK-NEXT:    mov v0.b[5], w8
+; CHECK-NEXT:    umov w8, v1.b[7]
+; CHECK-NEXT:    mov v0.b[6], w9
+; CHECK-NEXT:    umov w9, v1.b[8]
+; CHECK-NEXT:    mov v0.b[7], w8
+; CHECK-NEXT:    umov w8, v1.b[9]
+; CHECK-NEXT:    mov v0.b[8], w9
+; CHECK-NEXT:    umov w9, v1.b[10]
+; CHECK-NEXT:    mov v0.b[9], w8
+; CHECK-NEXT:    umov w8, v1.b[11]
+; CHECK-NEXT:    mov v0.b[10], w9
+; CHECK-NEXT:    umov w9, v1.b[12]
+; CHECK-NEXT:    mov v0.b[11], w8
+; CHECK-NEXT:    umov w8, v1.b[13]
+; CHECK-NEXT:    mov v0.b[12], w9
+; CHECK-NEXT:    umov w9, v1.b[14]
+; CHECK-NEXT:    mov v0.b[13], w8
+; CHECK-NEXT:    umov w8, v1.b[15]
+; CHECK-NEXT:    mov v0.b[14], w9
+; CHECK-NEXT:    mov v0.b[15], w8
+; CHECK-NEXT:    ret
+  %mask = call <16 x i1> @llvm.experimental.vector.extract.v16i1.nxv16i1(<vscale x 16 x i1> %inmask, i64 0)
+  ret <16 x i1> %mask
+}
+
+
 ; Fixed length clamping
 
 define <2 x i64> @extract_fixed_v2i64_nxv2i64(<vscale x 2 x i64> %vec) nounwind #0 {
@@ -424,6 +524,44 @@ entry:
   ret <4 x i32> %out
 }
 
+;
+; Extract fixed-width vector from a scalable vector splat.
+;
+
+define <2 x float> @extract_v2f32_nxv4f32_splat(float %f) {
+; CHECK-LABEL: extract_v2f32_nxv4f32_splat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-NEXT:    dup v0.2s, v0.s[0]
+; CHECK-NEXT:    ret
+  %ins = insertelement <vscale x 4 x float> poison, float %f, i32 0
+  %splat = shufflevector <vscale x 4 x float> %ins, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
+  %ext = call <2 x float> @llvm.experimental.vector.extract.v2f32.nxv4f32(<vscale x 4 x float> %splat, i64 0)
+  ret <2 x float> %ext
+}
+
+define <2 x float> @extract_v2f32_nxv4f32_splat_const() {
+; CHECK-LABEL: extract_v2f32_nxv4f32_splat_const:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov v0.2s, #1.00000000
+; CHECK-NEXT:    ret
+  %ins = insertelement <vscale x 4 x float> poison, float 1.0, i32 0
+  %splat = shufflevector <vscale x 4 x float> %ins, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
+  %ext = call <2 x float> @llvm.experimental.vector.extract.v2f32.nxv4f32(<vscale x 4 x float> %splat, i64 0)
+  ret <2 x float> %ext
+}
+
+define <4 x i32> @extract_v4i32_nxv8i32_splat_const() {
+; CHECK-LABEL: extract_v4i32_nxv8i32_splat_const:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.4s, #1
+; CHECK-NEXT:    ret
+  %ins = insertelement <vscale x 8 x i32> poison, i32 1, i32 0
+  %splat = shufflevector <vscale x 8 x i32> %ins, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
+  %ext = call <4 x i32> @llvm.experimental.vector.extract.v4i32.nxv8i32(<vscale x 8 x i32> %splat, i64 0)
+  ret <4 x i32> %ext
+}
+
 attributes #0 = { vscale_range(2,2) }
 attributes #1 = { vscale_range(8,8) }
 
@@ -441,4 +579,11 @@ declare <16 x i8> @llvm.experimental.vector.extract.v16i8.nxv8i8(<vscale x 8 x i
 declare <16 x i8> @llvm.experimental.vector.extract.v16i8.nxv4i8(<vscale x 4 x i8>, i64)
 declare <16 x i8> @llvm.experimental.vector.extract.v16i8.nxv2i8(<vscale x 2 x i8>, i64)
 
+declare <2 x i1> @llvm.experimental.vector.extract.v2i1.nxv2i1(<vscale x 2 x i1>, i64)
+declare <4 x i1> @llvm.experimental.vector.extract.v4i1.nxv4i1(<vscale x 4 x i1>, i64)
+declare <8 x i1> @llvm.experimental.vector.extract.v8i1.nxv8i1(<vscale x 8 x i1>, i64)
+declare <16 x i1> @llvm.experimental.vector.extract.v16i1.nxv16i1(<vscale x 16 x i1>, i64)
+
 declare <4 x i64> @llvm.experimental.vector.extract.v4i64.nxv2i64(<vscale x 2 x i64>, i64)
+declare <2 x float> @llvm.experimental.vector.extract.v2f32.nxv4f32(<vscale x 4 x float>, i64)
+declare <4 x i32> @llvm.experimental.vector.extract.v4i32.nxv8i32(<vscale x 8 x i32>, i64)

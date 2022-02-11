@@ -11,6 +11,6 @@
 #endif
 
 void test2(const NSString*);
-void test() {
+void test(void) {
   test2(kSimDeviceIOGetInterface);
 }

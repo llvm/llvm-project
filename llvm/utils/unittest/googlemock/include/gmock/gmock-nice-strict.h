@@ -27,7 +27,6 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 // Implements class templates NiceMock, NaggyMock, and StrictMock.
 //
 // Given a mock class MockFoo that is created using Google Mock,
@@ -59,6 +58,9 @@
 // supported.
 
 // GOOGLETEST_CM0002 DO NOT DELETE
+
+// IWYU pragma: private, include "gmock/gmock.h"
+// IWYU pragma: friend gmock/.*
 
 #ifndef GMOCK_INCLUDE_GMOCK_GMOCK_NICE_STRICT_H_
 #define GMOCK_INCLUDE_GMOCK_GMOCK_NICE_STRICT_H_

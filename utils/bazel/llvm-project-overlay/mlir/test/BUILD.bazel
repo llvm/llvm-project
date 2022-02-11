@@ -408,6 +408,7 @@ cc_library(
         "//mlir:TensorDialect",
         "//mlir:TensorTransforms",
         "//mlir:TransformUtils",
+        "//mlir:Transforms",
         "//mlir:VectorOps",
         "//mlir:VectorToSCF",
         "//mlir:VectorTransforms",

@@ -1,6 +1,6 @@
-; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=z13 \
+; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 \
 ; RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK-Z13 %s
-; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=z14 \
+; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z14 \
 ; RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK-Z14 %s
 ;
 ; Note: The scalarized vector instructions cost is not including any

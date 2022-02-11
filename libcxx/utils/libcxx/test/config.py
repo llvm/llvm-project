@@ -308,8 +308,8 @@ class Configuration(object):
         if triple is not None:
             cxx_target_headers = os.path.join(path, triple, cxx, version)
             if os.path.isdir(cxx_target_headers):
-                self.cxx.compile_flags += ['-I' + cxx_target_headers]
-        self.cxx.compile_flags += ['-I' + cxx_headers]
+                self.cxx.compile_flags += ['-isystem', cxx_target_headers]
+        self.cxx.compile_flags += ['-isystem', cxx_headers]
         if self.libcxx_obj_root is not None:
             cxxabi_headers = os.path.join(self.libcxx_obj_root, 'include',
                                           'c++build')

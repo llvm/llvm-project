@@ -307,6 +307,11 @@ static cl::opt<bool> InterleaveSmallLoopScalarReduction(
     cl::desc("Enable interleaving for loops with small iteration counts that "
              "contain scalar reductions to expose ILP."));
 
+/// The number of stores in a loop that are allowed to need predication.
+static cl::opt<unsigned> NumberOfStoresToPredicate(
+    "vectorize-num-stores-pred", cl::init(1), cl::Hidden,
+    cl::desc("Max number of stores to be predicated behind an if."));
+
 static cl::opt<bool> EnableIndVarRegisterHeur(
     "enable-ind-var-reg-heur", cl::init(true), cl::Hidden,
     cl::desc("Count the induction variable only once when interleaving"));
@@ -1773,6 +1778,10 @@ private:
   /// as a vector operation.
   bool isConsecutiveLoadOrStore(Instruction *I);
 
+  /// Returns true if an artificially high cost for emulated masked memrefs
+  /// should be used.
+  bool useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF);
+
   /// Map of scalar integer values to the smallest bitwidth they can be legally
   /// represented as. The vector equivalents of these values should be truncated
   /// to this type.
@@ -1989,7 +1998,7 @@ public:
   /// there is no vector code generation, the check blocks are removed
   /// completely.
   void Create(Loop *L, const LoopAccessInfo &LAI,
-              const SCEVUnionPredicate &UnionPred) {
+              const SCEVPredicate &Pred) {
 
     BasicBlock *LoopHeader = L->getHeader();
     BasicBlock *Preheader = L->getLoopPreheader();
@@ -1998,12 +2007,12 @@ public:
     // ensure the blocks are properly added to LoopInfo & DominatorTree. Those
     // may be used by SCEVExpander. The blocks will be un-linked from their
     // predecessors and removed from LI & DT at the end of the function.
-    if (!UnionPred.isAlwaysTrue()) {
+    if (!Pred.isAlwaysTrue()) {
       SCEVCheckBlock = SplitBlock(Preheader, Preheader->getTerminator(), DT, LI,
                                   nullptr, "vector.scevcheck");
 
       SCEVCheckCond = SCEVExp.expandCodeForPredicate(
-          &UnionPred, SCEVCheckBlock->getTerminator());
+          &Pred, SCEVCheckBlock->getTerminator());
     }
 
     const auto &RtPtrChecking = *LAI.getRuntimePointerChecking();
@@ -2334,9 +2343,8 @@ static Value *getStepVector(Value *Val, Value *StartIdx, Value *Step,
 
   // Create a vector of consecutive numbers from zero to VF.
   VectorType *InitVecValVTy = ValVTy;
-  Type *InitVecValSTy = STy;
   if (STy->isFloatingPointTy()) {
-    InitVecValSTy =
+    Type *InitVecValSTy =
         IntegerType::get(STy->getContext(), STy->getScalarSizeInBits());
     InitVecValVTy = VectorType::get(InitVecValSTy, VLen);
   }
@@ -2529,19 +2537,30 @@ static void buildScalarSteps(Value *ScalarIV, Value *Step,
   }
 }
 
+// Generate code for the induction step. Note that induction steps are
+// required to be loop-invariant
+static Value *CreateStepValue(const SCEV *Step, ScalarEvolution &SE,
+                              Instruction *InsertBefore,
+                              Loop *OrigLoop = nullptr) {
+  const DataLayout &DL = SE.getDataLayout();
+  assert((!OrigLoop || SE.isLoopInvariant(Step, OrigLoop)) &&
+         "Induction step should be loop invariant");
+  if (auto *E = dyn_cast<SCEVUnknown>(Step))
+    return E->getValue();
+
+  SCEVExpander Exp(SE, DL, "induction");
+  return Exp.expandCodeFor(Step, Step->getType(), InsertBefore);
+}
+
 /// Compute the transformed value of Index at offset StartValue using step
 /// StepValue.
 /// For integer induction, returns StartValue + Index * StepValue.
 /// For pointer induction, returns StartValue[Index * StepValue].
 /// FIXME: The newly created binary instructions should contain nsw/nuw
 /// flags, which can be found from the original scalar operations.
-static Value *emitTransformedIndex(IRBuilderBase &B, Value *Index,
-                                   ScalarEvolution *SE, const DataLayout &DL,
-                                   const InductionDescriptor &ID, LoopInfo &LI,
-                                   BasicBlock *VectorHeader) {
+static Value *emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *Step,
+                                   const InductionDescriptor &ID) {
 
-  SCEVExpander Exp(*SE, DL, "induction");
-  auto Step = ID.getStep();
   auto StartValue = ID.getStartValue();
   assert(Index->getType()->getScalarType() == Step->getType() &&
          "Index scalar type does not match StepValue type");
@@ -2580,39 +2599,21 @@ static Value *emitTransformedIndex(IRBuilderBase &B, Value *Index,
     return B.CreateMul(X, Y);
   };
 
-  // Get a suitable insert point for SCEV expansion. For blocks in the vector
-  // loop, choose the end of the vector loop header (=VectorHeader), because
-  // the DomTree is not kept up-to-date for additional blocks generated in the
-  // vector loop. By using the header as insertion point, we guarantee that the
-  // expanded instructions dominate all their uses.
-  auto GetInsertPoint = [&B, &LI, VectorHeader]() {
-    BasicBlock *InsertBB = B.GetInsertPoint()->getParent();
-    if (InsertBB != VectorHeader &&
-        LI.getLoopFor(VectorHeader) == LI.getLoopFor(InsertBB))
-      return VectorHeader->getTerminator();
-    return &*B.GetInsertPoint();
-  };
-
   switch (ID.getKind()) {
   case InductionDescriptor::IK_IntInduction: {
     assert(!isa<VectorType>(Index->getType()) &&
            "Vector indices not supported for integer inductions yet");
     assert(Index->getType() == StartValue->getType() &&
            "Index type does not match StartValue type");
-    if (ID.getConstIntStepValue() && ID.getConstIntStepValue()->isMinusOne())
+    if (isa<ConstantInt>(Step) && cast<ConstantInt>(Step)->isMinusOne())
       return B.CreateSub(StartValue, Index);
-    auto *Offset = CreateMul(
-        Index, Exp.expandCodeFor(Step, Index->getType(), GetInsertPoint()));
+    auto *Offset = CreateMul(Index, Step);
     return CreateAdd(StartValue, Offset);
   }
   case InductionDescriptor::IK_PtrInduction: {
-    assert(isa<SCEVConstant>(Step) &&
+    assert(isa<Constant>(Step) &&
            "Expected constant step for pointer induction");
-    return B.CreateGEP(
-        ID.getElementType(), StartValue,
-        CreateMul(Index,
-                  Exp.expandCodeFor(Step, Index->getType()->getScalarType(),
-                                    GetInsertPoint())));
+    return B.CreateGEP(ID.getElementType(), StartValue, CreateMul(Index, Step));
   }
   case InductionDescriptor::IK_FpInduction: {
     assert(!isa<VectorType>(Index->getType()) &&
@@ -2624,8 +2625,7 @@ static Value *emitTransformedIndex(IRBuilderBase &B, Value *Index,
             InductionBinOp->getOpcode() == Instruction::FSub) &&
            "Original bin op should be defined for FP induction");
 
-    Value *StepValue = cast<SCEVUnknown>(Step)->getValue();
-    Value *MulExp = B.CreateFMul(StepValue, Index);
+    Value *MulExp = B.CreateFMul(Step, Index);
     return B.CreateBinOp(InductionBinOp->getOpcode(), StartValue, MulExp,
                          "induction");
   }
@@ -2676,8 +2676,7 @@ void InnerLoopVectorizer::widenIntOrFpInduction(
           NeededType->isIntegerTy()
               ? Builder.CreateSExtOrTrunc(ScalarIV, NeededType)
               : Builder.CreateCast(Instruction::SIToFP, ScalarIV, NeededType);
-      ScalarIV = emitTransformedIndex(Builder, ScalarIV, PSE.getSE(), DL, ID,
-                                      *State.LI, State.CFG.PrevBB);
+      ScalarIV = emitTransformedIndex(Builder, ScalarIV, Step, ID);
       ScalarIV->setName("offset.idx");
     }
     if (Trunc) {
@@ -3410,9 +3409,9 @@ void InnerLoopVectorizer::createInductionResumeValues(
       Instruction::CastOps CastOp =
           CastInst::getCastOpcode(VectorTripCount, true, StepType, true);
       Value *CRD = B.CreateCast(CastOp, VectorTripCount, StepType, "cast.crd");
-      const DataLayout &DL = LoopScalarBody->getModule()->getDataLayout();
-      EndValue = emitTransformedIndex(B, CRD, PSE.getSE(), DL, II, *LI,
-                                      LoopVectorBody);
+      Value *Step =
+          CreateStepValue(II.getStep(), *PSE.getSE(), &*B.GetInsertPoint());
+      EndValue = emitTransformedIndex(B, CRD, Step, II);
       EndValue->setName("ind.end");
 
       // Compute the end value for the additional bypass (if applicable).
@@ -3420,10 +3419,11 @@ void InnerLoopVectorizer::createInductionResumeValues(
         B.SetInsertPoint(&(*AdditionalBypass.first->getFirstInsertionPt()));
         CastOp = CastInst::getCastOpcode(AdditionalBypass.second, true,
                                          StepType, true);
+        Value *Step =
+            CreateStepValue(II.getStep(), *PSE.getSE(), &*B.GetInsertPoint());
         CRD =
             B.CreateCast(CastOp, AdditionalBypass.second, StepType, "cast.crd");
-        EndValueFromAdditionalBypass = emitTransformedIndex(
-            B, CRD, PSE.getSE(), DL, II, *LI, LoopVectorBody);
+        EndValueFromAdditionalBypass = emitTransformedIndex(B, CRD, Step, II);
         EndValueFromAdditionalBypass->setName("ind.end");
       }
     }
@@ -3597,8 +3597,6 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
   for (User *U : OrigPhi->users()) {
     auto *UI = cast<Instruction>(U);
     if (!OrigLoop->contains(UI)) {
-      const DataLayout &DL =
-          OrigLoop->getHeader()->getModule()->getDataLayout();
       assert(isa<PHINode>(UI) && "Expected LCSSA form");
 
       IRBuilder<> B(MiddleBlock->getTerminator());
@@ -3615,8 +3613,10 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
                              II.getStep()->getType())
               : B.CreateSExtOrTrunc(CountMinusOne, II.getStep()->getType());
       CMO->setName("cast.cmo");
-      Value *Escape = emitTransformedIndex(B, CMO, PSE.getSE(), DL, II, *LI,
-                                           LoopVectorBody);
+
+      Value *Step = CreateStepValue(II.getStep(), *PSE.getSE(),
+                                    LoopVectorBody->getTerminator());
+      Value *Escape = emitTransformedIndex(B, CMO, Step, II);
       Escape->setName("ind.escape");
       MissingVals[UI] = Escape;
     }
@@ -4504,9 +4504,10 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
           Value *Idx = Builder.CreateAdd(
               PartStart, ConstantInt::get(PtrInd->getType(), Lane));
           Value *GlobalIdx = Builder.CreateAdd(PtrInd, Idx);
-          Value *SclrGep =
-              emitTransformedIndex(Builder, GlobalIdx, PSE.getSE(), DL, II,
-                                   *State.LI, State.CFG.PrevBB);
+
+          Value *Step = CreateStepValue(II.getStep(), *PSE.getSE(),
+                                        State.CFG.PrevBB->getTerminator());
+          Value *SclrGep = emitTransformedIndex(Builder, GlobalIdx, Step, II);
           SclrGep->setName("next.gep");
           State.set(PhiR, SclrGep, VPIteration(Part, Lane));
         }
@@ -5160,7 +5161,7 @@ bool LoopVectorizationCostModel::runtimeChecksRequired() {
     return true;
   }
 
-  if (!PSE.getUnionPredicate().getPredicates().empty()) {
+  if (!PSE.getPredicate().isAlwaysTrue()) {
     reportVectorizationFailure("Runtime SCEV check is required with -Os/-Oz",
         "runtime SCEV checks needed. Enable vectorization of this "
         "loop with '#pragma clang loop vectorize(enable)' when "
@@ -6428,6 +6429,22 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<ElementCount> VFs) {
   return RUs;
 }
 
+bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(Instruction *I,
+                                                           ElementCount VF) {
+  // TODO: Cost model for emulated masked load/store is completely
+  // broken. This hack guides the cost model to use an artificially
+  // high enough value to practically disable vectorization with such
+  // operations, except where previously deployed legality hack allowed
+  // using very low cost values. This is to avoid regressions coming simply
+  // from moving "masked load/store" check from legality to cost model.
+  // Masked Load/Gather emulation was previously never allowed.
+  // Limited number of Masked Store/Scatter emulation was allowed.
+  assert(isPredicatedInst(I, VF) && "Expecting a scalar emulated instruction");
+  return isa<LoadInst>(I) ||
+         (isa<StoreInst>(I) &&
+          NumPredStores > NumberOfStoresToPredicate);
+}
+
 void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
   // If we aren't vectorizing the loop, or if we've already collected the
   // instructions to scalarize, there's nothing to do. Collection may already
@@ -6453,7 +6470,9 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
         ScalarCostsTy ScalarCosts;
         // Do not apply discount if scalable, because that would lead to
         // invalid scalarization costs.
-        if (!VF.isScalable() &&
+        // Do not apply discount logic if hacked cost is needed
+        // for emulated masked memrefs.
+        if (!VF.isScalable() && !useEmulatedMaskMemRefHack(&I, VF) &&
             computePredInstDiscount(&I, ScalarCosts, VF) >= 0)
           ScalarCostsVF.insert(ScalarCosts.begin(), ScalarCosts.end());
         // Remember that BB will remain after vectorization.
@@ -6709,6 +6728,11 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
         Vec_i1Ty, APInt::getAllOnes(VF.getKnownMinValue()),
         /*Insert=*/false, /*Extract=*/true);
     Cost += TTI.getCFInstrCost(Instruction::Br, TTI::TCK_RecipThroughput);
+
+    if (useEmulatedMaskMemRefHack(I, VF))
+      // Artificially setting to a high enough value to practically disable
+      // vectorization with such operations.
+      Cost = 3000000;
   }
 
   return Cost;
@@ -10533,7 +10557,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     GeneratedRTChecks Checks(*PSE.getSE(), DT, LI,
                              F->getParent()->getDataLayout());
     if (!VF.Width.isScalar() || IC > 1)
-      Checks.Create(L, *LVL.getLAI(), PSE.getUnionPredicate());
+      Checks.Create(L, *LVL.getLAI(), PSE.getPredicate());
 
     using namespace ore;
     if (!VectorizeLoop) {

@@ -108,16 +108,10 @@ unsigned IntegerPolyhedron::insertId(IdKind kind, unsigned pos, unsigned num) {
   assert(pos <= getNumIdKind(kind));
 
   unsigned absolutePos = getIdKindOffset(kind) + pos;
-  if (kind == IdKind::Dimension)
-    numDims += num;
-  else if (kind == IdKind::Symbol)
-    numSymbols += num;
-  numIds += num;
-
   inequalities.insertColumns(absolutePos, num);
   equalities.insertColumns(absolutePos, num);
 
-  return absolutePos;
+  return PresburgerLocalSpace::insertId(kind, pos, num);
 }
 
 unsigned IntegerPolyhedron::appendDimId(unsigned num) {
@@ -166,27 +160,12 @@ void IntegerPolyhedron::removeIdRange(IdKind kind, unsigned idStart,
 }
 
 void IntegerPolyhedron::removeIdRange(unsigned idStart, unsigned idLimit) {
-  assert(idLimit < getNumCols() && "invalid id limit");
-
-  if (idStart >= idLimit)
-    return;
-
-  // We are going to be removing one or more identifiers from the range.
-  assert(idStart < getNumIds() && "invalid idStart position");
+  // Update space paramaters.
+  PresburgerLocalSpace::removeIdRange(idStart, idLimit);
 
   // Remove eliminated identifiers from the constraints..
   equalities.removeColumns(idStart, idLimit - idStart);
   inequalities.removeColumns(idStart, idLimit - idStart);
-
-  // Update members numDims, numSymbols and numIds.
-  unsigned numDimsEliminated =
-      getIdKindOverlap(IdKind::Dimension, idStart, idLimit);
-  unsigned numSymbolsEliminated =
-      getIdKindOverlap(IdKind::Symbol, idStart, idLimit);
-
-  numDims -= numDimsEliminated;
-  numSymbols -= numSymbolsEliminated;
-  numIds -= (idLimit - idStart);
 }
 
 void IntegerPolyhedron::removeEquality(unsigned pos) {
@@ -220,45 +199,6 @@ void IntegerPolyhedron::swapId(unsigned posA, unsigned posB) {
     std::swap(atIneq(r, posA), atIneq(r, posB));
   for (unsigned r = 0, e = getNumEqualities(); r < e; r++)
     std::swap(atEq(r, posA), atEq(r, posB));
-}
-
-unsigned IntegerPolyhedron::getIdKindOffset(IdKind kind) const {
-  if (kind == IdKind::Dimension)
-    return 0;
-  if (kind == IdKind::Symbol)
-    return getNumDimIds();
-  if (kind == IdKind::Local)
-    return getNumDimAndSymbolIds();
-  llvm_unreachable("IdKind expected to be Dimension, Symbol or Local!");
-}
-
-unsigned IntegerPolyhedron::getIdKindEnd(IdKind kind) const {
-  return getIdKindOffset(kind) + getNumIdKind(kind);
-}
-
-unsigned IntegerPolyhedron::getNumIdKind(IdKind kind) const {
-  if (kind == IdKind::Dimension)
-    return getNumDimIds();
-  if (kind == IdKind::Symbol)
-    return getNumSymbolIds();
-  if (kind == IdKind::Local)
-    return getNumLocalIds();
-  llvm_unreachable("IdKind expected to be Dimension, Symbol or Local!");
-}
-
-unsigned IntegerPolyhedron::getIdKindOverlap(IdKind kind, unsigned idStart,
-                                             unsigned idLimit) const {
-  unsigned idRangeStart = getIdKindOffset(kind);
-  unsigned idRangeEnd = getIdKindEnd(kind);
-
-  // Compute number of elements in intersection of the ranges [idStart, idLimit)
-  // and [idRangeStart, idRangeEnd).
-  unsigned overlapStart = std::max(idStart, idRangeStart);
-  unsigned overlapEnd = std::min(idLimit, idRangeEnd);
-
-  if (overlapStart > overlapEnd)
-    return 0;
-  return overlapEnd - overlapStart;
 }
 
 void IntegerPolyhedron::clearConstraints() {
@@ -1306,13 +1246,6 @@ void IntegerPolyhedron::addLocalFloorDiv(ArrayRef<int64_t> dividend,
                  std::negate<int64_t>());
   bound[bound.size() - 1] += divisor - 1;
   addInequality(bound);
-}
-
-void IntegerPolyhedron::setDimSymbolSeparation(unsigned newSymbolCount) {
-  assert(newSymbolCount <= getNumDimAndSymbolIds() &&
-         "invalid separation position");
-  numDims = numDims + numSymbols - newSymbolCount;
-  numSymbols = newSymbolCount;
 }
 
 /// Finds an equality that equates the specified identifier to a constant.

@@ -147,6 +147,10 @@ template<class In, class Out>
 template<class I1, class I2 = I1>
   concept indirectly_swappable = see below;                // since C++20
 
+// [alg.req.permutable], concept permutable                // since C++20
+template<class I>
+  concept permutable = see below;
+
 template<class I1, class I2, class R, class P1 = identity,
          class P2 = identity>
   concept indirectly_comparable =
@@ -340,8 +344,10 @@ public:
     insert_iterator& operator++(int);  // constexpr in C++20
 };
 
-template <class Container, class Iterator>
-insert_iterator<Container> inserter(Container& x, Iterator i);  // constexpr in C++20
+template <class Container>
+insert_iterator<Container> inserter(Container& x, typename Container::iterator i);  // until C++20
+template <class Container>
+constexpr insert_iterator<Container> inserter(Container& x, ranges::iterator_t<Container> i);  // since C++20
 
 template <class Iterator>
 class move_iterator {
@@ -618,6 +624,7 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <__iterator/next.h>
 #include <__iterator/ostream_iterator.h>
 #include <__iterator/ostreambuf_iterator.h>
+#include <__iterator/permutable.h>
 #include <__iterator/prev.h>
 #include <__iterator/projected.h>
 #include <__iterator/readable_traits.h>

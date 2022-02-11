@@ -1,4 +1,4 @@
-; RUN: opt < %s  -cost-model -analyze -mtriple=armv7-linux-gnueabihf -mcpu=cortex-a9 | FileCheck --check-prefix=COST %s
+; RUN: opt < %s  -passes='print<cost-model>' 2>&1 -disable-output -mtriple=armv7-linux-gnueabihf -mcpu=cortex-a9 | FileCheck --check-prefix=COST %s
 ; To see the assembly output: llc -mcpu=cortex-a9 < %s | FileCheck --check-prefix=ASM %s
 ; ASM lines below are only for reference, tests on that direction should go to tests/CodeGen/ARM
 
@@ -15,7 +15,7 @@ target triple = "armv7--linux-gnueabihf"
 %T464 = type <4 x i64>
 
 define void @direct(%T432* %loadaddr, %T432* %loadaddr2, %T432* %storeaddr) {
-; COST: function 'direct':
+; COST: function 'direct'
   %v0 = load %T432, %T432* %loadaddr
 ; ASM: vld1.64
   %v1 = load %T432, %T432* %loadaddr2
@@ -29,7 +29,7 @@ define void @direct(%T432* %loadaddr, %T432* %loadaddr2, %T432* %storeaddr) {
 }
 
 define void @ups1632(%T416* %loadaddr, %T416* %loadaddr2, %T432* %storeaddr) {
-; COST: function 'ups1632':
+; COST: function 'ups1632'
   %v0 = load %T416, %T416* %loadaddr
 ; ASM: vldr
   %v1 = load %T416, %T416* %loadaddr2
@@ -46,7 +46,7 @@ define void @ups1632(%T416* %loadaddr, %T416* %loadaddr2, %T432* %storeaddr) {
 }
 
 define void @upu1632(%T416* %loadaddr, %T416* %loadaddr2, %T432* %storeaddr) {
-; COST: function 'upu1632':
+; COST: function 'upu1632'
   %v0 = load %T416, %T416* %loadaddr
 ; ASM: vldr
   %v1 = load %T416, %T416* %loadaddr2
@@ -63,7 +63,7 @@ define void @upu1632(%T416* %loadaddr, %T416* %loadaddr2, %T432* %storeaddr) {
 }
 
 define void @ups3264(%T232* %loadaddr, %T232* %loadaddr2, %T264* %storeaddr) {
-; COST: function 'ups3264':
+; COST: function 'ups3264'
   %v0 = load %T232, %T232* %loadaddr
 ; ASM: vldr
   %v1 = load %T232, %T232* %loadaddr2
@@ -80,7 +80,7 @@ define void @ups3264(%T232* %loadaddr, %T232* %loadaddr2, %T264* %storeaddr) {
 }
 
 define void @upu3264(%T232* %loadaddr, %T232* %loadaddr2, %T264* %storeaddr) {
-; COST: function 'upu3264':
+; COST: function 'upu3264'
   %v0 = load %T232, %T232* %loadaddr
 ; ASM: vldr
   %v1 = load %T232, %T232* %loadaddr2
@@ -97,7 +97,7 @@ define void @upu3264(%T232* %loadaddr, %T232* %loadaddr2, %T264* %storeaddr) {
 }
 
 define void @dn3216(%T432* %loadaddr, %T432* %loadaddr2, %T416* %storeaddr) {
-; COST: function 'dn3216':
+; COST: function 'dn3216'
   %v0 = load %T432, %T432* %loadaddr
 ; ASM: vld1.64
   %v1 = load %T432, %T432* %loadaddr2

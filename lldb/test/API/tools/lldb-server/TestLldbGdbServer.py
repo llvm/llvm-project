@@ -355,18 +355,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             reg_index += 1
 
     def Hg_switches_to_3_threads(self, pass_pid=False):
-        # Startup the inferior with three threads (main + 2 new ones).
-        procs = self.prep_debug_monitor_and_inferior(
-            inferior_args=["thread:new", "thread:new"])
-
-        # Let the inferior process have a few moments to start up the thread
-        # when launched.  (The launch scenario has no time to run, so threads
-        # won't be there yet.)
-        self.run_process_then_stop(run_seconds=1)
-
-        # Wait at most x seconds for 3 threads to be present.
-        threads = self.wait_for_thread_count(3)
-        self.assertEqual(len(threads), 3)
+        _, threads = self.launch_with_threads(3)
 
         pid_str = ""
         if pass_pid:
@@ -390,37 +379,14 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             self.assertIsNotNone(context.get("thread_id"))
             self.assertEqual(int(context.get("thread_id"), 16), thread)
 
-    @expectedFailureAll(oslist=["windows"]) # expect 4 threads
     @skipIf(compiler="clang", compiler_version=['<', '11.0'])
     def test_Hg_switches_to_3_threads_launch(self):
         self.build()
         self.set_inferior_startup_launch()
         self.Hg_switches_to_3_threads()
 
-    @expectedFailureAll(oslist=["windows"]) # expecting one more thread
-    @skipIf(compiler="clang", compiler_version=['<', '11.0'])
-    def test_Hg_switches_to_3_threads_attach(self):
-        self.build()
-        self.set_inferior_startup_attach()
-        self.Hg_switches_to_3_threads()
-
-    @expectedFailureAll(oslist=["windows"]) # expect 4 threads
-    @add_test_categories(["llgs"])
-    @skipIf(compiler="clang", compiler_version=['<', '11.0'])
-    def test_Hg_switches_to_3_threads_attach_pass_correct_pid(self):
-        self.build()
-        self.set_inferior_startup_attach()
-        self.Hg_switches_to_3_threads(pass_pid=True)
-
     def Hg_fails_on_pid(self, pass_pid):
-        # Start the inferior.
-        procs = self.prep_debug_monitor_and_inferior(
-            inferior_args=["thread:new"])
-
-        self.run_process_then_stop(run_seconds=1)
-
-        threads = self.wait_for_thread_count(2)
-        self.assertEqual(len(threads), 2)
+        _, threads = self.launch_with_threads(2)
 
         if pass_pid == -1:
             pid_str = "p-1."
@@ -435,21 +401,18 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
         self.expect_gdbremote_sequence()
 
-    @expectedFailureAll(oslist=["windows"])
     @add_test_categories(["llgs"])
     def test_Hg_fails_on_another_pid(self):
         self.build()
         self.set_inferior_startup_launch()
         self.Hg_fails_on_pid(1)
 
-    @expectedFailureAll(oslist=["windows"])
     @add_test_categories(["llgs"])
     def test_Hg_fails_on_zero_pid(self):
         self.build()
         self.set_inferior_startup_launch()
         self.Hg_fails_on_pid(0)
 
-    @expectedFailureAll(oslist=["windows"])
     @add_test_categories(["llgs"])
     def test_Hg_fails_on_minus_one_pid(self):
         self.build()
@@ -478,13 +441,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             inferior_args=inferior_args)
         self.test_sequence.add_log_lines(["read packet: $c#63"], True)
         context = self.expect_gdbremote_sequence()
-
-        # Let the inferior process have a few moments to start up the thread when launched.
-        # context = self.run_process_then_stop(run_seconds=1)
-
-        # Wait at most x seconds for all threads to be present.
-        # threads = self.wait_for_thread_count(NUM_THREADS)
-        # self.assertEquals(len(threads), NUM_THREADS)
 
         signaled_tids = {}
         print_thread_ids = {}
@@ -1155,8 +1111,9 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
 
         # Startup the inferior with three threads.
-        procs = self.prep_debug_monitor_and_inferior(
-            inferior_args=["thread:new", "thread:new"])
+        _, threads = self.launch_with_threads(3)
+
+        self.reset_test_sequence()
         self.add_thread_suffix_request_packets()
         self.add_register_info_collection_packets()
         self.add_process_info_collection_packets()
@@ -1177,15 +1134,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertIsNotNone(reg_index)
         reg_byte_size = int(reg_infos[reg_index]["bitsize"]) // 8
         self.assertTrue(reg_byte_size > 0)
-
-        # Run the process a bit so threads can start up, and collect register
-        # info.
-        context = self.run_process_then_stop(run_seconds=1)
-        self.assertIsNotNone(context)
-
-        # Wait for 3 threads to be present.
-        threads = self.wait_for_thread_count(3)
-        self.assertEqual(len(threads), 3)
 
         expected_reg_values = []
         register_increment = 1

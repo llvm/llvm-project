@@ -1,11 +1,11 @@
 ; REQUIRES: arm-registered-target
-; RUN: opt -S -loop-unroll -codegenprepare < %s -domtree -analyze | FileCheck %s
+; RUN: opt -S -loop-unroll -codegenprepare < %s -domtree -verify-dom-info | FileCheck %s
 ;
 ; Checks that the dom tree is properly invalidated after an operation that will
 ; invalidate it in CodeGenPrepare. If the domtree isn't properly invalidated,
 ; this will likely segfault, or print badref.
 
-; CHECK-NOT: <badref>
+; CHECK: @f
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv7--linux-gnueabihf"

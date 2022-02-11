@@ -55,7 +55,7 @@ int bar(void);
 #pragma omp declare variant(foo) match(user = {condition(foo)}) // expected-error {{the user condition in the OpenMP context selector needs to be constant; foo is not}}
 #pragma omp declare variant(foo) match(user = {condition(foo())}) // expected-error {{the user condition in the OpenMP context selector needs to be constant; foo() is not}}
 #pragma omp declare variant(foo) match(user = {condition(<expr>)}) // expected-error {{expected expression}} expected-error {{use of undeclared identifier 'expr'}} expected-error {{expected expression}} expected-note {{the ignored selector spans until here}}
-int score_and_cond_non_const();
+int score_and_cond_non_const(void);
 
 #pragma omp declare variant(foo) match(construct={teams,parallel,for,simd})
 #pragma omp declare variant(foo) match(construct={target teams}) // expected-error {{expected ')'}} expected-warning {{expected '}' after the context selectors for the context set "construct"; '}' assumed}} expected-note {{to match this '('}} expected-error {{expected 'match' clause on 'omp declare variant' directive}}
@@ -80,14 +80,14 @@ int var;
 #pragma omp declare variant(foo) match(xxx={}) // expected-error {{function declaration is expected after 'declare variant' directive}}
 #pragma omp declare variant(foo) match(xxx={}) // expected-error {{function declaration is expected after 'declare variant' directive}}
 #pragma options align=packed
-int main();
+int main(void);
 
 
 
 #pragma omp declare variant(foo) match(implementation={vendor(llvm)}) // expected-error {{function declaration is expected after 'declare variant' directive}}
 #pragma omp declare variant(foo) match(implementation={vendor(llvm)}) // expected-error {{function declaration is expected after 'declare variant' directive}}
 #pragma init_seg(compiler)
-int main();
+int main(void);
 
 
 #pragma omp declare variant(foo) match(xxx={}) // expected-error {{single declaration is expected after 'declare variant' directive}} expected-warning {{'xxx' is not a valid context set in a `declare variant`; set ignored}} expected-note {{context set options are: 'construct' 'device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}}
@@ -108,8 +108,8 @@ int diff_proto(double); // expected-error {{conflicting types for 'diff_proto'}}
 int diff_proto1(double);
 
 int after_use_variant(void);
-int after_use();
-int bar() {
+int after_use(void);
+int bar(void) {
   return after_use();
 }
 
@@ -150,7 +150,7 @@ int unknown_isa_trait2(void);
 #pragma omp declare variant(foo) match(device = {kind(fpga), isa(bar)})
 int ignored_isa_trait(void);
 
-void caller() {
+void caller(void) {
   unknown_isa_trait();  // expected-warning {{isa trait 'foo' is not known to the current target; verify the spelling or consider restricting the context selector with the 'arch' selector further}}
   unknown_isa_trait2(); // expected-warning {{isa trait 'foo' is not known to the current target; verify the spelling or consider restricting the context selector with the 'arch' selector further}}
   ignored_isa_trait();

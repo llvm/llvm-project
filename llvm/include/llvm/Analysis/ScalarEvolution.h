@@ -425,19 +425,19 @@ private:
   /// Maps SCEVs to predicates for quick look-ups.
   PredicateMap SCEVToPreds;
 
+  /// Adds a predicate to this union.
+  void add(const SCEVPredicate *N);
+
 public:
-  SCEVUnionPredicate();
+  SCEVUnionPredicate(ArrayRef<const SCEVPredicate *> Preds);
 
   const SmallVectorImpl<const SCEVPredicate *> &getPredicates() const {
     return Preds;
   }
 
-  /// Adds a predicate to this union.
-  void add(const SCEVPredicate *N);
-
   /// Returns a reference to a vector containing all predicates which apply to
   /// \p Expr.
-  ArrayRef<const SCEVPredicate *> getPredicatesForExpr(const SCEV *Expr);
+  ArrayRef<const SCEVPredicate *> getPredicatesForExpr(const SCEV *Expr) const;
 
   /// Implementation of the SCEVPredicate interface
   bool isAlwaysTrue() const override;
@@ -886,7 +886,7 @@ public:
   /// the answer to be correct. Predicates can be checked with run-time
   /// checks and can be used to perform loop versioning.
   const SCEV *getPredicatedBackedgeTakenCount(const Loop *L,
-                                              SCEVUnionPredicate &Predicates);
+                                              SmallVector<const SCEVPredicate *, 4> &Predicates);
 
   /// When successful, this returns a SCEVConstant that is greater than or equal
   /// to (i.e. a "conservative over-approximation") of the value returend by
@@ -1167,6 +1167,8 @@ public:
   }
 
   const SCEVPredicate *getEqualPredicate(const SCEV *LHS, const SCEV *RHS);
+  const SCEVPredicate *getComparePredicate(ICmpInst::Predicate Pred,
+                                           const SCEV *LHS, const SCEV *RHS);
 
   const SCEVPredicate *
   getWrapPredicate(const SCEVAddRecExpr *AR,
@@ -1174,7 +1176,7 @@ public:
 
   /// Re-writes the SCEV according to the Predicates in \p A.
   const SCEV *rewriteUsingPredicate(const SCEV *S, const Loop *L,
-                                    SCEVUnionPredicate &A);
+                                    const SCEVPredicate &A);
   /// Tries to convert the \p S expression to an AddRec expression,
   /// adding additional predicates to \p Preds as required.
   const SCEVAddRecExpr *convertSCEVToAddRecWithPredicates(
@@ -1370,17 +1372,17 @@ private:
     PoisoningVH<BasicBlock> ExitingBlock;
     const SCEV *ExactNotTaken;
     const SCEV *MaxNotTaken;
-    std::unique_ptr<SCEVUnionPredicate> Predicate;
+    SmallPtrSet<const SCEVPredicate *, 4> Predicates;
 
     explicit ExitNotTakenInfo(PoisoningVH<BasicBlock> ExitingBlock,
                               const SCEV *ExactNotTaken,
                               const SCEV *MaxNotTaken,
-                              std::unique_ptr<SCEVUnionPredicate> Predicate)
+                              const SmallPtrSet<const SCEVPredicate *, 4> &Predicates)
       : ExitingBlock(ExitingBlock), ExactNotTaken(ExactNotTaken),
-        MaxNotTaken(ExactNotTaken), Predicate(std::move(Predicate)) {}
+        MaxNotTaken(ExactNotTaken), Predicates(Predicates) {}
 
     bool hasAlwaysTruePredicate() const {
-      return !Predicate || Predicate->isAlwaysTrue();
+      return Predicates.empty();
     }
   };
 
@@ -1453,7 +1455,7 @@ private:
     /// vector, this information can contain them and therefore a
     /// SCEVPredicate argument should be added to getExact.
     const SCEV *getExact(const Loop *L, ScalarEvolution *SE,
-                         SCEVUnionPredicate *Predicates = nullptr) const;
+                         SmallVector<const SCEVPredicate *, 4> *Predicates = nullptr) const;
 
     /// Return the number of times this loop exit may fall through to the back
     /// edge, or SCEVCouldNotCompute. The loop is guaranteed not to exit via
@@ -1620,8 +1622,22 @@ private:
   /// is either a select instruction or a phi node).  \p I is the instruction
   /// being processed, and it is assumed equivalent to "Cond ? TrueVal :
   /// FalseVal".
-  const SCEV *createNodeForSelectOrPHI(Instruction *I, Value *Cond,
-                                       Value *TrueVal, Value *FalseVal);
+  const SCEV *createNodeForSelectOrPHIInstWithICmpInstCond(Instruction *I,
+                                                           ICmpInst *Cond,
+                                                           Value *TrueVal,
+                                                           Value *FalseVal);
+
+  /// See if we can model this select-like instruction via umin_seq expression.
+  const SCEV *createNodeForSelectOrPHIViaUMinSeq(Value *I, Value *Cond,
+                                                 Value *TrueVal,
+                                                 Value *FalseVal);
+
+  /// Given a value \p V, which is a select-like instruction (currently this is
+  /// either a select instruction or a phi node), which is assumed equivalent to
+  ///   Cond ? TrueVal : FalseVal
+  /// see if we can model it as a SCEV expression.
+  const SCEV *createNodeForSelectOrPHI(Value *V, Value *Cond, Value *TrueVal,
+                                       Value *FalseVal);
 
   /// Provide the special handling we need to analyze GEP SCEVs.
   const SCEV *createNodeForGEP(GEPOperator *GEP);
@@ -2183,7 +2199,7 @@ class PredicatedScalarEvolution {
 public:
   PredicatedScalarEvolution(ScalarEvolution &SE, Loop &L);
 
-  const SCEVUnionPredicate &getUnionPredicate() const;
+  const SCEVPredicate &getPredicate() const;
 
   /// Returns the SCEV expression of V, in the context of the current SCEV
   /// predicate.  The order of transformations applied on the expression of V
@@ -2252,7 +2268,7 @@ private:
 
   /// The SCEVPredicate that forms our context. We will rewrite all
   /// expressions assuming that this predicate true.
-  SCEVUnionPredicate Preds;
+  std::unique_ptr<SCEVUnionPredicate> Preds;
 
   /// Marks the version of the SCEV predicate used. When rewriting a SCEV
   /// expression we mark it with the version of the predicate. We use this to

@@ -1199,20 +1199,21 @@ bool IsPureProcedure(const Scope &scope) {
 }
 
 bool IsFunction(const Symbol &symbol) {
-  return std::visit(
-      common::visitors{
-          [](const SubprogramDetails &x) { return x.isFunction(); },
-          [&](const SubprogramNameDetails &) {
-            return symbol.test(Symbol::Flag::Function);
-          },
-          [](const ProcEntityDetails &x) {
-            const auto &ifc{x.interface()};
-            return ifc.type() || (ifc.symbol() && IsFunction(*ifc.symbol()));
-          },
-          [](const ProcBindingDetails &x) { return IsFunction(x.symbol()); },
-          [](const auto &) { return false; },
-      },
-      symbol.GetUltimate().details());
+  const Symbol &ultimate{symbol.GetUltimate()};
+  return ultimate.test(Symbol::Flag::Function) ||
+      std::visit(common::visitors{
+                     [](const SubprogramDetails &x) { return x.isFunction(); },
+                     [](const ProcEntityDetails &x) {
+                       const auto &ifc{x.interface()};
+                       return ifc.type() ||
+                           (ifc.symbol() && IsFunction(*ifc.symbol()));
+                     },
+                     [](const ProcBindingDetails &x) {
+                       return IsFunction(x.symbol());
+                     },
+                     [](const auto &) { return false; },
+                 },
+          ultimate.details());
 }
 
 bool IsFunction(const Scope &scope) {

@@ -16,6 +16,6 @@ int g(int) __attribute__((abi_tag("foo", "bar", "baz"), no_sanitize("address", "
 float f(float);
 double f(double); // expected-error{{overloadable}}
                   // expected-note@-2{{previous unmarked overload}}
-void h() { g(0); }
+void h(void) { g(0); }
 
 #endif

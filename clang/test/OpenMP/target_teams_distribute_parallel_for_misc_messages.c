@@ -8,7 +8,7 @@
 // expected-error@+1 {{unexpected OpenMP directive '#pragma omp target teams distribute parallel for'}}
 #pragma omp target teams distribute parallel for foo
 
-void test_no_clause() {
+void test_no_clause(void) {
   int i;
 #pragma omp target teams distribute parallel for
   for (i = 0; i < 16; ++i)
@@ -19,7 +19,7 @@ void test_no_clause() {
   ++i;
 }
 
-void test_branch_protected_scope() {
+void test_branch_protected_scope(void) {
   int i = 0;
 L1:
   ++i;
@@ -46,7 +46,7 @@ L1:
     goto L1;
 }
 
-void test_invalid_clause() {
+void test_invalid_clause(void) {
   int i;
 // expected-warning@+1 {{extra tokens at the end of '#pragma omp target teams distribute parallel for' are ignored}}
 #pragma omp target teams distribute parallel for foo bar
@@ -54,7 +54,7 @@ void test_invalid_clause() {
     ;
 }
 
-void test_non_identifiers() {
+void test_non_identifiers(void) {
   int i, x;
 
 // expected-warning@+1 {{extra tokens at the end of '#pragma omp target teams distribute parallel for' are ignored}}
@@ -73,9 +73,9 @@ void test_non_identifiers() {
     ;
 }
 
-extern int foo();
+extern int foo(void);
 
-void test_collapse() {
+void test_collapse(void) {
   int i;
 // expected-error@+1 {{expected '('}}
 #pragma omp target teams distribute parallel for collapse
@@ -172,7 +172,7 @@ void test_collapse() {
         i += j;
 }
 
-void test_private() {
+void test_private(void) {
   int i;
 // expected-error@+2 {{expected expression}}
 // expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
@@ -214,7 +214,7 @@ void test_private() {
   }
 }
 
-void test_lastprivate() {
+void test_lastprivate(void) {
   int i;
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
 // expected-error@+1 {{expected expression}}
@@ -256,7 +256,7 @@ void test_lastprivate() {
     ;
 }
 
-void test_firstprivate() {
+void test_firstprivate(void) {
   int i;
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
 // expected-error@+1 {{expected expression}}
@@ -301,7 +301,7 @@ void test_firstprivate() {
     ;
 }
 
-void test_loop_messages() {
+void test_loop_messages(void) {
   float a[100], b[100], c[100];
 // expected-error@+2 {{variable must be of integer or pointer type}}
 #pragma omp target teams distribute parallel for

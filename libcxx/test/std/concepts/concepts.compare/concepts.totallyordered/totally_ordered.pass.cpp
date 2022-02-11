@@ -117,7 +117,6 @@ struct A {};
 // static_assert(!std::totally_ordered<std::deque<A> >);
 // static_assert(!std::totally_ordered<std::forward_list<A> >);
 // static_assert(!std::totally_ordered<std::list<A> >);
-static_assert(!std::totally_ordered<std::optional<A> >);
 // static_assert(!std::totally_ordered<std::set<A> >);
 // static_assert(!std::totally_ordered<std::vector<A> >);
 } // namespace standard_types

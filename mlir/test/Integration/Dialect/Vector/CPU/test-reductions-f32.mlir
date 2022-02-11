@@ -33,16 +33,16 @@ func @entry() {
 
   // Various vector reductions. Not full functional unit tests, but
   // a simple integration test to see if the code runs end-to-end.
-  %0 = vector.reduction "add", %v9 : vector<10xf32> into f32
+  %0 = vector.reduction <add>, %v9 : vector<10xf32> into f32
   vector.print %0 : f32
   // CHECK: -7.75
-  %1 = vector.reduction "mul", %v9 : vector<10xf32> into f32
+  %1 = vector.reduction <mul>, %v9 : vector<10xf32> into f32
   vector.print %1 : f32
   // CHECK: -5760
-  %2 = vector.reduction "minf", %v9 : vector<10xf32> into f32
+  %2 = vector.reduction <minf>, %v9 : vector<10xf32> into f32
   vector.print %2 : f32
   // CHECK: -16
-  %3 = vector.reduction "maxf", %v9 : vector<10xf32> into f32
+  %3 = vector.reduction <maxf>, %v9 : vector<10xf32> into f32
   vector.print %3 : f32
   // CHECK: 5
 

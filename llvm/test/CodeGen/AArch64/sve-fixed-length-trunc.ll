@@ -41,7 +41,7 @@ define void @trunc_v32i16_v32i8(<32 x i16>* %in, <32 x i8>* %out) #0 {
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].h, vl32
 ; VBITS_GE_512: ld1h { [[A_HALFS:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_512: uzp1 [[A_BYTES:z[0-9]+]].b, [[A_HALFS]].b, [[A_HALFS]].b
-; VBITS_GE_512: add [[A_BYTES]].b, [[PG]]/m, [[A_BYTES]].b, [[A_BYTES]].b
+; VBITS_GE_512: add [[A_BYTES]].b, [[A_BYTES]].b, [[A_BYTES]].b
   %a = load <32 x i16>, <32 x i16>* %in
   %b = trunc <32 x i16> %a to <32 x i8>
   %c = add <32 x i8> %b, %b
@@ -55,7 +55,7 @@ define void @trunc_v64i16_v64i8(<64 x i16>* %in, <64 x i8>* %out) #0 {
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].h, vl64
 ; VBITS_GE_1024: ld1h { [[A_HALFS:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_1024: uzp1 [[A_BYTES:z[0-9]+]].b, [[A_HALFS]].b, [[A_HALFS]].b
-; VBITS_GE_1024: add [[A_BYTES]].b, [[PG]]/m, [[A_BYTES]].b, [[A_BYTES]].b
+; VBITS_GE_1024: add [[A_BYTES]].b, [[A_BYTES]].b, [[A_BYTES]].b
   %a = load <64 x i16>, <64 x i16>* %in
   %b = trunc <64 x i16> %a to <64 x i8>
   %c = add <64 x i8> %b, %b
@@ -69,7 +69,7 @@ define void @trunc_v128i16_v128i8(<128 x i16>* %in, <128 x i8>* %out) #0 {
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].h, vl128
 ; VBITS_GE_2048: ld1h { [[A_HALFS:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_2048: uzp1 [[A_BYTES:z[0-9]+]].b, [[A_HALFS]].b, [[A_HALFS]].b
-; VBITS_GE_2048: add [[A_BYTES]].b, [[PG]]/m, [[A_BYTES]].b, [[A_BYTES]].b
+; VBITS_GE_2048: add [[A_BYTES]].b, [[A_BYTES]].b, [[A_BYTES]].b
   %a = load <128 x i16>, <128 x i16>* %in
   %b = trunc <128 x i16> %a to <128 x i8>
   %c = add <128 x i8> %b, %b
@@ -112,7 +112,7 @@ define void @trunc_v32i32_v32i8(<32 x i32>* %in, <32 x i8>* %out) #0 {
 ; VBITS_GE_1024: ld1w { [[A_WORDS:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_1024: uzp1 [[A_HALFS:z[0-9]+]].h, [[A_WORDS]].h, [[A_WORDS]].h
 ; VBITS_GE_1024: uzp1 [[A_BYTES:z[0-9]+]].b, [[A_HALFS]].b, [[A_HALFS]].b
-; VBITS_GE_1024: add [[A_BYTES]].b, [[PG]]/m, [[A_BYTES]].b, [[A_BYTES]].b
+; VBITS_GE_1024: add [[A_BYTES]].b, [[A_BYTES]].b, [[A_BYTES]].b
   %a = load <32 x i32>, <32 x i32>* %in
   %b = trunc <32 x i32> %a to <32 x i8>
   %c = add <32 x i8> %b, %b
@@ -127,7 +127,7 @@ define void @trunc_v64i32_v64i8(<64 x i32>* %in, <64 x i8>* %out) #0 {
 ; VBITS_GE_2048: ld1w { [[A_WORDS:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_2048: uzp1 [[A_HALFS:z[0-9]+]].h, [[A_WORDS]].h, [[A_WORDS]].h
 ; VBITS_GE_2048: uzp1 [[A_BYTES:z[0-9]+]].b, [[A_HALFS]].b, [[A_HALFS]].b
-; VBITS_GE_2048: add [[A_BYTES]].b, [[PG]]/m, [[A_BYTES]].b, [[A_BYTES]].b
+; VBITS_GE_2048: add [[A_BYTES]].b, [[A_BYTES]].b, [[A_BYTES]].b
   %a = load <64 x i32>, <64 x i32>* %in
   %b = trunc <64 x i32> %a to <64 x i8>
   %c = add <64 x i8> %b, %b
@@ -156,7 +156,7 @@ define void @trunc_v16i32_v16i16(<16 x i32>* %in, <16 x i16>* %out) #0 {
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl16
 ; VBITS_GE_512: ld1w { [[A_WORDS:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_512: uzp1 [[A_HALFS:z[0-9]+]].h, [[A_WORDS]].h, [[A_WORDS]].h
-; VBITS_GE_512: add [[A_HALFS]].h, [[PG]]/m, [[A_HALFS]].h, [[A_HALFS]].h
+; VBITS_GE_512: add [[A_HALFS]].h, [[A_HALFS]].h, [[A_HALFS]].h
   %a = load <16 x i32>, <16 x i32>* %in
   %b = trunc <16 x i32> %a to <16 x i16>
   %c = add <16 x i16> %b, %b
@@ -170,7 +170,7 @@ define void @trunc_v32i32_v32i16(<32 x i32>* %in, <32 x i16>* %out) #0 {
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].s, vl32
 ; VBITS_GE_1024: ld1w { [[A_WORDS:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_1024: uzp1 [[A_HALFS:z[0-9]+]].h, [[A_WORDS]].h, [[A_WORDS]].h
-; VBITS_GE_1024: add [[A_HALFS]].h, [[PG]]/m, [[A_HALFS]].h, [[A_HALFS]].h
+; VBITS_GE_1024: add [[A_HALFS]].h, [[A_HALFS]].h, [[A_HALFS]].h
   %a = load <32 x i32>, <32 x i32>* %in
   %b = trunc <32 x i32> %a to <32 x i16>
   %c = add <32 x i16> %b, %b
@@ -184,7 +184,7 @@ define void @trunc_v64i32_v64i16(<64 x i32>* %in, <64 x i16>* %out) #0 {
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].s, vl64
 ; VBITS_GE_2048: ld1w { [[A_WORDS:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_2048: uzp1 [[A_HALFS:z[0-9]+]].h, [[A_WORDS]].h, [[A_WORDS]].h
-; VBITS_GE_2048: add [[A_HALFS]].h, [[PG]]/m, [[A_HALFS]].h, [[A_HALFS]].h
+; VBITS_GE_2048: add [[A_HALFS]].h, [[A_HALFS]].h, [[A_HALFS]].h
   %a = load <64 x i32>, <64 x i32>* %in
   %b = trunc <64 x i32> %a to <64 x i16>
   %c = add <64 x i16> %b, %b
@@ -243,7 +243,7 @@ define void @trunc_v32i64_v32i8(<32 x i64>* %in, <32 x i8>* %out) #0 {
 ; VBITS_GE_2048: uzp1 [[A_WORDS:z[0-9]+]].s, [[A_DWORDS]].s, [[A_DWORDS]].s
 ; VBITS_GE_2048: uzp1 [[A_HALFS:z[0-9]+]].h, [[A_WORDS]].h, [[A_WORDS]].h
 ; VBITS_GE_2048: uzp1 [[A_BYTES:z[0-9]+]].b, [[A_HALFS]].b, [[A_HALFS]].b
-; VBITS_GE_2048: add [[A_BYTES]].b, [[PG]]/m, [[A_BYTES]].b, [[A_BYTES]].b
+; VBITS_GE_2048: add [[A_BYTES]].b, [[A_BYTES]].b, [[A_BYTES]].b
   %a = load <32 x i64>, <32 x i64>* %in
   %b = trunc <32 x i64> %a to <32 x i8>
   %c = add <32 x i8> %b, %b
@@ -286,7 +286,7 @@ define void @trunc_v16i64_v16i16(<16 x i64>* %in, <16 x i16>* %out) #0 {
 ; VBITS_GE_1024: ld1d { [[A_DWORDS:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_1024: uzp1 [[A_WORDS:z[0-9]+]].s, [[A_DWORDS]].s, [[A_DWORDS]].s
 ; VBITS_GE_1024: uzp1 [[A_HALFS:z[0-9]+]].h, [[A_WORDS]].h, [[A_WORDS]].h
-; VBITS_GE_1024: add [[A_HALFS]].h, [[PG]]/m, [[A_HALFS]].h, [[A_HALFS]].h
+; VBITS_GE_1024: add [[A_HALFS]].h, [[A_HALFS]].h, [[A_HALFS]].h
   %a = load <16 x i64>, <16 x i64>* %in
   %b = trunc <16 x i64> %a to <16 x i16>
   %c = add <16 x i16> %b, %b
@@ -301,7 +301,7 @@ define void @trunc_v32i64_v32i16(<32 x i64>* %in, <32 x i16>* %out) #0 {
 ; VBITS_GE_2048: ld1d { [[A_DWORDS:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_2048: uzp1 [[A_WORDS:z[0-9]+]].s, [[A_DWORDS]].s, [[A_DWORDS]].s
 ; VBITS_GE_2048: uzp1 [[A_HALFS:z[0-9]+]].h, [[A_WORDS]].h, [[A_WORDS]].h
-; VBITS_GE_2048: add [[A_HALFS]].h, [[PG]]/m, [[A_HALFS]].h, [[A_HALFS]].h
+; VBITS_GE_2048: add [[A_HALFS]].h, [[A_HALFS]].h, [[A_HALFS]].h
   %a = load <32 x i64>, <32 x i64>* %in
   %b = trunc <32 x i64> %a to <32 x i16>
   %c = add <32 x i16> %b, %b
@@ -330,7 +330,7 @@ define void @trunc_v8i64_v8i32(<8 x i64>* %in, <8 x i32>* %out) #0 {
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].d, vl8
 ; VBITS_GE_512: ld1d { [[A_DWORDS:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_512: uzp1 [[A_WORDS:z[0-9]+]].s, [[A_DWORDS]].s, [[A_DWORDS]].s
-; VBITS_GE_512: add [[A_WORDS]].s, [[PG]]/m, [[A_WORDS]].s, [[A_WORDS]].s
+; VBITS_GE_512: add [[A_WORDS]].s, [[A_WORDS]].s, [[A_WORDS]].s
   %a = load <8 x i64>, <8 x i64>* %in
   %b = trunc <8 x i64> %a to <8 x i32>
   %c = add <8 x i32> %b, %b
@@ -344,7 +344,7 @@ define void @trunc_v16i64_v16i32(<16 x i64>* %in, <16 x i32>* %out) #0 {
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].d, vl16
 ; VBITS_GE_1024: ld1d { [[A_DWORDS:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_1024: uzp1 [[A_WORDS:z[0-9]+]].s, [[A_DWORDS]].s, [[A_DWORDS]].s
-; VBITS_GE_1024: add [[A_WORDS]].s, [[PG]]/m, [[A_WORDS]].s, [[A_WORDS]].s
+; VBITS_GE_1024: add [[A_WORDS]].s, [[A_WORDS]].s, [[A_WORDS]].s
   %a = load <16 x i64>, <16 x i64>* %in
   %b = trunc <16 x i64> %a to <16 x i32>
   %c = add <16 x i32> %b, %b
@@ -358,7 +358,7 @@ define void @trunc_v32i64_v32i32(<32 x i64>* %in, <32 x i32>* %out) #0 {
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl32
 ; VBITS_GE_2048: ld1d { [[A_DWORDS:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_2048: uzp1 [[A_WORDS:z[0-9]+]].s, [[A_DWORDS]].s, [[A_DWORDS]].s
-; VBITS_GE_2048: add [[A_WORDS]].s, [[PG]]/m, [[A_WORDS]].s, [[A_WORDS]].s
+; VBITS_GE_2048: add [[A_WORDS]].s, [[A_WORDS]].s, [[A_WORDS]].s
   %a = load <32 x i64>, <32 x i64>* %in
   %b = trunc <32 x i64> %a to <32 x i32>
   %c = add <32 x i32> %b, %b

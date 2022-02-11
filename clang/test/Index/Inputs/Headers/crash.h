@@ -3,4 +3,4 @@
 #  pragma clang __debug crash
 #endif
 
-const char *getCrashString();
+const char *getCrashString(void);
