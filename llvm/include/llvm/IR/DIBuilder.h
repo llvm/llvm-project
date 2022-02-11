@@ -224,10 +224,10 @@ namespace llvm {
     /// Create debugging information entry for Fortran
     /// assumed length string type.
     /// \param Name            Type name.
-    /// \param StringLength    String length expressed as Metadata *.
+    /// \param StringLength    String length expressed as DIVariable *.
     /// \param StrLocationExp  Optional memory location of the string.
-    DIStringType *createStringType(StringRef Name, Metadata *StringLength,
-                                   Metadata *StrLocationExp = nullptr);
+    DIStringType *createStringType(StringRef Name, DIVariable *StringLength,
+                                   DIExpression *StrLocationExp = nullptr);
 
     /// Create debugging information entry for Fortran
     /// assumed length string type.
@@ -236,7 +236,7 @@ namespace llvm {
     /// \param StrLocationExp   Optional memory location of the string.
     DIStringType *createStringTypeExp(StringRef Name,
                                       DIExpression *StringLengthExp,
-                                      Metadata *StrLocationExp = nullptr);
+                                      DIExpression *StrLocationExp = nullptr);
 
     /// Create debugging information entry for a qualified
     /// type, e.g. 'const int'.
