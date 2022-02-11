@@ -56,6 +56,24 @@ define void @modify32_shl_by_negated(i32* %valptr, i32 %shamt) nounwind {
   store i32 %shifted, i32* %valptr
   ret void
 }
+define void @modify32_shl_by_negated_multi_use(i32* %valptr, i32 %shamt, i32* %shamtptr) nounwind {
+; CHECK-LABEL: modify32_shl_by_negated_multi_use:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    ldr w9, [x0]
+; CHECK-NEXT:    mov w10, #32
+; CHECK-NEXT:    lsl w8, w9, w8
+; CHECK-NEXT:    sub w9, w10, w1
+; CHECK-NEXT:    str w8, [x0]
+; CHECK-NEXT:    str w9, [x2]
+; CHECK-NEXT:    ret
+  %val = load i32, i32* %valptr
+  %negshamt = sub i32 32, %shamt
+  %shifted = shl i32 %val, %negshamt
+  store i32 %shifted, i32* %valptr
+  store i32 %negshamt, i32* %shamtptr
+  ret void
+}
 
 define i64 @reg64_shl_by_negated(i64 %val, i64 %shamt) nounwind {
 ; CHECK-LABEL: reg64_shl_by_negated:
@@ -103,6 +121,24 @@ define void @modify64_shl_by_negated(i64* %valptr, i64 %shamt) nounwind {
   %negshamt = sub i64 64, %shamt
   %shifted = shl i64 %val, %negshamt
   store i64 %shifted, i64* %valptr
+  ret void
+}
+define void @modify64_shl_by_negated_multi_use(i64* %valptr, i64 %shamt, i64* %shamtptr) nounwind {
+; CHECK-LABEL: modify64_shl_by_negated_multi_use:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg x8, x1
+; CHECK-NEXT:    ldr x9, [x0]
+; CHECK-NEXT:    mov w10, #64
+; CHECK-NEXT:    lsl x8, x9, x8
+; CHECK-NEXT:    sub x9, x10, x1
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    str x9, [x2]
+; CHECK-NEXT:    ret
+  %val = load i64, i64* %valptr
+  %negshamt = sub i64 64, %shamt
+  %shifted = shl i64 %val, %negshamt
+  store i64 %shifted, i64* %valptr
+  store i64 %negshamt, i64* %shamtptr
   ret void
 }
 
@@ -157,6 +193,24 @@ define void @modify32_lshr_by_negated(i32* %valptr, i32 %shamt) nounwind {
   store i32 %shifted, i32* %valptr
   ret void
 }
+define void @modify32_lshr_by_negated_multi_use(i32* %valptr, i32 %shamt, i32* %shamtptr) nounwind {
+; CHECK-LABEL: modify32_lshr_by_negated_multi_use:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    ldr w9, [x0]
+; CHECK-NEXT:    mov w10, #32
+; CHECK-NEXT:    lsr w8, w9, w8
+; CHECK-NEXT:    sub w9, w10, w1
+; CHECK-NEXT:    str w8, [x0]
+; CHECK-NEXT:    str w9, [x2]
+; CHECK-NEXT:    ret
+  %val = load i32, i32* %valptr
+  %negshamt = sub i32 32, %shamt
+  %shifted = lshr i32 %val, %negshamt
+  store i32 %shifted, i32* %valptr
+  store i32 %negshamt, i32* %shamtptr
+  ret void
+}
 
 define i64 @reg64_lshr_by_negated(i64 %val, i64 %shamt) nounwind {
 ; CHECK-LABEL: reg64_lshr_by_negated:
@@ -204,6 +258,24 @@ define void @modify64_lshr_by_negated(i64* %valptr, i64 %shamt) nounwind {
   %negshamt = sub i64 64, %shamt
   %shifted = lshr i64 %val, %negshamt
   store i64 %shifted, i64* %valptr
+  ret void
+}
+define void @modify64_lshr_by_negated_multi_use(i64* %valptr, i64 %shamt, i64* %shamtptr) nounwind {
+; CHECK-LABEL: modify64_lshr_by_negated_multi_use:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg x8, x1
+; CHECK-NEXT:    ldr x9, [x0]
+; CHECK-NEXT:    mov w10, #64
+; CHECK-NEXT:    lsr x8, x9, x8
+; CHECK-NEXT:    sub x9, x10, x1
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    str x9, [x2]
+; CHECK-NEXT:    ret
+  %val = load i64, i64* %valptr
+  %negshamt = sub i64 64, %shamt
+  %shifted = lshr i64 %val, %negshamt
+  store i64 %shifted, i64* %valptr
+  store i64 %negshamt, i64* %shamtptr
   ret void
 }
 
@@ -258,6 +330,24 @@ define void @modify32_ashr_by_negated(i32* %valptr, i32 %shamt) nounwind {
   store i32 %shifted, i32* %valptr
   ret void
 }
+define void @modify32_ashr_by_negated_multi_use(i32* %valptr, i32 %shamt, i32* %shamtptr) nounwind {
+; CHECK-LABEL: modify32_ashr_by_negated_multi_use:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    ldr w9, [x0]
+; CHECK-NEXT:    mov w10, #32
+; CHECK-NEXT:    asr w8, w9, w8
+; CHECK-NEXT:    sub w9, w10, w1
+; CHECK-NEXT:    str w8, [x0]
+; CHECK-NEXT:    str w9, [x2]
+; CHECK-NEXT:    ret
+  %val = load i32, i32* %valptr
+  %negshamt = sub i32 32, %shamt
+  %shifted = ashr i32 %val, %negshamt
+  store i32 %shifted, i32* %valptr
+  store i32 %negshamt, i32* %shamtptr
+  ret void
+}
 
 define i64 @reg64_ashr_by_negated(i64 %val, i64 %shamt) nounwind {
 ; CHECK-LABEL: reg64_ashr_by_negated:
@@ -305,6 +395,24 @@ define void @modify64_ashr_by_negated(i64* %valptr, i64 %shamt) nounwind {
   %negshamt = sub i64 64, %shamt
   %shifted = ashr i64 %val, %negshamt
   store i64 %shifted, i64* %valptr
+  ret void
+}
+define void @modify64_ashr_by_negated_multi_use(i64* %valptr, i64 %shamt, i64* %shamtptr) nounwind {
+; CHECK-LABEL: modify64_ashr_by_negated_multi_use:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg x8, x1
+; CHECK-NEXT:    ldr x9, [x0]
+; CHECK-NEXT:    mov w10, #64
+; CHECK-NEXT:    asr x8, x9, x8
+; CHECK-NEXT:    sub x9, x10, x1
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    str x9, [x2]
+; CHECK-NEXT:    ret
+  %val = load i64, i64* %valptr
+  %negshamt = sub i64 64, %shamt
+  %shifted = ashr i64 %val, %negshamt
+  store i64 %shifted, i64* %valptr
+  store i64 %negshamt, i64* %shamtptr
   ret void
 }
 
@@ -367,6 +475,23 @@ define void @modify32_shl_by_complemented(i32* %valptr, i32 %shamt) nounwind {
   store i32 %shifted, i32* %valptr
   ret void
 }
+define void @modify32_shl_by_complemented_multi_use(i32* %valptr, i32 %shamt, i32* %shamtptr) nounwind {
+; CHECK-LABEL: modify32_shl_by_complemented_multi_use:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    ldr w9, [x0]
+; CHECK-NEXT:    sub w8, w8, w1
+; CHECK-NEXT:    lsl w9, w9, w8
+; CHECK-NEXT:    str w9, [x0]
+; CHECK-NEXT:    str w8, [x2]
+; CHECK-NEXT:    ret
+  %val = load i32, i32* %valptr
+  %negshamt = sub i32 31, %shamt
+  %shifted = shl i32 %val, %negshamt
+  store i32 %shifted, i32* %valptr
+  store i32 %negshamt, i32* %shamtptr
+  ret void
+}
 
 define i64 @reg64_shl_by_complemented(i64 %val, i64 %shamt) nounwind {
 ; CHECK-LABEL: reg64_shl_by_complemented:
@@ -418,6 +543,23 @@ define void @modify64_shl_by_complemented(i64* %valptr, i64 %shamt) nounwind {
   %negshamt = sub i64 63, %shamt
   %shifted = shl i64 %val, %negshamt
   store i64 %shifted, i64* %valptr
+  ret void
+}
+define void @modify64_shl_by_complemented_multi_use(i64* %valptr, i64 %shamt, i64* %shamtptr) nounwind {
+; CHECK-LABEL: modify64_shl_by_complemented_multi_use:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    ldr x9, [x0]
+; CHECK-NEXT:    sub x8, x8, x1
+; CHECK-NEXT:    lsl x9, x9, x8
+; CHECK-NEXT:    str x9, [x0]
+; CHECK-NEXT:    str x8, [x2]
+; CHECK-NEXT:    ret
+  %val = load i64, i64* %valptr
+  %negshamt = sub i64 63, %shamt
+  %shifted = shl i64 %val, %negshamt
+  store i64 %shifted, i64* %valptr
+  store i64 %negshamt, i64* %shamtptr
   ret void
 }
 
@@ -476,6 +618,23 @@ define void @modify32_lshr_by_complemented(i32* %valptr, i32 %shamt) nounwind {
   store i32 %shifted, i32* %valptr
   ret void
 }
+define void @modify32_lshr_by_complemented_multi_use(i32* %valptr, i32 %shamt, i32* %shamtptr) nounwind {
+; CHECK-LABEL: modify32_lshr_by_complemented_multi_use:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    ldr w9, [x0]
+; CHECK-NEXT:    sub w8, w8, w1
+; CHECK-NEXT:    lsr w9, w9, w8
+; CHECK-NEXT:    str w9, [x0]
+; CHECK-NEXT:    str w8, [x2]
+; CHECK-NEXT:    ret
+  %val = load i32, i32* %valptr
+  %negshamt = sub i32 31, %shamt
+  %shifted = lshr i32 %val, %negshamt
+  store i32 %shifted, i32* %valptr
+  store i32 %negshamt, i32* %shamtptr
+  ret void
+}
 
 define i64 @reg64_lshr_by_complemented(i64 %val, i64 %shamt) nounwind {
 ; CHECK-LABEL: reg64_lshr_by_complemented:
@@ -527,6 +686,23 @@ define void @modify64_lshr_by_complemented(i64* %valptr, i64 %shamt) nounwind {
   %negshamt = sub i64 63, %shamt
   %shifted = lshr i64 %val, %negshamt
   store i64 %shifted, i64* %valptr
+  ret void
+}
+define void @modify64_lshr_by_complemented_multi_use(i64* %valptr, i64 %shamt, i64* %shamtptr) nounwind {
+; CHECK-LABEL: modify64_lshr_by_complemented_multi_use:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    ldr x9, [x0]
+; CHECK-NEXT:    sub x8, x8, x1
+; CHECK-NEXT:    lsr x9, x9, x8
+; CHECK-NEXT:    str x9, [x0]
+; CHECK-NEXT:    str x8, [x2]
+; CHECK-NEXT:    ret
+  %val = load i64, i64* %valptr
+  %negshamt = sub i64 63, %shamt
+  %shifted = lshr i64 %val, %negshamt
+  store i64 %shifted, i64* %valptr
+  store i64 %negshamt, i64* %shamtptr
   ret void
 }
 
@@ -585,6 +761,23 @@ define void @modify32_ashr_by_complemented(i32* %valptr, i32 %shamt) nounwind {
   store i32 %shifted, i32* %valptr
   ret void
 }
+define void @modify32_ashr_by_complemented_multi_use(i32* %valptr, i32 %shamt, i32* %shamtptr) nounwind {
+; CHECK-LABEL: modify32_ashr_by_complemented_multi_use:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    ldr w9, [x0]
+; CHECK-NEXT:    sub w8, w8, w1
+; CHECK-NEXT:    asr w9, w9, w8
+; CHECK-NEXT:    str w9, [x0]
+; CHECK-NEXT:    str w8, [x2]
+; CHECK-NEXT:    ret
+  %val = load i32, i32* %valptr
+  %negshamt = sub i32 31, %shamt
+  %shifted = ashr i32 %val, %negshamt
+  store i32 %shifted, i32* %valptr
+  store i32 %negshamt, i32* %shamtptr
+  ret void
+}
 
 define i64 @reg64_ashr_by_complemented(i64 %val, i64 %shamt) nounwind {
 ; CHECK-LABEL: reg64_ashr_by_complemented:
@@ -636,6 +829,23 @@ define void @modify64_ashr_by_complemented(i64* %valptr, i64 %shamt) nounwind {
   %negshamt = sub i64 63, %shamt
   %shifted = ashr i64 %val, %negshamt
   store i64 %shifted, i64* %valptr
+  ret void
+}
+define void @modify64_ashr_by_complemented_multi_use(i64* %valptr, i64 %shamt, i64* %shamtptr) nounwind {
+; CHECK-LABEL: modify64_ashr_by_complemented_multi_use:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    ldr x9, [x0]
+; CHECK-NEXT:    sub x8, x8, x1
+; CHECK-NEXT:    asr x9, x9, x8
+; CHECK-NEXT:    str x9, [x0]
+; CHECK-NEXT:    str x8, [x2]
+; CHECK-NEXT:    ret
+  %val = load i64, i64* %valptr
+  %negshamt = sub i64 63, %shamt
+  %shifted = ashr i64 %val, %negshamt
+  store i64 %shifted, i64* %valptr
+  store i64 %negshamt, i64* %shamtptr
   ret void
 }
 
