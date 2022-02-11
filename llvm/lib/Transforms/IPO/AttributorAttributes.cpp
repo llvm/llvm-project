@@ -9586,7 +9586,8 @@ struct AACallEdgesFunction : public AACallEdgesImpl {
     // Visit all callable instructions.
     bool UsedAssumedInformation = false;
     if (!A.checkForAllCallLikeInstructions(ProcessCallInst, *this,
-                                           UsedAssumedInformation)) {
+                                           UsedAssumedInformation,
+                                           /* CheckBBLivenessOnly */ true)) {
       // If we haven't looked at all call like instructions, assume that there
       // are unknown callees.
       setHasUnknownCallee(true, Change);
