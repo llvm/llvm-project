@@ -5909,9 +5909,6 @@ bool SCEVMinMaxExprContains(const SCEV *Root, const SCEV *OperandToFind,
                   RootKind)) {}
 
     bool follow(const SCEV *S) {
-      if (isDone())
-        return false;
-
       Found = S == OperandToFind;
 
       return !isDone() && canRecurseInto(S->getSCEVType());

@@ -698,8 +698,11 @@ public:
       case scUMinExpr:
       case scSequentialUMinExpr:
       case scAddRecExpr:
-        for (const auto *Op : cast<SCEVNAryExpr>(S)->operands())
+        for (const auto *Op : cast<SCEVNAryExpr>(S)->operands()) {
           push(Op);
+          if (Visitor.isDone())
+            break;
+        }
         continue;
       case scUDivExpr: {
         const SCEVUDivExpr *UDiv = cast<SCEVUDivExpr>(S);
