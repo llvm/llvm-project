@@ -39,6 +39,7 @@ static void MemprofDie() {
   if (atomic_fetch_add(&num_calls, 1, memory_order_relaxed) != 0) {
     // Don't die twice - run a busy loop.
     while (1) {
+      internal_sched_yield();
     }
   }
   if (common_flags()->print_module_map >= 1)
