@@ -825,9 +825,8 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
       hasStructRetAttr = true;
       // sret only allowed on first argument
       assert(Outs[realArgIdx].OrigArgIndex == 0);
-      PointerType *Ty = cast<PointerType>(CLI.getArgs()[0].Ty);
-      Type *ElementTy = Ty->getPointerElementType();
-      SRetArgSize = DAG.getDataLayout().getTypeAllocSize(ElementTy);
+      SRetArgSize =
+          DAG.getDataLayout().getTypeAllocSize(CLI.getArgs()[0].IndirectType);
       continue;
     }
 
@@ -2178,8 +2177,10 @@ SparcTargetLowering::LowerF128Op(SDValue Op, SelectionDAG &DAG,
     RetPtr = DAG.getFrameIndex(RetFI, PtrVT);
     Entry.Node = RetPtr;
     Entry.Ty   = PointerType::getUnqual(RetTy);
-    if (!Subtarget->is64Bit())
+    if (!Subtarget->is64Bit()) {
       Entry.IsSRet = true;
+      Entry.IndirectType = RetTy;
+    }
     Entry.IsReturned = false;
     Args.push_back(Entry);
     RetTyABI = Type::getVoidTy(*DAG.getContext());
