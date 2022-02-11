@@ -1779,6 +1779,15 @@ public:
     return nullptr;
   }
 
+  /// Extract the elementtype type for a call or parameter.
+  Type *getParamElementType(unsigned ArgNo) const {
+    if (auto *Ty = Attrs.getParamElementType(ArgNo))
+      return Ty;
+    if (const Function *F = getCalledFunction())
+      return F->getAttributes().getParamElementType(ArgNo);
+    return nullptr;
+  }
+
   /// Extract the number of dereferenceable bytes for a call or
   /// parameter (0=unknown).
   uint64_t getRetDereferenceableBytes() const {
