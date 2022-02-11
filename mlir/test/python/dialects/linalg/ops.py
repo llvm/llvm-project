@@ -126,7 +126,7 @@ def testNamedStructuredOpGenericForm():
         # CHECK-NEXT:    arith.mulf{{.*}} (f32, f32) -> f32
         # CHECK-NEXT:    arith.addf{{.*}} (f32, f32) -> f32
         # CHECK-NEXT:    linalg.yield{{.*}} (f32) -> ()
-        # CHECK-NEXT:    {linalg.memoized_indexing_maps{{.*}}operand_segment_sizes = dense<[2, 1]> : vector<2xi32>} :
+        # CHECK-NEXT:    operand_segment_sizes = dense<[2, 1]> : vector<2xi32>
         # CHECK-SAME: (tensor<4x16xf32>, tensor<16x8xf32>, tensor<4x8xf32>) -> tensor<4x8xf32>
         return linalg.matmul(lhs, rhs, outs=[init_result.result])
 

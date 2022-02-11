@@ -2523,6 +2523,42 @@ structured_op: !LinalgStructuredOpConfig
               scalar_arg: I
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
+  name: fill_tensor
+  cpp_class_name: FillTensorOp
+  doc: |-
+    Fills the output tensor with the given value.
+
+    Works for arbitrary ranked output tensors since the operation performs scalar
+    accesses only and is thus rank polymorphic. Numeric casting is performed on
+    the value operand, promoting it to the same data type as the output.
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: value
+    usage: InputOperand
+    type_var: T1
+  - !LinalgOperandDefConfig
+    name: O
+    usage: OutputOperand
+    type_var: U
+    shape_map: affine_map<() -> ()>
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<() -> ()>
+    - affine_map<() -> ()>
+  iterator_types: []
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !ScalarExpression
+      type_fn:
+        fn_name: cast
+        type_var: U
+        operands:
+        - !ScalarExpression
+          scalar_arg: value
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
   name: fill_rng_2d
   cpp_class_name: FillRng2DOp
   doc: |-
