@@ -10,8 +10,8 @@
 // transfer_write ops.
 //
 //===----------------------------------------------------------------------===//
+
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
@@ -373,8 +373,8 @@ class FlattenContiguousRowMajorTransferReadPattern
     // Contiguity check is valid on tensors only.
     if (!sourceType)
       return failure();
-    if (vectorType.getRank() == 1 && sourceType.getRank() == 1)
-      // Already 1D, nothing to do.
+    if (vectorType.getRank() <= 1)
+      // Already 0D/1D, nothing to do.
       return failure();
     if (!isStaticShapeAndContiguousRowMajor(sourceType))
       return failure();
@@ -425,8 +425,8 @@ class FlattenContiguousRowMajorTransferWritePattern
     // Contiguity check is valid on tensors only.
     if (!sourceType)
       return failure();
-    if (vectorType.getRank() == 1 && sourceType.getRank() == 1)
-      // Already 1D, nothing to do.
+    if (vectorType.getRank() <= 1)
+      // Already 0D/1D, nothing to do.
       return failure();
     if (!isStaticShapeAndContiguousRowMajor(sourceType))
       return failure();

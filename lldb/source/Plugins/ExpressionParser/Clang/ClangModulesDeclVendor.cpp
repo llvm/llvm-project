@@ -32,6 +32,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/StreamString.h"
@@ -130,7 +131,7 @@ private:
 } // anonymous namespace
 
 StoringDiagnosticConsumer::StoringDiagnosticConsumer() {
-  m_log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+  m_log = GetLog(LLDBLog::Expressions);
 
   clang::DiagnosticOptions *m_options = new clang::DiagnosticOptions();
   m_os = std::make_shared<llvm::raw_string_ostream>(m_output);
@@ -656,7 +657,7 @@ ClangModulesDeclVendor::Create(Target &target) {
   for (const std::string &arg : compiler_invocation_arguments)
     compiler_invocation_argument_cstrs.push_back(arg.c_str());
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
   LLDB_LOG(log, "ClangModulesDeclVendor's compiler flags {0:$[ ]}",
            llvm::make_range(compiler_invocation_arguments.begin(),
                             compiler_invocation_arguments.end()));

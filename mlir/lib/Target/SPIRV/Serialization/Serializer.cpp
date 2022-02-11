@@ -86,7 +86,7 @@ Serializer::Serializer(spirv::ModuleOp module,
 LogicalResult Serializer::serialize() {
   LLVM_DEBUG(llvm::dbgs() << "+++ starting serialization +++\n");
 
-  if (failed(module.verify()))
+  if (failed(module.verifyInvariants()))
     return failure();
 
   // TODO: handle the other sections

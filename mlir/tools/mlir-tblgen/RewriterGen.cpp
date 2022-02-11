@@ -392,7 +392,8 @@ void PatternEmitter::emitMatch(DagNode tree, StringRef name, int depth) {
 
 void PatternEmitter::emitStaticMatchCall(DagNode tree, StringRef opName) {
   std::string funcName = staticMatcherHelper.getMatcherName(tree);
-  os << formatv("if(failed({0}(rewriter, {1}, tblgen_ops", funcName, opName);
+  os << formatv("if(::mlir::failed({0}(rewriter, {1}, tblgen_ops", funcName,
+                opName);
 
   // TODO(chiahungduan): Add a lookupBoundSymbols() to do the subtree lookup in
   // one pass.
@@ -423,8 +424,8 @@ void PatternEmitter::emitStaticMatchCall(DagNode tree, StringRef opName) {
 void PatternEmitter::emitStaticVerifierCall(StringRef funcName,
                                             StringRef opName, StringRef arg,
                                             StringRef failureStr) {
-  os << formatv("if(failed({0}(rewriter, {1}, {2}, {3}))) {{\n", funcName,
-                opName, arg, failureStr);
+  os << formatv("if(::mlir::failed({0}(rewriter, {1}, {2}, {3}))) {{\n",
+                funcName, opName, arg, failureStr);
   os.scope().os << "return ::mlir::failure();\n";
   os << "}\n";
 }
@@ -463,13 +464,13 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
       if (argTree.isEither())
         PrintFatalError(loc, "NativeCodeCall cannot have `either` operands");
 
-      os << "Value " << argName << ";\n";
+      os << "::mlir::Value " << argName << ";\n";
     } else {
       auto leaf = tree.getArgAsLeaf(i);
       if (leaf.isAttrMatcher() || leaf.isConstantAttr()) {
-        os << "Attribute " << argName << ";\n";
+        os << "::mlir::Attribute " << argName << ";\n";
       } else {
-        os << "Value " << argName << ";\n";
+        os << "::mlir::Value " << argName << ";\n";
       }
     }
 
@@ -490,8 +491,8 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
       tgfmt(fmt, &fmtCtx.addSubst("_loc", locToUse).withSelf(opName.str()),
             static_cast<ArrayRef<std::string>>(capture)));
 
-  emitMatchCheck(opName, formatv("!failed({0})", nativeCodeCall),
-                 formatv("\"{0} return failure\"", nativeCodeCall));
+  emitMatchCheck(opName, formatv("!::mlir::failed({0})", nativeCodeCall),
+                 formatv("\"{0} return ::mlir::failure\"", nativeCodeCall));
 
   for (int i = 0, e = tree.getNumArgs() - tail.numDirectives; i != e; ++i) {
     auto name = tree.getArgName(i);
@@ -699,8 +700,9 @@ void PatternEmitter::emitEitherOperandMatch(DagNode tree, DagNode eitherArgTree,
   llvm::raw_string_ostream tblgenOps(codeBuffer);
 
   std::string lambda = formatv("eitherLambda{0}", depth);
-  os << formatv("auto {0} = [&](OperandRange v0, OperandRange v1) {{\n",
-                lambda);
+  os << formatv(
+      "auto {0} = [&](::mlir::OperandRange v0, ::mlir::OperandRange v1) {{\n",
+      lambda);
 
   os.indent();
 
@@ -733,7 +735,7 @@ void PatternEmitter::emitEitherOperandMatch(DagNode tree, DagNode eitherArgTree,
   }
 
   os << tblgenOps.str();
-  os << "return success();\n";
+  os << "return ::mlir::success();\n";
   os.unindent() << "};\n";
 
   os << "{\n";
@@ -744,11 +746,11 @@ void PatternEmitter::emitEitherOperandMatch(DagNode tree, DagNode eitherArgTree,
   os << formatv("auto eitherOperand1 = {0}.getODSOperands({1});\n", opName,
                 operandIndex - 1);
 
-  os << formatv("if(failed({0}(eitherOperand0, eitherOperand1)) && "
-                "failed({0}(eitherOperand1, "
+  os << formatv("if(::mlir::failed({0}(eitherOperand0, eitherOperand1)) && "
+                "::mlir::failed({0}(eitherOperand1, "
                 "eitherOperand0)))\n",
                 lambda);
-  os.indent() << "return failure();\n";
+  os.indent() << "return ::mlir::failure();\n";
 
   os.unindent().unindent() << "}\n";
 }
@@ -802,7 +804,7 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef opName,
       // through.
       if (!StringRef(matcher.getConditionTemplate()).contains("!$_self") &&
           StringRef(matcher.getConditionTemplate()).contains("$_self")) {
-        os << "if (!tblgen_attr) return failure();\n";
+        os << "if (!tblgen_attr) return ::mlir::failure();\n";
       }
     }
     emitStaticVerifierCall(
@@ -851,6 +853,9 @@ void PatternEmitter::emitMatchLogic(DagNode tree, StringRef opName) {
 
     auto condition = constraint.getConditionTemplate();
     if (isa<TypeConstraint>(constraint)) {
+      if (entities.size() != 1)
+        PrintFatalError(loc, "type constraint requires exactly one argument");
+
       auto self = formatv("({0}.getType())",
                           symbolInfoMap.getValueAndRangeUse(entities.front()));
       emitMatchCheck(
@@ -1143,8 +1148,8 @@ StringRef PatternEmitter::handleReplaceWithValue(DagNode tree) {
 std::string PatternEmitter::handleLocationDirective(DagNode tree) {
   assert(tree.isLocationDirective());
   auto lookUpArgLoc = [this, &tree](int idx) {
-    const auto *const lookupFmt = "(*{0}.begin()).getLoc()";
-    return symbolInfoMap.getAllRangeUse(tree.getArgName(idx), lookupFmt);
+    const auto *const lookupFmt = "{0}.getLoc()";
+    return symbolInfoMap.getValueAndRangeUse(tree.getArgName(idx), lookupFmt);
   };
 
   if (tree.getNumArgs() == 0)

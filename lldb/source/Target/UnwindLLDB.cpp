@@ -17,6 +17,7 @@
 #include "lldb/Target/RegisterContextUnwind.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 using namespace lldb;
@@ -101,7 +102,7 @@ bool UnwindLLDB::AddFirstFrame() {
   return true;
 
 unwind_done:
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+  Log *log = GetLog(LLDBLog::Unwind);
   if (log) {
     LLDB_LOGF(log, "th%d Unwind of this thread is complete.",
               m_thread.GetIndexID());
@@ -119,7 +120,7 @@ UnwindLLDB::CursorSP UnwindLLDB::GetOneMoreFrame(ABI *abi) {
   if (m_unwind_complete)
     return nullptr;
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+  Log *log = GetLog(LLDBLog::Unwind);
 
   CursorSP prev_frame = m_frames.back();
   uint32_t cur_idx = m_frames.size();
@@ -315,7 +316,7 @@ void UnwindLLDB::UpdateUnwindPlanForFirstFrameIfInvalid(ABI *abi) {
 }
 
 bool UnwindLLDB::AddOneMoreFrame(ABI *abi) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+  Log *log = GetLog(LLDBLog::Unwind);
 
   // Frame zero is a little different
   if (m_frames.empty())

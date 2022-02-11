@@ -43,15 +43,15 @@ void test_not_integral(void (^handler)(double));
 
 ASYNC(swift_private, 1)
 ASYNC_ERROR(none)
-void test_none(void (^)());
+void test_none(void (^)(void));
 
 ASYNC(none)
 ASYNC_ERROR(none)
-void test_double_none(void (^)());
+void test_double_none(void (^)(void));
 
 ASYNC(none)
 ASYNC_ERROR(none, 1) // expected-error {{'swift_async_error' attribute takes one argument}}
-void test_double_none_args();
+void test_double_none_args(void);
 
 ASYNC(swift_private, 1)
 ASYNC_ERROR(nonnull_error, 1) // expected-error{{'swift_async_error' attribute takes one argument}}

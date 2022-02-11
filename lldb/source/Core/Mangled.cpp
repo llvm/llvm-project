@@ -13,8 +13,8 @@
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataEncoder.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-enumerations.h"
@@ -130,7 +130,7 @@ static char *GetMSVCDemangledStr(const char *M) {
           llvm::MSDF_NoAccessSpecifier | llvm::MSDF_NoCallingConvention |
           llvm::MSDF_NoMemberType | llvm::MSDF_NoVariableType));
 
-  if (Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DEMANGLE)) {
+  if (Log *log = GetLog(LLDBLog::Demangle)) {
     if (demangled_cstr && demangled_cstr[0])
       LLDB_LOGF(log, "demangled msvc: %s -> \"%s\"", M, demangled_cstr);
     else
@@ -157,7 +157,7 @@ static char *GetItaniumDemangledStr(const char *M) {
            "Expected demangled_size to return length including trailing null");
   }
 
-  if (Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DEMANGLE)) {
+  if (Log *log = GetLog(LLDBLog::Demangle)) {
     if (demangled_cstr)
       LLDB_LOGF(log, "demangled itanium: %s -> \"%s\"", M, demangled_cstr);
     else
@@ -170,7 +170,7 @@ static char *GetItaniumDemangledStr(const char *M) {
 static char *GetRustV0DemangledStr(const char *M) {
   char *demangled_cstr = llvm::rustDemangle(M, nullptr, nullptr, nullptr);
 
-  if (Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DEMANGLE)) {
+  if (Log *log = GetLog(LLDBLog::Demangle)) {
     if (demangled_cstr && demangled_cstr[0])
       LLDB_LOG(log, "demangled rustv0: {0} -> \"{1}\"", M, demangled_cstr);
     else
@@ -183,7 +183,7 @@ static char *GetRustV0DemangledStr(const char *M) {
 static char *GetDLangDemangledStr(const char *M) {
   char *demangled_cstr = llvm::dlangDemangle(M);
 
-  if (Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DEMANGLE)) {
+  if (Log *log = GetLog(LLDBLog::Demangle)) {
     if (demangled_cstr && demangled_cstr[0])
       LLDB_LOG(log, "demangled dlang: {0} -> \"{1}\"", M, demangled_cstr);
     else
@@ -195,8 +195,8 @@ static char *GetDLangDemangledStr(const char *M) {
 
 // Explicit demangling for scheduled requests during batch processing. This
 // makes use of ItaniumPartialDemangler's rich demangle info
-bool Mangled::DemangleWithRichManglingInfo(
-    RichManglingContext &context, SkipMangledNameFn *skip_mangled_name) {
+bool Mangled::GetRichManglingInfo(RichManglingContext &context,
+                                  SkipMangledNameFn *skip_mangled_name) {
   // Others are not meant to arrive here. ObjC names or C's main() for example
   // have their names stored in m_demangled, while m_mangled is empty.
   assert(m_mangled);
@@ -214,25 +214,16 @@ bool Mangled::DemangleWithRichManglingInfo(
   case eManglingSchemeItanium:
     // We want the rich mangling info here, so we don't care whether or not
     // there is a demangled string in the pool already.
-    if (context.FromItaniumName(m_mangled)) {
-      // If we got an info, we have a name. Copy to string pool and connect the
-      // counterparts to accelerate later access in GetDemangledName().
-      context.ParseFullName();
-      m_demangled.SetStringWithMangledCounterpart(context.GetBufferRef(),
-                                                  m_mangled);
-      return true;
-    } else {
-      m_demangled.SetCString("");
-      return false;
-    }
+    return context.FromItaniumName(m_mangled);
 
   case eManglingSchemeMSVC: {
     // We have no rich mangling for MSVC-mangled names yet, so first try to
     // demangle it if necessary.
     if (!m_demangled && !m_mangled.GetMangledCounterpart(m_demangled)) {
       if (char *d = GetMSVCDemangledStr(m_mangled.GetCString())) {
-        // If we got an info, we have a name. Copy to string pool and connect
-        // the counterparts to accelerate later access in GetDemangledName().
+        // Without the rich mangling info we have to demangle the full name.
+        // Copy it to string pool and connect the counterparts to accelerate
+        // later access in GetDemangledName().
         m_demangled.SetStringWithMangledCounterpart(llvm::StringRef(d),
                                                     m_mangled);
         ::free(d);

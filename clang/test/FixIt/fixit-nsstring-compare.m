@@ -10,7 +10,7 @@ typedef unsigned char BOOL;
 @interface NSString<NSObject>
 @end
 
-int main() {
+int main(void) {
   NSString *stringA = @"stringA";
 
   BOOL comparison = stringA==@"stringB";

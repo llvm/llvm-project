@@ -20,6 +20,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 #include <string>
@@ -29,7 +30,7 @@ using namespace lldb_private;
 static bool VerifyClangPath(const llvm::Twine &clang_path) {
   if (FileSystem::Instance().IsDirectory(clang_path))
     return true;
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  Log *log = GetLog(LLDBLog::Host);
   LLDB_LOGF(log,
             "VerifyClangPath(): "
             "failed to stat clang resource directory at \"%s\"",
@@ -47,7 +48,7 @@ static bool VerifyClangPath(const llvm::Twine &clang_path) {
 static bool DefaultComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
                                                  FileSpec &file_spec,
                                                  bool verify) {
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  Log *log = GetLog(LLDBLog::Host);
   std::string raw_path = lldb_shlib_spec.GetPath();
   llvm::StringRef parent_dir = llvm::sys::path::parent_path(raw_path);
 
@@ -157,7 +158,7 @@ FileSpec lldb_private::GetClangResourceDir() {
     if (FileSpec lldb_file_spec = HostInfo::GetShlibDir())
       ComputeClangResourceDirectory(lldb_file_spec, g_cached_resource_dir,
                                     true);
-    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+    Log *log = GetLog(LLDBLog::Host);
     LLDB_LOGF(log, "GetClangResourceDir() => '%s'",
               g_cached_resource_dir.GetPath().c_str());
   });

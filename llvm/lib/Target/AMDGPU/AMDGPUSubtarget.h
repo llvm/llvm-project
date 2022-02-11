@@ -267,7 +267,7 @@ public:
   /// \p WavefrontSize.
   AMDGPUDwarfFlavour getAMDGPUDwarfFlavour() const;
 
-  virtual ~AMDGPUSubtarget() {}
+  virtual ~AMDGPUSubtarget() = default;
 };
 
 } // end namespace llvm

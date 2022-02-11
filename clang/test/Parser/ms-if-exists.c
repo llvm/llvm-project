@@ -4,7 +4,7 @@
 struct Type {
 };
 
-void test_if_exists_stmts() {
+void test_if_exists_stmts(void) {
   int b = 0;
   __if_exists(Type) {
     b++;
@@ -22,7 +22,7 @@ void test_if_exists_stmts() {
   }
 }
 
-int if_exists_creates_no_scope() {
+int if_exists_creates_no_scope(void) {
   __if_exists(Type) {
     int x;  // 'x' is declared in the parent scope.
   }
@@ -48,7 +48,7 @@ __if_not_exists(Type_not) {
   int var244;
 }
 
-void test_if_exists_init_list() {
+void test_if_exists_init_list(void) {
 
   int array1[] = {
     0,
@@ -77,7 +77,7 @@ void test_if_exists_init_list() {
 }
 
 
-void test_nested_if_exists() {
+void test_nested_if_exists(void) {
   __if_exists(Type) {
     int x = 42;
     __if_not_exists(Type_not) {

@@ -37,7 +37,7 @@ class AllocaHolder {
   std::vector<void *> Allocations;
 
 public:
-  AllocaHolder() {}
+  AllocaHolder() = default;
 
   // Make this type move-only.
   AllocaHolder(AllocaHolder &&) = default;

@@ -6,7 +6,7 @@ typedef __declspec(dllexport) int typedef2;
 // expected-warning@-1{{'dllexport' attribute only applies to}}
 typedef int __declspec(dllexport) typedef3;
 // expected-warning@-1{{'dllexport' attribute only applies to}}
-typedef __declspec(dllexport) void (*FunTy)();
+typedef __declspec(dllexport) void (*FunTy)(void);
 // expected-warning@-1{{'dllexport' attribute only applies to}}
 enum __declspec(dllexport) E { Val };
 // expected-warning@-1{{'dllexport' attribute only applies to}}

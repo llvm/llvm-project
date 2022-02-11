@@ -14,13 +14,10 @@
 #define LLVM_ANALYSIS_SCALAREVOLUTIONEXPRESSIONS_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -31,9 +28,11 @@ namespace llvm {
 
 class APInt;
 class Constant;
+class ConstantInt;
 class ConstantRange;
 class Loop;
 class Type;
+class Value;
 
 enum SCEVTypes : unsigned short {
   // These should be ordered in terms of increasing complexity to make the

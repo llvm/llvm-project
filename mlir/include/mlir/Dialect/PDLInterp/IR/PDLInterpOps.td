@@ -75,19 +75,6 @@ class PDLInterp_SwitchOp<string mnemonic, list<Trait> traits = []> :
     PDLInterp_Op<mnemonic, !listconcat([Terminator], traits)> {
   let successors = (successor AnySuccessor:$defaultDest,
                               VariadicSuccessor<AnySuccessor>:$cases);
-
-  let verifier = [{
-    // Verify that the number of case destinations matches the number of case
-    // values.
-    size_t numDests = cases().size();
-    size_t numValues = caseValues().size();
-    if (numDests != numValues) {
-      return emitOpError("expected number of cases to match the number of case "
-                         "values, got ")
-          << numDests << " but expected " << numValues;
-    }
-    return success();
-  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -636,9 +623,8 @@ def PDLInterp_ForEachOp
     /// Returns the loop variable.
     BlockArgument getLoopVariable() { return region().getArgument(0); }
   }];
-  let parser = [{ return ::parseForEachOp(parser, result); }];
-  let printer = [{ return ::print(p, *this); }];
-  let verifier = [{ return ::verify(*this); }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1078,6 +1064,7 @@ def PDLInterp_SwitchAttributeOp
     build($_builder, $_state, attribute, $_builder.getArrayAttr(caseValues),
           defaultDest, dests);
   }]>];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1111,6 +1098,7 @@ def PDLInterp_SwitchOperandCountOp
     build($_builder, $_state, operation, $_builder.getI32VectorAttr(counts),
           defaultDest, dests);
   }]>];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1148,6 +1136,7 @@ def PDLInterp_SwitchOperationNameOp
             defaultDest, dests);
     }]>,
   ];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1181,6 +1170,7 @@ def PDLInterp_SwitchResultCountOp
     build($_builder, $_state, operation, $_builder.getI32VectorAttr(counts),
           defaultDest, dests);
   }]>];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1218,6 +1208,7 @@ def PDLInterp_SwitchTypeOp : PDLInterp_SwitchOp<"switch_type", [NoSideEffect]> {
   let extraClassDeclaration = [{
     auto getCaseTypes() { return caseValues().getAsValueRange<TypeAttr>(); }
   }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1259,6 +1250,7 @@ def PDLInterp_SwitchTypesOp : PDLInterp_SwitchOp<"switch_types",
   let extraClassDeclaration = [{
     auto getCaseTypes() { return caseValues().getAsRange<ArrayAttr>(); }
   }];
+  let hasVerifier = 1;
 }
 
 #endif // MLIR_DIALECT_PDLINTERP_IR_PDLINTERPOPS

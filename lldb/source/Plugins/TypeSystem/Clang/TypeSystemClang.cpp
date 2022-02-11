@@ -50,9 +50,6 @@
 #include "Plugins/ExpressionParser/Clang/ClangUserExpression.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtilityFunction.h"
-#include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/Flags.h"
-
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -65,9 +62,11 @@
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Flags.h"
 #include "lldb/Utility/LLDBAssert.h"
-#include "lldb/Utility/Log.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Scalar.h"
 
@@ -688,9 +687,7 @@ ASTContext &TypeSystemClang::getASTContext() {
 
 class NullDiagnosticConsumer : public DiagnosticConsumer {
 public:
-  NullDiagnosticConsumer() {
-    m_log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
-  }
+  NullDiagnosticConsumer() { m_log = GetLog(LLDBLog::Expressions); }
 
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                         const clang::Diagnostic &info) override {
@@ -1148,7 +1145,7 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
     break;
   }
 
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES);
+  Log *log = GetLog(LLDBLog::Commands);
   LLDB_LOG(log,
            "error: need to add support for DW_TAG_base_type '{0}' "
            "encoded with DW_ATE = {1:x}, bit_size = {2}",
@@ -1492,7 +1489,7 @@ static bool TemplateParameterAllowsValue(NamedDecl *param,
     // There is no way to create other parameter decls at the moment, so we
     // can't reach this case during normal LLDB usage. Log that this happened
     // and assert.
-    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+    Log *log = GetLog(LLDBLog::Expressions);
     LLDB_LOG(log,
              "Don't know how to compare template parameter to passed"
              " value. Decl kind of parameter is: {0}",
@@ -9793,8 +9790,8 @@ ScratchTypeSystemClang::GetForTarget(Target &target,
   auto type_system_or_err = target.GetScratchTypeSystemForLanguage(
       lldb::eLanguageTypeC, create_on_demand);
   if (auto err = type_system_or_err.takeError()) {
-    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET),
-                   std::move(err), "Couldn't get scratch TypeSystemClang");
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Target), std::move(err),
+                   "Couldn't get scratch TypeSystemClang");
     return nullptr;
   }
   ScratchTypeSystemClang &scratch_ast =

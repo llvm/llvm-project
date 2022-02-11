@@ -29,7 +29,7 @@
 
 namespace llvm {
 
-RTDyldMemoryManager::~RTDyldMemoryManager() {}
+RTDyldMemoryManager::~RTDyldMemoryManager() = default;
 
 #if defined(HAVE_REGISTER_FRAME) && defined(HAVE_DEREGISTER_FRAME) &&          \
     !defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)

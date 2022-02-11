@@ -20,3 +20,4 @@ Modified as follows:
 * Support for std::begin/std::end in gmock-matchers.h
 * IWYU pragmas
 * Disabled -Wdeprecated-copy for clang
+* Added IWYU pragmas from https://github.com/google/googletest/commit/100f6fbf5f81a82d163c1e29735e8a2936eacd4f

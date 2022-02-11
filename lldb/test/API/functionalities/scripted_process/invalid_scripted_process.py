@@ -54,7 +54,7 @@ class InvalidScriptedThread(ScriptedThread):
 
     def get_stop_reason(self) -> Dict[str, Any]:
         return { "type": lldb.eStopReasonSignal, "data": {
-            "signal": signal.SIGINT
+            "signal": signal.SIGTRAP
         } }
 
     def get_stackframes(self):

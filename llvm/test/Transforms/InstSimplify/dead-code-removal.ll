@@ -1,4 +1,4 @@
-; RUN: opt -instsimplify -S < %s | FileCheck %s
+; RUN: opt -passes=instsimplify -S < %s | FileCheck %s
 
 define void @foo() nounwind {
   br i1 undef, label %1, label %4

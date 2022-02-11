@@ -17,6 +17,7 @@
 
 /*  Constant                                       Value
     __cpp_lib_adaptor_iterator_pair_constructor    202106L [C++2b]
+    __cpp_lib_ranges_to_container                  202202L [C++2b]
 */
 
 #include <stack>
@@ -28,10 +29,18 @@
 #   error "__cpp_lib_adaptor_iterator_pair_constructor should not be defined before c++2b"
 # endif
 
+# ifdef __cpp_lib_ranges_to_container
+#   error "__cpp_lib_ranges_to_container should not be defined before c++2b"
+# endif
+
 #elif TEST_STD_VER == 14
 
 # ifdef __cpp_lib_adaptor_iterator_pair_constructor
 #   error "__cpp_lib_adaptor_iterator_pair_constructor should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_to_container
+#   error "__cpp_lib_ranges_to_container should not be defined before c++2b"
 # endif
 
 #elif TEST_STD_VER == 17
@@ -40,10 +49,18 @@
 #   error "__cpp_lib_adaptor_iterator_pair_constructor should not be defined before c++2b"
 # endif
 
+# ifdef __cpp_lib_ranges_to_container
+#   error "__cpp_lib_ranges_to_container should not be defined before c++2b"
+# endif
+
 #elif TEST_STD_VER == 20
 
 # ifdef __cpp_lib_adaptor_iterator_pair_constructor
 #   error "__cpp_lib_adaptor_iterator_pair_constructor should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_ranges_to_container
+#   error "__cpp_lib_ranges_to_container should not be defined before c++2b"
 # endif
 
 #elif TEST_STD_VER > 20
@@ -53,6 +70,19 @@
 # endif
 # if __cpp_lib_adaptor_iterator_pair_constructor != 202106L
 #   error "__cpp_lib_adaptor_iterator_pair_constructor should have the value 202106L in c++2b"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_ranges_to_container
+#     error "__cpp_lib_ranges_to_container should be defined in c++2b"
+#   endif
+#   if __cpp_lib_ranges_to_container != 202202L
+#     error "__cpp_lib_ranges_to_container should have the value 202202L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_ranges_to_container
+#     error "__cpp_lib_ranges_to_container should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 #endif // TEST_STD_VER > 20

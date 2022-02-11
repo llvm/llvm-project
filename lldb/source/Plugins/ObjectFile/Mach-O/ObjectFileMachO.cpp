@@ -36,6 +36,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -1666,7 +1667,7 @@ void ObjectFileMachO::ProcessSegmentCommand(
     // addresses will differ from what the ObjectFile had originally,
     // and what the dSYM has.
     if (is_dsym && unified_section_sp->GetFileAddress() != load_cmd.vmaddr) {
-      Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS));
+      Log *log = GetLog(LLDBLog::Symbols);
       if (log) {
         log->Printf(
             "Installing dSYM's %s segment file address over ObjectFile's "
@@ -2174,7 +2175,7 @@ UUID ObjectFileMachO::GetSharedCacheUUID(FileSpec dyld_shared_cache,
     dsc_uuid = UUID::fromOptionalData(
         dsc_header_data.GetData(&offset, sizeof(uuid_t)), sizeof(uuid_t));
   }
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS));
+  Log *log = GetLog(LLDBLog::Symbols);
   if (log && dsc_uuid.IsValid()) {
     LLDB_LOGF(log, "Shared cache %s has UUID %s",
               dyld_shared_cache.GetPath().c_str(),
@@ -2235,7 +2236,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
   uint32_t i;
   FileSpecList dylib_files;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS));
+  Log *log = GetLog(LLDBLog::Symbols);
   llvm::StringRef g_objc_v2_prefix_class("_OBJC_CLASS_$_");
   llvm::StringRef g_objc_v2_prefix_metaclass("_OBJC_METACLASS_$_");
   llvm::StringRef g_objc_v2_prefix_ivar("_OBJC_IVAR_$_");
@@ -2593,8 +2594,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   // sections - we should not make any assumptions about them based on that.
   if (function_starts_count == 0 && CalculateStrata() == eStrataUser) {
     m_allow_assembly_emulation_unwind_plans = false;
-    Log *unwind_or_symbol_log(lldb_private::GetLogIfAnyCategoriesSet(
-        LIBLLDB_LOG_SYMBOLS | LIBLLDB_LOG_UNWIND));
+    Log *unwind_or_symbol_log(GetLog(LLDBLog::Symbols | LLDBLog::Unwind));
 
     if (unwind_or_symbol_log)
       module_sp->LogMessage(
@@ -4908,8 +4908,7 @@ struct OSEnv {
           llvm::Triple::getEnvironmentTypeName(llvm::Triple::Simulator);
       return;
     default: {
-      Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS |
-                                                      LIBLLDB_LOG_PROCESS));
+      Log *log(GetLog(LLDBLog::Symbols | LLDBLog::Process));
       LLDB_LOGF(log, "unsupported platform in LC_BUILD_VERSION");
     }
     }
@@ -5838,8 +5837,7 @@ void ObjectFileMachO::GetProcessSharedCacheUUID(Process *process,
     dl->GetSharedCacheInformation(base_addr, uuid, using_shared_cache,
                                   private_shared_cache);
   }
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS |
-                                                  LIBLLDB_LOG_PROCESS));
+  Log *log(GetLog(LLDBLog::Symbols | LLDBLog::Process));
   LLDB_LOGF(
       log,
       "inferior process shared cache has a UUID of %s, base address 0x%" PRIx64,
@@ -5933,8 +5931,7 @@ void ObjectFileMachO::GetLLDBSharedCacheUUID(addr_t &base_addr, UUID &uuid) {
       }
     }
   }
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS |
-                                                  LIBLLDB_LOG_PROCESS));
+  Log *log(GetLog(LLDBLog::Symbols | LLDBLog::Process));
   if (log && uuid.IsValid())
     LLDB_LOGF(log,
               "lldb's in-memory shared cache has a UUID of %s base address of "
@@ -6942,7 +6939,7 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
 
 bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
   MachOCorefileAllImageInfos image_infos = GetCorefileAllImageInfos();
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
 
   ModuleList added_modules;
   for (const MachOCorefileImageEntry &image : image_infos.all_image_infos) {

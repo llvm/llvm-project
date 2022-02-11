@@ -11,6 +11,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/StreamString.h"
@@ -535,10 +536,8 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
       auto type_system_or_err =
           m_symbol_file->GetTypeSystemForLanguage(eLanguageTypeC);
       if (auto err = type_system_or_err.takeError()) {
-        LLDB_LOG_ERROR(
-            lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
-            std::move(err),
-            "Unable to construct void type from TypeSystemClang");
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                       "Unable to construct void type from TypeSystemClang");
       } else {
         CompilerType void_compiler_type =
             type_system_or_err->GetBasicTypeFromAST(eBasicTypeVoid);

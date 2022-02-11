@@ -135,6 +135,11 @@ GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,
                           Value outputTensor,
                           ArrayRef<int64_t> transposeVector);
 
+/// Returns GenericOp that copies an n-D memref. Unlike the current
+/// implementation of memref::CopyOp, this op can further tile, lower to loops
+/// or vectorize.
+GenericOp makeMemRefCopyOp(OpBuilder &b, Location loc, Value from, Value to);
+
 //===----------------------------------------------------------------------===//
 // Fusion / Tiling utilities
 //===----------------------------------------------------------------------===//
@@ -269,10 +274,10 @@ public:
   /// Returns the loop ops generated from tiling.
   ArrayRef<scf::ForOp> getLoopOps() { return tileLoopOps; }
 
-private:
   /// Returns true if the tile loop nest has no tile loops.
   bool isEmpty();
 
+private:
   /// Returns true if the tile loop nest invariants are satisfied:
   /// - The `rootOp` has been tiled at least once.
   /// - The number of tile loop operations and dimensions match.

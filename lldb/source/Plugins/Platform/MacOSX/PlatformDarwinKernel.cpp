@@ -27,6 +27,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
@@ -69,7 +70,7 @@ void PlatformDarwinKernel::Terminate() {
 
 PlatformSP PlatformDarwinKernel::CreateInstance(bool force,
                                                 const ArchSpec *arch) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   if (log) {
     const char *arch_name;
     if (arch && arch->GetArchitectureName())
@@ -279,7 +280,7 @@ void PlatformDarwinKernel::GetStatus(Stream &strm) {
   strm.Printf(" Number of Kernel dSYM.yaa's indexed: %d\n",
               (int)m_kernel_dsyms_yaas.size());
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   if (log) {
     LLDB_LOGF(log, "\nkexts with dSYMs");
     for (auto pos : m_name_to_kext_path_map_with_dsyms) {
@@ -483,7 +484,7 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
   FileSpec file_spec(path);
   ConstString file_spec_extension = file_spec.GetFileNameExtension();
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
 
   LLDB_LOGV(log, "PlatformDarwinKernel examining '{0}'", file_spec);
 
@@ -575,7 +576,7 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
 
 void PlatformDarwinKernel::AddKextToMap(PlatformDarwinKernel *thisp,
                                         const FileSpec &file_spec) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   CFCBundle bundle(file_spec.GetPath().c_str());
   CFStringRef bundle_id(bundle.GetIdentifier());
   if (bundle_id && CFGetTypeID(bundle_id) == CFStringGetTypeID()) {

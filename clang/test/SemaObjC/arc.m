@@ -92,7 +92,7 @@ void test1(A *a) {
 
 @end
 
-void rdar8861761() {
+void rdar8861761(void) {
   B *o1 = [[B alloc] initWithInt:0];
   B *o2 = [B alloc];
   [o2 initWithInt:0]; // expected-warning {{expression result unused}}
@@ -105,7 +105,7 @@ void rdar8861761() {
 - (void)foo:(void (^)(unsigned captureCount, I * const capturedStrings[captureCount]))block;
 @end
 
-void test5() {
+void test5(void) {
   extern void test5_helper(__autoreleasing id *);
   id x;
 
@@ -340,7 +340,7 @@ void test12(id collection) {
 
 // rdar://problem/9172151
 @class Test14A, Test14B;
-void test14() {
+void test14(void) {
   extern void test14_consume(id *);
   extern int test14_cond(void);
   extern float test14_nowriteback(id __autoreleasing const *); // expected-note{{passing argument to parameter here}}
@@ -376,7 +376,7 @@ void test14() {
   test14_nowriteback(wip); // expected-error{{passing '__weak id *' to parameter of type '__autoreleasing id const *' changes retain/release properties of pointer}}
 }
 
-void test15() {
+void test15(void) {
   __block __autoreleasing id x; // expected-error {{__block variables cannot have __autoreleasing ownership}}
 }
 
@@ -464,7 +464,7 @@ _Bool fn(id obj) {
 }
 
 // Check casting w/ ownership qualifiers.
-void test21() {
+void test21(void) {
   __strong id *sip;
   (void)(__weak id *)sip; // expected-error{{casting '__strong id *' to type '__weak id *' changes retain/release properties of pointer}}
   (void)(__weak const id *)sip; // expected-error{{casting '__strong id *' to type '__weak id const *' changes retain/release properties of pointer}}
@@ -606,7 +606,7 @@ typedef struct Bark Bark;
 // rdar://9411838
 @protocol PTest31 @end
 
-int Test31() {
+int Test31(void) {
     Class cls;
     id ids;
     id<PTest31> pids;
@@ -698,7 +698,7 @@ void test37(Test37 *c) {
 @interface Test38
 @property int value;
 @end
-void test38() {
+void test38(void) {
   extern Test38 *test38_helper(void);
   switch (test38_helper().value) {
   case 0:
@@ -797,7 +797,7 @@ void foo(NSArray *array) {
 }
 
 // rdar://16627903
-extern void abort();
+extern void abort(void);
 #define TKAssertEqual(a, b) do{\
     __typeof(a) a_res = (a);\
     __typeof(b) b_res = (b);\
@@ -806,7 +806,7 @@ extern void abort();
     }\
 }while(0)
 
-int garf() {
+int garf(void) {
   id object;
   TKAssertEqual(object, nil);
   TKAssertEqual(object, (id)nil);

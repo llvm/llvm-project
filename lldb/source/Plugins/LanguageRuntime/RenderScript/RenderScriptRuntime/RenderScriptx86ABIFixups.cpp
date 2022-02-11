@@ -19,6 +19,7 @@
 #include "llvm/Pass.h"
 
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 using namespace lldb_private;
@@ -85,8 +86,7 @@ static llvm::FunctionType *cloneToStructRetFnTy(llvm::CallInst *call_inst) {
   // create a return type by getting the pointer type of the old return type,
   // and inserting a new initial argument of pointer type of the original
   // return type.
-  Log *log(
-      GetLogIfAnyCategoriesSet(LIBLLDB_LOG_LANGUAGE | LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Language | LLDBLog::Expressions);
 
   assert(call_inst && "no CallInst");
   llvm::Function *orig = call_inst->getCalledFunction();

@@ -1071,6 +1071,11 @@ public:
     return false;
   }
 
+  /// How to legalize this custom operation?
+  virtual LegalizeAction getCustomOperationAction(SDNode &Op) const {
+    return Legal;
+  }
+
   /// Return how this operation should be treated: either it is legal, needs to
   /// be promoted to a larger size, needs to be expanded to some other code
   /// sequence, or the target has a custom expander for it.
@@ -2851,6 +2856,14 @@ public:
     return false;
   }
 
+  /// Return true if pulling a binary operation into a select with an identity
+  /// constant is profitable. This is the inverse of an IR transform.
+  /// Example: X + (Cond ? Y : 0) --> Cond ? (X + Y) : X
+  virtual bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
+                                                    EVT VT) const {
+    return false;
+  }
+
   /// Return true if it is beneficial to convert a load of a constant to
   /// just the constant itself.
   /// On some targets it might be more efficient to use a combination of
@@ -3534,7 +3547,6 @@ public:
   /// Helper wrapper around SimplifyDemandedVectorElts.
   /// Adds Op back to the worklist upon success.
   bool SimplifyDemandedVectorElts(SDValue Op, const APInt &DemandedElts,
-                                  APInt &KnownUndef, APInt &KnownZero,
                                   DAGCombinerInfo &DCI) const;
 
   /// Determine which of the bits specified in Mask are known to be either zero

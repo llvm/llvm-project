@@ -45,6 +45,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/State.h"
@@ -1825,7 +1826,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   std::string command_string(command_line);
   std::string original_command_string(command_line);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_COMMANDS));
+  Log *log = GetLog(LLDBLog::Commands);
   llvm::PrettyStackTraceFormat stack_trace("HandleCommand(command = \"%s\")",
                                    command_line);
 
@@ -3122,8 +3123,8 @@ bool CommandInterpreter::SaveTranscript(
   }
 
   auto error_out = [&](llvm::StringRef error_message, std::string description) {
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_COMMANDS), "{0} ({1}:{2})",
-             error_message, output_file, description);
+    LLDB_LOG(GetLog(LLDBLog::Commands), "{0} ({1}:{2})", error_message,
+             output_file, description);
     result.AppendErrorWithFormatv(
         "Failed to save session's transcripts to {0}!", *output_file);
     return false;

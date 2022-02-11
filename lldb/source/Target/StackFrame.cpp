@@ -29,6 +29,7 @@
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 
@@ -1336,9 +1337,8 @@ lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
         auto c_type_system_or_err =
             target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC);
         if (auto err = c_type_system_or_err.takeError()) {
-          LLDB_LOG_ERROR(
-              lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_THREAD),
-              std::move(err), "Unable to guess value for given address");
+          LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), std::move(err),
+                         "Unable to guess value for given address");
           return ValueObjectSP();
         } else {
           CompilerType void_ptr_type =

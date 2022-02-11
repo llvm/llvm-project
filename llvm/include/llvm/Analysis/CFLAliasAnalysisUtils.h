@@ -14,10 +14,12 @@
 #ifndef LLVM_ANALYSIS_CFLALIASANALYSISUTILS_H
 #define LLVM_ANALYSIS_CFLALIASANALYSISUTILS_H
 
+#include "llvm/IR/Argument.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/ValueHandle.h"
 
 namespace llvm {
+
 namespace cflaa {
 
 template <typename AAResult> struct FunctionHandle final : public CallbackVH {

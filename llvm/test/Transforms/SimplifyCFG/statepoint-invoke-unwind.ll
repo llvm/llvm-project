@@ -11,7 +11,7 @@ define i32 @test() gc "statepoint-example" personality i32* ()* @fake_personalit
 entry:
   ; CHECK-LABEL: entry:
   ; CHECK-NEXT: %sp = invoke token (i64, i32, i64 addrspace(1)* ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i64f
-  %sp = invoke token (i64, i32, i64 addrspace(1)* ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i64f(i64 0, i32 0, i64 addrspace(1)* ()* @gc_call, i32 0, i32 0, i32 0, i32 0)
+  %sp = invoke token (i64, i32, i64 addrspace(1)* ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i64f(i64 0, i32 0, i64 addrspace(1)* ()* elementtype(i64 addrspace(1)* ()) @gc_call, i32 0, i32 0, i32 0, i32 0)
                 to label %normal unwind label %exception
 
 exception:

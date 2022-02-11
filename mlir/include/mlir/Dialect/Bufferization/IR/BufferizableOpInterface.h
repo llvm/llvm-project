@@ -47,9 +47,6 @@ struct BufferizationOptions {
 
   BufferizationOptions();
 
-  // BufferizationOptions cannot be copied.
-  BufferizationOptions(const BufferizationOptions &other) = delete;
-
   /// Return `true` if the op is allowed to be bufferized.
   bool isOpAllowed(Operation *op) const {
     if (!hasFilter)
@@ -183,9 +180,8 @@ public:
   SmallVector<OpOperand *> getAliasingOpOperand(OpResult result) const;
 
   /// Determine which OpResult will alias with `opOperand` if the op is
-  /// bufferized in place. Return an empty OpResult if the op is not
-  /// bufferizable.
-  OpResult getAliasingOpResult(OpOperand &opOperand) const;
+  /// bufferized in place. Return an empty vector if the op is not bufferizable.
+  SmallVector<OpResult> getAliasingOpResult(OpOperand &opOperand) const;
 
   /// Return true if `opOperand` bufferizes to a memory read. Return `true` if
   /// the op is not bufferizable.
@@ -399,9 +395,10 @@ struct AllocationHoistingBarrierOnly
     return {};
   }
 
-  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
-    return OpResult();
+  SmallVector<OpResult>
+  getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                      const BufferizationState &state) const {
+    return {};
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,

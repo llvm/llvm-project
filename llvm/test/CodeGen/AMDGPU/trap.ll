@@ -14,6 +14,9 @@
 
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
 
+; GCN-WARNING: warning: <unknown>:0:0: in function hsa_debugtrap void (i32 addrspace(1)*): debugtrap handler not supported
+
+
 declare void @llvm.trap() #0
 declare void @llvm.debugtrap() #1
 
@@ -54,7 +57,6 @@ define amdgpu_kernel void @hsa_trap(i32 addrspace(1)* nocapture readonly %arg0) 
 ; NOMESA-TRAP:  .long   47180
 ; NOMESA-TRAP-NEXT: .long   144
 
-; GCN-WARNING: warning: <unknown>:0:0: in function hsa_debugtrap void (i32 addrspace(1)*): debugtrap handler not supported
 ; GCN-LABEL: {{^}}hsa_debugtrap:
 ; HSA-TRAP: enable_trap_handler = 0
 ; HSA-TRAP: s_trap 3

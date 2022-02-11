@@ -85,7 +85,7 @@ define i1 @gep_constant_negative_index(i8* %dst, i8* %lower, i8* %upper) {
 ; CHECK-NEXT:    [[CMP_DST_SUB_4_LOWER:%.*]] = icmp uge i8* [[DST_SUB_4]], [[LOWER]]
 ; CHECK-NEXT:    [[CMP_DST_SUB_4_UPPER:%.*]] = icmp ult i8* [[DST_SUB_4]], [[UPPER]]
 ; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], [[CMP_DST_SUB_4_LOWER]]
-; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], true
+; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], [[CMP_DST_SUB_4_UPPER]]
 ; CHECK-NEXT:    [[DST_SUB_5:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 -5
 ; CHECK-NEXT:    [[CMP_DST_SUB_5_LOWER:%.*]] = icmp uge i8* [[DST_SUB_5]], [[LOWER]]
 ; CHECK-NEXT:    [[CMP_DST_SUB_5_UPPER:%.*]] = icmp ult i8* [[DST_SUB_5]], [[UPPER]]
@@ -435,7 +435,7 @@ define i4 @ptr_N_and_step_signed_positive_unsigned_checks_only(i8* %src, i8* %lo
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i16 1
 ; CHECK-NEXT:    [[CMP_STEP_START:%.*]] = icmp ult i8* [[SRC_STEP]], [[LOWER]]
 ; CHECK-NEXT:    [[CMP_STEP_END:%.*]] = icmp uge i8* [[SRC_STEP]], [[UPPER]]
-; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 false, false
+; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 false, [[CMP_STEP_END]]
 ; CHECK-NEXT:    br i1 [[OR_CHECK]], label [[TRAP_BB]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i4 3
@@ -545,7 +545,7 @@ define i4 @ptr_N_could_be_negative(i8* %src, i8* %lower, i8* %upper, i8 %N, i8 %
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i8 [[STEP]]
 ; CHECK-NEXT:    [[CMP_STEP_START:%.*]] = icmp ult i8* [[SRC_STEP]], [[LOWER]]
 ; CHECK-NEXT:    [[CMP_STEP_END:%.*]] = icmp uge i8* [[SRC_STEP]], [[UPPER]]
-; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 false, false
+; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 [[CMP_STEP_START]], [[CMP_STEP_END]]
 ; CHECK-NEXT:    br i1 [[OR_CHECK]], label [[TRAP_BB]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i4 3
@@ -652,7 +652,7 @@ define i4 @inc_ptr_N_could_be_negative(i8* %src, i8* %lower, i8* %upper, i8 %N, 
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i8 [[STEP]]
 ; CHECK-NEXT:    [[CMP_STEP_START:%.*]] = icmp ult i8* [[SRC_STEP]], [[LOWER]]
 ; CHECK-NEXT:    [[CMP_STEP_END:%.*]] = icmp uge i8* [[SRC_STEP]], [[UPPER]]
-; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 false, false
+; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 [[CMP_STEP_START]], [[CMP_STEP_END]]
 ; CHECK-NEXT:    br i1 [[OR_CHECK]], label [[TRAP_BB]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i4 3
@@ -912,7 +912,7 @@ define i4 @ptr_N_signed_positive_assume(i8* %src, i8* %lower, i8* %upper, i16 %N
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i16 [[STEP]]
 ; CHECK-NEXT:    [[CMP_STEP_START:%.*]] = icmp ult i8* [[SRC_STEP]], [[LOWER]]
 ; CHECK-NEXT:    [[CMP_STEP_END:%.*]] = icmp uge i8* [[SRC_STEP]], [[UPPER]]
-; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 false, false
+; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 [[CMP_STEP_START]], [[CMP_STEP_END]]
 ; CHECK-NEXT:    br i1 [[OR_CHECK]], label [[TRAP_BB]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i4 3

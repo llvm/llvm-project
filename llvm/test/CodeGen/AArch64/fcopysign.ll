@@ -95,10 +95,10 @@ entry:
 define float @copysign32(float %a, float %b) {
 ; CHECK-LABEL: copysign32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #128, lsl #24
+; CHECK-NEXT:    mvni v2.4s, #128, lsl #24
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
-; CHECK-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    ret
 ;
@@ -118,11 +118,11 @@ entry:
 define double @copysign64(double %a, double %b) {
 ; CHECK-LABEL: copysign64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    movi v2.2d, #0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fneg v2.2d, v2.2d
-; CHECK-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 ;
@@ -142,10 +142,10 @@ entry:
 define half @copysign16(half %a, half %b) {
 ; CHECK-LABEL: copysign16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #128, lsl #24
+; CHECK-NEXT:    mvni v2.4s, #128, lsl #24
 ; CHECK-NEXT:    fcvt s1, h1
 ; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    fcvt h0, s0
 ; CHECK-NEXT:    ret
 ;

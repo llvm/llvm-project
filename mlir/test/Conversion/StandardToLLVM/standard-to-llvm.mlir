@@ -18,7 +18,7 @@ func @simple_loop() {
 ^bb0:
 // CHECK-NEXT:  llvm.br ^bb1
 // CHECK32-NEXT:  llvm.br ^bb1
-  br ^bb1
+  cf.br ^bb1
 
 // CHECK-NEXT: ^bb1:	// pred: ^bb0
 // CHECK-NEXT:  {{.*}} = llvm.mlir.constant(1 : index) : i64
@@ -31,7 +31,7 @@ func @simple_loop() {
 ^bb1:	// pred: ^bb0
   %c1 = arith.constant 1 : index
   %c42 = arith.constant 42 : index
-  br ^bb2(%c1 : index)
+  cf.br ^bb2(%c1 : index)
 
 // CHECK:      ^bb2({{.*}}: i64):	// 2 preds: ^bb1, ^bb3
 // CHECK-NEXT:  {{.*}} = llvm.icmp "slt" {{.*}}, {{.*}} : i64
@@ -41,7 +41,7 @@ func @simple_loop() {
 // CHECK32-NEXT:  llvm.cond_br {{.*}}, ^bb3, ^bb4
 ^bb2(%0: index):	// 2 preds: ^bb1, ^bb3
   %1 = arith.cmpi slt, %0, %c42 : index
-  cond_br %1, ^bb3, ^bb4
+  cf.cond_br %1, ^bb3, ^bb4
 
 // CHECK:      ^bb3:	// pred: ^bb2
 // CHECK-NEXT:  llvm.call @body({{.*}}) : (i64) -> ()
@@ -57,7 +57,7 @@ func @simple_loop() {
   call @body(%0) : (index) -> ()
   %c1_0 = arith.constant 1 : index
   %2 = arith.addi %0, %c1_0 : index
-  br ^bb2(%2 : index)
+  cf.br ^bb2(%2 : index)
 
 // CHECK:      ^bb4:	// pred: ^bb2
 // CHECK-NEXT:  llvm.return
@@ -111,7 +111,7 @@ func private @other(index, i32) -> i32
 func @func_args(i32, i32) -> i32 {
 ^bb0(%arg0: i32, %arg1: i32):
   %c0_i32 = arith.constant 0 : i32
-  br ^bb1
+  cf.br ^bb1
 
 // CHECK-NEXT: ^bb1:	// pred: ^bb0
 // CHECK-NEXT:  {{.*}} = llvm.mlir.constant(0 : index) : i64
@@ -124,7 +124,7 @@ func @func_args(i32, i32) -> i32 {
 ^bb1:	// pred: ^bb0
   %c0 = arith.constant 0 : index
   %c42 = arith.constant 42 : index
-  br ^bb2(%c0 : index)
+  cf.br ^bb2(%c0 : index)
 
 // CHECK-NEXT: ^bb2({{.*}}: i64):	// 2 preds: ^bb1, ^bb3
 // CHECK-NEXT:  {{.*}} = llvm.icmp "slt" {{.*}}, {{.*}} : i64
@@ -134,7 +134,7 @@ func @func_args(i32, i32) -> i32 {
 // CHECK32-NEXT:  llvm.cond_br {{.*}}, ^bb3, ^bb4
 ^bb2(%0: index):	// 2 preds: ^bb1, ^bb3
   %1 = arith.cmpi slt, %0, %c42 : index
-  cond_br %1, ^bb3, ^bb4
+  cf.cond_br %1, ^bb3, ^bb4
 
 // CHECK-NEXT: ^bb3:	// pred: ^bb2
 // CHECK-NEXT:  {{.*}} = llvm.call @body_args({{.*}}) : (i64) -> i64
@@ -159,7 +159,7 @@ func @func_args(i32, i32) -> i32 {
   %5 = call @other(%2, %arg1) : (index, i32) -> i32
   %c1 = arith.constant 1 : index
   %6 = arith.addi %0, %c1 : index
-  br ^bb2(%6 : index)
+  cf.br ^bb2(%6 : index)
 
 // CHECK-NEXT: ^bb4:	// pred: ^bb2
 // CHECK-NEXT:  {{.*}} = llvm.mlir.constant(0 : index) : i64
@@ -191,7 +191,7 @@ func private @post(index)
 // CHECK-NEXT:  llvm.br ^bb1
 func @imperfectly_nested_loops() {
 ^bb0:
-  br ^bb1
+  cf.br ^bb1
 
 // CHECK-NEXT: ^bb1:	// pred: ^bb0
 // CHECK-NEXT:  {{.*}} = llvm.mlir.constant(0 : index) : i64
@@ -200,21 +200,21 @@ func @imperfectly_nested_loops() {
 ^bb1:	// pred: ^bb0
   %c0 = arith.constant 0 : index
   %c42 = arith.constant 42 : index
-  br ^bb2(%c0 : index)
+  cf.br ^bb2(%c0 : index)
 
 // CHECK-NEXT: ^bb2({{.*}}: i64):	// 2 preds: ^bb1, ^bb7
 // CHECK-NEXT:  {{.*}} = llvm.icmp "slt" {{.*}}, {{.*}} : i64
 // CHECK-NEXT:  llvm.cond_br {{.*}}, ^bb3, ^bb8
 ^bb2(%0: index):	// 2 preds: ^bb1, ^bb7
   %1 = arith.cmpi slt, %0, %c42 : index
-  cond_br %1, ^bb3, ^bb8
+  cf.cond_br %1, ^bb3, ^bb8
 
 // CHECK-NEXT: ^bb3:
 // CHECK-NEXT:  llvm.call @pre({{.*}}) : (i64) -> ()
 // CHECK-NEXT:  llvm.br ^bb4
 ^bb3:	// pred: ^bb2
   call @pre(%0) : (index) -> ()
-  br ^bb4
+  cf.br ^bb4
 
 // CHECK-NEXT: ^bb4:	// pred: ^bb3
 // CHECK-NEXT:  {{.*}} = llvm.mlir.constant(7 : index) : i64
@@ -223,14 +223,14 @@ func @imperfectly_nested_loops() {
 ^bb4:	// pred: ^bb3
   %c7 = arith.constant 7 : index
   %c56 = arith.constant 56 : index
-  br ^bb5(%c7 : index)
+  cf.br ^bb5(%c7 : index)
 
 // CHECK-NEXT: ^bb5({{.*}}: i64):	// 2 preds: ^bb4, ^bb6
 // CHECK-NEXT:  {{.*}} = llvm.icmp "slt" {{.*}}, {{.*}} : i64
 // CHECK-NEXT:  llvm.cond_br {{.*}}, ^bb6, ^bb7
 ^bb5(%2: index):	// 2 preds: ^bb4, ^bb6
   %3 = arith.cmpi slt, %2, %c56 : index
-  cond_br %3, ^bb6, ^bb7
+  cf.cond_br %3, ^bb6, ^bb7
 
 // CHECK-NEXT: ^bb6:	// pred: ^bb5
 // CHECK-NEXT:  llvm.call @body2({{.*}}, {{.*}}) : (i64, i64) -> ()
@@ -241,7 +241,7 @@ func @imperfectly_nested_loops() {
   call @body2(%0, %2) : (index, index) -> ()
   %c2 = arith.constant 2 : index
   %4 = arith.addi %2, %c2 : index
-  br ^bb5(%4 : index)
+  cf.br ^bb5(%4 : index)
 
 // CHECK-NEXT: ^bb7:	// pred: ^bb5
 // CHECK-NEXT:  llvm.call @post({{.*}}) : (i64) -> ()
@@ -252,7 +252,7 @@ func @imperfectly_nested_loops() {
   call @post(%0) : (index) -> ()
   %c1 = arith.constant 1 : index
   %5 = arith.addi %0, %c1 : index
-  br ^bb2(%5 : index)
+  cf.br ^bb2(%5 : index)
 
 // CHECK-NEXT: ^bb8:	// pred: ^bb2
 // CHECK-NEXT:  llvm.return
@@ -316,49 +316,49 @@ func private @body3(index, index)
 // CHECK-NEXT: }
 func @more_imperfectly_nested_loops() {
 ^bb0:
-  br ^bb1
+  cf.br ^bb1
 ^bb1:	// pred: ^bb0
   %c0 = arith.constant 0 : index
   %c42 = arith.constant 42 : index
-  br ^bb2(%c0 : index)
+  cf.br ^bb2(%c0 : index)
 ^bb2(%0: index):	// 2 preds: ^bb1, ^bb11
   %1 = arith.cmpi slt, %0, %c42 : index
-  cond_br %1, ^bb3, ^bb12
+  cf.cond_br %1, ^bb3, ^bb12
 ^bb3:	// pred: ^bb2
   call @pre(%0) : (index) -> ()
-  br ^bb4
+  cf.br ^bb4
 ^bb4:	// pred: ^bb3
   %c7 = arith.constant 7 : index
   %c56 = arith.constant 56 : index
-  br ^bb5(%c7 : index)
+  cf.br ^bb5(%c7 : index)
 ^bb5(%2: index):	// 2 preds: ^bb4, ^bb6
   %3 = arith.cmpi slt, %2, %c56 : index
-  cond_br %3, ^bb6, ^bb7
+  cf.cond_br %3, ^bb6, ^bb7
 ^bb6:	// pred: ^bb5
   call @body2(%0, %2) : (index, index) -> ()
   %c2 = arith.constant 2 : index
   %4 = arith.addi %2, %c2 : index
-  br ^bb5(%4 : index)
+  cf.br ^bb5(%4 : index)
 ^bb7:	// pred: ^bb5
   call @mid(%0) : (index) -> ()
-  br ^bb8
+  cf.br ^bb8
 ^bb8:	// pred: ^bb7
   %c18 = arith.constant 18 : index
   %c37 = arith.constant 37 : index
-  br ^bb9(%c18 : index)
+  cf.br ^bb9(%c18 : index)
 ^bb9(%5: index):	// 2 preds: ^bb8, ^bb10
   %6 = arith.cmpi slt, %5, %c37 : index
-  cond_br %6, ^bb10, ^bb11
+  cf.cond_br %6, ^bb10, ^bb11
 ^bb10:	// pred: ^bb9
   call @body3(%0, %5) : (index, index) -> ()
   %c3 = arith.constant 3 : index
   %7 = arith.addi %5, %c3 : index
-  br ^bb9(%7 : index)
+  cf.br ^bb9(%7 : index)
 ^bb11:	// pred: ^bb9
   call @post(%0) : (index) -> ()
   %c1 = arith.constant 1 : index
   %8 = arith.addi %0, %c1 : index
-  br ^bb2(%8 : index)
+  cf.br ^bb2(%8 : index)
 ^bb12:	// pred: ^bb2
   return
 }
@@ -427,19 +427,12 @@ func @multireturn_caller() {
   return
 }
 
-// CHECK-LABEL: @select
-func @select(%arg0 : i1, %arg1 : i32, %arg2 : i32) -> i32 {
-// CHECK: = llvm.select %arg0, %arg1, %arg2 : i1, i32
-  %0 = select %arg0, %arg1, %arg2 : i32
-  return %0 : i32
-}
-
 // CHECK-LABEL: @dfs_block_order
 func @dfs_block_order(%arg0: i32) -> (i32) {
 // CHECK-NEXT:  %[[CST:.*]] = llvm.mlir.constant(42 : i32) : i32
   %0 = arith.constant 42 : i32
 // CHECK-NEXT:  llvm.br ^bb2
-  br ^bb2
+  cf.br ^bb2
 
 // CHECK-NEXT: ^bb1:
 // CHECK-NEXT:  %[[ADD:.*]] = llvm.add %arg0, %[[CST]] : i32
@@ -451,38 +444,8 @@ func @dfs_block_order(%arg0: i32) -> (i32) {
 // CHECK-NEXT: ^bb2:
 ^bb2:
 // CHECK-NEXT:  llvm.br ^bb1
-  br ^bb1
+  cf.br ^bb1
 }
-
-// -----
-
-// CHECK-LABEL: @splat_0d
-// CHECK-SAME: %[[ARG:.*]]: f32
-func @splat_0d(%a: f32) -> vector<f32> {
-  %v = splat %a : vector<f32>
-  return %v : vector<f32>
-}
-// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.undef : vector<1xf32>
-// CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ARG]], %[[UNDEF]][%[[ZERO]] : i32] : vector<1xf32>
-// CHECK-NEXT: llvm.return %[[V]] : vector<1xf32>
-
-// -----
-
-// CHECK-LABEL: @splat
-// CHECK-SAME: %[[A:arg[0-9]+]]: vector<4xf32>
-// CHECK-SAME: %[[ELT:arg[0-9]+]]: f32
-func @splat(%a: vector<4xf32>, %b: f32) -> vector<4xf32> {
-  %vb = splat %b : vector<4xf32>
-  %r = arith.mulf %a, %vb : vector<4xf32>
-  return %r : vector<4xf32>
-}
-// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.undef : vector<4xf32>
-// CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ELT]], %[[UNDEF]][%[[ZERO]] : i32] : vector<4xf32>
-// CHECK-NEXT: %[[SPLAT:[0-9]+]] = llvm.shufflevector %[[V]], %[[UNDEF]] [0 : i32, 0 : i32, 0 : i32, 0 : i32]
-// CHECK-NEXT: %[[SCALE:[0-9]+]] = llvm.fmul %[[A]], %[[SPLAT]] : vector<4xf32>
-// CHECK-NEXT: llvm.return %[[SCALE]] : vector<4xf32>
 
 // -----
 
@@ -506,7 +469,7 @@ func @floorf(%arg0 : f32) {
 
 // -----
 
-// Lowers `assert` to a function call to `abort` if the assertion is violated.
+// Lowers `cf.assert` to a function call to `abort` if the assertion is violated.
 // CHECK: llvm.func @abort()
 // CHECK-LABEL: @assert_test_function
 // CHECK-SAME:  (%[[ARG:.*]]: i1)
@@ -517,7 +480,7 @@ func @assert_test_function(%arg : i1) {
   // CHECK: ^[[FAILURE_BLOCK]]:
   // CHECK: llvm.call @abort() : () -> ()
   // CHECK: llvm.unreachable
-  assert %arg, "Computer says no"
+  cf.assert %arg, "Computer says no"
   return
 }
 
@@ -549,23 +512,10 @@ func @fmaf(%arg0: f32, %arg1: vector<4xf32>) {
 
 // -----
 
-// CHECK-LABEL: func @select_2dvector(
-func @select_2dvector(%arg0 : vector<4x3xi1>, %arg1 : vector<4x3xi32>, %arg2 : vector<4x3xi32>) {
-  // CHECK: %[[EXTRACT1:.*]] = llvm.extractvalue %arg0[0] : !llvm.array<4 x vector<3xi1>>
-  // CHECK: %[[EXTRACT2:.*]] = llvm.extractvalue %arg1[0] : !llvm.array<4 x vector<3xi32>>
-  // CHECK: %[[EXTRACT3:.*]] = llvm.extractvalue %arg2[0] : !llvm.array<4 x vector<3xi32>>
-  // CHECK: %[[SELECT:.*]] = llvm.select %[[EXTRACT1]], %[[EXTRACT2]], %[[EXTRACT3]] : vector<3xi1>, vector<3xi32>
-  // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[SELECT]], %0[0] : !llvm.array<4 x vector<3xi32>>
-  %0 = select %arg0, %arg1, %arg2 : vector<4x3xi1>, vector<4x3xi32>
-  std.return
-}
-
-// -----
-
 // CHECK-LABEL: func @switchi8(
 func @switchi8(%arg0 : i8) -> i32 {
-switch %arg0 : i8, [
-  default: ^bb1,
+  cf.switch %arg0 : i8, [
+    default: ^bb1,
     42: ^bb1,
     43: ^bb3
   ]

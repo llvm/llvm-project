@@ -45,18 +45,17 @@ class SPV_GLSLUnaryOp<string mnemonic, int opcode, Type resultType,
     SPV_ScalarOrVectorOf<resultType>:$result
   );
 
-  let parser = [{ return parseUnaryOp(parser, result); }];
-
-  let printer = [{ return printUnaryOp(getOperation(), p); }];
-
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 }
 
 // Base class for GLSL Unary arithmetic ops where return type matches
 // the operand type.
 class SPV_GLSLUnaryArithmeticOp<string mnemonic, int opcode, Type type,
                                 list<Trait> traits = []> :
-  SPV_GLSLUnaryOp<mnemonic, opcode, type, type, traits>;
+  SPV_GLSLUnaryOp<mnemonic, opcode, type, type,
+                  traits # [SameOperandsAndResultType]> {
+  let assemblyFormat = "$operand `:` type($operand) attr-dict";
+}
 
 // Base class for GLSL binary ops.
 class SPV_GLSLBinaryOp<string mnemonic, int opcode, Type resultType,
@@ -72,18 +71,17 @@ class SPV_GLSLBinaryOp<string mnemonic, int opcode, Type resultType,
     SPV_ScalarOrVectorOf<resultType>:$result
   );
 
-  let parser = [{ return impl::parseOneResultSameOperandTypeOp(parser, result); }];
-
-  let printer = [{ return impl::printOneResultOp(getOperation(), p); }];
-
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 }
 
 // Base class for GLSL Binary arithmetic ops where operand types and
 // return type matches.
 class SPV_GLSLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
                                  list<Trait> traits = []> :
-  SPV_GLSLBinaryOp<mnemonic, opcode, type, type, traits>;
+  SPV_GLSLBinaryOp<mnemonic, opcode, type, type,
+                   traits # [SameOperandsAndResultType]> {
+  let assemblyFormat = "operands attr-dict `:` type($result)";
+}
 
 // Base class for GLSL ternary ops.
 class SPV_GLSLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
@@ -100,11 +98,8 @@ class SPV_GLSLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
     SPV_ScalarOrVectorOf<type>:$result
   );
 
-  let parser = [{ return impl::parseOneResultSameOperandTypeOp(parser, result); }];
-
-  let printer = [{ return impl::printOneResultOp(getOperation(), p); }];
-
-  let verifier = [{ return success(); }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 0;
 }
 
 // -----
@@ -1133,8 +1128,6 @@ def SPV_GLSLFrexpStructOp : SPV_GLSLOp<"FrexpStruct", 52, [NoSideEffect]> {
   let assemblyFormat = [{
     attr-dict $operand `:` type($operand) `->` type($result)
   }];
-
-  let verifier = [{ return ::verifyGLSLFrexpStructOp(*this); }];
 }
 
 def SPV_GLSLLdexpOp :
@@ -1187,8 +1180,6 @@ def SPV_GLSLLdexpOp :
   let assemblyFormat = [{
     attr-dict $x `:` type($x) `,` $exp `:` type($exp) `->` type($y)
   }];
-
-  let verifier = [{ return ::verify(*this); }];
 }
 
 def SPV_GLSLFMixOp :
@@ -1227,7 +1218,7 @@ def SPV_GLSLFMixOp :
     attr-dict $x `:` type($x) `,` $y `:` type($y) `,` $a `:` type($a) `->` type($result)
   }];
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 }
 
 #endif // MLIR_DIALECT_SPIRV_IR_GLSL_OPS

@@ -250,7 +250,7 @@ func @omp_wsloop_pretty_multi_block(%lb : index, %ub : index, %step : index, %da
   // CHECK: omp.wsloop (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}})
   omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) {
     %1 = "test.payload"(%iv) : (index) -> (i32)
-    br ^bb1(%1: i32)
+    cf.br ^bb1(%1: i32)
   ^bb1(%arg: i32):
     memref.store %arg, %data1[%iv] : memref<?xi32>
     omp.yield
@@ -260,13 +260,13 @@ func @omp_wsloop_pretty_multi_block(%lb : index, %ub : index, %step : index, %da
   omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) {
     %c = "test.condition"(%iv) : (index) -> (i1)
     %v1 = "test.payload"(%iv) : (index) -> (i32)
-    cond_br %c, ^bb1(%v1: i32), ^bb2(%v1: i32)
+    cf.cond_br %c, ^bb1(%v1: i32), ^bb2(%v1: i32)
   ^bb1(%arg0: i32):
     memref.store %arg0, %data1[%iv] : memref<?xi32>
-    br ^bb3
+    cf.br ^bb3
   ^bb2(%arg1: i32):
     memref.store %arg1, %data2[%iv] : memref<?xi32>
-    br ^bb3
+    cf.br ^bb3
   ^bb3:
     omp.yield
   }
@@ -275,7 +275,7 @@ func @omp_wsloop_pretty_multi_block(%lb : index, %ub : index, %step : index, %da
   omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) {
     %c = "test.condition"(%iv) : (index) -> (i1)
     %v1 = "test.payload"(%iv) : (index) -> (i32)
-    cond_br %c, ^bb1(%v1: i32), ^bb2(%v1: i32)
+    cf.cond_br %c, ^bb1(%v1: i32), ^bb2(%v1: i32)
   ^bb1(%arg0: i32):
     memref.store %arg0, %data1[%iv] : memref<?xi32>
     omp.yield
@@ -294,7 +294,7 @@ func @omp_wsloop_pretty_non_index(%lb1 : i32, %ub1 : i32, %step1 : i32, %lb2 : i
   // CHECK: omp.wsloop (%{{.*}}) : i32 = (%{{.*}}) to (%{{.*}}) step (%{{.*}})
   omp.wsloop (%iv1) : i32 = (%lb1) to (%ub1) step (%step1) {
     %1 = "test.payload"(%iv1) : (i32) -> (index)
-    br ^bb1(%1: index)
+    cf.br ^bb1(%1: index)
   ^bb1(%arg1: index):
     memref.store %iv1, %data1[%arg1] : memref<?xi32>
     omp.yield
@@ -303,7 +303,7 @@ func @omp_wsloop_pretty_non_index(%lb1 : i32, %ub1 : i32, %step1 : i32, %lb2 : i
   // CHECK: omp.wsloop (%{{.*}}) : i64 = (%{{.*}}) to (%{{.*}}) step (%{{.*}})
   omp.wsloop (%iv2) : i64 = (%lb2) to (%ub2) step (%step2) {
     %2 = "test.payload"(%iv2) : (i64) -> (index)
-    br ^bb1(%2: index)
+    cf.br ^bb1(%2: index)
   ^bb1(%arg2: index):
     memref.store %iv2, %data2[%arg2] : memref<?xi64>
     omp.yield

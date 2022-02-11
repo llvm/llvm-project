@@ -356,24 +356,24 @@ Example output is shown below:
 
 ```
 //===-------------------------------------------===//
-Processing operation : 'std.cond_br'(0x60f000001120) {
-  "std.cond_br"(%arg0)[^bb2, ^bb2] {operand_segment_sizes = dense<[1, 0, 0]> : vector<3xi32>} : (i1) -> ()
+Processing operation : 'cf.cond_br'(0x60f000001120) {
+  "cf.cond_br"(%arg0)[^bb2, ^bb2] {operand_segment_sizes = dense<[1, 0, 0]> : vector<3xi32>} : (i1) -> ()
 
-  * Pattern SimplifyConstCondBranchPred : 'std.cond_br -> ()' {
+  * Pattern SimplifyConstCondBranchPred : 'cf.cond_br -> ()' {
   } -> failure : pattern failed to match
 
-  * Pattern SimplifyCondBranchIdenticalSuccessors : 'std.cond_br -> ()' {
-    ** Insert  : 'std.br'(0x60b000003690)
-    ** Replace : 'std.cond_br'(0x60f000001120)
+  * Pattern SimplifyCondBranchIdenticalSuccessors : 'cf.cond_br -> ()' {
+    ** Insert  : 'cf.br'(0x60b000003690)
+    ** Replace : 'cf.cond_br'(0x60f000001120)
   } -> success : pattern applied successfully
 } -> success : pattern matched
 //===-------------------------------------------===//
 ```
 
-This output is describing the processing of a `std.cond_br` operation. We first
+This output is describing the processing of a `cf.cond_br` operation. We first
 try to apply the `SimplifyConstCondBranchPred`, which fails. From there, another
 pattern (`SimplifyCondBranchIdenticalSuccessors`) is applied that matches the
-`std.cond_br` and replaces it with a `std.br`.
+`cf.cond_br` and replaces it with a `cf.br`.
 
 ## Debugging
 

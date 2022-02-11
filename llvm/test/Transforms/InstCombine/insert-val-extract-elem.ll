@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine %s | FileCheck %s
+; RUN: opt -S -passes=instcombine %s | FileCheck %s
 
 ; CHECK-LABEL: julia_2xdouble
 ; CHECK-NOT: insertvalue

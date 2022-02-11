@@ -200,10 +200,7 @@ static cl::opt<unsigned> TriangleChainCount(
     cl::init(2),
     cl::Hidden);
 
-static cl::opt<bool> EnableExtTspBlockPlacement(
-    "enable-ext-tsp-block-placement", cl::Hidden, cl::init(false),
-    cl::desc("Enable machine block placement based on the ext-tsp model, "
-             "optimizing I-cache utilization."));
+extern cl::opt<bool> EnableExtTspBlockPlacement;
 
 namespace llvm {
 extern cl::opt<unsigned> StaticLikelyProb;

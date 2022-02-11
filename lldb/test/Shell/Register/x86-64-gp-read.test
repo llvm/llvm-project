@@ -1,4 +1,3 @@
-# XFAIL: system-windows
 # REQUIRES: native && target-x86_64
 # RUN: %clangxx_host -fomit-frame-pointer %p/Inputs/x86-64-gp-read.cpp -o %t
 # RUN: %lldb -b -s %s %t | FileCheck %s

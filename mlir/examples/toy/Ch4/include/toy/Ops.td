@@ -61,9 +61,8 @@ def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
   // The constant operation returns a single value of TensorType.
   let results = (outs F64Tensor);
 
-  // Specify a parser and printer method.
-  let parser = [{ return ::parseConstantOp(parser, result); }];
-  let printer = [{ return ::print(p, *this); }];
+  // Indicate that the operation has a custom parser and printer method.
+  let hasCustomAssemblyFormat = 1;
 
   // Add custom build methods for the constant operation. These method populates
   // the `state` that MLIR uses to create operations, i.e. these are used when
@@ -78,8 +77,8 @@ def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
     OpBuilder<(ins "double":$value)>
   ];
 
-  // Invoke a static verify method to verify this constant operation.
-  let verifier = [{ return ::verify(*this); }];
+  // Indicate that additional verification for this operation is necessary.
+  let hasVerifier = 1;
 }
 
 def AddOp : Toy_Op<"add",
@@ -93,9 +92,8 @@ def AddOp : Toy_Op<"add",
   let arguments = (ins F64Tensor:$lhs, F64Tensor:$rhs);
   let results = (outs F64Tensor);
 
-  // Specify a parser and printer method.
-  let parser = [{ return ::parseBinaryOp(parser, result); }];
-  let printer = [{ return ::printBinaryOp(p, *this); }];
+  // Indicate that the operation has a custom parser and printer method.
+  let hasCustomAssemblyFormat = 1;
 
   // Allow building an AddOp with from the two input operands.
   let builders = [
@@ -171,9 +169,8 @@ def MulOp : Toy_Op<"mul",
   let arguments = (ins F64Tensor:$lhs, F64Tensor:$rhs);
   let results = (outs F64Tensor);
 
-  // Specify a parser and printer method.
-  let parser = [{ return ::parseBinaryOp(parser, result); }];
-  let printer = [{ return ::printBinaryOp(p, *this); }];
+  // Indicate that the operation has a custom parser and printer method.
+  let hasCustomAssemblyFormat = 1;
 
   // Allow building a MulOp with from the two input operands.
   let builders = [
@@ -252,8 +249,8 @@ def ReturnOp : Toy_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
     bool hasOperand() { return getNumOperands() != 0; }
   }];
 
-  // Invoke a static verify method to verify this return operation.
-  let verifier = [{ return ::verify(*this); }];
+  // Indicate that additional verification for this operation is necessary.
+  let hasVerifier = 1;
 }
 
 def TransposeOp : Toy_Op<"transpose",
@@ -275,8 +272,8 @@ def TransposeOp : Toy_Op<"transpose",
     OpBuilder<(ins "Value":$input)>
   ];
 
-  // Invoke a static verify method to verify this transpose operation.
-  let verifier = [{ return ::verify(*this); }];
+  // Indicate that additional verification for this operation is necessary.
+  let hasVerifier = 1;
 }
 
 #endif // TOY_OPS

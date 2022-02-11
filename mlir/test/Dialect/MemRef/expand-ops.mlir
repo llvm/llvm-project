@@ -9,7 +9,7 @@ func @atomic_rmw_to_generic(%F: memref<10xf32>, %f: f32, %i: index) -> f32 {
 // CHECK: %0 = memref.generic_atomic_rmw %arg0[%arg2] : memref<10xf32> {
 // CHECK: ^bb0([[CUR_VAL:%.*]]: f32):
 // CHECK:   [[CMP:%.*]] = arith.cmpf ogt, [[CUR_VAL]], [[f]] : f32
-// CHECK:   [[SELECT:%.*]] = select [[CMP]], [[CUR_VAL]], [[f]] : f32
+// CHECK:   [[SELECT:%.*]] = arith.select [[CMP]], [[CUR_VAL]], [[f]] : f32
 // CHECK:   memref.atomic_yield [[SELECT]] : f32
 // CHECK: }
 // CHECK: return %0 : f32

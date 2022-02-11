@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine < %s | FileCheck %s
+; RUN: opt -S -passes=instcombine < %s | FileCheck %s
 
 define i1 @test1() {
 entry:

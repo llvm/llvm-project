@@ -66,10 +66,21 @@ public:
     });
     addConversion(
         [&](fir::CharacterType charTy) { return convertCharType(charTy); });
+    addConversion(
+        [&](fir::ComplexType cmplx) { return convertComplexType(cmplx); });
+    addConversion([&](fir::FieldType field) {
+      // Convert to i32 because of LLVM GEP indexing restriction.
+      return mlir::IntegerType::get(field.getContext(), 32);
+    });
     addConversion([&](HeapType heap) { return convertPointerLike(heap); });
     addConversion([&](fir::IntegerType intTy) {
       return mlir::IntegerType::get(
           &getContext(), kindMapping.getIntegerBitsize(intTy.getFKind()));
+    });
+    addConversion([&](fir::LenType field) {
+      // Get size of len paramter from the descriptor.
+      return getModel<Fortran::runtime::typeInfo::TypeParameterValue>()(
+          &getContext());
     });
     addConversion([&](fir::LogicalType boolTy) {
       return mlir::IntegerType::get(
@@ -80,21 +91,11 @@ public:
     });
     addConversion(
         [&](fir::PointerType pointer) { return convertPointerLike(pointer); });
-    addConversion([&](fir::RecordType derived, SmallVectorImpl<Type> &results,
-                      ArrayRef<Type> callStack) {
+    addConversion([&](fir::RecordType derived,
+                      SmallVectorImpl<mlir::Type> &results,
+                      ArrayRef<mlir::Type> callStack) {
       return convertRecordType(derived, results, callStack);
     });
-    addConversion([&](fir::FieldType field) {
-      // Convert to i32 because of LLVM GEP indexing restriction.
-      return mlir::IntegerType::get(field.getContext(), 32);
-    });
-    addConversion([&](fir::LenType field) {
-      // Get size of len paramter from the descriptor.
-      return getModel<Fortran::runtime::typeInfo::TypeParameterValue>()(
-          &getContext());
-    });
-    addConversion(
-        [&](fir::ComplexType cmplx) { return convertComplexType(cmplx); });
     addConversion(
         [&](fir::RealType real) { return convertRealType(real.getFKind()); });
     addConversion(
@@ -111,13 +112,21 @@ public:
     });
     addConversion([&](mlir::TupleType tuple) {
       LLVM_DEBUG(llvm::dbgs() << "type convert: " << tuple << '\n');
-      llvm::SmallVector<mlir::Type> inMembers;
-      tuple.getFlattenedTypes(inMembers);
       llvm::SmallVector<mlir::Type> members;
-      for (auto mem : inMembers)
-        members.push_back(convertType(mem).cast<mlir::Type>());
+      for (auto mem : tuple.getTypes()) {
+        // Prevent fir.box from degenerating to a pointer to a descriptor in the
+        // context of a tuple type.
+        if (auto box = mem.dyn_cast<fir::BoxType>())
+          members.push_back(convertBoxTypeAsStruct(box));
+        else
+          members.push_back(convertType(mem).cast<mlir::Type>());
+      }
       return mlir::LLVM::LLVMStructType::getLiteral(&getContext(), members,
                                                     /*isPacked=*/false);
+    });
+    addConversion([&](mlir::NoneType none) {
+      return mlir::LLVM::LLVMStructType::getLiteral(
+          none.getContext(), llvm::None, /*isPacked=*/false);
     });
   }
 
@@ -130,8 +139,9 @@ public:
 
   // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
   llvm::Optional<LogicalResult>
-  convertRecordType(fir::RecordType derived, SmallVectorImpl<Type> &results,
-                    ArrayRef<Type> callStack) {
+  convertRecordType(fir::RecordType derived,
+                    SmallVectorImpl<mlir::Type> &results,
+                    ArrayRef<mlir::Type> callStack) {
     auto name = derived.getName();
     auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);
     if (llvm::count(callStack, derived) > 1) {
@@ -140,7 +150,12 @@ public:
     }
     llvm::SmallVector<mlir::Type> members;
     for (auto mem : derived.getTypeList()) {
-      members.push_back(convertType(mem.second).cast<mlir::Type>());
+      // Prevent fir.box from degenerating to a pointer to a descriptor in the
+      // context of a record type.
+      if (auto box = mem.second.dyn_cast<fir::BoxType>())
+        members.push_back(convertBoxTypeAsStruct(box));
+      else
+        members.push_back(convertType(mem.second).cast<mlir::Type>());
     }
     if (mlir::failed(st.setBody(members, /*isPacked=*/false)))
       return failure();
@@ -227,6 +242,14 @@ public:
                                                /*isPacked=*/false));
   }
 
+  /// Convert fir.box type to the corresponding llvm struct type instead of a
+  /// pointer to this struct type.
+  mlir::Type convertBoxTypeAsStruct(BoxType box) {
+    return convertBoxType(box)
+        .cast<mlir::LLVM::LLVMPointerType>()
+        .getElementType();
+  }
+
   unsigned characterBitsize(fir::CharacterType charTy) {
     return kindMapping.getCharacterBitsize(charTy.getFKind());
   }
@@ -250,12 +273,6 @@ public:
     LLVM_DEBUG(llvm::dbgs() << "type convert: " << cmplx << '\n');
     auto eleTy = cmplx.getElementType();
     return convertType(specifics->complexMemoryType(eleTy));
-  }
-
-  // convert a front-end kind value to either a std or LLVM IR dialect type
-  // fir.real<n>  -->  llvm.anyfloat  where anyfloat is a kind mapping
-  mlir::Type convertRealType(fir::KindTy kind) {
-    return fromRealTypeID(kindMapping.getRealTypeID(kind), kind);
   }
 
   template <typename A>
@@ -283,6 +300,12 @@ public:
       return convertType(eleTy);
 
     return mlir::LLVM::LLVMPointerType::get(convertType(eleTy));
+  }
+
+  // convert a front-end kind value to either a std or LLVM IR dialect type
+  // fir.real<n>  -->  llvm.anyfloat  where anyfloat is a kind mapping
+  mlir::Type convertRealType(fir::KindTy kind) {
+    return fromRealTypeID(kindMapping.getRealTypeID(kind), kind);
   }
 
   // fir.array<c ... :any>  -->  llvm<"[...[c x any]]">

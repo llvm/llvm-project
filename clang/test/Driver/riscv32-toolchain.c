@@ -329,46 +329,46 @@ int size_a_ld = sizeof(_Atomic(long double));
 // Check types
 
 // CHECK: zeroext i8 @check_char()
-char check_char() { return 0; }
+char check_char(void) { return 0; }
 
 // CHECK: define dso_local signext i16 @check_short()
-short check_short() { return 0; }
+short check_short(void) { return 0; }
 
 // CHECK: define dso_local i32 @check_int()
-int check_int() { return 0; }
+int check_int(void) { return 0; }
 
 // CHECK: define dso_local i32 @check_wchar_t()
-int check_wchar_t() { return 0; }
+int check_wchar_t(void) { return 0; }
 
 // CHECK: define dso_local i32 @check_long()
-long check_long() { return 0; }
+long check_long(void) { return 0; }
 
 // CHECK: define dso_local i64 @check_longlong()
-long long check_longlong() { return 0; }
+long long check_longlong(void) { return 0; }
 
 // CHECK: define dso_local zeroext i8 @check_uchar()
-unsigned char check_uchar() { return 0; }
+unsigned char check_uchar(void) { return 0; }
 
 // CHECK: define dso_local zeroext i16 @check_ushort()
-unsigned short check_ushort() { return 0; }
+unsigned short check_ushort(void) { return 0; }
 
 // CHECK: define dso_local i32 @check_uint()
-unsigned int check_uint() { return 0; }
+unsigned int check_uint(void) { return 0; }
 
 // CHECK: define dso_local i32 @check_ulong()
-unsigned long check_ulong() { return 0; }
+unsigned long check_ulong(void) { return 0; }
 
 // CHECK: define dso_local i64 @check_ulonglong()
-unsigned long long check_ulonglong() { return 0; }
+unsigned long long check_ulonglong(void) { return 0; }
 
 // CHECK: define dso_local i32 @check_size_t()
-size_t check_size_t() { return 0; }
+size_t check_size_t(void) { return 0; }
 
 // CHECK: define dso_local float @check_float()
-float check_float() { return 0; }
+float check_float(void) { return 0; }
 
 // CHECK: define dso_local double @check_double()
-double check_double() { return 0; }
+double check_double(void) { return 0; }
 
 // CHECK: define dso_local fp128 @check_longdouble()
-long double check_longdouble() { return 0; }
+long double check_longdouble(void) { return 0; }

@@ -77,6 +77,9 @@ public:
   /// divisions.
   PresburgerSet subtract(const PresburgerSet &set) const;
 
+  /// Return true if this set is a subset of the given set, and false otherwise.
+  bool isSubsetOf(const PresburgerSet &set) const;
+
   /// Return true if this set is equal to the given set, and false otherwise.
   /// All local variables in both sets must correspond to floor divisions.
   bool isEqual(const PresburgerSet &set) const;
@@ -95,6 +98,15 @@ public:
   /// Find an integer sample from the given set. This should not be called if
   /// any of the Polys in the union are unbounded.
   bool findIntegerSample(SmallVectorImpl<int64_t> &sample);
+
+  /// Compute an overapproximation of the number of integer points in the
+  /// polyhedron. Symbol ids are currently not supported. If the computed
+  /// overapproximation is infinite, an empty optional is returned.
+  ///
+  /// This currently just sums up the overapproximations of the volumes of the
+  /// disjuncts, so the approximation might be far from the true volume in the
+  /// case when there is a lot of overlap between disjuncts.
+  Optional<uint64_t> computeVolume() const;
 
   /// Simplifies the representation of a PresburgerSet.
   ///

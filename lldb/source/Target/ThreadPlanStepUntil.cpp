@@ -14,6 +14,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 using namespace lldb;
@@ -315,7 +316,7 @@ bool ThreadPlanStepUntil::MischiefManaged() {
   // here.
   bool done = false;
   if (IsPlanComplete()) {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+    Log *log = GetLog(LLDBLog::Step);
     LLDB_LOGF(log, "Completed step until plan.");
 
     Clear();

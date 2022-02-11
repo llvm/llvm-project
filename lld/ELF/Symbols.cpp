@@ -15,9 +15,6 @@
 #include "Writer.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
 #include <cstring>
 
 using namespace llvm;
@@ -290,20 +287,20 @@ bool Symbol::includeInDynsym() const {
 }
 
 // Print out a log message for --trace-symbol.
-void elf::printTraceSymbol(const Symbol *sym) {
+void elf::printTraceSymbol(const Symbol &sym, StringRef name) {
   std::string s;
-  if (sym->isUndefined())
+  if (sym.isUndefined())
     s = ": reference to ";
-  else if (sym->isLazy())
+  else if (sym.isLazy())
     s = ": lazy definition of ";
-  else if (sym->isShared())
+  else if (sym.isShared())
     s = ": shared definition of ";
-  else if (sym->isCommon())
+  else if (sym.isCommon())
     s = ": common definition of ";
   else
     s = ": definition of ";
 
-  message(toString(sym->file) + s + sym->getName());
+  message(toString(sym.file) + s + name);
 }
 
 static void recordWhyExtract(const InputFile *reference,
@@ -458,7 +455,7 @@ void Symbol::resolveUndefined(const Undefined &other) {
   }
 
   if (traced)
-    printTraceSymbol(&other);
+    printTraceSymbol(other, getName());
 
   if (isLazy()) {
     // An undefined weak will not extract archive members. See comment on Lazy
@@ -702,7 +699,7 @@ template <class LazyT> void Symbol::resolveLazy(const LazyT &other) {
         return;
       }
     } else if (auto *loSym = dyn_cast<LazyObject>(&other)) {
-      if (loSym->file->shouldExtractForCommon(loSym->getName())) {
+      if (loSym->file->shouldExtractForCommon(getName())) {
         replaceCommon(*this, other);
         return;
       }
@@ -746,5 +743,5 @@ void Symbol::resolveShared(const SharedSymbol &other) {
     replace(other);
     binding = bind;
   } else if (traced)
-    printTraceSymbol(&other);
+    printTraceSymbol(other, getName());
 }

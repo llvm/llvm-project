@@ -1531,10 +1531,10 @@ int registerOnlyStd() {
   fprintf(stderr, "@registration\n");
   // CHECK-LABEL: @registration
 
-  // CHECK: std.cond_br is_registered: 1
-  fprintf(stderr, "std.cond_br is_registered: %d\n",
+  // CHECK: cf.cond_br is_registered: 1
+  fprintf(stderr, "cf.cond_br is_registered: %d\n",
           mlirContextIsRegisteredOperation(
-              ctx, mlirStringRefCreateFromCString("std.cond_br")));
+              ctx, mlirStringRefCreateFromCString("cf.cond_br")));
 
   // CHECK: std.not_existing_op is_registered: 0
   fprintf(stderr, "std.not_existing_op is_registered: %d\n",

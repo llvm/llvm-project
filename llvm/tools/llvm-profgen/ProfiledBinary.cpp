@@ -211,17 +211,13 @@ void ProfiledBinary::load() {
   if (!DebugBinaryPath.empty()) {
     OwningBinary<Binary> DebugPath =
         unwrapOrError(createBinary(DebugBinaryPath), DebugBinaryPath);
-    loadSymbolsFromDWARF(*dyn_cast<ObjectFile>(DebugPath.getBinary()));
+    loadSymbolsFromDWARF(*cast<ObjectFile>(DebugPath.getBinary()));
   } else {
-    loadSymbolsFromDWARF(*dyn_cast<ObjectFile>(&ExeBinary));
+    loadSymbolsFromDWARF(*cast<ObjectFile>(&ExeBinary));
   }
 
   // Disassemble the text sections.
   disassemble(Obj);
-
-  // Track size for optimized inlinees when probe is available
-  if (UsePseudoProbes && TrackFuncContextSize)
-    FuncSizeTracker.trackInlineesOptimizedAway(ProbeDecoder);
 
   // Use function start and return address to infer prolog and epilog
   ProEpilogTracker.inferPrologOffsets(StartOffset2FuncRangeMap);
@@ -346,6 +342,17 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
         exitWithError("Pseudo Probe decoder fail in .pseudo_probe section");
       // set UsePseudoProbes flag, used for PerfReader
       UsePseudoProbes = true;
+    }
+  }
+
+  // Build TopLevelProbeFrameMap to track size for optimized inlinees when probe
+  // is available
+  if (UsePseudoProbes && TrackFuncContextSize) {
+    for (const auto &Child : ProbeDecoder.getDummyInlineRoot().getChildren()) {
+      auto *Frame = Child.second.get();
+      StringRef FuncName =
+          ProbeDecoder.getFuncDescForGUID(Frame->Guid)->FuncName;
+      TopLevelProbeFrameMap[FuncName] = Frame;
     }
   }
 
@@ -745,6 +752,25 @@ void ProfiledBinary::computeInlinedContextSizeForRange(uint64_t StartOffset,
     FuncSizeTracker.addInstructionForContext(SymbolizedCallStack, Size);
 
   } while (IP.advance() && IP.Address < RangeEnd);
+}
+
+void ProfiledBinary::computeInlinedContextSizeForFunc(
+    const BinaryFunction *Func) {
+  // Note that a function can be spilt into multiple ranges, so compute for all
+  // ranges of the function.
+  for (const auto &Range : Func->Ranges)
+    computeInlinedContextSizeForRange(Range.first, Range.second);
+
+  // Track optimized-away inlinee for probed binary. A function inlined and then
+  // optimized away should still have their probes left over in places.
+  if (usePseudoProbes()) {
+    auto I = TopLevelProbeFrameMap.find(Func->FuncName);
+    if (I != TopLevelProbeFrameMap.end()) {
+      BinarySizeContextTracker::ProbeFrameStack ProbeContext;
+      FuncSizeTracker.trackInlineesOptimizedAway(ProbeDecoder, *I->second,
+                                                 ProbeContext);
+    }
+  }
 }
 
 InstructionPointer::InstructionPointer(const ProfiledBinary *Binary,

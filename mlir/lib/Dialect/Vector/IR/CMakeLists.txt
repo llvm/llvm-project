@@ -9,14 +9,12 @@ add_mlir_dialect_library(MLIRVector
   MLIRVectorOpsEnumsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAffine
-  MLIRAffineAnalysis
-  MLIRAffineUtils
   MLIRArithmetic
+  MLIRDataLayoutInterfaces
   MLIRDialectUtils
   MLIRIR
   MLIRMemRef
-  MLIRStandard
   MLIRSideEffectInterfaces
+  MLIRTensor
   MLIRVectorInterfaces
   )

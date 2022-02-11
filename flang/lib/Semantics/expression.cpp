@@ -987,11 +987,20 @@ std::optional<Component> ExpressionAnalyzer::CreateComponent(
   if (&component.owner() == &scope) {
     return Component{std::move(base), component};
   }
-  if (const semantics::Scope * parentScope{scope.GetDerivedTypeParent()}) {
-    if (const Symbol * parentComponent{parentScope->GetSymbol()}) {
-      return CreateComponent(
-          DataRef{Component{std::move(base), *parentComponent}}, component,
-          *parentScope);
+  if (const Symbol * typeSymbol{scope.GetSymbol()}) {
+    if (const Symbol *
+        parentComponent{typeSymbol->GetParentComponent(&scope)}) {
+      if (const auto *object{
+              parentComponent->detailsIf<semantics::ObjectEntityDetails>()}) {
+        if (const auto *parentType{object->type()}) {
+          if (const semantics::Scope *
+              parentScope{parentType->derivedTypeSpec().scope()}) {
+            return CreateComponent(
+                DataRef{Component{std::move(base), *parentComponent}},
+                component, *parentScope);
+          }
+        }
+      }
     }
   }
   return std::nullopt;
@@ -2474,7 +2483,7 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
     bool treatExternalAsImplicit{IsExternalCalledImplicitly(callSite, proc)};
     if (treatExternalAsImplicit && !chars->CanBeCalledViaImplicitInterface()) {
       Say(callSite,
-          "References to the procedure '%s' require an explicit interface"_en_US,
+          "References to the procedure '%s' require an explicit interface"_err_en_US,
           DEREF(proc.GetSymbol()).name());
     }
     // Checks for ASSOCIATED() are done in intrinsic table processing

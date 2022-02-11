@@ -182,15 +182,6 @@ count_t GetSystemClockCountMax(int kind, preferred_implementation,
 
 // DATE_AND_TIME (Fortran 2018 16.9.59)
 
-// Helper to store integer value in result[at].
-template <int KIND> struct StoreIntegerAt {
-  void operator()(const Fortran::runtime::Descriptor &result, std::size_t at,
-      std::int64_t value) const {
-    *result.ZeroBasedIndexedElement<Fortran::runtime::CppTypeFor<
-        Fortran::common::TypeCategory::Integer, KIND>>(at) = value;
-  }
-};
-
 // Helper to set an integer value to -HUGE
 template <int KIND> struct StoreNegativeHugeAt {
   void operator()(
@@ -319,8 +310,8 @@ static void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
     int kind{typeCode->second};
     RUNTIME_CHECK(terminator, kind != 1);
     auto storeIntegerAt = [&](std::size_t atIndex, std::int64_t value) {
-      Fortran::runtime::ApplyIntegerKind<StoreIntegerAt, void>(
-          kind, terminator, *values, atIndex, value);
+      Fortran::runtime::ApplyIntegerKind<Fortran::runtime::StoreIntegerAt,
+          void>(kind, terminator, *values, atIndex, value);
     };
     storeIntegerAt(0, localTime.tm_year + 1900);
     storeIntegerAt(1, localTime.tm_mon + 1);

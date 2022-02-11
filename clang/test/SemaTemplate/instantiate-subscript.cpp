@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++2b %s
 
 struct Sub0 {
   int &operator[](int);

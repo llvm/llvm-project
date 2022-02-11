@@ -54,6 +54,7 @@
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
@@ -108,10 +109,10 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
 
   CheckInWithManager();
 
-  LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT),
-           "{0} Target::Target()", static_cast<void *>(this));
+  LLDB_LOG(GetLog(LLDBLog::Object), "{0} Target::Target()",
+           static_cast<void *>(this));
   if (target_arch.IsValid()) {
-    LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET),
+    LLDB_LOG(GetLog(LLDBLog::Target),
              "Target::Target created with architecture {0} ({1})",
              target_arch.GetArchitectureName(),
              target_arch.GetTriple().getTriple().c_str());
@@ -121,7 +122,7 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
 }
 
 Target::~Target() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+  Log *log = GetLog(LLDBLog::Object);
   LLDB_LOG(log, "{0} Target::~Target()", static_cast<void *>(this));
   DeleteCurrentProcess();
 }
@@ -647,7 +648,7 @@ void Target::AddBreakpoint(lldb::BreakpointSP bp_sp, bool internal) {
   else
     m_breakpoint_list.Add(bp_sp, true);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   if (log) {
     StreamString s;
     bp_sp->GetDescription(&s, lldb::eDescriptionLevelVerbose);
@@ -743,8 +744,7 @@ void Target::ApplyNameToBreakpoints(BreakpointName &bp_name) {
       m_breakpoint_list.FindBreakpointsByName(bp_name.GetName().AsCString());
 
   if (!expected_vector) {
-    LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS),
-             "invalid breakpoint name: {}",
+    LLDB_LOG(GetLog(LLDBLog::Breakpoints), "invalid breakpoint name: {}",
              llvm::toString(expected_vector.takeError()));
     return;
   }
@@ -789,7 +789,7 @@ static bool CheckIfWatchpointsSupported(Target *target, Status &error) {
 WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
                                       const CompilerType *type, uint32_t kind,
                                       Status &error) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   LLDB_LOGF(log,
             "Target::%s (addr = 0x%8.8" PRIx64 " size = %" PRIu64
             " type = %u)\n",
@@ -873,7 +873,7 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
 }
 
 void Target::RemoveAllowedBreakpoints() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   LLDB_LOGF(log, "Target::%s \n", __FUNCTION__);
 
   m_breakpoint_list.RemoveAllowed(true);
@@ -882,7 +882,7 @@ void Target::RemoveAllowedBreakpoints() {
 }
 
 void Target::RemoveAllBreakpoints(bool internal_also) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   LLDB_LOGF(log, "Target::%s (internal_also = %s)\n", __FUNCTION__,
             internal_also ? "yes" : "no");
 
@@ -894,7 +894,7 @@ void Target::RemoveAllBreakpoints(bool internal_also) {
 }
 
 void Target::DisableAllBreakpoints(bool internal_also) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   LLDB_LOGF(log, "Target::%s (internal_also = %s)\n", __FUNCTION__,
             internal_also ? "yes" : "no");
 
@@ -904,14 +904,14 @@ void Target::DisableAllBreakpoints(bool internal_also) {
 }
 
 void Target::DisableAllowedBreakpoints() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   LLDB_LOGF(log, "Target::%s", __FUNCTION__);
 
   m_breakpoint_list.SetEnabledAllowed(false);
 }
 
 void Target::EnableAllBreakpoints(bool internal_also) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   LLDB_LOGF(log, "Target::%s (internal_also = %s)\n", __FUNCTION__,
             internal_also ? "yes" : "no");
 
@@ -921,14 +921,14 @@ void Target::EnableAllBreakpoints(bool internal_also) {
 }
 
 void Target::EnableAllowedBreakpoints() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   LLDB_LOGF(log, "Target::%s", __FUNCTION__);
 
   m_breakpoint_list.SetEnabledAllowed(true);
 }
 
 bool Target::RemoveBreakpointByID(break_id_t break_id) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   LLDB_LOGF(log, "Target::%s (break_id = %i, internal = %s)\n", __FUNCTION__,
             break_id, LLDB_BREAK_ID_IS_INTERNAL(break_id) ? "yes" : "no");
 
@@ -948,7 +948,7 @@ bool Target::RemoveBreakpointByID(break_id_t break_id) {
 }
 
 bool Target::DisableBreakpointByID(break_id_t break_id) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   LLDB_LOGF(log, "Target::%s (break_id = %i, internal = %s)\n", __FUNCTION__,
             break_id, LLDB_BREAK_ID_IS_INTERNAL(break_id) ? "yes" : "no");
 
@@ -966,7 +966,7 @@ bool Target::DisableBreakpointByID(break_id_t break_id) {
 }
 
 bool Target::EnableBreakpointByID(break_id_t break_id) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   LLDB_LOGF(log, "Target::%s (break_id = %i, internal = %s)\n", __FUNCTION__,
             break_id, LLDB_BREAK_ID_IS_INTERNAL(break_id) ? "yes" : "no");
 
@@ -1144,7 +1144,7 @@ Status Target::CreateBreakpointsFromFile(const FileSpec &file,
 // Assumption: Caller holds the list mutex lock for m_watchpoint_list for end
 // to end operations.
 bool Target::RemoveAllWatchpoints(bool end_to_end) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   LLDB_LOGF(log, "Target::%s\n", __FUNCTION__);
 
   if (!end_to_end) {
@@ -1173,7 +1173,7 @@ bool Target::RemoveAllWatchpoints(bool end_to_end) {
 // Assumption: Caller holds the list mutex lock for m_watchpoint_list for end
 // to end operations.
 bool Target::DisableAllWatchpoints(bool end_to_end) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   LLDB_LOGF(log, "Target::%s\n", __FUNCTION__);
 
   if (!end_to_end) {
@@ -1200,7 +1200,7 @@ bool Target::DisableAllWatchpoints(bool end_to_end) {
 // Assumption: Caller holds the list mutex lock for m_watchpoint_list for end
 // to end operations.
 bool Target::EnableAllWatchpoints(bool end_to_end) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   LLDB_LOGF(log, "Target::%s\n", __FUNCTION__);
 
   if (!end_to_end) {
@@ -1226,7 +1226,7 @@ bool Target::EnableAllWatchpoints(bool end_to_end) {
 
 // Assumption: Caller holds the list mutex lock for m_watchpoint_list.
 bool Target::ClearAllWatchpointHitCounts() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   LLDB_LOGF(log, "Target::%s\n", __FUNCTION__);
 
   for (WatchpointSP wp_sp : m_watchpoint_list.Watchpoints()) {
@@ -1240,7 +1240,7 @@ bool Target::ClearAllWatchpointHitCounts() {
 
 // Assumption: Caller holds the list mutex lock for m_watchpoint_list.
 bool Target::ClearAllWatchpointHistoricValues() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   LLDB_LOGF(log, "Target::%s\n", __FUNCTION__);
 
   for (WatchpointSP wp_sp : m_watchpoint_list.Watchpoints()) {
@@ -1255,7 +1255,7 @@ bool Target::ClearAllWatchpointHistoricValues() {
 // Assumption: Caller holds the list mutex lock for m_watchpoint_list during
 // these operations.
 bool Target::IgnoreAllWatchpoints(uint32_t ignore_count) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   LLDB_LOGF(log, "Target::%s\n", __FUNCTION__);
 
   if (!ProcessIsValid())
@@ -1272,7 +1272,7 @@ bool Target::IgnoreAllWatchpoints(uint32_t ignore_count) {
 
 // Assumption: Caller holds the list mutex lock for m_watchpoint_list.
 bool Target::DisableWatchpointByID(lldb::watch_id_t watch_id) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   LLDB_LOGF(log, "Target::%s (watch_id = %i)\n", __FUNCTION__, watch_id);
 
   if (!ProcessIsValid())
@@ -1291,7 +1291,7 @@ bool Target::DisableWatchpointByID(lldb::watch_id_t watch_id) {
 
 // Assumption: Caller holds the list mutex lock for m_watchpoint_list.
 bool Target::EnableWatchpointByID(lldb::watch_id_t watch_id) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   LLDB_LOGF(log, "Target::%s (watch_id = %i)\n", __FUNCTION__, watch_id);
 
   if (!ProcessIsValid())
@@ -1310,7 +1310,7 @@ bool Target::EnableWatchpointByID(lldb::watch_id_t watch_id) {
 
 // Assumption: Caller holds the list mutex lock for m_watchpoint_list.
 bool Target::RemoveWatchpointByID(lldb::watch_id_t watch_id) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   LLDB_LOGF(log, "Target::%s (watch_id = %i)\n", __FUNCTION__, watch_id);
 
   WatchpointSP watch_to_remove_sp = m_watchpoint_list.FindByID(watch_id);
@@ -1327,7 +1327,7 @@ bool Target::RemoveWatchpointByID(lldb::watch_id_t watch_id) {
 // Assumption: Caller holds the list mutex lock for m_watchpoint_list.
 bool Target::IgnoreWatchpointByID(lldb::watch_id_t watch_id,
                                   uint32_t ignore_count) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   LLDB_LOGF(log, "Target::%s (watch_id = %i)\n", __FUNCTION__, watch_id);
 
   if (!ProcessIsValid())
@@ -1392,7 +1392,7 @@ void Target::DidExec() {
 
 void Target::SetExecutableModule(ModuleSP &executable_sp,
                                  LoadDependentFiles load_dependent_files) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
+  Log *log = GetLog(LLDBLog::Target);
   ClearModules(false);
 
   if (executable_sp) {
@@ -1457,7 +1457,7 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
 }
 
 bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
+  Log *log = GetLog(LLDBLog::Target);
   bool missing_local_arch = !m_arch.GetSpec().IsValid();
   bool replace_local_arch = true;
   bool compatible_local_arch = false;
@@ -1545,7 +1545,7 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform) {
 }
 
 bool Target::MergeArchitecture(const ArchSpec &arch_spec) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
+  Log *log = GetLog(LLDBLog::Target);
   if (arch_spec.IsValid()) {
     if (m_arch.GetSpec().IsCompatibleMatch(arch_spec)) {
       // The current target arch is compatible with "arch_spec", see if we can
@@ -2187,8 +2187,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
           // In the meantime, just log that this has happened; just
           // above we called ReplaceModule on the first one, and Remove
           // on the rest.
-          if (Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET |
-                                                  LIBLLDB_LOG_MODULES)) {
+          if (Log *log = GetLog(LLDBLog::Target | LLDBLog::Modules)) {
             StreamString message;
             auto dump = [&message](Module &dump_module) -> void {
               UUID dump_uuid = dump_module.GetUUID();
@@ -2305,8 +2304,7 @@ std::vector<TypeSystem *> Target::GetScratchTypeSystems(bool create_on_demand) {
     auto type_system_or_err =
         GetScratchTypeSystemForLanguage(language, create_on_demand);
     if (!type_system_or_err)
-      LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET),
-                     type_system_or_err.takeError(),
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Target), type_system_or_err.takeError(),
                      "Language '{}' has expression support but no scratch type "
                      "system available",
                      Language::GetNameForLanguageType(language));
@@ -2322,8 +2320,7 @@ Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language) {
   auto type_system_or_err = GetScratchTypeSystemForLanguage(language, true);
 
   if (auto err = type_system_or_err.takeError()) {
-    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET),
-                   std::move(err),
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Target), std::move(err),
                    "Unable to get persistent expression state for language {}",
                    Language::GetNameForLanguageType(language));
     return nullptr;
@@ -2421,7 +2418,7 @@ ArchSpec Target::GetDefaultArchitecture() {
 }
 
 void Target::SetDefaultArchitecture(const ArchSpec &arch) {
-  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET),
+  LLDB_LOG(GetLog(LLDBLog::Target),
            "setting target's default architecture to  {0} ({1})",
            arch.GetArchitectureName(), arch.GetTriple().getTriple());
   Target::GetGlobalProperties().SetDefaultArchitecture(arch);
@@ -2480,8 +2477,8 @@ ExpressionResults Target::EvaluateExpression(
     auto type_system_or_err =
             GetScratchTypeSystemForLanguage(eLanguageTypeC);
     if (auto err = type_system_or_err.takeError()) {
-      LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET),
-                     std::move(err), "Unable to get scratch type system");
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Target), std::move(err),
+                     "Unable to get scratch type system");
     } else {
       persistent_var_sp =
           type_system_or_err->GetPersistentExpressionState()->GetVariable(expr);
@@ -2811,7 +2808,7 @@ bool Target::RunStopHooks() {
   // We only compute should_stop against the hook results if a hook got to run
   // which is why we have to do this conjoint test.
   if ((hooks_ran && !should_stop) || auto_continue) {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+    Log *log = GetLog(LLDBLog::Process);
     Status error = m_process_sp->PrivateResume();
     if (error.Success()) {
       LLDB_LOG(log, "Resuming from RunStopHooks");
@@ -2967,7 +2964,7 @@ void Target::ClearAllLoadedSections() { m_section_load_history.Clear(); }
 Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
   m_stats.SetLaunchOrAttachTime();
   Status error;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
+  Log *log = GetLog(LLDBLog::Target);
 
   LLDB_LOGF(log, "Target::%s() called for %s", __FUNCTION__,
             launch_info.GetExecutableFile().GetPath().c_str());
@@ -3252,7 +3249,7 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
 }
 
 void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  Log *log = GetLog(LLDBLog::Process);
 
   // Finalize the file actions, and if none were given, default to opening up a
   // pseudo terminal

@@ -62,8 +62,8 @@ func @select(%arg0: tensor<i1>, %arg1: tensor<i32>, %arg2: tensor<i32>) -> tenso
   // CHECK-SAME:  ins(%[[ARG0]], %[[ARG1]], %[[ARG2]]
   // CHECK-SAME: outs(%[[ARG1]]
   // CHECK: ^bb0(%[[PRED:.*]]: i1, %[[TRUE_VAL:.*]]: i32, %[[FALSE_VAL:.*]]: i32, %{{.*}}: i32):
-  // CHECK:   select %[[PRED]], %[[TRUE_VAL]], %[[FALSE_VAL]] : i32
-  %0 = select %arg0, %arg1, %arg2 : tensor<i1>, tensor<i32>
+  // CHECK:   arith.select %[[PRED]], %[[TRUE_VAL]], %[[FALSE_VAL]] : i32
+  %0 = arith.select %arg0, %arg1, %arg2 : tensor<i1>, tensor<i32>
   return %0 : tensor<i32>
 }
 

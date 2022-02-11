@@ -39,7 +39,7 @@ LSUnitBase::LSUnitBase(const MCSchedModel &SM, unsigned LQ, unsigned SQ,
   }
 }
 
-LSUnitBase::~LSUnitBase() {}
+LSUnitBase::~LSUnitBase() = default;
 
 void LSUnitBase::cycleEvent() {
   for (const std::pair<unsigned, std::unique_ptr<MemoryGroup>> &G : Groups)

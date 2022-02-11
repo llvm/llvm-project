@@ -328,8 +328,10 @@ void Symtab::InitNameIndexes() {
 
         const SymbolType type = symbol->GetType();
         if (type == eSymbolTypeCode || type == eSymbolTypeResolver) {
-          if (mangled.DemangleWithRichManglingInfo(rmc, lldb_skip_name))
+          if (mangled.GetRichManglingInfo(rmc, lldb_skip_name)) {
             RegisterMangledNameEntry(value, class_contexts, backlog, rmc);
+            continue;
+          }
         }
       }
 
@@ -383,16 +385,13 @@ void Symtab::RegisterMangledNameEntry(
     std::vector<std::pair<NameToIndexMap::Entry, const char *>> &backlog,
     RichManglingContext &rmc) {
   // Only register functions that have a base name.
-  rmc.ParseFunctionBaseName();
-  llvm::StringRef base_name = rmc.GetBufferRef();
+  llvm::StringRef base_name = rmc.ParseFunctionBaseName();
   if (base_name.empty())
     return;
 
   // The base name will be our entry's name.
   NameToIndexMap::Entry entry(ConstString(base_name), value);
-
-  rmc.ParseFunctionDeclContextName();
-  llvm::StringRef decl_context = rmc.GetBufferRef();
+  llvm::StringRef decl_context = rmc.ParseFunctionDeclContextName();
 
   // Register functions with no context.
   if (decl_context.empty()) {

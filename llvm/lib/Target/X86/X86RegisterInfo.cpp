@@ -618,6 +618,62 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
+bool X86RegisterInfo::isArgumentRegister(const MachineFunction &MF,
+                                         MCRegister Reg) const {
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  const TargetRegisterInfo &TRI = *ST.getRegisterInfo();
+  auto IsSubReg = [&](MCRegister RegA, MCRegister RegB) {
+    return TRI.isSuperOrSubRegisterEq(RegA, RegB);
+  };
+
+  if (!ST.is64Bit())
+    return llvm::any_of(
+               SmallVector<MCRegister>{X86::EAX, X86::ECX, X86::EDX},
+               [&](MCRegister &RegA) { return IsSubReg(RegA, Reg); }) ||
+           (ST.hasMMX() && X86::VR64RegClass.contains(Reg));
+
+  CallingConv::ID CC = MF.getFunction().getCallingConv();
+
+  if (CC == CallingConv::X86_64_SysV && IsSubReg(X86::RAX, Reg))
+    return true;
+
+  if (llvm::any_of(
+          SmallVector<MCRegister>{X86::RDX, X86::RCX, X86::R8, X86::R9},
+          [&](MCRegister &RegA) { return IsSubReg(RegA, Reg); }))
+    return true;
+
+  if (CC != CallingConv::Win64 &&
+      llvm::any_of(SmallVector<MCRegister>{X86::RDI, X86::RSI},
+                   [&](MCRegister &RegA) { return IsSubReg(RegA, Reg); }))
+    return true;
+
+  if (ST.hasSSE1() &&
+      llvm::any_of(SmallVector<MCRegister>{X86::XMM0, X86::XMM1, X86::XMM2,
+                                           X86::XMM3, X86::XMM4, X86::XMM5,
+                                           X86::XMM6, X86::XMM7},
+                   [&](MCRegister &RegA) { return IsSubReg(RegA, Reg); }))
+    return true;
+
+  return false;
+}
+
+bool X86RegisterInfo::isFixedRegister(const MachineFunction &MF,
+                                      MCRegister PhysReg) const {
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  const TargetRegisterInfo &TRI = *ST.getRegisterInfo();
+
+  // Stack pointer.
+  if (TRI.isSuperOrSubRegisterEq(X86::RSP, PhysReg))
+    return true;
+
+  // Don't use the frame pointer if it's being used.
+  const X86FrameLowering &TFI = *getFrameLowering(MF);
+  if (TFI.hasFP(MF) && TRI.isSuperOrSubRegisterEq(X86::RBP, PhysReg))
+    return true;
+
+  return X86GenRegisterInfo::isFixedRegister(MF, PhysReg);
+}
+
 void X86RegisterInfo::adjustStackMapLiveOutMask(uint32_t *Mask) const {
   // Check if the EFLAGS register is marked as live-out. This shouldn't happen,
   // because the calling convention defines the EFLAGS register as NOT

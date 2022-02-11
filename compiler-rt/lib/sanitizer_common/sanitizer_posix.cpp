@@ -95,6 +95,7 @@ void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
     UnmapOrDie((void*)map_res, res - map_res);
   }
   uptr end = res + size;
+  end = RoundUpTo(end, GetPageSizeCached());
   if (end != map_end)
     UnmapOrDie((void*)end, map_end - end);
   return (void*)res;

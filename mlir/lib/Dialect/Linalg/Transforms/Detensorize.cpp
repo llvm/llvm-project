@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/StandardOps/Transforms/FuncConversions.h"
@@ -254,13 +255,13 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
                  DenseSet<BlockArgument> &blockArgsToDetensor) override {
       SmallVector<Value> workList;
 
-      func->walk([&](CondBranchOp condBr) {
+      func->walk([&](cf::CondBranchOp condBr) {
         for (auto operand : condBr.getOperands()) {
           workList.push_back(operand);
         }
       });
 
-      func->walk([&](BranchOp br) {
+      func->walk([&](cf::BranchOp br) {
         for (auto operand : br.getOperands()) {
           workList.push_back(operand);
         }

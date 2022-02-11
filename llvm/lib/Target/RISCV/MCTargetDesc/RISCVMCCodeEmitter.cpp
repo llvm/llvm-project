@@ -23,6 +23,7 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/EndianStream.h"
@@ -46,7 +47,7 @@ public:
   RISCVMCCodeEmitter(MCContext &ctx, MCInstrInfo const &MCII)
       : Ctx(ctx), MCII(MCII) {}
 
-  ~RISCVMCCodeEmitter() override {}
+  ~RISCVMCCodeEmitter() override = default;
 
   void encodeInstruction(const MCInst &MI, raw_ostream &OS,
                          SmallVectorImpl<MCFixup> &Fixups,

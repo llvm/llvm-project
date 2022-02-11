@@ -43,34 +43,21 @@ public:
   bool IsCtorOrDtor() const;
 
   /// Get the base name of a function. This doesn't include trailing template
-  /// arguments, ie "a::b<int>" gives "b". The result will overwrite the
-  /// internal buffer. It can be obtained via GetBufferRef().
-  void ParseFunctionBaseName();
+  /// arguments, ie "a::b<int>" gives "b".
+  llvm::StringRef ParseFunctionBaseName();
 
   /// Get the context name for a function. For "a::b::c", this function returns
-  /// "a::b". The result will overwrite the internal buffer. It can be obtained
-  /// via GetBufferRef().
-  void ParseFunctionDeclContextName();
+  /// "a::b".
+  llvm::StringRef ParseFunctionDeclContextName();
 
-  /// Get the entire demangled name. The result will overwrite the internal
-  /// buffer. It can be obtained via GetBufferRef().
-  void ParseFullName();
-
-  /// Obtain a StringRef to the internal buffer that holds the result of the
-  /// most recent ParseXy() operation. The next ParseXy() call invalidates it.
-  llvm::StringRef GetBufferRef() const {
-    assert(m_provider != None && "Initialize a provider first");
-    return m_buffer;
-  }
+  /// Get the entire demangled name.
+  llvm::StringRef ParseFullName();
 
 private:
   enum InfoProvider { None, ItaniumPartialDemangler, PluginCxxLanguage };
 
   /// Selects the rich mangling info provider.
   InfoProvider m_provider = None;
-
-  /// Reference to the buffer used for results of ParseXy() operations.
-  llvm::StringRef m_buffer;
 
   /// Members for ItaniumPartialDemangler
   llvm::ItaniumPartialDemangler m_ipd;
@@ -93,7 +80,7 @@ private:
   void ResetProvider(InfoProvider new_provider);
 
   /// Uniform handling of string buffers for ItaniumPartialDemangler.
-  void processIPDStrResult(char *ipd_res, size_t res_len);
+  llvm::StringRef processIPDStrResult(char *ipd_res, size_t res_len);
 
   /// Cast the given parser to the given type. Ideally we would have a type
   /// trait to deduce \a ParserT from a given InfoProvider, but unfortunately we

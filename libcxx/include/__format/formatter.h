@@ -18,15 +18,11 @@
 #include <__format/format_fwd.h>
 #include <__format/format_string.h>
 #include <__format/parser_std_format_spec.h>
-#include <concepts>
 #include <string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
-
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -284,7 +280,5 @@ __write_unicode(output_iterator<const _CharT&> auto __out_it,
 #endif //_LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___FORMAT_FORMATTER_H

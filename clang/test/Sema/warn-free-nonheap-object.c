@@ -10,7 +10,7 @@ struct S {
 };
 
 int GI;
-void test() {
+void test(void) {
   {
     free(&GI); // expected-warning {{attempt to call free on non-heap object 'GI'}}
   }

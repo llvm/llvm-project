@@ -541,6 +541,8 @@ class Attr {
   //   match rules.
   // - It has GNU/CXX11 spelling and doesn't require delayed parsing.
   bit PragmaAttributeSupport;
+  // Set to true if this attribute accepts parameter pack expansion expressions.
+  bit AcceptsExprPack = 0;
   // Lists language options, one of which is required to be true for the
   // attribute to be applicable. If empty, no language options are required.
   list<LangOpt> LangOpts = [];
@@ -784,6 +786,7 @@ def Annotate : InheritableParamAttr {
   }
   }];
   let PragmaAttributeSupport = 1;
+  let AcceptsExprPack = 1;
   let Documentation = [Undocumented];
 }
 
@@ -2559,6 +2562,19 @@ def VectorCall : DeclOrTypeAttr {
                    Keyword<"_vectorcall">];
 //  let Subjects = [Function, ObjCMethod];
   let Documentation = [VectorCallDocs];
+}
+
+def ZeroCallUsedRegs : InheritableAttr {
+  let Spellings = [GCC<"zero_call_used_regs">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Args = [
+    EnumArgument<"ZeroCallUsedRegs", "ZeroCallUsedRegsKind",
+                 ["skip", "used-gpr-arg", "used-gpr", "used-arg", "used",
+                  "all-gpr-arg", "all-gpr", "all-arg", "all"],
+                 ["Skip", "UsedGPRArg", "UsedGPR", "UsedArg", "Used",
+                  "AllGPRArg", "AllGPR", "AllArg", "All"]>
+  ];
+  let Documentation = [ZeroCallUsedRegsDocs];
 }
 
 def Pascal : DeclOrTypeAttr {

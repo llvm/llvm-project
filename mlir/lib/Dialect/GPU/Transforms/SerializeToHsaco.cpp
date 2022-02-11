@@ -438,10 +438,13 @@ SerializeToHsacoPass::createHsaco(const SmallVectorImpl<char> &isaBinary) {
     static std::mutex mutex;
     const std::lock_guard<std::mutex> lock(mutex);
     // Invoke lld. Expect a true return value from lld.
-    if (!lld::elf::link({"ld.lld", "-shared", tempIsaBinaryFilename.c_str(),
-                         "-o", tempHsacoFilename.c_str()},
-                        llvm::outs(), llvm::errs(), /*exitEarly=*/true,
-                        /*disableOutput=*/false)) {
+    bool r = lld::elf::link({"ld.lld", "-shared", tempIsaBinaryFilename.c_str(),
+                             "-o", tempHsacoFilename.c_str()},
+                            llvm::outs(), llvm::errs(), /*exitEarly=*/false,
+                            /*disableOutput=*/false);
+    // Allow for calling the driver again in the same process.
+    lld::cleanup();
+    if (!r) {
       emitError(loc, "lld invocation error");
       return {};
     }

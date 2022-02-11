@@ -13,7 +13,7 @@ void foo12 (int x, ... ) ATTR; // expected-note {{function has been explicitly m
 
 #define FOOMACRO(...) foo1(__VA_ARGS__)
 
-void test1() {
+void test1(void) {
   foo1(1, NULL); // OK
   foo1(1, 0) ; // expected-warning {{missing sentinel in function call}}
   foo5(1, NULL, 2);  // OK
@@ -41,7 +41,7 @@ void test1() {
 
 void (*e) (int arg, const char * format, ...) __attribute__ ((__sentinel__ (1,1)));
 
-void test2() {
+void test2(void) {
   void (*b) (int arg, const char * format, ...) __attribute__ ((__sentinel__));  // expected-note {{function has been explicitly marked sentinel here}}
   void (*z) (int arg, const char * format, ...) __attribute__ ((__sentinel__ (2))); // expected-note {{function has been explicitly marked sentinel here}}
   

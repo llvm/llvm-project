@@ -13,12 +13,12 @@
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__utility/forward.h>
+#include <__utility/move.h>
 #include <concepts> // __class_or_enum
 #include <type_traits>
-#include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -83,7 +83,7 @@ inline namespace __cpo {
 } // namespace ranges
 
 template<__dereferenceable _Tp>
-  requires requires(_Tp& __t) { { ranges::iter_move(__t) } -> __referenceable; }
+  requires requires(_Tp& __t) { { ranges::iter_move(__t) } -> __can_reference; }
 using iter_rvalue_reference_t = decltype(ranges::iter_move(declval<_Tp&>()));
 
 #endif // !_LIBCPP_HAS_NO_CONCEPTS

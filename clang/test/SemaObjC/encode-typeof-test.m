@@ -19,7 +19,7 @@ Class <X> IVAR_Classx;
 @implementation Intf 
 @end
 
-int main()
+int main(void)
 {
     int i;
     typeof(@encode(typeof(i))) e = @encode(typeof(Intf)); // expected-warning {{initializer-string for char array is too long}}
@@ -39,7 +39,7 @@ struct foo {
  char *string;
 };
 
-const char *RetEncode () {
+const char *RetEncode (void) {
  return @encode(struct foo); // expected-warning {{encoding of 'struct foo' type is incomplete because 'short8' (vector of 8 'short' values) component has unknown encoding}}
 }
 

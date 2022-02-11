@@ -72,8 +72,7 @@ class MCJIT : public ExecutionEngine {
 
   class OwningModuleContainer {
   public:
-    OwningModuleContainer() {
-    }
+    OwningModuleContainer() = default;
     ~OwningModuleContainer() {
       freeModulePtrSet(AddedModules);
       freeModulePtrSet(LoadedModules);

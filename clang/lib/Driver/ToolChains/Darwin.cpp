@@ -209,19 +209,19 @@ static bool shouldLinkerNotDedup(bool IsLinkerOnlyAction, const ArgList &Args) {
 void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
                                  ArgStringList &CmdArgs,
                                  const InputInfoList &Inputs,
-                                 unsigned Version[5], bool LinkerIsLLD) const {
+                                 VersionTuple Version, bool LinkerIsLLD) const {
   const Driver &D = getToolChain().getDriver();
   const toolchains::MachO &MachOTC = getMachOToolChain();
 
   // Newer linkers support -demangle. Pass it if supported and not disabled by
   // the user.
-  if ((Version[0] >= 100 || LinkerIsLLD) &&
+  if ((Version >= VersionTuple(100) || LinkerIsLLD) &&
       !Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("-demangle");
 
   // FIXME: Pass most of the flags below that check Version if LinkerIsLLD too.
 
-  if (Args.hasArg(options::OPT_rdynamic) && Version[0] >= 137)
+  if (Args.hasArg(options::OPT_rdynamic) && Version >= VersionTuple(137))
     CmdArgs.push_back("-export_dynamic");
 
   // If we are using App Extension restrictions, pass a flag to the linker
@@ -230,7 +230,7 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
                    options::OPT_fno_application_extension, false))
     CmdArgs.push_back("-application_extension");
 
-  if (D.isUsingLTO() && Version[0] >= 116 && NeedsTempPath(Inputs)) {
+  if (D.isUsingLTO() && Version >= VersionTuple(116) && NeedsTempPath(Inputs)) {
     std::string TmpPathName;
     if (D.getLTOMode() == LTOK_Full) {
       // If we are using full LTO, then automatically create a temporary file
@@ -259,7 +259,7 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
   // clang version won't work anyways.
   // lld is built at the same revision as clang and statically links in
   // LLVM libraries, so it doesn't need libLTO.dylib.
-  if (Version[0] >= 133 && !LinkerIsLLD) {
+  if (Version >= VersionTuple(133) && !LinkerIsLLD) {
     // Search for libLTO in <InstalledDir>/../lib/libLTO.dylib
     StringRef P = llvm::sys::path::parent_path(D.Dir);
     SmallString<128> LibLTOPath(P);
@@ -270,7 +270,7 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
   }
 
   // ld64 version 262 and above run the deduplicate pass by default.
-  if (Version[0] >= 262 && shouldLinkerNotDedup(C.getJobs().empty(), Args))
+  if (Version >= VersionTuple(262) && shouldLinkerNotDedup(C.getJobs().empty(), Args))
     CmdArgs.push_back("-no_deduplicate");
 
   // Derived from the "link" spec.
@@ -342,7 +342,7 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
   Args.AddAllArgs(CmdArgs, options::OPT_init);
 
   // Add the deployment target.
-  if (Version[0] >= 520 || LinkerIsLLD)
+  if (Version >= VersionTuple(520) || LinkerIsLLD)
     MachOTC.addPlatformVersionArgs(Args, CmdArgs);
   else
     MachOTC.addMinVersionArgs(Args, CmdArgs);
@@ -368,7 +368,8 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
     // Check if the toolchain supports bitcode build flow.
     if (MachOTC.SupportsEmbeddedBitcode()) {
       CmdArgs.push_back("-bitcode_bundle");
-      if (C.getDriver().embedBitcodeMarkerOnly() && Version[0] >= 278) {
+      if (C.getDriver().embedBitcodeMarkerOnly() &&
+          Version >= VersionTuple(278)) {
         CmdArgs.push_back("-bitcode_process_mode");
         CmdArgs.push_back("marker");
       }
@@ -548,12 +549,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     return;
   }
 
-  unsigned Version[5] = {0, 0, 0, 0, 0};
-  if (Arg *A = Args.getLastArg(options::OPT_mlinker_version_EQ)) {
-    if (!Driver::GetReleaseVersion(A->getValue(), Version))
-      getToolChain().getDriver().Diag(diag::err_drv_invalid_version_number)
-          << A->getAsString(Args);
-  }
+  VersionTuple Version = getMachOToolChain().getLinkerVersion(Args);
 
   bool LinkerIsLLD;
   const char *Exec =
@@ -713,7 +709,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   ResponseFileSupport ResponseSupport;
-  if (Version[0] >= 705 || LinkerIsLLD) {
+  if (Version >= VersionTuple(705) || LinkerIsLLD) {
     ResponseSupport = ResponseFileSupport::AtFileUTF8();
   } else {
     // For older versions of the linker, use the legacy filelist method instead.
@@ -979,6 +975,27 @@ StringRef MachO::getMachOArchName(const ArgList &Args) const {
   }
 }
 
+VersionTuple MachO::getLinkerVersion(const llvm::opt::ArgList &Args) const {
+  if (LinkerVersion) {
+#ifndef NDEBUG
+    VersionTuple NewLinkerVersion;
+    if (Arg *A = Args.getLastArg(options::OPT_mlinker_version_EQ))
+      (void)NewLinkerVersion.tryParse(A->getValue());
+    assert(NewLinkerVersion == LinkerVersion);
+#endif
+    return *LinkerVersion;
+  }
+
+  VersionTuple NewLinkerVersion;
+  if (Arg *A = Args.getLastArg(options::OPT_mlinker_version_EQ))
+    if (NewLinkerVersion.tryParse(A->getValue()))
+      getDriver().Diag(diag::err_drv_invalid_version_number)
+        << A->getAsString(Args);
+
+  LinkerVersion = NewLinkerVersion;
+  return *LinkerVersion;
+}
+
 Darwin::~Darwin() {}
 
 MachO::~MachO() {}
@@ -1152,8 +1169,9 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
   DarwinLibName += getOSLibraryNameSuffix();
   DarwinLibName += IsShared ? "_dynamic.dylib" : ".a";
   SmallString<128> Dir(getDriver().ResourceDir);
-  llvm::sys::path::append(
-      Dir, "lib", (Opts & RLO_IsEmbedded) ? "macho_embedded" : "darwin");
+  llvm::sys::path::append(Dir, "lib", "darwin");
+  if (Opts & RLO_IsEmbedded)
+    llvm::sys::path::append(Dir, "macho_embedded");
 
   SmallString<128> P(Dir);
   llvm::sys::path::append(P, DarwinLibName);

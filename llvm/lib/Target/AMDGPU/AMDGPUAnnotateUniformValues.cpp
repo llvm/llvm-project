@@ -33,7 +33,6 @@ class AMDGPUAnnotateUniformValues : public FunctionPass,
   LegacyDivergenceAnalysis *DA;
   MemorySSA *MSSA;
   AliasAnalysis *AA;
-  DenseMap<Value*, GetElementPtrInst*> noClobberClones;
   bool isEntryFunc;
 
 public:
@@ -160,46 +159,19 @@ void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
   Value *Ptr = I.getPointerOperand();
   if (!DA->isUniform(Ptr))
     return;
+  Instruction *PtrI = dyn_cast<Instruction>(Ptr);
+  if (PtrI)
+    setUniformMetadata(PtrI);
+
   // We're tracking up to the Function boundaries, and cannot go beyond because
   // of FunctionPass restrictions. We can ensure that is memory not clobbered
   // for memory operations that are live in to entry points only.
-  Instruction *PtrI = dyn_cast<Instruction>(Ptr);
-
-  if (!isEntryFunc) {
-    if (PtrI)
-      setUniformMetadata(PtrI);
+  if (!isEntryFunc)
     return;
-  }
-
-  bool NotClobbered = false;
   bool GlobalLoad = I.getPointerAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
-  if (PtrI)
-    NotClobbered = GlobalLoad && !isClobberedInFunction(&I);
-  else if (isa<Argument>(Ptr) || isa<GlobalValue>(Ptr)) {
-    if (GlobalLoad && !isClobberedInFunction(&I)) {
-      NotClobbered = true;
-      // Lookup for the existing GEP
-      if (noClobberClones.count(Ptr)) {
-        PtrI = noClobberClones[Ptr];
-      } else {
-        // Create GEP of the Value
-        Function *F = I.getParent()->getParent();
-        Value *Idx = Constant::getIntegerValue(
-          Type::getInt32Ty(Ptr->getContext()), APInt(64, 0));
-        // Insert GEP at the entry to make it dominate all uses
-        PtrI = GetElementPtrInst::Create(I.getType(), Ptr,
-                                         ArrayRef<Value *>(Idx), Twine(""),
-                                         F->getEntryBlock().getFirstNonPHI());
-      }
-      I.replaceUsesOfWith(Ptr, PtrI);
-    }
-  }
-
-  if (PtrI) {
-    setUniformMetadata(PtrI);
-    if (NotClobbered)
-      setNoClobberMetadata(PtrI);
-  }
+  bool NotClobbered = GlobalLoad && !isClobberedInFunction(&I);
+  if (NotClobbered)
+    setNoClobberMetadata(&I);
 }
 
 bool AMDGPUAnnotateUniformValues::doInitialization(Module &M) {
@@ -216,7 +188,6 @@ bool AMDGPUAnnotateUniformValues::runOnFunction(Function &F) {
   isEntryFunc = AMDGPU::isEntryFunctionCC(F.getCallingConv());
 
   visit(F);
-  noClobberClones.clear();
   return true;
 }
 

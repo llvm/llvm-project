@@ -17,7 +17,7 @@
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -28,13 +28,13 @@ template <class _Tp>
 using __with_reference = _Tp&;
 
 template <class _Tp>
-concept __referenceable = requires {
+concept __can_reference = requires {
   typename __with_reference<_Tp>;
 };
 
 template <class _Tp>
 concept __dereferenceable = requires(_Tp& __t) {
-  { *__t } -> __referenceable; // not required to be equality-preserving
+  { *__t } -> __can_reference; // not required to be equality-preserving
 };
 
 // [iterator.traits]
@@ -147,9 +147,9 @@ namespace __iterator_traits_detail {
 template<class _Ip>
 concept __cpp17_iterator =
   requires(_Ip __i) {
-    {   *__i } -> __referenceable;
+    {   *__i } -> __can_reference;
     {  ++__i } -> same_as<_Ip&>;
-    { *__i++ } -> __referenceable;
+    { *__i++ } -> __can_reference;
   } &&
   copyable<_Ip>;
 

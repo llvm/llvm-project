@@ -88,7 +88,7 @@ void test() {
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
   test<std::back_insert_iterator<std::basic_string<char8_t>>, char8_t>();
 #endif
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
+#ifndef TEST_HAS_NO_UNICODE_CHARS
   test<std::back_insert_iterator<std::basic_string<char16_t>>, char16_t>();
   test<std::back_insert_iterator<std::basic_string<char32_t>>, char32_t>();
 #endif

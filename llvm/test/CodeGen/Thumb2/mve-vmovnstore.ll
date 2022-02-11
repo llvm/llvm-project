@@ -149,8 +149,8 @@ define arm_aapcs_vfpcc void @vmovn64_b2(<2 x i64> %src1, <2 x i64> %src2, <2 x i
 ; CHECK-LABEL: vmovn64_b2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s4, s6
-; CHECK-NEXT:    vmov.f32 s5, s7
 ; CHECK-NEXT:    vmov.f32 s6, s0
+; CHECK-NEXT:    vmov.f32 s5, s7
 ; CHECK-NEXT:    vmov.f32 s7, s1
 ; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    bx lr
@@ -164,8 +164,8 @@ define arm_aapcs_vfpcc void @vmovn64_b3(<2 x i64> %src1, <2 x i64> %src2, <2 x i
 ; CHECK-LABEL: vmovn64_b3:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s0, s2
-; CHECK-NEXT:    vmov.f32 s1, s3
 ; CHECK-NEXT:    vmov.f32 s2, s4
+; CHECK-NEXT:    vmov.f32 s1, s3
 ; CHECK-NEXT:    vmov.f32 s3, s5
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    bx lr

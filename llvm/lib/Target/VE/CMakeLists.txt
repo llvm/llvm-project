@@ -26,6 +26,7 @@ add_llvm_target(VECodeGen
   VERegisterInfo.cpp
   VESubtarget.cpp
   VETargetMachine.cpp
+  VVPISelLowering.cpp
 
   LINK_COMPONENTS
   Analysis

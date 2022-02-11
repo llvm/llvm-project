@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/ConvertType.h"
+#include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Utils.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -177,11 +178,8 @@ namespace {
 /// mlir::Type. The type returned may be an MLIR standard or FIR type.
 class TypeBuilder {
 public:
-  /// Constructor.
-  explicit TypeBuilder(
-      mlir::MLIRContext *context,
-      const Fortran::common::IntrinsicTypeDefaultKinds &defaults)
-      : context{context}, defaults{defaults} {}
+  TypeBuilder(Fortran::lower::AbstractConverter &converter)
+      : context{&converter.getMLIRContext()} {}
 
   //===--------------------------------------------------------------------===//
   // Generate type entry points
@@ -221,7 +219,7 @@ public:
     return genVariant(dref);
   }
 
-  mlir::Type gen(const Fortran::lower::pft::Variable &var) {
+  mlir::Type genVariableType(const Fortran::lower::pft::Variable &var) {
     return genSymbolHelper(var.getSymbol(), var.isHeapAlloc(), var.isPointer());
   }
 
@@ -425,9 +423,7 @@ private:
   int defaultKind() {
     return defaultKind(TC);
   }
-  int defaultKind(Fortran::common::TypeCategory TC) {
-    return defaults.GetDefaultKind(TC);
-  }
+  int defaultKind(Fortran::common::TypeCategory TC) { return 0; }
 
   fir::SequenceType::Shape seqShapeHelper(Fortran::semantics::SymbolRef symbol,
                                           fir::SequenceType::Shape &bounds) {
@@ -470,51 +466,81 @@ private:
   //===--------------------------------------------------------------------===//
 
   mlir::MLIRContext *context;
-  const Fortran::common::IntrinsicTypeDefaultKinds &defaults;
 };
 
 } // namespace
 
-mlir::Type Fortran::lower::getFIRType(
-    mlir::MLIRContext *context,
-    const Fortran::common::IntrinsicTypeDefaultKinds &defaults,
-    Fortran::common::TypeCategory tc, int kind) {
-  return TypeBuilder{context, defaults}.genFIRTy(tc, kind);
+template <int KIND>
+int getIntegerBits() {
+  return Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer,
+                                 KIND>::Scalar::bits;
+}
+static mlir::Type genIntegerType(mlir::MLIRContext *context, int kind) {
+  if (Fortran::evaluate::IsValidKindOfIntrinsicType(
+          Fortran::common::TypeCategory::Integer, kind)) {
+    switch (kind) {
+    case 1:
+      return mlir::IntegerType::get(context, getIntegerBits<1>());
+    case 2:
+      return mlir::IntegerType::get(context, getIntegerBits<2>());
+    case 4:
+      return mlir::IntegerType::get(context, getIntegerBits<4>());
+    case 8:
+      return mlir::IntegerType::get(context, getIntegerBits<8>());
+    case 16:
+      return mlir::IntegerType::get(context, getIntegerBits<16>());
+    }
+  }
+  llvm_unreachable("INTEGER kind not translated");
 }
 
-mlir::Type Fortran::lower::getFIRType(
-    mlir::MLIRContext *context,
-    const Fortran::common::IntrinsicTypeDefaultKinds &defaults,
-    Fortran::common::TypeCategory tc) {
-  return TypeBuilder{context, defaults}.genFIRTy(tc);
+static mlir::Type genFIRType(mlir::MLIRContext *context,
+                             Fortran::common::TypeCategory tc, int kind) {
+  switch (tc) {
+  case Fortran::common::TypeCategory::Integer:
+    return genIntegerType(context, kind);
+  case Fortran::common::TypeCategory::Real:
+  case Fortran::common::TypeCategory::Complex:
+  case Fortran::common::TypeCategory::Logical:
+  case Fortran::common::TypeCategory::Character:
+  default:
+    break;
+  }
+  llvm_unreachable("unhandled type category");
+}
+
+mlir::Type Fortran::lower::getFIRType(mlir::MLIRContext *context,
+                                      Fortran::common::TypeCategory tc,
+                                      int kind) {
+  return genFIRType(context, tc, kind);
+}
+
+mlir::Type
+Fortran::lower::getFIRType(Fortran::lower::AbstractConverter &converter,
+                           Fortran::common::TypeCategory tc) {
+  return TypeBuilder{converter}.genFIRTy(tc);
 }
 
 mlir::Type Fortran::lower::translateDataRefToFIRType(
-    mlir::MLIRContext *context,
-    const Fortran::common::IntrinsicTypeDefaultKinds &defaults,
+    Fortran::lower::AbstractConverter &converter,
     const Fortran::evaluate::DataRef &dataRef) {
-  return TypeBuilder{context, defaults}.gen(dataRef);
+  return TypeBuilder{converter}.gen(dataRef);
 }
 
 mlir::Type Fortran::lower::translateSomeExprToFIRType(
-    mlir::MLIRContext *context,
-    const Fortran::common::IntrinsicTypeDefaultKinds &defaults,
-    const SomeExpr *expr) {
-  return TypeBuilder{context, defaults}.gen(*expr);
+    Fortran::lower::AbstractConverter &converter, const SomeExpr *expr) {
+  return TypeBuilder{converter}.gen(*expr);
 }
 
 mlir::Type Fortran::lower::translateSymbolToFIRType(
-    mlir::MLIRContext *context,
-    const Fortran::common::IntrinsicTypeDefaultKinds &defaults,
-    const SymbolRef symbol) {
-  return TypeBuilder{context, defaults}.gen(symbol);
+    Fortran::lower::AbstractConverter &converter, const SymbolRef symbol) {
+  return TypeBuilder{converter}.gen(symbol);
 }
 
 mlir::Type Fortran::lower::translateVariableToFIRType(
-    mlir::MLIRContext *context,
-    const Fortran::common::IntrinsicTypeDefaultKinds &defaults,
+    Fortran::lower::AbstractConverter &converter,
     const Fortran::lower::pft::Variable &var) {
-  return TypeBuilder{context, defaults}.gen(var);
+  return TypeBuilder{converter}.genVariableType(var);
 }
 
 mlir::Type Fortran::lower::convertReal(mlir::MLIRContext *context, int kind) {

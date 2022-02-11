@@ -28,9 +28,9 @@ static inline char32_t GetComma(IoStatementState &io) {
 bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
   IoStatementState &io{*cookie};
   io.CheckFormattedStmtType<Direction::Output>("OutputNamelist");
-  ConnectionState &connection{io.GetConnectionState()};
-  connection.modes.inNamelist = true;
+  io.mutableModes().inNamelist = true;
   char comma{static_cast<char>(GetComma(io))};
+  ConnectionState &connection{io.GetConnectionState()};
   // Internal functions to advance records and convert case
   const auto EmitWithAdvance{[&](char ch) -> bool {
     return (!connection.NeedAdvance(1) || io.AdvanceRecord()) &&
@@ -355,8 +355,7 @@ static void SkipNamelistGroup(IoStatementState &io) {
 bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   IoStatementState &io{*cookie};
   io.CheckFormattedStmtType<Direction::Input>("InputNamelist");
-  ConnectionState &connection{io.GetConnectionState()};
-  connection.modes.inNamelist = true;
+  io.mutableModes().inNamelist = true;
   IoErrorHandler &handler{io.GetIoErrorHandler()};
   auto *listInput{io.get_if<ListDirectedStatementState<Direction::Input>>()};
   RUNTIME_CHECK(handler, listInput != nullptr);
@@ -485,8 +484,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
 
 bool IsNamelistName(IoStatementState &io) {
   if (io.get_if<ListDirectedStatementState<Direction::Input>>()) {
-    ConnectionState &connection{io.GetConnectionState()};
-    if (connection.modes.inNamelist) {
+    if (io.mutableModes().inNamelist) {
       SavedPosition savedPosition{io};
       if (auto ch{io.GetNextNonBlank()}) {
         if (IsLegalIdStart(*ch)) {

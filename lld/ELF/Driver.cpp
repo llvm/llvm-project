@@ -52,6 +52,7 @@
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
@@ -235,22 +236,28 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     // user is attempting LTO and using a default ar command that doesn't
     // understand the LLVM bitcode file. Treat the archive as a group of lazy
     // object files.
-    if (!file->isEmpty() && !file->hasSymbolTable()) {
-      for (const std::pair<MemoryBufferRef, uint64_t> &p :
-           getArchiveMembers(mbref)) {
-        auto magic = identify_magic(p.first.getBuffer());
-        if (magic == file_magic::bitcode ||
-            magic == file_magic::elf_relocatable)
-          files.push_back(createLazyFile(p.first, path, p.second));
-        else
-          error(path + ": archive member '" + p.first.getBufferIdentifier() +
-                "' is neither ET_REL nor LLVM bitcode");
-      }
+    if (file->isEmpty() || file->hasSymbolTable()) {
+      // Handle the regular case.
+      files.push_back(make<ArchiveFile>(std::move(file)));
       return;
     }
 
-    // Handle the regular case.
-    files.push_back(make<ArchiveFile>(std::move(file)));
+    // All files within the archive get the same group ID to allow mutual
+    // references for --warn-backrefs.
+    bool saved = InputFile::isInGroup;
+    InputFile::isInGroup = true;
+    for (const std::pair<MemoryBufferRef, uint64_t> &p :
+         getArchiveMembers(mbref)) {
+      auto magic = identify_magic(p.first.getBuffer());
+      if (magic == file_magic::bitcode || magic == file_magic::elf_relocatable)
+        files.push_back(createLazyFile(p.first, path, p.second));
+      else
+        error(path + ": archive member '" + p.first.getBufferIdentifier() +
+              "' is neither ET_REL nor LLVM bitcode");
+    }
+    InputFile::isInGroup = saved;
+    if (!saved)
+      ++InputFile::nextGroupId;
     return;
   }
   case file_magic::elf_shared_object:
@@ -326,9 +333,6 @@ static void checkOptions() {
 
   if (!config->shared && !config->auxiliaryList.empty())
     error("-f may not be used without -shared");
-
-  if (!config->relocatable && !config->defineCommon)
-    error("-no-define-common not supported in non relocatable output");
 
   if (config->strip == StripPolicy::All && config->emitRelocs)
     error("--strip-all and --emit-relocs may not be used together");
@@ -989,8 +993,6 @@ static void readConfigs(opt::InputArgList &args) {
   config->chroot = args.getLastArgValue(OPT_chroot);
   config->compressDebugSections = getCompressDebugSections(args);
   config->cref = args.hasArg(OPT_cref);
-  config->defineCommon = args.hasFlag(OPT_define_common, OPT_no_define_common,
-                                      !args.hasArg(OPT_relocatable));
   config->optimizeBBJumps =
       args.hasFlag(OPT_optimize_bb_jumps, OPT_no_optimize_bb_jumps, false);
   config->demangle = args.hasFlag(OPT_demangle, OPT_no_demangle, true);
@@ -1814,7 +1816,7 @@ static void replaceCommonSymbols() {
       auto *bss = make<BssSection>("COMMON", s->size, s->alignment);
       bss->file = s->file;
       inputSections.push_back(bss);
-      s->replace(Defined{s->file, s->getName(), s->binding, s->stOther, s->type,
+      s->replace(Defined{s->file, StringRef(), s->binding, s->stOther, s->type,
                          /*value=*/0, s->size, bss});
     }
   }
@@ -2047,7 +2049,11 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
       continue;
 
     Symbol *sym = symtab->find(name);
-    if (!sym)
+    // Avoid wrapping symbols that are lazy and unreferenced at this point, to
+    // not create undefined references. The isUsedInRegularObj check handles the
+    // case of a weak reference, which we still want to wrap even though it
+    // doesn't cause lazy symbols to be extracted.
+    if (!sym || (sym->isLazy() && !sym->isUsedInRegularObj))
       continue;
 
     Symbol *real = addUnusedUndefined(saver().save("__real_" + name));
@@ -2057,8 +2063,8 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
 
     // We want to tell LTO not to inline symbols to be overwritten
     // because LTO doesn't know the final symbol contents after renaming.
-    real->canInline = false;
-    sym->canInline = false;
+    real->scriptDefined = true;
+    sym->scriptDefined = true;
 
     // Tell LTO not to eliminate these symbols.
     sym->isUsedInRegularObj = true;

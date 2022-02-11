@@ -16,7 +16,7 @@
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
@@ -251,7 +251,7 @@ public:
         explicit duration(const _Rep2& __r,
             typename enable_if
             <
-               is_convertible<_Rep2, rep>::value &&
+               is_convertible<const _Rep2&, rep>::value &&
                (treat_as_floating_point<rep>::value ||
                !treat_as_floating_point<_Rep2>::value)
             >::type* = nullptr)

@@ -34,39 +34,44 @@ llvm::Type *CGOpenCLRuntime::convertOpenCLSpecificType(const Type *T) {
   assert(T->isOpenCLSpecificType() &&
          "Not an OpenCL specific type!");
 
-  llvm::LLVMContext& Ctx = CGM.getLLVMContext();
-  uint32_t AddrSpc = CGM.getContext().getTargetAddressSpace(
-      CGM.getContext().getOpenCLTypeAddrSpace(T));
   switch (cast<BuiltinType>(T)->getKind()) {
   default:
     llvm_unreachable("Unexpected opencl builtin type!");
     return nullptr;
-#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
-  case BuiltinType::Id: \
-    return llvm::PointerType::get( \
-        llvm::StructType::create(Ctx, "opencl." #ImgType "_" #Suffix "_t"), \
-        AddrSpc);
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
+  case BuiltinType::Id:                                                        \
+    return getPointerType(T, "opencl." #ImgType "_" #Suffix "_t");
 #include "clang/Basic/OpenCLImageTypes.def"
   case BuiltinType::OCLSampler:
     return getSamplerType(T);
   case BuiltinType::OCLEvent:
-    return llvm::PointerType::get(
-        llvm::StructType::create(Ctx, "opencl.event_t"), AddrSpc);
+    return getPointerType(T, "opencl.event_t");
   case BuiltinType::OCLClkEvent:
-    return llvm::PointerType::get(
-        llvm::StructType::create(Ctx, "opencl.clk_event_t"), AddrSpc);
+    return getPointerType(T, "opencl.clk_event_t");
   case BuiltinType::OCLQueue:
-    return llvm::PointerType::get(
-        llvm::StructType::create(Ctx, "opencl.queue_t"), AddrSpc);
+    return getPointerType(T, "opencl.queue_t");
   case BuiltinType::OCLReserveID:
-    return llvm::PointerType::get(
-        llvm::StructType::create(Ctx, "opencl.reserve_id_t"), AddrSpc);
-#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
-  case BuiltinType::Id: \
-    return llvm::PointerType::get( \
-        llvm::StructType::create(Ctx, "opencl." #ExtType), AddrSpc);
+    return getPointerType(T, "opencl.reserve_id_t");
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext)                                      \
+  case BuiltinType::Id:                                                        \
+    return getPointerType(T, "opencl." #ExtType);
 #include "clang/Basic/OpenCLExtensionTypes.def"
   }
+}
+
+llvm::PointerType *CGOpenCLRuntime::getPointerType(const Type *T,
+                                                   StringRef Name) {
+  auto I = CachedTys.find(Name);
+  if (I != CachedTys.end())
+    return I->second;
+
+  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+  uint32_t AddrSpc = CGM.getContext().getTargetAddressSpace(
+      CGM.getContext().getOpenCLTypeAddrSpace(T));
+  auto *PTy =
+      llvm::PointerType::get(llvm::StructType::create(Ctx, Name), AddrSpc);
+  CachedTys[Name] = PTy;
+  return PTy;
 }
 
 llvm::Type *CGOpenCLRuntime::getPipeType(const PipeType *T) {

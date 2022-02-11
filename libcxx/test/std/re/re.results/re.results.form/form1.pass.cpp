@@ -30,7 +30,7 @@ int main(int, char**)
 
         char out[100] = {0};
         const char fmt[] = "prefix: $`, match: $&, suffix: $', m[1]: $1, m[2]: $2";
-        char* r = m.format(output_iterator<char*>(out),
+        char* r = m.format(cpp17_output_iterator<char*>(out),
                     fmt, fmt + std::char_traits<char>::length(fmt)).base();
         assert(r == out + 58);
         assert(std::string(out) == "prefix: ab, match: cdefghi, suffix: jk, m[1]: efg, m[2]: e");
@@ -43,7 +43,7 @@ int main(int, char**)
 
         char out[100] = {0};
         const char fmt[] = "prefix: $`, match: $&, suffix: $', m[1]: $1, m[2]: $2";
-        char* r = m.format(output_iterator<char*>(out),
+        char* r = m.format(cpp17_output_iterator<char*>(out),
                     fmt, fmt + std::char_traits<char>::length(fmt)).base();
         assert(r == out + 54);
         assert(std::string(out) == "prefix: ab, match: cdefghi, suffix: jk, m[1]: , m[2]: ");
@@ -55,7 +55,7 @@ int main(int, char**)
 
         char out[100] = {0};
         const char fmt[] = "prefix: $`, match: $&, suffix: $', m[1]: $1, m[2]: $2";
-        char* r = m.format(output_iterator<char*>(out),
+        char* r = m.format(cpp17_output_iterator<char*>(out),
                     fmt, fmt + std::char_traits<char>::length(fmt)).base();
         assert(r == out + 54);
         assert(std::string(out) == "prefix: ab, match: cdefghi, suffix: jk, m[1]: , m[2]: ");
@@ -67,7 +67,7 @@ int main(int, char**)
 
         char out[100] = {0};
         const char fmt[] = "prefix: $`, match: $&, suffix: $', m[1]: $1, m[2]: $2";
-        char* r = m.format(output_iterator<char*>(out),
+        char* r = m.format(cpp17_output_iterator<char*>(out),
                     fmt, fmt + std::char_traits<char>::length(fmt),
                     std::regex_constants::format_sed).base();
         assert(r == out + 59);
@@ -80,7 +80,7 @@ int main(int, char**)
 
         char out[100] = {0};
         const char fmt[] = "match: &, m[1]: \\1, m[2]: \\2";
-        char* r = m.format(output_iterator<char*>(out),
+        char* r = m.format(cpp17_output_iterator<char*>(out),
                     fmt, fmt + std::char_traits<char>::length(fmt),
                     std::regex_constants::format_sed).base();
         assert(r == out + 34);
@@ -94,7 +94,7 @@ int main(int, char**)
 
         char out[100] = {0};
         const char fmt[] = "match: &, m[1]: \\1, m[2]: \\2";
-        char* r = m.format(output_iterator<char*>(out),
+        char* r = m.format(cpp17_output_iterator<char*>(out),
                     fmt, fmt + std::char_traits<char>::length(fmt),
                     std::regex_constants::format_sed).base();
         assert(r == out + 30);
@@ -107,7 +107,7 @@ int main(int, char**)
 
         char out[100] = {0};
         const char fmt[] = "match: &, m[1]: \\1, m[2]: \\2";
-        char* r = m.format(output_iterator<char*>(out),
+        char* r = m.format(cpp17_output_iterator<char*>(out),
                     fmt, fmt + std::char_traits<char>::length(fmt),
                     std::regex_constants::format_sed).base();
         assert(r == out + 30);
@@ -122,7 +122,7 @@ int main(int, char**)
 
         wchar_t out[100] = {0};
         const wchar_t fmt[] = L"prefix: $`, match: $&, suffix: $', m[1]: $1, m[2]: $2";
-        wchar_t* r = m.format(output_iterator<wchar_t*>(out),
+        wchar_t* r = m.format(cpp17_output_iterator<wchar_t*>(out),
                     fmt, fmt + std::char_traits<wchar_t>::length(fmt)).base();
         assert(r == out + 58);
         assert(std::wstring(out) == L"prefix: ab, match: cdefghi, suffix: jk, m[1]: efg, m[2]: e");
@@ -134,7 +134,7 @@ int main(int, char**)
 
         wchar_t out[100] = {0};
         const wchar_t fmt[] = L"prefix: $`, match: $&, suffix: $', m[1]: $1, m[2]: $2";
-        wchar_t* r = m.format(output_iterator<wchar_t*>(out),
+        wchar_t* r = m.format(cpp17_output_iterator<wchar_t*>(out),
                     fmt, fmt + std::char_traits<wchar_t>::length(fmt),
                     std::regex_constants::format_sed).base();
         assert(r == out + 59);
@@ -147,7 +147,7 @@ int main(int, char**)
 
         wchar_t out[100] = {0};
         const wchar_t fmt[] = L"match: &, m[1]: \\1, m[2]: \\2";
-        wchar_t* r = m.format(output_iterator<wchar_t*>(out),
+        wchar_t* r = m.format(cpp17_output_iterator<wchar_t*>(out),
                     fmt, fmt + std::char_traits<wchar_t>::length(fmt),
                     std::regex_constants::format_sed).base();
         assert(r == out + 34);

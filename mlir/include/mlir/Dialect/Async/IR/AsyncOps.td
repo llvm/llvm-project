@@ -31,7 +31,8 @@ def Async_ExecuteOp :
   Async_Op<"execute", [SingleBlockImplicitTerminator<"YieldOp">,
                        DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                                  ["getSuccessorEntryOperands"]>,
-                       AttrSizedOperandSegments]> {
+                       AttrSizedOperandSegments,
+                       AutomaticAllocationScope]> {
   let summary = "Asynchronous execute operation";
   let description = [{
     The `body` region attached to the `async.execute` operation semantically
@@ -80,11 +81,9 @@ def Async_ExecuteOp :
                       Variadic<Async_ValueType>:$results);
   let regions = (region SizedRegion<1>:$body);
 
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-  let verifier = [{ return ::verify(*this); }];
-
+  let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;
+  let hasVerifier = 1;
   let builders = [
     OpBuilder<(ins "TypeRange":$resultTypes, "ValueRange":$dependencies,
       "ValueRange":$operands,
@@ -110,10 +109,8 @@ def Async_YieldOp :
   }];
 
   let arguments = (ins Variadic<AnyType>:$operands);
-
   let assemblyFormat = "($operands^ `:` type($operands))? attr-dict";
-
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
 }
 
 def Async_AwaitOp : Async_Op<"await"> {
@@ -137,6 +134,7 @@ def Async_AwaitOp : Async_Op<"await"> {
   let results = (outs Optional<AnyType>:$result);
 
   let skipDefaultBuilders = 1;
+  let hasVerifier = 1;
 
   let builders = [
     OpBuilder<(ins "Value":$operand,
@@ -155,8 +153,6 @@ def Async_AwaitOp : Async_Op<"await"> {
       type($operand), type($result)
     ) attr-dict
   }];
-
-  let verifier = [{ return ::verify(*this); }];
 }
 
 def Async_CreateGroupOp : Async_Op<"create_group", [NoSideEffect]> {

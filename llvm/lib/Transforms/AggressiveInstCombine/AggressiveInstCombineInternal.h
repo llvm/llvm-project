@@ -61,7 +61,7 @@ class TruncInstCombine {
   SmallVector<TruncInst *, 4> Worklist;
 
   /// Current processed TruncInst instruction.
-  TruncInst *CurrentTruncInst;
+  TruncInst *CurrentTruncInst = nullptr;
 
   /// Information per each instruction in the expression dag.
   struct Info {
@@ -81,7 +81,7 @@ class TruncInstCombine {
 public:
   TruncInstCombine(AssumptionCache &AC, TargetLibraryInfo &TLI,
                    const DataLayout &DL, const DominatorTree &DT)
-      : AC(AC), TLI(TLI), DL(DL), DT(DT), CurrentTruncInst(nullptr) {}
+      : AC(AC), TLI(TLI), DL(DL), DT(DT) {}
 
   /// Perform TruncInst pattern optimization on given function.
   bool run(Function &F);

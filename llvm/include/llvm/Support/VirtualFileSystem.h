@@ -571,7 +571,10 @@ class RedirectingFileSystemParser;
 ///   'case-sensitive': <boolean, default=(true for Posix, false for Windows)>
 ///   'use-external-names': <boolean, default=true>
 ///   'overlay-relative': <boolean, default=false>
-///   'fallthrough': <boolean, default=true>
+///   'fallthrough': <boolean, default=true, deprecated - use 'redirecting-with'
+///                   instead>
+///   'redirecting-with': <string, one of 'fallthrough', 'fallback', or
+///                        'redirect-only', default='fallthrough'>
 ///
 /// Virtual directories that list their contents are represented as
 /// \verbatim
@@ -641,6 +644,20 @@ class RedirectingFileSystem : public vfs::FileSystem {
 public:
   enum EntryKind { EK_Directory, EK_DirectoryRemap, EK_File };
   enum NameKind { NK_NotSet, NK_External, NK_Virtual };
+
+  /// The type of redirection to perform.
+  enum class RedirectKind {
+    /// Lookup the redirected path first (ie. the one specified in
+    /// 'external-contents') and if that fails "fallthrough" to a lookup of the
+    /// originally provided path.
+    Fallthrough,
+    /// Lookup the provided path first and if that fails, "fallback" to a
+    /// lookup of the redirected path.
+    Fallback,
+    /// Only lookup the redirected path, do not lookup the originally provided
+    /// path.
+    RedirectOnly
+  };
 
   /// A single file or directory in the VFS.
   class Entry {
@@ -776,16 +793,10 @@ private:
   friend class RedirectingFSDirIterImpl;
   friend class RedirectingFileSystemParser;
 
-  bool shouldUseExternalFS() const { return IsFallthrough; }
-
   /// Canonicalize path by removing ".", "..", "./", components. This is
   /// a VFS request, do not bother about symlinks in the path components
   /// but canonicalize in order to perform the correct entry search.
   std::error_code makeCanonical(SmallVectorImpl<char> &Path) const;
-
-  /// Whether to fall back to the external file system when an operation fails
-  /// with the given error code on a path associated with the provided Entry.
-  bool shouldFallBackToExternalFS(std::error_code EC, Entry *E = nullptr) const;
 
   /// Get the File status, or error, from the underlying external file system.
   /// This returns the status with the originally requested name, while looking
@@ -834,9 +845,9 @@ private:
   /// names of files.  This global value is overridable on a per-file basis.
   bool UseExternalNames = true;
 
-  /// Whether to attempt a file lookup in external file system after it wasn't
-  /// found in VFS.
-  bool IsFallthrough = true;
+  /// Determines the lookups to perform, as well as their order. See
+  /// \c RedirectKind for details.
+  RedirectKind Redirection = RedirectKind::Fallthrough;
   /// @}
 
   RedirectingFileSystem(IntrusiveRefCntPtr<FileSystem> ExternalFS);
@@ -891,7 +902,11 @@ public:
 
   StringRef getExternalContentsPrefixDir() const;
 
+  /// Sets the redirection kind to \c Fallthrough if true or \c RedirectOnly
+  /// otherwise. Will removed in the future, use \c setRedirection instead.
   void setFallthrough(bool Fallthrough);
+
+  void setRedirection(RedirectingFileSystem::RedirectKind Kind);
 
   std::vector<llvm::StringRef> getRoots() const;
 

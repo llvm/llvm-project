@@ -328,8 +328,8 @@ func @generic_vectorize(%arg0: memref<4x256xf32>,
     %11 = arith.mulf %arg5, %8 : f32
   //       CHECK:   %[[RSQRT:.*]] = math.rsqrt %[[V3]] : vector<4x256xf32>
     %12 = math.rsqrt %arg5 : f32
-  //       CHECK:   %[[SEL:.*]] = select %[[CMP]], %[[V3]], %[[V1]] : vector<4x256xi1>, vector<4x256xf32>
-    %13 = select %7, %arg5, %arg6 : f32
+  //       CHECK:   %[[SEL:.*]] = arith.select %[[CMP]], %[[V3]], %[[V1]] : vector<4x256xi1>, vector<4x256xf32>
+    %13 = arith.select %7, %arg5, %arg6 : f32
   //       CHECK:   %[[SUB:.*]] = arith.subf %[[V3]], %[[V0]] : vector<4x256xf32>
     %14 = arith.subf %arg5, %arg4 : f32
   //       CHECK:   %[[TAN:.*]] = math.tanh %[[V3]] : vector<4x256xf32>
@@ -406,8 +406,8 @@ func @generic_vectorize_tensor(%arg0: tensor<4x256xf32>,
     %11 = arith.mulf %arg5, %8 : f32
   //       CHECK:   %[[RSQRT:.*]] = math.rsqrt %[[V3]] : vector<4x256xf32>
     %12 = math.rsqrt %arg5 : f32
-  //       CHECK:   %[[SEL:.*]] = select %[[CMP]], %[[V3]], %[[V1]] : vector<4x256xi1>, vector<4x256xf32>
-    %13 = select %7, %arg5, %arg6 : f32
+  //       CHECK:   %[[SEL:.*]] = arith.select %[[CMP]], %[[V3]], %[[V1]] : vector<4x256xi1>, vector<4x256xf32>
+    %13 = arith.select %7, %arg5, %arg6 : f32
   //       CHECK:   %[[SUB:.*]] = arith.subf %[[V3]], %[[V0]] : vector<4x256xf32>
     %14 = arith.subf %arg5, %arg4 : f32
   //       CHECK:   %[[TAN:.*]] = math.tanh %[[V3]] : vector<4x256xf32>

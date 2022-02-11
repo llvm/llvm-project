@@ -27,7 +27,7 @@
 #include "test_macros.h"
 #include "format_tests.h"
 
-auto test = []<class CharT, class... Args>(std::basic_string<CharT> expected, std::basic_string<CharT> fmt,
+auto test = []<class CharT, class... Args>(std::basic_string_view<CharT> expected, std::basic_string_view<CharT> fmt,
                                            const Args&... args) {
   std::basic_string<CharT> out = std::format(std::locale(), fmt, args...);
   if constexpr (std::same_as<CharT, char>)
@@ -37,15 +37,15 @@ auto test = []<class CharT, class... Args>(std::basic_string<CharT> expected, st
   assert(out == expected);
 };
 
-auto test_exception =
-    []<class CharT, class... Args>(std::string_view what, std::basic_string<CharT> fmt, const Args&... args) {
+auto test_exception = []<class CharT, class... Args>(std::string_view what, std::basic_string_view<CharT> fmt,
+                                                     const Args&... args) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
   try {
     std::format(std::locale(), fmt, args...);
     if constexpr (std::same_as<CharT, char>)
       std::cerr << "\nFormat string   " << fmt << "\nDidn't throw an exception.\n";
     assert(false);
-  } catch (std::format_error& e) {
+  } catch (const std::format_error& e) {
 #  ifdef _LIBCPP_VERSION
     if constexpr (std::same_as<CharT, char>)
       if (e.what() != what)

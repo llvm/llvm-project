@@ -1078,6 +1078,24 @@ std::optional<Expr<SomeType>> DataConstantConversionExtension(
   return std::nullopt;
 }
 
+bool IsAllocatableOrPointerObject(
+    const Expr<SomeType> &expr, FoldingContext &context) {
+  const semantics::Symbol *sym{UnwrapWholeSymbolOrComponentDataRef(expr)};
+  return (sym && semantics::IsAllocatableOrPointer(*sym)) ||
+      evaluate::IsObjectPointer(expr, context);
+}
+
+bool MayBePassedAsAbsentOptional(
+    const Expr<SomeType> &expr, FoldingContext &context) {
+  const semantics::Symbol *sym{UnwrapWholeSymbolOrComponentDataRef(expr)};
+  // 15.5.2.12 1. is pretty clear that an unallocated allocatable/pointer actual
+  // may be passed to a non-allocatable/non-pointer optional dummy. Note that
+  // other compilers (like nag, nvfortran, ifort, gfortran and xlf) seems to
+  // ignore this point in intrinsic contexts (e.g CMPLX argument).
+  return (sym && semantics::IsOptional(*sym)) ||
+      IsAllocatableOrPointerObject(expr, context);
+}
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {

@@ -1,24 +1,28 @@
-! Verify that the compiler driver correctly processes `-fsyntax-only`. By
-! default it will try to run code-generation, but that's not supported yet. We
-! don't need to test the frontend driver here - it runs `-fsyntax-only` by
-! default.
+! Verify that the driver correctly processes `-fsyntax-only`.
+!
+! By default, the compiler driver (`flang`) will create actions/phases to
+! generate machine code (i.e. object files). The `-fsyntax-only` flag is a
+! "phase-control" flag that controls this behavior and makes the driver stop
+! once the semantic checks have been run. The frontend driver (`flang -fc1`)
+! runs `-fsyntax-only` by default (i.e. that's the default action), so the flag
+! can be skipped.
 
 !-----------
 ! RUN LINES
 !-----------
-! RUN: not %flang -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix=FSYNTAX_ONLY
+! RUN: %flang -fsyntax-only %s 2>&1 | FileCheck %s --allow-empty
+! RUN: %flang_fc1 %s 2>&1 | FileCheck %s --allow-empty
+
 ! RUN: not %flang  %s 2>&1 | FileCheck %s --check-prefix=NO_FSYNTAX_ONLY
+! RUN: not %flang_fc1 -emit-obj %s 2>&1 | FileCheck %s --check-prefix=NO_FSYNTAX_ONLY
 
 !-----------------
 ! EXPECTED OUTPUT
 !-----------------
-! FSYNTAX_ONLY: IF statement is not allowed in IF statement
-! FSYNTAX_ONLY_NEXT: Semantic errors in {{.*}}syntax-only.f90
-
+! CHECK-NOT: error
 ! NO_FSYNTAX_ONLY: error: code-generation is not available yet
 
 !-------
 ! INPUT
 !-------
-IF (A > 0.0) IF (B < 0.0) A = LOG (A)
-END
+end program

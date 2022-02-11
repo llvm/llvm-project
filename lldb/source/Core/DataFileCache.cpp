@@ -12,8 +12,8 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/DataEncoder.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -57,7 +57,7 @@ DataFileCache::DataFileCache(StringRef path) {
   if (cache_or_err)
     m_cache_callback = std::move(*cache_or_err);
   else {
-    Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES));
+    Log *log = GetLog(LLDBLog::Modules);
     LLDB_LOG_ERROR(log, cache_or_err.takeError(),
                    "failed to create lldb index cache directory: {0}");
   }
@@ -89,7 +89,7 @@ DataFileCache::GetCachedData(StringRef key) {
     if (!add_stream)
       return std::move(m_mem_buff_up);
   } else {
-    Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES));
+    Log *log = GetLog(LLDBLog::Modules);
     LLDB_LOG_ERROR(log, add_stream_or_err.takeError(),
                    "failed to get the cache add stream callback for key: {0}");
   }
@@ -124,13 +124,13 @@ bool DataFileCache::SetCachedData(StringRef key, llvm::ArrayRef<uint8_t> data) {
         cfs->OS->write((const char *)data.data(), data.size());
         return true;
       } else {
-        Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES));
+        Log *log = GetLog(LLDBLog::Modules);
         LLDB_LOG_ERROR(log, file_or_err.takeError(),
                        "failed to get the cache file stream for key: {0}");
       }
     }
   } else {
-    Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES));
+    Log *log = GetLog(LLDBLog::Modules);
     LLDB_LOG_ERROR(log, add_stream_or_err.takeError(),
                    "failed to get the cache add stream callback for key: {0}");
   }

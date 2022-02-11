@@ -12,6 +12,7 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/Passes.h"
@@ -59,7 +60,7 @@ static void injectGpuIndexOperations(Location loc, Region &launchFuncOpBody,
 /// operations may not have side-effects, as otherwise sinking (and hence
 /// duplicating them) is not legal.
 static bool isSinkingBeneficiary(Operation *op) {
-  return isa<arith::ConstantOp, ConstantOp, memref::DimOp, SelectOp,
+  return isa<arith::ConstantOp, ConstantOp, memref::DimOp, arith::SelectOp,
              arith::CmpIOp>(op);
 }
 
@@ -186,7 +187,7 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
   Block &launchOpEntry = launchOpBody.front();
   Block *clonedLaunchOpEntry = map.lookup(&launchOpEntry);
   builder.setInsertionPointToEnd(&entryBlock);
-  builder.create<BranchOp>(loc, clonedLaunchOpEntry);
+  builder.create<cf::BranchOp>(loc, clonedLaunchOpEntry);
 
   outlinedFunc.walk([](gpu::TerminatorOp op) {
     OpBuilder replacer(op);

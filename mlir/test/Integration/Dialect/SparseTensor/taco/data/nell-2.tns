@@ -1,3 +1,8 @@
+# Extended FROSTT format:
+# rank number-non-zero-elements
+# dimension-sizes
+3 5
+2 4 4
 1 1 1 1.0
 1 2 2 2.0
 1 3 4 3.0

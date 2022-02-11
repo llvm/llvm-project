@@ -1,3 +1,6 @@
+# See http://frostt.io/tensors/file-formats.html for FROSTT (.tns) format
+2 9
+3 3
 1.0 1.0 100.0
 1.0 2.0 107.0
 1.0 3.0 114.0

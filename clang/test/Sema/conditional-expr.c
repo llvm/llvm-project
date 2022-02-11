@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-pointer-to-int-cast -verify -pedantic -Wsign-conversion %s
-void foo() {
+void foo(void) {
   *(0 ? (double *)0 : (void *)0) = 0;
   // FIXME: GCC doesn't consider the following two statements to be errors.
   *(0 ? (double *)0 : (void *)(int *)0) = 0; // expected-error {{incomplete type 'void' is not assignable}}
@@ -79,7 +79,7 @@ void foo() {
   (test0 ? (test0 ? adr2 : adr2) : nonconst_int); // expected-error{{conditional operator with the second and third operands of type  ('__attribute__((address_space(2))) int *' and 'int *') which are pointers to non-overlapping address spaces}}
 }
 
-int Postgresql() {
+int Postgresql(void) {
   char x;
   return ((((&x) != ((void *) 0)) ? (*(&x) = ((char) 1)) : (void) ((void *) 0)), (unsigned long) ((void *) 0)); // expected-warning {{C99 forbids conditional expressions with only one void side}}
 }
@@ -100,7 +100,7 @@ int f2(int x) {
 
 #define NULL (void*)0
 
-void PR9236() {
+void PR9236(void) {
   struct A {int i;} A1;
   (void)(1 ? A1 : NULL); // expected-error{{non-pointer operand type 'struct A' incompatible with NULL}}
   (void)(1 ? NULL : A1); // expected-error{{non-pointer operand type 'struct A' incompatible with NULL}}

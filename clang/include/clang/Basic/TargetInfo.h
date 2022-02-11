@@ -235,6 +235,8 @@ protected:
 
   unsigned MaxOpenCLWorkGroupSize;
 
+  Optional<llvm::Triple> DarwinTargetVariantTriple;
+
   // TargetInfo Constructor.  Default initializes all fields.
   TargetInfo(const llvm::Triple &T);
 
@@ -644,8 +646,8 @@ public:
   }
 
   /// Return the largest alignment for which a suitably-sized allocation with
-  /// '::operator new(size_t)' or 'malloc' is guaranteed to produce a
-  /// correctly-aligned pointer.
+  /// '::operator new(size_t)' is guaranteed to produce a correctly-aligned
+  /// pointer.
   unsigned getNewAlign() const {
     return NewAlign ? NewAlign : std::max(LongDoubleAlign, LongLongAlign);
   }
@@ -1607,6 +1609,21 @@ public:
 
   /// Whether target allows debuginfo types for decl only variables/functions.
   virtual bool allowDebugInfoForExternalRef() const { return false; }
+
+  /// Returns the darwin target variant triple, the variant of the deployment
+  /// target for which the code is being compiled.
+  const llvm::Triple *getDarwinTargetVariantTriple() const {
+    return DarwinTargetVariantTriple ? DarwinTargetVariantTriple.getPointer()
+                                     : nullptr;
+  }
+
+  /// Returns the version of the darwin target variant SDK which was used during
+  /// the compilation if one was specified, or an empty version otherwise.
+  const Optional<VersionTuple> getDarwinTargetVariantSDKVersion() const {
+    return !getTargetOpts().DarwinTargetVariantSDKVersion.empty()
+               ? getTargetOpts().DarwinTargetVariantSDKVersion
+               : Optional<VersionTuple>();
+  }
 
 protected:
   /// Copy type and layout related info.

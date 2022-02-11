@@ -37,7 +37,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mips16-registerinfo"
 
-Mips16RegisterInfo::Mips16RegisterInfo() {}
+Mips16RegisterInfo::Mips16RegisterInfo() = default;
 
 bool Mips16RegisterInfo::requiresRegisterScavenging
   (const MachineFunction &MF) const {

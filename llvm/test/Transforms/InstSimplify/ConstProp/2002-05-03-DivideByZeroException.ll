@@ -1,6 +1,6 @@
 ; Make sure that the constant propogator doesn't divide by zero!
 ;
-; RUN: opt < %s -instsimplify
+; RUN: opt < %s -passes=instsimplify
 ;
 
 define i32 @test() {

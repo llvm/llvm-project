@@ -65,6 +65,9 @@ ModulePass *llvm::createWebAssemblyMCLowerPrePass() {
 // for all functions before AsmPrinter. If this way of doing things is ever
 // suboptimal, we could opt to make it a MachineFunctionPass and instead use
 // something like createBarrierNoopPass() to enforce ordering.
+//
+// The information stored here is essential for emitExternalDecls in the Wasm
+// AsmPrinter
 bool WebAssemblyMCLowerPrePass::runOnModule(Module &M) {
   auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
   if (!MMIWP)

@@ -6,6 +6,6 @@
 
 typedef int vector;
 
-void test() {
+void test(void) {
   vector unsigned int v = {0};
 }

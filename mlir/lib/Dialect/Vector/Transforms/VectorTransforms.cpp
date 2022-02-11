@@ -17,7 +17,6 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
@@ -205,7 +204,7 @@ public:
 
     // Scalar to any vector can use splat.
     if (!srcType) {
-      rewriter.replaceOpWithNewOp<SplatOp>(op, dstType, op.source());
+      rewriter.replaceOpWithNewOp<vector::SplatOp>(op, dstType, op.source());
       return success();
     }
 
@@ -220,7 +219,7 @@ public:
         ext = rewriter.create<vector::ExtractElementOp>(loc, op.source());
       else
         ext = rewriter.create<vector::ExtractOp>(loc, op.source(), 0);
-      rewriter.replaceOpWithNewOp<SplatOp>(op, dstType, ext);
+      rewriter.replaceOpWithNewOp<vector::SplatOp>(op, dstType, ext);
       return success();
     }
 
@@ -699,7 +698,7 @@ public:
           rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(d));
       Value val = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
                                                  bnd, idx);
-      Value sel = rewriter.create<SelectOp>(loc, val, trueVal, falseVal);
+      Value sel = rewriter.create<arith::SelectOp>(loc, val, trueVal, falseVal);
       auto pos = rewriter.getI64ArrayAttr(d);
       result =
           rewriter.create<vector::InsertOp>(loc, dstType, sel, result, pos);
@@ -1735,7 +1734,7 @@ struct TransferReadToVectorLoadLowering
     // Create vector load op.
     Operation *loadOp;
     if (read.mask()) {
-      Value fill = rewriter.create<SplatOp>(
+      Value fill = rewriter.create<vector::SplatOp>(
           read.getLoc(), unbroadcastedVectorType, read.padding());
       loadOp = rewriter.create<vector::MaskedLoadOp>(
           read.getLoc(), unbroadcastedVectorType, read.source(), read.indices(),
@@ -2168,12 +2167,13 @@ static Value buildVectorComparison(PatternRewriter &rewriter, Operation *op,
   // Add in an offset if requested.
   if (off) {
     Value o = createCastToIndexLike(rewriter, loc, idxType, *off);
-    Value ov = rewriter.create<SplatOp>(loc, indices.getType(), o);
+    Value ov = rewriter.create<vector::SplatOp>(loc, indices.getType(), o);
     indices = rewriter.create<arith::AddIOp>(loc, ov, indices);
   }
   // Construct the vector comparison.
   Value bound = createCastToIndexLike(rewriter, loc, idxType, b);
-  Value bounds = rewriter.create<SplatOp>(loc, indices.getType(), bound);
+  Value bounds =
+      rewriter.create<vector::SplatOp>(loc, indices.getType(), bound);
   return rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, indices,
                                         bounds);
 }

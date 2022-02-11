@@ -1,6 +1,6 @@
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-empty.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-EMPTY %s
-RUN: not --crash llvm-dis -disable-output %p/Inputs/invalid-pr20485.bc 2>&1 | \
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-pr20485.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-ENCODING %s
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=BAD-ABBREV %s
@@ -71,14 +71,14 @@ RUN:   FileCheck --check-prefix=FP-SHIFT %s
 
 FP-SHIFT: Invalid record
 
-RUN: not --crash llvm-dis -disable-output %p/Inputs/invalid-abbrev-vbr-size-too-big.bc 2>&1 | \
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev-vbr-size-too-big.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=HUGE-ABBREV-OP %s
-RUN: not --crash llvm-dis -disable-output %p/Inputs/invalid-abbrev-fixed-size-too-big.bc 2>&1 | \
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev-fixed-size-too-big.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=HUGE-ABBREV-OP %s
 
 HUGE-ABBREV-OP: Fixed or VBR abbrev record with size > MaxChunkData
 
-RUN: not --crash llvm-dis -disable-output %p/Inputs/invalid-array-type.bc 2>&1 | \
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-array-type.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=ARRAY-TYPE %s
 
 ARRAY-TYPE: Array element type can't be an Array or a Blob
@@ -116,7 +116,7 @@ RUN:   FileCheck --check-prefix=INVALID-CAST %s
 
 INVALID-CAST: Invalid cast
 
-RUN: not --crash llvm-dis -disable-output %p/Inputs/invalid-array-op-not-2nd-to-last.bc 2>&1 | \
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-array-op-not-2nd-to-last.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=ARRAY-NOT-2LAST %s
 
 ARRAY-NOT-2LAST: Array op not second to last
@@ -176,7 +176,7 @@ RUN:   FileCheck --check-prefix=INVALID-GVCOMDAT-ID %s
 
 INVALID-GVCOMDAT-ID: Invalid global variable comdat ID
 
-RUN: not --crash llvm-dis -disable-output %p/Inputs/invalid-abbrev-no-operands.bc 2>&1 | \
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev-no-operands.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=ABBREV-NO-OPS %s
 
 ABBREV-NO-OPS: Abbrev record with no operands
@@ -219,7 +219,12 @@ VOID-CONSTANT-TYPE: Invalid constant type
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-gep-no-operands.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=GEP-NO-OPERANDS %s
 
-GEP-NO-OPERANDS: Invalid gep with no operands
+GEP-NO-OPERANDS: Constant GEP record must have at least two elements
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-constant-gep.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-CONSTANT-GEP %s
+
+INVALID-CONSTANT-GEP: Constant GEP record must have at least two elements
 
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-nonpointer-storeatomic.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=NONPOINTER-STOREATOMIC %s
@@ -246,3 +251,43 @@ RUN: not llvm-dis -disable-output %p/Inputs/invalid-cmpxchg-ordering-4.bc 2>&1 |
 RUN:   FileCheck --check-prefix=CMPXCHG-ORDERING %s
 
 CMPXCHG-ORDERING: Invalid cmpxchg {{failure|success}} ordering
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev-number.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-ABBREV-NUMBER %s
+
+INVALID-ABBREV-NUMBER: Invalid abbrev number
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-attribute-group-entry.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-ATTRIBUTE-GROUP-ENTRY %s
+
+INVALID-ATTRIBUTE-GROUP-ENTRY: Invalid attribute group entry
+
+RUN: not llvm-dis -disable-output %p/Inputs/unterminated-blob.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=UNTERMINATED-BLOB %s
+
+UNTERMINATED-BLOB: Blob ends too soon
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-value-symbol-table.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-VALUE-SYMBOL-TABLE %s
+
+INVALID-VALUE-SYMBOL-TABLE: Invalid value reference in symbol table
+
+RUN: not llvm-dis -disable-output %p/Inputs/unterminated-vbr.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=UNTERMINATED-VBR %s
+
+UNTERMINATED-VBR: Unterminated VBR
+
+RUN: not llvm-dis -disable-output %p/Inputs/comdat-name-too-large.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=COMDAT-NAME-TOO-LARGE %s
+
+COMDAT-NAME-TOO-LARGE: Comdat name size too large
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-chunk-size.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-CHUNK-SIZE %s
+
+INVALID-CHUNK-SIZE: Fixed or VBR abbrev record with size > MaxChunkData
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-diimportedentity-record.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-DIIMPORTEDENTITY-RECORD %s
+
+INVALID-DIIMPORTEDENTITY-RECORD: Invalid DIImportedEntity record

@@ -18,7 +18,9 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/STLExtras.h"
 #include <numeric>
 
 using namespace mlir;
@@ -247,6 +249,60 @@ struct VectorInsertStridedSliceOpConvert final
   }
 };
 
+class VectorSplatPattern final : public OpConversionPattern<vector::SplatOp> {
+public:
+  using OpConversionPattern<vector::SplatOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::SplatOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType dstVecType = op.getType();
+    if (!spirv::CompositeType::isValid(dstVecType))
+      return failure();
+    SmallVector<Value, 4> source(dstVecType.getNumElements(), adaptor.input());
+    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, dstVecType,
+                                                             source);
+    return success();
+  }
+};
+
+struct VectorShuffleOpConvert final
+    : public OpConversionPattern<vector::ShuffleOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::ShuffleOp shuffleOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto oldResultType = shuffleOp.getVectorType();
+    if (!spirv::CompositeType::isValid(oldResultType))
+      return failure();
+    auto newResultType = getTypeConverter()->convertType(oldResultType);
+
+    auto oldSourceType = shuffleOp.getV1VectorType();
+    if (oldSourceType.getNumElements() > 1) {
+      SmallVector<int32_t, 4> components = llvm::to_vector<4>(
+          llvm::map_range(shuffleOp.mask(), [](Attribute attr) -> int32_t {
+            return attr.cast<IntegerAttr>().getValue().getZExtValue();
+          }));
+      rewriter.replaceOpWithNewOp<spirv::VectorShuffleOp>(
+          shuffleOp, newResultType, adaptor.v1(), adaptor.v2(),
+          rewriter.getI32ArrayAttr(components));
+      return success();
+    }
+
+    SmallVector<Value, 2> oldOperands = {adaptor.v1(), adaptor.v2()};
+    SmallVector<Value, 4> newOperands;
+    newOperands.reserve(oldResultType.getNumElements());
+    for (const APInt &i : shuffleOp.mask().getAsValueRange<IntegerAttr>()) {
+      newOperands.push_back(oldOperands[i.getZExtValue()]);
+    }
+    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+        shuffleOp, newResultType, newOperands);
+
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
@@ -255,6 +311,6 @@ void mlir::populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                VectorExtractElementOpConvert, VectorExtractOpConvert,
                VectorExtractStridedSliceOpConvert, VectorFmaOpConvert,
                VectorInsertElementOpConvert, VectorInsertOpConvert,
-               VectorInsertStridedSliceOpConvert>(typeConverter,
-                                                  patterns.getContext());
+               VectorInsertStridedSliceOpConvert, VectorShuffleOpConvert,
+               VectorSplatPattern>(typeConverter, patterns.getContext());
 }

@@ -23,6 +23,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
@@ -92,7 +93,7 @@ llvm::StringRef PlatformRemoteGDBServer::GetDescription() {
 bool PlatformRemoteGDBServer::GetModuleSpec(const FileSpec &module_file_spec,
                                             const ArchSpec &arch,
                                             ModuleSpec &module_spec) {
-  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
+  Log *log = GetLog(LLDBLog::Platform);
 
   const auto module_path = module_file_spec.GetPath(false);
 
@@ -171,7 +172,7 @@ ArchSpec PlatformRemoteGDBServer::GetRemoteSystemArchitecture() {
 
 FileSpec PlatformRemoteGDBServer::GetRemoteWorkingDirectory() {
   if (IsConnected()) {
-    Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
+    Log *log = GetLog(LLDBLog::Platform);
     FileSpec working_dir;
     if (m_gdb_client_up->GetWorkingDir(working_dir) && log)
       LLDB_LOGF(log,
@@ -188,7 +189,7 @@ bool PlatformRemoteGDBServer::SetRemoteWorkingDirectory(
   if (IsConnected()) {
     // Clear the working directory it case it doesn't get set correctly. This
     // will for use to re-read it
-    Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
+    Log *log = GetLog(LLDBLog::Platform);
     LLDB_LOGF(log, "PlatformRemoteGDBServer::SetRemoteWorkingDirectory('%s')",
               working_dir.GetCString());
     return m_gdb_client_up->SetWorkingDir(working_dir) == 0;
@@ -280,10 +281,10 @@ Status PlatformRemoteGDBServer::DisconnectRemote() {
 
 const char *PlatformRemoteGDBServer::GetHostname() {
   if (m_gdb_client_up)
-    m_gdb_client_up->GetHostname(m_name);
-  if (m_name.empty())
+    m_gdb_client_up->GetHostname(m_hostname);
+  if (m_hostname.empty())
     return nullptr;
-  return m_name.c_str();
+  return m_hostname.c_str();
 }
 
 llvm::Optional<std::string>
@@ -318,7 +319,7 @@ bool PlatformRemoteGDBServer::GetProcessInfo(
 }
 
 Status PlatformRemoteGDBServer::LaunchProcess(ProcessLaunchInfo &launch_info) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   Status error;
 
   LLDB_LOGF(log, "PlatformRemoteGDBServer::%s() called", __FUNCTION__);
@@ -539,7 +540,7 @@ Status PlatformRemoteGDBServer::MakeDirectory(const FileSpec &file_spec,
   if (!IsConnected())
     return Status("Not connected.");
   Status error = m_gdb_client_up->MakeDirectory(file_spec, mode);
-  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log,
             "PlatformRemoteGDBServer::MakeDirectory(path='%s', mode=%o) "
             "error = %u (%s)",
@@ -553,7 +554,7 @@ Status PlatformRemoteGDBServer::GetFilePermissions(const FileSpec &file_spec,
     return Status("Not connected.");
   Status error =
       m_gdb_client_up->GetFilePermissions(file_spec, file_permissions);
-  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log,
             "PlatformRemoteGDBServer::GetFilePermissions(path='%s', "
             "file_permissions=%o) error = %u (%s)",
@@ -568,7 +569,7 @@ Status PlatformRemoteGDBServer::SetFilePermissions(const FileSpec &file_spec,
     return Status("Not connected.");
   Status error =
       m_gdb_client_up->SetFilePermissions(file_spec, file_permissions);
-  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log,
             "PlatformRemoteGDBServer::SetFilePermissions(path='%s', "
             "file_permissions=%o) error = %u (%s)",
@@ -637,7 +638,7 @@ Status PlatformRemoteGDBServer::CreateSymlink(
   if (!IsConnected())
     return Status("Not connected.");
   Status error = m_gdb_client_up->CreateSymlink(src, dst);
-  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log,
             "PlatformRemoteGDBServer::CreateSymlink(src='%s', dst='%s') "
             "error = %u (%s)",
@@ -650,7 +651,7 @@ Status PlatformRemoteGDBServer::Unlink(const FileSpec &file_spec) {
   if (!IsConnected())
     return Status("Not connected.");
   Status error = m_gdb_client_up->Unlink(file_spec);
-  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log, "PlatformRemoteGDBServer::Unlink(path='%s') error = %u (%s)",
             file_spec.GetCString(), error.GetError(), error.AsCString());
   return error;

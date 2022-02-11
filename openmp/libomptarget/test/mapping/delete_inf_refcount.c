@@ -1,8 +1,5 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 
-// fails with error message 'Unable to generate target entries' on amdgcn
-// XFAIL: amdgcn-amd-amdhsa
-
 #include <stdio.h>
 #include <omp.h>
 

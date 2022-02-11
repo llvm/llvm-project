@@ -42,6 +42,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -52,8 +53,8 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 #include <cassert>
 #include <iterator>
 #include <utility>
@@ -77,6 +78,12 @@ static cl::opt<unsigned> ClScanLimit("stack-tagging-merge-init-scan-limit",
 static cl::opt<unsigned>
     ClMergeInitSizeLimit("stack-tagging-merge-init-size-limit", cl::init(272),
                          cl::Hidden);
+
+static cl::opt<size_t> ClMaxLifetimes(
+    "stack-tagging-max-lifetimes-for-alloca", cl::Hidden, cl::init(3),
+    cl::ReallyHidden,
+    cl::desc("How many lifetime ends to handle for a single alloca."),
+    cl::Optional);
 
 static const Align kTagGranuleSize = Align(16);
 
@@ -289,7 +296,6 @@ class AArch64StackTagging : public FunctionPass {
     SmallVector<IntrinsicInst *, 2> LifetimeStart;
     SmallVector<IntrinsicInst *, 2> LifetimeEnd;
     SmallVector<DbgVariableIntrinsic *, 2> DbgVariableIntrinsics;
-    int Tag; // -1 for non-tagged allocations
   };
 
   const bool MergeInit;
@@ -460,15 +466,13 @@ void AArch64StackTagging::untagAlloca(AllocaInst *AI, Instruction *InsertBefore,
 }
 
 Instruction *AArch64StackTagging::insertBaseTaggedPointer(
-    const MapVector<AllocaInst *, AllocaInfo> &Allocas,
+    const MapVector<AllocaInst *, AllocaInfo> &InterestingAllocas,
     const DominatorTree *DT) {
   BasicBlock *PrologueBB = nullptr;
   // Try sinking IRG as deep as possible to avoid hurting shrink wrap.
-  for (auto &I : Allocas) {
+  for (auto &I : InterestingAllocas) {
     const AllocaInfo &Info = I.second;
     AllocaInst *AI = Info.AI;
-    if (Info.Tag < 0)
-      continue;
     if (!PrologueBB) {
       PrologueBB = AI->getParent();
       continue;
@@ -532,75 +536,73 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   if (MergeInit)
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
-  MapVector<AllocaInst *, AllocaInfo> Allocas; // need stable iteration order
+  MapVector<AllocaInst *, AllocaInfo>
+      InterestingAllocas; // need stable iteration order
   SmallVector<Instruction *, 8> RetVec;
   SmallVector<Instruction *, 4> UnrecognizedLifetimes;
 
-  for (auto &BB : *F) {
-    for (Instruction &I : BB) {
-      if (auto *AI = dyn_cast<AllocaInst>(&I)) {
-        Allocas[AI].AI = AI;
-        Allocas[AI].OldAI = AI;
-        continue;
+  bool CallsReturnTwice = false;
+  for (Instruction &I : instructions(F)) {
+    if (CallInst *CI = dyn_cast<CallInst>(&I)) {
+      if (CI->canReturnTwice()) {
+        CallsReturnTwice = true;
       }
-
-      if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
-        for (Value *V : DVI->location_ops())
-          if (auto *AI = dyn_cast_or_null<AllocaInst>(V))
-            if (Allocas[AI].DbgVariableIntrinsics.empty() ||
-                Allocas[AI].DbgVariableIntrinsics.back() != DVI)
-              Allocas[AI].DbgVariableIntrinsics.push_back(DVI);
-        continue;
-      }
-
-      auto *II = dyn_cast<IntrinsicInst>(&I);
-      if (II && (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-                 II->getIntrinsicID() == Intrinsic::lifetime_end)) {
-        AllocaInst *AI = findAllocaForValue(II->getArgOperand(1));
-        if (!AI) {
-          UnrecognizedLifetimes.push_back(&I);
-          continue;
-        }
-        if (II->getIntrinsicID() == Intrinsic::lifetime_start)
-          Allocas[AI].LifetimeStart.push_back(II);
-        else
-          Allocas[AI].LifetimeEnd.push_back(II);
-      }
-
-      if (isa<ReturnInst, ResumeInst, CleanupReturnInst>(&I))
-        RetVec.push_back(&I);
     }
-  }
-
-  if (Allocas.empty())
-    return false;
-
-  int NextTag = 0;
-  int NumInterestingAllocas = 0;
-  for (auto &I : Allocas) {
-    AllocaInfo &Info = I.second;
-    assert(Info.AI);
-
-    if (!isInterestingAlloca(*Info.AI)) {
-      Info.Tag = -1;
+    if (auto *AI = dyn_cast<AllocaInst>(&I)) {
+      if (isInterestingAlloca(*AI)) {
+        InterestingAllocas[AI].AI = AI;
+        InterestingAllocas[AI].OldAI = AI;
+      }
       continue;
     }
 
-    alignAndPadAlloca(Info);
-    NumInterestingAllocas++;
-    Info.Tag = NextTag;
-    NextTag = (NextTag + 1) % 16;
+    if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
+      for (Value *V : DVI->location_ops())
+        if (auto *AI = dyn_cast_or_null<AllocaInst>(V))
+          if (isInterestingAlloca(*AI) &&
+              (InterestingAllocas[AI].DbgVariableIntrinsics.empty() ||
+               InterestingAllocas[AI].DbgVariableIntrinsics.back() != DVI))
+            InterestingAllocas[AI].DbgVariableIntrinsics.push_back(DVI);
+      continue;
+    }
+
+    auto *II = dyn_cast<IntrinsicInst>(&I);
+    if (II && (II->getIntrinsicID() == Intrinsic::lifetime_start ||
+                II->getIntrinsicID() == Intrinsic::lifetime_end)) {
+      AllocaInst *AI = findAllocaForValue(II->getArgOperand(1));
+      if (!AI) {
+        UnrecognizedLifetimes.push_back(&I);
+        continue;
+      }
+      if (!isInterestingAlloca(*AI))
+        continue;
+      if (II->getIntrinsicID() == Intrinsic::lifetime_start)
+        InterestingAllocas[AI].LifetimeStart.push_back(II);
+      else
+        InterestingAllocas[AI].LifetimeEnd.push_back(II);
+      continue;
+    }
+
+    Instruction *ExitUntag = getUntagLocationIfFunctionExit(I);
+    if (ExitUntag)
+      RetVec.push_back(ExitUntag);
   }
 
-  if (NumInterestingAllocas == 0)
-    return true;
+  if (InterestingAllocas.empty())
+    return false;
+
+  for (auto &I : InterestingAllocas) {
+    AllocaInfo &Info = I.second;
+    assert(Info.AI && isInterestingAlloca(*Info.AI));
+    alignAndPadAlloca(Info);
+  }
 
   std::unique_ptr<DominatorTree> DeleteDT;
   DominatorTree *DT = nullptr;
   if (auto *P = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
     DT = &P->getDomTree();
 
-  if (DT == nullptr && (NumInterestingAllocas > 1 ||
+  if (DT == nullptr && (InterestingAllocas.size() > 1 ||
                         !F->hasFnAttribute(Attribute::OptimizeNone))) {
     DeleteDT = std::make_unique<DominatorTree>(*F);
     DT = DeleteDT.get();
@@ -619,30 +621,37 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   SetTagFunc =
       Intrinsic::getDeclaration(F->getParent(), Intrinsic::aarch64_settag);
 
-  Instruction *Base = insertBaseTaggedPointer(Allocas, DT);
+  Instruction *Base = insertBaseTaggedPointer(InterestingAllocas, DT);
 
-  for (auto &I : Allocas) {
+  int NextTag = 0;
+  for (auto &I : InterestingAllocas) {
     const AllocaInfo &Info = I.second;
     AllocaInst *AI = Info.AI;
-    if (Info.Tag < 0)
-      continue;
-
+    int Tag = NextTag;
+    NextTag = (NextTag + 1) % 16;
     // Replace alloca with tagp(alloca).
     IRBuilder<> IRB(Info.AI->getNextNode());
     Function *TagP = Intrinsic::getDeclaration(
         F->getParent(), Intrinsic::aarch64_tagp, {Info.AI->getType()});
     Instruction *TagPCall =
         IRB.CreateCall(TagP, {Constant::getNullValue(Info.AI->getType()), Base,
-                              ConstantInt::get(IRB.getInt64Ty(), Info.Tag)});
+                              ConstantInt::get(IRB.getInt64Ty(), Tag)});
     if (Info.AI->hasName())
       TagPCall->setName(Info.AI->getName() + ".tag");
     Info.AI->replaceAllUsesWith(TagPCall);
     TagPCall->setOperand(0, Info.AI);
 
-    if (UnrecognizedLifetimes.empty() && Info.LifetimeStart.size() == 1 &&
-        Info.LifetimeEnd.size() == 1) {
+    bool StandardLifetime =
+        UnrecognizedLifetimes.empty() &&
+        isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT,
+                           ClMaxLifetimes);
+    // Calls to functions that may return twice (e.g. setjmp) confuse the
+    // postdominator analysis, and will leave us to keep memory tagged after
+    // function return. Work around this by always untagging at every return
+    // statement if return_twice functions are called.
+    if (UnrecognizedLifetimes.empty() && StandardLifetime &&
+        !CallsReturnTwice) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
-      IntrinsicInst *End = Info.LifetimeEnd[0];
       uint64_t Size =
           cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
       Size = alignTo(Size, kTagGranuleSize);
@@ -651,8 +660,10 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
       auto TagEnd = [&](Instruction *Node) { untagAlloca(AI, Node, Size); };
       if (!DT || !PDT ||
           !forAllReachableExits(*DT, *PDT, Start, Info.LifetimeEnd, RetVec,
-                                TagEnd))
-        End->eraseFromParent();
+                                TagEnd)) {
+        for (auto *End : Info.LifetimeEnd)
+          End->eraseFromParent();
+      }
     } else {
       uint64_t Size = Info.AI->getAllocationSizeInBits(*DL).getValue() / 8;
       Value *Ptr = IRB.CreatePointerCast(TagPCall, IRB.getInt8PtrTy());

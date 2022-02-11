@@ -26,6 +26,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
@@ -123,7 +124,7 @@ ABIWindows_x86_64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &ar
 bool ABIWindows_x86_64::PrepareTrivialCall(Thread &thread, addr_t sp,
                                            addr_t func_addr, addr_t return_addr,
                                            llvm::ArrayRef<addr_t> args) const {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (log) {
     StreamString s;

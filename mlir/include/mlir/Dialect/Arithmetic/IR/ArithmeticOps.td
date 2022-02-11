@@ -73,12 +73,6 @@ class Arith_CastOp<string mnemonic, TypeConstraint From, TypeConstraint To,
     DeclareOpInterfaceMethods<CastOpInterface>]>,
     Arguments<(ins From:$in)>,
     Results<(outs To:$out)> {
-  let builders = [
-    OpBuilder<(ins "Value":$source, "Type":$destType), [{
-      impl::buildCastOp($_builder, $_state, source, destType);
-    }]>
-  ];
-
   let assemblyFormat = "$in attr-dict `:` type($in) `to` type($out)";
 }
 
@@ -158,7 +152,6 @@ def Arith_ConstantOp : Op<Arithmetic_Dialect, "constant",
   // of strings and signed/unsigned integers (for now) as an artefact of
   // splitting the Standard dialect.
   let results = (outs /*SignlessIntegerOrFloatLike*/AnyType:$result);
-  let verifier = [{ return ::verify(*this); }];
 
   let builders = [
     OpBuilder<(ins "Attribute":$value),
@@ -175,6 +168,7 @@ def Arith_ConstantOp : Op<Arithmetic_Dialect, "constant",
 
   let hasFolder = 1;
   let assemblyFormat = "attr-dict $value";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -814,7 +808,7 @@ def Arith_ExtUIOp : Arith_IToICastOp<"extui"> {
   }];
 
   let hasFolder = 1;
-  let verifier = [{ return verifyExtOp<IntegerType>(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -845,7 +839,7 @@ def Arith_ExtSIOp : Arith_IToICastOp<"extsi"> {
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
-  let verifier = [{ return verifyExtOp<IntegerType>(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -859,8 +853,7 @@ def Arith_ExtFOp : Arith_FToFCastOp<"extf"> {
     The destination type must to be strictly wider than the source type.
     When operating on vectors, casts elementwise.
   }];
-
-  let verifier = [{ return verifyExtOp<FloatType>(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -887,7 +880,7 @@ def Arith_TruncIOp : Arith_IToICastOp<"trunci"> {
   }];
 
   let hasFolder = 1;
-  let verifier = [{ return verifyTruncateOp<IntegerType>(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -904,7 +897,7 @@ def Arith_TruncFOp : Arith_FToFCastOp<"truncf"> {
   }];
 
   let hasFolder = 1;
-  let verifier = [{ return verifyTruncateOp<FloatType>(*this); }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1089,7 +1082,7 @@ def Arith_CmpIOp : Arith_CompareOpOfAnyRank<"cmpi"> {
     %x = arith.cmpi "eq", %lhs, %rhs : vector<4xi64>
 
     // Generic form of the same operation.
-    %x = "std.arith.cmpi"(%lhs, %rhs) {predicate = 0 : i64}
+    %x = "arith.cmpi"(%lhs, %rhs) {predicate = 0 : i64}
         : (vector<4xi64>, vector<4xi64>) -> vector<4xi1>
     ```
   }];
@@ -1160,6 +1153,56 @@ def Arith_CmpFOp : Arith_CompareOp<"cmpf"> {
   }];
 
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// SelectOp
+//===----------------------------------------------------------------------===//
+
+def SelectOp : Arith_Op<"select", [
+    AllTypesMatch<["true_value", "false_value", "result"]>
+  ] # ElementwiseMappable.traits> {
+  let summary = "select operation";
+  let description = [{
+    The `arith.select` operation chooses one value based on a binary condition
+    supplied as its first operand. If the value of the first operand is `1`,
+    the second operand is chosen, otherwise the third operand is chosen.
+    The second and the third operand must have the same type.
+
+    The operation applies to vectors and tensors elementwise given the _shape_
+    of all operands is identical. The choice is made for each element
+    individually based on the value at the same position as the element in the
+    condition operand. If an i1 is provided as the condition, the entire vector
+    or tensor is chosen.
+
+    Example:
+
+    ```mlir
+    // Custom form of scalar selection.
+    %x = arith.select %cond, %true, %false : i32
+
+    // Generic form of the same operation.
+    %x = "arith.select"(%cond, %true, %false) : (i1, i32, i32) -> i32
+
+    // Element-wise vector selection.
+    %vx = arith.select %vcond, %vtrue, %vfalse : vector<42xi1>, vector<42xf32>
+
+    // Full vector selection.
+    %vx = arith.select %cond, %vtrue, %vfalse : vector<42xf32>
+    ```
+  }];
+
+  let arguments = (ins BoolLike:$condition,
+                       AnyType:$true_value,
+                       AnyType:$false_value);
+  let results = (outs AnyType:$result);
+
+  let hasCanonicalizer = 1;
+  let hasFolder = 1;
+  let hasVerifier = 1;
+  
+  // FIXME: Switch this to use the declarative assembly format.
+  let hasCustomAssemblyFormat = 1;
 }
 
 #endif // ARITHMETIC_OPS

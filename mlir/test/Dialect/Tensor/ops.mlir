@@ -250,3 +250,13 @@ func @pad_to_static_size(%arg0: tensor<?x?xf32>, %ub0: index, %ub1: index,
 
 // -----
 
+// CHECK-LABEL: func @test_splat_op
+// CHECK-SAME: [[S:%arg[0-9]+]]: f32
+func @test_splat_op(%s : f32) {
+  // CHECK: tensor.splat [[S]] : tensor<8xf32>
+  %v = tensor.splat %s : tensor<8xf32>
+  
+  // CHECK: tensor.splat [[S]] : tensor<4xf32>
+  %u = "tensor.splat"(%s) : (f32) -> tensor<4xf32>
+  return
+}

@@ -5,7 +5,7 @@ extern int scanf(const char *format, ...);
 extern int fscanf(FILE *f, const char *format, ...);
 extern int sscanf(const char *input, const char *format, ...);
 
-void call_scanf() {
+void call_scanf(void) {
   char buf10[10];
   char buf20[20];
   char buf30[30];
@@ -41,7 +41,7 @@ void call_scanf() {
   scanf("%12d", &x);
 }
 
-void call_sscanf() {
+void call_sscanf(void) {
   char buf10[10];
   char buf20[20];
   char buf30[30];
@@ -54,7 +54,7 @@ void call_sscanf() {
   sscanf("a b c", "%19s %29s %9s", buf20, buf30, buf10);
 }
 
-void call_fscanf() {
+void call_fscanf(void) {
   char buf10[10];
   char buf20[20];
   char buf30[30];

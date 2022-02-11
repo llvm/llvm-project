@@ -8,6 +8,7 @@
 
 #include "NativeRegisterContextDBReg_arm64.h"
 
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 
@@ -29,7 +30,7 @@ static constexpr inline uint64_t GetSizeBits(int size) {
 }
 
 uint32_t NativeRegisterContextDBReg_arm64::NumSupportedHardwareBreakpoints() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   llvm::Error error = ReadHardwareDebugInfo();
   if (error) {
     LLDB_LOG_ERROR(log, std::move(error),
@@ -43,7 +44,7 @@ uint32_t NativeRegisterContextDBReg_arm64::NumSupportedHardwareBreakpoints() {
 uint32_t
 NativeRegisterContextDBReg_arm64::SetHardwareBreakpoint(lldb::addr_t addr,
                                                         size_t size) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   LLDB_LOG(log, "addr: {0:x}, size: {1:x}", addr, size);
 
   // Read hardware breakpoint and watchpoint information.
@@ -104,7 +105,7 @@ NativeRegisterContextDBReg_arm64::SetHardwareBreakpoint(lldb::addr_t addr,
 
 bool NativeRegisterContextDBReg_arm64::ClearHardwareBreakpoint(
     uint32_t hw_idx) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   LLDB_LOG(log, "hw_idx: {0}", hw_idx);
 
   // Read hardware breakpoint and watchpoint information.
@@ -144,7 +145,7 @@ bool NativeRegisterContextDBReg_arm64::ClearHardwareBreakpoint(
 
 Status NativeRegisterContextDBReg_arm64::GetHardwareBreakHitIndex(
     uint32_t &bp_index, lldb::addr_t trap_addr) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
 
   LLDB_LOGF(log, "NativeRegisterContextDBReg_arm64::%s()", __FUNCTION__);
 
@@ -164,7 +165,7 @@ Status NativeRegisterContextDBReg_arm64::GetHardwareBreakHitIndex(
 }
 
 Status NativeRegisterContextDBReg_arm64::ClearAllHardwareBreakpoints() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
 
   LLDB_LOGF(log, "NativeRegisterContextDBReg_arm64::%s()", __FUNCTION__);
 
@@ -206,7 +207,7 @@ bool NativeRegisterContextDBReg_arm64::BreakpointIsEnabled(uint32_t bp_index) {
 }
 
 uint32_t NativeRegisterContextDBReg_arm64::NumSupportedHardwareWatchpoints() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   llvm::Error error = ReadHardwareDebugInfo();
   if (error) {
     LLDB_LOG_ERROR(log, std::move(error),
@@ -219,7 +220,7 @@ uint32_t NativeRegisterContextDBReg_arm64::NumSupportedHardwareWatchpoints() {
 
 uint32_t NativeRegisterContextDBReg_arm64::SetHardwareWatchpoint(
     lldb::addr_t addr, size_t size, uint32_t watch_flags) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   LLDB_LOG(log, "addr: {0:x}, size: {1:x} watch_flags: {2:x}", addr, size,
            watch_flags);
 
@@ -312,7 +313,7 @@ uint32_t NativeRegisterContextDBReg_arm64::SetHardwareWatchpoint(
 
 bool NativeRegisterContextDBReg_arm64::ClearHardwareWatchpoint(
     uint32_t wp_index) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   LLDB_LOG(log, "wp_index: {0}", wp_index);
 
   // Read hardware breakpoint and watchpoint information.
@@ -384,7 +385,7 @@ Status NativeRegisterContextDBReg_arm64::ClearAllHardwareWatchpoints() {
 
 uint32_t
 NativeRegisterContextDBReg_arm64::GetWatchpointSize(uint32_t wp_index) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   LLDB_LOG(log, "wp_index: {0}", wp_index);
 
   switch ((m_hwp_regs[wp_index].control >> 5) & 0xff) {
@@ -402,7 +403,7 @@ NativeRegisterContextDBReg_arm64::GetWatchpointSize(uint32_t wp_index) {
 }
 
 bool NativeRegisterContextDBReg_arm64::WatchpointIsEnabled(uint32_t wp_index) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   LLDB_LOG(log, "wp_index: {0}", wp_index);
 
   if ((m_hwp_regs[wp_index].control & g_enable_bit) != 0)
@@ -413,7 +414,7 @@ bool NativeRegisterContextDBReg_arm64::WatchpointIsEnabled(uint32_t wp_index) {
 
 Status NativeRegisterContextDBReg_arm64::GetWatchpointHitIndex(
     uint32_t &wp_index, lldb::addr_t trap_addr) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   LLDB_LOG(log, "wp_index: {0}, trap_addr: {1:x}", wp_index, trap_addr);
 
   // Read hardware breakpoint and watchpoint information.
@@ -444,7 +445,7 @@ Status NativeRegisterContextDBReg_arm64::GetWatchpointHitIndex(
 
 lldb::addr_t
 NativeRegisterContextDBReg_arm64::GetWatchpointAddress(uint32_t wp_index) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   LLDB_LOG(log, "wp_index: {0}", wp_index);
 
   if (wp_index >= m_max_hwp_supported)
@@ -457,7 +458,7 @@ NativeRegisterContextDBReg_arm64::GetWatchpointAddress(uint32_t wp_index) {
 
 lldb::addr_t
 NativeRegisterContextDBReg_arm64::GetWatchpointHitAddress(uint32_t wp_index) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   LLDB_LOG(log, "wp_index: {0}", wp_index);
 
   if (wp_index >= m_max_hwp_supported)

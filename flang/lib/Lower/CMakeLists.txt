@@ -4,7 +4,9 @@ add_flang_library(FortranLower
   Bridge.cpp
   CallInterface.cpp
   Coarray.cpp
+  ConvertExpr.cpp
   ConvertType.cpp
+  ConvertVariable.cpp
   Mangler.cpp
   OpenACC.cpp
   OpenMP.cpp
@@ -31,7 +33,7 @@ add_flang_library(FortranLower
   FortranSemantics
   MLIRAffineToStandard
   MLIRLLVMIR
-  MLIRSCFToStandard
+  MLIRSCFToControlFlow
   MLIRStandard
 
   LINK_COMPONENTS

@@ -76,7 +76,7 @@ void t4(Class c)
 - (void) MySetter : (int) value;
 @end
 
-int t5() {
+int t5(void) {
   Bar *f;
   f.FooBar = 1;	   // expected-warning {{'FooBar' is deprecated}}
   return f.FooBar; // expected-warning {{'FooBar' is deprecated}}
@@ -102,7 +102,7 @@ __attribute ((deprecated)) // expected-note {{'DEPRECATED' has been explicitly m
 @end
 
 __attribute__((deprecated))
-void depr_function();
+void depr_function(void);
 
 @implementation DEPRECATED (Category2) // no warning
 - (id)meth {
@@ -248,7 +248,7 @@ expected-note {{property declared here}}
 @end
 
 id PID = 0;
-const char * func() {
+const char * func(void) {
   return [PID cString]; // expected-warning {{'cString' is deprecated: first deprecated in macOS 10.4}}
 }
 

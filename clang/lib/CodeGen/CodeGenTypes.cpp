@@ -25,6 +25,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
+
 using namespace clang;
 using namespace CodeGen;
 
@@ -382,9 +383,6 @@ llvm::Type *CodeGenTypes::ConvertFunctionTypeInternal(QualType QFT) {
 
   RecordsBeingLaidOut.erase(Ty);
 
-  if (SkippedLayout)
-    TypeCache.clear();
-
   if (RecordsBeingLaidOut.empty())
     while (!DeferredRecords.empty())
       ConvertRecordDeclType(DeferredRecords.pop_back_val());
@@ -415,11 +413,27 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   if (const RecordType *RT = dyn_cast<RecordType>(Ty))
     return ConvertRecordDeclType(RT->getDecl());
 
-  // See if type is already cached.
-  llvm::DenseMap<const Type *, llvm::Type *>::iterator TCI = TypeCache.find(Ty);
-  // If type is found in map then use it. Otherwise, convert type T.
-  if (TCI != TypeCache.end())
-    return TCI->second;
+  // The LLVM type we return for a given Clang type may not always be the same,
+  // most notably when dealing with recursive structs. We mark these potential
+  // cases with ShouldUseCache below. Builtin types cannot be recursive.
+  // TODO: when clang uses LLVM opaque pointers we won't be able to represent
+  // recursive types with LLVM types, making this logic much simpler.
+  llvm::Type *CachedType = nullptr;
+  bool ShouldUseCache =
+      Ty->isBuiltinType() ||
+      (noRecordsBeingLaidOut() && FunctionsBeingProcessed.empty());
+  if (ShouldUseCache) {
+    llvm::DenseMap<const Type *, llvm::Type *>::iterator TCI =
+        TypeCache.find(Ty);
+    if (TCI != TypeCache.end())
+      CachedType = TCI->second;
+      // With expensive checks, check that the type we compute matches the
+      // cached type.
+#ifndef EXPENSIVE_CHECKS
+    if (CachedType)
+      return CachedType;
+#endif
+  }
 
   // If we don't have it in the cache, convert it now.
   llvm::Type *ResultType = nullptr;
@@ -758,8 +772,11 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::MemberPointer: {
     auto *MPTy = cast<MemberPointerType>(Ty);
     if (!getCXXABI().isMemberPointerConvertible(MPTy)) {
-      RecordsWithOpaqueMemberPointers.insert(MPTy->getClass());
-      ResultType = llvm::StructType::create(getLLVMContext());
+      auto *C = MPTy->getClass();
+      auto Insertion = RecordsWithOpaqueMemberPointers.insert({C, nullptr});
+      if (Insertion.second)
+        Insertion.first->second = llvm::StructType::create(getLLVMContext());
+      ResultType = Insertion.first->second;
     } else {
       ResultType = getCXXABI().ConvertMemberPointerType(MPTy);
     }
@@ -796,8 +813,11 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   }
 
   assert(ResultType && "Didn't convert a type?");
+  assert((!CachedType || CachedType == ResultType) &&
+         "Cached type doesn't match computed type");
 
-  TypeCache[Ty] = ResultType;
+  if (ShouldUseCache)
+    TypeCache[Ty] = ResultType;
   return ResultType;
 }
 

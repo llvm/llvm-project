@@ -10,7 +10,7 @@ void test2 (const struct {int a;} *x) {
 }
 
 typedef int arr[10];
-void test3() {
+void test3(void) {
   const arr b;      // expected-note {{variable 'b' declared const here}}
   const int b2[10]; // expected-note {{variable 'b2' declared const here}}
   b[4] = 1;         // expected-error {{cannot assign to variable 'b' with const-qualified type 'const arr' (aka 'const int[10]')}}

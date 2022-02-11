@@ -1,4 +1,4 @@
-; RUN: opt < %s -instsimplify -S | FileCheck %s
+; RUN: opt < %s -passes=instsimplify -S | FileCheck %s
 
 ; Cycle through commuted variants where one operand of fcmp ord/uno is
 ; known not-a-NAN and the other is repeated in the logically-connected fcmp.

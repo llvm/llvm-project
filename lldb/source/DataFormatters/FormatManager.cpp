@@ -8,15 +8,14 @@
 
 #include "lldb/DataFormatters/FormatManager.h"
 
-#include "llvm/ADT/STLExtras.h"
-
-
 #include "lldb/Core/Debugger.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/LanguageCategory.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -614,7 +613,7 @@ ImplSP FormatManager::Get(ValueObject &valobj,
   if (ImplSP retval_sp = GetCached<ImplSP>(match_data))
     return retval_sp;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+  Log *log = GetLog(LLDBLog::DataFormatters);
 
   LLDB_LOGF(log, "[%s] Search failed. Giving language a chance.", __FUNCTION__);
   for (lldb::LanguageType lang_type : match_data.GetCandidateLanguages()) {
@@ -637,7 +636,7 @@ ImplSP FormatManager::Get(ValueObject &valobj,
 template <typename ImplSP>
 ImplSP FormatManager::GetCached(FormattersMatchData &match_data) {
   ImplSP retval_sp;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+  Log *log = GetLog(LLDBLog::DataFormatters);
   if (match_data.GetTypeForCache()) {
     LLDB_LOGF(log, "\n\n[%s] Looking into cache for type %s", __FUNCTION__,
               match_data.GetTypeForCache().AsCString("<invalid>"));

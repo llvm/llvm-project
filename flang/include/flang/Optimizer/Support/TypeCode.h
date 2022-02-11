@@ -37,10 +37,11 @@ inline int characterBitsToTypeCode(unsigned bitwidth) {
 inline int complexBitsToTypeCode(unsigned bitwidth) {
   // clang-format off
   switch (bitwidth) {
+  case 16:  return CFI_type_half_float_Complex; // CFI_type_bfloat_Complex ?
   case 32:  return CFI_type_float_Complex;
   case 64:  return CFI_type_double_Complex;
-  case 80:
-  case 128: return CFI_type_long_double_Complex;
+  case 80:  return CFI_type_extended_double_Complex;
+  case 128: return CFI_type_float128_Complex;
   default:  llvm_unreachable("unsupported complex size");
   }
   // clang-format on
@@ -74,10 +75,11 @@ inline int logicalBitsToTypeCode(unsigned bitwidth) {
 inline int realBitsToTypeCode(unsigned bitwidth) {
   // clang-format off
   switch (bitwidth) {
+  case 16:  return CFI_type_half_float; // CFI_type_bfloat ?
   case 32:  return CFI_type_float;
   case 64:  return CFI_type_double;
-  case 80:
-  case 128: return CFI_type_long_double;
+  case 80:  return CFI_type_extended_double;
+  case 128: return CFI_type_float128;
   default:  llvm_unreachable("unsupported real size");
   }
   // clang-format on

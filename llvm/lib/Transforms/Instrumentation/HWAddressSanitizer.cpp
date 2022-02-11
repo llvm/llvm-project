@@ -34,6 +34,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -54,6 +55,7 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <sstream>
@@ -302,8 +304,6 @@ public:
   void tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag, size_t Size);
   Value *tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong, Value *Tag);
   Value *untagPointer(IRBuilder<> &IRB, Value *PtrLong);
-  static bool isStandardLifetime(const AllocaInfo &AllocaInfo,
-                                 const DominatorTree &DT);
   bool instrumentStack(
       bool ShouldDetectUseAfterScope,
       MapVector<AllocaInst *, AllocaInfo> &AllocasToInstrument,
@@ -1058,15 +1058,8 @@ bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O) {
 }
 
 static uint64_t getAllocaSizeInBytes(const AllocaInst &AI) {
-  uint64_t ArraySize = 1;
-  if (AI.isArrayAllocation()) {
-    const ConstantInt *CI = dyn_cast<ConstantInt>(AI.getArraySize());
-    assert(CI && "non-constant array size");
-    ArraySize = CI->getZExtValue();
-  }
-  Type *Ty = AI.getAllocatedType();
-  uint64_t SizeInBytes = AI.getModule()->getDataLayout().getTypeAllocSize(Ty);
-  return SizeInBytes * ArraySize;
+  auto DL = AI.getModule()->getDataLayout();
+  return AI.getAllocationSizeInBits(DL).getValue() / 8;
 }
 
 void HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
@@ -1331,35 +1324,6 @@ bool HWAddressSanitizer::instrumentLandingPads(
   return true;
 }
 
-static bool
-maybeReachableFromEachOther(const SmallVectorImpl<IntrinsicInst *> &Insts,
-                            const DominatorTree &DT) {
-  // If we have too many lifetime ends, give up, as the algorithm below is N^2.
-  if (Insts.size() > ClMaxLifetimes)
-    return true;
-  for (size_t I = 0; I < Insts.size(); ++I) {
-    for (size_t J = 0; J < Insts.size(); ++J) {
-      if (I == J)
-        continue;
-      if (isPotentiallyReachable(Insts[I], Insts[J], nullptr, &DT))
-        return true;
-    }
-  }
-  return false;
-}
-
-// static
-bool HWAddressSanitizer::isStandardLifetime(const AllocaInfo &AllocaInfo,
-                                            const DominatorTree &DT) {
-  // An alloca that has exactly one start and end in every possible execution.
-  // If it has multiple ends, they have to be unreachable from each other, so
-  // at most one of them is actually used for each execution of the function.
-  return AllocaInfo.LifetimeStart.size() == 1 &&
-         (AllocaInfo.LifetimeEnd.size() == 1 ||
-          (AllocaInfo.LifetimeEnd.size() > 0 &&
-           !maybeReachableFromEachOther(AllocaInfo.LifetimeEnd, DT)));
-}
-
 bool HWAddressSanitizer::instrumentStack(
     bool ShouldDetectUseAfterScope,
     MapVector<AllocaInst *, AllocaInfo> &AllocasToInstrument,
@@ -1412,7 +1376,9 @@ bool HWAddressSanitizer::instrumentStack(
       tagAlloca(IRB, AI, UARTag, AlignedSize);
     };
     bool StandardLifetime =
-        UnrecognizedLifetimes.empty() && isStandardLifetime(Info, GetDT());
+        UnrecognizedLifetimes.empty() &&
+        isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, &GetDT(),
+                           ClMaxLifetimes);
     if (ShouldDetectUseAfterScope && StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
       IRB.SetInsertPoint(Start->getNextNode());
@@ -1509,64 +1475,56 @@ bool HWAddressSanitizer::sanitizeFunction(
   SmallVector<Instruction *, 4> UnrecognizedLifetimes;
   DenseMap<AllocaInst *, std::vector<DbgVariableIntrinsic *>> AllocaDbgMap;
   bool CallsReturnTwice = false;
-  for (auto &BB : F) {
-    for (auto &Inst : BB) {
-      if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
-        if (CI->canReturnTwice()) {
-          CallsReturnTwice = true;
-        }
+  for (auto &Inst : instructions(F)) {
+    if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
+      if (CI->canReturnTwice()) {
+        CallsReturnTwice = true;
       }
-      if (InstrumentStack) {
-        if (AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
-          if (isInterestingAlloca(*AI))
-            AllocasToInstrument.insert({AI, {}});
-          continue;
-        }
-        auto *II = dyn_cast<IntrinsicInst>(&Inst);
-        if (II && (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-                   II->getIntrinsicID() == Intrinsic::lifetime_end)) {
-          AllocaInst *AI = findAllocaForValue(II->getArgOperand(1));
-          if (!AI) {
-            UnrecognizedLifetimes.push_back(&Inst);
-            continue;
-          }
-          if (!isInterestingAlloca(*AI))
-            continue;
-          if (II->getIntrinsicID() == Intrinsic::lifetime_start)
-            AllocasToInstrument[AI].LifetimeStart.push_back(II);
-          else
-            AllocasToInstrument[AI].LifetimeEnd.push_back(II);
-          continue;
-        }
-      }
-
-      if (isa<ReturnInst>(Inst)) {
-        if (CallInst *CI = Inst.getParent()->getTerminatingMustTailCall())
-          RetVec.push_back(CI);
-        else
-          RetVec.push_back(&Inst);
-      } else if (isa<ResumeInst, CleanupReturnInst>(Inst)) {
-        RetVec.push_back(&Inst);
-      }
-
-      if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
-        for (Value *V : DVI->location_ops()) {
-          if (auto *Alloca = dyn_cast_or_null<AllocaInst>(V))
-            if (!AllocaDbgMap.count(Alloca) ||
-                AllocaDbgMap[Alloca].back() != DVI)
-              AllocaDbgMap[Alloca].push_back(DVI);
-        }
-      }
-
-      if (InstrumentLandingPads && isa<LandingPadInst>(Inst))
-        LandingPadVec.push_back(&Inst);
-
-      getInterestingMemoryOperands(&Inst, OperandsToInstrument);
-
-      if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&Inst))
-        if (!ignoreMemIntrinsic(MI))
-          IntrinToInstrument.push_back(MI);
     }
+    if (InstrumentStack) {
+      if (AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
+        if (isInterestingAlloca(*AI))
+          AllocasToInstrument.insert({AI, {}});
+        continue;
+      }
+      auto *II = dyn_cast<IntrinsicInst>(&Inst);
+      if (II && (II->getIntrinsicID() == Intrinsic::lifetime_start ||
+                 II->getIntrinsicID() == Intrinsic::lifetime_end)) {
+        AllocaInst *AI = findAllocaForValue(II->getArgOperand(1));
+        if (!AI) {
+          UnrecognizedLifetimes.push_back(&Inst);
+          continue;
+        }
+        if (!isInterestingAlloca(*AI))
+          continue;
+        if (II->getIntrinsicID() == Intrinsic::lifetime_start)
+          AllocasToInstrument[AI].LifetimeStart.push_back(II);
+        else
+          AllocasToInstrument[AI].LifetimeEnd.push_back(II);
+        continue;
+      }
+    }
+
+    Instruction *ExitUntag = getUntagLocationIfFunctionExit(Inst);
+    if (ExitUntag)
+      RetVec.push_back(ExitUntag);
+
+    if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
+      for (Value *V : DVI->location_ops()) {
+        if (auto *Alloca = dyn_cast_or_null<AllocaInst>(V))
+          if (!AllocaDbgMap.count(Alloca) || AllocaDbgMap[Alloca].back() != DVI)
+            AllocaDbgMap[Alloca].push_back(DVI);
+      }
+    }
+
+    if (InstrumentLandingPads && isa<LandingPadInst>(Inst))
+      LandingPadVec.push_back(&Inst);
+
+    getInterestingMemoryOperands(&Inst, OperandsToInstrument);
+
+    if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&Inst))
+      if (!ignoreMemIntrinsic(MI))
+        IntrinToInstrument.push_back(MI);
   }
 
   initializeCallbacks(*F.getParent());
@@ -1614,16 +1572,14 @@ bool HWAddressSanitizer::sanitizeFunction(
       padInterestingAllocas(AllocasToInstrument);
 
   if (!AllocaToPaddedAllocaMap.empty()) {
-    for (auto &BB : F) {
-      for (auto &Inst : BB) {
-        if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
-          SmallDenseSet<Value *> LocationOps(DVI->location_ops().begin(),
-                                             DVI->location_ops().end());
-          for (Value *V : LocationOps) {
-            if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
-              if (auto *NewAI = AllocaToPaddedAllocaMap.lookup(AI))
-                DVI->replaceVariableLocationOp(V, NewAI);
-            }
+    for (auto &Inst : instructions(F)) {
+      if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
+        SmallDenseSet<Value *> LocationOps(DVI->location_ops().begin(),
+                                           DVI->location_ops().end());
+        for (Value *V : LocationOps) {
+          if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
+            if (auto *NewAI = AllocaToPaddedAllocaMap.lookup(AI))
+              DVI->replaceVariableLocationOp(V, NewAI);
           }
         }
       }

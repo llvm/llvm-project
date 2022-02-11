@@ -3,8 +3,8 @@
 # RUN:     -filetype=obj -o %t/elf_sm_pic_reloc.o %s
 # RUN: llvm-jitlink -noexec \
 # RUN:     -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
-# RUN:     -define-abs external_data=0x1 \
-# RUN:     -define-abs extern_out_of_range32=0x7fff00000000 \
+# RUN:     -abs external_data=0x1 \
+# RUN:     -abs extern_out_of_range32=0x7fff00000000 \
 # RUN:     -check %s %t/elf_sm_pic_reloc.o
 #
 # Test ELF small/PIC relocations.

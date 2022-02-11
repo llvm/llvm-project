@@ -1,6 +1,4 @@
 add_mlir_dialect_library(MLIRStandardOpsTransforms
-  BufferizableOpInterfaceImpl.cpp
-  Bufferize.cpp
   DecomposeCallGraphTypes.cpp
   FuncBufferize.cpp
   FuncConversions.cpp

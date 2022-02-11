@@ -268,11 +268,11 @@ func @full_contract2(%arg0: vector<2x3xf32>,
 // CHECK-SAME: %[[B:.*1]]: vector<3xf32>
 // CHECK:      %[[C0:.*]] = arith.constant dense<0.000000e+00> : vector<2x3xf32>
 // CHECK:      %[[T0:.*]] = vector.extract %[[A]][0] : vector<2xf32>
-// CHECK:      %[[T1:.*]] = splat %[[T0]] : vector<3xf32>
+// CHECK:      %[[T1:.*]] = vector.splat %[[T0]] : vector<3xf32>
 // CHECK:      %[[T2:.*]] = arith.mulf %[[T1]], %[[B]] : vector<3xf32>
 // CHECK:      %[[T3:.*]] = vector.insert %[[T2]], %[[C0]] [0] : vector<3xf32> into vector<2x3xf32>
 // CHECK:      %[[T4:.*]] = vector.extract %[[A]][1] : vector<2xf32>
-// CHECK:      %[[T5:.*]] = splat %[[T4]] : vector<3xf32>
+// CHECK:      %[[T5:.*]] = vector.splat %[[T4]] : vector<3xf32>
 // CHECK:      %[[T6:.*]] = arith.mulf %[[T5]], %[[B]] : vector<3xf32>
 // CHECK:      %[[T7:.*]] = vector.insert %[[T6]], %[[T3]] [1] : vector<3xf32> into vector<2x3xf32>
 // CHECK:      return %[[T7]] : vector<2x3xf32>
@@ -289,12 +289,12 @@ func @outerproduct_noacc(%arg0: vector<2xf32>,
 // CHECK-SAME: %[[C:.*2]]: vector<2x3xf32>
 // CHECK:      %[[C0:.*]] = arith.constant dense<0.000000e+00> : vector<2x3xf32>
 // CHECK:      %[[T0:.*]] = vector.extract %[[A]][0] : vector<2xf32>
-// CHECK:      %[[T1:.*]] = splat %[[T0]] : vector<3xf32>
+// CHECK:      %[[T1:.*]] = vector.splat %[[T0]] : vector<3xf32>
 // CHECK:      %[[T2:.*]] = vector.extract %[[C]][0] : vector<2x3xf32>
 // CHECK:      %[[T3:.*]] = vector.fma %[[T1]], %[[B]], %[[T2]] : vector<3xf32>
 // CHECK:      %[[T4:.*]] = vector.insert %[[T3]], %[[C0]] [0] : vector<3xf32> into vector<2x3xf32>
 // CHECK:      %[[T5:.*]] = vector.extract %[[A]][1] : vector<2xf32>
-// CHECK:      %[[T6:.*]] = splat %[[T5]] : vector<3xf32>
+// CHECK:      %[[T6:.*]] = vector.splat %[[T5]] : vector<3xf32>
 // CHECK:      %[[T7:.*]] = vector.extract %[[C]][1] : vector<2x3xf32>
 // CHECK:      %[[T8:.*]] = vector.fma %[[T6]], %[[B]], %[[T7]] : vector<3xf32>
 // CHECK:      %[[T9:.*]] = vector.insert %[[T8]], %[[T4]] [1] : vector<3xf32> into vector<2x3xf32>
@@ -312,11 +312,11 @@ func @outerproduct_acc(%arg0: vector<2xf32>,
 // CHECK-SAME: %[[B:.*1]]: vector<3xi32>
 // CHECK:      %[[C0:.*]] = arith.constant dense<0> : vector<2x3xi32>
 // CHECK:      %[[T0:.*]] = vector.extract %[[A]][0] : vector<2xi32>
-// CHECK:      %[[T1:.*]] = splat %[[T0]] : vector<3xi32>
+// CHECK:      %[[T1:.*]] = vector.splat %[[T0]] : vector<3xi32>
 // CHECK:      %[[T2:.*]] = arith.muli %[[T1]], %[[B]] : vector<3xi32>
 // CHECK:      %[[T3:.*]] = vector.insert %[[T2]], %[[C0]] [0] : vector<3xi32> into vector<2x3xi32>
 // CHECK:      %[[T4:.*]] = vector.extract %[[A]][1] : vector<2xi32>
-// CHECK:      %[[T5:.*]] = splat %[[T4]] : vector<3xi32>
+// CHECK:      %[[T5:.*]] = vector.splat %[[T4]] : vector<3xi32>
 // CHECK:      %[[T6:.*]] = arith.muli %[[T5]], %[[B]] : vector<3xi32>
 // CHECK:      %[[T7:.*]] = vector.insert %[[T6]], %[[T3]] [1] : vector<3xi32> into vector<2x3xi32>
 // CHECK:      return %[[T7]] : vector<2x3xi32>
@@ -332,13 +332,13 @@ func @outerproduct_noacc_int(%arg0: vector<2xi32>,
 // CHECK-SAME: %[[C:.*2]]: vector<2x3xi32>
 // CHECK:      %[[C0:.*]] = arith.constant dense<0> : vector<2x3xi32>
 // CHECK:      %[[T0:.*]] = vector.extract %[[A]][0] : vector<2xi32>
-// CHECK:      %[[T1:.*]] = splat %[[T0]] : vector<3xi32>
+// CHECK:      %[[T1:.*]] = vector.splat %[[T0]] : vector<3xi32>
 // CHECK:      %[[T2:.*]] = vector.extract %[[C]][0] : vector<2x3xi32>
 // CHECK:      %[[T3:.*]] = arith.muli %[[T1]], %[[B]] : vector<3xi32>
 // CHECK:      %[[T4:.*]] = arith.addi %[[T3]], %[[T2]] : vector<3xi32>
 // CHECK:      %[[T5:.*]] = vector.insert %[[T4]], %[[C0]] [0] : vector<3xi32> into vector<2x3xi32>
 // CHECK:      %[[T6:.*]] = vector.extract %[[A]][1] : vector<2xi32>
-// CHECK:      %[[T7:.*]] = splat %[[T6]] : vector<3xi32>
+// CHECK:      %[[T7:.*]] = vector.splat %[[T6]] : vector<3xi32>
 // CHECK:      %[[T8:.*]] = vector.extract %[[C]][1] : vector<2x3xi32>
 // CHECK:      %[[T9:.*]] = arith.muli %[[T7]], %[[B]] : vector<3xi32>
 // CHECK:      %[[T10:.*]] = arith.addi %[[T9]], %[[T8]] : vector<3xi32>
@@ -354,7 +354,7 @@ func @outerproduct_acc_int(%arg0: vector<2xi32>,
 // CHECK-LABEL: func @axpy_fp(
 // CHECK-SAME: %[[A:.*0]]: vector<16xf32>,
 // CHECK-SAME: %[[B:.*1]]: f32)
-// CHECK: %[[T0:.*]] = splat %[[B]] : vector<16xf32>
+// CHECK: %[[T0:.*]] = vector.splat %[[B]] : vector<16xf32>
 // CHECK: %[[T1:.*]] = arith.mulf %[[A]], %[[T0]] : vector<16xf32>
 // CHECK: return %[[T1]] : vector<16xf32>
 func @axpy_fp(%arg0: vector<16xf32>, %arg1: f32) -> vector<16xf32> {
@@ -366,7 +366,7 @@ func @axpy_fp(%arg0: vector<16xf32>, %arg1: f32) -> vector<16xf32> {
 // CHECK-SAME: %[[A:.*0]]: vector<16xf32>,
 // CHECK-SAME: %[[B:.*1]]: f32,
 // CHECK-SAME: %[[C:.*2]]: vector<16xf32>)
-// CHECK: %[[T0:.*]] = splat %[[B]] : vector<16xf32>
+// CHECK: %[[T0:.*]] = vector.splat %[[B]] : vector<16xf32>
 // CHECK: %[[T1:.*]] = vector.fma %[[A]], %[[T0]], %[[C]] : vector<16xf32>
 // CHECK: return %[[T1]] : vector<16xf32>
 func @axpy_fp_add(%arg0: vector<16xf32>, %arg1: f32, %arg2 : vector<16xf32>) -> vector<16xf32> {
@@ -377,7 +377,7 @@ func @axpy_fp_add(%arg0: vector<16xf32>, %arg1: f32, %arg2 : vector<16xf32>) -> 
 // CHECK-LABEL: func @axpy_int(
 // CHECK-SAME: %[[A:.*0]]: vector<16xi32>,
 // CHECK-SAME: %[[B:.*1]]: i32)
-// CHECK: %[[T0:.*]] = splat %[[B]] : vector<16xi32>
+// CHECK: %[[T0:.*]] = vector.splat %[[B]] : vector<16xi32>
 // CHECK: %[[T1:.*]] = arith.muli %[[A]], %[[T0]] : vector<16xi32>
 // CHECK: return %[[T1]] : vector<16xi32>
 func @axpy_int(%arg0: vector<16xi32>, %arg1: i32) -> vector<16xi32> {
@@ -389,7 +389,7 @@ func @axpy_int(%arg0: vector<16xi32>, %arg1: i32) -> vector<16xi32> {
 // CHECK-SAME: %[[A:.*0]]: vector<16xi32>,
 // CHECK-SAME: %[[B:.*1]]: i32,
 // CHECK-SAME: %[[C:.*2]]: vector<16xi32>)
-// CHECK: %[[T0:.*]] = splat %[[B]] : vector<16xi32>
+// CHECK: %[[T0:.*]] = vector.splat %[[B]] : vector<16xi32>
 // CHECK: %[[T1:.*]] = arith.muli %[[A]], %[[T0]] : vector<16xi32>
 // CHECK: %[[T2:.*]] = arith.addi %[[T1]], %[[C]] : vector<16xi32>
 // CHECK: return %[[T2]] : vector<16xi32>
@@ -612,7 +612,7 @@ func @matmul(%arg0: vector<2x4xf32>,
 
 // CHECK-LABEL: func @broadcast_vec1d_from_scalar
 // CHECK-SAME: %[[A:.*0]]: f32
-// CHECK:      %[[T0:.*]] = splat %[[A]] : vector<2xf32>
+// CHECK:      %[[T0:.*]] = vector.splat %[[A]] : vector<2xf32>
 // CHECK:      return %[[T0]] : vector<2xf32>
 
 func @broadcast_vec1d_from_scalar(%arg0: f32) -> vector<2xf32> {
@@ -622,7 +622,7 @@ func @broadcast_vec1d_from_scalar(%arg0: f32) -> vector<2xf32> {
 
 // CHECK-LABEL: func @broadcast_vec2d_from_scalar
 // CHECK-SAME: %[[A:.*0]]: f32
-// CHECK:      %[[T0:.*]] = splat %[[A]] : vector<2x3xf32>
+// CHECK:      %[[T0:.*]] = vector.splat %[[A]] : vector<2x3xf32>
 // CHECK:      return %[[T0]] : vector<2x3xf32>
 
 func @broadcast_vec2d_from_scalar(%arg0: f32) -> vector<2x3xf32> {
@@ -632,7 +632,7 @@ func @broadcast_vec2d_from_scalar(%arg0: f32) -> vector<2x3xf32> {
 
 // CHECK-LABEL: func @broadcast_vec3d_from_scalar
 // CHECK-SAME: %[[A:.*0]]: f32
-// CHECK:      %[[T0:.*]] = splat %[[A]] : vector<2x3x4xf32>
+// CHECK:      %[[T0:.*]] = vector.splat %[[A]] : vector<2x3x4xf32>
 // CHECK:      return %[[T0]] : vector<2x3x4xf32>
 
 func @broadcast_vec3d_from_scalar(%arg0: f32) -> vector<2x3x4xf32> {
@@ -697,7 +697,7 @@ func @broadcast_vec3d_from_vec2d(%arg0: vector<3x2xf32>) -> vector<4x3x2xf32> {
 // CHECK-LABEL: func @broadcast_stretch
 // CHECK-SAME: %[[A:.*0]]: vector<1xf32>
 // CHECK:      %[[T0:.*]] = vector.extract %[[A]][0] : vector<1xf32>
-// CHECK:      %[[T1:.*]] = splat %[[T0]] : vector<4xf32>
+// CHECK:      %[[T1:.*]] = vector.splat %[[T0]] : vector<4xf32>
 // CHECK:      return %[[T1]] : vector<4xf32>
 
 func @broadcast_stretch(%arg0: vector<1xf32>) -> vector<4xf32> {
@@ -723,16 +723,16 @@ func @broadcast_stretch_at_start(%arg0: vector<1x4xf32>) -> vector<3x4xf32> {
 // CHECK-SAME: %[[A:.*0]]: vector<4x1xf32>
 // CHECK:      %[[C0:.*]] = arith.constant dense<0.000000e+00> : vector<4x3xf32>
 // CHECK:      %[[T0:.*]] = vector.extract %[[A]][0, 0] : vector<4x1xf32>
-// CHECK:      %[[T2:.*]] = splat %[[T0]] : vector<3xf32>
+// CHECK:      %[[T2:.*]] = vector.splat %[[T0]] : vector<3xf32>
 // CHECK:      %[[T3:.*]] = vector.insert %[[T2]], %[[C0]] [0] : vector<3xf32> into vector<4x3xf32>
 // CHECK:      %[[T4:.*]] = vector.extract %[[A]][1, 0] : vector<4x1xf32>
-// CHECK:      %[[T6:.*]] = splat %[[T4]] : vector<3xf32>
+// CHECK:      %[[T6:.*]] = vector.splat %[[T4]] : vector<3xf32>
 // CHECK:      %[[T7:.*]] = vector.insert %[[T6]], %[[T3]] [1] : vector<3xf32> into vector<4x3xf32>
 // CHECK:      %[[T8:.*]] = vector.extract %[[A]][2, 0] : vector<4x1xf32>
-// CHECK:      %[[T10:.*]] = splat %[[T8]] : vector<3xf32>
+// CHECK:      %[[T10:.*]] = vector.splat %[[T8]] : vector<3xf32>
 // CHECK:      %[[T11:.*]] = vector.insert %[[T10]], %[[T7]] [2] : vector<3xf32> into vector<4x3xf32>
 // CHECK:      %[[T12:.*]] = vector.extract %[[A]][3, 0] : vector<4x1xf32>
-// CHECK:      %[[T14:.*]] = splat %[[T12]] : vector<3xf32>
+// CHECK:      %[[T14:.*]] = vector.splat %[[T12]] : vector<3xf32>
 // CHECK:      %[[T15:.*]] = vector.insert %[[T14]], %[[T11]] [3] : vector<3xf32> into vector<4x3xf32>
 // CHECK:      return %[[T15]] : vector<4x3xf32>
 
@@ -825,10 +825,10 @@ func @genbool_var_1d(%arg0: index) -> vector<3xi1> {
 // CHECK:      %[[c1:.*]] = arith.constant 1 : index
 // CHECK:      %[[T0:.*]] = vector.create_mask %[[B]] : vector<3xi1>
 // CHECK:      %[[T1:.*]] = arith.cmpi slt, %[[c0]], %[[A]] : index
-// CHECK:      %[[T2:.*]] = select %[[T1]], %[[T0]], %[[C1]] : vector<3xi1>
+// CHECK:      %[[T2:.*]] = arith.select %[[T1]], %[[T0]], %[[C1]] : vector<3xi1>
 // CHECK:      %[[T3:.*]] = vector.insert %[[T2]], %[[C2]] [0] : vector<3xi1> into vector<2x3xi1>
 // CHECK:      %[[T4:.*]] = arith.cmpi slt, %[[c1]], %[[A]] : index
-// CHECK:      %[[T5:.*]] = select %[[T4]], %[[T0]], %[[C1]] : vector<3xi1>
+// CHECK:      %[[T5:.*]] = arith.select %[[T4]], %[[T0]], %[[C1]] : vector<3xi1>
 // CHECK:      %[[T6:.*]] = vector.insert %[[T5]], %[[T3]] [1] : vector<3xi1> into vector<2x3xi1>
 // CHECK:      return %[[T6]] : vector<2x3xi1>
 
@@ -848,13 +848,13 @@ func @genbool_var_2d(%arg0: index, %arg1: index) -> vector<2x3xi1> {
 // CHECK-DAG:  %[[c1:.*]] = arith.constant 1 : index
 // CHECK:      %[[T0:.*]] = vector.create_mask %[[C]] : vector<7xi1>
 // CHECK:      %[[T1:.*]] = arith.cmpi slt, %[[c0]], %[[B]] : index
-// CHECK:      %[[T2:.*]] = select %[[T1]], %[[T0]], %[[C1]] : vector<7xi1>
+// CHECK:      %[[T2:.*]] = arith.select %[[T1]], %[[T0]], %[[C1]] : vector<7xi1>
 // CHECK:      %[[T3:.*]] = vector.insert %[[T2]], %[[C2]] [0] : vector<7xi1> into vector<1x7xi1>
 // CHECK:      %[[T4:.*]] = arith.cmpi slt, %[[c0]], %[[A]] : index
-// CHECK:      %[[T5:.*]] = select %[[T4]], %[[T3]], %[[C2]] : vector<1x7xi1>
+// CHECK:      %[[T5:.*]] = arith.select %[[T4]], %[[T3]], %[[C2]] : vector<1x7xi1>
 // CHECK:      %[[T6:.*]] = vector.insert %[[T5]], %[[C3]] [0] : vector<1x7xi1> into vector<2x1x7xi1>
 // CHECK:      %[[T7:.*]] = arith.cmpi slt, %[[c1]], %[[A]] : index
-// CHECK:      %[[T8:.*]] = select %[[T7]], %[[T3]], %[[C2]] : vector<1x7xi1>
+// CHECK:      %[[T8:.*]] = arith.select %[[T7]], %[[T3]], %[[C2]] : vector<1x7xi1>
 // CHECK:      %[[T9:.*]] = vector.insert %[[T8]], %[[T6]] [1] : vector<1x7xi1> into vector<2x1x7xi1>
 // CHECK:      return %[[T9]] : vector<2x1x7xi1>
 

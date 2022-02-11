@@ -22,7 +22,7 @@
 #include <variant>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -148,7 +148,7 @@ public:
       auto __tmp = *this;
       ++*this;
       return __tmp;
-    } else if constexpr (requires (_Iter& __i) { { *__i++ } -> __referenceable; } ||
+    } else if constexpr (requires (_Iter& __i) { { *__i++ } -> __can_reference; } ||
                          !__can_use_postfix_proxy<_Iter>) {
       return _VSTD::__unchecked_get<_Iter>(__hold_)++;
     } else {

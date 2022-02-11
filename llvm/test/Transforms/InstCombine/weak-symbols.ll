@@ -1,7 +1,7 @@
 ; PR4738 - Test that the library call simplifier doesn't assume anything about
 ; weak symbols.
 ;
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 @real_init = weak_odr constant [2 x i8] c"y\00"
 @fake_init = weak constant [2 x i8] c"y\00"

@@ -54,16 +54,20 @@ RUN printf "fr_CA ISO-8859-1\ncs_CZ ISO-8859-2" >> /usr/local/share/i1en/SUPPORT
 RUN locale-gen
 
 # Install Clang <latest>, <latest-1> and ToT, which are the ones we support.
-ENV LLVM_LATEST_VERSION=13
+# We also install <latest-2> to allow smooth CI transitions around release points.
+ENV LLVM_LATEST_VERSION=14
 RUN apt-get update && apt-get install -y lsb-release wget software-properties-common
 RUN wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
+RUN bash /tmp/llvm.sh $(($LLVM_LATEST_VERSION - 2)) # for CI transitions
 RUN bash /tmp/llvm.sh $(($LLVM_LATEST_VERSION - 1)) # previous release
 RUN bash /tmp/llvm.sh $LLVM_LATEST_VERSION          # latest release
 RUN bash /tmp/llvm.sh $(($LLVM_LATEST_VERSION + 1)) # current ToT
 
-# Make the ToT Clang the "default" compiler on the system
-RUN ln -fs /usr/bin/clang++-$(($LLVM_LATEST_VERSION + 1)) /usr/bin/c++ && [ -e $(readlink /usr/bin/c++) ]
-RUN ln -fs /usr/bin/clang-$(($LLVM_LATEST_VERSION + 1)) /usr/bin/cc && [ -e $(readlink /usr/bin/cc) ]
+# Make the latest version of Clang the "default" compiler on the system
+# TODO: In the future, all jobs should be using an explicitly-versioned version of Clang instead,
+#       and we can get rid of this entirely.
+RUN ln -fs /usr/bin/clang++-$LLVM_LATEST_VERSION /usr/bin/c++ && [ -e $(readlink /usr/bin/c++) ]
+RUN ln -fs /usr/bin/clang-$LLVM_LATEST_VERSION /usr/bin/cc && [ -e $(readlink /usr/bin/cc) ]
 
 # Install clang-format
 RUN apt-get install -y clang-format-$LLVM_LATEST_VERSION

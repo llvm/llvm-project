@@ -32,6 +32,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 #include "lldb/../../source/Plugins/ObjectFile/JIT/ObjectFileJIT.h"
@@ -70,8 +71,7 @@ lldb::addr_t IRExecutionUnit::WriteNow(const uint8_t *bytes, size_t size,
     return LLDB_INVALID_ADDRESS;
   }
 
-  if (Log *log =
-          lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS)) {
+  if (Log *log = GetLog(LLDBLog::Expressions)) {
     DataBufferHeap my_buffer(size, 0);
     Status err;
     ReadMemory(my_buffer.GetBytes(), allocation_process_addr, size, err);
@@ -99,7 +99,7 @@ void IRExecutionUnit::FreeNow(lldb::addr_t allocation) {
 
 Status IRExecutionUnit::DisassembleFunction(Stream &stream,
                                             lldb::ProcessSP &process_wp) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   ExecutionContext exe_ctx(process_wp);
 
@@ -254,7 +254,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
 
   m_did_jit = true;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   std::string error_string;
 
@@ -592,7 +592,7 @@ lldb::SectionType IRExecutionUnit::GetSectionTypeFromSectionName(
 uint8_t *IRExecutionUnit::MemoryManager::allocateCodeSection(
     uintptr_t Size, unsigned Alignment, unsigned SectionID,
     llvm::StringRef SectionName) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   uint8_t *return_value = m_default_mm_up->allocateCodeSection(
       Size, Alignment, SectionID, SectionName);
@@ -622,7 +622,7 @@ uint8_t *IRExecutionUnit::MemoryManager::allocateCodeSection(
 uint8_t *IRExecutionUnit::MemoryManager::allocateDataSection(
     uintptr_t Size, unsigned Alignment, unsigned SectionID,
     llvm::StringRef SectionName, bool IsReadOnly) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   uint8_t *return_value = m_default_mm_up->allocateDataSection(
       Size, Alignment, SectionID, SectionName, IsReadOnly);
@@ -882,7 +882,7 @@ lldb::addr_t IRExecutionUnit::FindSymbol(lldb_private::ConstString name,
 
 void IRExecutionUnit::GetStaticInitializers(
     std::vector<lldb::addr_t> &static_initializers) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   llvm::GlobalVariable *global_ctors =
       m_module->getNamedGlobal("llvm.global_ctors");
@@ -950,7 +950,7 @@ IRExecutionUnit::MemoryManager::getSymbolAddress(const std::string &Name) {
 uint64_t 
 IRExecutionUnit::MemoryManager::GetSymbolAddressAndPresence(
     const std::string &Name, bool &missing_weak) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   ConstString name_cs(Name.c_str());
 
@@ -977,7 +977,7 @@ void *IRExecutionUnit::MemoryManager::getPointerToNamedFunction(
 
 lldb::addr_t
 IRExecutionUnit::GetRemoteAddressForLocal(lldb::addr_t local_address) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   for (AllocationRecord &record : m_records) {
     if (local_address >= record.m_host_address &&

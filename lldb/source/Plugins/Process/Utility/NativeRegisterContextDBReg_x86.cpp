@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NativeRegisterContextDBReg_x86.h"
-
-#include "lldb/Utility/Log.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegisterValue.h"
 
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
@@ -242,7 +241,7 @@ Status NativeRegisterContextDBReg_x86::ClearAllHardwareWatchpoints() {
 
 uint32_t NativeRegisterContextDBReg_x86::SetHardwareWatchpoint(
     lldb::addr_t addr, size_t size, uint32_t watch_flags) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log = GetLog(LLDBLog::Watchpoints);
   const uint32_t num_hw_watchpoints = NumSupportedHardwareWatchpoints();
   for (uint32_t wp_index = 0; wp_index < num_hw_watchpoints; ++wp_index) {
     bool is_vacant;

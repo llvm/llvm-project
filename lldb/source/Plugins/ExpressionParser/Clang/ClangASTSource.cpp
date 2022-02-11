@@ -18,6 +18,7 @@
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TaggedASTType.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecordLayout.h"
@@ -183,7 +184,7 @@ bool ClangASTSource::FindExternalVisibleDeclsByName(
 }
 
 TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (const NamespaceDecl *namespace_context =
           dyn_cast<NamespaceDecl>(decl->getDeclContext())) {
@@ -278,7 +279,7 @@ TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
 }
 
 void ClangASTSource::CompleteType(TagDecl *tag_decl) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (log) {
     LLDB_LOG(log,
@@ -307,7 +308,7 @@ void ClangASTSource::CompleteType(TagDecl *tag_decl) {
 }
 
 void ClangASTSource::CompleteType(clang::ObjCInterfaceDecl *interface_decl) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   LLDB_LOG(log,
            "    [CompleteObjCInterfaceDecl] on (ASTContext*){0} '{1}' "
@@ -387,7 +388,7 @@ void ClangASTSource::FindExternalLexicalDecls(
     llvm::function_ref<bool(Decl::Kind)> predicate,
     llvm::SmallVectorImpl<Decl *> &decls) {
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   const Decl *context_decl = dyn_cast<Decl>(decl_context);
 
@@ -520,7 +521,7 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
 
   const ConstString name(context.m_decl_name.getAsString().c_str());
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (log) {
     if (!context.m_decl_context)
@@ -597,7 +598,7 @@ void ClangASTSource::FindExternalVisibleDecls(
     CompilerDeclContext &namespace_decl) {
   assert(m_ast_context);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   SymbolContextList sc_list;
 
@@ -668,7 +669,7 @@ void ClangASTSource::FillNamespaceMap(
   if (IgnoreName(name, true))
     return;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (module_sp && namespace_decl) {
     CompilerDeclContext found_namespace_decl;
@@ -833,7 +834,7 @@ bool ClangASTSource::FindObjCMethodDeclsWithOrigin(
     if (!copied_method_decl)
       continue;
 
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+    Log *log = GetLog(LLDBLog::Expressions);
 
     LLDB_LOG(log, "  CAS::FOMD found ({0}) {1}", log_info,
              ClangUtil::DumpDecl(copied_method_decl));
@@ -846,7 +847,7 @@ bool ClangASTSource::FindObjCMethodDeclsWithOrigin(
 
 void ClangASTSource::FindDeclInModules(NameSearchContext &context,
                                        ConstString name) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   std::shared_ptr<ClangModulesDeclVendor> modules_decl_vendor =
       GetClangModulesDeclVendor();
@@ -886,7 +887,7 @@ void ClangASTSource::FindDeclInModules(NameSearchContext &context,
 
 void ClangASTSource::FindDeclInObjCRuntime(NameSearchContext &context,
                                            ConstString name) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   lldb::ProcessSP process(m_target->GetProcessSP());
 
@@ -928,7 +929,7 @@ void ClangASTSource::FindDeclInObjCRuntime(NameSearchContext &context,
 }
 
 void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   const DeclarationName &decl_name(context.m_decl_name);
   const DeclContext *decl_ctx(context.m_decl_context);
@@ -1208,7 +1209,7 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
 static bool FindObjCPropertyAndIvarDeclsWithOrigin(
     NameSearchContext &context, ClangASTSource &source,
     DeclFromUser<const ObjCInterfaceDecl> &origin_iface_decl) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (origin_iface_decl.IsInvalid())
     return false;
@@ -1255,7 +1256,7 @@ static bool FindObjCPropertyAndIvarDeclsWithOrigin(
 }
 
 void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   DeclFromParser<const ObjCInterfaceDecl> parser_iface_decl(
       cast<ObjCInterfaceDecl>(context.m_decl_context));
@@ -1391,7 +1392,7 @@ void ClangASTSource::LookupInNamespace(NameSearchContext &context) {
   const NamespaceDecl *namespace_context =
       dyn_cast<NamespaceDecl>(context.m_decl_context);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   ClangASTImporter::NamespaceMapSP namespace_map =
       m_ast_importer_sp->GetNamespaceMap(namespace_context);
@@ -1498,7 +1499,7 @@ bool ClangASTSource::layoutRecordType(const RecordDecl *record, uint64_t &size,
                                       BaseOffsetMap &base_offsets,
                                       BaseOffsetMap &virtual_base_offsets) {
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   LLDB_LOG(log,
            "LayoutRecordType on (ASTContext*){0} '{1}' for (RecordDecl*)"
@@ -1620,7 +1621,7 @@ void ClangASTSource::CompleteNamespaceMap(
     ClangASTImporter::NamespaceMapSP &namespace_map, ConstString name,
     ClangASTImporter::NamespaceMapSP &parent_map) const {
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (log) {
     if (parent_map && parent_map->size())

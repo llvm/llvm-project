@@ -281,6 +281,16 @@ struct PartiallyConstructedSafepointRecord {
   RematerializedValueMapTy RematerializedValues;
 };
 
+struct RematerizlizationCandidateRecord {
+  // Chain from derived pointer to base.
+  SmallVector<Instruction *, 3> ChainToBase;
+  // Original base.
+  Value *RootOfChain;
+  // Cost of chain.
+  InstructionCost Cost;
+};
+using RematCandTy = MapVector<Value *, RematerizlizationCandidateRecord>;
+
 } // end anonymous namespace
 
 static ArrayRef<Use> GetDeoptBundleOperands(const CallBase *Call) {
@@ -1349,23 +1359,23 @@ static constexpr Attribute::AttrKind FnAttrsToStrip[] =
 // Create new attribute set containing only attributes which can be transferred
 // from original call to the safepoint.
 static AttributeList legalizeCallAttributes(LLVMContext &Ctx,
-                                            AttributeList AL) {
-  if (AL.isEmpty())
-    return AL;
+                                            AttributeList OrigAL,
+                                            AttributeList StatepointAL) {
+  if (OrigAL.isEmpty())
+    return StatepointAL;
 
   // Remove the readonly, readnone, and statepoint function attributes.
-  AttrBuilder FnAttrs(Ctx, AL.getFnAttrs());
+  AttrBuilder FnAttrs(Ctx, OrigAL.getFnAttrs());
   for (auto Attr : FnAttrsToStrip)
     FnAttrs.removeAttribute(Attr);
 
-  for (Attribute A : AL.getFnAttrs()) {
+  for (Attribute A : OrigAL.getFnAttrs()) {
     if (isStatepointDirectiveAttr(A))
       FnAttrs.removeAttribute(A);
   }
 
   // Just skip parameter and return attributes for now
-  return AttributeList::get(Ctx, AttributeList::FunctionIndex,
-                            AttributeSet::get(Ctx, FnAttrs));
+  return StatepointAL.addFnAttributes(Ctx, FnAttrs);
 }
 
 /// Helper function to place all gc relocates necessary for the given
@@ -1570,8 +1580,8 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
     assert(DeoptLowering.equals("live-through") && "Unsupported value!");
   }
 
-  Value *CallTarget = Call->getCalledOperand();
-  if (Function *F = dyn_cast<Function>(CallTarget)) {
+  FunctionCallee CallTarget(Call->getFunctionType(), Call->getCalledOperand());
+  if (Function *F = dyn_cast<Function>(CallTarget.getCallee())) {
     auto IID = F->getIntrinsicID();
     if (IID == Intrinsic::experimental_deoptimize) {
       // Calls to llvm.experimental.deoptimize are lowered to calls to the
@@ -1589,8 +1599,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
       // the same module.  This is fine -- we assume the frontend knew what it
       // was doing when generating this kind of IR.
       CallTarget = F->getParent()
-                       ->getOrInsertFunction("__llvm_deoptimize", FTy)
-                       .getCallee();
+                       ->getOrInsertFunction("__llvm_deoptimize", FTy);
 
       IsDeoptimize = true;
     } else if (IID == Intrinsic::memcpy_element_unordered_atomic ||
@@ -1686,8 +1695,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
 
       CallTarget =
           F->getParent()
-              ->getOrInsertFunction(GetFunctionName(IID, ElementSizeCI), FTy)
-              .getCallee();
+              ->getOrInsertFunction(GetFunctionName(IID, ElementSizeCI), FTy);
     }
   }
 
@@ -1705,8 +1713,8 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
     // function attributes.  In case if we can handle this set of attributes -
     // set up function attrs directly on statepoint and return attrs later for
     // gc_result intrinsic.
-    SPCall->setAttributes(
-        legalizeCallAttributes(CI->getContext(), CI->getAttributes()));
+    SPCall->setAttributes(legalizeCallAttributes(
+        CI->getContext(), CI->getAttributes(), SPCall->getAttributes()));
 
     Token = cast<GCStatepointInst>(SPCall);
 
@@ -1732,8 +1740,8 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
     // function attributes.  In case if we can handle this set of attributes -
     // set up function attrs directly on statepoint and return attrs later for
     // gc_result intrinsic.
-    SPInvoke->setAttributes(
-        legalizeCallAttributes(II->getContext(), II->getAttributes()));
+    SPInvoke->setAttributes(legalizeCallAttributes(
+        II->getContext(), II->getAttributes(), SPInvoke->getAttributes()));
 
     Token = cast<GCStatepointInst>(SPInvoke);
 
@@ -2221,27 +2229,25 @@ static bool AreEquivalentPhiNodes(PHINode &OrigRootPhi, PHINode &AlternateRootPh
   return true;
 }
 
-// From the statepoint live set pick values that are cheaper to recompute then
-// to relocate. Remove this values from the live set, rematerialize them after
-// statepoint and record them in "Info" structure. Note that similar to
-// relocated values we don't do any user adjustments here.
-static void rematerializeLiveValues(CallBase *Call,
-                                    PartiallyConstructedSafepointRecord &Info,
-                                    PointerToBaseTy &PointerToBase,
-                                    TargetTransformInfo &TTI) {
+// Find derived pointers that can be recomputed cheap enough and fill
+// RematerizationCandidates with such candidates.
+static void
+findRematerializationCandidates(PointerToBaseTy PointerToBase,
+                                RematCandTy &RematerizationCandidates,
+                                TargetTransformInfo &TTI) {
   const unsigned int ChainLengthThreshold = 10;
 
-  // Record values we are going to delete from this statepoint live set.
-  // We can not di this in following loop due to iterator invalidation.
-  SmallVector<Value *, 32> LiveValuesToBeDeleted;
+  for (auto P2B : PointerToBase) {
+    auto *Derived = P2B.first;
+    auto *Base = P2B.second;
+    // Consider only derived pointers.
+    if (Derived == Base)
+      continue;
 
-  for (Value *LiveValue: Info.LiveSet) {
-    // For each live pointer find its defining chain
+    // For each live pointer find its defining chain.
     SmallVector<Instruction *, 3> ChainToBase;
-    assert(PointerToBase.count(LiveValue));
     Value *RootOfChain =
-      findRematerializableChainToBasePointer(ChainToBase,
-                                             LiveValue);
+        findRematerializableChainToBasePointer(ChainToBase, Derived);
 
     // Nothing to do, or chain is too long
     if ( ChainToBase.size() == 0 ||
@@ -2250,9 +2256,9 @@ static void rematerializeLiveValues(CallBase *Call,
 
     // Handle the scenario where the RootOfChain is not equal to the
     // Base Value, but they are essentially the same phi values.
-    if (RootOfChain != PointerToBase[LiveValue]) {
+    if (RootOfChain != PointerToBase[Derived]) {
       PHINode *OrigRootPhi = dyn_cast<PHINode>(RootOfChain);
-      PHINode *AlternateRootPhi = dyn_cast<PHINode>(PointerToBase[LiveValue]);
+      PHINode *AlternateRootPhi = dyn_cast<PHINode>(PointerToBase[Derived]);
       if (!OrigRootPhi || !AlternateRootPhi)
         continue;
       // PHI nodes that have the same incoming values, and belonging to the same
@@ -2266,33 +2272,61 @@ static void rematerializeLiveValues(CallBase *Call,
       // deficiency in the findBasePointer algorithm.
       if (!AreEquivalentPhiNodes(*OrigRootPhi, *AlternateRootPhi))
         continue;
-      // Now that the phi nodes are proved to be the same, assert that
-      // findBasePointer's newly generated AlternateRootPhi is present in the
-      // liveset of the call.
-      assert(Info.LiveSet.count(AlternateRootPhi));
     }
-    // Compute cost of this chain
+    // Compute cost of this chain.
     InstructionCost Cost = chainToBasePointerCost(ChainToBase, TTI);
     // TODO: We can also account for cases when we will be able to remove some
     //       of the rematerialized values by later optimization passes. I.e if
     //       we rematerialized several intersecting chains. Or if original values
     //       don't have any uses besides this statepoint.
 
+    // Ok, there is a candidate.
+    RematerizlizationCandidateRecord Record;
+    Record.ChainToBase = ChainToBase;
+    Record.RootOfChain = RootOfChain;
+    Record.Cost = Cost;
+    RematerizationCandidates.insert({ Derived, Record });
+  }
+}
+
+// From the statepoint live set pick values that are cheaper to recompute then
+// to relocate. Remove this values from the live set, rematerialize them after
+// statepoint and record them in "Info" structure. Note that similar to
+// relocated values we don't do any user adjustments here.
+static void rematerializeLiveValues(CallBase *Call,
+                                    PartiallyConstructedSafepointRecord &Info,
+                                    PointerToBaseTy &PointerToBase,
+                                    RematCandTy &RematerizationCandidates,
+                                    TargetTransformInfo &TTI) {
+  // Record values we are going to delete from this statepoint live set.
+  // We can not di this in following loop due to iterator invalidation.
+  SmallVector<Value *, 32> LiveValuesToBeDeleted;
+
+  for (Value *LiveValue : Info.LiveSet) {
+    auto It = RematerizationCandidates.find(LiveValue);
+    if (It == RematerizationCandidates.end())
+      continue;
+
+    RematerizlizationCandidateRecord &Record = It->second;
+
+    InstructionCost Cost = Record.Cost;
     // For invokes we need to rematerialize each chain twice - for normal and
     // for unwind basic blocks. Model this by multiplying cost by two.
-    if (isa<InvokeInst>(Call)) {
+    if (isa<InvokeInst>(Call))
       Cost *= 2;
-    }
-    // If it's too expensive - skip it
+
+    // If it's too expensive - skip it.
     if (Cost >= RematerializationThreshold)
       continue;
 
     // Remove value from the live set
     LiveValuesToBeDeleted.push_back(LiveValue);
 
-    // Clone instructions and record them inside "Info" structure
+    // Clone instructions and record them inside "Info" structure.
 
-    // Walk backwards to visit top-most instructions first
+    // For each live pointer find get its defining chain.
+    SmallVector<Instruction *, 3> ChainToBase = Record.ChainToBase;
+    // Walk backwards to visit top-most instructions first.
     std::reverse(ChainToBase.begin(), ChainToBase.end());
 
     // Utility function which clones all instructions from "ChainToBase"
@@ -2352,7 +2386,7 @@ static void rematerializeLiveValues(CallBase *Call,
       Instruction *InsertBefore = Call->getNextNode();
       assert(InsertBefore);
       Instruction *RematerializedValue = rematerializeChain(
-          InsertBefore, RootOfChain, PointerToBase[LiveValue]);
+          InsertBefore, Record.RootOfChain, PointerToBase[LiveValue]);
       Info.RematerializedValues[RematerializedValue] = LiveValue;
     } else {
       auto *Invoke = cast<InvokeInst>(Call);
@@ -2363,9 +2397,9 @@ static void rematerializeLiveValues(CallBase *Call,
           &*Invoke->getUnwindDest()->getFirstInsertionPt();
 
       Instruction *NormalRematerializedValue = rematerializeChain(
-          NormalInsertBefore, RootOfChain, PointerToBase[LiveValue]);
+          NormalInsertBefore, Record.RootOfChain, PointerToBase[LiveValue]);
       Instruction *UnwindRematerializedValue = rematerializeChain(
-          UnwindInsertBefore, RootOfChain, PointerToBase[LiveValue]);
+          UnwindInsertBefore, Record.RootOfChain, PointerToBase[LiveValue]);
 
       Info.RematerializedValues[NormalRematerializedValue] = LiveValue;
       Info.RematerializedValues[UnwindRematerializedValue] = LiveValue;
@@ -2563,11 +2597,16 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
 
   Holders.clear();
 
+  // Compute the cost of possible re-materialization of derived pointers.
+  RematCandTy RematerizationCandidates;
+  findRematerializationCandidates(PointerToBase, RematerizationCandidates, TTI);
+
   // In order to reduce live set of statepoint we might choose to rematerialize
   // some values instead of relocating them. This is purely an optimization and
   // does not influence correctness.
   for (size_t i = 0; i < Records.size(); i++)
-    rematerializeLiveValues(ToUpdate[i], Records[i], PointerToBase, TTI);
+    rematerializeLiveValues(ToUpdate[i], Records[i], PointerToBase,
+                            RematerizationCandidates, TTI);
 
   // We need this to safely RAUW and delete call or invoke return values that
   // may themselves be live over a statepoint.  For details, please see usage in

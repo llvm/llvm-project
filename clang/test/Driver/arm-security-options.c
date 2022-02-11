@@ -90,4 +90,4 @@
 // BAD-B-KEY-COMBINATION: invalid branch protection option 'b-key' in '-mbranch-protection={{.*}}'
 // BAD-LEAF-COMBINATION: invalid branch protection option 'leaf' in '-mbranch-protection={{.*}}'
 
-// INCOMPATIBLE-ARCH: ignoring '-mbranch-protection=' option because the '{{.*}}' architecture does not support it
+// INCOMPATIBLE-ARCH: '-mbranch-protection=' option is incompatible with the '{{.*}}' architecture

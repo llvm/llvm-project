@@ -55,7 +55,7 @@ extern int 👷‍♀; // expected-warning {{declaration does not declare anythi
 // A 🌹 by any other name....
 extern int 🌹;
 int 🌵(int 🌻) { return 🌻+ 1; }
-int main () {
+int main (void) {
   int 🌷 = 🌵(🌹);
   return 🌷;
 }

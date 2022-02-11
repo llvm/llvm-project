@@ -41,11 +41,15 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   .Case(#Name, static_cast<unsigned>(OMPC_SCHEDULE_MODIFIER_##Name))
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_SCHEDULE_unknown);
-  case OMPC_depend:
-    return llvm::StringSwitch<OpenMPDependClauseKind>(Str)
+  case OMPC_depend: {
+    unsigned Type = llvm::StringSwitch<unsigned>(Str)
 #define OPENMP_DEPEND_KIND(Name) .Case(#Name, OMPC_DEPEND_##Name)
 #include "clang/Basic/OpenMPKinds.def"
-        .Default(OMPC_DEPEND_unknown);
+                        .Default(OMPC_DEPEND_unknown);
+    if (LangOpts.OpenMP < 51 && Type == OMPC_DEPEND_inoutset)
+      return OMPC_DEPEND_unknown;
+    return Type;
+  }
   case OMPC_linear:
     return llvm::StringSwitch<OpenMPLinearClauseKind>(Str)
 #define OPENMP_LINEAR_KIND(Name) .Case(#Name, OMPC_LINEAR_##Name)

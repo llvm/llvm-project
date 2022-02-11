@@ -349,8 +349,7 @@ private:
     if (auto Scalar = scalarValue(N, Desc)) {
       if (auto Bool = llvm::yaml::parseBool(**Scalar))
         return Located<bool>(*Bool, Scalar->Range);
-      else
-        warning(Desc + " should be a boolean", N);
+      warning(Desc + " should be a boolean", N);
     }
     return llvm::None;
   }

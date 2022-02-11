@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -verify -fsyntax-only -pedantic
 
-int test1() {
+int test1(void) {
   typedef int x[test1()];  // vla
   static int y = sizeof(x);  // expected-error {{not a compile-time constant}}
 }
@@ -32,7 +32,7 @@ int d[i]; // expected-error {{variable length array declaration not allowed at f
 
 int (*e)[i]; // expected-error {{variably modified type declaration not allowed at file scope}}
 
-void f3()
+void f3(void)
 {
   static int a[i]; // expected-error {{variable length array declaration cannot have 'static' storage duration}}
   extern int b[i]; // expected-error {{variable length array declaration cannot have 'extern' linkage}}
@@ -53,7 +53,7 @@ int pr2044b;
 int (*pr2044c(void))[pr2044b]; // expected-error {{variably modified type}}
 
 const int f5_ci = 1;
-void f5() { char a[][f5_ci] = {""}; } // expected-error {{variable-sized object may not be initialized}}
+void f5(void) { char a[][f5_ci] = {""}; } // expected-error {{variable-sized object may not be initialized}}
 
 // PR5185
 void pr5185(int a[*]);
@@ -75,7 +75,7 @@ struct {
     implicitly_declared() // expected-warning {{implicit declaration}}
   ];
 };
-int (*use_implicitly_declared)() = implicitly_declared; // ok, was implicitly declared at file scope
+int (*use_implicitly_declared)(void) = implicitly_declared; // ok, was implicitly declared at file scope
 
 void VLAPtrAssign(int size) {
   int array[1][2][3][size][4][5];
@@ -90,7 +90,7 @@ void VLAPtrAssign(int size) {
   int (*p4)[2][size][3][4][5] = array;
 }
 
-void pr44406() {
+void pr44406(void) {
   goto L; // expected-error {{cannot jump}}
   int z[(int)(1.0 * 2)]; // expected-note {{bypasses initialization of variable length array}}
 L:;
@@ -101,7 +101,7 @@ typedef struct {
   char c[pr44406_a]; // expected-warning {{folded to constant array as an extension}}
 } pr44406_s;
 
-void test_fold_to_constant_array() {
+void test_fold_to_constant_array(void) {
   const int ksize = 4;
 
   goto jump_over_a1; // expected-error{{cannot jump from this goto statement to its label}}

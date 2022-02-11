@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S < %s | FileCheck %s
+; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 ;
 ; Verify that instcombine preserves TBAA tags when converting a memcpy into
 ; a scalar load and store.

@@ -180,15 +180,13 @@ def EXIT_STRICT_WQM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
 // restoring it after we're done.
 let Defs = [SCC] in {
 def V_SET_INACTIVE_B32 : VPseudoInstSI <(outs VGPR_32:$vdst),
-  (ins VGPR_32: $src, VSrc_b32:$inactive),
+  (ins VSrc_b32: $src, VSrc_b32:$inactive),
   [(set i32:$vdst, (int_amdgcn_set_inactive i32:$src, i32:$inactive))]> {
-  let Constraints = "$src = $vdst";
 }
 
 def V_SET_INACTIVE_B64 : VPseudoInstSI <(outs VReg_64:$vdst),
-  (ins VReg_64: $src, VSrc_b64:$inactive),
+  (ins VSrc_b64: $src, VSrc_b64:$inactive),
   [(set i64:$vdst, (int_amdgcn_set_inactive i64:$src, i64:$inactive))]> {
-  let Constraints = "$src = $vdst";
 }
 } // End Defs = [SCC]
 
@@ -2011,12 +2009,12 @@ def : GCNPat<(i32 (DivergentSextInreg<i1> i32:$src)),
 
 def : GCNPat <
   (i16 (DivergentSextInreg<i1> i16:$src)),
-  (V_BFE_I32_e64 $src, (i32 0), (i32 1)) // 0 | 1 << 16
+  (V_BFE_I32_e64 $src, (i32 0), (i32 1))
 >;
 
 def : GCNPat <
   (i16 (DivergentSextInreg<i8> i16:$src)),
-  (V_BFE_I32_e64 $src, (i32 0), (i32 8)) // 0 | 8 << 16
+  (V_BFE_I32_e64 $src, (i32 0), (i32 8))
 >;
 
 def : GCNPat <
@@ -2029,14 +2027,14 @@ def : GCNPat <
 def : GCNPat <
   (i64 (DivergentSextInreg<i8> i64:$src)),
   (REG_SEQUENCE VReg_64,
-    (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 8)/* 0 | 8 << 16 */), sub0,
+    (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 8)), sub0,
     (V_ASHRREV_I32_e32 (i32 31), (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 8))), sub1)
 >;
 
 def : GCNPat <
   (i64 (DivergentSextInreg<i16> i64:$src)),
   (REG_SEQUENCE VReg_64,
-    (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 16)/* 0 | 16 << 16 */), sub0,
+    (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 16)), sub0,
     (V_ASHRREV_I32_e32 (i32 31), (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 16))), sub1)
 >;
 
@@ -2286,6 +2284,34 @@ def : GCNPat <
 def : GCNPat <
   (i1 (DivergentUnaryFrag<trunc> i16:$a)),
   (V_CMP_EQ_U32_e64 (V_AND_B32_e64 (i32 1), $a), (i32 1))
+>;
+
+def IMMBitSelConst : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(1ULL << N->getZExtValue(), SDLoc(N),
+                                   MVT::i32);
+}]>;
+
+// Matching separate SRL and TRUNC instructions
+// with dependent operands (SRL dest is source of TRUNC)
+// generates three instructions. However, by using bit shifts,
+// the V_LSHRREV_B32_e64 result can be directly used in the
+// operand of the V_AND_B32_e64 instruction:
+// (trunc i32 (srl i32 $a, i32 $b)) ->
+// v_and_b32_e64 $a, (1 << $b), $a
+// v_cmp_ne_u32_e64 $a, 0, $a
+
+// Handle the VALU case.
+def : GCNPat <
+  (i1 (DivergentUnaryFrag<trunc> (i32 (srl i32:$a, (i32 imm:$b))))),
+  (V_CMP_NE_U32_e64 (V_AND_B32_e64 (i32 (IMMBitSelConst $b)), $a),
+    (i32 0))
+>;
+
+// Handle the scalar case.
+def : GCNPat <
+  (i1 (UniformUnaryFrag<trunc> (i32 (srl i32:$a, (i32 imm:$b))))),
+  (S_CMP_LG_U32 (S_AND_B32 (i32 (IMMBitSelConst $b)), $a),
+    (i32 0))
 >;
 
 def : GCNPat <

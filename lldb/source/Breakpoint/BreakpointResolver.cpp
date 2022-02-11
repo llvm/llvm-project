@@ -24,6 +24,7 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
@@ -292,7 +293,7 @@ void BreakpointResolver::AddLocation(SearchFilter &filter,
                                      const SymbolContext &sc,
                                      bool skip_prologue,
                                      llvm::StringRef log_ident) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   Address line_start = sc.line_entry.range.GetBaseAddress();
   if (!line_start.IsValid()) {
     LLDB_LOGF(log,

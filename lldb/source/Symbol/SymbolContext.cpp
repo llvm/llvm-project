@@ -19,6 +19,7 @@
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -477,7 +478,7 @@ bool SymbolContext::GetParentOfInlinedScope(const Address &curr_frame_pc,
             curr_inlined_block_inlined_info->GetCallSite().GetColumn();
         return true;
       } else {
-        Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS));
+        Log *log = GetLog(LLDBLog::Symbols);
 
         if (log) {
           LLDB_LOGF(

@@ -1,1 +1,1 @@
-int *getAExtensions();
+int *getAExtensions(void);

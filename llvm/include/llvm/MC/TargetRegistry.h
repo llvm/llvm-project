@@ -27,7 +27,6 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <iterator>
@@ -56,7 +55,6 @@ class MCTargetAsmParser;
 class MCTargetOptions;
 class MCTargetStreamer;
 class raw_ostream;
-class raw_pwrite_stream;
 class TargetMachine;
 class TargetOptions;
 namespace mca {

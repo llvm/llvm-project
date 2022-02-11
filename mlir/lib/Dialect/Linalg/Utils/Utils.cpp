@@ -18,11 +18,11 @@
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -421,6 +421,29 @@ GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,
   b.setInsertionPointToEnd(&body.front());
   b.create<YieldOp>(loc, transposeOp.getRegion().front().getArgument(0));
   return transposeOp;
+}
+
+GenericOp makeMemRefCopyOp(OpBuilder &b, Location loc, Value from, Value to) {
+  auto memrefTypeTo = to.getType().cast<MemRefType>();
+#ifndef NDEBUG
+  auto memrefTypeFrom = from.getType().cast<MemRefType>();
+  assert(memrefTypeFrom.getRank() == memrefTypeTo.getRank() &&
+         "`from` and `to` memref must have the same rank");
+#endif // NDEBUG
+
+  AffineMap id =
+      AffineMap::getMultiDimIdentityMap(memrefTypeTo.getRank(), b.getContext());
+  SmallVector<StringRef> iteratorTypes(memrefTypeTo.getRank(),
+                                       getParallelIteratorTypeName());
+  return b.create<linalg::GenericOp>(
+      loc,
+      /*inputs=*/from,
+      /*outputs=*/to,
+      /*indexingMaps=*/llvm::makeArrayRef({id, id}),
+      /*iteratorTypes=*/iteratorTypes,
+      [](OpBuilder &b, Location loc, ValueRange args) {
+        b.create<linalg::YieldOp>(loc, args.front());
+      });
 }
 
 /// Specialization to build an scf "for" nest.

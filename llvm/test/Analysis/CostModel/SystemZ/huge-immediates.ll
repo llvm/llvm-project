@@ -1,4 +1,4 @@
-; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=z13
+; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13
 ;
 ; Test that cost functions can handle immediates of more than 64 bits without crashing.
 

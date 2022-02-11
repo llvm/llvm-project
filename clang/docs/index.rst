@@ -96,6 +96,7 @@ Design Documents
 
    InternalsManual
    DriverInternals
+   OffloadingDesign
    PCHInternals
    ItaniumMangleAbiTags
    HardwareAssistedAddressSanitizerDesign.rst

@@ -429,7 +429,7 @@ protected:
   std::pair<StringRef, ArrayRef<uint64_t>>
   readNameFromStrtab(ArrayRef<uint64_t> Record);
 
-  bool readBlockInfo();
+  Error readBlockInfo();
 
   // Contains an arbitrary and optional string identifying the bitcode producer
   std::string ProducerIdentification;
@@ -1647,9 +1647,7 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           }
 
           B.addAttribute(KindStr.str(), ValStr.str());
-        } else {
-          assert((Record[i] == 5 || Record[i] == 6) &&
-                 "Invalid attribute group entry");
+        } else if (Record[i] == 5 || Record[i] == 6) {
           bool HasType = Record[i] == 6;
           Attribute::AttrKind Kind;
           if (Error Err = parseAttrKind(Record[++i], &Kind))
@@ -1658,6 +1656,8 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             return error("Not a type attribute");
 
           B.addTypeAttr(Kind, HasType ? getTypeByID(Record[++i]) : nullptr);
+        } else {
+          return error("Invalid attribute group entry");
         }
       }
 
@@ -2056,8 +2056,9 @@ static Expected<uint64_t> jumpToValueSymbolTable(uint64_t Offset,
   Expected<BitstreamEntry> MaybeEntry = Stream.advance();
   if (!MaybeEntry)
     return MaybeEntry.takeError();
-  assert(MaybeEntry.get().Kind == BitstreamEntry::SubBlock);
-  assert(MaybeEntry.get().ID == bitc::VALUE_SYMTAB_BLOCK_ID);
+  if (MaybeEntry.get().Kind != BitstreamEntry::SubBlock ||
+      MaybeEntry.get().ID != bitc::VALUE_SYMTAB_BLOCK_ID)
+    return error("Expected value symbol table subblock");
   return CurrentBit;
 }
 
@@ -2107,10 +2108,14 @@ Error BitcodeReader::parseGlobalValueSymbolTable() {
     if (!MaybeRecord)
       return MaybeRecord.takeError();
     switch (MaybeRecord.get()) {
-    case bitc::VST_CODE_FNENTRY: // [valueid, offset]
+    case bitc::VST_CODE_FNENTRY: { // [valueid, offset]
+      unsigned ValueID = Record[0];
+      if (ValueID >= ValueList.size() || !ValueList[ValueID])
+        return error("Invalid value reference in symbol table");
       setDeferredFunctionInfo(FuncBitcodeOffsetDelta,
-                              cast<Function>(ValueList[Record[0]]), Record);
+                              cast<Function>(ValueList[ValueID]), Record);
       break;
+    }
     }
   }
 }
@@ -2671,6 +2676,8 @@ Error BitcodeReader::parseConstants() {
     case bitc::CST_CODE_CE_GEP: // [ty, n x operands]
     case bitc::CST_CODE_CE_GEP_WITH_INRANGE_INDEX: { // [ty, flags, n x
                                                      // operands]
+      if (Record.size() < 2)
+        return error("Constant GEP record must have at least two elements");
       unsigned OpNum = 0;
       Type *PointeeType = nullptr;
       if (BitCode == bitc::CST_CODE_CE_GEP_WITH_INRANGE_INDEX ||
@@ -3211,17 +3218,17 @@ Error BitcodeReader::rememberAndSkipFunctionBodies() {
   }
 }
 
-bool BitcodeReaderBase::readBlockInfo() {
+Error BitcodeReaderBase::readBlockInfo() {
   Expected<Optional<BitstreamBlockInfo>> MaybeNewBlockInfo =
       Stream.ReadBlockInfoBlock();
   if (!MaybeNewBlockInfo)
-    return true; // FIXME Handle the error.
+    return MaybeNewBlockInfo.takeError();
   Optional<BitstreamBlockInfo> NewBlockInfo =
       std::move(MaybeNewBlockInfo.get());
   if (!NewBlockInfo)
-    return true;
+    return error("Malformed block");
   BlockInfo = std::move(*NewBlockInfo);
-  return false;
+  return Error::success();
 }
 
 Error BitcodeReader::parseComdatRecord(ArrayRef<uint64_t> Record) {
@@ -3238,6 +3245,8 @@ Error BitcodeReader::parseComdatRecord(ArrayRef<uint64_t> Record) {
     if (Record.size() < 2)
       return error("Invalid record");
     unsigned ComdatNameSize = Record[1];
+    if (ComdatNameSize > Record.size() - 2)
+      return error("Comdat name size too large");
     OldFormatName.reserve(ComdatNameSize);
     for (unsigned i = 0; i != ComdatNameSize; ++i)
       OldFormatName += (char)Record[2 + i];
@@ -3639,8 +3648,8 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
           return Err;
         break;
       case bitc::BLOCKINFO_BLOCK_ID:
-        if (readBlockInfo())
-          return error("Malformed block");
+        if (Error Err = readBlockInfo())
+          return Err;
         break;
       case bitc::PARAMATTR_BLOCK_ID:
         if (Error Err = parseAttributeBlock())
@@ -3796,7 +3805,10 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       std::string S;
       if (convertToString(Record, 0, S))
         return error("Invalid record");
-      TheModule->setDataLayout(S);
+      Expected<DataLayout> MaybeDL = DataLayout::parse(S);
+      if (!MaybeDL)
+        return MaybeDL.takeError();
+      TheModule->setDataLayout(MaybeDL.get());
       break;
     }
     case bitc::MODULE_CODE_ASM: {  // ASM: [strchr x N]
@@ -5913,8 +5925,8 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
         break;
       case bitc::BLOCKINFO_BLOCK_ID:
         // Need to parse these to get abbrev ids (e.g. for VST)
-        if (readBlockInfo())
-          return error("Malformed block");
+        if (Error Err = readBlockInfo())
+          return Err;
         break;
       case bitc::VALUE_SYMTAB_BLOCK_ID:
         // Should have been parsed earlier via VSTOffset, unless there

@@ -15,23 +15,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/PresburgerSet.h"
-#include "../../Dialect/Affine/Analysis/AffineStructuresParser.h"
+#include "./Utils.h"
+#include "mlir/IR/MLIRContext.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 namespace mlir {
-
-/// Parses an IntegerPolyhedron from a StringRef. It is expected that the
-/// string represents a valid IntegerSet, otherwise it will violate a gtest
-/// assertion.
-static IntegerPolyhedron parsePoly(StringRef str, MLIRContext *context) {
-  FailureOr<IntegerPolyhedron> poly = parseIntegerSetToFAC(str, context);
-
-  EXPECT_TRUE(succeeded(poly));
-
-  return *poly;
-}
 
 /// Parse a list of StringRefs to IntegerPolyhedron and combine them into a
 /// PresburgerSet be using the union operation. It is expected that the strings
@@ -704,6 +694,66 @@ TEST(SetTest, coalesceContainedEqComplex) {
       },
       &context);
   expectCoalesce(1, set);
+}
+
+static void
+expectComputedVolumeIsValidOverapprox(const PresburgerSet &set,
+                                      Optional<uint64_t> trueVolume,
+                                      Optional<uint64_t> resultBound) {
+  expectComputedVolumeIsValidOverapprox(set.computeVolume(), trueVolume,
+                                        resultBound);
+}
+
+TEST(SetTest, computeVolume) {
+  MLIRContext context;
+  // Diamond with vertices at (0, 0), (5, 5), (5, 5), (10, 0).
+  PresburgerSet diamond(
+      parsePoly("(x, y) : (x + y >= 0, -x - y + 10 >= 0, x - y >= 0, -x + y + "
+                "10 >= 0)",
+                &context));
+  expectComputedVolumeIsValidOverapprox(diamond,
+                                        /*trueVolume=*/61ull,
+                                        /*resultBound=*/121ull);
+
+  // Diamond with vertices at (-5, 0), (0, -5), (0, 5), (5, 0).
+  PresburgerSet shiftedDiamond(parsePoly(
+      "(x, y) : (x + y + 5 >= 0, -x - y + 5 >= 0, x - y + 5 >= 0, -x + y + "
+      "5 >= 0)",
+      &context));
+  expectComputedVolumeIsValidOverapprox(shiftedDiamond,
+                                        /*trueVolume=*/61ull,
+                                        /*resultBound=*/121ull);
+
+  // Diamond with vertices at (-5, 0), (5, -10), (5, 10), (15, 0).
+  PresburgerSet biggerDiamond(parsePoly(
+      "(x, y) : (x + y + 5 >= 0, -x - y + 15 >= 0, x - y + 5 >= 0, -x + y + "
+      "15 >= 0)",
+      &context));
+  expectComputedVolumeIsValidOverapprox(biggerDiamond,
+                                        /*trueVolume=*/221ull,
+                                        /*resultBound=*/441ull);
+
+  // There is some overlap between diamond and shiftedDiamond.
+  expectComputedVolumeIsValidOverapprox(diamond.unionSet(shiftedDiamond),
+                                        /*trueVolume=*/104ull,
+                                        /*resultBound=*/242ull);
+
+  // biggerDiamond subsumes both the small ones.
+  expectComputedVolumeIsValidOverapprox(
+      diamond.unionSet(shiftedDiamond).unionSet(biggerDiamond),
+      /*trueVolume=*/221ull,
+      /*resultBound=*/683ull);
+
+  // Unbounded polytope.
+  PresburgerSet unbounded(
+      parsePoly("(x, y) : (2*x - y >= 0, y - 3*x >= 0)", &context));
+  expectComputedVolumeIsValidOverapprox(unbounded, /*trueVolume=*/{},
+                                        /*resultBound=*/{});
+
+  // Union of unbounded with bounded is unbounded.
+  expectComputedVolumeIsValidOverapprox(unbounded.unionSet(diamond),
+                                        /*trueVolume=*/{},
+                                        /*resultBound=*/{});
 }
 
 } // namespace mlir

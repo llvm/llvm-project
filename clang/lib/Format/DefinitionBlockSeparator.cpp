@@ -35,19 +35,31 @@ void DefinitionBlockSeparator::separateBlocks(
   const bool IsNeverStyle =
       Style.SeparateDefinitionBlocks == FormatStyle::SDS_Never;
   const AdditionalKeywords &ExtraKeywords = Tokens.getKeywords();
-  auto LikelyDefinition = [this, ExtraKeywords](const AnnotatedLine *Line,
-                                                bool ExcludeEnum = false) {
+  auto GetBracketLevelChange = [](const FormatToken *Tok) {
+    if (Tok->isOneOf(tok::l_brace, tok::l_paren, tok::l_square))
+      return 1;
+    if (Tok->isOneOf(tok::r_brace, tok::r_paren, tok::r_square))
+      return -1;
+    return 0;
+  };
+  auto LikelyDefinition = [&](const AnnotatedLine *Line,
+                              bool ExcludeEnum = false) {
     if ((Line->MightBeFunctionDecl && Line->mightBeFunctionDefinition()) ||
         Line->startsWithNamespace())
       return true;
-    FormatToken *CurrentToken = Line->First;
-    while (CurrentToken) {
-      if (CurrentToken->isOneOf(tok::kw_class, tok::kw_struct) ||
-          (Style.isJavaScript() && CurrentToken->is(ExtraKeywords.kw_function)))
-        return true;
-      if (!ExcludeEnum && CurrentToken->is(tok::kw_enum))
-        return true;
-      CurrentToken = CurrentToken->Next;
+    int BracketLevel = 0;
+    for (const FormatToken *CurrentToken = Line->First; CurrentToken;
+         CurrentToken = CurrentToken->Next) {
+      if (BracketLevel == 0) {
+        if ((CurrentToken->isOneOf(tok::kw_class, tok::kw_struct,
+                                   tok::kw_union) ||
+             (Style.isJavaScript() &&
+              CurrentToken->is(ExtraKeywords.kw_function))))
+          return true;
+        if (!ExcludeEnum && CurrentToken->is(tok::kw_enum))
+          return true;
+      }
+      BracketLevel += GetBracketLevelChange(CurrentToken);
     }
     return false;
   };
@@ -102,14 +114,17 @@ void DefinitionBlockSeparator::separateBlocks(
              IsPPConditional(OpeningLineIndex - 1);
     };
     const auto HasEnumOnLine = [&]() {
-      FormatToken *CurrentToken = CurrentLine->First;
       bool FoundEnumKeyword = false;
-      while (CurrentToken) {
-        if (CurrentToken->is(tok::kw_enum))
-          FoundEnumKeyword = true;
-        else if (FoundEnumKeyword && CurrentToken->is(tok::l_brace))
-          return true;
-        CurrentToken = CurrentToken->Next;
+      int BracketLevel = 0;
+      for (const FormatToken *CurrentToken = CurrentLine->First; CurrentToken;
+           CurrentToken = CurrentToken->Next) {
+        if (BracketLevel == 0) {
+          if (CurrentToken->is(tok::kw_enum))
+            FoundEnumKeyword = true;
+          else if (FoundEnumKeyword && CurrentToken->is(tok::l_brace))
+            return true;
+        }
+        BracketLevel += GetBracketLevelChange(CurrentToken);
       }
       return FoundEnumKeyword && I + 1 < Lines.size() &&
              Lines[I + 1]->First->is(tok::l_brace);
@@ -168,10 +183,9 @@ void DefinitionBlockSeparator::separateBlocks(
       TargetToken = TargetLine->First;
       while (TargetToken && !TargetToken->is(tok::r_brace))
         TargetToken = TargetToken->Next;
-      if (!TargetToken) {
+      if (!TargetToken)
         while (I < Lines.size() && !Lines[I]->First->is(tok::r_brace))
           ++I;
-      }
     } else if (CurrentLine->First->closesScope()) {
       if (OpeningLineIndex > Lines.size())
         continue;

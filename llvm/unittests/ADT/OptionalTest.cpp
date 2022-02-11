@@ -578,8 +578,6 @@ TEST(OptionalTest, DeletedCopyStringMap) {
   Optional<NoCopyStringMap> TestInstantiation;
 }
 
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
-
 TEST(OptionalTest, MoveGetValueOr) {
   Optional<MoveOnly> A;
 
@@ -596,8 +594,6 @@ TEST(OptionalTest, MoveGetValueOr) {
   EXPECT_EQ(0u, MoveOnly::MoveAssignments);
   EXPECT_EQ(2u, MoveOnly::Destructions);
 }
-
-#endif // LLVM_HAS_RVALUE_REFERENCE_THIS
 
 struct EqualTo {
   template <typename T, typename U> static bool apply(const T &X, const U &Y) {

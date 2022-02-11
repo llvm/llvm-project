@@ -32,6 +32,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/RegularExpression.h"
@@ -120,7 +121,7 @@ struct GetArgsCtx {
 };
 
 bool GetArgsX86(const GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args) {
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+  Log *log = GetLog(LLDBLog::Language);
 
   Status err;
 
@@ -148,7 +149,7 @@ bool GetArgsX86(const GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args) {
 }
 
 bool GetArgsX86_64(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args) {
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+  Log *log = GetLog(LLDBLog::Language);
 
   // number of arguments passed in registers
   static const uint32_t args_in_reg = 6;
@@ -224,7 +225,7 @@ bool GetArgsArm(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args) {
   // number of arguments passed in registers
   static const uint32_t args_in_reg = 4;
 
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+  Log *log = GetLog(LLDBLog::Language);
 
   Status err;
 
@@ -268,7 +269,7 @@ bool GetArgsAarch64(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args) {
   // number of arguments passed in registers
   static const uint32_t args_in_reg = 8;
 
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+  Log *log = GetLog(LLDBLog::Language);
 
   for (size_t i = 0; i < num_args; ++i) {
     bool success = false;
@@ -301,7 +302,7 @@ bool GetArgsMipsel(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args) {
   // register file offset to first argument
   static const uint32_t reg_offset = 4;
 
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+  Log *log = GetLog(LLDBLog::Language);
 
   Status err;
 
@@ -346,7 +347,7 @@ bool GetArgsMips64el(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args) {
   // register file offset to first argument
   static const uint32_t reg_offset = 4;
 
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+  Log *log = GetLog(LLDBLog::Language);
 
   Status err;
 
@@ -388,7 +389,7 @@ bool GetArgsMips64el(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args) {
 }
 
 bool GetArgs(ExecutionContext &exe_ctx, ArgItem *arg_list, size_t num_args) {
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+  Log *log = GetLog(LLDBLog::Language);
 
   // verify that we have a target
   if (!exe_ctx.GetTargetPtr()) {
@@ -465,7 +466,7 @@ bool ParseCoordinate(llvm::StringRef coord_s, RSCoordinate &coord) {
 }
 
 bool SkipPrologue(lldb::ModuleSP &module, Address &addr) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
   SymbolContext sc;
   uint32_t resolved_flags =
       module->ResolveSymbolContextForAddress(addr, eSymbolContextFunction, sc);
@@ -833,7 +834,7 @@ RSReduceBreakpointResolver::SearchCallback(lldb_private::SearchFilter &filter,
   // identifiable by parsing the .rs.info packet, or finding the expand symbol.
   // We therefore need access to the list of parsed rs modules to properly
   // resolve reduction names.
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   ModuleSP module = context.module_sp;
 
   if (!module || !IsRenderScriptScriptModule(module))
@@ -893,7 +894,7 @@ Searcher::CallbackReturn RSScriptGroupBreakpointResolver::SearchCallback(
   if (!breakpoint_sp)
     return eCallbackReturnContinue;
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   ModuleSP &module = context.module_sp;
 
   if (!module || !IsRenderScriptScriptModule(module))
@@ -1105,7 +1106,7 @@ bool RenderScriptRuntime::HookCallback(void *baton,
 
 void RenderScriptRuntime::HookCallback(RuntimeHook *hook,
                                        ExecutionContext &exe_ctx) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   LLDB_LOGF(log, "%s - '%s'", __FUNCTION__, hook->defn->name);
 
@@ -1116,7 +1117,7 @@ void RenderScriptRuntime::HookCallback(RuntimeHook *hook,
 
 void RenderScriptRuntime::CaptureDebugHintScriptGroup2(
     RuntimeHook *hook_info, ExecutionContext &context) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   enum {
     eGroupName = 0,
@@ -1254,7 +1255,7 @@ void RenderScriptRuntime::CaptureDebugHintScriptGroup2(
 
 void RenderScriptRuntime::CaptureScriptInvokeForEachMulti(
     RuntimeHook *hook, ExecutionContext &exe_ctx) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   enum {
     eRsContext = 0,
@@ -1354,7 +1355,7 @@ void RenderScriptRuntime::CaptureScriptInvokeForEachMulti(
 
 void RenderScriptRuntime::CaptureSetGlobalVar(RuntimeHook *hook,
                                               ExecutionContext &context) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   enum {
     eRsContext,
@@ -1401,7 +1402,7 @@ void RenderScriptRuntime::CaptureSetGlobalVar(RuntimeHook *hook,
 
 void RenderScriptRuntime::CaptureAllocationInit(RuntimeHook *hook,
                                                 ExecutionContext &exe_ctx) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   enum { eRsContext, eRsAlloc, eRsForceZero };
 
@@ -1429,7 +1430,7 @@ void RenderScriptRuntime::CaptureAllocationInit(RuntimeHook *hook,
 
 void RenderScriptRuntime::CaptureAllocationDestroy(RuntimeHook *hook,
                                                    ExecutionContext &exe_ctx) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   enum {
     eRsContext,
@@ -1466,7 +1467,7 @@ void RenderScriptRuntime::CaptureAllocationDestroy(RuntimeHook *hook,
 
 void RenderScriptRuntime::CaptureScriptInit(RuntimeHook *hook,
                                             ExecutionContext &exe_ctx) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   Status err;
   Process *process = exe_ctx.GetProcessPtr();
@@ -1527,7 +1528,7 @@ void RenderScriptRuntime::CaptureScriptInit(RuntimeHook *hook,
 
 void RenderScriptRuntime::LoadRuntimeHooks(lldb::ModuleSP module,
                                            ModuleKind kind) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   if (!module) {
     return;
@@ -1619,7 +1620,7 @@ void RenderScriptRuntime::FixupScriptDetails(RSModuleDescriptorSP rsmodule_sp) {
   if (!rsmodule_sp)
     return;
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   const ModuleSP module = rsmodule_sp->m_module;
   const FileSpec &file = module->GetPlatformFileSpec();
@@ -1675,7 +1676,7 @@ void RenderScriptRuntime::FixupScriptDetails(RSModuleDescriptorSP rsmodule_sp) {
 bool RenderScriptRuntime::EvalRSExpression(const char *expr,
                                            StackFrame *frame_ptr,
                                            uint64_t *result) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
   LLDB_LOGF(log, "%s(%s)", __FUNCTION__, expr);
 
   ValueObjectSP expr_result;
@@ -1822,7 +1823,7 @@ const char *JITTemplate(ExpressionStrings e) {
 bool RenderScriptRuntime::JITDataPointer(AllocationDetails *alloc,
                                          StackFrame *frame_ptr, uint32_t x,
                                          uint32_t y, uint32_t z) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   if (!alloc->address.isValid()) {
     LLDB_LOGF(log, "%s - failed to find allocation details.", __FUNCTION__);
@@ -1857,7 +1858,7 @@ bool RenderScriptRuntime::JITDataPointer(AllocationDetails *alloc,
 // success, false otherwise
 bool RenderScriptRuntime::JITTypePointer(AllocationDetails *alloc,
                                          StackFrame *frame_ptr) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   if (!alloc->address.isValid() || !alloc->context.isValid()) {
     LLDB_LOGF(log, "%s - failed to find allocation details.", __FUNCTION__);
@@ -1892,7 +1893,7 @@ bool RenderScriptRuntime::JITTypePointer(AllocationDetails *alloc,
 // the result. Returns true on success, false otherwise
 bool RenderScriptRuntime::JITTypePacked(AllocationDetails *alloc,
                                         StackFrame *frame_ptr) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   if (!alloc->type_ptr.isValid() || !alloc->context.isValid()) {
     LLDB_LOGF(log, "%s - Failed to find allocation details.", __FUNCTION__);
@@ -1953,7 +1954,7 @@ bool RenderScriptRuntime::JITTypePacked(AllocationDetails *alloc,
 bool RenderScriptRuntime::JITElementPacked(Element &elem,
                                            const lldb::addr_t context,
                                            StackFrame *frame_ptr) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   if (!elem.element_ptr.isValid()) {
     LLDB_LOGF(log, "%s - failed to find allocation details.", __FUNCTION__);
@@ -2010,7 +2011,7 @@ bool RenderScriptRuntime::JITElementPacked(Element &elem,
 bool RenderScriptRuntime::JITSubelements(Element &elem,
                                          const lldb::addr_t context,
                                          StackFrame *frame_ptr) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   if (!elem.element_ptr.isValid() || !elem.field_count.isValid()) {
     LLDB_LOGF(log, "%s - failed to find allocation details.", __FUNCTION__);
@@ -2093,7 +2094,7 @@ bool RenderScriptRuntime::JITSubelements(Element &elem,
 // allocation. Returns true on success, false otherwise
 bool RenderScriptRuntime::JITAllocationSize(AllocationDetails *alloc,
                                             StackFrame *frame_ptr) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   if (!alloc->address.isValid() || !alloc->dimension.isValid() ||
       !alloc->data_ptr.isValid() || !alloc->element.datum_size.isValid()) {
@@ -2159,7 +2160,7 @@ bool RenderScriptRuntime::JITAllocationSize(AllocationDetails *alloc,
 // 16-byte aligned. Returns true on success, false otherwise
 bool RenderScriptRuntime::JITAllocationStride(AllocationDetails *alloc,
                                               StackFrame *frame_ptr) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   if (!alloc->address.isValid() || !alloc->data_ptr.isValid()) {
     LLDB_LOGF(log, "%s - failed to find allocation details.", __FUNCTION__);
@@ -2220,7 +2221,7 @@ bool RenderScriptRuntime::RefreshAllocation(AllocationDetails *alloc,
 // represents. We need this string for pretty printing the Element to users.
 void RenderScriptRuntime::FindStructTypeName(Element &elem,
                                              StackFrame *frame_ptr) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   if (!elem.type_name.IsEmpty()) // Name already set
     return;
@@ -2304,7 +2305,7 @@ void RenderScriptRuntime::FindStructTypeName(Element &elem,
 // single instance including padding. Assumes the relevant allocation
 // information has already been jitted.
 void RenderScriptRuntime::SetElementSize(Element &elem) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
   const Element::DataType type = *elem.type.get();
   assert(type >= Element::RS_TYPE_NONE && type <= Element::RS_TYPE_FONT &&
          "Invalid allocation type");
@@ -2348,7 +2349,7 @@ void RenderScriptRuntime::SetElementSize(Element &elem) {
 std::shared_ptr<uint8_t>
 RenderScriptRuntime::GetAllocationData(AllocationDetails *alloc,
                                        StackFrame *frame_ptr) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   // JIT all the allocation details
   if (alloc->ShouldRefresh()) {
@@ -2396,7 +2397,7 @@ RenderScriptRuntime::GetAllocationData(AllocationDetails *alloc,
 bool RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id,
                                          const char *path,
                                          StackFrame *frame_ptr) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   // Find allocation with the given id
   AllocationDetails *alloc = FindAllocByID(strm, alloc_id);
@@ -2616,7 +2617,7 @@ size_t RenderScriptRuntime::CalculateElementHeaderSize(const Element &elem) {
 bool RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id,
                                          const char *path,
                                          StackFrame *frame_ptr) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   // Find allocation with the given id
   AllocationDetails *alloc = FindAllocByID(strm, alloc_id);
@@ -2735,7 +2736,7 @@ bool RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id,
 }
 
 bool RenderScriptRuntime::LoadModule(const lldb::ModuleSP &module_sp) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   if (module_sp) {
     for (const auto &rs_module : m_rsmodules) {
@@ -2867,7 +2868,7 @@ bool RSModuleDescriptor::ParseExportReduceCount(llvm::StringRef *lines,
   // a function is not explicitly named by the user, or is not generated by the
   // compiler, it is named "." so the dash separated list should always be 8
   // items long
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+  Log *log = GetLog(LLDBLog::Language);
   // Skip the exportReduceCount line
   ++lines;
   for (; n_lines--; ++lines) {
@@ -2958,7 +2959,7 @@ bool RSModuleDescriptor::ParseExportVarCount(llvm::StringRef *lines,
 // be parsed. The string is basic and is parsed on a line by line basis.
 bool RSModuleDescriptor::ParseRSInfo() {
   assert(m_module);
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
   const Symbol *info_sym = m_module->FindFirstSymbolWithNameAndType(
       ConstString(".rs.info"), eSymbolTypeData);
   if (!info_sym)
@@ -3165,7 +3166,7 @@ RenderScriptRuntime::FindAllocByID(Stream &strm, const uint32_t alloc_id) {
 // file
 bool RenderScriptRuntime::DumpAllocation(Stream &strm, StackFrame *frame_ptr,
                                          const uint32_t id) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   // Check we can find the desired allocation
   AllocationDetails *alloc = FindAllocByID(strm, id);
@@ -3453,8 +3454,7 @@ void RenderScriptRuntime::BreakOnModuleKernels(
 // or disable breaking on all kernels. When do_break is true we want to enable
 // this functionality. When do_break is false we want to disable it.
 void RenderScriptRuntime::SetBreakAllKernels(bool do_break, TargetSP target) {
-  Log *log(
-      GetLogIfAnyCategoriesSet(LIBLLDB_LOG_LANGUAGE | LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Language | LLDBLog::Breakpoints);
 
   InitSearchFilter(target);
 
@@ -3482,8 +3482,7 @@ void RenderScriptRuntime::SetBreakAllKernels(bool do_break, TargetSP target) {
 // breakpoint resolver, and returns the Breakpoint shared pointer.
 BreakpointSP
 RenderScriptRuntime::CreateKernelBreakpoint(ConstString name) {
-  Log *log(
-      GetLogIfAnyCategoriesSet(LIBLLDB_LOG_LANGUAGE | LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Language | LLDBLog::Breakpoints);
 
   if (!m_filtersp) {
     LLDB_LOGF(log, "%s - error, no breakpoint search filter set.",
@@ -3510,8 +3509,7 @@ RenderScriptRuntime::CreateKernelBreakpoint(ConstString name) {
 BreakpointSP
 RenderScriptRuntime::CreateReductionBreakpoint(ConstString name,
                                                int kernel_types) {
-  Log *log(
-      GetLogIfAnyCategoriesSet(LIBLLDB_LOG_LANGUAGE | LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Language | LLDBLog::Breakpoints);
 
   if (!m_filtersp) {
     LLDB_LOGF(log, "%s - error, no breakpoint search filter set.",
@@ -3542,7 +3540,7 @@ RenderScriptRuntime::CreateReductionBreakpoint(ConstString name,
 bool RenderScriptRuntime::GetFrameVarAsUnsigned(const StackFrameSP frame_sp,
                                                 const char *var_name,
                                                 uint64_t &val) {
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
   Status err;
   VariableSP var_sp;
 
@@ -3580,7 +3578,7 @@ bool RenderScriptRuntime::GetKernelCoordinate(RSCoordinate &coord,
   static const char *const y_expr = "p->current.y";
   static const char *const z_expr = "p->current.z";
 
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+  Log *log = GetLog(LLDBLog::Language);
 
   if (!thread_ptr) {
     LLDB_LOGF(log, "%s - Error, No thread pointer", __FUNCTION__);
@@ -3646,8 +3644,7 @@ bool RenderScriptRuntime::KernelBreakpointHit(void *baton,
                                               StoppointCallbackContext *ctx,
                                               user_id_t break_id,
                                               user_id_t break_loc_id) {
-  Log *log(
-      GetLogIfAnyCategoriesSet(LIBLLDB_LOG_LANGUAGE | LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Language | LLDBLog::Breakpoints);
 
   assert(baton &&
          "Error: null baton in conditional kernel breakpoint callback");
@@ -3742,8 +3739,7 @@ bool RenderScriptRuntime::PlaceBreakpointOnKernel(TargetSP target,
 BreakpointSP
 RenderScriptRuntime::CreateScriptGroupBreakpoint(ConstString name,
                                                  bool stop_on_all) {
-  Log *log(
-      GetLogIfAnyCategoriesSet(LIBLLDB_LOG_LANGUAGE | LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Language | LLDBLog::Breakpoints);
 
   if (!m_filtersp) {
     LLDB_LOGF(log, "%s - error, no breakpoint search filter set.",
@@ -3839,7 +3835,7 @@ RenderScriptRuntime::LookUpAllocation(addr_t address) {
 
 RenderScriptRuntime::AllocationDetails *
 RenderScriptRuntime::CreateAllocation(addr_t address) {
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+  Log *log = GetLog(LLDBLog::Language);
 
   // Remove any previous allocation which contains the same address
   auto it = m_allocations.begin();
@@ -3862,7 +3858,7 @@ RenderScriptRuntime::CreateAllocation(addr_t address) {
 
 bool RenderScriptRuntime::ResolveKernelName(lldb::addr_t kernel_addr,
                                             ConstString &name) {
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS);
+  Log *log = GetLog(LLDBLog::Symbols);
 
   Target &target = GetProcess()->GetTarget();
   Address resolved;

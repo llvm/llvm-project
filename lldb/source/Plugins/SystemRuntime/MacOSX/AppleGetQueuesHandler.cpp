@@ -20,6 +20,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -146,7 +147,7 @@ AppleGetQueuesHandler::SetupGetQueuesFunction(Thread &thread,
 
   Address impl_code_address;
   DiagnosticManager diagnostics;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
+  Log *log = GetLog(LLDBLog::SystemRuntime);
   lldb::addr_t args_addr = LLDB_INVALID_ADDRESS;
 
   FunctionCaller *get_queues_caller = nullptr;
@@ -222,7 +223,7 @@ AppleGetQueuesHandler::GetCurrentQueues(Thread &thread, addr_t page_to_free,
   TargetSP target_sp(thread.CalculateTarget());
   TypeSystemClang *clang_ast_context =
       ScratchTypeSystemClang::GetForTarget(*target_sp);
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
+  Log *log = GetLog(LLDBLog::SystemRuntime);
 
   GetQueuesReturnInfo return_value;
   return_value.queues_buffer_ptr = LLDB_INVALID_ADDRESS;

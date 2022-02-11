@@ -22,7 +22,7 @@ using namespace llvm::pdb;
 SymbolStream::SymbolStream(std::unique_ptr<MappedBlockStream> Stream)
     : Stream(std::move(Stream)) {}
 
-SymbolStream::~SymbolStream() {}
+SymbolStream::~SymbolStream() = default;
 
 Error SymbolStream::reload() {
   BinaryStreamReader Reader(*Stream);

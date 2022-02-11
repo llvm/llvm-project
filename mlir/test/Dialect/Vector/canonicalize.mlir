@@ -515,7 +515,7 @@ func @fold_extract_broadcast(%a : f32) -> f32 {
 //  CHECK-SAME:   %[[A:.*]]: f32
 //       CHECK:   return %[[A]] : f32
 func @fold_extract_splat(%a : f32) -> f32 {
-  %b = splat %a : vector<1x2x4xf32>
+  %b = vector.splat %a : vector<1x2x4xf32>
   %r = vector.extract %b[0, 1, 2] : vector<1x2x4xf32>
   return %r : f32
 }
@@ -1121,10 +1121,10 @@ func @insert_strided_slice_full_range(%source: vector<16x16xf16>, %dest: vector<
 // -----
 
 // CHECK-LABEL: extract_strided_splat
-//       CHECK:   %[[B:.*]] = splat %{{.*}} : vector<2x4xf16>
+//       CHECK:   %[[B:.*]] = vector.splat %{{.*}} : vector<2x4xf16>
 //  CHECK-NEXT:   return %[[B]] : vector<2x4xf16>
 func @extract_strided_splat(%arg0: f16) -> vector<2x4xf16> {
- %0 = splat %arg0 : vector<16x4xf16>
+ %0 = vector.splat %arg0 : vector<16x4xf16>
  %1 = vector.extract_strided_slice %0
   {offsets = [1, 0], sizes = [2, 4], strides = [1, 1]} :
   vector<16x4xf16> to vector<2x4xf16>
@@ -1241,4 +1241,28 @@ func @extract_extract_strided2(%A: vector<2x4xf32>)
  %0 = vector.extract_strided_slice %A {offsets = [1, 0], sizes = [1, 4], strides = [1, 1]} : vector<2x4xf32> to vector<1x4xf32>
  %1 = vector.extract %0[0] : vector<1x4xf32>
  return %1 : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @splat_fold
+func @splat_fold() -> vector<4xf32> {
+  %c = arith.constant 1.0 : f32
+  %v = vector.splat %c : vector<4xf32>
+  return %v : vector<4xf32>
+
+  // CHECK-NEXT: [[V:%.*]] = arith.constant dense<1.000000e+00> : vector<4xf32>
+  // CHECK-NEXT: return [[V]] : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @shuffle_1d
+//       CHECK:   %[[V:.+]] = arith.constant dense<[3, 2, 5, 1]> : vector<4xi32>
+//       CHECK:   return %[[V]]
+func @shuffle_1d() -> vector<4xi32> {
+  %v0 = arith.constant dense<[0, 1, 2]> : vector<3xi32>
+  %v1 = arith.constant dense<[3, 4, 5]> : vector<3xi32>
+  %shuffle = vector.shuffle %v0, %v1 [3, 2, 5, 1] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<4xi32>
 }

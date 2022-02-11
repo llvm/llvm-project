@@ -136,9 +136,13 @@ static cl::opt<bool>
                      cl::init(false), cl::cat(JITLinkCategory));
 
 static cl::list<std::string> AbsoluteDefs(
-    "define-abs",
+    "abs",
     cl::desc("Inject absolute symbol definitions (syntax: <name>=<addr>)"),
     cl::ZeroOrMore, cl::cat(JITLinkCategory));
+
+static cl::list<std::string>
+    Aliases("alias", cl::desc("Inject symbol aliases (syntax: <name>=<addr>)"),
+            cl::ZeroOrMore, cl::cat(JITLinkCategory));
 
 static cl::list<std::string> TestHarnesses("harness", cl::Positional,
                                            cl::desc("Test harness files"),
@@ -1374,8 +1378,8 @@ static Error addAbsoluteSymbols(Session &S,
     uint64_t Addr;
     if (AddrStr.getAsInteger(0, Addr))
       return make_error<StringError>("Invalid address expression \"" + AddrStr +
-                                     "\" in absolute define \"" + AbsDefStmt +
-                                     "\"",
+                                         "\" in absolute symbol definition \"" +
+                                         AbsDefStmt + "\"",
                                      inconvertibleErrorCode());
     JITEvaluatedSymbol AbsDef(Addr, JITSymbolFlags::Exported);
     if (auto Err = JD.define(absoluteSymbols({{S.ES.intern(Name), AbsDef}})))
@@ -1383,6 +1387,33 @@ static Error addAbsoluteSymbols(Session &S,
 
     // Register the absolute symbol with the session symbol infos.
     S.SymbolInfos[Name] = {ArrayRef<char>(), Addr};
+  }
+
+  return Error::success();
+}
+
+static Error addAliases(Session &S,
+                        const std::map<unsigned, JITDylib *> &IdxToJD) {
+  // Define absolute symbols.
+  LLVM_DEBUG(dbgs() << "Defining aliases...\n");
+  for (auto AliasItr = Aliases.begin(), AliasEnd = Aliases.end();
+       AliasItr != AliasEnd; ++AliasItr) {
+    unsigned AliasArgIdx = Aliases.getPosition(AliasItr - Aliases.begin());
+    auto &JD = *std::prev(IdxToJD.lower_bound(AliasArgIdx))->second;
+
+    StringRef AliasStmt = *AliasItr;
+    size_t EqIdx = AliasStmt.find_first_of('=');
+    if (EqIdx == StringRef::npos)
+      return make_error<StringError>("Invalid alias definition \"" + AliasStmt +
+                                         "\". Syntax: <name>=<addr>",
+                                     inconvertibleErrorCode());
+    StringRef Alias = AliasStmt.substr(0, EqIdx).trim();
+    StringRef Aliasee = AliasStmt.substr(EqIdx + 1).trim();
+
+    SymbolAliasMap SAM;
+    SAM[S.ES.intern(Alias)] = {S.ES.intern(Aliasee), JITSymbolFlags::Exported};
+    if (auto Err = JD.define(symbolAliases(std::move(SAM))))
+      return Err;
   }
 
   return Error::success();
@@ -1687,21 +1718,6 @@ static Error addLibraries(Session &S,
   return Error::success();
 }
 
-static Error addProcessSymbols(Session &S,
-                               const std::map<unsigned, JITDylib *> &IdxToJD) {
-
-  if (NoProcessSymbols)
-    return Error::success();
-
-  for (auto &KV : IdxToJD) {
-    auto &JD = *KV.second;
-    JD.addGenerator(ExitOnErr(
-        orc::EPCDynamicLibrarySearchGenerator::GetForTargetProcess(S.ES)));
-  }
-
-  return Error::success();
-}
-
 static Error addSessionInputs(Session &S) {
   std::map<unsigned, JITDylib *> IdxToJD;
 
@@ -1709,6 +1725,9 @@ static Error addSessionInputs(Session &S) {
     return Err;
 
   if (auto Err = addAbsoluteSymbols(S, IdxToJD))
+    return Err;
+
+  if (auto Err = addAliases(S, IdxToJD))
     return Err;
 
   if (!TestHarnesses.empty())
@@ -1719,9 +1738,6 @@ static Error addSessionInputs(Session &S) {
     return Err;
 
   if (auto Err = addLibraries(S, IdxToJD))
-    return Err;
-
-  if (auto Err = addProcessSymbols(S, IdxToJD))
     return Err;
 
   return Error::success();

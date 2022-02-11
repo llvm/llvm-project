@@ -453,8 +453,8 @@ protected:
   /// ARMTargetLowering::allowsMisalignedMemoryAccesses().
   bool StrictAlign = false;
 
-  /// RestrictIT - If true, the subtarget disallows generation of deprecated IT
-  ///  blocks to conform to ARMv8 rule.
+  /// RestrictIT - If true, the subtarget disallows generation of complex IT
+  ///  blocks.
   bool RestrictIT = false;
 
   /// HasDSP - If true, the subtarget supports the DSP (saturating arith

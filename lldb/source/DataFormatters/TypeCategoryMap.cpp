@@ -9,8 +9,8 @@
 #include "lldb/DataFormatters/TypeCategoryMap.h"
 
 #include "lldb/DataFormatters/FormatClasses.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-
 
 using namespace lldb;
 using namespace lldb_private;
@@ -174,7 +174,7 @@ void TypeCategoryMap::Get(FormattersMatchData &match_data, ImplSP &retval) {
 
   ActiveCategoriesIterator begin, end = m_active_categories.end();
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+  Log *log = GetLog(LLDBLog::DataFormatters);
 
   if (log) {
     for (auto match : match_data.GetMatchesVector()) {

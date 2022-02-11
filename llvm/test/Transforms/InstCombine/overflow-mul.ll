@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine < %s | FileCheck %s
+; RUN: opt -S -passes=instcombine < %s | FileCheck %s
 
 ; The last test needs this weird datalayout.
 target datalayout = "i32:8:8"

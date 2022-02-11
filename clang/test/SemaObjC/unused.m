@@ -20,7 +20,7 @@ int test1(void) {
 - (int)length;
 @end
 
-void test2() {
+void test2(void) {
   @"pointless example call for test purposes".length; // expected-warning {{property access result unused - getters should not be used for side effects}}
 }
 

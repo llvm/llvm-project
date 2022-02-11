@@ -87,6 +87,11 @@ std::unique_ptr<Pass> createSCCPPass();
 /// pass may *only* be scheduled on an operation that defines a SymbolTable.
 std::unique_ptr<Pass> createSymbolDCEPass();
 
+/// Creates a pass which marks top-level symbol operations as `private` unless
+/// listed in `excludeSymbols`.
+std::unique_ptr<Pass>
+createSymbolPrivatizePass(ArrayRef<std::string> excludeSymbols = {});
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//

@@ -24,6 +24,9 @@ namespace ranges {
 
   template <class I1, class I2, class O>
     struct in_in_out_result; // since C++20
+
+  template <class I, class O1, class O2>
+    struct in_out_out_result; // since C++20
 }
 
 template <class InputIterator, class Predicate>
@@ -659,7 +662,7 @@ template<class InputIterator, class OutputIterator>
 
 */
 
-#include <__bits> // __libcpp_clz
+#include <__bits>
 #include <__config>
 #include <__debug>
 #include <cstddef>
@@ -669,7 +672,7 @@ template<class InputIterator, class OutputIterator>
 #include <iterator>
 #include <memory>
 #include <type_traits>
-#include <utility> // swap_ranges
+#include <utility>
 #include <version>
 
 #include <__algorithm/adjacent_find.h>
@@ -701,6 +704,7 @@ template<class InputIterator, class OutputIterator>
 #include <__algorithm/half_positive.h>
 #include <__algorithm/in_in_out_result.h>
 #include <__algorithm/in_in_result.h>
+#include <__algorithm/in_out_out_result.h>
 #include <__algorithm/in_out_result.h>
 #include <__algorithm/includes.h>
 #include <__algorithm/inplace_merge.h>
@@ -770,7 +774,7 @@ template<class InputIterator, class OutputIterator>
 #include <__algorithm/upper_bound.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 #if defined(_LIBCPP_HAS_PARALLEL_ALGORITHMS) && _LIBCPP_STD_VER >= 17

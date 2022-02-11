@@ -360,8 +360,7 @@ def SingleNoTerminatorOp : TEST_Op<"single_no_terminator_op",
 def SingleNoTerminatorCustomAsmOp : TEST_Op<"single_no_terminator_custom_asm_op",
                                             [SingleBlock, NoTerminator]> {
   let regions = (region SizedRegion<1>);
-  let parser = [{ return ::parseSingleNoTerminatorCustomAsmOp(parser, result); }];
-  let printer = [{ return ::print(*this, p); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 def VariadicNoTerminatorOp : TEST_Op<"variadic_no_terminator_op",
@@ -644,9 +643,7 @@ def StringAttrPrettyNameOp
            [DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let arguments = (ins StrArrayAttr:$names);
   let results = (outs Variadic<I32>:$r);
-
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 // This is used to test the OpAsmOpInterface::getDefaultDialect() feature:
@@ -666,26 +663,15 @@ def DefaultDialectOp : TEST_Op<"default_dialect", [OpAsmOpInterface]> {
 // This operation requires its return type to have the trait 'TestTypeTrait'.
 def ResultTypeWithTraitOp : TEST_Op<"result_type_with_trait", []> {
   let results = (outs AnyType);
-
-  let verifier = [{
-    if((*this)->getResultTypes()[0].hasTrait<TypeTrait::TestTypeTrait>())
-      return success();
-    return this->emitError("result type should have trait 'TestTypeTrait'");
-  }];
+  let hasVerifier = 1;
 }
 
 // This operation requires its "attr" attribute to have the
 // trait 'TestAttrTrait'.
 def AttrWithTraitOp : TEST_Op<"attr_with_trait", []> {
   let arguments = (ins AnyAttr:$attr);
-
-  let verifier = [{
-    if (this->getAttr().hasTrait<AttributeTrait::TestAttrTrait>())
-      return success();
-    return this->emitError("'attr' attribute should have trait 'TestAttrTrait'");
-  }];
+  let hasVerifier = 1;
 }
-
 
 //===----------------------------------------------------------------------===//
 // Test Locations
@@ -699,6 +685,16 @@ def TestLocationSrcOp : TEST_Op<"loc_src"> {
 def TestLocationDstOp : TEST_Op<"loc_dst", [SameOperandsAndResultType]> {
   let arguments = (ins I32:$input);
   let results = (outs I32:$output);
+}
+
+def TestLocationSrcNoResOp : TEST_Op<"loc_src_no_res"> {
+  let arguments = (ins I32:$input);
+  let results = (outs);
+}
+
+def TestLocationDstNoResOp : TEST_Op<"loc_dst_no_res"> {
+  let arguments = (ins I32:$input);
+  let results = (outs);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1386,6 +1382,11 @@ def : Pat<(TestLocationSrcOp:$res1
               (location "named")),
             (location "fused", $res2, $res3))>;
 
+// Test that we can use the location of an op without results
+def : Pat<(TestLocationSrcNoResOp:$loc
+            (TestLocationSrcOp (TestLocationSrcOp $input))),
+          (TestLocationDstNoResOp $input, (location $loc))>;
+
 //===----------------------------------------------------------------------===//
 // Test Patterns (Type Builders)
 
@@ -1576,14 +1577,12 @@ def TestSignatureConversionNoConverterOp
 
 def ParseIntegerLiteralOp : TEST_Op<"parse_integer_literal"> {
   let results = (outs Variadic<Index>:$results);
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-  let printer = [{ return ::print(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 def ParseWrappedKeywordOp : TEST_Op<"parse_wrapped_keyword"> {
   let arguments = (ins StrAttr:$keyword);
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-  let printer = [{ return ::print(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1598,8 +1597,7 @@ def IsolatedRegionOp : TEST_Op<"isolated_region", [IsolatedFromAbove]> {
 
   let arguments = (ins Index);
   let regions = (region SizedRegion<1>:$region);
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-  let printer = [{ return ::print(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 def SSACFGRegionOp : TEST_Op<"ssacfg_region",  [
@@ -1622,8 +1620,7 @@ def GraphRegionOp : TEST_Op<"graph_region",  [
   }];
 
   let regions = (region AnyRegion:$region);
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-  let printer = [{ return ::print(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 def AffineScopeOp : TEST_Op<"affine_scope", [AffineScope]> {
@@ -1633,8 +1630,7 @@ def AffineScopeOp : TEST_Op<"affine_scope", [AffineScope]> {
   }];
 
   let regions = (region SizedRegion<1>:$region);
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-  let printer = [{ return ::print(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 def WrappingRegionOp : TEST_Op<"wrapping_region",
@@ -1647,8 +1643,7 @@ def WrappingRegionOp : TEST_Op<"wrapping_region",
 
   let results = (outs Variadic<AnyType>);
   let regions = (region SizedRegion<1>:$region);
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-  let printer = [{ return ::print(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 def PrettyPrintedRegionOp : TEST_Op<"pretty_printed_region",
@@ -1666,12 +1661,10 @@ def PrettyPrintedRegionOp : TEST_Op<"pretty_printed_region",
 
   let results = (outs AnyType);
   let regions = (region SizedRegion<1>:$region);
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-  let printer = [{ return ::print(p, *this); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
-def PolyForOp : TEST_Op<"polyfor", [OpAsmOpInterface]>
-{
+def PolyForOp : TEST_Op<"polyfor", [OpAsmOpInterface]> {
   let summary =  "polyfor operation";
   let description = [{
     Test op with multiple region arguments, each argument of index type.
@@ -1681,7 +1674,7 @@ def PolyForOp : TEST_Op<"polyfor", [OpAsmOpInterface]>
                                   mlir::OpAsmSetValueNameFn setNameFn);
   }];
   let regions = (region SizedRegion<1>:$region);
-  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2352,8 +2345,6 @@ def RegionIfOp : TEST_Op<"region_if",
     parent op.
   }];
 
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parseRegionIfOp(parser, result); }];
   let arguments = (ins Variadic<AnyType>);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$thenRegion,
@@ -2371,6 +2362,7 @@ def RegionIfOp : TEST_Op<"region_if",
     }
     ::mlir::OperandRange getSuccessorEntryOperands(unsigned index);
   }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 def AnyCondOp : TEST_Op<"any_cond",

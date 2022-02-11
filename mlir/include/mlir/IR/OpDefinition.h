@@ -201,7 +201,7 @@ public:
 protected:
   /// If the concrete type didn't implement a custom verifier hook, just fall
   /// back to this one which accepts everything.
-  LogicalResult verify() { return success(); }
+  LogicalResult verifyInvariants() { return success(); }
 
   /// Parse the custom form of an operation. Unless overridden, this method will
   /// first try to get an operation parser from the op's dialect. Otherwise the
@@ -1368,14 +1368,14 @@ struct Elementwise : public TraitBase<ConcreteType, Elementwise> {
 ///
 /// Example:
 /// ```
-/// %tensor_select = "std.select"(%pred_tensor, %true_val, %false_val)
+/// %tensor_select = "arith.select"(%pred_tensor, %true_val, %false_val)
 ///                      : (tensor<?xi1>, tensor<?xf32>, tensor<?xf32>)
 ///                      -> tensor<?xf32>
 /// ```
 /// can be scalarized to
 ///
 /// ```
-/// %scalar_select = "std.select"(%pred, %true_val_scalar, %false_val_scalar)
+/// %scalar_select = "arith.select"(%pred, %true_val_scalar, %false_val_scalar)
 ///                      : (i1, f32, f32) -> f32
 /// ```
 template <typename ConcreteType>
@@ -1430,12 +1430,12 @@ struct Vectorizable : public TraitBase<ConcreteType, Vectorizable> {
 /// ```
 ///
 /// ```
-/// %scalar_pred = "std.select"(%pred, %true_val, %false_val)
+/// %scalar_pred = "arith.select"(%pred, %true_val, %false_val)
 ///                    : (i1, tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
 /// ```
 /// can be tensorized to
 /// ```
-/// %tensor_pred = "std.select"(%pred, %true_val, %false_val)
+/// %tensor_pred = "arith.select"(%pred, %true_val, %false_val)
 ///                    : (tensor<?xi1>, tensor<?xf32>, tensor<?xf32>)
 ///                    -> tensor<?xf32>
 /// ```
@@ -1604,6 +1604,7 @@ class Op : public OpState, public Traits<ConcreteType>... {
 public:
   /// Inherit getOperation from `OpState`.
   using OpState::getOperation;
+  using OpState::verifyInvariants;
 
   /// Return if this operation contains the provided trait.
   template <template <typename T> class Trait>
@@ -1834,8 +1835,15 @@ private:
     return cast<ConcreteType>(op).print(p);
   }
   /// Implementation of `VerifyInvariantsFn` OperationName hook.
+  static LogicalResult verifyInvariants(Operation *op) {
+    static_assert(hasNoDataMembers(),
+                  "Op class shouldn't define new data members");
+    return failure(
+        failed(op_definition_impl::verifyTraits<VerifiableTraitsTupleT>(op)) ||
+        failed(cast<ConcreteType>(op).verifyInvariants()));
+  }
   static OperationName::VerifyInvariantsFn getVerifyInvariantsFn() {
-    return &verifyInvariants;
+    return static_cast<LogicalResult (*)(Operation *)>(&verifyInvariants);
   }
 
   static constexpr bool hasNoDataMembers() {
@@ -1843,14 +1851,6 @@ private:
     // its size to an ad-hoc EmptyOp.
     class EmptyOp : public Op<EmptyOp, Traits...> {};
     return sizeof(ConcreteType) == sizeof(EmptyOp);
-  }
-
-  static LogicalResult verifyInvariants(Operation *op) {
-    static_assert(hasNoDataMembers(),
-                  "Op class shouldn't define new data members");
-    return failure(
-        failed(op_definition_impl::verifyTraits<VerifiableTraitsTupleT>(op)) ||
-        failed(cast<ConcreteType>(op).verify()));
   }
 
   /// Allow access to internal implementation methods.
@@ -1897,25 +1897,8 @@ protected:
 };
 
 //===----------------------------------------------------------------------===//
-// Common Operation Folders/Parsers/Printers
+// CastOpInterface utilities
 //===----------------------------------------------------------------------===//
-
-// These functions are out-of-line implementations of the methods in UnaryOp and
-// BinaryOp, which avoids them being template instantiated/duplicated.
-namespace impl {
-ParseResult parseOneResultOneOperandTypeOp(OpAsmParser &parser,
-                                           OperationState &result);
-
-void buildBinaryOp(OpBuilder &builder, OperationState &result, Value lhs,
-                   Value rhs);
-ParseResult parseOneResultSameOperandTypeOp(OpAsmParser &parser,
-                                            OperationState &result);
-
-// Prints the given binary `op` in custom assembly form if both the two operands
-// and the result have the same time. Otherwise, prints the generic assembly
-// form.
-void printOneResultOp(Operation *op, OpAsmPrinter &p);
-} // namespace impl
 
 // These functions are out-of-line implementations of the methods in
 // CastOpInterface, which avoids them being template instantiated/duplicated.
@@ -1927,20 +1910,6 @@ LogicalResult foldCastInterfaceOp(Operation *op,
 /// Attempt to verify the given cast operation.
 LogicalResult verifyCastInterfaceOp(
     Operation *op, function_ref<bool(TypeRange, TypeRange)> areCastCompatible);
-
-// TODO: Remove the parse/print/build here (new ODS functionality obsoletes the
-// need for them, but some older ODS code in `std` still depends on them).
-void buildCastOp(OpBuilder &builder, OperationState &result, Value source,
-                 Type destType);
-ParseResult parseCastOp(OpAsmParser &parser, OperationState &result);
-void printCastOp(Operation *op, OpAsmPrinter &p);
-// TODO: These methods are deprecated in favor of CastOpInterface. Remove them
-// when all uses have been updated. Also, consider adding functionality to
-// CastOpInterface to be able to perform the ChainedTensorCast canonicalization
-// generically.
-Value foldCastOp(Operation *op);
-LogicalResult verifyCastOp(Operation *op,
-                           function_ref<bool(Type, Type)> areCastCompatible);
 } // namespace impl
 } // namespace mlir
 

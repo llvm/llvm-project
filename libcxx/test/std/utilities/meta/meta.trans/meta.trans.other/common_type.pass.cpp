@@ -14,6 +14,7 @@
 #include <memory>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -234,11 +235,11 @@ void test_bullet_three_four() {
   static_assert(std::is_same_v<std::common_type_t<const bad_reference_wrapper<double>, double>, double>, "");
   static_assert(std::is_same_v<std::common_type_t<volatile bad_reference_wrapper<double>, double>, double>, "");
   static_assert(std::is_same_v<std::common_type_t<const volatile bad_reference_wrapper<double>, double>, double>, "");
-  
+
   static_assert(std::is_same_v<std::common_type_t<bad_reference_wrapper<double>, const double>, double>, "");
   static_assert(std::is_same_v<std::common_type_t<bad_reference_wrapper<double>, volatile double>, double>, "");
   static_assert(std::is_same_v<std::common_type_t<bad_reference_wrapper<double>, const volatile double>, double>, "");
-  
+
   static_assert(std::is_same_v<std::common_type_t<bad_reference_wrapper<double>&, double>, double>, "");
   static_assert(std::is_same_v<std::common_type_t<bad_reference_wrapper<double>, double&>, double>, "");
 #endif
@@ -359,7 +360,20 @@ int main(int, char**)
     static_assert(std::is_same_v<std::common_type_t<std::tuple<const int&>>, std::tuple<int>>);
     static_assert(std::is_same_v<std::common_type_t<std::tuple<const volatile int&>, std::tuple<const volatile long&>>, std::tuple<long>>);
 
-    static_assert(std::is_same_v<std::common_reference_t<A, std::tuple<B>,std::tuple<C>>, std::tuple<B>>);
+    static_assert(std::is_same_v<std::common_type_t<A, std::tuple<B>, std::tuple<C>>, std::tuple<B>>);
+
+    static_assert(std::is_same_v<std::common_type_t<std::pair<int, int>>, std::pair<int, int>>);
+    static_assert(std::is_same_v<std::common_type_t<std::pair<int, long>, std::pair<long, int>>, std::pair<long, long>>);
+    static_assert(std::is_same_v<std::common_type_t<std::pair<const int, const long>,
+                                                    std::pair<const int, const long>>,
+                                                    std::pair<int, long>>);
+
+    static_assert(std::is_same_v<std::common_type_t<std::pair<const int&, const long&>>, std::pair<int, long>>);
+    static_assert(std::is_same_v<std::common_type_t<std::pair<const volatile int&, const volatile long&>,
+                                                    std::pair<const volatile long&, const volatile int&>>,
+                                                    std::pair<long, long>>);
+
+    static_assert(std::is_same_v<std::common_type_t<A, std::tuple<B>, std::tuple<C>>, std::tuple<B>>);
 #endif
 
   return 0;

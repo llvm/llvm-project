@@ -36,7 +36,7 @@
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -53,7 +53,7 @@ template<class _View, class _Fn>
 concept __transform_view_constraints =
   view<_View> && is_object_v<_Fn> &&
   regular_invocable<_Fn&, range_reference_t<_View>> &&
-  __referenceable<invoke_result_t<_Fn&, range_reference_t<_View>>>;
+  __can_reference<invoke_result_t<_Fn&, range_reference_t<_View>>>;
 
 template<input_range _View, copy_constructible _Fn>
   requires __transform_view_constraints<_View, _Fn>

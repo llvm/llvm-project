@@ -55,10 +55,10 @@ func @mismatch_unknown_terminator(%arg0 : i32, %arg1 : i32) -> i32 {
 // CHECK-LABEL: func @mismatch_operands
 // CHECK-SAME: %[[COND:.*]]: i1, %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32
 func @mismatch_operands(%cond : i1, %arg0 : i32, %arg1 : i32) -> i32 {
-  // CHECK: %[[RES:.*]] = select %[[COND]], %[[ARG0]], %[[ARG1]]
+  // CHECK: %[[RES:.*]] = arith.select %[[COND]], %[[ARG0]], %[[ARG1]]
   // CHECK: return %[[RES]]
 
-  cond_br %cond, ^bb1, ^bb2
+  cf.cond_br %cond, ^bb1, ^bb2
 
 ^bb1:
   return %arg0 : i32
@@ -71,11 +71,11 @@ func @mismatch_operands(%cond : i1, %arg0 : i32, %arg1 : i32) -> i32 {
 // CHECK-LABEL: func @mismatch_operands_matching_arguments(
 // CHECK-SAME: %[[COND:.*]]: i1, %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32
 func @mismatch_operands_matching_arguments(%cond : i1, %arg0 : i32, %arg1 : i32) -> (i32, i32) {
-  // CHECK: %[[RES0:.*]] = select %[[COND]], %[[ARG1]], %[[ARG0]]
-  // CHECK: %[[RES1:.*]] = select %[[COND]], %[[ARG0]], %[[ARG1]]
+  // CHECK: %[[RES0:.*]] = arith.select %[[COND]], %[[ARG1]], %[[ARG0]]
+  // CHECK: %[[RES1:.*]] = arith.select %[[COND]], %[[ARG0]], %[[ARG1]]
   // CHECK: return %[[RES1]], %[[RES0]]
 
-  cond_br %cond, ^bb1(%arg1 : i32), ^bb2(%arg0 : i32)
+  cf.cond_br %cond, ^bb1(%arg1 : i32), ^bb2(%arg0 : i32)
 
 ^bb1(%arg2 : i32):
   return %arg0, %arg2 : i32, i32
@@ -87,9 +87,9 @@ func @mismatch_operands_matching_arguments(%cond : i1, %arg0 : i32, %arg1 : i32)
 
 // CHECK-LABEL: func @mismatch_argument_uses(
 func @mismatch_argument_uses(%cond : i1, %arg0 : i32, %arg1 : i32) -> (i32, i32) {
-  // CHECK: cond_br %{{.*}}, ^bb1(%{{.*}}), ^bb2
+  // CHECK: cf.cond_br %{{.*}}, ^bb1(%{{.*}}), ^bb2
 
-  cond_br %cond, ^bb1(%arg1 : i32), ^bb2(%arg0 : i32)
+  cf.cond_br %cond, ^bb1(%arg1 : i32), ^bb2(%arg0 : i32)
 
 ^bb1(%arg2 : i32):
   return %arg0, %arg2 : i32, i32
@@ -101,9 +101,9 @@ func @mismatch_argument_uses(%cond : i1, %arg0 : i32, %arg1 : i32) -> (i32, i32)
 
 // CHECK-LABEL: func @mismatch_argument_types(
 func @mismatch_argument_types(%cond : i1, %arg0 : i32, %arg1 : i16) {
-  // CHECK: cond_br %{{.*}}, ^bb1(%{{.*}}), ^bb2
+  // CHECK: cf.cond_br %{{.*}}, ^bb1(%{{.*}}), ^bb2
 
-  cond_br %cond, ^bb1(%arg0 : i32), ^bb2(%arg1 : i16)
+  cf.cond_br %cond, ^bb1(%arg0 : i32), ^bb2(%arg1 : i16)
 
 ^bb1(%arg2 : i32):
   "foo.return"(%arg2) : (i32) -> ()
@@ -115,9 +115,9 @@ func @mismatch_argument_types(%cond : i1, %arg0 : i32, %arg1 : i16) {
 
 // CHECK-LABEL: func @mismatch_argument_count(
 func @mismatch_argument_count(%cond : i1, %arg0 : i32) {
-  // CHECK: cond_br %{{.*}}, ^bb1(%{{.*}}), ^bb2
+  // CHECK: cf.cond_br %{{.*}}, ^bb1(%{{.*}}), ^bb2
 
-  cond_br %cond, ^bb1(%arg0 : i32), ^bb2
+  cf.cond_br %cond, ^bb1(%arg0 : i32), ^bb2
 
 ^bb1(%arg2 : i32):
   "foo.return"(%arg2) : (i32) -> ()
@@ -129,9 +129,9 @@ func @mismatch_argument_count(%cond : i1, %arg0 : i32) {
 
 // CHECK-LABEL: func @mismatch_operations(
 func @mismatch_operations(%cond : i1) {
-  // CHECK: cond_br %{{.*}}, ^bb1, ^bb2
+  // CHECK: cf.cond_br %{{.*}}, ^bb1, ^bb2
 
-  cond_br %cond, ^bb1, ^bb2
+  cf.cond_br %cond, ^bb1, ^bb2
 
 ^bb1:
   "foo.return"() : () -> ()
@@ -143,9 +143,9 @@ func @mismatch_operations(%cond : i1) {
 
 // CHECK-LABEL: func @mismatch_operation_count(
 func @mismatch_operation_count(%cond : i1) {
-  // CHECK: cond_br %{{.*}}, ^bb1, ^bb2
+  // CHECK: cf.cond_br %{{.*}}, ^bb1, ^bb2
 
-  cond_br %cond, ^bb1, ^bb2
+  cf.cond_br %cond, ^bb1, ^bb2
 
 ^bb1:
   "foo.op"() : () -> ()
@@ -158,9 +158,9 @@ func @mismatch_operation_count(%cond : i1) {
 
 // CHECK-LABEL: func @contains_regions(
 func @contains_regions(%cond : i1) {
-  // CHECK: cond_br %{{.*}}, ^bb1, ^bb2
+  // CHECK: cf.cond_br %{{.*}}, ^bb1, ^bb2
 
-  cond_br %cond, ^bb1, ^bb2
+  cf.cond_br %cond, ^bb1, ^bb2
 
 ^bb1:
   scf.if %cond {
@@ -180,19 +180,19 @@ func @contains_regions(%cond : i1) {
 // CHECK-SAME: %[[ARG:.*]]: i1, %[[ARG2:.*]]: i1
 func @mismatch_loop(%cond : i1, %cond2 : i1) {
   // CHECK-NEXT: %[[LOOP_CARRY:.*]] = "foo.op"
-  // CHECK: cond_br %{{.*}}, ^bb1(%[[ARG2]] : i1), ^bb2
+  // CHECK: cf.cond_br %{{.*}}, ^bb1(%[[ARG2]] : i1), ^bb2
 
   %cond3 = "foo.op"() : () -> (i1)
-  cond_br %cond, ^bb2, ^bb3
+  cf.cond_br %cond, ^bb2, ^bb3
 
 ^bb1:
   // CHECK: ^bb1(%[[ARG3:.*]]: i1):
-  // CHECK-NEXT: cond_br %[[ARG3]], ^bb1(%[[LOOP_CARRY]] : i1), ^bb2
+  // CHECK-NEXT: cf.cond_br %[[ARG3]], ^bb1(%[[LOOP_CARRY]] : i1), ^bb2
 
-  cond_br %cond3, ^bb1, ^bb3
+  cf.cond_br %cond3, ^bb1, ^bb3
 
 ^bb2:
-  cond_br %cond2, ^bb1, ^bb3
+  cf.cond_br %cond2, ^bb1, ^bb3
 
 ^bb3:
   // CHECK: ^bb2:
@@ -207,20 +207,20 @@ func @mismatch_loop(%cond : i1, %cond2 : i1) {
 func @mismatch_operand_types(%arg0 : i1, %arg1 : memref<i32>, %arg2 : memref<i1>) {
   %c0_i32 = arith.constant 0 : i32
   %true = arith.constant true
-  br ^bb1
+  cf.br ^bb1
 
 ^bb1:
-  cond_br %arg0, ^bb2, ^bb3
+  cf.cond_br %arg0, ^bb2, ^bb3
 
 ^bb2:
   // CHECK: memref.store %{{.*}}, %{{.*}} : memref<i32>
   memref.store %c0_i32, %arg1[] : memref<i32>
-  br ^bb1
+  cf.br ^bb1
 
 ^bb3:
   // CHECK: memref.store %{{.*}}, %{{.*}} : memref<i1>
   memref.store %true, %arg2[] : memref<i1>
-  br ^bb1
+  cf.br ^bb1
 }
 
 // Check that it is illegal to merge blocks containing an operand
@@ -232,21 +232,21 @@ func private @print(%arg0: i32, %arg1: i32)
 func @nomerge(%arg0: i32, %i: i32) {
   %c1_i32 = arith.constant 1 : i32
   %icmp = arith.cmpi slt, %i, %arg0 : i32
-  cond_br %icmp, ^bb2, ^bb3
+  cf.cond_br %icmp, ^bb2, ^bb3
 
 ^bb2:  // pred: ^bb1
   %ip1 = arith.addi %i, %c1_i32 : i32
-  br ^bb4(%ip1 : i32)
+  cf.br ^bb4(%ip1 : i32)
 
 ^bb7:  // pred: ^bb5
   %jp1 = arith.addi %j, %c1_i32 : i32
-  br ^bb4(%jp1 : i32)
+  cf.br ^bb4(%jp1 : i32)
 
 ^bb4(%j: i32):  // 2 preds: ^bb2, ^bb7
   %jcmp = arith.cmpi slt, %j, %arg0 : i32
 // CHECK-NOT:  call @print(%[[arg1:.+]], %[[arg1]])
   call @print(%j, %ip1) : (i32, i32) -> ()
-  cond_br %jcmp, ^bb7, ^bb3
+  cf.cond_br %jcmp, ^bb7, ^bb3
 
 ^bb3:  // pred: ^bb1
   return

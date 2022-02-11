@@ -5,7 +5,7 @@ union U { unsigned n; char b[4]; } u;
 
 void (*fn2)(int, union U) __attribute__((cmse_nonsecure_call));
 
-union U xyzzy() __attribute__((cmse_nonsecure_entry)) {
+union U xyzzy(void) __attribute__((cmse_nonsecure_entry)) {
   fn2(0, u);
   return u;
 }

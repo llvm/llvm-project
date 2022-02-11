@@ -6,6 +6,6 @@
 typedef void (*hookfunc)(void *arg);
 hookfunc hook;
 
-void clear_hook() {
+void clear_hook(void) {
   hook = NULL;
 }

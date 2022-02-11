@@ -374,7 +374,7 @@ class VirtRegMap;
     ///
     /// Returns false if \p LI doesn't cross any register mask instructions. In
     /// that case, the bit vector is not filled in.
-    bool checkRegMaskInterference(LiveInterval &LI,
+    bool checkRegMaskInterference(const LiveInterval &LI,
                                   BitVector &UsableRegs);
 
     // Register unit functions.

@@ -24,4 +24,4 @@
 // We want to emit extern function symbols.
 // CHECK-EXTERN2: bar
 STORAGE int foo;
-STORAGE int bar() { return 42; }
+STORAGE int bar(void) { return 42; }

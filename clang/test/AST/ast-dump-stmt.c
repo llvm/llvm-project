@@ -19,7 +19,7 @@ int TestIndent = 1 + (1);
 // CHECK-NEXT: {{^}}|   `-ParenExpr{{.*0[^()]*$}}
 // CHECK-NEXT: {{^}}|     `-IntegerLiteral{{.*0[^()]*$}}
 
-void TestDeclStmt() {
+void TestDeclStmt(void) {
   int x = 0;
   int y, z;
 }

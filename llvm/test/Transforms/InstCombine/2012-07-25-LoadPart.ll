@@ -1,5 +1,5 @@
-; RUN: opt < %s -data-layout="e-p:32:32:32" -instcombine -S | FileCheck %s --check-prefix=LE
-; RUN: opt < %s -data-layout="E-p:32:32:32" -instcombine -S | FileCheck %s --check-prefix=BE
+; RUN: opt < %s -data-layout="e-p:32:32:32" -passes=instcombine -S | FileCheck %s --check-prefix=LE
+; RUN: opt < %s -data-layout="E-p:32:32:32" -passes=instcombine -S | FileCheck %s --check-prefix=BE
 ; PR13442
 
 @test = constant [4 x i32] [i32 1, i32 2, i32 3, i32 4]
