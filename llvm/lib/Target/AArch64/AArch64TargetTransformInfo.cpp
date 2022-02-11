@@ -862,12 +862,14 @@ instCombineSVELD1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
 
   if (isAllActivePredicate(Pred)) {
     LoadInst *Load = Builder.CreateLoad(VecTy, VecPtr);
+    Load->copyMetadata(II);
     return IC.replaceInstUsesWith(II, Load);
   }
 
   CallInst *MaskedLoad =
       Builder.CreateMaskedLoad(VecTy, VecPtr, PtrOp->getPointerAlignment(DL),
                                Pred, ConstantAggregateZero::get(VecTy));
+  MaskedLoad->copyMetadata(II);
   return IC.replaceInstUsesWith(II, MaskedLoad);
 }
 
@@ -883,12 +885,14 @@ instCombineSVEST1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
       Builder.CreateBitCast(PtrOp, VecOp->getType()->getPointerTo());
 
   if (isAllActivePredicate(Pred)) {
-    Builder.CreateStore(VecOp, VecPtr);
+    StoreInst *Store = Builder.CreateStore(VecOp, VecPtr);
+    Store->copyMetadata(II);
     return IC.eraseInstFromFunction(II);
   }
 
-  Builder.CreateMaskedStore(VecOp, VecPtr, PtrOp->getPointerAlignment(DL),
-                            Pred);
+  CallInst *MaskedStore = Builder.CreateMaskedStore(
+      VecOp, VecPtr, PtrOp->getPointerAlignment(DL), Pred);
+  MaskedStore->copyMetadata(II);
   return IC.eraseInstFromFunction(II);
 }
 
