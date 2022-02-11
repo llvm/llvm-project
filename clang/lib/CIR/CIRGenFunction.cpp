@@ -16,7 +16,8 @@
 using namespace cir;
 using namespace clang;
 
-CIRGenFunction::CIRGenFunction(CIRGenModule &CGM) : CGM{CGM} {}
+CIRGenFunction::CIRGenFunction(CIRGenModule &CGM)
+    : CGM{CGM}, SanOpts(CGM.getLangOpts().Sanitize) {}
 
 clang::ASTContext &CIRGenFunction::getContext() const {
   return CGM.getASTContext();
