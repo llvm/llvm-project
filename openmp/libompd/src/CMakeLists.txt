@@ -44,6 +44,17 @@ include_directories (
         ${LIBOMP_SRC_DIR}
 )
 
+if(${LIBOMP_USE_HWLOC})
+  set(CMAKE_REQUIRED_INCLUDES ${LIBOMP_HWLOC_INSTALL_DIR}/include)
+  check_include_file(hwloc.h LIBOMP_HAVE_HWLOC_H)
+  set(CMAKE_REQUIRED_INCLUDES)
+  if(NOT LIBOMP_HAVE_HWLOC_H)
+    libomp_error_say("Hwloc requested but not available")
+  else()
+    include_directories(${LIBOMP_HWLOC_INSTALL_DIR}/include)
+  endif()
+endif()
+
 INSTALL( TARGETS ompd
         LIBRARY DESTINATION ${OPENMP_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${OPENMP_INSTALL_LIBDIR}
