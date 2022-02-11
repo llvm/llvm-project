@@ -243,6 +243,14 @@ bool Variable::LocationIsValidForAddress(const Address &address) {
   // Be sure to resolve the address to section offset prior to calling this
   // function.
   if (address.IsSectionOffset()) {
+    // We need to check if the address is valid for both scope range and value
+    // range. 
+    // Empty scope range means block range.
+    bool valid_in_scope_range =
+        GetScopeRange().IsEmpty() || GetScopeRange().FindEntryThatContains(
+                                         address.GetFileAddress()) != nullptr;
+    if (!valid_in_scope_range)
+      return false;
     SymbolContext sc;
     CalculateSymbolContext(&sc);
     if (sc.module_sp == address.GetModule()) {

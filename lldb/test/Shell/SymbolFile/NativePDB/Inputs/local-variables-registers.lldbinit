@@ -1,0 +1,11 @@
+image lookup -a 0x140001000 -v
+image lookup -a 0x140001003 -v
+image lookup -a 0x140001006 -v
+
+image lookup -a 0x140001011 -v
+image lookup -a 0x140001017 -v
+image lookup -a 0x140001019 -v
+image lookup -a 0x14000101e -v
+image lookup -a 0x14000102c -v
+
+exit

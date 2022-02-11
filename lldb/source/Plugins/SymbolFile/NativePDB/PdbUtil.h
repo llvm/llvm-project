@@ -105,6 +105,7 @@ struct VariableInfo {
   llvm::codeview::TypeIndex type;
   llvm::Optional<DWARFExpression> location;
   llvm::Optional<Variable::RangeList> ranges;
+  bool is_param;
 };
 
 llvm::pdb::PDB_SymType CVSymToPDBSym(llvm::codeview::SymbolKind kind);
