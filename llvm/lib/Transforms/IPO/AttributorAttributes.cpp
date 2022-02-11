@@ -787,9 +787,6 @@ namespace llvm {
 namespace AA {
 namespace PointerInfo {
 
-/// An access kind description as used by AAPointerInfo.
-struct OffsetAndSize;
-
 struct State;
 
 } // namespace PointerInfo
@@ -807,7 +804,7 @@ struct DenseMapInfo<AAPointerInfo::Access> : DenseMapInfo<Instruction *> {
 
 /// Helper that allows OffsetAndSize as a key in a DenseMap.
 template <>
-struct DenseMapInfo<AA::PointerInfo ::OffsetAndSize>
+struct DenseMapInfo<AAPointerInfo ::OffsetAndSize>
     : DenseMapInfo<std::pair<int64_t, int64_t>> {};
 
 /// Helper for AA::PointerInfo::Acccess DenseMap/Set usage ignoring everythign
@@ -822,38 +819,6 @@ struct AccessAsInstructionInfo : DenseMapInfo<Instruction *> {
 };
 
 } // namespace llvm
-
-/// Helper to represent an access offset and size, with logic to deal with
-/// uncertainty and check for overlapping accesses.
-struct AA::PointerInfo::OffsetAndSize : public std::pair<int64_t, int64_t> {
-  using BaseTy = std::pair<int64_t, int64_t>;
-  OffsetAndSize(int64_t Offset, int64_t Size) : BaseTy(Offset, Size) {}
-  OffsetAndSize(const BaseTy &P) : BaseTy(P) {}
-  int64_t getOffset() const { return first; }
-  int64_t getSize() const { return second; }
-  static OffsetAndSize getUnknown() { return OffsetAndSize(Unknown, Unknown); }
-
-  /// Return true if offset or size are unknown.
-  bool offsetOrSizeAreUnknown() const {
-    return getOffset() == OffsetAndSize::Unknown ||
-           getSize() == OffsetAndSize::Unknown;
-  }
-
-  /// Return true if this offset and size pair might describe an address that
-  /// overlaps with \p OAS.
-  bool mayOverlap(const OffsetAndSize &OAS) const {
-    // Any unknown value and we are giving up -> overlap.
-    if (offsetOrSizeAreUnknown() || OAS.offsetOrSizeAreUnknown())
-      return true;
-
-    // Check if one offset point is in the other interval [offset, offset+size].
-    return OAS.getOffset() + OAS.getSize() > getOffset() &&
-           OAS.getOffset() < getOffset() + getSize();
-  }
-
-  /// Constant used to represent unknown offset or sizes.
-  static constexpr int64_t Unknown = 1 << 31;
-};
 
 /// Implementation of the DenseMapInfo.
 ///
@@ -988,14 +953,14 @@ struct AA::PointerInfo::State : public AbstractState {
   using Accesses = DenseSet<AAPointerInfo::Access, AccessAsInstructionInfo>;
 
   /// We store all accesses in bins denoted by their offset and size.
-  using AccessBinsTy = DenseMap<OffsetAndSize, Accesses>;
+  using AccessBinsTy = DenseMap<AAPointerInfo::OffsetAndSize, Accesses>;
 
   AccessBinsTy::const_iterator begin() const { return AccessBins.begin(); }
   AccessBinsTy::const_iterator end() const { return AccessBins.end(); }
 
 protected:
   /// The bins with all the accesses for the associated pointer.
-  DenseMap<OffsetAndSize, Accesses> AccessBins;
+  DenseMap<AAPointerInfo::OffsetAndSize, Accesses> AccessBins;
 
   /// Add a new access to the state at offset \p Offset and with size \p Size.
   /// The access is associated with \p I, writes \p Content (if anything), and
@@ -1006,7 +971,7 @@ protected:
                          AAPointerInfo::AccessKind Kind, Type *Ty,
                          Instruction *RemoteI = nullptr,
                          Accesses *BinPtr = nullptr) {
-    OffsetAndSize Key{Offset, Size};
+    AAPointerInfo::OffsetAndSize Key{Offset, Size};
     Accesses &Bin = BinPtr ? *BinPtr : AccessBins[Key];
     AAPointerInfo::Access Acc(&I, RemoteI ? RemoteI : &I, Content, Kind, Ty);
     // Check if we have an access for this instruction in this bin, if not,
@@ -1025,12 +990,32 @@ protected:
 
   /// See AAPointerInfo::forallInterferingAccesses.
   bool forallInterferingAccesses(
+      AAPointerInfo::OffsetAndSize OAS,
+      function_ref<bool(const AAPointerInfo::Access &, bool)> CB) const {
+    if (!isValidState())
+      return false;
+
+    for (auto &It : AccessBins) {
+      AAPointerInfo::OffsetAndSize ItOAS = It.getFirst();
+      if (!OAS.mayOverlap(ItOAS))
+        continue;
+      bool IsExact = OAS == ItOAS && !OAS.offsetOrSizeAreUnknown();
+      for (auto &Access : It.getSecond())
+        if (!CB(Access, IsExact))
+          return false;
+    }
+    return true;
+  }
+
+  /// See AAPointerInfo::forallInterferingAccesses.
+  bool forallInterferingAccesses(
       Instruction &I,
       function_ref<bool(const AAPointerInfo::Access &, bool)> CB) const {
     if (!isValidState())
       return false;
+
     // First find the offset and size of I.
-    OffsetAndSize OAS(-1, -1);
+    AAPointerInfo::OffsetAndSize OAS(-1, -1);
     for (auto &It : AccessBins) {
       for (auto &Access : It.getSecond()) {
         if (Access.getRemoteInst() == &I) {
@@ -1041,21 +1026,13 @@ protected:
       if (OAS.getSize() != -1)
         break;
     }
+    // No access for I was found, we are done.
     if (OAS.getSize() == -1)
       return true;
 
     // Now that we have an offset and size, find all overlapping ones and use
     // the callback on the accesses.
-    for (auto &It : AccessBins) {
-      OffsetAndSize ItOAS = It.getFirst();
-      if (!OAS.mayOverlap(ItOAS))
-        continue;
-      bool IsExact = OAS == ItOAS && !OAS.offsetOrSizeAreUnknown();
-      for (auto &Access : It.getSecond())
-        if (!CB(Access, IsExact))
-          return false;
-    }
-    return true;
+    return forallInterferingAccesses(OAS, CB);
   }
 
 private:
@@ -1084,6 +1061,12 @@ struct AAPointerInfoImpl
     return AAPointerInfo::manifest(A);
   }
 
+  bool forallInterferingAccesses(
+      OffsetAndSize OAS,
+      function_ref<bool(const AAPointerInfo::Access &, bool)> CB)
+      const override {
+    return State::forallInterferingAccesses(OAS, CB);
+  }
   bool forallInterferingAccesses(
       LoadInst &LI, function_ref<bool(const AAPointerInfo::Access &, bool)> CB)
       const override {
@@ -1306,7 +1289,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
   bool handleAccess(Attributor &A, Instruction &I, Value &Ptr,
                     Optional<Value *> Content, AccessKind Kind, int64_t Offset,
                     ChangeStatus &Changed, Type *Ty,
-                    int64_t Size = AA::PointerInfo::OffsetAndSize::Unknown) {
+                    int64_t Size = OffsetAndSize::Unknown) {
     using namespace AA::PointerInfo;
     // No need to find a size if one is given or the offset is unknown.
     if (Offset != OffsetAndSize::Unknown && Size == OffsetAndSize::Unknown &&
@@ -1322,7 +1305,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
 
   /// Helper struct, will support ranges eventually.
   struct OffsetInfo {
-    int64_t Offset = AA::PointerInfo::OffsetAndSize::Unknown;
+    int64_t Offset = OffsetAndSize::Unknown;
 
     bool operator==(const OffsetInfo &OI) const { return Offset == OI.Offset; }
   };
