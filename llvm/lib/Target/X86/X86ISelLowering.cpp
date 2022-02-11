@@ -43438,19 +43438,17 @@ static SDValue combineSelectOfTwoConstants(SDNode *N, SelectionDAG &DAG) {
 /// This function will also call SimplifyDemandedBits on already created
 /// BLENDV to perform additional simplifications.
 static SDValue combineVSelectToBLENDV(SDNode *N, SelectionDAG &DAG,
-                                           TargetLowering::DAGCombinerInfo &DCI,
-                                           const X86Subtarget &Subtarget) {
+                                      TargetLowering::DAGCombinerInfo &DCI,
+                                      const X86Subtarget &Subtarget) {
   SDValue Cond = N->getOperand(0);
   if ((N->getOpcode() != ISD::VSELECT &&
        N->getOpcode() != X86ISD::BLENDV) ||
       ISD::isBuildVectorOfConstantSDNodes(Cond.getNode()))
     return SDValue();
 
-  // Don't optimize before the condition has been transformed to a legal type
-  // and don't ever optimize vector selects that map to AVX512 mask-registers.
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   unsigned BitWidth = Cond.getScalarValueSizeInBits();
-  if (BitWidth < 8 || BitWidth > 64)
-    return SDValue();
+  EVT VT = N->getValueType(0);
 
   // We can only handle the cases where VSELECT is directly legal on the
   // subtarget. We custom lower VSELECT nodes with constant conditions and
@@ -43462,8 +43460,6 @@ static SDValue combineVSelectToBLENDV(SDNode *N, SelectionDAG &DAG,
   // Potentially, we should combine constant-condition vselect nodes
   // pre-legalization into shuffles and not mark as many types as custom
   // lowered.
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  EVT VT = N->getValueType(0);
   if (!TLI.isOperationLegalOrCustom(ISD::VSELECT, VT))
     return SDValue();
   // FIXME: We don't support i16-element blends currently. We could and
@@ -43479,6 +43475,22 @@ static SDValue combineVSelectToBLENDV(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   // There are no 512-bit blend instructions that use sign bits.
   if (VT.is512BitVector())
+    return SDValue();
+
+  // PreAVX512, without mask-registers, attempt to sign-extend bool vectors to
+  // allow us to use BLENDV.
+  if (!Subtarget.hasAVX512() && BitWidth == 1) {
+    EVT CondVT = VT.changeVectorElementTypeToInteger();
+    if (SDValue ExtCond = combineToExtendBoolVectorInReg(
+            ISD::SIGN_EXTEND, SDLoc(N), CondVT, Cond, DAG, DCI, Subtarget)) {
+      return DAG.getNode(X86ISD::BLENDV, SDLoc(N), VT, ExtCond,
+                         N->getOperand(1), N->getOperand(2));
+    }
+  }
+
+  // Don't optimize before the condition has been transformed to a legal type
+  // and don't ever optimize vector selects that map to AVX512 mask-registers.
+  if (BitWidth < 8 || BitWidth > 64)
     return SDValue();
 
   auto OnlyUsedAsSelectCond = [](SDValue Cond) {
