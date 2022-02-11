@@ -45,7 +45,7 @@ namespace ranges {
     // one can't call begin() on it more than once.
     static constexpr bool _UseCache = forward_range<_View> && !(random_access_range<_View> && sized_range<_View>);
     using _Cache = _If<_UseCache, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
-    [[no_unique_address]] _Cache __cached_begin_ = _Cache();
+    _LIBCPP_NO_UNIQUE_ADDRESS _Cache __cached_begin_ = _Cache();
     range_difference_t<_View> __count_ = 0;
     _View __base_ = _View();
 

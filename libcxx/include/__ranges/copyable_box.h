@@ -41,7 +41,7 @@ namespace ranges {
   // Primary template - uses std::optional and introduces an empty state in case assignment fails.
   template<__copy_constructible_object _Tp>
   class __copyable_box {
-    [[no_unique_address]] optional<_Tp> __val_;
+    _LIBCPP_NO_UNIQUE_ADDRESS optional<_Tp> __val_;
 
   public:
     template<class ..._Args>
@@ -116,7 +116,7 @@ namespace ranges {
   template<__copy_constructible_object _Tp>
     requires __doesnt_need_empty_state_for_copy<_Tp> && __doesnt_need_empty_state_for_move<_Tp>
   class __copyable_box<_Tp> {
-    [[no_unique_address]] _Tp __val_;
+    _LIBCPP_NO_UNIQUE_ADDRESS _Tp __val_;
 
   public:
     template<class ..._Args>

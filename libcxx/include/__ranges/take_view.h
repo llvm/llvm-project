@@ -39,7 +39,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
   template<view _View>
   class take_view : public view_interface<take_view<_View>> {
-    [[no_unique_address]] _View __base_ = _View();
+    _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
     range_difference_t<_View> __count_ = 0;
 
     template<bool> class __sentinel;
@@ -136,7 +136,7 @@ namespace ranges {
     using _Base = __maybe_const<_Const, _View>;
     template<bool _OtherConst>
     using _Iter = counted_iterator<iterator_t<__maybe_const<_OtherConst, _View>>>;
-    [[no_unique_address]] sentinel_t<_Base> __end_ = sentinel_t<_Base>();
+    _LIBCPP_NO_UNIQUE_ADDRESS sentinel_t<_Base> __end_ = sentinel_t<_Base>();
 
     template<bool>
     friend class take_view<_View>::__sentinel;

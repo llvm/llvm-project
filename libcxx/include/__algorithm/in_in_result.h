@@ -26,8 +26,8 @@ namespace ranges {
 
 template <class _I1, class _I2>
 struct in_in_result {
-  [[no_unique_address]] _I1 in1;
-  [[no_unique_address]] _I2 in2;
+  _LIBCPP_NO_UNIQUE_ADDRESS _I1 in1;
+  _LIBCPP_NO_UNIQUE_ADDRESS _I2 in2;
 
   template <class _II1, class _II2>
     requires convertible_to<const _I1&, _II1> && convertible_to<const _I2&, _II2>
