@@ -22,6 +22,7 @@ class Expr;
 } // namespace clang
 
 namespace cir {
+class CIRGenModule;
 
 // FIXME: for now we are reusing this from lib/Clang/CodeGenFunction.h, which
 // isn't available in the include dir. Same for getEvaluationKind below.
@@ -39,6 +40,9 @@ public:
   mlir::Type FnRetTy;
   clang::QualType FnRetQualTy;
 
+  CIRGenModule &CGM;
+  clang::ASTContext &getContext() const;
+
   ///  Return the TypeEvaluationKind of QualType \c T.
   static TypeEvaluationKind getEvaluationKind(clang::QualType T);
 
@@ -50,7 +54,7 @@ public:
     return getEvaluationKind(T) == TEK_Aggregate;
   }
 
-  CIRGenFunction();
+  CIRGenFunction(CIRGenModule &CGM);
 };
 
 } // namespace cir
