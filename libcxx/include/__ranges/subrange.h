@@ -56,8 +56,8 @@ namespace ranges {
       requires derived_from<tuple_size<_Tp>, integral_constant<size_t, 2>>;
       typename tuple_element_t<0, remove_const_t<_Tp>>;
       typename tuple_element_t<1, remove_const_t<_Tp>>;
-      { _VSTD::get<0>(__t) } -> convertible_to<const tuple_element_t<0, _Tp>&>;
-      { _VSTD::get<1>(__t) } -> convertible_to<const tuple_element_t<1, _Tp>&>;
+      { std::get<0>(__t) } -> convertible_to<const tuple_element_t<0, _Tp>&>;
+      { std::get<1>(__t) } -> convertible_to<const tuple_element_t<1, _Tp>&>;
     };
 
   template<class _Pair, class _Iter, class _Sent>
@@ -93,14 +93,14 @@ namespace ranges {
     _LIBCPP_HIDE_FROM_ABI
     constexpr subrange(__convertible_to_non_slicing<_Iter> auto __iter, _Sent __sent)
       requires _MustProvideSizeAtConstruction
-      : __begin_(_VSTD::move(__iter)), __end_(_VSTD::move(__sent))
+      : __begin_(std::move(__iter)), __end_(std::move(__sent))
     { }
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr subrange(__convertible_to_non_slicing<_Iter> auto __iter, _Sent __sent,
                        make_unsigned_t<iter_difference_t<_Iter>> __n)
       requires (_Kind == subrange_kind::sized)
-      : __begin_(_VSTD::move(__iter)), __end_(_VSTD::move(__sent)), __size_(__n)
+      : __begin_(std::move(__iter)), __end_(std::move(__sent)), __size_(__n)
     {
       if constexpr (sized_sentinel_for<_Sent, _Iter>)
         _LIBCPP_ASSERT((__end_ - __begin_) == static_cast<iter_difference_t<_Iter>>(__n),
@@ -149,7 +149,7 @@ namespace ranges {
     }
 
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Iter begin() requires (!copyable<_Iter>) {
-      return _VSTD::move(__begin_);
+      return std::move(__begin_);
     }
 
     _LIBCPP_HIDE_FROM_ABI
@@ -168,7 +168,7 @@ namespace ranges {
       if constexpr (_StoreSize)
         return __size_;
       else
-        return _VSTD::__to_unsigned_like(__end_ - __begin_);
+        return std::__to_unsigned_like(__end_ - __begin_);
     }
 
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr subrange next(iter_difference_t<_Iter> __n = 1) const&
@@ -181,7 +181,7 @@ namespace ranges {
 
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr subrange next(iter_difference_t<_Iter> __n = 1) && {
       advance(__n);
-      return _VSTD::move(*this);
+      return std::move(*this);
     }
 
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr subrange prev(iter_difference_t<_Iter> __n = 1) const
@@ -198,14 +198,14 @@ namespace ranges {
         if (__n < 0) {
           ranges::advance(__begin_, __n);
           if constexpr (_StoreSize)
-            __size_ += _VSTD::__to_unsigned_like(-__n);
+            __size_ += std::__to_unsigned_like(-__n);
           return *this;
         }
       }
 
       auto __d = __n - ranges::advance(__begin_, __n, __end_);
       if constexpr (_StoreSize)
-        __size_ -= _VSTD::__to_unsigned_like(__d);
+        __size_ -= std::__to_unsigned_like(__d);
       return *this;
     }
   };

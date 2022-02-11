@@ -50,13 +50,13 @@ namespace ranges {
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr take_view(_View __base, range_difference_t<_View> __count)
-      : __base_(_VSTD::move(__base)), __count_(__count) {}
+      : __base_(std::move(__base)), __count_(__count) {}
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr _View base() const& requires copy_constructible<_View> { return __base_; }
 
     _LIBCPP_HIDE_FROM_ABI
-    constexpr _View base() && { return _VSTD::move(__base_); }
+    constexpr _View base() && { return std::move(__base_); }
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr auto begin() requires (!__simple_view<_View>) {
@@ -119,14 +119,14 @@ namespace ranges {
     constexpr auto size() requires sized_range<_View> {
       auto __n = ranges::size(__base_);
       // TODO: use ranges::min here.
-      return _VSTD::min(__n, static_cast<decltype(__n)>(__count_));
+      return std::min(__n, static_cast<decltype(__n)>(__count_));
     }
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr auto size() const requires sized_range<const _View> {
       auto __n = ranges::size(__base_);
       // TODO: use ranges::min here.
-      return _VSTD::min(__n, static_cast<decltype(__n)>(__count_));
+      return std::min(__n, static_cast<decltype(__n)>(__count_));
     }
   };
 
@@ -146,12 +146,12 @@ public:
     __sentinel() = default;
 
     _LIBCPP_HIDE_FROM_ABI
-    constexpr explicit __sentinel(sentinel_t<_Base> __end) : __end_(_VSTD::move(__end)) {}
+    constexpr explicit __sentinel(sentinel_t<_Base> __end) : __end_(std::move(__end)) {}
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr __sentinel(__sentinel<!_Const> __s)
       requires _Const && convertible_to<sentinel_t<_View>, sentinel_t<_Base>>
-      : __end_(_VSTD::move(__s.__end_)) {}
+      : __end_(std::move(__s.__end_)) {}
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr sentinel_t<_Base> base() const { return __end_; }

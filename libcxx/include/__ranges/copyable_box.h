@@ -49,7 +49,7 @@ namespace ranges {
     _LIBCPP_HIDE_FROM_ABI
     constexpr explicit __copyable_box(in_place_t, _Args&& ...__args)
       noexcept(is_nothrow_constructible_v<_Tp, _Args...>)
-      : __val_(in_place, _VSTD::forward<_Args>(__args)...)
+      : __val_(in_place, std::forward<_Args>(__args)...)
     { }
 
     _LIBCPP_HIDE_FROM_ABI
@@ -65,7 +65,7 @@ namespace ranges {
     constexpr __copyable_box& operator=(__copyable_box const& __other)
       noexcept(is_nothrow_copy_constructible_v<_Tp>)
     {
-      if (this != _VSTD::addressof(__other)) {
+      if (this != std::addressof(__other)) {
         if (__other.__has_value()) __val_.emplace(*__other);
         else                       __val_.reset();
       }
@@ -79,8 +79,8 @@ namespace ranges {
     constexpr __copyable_box& operator=(__copyable_box&& __other)
       noexcept(is_nothrow_move_constructible_v<_Tp>)
     {
-      if (this != _VSTD::addressof(__other)) {
-        if (__other.__has_value()) __val_.emplace(_VSTD::move(*__other));
+      if (this != std::addressof(__other)) {
+        if (__other.__has_value()) __val_.emplace(std::move(*__other));
         else                       __val_.reset();
       }
       return *this;
@@ -124,7 +124,7 @@ namespace ranges {
     _LIBCPP_HIDE_FROM_ABI
     constexpr explicit __copyable_box(in_place_t, _Args&& ...__args)
       noexcept(is_nothrow_constructible_v<_Tp, _Args...>)
-      : __val_(_VSTD::forward<_Args>(__args)...)
+      : __val_(std::forward<_Args>(__args)...)
     { }
 
     _LIBCPP_HIDE_FROM_ABI
@@ -144,9 +144,9 @@ namespace ranges {
     _LIBCPP_HIDE_FROM_ABI
     constexpr __copyable_box& operator=(__copyable_box const& __other) noexcept {
       static_assert(is_nothrow_copy_constructible_v<_Tp>);
-      if (this != _VSTD::addressof(__other)) {
-        _VSTD::destroy_at(_VSTD::addressof(__val_));
-        _VSTD::construct_at(_VSTD::addressof(__val_), __other.__val_);
+      if (this != std::addressof(__other)) {
+        std::destroy_at(std::addressof(__val_));
+        std::construct_at(std::addressof(__val_), __other.__val_);
       }
       return *this;
     }
@@ -154,9 +154,9 @@ namespace ranges {
     _LIBCPP_HIDE_FROM_ABI
     constexpr __copyable_box& operator=(__copyable_box&& __other) noexcept {
       static_assert(is_nothrow_move_constructible_v<_Tp>);
-      if (this != _VSTD::addressof(__other)) {
-        _VSTD::destroy_at(_VSTD::addressof(__val_));
-        _VSTD::construct_at(_VSTD::addressof(__val_), _VSTD::move(__other.__val_));
+      if (this != std::addressof(__other)) {
+        std::destroy_at(std::addressof(__val_));
+        std::construct_at(std::addressof(__val_), std::move(__other.__val_));
       }
       return *this;
     }
@@ -164,8 +164,8 @@ namespace ranges {
     _LIBCPP_HIDE_FROM_ABI constexpr _Tp const& operator*() const noexcept { return __val_; }
     _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() noexcept { return __val_; }
 
-    _LIBCPP_HIDE_FROM_ABI constexpr const _Tp *operator->() const noexcept { return _VSTD::addressof(__val_); }
-    _LIBCPP_HIDE_FROM_ABI constexpr _Tp *operator->() noexcept { return _VSTD::addressof(__val_); }
+    _LIBCPP_HIDE_FROM_ABI constexpr const _Tp *operator->() const noexcept { return std::addressof(__val_); }
+    _LIBCPP_HIDE_FROM_ABI constexpr _Tp *operator->() noexcept { return std::addressof(__val_); }
 
     _LIBCPP_HIDE_FROM_ABI constexpr bool __has_value() const noexcept { return true; }
   };

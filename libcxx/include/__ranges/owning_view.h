@@ -38,15 +38,15 @@ namespace ranges {
 
 public:
     owning_view() requires default_initializable<_Rp> = default;
-    _LIBCPP_HIDE_FROM_ABI constexpr owning_view(_Rp&& __r) : __r_(_VSTD::move(__r)) {}
+    _LIBCPP_HIDE_FROM_ABI constexpr owning_view(_Rp&& __r) : __r_(std::move(__r)) {}
 
     owning_view(owning_view&&) = default;
     owning_view& operator=(owning_view&&) = default;
 
     _LIBCPP_HIDE_FROM_ABI constexpr _Rp& base() & noexcept { return __r_; }
     _LIBCPP_HIDE_FROM_ABI constexpr const _Rp& base() const& noexcept { return __r_; }
-    _LIBCPP_HIDE_FROM_ABI constexpr _Rp&& base() && noexcept { return _VSTD::move(__r_); }
-    _LIBCPP_HIDE_FROM_ABI constexpr const _Rp&& base() const&& noexcept { return _VSTD::move(__r_); }
+    _LIBCPP_HIDE_FROM_ABI constexpr _Rp&& base() && noexcept { return std::move(__r_); }
+    _LIBCPP_HIDE_FROM_ABI constexpr const _Rp&& base() const&& noexcept { return std::move(__r_); }
 
     _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Rp> begin() { return ranges::begin(__r_); }
     _LIBCPP_HIDE_FROM_ABI constexpr sentinel_t<_Rp> end() { return ranges::end(__r_); }

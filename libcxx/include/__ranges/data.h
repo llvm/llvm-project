@@ -60,8 +60,8 @@ namespace __data {
     template<__ranges_begin_invocable _Tp>
     _LIBCPP_HIDE_FROM_ABI
     constexpr auto operator()(_Tp&& __t) const
-        noexcept(noexcept(_VSTD::to_address(ranges::begin(__t)))) {
-      return _VSTD::to_address(ranges::begin(__t));
+        noexcept(noexcept(std::to_address(ranges::begin(__t)))) {
+      return std::to_address(ranges::begin(__t));
     }
   };
 } // namespace __data

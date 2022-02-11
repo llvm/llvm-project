@@ -55,13 +55,13 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     constexpr drop_view(_View __base, range_difference_t<_View> __count)
       : __count_(__count)
-      , __base_(_VSTD::move(__base))
+      , __base_(std::move(__base))
     {
       _LIBCPP_ASSERT(__count_ >= 0, "count must be greater than or equal to zero.");
     }
 
     _LIBCPP_HIDE_FROM_ABI constexpr _View base() const& requires copy_constructible<_View> { return __base_; }
-    _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return _VSTD::move(__base_); }
+    _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr auto begin()
