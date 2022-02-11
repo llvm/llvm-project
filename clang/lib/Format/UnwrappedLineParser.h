@@ -92,11 +92,16 @@ private:
   void reset();
   void parseFile();
   bool precededByCommentOrPPDirective() const;
-  bool parseLevel(bool HasOpeningBrace, IfStmtKind *IfKind = nullptr);
+  bool parseLevel(bool HasOpeningBrace, bool CanContainBracedList,
+                  IfStmtKind *IfKind = nullptr,
+                  TokenType NextLBracesType = TT_Unknown);
   IfStmtKind parseBlock(bool MustBeDeclaration = false, unsigned AddLevels = 1u,
                         bool MunchSemi = true,
-                        bool UnindentWhitesmithsBraces = false);
-  void parseChildBlock();
+                        bool UnindentWhitesmithsBraces = false,
+                        bool CanContainBracedList = true,
+                        TokenType NextLBracesType = TT_Unknown);
+  void parseChildBlock(bool CanContainBracedList = true,
+                       TokenType NextLBracesType = TT_Unknown);
   void parsePPDirective();
   void parsePPDefine();
   void parsePPIf(bool IfDef);
@@ -106,11 +111,12 @@ private:
   void parsePPUnknown();
   void readTokenWithJavaScriptASI();
   void parseStructuralElement(IfStmtKind *IfKind = nullptr,
-                              bool IsTopLevel = false);
+                              bool IsTopLevel = false,
+                              TokenType NextLBracesType = TT_Unknown);
   bool tryToParseBracedList();
   bool parseBracedList(bool ContinueOnSemicolons = false, bool IsEnum = false,
                        tok::TokenKind ClosingBraceKind = tok::r_brace);
-  void parseParens();
+  void parseParens(TokenType AmpAmpTokenType = TT_Unknown);
   void parseSquare(bool LambdaIntroducer = false);
   void keepAncestorBraces();
   FormatToken *parseIfThenElse(IfStmtKind *IfKind, bool KeepBraces = false);
@@ -127,9 +133,9 @@ private:
   bool parseEnum();
   bool parseStructLike();
   void parseConcept();
-  void parseRequires();
-  void parseRequiresExpression(unsigned int OriginalLevel);
-  void parseConstraintExpression(unsigned int OriginalLevel);
+  void parseRequiresClause();
+  void parseRequiresExpression();
+  void parseConstraintExpression();
   void parseJavaEnumBody();
   // Parses a record (aka class) as a top level element. If ParseAsExpr is true,
   // parses the record as a child block, i.e. if the class declaration is an
