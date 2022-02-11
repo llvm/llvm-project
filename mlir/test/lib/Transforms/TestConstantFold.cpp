@@ -8,7 +8,6 @@
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/FoldUtils.h"
-#include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
 

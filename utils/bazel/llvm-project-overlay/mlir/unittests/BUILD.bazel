@@ -291,6 +291,7 @@ cc_test(
         "//mlir:AffineAnalysis",
         "//mlir:Analysis",
         "//mlir:IR",
+        "//mlir:Parser",
     ],
 )
 
