@@ -18,7 +18,7 @@
 // COMMON-LABEL: define{{.*}} amdgpu_kernel void @_Z7kernel1Pi(i32 addrspace(1)*{{.*}} %x.coerce)
 // CHECK:     ={{.*}} addrspacecast [[TYPE:.*]] addrspace(1)* %{{.*}} to [[TYPE]]*
 // CHECK-NOT: ={{.*}} addrspacecast [[TYPE:.*]] addrspace(1)* %{{.*}} to [[TYPE]]*
-// OPT: [[VAL:%.*]] = load i32, i32 addrspace(1)* %x.coerce, align 4
+// OPT: [[VAL:%.*]] = load i32, i32 addrspace(4)* %x.coerce.const, align 4
 // OPT: [[INC:%.*]] = add nsw i32 [[VAL]], 1
 // OPT: store i32 [[INC]], i32 addrspace(1)* %x.coerce, align 4
 // OPT: ret void
@@ -30,7 +30,7 @@ __global__ void kernel1(int *x) {
 // COMMON-LABEL: define{{.*}} amdgpu_kernel void @_Z7kernel2Ri(i32 addrspace(1)*{{.*}} nonnull align 4 dereferenceable(4) %x.coerce)
 // CHECK:     ={{.*}} addrspacecast [[TYPE:.*]] addrspace(1)* %{{.*}} to [[TYPE]]*
 // CHECK-NOT: ={{.*}} addrspacecast [[TYPE:.*]] addrspace(1)* %{{.*}} to [[TYPE]]*
-// OPT: [[VAL:%.*]] = load i32, i32 addrspace(1)* %x.coerce, align 4
+// OPT: [[VAL:%.*]] = load i32, i32 addrspace(4)* %x.coerce.const, align 4
 // OPT: [[INC:%.*]] = add nsw i32 [[VAL]], 1
 // OPT: store i32 [[INC]], i32 addrspace(1)* %x.coerce, align 4
 // OPT: ret void
@@ -68,7 +68,8 @@ struct S {
 // OPT: [[R1:%.*]] = getelementptr inbounds %struct.S, %struct.S addrspace(4)* %0, i64 0, i32 1
 // OPT: [[P1:%.*]] = load float*, float* addrspace(4)* [[R1]], align 8
 // OPT: [[G1:%.*]] ={{.*}} addrspacecast float* [[P1]] to float addrspace(1)*
-// OPT: [[V0:%.*]] = load i32, i32 addrspace(1)* [[G0]], align 4
+// OPT: [[G2:%.*]] ={{.*}} addrspacecast i32* [[P0]] to i32 addrspace(4)*
+// OPT: [[V0:%.*]] = load i32, i32 addrspace(4)* [[G2]], align 4
 // OPT: [[INC:%.*]] = add nsw i32 [[V0]], 1
 // OPT: store i32 [[INC]], i32 addrspace(1)* [[G0]], align 4
 // OPT: [[V1:%.*]] = load float, float addrspace(1)* [[G1]], align 4
@@ -103,7 +104,8 @@ struct T {
 // OPT: [[R1:%.*]] = getelementptr inbounds %struct.T, %struct.T addrspace(4)* %0, i64 0, i32 0, i64 1
 // OPT: [[P1:%.*]] = load float*, float* addrspace(4)* [[R1]], align 8
 // OPT: [[G1:%.*]] ={{.*}} addrspacecast float* [[P1]] to float addrspace(1)*
-// OPT: [[V0:%.*]] = load float, float addrspace(1)* [[G0]], align 4
+// OPT: [[G2:%.*]] ={{.*}} addrspacecast float* [[P0]] to float addrspace(4)*
+// OPT: [[V0:%.*]] = load float, float addrspace(4)* [[G2]], align 4
 // OPT: [[ADD0:%.*]] = fadd contract float [[V0]], 1.000000e+00
 // OPT: store float [[ADD0]], float addrspace(1)* [[G0]], align 4
 // OPT: [[V1:%.*]] = load float, float addrspace(1)* [[G1]], align 4
@@ -130,7 +132,7 @@ struct SS {
 // COMMON-LABEL: define{{.*}} amdgpu_kernel void @_Z7kernel82SS(float addrspace(1)*{{.*}} %a.coerce)
 // CHECK:     ={{.*}} addrspacecast [[TYPE:.*]] addrspace(1)* %{{.*}} to [[TYPE]]*
 // CHECK-NOT: ={{.*}} addrspacecast [[TYPE:.*]] addrspace(1)* %{{.*}} to [[TYPE]]*
-// OPT: [[VAL:%.*]] = load float, float addrspace(1)* %a.coerce, align 4
+// OPT: [[VAL:%.*]] = load float, float addrspace(4)* %a.coerce.const, align 4
 // OPT: [[INC:%.*]] = fadd contract float [[VAL]], 3.000000e+00
 // OPT: store float [[INC]], float addrspace(1)* %a.coerce, align 4
 // OPT: ret void
