@@ -316,6 +316,8 @@ int main() {
   f1<void(t8)>();
   operator_not_really<int>();
   t12 v4;
+  f1<_BitInt(3)>();
+  f1<const unsigned _BitInt(5)>();
 }
 void t8::mem() {
   struct t7 { };
