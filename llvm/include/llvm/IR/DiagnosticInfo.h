@@ -559,7 +559,7 @@ operator<<(RemarkT &&R,
                StringRef>
                S) {
   R.insert(S);
-  return R;
+  return *(&R);
 }
 
 template <class RemarkT>
@@ -581,7 +581,7 @@ operator<<(RemarkT &&R,
                DiagnosticInfoOptimizationBase::Argument>
                A) {
   R.insert(A);
-  return R;
+  return *(&R);
 }
 
 template <class RemarkT>
