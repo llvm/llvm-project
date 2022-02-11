@@ -2132,10 +2132,10 @@ void StmtPrinter::VisitCXXNewExpr(CXXNewExpr *E) {
   if (E->isParenTypeId())
     OS << "(";
   std::string TypeS;
-  if (Optional<Expr *> Size = E->getArraySize()) {
+  if (E->isArray()) {
     llvm::raw_string_ostream s(TypeS);
     s << '[';
-    if (*Size)
+    if (Optional<Expr *> Size = E->getArraySize())
       (*Size)->printPretty(s, Helper, Policy);
     s << ']';
   }
