@@ -393,54 +393,7 @@ void format_test_bool(TestFunction check, ExceptionTest check_exception) {
   // See locale-specific_form.pass.cpp
 
   // *** type ***
-  for (const auto& fmt : invalid_types<CharT>("bBcdosxX"))
-    check_exception("The format-spec type has a type not supported for a bool argument", fmt, true);
-}
-
-template <class CharT, class TestFunction, class ExceptionTest>
-void format_test_bool_as_char(TestFunction check, ExceptionTest check_exception) {
-  // *** align-fill & width ***
-  check(SV("answer is '\1     '"), SV("answer is '{:6c}'"), true);
-  check(SV("answer is '     \1'"), SV("answer is '{:>6c}'"), true);
-  check(SV("answer is '\1     '"), SV("answer is '{:<6c}'"), true);
-  check(SV("answer is '  \1   '"), SV("answer is '{:^6c}'"), true);
-
-  check(SV("answer is '-----\1'"), SV("answer is '{:->6c}'"), true);
-  check(SV("answer is '\1-----'"), SV("answer is '{:-<6c}'"), true);
-  check(SV("answer is '--\1---'"), SV("answer is '{:-^6c}'"), true);
-
-  check(std::basic_string_view<CharT>(CSTR("answer is '\0     '"), 18), SV("answer is '{:6c}'"), false);
-  check(std::basic_string_view<CharT>(CSTR("answer is '\0     '"), 18), SV("answer is '{:6c}'"), false);
-  check(std::basic_string_view<CharT>(CSTR("answer is '     \0'"), 18), SV("answer is '{:>6c}'"), false);
-  check(std::basic_string_view<CharT>(CSTR("answer is '\0     '"), 18), SV("answer is '{:<6c}'"), false);
-  check(std::basic_string_view<CharT>(CSTR("answer is '  \0   '"), 18), SV("answer is '{:^6c}'"), false);
-
-  check(std::basic_string_view<CharT>(CSTR("answer is '-----\0'"), 18), SV("answer is '{:->6c}'"), false);
-  check(std::basic_string_view<CharT>(CSTR("answer is '\0-----'"), 18), SV("answer is '{:-<6c}'"), false);
-  check(std::basic_string_view<CharT>(CSTR("answer is '--\0---'"), 18), SV("answer is '{:-^6c}'"), false);
-
-  // *** Sign ***
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:-c}"), true);
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:+c}"), true);
-  check_exception("A sign field isn't allowed in this format-spec", SV("{: c}"), true);
-
-  // *** alternate form ***
-  check_exception("An alternate form field isn't allowed in this format-spec", SV("{:#c}"), true);
-
-  // *** zero-padding ***
-  check_exception("A zero-padding field isn't allowed in this format-spec", SV("{:0c}"), true);
-
-  // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.c}"), true);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.0c}"), true);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.42c}"), true);
-
-  // *** locale-specific form ***
-  // Note it has no effect but it's allowed.
-  check(SV("answer is '*'"), SV("answer is '{:Lc}'"), '*');
-
-  // *** type ***
-  for (const auto& fmt : invalid_types<CharT>("bBcdosxX"))
+  for (const auto& fmt : invalid_types<CharT>("bBdosxX"))
     check_exception("The format-spec type has a type not supported for a bool argument", fmt, true);
 }
 
@@ -2550,7 +2503,6 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   check(SV("hello false true"), SV("hello {} {}"), false, true);
 
   format_test_bool<CharT>(check, check_exception);
-  format_test_bool_as_char<CharT>(check, check_exception);
   format_test_bool_as_integer<CharT>(check, check_exception);
 
   // *** Test signed integral format argument ***
