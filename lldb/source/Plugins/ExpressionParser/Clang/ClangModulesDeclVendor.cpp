@@ -518,8 +518,9 @@ void ClangModulesDeclVendorImpl::ForEachMacro(
 
         bool first_token = true;
 
-        for (clang::MacroInfo::tokens_iterator ti = macro_info->tokens_begin(),
-                                               te = macro_info->tokens_end();
+        for (clang::MacroInfo::const_tokens_iterator
+                 ti = macro_info->tokens_begin(),
+                 te = macro_info->tokens_end();
              ti != te; ++ti) {
           if (!first_token)
             macro_expansion.append(" ");
