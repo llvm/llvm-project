@@ -4161,9 +4161,10 @@ basic_string<_CharT, _Traits, _Allocator>
 operator+(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
           const basic_string<_CharT, _Traits, _Allocator>& __rhs)
 {
-    basic_string<_CharT, _Traits, _Allocator> __r(__lhs.get_allocator());
-    typename basic_string<_CharT, _Traits, _Allocator>::size_type __lhs_sz = __lhs.size();
-    typename basic_string<_CharT, _Traits, _Allocator>::size_type __rhs_sz = __rhs.size();
+    using _String = basic_string<_CharT, _Traits, _Allocator>;
+    _String __r(_String::__alloc_traits::select_on_container_copy_construction(__lhs.get_allocator()));
+    typename _String::size_type __lhs_sz = __lhs.size();
+    typename _String::size_type __rhs_sz = __rhs.size();
     __r.__init(__lhs.data(), __lhs_sz, __lhs_sz + __rhs_sz);
     __r.append(__rhs.data(), __rhs_sz);
     return __r;
@@ -4173,9 +4174,10 @@ template<class _CharT, class _Traits, class _Allocator>
 basic_string<_CharT, _Traits, _Allocator>
 operator+(const _CharT* __lhs , const basic_string<_CharT,_Traits,_Allocator>& __rhs)
 {
-    basic_string<_CharT, _Traits, _Allocator> __r(__rhs.get_allocator());
-    typename basic_string<_CharT, _Traits, _Allocator>::size_type __lhs_sz = _Traits::length(__lhs);
-    typename basic_string<_CharT, _Traits, _Allocator>::size_type __rhs_sz = __rhs.size();
+    using _String = basic_string<_CharT, _Traits, _Allocator>;
+    _String __r(_String::__alloc_traits::select_on_container_copy_construction(__rhs.get_allocator()));
+    typename _String::size_type __lhs_sz = _Traits::length(__lhs);
+    typename _String::size_type __rhs_sz = __rhs.size();
     __r.__init(__lhs, __lhs_sz, __lhs_sz + __rhs_sz);
     __r.append(__rhs.data(), __rhs_sz);
     return __r;
@@ -4185,8 +4187,9 @@ template<class _CharT, class _Traits, class _Allocator>
 basic_string<_CharT, _Traits, _Allocator>
 operator+(_CharT __lhs, const basic_string<_CharT,_Traits,_Allocator>& __rhs)
 {
-    basic_string<_CharT, _Traits, _Allocator> __r(__rhs.get_allocator());
-    typename basic_string<_CharT, _Traits, _Allocator>::size_type __rhs_sz = __rhs.size();
+    using _String = basic_string<_CharT, _Traits, _Allocator>;
+    _String __r(_String::__alloc_traits::select_on_container_copy_construction(__rhs.get_allocator()));
+    typename _String::size_type __rhs_sz = __rhs.size();
     __r.__init(&__lhs, 1, 1 + __rhs_sz);
     __r.append(__rhs.data(), __rhs_sz);
     return __r;
@@ -4197,9 +4200,10 @@ inline
 basic_string<_CharT, _Traits, _Allocator>
 operator+(const basic_string<_CharT, _Traits, _Allocator>& __lhs, const _CharT* __rhs)
 {
-    basic_string<_CharT, _Traits, _Allocator> __r(__lhs.get_allocator());
-    typename basic_string<_CharT, _Traits, _Allocator>::size_type __lhs_sz = __lhs.size();
-    typename basic_string<_CharT, _Traits, _Allocator>::size_type __rhs_sz = _Traits::length(__rhs);
+    using _String = basic_string<_CharT, _Traits, _Allocator>;
+    _String __r(_String::__alloc_traits::select_on_container_copy_construction(__lhs.get_allocator()));
+    typename _String::size_type __lhs_sz = __lhs.size();
+    typename _String::size_type __rhs_sz = _Traits::length(__rhs);
     __r.__init(__lhs.data(), __lhs_sz, __lhs_sz + __rhs_sz);
     __r.append(__rhs, __rhs_sz);
     return __r;
@@ -4209,8 +4213,9 @@ template<class _CharT, class _Traits, class _Allocator>
 basic_string<_CharT, _Traits, _Allocator>
 operator+(const basic_string<_CharT, _Traits, _Allocator>& __lhs, _CharT __rhs)
 {
-    basic_string<_CharT, _Traits, _Allocator> __r(__lhs.get_allocator());
-    typename basic_string<_CharT, _Traits, _Allocator>::size_type __lhs_sz = __lhs.size();
+    using _String = basic_string<_CharT, _Traits, _Allocator>;
+    _String __r(_String::__alloc_traits::select_on_container_copy_construction(__lhs.get_allocator()));
+    typename _String::size_type __lhs_sz = __lhs.size();
     __r.__init(__lhs.data(), __lhs_sz, __lhs_sz + 1);
     __r.push_back(__rhs);
     return __r;
