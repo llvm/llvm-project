@@ -247,6 +247,45 @@ TEST(DIBuilder, CreateSetType) {
   EXPECT_TRUE(isa_and_nonnull<DIDerivedType>(SetType));
 }
 
+TEST(DIBuilder, CreateStringType) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M(new Module("MyModule", Ctx));
+  DIBuilder DIB(*M);
+  DIScope *Scope = DISubprogram::getDistinct(
+      Ctx, nullptr, "", "", nullptr, 0, nullptr, 0, nullptr, 0, 0,
+      DINode::FlagZero, DISubprogram::SPFlagZero, nullptr);
+  DIFile *F = DIB.createFile("main.c", "/");
+  StringRef StrName = "string";
+  DIVariable *StringLen = DIB.createAutoVariable(Scope, StrName, F, 0, nullptr,
+                                                 false, DINode::FlagZero, 0);
+  auto getDIExpression = [&DIB](int offset) {
+    SmallVector<uint64_t, 4> ops;
+    ops.push_back(llvm::dwarf::DW_OP_push_object_address);
+    DIExpression::appendOffset(ops, offset);
+    ops.push_back(llvm::dwarf::DW_OP_deref);
+
+    return DIB.createExpression(ops);
+  };
+  DIExpression *StringLocationExp = getDIExpression(1);
+  DIStringType *StringType =
+      DIB.createStringType(StrName, StringLen, StringLocationExp);
+
+  EXPECT_TRUE(isa_and_nonnull<DIStringType>(StringType));
+  EXPECT_EQ(StringType->getName(), StrName);
+  EXPECT_EQ(StringType->getStringLength(), StringLen);
+  EXPECT_EQ(StringType->getStringLocationExp(), StringLocationExp);
+
+  StringRef StrNameExp = "stringexp";
+  DIExpression *StringLengthExp = getDIExpression(2);
+  DIStringType *StringTypeExp =
+      DIB.createStringType(StrNameExp, StringLengthExp, StringLocationExp);
+
+  EXPECT_TRUE(isa_and_nonnull<DIStringType>(StringTypeExp));
+  EXPECT_EQ(StringTypeExp->getName(), StrNameExp);
+  EXPECT_EQ(StringTypeExp->getStringLocationExp(), StringLocationExp);
+  EXPECT_EQ(StringTypeExp->getStringLengthExp(), StringLengthExp);
+}
+
 TEST(DIBuilder, DIEnumerator) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M(new Module("MyModule", Ctx));
