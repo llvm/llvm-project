@@ -123,7 +123,7 @@ private:
   SmallVector<RuntimePointerCheck, 4> AliasChecks;
 
   /// The set of SCEV checks that we are versioning for.
-  const SCEVUnionPredicate &Preds;
+  const SCEVPredicate &Preds;
 
   /// Maps a pointer to the pointer checking group that the pointer
   /// belongs to.
