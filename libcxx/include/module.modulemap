@@ -1020,10 +1020,6 @@ module std [system] {
       header "experimental/deque"
       export *
     }
-    module filesystem {
-      header "experimental/filesystem"
-      export *
-    }
     module forward_list {
       header "experimental/forward_list"
       export *

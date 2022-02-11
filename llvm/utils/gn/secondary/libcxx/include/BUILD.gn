@@ -504,7 +504,6 @@ if (current_toolchain == default_toolchain) {
       "experimental/algorithm",
       "experimental/coroutine",
       "experimental/deque",
-      "experimental/filesystem",
       "experimental/forward_list",
       "experimental/functional",
       "experimental/iterator",

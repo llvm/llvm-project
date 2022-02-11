@@ -29,7 +29,6 @@ header_markup = {
     "shared_mutex": ["ifndef _LIBCPP_HAS_NO_THREADS"],
     "thread": ["ifndef _LIBCPP_HAS_NO_THREADS"],
 
-    "experimental/filesystem": ["ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY"],
     "filesystem": ["ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY"],
     "format": ["ifndef _LIBCPP_HAS_NO_INCOMPLETE_FORMAT"],
 
