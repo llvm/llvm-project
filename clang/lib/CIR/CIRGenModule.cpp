@@ -1502,7 +1502,7 @@ void CIRGenModule::buildTopLevelDecl(Decl *decl) {
 }
 
 mlir::FuncOp CIRGenModule::buildFunction(const FunctionDecl *FD) {
-  CIRGenFunction CGF;
+  CIRGenFunction CGF{*this};
   CurCGF = &CGF;
 
   // Create a scope in the symbol table to hold variable declarations.

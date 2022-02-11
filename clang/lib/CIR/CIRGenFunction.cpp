@@ -11,11 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenFunction.h"
+#include "CIRGenModule.h"
 
 using namespace cir;
 using namespace clang;
 
-CIRGenFunction::CIRGenFunction() = default;
+CIRGenFunction::CIRGenFunction(CIRGenModule &CGM) : CGM{CGM} {}
+
+clang::ASTContext &CIRGenFunction::getContext() const {
+  return CGM.getASTContext();
+}
 
 TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
   type = type.getCanonicalType();
