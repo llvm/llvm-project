@@ -478,7 +478,7 @@ define i32 @umin_seq_x_y_tautological(i32 %x, i32 %y) {
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %y, i32 %x)
 ; CHECK-NEXT:    --> (%x umin %y) U: full-set S: full-set
 ; CHECK-NEXT:    %r = select i1 %umin.is.zero, i32 0, i32 %umin
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> (%x umin %y) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_tautological
 ;
   %umin = call i32 @llvm.umin(i32 %y, i32 %x)
@@ -492,7 +492,7 @@ define i32 @umin_seq_x_y_tautological_wrongtype(i32 %x, i32 %y) {
 ; CHECK-NEXT:    %umax = call i32 @llvm.umax.i32(i32 %y, i32 %x)
 ; CHECK-NEXT:    --> (%x umax %y) U: full-set S: full-set
 ; CHECK-NEXT:    %r = select i1 %umax.is.zero, i32 0, i32 %umax
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> (%x umax %y) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_tautological_wrongtype
 ;
   %umax = call i32 @llvm.umax(i32 %y, i32 %x)
