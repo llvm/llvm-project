@@ -6,7 +6,7 @@
 # RUN: mkdir -p %t
 #
 # RUN: llvm-mc -filetype obj -triple x86_64-apple-ios %s -o %t/test.o
-# RUN: not ld64.lld -arch x86_64 -platform_version ios 14.0 15.0 -o %t/test \
+# RUN: not %no-arg-lld -arch x86_64 -platform_version ios 14.0 15.0 -o %t/test \
 # RUN:   -syslibroot %S/../Inputs/iPhoneSimulator.sdk -lSystem %t/test.o 2>&1 | FileCheck %s
 
 # CHECK-DAG: error: undefined symbol: __cache_handle_memory_pressure_event
