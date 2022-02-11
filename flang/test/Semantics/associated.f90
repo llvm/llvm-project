@@ -12,6 +12,14 @@ subroutine assoc()
     end function
   end interface
 
+  type :: t1
+    integer :: n
+  end type t1
+  type :: t2
+    type(t1) :: t1arr(2)
+    type(t1), pointer :: t1ptr(:)
+  end type t2
+
   contains
   integer function intFunc(x)
     integer, intent(in) :: x
@@ -60,6 +68,10 @@ subroutine assoc()
     procedure(subrInt), pointer :: subProcPointer
     procedure(), pointer :: implicitProcPointer
     logical :: lVar
+    type(t1) :: t1x
+    type(t1), target :: t1xtarget
+    type(t2) :: t2x
+    type(t2), target :: t2xtarget
 
     !ERROR: missing mandatory 'pointer=' argument
     lVar = associated()
@@ -90,6 +102,15 @@ subroutine assoc()
     intPointerVar1 => intVar
     !ERROR: TARGET= argument 'intvar' must have either the POINTER or the TARGET attribute
     lVar = associated(intPointerVar1, intVar)
+
+    !ERROR: TARGET= argument 't1x%n' must have either the POINTER or the TARGET attribute
+    lVar = associated(intPointerVar1, t1x%n)
+    lVar = associated(intPointerVar1, t1xtarget%n) ! ok
+    !ERROR: TARGET= argument 't2x%t1arr(1_8)%n' must have either the POINTER or the TARGET attribute
+    lVar = associated(intPointerVar1, t2x%t1arr(1)%n)
+    lVar = associated(intPointerVar1, t2x%t1ptr(1)%n) ! ok
+    lVar = associated(intPointerVar1, t2xtarget%t1arr(1)%n) ! ok
+    lVar = associated(intPointerVar1, t2xtarget%t1ptr(1)%n) ! ok
 
     ! Procedure pointer tests
     intprocPointer1 => intProc !OK
