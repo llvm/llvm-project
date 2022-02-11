@@ -234,7 +234,7 @@ namespace llvm {
     /// \param Name             Type name.
     /// \param StringLengthExp  String length expressed in DIExpression form.
     /// \param StrLocationExp   Optional memory location of the string.
-    DIStringType *createStringTypeExp(StringRef Name,
+    DIStringType *createStringType(StringRef Name,
                                       DIExpression *StringLengthExp,
                                       DIExpression *StrLocationExp = nullptr);
 

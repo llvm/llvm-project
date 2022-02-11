@@ -301,7 +301,7 @@ DIStringType *DIBuilder::createStringType(StringRef Name,
                            StringLength, nullptr, StrLocationExp, 0, 0, 0);
 }
 
-DIStringType *DIBuilder::createStringTypeExp(StringRef Name,
+DIStringType *DIBuilder::createStringType(StringRef Name,
                                              DIExpression *StringLengthExp,
                                              DIExpression *StrLocationExp) {
   assert(!Name.empty() && "Unable to create type without name");
