@@ -31,7 +31,7 @@ class TestObjCGlobalVar(TestBase):
 
         # Before we launch, make an SBValue for our global object pointer:
         g_obj_ptr = target.FindFirstGlobalVariable("g_obj_ptr")
-        self.assertTrue(g_obj_ptr.GetError().Success(), "Made the g_obj_ptr")
+        self.assertSuccess(g_obj_ptr.GetError(), "Made the g_obj_ptr")
         self.assertEqual(
             g_obj_ptr.GetValueAsUnsigned(10), 0,
             "g_obj_ptr is initially null")

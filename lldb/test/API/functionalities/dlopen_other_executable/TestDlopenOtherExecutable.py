@@ -39,7 +39,7 @@ class TestCase(TestBase):
 
         # Kill the process and run the program again.
         err = self.process().Kill()
-        self.assertTrue(err.Success(), str(err))
+        self.assertSuccess(err)
 
         # Test that we hit the breakpoint after dlopen.
         lldbutil.run_to_breakpoint_do_run(self, self.target(), breakpoint)

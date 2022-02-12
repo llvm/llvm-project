@@ -43,7 +43,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             # save core and, kill process and verify corefile existence
             self.runCmd("process save-core --plugin-name=minidump --style=stack " + core)
             self.assertTrue(os.path.isfile(core))
-            self.assertTrue(process.Kill().Success())
+            self.assertSuccess(process.Kill())
 
             # To verify, we'll launch with the mini dump
             target = self.dbg.CreateTarget(None)

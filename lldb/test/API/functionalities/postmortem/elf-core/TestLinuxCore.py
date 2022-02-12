@@ -109,7 +109,7 @@ class LinuxCoreTestCase(TestBase):
         error = lldb.SBError()
         F = altprocess.ReadCStringFromMemory(
             altframe.FindVariable("F").GetValueAsUnsigned(), 256, error)
-        self.assertTrue(error.Success())
+        self.assertSuccess(error)
         self.assertEqual(F, "_start")
 
         # without destroying this process, run the test which opens another core file with the

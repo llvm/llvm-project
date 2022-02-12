@@ -515,7 +515,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         process = self.connect(target)
 
         siginfo = process.threads[0].GetSiginfo()
-        self.assertTrue(siginfo.GetError().Success(), siginfo.GetError())
+        self.assertSuccess(siginfo.GetError())
 
         for key, value in expected.items():
             self.assertEqual(siginfo.GetValueForExpressionPath("." + key)

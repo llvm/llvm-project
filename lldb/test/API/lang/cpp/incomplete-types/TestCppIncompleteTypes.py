@@ -17,13 +17,13 @@ class TestCppIncompleteTypes(TestBase):
         self.assertTrue(
             value_f.IsValid(),
             "'expr f' results in a valid SBValue object")
-        self.assertTrue(value_f.GetError().Success(), "'expr f' is successful")
+        self.assertSuccess(value_f.GetError(), "'expr f' is successful")
 
         value_a = frame.EvaluateExpression("a")
         self.assertTrue(
             value_a.IsValid(),
             "'expr a' results in a valid SBValue object")
-        self.assertTrue(value_a.GetError().Success(), "'expr a' is successful")
+        self.assertSuccess(value_a.GetError(), "'expr a' is successful")
 
     @skipIf(compiler="gcc")
     # Clang on Windows asserts in external record layout in this case.
@@ -36,13 +36,13 @@ class TestCppIncompleteTypes(TestBase):
         self.assertTrue(
             value_f.IsValid(),
             "'expr f' results in a valid SBValue object")
-        self.assertTrue(value_f.GetError().Success(), "'expr f' is successful")
+        self.assertSuccess(value_f.GetError(), "'expr f' is successful")
 
         value_a = frame.EvaluateExpression("a")
         self.assertTrue(
             value_a.IsValid(),
             "'expr a' results in a valid SBValue object")
-        self.assertTrue(value_a.GetError().Success(), "'expr a' is successful")
+        self.assertSuccess(value_a.GetError(), "'expr a' is successful")
 
     def get_test_frame(self, exe):
         # Get main source file

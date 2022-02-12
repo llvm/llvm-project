@@ -70,7 +70,7 @@ class ScriptedProcesTestCase(TestBase):
 
         process = target.Launch(launch_info, error)
 
-        self.assertTrue(error.Success(), error.GetCString())
+        self.assertSuccess(error)
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetProcessID(), 666)
         self.assertEqual(process.GetNumThreads(), 0)
