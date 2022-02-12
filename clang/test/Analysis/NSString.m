@@ -134,7 +134,7 @@ NSString* f7(NSString* s1, NSString* s2, NSString* s3) {
   return s4;
 }
 
-NSMutableArray* f8() {
+NSMutableArray* f8(void) {
   
   NSString* s = [[NSString alloc] init];
   NSMutableArray* a = [[NSMutableArray alloc] initWithCapacity:2];
@@ -143,7 +143,7 @@ NSMutableArray* f8() {
   return a;
 }
 
-void f9() {
+void f9(void) {
   
   NSString* s = [[NSString alloc] init];
   NSString* q = s;
@@ -151,7 +151,7 @@ void f9() {
   [q release]; // expected-warning {{used after it is released}}
 }
 
-NSString* f10() {
+NSString* f10(void) {
   static NSString* s = 0;
   if (!s) s = [[NSString alloc] init];
   return s; // no-warning
@@ -172,7 +172,7 @@ NSString* f11(CFDictionaryRef dict, const char* key) {
 // Test case for passing a tracked object by-reference to a function we
 // don't understand.
 void unknown_function_f12(NSString** s);
-void f12() {
+void f12(void) {
   NSString *string = [[NSString alloc] init];
   unknown_function_f12(&string); // no-warning
 }
@@ -275,7 +275,7 @@ void f14(MyString *s) {
 }
 @end
 
-id testSharedClassFromFunction() {
+id testSharedClassFromFunction(void) {
   return [[SharedClass alloc] _init]; // no-warning
 }
 
@@ -300,7 +300,7 @@ extern BOOL objc_atomicCompareAndSwapPtr(id predicate, id replacement, volatile 
 }
 #endif
 
-void testOSCompareAndSwap() {
+void testOSCompareAndSwap(void) {
   NSString *old = 0;
   NSString *s = [[NSString alloc] init]; // no-warning
   if (!OSAtomicCompareAndSwapPtr(0, s, (void**) &old))
@@ -309,7 +309,7 @@ void testOSCompareAndSwap() {
     [old release];
 }
 
-void testOSCompareAndSwapXXBarrier_local() {
+void testOSCompareAndSwapXXBarrier_local(void) {
   NSString *old = 0;
   NSString *s = [[NSString alloc] init]; // no-warning
   if (!COMPARE_SWAP_BARRIER((intptr_t) 0, (intptr_t) s, (intptr_t*) &old))
@@ -318,7 +318,7 @@ void testOSCompareAndSwapXXBarrier_local() {
     [old release];
 }
 
-void testOSCompareAndSwapXXBarrier_local_no_direct_release() {
+void testOSCompareAndSwapXXBarrier_local_no_direct_release(void) {
   NSString *old = 0;
   NSString *s = [[NSString alloc] init]; // no-warning
   if (!COMPARE_SWAP_BARRIER((intptr_t) 0, (intptr_t) s, (intptr_t*) &old))
@@ -333,7 +333,7 @@ int testOSCompareAndSwapXXBarrier_id(Class myclass, id xclass) {
   return 0;
 }
 
-void test_objc_atomicCompareAndSwap_local() {
+void test_objc_atomicCompareAndSwap_local(void) {
   NSString *old = 0;
   NSString *s = [[NSString alloc] init]; // no-warning
   if (!objc_atomicCompareAndSwapPtr(0, s, &old))
@@ -342,7 +342,7 @@ void test_objc_atomicCompareAndSwap_local() {
     [old release];
 }
 
-void test_objc_atomicCompareAndSwap_local_no_direct_release() {
+void test_objc_atomicCompareAndSwap_local_no_direct_release(void) {
   NSString *old = 0;
   NSString *s = [[NSString alloc] init]; // no-warning
   if (!objc_atomicCompareAndSwapPtr(0, s, &old))
@@ -369,13 +369,13 @@ void test_objc_atomicCompareAndSwap_parameter_no_direct_release(NSString **old) 
 
 
 // Test stringWithFormat (<rdar://problem/6815234>)
-void test_stringWithFormat() {  
+void test_stringWithFormat(void) {  
   NSString *string = [[NSString stringWithFormat:@"%ld", (long) 100] retain];
   [string release];
   [string release]; // expected-warning{{Incorrect decrement of the reference count}}
 }
 
-// Test isTrackedObjectType().
+// Test isTrackedObjectType(void).
 typedef NSString* WonkyTypedef;
 @interface TestIsTracked
 + (WonkyTypedef)newString;

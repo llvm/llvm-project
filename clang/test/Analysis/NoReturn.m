@@ -95,7 +95,7 @@ int testCustomException(int *x) {
 - (void) alsoDoesNotReturn __attribute__((analyzer_noreturn));
 @end
 
-void test_rdar11634353() {
+void test_rdar11634353(void) {
   [Radar11634353 doesNotReturn];
   int *p = 0;
   *p = 0xDEADBEEF; // no-warning
@@ -107,7 +107,7 @@ void test_rdar11634352_instance(Radar11634353 *o) {
   *p = 0xDEADBEEF; // no-warning
 }
 
-void test_rdar11634353_positive() {
+void test_rdar11634353_positive(void) {
   int *p = 0;
   *p = 0xDEADBEEF; // expected-warning {{null pointer}}
 }
@@ -126,7 +126,7 @@ void PR11959(int *p) {
 // Test that hard-coded Microsoft _wassert name is recognized as a noreturn
 #define assert(_Expression) (void)( (!!(_Expression)) || (_wassert(#_Expression, __FILE__, __LINE__), 0) )
 extern void _wassert(const char * _Message, const char *_File, unsigned _Line);
-void test_wassert() {
+void test_wassert(void) {
   assert(0);
   int *p = 0;
   *p = 0xDEADBEEF; // no-warning
@@ -137,7 +137,7 @@ void test_wassert() {
 #define assert(_Expression) ((_Expression) ? (void)0 : __assert2(0, 0, 0, 0));
 extern void __assert2(const char *, int, const char *, const char *);
 extern void _wassert(const char * _Message, const char *_File, unsigned _Line);
-void test___assert2() {
+void test___assert2(void) {
   assert(0);
   int *p = 0;
   *p = 0xDEADBEEF; // no-warning

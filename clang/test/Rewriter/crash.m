@@ -7,7 +7,7 @@
 @interface NSConstantString {}
 @end
 
-int main() {
+int main(void) {
     id foo = [NSArray arrayWithObjects:@"1", @"2", @"3", @"4", @"5", @"6", @"7", @"8", @"9", @"10", @"11", @"12", 0];
     return 0;
 }
@@ -19,7 +19,7 @@ int main() {
 @interface Foo
 @end
 
-void func() {
+void func(void) {
   id <A> obj = (id <A>)[Foo bar];
 }
 

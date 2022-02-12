@@ -10,7 +10,7 @@ enum En_t {
   En_4 = 4
 };
 
-void unscopedUnspecifiedCStyle() {
+void unscopedUnspecifiedCStyle(void) {
   enum En_t Below = (enum En_t)(-5);    // expected-warning {{not in the valid range}}
   enum En_t NegVal1 = (enum En_t)(-4);  // OK.
   enum En_t NegVal2 = (enum En_t)(-3);  // OK.
@@ -25,7 +25,7 @@ void unscopedUnspecifiedCStyle() {
 }
 
 enum En_t unused;
-void unusedExpr() {
+void unusedExpr(void) {
   // Following line is not something that EnumCastOutOfRangeChecker should
   // evaluate.  Checker should either ignore this line or process it without
   // producing any warnings.  However, compilation will (and should) still

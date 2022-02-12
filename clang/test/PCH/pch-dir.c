@@ -21,7 +21,7 @@
 // CHECK-CBAR: int bar
 int FOO;
 
-int get() {
+int get(void) {
 #ifdef __cplusplus
   // CHECK-CPP: .h.gch{{[/\\]}}cpp.gch
   return i;

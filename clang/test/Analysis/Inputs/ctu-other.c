@@ -33,7 +33,7 @@ int g(struct S *ctx) {
 // Test that asm import does not fail.
 // TODO: Support the GNU extension asm keyword as well.
 // Example using the GNU extension: asm("mov $42, %0" : "=r"(res));
-int inlineAsm() {
+int inlineAsm(void) {
   int res;
   __asm__("mov $42, %0"
           : "=r"(res));

@@ -5,7 +5,7 @@
 
 extern void foo(const char *str);
 
-void bar() {
+void bar(void) {
   FOO(R"(foo
     bar)");
 }

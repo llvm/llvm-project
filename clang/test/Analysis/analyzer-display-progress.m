@@ -2,7 +2,7 @@
 
 #include "Inputs/system-header-simulator-objc.h"
 
-static void f() {}
+static void f(void) {}
 
 @interface I: NSObject
 -(void)instanceMethod:(int)arg1 with:(int)arg2;
