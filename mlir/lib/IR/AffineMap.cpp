@@ -299,22 +299,17 @@ unsigned AffineMap::getNumSymbols() const {
   assert(map && "uninitialized map storage");
   return map->numSymbols;
 }
-unsigned AffineMap::getNumResults() const {
-  assert(map && "uninitialized map storage");
-  return map->results.size();
-}
+unsigned AffineMap::getNumResults() const { return getResults().size(); }
 unsigned AffineMap::getNumInputs() const {
   assert(map && "uninitialized map storage");
   return map->numDims + map->numSymbols;
 }
-
 ArrayRef<AffineExpr> AffineMap::getResults() const {
   assert(map && "uninitialized map storage");
-  return map->results;
+  return map->results();
 }
 AffineExpr AffineMap::getResult(unsigned idx) const {
-  assert(map && "uninitialized map storage");
-  return map->results[idx];
+  return getResults()[idx];
 }
 
 unsigned AffineMap::getDimPosition(unsigned idx) const {
