@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -37,6 +38,11 @@ public:
 private:
   bool Sparse;
   StringMap<ProfilingData> FunctionData;
+
+  // A map to hold memprof data per function. The lower 64 bits obtained from
+  // the md5 hash of the function name is used to index into the map.
+  memprof::FunctionMemProfMap MemProfData;
+
   // An enum describing the attributes of the profile.
   InstrProfKind ProfileKind = InstrProfKind::Unknown;
   // Use raw pointer here for the incomplete type object.
@@ -56,6 +62,9 @@ public:
   void addRecord(NamedInstrProfRecord &&I, function_ref<void(Error)> Warn) {
     addRecord(std::move(I), 1, Warn);
   }
+
+  void addRecord(const ::llvm::memprof::MemProfRecord &MR,
+                 function_ref<void(Error)> Warn);
 
   /// Merge existing function counts from the given writer.
   void mergeRecordsFromWriter(InstrProfWriter &&IPW,
@@ -111,6 +120,8 @@ public:
     ProfileKind |= Other;
     return Error::success();
   }
+
+  InstrProfKind getProfileKind() const { return ProfileKind; }
 
   // Internal interface for testing purpose only.
   void setValueProfDataEndianness(support::endianness Endianness);
