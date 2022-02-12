@@ -109,7 +109,7 @@ uint64_t getAllocaSizeInBytes(const AllocaInst &AI) {
   return AI.getAllocationSizeInBits(DL).getValue() / 8;
 }
 
-void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
+bool alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
   const Align NewAlignment = max(MaybeAlign(Info.AI->getAlign()), Alignment);
   Info.AI->setAlignment(NewAlignment);
   auto &Ctx = Info.AI->getFunction()->getContext();
@@ -117,7 +117,7 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
   uint64_t Size = getAllocaSizeInBytes(*Info.AI);
   uint64_t AlignedSize = alignTo(Size, Alignment);
   if (Size == AlignedSize)
-    return;
+    return false;
 
   // Add padding to the alloca.
   Type *AllocatedType =
@@ -139,8 +139,8 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
 
   auto *NewPtr = new BitCastInst(NewAI, Info.AI->getType(), "", Info.AI);
   Info.AI->replaceAllUsesWith(NewPtr);
-  Info.AI->eraseFromParent();
   Info.AI = NewAI;
+  return true;
 }
 
 } // namespace memtag
