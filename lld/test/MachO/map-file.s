@@ -2,6 +2,7 @@
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/foo.s -o %t/foo.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/c-string-literal.s -o %t/c-string-literal.o
 
 # RUN: %lld -map %t/map %t/test.o %t/foo.o --time-trace -o %t/test-map
 # RUN: llvm-objdump --syms --section-headers %t/test-map > %t/objdump
@@ -50,5 +51,43 @@ _main:
 # CHECK-NEXT: 0x[[#MAIN]]      [  1]  _main
 # CHECK-NEXT: 0x[[#FOO]]       [  2]  _foo
 # CHECK-NEXT: 0x[[#NUMBER]]    [  1]  _number
+
+#--- c-string-literal.s
+.section __TEXT,__cstring
+.globl _hello_world, _hello_its_me, _main
+
+_hello_world:
+.asciz "Hello world!\n"
+
+_hello_its_me:
+.asciz "Hello, it's me"
+
+.text
+_main:
+  movl $0x2000004, %eax # write() syscall
+  mov $1, %rdi # stdout
+  leaq _hello_world(%rip), %rsi
+  mov $13, %rdx # length of str
+  syscall
+  ret
+
+# RUN: %lld -map %t/c-string-literal-map %t/c-string-literal.o -o %t/c-string-literal-out
+# RUN: FileCheck --check-prefix=CSTRING %s < %t/c-string-literal-map
+
+## C-string literals should be printed as "literal string: <C string literal>"
+# CSTRING-LABEL: Symbols:
+# CSTRING-DAG: _main
+# CSTRING-DAG: literal string: Hello world!\n
+# CSTRING-DAG: literal string: Hello, it's me
+
+# RUN: %lld -dead_strip -map %t/dead-c-string-literal-map %t/c-string-literal.o -o %t/dead-c-string-literal-out
+# RUN: FileCheck --check-prefix=DEADCSTRING %s < %t/dead-c-string-literal-map
+
+## C-string literals should be printed as "literal string: <C string literal>"
+# DEADCSTRING-LABEL: Symbols:
+# DEADCSTRING-DAG: _main
+# DEADCSTRING-DAG: literal string: Hello world!\n
+# DEADCSTRING-LABEL: Dead Stripped Symbols:
+# DEADCSTRING-DAG: literal string: Hello, it's me
 
 # MAPFILE: "name":"Total Write map file"
