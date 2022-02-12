@@ -835,23 +835,12 @@ public:
   /// to refer to the designated register.
   void updateDbgUsersToReg(MCRegister OldReg, MCRegister NewReg,
                            ArrayRef<MachineInstr *> Users) const {
-    SmallSet<MCRegister, 4> OldRegUnits;
-    for (MCRegUnitIterator RUI(OldReg, getTargetRegisterInfo()); RUI.isValid();
-         ++RUI)
-      OldRegUnits.insert(*RUI);
-
     // If this operand is a register, check whether it overlaps with OldReg.
     // If it does, replace with NewReg.
-    auto UpdateOp = [this, &NewReg, &OldReg, &OldRegUnits](MachineOperand &Op) {
-      if (Op.isReg()) {
-        for (MCRegUnitIterator RUI(OldReg, getTargetRegisterInfo());
-             RUI.isValid(); ++RUI) {
-          if (OldRegUnits.contains(*RUI)) {
-            Op.setReg(NewReg);
-            break;
-          }
-        }
-      }
+    auto UpdateOp = [this, &NewReg, &OldReg](MachineOperand &Op) {
+      if (Op.isReg() &&
+          getTargetRegisterInfo()->regsOverlap(Op.getReg(), OldReg))
+        Op.setReg(NewReg);
     };
 
     // Iterate through (possibly several) operands to DBG_VALUEs and update
