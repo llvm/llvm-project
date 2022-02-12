@@ -534,7 +534,7 @@ AffineMap AffineMap::getMajorSubMap(unsigned numResults) const {
     return AffineMap();
   if (numResults > getNumResults())
     return *this;
-  return getSubMap(llvm::to_vector<4>(llvm::seq<unsigned>(0, numResults)));
+  return getSliceMap(0, numResults);
 }
 
 AffineMap AffineMap::getMinorSubMap(unsigned numResults) const {
@@ -542,8 +542,7 @@ AffineMap AffineMap::getMinorSubMap(unsigned numResults) const {
     return AffineMap();
   if (numResults > getNumResults())
     return *this;
-  return getSubMap(llvm::to_vector<4>(
-      llvm::seq<unsigned>(getNumResults() - numResults, getNumResults())));
+  return getSliceMap(getNumResults() - numResults, numResults);
 }
 
 AffineMap mlir::compressDims(AffineMap map,
