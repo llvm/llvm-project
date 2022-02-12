@@ -384,6 +384,10 @@ inline void DoNotOptimize(Tp const& value) {
 #  define TEST_HAS_NO_CHAR8_T
 #endif
 
+#if defined(_LIBCPP_HAS_NO_THREADS)
+#  define TEST_HAS_NO_THREADS
+#endif
+
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif
