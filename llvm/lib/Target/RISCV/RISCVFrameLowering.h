@@ -65,8 +65,6 @@ public:
   bool canUseAsPrologue(const MachineBasicBlock &MBB) const override;
   bool canUseAsEpilogue(const MachineBasicBlock &MBB) const override;
 
-  bool enableShrinkWrapping(const MachineFunction &MF) const override;
-
   bool isSupportedStackID(TargetStackID::Value ID) const override;
   TargetStackID::Value getStackIDForScalableVectors() const override;
 
