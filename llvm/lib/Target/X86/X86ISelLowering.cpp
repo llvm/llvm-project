@@ -25746,8 +25746,8 @@ static SDValue getTargetVShiftNode(unsigned Opc, const SDLoc &dl, MVT VT,
           DAG.getConstant(0, dl, AmtVT.getScalarType()));
       MaskElts[0] = DAG.getAllOnesConstant(dl, AmtVT.getScalarType());
       SDValue Mask = DAG.getBuildVector(AmtVT, dl, MaskElts);
-      if (Mask = DAG.FoldConstantArithmetic(ISD::AND, dl, AmtVT,
-                                            {ShAmt.getOperand(1), Mask})) {
+      if ((Mask = DAG.FoldConstantArithmetic(ISD::AND, dl, AmtVT,
+                                             {ShAmt.getOperand(1), Mask}))) {
         ShAmt = DAG.getNode(ISD::AND, dl, AmtVT, ShAmt.getOperand(0), Mask);
         IsMasked = true;
       }
