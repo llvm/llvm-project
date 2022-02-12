@@ -26,6 +26,13 @@ namespace format {
 
 namespace {
 
+/// Returns \c true if the line starts with a token that can start a statement
+/// with an initializer.
+static bool startsWithInitStatement(const AnnotatedLine &Line) {
+  return Line.startsWith(tok::kw_for) || Line.startsWith(tok::kw_if) ||
+         Line.startsWith(tok::kw_switch);
+}
+
 /// Returns \c true if the token can be used as an identifier in
 /// an Objective-C \c \@selector, \c false otherwise.
 ///
@@ -1135,7 +1142,7 @@ private:
       else if (Contexts.back().InInheritanceList)
         Tok->setType(TT_InheritanceComma);
       else if (Contexts.back().FirstStartOfName &&
-               (Contexts.size() == 1 || Line.startsWith(tok::kw_for))) {
+               (Contexts.size() == 1 || startsWithInitStatement(Line))) {
         Contexts.back().FirstStartOfName->PartOfMultiVariableDeclStmt = true;
         Line.IsMultiVariableDeclStmt = true;
       }
@@ -3090,7 +3097,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                 FormatStyle::PAS_Left ||
             (Line.IsMultiVariableDeclStmt &&
              (Left.NestingLevel == 0 ||
-              (Left.NestingLevel == 1 && Line.First->is(tok::kw_for)))));
+              (Left.NestingLevel == 1 && startsWithInitStatement(Line)))));
   }
   if (Right.is(TT_FunctionTypeLParen) && Left.isNot(tok::l_paren) &&
       (!Left.is(TT_PointerOrReference) ||
