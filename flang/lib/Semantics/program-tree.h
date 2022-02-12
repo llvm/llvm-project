@@ -30,6 +30,8 @@ class Scope;
 class ProgramTree {
 public:
   using EntryStmtList = std::list<common::Reference<const parser::EntryStmt>>;
+  using GenericSpecList =
+      std::list<common::Reference<const parser::GenericSpec>>;
 
   // Build the ProgramTree rooted at one of these program units.
   static ProgramTree Build(const parser::ProgramUnit &);
@@ -71,10 +73,9 @@ public:
   const parser::ExecutionPart *exec() const { return exec_; }
   std::list<ProgramTree> &children() { return children_; }
   const std::list<ProgramTree> &children() const { return children_; }
-  const std::list<common::Reference<const parser::EntryStmt>> &
-  entryStmts() const {
-    return entryStmts_;
-  }
+  const EntryStmtList &entryStmts() const { return entryStmts_; }
+  const GenericSpecList &genericSpecs() const { return genericSpecs_; }
+
   Symbol::Flag GetSubpFlag() const;
   bool IsModule() const; // Module or Submodule
   bool HasModulePrefix() const; // in function or subroutine stmt
@@ -82,6 +83,7 @@ public:
   void set_scope(Scope &);
   void AddChild(ProgramTree &&);
   void AddEntry(const parser::EntryStmt &);
+  void AddGeneric(const parser::GenericSpec &);
 
   template <typename T>
   ProgramTree &set_stmt(const parser::Statement<T> &stmt) {
@@ -102,6 +104,7 @@ private:
   const parser::ExecutionPart *exec_{nullptr};
   std::list<ProgramTree> children_;
   EntryStmtList entryStmts_;
+  GenericSpecList genericSpecs_;
   Scope *scope_{nullptr};
   const parser::CharBlock *endStmt_{nullptr};
   bool isSpecificationPartResolved_{false};

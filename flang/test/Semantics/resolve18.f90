@@ -182,3 +182,29 @@ contains
   function f13()
   end function f13
 end module m13
+
+! Not an error
+module m14
+  interface gen1
+    module procedure s
+  end interface
+  generic :: gen2 => s
+ contains
+  subroutine s(x)
+    integer(1) :: x
+  end subroutine s
+end module m14
+module m15
+  use m14
+  interface gen1
+    module procedure gen1
+  end interface
+  generic :: gen2 => gen2
+ contains
+  subroutine gen1(x)
+    integer(2) :: x
+  end subroutine gen1
+  subroutine gen2(x)
+    integer(4) :: x
+  end subroutine gen2
+end module m15
