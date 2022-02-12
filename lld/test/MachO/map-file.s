@@ -10,17 +10,6 @@
 # RUN: FileCheck %s < %t/out
 # RUN: FileCheck %s --check-prefix=MAPFILE < %t/test-map.time-trace
 
-#--- foo.s
-.section __TEXT,obj
-.globl _foo
-_foo:
-
-#--- test.s
-.comm _number, 1
-.globl _main
-_main:
-  ret
-
 # CHECK:      Sections:
 # CHECK-NEXT: Idx  Name          Size           VMA           Type
 # CHECK-NEXT: 0    __text        {{[0-9a-f]+}}  [[#%x,TEXT:]] TEXT
@@ -52,25 +41,6 @@ _main:
 # CHECK-NEXT: 0x[[#FOO]]       [  2]  _foo
 # CHECK-NEXT: 0x[[#NUMBER]]    [  1]  _number
 
-#--- c-string-literal.s
-.section __TEXT,__cstring
-.globl _hello_world, _hello_its_me, _main
-
-_hello_world:
-.asciz "Hello world!\n"
-
-_hello_its_me:
-.asciz "Hello, it's me"
-
-.text
-_main:
-  movl $0x2000004, %eax # write() syscall
-  mov $1, %rdi # stdout
-  leaq _hello_world(%rip), %rsi
-  mov $13, %rdx # length of str
-  syscall
-  ret
-
 # RUN: %lld -map %t/c-string-literal-map %t/c-string-literal.o -o %t/c-string-literal-out
 # RUN: FileCheck --check-prefix=CSTRING %s < %t/c-string-literal-map
 
@@ -91,3 +61,33 @@ _main:
 # DEADCSTRING-DAG: literal string: Hello, it's me
 
 # MAPFILE: "name":"Total Write map file"
+
+#--- foo.s
+.section __TEXT,obj
+.globl _foo
+_foo:
+
+#--- test.s
+.comm _number, 1
+.globl _main
+_main:
+  ret
+
+#--- c-string-literal.s
+.section __TEXT,__cstring
+.globl _hello_world, _hello_its_me, _main
+
+_hello_world:
+.asciz "Hello world!\n"
+
+_hello_its_me:
+.asciz "Hello, it's me"
+
+.text
+_main:
+  movl $0x2000004, %eax # write() syscall
+  mov $1, %rdi # stdout
+  leaq _hello_world(%rip), %rsi
+  mov $13, %rdx # length of str
+  syscall
+  ret
