@@ -331,7 +331,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   if (Style.BraceWrapping.BeforeLambdaBody && Current.CanBreakBefore &&
       Current.is(TT_LambdaLBrace) && Previous.isNot(TT_LineComment)) {
     auto LambdaBodyLength = getLengthToMatchingParen(Current, State.Stack);
-    return (LambdaBodyLength > getColumnLimit(State));
+    return LambdaBodyLength > getColumnLimit(State);
   }
   if (Current.MustBreakBefore || Current.is(TT_InlineASMColon))
     return true;
@@ -1234,7 +1234,7 @@ static bool hasNestedBlockInlined(const FormatToken *Previous,
     return true;
 
   // Also a nested block if contains a lambda inside function with 1 parameter
-  return (Style.BraceWrapping.BeforeLambdaBody && Current.is(TT_LambdaLSquare));
+  return Style.BraceWrapping.BeforeLambdaBody && Current.is(TT_LambdaLSquare);
 }
 
 unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
