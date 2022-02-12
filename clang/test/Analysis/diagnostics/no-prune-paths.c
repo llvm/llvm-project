@@ -4,12 +4,12 @@
 // "prune-paths" is a debug option only; this is just a simple test to see that
 // it's being honored.
 
-void helper() {
-  extern void foo();
+void helper(void) {
+  extern void foo(void);
   foo();
 }
 
-void test() {
+void test(void) {
   helper();
 #if NPRUNE
   // expected-note@-2 {{Calling 'helper'}}

@@ -17,21 +17,21 @@ void assign(unsigned U, signed S) {
     S8 = U; // no-warning
 }
 
-void addAssign() {
+void addAssign(void) {
   unsigned long L = 1000;
   int I = -100;
   U8 += L; // expected-warning {{Loss of precision in implicit conversion}}
   L += I; // no-warning
 }
 
-void subAssign() {
+void subAssign(void) {
   unsigned long L = 1000;
   int I = -100;
   U8 -= L; // expected-warning {{Loss of precision in implicit conversion}}
   L -= I; // no-warning
 }
 
-void mulAssign() {
+void mulAssign(void) {
   unsigned long L = 1000;
   int I = -1;
   U8 *= L; // expected-warning {{Loss of precision in implicit conversion}}
@@ -40,42 +40,42 @@ void mulAssign() {
   L *= I; // no-warning
 }
 
-void divAssign() {
+void divAssign(void) {
   unsigned long L = 1000;
   int I = -1;
   U8 /= L; // no-warning
   L /= I; // expected-warning {{Loss of sign in implicit conversion}}
 }
 
-void remAssign() {
+void remAssign(void) {
   unsigned long L = 1000;
   int I = -1;
   U8 %= L; // no-warning
   L %= I; // expected-warning {{Loss of sign in implicit conversion}}
 }
 
-void andAssign() {
+void andAssign(void) {
   unsigned long L = 1000;
   int I = -1;
   U8 &= L; // no-warning
   L &= I; // expected-warning {{Loss of sign in implicit conversion}}
 }
 
-void orAssign() {
+void orAssign(void) {
   unsigned long L = 1000;
   int I = -1;
   U8 |= L; // expected-warning {{Loss of precision in implicit conversion}}
   L |= I;  // expected-warning {{Loss of sign in implicit conversion}}
 }
 
-void xorAssign() {
+void xorAssign(void) {
   unsigned long L = 1000;
   int I = -1;
   U8 ^= L; // expected-warning {{Loss of precision in implicit conversion}}
   L ^= I;  // expected-warning {{Loss of sign in implicit conversion}}
 }
 
-void init1() {
+void init1(void) {
   long long A = 1LL << 60;
   short X = A; // expected-warning {{Loss of precision in implicit conversion}}
 }
@@ -108,7 +108,7 @@ void division(unsigned U, signed S) {
 void f(unsigned x) {}
 void g(unsigned x) {}
 
-void functioncall1() {
+void functioncall1(void) {
   long x = -1;
   int y = 0;
   f(x); // expected-warning {{Loss of sign in implicit conversion}}
@@ -145,11 +145,11 @@ void dontwarn3(int X) {
 
 // don't warn for macros
 #define DOSTUFF ({ unsigned X = 1000; U8 = X; })
-void dontwarn4() {
+void dontwarn4(void) {
   DOSTUFF;
 }
 
-void dontwarn5() {
+void dontwarn5(void) {
   unsigned char c1 = 'A';
   c1 = (c1 >= 'A' && c1 <= 'Z') ? c1 - 'A' + 'a' : c1;
   unsigned char c2 = 0;
@@ -162,7 +162,7 @@ void dontwarn5() {
   c5 = (c5 >= 'A' && c5 <= 'Z') ? c5 - 'A' + 'a' : c5;
 }
 
-void dontwarn6() {
+void dontwarn6(void) {
   int x = ~0;
   unsigned y = ~0;
 }
@@ -172,11 +172,11 @@ void dontwarn7(unsigned x) {
   }
 }
 
-void dontwarn8() {
+void dontwarn8(void) {
   unsigned x = (unsigned)-1;
 }
 
-unsigned dontwarn9() {
+unsigned dontwarn9(void) {
   return ~0;
 }
 
@@ -190,7 +190,7 @@ char dontwarn10(long long x) {
 // C library functions, handled via apiModeling.StdCLibraryFunctions
 
 int isascii(int c);
-void libraryFunction1() {
+void libraryFunction1(void) {
   char kb2[5];
   int X = 1000;
   if (isascii(X)) {
@@ -204,7 +204,7 @@ typedef struct FILE {} FILE; int getc(FILE *stream);
 char reply_string[8192];
 FILE *cin;
 extern int dostuff(void);
-int libraryFunction2() {
+int libraryFunction2(void) {
   int c, n;
   int dig;
   char *cp = reply_string;
@@ -239,7 +239,7 @@ double floating_point(long long a, int b) {
   return 137;
 }
 
-double floating_point2() {
+double floating_point2(void) {
   int a = 1 << 24;
   long long b = 1LL << 53;
   float f = a; // no-warning

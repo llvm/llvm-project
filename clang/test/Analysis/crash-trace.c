@@ -13,7 +13,7 @@ void inlined(int x, float y) {
   clang_analyzer_crash();
 }
 
-void test() {
+void test(void) {
   inlined(0, 0);
 }
 

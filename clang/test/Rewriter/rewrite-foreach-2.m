@@ -16,9 +16,9 @@
 - (void)compilerTestAgainst;
 @end
 
-int LOOP();
-int INNERLOOP();
-void END_LOOP();
+int LOOP(void);
+int INNERLOOP(void);
+void END_LOOP(void);
 @implementation MyList (BasicTest)
 - (void)compilerTestAgainst {
   id el;

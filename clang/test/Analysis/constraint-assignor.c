@@ -3,7 +3,7 @@
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -verify
 
-void clang_analyzer_warnIfReached();
+void clang_analyzer_warnIfReached(void);
 void clang_analyzer_eval(int);
 
 void rem_constant_rhs_ne_zero(int x, int y) {
