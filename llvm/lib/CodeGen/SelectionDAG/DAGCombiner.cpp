@@ -19206,28 +19206,27 @@ SDValue DAGCombiner::scalarizeExtractedVectorLoad(SDNode *EVE, EVT InVecVT,
   if (ResultVT.bitsGT(VecEltVT)) {
     // If the result type of vextract is wider than the load, then issue an
     // extending load instead.
-    ISD::LoadExtType ExtType = TLI.isLoadExtLegal(ISD::ZEXTLOAD, ResultVT,
-                                                  VecEltVT)
-                                   ? ISD::ZEXTLOAD
-                                   : ISD::EXTLOAD;
-    Load = DAG.getExtLoad(ExtType, SDLoc(EVE), ResultVT,
-                          OriginalLoad->getChain(), NewPtr, MPI, VecEltVT,
-                          Alignment, OriginalLoad->getMemOperand()->getFlags(),
+    ISD::LoadExtType ExtType =
+        TLI.isLoadExtLegal(ISD::ZEXTLOAD, ResultVT, VecEltVT) ? ISD::ZEXTLOAD
+                                                              : ISD::EXTLOAD;
+    Load = DAG.getExtLoad(ExtType, DL, ResultVT, OriginalLoad->getChain(),
+                          NewPtr, MPI, VecEltVT, Alignment,
+                          OriginalLoad->getMemOperand()->getFlags(),
                           OriginalLoad->getAAInfo());
     Chain = Load.getValue(1);
   } else {
-    Load = DAG.getLoad(
-        VecEltVT, SDLoc(EVE), OriginalLoad->getChain(), NewPtr, MPI, Alignment,
-        OriginalLoad->getMemOperand()->getFlags(), OriginalLoad->getAAInfo());
+    Load = DAG.getLoad(VecEltVT, DL, OriginalLoad->getChain(), NewPtr, MPI,
+                       Alignment, OriginalLoad->getMemOperand()->getFlags(),
+                       OriginalLoad->getAAInfo());
     Chain = Load.getValue(1);
     if (ResultVT.bitsLT(VecEltVT))
-      Load = DAG.getNode(ISD::TRUNCATE, SDLoc(EVE), ResultVT, Load);
+      Load = DAG.getNode(ISD::TRUNCATE, DL, ResultVT, Load);
     else
       Load = DAG.getBitcast(ResultVT, Load);
   }
   WorklistRemover DeadNodes(*this);
-  SDValue From[] = { SDValue(EVE, 0), SDValue(OriginalLoad, 1) };
-  SDValue To[] = { Load, Chain };
+  SDValue From[] = {SDValue(EVE, 0), SDValue(OriginalLoad, 1)};
+  SDValue To[] = {Load, Chain};
   DAG.ReplaceAllUsesOfValuesWith(From, To, 2);
   // Make sure to revisit this node to clean it up; it will usually be dead.
   AddToWorklist(EVE);
