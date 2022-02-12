@@ -646,6 +646,83 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
 }
 } // namespace amdgcn
 
+namespace generic {
+
+const char *getLDMOption(const llvm::Triple &T) {
+  switch (T.getArch()) {
+  case llvm::Triple::x86:
+    if (T.isOSIAMCU())
+      return "elf_iamcu";
+    return "elf_i386";
+  case llvm::Triple::aarch64:
+    return "aarch64linux";
+  case llvm::Triple::aarch64_be:
+    return "aarch64linuxb";
+  case llvm::Triple::ppc64:
+    return "elf64ppc";
+  case llvm::Triple::ppc64le:
+    return "elf64lppc";
+  case llvm::Triple::x86_64:
+    if (T.isX32())
+      return "elf32_x86_64";
+    return "elf_x86_64";
+  case llvm::Triple::ve:
+    return "elf64ve";
+  default:
+    return nullptr;
+  }
+}
+
+Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
+                           StringRef Arch) {
+  // Create a new file to write the linked device image to.
+  SmallString<128> TempFile;
+  if (Error Err = createOutputFile(sys::path::filename(ExecutableName) + "-" +
+                                       TheTriple.getArchName() + "-" + Arch,
+                                   "out", TempFile))
+    return std::move(Err);
+
+  // Use the host linker to perform generic offloading. Use the same libraries
+  // and paths as the host application does.
+  SmallVector<StringRef, 16> CmdArgs;
+  CmdArgs.push_back(LinkerUserPath);
+  CmdArgs.push_back("-m");
+  CmdArgs.push_back(getLDMOption(TheTriple));
+  CmdArgs.push_back("-shared");
+  for (auto AI = HostLinkerArgs.begin(), AE = HostLinkerArgs.end(); AI != AE;
+       ++AI) {
+    StringRef Arg = *AI;
+    if (Arg.startswith("-L"))
+      CmdArgs.push_back(Arg);
+    else if (Arg.startswith("-l"))
+      CmdArgs.push_back(Arg);
+    else if (Arg.startswith("--as-needed"))
+      CmdArgs.push_back(Arg);
+    else if (Arg.startswith("--no-as-needed"))
+      CmdArgs.push_back(Arg);
+    else if (Arg.startswith("-rpath")) {
+      CmdArgs.push_back(Arg);
+      CmdArgs.push_back(*(AI + 1));
+    } else if (Arg.startswith("-dynamic-linker")) {
+      CmdArgs.push_back(Arg);
+      CmdArgs.push_back(*(AI + 1));
+    }
+  }
+  CmdArgs.push_back("-Bsymbolic");
+  CmdArgs.push_back("-o");
+  CmdArgs.push_back(TempFile);
+
+  // Add extracted input files.
+  for (StringRef Input : InputFiles)
+    CmdArgs.push_back(Input);
+
+  if (sys::ExecuteAndWait(LinkerUserPath, CmdArgs))
+    return createStringError(inconvertibleErrorCode(), "'linker' failed");
+
+  return static_cast<std::string>(TempFile);
+}
+} // namespace generic
+
 Expected<std::string> linkDevice(ArrayRef<std::string> InputFiles,
                                  Triple TheTriple, StringRef Arch) {
   switch (TheTriple.getArch()) {
@@ -656,7 +733,11 @@ Expected<std::string> linkDevice(ArrayRef<std::string> InputFiles,
     return amdgcn::link(InputFiles, TheTriple, Arch);
   case Triple::x86:
   case Triple::x86_64:
-    // TODO: x86 linking support.
+  case Triple::aarch64:
+  case Triple::aarch64_be:
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return generic::link(InputFiles, TheTriple, Arch);
   default:
     return createStringError(inconvertibleErrorCode(),
                              TheTriple.getArchName() +

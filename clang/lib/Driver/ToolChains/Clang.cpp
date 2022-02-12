@@ -8200,14 +8200,19 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       ArgStringList FeatureArgs;
       TC->addClangTargetOptions(TCArgs, FeatureArgs, Action::OFK_OpenMP);
       auto FeatureIt = llvm::find(FeatureArgs, "-target-feature");
-      CmdArgs.push_back(Args.MakeArgString(
-          "-target-feature=" + TC->getTripleString() + "=" + *(FeatureIt + 1)));
+      if (FeatureIt != FeatureArgs.end())
+        CmdArgs.push_back(
+            Args.MakeArgString("-target-feature=" + TC->getTripleString() +
+                               "=" + *(FeatureIt + 1)));
     }
 
     // Pass in the bitcode library to be linked during LTO.
     for (auto &I :
          llvm::make_range(OpenMPTCRange.first, OpenMPTCRange.second)) {
       const ToolChain *TC = I.second;
+      if (!(TC->getTriple().isNVPTX() || TC->getTriple().isAMDGPU()))
+        continue;
+
       const Driver &TCDriver = TC->getDriver();
       const ArgList &TCArgs = C.getArgsForToolChain(TC, "", Action::OFK_OpenMP);
       StringRef Arch = TCArgs.getLastArgValue(options::OPT_march_EQ);
