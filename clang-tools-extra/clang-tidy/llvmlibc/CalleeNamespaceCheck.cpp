@@ -22,7 +22,7 @@ namespace llvm_libc {
 // Unit.
 const DeclContext *getOutermostNamespace(const DeclContext *Decl) {
   const DeclContext *Parent = Decl->getParent();
-  if (Parent && Parent->isTranslationUnit())
+  if (Parent->isTranslationUnit())
     return Decl;
   return getOutermostNamespace(Parent);
 }
