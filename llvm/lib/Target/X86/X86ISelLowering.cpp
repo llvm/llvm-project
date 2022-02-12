@@ -47090,30 +47090,44 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
 
     // If either operand is a constant mask, then only the elements that aren't
     // zero are actually demanded by the other operand.
-    auto SimplifyUndemandedElts = [&](SDValue Op, SDValue OtherOp) {
+    auto GetDemandedMasks = [&](SDValue Op) {
       APInt UndefElts;
       SmallVector<APInt> EltBits;
       int NumElts = VT.getVectorNumElements();
       int EltSizeInBits = VT.getScalarSizeInBits();
-      if (!getTargetConstantBitsFromNode(Op, EltSizeInBits, UndefElts, EltBits))
-        return false;
-
-      APInt DemandedBits = APInt::getZero(EltSizeInBits);
-      APInt DemandedElts = APInt::getZero(NumElts);
-      for (int I = 0; I != NumElts; ++I)
-        if (!EltBits[I].isZero()) {
-          DemandedBits |= EltBits[I];
-          DemandedElts.setBit(I);
-        }
-
-      return TLI.SimplifyDemandedVectorElts(OtherOp, DemandedElts, DCI) ||
-             TLI.SimplifyDemandedBits(OtherOp, DemandedBits, DemandedElts, DCI);
+      APInt DemandedBits = APInt::getAllOnes(EltSizeInBits);
+      APInt DemandedElts = APInt::getAllOnes(NumElts);
+      if (getTargetConstantBitsFromNode(Op, EltSizeInBits, UndefElts,
+                                        EltBits)) {
+        DemandedBits.clearAllBits();
+        DemandedElts.clearAllBits();
+        for (int I = 0; I != NumElts; ++I)
+          if (!EltBits[I].isZero()) {
+            DemandedBits |= EltBits[I];
+            DemandedElts.setBit(I);
+          }
+      }
+      return std::make_pair(DemandedBits, DemandedElts);
     };
-    if (SimplifyUndemandedElts(N0, N1) || SimplifyUndemandedElts(N1, N0)) {
+    std::pair<APInt, APInt> Demand0 = GetDemandedMasks(N1);
+    std::pair<APInt, APInt> Demand1 = GetDemandedMasks(N0);
+
+    if (TLI.SimplifyDemandedVectorElts(N0, Demand0.second, DCI) ||
+        TLI.SimplifyDemandedVectorElts(N1, Demand1.second, DCI) ||
+        TLI.SimplifyDemandedBits(N0, Demand0.first, Demand0.second, DCI) ||
+        TLI.SimplifyDemandedBits(N1, Demand1.first, Demand1.second, DCI)) {
       if (N->getOpcode() != ISD::DELETED_NODE)
         DCI.AddToWorklist(N);
       return SDValue(N, 0);
     }
+
+    SDValue NewN0 = TLI.SimplifyMultipleUseDemandedBits(N0, Demand0.first,
+                                                        Demand0.second, DAG);
+    SDValue NewN1 = TLI.SimplifyMultipleUseDemandedBits(N1, Demand1.first,
+                                                        Demand1.second, DAG);
+    if (NewN0 || NewN1)
+      return DAG.getNode(ISD::AND, dl, VT, NewN0 ? NewN0 : N0,
+                         NewN1 ? NewN1 : N1);
   }
 
   // Attempt to combine a scalar bitmask AND with an extracted shuffle.
