@@ -218,5 +218,22 @@ TYPED_TEST(LlvmLibcArrayRefTest, TakeBack, Types) {
   }
 }
 
+TEST(LlvmLibcArrayRefTest, ConstructFromVoidPtr) {
+  unsigned data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  void *ptr = data;
+  const void *const_ptr = data;
+  ArrayRef<unsigned> ref(const_ptr, sizeof(data));
+  MutableArrayRef<unsigned> mutable_ref(ptr, sizeof(data));
+  ASSERT_EQ(ref.size(), sizeof(data) / sizeof(unsigned));
+  ASSERT_EQ(mutable_ref.size(), sizeof(data) / sizeof(unsigned));
+
+  unsigned val = 123;
+  for (size_t i = 0; i < sizeof(data) / sizeof(unsigned); ++i)
+    mutable_ref[i] = val;
+
+  for (size_t i = 0; i < sizeof(data) / sizeof(unsigned); ++i)
+    ASSERT_EQ(ref[i], val);
+}
+
 } // namespace cpp
 } // namespace __llvm_libc

@@ -58,7 +58,7 @@ public:
 
   bool empty() const { return size() == 0; }
 
-  auto operator[](size_t Index) const { return data()[Index]; }
+  auto &operator[](size_t Index) const { return data()[Index]; }
 
   // slice(n, m) - Chop off the first N elements of the array, and keep M
   // elements in the array.
@@ -115,6 +115,11 @@ private:
   using Impl::Impl;
 
 public:
+  // Construct an ArrayRef from void * pointer.
+  // |Length| is the byte length of the array pointed to by |Data|.
+  ArrayRef(const void *Data, size_t Length)
+      : Impl(reinterpret_cast<const T *>(Data), Length / sizeof(T)) {}
+
   // From Array.
   template <size_t N> ArrayRef(const Array<T, N> &Arr) : Impl(Arr.Data, N) {}
 };
@@ -129,6 +134,11 @@ private:
   using Impl::Impl;
 
 public:
+  // Construct an ArrayRef from void * pointer.
+  // |Length| is the byte length of the array pointed to by |Data|.
+  MutableArrayRef(void *Data, size_t Length)
+      : Impl(reinterpret_cast<T *>(Data), Length / sizeof(T)) {}
+
   // From Array.
   template <size_t N> MutableArrayRef(Array<T, N> &Arr) : Impl(Arr.Data, N) {}
 
