@@ -11310,7 +11310,7 @@ void CheckFreeArgumentsCast(Sema &S, const std::string &CalleeName,
 /// Alerts the user that they are attempting to free a non-malloc'd object.
 void Sema::CheckFreeArguments(const CallExpr *E) {
   const std::string CalleeName =
-      dyn_cast<FunctionDecl>(E->getCalleeDecl())->getQualifiedNameAsString();
+      cast<FunctionDecl>(E->getCalleeDecl())->getQualifiedNameAsString();
 
   { // Prefer something that doesn't involve a cast to make things simpler.
     const Expr *Arg = E->getArg(0)->IgnoreParenCasts();
