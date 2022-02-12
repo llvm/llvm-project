@@ -1287,12 +1287,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       if (VT == MVT::v4i64) continue;
       setOperationAction(ISD::ROTL, VT, Custom);
       setOperationAction(ISD::ROTR, VT, Custom);
+      setOperationAction(ISD::FSHL, VT, Custom);
+      setOperationAction(ISD::FSHR, VT, Custom);
     }
-
-    setOperationAction(ISD::FSHL,       MVT::v32i8, Custom);
-    setOperationAction(ISD::FSHR,       MVT::v32i8, Custom);
-    setOperationAction(ISD::FSHL,       MVT::v8i32, Custom);
-    setOperationAction(ISD::FSHR,       MVT::v8i32, Custom);
 
     // These types need custom splitting if their input is a 128-bit vector.
     setOperationAction(ISD::SIGN_EXTEND,       MVT::v8i64,  Custom);
@@ -29950,8 +29947,8 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
                            {Op0, Op1, Amt}, DAG, Subtarget);
     }
     assert((VT == MVT::v16i8 || VT == MVT::v32i8 || VT == MVT::v64i8 ||
-            VT == MVT::v8i16 || VT == MVT::v4i32 || VT == MVT::v8i32 ||
-            VT == MVT::v16i32) &&
+            VT == MVT::v8i16 || VT == MVT::v16i16 || VT == MVT::v4i32 ||
+            VT == MVT::v8i32 || VT == MVT::v16i32) &&
            "Unexpected funnel shift type!");
 
     // fshl(x,y,z) -> unpack(y,x) << (z & (bw-1))) >> bw.
@@ -29974,7 +29971,7 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
 
     // Split 256-bit integers on XOP/pre-AVX2 targets.
     // Split 512-bit integers on non 512-bit BWI targets.
-    if ((VT.is256BitVector() && ((Subtarget.hasXOP() && EltSizeInBits < 32) ||
+    if ((VT.is256BitVector() && ((Subtarget.hasXOP() && EltSizeInBits < 16) ||
                                  !Subtarget.hasAVX2())) ||
         (VT.is512BitVector() && !Subtarget.useBWIRegs() &&
          EltSizeInBits < 32)) {
