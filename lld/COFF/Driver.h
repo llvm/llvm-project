@@ -23,7 +23,6 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/TarWriter.h"
-#include "llvm/WindowsDriver/MSVCPaths.h"
 #include <memory>
 #include <set>
 #include <vector>
@@ -83,10 +82,6 @@ public:
 
   void linkerMain(llvm::ArrayRef<const char *> args);
 
-  // Adds various search paths based on the sysroot.  Must only be called once
-  // config->machine has been set.
-  void addWinSysRootLibSearchPaths();
-
   // Used by the resolver to parse .drectve section contents.
   void parseDirectives(InputFile *file);
 
@@ -111,9 +106,6 @@ private:
   StringRef doFindLibMinGW(StringRef filename);
 
   bool findUnderscoreMangle(StringRef sym);
-
-  // Determines the location of the sysroot based on `args`, environment, etc.
-  void detectWinSysRoot(const llvm::opt::InputArgList &args);
 
   // Parses LIB environment which contains a list of search paths.
   void addLibSearchPaths();
@@ -162,14 +154,6 @@ private:
   llvm::StringSet<> directivesExports;
 
   COFFLinkerContext &ctx;
-
-  llvm::ToolsetLayout vsLayout = llvm::ToolsetLayout::OlderVS;
-  std::string vcToolChainPath;
-  llvm::SmallString<128> diaPath;
-  bool useWinSysRootLibPath = false;
-  llvm::SmallString<128> universalCRTLibPath;
-  int sdkMajor = 0;
-  llvm::SmallString<128> windowsSdkLibPath;
 };
 
 // Functions below this line are defined in DriverUtils.cpp.

@@ -15,7 +15,6 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
-#include "llvm/WindowsDriver/MSVCPaths.h"
 
 namespace clang {
 namespace driver {
@@ -74,14 +73,28 @@ public:
     return 4;
   }
 
-  std::string getSubDirectoryPath(llvm::SubDirectoryType Type,
-                                  llvm::StringRef SubdirParent = "") const;
-  std::string getSubDirectoryPath(llvm::SubDirectoryType Type,
+  enum class SubDirectoryType {
+    Bin,
+    Include,
+    Lib,
+  };
+  std::string getSubDirectoryPath(SubDirectoryType Type,
+                                  llvm::StringRef SubdirParent,
                                   llvm::Triple::ArchType TargetArch) const;
 
-  bool getIsVS2017OrNewer() const {
-    return VSLayout == llvm::ToolsetLayout::VS2017OrNewer;
+  // Convenience overload.
+  // Uses the current target arch.
+  std::string getSubDirectoryPath(SubDirectoryType Type,
+                                  llvm::StringRef SubdirParent = "") const {
+    return getSubDirectoryPath(Type, SubdirParent, getArch());
   }
+
+  enum class ToolsetLayout {
+    OlderVS,
+    VS2017OrNewer,
+    DevDivInternal,
+  };
+  bool getIsVS2017OrNewer() const { return VSLayout == ToolsetLayout::VS2017OrNewer; }
 
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
@@ -129,9 +142,8 @@ protected:
   Tool *buildLinker() const override;
   Tool *buildAssembler() const override;
 private:
-  llvm::StringRef WinSdkDir, WinSdkVersion, WinSysRoot;
   std::string VCToolChainPath;
-  llvm::ToolsetLayout VSLayout = llvm::ToolsetLayout::OlderVS;
+  ToolsetLayout VSLayout = ToolsetLayout::OlderVS;
   CudaInstallationDetector CudaInstallation;
   RocmInstallationDetector RocmInstallation;
 };
