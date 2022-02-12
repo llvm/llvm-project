@@ -4967,7 +4967,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (Args.hasArg(options::OPT_fclangir))
+  if (Args.hasArg(options::OPT_fclangir) || Args.hasArg(options::OPT_emit_cir))
     CmdArgs.push_back("-fclangir");
 
   if (IsOpenMPDevice) {
