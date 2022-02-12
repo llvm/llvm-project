@@ -3134,7 +3134,15 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       return false;
     if (getTokenPointerOrReferenceAlignment(Left) == FormatStyle::PAS_Right)
       return false;
-    if (Line.IsMultiVariableDeclStmt)
+    // FIXME: Setting IsMultiVariableDeclStmt for the whole line is error-prone,
+    // because it does not take into account nested scopes like lambdas.
+    // In multi-variable declaration statements, attach */& to the variable
+    // independently of the style. However, avoid doing it if we are in a nested
+    // scope, e.g. lambda. We still need to special-case statements with
+    // initializers.
+    if (Line.IsMultiVariableDeclStmt &&
+        (Left.NestingLevel == Line.First->NestingLevel ||
+         startsWithInitStatement(Line)))
       return false;
     return Left.Previous && !Left.Previous->isOneOf(
                                 tok::l_paren, tok::coloncolon, tok::l_square);
