@@ -54,6 +54,9 @@ bool isHsaAbiVersion5(const MCSubtargetInfo *STI);
 /// false otherwise.
 bool isHsaAbiVersion3AndAbove(const MCSubtargetInfo *STI);
 
+/// \returns The offset of the hostcall pointer argument from implicitarg_ptr
+unsigned getHostcallImplicitArgPosition();
+
 struct GcnBufferFormatInfo {
   unsigned Format;
   unsigned BitsPerComp;
@@ -737,6 +740,8 @@ bool isEntryFunctionCC(CallingConv::ID CC);
 // the current module. Module entry functions are allowed to allocate LDS.
 LLVM_READNONE
 bool isModuleEntryFunctionCC(CallingConv::ID CC);
+
+bool isKernelCC(const Function *Func);
 
 // FIXME: Remove this when calling conventions cleaned up
 LLVM_READNONE

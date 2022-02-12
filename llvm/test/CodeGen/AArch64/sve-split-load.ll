@@ -71,7 +71,7 @@ define <vscale x 16 x i64> @load_split_16i64(<vscale x 16 x i64>* %a) {
 define <vscale x 2 x i32> @masked_load_promote_2i32(<vscale x 2 x i32> *%a, <vscale x 2 x i1> %pg) {
 ; CHECK-LABEL: masked_load_promote_2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1sw { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %load = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32(<vscale x 2 x i32> *%a, i32 1, <vscale x 2 x i1> %pg, <vscale x 2 x i32> undef)
   ret <vscale x 2 x i32> %load

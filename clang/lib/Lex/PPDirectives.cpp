@@ -2711,12 +2711,14 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
   if (!Tok.is(tok::eod))
     LastTok = Tok;
 
+  SmallVector<Token, 16> Tokens;
+
   // Read the rest of the macro body.
   if (MI->isObjectLike()) {
     // Object-like macros are very simple, just read their body.
     while (Tok.isNot(tok::eod)) {
       LastTok = Tok;
-      MI->AddTokenToBody(Tok);
+      Tokens.push_back(Tok);
       // Get the next token of the macro.
       LexUnexpandedToken(Tok);
     }
@@ -2731,7 +2733,7 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
       LastTok = Tok;
 
       if (!Tok.isOneOf(tok::hash, tok::hashat, tok::hashhash)) {
-        MI->AddTokenToBody(Tok);
+        Tokens.push_back(Tok);
 
         if (VAOCtx.isVAOptToken(Tok)) {
           // If we're already within a VAOPT, emit an error.
@@ -2745,7 +2747,7 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
             Diag(Tok, diag::err_pp_missing_lparen_in_vaopt_use);
             return nullptr;
           }
-          MI->AddTokenToBody(Tok);
+          Tokens.push_back(Tok);
           VAOCtx.sawVAOptFollowedByOpeningParens(Tok.getLocation());
           LexUnexpandedToken(Tok);
           if (Tok.is(tok::hashhash)) {
@@ -2756,10 +2758,10 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
         } else if (VAOCtx.isInVAOpt()) {
           if (Tok.is(tok::r_paren)) {
             if (VAOCtx.sawClosingParen()) {
-              const unsigned NumTokens = MI->getNumTokens();
-              assert(NumTokens >= 3 && "Must have seen at least __VA_OPT__( "
-                                       "and a subsequent tok::r_paren");
-              if (MI->getReplacementToken(NumTokens - 2).is(tok::hashhash)) {
+              assert(Tokens.size() >= 3 &&
+                     "Must have seen at least __VA_OPT__( "
+                     "and a subsequent tok::r_paren");
+              if (Tokens[Tokens.size() - 2].is(tok::hashhash)) {
                 Diag(Tok, diag::err_vaopt_paste_at_end);
                 return nullptr;
               }
@@ -2778,7 +2780,7 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
       // things.
       if (getLangOpts().TraditionalCPP) {
         Tok.setKind(tok::unknown);
-        MI->AddTokenToBody(Tok);
+        Tokens.push_back(Tok);
 
         // Get the next token of the macro.
         LexUnexpandedToken(Tok);
@@ -2794,17 +2796,16 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
         LexUnexpandedToken(Tok);
 
         if (Tok.is(tok::eod)) {
-          MI->AddTokenToBody(LastTok);
+          Tokens.push_back(LastTok);
           break;
         }
 
-        unsigned NumTokens = MI->getNumTokens();
-        if (NumTokens && Tok.getIdentifierInfo() == Ident__VA_ARGS__ &&
-            MI->getReplacementToken(NumTokens-1).is(tok::comma))
+        if (!Tokens.empty() && Tok.getIdentifierInfo() == Ident__VA_ARGS__ &&
+            Tokens[Tokens.size() - 1].is(tok::comma))
           MI->setHasCommaPasting();
 
         // Things look ok, add the '##' token to the macro.
-        MI->AddTokenToBody(LastTok);
+        Tokens.push_back(LastTok);
         continue;
       }
 
@@ -2823,7 +2824,7 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
         // confused.
         if (getLangOpts().AsmPreprocessor && Tok.isNot(tok::eod)) {
           LastTok.setKind(tok::unknown);
-          MI->AddTokenToBody(LastTok);
+          Tokens.push_back(LastTok);
           continue;
         } else {
           Diag(Tok, diag::err_pp_stringize_not_parameter)
@@ -2833,13 +2834,13 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
       }
 
       // Things look ok, add the '#' and param name tokens to the macro.
-      MI->AddTokenToBody(LastTok);
+      Tokens.push_back(LastTok);
 
       // If the token following '#' is VAOPT, let the next iteration handle it
       // and check it for correctness, otherwise add the token and prime the
       // loop with the next one.
       if (!VAOCtx.isVAOptToken(Tok)) {
-        MI->AddTokenToBody(Tok);
+        Tokens.push_back(Tok);
         LastTok = Tok;
 
         // Get the next token of the macro.
@@ -2855,6 +2856,8 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
     }
   }
   MI->setDefinitionEndLoc(LastTok.getLocation());
+
+  MI->setTokens(Tokens, BP);
   return MI;
 }
 /// HandleDefineDirective - Implements \#define.  This consumes the entire macro
@@ -3007,7 +3010,7 @@ void Preprocessor::HandleDefineDirective(
     Tok.startToken();
     Tok.setKind(tok::kw__Static_assert);
     Tok.setIdentifierInfo(getIdentifierInfo("_Static_assert"));
-    MI->AddTokenToBody(Tok);
+    MI->setTokens({Tok}, BP);
     (void)appendDefMacroDirective(getIdentifierInfo("static_assert"), MI);
   }
 }

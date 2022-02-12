@@ -44,3 +44,7 @@ static_assert(sizeof(std::ranges::in_out_out_result<Empty, char, Empty>) == 2);
 static_assert(sizeof(std::ranges::in_out_out_result<Empty, Empty, char>) == 2);
 static_assert(sizeof(std::ranges::in_out_out_result<int, Empty, Empty2>) == sizeof(int));
 static_assert(sizeof(std::ranges::in_out_out_result<Empty, Empty, Empty>) == 3);
+
+static_assert(sizeof(std::ranges::in_fun_result<Empty, int>) == sizeof(int));
+static_assert(sizeof(std::ranges::in_fun_result<int, Empty>) == sizeof(int));
+static_assert(sizeof(std::ranges::in_fun_result<Empty, Empty>) == 2);

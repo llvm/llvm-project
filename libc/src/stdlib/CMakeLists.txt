@@ -230,7 +230,19 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
     DEPENDS
       ${SCUDO_DEPS}
   )
-
+else()
+  add_entrypoint_external(
+    malloc
+  )
+  add_entrypoint_external(
+    calloc
+  )
+  add_entrypoint_external(
+    realloc
+  )
+  add_entrypoint_external(
+    free
+  )
 endif()
 
 if(NOT LLVM_LIBC_FULL_BUILD)

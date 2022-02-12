@@ -1,4 +1,4 @@
-; RUN: llc -aarch64-sve-vector-bits-min=256 < %s | FileCheck %s
+; RUN: llc < %s | FileCheck %s
 
 target triple = "aarch64-unknown-linux-gnu"
 
@@ -14,4 +14,22 @@ define void @hang_when_merging_stores_after_legalisation(<8 x i32>* %a, <2 x i32
   ret void
 }
 
-attributes #0 = { nounwind "target-features"="+sve" }
+; Ensure we don't crash when trying to lower a shuffle via and extract
+define void @crash_when_lowering_extract_shuffle(<32 x i32>* %dst, i1 %cond) #0 {
+; CHECK-LABEL: crash_when_lowering_extract_shuffle:
+; CHECK:       ld1w { z3.s }, p0/z, [x0]
+; CHECK:       st1w { z3.s }, p0, [x0]
+  %broadcast.splat = shufflevector <32 x i1> zeroinitializer, <32 x i1> zeroinitializer, <32 x i32> zeroinitializer
+  br i1 %cond, label %exit, label %vector.body
+
+vector.body:
+  %1 = load <32 x i32>, <32 x i32>* %dst, align 16
+  %predphi = select <32 x i1> %broadcast.splat, <32 x i32> zeroinitializer, <32 x i32> %1
+  store <32 x i32> %predphi, <32 x i32>* %dst, align 16
+  br label %exit
+
+exit:
+  ret void
+}
+
+attributes #0 = { vscale_range(2,2) "target-features"="+sve" }

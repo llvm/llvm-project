@@ -1,6 +1,6 @@
-// RUN: not mlir-pdll %s -split-input-file 2>&1  | FileCheck %s
+// RUN: not mlir-pdll %s -split-input-file 2>&1 | FileCheck %s
 
-// CHECK: expected `{` to start pattern body
+// CHECK: expected `{` or `=>` to start pattern body
 Pattern }
 
 // -----
@@ -9,6 +9,13 @@ Pattern }
 // CHECK: :5:9: note: see previous definition here
 Pattern Foo { erase root: Op; }
 Pattern Foo { erase root: Op; }
+
+// -----
+
+// CHECK: `return` statements are only permitted within a `Constraint` or `Rewrite` body
+Pattern {
+  return _: Value;
+}
 
 // -----
 
@@ -23,6 +30,20 @@ Pattern {
 Pattern {
   erase root: Op;
   let value: Value;
+}
+
+// -----
+
+// CHECK: expected Pattern lambda body to contain a single operation rewrite statement, such as `erase`, `replace`, or `rewrite`
+Pattern => op<>;
+
+// -----
+
+Rewrite SomeRewrite();
+
+// CHECK: unable to invoke `Rewrite` within a match section
+Pattern {
+  SomeRewrite();
 }
 
 // -----

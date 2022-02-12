@@ -67,7 +67,7 @@ define i8 @uaddv_v64i8(<64 x i8>* %a) #0 {
 ; VBITS_EQ_256-DAG: mov w[[NUMELTS:[0-9]+]], #32
 ; VBITS_EQ_256-DAG: ld1b { [[LO:z[0-9]+]].b }, [[PG]]/z, [x0]
 ; VBITS_EQ_256-DAG: ld1b { [[HI:z[0-9]+]].b }, [[PG]]/z, [x0, x[[NUMELTS]]]
-; VBITS_EQ_256-DAG: add [[ADD:z[0-9]+]].b, [[PG]]/m, [[HI]].b, [[LO]].b
+; VBITS_EQ_256-DAG: add [[ADD:z[0-9]+]].b, [[LO]].b, [[HI]].b
 ; VBITS_EQ_256-DAG: addv [[REDUCE:d[0-9]+]], [[PG]], [[ADD]].b
 ; VBITS_EQ_256-NEXT: fmov x0, [[REDUCE]]
 ; VBITS_EQ_256-NEXT: ret
@@ -143,7 +143,7 @@ define i16 @uaddv_v32i16(<32 x i16>* %a) #0 {
 ; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #16
 ; VBITS_EQ_256-DAG: ld1h { [[LO:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_EQ_256-DAG: ld1h { [[HI:z[0-9]+]].h }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #1]
-; VBITS_EQ_256-DAG: add [[ADD:z[0-9]+]].h, [[PG]]/m, [[HI]].h, [[LO]].h
+; VBITS_EQ_256-DAG: add [[ADD:z[0-9]+]].h, [[LO]].h, [[HI]].h
 ; VBITS_EQ_256-DAG: addv [[REDUCE:d[0-9]+]], [[PG]], [[ADD]].h
 ; VBITS_EQ_256-NEXT: fmov x0, [[REDUCE]]
 ; VBITS_EQ_256-NEXT: ret
@@ -219,7 +219,7 @@ define i32 @uaddv_v16i32(<16 x i32>* %a) #0 {
 ; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #8
 ; VBITS_EQ_256-DAG: ld1w { [[LO:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_EQ_256-DAG: ld1w { [[HI:z[0-9]+]].s }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #2]
-; VBITS_EQ_256-DAG: add [[ADD:z[0-9]+]].s, [[PG]]/m, [[HI]].s, [[LO]].s
+; VBITS_EQ_256-DAG: add [[ADD:z[0-9]+]].s, [[LO]].s, [[HI]].s
 ; VBITS_EQ_256-DAG: addv [[REDUCE:d[0-9]+]], [[PG]], [[ADD]].s
 ; VBITS_EQ_256-NEXT: fmov x0, [[REDUCE]]
 ; VBITS_EQ_256-NEXT: ret
@@ -295,7 +295,7 @@ define i64 @uaddv_v8i64(<8 x i64>* %a) #0 {
 ; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
 ; VBITS_EQ_256-DAG: ld1d { [[LO:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_EQ_256-DAG: ld1d { [[HI:z[0-9]+]].d }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #3]
-; VBITS_EQ_256-DAG: add [[ADD:z[0-9]+]].d, [[PG]]/m, [[HI]].d, [[LO]].d
+; VBITS_EQ_256-DAG: add [[ADD:z[0-9]+]].d, [[LO]].d, [[HI]].d
 ; VBITS_EQ_256-DAG: addv [[REDUCE:d[0-9]+]], [[PG]], [[ADD]].d
 ; VBITS_EQ_256-NEXT: fmov x0, [[REDUCE]]
 ; VBITS_EQ_256-NEXT: ret

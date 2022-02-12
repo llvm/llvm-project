@@ -66,6 +66,7 @@ static_library("CodeGen") {
     "InterleavedAccessPass.cpp",
     "InterleavedLoadCombinePass.cpp",
     "IntrinsicLowering.cpp",
+    "JMCInstrumenter.cpp",
     "LLVMTargetMachine.cpp",
     "LatencyPriorityQueue.cpp",
     "LazyMachineBlockFrequencyInfo.cpp",

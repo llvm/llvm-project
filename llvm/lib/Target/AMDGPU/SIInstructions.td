@@ -14,6 +14,16 @@ class GCNPat<dag pattern, dag result> : Pat<pattern, result>, GCNPredicateContro
 
 }
 
+class UniformSextInreg<ValueType VT> : PatFrag<
+  (ops node:$src),
+  (sext_inreg $src, VT),
+  [{ return !N->isDivergent(); }]>;
+
+class DivergentSextInreg<ValueType VT> : PatFrag<
+  (ops node:$src),
+  (sext_inreg $src, VT),
+  [{ return N->isDivergent(); }]>;
+
 include "SOPInstructions.td"
 include "VOPInstructions.td"
 include "SMInstructions.td"
@@ -175,6 +185,22 @@ def EXIT_STRICT_WQM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
   let mayLoad = 0;
   let mayStore = 0;
 }
+
+// Pseudo instructions used for @llvm.fptrunc.round upward
+// and @llvm.fptrunc.round downward.
+// These intrinsics will be legalized to G_FPTRUNC_ROUND_UPWARD
+// and G_FPTRUNC_ROUND_DOWNWARD before being lowered to
+// FPTRUNC_UPWARD_PSEUDO and FPTRUNC_DOWNWARD_PSEUDO.
+// The final codegen is done in the ModeRegister pass.
+let Uses = [MODE, EXEC] in {
+def FPTRUNC_UPWARD_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
+  (ins VGPR_32:$src0),
+  [(set f16:$vdst, (SIfptrunc_round_upward f32:$src0))]>;
+
+def FPTRUNC_DOWNWARD_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
+  (ins VGPR_32:$src0),
+  [(set f16:$vdst, (SIfptrunc_round_downward f32:$src0))]>;
+} // End Uses = [MODE, EXEC]
 
 // Invert the exec mask and overwrite the inactive lanes of dst with inactive,
 // restoring it after we're done.
@@ -1958,12 +1984,6 @@ def : GCNPat <
 //===----------------------------------------------------------------------===//
 // Conversion Patterns
 //===----------------------------------------------------------------------===//
-
-class UniformSextInreg<ValueType VT> : PatFrag<
-  (ops node:$src),
-  (sext_inreg $src, VT),
-  [{ return !N->isDivergent(); }]>;
-
 def : GCNPat<(i32 (UniformSextInreg<i1> i32:$src)),
   (S_BFE_I32 i32:$src, (i32 65536))>; // 0 | 1 << 16
 
@@ -1998,13 +2018,8 @@ def : GCNPat <
   (S_BFE_I64 i64:$src, (i32 0x200000)) // 0 | 32 << 16
 >;
 
-
-class DivergentSextInreg<ValueType VT> : PatFrag<
-  (ops node:$src),
-  (sext_inreg $src, VT),
-  [{ return N->isDivergent(); }]>;
-
-def : GCNPat<(i32 (DivergentSextInreg<i1> i32:$src)),
+def : GCNPat<
+  (i32 (DivergentSextInreg<i1> i32:$src)),
   (V_BFE_I32_e64 i32:$src, (i32 0), (i32 1))>;
 
 def : GCNPat <
@@ -2015,6 +2030,16 @@ def : GCNPat <
 def : GCNPat <
   (i16 (DivergentSextInreg<i8> i16:$src)),
   (V_BFE_I32_e64 $src, (i32 0), (i32 8))
+>;
+
+def : GCNPat<
+  (i32 (DivergentSextInreg<i8> i32:$src)),
+  (V_BFE_I32_e64 i32:$src, (i32 0), (i32 8))
+>;
+
+def : GCNPat <
+  (i32 (DivergentSextInreg<i16> i32:$src)),
+  (V_BFE_I32_e64 $src, (i32 0), (i32 16))
 >;
 
 def : GCNPat <
@@ -2070,9 +2095,15 @@ def : ZExt_i64_i1_Pat<anyext>;
 // FIXME: We need to use COPY_TO_REGCLASS to work-around the fact that
 // REG_SEQUENCE patterns don't support instructions with multiple outputs.
 def : GCNPat <
-  (i64 (sext i32:$src)),
+  (i64 (UniformUnaryFrag<sext> i32:$src)),
     (REG_SEQUENCE SReg_64, $src, sub0,
     (i32 (COPY_TO_REGCLASS (S_ASHR_I32 $src, (i32 31)), SReg_32_XM0)), sub1)
+>;
+
+def : GCNPat <
+  (i64 (DivergentUnaryFrag<sext> i32:$src)),
+    (REG_SEQUENCE VReg_64, $src, sub0,
+    (i32 (COPY_TO_REGCLASS (V_ASHRREV_I32_e64 (i32 31), $src), VGPR_32)), sub1)
 >;
 
 def : GCNPat <
@@ -2251,6 +2282,18 @@ def : GCNPat <
 // certainty what the source behavior is without more context on how
 // the src is lowered. e.g. fptrunc + fma may be lowered to a
 // v_fma_mix* instruction which does not zero, or may not.
+def : GCNPat<
+  (i32 (DivergentUnaryFrag<zext> i16:$src)),
+  (V_AND_B32_e64 (S_MOV_B32 (i32 0xffff)), $src)
+>;
+
+def : GCNPat<
+  (i64 (DivergentUnaryFrag<zext> i16:$src)),
+  (REG_SEQUENCE VReg_64,
+    (V_AND_B32_e64 (S_MOV_B32 (i32 0xffff)), $src), sub0,
+    (S_MOV_B32 (i32 0)), sub1)
+>;
+
 def : GCNPat<
   (i32 (zext (i16 (bitconvert fp16_zeros_high_16bits:$src)))),
   (COPY VSrc_b16:$src)>;
@@ -3174,4 +3217,16 @@ def G_SI_CALL : AMDGPUGenericInstruction {
   let SchedRW = [WriteBranch];
   // TODO: Should really base this on the call target
   let isConvergent = 1;
+}
+
+def G_FPTRUNC_ROUND_UPWARD : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$vdst);
+  let InOperandList = (ins type1:$src0);
+  let hasSideEffects = 0;
+}
+
+def G_FPTRUNC_ROUND_DOWNWARD : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$vdst);
+  let InOperandList = (ins type1:$src0);
+  let hasSideEffects = 0;
 }

@@ -13,6 +13,8 @@
 #include <cassert>
 #include <vector>
 
+#include "test_macros.h"
+
 bool test() {
   std::vector<bool> vec;
   typedef std::vector<bool>::reference Ref;
@@ -30,6 +32,15 @@ bool test() {
   assert(!vec[1]);
 
   assert(cref);
+
+#if TEST_STD_VER > 20
+  cref = false;
+  assert(!vec[0]);
+  assert(!vec[1]);
+  cref = true;
+  assert(vec[0]);
+  assert(!vec[1]);
+#endif
 
   return true;
 }

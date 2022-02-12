@@ -42,7 +42,7 @@
 # EXPORT-DAG: g     F __TEXT,__text _keep_lazy
 
 ## Check that exported symbol is global
-# RUN: %no_fatal_warnings_lld -dylib %t/default.o -o %t/hidden-export \
+# RUN: %no-fatal-warnings-lld -dylib %t/default.o -o %t/hidden-export \
 # RUN:         -exported_symbol _private_extern 2>&1 | \
 # RUN:     FileCheck --check-prefix=PRIVATE %s
 

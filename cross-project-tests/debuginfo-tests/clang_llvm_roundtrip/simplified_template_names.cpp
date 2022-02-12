@@ -53,6 +53,7 @@ template<unsigned N>
 struct t4 { };
 namespace {
 struct t5 { };
+enum LocalEnum { LocalEnum1 };
 }
 template<typename ...T1, typename T2 = int>
 void f5() { }
@@ -167,6 +168,14 @@ template<typename T>
 void operator_not_really() {
 }
 
+template<typename T, T ...A>
+struct t11 {
+};
+
+struct t12 {
+  t11<LocalEnum, LocalEnum1> v1;
+};
+
 int main() {
   struct { } A;
   auto L = []{};
@@ -198,6 +207,7 @@ int main() {
   f3<ns::EnumerationClass, ns::EnumerationClass::Enumerator3, (ns::EnumerationClass)2>();
   f3<ns::EnumerationSmall, ns::kNeg>();
   f3<decltype(ns::AnonEnum1), ns::AnonEnum3, (decltype(ns::AnonEnum1))2>();
+  f3<LocalEnum, LocalEnum1>();
   f3<int*, &i>();
   f3<int*, nullptr>();
   t4<3> v2;
@@ -216,6 +226,7 @@ int main() {
   f1<t3<t3<int>>>();
   f1<decltype(L)>();
   t3<decltype(L)> v1;
+  f1<t3<t3<decltype(L)>>>();
   f1<int(float)>();
   f1<void(...)>();
   f1<void(int, ...)>();
@@ -304,6 +315,7 @@ int main() {
   f1<void(t8, decltype(A))>();
   f1<void(t8)>();
   operator_not_really<int>();
+  t12 v4;
 }
 void t8::mem() {
   struct t7 { };

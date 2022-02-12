@@ -25,9 +25,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 template <class _I1, class _O1, class _O2>
 struct in_out_out_result {
-  [[no_unique_address]] _I1 in;
-  [[no_unique_address]] _O1 out1;
-  [[no_unique_address]] _O2 out2;
+  _LIBCPP_NO_UNIQUE_ADDRESS _I1 in;
+  _LIBCPP_NO_UNIQUE_ADDRESS _O1 out1;
+  _LIBCPP_NO_UNIQUE_ADDRESS _O2 out2;
 
   template <class _II1, class _OO1, class _OO2>
     requires convertible_to<const _I1&, _II1> && convertible_to<const _O1&, _OO1> && convertible_to<const _O2&, _OO2>

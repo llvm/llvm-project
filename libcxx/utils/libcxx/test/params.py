@@ -76,7 +76,6 @@ DEFAULT_PARAMETERS = [
             actions=lambda modules: [
               AddFeature('modules-build'),
               AddCompileFlag('-fmodules'),
-              AddCompileFlag('-Xclang -fmodules-local-submodule-visibility'),
             ] if modules else []),
 
   Parameter(name='enable_exceptions', choices=[True, False], type=bool, default=True,

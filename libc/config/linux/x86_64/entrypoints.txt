@@ -55,6 +55,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strtok
     libc.src.string.strtok_r
 
+    # string.h entrypoints that depend on malloc
+    libc.src.string.strdup
+    libc.src.string.strndup
+
     # inttypes.h entrypoints
     libc.src.inttypes.imaxdiv
     libc.src.inttypes.strtoimax
@@ -80,6 +84,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtoll
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull
+
+    # stdlib.h external entrypoints
+    libc.src.stdlib.malloc
+    libc.src.stdlib.calloc
+    libc.src.stdlib.realloc
+    libc.src.stdlib.free
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.mmap
@@ -248,25 +258,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.gmtime
     libc.src.time.gmtime_r
     libc.src.time.mktime
-  )
-endif()
-
-if(LLVM_LIBC_INCLUDE_SCUDO)
-  list(APPEND TARGET_LIBC_ENTRYPOINTS
-
-    # stdlib.h external entrypoints
-    libc.src.stdlib.malloc
-    libc.src.stdlib.calloc
-    libc.src.stdlib.realloc
-    libc.src.stdlib.free
-  )
-endif()
-
-if(LLVM_LIBC_INCLUDE_SCUDO OR NOT LLVM_LIBC_FULL_BUILD)
-  list(APPEND TARGET_LIBC_ENTRYPOINTS
-    # string.h entrypoints that depend on malloc
-    libc.src.string.strdup
-    libc.src.string.strndup
   )
 endif()
 

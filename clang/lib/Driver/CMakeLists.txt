@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   ProfileData
   Support
   Object
+  WindowsDriver
   )
 
 if(WIN32)

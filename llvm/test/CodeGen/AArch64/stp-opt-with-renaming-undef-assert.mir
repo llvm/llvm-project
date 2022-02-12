@@ -1,0 +1,54 @@
+# RUN: llc -run-pass=aarch64-ldst-opt -mtriple=aarch64 -verify-machineinstrs -o - %s | FileCheck %s
+
+# This test checks that aarch64 load store optimizer is not throwing an
+# assertion:
+# "Rename register used between paired instruction, trashing the content".
+#
+# The assertion was previously triggered because q16 is picked as renamable
+# register, which overlap with renamable undef d16 used by ZIP2 instruction.
+# However, the content of an undef register is not used in meaningful way,
+# aarch64 load store optimizer should not throw an assertion if a renamable
+# register picked overlap with a renamable undef register.
+
+# This test also checks that pairwise store STP is generated.
+
+# CHECK-LABLE: test
+# CHECK: bb.0:
+# CHECK-NEXT: liveins: $x0, $x17, $x18
+# CHECK: renamable $q13_q14_q15 = LD3Threev16b undef renamable $x17 :: (load (s384) from `<16 x i8>* undef`, align 64)
+# CHECK-NEXT: renamable $q23_q24_q25 = LD3Threev16b undef renamable $x18 :: (load (s384) from `<16 x i8>* undef`, align 64)
+# CHECK-NEXT: $q16 = EXTv16i8 renamable $q23, renamable $q23, 8
+# CHECK-NEXT: renamable $q20 = EXTv16i8 renamable $q14, renamable $q14, 8
+# CHECK-NEXT: STRQui killed renamable $q20, $sp, 4 :: (store (s128))
+# CHECK-NEXT: renamable $d6 = ZIP2v8i8 renamable $d23, undef renamable $d16
+# CHECK-NEXT: STRDui killed renamable $d6, $sp, 11 :: (store (s64))
+# CHECK-NEXT: renamable $q6 = EXTv16i8 renamable $q13, renamable $q13, 8
+# CHECK-NEXT: STPQi killed renamable $q6, killed $q16, $sp, 6 :: (store (s128))
+# CHECK-NEXT: RET undef $lr
+
+---
+name:            test
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0', virtual-reg: '' }
+frameInfo:
+  maxAlignment:    16
+  maxCallFrameSize: 0
+fixedStack:      []
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x17, $x18
+    renamable $q13_q14_q15 = LD3Threev16b undef renamable $x17 :: (load (s384) from `<16 x i8>* undef`, align 64)
+    renamable $q23_q24_q25 = LD3Threev16b undef renamable $x18 :: (load (s384) from `<16 x i8>* undef`, align 64)
+    renamable $q20 = EXTv16i8 renamable $q23, renamable $q23, 8
+    STRQui killed renamable $q20, $sp, 7 :: (store (s128))
+    renamable $q20 = EXTv16i8 renamable $q14, renamable $q14, 8
+    STRQui killed renamable $q20, $sp, 4 :: (store (s128))
+    renamable $d6 = ZIP2v8i8 renamable $d23, undef renamable $d16
+    STRDui killed renamable $d6, $sp, 11 :: (store (s64))
+    renamable $q6 = EXTv16i8 renamable $q13, renamable $q13, 8
+    STRQui killed renamable $q6, $sp, 6 :: (store (s128))
+    RET undef $lr
+...

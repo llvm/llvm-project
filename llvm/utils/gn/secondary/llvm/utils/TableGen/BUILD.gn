@@ -53,6 +53,7 @@ executable("llvm-tblgen") {
     "SubtargetFeatureInfo.cpp",
     "TableGen.cpp",
     "Types.cpp",
+    "VarLenCodeEmitterGen.cpp",
     "WebAssemblyDisassemblerEmitter.cpp",
     "X86DisassemblerTables.cpp",
     "X86EVEX2VEXTablesEmitter.cpp",

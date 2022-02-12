@@ -486,7 +486,7 @@ define void @test_guard_if_and_enter(i32* nocapture readonly %data, i64 %count) 
 ; CHECK-LABEL: 'test_guard_if_and_enter'
 ; CHECK-NEXT:  Classifying expressions for: @test_guard_if_and_enter
 ; CHECK-NEXT:    %cmp.and = and i1 %cmp.ult, %cmp.ne
-; CHECK-NEXT:    --> %cmp.and U: full-set S: full-set
+; CHECK-NEXT:    --> (%cmp.ult umin %cmp.ne) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,4) S: [0,4) Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
@@ -522,7 +522,7 @@ define void @test_guard_if_and_skip(i32* nocapture readonly %data, i64 %count) {
 ; CHECK-LABEL: 'test_guard_if_and_skip'
 ; CHECK-NEXT:  Classifying expressions for: @test_guard_if_and_skip
 ; CHECK-NEXT:    %cmp.and = and i1 %cmp.ult, %cmp.ne
-; CHECK-NEXT:    --> %cmp.and U: full-set S: full-set
+; CHECK-NEXT:    --> (%cmp.ult umin %cmp.ne) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
@@ -558,9 +558,9 @@ define void @test_guard_if_and_and(i32* nocapture readonly %data, i64 %count, i1
 ; CHECK-LABEL: 'test_guard_if_and_and'
 ; CHECK-NEXT:  Classifying expressions for: @test_guard_if_and_and
 ; CHECK-NEXT:    %cmp.and1 = and i1 %c, %cmp.ne
-; CHECK-NEXT:    --> %cmp.and1 U: full-set S: full-set
+; CHECK-NEXT:    --> (%c umin %cmp.ne) U: full-set S: full-set
 ; CHECK-NEXT:    %cmp.and = and i1 %cmp.ult, %cmp.and1
-; CHECK-NEXT:    --> %cmp.and U: full-set S: full-set
+; CHECK-NEXT:    --> (%c umin %cmp.ult umin %cmp.ne) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,4) S: [0,4) Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
@@ -597,9 +597,9 @@ define void @test_guard_if_and_or(i32* nocapture readonly %data, i64 %count, i1 
 ; CHECK-LABEL: 'test_guard_if_and_or'
 ; CHECK-NEXT:  Classifying expressions for: @test_guard_if_and_or
 ; CHECK-NEXT:    %cmp.or = or i1 %c, %cmp.ne
-; CHECK-NEXT:    --> %cmp.or U: full-set S: full-set
+; CHECK-NEXT:    --> (%c umax %cmp.ne) U: full-set S: full-set
 ; CHECK-NEXT:    %cmp.and = and i1 %cmp.ult, %cmp.or
-; CHECK-NEXT:    --> %cmp.and U: full-set S: full-set
+; CHECK-NEXT:    --> ((%c umax %cmp.ne) umin %cmp.ult) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
@@ -636,7 +636,7 @@ define void @test_guard_if_or_skip(i32* nocapture readonly %data, i64 %count) {
 ; CHECK-LABEL: 'test_guard_if_or_skip'
 ; CHECK-NEXT:  Classifying expressions for: @test_guard_if_or_skip
 ; CHECK-NEXT:    %cmp.or = or i1 %cmp.uge, %cmp.eq
-; CHECK-NEXT:    --> %cmp.or U: full-set S: full-set
+; CHECK-NEXT:    --> (%cmp.uge umax %cmp.eq) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,4) S: [0,4) Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
@@ -672,7 +672,7 @@ define void @test_guard_if_or_enter(i32* nocapture readonly %data, i64 %count) {
 ; CHECK-LABEL: 'test_guard_if_or_enter'
 ; CHECK-NEXT:  Classifying expressions for: @test_guard_if_or_enter
 ; CHECK-NEXT:    %cmp.or = or i1 %cmp.uge, %cmp.eq
-; CHECK-NEXT:    --> %cmp.or U: full-set S: full-set
+; CHECK-NEXT:    --> (%cmp.uge umax %cmp.eq) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
@@ -708,9 +708,9 @@ define void @test_guard_if_or_or(i32* nocapture readonly %data, i64 %count, i1 %
 ; CHECK-LABEL: 'test_guard_if_or_or'
 ; CHECK-NEXT:  Classifying expressions for: @test_guard_if_or_or
 ; CHECK-NEXT:    %cmp.or1 = or i1 %c, %cmp.eq
-; CHECK-NEXT:    --> %cmp.or1 U: full-set S: full-set
+; CHECK-NEXT:    --> (%c umax %cmp.eq) U: full-set S: full-set
 ; CHECK-NEXT:    %cmp.or = or i1 %cmp.uge, %cmp.or1
-; CHECK-NEXT:    --> %cmp.or U: full-set S: full-set
+; CHECK-NEXT:    --> (%c umax %cmp.uge umax %cmp.eq) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,4) S: [0,4) Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
@@ -747,9 +747,9 @@ define void @test_guard_if_or_and(i32* nocapture readonly %data, i64 %count, i1 
 ; CHECK-LABEL: 'test_guard_if_or_and'
 ; CHECK-NEXT:  Classifying expressions for: @test_guard_if_or_and
 ; CHECK-NEXT:    %cmp.and = and i1 %c, %cmp.eq
-; CHECK-NEXT:    --> %cmp.and U: full-set S: full-set
+; CHECK-NEXT:    --> (%c umin %cmp.eq) U: full-set S: full-set
 ; CHECK-NEXT:    %cmp.or = or i1 %cmp.uge, %cmp.and
-; CHECK-NEXT:    --> %cmp.or U: full-set S: full-set
+; CHECK-NEXT:    --> ((%c umin %cmp.eq) umax %cmp.uge) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
@@ -1110,7 +1110,7 @@ define void @test_guard_slt_sgt_1(i32* nocapture %a, i64 %N) {
 ; CHECK-LABEL: 'test_guard_slt_sgt_1'
 ; CHECK-NEXT:  Classifying expressions for: @test_guard_slt_sgt_1
 ; CHECK-NEXT:    %and = and i1 %c.0, %c.1
-; CHECK-NEXT:    --> %and U: full-set S: full-set
+; CHECK-NEXT:    --> (%c.0 umin %c.1) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,11) S: [0,11) Exits: (-1 + %N) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %a, i64 %iv
@@ -1146,7 +1146,7 @@ define void @test_guard_slt_sgt_2(i32* nocapture %a, i64 %i) {
 ; CHECK-LABEL: 'test_guard_slt_sgt_2'
 ; CHECK-NEXT:  Classifying expressions for: @test_guard_slt_sgt_2
 ; CHECK-NEXT:    %and = and i1 %c.0, %c.1
-; CHECK-NEXT:    --> %and U: full-set S: full-set
+; CHECK-NEXT:    --> (%c.0 umin %c.1) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ %i, %entry ]
 ; CHECK-NEXT:    --> {%i,+,1}<nuw><nsw><%loop> U: full-set S: full-set Exits: 17 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %a, i64 %iv
@@ -1182,7 +1182,7 @@ define void @test_guard_sle_sge_1(i32* nocapture %a, i64 %N) {
 ; CHECK-LABEL: 'test_guard_sle_sge_1'
 ; CHECK-NEXT:  Classifying expressions for: @test_guard_sle_sge_1
 ; CHECK-NEXT:    %and = and i1 %c.0, %c.1
-; CHECK-NEXT:    --> %and U: full-set S: full-set
+; CHECK-NEXT:    --> (%c.0 umin %c.1) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,12) S: [0,12) Exits: (-1 + %N) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %a, i64 %iv
@@ -1218,7 +1218,7 @@ define void @test_guard_sle_sge_2(i32* nocapture %a, i64 %i) {
 ; CHECK-LABEL: 'test_guard_sle_sge_2'
 ; CHECK-NEXT:  Classifying expressions for: @test_guard_sle_sge_2
 ; CHECK-NEXT:    %and = and i1 %c.0, %c.1
-; CHECK-NEXT:    --> %and U: full-set S: full-set
+; CHECK-NEXT:    --> (%c.0 umin %c.1) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ %i, %entry ]
 ; CHECK-NEXT:    --> {%i,+,1}<nuw><nsw><%loop> U: full-set S: full-set Exits: 17 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %a, i64 %iv

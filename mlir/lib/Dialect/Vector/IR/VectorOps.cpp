@@ -376,6 +376,17 @@ OpFoldResult MultiDimReductionOp::fold(ArrayRef<Attribute> operands) {
 // ReductionOp
 //===----------------------------------------------------------------------===//
 
+void vector::ReductionOp::build(OpBuilder &builder, OperationState &result,
+                                CombiningKind kind, Value vector) {
+  build(builder, result, kind, vector, /*acc=*/Value());
+}
+
+void vector::ReductionOp::build(OpBuilder &builder, OperationState &result,
+                                CombiningKind kind, Value vector, Value acc) {
+  build(builder, result, vector.getType().cast<VectorType>().getElementType(),
+        kind, vector, acc);
+}
+
 LogicalResult ReductionOp::verify() {
   // Verify for 1-D vector.
   int64_t rank = getVectorType().getRank();
@@ -383,20 +394,17 @@ LogicalResult ReductionOp::verify() {
     return emitOpError("unsupported reduction rank: ") << rank;
 
   // Verify supported reduction kind.
-  StringRef strKind = kind();
-  auto maybeKind = symbolizeCombiningKind(strKind);
-  if (!maybeKind)
-    return emitOpError("unknown reduction kind: ") << strKind;
-
   Type eltType = dest().getType();
-  if (!isSupportedCombiningKind(*maybeKind, eltType))
+  if (!isSupportedCombiningKind(kind(), eltType))
     return emitOpError("unsupported reduction type '")
-           << eltType << "' for kind '" << strKind << "'";
+           << eltType << "' for kind '" << stringifyCombiningKind(kind())
+           << "'";
 
   // Verify optional accumulator.
-  if (!acc().empty()) {
-    if (strKind != "add" && strKind != "mul")
-      return emitOpError("no accumulator for reduction kind: ") << strKind;
+  if (acc()) {
+    if (kind() != CombiningKind::ADD && kind() != CombiningKind::MUL)
+      return emitOpError("no accumulator for reduction kind: ")
+             << stringifyCombiningKind(kind());
     if (!eltType.isa<FloatType>())
       return emitOpError("no accumulator for type: ") << eltType;
   }
@@ -408,8 +416,9 @@ ParseResult ReductionOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 2> operandsInfo;
   Type redType;
   Type resType;
-  Attribute attr;
-  if (parser.parseAttribute(attr, "kind", result.attributes) ||
+  CombiningKindAttr kindAttr;
+  if (parser.parseCustomAttributeWithFallback(kindAttr, Type{}, "kind",
+                                              result.attributes) ||
       parser.parseComma() || parser.parseOperandList(operandsInfo) ||
       parser.parseColonType(redType) ||
       parser.parseKeywordType("into", resType) ||
@@ -426,8 +435,10 @@ ParseResult ReductionOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void ReductionOp::print(OpAsmPrinter &p) {
-  p << " \"" << kind() << "\", " << vector();
-  if (!acc().empty())
+  p << " ";
+  kindAttr().print(p);
+  p << ", " << vector();
+  if (acc())
     p << ", " << acc();
   p << " : " << vector().getType() << " into " << dest().getType();
 }
@@ -435,42 +446,33 @@ void ReductionOp::print(OpAsmPrinter &p) {
 Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
                                          OpBuilder &builder, Location loc,
                                          Value vector) {
-  Type scalarType = vector.getType().cast<ShapedType>().getElementType();
   switch (op) {
   case arith::AtomicRMWKind::addf:
   case arith::AtomicRMWKind::addi:
-    return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
-                                               builder.getStringAttr("add"),
-                                               vector, ValueRange{});
+    return builder.create<vector::ReductionOp>(vector.getLoc(),
+                                               CombiningKind::ADD, vector);
   case arith::AtomicRMWKind::mulf:
   case arith::AtomicRMWKind::muli:
-    return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
-                                               builder.getStringAttr("mul"),
-                                               vector, ValueRange{});
+    return builder.create<vector::ReductionOp>(vector.getLoc(),
+                                               CombiningKind::MUL, vector);
   case arith::AtomicRMWKind::minf:
-    return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
-                                               builder.getStringAttr("minf"),
-                                               vector, ValueRange{});
+    return builder.create<vector::ReductionOp>(vector.getLoc(),
+                                               CombiningKind::MINF, vector);
   case arith::AtomicRMWKind::mins:
-    return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
-                                               builder.getStringAttr("minsi"),
-                                               vector, ValueRange{});
+    return builder.create<vector::ReductionOp>(vector.getLoc(),
+                                               CombiningKind::MINSI, vector);
   case arith::AtomicRMWKind::minu:
-    return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
-                                               builder.getStringAttr("minui"),
-                                               vector, ValueRange{});
+    return builder.create<vector::ReductionOp>(vector.getLoc(),
+                                               CombiningKind::MINUI, vector);
   case arith::AtomicRMWKind::maxf:
-    return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
-                                               builder.getStringAttr("maxf"),
-                                               vector, ValueRange{});
+    return builder.create<vector::ReductionOp>(vector.getLoc(),
+                                               CombiningKind::MAXF, vector);
   case arith::AtomicRMWKind::maxs:
-    return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
-                                               builder.getStringAttr("maxsi"),
-                                               vector, ValueRange{});
+    return builder.create<vector::ReductionOp>(vector.getLoc(),
+                                               CombiningKind::MAXSI, vector);
   case arith::AtomicRMWKind::maxu:
-    return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
-                                               builder.getStringAttr("maxui"),
-                                               vector, ValueRange{});
+    return builder.create<vector::ReductionOp>(vector.getLoc(),
+                                               CombiningKind::MAXUI, vector);
   // TODO: Add remaining reduction operations.
   default:
     (void)emitOptionalError(loc, "Reduction operation type not supported");
@@ -500,13 +502,20 @@ void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
                                   Value lhs, Value rhs, Value acc,
                                   ArrayAttr indexingMaps,
                                   ArrayAttr iteratorTypes) {
+  build(builder, result, lhs, rhs, acc, indexingMaps, iteratorTypes,
+        ContractionOp::getDefaultKind());
+}
+
+void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
+                                  Value lhs, Value rhs, Value acc,
+                                  ArrayAttr indexingMaps,
+                                  ArrayAttr iteratorTypes, CombiningKind kind) {
   result.addOperands({lhs, rhs, acc});
   result.addTypes(acc.getType());
   result.addAttribute(getIndexingMapsAttrName(), indexingMaps);
   result.addAttribute(getIteratorTypesAttrName(), iteratorTypes);
   result.addAttribute(ContractionOp::getKindAttrName(),
-                      CombiningKindAttr::get(ContractionOp::getDefaultKind(),
-                                             builder.getContext()));
+                      CombiningKindAttr::get(kind, builder.getContext()));
 }
 
 ParseResult ContractionOp::parse(OpAsmParser &parser, OperationState &result) {

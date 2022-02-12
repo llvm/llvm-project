@@ -2342,7 +2342,7 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
                    << "found in loop.\n";
 
   OS.indent(Depth) << "SCEV assumptions:\n";
-  PSE->getUnionPredicate().print(OS, Depth);
+  PSE->getPredicate().print(OS, Depth);
 
   OS << "\n";
 

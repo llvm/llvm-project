@@ -16,12 +16,12 @@ FileHeader:
   cpusubtype:      0x3
   filetype:        0x1
   ncmds:           8
-  sizeofcmds:      2800
+  sizeofcmds:      3040
   flags:           0x2000
   reserved:        0x0
 LoadCommands:
   - cmd:             LC_SEGMENT_64
-    cmdsize:         2552
+    cmdsize:         2792
     segname:         ''
     vmaddr:          0
     vmsize:          21352
@@ -29,14 +29,14 @@ LoadCommands:
     filesize:        20967
     maxprot:         7
     initprot:        7
-    nsects:          31
+    nsects:          33
     flags:           0
     Sections:
       - sectname:        __text
         segname:         __TEXT
         addr:            0x0
         size:            4571
-        offset:          0xB10
+        offset:          0xC00
         align:           4
         reloff:          0x5CF8
         nreloc:          74
@@ -56,7 +56,7 @@ LoadCommands:
         segname:         __TEXT
         addr:            0x11DC
         size:            117
-        offset:          0x1CEC
+        offset:          0x1DDC
         align:           1
         reloff:          0x5F48
         nreloc:          22
@@ -77,7 +77,7 @@ LoadCommands:
         segname:         __TEXT
         addr:            0x1254
         size:            24
-        offset:          0x1D64
+        offset:          0x1E54
         align:           2
         reloff:          0x5FF8
         nreloc:          6
@@ -98,7 +98,7 @@ LoadCommands:
         segname:         __TEXT
         addr:            0x17D8
         size:            37
-        offset:          0x22E8
+        offset:          0x23D8
         align:           0
         reloff:          0x0
         nreloc:          0
@@ -110,7 +110,7 @@ LoadCommands:
         segname:         __TEXT
         addr:            0x1800
         size:            24
-        offset:          0x2310
+        offset:          0x2400
         align:           2
         reloff:          0x6530
         nreloc:          8
@@ -131,7 +131,7 @@ LoadCommands:
         segname:         __TEXT
         addr:            0x1818
         size:            260
-        offset:          0x2328
+        offset:          0x2418
         align:           2
         reloff:          0x6570
         nreloc:          60
@@ -152,7 +152,7 @@ LoadCommands:
         segname:         __TEXT
         addr:            0x1AC8
         size:            20
-        offset:          0x25D8
+        offset:          0x26C8
         align:           2
         reloff:          0x67F8
         nreloc:          2
@@ -169,11 +169,47 @@ LoadCommands:
             type:            5
             scattered:       false
             value:           0
+      - sectname:        __swift5_proto
+        segname:         __TEXT
+        addr:            0x1AEC
+        size:            10
+        offset:          0x26EC
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x10000000
+        reserved1:       0x0
+        reserved2:       0x0
+        content:         41424344454647484950
+      - sectname:        __swift5_protos
+        segname:         __TEXT
+        addr:            0x1AF8
+        size:            10
+        offset:          0x2710
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x10000000
+        reserved1:       0x0
+        reserved2:       0x0
+        content:         51525354555657585960
+      - sectname:        __swift5_acfuncs
+        segname:         __TEXT
+        addr:            0x1B04
+        size:            10
+        offset:          0x2734
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x10000000
+        reserved1:       0x0
+        reserved2:       0x0
+        content:         61626364656667686970
       - sectname:        __bss
         segname:         __DATA
         addr:            0x3372
         size:            2084
-        offset:          0x50B0
+        offset:          0x51D0
         align:           3
         reloff:          0x0
         nreloc:          0

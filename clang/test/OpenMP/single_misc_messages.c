@@ -8,7 +8,7 @@ void xxx(int argc) {
   argc = x; // expected-warning {{variable 'x' is uninitialized when used here}}
 }
 
-void foo();
+void foo(void);
 
 // expected-error@+1 {{unexpected OpenMP directive '#pragma omp single'}}
 #pragma omp single
@@ -16,7 +16,7 @@ void foo();
 // expected-error@+1 {{unexpected OpenMP directive '#pragma omp single'}}
 #pragma omp single foo
 
-void test_no_clause() {
+void test_no_clause(void) {
   int i;
 #pragma omp single
   foo();
@@ -25,7 +25,7 @@ void test_no_clause() {
   ++i;
 }
 
-void test_branch_protected_scope() {
+void test_branch_protected_scope(void) {
   int i = 0;
 L1:
   ++i;
@@ -53,7 +53,7 @@ L1:
     goto L1;
 }
 
-void test_invalid_clause() {
+void test_invalid_clause(void) {
   int i;
 #pragma omp parallel
 // expected-warning@+1 {{extra tokens at the end of '#pragma omp single' are ignored}}
@@ -61,7 +61,7 @@ void test_invalid_clause() {
   foo();
 }
 
-void test_non_identifiers() {
+void test_non_identifiers(void) {
   int i, x;
 
 #pragma omp parallel
@@ -85,7 +85,7 @@ void test_non_identifiers() {
   foo();
 }
 
-void test_private() {
+void test_private(void) {
   int i;
 #pragma omp parallel
 // expected-error@+2 {{expected expression}}
@@ -126,7 +126,7 @@ void test_private() {
   foo();
 }
 
-void test_firstprivate() {
+void test_firstprivate(void) {
   int i;
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
@@ -157,7 +157,7 @@ void test_firstprivate() {
   foo();
 }
 
-void test_nowait() {
+void test_nowait(void) {
 #pragma omp single nowait nowait // expected-error {{directive '#pragma omp single' cannot contain more than one 'nowait' clause}}
   for (int i = 0; i < 16; ++i)
     ;

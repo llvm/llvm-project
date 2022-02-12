@@ -2827,15 +2827,15 @@ bool AArch64DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
     SDValue Add1 = ShiftAmt->getOperand(1);
     uint64_t Add0Imm;
     uint64_t Add1Imm;
-    // If we are shifting by X+/-N where N == 0 mod Size, then just shift by X
-    // to avoid the ADD/SUB.
-    if (isIntImmediate(Add1, Add1Imm) && (Add1Imm % Size == 0))
+    if (isIntImmediate(Add1, Add1Imm) && (Add1Imm % Size == 0)) {
+      // If we are shifting by X+/-N where N == 0 mod Size, then just shift by X
+      // to avoid the ADD/SUB.
       NewShiftAmt = Add0;
-    // If we are shifting by N-X where N == 0 mod Size, then just shift by -X to
-    // generate a NEG instead of a SUB of a constant.
-    else if (ShiftAmt->getOpcode() == ISD::SUB &&
-             isIntImmediate(Add0, Add0Imm) && Add0Imm != 0 &&
-             (Add0Imm % Size == 0)) {
+    } else if (ShiftAmt->getOpcode() == ISD::SUB &&
+               isIntImmediate(Add0, Add0Imm) && Add0Imm != 0 &&
+               (Add0Imm % Size == 0)) {
+      // If we are shifting by N-X where N == 0 mod Size, then just shift by -X
+      // to generate a NEG instead of a SUB from a constant.
       unsigned NegOpc;
       unsigned ZeroReg;
       EVT SubVT = ShiftAmt->getValueType(0);
@@ -2852,6 +2852,26 @@ bool AArch64DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
       MachineSDNode *Neg =
           CurDAG->getMachineNode(NegOpc, DL, SubVT, Zero, Add1);
       NewShiftAmt = SDValue(Neg, 0);
+    } else if (ShiftAmt->getOpcode() == ISD::SUB &&
+               isIntImmediate(Add0, Add0Imm) && (Add0Imm % Size == Size - 1)) {
+      // If we are shifting by N-X where N == -1 mod Size, then just shift by ~X
+      // to generate a NOT instead of a SUB from a constant.
+      unsigned NotOpc;
+      unsigned ZeroReg;
+      EVT SubVT = ShiftAmt->getValueType(0);
+      if (SubVT == MVT::i32) {
+        NotOpc = AArch64::ORNWrr;
+        ZeroReg = AArch64::WZR;
+      } else {
+        assert(SubVT == MVT::i64);
+        NotOpc = AArch64::ORNXrr;
+        ZeroReg = AArch64::XZR;
+      }
+      SDValue Zero =
+          CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, ZeroReg, SubVT);
+      MachineSDNode *Not =
+          CurDAG->getMachineNode(NotOpc, DL, SubVT, Zero, Add1);
+      NewShiftAmt = SDValue(Not, 0);
     } else
       return false;
   } else {
@@ -3901,7 +3921,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
                              true);
         return;
       } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
-                 (VT == MVT::nxv8bf16 && Subtarget->hasBF16())) {
+                 VT == MVT::nxv8bf16) {
         SelectPredicatedLoad(Node, 2, 1, AArch64::LD2H_IMM, AArch64::LD2H,
                              true);
         return;
@@ -3922,7 +3942,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
                              true);
         return;
       } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
-                 (VT == MVT::nxv8bf16 && Subtarget->hasBF16())) {
+                 VT == MVT::nxv8bf16) {
         SelectPredicatedLoad(Node, 3, 1, AArch64::LD3H_IMM, AArch64::LD3H,
                              true);
         return;
@@ -3943,7 +3963,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
                              true);
         return;
       } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
-                 (VT == MVT::nxv8bf16 && Subtarget->hasBF16())) {
+                 VT == MVT::nxv8bf16) {
         SelectPredicatedLoad(Node, 4, 1, AArch64::LD4H_IMM, AArch64::LD4H,
                              true);
         return;
@@ -4267,7 +4287,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         SelectPredicatedStore(Node, 2, 0, AArch64::ST2B, AArch64::ST2B_IMM);
         return;
       } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
-                 (VT == MVT::nxv8bf16 && Subtarget->hasBF16())) {
+                 VT == MVT::nxv8bf16) {
         SelectPredicatedStore(Node, 2, 1, AArch64::ST2H, AArch64::ST2H_IMM);
         return;
       } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
@@ -4284,7 +4304,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         SelectPredicatedStore(Node, 3, 0, AArch64::ST3B, AArch64::ST3B_IMM);
         return;
       } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
-                 (VT == MVT::nxv8bf16 && Subtarget->hasBF16())) {
+                 VT == MVT::nxv8bf16) {
         SelectPredicatedStore(Node, 3, 1, AArch64::ST3H, AArch64::ST3H_IMM);
         return;
       } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
@@ -4301,7 +4321,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         SelectPredicatedStore(Node, 4, 0, AArch64::ST4B, AArch64::ST4B_IMM);
         return;
       } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
-                 (VT == MVT::nxv8bf16 && Subtarget->hasBF16())) {
+                 VT == MVT::nxv8bf16) {
         SelectPredicatedStore(Node, 4, 1, AArch64::ST4H, AArch64::ST4H_IMM);
         return;
       } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
@@ -4911,7 +4931,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SelectPredicatedLoad(Node, 2, 0, AArch64::LD2B_IMM, AArch64::LD2B);
       return;
     } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
-               (VT == MVT::nxv8bf16 && Subtarget->hasBF16())) {
+               VT == MVT::nxv8bf16) {
       SelectPredicatedLoad(Node, 2, 1, AArch64::LD2H_IMM, AArch64::LD2H);
       return;
     } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
@@ -4928,7 +4948,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SelectPredicatedLoad(Node, 3, 0, AArch64::LD3B_IMM, AArch64::LD3B);
       return;
     } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
-               (VT == MVT::nxv8bf16 && Subtarget->hasBF16())) {
+               VT == MVT::nxv8bf16) {
       SelectPredicatedLoad(Node, 3, 1, AArch64::LD3H_IMM, AArch64::LD3H);
       return;
     } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
@@ -4945,7 +4965,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SelectPredicatedLoad(Node, 4, 0, AArch64::LD4B_IMM, AArch64::LD4B);
       return;
     } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
-               (VT == MVT::nxv8bf16 && Subtarget->hasBF16())) {
+               VT == MVT::nxv8bf16) {
       SelectPredicatedLoad(Node, 4, 1, AArch64::LD4H_IMM, AArch64::LD4H);
       return;
     } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {

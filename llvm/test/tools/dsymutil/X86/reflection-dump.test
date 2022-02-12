@@ -42,3 +42,12 @@ CHECK-NEXT:	 10000e23c f0ffffff ecffffff                    ........
 CHECK: Contents of section __DWARF,__swift5_builtin:
 CHECK-NEXT:  10000e244 00000000 09000000 08000100 10000000  ................
 CHECK-NEXT:  10000e254 fe000000                             ....
+
+CHECK: Contents of section __DWARF,__swift5_proto:
+CHECK-NEXT: 10000e258 41424344 45464748 4950               ABCDEFGHIP
+
+CHECK: Contents of section __DWARF,__swift5_protos:
+CHECK-NEXT: 10000e264 51525354 55565758 5960               QRSTUVWXY`
+
+CHECK: Contents of section __DWARF,__swift5_acfuncs:
+CHECK-NEXT: 10000e270 61626364 65666768 6970               abcdefghip

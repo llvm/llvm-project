@@ -17,7 +17,7 @@ define void @test_and(i1 %boolcond) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %inc, %backedge ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,3) S: [0,3) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %or.cond = and i1 %cond.false.on.first.iter, %cond.false.on.second.iter
-; CHECK-NEXT:    --> %or.cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%cond.false.on.first.iter umin %cond.false.on.second.iter) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %inc = add nuw nsw i32 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,4) S: [1,4) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_and
@@ -64,7 +64,7 @@ define void @test_or(i1 %boolcond) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %inc, %backedge ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,3) S: [0,3) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %or.cond = or i1 %cond.true.on.first.iter, %cond.true.on.second.iter
-; CHECK-NEXT:    --> %or.cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%cond.true.on.first.iter umax %cond.true.on.second.iter) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %inc = add nuw nsw i32 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,4) S: [1,4) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_or

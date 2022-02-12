@@ -97,6 +97,47 @@ for.end:
       });
 }
 
+TEST(IVDescriptorsTest, LoopWithScalableTypes) {
+  // Parse the module.
+  LLVMContext Context;
+
+  std::unique_ptr<Module> M =
+      parseIR(Context,
+              R"(define void @foo(<vscale x 4 x float>* %ptr) {
+entry:
+  br label %for.body
+
+for.body:
+  %lsr.iv1 = phi <vscale x 4 x float>* [ %0, %for.body ], [ %ptr, %entry ]
+  %j.0117 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
+  %lsr.iv12 = bitcast <vscale x 4 x float>* %lsr.iv1 to i8*
+  %inc = add nuw nsw i64 %j.0117, 1
+  %uglygep = getelementptr i8, i8* %lsr.iv12, i64 4
+  %0 = bitcast i8* %uglygep to <vscale x 4 x float>*
+  %cmp = icmp ne i64 %inc, 1024
+  br i1 %cmp, label %for.body, label %end
+
+end:
+  ret void
+})");
+
+  runWithLoopInfoAndSE(
+      *M, "foo", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        Function::iterator FI = F.begin();
+        // First basic block is entry - skip it.
+        BasicBlock *Header = &*(++FI);
+        assert(Header->getName() == "for.body");
+        Loop *L = LI.getLoopFor(Header);
+        EXPECT_NE(L, nullptr);
+        PHINode *Inst_iv = dyn_cast<PHINode>(&Header->front());
+        assert(Inst_iv->getName() == "lsr.iv1");
+        InductionDescriptor IndDesc;
+        bool IsInductionPHI =
+            InductionDescriptor::isInductionPHI(Inst_iv, L, &SE, IndDesc);
+        EXPECT_FALSE(IsInductionPHI);
+      });
+}
+
 // Depending on how SCEV deals with ptrtoint cast, the step of a phi could be
 // a pointer, and InductionDescriptor used to fail with an assertion.
 // So just check that it doesn't assert.

@@ -255,6 +255,14 @@ def SIdenorm_mode : SDNode<"AMDGPUISD::DENORM_MODE",
   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]
 >;
 
+def SIfptrunc_round_upward : SDNode<"AMDGPUISD::FPTRUNC_ROUND_UPWARD",
+  SDTFPRoundOp
+>;
+
+def SIfptrunc_round_downward : SDNode<"AMDGPUISD::FPTRUNC_ROUND_DOWNWARD",
+  SDTFPRoundOp
+>;
+
 //===----------------------------------------------------------------------===//
 // ValueType helpers
 //===----------------------------------------------------------------------===//
@@ -291,19 +299,10 @@ class isPackedType<ValueType SrcVT> {
 // PatFrags for global memory operations
 //===----------------------------------------------------------------------===//
 
-foreach as = [ "global", "flat", "constant", "local", "private", "region" ] in {
-let AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
-
-
-defm atomic_inc_#as : binary_atomic_op<SIatomic_inc>;
-defm atomic_dec_#as : binary_atomic_op<SIatomic_dec>;
-defm atomic_load_fmin_#as : binary_atomic_op<SIatomic_fmin, 0>;
-defm atomic_load_fmax_#as : binary_atomic_op<SIatomic_fmax, 0>;
-
-
-} // End let AddressSpaces = ...
-} // End foreach AddrSpace
-
+defm atomic_inc : binary_atomic_op_all_as<SIatomic_inc>;
+defm atomic_dec : binary_atomic_op_all_as<SIatomic_dec>;
+defm atomic_load_fmin : binary_atomic_op_all_as<SIatomic_fmin, 0>;
+defm atomic_load_fmax : binary_atomic_op_all_as<SIatomic_fmax, 0>;
 
 //===----------------------------------------------------------------------===//
 // SDNodes PatFrags for loads/stores with a glue input.
@@ -686,10 +685,14 @@ multiclass SIAtomicM0Glue2 <string op_name, bit is_amdgpu = 0,
 
   let AddressSpaces = StoreAddress_local.AddrSpaces in {
     defm _local_m0 : binary_atomic_op <!cast<SDNode>(NAME#"_glue"), IsInt>;
+    defm _local_m0 : ret_noret_binary_atomic_op <!cast<SDNode>(NAME#"_glue"),
+                                                 IsInt>;
   }
 
   let AddressSpaces = StoreAddress_region.AddrSpaces in {
     defm _region_m0 : binary_atomic_op <!cast<SDNode>(NAME#"_glue"), IsInt>;
+    defm _region_m0 : ret_noret_binary_atomic_op <!cast<SDNode>(NAME#"_glue"),
+                                                  IsInt>;
   }
 }
 
