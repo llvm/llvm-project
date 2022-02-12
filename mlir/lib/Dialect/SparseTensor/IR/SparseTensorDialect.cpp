@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
+
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
@@ -15,8 +16,6 @@
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
-
-#include "mlir/Dialect/SparseTensor/IR/SparseTensorOpsDialect.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // TensorDialect Attribute Methods.
@@ -351,3 +350,5 @@ void SparseTensorDialect::initialize() {
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorOps.cpp.inc"
+
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorOpsDialect.cpp.inc"
