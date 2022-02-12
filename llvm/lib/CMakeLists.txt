@@ -40,7 +40,6 @@ add_subdirectory(XRay)
 if (LLVM_INCLUDE_TESTS)
   add_subdirectory(Testing)
 endif()
-add_subdirectory(WindowsDriver)
 add_subdirectory(WindowsManifest)
 
 set(LLVMCONFIGLIBRARYDEPENDENCIESINC "${LLVM_BINARY_DIR}/tools/llvm-config/LibraryDependencies.inc")
