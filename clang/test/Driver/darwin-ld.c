@@ -236,6 +236,9 @@
 // RUN: %clang -target x86_64-apple-darwin12 -rdynamic -### %t.o \
 // RUN:   -fuse-ld= -mlinker-version=137 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_EXPORT_DYNAMIC %s < %t.log
+// RUN: %clang -target x86_64-apple-darwin12 -rdynamic -### %t.o \
+// RUN:   -fuse-ld=lld -B%S/Inputs/lld -mlinker-version=100 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_EXPORT_DYNAMIC %s < %t.log
 // LINK_EXPORT_DYNAMIC: {{ld(.exe)?"}}
 // LINK_EXPORT_DYNAMIC: "-export_dynamic"
 
