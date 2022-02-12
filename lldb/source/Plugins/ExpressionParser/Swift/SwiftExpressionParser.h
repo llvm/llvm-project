@@ -58,7 +58,9 @@ public:
   /// @param[in] options
   ///     Additional options for the parser.
   //------------------------------------------------------------------
-  SwiftExpressionParser(ExecutionContextScope *exe_scope, Expression &expr,
+  SwiftExpressionParser(ExecutionContextScope *exe_scope,
+                        SwiftASTContextForExpressions &swift_ast_ctx,
+                        Expression &expr,
                         const EvaluateExpressionOptions &options);
 
   //------------------------------------------------------------------
@@ -162,7 +164,7 @@ private:
   /// The container for the IR, to be JIT-compiled or interpreted.
   lldb::IRExecutionUnitSP m_execution_unit_sp;
   /// The AST context to build the expression into.
-  std::unique_ptr<SwiftScratchContextReader> m_swift_ast_context;
+  SwiftASTContextForExpressions &m_swift_ast_ctx;
   /// Used to manage the memory of a potential on-off context.
   //lldb::TypeSystemSP m_typesystem_sp;
   /// The symbol context to use when parsing.

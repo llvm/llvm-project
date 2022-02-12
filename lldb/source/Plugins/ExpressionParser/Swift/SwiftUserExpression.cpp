@@ -56,9 +56,18 @@ SwiftUserExpression::SwiftUserExpression(
       m_type_system_helper(*m_target_wp.lock().get()),
       m_result_delegate(exe_scope.CalculateTarget(), *this, false),
       m_error_delegate(exe_scope.CalculateTarget(), *this, true),
-      m_persistent_variable_delegate(*this) {
+      m_persistent_variable_delegate(*this),
+      m_swift_scratch_ctx(
+          exe_scope.CalculateTarget()
+              ? exe_scope.CalculateTarget()->GetSwiftScratchContext(m_err,
+                                                                    exe_scope)
+              : llvm::None) {
   m_runs_in_playground_or_repl =
       options.GetREPLEnabled() || options.GetPlaygroundTransformEnabled();
+  if (m_swift_scratch_ctx)
+    if (m_swift_scratch_ctx->get())
+      m_swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
+          m_swift_scratch_ctx->get()->GetSwiftASTContext());
 }
 
 SwiftUserExpression::~SwiftUserExpression() {}
@@ -184,22 +193,16 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
     return;
   }
 
-  // Make sure the target's SwiftASTContext has been setup before doing any
-  // Swift name lookups.
-  llvm::Optional<SwiftScratchContextReader> maybe_swift_ast_ctx =
-      m_target->GetSwiftScratchContext(err, *frame);
-  if (!maybe_swift_ast_ctx) {
+  if (!m_swift_ast_ctx) {
     LLDB_LOG(log, "  [SUE::SC] NULL Swift AST Context");
     return;
   }
-  SwiftASTContext *swift_ast_ctx = maybe_swift_ast_ctx->get();
-
-  if (!swift_ast_ctx->GetClangImporter()) {
+  if (!m_swift_ast_ctx->GetClangImporter()) {
     LLDB_LOG(log, "  [SUE::SC] Swift AST Context has no Clang importer");
     return;
   }
 
-  if (swift_ast_ctx->HasFatalErrors()) {
+  if (m_swift_ast_ctx->HasFatalErrors()) {
     LLDB_LOG(log, "  [SUE::SC] Swift AST Context has fatal errors");
     return;
   }
@@ -297,39 +300,35 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     return false;
   }
 
-  // Make sure the target's SwiftASTContext has been setup before doing any
-  // Swift name lookups.
-  llvm::Optional<SwiftScratchContextReader> maybe_swift_ast_ctx =
-      target->GetSwiftScratchContext(err, *frame);
-  if (!maybe_swift_ast_ctx) {
+  if (!m_swift_ast_ctx) {
     LLDB_LOG(log, "no Swift AST Context");
     return false;
   }
-
-  SwiftASTContext *swift_ast_ctx = maybe_swift_ast_ctx->get();
-
-  if (auto *persistent_state = GetPersistentState(target, exe_ctx)) {
-
-    Status error;
-    SourceModule module_info;
-    module_info.path.emplace_back("Swift");
-    swift::ModuleDecl *module = swift_ast_ctx->GetModule(module_info, error);
-
-    if (error.Fail() || !module) {
-      LLDB_LOG(log, "couldn't load Swift Standard Library\n");
-      return false;
-    }
-
-    persistent_state->AddHandLoadedModule(ConstString("Swift"),
-                                          swift::ImportedModule(module));
-    m_result_delegate.RegisterPersistentState(persistent_state);
-    m_error_delegate.RegisterPersistentState(persistent_state);
-  } else {
+  
+  // This may destroy the scratch context.
+  auto *persistent_state = GetPersistentState(target, exe_ctx);
+  if (!persistent_state) {
     diagnostic_manager.PutString(eDiagnosticSeverityError,
                                  "couldn't start parsing (no persistent data)");
     return false;
   }
 
+  Status error;
+  SourceModule module_info;
+  module_info.path.emplace_back("Swift");
+  swift::ModuleDecl *module_decl =
+      m_swift_ast_ctx->GetModule(module_info, error);
+
+  if (error.Fail() || !module_decl) {
+    LLDB_LOG(log, "couldn't load Swift Standard Library\n");
+    return false;
+  }
+
+  persistent_state->AddHandLoadedModule(ConstString("Swift"),
+                                        swift::ImportedModule(module_decl));
+  m_result_delegate.RegisterPersistentState(persistent_state);
+  m_error_delegate.RegisterPersistentState(persistent_state);
+ 
   ScanContext(exe_ctx, err);
 
   if (!err.Success()) {
@@ -409,7 +408,8 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     exe_scope = exe_ctx.GetTargetPtr();
   } while (0);
 
-  auto *swift_parser = new SwiftExpressionParser(exe_scope, *this, m_options);
+  auto *swift_parser =
+      new SwiftExpressionParser(exe_scope, *m_swift_ast_ctx, *this, m_options);
   unsigned error_code = swift_parser->Parse(
       diagnostic_manager, first_body_line,
       first_body_line + source_code->GetNumBodyLines());
