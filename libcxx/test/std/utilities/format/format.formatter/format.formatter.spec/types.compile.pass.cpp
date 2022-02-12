@@ -135,7 +135,7 @@ void test_P0645() {
   assert_formatter_is_enabled<signed int, CharT>();
   assert_formatter_is_enabled<signed long, CharT>();
   assert_formatter_is_enabled<signed long long, CharT>();
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
   assert_formatter_is_enabled<__int128_t, CharT>();
 #endif
 
@@ -144,7 +144,7 @@ void test_P0645() {
   assert_formatter_is_enabled<unsigned int, CharT>();
   assert_formatter_is_enabled<unsigned long, CharT>();
   assert_formatter_is_enabled<unsigned long long, CharT>();
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
   assert_formatter_is_enabled<__uint128_t, CharT>();
 #endif
 
