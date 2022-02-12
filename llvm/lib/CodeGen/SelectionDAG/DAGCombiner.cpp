@@ -19195,14 +19195,9 @@ SDValue DAGCombiner::scalarizeExtractedVectorLoad(SDNode *EVE, EVT InVecVT,
   SDValue NewPtr = TLI.getVectorElementPointer(DAG, OriginalLoad->getBasePtr(),
                                                InVecVT, EltNo);
 
-  // The replacement we need to do here is a little tricky: we need to
-  // replace an extractelement of a load with a load.
-  // Use ReplaceAllUsesOfValuesWith to do the replacement.
-  // Note that this replacement assumes that the extractvalue is the only
-  // use of the load; that's okay because we don't want to perform this
-  // transformation in other cases anyway.
+  // We are replacing a vector load with a scalar load. The new load must have
+  // identical memory op ordering to the original.
   SDValue Load;
-  SDValue Chain;
   if (ResultVT.bitsGT(VecEltVT)) {
     // If the result type of vextract is wider than the load, then issue an
     // extending load instead.
@@ -19213,28 +19208,20 @@ SDValue DAGCombiner::scalarizeExtractedVectorLoad(SDNode *EVE, EVT InVecVT,
                           NewPtr, MPI, VecEltVT, Alignment,
                           OriginalLoad->getMemOperand()->getFlags(),
                           OriginalLoad->getAAInfo());
-    Chain = Load.getValue(1);
+    DAG.makeEquivalentMemoryOrdering(OriginalLoad, Load);
   } else {
+    // The result type is narrower or the same width as the vector element
     Load = DAG.getLoad(VecEltVT, DL, OriginalLoad->getChain(), NewPtr, MPI,
                        Alignment, OriginalLoad->getMemOperand()->getFlags(),
                        OriginalLoad->getAAInfo());
-    Chain = Load.getValue(1);
+    DAG.makeEquivalentMemoryOrdering(OriginalLoad, Load);
     if (ResultVT.bitsLT(VecEltVT))
       Load = DAG.getNode(ISD::TRUNCATE, DL, ResultVT, Load);
     else
       Load = DAG.getBitcast(ResultVT, Load);
   }
-  WorklistRemover DeadNodes(*this);
-  SDValue From[] = {SDValue(EVE, 0), SDValue(OriginalLoad, 1)};
-  SDValue To[] = {Load, Chain};
-  DAG.ReplaceAllUsesOfValuesWith(From, To, 2);
-  // Make sure to revisit this node to clean it up; it will usually be dead.
-  AddToWorklist(EVE);
-  // Since we're explicitly calling ReplaceAllUses, add the new node to the
-  // worklist explicitly as well.
-  AddToWorklistWithUsers(Load.getNode());
   ++OpsNarrowed;
-  return SDValue(EVE, 0);
+  return Load;
 }
 
 /// Transform a vector binary operation into a scalar binary operation by moving
