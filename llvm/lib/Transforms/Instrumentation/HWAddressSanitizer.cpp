@@ -1046,11 +1046,6 @@ bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O) {
   return true;
 }
 
-static uint64_t getAllocaSizeInBytes(const AllocaInst &AI) {
-  auto DL = AI.getModule()->getDataLayout();
-  return AI.getAllocationSizeInBits(DL).getValue() / 8;
-}
-
 void HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
                                    size_t Size) {
   size_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
@@ -1353,7 +1348,7 @@ bool HWAddressSanitizer::instrumentStack(
                                                           NewOps, LocNo));
     }
 
-    size_t Size = getAllocaSizeInBytes(*AI);
+    size_t Size = memtag::getAllocaSizeInBytes(*AI);
     size_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
     auto TagEnd = [&](Instruction *Node) {
       IRB.SetInsertPoint(Node);
@@ -1396,7 +1391,7 @@ bool HWAddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
           // FIXME: instrument dynamic allocas, too
           AI.isStaticAlloca() &&
           // alloca() may be called with 0 size, ignore it.
-          getAllocaSizeInBytes(AI) > 0 &&
+          memtag::getAllocaSizeInBytes(AI) > 0 &&
           // We are only interested in allocas not promotable to registers.
           // Promotable allocas are common under -O0.
           !isAllocaPromotable(&AI) &&
@@ -1414,7 +1409,7 @@ DenseMap<AllocaInst *, AllocaInst *> HWAddressSanitizer::padInterestingAllocas(
   DenseMap<AllocaInst *, AllocaInst *> AllocaToPaddedAllocaMap;
   for (auto &KV : AllocasToInstrument) {
     AllocaInst *AI = KV.first;
-    uint64_t Size = getAllocaSizeInBytes(*AI);
+    uint64_t Size = memtag::getAllocaSizeInBytes(*AI);
     uint64_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
     AI->setAlignment(
         Align(std::max(AI->getAlignment(), Mapping.getObjectAlignment())));
