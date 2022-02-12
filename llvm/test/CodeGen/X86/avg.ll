@@ -166,10 +166,10 @@ define void @avg_v32i8(<32 x i8>* %a, <32 x i8>* %b) nounwind {
 ;
 ; AVX1-LABEL: avg_v32i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa (%rsi), %xmm0
-; AVX1-NEXT:    vmovdqa 16(%rsi), %xmm1
-; AVX1-NEXT:    vpavgb (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vpavgb 16(%rdi), %xmm1, %xmm1
+; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
+; AVX1-NEXT:    vpavgb (%rsi), %xmm0, %xmm0
+; AVX1-NEXT:    vpavgb 16(%rsi), %xmm1, %xmm1
 ; AVX1-NEXT:    vmovdqu %xmm1, (%rax)
 ; AVX1-NEXT:    vmovdqu %xmm0, (%rax)
 ; AVX1-NEXT:    retq
@@ -316,10 +316,10 @@ define void @avg_v64i8(<64 x i8>* %a, <64 x i8>* %b) nounwind {
 ;
 ; AVX512F-LABEL: avg_v64i8:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqa (%rsi), %ymm0
-; AVX512F-NEXT:    vmovdqa 32(%rsi), %ymm1
-; AVX512F-NEXT:    vpavgb (%rdi), %ymm0, %ymm0
-; AVX512F-NEXT:    vpavgb 32(%rdi), %ymm1, %ymm1
+; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX512F-NEXT:    vmovdqa 32(%rdi), %ymm1
+; AVX512F-NEXT:    vpavgb (%rsi), %ymm0, %ymm0
+; AVX512F-NEXT:    vpavgb 32(%rsi), %ymm1, %ymm1
 ; AVX512F-NEXT:    vmovdqu %ymm1, (%rax)
 ; AVX512F-NEXT:    vmovdqu %ymm0, (%rax)
 ; AVX512F-NEXT:    vzeroupper
@@ -411,10 +411,10 @@ define void @avg_v16i16(<16 x i16>* %a, <16 x i16>* %b) nounwind {
 ;
 ; AVX1-LABEL: avg_v16i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa (%rsi), %xmm0
-; AVX1-NEXT:    vmovdqa 16(%rsi), %xmm1
-; AVX1-NEXT:    vpavgw (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vpavgw 16(%rdi), %xmm1, %xmm1
+; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
+; AVX1-NEXT:    vpavgw (%rsi), %xmm0, %xmm0
+; AVX1-NEXT:    vpavgw 16(%rsi), %xmm1, %xmm1
 ; AVX1-NEXT:    vmovdqu %xmm1, (%rax)
 ; AVX1-NEXT:    vmovdqu %xmm0, (%rax)
 ; AVX1-NEXT:    retq
@@ -492,10 +492,10 @@ define void @avg_v32i16(<32 x i16>* %a, <32 x i16>* %b) nounwind {
 ;
 ; AVX512F-LABEL: avg_v32i16:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqa (%rsi), %ymm0
-; AVX512F-NEXT:    vmovdqa 32(%rsi), %ymm1
-; AVX512F-NEXT:    vpavgw (%rdi), %ymm0, %ymm0
-; AVX512F-NEXT:    vpavgw 32(%rdi), %ymm1, %ymm1
+; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX512F-NEXT:    vmovdqa 32(%rdi), %ymm1
+; AVX512F-NEXT:    vpavgw (%rsi), %ymm0, %ymm0
+; AVX512F-NEXT:    vpavgw 32(%rsi), %ymm1, %ymm1
 ; AVX512F-NEXT:    vmovdqu %ymm1, (%rax)
 ; AVX512F-NEXT:    vmovdqu %ymm0, (%rax)
 ; AVX512F-NEXT:    vzeroupper
