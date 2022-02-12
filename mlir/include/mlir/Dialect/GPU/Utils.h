@@ -38,7 +38,9 @@ gpu::GPUFuncOp outlineKernelFunc(gpu::LaunchOp launchOp, StringRef kernelFnName,
 /// Sink operations into the `launchOp` to reduce the number of values that are
 /// used within the region of the operation, but defined outside of the
 /// region.
-LogicalResult sinkOperationsIntoLaunchOp(gpu::LaunchOp launchOp);
+LogicalResult sinkOperationsIntoLaunchOp(
+    gpu::LaunchOp launchOp,
+    llvm::function_ref<bool(Operation *)> isSinkingBeneficiary);
 
 } // namespace mlir
 #endif // MLIR_DIALECT_GPU_UTILS_H_
