@@ -1547,27 +1547,6 @@ findCondCodeUseOperandIdxForBranchOrSelect(const MachineInstr &Instr) {
   }
 }
 
-namespace {
-
-struct UsedNZCV {
-  bool N = false;
-  bool Z = false;
-  bool C = false;
-  bool V = false;
-
-  UsedNZCV() = default;
-
-  UsedNZCV &operator|=(const UsedNZCV &UsedFlags) {
-    this->N |= UsedFlags.N;
-    this->Z |= UsedFlags.Z;
-    this->C |= UsedFlags.C;
-    this->V |= UsedFlags.V;
-    return *this;
-  }
-};
-
-} // end anonymous namespace
-
 /// Find a condition code used by the instruction.
 /// Returns AArch64CC::Invalid if either the instruction does not use condition
 /// codes or we don't optimize CmpInstr in the presence of such instructions.
@@ -1622,15 +1601,15 @@ static UsedNZCV getUsedNZCV(AArch64CC::CondCode CC) {
   return UsedFlags;
 }
 
-/// \returns Conditions flags used after \p CmpInstr in its MachineBB if they
-/// are not containing C or V flags and NZCV flags are not alive in successors
-/// of the same \p CmpInstr and \p MI parent. \returns None otherwise.
+/// \returns Conditions flags used after \p CmpInstr in its MachineBB if NZCV
+/// flags are not alive in successors of the same \p CmpInstr and \p MI parent.
+/// \returns None otherwise.
 ///
 /// Collect instructions using that flags in \p CCUseInstrs if provided.
-static Optional<UsedNZCV>
-examineCFlagsUse(MachineInstr &MI, MachineInstr &CmpInstr,
-                 const TargetRegisterInfo &TRI,
-                 SmallVectorImpl<MachineInstr *> *CCUseInstrs = nullptr) {
+Optional<UsedNZCV>
+llvm::examineCFlagsUse(MachineInstr &MI, MachineInstr &CmpInstr,
+                       const TargetRegisterInfo &TRI,
+                       SmallVectorImpl<MachineInstr *> *CCUseInstrs) {
   MachineBasicBlock *CmpParent = CmpInstr.getParent();
   if (MI.getParent() != CmpParent)
     return None;
@@ -1652,8 +1631,6 @@ examineCFlagsUse(MachineInstr &MI, MachineInstr &CmpInstr,
     if (Instr.modifiesRegister(AArch64::NZCV, &TRI))
       break;
   }
-  if (NZCVUsedAfterCmp.C || NZCVUsedAfterCmp.V)
-    return None;
   return NZCVUsedAfterCmp;
 }
 
@@ -1684,7 +1661,8 @@ static bool canInstrSubstituteCmpInstr(MachineInstr &MI, MachineInstr &CmpInstr,
   if (!isADDSRegImm(CmpOpcode) && !isSUBSRegImm(CmpOpcode))
     return false;
 
-  if (!examineCFlagsUse(MI, CmpInstr, TRI))
+  Optional<UsedNZCV> NZVCUsed = examineCFlagsUse(MI, CmpInstr, TRI);
+  if (!NZVCUsed || NZVCUsed->C || NZVCUsed->V)
     return false;
 
   AccessKind AccessToCheck = AK_Write;
@@ -1773,7 +1751,7 @@ static bool canCmpInstrBeRemoved(MachineInstr &MI, MachineInstr &CmpInstr,
       examineCFlagsUse(MI, CmpInstr, TRI, &CCUseInstrs);
   // Condition flags are not used in CmpInstr basic block successors and only
   // Z or N flags allowed to be used after CmpInstr within its basic block
-  if (!NZCVUsedAfterCmp)
+  if (!NZCVUsedAfterCmp || NZCVUsedAfterCmp->C || NZCVUsedAfterCmp->V)
     return false;
   // Z or N flag used after CmpInstr must correspond to the flag used in MI
   if ((MIUsedNZCV.Z && NZCVUsedAfterCmp->N) ||
