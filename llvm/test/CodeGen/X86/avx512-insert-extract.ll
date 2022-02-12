@@ -668,7 +668,6 @@ define <32 x i16> @insert_v32i16(<32 x i16> %x, i16 %y, i16* %ptr) {
 ; KNL-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm1
 ; KNL-NEXT:    vmovd %edi, %xmm0
 ; KNL-NEXT:    vpbroadcastw %xmm0, %ymm0
-; KNL-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
 ; KNL-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm0
 ; KNL-NEXT:    retq
 ;
