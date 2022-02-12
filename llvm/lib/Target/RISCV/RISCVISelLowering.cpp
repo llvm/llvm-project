@@ -7443,6 +7443,8 @@ static SDValue combineMUL_VLToVWMUL_VL(SDNode *N, SelectionDAG &DAG,
   unsigned ExtOpc = IsSignExt ? RISCVISD::VSEXT_VL : RISCVISD::VZEXT_VL;
   if (Op0.getValueType() != NarrowVT)
     Op0 = DAG.getNode(ExtOpc, DL, NarrowVT, Op0, Mask, VL);
+  // vwmulsu requires second operand to be zero extended.
+  ExtOpc = IsVWMULSU ? RISCVISD::VZEXT_VL : ExtOpc;
   if (Op1.getValueType() != NarrowVT)
     Op1 = DAG.getNode(ExtOpc, DL, NarrowVT, Op1, Mask, VL);
 
