@@ -30,24 +30,24 @@ int main(int, char**)
         assert(std::distance(c.begin(), c.end()) == 1);
 
         i = c.insert_after(c.cbegin(), 1);
-        assert(i == next(c.begin()));
+        assert(i == std::next(c.begin()));
         assert(c.front() == 0);
-        assert(*next(c.begin()) == 1);
+        assert(*std::next(c.begin()) == 1);
         assert(std::distance(c.begin(), c.end()) == 2);
 
-        i = c.insert_after(next(c.cbegin()), 2);
-        assert(i == next(c.begin(), 2));
+        i = c.insert_after(std::next(c.cbegin()), 2);
+        assert(i == std::next(c.begin(), 2));
         assert(c.front() == 0);
-        assert(*next(c.begin()) == 1);
-        assert(*next(c.begin(), 2) == 2);
+        assert(*std::next(c.begin()) == 1);
+        assert(*std::next(c.begin(), 2) == 2);
         assert(std::distance(c.begin(), c.end()) == 3);
 
         i = c.insert_after(c.cbegin(), 3);
-        assert(i == next(c.begin()));
+        assert(i == std::next(c.begin()));
         assert(c.front() == 0);
-        assert(*next(c.begin(), 1) == 3);
-        assert(*next(c.begin(), 2) == 1);
-        assert(*next(c.begin(), 3) == 2);
+        assert(*std::next(c.begin(), 1) == 3);
+        assert(*std::next(c.begin(), 2) == 1);
+        assert(*std::next(c.begin(), 3) == 2);
         assert(std::distance(c.begin(), c.end()) == 4);
     }
 #if TEST_STD_VER >= 11
@@ -63,24 +63,24 @@ int main(int, char**)
         assert(std::distance(c.begin(), c.end()) == 1);
 
         i = c.insert_after(c.cbegin(), 1);
-        assert(i == next(c.begin()));
+        assert(i == std::next(c.begin()));
         assert(c.front() == 0);
-        assert(*next(c.begin()) == 1);
+        assert(*std::next(c.begin()) == 1);
         assert(std::distance(c.begin(), c.end()) == 2);
 
-        i = c.insert_after(next(c.cbegin()), 2);
-        assert(i == next(c.begin(), 2));
+        i = c.insert_after(std::next(c.cbegin()), 2);
+        assert(i == std::next(c.begin(), 2));
         assert(c.front() == 0);
-        assert(*next(c.begin()) == 1);
-        assert(*next(c.begin(), 2) == 2);
+        assert(*std::next(c.begin()) == 1);
+        assert(*std::next(c.begin(), 2) == 2);
         assert(std::distance(c.begin(), c.end()) == 3);
 
         i = c.insert_after(c.cbegin(), 3);
-        assert(i == next(c.begin()));
+        assert(i == std::next(c.begin()));
         assert(c.front() == 0);
-        assert(*next(c.begin(), 1) == 3);
-        assert(*next(c.begin(), 2) == 1);
-        assert(*next(c.begin(), 3) == 2);
+        assert(*std::next(c.begin(), 1) == 3);
+        assert(*std::next(c.begin(), 2) == 1);
+        assert(*std::next(c.begin(), 3) == 2);
         assert(std::distance(c.begin(), c.end()) == 4);
     }
 #endif

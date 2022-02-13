@@ -61,7 +61,7 @@ int main(int, char**)
     assert(std::distance(l1.begin(), l1.end()) == 2);
     assert(*j == 3);
     assert(*l1.begin() == 1);
-    assert(*next(l1.begin()) == 3);
+    assert(*std::next(l1.begin()) == 3);
     assert(is_contiguous_container_asan_correct(l1));
     j = l1.erase(j);
     assert(j == l1.end());
@@ -87,7 +87,7 @@ int main(int, char**)
     assert(std::distance(l1.begin(), l1.end()) == 2);
     assert(*j == 3);
     assert(*l1.begin() == 1);
-    assert(*next(l1.begin()) == 3);
+    assert(*std::next(l1.begin()) == 3);
     assert(is_contiguous_container_asan_correct(l1));
     j = l1.erase(j);
     assert(j == l1.end());
