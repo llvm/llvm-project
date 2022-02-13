@@ -406,4 +406,216 @@ define i64 @addl_0x80000000(i64 %a) {
   ret i64 %b
 }
 
-; TODO: adds/subs
+; ADDS and SUBS Optimizations
+; Checks with all types first, then checks that only EQ and NE optimize
+define i1 @eq_i(i32 %0) {
+; CHECK-LABEL: eq_i:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub w8, w0, #273, lsl #12 // =1118208
+; CHECK-NEXT:    cmp w8, #273
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+  %2 = icmp eq i32 %0, 1118481
+  ret i1 %2
+}
+
+define i1 @eq_l(i64 %0) {
+; CHECK-LABEL: eq_l:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub x8, x0, #273, lsl #12 // =1118208
+; CHECK-NEXT:    cmp x8, #273
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+  %2 = icmp eq i64 %0, 1118481
+  ret i1 %2
+}
+
+define i1 @ne_i(i32 %0) {
+; CHECK-LABEL: ne_i:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub w8, w0, #273, lsl #12 // =1118208
+; CHECK-NEXT:    cmp w8, #273
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    ret
+  %2 = icmp ne i32 %0, 1118481
+  ret i1 %2
+}
+
+define i1 @ne_l(i64 %0) {
+; CHECK-LABEL: ne_l:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub x8, x0, #273, lsl #12 // =1118208
+; CHECK-NEXT:    cmp x8, #273
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    ret
+  %2 = icmp ne i64 %0, 1118481
+  ret i1 %2
+}
+
+define i1 @eq_in(i32 %0) {
+; CHECK-LABEL: eq_in:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add w8, w0, #273, lsl #12 // =1118208
+; CHECK-NEXT:    cmn w8, #273
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+  %2 = icmp eq i32 %0, -1118481
+  ret i1 %2
+}
+
+define i1 @eq_ln(i64 %0) {
+; CHECK-LABEL: eq_ln:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add x8, x0, #273, lsl #12 // =1118208
+; CHECK-NEXT:    cmn x8, #273
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+  %2 = icmp eq i64 %0, -1118481
+  ret i1 %2
+}
+
+define i1 @ne_in(i32 %0) {
+; CHECK-LABEL: ne_in:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add w8, w0, #273, lsl #12 // =1118208
+; CHECK-NEXT:    cmn w8, #273
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    ret
+  %2 = icmp ne i32 %0, -1118481
+  ret i1 %2
+}
+
+define i1 @ne_ln(i64 %0) {
+; CHECK-LABEL: ne_ln:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add x8, x0, #273, lsl #12 // =1118208
+; CHECK-NEXT:    cmn x8, #273
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    ret
+  %2 = icmp ne i64 %0, -1118481
+  ret i1 %2
+}
+
+define i1 @reject_eq(i32 %0) {
+; CHECK-LABEL: reject_eq:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #51712
+; CHECK-NEXT:    movk w8, #15258, lsl #16
+; CHECK-NEXT:    cmp w0, w8
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+  %2 = icmp eq i32 %0, 1000000000
+  ret i1 %2
+}
+
+define i1 @reject_non_eqne_csinc(i32 %0) {
+; CHECK-LABEL: reject_non_eqne_csinc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #4369
+; CHECK-NEXT:    movk w8, #17, lsl #16
+; CHECK-NEXT:    cmp w0, w8
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    ret
+  %2 = icmp ult i32 %0, 1118481
+  ret i1 %2
+}
+
+define i32 @accept_csel(i32 %0) {
+; CHECK-LABEL: accept_csel:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub w9, w0, #273, lsl #12 // =1118208
+; CHECK-NEXT:    mov w8, #17
+; CHECK-NEXT:    cmp w9, #273
+; CHECK-NEXT:    mov w9, #11
+; CHECK-NEXT:    csel w0, w9, w8, eq
+; CHECK-NEXT:    ret
+  %2 = icmp eq i32 %0, 1118481
+  %3 = select i1 %2, i32 11, i32 17
+  ret i32 %3
+}
+
+define i32 @reject_non_eqne_csel(i32 %0) {
+; CHECK-LABEL: reject_non_eqne_csel:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #4369
+; CHECK-NEXT:    mov w9, #11
+; CHECK-NEXT:    movk w8, #17, lsl #16
+; CHECK-NEXT:    cmp w0, w8
+; CHECK-NEXT:    mov w8, #17
+; CHECK-NEXT:    csel w0, w9, w8, lo
+; CHECK-NEXT:    ret
+  %2 = icmp ult i32 %0, 1118481
+  %3 = select i1 %2, i32 11, i32 17
+  ret i32 %3
+}
+
+declare void @fooy()
+
+define void @accept_branch(i32 %0) {
+; CHECK-LABEL: accept_branch:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub w8, w0, #291, lsl #12 // =1191936
+; CHECK-NEXT:    cmp w8, #1110
+; CHECK-NEXT:    b.eq .LBB32_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB32_2:
+; CHECK-NEXT:    b fooy
+  %2 = icmp ne i32 %0, 1193046
+  br i1 %2, label %4, label %3
+3:                                                ; preds = %1
+  tail call void @fooy()
+  br label %4
+4:                                                ; preds = %3, %1
+  ret void
+}
+
+define void @reject_non_eqne_branch(i32 %0) {
+; CHECK-LABEL: reject_non_eqne_branch:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #13398
+; CHECK-NEXT:    movk w8, #18, lsl #16
+; CHECK-NEXT:    cmp w0, w8
+; CHECK-NEXT:    b.le .LBB33_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB33_2:
+; CHECK-NEXT:    b fooy
+  %2 = icmp sgt i32 %0, 1193046
+  br i1 %2, label %4, label %3
+3:                                                ; preds = %1
+  tail call void @fooy()
+  br label %4
+4:                                                ; preds = %3, %1
+  ret void
+}
+
+define i32 @reject_multiple_usages(i32 %0) {
+; CHECK-LABEL: reject_multiple_usages:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #4369
+; CHECK-NEXT:    mov w9, #3
+; CHECK-NEXT:    movk w8, #17, lsl #16
+; CHECK-NEXT:    mov w10, #17
+; CHECK-NEXT:    cmp w0, w8
+; CHECK-NEXT:    mov w8, #9
+; CHECK-NEXT:    mov w11, #12
+; CHECK-NEXT:    csel w8, w8, w9, eq
+; CHECK-NEXT:    csel w9, w11, w10, hi
+; CHECK-NEXT:    add w8, w8, w9
+; CHECK-NEXT:    mov w9, #53312
+; CHECK-NEXT:    movk w9, #2, lsl #16
+; CHECK-NEXT:    cmp w0, w9
+; CHECK-NEXT:    mov w9, #26304
+; CHECK-NEXT:    movk w9, #1433, lsl #16
+; CHECK-NEXT:    csel w0, w8, w9, hi
+; CHECK-NEXT:    ret
+  %2 = icmp eq i32 %0, 1118481
+  %3 = icmp ugt i32 %0, 1118481
+  %4 = select i1 %2, i32 9, i32 3
+  %5 = select i1 %3, i32 12, i32 17
+  %6 = add i32 %4, %5
+  %7 = icmp ugt i32 %0, 184384
+  %8 = select i1 %7, i32 %6, i32 93939392
+  ret i32 %8
+}

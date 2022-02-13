@@ -19,6 +19,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ValueHandle.h"
 
 namespace llvm {
 namespace memtag {
@@ -74,14 +75,15 @@ Instruction *getUntagLocationIfFunctionExit(Instruction &Inst);
 
 struct AllocaInfo {
   AllocaInst *AI;
+  TrackingVH<Instruction> OldAI; // Track through RAUW to replace debug uses.
   SmallVector<IntrinsicInst *, 2> LifetimeStart;
   SmallVector<IntrinsicInst *, 2> LifetimeEnd;
+  SmallVector<DbgVariableIntrinsic *, 2> DbgVariableIntrinsics;
 };
 
 struct StackInfo {
   MapVector<AllocaInst *, AllocaInfo> AllocasToInstrument;
   SmallVector<Instruction *, 4> UnrecognizedLifetimes;
-  DenseMap<AllocaInst *, std::vector<DbgVariableIntrinsic *>> AllocaDbgMap;
   SmallVector<Instruction *, 8> RetVec;
   bool CallsReturnTwice = false;
 };

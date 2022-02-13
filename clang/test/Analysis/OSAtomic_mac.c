@@ -7,7 +7,7 @@ int OSAtomicCompareAndSwapPtrBarrier() {
   // but we should trust our BodyFarm instead.
 }
 
-int *invalidSLocOnRedecl() {
+int *invalidSLocOnRedecl(void) {
   // Was crashing when trying to throw a report about returning an uninitialized
   // value to the caller. FIXME: We should probably still throw that report,
   // something like "The "compare" part of CompareAndSwap depends on an
@@ -17,7 +17,7 @@ int *invalidSLocOnRedecl() {
   return b;
 }
 
-void testThatItActuallyWorks() {
+void testThatItActuallyWorks(void) {
   void *x = 0;
   int res = OSAtomicCompareAndSwapPtrBarrier(0, &x, &x);
   clang_analyzer_eval(res); // expected-warning{{TRUE}}

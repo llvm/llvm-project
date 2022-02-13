@@ -15,7 +15,7 @@ static void f1(const char *x, char *y) {
 // the RvalueType of an ElementRegion.
 typedef struct F12_struct {} F12_typedef;
 typedef void* void_typedef;
-void_typedef f2_helper();
+void_typedef f2_helper(void);
 static void f2(void *buf) {
   F12_typedef* x;
   x = f2_helper();

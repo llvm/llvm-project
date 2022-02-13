@@ -6,6 +6,6 @@
 
 
 
-void f() {
+void f(void) {
   extern int g(int, int);
 }

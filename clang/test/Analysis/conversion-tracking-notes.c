@@ -7,7 +7,7 @@
 unsigned char U8;
 signed char S8;
 
-void track_assign() {
+void track_assign(void) {
   unsigned long L = 1000; // expected-note {{'L' initialized to 1000}}
   int I = -1;             // expected-note {{'I' initialized to -1}}
   U8 *= L; // expected-warning {{Loss of precision in implicit conversion}}

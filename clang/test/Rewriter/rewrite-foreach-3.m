@@ -16,7 +16,7 @@
 - (void)compilerTestAgainst;
 @end
 
-int LOOP();
+int LOOP(void);
 @implementation MyList (BasicTest)
 - (void)compilerTestAgainst {
   MyList * el;

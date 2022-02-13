@@ -31,6 +31,7 @@
 #include "OutputSection.h"
 #include "OutputSegment.h"
 #include "Symbols.h"
+#include "SyntheticSections.h"
 #include "Target.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -76,7 +77,27 @@ getSymbolStrings(ArrayRef<Defined *> syms) {
   std::vector<std::string> str(syms.size());
   parallelForEachN(0, syms.size(), [&](size_t i) {
     raw_string_ostream os(str[i]);
-    os << toString(*syms[i]);
+    Defined *sym = syms[i];
+
+    switch (sym->isec->kind()) {
+    case InputSection::CStringLiteralKind: {
+      // Output "literal string: <string literal>"
+      const auto *isec = cast<CStringInputSection>(sym->isec);
+      const StringPiece &piece = isec->getStringPiece(sym->value);
+      assert(
+          sym->value == piece.inSecOff &&
+          "We expect symbols to always point to the start of a StringPiece.");
+      StringRef str = isec->getStringRef(&piece - &(*isec->pieces.begin()));
+      assert(str.back() == '\000');
+      (os << "literal string: ")
+          // Remove null sequence at the end
+          .write_escaped(str.substr(0, str.size() - 1));
+      break;
+    }
+    case InputSection::ConcatKind:
+    case InputSection::WordLiteralKind:
+      os << toString(*sym);
+    }
   });
 
   DenseMap<Symbol *, std::string> ret;

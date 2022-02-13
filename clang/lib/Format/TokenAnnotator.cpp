@@ -1615,10 +1615,10 @@ private:
               PriorLeadingIdentifier->is(tok::kw_explicit))
             PriorLeadingIdentifier = PriorLeadingIdentifier->Previous;
 
-          return (PriorLeadingIdentifier &&
-                  (PriorLeadingIdentifier->is(TT_TemplateCloser) ||
-                   PriorLeadingIdentifier->ClosesRequiresClause) &&
-                  LeadingIdentifier->TokenText == Current.Next->TokenText);
+          return PriorLeadingIdentifier &&
+                 (PriorLeadingIdentifier->is(TT_TemplateCloser) ||
+                  PriorLeadingIdentifier->ClosesRequiresClause) &&
+                 LeadingIdentifier->TokenText == Current.Next->TokenText;
         }
       }
     }
@@ -1868,7 +1868,7 @@ private:
       return true;
 
     // const a = in JavaScript.
-    return (Style.isJavaScript() && PreviousNotConst->is(tok::kw_const));
+    return Style.isJavaScript() && PreviousNotConst->is(tok::kw_const);
   }
 
   /// Determine whether ')' is ending a cast.
@@ -3085,12 +3085,12 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
         Right.Next->Next->is(TT_RangeBasedForLoopColon))
       return getTokenPointerOrReferenceAlignment(Right) !=
              FormatStyle::PAS_Left;
-    return (
-        (!Left.isOneOf(TT_PointerOrReference, tok::l_paren) &&
-         (getTokenPointerOrReferenceAlignment(Right) != FormatStyle::PAS_Left ||
-          (Line.IsMultiVariableDeclStmt &&
-           (Left.NestingLevel == 0 ||
-            (Left.NestingLevel == 1 && Line.First->is(tok::kw_for)))))));
+    return !Left.isOneOf(TT_PointerOrReference, tok::l_paren) &&
+           (getTokenPointerOrReferenceAlignment(Right) !=
+                FormatStyle::PAS_Left ||
+            (Line.IsMultiVariableDeclStmt &&
+             (Left.NestingLevel == 0 ||
+              (Left.NestingLevel == 1 && Line.First->is(tok::kw_for)))));
   }
   if (Right.is(TT_FunctionTypeLParen) && Left.isNot(tok::l_paren) &&
       (!Left.is(TT_PointerOrReference) ||
@@ -3172,7 +3172,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     // dependent on PointerAlignment style.
     if (Previous) {
       if (Previous->endsSequence(tok::kw_operator))
-        return (Style.PointerAlignment != FormatStyle::PAS_Left);
+        return Style.PointerAlignment != FormatStyle::PAS_Left;
       if (Previous->is(tok::kw_const) || Previous->is(tok::kw_volatile))
         return (Style.PointerAlignment != FormatStyle::PAS_Left) ||
                (Style.SpaceAroundPointerQualifiers ==
@@ -3237,11 +3237,11 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
         (Left.is(tok::r_square) && Left.is(TT_AttributeSquare)))
       return true;
     if (Left.is(TT_ForEachMacro))
-      return (Style.SpaceBeforeParensOptions.AfterForeachMacros ||
-              spaceRequiredBeforeParens(Right));
+      return Style.SpaceBeforeParensOptions.AfterForeachMacros ||
+             spaceRequiredBeforeParens(Right);
     if (Left.is(TT_IfMacro))
-      return (Style.SpaceBeforeParensOptions.AfterIfMacros ||
-              spaceRequiredBeforeParens(Right));
+      return Style.SpaceBeforeParensOptions.AfterIfMacros ||
+             spaceRequiredBeforeParens(Right);
     if (Line.Type == LT_ObjCDecl)
       return true;
     if (Left.is(tok::semi))
@@ -3764,8 +3764,8 @@ isItAnEmptyLambdaAllowed(const FormatToken &Tok,
 }
 
 static bool isAllmanLambdaBrace(const FormatToken &Tok) {
-  return (Tok.is(tok::l_brace) && Tok.is(BK_Block) &&
-          !Tok.isOneOf(TT_ObjCBlockLBrace, TT_DictLiteral));
+  return Tok.is(tok::l_brace) && Tok.is(BK_Block) &&
+         !Tok.isOneOf(TT_ObjCBlockLBrace, TT_DictLiteral);
 }
 
 // Returns the first token on the line that is not a comment.
@@ -3938,7 +3938,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     // concept ...
     if (Right.is(tok::kw_concept))
       return Style.BreakBeforeConceptDeclarations == FormatStyle::BBCDS_Always;
-    return (Style.AlwaysBreakTemplateDeclarations == FormatStyle::BTDS_Yes);
+    return Style.AlwaysBreakTemplateDeclarations == FormatStyle::BTDS_Yes;
   }
   if (Left.ClosesRequiresClause) {
     switch (Style.RequiresClausePosition) {

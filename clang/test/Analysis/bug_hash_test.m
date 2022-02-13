@@ -28,7 +28,7 @@ __attribute__((objc_root_class))
 @end
 
 
-void testBlocks() {
+void testBlocks(void) {
   int x = 5;
   ^{
     clang_analyzer_hashDump(x); // expected-warning {{debug.ExprInspection$$29$clang_analyzer_hashDump(x);$Category}}

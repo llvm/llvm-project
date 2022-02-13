@@ -13,13 +13,13 @@
 // WITH_MISSING: warning: profile data may be out of date: of 3 functions, 2 have mismatched data that will be ignored
 // WITH_MISSING: warning: profile data may be incomplete: of 3 functions, 1 has no data
 
-void no_usable_data() {
+void no_usable_data(void) {
   int i = 0;
 
   if (i) {}
 }
 
-void no_data() {
+void no_data(void) {
 }
 
 int main(int argc, const char *argv[]) {

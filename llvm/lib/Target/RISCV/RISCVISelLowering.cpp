@@ -1068,6 +1068,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::AND);
   setTargetDAGCombine(ISD::OR);
   setTargetDAGCombine(ISD::XOR);
+  setTargetDAGCombine(ISD::ROTL);
+  setTargetDAGCombine(ISD::ROTR);
   setTargetDAGCombine(ISD::ANY_EXTEND);
   if (Subtarget.hasStdExtF()) {
     setTargetDAGCombine(ISD::ZERO_EXTEND);
@@ -7269,6 +7271,40 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::SHL, DL, VT, NA1, DAG.getConstant(Bits, DL, VT));
 }
 
+// Combine
+// ROTR ((GREV x, 24), 16) -> (GREVI x, 8)
+// ROTL ((GREV x, 24), 16) -> (GREVI x, 8)
+// RORW ((GREVW x, 24), 16) -> (GREVIW x, 8)
+// ROLW ((GREVW x, 24), 16) -> (GREVIW x, 8)
+static SDValue combineROTR_ROTL_RORW_ROLW(SDNode *N, SelectionDAG &DAG) {
+  SDValue Src = N->getOperand(0);
+  SDLoc DL(N);
+  unsigned Opc;
+
+  if ((N->getOpcode() == ISD::ROTR || N->getOpcode() == ISD::ROTL) &&
+      Src.getOpcode() == RISCVISD::GREV)
+    Opc = RISCVISD::GREV;
+  else if ((N->getOpcode() == RISCVISD::RORW ||
+            N->getOpcode() == RISCVISD::ROLW) &&
+           Src.getOpcode() == RISCVISD::GREVW)
+    Opc = RISCVISD::GREVW;
+  else
+    return SDValue();
+
+  if (!isa<ConstantSDNode>(N->getOperand(1)) ||
+      !isa<ConstantSDNode>(Src.getOperand(1)))
+    return SDValue();
+
+  unsigned ShAmt1 = N->getConstantOperandVal(1);
+  unsigned ShAmt2 = Src.getConstantOperandVal(1);
+  if (ShAmt1 != 16 && ShAmt2 != 24)
+    return SDValue();
+
+  Src = Src.getOperand(0);
+  return DAG.getNode(Opc, DL, N->getValueType(0), Src,
+                     DAG.getConstant(8, DL, N->getOperand(1).getValueType()));
+}
+
 // Combine (GREVI (GREVI x, C2), C1) -> (GREVI x, C1^C2) when C1^C2 is
 // non-zero, and to x when it is. Any repeated GREVI stage undoes itself.
 // Combine (GORCI (GORCI x, C2), C1) -> (GORCI x, C1|C2). Repeated stage does
@@ -7769,6 +7805,8 @@ static SDValue combineMUL_VLToVWMUL_VL(SDNode *N, SelectionDAG &DAG,
   unsigned ExtOpc = IsSignExt ? RISCVISD::VSEXT_VL : RISCVISD::VZEXT_VL;
   if (Op0.getValueType() != NarrowVT)
     Op0 = DAG.getNode(ExtOpc, DL, NarrowVT, Op0, Mask, VL);
+  // vwmulsu requires second operand to be zero extended.
+  ExtOpc = IsVWMULSU ? RISCVISD::VZEXT_VL : ExtOpc;
   if (Op1.getValueType() != NarrowVT)
     Op1 = DAG.getNode(ExtOpc, DL, NarrowVT, Op1, Mask, VL);
 
@@ -7973,8 +8011,12 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SimplifyDemandedLowBitsHelper(0, 32) ||
         SimplifyDemandedLowBitsHelper(1, 5))
       return SDValue(N, 0);
-    break;
+
+    return combineROTR_ROTL_RORW_ROLW(N, DAG);
   }
+  case ISD::ROTR:
+  case ISD::ROTL:
+    return combineROTR_ROTL_RORW_ROLW(N, DAG);
   case RISCVISD::CLZW:
   case RISCVISD::CTZW: {
     // Only the lower 32 bits of the first operand are read

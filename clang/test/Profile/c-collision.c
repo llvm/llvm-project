@@ -6,7 +6,7 @@
 // CHECK-EXTRA:   @__profd_foo = private global { {{.*}} } { i64 6699318081062747564, i64 -4383447408116050035,
 
 extern int bar;
-void foo() {
+void foo(void) {
   if (bar) {
   }
   if (bar) {
