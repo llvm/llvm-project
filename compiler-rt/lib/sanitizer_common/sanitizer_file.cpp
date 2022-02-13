@@ -84,8 +84,12 @@ static void RecursiveCreateParentDirs(char *path) {
     if (!IsPathSeparator(path[i]))
       continue;
     path[i] = '\0';
-    /* Some of these will fail, because the directory exists, ignore it. */
-    CreateDir(path);
+    if (!DirExists(path) && !CreateDir(path)) {
+      const char *ErrorMsgPrefix = "ERROR: Can't create directory: ";
+      WriteToFile(kStderrFd, ErrorMsgPrefix, internal_strlen(ErrorMsgPrefix));
+      WriteToFile(kStderrFd, path, internal_strlen(path));
+      Die();
+    }
     path[i] = save;
   }
 }
