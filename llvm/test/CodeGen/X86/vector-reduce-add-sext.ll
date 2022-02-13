@@ -4,8 +4,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=AVX,AVX1,AVX1-SLOW
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx,+fast-hops | FileCheck %s --check-prefixes=AVX,AVX1,AVX1-FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefix=AVX512
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512vl | FileCheck %s --check-prefix=AVX512
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX512
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512vl | FileCheck %s --check-prefixes=AVX,AVX512
 
 ;
 ; vXi64
@@ -37,14 +37,6 @@ define i64 @test_v2i64_v2i32(<2 x i32> %a0) {
 ; AVX-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, %rax
 ; AVX-NEXT:    retq
-;
-; AVX512-LABEL: test_v2i64_v2i32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovsxdq %xmm0, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX512-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vmovq %xmm0, %rax
-; AVX512-NEXT:    retq
   %1 = sext <2 x i32> %a0 to <2 x i64>
   %2 = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %1)
   ret i64 %2
