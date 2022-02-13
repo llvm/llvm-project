@@ -42964,6 +42964,24 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
 
   SDLoc DL(ExtElt);
 
+  // Extend v4i8/v8i8 vector to v16i8, with undef upper 64-bits.
+  auto WidenToV16I8 = [&](SDValue V, bool ZeroExtend) {
+    if (VecVT == MVT::v4i8) {
+      if (ZeroExtend && Subtarget.hasSSE41()) {
+        V = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, MVT::v4i32,
+                        DAG.getConstant(0, DL, MVT::v4i32),
+                        DAG.getBitcast(MVT::i32, V),
+                        DAG.getIntPtrConstant(0, DL));
+        return DAG.getBitcast(MVT::v16i8, V);
+      }
+      V = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8, V,
+                      ZeroExtend ? DAG.getConstant(0, DL, MVT::v4i8)
+                                 : DAG.getUNDEF(MVT::v4i8));
+    }
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i8, V,
+                       DAG.getUNDEF(MVT::v8i8));
+  };
+
   // vXi8 mul reduction - promote to vXi16 mul reduction.
   if (Opc == ISD::MUL) {
     unsigned NumElts = VecVT.getVectorNumElements();
@@ -42981,11 +42999,7 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
         Rdx = DAG.getNode(Opc, DL, Lo.getValueType(), Lo, Hi);
       }
     } else {
-      if (VecVT == MVT::v4i8)
-        Rdx = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8, Rdx,
-                          DAG.getUNDEF(MVT::v4i8));
-      Rdx = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i8, Rdx,
-                        DAG.getUNDEF(MVT::v8i8));
+      Rdx = WidenToV16I8(Rdx, false);
       Rdx = getUnpackl(DAG, DL, MVT::v16i8, Rdx, DAG.getUNDEF(MVT::v16i8));
       Rdx = DAG.getBitcast(MVT::v8i16, Rdx);
     }
@@ -43005,24 +43019,7 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
 
   // vXi8 add reduction - sub 128-bit vector.
   if (VecVT == MVT::v4i8 || VecVT == MVT::v8i8) {
-    if (VecVT == MVT::v4i8) {
-      // Pad with zero.
-      if (Subtarget.hasSSE41()) {
-        Rdx = DAG.getBitcast(MVT::i32, Rdx);
-        Rdx = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, MVT::v4i32,
-                          DAG.getConstant(0, DL, MVT::v4i32), Rdx,
-                          DAG.getIntPtrConstant(0, DL));
-        Rdx = DAG.getBitcast(MVT::v16i8, Rdx);
-      } else {
-        Rdx = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8, Rdx,
-                          DAG.getConstant(0, DL, VecVT));
-      }
-    }
-    if (Rdx.getValueType() == MVT::v8i8) {
-      // Pad with undef.
-      Rdx = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i8, Rdx,
-                        DAG.getUNDEF(MVT::v8i8));
-    }
+    Rdx = WidenToV16I8(Rdx, true);
     Rdx = DAG.getNode(X86ISD::PSADBW, DL, MVT::v2i64, Rdx,
                       DAG.getConstant(0, DL, MVT::v16i8));
     Rdx = DAG.getBitcast(MVT::v16i8, Rdx);
