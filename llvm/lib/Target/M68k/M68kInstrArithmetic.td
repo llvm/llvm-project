@@ -31,7 +31,7 @@
 // OPMODE Encoding
 //===----------------------------------------------------------------------===//
 class MxOpModeEncoding<bits<3> encoding> {
- bits<3> Value = encoding;
+  bits<3> Value = encoding;
 }
 
 // op EA, Dn
