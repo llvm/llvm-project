@@ -27,6 +27,8 @@ define void @foo(i8* %start, i8* %end) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i32 -1, [[INDUCTION3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, i8* [[END]], i32 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, i8* [[END]], i32 [[TMP5]]
+; CHECK-NEXT:    store i8 0, i8* [[TMP6]], align 1
+; CHECK-NEXT:    store i8 0, i8* [[TMP7]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -40,6 +42,7 @@ define void @foo(i8* %start, i8* %end) {
 ; CHECK-NEXT:    [[COUNT_09:%.*]] = phi i32 [ [[ADD:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 -1, [[COUNT_09]]
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, i8* [[END]], i32 [[ADD]]
+; CHECK-NEXT:    store i8 0, i8* [[G]], align 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8* [[START]], [[G]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[WHILE_BODY]], label [[WHILE_END_LOOPEXIT]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       while.end.loopexit:
@@ -52,6 +55,7 @@ while.body:                                       ; preds = %while.body, %entry
   %count.09 = phi i32 [ %add, %while.body ], [ 0, %entry ]
   %add = add nsw i32 -1, %count.09
   %G = getelementptr i8, i8* %end, i32 %add
+  store i8 0, i8* %G
   %cmp = icmp ult i8* %start, %G
   br i1 %cmp, label %while.body, label %while.end.loopexit
 
