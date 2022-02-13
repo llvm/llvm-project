@@ -31,7 +31,7 @@ TEST_CONSTEXPR_CXX20 void test0(const S& lhs, const typename S::value_type* rhs,
 #if TEST_STD_VER >= 11
 template <class S>
 TEST_CONSTEXPR_CXX20 void test1(S&& lhs, const typename S::value_type* rhs, const S& x) {
-  assert(move(lhs) + rhs == x);
+  assert(std::move(lhs) + rhs == x);
 }
 #endif
 
