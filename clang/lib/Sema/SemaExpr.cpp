@@ -3022,7 +3022,7 @@ Sema::PerformObjectMemberConversion(Expr *From,
     QualType QType = QualType(Qualifier->getAsType(), 0);
     assert(QType->isRecordType() && "lookup done with non-record type");
 
-    QualType QRecordType = QualType(QType->getAs<RecordType>(), 0);
+    QualType QRecordType = QualType(QType->castAs<RecordType>(), 0);
 
     // In C++98, the qualifier type doesn't actually have to be a base
     // type of the object type, in which case we just ignore it.
@@ -10035,7 +10035,7 @@ static bool tryGCCVectorConvertAndSplat(Sema &S, ExprResult *Scalar,
                                         ExprResult *Vector) {
   QualType ScalarTy = Scalar->get()->getType().getUnqualifiedType();
   QualType VectorTy = Vector->get()->getType().getUnqualifiedType();
-  const VectorType *VT = VectorTy->getAs<VectorType>();
+  const auto *VT = VectorTy->castAs<VectorType>();
 
   assert(!isa<ExtVectorType>(VT) &&
          "ExtVectorTypes should not be handled here!");
