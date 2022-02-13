@@ -34,11 +34,11 @@ entry:
   ret void
 }
 
-define <4 x i32> @foo(<4 x float> %0, ...) nounwind {
+define <4 x i32> @foo(<4 x float> inreg %0, ...) nounwind {
 ; MSVC-LABEL: foo:
 ; MSVC:       # %bb.0:
 ; MSVC-NEXT:    pushl %eax
-; MSVC-NEXT:    movaps 8(%esp), %xmm0
+; MSVC-NEXT:    movups 8(%esp), %xmm0
 ; MSVC-NEXT:    movups 24(%esp), %xmm1
 ; MSVC-NEXT:    cmpltps %xmm1, %xmm0
 ; MSVC-NEXT:    popl %eax
@@ -73,9 +73,9 @@ define <4 x i32> @bar() nounwind {
 ; MSVC:       # %bb.0:
 ; MSVC-NEXT:    subl $32, %esp
 ; MSVC-NEXT:    movaps {{.*#+}} xmm0 = [5.0E+0,6.0E+0,7.0E+0,8.0E+0]
-; MSVC-NEXT:    movaps %xmm0, 16(%esp)
+; MSVC-NEXT:    movups %xmm0, 16(%esp)
 ; MSVC-NEXT:    movaps {{.*#+}} xmm0 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0]
-; MSVC-NEXT:    movaps %xmm0, (%esp)
+; MSVC-NEXT:    movups %xmm0, (%esp)
 ; MSVC-NEXT:    calll _foo
 ; MSVC-NEXT:    addl $32, %esp
 ; MSVC-NEXT:    retl

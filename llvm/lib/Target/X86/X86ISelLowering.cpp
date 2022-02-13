@@ -3569,10 +3569,15 @@ X86TargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
     MFI.setObjectSExt(FI, true);
   }
 
+  MaybeAlign Alignment;
+  if (Subtarget.isTargetWindowsMSVC() && !Subtarget.is64Bit() &&
+      ValVT != MVT::f80)
+    Alignment = MaybeAlign(4);
   SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
   SDValue Val = DAG.getLoad(
       ValVT, dl, Chain, FIN,
-      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI));
+      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI),
+      Alignment);
   return ExtendedInMem
              ? (VA.getValVT().isVector()
                     ? DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VA.getValVT(), Val)
@@ -4091,9 +4096,14 @@ SDValue X86TargetLowering::LowerMemOpCallTo(SDValue Chain, SDValue StackPtr,
   if (isByVal)
     return CreateCopyOfByValArgument(Arg, PtrOff, Chain, Flags, DAG, dl);
 
+  MaybeAlign Alignment;
+  if (Subtarget.isTargetWindowsMSVC() && !Subtarget.is64Bit() &&
+      Arg.getSimpleValueType() != MVT::f80)
+    Alignment = MaybeAlign(4);
   return DAG.getStore(
       Chain, dl, Arg, PtrOff,
-      MachinePointerInfo::getStack(DAG.getMachineFunction(), LocMemOffset));
+      MachinePointerInfo::getStack(DAG.getMachineFunction(), LocMemOffset),
+      Alignment);
 }
 
 /// Emit a load of return address if tail call
