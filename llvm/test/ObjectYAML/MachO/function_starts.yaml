@@ -177,7 +177,7 @@ LinkEditData:
 ...
 
 # RUN: yaml2obj %s -o=%t
-# RUN obj2yaml %t | FileCheck %s
+# RUN: obj2yaml %t | FileCheck %s
 # CHECK: FunctionStarts:  [ 0x3F80, 0x3F84 ]
 
 # RUN: llvm-objdump --macho --function-starts %t | FileCheck %s --check-prefix=OBJDUMP-VERIFY
