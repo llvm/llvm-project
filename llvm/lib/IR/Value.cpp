@@ -377,6 +377,7 @@ void Value::setName(const Twine &NewName) {
 }
 
 void Value::takeName(Value *V) {
+  assert(V != this && "Illegal call to this->takeName(this)!");
   ValueSymbolTable *ST = nullptr;
   // If this value has a name, drop it.
   if (hasName()) {
