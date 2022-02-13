@@ -1499,6 +1499,16 @@ let TargetPrefix = "riscv" in {
                     [llvm_anyvector_ty, llvm_anyptr_ty,
                      llvm_anyint_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                     [NoCapture<ArgIndex<1>>, IntrWriteMem]>;
+
+  // Segment loads for fixed vectors.
+  foreach nf = [2, 3, 4, 5, 6, 7, 8] in {
+    def int_riscv_seg # nf # _load
+          : Intrinsic<!listconcat([llvm_anyvector_ty], !listsplat(LLVMMatchType<0>,
+                                !add(nf, -1))),
+                      [llvm_anyptr_ty, llvm_anyint_ty],
+                      [NoCapture<ArgIndex<0>>, IntrReadMem]>;
+  }
+
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//

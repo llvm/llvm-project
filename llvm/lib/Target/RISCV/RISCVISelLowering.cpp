@@ -1126,6 +1126,24 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.size = MemoryLocation::UnknownSize;
     Info.flags |= MachineMemOperand::MOStore;
     return true;
+  case Intrinsic::riscv_seg2_load:
+  case Intrinsic::riscv_seg3_load:
+  case Intrinsic::riscv_seg4_load:
+  case Intrinsic::riscv_seg5_load:
+  case Intrinsic::riscv_seg6_load:
+  case Intrinsic::riscv_seg7_load:
+  case Intrinsic::riscv_seg8_load:
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.memVT =
+        getValueType(DL, I.getType()->getStructElementType(0)->getScalarType());
+    Info.align =
+        Align(DL.getTypeSizeInBits(
+                  I.getType()->getStructElementType(0)->getScalarType()) /
+              8);
+    Info.size = MemoryLocation::UnknownSize;
+    Info.flags |= MachineMemOperand::MOLoad;
+    return true;
   }
 }
 
@@ -4877,6 +4895,42 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     SDValue Chain = Result.getValue(1);
     Result = convertFromScalableVector(VT, Result, DAG, Subtarget);
     return DAG.getMergeValues({Result, Chain}, DL);
+  }
+  case Intrinsic::riscv_seg2_load:
+  case Intrinsic::riscv_seg3_load:
+  case Intrinsic::riscv_seg4_load:
+  case Intrinsic::riscv_seg5_load:
+  case Intrinsic::riscv_seg6_load:
+  case Intrinsic::riscv_seg7_load:
+  case Intrinsic::riscv_seg8_load: {
+    SDLoc DL(Op);
+    static const Intrinsic::ID VlsegInts[7] = {
+        Intrinsic::riscv_vlseg2, Intrinsic::riscv_vlseg3,
+        Intrinsic::riscv_vlseg4, Intrinsic::riscv_vlseg5,
+        Intrinsic::riscv_vlseg6, Intrinsic::riscv_vlseg7,
+        Intrinsic::riscv_vlseg8};
+    unsigned NF = Op->getNumValues() - 1;
+    assert(NF >= 2 && NF <= 8 && "Unexpected seg number");
+    MVT XLenVT = Subtarget.getXLenVT();
+    MVT VT = Op->getSimpleValueType(0);
+    MVT ContainerVT = getContainerForFixedLengthVector(VT);
+
+    SDValue VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
+    SDValue IntID = DAG.getTargetConstant(VlsegInts[NF - 2], DL, XLenVT);
+    auto *Load = cast<MemIntrinsicSDNode>(Op);
+    SmallVector<EVT, 9> ContainerVTs(NF, ContainerVT);
+    ContainerVTs.push_back(MVT::Other);
+    SDVTList VTs = DAG.getVTList(ContainerVTs);
+    SDValue Result =
+        DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs,
+                                {Load->getChain(), IntID, Op.getOperand(2), VL},
+                                Load->getMemoryVT(), Load->getMemOperand());
+    SmallVector<SDValue, 9> Results;
+    for (unsigned int RetIdx = 0; RetIdx < NF; RetIdx++)
+      Results.push_back(convertFromScalableVector(VT, Result.getValue(RetIdx),
+                                                  DAG, Subtarget));
+    Results.push_back(Result.getValue(NF));
+    return DAG.getMergeValues(Results, DL);
   }
   }
 
