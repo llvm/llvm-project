@@ -22,9 +22,10 @@ define void @induction_i7(i64* %dst) #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = add <vscale x 2 x i7> [[VEC_IND]], zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, i64* [[DST:%.*]], i64 [[TMP10]]
+; CHECK-NEXT:    [[EXT:%.+]]  = zext <vscale x 2 x i7> [[TMP11]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, i64* [[TMP12]], i32 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i64* [[TMP13]] to <vscale x 2 x i64>*
-; CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i64>* [[TMP14]], align 8
+; CHECK-NEXT:    store <vscale x 2 x i64> [[EXT]], <vscale x 2 x i64>* [[TMP14]], align 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP16]]
@@ -38,7 +39,8 @@ for.body:                                         ; preds = %for.body, %entry
   %indvars.iv1286 = phi i64 [ %indvars.iv.next1287, %for.body ], [ 0, %entry ]
   %addi7 = add i7 %indvars.iv1294, 0
   %arrayidx = getelementptr inbounds i64, i64* %dst, i64 %indvars.iv1286
-  store i64 0, i64* %arrayidx, align 8
+  %ext = zext i7 %addi7 to i64
+  store i64 %ext, i64* %arrayidx, align 8
   %indvars.iv.next1287 = add nuw nsw i64 %indvars.iv1286, 1
   %indvars.iv.next1295 = add i7 %indvars.iv1294, 1
   %exitcond = icmp eq i64 %indvars.iv.next1287, 64
