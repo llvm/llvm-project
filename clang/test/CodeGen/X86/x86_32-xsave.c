@@ -17,7 +17,7 @@
 #define __MM_MALLOC_H
 #include <x86intrin.h>
 
-void test() {
+void test(void) {
   unsigned long long tmp_ULLi;
   unsigned int       tmp_Ui;
   void*              tmp_vp;

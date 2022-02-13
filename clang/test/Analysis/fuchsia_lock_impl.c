@@ -3,7 +3,7 @@
 typedef int spin_lock_t;
 
 void spin_lock(spin_lock_t *lock);
-int getCond();
+int getCond(void);
 int spin_trylock(spin_lock_t *lock) {
     if (getCond())
         return 0;
@@ -12,7 +12,7 @@ int spin_trylock(spin_lock_t *lock) {
 void spin_unlock(spin_lock_t *lock);
 
 spin_lock_t mtx;
-void no_crash() {
+void no_crash(void) {
   if (spin_trylock(&mtx) == 0)
     spin_unlock(&mtx);
 }

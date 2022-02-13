@@ -3,6 +3,6 @@
 
 void clang_analyzer_dump(unsigned __int128 x);
 
-void testDumpInt128() {
+void testDumpInt128(void) {
   clang_analyzer_dump((unsigned __int128)5 << 64); // expected-warning{{92233720368547758080 U128b}}
 }

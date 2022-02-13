@@ -5,12 +5,12 @@ static inline bug(int *p) {
   *p = 0xDEADBEEF;
 }
 
-void test_bug_1() {
+void test_bug_1(void) {
   int *p = 0;
   bug(p);
 }
 
-void test_bug_2() {
+void test_bug_2(void) {
   int *p = 0;
   bug(p);
 }

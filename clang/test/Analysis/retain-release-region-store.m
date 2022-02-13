@@ -104,7 +104,7 @@ struct foo {
 // temporarily "escape" retain counted objects stored to structs very eagerly
 // until we can properly tell whether they have escaped via a return value
 // or not.
-CFAbsoluteTime f4() {
+CFAbsoluteTime f4(void) {
   struct foo x;
   
   CFAbsoluteTime t = CFAbsoluteTimeGetCurrent();

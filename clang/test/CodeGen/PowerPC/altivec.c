@@ -28,7 +28,7 @@ vector char v3 = (vector char)((vector int)('a', 'b', 'c', 'd'));
 // CHECK-LE: @v4 ={{.*}} global <4 x i32> <i32 67305985, i32 0, i32 0, i32 0>
 vector int v4 = (vector char){1, 2, 3, 4};
 
-void test2()
+void test2(void)
 {
   vector int vi;
   vector float vf;
@@ -44,7 +44,7 @@ void test2()
 }
 
 // Check pre/post increment/decrement
-void test3() {
+void test3(void) {
   vector int vi;
   vi++;                                    // CHECK: add <4 x i32> {{.*}} <i32 1, i32 1, i32 1, i32 1>
   vector unsigned int vui;

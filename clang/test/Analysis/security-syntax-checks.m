@@ -53,7 +53,7 @@ typedef typeof(sizeof(int)) size_t;
 //
 // For reference: https://www.securecoding.cert.org/confluence/display/seccode/FLP30-C.+Do+not+use+floating+point+variables+as+loop+counters
 //
-void test_float_condition() {
+void test_float_condition(void) {
   for (float x = 0.1f; x <= 1.0f; x += 0.1f) {} // expected-warning{{Variable 'x' with floating point type 'float'}}
   for (float x = 100000001.0f; x <= 100000010.0f; x += 1.0f) {} // expected-warning{{Variable 'x' with floating point type 'float'}}
   for (float x = 100000001.0f; x <= 100000010.0f; x++ ) {} // expected-warning{{Variable 'x' with floating point type 'float'}}
@@ -94,14 +94,14 @@ void test_bzero(void *a, size_t n) {
 // Part of recommendation: 300-BSI (buildsecurityin.us-cert.gov)
 char* gets(char *buf);
 
-void test_gets() {
+void test_gets(void) {
   char buff[1024];
   gets(buff); // expected-warning{{Call to function 'gets' is extremely insecure as it can always result in a buffer overflow}}
 }
 
 int getpw(unsigned int uid, char *buf);
 
-void test_getpw() {
+void test_getpw(void) {
   char buff[1024];
   getpw(2, buff); // expected-warning{{The getpw() function is dangerous as it may overflow the provided buffer. It is obsoleted by getpwuid()}}
 }
@@ -119,7 +119,7 @@ int setreuid(uid_t, uid_t);
 extern void check(int);
 void abort(void);
 
-void test_setuid() 
+void test_setuid(void) 
 {
   setuid(2); // expected-warning{{The return value from the call to 'setuid' is not checked.  If an error occurs in 'setuid', the following code may execute with unexpected privileges}}
   setuid(0); // expected-warning{{The return value from the call to 'setuid' is not checked.  If an error occurs in 'setuid', the following code may execute with unexpected privileges}}
@@ -151,7 +151,7 @@ long     nrand48(unsigned short[3]);
 long     random(void);
 int      rand_r(unsigned *);
 
-void test_rand()
+void test_rand(void)
 {
   unsigned short a[7];
   unsigned b;
@@ -170,7 +170,7 @@ void test_rand()
 
 char *mktemp(char *buf);
 
-void test_mktemp() {
+void test_mktemp(void) {
   char *x = mktemp("/tmp/zxcv"); // expected-warning{{Call to function 'mktemp' is insecure as it always creates or uses insecure temporary file}}
 }
 
@@ -192,24 +192,24 @@ char *strcpy(char *restrict s1, const char *restrict s2);
 
 #endif /* VARIANT */
 
-void test_strcpy() {
+void test_strcpy(void) {
   char x[4];
   char *y;
 
   strcpy(x, y); //expected-warning{{Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119}}
 }
 
-void test_strcpy_2() {
+void test_strcpy_2(void) {
   char x[4];
   strcpy(x, "abcd"); //expected-warning{{Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119}}
 }
 
-void test_strcpy_safe() {
+void test_strcpy_safe(void) {
   char x[5];
   strcpy(x, "abcd");
 }
 
-void test_strcpy_safe_2() {
+void test_strcpy_safe_2(void) {
   struct {char s1[100];} s;
   strcpy(s.s1, "hello");
 }
@@ -231,7 +231,7 @@ char *strcat(char *restrict s1, const char *restrict s2);
 
 #endif /* VARIANT */
 
-void test_strcat() {
+void test_strcat(void) {
   char x[4];
   char *y;
 
@@ -245,7 +245,7 @@ typedef int __int32_t;
 typedef __int32_t pid_t;
 pid_t vfork(void);
 
-void test_vfork() {
+void test_vfork(void) {
   vfork(); //expected-warning{{Call to function 'vfork' is insecure as it can lead to denial of service situations in the parent process}}
 }
 
@@ -258,7 +258,7 @@ int mkstemps(char *template, int suffixlen);
 int mkstemp(char *template);
 char *mktemp(char *template);
 
-void test_mkstemp() {
+void test_mkstemp(void) {
   mkstemp("XX"); // expected-warning {{Call to 'mkstemp' should have at least 6 'X's in the format string to be secure (2 'X's seen)}}
   mkstemp("XXXXXX");
   mkstemp("XXXXXXX");
@@ -300,7 +300,7 @@ char *strncpy(char *destination, const char *source, size_t num);
 char *strncat(char *destination, const char *source, size_t num);
 void *memset(void *ptr, int value, size_t num);
 
-void test_deprecated_or_unsafe_buffer_handling_1() {
+void test_deprecated_or_unsafe_buffer_handling_1(void) {
   char buf [5];
   wchar_t wbuf [5];
   int a;

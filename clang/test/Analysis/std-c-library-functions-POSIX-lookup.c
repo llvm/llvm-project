@@ -15,7 +15,7 @@
 
 // Must have at least one call expression to initialize the summary map.
 int bar(void);
-void foo() {
+void foo(void) {
   bar();
 }
 

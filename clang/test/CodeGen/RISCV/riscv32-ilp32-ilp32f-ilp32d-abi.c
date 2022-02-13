@@ -81,7 +81,7 @@ void f_agg_tiny(struct tiny x) {
 }
 
 // CHECK-LABEL: define{{.*}} i32 @f_agg_tiny_ret()
-struct tiny f_agg_tiny_ret() {
+struct tiny f_agg_tiny_ret(void) {
   return (struct tiny){1, 2, 3, 4};
 }
 
@@ -95,7 +95,7 @@ void f_vec_tiny_v4i8(v4i8 x) {
 }
 
 // CHECK-LABEL: define{{.*}} i32 @f_vec_tiny_v4i8_ret()
-v4i8 f_vec_tiny_v4i8_ret() {
+v4i8 f_vec_tiny_v4i8_ret(void) {
   return (v4i8){1, 2, 3, 4};
 }
 
@@ -105,7 +105,7 @@ void f_vec_tiny_v1i32(v1i32 x) {
 }
 
 // CHECK-LABEL: define{{.*}} i32 @f_vec_tiny_v1i32_ret()
-v1i32 f_vec_tiny_v1i32_ret() {
+v1i32 f_vec_tiny_v1i32_ret(void) {
   return (v1i32){1};
 }
 
@@ -120,7 +120,7 @@ void f_agg_small(struct small x) {
 }
 
 // CHECK-LABEL: define{{.*}} [2 x i32] @f_agg_small_ret()
-struct small f_agg_small_ret() {
+struct small f_agg_small_ret(void) {
   return (struct small){1, 0};
 }
 
@@ -133,7 +133,7 @@ void f_vec_small_v8i8(v8i8 x) {
 }
 
 // CHECK-LABEL: define{{.*}} i64 @f_vec_small_v8i8_ret()
-v8i8 f_vec_small_v8i8_ret() {
+v8i8 f_vec_small_v8i8_ret(void) {
   return (v8i8){1, 2, 3, 4, 5, 6, 7, 8};
 }
 
@@ -143,7 +143,7 @@ void f_vec_small_v1i64(v1i64 x) {
 }
 
 // CHECK-LABEL: define{{.*}} i64 @f_vec_small_v1i64_ret()
-v1i64 f_vec_small_v1i64_ret() {
+v1i64 f_vec_small_v1i64_ret(void) {
   return (v1i64){1};
 }
 
@@ -190,7 +190,7 @@ void f_vec_large_v16i8(v16i8 x) {
 }
 
 // CHECK-LABEL: define{{.*}} void @f_vec_large_v16i8_ret(<16 x i8>* noalias sret(<16 x i8>) align 16 %agg.result)
-v16i8 f_vec_large_v16i8_ret() {
+v16i8 f_vec_large_v16i8_ret(void) {
   return (v16i8){1, 2, 3, 4, 5, 6, 7, 8};
 }
 
@@ -238,7 +238,7 @@ int f_va_callee(int, ...);
 
 // CHECK-LABEL: define{{.*}} void @f_va_caller()
 // CHECK: call i32 (i32, ...) @f_va_callee(i32 noundef 1, i32 noundef 2, i64 noundef 3, double noundef 4.000000e+00, double noundef 5.000000e+00, i32 {{%.*}}, [2 x i32] {{%.*}}, i64 {{%.*}}, %struct.large* noundef {{%.*}})
-void f_va_caller() {
+void f_va_caller(void) {
   f_va_callee(1, 2, 3LL, 4.0f, 5.0, (struct tiny){6, 7, 8, 9},
               (struct small){10, NULL}, (struct small_aligned){11},
               (struct large){12, 13, 14, 15});

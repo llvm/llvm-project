@@ -7,7 +7,7 @@
 // CHECK:   ret i32 1
 // <rdr://6115726>
 
-int f0() {
+int f0(void) {
   int x;
   unsigned short n = 1;
   int *a = &x;

@@ -152,7 +152,7 @@ NSNumber* numberFromMyNumberProperty(MyNumber* aMyNumber)
 @end
 
 #if !__has_feature(objc_arc)
-void rdar6611873() {
+void rdar6611873(void) {
   Person *p = [[[Person alloc] init] autorelease];
   
   p.name = [[NSString string] retain]; // expected-warning {{leak}}
@@ -967,7 +967,7 @@ void testOpaqueConsistency(OpaqueIntWrapper *w) {
 
 // rdar://problem/19862648
 - (void)establishIvarIsNilDuringLoops {
-  extern id getRandomObject();
+  extern id getRandomObject(void);
 
   int i = 4; // Must be at least 4 to trigger the bug.
   while (--i) {
@@ -998,7 +998,7 @@ void testOpaqueConsistency(OpaqueIntWrapper *w) {
 @synthesize value;
 @end
 
-void testNoCrashWhenAccessPropertyAndThereAreNoDirectBindingsAtAll() {
+void testNoCrashWhenAccessPropertyAndThereAreNoDirectBindingsAtAll(void) {
    union {
     Wrapper *wrapper;
    } u = { 0 };

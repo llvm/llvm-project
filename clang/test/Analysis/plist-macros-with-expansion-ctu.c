@@ -18,7 +18,7 @@ extern void F2(int **);
 extern void F3(int **);
 extern void F_H(int **);
 
-void test0() {
+void test0(void) {
   int *X;
   F3(&X);
   *X = 1; // expected-warning{{Dereference of null pointer}}
@@ -28,7 +28,7 @@ void test0() {
 // CHECK-NEXT: <array>
 // CHECK-NEXT: </array>
 
-void test1() {
+void test1(void) {
   int *X;
   F1(&X);
   *X = 1; // expected-warning{{Dereference of null pointer}}
@@ -38,7 +38,7 @@ void test1() {
 // CHECK-NEXT: <array>
 // CHECK-NEXT: </array>
 
-void test2() {
+void test2(void) {
   int *X;
   F2(&X);
   *X = 1; // expected-warning{{Dereference of null pointer}}
@@ -50,7 +50,7 @@ void test2() {
 
 #define M F1(&X)
 
-void test3() {
+void test3(void) {
   int *X;
   M;
   *X = 1; // expected-warning{{Dereference of null pointer}}
@@ -73,7 +73,7 @@ void test3() {
 #undef M
 #define M F2(&X)
 
-void test4() {
+void test4(void) {
   int *X;
   M;
   *X = 1; // expected-warning{{Dereference of null pointer}}
@@ -93,7 +93,7 @@ void test4() {
 // CHECK-NEXT:  </dict>
 // CHECK-NEXT: </array>
 
-void test_h() {
+void test_h(void) {
   int *X;
   F_H(&X);
   *X = 1; // expected-warning{{Dereference of null pointer}}

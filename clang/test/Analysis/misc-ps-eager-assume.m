@@ -92,7 +92,7 @@ void pr3836(int *a, int *b) {
 
 void rdar7342806_aux(short x);
 
-void rdar7342806() {
+void rdar7342806(void) {
   extern short Count;
   extern short Flag1;
 

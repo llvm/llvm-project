@@ -11,6 +11,6 @@ struct MyStruct {
   void * B;
 };
 
-void bar(){
+void bar(void){
 struct MyStruct MS = { tB, 0 };
 }

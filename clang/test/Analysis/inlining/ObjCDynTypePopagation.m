@@ -4,7 +4,7 @@
 
 void clang_analyzer_eval(int);
 
-PublicSubClass2 *getObj();
+PublicSubClass2 *getObj(void);
 
 @implementation PublicParent
 - (int)getZeroOverridden {

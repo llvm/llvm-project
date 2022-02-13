@@ -4,7 +4,7 @@
 typedef int sigjmp_buf[_JBLEN + 1];
 int sigsetjmp(sigjmp_buf env, int savemask);
 sigjmp_buf B;
-int foo() {
+int foo(void) {
   sigsetjmp(B, 1);
   bar();
 }

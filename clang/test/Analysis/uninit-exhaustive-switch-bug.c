@@ -3,9 +3,9 @@
 // rdar://problem/54359410
 // expected-no-diagnostics
 
-int rand();
+int rand(void);
 
-void test() {
+void test(void) {
   int offset = 0;
   int value;
   int test = rand();

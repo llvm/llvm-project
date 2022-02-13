@@ -79,11 +79,11 @@ void free(void *);
 #define strlen BUILTIN(strlen)
 size_t strlen(const char *s);
 
-void strlen_constant0() {
+void strlen_constant0(void) {
   clang_analyzer_eval(strlen("123") == 3); // expected-warning{{TRUE}}
 }
 
-void strlen_constant1() {
+void strlen_constant1(void) {
   const char *a = "123";
   clang_analyzer_eval(strlen(a) == 3); // expected-warning{{TRUE}}
 }
@@ -96,20 +96,20 @@ void strlen_constant2(char x) {
   clang_analyzer_eval(strlen(a) == 3); // expected-warning{{UNKNOWN}}
 }
 
-size_t strlen_null() {
+size_t strlen_null(void) {
   return strlen(0); // expected-warning{{Null pointer passed as 1st argument to string length function}}
 }
 
-size_t strlen_fn() {
+size_t strlen_fn(void) {
   return strlen((char*)&strlen_fn); // expected-warning{{Argument to string length function is the address of the function 'strlen_fn', which is not a null-terminated string}}
 }
 
-size_t strlen_nonloc() {
+size_t strlen_nonloc(void) {
 label:
   return strlen((char*)&&label); // expected-warning{{Argument to string length function is the address of the label 'label', which is not a null-terminated string}}
 }
 
-void strlen_subregion() {
+void strlen_subregion(void) {
   struct two_strings { char a[2], b[2]; };
   extern void use_two_strings(struct two_strings *);
 
@@ -144,7 +144,7 @@ void strlen_argument(char *x) {
 }
 
 extern char global_str[];
-void strlen_global() {
+void strlen_global(void) {
   size_t a = strlen(global_str);
   size_t b = strlen(global_str);
   if (a == 0) {
@@ -202,7 +202,7 @@ size_t strlenWrapper(const char *str) {
 
 extern void invalidate(char *s);
 
-void testStrlenCallee() {
+void testStrlenCallee(void) {
   char str[42];
   invalidate(str);
   size_t lenBefore = strlenWrapper(str);
@@ -218,11 +218,11 @@ void testStrlenCallee() {
 
 size_t strnlen(const char *s, size_t maxlen);
 
-void strnlen_constant0() {
+void strnlen_constant0(void) {
   clang_analyzer_eval(strnlen("123", 10) == 3); // expected-warning{{TRUE}}
 }
 
-void strnlen_constant1() {
+void strnlen_constant1(void) {
   const char *a = "123";
   clang_analyzer_eval(strnlen(a, 10) == 3); // expected-warning{{TRUE}}
 }
@@ -234,11 +234,11 @@ void strnlen_constant2(char x) {
   clang_analyzer_eval(strnlen(a, 10) == 3); // expected-warning{{UNKNOWN}}
 }
 
-void strnlen_constant4() {
+void strnlen_constant4(void) {
   clang_analyzer_eval(strnlen("123456", 3) == 3); // expected-warning{{TRUE}}
 }
 
-void strnlen_constant5() {
+void strnlen_constant5(void) {
   const char *a = "123456";
   clang_analyzer_eval(strnlen(a, 3) == 3); // expected-warning{{TRUE}}
 }
@@ -250,25 +250,25 @@ void strnlen_constant6(char x) {
   clang_analyzer_eval(strnlen(a, 3) == 3); // expected-warning{{UNKNOWN}}
 }
 
-size_t strnlen_null() {
+size_t strnlen_null(void) {
   return strnlen(0, 3); // expected-warning{{Null pointer passed as 1st argument to string length function}}
 }
 
-size_t strnlen_fn() {
+size_t strnlen_fn(void) {
   return strnlen((char*)&strlen_fn, 3); // expected-warning{{Argument to string length function is the address of the function 'strlen_fn', which is not a null-terminated string}}
 }
 
-size_t strnlen_nonloc() {
+size_t strnlen_nonloc(void) {
 label:
   return strnlen((char*)&&label, 3); // expected-warning{{Argument to string length function is the address of the label 'label', which is not a null-terminated string}}
 }
 
-void strnlen_zero() {
+void strnlen_zero(void) {
   clang_analyzer_eval(strnlen("abc", 0) == 0); // expected-warning{{TRUE}}
   clang_analyzer_eval(strnlen(NULL, 0) == 0); // expected-warning{{TRUE}}
 }
 
-size_t strnlen_compound_literal() {
+size_t strnlen_compound_literal(void) {
   // This used to crash because we don't model the string lengths of
   // compound literals.
   return strnlen((char[]) { 'a', 'b', 0 }, 1);
@@ -364,7 +364,7 @@ void strcpy_no_overflow(char *y) {
 }
 
 // PR37503
-void *get_void_ptr();
+void *get_void_ptr(void);
 char ***type_punned_ptr;
 void strcpy_no_assertion(char c) {
   *(unsigned char **)type_punned_ptr = (unsigned char *)(get_void_ptr());
@@ -559,7 +559,7 @@ void strncpy_effects(char *x, char *y) {
 #ifndef SUPPRESS_OUT_OF_BOUND
 // Enabling the malloc checker enables some of the buffer-checking portions
 // of the C-string checker.
-void cstringchecker_bounds_nocrash() {
+void cstringchecker_bounds_nocrash(void) {
   char *p = malloc(2);
   strncpy(p, "AAA", sizeof("AAA"));
   // expected-warning@-1 {{String copy function overflows the destination buffer}}
@@ -623,7 +623,7 @@ void strncpy_zero(char *src) {
   strncpy(dst, src, 0); // no-warning
 }
 
-void strncpy_empty() {
+void strncpy_empty(void) {
   char dst[] = "123";
   char src[] = "";
   strncpy(dst, src, 4); // no-warning
@@ -776,7 +776,7 @@ void strncat_zero(char *src) {
   strncat(dst, src, 0); // no-warning
 }
 
-void strncat_empty() {
+void strncat_empty(void) {
   char dst[8] = "123";
   char src[] = "";
   strncat(dst, src, 4); // no-warning
@@ -789,7 +789,7 @@ void strncat_empty() {
 #define strcmp BUILTIN(strcmp)
 int strcmp(const char * s1, const char * s2);
 
-void strcmp_check_modelling() {
+void strcmp_check_modelling(void) {
   char *x = "aa";
   char *y = "a";
   clang_analyzer_eval(strcmp(x, y) > 0); // expected-warning{{TRUE}}
@@ -801,75 +801,75 @@ void strcmp_check_modelling() {
   clang_analyzer_eval(strcmp(y, x) < -1); // expected-warning{{UNKNOWN}}
 }
 
-void strcmp_constant0() {
+void strcmp_constant0(void) {
   clang_analyzer_eval(strcmp("123", "123") == 0); // expected-warning{{TRUE}}
 }
 
-void strcmp_constant_and_var_0() {
+void strcmp_constant_and_var_0(void) {
   char *x = "123";
   clang_analyzer_eval(strcmp(x, "123") == 0); // expected-warning{{TRUE}}
 }
 
-void strcmp_constant_and_var_1() {
+void strcmp_constant_and_var_1(void) {
   char *x = "123";
   clang_analyzer_eval(strcmp("123", x) == 0); // expected-warning{{TRUE}}
 }
 
-void strcmp_0() {
+void strcmp_0(void) {
   char *x = "123";
   char *y = "123";
   clang_analyzer_eval(strcmp(x, y) == 0); // expected-warning{{TRUE}}
 }
 
-void strcmp_1() {
+void strcmp_1(void) {
   char *x = "234";
   char *y = "123";
   clang_analyzer_eval(strcmp(x, y) > 0); // expected-warning{{TRUE}}
 }
 
-void strcmp_2() {
+void strcmp_2(void) {
   char *x = "123";
   char *y = "234";
   clang_analyzer_eval(strcmp(x, y) < 0); // expected-warning{{TRUE}}
 }
 
-void strcmp_null_0() {
+void strcmp_null_0(void) {
   char *x = NULL;
   char *y = "123";
   strcmp(x, y); // expected-warning{{Null pointer passed as 1st argument to string comparison function}}
 }
 
-void strcmp_null_1() {
+void strcmp_null_1(void) {
   char *x = "123";
   char *y = NULL;
   strcmp(x, y); // expected-warning{{Null pointer passed as 2nd argument to string comparison function}}
 }
 
-void strcmp_diff_length_0() {
+void strcmp_diff_length_0(void) {
   char *x = "12345";
   char *y = "234";
   clang_analyzer_eval(strcmp(x, y) < 0); // expected-warning{{TRUE}}
 }
 
-void strcmp_diff_length_1() {
+void strcmp_diff_length_1(void) {
   char *x = "123";
   char *y = "23456";
   clang_analyzer_eval(strcmp(x, y) < 0); // expected-warning{{TRUE}}
 }
 
-void strcmp_diff_length_2() {
+void strcmp_diff_length_2(void) {
   char *x = "12345";
   char *y = "123";
   clang_analyzer_eval(strcmp(x, y) > 0); // expected-warning{{TRUE}}
 }
 
-void strcmp_diff_length_3() {
+void strcmp_diff_length_3(void) {
   char *x = "123";
   char *y = "12345";
   clang_analyzer_eval(strcmp(x, y) < 0); // expected-warning{{TRUE}}
 }
 
-void strcmp_embedded_null () {
+void strcmp_embedded_null (void) {
 	clang_analyzer_eval(strcmp("\0z", "\0y") == 0); // expected-warning{{TRUE}}
 }
 
@@ -904,7 +904,7 @@ int strcmp_null_argument(char *a) {
 #define strncmp BUILTIN(strncmp)
 int strncmp(const char *s1, const char *s2, size_t n);
 
-void strncmp_check_modelling() {
+void strncmp_check_modelling(void) {
   char *x = "aa";
   char *y = "a";
   clang_analyzer_eval(strncmp(x, y, 2) > 0); // expected-warning{{TRUE}}
@@ -916,93 +916,93 @@ void strncmp_check_modelling() {
   clang_analyzer_eval(strncmp(y, x, 2) < -1); // expected-warning{{UNKNOWN}}
 }
 
-void strncmp_constant0() {
+void strncmp_constant0(void) {
   clang_analyzer_eval(strncmp("123", "123", 3) == 0); // expected-warning{{TRUE}}
 }
 
-void strncmp_constant_and_var_0() {
+void strncmp_constant_and_var_0(void) {
   char *x = "123";
   clang_analyzer_eval(strncmp(x, "123", 3) == 0); // expected-warning{{TRUE}}
 }
 
-void strncmp_constant_and_var_1() {
+void strncmp_constant_and_var_1(void) {
   char *x = "123";
   clang_analyzer_eval(strncmp("123", x, 3) == 0); // expected-warning{{TRUE}}
 }
 
-void strncmp_0() {
+void strncmp_0(void) {
   char *x = "123";
   char *y = "123";
   clang_analyzer_eval(strncmp(x, y, 3) == 0); // expected-warning{{TRUE}}
 }
 
-void strncmp_1() {
+void strncmp_1(void) {
   char *x = "234";
   char *y = "123";
   clang_analyzer_eval(strncmp(x, y, 3) > 0); // expected-warning{{TRUE}}
 }
 
-void strncmp_2() {
+void strncmp_2(void) {
   char *x = "123";
   char *y = "234";
   clang_analyzer_eval(strncmp(x, y, 3) < 0); // expected-warning{{TRUE}}
 }
 
-void strncmp_null_0() {
+void strncmp_null_0(void) {
   char *x = NULL;
   char *y = "123";
   strncmp(x, y, 3); // expected-warning{{Null pointer passed as 1st argument to string comparison function}}
 }
 
-void strncmp_null_1() {
+void strncmp_null_1(void) {
   char *x = "123";
   char *y = NULL;
   strncmp(x, y, 3); // expected-warning{{Null pointer passed as 2nd argument to string comparison function}}
 }
 
-void strncmp_diff_length_0() {
+void strncmp_diff_length_0(void) {
   char *x = "12345";
   char *y = "234";
   clang_analyzer_eval(strncmp(x, y, 5) < 0); // expected-warning{{TRUE}}
 }
 
-void strncmp_diff_length_1() {
+void strncmp_diff_length_1(void) {
   char *x = "123";
   char *y = "23456";
   clang_analyzer_eval(strncmp(x, y, 5) < 0); // expected-warning{{TRUE}}
 }
 
-void strncmp_diff_length_2() {
+void strncmp_diff_length_2(void) {
   char *x = "12345";
   char *y = "123";
   clang_analyzer_eval(strncmp(x, y, 5) > 0); // expected-warning{{TRUE}}
 }
 
-void strncmp_diff_length_3() {
+void strncmp_diff_length_3(void) {
   char *x = "123";
   char *y = "12345";
   clang_analyzer_eval(strncmp(x, y, 5) < 0); // expected-warning{{TRUE}}
 }
 
-void strncmp_diff_length_4() {
+void strncmp_diff_length_4(void) {
   char *x = "123";
   char *y = "12345";
   clang_analyzer_eval(strncmp(x, y, 3) == 0); // expected-warning{{TRUE}}
 }
 
-void strncmp_diff_length_5() {
+void strncmp_diff_length_5(void) {
   char *x = "012";
   char *y = "12345";
   clang_analyzer_eval(strncmp(x, y, 3) < 0); // expected-warning{{TRUE}}
 }
 
-void strncmp_diff_length_6() {
+void strncmp_diff_length_6(void) {
   char *x = "234";
   char *y = "12345";
   clang_analyzer_eval(strncmp(x, y, 3) > 0); // expected-warning{{TRUE}}
 }
 
-void strncmp_embedded_null () {
+void strncmp_embedded_null (void) {
 	clang_analyzer_eval(strncmp("ab\0zz", "ab\0yy", 4) == 0); // expected-warning{{TRUE}}
 }
 
@@ -1019,7 +1019,7 @@ int strncmp_null_argument(char *a, size_t n) {
 #define strcasecmp BUILTIN(strcasecmp)
 int strcasecmp(const char *s1, const char *s2);
 
-void strcasecmp_check_modelling() {
+void strcasecmp_check_modelling(void) {
   char *x = "aa";
   char *y = "a";
   clang_analyzer_eval(strcasecmp(x, y) > 0); // expected-warning{{TRUE}}
@@ -1031,75 +1031,75 @@ void strcasecmp_check_modelling() {
   clang_analyzer_eval(strcasecmp(y, x) < -1); // expected-warning{{UNKNOWN}}
 }
 
-void strcasecmp_constant0() {
+void strcasecmp_constant0(void) {
   clang_analyzer_eval(strcasecmp("abc", "Abc") == 0); // expected-warning{{TRUE}}
 }
 
-void strcasecmp_constant_and_var_0() {
+void strcasecmp_constant_and_var_0(void) {
   char *x = "abc";
   clang_analyzer_eval(strcasecmp(x, "Abc") == 0); // expected-warning{{TRUE}}
 }
 
-void strcasecmp_constant_and_var_1() {
+void strcasecmp_constant_and_var_1(void) {
   char *x = "abc";
   clang_analyzer_eval(strcasecmp("Abc", x) == 0); // expected-warning{{TRUE}}
 }
 
-void strcasecmp_0() {
+void strcasecmp_0(void) {
   char *x = "abc";
   char *y = "Abc";
   clang_analyzer_eval(strcasecmp(x, y) == 0); // expected-warning{{TRUE}}
 }
 
-void strcasecmp_1() {
+void strcasecmp_1(void) {
   char *x = "Bcd";
   char *y = "abc";
   clang_analyzer_eval(strcasecmp(x, y) > 0); // expected-warning{{TRUE}}
 }
 
-void strcasecmp_2() {
+void strcasecmp_2(void) {
   char *x = "abc";
   char *y = "Bcd";
   clang_analyzer_eval(strcasecmp(x, y) < 0); // expected-warning{{TRUE}}
 }
 
-void strcasecmp_null_0() {
+void strcasecmp_null_0(void) {
   char *x = NULL;
   char *y = "123";
   strcasecmp(x, y); // expected-warning{{Null pointer passed as 1st argument to string comparison function}}
 }
 
-void strcasecmp_null_1() {
+void strcasecmp_null_1(void) {
   char *x = "123";
   char *y = NULL;
   strcasecmp(x, y); // expected-warning{{Null pointer passed as 2nd argument to string comparison function}}
 }
 
-void strcasecmp_diff_length_0() {
+void strcasecmp_diff_length_0(void) {
   char *x = "abcde";
   char *y = "aBd";
   clang_analyzer_eval(strcasecmp(x, y) < 0); // expected-warning{{TRUE}}
 }
 
-void strcasecmp_diff_length_1() {
+void strcasecmp_diff_length_1(void) {
   char *x = "abc";
   char *y = "aBdef";
   clang_analyzer_eval(strcasecmp(x, y) < 0); // expected-warning{{TRUE}}
 }
 
-void strcasecmp_diff_length_2() {
+void strcasecmp_diff_length_2(void) {
   char *x = "aBcDe";
   char *y = "abc";
   clang_analyzer_eval(strcasecmp(x, y) > 0); // expected-warning{{TRUE}}
 }
 
-void strcasecmp_diff_length_3() {
+void strcasecmp_diff_length_3(void) {
   char *x = "aBc";
   char *y = "abcde";
   clang_analyzer_eval(strcasecmp(x, y) < 0); // expected-warning{{TRUE}}
 }
 
-void strcasecmp_embedded_null () {
+void strcasecmp_embedded_null (void) {
 	clang_analyzer_eval(strcasecmp("ab\0zz", "ab\0yy") == 0); // expected-warning{{TRUE}}
 }
 
@@ -1116,7 +1116,7 @@ int strcasecmp_null_argument(char *a) {
 #define strncasecmp BUILTIN(strncasecmp)
 int strncasecmp(const char *s1, const char *s2, size_t n);
 
-void strncasecmp_check_modelling() {
+void strncasecmp_check_modelling(void) {
   char *x = "aa";
   char *y = "a";
   clang_analyzer_eval(strncasecmp(x, y, 2) > 0); // expected-warning{{TRUE}}
@@ -1128,93 +1128,93 @@ void strncasecmp_check_modelling() {
   clang_analyzer_eval(strncasecmp(y, x, 2) < -1); // expected-warning{{UNKNOWN}}
 }
 
-void strncasecmp_constant0() {
+void strncasecmp_constant0(void) {
   clang_analyzer_eval(strncasecmp("abc", "Abc", 3) == 0); // expected-warning{{TRUE}}
 }
 
-void strncasecmp_constant_and_var_0() {
+void strncasecmp_constant_and_var_0(void) {
   char *x = "abc";
   clang_analyzer_eval(strncasecmp(x, "Abc", 3) == 0); // expected-warning{{TRUE}}
 }
 
-void strncasecmp_constant_and_var_1() {
+void strncasecmp_constant_and_var_1(void) {
   char *x = "abc";
   clang_analyzer_eval(strncasecmp("Abc", x, 3) == 0); // expected-warning{{TRUE}}
 }
 
-void strncasecmp_0() {
+void strncasecmp_0(void) {
   char *x = "abc";
   char *y = "Abc";
   clang_analyzer_eval(strncasecmp(x, y, 3) == 0); // expected-warning{{TRUE}}
 }
 
-void strncasecmp_1() {
+void strncasecmp_1(void) {
   char *x = "Bcd";
   char *y = "abc";
   clang_analyzer_eval(strncasecmp(x, y, 3) > 0); // expected-warning{{TRUE}}
 }
 
-void strncasecmp_2() {
+void strncasecmp_2(void) {
   char *x = "abc";
   char *y = "Bcd";
   clang_analyzer_eval(strncasecmp(x, y, 3) < 0); // expected-warning{{TRUE}}
 }
 
-void strncasecmp_null_0() {
+void strncasecmp_null_0(void) {
   char *x = NULL;
   char *y = "123";
   strncasecmp(x, y, 3); // expected-warning{{Null pointer passed as 1st argument to string comparison function}}
 }
 
-void strncasecmp_null_1() {
+void strncasecmp_null_1(void) {
   char *x = "123";
   char *y = NULL;
   strncasecmp(x, y, 3); // expected-warning{{Null pointer passed as 2nd argument to string comparison function}}
 }
 
-void strncasecmp_diff_length_0() {
+void strncasecmp_diff_length_0(void) {
   char *x = "abcde";
   char *y = "aBd";
   clang_analyzer_eval(strncasecmp(x, y, 5) < 0); // expected-warning{{TRUE}}
 }
 
-void strncasecmp_diff_length_1() {
+void strncasecmp_diff_length_1(void) {
   char *x = "abc";
   char *y = "aBdef";
   clang_analyzer_eval(strncasecmp(x, y, 5) < 0); // expected-warning{{TRUE}}
 }
 
-void strncasecmp_diff_length_2() {
+void strncasecmp_diff_length_2(void) {
   char *x = "aBcDe";
   char *y = "abc";
   clang_analyzer_eval(strncasecmp(x, y, 5) > 0); // expected-warning{{TRUE}}
 }
 
-void strncasecmp_diff_length_3() {
+void strncasecmp_diff_length_3(void) {
   char *x = "aBc";
   char *y = "abcde";
   clang_analyzer_eval(strncasecmp(x, y, 5) < 0); // expected-warning{{TRUE}}
 }
 
-void strncasecmp_diff_length_4() {
+void strncasecmp_diff_length_4(void) {
   char *x = "abcde";
   char *y = "aBc";
   clang_analyzer_eval(strncasecmp(x, y, 3) == 0); // expected-warning{{TRUE}}
 }
 
-void strncasecmp_diff_length_5() {
+void strncasecmp_diff_length_5(void) {
   char *x = "abcde";
   char *y = "aBd";
   clang_analyzer_eval(strncasecmp(x, y, 3) < 0); // expected-warning{{TRUE}}
 }
 
-void strncasecmp_diff_length_6() {
+void strncasecmp_diff_length_6(void) {
   char *x = "aBDe";
   char *y = "abc";
   clang_analyzer_eval(strncasecmp(x, y, 3) > 0); // expected-warning{{TRUE}}
 }
 
-void strncasecmp_embedded_null () {
+void strncasecmp_embedded_null (void) {
 	clang_analyzer_eval(strncasecmp("ab\0zz", "ab\0yy", 4) == 0); // expected-warning{{TRUE}}
 }
 
@@ -1234,7 +1234,7 @@ void strsep_null_delim(char *s) {
   strsep(&s, NULL); // expected-warning{{Null pointer passed as 2nd argument to strsep()}}
 }
 
-void strsep_null_search() {
+void strsep_null_search(void) {
   strsep(NULL, ""); // expected-warning{{Null pointer passed as 1st argument to strsep()}}
 }
 
@@ -1244,7 +1244,7 @@ void strsep_return_original_pointer(char *s) {
   clang_analyzer_eval(original == result); // expected-warning{{TRUE}}
 }
 
-void strsep_null_string() {
+void strsep_null_string(void) {
   char *s = NULL;
   char *result = strsep(&s, ""); // no-warning
   clang_analyzer_eval(result == NULL); // expected-warning{{TRUE}}
@@ -1262,7 +1262,7 @@ void strsep_changes_input_pointer(char *s) {
   }
 }
 
-void strsep_changes_input_string() {
+void strsep_changes_input_string(void) {
   char str[] = "abc";
 
   clang_analyzer_eval(str[1] == 'b'); // expected-warning{{TRUE}}
@@ -1287,14 +1287,14 @@ void explicit_bzero(void *dest, size_t count);
 void *malloc(size_t size);
 void free(void *);
 
-void memset1_char_array_null() {
+void memset1_char_array_null(void) {
   char str[] = "abcd";
   clang_analyzer_eval(strlen(str) == 4); // expected-warning{{TRUE}}
   memset(str, '\0', 2);
   clang_analyzer_eval(strlen(str) == 0); // expected-warning{{TRUE}}
 }
 
-void memset2_char_array_null() {
+void memset2_char_array_null(void) {
   char str[] = "abcd";
   clang_analyzer_eval(strlen(str) == 4); // expected-warning{{TRUE}}
   memset(str, '\0', strlen(str) + 1);
@@ -1302,14 +1302,14 @@ void memset2_char_array_null() {
   clang_analyzer_eval(str[2] == 0);      // expected-warning{{TRUE}}
 }
 
-void memset3_char_malloc_null() {
+void memset3_char_malloc_null(void) {
   char *str = (char *)malloc(10 * sizeof(char));
   memset(str + 1, '\0', 8);
   clang_analyzer_eval(str[1] == 0); // expected-warning{{UNKNOWN}}
   free(str);
 }
 
-void memset4_char_malloc_null() {
+void memset4_char_malloc_null(void) {
   char *str = (char *)malloc(10 * sizeof(char));
   //void *str = malloc(10 * sizeof(char));
   memset(str, '\0', 10);
@@ -1319,7 +1319,7 @@ void memset4_char_malloc_null() {
 }
 
 #ifdef SUPPRESS_OUT_OF_BOUND
-void memset5_char_malloc_overflow_null() {
+void memset5_char_malloc_overflow_null(void) {
   char *str = (char *)malloc(10 * sizeof(char));
   memset(str, '\0', 12);
   clang_analyzer_eval(str[1] == 0); // expected-warning{{UNKNOWN}}
@@ -1327,7 +1327,7 @@ void memset5_char_malloc_overflow_null() {
 }
 #endif
 
-void memset6_char_array_nonnull() {
+void memset6_char_array_nonnull(void) {
   char str[] = "abcd";
   clang_analyzer_eval(strlen(str) == 4); // expected-warning{{TRUE}}
   memset(str, '0', 2);
@@ -1336,7 +1336,7 @@ void memset6_char_array_nonnull() {
 }
 
 #ifdef SUPPRESS_OUT_OF_BOUND
-void memset8_char_array_nonnull() {
+void memset8_char_array_nonnull(void) {
   char str[5] = "abcd";
   clang_analyzer_eval(strlen(str) == 4); // expected-warning{{TRUE}}
   memset(str, '0', 10); // expected-warning{{'memset' will always overflow; destination buffer has size 5, but size argument is 10}}
@@ -1351,7 +1351,7 @@ struct POD_memset {
   char c;
 };
 
-void memset10_struct() {
+void memset10_struct(void) {
   struct POD_memset pod;
   char *str = (char *)&pod;
   pod.num = 1;
@@ -1362,7 +1362,7 @@ void memset10_struct() {
 }
 
 #ifdef SUPPRESS_OUT_OF_BOUND
-void memset11_struct_field() {
+void memset11_struct_field(void) {
   struct POD_memset pod;
   pod.num = 1;
   pod.c = '1';
@@ -1372,7 +1372,7 @@ void memset11_struct_field() {
   clang_analyzer_eval(pod.c == '\0'); // expected-warning{{TRUE}}
 }
 
-void memset12_struct_field() {
+void memset12_struct_field(void) {
   struct POD_memset pod;
   pod.num = 1;
   pod.c = '1';
@@ -1387,7 +1387,7 @@ union U_memset {
   char c;
 };
 
-void memset13_union_field() {
+void memset13_union_field(void) {
   union U_memset u;
   u.i = 5;
   memset(&u.i, '\0', sizeof(union U_memset));
@@ -1396,7 +1396,7 @@ void memset13_union_field() {
 }
 #endif
 
-void memset14_region_cast() {
+void memset14_region_cast(void) {
   char *str = (char *)malloc(10 * sizeof(int));
   int *array = (int *)str;
   memset(array, 0, 10 * sizeof(int));
@@ -1406,7 +1406,7 @@ void memset14_region_cast() {
   free(str);
 }
 
-void memset15_region_cast() {
+void memset15_region_cast(void) {
   char *str = (char *)malloc(10 * sizeof(int));
   int *array = (int *)str;
   memset(array, 0, 5 * sizeof(int));
@@ -1416,7 +1416,7 @@ void memset15_region_cast() {
   free(str);
 }
 
-int memset20_scalar() {
+int memset20_scalar(void) {
   int *x = malloc(sizeof(int));
   *x = 10;
   memset(x, 0, sizeof(int));
@@ -1425,7 +1425,7 @@ int memset20_scalar() {
   return num;
 }
 
-int memset21_scalar() {
+int memset21_scalar(void) {
   int *x = malloc(sizeof(int));
   memset(x, 0, 1);
   int num = 1 / *x;
@@ -1433,14 +1433,14 @@ int memset21_scalar() {
   return num;
 }
 
-void memset22_array() {
+void memset22_array(void) {
   int array[] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
   clang_analyzer_eval(array[1] == 2); // expected-warning{{TRUE}}
   memset(array, 0, sizeof(array));
   clang_analyzer_eval(array[1] == 0); // expected-warning{{TRUE}}
 }
 
-void memset23_array_pod_object() {
+void memset23_array_pod_object(void) {
   struct POD_memset array[10];
   array[1].num = 10;
   array[1].c = 'c';
@@ -1449,7 +1449,7 @@ void memset23_array_pod_object() {
   clang_analyzer_eval(array[1].num == 0); // expected-warning{{UNKNOWN}}
 }
 
-void memset24_array_pod_object() {
+void memset24_array_pod_object(void) {
   struct POD_memset array[10];
   array[1].num = 10;
   array[1].c = 'c';
@@ -1469,7 +1469,7 @@ void memset25_symbol(char c) {
   clang_analyzer_eval(array[4] == 0); // expected-warning{{TRUE}}
 }
 
-void memset26_upper_UCHAR_MAX() {
+void memset26_upper_UCHAR_MAX(void) {
   char array[10] = {1};
 
   memset(array, 1024, 10);
@@ -1478,33 +1478,33 @@ void memset26_upper_UCHAR_MAX() {
   clang_analyzer_eval(array[4] == 0); // expected-warning{{TRUE}}
 }
 
-void bzero1_null() {
+void bzero1_null(void) {
   char *a = NULL;
 
   bzero(a, 10); // expected-warning{{Null pointer passed as 1st argument to memory clearance function}}
 }
 
-void bzero2_char_array_null() {
+void bzero2_char_array_null(void) {
   char str[] = "abcd";
   clang_analyzer_eval(strlen(str) == 4); // expected-warning{{TRUE}}
   bzero(str, 2);
   clang_analyzer_eval(strlen(str) == 0); // expected-warning{{TRUE}}
 }
 
-void bzero3_char_ptr_null() {
+void bzero3_char_ptr_null(void) {
   char *str = "abcd";
   clang_analyzer_eval(strlen(str) == 4); // expected-warning{{TRUE}}
   bzero(str + 2, 2);
   clang_analyzer_eval(strlen(str) == 0); // expected-warning{{FALSE}}
 }
 
-void explicit_bzero1_null() {
+void explicit_bzero1_null(void) {
   char *a = NULL;
 
   explicit_bzero(a, 10); // expected-warning{{Null pointer passed as 1st argument to memory clearance function}}
 }
 
-void explicit_bzero2_clear_mypassword() {
+void explicit_bzero2_clear_mypassword(void) {
   char passwd[7] = "passwd";
 
   explicit_bzero(passwd, sizeof(passwd)); // no-warning
@@ -1513,7 +1513,7 @@ void explicit_bzero2_clear_mypassword() {
   clang_analyzer_eval(passwd[0] == '\0'); // expected-warning{{TRUE}}
 }
 
-void explicit_bzero3_out_ofbound() {
+void explicit_bzero3_out_ofbound(void) {
   char *privkey = (char *)malloc(7);
   const char newprivkey[10] = "mysafekey";
 
@@ -1557,7 +1557,7 @@ void strncpy_exactly_matching_buffer2(char *y) {
   clang_analyzer_eval(strlen(x) <= 3); // expected-warning{{UNKNOWN}}
 }
 
-void memset7_char_array_nonnull() {
+void memset7_char_array_nonnull(void) {
   char str[5] = "abcd";
   clang_analyzer_eval(strlen(str) == 4); // expected-warning{{TRUE}}
   memset(str, '0', 5);
@@ -1566,7 +1566,7 @@ void memset7_char_array_nonnull() {
   clang_analyzer_eval(strlen(str) >= 5); // expected-warning{{TRUE}}
 }
 
-void memset16_region_cast() {
+void memset16_region_cast(void) {
   char *str = (char *)malloc(10 * sizeof(int));
   int *array = (int *)str;
   memset(array, '0', 10 * sizeof(int));
@@ -1578,7 +1578,7 @@ void memset16_region_cast() {
 }
 
 #ifdef SUPPRESS_OUT_OF_BOUND
-void memset17_region_cast() {
+void memset17_region_cast(void) {
   char *str = (char *)malloc(10 * sizeof(int));
   int *array = (int *)str;
   memset(array, '0', 12 * sizeof(int));
@@ -1588,7 +1588,7 @@ void memset17_region_cast() {
   free(str);
 }
 
-void memset18_memset_multiple_times() {
+void memset18_memset_multiple_times(void) {
   char *str = (char *)malloc(10 * sizeof(char));
   clang_analyzer_eval(strlen(str) == 0); // expected-warning{{UNKNOWN}}
 
@@ -1604,7 +1604,7 @@ void memset18_memset_multiple_times() {
   free(str);
 }
 
-void memset19_memset_multiple_times() {
+void memset19_memset_multiple_times(void) {
   char *str = (char *)malloc(10 * sizeof(char));
   clang_analyzer_eval(strlen(str) == 0); // expected-warning{{UNKNOWN}}
 
@@ -1634,20 +1634,20 @@ void memset27_symbol(char c) {
   clang_analyzer_eval(array[4] >= 10); // expected-warning{{UNKNOWN}}
 }
 
-void memset28() {
+void memset28(void) {
   short x;
   memset(&x, 1, sizeof(short));
   // This should be true.
   clang_analyzer_eval(x == 0x101); // expected-warning{{UNKNOWN}}
 }
 
-void memset29_plain_int_zero() {
+void memset29_plain_int_zero(void) {
   short x;
   memset(&x, 0, sizeof(short));
   clang_analyzer_eval(x == 0); // expected-warning{{TRUE}}
 }
 
-void test_memset_chk() {
+void test_memset_chk(void) {
   int x;
   __builtin___memset_chk(&x, 0, sizeof(x), __builtin_object_size(&x, 0));
   clang_analyzer_eval(x == 0); // expected-warning{{TRUE}}

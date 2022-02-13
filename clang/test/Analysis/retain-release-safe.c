@@ -10,7 +10,7 @@ extern void CFRelease(CFTypeRef cf);
 #define CF_RETURNS_RETAINED __attribute__((cf_returns_retained))
 #define CF_CONSUMED __attribute__((cf_consumed))
 
-extern CFTypeRef CFCreate() CF_RETURNS_RETAINED;
+extern CFTypeRef CFCreate(void) CF_RETURNS_RETAINED;
 
 // A "safe" variant of CFRetain that doesn't crash when a null pointer is
 // retained. This is often defined by users in a similar manner. The
@@ -51,7 +51,7 @@ void releaseCFType(CFTypeRef CF_CONSUMED cf) {
 
 void escape(CFTypeRef cf);
 
-void makeSureTestsWork() {
+void makeSureTestsWork(void) {
   CFTypeRef cf = CFCreate();
   CFRelease(cf);
   CFRelease(cf); // expected-warning{{Reference-counted object is used after it is released}}
