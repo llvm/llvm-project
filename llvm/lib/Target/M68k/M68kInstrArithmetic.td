@@ -138,7 +138,7 @@ class MxBiArOp_R_RI_xEA<string MN, SDNode NODE, MxType TYPE, bits<4> CMD>
 }
 
 // Again, there are two ways to write an immediate to Dn register either dEA
-// opmode or using *I encoding, and again some instrucitons also support address
+// opmode or using *I encoding, and again some instructions also support address
 // registers some do not.
 class MxBiArOp_R_RI<string MN, SDNode NODE, MxType TYPE, bits<4> CMD>
     : MxInst<(outs TYPE.ROp:$dst), (ins TYPE.ROp:$src, TYPE.IOp:$opd),
