@@ -122,6 +122,7 @@ struct LinkEditData {
   std::vector<NListEntry> NameList;
   std::vector<StringRef> StringTable;
   std::vector<yaml::Hex32> IndirectSymbols;
+  std::vector<yaml::Hex64> FunctionStarts;
 
   bool isEmpty() const;
 };
