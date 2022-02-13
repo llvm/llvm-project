@@ -15,8 +15,8 @@ extern void __assert_fail (__const char *__assertion, __const char *__file,
 #define assert(expr) \
   ((expr)  ? (void)(0)  : __assert_fail (#expr, __FILE__, __LINE__, __func__))
 
-int g();
-int f() {
+int g(void);
+int f(void) {
   int x = g();
   // Assert that no overflows occur in this test file.
   // Assuming that concrete integers are also within that range.
@@ -25,14 +25,14 @@ int f() {
   return x;
 }
 
-void compare_different_symbol_equal() {
+void compare_different_symbol_equal(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
   clang_analyzer_express(x == y); // expected-warning {{$x - $y == 0}}
 }
 
-void compare_different_symbol_plus_left_int_equal() {
+void compare_different_symbol_plus_left_int_equal(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -40,7 +40,7 @@ void compare_different_symbol_plus_left_int_equal() {
   clang_analyzer_express(x == y); // expected-warning {{$y - $x == 1}}
 }
 
-void compare_different_symbol_minus_left_int_equal() {
+void compare_different_symbol_minus_left_int_equal(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -48,7 +48,7 @@ void compare_different_symbol_minus_left_int_equal() {
   clang_analyzer_express(x == y); // expected-warning {{$x - $y == 1}}
 }
 
-void compare_different_symbol_plus_right_int_equal() {
+void compare_different_symbol_plus_right_int_equal(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -57,7 +57,7 @@ void compare_different_symbol_plus_right_int_equal() {
   clang_analyzer_express(x == y); // expected-warning {{$x - $y == 2}}
 }
 
-void compare_different_symbol_minus_right_int_equal() {
+void compare_different_symbol_minus_right_int_equal(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -66,7 +66,7 @@ void compare_different_symbol_minus_right_int_equal() {
   clang_analyzer_express(x == y); // expected-warning {{$y - $x == 2}}
 }
 
-void compare_different_symbol_plus_left_plus_right_int_equal() {
+void compare_different_symbol_plus_left_plus_right_int_equal(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -77,7 +77,7 @@ void compare_different_symbol_plus_left_plus_right_int_equal() {
   clang_analyzer_express(x == y); // expected-warning {{$y - $x == 1}}
 }
 
-void compare_different_symbol_plus_left_minus_right_int_equal() {
+void compare_different_symbol_plus_left_minus_right_int_equal(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -88,7 +88,7 @@ void compare_different_symbol_plus_left_minus_right_int_equal() {
   clang_analyzer_express(x == y); // expected-warning {{$y - $x == 3}}
 }
 
-void compare_different_symbol_minus_left_plus_right_int_equal() {
+void compare_different_symbol_minus_left_plus_right_int_equal(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -99,7 +99,7 @@ void compare_different_symbol_minus_left_plus_right_int_equal() {
   clang_analyzer_express(x == y); // expected-warning {{$x - $y == 3}}
 }
 
-void compare_different_symbol_minus_left_minus_right_int_equal() {
+void compare_different_symbol_minus_left_minus_right_int_equal(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -110,14 +110,14 @@ void compare_different_symbol_minus_left_minus_right_int_equal() {
   clang_analyzer_express(x == y); // expected-warning {{$x - $y == 1}}
 }
 
-void compare_same_symbol_equal() {
+void compare_same_symbol_equal(void) {
   int x = f(), y = x;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_express(y); // expected-warning {{$x}}
   clang_analyzer_eval(x == y); // expected-warning {{TRUE}}
 }
 
-void compare_same_symbol_plus_left_int_equal() {
+void compare_same_symbol_plus_left_int_equal(void) {
   int x = f(), y = x;
   clang_analyzer_denote(x, "$x");
   ++x;
@@ -126,7 +126,7 @@ void compare_same_symbol_plus_left_int_equal() {
   clang_analyzer_eval(x == y); // expected-warning {{FALSE}}
 }
 
-void compare_same_symbol_minus_left_int_equal() {
+void compare_same_symbol_minus_left_int_equal(void) {
   int x = f(), y = x;
   clang_analyzer_denote(x, "$x");
   --x;
@@ -135,21 +135,21 @@ void compare_same_symbol_minus_left_int_equal() {
   clang_analyzer_eval(x == y); // expected-warning {{FALSE}}
 }
 
-void compare_same_symbol_plus_right_int_equal() {
+void compare_same_symbol_plus_right_int_equal(void) {
   int x = f(), y = x + 1;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_express(y); // expected-warning {{$x + 1}}
   clang_analyzer_eval(x == y); // expected-warning {{FALSE}}
 }
 
-void compare_same_symbol_minus_right_int_equal() {
+void compare_same_symbol_minus_right_int_equal(void) {
   int x = f(), y = x - 1;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_express(y); // expected-warning {{$x - 1}}
   clang_analyzer_eval(x == y); // expected-warning {{FALSE}}
 }
 
-void compare_same_symbol_plus_left_plus_right_int_equal() {
+void compare_same_symbol_plus_left_plus_right_int_equal(void) {
   int x = f(), y = x + 1;
   clang_analyzer_denote(x, "$x");
   ++x;
@@ -158,7 +158,7 @@ void compare_same_symbol_plus_left_plus_right_int_equal() {
   clang_analyzer_eval(x == y); // expected-warning {{TRUE}}
 }
 
-void compare_same_symbol_plus_left_minus_right_int_equal() {
+void compare_same_symbol_plus_left_minus_right_int_equal(void) {
   int x = f(), y = x - 1;
   clang_analyzer_denote(x, "$x");
   ++x;
@@ -167,7 +167,7 @@ void compare_same_symbol_plus_left_minus_right_int_equal() {
   clang_analyzer_eval(x == y); // expected-warning {{FALSE}}
 }
 
-void compare_same_symbol_minus_left_plus_right_int_equal() {
+void compare_same_symbol_minus_left_plus_right_int_equal(void) {
   int x = f(), y = x + 1;
   clang_analyzer_denote(x, "$x");
   --x;
@@ -176,7 +176,7 @@ void compare_same_symbol_minus_left_plus_right_int_equal() {
   clang_analyzer_eval(x == y); // expected-warning {{FALSE}}
 }
 
-void compare_same_symbol_minus_left_minus_right_int_equal() {
+void compare_same_symbol_minus_left_minus_right_int_equal(void) {
   int x = f(), y = x - 1;
   clang_analyzer_denote(x, "$x");
   --x;
@@ -185,14 +185,14 @@ void compare_same_symbol_minus_left_minus_right_int_equal() {
   clang_analyzer_eval(x == y); // expected-warning {{TRUE}}
 }
 
-void compare_different_symbol_less_or_equal() {
+void compare_different_symbol_less_or_equal(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
   clang_analyzer_express(x <= y); // expected-warning {{$x - $y <= 0}}
 }
 
-void compare_different_symbol_plus_left_int_less_or_equal() {
+void compare_different_symbol_plus_left_int_less_or_equal(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -201,7 +201,7 @@ void compare_different_symbol_plus_left_int_less_or_equal() {
   clang_analyzer_express(x <= y); // expected-warning {{$y - $x >= 1}}
 }
 
-void compare_different_symbol_minus_left_int_less_or_equal() {
+void compare_different_symbol_minus_left_int_less_or_equal(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -209,7 +209,7 @@ void compare_different_symbol_minus_left_int_less_or_equal() {
   clang_analyzer_express(x <= y); // expected-warning {{$x - $y <= 1}}
 }
 
-void compare_different_symbol_plus_right_int_less_or_equal() {
+void compare_different_symbol_plus_right_int_less_or_equal(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -217,7 +217,7 @@ void compare_different_symbol_plus_right_int_less_or_equal() {
   clang_analyzer_express(x <= y); // expected-warning {{$x - $y <= 2}}
 }
 
-void compare_different_symbol_minus_right_int_less_or_equal() {
+void compare_different_symbol_minus_right_int_less_or_equal(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -226,7 +226,7 @@ void compare_different_symbol_minus_right_int_less_or_equal() {
   clang_analyzer_express(x <= y); // expected-warning {{$y - $x >= 2}}
 }
 
-void compare_different_symbol_plus_left_plus_right_int_less_or_equal() {
+void compare_different_symbol_plus_left_plus_right_int_less_or_equal(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -237,7 +237,7 @@ void compare_different_symbol_plus_left_plus_right_int_less_or_equal() {
   clang_analyzer_express(x <= y); // expected-warning {{$y - $x >= 1}}
 }
 
-void compare_different_symbol_plus_left_minus_right_int_less_or_equal() {
+void compare_different_symbol_plus_left_minus_right_int_less_or_equal(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -248,7 +248,7 @@ void compare_different_symbol_plus_left_minus_right_int_less_or_equal() {
   clang_analyzer_express(x <= y); // expected-warning {{$y - $x >= 3}}
 }
 
-void compare_different_symbol_minus_left_plus_right_int_less_or_equal() {
+void compare_different_symbol_minus_left_plus_right_int_less_or_equal(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -259,7 +259,7 @@ void compare_different_symbol_minus_left_plus_right_int_less_or_equal() {
   clang_analyzer_express(x <= y); // expected-warning {{$x - $y <= 3}}
 }
 
-void compare_different_symbol_minus_left_minus_right_int_less_or_equal() {
+void compare_different_symbol_minus_left_minus_right_int_less_or_equal(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -270,14 +270,14 @@ void compare_different_symbol_minus_left_minus_right_int_less_or_equal() {
   clang_analyzer_express(x <= y); // expected-warning {{$x - $y <= 1}}
 }
 
-void compare_same_symbol_less_or_equal() {
+void compare_same_symbol_less_or_equal(void) {
   int x = f(), y = x;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_express(y); // expected-warning {{$x}}
   clang_analyzer_eval(x <= y); // expected-warning {{TRUE}}
 }
 
-void compare_same_symbol_plus_left_int_less_or_equal() {
+void compare_same_symbol_plus_left_int_less_or_equal(void) {
   int x = f(), y = x;
   clang_analyzer_denote(x, "$x");
   ++x;
@@ -286,7 +286,7 @@ void compare_same_symbol_plus_left_int_less_or_equal() {
   clang_analyzer_eval(x <= y); // expected-warning {{FALSE}}
 }
 
-void compare_same_symbol_minus_left_int_less_or_equal() {
+void compare_same_symbol_minus_left_int_less_or_equal(void) {
   int x = f(), y = x;
   clang_analyzer_denote(x, "$x");
   --x;
@@ -295,21 +295,21 @@ void compare_same_symbol_minus_left_int_less_or_equal() {
   clang_analyzer_eval(x <= y); // expected-warning {{TRUE}}
 }
 
-void compare_same_symbol_plus_right_int_less_or_equal() {
+void compare_same_symbol_plus_right_int_less_or_equal(void) {
   int x = f(), y = x + 1;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_express(y); // expected-warning {{$x + 1}}
   clang_analyzer_eval(x <= y); // expected-warning {{TRUE}}
 }
 
-void compare_same_symbol_minus_right_int_less_or_equal() {
+void compare_same_symbol_minus_right_int_less_or_equal(void) {
   int x = f(), y = x - 1;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_express(y); // expected-warning {{$x - 1}}
   clang_analyzer_eval(x <= y); // expected-warning {{FALSE}}
 }
 
-void compare_same_symbol_plus_left_plus_right_int_less_or_equal() {
+void compare_same_symbol_plus_left_plus_right_int_less_or_equal(void) {
   int x = f(), y = x + 1;
   clang_analyzer_denote(x, "$x");
   ++x;
@@ -318,7 +318,7 @@ void compare_same_symbol_plus_left_plus_right_int_less_or_equal() {
   clang_analyzer_eval(x <= y); // expected-warning {{TRUE}}
 }
 
-void compare_same_symbol_plus_left_minus_right_int_less_or_equal() {
+void compare_same_symbol_plus_left_minus_right_int_less_or_equal(void) {
   int x = f(), y = x - 1;
   clang_analyzer_denote(x, "$x");
   ++x;
@@ -327,7 +327,7 @@ void compare_same_symbol_plus_left_minus_right_int_less_or_equal() {
   clang_analyzer_eval(x <= y); // expected-warning {{FALSE}}
 }
 
-void compare_same_symbol_minus_left_plus_right_int_less_or_equal() {
+void compare_same_symbol_minus_left_plus_right_int_less_or_equal(void) {
   int x = f(), y = x + 1;
   clang_analyzer_denote(x, "$x");
   --x;
@@ -336,7 +336,7 @@ void compare_same_symbol_minus_left_plus_right_int_less_or_equal() {
   clang_analyzer_eval(x <= y); // expected-warning {{TRUE}}
 }
 
-void compare_same_symbol_minus_left_minus_right_int_less_or_equal() {
+void compare_same_symbol_minus_left_minus_right_int_less_or_equal(void) {
   int x = f(), y = x - 1;
   clang_analyzer_denote(x, "$x");
   --x;
@@ -345,7 +345,7 @@ void compare_same_symbol_minus_left_minus_right_int_less_or_equal() {
   clang_analyzer_eval(x <= y); // expected-warning {{TRUE}}
 }
 
-void compare_different_symbol_less() {
+void compare_different_symbol_less(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -353,7 +353,7 @@ void compare_different_symbol_less() {
   clang_analyzer_express(x < y); // expected-warning {{$x - $y < 0}}
 }
 
-void compare_different_symbol_plus_left_int_less() {
+void compare_different_symbol_plus_left_int_less(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -363,7 +363,7 @@ void compare_different_symbol_plus_left_int_less() {
   clang_analyzer_express(x < y); // expected-warning {{$y - $x > 1}}
 }
 
-void compare_different_symbol_minus_left_int_less() {
+void compare_different_symbol_minus_left_int_less(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -373,7 +373,7 @@ void compare_different_symbol_minus_left_int_less() {
   clang_analyzer_express(x < y); // expected-warning {{$x - $y < 1}}
 }
 
-void compare_different_symbol_plus_right_int_less() {
+void compare_different_symbol_plus_right_int_less(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -382,7 +382,7 @@ void compare_different_symbol_plus_right_int_less() {
   clang_analyzer_express(x < y); // expected-warning {{$x - $y < 2}}
 }
 
-void compare_different_symbol_minus_right_int_less() {
+void compare_different_symbol_minus_right_int_less(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -391,7 +391,7 @@ void compare_different_symbol_minus_right_int_less() {
   clang_analyzer_express(x < y); // expected-warning {{$y - $x > 2}}
 }
 
-void compare_different_symbol_plus_left_plus_right_int_less() {
+void compare_different_symbol_plus_left_plus_right_int_less(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -402,7 +402,7 @@ void compare_different_symbol_plus_left_plus_right_int_less() {
   clang_analyzer_express(x < y); // expected-warning {{$y - $x > 1}}
 }
 
-void compare_different_symbol_plus_left_minus_right_int_less() {
+void compare_different_symbol_plus_left_minus_right_int_less(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -413,7 +413,7 @@ void compare_different_symbol_plus_left_minus_right_int_less() {
   clang_analyzer_express(x < y); // expected-warning {{$y - $x > 3}}
 }
 
-void compare_different_symbol_minus_left_plus_right_int_less() {
+void compare_different_symbol_minus_left_plus_right_int_less(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -424,7 +424,7 @@ void compare_different_symbol_minus_left_plus_right_int_less() {
   clang_analyzer_express(x < y); // expected-warning {{$x - $y < 3}}
 }
 
-void compare_different_symbol_minus_left_minus_right_int_less() {
+void compare_different_symbol_minus_left_minus_right_int_less(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -435,14 +435,14 @@ void compare_different_symbol_minus_left_minus_right_int_less() {
   clang_analyzer_express(x < y); // expected-warning {{$x - $y < 1}}
 }
 
-void compare_same_symbol_less() {
+void compare_same_symbol_less(void) {
   int x = f(), y = x;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_express(y); // expected-warning {{$x}}
   clang_analyzer_eval(x < y); // expected-warning {{FALSE}}
 }
 
-void compare_same_symbol_plus_left_int_less() {
+void compare_same_symbol_plus_left_int_less(void) {
   int x = f(), y = x;
   clang_analyzer_denote(x, "$x");
   ++x;
@@ -451,7 +451,7 @@ void compare_same_symbol_plus_left_int_less() {
   clang_analyzer_eval(x < y); // expected-warning {{FALSE}}
 }
 
-void compare_same_symbol_minus_left_int_less() {
+void compare_same_symbol_minus_left_int_less(void) {
   int x = f(), y = x;
   clang_analyzer_denote(x, "$x");
   --x;
@@ -460,21 +460,21 @@ void compare_same_symbol_minus_left_int_less() {
   clang_analyzer_eval(x < y); // expected-warning {{TRUE}}
 }
 
-void compare_same_symbol_plus_right_int_less() {
+void compare_same_symbol_plus_right_int_less(void) {
   int x = f(), y = x + 1;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_express(y); // expected-warning {{$x + 1}}
   clang_analyzer_eval(x < y); // expected-warning {{TRUE}}
 }
 
-void compare_same_symbol_minus_right_int_less() {
+void compare_same_symbol_minus_right_int_less(void) {
   int x = f(), y = x - 1;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_express(y); // expected-warning {{$x - 1}}
   clang_analyzer_eval(x < y); // expected-warning {{FALSE}}
 }
 
-void compare_same_symbol_plus_left_plus_right_int_less() {
+void compare_same_symbol_plus_left_plus_right_int_less(void) {
   int x = f(), y = x + 1;
   clang_analyzer_denote(x, "$x");
   ++x;
@@ -483,7 +483,7 @@ void compare_same_symbol_plus_left_plus_right_int_less() {
   clang_analyzer_eval(x < y); // expected-warning {{FALSE}}
 }
 
-void compare_same_symbol_plus_left_minus_right_int_less() {
+void compare_same_symbol_plus_left_minus_right_int_less(void) {
   int x = f(), y = x - 1;
   clang_analyzer_denote(x, "$x");
   ++x;
@@ -492,7 +492,7 @@ void compare_same_symbol_plus_left_minus_right_int_less() {
   clang_analyzer_eval(x < y); // expected-warning {{FALSE}}
 }
 
-void compare_same_symbol_minus_left_plus_right_int_less() {
+void compare_same_symbol_minus_left_plus_right_int_less(void) {
   int x = f(), y = x + 1;
   clang_analyzer_denote(x, "$x");
   --x;
@@ -501,7 +501,7 @@ void compare_same_symbol_minus_left_plus_right_int_less() {
   clang_analyzer_eval(x < y); // expected-warning {{TRUE}}
 }
 
-void compare_same_symbol_minus_left_minus_right_int_less() {
+void compare_same_symbol_minus_left_minus_right_int_less(void) {
   int x = f(), y = x - 1;
   clang_analyzer_denote(x, "$x");
   --x;
@@ -510,7 +510,7 @@ void compare_same_symbol_minus_left_minus_right_int_less() {
   clang_analyzer_eval(x < y); // expected-warning {{FALSE}}
 }
 
-void compare_different_symbol_equal_unsigned() {
+void compare_different_symbol_equal_unsigned(void) {
   unsigned x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -518,7 +518,7 @@ void compare_different_symbol_equal_unsigned() {
   clang_analyzer_express(x == y); // expected-warning {{$x - $y == 0}}
 }
 
-void compare_different_symbol_plus_left_int_equal_unsigned() {
+void compare_different_symbol_plus_left_int_equal_unsigned(void) {
   unsigned x = f() + 1, y = f();
   clang_analyzer_denote(x - 1, "$x");
   clang_analyzer_denote(y, "$y");
@@ -527,7 +527,7 @@ void compare_different_symbol_plus_left_int_equal_unsigned() {
   clang_analyzer_express(x == y); // expected-warning {{$y - $x == 1}}
 }
 
-void compare_different_symbol_minus_left_int_equal_unsigned() {
+void compare_different_symbol_minus_left_int_equal_unsigned(void) {
   unsigned x = f() - 1, y = f();
   clang_analyzer_denote(x + 1, "$x");
   clang_analyzer_denote(y, "$y");
@@ -536,7 +536,7 @@ void compare_different_symbol_minus_left_int_equal_unsigned() {
   clang_analyzer_express(x == y); // expected-warning {{$x - $y == 1}}
 }
 
-void compare_different_symbol_plus_right_int_equal_unsigned() {
+void compare_different_symbol_plus_right_int_equal_unsigned(void) {
   unsigned x = f(), y = f() + 2;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y - 2, "$y");
@@ -544,7 +544,7 @@ void compare_different_symbol_plus_right_int_equal_unsigned() {
   clang_analyzer_express(x == y); // expected-warning {{$x - $y == 2}}
 }
 
-void compare_different_symbol_minus_right_int_equal_unsigned() {
+void compare_different_symbol_minus_right_int_equal_unsigned(void) {
   unsigned x = f(), y = f() - 2;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y + 2, "$y");
@@ -552,7 +552,7 @@ void compare_different_symbol_minus_right_int_equal_unsigned() {
   clang_analyzer_express(x == y); // expected-warning {{$y - $x == 2}}
 }
 
-void compare_different_symbol_plus_left_plus_right_int_equal_unsigned() {
+void compare_different_symbol_plus_left_plus_right_int_equal_unsigned(void) {
   unsigned x = f() + 2, y = f() + 1;
   clang_analyzer_denote(x - 2, "$x");
   clang_analyzer_denote(y - 1, "$y");
@@ -561,7 +561,7 @@ void compare_different_symbol_plus_left_plus_right_int_equal_unsigned() {
   clang_analyzer_express(x == y); // expected-warning {{$y - $x == 1}}
 }
 
-void compare_different_symbol_plus_left_minus_right_int_equal_unsigned() {
+void compare_different_symbol_plus_left_minus_right_int_equal_unsigned(void) {
   unsigned x = f() + 2, y = f() - 1;
   clang_analyzer_denote(x - 2, "$x");
   clang_analyzer_denote(y + 1, "$y");
@@ -570,7 +570,7 @@ void compare_different_symbol_plus_left_minus_right_int_equal_unsigned() {
   clang_analyzer_express(x == y); // expected-warning {{$y - $x == 3}}
 }
 
-void compare_different_symbol_minus_left_plus_right_int_equal_unsigned() {
+void compare_different_symbol_minus_left_plus_right_int_equal_unsigned(void) {
   unsigned x = f() - 2, y = f() + 1;
   clang_analyzer_denote(x + 2, "$x");
   clang_analyzer_denote(y - 1, "$y");
@@ -579,7 +579,7 @@ void compare_different_symbol_minus_left_plus_right_int_equal_unsigned() {
   clang_analyzer_express(x == y); // expected-warning {{$x - $y == 3}}
 }
 
-void compare_different_symbol_minus_left_minus_right_int_equal_unsigned() {
+void compare_different_symbol_minus_left_minus_right_int_equal_unsigned(void) {
   unsigned x = f() - 2, y = f() - 1;
   clang_analyzer_denote(x + 2, "$x");
   clang_analyzer_denote(y + 1, "$y");
@@ -588,14 +588,14 @@ void compare_different_symbol_minus_left_minus_right_int_equal_unsigned() {
   clang_analyzer_express(x == y); // expected-warning {{$x - $y == 1}}
 }
 
-void compare_same_symbol_equal_unsigned() {
+void compare_same_symbol_equal_unsigned(void) {
   unsigned x = f(), y = x;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_express(y); // expected-warning {{$x}}
   clang_analyzer_eval(x == y); // expected-warning {{TRUE}}
 }
 
-void compare_same_symbol_plus_left_int_equal_unsigned() {
+void compare_same_symbol_plus_left_int_equal_unsigned(void) {
   unsigned x = f(), y = x;
   clang_analyzer_denote(x, "$x");
   ++x;
@@ -604,7 +604,7 @@ void compare_same_symbol_plus_left_int_equal_unsigned() {
   clang_analyzer_express(x == y); // expected-warning {{$x + 1U == $x}}
 }
 
-void compare_same_symbol_minus_left_int_equal_unsigned() {
+void compare_same_symbol_minus_left_int_equal_unsigned(void) {
   unsigned x = f(), y = x;
   clang_analyzer_denote(x, "$x");
   --x;
@@ -613,21 +613,21 @@ void compare_same_symbol_minus_left_int_equal_unsigned() {
   clang_analyzer_express(x == y); // expected-warning {{$x - 1U == $x}}
 }
 
-void compare_same_symbol_plus_right_int_equal_unsigned() {
+void compare_same_symbol_plus_right_int_equal_unsigned(void) {
   unsigned x = f(), y = x + 1;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_express(y); // expected-warning {{$x + 1}}
   clang_analyzer_express(x == y); // expected-warning {{$x == $x + 1U}}
 }
 
-void compare_same_symbol_minus_right_int_equal_unsigned() {
+void compare_same_symbol_minus_right_int_equal_unsigned(void) {
   unsigned x = f(), y = x - 1;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_express(y); // expected-warning {{$x - 1}}
   clang_analyzer_express(x == y); // expected-warning {{$x == $x - 1U}}
 }
 
-void compare_same_symbol_plus_left_plus_right_int_equal_unsigned() {
+void compare_same_symbol_plus_left_plus_right_int_equal_unsigned(void) {
   unsigned x = f(), y = x + 1;
   clang_analyzer_denote(x, "$x");
   ++x;
@@ -636,7 +636,7 @@ void compare_same_symbol_plus_left_plus_right_int_equal_unsigned() {
   clang_analyzer_eval(x == y); // expected-warning {{TRUE}}
 }
 
-void compare_same_symbol_plus_left_minus_right_int_equal_unsigned() {
+void compare_same_symbol_plus_left_minus_right_int_equal_unsigned(void) {
   unsigned x = f(), y = x - 1;
   clang_analyzer_denote(x, "$x");
   ++x;
@@ -645,7 +645,7 @@ void compare_same_symbol_plus_left_minus_right_int_equal_unsigned() {
   clang_analyzer_express(x == y); // expected-warning {{$x + 1U == $x - 1U}}
 }
 
-void compare_same_symbol_minus_left_plus_right_int_equal_unsigned() {
+void compare_same_symbol_minus_left_plus_right_int_equal_unsigned(void) {
   unsigned x = f(), y = x + 1;
   clang_analyzer_denote(x, "$x");
   --x;
@@ -654,7 +654,7 @@ void compare_same_symbol_minus_left_plus_right_int_equal_unsigned() {
   clang_analyzer_express(x == y); // expected-warning {{$x - 1U == $x + 1U}}
 }
 
-void compare_same_symbol_minus_left_minus_right_int_equal_unsigned() {
+void compare_same_symbol_minus_left_minus_right_int_equal_unsigned(void) {
   unsigned x = f(), y = x - 1;
   clang_analyzer_denote(x, "$x");
   --x;
@@ -663,7 +663,7 @@ void compare_same_symbol_minus_left_minus_right_int_equal_unsigned() {
   clang_analyzer_eval(x == y); // expected-warning {{TRUE}}
 }
 
-void compare_different_symbol_less_or_equal_unsigned() {
+void compare_different_symbol_less_or_equal_unsigned(void) {
   unsigned x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -671,7 +671,7 @@ void compare_different_symbol_less_or_equal_unsigned() {
   clang_analyzer_express(x <= y); // expected-warning {{$x - $y <= 0}}
 }
 
-void compare_different_symbol_plus_left_int_less_or_equal_unsigned() {
+void compare_different_symbol_plus_left_int_less_or_equal_unsigned(void) {
   unsigned x = f() + 1, y = f();
   clang_analyzer_denote(x - 1, "$x");
   clang_analyzer_denote(y, "$y");
@@ -680,7 +680,7 @@ void compare_different_symbol_plus_left_int_less_or_equal_unsigned() {
   clang_analyzer_express(x <= y); // expected-warning {{$y - $x >= 1}}
 }
 
-void compare_different_symbol_minus_left_int_less_or_equal_unsigned() {
+void compare_different_symbol_minus_left_int_less_or_equal_unsigned(void) {
   unsigned x = f() - 1, y = f();
   clang_analyzer_denote(x + 1, "$x");
   clang_analyzer_denote(y, "$y");
@@ -689,7 +689,7 @@ void compare_different_symbol_minus_left_int_less_or_equal_unsigned() {
   clang_analyzer_express(x <= y); // expected-warning {{$x - $y <= 1}}
 }
 
-void compare_different_symbol_plus_right_int_less_or_equal_unsigned() {
+void compare_different_symbol_plus_right_int_less_or_equal_unsigned(void) {
   unsigned x = f(), y = f() + 2;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y - 2, "$y");
@@ -697,7 +697,7 @@ void compare_different_symbol_plus_right_int_less_or_equal_unsigned() {
   clang_analyzer_express(x <= y); // expected-warning {{$x - $y <= 2}}
 }
 
-void compare_different_symbol_minus_right_int_less_or_equal_unsigned() {
+void compare_different_symbol_minus_right_int_less_or_equal_unsigned(void) {
   unsigned x = f(), y = f() - 2;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y + 2, "$y");
@@ -705,7 +705,7 @@ void compare_different_symbol_minus_right_int_less_or_equal_unsigned() {
   clang_analyzer_express(x <= y); // expected-warning {{$y - $x >= 2}}
 }
 
-void compare_different_symbol_plus_left_plus_right_int_less_or_equal_unsigned() {
+void compare_different_symbol_plus_left_plus_right_int_less_or_equal_unsigned(void) {
   unsigned x = f() + 2, y = f() + 1;
   clang_analyzer_denote(x - 2, "$x");
   clang_analyzer_denote(y - 1, "$y");
@@ -714,7 +714,7 @@ void compare_different_symbol_plus_left_plus_right_int_less_or_equal_unsigned() 
   clang_analyzer_express(x <= y); // expected-warning {{$y - $x >= 1}}
 }
 
-void compare_different_symbol_plus_left_minus_right_int_less_or_equal_unsigned() {
+void compare_different_symbol_plus_left_minus_right_int_less_or_equal_unsigned(void) {
   unsigned x = f() + 2, y = f() - 1;
   clang_analyzer_denote(x - 2, "$x");
   clang_analyzer_denote(y + 1, "$y");
@@ -723,7 +723,7 @@ void compare_different_symbol_plus_left_minus_right_int_less_or_equal_unsigned()
   clang_analyzer_express(x <= y); // expected-warning {{$y - $x >= 3}}
 }
 
-void compare_different_symbol_minus_left_plus_right_int_less_or_equal_unsigned() {
+void compare_different_symbol_minus_left_plus_right_int_less_or_equal_unsigned(void) {
   unsigned x = f() - 2, y = f() + 1;
   clang_analyzer_denote(x + 2, "$x");
   clang_analyzer_denote(y - 1, "$y");
@@ -732,7 +732,7 @@ void compare_different_symbol_minus_left_plus_right_int_less_or_equal_unsigned()
   clang_analyzer_express(x <= y); // expected-warning {{$x - $y <= 3}}
 }
 
-void compare_different_symbol_minus_left_minus_right_int_less_or_equal_unsigned() {
+void compare_different_symbol_minus_left_minus_right_int_less_or_equal_unsigned(void) {
   unsigned x = f() - 2, y = f() - 1;
   clang_analyzer_denote(x + 2, "$x");
   clang_analyzer_denote(y + 1, "$y");
@@ -741,14 +741,14 @@ void compare_different_symbol_minus_left_minus_right_int_less_or_equal_unsigned(
   clang_analyzer_express(x <= y); // expected-warning {{$x - $y <= 1}}
 }
 
-void compare_same_symbol_less_or_equal_unsigned() {
+void compare_same_symbol_less_or_equal_unsigned(void) {
   unsigned x = f(), y = x;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_express(y); // expected-warning {{$x}}
   clang_analyzer_eval(x <= y); // expected-warning {{TRUE}}
 }
 
-void compare_same_symbol_plus_left_int_less_or_equal_unsigned() {
+void compare_same_symbol_plus_left_int_less_or_equal_unsigned(void) {
   unsigned x = f(), y = x;
   clang_analyzer_denote(x, "$x");
   ++x;
@@ -757,7 +757,7 @@ void compare_same_symbol_plus_left_int_less_or_equal_unsigned() {
   clang_analyzer_express(x <= y); // expected-warning {{$x + 1U <= $x}}
 }
 
-void compare_same_symbol_minus_left_int_less_or_equal_unsigned() {
+void compare_same_symbol_minus_left_int_less_or_equal_unsigned(void) {
   unsigned x = f(), y = x;
   clang_analyzer_denote(x, "$x");
   --x;
@@ -766,21 +766,21 @@ void compare_same_symbol_minus_left_int_less_or_equal_unsigned() {
   clang_analyzer_express(x <= y); // expected-warning {{$x - 1U <= $x}}
 }
 
-void compare_same_symbol_plus_right_int_less_or_equal_unsigned() {
+void compare_same_symbol_plus_right_int_less_or_equal_unsigned(void) {
   unsigned x = f(), y = x + 1;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_express(y); // expected-warning {{$x + 1}}
   clang_analyzer_express(x <= y); // expected-warning {{$x <= $x + 1U}}
 }
 
-void compare_same_symbol_minus_right_int_less_or_equal_unsigned() {
+void compare_same_symbol_minus_right_int_less_or_equal_unsigned(void) {
   unsigned x = f(), y = x - 1;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_express(y); // expected-warning {{$x - 1}}
   clang_analyzer_express(x <= y); // expected-warning {{$x <= $x - 1U}}
 }
 
-void compare_same_symbol_plus_left_plus_right_int_less_or_equal_unsigned() {
+void compare_same_symbol_plus_left_plus_right_int_less_or_equal_unsigned(void) {
   unsigned x = f(), y = x + 1;
   clang_analyzer_denote(x, "$x");
   ++x;
@@ -789,7 +789,7 @@ void compare_same_symbol_plus_left_plus_right_int_less_or_equal_unsigned() {
   clang_analyzer_eval(x <= y); // expected-warning {{TRUE}}
 }
 
-void compare_same_symbol_plus_left_minus_right_int_less_or_equal_unsigned() {
+void compare_same_symbol_plus_left_minus_right_int_less_or_equal_unsigned(void) {
   unsigned x = f(), y = x - 1;
   clang_analyzer_denote(x, "$x");
   ++x;
@@ -798,7 +798,7 @@ void compare_same_symbol_plus_left_minus_right_int_less_or_equal_unsigned() {
   clang_analyzer_express(x <= y); // expected-warning {{$x + 1U <= $x - 1U}}
 }
 
-void compare_same_symbol_minus_left_plus_right_int_less_or_equal_unsigned() {
+void compare_same_symbol_minus_left_plus_right_int_less_or_equal_unsigned(void) {
   unsigned x = f(), y = x + 1;
   clang_analyzer_denote(x, "$x");
   --x;
@@ -807,7 +807,7 @@ void compare_same_symbol_minus_left_plus_right_int_less_or_equal_unsigned() {
   clang_analyzer_express(x <= y); // expected-warning {{$x - 1U <= $x + 1U}}
 }
 
-void compare_same_symbol_minus_left_minus_right_int_less_or_equal_unsigned() {
+void compare_same_symbol_minus_left_minus_right_int_less_or_equal_unsigned(void) {
   unsigned x = f(), y = x - 1;
   clang_analyzer_denote(x, "$x");
   --x;
@@ -816,7 +816,7 @@ void compare_same_symbol_minus_left_minus_right_int_less_or_equal_unsigned() {
   clang_analyzer_eval(x <= y); // expected-warning {{TRUE}}
 }
 
-void compare_different_symbol_less_unsigned() {
+void compare_different_symbol_less_unsigned(void) {
   unsigned x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
@@ -824,7 +824,7 @@ void compare_different_symbol_less_unsigned() {
   clang_analyzer_express(x < y); // expected-warning {{$x - $y < 0}}
 }
 
-void compare_different_symbol_plus_left_int_less_unsigned() {
+void compare_different_symbol_plus_left_int_less_unsigned(void) {
   unsigned x = f() + 1, y = f();
   clang_analyzer_denote(x - 1, "$x");
   clang_analyzer_denote(y, "$y");
@@ -833,7 +833,7 @@ void compare_different_symbol_plus_left_int_less_unsigned() {
   clang_analyzer_express(x < y); // expected-warning {{$y - $x > 1}}
 }
 
-void compare_different_symbol_minus_left_int_less_unsigned() {
+void compare_different_symbol_minus_left_int_less_unsigned(void) {
   unsigned x = f() - 1, y = f();
   clang_analyzer_denote(x + 1, "$x");
   clang_analyzer_denote(y, "$y");
@@ -842,7 +842,7 @@ void compare_different_symbol_minus_left_int_less_unsigned() {
   clang_analyzer_express(x < y); // expected-warning {{$x - $y < 1}}
 }
 
-void compare_different_symbol_plus_right_int_less_unsigned() {
+void compare_different_symbol_plus_right_int_less_unsigned(void) {
   unsigned x = f(), y = f() + 2;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y - 2, "$y");
@@ -850,7 +850,7 @@ void compare_different_symbol_plus_right_int_less_unsigned() {
   clang_analyzer_express(x < y); // expected-warning {{$x - $y < 2}}
 }
 
-void compare_different_symbol_minus_right_int_less_unsigned() {
+void compare_different_symbol_minus_right_int_less_unsigned(void) {
   unsigned x = f(), y = f() - 2;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y + 2, "$y");
@@ -858,7 +858,7 @@ void compare_different_symbol_minus_right_int_less_unsigned() {
   clang_analyzer_express(x < y); // expected-warning {{$y - $x > 2}}
 }
 
-void compare_different_symbol_plus_left_plus_right_int_less_unsigned() {
+void compare_different_symbol_plus_left_plus_right_int_less_unsigned(void) {
   unsigned x = f() + 2, y = f() + 1;
   clang_analyzer_denote(x - 2, "$x");
   clang_analyzer_denote(y - 1, "$y");
@@ -867,7 +867,7 @@ void compare_different_symbol_plus_left_plus_right_int_less_unsigned() {
   clang_analyzer_express(x < y); // expected-warning {{$y - $x > 1}}
 }
 
-void compare_different_symbol_plus_left_minus_right_int_less_unsigned() {
+void compare_different_symbol_plus_left_minus_right_int_less_unsigned(void) {
   unsigned x = f() + 2, y = f() - 1;
   clang_analyzer_denote(x - 2, "$x");
   clang_analyzer_denote(y + 1, "$y");
@@ -876,7 +876,7 @@ void compare_different_symbol_plus_left_minus_right_int_less_unsigned() {
   clang_analyzer_express(x < y); // expected-warning {{$y - $x > 3}}
 }
 
-void compare_different_symbol_minus_left_plus_right_int_less_unsigned() {
+void compare_different_symbol_minus_left_plus_right_int_less_unsigned(void) {
   unsigned x = f() - 2, y = f() + 1;
   clang_analyzer_denote(x + 2, "$x");
   clang_analyzer_denote(y - 1, "$y");
@@ -885,7 +885,7 @@ void compare_different_symbol_minus_left_plus_right_int_less_unsigned() {
   clang_analyzer_express(x < y); // expected-warning {{$x - $y < 3}}
 }
 
-void compare_different_symbol_minus_left_minus_right_int_less_unsigned() {
+void compare_different_symbol_minus_left_minus_right_int_less_unsigned(void) {
   unsigned x = f() - 2, y = f() - 1;
   clang_analyzer_denote(x + 2, "$x");
   clang_analyzer_denote(y + 1, "$y");
@@ -894,14 +894,14 @@ void compare_different_symbol_minus_left_minus_right_int_less_unsigned() {
   clang_analyzer_express(x < y); // expected-warning {{$x - $y < 1}}
 }
 
-void compare_same_symbol_less_unsigned() {
+void compare_same_symbol_less_unsigned(void) {
   unsigned x = f(), y = x;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_express(y); // expected-warning {{$x}}
   clang_analyzer_eval(x < y); // expected-warning {{FALSE}}
 }
 
-void compare_same_symbol_plus_left_int_less_unsigned() {
+void compare_same_symbol_plus_left_int_less_unsigned(void) {
   unsigned x = f(), y = x;
   clang_analyzer_denote(x, "$x");
   ++x;
@@ -910,7 +910,7 @@ void compare_same_symbol_plus_left_int_less_unsigned() {
   clang_analyzer_express(x < y); // expected-warning {{$x + 1U < $x}}
 }
 
-void compare_same_symbol_minus_left_int_less_unsigned() {
+void compare_same_symbol_minus_left_int_less_unsigned(void) {
   unsigned x = f(), y = x;
   clang_analyzer_denote(x, "$x");
   --x;
@@ -919,21 +919,21 @@ void compare_same_symbol_minus_left_int_less_unsigned() {
   clang_analyzer_express(x < y); // expected-warning {{$x - 1U < $x}}
 }
 
-void compare_same_symbol_plus_right_int_less_unsigned() {
+void compare_same_symbol_plus_right_int_less_unsigned(void) {
   unsigned x = f(), y = x + 1;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_express(y); // expected-warning {{$x + 1}}
   clang_analyzer_express(x < y); // expected-warning {{$x < $x + 1U}}
 }
 
-void compare_same_symbol_minus_right_int_less_unsigned() {
+void compare_same_symbol_minus_right_int_less_unsigned(void) {
   unsigned x = f(), y = x - 1;
   clang_analyzer_denote(x, "$x");
   clang_analyzer_express(y); // expected-warning {{$x - 1}}
   clang_analyzer_express(x < y); // expected-warning {{$x < $x - 1U}}
 }
 
-void compare_same_symbol_plus_left_plus_right_int_less_unsigned() {
+void compare_same_symbol_plus_left_plus_right_int_less_unsigned(void) {
   unsigned x = f(), y = x + 1;
   clang_analyzer_denote(x, "$x");
   ++x;
@@ -942,7 +942,7 @@ void compare_same_symbol_plus_left_plus_right_int_less_unsigned() {
   clang_analyzer_eval(x < y); // expected-warning {{FALSE}}
 }
 
-void compare_same_symbol_plus_left_minus_right_int_less_unsigned() {
+void compare_same_symbol_plus_left_minus_right_int_less_unsigned(void) {
   unsigned x = f(), y = x - 1;
   clang_analyzer_denote(x, "$x");
   ++x;
@@ -951,7 +951,7 @@ void compare_same_symbol_plus_left_minus_right_int_less_unsigned() {
   clang_analyzer_express(x < y); // expected-warning {{$x + 1U < $x - 1U}}
 }
 
-void compare_same_symbol_minus_left_plus_right_int_less_unsigned() {
+void compare_same_symbol_minus_left_plus_right_int_less_unsigned(void) {
   unsigned x = f(), y = x + 1;
   clang_analyzer_denote(x, "$x");
   --x;
@@ -960,7 +960,7 @@ void compare_same_symbol_minus_left_plus_right_int_less_unsigned() {
   clang_analyzer_express(x < y); // expected-warning {{$x - 1U < $x + 1U}}
 }
 
-void compare_same_symbol_minus_left_minus_right_int_less_unsigned() {
+void compare_same_symbol_minus_left_minus_right_int_less_unsigned(void) {
   unsigned x = f(), y = x - 1;
   clang_analyzer_denote(x, "$x");
   --x;
@@ -980,8 +980,8 @@ int mixed_integer_types(int x, int y) {
   return a - y;
 }
 
-unsigned gu();
-unsigned fu() {
+unsigned gu(void);
+unsigned fu(void) {
   unsigned x = gu();
   // Assert that no overflows occur in this test file.
   // Assuming that concrete integers are also within that range.
@@ -989,7 +989,7 @@ unsigned fu() {
   return x;
 }
 
-void unsigned_concrete_int_no_crash() {
+void unsigned_concrete_int_no_crash(void) {
   unsigned x = fu() + 1U, y = fu() + 1U;
   clang_analyzer_denote(x - 1U, "$x");
   clang_analyzer_denote(y - 1U, "$y");

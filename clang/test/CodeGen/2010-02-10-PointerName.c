@@ -3,7 +3,7 @@
 // CHECK-NOT: {"char"}
 
 char i = 1;
-void foo() {
+void foo(void) {
   char *cp = &i;
 }
 

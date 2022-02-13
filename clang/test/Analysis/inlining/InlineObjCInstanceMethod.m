@@ -123,7 +123,7 @@ void randomlyMessageAnObject(MyClass *arr[], int i) {
 
 @end
 
-int testNonCovariantReturnType() {
+int testNonCovariantReturnType(void) {
   MyParent *obj = [[EvilChild alloc] init];
 
   // Devirtualization allows us to directly call -[EvilChild getInt], but
@@ -137,7 +137,7 @@ int testNonCovariantReturnType() {
   return 5/(x-1); // no-warning
 }
 
-int testCovariantReturnTypeNoErrorSinceTypesMatch() {
+int testCovariantReturnTypeNoErrorSinceTypesMatch(void) {
   MyParent *obj = [[EvilChild alloc] init];
 
   CFStringRef S = ((void*)0);

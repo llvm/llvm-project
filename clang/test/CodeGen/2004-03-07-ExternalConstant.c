@@ -2,6 +2,6 @@
 
 // CHECK: @a = external {{(dso_local )?}}constan
 extern const int a[];   // 'a' should be marked constant even though it's external!
-int foo () {
+int foo (void) {
   return a[0];
 }

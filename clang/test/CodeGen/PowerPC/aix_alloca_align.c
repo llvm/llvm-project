@@ -7,7 +7,7 @@
 typedef __SIZE_TYPE__ size_t;
 extern void *alloca(size_t __size) __attribute__((__nothrow__));
 
-void foo() {
+void foo(void) {
   char *ptr1 = (char *)alloca(sizeof(char) * 9);
   char *ptr2 = (char *)alloca(sizeof(char) * 32);
 }

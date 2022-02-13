@@ -70,7 +70,7 @@ void f_agg_tiny(struct tiny x) {
 }
 
 // CHECK-LABEL: define{{.*}} i64 @f_agg_tiny_ret()
-struct tiny f_agg_tiny_ret() {
+struct tiny f_agg_tiny_ret(void) {
   return (struct tiny){1, 2, 3, 4};
 }
 
@@ -84,7 +84,7 @@ void f_vec_tiny_v4i16(v4i16 x) {
 }
 
 // CHECK-LABEL: define{{.*}} i64 @f_vec_tiny_v4i16_ret()
-v4i16 f_vec_tiny_v4i16_ret() {
+v4i16 f_vec_tiny_v4i16_ret(void) {
   return (v4i16){1, 2, 3, 4};
 }
 
@@ -94,7 +94,7 @@ void f_vec_tiny_v1i64(v1i64 x) {
 }
 
 // CHECK-LABEL: define{{.*}} i64 @f_vec_tiny_v1i64_ret()
-v1i64 f_vec_tiny_v1i64_ret() {
+v1i64 f_vec_tiny_v1i64_ret(void) {
   return (v1i64){1};
 }
 
@@ -109,7 +109,7 @@ void f_agg_small(struct small x) {
 }
 
 // CHECK-LABEL: define{{.*}} [2 x i64] @f_agg_small_ret()
-struct small f_agg_small_ret() {
+struct small f_agg_small_ret(void) {
   return (struct small){1, 0};
 }
 
@@ -122,7 +122,7 @@ void f_vec_small_v8i16(v8i16 x) {
 }
 
 // CHECK-LABEL: define{{.*}} i128 @f_vec_small_v8i16_ret()
-v8i16 f_vec_small_v8i16_ret() {
+v8i16 f_vec_small_v8i16_ret(void) {
   return (v8i16){1, 2, 3, 4, 5, 6, 7, 8};
 }
 
@@ -132,7 +132,7 @@ void f_vec_small_v1i128(v1i128 x) {
 }
 
 // CHECK-LABEL: define{{.*}} i128 @f_vec_small_v1i128_ret()
-v1i128 f_vec_small_v1i128_ret() {
+v1i128 f_vec_small_v1i128_ret(void) {
   return (v1i128){1};
 }
 
@@ -179,7 +179,7 @@ void f_vec_large_v32i8(v32i8 x) {
 }
 
 // CHECK-LABEL: define{{.*}} void @f_vec_large_v32i8_ret(<32 x i8>* noalias sret(<32 x i8>) align 32 %agg.result)
-v32i8 f_vec_large_v32i8_ret() {
+v32i8 f_vec_large_v32i8_ret(void) {
   return (v32i8){1, 2, 3, 4, 5, 6, 7, 8};
 }
 
@@ -216,7 +216,7 @@ struct large f_scalar_stack_3(uint32_t a, __int128_t b, long double c, v32i8 d,
 int f_va_callee(int, ...);
 
 // CHECK-LABEL: define{{.*}} void @f_va_caller()
-void f_va_caller() {
+void f_va_caller(void) {
   // CHECK: call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i64 noundef 3, double noundef 4.000000e+00, double noundef 5.000000e+00, i64 {{%.*}}, [2 x i64] {{%.*}}, i128 {{%.*}}, %struct.large* noundef {{%.*}})
   f_va_callee(1, 2, 3LL, 4.0f, 5.0, (struct tiny){6, 7, 8, 9},
               (struct small){10, NULL}, (struct small_aligned){11},

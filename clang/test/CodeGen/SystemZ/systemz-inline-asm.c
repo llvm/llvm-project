@@ -33,7 +33,7 @@ void test_store_T(unsigned int i) {
 // CHECK: call void asm "st $1, $0", "=*T,r"(i32* nonnull elementtype(i32) @gi, i32 %i)
 }
 
-int test_load_m() {
+int test_load_m(void) {
   unsigned int i;
   asm("l %0, %1" : "=r" (i) : "m" (gi));
   return i;
@@ -41,7 +41,7 @@ int test_load_m() {
 // CHECK: call i32 asm "l $0, $1", "=r,*m"(i32* nonnull elementtype(i32) @gi)
 }
 
-int test_load_Q() {
+int test_load_Q(void) {
   unsigned int i;
   asm("l %0, %1" : "=r" (i) : "Q" (gi));
   return i;
@@ -49,7 +49,7 @@ int test_load_Q() {
 // CHECK: call i32 asm "l $0, $1", "=r,*Q"(i32* nonnull elementtype(i32) @gi)
 }
 
-int test_load_R() {
+int test_load_R(void) {
   unsigned int i;
   asm("l %0, %1" : "=r" (i) : "R" (gi));
   return i;
@@ -57,7 +57,7 @@ int test_load_R() {
 // CHECK: call i32 asm "l $0, $1", "=r,*R"(i32* nonnull elementtype(i32) @gi)
 }
 
-int test_load_S() {
+int test_load_S(void) {
   unsigned int i;
   asm("l %0, %1" : "=r" (i) : "S" (gi));
   return i;
@@ -65,7 +65,7 @@ int test_load_S() {
 // CHECK: call i32 asm "l $0, $1", "=r,*S"(i32* nonnull elementtype(i32) @gi)
 }
 
-int test_load_T() {
+int test_load_T(void) {
   unsigned int i;
   asm("l %0, %1" : "=r" (i) : "T" (gi));
   return i;
@@ -100,7 +100,7 @@ unsigned long test_rL(unsigned long i) {
 // CHECK: call i64 asm "sllg $0, $1, $2", "=r,r,L"(i64 %i, i32 500000)
 }
 
-void test_M() {
+void test_M(void) {
   asm volatile("#FOO %0" :: "M"(0x7fffffff));
 // CHECK-LABEL: define{{.*}} void @test_M()
 // CHECK: call void asm sideeffect "#FOO $0", "M"(i32 2147483647)

@@ -10,13 +10,13 @@ struct Y {
   struct X x;
 };
 
-struct Y bar();
+struct Y bar(void);
 
 void foo(struct Y *P) {
   *P = bar();
 }
 
-struct Y bar() {
+struct Y bar(void) {
   struct Y a;
   a.x.D = 0;
   return a;

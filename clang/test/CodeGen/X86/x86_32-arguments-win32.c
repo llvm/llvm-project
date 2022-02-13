@@ -77,7 +77,7 @@ void receive_vec_1024(__m1024 x, __m1024 y, __m1024 z, __m1024 w, __m1024 q) {
 // CHECK-LABEL: define dso_local void @receive_vec_512(<16 x float> inreg noundef %x, <16 x float> inreg noundef %y, <16 x float> inreg noundef %z, <16 x float>* noundef %0, <16 x float>* noundef %1)
 // CHECK-LABEL: define dso_local void @receive_vec_1024(<32 x float>* noundef %0, <32 x float>* noundef %1, <32 x float>* noundef %2, <32 x float>* noundef %3, <32 x float>* noundef %4)
 
-void pass_vec_128() {
+void pass_vec_128(void) {
   __m128 z = {0};
   receive_vec_128(z, z, z, z, z);
 }

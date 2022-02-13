@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 \
 // RUN:  -analyzer-checker=debug.ExprInspection %s 2>&1 | FileCheck %s
 
-void clang_analyzer_printState();
+void clang_analyzer_printState(void);
 
 void test_disequality_info(int e0, int b0, int b1, int c0) {
   int e1 = e0 - b0;

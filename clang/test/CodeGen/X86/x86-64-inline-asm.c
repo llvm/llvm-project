@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -triple x86_64 %s -S -o /dev/null -DWARN -verify
 // RUN: %clang_cc1 -triple x86_64 %s -S -o /dev/null -Werror -verify
 // RUN: %clang_cc1 -triple x86_64-linux-gnu %s -S -o - | FileCheck %s
-void f() {
+void f(void) {
   asm("movaps %xmm3, (%esi, 2)");
 // expected-note@1 {{instantiated into assembly here}}
 #ifdef WARN

@@ -37,7 +37,7 @@ unsigned int test_rdsspd(unsigned int a) {
   return _rdsspd(a);
 }
 
-unsigned int test_rdsspd_i32() {
+unsigned int test_rdsspd_i32(void) {
   // CHECK-LABEL: @test_rdsspd_i32
   // CHECK:       call i32 @llvm.x86.rdsspd(i32 %{{[a-z0-9.]+}})
   return _rdsspd_i32();
@@ -50,7 +50,7 @@ unsigned long long test_rdsspq(unsigned long long a) {
   return _rdsspq(a);
 }
 
-unsigned long long test_rdsspq_i64() {
+unsigned long long test_rdsspq_i64(void) {
   // X86_64-LABEL: @test_rdsspq_i64
   // X86_64:       call i64 @llvm.x86.rdsspq(i64 %{{[a-z0-9.]+}})
   return _rdsspq_i64();
@@ -72,7 +72,7 @@ unsigned int test_get_ssp(void) {
 
 #endif
 
-void  test_saveprevssp() {
+void  test_saveprevssp(void) {
   // CHECK-LABEL: @test_saveprevssp
   // CHECK:       call void @llvm.x86.saveprevssp()
   _saveprevssp();
@@ -112,7 +112,7 @@ void test_wrussq(unsigned long long __a, void * __p) {
 }
 #endif
 
-void test_setssbsy() {
+void test_setssbsy(void) {
   // CHECK-LABEL: @test_setssbsy
   // CHECK:       call void @llvm.x86.setssbsy()
   _setssbsy();

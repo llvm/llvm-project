@@ -4,7 +4,7 @@
 // Test for DIFlagNonTrivial on forward declared DICompositeTypes.
 
 struct Incomplete;
-struct Incomplete (*func_ptr)() = 0;
+struct Incomplete (*func_ptr)(void) = 0;
 // CHECK-C: !DICompositeType({{.*}}name: "Incomplete"
 // CHECK-C-NOT: DIFlagNonTrivial
 // CHECK-CXX: !DICompositeType({{.*}}name: "Incomplete"

@@ -5,11 +5,11 @@ typedef struct
     int a;
 } Struct;
 
-Struct func1();
+Struct func1(void);
 
 void func2(Struct S);
 
-void func3()
+void func3(void)
 {
     // CHECK: call i32 @func1() #{{[0-9]+}}, !dbg ![[LOC:[0-9]+]]
     // CHECK: call void @func2(i32 %{{[0-9]+}}) #{{[0-9]+}}, !dbg ![[LOC]]

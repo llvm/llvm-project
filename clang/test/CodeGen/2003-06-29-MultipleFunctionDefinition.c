@@ -2,7 +2,7 @@
 
 /* This is apparently legal C.
  */
-extern __inline__ void test() { }
+extern __inline__ void test(void) { }
 
-void test() {
+void test(void) {
 }

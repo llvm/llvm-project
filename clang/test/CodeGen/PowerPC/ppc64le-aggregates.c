@@ -369,58 +369,58 @@ struct s16 { char c[16]; };
 struct s17 { char c[17]; };
 
 // CHECK: define{{.*}} i8 @ret_s1()
-struct s1 ret_s1() {
+struct s1 ret_s1(void) {
   return (struct s1) { 17 };
 }
 
 // CHECK: define{{.*}} i16 @ret_s2()
-struct s2 ret_s2() {
+struct s2 ret_s2(void) {
   return (struct s2) { 17, 18 };
 }
 
 // CHECK: define{{.*}} i24 @ret_s3()
-struct s3 ret_s3() {
+struct s3 ret_s3(void) {
   return (struct s3) { 17, 18, 19 };
 }
 
 // CHECK: define{{.*}} i32 @ret_s4()
-struct s4 ret_s4() {
+struct s4 ret_s4(void) {
   return (struct s4) { 17, 18, 19, 20 };
 }
 
 // CHECK: define{{.*}} i40 @ret_s5()
-struct s5 ret_s5() {
+struct s5 ret_s5(void) {
   return (struct s5) { 17, 18, 19, 20, 21 };
 }
 
 // CHECK: define{{.*}} i48 @ret_s6()
-struct s6 ret_s6() {
+struct s6 ret_s6(void) {
   return (struct s6) { 17, 18, 19, 20, 21, 22 };
 }
 
 // CHECK: define{{.*}} i56 @ret_s7()
-struct s7 ret_s7() {
+struct s7 ret_s7(void) {
   return (struct s7) { 17, 18, 19, 20, 21, 22, 23 };
 }
 
 // CHECK: define{{.*}} i64 @ret_s8()
-struct s8 ret_s8() {
+struct s8 ret_s8(void) {
   return (struct s8) { 17, 18, 19, 20, 21, 22, 23, 24 };
 }
 
 // CHECK: define{{.*}} { i64, i64 } @ret_s9()
-struct s9 ret_s9() {
+struct s9 ret_s9(void) {
   return (struct s9) { 17, 18, 19, 20, 21, 22, 23, 24, 25 };
 }
 
 // CHECK: define{{.*}} { i64, i64 } @ret_s16()
-struct s16 ret_s16() {
+struct s16 ret_s16(void) {
   return (struct s16) { 17, 18, 19, 20, 21, 22, 23, 24,
                         25, 26, 27, 28, 29, 30, 31, 32 };
 }
 
 // CHECK: define{{.*}} void @ret_s17(%struct.s17*
-struct s17 ret_s17() {
+struct s17 ret_s17(void) {
   return (struct s17) { 17, 18, 19, 20, 21, 22, 23, 24,
                         25, 26, 27, 28, 29, 30, 31, 32, 33 };
 }

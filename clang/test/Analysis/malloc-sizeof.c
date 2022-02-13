@@ -31,13 +31,13 @@ void foo(unsigned int unsignedInt, unsigned int readSize) {
 }
 
 // Don't warn when the types differ only by constness.
-void ignore_const() {
+void ignore_const(void) {
   const char **x = (const char **)malloc(1 * sizeof(char *)); // no-warning
   const char ***y = (const char ***)malloc(1 * sizeof(char *)); // expected-warning {{Result of 'malloc' is converted to a pointer of type 'const char **', which is incompatible with sizeof operand type 'char *'}}
   free(x);
 }
 
-int *mallocArraySize() {
+int *mallocArraySize(void) {
   static const int sTable[10];
   static const int nestedTable[10][2];
   int *table = malloc(sizeof sTable);
@@ -47,7 +47,7 @@ int *mallocArraySize() {
   return table;
 }
 
-int *mallocWrongArraySize() {
+int *mallocWrongArraySize(void) {
   static const double sTable[10];
   int *table = malloc(sizeof sTable); // expected-warning {{Result of 'malloc' is converted to a pointer of type 'int', which is incompatible with sizeof operand type 'const double[10]'}}
   return table;

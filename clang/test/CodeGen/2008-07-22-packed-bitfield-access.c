@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -emit-llvm -o -
 
-int main () {
+int main (void) {
   struct foo {
     unsigned a:16;
     unsigned b:32 __attribute__ ((packed));

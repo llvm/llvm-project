@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.Loops,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
 
 void clang_analyzer_eval(int);
-void clang_analyzer_warnIfReached();
+void clang_analyzer_warnIfReached(void);
 
 #define nil ((id)0)
 
@@ -53,7 +53,7 @@ typedef unsigned long NSUInteger;
 @interface NSString : NSObject
 @end
 
-void test() {
+void test(void) {
   id x;
   for (x in [NSArray testObject])
     clang_analyzer_eval(x != nil); // expected-warning{{TRUE}}
@@ -71,7 +71,7 @@ void test() {
     clang_analyzer_eval(x != nil); // expected-warning{{UNKNOWN}}
 }
 
-void testWithVarInFor() {
+void testWithVarInFor(void) {
   for (id x in [NSArray testObject])
     clang_analyzer_eval(x != nil); // expected-warning{{TRUE}}
   for (id x in [NSPointerArray testObject])
@@ -168,7 +168,7 @@ void onlySuppressLoopExitAfterZeroIterations_WithContinue(NSMutableDictionary *D
   }
 }
 
-int* getPtr();
+int* getPtr(void);
 void onlySuppressLoopExitAfterZeroIterations_WithBreak(NSMutableDictionary *D) {
   if (D.count > 0) {
     int *x;
@@ -345,7 +345,7 @@ void boxedArrayEscape(NSMutableArray *array) {
     clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
 }
 
-int not_reachable_on_iteration_through_nil() {
+int not_reachable_on_iteration_through_nil(void) {
   NSDictionary* d = nil;
   for (NSString* s in [d allKeys])
     clang_analyzer_warnIfReached(); // no-warning

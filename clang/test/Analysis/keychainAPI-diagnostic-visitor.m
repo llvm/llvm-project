@@ -19,7 +19,7 @@ OSStatus SecKeychainItemCopyContent (
                                      void **outData
                                      );
 
-void DellocWithCFStringCreate4() {
+void DellocWithCFStringCreate4(void) {
     unsigned int *ptr = 0;
     OSStatus st = 0;
     UInt32 length;

@@ -4,8 +4,8 @@
 // RUN:   -analyzer-config eagerly-assume=false \
 // RUN:   -verify
 
-void clang_analyzer_warnIfReached();
-void clang_analyzer_eval();
+void clang_analyzer_warnIfReached(void);
+void clang_analyzer_eval(_Bool);
 
 void test_simplification_adjustment_concrete_int(int b, int c) {
   if (b < 0 || b > 1)  // b: [0,1]

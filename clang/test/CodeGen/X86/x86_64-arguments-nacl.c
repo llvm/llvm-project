@@ -16,7 +16,7 @@ struct PP_Var {
 };
 
 // CHECK: define{{.*}} { i64, i64 } @f0()
-struct PP_Var f0() {
+struct PP_Var f0(void) {
   struct PP_Var result = { 0, 0, 0 };
   return result;
 }
@@ -40,7 +40,7 @@ union u8 {
   long double a;
   int b;
 };
-union u8 f8_1() { while (1) {} }
+union u8 f8_1(void) { while (1) {} }
 void f8_2(union u8 a0) {}
 
 // CHECK-LABEL: define{{.*}} i64 @f9()
@@ -51,7 +51,7 @@ struct s10 { int a; int b; int : 0; };
 void f10(struct s10 a0) {}
 
 // CHECK-LABEL: define{{.*}} double @f11()
-union { long double a; float b; } f11() { while (1) {} }
+union { long double a; float b; } f11(void) { while (1) {} }
 
 // CHECK-LABEL: define{{.*}} i32 @f12_0()
 // CHECK-LABEL: define{{.*}} void @f12_1(i32 %a0.coerce)
@@ -86,7 +86,7 @@ typedef struct _str {
 
 void func(str s);
 str ss;
-void f9122143()
+void f9122143(void)
 {
   func(ss);
 }

@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
 
 void clang_analyzer_eval(int);
-void clang_analyzer_warnIfReached();
+void clang_analyzer_warnIfReached(void);
 
 #define INT_MIN 0x80000000
 #define INT_MAX 0x7fffffff
@@ -208,7 +208,7 @@ void testDifferentTypes3(int arg) {
   }
 }
 
-void testConstant() {
+void testConstant(void) {
   switch (3) {
   case 1 ... 5:
     clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}

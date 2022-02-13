@@ -53,7 +53,7 @@ union u8 {
   long double a;
   int b;
 };
-union u8 f8_1() { while (1) {} }
+union u8 f8_1(void) { while (1) {} }
 void f8_2(union u8 a0) {}
 
 // CHECK-LABEL: define{{.*}} i64 @f9()
@@ -64,7 +64,7 @@ struct s10 { int a; int b; int : 0; };
 void f10(struct s10 a0) {}
 
 // CHECK-LABEL: define{{.*}} void @f11(%union.anon* noalias sret(%union.anon) align 16 %agg.result)
-union { long double a; float b; } f11() { while (1) {} }
+union { long double a; float b; } f11(void) { while (1) {} }
 
 // CHECK-LABEL: define{{.*}} i32 @f12_0()
 // CHECK-LABEL: define{{.*}} void @f12_1(i32 %a0.coerce)
@@ -281,7 +281,7 @@ typedef struct _str {
 
 void func(str s);
 str ss;
-void f9122143()
+void f9122143(void)
 {
   func(ss);
 }
@@ -304,7 +304,7 @@ __m256 x37;
 
 void f38(s256 x);
 void f37(__m256 x);
-void f39() { f38(x38); f37(x37); }
+void f39(void) { f38(x38); f37(x37); }
 
 // The two next tests make sure that the struct below is passed
 // in the same way regardless of avx being used
@@ -363,7 +363,7 @@ int foo(long3 X)
 // AVX: call i32 bitcast (i32 (...)* @f45 to i32 (<8 x float>)*)
 int f45();
 __m256 x45;
-void test45() { f45(x45); }
+void test45(void) { f45(x45); }
 
 // Make sure we use byval to pass 64-bit vectors in memory; the LLVM call
 // lowering can't handle this case correctly because it runs after legalization.
@@ -371,7 +371,7 @@ void test45() { f45(x45); }
 // CHECK: call void @f46({{.*}}<2 x float>* noundef byval(<2 x float>) align 8 {{.*}}, <2 x float>* noundef byval(<2 x float>) align 8 {{.*}})
 typedef float v46 __attribute((vector_size(8)));
 void f46(v46,v46,v46,v46,v46,v46,v46,v46,v46,v46);
-void test46() { v46 x = {1,2}; f46(x,x,x,x,x,x,x,x,x,x); }
+void test46(void) { v46 x = {1,2}; f46(x,x,x,x,x,x,x,x,x,x); }
 
 // Check that we pass the struct below without using byval, which helps out
 // codegen.
@@ -441,7 +441,7 @@ void test51(struct test51_s *s, __builtin_va_list argList) {
 
 void test52_helper(int, ...);
 __m256 x52;
-void test52() {
+void test52(void) {
   test52_helper(0, x52, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0i);
 }
 // AVX: @test52_helper(i32 noundef 0, <8 x float> noundef {{%[a-zA-Z0-9]+}}, double noundef 1.000000e+00, double noundef 1.000000e+00, double noundef 1.000000e+00, double noundef 1.000000e+00, double noundef 1.000000e+00, double noundef 1.000000e+00, double noundef {{%[a-zA-Z0-9]+}}, double noundef {{%[a-zA-Z0-9]+}})
@@ -455,7 +455,7 @@ void test53(__m256 *m, __builtin_va_list argList) {
 
 void test54_helper(__m256, ...);
 __m256 x54;
-void test54() {
+void test54(void) {
   test54_helper(x54, x54, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0i);
   test54_helper(x54, x54, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0i);
 }
@@ -482,7 +482,7 @@ void f55(s512 x);
 // AVX512: declare void @f56(<16 x float> noundef)
 // NO-AVX512: declare void @f56(<16 x float>* noundef byval(<16 x float>) align 64)
 void f56(__m512 x);
-void f57() { f55(x55); f56(x56); }
+void f57(void) { f55(x55); f56(x56); }
 
 // Like for __m128 on AVX, check that the struct below is passed
 // in the same way regardless of AVX512 being used.
@@ -514,7 +514,7 @@ void f61(SAtwo256 s) {
 // AVX512: @f62_helper(i32 noundef 0, <16 x float> noundef {{%[a-zA-Z0-9]+}}, double noundef 1.000000e+00, double noundef 1.000000e+00, double noundef 1.000000e+00, double noundef 1.000000e+00, double noundef 1.000000e+00, double noundef 1.000000e+00, double noundef {{%[a-zA-Z0-9]+}}, double noundef {{%[a-zA-Z0-9]+}})
 void f62_helper(int, ...);
 __m512 x62;
-void f62() {
+void f62(void) {
   f62_helper(0, x62, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0i);
 }
 
@@ -532,7 +532,7 @@ void f63(__m512 *m, __builtin_va_list argList) {
 // AVX512: @f64_helper(<16 x float> noundef {{%[a-zA-Z0-9]+}}, <16 x float> noundef {{%[a-zA-Z0-9]+}}, double noundef 1.000000e+00, double noundef 1.000000e+00, double noundef 1.000000e+00, double noundef 1.000000e+00, double noundef 1.000000e+00, double noundef 1.000000e+00, { double, double }* noundef byval({ double, double }) align 8 {{%[^)]+}})
 void f64_helper(__m512, ...);
 __m512 x64;
-void f64() {
+void f64(void) {
   f64_helper(x64, x64, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0i);
   f64_helper(x64, x64, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0i);
 }

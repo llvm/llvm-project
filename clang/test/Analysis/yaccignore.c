@@ -8,7 +8,7 @@
 
 /* A Bison parser, made by GNU Bison 1.875.  */
 
-void clang_analyzer_warnIfReached();
-void foo() {
+void clang_analyzer_warnIfReached(void);
+void foo(void) {
   clang_analyzer_warnIfReached(); // conditional-warning {{REACHABLE}}
 }

@@ -10,7 +10,7 @@ typedef struct foo {
 
 static FOO foo[100];
 
-int test() {
+int test(void) {
   return foo[4].Y;
 }
 

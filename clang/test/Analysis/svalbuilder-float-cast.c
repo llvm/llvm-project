@@ -13,7 +13,7 @@ void SymbolCast_of_float_type_aux(int *p) {
   clang_analyzer_express(*p); // expected-warning{{Not a symbol}}
 }
 
-void SymbolCast_of_float_type() {
+void SymbolCast_of_float_type(void) {
   extern float x;
   void (*f)() = SymbolCast_of_float_type_aux;
   f(&x);

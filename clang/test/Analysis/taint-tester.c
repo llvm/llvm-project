@@ -109,7 +109,7 @@ int fscanfTest(void) {
 }
 
 // Check if we propagate taint from stdin when it's used in an assignment.
-void stdinTest1() {
+void stdinTest1(void) {
   int i;
   fscanf(stdin, "%d", &i);
   int j = i; // expected-warning + {{tainted}}
@@ -133,7 +133,7 @@ void stdinTest2(FILE *pIn) {
   int jj4 = ii;// no warning
 }
 
-void stdinTest3() {
+void stdinTest3(void) {
   FILE **ppp = &stdin;
   int iii;
   fscanf(*ppp, "%d", &iii);
@@ -141,8 +141,8 @@ void stdinTest3() {
 }
 
 // Test that stdin does not get invalidated by calls.
-void foo();
-void stdinTest4() {
+void foo(void);
+void stdinTest4(void) {
   int i;
   fscanf(stdin, "%d", &i);
   foo();
@@ -150,7 +150,7 @@ void stdinTest4() {
 }
 
 int getw(FILE *);
-void getwTest() {
+void getwTest(void) {
   int i = getw(stdin); // expected-warning + {{tainted}}
 }
 
@@ -176,7 +176,7 @@ int atoi(const char *nptr);
 long atol(const char *nptr);
 long long atoll(const char *nptr);
 
-void atoiTest() {
+void atoiTest(void) {
   char s[80];
   scanf("%s", s);
   int d = atoi(s); // expected-warning + {{tainted}}
@@ -192,7 +192,7 @@ void atoiTest() {
 
 char *pointer1;
 void *pointer2;
-void noCrashTest() {
+void noCrashTest(void) {
   if (!*pointer1) {
     __builtin___memcpy_chk(pointer2, pointer1, 0, 0); // no-crash
   }

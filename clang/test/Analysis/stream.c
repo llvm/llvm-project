@@ -2,69 +2,69 @@
 
 #include "Inputs/system-header-simulator.h"
 
-void check_fread() {
+void check_fread(void) {
   FILE *fp = tmpfile();
   fread(0, 0, 0, fp); // expected-warning {{Stream pointer might be NULL}}
   fclose(fp);
 }
 
-void check_fwrite() {
+void check_fwrite(void) {
   FILE *fp = tmpfile();
   fwrite(0, 0, 0, fp); // expected-warning {{Stream pointer might be NULL}}
   fclose(fp);
 }
 
-void check_fseek() {
+void check_fseek(void) {
   FILE *fp = tmpfile();
   fseek(fp, 0, 0); // expected-warning {{Stream pointer might be NULL}}
   fclose(fp);
 }
 
-void check_ftell() {
+void check_ftell(void) {
   FILE *fp = tmpfile();
   ftell(fp); // expected-warning {{Stream pointer might be NULL}}
   fclose(fp);
 }
 
-void check_rewind() {
+void check_rewind(void) {
   FILE *fp = tmpfile();
   rewind(fp); // expected-warning {{Stream pointer might be NULL}}
   fclose(fp);
 }
 
-void check_fgetpos() {
+void check_fgetpos(void) {
   FILE *fp = tmpfile();
   fpos_t pos;
   fgetpos(fp, &pos); // expected-warning {{Stream pointer might be NULL}}
   fclose(fp);
 }
 
-void check_fsetpos() {
+void check_fsetpos(void) {
   FILE *fp = tmpfile();
   fpos_t pos;
   fsetpos(fp, &pos); // expected-warning {{Stream pointer might be NULL}}
   fclose(fp);
 }
 
-void check_clearerr() {
+void check_clearerr(void) {
   FILE *fp = tmpfile();
   clearerr(fp); // expected-warning {{Stream pointer might be NULL}}
   fclose(fp);
 }
 
-void check_feof() {
+void check_feof(void) {
   FILE *fp = tmpfile();
   feof(fp); // expected-warning {{Stream pointer might be NULL}}
   fclose(fp);
 }
 
-void check_ferror() {
+void check_ferror(void) {
   FILE *fp = tmpfile();
   ferror(fp); // expected-warning {{Stream pointer might be NULL}}
   fclose(fp);
 }
 
-void check_fileno() {
+void check_fileno(void) {
   FILE *fp = tmpfile();
   fileno(fp); // expected-warning {{Stream pointer might be NULL}}
   fclose(fp);
@@ -160,12 +160,12 @@ void pr8081(FILE *stream, long offset, int whence) {
   fseek(stream, offset, whence);
 }
 
-void check_freopen_1() {
+void check_freopen_1(void) {
   FILE *f1 = freopen("foo.c", "r", (FILE *)0); // expected-warning {{Stream pointer might be NULL}}
   f1 = freopen(0, "w", (FILE *)0x123456);      // Do not report this as error.
 }
 
-void check_freopen_2() {
+void check_freopen_2(void) {
   FILE *f1 = fopen("foo.c", "r");
   if (f1) {
     FILE *f2 = freopen(0, "w", f1);
@@ -183,7 +183,7 @@ void check_freopen_2() {
   }
 }
 
-void check_freopen_3() {
+void check_freopen_3(void) {
   FILE *f1 = fopen("foo.c", "r");
   if (f1) {
     // Unchecked result of freopen.
@@ -197,7 +197,7 @@ void check_freopen_3() {
 extern FILE *GlobalF;
 extern void takeFile(FILE *);
 
-void check_escape1() {
+void check_escape1(void) {
   FILE *F = tmpfile();
   if (!F)
     return;
@@ -206,7 +206,7 @@ void check_escape1() {
   fwrite("1", 1, 1, F); // no warning
 }
 
-void check_escape2() {
+void check_escape2(void) {
   FILE *F = tmpfile();
   if (!F)
     return;
@@ -215,7 +215,7 @@ void check_escape2() {
   fwrite("1", 1, 1, F); // no warning
 }
 
-void check_escape3() {
+void check_escape3(void) {
   FILE *F = tmpfile();
   if (!F)
     return;
@@ -227,7 +227,7 @@ void check_escape3() {
   fwrite("1", 1, 1, F); // no warning
 }
 
-void check_escape4() {
+void check_escape4(void) {
   FILE *F = tmpfile();
   if (!F)
     return;
@@ -242,9 +242,9 @@ void check_escape4() {
 }
 
 int Test;
-_Noreturn void handle_error();
+_Noreturn void handle_error(void);
 
-void check_leak_noreturn_1() {
+void check_leak_noreturn_1(void) {
   FILE *F1 = tmpfile();
   if (!F1)
     return;
@@ -256,7 +256,7 @@ void check_leak_noreturn_1() {
 
 // Check that "location uniqueing" works.
 // This results in reporting only one occurence of resource leak for a stream.
-void check_leak_noreturn_2() {
+void check_leak_noreturn_2(void) {
   FILE *F1 = tmpfile();
   if (!F1)
     return;

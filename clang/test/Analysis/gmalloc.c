@@ -24,7 +24,7 @@ gpointer g_memdup(gconstpointer mem, guint byte_size);
 
 static const gsize n_bytes = 1024;
 
-void f1() {
+void f1(void) {
   gpointer g1 = g_malloc(n_bytes);
   gpointer g2 = g_malloc0(n_bytes);
   g1 = g_realloc(g1, n_bytes * 2);
@@ -43,7 +43,7 @@ void f1() {
   g_free(g2); // expected-warning{{Attempt to free released memory}}
 }
 
-void f2() {
+void f2(void) {
   gpointer g1 = g_malloc(n_bytes);
   gpointer g2 = g_malloc0(n_bytes);
   g1 = g_realloc(g1, n_bytes * 2);
@@ -63,7 +63,7 @@ void f2() {
   g3 = g_memdup(g3, n_bytes); // expected-warning{{Use of memory after it is freed}}
 }
 
-void f3() {
+void f3(void) {
   gpointer g1 = g_malloc(n_bytes);
   gpointer g2 = g_malloc0(n_bytes);
   g1 = g_realloc(g1, n_bytes * 2);
@@ -82,7 +82,7 @@ void f3() {
   g_free(g3);
 }
 
-void f4() {
+void f4(void) {
   gpointer g1 = g_malloc(n_bytes);
   gpointer g2 = g_malloc0(n_bytes);
   g1 = g_realloc(g1, n_bytes * 2);
@@ -102,7 +102,7 @@ void f4() {
   g_free(g4);
 }
 
-void f5() {
+void f5(void) {
   gpointer g1 = g_malloc(n_bytes);
   gpointer g2 = g_malloc0(n_bytes);
   g1 = g_realloc(g1, n_bytes * 2);
@@ -123,7 +123,7 @@ void f5() {
   g_free(g5);
 }
 
-void f6() {
+void f6(void) {
   gpointer g1 = g_malloc(n_bytes);
   gpointer g2 = g_malloc0(n_bytes);
   g1 = g_realloc(g1, n_bytes * 2);
@@ -145,7 +145,7 @@ void f6() {
   g_free(g6);
 }
 
-void f7() {
+void f7(void) {
   gpointer g1 = g_malloc(n_bytes);
   gpointer g2 = g_malloc0(n_bytes);
   g1 = g_realloc(g1, n_bytes * 2);

@@ -10,7 +10,7 @@ char buf[20];
 // IEEE128: call signext i32 (i8*, ...) @__printfieee128
 // PPC128-LABEL: define dso_local void @test_printf
 // PPC128: call signext i32 (i8*, ...) @printf
-void test_printf() {
+void test_printf(void) {
   __builtin_printf("%.Lf", x);
 }
 
@@ -40,7 +40,7 @@ void test_vsprintf(int n, ...) {
 // IEEE128: call signext i32 (i8*, i8*, ...) @__sprintfieee128
 // PPC128-LABEL: define dso_local void @test_sprintf
 // PPC128: call signext i32 (i8*, i8*, ...) @sprintf
-void test_sprintf() {
+void test_sprintf(void) {
   __builtin_sprintf(buf, "%.Lf", x);
 }
 
@@ -48,7 +48,7 @@ void test_sprintf() {
 // IEEE128: call signext i32 (i8*, i64, i8*, ...) @__snprintfieee128
 // PPC128-LABEL: define dso_local void @test_snprintf
 // PPC128: call signext i32 (i8*, i64, i8*, ...) @snprintf
-void test_snprintf() {
+void test_snprintf(void) {
   __builtin_snprintf(buf, 20, "%.Lf", x);
 }
 

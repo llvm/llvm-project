@@ -27,7 +27,7 @@ struct Test Test4(struct Test A) {
   return A;
 }
 
-int Test6() {
+int Test6(void) {
   int B[200];
   return B[4];
 }

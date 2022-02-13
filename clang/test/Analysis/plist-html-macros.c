@@ -24,7 +24,7 @@ void null_deref(int *a) {
   *a = 1; // expected-warning{{null}}
 }
 
-void test1() {
+void test1(void) {
   CALL_FN(0);
 }
 
