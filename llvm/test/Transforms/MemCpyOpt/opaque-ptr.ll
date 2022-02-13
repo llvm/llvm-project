@@ -22,6 +22,7 @@ define void @test_memset_memcpy(ptr %src, i64 %src_size, ptr noalias %dst, i64 %
 define void @test_different_gep_source_elements(ptr %src) {
 ; CHECK-LABEL: @test_different_gep_source_elements(
 ; CHECK-NEXT:    [[PB:%.*]] = getelementptr [[B:%.*]], ptr [[SRC:%.*]], i64 0, i32 1
+; CHECK-NEXT:    store i64 0, ptr [[PB]], align 4
 ; CHECK-NEXT:    [[PA:%.*]] = getelementptr [[A:%.*]], ptr [[SRC]], i64 0, i32 1
 ; CHECK-NEXT:    [[PA2:%.*]] = getelementptr [[A]], ptr [[SRC]], i64 0, i32 2
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[PA]], i8 0, i64 16, i1 false)
