@@ -33,12 +33,12 @@ int main(int, char**)
         assert(m.get_allocator() == A(7));
         assert(m.key_comp() == C(5));
         assert(m.size() == 0);
-        assert(distance(m.begin(), m.end()) == 0);
+        assert(std::distance(m.begin(), m.end()) == 0);
 
         assert(mo.get_allocator() == A(test_alloc_base::moved_value));
         assert(mo.key_comp() == C(5));
         assert(mo.size() == 0);
-        assert(distance(mo.begin(), mo.end()) == 0);
+        assert(std::distance(mo.begin(), mo.end()) == 0);
     }
     {
         typedef int V;
@@ -61,7 +61,7 @@ int main(int, char**)
         assert(m.get_allocator() == A(7));
         assert(m.key_comp() == C(5));
         assert(m.size() == 3);
-        assert(distance(m.begin(), m.end()) == 3);
+        assert(std::distance(m.begin(), m.end()) == 3);
         assert(*m.begin() == 1);
         assert(*next(m.begin()) == 2);
         assert(*next(m.begin(), 2) == 3);
@@ -69,7 +69,7 @@ int main(int, char**)
         assert(mo.get_allocator() == A(test_alloc_base::moved_value));
         assert(mo.key_comp() == C(5));
         assert(mo.size() == 0);
-        assert(distance(mo.begin(), mo.end()) == 0);
+        assert(std::distance(mo.begin(), mo.end()) == 0);
     }
     {
         typedef int V;
@@ -92,7 +92,7 @@ int main(int, char**)
         assert(m.get_allocator() == A());
         assert(m.key_comp() == C(5));
         assert(m.size() == 3);
-        assert(distance(m.begin(), m.end()) == 3);
+        assert(std::distance(m.begin(), m.end()) == 3);
         assert(*m.begin() == 1);
         assert(*next(m.begin()) == 2);
         assert(*next(m.begin(), 2) == 3);
@@ -100,7 +100,7 @@ int main(int, char**)
         assert(mo.get_allocator() == A());
         assert(mo.key_comp() == C(5));
         assert(mo.size() == 0);
-        assert(distance(mo.begin(), mo.end()) == 0);
+        assert(std::distance(mo.begin(), mo.end()) == 0);
     }
 
   return 0;

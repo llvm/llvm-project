@@ -57,7 +57,7 @@ test(C& c1)
               c1.emplace_back(Emplaceable(1, 2.5));
 #endif
     assert(c1.size() == c1_osize + 1);
-    assert(distance(c1.begin(), c1.end())
+    assert(std::distance(c1.begin(), c1.end())
                == static_cast<std::ptrdiff_t>(c1.size()));
     I i = c1.end();
     assert(*--i == Emplaceable(1, 2.5));

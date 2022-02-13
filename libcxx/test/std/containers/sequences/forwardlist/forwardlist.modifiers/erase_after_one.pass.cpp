@@ -26,7 +26,7 @@ int main(int, char**)
 
         C::iterator i = c.erase_after(next(c.cbefore_begin(), 4));
         assert(i == c.end());
-        assert(distance(c.begin(), c.end()) == 4);
+        assert(std::distance(c.begin(), c.end()) == 4);
         assert(*next(c.begin(), 0) == 0);
         assert(*next(c.begin(), 1) == 1);
         assert(*next(c.begin(), 2) == 2);
@@ -34,26 +34,26 @@ int main(int, char**)
 
         i = c.erase_after(next(c.cbefore_begin(), 0));
         assert(i == c.begin());
-        assert(distance(c.begin(), c.end()) == 3);
+        assert(std::distance(c.begin(), c.end()) == 3);
         assert(*next(c.begin(), 0) == 1);
         assert(*next(c.begin(), 1) == 2);
         assert(*next(c.begin(), 2) == 3);
 
         i = c.erase_after(next(c.cbefore_begin(), 1));
         assert(i == next(c.begin()));
-        assert(distance(c.begin(), c.end()) == 2);
+        assert(std::distance(c.begin(), c.end()) == 2);
         assert(*next(c.begin(), 0) == 1);
         assert(*next(c.begin(), 1) == 3);
 
         i = c.erase_after(next(c.cbefore_begin(), 1));
         assert(i == c.end());
-        assert(distance(c.begin(), c.end()) == 1);
+        assert(std::distance(c.begin(), c.end()) == 1);
         assert(*next(c.begin(), 0) == 1);
 
         i = c.erase_after(next(c.cbefore_begin(), 0));
         assert(i == c.begin());
         assert(i == c.end());
-        assert(distance(c.begin(), c.end()) == 0);
+        assert(std::distance(c.begin(), c.end()) == 0);
     }
 #if TEST_STD_VER >= 11
     {
@@ -64,7 +64,7 @@ int main(int, char**)
 
         C::iterator i = c.erase_after(next(c.cbefore_begin(), 4));
         assert(i == c.end());
-        assert(distance(c.begin(), c.end()) == 4);
+        assert(std::distance(c.begin(), c.end()) == 4);
         assert(*next(c.begin(), 0) == 0);
         assert(*next(c.begin(), 1) == 1);
         assert(*next(c.begin(), 2) == 2);
@@ -72,26 +72,26 @@ int main(int, char**)
 
         i = c.erase_after(next(c.cbefore_begin(), 0));
         assert(i == c.begin());
-        assert(distance(c.begin(), c.end()) == 3);
+        assert(std::distance(c.begin(), c.end()) == 3);
         assert(*next(c.begin(), 0) == 1);
         assert(*next(c.begin(), 1) == 2);
         assert(*next(c.begin(), 2) == 3);
 
         i = c.erase_after(next(c.cbefore_begin(), 1));
         assert(i == next(c.begin()));
-        assert(distance(c.begin(), c.end()) == 2);
+        assert(std::distance(c.begin(), c.end()) == 2);
         assert(*next(c.begin(), 0) == 1);
         assert(*next(c.begin(), 1) == 3);
 
         i = c.erase_after(next(c.cbefore_begin(), 1));
         assert(i == c.end());
-        assert(distance(c.begin(), c.end()) == 1);
+        assert(std::distance(c.begin(), c.end()) == 1);
         assert(*next(c.begin(), 0) == 1);
 
         i = c.erase_after(next(c.cbefore_begin(), 0));
         assert(i == c.begin());
         assert(i == c.end());
-        assert(distance(c.begin(), c.end()) == 0);
+        assert(std::distance(c.begin(), c.end()) == 0);
     }
 #endif
 

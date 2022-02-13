@@ -57,7 +57,7 @@ test(int P, const C& c0, const C& c2)
     CI i = c1.insert(c1.begin() + P, BCI(c2.begin()), BCI(c2.end()));
     assert(i == c1.begin() + P);
     assert(c1.size() == c1_osize + c2.size());
-    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
+    assert(static_cast<std::size_t>(std::distance(c1.begin(), c1.end())) == c1.size());
     i = c1.begin();
     for (int j = 0; j < P; ++j, ++i)
         assert(*i == j);
@@ -74,7 +74,7 @@ test(int P, const C& c0, const C& c2)
     CI i = c1.insert(c1.begin() + P, BCI(c2.begin()), BCI(c2.end()));
     assert(i == c1.begin() + P);
     assert(c1.size() == c1_osize + c2.size());
-    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
+    assert(static_cast<std::size_t>(std::distance(c1.begin(), c1.end())) == c1.size());
     i = c1.begin();
     for (int j = 0; j < P; ++j, ++i)
         assert(*i == j);
@@ -91,7 +91,7 @@ test(int P, const C& c0, const C& c2)
     CI i = c1.insert(c1.begin() + P, BCI(c2.begin()), BCI(c2.end()));
     assert(i == c1.begin() + P);
     assert(c1.size() == c1_osize + c2.size());
-    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
+    assert(static_cast<std::size_t>(std::distance(c1.begin(), c1.end())) == c1.size());
     i = c1.begin();
     for (int j = 0; j < P; ++j, ++i)
         assert(*i == j);
@@ -172,7 +172,7 @@ testI(int P, C& c1, const C& c2)
     CI i = c1.insert(c1.begin() + P, ICI(c2.begin()), ICI(c2.end()));
     assert(i == c1.begin() + P);
     assert(c1.size() == c1_osize + c2.size());
-    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
+    assert(static_cast<std::size_t>(std::distance(c1.begin(), c1.end())) == c1.size());
     i = c1.begin();
     for (int j = 0; j < P; ++j, ++i)
         assert(*i == j);

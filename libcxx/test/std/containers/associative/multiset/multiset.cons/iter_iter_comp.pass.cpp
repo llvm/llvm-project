@@ -40,7 +40,7 @@ int main(int, char**)
                      cpp17_input_iterator<const V*>(ar+sizeof(ar)/sizeof(ar[0])), C(5));
     assert(m.value_comp() == C(5));
     assert(m.size() == 9);
-    assert(distance(m.begin(), m.end()) == 9);
+    assert(std::distance(m.begin(), m.end()) == 9);
     assert(*next(m.begin(), 0) == 1);
     assert(*next(m.begin(), 1) == 1);
     assert(*next(m.begin(), 2) == 1);
