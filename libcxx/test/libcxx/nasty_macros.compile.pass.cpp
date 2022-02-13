@@ -320,9 +320,6 @@
 #        include <experimental/coroutine>
 #    endif
 #    include <experimental/deque>
-#    ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY
-#        include <experimental/filesystem>
-#    endif
 #    include <experimental/forward_list>
 #    include <experimental/functional>
 #    include <experimental/iterator>
