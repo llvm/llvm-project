@@ -19,8 +19,8 @@ define void @test_memset_memcpy(ptr %src, i64 %src_size, ptr noalias %dst, i64 %
 %a = type { i64, i64, i64 }
 %b = type { i32, i32, i32 }
 
-define void @test_non_const_gep(ptr %src, i64 %i) {
-; CHECK-LABEL: @test_non_const_gep(
+define void @test_different_gep_source_elements(ptr %src) {
+; CHECK-LABEL: @test_different_gep_source_elements(
 ; CHECK-NEXT:    [[PB:%.*]] = getelementptr [[B:%.*]], ptr [[SRC:%.*]], i64 0, i32 1
 ; CHECK-NEXT:    [[PA:%.*]] = getelementptr [[A:%.*]], ptr [[SRC]], i64 0, i32 1
 ; CHECK-NEXT:    [[PA2:%.*]] = getelementptr [[A]], ptr [[SRC]], i64 0, i32 2
