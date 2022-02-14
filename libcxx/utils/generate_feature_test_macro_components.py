@@ -744,7 +744,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_unreachable",
     "values": { "c++2b": 202202 },
     "headers": ["utility"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_unwrap_ref",
     "values": { "c++20": 201811 },

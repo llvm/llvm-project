@@ -961,6 +961,7 @@ module std [system] {
       module swap                { private header "__utility/swap.h" }
       module to_underlying       { private header "__utility/to_underlying.h" }
       module transaction         { private header "__utility/transaction.h" }
+      module unreachable         { private header "__utility/unreachable.h" }
     }
   }
   module valarray {

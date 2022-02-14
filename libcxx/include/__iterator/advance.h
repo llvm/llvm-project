@@ -16,6 +16,7 @@
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
 #include <__utility/move.h>
+#include <__utility/unreachable.h>
 #include <concepts>
 #include <cstdlib>
 #include <limits>
@@ -181,7 +182,7 @@ public:
       return __n;
     }
 
-    _LIBCPP_UNREACHABLE();
+    __libcpp_unreachable();
   }
 };
 

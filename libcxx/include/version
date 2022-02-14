@@ -400,7 +400,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_string_contains                      202011L
 # define __cpp_lib_string_resize_and_overwrite          202110L
 # define __cpp_lib_to_underlying                        202102L
-// # define __cpp_lib_unreachable                          202202L
+# define __cpp_lib_unreachable                          202202L
 #endif
 
 // clang-format on

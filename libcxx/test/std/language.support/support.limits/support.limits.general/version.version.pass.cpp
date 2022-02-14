@@ -5005,17 +5005,11 @@
 #   error "__cpp_lib_unordered_map_try_emplace should have the value 201411L in c++2b"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_unreachable
-#     error "__cpp_lib_unreachable should be defined in c++2b"
-#   endif
-#   if __cpp_lib_unreachable != 202202L
-#     error "__cpp_lib_unreachable should have the value 202202L in c++2b"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_unreachable
-#     error "__cpp_lib_unreachable should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_unreachable
+#   error "__cpp_lib_unreachable should be defined in c++2b"
+# endif
+# if __cpp_lib_unreachable != 202202L
+#   error "__cpp_lib_unreachable should have the value 202202L in c++2b"
 # endif
 
 # ifndef __cpp_lib_unwrap_ref

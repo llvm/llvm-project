@@ -19,6 +19,7 @@
 #include <__format/format_fwd.h>
 #include <__format/formatter.h>
 #include <__format/parser_std_format_spec.h>
+#include <__utility/unreachable.h>
 #include <array>
 #include <charconv>
 #include <concepts>
@@ -176,7 +177,7 @@ __determine_grouping(ptrdiff_t __size, const string& __grouping) {
     }
   }
 
-  _LIBCPP_UNREACHABLE();
+  __libcpp_unreachable();
 }
 
 template <class _Parser>
@@ -292,7 +293,7 @@ private:
     }
     default:
       _LIBCPP_ASSERT(false, "The parser should have validated the type");
-      _LIBCPP_UNREACHABLE();
+      __libcpp_unreachable();
     }
   }
 

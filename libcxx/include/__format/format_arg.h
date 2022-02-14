@@ -16,6 +16,7 @@
 #include <__format/format_fwd.h>
 #include <__format/format_parse_context.h>
 #include <__memory/addressof.h>
+#include <__utility/unreachable.h>
 #include <__variant/monostate.h>
 #include <string>
 #include <string_view>
@@ -77,7 +78,7 @@ visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
 #ifndef _LIBCPP_HAS_NO_INT128
     return _VSTD::invoke(_VSTD::forward<_Visitor>(__vis), __arg.__i128);
 #else
-    _LIBCPP_UNREACHABLE();
+    __libcpp_unreachable();
 #endif
   case __format::__arg_t::__unsigned:
     return _VSTD::invoke(_VSTD::forward<_Visitor>(__vis), __arg.__unsigned);
@@ -88,7 +89,7 @@ visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
 #ifndef _LIBCPP_HAS_NO_INT128
     return _VSTD::invoke(_VSTD::forward<_Visitor>(__vis), __arg.__u128);
 #else
-   _LIBCPP_UNREACHABLE();
+   __libcpp_unreachable();
 #endif
   case __format::__arg_t::__float:
     return _VSTD::invoke(_VSTD::forward<_Visitor>(__vis), __arg.__float);
@@ -106,7 +107,7 @@ visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
   case __format::__arg_t::__handle:
     return _VSTD::invoke(_VSTD::forward<_Visitor>(__vis), __arg.__handle);
   }
-  _LIBCPP_UNREACHABLE();
+  __libcpp_unreachable();
 }
 
 template <class _Context>

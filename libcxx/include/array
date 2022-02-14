@@ -111,8 +111,8 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 #include <__config>
 #include <__debug>
 #include <__tuple>
+#include <__utility/unreachable.h>
 #include <algorithm>
-#include <cstdlib> // for _LIBCPP_UNREACHABLE
 #include <iterator>
 #include <stdexcept>
 #include <type_traits>
@@ -309,54 +309,54 @@ struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     reference operator[](size_type) _NOEXCEPT {
       _LIBCPP_ASSERT(false, "cannot call array<T, 0>::operator[] on a zero-sized array");
-      _LIBCPP_UNREACHABLE();
+      __libcpp_unreachable();
     }
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     const_reference operator[](size_type) const _NOEXCEPT {
       _LIBCPP_ASSERT(false, "cannot call array<T, 0>::operator[] on a zero-sized array");
-      _LIBCPP_UNREACHABLE();
+      __libcpp_unreachable();
     }
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     reference at(size_type) {
       __throw_out_of_range("array<T, 0>::at");
-      _LIBCPP_UNREACHABLE();
+      __libcpp_unreachable();
     }
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     const_reference at(size_type) const {
       __throw_out_of_range("array<T, 0>::at");
-      _LIBCPP_UNREACHABLE();
+      __libcpp_unreachable();
     }
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     reference front() _NOEXCEPT {
       _LIBCPP_ASSERT(false, "cannot call array<T, 0>::front() on a zero-sized array");
-      _LIBCPP_UNREACHABLE();
+      __libcpp_unreachable();
     }
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     const_reference front() const _NOEXCEPT {
       _LIBCPP_ASSERT(false, "cannot call array<T, 0>::front() on a zero-sized array");
-      _LIBCPP_UNREACHABLE();
+      __libcpp_unreachable();
     }
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     reference back() _NOEXCEPT {
       _LIBCPP_ASSERT(false, "cannot call array<T, 0>::back() on a zero-sized array");
-      _LIBCPP_UNREACHABLE();
+      __libcpp_unreachable();
     }
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     const_reference back() const _NOEXCEPT {
       _LIBCPP_ASSERT(false, "cannot call array<T, 0>::back() on a zero-sized array");
-      _LIBCPP_UNREACHABLE();
+      __libcpp_unreachable();
     }
 };
 
 
-#if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER > 14
 template<class _Tp, class... _Args,
          class = enable_if_t<__all<_IsSame<_Tp, _Args>::value...>::value>
          >

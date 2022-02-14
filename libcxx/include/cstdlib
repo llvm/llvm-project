@@ -88,12 +88,6 @@ void *aligned_alloc(size_t alignment, size_t size);                       // C11
 #  pragma GCC system_header
 #endif
 
-#ifdef __GNUC__
-#define _LIBCPP_UNREACHABLE() __builtin_unreachable()
-#else
-#define _LIBCPP_UNREACHABLE() _VSTD::abort()
-#endif
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 using ::size_t _LIBCPP_USING_IF_EXISTS;
