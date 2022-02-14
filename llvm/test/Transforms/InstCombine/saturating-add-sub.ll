@@ -1772,9 +1772,8 @@ define i32 @unsigned_sat_variable_using_wrong_min(i32 %x) {
 ; CHECK-LABEL: @unsigned_sat_variable_using_wrong_min(
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @get_i32()
 ; CHECK-NEXT:    [[NOTY:%.*]] = xor i32 [[Y]], -1
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[NOTY]], [[X:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[X]], i32 [[NOTY]]
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[Y]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[NOTY]], i32 [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %y = call i32 @get_i32() ; thwart complexity-based canonicalization
@@ -1791,9 +1790,8 @@ define i32 @unsigned_sat_variable_using_wrong_value(i32 %x, i32 %z) {
 ; CHECK-LABEL: @unsigned_sat_variable_using_wrong_value(
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @get_i32()
 ; CHECK-NEXT:    [[NOTY:%.*]] = xor i32 [[Y]], -1
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[NOTY]], [[X:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[X]], i32 [[NOTY]]
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[S]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[NOTY]], i32 [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %y = call i32 @get_i32() ; thwart complexity-based canonicalization
@@ -1832,9 +1830,8 @@ define <2 x i32> @unsigned_sat_constant_using_min_splat(<2 x i32> %x) {
 
 define i32 @unsigned_sat_constant_using_min_wrong_constant(i32 %x) {
 ; CHECK-LABEL: @unsigned_sat_constant_using_min_wrong_constant(
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X:%.*]], 42
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[X]], i32 42
-; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[S]], -42
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 42)
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[TMP1]], -42
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %c = icmp ult i32 %x, 42

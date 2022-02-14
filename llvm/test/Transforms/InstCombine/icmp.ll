@@ -675,9 +675,8 @@ define i1 @test37_extra_uses(i32 %x, i32 %y, i32 %z) {
 
 define i32 @neg_max_s32(i32 %x, i32 %y) {
 ; CHECK-LABEL: @neg_max_s32(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[S_NEG:%.*]] = select i1 [[C]], i32 [[Y]], i32 [[X]]
-; CHECK-NEXT:    ret i32 [[S_NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %nx = sub nsw i32 0, %x
   %ny = sub nsw i32 0, %y
@@ -689,9 +688,8 @@ define i32 @neg_max_s32(i32 %x, i32 %y) {
 
 define <4 x i32> @neg_max_v4s32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @neg_max_v4s32(
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt <4 x i32> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[S_NEG:%.*]] = select <4 x i1> [[C]], <4 x i32> [[X]], <4 x i32> [[Y]]
-; CHECK-NEXT:    ret <4 x i32> [[S_NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]])
+; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %nx = sub nsw <4 x i32> zeroinitializer, %x
   %ny = sub nsw <4 x i32> zeroinitializer, %y

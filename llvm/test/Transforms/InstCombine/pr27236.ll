@@ -3,10 +3,9 @@
 
 define float @test1(i32 %scale) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[SCALE:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[SCALE]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
-; CHECK-NEXT:    ret float [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[SCALE:%.*]], i32 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = sitofp i32 [[TMP1]] to float
+; CHECK-NEXT:    ret float [[TMP2]]
 ;
   %1 = icmp sgt i32 1, %scale
   %2 = select i1 %1, i32 1, i32 %scale

@@ -592,9 +592,8 @@ next:
 ; SMAX(SMAX(x, y), x) -> SMAX(x, y)
 define i32 @test30(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test30(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[Y]]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %cmp = icmp sgt i32 %x, %y
   %cond = select i1 %cmp, i32 %x, i32 %y
@@ -606,9 +605,8 @@ define i32 @test30(i32 %x, i32 %y) {
 ; UMAX(UMAX(x, y), x) -> UMAX(x, y)
 define i32 @test31(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test31(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[Y]]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %cmp = icmp ugt i32 %x, %y
   %cond = select i1 %cmp, i32 %x, i32 %y
@@ -620,9 +618,8 @@ define i32 @test31(i32 %x, i32 %y) {
 ; SMIN(SMIN(x, y), x) -> SMIN(x, y)
 define i32 @test32(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test32(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[X]]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %cmp = icmp sgt i32 %x, %y
   %cond = select i1 %cmp, i32 %y, i32 %x
@@ -1426,10 +1423,9 @@ define i32 @PR23757_ne_swapped(i32 %x, i1* %p) {
 
 define i32 @PR27137(i32 %a) {
 ; CHECK-LABEL: @PR27137(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[A]], i32 0
-; CHECK-NEXT:    [[S1:%.*]] = xor i32 [[TMP2]], -1
-; CHECK-NEXT:    ret i32 [[S1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[A:%.*]], i32 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %not_a = xor i32 %a, -1
   %c0 = icmp slt i32 %a, 0

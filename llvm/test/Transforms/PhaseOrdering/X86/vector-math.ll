@@ -83,8 +83,7 @@ define <2 x i64> @max_v4i32(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @max_v4i32(
 ; CHECK-NEXT:    [[T0_I_I:%.*]] = bitcast <2 x i64> [[X:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[T1_I_I:%.*]] = bitcast <2 x i64> [[Y:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[CMP_I_I:%.*]] = icmp sgt <4 x i32> [[T0_I_I]], [[T1_I_I]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[CMP_I_I]], <4 x i32> [[T0_I_I]], <4 x i32> [[T1_I_I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[T0_I_I]], <4 x i32> [[T1_I_I]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 ;

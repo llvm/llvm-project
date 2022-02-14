@@ -59,9 +59,8 @@ define i32* @test1d(i32* %p, i32* %q) {
 
 define i32* @test2(i32* %p, i64 %x, i64 %y) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SELECT_V:%.*]] = select i1 [[CMP]], i64 [[X]], i64 [[Y]]
-; CHECK-NEXT:    [[SELECT:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[SELECT_V]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umax.i64(i64 [[X:%.*]], i64 [[Y:%.*]])
+; CHECK-NEXT:    [[SELECT:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    ret i32* [[SELECT]]
 ;
   %gep1 = getelementptr inbounds i32, i32* %p, i64 %x

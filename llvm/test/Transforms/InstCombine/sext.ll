@@ -295,9 +295,8 @@ define i32 @test17(i1 %x) {
 
 define i32 @test18(i16 %x) {
 ; CHECK-LABEL: @test18(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i16 [[X:%.*]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP1]], i16 [[X]], i16 0
-; CHECK-NEXT:    [[EXT:%.*]] = zext i16 [[SEL]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.smax.i16(i16 [[X:%.*]], i16 0)
+; CHECK-NEXT:    [[EXT:%.*]] = zext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[EXT]]
 ;
   %cmp = icmp slt i16 %x, 0

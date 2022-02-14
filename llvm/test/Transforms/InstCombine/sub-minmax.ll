@@ -14,8 +14,8 @@ define i32 @max_na_b_minux_na(i32 %A, i32 %B) {
 ; CHECK-LABEL: @max_na_b_minux_na(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A:%.*]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[NOT]], i32 [[B:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 0, [[TMP1]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[X:%.*]] = sub i32 0, [[TMP1]]
+; CHECK-NEXT:    ret i32 [[X]]
 ;
   %not = xor i32 %A, -1
   %l0 = icmp ult i32 %not, %B
@@ -85,8 +85,8 @@ define i32 @max_b_na_minus_na(i32 %A, i32 %B) {
 ; CHECK-LABEL: @max_b_na_minus_na(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A:%.*]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[NOT]], i32 [[B:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 0, [[TMP1]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[X:%.*]] = sub i32 0, [[TMP1]]
+; CHECK-NEXT:    ret i32 [[X]]
 ;
   %not = xor i32 %A, -1
   %l0 = icmp ugt i32 %not, %B
@@ -112,8 +112,8 @@ define i32 @na_minus_max_b_na(i32 %A, i32 %B) {
 define i32 @max_na_bi_minux_na(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: @max_na_bi_minux_na(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[BI:%.*]], i32 [[A:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 0, [[TMP1]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[X:%.*]] = sub i32 0, [[TMP1]]
+; CHECK-NEXT:    ret i32 [[X]]
 ;
   %B =  xor i32 %Bi, -1
   %not = xor i32 %A, -1
@@ -139,8 +139,8 @@ define i32 @na_minus_max_na_bi(i32 %A, i32 %Bi) {
 define i32 @max_bi_na_minus_na(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: @max_bi_na_minus_na(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[BI:%.*]], i32 [[A:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 0, [[TMP1]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[X:%.*]] = sub i32 0, [[TMP1]]
+; CHECK-NEXT:    ret i32 [[X]]
 ;
   %B =  xor i32 %Bi, -1
   %not = xor i32 %A, -1
@@ -166,11 +166,10 @@ define i32 @na_minus_max_bi_na(i32 %A, i32 %Bi) {
 
 define i32 @max_na_bi_minux_na_use(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: @max_na_bi_minux_na_use(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[A:%.*]], -32
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[A]], i32 -32
-; CHECK-NEXT:    [[L1:%.*]] = xor i32 [[TMP2]], -1
-; CHECK-NEXT:    [[X:%.*]] = sub i32 [[A]], [[TMP2]]
-; CHECK-NEXT:    call void @use32(i32 [[L1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[A:%.*]], i32 -32)
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[X:%.*]] = sub i32 [[A]], [[TMP1]]
+; CHECK-NEXT:    call void @use32(i32 [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %not = xor i32 %A, -1
@@ -183,11 +182,10 @@ define i32 @max_na_bi_minux_na_use(i32 %A, i32 %Bi) {
 
 define i32 @na_minus_max_na_bi_use(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: @na_minus_max_na_bi_use(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[A:%.*]], -32
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[A]], i32 -32
-; CHECK-NEXT:    [[L1:%.*]] = xor i32 [[TMP2]], -1
-; CHECK-NEXT:    [[X:%.*]] = sub i32 [[TMP2]], [[A]]
-; CHECK-NEXT:    call void @use32(i32 [[L1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[A:%.*]], i32 -32)
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[X:%.*]] = sub i32 [[TMP1]], [[A]]
+; CHECK-NEXT:    call void @use32(i32 [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %not = xor i32 %A, -1
@@ -200,11 +198,10 @@ define i32 @na_minus_max_na_bi_use(i32 %A, i32 %Bi) {
 
 define i32 @max_bi_na_minus_na_use(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: @max_bi_na_minus_na_use(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[BI:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[BI]], i32 [[A]]
-; CHECK-NEXT:    [[L1:%.*]] = xor i32 [[TMP2]], -1
-; CHECK-NEXT:    [[X:%.*]] = sub i32 [[A]], [[TMP2]]
-; CHECK-NEXT:    call void @use32(i32 [[L1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[BI:%.*]], i32 [[A:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[X:%.*]] = sub i32 [[A]], [[TMP1]]
+; CHECK-NEXT:    call void @use32(i32 [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %not = xor i32 %A, -1
@@ -218,11 +215,10 @@ define i32 @max_bi_na_minus_na_use(i32 %A, i32 %Bi) {
 
 define i32 @na_minus_max_bi_na_use(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: @na_minus_max_bi_na_use(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[BI:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[BI]], i32 [[A]]
-; CHECK-NEXT:    [[L1:%.*]] = xor i32 [[TMP2]], -1
-; CHECK-NEXT:    [[X:%.*]] = sub i32 [[TMP2]], [[A]]
-; CHECK-NEXT:    call void @use32(i32 [[L1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[BI:%.*]], i32 [[A:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[X:%.*]] = sub i32 [[TMP1]], [[A]]
+; CHECK-NEXT:    call void @use32(i32 [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %not = xor i32 %A, -1
@@ -238,10 +234,9 @@ define i32 @na_minus_max_bi_na_use(i32 %A, i32 %Bi) {
 define i32 @max_na_bi_minux_na_use2(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: @max_na_bi_minux_na_use2(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[L0:%.*]] = icmp ult i32 [[NOT]], 31
-; CHECK-NEXT:    [[L1:%.*]] = select i1 [[L0]], i32 [[NOT]], i32 31
-; CHECK-NEXT:    [[X:%.*]] = sub i32 [[L1]], [[NOT]]
-; CHECK-NEXT:    call void @use32(i32 [[L1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[NOT]], i32 31)
+; CHECK-NEXT:    [[X:%.*]] = sub i32 [[TMP1]], [[NOT]]
+; CHECK-NEXT:    call void @use32(i32 [[TMP1]])
 ; CHECK-NEXT:    call void @use32(i32 [[NOT]])
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
@@ -257,10 +252,9 @@ define i32 @max_na_bi_minux_na_use2(i32 %A, i32 %Bi) {
 define i32 @na_minus_max_na_bi_use2(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: @na_minus_max_na_bi_use2(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[L0:%.*]] = icmp ult i32 [[NOT]], 31
-; CHECK-NEXT:    [[L1:%.*]] = select i1 [[L0]], i32 [[NOT]], i32 31
-; CHECK-NEXT:    [[X:%.*]] = sub i32 [[NOT]], [[L1]]
-; CHECK-NEXT:    call void @use32(i32 [[L1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[NOT]], i32 31)
+; CHECK-NEXT:    [[X:%.*]] = sub i32 [[NOT]], [[TMP1]]
+; CHECK-NEXT:    call void @use32(i32 [[TMP1]])
 ; CHECK-NEXT:    call void @use32(i32 [[NOT]])
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
@@ -276,11 +270,10 @@ define i32 @na_minus_max_na_bi_use2(i32 %A, i32 %Bi) {
 define i32 @max_bi_na_minus_na_use2(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: @max_bi_na_minus_na_use2(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[BI:%.*]], [[A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[BI]], i32 [[A]]
-; CHECK-NEXT:    [[L1:%.*]] = xor i32 [[TMP2]], -1
-; CHECK-NEXT:    [[X:%.*]] = sub i32 [[A]], [[TMP2]]
-; CHECK-NEXT:    call void @use32(i32 [[L1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[BI:%.*]], i32 [[A]])
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[X:%.*]] = sub i32 [[A]], [[TMP1]]
+; CHECK-NEXT:    call void @use32(i32 [[TMP2]])
 ; CHECK-NEXT:    call void @use32(i32 [[NOT]])
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
@@ -297,11 +290,10 @@ define i32 @max_bi_na_minus_na_use2(i32 %A, i32 %Bi) {
 define i32 @na_minus_max_bi_na_use2(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: @na_minus_max_bi_na_use2(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[BI:%.*]], [[A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[BI]], i32 [[A]]
-; CHECK-NEXT:    [[L1:%.*]] = xor i32 [[TMP2]], -1
-; CHECK-NEXT:    [[X:%.*]] = sub i32 [[TMP2]], [[A]]
-; CHECK-NEXT:    call void @use32(i32 [[L1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[BI:%.*]], i32 [[A]])
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[X:%.*]] = sub i32 [[TMP1]], [[A]]
+; CHECK-NEXT:    call void @use32(i32 [[TMP2]])
 ; CHECK-NEXT:    call void @use32(i32 [[NOT]])
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
@@ -317,14 +309,13 @@ define i32 @na_minus_max_bi_na_use2(i32 %A, i32 %Bi) {
 
 define i8 @umin_not_sub(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umin_not_sub(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i8 [[X]], i8 [[Y]]
-; CHECK-NEXT:    [[MINXY:%.*]] = xor i8 [[TMP2]], -1
-; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[TMP2]], [[X]]
-; CHECK-NEXT:    [[SUBY:%.*]] = sub i8 [[TMP2]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[TMP1]], -1
+; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[SUBY:%.*]] = sub i8 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    call void @use8(i8 [[SUBX]])
 ; CHECK-NEXT:    call void @use8(i8 [[SUBY]])
-; CHECK-NEXT:    ret i8 [[MINXY]]
+; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
   %nx = xor i8 %x, -1
   %ny = xor i8 %y, -1
@@ -339,14 +330,13 @@ define i8 @umin_not_sub(i8 %x, i8 %y) {
 
 define i8 @umin_not_sub_rev(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umin_not_sub_rev(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i8 [[X]], i8 [[Y]]
-; CHECK-NEXT:    [[MINXY:%.*]] = xor i8 [[TMP2]], -1
-; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[X]], [[TMP2]]
-; CHECK-NEXT:    [[SUBY:%.*]] = sub i8 [[Y]], [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[TMP1]], -1
+; CHECK-NEXT:    [[SUBX:%.*]] = sub i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[SUBY:%.*]] = sub i8 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    call void @use8(i8 [[SUBX]])
 ; CHECK-NEXT:    call void @use8(i8 [[SUBY]])
-; CHECK-NEXT:    ret i8 [[MINXY]]
+; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
   %nx = xor i8 %x, -1
   %ny = xor i8 %y, -1
@@ -361,15 +351,13 @@ define i8 @umin_not_sub_rev(i8 %x, i8 %y) {
 
 define void @umin3_not_all_ops_extra_uses_invert_subs(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @umin3_not_all_ops_extra_uses_invert_subs(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i8 [[X]], i8 [[Z]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i8 [[TMP2]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i8 [[TMP2]], i8 [[Y]]
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i8 [[TMP4]], -1
-; CHECK-NEXT:    [[XMIN:%.*]] = sub i8 [[TMP4]], [[X]]
-; CHECK-NEXT:    [[YMIN:%.*]] = sub i8 [[TMP4]], [[Y]]
-; CHECK-NEXT:    [[ZMIN:%.*]] = sub i8 [[TMP4]], [[Z]]
-; CHECK-NEXT:    call void @use8(i8 [[TMP5]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 [[Z:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.umax.i8(i8 [[Y:%.*]], i8 [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i8 [[TMP2]], -1
+; CHECK-NEXT:    [[XMIN:%.*]] = sub i8 [[TMP2]], [[X]]
+; CHECK-NEXT:    [[YMIN:%.*]] = sub i8 [[TMP2]], [[Y]]
+; CHECK-NEXT:    [[ZMIN:%.*]] = sub i8 [[TMP2]], [[Z]]
+; CHECK-NEXT:    call void @use8(i8 [[TMP3]])
 ; CHECK-NEXT:    call void @use8(i8 [[XMIN]])
 ; CHECK-NEXT:    call void @use8(i8 [[YMIN]])
 ; CHECK-NEXT:    call void @use8(i8 [[ZMIN]])

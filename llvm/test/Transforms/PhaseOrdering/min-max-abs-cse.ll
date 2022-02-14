@@ -7,18 +7,9 @@
 
 ; sub (smax a,b), (smax a,b) --> 0
 
-; FIXME: We should canonicalize min/max to a form
-; where the cmp operands match the select operands.
-
 define i8 @smax_nsw(i8 %a, i8 %b) {
 ; CHECK-LABEL: @smax_nsw(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[A]], [[B]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[SUB]], 0
-; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 0, i8 [[SUB]]
-; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 [[SUB]], i8 0
-; CHECK-NEXT:    [[R:%.*]] = sub nsw i8 [[M2]], [[M1]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %sub = sub nsw i8 %a, %b
   %cmp1 = icmp slt i8 %a, %b
