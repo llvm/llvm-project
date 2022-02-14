@@ -1239,8 +1239,8 @@ inline bool CoreConstraintDecl::classof(const Node *node) {
 }
 
 inline bool Expr::classof(const Node *node) {
-  return isa<AttributeExpr, DeclRefExpr, MemberAccessExpr, OperationExpr,
-             TupleExpr, TypeExpr>(node);
+  return isa<AttributeExpr, CallExpr, DeclRefExpr, MemberAccessExpr,
+             OperationExpr, TupleExpr, TypeExpr>(node);
 }
 
 inline bool OpRewriteStmt::classof(const Node *node) {

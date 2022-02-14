@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/ToolUtilities.h"
 #include "mlir/Tools/PDLL/AST/Context.h"
 #include "mlir/Tools/PDLL/AST/Nodes.h"
+#include "mlir/Tools/PDLL/CodeGen/MLIRGen.h"
 #include "mlir/Tools/PDLL/Parser/Parser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
@@ -26,6 +28,7 @@ using namespace mlir::pdll;
 /// The desired output type.
 enum class OutputType {
   AST,
+  MLIR,
 };
 
 static LogicalResult
@@ -40,12 +43,18 @@ processBuffer(raw_ostream &os, std::unique_ptr<llvm::MemoryBuffer> chunkBuffer,
   if (failed(module))
     return failure();
 
-  switch (outputType) {
-  case OutputType::AST:
+  if (outputType == OutputType::AST) {
     (*module)->print(os);
-    break;
+    return success();
   }
 
+  MLIRContext mlirContext;
+  OwningOpRef<ModuleOp> pdlModule =
+      codegenPDLLToMLIR(&mlirContext, astContext, sourceMgr, **module);
+  if (!pdlModule)
+    return failure();
+
+  pdlModule->print(os, OpPrintingFlags().enableDebugInfo());
   return success();
 }
 
@@ -71,7 +80,9 @@ int main(int argc, char **argv) {
       "x", llvm::cl::init(OutputType::AST),
       llvm::cl::desc("The type of output desired"),
       llvm::cl::values(clEnumValN(OutputType::AST, "ast",
-                                  "generate the AST for the input file")));
+                                  "generate the AST for the input file"),
+                       clEnumValN(OutputType::MLIR, "mlir",
+                                  "generate the PDL MLIR for the input file")));
 
   llvm::InitLLVM y(argc, argv);
   llvm::cl::ParseCommandLineOptions(argc, argv, "PDLL Frontend");
