@@ -9,13 +9,13 @@ void clang_analyzer_eval(int);
 
 typedef const void *CFTypeRef;
 
-extern CFTypeRef CFCreate() CF_RETURNS_RETAINED;
+extern CFTypeRef CFCreate(void) CF_RETURNS_RETAINED;
 extern CFTypeRef CFRetain(CFTypeRef cf);
 extern void CFRelease(CFTypeRef cf);
 
 void bar(CFTypeRef *v) {}
 
-void test1() {
+void test1(void) {
   CFTypeRef *values = (CFTypeRef[]){
       CFCreate(),  // no-warning
       CFCreate(),  // expected-warning{{leak}}

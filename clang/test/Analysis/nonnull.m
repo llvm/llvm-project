@@ -188,7 +188,7 @@ void testVararg(int k, void *p) {
     testVararg_check(2, p, n); // expected-warning{{nonnull}}
 }
 
-void testNotPtr() {
+void testNotPtr(void) {
   struct S { int a; int b; int c; } s = {};
   extern void testNotPtr_check(struct S, int) __attribute__((nonnull(1, 2)));
   testNotPtr_check(s, 0);

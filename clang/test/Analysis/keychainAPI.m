@@ -70,7 +70,7 @@ OSStatus SecKeychainItemFreeAttributesAndData (
    void *data
 );
 
-void errRetVal() {
+void errRetVal(void) {
   unsigned int *ptr = 0;
   OSStatus st = 0;
   UInt32 length;
@@ -81,7 +81,7 @@ void errRetVal() {
 } // expected-warning{{Allocated data is not released: missing a call to 'SecKeychainItemFreeContent'}}
 
 // If null is passed in, the data is not allocated, so no need for the matching free.
-void fooDoNotReportNull() {
+void fooDoNotReportNull(void) {
     unsigned int *ptr = 0;
     OSStatus st = 0;
     UInt32 *length = 0;
@@ -90,7 +90,7 @@ void fooDoNotReportNull() {
     SecKeychainItemCopyContent(2, ptr, ptr, length, outData);
 }// no-warning
 
-void doubleAlloc() {
+void doubleAlloc(void) {
     unsigned int *ptr = 0;
     OSStatus st = 0;
     UInt32 length;
@@ -102,7 +102,7 @@ void doubleAlloc() {
 }
 
 // Do not warn if undefined value is passed to a function.
-void fooOnlyFreeUndef() {
+void fooOnlyFreeUndef(void) {
   unsigned int *ptr = 0;
   OSStatus st = 0;
   UInt32 length;
@@ -116,7 +116,7 @@ void fooOnlyFreeParam(void *attrList, void* X) {
 }// no-warning
 
 // If we are returning the value, do not report.
-void* returnContent() {
+void* returnContent(void) {
   unsigned int *ptr = 0;
   OSStatus st = 0;
   UInt32 length;
@@ -235,7 +235,7 @@ int testErrorCodeAsLHS(CFTypeRef keychainOrArray, SecProtocolType protocol,
 }
 
 void free(void *ptr);
-void deallocateWithFree() {
+void deallocateWithFree(void) {
     unsigned int *ptr = 0;
     OSStatus st = 0;
     UInt32 length;
@@ -314,7 +314,7 @@ void DellocWithCFStringCreate4(CFAllocatorRef alloc) {
 
 static CFAllocatorRef gKeychainDeallocator = 0;
 
-static CFAllocatorRef GetKeychainDeallocator() {  
+static CFAllocatorRef GetKeychainDeallocator(void) {  
   return gKeychainDeallocator;
 }
 
@@ -331,7 +331,7 @@ CFStringRef DellocWithCFStringCreate5(CFAllocatorRef alloc) {
   return 0;
 }
 
-void radar10508828() {
+void radar10508828(void) {
   UInt32 pwdLen = 0;
   void*  pwdBytes = 0;
   OSStatus rc = SecKeychainFindGenericPassword(0, 3, "foo", 3, "bar", &pwdLen, &pwdBytes, 0);
@@ -340,7 +340,7 @@ void radar10508828() {
     SecKeychainItemFreeContent(0, pwdBytes);
 }
 
-void radar10508828_20092614() {
+void radar10508828_20092614(void) {
   UInt32 pwdLen = 0;
   void*  pwdBytes = 0;
   OSStatus rc = SecKeychainFindGenericPassword(0, 3, "foo", 3, "bar", &pwdLen, &pwdBytes, 0);
@@ -386,7 +386,7 @@ OSStatus my_Allocate_Param(void** password, UInt32* passwordLength) {
   return err;
 }
 
-void allocAndFree1() {
+void allocAndFree1(void) {
     unsigned int *ptr = 0;
     OSStatus st = 0;
     UInt32 length;
@@ -417,7 +417,7 @@ void allocAndFree2(void *attrList) {
       my_FreeParam(attrList, outData);
 }
 
-void allocNoFree3() {
+void allocNoFree3(void) {
     UInt32 length = 32;
     void *outData;    
     void *outData2;
@@ -441,7 +441,7 @@ typedef struct AuthorizationCallback {
     OSStatus (*SetContextVal)(AuthorizationValue *inValue);
 } AuthorizationCallback;
 static AuthorizationCallback cb;
-int radar_19196494() {
+int radar_19196494(void) {
   @autoreleasepool {
     AuthorizationValue login_password = {};
     UInt32 passwordLength;
@@ -454,7 +454,7 @@ int radar_19196494() {
   }
   return 0;
 }
-int radar_19196494_v2() {
+int radar_19196494_v2(void) {
   @autoreleasepool {
     AuthorizationValue login_password = {};
     OSStatus err = SecKeychainFindGenericPassword(0, 0, "", 0, "", (UInt32 *)&login_password.length, (void**)&login_password.data, 0);

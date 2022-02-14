@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -O0 -cl-std=CL2.0  -emit-llvm %s -o - | FileCheck %s
-extern queue_t get_default_queue();
+extern queue_t get_default_queue(void);
 
-bool compare() {
+bool compare(void) {
   return 0 == get_default_queue() &&
          get_default_queue() == 0;
   // CHECK: icmp eq %opencl.queue_t* null, %{{.*}}
@@ -10,7 +10,7 @@ bool compare() {
 
 void func(queue_t q);
 
-void init() {
+void init(void) {
   queue_t q = 0;
   func(0);
   // CHECK: store %opencl.queue_t* null, %opencl.queue_t** %q

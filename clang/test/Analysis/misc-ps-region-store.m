@@ -43,7 +43,7 @@ typedef int32_t intptr_t;
 
 // PR 2948 (testcase; crash on VisitLValue for union types)
 // http://llvm.org/bugs/show_bug.cgi?id=2948
-void checkaccess_union() {
+void checkaccess_union(void) {
   int ret = 0, status;
   // Since RegionStore doesn't handle unions yet,
   // this branch condition won't be triggered
@@ -61,7 +61,7 @@ void checkaccess_union() {
 struct test2_struct { int x; int y; char* s; };
 void test2_help(struct test2_struct* p);
 
-char test2() {
+char test2(void) {
   struct test2_struct s;
   test2_help(&s);
   char *p = 0;
@@ -144,7 +144,7 @@ void testB_2(BStruct *b) {
 // engine caches out.  Previously a false transition would cause UnknownVal
 // to bind to the variable, firing an assertion failure.  This bug was fixed
 // in r76262.
-void test_declstmt_caching() {
+void test_declstmt_caching(void) {
 again:
   {
     const char a[] = "I like to crash";
@@ -170,7 +170,7 @@ void test_rdar_7114618(struct s_7114618 *s) {
 }
 
 // Test pointers increment correctly.
-void f() {
+void f(void) {
   int a[2];
   a[1] = 3;
   int *p = a;
@@ -190,7 +190,7 @@ struct test_7185607 {
   int x : 10;
   int y : 22;
 };
-int rdar_test_7185607() {
+int rdar_test_7185607(void) {
   struct test_7185607 s; // Uninitialized.
   *((unsigned *) &s) = 0U;
   return s.x; // no-warning
@@ -277,12 +277,12 @@ struct s_test_field_invalidate {
   int x;
 };
 extern void test_invalidate_field(int *x);
-int test_invalidate_field_test() {
+int test_invalidate_field_test(void) {
   struct s_test_field_invalidate y;
   test_invalidate_field(&y.x);
   return y.x; // no-warning
 }
-int test_invalidate_field_test_positive() {
+int test_invalidate_field_test_positive(void) {
   struct s_test_field_invalidate y;
   return y.x; // expected-warning{{garbage}}
 }
@@ -296,7 +296,7 @@ struct WrappedStruct { unsigned z; };
 
 void test_handle_array_wrapper_helper();
 
-int test_handle_array_wrapper() {
+int test_handle_array_wrapper(void) {
   struct ArrayWrapper x;
   test_handle_array_wrapper_helper(&x);
   struct WrappedStruct *p = (struct WrappedStruct*) x.y; // expected-warning{{Casting a non-structure type to a structure type and accessing a field can lead to memory access errors or data corruption}}
@@ -350,7 +350,7 @@ struct rdar_7312221_value { int x; };
 - (void) doSomething_7312221;
 @end
 
-extern struct rdar_7312221_value *rdar_7312221_helper();
+extern struct rdar_7312221_value *rdar_7312221_helper(void);
 extern int rdar_7312221_helper_2(id o);
 extern void rdar_7312221_helper_3(int z);
 
@@ -389,12 +389,12 @@ void doSomething_7312221_with_struct(struct rdar_7312221_container *Self) {
 // <rdar://problem/7332673> - Just more tests cases for regions
 //===----------------------------------------------------------------------===//
 
-void rdar_7332673_test1() {
+void rdar_7332673_test1(void) {
     char value[1];
     if ( *(value) != 1 ) {} // expected-warning{{The left operand of '!=' is a garbage value}}
 }
 int rdar_7332673_test2_aux(char *x);
-void rdar_7332673_test2() {
+void rdar_7332673_test2(void) {
     char *value;
     if ( rdar_7332673_test2_aux(value) != 1 ) {} // expected-warning{{1st function call argument is an uninitialized value}}
 }
@@ -462,7 +462,7 @@ void element_region_with_symbolic_superregion(int* p) {
 //===----------------------------------------------------------------------===//
 
 static int test_cwe466_return_outofbounds_pointer_a[10]; // expected-note{{Original object declared here}}
-int *test_cwe466_return_outofbounds_pointer() {
+int *test_cwe466_return_outofbounds_pointer(void) {
   int *p = test_cwe466_return_outofbounds_pointer_a+11;
   return p; // expected-warning{{Returned pointer value points outside the original object}}
             // expected-note@-1{{Original object 'test_cwe466_return_outofbounds_pointer_a' is an array of 10 'int' objects, returned pointer points at index 11}}
@@ -475,7 +475,7 @@ int *test_cwe466_return_outofbounds_pointer() {
 
 typedef struct { int *a; } pr3135_structure;
 int pr3135_bar(pr3135_structure *x);
-int pr3135() {
+int pr3135(void) {
   int x;
   pr3135_structure y = { &x };
   // the call to pr3135_bar may initialize x
@@ -494,7 +494,7 @@ typedef struct RDar7403269 {
   unsigned y;
 } RDar7403269;
 
-void rdar7403269() {
+void rdar7403269(void) {
   RDar7403269 z = { .y = 0 };
   if (z.x[4] == 0)
     return;
@@ -507,7 +507,7 @@ typedef struct RDar7403269_b {
   unsigned y;
 } RDar7403269_b;
 
-void rdar7403269_b() {
+void rdar7403269_b(void) {
   RDar7403269_b z = { .y = 0 };
   if (z.x[5].w == 0)
     return;
@@ -515,7 +515,7 @@ void rdar7403269_b() {
   *p = 0xDEADBEEF; // no-warning
 }
 
-void rdar7403269_b_pos() {
+void rdar7403269_b_pos(void) {
   RDar7403269_b z = { .y = 0 };
   if (z.x[5].w == 1)
     return;
@@ -559,11 +559,11 @@ double rdar_6811085(void) {
 // Path-sensitive tests for blocks.
 //===----------------------------------------------------------------------===//
 
-void indirect_block_call(void (^f)());
+void indirect_block_call(void (^f)(void));
 
 int blocks_1(int *p, int z) {
   __block int *q = 0;
-  void (^bar)() = ^{ q = p; };
+  void (^bar)(void) = ^{ q = p; };
   
   if (z == 1) {
     // The call to 'bar' might cause 'q' to be invalidated.
@@ -635,9 +635,9 @@ unsigned long rdar7582031_b2(RDar7582031 *o) {
 
 // Show that we handle static variables also getting invalidated.
 void rdar7582031_aux(void (^)(void));
-RDar7582031 *rdar7582031_aux_2();
+RDar7582031 *rdar7582031_aux_2(void);
 
-unsigned rdar7582031_static() {  
+unsigned rdar7582031_static(void) {  
   static RDar7582031 *o = 0;
   rdar7582031_aux(^{ o = rdar7582031_aux_2(); });
   
@@ -686,10 +686,10 @@ typedef void (^RDar_7462324_Callback)(id obj);
 //  not crash on variables passed by reference via __block.
 //===----------------------------------------------------------------------===//
 
-int rdar7468209_aux();
-void rdar7468209_aux_2();
+int rdar7468209_aux(void);
+void rdar7468209_aux_2(void);
 
-void rdar7468209() {
+void rdar7468209(void) {
   __block int x = 0;
   ^{
     x = rdar7468209_aux();
@@ -760,9 +760,9 @@ int test_return_struct(TestReturnStruct_rdar_7526777 *x) {
   return [x foo].x;
 }
 
-testReturn_rdar_7526777 test_return_struct_2_aux_rdar_7526777();
+testReturn_rdar_7526777 test_return_struct_2_aux_rdar_7526777(void);
 
-int test_return_struct_2_rdar_7526777() {
+int test_return_struct_2_rdar_7526777(void) {
   return test_return_struct_2_aux_rdar_7526777().x;
 }
 
@@ -775,7 +775,7 @@ int test_return_struct_2_rdar_7526777() {
 
 _Bool OSAtomicCompareAndSwapPtrBarrier( void *__oldValue, void *__newValue, void * volatile *__theValue );
 
-void rdar_7527292() {
+void rdar_7527292(void) {
   static id Cache7527292[32];
   for (signed long idx = 0;
        idx < 32;
@@ -796,7 +796,7 @@ struct rdar_7515938 {
   int y[];
 };
 
-const struct rdar_7515938 *rdar_7515938() {
+const struct rdar_7515938 *rdar_7515938(void) {
   static const struct rdar_7515938 z = { 0, { 1, 2 } };
   if (z.y[0] != 1) {
     int *p = 0;
@@ -810,7 +810,7 @@ struct rdar_7515938_str {
   char y[];
 };
 
-const struct rdar_7515938_str *rdar_7515938_str() {
+const struct rdar_7515938_str *rdar_7515938_str(void) {
   static const struct rdar_7515938_str z = { 0, "hello" };
   return &z;
 }
@@ -853,20 +853,20 @@ struct s_rev96062_nested { struct s_rev96062 z; };
 void test_a_rev96062_aux(struct s_rev96062 *s);
 void test_a_rev96062_aux2(struct s_rev96062_nested *s);
 
-int test_a_rev96062() {
+int test_a_rev96062(void) {
   int a, b;
   struct s_rev96062 x = { &a, &b };
   test_a_rev96062_aux(&x);
   return a + b; // no-warning
 }
-int test_b_rev96062() {
+int test_b_rev96062(void) {
   int a, b;
   struct s_rev96062 x = { &a, &b };
   struct s_rev96062 z = x;
   test_a_rev96062_aux(&z);
   return a + b; // no-warning
 }
-int test_c_rev96062() {
+int test_c_rev96062(void) {
   int a, b;
   struct s_rev96062 x = { &a, &b };
   struct s_rev96062_nested w = { x };
@@ -966,7 +966,7 @@ void pr6288_b(void) {
 - (void) rdar7817800_baz;
 @end
 
-char *rdar7817800_foobar();
+char *rdar7817800_foobar(void);
 void rdar7817800_qux(void*);
 
 @implementation Rdar7817800
@@ -1019,8 +1019,8 @@ void pr6854(void * arg) {
 
 // <rdar://problem/8032791> False positive due to symbolic store not find
 //  value because of 'const' qualifier
-double rdar_8032791_2();
-double rdar_8032791_1() {
+double rdar_8032791_2(void);
+double rdar_8032791_1(void) {
    struct R8032791 { double x[2]; double y; }
    data[3] = {
      {{1.0, 3.0}, 3.0},  //  1   2   3
@@ -1038,7 +1038,7 @@ double rdar_8032791_1() {
 
 // PR 7450 - Handle pointer arithmetic with __builtin_alloca
 void pr_7450_aux(void *x);
-void pr_7450() {
+void pr_7450(void) {
   void *p = __builtin_alloca(10);
   // Don't crash when analyzing the following statement.
   pr_7450_aux(p + 8);
@@ -1061,7 +1061,7 @@ void rdar_8243408(void) {
 }
 
 // <rdar://problem/8258814>
-int r8258814()
+int r8258814(void)
 {
   int foo;
   int * a = &foo;
@@ -1098,10 +1098,10 @@ pr8052(u_int boot_addr)
 
 // PR 8015 - don't return undefined values for arrays when using a valid
 // symbolic index
-int pr8015_A();
+int pr8015_A(void);
 void pr8015_B(const char *);
 
-void pr8015_C() {
+void pr8015_C(void) {
   int number = pr8015_A();
   const char *numbers[] = { "zero" };    
   if (number == 0) {
@@ -1112,7 +1112,7 @@ void pr8015_C() {
 // Tests that we correctly handle that 'number' is perfectly constrained
 // after 'if (number == 0)', allowing us to resolve that
 // numbers[number] == numbers[0].
-void pr8015_D_FIXME() {
+void pr8015_D_FIXME(void) {
   int number = pr8015_A();
   const char *numbers[] = { "zero" };
   if (number == 0) {
@@ -1124,7 +1124,7 @@ void pr8015_D_FIXME() {
   }
 }
 
-void pr8015_E() {
+void pr8015_E(void) {
   // Similar to pr8015_C, but number is allowed to be a valid range.
   unsigned number = pr8015_A();
   const char *numbers[] = { "zero", "one", "two" };
@@ -1133,7 +1133,7 @@ void pr8015_E() {
   }
 }
 
-void pr8015_F_FIXME() {
+void pr8015_F_FIXME(void) {
   // Similar to pr8015_E, but like pr8015_D we check if the pointer
   // is the same as one of the string literals.  The null dereference
   // here is not feasible in practice, so this is a false positive.
@@ -1217,7 +1217,7 @@ typedef struct s_test_rdar8848957 {
   int x, y, z;
 } s_test_rdar8848957;
 
-s_test_rdar8848957 foo_rdar8848957();
+s_test_rdar8848957 foo_rdar8848957(void);
 int rdar8848957(int index) {
   s_test_rdar8848957 vals[10];
   vals[index] = foo_rdar8848957();
@@ -1261,7 +1261,7 @@ void Rdar_9103310_E(Rdar_9103310_A * x, struct Rdar_9103310_C * b) { // expected
 
 // Test handling binding lazy compound values to a region and then have
 // specific elements have other bindings.
-int PR9455() {
+int PR9455(void) {
   char arr[4] = "000";
   arr[0] = '1';
   if (arr[1] == '0')
@@ -1270,7 +1270,7 @@ int PR9455() {
   *p = 0xDEADBEEF; // no-warning
   return 1;
 }
-int PR9455_2() {
+int PR9455_2(void) {
   char arr[4] = "000";
   arr[0] = '1';
   if (arr[1] == '0') {
@@ -1306,7 +1306,7 @@ RDar9163742_Rect RDar9163742_IntegralRect(RDar9163742_Rect frame)
 }
 
 // Test correct handling of prefix '--' operator.
-void rdar9444714() {
+void rdar9444714(void) {
   int   x;
   char    str[ 32 ];
   char    buf[ 32 ];
@@ -1335,7 +1335,7 @@ typedef struct {
     unsigned value;
 } RDar11127008;
 
-signed rdar_11127008_index();
+signed rdar_11127008_index(void);
 
 static unsigned rdar_11127008(void) {
     RDar11127008 values[] = {{.value = 0}, {.value = 1}};
@@ -1351,7 +1351,7 @@ typedef void (^radar11125868_cb)(int *, unsigned);
 
 void rdar11125868_aux(radar11125868_cb cb);
 
-int rdar11125868() {
+int rdar11125868(void) {
   int integersStackArray[1];
   int *integers = integersStackArray;
   rdar11125868_aux(^(int *integerValue, unsigned index) {
@@ -1360,7 +1360,7 @@ int rdar11125868() {
   return integers[0] == 0; // no-warning
 }
 
-int rdar11125868_positive() {
+int rdar11125868_positive(void) {
   int integersStackArray[1];
   int *integers = integersStackArray;
   return integers[0] == 0; // expected-warning {{The left operand of '==' is a}}

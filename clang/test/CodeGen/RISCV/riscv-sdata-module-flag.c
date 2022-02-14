@@ -26,7 +26,7 @@
 // RUN: %clang -target riscv64-unknown-elf %s -S -emit-llvm -mcmodel=large -o - \
 // RUN:   | FileCheck %s -check-prefix=RV64-LARGE
 
-void test() {}
+void test(void) {}
 
 // RV32-DEFAULT: !{i32 1, !"SmallDataLimit", i32 8}
 // RV32-G4:      !{i32 1, !"SmallDataLimit", i32 4}

@@ -11,7 +11,7 @@ typedef __WCHAR_TYPE__ wchar_t;
   #define WCHAR_T_TYPE int
 #endif
 
-signed short _iodbcdm_sqlerror( )
+signed short _iodbcdm_sqlerror(void)
 {
   wchar_t _sqlState[6] = { L"\0" };
 }

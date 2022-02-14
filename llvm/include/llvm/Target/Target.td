@@ -758,15 +758,15 @@ def variable_ops;
 
 /// variable-length instruction encoding utilities.
 /// The `ascend` operator should be used like this:
-///     (ascend 0b0000, 0b1111)
+///     (ascend 0b0010, 0b1101)
 /// Which represent a seqence of encoding fragments placing from LSB to MSB.
-/// Thus, in this case the final encoding will be 0b11110000.
+/// Thus, in this case the final encoding will be 0b1101_0010.
 /// The arguments for `ascend` can either be `bits` or another DAG.
 def ascend;
 /// In addition, we can use `descend` to describe an encoding that places
 /// its arguments (i.e. encoding fragments) from MSB to LSB. For instance:
-///     (descend 0b0000, 0b1111)
-/// This results in an encoding of 0b00001111.
+///     (descend 0b0010, 0b1101)
+/// This results in an encoding of 0b0010_1101.
 def descend;
 /// The `operand` operator should be used like this:
 ///     (operand "$src", 4)

@@ -9,7 +9,7 @@ unsigned long long test_rdpmc(int a) {
 // CHECK: call i64 @llvm.x86.rdpmc
 }
 
-int test_rdtsc() {
+int test_rdtsc(void) {
   return _rdtsc();
 // CHECK: @test_rdtsc
 // CHECK: call i64 @llvm.x86.rdtsc

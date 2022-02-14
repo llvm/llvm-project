@@ -19,7 +19,7 @@ re_string_construct (pstr, str, len, trans, icase, dfa)
                 abort();
 return 0;
 }
-int main()
+int main(void)
 {
   return re_string_construct(0, 0, 0, 0, 0, (void*)0x282020c0);
 }

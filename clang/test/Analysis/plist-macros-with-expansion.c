@@ -5,7 +5,7 @@
 // RUN: FileCheck --input-file=%t.plist %s
 
 #define STRANGE_FN(x) STRANGE_FN(x, 0)
-void test_strange_macro_expansion() {
+void test_strange_macro_expansion(void) {
   char *path;
   STRANGE_FN(path); // no-crash
   // expected-warning@-1 {{implicit declaration of function}}

@@ -45,7 +45,7 @@ static inline BOOL performAction(NSNumber *(^action)(NSNumber *traitValue)) {
   return didFindTrait;
 }
 
-void runTest() {
+void runTest(void) {
   __attribute__((__blocks__(byref))) NSNumber *builtinResult = ((NSNumber *)0);
   BOOL wasBuiltinTrait = performAction(^(NSNumber *traitValue) {
     builtinResult = [traitValue retain];

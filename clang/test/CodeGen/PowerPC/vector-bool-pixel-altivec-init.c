@@ -46,7 +46,7 @@ vector bool long long vbi64_2;
 vector pixel p1;
 
 ////////////////////////////////////////////////////////////////////////////////
-void test_vector_bool_pixel_init() {
+void test_vector_bool_pixel_init(void) {
   // vector bool char initialization
   vbi8_1 = (vector bool char)('a');
   // MIXED: <i8 97, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
