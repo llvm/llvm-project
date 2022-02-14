@@ -80,7 +80,7 @@ int main(int, char**)
         testbuf<char> sb;
         std::ostream os(&sb);
         os.width(5);
-        left(os);
+        std::left(os);
         signed char c = 'a';
         os << c;
         assert(sb.str() == "a    ");

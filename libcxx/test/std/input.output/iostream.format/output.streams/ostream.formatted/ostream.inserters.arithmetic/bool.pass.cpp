@@ -76,7 +76,7 @@ int main(int, char**)
     {
         testbuf<char> sb;
         std::ostream os(&sb);
-        boolalpha(os);
+        std::boolalpha(os);
         bool b = true;
         os << b;
         assert(sb.str() == "true");
@@ -84,7 +84,7 @@ int main(int, char**)
     {
         testbuf<char> sb;
         std::ostream os(&sb);
-        boolalpha(os);
+        std::boolalpha(os);
         bool b = false;
         os << b;
         assert(sb.str() == "false");

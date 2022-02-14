@@ -45,7 +45,7 @@ int main(int, char**)
     {
         testbuf<char> sb("   123");
         std::istream is(&sb);
-        ws(is);
+        std::ws(is);
         assert(is.good());
         assert(is.peek() == '1');
     }
@@ -53,7 +53,7 @@ int main(int, char**)
     {
         testbuf<wchar_t> sb(L"   123");
         std::wistream is(&sb);
-        ws(is);
+        std::ws(is);
         assert(is.good());
         assert(is.peek() == L'1');
     }
@@ -61,10 +61,10 @@ int main(int, char**)
     {
         testbuf<char> sb("  ");
         std::istream is(&sb);
-        ws(is);
+        std::ws(is);
         assert(!is.fail());
         assert(is.eof());
-        ws(is);
+        std::ws(is);
         assert(is.eof());
         assert(is.fail());
     }
@@ -72,10 +72,10 @@ int main(int, char**)
     {
         testbuf<wchar_t> sb(L"  ");
         std::wistream is(&sb);
-        ws(is);
+        std::ws(is);
         assert(!is.fail());
         assert(is.eof());
-        ws(is);
+        std::ws(is);
         assert(is.eof());
         assert(is.fail());
     }

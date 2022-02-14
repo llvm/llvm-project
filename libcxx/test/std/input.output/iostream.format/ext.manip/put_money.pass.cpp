@@ -59,7 +59,7 @@ int main(int, char**)
         testbuf<char> sb;
         std::ostream os(&sb);
         os.imbue(std::locale(LOCALE_en_US_UTF_8));
-        showbase(os);
+        std::showbase(os);
         long double x = -123456789;
         os << std::put_money(x, false);
         assert(sb.str() == "-$1,234,567.89");
@@ -68,7 +68,7 @@ int main(int, char**)
         testbuf<char> sb;
         std::ostream os(&sb);
         os.imbue(std::locale(LOCALE_en_US_UTF_8));
-        showbase(os);
+        std::showbase(os);
         long double x = -123456789;
         os << std::put_money(x, true);
         assert(sb.str() == "-USD 1,234,567.89");
@@ -78,7 +78,7 @@ int main(int, char**)
         testbuf<wchar_t> sb;
         std::wostream os(&sb);
         os.imbue(std::locale(LOCALE_en_US_UTF_8));
-        showbase(os);
+        std::showbase(os);
         long double x = -123456789;
         os << std::put_money(x, false);
         assert(sb.str() == L"-$1,234,567.89");
@@ -87,7 +87,7 @@ int main(int, char**)
         testbuf<wchar_t> sb;
         std::wostream os(&sb);
         os.imbue(std::locale(LOCALE_en_US_UTF_8));
-        showbase(os);
+        std::showbase(os);
         long double x = -123456789;
         os << std::put_money(x, true);
         assert(sb.str() == L"-USD 1,234,567.89");
