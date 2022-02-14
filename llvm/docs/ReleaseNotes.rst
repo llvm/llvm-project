@@ -191,7 +191,39 @@ Changes to the LLVM tools
   `-name-whitelist` is marked as deprecated and to be removed in future
   releases.
 
+* llvm-ar now supports ``--thin`` for creating a thin archive. The modifier
+  ``T`` has a different meaning in some ar implementations.
+  (`D116979 <https://reviews.llvm.org/D116979>`_)
+* llvm-ar now supports reading big archives for XCOFF.
+  (`D111889 <https://reviews.llvm.org/D111889>`_)
+* llvm-nm now demangles Rust symbols.
+  (`D111937 <https://reviews.llvm.org/D111937>`_)
+* llvm-objcopy's ELF port now avoids reordering section headers to preserve ``st_shndx`` fields of dynamic symbols.
+  (`D107653 <https://reviews.llvm.org/D112116>`_)
+* llvm-objcopy now supports ``--update-section`` for ELF and Mach-O.
+  (`D112116 <https://reviews.llvm.org/D112116>`_)
+  (`D117281 <https://reviews.llvm.org/D117281>`_)
+* llvm-objcopy now supports ``--subsystem`` for PE/COFF.
+  (`D116556 <https://reviews.llvm.org/D116556>`_)
+* llvm-objcopy now supports mips64le relocations for ELF.
+  (`D115635 <https://reviews.llvm.org/D115635>`_)
+* llvm-objcopy ``--rename-section`` now renames relocation sections together with their targets.
+  (`D110352 <https://reviews.llvm.org/D110352>`_)
+* llvm-objdump ``--symbolize-operands`` now supports PowerPC.
+  (`D114492 <https://reviews.llvm.org/D114492>`_)
+* llvm-objdump ``-p`` now dumps PE header.
+  (`D113356 <https://reviews.llvm.org/D113356>`_)
+* llvm-objdump ``-R`` now supports ELF position-dependent executables.
+  (`D110595 <https://reviews.llvm.org/D110595>`_)
+* llvm-objdump ``-T`` now prints symbol versions.
+  (`D108097 <https://reviews.llvm.org/D108097>`_)
 * llvm-readobj: Improved printing of symbols in Windows unwind data.
+* llvm-readobj now supports ``--elf-output-style=JSON`` for JSON output and
+  ``--pretty-print`` for pretty printing of this output.
+  (`D114225 <https://reviews.llvm.org/D114225>`_)
+* llvm-readobj now supports several dump styles (``--needed-libs, --relocs, --syms``) for XCOFF.
+* llvm-symbolizer now supports `--debuginfod <https://llvm.org/docs/CommandGuide/llvm-symbolizer.html>`.
+  (`D113717 <https://reviews.llvm.org/D113717>`_)
 
 Changes to LLDB
 ---------------------------------
