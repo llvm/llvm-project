@@ -21,7 +21,7 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: O
-    usage: OutputOperand
+    usage: Output
     type_var: T
     shape_map: affine_map<()[s0, s1] -> (s0, s1)>
   indexing_maps: !LinalgIndexingMapsConfig
@@ -95,7 +95,7 @@ structured_op: !LinalgStructuredOpConfig
 # @linalg_structured_op
 # def test2(I=TensorDef(T, S.M, S.N),
 #           O=TensorDef(T, S.M, S.N, output=True),
-#           strides=IndexAttrDef(S.SM, S.SN)):
+#           strides=IndexAttrDef(S.SM, S.SN, default=[1, 2])):
 #   """Title.
 
 #   Detailed description.
@@ -114,19 +114,21 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: I
-    usage: InputOperand
+    usage: Input
     type_var: T
     shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s1)>
   - !LinalgOperandDefConfig
     name: O
-    usage: OutputOperand
+    usage: Output
     type_var: T
     shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s1)>
   - !LinalgOperandDefConfig
     name: strides
-    usage: IndexAttribute
-    type_var: I64
-    attribute_map: affine_map<()[s0, s1, s2, s3] -> (s2, s3)>
+    usage: IndexAttr
+    index_attr_map: affine_map<()[s0, s1, s2, s3] -> (s2, s3)>
+    default_vals:
+    - 1
+    - 2
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1)[s0, s1, s2, s3] -> (d1 * s2, d0 * s3)>
@@ -145,7 +147,8 @@ structured_op: !LinalgStructuredOpConfig
 #       ODS:  let arguments =
 #  ODS-NEXT:    Variadic<AnyType>:$inputs,
 #  ODS-NEXT:    Variadic<AnyShaped>:$outputs,
-#  ODS-NEXT:    RankedI64ElementsAttr<[2]>:$strides
+#  ODS-NEXT:    DefaultValuedAttr<RankedI64ElementsAttr<[2]>
+#  ODS-SAME:    "{ static_cast<int64_t>(1), static_cast<int64_t>(2) }">:$strides
 
 #       ODS:  "Attribute":$strides
 #       ODS:  $_state.addAttribute("strides", strides);
@@ -169,8 +172,8 @@ structured_op: !LinalgStructuredOpConfig
 #       IMPL:  Test2Op::hasDynamicIndexingMaps() { return true; }
 #       IMPL:  Test2Op::verifyIndexingMapRequiredAttributes()
 #       IMPL:  auto attr = op->getAttrOfType<DenseElementsAttr>("strides")
-#       IMPL:  "missing indexing map required attribute 'strides'"
-
+#       IMPL:  "incorrect element type for index attribute 'strides'"
+#       IMPL:  "incorrect shape for index attribute 'strides'"
 #       IMPL:  void Test2Op::regionBuilder(ImplicitLocOpBuilder &b, Block &block)
 #  IMPL-NEXT:    assert(2 > 0 && block.getNumArguments() == 2 &&
 
@@ -197,11 +200,11 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: value
-    usage: InputOperand
+    usage: Input
     type_var: T1
   - !LinalgOperandDefConfig
     name: O
-    usage: OutputOperand
+    usage: Output
     type_var: U
     shape_map: affine_map<() -> ()>
   indexing_maps: !LinalgIndexingMapsConfig

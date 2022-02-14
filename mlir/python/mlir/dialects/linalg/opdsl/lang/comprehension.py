@@ -135,7 +135,7 @@ class OperandKind(Enum):
   InputTensor = 0
   Scalar = 1
   OutputTensor = 2
-  Attribute = 3
+  IndexAttr = 3
 
 
 class OperandDef:
@@ -147,16 +147,18 @@ class OperandDef:
 
   def __init__(self,
                kind: OperandKind,
-               type_var: TypeVar,
+               type_var: Optional[TypeVar] = None,
                size_exprs: Optional[Sequence[AffineExprDef]] = None,
-               index_dims: Optional[Sequence[DimDef]] = None):
-    if not isinstance(type_var, TypeVar):
+               index_dims: Optional[Sequence[DimDef]] = None,
+               default_vals : Optional[Sequence[int]] = None):
+    if type_var and not isinstance(type_var, TypeVar):
       raise ValueError(
           f"OperandDef requires a TypeVar but got {repr(type_var)}")
     self.owner = None  # type: Optional["LinalgOpDef"]
     self.type_var = type_var
     self.size_exprs = size_exprs
     self.index_dims = index_dims
+    self.default_vals = default_vals
     self.kind = kind
     self.name = None  # type: Optional[str]
     self.registered_index = -1  # type: int
@@ -174,7 +176,7 @@ class OperandDef:
   def __repr__(self):
     return (f"{self.name}:OperandDef(kind={self.kind.name}, "
             f"type={repr(self.type_var)}, size_exprs={self.size_exprs}), "
-            f"index_dims={self.index_dims})")
+            f"index_dims={self.index_dims}, default_vals={self.default_vals})")
 
 
 class TensorDef:
@@ -202,7 +204,7 @@ class TensorDef:
                        f"got {index_dims}")
     kind = OperandKind.OutputTensor if output else OperandKind.InputTensor
     self.operand_def = OperandDef(
-        kind, type_var, size_exprs=shape, index_dims=index_dims)
+        kind, type_var=type_var, size_exprs=shape, index_dims=index_dims)
 
   def __getitem__(self, dims) -> TensorUse:
     assert self.operand_def.owner, "TensorDef is not attached to an op"
@@ -246,7 +248,7 @@ class ScalarDef(TensorExpression):
   """
 
   def __init__(self, type_var: TypeVar):
-    self.operand_def = OperandDef(OperandKind.Scalar, type_var)
+    self.operand_def = OperandDef(OperandKind.Scalar, type_var=type_var)
 
   @property
   def scalar_name(self) -> str:
@@ -259,18 +261,25 @@ class ScalarDef(TensorExpression):
 
 
 class IndexAttrDef:
-  """Index Attribute definition.
+  """Index attribute definition.
 
   Index attributes provide a way to define and set symbols that can be used in
   indexing expressions. Every attribute specifies a tuple of symbols that at
-  compile-time are replaced by integer values.
+  compile-time are replaced by integer values as well as their default values.
   """
 
-  def __init__(self, *sizes: SymbolDef):
+  def __init__(self, *sizes: SymbolDef, default: Sequence[int]):
     if any(not isinstance(size, SymbolDef) for size in sizes):
-      raise ValueError(f"IndexAttrDef requires sizes of type SymbolDef but got "
-                       f"{sizes}")
-    self.operand_def = OperandDef(OperandKind.Attribute, I64, size_exprs=sizes)
+      raise ValueError(f"IndexAttrDef requires sizes of type SymbolDef "
+                       f"but got {sizes}")
+    if any(not isinstance(default_val, int) for default_val in default):
+      raise ValueError(f"IndexAttrDef requires default values of type int "
+                       f"but got {default}")
+    if len(sizes) != len(default):
+      raise ValueError(f"IndexAttrDef expects {len(sizes)} default values "
+                       f"but got {len(default)}")
+    self.operand_def = OperandDef(
+        OperandKind.IndexAttr, size_exprs=sizes, default_vals=default)
 
 
 class Comprehension:
