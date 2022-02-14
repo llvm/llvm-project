@@ -113,6 +113,8 @@ Changes to the X86 Target
 During this release ...
 
 * Support for ``AVX512-FP16`` instructions has been added.
+* Removed incomplete support for Intel MPX.
+  (`D111517 <https://reviews.llvm.org/D111517>`_)
 
 Changes to the AMDGPU Target
 -----------------------------
