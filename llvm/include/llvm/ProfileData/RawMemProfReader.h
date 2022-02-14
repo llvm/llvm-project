@@ -66,6 +66,9 @@ public:
     return Iterator(this);
   }
 
+  // The RawMemProfReader only holds memory profile information.
+  InstrProfKind getProfileKind() const { return InstrProfKind::MemProf; }
+
   // Constructor for unittests only.
   RawMemProfReader(std::unique_ptr<llvm::symbolize::SymbolizableModule> Sym,
                    llvm::SmallVectorImpl<SegmentEntry> &Seg,
