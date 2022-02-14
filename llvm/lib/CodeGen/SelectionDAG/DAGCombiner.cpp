@@ -426,6 +426,7 @@ namespace {
     SDValue visitREM(SDNode *N);
     SDValue visitMULHU(SDNode *N);
     SDValue visitMULHS(SDNode *N);
+    SDValue visitAVG(SDNode *N);
     SDValue visitSMUL_LOHI(SDNode *N);
     SDValue visitUMUL_LOHI(SDNode *N);
     SDValue visitMULO(SDNode *N);
@@ -1635,6 +1636,10 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::UREM:               return visitREM(N);
   case ISD::MULHU:              return visitMULHU(N);
   case ISD::MULHS:              return visitMULHS(N);
+  case ISD::AVGFLOORS:
+  case ISD::AVGFLOORU:
+  case ISD::AVGCEILS:
+  case ISD::AVGCEILU:           return visitAVG(N);
   case ISD::SMUL_LOHI:          return visitSMUL_LOHI(N);
   case ISD::UMUL_LOHI:          return visitUMUL_LOHI(N);
   case ISD::SMULO:
@@ -4650,6 +4655,46 @@ SDValue DAGCombiner::visitMULHU(SDNode *N) {
   // folding based on known bits.
   if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
+
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitAVG(SDNode *N) {
+  unsigned Opcode = N->getOpcode();
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // fold (avg c1, c2)
+  if (SDValue C = DAG.FoldConstantArithmetic(Opcode, DL, VT, {N0, N1}))
+    return C;
+
+  // canonicalize constant to RHS.
+  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+    return DAG.getNode(Opcode, DL, N->getVTList(), N1, N0);
+
+  if (VT.isVector()) {
+    if (SDValue FoldedVOp = SimplifyVBinOp(N, DL))
+      return FoldedVOp;
+
+    // fold (avgfloor x, 0) -> x >> 1
+    if (ISD::isConstantSplatVectorAllZeros(N1.getNode())) {
+      if (Opcode == ISD::AVGFLOORS)
+        return DAG.getNode(ISD::SRA, DL, VT, N0, DAG.getConstant(1, DL, VT));
+      if (Opcode == ISD::AVGFLOORU)
+        return DAG.getNode(ISD::SRL, DL, VT, N0, DAG.getConstant(1, DL, VT));
+    }
+  }
+
+  // fold (avg x, undef) -> x
+  if (N0.isUndef())
+    return N1;
+  if (N1.isUndef())
+    return N0;
+
+  // TODO If we use avg for scalars anywhere, we can add (avgfl x, 0) -> x >> 1
 
   return SDValue();
 }
