@@ -39,7 +39,7 @@ class StepScriptedTestCase(TestBase):
         self.assertEqual("foo", frame.GetFunctionName())
 
         err = thread.StepUsingScriptedThreadPlan(name)
-        self.assertTrue(err.Success(), err.GetCString())
+        self.assertSuccess(err)
 
         frame = thread.GetFrameAtIndex(0)
         self.assertEqual("main", frame.GetFunctionName())
@@ -80,7 +80,7 @@ class StepScriptedTestCase(TestBase):
         frame = thread.GetFrameAtIndex(0)
         self.assertEqual("foo", frame.GetFunctionName())
         foo_val = frame.FindVariable("foo")
-        self.assertTrue(foo_val.GetError().Success(), "Got the foo variable")
+        self.assertSuccess(foo_val.GetError(), "Got the foo variable")
         self.assertEqual(foo_val.GetValueAsUnsigned(), 10, "foo starts at 10")
 
         if use_cli:
@@ -94,10 +94,10 @@ class StepScriptedTestCase(TestBase):
             data = lldb.SBStream()
             data.Print('{"variable_name" : "foo"}')
             error = args_data.SetFromJSON(data)
-            self.assertTrue(error.Success(), "Made the args_data correctly")
+            self.assertSuccess(error, "Made the args_data correctly")
 
             err = thread.StepUsingScriptedThreadPlan("Steps.StepUntil", args_data, True)
-            self.assertTrue(err.Success(), err.GetCString())
+            self.assertSuccess(err)
 
         # We should not have exited:
         self.assertEqual(process.GetState(), lldb.eStateStopped, "We are stopped")
