@@ -15,7 +15,6 @@
 #include <__iterator/readable_traits.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__utility/auto_cast.h>
-#include <concepts>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
