@@ -82,8 +82,8 @@ TEST(MemProf, Basic) {
   // Since we want to override the constructor set vals to make it easier to
   // test.
   memset(&FakeMIB, 0, sizeof(MemInfoBlock));
-  FakeMIB.alloc_count = 0x1;
-  FakeMIB.total_access_count = 0x2;
+  FakeMIB.AllocCount = 0x1;
+  FakeMIB.TotalAccessCount = 0x2;
 
   uint64_t FakeIds[2];
   FakeIds[0] = PopulateFakeMap(FakeMIB, /*StackPCBegin=*/2, FakeMap);

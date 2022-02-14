@@ -358,6 +358,7 @@ module LLVM_ProfileData {
 
   textual header "ProfileData/InstrProfData.inc"
   textual header "ProfileData/MemProfData.inc"
+  textual header "ProfileData/MIBEntryDef.inc"
 }
 
 // FIXME: Mislayered?
