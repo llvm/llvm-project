@@ -4027,6 +4027,9 @@ def warn_vector_mode_deprecated : Warning<
   "specifying vector types with the 'mode' attribute is deprecated; "
   "use the 'vector_size' attribute instead">,
   InGroup<DeprecatedAttributes>;
+def warn_deprecated_noreturn_spelling : Warning<
+  "the '[[_Noreturn]]' attribute spelling is deprecated in C2x; use "
+  "'[[noreturn]]' instead">, InGroup<DeprecatedAttributes>;
 def err_complex_mode_vector_type : Error<
   "type of machine mode does not support base vector types">;
 def err_enum_mode_vector_type : Error<
