@@ -64,3 +64,15 @@ Program d5
   line%value = 'ok'
   Print *,Trim(line%value)
 End Program
+
+!Not errors.
+subroutine outer
+  integer n
+ contains
+  character(n) function inner1()
+    inner1 = ''
+  end function inner1
+  function inner2()
+    real inner2(n)
+  end function inner2
+end subroutine outer

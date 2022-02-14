@@ -566,9 +566,6 @@ void CodeGenModule::Release() {
           "__amdgpu_device_library_preserve_asan_functions_ptr", nullptr,
           llvm::GlobalVariable::NotThreadLocal);
       addCompilerUsedGlobal(Var);
-      if (!getModule().getModuleFlag("amdgpu_hostcall")) {
-        getModule().addModuleFlag(llvm::Module::Override, "amdgpu_hostcall", 1);
-      }
     }
     // Emit amdgpu_code_object_version module flag, which is code object version
     // times 100.
@@ -5673,9 +5670,11 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
           getModule(), Type, false, llvm::GlobalVariable::InternalLinkage,
           nullptr);
     }
-    return ConstantAddress(
-        InsertResult.first->second,
-        InsertResult.first->second->getType()->getPointerElementType(), Align);
+    return ConstantAddress(InsertResult.first->second,
+                           llvm::cast<llvm::GlobalVariable>(
+                               InsertResult.first->second->stripPointerCasts())
+                               ->getValueType(),
+                           Align);
   }
 
   // FIXME: If an externally-visible declaration extends multiple temporaries,

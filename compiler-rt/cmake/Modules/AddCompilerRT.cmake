@@ -638,6 +638,7 @@ macro(add_custom_libcxx name prefix)
                -DLIBCXXABI_ENABLE_SHARED=OFF
                -DLIBCXXABI_HERMETIC_STATIC_LIBRARY=ON
                -DLIBCXXABI_INCLUDE_TESTS=OFF
+               -DLIBCXX_CXX_ABI=libcxxabi
                -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF
                -DLIBCXX_ENABLE_SHARED=OFF
                -DLIBCXX_HERMETIC_STATIC_LIBRARY=ON

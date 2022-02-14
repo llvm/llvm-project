@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -rewrite-objc -fobjc-runtime=macosx-fragile-10.5  %s -o -
 
-id SYNCH_EXPR();
-void SYNCH_BODY();
-void  SYNCH_BEFORE();
-void  SYNC_AFTER();
+id SYNCH_EXPR(void);
+void SYNCH_BODY(void);
+void  SYNCH_BEFORE(void);
+void  SYNC_AFTER(void);
 
 void foo(id sem)
 {

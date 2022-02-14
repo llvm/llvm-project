@@ -14,7 +14,7 @@ void pass_double(void) {
   //take_double(1.5);
 }
 
-double return_double();
+double return_double(void);
 void call_double(double *a) { // expected-error {{SSE2 register return with SSE2 disabled}}
   *a = return_double();
 }

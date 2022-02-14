@@ -1116,14 +1116,6 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
   return true;
 }
 
-bool RISCVFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
-  // Keep the conventional code flow when not optimizing.
-  if (MF.getFunction().hasOptNone())
-    return false;
-
-  return true;
-}
-
 bool RISCVFrameLowering::canUseAsPrologue(const MachineBasicBlock &MBB) const {
   MachineBasicBlock *TmpMBB = const_cast<MachineBasicBlock *>(&MBB);
   const MachineFunction *MF = MBB.getParent();

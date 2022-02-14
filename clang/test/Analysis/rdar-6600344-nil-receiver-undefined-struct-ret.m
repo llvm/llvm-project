@@ -13,12 +13,12 @@ typedef struct Foo { int x; } Bar;
 }
 @end
 
-void createFoo() {
+void createFoo(void) {
   MyClass *obj = 0;  
   Bar f = [obj foo]; // no-warning
 }
 
-void createFoo2() {
+void createFoo2(void) {
   MyClass *obj = 0;  
   [obj foo]; // no-warning
   Bar f = [obj foo]; // no-warning

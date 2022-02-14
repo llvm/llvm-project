@@ -2,9 +2,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -mattr=-unaligned-scratch-access < %s | FileCheck --check-prefix=GFX7-ALIGNED %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -mattr=+unaligned-scratch-access < %s | FileCheck --check-prefix=GFX7-UNALIGNED %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+unaligned-scratch-access < %s | FileCheck --check-prefix=GFX9 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+unaligned-scratch-access -amdgpu-enable-flat-scratch < %s | FileCheck --check-prefix=GFX9-FLASTSCR %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+unaligned-scratch-access -mattr=+enable-flat-scratch < %s | FileCheck --check-prefix=GFX9-FLASTSCR %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+unaligned-scratch-access < %s | FileCheck --check-prefix=GFX10 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+unaligned-scratch-access -amdgpu-enable-flat-scratch < %s | FileCheck --check-prefix=GFX10-FLASTSCR %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+unaligned-scratch-access -mattr=+enable-flat-scratch < %s | FileCheck --check-prefix=GFX10-FLASTSCR %s
 
 ; Should not merge this to a dword load
 define i32 @private_load_2xi16_align2(i16 addrspace(5)* %p) #0 {

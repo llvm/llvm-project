@@ -7,18 +7,18 @@
 
 // CHECK: @llvm.global_ctors = appending global [3 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* bitcast (i32 ()* @foo3 to void ()*), i8* null }, { i32, void ()*, i8* } { i32 180, void ()* bitcast (i32 ()* @foo2 to void ()*), i8* null }, { i32, void ()*, i8* } { i32 180, void ()* bitcast (i32 ()* @foo to void ()*), i8* null }]
 
-int foo() __attribute__((constructor(180)));
-int foo2() __attribute__((constructor(180)));
-int foo3() __attribute__((constructor(65535)));
+int foo(void) __attribute__((constructor(180)));
+int foo2(void) __attribute__((constructor(180)));
+int foo3(void) __attribute__((constructor(65535)));
 
-int foo3() {
+int foo3(void) {
   return 3;
 }
 
-int foo2() {
+int foo2(void) {
   return 2;
 }
 
-int foo() {
+int foo(void) {
   return 1;
 }

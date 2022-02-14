@@ -97,6 +97,14 @@ public:
   bool canRealignStack(const MachineFunction &MF) const override;
 
   Register getFrameRegister(const MachineFunction &MF) const override;
+
+  const TargetRegisterClass *
+  getCrossCopyRegClass(const TargetRegisterClass *RC) const override {
+    if (RC == &M68k::CCRCRegClass)
+      return &M68k::DR32RegClass;
+    return RC;
+  }
+
   unsigned getStackRegister() const { return StackPtr; }
   unsigned getBaseRegister() const { return BasePtr; }
   unsigned getGlobalBaseRegister() const { return GlobalBasePtr; }

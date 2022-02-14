@@ -44,4 +44,4 @@ ProgramHeaders:
     FirstSec: .dynamic
     LastSec:  .dynamic
 
-# CHECK: virtual address is not in any segment: 0x260 when locating .dynstr section contents
+# CHECK: virtual address is not in any segment: 0x260 when locating dynamic string table section contents

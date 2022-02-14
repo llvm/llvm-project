@@ -9,7 +9,7 @@
 
 #import "objc_import.h"
 
-void func() {
+void func(void) {
  TestPCH *xx;
 
  xx = [TestPCH alloc];

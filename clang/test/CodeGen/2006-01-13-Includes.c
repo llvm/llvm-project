@@ -3,7 +3,7 @@
 
 int printf(const char * restrict format, ...);
 
-void test() {
+void test(void) {
   printf("Hello World\n");
 }
 

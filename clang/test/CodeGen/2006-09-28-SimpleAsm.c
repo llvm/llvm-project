@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - | FileCheck %s
 // PR924
 
-void bar() {
+void bar(void) {
   // Extended asm
   // CHECK: call void asm sideeffect "ext: xorl %eax, eax; movl eax, fs; movl eax, gs  %blah
   asm volatile ("ext: xorl %%eax, eax; movl eax, fs; movl eax, gs  %%blah %= %\

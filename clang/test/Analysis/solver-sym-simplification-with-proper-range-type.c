@@ -6,7 +6,7 @@
 // Here we test that the range based solver equivalency tracking mechanism
 // assigns a properly typed range to the simplified symbol.
 
-void clang_analyzer_printState();
+void clang_analyzer_printState(void);
 void clang_analyzer_eval(int);
 
 void f(int a0, int b0, int c)

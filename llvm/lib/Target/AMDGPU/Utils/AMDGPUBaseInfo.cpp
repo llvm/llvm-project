@@ -136,6 +136,22 @@ bool isHsaAbiVersion3AndAbove(const MCSubtargetInfo *STI) {
          isHsaAbiVersion5(STI);
 }
 
+// FIXME: All such magic numbers about the ABI should be in a
+// central TD file.
+unsigned getHostcallImplicitArgPosition() {
+  switch (AmdhsaCodeObjectVersion) {
+  case 2:
+  case 3:
+  case 4:
+    return 24;
+  case 5:
+    return 80;
+  default:
+    llvm_unreachable("Unexpected code object version");
+    return 0;
+  }
+}
+
 #define GET_MIMGBaseOpcodesTable_IMPL
 #define GET_MIMGDimInfoTable_IMPL
 #define GET_MIMGInfoTable_IMPL
@@ -1425,6 +1441,10 @@ bool isModuleEntryFunctionCC(CallingConv::ID CC) {
   default:
     return isEntryFunctionCC(CC);
   }
+}
+
+bool isKernelCC(const Function *Func) {
+  return AMDGPU::isModuleEntryFunctionCC(Func->getCallingConv());
 }
 
 bool hasXNACK(const MCSubtargetInfo &STI) {

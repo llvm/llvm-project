@@ -17,7 +17,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(const S& s)
 {
     typedef typename S::traits_type T;
@@ -31,23 +31,32 @@ test(const S& s)
         assert(T::eq(str[0], typename S::value_type()));
 }
 
-int main(int, char**)
-{
-    {
+bool test() {
+  {
     typedef std::string S;
     test(S(""));
     test(S("abcde"));
     test(S("abcdefghij"));
     test(S("abcdefghijklmnopqrst"));
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     test(S(""));
     test(S("abcde"));
     test(S("abcdefghij"));
     test(S("abcdefghijklmnopqrst"));
-    }
+  }
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
 #endif
 
   return 0;

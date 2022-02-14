@@ -3660,17 +3660,17 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
             format(WrapCode, Style));
 
   Style = getLLVMStyleWithColumns(20);
-  StringRef AShitloadOfSpaces = "//                      This are more spaces "
-                                "than the ColumnLimit, what now?\n"
-                                "\n"
-                                "//   Comment\n"
-                                "\n"
-                                "// This is a text to split in multiple "
-                                "lines, please. Thank you very much!\n"
-                                "\n"
-                                "// A comment with\n"
-                                "//   some indentation that has to be split.\n"
-                                "// And now without";
+  StringRef LotsOfSpaces = "//                      This are more spaces "
+                           "than the ColumnLimit, what now?\n"
+                           "\n"
+                           "//   Comment\n"
+                           "\n"
+                           "// This is a text to split in multiple "
+                           "lines, please. Thank you very much!\n"
+                           "\n"
+                           "// A comment with\n"
+                           "//   some indentation that has to be split.\n"
+                           "// And now without";
   EXPECT_EQ("//                      This are more spaces "
             "than the ColumnLimit, what now?\n"
             "\n"
@@ -3688,7 +3688,7 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
             "//   that has to be\n"
             "//   split.\n"
             "// And now without",
-            format(AShitloadOfSpaces, Style));
+            format(LotsOfSpaces, Style));
 
   Style.SpacesInLineCommentPrefix = {0, 0};
   EXPECT_EQ("//This are more\n"
@@ -3709,7 +3709,7 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
             "//  that has to be\n"
             "//  split.\n"
             "//And now without",
-            format(AShitloadOfSpaces, Style));
+            format(LotsOfSpaces, Style));
 
   Style.SpacesInLineCommentPrefix = {3, 3};
   EXPECT_EQ("//   This are more\n"
@@ -3731,7 +3731,7 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
             "//     that has to\n"
             "//     be split.\n"
             "//   And now without",
-            format(AShitloadOfSpaces, Style));
+            format(LotsOfSpaces, Style));
 
   Style.SpacesInLineCommentPrefix = {30, -1u};
   EXPECT_EQ("//                              This are more spaces than the "
@@ -3746,7 +3746,7 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
             "//                                some indentation that has to be "
             "split.\n"
             "//                              And now without",
-            format(AShitloadOfSpaces, Style));
+            format(LotsOfSpaces, Style));
 
   Style.SpacesInLineCommentPrefix = {2, 4};
   EXPECT_EQ("//  A Comment to be\n"

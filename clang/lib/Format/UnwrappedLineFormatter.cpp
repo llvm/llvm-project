@@ -319,6 +319,15 @@ private:
 
     bool MergeShortFunctions = ShouldMergeShortFunctions();
 
+    const FormatToken *FirstNonComment = TheLine->First;
+    if (FirstNonComment->is(tok::comment)) {
+      FirstNonComment = FirstNonComment->getNextNonComment();
+      if (!FirstNonComment)
+        return 0;
+    }
+    // FIXME: There are probably cases where we should use FirstNonComment
+    // instead of TheLine->First.
+
     if (Style.CompactNamespaces) {
       if (auto nsToken = TheLine->First->getNamespaceToken()) {
         int i = 0;
@@ -358,9 +367,9 @@ private:
     if (TheLine->Last->is(TT_FunctionLBrace) && TheLine->First != TheLine->Last)
       return MergeShortFunctions ? tryMergeSimpleBlock(I, E, Limit) : 0;
     // Try to merge a control statement block with left brace unwrapped.
-    if (TheLine->Last->is(tok::l_brace) && TheLine->First != TheLine->Last &&
-        TheLine->First->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for,
-                                TT_ForEachMacro)) {
+    if (TheLine->Last->is(tok::l_brace) && FirstNonComment != TheLine->Last &&
+        FirstNonComment->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for,
+                                 TT_ForEachMacro)) {
       return Style.AllowShortBlocksOnASingleLine != FormatStyle::SBS_Never
                  ? tryMergeSimpleBlock(I, E, Limit)
                  : 0;
@@ -700,9 +709,13 @@ private:
 
     if (Line.Last->is(tok::l_brace)) {
       FormatToken *Tok = I[1]->First;
-      if (Tok->is(tok::r_brace) && !Tok->MustBreakBefore &&
-          (Tok->getNextNonComment() == nullptr ||
-           Tok->getNextNonComment()->is(tok::semi))) {
+      auto ShouldMerge = [Tok]() {
+        if (Tok->isNot(tok::r_brace) || Tok->MustBreakBefore)
+          return false;
+        const FormatToken *Next = Tok->getNextNonComment();
+        return !Next || Next->is(tok::semi);
+      };
+      if (ShouldMerge()) {
         // We merge empty blocks even if the line exceeds the column limit.
         Tok->SpacesRequiredBefore = Style.SpaceInEmptyBlock ? 1 : 0;
         Tok->CanBreakBefore = true;

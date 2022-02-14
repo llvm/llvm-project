@@ -3456,6 +3456,8 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Args, OPT_mlong_double_128, SA);
   else if (Opts.LongDoubleSize == 64)
     GenerateArg(Args, OPT_mlong_double_64, SA);
+  else if (Opts.LongDoubleSize == 80)
+    GenerateArg(Args, OPT_mlong_double_80, SA);
 
   // Not generating '-mrtd', it's just an alias for '-fdefault-calling-conv='.
 
@@ -3838,9 +3840,16 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.NoBuiltin = Args.hasArg(OPT_fno_builtin) || Opts.Freestanding;
   if (!Opts.NoBuiltin)
     getAllNoBuiltinFuncValues(Args, Opts.NoBuiltinFuncs);
-  Opts.LongDoubleSize = Args.hasArg(OPT_mlong_double_128)
-                            ? 128
-                            : Args.hasArg(OPT_mlong_double_64) ? 64 : 0;
+  if (Arg *A = Args.getLastArg(options::OPT_LongDouble_Group)) {
+    if (A->getOption().matches(options::OPT_mlong_double_64))
+      Opts.LongDoubleSize = 64;
+    else if (A->getOption().matches(options::OPT_mlong_double_80))
+      Opts.LongDoubleSize = 80;
+    else if (A->getOption().matches(options::OPT_mlong_double_128))
+      Opts.LongDoubleSize = 128;
+    else
+      Opts.LongDoubleSize = 0;
+  }
   if (Opts.FastRelaxedMath)
     Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
   llvm::sort(Opts.ModuleFeatures);

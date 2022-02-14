@@ -556,4 +556,8 @@ use omp_lib
   do i = 1, N
      a = 3.14
   enddo
+
+  !$omp target enter data map(alloc:A) device(0) 
+  !$omp target exit data map(delete:A) device(0) 
+
 end program

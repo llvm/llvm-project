@@ -1344,6 +1344,7 @@ cc_library(
         "//llvm:ProfileData",
         "//llvm:Support",
         "//llvm:Target",
+        "//llvm:WindowsDriver",
         "//llvm:config",
     ],
 )

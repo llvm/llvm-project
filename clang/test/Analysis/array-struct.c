@@ -28,19 +28,19 @@ void f(void) {
 
 // StringLiteral in lvalue context and pointer to array type.
 // p: ElementRegion, q: StringRegion
-void f2() {
+void f2(void) {
   char *p = "/usr/local";
   char (*q)[4];
   q = &"abc";
 }
 
 // Typedef'ed struct definition.
-void f3() {
+void f3(void) {
   STYPE s;
 }
 
 // Initialize array with InitExprList.
-void f4() {
+void f4(void) {
   int a[] = { 1, 2, 3};
   int b[3] = { 1, 2 };
   struct s c[] = {{1,{1}}};
@@ -48,13 +48,13 @@ void f4() {
 
 // Struct variable in lvalue context.
 // Assign UnknownVal to the whole struct.
-void f5() {
+void f5(void) {
   struct s data;
   g1(&data);
 }
 
 // AllocaRegion test.
-void f6() {
+void f6(void) {
   char *p;
   p = __builtin_alloca(10); 
   g(p);
@@ -70,30 +70,30 @@ struct s2;
 void g2(struct s2 *p);
 
 // Incomplete struct pointer used as function argument.
-void f7() {
+void f7(void) {
   struct s2 *p = __builtin_alloca(10);
   g2(p);
 }
 
 // sizeof() is unsigned while -1 is signed in array index.
-void f8() {
+void f8(void) {
   int a[10];
   a[sizeof(a)/sizeof(int) - 1] = 1; // no-warning
 }
 
 // Initialization of struct array elements.
-void f9() {
+void f9(void) {
   struct s a[10];
 }
 
 // Initializing array with string literal.
-void f10() {
+void f10(void) {
   char a1[4] = "abc";
   char a3[6] = "abc";
 }
 
 // Retrieve the default value of element/field region.
-void f11() {
+void f11(void) {
   struct s a;
   g1(&a);
   if (a.data == 0) // no-warning
@@ -129,25 +129,25 @@ struct s3 {
 static struct s3 opt;
 
 // Test if the embedded array is retrieved correctly.
-void f14() {
+void f14(void) {
   struct s3 my_opt = opt;
 }
 
 void bar(int*);
 
-struct s3 gets3() {
+struct s3 gets3(void) {
   struct s3 s;
   return s;
 }
 
-void accessArrayFieldNoCrash() {
+void accessArrayFieldNoCrash(void) {
   bar(gets3().a);
   bar((gets3().a));
   bar(((gets3().a)));  
 }
 
 // Test if the array is correctly invalidated.
-void f15() {
+void f15(void) {
   int a[10];
   bar(a);
   if (a[1]) // no-warning
@@ -167,7 +167,7 @@ void f16(struct s3 *p) {
 void inv(struct s1 *);
 
 // Invalidate the struct field.
-void f17() {
+void f17(void) {
   struct s1 t;
   int x;
   inv(&t);
@@ -177,7 +177,7 @@ void f17() {
 
 void read(char*);
 
-void f18() {
+void f18(void) {
   char *q;
   char *p = (char *) __builtin_alloca(10);
   read(p);

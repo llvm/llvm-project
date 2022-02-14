@@ -67,8 +67,8 @@ namespace ranges {
 
     static constexpr bool _UseCache = !is_reference_v<_InnerRange>;
     using _Cache = _If<_UseCache, __non_propagating_cache<remove_cvref_t<_InnerRange>>, __empty_cache>;
-    [[no_unique_address]] _Cache __cache_;
-    _View __base_ = _View(); // TODO: [[no_unique_address]] makes clang crash! File a bug :)
+    _LIBCPP_NO_UNIQUE_ADDRESS _Cache __cache_;
+    _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
 
   public:
     _LIBCPP_HIDE_FROM_ABI

@@ -375,7 +375,7 @@ define <2 x i32> @vwmulsu_v2i32_v2i8(<2 x i8>* %x, <2 x i8>* %y) {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v9, (a1)
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
-; CHECK-NEXT:    vsext.vf2 v10, v8
+; CHECK-NEXT:    vzext.vf2 v10, v8
 ; CHECK-NEXT:    vsext.vf2 v11, v9
 ; CHECK-NEXT:    vwmulsu.vv v8, v11, v10
 ; CHECK-NEXT:    ret
@@ -394,7 +394,7 @@ define <4 x i32> @vwmulsu_v4i32_v4i8_v4i16(<4 x i8>* %x, <4 x i16>* %y) {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v9, (a1)
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
-; CHECK-NEXT:    vsext.vf2 v10, v8
+; CHECK-NEXT:    vzext.vf2 v10, v8
 ; CHECK-NEXT:    vwmulsu.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %a = load <4 x i8>, <4 x i8>* %x

@@ -93,6 +93,11 @@ bool FileExists(const char *filename) {
   return ::GetFileAttributesA(filename) != INVALID_FILE_ATTRIBUTES;
 }
 
+bool DirExists(const char *path) {
+  auto attr = ::GetFileAttributesA(path);
+  return (attr != INVALID_FILE_ATTRIBUTES) && (attr & FILE_ATTRIBUTE_DIRECTORY);
+}
+
 uptr internal_getpid() {
   return GetProcessId(GetCurrentProcess());
 }
@@ -517,7 +522,7 @@ void ReExec() {
   UNIMPLEMENTED();
 }
 
-void PlatformPrepareForSandboxing(__sanitizer_sandbox_arguments *args) {}
+void PlatformPrepareForSandboxing(void *args) {}
 
 bool StackSizeIsUnlimited() {
   UNIMPLEMENTED();

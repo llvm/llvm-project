@@ -41,7 +41,7 @@ void repeatedStores(int coin) {
   if (coin) {
     // expected-note@-1 {{Assuming 'coin' is 0}}
     // expected-note@-2 {{Taking false branch}}
-    extern int *getPointer();
+    extern int *getPointer(void);
     p = getPointer();
   } else {
     p = 0; // expected-note {{Null pointer value stored to 'p'}}

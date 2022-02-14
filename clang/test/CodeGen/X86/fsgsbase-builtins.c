@@ -3,25 +3,25 @@
 
 #include <immintrin.h>
 
-unsigned int test_readfsbase_u32()
+unsigned int test_readfsbase_u32(void)
 {
   // CHECK: @llvm.x86.rdfsbase.32
   return _readfsbase_u32();
 }
 
-unsigned long long test_readfsbase_u64()
+unsigned long long test_readfsbase_u64(void)
 {
   // CHECK: @llvm.x86.rdfsbase.64
   return _readfsbase_u64();
 }
 
-unsigned int test_readgsbase_u32()
+unsigned int test_readgsbase_u32(void)
 {
   // CHECK: @llvm.x86.rdgsbase.32
   return _readgsbase_u32();
 }
 
-unsigned long long test_readgsbase_u64()
+unsigned long long test_readgsbase_u64(void)
 {
   // CHECK: @llvm.x86.rdgsbase.64
   return _readgsbase_u64();

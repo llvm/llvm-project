@@ -1508,7 +1508,7 @@ class ScalarCryptoByteSelectAny
     : Intrinsic<[llvm_anyint_ty],
                 [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i8_ty],
                 [IntrNoMem, IntrSpeculatable, IntrWillReturn,
-                 ImmArg<ArgIndex<2>>, Returned<ArgIndex<0>>]>;
+                 ImmArg<ArgIndex<2>>]>;
 
 // Zknd
 def int_riscv_aes32dsi  : ScalarCryptoByteSelect32;

@@ -1231,3 +1231,18 @@ func @splat_fold() -> tensor<4xf32> {
   // CHECK-NEXT: [[T:%.*]] = arith.constant dense<1.000000e+00> : tensor<4xf32>
   // CHECK-NEXT: return [[T]] : tensor<4xf32>
 }
+
+// -----
+
+// There was an issue in cast + insert_slice folding generating invalid ir.
+// https://github.com/llvm/llvm-project/issues/53099
+// CHECK-LABEL: func @insert_slice_cast
+func @insert_slice_cast(%arg0 : tensor<1x?xf32>, %arg1 : tensor<?x?xf32>, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : index, %arg6 : index, %arg7 : index) -> tensor<?x?xf32> {
+  // CHECK: %[[CAST:.*]] = tensor.cast %{{.*}} : tensor<1x?xf32> to tensor<?x?xf32>
+  %0 = tensor.cast %arg0 : tensor<1x?xf32> to tensor<?x?xf32>
+  // CHECK: %[[RES:.*]] = tensor.insert_slice %[[CAST]]
+  // CHECK-SAME: : tensor<?x?xf32> into tensor<?x?xf32>
+  %1 = tensor.insert_slice %0 into %arg1[%arg2, %arg3] [%arg4, %arg5] [%arg6, %arg7] : tensor<?x?xf32> into tensor<?x?xf32>
+  // CHECK: return %[[RES]] : tensor<?x?xf32>
+  return %1 : tensor<?x?xf32>
+}

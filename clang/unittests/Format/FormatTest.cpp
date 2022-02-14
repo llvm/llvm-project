@@ -1520,6 +1520,36 @@ TEST_F(FormatTest, FormatLoopsWithoutCompoundStatement) {
 
 TEST_F(FormatTest, FormatShortBracedStatements) {
   FormatStyle AllowSimpleBracedStatements = getLLVMStyle();
+  EXPECT_EQ(AllowSimpleBracedStatements.AllowShortBlocksOnASingleLine, false);
+  EXPECT_EQ(AllowSimpleBracedStatements.AllowShortIfStatementsOnASingleLine,
+            FormatStyle::SIS_Never);
+  EXPECT_EQ(AllowSimpleBracedStatements.AllowShortLoopsOnASingleLine, false);
+  EXPECT_EQ(AllowSimpleBracedStatements.BraceWrapping.AfterFunction, false);
+  verifyFormat("for (;;) {\n"
+               "  f();\n"
+               "}");
+  verifyFormat("/*comment*/ for (;;) {\n"
+               "  f();\n"
+               "}");
+  verifyFormat("BOOST_FOREACH (int v, vec) {\n"
+               "  f();\n"
+               "}");
+  verifyFormat("/*comment*/ BOOST_FOREACH (int v, vec) {\n"
+               "  f();\n"
+               "}");
+  verifyFormat("while (true) {\n"
+               "  f();\n"
+               "}");
+  verifyFormat("/*comment*/ while (true) {\n"
+               "  f();\n"
+               "}");
+  verifyFormat("if (true) {\n"
+               "  f();\n"
+               "}");
+  verifyFormat("/*comment*/ if (true) {\n"
+               "  f();\n"
+               "}");
+
   AllowSimpleBracedStatements.IfMacros.push_back("MYIF");
   // Where line-lengths matter, a 2-letter synonym that maintains line length.
   // Not IF to avoid any confusion that IF is somehow special.
@@ -3826,7 +3856,10 @@ TEST_F(FormatTest, FormatsNamespaces) {
                "struct b_struct {};\n"
                "} // namespace B\n",
                Style);
-  verifyFormat("template <int I> constexpr void foo requires(I == 42) {}\n"
+  verifyFormat("template <int I>\n"
+               "constexpr void foo()\n"
+               "  requires(I == 42)\n"
+               "{}\n"
                "namespace ns {\n"
                "void foo() {}\n"
                "} // namespace ns\n",
@@ -8363,6 +8396,12 @@ TEST_F(FormatTest, DeclarationsOfMultipleVariables) {
                Style);
   verifyFormat("vector<int*> a, b;", Style);
   verifyFormat("for (int *p, *q; p != q; p = p->next) {\n}", Style);
+  verifyFormat("/*comment*/ for (int *p, *q; p != q; p = p->next) {\n}", Style);
+  verifyFormat("if (int *p, *q; p != q) {\n  p = p->next;\n}", Style);
+  verifyFormat("/*comment*/ if (int *p, *q; p != q) {\n  p = p->next;\n}",
+               Style);
+  verifyFormat("switch (int *p, *q; p != q) {\n  default:\n    break;\n}", Style);
+  verifyFormat("/*comment*/ switch (int *p, *q; p != q) {\n  default:\n    break;\n}", Style);
 }
 
 TEST_F(FormatTest, ConditionalExpressionsInBrackets) {
@@ -19254,7 +19293,6 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(BinPackArguments);
   CHECK_PARSE_BOOL(BinPackParameters);
   CHECK_PARSE_BOOL(BreakAfterJavaFieldAnnotations);
-  CHECK_PARSE_BOOL(BreakBeforeConceptDeclarations);
   CHECK_PARSE_BOOL(BreakBeforeTernaryOperators);
   CHECK_PARSE_BOOL(BreakStringLiterals);
   CHECK_PARSE_BOOL(CompactNamespaces);
@@ -19266,7 +19304,8 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(IndentCaseLabels);
   CHECK_PARSE_BOOL(IndentCaseBlocks);
   CHECK_PARSE_BOOL(IndentGotoLabels);
-  CHECK_PARSE_BOOL(IndentRequires);
+  CHECK_PARSE_BOOL_FIELD(IndentRequiresClause, "IndentRequires");
+  CHECK_PARSE_BOOL(IndentRequiresClause);
   CHECK_PARSE_BOOL(IndentWrappedFunctionNames);
   CHECK_PARSE_BOOL(KeepEmptyLinesAtTheStartOfBlocks);
   CHECK_PARSE_BOOL(ObjCSpaceAfterProperty);
@@ -19932,6 +19971,27 @@ TEST_F(FormatTest, ParsesConfiguration) {
   // For backward compatibility:
   CHECK_PARSE("SpacesInAngles: false", SpacesInAngles, FormatStyle::SIAS_Never);
   CHECK_PARSE("SpacesInAngles: true", SpacesInAngles, FormatStyle::SIAS_Always);
+
+  CHECK_PARSE("RequiresClausePosition: WithPreceding", RequiresClausePosition,
+              FormatStyle::RCPS_WithPreceding);
+  CHECK_PARSE("RequiresClausePosition: WithFollowing", RequiresClausePosition,
+              FormatStyle::RCPS_WithFollowing);
+  CHECK_PARSE("RequiresClausePosition: SingleLine", RequiresClausePosition,
+              FormatStyle::RCPS_SingleLine);
+  CHECK_PARSE("RequiresClausePosition: OwnLine", RequiresClausePosition,
+              FormatStyle::RCPS_OwnLine);
+
+  CHECK_PARSE("BreakBeforeConceptDeclarations: Never",
+              BreakBeforeConceptDeclarations, FormatStyle::BBCDS_Never);
+  CHECK_PARSE("BreakBeforeConceptDeclarations: Always",
+              BreakBeforeConceptDeclarations, FormatStyle::BBCDS_Always);
+  CHECK_PARSE("BreakBeforeConceptDeclarations: Allowed",
+              BreakBeforeConceptDeclarations, FormatStyle::BBCDS_Allowed);
+  // For backward compatibility:
+  CHECK_PARSE("BreakBeforeConceptDeclarations: true",
+              BreakBeforeConceptDeclarations, FormatStyle::BBCDS_Always);
+  CHECK_PARSE("BreakBeforeConceptDeclarations: false",
+              BreakBeforeConceptDeclarations, FormatStyle::BBCDS_Allowed);
 }
 
 TEST_F(FormatTest, ParsesConfigurationWithLanguages) {
@@ -23200,275 +23260,584 @@ TEST_F(FormatTest, WebKitDefaultStyle) {
                Style);
 }
 
-TEST_F(FormatTest, ConceptsAndRequires) {
-  FormatStyle Style = getLLVMStyle();
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
+TEST_F(FormatTest, Concepts) {
+  EXPECT_EQ(getLLVMStyle().BreakBeforeConceptDeclarations,
+            FormatStyle::BBCDS_Always);
+  verifyFormat("template <typename T>\n"
+               "concept True = true;");
+
+  verifyFormat("template <typename T>\n"
+               "concept C = ((false || foo()) && C2<T>) ||\n"
+               "            (std::trait<T>::value && Baz) || sizeof(T) >= 6;",
+               getLLVMStyleWithColumns(60));
+
+  verifyFormat("template <typename T>\n"
+               "concept DelayedCheck = true && requires(T t) { t.bar(); } && "
+               "sizeof(T) <= 8;");
+
+  verifyFormat("template <typename T>\n"
+               "concept DelayedCheck = true && requires(T t) {\n"
+               "                                 t.bar();\n"
+               "                                 t.baz();\n"
+               "                               } && sizeof(T) <= 8;");
+
+  verifyFormat("template <typename T>\n"
+               "concept DelayedCheck = true && requires(T t) { // Comment\n"
+               "                                 t.bar();\n"
+               "                                 t.baz();\n"
+               "                               } && sizeof(T) <= 8;");
+
+  verifyFormat("template <typename T>\n"
+               "concept DelayedCheck = false || requires(T t) { t.bar(); } && "
+               "sizeof(T) <= 8;");
+
+  verifyFormat("template <typename T>\n"
+               "concept DelayedCheck = !!false || requires(T t) { t.bar(); } "
+               "&& sizeof(T) <= 8;");
+
+  verifyFormat(
+      "template <typename T>\n"
+      "concept DelayedCheck = static_cast<bool>(0) ||\n"
+      "                       requires(T t) { t.bar(); } && sizeof(T) <= 8;");
+
+  verifyFormat("template <typename T>\n"
+               "concept DelayedCheck = bool(0) || requires(T t) { t.bar(); } "
+               "&& sizeof(T) <= 8;");
+
+  verifyFormat(
+      "template <typename T>\n"
+      "concept DelayedCheck = (bool)(0) ||\n"
+      "                       requires(T t) { t.bar(); } && sizeof(T) <= 8;");
+
+  verifyFormat("template <typename T>\n"
+               "concept DelayedCheck = (bool)0 || requires(T t) { t.bar(); } "
+               "&& sizeof(T) <= 8;");
+
+  verifyFormat("template <typename T>\n"
+               "concept Size = sizeof(T) >= 5 && requires(T t) { t.bar(); } && "
+               "sizeof(T) <= 8;");
+
+  verifyFormat("template <typename T>\n"
+               "concept Size = 2 < 5 && 2 <= 5 && 8 >= 5 && 8 > 5 &&\n"
+               "               requires(T t) {\n"
+               "                 t.bar();\n"
+               "                 t.baz();\n"
+               "               } && sizeof(T) <= 8 && !(4 < 3);",
+               getLLVMStyleWithColumns(60));
+
+  verifyFormat("template <typename T>\n"
+               "concept TrueOrNot = IsAlwaysTrue || IsNeverTrue;");
+
+  verifyFormat("template <typename T>\n"
+               "concept C = foo();");
+
+  verifyFormat("template <typename T>\n"
+               "concept C = foo(T());");
+
+  verifyFormat("template <typename T>\n"
+               "concept C = foo(T{});");
+
+  verifyFormat("template <typename T>\n"
+               "concept Size = V<sizeof(T)>::Value > 5;");
+
+  verifyFormat("template <typename T>\n"
+               "concept True = S<T>::Value;");
+
+  verifyFormat(
+      "template <typename T>\n"
+      "concept C = []() { return true; }() && requires(T t) { t.bar(); } &&\n"
+      "            sizeof(T) <= 8;");
+
+  // FIXME: This is misformatted because the fake l paren starts at bool, not at
+  // the lambda l square.
+  verifyFormat("template <typename T>\n"
+               "concept C = [] -> bool { return true; }() && requires(T t) { "
+               "t.bar(); } &&\n"
+               "                      sizeof(T) <= 8;");
+
+  verifyFormat(
+      "template <typename T>\n"
+      "concept C = decltype([]() { return std::true_type{}; }())::value &&\n"
+      "            requires(T t) { t.bar(); } && sizeof(T) <= 8;");
+
+  verifyFormat("template <typename T>\n"
+               "concept C = decltype([]() { return std::true_type{}; "
+               "}())::value && requires(T t) { t.bar(); } && sizeof(T) <= 8;",
+               getLLVMStyleWithColumns(120));
+
+  verifyFormat("template <typename T>\n"
+               "concept C = decltype([]() -> std::true_type { return {}; "
+               "}())::value &&\n"
+               "            requires(T t) { t.bar(); } && sizeof(T) <= 8;");
+
+  verifyFormat("template <typename T>\n"
+               "concept C = true;\n"
+               "Foo Bar;");
 
   verifyFormat("template <typename T>\n"
                "concept Hashable = requires(T a) {\n"
-               "  { std::hash<T>{}(a) } -> std::convertible_to<std::size_t>;\n"
-               "};",
-               Style);
-  verifyFormat("template <typename T>\n"
-               "concept EqualityComparable = requires(T a, T b) {\n"
-               "  { a == b } -> bool;\n"
-               "};",
-               Style);
-  verifyFormat("template <typename T>\n"
-               "concept EqualityComparable = requires(T a, T b) {\n"
-               "  { a == b } -> bool;\n"
-               "  { a != b } -> bool;\n"
-               "};",
-               Style);
-  verifyFormat("template <typename T>\n"
-               "concept EqualityComparable = requires(T a, T b) {\n"
-               "  { a == b } -> bool;\n"
-               "  { a != b } -> bool;\n"
-               "};",
-               Style);
+               "                     { std::hash<T>{}(a) } -> "
+               "std::convertible_to<std::size_t>;\n"
+               "                   };");
 
-  verifyFormat("template <typename It>\n"
-               "requires Iterator<It>\n"
-               "void sort(It begin, It end) {\n"
-               "  //....\n"
-               "}",
-               Style);
+  verifyFormat(
+      "template <typename T>\n"
+      "concept EqualityComparable = requires(T a, T b) {\n"
+      "                               { a == b } -> std::same_as<bool>;\n"
+      "                             };");
+
+  verifyFormat(
+      "template <typename T>\n"
+      "concept EqualityComparable = requires(T a, T b) {\n"
+      "                               { a == b } -> std::same_as<bool>;\n"
+      "                               { a != b } -> std::same_as<bool>;\n"
+      "                             };");
 
   verifyFormat("template <typename T>\n"
-               "concept Large = sizeof(T) > 10;",
-               Style);
+               "concept WeakEqualityComparable = requires(T a, T b) {\n"
+               "                                   { a == b };\n"
+               "                                   { a != b };\n"
+               "                                 };");
+
+  verifyFormat("template <typename T>\n"
+               "concept HasSizeT = requires { typename T::size_t; };");
+
+  verifyFormat("template <typename T>\n"
+               "concept Semiregular =\n"
+               "    DefaultConstructible<T> && CopyConstructible<T> && "
+               "CopyAssignable<T> &&\n"
+               "    requires(T a, std::size_t n) {\n"
+               "      requires Same<T *, decltype(&a)>;\n"
+               "      { a.~T() } noexcept;\n"
+               "      requires Same<T *, decltype(new T)>;\n"
+               "      requires Same<T *, decltype(new T[n])>;\n"
+               "      { delete new T; };\n"
+               "      { delete new T[n]; };\n"
+               "    };");
+
+  verifyFormat("template <typename T>\n"
+               "concept Semiregular =\n"
+               "    requires(T a, std::size_t n) {\n"
+               "      requires Same<T *, decltype(&a)>;\n"
+               "      { a.~T() } noexcept;\n"
+               "      requires Same<T *, decltype(new T)>;\n"
+               "      requires Same<T *, decltype(new T[n])>;\n"
+               "      { delete new T; };\n"
+               "      { delete new T[n]; };\n"
+               "      { new T } -> std::same_as<T *>;\n"
+               "    } && DefaultConstructible<T> && CopyConstructible<T> && "
+               "CopyAssignable<T>;");
+
+  verifyFormat(
+      "template <typename T>\n"
+      "concept Semiregular =\n"
+      "    DefaultConstructible<T> && requires(T a, std::size_t n) {\n"
+      "                                 requires Same<T *, decltype(&a)>;\n"
+      "                                 { a.~T() } noexcept;\n"
+      "                                 requires Same<T *, decltype(new T)>;\n"
+      "                                 requires Same<T *, decltype(new "
+      "T[n])>;\n"
+      "                                 { delete new T; };\n"
+      "                                 { delete new T[n]; };\n"
+      "                               } && CopyConstructible<T> && "
+      "CopyAssignable<T>;");
+
+  verifyFormat("template <typename T>\n"
+               "concept Two = requires(T t) {\n"
+               "                { t.foo() } -> std::same_as<Bar>;\n"
+               "              } && requires(T &&t) {\n"
+               "                     { t.foo() } -> std::same_as<Bar &&>;\n"
+               "                   };");
+
+  verifyFormat(
+      "template <typename T>\n"
+      "concept C = requires(T x) {\n"
+      "              { *x } -> std::convertible_to<typename T::inner>;\n"
+      "              { x + 1 } noexcept -> std::same_as<int>;\n"
+      "              { x * 1 } -> std::convertible_to<T>;\n"
+      "            };");
+
+  verifyFormat(
+      "template <typename T, typename U = T>\n"
+      "concept Swappable = requires(T &&t, U &&u) {\n"
+      "                      swap(std::forward<T>(t), std::forward<U>(u));\n"
+      "                      swap(std::forward<U>(u), std::forward<T>(t));\n"
+      "                    };");
+
+  verifyFormat("template <typename T, typename U>\n"
+               "concept Common = requires(T &&t, U &&u) {\n"
+               "                   typename CommonType<T, U>;\n"
+               "                   { CommonType<T, U>(std::forward<T>(t)) };\n"
+               "                 };");
+
+  verifyFormat("template <typename T, typename U>\n"
+               "concept Common = requires(T &&t, U &&u) {\n"
+               "                   typename CommonType<T, U>;\n"
+               "                   { CommonType<T, U>{std::forward<T>(t)} };\n"
+               "                 };");
+
+  verifyFormat(
+      "template <typename T>\n"
+      "concept C = requires(T t) {\n"
+      "              requires Bar<T> && Foo<T>;\n"
+      "              requires((trait<T> && Baz) || (T2<T> && Foo<T>));\n"
+      "            };");
+
+  verifyFormat("template <typename T>\n"
+               "concept HasFoo = requires(T t) {\n"
+               "                   { t.foo() };\n"
+               "                   t.foo();\n"
+               "                 };\n"
+               "template <typename T>\n"
+               "concept HasBar = requires(T t) {\n"
+               "                   { t.bar() };\n"
+               "                   t.bar();\n"
+               "                 };");
+
+  verifyFormat("template <typename T>\n"
+               "concept Large = sizeof(T) > 10;");
 
   verifyFormat("template <typename T, typename U>\n"
                "concept FooableWith = requires(T t, U u) {\n"
-               "  typename T::foo_type;\n"
-               "  { t.foo(u) } -> typename T::foo_type;\n"
-               "  t++;\n"
-               "};\n"
-               "void doFoo(FooableWith<int> auto t) {\n"
-               "  t.foo(3);\n"
-               "}",
-               Style);
-  verifyFormat("template <typename T>\n"
-               "concept Context = sizeof(T) == 1;",
-               Style);
-  verifyFormat("template <typename T>\n"
-               "concept Context = is_specialization_of_v<context, T>;",
-               Style);
-  verifyFormat("template <typename T>\n"
-               "concept Node = std::is_object_v<T>;",
-               Style);
-  verifyFormat("template <typename T>\n"
-               "concept Tree = true;",
-               Style);
-
-  verifyFormat("template <typename T> int g(T i) requires Concept1<I> {\n"
-               "  //...\n"
-               "}",
-               Style);
-
-  verifyFormat(
-      "template <typename T> int g(T i) requires Concept1<I> && Concept2<I> {\n"
-      "  //...\n"
-      "}",
-      Style);
-
-  verifyFormat(
-      "template <typename T> int g(T i) requires Concept1<I> || Concept2<I> {\n"
-      "  //...\n"
-      "}",
-      Style);
+               "                        typename T::foo_type;\n"
+               "                        { t.foo(u) } -> typename T::foo_type;\n"
+               "                        t++;\n"
+               "                      };\n"
+               "void doFoo(FooableWith<int> auto t) { t.foo(3); }");
 
   verifyFormat("template <typename T>\n"
-               "veryveryvery_long_return_type g(T i) requires Concept1<I> || "
-               "Concept2<I> {\n"
-               "  //...\n"
-               "}",
-               Style);
+               "concept Context = is_specialization_of_v<context, T>;");
 
   verifyFormat("template <typename T>\n"
-               "veryveryvery_long_return_type g(T i) requires Concept1<I> && "
-               "Concept2<I> {\n"
-               "  //...\n"
-               "}",
-               Style);
+               "concept Node = std::is_object_v<T>;");
+
+  auto Style = getLLVMStyle();
+  Style.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Allowed;
 
   verifyFormat(
       "template <typename T>\n"
-      "veryveryvery_long_return_type g(T i) requires Concept1 && Concept2 {\n"
-      "  //...\n"
-      "}",
+      "concept C = requires(T t) {\n"
+      "              requires Bar<T> && Foo<T>;\n"
+      "              requires((trait<T> && Baz) || (T2<T> && Foo<T>));\n"
+      "            };",
       Style);
 
-  verifyFormat(
-      "template <typename T>\n"
-      "veryveryvery_long_return_type g(T i) requires Concept1 || Concept2 {\n"
-      "  //...\n"
-      "}",
-      Style);
-
-  verifyFormat("template <typename It>\n"
-               "requires Foo<It>() && Bar<It> {\n"
-               "  //....\n"
-               "}",
-               Style);
-
-  verifyFormat("template <typename It>\n"
-               "requires Foo<Bar<It>>() && Bar<Foo<It, It>> {\n"
-               "  //....\n"
-               "}",
-               Style);
-
-  verifyFormat("template <typename It>\n"
-               "requires Foo<Bar<It, It>>() && Bar<Foo<It, It>> {\n"
-               "  //....\n"
-               "}",
-               Style);
-
-  verifyFormat(
-      "template <typename It>\n"
-      "requires Foo<Bar<It>, Baz<It>>() && Bar<Foo<It>, Baz<It, It>> {\n"
-      "  //....\n"
-      "}",
-      Style);
-
-  Style.IndentRequires = true;
-  verifyFormat("template <typename It>\n"
-               "  requires Iterator<It>\n"
-               "void sort(It begin, It end) {\n"
-               "  //....\n"
-               "}",
-               Style);
-  verifyFormat("template <std::size index_>\n"
-               "  requires(index_ < sizeof...(Children_))\n"
-               "Tree auto &child() {\n"
-               "  // ...\n"
-               "}",
-               Style);
-
-  Style.SpaceBeforeParens = FormatStyle::SBPO_Always;
   verifyFormat("template <typename T>\n"
-               "concept Hashable = requires (T a) {\n"
-               "  { std::hash<T>{}(a) } -> std::convertible_to<std::size_t>;\n"
+               "concept HasFoo = requires(T t) {\n"
+               "                   { t.foo() };\n"
+               "                   t.foo();\n"
+               "                 };\n"
+               "template <typename T>\n"
+               "concept HasBar = requires(T t) {\n"
+               "                   { t.bar() };\n"
+               "                   t.bar();\n"
+               "                 };",
+               Style);
+
+  verifyFormat("template <typename T> concept True = true;", Style);
+
+  verifyFormat("template <typename T>\n"
+               "concept C = decltype([]() -> std::true_type { return {}; "
+               "}())::value &&\n"
+               "            requires(T t) { t.bar(); } && sizeof(T) <= 8;",
+               Style);
+
+  verifyFormat("template <typename T>\n"
+               "concept Semiregular =\n"
+               "    DefaultConstructible<T> && CopyConstructible<T> && "
+               "CopyAssignable<T> &&\n"
+               "    requires(T a, std::size_t n) {\n"
+               "      requires Same<T *, decltype(&a)>;\n"
+               "      { a.~T() } noexcept;\n"
+               "      requires Same<T *, decltype(new T)>;\n"
+               "      requires Same<T *, decltype(new T[n])>;\n"
+               "      { delete new T; };\n"
+               "      { delete new T[n]; };\n"
+               "    };",
+               Style);
+
+  Style.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Never;
+
+  verifyFormat("template <typename T> concept C =\n"
+               "    requires(T t) {\n"
+               "      requires Bar<T> && Foo<T>;\n"
+               "      requires((trait<T> && Baz) || (T2<T> && Foo<T>));\n"
+               "    };",
+               Style);
+
+  verifyFormat("template <typename T> concept HasFoo = requires(T t) {\n"
+               "                                         { t.foo() };\n"
+               "                                         t.foo();\n"
+               "                                       };\n"
+               "template <typename T> concept HasBar = requires(T t) {\n"
+               "                                         { t.bar() };\n"
+               "                                         t.bar();\n"
+               "                                       };",
+               Style);
+
+  verifyFormat("template <typename T> concept True = true;", Style);
+
+  verifyFormat(
+      "template <typename T> concept C = decltype([]() -> std::true_type {\n"
+      "                                    return {};\n"
+      "                                  }())::value\n"
+      "                                  && requires(T t) { t.bar(); } &&\n"
+      "                                  sizeof(T) <= 8;",
+      Style);
+
+  verifyFormat("template <typename T> concept Semiregular =\n"
+               "    DefaultConstructible<T> && CopyConstructible<T> && "
+               "CopyAssignable<T> &&\n"
+               "    requires(T a, std::size_t n) {\n"
+               "      requires Same<T *, decltype(&a)>;\n"
+               "      { a.~T() } noexcept;\n"
+               "      requires Same<T *, decltype(new T)>;\n"
+               "      requires Same<T *, decltype(new T[n])>;\n"
+               "      { delete new T; };\n"
+               "      { delete new T[n]; };\n"
+               "    };",
+               Style);
+
+  // The following tests are invalid C++, we just want to make sure we don't
+  // assert.
+  verifyFormat("template <typename T>\n"
+               "concept C = requires C2<T>;");
+
+  verifyFormat("template <typename T>\n"
+               "concept C = 5 + 4;");
+
+  verifyFormat("template <typename T>\n"
+               "concept C =\n"
+               "class X;");
+
+  verifyFormat("template <typename T>\n"
+               "concept C = [] && true;");
+
+  verifyFormat("template <typename T>\n"
+               "concept C = [] && requires(T t) { typename T::size_type; };");
+}
+
+TEST_F(FormatTest, RequiresClauses) {
+  auto Style = getLLVMStyle();
+  EXPECT_EQ(Style.RequiresClausePosition, FormatStyle::RCPS_OwnLine);
+  EXPECT_EQ(Style.IndentRequiresClause, true);
+
+  verifyFormat("template <typename T>\n"
+               "  requires(Foo<T> && std::trait<T>)\n"
+               "struct Bar;",
+               Style);
+
+  verifyFormat("template <typename T>\n"
+               "  requires(Foo<T> && std::trait<T>)\n"
+               "class Bar {\n"
+               "public:\n"
+               "  Bar(T t);\n"
+               "  bool baz();\n"
                "};",
                Style);
 
-  verifyFormat("template <class T = void>\n"
-               "  requires EqualityComparable<T> || Same<T, void>\n"
-               "struct equal_to;",
-               Style);
+  verifyFormat(
+      "template <typename T>\n"
+      "  requires requires(T &&t) {\n"
+      "             typename T::I;\n"
+      "             requires(F<typename T::I> && std::trait<typename T::I>);\n"
+      "           }\n"
+      "Bar(T) -> Bar<typename T::I>;",
+      Style);
 
-  verifyFormat("template <class T>\n"
-               "  requires requires {\n"
-               "    T{};\n"
-               "    T (int);\n"
-               "  }\n",
-               Style);
-
-  Style.ColumnLimit = 78;
   verifyFormat("template <typename T>\n"
-               "concept Context = Traits<typename T::traits_type> and\n"
-               "    Interface<typename T::interface_type> and\n"
-               "    Request<typename T::request_type> and\n"
-               "    Response<typename T::response_type> and\n"
-               "    ContextExtension<typename T::extension_type> and\n"
-               "    ::std::is_copy_constructable<T> and "
-               "::std::is_move_constructable<T> and\n"
-               "    requires (T c) {\n"
-               "  { c.response; } -> Response;\n"
-               "} and requires (T c) {\n"
-               "  { c.request; } -> Request;\n"
-               "}\n",
+               "  requires(Foo<T> && std::trait<T>)\n"
+               "constexpr T MyGlobal;",
                Style);
 
   verifyFormat("template <typename T>\n"
-               "concept Context = Traits<typename T::traits_type> or\n"
-               "    Interface<typename T::interface_type> or\n"
-               "    Request<typename T::request_type> or\n"
-               "    Response<typename T::response_type> or\n"
-               "    ContextExtension<typename T::extension_type> or\n"
-               "    ::std::is_copy_constructable<T> or "
-               "::std::is_move_constructable<T> or\n"
-               "    requires (T c) {\n"
-               "  { c.response; } -> Response;\n"
-               "} or requires (T c) {\n"
-               "  { c.request; } -> Request;\n"
-               "}\n",
+               "  requires Foo<T> && requires(T t) {\n"
+               "                       { t.baz() } -> std::same_as<bool>;\n"
+               "                       requires std::same_as<T::Factor, int>;\n"
+               "                     }\n"
+               "inline int bar(T t) {\n"
+               "  return t.baz() ? T::Factor : 5;\n"
+               "}",
                Style);
 
   verifyFormat("template <typename T>\n"
-               "concept Context = Traits<typename T::traits_type> &&\n"
-               "    Interface<typename T::interface_type> &&\n"
-               "    Request<typename T::request_type> &&\n"
-               "    Response<typename T::response_type> &&\n"
-               "    ContextExtension<typename T::extension_type> &&\n"
-               "    ::std::is_copy_constructable<T> && "
-               "::std::is_move_constructable<T> &&\n"
-               "    requires (T c) {\n"
-               "  { c.response; } -> Response;\n"
-               "} && requires (T c) {\n"
-               "  { c.request; } -> Request;\n"
-               "}\n",
-               Style);
-
-  verifyFormat("template <typename T>\nconcept someConcept = Constraint1<T> && "
-               "Constraint2<T>;");
-
-  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
-  Style.BraceWrapping.AfterFunction = true;
-  Style.BraceWrapping.AfterClass = true;
-  Style.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_Yes;
-  Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
-  verifyFormat("void Foo () requires (std::copyable<T>)\n"
+               "inline int bar(T t)\n"
+               "  requires Foo<T> && requires(T t) {\n"
+               "                       { t.baz() } -> std::same_as<bool>;\n"
+               "                       requires std::same_as<T::Factor, int>;\n"
+               "                     }\n"
                "{\n"
-               "  return\n"
-               "}\n",
+               "  return t.baz() ? T::Factor : 5;\n"
+               "}",
                Style);
 
-  verifyFormat("void Foo () requires std::copyable<T>\n"
+  verifyFormat("template <typename T>\n"
+               "  requires F<T>\n"
+               "int bar(T t) {\n"
+               "  return 5;\n"
+               "}",
+               Style);
+
+  verifyFormat("template <typename T>\n"
+               "int bar(T t)\n"
+               "  requires F<T>\n"
                "{\n"
-               "  return\n"
-               "}\n",
+               "  return 5;\n"
+               "}",
                Style);
 
-  verifyFormat("template <std::semiregular F, std::semiregular... Args>\n"
-               "  requires (std::invocable<F, std::invoke_result_t<Args>...>)\n"
-               "struct constant;",
+  Style.IndentRequiresClause = false;
+  verifyFormat("template <typename T>\n"
+               "requires F<T>\n"
+               "int bar(T t) {\n"
+               "  return 5;\n"
+               "}",
                Style);
 
-  verifyFormat("template <std::semiregular F, std::semiregular... Args>\n"
-               "  requires std::invocable<F, std::invoke_result_t<Args>...>\n"
-               "struct constant;",
-               Style);
-
-  verifyFormat("template <class T>\n"
-               "class plane_with_very_very_very_long_name\n"
+  verifyFormat("template <typename T>\n"
+               "int bar(T t)\n"
+               "requires F<T>\n"
                "{\n"
-               "  constexpr plane_with_very_very_very_long_name () requires "
-               "std::copyable<T>\n"
-               "      : plane_with_very_very_very_long_name (1)\n"
-               "  {\n"
-               "  }\n"
-               "}\n",
+               "  return 5;\n"
+               "}",
                Style);
 
-  verifyFormat("template <class T>\n"
-               "class plane_with_long_name\n"
-               "{\n"
-               "  constexpr plane_with_long_name () requires std::copyable<T>\n"
-               "      : plane_with_long_name (1)\n"
-               "  {\n"
-               "  }\n"
-               "}\n",
+  Style.RequiresClausePosition = FormatStyle::RCPS_SingleLine;
+  verifyFormat("template <typename T> requires Foo<T> struct Bar {};\n"
+               "template <typename T> requires Foo<T> void bar() {}\n"
+               "template <typename T> void bar() requires Foo<T> {}\n"
+               "template <typename T> requires Foo<T> Bar(T) -> Bar<T>;",
                Style);
 
-  Style.BreakBeforeConceptDeclarations = false;
-  verifyFormat("template <typename T> concept Tree = true;", Style);
+  auto ColumnStyle = Style;
+  ColumnStyle.ColumnLimit = 40;
+  verifyFormat("template <typename AAAAAAA>\n"
+               "requires Foo<T> struct Bar {};\n"
+               "template <typename AAAAAAA>\n"
+               "requires Foo<T> void bar() {}\n"
+               "template <typename AAAAAAA>\n"
+               "void bar() requires Foo<T> {}\n"
+               "template <typename AAAAAAA>\n"
+               "requires Foo<T> Baz(T) -> Baz<T>;",
+               ColumnStyle);
 
-  Style.IndentRequires = false;
-  verifyFormat("template <std::semiregular F, std::semiregular... Args>\n"
-               "requires (std::invocable<F, std::invoke_result_t<Args>...>) "
-               "struct constant;",
+  verifyFormat("template <typename T>\n"
+               "requires Foo<AAAAAAA> struct Bar {};\n"
+               "template <typename T>\n"
+               "requires Foo<AAAAAAA> void bar() {}\n"
+               "template <typename T>\n"
+               "void bar() requires Foo<AAAAAAA> {}\n"
+               "template <typename T>\n"
+               "requires Foo<AAAAAAA> Bar(T) -> Bar<T>;",
+               ColumnStyle);
+
+  verifyFormat("template <typename AAAAAAA>\n"
+               "requires Foo<AAAAAAAAAAAAAAAA>\n"
+               "struct Bar {};\n"
+               "template <typename AAAAAAA>\n"
+               "requires Foo<AAAAAAAAAAAAAAAA>\n"
+               "void bar() {}\n"
+               "template <typename AAAAAAA>\n"
+               "void bar()\n"
+               "    requires Foo<AAAAAAAAAAAAAAAA> {}\n"
+               "template <typename AAAAAAA>\n"
+               "requires Foo<AAAAAAAA> Bar(T) -> Bar<T>;\n"
+               "template <typename AAAAAAA>\n"
+               "requires Foo<AAAAAAAAAAAAAAAA>\n"
+               "Bar(T) -> Bar<T>;",
+               ColumnStyle);
+
+  Style.RequiresClausePosition = FormatStyle::RCPS_WithFollowing;
+  ColumnStyle.RequiresClausePosition = FormatStyle::RCPS_WithFollowing;
+
+  verifyFormat("template <typename T>\n"
+               "requires Foo<T> struct Bar {};\n"
+               "template <typename T>\n"
+               "requires Foo<T> void bar() {}\n"
+               "template <typename T>\n"
+               "void bar()\n"
+               "requires Foo<T> {}\n"
+               "template <typename T>\n"
+               "requires Foo<T> Bar(T) -> Bar<T>;",
                Style);
+
+  verifyFormat("template <typename AAAAAAA>\n"
+               "requires Foo<AAAAAAAAAAAAAAAA>\n"
+               "struct Bar {};\n"
+               "template <typename AAAAAAA>\n"
+               "requires Foo<AAAAAAAAAAAAAAAA>\n"
+               "void bar() {}\n"
+               "template <typename AAAAAAA>\n"
+               "void bar()\n"
+               "requires Foo<AAAAAAAAAAAAAAAA> {}\n"
+               "template <typename AAAAAAA>\n"
+               "requires Foo<AAAAAAAA> Bar(T) -> Bar<T>;\n"
+               "template <typename AAAAAAA>\n"
+               "requires Foo<AAAAAAAAAAAAAAAA>\n"
+               "Bar(T) -> Bar<T>;",
+               ColumnStyle);
+
+  Style.IndentRequiresClause = true;
+  ColumnStyle.IndentRequiresClause = true;
+
+  verifyFormat("template <typename T>\n"
+               "  requires Foo<T> struct Bar {};\n"
+               "template <typename T>\n"
+               "  requires Foo<T> void bar() {}\n"
+               "template <typename T>\n"
+               "void bar()\n"
+               "  requires Foo<T> {}\n"
+               "template <typename T>\n"
+               "  requires Foo<T> Bar(T) -> Bar<T>;",
+               Style);
+
+  verifyFormat("template <typename AAAAAAA>\n"
+               "  requires Foo<AAAAAAAAAAAAAAAA>\n"
+               "struct Bar {};\n"
+               "template <typename AAAAAAA>\n"
+               "  requires Foo<AAAAAAAAAAAAAAAA>\n"
+               "void bar() {}\n"
+               "template <typename AAAAAAA>\n"
+               "void bar()\n"
+               "  requires Foo<AAAAAAAAAAAAAAAA> {}\n"
+               "template <typename AAAAAAA>\n"
+               "  requires Foo<AAAAAA> Bar(T) -> Bar<T>;\n"
+               "template <typename AAAAAAA>\n"
+               "  requires Foo<AAAAAAAAAAAAAAAA>\n"
+               "Bar(T) -> Bar<T>;",
+               ColumnStyle);
+
+  Style.RequiresClausePosition = FormatStyle::RCPS_WithPreceding;
+  ColumnStyle.RequiresClausePosition = FormatStyle::RCPS_WithPreceding;
+
+  verifyFormat("template <typename T> requires Foo<T>\n"
+               "struct Bar {};\n"
+               "template <typename T> requires Foo<T>\n"
+               "void bar() {}\n"
+               "template <typename T>\n"
+               "void bar() requires Foo<T>\n"
+               "{}\n"
+               "template <typename T> requires Foo<T>\n"
+               "Bar(T) -> Bar<T>;",
+               Style);
+
+  verifyFormat("template <typename AAAAAAA>\n"
+               "requires Foo<AAAAAAAAAAAAAAAA>\n"
+               "struct Bar {};\n"
+               "template <typename AAAAAAA>\n"
+               "requires Foo<AAAAAAAAAAAAAAAA>\n"
+               "void bar() {}\n"
+               "template <typename AAAAAAA>\n"
+               "void bar()\n"
+               "    requires Foo<AAAAAAAAAAAAAAAA>\n"
+               "{}\n"
+               "template <typename AAAAAAA>\n"
+               "requires Foo<AAAAAAAA>\n"
+               "Bar(T) -> Bar<T>;\n"
+               "template <typename AAAAAAA>\n"
+               "requires Foo<AAAAAAAAAAAAAAAA>\n"
+               "Bar(T) -> Bar<T>;",
+               ColumnStyle);
 }
 
 TEST_F(FormatTest, StatementAttributeLikeMacros) {

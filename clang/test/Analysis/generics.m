@@ -81,9 +81,9 @@ __attribute__((objc_root_class))
 @interface UnrelatedType : NSObject<NSCopying>
 @end
 
-int getUnknown();
-NSArray *getStuff();
-NSArray *getTypedStuff() {
+int getUnknown(void);
+NSArray *getStuff(void);
+NSArray *getTypedStuff(void) {
   NSArray<NSNumber *> *c = getStuff();
   return c;
 }
@@ -107,7 +107,7 @@ void incompatibleTypesErased(NSArray *a, NSMutableArray<NSString *> *b,
   [d addObject: [[NSNumber alloc] init]]; // expected-warning {{Conversion from value of type 'NSNumber *' to incompatible type 'NSString *'}}
 }
 
-void crossProceduralErasedTypes() {
+void crossProceduralErasedTypes(void) {
   NSArray<NSString *> *a = getTypedStuff(); // expected-warning {{Conversion}}
 }
 
@@ -263,7 +263,7 @@ void InferenceFromAPIWithBuggyTypes4(__kindof NSArray<NSString *> *a) {
   withMutArrMutableString(b); // expected-warning {{Conversion}}
 }
 
-NSArray<NSString *> *getStrings();
+NSArray<NSString *> *getStrings(void);
 void enforceDynamicRulesInsteadOfStatic(NSArray<NSNumber *> *a) {
   NSArray *b = a;
   // Valid uses of NSArray of NSNumbers.
@@ -305,13 +305,13 @@ void findMethodDeclInTrackedType2(__kindof NSArray<NSString *> *a,
   }
 }
 
-void testUnannotatedLiterals() {
+void testUnannotatedLiterals(void) {
   // ObjCArrayLiterals are not specialized in the AST. 
   NSArray *arr = @[@"A", @"B"];
   [arr contains: [[NSNumber alloc] init]];
 }
 
-void testAnnotatedLiterals() {
+void testAnnotatedLiterals(void) {
   NSArray<NSString *> *arr = @[@"A", @"B"];
   NSArray *arr2 = arr;
   [arr2 contains: [[NSNumber alloc] init]];
@@ -322,7 +322,7 @@ void nonExistentMethodDoesNotCrash(id a, MutableArray<NSMutableString *> *b) {
   [a nonExistentMethod];
 }
 
-void trackedClassVariables() {
+void trackedClassVariables(void) {
   Class c = [NSArray<NSString *> class];
   NSArray<NSNumber *> *a = [c getEmpty]; // expected-warning {{Conversion}}
   a = [c getEmpty2]; // expected-warning {{Conversion}}

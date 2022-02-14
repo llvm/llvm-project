@@ -46,7 +46,7 @@ void foo(void);
 // NOOMP-NEXT:    call void @foo()
 // NOOMP-NEXT:    ret i32 0
 //
-int main() {
+int main(void) {
   int i = 0;
 
 #pragma omp parallel for

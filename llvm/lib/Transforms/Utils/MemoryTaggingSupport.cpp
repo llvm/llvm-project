@@ -12,7 +12,10 @@
 
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 
+#include "llvm/Analysis/ValueTracking.h"
+
 namespace llvm {
+namespace memtag {
 namespace {
 bool maybeReachableFromEachOther(const SmallVectorImpl<IntrinsicInst *> &Insts,
                                  const DominatorTree *DT, size_t MaxLifetimes) {
@@ -54,4 +57,52 @@ Instruction *getUntagLocationIfFunctionExit(Instruction &Inst) {
   }
   return nullptr;
 }
+
+void StackInfoBuilder::visit(Instruction &Inst) {
+  if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
+    if (CI->canReturnTwice()) {
+      Info.CallsReturnTwice = true;
+    }
+  }
+  if (AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
+    if (IsInterestingAlloca(*AI)) {
+      Info.AllocasToInstrument[AI].AI = AI;
+      Info.AllocasToInstrument[AI].OldAI = AI;
+    }
+    return;
+  }
+  auto *II = dyn_cast<IntrinsicInst>(&Inst);
+  if (II && (II->getIntrinsicID() == Intrinsic::lifetime_start ||
+             II->getIntrinsicID() == Intrinsic::lifetime_end)) {
+    AllocaInst *AI = findAllocaForValue(II->getArgOperand(1));
+    if (!AI) {
+      Info.UnrecognizedLifetimes.push_back(&Inst);
+      return;
+    }
+    if (!IsInterestingAlloca(*AI))
+      return;
+    if (II->getIntrinsicID() == Intrinsic::lifetime_start)
+      Info.AllocasToInstrument[AI].LifetimeStart.push_back(II);
+    else
+      Info.AllocasToInstrument[AI].LifetimeEnd.push_back(II);
+    return;
+  }
+  if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
+    for (Value *V : DVI->location_ops()) {
+      if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
+        if (!IsInterestingAlloca(*AI))
+          continue;
+        AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
+        auto &DVIVec = AInfo.DbgVariableIntrinsics;
+        if (DVIVec.empty() || DVIVec.back() != DVI)
+          DVIVec.push_back(DVI);
+      }
+    }
+  }
+  Instruction *ExitUntag = getUntagLocationIfFunctionExit(Inst);
+  if (ExitUntag)
+    Info.RetVec.push_back(ExitUntag);
+}
+
+} // namespace memtag
 } // namespace llvm

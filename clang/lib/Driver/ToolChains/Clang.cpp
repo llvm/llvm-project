@@ -8212,15 +8212,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       const ArgList &TCArgs = C.getArgsForToolChain(TC, "", Action::OFK_OpenMP);
       StringRef Arch = TCArgs.getLastArgValue(options::OPT_march_EQ);
 
-      std::string BitcodeSuffix;
-      if (TC->getTriple().isNVPTX())
-        BitcodeSuffix += "nvptx-";
-      else if (TC->getTriple().isAMDGPU())
-        BitcodeSuffix += "amdgpu-";
-      BitcodeSuffix += Arch;
-
       ArgStringList BitcodeLibrary;
-      addOpenMPDeviceRTL(TCDriver, TCArgs, BitcodeLibrary, BitcodeSuffix,
+      addOpenMPDeviceRTL(TCDriver, TCArgs, BitcodeLibrary, Arch,
                          TC->getTriple());
 
       if (!BitcodeLibrary.empty())

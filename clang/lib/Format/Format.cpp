@@ -258,6 +258,21 @@ struct ScalarEnumerationTraits<
 };
 
 template <>
+struct ScalarEnumerationTraits<
+    FormatStyle::BreakBeforeConceptDeclarationsStyle> {
+  static void
+  enumeration(IO &IO, FormatStyle::BreakBeforeConceptDeclarationsStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::BBCDS_Never);
+    IO.enumCase(Value, "Allowed", FormatStyle::BBCDS_Allowed);
+    IO.enumCase(Value, "Always", FormatStyle::BBCDS_Always);
+
+    // For backward compatibility.
+    IO.enumCase(Value, "true", FormatStyle::BBCDS_Always);
+    IO.enumCase(Value, "false", FormatStyle::BBCDS_Allowed);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::BreakConstructorInitializersStyle> {
   static void
   enumeration(IO &IO, FormatStyle::BreakConstructorInitializersStyle &Value) {
@@ -464,6 +479,17 @@ struct ScalarEnumerationTraits<FormatStyle::ReferenceAlignmentStyle> {
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::RequiresClausePositionStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::RequiresClausePositionStyle &Value) {
+    IO.enumCase(Value, "OwnLine", FormatStyle::RCPS_OwnLine);
+    IO.enumCase(Value, "WithPreceding", FormatStyle::RCPS_WithPreceding);
+    IO.enumCase(Value, "WithFollowing", FormatStyle::RCPS_WithFollowing);
+    IO.enumCase(Value, "SingleLine", FormatStyle::RCPS_SingleLine);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::SpaceBeforeParensStyle> {
   static void enumeration(IO &IO, FormatStyle::SpaceBeforeParensStyle &Value) {
     IO.enumCase(Value, "Never", FormatStyle::SBPO_Never);
@@ -565,6 +591,7 @@ template <> struct MappingTraits<FormatStyle> {
       IO.mapOptional("DerivePointerBinding", Style.DerivePointerAlignment);
       IO.mapOptional("IndentFunctionDeclarationAfterType",
                      Style.IndentWrappedFunctionNames);
+      IO.mapOptional("IndentRequires", Style.IndentRequiresClause);
       IO.mapOptional("PointerBindsToType", Style.PointerAlignment);
       IO.mapOptional("SpaceAfterControlStatementKeyword",
                      Style.SpaceBeforeParens);
@@ -737,7 +764,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("IndentGotoLabels", Style.IndentGotoLabels);
     IO.mapOptional("IndentPPDirectives", Style.IndentPPDirectives);
     IO.mapOptional("IndentExternBlock", Style.IndentExternBlock);
-    IO.mapOptional("IndentRequires", Style.IndentRequires);
+    IO.mapOptional("IndentRequiresClause", Style.IndentRequiresClause);
     IO.mapOptional("IndentWidth", Style.IndentWidth);
     IO.mapOptional("IndentWrappedFunctionNames",
                    Style.IndentWrappedFunctionNames);
@@ -782,6 +809,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("ReferenceAlignment", Style.ReferenceAlignment);
     IO.mapOptional("ReflowComments", Style.ReflowComments);
     IO.mapOptional("RemoveBracesLLVM", Style.RemoveBracesLLVM);
+    IO.mapOptional("RequiresClausePosition", Style.RequiresClausePosition);
     IO.mapOptional("SeparateDefinitionBlocks", Style.SeparateDefinitionBlocks);
     IO.mapOptional("ShortNamespaceLines", Style.ShortNamespaceLines);
     IO.mapOptional("SortIncludes", Style.SortIncludes);
@@ -1130,7 +1158,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BinPackArguments = true;
   LLVMStyle.BinPackParameters = true;
   LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
-  LLVMStyle.BreakBeforeConceptDeclarations = true;
+  LLVMStyle.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Always;
   LLVMStyle.BreakBeforeTernaryOperators = true;
   LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;
   LLVMStyle.BraceWrapping = {/*AfterCaseLabel=*/false,
@@ -1188,7 +1216,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.IndentCaseBlocks = false;
   LLVMStyle.IndentGotoLabels = true;
   LLVMStyle.IndentPPDirectives = FormatStyle::PPDIS_None;
-  LLVMStyle.IndentRequires = false;
+  LLVMStyle.IndentRequiresClause = true;
   LLVMStyle.IndentWrappedFunctionNames = false;
   LLVMStyle.IndentWidth = 2;
   LLVMStyle.PPIndentWidth = -1;
@@ -1207,6 +1235,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ObjCSpaceBeforeProtocolList = true;
   LLVMStyle.PointerAlignment = FormatStyle::PAS_Right;
   LLVMStyle.ReferenceAlignment = FormatStyle::RAS_Pointer;
+  LLVMStyle.RequiresClausePosition = FormatStyle::RCPS_OwnLine;
   LLVMStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Leave;
   LLVMStyle.ShortNamespaceLines = 1;
   LLVMStyle.SpacesBeforeTrailingComments = 1;
@@ -3048,6 +3077,15 @@ reformat(const FormatStyle &Style, StringRef Code,
   FormatStyle Expanded = Style;
   expandPresetsBraceWrapping(Expanded);
   expandPresetsSpaceBeforeParens(Expanded);
+  switch (Expanded.RequiresClausePosition) {
+  case FormatStyle::RCPS_SingleLine:
+  case FormatStyle::RCPS_WithPreceding:
+    Expanded.IndentRequiresClause = false;
+    break;
+  default:
+    break;
+  }
+
   if (Expanded.DisableFormat)
     return {tooling::Replacements(), 0};
   if (isLikelyXml(Code))

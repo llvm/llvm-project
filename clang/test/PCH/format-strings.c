@@ -11,7 +11,7 @@ extern int printf(const char *restrict, ...);
 
 #else
 
-void foo() {
+void foo(void) {
   LOG;
 }
 

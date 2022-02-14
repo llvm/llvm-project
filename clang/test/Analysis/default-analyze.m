@@ -52,9 +52,9 @@ static __inline__ __attribute__((always_inline)) CGFloat NSHeight(NSRect aRect) 
     return (aRect.size.height);
 }
 
-NSSize rdar880566_size();
+NSSize rdar880566_size(void);
 
-double rdar8808566() {
+double rdar8808566(void) {
   NSRect myRect;
   myRect.size = rdar880566_size();
   double x = NSWidth(myRect) + NSHeight(myRect); // no-warning

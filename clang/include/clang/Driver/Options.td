@@ -1251,9 +1251,10 @@ def fcs_profile_generate_EQ : Joined<["-"], "fcs-profile-generate=">,
     Group<f_Group>, Flags<[CoreOption]>, MetaVarName<"<directory>">,
     HelpText<"Generate instrumented code to collect context sensitive execution counts into <directory>/default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
 def fprofile_use : Flag<["-"], "fprofile-use">, Group<f_Group>,
-    Alias<fprofile_instr_use>;
+    Flags<[CoreOption]>, Alias<fprofile_instr_use>;
 def fprofile_use_EQ : Joined<["-"], "fprofile-use=">,
-    Group<f_Group>, Flags<[NoXarchOption]>, MetaVarName<"<pathname>">,
+    Group<f_Group>, Flags<[NoXarchOption, CoreOption]>,
+    MetaVarName<"<pathname>">,
     HelpText<"Use instrumentation data for profile-guided optimization. If pathname is a directory, it reads from <pathname>/default.profdata. Otherwise, it reads from file <pathname>.">;
 def fno_profile_instr_generate : Flag<["-"], "fno-profile-instr-generate">,
     Group<f_Group>, Flags<[CoreOption]>,

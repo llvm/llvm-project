@@ -10,7 +10,7 @@ int arr[] = {4, 5, 6};
 
 void clang_analyzer_eval(int);
 
-int main() {
+int main(void) {
   // In main() we know that the initial values are still valid.
   clang_analyzer_eval(x == 1); // expected-warning{{TRUE}}
   clang_analyzer_eval(s.a == 2); // expected-warning{{TRUE}}
@@ -21,7 +21,7 @@ int main() {
   return 0;
 }
 
-void foo() {
+void foo(void) {
   // In other functions these values may already be overwritten.
   clang_analyzer_eval(x == 1); // expected-warning{{TRUE}} // expected-warning{{FALSE}}
   clang_analyzer_eval(s.a == 2); // expected-warning{{TRUE}} // expected-warning{{FALSE}}

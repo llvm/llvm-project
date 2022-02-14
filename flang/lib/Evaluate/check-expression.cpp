@@ -526,15 +526,11 @@ public:
       } else {
         return "dummy procedure argument";
       }
+    } else if (&symbol.owner() != &scope_ || &ultimate.owner() != &scope_) {
+      return std::nullopt; // host association is in play
     } else if (const auto *object{
                    ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
       if (object->commonBlock()) {
-        return std::nullopt;
-      }
-    }
-    for (const semantics::Scope *s{&scope_}; !s->IsGlobal();) {
-      s = &s->parent();
-      if (s == &ultimate.owner()) {
         return std::nullopt;
       }
     }

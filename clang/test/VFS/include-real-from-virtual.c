@@ -6,6 +6,6 @@
 
 #include "include_real.h"
 
-void foo() {
+void foo(void) {
   baz();
 }

@@ -261,7 +261,7 @@ void test_multiple_constraints_on_same_arg(int x) {
 }
 
 int __variadic(void *stream, const char *format, ...);
-void test_arg_constraint_on_variadic_fun() {
+void test_arg_constraint_on_variadic_fun(void) {
   __variadic(0, "%d%d", 1, 2); // \
   // report-warning{{Function argument constraint is not satisfied}} \
   // report-note{{}} \
@@ -271,7 +271,7 @@ void test_arg_constraint_on_variadic_fun() {
 }
 
 int __buf_size_arg_constraint(const void *, size_t);
-void test_buf_size_concrete() {
+void test_buf_size_concrete(void) {
   char buf[3];                       // bugpath-note{{'buf' initialized here}}
   __buf_size_arg_constraint(buf, 4); // \
   // report-warning{{Function argument constraint is not satisfied}} \
@@ -300,7 +300,7 @@ void test_buf_size_symbolic_and_offset(int s) {
 }
 
 int __buf_size_arg_constraint_mul(const void *, size_t, size_t);
-void test_buf_size_concrete_with_multiplication() {
+void test_buf_size_concrete_with_multiplication(void) {
   short buf[3];                                         // bugpath-note{{'buf' initialized here}}
   __buf_size_arg_constraint_mul(buf, 4, sizeof(short)); // \
   // report-warning{{Function argument constraint is not satisfied}} \
@@ -328,7 +328,7 @@ void test_buf_size_symbolic_and_offset_with_multiplication(size_t s) {
 
 // The minimum buffer size for this function is set to 10.
 int __buf_size_arg_constraint_concrete(const void *);
-void test_min_buf_size() {
+void test_min_buf_size(void) {
   char buf[9];// bugpath-note{{'buf' initialized here}}
   __buf_size_arg_constraint_concrete(buf); // \
   // report-warning{{Function argument constraint is not satisfied}} \

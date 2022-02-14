@@ -222,6 +222,9 @@ def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FMAX, SIbuffer_atomic_fmax>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_CMPSWAP, SIbuffer_atomic_cmpswap>;
 def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD, SIsbuffer_load>;
 
+def : GINodeEquiv<G_FPTRUNC_ROUND_UPWARD, SIfptrunc_round_upward>;
+def : GINodeEquiv<G_FPTRUNC_ROUND_DOWNWARD, SIfptrunc_round_downward>;
+
 class GISelSop2Pat <
   SDPatternOperator node,
   Instruction inst,
