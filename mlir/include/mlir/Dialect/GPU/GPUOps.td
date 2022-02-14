@@ -439,7 +439,7 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func",
   let hasVerifier = 1;
 }
 
-def GPU_LaunchOp : GPU_Op<"launch">,
+def GPU_LaunchOp : GPU_Op<"launch", [AutomaticAllocationScope]>,
     Arguments<(ins Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
                Optional<I32>:$dynamicSharedMemorySize)>,
