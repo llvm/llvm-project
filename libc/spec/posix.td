@@ -265,6 +265,20 @@ def POSIX : StandardSpec<"POSIX"> {
     ]
   >;
   
+  HeaderSpec StdLib = HeaderSpec<
+    "stdlib.h",
+    [], // Macros
+    [], // Types
+    [], // Enumerations
+    [
+        FunctionSpec<
+          "getenv",
+          RetValSpec<CharPtr>,
+          [ArgSpec<ConstCharPtr>]
+        >,
+    ]
+  >;
+
   HeaderSpec String = HeaderSpec<
     "string.h",
     [
@@ -356,6 +370,7 @@ def POSIX : StandardSpec<"POSIX"> {
     Errno,
     FCntl,
     Signal,
+    StdLib,
     SysMMan,
     SysStat,
     UniStd,
