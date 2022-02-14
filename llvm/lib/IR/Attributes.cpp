@@ -1773,40 +1773,50 @@ bool AttrBuilder::operator==(const AttrBuilder &B) const {
 //===----------------------------------------------------------------------===//
 
 /// Which attributes cannot be applied to a type.
-AttributeMask AttributeFuncs::typeIncompatible(Type *Ty) {
+AttributeMask AttributeFuncs::typeIncompatible(Type *Ty,
+                                               AttributeSafetyKind ASK) {
   AttributeMask Incompatible;
 
-  if (!Ty->isIntegerTy())
+  if (!Ty->isIntegerTy()) {
     // Attributes that only apply to integers.
-    Incompatible.addAttribute(Attribute::SExt)
-        .addAttribute(Attribute::ZExt)
-        .addAttribute(Attribute::AllocAlign);
+    if (ASK & ASK_SAFE_TO_DROP)
+      Incompatible.addAttribute(Attribute::AllocAlign);
+    if (ASK & ASK_UNSAFE_TO_DROP)
+      Incompatible.addAttribute(Attribute::SExt).addAttribute(Attribute::ZExt);
+  }
 
-  if (!Ty->isPointerTy())
+  if (!Ty->isPointerTy()) {
     // Attributes that only apply to pointers.
-    Incompatible.addAttribute(Attribute::Nest)
-        .addAttribute(Attribute::NoAlias)
-        .addAttribute(Attribute::NoCapture)
-        .addAttribute(Attribute::NonNull)
-        .addAttribute(Attribute::ReadNone)
-        .addAttribute(Attribute::ReadOnly)
-        .addAttribute(Attribute::SwiftError)
-        .addAttribute(Attribute::Dereferenceable)
-        .addAttribute(Attribute::DereferenceableOrNull)
-        .addAttribute(Attribute::Preallocated)
-        .addAttribute(Attribute::InAlloca)
-        .addAttribute(Attribute::ByVal)
-        .addAttribute(Attribute::StructRet)
-        .addAttribute(Attribute::ByRef)
-        .addAttribute(Attribute::ElementType);
+    if (ASK & ASK_SAFE_TO_DROP)
+      Incompatible.addAttribute(Attribute::NoAlias)
+          .addAttribute(Attribute::NoCapture)
+          .addAttribute(Attribute::NonNull)
+          .addAttribute(Attribute::ReadNone)
+          .addAttribute(Attribute::ReadOnly)
+          .addAttribute(Attribute::Dereferenceable)
+          .addAttribute(Attribute::DereferenceableOrNull);
+    if (ASK & ASK_UNSAFE_TO_DROP)
+      Incompatible.addAttribute(Attribute::Nest)
+          .addAttribute(Attribute::SwiftError)
+          .addAttribute(Attribute::Preallocated)
+          .addAttribute(Attribute::InAlloca)
+          .addAttribute(Attribute::ByVal)
+          .addAttribute(Attribute::StructRet)
+          .addAttribute(Attribute::ByRef)
+          .addAttribute(Attribute::ElementType);
+  }
 
-  if (!Ty->isPtrOrPtrVectorTy())
     // Attributes that only apply to pointers or vectors of pointers.
-    Incompatible.addAttribute(Attribute::Alignment);
+  if (!Ty->isPtrOrPtrVectorTy()) {
+    if (ASK & ASK_SAFE_TO_DROP)
+      Incompatible.addAttribute(Attribute::Alignment);
+  }
 
   // Some attributes can apply to all "values" but there are no `void` values.
-  if (Ty->isVoidTy())
-    Incompatible.addAttribute(Attribute::NoUndef);
+  if (Ty->isVoidTy()) {
+    if (ASK & ASK_SAFE_TO_DROP)
+      Incompatible.addAttribute(Attribute::NoUndef);
+  }
 
   return Incompatible;
 }

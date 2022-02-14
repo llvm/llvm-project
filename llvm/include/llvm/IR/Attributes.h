@@ -1211,8 +1211,17 @@ public:
 
 namespace AttributeFuncs {
 
-/// Which attributes cannot be applied to a type.
-AttributeMask typeIncompatible(Type *Ty);
+enum AttributeSafetyKind : uint8_t {
+  ASK_SAFE_TO_DROP = 1,
+  ASK_UNSAFE_TO_DROP = 2,
+  ASK_ALL = ASK_SAFE_TO_DROP | ASK_UNSAFE_TO_DROP,
+};
+
+/// Which attributes cannot be applied to a type. The argument \p ASK indicates,
+/// if only attributes that are known to be safely droppable are contained in
+/// the mask; only attributes that might be unsafe to drop (e.g., ABI-related
+/// attributes) are in the mask; or both.
+AttributeMask typeIncompatible(Type *Ty, AttributeSafetyKind ASK = ASK_ALL);
 
 /// Get param/return attributes which imply immediate undefined behavior if an
 /// invalid value is passed. For example, this includes noundef (where undef
