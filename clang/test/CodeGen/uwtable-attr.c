@@ -1,13 +1,15 @@
 // Test that function and modules attributes react on the command-line options,
 // it does not state the current behaviour makes sense in all cases (it does not).
 
-// RUN: %clang -S -emit-llvm -o - %s                                                    | FileCheck %s -check-prefixes=CHECK,DEFAULT
-// RUN: %clang -S -emit-llvm -o - %s -funwind-tables    -fno-asynchronous-unwind-tables | FileCheck %s -check-prefixes=CHECK,TABLES
-// RUN: %clang -S -emit-llvm -o - %s -fno-unwind-tables -fno-asynchronous-unwind-tables | FileCheck %s -check-prefixes=CHECK,NO_TABLES
+// RUN: %clang -target x86_64-linux -S -emit-llvm -o - %s                                                    | FileCheck %s -check-prefixes=CHECK,DEFAULT
+// RUN: %clang -target x86_64-linux -S -emit-llvm -o - %s -funwind-tables    -fno-asynchronous-unwind-tables | FileCheck %s -check-prefixes=CHECK,TABLES
+// RUN: %clang -target x86_64-linux -S -emit-llvm -o - %s -fno-unwind-tables -fno-asynchronous-unwind-tables | FileCheck %s -check-prefixes=CHECK,NO_TABLES
 
-// RUN: %clang -S -emit-llvm -o - -x c++ %s                                                                     | FileCheck %s -check-prefixes=CHECK,DEFAULT
-// RUN: %clang -S -emit-llvm -o - -x c++ %s                  -funwind-tables    -fno-asynchronous-unwind-tables | FileCheck %s -check-prefixes=CHECK,TABLES
-// RUN: %clang -S -emit-llvm -o - -x c++ %s  -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables | FileCheck %s -check-prefixes=CHECK,NO_TABLES
+// RUN: %clang -target x86_64-linux -S -emit-llvm -o - -x c++ %s                                                                     | FileCheck %s -check-prefixes=CHECK,DEFAULT
+// RUN: %clang -target x86_64-linux -S -emit-llvm -o - -x c++ %s                  -funwind-tables    -fno-asynchronous-unwind-tables | FileCheck %s -check-prefixes=CHECK,TABLES
+// RUN: %clang -target x86_64-linux -S -emit-llvm -o - -x c++ %s  -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables | FileCheck %s -check-prefixes=CHECK,NO_TABLES
+
+// REQUIRES: x86-registered-target
 
 #ifdef __cplusplus
 extern "C" void g(void);
