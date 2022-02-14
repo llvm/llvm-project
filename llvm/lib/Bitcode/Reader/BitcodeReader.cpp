@@ -831,7 +831,7 @@ BitcodeReader::BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
                              StringRef ProducerIdentification,
                              LLVMContext &Context)
     : BitcodeReaderBase(std::move(Stream), Strtab), Context(Context),
-      ValueList(Context, Stream.SizeInBytes()) {
+      ValueList(Context, this->Stream.SizeInBytes()) {
   this->ProducerIdentification = std::string(ProducerIdentification);
 }
 
