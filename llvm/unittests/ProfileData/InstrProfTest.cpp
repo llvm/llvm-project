@@ -12,6 +12,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/InstrProfWriter.h"
+#include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
@@ -219,6 +220,67 @@ TEST_F(InstrProfTest, test_writer_merge) {
   ASSERT_EQ(2U, R->Counts.size());
   ASSERT_EQ(0U, R->Counts[0]);
   ASSERT_EQ(0U, R->Counts[1]);
+}
+
+TEST_F(InstrProfTest, test_memprof) {
+  ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
+                    Succeeded());
+  llvm::memprof::MemProfRecord MR;
+  MR.CallStack.push_back({0x123, 1, 2, false});
+  MR.CallStack.push_back({0x345, 3, 4, true});
+  Writer.addRecord(MR, Err);
+
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  auto RecordsOr = Reader->getMemProfRecord(0x123);
+  ASSERT_THAT_ERROR(RecordsOr.takeError(), Succeeded());
+  const auto Records = RecordsOr.get();
+  ASSERT_EQ(Records.size(), 1U);
+  EXPECT_EQ(Records[0], MR);
+}
+
+TEST_F(InstrProfTest, test_memprof_merge) {
+  Writer.addRecord({"func1", 0x1234, {42}}, Err);
+
+  InstrProfWriter Writer2;
+  ASSERT_THAT_ERROR(Writer2.mergeProfileKind(InstrProfKind::MemProf),
+                    Succeeded());
+
+  llvm::memprof::MemProfRecord MR;
+  MR.CallStack.push_back({0x123, 1, 2, false});
+  MR.CallStack.push_back({0x345, 3, 4, true});
+  Writer2.addRecord(MR, Err);
+
+  ASSERT_THAT_ERROR(Writer.mergeProfileKind(Writer2.getProfileKind()),
+                    Succeeded());
+  Writer.mergeRecordsFromWriter(std::move(Writer2), Err);
+
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  Expected<InstrProfRecord> R = Reader->getInstrProfRecord("func1", 0x1234);
+  EXPECT_THAT_ERROR(R.takeError(), Succeeded());
+  ASSERT_EQ(1U, R->Counts.size());
+  ASSERT_EQ(42U, R->Counts[0]);
+
+  auto RecordsOr = Reader->getMemProfRecord(0x123);
+  ASSERT_THAT_ERROR(RecordsOr.takeError(), Succeeded());
+  const auto Records = RecordsOr.get();
+  ASSERT_EQ(Records.size(), 1U);
+  EXPECT_EQ(Records[0], MR);
+}
+
+TEST_F(InstrProfTest, test_memprof_invalid_add_record) {
+  llvm::memprof::MemProfRecord MR;
+  // At least one of the frames should be a non-inline frame.
+  MR.CallStack.push_back({0x123, 1, 2, true});
+  MR.CallStack.push_back({0x345, 3, 4, true});
+
+  auto CheckErr = [](Error &&E) {
+    EXPECT_TRUE(ErrorEquals(instrprof_error::invalid_prof, std::move(E)));
+  };
+  Writer.addRecord(MR, CheckErr);
 }
 
 static const char callee1[] = "callee1";
