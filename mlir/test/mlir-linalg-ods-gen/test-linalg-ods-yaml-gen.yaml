@@ -83,8 +83,8 @@ structured_op: !LinalgStructuredOpConfig
 #  ODS-NEXT:      TypeRange(inputs),
 #  ODS-NEXT:      TypeRange(outputs)
 
-# IMPL-LABEL:  void Test1Op::regionBuilder(
-#       IMPL:    ImplicitLocOpBuilder &b, Block &block)
+# IMPL-LABEL:  void Test1Op::regionBuilder(ImplicitLocOpBuilder &b,
+#  IMPL-NEXT:    Block &block, ArrayRef<NamedAttribute> attrs)
 #       IMPL:  Value [[VAL0:[a-z0-9]+]] = helper.constant("42 : i64");
 #   IMPL-DAG:  Value [[VAL1:[a-z0-9]+]] = helper.typefn__cast(block.getArgument(0).getType(), [[VAL0]]);
 #   IMPL-DAG:  Value [[VAL2:[a-z0-9]+]] = helper.index(1);
@@ -174,7 +174,8 @@ structured_op: !LinalgStructuredOpConfig
 #       IMPL:  auto attr = op->getAttrOfType<DenseElementsAttr>("strides")
 #       IMPL:  "incorrect element type for index attribute 'strides'"
 #       IMPL:  "incorrect shape for index attribute 'strides'"
-#       IMPL:  void Test2Op::regionBuilder(ImplicitLocOpBuilder &b, Block &block)
+#       IMPL:  void Test2Op::regionBuilder(ImplicitLocOpBuilder &b,
+#  IMPL-NEXT:    Block &block, ArrayRef<NamedAttribute> attrs)
 #  IMPL-NEXT:    assert(2 > 0 && block.getNumArguments() == 2 &&
 
 #       IMPL:   yields.push_back(block.getArgument(0));
