@@ -3,9 +3,6 @@
 // RUN:   -mllvm -debug-only=taint-checker \
 // RUN:   2>&1 | FileCheck %s
 
-// FIXME: We should not crash.
-// XFAIL: *
-
 struct _IO_FILE;
 typedef struct _IO_FILE FILE;
 FILE *fopen(const char *fname, const char *mode);
@@ -31,12 +28,8 @@ void top(const char *fname, char *buf) {
   // CHECK-NEXT: PreCall<fgets(buf, 42, fp)> prepares tainting arg index: 1
   // CHECK-NEXT: PreCall<fgets(buf, 42, fp)> prepares tainting arg index: 2
 
-  // FIXME: We should propagate taint from PreCall<fgets> -> PostCall<fgets>.
-  // CHECK-NEXT: PostCall<nested_call()> actually wants to taint arg index: -1
-  // CHECK-NEXT: PostCall<nested_call()> actually wants to taint arg index: 0
-  // CHECK-NEXT: PostCall<nested_call()> actually wants to taint arg index: 1
-  // CHECK-NEXT: PostCall<nested_call()> actually wants to taint arg index: 2
-
-  // FIXME: We should not crash.
-  // CHECK: PLEASE submit a bug report
+  // CHECK-NEXT: PostCall<fgets(buf, 42, fp)> actually wants to taint arg index: -1
+  // CHECK-NEXT: PostCall<fgets(buf, 42, fp)> actually wants to taint arg index: 0
+  // CHECK-NEXT: PostCall<fgets(buf, 42, fp)> actually wants to taint arg index: 1
+  // CHECK-NEXT: PostCall<fgets(buf, 42, fp)> actually wants to taint arg index: 2
 }
