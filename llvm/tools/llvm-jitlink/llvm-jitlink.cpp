@@ -557,7 +557,7 @@ public:
                << "\n";
       });
       Seg.WorkingMem = SegAddr.toPtr<char *>();
-      Seg.Addr = SegAddr + NextSlabDelta;
+      Seg.Addr = SegAddr + SlabDelta;
 
       SegAddr += alignTo(Seg.ContentSize + Seg.ZeroFillSize, PageSize);
 
@@ -565,8 +565,6 @@ public:
       if (Seg.ZeroFillSize != 0)
         memset(Seg.WorkingMem + Seg.ContentSize, 0, Seg.ZeroFillSize);
     }
-
-    NextSlabDelta += SegsSizes->total();
 
     if (auto Err = BL.apply()) {
       OnAllocated(std::move(Err));
@@ -637,7 +635,7 @@ private:
     // Calculate the target address delta to link as-if slab were at
     // SlabAddress.
     if (SlabAddress != ~0ULL)
-      NextSlabDelta = ExecutorAddr(SlabAddress) -
+      SlabDelta = ExecutorAddr(SlabAddress) -
                       ExecutorAddr::fromPtr(SlabRemaining.base());
   }
 
@@ -649,7 +647,7 @@ private:
   std::mutex SlabMutex;
   sys::MemoryBlock SlabRemaining;
   uint64_t PageSize = 0;
-  int64_t NextSlabDelta = 0;
+  int64_t SlabDelta = 0;
 };
 
 Expected<uint64_t> getSlabAllocSize(StringRef SizeString) {

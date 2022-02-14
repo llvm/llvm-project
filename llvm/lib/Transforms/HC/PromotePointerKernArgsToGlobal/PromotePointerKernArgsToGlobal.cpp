@@ -62,8 +62,8 @@ public:
 
             Value *FToG = Builder.CreateAddrSpaceCast(
                 PArg,
-                cast<PointerType>(PArg->getType())
-                    ->getElementType()->getPointerTo(GlobalAddrSpace));
+		PArg->getType()->getPointerElementType()
+		    ->getPointerTo(GlobalAddrSpace));
             Value *GToF = Builder.CreateAddrSpaceCast(FToG, PArg->getType());
 
             Tmp.replaceAllUsesWith(GToF);

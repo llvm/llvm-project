@@ -105,3 +105,10 @@ defm : vbrd_elem64<v512i32, i64, simm7, LO7>;
 defm : vbrd_elem64<v512f32, i64, simm7, LO7>;
 defm : vbrd_elem64<v512i32, f64, simm7fp, LO7FP>;
 defm : vbrd_elem64<v512f32, f64, simm7fp, LO7FP>;
+
+class Mask_Binary<ValueType MaskVT, SDPatternOperator MaskOp, string InstName> :
+  Pat<(MaskVT (MaskOp MaskVT:$ma, MaskVT:$mb)), (!cast<Instruction>(InstName#"mm") $ma, $mb)>;
+
+def: Mask_Binary<v256i1, and, "ANDM">;
+def: Mask_Binary<v256i1, or,  "ORM">;
+def: Mask_Binary<v256i1, xor, "XORM">;

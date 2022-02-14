@@ -2012,6 +2012,14 @@ Error ASTNodeImporter::ImportDefinition(
   }
 
   To->startDefinition();
+  // Set the definition to complete even if it is really not complete during
+  // import. Some AST constructs (expressions) require the record layout
+  // to be calculated (see 'clang::computeDependence') at the time they are
+  // constructed. Import of such AST node is possible during import of the
+  // same record, there is no way to have a completely defined record (all
+  // fields imported) at that time without multiple AST import passes.
+  if (!Importer.isMinimalImport())
+    To->setCompleteDefinition(true);
   // Complete the definition even if error is returned.
   // The RecordDecl may be already part of the AST so it is better to
   // have it in complete state even if something is wrong with it.
@@ -2076,9 +2084,10 @@ Error ASTNodeImporter::ImportDefinition(
       ToCXX->setBases(Bases.data(), Bases.size());
   }
 
-  if (shouldForceImportDeclContext(Kind))
+  if (shouldForceImportDeclContext(Kind)) {
     if (Error Err = ImportDeclContext(From, /*ForceImport=*/true))
       return Err;
+  }
 
   return Error::success();
 }

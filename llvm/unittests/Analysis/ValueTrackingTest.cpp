@@ -1725,6 +1725,28 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsCrash) {
       A, M->getDataLayout(), /* Depth */ 0, &AC, F->front().getTerminator());
 }
 
+TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
+  {
+    // Check for an inverted mask: (X & ~M) op (Y & M).
+    auto M = parseModule(R"(
+  define i32 @test(i32 %X, i32 %Y, i32 %M) {
+    %1 = xor i32 %M, -1
+    %LHS = and i32 %1, %X
+    %RHS = and i32 %Y, %M
+    %Ret = add i32 %LHS, %RHS
+    ret i32 %Ret
+  })");
+
+    auto *F = M->getFunction("test");
+    auto *LHS = findInstructionByNameOrNull(F, "LHS");
+    auto *RHS = findInstructionByNameOrNull(F, "RHS");
+
+    const DataLayout &DL = M->getDataLayout();
+    EXPECT_TRUE(haveNoCommonBitsSet(LHS, RHS, DL));
+    EXPECT_TRUE(haveNoCommonBitsSet(RHS, LHS, DL));
+  }
+}
+
 class IsBytewiseValueTest : public ValueTrackingTest,
                             public ::testing::WithParamInterface<
                                 std::pair<const char *, const char *>> {

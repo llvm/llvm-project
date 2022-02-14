@@ -3677,9 +3677,8 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       APInt FoldConst = C1->getValue().lshr(C2->getValue());
       FoldConst ^= C3->getValue();
       // Prepare the two operands.
-      auto *Opnd0 = cast<Instruction>(Builder.CreateLShr(X, C2));
-      Opnd0->takeName(cast<Instruction>(Op0));
-      Opnd0->setDebugLoc(I.getDebugLoc());
+      auto *Opnd0 = Builder.CreateLShr(X, C2);
+      Opnd0->takeName(Op0);
       return BinaryOperator::CreateXor(Opnd0, ConstantInt::get(Ty, FoldConst));
     }
   }

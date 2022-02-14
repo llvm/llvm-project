@@ -434,7 +434,7 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
        CGM.getContext().getTargetAddressSpace(LangAS::cuda_shared)) &&
       (CGM.getContext().getTargetInfo().getTriple().isAMDGCN()))
     var->setInitializer(
-        llvm::UndefValue::get(var->getType()->getElementType()));
+        llvm::UndefValue::get(var->getValueType()));
 
   var->setAlignment(alignment.getAsAlign());
 

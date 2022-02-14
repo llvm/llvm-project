@@ -328,9 +328,8 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
   // Construct a new result global and set up its metadata
 
   GlobalVariable *new_result_global = new GlobalVariable(
-      (*m_module), result_global->getType()->getElementType(),
-      false,                                 /* not constant */
-      GlobalValue::ExternalLinkage, nullptr, /* no initializer */
+      (*m_module), result_global->getValueType(), false, /* not constant */
+      GlobalValue::ExternalLinkage, nullptr,             /* no initializer */
       m_result_name.GetCString());
 
   // It's too late in compilation to create a new VarDecl for this, but we
@@ -1106,9 +1105,8 @@ bool IRForTarget::RewritePersistentAlloc(llvm::Instruction *persistent_alloc) {
   // Now, since the variable is a pointer variable, we will drop in a load of
   // that pointer variable.
 
-  LoadInst *persistent_load =
-      new LoadInst(persistent_global->getType()->getPointerElementType(),
-                   persistent_global, "", alloc);
+  LoadInst *persistent_load = new LoadInst(persistent_global->getValueType(),
+                                           persistent_global, "", alloc);
 
   LLDB_LOG(log, "Replacing \"{0}\" with \"{1}\"", PrintValue(alloc),
            PrintValue(persistent_load));

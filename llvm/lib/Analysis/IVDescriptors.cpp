@@ -917,12 +917,18 @@ bool RecurrenceDescriptor::isFirstOrderRecurrence(
         SinkCandidate->mayReadFromMemory() || SinkCandidate->isTerminator())
       return false;
 
-    // Do not try to sink an instruction multiple times (if multiple operands
-    // are first order recurrences).
-    // TODO: We can support this case, by sinking the instruction after the
-    // 'deepest' previous instruction.
-    if (SinkAfter.find(SinkCandidate) != SinkAfter.end())
-      return false;
+    // Try to sink an instruction after the 'deepest' previous instruction,
+    // which has multiple operands for first order recurrences.
+    auto It = SinkAfter.find(SinkCandidate);
+    if (It != SinkAfter.end()) {
+      auto LastPrev = It->second;
+      if (LastPrev->getParent() != Previous->getParent())
+        return false;
+
+      // If LastPrev comes after the current Previous, SinkCandidate already
+      // gets sunk past Previous and nothing left to do.
+      return Previous->comesBefore(LastPrev);
+    }
 
     // If we reach a PHI node that is not dominated by Previous, we reached a
     // header PHI. No need for sinking.

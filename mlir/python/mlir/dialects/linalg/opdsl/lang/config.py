@@ -421,18 +421,18 @@ class LinalgOpConfig(YAMLObject):
 
   @staticmethod
   def from_linalg_op_def(
-      tc_op_def: LinalgOpDef,
+      op_def: LinalgOpDef,
       context: Optional[_ir.Context] = None) -> Sequence["LinalgOpConfig"]:
     """Expands a LinalgOpDef into corresponding Linalg configured ops."""
     # TODO: Many LinalgOpDef patterns need to expand to multiple generics.
     assert len(
-        tc_op_def.comprehensions) == 1, "Only one comprehension supported"
+        op_def.comprehensions) == 1, "Only one comprehension supported"
     return [
         LinalgOpConfig(
-            tc_op_def.metadata,
+            op_def.metadata,
             structured_op=LinalgStructuredOpConfig(
-                tc_op_def.comprehensions[0], tc_op_def.domain,
-                tc_op_def.registered_operands.values(), context)),
+                op_def.comprehensions[0], op_def.domain,
+                op_def.registered_operands.values(), context)),
     ]
 
   def __repr__(self):
