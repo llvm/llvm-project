@@ -934,24 +934,17 @@ Error IndexedInstrProfReader::readHeader() {
   if ((const unsigned char *)DataBuffer->getBufferEnd() - Cur < 24)
     return error(instrprof_error::truncated);
 
-  auto *Header = reinterpret_cast<const IndexedInstrProf::Header *>(Cur);
-  Cur += sizeof(IndexedInstrProf::Header);
+  auto HeaderOr = IndexedInstrProf::Header::readFromBuffer(Start);
+  if (!HeaderOr)
+    return HeaderOr.takeError();
 
-  // Check the magic number.
-  uint64_t Magic = endian::byte_swap<uint64_t, little>(Header->Magic);
-  if (Magic != IndexedInstrProf::Magic)
-    return error(instrprof_error::bad_magic);
+  const IndexedInstrProf::Header *Header = &HeaderOr.get();
+  Cur += Header->size();
 
-  // Read the version.
-  uint64_t FormatVersion = endian::byte_swap<uint64_t, little>(Header->Version);
-  if (GET_VERSION(FormatVersion) >
-      IndexedInstrProf::ProfVersion::CurrentVersion)
-    return error(instrprof_error::unsupported_version);
-
-  Cur = readSummary((IndexedInstrProf::ProfVersion)FormatVersion, Cur,
+  Cur = readSummary((IndexedInstrProf::ProfVersion)Header->formatVersion(), Cur,
                     /* UseCS */ false);
-  if (FormatVersion & VARIANT_MASK_CSIR_PROF)
-    Cur = readSummary((IndexedInstrProf::ProfVersion)FormatVersion, Cur,
+  if (Header->formatVersion() & VARIANT_MASK_CSIR_PROF)
+    Cur = readSummary((IndexedInstrProf::ProfVersion)Header->formatVersion(), Cur,
                       /* UseCS */ true);
 
   // Read the hash type and start offset.
@@ -963,9 +956,8 @@ Error IndexedInstrProfReader::readHeader() {
   uint64_t HashOffset = endian::byte_swap<uint64_t, little>(Header->HashOffset);
 
   // The rest of the file is an on disk hash table.
-  auto IndexPtr =
-      std::make_unique<InstrProfReaderIndex<OnDiskHashTableImplV3>>(
-          Start + HashOffset, Cur, Start, HashType, FormatVersion);
+  auto IndexPtr = std::make_unique<InstrProfReaderIndex<OnDiskHashTableImplV3>>(
+      Start + HashOffset, Cur, Start, HashType, Header->formatVersion());
 
   // Load the remapping table now if requested.
   if (RemappingBuffer) {

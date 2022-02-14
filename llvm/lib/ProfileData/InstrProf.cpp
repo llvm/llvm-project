@@ -51,6 +51,7 @@
 #include <memory>
 #include <string>
 #include <system_error>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -1310,5 +1311,64 @@ void OverlapStats::dump(raw_fd_ostream &OS) const {
        << "\n";
   }
 }
+
+namespace IndexedInstrProf {
+// A C++14 compatible version of the offsetof macro.
+template <typename T1, typename T2>
+inline size_t constexpr offsetOf(T1 T2::*Member) {
+  constexpr T2 Object{};
+  return size_t(&(Object.*Member)) - size_t(&Object);
+}
+
+static inline uint64_t read(const unsigned char *Buffer, size_t Offset) {
+  return *reinterpret_cast<const uint64_t *>(Buffer + Offset);
+}
+
+uint64_t Header::formatVersion() const {
+  using namespace support;
+  return endian::byte_swap<uint64_t, little>(Version);
+}
+
+Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
+  using namespace support;
+  static_assert(std::is_standard_layout<Header>::value,
+                "The header should be standard layout type since we use offset "
+                "of fields to read.");
+  Header H;
+
+  H.Magic = read(Buffer, offsetOf(&Header::Magic));
+  // Check the magic number.
+  uint64_t Magic = endian::byte_swap<uint64_t, little>(H.Magic);
+  if (Magic != IndexedInstrProf::Magic)
+    return make_error<InstrProfError>(instrprof_error::bad_magic);
+
+  // Read the version.
+  H.Version = read(Buffer, offsetOf(&Header::Version));
+  if (GET_VERSION(H.formatVersion()) >
+      IndexedInstrProf::ProfVersion::CurrentVersion)
+    return make_error<InstrProfError>(instrprof_error::unsupported_version);
+
+  switch (GET_VERSION(H.formatVersion())) {
+  // When a new field is added in the header add a case statement here to
+  // populate it.
+  default: // Version7 (when the backwards compatible header was introduced).
+    H.HashType = read(Buffer, offsetOf(&Header::HashType));
+    H.HashOffset = read(Buffer, offsetOf(&Header::HashOffset));
+  }
+
+  return H;
+}
+
+size_t Header::size() const {
+  switch (GET_VERSION(formatVersion())) {
+  // When a new field is added to the header add a case statement here to
+  // compute the size as offset of the new field + size of the new field. This
+  // relies on the field being added to the end of the list.
+  default: // Version7 (when the backwards compatible header was introduced).
+    return offsetOf(&Header::HashOffset) + sizeof(Header::HashOffset);
+  }
+}
+
+} // namespace IndexedInstrProf
 
 } // end namespace llvm
