@@ -1623,7 +1623,7 @@ func @embox1(%arg0: !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>) {
   return
 }
 
-// CHECK: llvm.mlir.global extern_weak @_QMtest_dinitE.dt.tseq() : i8
+// CHECK: llvm.mlir.global available_externally constant @_QMtest_dinitE.dt.tseq() : i8
 // CHECK-LABEL: llvm.func @embox1
 // CHECK:         %[[TYPE_CODE:.*]] = llvm.mlir.constant(42 : i32) : i32
 // CHECK:         %[[TYPE_CODE_I8:.*]] = llvm.trunc %[[TYPE_CODE]] : i32 to i8
