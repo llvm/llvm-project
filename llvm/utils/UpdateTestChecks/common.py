@@ -853,7 +853,7 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
           body_start = 0
         else:
           output_lines.append('%s %s:       %s' % (comment_marker, checkprefix, func_body[0]))
-        for func_line in func_body[1:]:
+        for func_line in func_body[body_start:]:
           if func_line.strip() == '':
             output_lines.append('%s %s-EMPTY:' % (comment_marker, checkprefix))
           else:
