@@ -23,16 +23,16 @@ int main(int, char**)
     {
         std::atomic_flag f;
         f.clear();
-        assert(atomic_flag_test(&f) == 0);
+        assert(std::atomic_flag_test(&f) == 0);
         assert(f.test_and_set() == 0);
-        assert(atomic_flag_test(&f) == 1);
+        assert(std::atomic_flag_test(&f) == 1);
     }
     {
         volatile std::atomic_flag f;
         f.clear();
-        assert(atomic_flag_test(&f) == 0);
+        assert(std::atomic_flag_test(&f) == 0);
         assert(f.test_and_set() == 0);
-        assert(atomic_flag_test(&f) == 1);
+        assert(std::atomic_flag_test(&f) == 1);
     }
 
     return 0;
