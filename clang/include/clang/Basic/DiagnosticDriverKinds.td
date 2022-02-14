@@ -637,4 +637,8 @@ def err_drv_cuda_offload_only_emit_bc : Error<
 def warn_drv_jmc_requires_debuginfo : Warning<
   "/JMC requires debug info. Use '/Zi', '/Z7' or other debug options; option ignored">,
   InGroup<OptionIgnored>;
+
+def err_drv_target_variant_invalid : Error<
+  "unsupported '%0' value '%1'; use 'ios-macabi' instead">;
+
 }

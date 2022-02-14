@@ -1496,6 +1496,10 @@ struct DarwinPlatform {
   /// Returns true if the simulator environment can be inferred from the arch.
   bool canInferSimulatorFromArch() const { return InferSimulatorFromArch; }
 
+  const Optional<llvm::Triple> &getTargetVariantTriple() const {
+    return TargetVariantTriple;
+  }
+
   /// Adds the -m<os>-version-min argument to the compiler invocation.
   void addOSVersionMinArgument(DerivedArgList &Args, const OptTable &Opts) {
     if (Argument)
@@ -1558,6 +1562,16 @@ struct DarwinPlatform {
           }
         }
       }
+      // In a zippered build, we could be building for a macOS target that's
+      // lower than the version that's implied by the OS version. In that case
+      // we need to use the minimum version as the native target version.
+      if (TargetVariantTriple) {
+        auto TargetVariantVersion = TargetVariantTriple->getOSVersion();
+        if (TargetVariantVersion.getMajor()) {
+          if (TargetVariantVersion < NativeTargetVersion)
+            NativeTargetVersion = TargetVariantVersion;
+        }
+      }
       break;
     }
     default:
@@ -1567,12 +1581,14 @@ struct DarwinPlatform {
 
   static DarwinPlatform
   createFromTarget(const llvm::Triple &TT, StringRef OSVersion, Arg *A,
+                   Optional<llvm::Triple> TargetVariantTriple,
                    const Optional<DarwinSDKInfo> &SDKInfo) {
     DarwinPlatform Result(TargetArg, getPlatformFromOS(TT.getOS()), OSVersion,
                           A);
     VersionTuple OsVersion = TT.getOSVersion();
     if (OsVersion.getMajor() == 0)
       Result.HasOSVersion = false;
+    Result.TargetVariantTriple = TargetVariantTriple;
     Result.setEnvironment(TT.getEnvironment(), OsVersion, SDKInfo);
     return Result;
   }
@@ -1656,6 +1672,7 @@ private:
   bool HasOSVersion = true, InferSimulatorFromArch = true;
   Arg *Argument;
   StringRef EnvVarName;
+  Optional<llvm::Triple> TargetVariantTriple;
 };
 
 /// Returns the deployment target that's specified using the -m<os>-version-min
@@ -1881,7 +1898,6 @@ inferDeploymentTargetFromArch(DerivedArgList &Args, const Darwin &Toolchain,
   else if (MachOArchName != "armv6m" && MachOArchName != "armv7m" &&
            MachOArchName != "armv7em")
     OSTy = llvm::Triple::MacOSX;
-
   if (OSTy == llvm::Triple::UnknownOS)
     return None;
   return DarwinPlatform::createFromArch(OSTy,
@@ -1898,8 +1914,34 @@ Optional<DarwinPlatform> getDeploymentTargetFromTargetArg(
       Triple.getOS() == llvm::Triple::UnknownOS)
     return None;
   std::string OSVersion = getOSVersion(Triple.getOS(), Triple, TheDriver);
-  return DarwinPlatform::createFromTarget(
-      Triple, OSVersion, Args.getLastArg(options::OPT_target), SDKInfo);
+  Optional<llvm::Triple> TargetVariantTriple;
+  for (const Arg *A : Args.filtered(options::OPT_darwin_target_variant)) {
+    llvm::Triple TVT(A->getValue());
+    // Find a matching <arch>-<vendor> target variant triple that can be used.
+    if ((Triple.getArch() == llvm::Triple::aarch64 ||
+         TVT.getArchName() == Triple.getArchName()) &&
+        TVT.getArch() == Triple.getArch() &&
+        TVT.getSubArch() == Triple.getSubArch() &&
+        TVT.getVendor() == Triple.getVendor()) {
+      if (TargetVariantTriple)
+        continue;
+      A->claim();
+      // Accept a -target-variant triple when compiling code that may run on
+      // macOS or Mac Catalust.
+      if ((Triple.isMacOSX() && TVT.getOS() == llvm::Triple::IOS &&
+           TVT.isMacCatalystEnvironment()) ||
+          (TVT.isMacOSX() && Triple.getOS() == llvm::Triple::IOS &&
+           Triple.isMacCatalystEnvironment())) {
+        TargetVariantTriple = TVT;
+        continue;
+      }
+      TheDriver.Diag(diag::err_drv_target_variant_invalid)
+          << A->getSpelling() << A->getValue();
+    }
+  }
+  return DarwinPlatform::createFromTarget(Triple, OSVersion,
+                                          Args.getLastArg(options::OPT_target),
+                                          TargetVariantTriple, SDKInfo);
 }
 
 /// Returns the deployment target that's specified using the -mtargetos option.
@@ -2134,6 +2176,7 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   if (Environment == MacCatalyst)
     NativeTargetVersion = OSTarget->getNativeTargetVersion();
   setTarget(Platform, Environment, Major, Minor, Micro, NativeTargetVersion);
+  TargetVariantTriple = OSTarget->getTargetVariantTriple();
 
   if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
     StringRef SDK = getSDKName(A->getValue());
@@ -2653,6 +2696,12 @@ void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
       isAlignedAllocationUnavailable())
     CC1Args.push_back("-faligned-alloc-unavailable");
 
+  if (TargetVariantTriple) {
+    CC1Args.push_back("-darwin-target-variant-triple");
+    CC1Args.push_back(
+        DriverArgs.MakeArgString(TargetVariantTriple->getTriple()));
+  }
+
   if (SDKInfo) {
     /// Pass the SDK version to the compiler when the SDK information is
     /// available.
@@ -2673,6 +2722,28 @@ void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
       }
     } else {
       EmitTargetSDKVersionArg(SDKInfo->getVersion());
+    }
+
+    /// Pass the target variant SDK version to the compiler when the SDK
+    /// information is available and is required for target variant.
+    if (TargetVariantTriple) {
+      if (isTargetMacCatalyst()) {
+        std::string Arg;
+        llvm::raw_string_ostream OS(Arg);
+        OS << "-darwin-target-variant-sdk-version=" << SDKInfo->getVersion();
+        CC1Args.push_back(DriverArgs.MakeArgString(OS.str()));
+      } else if (const auto *MacOStoMacCatalystMapping =
+                     SDKInfo->getVersionMapping(
+                         DarwinSDKInfo::OSEnvPair::macOStoMacCatalystPair())) {
+        if (Optional<VersionTuple> SDKVersion = MacOStoMacCatalystMapping->map(
+                SDKInfo->getVersion(), minimumMacCatalystDeploymentTarget(),
+                None)) {
+          std::string Arg;
+          llvm::raw_string_ostream OS(Arg);
+          OS << "-darwin-target-variant-sdk-version=" << *SDKVersion;
+          CC1Args.push_back(DriverArgs.MakeArgString(OS.str()));
+        }
+      }
     }
   }
 
@@ -2834,6 +2905,25 @@ void Darwin::addMinVersionArgs(const ArgList &Args,
   if (!MinTgtVers.empty() && MinTgtVers > TargetVersion)
     TargetVersion = MinTgtVers;
   CmdArgs.push_back(Args.MakeArgString(TargetVersion.getAsString()));
+  if (TargetVariantTriple) {
+    assert(isTargetMacOSBased() && "unexpected target");
+    VersionTuple VariantTargetVersion;
+    if (TargetVariantTriple->isMacOSX()) {
+      CmdArgs.push_back("-macosx_version_min");
+      TargetVariantTriple->getMacOSXVersion(VariantTargetVersion);
+    } else {
+      assert(TargetVariantTriple->isiOS() &&
+             TargetVariantTriple->isMacCatalystEnvironment() &&
+             "unexpected target variant triple");
+      CmdArgs.push_back("-maccatalyst_version_min");
+      VariantTargetVersion = TargetVariantTriple->getiOSVersion();
+    }
+    VersionTuple MinTgtVers =
+        TargetVariantTriple->getMinimumSupportedOSVersion();
+    if (MinTgtVers.getMajor() && MinTgtVers > VariantTargetVersion)
+      VariantTargetVersion = MinTgtVers;
+    CmdArgs.push_back(Args.MakeArgString(VariantTargetVersion.getAsString()));
+  }
 }
 
 static const char *getPlatformName(Darwin::DarwinPlatformKind Platform,
@@ -2855,52 +2945,88 @@ static const char *getPlatformName(Darwin::DarwinPlatformKind Platform,
 
 void Darwin::addPlatformVersionArgs(const llvm::opt::ArgList &Args,
                                     llvm::opt::ArgStringList &CmdArgs) const {
-  // -platform_version <platform> <target_version> <sdk_version>
-  // Both the target and SDK version support only up to 3 components.
-  CmdArgs.push_back("-platform_version");
-  std::string PlatformName = getPlatformName(TargetPlatform, TargetEnvironment);
-  if (TargetEnvironment == Darwin::Simulator)
-    PlatformName += "-simulator";
-  CmdArgs.push_back(Args.MakeArgString(PlatformName));
-  VersionTuple TargetVersion = getTripleTargetVersion().withoutBuild();
-  VersionTuple MinTgtVers = getEffectiveTriple().getMinimumSupportedOSVersion();
-  if (!MinTgtVers.empty() && MinTgtVers > TargetVersion)
-    TargetVersion = MinTgtVers;
-  CmdArgs.push_back(Args.MakeArgString(TargetVersion.getAsString()));
+  auto EmitPlatformVersionArg =
+      [&](const VersionTuple &TV, Darwin::DarwinPlatformKind TargetPlatform,
+          Darwin::DarwinEnvironmentKind TargetEnvironment,
+          const llvm::Triple &TT) {
+        // -platform_version <platform> <target_version> <sdk_version>
+        // Both the target and SDK version support only up to 3 components.
+        CmdArgs.push_back("-platform_version");
+        std::string PlatformName =
+            getPlatformName(TargetPlatform, TargetEnvironment);
+        if (TargetEnvironment == Darwin::Simulator)
+          PlatformName += "-simulator";
+        CmdArgs.push_back(Args.MakeArgString(PlatformName));
+        VersionTuple TargetVersion = TV.withoutBuild();
+        if ((TargetPlatform == Darwin::IPhoneOS ||
+             TargetPlatform == Darwin::TvOS) &&
+            getTriple().getArchName() == "arm64e" &&
+            TargetVersion.getMajor() < 14) {
+          // arm64e slice is supported on iOS/tvOS 14+ only.
+          TargetVersion = VersionTuple(14, 0);
+        }
+        VersionTuple MinTgtVers = TT.getMinimumSupportedOSVersion();
+        if (!MinTgtVers.empty() && MinTgtVers > TargetVersion)
+          TargetVersion = MinTgtVers;
+        CmdArgs.push_back(Args.MakeArgString(TargetVersion.getAsString()));
 
-  if (isTargetMacCatalyst()) {
-    // Mac Catalyst programs must use the appropriate iOS SDK version
-    // that corresponds to the macOS SDK version used for the compilation.
-    Optional<VersionTuple> iOSSDKVersion;
-    if (SDKInfo) {
-      if (const auto *MacOStoMacCatalystMapping = SDKInfo->getVersionMapping(
-              DarwinSDKInfo::OSEnvPair::macOStoMacCatalystPair())) {
-        iOSSDKVersion = MacOStoMacCatalystMapping->map(
-            SDKInfo->getVersion().withoutBuild(),
-            minimumMacCatalystDeploymentTarget(), None);
-      }
-    }
-    CmdArgs.push_back(Args.MakeArgString(
-        (iOSSDKVersion ? *iOSSDKVersion : minimumMacCatalystDeploymentTarget())
-            .getAsString()));
+        if (TargetPlatform == IPhoneOS && TargetEnvironment == MacCatalyst) {
+          // Mac Catalyst programs must use the appropriate iOS SDK version
+          // that corresponds to the macOS SDK version used for the compilation.
+          Optional<VersionTuple> iOSSDKVersion;
+          if (SDKInfo) {
+            if (const auto *MacOStoMacCatalystMapping =
+                    SDKInfo->getVersionMapping(
+                        DarwinSDKInfo::OSEnvPair::macOStoMacCatalystPair())) {
+              iOSSDKVersion = MacOStoMacCatalystMapping->map(
+                  SDKInfo->getVersion().withoutBuild(),
+                  minimumMacCatalystDeploymentTarget(), None);
+            }
+          }
+          CmdArgs.push_back(Args.MakeArgString(
+              (iOSSDKVersion ? *iOSSDKVersion
+                             : minimumMacCatalystDeploymentTarget())
+                  .getAsString()));
+          return;
+        }
+
+        if (SDKInfo) {
+          VersionTuple SDKVersion = SDKInfo->getVersion().withoutBuild();
+          CmdArgs.push_back(Args.MakeArgString(SDKVersion.getAsString()));
+        } else {
+          // Use an SDK version that's matching the deployment target if the SDK
+          // version is missing. This is preferred over an empty SDK version
+          // (0.0.0) as the system's runtime might expect the linked binary to
+          // contain a valid SDK version in order for the binary to work
+          // correctly. It's reasonable to use the deployment target version as
+          // a proxy for the SDK version because older SDKs don't guarantee
+          // support for deployment targets newer than the SDK versions, so that
+          // rules out using some predetermined older SDK version, which leaves
+          // the deployment target version as the only reasonable choice.
+          CmdArgs.push_back(Args.MakeArgString(TargetVersion.getAsString()));
+        }
+      };
+  EmitPlatformVersionArg(getTripleTargetVersion(), TargetPlatform,
+                         TargetEnvironment, getEffectiveTriple());
+  if (!TargetVariantTriple)
     return;
-  }
-
-  if (SDKInfo) {
-    VersionTuple SDKVersion = SDKInfo->getVersion().withoutBuild();
-    CmdArgs.push_back(Args.MakeArgString(SDKVersion.getAsString()));
+  Darwin::DarwinPlatformKind Platform;
+  Darwin::DarwinEnvironmentKind Environment;
+  VersionTuple TargetVariantVersion;
+  if (TargetVariantTriple->isMacOSX()) {
+    TargetVariantTriple->getMacOSXVersion(TargetVariantVersion);
+    Platform = Darwin::MacOS;
+    Environment = Darwin::NativeEnvironment;
   } else {
-    // Use an SDK version that's matching the deployment target if the SDK
-    // version is missing. This is preferred over an empty SDK version (0.0.0)
-    // as the system's runtime might expect the linked binary to contain a
-    // valid SDK version in order for the binary to work correctly. It's
-    // reasonable to use the deployment target version as a proxy for the
-    // SDK version because older SDKs don't guarantee support for deployment
-    // targets newer than the SDK versions, so that rules out using some
-    // predetermined older SDK version, which leaves the deployment target
-    // version as the only reasonable choice.
-    CmdArgs.push_back(Args.MakeArgString(TargetVersion.getAsString()));
+    assert(TargetVariantTriple->isiOS() &&
+           TargetVariantTriple->isMacCatalystEnvironment() &&
+           "unexpected target variant triple");
+    TargetVariantVersion = TargetVariantTriple->getiOSVersion();
+    Platform = Darwin::IPhoneOS;
+    Environment = Darwin::MacCatalyst;
   }
+  EmitPlatformVersionArg(TargetVariantVersion, Platform, Environment,
+                         *TargetVariantTriple);
 }
 
 // Add additional link args for the -dynamiclib option.
