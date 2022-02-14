@@ -328,7 +328,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
   // Construct a new result global and set up its metadata
 
   GlobalVariable *new_result_global = new GlobalVariable(
-      (*m_module), result_global->getType()->getElementType(),
+      (*m_module), result_global->getValueType(),
       false,                                 /* not constant */
       GlobalValue::ExternalLinkage, nullptr, /* no initializer */
       m_result_name.GetCString());
