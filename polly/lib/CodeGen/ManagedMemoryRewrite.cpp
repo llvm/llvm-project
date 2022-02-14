@@ -180,7 +180,7 @@ static void
 replaceGlobalArray(Module &M, const DataLayout &DL, GlobalVariable &Array,
                    SmallPtrSet<GlobalVariable *, 4> &ReplacedGlobals) {
   // We only want arrays.
-  ArrayType *ArrayTy = dyn_cast<ArrayType>(Array.getType()->getElementType());
+  ArrayType *ArrayTy = dyn_cast<ArrayType>(Array.getValueType());
   if (!ArrayTy)
     return;
   Type *ElemTy = ArrayTy->getElementType();
@@ -298,8 +298,7 @@ static void rewriteAllocaAsManagedMemory(AllocaInst *Alloca,
 
   Function *MallocManagedFn =
       getOrCreatePollyMallocManaged(*Alloca->getModule());
-  const uint64_t Size =
-      DL.getTypeAllocSize(Alloca->getType()->getElementType());
+  const uint64_t Size = DL.getTypeAllocSize(Alloca->getAllocatedType());
   Value *SizeVal = Builder.getInt64(Size);
   Value *RawManagedMem = Builder.CreateCall(MallocManagedFn, {SizeVal});
   Value *Bitcasted = Builder.CreateBitCast(RawManagedMem, Alloca->getType());
