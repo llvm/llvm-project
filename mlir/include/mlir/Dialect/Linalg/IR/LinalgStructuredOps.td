@@ -83,8 +83,10 @@ def FillOp : LinalgStructured_Op<"fill", []> {
           extractOrIdentityMap(llvm::None, getNumParallelLoops(), context)});
     }
 
-    static void regionBuilder(ImplicitLocOpBuilder &b, Block &block);
-    static std::function<void(ImplicitLocOpBuilder &b, Block &block)>
+    static void regionBuilder(ImplicitLocOpBuilder &b, Block &block,
+                              ArrayRef<NamedAttribute> attrs);
+    static std::function<void(ImplicitLocOpBuilder&,
+                              Block&, ArrayRef<NamedAttribute>)>
     getRegionBuilder() {
       return &regionBuilder;
     }
@@ -254,7 +256,8 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [AttrSizedOperandSegments]> {
         library_call()->str() : "op_has_no_registered_library_name";
     }
 
-    static std::function<void(ImplicitLocOpBuilder &b, Block &block)>
+    static std::function<void(ImplicitLocOpBuilder &,
+                              Block &, ArrayRef<NamedAttribute>)>
     getRegionBuilder() {
       return nullptr;
     }
