@@ -153,7 +153,7 @@ private:
     case VoidPtr:
       if (auto ptrType = dyn_cast<PointerType>(type))
         return ptrType->getAddressSpace() == 0 &&
-               ptrType->getElementType()->isIntegerTy(8);
+               ptrType->getPointerElementType()->isIntegerTy(8);
       return false;
     case Key:
       return type->isIntegerTy(32);
