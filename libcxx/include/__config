@@ -1415,7 +1415,7 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
    // Note that this can be replaced by #error as soon as clang-cl
    // implements msvc::no_unique_address, since there should be no C++20
    // compiler that doesn't support one of the two attributes at that point.
-   // We geenrally don't want to use this macro outside of C++20-only code,
+   // We generally don't want to use this macro outside of C++20-only code,
    // because using it conditionally in one language version only would make
    // the ABI inconsistent.
 #endif
