@@ -23,9 +23,6 @@
 #include <complex>
 #include <concepts>
 #include <deque>
-#ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY
-#  include <filesystem>
-#endif
 #include <format>
 #include <forward_list>
 #include <list>
@@ -45,6 +42,9 @@
 
 #include "test_macros.h"
 
+#ifndef TEST_HAS_NO_FILESYSTEM_LIBRARY
+#  include <filesystem>
+#endif
 #ifndef TEST_HAS_NO_LOCALIZATION
 #  include <regex>
 #endif
@@ -210,7 +210,7 @@ void test_P1636() {
   assert_formatter_is_disabled<std::bitset<42>, CharT>();
   assert_formatter_is_disabled<std::complex<double>, CharT>();
   assert_formatter_is_disabled<std::error_code, CharT>();
-#ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY
+#ifndef TEST_HAS_NO_FILESYSTEM_LIBRARY
   assert_formatter_is_disabled<std::filesystem::path, CharT>();
 #endif
   assert_formatter_is_disabled<std::shared_ptr<int>, CharT>();
