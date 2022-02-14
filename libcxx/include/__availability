@@ -244,10 +244,6 @@
 #       define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_semaphore
 #   endif
 
-    // This controls the availability of the C++20 format library.
-    // The library is in development and not ABI stable yet. P2216 is
-    // retroactively accepted in C++20. This paper contains ABI breaking
-    // changes.
 #   define _LIBCPP_AVAILABILITY_FORMAT                                          \
         __attribute__((unavailable))
 #   define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format
