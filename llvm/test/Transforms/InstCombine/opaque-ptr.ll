@@ -457,3 +457,28 @@ join:
   %gep = getelementptr i32, ptr %phi, i64 1
   ret ptr %gep
 }
+
+define ptr @select_of_gep(i1 %c, ptr %p) {
+; CHECK-LABEL: @select_of_gep(
+; CHECK-NEXT:    [[S_V:%.*]] = select i1 [[C:%.*]], i64 1, i64 2
+; CHECK-NEXT:    [[S:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[S_V]]
+; CHECK-NEXT:    ret ptr [[S]]
+;
+  %gep1 = getelementptr i32, ptr %p, i64 1
+  %gep2 = getelementptr i32, ptr %p, i64 2
+  %s = select i1 %c, ptr %gep1, ptr %gep2
+  ret ptr %s
+}
+
+define ptr @select_of_gep_different_type(i1 %c, ptr %p) {
+; CHECK-LABEL: @select_of_gep_different_type(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i64, ptr [[P]], i64 2
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], ptr [[GEP1]], ptr [[GEP2]]
+; CHECK-NEXT:    ret ptr [[S]]
+;
+  %gep1 = getelementptr i32, ptr %p, i64 1
+  %gep2 = getelementptr i64, ptr %p, i64 2
+  %s = select i1 %c, ptr %gep1, ptr %gep2
+  ret ptr %s
+}
