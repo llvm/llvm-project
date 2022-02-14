@@ -90,6 +90,7 @@ static void exitWithError(Error E, StringRef Whence = "") {
       }
       exitWithError(IPE.message(), std::string(Whence), std::string(Hint));
     });
+    return;
   }
 
   exitWithError(toString(std::move(E)), std::string(Whence));
