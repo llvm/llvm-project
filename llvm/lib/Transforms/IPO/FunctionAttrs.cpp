@@ -1614,6 +1614,26 @@ static bool basicBlockCanReturn(BasicBlock &BB) {
   return none_of(BB, instructionDoesNotReturn);
 }
 
+// FIXME: this doesn't handle recursion.
+static bool canReturn(Function &F) {
+  SmallVector<BasicBlock *, 16> Worklist;
+  SmallPtrSet<BasicBlock *, 16> Visited;
+
+  Visited.insert(&F.front());
+  Worklist.push_back(&F.front());
+
+  do {
+    BasicBlock *BB = Worklist.pop_back_val();
+    if (basicBlockCanReturn(*BB))
+      return true;
+    for (BasicBlock *Succ : successors(BB))
+      if (Visited.insert(Succ).second)
+        Worklist.push_back(Succ);
+  } while (!Worklist.empty());
+
+  return false;
+}
+
 // Set the noreturn function attribute if possible.
 static void addNoReturnAttrs(const SCCNodeSet &SCCNodes,
                              SmallSet<Function *, 8> &Changed) {
@@ -1622,9 +1642,7 @@ static void addNoReturnAttrs(const SCCNodeSet &SCCNodes,
         F->doesNotReturn())
       continue;
 
-    // The function can return if any basic blocks can return.
-    // FIXME: this doesn't handle recursion or unreachable blocks.
-    if (none_of(*F, basicBlockCanReturn)) {
+    if (!canReturn(*F)) {
       F->setDoesNotReturn();
       Changed.insert(F);
     }
