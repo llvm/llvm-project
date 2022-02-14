@@ -25,6 +25,7 @@ define <vscale x 1 x i64> @access_fixed_object(i64 *%val) {
 declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(
   <vscale x 1 x i64>,
   <vscale x 1 x i64>,
+  <vscale x 1 x i64>,
   i64);
 
 define <vscale x 1 x i64> @access_fixed_and_vector_objects(i64 *%val) {
@@ -54,6 +55,7 @@ define <vscale x 1 x i64> @access_fixed_and_vector_objects(i64 *%val) {
   %len = load i64, i64* %local
 
   %a = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(
+    <vscale x 1 x i64> undef,
     <vscale x 1 x i64> %v1,
     <vscale x 1 x i64> %v2,
     i64 %len)
