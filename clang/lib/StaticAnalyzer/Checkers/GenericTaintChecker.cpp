@@ -559,7 +559,7 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{"atoll"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{"fgetc"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{"fgetln"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"fgets"}, TR::Prop({{2}}, {{0}, ReturnValueIndex})},
+      {{"fgets"}, TR::Prop({{2}}, {{0, ReturnValueIndex}})},
       {{"fscanf"}, TR::Prop({{0}}, {{}, 2})},
       {{"sscanf"}, TR::Prop({{0}}, {{}, 2})},
       {{"getc"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
@@ -632,7 +632,7 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
   if (TR::UntrustedEnv(C)) {
     // void setproctitle_init(int argc, char *argv[], char *envp[])
     GlobalCRules.push_back(
-        {{{"setproctitle_init"}}, TR::Sink({{2}}, MsgCustomSink)});
+        {{{"setproctitle_init"}}, TR::Sink({{1, 2}}, MsgCustomSink)});
     GlobalCRules.push_back({{"getenv"}, TR::Source({{ReturnValueIndex}})});
   }
 
