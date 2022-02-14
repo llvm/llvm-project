@@ -212,10 +212,13 @@ uint32_t mapping::getThreadIdInBlock() {
 
 uint32_t mapping::getWarpSize() { return impl::getWarpSize(); }
 
-uint32_t mapping::getBlockSize() {
+uint32_t mapping::getBlockSize(bool IsSPMD) {
   uint32_t BlockSize = mapping::getNumberOfProcessorElements() -
-                       (!mapping::isSPMDMode() * impl::getWarpSize());
+                       (!IsSPMD * impl::getWarpSize());
   return BlockSize;
+}
+uint32_t mapping::getBlockSize() {
+  return mapping::getBlockSize(mapping::isSPMDMode());
 }
 
 uint32_t mapping::getKernelSize() { return impl::getKernelSize(); }

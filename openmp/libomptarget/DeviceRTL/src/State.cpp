@@ -236,7 +236,7 @@ struct TeamStateTy {
 TeamStateTy SHARED(TeamState);
 
 void TeamStateTy::init(bool IsSPMD) {
-  ICVState.NThreadsVar = mapping::getBlockSize();
+  ICVState.NThreadsVar = mapping::getBlockSize(IsSPMD);
   ICVState.LevelVar = 0;
   ICVState.ActiveLevelVar = 0;
   ICVState.MaxActiveLevelsVar = 1;
