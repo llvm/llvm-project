@@ -888,8 +888,8 @@ public:
   void setRtLibUseGOT();
 
   /// Get/set whether synthesized functions should get the uwtable attribute.
-  bool getUwtable() const;
-  void setUwtable();
+  UWTableKind getUwtable() const;
+  void setUwtable(UWTableKind Kind);
 
   /// Get/set whether synthesized functions should get the "frame-pointer"
   /// attribute.

@@ -516,6 +516,16 @@ define void @f83(<4 x i8*> align 32 %0, <vscale x 1 x double*> align 64 %1) {
   ret void
 }
 
+; CHECK: define void @f84() #51
+define void @f84() uwtable(sync) {
+        ret void;
+}
+
+; CHECK: define void @f85() #15
+define void @f85() uwtable(async) {
+        ret void;
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { readnone }
@@ -567,4 +577,5 @@ define void @f83(<4 x i8*> align 32 %0, <vscale x 1 x double*> align 64 %1) {
 ; CHECK: attributes #48 = { nosanitize_coverage }
 ; CHECK: attributes #49 = { noprofile }
 ; CHECK: attributes #50 = { disable_sanitizer_instrumentation }
+; CHECK: attributes #51 = { uwtable(sync) }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }

@@ -22,7 +22,7 @@ entry:
 !8 = !DILocation(line: 2, column: 1, scope: !5)
 
 ;; Due to -fasynchronous-unwind-tables.
-!9 = !{i32 7, !"uwtable", i32 1}
+!9 = !{i32 7, !"uwtable", i32 2}
 
 ;; Due to -fno-omit-frame-pointer.
 !10 = !{i32 7, !"frame-pointer", i32 2}

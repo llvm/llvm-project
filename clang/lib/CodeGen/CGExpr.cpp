@@ -3188,7 +3188,7 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
     B.addAttribute(llvm::Attribute::NoReturn)
         .addAttribute(llvm::Attribute::NoUnwind);
   }
-  B.addAttribute(llvm::Attribute::UWTable);
+  B.addUWTableAttr(llvm::UWTableKind::Default);
 
   llvm::FunctionCallee Fn = CGF.CGM.CreateRuntimeFunction(
       FnType, FnName,

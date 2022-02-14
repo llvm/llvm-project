@@ -71,13 +71,13 @@ define internal i32 @dead_internal_func(i32 %0) {
 }
 
 define i32 @volatile_load(i32*) norecurse nounwind uwtable {
-; NOT_CGSCC_NPM: Function Attrs: argmemonly nofree norecurse nounwind uwtable willreturn
+; NOT_CGSCC_NPM: Function Attrs: argmemonly nofree norecurse nounwind willreturn uwtable
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@volatile_load
 ; NOT_CGSCC_NPM-SAME: (i32* nofree align 4 [[TMP0:%.*]]) #[[ATTR6:[0-9]+]] {
 ; NOT_CGSCC_NPM-NEXT:    [[TMP2:%.*]] = load volatile i32, i32* [[TMP0]], align 4
 ; NOT_CGSCC_NPM-NEXT:    ret i32 [[TMP2]]
 ;
-; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nounwind uwtable willreturn
+; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nounwind willreturn uwtable
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@volatile_load
 ; IS__CGSCC____-SAME: (i32* nofree align 4 [[TMP0:%.*]]) #[[ATTR7:[0-9]+]] {
 ; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = load volatile i32, i32* [[TMP0]], align 4
@@ -88,7 +88,7 @@ define i32 @volatile_load(i32*) norecurse nounwind uwtable {
 }
 
 define internal i32 @internal_load(i32*) norecurse nounwind uwtable {
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone uwtable willreturn
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn uwtable
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@internal_load
 ; IS__CGSCC____-SAME: () #[[ATTR8:[0-9]+]] {
 ; IS__CGSCC____-NEXT:    ret i32 undef
@@ -2666,7 +2666,7 @@ declare void @llvm.lifetime.end.p0i8(i64 %0, i8* %1)
 ; NOT_CGSCC_NPM: attributes #[[ATTR3]] = { noreturn nounwind }
 ; NOT_CGSCC_NPM: attributes #[[ATTR4]] = { noreturn }
 ; NOT_CGSCC_NPM: attributes #[[ATTR5]] = { nosync readnone }
-; NOT_CGSCC_NPM: attributes #[[ATTR6]] = { argmemonly nofree norecurse nounwind uwtable willreturn }
+; NOT_CGSCC_NPM: attributes #[[ATTR6]] = { argmemonly nofree norecurse nounwind willreturn uwtable }
 ; NOT_CGSCC_NPM: attributes #[[ATTR7:[0-9]+]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
 ; NOT_CGSCC_NPM: attributes #[[ATTR8]] = { nofree norecurse noreturn nosync nounwind readnone }
 ; NOT_CGSCC_NPM: attributes #[[ATTR9]] = { nofree nosync nounwind readnone willreturn }
@@ -2683,8 +2683,8 @@ declare void @llvm.lifetime.end.p0i8(i64 %0, i8* %1)
 ; IS__CGSCC____: attributes #[[ATTR4]] = { noreturn }
 ; IS__CGSCC____: attributes #[[ATTR5]] = { nosync readnone }
 ; IS__CGSCC____: attributes #[[ATTR6]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR7]] = { argmemonly nofree norecurse nounwind uwtable willreturn }
-; IS__CGSCC____: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind readnone uwtable willreturn }
+; IS__CGSCC____: attributes #[[ATTR7]] = { argmemonly nofree norecurse nounwind willreturn uwtable }
+; IS__CGSCC____: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind readnone willreturn uwtable }
 ; IS__CGSCC____: attributes #[[ATTR9]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR10]] = { nofree norecurse noreturn nosync nounwind readnone }
 ; IS__CGSCC____: attributes #[[ATTR11]] = { nofree nosync nounwind readnone willreturn }

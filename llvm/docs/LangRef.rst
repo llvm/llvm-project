@@ -2108,12 +2108,15 @@ example:
     function with a tail call. The prototype of a thunk should not be used for
     optimization purposes. The caller is expected to cast the thunk prototype to
     match the thunk target prototype.
-``uwtable``
+``uwtable[(sync|async)]``
     This attribute indicates that the ABI being targeted requires that
     an unwind table entry be produced for this function even if we can
     show that no exceptions passes by it. This is normally the case for
     the ELF x86-64 abi, but it can be disabled for some compilation
-    units.
+    units. The optional parameter describes what kind of unwind tables
+    to generate: ``sync`` for normal unwind tables, ``async`` for asynchronous
+    (instruction precise) unwind tables. Without the parameter, the attribute
+    ``uwtable`` is equivalent to ``uwtable(async)``.
 ``nocf_check``
     This attribute indicates that no control-flow check will be performed on
     the attributed entity. It disables -fcf-protection=<> for a specific
@@ -7215,8 +7218,9 @@ functions is small.
 - "frame-pointer": **Max**. The value can be 0, 1, or 2. A synthesized function
   will get the "frame-pointer" function attribute, with value being "none",
   "non-leaf", or "all", respectively.
-- "uwtable": **Max**. The value can be 0 or 1. If the value is 1, a synthesized
-  function will get the ``uwtable`` function attribute.
+- "uwtable": **Max**. The value can be 0, 1, or 2. If the value is 1, a synthesized
+  function will get the ``uwtable(sync)`` function attribute, if the value is 2,
+  a synthesized function will get the ``uwtable(async)`` function attribute.
 
 Objective-C Garbage Collection Module Flags Metadata
 ----------------------------------------------------

@@ -623,15 +623,19 @@ public:
   bool willReturn() const { return hasFnAttribute(Attribute::WillReturn); }
   void setWillReturn() { addFnAttr(Attribute::WillReturn); }
 
+  /// Get what kind of unwind table entry to generate for this function.
+  UWTableKind getUWTableKind() const {
+    return AttributeSets.getUWTableKind();
+  }
+
   /// True if the ABI mandates (or the user requested) that this
   /// function be in a unwind table.
   bool hasUWTable() const {
-    return hasFnAttribute(Attribute::UWTable);
+    return getUWTableKind() != UWTableKind::None;
   }
-  void setHasUWTable() {
-    addFnAttr(Attribute::UWTable);
+  void setUWTableKind(UWTableKind K) {
+    addFnAttr(Attribute::getWithUWTableKind(getContext(), K));
   }
-
   /// True if this function needs an unwind table.
   bool needsUnwindTableEntry() const {
     return hasUWTable() || !doesNotThrow() || hasPersonalityFn();

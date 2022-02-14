@@ -99,7 +99,8 @@ TEST(VerifierTest, InvalidRetAttribute) {
   FunctionType *FTy = FunctionType::get(Type::getInt32Ty(C), /*isVarArg=*/false);
   Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
   AttributeList AS = F->getAttributes();
-  F->setAttributes(AS.addRetAttribute(C, Attribute::UWTable));
+  F->setAttributes(AS.addRetAttribute(
+      C, Attribute::getWithUWTableKind(C, UWTableKind::Default)));
 
   std::string Error;
   raw_string_ostream ErrorOS(Error);

@@ -339,8 +339,9 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
                                           Module *M) {
   auto *F = new Function(Ty, Linkage, AddrSpace, N, M);
   AttrBuilder B(F->getContext());
-  if (M->getUwtable())
-    B.addAttribute(Attribute::UWTable);
+  UWTableKind UWTable = M->getUwtable();
+  if (UWTable != UWTableKind::None)
+    B.addUWTableAttr(UWTable);
   switch (M->getFramePointer()) {
   case FramePointerKind::None:
     // 0 ("none") is the default.
