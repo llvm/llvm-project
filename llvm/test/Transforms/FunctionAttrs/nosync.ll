@@ -104,7 +104,7 @@ define void @test9(i8* %p) {
 
 ; atomic load with monotonic ordering
 define i32 @load_monotonic(i32* nocapture readonly %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind uwtable willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn uwtable
 ; CHECK-LABEL: @load_monotonic(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, i32* [[TMP0:%.*]] monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
@@ -115,7 +115,7 @@ define i32 @load_monotonic(i32* nocapture readonly %0) norecurse nounwind uwtabl
 
 ; atomic store with monotonic ordering.
 define void @store_monotonic(i32* nocapture %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind uwtable willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn uwtable
 ; CHECK-LABEL: @store_monotonic(
 ; CHECK-NEXT:    store atomic i32 10, i32* [[TMP0:%.*]] monotonic, align 4
 ; CHECK-NEXT:    ret void
@@ -127,7 +127,7 @@ define void @store_monotonic(i32* nocapture %0) norecurse nounwind uwtable {
 ; negative, should not deduce nosync
 ; atomic load with acquire ordering.
 define i32 @load_acquire(i32* nocapture readonly %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind uwtable willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn uwtable
 ; CHECK-LABEL: @load_acquire(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, i32* [[TMP0:%.*]] acquire, align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
@@ -137,7 +137,7 @@ define i32 @load_acquire(i32* nocapture readonly %0) norecurse nounwind uwtable 
 }
 
 define i32 @load_unordered(i32* nocapture readonly %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readonly uwtable willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readonly willreturn uwtable
 ; CHECK-LABEL: @load_unordered(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, i32* [[TMP0:%.*]] unordered, align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
@@ -148,7 +148,7 @@ define i32 @load_unordered(i32* nocapture readonly %0) norecurse nounwind uwtabl
 
 ; atomic store with unordered ordering.
 define void @store_unordered(i32* nocapture %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind uwtable willreturn writeonly
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn writeonly uwtable
 ; CHECK-LABEL: @store_unordered(
 ; CHECK-NEXT:    store atomic i32 10, i32* [[TMP0:%.*]] unordered, align 4
 ; CHECK-NEXT:    ret void
@@ -195,7 +195,7 @@ define void @volatile_store(i32* %0) norecurse nounwind uwtable {
 ; negative, should not deduce nosync
 ; volatile load.
 define i32 @volatile_load(i32* %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind uwtable willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn uwtable
 ; CHECK-LABEL: @volatile_load(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load volatile i32, i32* [[TMP0:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
@@ -211,7 +211,7 @@ declare void @nosync_function() noinline nounwind uwtable nosync
 define void @call_nosync_function() nounwind uwtable noinline {
 ; CHECK: Function Attrs: noinline nosync nounwind uwtable
 ; CHECK-LABEL: @call_nosync_function(
-; CHECK-NEXT:    tail call void @nosync_function() #[[ATTR8:[0-9]+]]
+; CHECK-NEXT:    tail call void @nosync_function() #[[ATTR9:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   tail call void @nosync_function() noinline nounwind uwtable
@@ -225,7 +225,7 @@ declare void @might_sync() noinline nounwind uwtable
 define void @call_might_sync() nounwind uwtable noinline {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: @call_might_sync(
-; CHECK-NEXT:    tail call void @might_sync() #[[ATTR8]]
+; CHECK-NEXT:    tail call void @might_sync() #[[ATTR9]]
 ; CHECK-NEXT:    ret void
 ;
   tail call void @might_sync() noinline nounwind uwtable
