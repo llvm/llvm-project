@@ -18,26 +18,37 @@ define i32 @src(i32 %0, i32 %1) {
   ret i32 %6
 }
 
-; (x & y) + ~(x | y)
-define i32 @src_thwart(i32 %0, i32 %1) {
-; CHECK-LABEL: @src_thwart(
-; CHECK-NEXT:    [[X:%.*]] = sdiv i32 42, [[TMP0:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = sdiv i32 43, [[TMP1:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP4]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    ret i32 [[TMP6]]
+; vector version of src
+define <2 x i32> @src_vec(<2 x i32> %0, <2 x i32> %1) {
+; CHECK-LABEL: @src_vec(
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i32> [[TMP1:%.*]], [[TMP0:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i32> [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = xor <2 x i32> [[TMP4]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    ret <2 x i32> [[TMP6]]
 ;
-  %x = sdiv i32 42, %0 ; thwart complexity-based canonicalization
-  %y = sdiv i32 43, %1 ; thwart complexity-based canonicalization
-  %3 = and i32 %y, %x
-  %4 = or i32 %y, %x
-  %5 = xor i32 %4, -1
-  %6 = add i32 %3, %5
-  ret i32 %6
+  %3 = and <2 x i32> %1, %0
+  %4 = or  <2 x i32> %1, %0
+  %5 = xor <2 x i32> %4, <i32 -1, i32 -1>
+  %6 = add <2 x i32> %3, %5
+  ret <2 x i32> %6
 }
 
+; vector version of src with undef values
+define <2 x i32> @src_vec_undef(<2 x i32> %0, <2 x i32> %1) {
+; CHECK-LABEL: @src_vec_undef(
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i32> [[TMP1:%.*]], [[TMP0:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i32> [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = xor <2 x i32> [[TMP4]], <i32 -1, i32 undef>
+; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    ret <2 x i32> [[TMP6]]
+;
+  %3 = and <2 x i32> %1, %0
+  %4 = or  <2 x i32> %1, %0
+  %5 = xor <2 x i32> %4, <i32 -1, i32 undef>
+  %6 = add <2 x i32> %3, %5
+  ret <2 x i32> %6
+}
 
 ; (x & y) + ~(y | x)
 define i32 @src2(i32 %0, i32 %1) {
@@ -50,26 +61,6 @@ define i32 @src2(i32 %0, i32 %1) {
 ;
   %3 = and i32 %1, %0
   %4 = or i32 %0, %1
-  %5 = xor i32 %4, -1
-  %6 = add i32 %3, %5
-  ret i32 %6
-}
-
-; (x & y) + ~(y | x)
-define i32 @src2_thwart(i32 %0, i32 %1) {
-; CHECK-LABEL: @src2_thwart(
-; CHECK-NEXT:    [[X:%.*]] = sdiv i32 42, [[TMP0:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = sdiv i32 43, [[TMP1:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP4]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    ret i32 [[TMP6]]
-;
-  %x = sdiv i32 42, %0 ; thwart complexity-based canonicalization
-  %y = sdiv i32 43, %1 ; thwart complexity-based canonicalization
-  %3 = and i32 %y, %x
-  %4 = or i32 %x, %y
   %5 = xor i32 %4, -1
   %6 = add i32 %3, %5
   ret i32 %6
@@ -92,27 +83,6 @@ define i32 @src3(i32 %0, i32 %1) {
   ret i32 %7
 }
 
-; (x & y) + (~x & ~y)
-define i32 @src3_thwart(i32 %0, i32 %1) {
-; CHECK-LABEL: @src3_thwart(
-; CHECK-NEXT:    [[X:%.*]] = sdiv i32 42, [[TMP0:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = sdiv i32 43, [[TMP1:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[DOTDEMORGAN:%.*]] = or i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[DOTDEMORGAN]], -1
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    ret i32 [[TMP5]]
-;
-  %x = sdiv i32 42, %0 ; thwart complexity-based canonicalization
-  %y = sdiv i32 43, %1 ; thwart complexity-based canonicalization
-  %3 = and i32 %y, %x
-  %4 = xor i32 %x, -1
-  %5 = xor i32 %y, -1
-  %6 = and i32 %4, %5
-  %7 = add i32 %3, %6
-  ret i32 %7
-}
-
 ; ~(x | y) + (y & x)
 define i32 @src4(i32 %0, i32 %1) {
 ; CHECK-LABEL: @src4(
@@ -124,26 +94,6 @@ define i32 @src4(i32 %0, i32 %1) {
 ;
   %3 = and i32 %0, %1
   %4 = or i32 %1, %0
-  %5 = xor i32 %4, -1
-  %6 = add i32 %3, %5
-  ret i32 %6
-}
-
-; ~(x | y) + (y & x)
-define i32 @src4_thwart(i32 %0, i32 %1) {
-; CHECK-LABEL: @src4_thwart(
-; CHECK-NEXT:    [[X:%.*]] = sdiv i32 42, [[TMP0:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = sdiv i32 43, [[TMP1:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP4]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    ret i32 [[TMP6]]
-;
-  %x = sdiv i32 42, %0 ; thwart complexity-based canonicalization
-  %y = sdiv i32 43, %1 ; thwart complexity-based canonicalization
-  %3 = and i32 %x, %y
-  %4 = or i32 %y, %x
   %5 = xor i32 %4, -1
   %6 = add i32 %3, %5
   ret i32 %6
@@ -165,122 +115,9 @@ define i32 @src5(i32 %0, i32 %1) {
   ret i32 %6
 }
 
-; ~(x | y) + (x & y)
-define i32 @src5_thwart(i32 %0, i32 %1) {
-; CHECK-LABEL: @src5_thwart(
-; CHECK-NEXT:    [[X:%.*]] = sdiv i32 42, [[TMP0:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = sdiv i32 43, [[TMP1:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], -1
-; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    ret i32 [[TMP6]]
-;
-  %x = sdiv i32 42, %0 ; thwart complexity-based canonicalization
-  %y = sdiv i32 43, %1 ; thwart complexity-based canonicalization
-  %3 = or i32 %y, %x
-  %4 = xor i32 %3, -1
-  %5 = and i32 %y, %x
-  %6 = add i32 %4, %5
-  ret i32 %6
-}
-
-; (x & y) + (~x & ~y)
-define i32 @src6(i32 %0, i32 %1) {
-; CHECK-LABEL: @src6(
-; CHECK-NEXT:    [[DOTDEMORGAN:%.*]] = or i32 [[TMP0:%.*]], [[TMP1:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[DOTDEMORGAN]], -1
-; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    ret i32 [[TMP5]]
-;
-  %3 = xor i32 %0, -1
-  %4 = xor i32 %1, -1
-  %5 = and i32 %3, %4
-  %6 = and i32 %1, %0
-  %7 = add i32 %5, %6
-  ret i32 %7
-}
-
-; (x & y) + (~x & ~y)
-define i32 @src6_thwart(i32 %0, i32 %1) {
-; CHECK-LABEL: @src6_thwart(
-; CHECK-NEXT:    [[X:%.*]] = sdiv i32 42, [[TMP0:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = sdiv i32 43, [[TMP1:%.*]]
-; CHECK-NEXT:    [[DOTDEMORGAN:%.*]] = or i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[DOTDEMORGAN]], -1
-; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    ret i32 [[TMP5]]
-;
-  %x = sdiv i32 42, %0 ; thwart complexity-based canonicalization
-  %y = sdiv i32 43, %1 ; thwart complexity-based canonicalization
-  %3 = xor i32 %x, -1
-  %4 = xor i32 %y, -1
-  %5 = and i32 %3, %4
-  %6 = and i32 %y, %x
-  %7 = add i32 %5, %6
-  ret i32 %7
-}
-
-; vector version of src6
-define <2 x i32> @src6_vec(<2 x i32> %0, <2 x i32> %1) {
-; CHECK-LABEL: @src6_vec(
-; CHECK-NEXT:    [[DOTDEMORGAN:%.*]] = or <2 x i32> [[TMP0:%.*]], [[TMP1:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[DOTDEMORGAN]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP4:%.*]] = and <2 x i32> [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    ret <2 x i32> [[TMP5]]
-;
-  %3 = xor <2 x i32> %0, <i32 -1, i32 -1>
-  %4 = xor <2 x i32> %1, <i32 -1, i32 -1>
-  %5 = and <2 x i32> %3, %4
-  %6 = and <2 x i32> %1, %0
-  %7 = add <2 x i32> %5, %6
-  ret <2 x i32> %7
-}
-
-; check the transformation is still valid with undef
-define <2 x i32> @src6_vec_undef(<2 x i32> %0, <2 x i32> %1) {
-; CHECK-LABEL: @src6_vec_undef(
-; CHECK-NEXT:    [[DOTDEMORGAN:%.*]] = or <2 x i32> [[TMP0:%.*]], [[TMP1:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[DOTDEMORGAN]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP4:%.*]] = and <2 x i32> [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    ret <2 x i32> [[TMP5]]
-;
-  %3 = xor <2 x i32> %0, <i32 -1, i32 undef>
-  %4 = xor <2 x i32> %1, <i32 -1, i32 -1>
-  %5 = and <2 x i32> %3, %4
-  %6 = and <2 x i32> %1, %0
-  %7 = add <2 x i32> %5, %6
-  ret <2 x i32> %7
-}
-
-; vector version of src6 with thwart complexity-based canonicalization
-define <2 x i32> @src6_vec_thwart(<2 x i32> %0, <2 x i32> %1) {
-; CHECK-LABEL: @src6_vec_thwart(
-; CHECK-NEXT:    [[X:%.*]] = sdiv <2 x i32> <i32 42, i32 43>, [[TMP0:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = sdiv <2 x i32> <i32 43, i32 42>, [[TMP1:%.*]]
-; CHECK-NEXT:    [[DOTDEMORGAN:%.*]] = or <2 x i32> [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[DOTDEMORGAN]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP4:%.*]] = and <2 x i32> [[Y]], [[X]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    ret <2 x i32> [[TMP5]]
-;
-  %x = sdiv <2 x i32> <i32 42, i32 43>, %0 ; thwart complexity-based canonicalization
-  %y = sdiv <2 x i32> <i32 43, i32 42>, %1 ; thwart complexity-based canonicalization
-  %3 = xor <2 x i32> %x, <i32 -1, i32 -1>
-  %4 = xor <2 x i32> %y, <i32 -1, i32 -1>
-  %5 = and <2 x i32> %3, %4
-  %6 = and <2 x i32> %y, %x
-  %7 = add <2 x i32> %5, %6
-  ret <2 x i32> %7
-}
-
 ; (a & b) + ~(c | d)
-define i32 @src7(i32 %0, i32 %1, i32 %2, i32 %3) {
-; CHECK-LABEL: @src7(
+define i32 @src6(i32 %0, i32 %1, i32 %2, i32 %3) {
+; CHECK-LABEL: @src6(
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP0:%.*]], [[TMP1:%.*]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = or i32 [[TMP2:%.*]], [[TMP3:%.*]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i32 [[TMP6]], -1
