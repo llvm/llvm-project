@@ -76,6 +76,7 @@ CHECK-NEXT:       NumMigratedCpu: 1
 CHECK-NEXT:       NumLifetimeOverlaps: 0
 CHECK-NEXT:       NumSameAllocCpu: 0
 CHECK-NEXT:       NumSameDeallocCpu: 0
+CHECK-NEXT:       DataTypeId: {{[0-9]+}}
 CHECK-NEXT:   -
 CHECK-NEXT:     Callstack:
 CHECK-NEXT:     -
@@ -112,6 +113,7 @@ CHECK-NEXT:       NumMigratedCpu: 0
 CHECK-NEXT:       NumLifetimeOverlaps: 0
 CHECK-NEXT:       NumSameAllocCpu: 0
 CHECK-NEXT:       NumSameDeallocCpu: 0
+CHECK-NEXT:       DataTypeId: {{[0-9]+}}
 CHECK-NEXT:   -
 CHECK-NEXT:     Callstack:
 CHECK-NEXT:     -
@@ -148,3 +150,4 @@ CHECK-NEXT:       NumMigratedCpu: 0
 CHECK-NEXT:       NumLifetimeOverlaps: 0
 CHECK-NEXT:       NumSameAllocCpu: 0
 CHECK-NEXT:       NumSameDeallocCpu: 0
+CHECK-NEXT:       DataTypeId: {{[0-9]+}}
