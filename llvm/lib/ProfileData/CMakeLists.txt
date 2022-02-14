@@ -4,6 +4,7 @@ add_llvm_component_library(LLVMProfileData
   InstrProfCorrelator.cpp
   InstrProfReader.cpp
   InstrProfWriter.cpp
+  MemProf.cpp
   ProfileSummaryBuilder.cpp
   SampleProf.cpp
   SampleProfReader.cpp
