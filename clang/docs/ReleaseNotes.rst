@@ -85,6 +85,8 @@ New Compiler Flags
   allow silencing warnings about unused arguments for only a subset of
   the command line arguments, keeping potential warnings for other arguments
   outside of such a region.
+- ``-falign-loops=N`` (N is a power of 2) is now supported for non-LTO cases.
+  (`D106701 <https://reviews.llvm.org/D106701>`_)
 
 Deprecated Compiler Flags
 -------------------------
@@ -116,9 +118,14 @@ Modified Compiler Flags
   - Armv9.1-A (``armv9.1-a``).
   - Armv9.2-A (``armv9.2-a``).
 
+- ``-r`` now implies ``-nostdlib`` for many toolchains, matching GCC.
+  (`D116843 <https://reviews.llvm.org/D116843>`_)
+
 Removed Compiler Flags
 -------------------------
 
+- The legacy ``-gz=zlib-gnu`` and ``-Wa,--compress-debug-sections=zlib-gnu``
+  have been removed.
 - ``-fno-experimental-new-pass-manager`` has been removed.
   ``-flegacy-pass-manager`` can be used as a makeshift,
   Using the legacy pass manager for the optimization pipeline was deprecated in
