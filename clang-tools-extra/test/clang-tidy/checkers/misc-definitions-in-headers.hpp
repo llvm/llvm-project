@@ -193,6 +193,16 @@ const int f12() { return 0; }
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: full function template specialization 'f12<int>' defined in a header file;
 // CHECK-FIXES: inline const int f12() { return 0; }
 
+template <typename T1, typename T2>
+constexpr bool f13 = false;
+
+template <typename T>
+constexpr bool f13<T, int> = true; // OK: template partial specialization
+
+template <>
+constexpr bool f13<void, int> = false;
+// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: variable 'f13<void, int>' defined in a header file;
+
 int main() {}
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'main' defined in a header file;
 // CHECK-FIXES: {{^}}int main() {
