@@ -35,8 +35,8 @@ constexpr bool test() {
   assert(aPair.first.base() == globalBuff);
   assert(aPair.second.base() == globalBuff + 8);
   std::tuple<ForwardIter, ForwardIter> aTuple = a;
-  assert(get<0>(aTuple).base() == globalBuff);
-  assert(get<1>(aTuple).base() == globalBuff + 8);
+  assert(std::get<0>(aTuple).base() == globalBuff);
+  assert(std::get<1>(aTuple).base() == globalBuff + 8);
 
   return true;
 }
