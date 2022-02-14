@@ -670,13 +670,6 @@ public:
     return get(PT->PointeeTy, AddressSpace);
   }
 
-  [[deprecated("Pointer element types are deprecated. You can *temporarily* "
-               "use Type::getPointerElementType() instead")]]
-  Type *getElementType() const {
-    assert(!isOpaque() && "Attempting to get element type of opaque pointer");
-    return PointeeTy;
-  }
-
   bool isOpaque() const { return !PointeeTy; }
 
   /// Return true if the specified type is valid as a element type.
