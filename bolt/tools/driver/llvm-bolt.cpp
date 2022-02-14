@@ -19,6 +19,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"

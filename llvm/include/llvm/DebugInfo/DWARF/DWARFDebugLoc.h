@@ -11,10 +11,7 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
-#include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
-#include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
 #include "llvm/Support/Errc.h"
 #include <cstdint>
 
@@ -22,6 +19,12 @@ namespace llvm {
 class DWARFUnit;
 class MCRegisterInfo;
 class raw_ostream;
+class DWARFObject;
+struct DIDumpOptions;
+struct DWARFLocationExpression;
+namespace object {
+struct SectionedAddress;
+}
 
 /// A single location within a location list. Entries are stored in the DWARF5
 /// form even if they originally come from a DWARF<=4 location list.

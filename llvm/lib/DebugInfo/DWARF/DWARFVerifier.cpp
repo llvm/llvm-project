@@ -8,15 +8,25 @@
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
+#include "llvm/DebugInfo/DWARF/DWARFAttribute.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
+#include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFObject.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
-#include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/Object/Error.h"
 #include "llvm/Support/DJB.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -27,6 +37,10 @@
 using namespace llvm;
 using namespace dwarf;
 using namespace object;
+
+namespace llvm {
+class DWARFDebugInfoEntry;
+}
 
 Optional<DWARFAddressRange>
 DWARFVerifier::DieRangeInfo::insert(const DWARFAddressRange &R) {

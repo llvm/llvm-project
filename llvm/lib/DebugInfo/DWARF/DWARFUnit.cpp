@@ -14,9 +14,14 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
+#include "llvm/DebugInfo/DWARF/DWARFListTable.h"
+#include "llvm/DebugInfo/DWARF/DWARFObject.h"
+#include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
@@ -25,7 +30,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
 #include <utility>
 #include <vector>
 

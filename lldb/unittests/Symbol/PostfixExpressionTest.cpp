@@ -9,6 +9,7 @@
 #include "lldb/Symbol/PostfixExpression.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"

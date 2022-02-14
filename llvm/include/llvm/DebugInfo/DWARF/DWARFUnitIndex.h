@@ -11,13 +11,13 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/DataExtractor.h"
 #include <cstdint>
 #include <memory>
 
 namespace llvm {
 
 class raw_ostream;
+class DataExtractor;
 
 /// The enum of section identifiers to be used in internal interfaces.
 ///

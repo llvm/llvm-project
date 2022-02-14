@@ -13,6 +13,8 @@
 #include "bolt/Core/DebugData.h"
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Utils/Utils.h"
+#include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"

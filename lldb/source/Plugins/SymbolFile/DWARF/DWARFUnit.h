@@ -11,8 +11,9 @@
 
 #include "DWARFDIE.h"
 #include "DWARFDebugInfoEntry.h"
-#include "lldb/lldb-enumerations.h"
 #include "lldb/Utility/XcodeSDK.h"
+#include "lldb/lldb-enumerations.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/Support/RWMutex.h"
 #include <atomic>
 

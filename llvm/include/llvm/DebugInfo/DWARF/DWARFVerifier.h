@@ -13,7 +13,6 @@
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include <cstdint>
 #include <map>
@@ -28,7 +27,6 @@ class DWARFDataExtractor;
 class DWARFDebugAbbrev;
 class DataExtractor;
 struct DWARFSection;
-class DWARFUnit;
 
 /// A class that verifies DWARF debug information given a DWARF Context.
 class DWARFVerifier {

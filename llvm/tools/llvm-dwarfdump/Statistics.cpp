@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/JSON.h"
 
