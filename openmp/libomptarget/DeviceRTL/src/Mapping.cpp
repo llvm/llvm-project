@@ -29,7 +29,7 @@ namespace impl {
 ///{
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 
-constexpr const llvm::omp::GV &getGridValue() {
+static const llvm::omp::GV &getGridValue() {
   return llvm::omp::getAMDGPUGridValues<__AMDGCN_WAVEFRONT_SIZE>();
 }
 
@@ -104,7 +104,7 @@ uint32_t getNumHardwareThreadsInBlock() {
   return __nvvm_read_ptx_sreg_ntid_x();
 }
 
-constexpr const llvm::omp::GV &getGridValue() {
+static const llvm::omp::GV &getGridValue() {
   return llvm::omp::NVPTXGridValues;
 }
 
