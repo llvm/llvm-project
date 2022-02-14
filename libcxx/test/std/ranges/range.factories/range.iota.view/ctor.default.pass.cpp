@@ -10,7 +10,7 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
-// iota_view() requires default_­initializable<W> = default;
+// iota_view() requires default_initializable<W> = default;
 
 #include <ranges>
 #include <cassert>
