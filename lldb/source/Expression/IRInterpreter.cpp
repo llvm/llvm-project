@@ -1376,21 +1376,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       lldb_private::DiagnosticManager diagnostics;
       lldb_private::EvaluateExpressionOptions options;
 
-      // We generally receive a function pointer which we must dereference
-      llvm::Type *prototype = val->getType();
-      if (!prototype->isPointerTy()) {
-        error.SetErrorToGenericError();
-        error.SetErrorString("call need function pointer");
-        return false;
-      }
-
-      // Dereference the function pointer
-      prototype = prototype->getPointerElementType();
-      if (!(prototype->isFunctionTy() || prototype->isFunctionVarArg())) {
-        error.SetErrorToGenericError();
-        error.SetErrorString("call need function pointer");
-        return false;
-      }
+      llvm::FunctionType *prototype = call_inst->getFunctionType();
 
       // Find number of arguments
       const int numArgs = call_inst->arg_size();
