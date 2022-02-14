@@ -3160,7 +3160,7 @@ bool UnwrappedLineParser::parseEnum() {
   // Just a declaration or something is wrong.
   if (FormatTok->isNot(tok::l_brace))
     return true;
-  FormatTok->setType(TT_RecordLBrace);
+  FormatTok->setType(TT_EnumLBrace);
   FormatTok->setBlockKind(BK_Block);
 
   if (Style.Language == FormatStyle::LK_Java) {
@@ -3397,8 +3397,22 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       nextToken();
     }
   }
+
+  auto GetBraceType = [](const FormatToken &RecordTok) {
+    switch (RecordTok.Tok.getKind()) {
+    case tok::kw_class:
+      return TT_ClassLBrace;
+    case tok::kw_struct:
+      return TT_StructLBrace;
+    case tok::kw_union:
+      return TT_UnionLBrace;
+    default:
+      // Useful for e.g. interface.
+      return TT_RecordLBrace;
+    }
+  };
   if (FormatTok->Tok.is(tok::l_brace)) {
-    FormatTok->setType(TT_RecordLBrace);
+    FormatTok->setType(GetBraceType(InitialToken));
     if (ParseAsExpr) {
       parseChildBlock();
     } else {

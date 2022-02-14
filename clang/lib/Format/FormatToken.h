@@ -37,6 +37,7 @@ namespace format {
   TYPE(BlockComment)                                                           \
   TYPE(BracedListLBrace)                                                       \
   TYPE(CastRParen)                                                             \
+  TYPE(ClassLBrace)                                                            \
   TYPE(CompoundRequirementLBrace)                                              \
   TYPE(ConditionalExpr)                                                        \
   TYPE(ConflictAlternative)                                                    \
@@ -47,6 +48,7 @@ namespace format {
   TYPE(DesignatedInitializerLSquare)                                           \
   TYPE(DesignatedInitializerPeriod)                                            \
   TYPE(DictLiteral)                                                            \
+  TYPE(EnumLBrace)                                                             \
   TYPE(FatArrow)                                                               \
   TYPE(ForEachMacro)                                                           \
   TYPE(FunctionAnnotationRParen)                                               \
@@ -108,6 +110,7 @@ namespace format {
   TYPE(StartOfName)                                                            \
   TYPE(StatementAttributeLikeMacro)                                            \
   TYPE(StatementMacro)                                                         \
+  TYPE(StructLBrace)                                                           \
   TYPE(StructuredBindingLSquare)                                               \
   TYPE(TemplateCloser)                                                         \
   TYPE(TemplateOpener)                                                         \
@@ -119,6 +122,7 @@ namespace format {
   TYPE(TypeDeclarationParen)                                                   \
   TYPE(TypenameMacro)                                                          \
   TYPE(UnaryOperator)                                                          \
+  TYPE(UnionLBrace)                                                            \
   TYPE(UntouchableMacroFunc)                                                   \
   TYPE(CSharpStringLiteral)                                                    \
   TYPE(CSharpNamedArgumentColon)                                               \

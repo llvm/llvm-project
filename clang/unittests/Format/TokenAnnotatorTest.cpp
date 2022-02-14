@@ -78,25 +78,38 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmpInMacroDefinition) {
 TEST_F(TokenAnnotatorTest, UnderstandsClasses) {
   auto Tokens = annotate("class C {};");
   EXPECT_EQ(Tokens.size(), 6u) << Tokens;
-  EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_RecordLBrace);
+  EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_ClassLBrace);
+
+  Tokens = annotate("const class C {} c;");
+  EXPECT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::l_brace, TT_ClassLBrace);
+
+  Tokens = annotate("const class {} c;");
+  EXPECT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_ClassLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   auto Tokens = annotate("struct S {};");
   EXPECT_EQ(Tokens.size(), 6u) << Tokens;
-  EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_RecordLBrace);
+  EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_StructLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUnions) {
   auto Tokens = annotate("union U {};");
   EXPECT_EQ(Tokens.size(), 6u) << Tokens;
-  EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_RecordLBrace);
+  EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_UnionLBrace);
+
+  Tokens = annotate("union U { void f() { return; } };");
+  EXPECT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_UnionLBrace);
+  EXPECT_TOKEN(Tokens[7], tok::l_brace, TT_FunctionLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsEnums) {
   auto Tokens = annotate("enum E {};");
   EXPECT_EQ(Tokens.size(), 6u) << Tokens;
-  EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_RecordLBrace);
+  EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_EnumLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsLBracesInMacroDefinition) {
