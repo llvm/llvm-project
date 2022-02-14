@@ -16,7 +16,7 @@
 # CHECK-DAG: BOLT-WARNING: Ignoring main2
 # CHECK-DAG: BOLT-WARNING: Ignoring main
 # CHECK-DAG: BOLT-WARNING: Ignoring main2.cold.1(*2)
-# CHECK: BOLT-WARNING: Ignored 3 functions due to cold fragments.
+# CHECK: BOLT-WARNING: ignored 3 functions due to cold fragments
   .text
   .globl main
   .type main, %function
