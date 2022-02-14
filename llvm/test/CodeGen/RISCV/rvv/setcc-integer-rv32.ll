@@ -395,7 +395,7 @@ define <vscale x 8 x i1> @icmp_ult_vi_nxv8i8_4(<vscale x 8 x i8> %va) {
   ret <vscale x 8 x i1> %vc
 }
 
-declare <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(i8, i32);
+declare <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 8 x i8>, i8, i32);
 
 ; Test that we don't optimize ult x, 0 -> ule x, -1
 define <vscale x 8 x i1> @icmp_ult_vi_nxv8i8_5(<vscale x 8 x i8> %va, i32 %vl) {
@@ -404,7 +404,7 @@ define <vscale x 8 x i1> @icmp_ult_vi_nxv8i8_5(<vscale x 8 x i8> %va, i32 %vl) {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vmsltu.vx v0, v8, zero
 ; CHECK-NEXT:    ret
-  %splat = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(i8 0, i32 %vl)
+  %splat = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 8 x i8> undef, i8 0, i32 %vl)
   %vc = icmp ult <vscale x 8 x i8> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
@@ -1038,7 +1038,7 @@ define <vscale x 8 x i1> @icmp_uge_vi_nxv8i8_6(<vscale x 8 x i8> %va, i32 %vl) {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vmsleu.vv v0, v9, v8
 ; CHECK-NEXT:    ret
-  %splat = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(i8 0, i32 %vl)
+  %splat = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 8 x i8> undef, i8 0, i32 %vl)
   %vc = icmp uge <vscale x 8 x i8> %va, %splat
   ret <vscale x 8 x i1> %vc
 }

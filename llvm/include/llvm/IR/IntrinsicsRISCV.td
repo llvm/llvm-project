@@ -1266,20 +1266,29 @@ let TargetPrefix = "riscv" in {
 
   defm vmerge : RISCVBinaryWithV0;
 
+  // Output: (vector)
+  // Input: (passthru, vector_in, vl)
   def int_riscv_vmv_v_v : Intrinsic<[llvm_anyvector_ty],
-                                    [LLVMMatchType<0>, llvm_anyint_ty],
+                                    [LLVMMatchType<0>, LLVMMatchType<0>,
+                                     llvm_anyint_ty],
                                     [IntrNoMem]>, RISCVVIntrinsic {
-    let VLOperand = 1;
+    let VLOperand = 2;
   }
+  // Output: (vector)
+  // Input: (passthru, scalar, vl)
   def int_riscv_vmv_v_x : Intrinsic<[llvm_anyint_ty],
-                                    [LLVMVectorElementType<0>, llvm_anyint_ty],
+                                    [LLVMMatchType<0>, LLVMVectorElementType<0>,
+                                     llvm_anyint_ty],
                                     [IntrNoMem]>, RISCVVIntrinsic {
-    let VLOperand = 1;
+    let VLOperand = 2;
   }
+  // Output: (vector)
+  // Input: (passthru, scalar, vl)
   def int_riscv_vfmv_v_f : Intrinsic<[llvm_anyfloat_ty],
-                                     [LLVMVectorElementType<0>,llvm_anyint_ty],
+                                     [LLVMMatchType<0>, LLVMVectorElementType<0>,
+                                      llvm_anyint_ty],
                                      [IntrNoMem]>, RISCVVIntrinsic {
-    let VLOperand = 1;
+    let VLOperand = 2;
   }
 
   def int_riscv_vmv_x_s : Intrinsic<[LLVMVectorElementType<0>],
