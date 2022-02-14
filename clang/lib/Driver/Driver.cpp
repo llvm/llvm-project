@@ -1001,7 +1001,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         size_t find_loc = Target.find('^');
         std::string TripleStr = Target.substr(0, find_loc);
         std::string OpenMPTargetArch = Target.substr(find_loc + 1);
-        llvm::Triple TT(TripleStr);
+        llvm::Triple TT(ToolChain::getOpenMPTriple(TripleStr.c_str()));
         llvm::StringMap<bool> Features;
         StringRef IdStr(OpenMPTargetArch);
         auto ArchStr = parseTargetID(TT, IdStr, &Features);
@@ -1015,18 +1015,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         std::string NormalizedName =
             Twine(TT.normalize() + "-" + OpenMPTargetArch).str();
         
-      	// We want to expand the shortened versions of the triples passed in to
-        // the values used for the bitcode libraries for convenience.
-        if (TT.getVendor() == llvm::Triple::UnknownVendor ||
-            TT.getOS() == llvm::Triple::UnknownOS) {
-          if (TT.getArch() == llvm::Triple::nvptx)
-            TT = llvm::Triple("nvptx-nvidia-cuda");
-          else if (TT.getArch() == llvm::Triple::nvptx64)
-            TT = llvm::Triple("nvptx64-nvidia-cuda");
-          else if (TT.getArch() == llvm::Triple::amdgcn)
-            TT = llvm::Triple("amdgcn-amd-amdhsa");
-        }
-
         // Make sure we don't have a duplicate triple.
         auto Duplicate = FoundNormalizedTriples.find(NormalizedName);
         if (Duplicate != FoundNormalizedTriples.end()) {
@@ -1034,21 +1022,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
               << NormalizedName << Duplicate->second;
           continue;
         }
-#if 0 // RFIXME
-      if (HasValidOpenMPRuntime) {
-        llvm::StringMap<const char *> FoundNormalizedTriples;
-        for (const char *Val : OpenMPTargets->getValues()) {
-          llvm::Triple TT(ToolChain::getOpenMPTriple(Val));
-          std::string NormalizedName = TT.normalize();
-
-          // Make sure we don't have a duplicate triple.
-          auto Duplicate = FoundNormalizedTriples.find(NormalizedName);
-          if (Duplicate != FoundNormalizedTriples.end()) {
-            Diag(clang::diag::warn_drv_omp_offload_target_duplicate)
-                << Val << Duplicate->second;
-            continue;
-          }
-#endif
 
         // Store the current triple so that we can check for duplicates in the
         // following iterations.
