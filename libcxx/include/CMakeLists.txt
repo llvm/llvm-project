@@ -346,7 +346,9 @@ set(files
   __ranges/non_propagating_cache.h
   __ranges/owning_view.h
   __ranges/range_adaptor.h
+  __ranges/rbegin.h
   __ranges/ref_view.h
+  __ranges/rend.h
   __ranges/reverse_view.h
   __ranges/single_view.h
   __ranges/size.h
