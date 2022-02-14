@@ -74,9 +74,9 @@ int main(int, char**) {
       // separator.
       {"NO_ROOT_NAME_ON_LINUX", "NO_ROOT_NAME_ON_LINUX"},
       // p3: Replace each directory-separator with a preferred-separator.
-      // [ Note: The generic pathname grammar ([fs.path.generic]) defines
+      // [ Note: The generic pathname grammar ([fs.path.generic]) defines
       //   directory-separator as one or more slashes and preferred-separators.
-      //   — end note ]
+      //   — end note ]
       {"/", "/"},
       {"//", "/"},
       {"///", "/"},
@@ -107,8 +107,8 @@ int main(int, char**) {
       {"foo/bar/./..", "foo/"},
       {"foo/bar/./../", "foo/"},
       // p6: If there is a root-directory, remove all dot-dot filenames and any
-      // directory-separators immediately following them. [ Note: These dot-dot
-      // filenames attempt to refer to nonexistent parent directories. — end note ]
+      // directory-separators immediately following them. [ Note: These dot-dot
+      // filenames attempt to refer to nonexistent parent directories. — end note ]
       {"/..", "/"},
       {"/../", "/"},
       {"/foo/../..", "/"},
