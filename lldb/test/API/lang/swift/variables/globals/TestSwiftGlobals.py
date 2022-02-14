@@ -87,7 +87,7 @@ class TestSwiftGlobals(TestBase):
             g_counter.IsValid(),
             "g_counter returned a valid value object.")
         value = g_counter.GetValueAsSigned(error)
-        self.assertTrue(error.Success(), "Got a value for g_counter")
+        self.assertSuccess(error, "Got a value for g_counter")
         self.assertTrue(
             value == 0,
             "g_counter value is the uninitialized one.")
@@ -97,14 +97,14 @@ class TestSwiftGlobals(TestBase):
             foo_var.IsValid(),
             "foo_var returned a valid value object.")
         value = foo_var.GetValueAsUnsigned(error)
-        self.assertTrue(error.Success(), "foo_var has a value.")
+        self.assertSuccess(error, "foo_var has a value.")
         self.assertTrue(value == 0, "foo_var is null before initialization.")
 
         my_large_dude = frame.EvaluateExpression("my_large_dude", options)
         self.assertTrue(my_large_dude.IsValid(),
                         "my_large_dude returned a valid value object.")
         value = my_large_dude.GetValue()
-        self.assertTrue(error.Success(), "Got a value for my_large_dude")
+        self.assertSuccess(error, "Got a value for my_large_dude")
         self.assertTrue(
             value is None,
             "my_large_dude value is the uninitialized one.")
@@ -123,7 +123,7 @@ class TestSwiftGlobals(TestBase):
             g_counter.IsValid(),
             "g_counter returned a valid value object.")
         value = g_counter.GetValueAsSigned(error)
-        self.assertTrue(error.Success(), "Got a value for g_counter")
+        self.assertSuccess(error, "Got a value for g_counter")
         self.assertTrue(value == 2, "g_counter value should be 2.")
 
         foo_var = frame.EvaluateExpression("my_foo", options)
@@ -133,7 +133,7 @@ class TestSwiftGlobals(TestBase):
         foo_var_x = foo_var.GetChildMemberWithName("x")
         self.assertTrue(foo_var_x.IsValid(), "Got value object for foo_var.x")
         value = foo_var_x.GetValueAsUnsigned(error)
-        self.assertTrue(error.Success(), "foo_var.x has a value.")
+        self.assertSuccess(error, "foo_var.x has a value.")
         self.assertTrue(value == 1, "foo_var is null before initialization.")
 
         my_large_dude = frame.EvaluateExpression("my_large_dude", options)
@@ -144,7 +144,7 @@ class TestSwiftGlobals(TestBase):
             my_large_dude_y.IsValid(),
             "Got value object for my_large_dude.y")
         value = my_large_dude_y.GetValueAsUnsigned(error)
-        self.assertTrue(error.Success(), "Got a value for my_large_dude.y")
+        self.assertSuccess(error, "Got a value for my_large_dude.y")
         self.assertTrue(
             value == 20,
             "my_large_dude value is the uninitialized one.")

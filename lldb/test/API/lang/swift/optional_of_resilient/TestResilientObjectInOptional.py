@@ -42,9 +42,9 @@ class TestResilientObjectInOptional(TestBase):
         # First try getting a non-resilient optional, to make sure that
         # part isn't broken:
         t_opt_var = frame.FindVariable("t_opt")
-        self.assertTrue(t_opt_var.GetError().Success(), "Made t_opt value object")
+        self.assertSuccess(t_opt_var.GetError(), "Made t_opt value object")
         t_a_var = t_opt_var.GetChildMemberWithName("a")
-        self.assertTrue(t_a_var.GetError().Success(), "The child was a")
+        self.assertSuccess(t_a_var.GetError(), "The child was a")
         lldbutil.check_variable(self, t_a_var, False, value="2")
         
         # Make sure we can print an optional of a resilient type...
@@ -52,7 +52,7 @@ class TestResilientObjectInOptional(TestBase):
         # it's child will be "a".
         # First do this with "frame var":
         opt_var = frame.FindVariable("s_opt")
-        self.assertTrue(opt_var.GetError().Success(), "Made s_opt value object")
+        self.assertSuccess(opt_var.GetError(), "Made s_opt value object")
         a_var = opt_var.GetChildMemberWithName("a")
-        self.assertTrue(a_var.GetError().Success(), "The resilient child was 'a'")
+        self.assertSuccess(a_var.GetError(), "The resilient child was 'a'")
         lldbutil.check_variable(self, a_var, False, value="1")

@@ -79,10 +79,9 @@ class TestUnitTests(TestBase):
         options = lldb.SBExpressionOptions()
 
         value = self.frame().EvaluateExpression("lhs == rhs", options)
-        self.assertTrue(
-            value.GetError().Success(),
-            "Expression in %s was successful" %
-            (bkpt_name))
+        self.assertSuccess(
+            value.GetError(),
+            "Expression in %s was successful" % bkpt_name)
         summary = value.GetSummary()
         self.assertTrue(
             summary == compare_value,
@@ -92,7 +91,7 @@ class TestUnitTests(TestBase):
 
         # And make sure we got did increment the counter by the right value.
         value = self.frame().EvaluateExpression("Fooey.GetCounter()", options)
-        self.assertTrue(value.GetError().Success(), "GetCounter failed with error %s"%(value.GetError().GetCString()))
+        self.assertSuccess(value.GetError(), "GetCounter expression failed")
 
         counter = value.GetValueAsUnsigned()
         self.assertTrue(
@@ -102,9 +101,7 @@ class TestUnitTests(TestBase):
         # Make sure the presence of these type specific == operators doesn't interfere
         # with finding other unrelated == operators.
         value = self.frame().EvaluateExpression("1 == 2", options)
-        self.assertTrue(
-            value.GetError().Success(),
-            "1 == 2 expression couldn't run")
+        self.assertSuccess(value.GetError(), "1 == 2 expression couldn't run")
         self.assertTrue(
             value.GetSummary() == "false",
             "1 == 2 didn't return false.")

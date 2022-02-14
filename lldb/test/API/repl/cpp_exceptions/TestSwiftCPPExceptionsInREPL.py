@@ -79,6 +79,5 @@ class TestSwiftREPLExceptions(TestBase):
         options = lldb.SBExpressionOptions()
         options.SetREPLMode(True)
         val = frame.EvaluateExpression("call_cpp(); 5", options)
-        self.assertTrue(val.GetError().Success(), 
-                        "Got an error evaluating expression: %s."%(val.GetError().GetCString()))
+        self.assertSuccess(val.GetError(), "Got an error evaluating expression")
         self.assertEqual(val.GetValueAsUnsigned(), 5,"The expression didn't return the correct result")

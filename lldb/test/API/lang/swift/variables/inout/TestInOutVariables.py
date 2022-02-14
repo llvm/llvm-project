@@ -48,10 +48,9 @@ class TestInOutVariables(TestBase):
             message_end = "from EvaluateExpression"
             x_actual = self.frame().EvaluateExpression(
                 "x", lldb.eDynamicCanRunTarget)
-            self.assertTrue(
-                x_actual.GetError().Success(),
-                "Expression evaluation failed: %s" %
-                (x_actual.GetError().GetCString()))
+            self.assertSuccess(
+                x_actual.GetError(),
+                "Expression evaluation failed")
         else:
             message_end = "from FindVariable"
             x = self.frame().FindVariable("x").GetDynamicValue(
@@ -180,7 +179,7 @@ class TestInOutVariables(TestBase):
         var = self.frame().EvaluateExpression(
             "x = Other(in1: 556678, in2: 667788)",
             lldb.eDynamicCanRunTarget)
-        self.assertTrue(var.GetError().Success())
+        self.assertSuccess(var.GetError())
 
         #self.check_class("556677", "667788")
 

@@ -36,7 +36,7 @@ class TestSwiftAddressOf(lldbtest.TestBase):
         else:
             self.assertFalse(var.GetType().IsReferenceType(), name + "was supposed to be a reference.")
             addr_val = var.AddressOf()
-            self.assertTrue(addr_val.GetError().Success(), "AddressOf didn't return a good variable: %s."%(addr_val.GetError().GetCString()))
+            self.assertSuccess(addr_val.GetError(), "AddressOf didn't return a good variable")
             addr_value = addr_val.GetValueAsUnsigned()
             
         # FIXME: I want to use SBTarget::CreateValueFromAddress to make the
@@ -45,7 +45,7 @@ class TestSwiftAddressOf(lldbtest.TestBase):
         # for now I'm just telling myself that I could read the memory.
         error = lldb.SBError()
         bytes = self.process.ReadMemory(addr_value, var.GetByteSize(), error)
-        self.assertTrue(error.Success())
+        self.assertSuccess(error)
 
         
     @swiftTest

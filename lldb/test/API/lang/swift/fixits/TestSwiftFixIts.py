@@ -92,11 +92,11 @@ class TestSwiftFixIts(TestBase):
 
         # Check that the expressions were correct:
         tmp_value = frame.EvaluateExpression("$tmp == 100")
-        self.assertTrue(tmp_value.GetError().Success())
+        self.assertSuccess(tmp_value.GetError())
         self.assertTrue(tmp_value.GetSummary() == 'true')
         
         value = frame.EvaluateExpression(
                 "var $tmp2 = wrapper.wrapped", options)
         tmp_value = frame.EvaluateExpression("$tmp2 == 7")
-        self.assertTrue(tmp_value.GetError().Success())
+        self.assertSuccess(tmp_value.GetError())
         self.assertTrue(tmp_value.GetSummary() == 'true')

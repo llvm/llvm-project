@@ -44,7 +44,7 @@ class TestSwiftSubmoduleImport(TestBase):
         # so even though it doesn't seem like it this does test auto-import:
         value = self.frame().EvaluateExpression("b", options)
         self.assertTrue(value.IsValid(), "Got a valid variable back from b")
-        self.assertTrue(value.GetError().Success(),
+        self.assertSuccess(value.GetError(),
                         "And the variable was successfully evaluated")
         result = value.GetSummary()
         self.assertTrue(
@@ -56,8 +56,7 @@ class TestSwiftSubmoduleImport(TestBase):
         self.assertTrue(
             value.IsValid(),
             "Got a valid value back from import Darwin.C")
-        self.assertTrue(
-            value.GetError().Success(),
-            "The import was not successful: %s" %
-            (value.GetError().GetCString()))
+        self.assertSuccess(
+            value.GetError(),
+            "The import was not successful")
 

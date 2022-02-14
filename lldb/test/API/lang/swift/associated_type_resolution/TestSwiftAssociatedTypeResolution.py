@@ -37,8 +37,7 @@ class TestSwiftArchetypeResolution(TestBase):
         var = self.frame().FindVariable("things")
         var.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)
         var.SetPreferSyntheticValue(True)
-        self.assertTrue(var.GetError().Success(),
-                        "Failed to get things: %s"%(var.GetError().GetCString()))
+        self.assertSuccess(var.GetError(), "Failed to get things")
         self.assertEqual(var.GetNumChildren(), 4,
                          "Got the right number of children")
         type_name = var.GetTypeName()
@@ -46,8 +45,6 @@ class TestSwiftArchetypeResolution(TestBase):
                          "Wrong typename: %s."%(type_name))
         for i in range(0,4):
             child = var.GetChildAtIndex(i)
-            self.assertTrue(child.GetError().Success(),
-                            "Failed to get things[%d]: %s"%
-                            (i, var.GetError().GetCString()))
+            self.assertSuccess(child.GetError(), "Failed to get things[%d]" % i)
             value = child.GetValueAsUnsigned()
             self.assertEqual(value, i, "Wrong value: %d not %d."%(value, i))

@@ -52,7 +52,7 @@ class TestDefiningOverloadedFunctions(TestBase):
         value_obj = self.frame().EvaluateExpression(
             "func $overload(_ a: Int) -> Int { return 1 }\n 1")
         error = value_obj.GetError()
-        self.assertTrue(error.Success())
+        self.assertSuccess(error)
 
         self.check_expression("$overload(10)", "1", False)
 
@@ -60,7 +60,7 @@ class TestDefiningOverloadedFunctions(TestBase):
         value_obj = self.frame().EvaluateExpression(
             "func $overload(_ a: String) -> Int { return 2 } \n 1")
         error = value_obj.GetError()
-        self.assertTrue(error.Success())
+        self.assertSuccess(error)
 
         self.check_expression('$overload(10)', '1', False)
         self.check_expression('$overload("some string")', '2', False)

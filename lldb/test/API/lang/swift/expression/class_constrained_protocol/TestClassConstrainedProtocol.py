@@ -56,9 +56,8 @@ class TestClassConstrainedProtocol(TestBase):
         opts.SetFetchDynamicValue(lldb.eDynamicCanRunTarget)
         result = self.frame().EvaluateExpression("self", opts)
         error = result.GetError()
-        self.assertTrue(error.Success(),
-                        "'self' expression failed at '%s': %s"
-                        %(bkpt_pattern, error.GetCString()))
+        self.assertSuccess(error,
+                           "'self' expression failed at '%s'" % bkpt_pattern)
         f_ivar = result.GetChildMemberWithName("f")
         self.assertTrue(f_ivar.IsValid(),
                         "Could not find 'f' in self at '%s'"%(bkpt_pattern))

@@ -104,10 +104,7 @@ class TestExpressionErrors(TestBase):
         enum_value = self.frame().EvaluateExpression(
             "IThrowEnumOver10(101)", options)
         self.assertTrue(enum_value.IsValid(), "Got a valid enum value.")
-        self.assertTrue(
-            enum_value.GetError().Success(),
-            "Got error %s getting enum value" %
-            (enum_value.GetError().GetCString()))
+        self.assertSuccess(enum_value.GetError(), "Error getting enum value")
         self.assertTrue(
             enum_value.GetValue() == "ImportantError",
             "Expected 'ImportantError', got %s" %
@@ -116,15 +113,14 @@ class TestExpressionErrors(TestBase):
         object_value = self.frame().EvaluateExpression(
             "IThrowObjectOver10(101)", options)
         self.assertTrue(object_value.IsValid(), "Got a valid object value.")
-        self.assertTrue(
-            object_value.GetError().Success(),
-            "Got error %s getting object value" %
-            (object_value.GetError().GetCString()))
+        self.assertSuccess(
+            object_value.GetError(),
+            "Error getting object value")
 
         message = object_value.GetChildMemberWithName("m_message")
         self.assertTrue(message.IsValid(), "Found some m_message child.")
-        self.assertTrue(
-            message.GetError().Success(),
+        self.assertSuccess(
+            message.GetError(),
             "No errors fetching m_message value")
         self.assertTrue(
             message.GetSummary() == '"Over 100"',

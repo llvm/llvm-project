@@ -36,5 +36,5 @@ class TestOptionalAmbiguity(TestBase):
         # to compile, I just check that here.
         frame = thread.GetFrameAtIndex(0)
         ret_value = frame.EvaluateExpression("self")
-        self.assertTrue(ret_value.GetError().Success(), "The expression completed successfully")
+        self.assertSuccess(ret_value.GetError(), "The expression completed successfully")
 

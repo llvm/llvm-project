@@ -62,7 +62,7 @@ class TestPassedClosures(TestBase):
             # First see that we can print the function we were passed:
             result = self.frame().EvaluateExpression("fn", opts)
             error = result.GetError()
-            self.assertTrue(error.Success(),"'fn' failed: %s"%(error.GetCString()))
+            self.assertSuccess(error, "'fn' failed")
             self.assertTrue("() -> Swift.Int" in result.GetValue(), "Got the function name wrong: %s."%(result.GetValue()))
             self.assertTrue("() -> Swift.Int" in result.GetTypeName(), "Got the function type wrong: %s."%(result.GetTypeName()))
         
@@ -70,7 +70,7 @@ class TestPassedClosures(TestBase):
             # Now see that we can call it:
             result = self.frame().EvaluateExpression("fn()", opts)
             error.result.GetError()
-            self.assertTrue(error.Success(),"'fn()' failed: %s"%(error.GetCString()))
+            self.assertSuccess(error, "'fn()' failed")
             self.assertTrue(result.GetValue() == "3", "Got the wrong value: %s"%(result.GetValue()))
 
     def generic_type(self, test_call):
@@ -81,7 +81,7 @@ class TestPassedClosures(TestBase):
             # First see that we can print the function we were passed:
             result = self.frame().EvaluateExpression("fn", opts)
             error = result.GetError()
-            self.assertTrue(error.Success(),"'fn' failed: %s"%(error.GetCString()))
+            self.assertSuccess(error, "'fn' failed")
             self.assertTrue("() -> A" in result.GetValue(), "Got the function name wrong: %s."%(result.GetValue()))
             self.assertTrue("() -> A" in result.GetTypeName(), "Got the function type wrong: %s."%(result.GetTypeName()))
         
@@ -89,7 +89,7 @@ class TestPassedClosures(TestBase):
             # Now see that we can call it:
             result = self.frame().EvaluateExpression("fn()", opts)
             error.result.GetError()
-            self.assertTrue(error.Success(),"'fn()' failed: %s"%(error.GetCString()))
+            self.assertSuccess(error, "'fn()' failed")
             self.assertTrue(result.GetValue() == "3", "Got the wrong value: %s"%(result.GetValue()))
 
 
