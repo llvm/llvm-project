@@ -45,7 +45,7 @@ namespace __format_spec {
 /**
  * Contains the flags for the std-format-spec.
  *
- * Some format-options can only be used for specific C++types and may depend on
+ * Some format-options can only be used for specific C++ types and may depend on
  * the selected format-type.
  * * The C++type filtering can be done using the proper policies for
  *   @ref __parser_std.
