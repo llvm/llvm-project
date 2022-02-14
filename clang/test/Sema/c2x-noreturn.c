@@ -36,29 +36,30 @@ _Noreturn void func1(void); // ok, using the function specifier
 [[_Noreturn]] void func3(void); // all-warning {{the '[[_Noreturn]]' attribute spelling is deprecated in C2x; use '[[noreturn]]' instead}}
 
 // Test the behavior of including <stdnoreturn.h>
-#include <stdnoreturn.h> // c2x-warning@stdnoreturn.h:* {{the '<stdnoreturn.h>' header is deprecated in C2x}}
+#include <stdnoreturn.h> // c2x-warning@stdnoreturn.h:* {{the '<stdnoreturn.h>' header is deprecated in C2x; either use the '_Noreturn' keyword or the '[[noreturn]]' attribute}}
 
-[[noreturn]] void func6(void); // all-warning {{the '[[_Noreturn]]' attribute spelling is deprecated in C2x; use '[[noreturn]]' instead}} \
-                               // c2x-warning {{macro 'noreturn' has been marked as deprecated}} \
-                               // c2x-note@stdnoreturn.h:* {{macro marked 'deprecated' here}}
+[[noreturn]] void func6(void);
 
-void func7 [[noreturn]] (void); // all-warning {{the '[[_Noreturn]]' attribute spelling is deprecated in C2x; use '[[noreturn]]' instead}} \
-                                // c2x-warning {{macro 'noreturn' has been marked as deprecated}} \
-                                // c2x-note@stdnoreturn.h:* {{macro marked 'deprecated' here}}
+void func7 [[noreturn]] (void);
 
-noreturn void func8(void); // c2x-warning {{macro 'noreturn' has been marked as deprecated}} \
-                           // c2x-note@stdnoreturn.h:* {{macro marked 'deprecated' here}}
+noreturn void func8(void);
 
-// Ensure the function specifier form still works
-void noreturn func9(void); // c2x-warning {{macro 'noreturn' has been marked as deprecated}} \
-                           // c2x-note@stdnoreturn.h:* {{macro marked 'deprecated' here}}
+// Ensure the function specifier form still works.
+void noreturn func9(void);
+
+// Ensure that spelling the deprecated form of the attribute is still diagnosed.
+[[_Noreturn]] void func10(void); // all-warning {{the '[[_Noreturn]]' attribute spelling is deprecated in C2x; use '[[noreturn]]' instead}}
 
 // Test preprocessor functionality after including <stdnoreturn.h>.
-#if !__has_c_attribute(noreturn) // c2x-warning {{macro 'noreturn' has been marked as deprecated}} \
-                                 // c2x-note@stdnoreturn.h:* {{macro marked 'deprecated' here}}
+#if !__has_c_attribute(noreturn)
 #error "No noreturn attribute support?"
 #endif
 
 #if !__has_c_attribute(_Noreturn)
 #error "No _Noreturn attribute support?"
 #endif
+
+// Test that a macro which expands to _Noreturn is still diagnosed when it
+// doesn't come from a system header.
+#define NORETURN _Noreturn
+[[NORETURN]] void func11(void); // all-warning {{the '[[_Noreturn]]' attribute spelling is deprecated in C2x; use '[[noreturn]]' instead}}
