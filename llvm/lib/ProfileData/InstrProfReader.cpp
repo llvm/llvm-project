@@ -934,17 +934,24 @@ Error IndexedInstrProfReader::readHeader() {
   if ((const unsigned char *)DataBuffer->getBufferEnd() - Cur < 24)
     return error(instrprof_error::truncated);
 
-  auto HeaderOr = IndexedInstrProf::Header::readFromBuffer(Start);
-  if (!HeaderOr)
-    return HeaderOr.takeError();
+  auto *Header = reinterpret_cast<const IndexedInstrProf::Header *>(Cur);
+  Cur += sizeof(IndexedInstrProf::Header);
 
-  const IndexedInstrProf::Header *Header = &HeaderOr.get();
-  Cur += Header->size();
+  // Check the magic number.
+  uint64_t Magic = endian::byte_swap<uint64_t, little>(Header->Magic);
+  if (Magic != IndexedInstrProf::Magic)
+    return error(instrprof_error::bad_magic);
 
-  Cur = readSummary((IndexedInstrProf::ProfVersion)Header->Version, Cur,
+  // Read the version.
+  uint64_t FormatVersion = endian::byte_swap<uint64_t, little>(Header->Version);
+  if (GET_VERSION(FormatVersion) >
+      IndexedInstrProf::ProfVersion::CurrentVersion)
+    return error(instrprof_error::unsupported_version);
+
+  Cur = readSummary((IndexedInstrProf::ProfVersion)FormatVersion, Cur,
                     /* UseCS */ false);
-  if (Header->Version & VARIANT_MASK_CSIR_PROF)
-    Cur = readSummary((IndexedInstrProf::ProfVersion)Header->Version, Cur,
+  if (FormatVersion & VARIANT_MASK_CSIR_PROF)
+    Cur = readSummary((IndexedInstrProf::ProfVersion)FormatVersion, Cur,
                       /* UseCS */ true);
 
   // Read the hash type and start offset.
@@ -956,8 +963,9 @@ Error IndexedInstrProfReader::readHeader() {
   uint64_t HashOffset = endian::byte_swap<uint64_t, little>(Header->HashOffset);
 
   // The rest of the file is an on disk hash table.
-  auto IndexPtr = std::make_unique<InstrProfReaderIndex<OnDiskHashTableImplV3>>(
-      Start + HashOffset, Cur, Start, HashType, Header->Version);
+  auto IndexPtr =
+      std::make_unique<InstrProfReaderIndex<OnDiskHashTableImplV3>>(
+          Start + HashOffset, Cur, Start, HashType, FormatVersion);
 
   // Load the remapping table now if requested.
   if (RemappingBuffer) {
