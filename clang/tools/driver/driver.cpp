@@ -379,6 +379,7 @@ int main(int Argc, const char **Argv) {
     if (std::string(Arg).find("--target=x86_64-pc-windows") !=
         std::string::npos) {
       Args.push_back("-mssse3");
+      Args.push_back("-msse4.1");
       break;
     }
   }
