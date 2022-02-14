@@ -862,18 +862,9 @@ void CXXNameMangler::mangleFunctionEncodingBareType(const FunctionDecl *FD) {
                          MangleReturnType, FD);
 }
 
-static const DeclContext *IgnoreLinkageSpecDecls(const DeclContext *DC) {
-  while (isa<LinkageSpecDecl>(DC)) {
-    DC = getEffectiveParentContext(DC);
-  }
-
-  return DC;
-}
-
 /// Return whether a given namespace is the 'std' namespace.
 static bool isStd(const NamespaceDecl *NS) {
-  if (!IgnoreLinkageSpecDecls(getEffectiveParentContext(NS))
-                                ->isTranslationUnit())
+  if (!getEffectiveParentContext(NS)->isTranslationUnit())
     return false;
 
   const IdentifierInfo *II = NS->getOriginalNamespace()->getIdentifier();
@@ -978,7 +969,7 @@ void CXXNameMangler::mangleNameWithAbiTags(GlobalDecl GD,
     return;
   }
 
-  DC = IgnoreLinkageSpecDecls(DC);
+  assert(!isa<LinkageSpecDecl>(DC) && "context cannot be LinkageSpecDecl");
 
   if (isLocalContainerContext(DC)) {
     mangleLocalName(GD, AdditionalAbiTags);
@@ -1054,7 +1045,7 @@ void CXXNameMangler::mangleModuleNamePrefix(StringRef Name) {
 void CXXNameMangler::mangleTemplateName(const TemplateDecl *TD,
                                         const TemplateArgument *TemplateArgs,
                                         unsigned NumTemplateArgs) {
-  const DeclContext *DC = IgnoreLinkageSpecDecls(getEffectiveDeclContext(TD));
+  const DeclContext *DC = getEffectiveDeclContext(TD);
 
   if (DC->isTranslationUnit() || isStdNamespace(DC)) {
     mangleUnscopedTemplateName(TD, nullptr);
@@ -1070,7 +1061,7 @@ void CXXNameMangler::mangleUnscopedName(GlobalDecl GD,
   //  <unscoped-name> ::= <unqualified-name>
   //                  ::= St <unqualified-name>   # ::std::
 
-  if (isStdNamespace(IgnoreLinkageSpecDecls(getEffectiveDeclContext(ND))))
+  if (isStdNamespace(getEffectiveDeclContext(ND)))
     Out << "St";
 
   mangleUnqualifiedName(GD, AdditionalAbiTags);
@@ -2030,7 +2021,7 @@ void CXXNameMangler::manglePrefix(const DeclContext *DC, bool NoFunction) {
   //           ::= # empty
   //           ::= <substitution>
 
-  DC = IgnoreLinkageSpecDecls(DC);
+  assert(!isa<LinkageSpecDecl>(DC) && "prefix cannot be LinkageSpecDecl");
 
   if (DC->isTranslationUnit())
     return;
