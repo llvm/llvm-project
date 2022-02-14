@@ -594,7 +594,7 @@ private:
   StructType *createIdentifiedStructType(LLVMContext &Context);
 
   Type *getTypeByID(unsigned ID);
-  Type *getElementTypeByID(unsigned ID);
+  Type *getPtrElementTypeByID(unsigned ID);
 
   Value *getFnValueByID(unsigned ID, Type *Ty) {
     if (Ty && Ty->isMetadataTy())
@@ -1180,7 +1180,7 @@ Type *BitcodeReader::getTypeByID(unsigned ID) {
   return TypeList[ID] = createIdentifiedStructType(Context);
 }
 
-Type *BitcodeReader::getElementTypeByID(unsigned ID) {
+Type *BitcodeReader::getPtrElementTypeByID(unsigned ID) {
   if (ID >= TypeList.size())
     return nullptr;
 
@@ -2486,7 +2486,7 @@ Error BitcodeReader::parseConstants() {
       if (TypeList[Record[0]] == VoidType)
         return error("Invalid constant type");
       CurTy = TypeList[Record[0]];
-      CurElemTy = getElementTypeByID(Record[0]);
+      CurElemTy = getPtrElementTypeByID(Record[0]);
       continue;  // Skip the ValueList manipulation.
     case bitc::CST_CODE_NULL:      // NULL
       if (CurTy->isVoidTy() || CurTy->isFunctionTy() || CurTy->isLabelTy())
@@ -3319,7 +3319,7 @@ Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
     if (!Ty->isPointerTy())
       return error("Invalid type for value");
     AddressSpace = cast<PointerType>(Ty)->getAddressSpace();
-    Ty = getElementTypeByID(Record[0]);
+    Ty = getPtrElementTypeByID(Record[0]);
     if (!Ty)
       return error("Missing element type for old-style global");
   }
@@ -3414,7 +3414,7 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
   if (!FTy)
     return error("Invalid record");
   if (isa<PointerType>(FTy)) {
-    FTy = getElementTypeByID(Record[0]);
+    FTy = getPtrElementTypeByID(Record[0]);
     if (!FTy)
       return error("Missing element type for old-style function");
   }
@@ -3583,7 +3583,7 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
     if (!PTy)
       return error("Invalid type for value");
     AddrSpace = PTy->getAddressSpace();
-    Ty = getElementTypeByID(TypeID);
+    Ty = getPtrElementTypeByID(TypeID);
     if (!Ty)
       return error("Missing element type for old-style indirect symbol");
   } else {
@@ -5044,7 +5044,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       const bool SwiftError = Bitfield::get<APV::SwiftError>(Rec);
       Type *Ty = getTypeByID(Record[0]);
       if (!Bitfield::get<APV::ExplicitType>(Rec)) {
-        Ty = getElementTypeByID(Record[0]);
+        Ty = getPtrElementTypeByID(Record[0]);
         if (!Ty)
           return error("Missing element type for old-style alloca");
       }
