@@ -72,8 +72,6 @@ class TestCase(TestBase):
         value = self.target().EvaluateExpression(expr)
         self.assertSuccess(value.GetError())
 
-    # We fail to lookup static members on Windows.
-    @expectedFailureAll(oslist=["windows"])
     def test_IR_interpreter_can_handle_getelementptr_constants_args(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "// stop in main", lldb.SBFileSpec("main.cpp"))
