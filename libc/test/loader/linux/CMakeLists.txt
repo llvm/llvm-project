@@ -43,18 +43,19 @@ add_loader_test(
     libc.loader.linux.crt1
 )
 
-add_loader_test(
-  getenv_test
-  SRC
-    getenv_test.cpp
-  DEPENDS
-    .loader_test
-    libc.loader.linux.crt1
-    libc.src.stdlib.getenv
-  ENV
-    FRANCE=Paris
-    GERMANY=Berlin
-)
+# TODO: Disableing this test temporarily.
+# add_loader_test(
+#   getenv_test
+#   SRC
+#     getenv_test.cpp
+#   DEPENDS
+#     .loader_test
+#     libc.loader.linux.crt1
+#     libc.src.stdlib.getenv
+#   ENV
+#     FRANCE=Paris
+#     GERMANY=Berlin
+# )
 
 
 # TODO: Disableing this test temporarily to investigate why gold fails to link
