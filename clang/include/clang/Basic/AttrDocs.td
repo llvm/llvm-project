@@ -487,10 +487,14 @@ pointer type.
 
 def CXX11NoReturnDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "noreturn, _Noreturn";
   let Content = [{
 A function declared as ``[[noreturn]]`` shall not return to its caller. The
 compiler will generate a diagnostic for a function declared as ``[[noreturn]]``
 that appears to be capable of returning to its caller.
+
+The ``[[_Noreturn]]`` spelling is deprecated and only exists to ease code
+migration for code using ``[[noreturn]]`` after including ``<stdnoreturn.h>``.
   }];
 }
 
