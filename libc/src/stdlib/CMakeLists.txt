@@ -39,6 +39,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getenv
+  SRCS
+    getenv.cpp
+  HDRS
+    getenv.h
+  DEPENDS
+    libc.config.linux.app_h
+    libc.src.string.strncmp
+)
+
+add_entrypoint_object(
   strtof
   SRCS
     strtof.cpp

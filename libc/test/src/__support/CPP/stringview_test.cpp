@@ -45,6 +45,19 @@ TEST(LlvmLibcStringViewTest, Equals) {
   ASSERT_FALSE(v.equals(__llvm_libc::cpp::StringView("abcde")));
 }
 
+TEST(LlvmLibcStringViewTest, startsWith) {
+  __llvm_libc::cpp::StringView v("abc");
+  ASSERT_TRUE(v.starts_with(__llvm_libc::cpp::StringView("a")));
+  ASSERT_TRUE(v.starts_with(__llvm_libc::cpp::StringView("ab")));
+  ASSERT_TRUE(v.starts_with(__llvm_libc::cpp::StringView("abc")));
+  ASSERT_TRUE(v.starts_with(__llvm_libc::cpp::StringView()));
+  ASSERT_TRUE(v.starts_with(__llvm_libc::cpp::StringView("")));
+  ASSERT_FALSE(v.starts_with(__llvm_libc::cpp::StringView("123")));
+  ASSERT_FALSE(v.starts_with(__llvm_libc::cpp::StringView("abd")));
+  ASSERT_FALSE(v.starts_with(__llvm_libc::cpp::StringView("aaa")));
+  ASSERT_FALSE(v.starts_with(__llvm_libc::cpp::StringView("abcde")));
+}
+
 TEST(LlvmLibcStringViewTest, RemovePrefix) {
   __llvm_libc::cpp::StringView v("123456789");
 
