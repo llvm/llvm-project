@@ -409,6 +409,10 @@ void LinkerDriver::parseDirectives(InputFile *file) {
     case OPT_guardsym:
     case OPT_throwingnew:
       break;
+    case OPT_align:
+      // [MSVC Compatibility] Handle #pragma comment(linker, "/ALIGN:0x10000")
+      parseNumbers(arg->getValue(), &config->align);
+      break;
     default:
       error(arg->getSpelling() + " is not allowed in .drectve");
     }
