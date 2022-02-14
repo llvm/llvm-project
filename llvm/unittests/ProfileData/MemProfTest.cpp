@@ -123,8 +123,8 @@ TEST(MemProf, FillsValue) {
   CSM[0x2] = {0x6000, 0x2000};
 
   llvm::MapVector<uint64_t, MemInfoBlock> Prof;
-  Prof[0x1].alloc_count = 1;
-  Prof[0x2].alloc_count = 2;
+  Prof[0x1].AllocCount = 1;
+  Prof[0x2].AllocCount = 2;
 
   auto Seg = makeSegments();
 
@@ -136,8 +136,8 @@ TEST(MemProf, FillsValue) {
   }
   EXPECT_EQ(Records.size(), 2U);
 
-  EXPECT_EQ(Records[0].Info.alloc_count, 1U);
-  EXPECT_EQ(Records[1].Info.alloc_count, 2U);
+  EXPECT_EQ(Records[0].Info.AllocCount, 1U);
+  EXPECT_EQ(Records[1].Info.AllocCount, 2U);
   EXPECT_THAT(Records[0].CallStack[0], FrameContains("foo", 5U, 30U, false));
   EXPECT_THAT(Records[0].CallStack[1], FrameContains("bar", 51U, 20U, true));
 

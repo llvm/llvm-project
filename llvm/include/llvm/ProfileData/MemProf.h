@@ -51,41 +51,41 @@ struct MemProfRecord {
 
     // TODO: Replace this once the format is updated to be version agnostic.
     OS << "      "
-       << "AllocCount: " << Info.alloc_count << "\n";
+       << "AllocCount: " << Info.AllocCount << "\n";
     OS << "      "
-       << "TotalAccessCount: " << Info.total_access_count << "\n";
+       << "TotalAccessCount: " << Info.TotalAccessCount << "\n";
     OS << "      "
-       << "MinAccessCount: " << Info.min_access_count << "\n";
+       << "MinAccessCount: " << Info.MinAccessCount << "\n";
     OS << "      "
-       << "MaxAccessCount: " << Info.max_access_count << "\n";
+       << "MaxAccessCount: " << Info.MaxAccessCount << "\n";
     OS << "      "
-       << "TotalSize: " << Info.total_size << "\n";
+       << "TotalSize: " << Info.TotalSize << "\n";
     OS << "      "
-       << "MinSize: " << Info.min_size << "\n";
+       << "MinSize: " << Info.MinSize << "\n";
     OS << "      "
-       << "MaxSize: " << Info.max_size << "\n";
+       << "MaxSize: " << Info.MaxSize << "\n";
     OS << "      "
-       << "AllocTimestamp: " << Info.alloc_timestamp << "\n";
+       << "AllocTimestamp: " << Info.AllocTimestamp << "\n";
     OS << "      "
-       << "DeallocTimestamp: " << Info.dealloc_timestamp << "\n";
+       << "DeallocTimestamp: " << Info.DeallocTimestamp << "\n";
     OS << "      "
-       << "TotalLifetime: " << Info.total_lifetime << "\n";
+       << "TotalLifetime: " << Info.TotalLifetime << "\n";
     OS << "      "
-       << "MinLifetime: " << Info.min_lifetime << "\n";
+       << "MinLifetime: " << Info.MinLifetime << "\n";
     OS << "      "
-       << "MaxLifetime: " << Info.max_lifetime << "\n";
+       << "MaxLifetime: " << Info.MaxLifetime << "\n";
     OS << "      "
-       << "AllocCpuId: " << Info.alloc_cpu_id << "\n";
+       << "AllocCpuId: " << Info.AllocCpuId << "\n";
     OS << "      "
-       << "DeallocCpuId: " << Info.dealloc_cpu_id << "\n";
+       << "DeallocCpuId: " << Info.DeallocCpuId << "\n";
     OS << "      "
-       << "NumMigratedCpu: " << Info.num_migrated_cpu << "\n";
+       << "NumMigratedCpu: " << Info.NumMigratedCpu << "\n";
     OS << "      "
-       << "NumLifetimeOverlaps: " << Info.num_lifetime_overlaps << "\n";
+       << "NumLifetimeOverlaps: " << Info.NumLifetimeOverlaps << "\n";
     OS << "      "
-       << "NumSameAllocCpu: " << Info.num_same_alloc_cpu << "\n";
+       << "NumSameAllocCpu: " << Info.NumSameAllocCpu << "\n";
     OS << "      "
-       << "NumSameDeallocCpu: " << Info.num_same_dealloc_cpu << "\n";
+       << "NumSameDeallocCpu: " << Info.NumSameDeallocCpu << "\n";
   }
 };
 
