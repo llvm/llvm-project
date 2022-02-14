@@ -235,10 +235,10 @@ def : GCNPat <
 
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 def S_BREV_B32 : SOP1_32 <"s_brev_b32",
-  [(set i32:$sdst, (bitreverse i32:$src0))]
+  [(set i32:$sdst, (UniformUnaryFrag<bitreverse> i32:$src0))]
 >;
 def S_BREV_B64 : SOP1_64 <"s_brev_b64",
-  [(set i64:$sdst, (bitreverse i64:$src0))]
+  [(set i64:$sdst, (UniformUnaryFrag<bitreverse> i64:$src0))]
 >;
 } // End isReMaterializable = 1, isAsCheapAsAMove = 1
 

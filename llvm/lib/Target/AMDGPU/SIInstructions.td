@@ -2431,6 +2431,11 @@ def : GCNPat <
 
 }
 
+def : GCNPat<
+  (i64 (DivergentUnaryFrag<bitreverse> i64:$a)),
+  (REG_SEQUENCE VReg_64,
+   (V_BFREV_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$a, sub1))), sub0,
+   (V_BFREV_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$a, sub0))), sub1)>;
 
 // Prefer selecting to max when legal, but using mul is always valid.
 let AddedComplexity = -5 in {

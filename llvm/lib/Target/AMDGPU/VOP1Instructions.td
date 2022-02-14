@@ -282,7 +282,7 @@ defm V_COS_F32 : VOP1Inst <"v_cos_f32", VOP_F32_F32, AMDGPUcos>;
 } // End TRANS = 1, SchedRW = [WriteTrans32]
 
 defm V_NOT_B32 : VOP1Inst <"v_not_b32", VOP_I32_I32>;
-defm V_BFREV_B32 : VOP1Inst <"v_bfrev_b32", VOP_I32_I32, bitreverse>;
+defm V_BFREV_B32 : VOP1Inst <"v_bfrev_b32", VOP_I32_I32, DivergentUnaryFrag<bitreverse>>;
 defm V_FFBH_U32 : VOP1Inst <"v_ffbh_u32", VOP_I32_I32, AMDGPUffbh_u32>;
 defm V_FFBL_B32 : VOP1Inst <"v_ffbl_b32", VOP_I32_I32, AMDGPUffbl_b32>;
 defm V_FFBH_I32 : VOP1Inst <"v_ffbh_i32", VOP_I32_I32, AMDGPUffbh_i32>;
