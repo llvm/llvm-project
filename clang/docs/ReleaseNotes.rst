@@ -77,6 +77,9 @@ Attribute Changes in Clang
 
 - Added support for parameter pack expansion in `clang::annotate`.
 
+- The ``overloadable`` attribute can now be written in all of the syntactic
+  locations a declaration attribute may appear. Fixes PR53805.
+
 Windows Support
 ---------------
 

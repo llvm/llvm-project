@@ -5238,7 +5238,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         // function is marked with the "overloadable" attribute. Scan
         // for this attribute now.
         if (!FTI.NumParams && FTI.isVariadic && !LangOpts.CPlusPlus)
-          if (!D.getAttributes().hasAttribute(ParsedAttr::AT_Overloadable))
+          if (!D.getAttributes().hasAttribute(ParsedAttr::AT_Overloadable) &&
+              !D.getDeclSpec().getAttributes().hasAttribute(
+                  ParsedAttr::AT_Overloadable))
             S.Diag(FTI.getEllipsisLoc(), diag::err_ellipsis_first_param);
 
         if (FTI.NumParams && FTI.Params[0].Param == nullptr) {
