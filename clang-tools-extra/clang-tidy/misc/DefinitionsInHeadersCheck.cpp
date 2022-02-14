@@ -149,6 +149,9 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
     // Ignore inline variables.
     if (VD->isInline())
       return;
+    // Ignore partial specializations.
+    if (isa<VarTemplatePartialSpecializationDecl>(VD))
+      return;
 
     diag(VD->getLocation(),
          "variable %0 defined in a header file; "
