@@ -82,7 +82,7 @@ function(add_entrypoint_library target_name)
   list(REMOVE_DUPLICATES all_deps)
   set(objects "")
   foreach(dep IN LISTS all_deps)
-    list(APPEND objects $<TARGET_OBJECTS:${dep}>)
+    list(APPEND objects $<$<STREQUAL:$<TARGET_NAME_IF_EXISTS:${dep}>,${dep}>:$<TARGET_OBJECTS:${dep}>>)
   endforeach(dep)
 
   add_library(
