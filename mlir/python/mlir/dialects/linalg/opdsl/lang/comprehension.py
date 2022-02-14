@@ -17,9 +17,6 @@ from .scalar_expr import *
 from .types import *
 from .yaml_helper import *
 
-# Type aliases.
-AffineDimList = Dict[str, _ir.AffineExpr]
-
 
 class TensorExpression:
   """An expression that can appear on the RHS of a comprehension."""
