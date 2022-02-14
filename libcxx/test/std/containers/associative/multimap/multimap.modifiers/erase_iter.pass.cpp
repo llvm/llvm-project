@@ -86,7 +86,7 @@ int main(int, char**)
 
         i = m.erase(std::next(m.cbegin(), 5));
         assert(m.size() == 6);
-        assert(i == prev(m.end()));
+        assert(i == std::prev(m.end()));
         assert(std::next(m.begin(), 0)->first == 1);
         assert(std::next(m.begin(), 0)->second == 1.5);
         assert(std::next(m.begin(), 1)->first == 1);
@@ -214,7 +214,7 @@ int main(int, char**)
 
         i = m.erase(std::next(m.cbegin(), 5));
         assert(m.size() == 6);
-        assert(i == prev(m.end()));
+        assert(i == std::prev(m.end()));
         assert(std::next(m.begin(), 0)->first == 1);
         assert(std::next(m.begin(), 0)->second == 1.5);
         assert(std::next(m.begin(), 1)->first == 1);
