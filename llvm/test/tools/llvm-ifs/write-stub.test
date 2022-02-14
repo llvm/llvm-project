@@ -142,10 +142,11 @@ Symbols:
 # CHECK-NEXT:   EntrySize: 0
 # CHECK-NEXT: }
 
-# CHECK:      DynamicSection [ (4 entries)
+# CHECK:      DynamicSection [ (5 entries)
 # CHECK-NEXT:   Tag                Type   Name/Value
 # CHECK-NEXT:   0x[[DYNTABZ]]0000006 SYMTAB
 # CHECK-NEXT:   0x[[DYNTABZ]]0000005 STRTAB
+# CHECK-NEXT:   0x[[DYNTABZ]]000000A STRSZ
 # CHECK-NEXT:   0x[[DYNTABZ]]0000001 NEEDED Shared library: [libc.so.6]
 # CHECK-NEXT:   0x[[DYNTABZ]]0000000 NULL
 # CHECK-NEXT: ]
