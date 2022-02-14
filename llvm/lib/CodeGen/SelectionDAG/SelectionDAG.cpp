@@ -5274,6 +5274,30 @@ static llvm::Optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
     APInt C2Ext = C2.zext(FullWidth);
     return (C1Ext * C2Ext).extractBits(C1.getBitWidth(), C1.getBitWidth());
   }
+  case ISD::AVGFLOORS: {
+    unsigned FullWidth = C1.getBitWidth() + 1;
+    APInt C1Ext = C1.sext(FullWidth);
+    APInt C2Ext = C2.sext(FullWidth);
+    return (C1Ext + C2Ext).extractBits(C1.getBitWidth(), 1);
+  }
+  case ISD::AVGFLOORU: {
+    unsigned FullWidth = C1.getBitWidth() + 1;
+    APInt C1Ext = C1.zext(FullWidth);
+    APInt C2Ext = C2.zext(FullWidth);
+    return (C1Ext + C2Ext).extractBits(C1.getBitWidth(), 1);
+  }
+  case ISD::AVGCEILS: {
+    unsigned FullWidth = C1.getBitWidth() + 1;
+    APInt C1Ext = C1.sext(FullWidth);
+    APInt C2Ext = C2.sext(FullWidth);
+    return (C1Ext + C2Ext + 1).extractBits(C1.getBitWidth(), 1);
+  }
+  case ISD::AVGCEILU: {
+    unsigned FullWidth = C1.getBitWidth() + 1;
+    APInt C1Ext = C1.zext(FullWidth);
+    APInt C2Ext = C2.zext(FullWidth);
+    return (C1Ext + C2Ext + 1).extractBits(C1.getBitWidth(), 1);
+  }
   }
   return llvm::None;
 }
