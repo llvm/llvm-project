@@ -5136,12 +5136,15 @@ SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = simplifyFPOp({Op0, Op1}, FMF, Q, ExBehavior, Rounding))
     return C;
 
+  // fsub X, +0 ==> X
+  if (canIgnoreSNaN(ExBehavior, FMF) &&
+      (!canRoundingModeBe(Rounding, RoundingMode::TowardNegative) ||
+       FMF.noSignedZeros()))
+    if (match(Op1, m_PosZeroFP()))
+      return Op0;
+
   if (!isDefaultFPEnvironment(ExBehavior, Rounding))
     return nullptr;
-
-  // fsub X, +0 ==> X
-  if (match(Op1, m_PosZeroFP()))
-    return Op0;
 
   // fsub X, -0 ==> X, when we know X is not -0
   if (match(Op1, m_NegZeroFP()) &&

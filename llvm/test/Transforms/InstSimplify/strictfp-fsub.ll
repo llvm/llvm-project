@@ -27,11 +27,9 @@ define float @fsub_x_p0_ebmaytrap(float %a) #0 {
   ret float %ret
 }
 
-; TODO: This will fold if we allow non-default floating point environments.
 define float @fsub_nnan_x_p0_ebmaytrap(float %a) #0 {
 ; CHECK-LABEL: @fsub_nnan_x_p0_ebmaytrap(
-; CHECK-NEXT:    [[RET:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[RET]]
+; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %ret = call nnan float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
   ret float %ret
@@ -47,12 +45,11 @@ define float @fsub_x_p0_ebstrict(float %a) #0 {
   ret float %ret
 }
 
-; TODO: This will fold if we allow non-default floating point environments.
 ; TODO: The instruction is expected to remain, but the result isn't used.
 define float @fsub_nnan_x_p0_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fsub_nnan_x_p0_ebstrict(
 ; CHECK-NEXT:    [[RET:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[RET]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %ret = call nnan float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %ret
@@ -65,6 +62,45 @@ define float @fsub_ninf_x_p0_ebstrict(float %a) #0 {
 ; CHECK-NEXT:    ret float [[RET]]
 ;
   %ret = call ninf float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret float %ret
+}
+
+; Round to -inf and if x is zero then the result is -0.0: must not fire
+define float @fsub_x_p0_neginf(float %a) #0 {
+; CHECK-LABEL: @fsub_x_p0_neginf(
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.downward", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    ret float [[RET]]
+;
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.downward", metadata !"fpexcept.ignore") #0
+  ret float %ret
+}
+
+; Dynamic rounding means the rounding mode might be to -inf:
+; Round to -inf and if x is zero then the result is -0.0: must not fire
+define float @fsub_x_p0_dynamic(float %a) #0 {
+; CHECK-LABEL: @fsub_x_p0_dynamic(
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    ret float [[RET]]
+;
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  ret float %ret
+}
+
+; With nsz we don't have to worry about -0.0 so the transform is valid.
+define float @fsub_nsz_x_p0_neginf(float %a) #0 {
+; CHECK-LABEL: @fsub_nsz_x_p0_neginf(
+; CHECK-NEXT:    ret float [[A:%.*]]
+;
+  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.downward", metadata !"fpexcept.ignore") #0
+  ret float %ret
+}
+
+; With nsz we don't have to worry about -0.0 so the transform is valid.
+define float @fsub_nsz_x_p0_dynamic(float %a) #0 {
+; CHECK-LABEL: @fsub_nsz_x_p0_dynamic(
+; CHECK-NEXT:    ret float [[A:%.*]]
+;
+  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float %a, float 0.0, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
   ret float %ret
 }
 
