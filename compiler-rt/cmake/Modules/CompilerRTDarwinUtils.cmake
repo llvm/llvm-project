@@ -298,6 +298,14 @@ macro(darwin_add_builtin_library name suffix)
          -target "${LIB_ARCH}-apple-${base_os}${DARWIN_${LIBOS}_BUILTIN_MIN_VER}-simulator")
   endif()
 
+  if ("${COMPILER_RT_ENABLE_MACCATALYST}" AND
+      "${LIB_OS}" MATCHES "^osx$")
+    # Build the macOS builtins with Mac Catalyst support.
+    list(APPEND builtin_cflags
+      -target ${LIB_ARCH}-apple-macos${DARWIN_osx_BUILTIN_MIN_VER}
+      -darwin-target-variant ${LIB_ARCH}-apple-ios13.1-macabi)
+  endif()
+
   set_target_compile_flags(${libname}
     ${sysroot_flag}
     ${DARWIN_${LIB_OS}_BUILTIN_MIN_VER_FLAG}

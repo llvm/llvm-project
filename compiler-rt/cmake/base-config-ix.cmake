@@ -3,6 +3,7 @@
 # .o files. This is particularly useful in producing larger, more complex
 # runtime libraries.
 
+include(BuiltinTests)
 include(CheckIncludeFile)
 include(CheckCXXSourceCompiles)
 include(GNUInstallDirs)
@@ -138,6 +139,12 @@ if(APPLE)
     set(OSX_SYSROOT_FLAG "")
   endif()
 
+  try_compile_only(COMPILER_RT_HAS_DARWIN_TARGET_VARIANT_FLAG
+                   FLAGS
+                   "-target" "x86_64-apple-macos10.15"
+                   "-darwin-target-variant" "x86_64-apple-ios13.1-macabi"
+                   "-Werror")
+  option(COMPILER_RT_ENABLE_MACCATALYST "Enable building for Mac Catalyst" ${COMPILER_RT_HAS_DARWIN_TARGET_VARIANT_FLAG})
   option(COMPILER_RT_ENABLE_IOS "Enable building for iOS" On)
   option(COMPILER_RT_ENABLE_WATCHOS "Enable building for watchOS - Experimental" Off)
   option(COMPILER_RT_ENABLE_TVOS "Enable building for tvOS - Experimental" Off)
