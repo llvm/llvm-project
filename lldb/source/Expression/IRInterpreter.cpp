@@ -1193,16 +1193,6 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       const Value *pointer_operand = load_inst->getPointerOperand();
 
-      Type *pointer_ty = pointer_operand->getType();
-      PointerType *pointer_ptr_ty = dyn_cast<PointerType>(pointer_ty);
-      if (!pointer_ptr_ty) {
-        LLDB_LOGF(log, "getPointerOperand()->getType() is not a PointerType");
-        error.SetErrorToGenericError();
-        error.SetErrorString(interpreter_internal_error);
-        return false;
-      }
-      Type *target_ty = pointer_ptr_ty->getElementType();
-
       lldb::addr_t D = frame.ResolveValue(load_inst, module);
       lldb::addr_t P = frame.ResolveValue(pointer_operand, module);
 
@@ -1231,6 +1221,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         return false;
       }
 
+      Type *target_ty = load_inst->getType();
       size_t target_size = data_layout.getTypeStoreSize(target_ty);
       lldb_private::DataBufferHeap buffer(target_size, 0);
 
@@ -1276,12 +1267,6 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       const Value *value_operand = store_inst->getValueOperand();
       const Value *pointer_operand = store_inst->getPointerOperand();
 
-      Type *pointer_ty = pointer_operand->getType();
-      PointerType *pointer_ptr_ty = dyn_cast<PointerType>(pointer_ty);
-      if (!pointer_ptr_ty)
-        return false;
-      Type *target_ty = pointer_ptr_ty->getElementType();
-
       lldb::addr_t D = frame.ResolveValue(value_operand, module);
       lldb::addr_t P = frame.ResolveValue(pointer_operand, module);
 
@@ -1310,6 +1295,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         return false;
       }
 
+      Type *target_ty = value_operand->getType();
       size_t target_size = data_layout.getTypeStoreSize(target_ty);
       lldb_private::DataBufferHeap buffer(target_size, 0);
 
