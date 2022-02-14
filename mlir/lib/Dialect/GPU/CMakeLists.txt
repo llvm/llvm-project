@@ -133,7 +133,7 @@ if(MLIR_ENABLE_ROCM_RUNNER)
     MLIR_GPU_TO_HSACO_PASS_ENABLE=1
   )
 
-  target_link_libraries(MLIRGPUOps
+  target_link_libraries(MLIRGPUTransforms
     PRIVATE
     MLIRExecutionEngine
     MLIRROCDLToLLVMIRTranslation
