@@ -64,7 +64,7 @@ namespace pmr {
 
  */
 
-#include <__debug>
+#include <__assert>
 #include <__tuple>
 #include <cstddef>
 #include <cstdlib>

@@ -1,0 +1,69 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP___ASSERT
+#define _LIBCPP___ASSERT
+
+#include <__config>
+#include <iosfwd> // for std::string
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+#if _LIBCPP_DEBUG_LEVEL >= 1
+#   define _LIBCPP_ASSERT_IMPL(x, m) ((x) ? (void)0 : ::std::__libcpp_debug_function(::std::__libcpp_debug_info(__FILE__, __LINE__, #x, m)))
+#else
+#   define _LIBCPP_ASSERT_IMPL(x, m) ((void)0)
+#endif
+
+// We do this dance because some of our tests re-define _LIBCPP_ASSERT to something else.
+// In the future, we should find other ways to test our assertions and disallow re-defining
+// _LIBCPP_ASSERT.
+#if !defined(_LIBCPP_ASSERT)
+#   define _LIBCPP_ASSERT(x, m) _LIBCPP_ASSERT_IMPL(x, m)
+#endif
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+struct _LIBCPP_TEMPLATE_VIS __libcpp_debug_info {
+  _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+  __libcpp_debug_info()
+      : __file_(nullptr), __line_(-1), __pred_(nullptr), __msg_(nullptr) {}
+  _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+  __libcpp_debug_info(const char* __f, int __l, const char* __p, const char* __m)
+    : __file_(__f), __line_(__l), __pred_(__p), __msg_(__m) {}
+
+  _LIBCPP_FUNC_VIS string what() const;
+
+  const char* __file_;
+  int __line_;
+  const char* __pred_;
+  const char* __msg_;
+};
+
+/// __libcpp_debug_function_type - The type of the assertion failure handler.
+typedef void(*__libcpp_debug_function_type)(__libcpp_debug_info const&);
+
+/// __libcpp_debug_function - The handler function called when a _LIBCPP_ASSERT
+///    fails.
+extern _LIBCPP_EXPORTED_FROM_ABI __libcpp_debug_function_type __libcpp_debug_function;
+
+/// __libcpp_abort_debug_function - A debug handler that aborts when called.
+_LIBCPP_NORETURN _LIBCPP_FUNC_VIS
+void __libcpp_abort_debug_function(__libcpp_debug_info const&);
+
+/// __libcpp_set_debug_function - Set the debug handler to the specified
+///    function.
+_LIBCPP_FUNC_VIS
+bool __libcpp_set_debug_function(__libcpp_debug_function_type __func);
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP___ASSERT

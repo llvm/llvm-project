@@ -21,6 +21,7 @@
 #include <__algorithm/find_if.h>
 #include <__algorithm/lower_bound.h>
 #include <__algorithm/min.h>
+#include <__assert>
 #include <__config>
 #include <__iterator/access.h>
 #include <__iterator/size.h>

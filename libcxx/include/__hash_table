@@ -12,6 +12,7 @@
 
 #include <__algorithm/max.h>
 #include <__algorithm/min.h>
+#include <__assert>
 #include <__bits> // __libcpp_clz
 #include <__config>
 #include <__debug>

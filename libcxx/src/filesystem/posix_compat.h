@@ -23,6 +23,7 @@
 #ifndef POSIX_COMPAT_H
 #define POSIX_COMPAT_H
 
+#include <__assert>
 #include <filesystem>
 
 #include "filesystem_common.h"

@@ -17,9 +17,9 @@
 #include <__algorithm/min.h>
 #include <__algorithm/rotate.h>
 #include <__algorithm/transform.h>
+#include <__assert>
 #include <__concepts/arithmetic.h>
 #include <__config>
-#include <__debug>
 #include <__format/format_error.h>
 #include <__format/format_fwd.h>
 #include <__format/format_string.h>

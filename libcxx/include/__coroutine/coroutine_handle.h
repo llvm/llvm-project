@@ -9,8 +9,8 @@
 #ifndef _LIBCPP___COROUTINE_COROUTINE_HANDLE_H
 #define _LIBCPP___COROUTINE_COROUTINE_HANDLE_H
 
+#include <__assert>
 #include <__config>
-#include <__debug>
 #include <__functional/hash.h>
 #include <__memory/addressof.h>
 #include <compare>

@@ -180,9 +180,9 @@ typedef basic_fstream<wchar_t> wfstream;
 */
 
 #include <__algorithm/max.h>
+#include <__assert>
 #include <__availability>
 #include <__config>
-#include <__debug>
 #include <__locale>
 #include <__utility/unreachable.h>
 #include <cstdio>

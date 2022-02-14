@@ -61,11 +61,11 @@ namespace std {
 
 */
 
+#include <__assert>
 #include <__bit/bit_cast.h>
 #include <__bit/byteswap.h>
 #include <__bits> // __libcpp_clz
 #include <__config>
-#include <__debug>
 #include <limits>
 #include <type_traits>
 #include <version>

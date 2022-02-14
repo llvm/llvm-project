@@ -17,7 +17,9 @@
 #include <__algorithm/find_end.h>
 #include <__algorithm/find_first_of.h>
 #include <__algorithm/min.h>
+#include <__assert>
 #include <__config>
+#include <__debug>
 #include <__functional/hash.h>     // for __murmur2_or_cityhash
 #include <__iterator/iterator_traits.h>
 #include <cstdint>     // for uint_least16_t
@@ -29,8 +31,6 @@
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 #   include <cwchar> // for wmemcpy
 #endif
-
-#include <__debug>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

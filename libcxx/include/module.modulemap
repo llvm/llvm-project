@@ -989,6 +989,7 @@ module std [system] {
 
   // __config not modularised due to a bug in Clang
   // FIXME: These should be private.
+  module __assert            {         header "__assert"            export * }
   module __availability      { private header "__availability"      export * }
   module __bit_reference     { private header "__bit_reference"     export * }
   module __bits              { private header "__bits"              export * }

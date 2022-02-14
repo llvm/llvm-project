@@ -99,6 +99,7 @@ set(files
   __algorithm/unique_copy.h
   __algorithm/unwrap_iter.h
   __algorithm/upper_bound.h
+  __assert
   __availability
   __bit/bit_cast.h
   __bit/byteswap.h
