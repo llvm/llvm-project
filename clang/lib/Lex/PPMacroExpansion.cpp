@@ -1244,45 +1244,39 @@ static bool EvaluateHasIncludeCommon(Token &Tok,
   return File.hasValue();
 }
 
-/// EvaluateHasInclude - Process a '__has_include("path")' expression.
-/// Returns true if successful.
-static bool EvaluateHasInclude(Token &Tok, IdentifierInfo *II,
-                               Preprocessor &PP) {
-  return EvaluateHasIncludeCommon(Tok, II, PP, nullptr, nullptr);
+bool Preprocessor::EvaluateHasInclude(Token &Tok, IdentifierInfo *II) {
+  return EvaluateHasIncludeCommon(Tok, II, *this, nullptr, nullptr);
 }
 
-/// EvaluateHasIncludeNext - Process '__has_include_next("path")' expression.
-/// Returns true if successful.
-static bool EvaluateHasIncludeNext(Token &Tok,
-                                   IdentifierInfo *II, Preprocessor &PP) {
+bool Preprocessor::EvaluateHasIncludeNext(Token &Tok, IdentifierInfo *II) {
   // __has_include_next is like __has_include, except that we start
   // searching after the current found directory.  If we can't do this,
   // issue a diagnostic.
   // FIXME: Factor out duplication with
   // Preprocessor::HandleIncludeNextDirective.
-  const DirectoryLookup *Lookup = PP.GetCurDirLookup();
+  const DirectoryLookup *Lookup = CurDirLookup;
   const FileEntry *LookupFromFile = nullptr;
-  if (PP.isInPrimaryFile() && PP.getLangOpts().IsHeaderFile) {
+  if (isInPrimaryFile() && getLangOpts().IsHeaderFile) {
     // If the main file is a header, then it's either for PCH/AST generation,
     // or libclang opened it. Either way, handle it as a normal include below
     // and do not complain about __has_include_next.
-  } else if (PP.isInPrimaryFile()) {
+  } else if (isInPrimaryFile()) {
     Lookup = nullptr;
-    PP.Diag(Tok, diag::pp_include_next_in_primary);
-  } else if (PP.getCurrentLexerSubmodule()) {
+    Diag(Tok, diag::pp_include_next_in_primary);
+  } else if (getCurrentLexerSubmodule()) {
     // Start looking up in the directory *after* the one in which the current
     // file would be found, if any.
-    assert(PP.getCurrentLexer() && "#include_next directive in macro?");
-    LookupFromFile = PP.getCurrentLexer()->getFileEntry();
+    assert(getCurrentLexer() && "#include_next directive in macro?");
+    LookupFromFile = getCurrentLexer()->getFileEntry();
     Lookup = nullptr;
   } else if (!Lookup) {
-    PP.Diag(Tok, diag::pp_include_next_absolute_path);
+    Diag(Tok, diag::pp_include_next_absolute_path);
   } else {
     // Start looking up in the next directory.
     ++Lookup;
   }
 
-  return EvaluateHasIncludeCommon(Tok, II, PP, Lookup, LookupFromFile);
+  return EvaluateHasIncludeCommon(Tok, II, *this, Lookup, LookupFromFile);
 }
 
 /// Process single-argument builtin feature-like macros that return
@@ -1736,9 +1730,9 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     // double-quotes ("").
     bool Value;
     if (II == Ident__has_include)
-      Value = EvaluateHasInclude(Tok, II, *this);
+      Value = EvaluateHasInclude(Tok, II);
     else
-      Value = EvaluateHasIncludeNext(Tok, II, *this);
+      Value = EvaluateHasIncludeNext(Tok, II);
 
     if (Tok.isNot(tok::r_paren))
       return;
