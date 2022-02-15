@@ -505,7 +505,9 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   for (auto &I : SInfo.AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
     assert(Info.AI && isInterestingAlloca(*Info.AI));
-    memtag::alignAndPadAlloca(Info, kTagGranuleSize);
+    auto *PrevAI = Info.AI;
+    if (memtag::alignAndPadAlloca(Info, kTagGranuleSize))
+      PrevAI->eraseFromParent();
   }
 
   std::unique_ptr<DominatorTree> DeleteDT;

@@ -102,7 +102,7 @@ private:
 };
 
 uint64_t getAllocaSizeInBytes(const AllocaInst &AI);
-void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Align);
+bool alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Align);
 
 } // namespace memtag
 } // namespace llvm
