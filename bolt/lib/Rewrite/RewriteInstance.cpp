@@ -31,6 +31,7 @@
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"

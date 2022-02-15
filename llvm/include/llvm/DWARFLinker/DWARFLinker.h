@@ -14,6 +14,8 @@
 #include "llvm/DWARFLinker/DWARFLinkerDeclContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/MC/MCDwarf.h"
 #include <map>
 

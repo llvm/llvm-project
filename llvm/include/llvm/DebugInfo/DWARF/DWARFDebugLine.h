@@ -11,12 +11,10 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
-#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
-#include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
-#include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/Path.h"
 #include <cstdint>
@@ -26,7 +24,6 @@
 
 namespace llvm {
 
-class DWARFUnit;
 class raw_ostream;
 
 class DWARFDebugLine {

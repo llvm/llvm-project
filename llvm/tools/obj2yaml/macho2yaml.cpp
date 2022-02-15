@@ -11,6 +11,7 @@
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
