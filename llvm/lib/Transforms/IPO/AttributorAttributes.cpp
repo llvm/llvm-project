@@ -32,6 +32,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Assumptions.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -6031,13 +6032,13 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       else
         A.emitRemark<OptimizationRemark>(AI.CB, "HeapToStack", Remark);
 
+      const DataLayout &DL = A.getInfoCache().getDL();
       Value *Size;
       Optional<APInt> SizeAPI = getSize(A, *this, AI);
       if (SizeAPI.hasValue()) {
         Size = ConstantInt::get(AI.CB->getContext(), *SizeAPI);
       } else {
         LLVMContext &Ctx = AI.CB->getContext();
-        auto &DL = A.getInfoCache().getDL();
         ObjectSizeOpts Opts;
         ObjectSizeOffsetEvaluator Eval(DL, TLI, Ctx, Opts);
         SizeOffsetEvalType SizeOffsetPair = Eval.compute(AI.CB);
@@ -6057,14 +6058,14 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
             max(Alignment, MaybeAlign(AlignmentAPI.getValue().getZExtValue()));
       }
 
-      unsigned AS = cast<PointerType>(AI.CB->getType())->getAddressSpace();
-      Instruction *Alloca =
-          new AllocaInst(Type::getInt8Ty(F->getContext()), AS, Size, Alignment,
-                         "", AI.CB->getNextNode());
+      // TODO: Hoist the alloca towards the function entry.
+      unsigned AS = DL.getAllocaAddrSpace();
+      Instruction *Alloca = new AllocaInst(Type::getInt8Ty(F->getContext()), AS,
+                                           Size, Alignment, "", AI.CB);
 
       if (Alloca->getType() != AI.CB->getType())
-        Alloca = new BitCastInst(Alloca, AI.CB->getType(), "malloc_bc",
-                                 Alloca->getNextNode());
+        Alloca = BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
+            Alloca, AI.CB->getType(), "malloc_cast", AI.CB);
 
       auto *I8Ty = Type::getInt8Ty(F->getContext());
       auto *InitVal = getInitialValueOfAllocation(AI.CB, TLI, I8Ty);
