@@ -358,6 +358,8 @@ static enum BaseType getBaseType(const Value *Val) {
       continue;
     }
     if (const auto *GCRelocate = dyn_cast<GCRelocateInst>(V)) {
+      // GCRelocates do not change null-ness or constant-ness of the value.
+      // So we can continue with derived pointer this instruction relocates.
       Worklist.push_back(GCRelocate->getDerivedPtr());
       continue;
     }
