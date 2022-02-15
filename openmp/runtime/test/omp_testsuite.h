@@ -20,6 +20,60 @@
 #define NUM_TASKS 25
 #define MAX_TASKS_PER_THREAD 5
 
+// Functions that call a parallel region that does very minimal work
+// Some compilers may optimize away an empty parallel region
+volatile int g_counter__;
+
+// If nthreads == 0, then do not use num_threads() clause
+static void go_parallel() {
+  g_counter__ = 0;
+  #pragma omp parallel
+  {
+    #pragma omp atomic
+    g_counter__++;
+  }
+}
+
+static void go_parallel_nthreads(int nthreads) {
+  g_counter__ = 0;
+  #pragma omp parallel num_threads(nthreads)
+  {
+    #pragma omp atomic
+    g_counter__++;
+  }
+}
+
+static void go_parallel_spread() {
+  g_counter__ = 0;
+  #pragma omp parallel proc_bind(spread)
+  {
+    #pragma omp atomic
+    g_counter__++;
+  }
+}
+
+static void go_parallel_close() {
+  g_counter__ = 0;
+  #pragma omp parallel proc_bind(close)
+  {
+    #pragma omp atomic
+    g_counter__++;
+  }
+}
+
+static void go_parallel_master() {
+  g_counter__ = 0;
+  #pragma omp parallel proc_bind(master)
+  {
+    #pragma omp atomic
+    g_counter__++;
+  }
+}
+
+static inline int get_exit_value() {
+  return ((g_counter__ == -1) ? EXIT_FAILURE : EXIT_SUCCESS);
+}
+
 #ifdef  _WIN32
 // Windows versions of pthread_create() and pthread_join()
 # include <windows.h>

@@ -2452,6 +2452,7 @@ ATOMIC_CMPXCHG_CPT(float8, mul_cpt, kmp_real64, 64, *,
                                RTYPE, LCK_ID, MASK, GOMP_FLAG)                 \
   ATOMIC_BEGIN_CPT_MIX(TYPE_ID, OP_ID, TYPE, RTYPE_ID, RTYPE)                  \
   TYPE new_value;                                                              \
+  (void)new_value;                                                             \
   OP_GOMP_CRITICAL_CPT(TYPE, OP, GOMP_FLAG)                                    \
   OP_CMPXCHG_CPT(TYPE, BITS, OP)                                               \
   }
@@ -2461,6 +2462,7 @@ ATOMIC_CMPXCHG_CPT(float8, mul_cpt, kmp_real64, 64, *,
                                 LCK_ID, GOMP_FLAG)                             \
   ATOMIC_BEGIN_CPT_MIX(TYPE_ID, OP_ID, TYPE, RTYPE_ID, RTYPE)                  \
   TYPE new_value;                                                              \
+  (void)new_value;                                                             \
   OP_GOMP_CRITICAL_CPT(TYPE, OP, GOMP_FLAG) /* send assignment */              \
   OP_UPDATE_CRITICAL_CPT(TYPE, OP, LCK_ID) /* send assignment */               \
   }
@@ -3162,6 +3164,7 @@ ATOMIC_CRITICAL_CPT_REV(cmplx16, div_a16_cpt_rev, kmp_cmplx128_a16_t, /, 32c,
                                    RTYPE, LCK_ID, MASK, GOMP_FLAG)             \
   ATOMIC_BEGIN_CPT_MIX(TYPE_ID, OP_ID, TYPE, RTYPE_ID, RTYPE)                  \
   TYPE new_value;                                                              \
+  (void)new_value;                                                             \
   OP_GOMP_CRITICAL_CPT_REV(TYPE, OP, GOMP_FLAG)                                \
   OP_CMPXCHG_CPT_REV(TYPE, BITS, OP)                                           \
   }
@@ -3171,6 +3174,7 @@ ATOMIC_CRITICAL_CPT_REV(cmplx16, div_a16_cpt_rev, kmp_cmplx128_a16_t, /, 32c,
                                     LCK_ID, GOMP_FLAG)                         \
   ATOMIC_BEGIN_CPT_MIX(TYPE_ID, OP_ID, TYPE, RTYPE_ID, RTYPE)                  \
   TYPE new_value;                                                              \
+  (void)new_value;                                                             \
   OP_GOMP_CRITICAL_CPT_REV(TYPE, OP, GOMP_FLAG) /* send assignment */          \
   OP_CRITICAL_CPT_REV(TYPE, OP, LCK_ID) /* send assignment */                  \
   }
