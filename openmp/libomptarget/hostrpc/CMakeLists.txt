@@ -90,7 +90,7 @@ foreach(mcpu ${amdgpu_mcpus})
   # extract device bc from the heterogeneous object file
   add_custom_command(
       OUTPUT ${bc_cpp_filename}
-      COMMAND ${CLANG_OFFLOAD_BUNDLER_TOOL} -type=o -targets=openmp-${triple}-${mcpu} -inputs=${obj_filename} -outputs=${bc_cpp_filename} -unbundle
+      COMMAND ${CLANG_OFFLOAD_BUNDLER_TOOL} -type=o -targets=openmp-${triple}-${mcpu} -input=${obj_filename} -output=${bc_cpp_filename} -unbundle
       DEPENDS ${obj_filename} ${clang_driver_runtime_depends})
 
   set(libhostrpc-bc ${CMAKE_BINARY_DIR}/libhostrpc-amdgcn-${mcpu}.bc)
