@@ -370,5 +370,8 @@ inline static uint64_t mimm2Val(uint64_t Val) {
 inline unsigned M0(unsigned Val) { return Val + 64; }
 inline unsigned M1(unsigned Val) { return Val; }
 
+static const unsigned StandardVectorWidth = 256;
+static const unsigned PackedVectorWidth = 512;
+
 } // namespace llvm
 #endif
