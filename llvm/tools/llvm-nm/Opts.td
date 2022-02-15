@@ -13,6 +13,7 @@ multiclass Eq<string name, string help> {
   def : Separate<["--"], name>, Alias<!cast<Joined>(NAME #_EQ)>;
 }
 
+def X : JoinedOrSeparate<["-"], "X">, HelpText<"Specifies the type of ELF, XCOFF, or IR object file to examine. The value must be one of: 32, 64, 32_64, any (default)">;
 def debug_syms : FF<"debug-syms", "Show all symbols, even debugger only">;
 def defined_only : FF<"defined-only", "Show only defined symbols">;
 defm demangle : BB<"demangle", "Demangle C++ symbol names", "Don't demangle symbol names">;

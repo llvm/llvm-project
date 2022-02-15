@@ -1,0 +1,111 @@
+## Test the "-X" option.
+## The option specifies the type of object file to examine.
+
+# RUN: llvm-as -o %t32.bc %p/Inputs/bitcode-sym32.ll
+# RUN: llvm-as -o %t64.bc %p/Inputs/bitcode-sym64.ll
+
+# RUN: llvm-nm --format=just-symbols -X32 %t32.bc %t64.bc | \
+# RUN:   FileCheck %s -DFILE1=%t32.bc --check-prefixes=BITCODE32 --implicit-check-not={{.}}
+# RUN: llvm-nm --format=just-symbols -X64 %t32.bc %t64.bc | \
+# RUN:   FileCheck %s -DFILE2=%t64.bc --check-prefixes=BITCODE64 --implicit-check-not={{.}}
+# RUN: llvm-nm --format=just-symbols %t32.bc %t64.bc | \
+# RUN:   FileCheck %s -DFILE1=%t32.bc -DFILE2=%t64.bc --check-prefixes=BITCODE32,BITCODE64
+# RUN: llvm-nm --format=just-symbols -X32_64 %t32.bc %t64.bc | \
+# RUN:   FileCheck %s -DFILE1=%t32.bc -DFILE2=%t64.bc --check-prefixes=BITCODE32,BITCODE64
+# RUN: llvm-nm --format=just-symbols -Xany %t32.bc %t64.bc | \
+# RUN:   FileCheck %s -DFILE1=%t32.bc -DFILE2=%t64.bc --check-prefixes=BITCODE32,BITCODE64
+
+# BITCODE32:      [[FILE1]]:
+# BITCODE32-NEXT: C32
+# BITCODE32-NEXT: foo32
+# BITCODE32-NEXT: undef_var32
+
+# BITCODE64:      [[FILE2]]:
+# BITCODE64-NEXT: C64
+# BITCODE64-NEXT: bar64
+# BITCODE64-NEXT: static_var64
+
+# RUN: yaml2obj --docnum=1 -DCLASS=ELFCLASS32 %s -o %t_elf32.o
+# RUN: yaml2obj --docnum=1 -DCLASS=ELFCLASS64 %s -o %t_elf64.o
+
+# RUN: llvm-nm --format=just-symbols -X32 %t_elf32.o %t_elf64.o | \
+# RUN:   FileCheck %s -DFILE32=%t_elf32.o --check-prefixes=ELF32 --implicit-check-not={{.}}
+# RUN: llvm-nm --format=just-symbols -X64 %t_elf32.o %t_elf64.o | \
+# RUN:   FileCheck %s -DFILE64=%t_elf64.o --check-prefixes=ELF64 --implicit-check-not={{.}}
+# RUN: llvm-nm --format=just-symbols %t_elf32.o %t_elf64.o | \
+# RUN:   FileCheck %s -DFILE32=%t_elf32.o -DFILE64=%t_elf64.o --check-prefixes=ELF32,ELF64
+# RUN: llvm-nm --format=just-symbols -X32_64 %t_elf32.o %t_elf64.o | \
+# RUN:   FileCheck %s -DFILE32=%t_elf32.o -DFILE64=%t_elf64.o --check-prefixes=ELF32,ELF64
+# RUN: llvm-nm --format=just-symbols -Xany %t_elf32.o %t_elf64.o | \
+# RUN:   FileCheck %s -DFILE32=%t_elf32.o -DFILE64=%t_elf64.o --check-prefixes=ELF32,ELF64
+
+# ELF32:      [[FILE32]]:
+# ELF32-NEXT: ELFCLASS32_var
+
+# ELF64:      [[FILE64]]:
+# ELF64-NEXT: ELFCLASS64_var
+
+--- !ELF
+FileHeader:
+  Class:   [[CLASS]]
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+Symbols:
+  - Name:    [[CLASS]]_var
+
+# RUN: yaml2obj --docnum=2 -DFLAG=0x1DF %s -o %t_xcoff32.o
+# RUN: yaml2obj --docnum=2 -DFLAG=0x1F7 %s -o %t_xcoff64.o
+# RUN: rm -f %t.a
+# RUN: llvm-ar -q -c %t.a %t_xcoff32.o %t_xcoff64.o
+
+# RUN: llvm-nm --format=just-symbols -X32 %t_xcoff32.o | \
+# RUN:   FileCheck --check-prefixes=XCOFF32 %s --implicit-check-not={{.}}
+# RUN: llvm-nm --format=just-symbols -X32 %t.a | \
+# RUN:   FileCheck --check-prefixes=ARC32,XCOFF32 %s -DFILE=%basename_t --implicit-check-not={{.}}
+# ARC32:      [[FILE]].tmp_xcoff32.o:
+# XCOFF32:      var_0x1DF
+
+# RUN: llvm-nm --format=just-symbols -X64 %t_xcoff64.o | \
+# RUN:   FileCheck --check-prefixes=XCOFF64 %s --implicit-check-not={{.}}
+# RUN: llvm-nm --format=just-symbols -X64 %t.a | \
+# RUN:   FileCheck --check-prefixes=ARC64,XCOFF64 -DFILE=%basename_t %s --implicit-check-not={{.}}
+# ARC64:       [[FILE]].tmp_xcoff64.o:
+# XCOFF64:       var_0x1F7
+
+# RUN: llvm-nm --format=just-symbols %t_xcoff32.o %t_xcoff64.o | \
+# RUN:   FileCheck --check-prefixes=BOTH %s -DFILE32=%t_xcoff32.o -DFILE64=%t_xcoff64.o --match-full-lines
+# RUN: llvm-nm --format=just-symbols -X32_64 %t_xcoff32.o %t_xcoff64.o | \
+# RUN:   FileCheck --check-prefixes=BOTH %s -DFILE32=%t_xcoff32.o -DFILE64=%t_xcoff64.o --match-full-lines
+# RUN: llvm-nm --format=just-symbols -Xany %t_xcoff32.o %t_xcoff64.o | \
+# RUN:   FileCheck --check-prefixes=BOTH %s -DFILE32=%t_xcoff32.o -DFILE64=%t_xcoff64.o --match-full-lines
+
+# BOTH:        [[FILE32]]:
+# BOTH-NEXT:   var_0x1DF
+# BOTH-EMPTY:
+# BOTH-NEXT:   [[FILE64]]:
+# BOTH-NEXT:   var_0x1F7
+
+# RUN: llvm-nm --format=just-symbols %t.a | \
+# RUN:   FileCheck --check-prefixes=ARCHIVE-BOTH -DFILE=%basename_t --match-full-lines %s
+# RUN: llvm-nm --format=just-symbols -X32_64 %t.a | \
+# RUN:   FileCheck --check-prefixes=ARCHIVE-BOTH -DFILE=%basename_t --match-full-lines %s
+# RUN: llvm-nm --format=just-symbols -Xany %t.a | \
+# RUN:   FileCheck --check-prefixes=ARCHIVE-BOTH -DFILE=%basename_t --match-full-lines %s
+
+# ARCHIVE-BOTH:      [[FILE]].tmp_xcoff32.o:
+# ARCHIVE-BOTH-NEXT: var_0x1DF{{[[:space:]]}}
+# ARCHIVE-BOTH-NEXT: [[FILE]].tmp_xcoff64.o:
+# ARCHIVE-BOTH-NEXT: var_0x1F7
+
+# RUN: llvm-nm --format=just-symbols -X64 %t_xcoff32.o | count 0
+# RUN: llvm-nm --format=just-symbols -X32 %t_xcoff64.o | count 0
+
+# RUN: not llvm-nm --format=just-symbols -X33 %t_xcoff32.o 2>&1 |  FileCheck %s --check-prefixes=ERR
+# ERR:      error: : -X value should be one of: 32, 64, 32_64, (default) any
+# ERR-NEXT: var_0x1DF
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       [[FLAG]]
+Symbols:
+  - Name:            var_[[FLAG]]
