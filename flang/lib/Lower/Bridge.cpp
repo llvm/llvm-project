@@ -99,9 +99,8 @@ public:
     TODO_NOLOC("Not implemented genType SomeExpr. Needed for more complex "
                "expression lowering");
   }
-  mlir::Type genType(Fortran::lower::SymbolRef) override final {
-    TODO_NOLOC("Not implemented genType SymbolRef. Needed for more complex "
-               "expression lowering");
+  mlir::Type genType(Fortran::lower::SymbolRef sym) override final {
+    return Fortran::lower::translateSymbolToFIRType(*this, sym);
   }
   mlir::Type genType(Fortran::common::TypeCategory tc) override final {
     TODO_NOLOC("Not implemented genType TypeCategory. Needed for more complex "
@@ -247,8 +246,11 @@ public:
     for (const Fortran::lower::pft::Variable &var :
          funit.getOrderedSymbolTable()) {
       const Fortran::semantics::Symbol &sym = var.getSymbol();
-      if (!sym.IsFuncResult() || !funit.primaryResult)
+      if (!sym.IsFuncResult() || !funit.primaryResult) {
         instantiateVar(var);
+      } else if (&sym == funit.primaryResult) {
+        instantiateVar(var);
+      }
     }
 
     // Create most function blocks in advance.
@@ -335,6 +337,36 @@ private:
   }
   void genFIR(const Fortran::parser::EndProgramStmt &) { genExitRoutine(); }
 
+  /// END of procedure-like constructs
+  ///
+  /// Generate the cleanup block before the procedure exits
+  void genReturnSymbol(const Fortran::semantics::Symbol &functionSymbol) {
+    const Fortran::semantics::Symbol &resultSym =
+        functionSymbol.get<Fortran::semantics::SubprogramDetails>().result();
+    Fortran::lower::SymbolBox resultSymBox = lookupSymbol(resultSym);
+    mlir::Location loc = toLocation();
+    if (!resultSymBox) {
+      mlir::emitError(loc, "failed lowering function return");
+      return;
+    }
+    mlir::Value resultVal = resultSymBox.match(
+        [&](const fir::CharBoxValue &x) -> mlir::Value {
+          TODO(loc, "Function return CharBoxValue");
+        },
+        [&](const auto &) -> mlir::Value {
+          mlir::Value resultRef = resultSymBox.getAddr();
+          mlir::Type resultType = genType(resultSym);
+          mlir::Type resultRefType = builder->getRefType(resultType);
+          // A function with multiple entry points returning different types
+          // tags all result variables with one of the largest types to allow
+          // them to share the same storage.  Convert this to the actual type.
+          if (resultRef.getType() != resultRefType)
+            TODO(loc, "Convert to actual type");
+          return builder->create<fir::LoadOp>(loc, resultRef);
+        });
+    builder->create<mlir::ReturnOp>(loc, resultVal);
+  }
+
   void genFIRProcedureExit(Fortran::lower::pft::FunctionLikeUnit &funit,
                            const Fortran::semantics::Symbol &symbol) {
     if (mlir::Block *finalBlock = funit.finalBlock) {
@@ -345,7 +377,7 @@ private:
       builder->setInsertionPoint(finalBlock, finalBlock->end());
     }
     if (Fortran::semantics::IsFunction(symbol)) {
-      TODO(toLocation(), "Function lowering");
+      genReturnSymbol(symbol);
     } else {
       genExitRoutine();
     }
@@ -719,10 +751,6 @@ private:
     TODO(toLocation(), "EndDoStmt lowering");
   }
 
-  void genFIR(const Fortran::parser::EndFunctionStmt &) {
-    TODO(toLocation(), "EndFunctionStmt lowering");
-  }
-
   void genFIR(const Fortran::parser::EndIfStmt &) {
     TODO(toLocation(), "EndIfStmt lowering");
   }
@@ -736,6 +764,7 @@ private:
   }
 
   // Nop statements - No code, or code is generated at the construct level.
+  void genFIR(const Fortran::parser::EndFunctionStmt &) {}   // nop
   void genFIR(const Fortran::parser::EndSubroutineStmt &) {} // nop
 
   void genFIR(const Fortran::parser::EntryStmt &) {
