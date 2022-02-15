@@ -24009,10 +24009,10 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
   if (VT.is256BitVector() && !Subtarget.hasInt256())
     return splitIntVSETCC(VT, Op0, Op1, Cond, DAG, dl);
 
-  if (VT == MVT::v32i16 || VT == MVT::v64i8) {
-    assert(!Subtarget.hasBWI() && "Unexpected VT with AVX512BW!");
+  // Break 512-bit integer vector compare into smaller ones.
+  // TODO: Try harder to use VPCMPx + VPMOV2x?
+  if (VT.is512BitVector())
     return splitIntVSETCC(VT, Op0, Op1, Cond, DAG, dl);
-  }
 
   // If we have a limit constant, try to form PCMPGT (signed cmp) to avoid
   // not-of-PCMPEQ:
