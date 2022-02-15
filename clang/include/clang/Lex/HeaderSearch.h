@@ -167,8 +167,7 @@ namespace detail {
 template <bool Const, typename T>
 using Qualified = std::conditional_t<Const, const T, T>;
 
-/// Forward iterator over the search directories of HeaderSearch.
-/// Does not get invalidated by \c HeaderSearch::Add{,System}SearchPath.
+/// Forward iterator over the search directories of \c HeaderSearch.
 template <bool IsConst>
 struct SearchDirIteratorImpl
     : llvm::iterator_facade_base<SearchDirIteratorImpl<IsConst>,
