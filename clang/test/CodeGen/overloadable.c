@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck %s
 // CHECK: _Z1fPA10_1X
-// CHECK: _Z1fPFvE
+// CHECK: _Z1fPFvvE
 
 int __attribute__((overloadable)) f(int x) { return x; }
 float __attribute__((overloadable)) f(float x) { return x; }
@@ -14,9 +14,9 @@ void  __attribute__((overloadable)) f(struct X (*ptr)[10]) { }
 
 void __attribute__((overloadable)) f(int x, int y, ...) { }
 
-void __attribute__((overloadable)) f(void (*x)()) {}
+void __attribute__((overloadable)) f(void (*x)(void)) {}
 
-int main() {
+int main(void) {
   int iv = 17;
   float fv = 3.0f;
   double dv = 4.0;
@@ -42,7 +42,7 @@ void addrof_single(char *a) __attribute__((overloadable, enable_if(0, "")));
 void addrof_single(char *a) __attribute__((overloadable));
 
 // CHECK-LABEL: define {{(dso_local )?}}void @foo
-void foo() {
+void foo(void) {
   // CHECK: store void (i8*)* @_Z11addrof_manyPc
   void (*p1)(char *) = &addrof_many;
   // CHECK: store void (i8*)* @_Z11addrof_manyPv
@@ -65,7 +65,7 @@ void ovl_bar(char *) __attribute__((overloadable));
 void ovl_bar(int) __attribute__((overloadable));
 
 // CHECK-LABEL: define {{(dso_local )?}}void @bar
-void bar() {
+void bar(void) {
   char charbuf[1];
   unsigned char ucharbuf[1];
 
@@ -80,7 +80,7 @@ void ovl_baz(unsigned int *, unsigned int) __attribute__((overloadable));
 void ovl_baz2(int, int *) __attribute__((overloadable));
 void ovl_baz2(unsigned int, unsigned int *) __attribute__((overloadable));
 // CHECK-LABEL: define {{(dso_local )?}}void @baz
-void baz() {
+void baz(void) {
   unsigned int j;
   // Initial rules for incompatible pointer conversions made this overload
   // ambiguous.

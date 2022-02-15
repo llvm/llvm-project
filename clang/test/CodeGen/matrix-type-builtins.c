@@ -79,15 +79,14 @@ void transpose_transpose_struct_member(struct Foo *F) {
   F->in = __builtin_matrix_transpose(__builtin_matrix_transpose(F->in));
 }
 
-dx5x5_t get_matrix();
+dx5x5_t get_matrix(void);
 
-void transpose_rvalue() {
+void transpose_rvalue(void) {
   // COMMON-LABEL: define{{.*}} void @transpose_rvalue()
   // COMMON-NEXT:  entry:
   // CHECK32-NEXT:   [[M_T_ADDR:%.*]] = alloca [25 x double], align 4
   // CHECK64-NEXT:   [[M_T_ADDR:%.*]] = alloca [25 x double], align 8
-  // CHECK32-NEXT:   [[CALL:%.*]] = call <25 x double> bitcast (<25 x double> (...)* @get_matrix to <25 x double> ()*)()
-  // CHECK64-NEXT:   [[CALL:%.*]] = call <25 x double> (...) @get_matrix()
+  // COMMON-NEXT:    [[CALL:%.*]] = call <25 x double> @get_matrix()
   // COMMON-NEXT:    [[M_T:%.*]] = call <25 x double> @llvm.matrix.transpose.v25f64(<25 x double> [[CALL]], i32 5, i32 5)
   // COMMON-NEXT:    [[M_T_ADDR_C:%.*]] = bitcast [25 x double]* [[M_T_ADDR]] to <25 x double>*
   // CHECK32-NEXT:   store <25 x double> [[M_T]], <25 x double>* [[M_T_ADDR_C]], align 4
@@ -98,7 +97,7 @@ void transpose_rvalue() {
 
 const dx5x5_t global_matrix;
 
-void transpose_global() {
+void transpose_global(void) {
   // COMMON-LABEL: define{{.*}} void @transpose_global()
   // COMMON-NEXT:  entry:
   // CHECK32-NEXT:    [[M_T_ADDR:%.*]] = alloca [25 x double], align 4
@@ -187,7 +186,7 @@ void column_major_load_array1(double Ptr[25]) {
   dx5x5_t m = __builtin_matrix_column_major_load(Ptr, 5, 5, 5);
 }
 
-void column_major_load_array2() {
+void column_major_load_array2(void) {
   // COMMON-LABEL: define{{.*}} void @column_major_load_array2() #0 {
   // COMMON-NEXT:  entry:
   // CHECK32-NEXT:    [[PTR:%.*]] = alloca [25 x double], align 8
@@ -299,7 +298,7 @@ void column_major_store_array1(double Ptr[25]) {
   __builtin_matrix_column_major_store(m, Ptr, 5);
 }
 
-void column_major_store_array2() {
+void column_major_store_array2(void) {
   // COMMON-LABEL: define{{.*}} void @column_major_store_array2()
   // CHECK32:         [[M:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 4
   // CHECK32-NEXT:    [[PTR:%.*]] = getelementptr inbounds [25 x double], [25 x double]* %Ptr, i32 0, i32 0

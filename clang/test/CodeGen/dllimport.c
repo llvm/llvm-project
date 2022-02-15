@@ -7,8 +7,8 @@
 
 #define JOIN2(x, y) x##y
 #define JOIN(x, y) JOIN2(x, y)
-#define USEVAR(var) int JOIN(use, __LINE__)() { return var; }
-#define USE(func) void JOIN(use, __LINE__)() { func(); }
+#define USEVAR(var) int JOIN(use, __LINE__)(void) { return var; }
+#define USE(func) void JOIN(use, __LINE__)(void) { func(); }
 
 
 
@@ -61,7 +61,7 @@ USEVAR(GlobalRedecl5)
 // Redeclaration in local context.
 // CHECK: @GlobalRedecl6 = external dllimport global i32
 __declspec(dllimport) int GlobalRedecl6;
-int functionScope() {
+int functionScope(void) {
   extern int GlobalRedecl6; // still dllimport
   return GlobalRedecl6;
 }

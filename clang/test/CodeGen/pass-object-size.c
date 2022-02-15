@@ -188,7 +188,7 @@ int NoViableOverloadObjectSize3(void *const p PS(3))
 }
 
 // CHECK-LABEL: define{{.*}} void @test3
-void test3() {
+void test3(void) {
   struct Foo t[10];
 
   // CHECK: call i32 @_Z27NoViableOverloadObjectSize0PvU17pass_object_size0(i8* noundef %{{.*}}, i64 noundef 360)
@@ -235,7 +235,7 @@ void test4(struct Foo *t) {
   gi = NoViableOverloadObjectSize3(&t[1].t[1]);
 }
 
-void test5() {
+void test5(void) {
   struct Foo t[10];
 
   int (*f)(void *) = &NoViableOverloadObjectSize0;
@@ -290,7 +290,7 @@ int OverloadedObjectSize(void *const p, void *const c)
     __attribute__((overloadable)) __asm__("OverloadNoSize");
 
 // CHECK-LABEL: define{{.*}} void @test6
-void test6() {
+void test6(void) {
   int known[10], *opaque;
 
   // CHECK: call i32 @"\01Overload0"
@@ -318,7 +318,7 @@ int AsmObjectSize2(void *const p PS(2)) __asm__("Identity");
 int AsmObjectSize3(void *const p PS(3)) __asm__("Identity");
 
 // CHECK-LABEL: define{{.*}} void @test7
-void test7() {
+void test7(void) {
   struct Foo t[10];
 
   // CHECK: call i32 @"\01Identity"(i8* noundef %{{.*}}, i64 noundef 360)
@@ -408,7 +408,7 @@ void test12(void *const p __attribute__((pass_object_size(3)))) {
 }
 
 // CHECK-LABEL: define{{.*}} void @test13
-void test13() {
+void test13(void) {
   char c[10];
   unsigned i = 0;
   char *p = c;

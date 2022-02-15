@@ -2,7 +2,7 @@
 
 typedef __attribute__(( ext_vector_type(4) )) float float4;
 // CHECK: @test
-void test()
+void test(void)
 {
   float4 va;
   va.hi[0] = 3.0;

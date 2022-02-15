@@ -9,7 +9,7 @@
 
 // CHECK: @test7 = {{(dso_local )?}}global [2 x %struct.test7s] [%struct.test7s { i32 1, i32 2 }, %struct.test7s { i32 4, i32 0 }]
 
-void test1() {
+void test1(void) {
   // This should codegen as a "@test1.x" global.
   const int x[] = { 1, 2, 3, 4, 6, 8, 9, 10, 123, 231, 123,23 };
   foo(x);
@@ -20,7 +20,7 @@ void test1() {
 
 
 // rdar://7346691
-void test2() {
+void test2(void) {
   // This should codegen as a "@test2.x" global + memcpy.
   int x[] = { 1, 2, 3, 4, 6, 8, 9, 10, 123, 231, 123,23, 24 };
   foo(x);
@@ -32,7 +32,7 @@ void test2() {
 }
 
 
-void test3() {
+void test3(void) {
   // This should codegen as a memset.
   int x[100] = { 0 };
   foo(x);
@@ -55,7 +55,7 @@ void test4(void) {
 
 union test5u { int i; double d; };
 
-void test5() {
+void test5(void) {
   union test5u ola = (union test5u) 351;
   union test5u olb = (union test5u) 1.0;
 }
@@ -73,7 +73,7 @@ struct SelectDest {
   int iMem;
 };
 
-void test6() {
+void test6(void) {
   struct SelectDest x = {1, 2, 3};
   test6f(&x);
 }

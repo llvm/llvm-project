@@ -2,7 +2,7 @@
 
 __attribute__((regparm(3))) void f1(int a, int b, int c, int d);
 // CHECK: declare void @f1(i32 inreg noundef, i32 inreg noundef, i32 inreg noundef, i32 noundef)
-void g1() {
+void g1(void) {
   f1(41, 42, 43, 44);
 }
 
@@ -11,7 +11,7 @@ struct s1 {
 };
 __attribute__((regparm(3))) void f2(int a, int b, struct s1 c, int d);
 // CHECK: declare void @f2(i32 inreg noundef, i32 inreg noundef, i32 inreg, i32 noundef)
-void g2() {
+void g2(void) {
   struct s1 x = {43};
   f2(41, 42, x, 44);
 }
@@ -22,13 +22,13 @@ struct s2 {
 };
 __attribute__((regparm(3))) void f3(int a, int b, struct s2 c, int d);
 // CHECK: declare void @f3(i32 inreg noundef, i32 inreg noundef, i32, i32, i32 noundef)
-void g3() {
+void g3(void) {
   struct s2 x = {43, 44};
   f3(41, 42, x, 45);
 }
 __attribute__((regparm(3))) void f4(int a, struct s2 b, int c);
 // CHECK: declare void @f4(i32 inreg noundef, i32 inreg, i32 inreg, i32 noundef)
-void g4() {
+void g4(void) {
   struct s2 x = {42, 43};
   f4(41, x, 44);
 }
@@ -40,13 +40,13 @@ struct s3 {
 };
 __attribute__((regparm(3))) void f5(int a, struct s3 b, int c);
 // CHECK: declare void @f5(i32 inreg noundef, i32, i32, i32, i32 noundef)
-void g5() {
+void g5(void) {
   struct s3 x = {42, 43, 44};
   f5(41, x, 45);
 }
 __attribute__((regparm(3))) void f6(struct s3 a, int b);
 // CHECK: declare void @f6(i32 inreg, i32 inreg, i32 inreg, i32 noundef)
-void g6() {
+void g6(void) {
   struct s3 x = {41, 42, 43};
   f6(x, 44);
 }
@@ -59,7 +59,7 @@ struct s4 {
 };
 __attribute__((regparm(3))) void f7(struct s4 a, int b);
 // CHECK: declare void @f7(i32, i32, i32, i32, i32 noundef)
-void g7() {
+void g7(void) {
   struct s4 x = {41, 42, 43, 44};
   f7(x, 45);
 }

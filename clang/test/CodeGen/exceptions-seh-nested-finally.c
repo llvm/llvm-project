@@ -11,7 +11,7 @@
 // CHECK-LABEL: define internal void @"?fin$0@0@main@@"({{i8 noundef( zeroext)?}} %abnormal_termination, i8* noundef %frame_pointer)
 // CHECK: call void @"?fin$1@0@main@@"({{i8 noundef( zeroext)?}} 0, i8* noundef %frame_pointer)
 int
-main() {
+main(void) {
   int Check = 0;
   __try {
     Check = 3;

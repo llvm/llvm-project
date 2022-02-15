@@ -17,7 +17,7 @@ typedef struct {
   int cc;
 } s2;
 // CHECK: define{{.*}} void @f2(%struct.s2* noalias sret(%struct.s2) align 4 %agg.result)
-s2 f2() {
+s2 f2(void) {
   s2 foo;
   return foo;
 }
@@ -27,7 +27,7 @@ typedef struct {
   int dd;
 } s3;
 // CHECK: define{{.*}} void @f3(%struct.s3* noalias sret(%struct.s3) align 4 %agg.result)
-s3 f3() {
+s3 f3(void) {
   s3 foo;
   return foo;
 }

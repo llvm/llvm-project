@@ -25,7 +25,7 @@ void use(struct S*);
 // CHECK-NEXT:  %[[B:[0-9+]]] = bitcast %struct.S* %s to i8*
 // CHECK-NEXT:  call void @llvm.memset{{.*}}(i8* align 8 %[[B]], i8 0,
 // CHECK-NEXT:  call void @use(%struct.S* noundef %s)
-void empty_braces() {
+void empty_braces(void) {
   struct S s = {};
   return use(&s);
 }
@@ -35,7 +35,7 @@ void empty_braces() {
 // CHECK-NEXT:  %[[B:[0-9+]]] = bitcast %struct.S* %s to i8*
 // CHECK-NEXT:  call void @llvm.memcpy{{.*}}(i8* align 8 %[[B]], {{.*}}@__const.partial_init.s
 // CHECK-NEXT:  call void @use(%struct.S* noundef %s)
-void partial_init() {
+void partial_init(void) {
   struct S s = { .c = 42 };
   return use(&s);
 }
@@ -45,7 +45,7 @@ void partial_init() {
 // CHECK-NEXT:  %[[B:[0-9+]]] = bitcast %struct.S* %s to i8*
 // CHECK-NEXT:  call void @llvm.memcpy{{.*}}(i8* align 8 %[[B]], {{.*}}@__const.init_all.s
 // CHECK-NEXT:  call void @use(%struct.S* noundef %s)
-void init_all() {
+void init_all(void) {
   struct S s = { .c = 42, .l = 0xdeadbeefc0fedead };
   return use(&s);
 }

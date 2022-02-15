@@ -3,6 +3,6 @@
 // CHECK-LABEL: main
 // CHECK: attributes #0 = {{.*}}"no-jump-tables"="true"{{.*}}
 
-int main() {
+int main(void) {
   return 0;
 }

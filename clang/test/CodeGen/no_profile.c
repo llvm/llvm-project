@@ -8,7 +8,7 @@
 // RUN:   -emit-llvm -o - %s | FileCheck %s
 int g(int);
 
-void __attribute__((no_profile_instrument_function)) no_instr() {
+void __attribute__((no_profile_instrument_function)) no_instr(void) {
 // CHECK: define {{.*}}void @no_instr() [[ATTR:#[0-9]+]]
 }
 

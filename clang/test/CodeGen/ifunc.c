@@ -15,11 +15,11 @@ typedef int (*foo_t)(int);
 
 int global;
 
-static foo_t foo_ifunc() {
+static foo_t foo_ifunc(void) {
   return global ? f1 : f2;
 }
 
-int bar() {
+int bar(void) {
   return foo(1);
 }
 

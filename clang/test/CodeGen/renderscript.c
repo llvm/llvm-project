@@ -51,11 +51,11 @@ void argShortChar(sShortChar s) {}
 
 // CHECK-RS32: [3 x i8] @retChar3()
 // CHECK-RS64: [3 x i8] @retChar3()
-sChar3 retChar3() { sChar3 r; return r; }
+sChar3 retChar3(void) { sChar3 r; return r; }
 
 // CHECK-RS32: [2 x i16] @retShortChar()
 // CHECK-RS64: [2 x i16] @retShortChar()
-sShortChar retShortChar() { sShortChar r; return r; }
+sShortChar retShortChar(void) { sShortChar r; return r; }
 
 // =============================================================================
 // aggregate parameter <= 16 bytes: coerced to [a x iNN] for both 32-bit and
@@ -85,15 +85,15 @@ void argLongInt(sLongInt s) {}
 
 // CHECK-RS32: void @retShortCharShort(%struct.sShortCharShort* noalias sret(%struct.sShortCharShort) align 2 %agg.result)
 // CHECK-RS64: [3 x i16] @retShortCharShort()
-sShortCharShort retShortCharShort() { sShortCharShort r; return r; }
+sShortCharShort retShortCharShort(void) { sShortCharShort r; return r; }
 
 // CHECK-RS32: void @retIntShortChar(%struct.sIntShortChar* noalias sret(%struct.sIntShortChar) align 4 %agg.result)
 // CHECK-RS64: [2 x i32] @retIntShortChar()
-sIntShortChar retIntShortChar() { sIntShortChar r; return r; }
+sIntShortChar retIntShortChar(void) { sIntShortChar r; return r; }
 
 // CHECK-RS32: void @retLongInt(%struct.sLongInt* noalias sret(%struct.sLongInt) align 8 %agg.result)
 // CHECK-RS64: [2 x i64] @retLongInt()
-sLongInt retLongInt() { sLongInt r; return r; }
+sLongInt retLongInt(void) { sLongInt r; return r; }
 
 // =============================================================================
 // aggregate parameter <= 64 bytes: coerced to [a x iNN] for 32-bit RenderScript
@@ -118,11 +118,11 @@ void argLong2Char(sLong2Char s) {}
 
 // CHECK-RS32: void @retInt5(%struct.sInt5* noalias sret(%struct.sInt5) align 4 %agg.result)
 // CHECK-RS64: void @retInt5(%struct.sInt5* noalias sret(%struct.sInt5) align 4 %agg.result)
-sInt5 retInt5() { sInt5 r; return r;}
+sInt5 retInt5(void) { sInt5 r; return r;}
 
 // CHECK-RS32: void @retLong2Char(%struct.sLong2Char* noalias sret(%struct.sLong2Char) align 8 %agg.result)
 // CHECK-RS64: void @retLong2Char(%struct.sLong2Char* noalias sret(%struct.sLong2Char) align 8 %agg.result)
-sLong2Char retLong2Char() { sLong2Char r; return r;}
+sLong2Char retLong2Char(void) { sLong2Char r; return r;}
 
 // =============================================================================
 // aggregate parameters and return values > 64 bytes: passed and returned on the
@@ -137,4 +137,4 @@ void argLong9(sLong9 s) {}
 
 // CHECK-RS32: void @retLong9(%struct.sLong9* noalias sret(%struct.sLong9) align 8 %agg.result)
 // CHECK-RS64: void @retLong9(%struct.sLong9* noalias sret(%struct.sLong9) align 8 %agg.result)
-sLong9 retLong9() { sLong9 r; return r; }
+sLong9 retLong9(void) { sLong9 r; return r; }

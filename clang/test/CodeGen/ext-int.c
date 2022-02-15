@@ -32,7 +32,7 @@ struct S {
   _BitInt(17) C;
 };
 
-void OffsetOfTest() {
+void OffsetOfTest(void) {
   // CHECK: define {{.*}}void @OffsetOfTest
   int A = __builtin_offsetof(struct S,A);
   // CHECK: store i32 0, i32* %{{.+}}

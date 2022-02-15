@@ -11,7 +11,7 @@ typedef int v4i32 __attribute__((vector_size(16)));
   // CHECK: %{{[0-9]+}} = call i32 asm "lw    $0,${1:D};\0A", "=r,*m,~{$1}"(i32* elementtype(i32) getelementptr inbounds ([8 x i32], [8 x i32]* @b, i32 {{[0-9]+}}, i32 {{[0-9]+}})) #2,
   // CHECK: %{{[0-9]+}} = call <4 x i32> asm "ldi.w ${0:w},1", "=f,~{$1}"
 int b[8] = {0,1,2,3,4,5,6,7};
-int  main()
+int  main(void)
 {
   int i;
   v4i32 v4i32_r;

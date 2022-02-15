@@ -117,7 +117,7 @@ int printf(const char *fmt, ...) {
     return 0;
 }
 
-void unit1() {
+void unit1(void) {
   struct U1A {
     short a;
   };
@@ -134,7 +134,7 @@ void unit1() {
   __builtin_dump_struct(&a, &printf);
 }
 
-void unit2() {
+void unit2(void) {
   struct U2A {
     unsigned short a;
   };
@@ -152,7 +152,7 @@ void unit2() {
   __builtin_dump_struct(&a, &printf);
 }
 
-void unit3() {
+void unit3(void) {
   struct U3A {
     int a;
   };
@@ -170,7 +170,7 @@ void unit3() {
   __builtin_dump_struct(&a, &printf);
 }
 
-void unit4() {
+void unit4(void) {
   struct U4A {
     unsigned int a;
   };
@@ -188,7 +188,7 @@ void unit4() {
   __builtin_dump_struct(&a, &printf);
 }
 
-void unit5() {
+void unit5(void) {
   struct U5A {
     long a;
   };
@@ -206,7 +206,7 @@ void unit5() {
   __builtin_dump_struct(&a, &printf);
 }
 
-void unit6() {
+void unit6(void) {
   struct U6A {
     unsigned long a;
   };
@@ -224,7 +224,7 @@ void unit6() {
   __builtin_dump_struct(&a, &printf);
 }
 
-void unit7() {
+void unit7(void) {
   struct U7A {
     long long a;
   };
@@ -242,7 +242,7 @@ void unit7() {
   __builtin_dump_struct(&a, &printf);
 }
 
-void unit8() {
+void unit8(void) {
   struct U8A {
     unsigned long long a;
   };
@@ -260,7 +260,7 @@ void unit8() {
   __builtin_dump_struct(&a, &printf);
 }
 
-void unit9() {
+void unit9(void) {
   struct U9A {
     char a;
   };
@@ -278,7 +278,7 @@ void unit9() {
   __builtin_dump_struct(&a, &printf);
 }
 
-void unit10() {
+void unit10(void) {
   struct U10A {
     char *a;
   };
@@ -296,7 +296,7 @@ void unit10() {
   __builtin_dump_struct(&a, &printf);
 }
 
-void unit11() {
+void unit11(void) {
   struct U11A {
     void *a;
   };
@@ -314,7 +314,7 @@ void unit11() {
   __builtin_dump_struct(&a, &printf);
 }
 
-void unit12() {
+void unit12(void) {
   struct U12A {
     const char *a;
   };
@@ -332,7 +332,7 @@ void unit12() {
   __builtin_dump_struct(&a, &printf);
 }
 
-void unit13() {
+void unit13(void) {
   typedef char *charstar;
   struct U13A {
     const charstar a;
@@ -351,7 +351,7 @@ void unit13() {
   __builtin_dump_struct(&a, &printf);
 }
 
-void unit14() {
+void unit14(void) {
   struct U14A {
     double a;
   };
@@ -369,7 +369,7 @@ void unit14() {
   __builtin_dump_struct(&a, &printf);
 }
 
-void unit15() {
+void unit15(void) {
   struct U15A {
     int a[3];
   };
@@ -387,7 +387,7 @@ void unit15() {
   __builtin_dump_struct(&a, &printf);
 }
 
-void unit16() {
+void unit16(void) {
   struct U16A {
     uint8_t a;
   };
@@ -405,7 +405,7 @@ void unit16() {
   __builtin_dump_struct(&a, &printf);
 }
 
-void unit17() {
+void unit17(void) {
   struct U17A {
     int8_t a;
   };
@@ -423,7 +423,7 @@ void unit17() {
   __builtin_dump_struct(&a, &printf);
 }
 
-void unit18() {
+void unit18(void) {
   struct U18A {
     long double a;
   };
@@ -441,7 +441,7 @@ void unit18() {
   __builtin_dump_struct(&a, &printf);
 }
 
-void test1() {
+void test1(void) {
   struct T1A {
     int a;
     char *b;
@@ -465,7 +465,7 @@ void test1() {
   __builtin_dump_struct(&a, &printf);
 }
 
-void test2() {
+void test2(void) {
   struct T2A {
     int a;
   };
@@ -497,7 +497,7 @@ void test2() {
   __builtin_dump_struct(&b, &printf);
 }
 
-void test3() {
+void test3(void) {
   struct T3A {
     union {
       int a;
@@ -522,7 +522,7 @@ void test3() {
   __builtin_dump_struct(&a, &printf);
 }
 
-void test4() {
+void test4(void) {
   struct T4A {
     union {
       struct {

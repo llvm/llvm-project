@@ -14,4 +14,4 @@
 // RUN: %clang_cc1 -flto -triple x86_64-pc-linux-gnu -emit-llvm-bc -disable-llvm-passes < %s -o %t.bc
 // RUN: %clang_cc1 -flto -triple x86_64-pc-linux-gnu -emit-llvm-bc -x ir < %t.bc | llvm-bcanalyzer -dump | FileCheck --check-prefix=LTOINDEX %s
 
-int main() {}
+int main(void) {}

@@ -3,7 +3,7 @@
 /* Sparc is not C99-compliant */
 #if defined(sparc) || defined(__sparc__) || defined(__sparcv9)
 
-int main() { return 0; }
+int main(void) { return 0; }
 
 #else /* sparc */
 
@@ -29,7 +29,7 @@ int putchar(char c);
 
 volatile double __complex__ accum;
 
-void mandel() {
+void mandel(void) {
   int x, y, n;
   for (y = 0; y < IMAGE_HEIGHT; ++y) {
     for (x = 0; x < IMAGE_WIDTH; ++x) {
@@ -57,7 +57,7 @@ void mandel() {
   }
 }
 
-int main() {
+int main(void) {
   mandel();
   return 0;
 }

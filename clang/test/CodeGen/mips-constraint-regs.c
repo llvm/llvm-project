@@ -4,7 +4,7 @@
 // This checks that the frontend will accept inline asm constraints
 // c', 'l' and 'x'.
 
-int main()
+int main(void)
 {
   // 'c': 16 bit address register for Mips16, GPR for all others
   // I am using 'c' to constrain both the target and one of the source

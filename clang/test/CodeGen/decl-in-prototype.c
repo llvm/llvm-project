@@ -15,7 +15,7 @@ int f2(enum {AA=7,BB} E) {
 }
 
 // Check nested function declarators work.
-int f(void (*g)(), enum {AA,BB} h) {
+int f(void (*g)(void), enum {AA,BB} h) {
     // CHECK: ret i32 0
     return AA;
 }

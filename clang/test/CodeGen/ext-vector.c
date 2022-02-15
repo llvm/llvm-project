@@ -27,7 +27,7 @@ float f;
 // CHECK: shufflevector {{.*}} <i32 1, i32 1, i32 1, i32 1>
 // CHECK: insertelement
 // CHECK: shufflevector {{.*}} <i32 1, i32 0>
-void test2() {
+void test2(void) {
     vec2 = vec4.xy;  // shorten
     f = vec2.x;      // extract elt
     vec4 = vec4.yyyy;  // splat
@@ -228,8 +228,8 @@ int test10(int4 V) {
 
 // CHECK: @test11
 // CHECK: extractelement <4 x i32>
-int4 test11a();
-int test11() {
+int4 test11a(void);
+int test11(void) {
   return test11a().x;
 }
 
@@ -307,7 +307,7 @@ typedef __attribute__(( ext_vector_type(16) )) float float16;
 float16 vec16, vec16_2;
 
 // CHECK: @test_rgba
-void test_rgba() {
+void test_rgba(void) {
   // CHECK: fadd <4 x float>
   vec4_2 = vec4.abgr + vec4;
 

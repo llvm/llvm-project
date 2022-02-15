@@ -8,6 +8,6 @@ inline static void __zend_malloc() {
 
 void *malloc(__SIZE_TYPE__ size) __attribute__ ((__nothrow__));
 
-void fontFetch() {
+void fontFetch(void) {
     __zend_malloc(1);
 }

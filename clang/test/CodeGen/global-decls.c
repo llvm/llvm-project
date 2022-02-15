@@ -14,7 +14,7 @@ int g0_def __attribute__((weak)) = 52;
 int __attribute__((weak)) g1_def (void) { return 0; }
 
 // Force _ext references
-void f0() {
+void f0(void) {
   int a = g0_ext;
   int b = g1_ext();
 }

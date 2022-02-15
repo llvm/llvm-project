@@ -31,8 +31,8 @@ int ifunc(void) __attribute__((ifunc("ifunc_resolver")));
 int func(void) { return 0; }
 int ext(void);
 
-static void *ifunc_resolver() { return func; }
+static void *ifunc_resolver(void) { return func; }
 
-int foo() {
+int foo(void) {
   return var + ext_var + ifunc() + func() + ext();
 }
