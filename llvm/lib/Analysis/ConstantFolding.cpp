@@ -2506,6 +2506,11 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
     case Intrinsic::smin:
     case Intrinsic::umax:
     case Intrinsic::umin:
+      // This is the same as for binary ops - poison propagates.
+      // TODO: Poison handling should be consolidated.
+      if (isa<PoisonValue>(Operands[0]) || isa<PoisonValue>(Operands[1]))
+        return PoisonValue::get(Ty);
+
       if (!C0 && !C1)
         return UndefValue::get(Ty);
       if (!C0 || !C1)
