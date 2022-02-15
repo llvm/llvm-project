@@ -12,6 +12,7 @@
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/Utils.h"
+#include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -33,6 +34,11 @@ static std::string getMangledName(const Fortran::semantics::Symbol &symbol) {
 // Callee side interface implementation
 //===----------------------------------------------------------------------===//
 
+bool Fortran::lower::CalleeInterface::hasAlternateReturns() const {
+  return !funit.isMainProgram() &&
+         Fortran::semantics::HasAlternateReturns(funit.getSubprogramSymbol());
+}
+
 std::string Fortran::lower::CalleeInterface::getMangledName() const {
   if (funit.isMainProgram())
     return fir::NameUniquer::doProgramEntry().str();
@@ -50,6 +56,21 @@ mlir::Location Fortran::lower::CalleeInterface::getCalleeLocation() const {
   // FIXME: do NOT use unknown for the anonymous PROGRAM case. We probably
   // should just stash the location in the funit regardless.
   return converter.genLocation(funit.getStartingSourceLoc());
+}
+
+Fortran::evaluate::characteristics::Procedure
+Fortran::lower::CalleeInterface::characterize() const {
+  Fortran::evaluate::FoldingContext &foldingContext =
+      converter.getFoldingContext();
+  std::optional<Fortran::evaluate::characteristics::Procedure> characteristic =
+      Fortran::evaluate::characteristics::Procedure::Characterize(
+          funit.getSubprogramSymbol(), foldingContext);
+  assert(characteristic && "Fail to get characteristic from symbol");
+  return *characteristic;
+}
+
+bool Fortran::lower::CalleeInterface::isMainProgram() const {
+  return funit.isMainProgram();
 }
 
 mlir::FuncOp Fortran::lower::CalleeInterface::addEntryBlockAndMapArguments() {
@@ -81,6 +102,13 @@ static void addSymbolAttribute(mlir::FuncOp func,
 /// signature and building/finding the mlir::FuncOp.
 template <typename T>
 void Fortran::lower::CallInterface<T>::declare() {
+  if (!side().isMainProgram()) {
+    characteristic.emplace(side().characterize());
+    bool isImplicit = characteristic->CanBeCalledViaImplicitInterface();
+    determineInterface(isImplicit, *characteristic);
+  }
+  // No input/output for main program
+
   // Create / get funcOp for direct calls. For indirect calls (only meaningful
   // on the caller side), no funcOp has to be created here. The mlir::Value
   // holding the indirection is used when creating the fir::CallOp.
@@ -98,9 +126,90 @@ void Fortran::lower::CallInterface<T>::declare() {
   }
 }
 
+//===----------------------------------------------------------------------===//
+// CallInterface implementation: this part is common to both caller and caller
+// sides.
+//===----------------------------------------------------------------------===//
+
+/// This is the actual part that defines the FIR interface based on the
+/// characteristic. It directly mutates the CallInterface members.
+template <typename T>
+class Fortran::lower::CallInterfaceImpl {
+  using CallInterface = Fortran::lower::CallInterface<T>;
+  using FirPlaceHolder = typename CallInterface::FirPlaceHolder;
+  using Property = typename CallInterface::Property;
+  using TypeAndShape = Fortran::evaluate::characteristics::TypeAndShape;
+
+public:
+  CallInterfaceImpl(CallInterface &i)
+      : interface(i), mlirContext{i.converter.getMLIRContext()} {}
+
+  void buildImplicitInterface(
+      const Fortran::evaluate::characteristics::Procedure &procedure) {
+    // Handle result
+    if (const std::optional<Fortran::evaluate::characteristics::FunctionResult>
+            &result = procedure.functionResult)
+      handleImplicitResult(*result);
+    else if (interface.side().hasAlternateReturns())
+      addFirResult(mlir::IndexType::get(&mlirContext),
+                   FirPlaceHolder::resultEntityPosition, Property::Value);
+  }
+
+private:
+  void handleImplicitResult(
+      const Fortran::evaluate::characteristics::FunctionResult &result) {
+    if (result.IsProcedurePointer())
+      TODO(interface.converter.getCurrentLocation(),
+           "procedure pointer result not yet handled");
+    const Fortran::evaluate::characteristics::TypeAndShape *typeAndShape =
+        result.GetTypeAndShape();
+    assert(typeAndShape && "expect type for non proc pointer result");
+    Fortran::evaluate::DynamicType dynamicType = typeAndShape->type();
+    if (dynamicType.category() == Fortran::common::TypeCategory::Character) {
+      TODO(interface.converter.getCurrentLocation(),
+           "implicit result character type");
+    } else if (dynamicType.category() ==
+               Fortran::common::TypeCategory::Derived) {
+      TODO(interface.converter.getCurrentLocation(),
+           "implicit result derived type");
+    } else {
+      // All result other than characters/derived are simply returned by value
+      // in implicit interfaces
+      mlir::Type mlirType =
+          getConverter().genType(dynamicType.category(), dynamicType.kind());
+      addFirResult(mlirType, FirPlaceHolder::resultEntityPosition,
+                   Property::Value);
+    }
+  }
+
+  void addFirResult(mlir::Type type, int entityPosition, Property p) {
+    interface.outputs.emplace_back(FirPlaceHolder{type, entityPosition, p});
+  }
+
+  Fortran::lower::AbstractConverter &getConverter() {
+    return interface.converter;
+  }
+  CallInterface &interface;
+  mlir::MLIRContext &mlirContext;
+};
+
+template <typename T>
+void Fortran::lower::CallInterface<T>::determineInterface(
+    bool isImplicit,
+    const Fortran::evaluate::characteristics::Procedure &procedure) {
+  CallInterfaceImpl<T> impl(*this);
+  if (isImplicit)
+    impl.buildImplicitInterface(procedure);
+  else
+    TODO_NOLOC("determineImplicitInterface");
+}
+
 template <typename T>
 mlir::FunctionType Fortran::lower::CallInterface<T>::genFunctionType() {
-  return mlir::FunctionType::get(&converter.getMLIRContext(), {}, {});
+  llvm::SmallVector<mlir::Type> returnTys;
+  for (const FirPlaceHolder &placeHolder : outputs)
+    returnTys.emplace_back(placeHolder.type);
+  return mlir::FunctionType::get(&converter.getMLIRContext(), {}, returnTys);
 }
 
 template class Fortran::lower::CallInterface<Fortran::lower::CalleeInterface>;

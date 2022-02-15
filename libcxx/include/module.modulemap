@@ -50,6 +50,10 @@ module std [system] {
       header "setjmp.h"
       export *
     }
+    module stdatomic_h {
+      header "stdatomic.h"
+      export *
+    }
     // FIXME: <stdalign.h> is missing.
     // <signal.h> provided by C library.
     // <stdarg.h> provided by compiler.
@@ -815,7 +819,9 @@ module std [system] {
       module non_propagating_cache  { private header "__ranges/non_propagating_cache.h" }
       module owning_view            { private header "__ranges/owning_view.h" }
       module range_adaptor          { private header "__ranges/range_adaptor.h" }
+      module rbegin                 { private header "__ranges/rbegin.h" }
       module ref_view               { private header "__ranges/ref_view.h" }
+      module rend                   { private header "__ranges/rend.h" }
       module reverse_view           { private header "__ranges/reverse_view.h" }
       module single_view            { private header "__ranges/single_view.h" }
       module size                   { private header "__ranges/size.h" }
@@ -959,6 +965,7 @@ module std [system] {
       module swap                { private header "__utility/swap.h" }
       module to_underlying       { private header "__utility/to_underlying.h" }
       module transaction         { private header "__utility/transaction.h" }
+      module unreachable         { private header "__utility/unreachable.h" }
     }
   }
   module valarray {

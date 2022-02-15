@@ -10,6 +10,9 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFADDRESSRANGE_H
 
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/Object/ObjectFile.h"
+#include <algorithm>
+#include <cassert>
 #include <cstdint>
 #include <tuple>
 #include <vector>

@@ -76,6 +76,8 @@ write_cmake_config("lit_common_configured") {
 
   if (host_cpu == "x64") {
     values += [ "HOST_ARCH=x86_64" ]
+  } else if (host_cpu == "arm64") {
+    values += [ "HOST_ARCH=aarch64" ]
   } else {
     assert(false, "unimplemented host_cpu " + host_cpu)
   }

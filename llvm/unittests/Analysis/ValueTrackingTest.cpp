@@ -1737,7 +1737,7 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
     ret i32 %Ret
   })");
 
-    F = M->getFunction("test");
+    auto *F = M->getFunction("test");
     auto *LHS = findInstructionByNameOrNull(F, "LHS");
     auto *RHS = findInstructionByNameOrNull(F, "RHS");
 

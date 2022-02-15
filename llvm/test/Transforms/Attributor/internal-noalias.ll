@@ -5,7 +5,7 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_OPM,IS__CGSCC____,IS________NPM,IS__CGSCC_NPM
 
 define dso_local i32 @visible(i32* noalias %A, i32* noalias %B) #0 {
-; IS__TUNIT____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable willreturn
+; IS__TUNIT____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly willreturn uwtable
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@visible
 ; IS__TUNIT____-SAME: (i32* noalias nocapture nofree readonly align 4 [[A:%.*]], i32* noalias nocapture nofree readonly align 4 [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__TUNIT____-NEXT:  entry:
@@ -14,7 +14,7 @@ define dso_local i32 @visible(i32* noalias %A, i32* noalias %B) #0 {
 ; IS__TUNIT____-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL1]], [[CALL2]]
 ; IS__TUNIT____-NEXT:    ret i32 [[ADD]]
 ;
-; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable willreturn
+; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly willreturn uwtable
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@visible
 ; IS__CGSCC____-SAME: (i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
@@ -31,7 +31,7 @@ entry:
 }
 
 define private i32 @noalias_args(i32* %A, i32* %B) #0 {
-; IS__TUNIT____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable willreturn
+; IS__TUNIT____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly willreturn uwtable
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@noalias_args
 ; IS__TUNIT____-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT____-NEXT:  entry:
@@ -42,7 +42,7 @@ define private i32 @noalias_args(i32* %A, i32* %B) #0 {
 ; IS__TUNIT____-NEXT:    [[ADD2:%.*]] = add nsw i32 [[ADD]], [[CALL]]
 ; IS__TUNIT____-NEXT:    ret i32 [[ADD2]]
 ;
-; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable willreturn
+; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly willreturn uwtable
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@noalias_args
 ; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
@@ -64,7 +64,7 @@ entry:
 
 
 define internal i32 @noalias_args_argmem(i32* %A, i32* %B) #1 {
-; CHECK: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable willreturn
+; CHECK: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@noalias_args_argmem
 ; CHECK-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -81,7 +81,7 @@ entry:
 }
 
 define dso_local i32 @visible_local(i32* %A) #0 {
-; IS__TUNIT____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@visible_local
 ; IS__TUNIT____-SAME: (i32* nocapture nofree readonly [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IS__TUNIT____-NEXT:  entry:
@@ -92,7 +92,7 @@ define dso_local i32 @visible_local(i32* %A) #0 {
 ; IS__TUNIT____-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL1]], [[CALL2]]
 ; IS__TUNIT____-NEXT:    ret i32 [[ADD]]
 ;
-; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@visible_local
 ; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
@@ -113,7 +113,7 @@ entry:
 }
 
 define internal i32 @noalias_args_argmem_ro(i32* %A, i32* %B) #1 {
-; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@noalias_args_argmem_ro
 ; IS__CGSCC____-SAME: () #[[ATTR2:[0-9]+]] {
 ; IS__CGSCC____-NEXT:    ret i32 undef
@@ -144,7 +144,7 @@ define i32 @visible_local_2() {
 }
 
 define internal i32 @noalias_args_argmem_rn(i32* %A, i32* %B) #1 {
-; CHECK: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn
+; CHECK: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@noalias_args_argmem_rn
 ; CHECK-SAME: (i32* noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[T0:%.*]] = load i32, i32* [[B]], align 4
@@ -182,15 +182,15 @@ define i32 @visible_local_3() {
 attributes #0 = { noinline nounwind uwtable willreturn }
 attributes #1 = { argmemonly noinline nounwind uwtable willreturn}
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { argmemonly nofree noinline norecurse nosync nounwind readonly uwtable willreturn }
-; IS__TUNIT____: attributes #[[ATTR1]] = { argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn }
+; IS__TUNIT____: attributes #[[ATTR0]] = { argmemonly nofree noinline norecurse nosync nounwind readonly willreturn uwtable }
+; IS__TUNIT____: attributes #[[ATTR1]] = { argmemonly nofree noinline norecurse nosync nounwind willreturn uwtable }
 ; IS__TUNIT____: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__TUNIT____: attributes #[[ATTR3]] = { nofree nosync nounwind readonly }
 ; IS__TUNIT____: attributes #[[ATTR4]] = { nofree nosync nounwind willreturn }
 ;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { argmemonly nofree noinline norecurse nosync nounwind readonly uwtable willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn }
-; IS__CGSCC____: attributes #[[ATTR2]] = { nofree noinline norecurse nosync nounwind readnone uwtable willreturn }
+; IS__CGSCC____: attributes #[[ATTR0]] = { argmemonly nofree noinline norecurse nosync nounwind readonly willreturn uwtable }
+; IS__CGSCC____: attributes #[[ATTR1]] = { argmemonly nofree noinline norecurse nosync nounwind willreturn uwtable }
+; IS__CGSCC____: attributes #[[ATTR2]] = { nofree noinline norecurse nosync nounwind readnone willreturn uwtable }
 ; IS__CGSCC____: attributes #[[ATTR3]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR4]] = { nounwind readonly }
 ; IS__CGSCC____: attributes #[[ATTR5]] = { nosync nounwind readonly }

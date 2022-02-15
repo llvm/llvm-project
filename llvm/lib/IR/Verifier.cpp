@@ -3285,11 +3285,12 @@ void Verifier::visitCallBase(CallBase &Call) {
       visitIntrinsicCall(ID, Call);
 
   // Verify that a callsite has at most one "deopt", at most one "funclet", at
-  // most one "gc-transition", at most one "cfguardtarget",
-  // and at most one "preallocated" operand bundle.
+  // most one "gc-transition", at most one "cfguardtarget", at most one
+  // "preallocated" operand bundle, and at most one "ptrauth" operand bundle.
   bool FoundDeoptBundle = false, FoundFuncletBundle = false,
        FoundGCTransitionBundle = false, FoundCFGuardTargetBundle = false,
        FoundPreallocatedBundle = false, FoundGCLiveBundle = false,
+       FoundPtrauthBundle = false,
        FoundAttachedCallBundle = false;
   for (unsigned i = 0, e = Call.getNumOperandBundles(); i < e; ++i) {
     OperandBundleUse BU = Call.getOperandBundleAt(i);
@@ -3315,6 +3316,16 @@ void Verifier::visitCallBase(CallBase &Call) {
       FoundCFGuardTargetBundle = true;
       Assert(BU.Inputs.size() == 1,
              "Expected exactly one cfguardtarget bundle operand", Call);
+    } else if (Tag == LLVMContext::OB_ptrauth) {
+      Assert(!FoundPtrauthBundle, "Multiple ptrauth operand bundles", Call);
+      FoundPtrauthBundle = true;
+      Assert(BU.Inputs.size() == 2,
+             "Expected exactly two ptrauth bundle operands", Call);
+      Assert(isa<ConstantInt>(BU.Inputs[0]) &&
+             BU.Inputs[0]->getType()->isIntegerTy(32),
+             "Ptrauth bundle key operand must be an i32 constant", Call);
+      Assert(BU.Inputs[1]->getType()->isIntegerTy(64),
+             "Ptrauth bundle discriminator operand must be an i64", Call);
     } else if (Tag == LLVMContext::OB_preallocated) {
       Assert(!FoundPreallocatedBundle, "Multiple preallocated operand bundles",
              Call);
@@ -3338,6 +3349,10 @@ void Verifier::visitCallBase(CallBase &Call) {
       verifyAttachedCallBundle(Call, BU);
     }
   }
+
+  // Verify that callee and callsite agree on whether to use pointer auth.
+  Assert(!(Call.getCalledFunction() && FoundPtrauthBundle),
+         "Direct call cannot have a ptrauth bundle", Call);
 
   // Verify that each inlinable callsite of a debug-info-bearing function in a
   // debug-info-bearing function has a debug location attached to it. Failure to

@@ -11,7 +11,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; This should promote
 define internal fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #0 {
 ;
-; IS________OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS________OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS________OPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512
 ; IS________OPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS________OPM-NEXT:  bb:
@@ -19,7 +19,7 @@ define internal fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal5
 ; IS________OPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS________OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512
 ; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__TUNIT_NPM-NEXT:  bb:
@@ -29,7 +29,7 @@ define internal fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal5
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512
 ; IS__CGSCC_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
@@ -47,7 +47,7 @@ bb:
 
 define void @avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>* %arg) #0 {
 ;
-; IS__TUNIT_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@avx512_legal512_prefer512_call_avx512_legal512_prefer512
 ; IS__TUNIT_OPM-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT_OPM-NEXT:  bb:
@@ -60,7 +60,7 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>*
 ; IS__TUNIT_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@avx512_legal512_prefer512_call_avx512_legal512_prefer512
 ; IS__TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT_NPM-NEXT:  bb:
@@ -74,7 +74,7 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>*
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@avx512_legal512_prefer512_call_avx512_legal512_prefer512
 ; IS__CGSCC_OPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC_OPM-NEXT:  bb:
@@ -87,7 +87,7 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>*
 ; IS__CGSCC_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@avx512_legal512_prefer512_call_avx512_legal512_prefer512
 ; IS__CGSCC_NPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
@@ -115,7 +115,7 @@ bb:
 ; This should promote
 define internal fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #1 {
 ;
-; IS________OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS________OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS________OPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256
 ; IS________OPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IS________OPM-NEXT:  bb:
@@ -123,7 +123,7 @@ define internal fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal5
 ; IS________OPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS________OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256
 ; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IS__TUNIT_NPM-NEXT:  bb:
@@ -133,7 +133,7 @@ define internal fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal5
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256
 ; IS__CGSCC_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
@@ -151,7 +151,7 @@ bb:
 
 define void @avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>* %arg) #1 {
 ;
-; IS__TUNIT_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@avx512_legal512_prefer256_call_avx512_legal512_prefer256
 ; IS__TUNIT_OPM-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR1]] {
 ; IS__TUNIT_OPM-NEXT:  bb:
@@ -164,7 +164,7 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__TUNIT_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@avx512_legal512_prefer256_call_avx512_legal512_prefer256
 ; IS__TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR1]] {
 ; IS__TUNIT_NPM-NEXT:  bb:
@@ -178,7 +178,7 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@avx512_legal512_prefer256_call_avx512_legal512_prefer256
 ; IS__CGSCC_OPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC_OPM-NEXT:  bb:
@@ -191,7 +191,7 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__CGSCC_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@avx512_legal512_prefer256_call_avx512_legal512_prefer256
 ; IS__CGSCC_NPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
@@ -219,7 +219,7 @@ bb:
 ; This should promote
 define internal fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #1 {
 ;
-; IS________OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS________OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS________OPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256
 ; IS________OPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]]) #[[ATTR1]] {
 ; IS________OPM-NEXT:  bb:
@@ -227,7 +227,7 @@ define internal fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal5
 ; IS________OPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS________OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256
 ; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR1]] {
 ; IS__TUNIT_NPM-NEXT:  bb:
@@ -237,7 +237,7 @@ define internal fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal5
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256
 ; IS__CGSCC_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
@@ -255,7 +255,7 @@ bb:
 
 define void @avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>* %arg) #0 {
 ;
-; IS__TUNIT_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@avx512_legal512_prefer512_call_avx512_legal512_prefer256
 ; IS__TUNIT_OPM-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT_OPM-NEXT:  bb:
@@ -268,7 +268,7 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__TUNIT_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@avx512_legal512_prefer512_call_avx512_legal512_prefer256
 ; IS__TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT_NPM-NEXT:  bb:
@@ -282,7 +282,7 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@avx512_legal512_prefer512_call_avx512_legal512_prefer256
 ; IS__CGSCC_OPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC_OPM-NEXT:  bb:
@@ -295,7 +295,7 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__CGSCC_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@avx512_legal512_prefer512_call_avx512_legal512_prefer256
 ; IS__CGSCC_NPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
@@ -323,7 +323,7 @@ bb:
 ; This should promote
 define internal fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #0 {
 ;
-; IS________OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS________OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS________OPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512
 ; IS________OPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]]) #[[ATTR0]] {
 ; IS________OPM-NEXT:  bb:
@@ -331,7 +331,7 @@ define internal fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal5
 ; IS________OPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS________OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512
 ; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT_NPM-NEXT:  bb:
@@ -341,7 +341,7 @@ define internal fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal5
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512
 ; IS__CGSCC_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
@@ -359,7 +359,7 @@ bb:
 
 define void @avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>* %arg) #1 {
 ;
-; IS__TUNIT_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@avx512_legal512_prefer256_call_avx512_legal512_prefer512
 ; IS__TUNIT_OPM-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR1]] {
 ; IS__TUNIT_OPM-NEXT:  bb:
@@ -372,7 +372,7 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>*
 ; IS__TUNIT_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@avx512_legal512_prefer256_call_avx512_legal512_prefer512
 ; IS__TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR1]] {
 ; IS__TUNIT_NPM-NEXT:  bb:
@@ -386,7 +386,7 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>*
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@avx512_legal512_prefer256_call_avx512_legal512_prefer512
 ; IS__CGSCC_OPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC_OPM-NEXT:  bb:
@@ -399,7 +399,7 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>*
 ; IS__CGSCC_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@avx512_legal512_prefer256_call_avx512_legal512_prefer512
 ; IS__CGSCC_NPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
@@ -427,7 +427,7 @@ bb:
 ; This should not promote
 define internal fastcc void @callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #1 {
 ;
-; IS________OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS________OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS________OPM-LABEL: define {{[^@]+}}@callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256
 ; IS________OPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]]) #[[ATTR1]] {
 ; IS________OPM-NEXT:  bb:
@@ -435,7 +435,7 @@ define internal fastcc void @callee_avx512_legal256_prefer256_call_avx512_legal5
 ; IS________OPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS________OPM-NEXT:    ret void
 ;
-; IS________NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS________NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS________NPM-LABEL: define {{[^@]+}}@callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256
 ; IS________NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IS________NPM-NEXT:  bb:
@@ -451,7 +451,7 @@ bb:
 
 define void @avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>* %arg) #2 {
 ;
-; IS__TUNIT_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@avx512_legal256_prefer256_call_avx512_legal512_prefer256
 ; IS__TUNIT_OPM-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
 ; IS__TUNIT_OPM-NEXT:  bb:
@@ -464,7 +464,7 @@ define void @avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__TUNIT_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@avx512_legal256_prefer256_call_avx512_legal512_prefer256
 ; IS__TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
 ; IS__TUNIT_NPM-NEXT:  bb:
@@ -477,7 +477,7 @@ define void @avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@avx512_legal256_prefer256_call_avx512_legal512_prefer256
 ; IS__CGSCC_OPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
 ; IS__CGSCC_OPM-NEXT:  bb:
@@ -490,7 +490,7 @@ define void @avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__CGSCC_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@avx512_legal256_prefer256_call_avx512_legal512_prefer256
 ; IS__CGSCC_NPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
@@ -517,7 +517,7 @@ bb:
 ; This should not promote
 define internal fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #2 {
 ;
-; IS________OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS________OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS________OPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256
 ; IS________OPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]]) #[[ATTR2:[0-9]+]] {
 ; IS________OPM-NEXT:  bb:
@@ -525,7 +525,7 @@ define internal fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal2
 ; IS________OPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS________OPM-NEXT:    ret void
 ;
-; IS________NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS________NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS________NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256
 ; IS________NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]]) #[[ATTR2:[0-9]+]] {
 ; IS________NPM-NEXT:  bb:
@@ -541,7 +541,7 @@ bb:
 
 define void @avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>* %arg) #1 {
 ;
-; IS__TUNIT_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@avx512_legal512_prefer256_call_avx512_legal256_prefer256
 ; IS__TUNIT_OPM-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR1]] {
 ; IS__TUNIT_OPM-NEXT:  bb:
@@ -554,7 +554,7 @@ define void @avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>*
 ; IS__TUNIT_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@avx512_legal512_prefer256_call_avx512_legal256_prefer256
 ; IS__TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR1]] {
 ; IS__TUNIT_NPM-NEXT:  bb:
@@ -567,7 +567,7 @@ define void @avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>*
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@avx512_legal512_prefer256_call_avx512_legal256_prefer256
 ; IS__CGSCC_OPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC_OPM-NEXT:  bb:
@@ -580,7 +580,7 @@ define void @avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>*
 ; IS__CGSCC_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@avx512_legal512_prefer256_call_avx512_legal256_prefer256
 ; IS__CGSCC_NPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
@@ -607,7 +607,7 @@ bb:
 ; This should promote
 define internal fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #3 {
 ;
-; IS________OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS________OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS________OPM-LABEL: define {{[^@]+}}@callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256
 ; IS________OPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]]) #[[ATTR3:[0-9]+]] {
 ; IS________OPM-NEXT:  bb:
@@ -615,7 +615,7 @@ define internal fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_p
 ; IS________OPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS________OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256
 ; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR3:[0-9]+]] {
 ; IS__TUNIT_NPM-NEXT:  bb:
@@ -625,7 +625,7 @@ define internal fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_p
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256
 ; IS__CGSCC_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR3:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
@@ -643,7 +643,7 @@ bb:
 
 define void @avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* %arg) #4 {
 ;
-; IS__TUNIT_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@avx2_legal256_prefer256_call_avx2_legal512_prefer256
 ; IS__TUNIT_OPM-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
 ; IS__TUNIT_OPM-NEXT:  bb:
@@ -656,7 +656,7 @@ define void @avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* %ar
 ; IS__TUNIT_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@avx2_legal256_prefer256_call_avx2_legal512_prefer256
 ; IS__TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
 ; IS__TUNIT_NPM-NEXT:  bb:
@@ -670,7 +670,7 @@ define void @avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* %ar
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@avx2_legal256_prefer256_call_avx2_legal512_prefer256
 ; IS__CGSCC_OPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
 ; IS__CGSCC_OPM-NEXT:  bb:
@@ -683,7 +683,7 @@ define void @avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* %ar
 ; IS__CGSCC_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@avx2_legal256_prefer256_call_avx2_legal512_prefer256
 ; IS__CGSCC_NPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
@@ -711,7 +711,7 @@ bb:
 ; This should promote
 define internal fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #4 {
 ;
-; IS________OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS________OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS________OPM-LABEL: define {{[^@]+}}@callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256
 ; IS________OPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]]) #[[ATTR4:[0-9]+]] {
 ; IS________OPM-NEXT:  bb:
@@ -719,7 +719,7 @@ define internal fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_p
 ; IS________OPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS________OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256
 ; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR4]] {
 ; IS__TUNIT_NPM-NEXT:  bb:
@@ -729,7 +729,7 @@ define internal fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_p
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256
 ; IS__CGSCC_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR4]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
@@ -747,7 +747,7 @@ bb:
 
 define void @avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* %arg) #3 {
 ;
-; IS__TUNIT_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@avx2_legal512_prefer256_call_avx2_legal256_prefer256
 ; IS__TUNIT_OPM-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR3]] {
 ; IS__TUNIT_OPM-NEXT:  bb:
@@ -760,7 +760,7 @@ define void @avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* %ar
 ; IS__TUNIT_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@avx2_legal512_prefer256_call_avx2_legal256_prefer256
 ; IS__TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR3]] {
 ; IS__TUNIT_NPM-NEXT:  bb:
@@ -774,7 +774,7 @@ define void @avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* %ar
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@avx2_legal512_prefer256_call_avx2_legal256_prefer256
 ; IS__CGSCC_OPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR3]] {
 ; IS__CGSCC_OPM-NEXT:  bb:
@@ -787,7 +787,7 @@ define void @avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* %ar
 ; IS__CGSCC_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@avx2_legal512_prefer256_call_avx2_legal256_prefer256
 ; IS__CGSCC_NPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR3]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
@@ -822,20 +822,20 @@ attributes #3 = { inlinehint norecurse nounwind uwtable "target-features"="+avx2
 attributes #4 = { inlinehint norecurse nounwind uwtable "target-features"="+avx2" "min-legal-vector-width"="256" "prefer-vector-width"="256" }
 attributes #5 = { argmemonly nounwind }
 ;.
-; IS__TUNIT____: attributes #[[ATTR0:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn "min-legal-vector-width"="512" "prefer-vector-width"="512" "target-features"="+avx512vl" }
-; IS__TUNIT____: attributes #[[ATTR1:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx512vl" }
-; IS__TUNIT____: attributes #[[ATTR2:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx512vl" }
-; IS__TUNIT____: attributes #[[ATTR3:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx2" }
-; IS__TUNIT____: attributes #[[ATTR4:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx2" }
+; IS__TUNIT____: attributes #[[ATTR0:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="512" "prefer-vector-width"="512" "target-features"="+avx512vl" }
+; IS__TUNIT____: attributes #[[ATTR1:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx512vl" }
+; IS__TUNIT____: attributes #[[ATTR2:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx512vl" }
+; IS__TUNIT____: attributes #[[ATTR3:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx2" }
+; IS__TUNIT____: attributes #[[ATTR4:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx2" }
 ; IS__TUNIT____: attributes #[[ATTR5:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
 ; IS__TUNIT____: attributes #[[ATTR6:[0-9]+]] = { willreturn writeonly }
 ; IS__TUNIT____: attributes #[[ATTR7:[0-9]+]] = { nofree nosync nounwind willreturn }
 ;.
-; IS__CGSCC____: attributes #[[ATTR0:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn "min-legal-vector-width"="512" "prefer-vector-width"="512" "target-features"="+avx512vl" }
-; IS__CGSCC____: attributes #[[ATTR1:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx512vl" }
-; IS__CGSCC____: attributes #[[ATTR2:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx512vl" }
-; IS__CGSCC____: attributes #[[ATTR3:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx2" }
-; IS__CGSCC____: attributes #[[ATTR4:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx2" }
+; IS__CGSCC____: attributes #[[ATTR0:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="512" "prefer-vector-width"="512" "target-features"="+avx512vl" }
+; IS__CGSCC____: attributes #[[ATTR1:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx512vl" }
+; IS__CGSCC____: attributes #[[ATTR2:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx512vl" }
+; IS__CGSCC____: attributes #[[ATTR3:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx2" }
+; IS__CGSCC____: attributes #[[ATTR4:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx2" }
 ; IS__CGSCC____: attributes #[[ATTR5:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR6:[0-9]+]] = { willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR7:[0-9]+]] = { nosync nounwind willreturn }

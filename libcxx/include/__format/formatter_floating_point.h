@@ -27,6 +27,7 @@
 #include <__format/formatter_integral.h>
 #include <__format/parser_std_format_spec.h>
 #include <__utility/move.h>
+#include <__utility/unreachable.h>
 #include <charconv>
 #include <cmath>
 
@@ -689,7 +690,7 @@ private:
 
     default:
       _LIBCPP_ASSERT(false, "The parser should have validated the type");
-      _LIBCPP_UNREACHABLE();
+      __libcpp_unreachable();
     }
   }
 };

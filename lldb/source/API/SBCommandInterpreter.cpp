@@ -52,15 +52,15 @@ public:
   bool IsRemovable() const override { return true; }
 
   /// More documentation is available in lldb::CommandObject::GetRepeatCommand,
-  /// but in short, if nullptr is returned, the previous command will be
+  /// but in short, if llvm::None is returned, the previous command will be
   /// repeated, and if an empty string is returned, no commands will be
   /// executed.
-  const char *GetRepeatCommand(Args &current_command_args,
-                               uint32_t index) override {
+  llvm::Optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                               uint32_t index) override {
     if (!m_auto_repeat_command)
-      return nullptr;
+      return llvm::None;
     else
-      return m_auto_repeat_command->c_str();
+      return m_auto_repeat_command;
   }
 
 protected:

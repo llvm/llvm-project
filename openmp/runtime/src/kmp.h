@@ -1124,7 +1124,7 @@ extern void __kmp_init_target_mem();
 #if KMP_OS_UNIX && (KMP_ARCH_X86 || KMP_ARCH_X86_64)
 // HW TSC is used to reduce overhead (clock tick instead of nanosecond).
 extern kmp_uint64 __kmp_ticks_per_msec;
-#if KMP_COMPILER_ICC
+#if KMP_COMPILER_ICC || KMP_COMPILER_ICX
 #define KMP_NOW() ((kmp_uint64)_rdtsc())
 #else
 #define KMP_NOW() __kmp_hardware_timestamp()

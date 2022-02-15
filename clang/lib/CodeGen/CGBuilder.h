@@ -151,13 +151,6 @@ public:
                                             Ordering, SSID);
   }
 
-  using CGBuilderBaseTy::CreateBitCast;
-  Address CreateBitCast(Address Addr, llvm::Type *Ty,
-                        const llvm::Twine &Name = "") {
-    return Address(CreateBitCast(Addr.getPointer(), Ty, Name),
-                   Addr.getAlignment());
-  }
-
   using CGBuilderBaseTy::CreateAddrSpaceCast;
   Address CreateAddrSpaceCast(Address Addr, llvm::Type *Ty,
                               const llvm::Twine &Name = "") {

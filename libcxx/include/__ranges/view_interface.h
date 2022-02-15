@@ -90,19 +90,19 @@ public:
   template<class _D2 = _Derived>
   _LIBCPP_HIDE_FROM_ABI
   constexpr auto data()
-    noexcept(noexcept(_VSTD::to_address(ranges::begin(__derived()))))
+    noexcept(noexcept(std::to_address(ranges::begin(__derived()))))
     requires contiguous_iterator<iterator_t<_D2>>
   {
-    return _VSTD::to_address(ranges::begin(__derived()));
+    return std::to_address(ranges::begin(__derived()));
   }
 
   template<class _D2 = _Derived>
   _LIBCPP_HIDE_FROM_ABI
   constexpr auto data() const
-    noexcept(noexcept(_VSTD::to_address(ranges::begin(__derived()))))
+    noexcept(noexcept(std::to_address(ranges::begin(__derived()))))
     requires range<const _D2> && contiguous_iterator<iterator_t<const _D2>>
   {
-    return _VSTD::to_address(ranges::begin(__derived()));
+    return std::to_address(ranges::begin(__derived()));
   }
 
   template<class _D2 = _Derived>

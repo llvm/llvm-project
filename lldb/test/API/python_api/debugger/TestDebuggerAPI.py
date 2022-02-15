@@ -81,8 +81,8 @@ class DebuggerAPITestCase(TestBase):
         error = self.dbg.SetInternalVariable(property_name,
                                              str(new_cache_line_size),
                                              self.dbg.GetInstanceName())
-        self.assertTrue(error.Success(),
-                        property_name + " value was changed successfully")
+        self.assertSuccess(error,
+                           property_name + " value was changed successfully")
 
         # Check that it was set actually.
         self.assertEqual(get_cache_line_size(), new_cache_line_size)

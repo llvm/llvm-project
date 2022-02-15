@@ -688,11 +688,9 @@ Error RISCVISAInfo::checkDependency() {
   bool HasE = Exts.count("e") != 0;
   bool HasD = Exts.count("d") != 0;
   bool HasF = Exts.count("f") != 0;
-  bool HasZve32x = Exts.count("zve32x") != 0;
+  bool HasVector = Exts.count("zve32x") != 0;
   bool HasZve32f = Exts.count("zve32f") != 0;
   bool HasZve64d = Exts.count("zve64d") != 0;
-  bool HasV = Exts.count("v") != 0;
-  bool HasVector = HasZve32x || HasV;
   bool HasZvl = MinVLen != 0;
 
   if (HasE && !IsRv32)
@@ -732,7 +730,7 @@ Error RISCVISAInfo::checkDependency() {
   return Error::success();
 }
 
-static const char *ImpliedExtsV[] = {"zvl128b", "f", "d"};
+static const char *ImpliedExtsV[] = {"zvl128b", "zve64d", "f", "d"};
 static const char *ImpliedExtsZfhmin[] = {"f"};
 static const char *ImpliedExtsZfh[] = {"f"};
 static const char *ImpliedExtsZve64d[] = {"zve64f"};
@@ -863,11 +861,6 @@ void RISCVISAInfo::updateMaxELen() {
       unsigned ZveELen;
       ExtName.getAsInteger(10, ZveELen);
       MaxELen = std::max(MaxELen, ZveELen);
-    }
-    if (ExtName == "v") {
-      MaxELenFp = 64;
-      MaxELen = 64;
-      return;
     }
   }
 }

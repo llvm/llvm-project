@@ -13,13 +13,13 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/Support/DataExtractor.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 
 namespace llvm {
 
+class DataExtractor;
 class DWARFFormValue;
 class DWARFUnit;
 class raw_ostream;

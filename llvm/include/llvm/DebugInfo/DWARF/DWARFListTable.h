@@ -14,7 +14,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <map>

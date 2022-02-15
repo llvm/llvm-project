@@ -305,7 +305,6 @@ public:
   }
 
   bool isInterestingAlloca(const AllocaInst &AI);
-  void alignAndPadAlloca(memtag::AllocaInfo &Info);
 
   void tagAlloca(AllocaInst *AI, Instruction *InsertBefore, Value *Ptr,
                  uint64_t Size);
@@ -482,40 +481,6 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
   return Base;
 }
 
-void AArch64StackTagging::alignAndPadAlloca(memtag::AllocaInfo &Info) {
-  const Align NewAlignment =
-      max(MaybeAlign(Info.AI->getAlign()), kTagGranuleSize);
-  Info.AI->setAlignment(NewAlignment);
-
-  uint64_t Size = Info.AI->getAllocationSizeInBits(*DL).getValue() / 8;
-  uint64_t AlignedSize = alignTo(Size, kTagGranuleSize);
-  if (Size == AlignedSize)
-    return;
-
-  // Add padding to the alloca.
-  Type *AllocatedType =
-      Info.AI->isArrayAllocation()
-          ? ArrayType::get(
-                Info.AI->getAllocatedType(),
-                cast<ConstantInt>(Info.AI->getArraySize())->getZExtValue())
-          : Info.AI->getAllocatedType();
-  Type *PaddingType =
-      ArrayType::get(Type::getInt8Ty(F->getContext()), AlignedSize - Size);
-  Type *TypeWithPadding = StructType::get(AllocatedType, PaddingType);
-  auto *NewAI = new AllocaInst(
-      TypeWithPadding, Info.AI->getType()->getAddressSpace(), nullptr, "", Info.AI);
-  NewAI->takeName(Info.AI);
-  NewAI->setAlignment(Info.AI->getAlign());
-  NewAI->setUsedWithInAlloca(Info.AI->isUsedWithInAlloca());
-  NewAI->setSwiftError(Info.AI->isSwiftError());
-  NewAI->copyMetadata(*Info.AI);
-
-  auto *NewPtr = new BitCastInst(NewAI, Info.AI->getType(), "", Info.AI);
-  Info.AI->replaceAllUsesWith(NewPtr);
-  Info.AI->eraseFromParent();
-  Info.AI = NewAI;
-}
-
 // FIXME: check for MTE extension
 bool AArch64StackTagging::runOnFunction(Function &Fn) {
   if (!Fn.hasFnAttribute(Attribute::SanitizeMemTag))
@@ -540,7 +505,9 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   for (auto &I : SInfo.AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
     assert(Info.AI && isInterestingAlloca(*Info.AI));
-    alignAndPadAlloca(Info);
+    auto *PrevAI = Info.AI;
+    if (memtag::alignAndPadAlloca(Info, kTagGranuleSize))
+      PrevAI->eraseFromParent();
   }
 
   std::unique_ptr<DominatorTree> DeleteDT;

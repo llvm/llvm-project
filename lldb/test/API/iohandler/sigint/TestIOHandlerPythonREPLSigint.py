@@ -58,7 +58,7 @@ class TestCase(PExpectTest):
     @skipIfAsan
     # FIXME: On Linux the Python code that reads from stdin seems to block until
     # it has finished reading a line before handling any queued signals.
-    @skipIfLinux
+    @skipIf(hostoslist=['linux'])
     @skipIfWindows
     def test_while_waiting_on_input(self):
         """ Tests SIGINT handling while the REPL is waiting on input from

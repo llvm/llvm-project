@@ -61,23 +61,6 @@ public:
                            const Token &FilenameTok,
                            SrcMgr::CharacteristicKind FileType) {}
 
-  /// Callback invoked whenever an inclusion directive results in a
-  /// file-not-found error.
-  ///
-  /// \param FileName The name of the file being included, as written in the
-  /// source code.
-  ///
-  /// \param RecoveryPath If this client indicates that it can recover from
-  /// this missing file, the client should set this as an additional header
-  /// search patch.
-  ///
-  /// \returns true to indicate that the preprocessor should attempt to recover
-  /// by adding \p RecoveryPath as a header search path.
-  virtual bool FileNotFound(StringRef FileName,
-                            SmallVectorImpl<char> &RecoveryPath) {
-    return false;
-  }
-
   /// Callback invoked whenever an inclusion directive of
   /// any kind (\c \#include, \c \#import, etc.) has been processed, regardless
   /// of whether the inclusion will actually result in an inclusion.
@@ -441,12 +424,6 @@ public:
                    SrcMgr::CharacteristicKind FileType) override {
     First->FileSkipped(SkippedFile, FilenameTok, FileType);
     Second->FileSkipped(SkippedFile, FilenameTok, FileType);
-  }
-
-  bool FileNotFound(StringRef FileName,
-                    SmallVectorImpl<char> &RecoveryPath) override {
-    return First->FileNotFound(FileName, RecoveryPath) ||
-           Second->FileNotFound(FileName, RecoveryPath);
   }
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,

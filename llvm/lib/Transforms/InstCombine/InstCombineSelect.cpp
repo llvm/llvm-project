@@ -370,6 +370,7 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   // one-use constraint, but that needs be examined carefully since it may not
   // reduce the total number of instructions.
   if (TI->getNumOperands() != 2 || FI->getNumOperands() != 2 ||
+      !TI->isSameOperationAs(FI) ||
       (!isa<BinaryOperator>(TI) && !isa<GetElementPtrInst>(TI)) ||
       !TI->hasOneUse() || !FI->hasOneUse())
     return nullptr;

@@ -48,7 +48,7 @@ public:
         convertible_to<_Tp, _Range&> && requires { __fun(declval<_Tp>()); }
     _LIBCPP_HIDE_FROM_ABI
     constexpr ref_view(_Tp&& __t)
-      : __range_(_VSTD::addressof(static_cast<_Range&>(_VSTD::forward<_Tp>(__t))))
+      : __range_(std::addressof(static_cast<_Range&>(std::forward<_Tp>(__t))))
     {}
 
     _LIBCPP_HIDE_FROM_ABI constexpr _Range& base() const { return *__range_; }

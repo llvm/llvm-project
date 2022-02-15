@@ -47,7 +47,12 @@ sections with improvements to Clang's support for those languages.
 Major New Features
 ------------------
 
--  ...
+- Clang now supports the ``-fzero-call-used-regs`` feature for x86. The purpose
+  of this feature is to limit Return-Oriented Programming (ROP) exploits and
+  information leakage. It works by zeroing out a selected class of registers
+  before function return --- e.g., all GPRs that are used within the function.
+  There is an analogous ``zero_call_used_regs`` attribute to allow for finer
+  control of this feature.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -77,6 +82,9 @@ Attribute Changes in Clang
 
 - Added support for parameter pack expansion in `clang::annotate`.
 
+- The ``overloadable`` attribute can now be written in all of the syntactic
+  locations a declaration attribute may appear. Fixes PR53805.
+
 Windows Support
 ---------------
 
@@ -88,6 +96,11 @@ Windows Support
 
 C Language Changes in Clang
 ---------------------------
+
+C2x Feature Support
+-------------------
+
+- Implemented `WG14 N2674 The noreturn attribute <http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2764.pdf>`_.
 
 C++ Language Changes in Clang
 -----------------------------

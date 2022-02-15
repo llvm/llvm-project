@@ -43,7 +43,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK: @[[_ZTI1Y:[a-zA-Z0-9_$"\\.-]+]] = external dso_local constant { i8*, i8*, i8* }, align 8
 ;.
 define i32 @sink_r0(i32 %r) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@sink_r0
 ; CHECK-SAME: (i32 returned [[R:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -61,7 +61,7 @@ define i32 @scc_r1(i32 %a, i32 %r, i32 %b) #0 {
 ; IS__TUNIT____-NEXT:    [[CALL1:%.*]] = call i32 @scc_r2(i32 [[R]], i32 [[A]], i32 [[R]]) #[[ATTR10:[0-9]+]]
 ; IS__TUNIT____-NEXT:    ret i32 [[R]]
 ;
-; IS__CGSCC____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
+; IS__CGSCC____: Function Attrs: nofree noinline nosync nounwind readnone willreturn uwtable
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@scc_r1
 ; IS__CGSCC____-SAME: (i32 [[A:%.*]], i32 returned [[R:%.*]], i32 [[B:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
@@ -110,7 +110,7 @@ define i32 @scc_r2(i32 %a, i32 %b, i32 %r) #0 {
 ; IS__TUNIT____-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[R]], [[IF_THEN]] ], [ [[R]], [[IF_THEN3]] ], [ [[COND]], [[COND_END]] ]
 ; IS__TUNIT____-NEXT:    ret i32 [[R]]
 ;
-; IS__CGSCC____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
+; IS__CGSCC____: Function Attrs: nofree noinline nosync nounwind readnone willreturn uwtable
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@scc_r2
 ; IS__CGSCC____-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 returned [[R:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC____-NEXT:  entry:
@@ -225,7 +225,7 @@ define i32 @scc_rX(i32 %a, i32 %b, i32 %r) #0 {
 ; IS__TUNIT____-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[R]], [[IF_THEN]] ], [ [[B]], [[IF_THEN3]] ], [ [[COND]], [[COND_END]] ]
 ; IS__TUNIT____-NEXT:    ret i32 [[RETVAL_0]]
 ;
-; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@scc_rX
 ; IS__CGSCC____-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[R:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
@@ -318,7 +318,7 @@ return:                                           ; preds = %cond.end, %if.then3
 ;   return a == b ? r : ptr_scc_r2(a, b, r);
 ; }
 define double* @ptr_sink_r0(double* %r) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@ptr_sink_r0
 ; CHECK-SAME: (double* nofree readnone returned "no-capture-maybe-returned" [[R:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -501,13 +501,13 @@ entry:
 ; }
 ;
 define i32* @rt1(i32* %a) #0 {
-; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
+; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone willreturn uwtable
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@rt1
 ; IS__TUNIT____-SAME: (i32* nocapture nofree nonnull readnone align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR4:[0-9]+]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    ret i32* undef
 ;
-; IS__CGSCC____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
+; IS__CGSCC____: Function Attrs: nofree noinline nosync nounwind readnone willreturn uwtable
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@rt1
 ; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull readnone align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC____-NEXT:  entry:
@@ -784,7 +784,7 @@ entry:
 ; }
 ;
 define double @select_and_phi(double %b) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@select_and_phi
 ; CHECK-SAME: (double returned [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -870,7 +870,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; }
 ;
 define double* @bitcast(i32* %b) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@bitcast
 ; CHECK-SAME: (i32* nofree readnone "no-capture-maybe-returned" [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -893,7 +893,7 @@ entry:
 ; }
 ;
 define double* @bitcasts_select_and_phi(i32* %b) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@bitcasts_select_and_phi
 ; CHECK-SAME: (i32* nofree readnone [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -943,7 +943,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; }
 ;
 define double* @ret_arg_arg_undef(i32* %b) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@ret_arg_arg_undef
 ; CHECK-SAME: (i32* nofree readnone [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -991,7 +991,7 @@ ret_undef:
 ; }
 ;
 define double* @ret_undef_arg_arg(i32* %b) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@ret_undef_arg_arg
 ; CHECK-SAME: (i32* nofree readnone [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -1039,7 +1039,7 @@ ret_arg1:
 ; }
 ;
 define double* @ret_undef_arg_undef(i32* %b) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@ret_undef_arg_undef
 ; CHECK-SAME: (i32* nofree readnone [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -1172,7 +1172,7 @@ r:
 ; TEST inconsistent IR in dead code.
 ;
 define i32 @deadblockcall1(i32 %A) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@deadblockcall1
 ; CHECK-SAME: (i32 returned [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -1190,7 +1190,7 @@ unreachableblock:
 declare i32 @deadblockcall_helper(i32 returned %A);
 
 define i32 @deadblockcall2(i32 %A) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@deadblockcall2
 ; CHECK-SAME: (i32 returned [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -1211,7 +1211,7 @@ unreachableblock2:
 }
 
 define i32 @deadblockphi1(i32 %A) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@deadblockphi1
 ; CHECK-SAME: (i32 returned [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -1237,7 +1237,7 @@ r:
 }
 
 define i32 @deadblockphi2(i32 %A) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@deadblockphi2
 ; CHECK-SAME: (i32 returned [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -1404,7 +1404,7 @@ define i32 @exact(i32* align 8 %a, i32* align 8 %b) {
 
 @G = external global i8
 define i32* @ret_const() #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@ret_const
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    ret i32* bitcast (i8* @G to i32*)
@@ -1413,7 +1413,7 @@ define i32* @ret_const() #0 {
   ret i32* %bc
 }
 define i32* @use_const() #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@use_const
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    ret i32* bitcast (i8* @G to i32*)
@@ -1422,7 +1422,7 @@ define i32* @use_const() #0 {
   ret i32* %c
 }
 define i32* @dont_use_const() #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@dont_use_const
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    ret i32* bitcast (i8* @G to i32*)
@@ -1476,11 +1476,11 @@ declare dso_local i8* @__dynamic_cast(i8*, i8*, i8*, i64)
 
 attributes #0 = { noinline nounwind uwtable }
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone uwtable willreturn }
+; IS__TUNIT____: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone willreturn uwtable }
 ; IS__TUNIT____: attributes #[[ATTR1]] = { nofree noinline nosync nounwind readnone uwtable }
 ; IS__TUNIT____: attributes #[[ATTR2]] = { nofree noinline norecurse nosync nounwind readnone uwtable }
 ; IS__TUNIT____: attributes #[[ATTR3]] = { argmemonly nofree noinline nosync nounwind readonly uwtable }
-; IS__TUNIT____: attributes #[[ATTR4]] = { nofree noinline nosync nounwind readnone uwtable willreturn }
+; IS__TUNIT____: attributes #[[ATTR4]] = { nofree noinline nosync nounwind readnone willreturn uwtable }
 ; IS__TUNIT____: attributes #[[ATTR5]] = { noinline nounwind uwtable }
 ; IS__TUNIT____: attributes #[[ATTR6]] = { noinline norecurse nounwind uwtable }
 ; IS__TUNIT____: attributes #[[ATTR7]] = { noreturn }
@@ -1491,8 +1491,8 @@ attributes #0 = { noinline nounwind uwtable }
 ; IS__TUNIT____: attributes #[[ATTR12]] = { nounwind }
 ; IS__TUNIT____: attributes #[[ATTR13:[0-9]+]] = { nounwind readnone }
 ;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone uwtable willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { nofree noinline nosync nounwind readnone uwtable willreturn }
+; IS__CGSCC____: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone willreturn uwtable }
+; IS__CGSCC____: attributes #[[ATTR1]] = { nofree noinline nosync nounwind readnone willreturn uwtable }
 ; IS__CGSCC____: attributes #[[ATTR2]] = { nofree noinline nosync nounwind readnone uwtable }
 ; IS__CGSCC____: attributes #[[ATTR3]] = { argmemonly nofree noinline nosync nounwind readonly uwtable }
 ; IS__CGSCC____: attributes #[[ATTR4]] = { noinline nounwind uwtable }

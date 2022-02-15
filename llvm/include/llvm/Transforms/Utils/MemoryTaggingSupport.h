@@ -101,6 +101,9 @@ private:
   std::function<bool(const AllocaInst &)> IsInterestingAlloca;
 };
 
+uint64_t getAllocaSizeInBytes(const AllocaInst &AI);
+bool alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Align);
+
 } // namespace memtag
 } // namespace llvm
 

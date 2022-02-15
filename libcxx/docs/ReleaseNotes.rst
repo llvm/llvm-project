@@ -38,6 +38,8 @@ What's New in Libc++ 15.0.0?
 New Features
 ------------
 
+ - Implemented P0627R6 (Function to mark unreachable code)
+
 API Changes
 -----------
 

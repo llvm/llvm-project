@@ -250,7 +250,9 @@ namespace std {
 #include <__ranges/enable_view.h>
 #include <__ranges/iota_view.h>
 #include <__ranges/join_view.h>
+#include <__ranges/rbegin.h>
 #include <__ranges/ref_view.h>
+#include <__ranges/rend.h>
 #include <__ranges/reverse_view.h>
 #include <__ranges/single_view.h>
 #include <__ranges/size.h>

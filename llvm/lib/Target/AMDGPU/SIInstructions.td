@@ -2264,6 +2264,18 @@ def : GCNPat <
 // the src is lowered. e.g. fptrunc + fma may be lowered to a
 // v_fma_mix* instruction which does not zero, or may not.
 def : GCNPat<
+  (i32 (DivergentUnaryFrag<abs> i32:$src)),
+  (V_MAX_I32_e64 (V_SUB_CO_U32_e32 (i32 0), $src), $src)>;
+
+let AddedComplexity = 1 in {
+def : GCNPat<
+  (i32 (DivergentUnaryFrag<abs> i32:$src)),
+  (V_MAX_I32_e64 (V_SUB_U32_e32 (i32 0), $src), $src)>{
+  let SubtargetPredicate = HasAddNoCarryInsts;
+}
+}  // AddedComplexity = 1
+
+def : GCNPat<
   (i32 (DivergentUnaryFrag<zext> i16:$src)),
   (V_AND_B32_e64 (S_MOV_B32 (i32 0xffff)), $src)
 >;
@@ -2772,20 +2784,21 @@ def : GCNPat<
   (S_MOV_B32 SReg_32:$src)
 >;
 
-multiclass BFMPatterns <ValueType vt, InstSI BFM, InstSI MOV> {
+multiclass BFMPatterns <ValueType vt, PatFrag SHL, PatFrag ADD, InstSI BFM> {
   def : GCNPat <
-    (vt (shl (vt (add (vt (shl 1, vt:$a)), -1)), vt:$b)),
+    (vt (SHL (vt (add (vt (shl 1, vt:$a)), -1)), vt:$b)),
     (BFM $a, $b)
   >;
 
   def : GCNPat <
-    (vt (add (vt (shl 1, vt:$a)), -1)),
-    (BFM $a, (MOV (i32 0)))
+    (vt (ADD (vt (shl 1, vt:$a)), -1)),
+    (BFM $a, (i32 0))
   >;
 }
 
-defm : BFMPatterns <i32, S_BFM_B32, S_MOV_B32>;
-// FIXME: defm : BFMPatterns <i64, S_BFM_B64, S_MOV_B64>;
+defm : BFMPatterns <i32, UniformBinFrag<shl>, UniformBinFrag<add>, S_BFM_B32>;
+// FIXME: defm : BFMPatterns <i64, UniformBinFrag<shl>, UniformBinFrag<add>, S_BFM_B64>;
+defm : BFMPatterns <i32, DivergentBinFrag<shl>, DivergentBinFrag<add>, V_BFM_B32_e64>;
 
 // Bitfield extract patterns
 

@@ -1694,6 +1694,7 @@ MacroInfo *ASTReader::ReadMacroRecord(ModuleFile &F, uint64_t Offset) {
   RecordData Record;
   SmallVector<IdentifierInfo*, 16> MacroParams;
   MacroInfo *Macro = nullptr;
+  llvm::MutableArrayRef<Token> MacroTokens;
 
   while (true) {
     // Advance to the next record, but if we get to the end of the block, don't
@@ -1748,7 +1749,8 @@ MacroInfo *ASTReader::ReadMacroRecord(ModuleFile &F, uint64_t Offset) {
       MI->setDefinitionEndLoc(ReadSourceLocation(F, Record, NextIndex));
       MI->setIsUsed(Record[NextIndex++]);
       MI->setUsedForHeaderGuard(Record[NextIndex++]);
-
+      MacroTokens = MI->allocateTokens(Record[NextIndex++],
+                                       PP.getPreprocessorAllocator());
       if (RecType == PP_MACRO_FUNCTION_LIKE) {
         // Decode function-like macro info.
         bool isC99VarArgs = Record[NextIndex++];
@@ -1793,10 +1795,14 @@ MacroInfo *ASTReader::ReadMacroRecord(ModuleFile &F, uint64_t Offset) {
       // If we see a TOKEN before a PP_MACRO_*, then the file is
       // erroneous, just pretend we didn't see this.
       if (!Macro) break;
+      if (MacroTokens.empty()) {
+        Error("unexpected number of macro tokens for a macro in AST file");
+        return Macro;
+      }
 
       unsigned Idx = 0;
-      Token Tok = ReadToken(F, Record, Idx);
-      Macro->AddTokenToBody(Tok);
+      MacroTokens[0] = ReadToken(F, Record, Idx);
+      MacroTokens = MacroTokens.drop_front();
       break;
     }
     }

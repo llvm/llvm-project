@@ -36,6 +36,8 @@
 #include "lldb/Target/StackID.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
 

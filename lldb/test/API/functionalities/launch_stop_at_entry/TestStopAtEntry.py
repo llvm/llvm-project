@@ -86,7 +86,7 @@ class TestStopAtEntry(TestBase):
         error = lldb.SBError()
 
         process = target.Launch(launch_info, error)
-        self.assertTrue(error.Success(), "Launch failed: {0}".format(error.description))
+        self.assertSuccess(error, "Launch failed")
         # If we are asynchronous, we have to wait for the events:
         if not synchronous:
             listener = launch_info.GetListener()
@@ -106,7 +106,7 @@ class TestStopAtEntry(TestBase):
 
         # Now make sure that we can resume the process and have it exit.
         error = process.Continue()
-        self.assertTrue(error.Success(), "Error continuing: {0}".format(error.description))
+        self.assertSuccess(error, "Error continuing")
         # Fetch events till we get eStateExited:
         if not synchronous:
             # Get events till exited.

@@ -38,4 +38,10 @@ spv.module Physical64 OpenCL requires #spv.vce<v1.0, [Kernel, Addresses], []> {
     %0 = spv.OCL.fabs %arg0 : vector<16xf32>
     spv.Return
   }
+
+  spv.func @fma(%arg0 : f32, %arg1 : f32, %arg2 : f32) "None" {
+    // CHECK: spv.OCL.fma {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : f32
+    %13 = spv.OCL.fma %arg0, %arg1, %arg2 : f32
+    spv.Return
+  }
 }

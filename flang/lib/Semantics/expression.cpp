@@ -1754,8 +1754,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(
           } else if (valueType) {
             AttachDeclaration(
                 Say(expr.source,
-                    "Value in structure constructor of type %s is "
-                    "incompatible with component '%s' of type %s"_err_en_US,
+                    "Value in structure constructor of type '%s' is "
+                    "incompatible with component '%s' of type '%s'"_err_en_US,
                     valueType->AsFortran(), symbol->name(),
                     symType->AsFortran()),
                 *symbol);
@@ -1763,7 +1763,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(
             AttachDeclaration(
                 Say(expr.source,
                     "Value in structure constructor is incompatible with "
-                    " component '%s' of type %s"_err_en_US,
+                    "component '%s' of type %s"_err_en_US,
                     symbol->name(), symType->AsFortran()),
                 *symbol);
           }
@@ -3108,7 +3108,9 @@ bool ExpressionAnalyzer::EnforceTypeConstraint(parser::CharBlock at,
 MaybeExpr ExpressionAnalyzer::MakeFunctionRef(parser::CharBlock callSite,
     ProcedureDesignator &&proc, ActualArguments &&arguments) {
   if (const auto *intrinsic{std::get_if<SpecificIntrinsic>(&proc.u)}) {
-    if (intrinsic->name == "null" && arguments.empty()) {
+    if (intrinsic->characteristics.value().attrs.test(
+            characteristics::Procedure::Attr::NullPointer) &&
+        arguments.empty()) {
       return Expr<SomeType>{NullPointer{}};
     }
   }

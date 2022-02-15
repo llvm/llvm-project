@@ -24,7 +24,7 @@ CHECKORIG-NEXT:        DW_AT_name      ("main")
 CHECKORIG-NEXT:        DW_AT_decl_file
 CHECKORIG-NEXT:        DW_AT_decl_line (1)
 CHECKORIG-NEXT:        DW_AT_decl_column       (0x05)
-CHECKORIG-NEXT:        DW_AT_type      (0x00000090 "int")
+CHECKORIG-NEXT:        DW_AT_type
 CHECKORIG-NEXT:        DW_AT_low_pc    (0x0000000000000660)
 CHECKORIG-NEXT:        DW_AT_high_pc   (0x0000000000000684)
 
@@ -48,6 +48,7 @@ CHECK-NEXT:        DW_AT_name      ("main")
 CHECK-NEXT:        DW_AT_decl_file
 CHECK-NEXT:        DW_AT_decl_line (1)
 CHECK-NEXT:        DW_AT_decl_column       (0x05)
-CHECK-NEXT:        DW_AT_type      (0x00000090 "int")
-CHECK-NEXT:        DW_AT_low_pc    (0x0000000000000660)
-CHECK-NEXT:        DW_AT_high_pc   (0x0000000000000684)
+CHECK-NEXT:        DW_AT_type
+CHECK-NEXT:        DW_AT_low_pc    (0x0000000000000000)
+CHECK-NEXT:        DW_AT_ranges    (0x00000030
+CHECK-NEXT:           [0x0000000000000660, 0x0000000000000684))

@@ -10,6 +10,7 @@ add_header_library(
     Limits.h
     StringView.h
     TypeTraits.h
+    Utility.h
 )
 
 add_header_library(

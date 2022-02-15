@@ -56,9 +56,9 @@ public:
 
   ~CommandObjectCommandsSource() override = default;
 
-  const char *GetRepeatCommand(Args &current_command_args,
-                               uint32_t index) override {
-    return "";
+  llvm::Optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                               uint32_t index) override {
+    return std::string("");
   }
 
   void

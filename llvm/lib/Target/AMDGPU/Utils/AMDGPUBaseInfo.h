@@ -779,9 +779,6 @@ bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 /// Is Reg - scalar register
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI);
 
-/// Is there any intersection between registers
-bool isRegIntersect(unsigned Reg0, unsigned Reg1, const MCRegisterInfo* TRI);
-
 /// If \p Reg is a pseudo reg, return the correct hardware register given
 /// \p STI otherwise return \p Reg.
 unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI);

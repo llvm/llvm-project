@@ -3645,6 +3645,11 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
             "           // World\n"
             "}",
             format(WrapCode, Style));
+  EXPECT_EQ("// x\n"
+            "// y",
+            format("//   x\n"
+                   "// y",
+                   Style));
 
   Style.SpacesInLineCommentPrefix = {3, 3};
   EXPECT_EQ("//   Lorem ipsum\n"

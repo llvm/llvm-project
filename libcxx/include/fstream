@@ -183,6 +183,7 @@ typedef basic_fstream<wchar_t> wfstream;
 #include <__config>
 #include <__debug>
 #include <__locale>
+#include <__utility/unreachable.h>
 #include <cstdio>
 #include <cstdlib>
 #include <istream>
@@ -538,7 +539,7 @@ const char* basic_filebuf<_CharT, _Traits>::__make_mdstring(
   default:
     return nullptr;
   }
-  _LIBCPP_UNREACHABLE();
+  __libcpp_unreachable();
 }
 
 template <class _CharT, class _Traits>

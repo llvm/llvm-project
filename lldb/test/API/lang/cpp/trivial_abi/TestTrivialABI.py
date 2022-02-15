@@ -38,9 +38,9 @@ class TestTrivialABI(TestBase):
         self.expr_test(False)
 
     def check_value(self, test_var, ivar_value):
-        self.assertTrue(test_var.GetError().Success(), "Invalid valobj: %s"%(test_var.GetError().GetCString()))
+        self.assertSuccess(test_var.GetError(), "Invalid valobj")
         ivar = test_var.GetChildMemberWithName("ivar")
-        self.assertTrue(test_var.GetError().Success(), "Failed to fetch ivar")
+        self.assertSuccess(test_var.GetError(), "Failed to fetch ivar")
         self.assertEqual(ivar_value, ivar.GetValueAsSigned(), "Got the right value for ivar")
 
     def check_frame(self, thread):

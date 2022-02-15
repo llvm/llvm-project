@@ -3994,6 +3994,9 @@ def : Separate<["--"], "no-system-header-prefix">, Alias<no_system_header_prefix
 def s : Flag<["-"], "s">, Group<Link_Group>;
 def target : Joined<["--"], "target=">, Flags<[NoXarchOption, CoreOption]>,
   HelpText<"Generate code for the given target">;
+def darwin_target_variant : Separate<["-"], "darwin-target-variant">,
+  Flags<[NoXarchOption, CoreOption]>,
+  HelpText<"Generate code for an additional runtime variant of the deployment target">;
 def print_supported_cpus : Flag<["-", "--"], "print-supported-cpus">,
   Group<CompileOnly_Group>, Flags<[CC1Option, CoreOption]>,
   HelpText<"Print supported cpu models for the given target (if target is not specified,"

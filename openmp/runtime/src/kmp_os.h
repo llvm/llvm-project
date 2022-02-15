@@ -53,8 +53,12 @@
 #define KMP_COMPILER_GCC 0
 #define KMP_COMPILER_CLANG 0
 #define KMP_COMPILER_MSVC 0
+#define KMP_COMPILER_ICX 0
 
-#if defined(__INTEL_COMPILER)
+#if __INTEL_CLANG_COMPILER
+#undef KMP_COMPILER_ICX
+#define KMP_COMPILER_ICX 1
+#elif defined(__INTEL_COMPILER)
 #undef KMP_COMPILER_ICC
 #define KMP_COMPILER_ICC 1
 #elif defined(__clang__)
@@ -85,7 +89,7 @@
 /* Check for quad-precision extension. */
 #define KMP_HAVE_QUAD 0
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
-#if KMP_COMPILER_ICC
+#if KMP_COMPILER_ICC || KMP_COMPILER_ICX
 /* _Quad is already defined for icc */
 #undef KMP_HAVE_QUAD
 #define KMP_HAVE_QUAD 1
@@ -448,7 +452,9 @@ enum kmp_mem_fence_type {
 #pragma intrinsic(InterlockedExchangeAdd)
 #pragma intrinsic(InterlockedCompareExchange)
 #pragma intrinsic(InterlockedExchange)
+#if !(KMP_COMPILER_ICX && KMP_32_BIT_ARCH)
 #pragma intrinsic(InterlockedExchange64)
+#endif
 #endif
 
 // Using InterlockedIncrement / InterlockedDecrement causes a library loading
@@ -842,8 +848,14 @@ static inline bool mips_sync_val_compare_and_swap(volatile kmp_uint64 *p,
                               (kmp_uint64)(sv))
 #endif
 
+#if KMP_OS_DARWIN && defined(__INTEL_COMPILER) && __INTEL_COMPILER >= 1800
+#define KMP_XCHG_FIXED8(p, v)                                                  \
+  __atomic_exchange_1((volatile kmp_uint8 *)(p), (kmp_uint8)(v),               \
+                      __ATOMIC_SEQ_CST)
+#else
 #define KMP_XCHG_FIXED8(p, v)                                                  \
   __sync_lock_test_and_set((volatile kmp_uint8 *)(p), (kmp_uint8)(v))
+#endif
 #define KMP_XCHG_FIXED16(p, v)                                                 \
   __sync_lock_test_and_set((volatile kmp_uint16 *)(p), (kmp_uint16)(v))
 #define KMP_XCHG_FIXED32(p, v)                                                 \
@@ -1026,7 +1038,7 @@ extern kmp_real64 __kmp_xchg_real64(volatile kmp_real64 *p, kmp_real64 v);
 #endif
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
-#if KMP_COMPILER_ICC
+#if KMP_COMPILER_ICC || KMP_COMPILER_ICX
 #define KMP_MFENCE_() _mm_mfence()
 #define KMP_SFENCE_() _mm_sfence()
 #elif KMP_COMPILER_MSVC

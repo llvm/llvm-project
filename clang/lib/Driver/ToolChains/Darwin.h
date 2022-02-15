@@ -317,6 +317,9 @@ public:
   /// The information about the darwin SDK that was used.
   mutable Optional<DarwinSDKInfo> SDKInfo;
 
+  /// The target variant triple that was specified (if any).
+  mutable Optional<llvm::Triple> TargetVariantTriple;
+
   CudaInstallationDetector CudaInstallation;
   RocmInstallationDetector RocmInstallation;
 

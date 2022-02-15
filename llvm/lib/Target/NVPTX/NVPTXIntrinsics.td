@@ -2473,7 +2473,7 @@ def : Pat<(int_nvvm_rotate_right_b64 Int64Regs:$src, Int32Regs:$amt),
 
 // SW version of rotate 64
 def : Pat<(int_nvvm_rotate_b64 Int64Regs:$src, (i32 imm:$amt)),
-          (ROT64imm_sw Int64Regs:$src, imm:$amt, (SUB_FRM_32 node:$amt))>,
+          (ROT64imm_sw Int64Regs:$src, imm:$amt, (SUB_FRM_64 node:$amt))>,
       Requires<[noHWROT32]>;
 def : Pat<(int_nvvm_rotate_b64 Int64Regs:$src, Int32Regs:$amt),
           (ROTL64reg_sw Int64Regs:$src, Int32Regs:$amt)>,

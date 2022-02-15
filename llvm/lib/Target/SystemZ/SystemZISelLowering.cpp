@@ -1833,6 +1833,40 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   return Chain;
 }
 
+// Generate a call taking the given operands as arguments and returning a
+// result of type RetVT.
+std::pair<SDValue, SDValue> SystemZTargetLowering::makeExternalCall(
+    SDValue Chain, SelectionDAG &DAG, const char *CalleeName, EVT RetVT,
+    ArrayRef<SDValue> Ops, CallingConv::ID CallConv, bool IsSigned, SDLoc DL,
+    bool DoesNotReturn, bool IsReturnValueUsed) const {
+  TargetLowering::ArgListTy Args;
+  Args.reserve(Ops.size());
+
+  TargetLowering::ArgListEntry Entry;
+  for (SDValue Op : Ops) {
+    Entry.Node = Op;
+    Entry.Ty = Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
+    Entry.IsSExt = shouldSignExtendTypeInLibCall(Op.getValueType(), IsSigned);
+    Entry.IsZExt = !shouldSignExtendTypeInLibCall(Op.getValueType(), IsSigned);
+    Args.push_back(Entry);
+  }
+
+  SDValue Callee =
+      DAG.getExternalSymbol(CalleeName, getPointerTy(DAG.getDataLayout()));
+
+  Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  bool SignExtend = shouldSignExtendTypeInLibCall(RetVT, IsSigned);
+  CLI.setDebugLoc(DL)
+      .setChain(Chain)
+      .setCallee(CallConv, RetTy, Callee, std::move(Args))
+      .setNoReturn(DoesNotReturn)
+      .setDiscardResult(!IsReturnValueUsed)
+      .setSExtResult(SignExtend)
+      .setZExtResult(!SignExtend);
+  return LowerCallTo(CLI);
+}
+
 bool SystemZTargetLowering::
 CanLowerReturn(CallingConv::ID CallConv,
                MachineFunction &MF, bool isVarArg,
@@ -3520,8 +3554,82 @@ SDValue SystemZTargetLowering::lowerVACOPY(SDValue Op,
                        MachinePointerInfo(SrcSV));
 }
 
-SDValue SystemZTargetLowering::
-lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const {
+SDValue
+SystemZTargetLowering::lowerDYNAMIC_STACKALLOC(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  if (Subtarget.isTargetXPLINK64())
+    return lowerDYNAMIC_STACKALLOC_XPLINK(Op, DAG);
+  else
+    return lowerDYNAMIC_STACKALLOC_ELF(Op, DAG);
+}
+
+SDValue
+SystemZTargetLowering::lowerDYNAMIC_STACKALLOC_XPLINK(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+  const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
+  MachineFunction &MF = DAG.getMachineFunction();
+  bool RealignOpt = !MF.getFunction().hasFnAttribute("no-realign-stack");
+  SDValue Chain = Op.getOperand(0);
+  SDValue Size = Op.getOperand(1);
+  SDValue Align = Op.getOperand(2);
+  SDLoc DL(Op);
+
+  // If user has set the no alignment function attribute, ignore
+  // alloca alignments.
+  uint64_t AlignVal =
+      (RealignOpt ? dyn_cast<ConstantSDNode>(Align)->getZExtValue() : 0);
+
+  uint64_t StackAlign = TFI->getStackAlignment();
+  uint64_t RequiredAlign = std::max(AlignVal, StackAlign);
+  uint64_t ExtraAlignSpace = RequiredAlign - StackAlign;
+
+  SDValue NeededSpace = Size;
+
+  // Add extra space for alignment if needed.
+  EVT PtrVT = getPointerTy(MF.getDataLayout());
+  if (ExtraAlignSpace)
+    NeededSpace = DAG.getNode(ISD::ADD, DL, PtrVT, NeededSpace,
+                              DAG.getConstant(ExtraAlignSpace, DL, PtrVT));
+
+  bool IsSigned = false;
+  bool DoesNotReturn = false;
+  bool IsReturnValueUsed = false;
+  EVT VT = Op.getValueType();
+  SDValue AllocaCall =
+      makeExternalCall(Chain, DAG, "@@ALCAXP", VT, makeArrayRef(NeededSpace),
+                       CallingConv::C, IsSigned, DL, DoesNotReturn,
+                       IsReturnValueUsed)
+          .first;
+
+  // Perform a CopyFromReg from %GPR4 (stack pointer register). Chain and Glue
+  // to end of call in order to ensure it isn't broken up from the call
+  // sequence.
+  auto &Regs = Subtarget.getSpecialRegisters<SystemZXPLINK64Registers>();
+  Register SPReg = Regs.getStackPointerRegister();
+  Chain = AllocaCall.getValue(1);
+  SDValue Glue = AllocaCall.getValue(2);
+  SDValue NewSPRegNode = DAG.getCopyFromReg(Chain, DL, SPReg, PtrVT, Glue);
+  Chain = NewSPRegNode.getValue(1);
+
+  MVT PtrMVT = getPointerMemTy(MF.getDataLayout());
+  SDValue ArgAdjust = DAG.getNode(SystemZISD::ADJDYNALLOC, DL, PtrMVT);
+  SDValue Result = DAG.getNode(ISD::ADD, DL, PtrMVT, NewSPRegNode, ArgAdjust);
+
+  // Dynamically realign if needed.
+  if (ExtraAlignSpace) {
+    Result = DAG.getNode(ISD::ADD, DL, PtrVT, Result,
+                         DAG.getConstant(ExtraAlignSpace, DL, PtrVT));
+    Result = DAG.getNode(ISD::AND, DL, PtrVT, Result,
+                         DAG.getConstant(~(RequiredAlign - 1), DL, PtrVT));
+  }
+
+  SDValue Ops[2] = {Result, Chain};
+  return DAG.getMergeValues(Ops, DL);
+}
+
+SDValue
+SystemZTargetLowering::lowerDYNAMIC_STACKALLOC_ELF(SDValue Op,
+                                                   SelectionDAG &DAG) const {
   const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
   MachineFunction &MF = DAG.getMachineFunction();
   bool RealignOpt = !MF.getFunction().hasFnAttribute("no-realign-stack");

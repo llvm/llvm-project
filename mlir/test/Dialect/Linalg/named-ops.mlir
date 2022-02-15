@@ -97,19 +97,12 @@ func @depthwise_conv_2d_nhwc_hwcm_memref_dilated(%input: memref<2x8x9x2xf32>, %f
 
 // -----
 
-func @depthwise_conv_2d_input_nhwc_filter_missing_stride(%input: memref<1x113x113x96xf32>, %filter: memref<3x3x96xf32>, %output: memref<1x56x56x96xf32>) {
-  // expected-error @+1 {{missing indexing map required attribute 'strides'}}
-  linalg.depthwise_conv_2d_nhwc_hwc {dilations = dense<1> : vector<2xi64>}
-    ins(%input, %filter: memref<1x113x113x96xf32>, memref<3x3x96xf32>)
-    outs(%output: memref<1x56x56x96xf32>)
-  return
-}
-
-// -----
-
-func @depthwise_conv_2d_input_nhwc_filter_missing_dilations(%input: memref<1x113x113x96xf32>, %filter: memref<3x3x96xf32>, %output: memref<1x56x56x96xf32>) {
-  // expected-error @+1 {{missing indexing map required attribute 'dilations'}}
-  linalg.depthwise_conv_2d_nhwc_hwc {strides = dense<1> : vector<2xi64>}
+// CHECK-LABEL: func @depthwise_conv_2d_input_nhwc_filter_default_attributes
+func @depthwise_conv_2d_input_nhwc_filter_default_attributes(%input: memref<1x113x113x96xf32>, %filter: memref<3x3x96xf32>, %output: memref<1x56x56x96xf32>) {
+  // CHECK:      linalg.depthwise_conv_2d_nhwc_hwc
+  // CHECK-NOT:  strides =
+  // CHECK-NOT:  dilations =
+  linalg.depthwise_conv_2d_nhwc_hwc
     ins(%input, %filter: memref<1x113x113x96xf32>, memref<3x3x96xf32>)
     outs(%output: memref<1x56x56x96xf32>)
   return
@@ -118,7 +111,7 @@ func @depthwise_conv_2d_input_nhwc_filter_missing_dilations(%input: memref<1x113
 // -----
 
 func @depthwise_conv_2d_input_nhwc_filter_wrong_stride_element_type(%input: memref<1x113x113x96xf32>, %filter: memref<3x3x96xf32>, %output: memref<1x56x56x96xf32>) {
-  // expected-error @+1 {{incorrect element type for indexing map required attribute 'strides'}}
+  // expected-error @+1 {{incorrect element type for index attribute 'strides'}}
   linalg.depthwise_conv_2d_nhwc_hwc {dilations = dense<1> : vector<2xi64>, strides = dense<2.0> : vector<2xf32>}
     ins(%input, %filter: memref<1x113x113x96xf32>, memref<3x3x96xf32>)
     outs(%output: memref<1x56x56x96xf32>)
@@ -128,7 +121,7 @@ func @depthwise_conv_2d_input_nhwc_filter_wrong_stride_element_type(%input: memr
 // -----
 
 func @depthwise_conv_2d_input_nhwc_filter_wrong_stride_size(%input: memref<1x113x113x96xf32>, %filter: memref<3x3x96xf32>, %output: memref<1x56x56x96xf32>) {
-  // expected-error @+1 {{incorrect shape for indexing map required attribute 'strides'}}
+  // expected-error @+1 {{incorrect shape for index attribute 'strides'}}
   linalg.depthwise_conv_2d_nhwc_hwc {dilations = dense<1> : vector<2xi64>, strides = dense<2> : vector<3xi64> }
     ins(%input, %filter: memref<1x113x113x96xf32>, memref<3x3x96xf32>)
     outs(%output: memref<1x56x56x96xf32>)
@@ -566,7 +559,7 @@ func @conv_interface_wrong_input_indexing_map(
     %arg0 : tensor<?x?x?x?xf32>, %arg2 : tensor<?x?x?x?xf32>, %arg1 : tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
   // expected-error @+1 {{unexpected input index map for convolutions}}
   %0 = "linalg.conv_2d_nhwc_hwcf"(%arg0, %arg1, %arg2) ({
-    ^bb0(%arg3: f32, %arg4: f32, %arg5 : f32):  
+    ^bb0(%arg3: f32, %arg4: f32, %arg5 : f32):
       %1 = "arith.mulf"(%arg3, %arg4) : (f32, f32) -> f32
       %2 = "arith.addf"(%arg5, %1) : (f32, f32) -> f32
       "linalg.yield"(%2) : (f32) -> ()
@@ -583,7 +576,7 @@ func @conv_interface_wrong_num_operands(
     %arg0 : tensor<?x?x?x?xf32>, %arg1 : tensor<?x?x?x?x?xf32>, %arg2 : tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
   // expected-error @+1 {{expected output/filter indexing maps to be projected permutations}}
   %0 = "linalg.conv_2d_nhwc_hwcf"(%arg0, %arg1, %arg2) ({
-    ^bb0(%arg3: f32, %arg4: f32, %arg5 : f32):  
+    ^bb0(%arg3: f32, %arg4: f32, %arg5 : f32):
       %1 = "arith.mulf"(%arg3, %arg4) : (f32, f32) -> f32
       %2 = "arith.addf"(%arg5, %1) : (f32, f32) -> f32
       "linalg.yield"(%2) : (f32) -> ()

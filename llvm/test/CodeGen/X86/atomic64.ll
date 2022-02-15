@@ -18,21 +18,18 @@ define void @atomic_fetch_add64() nounwind {
 ; I486-LABEL: atomic_fetch_add64:
 ; I486:       # %bb.0: # %entry
 ; I486-NEXT:    subl $16, %esp
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl $2, 12(%eax)
 ; I486-NEXT:    movl $0, 8(%eax)
 ; I486-NEXT:    movl $1, 4(%eax)
 ; I486-NEXT:    movl $sc64, (%eax)
 ; I486-NEXT:    calll __atomic_fetch_add_8@PLT
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl $2, 12(%eax)
 ; I486-NEXT:    movl $0, 8(%eax)
 ; I486-NEXT:    movl $3, 4(%eax)
 ; I486-NEXT:    movl $sc64, (%eax)
 ; I486-NEXT:    calll __atomic_fetch_add_8@PLT
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl $2, 12(%eax)
 ; I486-NEXT:    movl $0, 8(%eax)
@@ -40,7 +37,6 @@ define void @atomic_fetch_add64() nounwind {
 ; I486-NEXT:    movl $sc64, (%eax)
 ; I486-NEXT:    calll __atomic_fetch_add_8@PLT
 ; I486-NEXT:    movl %eax, %ecx
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl %edx, 8(%eax)
 ; I486-NEXT:    movl %ecx, 4(%eax)
@@ -70,21 +66,18 @@ define void @atomic_fetch_sub64() nounwind {
 ; I486-LABEL: atomic_fetch_sub64:
 ; I486:       # %bb.0:
 ; I486-NEXT:    subl $16, %esp
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl $2, 12(%eax)
 ; I486-NEXT:    movl $0, 8(%eax)
 ; I486-NEXT:    movl $1, 4(%eax)
 ; I486-NEXT:    movl $sc64, (%eax)
 ; I486-NEXT:    calll __atomic_fetch_sub_8@PLT
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl $2, 12(%eax)
 ; I486-NEXT:    movl $0, 8(%eax)
 ; I486-NEXT:    movl $3, 4(%eax)
 ; I486-NEXT:    movl $sc64, (%eax)
 ; I486-NEXT:    calll __atomic_fetch_sub_8@PLT
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl $2, 12(%eax)
 ; I486-NEXT:    movl $0, 8(%eax)
@@ -92,7 +85,6 @@ define void @atomic_fetch_sub64() nounwind {
 ; I486-NEXT:    movl $sc64, (%eax)
 ; I486-NEXT:    calll __atomic_fetch_sub_8@PLT
 ; I486-NEXT:    movl %eax, %ecx
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl %edx, 8(%eax)
 ; I486-NEXT:    movl %ecx, 4(%eax)
@@ -135,14 +127,12 @@ define void @atomic_fetch_and64() nounwind {
 ; I486-LABEL: atomic_fetch_and64:
 ; I486:       # %bb.0:
 ; I486-NEXT:    subl $16, %esp
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl $2, 12(%eax)
 ; I486-NEXT:    movl $0, 8(%eax)
 ; I486-NEXT:    movl $3, 4(%eax)
 ; I486-NEXT:    movl $sc64, (%eax)
 ; I486-NEXT:    calll __atomic_fetch_and_8@PLT
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl $2, 12(%eax)
 ; I486-NEXT:    movl $0, 8(%eax)
@@ -150,7 +140,6 @@ define void @atomic_fetch_and64() nounwind {
 ; I486-NEXT:    movl $sc64, (%eax)
 ; I486-NEXT:    calll __atomic_fetch_and_8@PLT
 ; I486-NEXT:    movl %eax, %ecx
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl %edx, 8(%eax)
 ; I486-NEXT:    movl %ecx, 4(%eax)
@@ -191,14 +180,12 @@ define void @atomic_fetch_or64() nounwind {
 ; I486-LABEL: atomic_fetch_or64:
 ; I486:       # %bb.0:
 ; I486-NEXT:    subl $16, %esp
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl $2, 12(%eax)
 ; I486-NEXT:    movl $0, 8(%eax)
 ; I486-NEXT:    movl $3, 4(%eax)
 ; I486-NEXT:    movl $sc64, (%eax)
 ; I486-NEXT:    calll __atomic_fetch_or_8@PLT
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl $2, 12(%eax)
 ; I486-NEXT:    movl $0, 8(%eax)
@@ -206,7 +193,6 @@ define void @atomic_fetch_or64() nounwind {
 ; I486-NEXT:    movl $sc64, (%eax)
 ; I486-NEXT:    calll __atomic_fetch_or_8@PLT
 ; I486-NEXT:    movl %eax, %ecx
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl %edx, 8(%eax)
 ; I486-NEXT:    movl %ecx, 4(%eax)
@@ -247,14 +233,12 @@ define void @atomic_fetch_xor64() nounwind {
 ; I486-LABEL: atomic_fetch_xor64:
 ; I486:       # %bb.0:
 ; I486-NEXT:    subl $16, %esp
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl $2, 12(%eax)
 ; I486-NEXT:    movl $0, 8(%eax)
 ; I486-NEXT:    movl $3, 4(%eax)
 ; I486-NEXT:    movl $sc64, (%eax)
 ; I486-NEXT:    calll __atomic_fetch_xor_8@PLT
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl $2, 12(%eax)
 ; I486-NEXT:    movl $0, 8(%eax)
@@ -262,7 +246,6 @@ define void @atomic_fetch_xor64() nounwind {
 ; I486-NEXT:    movl $sc64, (%eax)
 ; I486-NEXT:    calll __atomic_fetch_xor_8@PLT
 ; I486-NEXT:    movl %eax, %ecx
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl %edx, 8(%eax)
 ; I486-NEXT:    movl %ecx, 4(%eax)
@@ -305,7 +288,6 @@ define void @atomic_fetch_nand64(i64 %x) nounwind {
 ; I486-NEXT:    subl $16, %esp
 ; I486-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; I486-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl %edx, 8(%eax)
 ; I486-NEXT:    movl %ecx, 4(%eax)
@@ -708,7 +690,6 @@ define void @atomic_fetch_cmpxchg64() nounwind {
 ; I486-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; I486-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; I486-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl %ecx, 4(%eax)
 ; I486-NEXT:    movl $2, 20(%eax)
@@ -735,7 +716,6 @@ define void @atomic_fetch_store64(i64 %x) nounwind {
 ; I486-NEXT:    subl $16, %esp
 ; I486-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; I486-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl %edx, 8(%eax)
 ; I486-NEXT:    movl %ecx, 4(%eax)
@@ -759,7 +739,6 @@ define void @atomic_fetch_swap64(i64 %x) nounwind {
 ; I486-NEXT:    subl $16, %esp
 ; I486-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; I486-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl %edx, 8(%eax)
 ; I486-NEXT:    movl %ecx, 4(%eax)
@@ -789,7 +768,6 @@ define void @atomic_fetch_swapf64(double %x) nounwind {
 ; I486-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; I486-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; I486-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; I486-NEXT:    leal fsc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl %edx, 8(%eax)
 ; I486-NEXT:    movl %ecx, 4(%eax)

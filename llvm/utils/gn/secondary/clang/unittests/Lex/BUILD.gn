@@ -17,5 +17,6 @@ unittest("LexTests") {
     "LexerTest.cpp",
     "PPCallbacksTest.cpp",
     "PPConditionalDirectiveRecordTest.cpp",
+    "PPMemoryAllocationsTest.cpp",
   ]
 }

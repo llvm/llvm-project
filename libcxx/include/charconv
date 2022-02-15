@@ -83,15 +83,15 @@ namespace std {
 #include <__charconv/from_chars_result.h>
 #include <__charconv/to_chars_result.h>
 #include <__config>
+#include <__debug>
 #include <__errc>
+#include <__utility/unreachable.h>
 #include <cmath> // for log2f
 #include <cstdint>
-#include <cstdlib> // for _LIBCPP_UNREACHABLE
+#include <cstdlib>
 #include <cstring>
 #include <limits>
 #include <type_traits>
-
-#include <__debug>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -341,7 +341,7 @@ _LIBCPP_AVAILABILITY_TO_CHARS _LIBCPP_INLINE_VISIBILITY int __to_chars_integral_
     __r += 4;
   }
 
-  _LIBCPP_UNREACHABLE();
+  __libcpp_unreachable();
 }
 
 template <typename _Tp>
