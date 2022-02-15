@@ -12,6 +12,7 @@
 
 #include <__algorithm/copy.h>
 #include <__algorithm/fill_n.h>
+#include <__algorithm/transform.h>
 #include <__availability>
 #include <__config>
 #include <__format/format_error.h>

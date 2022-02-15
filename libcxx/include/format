@@ -122,6 +122,7 @@ namespace std {
 // Enable the contents of the header only when libc++ was built with LIBCXX_ENABLE_INCOMPLETE_FEATURES.
 #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
 
+#include <__algorithm/clamp.h>
 #include <__config>
 #include <__debug>
 #include <__format/format_arg.h>

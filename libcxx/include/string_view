@@ -195,6 +195,7 @@ namespace std {
 
 */
 
+#include <__algorithm/min.h>
 #include <__config>
 #include <__debug>
 #include <__ranges/concepts.h>
@@ -203,7 +204,6 @@ namespace std {
 #include <__ranges/enable_view.h>
 #include <__ranges/size.h>
 #include <__string>
-#include <algorithm>
 #include <compare>
 #include <iosfwd>
 #include <iterator>

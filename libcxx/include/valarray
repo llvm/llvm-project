@@ -341,8 +341,14 @@ template <class T> unspecified2 end(const valarray<T>& v);
 
 */
 
+#include <__algorithm/copy.h>
+#include <__algorithm/count.h>
+#include <__algorithm/fill.h>
+#include <__algorithm/max_element.h>
+#include <__algorithm/min.h>
+#include <__algorithm/min_element.h>
+#include <__algorithm/unwrap_iter.h>
 #include <__config>
-#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <functional>

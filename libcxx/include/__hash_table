@@ -10,10 +10,12 @@
 #ifndef _LIBCPP__HASH_TABLE
 #define _LIBCPP__HASH_TABLE
 
+#include <__algorithm/max.h>
+#include <__algorithm/min.h>
 #include <__bits> // __libcpp_clz
 #include <__config>
 #include <__debug>
-#include <algorithm>
+#include <__functional/hash.h>
 #include <cmath>
 #include <initializer_list>
 #include <iterator>

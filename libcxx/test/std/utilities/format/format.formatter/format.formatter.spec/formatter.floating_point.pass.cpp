@@ -26,6 +26,7 @@
 
 #include <format>
 
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <cmath>
