@@ -1,2 +1,2 @@
 InheritParentConfig: true
-Checks: '-readability-identifier-naming,-llvm-header-guard,-llvm-include-order,-misc-unconventional-assign-operator,-llvm-else-after-return'
+Checks: '-readability-identifier-naming,-llvm-header-guard,-misc-unconventional-assign-operator,-llvm-else-after-return'

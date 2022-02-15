@@ -44,17 +44,4 @@ if __name__ == '__main__':
             if pretty(fname) not in ['__undef_macros']:
                 okay = False
                 print('FAILED TO FIND #  pragma GCC system_header in libcxx/include/%s!' % pretty(fname))
-
-        # Examine each consecutive run of #include directives.
-        prevline = None
-        for line in lines:
-            if re.match(r'^\s*#\s*include ', line):
-                if (prevline is not None) and (line < prevline):
-                    okay = False
-                    print('LINES OUT OF ORDER in libcxx/include/%s!' % pretty(fname))
-                    print(prevline)
-                    print(line)
-                prevline = line
-            else:
-                prevline = None
     assert okay

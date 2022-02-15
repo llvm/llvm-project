@@ -201,6 +201,7 @@ def produce_test(test_filename, exclusions=None, post_include=None):
 
 
 def main():
+    produce_test('clang_tidy.sh.cpp')
     produce_test('double_include.sh.cpp')
     produce_test('min_max_macros.compile.pass.cpp', post_include='TEST_MACROS();')
     produce_test('nasty_macros.compile.pass.cpp')

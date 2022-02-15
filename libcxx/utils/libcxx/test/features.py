@@ -83,6 +83,8 @@ DEFAULT_FEATURES = [
   # manages to find binaries to execute.
   Feature(name='executor-has-no-bash',
           when=lambda cfg: runScriptExitCode(cfg, ['%{exec} bash -c \'bash --version\'']) != 0),
+  Feature(name='has-clang-tidy',
+          when=lambda cfg: runScriptExitCode(cfg, ['clang-tidy --version']) == 0),
 
   Feature(name='apple-clang',                                                                                                      when=_isAppleClang),
   Feature(name=lambda cfg: 'apple-clang-{__clang_major__}'.format(**compilerMacros(cfg)),                                          when=_isAppleClang),
