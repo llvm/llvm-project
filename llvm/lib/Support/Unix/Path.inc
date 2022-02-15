@@ -118,12 +118,6 @@ typedef uint_t uint;
 #define STATVFS_F_FLAG(vfs) (vfs).f_flags
 #endif
 
-#if defined(__sun__) && defined(__svr4__)
-// The madvise() declaration on Illumos cannot be made visible if _XOPEN_SOURCE
-// is defined. This declaration is also compatible with Solaris 11.4.
-extern "C" int madvise(void *, size_t, int);
-#endif
-
 using namespace llvm;
 
 namespace llvm {
@@ -880,12 +874,14 @@ void mapped_file_region::unmapImpl() {
 
 void mapped_file_region::dontNeedImpl() {
   assert(Mode == mapped_file_region::readonly);
+  if (!Mapping)
+      return;
 #if defined(__MVS__) || defined(_AIX)
   // If we don't have madvise, or it isn't beneficial, treat this as a no-op.
-  return;
+#elif defined(POSIX_MADV_DONTNEED)
+  ::posix_madvise(Mapping, Size, POSIX_MADV_DONTNEED);
 #else
-  if (Mapping)
-    ::madvise(Mapping, Size, MADV_DONTNEED);
+  ::madvise(Mapping, Size, MADV_DONTNEED);
 #endif
 }
 
