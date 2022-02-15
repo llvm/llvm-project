@@ -1012,7 +1012,14 @@ protected:
         uint32_t index_ptr = 0, end_ptr;
         std::vector<addr_t> address_list;
 
-        // Find the beginning & end index of the        
+        // Find the beginning & end index of the function, but first make
+        // sure it is valid:
+        if (!sc.function) {
+          result.AppendErrorWithFormat("Have debug information but no "
+                                       "function info - can't get until range.");
+          return false;
+        }
+
         AddressRange fun_addr_range = sc.function->GetAddressRange();
         Address fun_start_addr = fun_addr_range.GetBaseAddress();
         line_table->FindLineEntryByAddress(fun_start_addr, function_start,
