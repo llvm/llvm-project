@@ -866,6 +866,23 @@ enum {
 #include "ELFRelocs/VE.def"
 };
 
+// CSKY Specific e_flags
+enum : unsigned {
+  EF_CSKY_801 = 0xa,
+  EF_CSKY_802 = 0x10,
+  EF_CSKY_803 = 0x9,
+  EF_CSKY_805 = 0x11,
+  EF_CSKY_807 = 0x6,
+  EF_CSKY_810 = 0x8,
+  EF_CSKY_860 = 0xb,
+  EF_CSKY_800 = 0x1f,
+  EF_CSKY_FLOAT = 0x2000,
+  EF_CSKY_DSP = 0x4000,
+  EF_CSKY_ABIV2 = 0x20000000,
+  EF_CSKY_EFV1 = 0x1000000,
+  EF_CSKY_EFV2 = 0x2000000,
+  EF_CSKY_EFV3 = 0x3000000
+};
 
 // ELF Relocation types for CSKY
 enum {
@@ -990,6 +1007,8 @@ enum : unsigned {
   SHT_MSP430_ATTRIBUTES = 0x70000003U,
 
   SHT_RISCV_ATTRIBUTES = 0x70000003U,
+
+  SHT_CSKY_ATTRIBUTES = 0x70000001U,
 
   SHT_HIPROC = 0x7fffffff, // Highest processor arch-specific type.
   SHT_LOUSER = 0x80000000, // Lowest type reserved for applications.
