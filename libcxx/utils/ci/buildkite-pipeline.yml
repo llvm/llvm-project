@@ -603,6 +603,7 @@ steps:
       agents:
         queue: "libcxx-builders"
         os: "macos"
+        arch: "arm64" # This can technically run on any architecture, but we have more resources on arm64 so we pin this job to arm64
       retry:
         automatic:
           - exit_status: -1  # Agent was lost
