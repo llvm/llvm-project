@@ -12,7 +12,7 @@
 // disable them for now until their behavior can be designed better later.
 // See https://reviews.llvm.org/D84049 for details.
 
-// UNSUPPORTED: apple-clang-12, apple-clang-13
+// UNSUPPORTED: apple-clang-12, apple-clang-13, apple-clang-14
 // UNSUPPORTED: clang-12, clang-13
 
 // UNSUPPORTED: c++03
