@@ -126,11 +126,6 @@ _LIBCPP_NORETURN static void __throw_runtime_error(const string &msg)
 
 }
 
-#if defined(_AIX)
-// Set priority to INT_MIN + 256 + 150
-# pragma priority ( -2147483242 )
-#endif
-
 const locale::category locale::none;
 const locale::category locale::collate;
 const locale::category locale::ctype;
