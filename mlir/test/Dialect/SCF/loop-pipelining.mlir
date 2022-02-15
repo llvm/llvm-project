@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -test-scf-pipelining -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-scf-pipelining=annotate -split-input-file | FileCheck %s --check-prefix ANNOTATE
 
 // CHECK-LABEL: simple_pipeline(
 //  CHECK-SAME:   %[[A:.*]]: memref<?xf32>, %[[R:.*]]: memref<?xf32>) {
@@ -97,6 +98,22 @@ func @simple_pipeline_step(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  CHECK-NEXT:   memref.store %[[LR]]#0, %[[R]][%[[C2]]] : memref<?xf32>
 //  CHECK-NEXT:   %[[ADD2:.*]] = arith.addf %[[LR]]#1, %{{.*}} : f32
 //  CHECK-NEXT:   memref.store %[[ADD2]], %[[R]][%[[C3]]] : memref<?xf32>
+
+// Prologue:
+//  ANNOTATE:   memref.load {{.*}} {__test_pipelining_iteration = 0 : i32, __test_pipelining_part = "prologue"}
+//  ANNOTATE:   memref.load {{.*}} {__test_pipelining_iteration = 1 : i32, __test_pipelining_part = "prologue"}
+// Kernel:
+//  ANNOTATE:   scf.for
+//  ANNOTATE:     memref.store {{.*}} {__test_pipelining_iteration = 0 : i32, __test_pipelining_part = "kernel"}
+//  ANNOTATE:     arith.addf {{.*}} {__test_pipelining_iteration = 0 : i32, __test_pipelining_part = "kernel"}
+//  ANNOTATE:     memref.load {{.*}} {__test_pipelining_iteration = 0 : i32, __test_pipelining_part = "kernel"}
+//  ANNOTATE:     scf.yield
+//  ANNOTATE:   }
+// Epilogue:
+//  ANNOTATE:   memref.store {{.*}} {__test_pipelining_iteration = 0 : i32, __test_pipelining_part = "epilogue"}
+//  ANNOTATE:   arith.addf {{.*}} {__test_pipelining_iteration = 0 : i32, __test_pipelining_part = "epilogue"}
+//  ANNOTATE:   memref.store {{.*}} {__test_pipelining_iteration = 1 : i32, __test_pipelining_part = "epilogue"}
+
 func @three_stage(%A: memref<?xf32>, %result: memref<?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index

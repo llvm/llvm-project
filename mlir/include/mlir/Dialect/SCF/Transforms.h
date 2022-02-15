@@ -125,7 +125,21 @@ struct PipeliningOption {
   /// order picked for the pipelined loop.
   using GetScheduleFnType = std::function<void(
       scf::ForOp, std::vector<std::pair<Operation *, unsigned>> &)>;
-  GetScheduleFnType getScheduleFn;
+  GetScheduleFnType getScheduleFn = nullptr;
+  enum class PipelinerPart {
+    Prologue,
+    Kernel,
+    Epilogue,
+  };
+  /// Lambda called by the pipeliner to allow the user to annotate the IR while
+  /// it is generated.
+  /// The callback passes the operation created along with the part of the
+  /// pipeline and the iteration index. The iteration index is always 0 for the
+  /// kernel. For the prologue and epilogue, it corresponds to the iteration
+  /// peeled out of the loop in the range [0, maxStage[.
+  using AnnotationlFnType =
+      std::function<void(Operation *, PipelinerPart, unsigned)>;
+  AnnotationlFnType annotateFn = nullptr;
   // TODO: add option to decide if the prologue/epilogue should be peeled.
 };
 
