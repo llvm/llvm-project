@@ -142,6 +142,9 @@
 #  define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
 #endif
 
+#define _LIBCPP_TOSTRING2(x) #x
+#define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
+
 #if __cplusplus < 201103L
 #define _LIBCPP_CXX03_LANG
 #endif
@@ -561,8 +564,6 @@ typedef __char32_t char32_t;
 
 #elif defined(_LIBCPP_COMPILER_MSVC)
 
-#define _LIBCPP_TOSTRING2(x) #x
-#define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
 #define _LIBCPP_WARNING(x) __pragma(message(__FILE__ "(" _LIBCPP_TOSTRING(__LINE__) ") : warning note: " x))
 
 #if _MSC_VER < 1900
@@ -1418,6 +1419,23 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
    // We generally don't want to use this macro outside of C++20-only code,
    // because using it conditionally in one language version only would make
    // the ABI inconsistent.
+#endif
+
+#ifdef _LIBCPP_COMPILER_CLANG_BASED
+#  define _LIBCPP_DIAGNOSTIC_PUSH _Pragma("clang diagnostic push")
+#  define _LIBCPP_DIAGNOSTIC_POP _Pragma("clang diagnostic pop")
+#  define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED(str) _Pragma(_LIBCPP_TOSTRING(clang diagnostic ignored str))
+#  define _LIBCPP_GCC_DIAGNOSTIC_IGNORED(str)
+#elif defined(_LIBCPP_COMPILER_GCC)
+#  define _LIBCPP_DIAGNOSTIC_PUSH _Pragma("GCC diagnostic push")
+#  define _LIBCPP_DIAGNOSTIC_POP _Pragma("GCC diagnostic pop")
+#  define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED(str)
+#  define _LIBCPP_GCC_DIAGNOSTIC_IGNORED(str) _Pragma(_LIBCPP_TOSTRING(GCC diagnostic ignored str))
+#else
+#  define _LIBCPP_DIAGNOSTIC_PUSH
+#  define _LIBCPP_DIAGNOSTIC_POP
+#  define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED(str)
+#  define _LIBCPP_GCC_DIAGNOSTIC_IGNORED(str)
 #endif
 
 #endif // __cplusplus
