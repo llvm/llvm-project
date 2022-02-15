@@ -344,8 +344,10 @@ public:
     insert_iterator& operator++(int);  // constexpr in C++20
 };
 
-template <class Container, class Iterator>
-insert_iterator<Container> inserter(Container& x, Iterator i);  // constexpr in C++20
+template <class Container>
+insert_iterator<Container> inserter(Container& x, typename Container::iterator i);  // until C++20
+template <class Container>
+constexpr insert_iterator<Container> inserter(Container& x, ranges::iterator_t<Container> i);  // since C++20
 
 template <class Iterator>
 class move_iterator {

@@ -80,7 +80,7 @@ void foobar(void) {
   __attribute__((nomerge, unused)) bar(); // expected-error {{expected identifier or '('}}
   __attribute__((nomerge(1, 2))) bar();   // expected-error {{'nomerge' attribute takes no arguments}}
   int x;
-  __attribute__((nomerge)) x = 10; // expected-warning {{nomerge attribute is ignored because there exists no call expression inside the statement}}
+  __attribute__((nomerge)) x = 10; // expected-warning {{'nomerge' attribute is ignored because there exists no call expression inside the statement}}
 
   __attribute__((nomerge)) label : bar(); // expected-error {{'nomerge' attribute only applies to functions and statements}}
 }

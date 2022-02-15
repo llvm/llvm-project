@@ -1065,10 +1065,10 @@ class VPseudoBinaryMask<VReg RetClass,
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-class VPseudoBinaryMaskTA<VReg RetClass,
-                          RegisterClass Op1Class,
-                          DAGOperand Op2Class,
-                          string Constraint> :
+class VPseudoBinaryMaskPolicy<VReg RetClass,
+                              RegisterClass Op1Class,
+                              DAGOperand Op2Class,
+                              string Constraint> :
         Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                 (ins GetVRegNoV0<RetClass>.R:$merge,
                      Op1Class:$rs2, Op2Class:$rs1,
@@ -1652,8 +1652,8 @@ multiclass VPseudoBinary<VReg RetClass,
   let VLMul = MInfo.value in {
     def "_" # MInfo.MX : VPseudoBinaryNoMask<RetClass, Op1Class, Op2Class,
                                              Constraint>;
-    def "_" # MInfo.MX # "_MASK" : VPseudoBinaryMaskTA<RetClass, Op1Class, Op2Class,
-                                                       Constraint>,
+    def "_" # MInfo.MX # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class,
+                                                           Constraint>,
                                    RISCVMaskedPseudo</*MaskOpIdx*/ 3>;
   }
 }
@@ -1681,8 +1681,8 @@ multiclass VPseudoBinaryEmul<VReg RetClass,
   let VLMul = lmul.value in {
     def "_" # lmul.MX # "_" # emul.MX : VPseudoBinaryNoMask<RetClass, Op1Class, Op2Class,
                                                             Constraint>;
-    def "_" # lmul.MX # "_" # emul.MX # "_MASK" : VPseudoBinaryMaskTA<RetClass, Op1Class, Op2Class,
-                                                                      Constraint>;
+    def "_" # lmul.MX # "_" # emul.MX # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class,
+                                                                          Constraint>;
   }
 }
 
@@ -2333,6 +2333,19 @@ multiclass VPseudoTernary<VReg RetClass,
   }
 }
 
+multiclass VPseudoTernaryNoMaskNoPolicy<VReg RetClass,
+                                        RegisterClass Op1Class,
+                                        DAGOperand Op2Class,
+                                        LMULInfo MInfo,
+                                        string Constraint = ""> {
+  let VLMul = MInfo.value in {
+    def "_" # MInfo.MX : VPseudoTernaryNoMask<RetClass, Op1Class, Op2Class, Constraint>;
+    def "_" # MInfo.MX # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class,
+                                                           Constraint>;
+                                   
+  }
+}
+
 multiclass VPseudoTernaryWithPolicy<VReg RetClass,
                                     RegisterClass Op1Class,
                                     DAGOperand Op2Class,
@@ -2342,7 +2355,7 @@ multiclass VPseudoTernaryWithPolicy<VReg RetClass,
   let VLMul = MInfo.value in {
     let isCommutable = Commutable in
     def "_" # MInfo.MX : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class, Constraint>;
-    def "_" # MInfo.MX # "_MASK" : VPseudoBinaryMask<RetClass, Op1Class, Op2Class, Constraint>;
+    def "_" # MInfo.MX # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class, Constraint>;
   }
 }
 
@@ -2356,7 +2369,7 @@ multiclass VPseudoTernaryV_VV_AAXA<string Constraint = "",
 
 multiclass VPseudoTernaryV_VX<string Constraint = ""> {
   foreach m = MxList in
-    defm _VX : VPseudoTernary<m.vrclass, m.vrclass, GPR, m, Constraint>;
+    defm _VX : VPseudoTernaryNoMaskNoPolicy<m.vrclass, m.vrclass, GPR, m, Constraint>;
 }
 
 multiclass VPseudoTernaryV_VX_AAXA<string Constraint = ""> {
@@ -2397,7 +2410,7 @@ multiclass VPseudoTernaryW_VF {
 
 multiclass VPseudoTernaryV_VI<Operand ImmType = simm5, string Constraint = ""> {
   foreach m = MxList in
-    defm _VI : VPseudoTernary<m.vrclass, m.vrclass, ImmType, m, Constraint>;
+    defm _VI : VPseudoTernaryNoMaskNoPolicy<m.vrclass, m.vrclass, ImmType, m, Constraint>;
 }
 
 multiclass VPseudoVMAC_VV_VX_AAXA<string Constraint = ""> {
@@ -3013,6 +3026,31 @@ class VPatTernaryMask<string intrinsic,
                     (mask_type V0),
                     GPR:$vl, sew)>;
 
+class VPatTernaryMaskPolicy<string intrinsic,
+                            string inst,
+                            string kind,
+                            ValueType result_type,
+                            ValueType op1_type,
+                            ValueType op2_type,
+                            ValueType mask_type,
+                            int sew,
+                            LMULInfo vlmul,
+                            VReg result_reg_class,
+                            RegisterClass op1_reg_class,
+                            DAGOperand op2_kind> :
+  Pat<(result_type (!cast<Intrinsic>(intrinsic#"_mask")
+                    (result_type result_reg_class:$rs3),
+                    (op1_type op1_reg_class:$rs1),
+                    (op2_type op2_kind:$rs2),
+                    (mask_type V0),
+                    VLOpFrag, (XLenVT timm:$policy))),
+                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX # "_MASK")
+                    result_reg_class:$rs3,
+                    (op1_type op1_reg_class:$rs1),
+                    op2_kind:$rs2,
+                    (mask_type V0),
+                    GPR:$vl, sew, (XLenVT timm:$policy))>;
+
 multiclass VPatUnaryS_M<string intrinsic_name,
                              string inst>
 {
@@ -3584,6 +3622,26 @@ multiclass VPatTernary<string intrinsic,
                         op2_kind>;
 }
 
+multiclass VPatTernaryNoMaskNoPolicy<string intrinsic,
+                                     string inst,
+                                     string kind,
+                                     ValueType result_type,
+                                     ValueType op1_type,
+                                     ValueType op2_type,
+                                     ValueType mask_type,
+                                     int sew,
+                                     LMULInfo vlmul,
+                                     VReg result_reg_class,
+                                     RegisterClass op1_reg_class,
+                                     DAGOperand op2_kind> {
+  def : VPatTernaryNoMask<intrinsic, inst, kind, result_type, op1_type, op2_type,
+                          sew, vlmul, result_reg_class, op1_reg_class,
+                          op2_kind>;
+  def : VPatTernaryMaskPolicy<intrinsic, inst, kind, result_type, op1_type, op2_type,
+                              mask_type, sew, vlmul, result_reg_class, op1_reg_class,
+                              op2_kind>;
+}
+
 multiclass VPatTernaryWithPolicy<string intrinsic,
                                  string inst,
                                  string kind,
@@ -3599,9 +3657,9 @@ multiclass VPatTernaryWithPolicy<string intrinsic,
   def : VPatTernaryNoMaskWithPolicy<intrinsic, inst, kind, result_type, op1_type,
                                     op2_type, sew, vlmul, result_reg_class,
                                     op1_reg_class, op2_kind>;
-  def : VPatTernaryMask<intrinsic, inst, kind, result_type, op1_type, op2_type,
-                        mask_type, sew, vlmul, result_reg_class, op1_reg_class,
-                        op2_kind>;
+  def : VPatTernaryMaskPolicy<intrinsic, inst, kind, result_type, op1_type, op2_type,
+                              mask_type, sew, vlmul, result_reg_class, op1_reg_class,
+                              op2_kind>;
 }
 
 multiclass VPatTernaryV_VV_AAXA<string intrinsic, string instruction,
@@ -3616,10 +3674,10 @@ multiclass VPatTernaryV_VV_AAXA<string intrinsic, string instruction,
 multiclass VPatTernaryV_VX<string intrinsic, string instruction,
                            list<VTypeInfo> vtilist> {
   foreach vti = vtilist in
-    defm : VPatTernary<intrinsic, instruction, "VX",
-                       vti.Vector, vti.Vector, XLenVT, vti.Mask,
-                       vti.Log2SEW, vti.LMul, vti.RegClass,
-                       vti.RegClass, GPR>;
+    defm : VPatTernaryNoMaskNoPolicy<intrinsic, instruction, "VX",
+                                     vti.Vector, vti.Vector, XLenVT, vti.Mask,
+                                     vti.Log2SEW, vti.LMul, vti.RegClass,
+                                     vti.RegClass, GPR>;
 }
 
 multiclass VPatTernaryV_VX_AAXA<string intrinsic, string instruction,
@@ -3635,10 +3693,10 @@ multiclass VPatTernaryV_VX_AAXA<string intrinsic, string instruction,
 multiclass VPatTernaryV_VI<string intrinsic, string instruction,
                            list<VTypeInfo> vtilist, Operand Imm_type> {
   foreach vti = vtilist in
-    defm : VPatTernary<intrinsic, instruction, "VI",
-                      vti.Vector, vti.Vector, XLenVT, vti.Mask,
-                      vti.Log2SEW, vti.LMul, vti.RegClass,
-                      vti.RegClass, Imm_type>;
+    defm : VPatTernaryNoMaskNoPolicy<intrinsic, instruction, "VI",
+                                     vti.Vector, vti.Vector, XLenVT, vti.Mask,
+                                     vti.Log2SEW, vti.LMul, vti.RegClass,
+                                     vti.RegClass, Imm_type>;
 }
 
 multiclass VPatTernaryW_VV<string intrinsic, string instruction,

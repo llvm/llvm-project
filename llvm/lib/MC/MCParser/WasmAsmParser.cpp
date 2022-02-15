@@ -23,10 +23,8 @@
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/MachineValueType.h"
 
 using namespace llvm;
 

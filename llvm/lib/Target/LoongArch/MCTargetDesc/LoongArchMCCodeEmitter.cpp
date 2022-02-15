@@ -16,6 +16,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/EndianStream.h"
 
 using namespace llvm;
