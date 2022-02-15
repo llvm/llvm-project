@@ -1667,18 +1667,18 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
       return rewriter.create<mlir::LLVM::AddressOfOp>(loc, ty,
                                                       global.getSymName());
     }
-    auto i8Ty = rewriter.getIntegerType(8);
     if (fir::NameUniquer::belongsToModule(
             name, Fortran::semantics::typeInfoBuiltinModule)) {
       // Type info derived types do not have type descriptors since they are the
       // types defining type descriptors.
-      auto i8PtrTy = mlir::LLVM::LLVMPointerType::get(i8Ty);
-      return rewriter.create<mlir::LLVM::NullOp>(loc, i8PtrTy);
+      return rewriter.create<mlir::LLVM::NullOp>(
+          loc, ::getVoidPtrType(box.getContext()));
     }
     // The global does not exist in the current translation unit, but may be
     // defined elsewhere (e.g., type defined in a module).
     // Create an available_externally global to require the symbols to be
     // defined elsewhere and to cause link-time failure otherwise.
+    auto i8Ty = rewriter.getIntegerType(8);
     mlir::OpBuilder modBuilder(module.getBodyRegion());
     modBuilder.create<mlir::LLVM::GlobalOp>(
         loc, i8Ty, /*isConstant=*/true,
