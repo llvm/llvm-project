@@ -47,7 +47,12 @@ sections with improvements to Clang's support for those languages.
 Major New Features
 ------------------
 
--  ...
+- Clang now supports the ``-fzero-call-used-regs`` feature for x86. The purpose
+  of this feature is to limit Return-Oriented Programming (ROP) exploits and
+  information leakage. It works by zeroing out a selected class of registers
+  before function return --- e.g., all GPRs that are used within the function.
+  There is an analogous ``zero_call_used_regs`` attribute to allow for finer
+  control of this feature.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
