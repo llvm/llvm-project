@@ -167,6 +167,12 @@ void ImportSection::addGOTEntry(Symbol *sym) {
     return;
   LLVM_DEBUG(dbgs() << "addGOTEntry: " << toString(*sym) << "\n");
   sym->setGOTIndex(numImportedGlobals++);
+  if (config->isPic) {
+    // Any symbol that is assigned an normal GOT entry must be exported
+    // otherwise the dynamic linker won't be able create the entry that contains
+    // it.
+    sym->forceExport = true;
+  }
   gotSymbols.push_back(sym);
 }
 
