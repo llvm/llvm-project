@@ -27,11 +27,52 @@ RUN:   --obj=%t/addr.exe 0x40054d --debuginfod | \
 RUN:   FileCheck %s --check-prefix=FOUND
 FOUND: {{[/\]+}}tmp{{[/\]+}}x.c:14:0
 
-# This should also work if the build ID is provided.
+# This should also work if the build ID is provided via flag.
 RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
 RUN:   --build-id=127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d | \
+RUN:   FileCheck %s --check-prefix=FOUND
+
+# This should also work if the build ID is provided via stdin.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
+RUN:   "BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
+RUN:   FileCheck %s --check-prefix=FOUND
+
+# Passing BUILDID twice is a syntax error.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
+RUN:   "BUILDID:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
+RUN:   FileCheck %s --check-prefix=BUILDIDBUILDID
+BUILDIDBUILDID: BUILDID:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d
+
+# CODE should work preceding build ID.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
+RUN:   "CODE BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
 RUN:   FileCheck %s --check-prefix=FOUND
 
 # The symbolizer shouldn't call the debuginfod library by default with no URLs.
 RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer --print-address \
 RUN:   --obj=%t/addr.exe 0x40054d | FileCheck %s --check-prefix=NOTFOUND
+
+# The symbolizer shouldn't call the debuginfod library if explicitly disabled.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
+RUN:   --no-debuginfod \
+RUN:   "BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
+RUN:   FileCheck %s --check-prefix=NOTHINGFOUND
+NOTHINGFOUND:      ??
+NOTHINGFOUND-NEXT: ??:0:0
+
+# BUILDID shouldn't be parsed if --obj is given, just like regular filenames.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
+RUN:   --obj=%t/addr.exe \
+RUN:   "BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
+RUN:   FileCheck %s --check-prefix=BUILDIDIGNORED
+BUILDIDIGNORED: BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d
+
+# Providing both BUILDID and FILE is a syntax error.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
+RUN:   "BUILDID:FILE:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
+RUN:   FileCheck %s --check-prefix=BUILDIDFILE
+BUILDIDFILE: BUILDID:FILE:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
+RUN:   "FILE:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
+RUN:   FileCheck %s --check-prefix=FILEBUILDID
+FILEBUILDID: FILE:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d
