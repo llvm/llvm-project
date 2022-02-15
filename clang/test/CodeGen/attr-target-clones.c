@@ -33,7 +33,7 @@ __attribute__((target_clones("default,default ,sse4.2"))) void foo_dupes(void) {
 // WINDOWS: musttail call void @foo_dupes.sse4.2.0
 // WINDOWS: musttail call void @foo_dupes.default.1
 
-void bar2() {
+void bar2(void) {
   // LINUX: define {{.*}}void @bar2()
   // WINDOWS: define dso_local void @bar2()
   foo_dupes();
@@ -41,7 +41,7 @@ void bar2() {
   // WINDOWS: call void @foo_dupes()
 }
 
-int bar() {
+int bar(void) {
   // LINUX: define {{.*}}i32 @bar() #[[DEF:[0-9]+]]
   // WINDOWS: define dso_local i32 @bar() #[[DEF:[0-9]+]]
   return foo();
@@ -68,7 +68,7 @@ foo_inline(void) { return 0; }
 inline int __attribute__((target_clones("arch=sandybridge,default,sse4.2")))
 foo_inline2(void);
 
-int bar3() {
+int bar3(void) {
   // LINUX: define {{.*}}i32 @bar3()
   // WINDOWS: define dso_local i32 @bar3()
   return foo_inline() + foo_inline2();

@@ -29,14 +29,14 @@ unsigned char align = 1;
 void bar(const char *);
 
 // CHECK-LABEL: define {{.*}}void @f0()
-void f0() {
+void f0(void) {
   bar("hello");
   // ITANIUM: call {{.*}}void @bar({{.*}} @.str
   // MSABI: call {{.*}}void @bar({{.*}} @"??_C@_05CJBACGMB@hello?$AA@"
 }
 
 // CHECK-LABEL: define {{.*}}void @f1()
-void f1() {
+void f1(void) {
   static char *x = "hello";
   bar(x);
   // CHECK: [[T1:%.*]] = load i8*, i8** @f1.x
@@ -44,14 +44,14 @@ void f1() {
 }
 
 // CHECK-LABEL: define {{.*}}void @f2()
-void f2() {
+void f2(void) {
   static char x[] = "hello";
   bar(x);
   // CHECK: call {{.*}}void @bar({{.*}} @f2.x
 }
 
 // CHECK-LABEL: define {{.*}}void @f3()
-void f3() {
+void f3(void) {
   static char x[8] = "hello";
   bar(x);
   // CHECK: call {{.*}}void @bar({{.*}} @f3.x
@@ -60,7 +60,7 @@ void f3() {
 void gaz(void *);
 
 // CHECK-LABEL: define {{.*}}void @f4()
-void f4() {
+void f4(void) {
   static struct s {
     char *name;
   } x = { "hello" };

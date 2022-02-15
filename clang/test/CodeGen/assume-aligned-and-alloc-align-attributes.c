@@ -8,7 +8,7 @@ void *my_aligned_alloc(int size, int alignment) __attribute__((assume_aligned(32
 // CHECK-NEXT:    [[CALL:%.*]] = call align 32 i8* @my_aligned_alloc(i32 noundef 320, i32 noundef 16)
 // CHECK-NEXT:    ret i8* [[CALL]]
 //
-void *t0_immediate0() {
+void *t0_immediate0(void) {
   return my_aligned_alloc(320, 16);
 };
 
@@ -17,7 +17,7 @@ void *t0_immediate0() {
 // CHECK-NEXT:    [[CALL:%.*]] = call align 32 i8* @my_aligned_alloc(i32 noundef 320, i32 noundef 32)
 // CHECK-NEXT:    ret i8* [[CALL]]
 //
-void *t1_immediate1() {
+void *t1_immediate1(void) {
   return my_aligned_alloc(320, 32);
 };
 
@@ -26,7 +26,7 @@ void *t1_immediate1() {
 // CHECK-NEXT:    [[CALL:%.*]] = call align 64 i8* @my_aligned_alloc(i32 noundef 320, i32 noundef 64)
 // CHECK-NEXT:    ret i8* [[CALL]]
 //
-void *t2_immediate2() {
+void *t2_immediate2(void) {
   return my_aligned_alloc(320, 64);
 };
 

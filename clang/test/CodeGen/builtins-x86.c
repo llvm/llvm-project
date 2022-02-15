@@ -45,7 +45,7 @@ typedef signed long V4LLi __attribute__((vector_size(32)));
 typedef double V4d __attribute__((vector_size(32)));
 typedef float  V8f __attribute__((vector_size(32)));
 
-void f0() {
+void f0(void) {
   signed char         tmp_c;
 //  unsigned char       tmp_Uc;
   signed short        tmp_s;

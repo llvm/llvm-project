@@ -32,41 +32,41 @@ void t9() __attribute__((weak, alias("__t8")));
 
 // CHECK: declare extern_weak i32 @t15()
 int __attribute__((weak_import)) t15(void);
-int t17() {
+int t17(void) {
   return t15() + t16;
 }
 
 // CHECK: define{{.*}} void @t1() [[NR:#[0-9]+]] {
-void t1() __attribute__((noreturn));
-void t1() { while (1) {} }
+void t1(void) __attribute__((noreturn));
+void t1(void) { while (1) {} }
 
 // CHECK: define{{.*}} void @t2() [[NUW:#[0-9]+]] {
-void t2() __attribute__((nothrow));
-void t2() {}
+void t2(void) __attribute__((nothrow));
+void t2(void) {}
 
 // CHECK: define weak{{.*}} void @t3() [[NUW]] {
-void t3() __attribute__((weak));
-void t3() {}
+void t3(void) __attribute__((weak));
+void t3(void) {}
 
 // CHECK: define hidden void @t4() [[NUW]] {
-void t4() __attribute__((visibility("hidden")));
-void t4() {}
+void t4(void) __attribute__((visibility("hidden")));
+void t4(void) {}
 
 // CHECK: define{{.*}} void @t7() [[NR]] {
-void t7() __attribute__((noreturn, nothrow));
-void t7() { while (1) {} }
+void t7(void) __attribute__((noreturn, nothrow));
+void t7(void) { while (1) {} }
 
 // CHECK: define{{.*}} void @t72() [[COLDDEF:#[0-9]+]] {
 void t71(void) __attribute__((cold));
-void t72() __attribute__((cold));
-void t72() { t71(); }
+void t72(void) __attribute__((cold));
+void t72(void) { t71(); }
 // CHECK: call void @t71() [[COLDSITE:#[0-9]+]]
 // CHECK: declare void @t71() [[COLDDECL:#[0-9]+]]
 
 // CHECK: define{{.*}} void @t82() [[HOTDEF:#[0-9]+]] {
 void t81(void) __attribute__((hot));
-void t82() __attribute__((hot));
-void t82() { t81(); }
+void t82(void) __attribute__((hot));
+void t82(void) { t81(); }
 // CHECK: call void @t81() [[HOTSITE:#[0-9]+]]
 // CHECK: declare void @t81() [[HOTDECL:#[0-9]+]]
 

@@ -4,7 +4,7 @@
 // RUN: %clang_cl --target=i686-windows-msvc /c /Z7 /Fo%t.obj -fdebug-compilation-dir=. -- %s
 // RUN: llvm-pdbutil dump --types %t.obj | FileCheck %s --check-prefix RELATIVE
 
-int main() { return 42; }
+int main(void) { return 42; }
 
 // CHECK:                       Types (.debug$T)
 // CHECK: ============================================================

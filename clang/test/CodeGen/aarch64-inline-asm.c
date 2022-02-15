@@ -23,7 +23,7 @@ void test_generic_constraints(int var32, long var64) {
 
 float f;
 double d;
-void test_constraint_w() {
+void test_constraint_w(void) {
     asm("fadd %s0, %s1, %s1" : "=w"(f) : "w"(f));
 // CHECK: [[FLT_ARG:%[a-zA-Z_0-9]+]] = load float, float* @f
 // CHECK: call float asm "fadd ${0:s}, ${1:s}, ${1:s}", "=w,w"(float [[FLT_ARG]])

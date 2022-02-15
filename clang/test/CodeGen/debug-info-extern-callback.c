@@ -2,16 +2,16 @@
 
 extern int do_work1(int);
 long bpf_helper1(void *callback_fn);
-long prog1() {
+long prog1(void) {
   return bpf_helper1(&do_work1);
 }
 
-extern int do_work2();
-long prog2_1() {
+extern int do_work2(void);
+long prog2_1(void) {
   return (long)&do_work2;
 }
-int do_work2() { return 0; }
-long prog2_2() {
+int do_work2(void) { return 0; }
+long prog2_2(void) {
   return (long)&do_work2;
 }
 

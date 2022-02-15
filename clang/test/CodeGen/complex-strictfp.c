@@ -29,7 +29,7 @@ double D;
 // CHECK-NEXT:    store float [[CONV3]], float* getelementptr inbounds ({ float, float }, { float, float }* @cf, i32 0, i32 1), align 4
 // CHECK-NEXT:    ret void
 //
-void test3a() {
+void test3a(void) {
   cf += D;
 }
 
@@ -44,7 +44,7 @@ void test3a() {
 // CHECK-NEXT:    store double [[ADD_R]], double* @D, align 8
 // CHECK-NEXT:    ret void
 //
-void test3b() {
+void test3b(void) {
   D += cf;
 }
 
@@ -65,7 +65,7 @@ void test3b() {
 // CHECK-NEXT:    store float [[CONV3]], float* getelementptr inbounds ({ float, float }, { float, float }* @cf, i32 0, i32 1), align 4
 // CHECK-NEXT:    ret void
 //
-void test3c() {
+void test3c(void) {
   cf /= g1;
 }
 
@@ -79,7 +79,7 @@ void test3c() {
 // CHECK-NEXT:    store double [[G1_IMAG]], double* getelementptr inbounds ({ double, double }, { double, double }* @g1, i32 0, i32 1), align 8
 // CHECK-NEXT:    ret void
 //
-void test3d() {
+void test3d(void) {
   g1 = g1 + D;
 }
 
@@ -93,7 +93,7 @@ void test3d() {
 // CHECK-NEXT:    store double [[G1_IMAG]], double* getelementptr inbounds ({ double, double }, { double, double }* @g1, i32 0, i32 1), align 8
 // CHECK-NEXT:    ret void
 //
-void test3e() {
+void test3e(void) {
   g1 = D + g1;
 }
 
@@ -103,7 +103,7 @@ void test3e() {
 // CHECK-NEXT:    store float [[CONV]], float* getelementptr inbounds ({ float, float }, { float, float }* @cf, i32 0, i32 0), align 4
 // CHECK-NEXT:    ret void
 //
-void t1() {
+void t1(void) {
   (__real__ cf) = 4.0;
 }
 
@@ -113,7 +113,7 @@ void t1() {
 // CHECK-NEXT:    store float [[CONV]], float* getelementptr inbounds ({ float, float }, { float, float }* @cf, i32 0, i32 1), align 4
 // CHECK-NEXT:    ret void
 //
-void t2() {
+void t2(void) {
   (__imag__ cf) = 4.0;
 }
 
@@ -132,7 +132,7 @@ void t2() {
 // CHECK-NEXT:    [[COND_I:%.*]] = phi double [ 0.000000e+00, [[COND_TRUE]] ], [ 0.000000e+00, [[COND_FALSE]] ]
 // CHECK-NEXT:    ret void
 //
-void t91() {
+void t91(void) {
   // Check for proper type promotion of conditional expression
   char c[(int)(sizeof(typeof((0 ? 2.0f : (_Complex double) 2.0f))) - sizeof(_Complex double))];
   // Check for proper codegen
@@ -154,7 +154,7 @@ void t91() {
 // CHECK-NEXT:    [[COND_I:%.*]] = phi double [ 0.000000e+00, [[COND_TRUE]] ], [ 0.000000e+00, [[COND_FALSE]] ]
 // CHECK-NEXT:    ret void
 //
-void t92() {
+void t92(void) {
   // Check for proper type promotion of conditional expression
   char c[(int)(sizeof(typeof((0 ? (_Complex double) 2.0f : 2.0f))) - sizeof(_Complex double))];
   // Check for proper codegen

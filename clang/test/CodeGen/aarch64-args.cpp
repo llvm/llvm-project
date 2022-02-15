@@ -25,7 +25,7 @@ EXTERNC int empty_arg(struct Empty e, int a) {
 // CHECK: define{{.*}} void @empty_ret()
 // CHECK-GNU-C: define{{.*}} void @empty_ret()
 // CHECK-GNU-CXX: define{{.*}} void @empty_ret()
-EXTERNC struct Empty empty_ret() {
+EXTERNC struct Empty empty_ret(void) {
   struct Empty e;
   return e;
 }
@@ -61,7 +61,7 @@ EXTERNC int sort_of_empty_arg(struct Empty e, int a) {
 // CHECK: define{{.*}} void @sort_of_empty_ret()
 // CHECK-GNU-C: define{{.*}} void @sort_of_empty_ret()
 // CHECK-GNU-CXX: define{{.*}} void @sort_of_empty_ret()
-EXTERNC struct SortOfEmpty sort_of_empty_ret() {
+EXTERNC struct SortOfEmpty sort_of_empty_ret(void) {
   struct SortOfEmpty e;
   return e;
 }

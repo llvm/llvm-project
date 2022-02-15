@@ -16,7 +16,7 @@ void r(char *str, void *ptr) {
 
 int random(void);
 
-int main() {
+int main(void) {
   int N = random();
 #define P(n,args) p(#n #args, __builtin_##n args)
 #define Q(n,args) q(#n #args, __builtin_##n args)
@@ -143,12 +143,12 @@ int main() {
 
 
 
-void foo() {
+void foo(void) {
  __builtin_strcat(0, 0);
 }
 
 // CHECK-LABEL: define{{.*}} void @bar(
-void bar() {
+void bar(void) {
   float f;
   double d;
   long double ld;
@@ -183,7 +183,7 @@ void bar() {
 // CHECK: }
 
 // CHECK-LABEL: define{{.*}} void @test_conditional_bzero
-void test_conditional_bzero() {
+void test_conditional_bzero(void) {
   char dst[20];
   int _sz = 20, len = 20;
   return (_sz
@@ -457,7 +457,7 @@ void test_memory_builtins(int n) {
 }
 
 // CHECK-LABEL: define{{.*}} i64 @test_builtin_readcyclecounter
-long long test_builtin_readcyclecounter() {
+long long test_builtin_readcyclecounter(void) {
   // CHECK: call i64 @llvm.readcyclecounter()
   return __builtin_readcyclecounter();
 }
@@ -473,7 +473,7 @@ void test_builtin_launder(int *p) {
 
 // __warn_memset_zero_len should be NOP, see https://sourceware.org/bugzilla/show_bug.cgi?id=25399
 // CHECK-LABEL: define{{.*}} void @test___warn_memset_zero_len
-void test___warn_memset_zero_len() {
+void test___warn_memset_zero_len(void) {
   // CHECK-NOT: @__warn_memset_zero_len
   __warn_memset_zero_len();
 }
@@ -836,7 +836,7 @@ void test_builtin_os_log_merge_helper1(void *buf, unsigned u, long long ll) {
 // Check that this function doesn't write past the end of array 'buf'.
 
 // CHECK-LABEL: define{{.*}} void @test_builtin_os_log_errno
-void test_builtin_os_log_errno() {
+void test_builtin_os_log_errno(void) {
   // CHECK-NOT: @stacksave
   // CHECK: %[[BUF:.*]] = alloca [4 x i8], align 1
   // CHECK: %[[DECAY:.*]] = getelementptr inbounds [4 x i8], [4 x i8]* %[[BUF]], i64 0, i64 0

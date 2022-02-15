@@ -32,9 +32,9 @@ int __attribute__((target("arch=lakemont,mmx"))) use_before_def(void) {
 
 int __attribute__((target("tune=sandybridge"))) walrus(int a) { return 4; }
 
-void __attribute__((target("arch=x86-64-v2"))) x86_64_v2() {}
-void __attribute__((target("arch=x86-64-v3"))) x86_64_v3() {}
-void __attribute__((target("arch=x86-64-v4"))) x86_64_v4() {}
+void __attribute__((target("arch=x86-64-v2"))) x86_64_v2(void) {}
+void __attribute__((target("arch=x86-64-v3"))) x86_64_v3(void) {}
+void __attribute__((target("arch=x86-64-v4"))) x86_64_v4(void) {}
 
 // Check that we emit the additional subtarget and cpu features for foo and not for baz or bar.
 // CHECK: baz{{.*}} #0

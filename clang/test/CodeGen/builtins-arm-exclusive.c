@@ -339,7 +339,7 @@ int test_stlex(char *addr) {
   return res;
 }
 
-void test_clrex() {
+void test_clrex(void) {
 // CHECK-LABEL: @test_clrex
 // CHECK-ARM64-LABEL: @test_clrex
 

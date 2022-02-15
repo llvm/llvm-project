@@ -19,4 +19,4 @@
 // CHECK-NOMAX: attributes #0 = { {{.*}} vscale_range([[#VBITS]],0) {{.*}} }
 // CHECK-UNBOUNDED: attributes #0 = { {{.*}} vscale_range(1,0) {{.*}} }
 // CHECK-NONE: attributes #0 = { {{.*}} vscale_range(1,16) {{.*}} }
-void func() {}
+void func(void) {}

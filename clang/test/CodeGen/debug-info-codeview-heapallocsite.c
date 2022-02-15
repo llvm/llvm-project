@@ -3,10 +3,10 @@
 struct Foo;
 struct Bar;
 
-__declspec(allocator) void *alloc_void();
-__declspec(allocator) struct Foo *alloc_foo();
+__declspec(allocator) void *alloc_void(void);
+__declspec(allocator) struct Foo *alloc_foo(void);
 
-void call_alloc() {
+void call_alloc(void) {
   struct Foo *p = alloc_void();
   struct Foo *w = alloc_foo();
   struct Foo *q = (struct Foo*)alloc_void();

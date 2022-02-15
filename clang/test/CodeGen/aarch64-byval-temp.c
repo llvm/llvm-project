@@ -12,7 +12,7 @@ void pass_large(struct large);
 //
 // Make sure we generate the appropriate lifetime markers for the temporary
 // allocas so that the optimizer can re-use stack slots if possible.
-void example() {
+void example(void) {
     struct large l = {0};
     pass_large(l);
     pass_large(l);

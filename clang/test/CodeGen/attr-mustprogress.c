@@ -32,7 +32,7 @@ int b = 0;
 // C11-NOT:       br {{.*}}!llvm.loop
 // FINITE-NEXT:   br {{.*}}!llvm.loop
 //
-void f0() {
+void f0(void) {
   for (; ;) ;
 }
 
@@ -49,7 +49,7 @@ void f0() {
 // CHECK:       for.end:
 // CHECK-NEXT:    ret void
 //
-void f1() {
+void f1(void) {
   for (; 1;) {
   }
 }
@@ -70,7 +70,7 @@ void f1() {
 // CHECK:       for.end:
 // CHECK-NEXT:    ret void
 //
-void f2() {
+void f2(void) {
   for (; a == b;) {
   }
 }
@@ -99,7 +99,7 @@ void f2() {
 // CHECK:       for.end3:
 // CHECK-NEXT:    ret void
 //
-void F() {
+void F(void) {
   for (; 1;) {
   }
   for (; a == b;) {
@@ -115,7 +115,7 @@ void F() {
 // C11-NOT:       br {{.*}}, !llvm.loop
 // FINITE-NEXT:   br {{.*}}, !llvm.loop
 //
-void w1() {
+void w1(void) {
   while (1) {
   }
 }
@@ -136,7 +136,7 @@ void w1() {
 // CHECK:       while.end:
 // CHECK-NEXT:    ret void
 //
-void w2() {
+void w2(void) {
   while (a == b) {
   }
 }
@@ -161,7 +161,7 @@ void w2() {
 // C11-NOT:       br {{.*}} !llvm.loop
 // FINITE-NEXT:   br {{.*}} !llvm.loop
 //
-void W() {
+void W(void) {
   while (a == b) {
   }
   while (1) {
@@ -181,7 +181,7 @@ void W() {
 // CHECK:       do.end:
 // CHECK-NEXT:    ret void
 //
-void d1() {
+void d1(void) {
   do {
   } while (1);
 }
@@ -202,7 +202,7 @@ void d1() {
 // CHECK:       do.end:
 // CHECK-NEXT:    ret void
 //
-void d2() {
+void d2(void) {
   do {
   } while (a == b);
 }
@@ -229,7 +229,7 @@ void d2() {
 // CHECK:       do.end3:
 // CHECK-NEXT:    ret void
 //
-void D() {
+void D(void) {
   do {
   } while (1);
   do {
