@@ -31,7 +31,7 @@ namespace {
 struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
   void runOnOperation() override {
     BufferizationOptions options = getPartialBufferizationOptions();
-    options.addToDialectFilter<tensor::TensorDialect>();
+    options.allowDialectInFilter<tensor::TensorDialect>();
 
     if (failed(bufferizeOp(getOperation(), options)))
       signalPassFailure();
