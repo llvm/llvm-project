@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: libcpp-has-no-filesystem-library
 // REQUIRES: libcpp-has-no-incomplete-ranges
 
 // Test that _LIBCPP_HAS_NO_INCOMPLETE_RANGES disables the std::ranges namespace.
