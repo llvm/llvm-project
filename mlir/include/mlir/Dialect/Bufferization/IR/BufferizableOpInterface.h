@@ -130,8 +130,34 @@ struct BufferizationOptions {
     OpFilterEntry::FilterFn filterFn = [=](Operation *op) {
       return op->getName().getStringRef() == opName;
     };
-    opFilter.push_back(
-        OpFilterEntry{filterFn, OpFilterEntry::FilterType::ALLOW});
+    allowOperationInFilter(filterFn);
+  }
+
+  /// Deny the given op and activate the filter (`hasFilter`).
+  ///
+  /// This function adds a DENY filter.
+  void denyOperationInFilter(StringRef opName) {
+    hasFilter = true;
+    OpFilterEntry::FilterFn filterFn = [=](Operation *op) {
+      return op->getName().getStringRef() == opName;
+    };
+    denyOperationInFilter(filterFn);
+  }
+
+  /// Allow ops that are matched by `fn` and activate the filter (`hasFilter`).
+  ///
+  /// This function adds an ALLOW filter.
+  void allowOperationInFilter(OpFilterEntry::FilterFn fn) {
+    hasFilter = true;
+    opFilter.push_back(OpFilterEntry{fn, OpFilterEntry::FilterType::ALLOW});
+  }
+
+  /// Deny ops that are matched by `fn` and activate the filter (`hasFilter`).
+  ///
+  /// This function adds a DENY filter.
+  void denyOperationInFilter(OpFilterEntry::FilterFn fn) {
+    hasFilter = true;
+    opFilter.push_back(OpFilterEntry{fn, OpFilterEntry::FilterType::DENY});
   }
 
   /// Try to cast the given op to BufferizableOpInterface if the op is allow

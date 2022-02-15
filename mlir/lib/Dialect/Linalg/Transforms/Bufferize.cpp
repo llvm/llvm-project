@@ -268,43 +268,6 @@ public:
     return success();
   }
 };
-
-class VectorTransferReadOpConverter
-    : public OpConversionPattern<vector::TransferReadOp> {
-public:
-  using OpConversionPattern<vector::TransferReadOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(vector::TransferReadOp readOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    if (readOp.getShapedType().isa<MemRefType>())
-      return failure();
-    rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
-        readOp, readOp.getType(), adaptor.source(), adaptor.indices(),
-        adaptor.permutation_mapAttr(), adaptor.padding(), adaptor.mask(),
-        adaptor.in_boundsAttr());
-    return success();
-  }
-};
-
-class VectorTransferWriteOpConverter
-    : public OpConversionPattern<vector::TransferWriteOp> {
-public:
-  using OpConversionPattern<vector::TransferWriteOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(vector::TransferWriteOp writeOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    if (writeOp.getShapedType().isa<MemRefType>())
-      return failure();
-    rewriter.create<vector::TransferWriteOp>(
-        writeOp.getLoc(), adaptor.vector(), adaptor.source(), adaptor.indices(),
-        adaptor.permutation_mapAttr(),
-        adaptor.in_bounds() ? adaptor.in_boundsAttr() : ArrayAttr());
-    rewriter.replaceOp(writeOp, adaptor.source());
-    return success();
-  }
-};
 } // namespace
 
 namespace {
@@ -329,9 +292,6 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
       return typeConverter.isLegal(op);
     };
     target.addDynamicallyLegalDialect<linalg::LinalgDialect>(isLegalOperation);
-    target
-        .addDynamicallyLegalOp<vector::TransferReadOp, vector::TransferWriteOp>(
-            isLegalOperation);
 
     RewritePatternSet patterns(&context);
     populateLinalgBufferizePatterns(typeConverter, patterns);
@@ -358,9 +318,7 @@ void mlir::linalg::populateLinalgBufferizePatterns(
       BufferizeTensorReshapeOp<tensor::ExpandShapeOp>,
       BufferizeTensorReshapeOp<tensor::CollapseShapeOp>,
       ExtractSliceOpConverter,
-      InsertSliceOpConverter,
-      VectorTransferReadOpConverter,
-      VectorTransferWriteOpConverter
+      InsertSliceOpConverter
     >(typeConverter, patterns.getContext());
   // clang-format on
   patterns.add<GeneralizePadOpPattern>(patterns.getContext());
