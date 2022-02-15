@@ -76,7 +76,7 @@ func @float32_binary_vector(%lhs: vector<4xf32>, %rhs: vector<4xf32>) {
   return
 }
 
-  // CHECK-LABEL: @float32_ternary_scalar
+// CHECK-LABEL: @float32_ternary_scalar
 func @float32_ternary_scalar(%a: f32, %b: f32, %c: f32) {
   // CHECK: spv.GLSL.Fma %{{.*}}: f32
   %0 = math.fma %a, %b, %c : f32

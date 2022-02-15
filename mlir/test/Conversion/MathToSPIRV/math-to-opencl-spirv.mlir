@@ -78,4 +78,19 @@ func @float32_binary_vector(%lhs: vector<4xf32>, %rhs: vector<4xf32>) {
   return
 }
 
+// CHECK-LABEL: @float32_ternary_scalar
+func @float32_ternary_scalar(%a: f32, %b: f32, %c: f32) {
+  // CHECK: spv.OCL.fma %{{.*}}: f32
+  %0 = math.fma %a, %b, %c : f32
+  return
+}
+
+// CHECK-LABEL: @float32_ternary_vector
+func @float32_ternary_vector(%a: vector<4xf32>, %b: vector<4xf32>,
+                            %c: vector<4xf32>) {
+  // CHECK: spv.OCL.fma %{{.*}}: vector<4xf32>
+  %0 = math.fma %a, %b, %c : vector<4xf32>
+  return
+}
+
 } // end module
