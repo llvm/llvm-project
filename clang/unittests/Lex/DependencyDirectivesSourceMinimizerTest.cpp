@@ -714,6 +714,17 @@ TEST(MinimizeSourceToDependencyDirectivesTest,
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest,
+     SupportWhitespaceBeforeLineContinuation) {
+  SmallVector<char, 128> Out;
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives("#define FOO(BAR) \\\n"
+                                                    "  #BAR\\\n"
+                                                    "  baz\n",
+                                                    Out));
+  EXPECT_STREQ("#define FOO(BAR) #BAR baz\n", Out.data());
+}
+
+TEST(MinimizeSourceToDependencyDirectivesTest,
      SupportWhitespaceBeforeLineContinuationInStringSkipping) {
   SmallVector<char, 128> Out;
 
