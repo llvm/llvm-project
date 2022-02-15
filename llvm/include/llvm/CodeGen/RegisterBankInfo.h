@@ -1,4 +1,4 @@
-//===- llvm/CodeGen/GlobalISel/RegisterBankInfo.h ---------------*- C++ -*-===//
+//===- llvm/CodeGen/RegisterBankInfo.h --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_GLOBALISEL_REGISTERBANKINFO_H
-#define LLVM_CODEGEN_GLOBALISEL_REGISTERBANKINFO_H
+#ifndef LLVM_CODEGEN_REGISTERBANKINFO_H
+#define LLVM_CODEGEN_REGISTERBANKINFO_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
@@ -217,8 +217,7 @@ public:
                        const ValueMapping *OperandsMapping,
                        unsigned NumOperands)
         : ID(ID), Cost(Cost), OperandsMapping(OperandsMapping),
-          NumOperands(NumOperands) {
-    }
+          NumOperands(NumOperands) {}
 
     /// Default constructor.
     /// Use this constructor to express that the mapping is invalid.
@@ -630,8 +629,9 @@ public:
   /// similar to ::copyCost, except for cases where multiple copy-like
   /// operations need to be inserted. If the register is used as a source
   /// operand and already has a bank assigned, \p CurBank is non-null.
-  virtual unsigned getBreakDownCost(const ValueMapping &ValMapping,
-                                    const RegisterBank *CurBank = nullptr) const {
+  virtual unsigned
+  getBreakDownCost(const ValueMapping &ValMapping,
+                   const RegisterBank *CurBank = nullptr) const {
     return std::numeric_limits<unsigned>::max();
   }
 
@@ -772,4 +772,4 @@ hash_code hash_value(const RegisterBankInfo::PartialMapping &PartMapping);
 
 } // end namespace llvm
 
-#endif // LLVM_CODEGEN_GLOBALISEL_REGISTERBANKINFO_H
+#endif // LLVM_CODEGEN_REGISTERBANKINFO_H

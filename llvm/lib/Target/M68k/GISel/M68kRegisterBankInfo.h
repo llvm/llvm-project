@@ -13,7 +13,7 @@
 #ifndef LLVM_LIB_TARGET_M68K_GLSEL_M68KREGISTERBANKINFO_H
 #define LLVM_LIB_TARGET_M68K_GLSEL_M68KREGISTERBANKINFO_H
 
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 
 #define GET_REGBANK_DECLARATIONS
 #include "M68kGenRegisterBank.inc"

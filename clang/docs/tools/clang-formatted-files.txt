@@ -4750,6 +4750,7 @@ llvm/include/llvm/CodeGen/NonRelocatableStringpool.h
 llvm/include/llvm/CodeGen/ParallelCG.h
 llvm/include/llvm/CodeGen/PBQPRAConstraint.h
 llvm/include/llvm/CodeGen/PreISelIntrinsicLowering.h
+llvm/include/llvm/CodeGen/RegisterBank.h
 llvm/include/llvm/CodeGen/RegisterClassInfo.h
 llvm/include/llvm/CodeGen/ReplaceWithVeclib.h
 llvm/include/llvm/CodeGen/ScheduleDAGMutation.h
@@ -4769,7 +4770,6 @@ llvm/include/llvm/CodeGen/GlobalISel/InlineAsmLowering.h
 llvm/include/llvm/CodeGen/GlobalISel/InstructionSelect.h
 llvm/include/llvm/CodeGen/GlobalISel/Legalizer.h
 llvm/include/llvm/CodeGen/GlobalISel/LostDebugLocObserver.h
-llvm/include/llvm/CodeGen/GlobalISel/RegisterBank.h
 llvm/include/llvm/CodeGen/MIRParser/MIRParser.h
 llvm/include/llvm/CodeGen/PBQP/CostAllocator.h
 llvm/include/llvm/DebugInfo/DIContext.h

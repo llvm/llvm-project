@@ -14,8 +14,8 @@
 #ifndef LLVM_LIB_TARGET_PPC_GISEL_PPCREGISTERBANKINFO_H
 #define LLVM_LIB_TARGET_PPC_GISEL_PPCREGISTERBANKINFO_H
 
-#include "llvm/CodeGen/GlobalISel/RegisterBank.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
+#include "llvm/CodeGen/RegisterBank.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_REGBANK_DECLARATIONS
