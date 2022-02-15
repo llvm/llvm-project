@@ -6,10 +6,9 @@
 
 define i8 @neg_mask1_lshr(i8 %a0) {
 ; CHECK-LABEL: @neg_mask1_lshr(
-; CHECK-NEXT:    [[SHIFT:%.*]] = lshr i8 [[A0:%.*]], 3
-; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[SHIFT]], 1
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i8 0, [[MASK]]
-; CHECK-NEXT:    ret i8 [[NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 [[A0:%.*]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i8 [[TMP1]], 7
+; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
   %shift = lshr i8 %a0, 3
   %mask = and i8 %shift, 1
@@ -19,9 +18,9 @@ define i8 @neg_mask1_lshr(i8 %a0) {
 
 define i8 @sub_mask1_lshr(i8 %a0) {
 ; CHECK-LABEL: @sub_mask1_lshr(
-; CHECK-NEXT:    [[SHIFT:%.*]] = lshr i8 [[A0:%.*]], 1
-; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[SHIFT]], 1
-; CHECK-NEXT:    [[NEG:%.*]] = sub nuw nsw i8 10, [[MASK]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 [[A0:%.*]], 6
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i8 [[TMP1]], 7
+; CHECK-NEXT:    [[NEG:%.*]] = add nsw i8 [[TMP2]], 10
 ; CHECK-NEXT:    ret i8 [[NEG]]
 ;
   %shift = lshr i8 %a0, 1
@@ -32,10 +31,9 @@ define i8 @sub_mask1_lshr(i8 %a0) {
 
 define <4 x i32> @neg_mask1_lshr_vector_uniform(<4 x i32> %a0) {
 ; CHECK-LABEL: @neg_mask1_lshr_vector_uniform(
-; CHECK-NEXT:    [[SHIFT:%.*]] = lshr <4 x i32> [[A0:%.*]], <i32 3, i32 3, i32 3, i32 3>
-; CHECK-NEXT:    [[MASK:%.*]] = and <4 x i32> [[SHIFT]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw <4 x i32> zeroinitializer, [[MASK]]
-; CHECK-NEXT:    ret <4 x i32> [[NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <4 x i32> [[A0:%.*]], <i32 28, i32 28, i32 28, i32 28>
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr <4 x i32> [[TMP1]], <i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %shift = lshr <4 x i32> %a0, <i32 3, i32 3, i32 3, i32 3>
   %mask = and <4 x i32> %shift, <i32 1, i32 1, i32 1, i32 1>
@@ -45,10 +43,9 @@ define <4 x i32> @neg_mask1_lshr_vector_uniform(<4 x i32> %a0) {
 
 define <4 x i32> @neg_mask1_lshr_vector_nonuniform(<4 x i32> %a0) {
 ; CHECK-LABEL: @neg_mask1_lshr_vector_nonuniform(
-; CHECK-NEXT:    [[SHIFT:%.*]] = lshr <4 x i32> [[A0:%.*]], <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[MASK:%.*]] = and <4 x i32> [[SHIFT]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw <4 x i32> zeroinitializer, [[MASK]]
-; CHECK-NEXT:    ret <4 x i32> [[NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <4 x i32> [[A0:%.*]], <i32 28, i32 27, i32 26, i32 25>
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr <4 x i32> [[TMP1]], <i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %shift = lshr <4 x i32> %a0, <i32 3, i32 4, i32 5, i32 6>
   %mask = and <4 x i32> %shift, <i32 1, i32 1, i32 1, i32 1>
@@ -58,9 +55,9 @@ define <4 x i32> @neg_mask1_lshr_vector_nonuniform(<4 x i32> %a0) {
 
 define <4 x i32> @sub_mask1_lshr_vector_nonuniform(<4 x i32> %a0) {
 ; CHECK-LABEL: @sub_mask1_lshr_vector_nonuniform(
-; CHECK-NEXT:    [[SHIFT:%.*]] = lshr <4 x i32> [[A0:%.*]], <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[MASK:%.*]] = and <4 x i32> [[SHIFT]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw <4 x i32> <i32 5, i32 0, i32 -1, i32 65556>, [[MASK]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <4 x i32> [[A0:%.*]], <i32 28, i32 27, i32 26, i32 25>
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr <4 x i32> [[TMP1]], <i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[NEG:%.*]] = add nsw <4 x i32> [[TMP2]], <i32 5, i32 0, i32 -1, i32 65556>
 ; CHECK-NEXT:    ret <4 x i32> [[NEG]]
 ;
   %shift = lshr <4 x i32> %a0, <i32 3, i32 4, i32 5, i32 6>
@@ -71,10 +68,10 @@ define <4 x i32> @sub_mask1_lshr_vector_nonuniform(<4 x i32> %a0) {
 
 define i8 @sub_mask1_trunc_lshr(i64 %a0) {
 ; CHECK-LABEL: @sub_mask1_trunc_lshr(
-; CHECK-NEXT:    [[SHIFT:%.*]] = lshr i64 [[A0:%.*]], 15
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[SHIFT]] to i8
-; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[TRUNC]], 1
-; CHECK-NEXT:    [[NEG:%.*]] = sub nuw nsw i8 10, [[MASK]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[A0:%.*]], 48
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 63
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i8
+; CHECK-NEXT:    [[NEG:%.*]] = add i8 [[TMP3]], 10
 ; CHECK-NEXT:    ret i8 [[NEG]]
 ;
   %shift = lshr i64 %a0, 15
@@ -86,10 +83,10 @@ define i8 @sub_mask1_trunc_lshr(i64 %a0) {
 
 define i32 @sub_sext_mask1_trunc_lshr(i64 %a0) {
 ; CHECK-LABEL: @sub_sext_mask1_trunc_lshr(
-; CHECK-NEXT:    [[SHIFT:%.*]] = lshr i64 [[A0:%.*]], 15
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[SHIFT]] to i8
-; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[TRUNC]], 1
-; CHECK-NEXT:    [[NARROW:%.*]] = sub nuw nsw i8 10, [[MASK]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[A0:%.*]], 48
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 63
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i8
+; CHECK-NEXT:    [[NARROW:%.*]] = add i8 [[TMP3]], 10
 ; CHECK-NEXT:    [[NEG:%.*]] = zext i8 [[NARROW]] to i32
 ; CHECK-NEXT:    ret i32 [[NEG]]
 ;
@@ -104,9 +101,9 @@ define i32 @sub_sext_mask1_trunc_lshr(i64 %a0) {
 define i32 @sub_zext_trunc_lshr(i64 %a0) {
 ; CHECK-LABEL: @sub_zext_trunc_lshr(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[A0:%.*]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 15
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 1
-; CHECK-NEXT:    [[NEG:%.*]] = sub nuw nsw i32 10, [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = ashr i32 [[TMP2]], 31
+; CHECK-NEXT:    [[NEG:%.*]] = add nsw i32 [[TMP3]], 10
 ; CHECK-NEXT:    ret i32 [[NEG]]
 ;
   %shift = lshr i64 %a0, 15
