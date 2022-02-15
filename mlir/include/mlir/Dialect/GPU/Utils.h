@@ -17,6 +17,7 @@
 
 namespace mlir {
 struct LogicalResult;
+class Operation;
 class Value;
 
 namespace gpu {
