@@ -42,7 +42,7 @@ LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI,
                                LoopInfo *LI, DominatorTree *DT,
                                ScalarEvolution *SE)
     : VersionedLoop(L), AliasChecks(Checks.begin(), Checks.end()),
-      Preds(LAI.getPSE().getUnionPredicate()), LAI(LAI), LI(LI), DT(DT),
+      Preds(LAI.getPSE().getPredicate()), LAI(LAI), LI(LI), DT(DT),
       SE(SE) {
 }
 
@@ -276,7 +276,7 @@ bool runImpl(LoopInfo *LI, function_ref<const LoopAccessInfo &(Loop &)> GetLAA,
     const LoopAccessInfo &LAI = GetLAA(*L);
     if (!LAI.hasConvergentOp() &&
         (LAI.getNumRuntimePointerChecks() ||
-         !LAI.getPSE().getUnionPredicate().isAlwaysTrue())) {
+         !LAI.getPSE().getPredicate().isAlwaysTrue())) {
       LoopVersioning LVer(LAI, LAI.getRuntimePointerChecking()->getChecks(), L,
                           LI, DT, SE);
       LVer.versionLoop();

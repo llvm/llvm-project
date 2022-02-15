@@ -9,7 +9,7 @@ define void @add_v64i8(<64 x i8>* %a, <64 x i8>* %b) #0 {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x1]
-; CHECK-NEXT:    add z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    add z0.b, z0.b, z1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <64 x i8>, <64 x i8>* %a
@@ -25,7 +25,7 @@ define void @add_v32i16(<32 x i16>* %a, <32 x i16>* %b, <32 x i16>* %c) #0 {
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
-; CHECK-NEXT:    add z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    add z0.h, z0.h, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x i16>, <32 x i16>* %a

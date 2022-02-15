@@ -100,6 +100,12 @@ constexpr TypeBuilderFunc getModel<const char32_t *>() {
   };
 }
 template <>
+constexpr TypeBuilderFunc getModel<char>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return mlir::IntegerType::get(context, 8 * sizeof(char));
+  };
+}
+template <>
 constexpr TypeBuilderFunc getModel<signed char>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::IntegerType::get(context, 8 * sizeof(signed char));

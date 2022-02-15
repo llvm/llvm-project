@@ -15,6 +15,42 @@ Pattern {
 // -----
 
 //===----------------------------------------------------------------------===//
+// CallExpr
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: |-UserConstraintDecl {{.*}} Name<MakeRootOp> ResultType<Op<my_dialect.foo>>
+// CHECK:   `-CallExpr {{.*}} Type<Op<my_dialect.foo>>
+// CHECK:     `-DeclRefExpr {{.*}} Type<Constraint>
+// CHECK:       `-UserConstraintDecl {{.*}} Name<MakeRootOp> ResultType<Op<my_dialect.foo>>
+Constraint MakeRootOp() => op<my_dialect.foo>;
+
+Pattern {
+  erase MakeRootOp();
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: |-UserRewriteDecl {{.*}} Name<CreateNewOp> ResultType<Op<my_dialect.foo>>
+// CHECK: `-PatternDecl {{.*}}
+// CHECK:   `-CallExpr {{.*}} Type<Op<my_dialect.foo>>
+// CHECK:     `-DeclRefExpr {{.*}} Type<Rewrite>
+// CHECK:       `-UserRewriteDecl {{.*}} Name<CreateNewOp> ResultType<Op<my_dialect.foo>>
+// CHECK:     `Arguments`
+// CHECK:       `-MemberAccessExpr {{.*}} Member<$results> Type<ValueRange>
+// CHECK:         `-DeclRefExpr {{.*}} Type<Op<my_dialect.bar>>
+// CHECK:           `-VariableDecl {{.*}} Name<inputOp> Type<Op<my_dialect.bar>>
+Rewrite CreateNewOp(inputs: ValueRange) => op<my_dialect.foo>(inputs);
+
+Pattern {
+  let inputOp = op<my_dialect.bar>;
+  replace op<my_dialect.bar>(inputOp) with CreateNewOp(inputOp);
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // MemberAccessExpr
 //===----------------------------------------------------------------------===//
 

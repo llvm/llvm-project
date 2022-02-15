@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 -o - %s -Wuninitialized
 
-void foo() { }
+void foo(void) { }
 
 void xxx(int argc) {
   int map; // expected-note {{initialize the variable 'map' to silence this warning}}

@@ -18,10 +18,9 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Object/COFF.h"
-#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {

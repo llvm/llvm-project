@@ -79,7 +79,6 @@ enum NodeType : unsigned {
   // Predicated instructions where inactive lanes produce undefined results.
   ABDS_PRED,
   ABDU_PRED,
-  ADD_PRED,
   FADD_PRED,
   FDIV_PRED,
   FMA_PRED,
@@ -98,7 +97,6 @@ enum NodeType : unsigned {
   SMIN_PRED,
   SRA_PRED,
   SRL_PRED,
-  SUB_PRED,
   UDIV_PRED,
   UMAX_PRED,
   UMIN_PRED,

@@ -1,2 +1,2 @@
 #line 10 "foo.h"
-foo(); // will warn if not treated as a system header
+foo(void); // will warn if not treated as a system header

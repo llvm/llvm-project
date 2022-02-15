@@ -149,3 +149,15 @@ cleanup:
 define void @byval(ptr byval({ i32, i32 }) %0) {
   ret void
 }
+
+; CHECK: define void @call_unnamed_fn() {
+; CHECK:  call void @0()
+define void @call_unnamed_fn() {
+  call void @0()
+  ret void
+}
+
+; CHECK: define void @0() {
+define void @0() {
+  ret void
+}

@@ -858,5 +858,27 @@ TEST_F(QualifierFixerTest, QualifierTemplates) {
                Style);
 }
 
+TEST_F(QualifierFixerTest, DisableRegions) {
+  FormatStyle Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"inline", "static", "const", "type"};
+
+  ReplacementCount = 0;
+  verifyFormat("// clang-format off\n"
+               "int const inline static a = 0;\n"
+               "// clang-format on\n",
+               Style);
+  EXPECT_EQ(ReplacementCount, 0);
+  verifyFormat("// clang-format off\n"
+               "int const inline static a = 0;\n"
+               "// clang-format on\n"
+               "inline static const int a = 0;\n",
+               "// clang-format off\n"
+               "int const inline static a = 0;\n"
+               "// clang-format on\n"
+               "int const inline static a = 0;\n",
+               Style);
+}
+
 } // namespace format
 } // namespace clang

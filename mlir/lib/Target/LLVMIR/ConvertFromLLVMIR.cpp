@@ -812,6 +812,9 @@ LogicalResult Importer::processFunction(llvm::Function *f) {
     emitWarning(UnknownLoc::get(context),
                 "could not deduce personality, skipping it");
 
+  if (f->hasGC())
+    fop.setGarbageCollectorAttr(b.getStringAttr(f->getGC()));
+
   if (f->isDeclaration())
     return success();
 

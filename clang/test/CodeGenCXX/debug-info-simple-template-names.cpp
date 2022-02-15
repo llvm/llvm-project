@@ -16,6 +16,17 @@ struct t2 {
 };
 template <template <typename...> class T>
 void f3() {}
+namespace {
+enum LocalEnum { LocalEnum1 };
+}
+template<typename T, T ... ts>
+struct t3 { };
+struct t4 {
+  t3<LocalEnum, LocalEnum1> m1;
+};
+  
+t4 v1;
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "t3<(anonymous namespace)::LocalEnum, (anonymous namespace)::LocalEnum1>"
 void f() {
   // Basic examples of simplifiable/rebuildable names
   f1<>();
@@ -48,9 +59,11 @@ void f() {
   // since we don't emit the column number. Also lambdas and unnamed classes are
   // ambiguous with each other - there's no DWARF that designates a lambda as
   // anything other than another unnamed class/struct.
-  auto A = [] {};
-  f1<decltype(A)>();
-  // CHECK: !DISubprogram(name: "f1<(lambda at {{.*}}debug-info-simple-template-names.cpp:[[# @LINE - 2]]:12)>",
+  auto Lambda = [] {};
+  f1<decltype(Lambda)>();
+  // CHECK: !DISubprogram(name: "f1<(lambda at {{.*}}debug-info-simple-template-names.cpp:[[# @LINE - 2]]:17)>",
+  f1<t1<t1<decltype(Lambda)>>>();
+  // CHECK: !DISubprogram(name: "f1<t1<t1<(lambda at {{.*}}> > >",
   struct {
   } unnamed_struct;
   f1<decltype(unnamed_struct)>();

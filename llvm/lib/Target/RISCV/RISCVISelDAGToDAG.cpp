@@ -48,15 +48,15 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
        I != E;) {
     SDNode *N = &*I++; // Preincrement iterator to avoid invalidation issues.
 
-    // Convert integer SPLAT_VECTOR to VMV_V_X_VL to reduce isel burden.
-    if (N->getOpcode() == ISD::SPLAT_VECTOR &&
-        N->getSimpleValueType(0).isInteger()) {
+    // Convert integer SPLAT_VECTOR to VMV_V_X_VL and floating-point
+    // SPLAT_VECTOR to VFMV_V_F_VL to reduce isel burden.
+    if (N->getOpcode() == ISD::SPLAT_VECTOR) {
       MVT VT = N->getSimpleValueType(0);
+      unsigned Opc =
+          VT.isInteger() ? RISCVISD::VMV_V_X_VL : RISCVISD::VFMV_V_F_VL;
       SDLoc DL(N);
-      SDValue VL = CurDAG->getTargetConstant(RISCV::VLMaxSentinel, DL,
-                                             Subtarget->getXLenVT());
-      SDValue Result =
-          CurDAG->getNode(RISCVISD::VMV_V_X_VL, DL, VT, N->getOperand(0), VL);
+      SDValue VL = CurDAG->getRegister(RISCV::X0, Subtarget->getXLenVT());
+      SDValue Result = CurDAG->getNode(Opc, DL, VT, N->getOperand(0), VL);
 
       --I;
       CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Result);
@@ -1737,6 +1737,22 @@ bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
       ShAmt = N.getOperand(0);
       return true;
     }
+  } else if (N.getOpcode() == ISD::SUB &&
+             isa<ConstantSDNode>(N.getOperand(0))) {
+    uint64_t Imm = N.getConstantOperandVal(0);
+    // If we are shifting by N-X where N == 0 mod Size, then just shift by -X to
+    // generate a NEG instead of a SUB of a constant.
+    if (Imm != 0 && Imm % ShiftWidth == 0) {
+      SDLoc DL(N);
+      EVT VT = N.getValueType();
+      SDValue Zero =
+          CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, RISCV::X0, VT);
+      unsigned NegOpc = VT == MVT::i64 ? RISCV::SUBW : RISCV::SUB;
+      MachineSDNode *Neg = CurDAG->getMachineNode(NegOpc, DL, VT, Zero,
+                                                  N.getOperand(1));
+      ShAmt = SDValue(Neg, 0);
+      return true;
+    }
   }
 
   ShAmt = N;
@@ -1885,14 +1901,24 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
 // allows us to choose betwen VSETIVLI or VSETVLI later.
 bool RISCVDAGToDAGISel::selectVLOp(SDValue N, SDValue &VL) {
   auto *C = dyn_cast<ConstantSDNode>(N);
-  if (C && isUInt<5>(C->getZExtValue()))
+  if (C && isUInt<5>(C->getZExtValue())) {
     VL = CurDAG->getTargetConstant(C->getZExtValue(), SDLoc(N),
                                    N->getValueType(0));
-  else if (C && C->isAllOnesValue() && C->getOpcode() != ISD::TargetConstant)
+  } else if (C && C->isAllOnesValue()) {
+    // Treat all ones as VLMax.
     VL = CurDAG->getTargetConstant(RISCV::VLMaxSentinel, SDLoc(N),
                                    N->getValueType(0));
-  else
+  } else if (isa<RegisterSDNode>(N) &&
+             cast<RegisterSDNode>(N)->getReg() == RISCV::X0) {
+    // All our VL operands use an operand that allows GPRNoX0 or an immediate
+    // as the register class. Convert X0 to a special immediate to pass the
+    // MachineVerifier. This is recognized specially by the vsetvli insertion
+    // pass.
+    VL = CurDAG->getTargetConstant(RISCV::VLMaxSentinel, SDLoc(N),
+                                   N->getValueType(0));
+  } else {
     VL = N;
+  }
 
   return true;
 }
@@ -2222,6 +2248,7 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
          RISCVII::hasDummyMaskOp(UnmaskedMCID.TSFlags) &&
          !RISCVII::hasVecPolicyOp(UnmaskedMCID.TSFlags) &&
          "Unexpected pseudo to transform to");
+  (void)UnmaskedMCID;
 
   SmallVector<SDValue, 8> Ops;
   // Skip the merge operand at index 0.

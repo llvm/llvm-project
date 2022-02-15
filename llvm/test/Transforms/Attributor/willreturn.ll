@@ -317,9 +317,9 @@ define void @conditional_exit(i32 %0, i32* nocapture readonly %1) local_unnamed_
 declare float @llvm.floor.f32(float)
 
 define void @call_floor(float %a) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
+; CHECK: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; CHECK-LABEL: define {{[^@]+}}@call_floor
-; CHECK-SAME: (float [[A:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (float [[A:%.*]]) #[[ATTR9:[0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
   tail call float @llvm.floor.f32(float %a)
@@ -329,13 +329,13 @@ define void @call_floor(float %a) #0 {
 define float @call_floor2(float %a) #0 {
 ; IS________OPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; IS________OPM-LABEL: define {{[^@]+}}@call_floor2
-; IS________OPM-SAME: (float [[A:%.*]]) #[[ATTR9:[0-9]+]] {
+; IS________OPM-SAME: (float [[A:%.*]]) #[[ATTR9]] {
 ; IS________OPM-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) #[[ATTR27:[0-9]+]]
 ; IS________OPM-NEXT:    ret float [[C]]
 ;
 ; IS________NPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; IS________NPM-LABEL: define {{[^@]+}}@call_floor2
-; IS________NPM-SAME: (float [[A:%.*]]) #[[ATTR9:[0-9]+]] {
+; IS________NPM-SAME: (float [[A:%.*]]) #[[ATTR9]] {
 ; IS________NPM-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) #[[ATTR29:[0-9]+]]
 ; IS________NPM-NEXT:    ret float [[C]]
 ;

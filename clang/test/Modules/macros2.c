@@ -26,7 +26,7 @@ TOP_OTHER_DEF_RIGHT_UNDEF *n0b; // expected-warning{{ambiguous expansion of macr
 #  error TOP_RIGHT_UNDEF should still be defined
 #endif
 
-void test() {
+void test(void) {
   float f;
   TOP_RIGHT_REDEF *fp = &f; // ok, right's definition overrides top's definition
 
@@ -81,6 +81,6 @@ int n3 = TOP_OTHER_DEF_RIGHT_UNDEF; // ok
 
 int top_redef_in_submodules = TOP_REDEF_IN_SUBMODULES;
 @import macros_top.c;
-void test2() {
+void test2(void) {
   int TOP_REDEF_IN_SUBMODULES = top_redef_in_submodules;
 }

@@ -623,10 +623,15 @@ used by people developing LLVM.
 |                         | other LLVM subprojects to additionally build. (Only|
 |                         | effective when using a side-by-side project layout |
 |                         | e.g. via git). The default list is empty. Can      |
-|                         | include: clang, clang-tools-extra, compiler-rt,    |
-|                         | cross-project-tests, flang, libc, libclc, libcxx,  |
-|                         | libcxxabi, libunwind, lld, lldb, mlir, openmp,     |
-|                         | polly, or pstl.                                    |
+|                         | include: clang, clang-tools-extra,                 |
+|                         | cross-project-tests, flang, libc, libclc, lld,     |
+|                         | lldb, mlir, openmp, polly, or pstl.                |
++-------------------------+----------------------------------------------------+
+| LLVM_ENABLE_RUNTIMES    | A semicolon-delimited list selecting which of the  |
+|                         | runtimes to build. (Only effective when using the  |
+|                         | full monorepo layout). The default list is empty.  |
+|                         | Can include: compiler-rt, libc, libcxx, libcxxabi, |
+|                         | libunwind, or openmp.                              |
 +-------------------------+----------------------------------------------------+
 | LLVM_ENABLE_SPHINX      | Build sphinx-based documentation from the source   |
 |                         | code. This is disabled by default because it is    |
@@ -1215,6 +1220,11 @@ following options with cmake:
  * -DLLVM_ENABLE_PROJECTS
    Set this equal to the projects you wish to compile (e.g. clang, lld, etc.) If
    compiling more than one project, separate the items with a semicolon. Should
+   you run into issues with the semicolon, try surrounding it with single quotes.
+
+ * -DLLVM_ENABLE_RUNTIMES
+   Set this equal to the runtimes you wish to compile (e.g. libcxx, libcxxabi, etc.)
+   If compiling more than one runtime, separate the items with a semicolon. Should
    you run into issues with the semicolon, try surrounding it with single quotes.
 
  * -DCLANG_ENABLE_STATIC_ANALYZER

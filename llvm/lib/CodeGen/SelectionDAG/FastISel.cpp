@@ -1434,14 +1434,9 @@ bool FastISel::selectBitCast(const User *I) {
   // First, try to perform the bitcast by inserting a reg-reg copy.
   Register ResultReg;
   if (SrcVT == DstVT) {
-    const TargetRegisterClass *SrcClass = TLI.getRegClassFor(SrcVT);
-    const TargetRegisterClass *DstClass = TLI.getRegClassFor(DstVT);
-    // Don't attempt a cross-class copy. It will likely fail.
-    if (SrcClass == DstClass) {
-      ResultReg = createResultReg(DstClass);
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-              TII.get(TargetOpcode::COPY), ResultReg).addReg(Op0);
-    }
+    ResultReg = createResultReg(TLI.getRegClassFor(DstVT));
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+            TII.get(TargetOpcode::COPY), ResultReg).addReg(Op0);
   }
 
   // If the reg-reg copy failed, select a BITCAST opcode.

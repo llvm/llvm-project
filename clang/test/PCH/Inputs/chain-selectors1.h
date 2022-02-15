@@ -5,7 +5,7 @@
   -(void)h:(int)p1 foo:(int)p2;
 @end
 
-void foo1() {
+void foo1(void) {
   // FIXME: Can't verify warnings in headers
   //(void)@selector(x);
   (void)@selector(f);

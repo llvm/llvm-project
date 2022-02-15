@@ -1221,10 +1221,17 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
   if (Current.is(TT_ArraySubscriptLSquare) &&
       State.Stack.back().StartOfArraySubscripts == 0)
     State.Stack.back().StartOfArraySubscripts = State.Column;
-  if (Current.is(TT_ConditionalExpr) && Current.is(tok::question) &&
-      ((Current.MustBreakBefore) ||
-       (Current.getNextNonComment() &&
-        Current.getNextNonComment()->MustBreakBefore)))
+
+  auto IsWrappedConditional = [](const FormatToken &Tok) {
+    if (!(Tok.is(TT_ConditionalExpr) && Tok.is(tok::question)))
+      return false;
+    if (Tok.MustBreakBefore)
+      return true;
+
+    const FormatToken *Next = Tok.getNextNonComment();
+    return Next && Next->MustBreakBefore;
+  };
+  if (IsWrappedConditional(Current))
     State.Stack.back().IsWrappedConditional = true;
   if (Style.BreakBeforeTernaryOperators && Current.is(tok::question))
     State.Stack.back().QuestionColumn = State.Column;

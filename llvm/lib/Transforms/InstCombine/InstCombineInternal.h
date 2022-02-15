@@ -652,7 +652,8 @@ public:
                            ICmpInst::Predicate Cond, Instruction &I);
   Instruction *foldAllocaCmp(ICmpInst &ICI, const AllocaInst *Alloca,
                              const Value *Other);
-  Instruction *foldCmpLoadFromIndexedGlobal(GetElementPtrInst *GEP,
+  Instruction *foldCmpLoadFromIndexedGlobal(LoadInst *LI,
+                                            GetElementPtrInst *GEP,
                                             GlobalVariable *GV, CmpInst &ICI,
                                             ConstantInt *AndCst = nullptr);
   Instruction *foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,

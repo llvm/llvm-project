@@ -1883,6 +1883,25 @@ private:
         LeftOfParens = LeftOfParens->MatchingParen->Previous;
       }
 
+      if (LeftOfParens->is(tok::r_square)) {
+        //   delete[] (void *)ptr;
+        auto MayBeArrayDelete = [](FormatToken *Tok) -> FormatToken * {
+          if (Tok->isNot(tok::r_square))
+            return nullptr;
+
+          Tok = Tok->getPreviousNonComment();
+          if (!Tok || Tok->isNot(tok::l_square))
+            return nullptr;
+
+          Tok = Tok->getPreviousNonComment();
+          if (!Tok || Tok->isNot(tok::kw_delete))
+            return nullptr;
+          return Tok;
+        };
+        if (FormatToken *MaybeDelete = MayBeArrayDelete(LeftOfParens))
+          LeftOfParens = MaybeDelete;
+      }
+
       // The Condition directly below this one will see the operator arguments
       // as a (void *foo) cast.
       //   void operator delete(void *foo) ATTRIB;
@@ -3074,14 +3093,15 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
         Right.Next->is(TT_RangeBasedForLoopColon))
       return getTokenPointerOrReferenceAlignment(Left) !=
              FormatStyle::PAS_Right;
-    return !Right.isOneOf(TT_PointerOrReference, TT_ArraySubscriptLSquare,
-                          tok::l_paren) &&
-           (getTokenPointerOrReferenceAlignment(Left) !=
-                FormatStyle::PAS_Right &&
-            !Line.IsMultiVariableDeclStmt) &&
-           Left.Previous &&
-           !Left.Previous->isOneOf(tok::l_paren, tok::coloncolon,
-                                   tok::l_square);
+    if (Right.isOneOf(TT_PointerOrReference, TT_ArraySubscriptLSquare,
+                      tok::l_paren))
+      return false;
+    if (getTokenPointerOrReferenceAlignment(Left) == FormatStyle::PAS_Right)
+      return false;
+    if (Line.IsMultiVariableDeclStmt)
+      return false;
+    return Left.Previous && !Left.Previous->isOneOf(
+                                tok::l_paren, tok::coloncolon, tok::l_square);
   }
   // Ensure right pointer alignment with ellipsis e.g. int *...P
   if (Left.is(tok::ellipsis) && Left.Previous &&
@@ -3227,7 +3247,10 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       if (Left.isOneOf(tok::kw_try, Keywords.kw___except, tok::kw_catch))
         return Style.SpaceBeforeParensOptions.AfterControlStatements ||
                spaceRequiredBeforeParens(Right);
-      if (Left.isOneOf(tok::kw_new, tok::kw_delete))
+      if (Left.isOneOf(tok::kw_new, tok::kw_delete) ||
+          (Left.is(tok::r_square) && Left.MatchingParen &&
+           Left.MatchingParen->Previous &&
+           Left.MatchingParen->Previous->is(tok::kw_delete)))
         return Style.SpaceBeforeParens != FormatStyle::SBPO_Never ||
                spaceRequiredBeforeParens(Right);
     }
@@ -3575,7 +3598,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   if (Right.is(tok::colon)) {
     if (Line.First->isOneOf(tok::kw_default, tok::kw_case))
       return Style.SpaceBeforeCaseColon;
-    if (!Right.getNextNonComment() || Right.getNextNonComment()->is(tok::semi))
+    const FormatToken *Next = Right.getNextNonComment();
+    if (!Next || Next->is(tok::semi))
       return false;
     if (Right.is(TT_ObjCMethodExpr))
       return false;

@@ -4,14 +4,14 @@
 
 @import DependsOnModule;
 
-void testSubFramework() {
+void testSubFramework(void) {
   float *sf1 = sub_framework; // expected-error{{declaration of 'sub_framework' must be imported from module 'DependsOnModule.SubFramework' before it is required}}
   // expected-note@Inputs/DependsOnModule.framework/Frameworks/SubFramework.framework/Headers/SubFramework.h:2 {{here}}
 }
 
 @import DependsOnModule.SubFramework;
 
-void testSubFrameworkAgain() {
+void testSubFrameworkAgain(void) {
   float *sf2 = sub_framework;
   double *sfo1 = sub_framework_other;
 }

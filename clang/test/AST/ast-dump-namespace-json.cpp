@@ -23,7 +23,7 @@ namespace quux::inline frobble {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "NamespaceDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 98,
+// CHECK-NEXT:   "offset": {{[0-9]+}},
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 3,
 // CHECK-NEXT:   "col": 11,
@@ -31,12 +31,12 @@ namespace quux::inline frobble {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 88,
+// CHECK-NEXT:    "offset": {{[0-9]+}},
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 9
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 104,
+// CHECK-NEXT:    "offset": {{[0-9]+}},
 // CHECK-NEXT:    "line": 4,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -48,19 +48,19 @@ namespace quux::inline frobble {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "NamespaceDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 117,
+// CHECK-NEXT:   "offset": {{[0-9]+}},
 // CHECK-NEXT:   "line": 6,
 // CHECK-NEXT:   "col": 11,
 // CHECK-NEXT:   "tokLen": 1
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 107,
+// CHECK-NEXT:    "offset": {{[0-9]+}},
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 9
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 119,
+// CHECK-NEXT:    "offset": {{[0-9]+}},
 // CHECK-NEXT:    "line": 7,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -76,19 +76,19 @@ namespace quux::inline frobble {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "NamespaceDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 132,
+// CHECK-NEXT:   "offset": {{[0-9]+}},
 // CHECK-NEXT:   "line": 9,
 // CHECK-NEXT:   "col": 11,
 // CHECK-NEXT:   "tokLen": 3
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 122,
+// CHECK-NEXT:    "offset": {{[0-9]+}},
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 9
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 163,
+// CHECK-NEXT:    "offset": {{[0-9]+}},
 // CHECK-NEXT:    "line": 12,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -100,19 +100,19 @@ namespace quux::inline frobble {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "NamespaceDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 155,
+// CHECK-NEXT:     "offset": {{[0-9]+}},
 // CHECK-NEXT:     "line": 10,
 // CHECK-NEXT:     "col": 18,
 // CHECK-NEXT:     "tokLen": 3
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 138,
+// CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 161,
+// CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "line": 11,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
@@ -127,19 +127,19 @@ namespace quux::inline frobble {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "NamespaceDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 176,
+// CHECK-NEXT:   "offset": {{[0-9]+}},
 // CHECK-NEXT:   "line": 14,
 // CHECK-NEXT:   "col": 11,
 // CHECK-NEXT:   "tokLen": 3
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 166,
+// CHECK-NEXT:    "offset": {{[0-9]+}},
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 9
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 188,
+// CHECK-NEXT:    "offset": {{[0-9]+}},
 // CHECK-NEXT:    "line": 15,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -151,19 +151,19 @@ namespace quux::inline frobble {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "NamespaceDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 181,
+// CHECK-NEXT:     "offset": {{[0-9]+}},
 // CHECK-NEXT:     "line": 14,
 // CHECK-NEXT:     "col": 16,
 // CHECK-NEXT:     "tokLen": 4
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 179,
+// CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "col": 14,
 // CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 188,
+// CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "line": 15,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
@@ -177,19 +177,19 @@ namespace quux::inline frobble {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "NamespaceDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 201,
+// CHECK-NEXT:   "offset": {{[0-9]+}},
 // CHECK-NEXT:   "line": 17,
 // CHECK-NEXT:   "col": 11,
 // CHECK-NEXT:   "tokLen": 4
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 191,
+// CHECK-NEXT:    "offset": {{[0-9]+}},
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 9
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 224,
+// CHECK-NEXT:    "offset": {{[0-9]+}},
 // CHECK-NEXT:    "line": 18,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -201,19 +201,19 @@ namespace quux::inline frobble {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "NamespaceDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 214,
+// CHECK-NEXT:     "offset": {{[0-9]+}},
 // CHECK-NEXT:     "line": 17,
 // CHECK-NEXT:     "col": 24,
 // CHECK-NEXT:     "tokLen": 7
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 207,
+// CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "col": 17,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 224,
+// CHECK-NEXT:      "offset": {{[0-9]+}},
 // CHECK-NEXT:      "line": 18,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1

@@ -1073,7 +1073,7 @@ define <2 x i32> @muladd2_vec_nonuniform_undef(<2 x i32> %a0) {
 
 define i32 @mulmuladd2(i32 %a0, i32 %a1) {
 ; CHECK-LABEL: @mulmuladd2(
-; CHECK-NEXT:    [[ADD_NEG:%.*]] = sub i32 -16, [[A0:%.*]]
+; CHECK-NEXT:    [[ADD_NEG:%.*]] = sub i32 1073741808, [[A0:%.*]]
 ; CHECK-NEXT:    [[MUL1_NEG:%.*]] = mul i32 [[ADD_NEG]], [[A1:%.*]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = shl i32 [[MUL1_NEG]], 2
 ; CHECK-NEXT:    ret i32 [[MUL2]]

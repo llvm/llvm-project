@@ -297,7 +297,7 @@ assertions:
 .. code-block:: none
 
   update_analyze_test_checks.py
-  opt --analyze --costmodel
+  opt -passes='print<cost-model>'
 
   update_cc_test_checks.py
   C/C++, or clang/clang++ (IR checks)

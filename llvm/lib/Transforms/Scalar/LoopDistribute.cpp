@@ -770,7 +770,7 @@ public:
 
     // Don't distribute the loop if we need too many SCEV run-time checks, or
     // any if it's illegal.
-    const SCEVUnionPredicate &Pred = LAI->getPSE().getUnionPredicate();
+    const SCEVPredicate &Pred = LAI->getPSE().getPredicate();
     if (LAI->hasConvergentOp() && !Pred.isAlwaysTrue()) {
       return fail("RuntimeCheckWithConvergent",
                   "may not insert runtime check with convergent operation");

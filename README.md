@@ -63,17 +63,25 @@ This is an example work-flow and configuration to get and build the LLVM source:
 
         Some common options:
 
-        * ``-DLLVM_ENABLE_PROJECTS='...'`` --- semicolon-separated list of the LLVM
-          sub-projects you'd like to additionally build. Can include any of: clang,
-          clang-tools-extra, compiler-rt,cross-project-tests, flang, libc, libclc,
-          libcxx, libcxxabi, libunwind, lld, lldb, mlir, openmp, polly, or pstl.
+        * ``-DLLVM_ENABLE_PROJECTS='...'`` and ``-DLLVM_ENABLE_RUNTIMES='...'`` ---
+          semicolon-separated list of the LLVM sub-projects and runtimes you'd like to
+          additionally build. ``LLVM_ENABLE_PROJECTS`` can include any of: clang,
+          clang-tools-extra, cross-project-tests, flang, libc, libclc, lld, lldb,
+          mlir, openmp, polly, or pstl. ``LLVM_ENABLE_RUNTIMES`` can include any of
+          libcxx, libcxxabi, libunwind, compiler-rt, libc or openmp. Some runtime
+          projects can be specified either in ``LLVM_ENABLE_PROJECTS`` or in
+          ``LLVM_ENABLE_RUNTIMES``.
 
           For example, to build LLVM, Clang, libcxx, and libcxxabi, use
-          ``-DLLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi"``.
+          ``-DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"``.
 
         * ``-DCMAKE_INSTALL_PREFIX=directory`` --- Specify for *directory* the full
           path name of where you want the LLVM tools and libraries to be installed
-          (default ``/usr/local``).
+          (default ``/usr/local``). Be careful if you install runtime libraries: if
+          your system uses those provided by LLVM (like libc++ or libc++abi), you
+          must not overwrite your system's copy of those libraries, since that
+          could render your system unusable. In general, using something like
+          ``/usr`` is not advised, but ``/usr/local`` is fine.
 
         * ``-DCMAKE_BUILD_TYPE=type`` --- Valid options for *type* are Debug,
           Release, RelWithDebInfo, and MinSizeRel. Default is Debug.
