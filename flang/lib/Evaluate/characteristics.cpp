@@ -149,14 +149,15 @@ std::optional<TypeAndShape> TypeAndShape::Characterize(
 
 bool TypeAndShape::IsCompatibleWith(parser::ContextualMessages &messages,
     const TypeAndShape &that, const char *thisIs, const char *thatIs,
-    bool isElemental, enum CheckConformanceFlags::Flags flags) const {
+    bool omitShapeConformanceCheck,
+    enum CheckConformanceFlags::Flags flags) const {
   if (!type_.IsTkCompatibleWith(that.type_)) {
     messages.Say(
         "%1$s type '%2$s' is not compatible with %3$s type '%4$s'"_err_en_US,
         thatIs, that.AsFortran(), thisIs, AsFortran());
     return false;
   }
-  return isElemental ||
+  return omitShapeConformanceCheck ||
       CheckConformance(messages, shape_, that.shape_, flags, thisIs, thatIs)
           .value_or(true /*fail only when nonconformance is known now*/);
 }

@@ -147,7 +147,7 @@ public:
   int Rank() const { return GetRank(shape_); }
   bool IsCompatibleWith(parser::ContextualMessages &, const TypeAndShape &that,
       const char *thisIs = "pointer", const char *thatIs = "target",
-      bool isElemental = false,
+      bool omitShapeConformanceCheck = false,
       enum CheckConformanceFlags::Flags = CheckConformanceFlags::None) const;
   std::optional<Expr<SubscriptInteger>> MeasureElementSizeInBytes(
       FoldingContext &, bool align) const;
