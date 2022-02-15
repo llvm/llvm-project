@@ -1157,9 +1157,9 @@ static bool HasExtension(const Preprocessor &PP, StringRef Extension) {
 /// EvaluateHasIncludeCommon - Process a '__has_include("path")'
 /// or '__has_include_next("path")' expression.
 /// Returns true if successful.
-static bool EvaluateHasIncludeCommon(Token &Tok,
-                                     IdentifierInfo *II, Preprocessor &PP,
-                                     const DirectoryLookup *LookupFrom,
+static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
+                                     Preprocessor &PP,
+                                     ConstSearchDirIterator LookupFrom,
                                      const FileEntry *LookupFromFile) {
   // Save the location of the current token.  If a '(' is later found, use
   // that location.  If not, use the end of this location instead.
@@ -1249,7 +1249,7 @@ bool Preprocessor::EvaluateHasInclude(Token &Tok, IdentifierInfo *II) {
 }
 
 bool Preprocessor::EvaluateHasIncludeNext(Token &Tok, IdentifierInfo *II) {
-  const DirectoryLookup *Lookup;
+  ConstSearchDirIterator Lookup = nullptr;
   const FileEntry *LookupFromFile;
   std::tie(Lookup, LookupFromFile) = getIncludeNextStart(Tok);
 
