@@ -27,7 +27,6 @@ header_markup = {
     "mutex": ["ifndef _LIBCPP_HAS_NO_THREADS"],
     "semaphore": ["ifndef _LIBCPP_HAS_NO_THREADS"],
     "shared_mutex": ["ifndef _LIBCPP_HAS_NO_THREADS"],
-    "stdatomic.h": ["ifndef _LIBCPP_HAS_NO_THREADS"],
     "thread": ["ifndef _LIBCPP_HAS_NO_THREADS"],
 
     "filesystem": ["ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY"],

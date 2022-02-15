@@ -160,9 +160,6 @@
 #    include <sstream>
 #endif
 #include <stack>
-#ifndef _LIBCPP_HAS_NO_THREADS
-#    include <stdatomic.h>
-#endif
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdexcept>
