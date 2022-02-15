@@ -2380,6 +2380,21 @@ void CommandInterpreter::SourceInitFileHome(CommandReturnObject &result,
   SourceInitFile(FileSpec(init_file.str()), result);
 }
 
+void CommandInterpreter::SourceInitFileGlobal(CommandReturnObject &result) {
+#ifdef LLDB_GLOBAL_INIT_DIRECTORY
+  if (!m_skip_lldbinit_files) {
+    FileSpec init_file(LLDB_GLOBAL_INIT_DIRECTORY);
+    if (init_file)
+      init_file.MakeAbsolute(HostInfo::GetShlibDir());
+
+    init_file.AppendPathComponent("lldbinit");
+    SourceInitFile(init_file, result);
+    return;
+  }
+#endif
+  result.SetStatus(eReturnStatusSuccessFinishNoResult);
+}
+
 const char *CommandInterpreter::GetCommandPrefix() {
   const char *prefix = GetDebugger().GetIOHandlerCommandPrefix();
   return prefix == nullptr ? "" : prefix;
