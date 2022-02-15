@@ -189,7 +189,30 @@ entry:
   ret i64 %retval
 }
 
+; CHECK-LABEL: call_vararg_float0
+; CHECK:       lghi  1, 1
+; CHECK:       llihf 2, 1073692672
+define i64 @call_vararg_float0() {
+entry:
+  %retval = call i64 (i64, ...) @pass_vararg2(i64 1, float 1.953125)
+  ret i64 %retval
+}
+
+; CHECK-LABEL: call_vararg_float1
+; CHECK:       llihf 0, 1073692672
+; CHECK-NEXT:  stg  0, 2200(4)
+; CHECK:       larl  1, @CPI21_0
+; CHECK-NEXT:  le  0, 0(1)
+; CHECK:       llihh 2, 16384
+; CHECK:       llihh 3, 16392
+define i64 @call_vararg_float1() {
+entry:
+  %retval = call i64 (float, ...) @pass_vararg4(float 1.0, float 2.0, float 3.0, float 1.953125)
+  ret i64 %retval
+}
+
 declare i64 @pass_vararg0(i64 %arg0, i64 %arg1, ...)
 declare i64 @pass_vararg1(fp128 %arg0, ...)
 declare i64 @pass_vararg2(i64 %arg0, ...)
 declare i64 @pass_vararg3(...)
+declare i64 @pass_vararg4(float, ...)
