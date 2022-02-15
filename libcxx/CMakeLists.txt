@@ -291,6 +291,16 @@ set(LIBCXX_TARGET_TRIPLE "${LIBCXX_DEFAULT_TARGET_TRIPLE}" CACHE STRING "Use alt
 set(LIBCXX_SYSROOT "${CMAKE_SYSROOT}" CACHE STRING "Use alternate sysroot.")
 set(LIBCXX_GCC_TOOLCHAIN "${CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN}" CACHE STRING "Use alternate GCC toolchain.")
 
+if(NOT CMAKE_SYSROOT AND LIBCXX_SYSROOT)
+  message(WARNING "LIBCXX_SYSROOT is deprecated, please use CMAKE_SYSROOT instead")
+endif()
+if(NOT CMAKE_CXX_COMPILER_TARGET AND LIBCXX_TARGET_TRIPLE)
+  message(WARNING "LIBCXX_TARGET_TRIPLE is deprecated, please use CMAKE_CXX_COMPILER_TARGET instead")
+endif()
+if(NOT CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN AND LIBCXX_GCC_TOOLCHAIN)
+  message(WARNING "LIBCXX_GCC_TOOLCHAIN is deprecated, please use CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN instead")
+endif()
+
 # Feature options -------------------------------------------------------------
 option(LIBCXX_ENABLE_EXCEPTIONS "Use exceptions." ON)
 option(LIBCXX_ENABLE_RTTI "Use run time type information." ON)
