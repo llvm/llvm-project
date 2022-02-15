@@ -1249,32 +1249,9 @@ bool Preprocessor::EvaluateHasInclude(Token &Tok, IdentifierInfo *II) {
 }
 
 bool Preprocessor::EvaluateHasIncludeNext(Token &Tok, IdentifierInfo *II) {
-  // __has_include_next is like __has_include, except that we start
-  // searching after the current found directory.  If we can't do this,
-  // issue a diagnostic.
-  // FIXME: Factor out duplication with
-  // Preprocessor::HandleIncludeNextDirective.
-  const DirectoryLookup *Lookup = CurDirLookup;
-  const FileEntry *LookupFromFile = nullptr;
-  if (isInPrimaryFile() && getLangOpts().IsHeaderFile) {
-    // If the main file is a header, then it's either for PCH/AST generation,
-    // or libclang opened it. Either way, handle it as a normal include below
-    // and do not complain about __has_include_next.
-  } else if (isInPrimaryFile()) {
-    Lookup = nullptr;
-    Diag(Tok, diag::pp_include_next_in_primary);
-  } else if (getCurrentLexerSubmodule()) {
-    // Start looking up in the directory *after* the one in which the current
-    // file would be found, if any.
-    assert(getCurrentLexer() && "#include_next directive in macro?");
-    LookupFromFile = getCurrentLexer()->getFileEntry();
-    Lookup = nullptr;
-  } else if (!Lookup) {
-    Diag(Tok, diag::pp_include_next_absolute_path);
-  } else {
-    // Start looking up in the next directory.
-    ++Lookup;
-  }
+  const DirectoryLookup *Lookup;
+  const FileEntry *LookupFromFile;
+  std::tie(Lookup, LookupFromFile) = getIncludeNextStart(Tok);
 
   return EvaluateHasIncludeCommon(Tok, II, *this, Lookup, LookupFromFile);
 }

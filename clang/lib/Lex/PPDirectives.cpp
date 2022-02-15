@@ -1778,6 +1778,41 @@ bool Preprocessor::checkModuleIsAvailable(const LangOptions &LangOpts,
   return true;
 }
 
+std::pair<const DirectoryLookup *, const FileEntry *>
+Preprocessor::getIncludeNextStart(const Token &IncludeNextTok) const {
+  // #include_next is like #include, except that we start searching after
+  // the current found directory.  If we can't do this, issue a
+  // diagnostic.
+  const DirectoryLookup *Lookup = CurDirLookup;
+  const FileEntry *LookupFromFile = nullptr;
+
+  if (isInPrimaryFile() && LangOpts.IsHeaderFile) {
+    // If the main file is a header, then it's either for PCH/AST generation,
+    // or libclang opened it. Either way, handle it as a normal include below
+    // and do not complain about include_next.
+  } else if (isInPrimaryFile()) {
+    Lookup = nullptr;
+    Diag(IncludeNextTok, diag::pp_include_next_in_primary);
+  } else if (CurLexerSubmodule) {
+    // Start looking up in the directory *after* the one in which the current
+    // file would be found, if any.
+    assert(CurPPLexer && "#include_next directive in macro?");
+    LookupFromFile = CurPPLexer->getFileEntry();
+    Lookup = nullptr;
+  } else if (!Lookup) {
+    // The current file was not found by walking the include path. Either it
+    // is the primary file (handled above), or it was found by absolute path,
+    // or it was found relative to such a file.
+    // FIXME: Track enough information so we know which case we're in.
+    Diag(IncludeNextTok, diag::pp_include_next_absolute_path);
+  } else {
+    // Start looking up in the next directory.
+    ++Lookup;
+  }
+
+  return {Lookup, LookupFromFile};
+}
+
 /// HandleIncludeDirective - The "\#include" tokens have just been read, read
 /// the file to be included from the lexer, then include it!  This is a common
 /// routine with functionality shared between \#include, \#include_next and
@@ -2375,34 +2410,9 @@ void Preprocessor::HandleIncludeNextDirective(SourceLocation HashLoc,
                                               Token &IncludeNextTok) {
   Diag(IncludeNextTok, diag::ext_pp_include_next_directive);
 
-  // #include_next is like #include, except that we start searching after
-  // the current found directory.  If we can't do this, issue a
-  // diagnostic.
-  const DirectoryLookup *Lookup = CurDirLookup;
-  const FileEntry *LookupFromFile = nullptr;
-  if (isInPrimaryFile() && LangOpts.IsHeaderFile) {
-    // If the main file is a header, then it's either for PCH/AST generation,
-    // or libclang opened it. Either way, handle it as a normal include below
-    // and do not complain about include_next.
-  } else if (isInPrimaryFile()) {
-    Lookup = nullptr;
-    Diag(IncludeNextTok, diag::pp_include_next_in_primary);
-  } else if (CurLexerSubmodule) {
-    // Start looking up in the directory *after* the one in which the current
-    // file would be found, if any.
-    assert(CurPPLexer && "#include_next directive in macro?");
-    LookupFromFile = CurPPLexer->getFileEntry();
-    Lookup = nullptr;
-  } else if (!Lookup) {
-    // The current file was not found by walking the include path. Either it
-    // is the primary file (handled above), or it was found by absolute path,
-    // or it was found relative to such a file.
-    // FIXME: Track enough information so we know which case we're in.
-    Diag(IncludeNextTok, diag::pp_include_next_absolute_path);
-  } else {
-    // Start looking up in the next directory.
-    ++Lookup;
-  }
+  const DirectoryLookup *Lookup;
+  const FileEntry *LookupFromFile;
+  std::tie(Lookup, LookupFromFile) = getIncludeNextStart(IncludeNextTok);
 
   return HandleIncludeDirective(HashLoc, IncludeNextTok, Lookup,
                                 LookupFromFile);

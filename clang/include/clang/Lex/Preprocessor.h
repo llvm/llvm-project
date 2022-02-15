@@ -2200,6 +2200,10 @@ private:
   /// Returns true if successful.
   bool EvaluateHasIncludeNext(Token &Tok, IdentifierInfo *II);
 
+  /// Get the directory and file from which to start \#include_next lookup.
+  std::pair<const DirectoryLookup *, const FileEntry *>
+  getIncludeNextStart(const Token &IncludeNextTok) const;
+
   /// Install the standard preprocessor pragmas:
   /// \#pragma GCC poison/system_header/dependency and \#pragma once.
   void RegisterBuiltinPragmas();
