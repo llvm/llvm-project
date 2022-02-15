@@ -75,6 +75,13 @@ static mlir::Type genLogicalType(mlir::MLIRContext *context, int KIND) {
   return {};
 }
 
+static mlir::Type genComplexType(mlir::MLIRContext *context, int KIND) {
+  if (Fortran::evaluate::IsValidKindOfIntrinsicType(
+          Fortran::common::TypeCategory::Complex, KIND))
+    return fir::ComplexType::get(context, KIND);
+  return {};
+}
+
 static mlir::Type genFIRType(mlir::MLIRContext *context,
                              Fortran::common::TypeCategory tc, int kind) {
   switch (tc) {
@@ -83,7 +90,7 @@ static mlir::Type genFIRType(mlir::MLIRContext *context,
   case Fortran::common::TypeCategory::Integer:
     return genIntegerType(context, kind);
   case Fortran::common::TypeCategory::Complex:
-    TODO_NOLOC("genFIRType Complex");
+    return genComplexType(context, kind);
   case Fortran::common::TypeCategory::Logical:
     return genLogicalType(context, kind);
   case Fortran::common::TypeCategory::Character:
@@ -135,16 +142,6 @@ genFIRType<Fortran::common::TypeCategory::Character>(mlir::MLIRContext *context,
   if (Fortran::evaluate::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Character, KIND))
     return fir::CharacterType::get(context, KIND, 1);
-  return {};
-}
-
-template <>
-mlir::Type
-genFIRType<Fortran::common::TypeCategory::Complex>(mlir::MLIRContext *context,
-                                                   int KIND) {
-  if (Fortran::evaluate::IsValidKindOfIntrinsicType(
-          Fortran::common::TypeCategory::Complex, KIND))
-    return fir::ComplexType::get(context, KIND);
   return {};
 }
 
