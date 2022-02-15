@@ -167,12 +167,12 @@ def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments,
 
   let extraClassDeclaration = [{
     mlir::Type getAllocatedType();
-    bool hasLenParams() { return !typeparams().empty(); }
-    bool hasShapeOperands() { return !shape().empty(); }
-    unsigned numLenParams() { return typeparams().size(); }
-    operand_range getLenParams() { return typeparams(); }
-    unsigned numShapeOperands() { return shape().size(); }
-    operand_range getShapeOperands() { return shape(); }
+    bool hasLenParams() { return !getTypeparams().empty(); }
+    bool hasShapeOperands() { return !getShape().empty(); }
+    unsigned numLenParams() { return getTypeparams().size(); }
+    operand_range getLenParams() { return getTypeparams(); }
+    unsigned numShapeOperands() { return getShape().size(); }
+    operand_range getShapeOperands() { return getShape(); }
     static mlir::Type getRefTy(mlir::Type ty);
   }];
 }
@@ -221,12 +221,12 @@ def fir_AllocMemOp : fir_Op<"allocmem",
 
   let extraClassDeclaration = [{
     mlir::Type getAllocatedType();
-    bool hasLenParams() { return !typeparams().empty(); }
-    bool hasShapeOperands() { return !shape().empty(); }
-    unsigned numLenParams() { return typeparams().size(); }
-    operand_range getLenParams() { return typeparams(); }
-    unsigned numShapeOperands() { return shape().size(); }
-    operand_range getShapeOperands() { return shape(); }
+    bool hasLenParams() { return !getTypeparams().empty(); }
+    bool hasShapeOperands() { return !getShape().empty(); }
+    unsigned numLenParams() { return getTypeparams().size(); }
+    operand_range getLenParams() { return getTypeparams(); }
+    unsigned numShapeOperands() { return getShape().size(); }
+    operand_range getShapeOperands() { return getShape(); }
     static mlir::Type getRefTy(mlir::Type ty);
   }];
 }
@@ -872,8 +872,8 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect, AttrSizedOperandSegments]> {
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    bool hasLenParams() { return !typeparams().empty(); }
-    unsigned numLenParams() { return typeparams().size(); }
+    bool hasLenParams() { return !getTypeparams().empty(); }
+    unsigned numLenParams() { return getTypeparams().size(); }
   }];
 }
 
@@ -1804,7 +1804,7 @@ def fir_FieldIndexOp : fir_OneResultOp<"field_index", [NoSideEffect]> {
   let extraClassDeclaration = [{
     static constexpr llvm::StringRef fieldAttrName() { return "field_id"; }
     static constexpr llvm::StringRef typeAttrName() { return "on_type"; }
-    llvm::StringRef getFieldName() { return field_id(); }
+    llvm::StringRef getFieldName() { return getFieldId(); }
   }];
 }
 
@@ -1868,7 +1868,7 @@ def fir_ShapeShiftOp : fir_Op<"shape_shift", [NoSideEffect]> {
     // Logically unzip the origins from the extent values.
     std::vector<mlir::Value> getOrigins() {
       std::vector<mlir::Value> result;
-      for (auto i : llvm::enumerate(pairs()))
+      for (auto i : llvm::enumerate(getPairs()))
         if (!(i.index() & 1))
           result.push_back(i.value());
       return result;
@@ -1877,7 +1877,7 @@ def fir_ShapeShiftOp : fir_Op<"shape_shift", [NoSideEffect]> {
     // Logically unzip the extents from the origin values.
     std::vector<mlir::Value> getExtents() {
       std::vector<mlir::Value> result;
-      for (auto i : llvm::enumerate(pairs()))
+      for (auto i : llvm::enumerate(getPairs()))
         if (i.index() & 1)
           result.push_back(i.value());
       return result;
@@ -1970,7 +1970,7 @@ def fir_SliceOp : fir_Op<"slice", [NoSideEffect, AttrSizedOperandSegments]> {
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    unsigned getOutRank() { return getOutputRank(triples()); }
+    unsigned getOutRank() { return getOutputRank(getTriples()); }
     static unsigned getOutputRank(mlir::ValueRange triples);
   }];
 }
@@ -2182,10 +2182,10 @@ def fir_DoLoopOp : region_Op<"do_loop",
     }
 
     /// Get the body of the loop
-    mlir::Block *getBody() { return &region().front(); }
+    mlir::Block *getBody() { return &getRegion().front(); }
 
     void setUnordered() {
-      unorderedAttr(mlir::UnitAttr::get(getContext()));
+      setUnorderedAttr(mlir::UnitAttr::get(getContext()));
     }
 
     mlir::BlockArgument iterArgToBlockArg(mlir::Value iterArg);
@@ -2229,13 +2229,13 @@ def fir_IfOp : region_Op<"if", [NoRegionArguments]> {
 
   let extraClassDeclaration = [{
     mlir::OpBuilder getThenBodyBuilder() {
-      assert(!thenRegion().empty() && "Unexpected empty 'where' region.");
-      mlir::Block &body = thenRegion().front();
+      assert(!getThenRegion().empty() && "Unexpected empty 'where' region.");
+      mlir::Block &body = getThenRegion().front();
       return mlir::OpBuilder(&body, std::prev(body.end()));
     }
     mlir::OpBuilder getElseBodyBuilder() {
-      assert(!elseRegion().empty() && "Unexpected empty 'other' region.");
-      mlir::Block &body = elseRegion().front();
+      assert(!getElseRegion().empty() && "Unexpected empty 'other' region.");
+      mlir::Block &body = getElseRegion().front();
       return mlir::OpBuilder(&body, std::prev(body.end()));
     }
 
@@ -2298,7 +2298,7 @@ def fir_IterWhileOp : region_Op<"iterate_while",
     static constexpr llvm::StringRef getFinalValueAttrNameStr() {
       return "finalValue";
     }
-    mlir::Block *getBody() { return &region().front(); }
+    mlir::Block *getBody() { return &getRegion().front(); }
     mlir::Value getIterateVar() { return getBody()->getArgument(1); }
     mlir::Value getInductionVar() { return getBody()->getArgument(0); }
     mlir::OpBuilder getBodyBuilder() {
@@ -2777,7 +2777,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     mlir::Type resultType();
 
     /// Return the initializer attribute if it exists, or a null attribute.
-    Attribute getValueOrNull() { return initVal().getValueOr(Attribute()); }
+    Attribute getValueOrNull() { return getInitVal().getValueOr(Attribute()); }
 
     /// Append the next initializer value to the `GlobalOp` to construct
     /// the variable's initial value.

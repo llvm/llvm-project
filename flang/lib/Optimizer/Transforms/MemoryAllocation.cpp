@@ -115,10 +115,11 @@ public:
         return *opt;
       return {};
     };
-    auto uniqName = unpackName(alloca.uniq_name());
-    auto bindcName = unpackName(alloca.bindc_name());
+    auto uniqName = unpackName(alloca.getUniqName());
+    auto bindcName = unpackName(alloca.getBindcName());
     auto heap = rewriter.create<fir::AllocMemOp>(
-        loc, varTy, uniqName, bindcName, alloca.typeparams(), alloca.shape());
+        loc, varTy, uniqName, bindcName, alloca.getTypeparams(),
+        alloca.getShape());
     auto insPt = rewriter.saveInsertionPoint();
     for (mlir::Operation *retOp : returnOps) {
       rewriter.setInsertionPoint(retOp);

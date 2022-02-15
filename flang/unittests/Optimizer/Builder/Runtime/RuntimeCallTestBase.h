@@ -85,13 +85,13 @@ static inline void checkCallOp(mlir::Operation *op, llvm::StringRef fctName,
     unsigned nbArgs, bool addLocArgs = true) {
   EXPECT_TRUE(mlir::isa<fir::CallOp>(*op));
   auto callOp = mlir::dyn_cast<fir::CallOp>(*op);
-  EXPECT_TRUE(callOp.callee().hasValue());
-  mlir::SymbolRefAttr callee = *callOp.callee();
+  EXPECT_TRUE(callOp.getCallee().hasValue());
+  mlir::SymbolRefAttr callee = *callOp.getCallee();
   EXPECT_EQ(fctName, callee.getRootReference().getValue());
   // sourceFile and sourceLine are added arguments.
   if (addLocArgs)
     nbArgs += 2;
-  EXPECT_EQ(nbArgs, callOp.args().size());
+  EXPECT_EQ(nbArgs, callOp.getArgs().size());
 }
 
 /// Check the call operation from the \p result value. In some cases the
@@ -133,8 +133,8 @@ static inline void checkBlockForCallOp(
   assert(block && "mlir::Block given is a nullptr");
   for (auto &op : block->getOperations()) {
     if (auto callOp = mlir::dyn_cast<fir::CallOp>(op)) {
-      if (fctName == callOp.callee()->getRootReference().getValue()) {
-        EXPECT_EQ(nbArgs, callOp.args().size());
+      if (fctName == callOp.getCallee()->getRootReference().getValue()) {
+        EXPECT_EQ(nbArgs, callOp.getArgs().size());
         return;
       }
     }

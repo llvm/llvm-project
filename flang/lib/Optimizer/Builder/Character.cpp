@@ -138,8 +138,8 @@ fir::factory::CharacterExprHelper::toExtendedValue(mlir::Value character,
     mlir::Value boxCharLen;
     if (auto *definingOp = character.getDefiningOp()) {
       if (auto box = dyn_cast<fir::EmboxCharOp>(definingOp)) {
-        base = box.memref();
-        boxCharLen = box.len();
+        base = box.getMemref();
+        boxCharLen = box.getLen();
       }
     }
     if (!boxCharLen) {
