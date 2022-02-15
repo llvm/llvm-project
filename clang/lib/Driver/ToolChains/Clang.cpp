@@ -8199,6 +8199,29 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  // Get the AMDGPU math libraries.
+  // FIXME: This method is bad, remove once AMDGPU has a proper math library
+  // (see AMDGCN::OpenMPLinker::constructLLVMLinkCommand).
+  for (auto &I : llvm::make_range(OpenMPTCRange.first, OpenMPTCRange.second)) {
+    const ToolChain *TC = I.second;
+
+    if (!TC->getTriple().isAMDGPU() || Args.hasArg(options::OPT_nogpulib))
+      continue;
+
+    const ArgList &TCArgs = C.getArgsForToolChain(TC, "", Action::OFK_OpenMP);
+    StringRef Arch = TCArgs.getLastArgValue(options::OPT_march_EQ);
+    const toolchains::ROCMToolChain RocmTC(TC->getDriver(), TC->getTriple(),
+                                           TCArgs);
+
+    SmallVector<std::string, 12> BCLibs =
+        RocmTC.getCommonDeviceLibNames(TCArgs, Arch.str());
+
+    for (StringRef LibName : BCLibs)
+      CmdArgs.push_back(
+          Args.MakeArgString("-target-library=" + TC->getTripleString() + "-" +
+                             Arch + "=" + LibName));
+  }
+
   if (D.isUsingLTO(/* IsOffload */ true)) {
     // Pass in target features for each toolchain.
     for (auto &I :
