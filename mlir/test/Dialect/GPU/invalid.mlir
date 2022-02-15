@@ -611,3 +611,42 @@ func @async_cp_num_dst_stride(
     memref<200x100xf32> to memref<200x100xf32, affine_map<(d0, d1) -> (200*d0 + 2*d1)>, 3>
   return
 }
+
+// -----
+
+// Number of symbol operand count less than memref symbol count.
+func @alloc() {
+   // expected-error@+1 {{symbol operand count does not equal memref symbol count}}
+   %1 = gpu.alloc() : memref<2x4xf32, affine_map<(d0, d1)[s0] -> ((d0 + s0), d1)>, 1>
+   return
+}
+
+// -----
+
+// Number of symbol operand count greater than memref symbol count.
+func @alloc() {
+   %0 = arith.constant 7 : index
+   // expected-error@+1 {{symbol operand count does not equal memref symbol count}}
+   %1 = gpu.alloc()[%0] : memref<2x4xf32, 1>
+   return
+}
+
+// -----
+
+// Number of dynamic dimension operand count greater than memref dynamic dimension count.
+func @alloc() {
+   %0 = arith.constant 7 : index
+   // expected-error@+1 {{dimension operand count does not equal memref dynamic dimension count}}
+   %1 = gpu.alloc(%0, %0) : memref<2x?xf32, 1>
+   return
+}
+
+// -----
+
+// Number of dynamic dimension operand count less than memref dynamic dimension count.
+func @alloc() {
+   %0 = arith.constant 7 : index
+   // expected-error@+1 {{dimension operand count does not equal memref dynamic dimension count}}
+   %1 = gpu.alloc(%0) : memref<2x?x?xf32, 1>
+   return
+}
