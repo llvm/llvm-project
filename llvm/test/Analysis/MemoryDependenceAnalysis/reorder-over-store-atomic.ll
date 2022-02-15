@@ -40,11 +40,8 @@ define i32 @test_load_acquire_unordered() {
 
 define i32 @test_store_cst_unordered(i32 %x) {
 ; CHECK-LABEL: @test_store_cst_unordered(
-; CHECK-NEXT:    [[L1:%.*]] = load atomic i32, i32* @w unordered, align 4
 ; CHECK-NEXT:    store atomic i32 [[X:%.*]], i32* @u seq_cst, align 4
-; CHECK-NEXT:    [[L2:%.*]] = load atomic i32, i32* @w unordered, align 4
-; CHECK-NEXT:    [[RES:%.*]] = sub i32 [[L1]], [[L2]]
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 0
 ;
   %l1 = load atomic i32, i32* @w unordered, align 4
   store atomic i32 %x, i32* @u seq_cst, align 4
@@ -55,11 +52,8 @@ define i32 @test_store_cst_unordered(i32 %x) {
 
 define i32 @test_store_release_unordered(i32 %x) {
 ; CHECK-LABEL: @test_store_release_unordered(
-; CHECK-NEXT:    [[L1:%.*]] = load atomic i32, i32* @w unordered, align 4
 ; CHECK-NEXT:    store atomic i32 [[X:%.*]], i32* @u release, align 4
-; CHECK-NEXT:    [[L2:%.*]] = load atomic i32, i32* @w unordered, align 4
-; CHECK-NEXT:    [[RES:%.*]] = sub i32 [[L1]], [[L2]]
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 0
 ;
   %l1 = load atomic i32, i32* @w unordered, align 4
   store atomic i32 %x, i32* @u release, align 4
