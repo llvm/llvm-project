@@ -344,12 +344,17 @@ public:
     LLVM_DEBUG(dbgs() << "FnSpecialization: Replacing " << *V
                       << "\nFnSpecialization: with " << *Const << "\n");
 
-    V->replaceAllUsesWith(Const);
-
-    for (auto *U : Const->users())
+    // Record uses of V to avoid visiting irrelevant uses of const later.
+    SmallVector<Instruction *> UseInsts;
+    for (auto *U : V->users())
       if (auto *I = dyn_cast<Instruction>(U))
         if (Solver.isBlockExecutable(I->getParent()))
-          Solver.visit(I);
+          UseInsts.push_back(I);
+
+    V->replaceAllUsesWith(Const);
+
+    for (auto *I : UseInsts)
+      Solver.visit(I);
 
     // Remove the instruction from Block and Solver.
     if (auto *I = dyn_cast<Instruction>(V)) {
