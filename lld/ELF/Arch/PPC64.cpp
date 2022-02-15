@@ -1380,9 +1380,10 @@ bool PPC64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   if (type == R_PPC64_REL24_NOTOC && (s.stOther >> 5) > 1)
     return true;
 
-  // If a symbol is a weak undefined and we are compiling an executable
-  // it doesn't need a range-extending thunk since it can't be called.
-  if (s.isUndefWeak() && !config->shared)
+  // An undefined weak symbol not in a PLT does not need a thunk. If it is
+  // hidden, its binding has been converted to local, so we just check
+  // isUndefined() here. A undefined non-weak symbol has been errored.
+  if (s.isUndefined())
     return false;
 
   // If the offset exceeds the range of the branch type then it will need
