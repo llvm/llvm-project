@@ -369,7 +369,7 @@ define <2 x i8> @test_ssub_vector_op1_undef_mix2() {
 
 define i8 @test_uadd_scalar_both_poison() {
 ; CHECK-LABEL: @test_uadd_scalar_both_poison(
-; CHECK-NEXT:    ret i8 undef
+; CHECK-NEXT:    ret i8 poison
 ;
   %x = call i8 @llvm.uadd.sat.i8(i8 poison, i8 poison)
   ret i8 %x
@@ -377,7 +377,7 @@ define i8 @test_uadd_scalar_both_poison() {
 
 define i8 @test_sadd_scalar_both_poison() {
 ; CHECK-LABEL: @test_sadd_scalar_both_poison(
-; CHECK-NEXT:    ret i8 undef
+; CHECK-NEXT:    ret i8 poison
 ;
   %x = call i8 @llvm.sadd.sat.i8(i8 poison, i8 poison)
   ret i8 %x
@@ -385,7 +385,7 @@ define i8 @test_sadd_scalar_both_poison() {
 
 define i8 @test_usub_scalar_both_poison() {
 ; CHECK-LABEL: @test_usub_scalar_both_poison(
-; CHECK-NEXT:    ret i8 undef
+; CHECK-NEXT:    ret i8 poison
 ;
   %x = call i8 @llvm.usub.sat.i8(i8 poison, i8 poison)
   ret i8 %x
@@ -393,7 +393,7 @@ define i8 @test_usub_scalar_both_poison() {
 
 define i8 @test_ssub_scalar_both_poison() {
 ; CHECK-LABEL: @test_ssub_scalar_both_poison(
-; CHECK-NEXT:    ret i8 undef
+; CHECK-NEXT:    ret i8 poison
 ;
   %x = call i8 @llvm.ssub.sat.i8(i8 poison, i8 poison)
   ret i8 %x
@@ -401,7 +401,7 @@ define i8 @test_ssub_scalar_both_poison() {
 
 define i8 @test_uadd_scalar_op2_poison() {
 ; CHECK-LABEL: @test_uadd_scalar_op2_poison(
-; CHECK-NEXT:    ret i8 -1
+; CHECK-NEXT:    ret i8 poison
 ;
   %x = call i8 @llvm.uadd.sat.i8(i8 10, i8 poison)
   ret i8 %x
@@ -409,7 +409,7 @@ define i8 @test_uadd_scalar_op2_poison() {
 
 define i8 @test_sadd_scalar_op1_poison() {
 ; CHECK-LABEL: @test_sadd_scalar_op1_poison(
-; CHECK-NEXT:    ret i8 -1
+; CHECK-NEXT:    ret i8 poison
 ;
   %x = call i8 @llvm.sadd.sat.i8(i8 poison, i8 10)
   ret i8 %x
@@ -417,7 +417,7 @@ define i8 @test_sadd_scalar_op1_poison() {
 
 define i8 @test_usub_scalar_op2_poison() {
 ; CHECK-LABEL: @test_usub_scalar_op2_poison(
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    ret i8 poison
 ;
   %x = call i8 @llvm.usub.sat.i8(i8 10, i8 poison)
   ret i8 %x
@@ -425,7 +425,7 @@ define i8 @test_usub_scalar_op2_poison() {
 
 define i8 @test_usub_scalar_op1_poison() {
 ; CHECK-LABEL: @test_usub_scalar_op1_poison(
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    ret i8 poison
 ;
   %x = call i8 @llvm.usub.sat.i8(i8 poison, i8 10)
   ret i8 %x
@@ -433,7 +433,7 @@ define i8 @test_usub_scalar_op1_poison() {
 
 define <2 x i8> @test_uadd_vector_both_poison_splat() {
 ; CHECK-LABEL: @test_uadd_vector_both_poison_splat(
-; CHECK-NEXT:    ret <2 x i8> undef
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %x = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> poison, <2 x i8> poison)
   ret <2 x i8> %x
@@ -441,7 +441,7 @@ define <2 x i8> @test_uadd_vector_both_poison_splat() {
 
 define <2 x i8> @test_sadd_vector_both_poison_splat() {
 ; CHECK-LABEL: @test_sadd_vector_both_poison_splat(
-; CHECK-NEXT:    ret <2 x i8> undef
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %x = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> poison, <2 x i8> poison)
   ret <2 x i8> %x
@@ -449,7 +449,7 @@ define <2 x i8> @test_sadd_vector_both_poison_splat() {
 
 define <2 x i8> @test_usub_vector_both_poison_splat() {
 ; CHECK-LABEL: @test_usub_vector_both_poison_splat(
-; CHECK-NEXT:    ret <2 x i8> undef
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %x = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> poison, <2 x i8> poison)
   ret <2 x i8> %x
@@ -457,7 +457,7 @@ define <2 x i8> @test_usub_vector_both_poison_splat() {
 
 define <2 x i8> @test_ssub_vector_both_poison_splat() {
 ; CHECK-LABEL: @test_ssub_vector_both_poison_splat(
-; CHECK-NEXT:    ret <2 x i8> undef
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %x = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> poison, <2 x i8> poison)
   ret <2 x i8> %x
@@ -465,7 +465,7 @@ define <2 x i8> @test_ssub_vector_both_poison_splat() {
 
 define <2 x i8> @test_uadd_vector_op2_poison_splat() {
 ; CHECK-LABEL: @test_uadd_vector_op2_poison_splat(
-; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %x = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> <i8 10, i8 20>, <2 x i8> poison)
   ret <2 x i8> %x
@@ -473,7 +473,7 @@ define <2 x i8> @test_uadd_vector_op2_poison_splat() {
 
 define <2 x i8> @test_sadd_vector_op1_poison_splat() {
 ; CHECK-LABEL: @test_sadd_vector_op1_poison_splat(
-; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %x = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> poison, <2 x i8> <i8 10, i8 20>)
   ret <2 x i8> %x
@@ -481,7 +481,7 @@ define <2 x i8> @test_sadd_vector_op1_poison_splat() {
 
 define <2 x i8> @test_usub_vector_op2_poison_splat() {
 ; CHECK-LABEL: @test_usub_vector_op2_poison_splat(
-; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %x = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> <i8 10, i8 20>, <2 x i8> poison)
   ret <2 x i8> %x
@@ -489,7 +489,7 @@ define <2 x i8> @test_usub_vector_op2_poison_splat() {
 
 define <2 x i8> @test_ssub_vector_op1_poison_splat() {
 ; CHECK-LABEL: @test_ssub_vector_op1_poison_splat(
-; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %x = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> poison, <2 x i8> <i8 10, i8 20>)
   ret <2 x i8> %x
@@ -497,7 +497,7 @@ define <2 x i8> @test_ssub_vector_op1_poison_splat() {
 
 define <2 x i8> @test_uadd_vector_op2_poison_mix1() {
 ; CHECK-LABEL: @test_uadd_vector_op2_poison_mix1(
-; CHECK-NEXT:    ret <2 x i8> <i8 30, i8 undef>
+; CHECK-NEXT:    ret <2 x i8> <i8 30, i8 poison>
 ;
   %x = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> <i8 10, i8 poison>, <2 x i8> <i8 20, i8 poison>)
   ret <2 x i8> %x
@@ -505,7 +505,7 @@ define <2 x i8> @test_uadd_vector_op2_poison_mix1() {
 
 define <2 x i8> @test_uadd_vector_op2_poison_mix2() {
 ; CHECK-LABEL: @test_uadd_vector_op2_poison_mix2(
-; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %x = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> <i8 10, i8 poison>, <2 x i8> <i8 poison, i8 20>)
   ret <2 x i8> %x
@@ -513,7 +513,7 @@ define <2 x i8> @test_uadd_vector_op2_poison_mix2() {
 
 define <2 x i8> @test_sadd_vector_op1_poison_mix1() {
 ; CHECK-LABEL: @test_sadd_vector_op1_poison_mix1(
-; CHECK-NEXT:    ret <2 x i8> <i8 undef, i8 30>
+; CHECK-NEXT:    ret <2 x i8> <i8 poison, i8 30>
 ;
   %x = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> <i8 poison, i8 10>, <2 x i8> <i8 poison, i8 20>)
   ret <2 x i8> %x
@@ -521,7 +521,7 @@ define <2 x i8> @test_sadd_vector_op1_poison_mix1() {
 
 define <2 x i8> @test_sadd_vector_op1_poison_mix2() {
 ; CHECK-LABEL: @test_sadd_vector_op1_poison_mix2(
-; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %x = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> <i8 poison, i8 10>, <2 x i8> <i8 20, i8 poison>)
   ret <2 x i8> %x
@@ -529,7 +529,7 @@ define <2 x i8> @test_sadd_vector_op1_poison_mix2() {
 
 define <2 x i8> @test_usub_vector_op2_poison_mix1() {
 ; CHECK-LABEL: @test_usub_vector_op2_poison_mix1(
-; CHECK-NEXT:    ret <2 x i8> <i8 0, i8 undef>
+; CHECK-NEXT:    ret <2 x i8> <i8 0, i8 poison>
 ;
   %x = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> <i8 10, i8 poison>, <2 x i8> <i8 20, i8 poison>)
   ret <2 x i8> %x
@@ -537,7 +537,7 @@ define <2 x i8> @test_usub_vector_op2_poison_mix1() {
 
 define <2 x i8> @test_usub_vector_op2_poison_mix2() {
 ; CHECK-LABEL: @test_usub_vector_op2_poison_mix2(
-; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %x = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> <i8 10, i8 poison>, <2 x i8> <i8 poison, i8 20>)
   ret <2 x i8> %x
@@ -545,7 +545,7 @@ define <2 x i8> @test_usub_vector_op2_poison_mix2() {
 
 define <2 x i8> @test_ssub_vector_op1_poison_mix1() {
 ; CHECK-LABEL: @test_ssub_vector_op1_poison_mix1(
-; CHECK-NEXT:    ret <2 x i8> <i8 undef, i8 -10>
+; CHECK-NEXT:    ret <2 x i8> <i8 poison, i8 -10>
 ;
   %x = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> <i8 poison, i8 10>, <2 x i8> <i8 poison, i8 20>)
   ret <2 x i8> %x
@@ -553,7 +553,7 @@ define <2 x i8> @test_ssub_vector_op1_poison_mix1() {
 
 define <2 x i8> @test_ssub_vector_op1_poison_mix2() {
 ; CHECK-LABEL: @test_ssub_vector_op1_poison_mix2(
-; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %x = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> <i8 poison, i8 10>, <2 x i8> <i8 20, i8 poison>)
   ret <2 x i8> %x
