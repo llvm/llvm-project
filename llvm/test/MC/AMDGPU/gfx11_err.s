@@ -24,3 +24,6 @@ v_add3_u32_e64_dpp v5, v1, s1, v0 dpp8:[7,6,5,4,3,2,1,0]
 ; disallow space between colons
 v_dual_mul_f32 v0, v0, v2 : : v_dual_mul_f32 v1, v1, v3
 // GFX11: [[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
+
+v_dot4c_i32_i8 v0, v1, v2
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
