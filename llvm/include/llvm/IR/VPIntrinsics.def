@@ -121,6 +121,11 @@
 #define VP_PROPERTY_BINARYOP
 #endif
 
+// A property to infer VP type casts automatically.
+#ifndef VP_PROPERTY_CASTOP
+#define VP_PROPERTY_CASTOP
+#endif
+
 /// } Property Macros
 
 ///// Integer Arithmetic {
@@ -222,6 +227,27 @@ VP_PROPERTY_CONSTRAINEDFP(1, 1, experimental_constrained_fma)
 END_REGISTER_VP(vp_fma, VP_FMA)
 
 ///// } Floating-Point Arithmetic
+
+///// Type Casts {
+// Specialized helper macro for type conversions.
+// <operation>(%x, %mask, %evl).
+#ifdef HELPER_REGISTER_CAST_VP
+#error                                                                         \
+    "The internal helper macro HELPER_REGISTER_CAST_VP is already defined!"
+#endif
+#define HELPER_REGISTER_CAST_VP(OPSUFFIX, VPSD, IROPC, HASROUND)                    \
+  BEGIN_REGISTER_VP(vp_##OPSUFFIX, 1, 2, VPSD, -1)                             \
+  VP_PROPERTY_FUNCTIONAL_OPC(IROPC)                                            \
+  VP_PROPERTY_CONSTRAINEDFP(HASROUND, 1, experimental_constrained_##OPSUFFIX)         \
+  VP_PROPERTY_CASTOP                                                         \
+  END_REGISTER_VP(vp_##OPSUFFIX, VPSD)
+
+// llvm.vp.fptosi(x,mask,vlen)
+HELPER_REGISTER_CAST_VP(fptosi, VP_FPTOSI, FPToSI, 0)
+
+#undef HELPER_REGISTER_CAST_VP
+
+///// } Type Casts
 
 ///// Memory Operations {
 // llvm.vp.store(val,ptr,mask,vlen)
@@ -375,6 +401,7 @@ END_REGISTER_VP(experimental_vp_splice, EXPERIMENTAL_VP_SPLICE)
 #undef END_REGISTER_VP_INTRINSIC
 #undef END_REGISTER_VP_SDNODE
 #undef VP_PROPERTY_BINARYOP
+#undef VP_PROPERTY_CASTOP
 #undef VP_PROPERTY_CONSTRAINEDFP
 #undef VP_PROPERTY_FUNCTIONAL_INTRINSIC
 #undef VP_PROPERTY_FUNCTIONAL_OPC
