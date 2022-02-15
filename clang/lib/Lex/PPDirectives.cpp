@@ -1845,28 +1845,6 @@ Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
   if (File)
     return File;
 
-  if (Callbacks) {
-    // Give the clients a chance to recover.
-    SmallString<128> RecoveryPath;
-    if (Callbacks->FileNotFound(Filename, RecoveryPath)) {
-      if (auto DE = FileMgr.getOptionalDirectoryRef(RecoveryPath)) {
-        // Add the recovery path to the list of search paths.
-        DirectoryLookup DL(*DE, SrcMgr::C_User, false);
-        HeaderInfo.AddSearchPath(DL, isAngled);
-
-        // Try the lookup again, skipping the cache.
-        Optional<FileEntryRef> File = LookupFile(
-            FilenameLoc,
-            LookupFilename, isAngled,
-            LookupFrom, LookupFromFile, CurDir, nullptr, nullptr,
-            &SuggestedModule, &IsMapped, /*IsFrameworkFound=*/nullptr,
-            /*SkipCache*/ true);
-        if (File)
-          return File;
-      }
-    }
-  }
-
   if (SuppressIncludeNotFoundError)
     return None;
 

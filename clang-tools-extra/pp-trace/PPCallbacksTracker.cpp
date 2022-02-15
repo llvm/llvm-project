@@ -128,16 +128,6 @@ void PPCallbacksTracker::FileSkipped(const FileEntryRef &SkippedFile,
   appendArgument("FileType", FileType, CharacteristicKindStrings);
 }
 
-// Callback invoked whenever an inclusion directive results in a
-// file-not-found error.
-bool
-PPCallbacksTracker::FileNotFound(llvm::StringRef FileName,
-                                 llvm::SmallVectorImpl<char> &RecoveryPath) {
-  beginCallback("FileNotFound");
-  appendFilePathArgument("FileName", FileName);
-  return false;
-}
-
 // Callback invoked whenever an inclusion directive of
 // any kind (#include, #import, etc.) has been processed, regardless
 // of whether the inclusion will actually result in an inclusion.
