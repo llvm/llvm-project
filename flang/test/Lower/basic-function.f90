@@ -98,3 +98,32 @@ end
 ! CHECK-LABEL: func @_QPrfct6() -> f128
 ! CHECK:         return %{{.*}} : f128
 
+complex(2) function cplxfct1()
+end
+! CHECK-LABEL: func @_QPcplxfct1() -> !fir.complex<2>
+! CHECK:         return %{{.*}} : !fir.complex<2>
+
+complex(3) function cplxfct2()
+end
+! CHECK-LABEL: func @_QPcplxfct2() -> !fir.complex<3>
+! CHECK:         return %{{.*}} : !fir.complex<3>
+
+complex(4) function cplxfct3()
+end
+! CHECK-LABEL: func @_QPcplxfct3() -> !fir.complex<4>
+! CHECK:         return %{{.*}} : !fir.complex<4>
+
+complex(8) function cplxfct4()
+end
+! CHECK-LABEL: func @_QPcplxfct4() -> !fir.complex<8>
+! CHECK:         return %{{.*}} : !fir.complex<8>
+
+complex(10) function cplxfct5()
+end
+! CHECK-LABEL: func @_QPcplxfct5() -> !fir.complex<10>
+! CHECK:         return %{{.*}} : !fir.complex<10>
+
+complex(16) function cplxfct6()
+end
+! CHECK-LABEL: func @_QPcplxfct6() -> !fir.complex<16>
+! CHECK:         return %{{.*}} : !fir.complex<16>
