@@ -22,7 +22,6 @@
  * synced up.
  *
 \*===----------------------------------------------------------------------===*/
-
 #ifndef MIBEntryDef
 #define MIBEntryDef(NameTag, Name, Type)
 #endif
@@ -46,6 +45,3 @@ MIBEntryDef(NumLifetimeOverlaps = 16, NumLifetimeOverlaps, uint32_t)
 MIBEntryDef(NumSameAllocCpu = 17, NumSameAllocCpu, uint32_t)
 MIBEntryDef(NumSameDeallocCpu = 18, NumSameDeallocCpu, uint32_t)
 MIBEntryDef(DataTypeId = 19, DataTypeId, uint64_t)
-
-
-
