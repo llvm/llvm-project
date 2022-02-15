@@ -118,6 +118,12 @@ typedef uint_t uint;
 #define STATVFS_F_FLAG(vfs) (vfs).f_flags
 #endif
 
+#if defined(__sun__) && defined(__svr4__)
+// The madvise() declaration on Illumos cannot be made visible if _XOPEN_SOURCE
+// is defined. This declaration is also compatible with Solaris 11.4.
+extern "C" int madvise(void *, size_t, int);
+#endif
+
 using namespace llvm;
 
 namespace llvm {
