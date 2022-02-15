@@ -94,7 +94,7 @@ namespace __size {
     template<__difference _Tp>
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __integer_like auto operator()(_Tp&& __t) const
         noexcept(noexcept(ranges::end(__t) - ranges::begin(__t))) {
-      return _VSTD::__to_unsigned_like(ranges::end(__t) - ranges::begin(__t));
+      return std::__to_unsigned_like(ranges::end(__t) - ranges::begin(__t));
     }
   };
 } // namespace __size

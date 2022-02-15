@@ -10717,6 +10717,13 @@ void test5()
     std::locale lc = std::locale::classic();
     std::locale lg(lc, new my_numpunct);
     const my_facet f(1);
+#if defined(TEST_HAS_GLIBC)
+    std::string pnan_sign = "+";
+    std::string pnan_padding25 = "*********************";
+#else
+    std::string pnan_sign = "";
+    std::string pnan_padding25 = "**********************";
+#endif
     {
         long double v = std::nan("");
         std::ios ios(0);
@@ -10881,11 +10888,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+nan");
-#else
-                                    assert(ex == "nan");
-#endif
+                                    assert(ex == pnan_sign + "nan");
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -10893,11 +10896,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+nan*********************");
-#else
-                                    assert(ex == "nan**********************");
-#endif
+                                    assert(ex == pnan_sign + "nan" + pnan_padding25);
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -10905,11 +10904,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "*********************+nan");
-#else
-                                    assert(ex == "**********************nan");
-#endif
+                                    assert(ex == pnan_padding25 + pnan_sign + "nan");
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -10917,11 +10912,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+*********************nan");
-#else
-                                    assert(ex == "**********************nan");
-#endif
+                                    assert(ex == pnan_sign + pnan_padding25 + "nan");
                                     assert(ios.width() == 0);
                                 }
                             }
@@ -10931,11 +10922,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+nan");
-#else
-                                    assert(ex == "nan");
-#endif
+                                    assert(ex == pnan_sign + "nan");
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -10943,11 +10930,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+nan*********************");
-#else
-                                    assert(ex == "nan**********************");
-#endif
+                                    assert(ex == pnan_sign + "nan" + pnan_padding25);
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -10955,11 +10938,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "*********************+nan");
-#else
-                                    assert(ex == "**********************nan");
-#endif
+                                    assert(ex == pnan_padding25 + pnan_sign + "nan");
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -10967,11 +10946,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+*********************nan");
-#else
-                                    assert(ex == "**********************nan");
-#endif
+                                    assert(ex == pnan_sign + pnan_padding25 + "nan");
                                     assert(ios.width() == 0);
                                 }
                             }
@@ -10984,11 +10959,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+nan");
-#else
-                                    assert(ex == "nan");
-#endif
+                                    assert(ex == pnan_sign + "nan");
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -10996,11 +10967,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+nan*********************");
-#else
-                                    assert(ex == "nan**********************");
-#endif
+                                    assert(ex == pnan_sign + "nan" + pnan_padding25);
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -11008,11 +10975,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "*********************+nan");
-#else
-                                    assert(ex == "**********************nan");
-#endif
+                                    assert(ex == pnan_padding25 + pnan_sign + "nan");
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -11020,11 +10983,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+*********************nan");
-#else
-                                    assert(ex == "**********************nan");
-#endif
+                                    assert(ex == pnan_sign + pnan_padding25 + "nan");
                                     assert(ios.width() == 0);
                                 }
                             }
@@ -11034,11 +10993,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+nan");
-#else
-                                    assert(ex == "nan");
-#endif
+                                    assert(ex == pnan_sign + "nan");
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -11046,11 +11001,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+nan*********************");
-#else
-                                    assert(ex == "nan**********************");
-#endif
+                                    assert(ex == pnan_sign + "nan" + pnan_padding25);
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -11058,11 +11009,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "*********************+nan");
-#else
-                                    assert(ex == "**********************nan");
-#endif
+                                    assert(ex == pnan_padding25 + pnan_sign + "nan");
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -11070,11 +11017,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+*********************nan");
-#else
-                                    assert(ex == "**********************nan");
-#endif
+                                    assert(ex == pnan_sign + pnan_padding25 + "nan");
                                     assert(ios.width() == 0);
                                 }
                             }
@@ -11238,11 +11181,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+NAN");
-#else
-                                    assert(ex == "NAN");
-#endif
+                                    assert(ex == pnan_sign + "NAN");
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -11250,11 +11189,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+NAN*********************");
-#else
-                                    assert(ex == "NAN**********************");
-#endif
+                                    assert(ex == pnan_sign + "NAN" + pnan_padding25);
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -11262,11 +11197,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "*********************+NAN");
-#else
-                                    assert(ex == "**********************NAN");
-#endif
+                                    assert(ex == pnan_padding25 + pnan_sign + "NAN");
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -11274,11 +11205,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+*********************NAN");
-#else
-                                    assert(ex == "**********************NAN");
-#endif
+                                    assert(ex == pnan_sign + pnan_padding25 + "NAN");
                                     assert(ios.width() == 0);
                                 }
                             }
@@ -11288,11 +11215,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+NAN");
-#else
-                                    assert(ex == "NAN");
-#endif
+                                    assert(ex == pnan_sign + "NAN");
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -11300,11 +11223,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+NAN*********************");
-#else
-                                    assert(ex == "NAN**********************");
-#endif
+                                    assert(ex == pnan_sign + "NAN" + pnan_padding25);
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -11312,11 +11231,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "*********************+NAN");
-#else
-                                    assert(ex == "**********************NAN");
-#endif
+                                    assert(ex == pnan_padding25 + pnan_sign + "NAN");
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -11324,11 +11239,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+*********************NAN");
-#else
-                                    assert(ex == "**********************NAN");
-#endif
+                                    assert(ex == pnan_sign + pnan_padding25 + "NAN");
                                     assert(ios.width() == 0);
                                 }
                             }
@@ -11341,11 +11252,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+NAN");
-#else
-                                    assert(ex == "NAN");
-#endif
+                                    assert(ex == pnan_sign + "NAN");
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -11353,11 +11260,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+NAN*********************");
-#else
-                                    assert(ex == "NAN**********************");
-#endif
+                                    assert(ex == pnan_sign + "NAN" + pnan_padding25);
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -11365,11 +11268,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "*********************+NAN");
-#else
-                                    assert(ex == "**********************NAN");
-#endif
+                                    assert(ex == pnan_padding25 + pnan_sign + "NAN");
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -11377,11 +11276,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+*********************NAN");
-#else
-                                    assert(ex == "**********************NAN");
-#endif
+                                    assert(ex == pnan_sign + pnan_padding25 + "NAN");
                                     assert(ios.width() == 0);
                                 }
                             }
@@ -11391,11 +11286,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+NAN");
-#else
-                                    assert(ex == "NAN");
-#endif
+                                    assert(ex == pnan_sign + "NAN");
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -11403,11 +11294,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+NAN*********************");
-#else
-                                    assert(ex == "NAN**********************");
-#endif
+                                    assert(ex == pnan_sign + "NAN" + pnan_padding25);
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -11415,11 +11302,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "*********************+NAN");
-#else
-                                    assert(ex == "**********************NAN");
-#endif
+                                    assert(ex == pnan_padding25 + pnan_sign + "NAN");
                                     assert(ios.width() == 0);
                                 }
                                 ios.width(25);
@@ -11427,11 +11310,7 @@ void test5()
                                 {
                                     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
                                     std::string ex(str, iter.base());
-#if defined(TEST_HAS_GLIBC)
-                                    assert(ex == "+*********************NAN");
-#else
-                                    assert(ex == "**********************NAN");
-#endif
+                                    assert(ex == pnan_sign + pnan_padding25 + "NAN");
                                     assert(ios.width() == 0);
                                 }
                             }
@@ -24531,7 +24410,7 @@ void test12()
 {
     std::locale lc = std::locale::classic();
     std::locale lg(lc, new my_numpunct);
-#if defined(__APPLE__) && defined(__x86_64__)
+#if (defined(__APPLE__) || defined(TEST_HAS_GLIBC)) && defined(__x86_64__)
 // This test is failing on FreeBSD, possibly due to different representations
 // of the floating point numbers.
     const my_facet f(1);

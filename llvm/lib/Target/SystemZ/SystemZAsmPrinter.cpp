@@ -124,6 +124,18 @@ static MCInst lowerSubvectorStore(const MachineInstr *MI, unsigned Opcode) {
     .addImm(0);
 }
 
+// The XPLINK ABI requires that a no-op encoding the call type is emitted after
+// each call to a subroutine. This information can be used by the called
+// function to determine its entry point, e.g. for generating a backtrace. The
+// call type is encoded as a register number in the bcr instruction. See
+// enumeration CallType for the possible values.
+void SystemZAsmPrinter::emitCallInformation(CallType CT) {
+  EmitToStreamer(*OutStreamer,
+                 MCInstBuilder(SystemZ::BCRAsm)
+                     .addImm(0)
+                     .addReg(SystemZMC::GR64Regs[static_cast<unsigned>(CT)]));
+}
+
 void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   SystemZMCInstLower Lower(MF->getContext(), *this);
   MCInst LoweredMI;
@@ -234,18 +246,14 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
                        .addReg(SystemZ::R7D)
                        .addExpr(Lower.getExpr(MI->getOperand(0),
                                               MCSymbolRefExpr::VK_PLT)));
-    EmitToStreamer(
-        *OutStreamer,
-        MCInstBuilder(SystemZ::BCRAsm).addImm(0).addReg(SystemZ::R3D));
+    emitCallInformation(CallType::BRASL7);
     return;
 
   case SystemZ::CallBASR_XPLINK64:
     EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BASR)
                                      .addReg(SystemZ::R7D)
                                      .addReg(MI->getOperand(0).getReg()));
-    EmitToStreamer(
-        *OutStreamer,
-        MCInstBuilder(SystemZ::BCRAsm).addImm(0).addReg(SystemZ::R0D));
+    emitCallInformation(CallType::BASR76);
     return;
 
   case SystemZ::CallBRASL:

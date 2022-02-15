@@ -10,8 +10,8 @@ target triple = "wasm32-unknown-unknown"
 @global_var = global i32 0, align 4
 ; NO-TLS-DAG: __THREW__ = external global [[PTR]]
 ; NO-TLS-DAG: __threwValue = external global [[PTR]]
-; TLS-DAG: __THREW__ = external thread_local(localexec) global i32
-; TLS-DAG: __threwValue = external thread_local(localexec) global i32
+; TLS-DAG: __THREW__ = external thread_local global i32
+; TLS-DAG: __threwValue = external thread_local global i32
 @global_longjmp_ptr = global void (%struct.__jmp_buf_tag*, i32)* @longjmp, align 4
 ; CHECK-DAG: @global_longjmp_ptr = global void (%struct.__jmp_buf_tag*, i32)* bitcast (void ([[PTR]], i32)* @emscripten_longjmp to void (%struct.__jmp_buf_tag*, i32)*)
 

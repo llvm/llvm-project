@@ -83,6 +83,7 @@ function generate-cmake-base() {
           -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+          -DLIBCXX_ENABLE_WERROR=YES \
           -DLLVM_LIT_ARGS="-sv --show-unsupported --xunit-xml-output test-results.xml" \
           "${@}"
 }
@@ -294,7 +295,8 @@ generic-gcc)
     export CXX=g++-11
     clean
     generate-cmake -DLIBCXX_TEST_CONFIG="llvm-libc++-shared-gcc.cfg.in" \
-                   -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
+                   -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in" \
+                   -DLIBCXX_ENABLE_WERROR=NO
     check-runtimes
 ;;
 generic-gcc-cxx11)
@@ -303,7 +305,8 @@ generic-gcc-cxx11)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake" \
                    -DLIBCXX_TEST_CONFIG="llvm-libc++-shared-gcc.cfg.in" \
-                   -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
+                   -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in" \
+                   -DLIBCXX_ENABLE_WERROR=NO
     check-runtimes
 ;;
 generic-asan)
@@ -444,10 +447,13 @@ apple-system-backdeployment-*)
     PARAMS="target_triple=${arch}-apple-macosx${DEPLOYMENT_TARGET}"
     PARAMS+=";cxx_runtime_root=${OSX_ROOTS}/macOS/libc++/${DEPLOYMENT_TARGET}"
     PARAMS+=";abi_runtime_root=${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
+    PARAMS+=";unwind_runtime_root=${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}"
     PARAMS+=";use_system_cxx_lib=True"
 
+    # TODO: We should run the libunwind tests using the back-deployment dylibs too.
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
                    -DLIBCXX_TEST_CONFIG="apple-libc++-backdeployment.cfg.in" \
+                   -DLIBCXXABI_TEST_CONFIG="apple-libc++abi-backdeployment.cfg.in" \
                    -DLIBCXX_TEST_PARAMS="${PARAMS}" \
                    -DLIBCXXABI_TEST_PARAMS="${PARAMS}"
 

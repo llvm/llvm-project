@@ -11,9 +11,9 @@
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // friend constexpr iter_difference_t<W> operator-(const iterator& x, const sentinel& y)
-//   requires sized_­sentinel_­for<Bound, W>;
+//   requires sized_sentinel_for<Bound, W>;
 // friend constexpr iter_difference_t<W> operator-(const sentinel& x, const iterator& y)
-//   requires sized_­sentinel_­for<Bound, W>;
+//   requires sized_sentinel_for<Bound, W>;
 
 #include <ranges>
 #include <cassert>

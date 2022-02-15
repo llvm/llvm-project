@@ -21,7 +21,17 @@
       __llvm_libc::quick_exit(127);                                            \
   }
 
+#define __CHECK_NE(file, line, val, should_exit)                               \
+  if ((val)) {                                                                 \
+    __llvm_libc::write_to_stderr(file ":" __AS_STRING(                         \
+        line) ": Expected '" #val "' to be false, but is true\n");             \
+    if (should_exit)                                                           \
+      __llvm_libc::quick_exit(127);                                            \
+  }
+
 #define EXPECT_TRUE(val) __CHECK(__FILE__, __LINE__, val, false)
 #define ASSERT_TRUE(val) __CHECK(__FILE__, __LINE__, val, true)
+#define EXPECT_FALSE(val) __CHECK_NE(__FILE__, __LINE__, val, false)
+#define ASSERT_FALSE(val) __CHECK_NE(__FILE__, __LINE__, val, true)
 
 #endif // LLVM_LIBC_TEST_LOADER_LINUX_LOADER_TEST_H

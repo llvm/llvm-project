@@ -11,12 +11,12 @@
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
-#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include <cstdint>
 
 namespace llvm {
 
 class DWARFUnit;
+class DWARFDataExtractor;
 
 /// DWARFDebugInfoEntry - A DIE with only the minimum required data.
 class DWARFDebugInfoEntry {

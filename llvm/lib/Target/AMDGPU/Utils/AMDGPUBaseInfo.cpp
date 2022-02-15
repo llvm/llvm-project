@@ -1528,13 +1528,6 @@ bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
     Reg == AMDGPU::SCC;
 }
 
-bool isRegIntersect(unsigned Reg0, unsigned Reg1, const MCRegisterInfo* TRI) {
-  for (MCRegAliasIterator R(Reg0, TRI, true); R.isValid(); ++R) {
-    if (*R == Reg1) return true;
-  }
-  return false;
-}
-
 #define MAP_REG2REG \
   using namespace AMDGPU; \
   switch(Reg) { \

@@ -137,7 +137,9 @@ attributes #0 = { minsize nofree norecurse nounwind optsize uwtable}
 ; UNWIND-NEXT:  0xB0      ; finish
 
 ; UNWIND-LABEL:  FunctionAddress: 0x40
-; UNWIND:        Model: CantUnwind
+; UNWIND:        Opcodes [
+; UNWIND-NEXT:     0xB0      ; finish
+
 
 ; UNWINND-LABEL: 00000041 {{.*}} OUTLINED_FUNCTION_0
 ; UNWINND-LABEL: 00000001 {{.*}} x

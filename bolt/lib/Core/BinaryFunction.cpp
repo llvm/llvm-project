@@ -1875,21 +1875,7 @@ bool BinaryFunction::postProcessIndirectBranches(
     BC.MIB->setJumpTable(*LastIndirectJump, LastJT, LastJTIndexReg, AllocId);
     HasUnknownControlFlow = false;
 
-    // re-populate successors based on the jump table.
-    std::set<const MCSymbol *> JTLabels;
-    LastIndirectJumpBB->removeAllSuccessors();
-    const JumpTable *JT = getJumpTableContainingAddress(LastJT);
-    for (const MCSymbol *Label : JT->Entries)
-      JTLabels.emplace(Label);
-    for (const MCSymbol *Label : JTLabels) {
-      BinaryBasicBlock *BB = getBasicBlockForLabel(Label);
-      // Ignore __builtin_unreachable()
-      if (!BB) {
-        assert(Label == getFunctionEndLabel() && "if no BB found, must be end");
-        continue;
-      }
-      LastIndirectJumpBB->addSuccessor(BB);
-    }
+    LastIndirectJumpBB->updateJumpTableSuccessors();
   }
 
   if (HasFixedIndirectBranch)

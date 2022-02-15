@@ -4,4 +4,9 @@
 // CHECK: clang{{.*}}" "-cc1" "-triple" "x86_64-pc-dragonfly"
 // CHECK: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/usr/libexec/ld-elf.so.{{.*}}" "--hash-style=gnu" "--enable-new-dtags" "-o" "a.out" "{{.*}}crt1.o" "{{.*}}crti.o" "{{.*}}crtbegin.o" "{{.*}}.o" "-L{{.*}}gcc{{.*}}" "-rpath" "{{.*}}gcc{{.*}}" "-lc" "-lgcc" "{{.*}}crtend.o" "{{.*}}crtn.o"
 
-
+// -r suppresses default -l and crt*.o like -nostdlib.
+// RUN: %clang -### %s --target=x86_64-pc-dragonfly -r \
+// RUN:   2>&1 | FileCheck %s --check-prefix=RELOCATABLE
+// RELOCATABLE:     "-r"
+// RELOCATABLE-NOT: "-l
+// RELOCATABLE-NOT: {{.*}}crt{{[^.]+}}.o

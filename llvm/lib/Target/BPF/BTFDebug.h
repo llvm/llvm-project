@@ -289,7 +289,8 @@ class BTFDebug : public DebugHandlerBase {
   std::map<std::string, std::unique_ptr<BTFKindDataSec>> DataSecEntries;
   std::vector<BTFTypeStruct *> StructTypes;
   std::map<const GlobalVariable *, std::pair<int64_t, uint32_t>> PatchImms;
-  std::map<StringRef, std::pair<bool, std::vector<BTFTypeDerived *>>>
+  std::map<const DICompositeType *,
+           std::vector<std::pair<const DIDerivedType *, BTFTypeDerived *>>>
       FixupDerivedTypes;
   std::set<const Function *>ProtoFunctions;
 
@@ -340,6 +341,13 @@ class BTFDebug : public DebugHandlerBase {
   /// Generate types for decl annotations.
   void processDeclAnnotations(DINodeArray Annotations, uint32_t BaseTypeId,
                               int ComponentId);
+
+  /// Generate BTF type_tag's. If BaseTypeId is nonnegative, the last
+  /// BTF type_tag in the chain points to BaseTypeId. Otherwise, it points to
+  /// the base type of DTy. Return the type id of the first BTF type_tag
+  /// in the chain. If no type_tag's are generated, a negative value
+  /// is returned.
+  int genBTFTypeTags(const DIDerivedType *DTy, int BaseTypeId);
 
   /// Generate one field relocation record.
   void generatePatchImmReloc(const MCSymbol *ORSym, uint32_t RootId,

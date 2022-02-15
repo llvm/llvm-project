@@ -63,7 +63,7 @@ class PlatformProcessCrashInfoTestCase(TestBase):
 
         error = crash_info.GetAsJSON(stream)
 
-        self.assertTrue(error.Success())
+        self.assertSuccess(error)
 
         self.assertTrue(crash_info.IsValid())
 

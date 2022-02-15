@@ -270,9 +270,6 @@ public:
     return false;
   }
   bool operator()(const StructureConstructor &) const { return false; }
-  template <typename T> bool operator()(const FunctionRef<T> &) {
-    return false;
-  }
   template <typename D, typename R, typename... O>
   bool operator()(const Operation<D, R, O...> &) const {
     return false;
@@ -280,7 +277,11 @@ public:
   template <typename T> bool operator()(const Parentheses<T> &x) const {
     return (*this)(x.left());
   }
-  template <typename T> bool operator()(const FunctionRef<T> &x) const {
+  bool operator()(const ProcedureRef &x) const {
+    if (const SpecificIntrinsic * intrinsic{x.proc().GetSpecificIntrinsic()}) {
+      return intrinsic->characteristics.value().attrs.test(
+          characteristics::Procedure::Attr::NullPointer);
+    }
     return false;
   }
   bool operator()(const Relational<SomeType> &) const { return false; }
@@ -557,7 +558,7 @@ public:
     return std::nullopt;
   }
 
-  template <typename T> Result operator()(const FunctionRef<T> &x) const {
+  Result operator()(const ProcedureRef &x) const {
     if (const auto *symbol{x.proc().GetSymbol()}) {
       const Symbol &ultimate{symbol->GetUltimate()};
       if (!semantics::IsPureProcedure(ultimate)) {
@@ -708,7 +709,7 @@ public:
   Result operator()(const ComplexPart &) const { return false; }
   Result operator()(const Substring &) const { return false; }
 
-  template <typename T> Result operator()(const FunctionRef<T> &x) const {
+  Result operator()(const ProcedureRef &x) const {
     if (auto chars{
             characteristics::Procedure::Characterize(x.proc(), context_)}) {
       if (chars->functionResult) {

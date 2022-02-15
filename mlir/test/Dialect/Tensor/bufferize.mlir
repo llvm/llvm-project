@@ -301,3 +301,31 @@ func @tensor.insert(%t1: tensor<5xf32>, %idx1: index, %f: f32) -> tensor<5xf32> 
   // CHECK: return %[[r]]
   return %0 : tensor<5xf32>
 }
+
+// CHECK-LABEL: func @tensor.expand_shape(
+//  CHECK-SAME:     %[[t1:.*]]: tensor<?x10xf32>
+func @tensor.expand_shape(%t1: tensor<?x10xf32>) -> tensor<2x?x10xf32> {
+  // CHECK: %[[m1:.*]] = bufferization.to_memref %[[t1]] : memref<?x10xf32>
+  // CHECK: %[[expanded:.*]] = memref.expand_shape %[[m1]] [
+  // CHECK-SAME: [0, 1], [2]] : memref<?x10xf32> into memref<2x?x10xf32>
+  %0 = tensor.expand_shape %t1 [[0, 1], [2]]
+      : tensor<?x10xf32> into tensor<2x?x10xf32>
+
+  // CHECK: %[[r:.*]] = bufferization.to_tensor %[[expanded]]
+  // CHECK: return %[[r]]
+  return %0 : tensor<2x?x10xf32>
+}
+
+// CHECK-LABEL: func @tensor.collapse_shape(
+//  CHECK-SAME:     %[[t1:.*]]: tensor<2x?x?xf32>
+func @tensor.collapse_shape(%t1: tensor<2x?x?xf32>) -> tensor<?x?xf32> {
+  // CHECK: %[[m1:.*]] = bufferization.to_memref %[[t1]] : memref<2x?x?xf32>
+  // CHECK: %[[collapsed:.*]] = memref.collapse_shape %[[m1]] [
+  // CHECK-SAME: [0, 1], [2]] : memref<2x?x?xf32> into memref<?x?xf32>
+  %0 = tensor.collapse_shape %t1 [[0, 1], [2]]
+      : tensor<2x?x?xf32> into tensor<?x?xf32>
+
+  // CHECK: %[[r:.*]] = bufferization.to_tensor %[[collapsed]]
+  // CHECK: return %[[r]]
+  return %0 : tensor<?x?xf32>
+}

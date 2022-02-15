@@ -102,8 +102,30 @@ public:
   using FortranEntity = typename PassedEntityTypes<T>::FortranEntity;
   using FirValue = typename PassedEntityTypes<T>::FirValue;
 
+  /// FirPlaceHolder are place holders for the mlir inputs and outputs that are
+  /// created during the first pass before the mlir::FuncOp is created.
+  struct FirPlaceHolder {
+    FirPlaceHolder(mlir::Type t, int passedPosition, Property p)
+        : type{t}, passedEntityPosition{passedPosition}, property{p} {}
+    /// Type for this input/output
+    mlir::Type type;
+    /// Position of related passedEntity in passedArguments.
+    /// (passedEntity is the passedResult this value is resultEntityPosition).
+    int passedEntityPosition;
+    static constexpr int resultEntityPosition = -1;
+    /// Indicate property of the entity passedEntityPosition that must be passed
+    /// through this argument.
+    Property property;
+  };
+
   /// Returns the mlir function type
   mlir::FunctionType genFunctionType();
+
+  /// determineInterface is the entry point of the first pass that defines the
+  /// interface and is required to get the mlir::FuncOp.
+  void
+  determineInterface(bool isImplicit,
+                     const Fortran::evaluate::characteristics::Procedure &);
 
 protected:
   CallInterface(Fortran::lower::AbstractConverter &c) : converter{c} {}
@@ -113,9 +135,14 @@ protected:
   /// create/find the mlir::FuncOp. Child needs to be initialized first.
   void declare();
 
+  llvm::SmallVector<FirPlaceHolder> outputs;
   mlir::FuncOp func;
 
   Fortran::lower::AbstractConverter &converter;
+  /// Store characteristic once created, it is required for further information
+  /// (e.g. getting the length of character result)
+  std::optional<Fortran::evaluate::characteristics::Procedure> characteristic =
+      std::nullopt;
 };
 
 //===----------------------------------------------------------------------===//
@@ -132,9 +159,11 @@ public:
     declare();
   }
 
+  bool hasAlternateReturns() const;
   std::string getMangledName() const;
   mlir::Location getCalleeLocation() const;
   Fortran::evaluate::characteristics::Procedure characterize() const;
+  bool isMainProgram() const;
 
   /// On the callee side it does not matter whether the procedure is
   /// called through pointers or not.

@@ -273,7 +273,7 @@ def SwiftSelf : EnumAttr<"swiftself", [ParamAttr]>;
 def SwiftAsync : EnumAttr<"swiftasync", [ParamAttr]>;
 
 /// Function must be in a unwind table.
-def UWTable : EnumAttr<"uwtable", [FnAttr]>;
+def UWTable : IntAttr<"uwtable", [FnAttr]>;
 
 /// Minimum/Maximum vscale value for function.
 def VScaleRange : IntAttr<"vscale_range", [FnAttr]>;

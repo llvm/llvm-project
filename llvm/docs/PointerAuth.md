@@ -10,8 +10,10 @@ Before the pointer is used, it needs to be authenticated, i.e., have its
 signature checked.  This prevents pointer values of unknown origin from being
 used to replace the signed pointer value.
 
-At the IR level, it is represented using a [set of intrinsics](#intrinsics)
-(to sign/authenticate pointers).
+At the IR level, it is represented using:
+
+* a [set of intrinsics](#intrinsics) (to sign/authenticate pointers)
+* a [call operand bundle](#operand-bundle) (to authenticate called pointers)
 
 The current implementation leverages the
 [Armv8.3-A PAuth/Pointer Authentication Code](#armv8-3-a-pauth-pointer-authentication-code)
@@ -218,6 +220,46 @@ target.
 The '``llvm.ptrauth.blend``' intrinsic combines a small integer discriminator
 with a pointer address discriminator, in a way that is specified by the target
 implementation.
+
+
+### Operand Bundle
+
+Function pointers used as indirect call targets can be signed when materialized,
+and authenticated before calls.  This can be accomplished with the
+[``llvm.ptrauth.auth``](#llvm-ptrauth-auth) intrinsic, feeding its result to
+an indirect call.
+
+However, that exposes the intermediate, unauthenticated pointer, e.g., if it
+gets spilled to the stack.  An attacker can then overwrite the pointer in
+memory, negating the security benefit provided by pointer authentication.
+To prevent that, the ``ptrauth`` operand bundle may be used: it guarantees that
+the intermediate call target is kept in a register and never stored to memory.
+This hardening benefit is similar to that provided by
+[``llvm.ptrauth.resign``](#llvm-ptrauth-resign)).
+
+Concretely:
+
+```llvm
+define void @f(void ()* %fp) {
+  call void %fp() [ "ptrauth"(i32 <key>, i64 <data>) ]
+  ret void
+}
+```
+
+is functionally equivalent to:
+
+```llvm
+define void @f(void ()* %fp) {
+  %fp_i = ptrtoint void ()* %fp to i64
+  %fp_auth = call i64 @llvm.ptrauth.auth(i64 %fp_i, i32 <key>, i64 <data>)
+  %fp_auth_p = inttoptr i64 %fp_auth to void ()*
+  call void %fp_auth_p()
+  ret void
+}
+```
+
+but with the added guarantee that ``%fp_i``, ``%fp_auth``, and ``%fp_auth_p``
+are not stored to (and reloaded from) memory.
 
 
 ## AArch64 Support

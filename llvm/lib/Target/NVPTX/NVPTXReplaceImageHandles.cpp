@@ -64,8 +64,12 @@ bool NVPTXReplaceImageHandles::runOnMachineFunction(MachineFunction &MF) {
   // This is needed in debug mode when code cleanup passes are not executed,
   // but we need the handle access to be eliminated because they are not
   // valid instructions when image handles are disabled.
-  for (MachineInstr *MI : InstrsToRemove)
-    MI->eraseFromParent();
+  for (MachineInstr *MI : InstrsToRemove) {
+    unsigned DefReg = MI->getOperand(0).getReg();
+    // Only these that are not used can be removed.
+    if (MF.getRegInfo().use_nodbg_empty(DefReg))
+      MI->eraseFromParent();
+  }
   return Changed;
 }
 

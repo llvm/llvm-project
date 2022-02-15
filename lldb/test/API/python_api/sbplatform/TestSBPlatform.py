@@ -18,7 +18,7 @@ class SBPlatformAPICase(TestBase):
             del os.environ["MY_TEST_ENV_VAR"]
         self.addTearDownHook(cleanup)
         cmd = lldb.SBPlatformShellCommand(self.getBuildArtifact("a.out"))
-        self.assertTrue(plat.Run(cmd).Success())
+        self.assertSuccess(plat.Run(cmd))
         self.assertIn("MY_TEST_ENV_VAR=SBPlatformAPICase.test_run", cmd.GetOutput())
 
     def test_SetSDKRoot(self):

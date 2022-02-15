@@ -24,18 +24,18 @@
 #include "min_allocator.h"
 
 template <class S>
-void test0(const typename S::value_type* lhs, const S& rhs, const S& x) {
+TEST_CONSTEXPR_CXX20 void test0(const typename S::value_type* lhs, const S& rhs, const S& x) {
   assert(lhs + rhs == x);
 }
 
 #if TEST_STD_VER >= 11
 template <class S>
-void test1(const typename S::value_type* lhs, S&& rhs, const S& x) {
+TEST_CONSTEXPR_CXX20 void test1(const typename S::value_type* lhs, S&& rhs, const S& x) {
   assert(lhs + move(rhs) == x);
 }
 #endif
 
-int main(int, char**) {
+bool test() {
   {
     typedef std::string S;
     test0("", S(""), S(""));
@@ -126,6 +126,15 @@ int main(int, char**) {
     test1("abcdefghijklmnopqrst", S("12345678901234567890"),
           S("abcdefghijklmnopqrst12345678901234567890"));
   }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER > 17
+  // static_assert(test());
 #endif
 
   return 0;

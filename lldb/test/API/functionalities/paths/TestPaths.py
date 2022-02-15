@@ -49,7 +49,7 @@ class TestPaths(TestBase):
         info_sd = self.dbg.GetScriptInterpreterInfo(self.dbg.GetScriptingLanguage("python"))
         self.assertTrue(info_sd.IsValid())
         stream = lldb.SBStream()
-        self.assertTrue(info_sd.GetAsJSON(stream).Success())
+        self.assertSuccess(info_sd.GetAsJSON(stream))
         info = json.loads(stream.GetData())
         prefix = info['prefix']
         self.assertEqual(os.path.realpath(sys.prefix), os.path.realpath(prefix))

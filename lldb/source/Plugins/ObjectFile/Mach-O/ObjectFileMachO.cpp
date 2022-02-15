@@ -6102,6 +6102,15 @@ Section *ObjectFileMachO::GetMachHeaderSection() {
     if (section->GetFileOffset() == 0 && SectionIsLoadable(section))
       return section;
   }
+
+  // We may have a binary in the shared cache that has a non-zero
+  // file address for its first segment, traditionally the __TEXT segment.
+  // Search for it by name and return it as our next best guess.
+  SectionSP text_segment_sp =
+      GetSectionList()->FindSectionByName(GetSegmentNameTEXT());
+  if (text_segment_sp.get() && SectionIsLoadable(text_segment_sp.get()))
+    return text_segment_sp.get();
+
   return nullptr;
 }
 

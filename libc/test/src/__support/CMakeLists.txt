@@ -50,4 +50,5 @@ add_custom_command(TARGET libc_str_to_float_comparison_test
                    VERBATIM)
 
 add_subdirectory(CPP)
+add_subdirectory(File)
 add_subdirectory(OSUtil)

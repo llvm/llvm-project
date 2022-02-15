@@ -59,8 +59,8 @@ int main(int, char**)
   static_assert(h.done() == false, "");
 
   // [coroutine.handle.noop.resumption]p2
-  // Remarks: If noop_­coroutine_­handle is converted to
-  // coroutine_­handle<>, calls to operator(), resume and
+  // Remarks: If noop_coroutine_handle is converted to
+  // coroutine_handle<>, calls to operator(), resume and
   // destroy on that handle will also have no observable
   // effects.
   base.resume();

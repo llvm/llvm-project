@@ -1443,10 +1443,14 @@ class DeclContext {
     /// Has the full definition of this type been required by a use somewhere in
     /// the TU.
     uint64_t IsCompleteDefinitionRequired : 1;
+
+    /// Whether this tag is a definition which was demoted due to
+    /// a module merge.
+    uint64_t IsThisDeclarationADemotedDefinition : 1;
   };
 
   /// Number of non-inherited bits in TagDeclBitfields.
-  enum { NumTagDeclBits = 9 };
+  enum { NumTagDeclBits = 10 };
 
   /// Stores the bits used by EnumDecl.
   /// If modified NumEnumDeclBit and the accessor

@@ -6,6 +6,8 @@ _start:
   .functype _start () -> ()
   i32.const foo@TLSREL
   i32.const bar@TLSREL
+  i32.const baz@TLSREL
+  drop
   drop
   drop
   end_function
@@ -24,3 +26,4 @@ bar:
 
 # CHECK: relocation R_WASM_MEMORY_ADDR_TLS_SLEB cannot be used against `foo` in non-TLS section: .data
 # CHECK: relocation R_WASM_MEMORY_ADDR_TLS_SLEB cannot be used against `bar` in non-TLS section: .bss
+# CHECK: relocation R_WASM_MEMORY_ADDR_TLS_SLEB cannot be used against an undefined symbol `baz`

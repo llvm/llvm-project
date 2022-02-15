@@ -2192,36 +2192,29 @@ def subnsw : PatFrag<(ops node:$lhs, node:$rhs),
   return N->getFlags().hasNoSignedWrap();
 }]>;
 
-multiclass MVE_VRHADD_m<MVEVectorVTInfo VTI,
-                      SDNode unpred_op, Intrinsic pred_int> {
+multiclass MVE_VRHADD_m<MVEVectorVTInfo VTI, SDNode Op,
+                      SDNode unpred_op, Intrinsic PredInt> {
   def "" : MVE_VRHADD_Base<VTI.Suffix, VTI.Unsigned, VTI.Size>;
   defvar Inst = !cast<Instruction>(NAME);
+  defm : MVE_TwoOpPattern<VTI, Op, PredInt, (? (i32 VTI.Unsigned)), !cast<Instruction>(NAME)>;
 
   let Predicates = [HasMVEInt] in {
-    // Unpredicated rounding add-with-divide-by-two
+    // Unpredicated rounding add-with-divide-by-two intrinsic
     def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
                             (i32 VTI.Unsigned))),
               (VTI.Vec (Inst (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
-
-    // Predicated add-with-divide-by-two
-    def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
-                            (i32 VTI.Unsigned), (VTI.Pred VCCR:$mask),
-                            (VTI.Vec MQPR:$inactive))),
-              (VTI.Vec (Inst (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
-                             ARMVCCThen, (VTI.Pred VCCR:$mask), zero_reg,
-                             (VTI.Vec MQPR:$inactive)))>;
   }
 }
 
-multiclass MVE_VRHADD<MVEVectorVTInfo VTI>
-  : MVE_VRHADD_m<VTI, int_arm_mve_vrhadd, int_arm_mve_rhadd_predicated>;
+multiclass MVE_VRHADD<MVEVectorVTInfo VTI, SDNode rhadd>
+  : MVE_VRHADD_m<VTI, rhadd, int_arm_mve_vrhadd, int_arm_mve_rhadd_predicated>;
 
-defm MVE_VRHADDs8  : MVE_VRHADD<MVE_v16s8>;
-defm MVE_VRHADDs16 : MVE_VRHADD<MVE_v8s16>;
-defm MVE_VRHADDs32 : MVE_VRHADD<MVE_v4s32>;
-defm MVE_VRHADDu8  : MVE_VRHADD<MVE_v16u8>;
-defm MVE_VRHADDu16 : MVE_VRHADD<MVE_v8u16>;
-defm MVE_VRHADDu32 : MVE_VRHADD<MVE_v4u32>;
+defm MVE_VRHADDs8  : MVE_VRHADD<MVE_v16s8, avgceils>;
+defm MVE_VRHADDs16 : MVE_VRHADD<MVE_v8s16, avgceils>;
+defm MVE_VRHADDs32 : MVE_VRHADD<MVE_v4s32, avgceils>;
+defm MVE_VRHADDu8  : MVE_VRHADD<MVE_v16u8, avgceilu>;
+defm MVE_VRHADDu16 : MVE_VRHADD<MVE_v8u16, avgceilu>;
+defm MVE_VRHADDu32 : MVE_VRHADD<MVE_v4u32, avgceilu>;
 
 // Rounding Halving Add perform the arithemtic operation with an extra bit of
 // precision, before performing the shift, to void clipping errors. We're not
@@ -2303,11 +2296,12 @@ class MVE_VHSUB_<string suffix, bit U, bits<2> size,
               list<dag> pattern=[]>
   : MVE_VHADDSUB<"vhsub", suffix, U, 0b1, size, pattern>;
 
-multiclass MVE_VHADD_m<MVEVectorVTInfo VTI,
-                      SDNode unpred_op, Intrinsic pred_int, PatFrag add_op,
+multiclass MVE_VHADD_m<MVEVectorVTInfo VTI, SDNode Op,
+                      SDNode unpred_op, Intrinsic PredInt, PatFrag add_op,
                       SDNode shift_op> {
   def "" : MVE_VHADD_<VTI.Suffix, VTI.Unsigned, VTI.Size>;
   defvar Inst = !cast<Instruction>(NAME);
+  defm : MVE_TwoOpPattern<VTI, Op, PredInt, (? (i32 VTI.Unsigned)), !cast<Instruction>(NAME)>;
 
   let Predicates = [HasMVEInt] in {
     // Unpredicated add-and-divide-by-two
@@ -2316,30 +2310,23 @@ multiclass MVE_VHADD_m<MVEVectorVTInfo VTI,
 
     def : Pat<(VTI.Vec (shift_op (add_op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)), (i32 1))),
               (Inst MQPR:$Qm, MQPR:$Qn)>;
-
-    // Predicated add-and-divide-by-two
-    def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn), (i32 VTI.Unsigned),
-                            (VTI.Pred VCCR:$mask), (VTI.Vec MQPR:$inactive))),
-              (VTI.Vec (Inst (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
-                             ARMVCCThen, (VTI.Pred VCCR:$mask), zero_reg,
-                             (VTI.Vec MQPR:$inactive)))>;
   }
 }
 
-multiclass MVE_VHADD<MVEVectorVTInfo VTI, PatFrag add_op, SDNode shift_op>
-  : MVE_VHADD_m<VTI, int_arm_mve_vhadd, int_arm_mve_hadd_predicated, add_op,
+multiclass MVE_VHADD<MVEVectorVTInfo VTI, SDNode Op, PatFrag add_op, SDNode shift_op>
+  : MVE_VHADD_m<VTI, Op, int_arm_mve_vhadd, int_arm_mve_hadd_predicated, add_op,
                 shift_op>;
 
 // Halving add/sub perform the arithemtic operation with an extra bit of
 // precision, before performing the shift, to void clipping errors. We're not
 // modelling that here with these patterns, but we're using no wrap forms of
 // add/sub to ensure that the extra bit of information is not needed.
-defm MVE_VHADDs8  : MVE_VHADD<MVE_v16s8, addnsw, ARMvshrsImm>;
-defm MVE_VHADDs16 : MVE_VHADD<MVE_v8s16, addnsw, ARMvshrsImm>;
-defm MVE_VHADDs32 : MVE_VHADD<MVE_v4s32, addnsw, ARMvshrsImm>;
-defm MVE_VHADDu8  : MVE_VHADD<MVE_v16u8, addnuw, ARMvshruImm>;
-defm MVE_VHADDu16 : MVE_VHADD<MVE_v8u16, addnuw, ARMvshruImm>;
-defm MVE_VHADDu32 : MVE_VHADD<MVE_v4u32, addnuw, ARMvshruImm>;
+defm MVE_VHADDs8  : MVE_VHADD<MVE_v16s8, avgfloors, addnsw, ARMvshrsImm>;
+defm MVE_VHADDs16 : MVE_VHADD<MVE_v8s16, avgfloors, addnsw, ARMvshrsImm>;
+defm MVE_VHADDs32 : MVE_VHADD<MVE_v4s32, avgfloors, addnsw, ARMvshrsImm>;
+defm MVE_VHADDu8  : MVE_VHADD<MVE_v16u8, avgflooru, addnuw, ARMvshruImm>;
+defm MVE_VHADDu16 : MVE_VHADD<MVE_v8u16, avgflooru, addnuw, ARMvshruImm>;
+defm MVE_VHADDu32 : MVE_VHADD<MVE_v4u32, avgflooru, addnuw, ARMvshruImm>;
 
 multiclass MVE_VHSUB_m<MVEVectorVTInfo VTI,
                       SDNode unpred_op, Intrinsic pred_int, PatFrag sub_op,
@@ -5372,10 +5359,10 @@ class MVE_VxADDSUB_qr<string iname, string suffix,
   let validForTailPredication = 1;
 }
 
-multiclass MVE_VHADDSUB_qr_m<string iname, MVEVectorVTInfo VTI, bit subtract,
-                             Intrinsic unpred_int, Intrinsic pred_int, PatFrag add_op,
-                             SDNode shift_op> {
+multiclass MVE_VHADDSUB_qr_m<string iname, MVEVectorVTInfo VTI, bit subtract, SDNode Op,
+                             Intrinsic unpred_int, Intrinsic pred_int, PatFrag add_op, PatFrag shift_op> {
   def "" : MVE_VxADDSUB_qr<iname, VTI.Suffix, VTI.Unsigned, VTI.Size, subtract, VTI.Size>;
+  defm : MVE_TwoOpPatternDup<VTI, Op, pred_int, (? (i32 VTI.Unsigned)), !cast<Instruction>(NAME)>;
   defm : MVE_vec_scalar_int_pat_m<!cast<Instruction>(NAME),
                                   VTI, unpred_int, pred_int, 1, 1>;
   defvar Inst = !cast<Instruction>(NAME);
@@ -5386,20 +5373,20 @@ multiclass MVE_VHADDSUB_qr_m<string iname, MVEVectorVTInfo VTI, bit subtract,
   }
 }
 
-multiclass MVE_VHADD_qr_m<MVEVectorVTInfo VTI, PatFrag add_op, SDNode shift_op> :
-  MVE_VHADDSUB_qr_m<"vhadd", VTI, 0b0, int_arm_mve_vhadd, int_arm_mve_hadd_predicated,
-                    add_op, shift_op>;
+multiclass MVE_VHADD_qr_m<MVEVectorVTInfo VTI, PatFrag add_op, SDNode shift_op, SDNode Op> :
+  MVE_VHADDSUB_qr_m<"vhadd", VTI, 0b0, Op, int_arm_mve_vhadd,
+                    int_arm_mve_hadd_predicated, add_op, shift_op>;
 
 multiclass MVE_VHSUB_qr_m<MVEVectorVTInfo VTI, PatFrag add_op, SDNode shift_op> :
-  MVE_VHADDSUB_qr_m<"vhsub", VTI, 0b1, int_arm_mve_vhsub, int_arm_mve_hsub_predicated,
-                    add_op, shift_op>;
+  MVE_VHADDSUB_qr_m<"vhsub", VTI, 0b1, null_frag, int_arm_mve_vhsub,
+                    int_arm_mve_hsub_predicated, add_op, shift_op>;
 
-defm MVE_VHADD_qr_s8  : MVE_VHADD_qr_m<MVE_v16s8, addnsw, ARMvshrsImm>;
-defm MVE_VHADD_qr_s16 : MVE_VHADD_qr_m<MVE_v8s16, addnsw, ARMvshrsImm>;
-defm MVE_VHADD_qr_s32 : MVE_VHADD_qr_m<MVE_v4s32, addnsw, ARMvshrsImm>;
-defm MVE_VHADD_qr_u8  : MVE_VHADD_qr_m<MVE_v16u8, addnuw, ARMvshruImm>;
-defm MVE_VHADD_qr_u16 : MVE_VHADD_qr_m<MVE_v8u16, addnuw, ARMvshruImm>;
-defm MVE_VHADD_qr_u32 : MVE_VHADD_qr_m<MVE_v4u32, addnuw, ARMvshruImm>;
+defm MVE_VHADD_qr_s8  : MVE_VHADD_qr_m<MVE_v16s8, addnsw, ARMvshrsImm, avgfloors>;
+defm MVE_VHADD_qr_s16 : MVE_VHADD_qr_m<MVE_v8s16, addnsw, ARMvshrsImm, avgfloors>;
+defm MVE_VHADD_qr_s32 : MVE_VHADD_qr_m<MVE_v4s32, addnsw, ARMvshrsImm, avgfloors>;
+defm MVE_VHADD_qr_u8  : MVE_VHADD_qr_m<MVE_v16u8, addnuw, ARMvshruImm, avgflooru>;
+defm MVE_VHADD_qr_u16 : MVE_VHADD_qr_m<MVE_v8u16, addnuw, ARMvshruImm, avgflooru>;
+defm MVE_VHADD_qr_u32 : MVE_VHADD_qr_m<MVE_v4u32, addnuw, ARMvshruImm, avgflooru>;
 
 defm MVE_VHSUB_qr_s8  : MVE_VHSUB_qr_m<MVE_v16s8, subnsw, ARMvshrsImm>;
 defm MVE_VHSUB_qr_s16 : MVE_VHSUB_qr_m<MVE_v8s16, subnsw, ARMvshrsImm>;

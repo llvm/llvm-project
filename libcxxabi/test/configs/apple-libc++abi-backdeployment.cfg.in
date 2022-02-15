@@ -1,0 +1,63 @@
+# Testing configuration for back-deployment against older Apple system libc++abi.
+#
+# Under this configuration, we compile and link all the test suite against the latest libc++abi,
+# however we run against the libc++abi on a different platform. This emulates the workflow of
+# a developer building their application using recent tools but with the goal of deploying
+# on existing devices running an older OS (and hence an older dylib).
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXXABI_LIBCXX_PATH@', 'utils'))
+import libcxx.test.params, libcxx.test.newconfig, libcxx.test.dsl
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+BACKDEPLOYMENT_PARAMETERS = [
+    libcxx.test.dsl.Parameter(name='cxx_runtime_root', type=str,
+        actions=lambda root: [libcxx.test.dsl.AddSubstitution('%{cxx-runtime-root}', root)],
+        help="""
+        The simulated root of the system (for libc++) when running tests.
+
+        This should be a directory hierarchy under which the libc++ dylib can be found.
+        The dylib in that hierarchy is the one that will be used at runtime when running
+        the tests.
+        """),
+    libcxx.test.dsl.Parameter(name='abi_runtime_root', type=str,
+        actions=lambda root: [libcxx.test.dsl.AddSubstitution('%{abi-runtime-root}', root)],
+        help="""
+        The simulated root of the system (for libc++abi) when running tests.
+
+        This should be a directory hierarchy under which the libc++abi dylib can be found.
+        The dylib in that hierarchy is the one that will be used at runtime when running
+        the tests.
+        """),
+    libcxx.test.dsl.Parameter(name='unwind_runtime_root', type=str,
+        actions=lambda root: [libcxx.test.dsl.AddSubstitution('%{unwind-runtime-root}', root)],
+        help="""
+        The simulated root of the system (for libunwind) when running tests.
+
+        This should be a directory hierarchy under which the libunwind dylib can be found.
+        The dylib in that hierarchy is the one that will be used at runtime when running
+        the tests.
+        """),
+]
+
+config.substitutions.append(('%{flags}',
+    '-isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else ''
+))
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -isystem %{install}/include/c++/v1 -DLIBCXXABI_NO_TIMER -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS ' +
+    '-I %{libcxx}/test/support -I %{libcxx}/src'
+))
+config.substitutions.append(('%{link_flags}',
+    '-nostdlib++ -L %{install}/lib -lc++ -lc++abi'
+))
+config.substitutions.append(('%{exec}',
+    '%{executor} --execdir %T --env DYLD_LIBRARY_PATH="%{cxx-runtime-root}:%{abi-runtime-root}:%{unwind-runtime-root}" -- '
+))
+
+libcxx.test.newconfig.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS + BACKDEPLOYMENT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)

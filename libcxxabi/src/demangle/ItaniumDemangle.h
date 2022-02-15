@@ -5032,30 +5032,29 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
     // interpreted as <type> node 'short' or 'ellipsis'. However, neither
     // __uuidof(short) nor __uuidof(...) can actually appear, so there is no
     // actual conflict here.
+    bool IsUUID = false;
+    Node *UUID = nullptr;
     if (Name->getBaseName() == "__uuidof") {
-      if (numLeft() < 2)
-        return nullptr;
-      if (*First == 't') {
-        ++First;
-        Node *Ty = getDerived().parseType();
-        if (!Ty)
-          return nullptr;
-        return make<CallExpr>(Name, makeNodeArray(&Ty, &Ty + 1));
-      }
-      if (*First == 'z') {
-        ++First;
-        Node *Ex = getDerived().parseExpr();
-        if (!Ex)
-          return nullptr;
-        return make<CallExpr>(Name, makeNodeArray(&Ex, &Ex + 1));
+      if (consumeIf('t')) {
+        UUID = getDerived().parseType();
+        IsUUID = true;
+      } else if (consumeIf('z')) {
+        UUID = getDerived().parseExpr();
+        IsUUID = true;
       }
     }
     size_t ExprsBegin = Names.size();
-    while (!consumeIf('E')) {
-      Node *E = getDerived().parseTemplateArg();
-      if (E == nullptr)
-        return E;
-      Names.push_back(E);
+    if (IsUUID) {
+      if (UUID == nullptr)
+        return nullptr;
+      Names.push_back(UUID);
+    } else {
+      while (!consumeIf('E')) {
+        Node *E = getDerived().parseTemplateArg();
+        if (E == nullptr)
+          return E;
+        Names.push_back(E);
+      }
     }
     return make<CallExpr>(Name, popTrailingNodeArray(ExprsBegin));
   }

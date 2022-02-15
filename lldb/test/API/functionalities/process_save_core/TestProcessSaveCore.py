@@ -43,7 +43,7 @@ class ProcessSaveCoreTestCase(TestBase):
             self.assertEqual(process.GetState(), lldb.eStateStopped)
             self.assertTrue(process.SaveCore(core))
             self.assertTrue(os.path.isfile(core))
-            self.assertTrue(process.Kill().Success())
+            self.assertSuccess(process.Kill())
 
             # To verify, we'll launch with the mini dump, and ensure that we see
             # the executable in the module list.
@@ -77,7 +77,7 @@ class ProcessSaveCoreTestCase(TestBase):
             self.assertEqual(process.GetState(), lldb.eStateStopped)
             self.assertTrue(process.SaveCore(core))
             self.assertTrue(os.path.isfile(core))
-            self.assertTrue(process.Kill().Success())
+            self.assertSuccess(process.Kill())
             pid = process.GetProcessID()
 
             target = self.dbg.CreateTarget(None)

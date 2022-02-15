@@ -261,8 +261,6 @@ public:
 
   void setSSI(const StackSafetyGlobalInfo *S) { SSI = S; }
 
-  DenseMap<AllocaInst *, AllocaInst *> padInterestingAllocas(
-      const MapVector<AllocaInst *, memtag::AllocaInfo> &AllocasToInstrument);
   bool sanitizeFunction(Function &F,
                         llvm::function_ref<const DominatorTree &()> GetDT,
                         llvm::function_ref<const PostDominatorTree &()> GetPDT);
@@ -1046,11 +1044,6 @@ bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O) {
   return true;
 }
 
-static uint64_t getAllocaSizeInBytes(const AllocaInst &AI) {
-  auto DL = AI.getModule()->getDataLayout();
-  return AI.getAllocationSizeInBits(DL).getValue() / 8;
-}
-
 void HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
                                    size_t Size) {
   size_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
@@ -1353,7 +1346,7 @@ bool HWAddressSanitizer::instrumentStack(
                                                           NewOps, LocNo));
     }
 
-    size_t Size = getAllocaSizeInBytes(*AI);
+    size_t Size = memtag::getAllocaSizeInBytes(*AI);
     size_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
     auto TagEnd = [&](Instruction *Node) {
       IRB.SetInsertPoint(Node);
@@ -1385,6 +1378,19 @@ bool HWAddressSanitizer::instrumentStack(
           II->eraseFromParent();
       }
     }
+    if (memtag::alignAndPadAlloca(Info, Align(Mapping.getObjectAlignment()))) {
+      for (auto DVI : Info.DbgVariableIntrinsics) {
+        SmallDenseSet<Value *> LocationOps(DVI->location_ops().begin(),
+                                           DVI->location_ops().end());
+        for (Value *V : LocationOps) {
+          if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
+            if (V == AI)
+              DVI->replaceVariableLocationOp(V, Info.AI);
+          }
+        }
+      }
+      AI->eraseFromParent();
+    }
   }
   for (auto &I : SInfo.UnrecognizedLifetimes)
     I->eraseFromParent();
@@ -1396,7 +1402,7 @@ bool HWAddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
           // FIXME: instrument dynamic allocas, too
           AI.isStaticAlloca() &&
           // alloca() may be called with 0 size, ignore it.
-          getAllocaSizeInBytes(AI) > 0 &&
+          memtag::getAllocaSizeInBytes(AI) > 0 &&
           // We are only interested in allocas not promotable to registers.
           // Promotable allocas are common under -O0.
           !isAllocaPromotable(&AI) &&
@@ -1407,39 +1413,6 @@ bool HWAddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
           !AI.isSwiftError()) &&
          // safe allocas are not interesting
          !(SSI && SSI->isSafe(AI));
-}
-
-DenseMap<AllocaInst *, AllocaInst *> HWAddressSanitizer::padInterestingAllocas(
-    const MapVector<AllocaInst *, memtag::AllocaInfo> &AllocasToInstrument) {
-  DenseMap<AllocaInst *, AllocaInst *> AllocaToPaddedAllocaMap;
-  for (auto &KV : AllocasToInstrument) {
-    AllocaInst *AI = KV.first;
-    uint64_t Size = getAllocaSizeInBytes(*AI);
-    uint64_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
-    AI->setAlignment(
-        Align(std::max(AI->getAlignment(), Mapping.getObjectAlignment())));
-    if (Size != AlignedSize) {
-      Type *AllocatedType = AI->getAllocatedType();
-      if (AI->isArrayAllocation()) {
-        uint64_t ArraySize =
-            cast<ConstantInt>(AI->getArraySize())->getZExtValue();
-        AllocatedType = ArrayType::get(AllocatedType, ArraySize);
-      }
-      Type *TypeWithPadding = StructType::get(
-          AllocatedType, ArrayType::get(Int8Ty, AlignedSize - Size));
-      auto *NewAI = new AllocaInst(
-          TypeWithPadding, AI->getType()->getAddressSpace(), nullptr, "", AI);
-      NewAI->takeName(AI);
-      NewAI->setAlignment(AI->getAlign());
-      NewAI->setUsedWithInAlloca(AI->isUsedWithInAlloca());
-      NewAI->setSwiftError(AI->isSwiftError());
-      NewAI->copyMetadata(*AI);
-      auto *Bitcast = new BitCastInst(NewAI, AI->getType(), "", AI);
-      AI->replaceAllUsesWith(Bitcast);
-      AllocaToPaddedAllocaMap[AI] = NewAI;
-    }
-  }
-  return AllocaToPaddedAllocaMap;
 }
 
 bool HWAddressSanitizer::sanitizeFunction(
@@ -1513,28 +1486,6 @@ bool HWAddressSanitizer::sanitizeFunction(
     // statement if return_twice functions are called.
     instrumentStack(DetectUseAfterScope && !SInfo.CallsReturnTwice, SIB.get(),
                     StackTag, GetDT, GetPDT);
-  }
-  // Pad and align each of the allocas that we instrumented to stop small
-  // uninteresting allocas from hiding in instrumented alloca's padding and so
-  // that we have enough space to store real tags for short granules.
-  DenseMap<AllocaInst *, AllocaInst *> AllocaToPaddedAllocaMap =
-      padInterestingAllocas(SInfo.AllocasToInstrument);
-
-  if (!AllocaToPaddedAllocaMap.empty()) {
-    for (auto &Inst : instructions(F)) {
-      if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
-        SmallDenseSet<Value *> LocationOps(DVI->location_ops().begin(),
-                                           DVI->location_ops().end());
-        for (Value *V : LocationOps) {
-          if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
-            if (auto *NewAI = AllocaToPaddedAllocaMap.lookup(AI))
-              DVI->replaceVariableLocationOp(V, NewAI);
-          }
-        }
-      }
-    }
-    for (auto &P : AllocaToPaddedAllocaMap)
-      P.first->eraseFromParent();
   }
 
   // If we split the entry block, move any allocas that were originally in the

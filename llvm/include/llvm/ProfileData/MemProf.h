@@ -5,11 +5,133 @@
 #include <string>
 #include <vector>
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ProfileData/MemProfData.inc"
+#include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 namespace memprof {
+
+enum class Meta : uint64_t {
+  Start = 0,
+#define MIBEntryDef(NameTag, Name, Type) NameTag,
+#include "llvm/ProfileData/MIBEntryDef.inc"
+#undef MIBEntryDef
+  Size
+};
+
+using MemProfSchema = llvm::SmallVector<Meta, static_cast<int>(Meta::Size)>;
+
+// Holds the actual MemInfoBlock data with all fields. Contents may be read or
+// written partially by providing an appropriate schema to the serialize and
+// deserialize methods.
+struct PortableMemInfoBlock {
+  PortableMemInfoBlock() = default;
+  explicit PortableMemInfoBlock(const MemInfoBlock &Block) {
+#define MIBEntryDef(NameTag, Name, Type) Name = Block.Name;
+#include "llvm/ProfileData/MIBEntryDef.inc"
+#undef MIBEntryDef
+  }
+
+  PortableMemInfoBlock(const MemProfSchema &Schema, const unsigned char *Ptr) {
+    deserialize(Schema, Ptr);
+  }
+
+  // Read the contents of \p Ptr based on the \p Schema to populate the
+  // MemInfoBlock member.
+  void deserialize(const MemProfSchema &Schema, const unsigned char *Ptr) {
+    using namespace support;
+
+    for (const Meta Id : Schema) {
+      switch (Id) {
+#define MIBEntryDef(NameTag, Name, Type)                                       \
+  case Meta::Name: {                                                           \
+    Name = endian::readNext<Type, little, unaligned>(Ptr);                     \
+  } break;
+#include "llvm/ProfileData/MIBEntryDef.inc"
+#undef MIBEntryDef
+      default:
+        llvm_unreachable("Unknown meta type id, is the profile collected from "
+                         "a newer version of the runtime?");
+      }
+    }
+  }
+
+  // Write the contents of the MemInfoBlock based on the \p Schema provided to
+  // the raw_ostream \p OS.
+  void serialize(const MemProfSchema &Schema, raw_ostream &OS) const {
+    using namespace support;
+
+    endian::Writer LE(OS, little);
+    for (const Meta Id : Schema) {
+      switch (Id) {
+#define MIBEntryDef(NameTag, Name, Type)                                       \
+  case Meta::Name: {                                                           \
+    LE.write<Type>(Name);                                                      \
+  } break;
+#include "llvm/ProfileData/MIBEntryDef.inc"
+#undef MIBEntryDef
+      default:
+        llvm_unreachable("Unknown meta type id, invalid input?");
+      }
+    }
+  }
+
+  // Print out the contents of the MemInfoBlock in YAML format.
+  void printYAML(raw_ostream &OS) const {
+    OS << "    MemInfoBlock:\n";
+#define MIBEntryDef(NameTag, Name, Type)                                       \
+  OS << "      " << #Name << ": " << Name << "\n";
+#include "llvm/ProfileData/MIBEntryDef.inc"
+#undef MIBEntryDef
+  }
+
+  // Define getters for each type which can be called by analyses.
+#define MIBEntryDef(NameTag, Name, Type)                                       \
+  Type get##Name() const { return Name; }
+#include "llvm/ProfileData/MIBEntryDef.inc"
+#undef MIBEntryDef
+
+  void clear() { *this = PortableMemInfoBlock(); }
+
+  // Returns the full schema currently in use.
+  static MemProfSchema getSchema() {
+    MemProfSchema List;
+#define MIBEntryDef(NameTag, Name, Type) List.push_back(Meta::Name);
+#include "llvm/ProfileData/MIBEntryDef.inc"
+#undef MIBEntryDef
+    return List;
+  }
+
+  bool operator==(const PortableMemInfoBlock &Other) const {
+#define MIBEntryDef(NameTag, Name, Type)                                       \
+  if (Other.get##Name() != get##Name())                                        \
+    return false;
+#include "llvm/ProfileData/MIBEntryDef.inc"
+#undef MIBEntryDef
+    return true;
+  }
+
+  bool operator!=(const PortableMemInfoBlock &Other) const {
+    return !operator==(Other);
+  }
+
+  static constexpr size_t serializedSize() {
+    size_t Result = 0;
+#define MIBEntryDef(NameTag, Name, Type) Result += sizeof(Type);
+#include "llvm/ProfileData/MIBEntryDef.inc"
+#undef MIBEntryDef
+    return Result;
+  }
+
+private:
+#define MIBEntryDef(NameTag, Name, Type) Type Name = Type();
+#include "llvm/ProfileData/MIBEntryDef.inc"
+#undef MIBEntryDef
+};
 
 struct MemProfRecord {
   struct Frame {
@@ -24,14 +146,11 @@ struct MemProfRecord {
   };
 
   std::vector<Frame> CallStack;
-  // TODO: Replace this with the entry format described in the RFC so
-  // that the InstrProfRecord reader and writer do not have to be concerned
-  // about backwards compat.
-  MemInfoBlock Info;
+  PortableMemInfoBlock Info;
 
   void clear() {
     CallStack.clear();
-    Info = MemInfoBlock();
+    Info.clear();
   }
 
   // Prints out the contents of the memprof record in YAML.
@@ -47,45 +166,7 @@ struct MemProfRecord {
          << "      Inline: " << Frame.IsInlineFrame << "\n";
     }
 
-    OS << "    MemInfoBlock:\n";
-
-    // TODO: Replace this once the format is updated to be version agnostic.
-    OS << "      "
-       << "AllocCount: " << Info.alloc_count << "\n";
-    OS << "      "
-       << "TotalAccessCount: " << Info.total_access_count << "\n";
-    OS << "      "
-       << "MinAccessCount: " << Info.min_access_count << "\n";
-    OS << "      "
-       << "MaxAccessCount: " << Info.max_access_count << "\n";
-    OS << "      "
-       << "TotalSize: " << Info.total_size << "\n";
-    OS << "      "
-       << "MinSize: " << Info.min_size << "\n";
-    OS << "      "
-       << "MaxSize: " << Info.max_size << "\n";
-    OS << "      "
-       << "AllocTimestamp: " << Info.alloc_timestamp << "\n";
-    OS << "      "
-       << "DeallocTimestamp: " << Info.dealloc_timestamp << "\n";
-    OS << "      "
-       << "TotalLifetime: " << Info.total_lifetime << "\n";
-    OS << "      "
-       << "MinLifetime: " << Info.min_lifetime << "\n";
-    OS << "      "
-       << "MaxLifetime: " << Info.max_lifetime << "\n";
-    OS << "      "
-       << "AllocCpuId: " << Info.alloc_cpu_id << "\n";
-    OS << "      "
-       << "DeallocCpuId: " << Info.dealloc_cpu_id << "\n";
-    OS << "      "
-       << "NumMigratedCpu: " << Info.num_migrated_cpu << "\n";
-    OS << "      "
-       << "NumLifetimeOverlaps: " << Info.num_lifetime_overlaps << "\n";
-    OS << "      "
-       << "NumSameAllocCpu: " << Info.num_same_alloc_cpu << "\n";
-    OS << "      "
-       << "NumSameDeallocCpu: " << Info.num_same_dealloc_cpu << "\n";
+    Info.printYAML(OS);
   }
 };
 

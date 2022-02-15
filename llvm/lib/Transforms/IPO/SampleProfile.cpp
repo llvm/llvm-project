@@ -1542,6 +1542,10 @@ void SampleProfileLoader::promoteMergeNotInlinedContextSamples(
       continue;
     }
 
+    // Do not merge a context that is already duplicated into the base profile.
+    if (FS->getContext().hasAttribute(sampleprof::ContextDuplicatedIntoBase))
+      continue;
+
     if (ProfileMergeInlinee) {
       // A function call can be replicated by optimizations like callsite
       // splitting or jump threading and the replicates end up sharing the

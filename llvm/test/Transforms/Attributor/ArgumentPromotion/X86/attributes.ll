@@ -9,7 +9,7 @@
 target triple = "x86_64-unknown-linux-gnu"
 
 define internal fastcc void @no_promote_avx2(<4 x i64>* %arg, <4 x i64>* readonly %arg1) #0 {
-; IS________OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS________OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS________OPM-LABEL: define {{[^@]+}}@no_promote_avx2
 ; IS________OPM-SAME: (<4 x i64>* nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[ARG:%.*]], <4 x i64>* nocapture nofree noundef nonnull readonly align 32 dereferenceable(32) [[ARG1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS________OPM-NEXT:  bb:
@@ -17,7 +17,7 @@ define internal fastcc void @no_promote_avx2(<4 x i64>* %arg, <4 x i64>* readonl
 ; IS________OPM-NEXT:    store <4 x i64> [[TMP]], <4 x i64>* [[ARG]], align 32
 ; IS________OPM-NEXT:    ret void
 ;
-; IS________NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS________NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS________NPM-LABEL: define {{[^@]+}}@no_promote_avx2
 ; IS________NPM-SAME: (<4 x i64>* noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[ARG:%.*]], <4 x i64>* noalias nocapture nofree noundef nonnull readonly align 32 dereferenceable(32) [[ARG1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS________NPM-NEXT:  bb:
@@ -32,7 +32,7 @@ bb:
 }
 
 define void @no_promote(<4 x i64>* %arg) #1 {
-; IS__TUNIT_OPM: Function Attrs: argmemonly nofree nosync nounwind uwtable willreturn
+; IS__TUNIT_OPM: Function Attrs: argmemonly nofree nosync nounwind willreturn uwtable
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@no_promote
 ; IS__TUNIT_OPM-SAME: (<4 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IS__TUNIT_OPM-NEXT:  bb:
@@ -45,7 +45,7 @@ define void @no_promote(<4 x i64>* %arg) #1 {
 ; IS__TUNIT_OPM-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly nofree nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly nofree nosync nounwind willreturn uwtable
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@no_promote
 ; IS__TUNIT_NPM-SAME: (<4 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IS__TUNIT_NPM-NEXT:  bb:
@@ -58,7 +58,7 @@ define void @no_promote(<4 x i64>* %arg) #1 {
 ; IS__TUNIT_NPM-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[ARG]], align 2
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_OPM: Function Attrs: argmemonly nofree nosync nounwind uwtable willreturn
+; IS__CGSCC_OPM: Function Attrs: argmemonly nofree nosync nounwind willreturn uwtable
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@no_promote
 ; IS__CGSCC_OPM-SAME: (<4 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(32) [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IS__CGSCC_OPM-NEXT:  bb:
@@ -71,7 +71,7 @@ define void @no_promote(<4 x i64>* %arg) #1 {
 ; IS__CGSCC_OPM-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[ARG]], align 2
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly nofree nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM: Function Attrs: argmemonly nofree nosync nounwind willreturn uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@no_promote
 ; IS__CGSCC_NPM-SAME: (<4 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(32) [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
@@ -96,7 +96,7 @@ bb:
 }
 
 define internal fastcc void @promote_avx2(<4 x i64>* %arg, <4 x i64>* readonly %arg1) #0 {
-; IS________OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS________OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS________OPM-LABEL: define {{[^@]+}}@promote_avx2
 ; IS________OPM-SAME: (<4 x i64>* nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[ARG:%.*]], <4 x i64>* nocapture nofree noundef nonnull readonly align 32 dereferenceable(32) [[ARG1:%.*]]) #[[ATTR0]] {
 ; IS________OPM-NEXT:  bb:
@@ -104,7 +104,7 @@ define internal fastcc void @promote_avx2(<4 x i64>* %arg, <4 x i64>* readonly %
 ; IS________OPM-NEXT:    store <4 x i64> [[TMP]], <4 x i64>* [[ARG]], align 32
 ; IS________OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@promote_avx2
 ; IS__TUNIT_NPM-SAME: (<4 x i64>* noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[ARG:%.*]], <4 x i64> [[TMP0:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT_NPM-NEXT:  bb:
@@ -114,7 +114,7 @@ define internal fastcc void @promote_avx2(<4 x i64>* %arg, <4 x i64>* readonly %
 ; IS__TUNIT_NPM-NEXT:    store <4 x i64> [[TMP]], <4 x i64>* [[ARG]], align 32
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@promote_avx2
 ; IS__CGSCC_NPM-SAME: (<4 x i64>* noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[ARG:%.*]], <4 x i64> [[TMP0:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
@@ -131,7 +131,7 @@ bb:
 }
 
 define void @promote(<4 x i64>* %arg) #0 {
-; IS__TUNIT_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@promote
 ; IS__TUNIT_OPM-SAME: (<4 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT_OPM-NEXT:  bb:
@@ -144,7 +144,7 @@ define void @promote(<4 x i64>* %arg) #0 {
 ; IS__TUNIT_OPM-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@promote
 ; IS__TUNIT_NPM-SAME: (<4 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT_NPM-NEXT:  bb:
@@ -158,7 +158,7 @@ define void @promote(<4 x i64>* %arg) #0 {
 ; IS__TUNIT_NPM-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[ARG]], align 2
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@promote
 ; IS__CGSCC_OPM-SAME: (<4 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(32) [[ARG:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC_OPM-NEXT:  bb:
@@ -171,7 +171,7 @@ define void @promote(<4 x i64>* %arg) #0 {
 ; IS__CGSCC_OPM-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[ARG]], align 2
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@promote
 ; IS__CGSCC_NPM-SAME: (<4 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(32) [[ARG:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
@@ -203,14 +203,14 @@ attributes #0 = { inlinehint norecurse nounwind uwtable "target-features"="+avx2
 attributes #1 = { nounwind uwtable }
 attributes #2 = { argmemonly nounwind }
 ;.
-; IS__TUNIT____: attributes #[[ATTR0:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn "target-features"="+avx2" }
-; IS__TUNIT____: attributes #[[ATTR1:[0-9]+]] = { argmemonly nofree nosync nounwind uwtable willreturn }
+; IS__TUNIT____: attributes #[[ATTR0:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "target-features"="+avx2" }
+; IS__TUNIT____: attributes #[[ATTR1:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn uwtable }
 ; IS__TUNIT____: attributes #[[ATTR2:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
 ; IS__TUNIT____: attributes #[[ATTR3:[0-9]+]] = { willreturn writeonly }
 ; IS__TUNIT____: attributes #[[ATTR4:[0-9]+]] = { nofree nosync nounwind willreturn }
 ;.
-; IS__CGSCC____: attributes #[[ATTR0:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn "target-features"="+avx2" }
-; IS__CGSCC____: attributes #[[ATTR1:[0-9]+]] = { argmemonly nofree nosync nounwind uwtable willreturn }
+; IS__CGSCC____: attributes #[[ATTR0:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "target-features"="+avx2" }
+; IS__CGSCC____: attributes #[[ATTR1:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn uwtable }
 ; IS__CGSCC____: attributes #[[ATTR2:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR3:[0-9]+]] = { willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind willreturn }

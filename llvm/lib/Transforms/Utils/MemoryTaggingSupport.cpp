@@ -104,5 +104,44 @@ void StackInfoBuilder::visit(Instruction &Inst) {
     Info.RetVec.push_back(ExitUntag);
 }
 
+uint64_t getAllocaSizeInBytes(const AllocaInst &AI) {
+  auto DL = AI.getModule()->getDataLayout();
+  return AI.getAllocationSizeInBits(DL).getValue() / 8;
+}
+
+bool alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
+  const Align NewAlignment = max(MaybeAlign(Info.AI->getAlign()), Alignment);
+  Info.AI->setAlignment(NewAlignment);
+  auto &Ctx = Info.AI->getFunction()->getContext();
+
+  uint64_t Size = getAllocaSizeInBytes(*Info.AI);
+  uint64_t AlignedSize = alignTo(Size, Alignment);
+  if (Size == AlignedSize)
+    return false;
+
+  // Add padding to the alloca.
+  Type *AllocatedType =
+      Info.AI->isArrayAllocation()
+          ? ArrayType::get(
+                Info.AI->getAllocatedType(),
+                cast<ConstantInt>(Info.AI->getArraySize())->getZExtValue())
+          : Info.AI->getAllocatedType();
+  Type *PaddingType = ArrayType::get(Type::getInt8Ty(Ctx), AlignedSize - Size);
+  Type *TypeWithPadding = StructType::get(AllocatedType, PaddingType);
+  auto *NewAI =
+      new AllocaInst(TypeWithPadding, Info.AI->getType()->getAddressSpace(),
+                     nullptr, "", Info.AI);
+  NewAI->takeName(Info.AI);
+  NewAI->setAlignment(Info.AI->getAlign());
+  NewAI->setUsedWithInAlloca(Info.AI->isUsedWithInAlloca());
+  NewAI->setSwiftError(Info.AI->isSwiftError());
+  NewAI->copyMetadata(*Info.AI);
+
+  auto *NewPtr = new BitCastInst(NewAI, Info.AI->getType(), "", Info.AI);
+  Info.AI->replaceAllUsesWith(NewPtr);
+  Info.AI = NewAI;
+  return true;
+}
+
 } // namespace memtag
 } // namespace llvm

@@ -17,11 +17,8 @@ define <8 x i16> @haddu_base(<8 x i16> %src1, <8 x i16> %src2) {
 define <8 x i16> @haddu_const(<8 x i16> %src1) {
 ; CHECK-LABEL: haddu_const:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    uaddw v2.4s, v1.4s, v0.4h
-; CHECK-NEXT:    uaddw2 v1.4s, v1.4s, v0.8h
-; CHECK-NEXT:    shrn v0.4h, v2.4s, #1
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #1
+; CHECK-NEXT:    movi v1.8h, #1
+; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = zext <8 x i16> %src1 to <8 x i32>
   %add = add <8 x i32> %zextsrc1, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
@@ -33,11 +30,8 @@ define <8 x i16> @haddu_const(<8 x i16> %src1) {
 define <8 x i16> @haddu_const_lhs(<8 x i16> %src1) {
 ; CHECK-LABEL: haddu_const_lhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    uaddw v2.4s, v1.4s, v0.4h
-; CHECK-NEXT:    uaddw2 v1.4s, v1.4s, v0.8h
-; CHECK-NEXT:    shrn v0.4h, v2.4s, #1
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #1
+; CHECK-NEXT:    movi v1.8h, #1
+; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = zext <8 x i16> %src1 to <8 x i32>
   %add = add <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, %zextsrc1
@@ -188,11 +182,8 @@ define <8 x i16> @hadds_base(<8 x i16> %src1, <8 x i16> %src2) {
 define <8 x i16> @hadds_const(<8 x i16> %src1) {
 ; CHECK-LABEL: hadds_const:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    saddw v2.4s, v1.4s, v0.4h
-; CHECK-NEXT:    saddw2 v1.4s, v1.4s, v0.8h
-; CHECK-NEXT:    shrn v0.4h, v2.4s, #1
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #1
+; CHECK-NEXT:    movi v1.8h, #1
+; CHECK-NEXT:    shadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <8 x i16> %src1 to <8 x i32>
   %add = add <8 x i32> %zextsrc1, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
@@ -204,11 +195,8 @@ define <8 x i16> @hadds_const(<8 x i16> %src1) {
 define <8 x i16> @hadds_const_lhs(<8 x i16> %src1) {
 ; CHECK-LABEL: hadds_const_lhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    saddw v2.4s, v1.4s, v0.4h
-; CHECK-NEXT:    saddw2 v1.4s, v1.4s, v0.8h
-; CHECK-NEXT:    shrn v0.4h, v2.4s, #1
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #1
+; CHECK-NEXT:    movi v1.8h, #1
+; CHECK-NEXT:    shadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <8 x i16> %src1 to <8 x i32>
   %add = add <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, %zextsrc1
@@ -362,11 +350,8 @@ define <8 x i16> @rhaddu_base(<8 x i16> %src1, <8 x i16> %src2) {
 define <8 x i16> @rhaddu_const(<8 x i16> %src1) {
 ; CHECK-LABEL: rhaddu_const:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #2
-; CHECK-NEXT:    uaddw v2.4s, v1.4s, v0.4h
-; CHECK-NEXT:    uaddw2 v1.4s, v1.4s, v0.8h
-; CHECK-NEXT:    shrn v0.4h, v2.4s, #1
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #1
+; CHECK-NEXT:    movi v1.8h, #1
+; CHECK-NEXT:    urhadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = zext <8 x i16> %src1 to <8 x i32>
   %add1 = add <8 x i32> %zextsrc1, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
@@ -379,11 +364,8 @@ define <8 x i16> @rhaddu_const(<8 x i16> %src1) {
 define <8 x i16> @rhaddu_const_lhs(<8 x i16> %src1) {
 ; CHECK-LABEL: rhaddu_const_lhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #2
-; CHECK-NEXT:    uaddw v2.4s, v1.4s, v0.4h
-; CHECK-NEXT:    uaddw2 v1.4s, v1.4s, v0.8h
-; CHECK-NEXT:    shrn v0.4h, v2.4s, #1
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #1
+; CHECK-NEXT:    movi v1.8h, #1
+; CHECK-NEXT:    urhadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = zext <8 x i16> %src1 to <8 x i32>
   %add1 = add <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, %zextsrc1
@@ -396,11 +378,8 @@ define <8 x i16> @rhaddu_const_lhs(<8 x i16> %src1) {
 define <8 x i16> @rhaddu_const_zero(<8 x i16> %src1) {
 ; CHECK-LABEL: rhaddu_const_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    uaddw v2.4s, v1.4s, v0.4h
-; CHECK-NEXT:    uaddw2 v1.4s, v1.4s, v0.8h
-; CHECK-NEXT:    shrn v0.4h, v2.4s, #1
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #1
+; CHECK-NEXT:    movi v1.8h, #1
+; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = zext <8 x i16> %src1 to <8 x i32>
   %add1 = add <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, %zextsrc1
@@ -439,11 +418,8 @@ define <8 x i16> @rhaddu_const_bothhigh() {
 define <8 x i16> @rhaddu_undef(<8 x i16> %src1) {
 ; CHECK-LABEL: rhaddu_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    uaddw v2.4s, v1.4s, v0.4h
-; CHECK-NEXT:    uaddw2 v1.4s, v1.4s, v0.8h
-; CHECK-NEXT:    shrn v0.4h, v2.4s, #1
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #1
+; CHECK-NEXT:    movi v1.8h, #1
+; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = zext <8 x i16> %src1 to <8 x i32>
   %zextsrc2 = zext <8 x i16> undef to <8 x i32>
@@ -543,11 +519,8 @@ define <8 x i16> @rhadds_base(<8 x i16> %src1, <8 x i16> %src2) {
 define <8 x i16> @rhadds_const(<8 x i16> %src1) {
 ; CHECK-LABEL: rhadds_const:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #2
-; CHECK-NEXT:    saddw v2.4s, v1.4s, v0.4h
-; CHECK-NEXT:    saddw2 v1.4s, v1.4s, v0.8h
-; CHECK-NEXT:    shrn v0.4h, v2.4s, #1
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #1
+; CHECK-NEXT:    movi v1.8h, #1
+; CHECK-NEXT:    srhadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <8 x i16> %src1 to <8 x i32>
   %add1 = add <8 x i32> %zextsrc1, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
@@ -560,11 +533,8 @@ define <8 x i16> @rhadds_const(<8 x i16> %src1) {
 define <8 x i16> @rhadds_const_lhs(<8 x i16> %src1) {
 ; CHECK-LABEL: rhadds_const_lhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #2
-; CHECK-NEXT:    saddw v2.4s, v1.4s, v0.4h
-; CHECK-NEXT:    saddw2 v1.4s, v1.4s, v0.8h
-; CHECK-NEXT:    shrn v0.4h, v2.4s, #1
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #1
+; CHECK-NEXT:    movi v1.8h, #1
+; CHECK-NEXT:    srhadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <8 x i16> %src1 to <8 x i32>
   %add1 = add <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, %zextsrc1
@@ -577,11 +547,8 @@ define <8 x i16> @rhadds_const_lhs(<8 x i16> %src1) {
 define <8 x i16> @rhadds_const_zero(<8 x i16> %src1) {
 ; CHECK-LABEL: rhadds_const_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    saddw v2.4s, v1.4s, v0.4h
-; CHECK-NEXT:    saddw2 v1.4s, v1.4s, v0.8h
-; CHECK-NEXT:    shrn v0.4h, v2.4s, #1
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #1
+; CHECK-NEXT:    movi v1.8h, #1
+; CHECK-NEXT:    shadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <8 x i16> %src1 to <8 x i32>
   %add1 = add <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, %zextsrc1
@@ -620,11 +587,8 @@ define <8 x i16> @rhadds_const_bothhigh() {
 define <8 x i16> @rhadds_undef(<8 x i16> %src1) {
 ; CHECK-LABEL: rhadds_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    saddw v2.4s, v1.4s, v0.4h
-; CHECK-NEXT:    saddw2 v1.4s, v1.4s, v0.8h
-; CHECK-NEXT:    shrn v0.4h, v2.4s, #1
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #1
+; CHECK-NEXT:    movi v1.8h, #1
+; CHECK-NEXT:    shadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <8 x i16> %src1 to <8 x i32>
   %zextsrc2 = sext <8 x i16> undef to <8 x i32>
