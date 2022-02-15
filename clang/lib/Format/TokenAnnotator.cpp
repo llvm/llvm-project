@@ -3142,7 +3142,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     // initializers.
     if (Line.IsMultiVariableDeclStmt &&
         (Left.NestingLevel == Line.First->NestingLevel ||
-         startsWithInitStatement(Line)))
+         ((Left.NestingLevel == Line.First->NestingLevel + 1) &&
+          startsWithInitStatement(Line))))
       return false;
     return Left.Previous && !Left.Previous->isOneOf(
                                 tok::l_paren, tok::coloncolon, tok::l_square);
