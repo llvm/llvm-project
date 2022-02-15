@@ -84,7 +84,7 @@ public:
   Constant *getConstantFwdRef(unsigned Idx, Type *Ty);
   Value *getValueFwdRef(unsigned Idx, Type *Ty);
 
-  void assignValue(Value *V, unsigned Idx);
+  void assignValue(unsigned Idx, Value *V);
 
   /// Once all constants are read, this method bulk resolves any forward
   /// references.

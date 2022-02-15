@@ -2454,7 +2454,7 @@ Error BitcodeReader::parseConstants() {
         SmallVector<int, 16> Mask;
         ShuffleVectorInst::getShuffleMask(Op2, Mask);
         Value *V = ConstantExpr::getShuffleVector(Op0, Op1, Mask);
-        ValueList.assignValue(V, CstNo);
+        ValueList.assignValue(CstNo, V);
       }
       for (auto &DelayedSelector : DelayedSelectors) {
         Type *OpTy = DelayedSelector.OpTy;
@@ -2475,7 +2475,7 @@ Error BitcodeReader::parseConstants() {
         }
         Constant *Op0 = ValueList.getConstantFwdRef(Op0Idx, SelectorTy);
         Value *V = ConstantExpr::getSelect(Op0, Op1, Op2);
-        ValueList.assignValue(V, CstNo);
+        ValueList.assignValue(CstNo, V);
       }
 
       if (NextCstNo != ValueList.size())
@@ -3062,7 +3062,7 @@ Error BitcodeReader::parseConstants() {
     }
     }
 
-    ValueList.assignValue(V, NextCstNo);
+    ValueList.assignValue(NextCstNo, V);
     ++NextCstNo;
   }
 }
@@ -5604,7 +5604,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
 
     // Non-void values get registered in the value table for future use.
     if (!I->getType()->isVoidTy())
-      ValueList.assignValue(I, NextValueNo++);
+      ValueList.assignValue(NextValueNo++, I);
   }
 
 OutOfRecordLoop:
