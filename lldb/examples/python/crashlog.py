@@ -351,6 +351,12 @@ class CrashLog(symbolication.Symbolicator):
         for image in self.images:
             image.dump('  ')
 
+    def set_main_image(self, identifier):
+        for i, image in enumerate(self.images):
+            if image.identifier == identifier:
+                self.images.insert(0, self.images.pop(i))
+                break
+
     def find_image_with_identifier(self, identifier):
         for image in self.images:
             if image.identifier == identifier:
@@ -435,6 +441,7 @@ class JSONCrashLogParser:
         try:
             self.parse_process_info(self.data)
             self.parse_images(self.data['usedImages'])
+            self.parse_main_image(self.data)
             self.parse_threads(self.data['threads'])
             self.parse_errors(self.data)
             thread = self.crashlog.threads[self.crashlog.crashed_thread_idx]
@@ -484,6 +491,11 @@ class JSONCrashLogParser:
                                                      self.verbose)
             self.crashlog.images.append(darwin_image)
             idx += 1
+
+    def parse_main_image(self, json_data):
+        if 'procName' in json_data:
+            proc_name = json_data['procName']
+            self.crashlog.set_main_image(proc_name)
 
     def parse_frames(self, thread, json_frames):
         idx = 0
