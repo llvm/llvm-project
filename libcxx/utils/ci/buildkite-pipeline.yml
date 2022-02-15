@@ -616,8 +616,8 @@ steps:
         - "**/test-results.xml"
       agents:
         queue: "libcxx-builders"
-        os: "macos10.15" # TODO: For now, we're running the back-deployment tests for 10.9 on 10.15, because we don't have proper 10.9 machines
-        arch: "x86_64"
+        os: "macos"
+        arch: "x86_64" # We need to use x86_64 for back-deployment CI, since the old dylibs were compiled for x86_64
       retry:
         automatic:
           - exit_status: -1  # Agent was lost
@@ -630,8 +630,8 @@ steps:
         - "**/test-results.xml"
       agents:
         queue: "libcxx-builders"
-        os: "macos10.15"
-        arch: "x86_64"
+        os: "macos"
+        arch: "x86_64" # We need to use x86_64 for back-deployment CI, since the old dylibs were compiled for x86_64
       retry:
         automatic:
           - exit_status: -1  # Agent was lost
