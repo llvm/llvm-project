@@ -518,6 +518,37 @@ printed as `(5 : i32)`. If it is not present, it will be `x`. Directives that
 are used inside optional groups are allowed only if all captured parameters are
 also optional.
 
+#### Default-Valued Parameters
+
+Optional parameters can be given default values by setting `defaultValue`, a
+string of the C++ default value, or by using `DefaultValuedParameter`. If a
+value for the parameter was not encountered during parsing, it is set to this
+default value. If a parameter is equal to its default value, it is not printed.
+The `comparator` field of the parameter is used, but if one is not specified,
+the equality operator is used.
+
+For example:
+
+```
+let parameters = (ins DefaultValuedParameter<"Optional<int>", "5">:$a)
+let mnemonic = "default_valued";
+let assemblyFormat = "(`<` $a^ `>`)?";
+```
+
+Which will look like:
+
+```
+!test.default_valued     // a = 5
+!test.default_valued<10> // a = 10
+```
+
+For optional `Attribute` or `Type` parameters, the current MLIR context is
+available through `$_ctx`. E.g.
+
+```
+DefaultValuedParameter<"IntegerType", "IntegerType::get($_ctx, 32)">
+```
+
 ### Assembly Format Directives
 
 Attribute and type assembly formats have the following directives:

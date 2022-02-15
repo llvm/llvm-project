@@ -179,6 +179,11 @@ DefGen::DefGen(const AttrOrTypeDef &def)
     : def(def), params(def.getParameters()), defCls(def.getCppClassName()),
       valueType(isa<AttrDef>(def) ? "Attribute" : "Type"),
       defType(isa<AttrDef>(def) ? "Attr" : "Type") {
+  // Check that all parameters have names.
+  for (const AttrOrTypeParameter &param : def.getParameters())
+    if (param.isAnonymous())
+      llvm::PrintFatalError("all parameters must have a name");
+
   // If a storage class is needed, create one.
   if (def.getNumParameters() > 0)
     storageCls.emplace(def.getStorageClassName(), /*isStruct=*/true);
@@ -535,8 +540,7 @@ void DefGen::emitEquals() {
                                  ? "getType()"
                                  : it.value().getName()},
                     {"_rhs", strfmt("std::get<{0}>(tblgenKey)", it.index())}});
-    Optional<StringRef> comparator = it.value().getComparator();
-    body << tgfmt(comparator ? *comparator : "$_lhs == $_rhs", &ctx);
+    body << tgfmt(it.value().getComparator(), &ctx);
   };
   llvm::interleave(llvm::enumerate(params), body, eachFn, ") && (");
 }
