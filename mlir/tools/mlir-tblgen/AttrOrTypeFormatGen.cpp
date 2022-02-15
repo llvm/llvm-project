@@ -57,20 +57,17 @@ public:
   StringRef getName() const { return param.getName(); }
 
   /// Generate the code to check whether the parameter should be printed.
-  auto genPrintGuard(FmtContext &ctx) const {
-    return [&](raw_ostream &os) -> raw_ostream & {
-      std::string self = getParameterAccessorName(getName()) + "()";
-      ctx.withSelf(self);
-      os << tgfmt("($_self", &ctx);
-      if (llvm::Optional<StringRef> defaultValue =
-              getParam().getDefaultValue()) {
-        // Use the `comparator` field if it exists, else the equality operator.
-        std::string valueStr = tgfmt(*defaultValue, &ctx).str();
-        ctx.addSubst("_lhs", self).addSubst("_rhs", valueStr);
-        os << " && !(" << tgfmt(getParam().getComparator(), &ctx) << ")";
-      }
-      return os << ")";
-    };
+  MethodBody &genPrintGuard(FmtContext &ctx, MethodBody &os) const {
+    std::string self = getParameterAccessorName(getName()) + "()";
+    ctx.withSelf(self);
+    os << tgfmt("($_self", &ctx);
+    if (llvm::Optional<StringRef> defaultValue = getParam().getDefaultValue()) {
+      // Use the `comparator` field if it exists, else the equality operator.
+      std::string valueStr = tgfmt(*defaultValue, &ctx).str();
+      ctx.addSubst("_lhs", self).addSubst("_rhs", valueStr);
+      os << " && !(" << tgfmt(getParam().getComparator(), &ctx) << ")";
+    }
+    return os << ")";
   }
 
 private:
@@ -81,12 +78,6 @@ private:
 /// Shorthand functions that can be used with ranged-based conditions.
 static bool paramIsOptional(ParameterElement *el) { return el->isOptional(); }
 static bool paramNotOptional(ParameterElement *el) { return !el->isOptional(); }
-
-/// raw_ostream doesn't have an overload for stream functors. Declare one here.
-template <typename StreamFunctor>
-static raw_ostream &operator<<(raw_ostream &os, StreamFunctor &&fcn) {
-  return fcn(os);
-}
 
 /// Base class for a directive that contains references to multiple variables.
 template <DirectiveElement::Kind DirectiveKind>
@@ -675,7 +666,7 @@ void DefFormat::genVariablePrinter(ParameterElement *el, FmtContext &ctx,
   // Guard the printer on the presence of optional parameters and that they
   // aren't equal to their default values (if they have one).
   if (el->isOptional() && !skipGuard) {
-    os << "if (" << el->genPrintGuard(ctx) << ") {\n";
+    el->genPrintGuard(ctx, os << "if (") << ") {\n";
     os.indent();
   }
 
@@ -703,8 +694,7 @@ static void guardOnAny(FmtContext &ctx, MethodBody &os,
   os << "if (";
   llvm::interleave(
       params, os,
-      [&](ParameterElement *param) { os << param->genPrintGuard(ctx); },
-      " || ");
+      [&](ParameterElement *param) { param->genPrintGuard(ctx, os); }, " || ");
   os << ") {\n";
   os.indent();
 }
@@ -727,7 +717,7 @@ void DefFormat::genCommaSeparatedPrinter(
   os.indent() << "bool _firstPrinted = true;\n";
   for (ParameterElement *param : params) {
     if (param->isOptional()) {
-      os << "if (" << param->genPrintGuard(ctx) << ") {\n";
+      param->genPrintGuard(ctx, os << "if (") << ") {\n";
       os.indent();
     }
     os << tgfmt("if (!_firstPrinted) $_printer << \", \";\n", &ctx);
