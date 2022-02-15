@@ -609,17 +609,26 @@ func @omp_atomic_write6(%addr : memref<i32>, %val : i32) {
 
 // -----
 
-func @omp_atomic_update1(%x: memref<i32>, %expr: i32, %foo: memref<i32>) {
-  // expected-error @below {{atomic update variable %x not found in the RHS of the assignment statement in an atomic.update operation}}
-  omp.atomic.update %x = %foo add %expr : memref<i32>, i32
+func @omp_atomic_update1(%x: memref<i32>, %expr: f32) {
+  // expected-error @below {{the type of the operand must be a pointer type whose element type is the same as that of the region argument}}
+  omp.atomic.update %x : memref<i32> {
+  ^bb0(%xval: f32):
+    %newval = llvm.fadd %xval, %expr : f32
+    omp.yield (%newval : f32)
+  }
   return
 }
 
 // -----
 
 func @omp_atomic_update2(%x: memref<i32>, %expr: i32) {
-  // expected-error @below {{invalid atomic bin op in atomic update}}
-  omp.atomic.update %x = %x invalid %expr : memref<i32>, i32
+  // expected-error @+2 {{op expects regions to end with 'omp.yield', found 'omp.terminator'}}
+  // expected-note @below {{in custom textual format, the absence of terminator implies 'omp.yield'}}
+  omp.atomic.update %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    omp.terminator
+  }
   return
 }
 
@@ -627,7 +636,11 @@ func @omp_atomic_update2(%x: memref<i32>, %expr: i32) {
 
 func @omp_atomic_update3(%x: memref<i32>, %expr: i32) {
   // expected-error @below {{memory-order must not be acq_rel or acquire for atomic updates}}
-  omp.atomic.update %x = %x add %expr memory_order(acq_rel) : memref<i32>, i32
+  omp.atomic.update memory_order(acq_rel) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    omp.yield (%newval : i32)
+  }
   return
 }
 
@@ -635,7 +648,11 @@ func @omp_atomic_update3(%x: memref<i32>, %expr: i32) {
 
 func @omp_atomic_update4(%x: memref<i32>, %expr: i32) {
   // expected-error @below {{memory-order must not be acq_rel or acquire for atomic updates}}
-  omp.atomic.update %x = %x add %expr memory_order(acquire) : memref<i32>, i32
+  omp.atomic.update memory_order(acquire) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    omp.yield (%newval : i32)
+  }
   return
 }
 
@@ -644,7 +661,47 @@ func @omp_atomic_update4(%x: memref<i32>, %expr: i32) {
 // expected-note @below {{prior use here}}
 func @omp_atomic_update5(%x: memref<i32>, %expr: i32) {
   // expected-error @below {{use of value '%x' expects different type than prior uses: 'i32' vs 'memref<i32>'}}
-  omp.atomic.update %x = %x add %expr : i32, memref<i32>
+  omp.atomic.update %x : i32 {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    omp.yield (%newval : i32)
+  }
+  return
+}
+
+// -----
+
+func @omp_atomic_update6(%x: memref<i32>, %expr: i32) {
+  // expected-error @below {{only updated value must be returned}}
+  omp.atomic.update %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    omp.yield (%newval, %expr : i32, i32)
+  }
+  return
+}
+
+// -----
+
+func @omp_atomic_update7(%x: memref<i32>, %expr: i32, %y: f32) {
+  // expected-error @below {{input and yielded value must have the same type}}
+  omp.atomic.update %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    omp.yield (%y: f32)
+  }
+  return
+}
+
+// -----
+
+func @omp_atomic_update8(%x: memref<i32>, %expr: i32) {
+  // expected-error @below {{the region must accept exactly one argument}}
+  omp.atomic.update %x : memref<i32> {
+  ^bb0(%xval: i32, %tmp: i32):
+    %newval = llvm.add %xval, %expr : i32
+    omp.yield (%newval : i32)
+  }
   return
 }
 
@@ -676,8 +733,16 @@ func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
 func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
   omp.atomic.capture {
     // expected-error @below {{invalid sequence of operations in the capture region}}
-    omp.atomic.update %x = %x add %expr : memref<i32>, i32
-    omp.atomic.update %x = %x sub %expr : memref<i32>, i32
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield (%newval : i32)
+    }
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield (%newval : i32)
+    }
     omp.terminator
   }
   return
@@ -701,7 +766,11 @@ func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
   omp.atomic.capture {
     // expected-error @below {{invalid sequence of operations in the capture region}}
     omp.atomic.write %x = %expr : memref<i32>, i32
-    omp.atomic.update %x = %x add %expr : memref<i32>, i32
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield (%newval : i32)
+    }
     omp.terminator
   }
   return
@@ -712,7 +781,11 @@ func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
 func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
   omp.atomic.capture {
     // expected-error @below {{invalid sequence of operations in the capture region}}
-    omp.atomic.update %x = %x add %expr : memref<i32>, i32
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield (%newval : i32)
+    }
     omp.atomic.write %x = %expr : memref<i32>, i32
     omp.terminator
   }
@@ -736,7 +809,11 @@ func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
 func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
   omp.atomic.capture {
     // expected-error @below {{updated variable in omp.atomic.update must be captured in second operation}}
-    omp.atomic.update %x = %x add %expr : memref<i32>, i32
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield (%newval : i32)
+    }
     omp.atomic.read %v = %y : memref<i32>
     omp.terminator
   }
@@ -748,7 +825,11 @@ func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %exp
   omp.atomic.capture {
     // expected-error @below {{captured variable in omp.atomic.read must be updated in second operation}}
     omp.atomic.read %v = %y : memref<i32>
-    omp.atomic.update %x = %x add %expr : memref<i32>, i32
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield (%newval : i32)
+    }
     omp.terminator
   }
 }
