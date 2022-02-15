@@ -3,6 +3,7 @@ add_llvm_component_library(LLVMTableGen
   Error.cpp
   JSONBackend.cpp
   Main.cpp
+  Parser.cpp
   Record.cpp
   SetTheory.cpp
   StringMatcher.cpp

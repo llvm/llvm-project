@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TableGen/Record.h"
+#include "RecordContext.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -92,6 +93,8 @@ struct RecordContext {
 } // namespace llvm
 
 ManagedStatic<detail::RecordContext> Context;
+
+void llvm::detail::resetTablegenRecordContext() { Context.destroy(); }
 
 //===----------------------------------------------------------------------===//
 //    Type implementations
