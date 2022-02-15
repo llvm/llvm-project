@@ -163,47 +163,71 @@ struct FrameworkCacheEntry {
   bool IsUserSpecifiedSystemFramework;
 };
 
-/// Forward iterator over the search directories of \c HeaderSearch.
-struct ConstSearchDirIterator
-    : llvm::iterator_facade_base<ConstSearchDirIterator,
+namespace detail {
+template <bool Const, typename T>
+using Qualified = std::conditional_t<Const, const T, T>;
+
+/// Forward iterator over the search directories of HeaderSearch.
+/// Does not get invalidated by \c HeaderSearch::Add{,System}SearchPath.
+template <bool IsConst>
+struct SearchDirIteratorImpl
+    : llvm::iterator_facade_base<SearchDirIteratorImpl<IsConst>,
                                  std::forward_iterator_tag,
-                                 const DirectoryLookup> {
-  ConstSearchDirIterator(const ConstSearchDirIterator &) = default;
+                                 Qualified<IsConst, DirectoryLookup>> {
+  /// Const -> non-const iterator conversion.
+  template <typename Enable = std::enable_if<IsConst, bool>>
+  SearchDirIteratorImpl(const SearchDirIteratorImpl<false> &Other)
+      : HS(Other.HS), Idx(Other.Idx) {}
 
-  ConstSearchDirIterator &operator=(const ConstSearchDirIterator &) = default;
+  SearchDirIteratorImpl(const SearchDirIteratorImpl &) = default;
 
-  bool operator==(const ConstSearchDirIterator &RHS) const {
+  SearchDirIteratorImpl &operator=(const SearchDirIteratorImpl &) = default;
+
+  bool operator==(const SearchDirIteratorImpl &RHS) const {
     return HS == RHS.HS && Idx == RHS.Idx;
   }
 
-  ConstSearchDirIterator &operator++() {
+  SearchDirIteratorImpl &operator++() {
     assert(*this && "Invalid iterator.");
     ++Idx;
     return *this;
   }
 
-  const DirectoryLookup &operator*() const;
+  Qualified<IsConst, DirectoryLookup> &operator*() const {
+    assert(*this && "Invalid iterator.");
+    return HS->SearchDirs[Idx];
+  }
 
   /// Creates an invalid iterator.
-  ConstSearchDirIterator(std::nullptr_t) : HS(nullptr), Idx(0) {}
+  SearchDirIteratorImpl(std::nullptr_t) : HS(nullptr), Idx(0) {}
 
   /// Checks whether the iterator is valid.
   explicit operator bool() const { return HS != nullptr; }
 
 private:
   /// The parent \c HeaderSearch. This is \c nullptr for invalid iterator.
-  const HeaderSearch *HS;
+  Qualified<IsConst, HeaderSearch> *HS;
 
   /// The index of the current element.
   size_t Idx;
 
   /// The constructor that creates a valid iterator.
-  ConstSearchDirIterator(const HeaderSearch &HS, size_t Idx)
+  SearchDirIteratorImpl(Qualified<IsConst, HeaderSearch> &HS, size_t Idx)
       : HS(&HS), Idx(Idx) {}
 
   /// Only HeaderSearch is allowed to instantiate valid iterators.
   friend HeaderSearch;
+
+  /// Enables const -> non-const conversion.
+  friend SearchDirIteratorImpl<!IsConst>;
 };
+} // namespace detail
+
+using ConstSearchDirIterator = detail::SearchDirIteratorImpl<true>;
+using SearchDirIterator = detail::SearchDirIteratorImpl<false>;
+
+using ConstSearchDirRange = llvm::iterator_range<ConstSearchDirIterator>;
+using SearchDirRange = llvm::iterator_range<SearchDirIterator>;
 
 /// Encapsulates the information needed to find the file referenced
 /// by a \#include or \#include_next, (sub-)framework lookup, etc.
@@ -211,6 +235,7 @@ class HeaderSearch {
   friend class DirectoryLookup;
 
   friend ConstSearchDirIterator;
+  friend SearchDirIterator;
 
   /// Header-search options used to initialize this header search.
   std::shared_ptr<HeaderSearchOptions> HSOpts;
@@ -778,8 +803,17 @@ public:
   const HeaderFileInfo *getExistingFileInfo(const FileEntry *FE,
                                             bool WantExternal = true) const;
 
+  SearchDirIterator search_dir_begin() { return {*this, 0}; }
+  SearchDirIterator search_dir_end() { return {*this, SearchDirs.size()}; }
+  SearchDirRange search_dir_range() {
+    return {search_dir_begin(), search_dir_end()};
+  }
+
   ConstSearchDirIterator search_dir_begin() const { return quoted_dir_begin(); }
   ConstSearchDirIterator search_dir_end() const { return system_dir_end(); }
+  ConstSearchDirRange search_dir_range() const {
+    return {search_dir_begin(), search_dir_end()};
+  }
 
   unsigned search_dir_size() const { return SearchDirs.size(); }
 
@@ -799,7 +833,7 @@ public:
   }
 
   /// Get the index of the given search directory.
-  Optional<unsigned> searchDirIdx(const DirectoryLookup &DL) const;
+  unsigned searchDirIdx(const DirectoryLookup &DL) const;
 
   /// Retrieve a uniqued framework name.
   StringRef getUniqueFrameworkName(StringRef Framework);
