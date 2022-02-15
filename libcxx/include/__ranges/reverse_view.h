@@ -51,13 +51,13 @@ namespace ranges {
     reverse_view() requires default_initializable<_View> = default;
 
     _LIBCPP_HIDE_FROM_ABI
-    constexpr explicit reverse_view(_View __view) : __base_(_VSTD::move(__view)) {}
+    constexpr explicit reverse_view(_View __view) : __base_(std::move(__view)) {}
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr _View base() const& requires copy_constructible<_View> { return __base_; }
 
     _LIBCPP_HIDE_FROM_ABI
-    constexpr _View base() && { return _VSTD::move(__base_); }
+    constexpr _View base() && { return std::move(__base_); }
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr reverse_iterator<iterator_t<_View>> begin() {
@@ -65,7 +65,7 @@ namespace ranges {
         if (__cached_begin_.__has_value())
           return *__cached_begin_;
 
-      auto __tmp = _VSTD::make_reverse_iterator(ranges::next(ranges::begin(__base_), ranges::end(__base_)));
+      auto __tmp = std::make_reverse_iterator(ranges::next(ranges::begin(__base_), ranges::end(__base_)));
       if constexpr (_UseCache)
         __cached_begin_.__emplace(__tmp);
       return __tmp;
@@ -73,22 +73,22 @@ namespace ranges {
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr reverse_iterator<iterator_t<_View>> begin() requires common_range<_View> {
-      return _VSTD::make_reverse_iterator(ranges::end(__base_));
+      return std::make_reverse_iterator(ranges::end(__base_));
     }
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr auto begin() const requires common_range<const _View> {
-      return _VSTD::make_reverse_iterator(ranges::end(__base_));
+      return std::make_reverse_iterator(ranges::end(__base_));
     }
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr reverse_iterator<iterator_t<_View>> end() {
-      return _VSTD::make_reverse_iterator(ranges::begin(__base_));
+      return std::make_reverse_iterator(ranges::begin(__base_));
     }
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr auto end() const requires common_range<const _View> {
-      return _VSTD::make_reverse_iterator(ranges::begin(__base_));
+      return std::make_reverse_iterator(ranges::begin(__base_));
     }
 
     _LIBCPP_HIDE_FROM_ABI
@@ -143,9 +143,9 @@ namespace ranges {
         requires __is_reverse_view<remove_cvref_t<_Range>>
       [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
       constexpr auto operator()(_Range&& __range) const
-        noexcept(noexcept(_VSTD::forward<_Range>(__range).base()))
-        -> decltype(      _VSTD::forward<_Range>(__range).base())
-        { return          _VSTD::forward<_Range>(__range).base(); }
+        noexcept(noexcept(std::forward<_Range>(__range).base()))
+        -> decltype(      std::forward<_Range>(__range).base())
+        { return          std::forward<_Range>(__range).base(); }
 
       template<class _Range,
                class _UnwrappedSubrange = typename __unwrapped_reverse_subrange<remove_cvref_t<_Range>>::type>
@@ -171,9 +171,9 @@ namespace ranges {
                   !__is_unsized_reverse_subrange<remove_cvref_t<_Range>>)
       [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
       constexpr auto operator()(_Range&& __range) const
-        noexcept(noexcept(reverse_view{_VSTD::forward<_Range>(__range)}))
-        -> decltype(      reverse_view{_VSTD::forward<_Range>(__range)})
-        { return          reverse_view{_VSTD::forward<_Range>(__range)}; }
+        noexcept(noexcept(reverse_view{std::forward<_Range>(__range)}))
+        -> decltype(      reverse_view{std::forward<_Range>(__range)})
+        { return          reverse_view{std::forward<_Range>(__range)}; }
     };
   } // namespace __reverse
 
