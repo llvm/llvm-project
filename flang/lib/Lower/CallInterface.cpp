@@ -155,6 +155,21 @@ public:
                    FirPlaceHolder::resultEntityPosition, Property::Value);
   }
 
+  void buildExplicitInterface(
+      const Fortran::evaluate::characteristics::Procedure &procedure) {
+    // Handle result
+    if (const std::optional<Fortran::evaluate::characteristics::FunctionResult>
+            &result = procedure.functionResult) {
+      if (result->CanBeReturnedViaImplicitInterface())
+        handleImplicitResult(*result);
+      else
+        handleExplicitResult(*result);
+    } else if (interface.side().hasAlternateReturns()) {
+      addFirResult(mlir::IndexType::get(&mlirContext),
+                   FirPlaceHolder::resultEntityPosition, Property::Value);
+    }
+  }
+
 private:
   void handleImplicitResult(
       const Fortran::evaluate::characteristics::FunctionResult &result) {
@@ -182,6 +197,57 @@ private:
     }
   }
 
+  void handleExplicitResult(
+      const Fortran::evaluate::characteristics::FunctionResult &result) {
+    using Attr = Fortran::evaluate::characteristics::FunctionResult::Attr;
+
+    if (result.IsProcedurePointer())
+      TODO(interface.converter.getCurrentLocation(),
+           "procedure pointer results");
+    const Fortran::evaluate::characteristics::TypeAndShape *typeAndShape =
+        result.GetTypeAndShape();
+    assert(typeAndShape && "expect type for non proc pointer result");
+    Fortran::evaluate::DynamicType dynamicType = typeAndShape->type();
+    if (dynamicType.category() == Fortran::common::TypeCategory::Character) {
+      TODO(interface.converter.getCurrentLocation(),
+           "implicit result character type");
+    } else if (dynamicType.category() ==
+               Fortran::common::TypeCategory::Derived) {
+      TODO(interface.converter.getCurrentLocation(),
+           "implicit result derived type");
+    }
+    mlir::Type mlirType =
+        getConverter().genType(dynamicType.category(), dynamicType.kind());
+    fir::SequenceType::Shape bounds = getBounds(typeAndShape->shape());
+    if (!bounds.empty())
+      mlirType = fir::SequenceType::get(bounds, mlirType);
+    if (result.attrs.test(Attr::Allocatable))
+      mlirType = fir::BoxType::get(fir::HeapType::get(mlirType));
+    if (result.attrs.test(Attr::Pointer))
+      mlirType = fir::BoxType::get(fir::PointerType::get(mlirType));
+
+    addFirResult(mlirType, FirPlaceHolder::resultEntityPosition,
+                 Property::Value);
+  }
+
+  fir::SequenceType::Shape getBounds(const Fortran::evaluate::Shape &shape) {
+    fir::SequenceType::Shape bounds;
+    for (Fortran::evaluate::MaybeExtentExpr extentExpr : shape) {
+      fir::SequenceType::Extent extent = fir::SequenceType::getUnknownExtent();
+      if (std::optional<std::int64_t> constantExtent =
+              toInt64(std::move(extentExpr)))
+        extent = *constantExtent;
+      bounds.push_back(extent);
+    }
+    return bounds;
+  }
+
+  template <typename A>
+  std::optional<std::int64_t> toInt64(A &&expr) {
+    return Fortran::evaluate::ToInt64(Fortran::evaluate::Fold(
+        getConverter().getFoldingContext(), std::move(expr)));
+  }
+
   void addFirResult(mlir::Type type, int entityPosition, Property p) {
     interface.outputs.emplace_back(FirPlaceHolder{type, entityPosition, p});
   }
@@ -201,7 +267,7 @@ void Fortran::lower::CallInterface<T>::determineInterface(
   if (isImplicit)
     impl.buildImplicitInterface(procedure);
   else
-    TODO_NOLOC("determineImplicitInterface");
+    impl.buildExplicitInterface(procedure);
 }
 
 template <typename T>
