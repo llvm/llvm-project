@@ -704,9 +704,10 @@ Optional<FileEntryRef> DirectoryLookup::DoFrameworkLookup(
 }
 
 void HeaderSearch::cacheLookupSuccess(LookupFileCacheInfo &CacheLookup,
-                                      unsigned HitIdx, SourceLocation Loc) {
-  CacheLookup.HitIdx = HitIdx;
-  noteLookupUsage(HitIdx, Loc);
+                                      ConstSearchDirIterator HitIt,
+                                      SourceLocation Loc) {
+  CacheLookup.HitIt = HitIt;
+  noteLookupUsage(HitIt.Idx, Loc);
 }
 
 void HeaderSearch::noteLookupUsage(unsigned HitIdx, SourceLocation Loc) {
@@ -964,12 +965,13 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
   CurDir = nullptr;
 
   // If this is a system #include, ignore the user #include locs.
-  unsigned i = isAngled ? AngledDirIdx : 0;
+  ConstSearchDirIterator It =
+      isAngled ? angled_dir_begin() : search_dir_begin();
 
   // If this is a #include_next request, start searching after the directory the
   // file was found in.
   if (FromDir)
-    i = FromDir.Idx;
+    It = FromDir;
 
   // Cache all of the lookups performed by this method.  Many headers are
   // multiply included, and the "pragma once" optimization prevents them from
@@ -977,12 +979,14 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
   // (potentially huge) series of SearchDirs to find it.
   LookupFileCacheInfo &CacheLookup = LookupFileCache[Filename];
 
+  ConstSearchDirIterator NextIt = std::next(It);
+
   // If the entry has been previously looked up, the first value will be
   // non-zero.  If the value is equal to i (the start point of our search), then
   // this is a matching hit.
-  if (!SkipCache && CacheLookup.StartIdx == i+1) {
+  if (!SkipCache && CacheLookup.StartIt == NextIt) {
     // Skip querying potentially lots of directories for this lookup.
-    i = CacheLookup.HitIdx;
+    It = CacheLookup.HitIt;
     if (CacheLookup.MappedName) {
       Filename = CacheLookup.MappedName;
       if (IsMapped)
@@ -992,17 +996,17 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
     // Otherwise, this is the first query, or the previous query didn't match
     // our search start.  We will fill in our found location below, so prime the
     // start point value.
-    CacheLookup.reset(/*StartIdx=*/i+1);
+    CacheLookup.reset(/*NewStartIt=*/NextIt);
   }
 
   SmallString<64> MappedName;
 
   // Check each directory in sequence to see if it contains this file.
-  for (; i != SearchDirs.size(); ++i) {
+  for (; It != search_dir_end(); ++It) {
     bool InUserSpecifiedSystemFramework = false;
     bool IsInHeaderMap = false;
     bool IsFrameworkFoundInDir = false;
-    Optional<FileEntryRef> File = SearchDirs[i].LookupFile(
+    Optional<FileEntryRef> File = It->LookupFile(
         Filename, *this, IncludeLoc, SearchPath, RelativePath, RequestingModule,
         SuggestedModule, InUserSpecifiedSystemFramework, IsFrameworkFoundInDir,
         IsInHeaderMap, MappedName);
@@ -1024,7 +1028,7 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
     if (!File)
       continue;
 
-    CurDir = ConstSearchDirIterator(*this, i);
+    CurDir = It;
 
     // This file is a system header or C++ unfriendly if the dir is.
     HeaderFileInfo &HFI = getFileInfo(&File->getFileEntry());
@@ -1077,7 +1081,7 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
           &File->getFileEntry(), isAngled, FoundByHeaderMap);
 
     // Remember this location for the next lookup we do.
-    cacheLookupSuccess(CacheLookup, i, IncludeLoc);
+    cacheLookupSuccess(CacheLookup, It, IncludeLoc);
     return File;
   }
 
@@ -1108,7 +1112,7 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
       }
 
       cacheLookupSuccess(LookupFileCache[Filename],
-                         LookupFileCache[ScratchFilename].HitIdx, IncludeLoc);
+                         LookupFileCache[ScratchFilename].HitIt, IncludeLoc);
       // FIXME: SuggestedModule.
       return File;
     }
@@ -1122,7 +1126,7 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
   }
 
   // Otherwise, didn't find it. Remember we didn't find this.
-  CacheLookup.HitIdx = SearchDirs.size();
+  CacheLookup.HitIt = search_dir_end();
   return None;
 }
 

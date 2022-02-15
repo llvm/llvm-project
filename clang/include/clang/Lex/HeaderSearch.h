@@ -255,13 +255,13 @@ class HeaderSearch {
 
   /// Keeps track of each lookup performed by LookupFile.
   struct LookupFileCacheInfo {
-    /// Starting index in SearchDirs that the cached search was performed from.
-    /// If there is a hit and this value doesn't match the current query, the
-    /// cache has to be ignored.
-    unsigned StartIdx = 0;
+    /// Starting search directory iterator that the cached search was performed
+    /// from. If there is a hit and this value doesn't match the current query,
+    /// the cache has to be ignored.
+    ConstSearchDirIterator StartIt = nullptr;
 
-    /// The entry in SearchDirs that satisfied the query.
-    unsigned HitIdx = 0;
+    /// The search directory iterator that satisfied the query.
+    ConstSearchDirIterator HitIt = nullptr;
 
     /// This is non-null if the original filename was mapped to a framework
     /// include via a headermap.
@@ -270,9 +270,9 @@ class HeaderSearch {
     /// Default constructor -- Initialize all members with zero.
     LookupFileCacheInfo() = default;
 
-    void reset(unsigned StartIdx) {
-      this->StartIdx = StartIdx;
-      this->MappedName = nullptr;
+    void reset(ConstSearchDirIterator NewStartIt) {
+      StartIt = NewStartIt;
+      MappedName = nullptr;
     }
   };
   llvm::StringMap<LookupFileCacheInfo, llvm::BumpPtrAllocator> LookupFileCache;
@@ -749,9 +749,11 @@ private:
                           ModuleMap::KnownHeader *SuggestedModule);
 
   /// Cache the result of a successful lookup at the given include location
-  /// using the search path at index `HitIdx`.
-  void cacheLookupSuccess(LookupFileCacheInfo &CacheLookup, unsigned HitIdx,
+  /// using the search path at \c HitIt.
+  void cacheLookupSuccess(LookupFileCacheInfo &CacheLookup,
+                          ConstSearchDirIterator HitIt,
                           SourceLocation IncludeLoc);
+
   /// Note that a lookup at the given include location was successful using the
   /// search path at index `HitIdx`.
   void noteLookupUsage(unsigned HitIdx, SourceLocation IncludeLoc);
