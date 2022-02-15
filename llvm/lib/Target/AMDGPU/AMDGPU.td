@@ -1192,7 +1192,6 @@ def FeatureISAVersion11_Common : FeatureSet<
   [FeatureGFX11,
    FeatureLDSBankCount32,
    FeatureDLInsts,
-   FeatureDot1Insts,
    FeatureDot5Insts,
    FeatureDot7Insts,
    FeatureDot8Insts,
