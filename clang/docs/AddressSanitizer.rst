@@ -229,6 +229,12 @@ compilers, so we suggest to use it together with
 The same attribute used on a global variable prevents AddressSanitizer
 from adding redzones around it and detecting out of bounds accesses.
 
+
+AddressSanitizer also supports
+``__attribute__((disable_sanitizer_instrumentation))``. This attribute
+works similar to ``__attribute__((no_sanitize("address")))``, but it also
+prevents instrumentation performed by other sanitizers.
+
 Suppressing Errors in Recompiled Code (Ignorelist)
 --------------------------------------------------
 
