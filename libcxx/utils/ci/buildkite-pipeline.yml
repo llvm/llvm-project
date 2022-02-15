@@ -598,34 +598,37 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  # Test back-deployment to older Apple platforms
-  - label: "Apple back-deployment macosx10.9"
-    command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.9"
-    artifact_paths:
-      - "**/test-results.xml"
-    agents:
-      queue: "libcxx-builders"
-      os: "macos10.15" # TODO: For now, we're running the back-deployment tests for 10.9 on 10.15, because we don't have proper 10.9 machines
-      arch: "x86_64"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
+  # Those are disabled on the release/14.x branch because we don't have macOS 10.15 builders anymore
+  # in the fleet. Enabling those tests on the release branch would require cherry-picking too many
+  # changes from `main`.
+  # # Test back-deployment to older Apple platforms
+  # - label: "Apple back-deployment macosx10.9"
+  #   command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.9"
+  #   artifact_paths:
+  #     - "**/test-results.xml"
+  #   agents:
+  #     queue: "libcxx-builders"
+  #     os: "macos10.15" # TODO: For now, we're running the back-deployment tests for 10.9 on 10.15, because we don't have proper 10.9 machines
+  #     arch: "x86_64"
+  #   retry:
+  #     automatic:
+  #       - exit_status: -1  # Agent was lost
+  #         limit: 2
+  #   timeout_in_minutes: 120
 
-  - label: "Apple back-deployment macosx10.15"
-    command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.15"
-    artifact_paths:
-      - "**/test-results.xml"
-    agents:
-      queue: "libcxx-builders"
-      os: "macos10.15"
-      arch: "x86_64"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
+  # - label: "Apple back-deployment macosx10.15"
+  #   command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.15"
+  #   artifact_paths:
+  #     - "**/test-results.xml"
+  #   agents:
+  #     queue: "libcxx-builders"
+  #     os: "macos10.15"
+  #     arch: "x86_64"
+  #   retry:
+  #     automatic:
+  #       - exit_status: -1  # Agent was lost
+  #         limit: 2
+  #   timeout_in_minutes: 120
 
   - label: "AArch64"
     command: "libcxx/utils/ci/run-buildbot aarch64"
