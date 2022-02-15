@@ -2077,13 +2077,6 @@ public:
              ModuleMap::KnownHeader *SuggestedModule, bool *IsMapped,
              bool *IsFrameworkFound, bool SkipCache = false);
 
-  /// Get the DirectoryLookup structure used to find the current
-  /// FileEntry, if CurLexer is non-null and if applicable.
-  ///
-  /// This allows us to implement \#include_next and find directory-specific
-  /// properties.
-  const DirectoryLookup *GetCurDirLookup() { return CurDirLookup; }
-
   /// Return true if we're in the top-level file, not in a \#include.
   bool isInPrimaryFile() const;
 
@@ -2196,6 +2189,16 @@ private:
   ///
   /// If the expression is equivalent to "!defined(X)" return X in IfNDefMacro.
   DirectiveEvalResult EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro);
+
+  /// Process a '__has_include("path")' expression.
+  ///
+  /// Returns true if successful.
+  bool EvaluateHasInclude(Token &Tok, IdentifierInfo *II);
+
+  /// Process '__has_include_next("path")' expression.
+  ///
+  /// Returns true if successful.
+  bool EvaluateHasIncludeNext(Token &Tok, IdentifierInfo *II);
 
   /// Install the standard preprocessor pragmas:
   /// \#pragma GCC poison/system_header/dependency and \#pragma once.
