@@ -17,18 +17,12 @@
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Object/Archive.h"
 #include "llvm/Object/ELF.h"
 #include <tuple>
 
 namespace lld {
 // Returns a string representation for a symbol for diagnostics.
 std::string toString(const elf::Symbol &);
-
-// There are two different ways to convert an Archive::Symbol to a string:
-// One for Microsoft name mangling and one for Itanium name mangling.
-// Call the functions toCOFFString and toELFString, not just toString.
-std::string toELFString(const llvm::object::Archive::Symbol &);
 
 namespace elf {
 class CommonSymbol;
@@ -59,7 +53,6 @@ public:
     CommonKind,
     SharedKind,
     UndefinedKind,
-    LazyArchiveKind,
     LazyObjectKind,
   };
 
@@ -152,9 +145,7 @@ public:
 
   bool isLocal() const { return binding == llvm::ELF::STB_LOCAL; }
 
-  bool isLazy() const {
-    return symbolKind == LazyArchiveKind || symbolKind == LazyObjectKind;
-  }
+  bool isLazy() const { return symbolKind == LazyObjectKind; }
 
   // True if this is an undefined weak symbol. This only works once
   // all input files have been added.
@@ -417,36 +408,15 @@ public:
   uint32_t alignment;
 };
 
-// LazyArchive and LazyObject represent a symbols that is not yet in the link,
-// but we know where to find it if needed. If the resolver finds both Undefined
-// and Lazy for the same name, it will ask the Lazy to load a file.
+// LazyObject symbols represent symbols in object files between --start-lib and
+// --end-lib options. LLD also handles traditional archives as if all the files
+// in the archive are surrounded by --start-lib and --end-lib.
 //
 // A special complication is the handling of weak undefined symbols. They should
 // not load a file, but we have to remember we have seen both the weak undefined
 // and the lazy. We represent that with a lazy symbol with a weak binding. This
 // means that code looking for undefined symbols normally also has to take lazy
 // symbols into consideration.
-
-// This class represents a symbol defined in an archive file. It is
-// created from an archive file header, and it knows how to load an
-// object file from an archive to replace itself with a defined
-// symbol.
-class LazyArchive : public Symbol {
-public:
-  LazyArchive(InputFile &file, const llvm::object::Archive::Symbol s)
-      : Symbol(LazyArchiveKind, &file, s.getName(), llvm::ELF::STB_GLOBAL,
-               llvm::ELF::STV_DEFAULT, llvm::ELF::STT_NOTYPE),
-        sym(s) {}
-
-  static bool classof(const Symbol *s) { return s->kind() == LazyArchiveKind; }
-
-  MemoryBufferRef getMemberBuffer();
-
-  const llvm::object::Archive::Symbol sym;
-};
-
-// LazyObject symbols represents symbols in object files between
-// --start-lib and --end-lib options.
 class LazyObject : public Symbol {
 public:
   LazyObject(InputFile &file)
@@ -505,8 +475,7 @@ union SymbolUnion {
   alignas(CommonSymbol) char b[sizeof(CommonSymbol)];
   alignas(Undefined) char c[sizeof(Undefined)];
   alignas(SharedSymbol) char d[sizeof(SharedSymbol)];
-  alignas(LazyArchive) char e[sizeof(LazyArchive)];
-  alignas(LazyObject) char f[sizeof(LazyObject)];
+  alignas(LazyObject) char e[sizeof(LazyObject)];
 };
 
 // It is important to keep the size of SymbolUnion small for performance and
@@ -527,7 +496,6 @@ static inline void assertSymbols() {
   AssertSymbol<CommonSymbol>();
   AssertSymbol<Undefined>();
   AssertSymbol<SharedSymbol>();
-  AssertSymbol<LazyArchive>();
   AssertSymbol<LazyObject>();
 }
 
@@ -539,8 +507,6 @@ size_t Symbol::getSymbolSize() const {
     return sizeof(CommonSymbol);
   case DefinedKind:
     return sizeof(Defined);
-  case LazyArchiveKind:
-    return sizeof(LazyArchive);
   case LazyObjectKind:
     return sizeof(LazyObject);
   case SharedKind:

@@ -15,8 +15,8 @@
 #include "lld/Common/Reproduce.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/BinaryFormat/Magic.h"
-#include "llvm/Object/Archive.h"
 #include "llvm/Object/ELF.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Threading.h"
 
 namespace llvm {
@@ -34,8 +34,6 @@ class DWARFCache;
 std::string toString(const elf::InputFile *f);
 
 namespace elf {
-
-using llvm::object::Archive;
 
 class InputSection;
 class Symbol;
@@ -310,33 +308,6 @@ private:
   llvm::once_flag initDwarf;
 };
 
-// An ArchiveFile object represents a .a file.
-class ArchiveFile : public InputFile {
-public:
-  explicit ArchiveFile(std::unique_ptr<Archive> &&file);
-  static bool classof(const InputFile *f) { return f->kind() == ArchiveKind; }
-  void parse();
-
-  // Pulls out an object file that contains a definition for Sym and
-  // returns it. If the same file was instantiated before, this
-  // function does nothing (so we don't instantiate the same file
-  // more than once.)
-  void extract(const Archive::Symbol &sym);
-
-  // Check if a non-common symbol should be extracted to override a common
-  // definition.
-  bool shouldExtractForCommon(const Archive::Symbol &sym);
-
-  size_t getMemberCount() const;
-  size_t getExtractedMemberCount() const { return seen.size(); }
-
-  bool parsed = false;
-
-private:
-  std::unique_ptr<Archive> file;
-  llvm::DenseSet<uint64_t> seen;
-};
-
 class BitcodeFile : public InputFile {
 public:
   BitcodeFile(MemoryBufferRef m, StringRef archiveName,
@@ -403,7 +374,6 @@ inline bool isBitcode(MemoryBufferRef mb) {
 std::string replaceThinLTOSuffix(StringRef path);
 
 extern SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
-extern SmallVector<ArchiveFile *, 0> archiveFiles;
 extern SmallVector<BinaryFile *, 0> binaryFiles;
 extern SmallVector<BitcodeFile *, 0> bitcodeFiles;
 extern SmallVector<BitcodeFile *, 0> lazyBitcodeFiles;
