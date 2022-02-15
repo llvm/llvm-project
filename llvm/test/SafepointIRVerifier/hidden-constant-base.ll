@@ -1,12 +1,7 @@
 ; RUN: opt -safepoint-ir-verifier-print-only -verify-safepoint-ir -S %s 2>&1 | FileCheck %s
 
-; This is a false positive case. Actually base of %tmp5 is null but verifier does not see that.
-; As a result it states that %tmp5 can have a unrelocated value of %tmp.
-; Relocation of %tmp is expected to be after the call to @widget but it is not required
-; due to %tmp is always null as well.
-
 ; CHECK-LABEL: Verifying gc pointers in function: test
-; CHECK: Illegal use of unrelocated value found!
+; CHECK: No illegal uses found by SafepointIRVerifier in: test
 define i8 addrspace(1)* @test(i1 %arg) gc "statepoint-example" {
 bb:
   br label %bb2
