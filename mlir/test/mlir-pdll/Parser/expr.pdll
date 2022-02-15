@@ -1,4 +1,4 @@
-// RUN: mlir-pdll %s -I %S -split-input-file | FileCheck %s
+// RUN: mlir-pdll %s -I %S -I %S/../../../include -split-input-file | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // AttrExpr
@@ -67,6 +67,25 @@ Pattern {
   let firstEltName = tuple.firstElt;
 
   erase _: Op;
+}
+
+// -----
+
+#include "include/ops.td"
+
+// CHECK: Module
+// CHECK: `-VariableDecl {{.*}} Name<firstEltIndex> Type<Value>
+// CHECK:   `-MemberAccessExpr {{.*}} Member<0> Type<Value>
+// CHECK:     `-DeclRefExpr {{.*}} Type<Op<test.all_single>>
+// CHECK: `-VariableDecl {{.*}} Name<firstEltName> Type<Value>
+// CHECK:   `-MemberAccessExpr {{.*}} Member<result> Type<Value>
+// CHECK:     `-DeclRefExpr {{.*}} Type<Op<test.all_single>>
+Pattern {
+  let op: Op<test.all_single>;
+  let firstEltIndex = op.0;
+  let firstEltName = op.result;
+
+  erase op;
 }
 
 // -----

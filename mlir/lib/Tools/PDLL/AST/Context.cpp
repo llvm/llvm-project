@@ -12,7 +12,7 @@
 using namespace mlir;
 using namespace mlir::pdll::ast;
 
-Context::Context() {
+Context::Context(ods::Context &odsContext) : odsContext(odsContext) {
   typeUniquer.registerSingletonStorageType<detail::AttributeTypeStorage>();
   typeUniquer.registerSingletonStorageType<detail::ConstraintTypeStorage>();
   typeUniquer.registerSingletonStorageType<detail::RewriteTypeStorage>();

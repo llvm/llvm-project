@@ -1,4 +1,4 @@
-// RUN: not mlir-pdll %s -split-input-file 2>&1 | FileCheck %s
+// RUN: not mlir-pdll %s -I %S -I %S/../../../include -split-input-file 2>&1 | FileCheck %s
 
 // CHECK: expected top-level declaration, such as a `Pattern`
 10
@@ -246,6 +246,28 @@ Constraint MultiConstraint(arg1: Value, arg2: Value);
 Pattern {
   // CHECK: `Constraint`s applied via a variable constraint list must take a single input, but got 2
   let foo: MultiConstraint;
+}
+
+// -----
+
+#include "include/ops.td"
+
+Pattern {
+  // CHECK: unable to convert expression of type `Op<test.all_empty>` to the expected type of `Value` 
+  // CHECK: see the definition of `test.all_empty`, which was defined with zero results
+  let value: Value = op<test.all_empty>;
+  erase _: Op;
+}
+
+// -----
+
+#include "include/ops.td"
+
+Pattern {
+  // CHECK: unable to convert expression of type `Op<test.multiple_single_result>` to the expected type of `Value` 
+  // CHECK: see the definition of `test.multiple_single_result`, which was defined with at least 2 results
+  let value: Value = op<test.multiple_single_result>;
+  erase _: Op;
 }
 
 // -----

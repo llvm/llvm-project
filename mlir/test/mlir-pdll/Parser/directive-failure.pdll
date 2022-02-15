@@ -19,5 +19,5 @@
 
 // -----
 
-// CHECK: expected include filename to end with `.pdll`
+// CHECK: expected include filename to end with `.pdll` or `.td`
 #include "unknown_file.foo"

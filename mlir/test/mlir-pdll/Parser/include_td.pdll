@@ -1,0 +1,52 @@
+// RUN: mlir-pdll %s -I %S -I %S/../../../include -dump-ods 2>&1 | FileCheck %s
+
+#include "include/ops.td"
+
+// CHECK:      Operation `test.all_empty` {
+// CHECK-NEXT: }
+
+// CHECK:      Operation `test.all_optional` {
+// CHECK-NEXT:   Attributes { attr : Optional<I64Attr> }
+// CHECK-NEXT:   Operands { operand : Optional<I64> }
+// CHECK-NEXT:   Results { result : Optional<I64> }
+// CHECK-NEXT: }
+
+// CHECK:      Operation `test.all_single` {
+// CHECK-NEXT:   Attributes { attr : I64Attr }
+// CHECK-NEXT:   Operands { operand : I64 }
+// CHECK-NEXT:   Results { result : I64 }
+// CHECK-NEXT: }
+
+// CHECK:      Operation `test.all_variadic` {
+// CHECK-NEXT:   Operands { operands : Variadic<I64> }
+// CHECK-NEXT:   Results { results : Variadic<I64> }
+// CHECK-NEXT: }
+  
+// CHECK:      AttributeConstraint `I64Attr` {
+// CHECK-NEXT:   Summary: 64-bit signless integer attribute
+// CHECK-NEXT:   CppClass: ::mlir::IntegerAttr
+// CHECK-NEXT: }
+
+// CHECK:      TypeConstraint `I64` {
+// CHECK-NEXT:   Summary: 64-bit signless integer
+// CHECK-NEXT:   CppClass: ::mlir::IntegerType
+// CHECK-NEXT: }
+
+// CHECK: UserConstraintDecl {{.*}} Name<TestAttrInterface> ResultType<Tuple<>> Code<llvm::isa<::TestAttrInterface>(self)>
+// CHECK:  `Inputs`
+// CHECK:    `-VariableDecl {{.*}} Name<self> Type<Attr>
+// CHECK:      `Constraints`
+// CHECK:        `-AttrConstraintDecl
+
+// CHECK: UserConstraintDecl {{.*}} Name<TestOpInterface> ResultType<Tuple<>> Code<llvm::isa<::TestOpInterface>(self)>
+// CHECK:  `Inputs`
+// CHECK:    `-VariableDecl {{.*}} Name<self> Type<Op>
+// CHECK:      `Constraints`
+// CHECK:        `-OpConstraintDecl
+// CHECK:          `-OpNameDecl
+
+// CHECK: UserConstraintDecl {{.*}} Name<TestTypeInterface> ResultType<Tuple<>> Code<llvm::isa<::TestTypeInterface>(self)>
+// CHECK:  `Inputs`
+// CHECK:    `-VariableDecl {{.*}} Name<self> Type<Type>
+// CHECK:      `Constraints`
+// CHECK:        `-TypeConstraintDecl {{.*}}
