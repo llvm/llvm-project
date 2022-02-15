@@ -252,4 +252,11 @@ module attributes {gpu.container_module} {
     gpu.device_async_wait %token {numGroups = 1 : i32}
     return
   }
+
+  // CHECK-LABEL: func @set_default_device
+  func @set_default_device(%arg0: i32) {
+    // CHECK: gpu.set_default_device
+    gpu.set_default_device %arg0
+    return
+  }
 }
