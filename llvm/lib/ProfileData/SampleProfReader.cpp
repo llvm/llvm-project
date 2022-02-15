@@ -656,7 +656,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFullContext))
       FunctionSamples::ProfileIsCSFlat = ProfileIsCSFlat = true;
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagIsCSNested))
-      FunctionSamples::ProfileIsCSNested = ProfileIsCSNested;
+      FunctionSamples::ProfileIsCSNested = ProfileIsCSNested = true;
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFSDiscriminator))
       FunctionSamples::ProfileIsFS = ProfileIsFS = true;
     break;
