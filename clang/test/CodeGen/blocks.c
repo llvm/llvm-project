@@ -68,7 +68,7 @@ ftype ^test2 = ^ftype {
 
 // rdar://problem/8605032
 void f3_helper(void (^)(void));
-void f3() {
+void f3(void) {
   _Bool b = 0;
   f3_helper(^{ if (b) {} });
 }
@@ -101,7 +101,7 @@ void f5(void) {
 
 // rdar://14085217
 void (^b)() = ^{};
-int main() {
+int main(void) {
    (b?: ^{})();
 }
 // CHECK: [[ZERO:%.*]] = load void (...)*, void (...)** @b
@@ -112,7 +112,7 @@ int main() {
 
 // Ensure that we don't emit helper code in copy/dispose routines for variables
 // that are const-captured.
-void testConstCaptureInCopyAndDestroyHelpers() {
+void testConstCaptureInCopyAndDestroyHelpers(void) {
   const int x = 0;
   __block int i;
   (^ { i = x; })();

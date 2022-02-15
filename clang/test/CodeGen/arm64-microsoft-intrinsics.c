@@ -74,7 +74,7 @@ void check__sevl(void) {
 // CHECK-MSVC: @llvm.aarch64.hint(i32 5)
 // CHECK-LINUX: error: implicit declaration of function '__sevl'
 
-void check_ReadWriteBarrier() {
+void check_ReadWriteBarrier(void) {
   _ReadWriteBarrier();
 }
 
@@ -103,7 +103,7 @@ unsigned long long check_umulh(unsigned long long a, unsigned long long b) {
 // CHECK-MSVC: %[[RES:.*]] = trunc i128 %[[HIGH]] to i64
 // CHECK-LINUX: error: implicit declaration of function '__umulh'
 
-unsigned __int64 check__getReg() {
+unsigned __int64 check__getReg(void) {
   unsigned volatile __int64 reg;
   reg = __getReg(18);
   reg = __getReg(31);

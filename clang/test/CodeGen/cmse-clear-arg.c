@@ -23,7 +23,7 @@ typedef struct T0 {
 void __attribute__((cmse_nonsecure_call)) (*g0)(T0);
 
 T0 t0;
-void f0() { g0(t0); }
+void f0(void) { g0(t0); }
 // CHECK:    define {{.*}} @f0()
 // CHECK-LE: %[[V0:.*]] = and i32 {{.*}}, 1
 // CHECK-BE: %[[V0:.*]] = and i32 {{.*}}, -2147483648
@@ -42,7 +42,7 @@ typedef struct T8 {
 
 T8 t8;
 void __attribute__((cmse_nonsecure_call)) (*g8)(T8);
-void f8() { g8(t8); }
+void f8(void) { g8(t8); }
 // CHECK:    define {{.*}} @f8()
 // CHECK-LE: %[[V0:.*]] = and i32 {{.*}}, -769
 // CHECK-BE: %[[V0:.*]] = and i32 {{.*}}, -12582913
@@ -62,7 +62,7 @@ typedef struct T15 {
 T15 t15;
 
 void __attribute__((cmse_nonsecure_call)) (*g15_0)(T15);
-void f15_0() {
+void f15_0(void) {
   g15_0(t15);
 }
 // CHECK: define {{.*}}@f15_0()
@@ -76,7 +76,7 @@ void f15_0() {
 // CHECK: call {{.*}} void %[[FN]]([2 x i32] %[[R1]])
 
 void __attribute__((cmse_nonsecure_call)) (*g15_1)(int, int, int, T15);
-void f15_1() {
+void f15_1(void) {
   g15_1(0, 1, 2, t15);
 }
 // CHECK: define {{.*}}@f15_1()
@@ -103,7 +103,7 @@ typedef struct T16 {
 T16 t16;
 
 void __attribute__((cmse_nonsecure_call)) (*g16_0)(T16);
-void f16_0() {
+void f16_0(void) {
   g16_0(t16);
 }
 // CHECK: define {{.*}} @f16_0()
@@ -133,7 +133,7 @@ typedef struct T18 {
 T18 t18;
 
 void __attribute__((cmse_nonsecure_call)) (*g18)(T18);
-void f18() {
+void f18(void) {
   g18(t18);
 }
 // CHECK:    define {{.*}} @f18()
@@ -163,7 +163,7 @@ typedef union T19 {
 
 T19 t19;
 void __attribute__((cmse_nonsecure_call)) (*g19)(T19);
-void f19() {
+void f19(void) {
   g19(t19);
 }
 // CHECK:    define {{.*}} @f19()
@@ -180,7 +180,7 @@ typedef struct T20 {
 
 T20 t20;
 void __attribute__((cmse_nonsecure_call)) (*g20)(T20);
-void f20() {
+void f20(void) {
   g20(t20);
 }
 // CHECK: define {{.*}} @f20()

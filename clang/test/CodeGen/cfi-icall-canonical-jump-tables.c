@@ -4,7 +4,7 @@
 void ext(void);
 
 // CHECK: define{{.*}} void @f({{.*}} [[ATTR1:#[0-9]+]]
-void f() {
+void f(void) {
   ext();
 }
 
@@ -12,7 +12,7 @@ void f() {
 // CANON: declare void @ext()
 
 // CHECK: define{{.*}} void @g({{.*}} [[ATTR2:#[0-9]+]]
-__attribute__((cfi_canonical_jump_table)) void g() {}
+__attribute__((cfi_canonical_jump_table)) void g(void) {}
 
 // CHECK: [[ATTR1]] = {
 // CHECK-NOT: "cfi-canonical-jump-table"

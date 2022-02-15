@@ -81,28 +81,28 @@ int test4(int *a, int b) {
   return a[0];
 }
 
-int *m1() __attribute__((assume_aligned(64)));
+int *m1(void) __attribute__((assume_aligned(64)));
 
 // CHECK-LABEL: @test5(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = call align 64 i32* (...) @m1()
+// CHECK-NEXT:    [[CALL:%.*]] = call align 64 i32* @m1()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CALL]], align 4
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
-int test5() {
+int test5(void) {
   return *m1();
 }
 
-int *m2() __attribute__((assume_aligned(64, 12)));
+int *m2(void) __attribute__((assume_aligned(64, 12)));
 
 // CHECK-LABEL: @test6(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = call i32* (...) @m2()
+// CHECK-NEXT:    [[CALL:%.*]] = call i32* @m2()
 // CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[CALL]], i64 64, i64 12) ]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CALL]], align 4
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
-int test6() {
+int test6(void) {
   return *m2();
 }
 

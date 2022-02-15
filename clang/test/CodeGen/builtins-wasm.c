@@ -26,19 +26,19 @@ __SIZE_TYPE__ memory_grow(__SIZE_TYPE__ delta) {
   // WEBASSEMBLY64: call i64 @llvm.wasm.memory.grow.i64(i32 0, i64 %{{.*}})
 }
 
-__SIZE_TYPE__ tls_size() {
+__SIZE_TYPE__ tls_size(void) {
   return __builtin_wasm_tls_size();
   // WEBASSEMBLY32: call i32 @llvm.wasm.tls.size.i32()
   // WEBASSEMBLY64: call i64 @llvm.wasm.tls.size.i64()
 }
 
-__SIZE_TYPE__ tls_align() {
+__SIZE_TYPE__ tls_align(void) {
   return __builtin_wasm_tls_align();
   // WEBASSEMBLY32: call i32 @llvm.wasm.tls.align.i32()
   // WEBASSEMBLY64: call i64 @llvm.wasm.tls.align.i64()
 }
 
-void *tls_base() {
+void *tls_base(void) {
   return __builtin_wasm_tls_base();
   // WEBASSEMBLY: call i8* @llvm.wasm.tls.base()
 }

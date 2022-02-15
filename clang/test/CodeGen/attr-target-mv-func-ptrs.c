@@ -8,7 +8,7 @@ int __attribute__((target("default"))) foo(int i) { return 2; }
 typedef int (*FuncPtr)(int);
 void func(FuncPtr);
 
-int bar() {
+int bar(void) {
   func(foo);
   FuncPtr Free = &foo;
   FuncPtr Free2 = foo;
