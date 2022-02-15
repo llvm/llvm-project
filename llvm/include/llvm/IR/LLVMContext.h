@@ -92,8 +92,8 @@ public:
     OB_cfguardtarget = 3,          // "cfguardtarget"
     OB_preallocated = 4,           // "preallocated"
     OB_gc_live = 5,                // "gc-live"
-    OB_ptrauth = 6,                // "ptrauth"
-    OB_clang_arc_attachedcall = 7, // "clang.arc.attachedcall"
+    OB_clang_arc_attachedcall = 6, // "clang.arc.attachedcall"
+    OB_ptrauth = 7,                // "ptrauth"
   };
 
   /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.

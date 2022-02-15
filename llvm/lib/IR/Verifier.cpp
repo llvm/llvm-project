@@ -3361,8 +3361,9 @@ void Verifier::visitCallBase(CallBase &Call) {
   // "preallocated" operand bundle, and at most one "ptrauth" operand bundle.
   bool FoundDeoptBundle = false, FoundFuncletBundle = false,
        FoundGCTransitionBundle = false, FoundCFGuardTargetBundle = false,
-       FoundPtrauthBundle = false, FoundPreallocatedBundle = false,
-       FoundGCLiveBundle = false, FoundAttachedCallBundle = false;
+       FoundPreallocatedBundle = false, FoundGCLiveBundle = false,
+       FoundPtrauthBundle = false,
+       FoundAttachedCallBundle = false;
   for (unsigned i = 0, e = Call.getNumOperandBundles(); i < e; ++i) {
     OperandBundleUse BU = Call.getOperandBundleAt(i);
     uint32_t Tag = BU.getTagID();
@@ -3420,6 +3421,10 @@ void Verifier::visitCallBase(CallBase &Call) {
       verifyAttachedCallBundle(Call, BU);
     }
   }
+
+  // Verify that callee and callsite agree on whether to use pointer auth.
+  Assert(!(Call.getCalledFunction() && FoundPtrauthBundle),
+         "Direct call cannot have a ptrauth bundle", Call);
 
   // Verify that each inlinable callsite of a debug-info-bearing function in a
   // debug-info-bearing function has a debug location attached to it. Failure to

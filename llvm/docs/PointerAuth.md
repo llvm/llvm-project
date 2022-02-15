@@ -226,13 +226,20 @@ implementation.
 
 ### Operand Bundle
 
-As a way to enforce CFI, function pointers used as indirect call targets are
-signed when materialized, and authenticated before calls.
+Function pointers used as indirect call targets can be signed when materialized,
+and authenticated before calls.  This can be accomplished with the
+[``llvm.ptrauth.auth``](#llvm-ptrauth-auth) intrinsic, feeding its result to
+an indirect call.
 
-To prevent the intermediate, unauthenticated pointer from being exposed to
-attackers (similar to [``llvm.ptrauth.resign``](#llvm-ptrauth-resign)), the
-representation guarantees that the intermediate call target is never attackable
-(e.g., by being spilled to memory), using the ``ptrauth`` operand bundle.
+However, that exposes the intermediate, unauthenticated pointer, e.g., if it
+gets spilled to the stack.  An attacker can then overwrite the pointer in
+memory, negating the security benefit provided by pointer authentication.
+To prevent that, the ``ptrauth`` operand bundle may be used: it guarantees that
+the intermediate call target is kept in a register and never stored to memory.
+This hardening benefit is similar to that provided by
+[``llvm.ptrauth.resign``](#llvm-ptrauth-resign)).
+
+Concretely:
 
 ```llvm
 define void @f(void ()* %fp) {
@@ -246,7 +253,7 @@ is functionally equivalent to:
 ```llvm
 define void @f(void ()* %fp) {
   %fp_i = ptrtoint void ()* %fp to i64
-  %fp_auth = call i64 @llvm.ptrauth.auth.i64(i64 %fp_i, i32 <key>, i64 <data>)
+  %fp_auth = call i64 @llvm.ptrauth.auth(i64 %fp_i, i32 <key>, i64 <data>)
   %fp_auth_p = inttoptr i64 %fp_auth to void ()*
   call void %fp_auth_p()
   ret void
@@ -254,7 +261,7 @@ define void @f(void ()* %fp) {
 ```
 
 but with the added guarantee that ``%fp_i``, ``%fp_auth``, and ``%fp_auth_p``
-are never attackable.
+are not stored to (and reloaded from) memory.
 
 
 ### Function Attributes
@@ -321,7 +328,6 @@ is equivalent to ``@fp.ptrauth`` being initialized with:
 
 Note that this is a temporary representation, chosen to minimize divergence with
 upstream.  Ideally, this would simply be a new kind of ConstantExpr.
-
 
 
 ## AArch64 Support
