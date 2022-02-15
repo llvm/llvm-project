@@ -1533,7 +1533,7 @@ ParseResult AtomicUpdateOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<ClauseType> clauses = {memoryOrderClause, hintClause};
   SmallVector<int> segments;
   OpAsmParser::OperandType x, expr;
-  Type xType, exprType;
+  Type xType;
 
   if (parseClauses(parser, result, clauses, segments) ||
       parser.parseOperand(x) || parser.parseColon() ||
