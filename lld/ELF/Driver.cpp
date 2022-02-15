@@ -49,6 +49,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
@@ -96,7 +97,6 @@ bool elf::link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
     inputSections.clear();
     outputSections.clear();
     memoryBuffers.clear();
-    archiveFiles.clear();
     binaryFiles.clear();
     bitcodeFiles.clear();
     lazyBitcodeFiles.clear();
@@ -228,32 +228,30 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
       return;
     }
 
-    std::unique_ptr<Archive> file =
-        CHECK(Archive::create(mbref), path + ": failed to parse archive");
+    auto members = getArchiveMembers(mbref);
+    archiveFiles.emplace_back(path, members.size());
 
-    // If an archive file has no symbol table, it may be intentional (used as a
-    // group of lazy object files where the symbol table is not useful), or the
-    // user is attempting LTO and using a default ar command that doesn't
-    // understand the LLVM bitcode file. Treat the archive as a group of lazy
-    // object files.
-    if (file->isEmpty() || file->hasSymbolTable()) {
-      // Handle the regular case.
-      files.push_back(make<ArchiveFile>(std::move(file)));
-      return;
-    }
-
+    // Handle archives and --start-lib/--end-lib using the same code path. This
+    // scans all the ELF relocatable object files and bitcode files in the
+    // archive rather than just the index file, with the benefit that the
+    // symbols are only loaded once. For many projects archives see high
+    // utilization rates and it is a net performance win. --start-lib scans
+    // symbols in the same order that llvm-ar adds them to the index, so in the
+    // common case the semantics are identical. If the archive symbol table was
+    // created in a different order, or is incomplete, this strategy has
+    // different semantics. Such output differences are considered user error.
+    //
     // All files within the archive get the same group ID to allow mutual
     // references for --warn-backrefs.
     bool saved = InputFile::isInGroup;
     InputFile::isInGroup = true;
-    for (const std::pair<MemoryBufferRef, uint64_t> &p :
-         getArchiveMembers(mbref)) {
+    for (const std::pair<MemoryBufferRef, uint64_t> &p : members) {
       auto magic = identify_magic(p.first.getBuffer());
       if (magic == file_magic::bitcode || magic == file_magic::elf_relocatable)
         files.push_back(createLazyFile(p.first, path, p.second));
       else
-        error(path + ": archive member '" + p.first.getBufferIdentifier() +
-              "' is neither ET_REL nor LLVM bitcode");
+        warn(path + ": archive member '" + p.first.getBufferIdentifier() +
+             "' is neither ET_REL nor LLVM bitcode");
     }
     InputFile::isInGroup = saved;
     if (!saved)
@@ -1470,13 +1468,16 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
 
   // Iterate over argv to process input files and positional arguments.
   InputFile::isInGroup = false;
+  bool hasInput = false;
   for (auto *arg : args) {
     switch (arg->getOption().getID()) {
     case OPT_library:
       addLibrary(arg->getValue());
+      hasInput = true;
       break;
     case OPT_INPUT:
       addFile(arg->getValue(), /*withLOption=*/false);
+      hasInput = true;
       break;
     case OPT_defsym: {
       StringRef from;
@@ -1565,7 +1566,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
     }
   }
 
-  if (files.empty() && errorCount() == 0)
+  if (files.empty() && !hasInput && errorCount() == 0)
     error("no input files");
 }
 
@@ -1721,10 +1722,7 @@ static void handleLibcall(StringRef name) {
     return;
 
   MemoryBufferRef mb;
-  if (auto *lo = dyn_cast<LazyObject>(sym))
-    mb = lo->file->mb;
-  else
-    mb = cast<LazyArchive>(sym)->getMemberBuffer();
+  mb = cast<LazyObject>(sym)->file->mb;
 
   if (isBitcode(mb))
     sym->extract();

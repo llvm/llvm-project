@@ -58,14 +58,19 @@
 // RUN:   FileCheck --check-prefix=A-AND-FREEBSD-SCRIPT %s
 // A-AND-FREEBSD-SCRIPT: a.o is incompatible with elf32-i386-freebsd
 
+/// %tb.a is not extracted, but we report an error anyway.
+// RUN: rm -f %tb.a && llvm-ar rc %tb.a %tb.o
+// RUN: not ld.lld %ta.o %tb.a -o /dev/null 2>&1 | FileCheck --check-prefix=UNEXTRACTED-ARCHIVE %s
+// UNEXTRACTED-ARCHIVE: {{.*}}.a({{.*}}b.o) is incompatible with {{.*}}a.o
+
 // We used to fail to identify this incompatibility and crash trying to
 // read a 64 bit file as a 32 bit one.
-// RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/archive2.s -o %ta.o
+// RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/archive2.s -o %tc.o
 // RUN: rm -f %t.a
-// RUN: llvm-ar rc %t.a %ta.o
-// RUN: llvm-mc -filetype=obj -triple=i686-linux %s -o %tb.o
-// RUN: not ld.lld %t.a %tb.o 2>&1 -o /dev/null | FileCheck --check-prefix=ARCHIVE %s
-// ARCHIVE: .a({{.*}}a.o) is incompatible with {{.*}}b.o
+// RUN: llvm-ar rc %t.a %tc.o
+// RUN: llvm-mc -filetype=obj -triple=i686-linux %s -o %td.o
+// RUN: not ld.lld %t.a %td.o 2>&1 -o /dev/null | FileCheck --check-prefix=ARCHIVE %s
+// ARCHIVE: {{.*}}d.o is incompatible
 .global _start
 _start:
 .data

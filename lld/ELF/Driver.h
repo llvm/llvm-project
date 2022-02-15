@@ -42,6 +42,9 @@ private:
   std::unique_ptr<BitcodeCompiler> lto;
 
   std::vector<InputFile *> files;
+
+public:
+  SmallVector<std::pair<StringRef, unsigned>, 0> archiveFiles;
 };
 
 // Parses command line options.

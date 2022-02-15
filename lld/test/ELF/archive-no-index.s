@@ -9,9 +9,9 @@
 
 # RUN: ld.lld -shared %t.archive.o -o %t.so
 # RUN: llvm-ar crS %t.a %t.so
-# RUN: not ld.lld %t.o %t.a --noinhibit-exec -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: ld.lld %t.o %t.a -o /dev/null 2>&1 | FileCheck %s --check-prefix=WARN
 
-# ERR: error: {{.*}}.a: archive member '{{.*}}.so' is neither ET_REL nor LLVM bitcode
+# WARN: warning: {{.*}}.a: archive member '{{.*}}.so' is neither ET_REL nor LLVM bitcode
 
 .globl _start
 _start:
