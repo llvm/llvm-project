@@ -650,12 +650,6 @@ else()
       find_ocamlfind_package(ctypes VERSION 0.4 OPTIONAL)
       if( HAVE_OCAML_CTYPES )
         message(STATUS "OCaml bindings enabled.")
-        find_ocamlfind_package(ounit2 OPTIONAL)
-        if ( HAVE_OCAML_OUNIT2 )
-          set(HAVE_OCAML_OUNIT TRUE)
-        else()
-          find_ocamlfind_package(oUnit VERSION 2 OPTIONAL)
-        endif()
         set(LLVM_BINDINGS "${LLVM_BINDINGS} ocaml")
 
         set(LLVM_OCAML_INSTALL_PATH "${OCAML_STDLIB_PATH}" CACHE STRING
