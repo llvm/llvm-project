@@ -65,7 +65,10 @@ config("cxxabi_config") {
     # Some files depend on libc++ internals.
     "//libcxx/src",
   ]
-  cflags_cc = [ "-nostdinc++" ]
+  cflags_cc = [
+    "-std=c++20",
+    "-nostdinc++",
+  ]
   defines = [ "_LIBCXXABI_BUILDING_LIBRARY" ]
   if (target_os == "win") {
     defines += [ "_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS" ]
