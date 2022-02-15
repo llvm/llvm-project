@@ -79,6 +79,11 @@ HeaderFileInfo::getControllingMacro(ExternalPreprocessorSource *External) {
 
 ExternalHeaderFileInfoSource::~ExternalHeaderFileInfoSource() = default;
 
+const DirectoryLookup &ConstSearchDirIterator::operator*() const {
+  assert(*this && "Invalid iterator.");
+  return HS->SearchDirs[Idx];
+}
+
 HeaderSearch::HeaderSearch(std::shared_ptr<HeaderSearchOptions> HSOpts,
                            SourceManager &SourceMgr, DiagnosticsEngine &Diags,
                            const LangOptions &LangOpts,
@@ -829,14 +834,14 @@ diagnoseFrameworkInclude(DiagnosticsEngine &Diags, SourceLocation IncludeLoc,
 /// search is needed. Microsoft mode will pass all \#including files.
 Optional<FileEntryRef> HeaderSearch::LookupFile(
     StringRef Filename, SourceLocation IncludeLoc, bool isAngled,
-    const DirectoryLookup *FromDir, const DirectoryLookup **CurDirArg,
+    ConstSearchDirIterator FromDir, ConstSearchDirIterator *CurDirArg,
     ArrayRef<std::pair<const FileEntry *, const DirectoryEntry *>> Includers,
     SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
     Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule,
     bool *IsMapped, bool *IsFrameworkFound, bool SkipCache,
     bool BuildSystemModule) {
-  const DirectoryLookup *CurDirLocal = nullptr;
-  const DirectoryLookup *&CurDir = CurDirArg ? *CurDirArg : CurDirLocal;
+  ConstSearchDirIterator CurDirLocal = nullptr;
+  ConstSearchDirIterator &CurDir = CurDirArg ? *CurDirArg : CurDirLocal;
 
   if (IsMapped)
     *IsMapped = false;
@@ -964,7 +969,7 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
   // If this is a #include_next request, start searching after the directory the
   // file was found in.
   if (FromDir)
-    i = FromDir-&SearchDirs[0];
+    i = FromDir.Idx;
 
   // Cache all of the lookups performed by this method.  Many headers are
   // multiply included, and the "pragma once" optimization prevents them from
@@ -1019,7 +1024,7 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
     if (!File)
       continue;
 
-    CurDir = &SearchDirs[i];
+    CurDir = ConstSearchDirIterator(*this, i);
 
     // This file is a system header or C++ unfriendly if the dir is.
     HeaderFileInfo &HFI = getFileInfo(&File->getFileEntry());

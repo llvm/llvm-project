@@ -817,13 +817,13 @@ Preprocessor::getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
 
 Optional<FileEntryRef> Preprocessor::LookupFile(
     SourceLocation FilenameLoc, StringRef Filename, bool isAngled,
-    const DirectoryLookup *FromDir, const FileEntry *FromFile,
-    const DirectoryLookup **CurDirArg, SmallVectorImpl<char> *SearchPath,
+    ConstSearchDirIterator FromDir, const FileEntry *FromFile,
+    ConstSearchDirIterator *CurDirArg, SmallVectorImpl<char> *SearchPath,
     SmallVectorImpl<char> *RelativePath,
     ModuleMap::KnownHeader *SuggestedModule, bool *IsMapped,
     bool *IsFrameworkFound, bool SkipCache) {
-  const DirectoryLookup *CurDirLocal = nullptr;
-  const DirectoryLookup *&CurDir = CurDirArg ? *CurDirArg : CurDirLocal;
+  ConstSearchDirIterator CurDirLocal = nullptr;
+  ConstSearchDirIterator &CurDir = CurDirArg ? *CurDirArg : CurDirLocal;
 
   Module *RequestingModule = getModuleForLocation(FilenameLoc);
   bool RequestingModuleIsModuleInterface = !SourceMgr.isInMainFile(FilenameLoc);
@@ -877,8 +877,8 @@ Optional<FileEntryRef> Preprocessor::LookupFile(
   if (FromFile) {
     // We're supposed to start looking from after a particular file. Search
     // the include path until we find that file or run out of files.
-    const DirectoryLookup *TmpCurDir = CurDir;
-    const DirectoryLookup *TmpFromDir = nullptr;
+    ConstSearchDirIterator TmpCurDir = CurDir;
+    ConstSearchDirIterator TmpFromDir = nullptr;
     while (Optional<FileEntryRef> FE = HeaderInfo.LookupFile(
                Filename, FilenameLoc, isAngled, TmpFromDir, &TmpCurDir,
                Includers, SearchPath, RelativePath, RequestingModule,
@@ -1778,12 +1778,12 @@ bool Preprocessor::checkModuleIsAvailable(const LangOptions &LangOpts,
   return true;
 }
 
-std::pair<const DirectoryLookup *, const FileEntry *>
+std::pair<ConstSearchDirIterator, const FileEntry *>
 Preprocessor::getIncludeNextStart(const Token &IncludeNextTok) const {
   // #include_next is like #include, except that we start searching after
   // the current found directory.  If we can't do this, issue a
   // diagnostic.
-  const DirectoryLookup *Lookup = CurDirLookup;
+  ConstSearchDirIterator Lookup = CurDirLookup;
   const FileEntry *LookupFromFile = nullptr;
 
   if (isInPrimaryFile() && LangOpts.IsHeaderFile) {
@@ -1820,7 +1820,7 @@ Preprocessor::getIncludeNextStart(const Token &IncludeNextTok) const {
 /// specifies the file to start searching from.
 void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
                                           Token &IncludeTok,
-                                          const DirectoryLookup *LookupFrom,
+                                          ConstSearchDirIterator LookupFrom,
                                           const FileEntry *LookupFromFile) {
   Token FilenameTok;
   if (LexHeaderName(FilenameTok))
@@ -1865,11 +1865,11 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
 }
 
 Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
-    const DirectoryLookup **CurDir, StringRef& Filename,
+    ConstSearchDirIterator *CurDir, StringRef &Filename,
     SourceLocation FilenameLoc, CharSourceRange FilenameRange,
     const Token &FilenameTok, bool &IsFrameworkFound, bool IsImportDecl,
-    bool &IsMapped, const DirectoryLookup *LookupFrom,
-    const FileEntry *LookupFromFile, StringRef& LookupFilename,
+    bool &IsMapped, ConstSearchDirIterator LookupFrom,
+    const FileEntry *LookupFromFile, StringRef &LookupFilename,
     SmallVectorImpl<char> &RelativePath, SmallVectorImpl<char> &SearchPath,
     ModuleMap::KnownHeader &SuggestedModule, bool isAngled) {
   Optional<FileEntryRef> File = LookupFile(
@@ -1973,7 +1973,7 @@ Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
 ///        lookup.
 Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     SourceLocation HashLoc, Token &IncludeTok, Token &FilenameTok,
-    SourceLocation EndLoc, const DirectoryLookup *LookupFrom,
+    SourceLocation EndLoc, ConstSearchDirIterator LookupFrom,
     const FileEntry *LookupFromFile) {
   SmallString<128> FilenameBuffer;
   StringRef Filename = getSpelling(FilenameTok, FilenameBuffer);
@@ -2023,7 +2023,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // Search include directories.
   bool IsMapped = false;
   bool IsFrameworkFound = false;
-  const DirectoryLookup *CurDir;
+  ConstSearchDirIterator CurDir = nullptr;
   SmallString<1024> SearchPath;
   SmallString<1024> RelativePath;
   // We get the raw path only if we have 'Callbacks' to which we later pass
@@ -2410,7 +2410,7 @@ void Preprocessor::HandleIncludeNextDirective(SourceLocation HashLoc,
                                               Token &IncludeNextTok) {
   Diag(IncludeNextTok, diag::ext_pp_include_next_directive);
 
-  const DirectoryLookup *Lookup;
+  ConstSearchDirIterator Lookup = nullptr;
   const FileEntry *LookupFromFile;
   std::tie(Lookup, LookupFromFile) = getIncludeNextStart(IncludeNextTok);
 
