@@ -12734,87 +12734,6 @@ SDValue DAGCombiner::visitEXTEND_VECTOR_INREG(SDNode *N) {
   return SDValue();
 }
 
-// Attempt to form one of the avg patterns from:
-// truncate(shr(add(zext(OpB), zext(OpA)), 1))
-// Creating avgflooru/avgfloors/avgceilu/avgceils, with the ceiling having an
-// extra rounding add:
-// truncate(shr(add(zext(OpB), zext(OpA), 1), 1))
-// This starts at a truncate, meaning the shift will always be shl, as the top
-// bits are known to not be demanded.
-static SDValue performAvgCombine(SDNode *N, SelectionDAG &DAG) {
-  assert(N->getOpcode() == ISD::TRUNCATE && "TRUNCATE node expected");
-  EVT VT = N->getValueType(0);
-
-  SDValue Shift = N->getOperand(0);
-  if (Shift.getOpcode() != ISD::SRL)
-    return SDValue();
-
-  // Is the right shift using an immediate value of 1?
-  ConstantSDNode *N1C = isConstOrConstSplat(Shift.getOperand(1));
-  if (!N1C || !N1C->isOne())
-    return SDValue();
-
-  // We are looking for an avgfloor
-  // add(ext, ext)
-  // or one of these as a avgceil
-  // add(add(ext, ext), 1)
-  // add(add(ext, 1), ext)
-  // add(ext, add(ext, 1))
-  SDValue Add = Shift.getOperand(0);
-  if (Add.getOpcode() != ISD::ADD)
-    return SDValue();
-
-  SDValue ExtendOpA = Add.getOperand(0);
-  SDValue ExtendOpB = Add.getOperand(1);
-  auto MatchOperands = [&](SDValue Op1, SDValue Op2, SDValue Op3) {
-    ConstantSDNode *ConstOp;
-    if ((ConstOp = isConstOrConstSplat(Op1)) && ConstOp->isOne()) {
-      ExtendOpA = Op2;
-      ExtendOpB = Op3;
-      return true;
-    }
-    if ((ConstOp = isConstOrConstSplat(Op2)) && ConstOp->isOne()) {
-      ExtendOpA = Op1;
-      ExtendOpB = Op3;
-      return true;
-    }
-    if ((ConstOp = isConstOrConstSplat(Op3)) && ConstOp->isOne()) {
-      ExtendOpA = Op1;
-      ExtendOpB = Op2;
-      return true;
-    }
-    return false;
-  };
-  bool IsCeil = (ExtendOpA.getOpcode() == ISD::ADD &&
-                 MatchOperands(ExtendOpA.getOperand(0), ExtendOpA.getOperand(1),
-                               ExtendOpB)) ||
-                (ExtendOpB.getOpcode() == ISD::ADD &&
-                 MatchOperands(ExtendOpB.getOperand(0), ExtendOpB.getOperand(1),
-                               ExtendOpA));
-
-  unsigned ExtendOpAOpc = ExtendOpA.getOpcode();
-  unsigned ExtendOpBOpc = ExtendOpB.getOpcode();
-  if (!(ExtendOpAOpc == ExtendOpBOpc &&
-        (ExtendOpAOpc == ISD::ZERO_EXTEND || ExtendOpAOpc == ISD::SIGN_EXTEND)))
-    return SDValue();
-
-  // Is the result of the right shift being truncated to the same value type as
-  // the original operands, OpA and OpB?
-  SDValue OpA = ExtendOpA.getOperand(0);
-  SDValue OpB = ExtendOpB.getOperand(0);
-  EVT OpAVT = OpA.getValueType();
-  if (VT != OpAVT || OpAVT != OpB.getValueType())
-    return SDValue();
-
-  bool IsSignExtend = ExtendOpAOpc == ISD::SIGN_EXTEND;
-  unsigned AVGOpc = IsSignExtend ? (IsCeil ? ISD::AVGCEILS : ISD::AVGFLOORS)
-                                 : (IsCeil ? ISD::AVGCEILU : ISD::AVGFLOORU);
-  if (!DAG.getTargetLoweringInfo().isOperationLegalOrCustom(AVGOpc, VT))
-    return SDValue();
-
-  return DAG.getNode(AVGOpc, SDLoc(N), VT, OpA, OpB);
-}
-
 SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
@@ -13101,8 +13020,6 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
 
   if (SDValue NewVSel = matchVSelectOpSizesWithSetCC(N))
     return NewVSel;
-  if (SDValue M = performAvgCombine(N, DAG))
-    return M;
 
   // Narrow a suitable binary operation with a non-opaque constant operand by
   // moving it ahead of the truncate. This is limited to pre-legalization
