@@ -2588,8 +2588,14 @@ computePointerICmp(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
   // numerous hazards. AliasAnalysis and its utilities rely on special rules
   // governing loads and stores which don't apply to icmps. Also, AliasAnalysis
   // doesn't need to guarantee pointer inequality when it says NoAlias.
-  Constant *LHSOffset = stripAndComputeConstantOffsets(DL, LHS);
-  Constant *RHSOffset = stripAndComputeConstantOffsets(DL, RHS);
+
+  // Even if an non-inbounds GEP occurs along the path we can still optimize
+  // equality comparisons concerning the result.
+  bool AllowNonInbounds = ICmpInst::isEquality(Pred);
+  Constant *LHSOffset =
+      stripAndComputeConstantOffsets(DL, LHS, AllowNonInbounds);
+  Constant *RHSOffset =
+      stripAndComputeConstantOffsets(DL, RHS, AllowNonInbounds);
 
   // If LHS and RHS are related via constant offsets to the same base
   // value, we can replace it with an icmp which just compares the offsets.
@@ -2658,17 +2664,6 @@ computePointerICmp(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
         return ConstantInt::get(GetCompareTy(LHS),
                                 !CmpInst::isTrueWhenEqual(Pred));
     }
-
-    // Even if an non-inbounds GEP occurs along the path we can still optimize
-    // equality comparisons concerning the result. We avoid walking the whole
-    // chain again by starting where the last calls to
-    // stripAndComputeConstantOffsets left off and accumulate the offsets.
-    Constant *LHSNoBound = stripAndComputeConstantOffsets(DL, LHS, true);
-    Constant *RHSNoBound = stripAndComputeConstantOffsets(DL, RHS, true);
-    if (LHS == RHS)
-      return ConstantExpr::getICmp(Pred,
-                                   ConstantExpr::getAdd(LHSOffset, LHSNoBound),
-                                   ConstantExpr::getAdd(RHSOffset, RHSNoBound));
 
     // If one side of the equality comparison must come from a noalias call
     // (meaning a system memory allocation function), and the other side must
