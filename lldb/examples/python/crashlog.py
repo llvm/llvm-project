@@ -49,11 +49,9 @@ try:
 except ImportError:
     # Ask the command line driver for the path to the lldb module. Copy over
     # the environment so that SDKROOT is propagated to xcrun.
-    env = os.environ.copy()
-    env['LLDB_DEFAULT_PYTHON_VERSION'] = str(sys.version_info.major)
     command =  ['xcrun', 'lldb', '-P'] if platform.system() == 'Darwin' else ['lldb', '-P']
     # Extend the PYTHONPATH if the path exists and isn't already there.
-    lldb_python_path = subprocess.check_output(command, env=env).decode("utf-8").strip()
+    lldb_python_path = subprocess.check_output(command).decode("utf-8").strip()
     if os.path.exists(lldb_python_path) and not sys.path.__contains__(lldb_python_path):
         sys.path.append(lldb_python_path)
     # Try importing LLDB again.
