@@ -86,6 +86,14 @@ MultiStringType currency_symbol_ru_RU() {
 #endif
 }
 
+MultiStringType currency_symbol_zh_CN() {
+#if defined(_WIN32)
+  return MKSTR("\u00A5"); // U+00A5 YEN SIGN
+#else
+  return MKSTR("\uFFE5"); // U+FFE5 FULLWIDTH YEN SIGN
+#endif
+}
+
 } // namespace LocaleHelpers
 
 #endif // LIBCXX_TEST_SUPPORT_LOCALE_HELPERS_H
