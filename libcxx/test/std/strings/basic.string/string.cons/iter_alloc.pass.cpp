@@ -20,7 +20,7 @@
 
 #include "test_macros.h"
 #include "test_allocator.h"
-#include "../cpp17_input_iterator.h"
+#include "test_iterators.h"
 #include "min_allocator.h"
 
 template <class It>
@@ -34,8 +34,11 @@ test(It first, It last)
     LIBCPP_ASSERT(s2.__invariants());
     assert(s2.size() == static_cast<std::size_t>(std::distance(first, last)));
     unsigned i = 0;
-    for (It it = first; it != last; ++it, ++i)
+    for (It it = first; it != last;) {
         assert(s2[i] == *it);
+        ++it;
+        ++i;
+    }
     assert(s2.get_allocator() == A());
     assert(s2.capacity() >= s2.size());
 }
@@ -50,8 +53,11 @@ test(It first, It last, const A& a)
     LIBCPP_ASSERT(s2.__invariants());
     assert(s2.size() == static_cast<std::size_t>(std::distance(first, last)));
     unsigned i = 0;
-    for (It it = first; it != last; ++it, ++i)
+    for (It it = first; it != last;) {
         assert(s2[i] == *it);
+        ++it;
+        ++i;
+    }
     assert(s2.get_allocator() == a);
     assert(s2.capacity() >= s2.size());
 }
