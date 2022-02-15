@@ -930,6 +930,8 @@ ExpApproximation::matchAndRewrite(math::ExpOp op,
 
   Value x = op.getOperand();
 
+  Value isNan = builder.create<arith::CmpFOp>(arith::CmpFPredicate::UNO, x, x);
+
   // Reduced y = x - floor(x / ln(2)) * ln(2) = x - k * ln(2)
   Value xL2Inv = mul(x, cstLog2E);
   Value kF32 = floor(xL2Inv);
@@ -985,13 +987,15 @@ ExpApproximation::matchAndRewrite(math::ExpOp op,
   Value isComputable = builder.create<arith::AndIOp>(rightBound, leftBound);
 
   expY = builder.create<arith::SelectOp>(
-      isNegInfinityX, zerof32Const,
+      isNan, x,
       builder.create<arith::SelectOp>(
-          isPosInfinityX, constPosInfinity,
+          isNegInfinityX, zerof32Const,
           builder.create<arith::SelectOp>(
-              isComputable, expY,
-              builder.create<arith::SelectOp>(isPostiveX, constPosInfinity,
-                                              underflow))));
+              isPosInfinityX, constPosInfinity,
+              builder.create<arith::SelectOp>(
+                  isComputable, expY,
+                  builder.create<arith::SelectOp>(isPostiveX, constPosInfinity,
+                                                  underflow)))));
 
   rewriter.replaceOp(op, expY);
 
