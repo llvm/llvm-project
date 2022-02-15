@@ -7786,12 +7786,15 @@ static SDValue combineMUL_VLToVWMUL_VL(SDNode *N, SelectionDAG &DAG,
     if (ScalarBits < EltBits)
       return SDValue();
 
-    if (IsSignExt) {
-      if (DAG.ComputeNumSignBits(Op1) <= (ScalarBits - NarrowSize))
-        return SDValue();
+    // If the LHS is a sign extend, try to use vwmul.
+    if (IsSignExt && DAG.ComputeNumSignBits(Op1) > (ScalarBits - NarrowSize)) {
+      // Can use vwmul.
     } else {
+      // Otherwise try to use vwmulu or vwmulsu.
       APInt Mask = APInt::getBitsSetFrom(ScalarBits, NarrowSize);
-      if (!DAG.MaskedValueIsZero(Op1, Mask))
+      if (DAG.MaskedValueIsZero(Op1, Mask))
+        IsVWMULSU = IsSignExt;
+      else
         return SDValue();
     }
 
@@ -8436,6 +8439,16 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (auto Gather = matchSplatAsGather(N->getOperand(0), VT.getSimpleVT(), N,
                                          DAG, Subtarget))
       return Gather;
+    break;
+  }
+  case RISCVISD::VMV_V_X_VL: {
+    // VMV.V.X only demands the vector element bitwidth from the scalar input.
+    unsigned ScalarSize = N->getOperand(0).getValueSizeInBits();
+    unsigned EltWidth = N->getValueType(0).getScalarSizeInBits();
+    if (ScalarSize > EltWidth)
+      if (SimplifyDemandedLowBitsHelper(0, EltWidth))
+        return SDValue(N, 0);
+
     break;
   }
   }
