@@ -401,7 +401,7 @@ void Minimizer::printToNewline(const char *&First, const char *const End) {
     do {
       // Iterate over strings correctly to avoid comments and newlines.
       if (*Last == '"' || *Last == '\'' ||
-          (*Last == '<' && top() == pp_include)) {
+          (*Last == '<' && (top() == pp_include || top() == pp_import))) {
         if (LLVM_UNLIKELY(isRawStringLiteral(First, Last)))
           skipRawString(Last, End);
         else

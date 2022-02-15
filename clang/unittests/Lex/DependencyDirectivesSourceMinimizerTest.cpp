@@ -454,11 +454,26 @@ TEST(MinimizeSourceToDependencyDirectivesTest, Include) {
   EXPECT_STREQ("#include <A>\n", Out.data());
 
   ASSERT_FALSE(
+      minimizeSourceToDependencyDirectives("#include <A//A.h>\n", Out));
+  EXPECT_STREQ("#include <A//A.h>\n", Out.data());
+
+  ASSERT_FALSE(
+      minimizeSourceToDependencyDirectives("#include \"A//A.h\"\n", Out));
+  EXPECT_STREQ("#include \"A//A.h\"\n", Out.data());
+
+  ASSERT_FALSE(
       minimizeSourceToDependencyDirectives("#include_next <A>\n", Out));
   EXPECT_STREQ("#include_next <A>\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("#import <A>\n", Out));
   EXPECT_STREQ("#import <A>\n", Out.data());
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives("#import <A//A.h>\n", Out));
+  EXPECT_STREQ("#import <A//A.h>\n", Out.data());
+
+  ASSERT_FALSE(
+      minimizeSourceToDependencyDirectives("#import \"A//A.h\"\n", Out));
+  EXPECT_STREQ("#import \"A//A.h\"\n", Out.data());
 
   ASSERT_FALSE(
       minimizeSourceToDependencyDirectives("#__include_macros <A>\n", Out));
