@@ -96,9 +96,6 @@ class TestThreadBacktracePage(TestBase):
     # problematic, or the step-out part.  This test stops at the rendevous point so I'm
     # removing the skipIfLinux to see if we see any flakiness in just this part of the test.
     @expectedFailureAll(
-        oslist=["linux"],
-        bugnumber="llvm.org/pr23477 Test occasionally times out on the Linux build bot")
-    @expectedFailureAll(
         oslist=["freebsd"],
         bugnumber="llvm.org/pr18066 inferior does not exit")
     @skipIfWindows # This test will hang on windows llvm.org/pr21753
