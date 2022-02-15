@@ -1033,8 +1033,8 @@ ExpM1Approximation::matchAndRewrite(math::ExpM1Op op,
   Value cstNegOne = bcast(f32Cst(builder, -1.0f));
   Value x = op.getOperand();
   Value u = builder.create<math::ExpOp>(x);
-  Value uEqOne =
-      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, u, cstOne);
+  Value uEqOneOrNaN =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::UEQ, u, cstOne);
   Value uMinusOne = builder.create<arith::SubFOp>(u, cstOne);
   Value uMinusOneEqNegOne = builder.create<arith::CmpFOp>(
       arith::CmpFPredicate::OEQ, uMinusOne, cstNegOne);
@@ -1050,7 +1050,7 @@ ExpM1Approximation::matchAndRewrite(math::ExpM1Op op,
       uMinusOne, builder.create<arith::DivFOp>(x, logU));
   expm1 = builder.create<arith::SelectOp>(isInf, u, expm1);
   Value approximation = builder.create<arith::SelectOp>(
-      uEqOne, x,
+      uEqOneOrNaN, x,
       builder.create<arith::SelectOp>(uMinusOneEqNegOne, cstNegOne, expm1));
   rewriter.replaceOp(op, approximation);
   return success();
