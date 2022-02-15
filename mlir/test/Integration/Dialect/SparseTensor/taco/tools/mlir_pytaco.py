@@ -1683,10 +1683,16 @@ def _mark_structured_op_root(
       to perform a reduction.
     expr_to_info: The dictionary to look up _ExprInfo for IndexExpr.
   """
+  expr_info = expr_to_info[expr]
+  if isinstance(expr, Access):
+    # Handle simple reduction expression in the format of A[i] = B[i, j].
+    if reduce_index in expr_info.src_indices:
+      expr_info.reduce_indices.add(reduce_index)
+    return
+
   assert (isinstance(expr, _BinaryExpr))
   a_info = expr_to_info[expr.a]
   b_info = expr_to_info[expr.b]
-  expr_info = expr_to_info[expr]
 
   if reduce_index in a_info.src_indices and reduce_index in b_info.src_indices:
     expr_info.reduce_indices.add(reduce_index)
@@ -1724,6 +1730,9 @@ def _accumulate_reduce_indices(
         | expr_info.reduce_indices)
   else:
     assert isinstance(expr, Access)
+    # Handle simple reduction expression in the format of A[i] = B[i, j].
+    expr_info.acc_reduce_indices = expr_info.reduce_indices
+
 
 
 def _gather_structured_op(
@@ -1821,9 +1830,10 @@ def _gather_structured_op_input(
     structop_inputs: The resulting list of IndexExpr that provide input to the
       current structured op.
   """
-  if (expr != root and expr not in structop_inputs) and (
-      isinstance(expr, Access) or
-      (expr in expr_to_info and expr_to_info[expr].structop_info)):
+  if ((expr != root or isinstance(expr, Access)) and
+      expr not in structop_inputs) and (isinstance(expr, Access) or
+                                        (expr in expr_to_info and
+                                         expr_to_info[expr].structop_info)):
     structop_inputs.append(expr)
 
 
@@ -1843,7 +1853,7 @@ def _emit_structured_op_input(
     An OperandDef in the linalg dialect for the input IndexExpr.
   """
   op_info = expr_to_info[expr].structop_info
-  if op_info:
+  if op_info and not isinstance(expr, Access):
     # The input is a temporary tensor produced by another structured op.
     indices = op_info.dst_indices
     name = op_info.dst_name
