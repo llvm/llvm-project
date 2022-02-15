@@ -26,6 +26,7 @@ set(files
   __algorithm/generate.h
   __algorithm/generate_n.h
   __algorithm/half_positive.h
+  __algorithm/in_fun_result.h
   __algorithm/in_in_out_result.h
   __algorithm/in_in_result.h
   __algorithm/in_out_out_result.h
@@ -63,6 +64,7 @@ set(files
   __algorithm/pop_heap.h
   __algorithm/prev_permutation.h
   __algorithm/push_heap.h
+  __algorithm/ranges_min_element.h
   __algorithm/ranges_swap_ranges.h
   __algorithm/remove.h
   __algorithm/remove_copy.h

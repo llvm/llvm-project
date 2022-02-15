@@ -20,7 +20,7 @@
 
 ## Check that we emit a warning for an invalid os version.
 
-# RUN: %no_fatal_warnings_lld -o %t/libfoo3.dylib %t/libLDInstallNameInvalid.tbd %t/foo.o -dylib \
+# RUN: %no-fatal-warnings-lld -o %t/libfoo3.dylib %t/libLDInstallNameInvalid.tbd %t/foo.o -dylib \
 # RUN:  -platform_version macos 11.0.0 11.0.0 2>&1 | FileCheck --check-prefix=INVALID-VERSION %s
 
 # INVALID-VERSION: failed to parse os version, symbol '$ld$install_name$os11.a$/New' ignored

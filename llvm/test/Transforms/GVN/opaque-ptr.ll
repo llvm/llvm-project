@@ -2,9 +2,10 @@
 ; RUN: opt -S -gvn -opaque-pointers < %s | FileCheck %s
 
 declare void @use(ptr)
+declare void @use.i32(i32)
 
-define void @test(ptr %p) {
-; CHECK-LABEL: @test(
+define void @gep_cse(ptr %p) {
+; CHECK-LABEL: @gep_cse(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i64, ptr [[P]], i64 1
 ; CHECK-NEXT:    call void @use(ptr [[GEP1]])
@@ -19,4 +20,86 @@ define void @test(ptr %p) {
   call void @use(ptr %gep2)
   call void @use(ptr %gep3)
   ret void
+}
+
+define i32 @phi_trans(i1 %c, ptr %p1, ptr %p2) {
+; CHECK-LABEL: @phi_trans(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[P1:%.*]], i64 1
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[GEP1]], align 4
+; CHECK-NEXT:    call void @use(i32 [[V1]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i32, ptr [[P2:%.*]], i64 1
+; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[GEP2]], align 4
+; CHECK-NEXT:    call void @use(i32 [[V2]]) #[[ATTR0]]
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[V:%.*]] = phi i32 [ [[V1]], [[IF]] ], [ [[V2]], [[ELSE]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[P1]], [[IF]] ], [ [[P2]], [[ELSE]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PHI]], i64 1
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  br i1 %c, label %if, label %else
+
+if:
+  %gep1 = getelementptr i32, ptr %p1, i64 1
+  %v1 = load i32, ptr %gep1
+  call void @use(i32 %v1) readnone
+  br label %join
+
+else:
+  %gep2 = getelementptr i32, ptr %p2, i64 1
+  %v2 = load i32, ptr %gep2
+  call void @use(i32 %v2) readnone
+  br label %join
+
+join:
+  %phi = phi ptr [ %p1, %if ], [ %p2, %else ]
+  %gep = getelementptr i32, ptr %phi, i64 1
+  %v = load i32, ptr %gep
+  ret i32 %v
+}
+
+define i32 @phi_trans_different_types(i1 %c, ptr %p1, ptr %p2) {
+; CHECK-LABEL: @phi_trans_different_types(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[P1:%.*]], i64 1
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[GEP1]], align 4
+; CHECK-NEXT:    call void @use.i32(i32 [[V1]]) #[[ATTR0]]
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i64, ptr [[P2:%.*]], i64 1
+; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[GEP2]], align 4
+; CHECK-NEXT:    call void @use.i32(i32 [[V2]]) #[[ATTR0]]
+; CHECK-NEXT:    [[GEP_PHI_TRANS_INSERT:%.*]] = getelementptr i32, ptr [[P2]], i64 1
+; CHECK-NEXT:    [[V_PRE:%.*]] = load i32, ptr [[GEP_PHI_TRANS_INSERT]], align 4
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[V:%.*]] = phi i32 [ [[V1]], [[IF]] ], [ [[V_PRE]], [[ELSE]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[P1]], [[IF]] ], [ [[P2]], [[ELSE]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PHI]], i64 1
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  br i1 %c, label %if, label %else
+
+if:
+  %gep1 = getelementptr i32, ptr %p1, i64 1
+  %v1 = load i32, ptr %gep1
+  call void @use.i32(i32 %v1) readnone
+  br label %join
+
+else:
+  %gep2 = getelementptr i64, ptr %p2, i64 1
+  %v2 = load i32, ptr %gep2
+  call void @use.i32(i32 %v2) readnone
+  br label %join
+
+join:
+  %phi = phi ptr [ %p1, %if ], [ %p2, %else ]
+  %gep = getelementptr i32, ptr %phi, i64 1
+  %v = load i32, ptr %gep
+  ret i32 %v
 }

@@ -177,7 +177,7 @@ entry:
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetZ
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
-; CHECK-NEXT:       ValueKind:       HiddenNone
+; CHECK-NEXT:       ValueKind:       HiddenHostcallBuffer
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:   CodeProps:
 define amdgpu_kernel void @test32(
@@ -221,7 +221,7 @@ entry:
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetZ
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
-; CHECK-NEXT:       ValueKind:       HiddenNone
+; CHECK-NEXT:       ValueKind:       HiddenHostcallBuffer
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
@@ -273,7 +273,7 @@ entry:
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetZ
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
-; CHECK-NEXT:       ValueKind:       HiddenNone
+; CHECK-NEXT:       ValueKind:       HiddenHostcallBuffer
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8

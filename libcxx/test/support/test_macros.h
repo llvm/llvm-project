@@ -380,6 +380,10 @@ inline void DoNotOptimize(Tp const& value) {
 #  define TEST_HAS_NO_LOCALIZATION
 #endif
 
+#if TEST_STD_VER <= 17 || !defined(__cpp_char8_t)
+#  define TEST_HAS_NO_CHAR8_T
+#endif
+
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif
