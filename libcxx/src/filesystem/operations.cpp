@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__utility/unreachable.h>
 #include "filesystem"
 #include "array"
 #include "iterator"
@@ -154,7 +155,7 @@ public:
       return makeState(PS_AtEnd);
 
     case PS_AtEnd:
-      _LIBCPP_UNREACHABLE();
+      __libcpp_unreachable();
     }
   }
 
@@ -202,7 +203,7 @@ public:
       return makeState(PS_InRootName, Path.data(), RStart + 1);
     case PS_InRootName:
     case PS_BeforeBegin:
-      _LIBCPP_UNREACHABLE();
+      __libcpp_unreachable();
     }
   }
 
@@ -224,7 +225,7 @@ public:
     case PS_InFilenames:
       return RawEntry;
     }
-    _LIBCPP_UNREACHABLE();
+    __libcpp_unreachable();
   }
 
   explicit operator bool() const noexcept {
@@ -285,7 +286,7 @@ private:
     case PS_AtEnd:
       return getAfterBack();
     }
-    _LIBCPP_UNREACHABLE();
+    __libcpp_unreachable();
   }
 
   /// \brief Return a pointer to the first character in the currently lexed
@@ -302,7 +303,7 @@ private:
     case PS_AtEnd:
       return &Path.back() + 1;
     }
-    _LIBCPP_UNREACHABLE();
+    __libcpp_unreachable();
   }
 
   // Consume all consecutive separators.
@@ -681,7 +682,7 @@ void filesystem_error::__create_what(int __num_paths) {
       return detail::format_string("filesystem error: %s [" PATH_CSTR_FMT "] [" PATH_CSTR_FMT "]",
                                    derived_what, path1().c_str(), path2().c_str());
     }
-    _LIBCPP_UNREACHABLE();
+    __libcpp_unreachable();
   }();
 }
 
@@ -1188,7 +1189,7 @@ bool __fs_is_empty(const path& p, error_code* ec) {
   } else if (is_regular_file(st))
     return static_cast<uintmax_t>(pst.st_size) == 0;
 
-  _LIBCPP_UNREACHABLE();
+  __libcpp_unreachable();
 }
 
 static file_time_type __extract_last_write_time(const path& p, const StatT& st,
@@ -1801,7 +1802,7 @@ path path::lexically_normal() const {
       break;
     }
     case PK_None:
-      _LIBCPP_UNREACHABLE();
+      __libcpp_unreachable();
     }
   }
   // [fs.path.generic]p6.8: If the path is empty, add a dot.

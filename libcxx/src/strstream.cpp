@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__utility/unreachable.h>
 #include "strstream"
 #include "algorithm"
 #include "climits"
@@ -268,7 +269,7 @@ strstreambuf::seekoff(off_type __off, ios_base::seekdir __way, ios_base::openmod
             newoff = seekhigh - eback();
             break;
         default:
-            _LIBCPP_UNREACHABLE();
+            __libcpp_unreachable();
         }
         newoff += __off;
         if (0 <= newoff && newoff <= seekhigh - eback())

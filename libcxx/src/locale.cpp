@@ -12,6 +12,7 @@
 #define _LCONV_C99
 #endif
 
+#include <__utility/unreachable.h>
 #include "algorithm"
 #include "clocale"
 #include "codecvt"
@@ -4623,7 +4624,7 @@ static bool checked_string_to_char_convert(char& dest,
 
   return false;
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
-  _LIBCPP_UNREACHABLE();
+  __libcpp_unreachable();
 }
 
 
