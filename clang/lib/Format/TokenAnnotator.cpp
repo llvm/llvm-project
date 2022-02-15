@@ -3093,14 +3093,15 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
         Right.Next->is(TT_RangeBasedForLoopColon))
       return getTokenPointerOrReferenceAlignment(Left) !=
              FormatStyle::PAS_Right;
-    return !Right.isOneOf(TT_PointerOrReference, TT_ArraySubscriptLSquare,
-                          tok::l_paren) &&
-           (getTokenPointerOrReferenceAlignment(Left) !=
-                FormatStyle::PAS_Right &&
-            !Line.IsMultiVariableDeclStmt) &&
-           Left.Previous &&
-           !Left.Previous->isOneOf(tok::l_paren, tok::coloncolon,
-                                   tok::l_square);
+    if (Right.isOneOf(TT_PointerOrReference, TT_ArraySubscriptLSquare,
+                      tok::l_paren))
+      return false;
+    if (getTokenPointerOrReferenceAlignment(Left) == FormatStyle::PAS_Right)
+      return false;
+    if (Line.IsMultiVariableDeclStmt)
+      return false;
+    return Left.Previous && !Left.Previous->isOneOf(
+                                tok::l_paren, tok::coloncolon, tok::l_square);
   }
   // Ensure right pointer alignment with ellipsis e.g. int *...P
   if (Left.is(tok::ellipsis) && Left.Previous &&
@@ -3597,7 +3598,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   if (Right.is(tok::colon)) {
     if (Line.First->isOneOf(tok::kw_default, tok::kw_case))
       return Style.SpaceBeforeCaseColon;
-    if (!Right.getNextNonComment() || Right.getNextNonComment()->is(tok::semi))
+    const FormatToken *Next = Right.getNextNonComment();
+    if (!Next || Next->is(tok::semi))
       return false;
     if (Right.is(TT_ObjCMethodExpr))
       return false;

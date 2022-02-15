@@ -1237,6 +1237,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
   let arguments = (ins DefaultValuedAttr<Linkage, "Linkage::External">:$linkage,
                    UnitAttr:$dso_local,
                    OptionalAttr<FlatSymbolRefAttr>:$personality,
+                   OptionalAttr<StrAttr>:$garbageCollector,
                    OptionalAttr<ArrayAttr>:$passthrough);
 
   let regions = (region AnyRegion:$body);

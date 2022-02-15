@@ -669,8 +669,9 @@ let TargetPrefix = "riscv" in {
   class RISCVTernaryAAAXMask
         : Intrinsic<[llvm_anyvector_ty],
                     [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyint_ty,
-                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<1>],
-                    [IntrNoMem]>, RISCVVIntrinsic {
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                     LLVMMatchType<1>, LLVMMatchType<1>],
+                    [ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
     let VLOperand = 4;
   }
   class RISCVTernaryAAXANoMask
@@ -681,11 +682,13 @@ let TargetPrefix = "riscv" in {
     let SplatOperand = 1;
     let VLOperand = 3;
   }
+  // Input: (vector_in, vector_in/scalar, vector_in, mask, vl, policy
   class RISCVTernaryAAXAMask
         : Intrinsic<[llvm_anyvector_ty],
                     [LLVMMatchType<0>, llvm_any_ty, LLVMMatchType<0>,
-                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
-                    [IntrNoMem]>, RISCVVIntrinsic {
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                     llvm_anyint_ty, LLVMMatchType<2>],
+                    [ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
     let SplatOperand = 1;
     let VLOperand = 4;
   }
@@ -697,11 +700,13 @@ let TargetPrefix = "riscv" in {
     let SplatOperand = 1;
     let VLOperand = 3;
   }
+  // Input: (vector_in, vector_in/scalar, vector_in, mask, vl, policy
   class RISCVTernaryWideMask
         : Intrinsic< [llvm_anyvector_ty],
                      [LLVMMatchType<0>, llvm_any_ty, llvm_anyvector_ty,
-                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
-                     [IntrNoMem]>, RISCVVIntrinsic {
+                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                      llvm_anyint_ty, LLVMMatchType<3>],
+                     [ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
     let SplatOperand = 1;
     let VLOperand = 4;
   }

@@ -538,13 +538,17 @@ void X86FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
   }
 
   // For GPRs, we only care to clear out the 32-bit register.
+  BitVector GPRsToZero(TRI->getNumRegs());
   for (MCRegister Reg : RegsToZero.set_bits())
     if (TRI->isGeneralPurposeRegister(MF, Reg)) {
-      Reg = getX86SubSuperRegisterOrZero(Reg, 32);
-      for (const MCPhysReg &Reg : TRI->sub_and_superregs_inclusive(Reg))
-        RegsToZero.reset(Reg);
-      RegsToZero.set(Reg);
+      GPRsToZero.set(getX86SubSuperRegisterOrZero(Reg, 32));
+      RegsToZero.reset(Reg);
     }
+
+  for (MCRegister Reg : GPRsToZero.set_bits())
+    BuildMI(MBB, MBBI, DL, TII.get(X86::XOR32rr), Reg)
+        .addReg(Reg, RegState::Undef)
+        .addReg(Reg, RegState::Undef);
 
   // Zero out registers.
   for (MCRegister Reg : RegsToZero.set_bits()) {
@@ -553,9 +557,7 @@ void X86FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
       continue;
 
     unsigned XorOp;
-    if (TRI->isGeneralPurposeRegister(MF, Reg)) {
-      XorOp = X86::XOR32rr;
-    } else if (X86::VR128RegClass.contains(Reg)) {
+    if (X86::VR128RegClass.contains(Reg)) {
       // XMM#
       if (!ST.hasSSE1())
         continue;

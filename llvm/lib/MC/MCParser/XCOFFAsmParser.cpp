@@ -8,15 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/XCOFF.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
-#include "llvm/MC/MCSectionXCOFF.h"
-#include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCSymbolXCOFF.h"
-#include "llvm/Support/MachineValueType.h"
 
 using namespace llvm;
 

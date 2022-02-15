@@ -158,10 +158,11 @@ void normalizeAffineParallel(AffineParallelOp op);
 /// Normalize an affine.for op. If the affine.for op has only a single iteration
 /// only then it is simply promoted, else it is normalized in the traditional
 /// way, by converting the lower bound to zero and loop step to one. The upper
-/// bound is set to the trip count of the loop. For now, original loops must
-/// have lower bound with a single result only. There is no such restriction on
-/// upper bounds.
-void normalizeAffineFor(AffineForOp op);
+/// bound is set to the trip count of the loop. Original loops must have a
+/// lower bound with only a single result. There is no such restriction on upper
+/// bounds. Returns success if the loop has been normalized (or is already in
+/// the normal form).
+LogicalResult normalizeAffineFor(AffineForOp op);
 
 /// Traverse `e` and return an AffineExpr where all occurrences of `dim` have
 /// been replaced by either:
