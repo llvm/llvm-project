@@ -22,16 +22,25 @@ namespace tooling {
 /// defined by the arguments of the constructor.
 class Transformer : public ast_matchers::MatchFinder::MatchCallback {
 public:
-  using ChangeConsumer =
-      std::function<void(Expected<clang::tooling::AtomicChange> Change)>;
+  /// Provides the set of changes to the consumer.  The callback is free to move
+  /// or destructively consume the changes as needed.
+  ///
+  /// We use \c MutableArrayRef as an abstraction to provide decoupling, and we
+  /// expect the majority of consumers to copy or move the individual values
+  /// into a separate data structure.
+  using ChangeSetConsumer = std::function<void(
+      Expected<llvm::MutableArrayRef<AtomicChange>> Changes)>;
 
-  /// \param Consumer Receives each rewrite or error.  Will not necessarily be
-  /// called for each match; for example, if the rewrite is not applicable
-  /// because of macros, but doesn't fail.  Note that clients are responsible
+  /// \param Consumer Receives all rewrites for a single match, or an error.
+  /// Will not necessarily be called for each match; for example, if the rule
+  /// generates no edits but does not fail.  Note that clients are responsible
   /// for handling the case that independent \c AtomicChanges conflict with each
   /// other.
-  Transformer(transformer::RewriteRule Rule, ChangeConsumer Consumer)
-      : Rule(std::move(Rule)), Consumer(std::move(Consumer)) {}
+  explicit Transformer(transformer::RewriteRule Rule,
+                       ChangeSetConsumer Consumer)
+      : Rule(std::move(Rule)), Consumer(std::move(Consumer)) {
+    assert(this->Consumer && "Consumer is empty");
+  }
 
   /// N.B. Passes `this` pointer to `MatchFinder`.  So, this object should not
   /// be moved after this call.
@@ -43,8 +52,9 @@ public:
 
 private:
   transformer::RewriteRule Rule;
-  /// Receives each successful rewrites as an \c AtomicChange.
-  ChangeConsumer Consumer;
+  /// Receives sets of successful rewrites as an
+  /// \c llvm::ArrayRef<AtomicChange>.
+  ChangeSetConsumer Consumer;
 };
 } // namespace tooling
 } // namespace clang

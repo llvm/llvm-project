@@ -26,6 +26,7 @@ using ::clang::transformer::applyFirst;
 using ::clang::transformer::before;
 using ::clang::transformer::cat;
 using ::clang::transformer::changeTo;
+using ::clang::transformer::editList;
 using ::clang::transformer::makeRule;
 using ::clang::transformer::member;
 using ::clang::transformer::name;
@@ -36,6 +37,8 @@ using ::clang::transformer::RewriteRule;
 using ::clang::transformer::statement;
 using ::testing::ElementsAre;
 using ::testing::IsEmpty;
+using ::testing::ResultOf;
+using ::testing::UnorderedElementsAre;
 
 constexpr char KHeaderContents[] = R"cc(
   struct string {
@@ -120,10 +123,11 @@ protected:
     return *ChangedCode;
   }
 
-  Transformer::ChangeConsumer consumer() {
-    return [this](Expected<AtomicChange> C) {
+  Transformer::ChangeSetConsumer consumer() {
+    return [this](Expected<MutableArrayRef<AtomicChange>> C) {
       if (C) {
-        Changes.push_back(std::move(*C));
+        Changes.insert(Changes.end(), std::make_move_iterator(C->begin()),
+                       std::make_move_iterator(C->end()));
       } else {
         // FIXME: stash this error rather then printing.
         llvm::errs() << "Error generating changes: "
@@ -799,7 +803,6 @@ TEST_F(TransformerTest, MultiChange) {
 }
 
 TEST_F(TransformerTest, EditList) {
-  using clang::transformer::editList;
   std::string Input = R"cc(
     void foo() {
       if (10 > 1.0)
@@ -827,7 +830,6 @@ TEST_F(TransformerTest, EditList) {
 }
 
 TEST_F(TransformerTest, Flatten) {
-  using clang::transformer::editList;
   std::string Input = R"cc(
     void foo() {
       if (10 > 1.0)
@@ -1638,4 +1640,46 @@ TEST_F(TransformerTest, AddIncludeMultipleFiles) {
       << "Could not update code: " << llvm::toString(UpdatedCode.takeError());
   EXPECT_EQ(format(*UpdatedCode), format(Header));
 }
+
+// A single change set can span multiple files.
+TEST_F(TransformerTest, MultiFileEdit) {
+  // NB: The fixture is unused for this test, but kept for the test suite name.
+  std::string Header = R"cc(void Func(int id);)cc";
+  std::string Source = R"cc(#include "input.h"
+                            void Caller() {
+                              int id = 0;
+                              Func(id);
+                            })cc";
+  int ErrorCount = 0;
+  std::vector<AtomicChanges> ChangeSets;
+  clang::ast_matchers::MatchFinder MatchFinder;
+  Transformer T(
+      makeRule(callExpr(callee(functionDecl(hasName("Func"))),
+                        forEachArgumentWithParam(expr().bind("arg"),
+                                                 parmVarDecl().bind("param"))),
+               editList({changeTo(node("arg"), cat("ARG")),
+                         changeTo(node("param"), cat("PARAM"))})),
+      [&](Expected<MutableArrayRef<AtomicChange>> Changes) {
+        if (Changes)
+          ChangeSets.push_back(AtomicChanges(Changes->begin(), Changes->end()));
+        else
+          ++ErrorCount;
+      });
+  T.registerMatchers(&MatchFinder);
+  auto Factory = newFrontendActionFactory(&MatchFinder);
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      Factory->create(), Source, std::vector<std::string>(), "input.cc",
+      "clang-tool", std::make_shared<PCHContainerOperations>(),
+      {{"input.h", Header}}));
+
+  EXPECT_EQ(ErrorCount, 0);
+  EXPECT_THAT(
+      ChangeSets,
+      UnorderedElementsAre(UnorderedElementsAre(
+          ResultOf([](const AtomicChange &C) { return C.getFilePath(); },
+                   "input.cc"),
+          ResultOf([](const AtomicChange &C) { return C.getFilePath(); },
+                   "./input.h"))));
+}
+
 } // namespace
