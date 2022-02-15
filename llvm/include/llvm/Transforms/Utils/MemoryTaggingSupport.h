@@ -19,7 +19,6 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/ValueHandle.h"
 
 namespace llvm {
 namespace memtag {
@@ -75,7 +74,6 @@ Instruction *getUntagLocationIfFunctionExit(Instruction &Inst);
 
 struct AllocaInfo {
   AllocaInst *AI;
-  TrackingVH<Instruction> OldAI; // Track through RAUW to replace debug uses.
   SmallVector<IntrinsicInst *, 2> LifetimeStart;
   SmallVector<IntrinsicInst *, 2> LifetimeEnd;
   SmallVector<DbgVariableIntrinsic *, 2> DbgVariableIntrinsics;
@@ -102,7 +100,7 @@ private:
 };
 
 uint64_t getAllocaSizeInBytes(const AllocaInst &AI);
-bool alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Align);
+void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Align);
 
 } // namespace memtag
 } // namespace llvm
