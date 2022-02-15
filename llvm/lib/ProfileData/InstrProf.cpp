@@ -1345,15 +1345,8 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
     return make_error<InstrProfError>(instrprof_error::unsupported_version);
 
   switch (GET_VERSION(FormatVersion)) {
-    // When a new field is added in the header add a case statement here to
-    // populate it.
-    static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version8,
-        "Please update the reading code below if a new field has been added, "
-        "if not add a case statement to fall through to the latest version.");
-  case 8ull:
-    H.MemProfOffset = read(Buffer, offsetOf(&Header::MemProfOffset));
-    LLVM_FALLTHROUGH;
+  // When a new field is added in the header add a case statement here to
+  // populate it.
   default:
     H.HashType = read(Buffer, offsetOf(&Header::HashType));
     H.HashOffset = read(Buffer, offsetOf(&Header::HashOffset));
@@ -1364,15 +1357,9 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
 
 size_t Header::size() const {
   switch (GET_VERSION(Version)) {
-    // When a new field is added to the header add a case statement here to
-    // compute the size as offset of the new field + size of the new field. This
-    // relies on the field being added to the end of the list.
-    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version8,
-                  "Please update the size computation below if a new field has "
-                  "been added to the header, if not add a case statement to "
-                  "fall through to the latest version.");
-  case 8ull:
-    return offsetOf(&Header::MemProfOffset) + sizeof(Header::MemProfOffset);
+  // When a new field is added to the header add a case statement here to
+  // compute the size as offset of the new field + size of the new field. This
+  // relies on the field being added to the end of the list.
   default:
     return offsetOf(&Header::HashOffset) + sizeof(Header::HashOffset);
   }

@@ -94,14 +94,14 @@ __pragma(pack(push,1))
 struct MemInfoBlock{
 
 #define MIBEntryDef(NameTag, Name, Type) Type Name;
-#include "llvm/ProfileData/MIBEntryDef.inc"
+#include "MIBEntryDef.inc"
 #undef MIBEntryDef
 
 bool operator==(const MemInfoBlock& Other) const {
   bool IsEqual = true;
 #define MIBEntryDef(NameTag, Name, Type) \
   IsEqual = (IsEqual && Name == Other.Name);
-#include "llvm/ProfileData/MIBEntryDef.inc"
+#include "MIBEntryDef.inc"
 #undef MIBEntryDef
   return IsEqual;
 }
