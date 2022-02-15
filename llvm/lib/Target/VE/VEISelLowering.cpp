@@ -76,6 +76,8 @@ bool VETargetLowering::CanLowerReturn(
 static const MVT AllVectorVTs[] = {MVT::v256i32, MVT::v512i32, MVT::v256i64,
                                    MVT::v256f32, MVT::v512f32, MVT::v256f64};
 
+static const MVT AllMaskVTs[] = {MVT::v256i1, MVT::v512i1};
+
 static const MVT AllPackedVTs[] = {MVT::v512i32, MVT::v512f32};
 
 void VETargetLowering::initRegisterClasses() {
@@ -294,6 +296,9 @@ void VETargetLowering::initSPUActions() {
 }
 
 void VETargetLowering::initVPUActions() {
+  for (MVT LegalMaskVT : AllMaskVTs)
+    setOperationAction(ISD::BUILD_VECTOR, LegalMaskVT, Custom);
+
   for (MVT LegalVecVT : AllVectorVTs) {
     setOperationAction(ISD::BUILD_VECTOR, LegalVecVT, Custom);
     setOperationAction(ISD::INSERT_VECTOR_ELT, LegalVecVT, Legal);
@@ -1661,7 +1666,7 @@ SDValue VETargetLowering::lowerBUILD_VECTOR(SDValue Op,
   if (SDValue ScalarV = getSplatValue(Op.getNode())) {
     unsigned NumEls = ResultVT.getVectorNumElements();
     auto AVL = CDAG.getConstant(NumEls, MVT::i32);
-    return CDAG.getBroadcast(ResultVT, Op.getOperand(0), AVL);
+    return CDAG.getBroadcast(ResultVT, ScalarV, AVL);
   }
 
   // Expand
@@ -2696,9 +2701,9 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
 
   // The representative and legalized vector type of this operation.
   VECustomDAG CDAG(DAG, Op);
-  MVT MaskVT = MVT::v256i1; // TODO: packed mode.
   EVT OpVecVT = Op.getValueType();
   EVT LegalVecVT = getTypeToTransformTo(*DAG.getContext(), OpVecVT);
+  auto Packing = getTypePacking(LegalVecVT.getSimpleVT());
 
   SDValue AVL;
   SDValue Mask;
@@ -2713,8 +2718,7 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
   } else {
     // Materialize the VL parameter.
     AVL = CDAG.getConstant(OpVecVT.getVectorNumElements(), MVT::i32);
-    SDValue ConstTrue = CDAG.getConstant(1, MVT::i32);
-    Mask = CDAG.getBroadcast(MaskVT, ConstTrue, AVL);
+    Mask = CDAG.getConstantMask(Packing, true);
   }
 
   if (isVVPBinaryOp(VVPOpcode)) {
