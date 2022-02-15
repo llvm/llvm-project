@@ -13424,8 +13424,8 @@ long __ovld atomic_fetch_max(volatile __global atomic_long *object, long operand
 long __ovld atomic_fetch_max(volatile __local atomic_long *object, long operand);
 ulong __ovld atomic_fetch_max(volatile __global atomic_ulong *object, ulong operand);
 ulong __ovld atomic_fetch_max(volatile __local atomic_ulong *object, ulong operand);
-uintptr_t __ovld atomic_fetch_add(volatile __global atomic_uintptr_t *object, ptrdiff_t operand);
-uintptr_t __ovld atomic_fetch_sub(volatile __local atomic_uintptr_t *object, ptrdiff_t operand);
+uintptr_t __ovld atomic_fetch_max(volatile __global atomic_uintptr_t *object, uintptr_t operand);
+uintptr_t __ovld atomic_fetch_max(volatile __local atomic_uintptr_t *object, uintptr_t operand);
 #endif //defined(cl_khr_int64_base_atomics) && defined(cl_khr_int64_extended_atomics)
 #endif // (__OPENCL_C_VERSION__ >= CL_VERSION_3_0 || __OPENCL_CPP_VERSION__ >= 202100)
 #endif
@@ -13543,8 +13543,8 @@ long __ovld atomic_fetch_max_explicit(volatile __global atomic_long *object, lon
 long __ovld atomic_fetch_max_explicit(volatile __local atomic_long *object, long operand, memory_order order);
 ulong __ovld atomic_fetch_max_explicit(volatile __global atomic_ulong *object, ulong operand, memory_order order);
 ulong __ovld atomic_fetch_max_explicit(volatile __local atomic_ulong *object, ulong operand, memory_order order);
-uintptr_t __ovld atomic_fetch_add_explicit(volatile __global atomic_uintptr_t *object, ptrdiff_t operand, memory_order order);
-uintptr_t __ovld atomic_fetch_sub_explicit(volatile __local atomic_uintptr_t *object, ptrdiff_t operand, memory_order order);
+uintptr_t __ovld atomic_fetch_max_explicit(volatile __global atomic_uintptr_t *object, uintptr_t operand, memory_order order);
+uintptr_t __ovld atomic_fetch_max_explicit(volatile __local atomic_uintptr_t *object, uintptr_t operand, memory_order order);
 #endif //defined(cl_khr_int64_base_atomics) && defined(cl_khr_int64_extended_atomics)
 #endif // (__OPENCL_C_VERSION__ >= CL_VERSION_3_0 || __OPENCL_CPP_VERSION__ >= 202100)
 #endif
@@ -13661,8 +13661,8 @@ long __ovld atomic_fetch_max_explicit(volatile __global atomic_long *object, lon
 long __ovld atomic_fetch_max_explicit(volatile __local atomic_long *object, long operand, memory_order order, memory_scope scope);
 ulong __ovld atomic_fetch_max_explicit(volatile __global atomic_ulong *object, ulong operand, memory_order order, memory_scope scope);
 ulong __ovld atomic_fetch_max_explicit(volatile __local atomic_ulong *object, ulong operand, memory_order order, memory_scope scope);
-uintptr_t __ovld atomic_fetch_add_explicit(volatile __global atomic_uintptr_t *object, ptrdiff_t operand, memory_order order, memory_scope scope);
-uintptr_t __ovld atomic_fetch_sub_explicit(volatile __local atomic_uintptr_t *object, ptrdiff_t operand, memory_order order, memory_scope scope);
+uintptr_t __ovld atomic_fetch_max_explicit(volatile __global atomic_uintptr_t *object, uintptr_t operand, memory_order order, memory_scope scope);
+uintptr_t __ovld atomic_fetch_max_explicit(volatile __local atomic_uintptr_t *object, uintptr_t operand, memory_order order, memory_scope scope);
 #endif //defined(cl_khr_int64_base_atomics) && defined(cl_khr_int64_extended_atomics)
 #endif // (__OPENCL_C_VERSION__ >= CL_VERSION_3_0 || __OPENCL_CPP_VERSION__ >= 202100)
 
