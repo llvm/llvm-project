@@ -67,3 +67,34 @@ logical(8) function lfct4()
 end
 ! CHECK-LABEL: func @_QPlfct4() -> !fir.logical<8>
 ! CHECK:         return %{{.*}} : !fir.logical<8>
+
+real(2) function rfct1()
+end
+! CHECK-LABEL: func @_QPrfct1() -> f16
+! CHECK:         return %{{.*}} : f16
+
+real(3) function rfct2()
+end
+! CHECK-LABEL: func @_QPrfct2() -> bf16
+! CHECK:         return %{{.*}} : bf16
+
+real function rfct3()
+end
+! CHECK-LABEL: func @_QPrfct3() -> f32
+! CHECK:         return %{{.*}} : f32
+
+real(8) function rfct4()
+end
+! CHECK-LABEL: func @_QPrfct4() -> f64
+! CHECK:         return %{{.*}} : f64
+
+real(10) function rfct5()
+end
+! CHECK-LABEL: func @_QPrfct5() -> f80
+! CHECK:         return %{{.*}} : f80
+
+real(16) function rfct6()
+end
+! CHECK-LABEL: func @_QPrfct6() -> f128
+! CHECK:         return %{{.*}} : f128
+
