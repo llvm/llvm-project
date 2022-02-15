@@ -521,6 +521,7 @@ private:
   void visitUserOp2(Instruction &I) { visitUserOp1(I); }
   void visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call);
   void visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI);
+  void visitVPIntrinsic(VPIntrinsic &VPI);
   void visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII);
   void visitDbgLabelIntrinsic(StringRef Kind, DbgLabelInst &DLI);
   void visitAtomicCmpXchgInst(AtomicCmpXchgInst &CXI);
@@ -4808,6 +4809,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
            "unsupported rounding mode argument", Call);
     break;
   }
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
+#include "llvm/IR/VPIntrinsics.def"
+    visitVPIntrinsic(cast<VPIntrinsic>(Call));
+    break;
 #define INSTRUCTION(NAME, NARGS, ROUND_MODE, INTRINSIC)                        \
   case Intrinsic::INTRINSIC:
 #include "llvm/IR/ConstrainedOps.def"
@@ -5511,6 +5516,17 @@ static DISubprogram *getSubprogram(Metadata *LocalScope) {
   // Just return null; broken scope chains are checked elsewhere.
   assert(!isa<DILocalScope>(LocalScope) && "Unknown type of local scope");
   return nullptr;
+}
+
+void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
+  if (auto *VPCast = dyn_cast<VPCastIntrinsic>(&VPI)) {
+    auto *RetTy = cast<VectorType>(VPCast->getType());
+    auto *ValTy = cast<VectorType>(VPCast->getOperand(0)->getType());
+    Assert(RetTy->getElementCount() == ValTy->getElementCount(),
+           "VP cast intrinsic first argument and result vector lengths must be "
+           "equal",
+           *VPCast);
+  }
 }
 
 void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
