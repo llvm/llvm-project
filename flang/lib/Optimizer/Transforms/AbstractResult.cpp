@@ -95,19 +95,19 @@ public:
       return mlir::failure();
     }
     auto argType = getResultArgumentType(result.getType(), options);
-    auto buffer = saveResult.memref();
+    auto buffer = saveResult.getMemref();
     mlir::Value arg = buffer;
     if (mustEmboxResult(result.getType(), options))
       arg = rewriter.create<fir::EmboxOp>(
-          loc, argType, buffer, saveResult.shape(), /*slice*/ mlir::Value{},
-          saveResult.typeparams());
+          loc, argType, buffer, saveResult.getShape(), /*slice*/ mlir::Value{},
+          saveResult.getTypeparams());
 
     llvm::SmallVector<mlir::Type> newResultTypes;
-    if (callOp.callee()) {
+    if (callOp.getCallee()) {
       llvm::SmallVector<mlir::Value> newOperands = {arg};
       newOperands.append(callOp.getOperands().begin(),
                          callOp.getOperands().end());
-      rewriter.create<fir::CallOp>(loc, callOp.callee().getValue(),
+      rewriter.create<fir::CallOp>(loc, callOp.getCallee().getValue(),
                                    newResultTypes, newOperands);
     } else {
       // Indirect calls.
@@ -163,8 +163,8 @@ public:
     bool replacedStorage = false;
     if (auto *op = returnedValue.getDefiningOp())
       if (auto load = mlir::dyn_cast<fir::LoadOp>(op)) {
-        auto resultStorage = load.memref();
-        load.memref().replaceAllUsesWith(options.newArg);
+        auto resultStorage = load.getMemref();
+        load.getMemref().replaceAllUsesWith(options.newArg);
         replacedStorage = true;
         if (auto *alloc = resultStorage.getDefiningOp())
           if (alloc->use_empty())
@@ -197,7 +197,7 @@ public:
     auto oldFuncTy = addrOf.getType().cast<mlir::FunctionType>();
     auto newFuncTy = getNewFunctionType(oldFuncTy, options);
     auto newAddrOf = rewriter.create<fir::AddrOfOp>(addrOf.getLoc(), newFuncTy,
-                                                    addrOf.symbol());
+                                                    addrOf.getSymbol());
     // Rather than converting all op a function pointer might transit through
     // (e.g calls, stores, loads, converts...), cast new type to the abstract
     // type. A conversion will be added when calling indirect calls of abstract
