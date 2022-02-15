@@ -119,10 +119,9 @@ class TestThreadBacktracePage(TestBase):
         if len(breakpoint_threads) == 1:
             success = thread.Suspend()
             self.assertTrue(success, "Couldn't suspend a thread")
-            bkpt_threads = lldbutil.continue_to_breakpoint(self.process,
+            breakpoint_threads = lldbutil.continue_to_breakpoint(self.process,
                                                            bkpt)
-            self.assertEqual(len(bkpt_threads), 1, "Second thread stopped")
-            breakpoint_threads.append(bkpt_threads[0])
+            self.assertEqual(len(breakpoint_threads), 2, "Second thread stopped")
 
         # Figure out which thread is which:
         thread_id_1 = breakpoint_threads[0].idx
