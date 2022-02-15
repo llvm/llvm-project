@@ -8,13 +8,13 @@ define amdgpu_ps void @test(<8 x i32> inreg %load, <8 x i32> inreg %store) {
 ; GFX9-LABEL: test:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NEXT:    image_load v1, v0, s[0:7] dmask:0x1 unorm
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    image_store v1, v0, s[8:15] dmask:0x1 unorm
-; GFX9-NEXT:    v_mov_b32_e32 v0, 1
-; GFX9-NEXT:    image_load v1, v0, s[0:7] dmask:0x1 unorm
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    image_store v1, v0, s[8:15] dmask:0x1 unorm
+; GFX9-NEXT:    v_mov_b32_e32 v1, 1
+; GFX9-NEXT:    image_load v2, v0, s[0:7] dmask:0x1 unorm
+; GFX9-NEXT:    image_load v3, v1, s[0:7] dmask:0x1 unorm
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    image_store v2, v0, s[8:15] dmask:0x1 unorm
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    image_store v3, v1, s[8:15] dmask:0x1 unorm
 ; GFX9-NEXT:    s_endpgm
   %data0 = call float @llvm.amdgcn.image.load.1d.f32.i32(i32 1, i32 0, <8 x i32> %load, i32 0, i32 0), !invariant.load !0
   call void @llvm.amdgcn.image.store.1d.f32.i32(float %data0, i32 1, i32 0, <8 x i32> %store, i32 0, i32 0)
