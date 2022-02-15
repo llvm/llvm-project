@@ -3182,6 +3182,10 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   if ((CB && CB->hasFnAttr("no_callee_saved_registers")))
     return false;
 
+  // Indirect calls with CFI checks need special handling.
+  if (CB && CB->isIndirectCall() && CB->getOperandBundle(LLVMContext::OB_kcfi))
+    return false;
+
   // Functions using thunks for indirect calls need to use SDISel.
   if (Subtarget->useIndirectThunkCalls())
     return false;
