@@ -773,7 +773,7 @@ void ASTDeclReader::VisitEnumDecl(EnumDecl *ED) {
     }
     if (OldDef) {
       Reader.MergedDeclContexts.insert(std::make_pair(ED, OldDef));
-      ED->setCompleteDefinition(false);
+      ED->demoteThisDefinitionToDeclaration();
       Reader.mergeDefinitionVisibility(OldDef, ED);
       if (OldDef->getODRHash() != ED->getODRHash())
         Reader.PendingEnumOdrMergeFailures[OldDef].push_back(ED);
