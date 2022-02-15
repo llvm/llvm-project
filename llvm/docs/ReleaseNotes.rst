@@ -255,6 +255,13 @@ Changes to LLDB
 Changes to Sanitizers
 ---------------------
 
+Changes to BOLT
+---------------------
+
+* BOLT project is added to the LLVM monorepo. BOLT is a post-link optimizer
+  developed to speed up large applications. Build and usage instructions are
+  given in `README <https://github.com/llvm/llvm-project/tree/main/bolt>`_.
+
 External Open Source Projects Using LLVM 14
 ===========================================
 
