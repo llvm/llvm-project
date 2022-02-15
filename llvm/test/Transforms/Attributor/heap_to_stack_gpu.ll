@@ -4,7 +4,12 @@
 ; RUN: opt -attributor-cgscc -enable-new-pm=0 -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_NPM,IS__CGSCC____,IS________OPM,IS__CGSCC_OPM
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_OPM,IS__CGSCC____,IS________NPM,IS__CGSCC_NPM
 
+; FIXME: amdgpu doesn't claim malloc is a thing, so the test is somewhat
+; useless except the __kmpc_alloc_shared part which now also covers the important
+; part this test was initially designed for, make sure the "is freed" check is
+; not sufficient on a GPU.
 target triple = "amdgcn-amd-amdhsa"
+target datalayout = "A5"
 
 declare noalias i8* @malloc(i64)
 
@@ -20,6 +25,7 @@ declare void @no_sync_func(i8* nocapture %p) nofree nosync willreturn
 
 declare void @nofree_func(i8* nocapture %p) nofree  nosync willreturn
 
+declare void @usei8(i8* %p)
 declare void @foo(i32* %p)
 
 declare void @foo_nounw(i32* %p) nounwind nofree
@@ -663,6 +669,43 @@ define void @test16d(i8 %v, i8** %P) {
   store i8* %1, i8** %P
   ret void
 }
+
+declare i8* @__kmpc_alloc_shared(i64)
+declare void @__kmpc_free_shared(i8* nocapture, i64)
+
+define void @test17() {
+; IS________OPM-LABEL: define {{[^@]+}}@test17() {
+; IS________OPM-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @__kmpc_alloc_shared(i64 noundef 4)
+; IS________OPM-NEXT:    tail call void @usei8(i8* noalias nocapture nofree [[TMP1]]) #[[ATTR6:[0-9]+]]
+; IS________OPM-NEXT:    tail call void @__kmpc_free_shared(i8* noalias nocapture [[TMP1]], i64 noundef 4)
+; IS________OPM-NEXT:    ret void
+;
+; IS________NPM-LABEL: define {{[^@]+}}@test17() {
+; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 4, align 1, addrspace(5)
+; IS________NPM-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast i8 addrspace(5)* [[TMP1]] to i8*
+; IS________NPM-NEXT:    tail call void @usei8(i8* noalias nocapture nofree [[MALLOC_CAST]]) #[[ATTR6:[0-9]+]]
+; IS________NPM-NEXT:    ret void
+;
+  %1 = tail call noalias i8* @__kmpc_alloc_shared(i64 4)
+  tail call void @usei8(i8* nocapture nofree %1) willreturn nounwind nosync
+  tail call void @__kmpc_free_shared(i8* %1, i64 4)
+  ret void
+}
+
+define void @test17b() {
+; CHECK-LABEL: define {{[^@]+}}@test17b() {
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @__kmpc_alloc_shared(i64 noundef 4)
+; CHECK-NEXT:    tail call void @usei8(i8* nofree [[TMP1]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    tail call void @__kmpc_free_shared(i8* nocapture [[TMP1]], i64 noundef 4)
+; CHECK-NEXT:    ret void
+;
+  %1 = tail call noalias i8* @__kmpc_alloc_shared(i64 4)
+  tail call void @usei8(i8* nofree %1) willreturn nounwind nosync
+  tail call void @__kmpc_free_shared(i8* %1, i64 4)
+  ret void
+}
+
+
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind willreturn }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nofree nosync willreturn }
@@ -670,4 +713,5 @@ define void @test16d(i8 %v, i8** %P) {
 ; CHECK: attributes #[[ATTR3]] = { noreturn }
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn }
 ; CHECK: attributes #[[ATTR5]] = { nounwind }
+; CHECK: attributes #[[ATTR6]] = { nosync nounwind willreturn }
 ;.
