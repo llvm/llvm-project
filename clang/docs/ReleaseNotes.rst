@@ -47,6 +47,8 @@ sections with improvements to Clang's support for those languages.
 Major New Features
 ------------------
 
+- Added SPIR-V triple and binary generation using external ``llvm-spirv`` tool.
+  For more details refer to :ref:`the SPIR-V support section <spir-v>`.
 -  ...
 
 Improvements to Clang's diagnostics
@@ -323,6 +325,17 @@ Arm and AArch64 Support in Clang
 
 - The ``attribute((target("branch-protection=...)))`` attributes will now also
   work for the ARM backend.
+
+SPIR-V Support in Clang
+-----------------------
+
+- Added triple/target ``spirv32`` and ``spirv64`` for 32-bit and 64-bit SPIR-V
+  respectively.
+- Added generation of binaries via external ``llvm-spirv`` tool. This can now
+  be used for HIP or OpenCL.
+- Added linking of separate object files in SPIR-V format using external
+  ``spirv-link`` tool.
+
 
 Floating Point Support in Clang
 -------------------------------
