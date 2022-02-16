@@ -240,6 +240,7 @@ Value *PHITransAddr::PHITranslateSubExpr(Value *V, BasicBlock *CurBB,
     for (User *U : APHIOp->users()) {
       if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(U))
         if (GEPI->getType() == GEP->getType() &&
+            GEPI->getSourceElementType() == GEP->getSourceElementType() &&
             GEPI->getNumOperands() == GEPOps.size() &&
             GEPI->getParent()->getParent() == CurBB->getParent() &&
             (!DT || DT->dominates(GEPI->getParent(), PredBB))) {

@@ -149,7 +149,16 @@ namespace {
       return LVal.getExtVectorPointer();
     }
     Address getAtomicAddress() const {
-      return Address(getAtomicPointer(), getAtomicAlignment());
+      llvm::Type *ElTy;
+      if (LVal.isSimple())
+        ElTy = LVal.getAddress(CGF).getElementType();
+      else if (LVal.isBitField())
+        ElTy = LVal.getBitFieldAddress().getElementType();
+      else if (LVal.isVectorElt())
+        ElTy = LVal.getVectorAddress().getElementType();
+      else
+        ElTy = LVal.getExtVectorAddress().getElementType();
+      return Address(getAtomicPointer(), ElTy, getAtomicAlignment());
     }
 
     Address getAtomicAddressAsAtomicIntPointer() const {

@@ -67,8 +67,8 @@ Section,Description,Dependencies,Assignee,Complete
 `[alg.req] <https://wg21.link/alg.req>`_: pt. 4,"| `permutable <https://llvm.org/D119222>`_
 | mergeable
 | sortable",[iterator.concepts],Konstantin Varlamov,In progress
-`[std.iterator.tags] <https://wg21.link/std.iterator.tags>`_,"| `contiguous_iterator_tag <https://reviews.llvm.org/rG45d048c20440989df2b4e1be1f9343225e7741ab>`_
-| `iterator_concept specialization for pointers <https://reviews.llvm.org/rG45d048c20440989df2b4e1be1f9343225e7741ab>`_
+`[std.iterator.tags] <https://wg21.link/std.iterator.tags>`_,"| `contiguous_iterator_tag <https://llvm.org/rG45d048c20440989df2b4e1be1f9343225e7741ab>`_
+| `iterator_concept specialization for pointers <https://llvm.org/rG45d048c20440989df2b4e1be1f9343225e7741ab>`_
 ",[iterator.traits],Eric Fiselier,✅
 `[range.iter.ops] <https://wg21.link/range.iter.ops>`_,"| `ranges::advance <https://llvm.org/D101922>`_
 | `ranges::distance <https://llvm.org/D102789>`_
@@ -76,12 +76,12 @@ Section,Description,Dependencies,Assignee,Complete
 | `ranges::prev <https://llvm.org/D102564>`_",[iterator.concepts],Christopher Di Bella and Arthur O'Dwyer,✅
 `[predef.iterators] <https://wg21.link/predef.iterators>`_,"
 | Updates to reverse_iterator
-| Updates to back_insert_iterator
-| Updates to front_insert_iterator
-| Updates to move_iterator","| [iterator.concepts]
+| `Updates to back_insert_iterator <https://llvm.org/D103273>`_
+| `Updates to front_insert_iterator <https://llvm.org/D103273>`_
+| `Updates to move_iterator <https://llvm.org/D117656>`_","| [iterator.concepts]
 | [iterator.cust.swap]
-| [iterator.cust.move]",Unassigned,Not started
-`[move.sentinel] <https://wg21.link/move.sentinel>`_,`move_sentinel <https://reviews.llvm.org/D117656>`_,[predef.iterators],Arthur O'Dwyer,In progress
+| [iterator.cust.move]",Various,In progress
+`[move.sentinel] <https://wg21.link/move.sentinel>`_,`move_sentinel <https://llvm.org/D117656>`_,[predef.iterators],Arthur O'Dwyer,In progress
 `[common.iterator] <https://wg21.link/common.iterator>`_,`common_iterator <https://llvm.org/D103335>`_,"| [iterator.concepts]
 | [iterator.cust.swap]
 | [iterator.cust.move]",Zoe Carver,✅
@@ -92,10 +92,10 @@ Section,Description,Dependencies,Assignee,Complete
 | [default.sentinels]",Zoe Carver,✅
 `[stream.iterators] <https://wg21.link/stream.iterators>`_,"
 | Updates to istream_iterator
-| Updates to ostream_iterator
+| `Updates to ostream_iterator <https://llvm.org/D103273>`_
 | Updates to istreambuf_iterator
-| Updates to ostreambuf_iterator
-",[default.sentinels],Unassigned,Not started
+| `Updates to ostreambuf_iterator <https://llvm.org/D103273>`_
+",[default.sentinels],Various,In progress
 `[range.access] <https://wg21.link/range.access>`_,"| `ranges::begin <https://llvm.org/D100255>`_
 | `ranges::end <https://llvm.org/D100255>`_
 | `range::cbegin <https://llvm.org/D100255>`_
