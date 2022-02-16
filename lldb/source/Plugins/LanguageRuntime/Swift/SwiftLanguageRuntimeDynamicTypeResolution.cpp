@@ -434,13 +434,22 @@ SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(Status *error) {
   if (m_compiler_type.hasValue())
     return m_compiler_type.getValue();
 
-  llvm::Optional<SwiftScratchContextReader> maybe_swift_ast_ctx =
+  llvm::Optional<SwiftScratchContextReader> maybe_swift_scratch_ctx =
       m_for_object_sp->GetSwiftScratchContext();
-  if (!maybe_swift_ast_ctx) {
+  if (!maybe_swift_scratch_ctx) {
     error->SetErrorString("couldn't get Swift scratch context");
     return CompilerType();
   }
-  SwiftASTContext *swift_ast_ctx = maybe_swift_ast_ctx->get();
+  auto scratch_ctx = maybe_swift_scratch_ctx->get();
+  if (!scratch_ctx) {
+    error->SetErrorString("couldn't get Swift scratch context");
+    return CompilerType();
+  }
+  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext();
+  if (!swift_ast_ctx) {
+    error->SetErrorString("couldn't get Swift scratch context");
+    return CompilerType();
+  }
   auto &remote_ast = m_swift_runtime.GetRemoteASTContext(*swift_ast_ctx);
   swift::remoteAST::Result<swift::Type> result =
       remote_ast.getTypeForRemoteTypeMetadata(
@@ -466,11 +475,14 @@ SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(Status *error) {
 SwiftLanguageRuntime::MetadataPromiseSP
 SwiftLanguageRuntimeImpl::GetMetadataPromise(lldb::addr_t addr,
                                              ValueObject &for_object) {
-  llvm::Optional<SwiftScratchContextReader> maybe_swift_ast_ctx =
+  llvm::Optional<SwiftScratchContextReader> maybe_swift_scratch_ctx =
       for_object.GetSwiftScratchContext();
-  if (!maybe_swift_ast_ctx)
+  if (!maybe_swift_scratch_ctx)
     return nullptr;
-  SwiftASTContext *swift_ast_ctx = maybe_swift_ast_ctx->get();
+  auto scratch_ctx = maybe_swift_scratch_ctx->get();
+  if (!scratch_ctx)
+    return nullptr;
+  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext();
   if (swift_ast_ctx->HasFatalErrors())
     return nullptr;
   if (addr == 0 || addr == LLDB_INVALID_ADDRESS)
@@ -1617,11 +1629,14 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
       in_value.GetSwiftScratchContext();
   if (!maybe_scratch_ctx)
     return false;
-  SwiftASTContextForExpressions *scratch_ctx = maybe_scratch_ctx->get();
+  auto scratch_ctx = maybe_scratch_ctx->get();
   if (!scratch_ctx)
+    return false;
+  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext();
+  if (!swift_ast_ctx)
     return true;
 
-  auto &remote_ast = GetRemoteASTContext(*scratch_ctx);
+  auto &remote_ast = GetRemoteASTContext(*swift_ast_ctx);
   auto remote_ast_metadata_address = remote_ast.getHeapMetadataForObject(
       swift::remote::RemoteAddress(instance_ptr));
   if (remote_ast_metadata_address) {
@@ -1726,12 +1741,15 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Protocol(
         in_value.GetSwiftScratchContext();
     if (!maybe_scratch_ctx)
       return {};
-    SwiftASTContextForExpressions *scratch_ctx = maybe_scratch_ctx->get();
+    auto scratch_ctx = maybe_scratch_ctx->get();
     if (!scratch_ctx)
+      return {};
+    SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext();
+    if (!swift_ast_ctx)
       return {};
 
     swift::remote::RemoteAddress remote_existential(existential_address);
-    auto &remote_ast = GetRemoteASTContext(*scratch_ctx);
+    auto &remote_ast = GetRemoteASTContext(*swift_ast_ctx);
     auto swift_type = GetSwiftType(protocol_type);
     if (!swift_type)
       return {};
@@ -2012,14 +2030,29 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
   // canonicalization in GetCanonicalDemangleTree() must be performed in
   // the original context as to resolve type aliases correctly.
   auto &target = m_process.GetTarget();
-  auto scratch_ctx = target.GetSwiftScratchContext(error, stack_frame);
+  auto maybe_scratch_ctx = target.GetSwiftScratchContext(error, stack_frame);
+  if (!maybe_scratch_ctx) {
+    LLDB_LOG(
+        GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS | LIBLLDB_LOG_TYPES),
+        "No scratch context available.");
+    return ts.GetTypeFromMangledTypename(mangled_name);
+  }
+  auto scratch_ctx = maybe_scratch_ctx->get();
   if (!scratch_ctx) {
     LLDB_LOG(
         GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS | LIBLLDB_LOG_TYPES),
         "No scratch context available.");
     return ts.GetTypeFromMangledTypename(mangled_name);
   }
-  bound_type = scratch_ctx->get()->ImportType(bound_type, error);
+  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext();
+  if (!swift_ast_ctx) {
+    LLDB_LOG(
+        GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS | LIBLLDB_LOG_TYPES),
+        "No scratch context available.");
+    return ts.GetTypeFromMangledTypename(mangled_name);
+  }
+
+  bound_type = swift_ast_ctx->ImportType(bound_type, error);
   
   LLDB_LOG(
       GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS | LIBLLDB_LOG_TYPES),
@@ -2052,8 +2085,13 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
       target.GetSwiftScratchContext(error, stack_frame);
   if (!maybe_scratch_ctx)
     return base_type;
-  SwiftASTContext *scratch_ctx = maybe_scratch_ctx->get();
-  base_type = scratch_ctx->ImportType(base_type, error);
+  auto scratch_ctx = maybe_scratch_ctx->get();
+  if (!scratch_ctx)
+    return base_type;
+  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext();
+  if (!swift_ast_ctx)
+    return base_type;
+  base_type = swift_ast_ctx->ImportType(base_type, error);
 
   if (base_type.GetTypeInfo() & lldb::eTypeIsSwift) {
     swift::Type target_swift_type(GetSwiftType(base_type));
@@ -2062,7 +2100,7 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
 
     // FIXME: This is wrong, but it doesn't actually matter right now since
     // all conformances are always visible
-    auto *module_decl = scratch_ctx->GetASTContext()->getStdlibModule();
+    auto *module_decl = swift_ast_ctx->GetASTContext()->getStdlibModule();
 
     // Replace opaque types with their underlying types when possible.
     swift::Mangle::ASTMangler mangler(true);
@@ -2130,7 +2168,7 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
                 continue;
 
               // Ask RemoteAST to get the underlying type out of the descriptor.
-              auto &remote_ast = GetRemoteASTContext(*scratch_ctx);
+              auto &remote_ast = GetRemoteASTContext(*swift_ast_ctx);
               auto genericParam = opaque_type->getInterfaceType()
                   ->getAs<swift::GenericTypeParamType>();
               auto underlying_type_result =
@@ -2171,7 +2209,7 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
 
     target_swift_type = target_swift_type.subst(
         [this, &stack_frame,
-         &scratch_ctx](swift::SubstitutableType *type) -> swift::Type {
+         &swift_ast_ctx](swift::SubstitutableType *type) -> swift::Type {
           StreamString type_name;
           if (!SwiftLanguageRuntime::GetAbstractTypeName(type_name, type))
             return type;
@@ -2179,7 +2217,7 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
               &stack_frame, ConstString(type_name.GetString()));
           Status import_error;
           CompilerType target_concrete_type =
-              scratch_ctx->ImportType(concrete_type, import_error);
+              swift_ast_ctx->ImportType(concrete_type, import_error);
 
           if (target_concrete_type.IsValid())
             return swift::Type(GetSwiftType(target_concrete_type));

@@ -82,8 +82,8 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromTarget(Status &err, Target &target,
   }
 
   // Check that we can get a type system, or we aren't going anywhere:
-  auto type_system_or_err =
-      target.GetScratchTypeSystemForLanguage(eLanguageTypeSwift, true, repl_options);
+  auto type_system_or_err = target.GetScratchTypeSystemForLanguage(
+      eLanguageTypeSwift, true, repl_options ? repl_options : "");
   if (!type_system_or_err) {
     llvm::consumeError(type_system_or_err.takeError());
     err.SetErrorString("Could not construct an expression "
@@ -255,8 +255,8 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   // Check that we can get a type system, or we aren't
   // going anywhere.  Remember to pass in the repl_options
   // in case they set up framework paths we need, etc.
-  auto type_system_or_err =
-      target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeSwift, true, repl_options);
+  auto type_system_or_err = target_sp->GetScratchTypeSystemForLanguage(
+      eLanguageTypeSwift, true, repl_options ? repl_options : "");
   if (!type_system_or_err) {
     llvm::consumeError(type_system_or_err.takeError());
     err.SetErrorString("Could not construct an expression "
@@ -556,15 +556,19 @@ void SwiftREPL::CompleteCode(const std::string &current_code,
   //----------------------------------------------------------------------
   Status error;
   if (!m_swift_ast) {
-    auto type_system_or_err = m_target.GetScratchTypeSystemForLanguage(eLanguageTypeSwift);
+    auto type_system_or_err =
+        m_target.GetScratchTypeSystemForLanguage(eLanguageTypeSwift);
     if (!type_system_or_err) {
       llvm::consumeError(type_system_or_err.takeError());
       return;
     }
 
+    auto *swift_ts =
+        llvm::dyn_cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
+            &*type_system_or_err);
     auto *target_swift_ast =
         llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-            &*type_system_or_err);
+            swift_ts->GetSwiftASTContext());
     m_swift_ast = target_swift_ast;
   }
   SwiftASTContextForExpressions *swift_ast = m_swift_ast;

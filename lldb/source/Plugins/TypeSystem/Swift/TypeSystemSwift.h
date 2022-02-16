@@ -69,11 +69,10 @@ public:
 ///                      TypeSystemSwift (abstract)
 ///                        │         │
 ///                        ↓         ↓
-///    TypeSystemSwiftTypeRef ⟷ SwiftASTContext (deprecated)
-///                              /    │
-///                              ↓    ↓
-///      SwiftASTContextForModules    SwiftASTContextForExpressions
-///          (deprecated)
+///    TypeSystemSwiftTypeRef ⟷ SwiftASTContextForModules (deprecated)
+///               │                                  │
+///               ↓                                  ↓
+///  TypeSystemSwiftTypeRefForExpressions ⟷ SwiftASTContextForExpressions
 ///
 ///
 /// Memory management:
@@ -116,8 +115,10 @@ public:
   static LanguageSet GetSupportedLanguagesForTypes();
   virtual SwiftASTContext *GetSwiftASTContext() const = 0;
   virtual TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() = 0;
+  virtual const TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() const = 0;
   virtual void SetTriple(const llvm::Triple triple) = 0;
   virtual void ClearModuleDependentCaches() = 0;
+  virtual lldb::TargetWP GetTargetWP() const = 0;
 
   virtual bool IsImportedType(lldb::opaque_compiler_type_t type,
                               CompilerType *original_type) = 0;

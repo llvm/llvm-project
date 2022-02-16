@@ -56,14 +56,17 @@ public:
 #endif
   ~TypeSystemSwiftTypeRef();
   TypeSystemSwiftTypeRef(Module &module);
-  TypeSystemSwiftTypeRef(SwiftASTContextForExpressions &swift_ast_context);
   /// Get the corresponding SwiftASTContext, and create one if necessary.
   SwiftASTContext *GetSwiftASTContext() const override;
   /// Return SwiftASTContext, iff one has already been created.
   SwiftASTContext *GetSwiftASTContextOrNull() const;
   TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() override { return *this; }
+  const TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() const override {
+    return *this;
+  }
   void SetTriple(const llvm::Triple triple) override;
   void ClearModuleDependentCaches() override;
+  lldb::TargetWP GetTargetWP() const override { return {}; }
 
   swift::CanType GetCanonicalSwiftType(CompilerType compiler_type);
   swift::Type GetSwiftType(CompilerType compiler_type);
@@ -300,7 +303,7 @@ public:
   CompilerType RemangleAsType(swift::Demangle::Demangler &dem,
                               swift::Demangle::NodePointer node);
 
-private:
+protected:
   /// Helper that creates an AST type from \p type.
   void *ReconstructType(lldb::opaque_compiler_type_t type);
   /// Cast \p opaque_type as a mangled name.
@@ -378,6 +381,7 @@ private:
   mutable bool m_swift_ast_context_initialized = false;
   mutable lldb::TypeSystemSP m_swift_ast_context_sp;
   mutable SwiftASTContext *m_swift_ast_context = nullptr;
+
   std::unique_ptr<DWARFASTParser> m_dwarf_ast_parser_up;
 
   /// The APINotesManager responsible for each Clang module.
@@ -387,6 +391,58 @@ private:
 
   /// All lldb::Type pointers produced by DWARFASTParser Swift go here.
   ThreadSafeDenseMap<const char *, lldb::TypeSP> m_swift_type_map;
+};
+
+/// This one owns a SwiftASTContextForExpressions.
+class TypeSystemSwiftTypeRefForExpressions : public TypeSystemSwiftTypeRef {
+  // LLVM RTTI support
+  static char ID;
+
+public:
+  /// LLVM RTTI support.
+  /// \{
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || TypeSystemSwiftTypeRef::isA(ClassID);
+  }
+  static bool classof(const TypeSystem *ts) { return ts->isA(&ID); }
+  /// \}
+
+  TypeSystemSwiftTypeRefForExpressions(lldb::LanguageType language,
+                                       Target &target,
+                                       const char *extra_options);
+
+  /// For per-module fallback contexts.
+  TypeSystemSwiftTypeRefForExpressions(lldb::LanguageType language,
+                                       Target &target, Module &module);
+
+  SwiftASTContext *GetSwiftASTContext() const override;
+  lldb::TargetWP GetTargetWP() const override { return m_target_wp; }
+
+  /// Forwards to SwiftASTContext.
+  UserExpression *GetUserExpression(llvm::StringRef expr,
+                                    llvm::StringRef prefix,
+                                    lldb::LanguageType language,
+                                    Expression::ResultType desired_type,
+                                    const EvaluateExpressionOptions &options,
+                                    ValueObject *ctx_obj) override;
+
+  /// Forwards to SwiftASTContext.
+  PersistentExpressionState *GetPersistentExpressionState() override;
+  void PerformCompileUnitImports(SymbolContext &sc);
+
+  friend class SwiftASTContextForExpressions;
+protected:
+  lldb::TargetWP m_target_wp;
+
+  /// This exists to implement the PerformCompileUnitImports
+  /// mechanism.
+  ///
+  /// FIXME: The mechanism's implementation is unreliable since it
+  ///        depends on where the scratch context is first
+  ///        initialized. It should be replaced by something more
+  ///        deterministic.
+  /// Perform all the implicit imports for the current frame.
+  mutable std::unique_ptr<SymbolContext> m_initial_symbol_context;
 };
 
 } // namespace lldb_private

@@ -199,9 +199,17 @@ char SwiftASTContextForModule::ID;
 char SwiftASTContextForExpressions::ID;
 
 CompilerType lldb_private::ToCompilerType(swift::Type qual_type) {
-  return CompilerType(
-      SwiftASTContext::GetSwiftASTContext(&qual_type->getASTContext()),
-      qual_type.getPointer());
+  assert(*reinterpret_cast<const char *>(qual_type.getPointer()) != '$' &&
+         "wrong type system");
+  if (!qual_type)
+    return {};
+  auto *ast_ctx = SwiftASTContext::GetSwiftASTContext(&qual_type->getASTContext());
+  if (!ast_ctx) {
+    std::string m_description("::");
+    LOG_PRINTF(LIBLLDB_LOG_TYPES, "dropped orphaned AST type");
+    return {};
+  }
+  return {ast_ctx, qual_type.getPointer()};
 }
 
 TypePayloadSwift::TypePayloadSwift(bool is_fixed_value_buffer) {
@@ -915,8 +923,9 @@ SwiftASTContext::SwiftASTContext() {
 }
 #endif
 
-SwiftASTContext::SwiftASTContext(std::string description, Target *target)
-    : TypeSystemSwift(),
+SwiftASTContext::SwiftASTContext(std::string description,
+                                 TypeSystemSwiftTypeRef &typeref_typesystem)
+    : TypeSystemSwift(), m_typeref_typesystem(&typeref_typesystem),
       m_compiler_invocation_ap(new swift::CompilerInvocation()) {
   m_description = description;
 
@@ -932,9 +941,6 @@ SwiftASTContext::SwiftASTContext(std::string description, Target *target)
   m_compiler_invocation_ap->setClangModuleCachePath(
       GetClangModulesCacheProperty());
 
-  if (target)
-    m_target_wp = target->shared_from_this();
-
   swift::IRGenOptions &ir_gen_opts =
       m_compiler_invocation_ap->getIRGenOptions();
   ir_gen_opts.OutputKind = swift::IRGenOutputKind::Module;
@@ -947,16 +953,14 @@ SwiftASTContext::SwiftASTContext(std::string description, Target *target)
 }
 
 SwiftASTContext::~SwiftASTContext() {
-  if (swift::ASTContext *ctx = m_ast_context_ap.get()) {
-    // A RemoteASTContext associated with this swift::ASTContext has
-    // to be destroyed before the swift::ASTContext is destroyed.
-    if (TargetSP target_sp = m_target_wp.lock())
-      if (ProcessSP process_sp = target_sp->GetProcessSP())
-        if (auto *runtime = SwiftLanguageRuntime::Get(process_sp))
-          runtime->ReleaseAssociatedRemoteASTContext(ctx);
+  if (swift::ASTContext *ctx = m_ast_context_ap.get())
+    assert(!GetASTMap().Lookup(ctx) && "ast context still in global map");
+}
 
+
+SwiftASTContextForModule::~SwiftASTContextForModule() {
+  if (swift::ASTContext *ctx = m_ast_context_ap.get())
     GetASTMap().Erase(ctx);
-  }
 }
 
 const std::string &SwiftASTContext::GetDescription() const {
@@ -1665,9 +1669,9 @@ static bool IsDWARFImported(swift::ModuleDecl &module) {
 
 lldb::TypeSystemSP
 SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
-                                TypeSystemSwiftTypeRef *typeref_typesystem,
-                                Target *target, bool fallback) {
-  assert(((bool)fallback && (bool)target) != (bool)typeref_typesystem);
+                                TypeSystemSwiftTypeRef &typeref_typesystem,
+                                bool fallback) {
+  TargetSP target = typeref_typesystem.GetTargetWP().lock();
   if (!SwiftASTContextSupportsLanguage(language))
     return lldb::TypeSystemSP();
 
@@ -1740,10 +1744,11 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   // If there is a target this may be a fallback scratch context.
   assert((!fallback || target) && "fallback context must specify a target");
   std::shared_ptr<SwiftASTContext> swift_ast_sp(
-      fallback ? static_cast<SwiftASTContext *>(
-                     new SwiftASTContextForExpressions(m_description, *target))
-               : static_cast<SwiftASTContext *>(new SwiftASTContextForModule(
-                     *typeref_typesystem, m_description, target)));
+      fallback
+          ? static_cast<SwiftASTContext *>(new SwiftASTContextForExpressions(
+                m_description, typeref_typesystem))
+          : static_cast<SwiftASTContext *>(new SwiftASTContextForModule(
+                m_description, typeref_typesystem)));
   bool suppress_config_log = false;
   auto defer_log = llvm::make_scope_exit([swift_ast_sp, &suppress_config_log] {
     // To avoid spamming the log with useless info, we don't log the
@@ -2093,9 +2098,10 @@ ProcessModule(ModuleSP module_sp, std::string m_description,
   }
 }
 
-lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
-                                                   Target &target,
-                                                   const char *extra_options) {
+lldb::TypeSystemSP SwiftASTContext::CreateInstance(
+    lldb::LanguageType language,
+    TypeSystemSwiftTypeRefForExpressions &typeref_typesystem,
+    const char *extra_options) {
   if (!SwiftASTContextSupportsLanguage(language))
     return lldb::TypeSystemSP();
 
@@ -2103,11 +2109,15 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   std::string m_description = "SwiftASTContextForExpressions";
   std::vector<std::string> module_search_paths;
   std::vector<std::pair<std::string, bool>> framework_search_paths;
+  TargetSP target_sp = typeref_typesystem.GetTargetWP().lock();
+  if (!target_sp)
+    return lldb::TypeSystemSP();
+  Target &target = *target_sp;
 
-  // Make an AST but don't set the triple yet. We need to try and
-  // detect if we have a iOS simulator.
+  // Make an AST but don't set the triple yet. We need to
+  // try and detect if we have a iOS simulator.
   std::shared_ptr<SwiftASTContextForExpressions> swift_ast_sp(
-      new SwiftASTContextForExpressions(m_description, target));
+      new SwiftASTContextForExpressions(m_description, typeref_typesystem));
   auto defer_log = llvm::make_scope_exit(
       [swift_ast_sp] { swift_ast_sp->LogConfiguration(); });
 
@@ -2434,7 +2444,7 @@ bool SwiftASTContext::SetTriple(const llvm::Triple triple, Module *module) {
     // Append the min OS to the triple if we have a target
     ModuleSP module_sp;
     if (!module) {
-      TargetSP target_sp(m_target_wp.lock());
+      TargetSP target_sp(GetTargetWP().lock());
       if (target_sp) {
         module_sp = target_sp->GetExecutableModule();
         if (module_sp)
@@ -2599,7 +2609,7 @@ void SwiftASTContext::InitializeSearchPathOptions(
                         triple);
 
   std::string sdk_path = GetPlatformSDKPath().str();
-  if (TargetSP target_sp = m_target_wp.lock())
+  if (TargetSP target_sp = GetTargetWP().lock())
     if (FileSpec &manual_override_sdk = target_sp->GetSDKPath()) {
       set_sdk = false;
       sdk_path = manual_override_sdk.GetPath();
@@ -3229,7 +3239,7 @@ public:
     };
     if (Module *module = m_swift_ast_ctx.GetTypeSystemSwiftTypeRef().GetModule())
       search(*module);
-    else if (TargetSP target_sp = m_swift_ast_ctx.GetTarget().lock()) {
+    else if (TargetSP target_sp = m_swift_ast_ctx.GetTargetWP().lock()) {
       // In a scratch context, check the module's DWARFImporterDelegates first.
       //
       // It's a common pattern that a type is revisited immediately
@@ -4405,6 +4415,7 @@ swift::TypeBase *SwiftASTContext::ReconstructType(ConstString mangled_typename,
   found_type = swift::Demangle::getTypeForMangling(
                    *ast_ctx, mangled_typename.GetStringRef())
                    .getPointer();
+  assert(!found_type || &found_type->getASTContext() == ast_ctx);
 
   // Objective-C classes sometimes have private subclasses that are invisible to
   // the Swift compiler because they are declared and defined in a .m file. If
@@ -4432,18 +4443,20 @@ swift::TypeBase *SwiftASTContext::ReconstructType(ConstString mangled_typename,
     found_type = swift::Demangle::getTypeForMangling(
                      *ast_ctx, super_mangled_typename.GetStringRef())
                      .getPointer();
+    assert(!found_type || &found_type->getASTContext() == ast_ctx);
   }
 
   if (found_type) {
     swift::TypeBase *ast_type =
         ConvertSILFunctionTypesToASTFunctionTypes(found_type).getPointer();
+    assert(ast_type);
+    assert(&ast_type->getASTContext() == ast_ctx);
     // This transformation is lossy: all SILFunction types are mapped
     // to the same AST type. We thus cannot cache the result, since
     // the mapping isn't bijective.
     if (ast_type == found_type)
       CacheDemangledType(mangled_typename, ast_type);
-    CompilerType result_type = ToCompilerType(ast_type);
-    assert(&ast_type->getASTContext() == ast_ctx);
+    CompilerType result_type = {this, ast_type};//ToCompilerType(ast_type);
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") -- found %s", mangled_cstr,
                result_type.GetTypeName().GetCString());
     return ast_type;
@@ -5050,7 +5063,7 @@ void SwiftASTContextForExpressions::ModulesDidLoad(ModuleList &module_list) {
 
   // Scan the new modules for Swift contents and try to import it if
   // safe, otherwise poison this context.
-  TargetSP target_sp = GetTarget().lock();
+  TargetSP target_sp = GetTargetWP().lock();
   if (!target_sp)
     return;
 
@@ -5153,21 +5166,20 @@ void SwiftASTContext::LogConfiguration() {
   }
 }
 
-bool SwiftASTContext::HasTarget() const {
-  lldb::TargetWP empty_wp;
+bool SwiftASTContext::HasTarget() {
+  lldb::TargetWP empty_wp, target_wp = GetTargetWP();
 
   // If either call to "std::weak_ptr::owner_before(...) value returns
   // true, this indicates that m_section_wp once contained (possibly
   // still does) a reference to a valid shared pointer. This helps us
   // know if we had a valid reference to a target which is now invalid
   // because the target was deleted.
-  return empty_wp.owner_before(m_target_wp) ||
-         m_target_wp.owner_before(empty_wp);
+  return empty_wp.owner_before(target_wp) || target_wp.owner_before(empty_wp);
 }
 
 bool SwiftASTContext::CheckProcessChanged() {
   if (HasTarget()) {
-    TargetSP target_sp(m_target_wp.lock());
+    TargetSP target_sp(GetTargetWP().lock());
     if (target_sp) {
       Process *process = target_sp->GetProcessSP().get();
       if (m_process == NULL) {
@@ -7536,6 +7548,8 @@ bool SwiftASTContext::GetSelectedEnumCase(const CompilerType &type,
   if (!swift_can_type)
     return false;
   auto *ast = GetSwiftASTContext(&swift_can_type->getASTContext());
+  if (!ast)
+    return false;
   SwiftEnumDescriptor *cached_enum_info =
       ast->GetCachedEnumInfo(swift_can_type.getPointer());
   if (!cached_enum_info)
@@ -8152,22 +8166,51 @@ DWARFASTParser *SwiftASTContext::GetDWARFParser() {
   return GetTypeSystemSwiftTypeRef().GetDWARFParser();
 }
 
+lldb::TargetWP SwiftASTContext::GetTargetWP() const {
+  return GetTypeSystemSwiftTypeRef().GetTargetWP();
+}
+
 std::vector<lldb::DataBufferSP> &
 SwiftASTContext::GetASTVectorForModule(const Module *module) {
   return m_ast_file_data_map[const_cast<Module *>(module)];
 }
 
 SwiftASTContextForExpressions::SwiftASTContextForExpressions(
-    std::string description, Target &target)
-    : SwiftASTContext(std::move(description), &target),
-      m_typeref_typesystem(*this),
-      m_persistent_state_up(new SwiftPersistentExpressionState) {}
+    std::string description, TypeSystemSwiftTypeRef &typeref_typesystem)
+    : SwiftASTContext(std::move(description), typeref_typesystem),
+      m_persistent_state_up(new SwiftPersistentExpressionState) {
+  assert(llvm::isa<TypeSystemSwiftTypeRefForExpressions>(m_typeref_typesystem));
+}
+
+SwiftASTContextForExpressions::~SwiftASTContextForExpressions() {
+  swift::ASTContext *ctx = m_ast_context_ap.get();
+  if (!ctx)
+    return;
+  // A RemoteASTContext associated with this swift::ASTContext has
+  // to be destroyed before the swift::ASTContext is destroyed.
+  if (TargetSP target_sp = GetTargetWP().lock()) {
+    if (ProcessSP process_sp = target_sp->GetProcessSP())
+      if (auto *runtime = SwiftLanguageRuntime::Get(process_sp))
+        runtime->ReleaseAssociatedRemoteASTContext(ctx);
+  } else {
+    LOG_PRINTF(LIBLLDB_LOG_TYPES | LIBLLDB_LOG_EXPRESSIONS,
+               "Failed to lock target in ~SwiftASTContextForExpressions().");
+  }
+
+  GetASTMap().Erase(ctx);
+}
+
+lldb::TargetWP SwiftASTContextForExpressions::GetTargetWP() const {
+  auto *ts = reinterpret_cast<TypeSystemSwiftTypeRefForExpressions *>(
+      m_typeref_typesystem);
+  return ts->m_target_wp;
+}
 
 UserExpression *SwiftASTContextForExpressions::GetUserExpression(
     llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
     Expression::ResultType desired_type,
     const EvaluateExpressionOptions &options, ValueObject *ctx_obj) {
-  TargetSP target_sp = m_target_wp.lock();
+  TargetSP target_sp = GetTargetWP().lock();
   if (!target_sp)
     return nullptr;
   if (ctx_obj != nullptr) {

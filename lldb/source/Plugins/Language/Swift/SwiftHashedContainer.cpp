@@ -300,7 +300,10 @@ HashedCollectionConfig::StorageObjectAtAddress(
     return nullptr;
   if (error.Fail())
     return nullptr;
-  SwiftASTContext *ast_ctx = reader->get();
+  auto scratch_ctx = reader->get();
+  if (!scratch_ctx)
+    return nullptr;
+  SwiftASTContext *ast_ctx = scratch_ctx->GetSwiftASTContext();
 
   CompilerType rawStorage_type =
       ast_ctx->GetTypeFromMangledTypename(m_nativeStorageRoot_mangled);

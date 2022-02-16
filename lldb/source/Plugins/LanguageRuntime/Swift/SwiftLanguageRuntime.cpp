@@ -1076,8 +1076,9 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
       ExecutionContext exe_ctx(frame);
       llvm::Optional<SwiftScratchContextReader> maybe_swift_ast =
           target.GetSwiftScratchContext(error, frame);
-      if (maybe_swift_ast) {
-        SwiftASTContext *swift_ast = maybe_swift_ast->get();
+      auto scratch_ctx = maybe_swift_ast->get();
+      if (scratch_ctx) {
+        if (SwiftASTContext *swift_ast = scratch_ctx->GetSwiftASTContext()) {
         CompilerType function_type = swift_ast->GetTypeFromMangledTypename(
             mangled_name.GetMangledName());
         if (error.Success()) {
@@ -1166,6 +1167,7 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
             }
           }
         }
+      }
       }
     }
   }
@@ -1281,11 +1283,17 @@ SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
   if (!exe_scope)
     return error_valobj_sp;
 
-  llvm::Optional<SwiftScratchContextReader> maybe_ast_context =
+  llvm::Optional<SwiftScratchContextReader> maybe_scratch_context =
       target->GetSwiftScratchContext(error, *frame_sp);
-  if (!maybe_ast_context || error.Fail())
+  if (!maybe_scratch_context || error.Fail())
     return error_valobj_sp;
-  SwiftASTContext *ast_context = maybe_ast_context->get();
+  auto scratch_ctx = maybe_scratch_context->get();
+  if (!scratch_ctx)
+    return error_valobj_sp;
+  SwiftASTContext *ast_context = scratch_ctx->GetSwiftASTContext();
+  if (!ast_context)
+    return error_valobj_sp;
+
 
   auto buffer_up =
       std::make_unique<DataBufferHeap>(arg0->GetScalar().GetByteSize(), 0);

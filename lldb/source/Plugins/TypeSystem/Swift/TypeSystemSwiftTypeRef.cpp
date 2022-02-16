@@ -50,6 +50,7 @@ using namespace lldb_private;
 
 char TypeSystemSwift::ID;
 char TypeSystemSwiftTypeRef::ID;
+char TypeSystemSwiftTypeRefForExpressions::ID;
 
 /// Determine wether this demangle tree contains an unresolved type alias.
 static bool ContainsUnresolvedTypeAlias(swift::Demangle::NodePointer node) {
@@ -171,7 +172,7 @@ TypeSP TypeSystemSwiftTypeRef::LookupClangType(StringRef name) {
   SwiftASTContext *target_holder = GetSwiftASTContext();
   if (!target_holder)
     return {};
-  TargetSP target_sp = target_holder->GetTarget().lock();
+  TargetSP target_sp = target_holder->GetTargetWP().lock();
   if (!target_sp)
     return {};
   TypeSP result;
@@ -431,7 +432,7 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
     else if (auto *M = GetModule())
       M->FindTypes({mangled}, false, 1, searched_symbol_files, types);
     else if (TargetSP target_sp = GetSwiftASTContext()
-                                      ? GetSwiftASTContext()->GetTarget().lock()
+                                      ? GetSwiftASTContext()->GetTargetWP().lock()
                                       : nullptr)
       target_sp->GetImages().FindTypes(nullptr, {mangled}, false, 1,
                                        searched_symbol_files, types);
@@ -783,6 +784,8 @@ TypeSystemSwiftTypeRef::GetSwiftified(swift::Demangle::Demangler &dem,
   if (ident.empty())
     return node;
 
+  if (ident.equals("NSURL") || ident.equals("URL"))
+    llvm::errs();
   // This is an imported Objective-C type; look it up in the
   // debug info.
   TypeSP clang_type = LookupClangType(ident);
@@ -1231,12 +1234,69 @@ TypeSystemSwiftTypeRef::TypeSystemSwiftTypeRef(Module &module) {
             "%s::TypeSystemSwiftTypeRef()", m_description.c_str());
 }
 
-TypeSystemSwiftTypeRef::TypeSystemSwiftTypeRef(
-    SwiftASTContextForExpressions &swift_ast_context)
-    : m_swift_ast_context(&swift_ast_context) {
-  m_description = "TypeSystemSwiftTypeRef(ForExpressions)";
+TypeSystemSwiftTypeRefForExpressions::TypeSystemSwiftTypeRefForExpressions(
+    lldb::LanguageType language, Target &target, Module &module)
+    : m_target_wp(target.shared_from_this()) {
+  m_description = "TypeSystemSwiftTypeRefForExpressions(PerModuleFallback)";
   LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-            "%sTypeSystemSwiftTypeRef()", m_description.c_str());
+            "%s::TypeSystemSwiftTypeRefForExpressions()",
+            m_description.c_str());
+  m_swift_ast_context_initialized = true;
+  m_swift_ast_context_sp = SwiftASTContext::CreateInstance(
+      LanguageType::eLanguageTypeSwift, module,
+      *const_cast<TypeSystemSwiftTypeRefForExpressions *>(this), true);
+  m_swift_ast_context =
+      llvm::dyn_cast_or_null<SwiftASTContext>(m_swift_ast_context_sp.get());
+}
+
+TypeSystemSwiftTypeRefForExpressions::TypeSystemSwiftTypeRefForExpressions(
+    lldb::LanguageType language, Target &target, const char *extra_options)
+    : m_target_wp(target.shared_from_this()) {
+  m_description = "TypeSystemSwiftTypeRefForExpressions";
+  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+            "%s::TypeSystemSwiftTypeRefForExpressions()",
+            m_description.c_str());
+  // Is this a REPL?
+  if (extra_options) {
+    m_swift_ast_context_initialized = true;
+    m_swift_ast_context_sp = SwiftASTContext::CreateInstance(
+        LanguageType::eLanguageTypeSwift,
+        *const_cast<TypeSystemSwiftTypeRefForExpressions *>(this),
+        extra_options);
+    m_swift_ast_context =
+        llvm::dyn_cast_or_null<SwiftASTContext>(m_swift_ast_context_sp.get());
+  }
+  // FIXME: Remove this line to make initialization lazy.
+  GetSwiftASTContext();
+}
+
+void TypeSystemSwiftTypeRefForExpressions::PerformCompileUnitImports(
+    SymbolContext &sc) {
+  Status error;
+  lldb::StackFrameWP stack_frame;
+  if (m_swift_ast_context_initialized)
+    GetSwiftASTContext()->PerformCompileUnitImports(sc, stack_frame, error);
+  else
+    m_initial_symbol_context = std::make_unique<SymbolContext>(sc);
+}
+
+UserExpression *TypeSystemSwiftTypeRefForExpressions::GetUserExpression(
+    llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
+    Expression::ResultType desired_type,
+    const EvaluateExpressionOptions &options, ValueObject *ctx_obj) {
+  auto *swift_ast_ctx = GetSwiftASTContext();
+  if (!swift_ast_ctx)
+    return nullptr;
+  return swift_ast_ctx->GetUserExpression(expr, prefix, language, desired_type,
+                                          options, ctx_obj);
+}
+
+PersistentExpressionState *
+TypeSystemSwiftTypeRefForExpressions::GetPersistentExpressionState() {
+  auto *swift_ast_ctx = GetSwiftASTContext();
+  if (!swift_ast_ctx)
+    return nullptr;
+  return swift_ast_ctx->GetPersistentExpressionState();
 }
 
 SwiftASTContext *TypeSystemSwiftTypeRef::GetSwiftASTContext() const {
@@ -1249,10 +1309,37 @@ SwiftASTContext *TypeSystemSwiftTypeRef::GetSwiftASTContext() const {
   if (auto *module = GetModule()) {
     m_swift_ast_context_sp = SwiftASTContext::CreateInstance(
         LanguageType::eLanguageTypeSwift, *module,
-        const_cast<TypeSystemSwiftTypeRef *>(this));
+        *const_cast<TypeSystemSwiftTypeRef *>(this));
     m_swift_ast_context =
         llvm::dyn_cast_or_null<SwiftASTContext>(m_swift_ast_context_sp.get());
   }
+  return m_swift_ast_context;
+}
+
+SwiftASTContext *
+TypeSystemSwiftTypeRefForExpressions::GetSwiftASTContext() const {
+  if (m_swift_ast_context_initialized)
+    return m_swift_ast_context;
+
+  // SwiftASTContext::CreateInstance() returns a nullptr on failure,
+  // there is no point in trying to initialize when that happens.
+  m_swift_ast_context_initialized = true;
+  m_swift_ast_context_sp = SwiftASTContext::CreateInstance(
+      LanguageType::eLanguageTypeSwift,
+      *const_cast<TypeSystemSwiftTypeRefForExpressions *>(this), nullptr);
+  m_swift_ast_context =
+      llvm::dyn_cast_or_null<SwiftASTContext>(m_swift_ast_context_sp.get());
+  assert(!m_swift_ast_context ||
+         llvm::isa<SwiftASTContextForExpressions>(m_swift_ast_context));
+
+  if (m_initial_symbol_context) {
+    Status error;
+    lldb::StackFrameWP stack_frame;
+    m_swift_ast_context->PerformCompileUnitImports(*m_initial_symbol_context,
+                                                   stack_frame, error);
+    m_initial_symbol_context.reset();
+  }
+
   return m_swift_ast_context;
 }
 
@@ -1270,6 +1357,7 @@ void TypeSystemSwiftTypeRef::ClearModuleDependentCaches() {
   if (auto *swift_ast_context = GetSwiftASTContextOrNull())
     swift_ast_context->ClearModuleDependentCaches();
 }
+
 const char *TypeSystemSwiftTypeRef::AsMangledName(opaque_compiler_type_t type) {
   assert(type && *reinterpret_cast<const char *>(type) == '$' &&
          "wrong type system");

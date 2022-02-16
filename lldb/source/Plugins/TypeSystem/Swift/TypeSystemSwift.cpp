@@ -42,7 +42,9 @@ static lldb::TypeSystemSP CreateTypeSystemInstance(lldb::LanguageType language,
         new TypeSystemSwiftTypeRef(*module));
   } else if (target) {
     assert(!module);
-    return SwiftASTContext::CreateInstance(language, *target, extra_options);
+    return std::shared_ptr<TypeSystemSwiftTypeRefForExpressions>(
+        new TypeSystemSwiftTypeRefForExpressions(language, *target,
+                                                 extra_options));
   }
   llvm_unreachable("Neither type nor module given to CreateTypeSystemInstance");
 }

@@ -164,13 +164,14 @@ public:
 
 protected:
   // Constructors and destructors
-  SwiftASTContext(std::string description, Target *target = nullptr);
+  SwiftASTContext(std::string description,
+                  TypeSystemSwiftTypeRef &typeref_typesystem);
 
 public:
 
   SwiftASTContext(const SwiftASTContext &rhs) = delete;
 
-  ~SwiftASTContext();
+  virtual ~SwiftASTContext();
 
 #ifndef NDEBUG
   /// Provided only for unit tests.
@@ -186,13 +187,14 @@ public:
   /// true, then a SwiftASTContextForExpressions is created.
   static lldb::TypeSystemSP
   CreateInstance(lldb::LanguageType language, Module &module,
-                 TypeSystemSwiftTypeRef *typeref_typesystem = nullptr,
-                 Target *target = nullptr, bool fallback = false);
+                 TypeSystemSwiftTypeRef &typeref_typesystem,
+                 bool fallback = false);
   /// Create a SwiftASTContext from a Target.  This context is global
   /// and used for the expression evaluator.
-  static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
-                                           Target &target,
-                                           const char *extra_options);
+  static lldb::TypeSystemSP
+  CreateInstance(lldb::LanguageType language,
+                 TypeSystemSwiftTypeRefForExpressions &typeref_typesystem,
+                 const char *extra_options);
 
   static void EnumerateSupportedLanguages(
       std::set<lldb::LanguageType> &languages_for_types,
@@ -204,6 +206,16 @@ public:
     return const_cast<SwiftASTContext *>(this);
   }
 
+  TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() override {
+    // Always non-null outside of unit tests.
+    return *m_typeref_typesystem;
+  }
+
+  const TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() const override {
+    // Always non-null outside of unit tests.
+    return *m_typeref_typesystem;
+  }
+  
   Status IsCompatible() override;
 
   swift::SourceManager &GetSourceManager();
@@ -358,8 +370,7 @@ public:
 
   swift::irgen::IRGenModule &GetIRGenModule();
 
-  lldb::TargetWP GetTarget() const { return m_target_wp; }
-
+  lldb::TargetWP GetTargetWP() const override;
   llvm::Triple GetTriple() const;
 
   bool SetTriple(const llvm::Triple triple, lldb_private::Module *module);
@@ -415,11 +426,8 @@ public:
   swift::TBDGenOptions &GetTBDGenOptions();
 
   void ClearModuleDependentCaches() override;
-
   void LogConfiguration();
-
-  bool HasTarget() const;
-
+  bool HasTarget();
   bool CheckProcessChanged();
 
   // FIXME: this should be removed once we figure out who should really own the
@@ -825,6 +833,8 @@ protected:
 
   /// Data members.
   /// @{
+  // Always non-null outside of unit tests.
+  TypeSystemSwiftTypeRef *m_typeref_typesystem;
   std::unique_ptr<swift::CompilerInvocation> m_compiler_invocation_ap;
   std::unique_ptr<swift::SourceManager> m_source_manager_up;
   std::unique_ptr<swift::DiagnosticEngine> m_diagnostic_engine_ap;
@@ -855,9 +865,6 @@ protected:
   uint32_t m_pointer_byte_size = 0;
   uint32_t m_pointer_bit_align = 0;
   CompilerType m_void_function_type;
-  /// Only if this AST belongs to a target will this contain a valid
-  /// target weak pointer.
-  lldb::TargetWP m_target_wp;
   /// Only if this AST belongs to a target, and an expression has been
   /// evaluated will the target's process pointer be filled in
   lldb_private::Process *m_process = nullptr;
@@ -947,18 +954,10 @@ public:
   static bool classof(const TypeSystem *ts) { return ts->isA(&ID); }
   /// \}
 
-  SwiftASTContextForModule(TypeSystemSwiftTypeRef &typeref_typesystem,
-                           std::string description, Target *target)
-      : SwiftASTContext(description, target),
-        m_typeref_typesystem(typeref_typesystem) {}
-  virtual ~SwiftASTContextForModule() {}
-
-  TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() override {
-    return m_typeref_typesystem;
-  }
-
-private:
-  TypeSystemSwiftTypeRef &m_typeref_typesystem;
+  SwiftASTContextForModule(std::string description,
+                           TypeSystemSwiftTypeRef &typeref_typesystem)
+      : SwiftASTContext(description, typeref_typesystem) {}
+  virtual ~SwiftASTContextForModule();
 };
 
 class SwiftASTContextForExpressions : public SwiftASTContext {
@@ -974,12 +973,10 @@ public:
   static bool classof(const TypeSystem *ts) { return ts->isA(&ID); }
   /// \}
 
-  SwiftASTContextForExpressions(std::string description, Target &target);
-  virtual ~SwiftASTContextForExpressions() {}
-
-  TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() override {
-    return m_typeref_typesystem;
-  }
+  SwiftASTContextForExpressions(std::string description,
+                                TypeSystemSwiftTypeRef &typeref_typesystem);
+  virtual ~SwiftASTContextForExpressions();
+  lldb::TargetWP GetTargetWP() const override;
 
   UserExpression *GetUserExpression(llvm::StringRef expr,
                                     llvm::StringRef prefix,
@@ -993,7 +990,6 @@ public:
   void ModulesDidLoad(ModuleList &module_list);
 
 private:
-  TypeSystemSwiftTypeRef m_typeref_typesystem;
   std::unique_ptr<SwiftPersistentExpressionState> m_persistent_state_up;
 };
 

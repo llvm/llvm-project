@@ -1017,20 +1017,22 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
             if (target) {
               const bool create_on_demand = false;
               Status error;
-              llvm::Optional<SwiftScratchContextReader> maybe_ast_ctx =
+              llvm::Optional<SwiftScratchContextReader> maybe_scratch_ctx =
                   target->GetSwiftScratchContext(error, *exe_scope,
                                                  create_on_demand);
-              if (maybe_ast_ctx) {
-                SwiftASTContext *ast_ctx = maybe_ast_ctx->get();
-                ConstString cs_input{input};
-                Mangled mangled(cs_input);
-                if (mangled.GuessLanguage() == eLanguageTypeSwift) {
-                  auto candidate =
-                      ast_ctx->GetTypeFromMangledTypename(cs_input);
-                  if (candidate.IsValid())
-                    results.insert(candidate);
-                }
-              }
+              if (maybe_scratch_ctx)
+                if (auto scratch_ctx = maybe_scratch_ctx->get())
+                  if (SwiftASTContext *ast_ctx =
+                          scratch_ctx->GetSwiftASTContext()) {
+                    ConstString cs_input{input};
+                    Mangled mangled(cs_input);
+                    if (mangled.GuessLanguage() == eLanguageTypeSwift) {
+                      auto candidate =
+                          ast_ctx->GetTypeFromMangledTypename(cs_input);
+                      if (candidate.IsValid())
+                        results.insert(candidate);
+                    }
+                  }
             }
           }
 
@@ -1077,73 +1079,76 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
             Target *target = exe_scope->CalculateTarget().get();
             const bool create_on_demand = false;
             Status error;
-            llvm::Optional<SwiftScratchContextReader> maybe_ast_ctx =
+            llvm::Optional<SwiftScratchContextReader> maybe_scratch_ctx =
                 target->GetSwiftScratchContext(error, *exe_scope,
                                                create_on_demand);
-            if (maybe_ast_ctx) {
-              SwiftASTContext *ast_ctx = maybe_ast_ctx->get();
-              auto iter = ast_ctx->GetModuleCache().begin(),
-                   end = ast_ctx->GetModuleCache().end();
+              if (maybe_scratch_ctx)
+                if (auto scratch_ctx = maybe_scratch_ctx->get())
+                  if (SwiftASTContext *ast_ctx =
+                          scratch_ctx->GetSwiftASTContext()) {
+                    auto iter = ast_ctx->GetModuleCache().begin(),
+                         end = ast_ctx->GetModuleCache().end();
 
-              std::vector<llvm::StringRef> name_parts;
-              SplitDottedName(input, name_parts);
+                    std::vector<llvm::StringRef> name_parts;
+                    SplitDottedName(input, name_parts);
 
-              std::function<void(swift::ModuleDecl *)> lookup_func =
-                  [&ast_ctx, input, name_parts,
-                   &results](swift::ModuleDecl *module) -> void {
-                for (auto imported_module :
-                     swift::namelookup::getAllImports(module)) {
-                  auto module = imported_module.importedModule;
-                  TypesOrDecls local_results;
-                  ast_ctx->FindTypesOrDecls(input, module, local_results,
-                                            false);
-                  llvm::Optional<TypeOrDecl> candidate;
-                  if (local_results.empty() && name_parts.size() > 1) {
-                    size_t idx_of_deeper = 1;
-                    // if you're looking for Swift.Int in module Swift, try
-                    // looking for Int
-                    if (name_parts.front() == module->getName().str()) {
-                      candidate = ast_ctx->FindTypeOrDecl(
-                          name_parts[1].str().c_str(), module);
-                      idx_of_deeper = 2;
-                    }
-                    // this is probably the top-level name of a nested type
-                    // String.UTF8View
-                    else {
-                      candidate = ast_ctx->FindTypeOrDecl(
-                          name_parts[0].str().c_str(), module);
-                    }
-                    if (candidate.hasValue()) {
-                      TypesOrDecls candidates{candidate.getValue()};
-                      for (; idx_of_deeper < name_parts.size();
-                           idx_of_deeper++) {
-                        TypesOrDecls new_candidates;
-                        for (auto candidate : candidates) {
-                          ast_ctx->FindContainedTypeOrDecl(
-                              name_parts[idx_of_deeper], candidate,
-                              new_candidates);
-                        }
-                        candidates = new_candidates;
+                    std::function<void(swift::ModuleDecl *)> lookup_func =
+                        [&ast_ctx, input, name_parts,
+                         &results](swift::ModuleDecl *module) -> void {
+                      for (auto imported_module :
+                           swift::namelookup::getAllImports(module)) {
+                        auto module = imported_module.importedModule;
+                        TypesOrDecls local_results;
+                        ast_ctx->FindTypesOrDecls(input, module, local_results,
+                                                  false);
+                        llvm::Optional<TypeOrDecl> candidate;
+                        if (local_results.empty() && name_parts.size() > 1) {
+                          size_t idx_of_deeper = 1;
+                          // if you're looking for Swift.Int in module Swift,
+                          // try looking for Int
+                          if (name_parts.front() == module->getName().str()) {
+                            candidate = ast_ctx->FindTypeOrDecl(
+                                name_parts[1].str().c_str(), module);
+                            idx_of_deeper = 2;
+                          }
+                          // this is probably the top-level name of a nested
+                          // type String.UTF8View
+                          else {
+                            candidate = ast_ctx->FindTypeOrDecl(
+                                name_parts[0].str().c_str(), module);
+                          }
+                          if (candidate.hasValue()) {
+                            TypesOrDecls candidates{candidate.getValue()};
+                            for (; idx_of_deeper < name_parts.size();
+                                 idx_of_deeper++) {
+                              TypesOrDecls new_candidates;
+                              for (auto candidate : candidates) {
+                                ast_ctx->FindContainedTypeOrDecl(
+                                    name_parts[idx_of_deeper], candidate,
+                                    new_candidates);
+                              }
+                              candidates = new_candidates;
+                            }
+                            for (auto candidate : candidates) {
+                              if (candidate)
+                                results.insert(candidate);
+                            }
+                          }
+                        } else if (local_results.size() > 0) {
+                          for (const auto &result : local_results)
+                            results.insert(result);
+                        } else if (local_results.empty() && module &&
+                                   name_parts.size() == 1 &&
+                                   name_parts.front() ==
+                                       module->getName().str())
+                          results.insert(
+                              ToCompilerType(swift::ModuleType::get(module)));
                       }
-                      for (auto candidate : candidates) {
-                        if (candidate)
-                          results.insert(candidate);
-                      }
-                    }
-                  } else if (local_results.size() > 0) {
-                    for (const auto &result : local_results)
-                      results.insert(result);
-                  } else if (local_results.empty() && module &&
-                             name_parts.size() == 1 &&
-                             name_parts.front() == module->getName().str())
-                    results.insert(
-                        ToCompilerType(swift::ModuleType::get(module)));
-                }
-              };
+                    };
 
-              for (; iter != end; iter++)
-                lookup_func(iter->second);
-            }
+                    for (; iter != end; iter++)
+                      lookup_func(iter->second);
+                  }
           }
 
           return (results.size() - before);
