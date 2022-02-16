@@ -10830,6 +10830,8 @@ def err_omp_interop_type_not_found : Error<
 def err_omp_declare_variant_incompat_types : Error<
   "variant in '#pragma omp declare variant' with type %0 is incompatible with"
   " type %1%select{| with appended arguments}2">;
+def err_omp_declare_variant_same_base_function : Error<
+  "variant in '#pragma omp declare variant' is the same as the base function">;
 def warn_omp_declare_variant_marked_as_declare_variant : Warning<
   "variant function in '#pragma omp declare variant' is itself marked as '#pragma omp declare variant'"
   >, InGroup<SourceUsesOpenMP>;

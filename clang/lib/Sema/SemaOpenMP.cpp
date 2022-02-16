@@ -7171,6 +7171,13 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
     return None;
   }
 
+  if (FD->getCanonicalDecl() == NewFD->getCanonicalDecl()) {
+    Diag(VariantRef->getExprLoc(),
+         diag::err_omp_declare_variant_same_base_function)
+        << VariantRef->getSourceRange();
+    return None;
+  }
+
   // Check if function types are compatible in C.
   if (!LangOpts.CPlusPlus) {
     QualType NewType =
