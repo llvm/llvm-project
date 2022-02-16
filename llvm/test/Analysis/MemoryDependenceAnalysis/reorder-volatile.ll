@@ -53,11 +53,8 @@ define i32 @test_load_with_seq_cst_load() {
 
 define i32 @test_store(i32 %x) {
 ; CHECK-LABEL: @test_store(
-; CHECK-NEXT:    [[L1:%.*]] = load atomic i32, i32* @w unordered, align 4
 ; CHECK-NEXT:    store volatile i32 [[X:%.*]], i32* @u, align 4
-; CHECK-NEXT:    [[L2:%.*]] = load atomic i32, i32* @w unordered, align 4
-; CHECK-NEXT:    [[RES:%.*]] = sub i32 [[L1]], [[L2]]
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 0
 ;
   %l1 = load atomic i32, i32* @w unordered, align 4
   store volatile i32 %x, i32* @u, align 4
