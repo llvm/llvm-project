@@ -36,7 +36,7 @@ class ConstraintSystem {
   bool mayHaveSolutionImpl();
 
 public:
-  bool addVariableRow(const SmallVector<int64_t, 8> &R) {
+  bool addVariableRow(ArrayRef<int64_t> R) {
     assert(Constraints.empty() || R.size() == Constraints.back().size());
     // If all variable coefficients are 0, the constraint does not provide any
     // usable information.
@@ -48,11 +48,11 @@ public:
       GCD = APIntOps::GreatestCommonDivisor({32, (uint32_t)A}, {32, GCD})
                 .getZExtValue();
     }
-    Constraints.push_back(R);
+    Constraints.emplace_back(R.begin(), R.end());
     return true;
   }
 
-  bool addVariableRowFill(const SmallVector<int64_t, 8> &R) {
+  bool addVariableRowFill(ArrayRef<int64_t> R) {
     for (auto &CR : Constraints) {
       while (CR.size() != R.size())
         CR.push_back(0);
