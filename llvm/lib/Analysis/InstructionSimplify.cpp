@@ -5138,13 +5138,14 @@ SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
     if (match(Op1, m_PosZeroFP()))
       return Op0;
 
+  // fsub X, -0 ==> X, when we know X is not -0
+  if (canIgnoreSNaN(ExBehavior, FMF))
+    if (match(Op1, m_NegZeroFP()) &&
+        (FMF.noSignedZeros() || CannotBeNegativeZero(Op0, Q.TLI)))
+      return Op0;
+
   if (!isDefaultFPEnvironment(ExBehavior, Rounding))
     return nullptr;
-
-  // fsub X, -0 ==> X, when we know X is not -0
-  if (match(Op1, m_NegZeroFP()) &&
-      (FMF.noSignedZeros() || CannotBeNegativeZero(Op0, Q.TLI)))
-    return Op0;
 
   // fsub -0.0, (fsub -0.0, X) ==> X
   // fsub -0.0, (fneg X) ==> X
