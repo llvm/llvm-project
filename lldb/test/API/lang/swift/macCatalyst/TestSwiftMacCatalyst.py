@@ -37,7 +37,9 @@ class TestSwiftMacCatalyst(TestBase):
         expr_log = self.getBuildArtifact("expr.log")
         self.expect('log enable lldb expr -f "%s"' % expr_log)
         self.expect("p s", "Hello macCatalyst")
-        expr_logfile = open(expr_log, "r")
+        import io
+        expr_logfile = io.open(expr_log, "r", encoding='utf-8')
+
         import re
         availability_re = re.compile(r'@available\(macCatalyst 1.*, \*\)')
         found = False
@@ -50,7 +52,8 @@ class TestSwiftMacCatalyst(TestBase):
 
         found_prebuilt = False
         found_sdk = False
-        types_logfile = open(types_log, "r")
+        import io
+        types_logfile = io.open(types_log, "r", encoding='utf-8')
         for line in types_logfile:
             if 'Using prebuilt Swift module cache path: ' in line:
                 self.assertTrue(line.endswith('/macosx/prebuilt-modules\n'),

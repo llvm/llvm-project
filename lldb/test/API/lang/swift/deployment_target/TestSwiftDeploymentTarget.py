@@ -69,8 +69,8 @@ class TestSwiftDeploymentTarget(TestBase):
 
         found_no_ast = False
         found_triple = False
-        logfile = open(log, "r")
-        print (log)
+        import io
+        logfile = io.open(log, "r", encoding='utf-8')
         for line in logfile:
             if 'SwiftASTContextForModule("a.out")::DeserializeAllCompilerFlags() -- Found 0 AST file data entries.' in line:
                 found_no_ast = True

@@ -65,7 +65,9 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
         prefix = 'Using prebuilt Swift module cache path: '
         expected_suffix = os.path.join('macosx', 'prebuilt-modules')
         found = False
-        with open(log, "r") as logfile:
+
+        import io
+        with io.open(log, "r", encoding='utf-8') as logfile:
             for line in logfile:
                 if prefix in line:
                     self.assertTrue(line.rstrip().endswith(os.path.sep + expected_suffix), 'unexpected prebuilt cache path: ' + line)

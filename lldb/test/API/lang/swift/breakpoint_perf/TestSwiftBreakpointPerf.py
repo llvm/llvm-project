@@ -19,7 +19,8 @@ class TestSwiftReflectionLoading(lldbtest.TestBase):
             self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
         # Scan through the types log.
-        logfile = open(log, "r")
+        import io
+        logfile = io.open(log, "r", encoding='utf-8')
         found_typeref = 0
         found_astctx = 0
         for line in logfile:

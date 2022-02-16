@@ -12,7 +12,8 @@ class TestSwiftXcodeSDK(lldbtest.TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def check_log(self, log, expected_path):
-        logfile = open(log, "r")
+        import io
+        logfile = io.open(log, "r", encoding='utf-8')
         in_expr_log = 0
         found = 0
         for line in logfile:

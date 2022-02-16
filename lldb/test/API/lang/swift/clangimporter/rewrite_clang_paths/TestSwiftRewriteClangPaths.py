@@ -100,7 +100,8 @@ class TestSwiftRewriteClangPaths(TestBase):
         found_abs = 0
         found_ovl = 0
         in_scratch_context = False
-        logfile = open(log, "r")
+        import io
+        logfile = io.open(log, "r", encoding='utf-8')
         for line in logfile:
             self.assertFalse("remapped -iquote" in line)
             if "error: " in line and "Foo" in line:

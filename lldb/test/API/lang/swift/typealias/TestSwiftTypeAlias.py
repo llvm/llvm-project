@@ -19,7 +19,8 @@ class TestSwiftTypeAlias(TestBase):
         self.expect("target variable bar",
                     substrs=["(Dylib.MyGenericAlias<Dylib.MyAlias>)", "42"])
 
-        logfile = open(log, "r")
+        import io
+        logfile = io.open(log, "r", encoding='utf-8')
         foo_lookups = 0
         bar_lookups = 0
         for line in logfile:

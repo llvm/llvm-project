@@ -24,7 +24,8 @@ class TestSwiftSystemFramework(lldbtest.TestBase):
         self.expect("expression -- 0")
         pos = 0
         neg = 0
-        with open(log, "r") as logfile:
+        import io
+        with open(log, "r", encoding='utf-8') as logfile:
             for line in logfile:
                 if "-- rejecting framework path " in line:
                     pos += 1

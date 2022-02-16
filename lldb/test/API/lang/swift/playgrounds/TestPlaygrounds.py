@@ -162,7 +162,8 @@ class TestSwiftPlaygrounds(TestBase):
         self.assertIn("Hello from the Dylib", playground_output)
 
         # Scan through the types log to make sure the SwiftASTContext was poisoned.
-        logfile = open(log, "r")
+        import io
+        logfile = io.open(log, "r", encoding='utf-8')
         found = 0
         for line in logfile:
             if 'New Swift image added' in line \

@@ -70,7 +70,8 @@ class TestSwiftReflectionOnly(lldbtest.TestBase):
         # check_var(self, enum2.GetChildAtIndex(0), value="42")
 
         # Scan through the types log.
-        logfile = open(log, "r")
+        import io
+        logfile = io.open(log, "r", encoding='utf-8')
         found_ref_exe = 0
         found_ref_lib = 0
         found_ast_exe = 0

@@ -118,7 +118,8 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
                                 num_children=0)
 
         found = False
-        logfile = open(log, "r")
+        import io
+        logfile = io.open(log, "r", encoding='utf-8')
         for line in logfile:
             if "missing required module" in line:
                 found = True

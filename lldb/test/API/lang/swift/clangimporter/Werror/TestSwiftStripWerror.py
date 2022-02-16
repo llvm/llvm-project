@@ -30,7 +30,8 @@ class TestSwiftWerror(TestBase):
         
         self.expect("p foo", DATA_TYPES_DISPLAYED_CORRECTLY, substrs=["42"])
         sanity = 0
-        logfile = open(log, "r")
+        import io
+        logfile = io.open(log, "r", encoding='utf-8')
         for line in logfile:
             self.assertFalse("-Werror" in line)
             if "-DCONFLICT" in line:

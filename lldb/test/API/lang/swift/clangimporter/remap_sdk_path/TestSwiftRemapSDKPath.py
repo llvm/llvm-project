@@ -25,7 +25,8 @@ class TestSwiftRewriteClangPaths(TestBase):
         self.expect("p 1", substrs=["1"])
 
         # Scan through the types log.
-        logfile = open(log, "r")
+        import io
+        logfile = io.open(log, "r", encoding='utf-8')
         found = 0
         for line in logfile:
             if line.startswith(' SwiftASTContextForModule("a.out")::RemapClangImporterOptions() -- remapped'):

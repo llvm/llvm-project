@@ -27,7 +27,8 @@ class TestSwiftReflectionLoading(lldbtest.TestBase):
         lldbutil.check_variable(self, var_c_x, value="23")
 
         # Scan through the types log.
-        logfile = open(log, "r")
+        import io
+        logfile = io.open(log, "r", encoding='utf-8')
         found_exe = 0
         found_lib = 0
         for line in logfile:
