@@ -479,7 +479,7 @@ int main(int argc, char **argv) {
   unsigned RegionIdx = 0;
 
   std::unique_ptr<MCCodeEmitter> MCE(
-      TheTarget->createMCCodeEmitter(*MCII, Ctx));
+      TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx));
   assert(MCE && "Unable to create code emitter!");
 
   std::unique_ptr<MCAsmBackend> MAB(TheTarget->createMCAsmBackend(
