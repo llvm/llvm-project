@@ -2387,12 +2387,19 @@ void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
       ProcedureDesignator *proc{std::get_if<ProcedureDesignator>(&callee->u)};
       CHECK(proc);
       if (CheckCall(call.source, *proc, callee->arguments)) {
-        bool hasAlternateReturns{HasAlternateReturns(callee->arguments)};
         callStmt.typedCall.Reset(
             new ProcedureRef{std::move(*proc), std::move(callee->arguments),
-                hasAlternateReturns},
+                HasAlternateReturns(callee->arguments)},
             ProcedureRef::Deleter);
+        return;
       }
+    }
+    if (!context_.AnyFatalError()) {
+      std::string buf;
+      llvm::raw_string_ostream dump{buf};
+      parser::DumpTree(dump, callStmt);
+      Say("Internal error: Expression analysis failed on CALL statement: %s"_err_en_US,
+          dump.str());
     }
   }
 }
