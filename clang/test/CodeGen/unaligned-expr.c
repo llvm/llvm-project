@@ -109,7 +109,7 @@ void test10(void) {
 // --------
 
 typedef __unaligned int UnalignedInt;
-void test13() {
+void test13(void) {
   // CHECK: %i = alloca i32, align 1
   // CHECK: {{%.*}} = load i32, i32* %i, align 1
   // CHECK: store i32 {{%.*}}, i32* %i, align 1
@@ -119,7 +119,7 @@ void test13() {
 
 typedef int Aligned;
 typedef __unaligned Aligned UnalignedInt2;
-void test14() {
+void test14(void) {
   // CHECK: %i = alloca i32, align 1
   // CHECK: {{%.*}} = load i32, i32* %i, align 1
   // CHECK: store i32 {{%.*}}, i32* %i, align 1
@@ -128,7 +128,7 @@ void test14() {
 }
 
 typedef UnalignedInt UnalignedInt3;
-void test15() {
+void test15(void) {
   // CHECK: %i = alloca i32, align 1
   // CHECK: {{%.*}} = load i32, i32* %i, align 1
   // CHECK: store i32 {{%.*}}, i32* %i, align 1

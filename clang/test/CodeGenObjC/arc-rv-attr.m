@@ -5,7 +5,7 @@
 
 A *makeA(void);
 
-void test_assign() {
+void test_assign(void) {
   __unsafe_unretained id x;
   x = makeA();
 }
@@ -19,7 +19,7 @@ void test_assign() {
 // CHECK-NEXT:    lifetime.end
 // CHECK-NEXT:    ret void
 
-void test_assign_assign() {
+void test_assign_assign(void) {
   __unsafe_unretained id x, y;
   x = y = makeA();
 }
@@ -37,7 +37,7 @@ void test_assign_assign() {
 // CHECK-NEXT:    lifetime.end
 // CHECK-NEXT:    ret void
 
-void test_strong_assign_assign() {
+void test_strong_assign_assign(void) {
   __strong id x;
   __unsafe_unretained id y;
   x = y = makeA();
@@ -60,7 +60,7 @@ void test_strong_assign_assign() {
 // CHECK-NEXT:    lifetime.end
 // CHECK-NEXT:    ret void
 
-void test_assign_strong_assign() {
+void test_assign_strong_assign(void) {
   __unsafe_unretained id x;
   __strong id y;
   x = y = makeA();
@@ -83,7 +83,7 @@ void test_assign_strong_assign() {
 // CHECK-NEXT:    lifetime.end
 // CHECK-NEXT:    ret void
 
-void test_init() {
+void test_init(void) {
   __unsafe_unretained id x = makeA();
 }
 // CHECK-LABEL: define{{.*}} void @test_init()
@@ -96,7 +96,7 @@ void test_init() {
 // CHECK-NEXT:    lifetime.end
 // CHECK-NEXT:    ret void
 
-void test_init_assignment() {
+void test_init_assignment(void) {
   __unsafe_unretained id x;
   __unsafe_unretained id y = x = makeA();
 }
@@ -114,7 +114,7 @@ void test_init_assignment() {
 // CHECK-NEXT:    lifetime.end
 // CHECK-NEXT:    ret void
 
-void test_strong_init_assignment() {
+void test_strong_init_assignment(void) {
   __unsafe_unretained id x;
   __strong id y = x = makeA();
 }
@@ -134,7 +134,7 @@ void test_strong_init_assignment() {
 // CHECK-NEXT:    lifetime.end
 // CHECK-NEXT:    ret void
 
-void test_init_strong_assignment() {
+void test_init_strong_assignment(void) {
   __strong id x;
   __unsafe_unretained id y = x = makeA();
 }
@@ -156,7 +156,7 @@ void test_init_strong_assignment() {
 // CHECK-NEXT:    lifetime.end
 // CHECK-NEXT:    ret void
 
-void test_ignored() {
+void test_ignored(void) {
   makeA();
 }
 // CHECK-LABEL: define{{.*}} void @test_ignored()
@@ -164,7 +164,7 @@ void test_ignored() {
 // CHECK-NEXT:    call void (...) @llvm.objc.clang.arc.noop.use({{.*}} [[T0]])
 // CHECK-NEXT:    ret void
 
-void test_cast_to_void() {
+void test_cast_to_void(void) {
   (void) makeA();
 }
 // CHECK-LABEL: define{{.*}} void @test_cast_to_void()

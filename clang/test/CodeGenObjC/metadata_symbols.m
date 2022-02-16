@@ -66,7 +66,7 @@ __attribute__((__objc_exception__))
 @interface EH3
 @end
 
-void f1();
+void f1(void);
 
 void f0(id x) {
   @try {

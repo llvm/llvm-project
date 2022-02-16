@@ -71,7 +71,7 @@ typedef signed char BOOL;
 // CHECK: [[STR0:.*]] = private unnamed_addr constant [4 x i8] c"abc\00", section "__TEXT,__cstring,cstring_literals", align 1
 // CHECK: [[UNNAMED_CFSTRING:.*]] = private global [[STRUCT_NSCONSTANT_STRING_TAG]] { i32* getelementptr inbounds ([0 x i32], [0 x i32]* @__CFConstantStringClassReference, i32 0, i32 0), i32 1992, i8* getelementptr inbounds ([4 x i8], [4 x i8]* [[STR0]], i32 0, i32 0), i64 3 }, section "__DATA,__cfstring", align 8
 
-int main() {
+int main(void) {
   // CHECK: [[T:%.*]] = alloca [[V0]]*, align 8
 
   // CHECK: load i8*, i8** [[WithIntSEL]]

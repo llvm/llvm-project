@@ -56,7 +56,7 @@ int printf(const char *, ...);
 // Test that compound operations only compute the base once.
 // CHECK-LABEL: define{{.*}} void @test2
 A *test2_helper(void);
-void test2() {
+void test2(void) {
   // CHECK:      [[BASE:%.*]] = call [[A:%.*]]* @test2_helper()
   // CHECK-NEXT: [[BASETMP:%.*]] = bitcast [[A]]* [[BASE]] to i8*
   // CHECK-NEXT: [[SEL:%.*]] = load i8*, i8**

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -o - %s | FileCheck -check-prefix=CHECK-UNOPT %s
 // rdar://12530881
 
-void test19() {
+void test19(void) {
    __block id x;
    ^{ (void)x; };
 // CHECK-UNOPT-LABEL: define internal void @__Block_byref_object_copy

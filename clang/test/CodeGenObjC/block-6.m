@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - -fblocks -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 | FileCheck %s
 // rdar://8893785
 
-void MYFUNC() {
+void MYFUNC(void) {
 // CHECK-LABEL:    define{{.*}} void @MYFUNC()
 // CHECK:      [[OBSERVER_SLOT:%.*]] = alloca [[OBSERVER_T:%.*]], align 8
 

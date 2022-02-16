@@ -3,7 +3,7 @@
 @interface I
 @end
 
-I *i() {
+I *i(void) {
   static I *i = ((void *)0);
   return i;
 }

@@ -7,7 +7,7 @@
 }
 @end
 
-id newObject();
+id newObject(void);
 void runWithBlock(void(^)(int i));
 
 @implementation Test

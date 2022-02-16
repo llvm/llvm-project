@@ -90,7 +90,7 @@ long double __complex__ fun_qcomplex(long double __complex__ a, long double __co
 }
 
 extern int hoge();
-void func() {
+void func(void) {
   // CHECK: %call = call signext i32 (i32, i32, i32, i32, i32, i32, i32, ...) bitcast (i32 (...)* @hoge to i32 (i32, i32, i32, i32, i32, i32, i32, ...)*)(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, i32 noundef signext 6, i32 noundef signext 7)
   hoge(1, 2, 3, 4, 5, 6, 7);
 }

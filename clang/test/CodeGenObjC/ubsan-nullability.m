@@ -186,7 +186,7 @@ void dont_crash(int *_Nonnull p, ...) {}
 #pragma clang assume_nonnull begin
 
 /// Create a "NSObject * _Nonnull" instance.
-NSObject *get_nonnull_error() {
+NSObject *get_nonnull_error(void) {
   // Use nil for convenience. The actual object doesn't matter.
   return (NSObject *)NULL;
 }
@@ -194,7 +194,7 @@ NSObject *get_nonnull_error() {
 NSObject *_Nullable no_null_return_value_diagnostic(int flag) {
 // CHECK-LABEL: define internal {{.*}}no_null_return_value_diagnostic{{i?}}_block_invoke
 // CHECK-NOT: @__ubsan_handle_nullability_return
-  NSObject *_Nullable (^foo)() = ^() {
+  NSObject *_Nullable (^foo)(void) = ^(void) {
     if (flag) {
       // Clang should not infer a nonnull return value for this block when this
       // call is present.
@@ -208,7 +208,7 @@ NSObject *_Nullable no_null_return_value_diagnostic(int flag) {
 
 #pragma clang assume_nonnull end
 
-int main() {
+int main(void) {
   nonnull_retval1(INULL);
   nonnull_retval2(INNULL, INNULL, INULL, (int *_Nullable)NULL, 0, 0, 0, 0);
   call_func_with_nonnull_arg(INNULL);

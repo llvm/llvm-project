@@ -555,7 +555,7 @@ void test13(id x) {
 }
 
 // <rdar://problem/10907510>
-void test14() {
+void test14(void) {
   void (^const x[1])(void) = { ^{} };
 }
 
@@ -567,7 +567,7 @@ void test15(int a) {
 }
 
 // rdar://11016025
-void test16() {
+void test16(void) {
   void (^BLKVAR)(void) = ^{ BLKVAR(); };
 
   // CHECK-LABEL: define{{.*}} void @test16(

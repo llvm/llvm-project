@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -fexceptions -disable-llvm-passes -o - %s | FileCheck %s
 
 void test1(_Bool c) {
-  void test1_fn(void (^blk)());
+  void test1_fn(void (^blk)(void));
   __weak id weakId = 0;
   test1_fn(c ? ^{ (void)weakId; } : 0);
 

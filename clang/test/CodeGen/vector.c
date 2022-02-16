@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -ffreestanding -triple i386-apple-darwin9 -O1 -target-cpu corei7 -debug-info-kind=limited -emit-llvm %s -o - | FileCheck %s
 typedef short __v4hi __attribute__ ((__vector_size__ (8)));
 
-void test1() {
+void test1(void) {
   __v4hi A = (__v4hi)0LL;
 }
 
@@ -9,7 +9,7 @@ __v4hi x = {1,2,3};
 __v4hi y = {1,2,3,4};
 
 typedef int vty __attribute((vector_size(16)));
-int test2() { vty b; return b[2LL]; }
+int test2(void) { vty b; return b[2LL]; }
 
 // PR4339
 typedef float vec4 __attribute__((vector_size(16)));
@@ -54,7 +54,7 @@ unsigned long test_epi16(__m128i x) { return _mm_extract_epi16(x, 3); }
 // CHECK: extractelement <8 x i16> {{.*}}, {{i32|i64}} 3
 // CHECK: zext i16 {{.*}} to i32
 
-void extractinttypes() {
+void extractinttypes(void) {
   extern int check_extract_result_int;
   extern __typeof(_mm_extract_epi8(_mm_setzero_si128(), 3)) check_result_int;
   extern __typeof(_mm_extract_epi16(_mm_setzero_si128(), 3)) check_result_int;

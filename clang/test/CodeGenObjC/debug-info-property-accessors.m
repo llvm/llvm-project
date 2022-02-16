@@ -44,7 +44,7 @@ typedef unsigned int NSUInteger;
 @end
 
 int
-main ()
+main (void)
 {
   Bar *my_bar = [[Bar alloc] init];
 

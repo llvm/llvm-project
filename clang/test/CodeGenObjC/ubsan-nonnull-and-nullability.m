@@ -34,7 +34,7 @@ __attribute__((returns_nonnull)) int *_Nonnull f1(int *_Nonnull p) {
 void f2(int *_Nonnull __attribute__((nonnull)) p) {}
 
 // CHECK-LABEL: define{{.*}} void @call_f2
-void call_f2() {
+void call_f2(void) {
   // CHECK: call void @__ubsan_handle_nonnull_arg_abort
   // CHECK-NOT: call void @__ubsan_handle_nonnull_arg_abort
   f2((void *)0);
@@ -52,7 +52,7 @@ int *f3(int *p) {
 // statement, to avoid accidentally calling the runtime.
 
 // CHECK-LABEL: define{{.*}} nonnull i32* @f4
-__attribute__((returns_nonnull)) int *f4() {
+__attribute__((returns_nonnull)) int *f4(void) {
   // CHECK: store i8* null, i8** [[SLOC_PTR:%.*]]
   // CHECK: [[SLOC:%.*]] = load {{.*}} [[SLOC_PTR]]
   // CHECK: [[SLOC_NONNULL:%.*]] = icmp ne i8* [[SLOC]], null

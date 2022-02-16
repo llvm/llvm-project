@@ -5,7 +5,7 @@
 typedef signed char BOOL;
 
 // SHARED-LABEL: f1
-BOOL f1() {
+BOOL f1(void) {
   // OBJC: call void @__ubsan_handle_load_invalid_value
   // C-NOT: call void @__ubsan_handle_load_invalid_value
   BOOL a = 2;

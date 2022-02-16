@@ -83,7 +83,7 @@ struct S { int iS; };
 @end
 typedef Object MyObj;
 
-int main()
+int main(void)
 {
 	const char *en = @encode(Derived);
 	const char *eb = @encode(B1);
@@ -188,7 +188,7 @@ size_t strlen(const char *s);
 // CHECK: %[[i:.*]] = alloca i32
 // CHECK: %[[call:.*]] = call i32 @strlen
 // CHECK: store i32 %[[call]], i32* %[[i]]
-void test_strlen() {
+void test_strlen(void) {
   const char array[] = @encode(int);
   int i = strlen(array);
 }

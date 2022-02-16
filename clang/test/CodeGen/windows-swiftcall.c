@@ -35,7 +35,7 @@ SWIFTCALL void context_error_1(CONTEXT int *self, ERROR float **error) {}
 // CHECK:       store float* [[T0]], float** [[TEMP]], align 8
 // CHECK:       [[T0:%.*]] = load float*, float** [[TEMP]], align 8
 // CHECK:       store float* [[T0]], float** [[ERRORARG]], align 8
-void test_context_error_1() {
+void test_context_error_1(void) {
   int x;
   float *error;
   context_error_1(&x, &error);
@@ -73,7 +73,7 @@ typedef int int8 __attribute__((ext_vector_type(8)));
   }                                      \
   SWIFTCALL void take_##TYPE(TYPE v) {   \
   }                                      \
-  void test_##TYPE() {                   \
+  void test_##TYPE(void) {               \
     take_##TYPE(return_##TYPE());        \
   }
 

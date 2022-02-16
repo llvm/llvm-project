@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple=i686-apple-darwin9 -emit-llvm -o - %s | FileCheck %s
 
-int main() {
+int main(void) {
   int n;
   
   const char * inc = @encode(int[]);

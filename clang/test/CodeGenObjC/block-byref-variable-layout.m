@@ -3,13 +3,13 @@
 // rdar://12759433
 @class NSString;
 
-void Test12759433() {
+void Test12759433(void) {
  __block __unsafe_unretained NSString *uuByref = (__bridge NSString *)(void*)0x102030405060708;
- void (^block)() = ^{ uuByref = 0; };
+ void (^block)(void) = ^{ uuByref = 0; };
  block();
 }
 // CHECK: %struct.__block_byref_uuByref = type { i8*, %struct.__block_byref_uuByref*, i32, i32, [[ZERO:%.*]]* }
-int main() {
+int main(void) {
   __block __weak id wid;
   __block long XXX;
   __block id ID;
@@ -19,7 +19,7 @@ int main() {
      void *pv;
      __unsafe_unretained id unsunr;
   } import;
-  void (^c)() = ^{
+  void (^c)(void) = ^{
 // Inline flag for BYREF variable layout (1107296256): BLOCK_BYREF_HAS_COPY_DISPOSE BLOCK_BYREF_LAYOUT_WEAK
 // CHECK: store i32 1107296256, i32* [[T0:%.*]]
   wid = 0;
@@ -43,7 +43,7 @@ int main() {
 
 // rdar://12787751
 typedef char mds_path_t[1024];
-void directVolumePerfWaitForStoreState()
+void directVolumePerfWaitForStoreState(void)
 {
  __block mds_path_t path;
 }

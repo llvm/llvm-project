@@ -29,7 +29,7 @@
 @synthesize p1 = _p1;
 @end
 
-int main() {
+int main(void) {
   I *myi;
   myi.p1 = 2;
   return myi.p1;

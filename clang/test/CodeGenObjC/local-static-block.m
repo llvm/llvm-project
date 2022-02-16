@@ -21,7 +21,7 @@ static  NSArray *(^ArrayRecurs)(NSArray *addresses, unsigned long level) = ^(NSA
 extern NSArray *address;
 extern unsigned long level;
 
-void FUNC()
+void FUNC(void)
 {
  ArrayRecurs(address, level);
 
@@ -50,7 +50,7 @@ void FUNC()
  }
 }
 
-void FUNC2() {
+void FUNC2(void) {
   static void (^const block1)(int) = ^(int a){
     if (a--)
       block1(a);
@@ -61,7 +61,7 @@ void FUNC2() {
 // CHECK: define internal void @_block_invoke{{.*}}(
 // CHECK: call void %{{.*}}(i8* noundef bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor* }* @__block_literal_global{{.*}} to i8*), i32 noundef %{{.*}})
 
-void FUNC1()
+void FUNC1(void)
 {
  static  NSArray *(^ArrayRecurs)(NSArray *addresses, unsigned long level) = ^(NSArray *addresses, unsigned long level) {
 

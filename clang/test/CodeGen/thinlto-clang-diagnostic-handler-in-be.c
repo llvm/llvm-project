@@ -10,7 +10,7 @@
 // RUN: %clang -cc1 -triple x86_64-linux-gnu -O2 -fexperimental-new-pass-manager -x ir %t1.bo -fthinlto-index=%t.thinlto.bc -fprofile-instrument-use-path=%t2.profdata -emit-obj 2>&1 | FileCheck %s -allow-empty -check-prefix=CHECK-NOWARNING
 
 int sum;
-__attribute__((noinline)) void bar() {
+__attribute__((noinline)) void bar(void) {
   sum = 1234;
 }
 
