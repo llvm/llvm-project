@@ -29,7 +29,6 @@ class MCTargetOptions;
 class Target;
 
 MCCodeEmitter *createSparcMCCodeEmitter(const MCInstrInfo &MCII,
-                                        const MCRegisterInfo &MRI,
                                         MCContext &Ctx);
 MCAsmBackend *createSparcAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                     const MCRegisterInfo &MRI,

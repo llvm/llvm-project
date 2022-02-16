@@ -68,7 +68,7 @@ bool DwarfStreamer::init(Triple TheTriple,
   if (!MII)
     return error("no instr info info for target " + TripleName, Context), false;
 
-  MCE = TheTarget->createMCCodeEmitter(*MII, *MRI, *MC);
+  MCE = TheTarget->createMCCodeEmitter(*MII, *MC);
   if (!MCE)
     return error("no code emitter for target " + TripleName, Context), false;
 

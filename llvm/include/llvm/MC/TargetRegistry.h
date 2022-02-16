@@ -175,7 +175,6 @@ public:
                                                  const MCInstrInfo &MII,
                                                  const MCRegisterInfo &MRI);
   using MCCodeEmitterCtorTy = MCCodeEmitter *(*)(const MCInstrInfo &II,
-                                                 const MCRegisterInfo &MRI,
                                                  MCContext &Ctx);
   using ELFStreamerCtorTy =
       MCStreamer *(*)(const Triple &T, MCContext &Ctx,
@@ -506,11 +505,10 @@ public:
 
   /// createMCCodeEmitter - Create a target specific code emitter.
   MCCodeEmitter *createMCCodeEmitter(const MCInstrInfo &II,
-                                     const MCRegisterInfo &MRI,
                                      MCContext &Ctx) const {
     if (!MCCodeEmitterCtorFn)
       return nullptr;
-    return MCCodeEmitterCtorFn(II, MRI, Ctx);
+    return MCCodeEmitterCtorFn(II, Ctx);
   }
 
   /// Create a target specific MCStreamer.
@@ -1360,7 +1358,6 @@ template <class MCCodeEmitterImpl> struct RegisterMCCodeEmitter {
 
 private:
   static MCCodeEmitter *Allocator(const MCInstrInfo & /*II*/,
-                                  const MCRegisterInfo & /*MRI*/,
                                   MCContext & /*Ctx*/) {
     return new MCCodeEmitterImpl();
   }

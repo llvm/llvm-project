@@ -33,7 +33,6 @@ enum AMDGPUDwarfFlavour : unsigned { Wave64 = 0, Wave32 = 1 };
 MCRegisterInfo *createGCNMCRegisterInfo(AMDGPUDwarfFlavour DwarfFlavour);
 
 MCCodeEmitter *createSIMCCodeEmitter(const MCInstrInfo &MCII,
-                                     const MCRegisterInfo &MRI,
                                      MCContext &Ctx);
 
 MCAsmBackend *createAMDGPUAsmBackend(const Target &T,

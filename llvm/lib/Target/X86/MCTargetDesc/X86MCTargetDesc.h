@@ -70,7 +70,6 @@ MCSubtargetInfo *createX86MCSubtargetInfo(const Triple &TT, StringRef CPU,
 }
 
 MCCodeEmitter *createX86MCCodeEmitter(const MCInstrInfo &MCII,
-                                      const MCRegisterInfo &MRI,
                                       MCContext &Ctx);
 
 MCAsmBackend *createX86_32AsmBackend(const Target &T,
