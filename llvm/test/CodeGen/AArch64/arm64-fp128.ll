@@ -257,13 +257,12 @@ define dso_local i1 @test_setcc3() {
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
 ; CHECK-NEXT:    stp q1, q0, [sp] // 32-byte Folded Spill
 ; CHECK-NEXT:    bl __eqtf2
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    cset w19, eq
+; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    ldp q1, q0, [sp] // 32-byte Folded Reload
 ; CHECK-NEXT:    bl __unordtf2
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    orr w0, w8, w19
+; CHECK-NEXT:    ccmp w19, #0, #4, eq
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret

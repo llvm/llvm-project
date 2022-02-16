@@ -18,10 +18,8 @@ define i1 @or(i32 %x, i32 %y, i32 %z, i32 %w) {
 ; CHECK-LABEL: or:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, gt
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, ne
+; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
   %a = icmp eq i32 %x, %y
   %b = icmp sgt i32 %z, %w
@@ -46,10 +44,8 @@ define i1 @or_not(i32 %x, i32 %y, i32 %z, i32 %w) {
 ; CHECK-LABEL: or_not:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    cmp w2, w3
-; CHECK-NEXT:    cset w9, gt
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    ccmp w2, w3, #0, eq
+; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
   %a = icmp eq i32 %x, %y
   %b = icmp sgt i32 %z, %w

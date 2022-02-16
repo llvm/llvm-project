@@ -14034,15 +14034,85 @@ static SDValue tryCombineToBSL(SDNode *N,
   return SDValue();
 }
 
+// Given a tree of and/or(csel(0, 1, cc0), csel(0, 1, cc1)), we may be able to
+// convert to csel(ccmp(.., cc0)), depending on cc1:
+
+// (AND (CSET cc0 cmp0) (CSET cc1 (CMP x1 y1)))
+// =>
+// (CSET cc1 (CCMP x1 y1 !cc1 cc0 cmp0))
+//
+// (OR (CSET cc0 cmp0) (CSET cc1 (CMP x1 y1)))
+// =>
+// (CSET cc1 (CCMP x1 y1 cc1 !cc0 cmp0))
+static SDValue performANDORCSELCombine(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  SDValue CSel0 = N->getOperand(0);
+  SDValue CSel1 = N->getOperand(1);
+
+  if (CSel0.getOpcode() != AArch64ISD::CSEL ||
+      CSel1.getOpcode() != AArch64ISD::CSEL)
+    return SDValue();
+
+  if (!CSel0->hasOneUse() || !CSel1->hasOneUse())
+    return SDValue();
+
+  if (!isNullConstant(CSel0.getOperand(0)) ||
+      !isOneConstant(CSel0.getOperand(1)) ||
+      !isNullConstant(CSel1.getOperand(0)) ||
+      !isOneConstant(CSel1.getOperand(1)))
+    return SDValue();
+
+  SDValue Cmp0 = CSel0.getOperand(3);
+  SDValue Cmp1 = CSel1.getOperand(3);
+  AArch64CC::CondCode CC0 = (AArch64CC::CondCode)CSel0.getConstantOperandVal(2);
+  AArch64CC::CondCode CC1 = (AArch64CC::CondCode)CSel1.getConstantOperandVal(2);
+  if (!Cmp0->hasOneUse() || !Cmp1->hasOneUse())
+    return SDValue();
+  if (Cmp1.getOpcode() != AArch64ISD::SUBS &&
+      Cmp0.getOpcode() == AArch64ISD::SUBS) {
+    std::swap(Cmp0, Cmp1);
+    std::swap(CC0, CC1);
+  }
+
+  if (Cmp1.getOpcode() != AArch64ISD::SUBS)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue CCmp;
+
+  if (N->getOpcode() == ISD::AND) {
+    AArch64CC::CondCode InvCC0 = AArch64CC::getInvertedCondCode(CC0);
+    SDValue Condition = DAG.getConstant(InvCC0, DL, MVT_CC);
+    unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(CC1);
+    SDValue NZCVOp = DAG.getConstant(NZCV, DL, MVT::i32);
+    CCmp = DAG.getNode(AArch64ISD::CCMP, DL, MVT_CC, Cmp1.getOperand(0),
+                       Cmp1.getOperand(1), NZCVOp, Condition, Cmp0);
+  } else {
+    SDLoc DL(N);
+    AArch64CC::CondCode InvCC1 = AArch64CC::getInvertedCondCode(CC1);
+    SDValue Condition = DAG.getConstant(CC0, DL, MVT_CC);
+    unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(InvCC1);
+    SDValue NZCVOp = DAG.getConstant(NZCV, DL, MVT::i32);
+    CCmp = DAG.getNode(AArch64ISD::CCMP, DL, MVT_CC, Cmp1.getOperand(0),
+                       Cmp1.getOperand(1), NZCVOp, Condition, Cmp0);
+  }
+  return DAG.getNode(AArch64ISD::CSEL, DL, VT, CSel0.getOperand(0),
+                     CSel0.getOperand(1), DAG.getConstant(CC1, DL, MVT::i32),
+                     CCmp);
+}
+
 static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const AArch64Subtarget *Subtarget) {
-  // Attempt to form an EXTR from (or (shl VAL1, #N), (srl VAL2, #RegWidth-N))
   SelectionDAG &DAG = DCI.DAG;
   EVT VT = N->getValueType(0);
+
+  if (SDValue R = performANDORCSELCombine(N, DAG))
+    return R;
 
   if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return SDValue();
 
+  // Attempt to form an EXTR from (or (shl VAL1, #N), (srl VAL2, #RegWidth-N))
   if (SDValue Res = tryCombineToEXTR(N, DCI))
     return Res;
 
@@ -14171,60 +14241,13 @@ static SDValue performSVEAndCombine(SDNode *N,
   return SDValue();
 }
 
-// Given a tree of and(csel(0, 1, cc0), csel(0, 1, cc1)), we may be able to
-// convert to csel(ccmp(.., cc0)), depending on cc1.
-static SDValue PerformANDCSELCombine(SDNode *N, SelectionDAG &DAG) {
-  EVT VT = N->getValueType(0);
-  SDValue CSel0 = N->getOperand(0);
-  SDValue CSel1 = N->getOperand(1);
-
-  if (CSel0.getOpcode() != AArch64ISD::CSEL ||
-      CSel1.getOpcode() != AArch64ISD::CSEL)
-    return SDValue();
-
-  if (!CSel0->hasOneUse() || !CSel1->hasOneUse())
-    return SDValue();
-
-  if (!isNullConstant(CSel0.getOperand(0)) ||
-      !isOneConstant(CSel0.getOperand(1)) ||
-      !isNullConstant(CSel1.getOperand(0)) ||
-      !isOneConstant(CSel1.getOperand(1)))
-    return SDValue();
-
-  SDValue Cmp0 = CSel0.getOperand(3);
-  SDValue Cmp1 = CSel1.getOperand(3);
-  AArch64CC::CondCode CC0 = (AArch64CC::CondCode)CSel0.getConstantOperandVal(2);
-  AArch64CC::CondCode CC1 = (AArch64CC::CondCode)CSel1.getConstantOperandVal(2);
-  if (!Cmp0->hasOneUse() || !Cmp1->hasOneUse())
-    return SDValue();
-  if (Cmp1.getOpcode() != AArch64ISD::SUBS &&
-      Cmp0.getOpcode() == AArch64ISD::SUBS) {
-    std::swap(Cmp0, Cmp1);
-    std::swap(CC0, CC1);
-  }
-
-  if (Cmp1.getOpcode() != AArch64ISD::SUBS)
-    return SDValue();
-
-  SDLoc DL(N);
-  AArch64CC::CondCode InvCC0 = AArch64CC::getInvertedCondCode(CC0);
-  SDValue Condition = DAG.getConstant(InvCC0, DL, MVT_CC);
-  unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(CC1);
-  SDValue NZCVOp = DAG.getConstant(NZCV, DL, MVT::i32);
-  SDValue CCmp = DAG.getNode(AArch64ISD::CCMP, DL, MVT_CC, Cmp1.getOperand(0),
-                             Cmp1.getOperand(1), NZCVOp, Condition, Cmp0);
-  return DAG.getNode(AArch64ISD::CSEL, DL, VT, CSel0.getOperand(0),
-                     CSel0.getOperand(1), DAG.getConstant(CC1, DL, MVT::i32),
-                     CCmp);
-}
-
 static SDValue performANDCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
   SDValue LHS = N->getOperand(0);
   EVT VT = N->getValueType(0);
 
-  if (SDValue R = PerformANDCSELCombine(N, DAG))
+  if (SDValue R = performANDORCSELCombine(N, DAG))
     return R;
 
   if (!VT.isVector() || !DAG.getTargetLoweringInfo().isTypeLegal(VT))

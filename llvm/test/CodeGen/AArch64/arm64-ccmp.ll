@@ -754,16 +754,12 @@ define i64 @select_noccmp1(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
 
 @g = global i32 0
 
-; Should not use ccmp if we have to compute the or expression in an integer
-; register anyway because of other users.
 define i64 @select_noccmp2(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
 ; CHECK-LABEL: select_noccmp2:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    cmp x0, #13
-; CHECK-NEXT:    cset w9, gt
-; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    ccmp x0, #13, #0, ge
+; CHECK-NEXT:    cset w8, gt
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csel x0, xzr, x3, ne
 ; CHECK-NEXT:    sbfx w8, w8, #0, #1
@@ -799,21 +795,17 @@ define i32 @select_noccmp3(i32 %v0, i32 %v1, i32 %v2) {
 ; CHECK-LABEL: select_noccmp3:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    cmp w0, #13
-; CHECK-NEXT:    cset w9, gt
+; CHECK-NEXT:    ccmp w0, #13, #0, ge
+; CHECK-NEXT:    cset w8, gt
 ; CHECK-NEXT:    cmp w0, #22
-; CHECK-NEXT:    cset w10, lt
-; CHECK-NEXT:    cmp w0, #44
-; CHECK-NEXT:    cset w11, gt
+; CHECK-NEXT:    mov w9, #44
+; CHECK-NEXT:    ccmp w0, w9, #0, ge
+; CHECK-NEXT:    cset w9, gt
 ; CHECK-NEXT:    cmp w0, #99
-; CHECK-NEXT:    cset w12, eq
-; CHECK-NEXT:    cmp w0, #77
-; CHECK-NEXT:    cset w13, eq
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w9, w10, w11
 ; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    orr w9, w12, w13
+; CHECK-NEXT:    mov w9, #77
+; CHECK-NEXT:    ccmp w0, w9, #4, ne
+; CHECK-NEXT:    cset w9, eq
 ; CHECK-NEXT:    tst w8, w9
 ; CHECK-NEXT:    csel w0, w1, w2, ne
 ; CHECK-NEXT:    ret
