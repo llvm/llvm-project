@@ -59,10 +59,16 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
 
       for (User *U : F.users())
         if (auto *CB = dyn_cast<CallBase>(U))
-          if (CB->getCalledFunction() == &F &&
-                CB->hasFnAttr(Attribute::AlwaysInline) &&
-                !CB->getAttributes().hasFnAttr(Attribute::NoInline))
+          if (CB->getCalledFunction() == &F) {
+            if (F.hasFnAttribute(Attribute::AlwaysInline)) {
+              // Avoid inlining if noinline call site attribute.
+              if (!CB->isNoInline())
+                Calls.insert(CB);
+            } else if (CB->hasFnAttr(Attribute::AlwaysInline)) {
+              // Ok, alwaysinline call site attribute.
               Calls.insert(CB);
+            }
+          }
 
       for (CallBase *CB : Calls) {
         Function *Caller = CB->getCaller();
