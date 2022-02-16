@@ -46,17 +46,6 @@ int fizzbuzz(int x, bool y) {
 // CHECK-ADVOCATE-DISPLAY-PROGRESS-NEXT: Pass the -analyzer-display-progress for tracking which functions are analyzed.
 // CHECK-ADVOCATE-DISPLAY-PROGRESS-NOT:  For analyzing
 
-// The user passed the '-analyze-function' option and that matches on a
-// declaration in C mode.
-//
-// RUN: %clang_analyze_cc1 -analyzer-checker=core \
-// RUN:   -analyze-function='fizzbuzz' -x c -Dbool=_Bool \
-// RUN:   -triple x86_64-pc-linux-gnu 2>&1 %s \
-// RUN: | FileCheck %s -check-prefix=CHECK-EMPTY2 --allow-empty
-//
-// Expected empty standard output.
-// CHECK-EMPTY2-NOT: Every top-level function was skipped.
-
 // Same as the previous but syntax mode only.
 // FIXME: This should have empty standard output.
 //
