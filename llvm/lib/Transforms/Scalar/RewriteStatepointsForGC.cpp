@@ -1164,13 +1164,21 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
 #ifndef NDEBUG
           Value *OldBase = BlockToValue[InBB];
           Value *Base = getBaseForInput(InVal, nullptr);
+
+          // We can't use `stripPointerCasts` instead of this function because
+          // `stripPointerCasts` doesn't handle vectors of pointers.
+          auto StripBitCasts = [](Value *V) -> Value * {
+            while (auto *BC = dyn_cast<BitCastInst>(V))
+              V = BC->getOperand(0);
+            return V;
+          };
           // In essence this assert states: the only way two values
           // incoming from the same basic block may be different is by
           // being different bitcasts of the same value.  A cleanup
           // that remains TODO is changing findBaseOrBDV to return an
           // llvm::Value of the correct type (and still remain pure).
           // This will remove the need to add bitcasts.
-          assert(Base->stripPointerCasts() == OldBase->stripPointerCasts() &&
+          assert(StripBitCasts(Base) == StripBitCasts(OldBase) &&
                  "findBaseOrBDV should be pure!");
 #endif
         }
