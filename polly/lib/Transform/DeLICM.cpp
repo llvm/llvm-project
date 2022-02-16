@@ -1461,16 +1461,10 @@ char DeLICMWrapperPass::ID;
 
 Pass *polly::createDeLICMWrapperPass() { return new DeLICMWrapperPass(); }
 
-INITIALIZE_PASS_BEGIN(DeLICMWrapperPass, "polly-delicm", "Polly - DeLICM/DePRE",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(ScopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(DeLICMWrapperPass, "polly-delicm", "Polly - DeLICM/DePRE",
-                    false, false)
-
-llvm::PreservedAnalyses DeLICMPass::run(Scop &S, ScopAnalysisManager &SAM,
-                                        ScopStandardAnalysisResults &SAR,
-                                        SPMUpdater &U) {
+llvm::PreservedAnalyses polly::DeLICMPass::run(Scop &S,
+                                               ScopAnalysisManager &SAM,
+                                               ScopStandardAnalysisResults &SAR,
+                                               SPMUpdater &U) {
   return runDeLICMUsingNPM(S, SAM, SAR, U, nullptr);
 }
 
@@ -1494,3 +1488,10 @@ bool polly::isConflicting(
 
   return Knowledge::isConflicting(Existing, Proposed, OS, Indent);
 }
+
+INITIALIZE_PASS_BEGIN(DeLICMWrapperPass, "polly-delicm", "Polly - DeLICM/DePRE",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(ScopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_END(DeLICMWrapperPass, "polly-delicm", "Polly - DeLICM/DePRE",
+                    false, false)

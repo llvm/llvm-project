@@ -1058,7 +1058,7 @@ void IslNodeBuilder::create(__isl_take isl_ast_node *Node) {
   llvm_unreachable("Unknown isl_ast_node type");
 }
 
-bool IslNodeBuilder::materializeValue(isl_id *Id) {
+bool IslNodeBuilder::materializeValue(__isl_take isl_id *Id) {
   // If the Id is already mapped, skip it.
   if (!IDToValue.count(Id)) {
     auto *ParamSCEV = (const SCEV *)isl_id_get_user(Id);
@@ -1122,7 +1122,7 @@ bool IslNodeBuilder::materializeValue(isl_id *Id) {
   return true;
 }
 
-bool IslNodeBuilder::materializeParameters(isl_set *Set) {
+bool IslNodeBuilder::materializeParameters(__isl_take isl_set *Set) {
   for (unsigned i = 0, e = isl_set_dim(Set, isl_dim_param); i < e; ++i) {
     if (!isl_set_involves_dims(Set, isl_dim_param, i, 1))
       continue;
@@ -1142,7 +1142,7 @@ bool IslNodeBuilder::materializeParameters() {
   return true;
 }
 
-Value *IslNodeBuilder::preloadUnconditionally(isl_set *AccessRange,
+Value *IslNodeBuilder::preloadUnconditionally(__isl_take isl_set *AccessRange,
                                               isl_ast_build *Build,
                                               Instruction *AccInst) {
   isl_pw_multi_aff *PWAccRel = isl_pw_multi_aff_from_set(AccessRange);
@@ -1173,7 +1173,7 @@ Value *IslNodeBuilder::preloadUnconditionally(isl_set *AccessRange,
 }
 
 Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
-                                            isl_set *Domain) {
+                                            __isl_take isl_set *Domain) {
   isl_set *AccessRange = isl_map_range(MA.getAddressFunction().release());
   AccessRange = isl_set_gist_params(AccessRange, S.getContext().release());
 
