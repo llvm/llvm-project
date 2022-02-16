@@ -511,6 +511,21 @@ cc_library(
 )
 
 cc_library(
+    name = "TestTensor",
+    srcs = glob(["lib/Dialect/Tensor/*.cpp"]),
+    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        "//mlir:ArithmeticDialect",
+        "//mlir:Pass",
+        "//mlir:SCFDialect",
+        "//mlir:TensorDialect",
+        "//mlir:TensorTransforms",
+        "//mlir:Transforms",
+    ],
+)
+
+cc_library(
     name = "TestVector",
     srcs = glob(["lib/Dialect/Vector/*.cpp"]),
     defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
