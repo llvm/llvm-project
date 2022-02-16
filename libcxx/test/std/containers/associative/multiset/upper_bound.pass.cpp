@@ -41,19 +41,19 @@ int main(int, char**)
         };
         M m(ar, ar+sizeof(ar)/sizeof(ar[0]));
         R r = m.upper_bound(4);
-        assert(r == next(m.begin(), 0));
+        assert(r == std::next(m.begin(), 0));
         r = m.upper_bound(5);
-        assert(r == next(m.begin(), 3));
+        assert(r == std::next(m.begin(), 3));
         r = m.upper_bound(6);
-        assert(r == next(m.begin(), 3));
+        assert(r == std::next(m.begin(), 3));
         r = m.upper_bound(7);
-        assert(r == next(m.begin(), 6));
+        assert(r == std::next(m.begin(), 6));
         r = m.upper_bound(8);
-        assert(r == next(m.begin(), 6));
+        assert(r == std::next(m.begin(), 6));
         r = m.upper_bound(9);
-        assert(r == next(m.begin(), 9));
+        assert(r == std::next(m.begin(), 9));
         r = m.upper_bound(11);
-        assert(r == next(m.begin(), 9));
+        assert(r == std::next(m.begin(), 9));
     }
     {
         typedef M::const_iterator R;
@@ -71,19 +71,19 @@ int main(int, char**)
         };
         const M m(ar, ar+sizeof(ar)/sizeof(ar[0]));
         R r = m.upper_bound(4);
-        assert(r == next(m.begin(), 0));
+        assert(r == std::next(m.begin(), 0));
         r = m.upper_bound(5);
-        assert(r == next(m.begin(), 3));
+        assert(r == std::next(m.begin(), 3));
         r = m.upper_bound(6);
-        assert(r == next(m.begin(), 3));
+        assert(r == std::next(m.begin(), 3));
         r = m.upper_bound(7);
-        assert(r == next(m.begin(), 6));
+        assert(r == std::next(m.begin(), 6));
         r = m.upper_bound(8);
-        assert(r == next(m.begin(), 6));
+        assert(r == std::next(m.begin(), 6));
         r = m.upper_bound(9);
-        assert(r == next(m.begin(), 9));
+        assert(r == std::next(m.begin(), 9));
         r = m.upper_bound(11);
-        assert(r == next(m.begin(), 9));
+        assert(r == std::next(m.begin(), 9));
     }
     }
 #if TEST_STD_VER >= 11
@@ -106,19 +106,19 @@ int main(int, char**)
         };
         M m(ar, ar+sizeof(ar)/sizeof(ar[0]));
         R r = m.upper_bound(4);
-        assert(r == next(m.begin(), 0));
+        assert(r == std::next(m.begin(), 0));
         r = m.upper_bound(5);
-        assert(r == next(m.begin(), 3));
+        assert(r == std::next(m.begin(), 3));
         r = m.upper_bound(6);
-        assert(r == next(m.begin(), 3));
+        assert(r == std::next(m.begin(), 3));
         r = m.upper_bound(7);
-        assert(r == next(m.begin(), 6));
+        assert(r == std::next(m.begin(), 6));
         r = m.upper_bound(8);
-        assert(r == next(m.begin(), 6));
+        assert(r == std::next(m.begin(), 6));
         r = m.upper_bound(9);
-        assert(r == next(m.begin(), 9));
+        assert(r == std::next(m.begin(), 9));
         r = m.upper_bound(11);
-        assert(r == next(m.begin(), 9));
+        assert(r == std::next(m.begin(), 9));
     }
     {
         typedef M::const_iterator R;
@@ -136,19 +136,19 @@ int main(int, char**)
         };
         const M m(ar, ar+sizeof(ar)/sizeof(ar[0]));
         R r = m.upper_bound(4);
-        assert(r == next(m.begin(), 0));
+        assert(r == std::next(m.begin(), 0));
         r = m.upper_bound(5);
-        assert(r == next(m.begin(), 3));
+        assert(r == std::next(m.begin(), 3));
         r = m.upper_bound(6);
-        assert(r == next(m.begin(), 3));
+        assert(r == std::next(m.begin(), 3));
         r = m.upper_bound(7);
-        assert(r == next(m.begin(), 6));
+        assert(r == std::next(m.begin(), 6));
         r = m.upper_bound(8);
-        assert(r == next(m.begin(), 6));
+        assert(r == std::next(m.begin(), 6));
         r = m.upper_bound(9);
-        assert(r == next(m.begin(), 9));
+        assert(r == std::next(m.begin(), 9));
         r = m.upper_bound(11);
-        assert(r == next(m.begin(), 9));
+        assert(r == std::next(m.begin(), 9));
     }
     }
 #endif
@@ -172,19 +172,19 @@ int main(int, char**)
     };
     M m(ar, ar+sizeof(ar)/sizeof(ar[0]));
     R r = m.upper_bound(4);
-    assert(r == next(m.begin(), 0));
+    assert(r == std::next(m.begin(), 0));
     r = m.upper_bound(5);
-    assert(r == next(m.begin(), 3));
+    assert(r == std::next(m.begin(), 3));
     r = m.upper_bound(6);
-    assert(r == next(m.begin(), 3));
+    assert(r == std::next(m.begin(), 3));
     r = m.upper_bound(7);
-    assert(r == next(m.begin(), 6));
+    assert(r == std::next(m.begin(), 6));
     r = m.upper_bound(8);
-    assert(r == next(m.begin(), 6));
+    assert(r == std::next(m.begin(), 6));
     r = m.upper_bound(9);
-    assert(r == next(m.begin(), 9));
+    assert(r == std::next(m.begin(), 9));
     r = m.upper_bound(11);
-    assert(r == next(m.begin(), 9));
+    assert(r == std::next(m.begin(), 9));
     }
 
     {
@@ -204,19 +204,19 @@ int main(int, char**)
     m.insert ( V::make ( 9 ));
 
     R r = m.upper_bound(4);
-    assert(r == next(m.begin(), 0));
+    assert(r == std::next(m.begin(), 0));
     r = m.upper_bound(5);
-    assert(r == next(m.begin(), 3));
+    assert(r == std::next(m.begin(), 3));
     r = m.upper_bound(6);
-    assert(r == next(m.begin(), 3));
+    assert(r == std::next(m.begin(), 3));
     r = m.upper_bound(7);
-    assert(r == next(m.begin(), 6));
+    assert(r == std::next(m.begin(), 6));
     r = m.upper_bound(8);
-    assert(r == next(m.begin(), 6));
+    assert(r == std::next(m.begin(), 6));
     r = m.upper_bound(9);
-    assert(r == next(m.begin(), 9));
+    assert(r == std::next(m.begin(), 9));
     r = m.upper_bound(11);
-    assert(r == next(m.begin(), 9));
+    assert(r == std::next(m.begin(), 9));
     }
 #endif
 

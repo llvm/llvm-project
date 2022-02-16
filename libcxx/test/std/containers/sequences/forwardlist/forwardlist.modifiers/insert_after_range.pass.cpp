@@ -33,20 +33,20 @@ int main(int, char**)
         assert(std::distance(c.begin(), c.end()) == 0);
 
         i = c.insert_after(c.cbefore_begin(), J(t), J(t+3));
-        assert(i == next(c.before_begin(), 3));
+        assert(i == std::next(c.before_begin(), 3));
         assert(std::distance(c.begin(), c.end()) == 3);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 2);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 2);
 
         i = c.insert_after(c.begin(), J(t+3), J(t+5));
-        assert(i == next(c.begin(), 2));
+        assert(i == std::next(c.begin(), 2));
         assert(std::distance(c.begin(), c.end()) == 5);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 3);
-        assert(*next(c.begin(), 2) == 4);
-        assert(*next(c.begin(), 3) == 1);
-        assert(*next(c.begin(), 4) == 2);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 3);
+        assert(*std::next(c.begin(), 2) == 4);
+        assert(*std::next(c.begin(), 3) == 1);
+        assert(*std::next(c.begin(), 4) == 2);
     }
 #if TEST_STD_VER >= 11
     {
@@ -61,20 +61,20 @@ int main(int, char**)
         assert(std::distance(c.begin(), c.end()) == 0);
 
         i = c.insert_after(c.cbefore_begin(), J(t), J(t+3));
-        assert(i == next(c.before_begin(), 3));
+        assert(i == std::next(c.before_begin(), 3));
         assert(std::distance(c.begin(), c.end()) == 3);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 2);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 2);
 
         i = c.insert_after(c.begin(), J(t+3), J(t+5));
-        assert(i == next(c.begin(), 2));
+        assert(i == std::next(c.begin(), 2));
         assert(std::distance(c.begin(), c.end()) == 5);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 3);
-        assert(*next(c.begin(), 2) == 4);
-        assert(*next(c.begin(), 3) == 1);
-        assert(*next(c.begin(), 4) == 2);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 3);
+        assert(*std::next(c.begin(), 2) == 4);
+        assert(*std::next(c.begin(), 3) == 1);
+        assert(*std::next(c.begin(), 4) == 2);
     }
 #endif
 

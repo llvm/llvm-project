@@ -41,8 +41,8 @@ int main(int, char**)
     assert(m.size() == 3);
     assert(std::distance(m.begin(), m.end()) == 3);
     assert(*m.begin() == V(1, 1));
-    assert(*next(m.begin()) == V(2, 1));
-    assert(*next(m.begin(), 2) == V(3, 1));
+    assert(*std::next(m.begin()) == V(2, 1));
+    assert(*std::next(m.begin(), 2) == V(3, 1));
     assert(m.key_comp() == C(3));
     assert(m.get_allocator() == A(6));
     }
@@ -64,8 +64,8 @@ int main(int, char**)
     assert(m.size() == 3);
     assert(std::distance(m.begin(), m.end()) == 3);
     assert(*m.begin() == V(1, 1));
-    assert(*next(m.begin()) == V(2, 1));
-    assert(*next(m.begin(), 2) == V(3, 1));
+    assert(*std::next(m.begin()) == V(2, 1));
+    assert(*std::next(m.begin(), 2) == V(3, 1));
     assert(m.key_comp() == C(3));
     assert(m.get_allocator() == A());
     }
@@ -89,8 +89,8 @@ int main(int, char**)
     assert(m.size() == 3);
     assert(std::distance(m.begin(), m.end()) == 3);
     assert(*m.begin() == V(1, 1));
-    assert(*next(m.begin()) == V(2, 1));
-    assert(*next(m.begin(), 2) == V(3, 1));
+    assert(*std::next(m.begin()) == V(2, 1));
+    assert(*std::next(m.begin(), 2) == V(3, 1));
     assert(m.get_allocator() == a);
     }
     {
@@ -112,8 +112,8 @@ int main(int, char**)
     assert(m.size() == 3);
     assert(std::distance(m.begin(), m.end()) == 3);
     assert(*m.begin() == V(1, 1));
-    assert(*next(m.begin()) == V(2, 1));
-    assert(*next(m.begin(), 2) == V(3, 1));
+    assert(*std::next(m.begin()) == V(2, 1));
+    assert(*std::next(m.begin(), 2) == V(3, 1));
     assert(m.key_comp() == C(3));
     assert(m.get_allocator() == a);
     }

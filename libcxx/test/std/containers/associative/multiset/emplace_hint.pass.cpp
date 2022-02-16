@@ -52,11 +52,11 @@ int main(int, char**)
         assert(m.size() == 1);
         assert(*m.begin() == Emplaceable());
         r = m.emplace_hint(m.cend(), 2, 3.5);
-        assert(r == next(m.begin()));
+        assert(r == std::next(m.begin()));
         assert(m.size() == 2);
         assert(*r == Emplaceable(2, 3.5));
         r = m.emplace_hint(m.cbegin(), 2, 3.5);
-        assert(r == next(m.begin()));
+        assert(r == std::next(m.begin()));
         assert(m.size() == 3);
         assert(*r == Emplaceable(2, 3.5));
     }

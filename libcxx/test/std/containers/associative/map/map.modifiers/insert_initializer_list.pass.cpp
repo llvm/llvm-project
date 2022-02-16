@@ -41,8 +41,8 @@ int main(int, char**)
     assert(m.size() == 3);
     assert(std::distance(m.begin(), m.end()) == 3);
     assert(*m.begin() == V(1, 1));
-    assert(*next(m.begin()) == V(2, 1));
-    assert(*next(m.begin(), 2) == V(3, 1));
+    assert(*std::next(m.begin()) == V(2, 1));
+    assert(*std::next(m.begin(), 2) == V(3, 1));
     }
     {
     typedef std::pair<const int, double> V;
@@ -63,8 +63,8 @@ int main(int, char**)
     assert(m.size() == 3);
     assert(std::distance(m.begin(), m.end()) == 3);
     assert(*m.begin() == V(1, 1));
-    assert(*next(m.begin()) == V(2, 1));
-    assert(*next(m.begin(), 2) == V(3, 1));
+    assert(*std::next(m.begin()) == V(2, 1));
+    assert(*std::next(m.begin(), 2) == V(3, 1));
     }
 
   return 0;

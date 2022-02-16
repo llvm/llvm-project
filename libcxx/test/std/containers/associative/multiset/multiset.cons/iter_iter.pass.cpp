@@ -40,15 +40,15 @@ int main(int, char**)
                   cpp17_input_iterator<const int*>(ar+sizeof(ar)/sizeof(ar[0])));
     assert(m.size() == 9);
     assert(std::distance(m.begin(), m.end()) == 9);
-    assert(*next(m.begin(), 0) == 1);
-    assert(*next(m.begin(), 1) == 1);
-    assert(*next(m.begin(), 2) == 1);
-    assert(*next(m.begin(), 3) == 2);
-    assert(*next(m.begin(), 4) == 2);
-    assert(*next(m.begin(), 5) == 2);
-    assert(*next(m.begin(), 6) == 3);
-    assert(*next(m.begin(), 7) == 3);
-    assert(*next(m.begin(), 8) == 3);
+    assert(*std::next(m.begin(), 0) == 1);
+    assert(*std::next(m.begin(), 1) == 1);
+    assert(*std::next(m.begin(), 2) == 1);
+    assert(*std::next(m.begin(), 3) == 2);
+    assert(*std::next(m.begin(), 4) == 2);
+    assert(*std::next(m.begin(), 5) == 2);
+    assert(*std::next(m.begin(), 6) == 3);
+    assert(*std::next(m.begin(), 7) == 3);
+    assert(*std::next(m.begin(), 8) == 3);
     }
 #if TEST_STD_VER >= 11
     {
@@ -69,15 +69,15 @@ int main(int, char**)
                   cpp17_input_iterator<const int*>(ar+sizeof(ar)/sizeof(ar[0])));
     assert(m.size() == 9);
     assert(std::distance(m.begin(), m.end()) == 9);
-    assert(*next(m.begin(), 0) == 1);
-    assert(*next(m.begin(), 1) == 1);
-    assert(*next(m.begin(), 2) == 1);
-    assert(*next(m.begin(), 3) == 2);
-    assert(*next(m.begin(), 4) == 2);
-    assert(*next(m.begin(), 5) == 2);
-    assert(*next(m.begin(), 6) == 3);
-    assert(*next(m.begin(), 7) == 3);
-    assert(*next(m.begin(), 8) == 3);
+    assert(*std::next(m.begin(), 0) == 1);
+    assert(*std::next(m.begin(), 1) == 1);
+    assert(*std::next(m.begin(), 2) == 1);
+    assert(*std::next(m.begin(), 3) == 2);
+    assert(*std::next(m.begin(), 4) == 2);
+    assert(*std::next(m.begin(), 5) == 2);
+    assert(*std::next(m.begin(), 6) == 3);
+    assert(*std::next(m.begin(), 7) == 3);
+    assert(*std::next(m.begin(), 8) == 3);
     }
 #endif
 

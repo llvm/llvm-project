@@ -45,16 +45,16 @@ int main(int, char**)
     assert(m.size() == 3);
     assert(std::distance(m.begin(), m.end()) == 3);
     assert(*m.begin() == V(1, 1));
-    assert(*next(m.begin()) == V(2, 1));
-    assert(*next(m.begin(), 2) == V(3, 1));
+    assert(*std::next(m.begin()) == V(2, 1));
+    assert(*std::next(m.begin(), 2) == V(3, 1));
 
     assert(mo.get_allocator() == A(7));
     assert(mo.key_comp() == C(5));
     assert(mo.size() == 3);
     assert(std::distance(mo.begin(), mo.end()) == 3);
     assert(*mo.begin() == V(1, 1));
-    assert(*next(mo.begin()) == V(2, 1));
-    assert(*next(mo.begin(), 2) == V(3, 1));
+    assert(*std::next(mo.begin()) == V(2, 1));
+    assert(*std::next(mo.begin(), 2) == V(3, 1));
     }
 #if TEST_STD_VER >= 11
     {
@@ -80,16 +80,16 @@ int main(int, char**)
     assert(m.size() == 3);
     assert(std::distance(m.begin(), m.end()) == 3);
     assert(*m.begin() == V(1, 1));
-    assert(*next(m.begin()) == V(2, 1));
-    assert(*next(m.begin(), 2) == V(3, 1));
+    assert(*std::next(m.begin()) == V(2, 1));
+    assert(*std::next(m.begin(), 2) == V(3, 1));
 
     assert(mo.get_allocator() == A());
     assert(mo.key_comp() == C(5));
     assert(mo.size() == 3);
     assert(std::distance(mo.begin(), mo.end()) == 3);
     assert(*mo.begin() == V(1, 1));
-    assert(*next(mo.begin()) == V(2, 1));
-    assert(*next(mo.begin(), 2) == V(3, 1));
+    assert(*std::next(mo.begin()) == V(2, 1));
+    assert(*std::next(mo.begin(), 2) == V(3, 1));
     }
     {
     typedef std::pair<const int, double> V;
@@ -114,16 +114,16 @@ int main(int, char**)
     assert(m.size() == 3);
     assert(std::distance(m.begin(), m.end()) == 3);
     assert(*m.begin() == V(1, 1));
-    assert(*next(m.begin()) == V(2, 1));
-    assert(*next(m.begin(), 2) == V(3, 1));
+    assert(*std::next(m.begin()) == V(2, 1));
+    assert(*std::next(m.begin(), 2) == V(3, 1));
 
     assert(mo.get_allocator() == A());
     assert(mo.key_comp() == C(5));
     assert(mo.size() == 3);
     assert(std::distance(mo.begin(), mo.end()) == 3);
     assert(*mo.begin() == V(1, 1));
-    assert(*next(mo.begin()) == V(2, 1));
-    assert(*next(mo.begin(), 2) == V(3, 1));
+    assert(*std::next(mo.begin()) == V(2, 1));
+    assert(*std::next(mo.begin(), 2) == V(3, 1));
     }
 #endif
 

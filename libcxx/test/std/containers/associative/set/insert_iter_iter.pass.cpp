@@ -42,8 +42,8 @@ int main(int, char**)
                  cpp17_input_iterator<const V*>(ar + sizeof(ar)/sizeof(ar[0])));
         assert(m.size() == 3);
         assert(*m.begin() == 1);
-        assert(*next(m.begin()) == 2);
-        assert(*next(m.begin(), 2) == 3);
+        assert(*std::next(m.begin()) == 2);
+        assert(*std::next(m.begin(), 2) == 3);
     }
 #if TEST_STD_VER >= 11
     {
@@ -66,8 +66,8 @@ int main(int, char**)
                  cpp17_input_iterator<const V*>(ar + sizeof(ar)/sizeof(ar[0])));
         assert(m.size() == 3);
         assert(*m.begin() == 1);
-        assert(*next(m.begin()) == 2);
-        assert(*next(m.begin(), 2) == 3);
+        assert(*std::next(m.begin()) == 2);
+        assert(*std::next(m.begin(), 2) == 3);
     }
 #endif
 

@@ -27,7 +27,7 @@ int main(int, char**)
         assert(std::distance(c.begin(), c.end()) == 1);
         c.push_front(3);
         assert(c.front() == 3);
-        assert(*next(c.begin()) == 1);
+        assert(*std::next(c.begin()) == 1);
         assert(std::distance(c.begin(), c.end()) == 2);
     }
 #if TEST_STD_VER >= 11
@@ -40,7 +40,7 @@ int main(int, char**)
         assert(std::distance(c.begin(), c.end()) == 1);
         c.push_front(3);
         assert(c.front() == 3);
-        assert(*next(c.begin()) == 1);
+        assert(*std::next(c.begin()) == 1);
         assert(std::distance(c.begin(), c.end()) == 2);
     }
 #endif

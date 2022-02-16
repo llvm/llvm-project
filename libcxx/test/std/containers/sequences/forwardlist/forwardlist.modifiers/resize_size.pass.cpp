@@ -42,27 +42,27 @@ int main(int, char**)
 
         c.resize(3);
         assert(std::distance(c.begin(), c.end()) == 3);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 2);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 2);
 
         c.resize(6);
         assert(std::distance(c.begin(), c.end()) == 6);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 2);
-        assert(*next(c.begin(), 3) == 0);
-        assert(*next(c.begin(), 4) == 0);
-        assert(*next(c.begin(), 5) == 0);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 2);
+        assert(*std::next(c.begin(), 3) == 0);
+        assert(*std::next(c.begin(), 4) == 0);
+        assert(*std::next(c.begin(), 5) == 0);
 
         c.resize(6);
         assert(std::distance(c.begin(), c.end()) == 6);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 2);
-        assert(*next(c.begin(), 3) == 0);
-        assert(*next(c.begin(), 4) == 0);
-        assert(*next(c.begin(), 5) == 0);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 2);
+        assert(*std::next(c.begin(), 3) == 0);
+        assert(*std::next(c.begin(), 4) == 0);
+        assert(*std::next(c.begin(), 5) == 0);
     }
 #if TEST_STD_VER >= 11
     {
@@ -88,27 +88,27 @@ int main(int, char**)
 
         c.resize(3);
         assert(std::distance(c.begin(), c.end()) == 3);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 2);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 2);
 
         c.resize(6);
         assert(std::distance(c.begin(), c.end()) == 6);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 2);
-        assert(*next(c.begin(), 3) == 0);
-        assert(*next(c.begin(), 4) == 0);
-        assert(*next(c.begin(), 5) == 0);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 2);
+        assert(*std::next(c.begin(), 3) == 0);
+        assert(*std::next(c.begin(), 4) == 0);
+        assert(*std::next(c.begin(), 5) == 0);
 
         c.resize(6);
         assert(std::distance(c.begin(), c.end()) == 6);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 2);
-        assert(*next(c.begin(), 3) == 0);
-        assert(*next(c.begin(), 4) == 0);
-        assert(*next(c.begin(), 5) == 0);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 2);
+        assert(*std::next(c.begin(), 3) == 0);
+        assert(*std::next(c.begin(), 4) == 0);
+        assert(*std::next(c.begin(), 5) == 0);
     }
 #endif
 
