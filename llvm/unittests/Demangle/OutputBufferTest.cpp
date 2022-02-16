@@ -78,3 +78,16 @@ TEST(OutputBufferTest, Prepend) {
 
   std::free(OB.getBuffer());
 }
+
+// Test when initial needed size is larger than the default.
+TEST(OutputBufferTest, Extend) {
+  OutputBuffer OB;
+
+  char Massive[2000];
+  std::memset(Massive, 'a', sizeof(Massive));
+  Massive[sizeof(Massive) - 1] = 0;
+  OB << Massive;
+  EXPECT_EQ(Massive, toString(OB));
+
+  std::free(OB.getBuffer());
+}

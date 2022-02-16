@@ -37,10 +37,10 @@ class OutputBuffer {
   void grow(size_t N) {
     size_t Need = N + CurrentPosition;
     if (Need > BufferCapacity) {
-      // Avoid many reallocations during startup, with a bit of hysteresis.
-      constexpr size_t MinInitAlloc = 1024;
-      if (Need < MinInitAlloc)
-        Need = MinInitAlloc;
+      // Reduce the number of reallocations, with a bit of hysteresis. The
+      // number here is chosen so the first allocation will more-than-likely not
+      // allocate more than 1K.
+      Need += 1024 - 32;
       BufferCapacity *= 2;
       if (BufferCapacity < Need)
         BufferCapacity = Need;
