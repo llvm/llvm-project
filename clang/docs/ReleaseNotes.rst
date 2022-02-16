@@ -18,7 +18,7 @@ Written by the `LLVM Team <https://llvm.org/>`_
 Introduction
 ============
 
-This document contains the release notes for the Clang C/C++/Objective-C
+This document contains the release notes for the Clang C/C++/Objective-C/OpenCL
 frontend, part of the LLVM Compiler Infrastructure, release |release|. Here we
 describe the status of Clang in some detail, including major
 improvements from the previous release and new feature work. For the
@@ -49,6 +49,8 @@ Major New Features
 
 - Added SPIR-V triple and binary generation using external ``llvm-spirv`` tool.
   For more details refer to :ref:`the SPIR-V support section <spir-v>`.
+- Completed support of OpenCL C 3.0 and C++ for OpenCL 2021 at experimental
+  state.
 -  ...
 
 Improvements to Clang's diagnostics
@@ -262,10 +264,37 @@ CUDA Language Changes in Clang
 Objective-C Language Changes in Clang
 -------------------------------------
 
-OpenCL C Language Changes in Clang
-----------------------------------
+OpenCL Kernel Language Changes in Clang
+---------------------------------------
 
-...
+OpenCL 3.0 is completed, but remains experimental:
+
+- Added parsing support for optionality of device-side enqueue and blocks.
+- Added missing support for optionality of various builtin functions:
+
+  - ``read_write`` images, pipes, collective workgroup in the default header.
+  - ``read_write`` images, named address space atomics in internal ``opencl-c.h``
+    (enabled via ``-finclude-default-header`` frontend flag).
+
+C++ for OpenCL:
+
+- Added experimental support of C++ for OpenCL 2021 as per `the provisional
+  language documentation
+  <https://github.com/KhronosGroup/OpenCL-Docs/releases/tag/cxxforopencl-docrev2021.12>`_.
+  Support of all optional features is aligned with OpenCL 3.0.
+- Added ``__remove_address_space`` utility (documentation available in
+  :doc:`LanguageExtensions`).
+- Fixed address space for temporaries (to be ``__private``).
+- Disallowed static kernel functions.
+- Fixed implicit definition of ``__cpp_threadsafe_static_init`` macro.
+
+Misc changes:
+
+- Added generation of SPIR-V binaries via external ``llvm-spirv`` tool.
+  For more details refer to :ref:`the SPIR-V support section <spir-v>`.
+- Added new extensions for ``atomic_half`` and ``cl_ext_float_atomics``.
+- Fixed/improved support of ``vload``/``vstore``.
+- Fixed incorrect ``as_type`` support for 3-element vector types.
 
 ABI Changes in Clang
 --------------------
