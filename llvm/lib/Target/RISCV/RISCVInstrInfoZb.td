@@ -429,24 +429,28 @@ def XPERM8 : ALU_rr<0b0010100, 0b100, "xperm8">, Sched<[]>;
 
 let Predicates = [HasStdExtZbt] in {
 def CMIX : RVBTernaryR<0b11, 0b001, OPC_OP, "cmix", "$rd, $rs2, $rs1, $rs3">,
-           Sched<[]>;
+           Sched<[WriteCMix, ReadCMix, ReadCMix, ReadCMix]>;
 def CMOV : RVBTernaryR<0b11, 0b101, OPC_OP, "cmov", "$rd, $rs2, $rs1, $rs3">,
-           Sched<[]>;
+           Sched<[WriteCMov, ReadCMov, ReadCMov, ReadCMov]>;
 def FSL  : RVBTernaryR<0b10, 0b001, OPC_OP, "fsl", "$rd, $rs1, $rs3, $rs2">,
-           Sched<[]>;
+           Sched<[WriteFSReg, ReadFSReg, ReadFSReg, ReadFSReg]>;
 def FSR  : RVBTernaryR<0b10, 0b101, OPC_OP, "fsr", "$rd, $rs1, $rs3, $rs2">,
-           Sched<[]>;
+           Sched<[WriteFSReg, ReadFSReg, ReadFSReg, ReadFSReg]>;
 def FSRI : RVBTernaryImm6<0b101, OPC_OP_IMM, "fsri",
-                          "$rd, $rs1, $rs3, $shamt">, Sched<[]>;
+                          "$rd, $rs1, $rs3, $shamt">,
+           Sched<[WriteFSRImm, ReadFSRImm, ReadFSRImm]>;
 } // Predicates = [HasStdExtZbt]
 
 let Predicates = [HasStdExtZbt, IsRV64] in {
 def FSLW  : RVBTernaryR<0b10, 0b001, OPC_OP_32,
-                        "fslw", "$rd, $rs1, $rs3, $rs2">, Sched<[]>;
+                        "fslw", "$rd, $rs1, $rs3, $rs2">,
+            Sched<[WriteFSReg32, ReadFSReg32, ReadFSReg32, ReadFSReg32]>;
 def FSRW  : RVBTernaryR<0b10, 0b101, OPC_OP_32, "fsrw",
-                        "$rd, $rs1, $rs3, $rs2">, Sched<[]>;
+                        "$rd, $rs1, $rs3, $rs2">,
+            Sched<[WriteFSReg32, ReadFSReg32, ReadFSReg32, ReadFSReg32]>;
 def FSRIW : RVBTernaryImm5<0b10, 0b101, OPC_OP_IMM_32,
-                           "fsriw", "$rd, $rs1, $rs3, $shamt">, Sched<[]>;
+                           "fsriw", "$rd, $rs1, $rs3, $shamt">,
+            Sched<[WriteFSRImm32, ReadFSRImm32, ReadFSRImm32]>;
 } // Predicates = [HasStdExtZbt, IsRV64]
 
 let Predicates = [HasStdExtZbb] in {
