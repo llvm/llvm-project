@@ -303,6 +303,9 @@ bool ScriptedProcess::DoUpdateThreadList(ThreadList &old_thread_list,
 
   StructuredData::DictionarySP thread_info_sp = GetInterface().GetThreadsInfo();
 
+  // FIXME: Need to sort the dictionary otherwise the thread ids won't match the
+  // thread indices.
+
   if (!thread_info_sp)
     return ScriptedInterface::ErrorWithMessage<bool>(
         LLVM_PRETTY_FUNCTION,
