@@ -40,7 +40,7 @@ ELF Improvements
   ``--warn-backrefs``. One may build such an archive with ``llvm-ar rcS
   [--thin]`` to save space.
   (`D117284 <https://reviews.llvm.org/D117284>`_)
-  The archive index may be `entirely ignored <https://reviews.llvm.org/D119074>`
+  The archive index may be `entirely ignored <https://reviews.llvm.org/D119074>`_
   in a future release.
 * No longer deduplicate local symbol names at the default optimization level of ``-O1``.
   This results in a larger ``.strtab`` (usually less than 1%) but a faster link
@@ -133,9 +133,9 @@ Mach-O Improvements
   (`D115949 <https://reviews.llvm.org/D115949>`_)
 * Thunk insertion now works more reliably.
   (`D108897 <https://reviews.llvm.org/D108897>`_,
-   `D108924 <https://reviews.llvm.org/D108924>`_,
-   `D109079  <https://reviews.llvm.org/D109079 >`_,
-   `D116705 <https://reviews.llvm.org/D116705>`_)
+  `D108924 <https://reviews.llvm.org/D108924>`_,
+  `D109079  <https://reviews.llvm.org/D109079>`_,
+  `D116705 <https://reviews.llvm.org/D116705>`_)
 * ``-ObjC`` now loads archive members before the symbol resolution phase.
   (`D108781 <https://reviews.llvm.org/D108781>`_)
 * ``-oso_prefix`` is now supported.
@@ -150,13 +150,13 @@ Mach-O Improvements
   a lot of framework flags and library lookups. Large Swift-based projects
   will benefit significantly.
   (`D113073 <https://reviews.llvm.org/D113073>`_,
-   `D113063 <https://reviews.llvm.org/D113063>`_,
-   `D113153 <https://reviews.llvm.org/D113153>`_,
-   `D113235 <https://reviews.llvm.org/D113235>`_)
+  `D113063 <https://reviews.llvm.org/D113063>`_,
+  `D113153 <https://reviews.llvm.org/D113153>`_,
+  `D113235 <https://reviews.llvm.org/D113235>`_)
 * Several memory-reduction optimizations were done to reduce LLD's RSS
   footprint.
   (`D113813 <https://reviews.llvm.org/D113813>`_,
-   `D113818 <https://reviews.llvm.org/D113818>`_)
+  `D113818 <https://reviews.llvm.org/D113818>`_)
 * Symbol patterns from ``-[un]exported_symbols_list`` are now processed in
   parallel. (`D113820 <https://reviews.llvm.org/D113820>`_)
 * ``.weak_def_can_be_hidden`` symbols can now be exported.
@@ -188,11 +188,11 @@ Mach-O Improvements
 * Map file output now proceeds in parallel with output of the binary.
   (`D117069 <https://reviews.llvm.org/D117069>`_)
 * The map file now contains dead-stripped symbols too.
-  (`D114737  <https://reviews.llvm.org/D114737 >`_)
+  (`D114737  <https://reviews.llvm.org/D114737>`_)
 * Multiple TLV sections with different alignments are now handled properly.
   (`D116263 <https://reviews.llvm.org/D116263>`_)
 * ``--start-lib`` and ``--end-lib`` are now supported.
-  (`D116913  <https://reviews.llvm.org/D116913 >`_)
+  (`D116913  <https://reviews.llvm.org/D116913>`_)
 * ``-noall_load`` is now supported.
   (`D117629 <https://reviews.llvm.org/D117629>`_)
 * ``-add_empty_section`` is now supported.
