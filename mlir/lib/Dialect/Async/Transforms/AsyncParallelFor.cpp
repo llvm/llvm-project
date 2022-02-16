@@ -615,13 +615,13 @@ static void doAsyncDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
   };
 
   auto asyncDispatch = [&](OpBuilder &nestedBuilder, Location loc) {
+    ImplicitLocOpBuilder nb(loc, nestedBuilder);
+
     // Create an async.group to wait on all async tokens from the concurrent
     // execution of multiple parallel compute function. First block will be
     // executed synchronously in the caller thread.
-    Value groupSize = b.create<arith::SubIOp>(blockCount, c1);
-    Value group = b.create<CreateGroupOp>(GroupType::get(ctx), groupSize);
-
-    ImplicitLocOpBuilder nb(loc, nestedBuilder);
+    Value groupSize = nb.create<arith::SubIOp>(blockCount, c1);
+    Value group = nb.create<CreateGroupOp>(GroupType::get(ctx), groupSize);
 
     // Launch async dispatch function for [0, blockCount) range.
     SmallVector<Value> operands = {group, c0, blockCount, blockSize};
@@ -631,7 +631,7 @@ static void doAsyncDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
                       asyncDispatchFunction.getCallableResults(), operands);
 
     // Wait for the completion of all parallel compute operations.
-    b.create<AwaitAllOp>(group);
+    nb.create<AwaitAllOp>(group);
 
     nb.create<scf::YieldOp>();
   };
