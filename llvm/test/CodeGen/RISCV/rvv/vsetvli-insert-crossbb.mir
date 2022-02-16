@@ -99,6 +99,31 @@
     ret void
   }
 
+  define void @redusum_loop(i32* nocapture noundef readonly %a, i32 noundef signext %n, i32* nocapture noundef writeonly %res) #0 {
+  entry:
+    br label %vector.body
+
+  vector.body:                                      ; preds = %vector.body, %entry
+    %lsr.iv1 = phi i32* [ %scevgep, %vector.body ], [ %a, %entry ]
+    %lsr.iv = phi i64 [ %lsr.iv.next, %vector.body ], [ 2048, %entry ]
+    %vec.phi = phi <4 x i32> [ zeroinitializer, %entry ], [ %0, %vector.body ]
+    %lsr.iv12 = bitcast i32* %lsr.iv1 to <4 x i32>*
+    %wide.load = load <4 x i32>, <4 x i32>* %lsr.iv12, align 4
+    %0 = add <4 x i32> %wide.load, %vec.phi
+    %lsr.iv.next = add nsw i64 %lsr.iv, -4
+    %scevgep = getelementptr i32, i32* %lsr.iv1, i64 4
+    %1 = icmp eq i64 %lsr.iv.next, 0
+    br i1 %1, label %middle.block, label %vector.body
+
+  middle.block:                                     ; preds = %vector.body
+    %2 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %0)
+    store i32 %2, i32* %res, align 4
+    ret void
+  }
+
+  ; Function Attrs: nofree nosync nounwind readnone willreturn
+  declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
+
   ; Function Attrs: nounwind readnone
   declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, i64) #1
 
@@ -567,8 +592,10 @@ body:             |
   ; CHECK-NEXT:   [[PseudoVADD_VX_M1_:%[0-9]+]]:vr = PseudoVADD_VX_M1 [[PseudoVID_V_M1_]], [[PHI]], -1, 6, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   [[MUL:%[0-9]+]]:gpr = MUL [[PHI]], [[SRLI]]
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:gpr = ADD [[COPY]], [[MUL]]
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 87, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK-NEXT:   PseudoVSE32_V_MF2 killed [[PseudoVADD_VX_M1_]], killed [[ADD]], -1, 5, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI [[PHI]], 1
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 88, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK-NEXT:   BLTU [[ADDI]], [[COPY1]], %bb.1
   ; CHECK-NEXT:   PseudoBR %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -598,4 +625,113 @@ body:             |
   bb.2:
 
     PseudoRET
+...
+---
+name:            redusum_loop
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: vr }
+  - { id: 3, class: vr }
+  - { id: 4, class: gpr }
+  - { id: 5, class: gpr }
+  - { id: 6, class: gpr }
+  - { id: 7, class: gpr }
+  - { id: 8, class: gpr }
+  - { id: 9, class: gpr }
+  - { id: 10, class: vr }
+  - { id: 11, class: vr }
+  - { id: 12, class: vr }
+  - { id: 13, class: gpr }
+  - { id: 14, class: vr }
+  - { id: 15, class: vr }
+  - { id: 16, class: vr }
+  - { id: 17, class: vr }
+  - { id: 18, class: gpr }
+  - { id: 19, class: gpr }
+  - { id: 20, class: vr }
+  - { id: 21, class: vr }
+  - { id: 22, class: vr }
+  - { id: 23, class: vr }
+  - { id: 24, class: vr }
+liveins:
+  - { reg: '$x10', virtual-reg: '%6' }
+  - { reg: '$x12', virtual-reg: '%8' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  ; CHECK-LABEL: name: redusum_loop
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x10, $x12
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x12
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x10
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 4, 80, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   [[PseudoVMV_V_I_M1_:%[0-9]+]]:vr = PseudoVMV_V_I_M1 0, 4, 5, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vr = COPY [[PseudoVMV_V_I_M1_]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vr = COPY [[COPY2]]
+  ; CHECK-NEXT:   [[LUI:%[0-9]+]]:gpr = LUI 1
+  ; CHECK-NEXT:   [[ADDIW:%[0-9]+]]:gpr = ADDIW killed [[LUI]], -2048
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.vector.body:
+  ; CHECK-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr = PHI [[COPY1]], %bb.0, %5, %bb.1
+  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:gpr = PHI [[ADDIW]], %bb.0, %4, %bb.1
+  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:vr = PHI [[COPY3]], %bb.0, %16, %bb.1
+  ; CHECK-NEXT:   [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 [[PHI]], 4, 5, implicit $vl, implicit $vtype :: (load (s128) from %ir.lsr.iv12, align 4)
+  ; CHECK-NEXT:   [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 killed [[PseudoVLE32_V_M1_]], [[PHI2]], 4, 5, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = nsw ADDI [[PHI1]], -4
+  ; CHECK-NEXT:   [[ADDI1:%[0-9]+]]:gpr = ADDI [[PHI]], 16
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr = COPY $x0
+  ; CHECK-NEXT:   BNE [[ADDI]], [[COPY4]], %bb.1
+  ; CHECK-NEXT:   PseudoBR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.middle.block:
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gpr = COPY $x0
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[PseudoVMV_S_X_M1_:%[0-9]+]]:vr = PseudoVMV_S_X_M1 [[DEF]], [[COPY5]], 1, 5, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[PseudoVREDSUM_VS_M1_:%[0-9]+]]:vr = PseudoVREDSUM_VS_M1 [[DEF1]], [[PseudoVADD_VV_M1_]], killed [[PseudoVMV_S_X_M1_]], 4, 5, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 1, 80, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   PseudoVSE32_V_M1 killed [[PseudoVREDSUM_VS_M1_]], [[COPY]], 1, 5, implicit $vl, implicit $vtype :: (store (s32) into %ir.res)
+  ; CHECK-NEXT:   PseudoRET
+  bb.0.entry:
+    liveins: $x10, $x12
+
+    %8:gpr = COPY $x12
+    %6:gpr = COPY $x10
+    %11:vr = PseudoVMV_V_I_M1 0, 4, 5
+    %12:vr = COPY %11
+    %10:vr = COPY %12
+    %13:gpr = LUI 1
+    %9:gpr = ADDIW killed %13, -2048
+
+  bb.1.vector.body:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+
+    %0:gpr = PHI %6, %bb.0, %5, %bb.1
+    %1:gpr = PHI %9, %bb.0, %4, %bb.1
+    %2:vr = PHI %10, %bb.0, %16, %bb.1
+    %14:vr = PseudoVLE32_V_M1 %0, 4, 5 :: (load (s128) from %ir.lsr.iv12, align 4)
+    %16:vr = PseudoVADD_VV_M1 killed %14, %2, 4, 5
+    %4:gpr = nsw ADDI %1, -4
+    %5:gpr = ADDI %0, 16
+    %18:gpr = COPY $x0
+    BNE %4, %18, %bb.1
+    PseudoBR %bb.2
+
+  bb.2.middle.block:
+    %19:gpr = COPY $x0
+    %21:vr = IMPLICIT_DEF
+    %20:vr = PseudoVMV_S_X_M1 %21, %19, 1, 5
+    %24:vr = IMPLICIT_DEF
+    %23:vr = PseudoVREDSUM_VS_M1 %24, %16, killed %20, 4, 5
+    PseudoVSE32_V_M1 killed %23, %8, 1, 5 :: (store (s32) into %ir.res)
+    PseudoRET
+
 ...

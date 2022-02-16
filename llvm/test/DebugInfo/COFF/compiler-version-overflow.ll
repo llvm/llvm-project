@@ -3,7 +3,7 @@
 
 ; CHECK: {{.*}} | S_COMPILE3 [size = {{.*}}]
 ; CHECK-NEXT: machine = intel pentium 3, Ver = clang version 999999999999.9999999999.9999999.99999999 , language = c++
-; CHECK-NEXT: frontend = 65535.65535.65535.65535, backend = 15000.0.0.0
+; CHECK-NEXT: frontend = 65535.65535.65535.65535, backend = {{[0-9]+}}.0.0.0
 ; CHECK-NEXT: flags = none
 
 
