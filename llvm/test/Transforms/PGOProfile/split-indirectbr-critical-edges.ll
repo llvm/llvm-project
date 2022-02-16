@@ -43,7 +43,10 @@ if.end:                                           ; preds = %if.end.preheader, %
 ; CHECK-LABEL: @cannot_split(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.instrprof.increment
+; CHECK: indirect:
 ; CHECK-NOT:     call void @llvm.instrprof.increment
+; CHECK: indirect2:
+; CHECK-NEXT:    call void @llvm.instrprof.increment
 define i32 @cannot_split(i8* nocapture readonly %p) {
 entry:
   %targets = alloca <2 x i8*>, align 16
@@ -56,6 +59,11 @@ entry:
   br label %indirect
 
 indirect:                                         ; preds = %entry, %indirect
+  indirectbr i8* %1, [label %indirect, label %end, label %indirect2]
+
+indirect2:
+  ; For this test we do not want critical edges split. Adding a 2nd `indirectbr`
+  ; does the trick.
   indirectbr i8* %1, [label %indirect, label %end]
 
 end:                                              ; preds = %indirect

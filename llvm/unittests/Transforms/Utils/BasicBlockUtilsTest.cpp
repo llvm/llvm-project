@@ -437,20 +437,22 @@ bb2:
   EXPECT_TRUE(PDT.verify());
 }
 
-TEST(BasicBlockUtils, SplitIndirectBrCriticalEdge) {
+TEST(BasicBlockUtils, SplitIndirectBrCriticalEdgesIgnorePHIs) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"IR(
-define void @crit_edge(i8* %cond0, i1 %cond1) {
+define void @crit_edge(i8* %tgt, i1 %cond0, i1 %cond1) {
 entry:
-  indirectbr i8* %cond0, [label %bb0, label %bb1]
+  indirectbr i8* %tgt, [label %bb0, label %bb1, label %bb2]
 bb0:
-  br label %bb1
+  br i1 %cond0, label %bb1, label %bb2
 bb1:
   %p = phi i32 [0, %bb0], [0, %entry]
-  br i1 %cond1, label %bb2, label %bb3
+  br i1 %cond1, label %bb3, label %bb4
 bb2:
   ret void
 bb3:
+  ret void
+bb4:
   ret void
 }
 )IR");
@@ -460,14 +462,69 @@ bb3:
   BranchProbabilityInfo BPI(*F, LI);
   BlockFrequencyInfo BFI(*F, BPI, LI);
 
-  ASSERT_TRUE(SplitIndirectBrCriticalEdges(*F, &BPI, &BFI));
+  ASSERT_TRUE(SplitIndirectBrCriticalEdges(*F, /*IgnoreBlocksWithoutPHI=*/true,
+                                           &BPI, &BFI));
 
   // Check that successors of the split block get their probability correct.
   BasicBlock *BB1 = getBasicBlockByName(*F, "bb1");
   BasicBlock *SplitBB = BB1->getTerminator()->getSuccessor(0);
-  EXPECT_EQ(2u, SplitBB->getTerminator()->getNumSuccessors());
+  ASSERT_EQ(2u, SplitBB->getTerminator()->getNumSuccessors());
   EXPECT_EQ(BranchProbability(1, 2), BPI.getEdgeProbability(SplitBB, 0u));
   EXPECT_EQ(BranchProbability(1, 2), BPI.getEdgeProbability(SplitBB, 1u));
+
+  // bb2 has no PHI, so we shouldn't split bb0 -> bb2
+  BasicBlock *BB0 = getBasicBlockByName(*F, "bb0");
+  ASSERT_EQ(2u, BB0->getTerminator()->getNumSuccessors());
+  EXPECT_EQ(BB0->getTerminator()->getSuccessor(1),
+            getBasicBlockByName(*F, "bb2"));
+}
+
+TEST(BasicBlockUtils, SplitIndirectBrCriticalEdges) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+define void @crit_edge(i8* %tgt, i1 %cond0, i1 %cond1) {
+entry:
+  indirectbr i8* %tgt, [label %bb0, label %bb1, label %bb2]
+bb0:
+  br i1 %cond0, label %bb1, label %bb2
+bb1:
+  %p = phi i32 [0, %bb0], [0, %entry]
+  br i1 %cond1, label %bb3, label %bb4
+bb2:
+  ret void
+bb3:
+  ret void
+bb4:
+  ret void
+}
+)IR");
+  Function *F = M->getFunction("crit_edge");
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+  BranchProbabilityInfo BPI(*F, LI);
+  BlockFrequencyInfo BFI(*F, BPI, LI);
+
+  ASSERT_TRUE(SplitIndirectBrCriticalEdges(*F, /*IgnoreBlocksWithoutPHI=*/false,
+                                           &BPI, &BFI));
+
+  // Check that successors of the split block get their probability correct.
+  BasicBlock *BB1 = getBasicBlockByName(*F, "bb1");
+  BasicBlock *SplitBB = BB1->getTerminator()->getSuccessor(0);
+  ASSERT_EQ(2u, SplitBB->getTerminator()->getNumSuccessors());
+  EXPECT_EQ(BranchProbability(1, 2), BPI.getEdgeProbability(SplitBB, 0u));
+  EXPECT_EQ(BranchProbability(1, 2), BPI.getEdgeProbability(SplitBB, 1u));
+
+  // Should split, resulting in:
+  //   bb0 -> bb2.clone; bb2 -> split1; bb2.clone -> split,
+  BasicBlock *BB0 = getBasicBlockByName(*F, "bb0");
+  ASSERT_EQ(2u, BB0->getTerminator()->getNumSuccessors());
+  BasicBlock *BB2Clone = BB0->getTerminator()->getSuccessor(1);
+  BasicBlock *BB2 = getBasicBlockByName(*F, "bb2");
+  EXPECT_NE(BB2Clone, BB2);
+  ASSERT_EQ(1u, BB2->getTerminator()->getNumSuccessors());
+  ASSERT_EQ(1u, BB2Clone->getTerminator()->getNumSuccessors());
+  EXPECT_EQ(BB2->getTerminator()->getSuccessor(0),
+            BB2Clone->getTerminator()->getSuccessor(0));
 }
 
 TEST(BasicBlockUtils, SetEdgeProbability) {

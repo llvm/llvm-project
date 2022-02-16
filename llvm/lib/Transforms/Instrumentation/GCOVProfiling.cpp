@@ -862,7 +862,8 @@ bool GCOVProfiler::emitProfileNotes(
 
       // Split indirectbr critical edges here before computing the MST rather
       // than later in getInstrBB() to avoid invalidating it.
-      SplitIndirectBrCriticalEdges(F, BPI, BFI);
+      SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/false, BPI,
+                                   BFI);
 
       CFGMST<Edge, BBInfo> MST(F, /*InstrumentFuncEntry_=*/false, BPI, BFI);
 
