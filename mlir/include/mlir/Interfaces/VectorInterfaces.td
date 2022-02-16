@@ -55,7 +55,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     StaticInterfaceMethod<
       /*desc=*/"Return the `in_bounds` attribute name.",
       /*retTy=*/"::mlir::StringRef",
-      /*methodName=*/"getInBoundsAttrName",
+      /*methodName=*/"getInBoundsAttrStrName",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/ [{ return "in_bounds"; }]
@@ -63,7 +63,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     StaticInterfaceMethod<
       /*desc=*/"Return the `permutation_map` attribute name.",
       /*retTy=*/"::mlir::StringRef",
-      /*methodName=*/"getPermutationMapAttrName",
+      /*methodName=*/"getPermutationMapAttrStrName",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/ [{ return "permutation_map"; }]
