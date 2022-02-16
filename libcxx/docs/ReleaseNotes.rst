@@ -235,3 +235,8 @@ Build System Changes
   ``-DCMAKE_POSITION_INDEPENDENT_CODE=ON`` explicitly when configuring the build, or
   ``-DRUNTIMES_<target-name>_CMAKE_POSITION_INDEPENDENT_CODE=ON`` if using the
   bootstrapping build.
+
+- The ``{LIBCXX,LIBCXXABI,LIBUNWIND}_TARGET_TRIPLE``, ``{LIBCXX,LIBCXXABI,LIBUNWIND}_SYSROOT`` and
+  ``{LIBCXX,LIBCXXABI,LIBUNWIND}_GCC_TOOLCHAIN`` CMake variables are deprecated. Instead, please use
+  the ``CMAKE_CXX_COMPILER_TARGET``, ``CMAKE_SYSROOT`` and ``CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN``
+  variables provided by CMake.
