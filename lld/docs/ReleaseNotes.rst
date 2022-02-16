@@ -174,7 +174,7 @@ Mach-O Improvements
   (`D115092 <https://reviews.llvm.org/D115092>`_)
 * ``$ld$hide`` symbols are now supported.
   (`D115775 <https://reviews.llvm.org/D115775>`_)
-* Symbols imported via `-weak_framework` are now properly marked as weak refs.
+* Symbols imported via ``-weak_framework`` are now properly marked as weak refs.
   (`D114397 <https://reviews.llvm.org/D114397>`_)
 * ``--warn-dylib-install-name`` and ``--no-warn-dylib-install-name`` were added
   to toggle LLD-specific warnings around the use of ``-install_name``.
