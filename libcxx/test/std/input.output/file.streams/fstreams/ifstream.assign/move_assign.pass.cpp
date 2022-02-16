@@ -25,7 +25,7 @@ int main(int, char**)
     {
         std::ifstream fso("test.dat");
         std::ifstream fs;
-        fs = move(fso);
+        fs = std::move(fso);
         double x = 0;
         fs >> x;
         assert(x == 3.25);
@@ -34,7 +34,7 @@ int main(int, char**)
     {
         std::wifstream fso("test.dat");
         std::wifstream fs;
-        fs = move(fso);
+        fs = std::move(fso);
         double x = 0;
         fs >> x;
         assert(x == 3.25);
