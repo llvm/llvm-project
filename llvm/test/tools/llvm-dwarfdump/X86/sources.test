@@ -1,0 +1,362 @@
+# RUN: yaml2obj --docnum=1 %s -o %t.name.o
+# RUN: llvm-dwarfdump --show-sources %t.name.o | \
+# RUN:   FileCheck --check-prefix=CU-NAME --match-full-lines \
+# RUN:     --implicit-check-not={{.}} %s
+
+# CU-NAME:      first.c
+# CU-NAME-NEXT: second.c
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Code:     1
+        Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+    - Table:
+      - Code:     1
+        Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+  debug_info:
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+           - CStr: first.c
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+           - CStr: second.c
+
+# RUN: yaml2obj --docnum=2 %s -o %t.comp-dir.o
+# RUN: llvm-dwarfdump --show-sources %t.comp-dir.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.comp-dir.o --check-prefix=CU-COMP-DIR \
+# RUN:     --match-full-lines --implicit-check-not={{.}} %s
+
+# CU-COMP-DIR:      warning: [[FILE]]: missing name for compilation unit
+# CU-COMP-DIR-NEXT: warning: [[FILE]]: missing name for compilation unit
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Code:     1
+        Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_comp_dir
+            Form:      DW_FORM_string
+    - Table:
+      - Code:     1
+        Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_comp_dir
+            Form:      DW_FORM_string
+  debug_info:
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+           - CStr: /comp/first
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+           - CStr: /comp/second
+
+# RUN: yaml2obj --docnum=3 \
+# RUN:   -DFIRST_NAME=first.c -DFIRST_COMP_DIR=/comp/first \
+# RUN:   -DSECOND_NAME=second.c -DSECOND_COMP_DIR=/comp/second \
+# RUN:   -o %t.comp-dir-rel-name.o %s
+# RUN: llvm-dwarfdump --show-sources %t.comp-dir-rel-name.o | \
+# RUN:   FileCheck --check-prefix=CU-COMP-DIR-REL-NAME --match-full-lines \
+# RUN:     --implicit-check-not={{.}} %s
+
+# CU-COMP-DIR-REL-NAME:      /comp/first[[SEP:[/\\]]]first.c
+# CU-COMP-DIR-REL-NAME-NEXT: /comp/second[[SEP]]second.c
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Code:     1
+        Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_comp_dir
+            Form:      DW_FORM_string
+    - Table:
+      - Code:     1
+        Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_comp_dir
+            Form:      DW_FORM_string
+  debug_info:
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+           - CStr: [[FIRST_NAME]]
+           - CStr: [[FIRST_COMP_DIR]]
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+           - CStr: [[SECOND_NAME]]
+           - CStr: [[SECOND_COMP_DIR]]
+
+# RUN: yaml2obj --docnum=3 -o %t.comp-dir-abs-name-posix.o \
+# RUN:   -DFIRST_NAME=/abs/first.c -DFIRST_COMP_DIR=/comp/dir \
+# RUN:   -DSECOND_NAME=/abs/second.c -DSECOND_COMP_DIR=/comp/dir \
+# RUN:   %s
+# RUN: llvm-dwarfdump --show-sources %t.comp-dir-abs-name-posix.o | \
+# RUN:   FileCheck --check-prefix=CU-COMP-DIR-ABS-NAME-POSIX \
+# RUN:     --match-full-lines --implicit-check-not={{.}} %s
+
+# CU-COMP-DIR-ABS-NAME-POSIX:      /abs/first.c
+# CU-COMP-DIR-ABS-NAME-POSIX-NEXT: /abs/second.c
+
+# RUN: yaml2obj --docnum=3 -o %t.comp-dir-abs-name-windows.o \
+# RUN:   -DFIRST_NAME='C:\abs\first.c' -DFIRST_COMP_DIR='C:\comp\dir' \
+# RUN:   -DSECOND_NAME='C:\abs\second.c' -DSECOND_COMP_DIR='C:\comp\dir' \
+# RUN:   %s
+# RUN: llvm-dwarfdump --show-sources %t.comp-dir-abs-name-windows.o | \
+# RUN:   FileCheck --check-prefix=CU-COMP-DIR-ABS-NAME-WINDOWS \
+# RUN:     --match-full-lines --implicit-check-not={{.}} %s
+
+# CU-COMP-DIR-ABS-NAME-WINDOWS:      C:\abs\first.c
+# CU-COMP-DIR-ABS-NAME-WINDOWS-NEXT: C:\abs\second.c
+
+# RUN: yaml2obj --docnum=4 %s -o %t.line-table-abs.o
+# RUN: llvm-dwarfdump --show-sources %t.line-table-abs.o | \
+# RUN:   FileCheck --check-prefix=LINE-TABLE-ABS --match-full-lines \
+# RUN:     --implicit-check-not={{.}} %s
+
+# LINE-TABLE-ABS:      /comp/first[[SEP:[/\\]]]first.c
+# LINE-TABLE-ABS-NEXT: /comp/second[[SEP]]second.c
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+DWARF:
+  debug_line:
+    - Version:       4
+      MinInstLength: 1
+      MaxOpsPerInst: 1
+      DefaultIsStmt: 1
+      LineBase:      0
+      LineRange:     0
+      OpcodeBase:    1
+      IncludeDirs:   [/comp/first]
+      Files:
+        - Name:    first.c
+          DirIdx:  1
+          ModTime: 0
+          Length:  0
+    - Version:       4
+      MinInstLength: 1
+      MaxOpsPerInst: 1
+      DefaultIsStmt: 1
+      LineBase:      0
+      LineRange:     0
+      OpcodeBase:    1
+      IncludeDirs:   [/comp/second]
+      Files:
+        - Name:    second.c
+          DirIdx:  1
+          ModTime: 0
+          Length:  0
+
+# RUN: yaml2obj --docnum=5 %s -o %t.line-table-rel.o
+# RUN: llvm-dwarfdump --show-sources %t.line-table-rel.o | \
+# RUN:   FileCheck --check-prefix=LINE-TABLE-REL --match-full-lines \
+# RUN:     --implicit-check-not={{.}} %s
+
+# LINE-TABLE-REL:      first.c
+# LINE-TABLE-REL-NEXT: second.c
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+DWARF:
+  debug_line:
+    - Version:       4
+      MinInstLength: 1
+      MaxOpsPerInst: 1
+      DefaultIsStmt: 1
+      LineBase:      0
+      LineRange:     0
+      OpcodeBase:    1
+      Files:
+        - Name:    first.c
+          DirIdx:  0
+          ModTime: 0
+          Length:  0
+    - Version:       4
+      MinInstLength: 1
+      MaxOpsPerInst: 1
+      DefaultIsStmt: 1
+      LineBase:      0
+      LineRange:     0
+      OpcodeBase:    1
+      Files:
+        - Name:    second.c
+          DirIdx:  0
+          ModTime: 0
+          Length:  0
+
+# RUN: yaml2obj --docnum=6 %s -o %t.cu-line-table.o
+# RUN: llvm-dwarfdump --show-sources %t.cu-line-table.o | \
+# RUN:   FileCheck --check-prefix=CU-LINE-TABLE --match-full-lines \
+# RUN:     --implicit-check-not={{.}} %s
+
+# CU-LINE-TABLE:      /first[[SEP:[/\\]]]first[[SEP]]first.c
+# CU-LINE-TABLE-NEXT: /second[[SEP]]second[[SEP]]second.c
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Code:     1
+        Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_comp_dir
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_stmt_list
+            Form:      DW_FORM_sec_offset
+    - Table:
+      - Code:     1
+        Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_comp_dir
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_stmt_list
+            Form:      DW_FORM_sec_offset
+  debug_info:
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+           - CStr:  /first
+           - Value: 0
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+           - CStr:  /second
+           - Value: 0x23
+  debug_line:
+    - Version:       4
+      MinInstLength: 1
+      MaxOpsPerInst: 1
+      DefaultIsStmt: 1
+      LineBase:      0
+      LineRange:     0
+      OpcodeBase:    1
+      IncludeDirs:   [first]
+      Files:
+        - Name:    first.c
+          DirIdx:  1
+          ModTime: 0
+          Length:  0
+    - Version:       4
+      MinInstLength: 1
+      MaxOpsPerInst: 1
+      DefaultIsStmt: 1
+      LineBase:      0
+      LineRange:     0
+      OpcodeBase:    1
+      IncludeDirs:   [second]
+      Files:
+        - Name:    second.c
+          DirIdx:  1
+          ModTime: 0
+          Length:  0
+
+# RUN: llvm-dwarfdump --show-sources %t.line-table-rel.o %t.cu-line-table.o | \
+# RUN:   FileCheck --check-prefix=MULTIPLE-FILES --match-full-lines \
+# RUN:     --implicit-check-not={{.}} %s
+
+# MULTIPLE-FILES:      first.c
+# MULTIPLE-FILES-NEXT: second.c
+# MULTIPLE-FILES-NEXT: /first[[SEP:[/\\]]]first[[SEP]]first.c
+# MULTIPLE-FILES-NEXT: /second[[SEP]]second[[SEP]]second.c
+
+# RUN: yaml2obj --docnum=7 %s -o %t.no-filenames.o
+# RUN: llvm-dwarfdump --show-sources %t.no-filenames.o | count 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+DWARF:
+  debug_line:
+    - Version:       4
+      MinInstLength: 1
+      MaxOpsPerInst: 1
+      DefaultIsStmt: 1
+      LineBase:      0
+      LineRange:     0
+      OpcodeBase:    1
+      IncludeDirs:   []
+
+# TODO: Use yaml2obj for this test once it supports DWARFv5 line tables.
+# RUN: echo '.file 0 "/dir" "dwarfv5.c"' | \
+# RUN:   llvm-mc -g -dwarf-version=5 -triple x86_64-pc-linux -filetype=obj \
+# RUN:     -o %t.dwarfv5.o
+# RUN: llvm-dwarfdump --show-sources %t.dwarfv5.o | \
+# RUN:   FileCheck --check-prefix=DWARFV5 --match-full-lines \
+# RUN:     --implicit-check-not={{.}} %s
+
+# DWARFV5: /dir{{[/\\]}}dwarfv5.c
+
+# RUN: llvm-mc -triple x86_64-pc-linux %S/Inputs/debug_line_malformed.s \
+# RUN:   -filetype=obj -o %t.malformed.o
+# RUN: not llvm-dwarfdump --show-sources %t.malformed.o 2>&1 | \
+# RUN:   FileCheck --check-prefix=MALFORMED --match-full-lines \
+# RUN:     --implicit-check-not={{.}} %s
+
+# MALFORMED: error: parsing line table prologue at offset 0x00000048: unsupported version 0
