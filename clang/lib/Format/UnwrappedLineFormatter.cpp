@@ -312,10 +312,15 @@ private:
               break;
 
           // Check if the found line starts a record.
-          for (const FormatToken *RecordTok = (*J)->Last; RecordTok;
-               RecordTok = RecordTok->Previous)
-            if (RecordTok->is(tok::l_brace))
-              return isRecordLBrace(*RecordTok);
+          const FormatToken *LastNonComment = (*J)->Last;
+          assert(LastNonComment);
+          if (LastNonComment->is(tok::comment)) {
+            LastNonComment = LastNonComment->getPreviousNonComment();
+            // There must be another token (usually `{`), because we chose a
+            // line that has a smaller level.
+            assert(LastNonComment);
+          }
+          return isRecordLBrace(*LastNonComment);
         }
       }
 

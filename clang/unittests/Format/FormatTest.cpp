@@ -3809,6 +3809,18 @@ TEST_F(FormatTest, FormatsNamespaces) {
                "  }\n"
                "} // namespace\n",
                ShortInlineFunctions);
+  verifyFormat("namespace { /* comment */\n"
+               "  void f() {\n"
+               "    return;\n"
+               "  }\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace { // comment\n"
+               "  void f() {\n"
+               "    return;\n"
+               "  }\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
   verifyFormat("namespace {\n"
                "  int some_int;\n"
                "  void f() {\n"
@@ -3824,6 +3836,18 @@ TEST_F(FormatTest, FormatsNamespaces) {
                ShortInlineFunctions);
   verifyFormat("namespace {\n"
                "  class X {\n"
+               "    void f() { return; }\n"
+               "  };\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace {\n"
+               "  class X { /* comment */\n"
+               "    void f() { return; }\n"
+               "  };\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace {\n"
+               "  class X { // comment\n"
                "    void f() { return; }\n"
                "  };\n"
                "} // namespace\n",
