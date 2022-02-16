@@ -982,10 +982,11 @@ private:
         Tok->setType(TT_JsTypeOperator);
       break;
     case tok::kw_if:
-    case tok::kw_while:
-      if (Tok->is(tok::kw_if) && CurrentToken &&
+      if (CurrentToken &&
           CurrentToken->isOneOf(tok::kw_constexpr, tok::identifier))
         next();
+      LLVM_FALLTHROUGH;
+    case tok::kw_while:
       if (CurrentToken && CurrentToken->is(tok::l_paren)) {
         next();
         if (!parseParens(/*LookForDecls=*/true))
