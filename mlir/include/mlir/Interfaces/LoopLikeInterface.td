@@ -44,6 +44,42 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       }],
       "::mlir::LogicalResult", "moveOutOfLoop", (ins "::mlir::ArrayRef<::mlir::Operation *>":$ops)
     >,
+    InterfaceMethod<[{
+        If there is a single induction variable return it, otherwise return
+        llvm::None.
+      }],
+      /*retTy=*/"::mlir::Optional<::mlir::Value>",
+      /*methodName=*/"getSingleInductionVar",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return llvm::None;
+      }]
+    >,
+    InterfaceMethod<[{
+        Return the single lower bound value or attribute if it exist, otherwise
+        return llvm::None.
+      }],
+      /*retTy=*/"::mlir::Optional<::mlir::OpFoldResult>",
+      /*methodName=*/"getSingleLowerBound",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return llvm::None;
+      }]
+    >,
+    InterfaceMethod<[{
+        Return the single step value or attribute if it exist, otherwise
+        return llvm::None.
+      }],
+      /*retTy=*/"::mlir::Optional<::mlir::OpFoldResult>",
+      /*methodName=*/"getSingleStep",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return llvm::None;
+      }]
+    >,
   ];
 }
 
