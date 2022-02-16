@@ -130,6 +130,13 @@ public:
     dummyIntent_ = intent;
     return *this;
   }
+  std::optional<parser::CharBlock> sourceLocation() const {
+    return sourceLocation_;
+  }
+  ActualArgument &set_sourceLocation(std::optional<parser::CharBlock> at) {
+    sourceLocation_ = at;
+    return *this;
+  }
 
   // Wrap this argument in parentheses
   void Parenthesize();
@@ -148,6 +155,7 @@ private:
   std::optional<parser::CharBlock> keyword_;
   bool isPassedObject_{false};
   common::Intent dummyIntent_{common::Intent::Default};
+  std::optional<parser::CharBlock> sourceLocation_;
 };
 
 using ActualArguments = std::vector<std::optional<ActualArgument>>;
